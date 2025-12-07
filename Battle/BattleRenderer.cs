@@ -518,9 +518,28 @@ namespace ProjectVagabond.Battle.UI
                 float alpha = MathHelper.Lerp(minAlpha, maxAlpha, pulse);
 
                 var pixel = ServiceLocator.Get<Texture2D>();
+
+                // --- NEW LOGIC FOR MULTI-TARGET HIGHLIGHTING ---
+                var targetType = uiManager.TargetTypeForSelection;
+                bool isMultiTarget = targetType == TargetType.Every || targetType == TargetType.EveryAll;
+                bool isAnyHovered = inputHandler.HoveredTargetIndex != -1;
+
                 for (int i = 0; i < _currentTargets.Count; i++)
                 {
-                    Color baseColor = i == inputHandler.HoveredTargetIndex ? Color.Red : Color.Yellow;
+                    bool shouldHighlight = false;
+
+                    if (isMultiTarget && isAnyHovered)
+                    {
+                        // If it's a multi-target move and the user is hovering ANY valid target, highlight ALL of them.
+                        shouldHighlight = true;
+                    }
+                    else if (i == inputHandler.HoveredTargetIndex)
+                    {
+                        // Standard single target hover
+                        shouldHighlight = true;
+                    }
+
+                    Color baseColor = shouldHighlight ? Color.Red : Color.Yellow;
                     Color boxColor = baseColor * alpha;
                     var bounds = _currentTargets[i].Bounds;
 
@@ -557,8 +576,6 @@ namespace ProjectVagabond.Battle.UI
             bool areAllFlashing = (state.Timer % cycleDuration) < HoverHighlightState.MultiTargetFlashOnDuration;
             Color flashColor = areAllFlashing ? _global.Palette_Red : Color.White;
 
-            float bobOffset = (MathF.Sin(sharedBobbingTimer * 4f) > 0) ? -1f : 0f;
-
             switch (move.Target)
             {
                 case TargetType.Self:
@@ -587,8 +604,13 @@ namespace ProjectVagabond.Battle.UI
                     foreach (var target in targets)
                     {
                         Rectangle sourceRect = target.IsPlayerControlled ? arrowRects[2] : arrowRects[6]; // Up for player, Down for enemy
-                        float finalBobOffset = target.IsPlayerControlled ? bobOffset : 0f;
-                        DrawTargetIndicator(spriteBatch, font, secondaryFont, allCombatants, target, sourceRect, flashColor, finalBobOffset);
+
+                        // Calculate independent bobbing
+                        // Use hash code to offset the sine wave phase
+                        float phaseOffset = (Math.Abs(target.CombatantID.GetHashCode()) % 100) * 0.13f;
+                        float uniqueBobOffset = (MathF.Sin((sharedBobbingTimer + phaseOffset) * 4f) > 0) ? -1f : 0f;
+
+                        DrawTargetIndicator(spriteBatch, font, secondaryFont, allCombatants, target, sourceRect, flashColor, uniqueBobOffset);
                     }
                     break;
             }
