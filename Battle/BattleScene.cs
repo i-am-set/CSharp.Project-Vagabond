@@ -764,7 +764,17 @@ namespace ProjectVagabond.Scenes
             else
             {
                 string actionName = e.Item != null ? e.Item.ItemName : (e.Move != null ? e.Move.MoveName : "Unknown Action");
-                _uiManager.ShowNarration($"{e.Actor.Name} USED\n{actionName}!");
+                string typeTag = "";
+                if (e.Move != null)
+                {
+                    typeTag = e.Move.MoveType == MoveType.Spell ? "cSpell" : "cAction";
+                }
+                else if (e.Item != null)
+                {
+                    typeTag = "cItem";
+                }
+
+                _uiManager.ShowNarration($"{e.Actor.Name} USED [{typeTag}]{actionName}[/]!");
             }
         }
 
@@ -780,8 +790,8 @@ namespace ProjectVagabond.Scenes
 
             if (e.CriticalHitCount > 0)
             {
-                if (e.CriticalHitCount == 1) _uiManager.ShowNarration("Landed a critical hit!");
-                else _uiManager.ShowNarration($"Landed {e.CriticalHitCount} critical hits!");
+                if (e.CriticalHitCount == 1) _uiManager.ShowNarration("Landed a [cCrit]CRITICAL HIT[/]!");
+                else _uiManager.ShowNarration($"Landed {e.CriticalHitCount} [cCrit]CRITICAL HITS[/]!");
             }
             _isWaitingForMultiHitDelay = false;
             _multiHitDelayTimer = 0f;
@@ -828,7 +838,7 @@ namespace ProjectVagabond.Scenes
                 if (result.WasCritical)
                 {
                     _animationManager.StartDamageIndicator(target.CombatantID, "CRITICAL HIT", hudPosition, ServiceLocator.Get<Global>().Palette_Yellow);
-                    if (!isMultiHit) _uiManager.ShowNarration($"A critical hit on {target.Name}!");
+                    if (!isMultiHit) _uiManager.ShowNarration($"A [cCrit]CRITICAL HIT[/] on {target.Name}!");
                 }
 
                 var font = ServiceLocator.Get<Core>().SecondaryFont;
@@ -885,7 +895,7 @@ namespace ProjectVagabond.Scenes
 
         private void OnCombatantDefeated(GameEvents.CombatantDefeated e)
         {
-            _uiManager.ShowNarration($"{e.DefeatedCombatant.Name} was defeated!");
+            _uiManager.ShowNarration($"{e.DefeatedCombatant.Name} was [cDefeat]DEFEATED[/]!");
             _animationManager.StartDeathAnimation(e.DefeatedCombatant.CombatantID);
             e.DefeatedCombatant.VisualAlpha = 1.0f;
         }
@@ -908,7 +918,7 @@ namespace ProjectVagabond.Scenes
                 }
 
                 string effectName = e.EffectType == StatusEffectType.Burn ? "the burn" : e.EffectType.ToString();
-                _uiManager.ShowNarration($"{e.Combatant.Name} takes {e.Damage} damage from {effectName}!");
+                _uiManager.ShowNarration($"{e.Combatant.Name} takes {e.Damage} damage from [cStatus]{effectName}[/]!");
 
                 _animationManager.StartHealthLossAnimation(e.Combatant.CombatantID, e.Combatant.VisualHP, e.Combatant.Stats.CurrentHP);
                 _animationManager.StartHealthAnimation(e.Combatant.CombatantID, (int)e.Combatant.VisualHP, e.Combatant.Stats.CurrentHP);
@@ -957,7 +967,7 @@ namespace ProjectVagabond.Scenes
 
         private void OnNextEnemyApproaches(GameEvents.NextEnemyApproaches e)
         {
-            _uiManager.ShowNarration("Another enemy approaches!");
+            _uiManager.ShowNarration("Another [cEnemy]ENEMY[/] approaches!");
         }
 
         private void OnCombatantSpawned(GameEvents.CombatantSpawned e)
@@ -970,7 +980,7 @@ namespace ProjectVagabond.Scenes
             _isBattleOver = true;
             _uiManager.HideAllMenus();
             var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
-            _uiManager.ShowNarration(player != null ? $"{player.Name} escaped." : "Got away safely!");
+            _uiManager.ShowNarration(player != null ? $"{player.Name} [cEscape]ESCAPED[/]." : "Got away safely!");
         }
 
         private void OpenSettings()

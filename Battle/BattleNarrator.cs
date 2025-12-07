@@ -3,13 +3,17 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.Battle.UI
 {
@@ -20,11 +24,11 @@ namespace ProjectVagabond.Battle.UI
         private readonly Queue<string> _messageQueue = new Queue<string>();
 
         private string _currentSegment = "";
-        private List<string> _words = new List<string>();
+        private List<ColoredText> _words = new List<ColoredText>();
         private int _wordIndex;
         private int _charInWordIndex;
 
-        private readonly List<StringBuilder> _displayLines = new List<StringBuilder>();
+        private readonly List<List<ColoredText>> _displayLines = new List<List<ColoredText>>();
         private float _wrapWidth;
         private int _maxVisibleLines;
         private BitmapFont _font;
@@ -83,10 +87,11 @@ namespace ProjectVagabond.Battle.UI
             // Adjust max lines calculation to account for extra line spacing
             _maxVisibleLines = Math.Min(7, (_bounds.Height - (padding * 2)) / (_font.LineHeight + LINE_SPACING));
 
-            string upperMessage = message.ToUpper();
+            // Note: We do NOT uppercase here anymore, as it might mess with case-sensitive tags if any exist (though our tags are lowercase).
+            // We will uppercase the text content during parsing.
 
             _messageQueue.Clear();
-            var segments = upperMessage.Split('|');
+            var segments = message.Split('|');
             foreach (var segment in segments)
             {
                 if (!string.IsNullOrWhiteSpace(segment))
@@ -106,11 +111,12 @@ namespace ProjectVagabond.Battle.UI
             if (_messageQueue.Count > 0)
             {
                 _currentSegment = _messageQueue.Dequeue();
-                // Handle explicit newlines by padding them so Split picks them up as words
-                string processedSegment = _currentSegment.Replace("\n", " \n ");
-                _words = processedSegment.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+
+                // Parse the segment into colored words
+                _words = ParseMessageToWords(_currentSegment);
+
                 _displayLines.Clear();
-                _displayLines.Add(new StringBuilder());
+                _displayLines.Add(new List<ColoredText>());
                 _wordIndex = 0;
                 _charInWordIndex = 0;
                 _typewriterTimer = 0f;
@@ -121,47 +127,93 @@ namespace ProjectVagabond.Battle.UI
             {
                 _currentSegment = "";
                 _isWaitingForInput = false;
-                // Note: We do NOT clear _displayLines here. 
-                // This allows the text to persist on screen even after IsBusy becomes false,
-                // preventing the "blank frame" glitch during transitions.
             }
+        }
+
+        private List<ColoredText> ParseMessageToWords(string message)
+        {
+            var words = new List<ColoredText>();
+            var parts = Regex.Split(message, @"(\[.*?\])");
+            Color currentColor = _global.Palette_BrightWhite;
+
+            foreach (var part in parts)
+            {
+                if (string.IsNullOrEmpty(part)) continue;
+
+                if (part.StartsWith("[") && part.EndsWith("]"))
+                {
+                    string tagContent = part.Substring(1, part.Length - 2);
+                    if (tagContent == "/")
+                    {
+                        currentColor = _global.Palette_BrightWhite;
+                    }
+                    else
+                    {
+                        currentColor = _global.GetNarrationColor(tagContent);
+                    }
+                }
+                else
+                {
+                    // Handle explicit newlines by replacing them with a special token or splitting
+                    string processedPart = part.Replace("\n", " \n ");
+                    var rawWords = processedPart.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+                    foreach (var rawWord in rawWords)
+                    {
+                        words.Add(new ColoredText(rawWord.ToUpper(), currentColor));
+                    }
+                }
+            }
+            return words;
         }
 
         private void FinishCurrentSegmentInstantly()
         {
             _displayLines.Clear();
-            var currentLine = new StringBuilder();
+            var currentLine = new List<ColoredText>();
             _displayLines.Add(currentLine);
 
-            foreach (var word in _words)
+            float currentLineWidth = 0f;
+            float spaceWidth = _font.MeasureString(" ").Width;
+
+            foreach (var wordObj in _words)
             {
-                if (word == "\n")
+                string wordText = wordObj.Text;
+
+                if (wordText == "\n")
                 {
-                    currentLine = new StringBuilder();
+                    currentLine = new List<ColoredText>();
                     _displayLines.Add(currentLine);
-                    if (_displayLines.Count > _maxVisibleLines)
-                    {
-                        _displayLines.RemoveAt(0);
-                    }
+                    currentLineWidth = 0f;
+                    if (_displayLines.Count > _maxVisibleLines) _displayLines.RemoveAt(0);
                     continue;
                 }
 
-                var potentialText = (currentLine.Length > 0 ? currentLine.ToString() + " " : "") + word;
-                if (_font.MeasureString(potentialText).Width > _wrapWidth)
+                float wordWidth = _font.MeasureString(wordText).Width;
+                float potentialWidth = currentLineWidth + (currentLine.Count > 0 ? spaceWidth : 0) + wordWidth;
+
+                if (potentialWidth > _wrapWidth)
                 {
-                    currentLine = new StringBuilder();
+                    currentLine = new List<ColoredText>();
                     _displayLines.Add(currentLine);
-                    if (_displayLines.Count > _maxVisibleLines)
-                    {
-                        _displayLines.RemoveAt(0);
-                    }
+                    currentLineWidth = 0f;
+                    if (_displayLines.Count > _maxVisibleLines) _displayLines.RemoveAt(0);
                 }
 
-                if (currentLine.Length > 0)
+                if (currentLine.Count > 0)
                 {
-                    currentLine.Append(" ");
+                    // Append space to the previous word if it exists, or add a space word?
+                    // Simpler: Just add a space to the current word's text if it's not the start of line
+                    // But we can't modify the source _words.
+                    // We will add a separate space entry or handle it in draw.
+                    // Let's append a space to the previous entry in the line for simplicity in this instant finish logic.
+                    var last = currentLine.Last();
+                    last.Text += " ";
+                    currentLineWidth += spaceWidth;
                 }
-                currentLine.Append(word);
+
+                currentLine.Add(new ColoredText(wordText, wordObj.Color));
+                currentLineWidth += wordWidth;
             }
 
             _isWaitingForInput = true;
@@ -186,13 +238,11 @@ namespace ProjectVagabond.Battle.UI
 
             if (_isWaitingForInput)
             {
-                // Only tick the timer if auto-progress is enabled
                 if (IsAutoProgressEnabled)
                 {
                     _timeoutTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
                 }
 
-                // Advance if input received OR (auto-progress is on AND timer expired)
                 if (advance || (IsAutoProgressEnabled && _timeoutTimer <= 0))
                 {
                     if (mouseJustReleased) UIInputManager.ConsumeMouseClick();
@@ -203,7 +253,6 @@ namespace ProjectVagabond.Battle.UI
             {
                 if (advance)
                 {
-                    // Finish the current segment instantly
                     FinishCurrentSegmentInstantly();
                     if (mouseJustReleased) UIInputManager.ConsumeMouseClick();
                 }
@@ -215,45 +264,59 @@ namespace ProjectVagabond.Battle.UI
                         _typewriterTimer = 0f;
                         if (_wordIndex < _words.Count)
                         {
-                            var word = _words[_wordIndex];
+                            var wordObj = _words[_wordIndex];
+                            string wordText = wordObj.Text;
 
                             // Handle Newline Token
-                            if (word == "\n")
+                            if (wordText == "\n")
                             {
-                                _displayLines.Add(new StringBuilder());
+                                _displayLines.Add(new List<ColoredText>());
                                 if (_displayLines.Count > _maxVisibleLines)
                                 {
                                     _displayLines.RemoveAt(0);
                                 }
                                 _wordIndex++;
                                 _charInWordIndex = 0;
-                                // Skip to next update cycle to process next word
                                 return;
                             }
 
-                            if (_charInWordIndex == 0) // Start of a new word, check for wrapping
+                            // Start of a new word: Check wrapping
+                            if (_charInWordIndex == 0)
                             {
                                 var currentLine = _displayLines.Last();
-                                var potentialText = (currentLine.Length > 0 ? currentLine.ToString() + " " : "") + word;
-                                if (_font.MeasureString(potentialText).Width > _wrapWidth)
+                                float currentLineWidth = 0f;
+                                foreach (var segment in currentLine) currentLineWidth += _font.MeasureString(segment.Text).Width;
+
+                                float spaceWidth = _font.MeasureString(" ").Width;
+                                float wordWidth = _font.MeasureString(wordText).Width;
+                                float potentialWidth = currentLineWidth + (currentLine.Count > 0 ? spaceWidth : 0) + wordWidth;
+
+                                if (potentialWidth > _wrapWidth)
                                 {
-                                    _displayLines.Add(new StringBuilder());
+                                    _displayLines.Add(new List<ColoredText>());
                                     if (_displayLines.Count > _maxVisibleLines)
                                     {
                                         _displayLines.RemoveAt(0);
                                     }
                                 }
+                                else if (currentLine.Count > 0)
+                                {
+                                    // Add space to the previous word in the line
+                                    currentLine.Last().Text += " ";
+                                }
+
+                                // Add the new word container to the line
+                                _displayLines.Last().Add(new ColoredText("", wordObj.Color));
                             }
 
+                            // Append character
                             var lineToAppendTo = _displayLines.Last();
-                            if (_charInWordIndex == 0 && lineToAppendTo.Length > 0)
-                            {
-                                lineToAppendTo.Append(" ");
-                            }
-                            lineToAppendTo.Append(word[_charInWordIndex]);
+                            var wordToAppendTo = lineToAppendTo.Last();
+                            wordToAppendTo.Text += wordText[_charInWordIndex];
+
                             _charInWordIndex++;
 
-                            if (_charInWordIndex >= word.Length)
+                            if (_charInWordIndex >= wordText.Length)
                             {
                                 _wordIndex++;
                                 _charInWordIndex = 0;
@@ -274,12 +337,9 @@ namespace ProjectVagabond.Battle.UI
 
         public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            // Changed from checking IsBusy to checking if there is content to draw.
-            // This allows the text to persist while the BattleManager transitions phases.
             if (_displayLines.Count == 0) return;
 
             const int padding = 5;
-            // Use the bounds directly for text positioning
             var panelBounds = new Rectangle(
                 _bounds.X + padding,
                 _bounds.Y + padding,
@@ -292,9 +352,15 @@ namespace ProjectVagabond.Battle.UI
             {
                 for (int i = 0; i < _displayLines.Count; i++)
                 {
-                    // Apply extra line spacing here
-                    var textPosition = new Vector2(panelBounds.X + padding, panelBounds.Y + padding - 2 + (i * (font.LineHeight + LINE_SPACING)));
-                    spriteBatch.DrawStringSnapped(font, _displayLines[i].ToString(), textPosition, _global.Palette_BrightWhite);
+                    var line = _displayLines[i];
+                    float currentX = panelBounds.X + padding;
+                    float currentY = panelBounds.Y + padding - 2 + (i * (font.LineHeight + LINE_SPACING));
+
+                    foreach (var segment in line)
+                    {
+                        spriteBatch.DrawStringSnapped(font, segment.Text, new Vector2(currentX, currentY), segment.Color);
+                        currentX += font.MeasureString(segment.Text).Width;
+                    }
                 }
             }
 
@@ -313,7 +379,6 @@ namespace ProjectVagabond.Battle.UI
                 float startX = panelBounds.Right - 3 - totalIndicatorWidth;
                 float yPos = panelBounds.Bottom - 10;
 
-                // Only draw the ellipsis countdown if auto-progress is enabled
                 if (IsAutoProgressEnabled)
                 {
                     string ellipsisToShow;
@@ -327,7 +392,6 @@ namespace ProjectVagabond.Battle.UI
                     spriteBatch.DrawStringSnapped(font, ellipsisToShow, ellipsisPosition, _global.Palette_Yellow);
                 }
 
-                // Always draw the arrow to indicate input is required/accepted
                 float yOffset = ((float)gameTime.TotalGameTime.TotalSeconds * 4 % 1.0f > 0.5f) ? -1f : 0f;
                 var indicatorPosition = new Vector2(startX + widestEllipsisSize.X + gapSize.X, yPos + yOffset);
                 spriteBatch.DrawStringSnapped(font, arrow, indicatorPosition, _global.Palette_Yellow);
@@ -335,4 +399,3 @@ namespace ProjectVagabond.Battle.UI
         }
     }
 }
-#nullable restore

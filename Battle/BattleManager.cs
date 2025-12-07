@@ -8,6 +8,7 @@ using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -349,7 +350,7 @@ namespace ProjectVagabond.Battle
 
             if (nextAction.Type == QueuedActionType.Charging)
             {
-                EventBus.Publish(new GameEvents.ActionFailed { Actor = nextAction.Actor, Reason = $"charging {nextAction.ChosenMove.MoveName}" });
+                EventBus.Publish(new GameEvents.ActionFailed { Actor = nextAction.Actor, Reason = $"charging [cAction]{nextAction.ChosenMove.MoveName}[/]" });
                 CanAdvance = false;
                 return;
             }
@@ -849,7 +850,7 @@ namespace ProjectVagabond.Battle
                         }
                         if (anyAffected)
                         {
-                            EventBus.Publish(new GameEvents.AbilityActivated { Combatant = combatant, Ability = relic, NarrationText = $"{combatant.Name}'s Intimidate lowered the opponents' {stat}!" });
+                            EventBus.Publish(new GameEvents.AbilityActivated { Combatant = combatant, Ability = relic, NarrationText = $"{combatant.Name}'s {relic.AbilityName} lowered the opponents' {stat}!" });
                         }
                     }
                 }
@@ -896,7 +897,8 @@ namespace ProjectVagabond.Battle
             if (move.Effects.TryGetValue("Charge", out var chargeValue) && EffectParser.TryParseInt(chargeValue, out int chargeTurns))
             {
                 action.Actor.ChargingAction = new DelayedAction { Action = action, TurnsRemaining = chargeTurns };
-                EventBus.Publish(new GameEvents.CombatantChargingAction { Actor = action.Actor, MoveName = move.MoveName });
+                string typeTag = move.MoveType == MoveType.Spell ? "cSpell" : "cAction";
+                EventBus.Publish(new GameEvents.CombatantChargingAction { Actor = action.Actor, MoveName = $"[{typeTag}]{move.MoveName}[/]" });
                 return true;
             }
 

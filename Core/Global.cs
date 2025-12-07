@@ -14,6 +14,7 @@ using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -73,6 +74,16 @@ namespace ProjectVagabond
             ItemOutlineColor_Idle_Corner = Palette_DarkGray;
             ItemOutlineColor_Hover_Corner = Palette_White;
             ItemOutlineColor_Selected_Corner = Palette_BrightWhite;
+
+            // Initialize Narration Colors
+            ColorNarration_Action = Palette_Orange;
+            ColorNarration_Spell = Palette_LightBlue;
+            ColorNarration_Item = Palette_Teal;
+            ColorNarration_Critical = Palette_Yellow;
+            ColorNarration_Defeated = Palette_Red;
+            ColorNarration_Escaped = Palette_LightBlue;
+            ColorNarration_Enemy = Palette_Red;
+            ColorNarration_Status = Palette_LightPurple;
 
             // Initialize Color Mappings
             ElementColors = new Dictionary<int, Color>
@@ -271,6 +282,16 @@ namespace ProjectVagabond
         public Color ItemOutlineColor_Idle_Corner { get; private set; }
         public Color ItemOutlineColor_Hover_Corner { get; private set; }
         public Color ItemOutlineColor_Selected_Corner { get; private set; }
+
+        // Narration Colors
+        public Color ColorNarration_Action { get; private set; }
+        public Color ColorNarration_Spell { get; private set; }
+        public Color ColorNarration_Item { get; private set; }
+        public Color ColorNarration_Critical { get; private set; }
+        public Color ColorNarration_Defeated { get; private set; }
+        public Color ColorNarration_Escaped { get; private set; }
+        public Color ColorNarration_Enemy { get; private set; }
+        public Color ColorNarration_Status { get; private set; }
 
         // Data-driven Colors
         public Dictionary<int, Color> ElementColors { get; private set; }
@@ -625,5 +646,20 @@ namespace ProjectVagabond
         /// </summary>
         public float DiceDebugAxisLineSize { get; set; } = 0.5f;
 
+        public Color GetNarrationColor(string tag)
+        {
+            switch (tag.ToLowerInvariant())
+            {
+                case "caction": return ColorNarration_Action;
+                case "cspell": return ColorNarration_Spell;
+                case "citem": return ColorNarration_Item;
+                case "ccrit": return ColorNarration_Critical;
+                case "cdefeat": return ColorNarration_Defeated;
+                case "cescape": return ColorNarration_Escaped;
+                case "cenemy": return ColorNarration_Enemy;
+                case "cstatus": return ColorNarration_Status;
+                default: return Palette_BrightWhite;
+            }
+        }
     }
 }
