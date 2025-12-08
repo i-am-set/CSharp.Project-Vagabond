@@ -107,6 +107,7 @@ namespace ProjectVagabond.Battle.UI
             Vector2 shakeOffset = hitFlashState?.ShakeOffset ?? Vector2.Zero;
             bool isFlashingWhite = hitFlashState != null && hitFlashState.IsCurrentlyWhite;
 
+            // Calculate top-left position based on center position
             var topLeftPosition = new Point(
                 (int)MathF.Round(_position.X - _origin.X + shakeOffset.X),
                 (int)MathF.Round(_position.Y - _origin.Y + shakeOffset.Y)
@@ -163,12 +164,12 @@ namespace ProjectVagabond.Battle.UI
 
                         // Removed rotation and scale noise as requested
                         float rotation = 0f;
-                        float scale = 1.0f;
+                        float indicatorScale = 1.0f;
 
                         Vector2 animatedPos = targetCenter + new Vector2(swayX, swayY) + shakeOffset;
                         Vector2 origin = new Vector2(indicator.Width / 2f, indicator.Height / 2f);
 
-                        spriteBatch.DrawSnapped(indicator, animatedPos, null, Color.White, rotation, origin, scale, SpriteEffects.None, 0f);
+                        spriteBatch.DrawSnapped(indicator, animatedPos, null, Color.White, rotation, origin, indicatorScale, SpriteEffects.None, 0f);
                     }
                 }
                 return;

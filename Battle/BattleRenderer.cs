@@ -52,8 +52,8 @@ namespace ProjectVagabond.Battle.UI
         // Attacker Animation
         private readonly Dictionary<string, float> _attackAnimTimers = new();
         private string? _lastAttackerId;
-        private const float ATTACK_BOB_DURATION = 0.25f;
-        private const float ATTACK_BOB_AMOUNT = 12f;
+        private const float ATTACK_BOB_DURATION = 0.35f; // Slightly increased to make the bounce readable
+        private const float ATTACK_BOB_AMOUNT = 6f; // Reduced for a "short" jump
 
         // Layout Constants
         private const int DIVIDER_Y = 123;
@@ -1393,14 +1393,20 @@ namespace ProjectVagabond.Battle.UI
             if (_attackAnimTimers.TryGetValue(combatantId, out float animTimer))
             {
                 float progress = Math.Clamp(animTimer / ATTACK_BOB_DURATION, 0f, 1f);
-                float bobValue;
+                float bobValue = 0f;
 
-                // Jump Phase (0 -> 1)
-                if (progress < 0.5f)
-                    bobValue = Easing.EaseInCubic(progress * 2f);
-                // Return Phase (1 -> 0)
+                // Phase 1: Main Jump (0% to 60% of duration)
+                if (progress < 0.6f)
+                {
+                    float p = progress / 0.6f;
+                    bobValue = MathF.Sin(p * MathHelper.Pi);
+                }
+                // Phase 2: The Bounce (60% to 100% of duration)
                 else
-                    bobValue = 1.0f - Easing.EaseOutCubic((progress - 0.5f) * 2f);
+                {
+                    float p = (progress - 0.6f) / 0.4f;
+                    bobValue = MathF.Sin(p * MathHelper.Pi) * 0.3f; // 30% height bounce
+                }
 
                 // Player: Up (-), Enemy: Down (+)
                 float direction = isPlayer ? -1f : 1f;
