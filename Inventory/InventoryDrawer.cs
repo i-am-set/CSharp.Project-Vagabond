@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -641,10 +640,17 @@ namespace ProjectVagabond.UI
             string targetVal = move.Target switch
             {
                 TargetType.Single => "SINGL",
+                TargetType.SingleAll => "ANY",
+                TargetType.Both => "BOTH",
                 TargetType.Every => "EVERY",
-                TargetType.SingleAll => "S ALL",
-                TargetType.EveryAll => "E ALL",
+                TargetType.All => "ALL",
                 TargetType.Self => "SELF",
+                TargetType.Team => "TEAM",
+                TargetType.Ally => "ALLY",
+                TargetType.SingleTeam => "S-TEAM",
+                TargetType.RandomBoth => "R-BOTH",
+                TargetType.RandomEvery => "R-EVRY",
+                TargetType.RandomAll => "R-ALL",
                 TargetType.None => "NONE",
                 _ => "---"
             };

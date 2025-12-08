@@ -8,7 +8,9 @@ using ProjectVagabond.Battle.UI;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
@@ -137,9 +139,9 @@ namespace ProjectVagabond.Battle.UI
             switch (item.Target)
             {
                 case TargetType.Single:
-                case TargetType.SingleAll:
+                case TargetType.SingleTeam:
                 case TargetType.Every:
-                case TargetType.EveryAll:
+                case TargetType.All:
                     // Always request targeting for these types
                     OnItemTargetingRequested?.Invoke(item);
                     break;

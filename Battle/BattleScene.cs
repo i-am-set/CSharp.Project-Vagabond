@@ -20,7 +20,6 @@ namespace ProjectVagabond.Scenes
     {
         // --- Tuning ---
         private const float MULTI_HIT_DELAY = 0.25f;
-
         // Core Battle Logic
         private BattleManager _battleManager;
 
@@ -391,7 +390,7 @@ namespace ProjectVagabond.Scenes
             // --- 1. Update Sub-Systems ---
             _animationManager.Update(gameTime, _battleManager.AllCombatants);
             _moveAnimationManager.Update(gameTime);
-            _uiManager.Update(gameTime, currentMouseState, currentKeyboardState);
+            _uiManager.Update(gameTime, currentMouseState, currentKeyboardState, _battleManager.CurrentActingCombatant);
             _inputHandler.Update(gameTime, _uiManager, _renderer);
             _renderer.Update(gameTime, _battleManager.AllCombatants);
             _alertManager.Update(gameTime);
@@ -655,7 +654,16 @@ namespace ProjectVagabond.Scenes
             Vector2 roundTextPosition = new Vector2(5, 5);
             spriteBatch.DrawStringSnapped(font, roundText, roundTextPosition, ServiceLocator.Get<Global>().Palette_DarkGray);
 
-            _renderer.Draw(spriteBatch, font, gameTime, _battleManager.AllCombatants, _currentActor, _uiManager, _inputHandler, _animationManager, _uiManager.SharedPulseTimer);
+            // Determine correct actor for rendering context (e.g. for targeting validity checks)
+            BattleCombatant renderContextActor = _currentActor;
+            if (_battleManager != null &&
+               (_battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection_Slot1 ||
+                _battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection_Slot2))
+            {
+                renderContextActor = _battleManager.CurrentActingCombatant;
+            }
+
+            _renderer.Draw(spriteBatch, font, gameTime, _battleManager.AllCombatants, renderContextActor, _uiManager, _inputHandler, _animationManager, _uiManager.SharedPulseTimer);
             _moveAnimationManager.Draw(spriteBatch);
             _uiManager.Draw(spriteBatch, font, gameTime, transform);
             _animationManager.DrawDamageIndicators(spriteBatch, secondaryFont);
@@ -725,7 +733,7 @@ namespace ProjectVagabond.Scenes
                 switch (item.Target)
                 {
                     case TargetType.Self:
-                    case TargetType.SingleAll: target = player; break;
+                    case TargetType.SingleTeam: target = player; break;
                     case TargetType.Single: if (enemies.Any()) target = enemies.First(); break;
                 }
             }

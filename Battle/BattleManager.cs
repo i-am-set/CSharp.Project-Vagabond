@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.Battle
 {
@@ -630,43 +631,104 @@ namespace ProjectVagabond.Battle
             var actor = action.Actor;
             var specifiedTarget = action.Target;
 
-            // Only target active combatants
+            // Identify Teams
             var activeEnemies = _enemyParty.Where(c => c.IsActiveOnField && !c.IsDefeated).ToList();
             var activePlayers = _playerParty.Where(c => c.IsActiveOnField && !c.IsDefeated).ToList();
             var allActive = _allCombatants.Where(c => c.IsActiveOnField && !c.IsDefeated).ToList();
 
-            if (isMultiHit && (targetType == TargetType.Every || targetType == TargetType.EveryAll))
+            // Determine "Opponents" and "Allies" relative to the actor
+            var opponents = actor.IsPlayerControlled ? activeEnemies : activePlayers;
+            var allies = actor.IsPlayerControlled ? activePlayers : activeEnemies;
+            var ally = allies.FirstOrDefault(c => c != actor); // The OTHER active team member
+
+            // --- RANDOM TARGET LOGIC (For Multi-Hit or Random Moves) ---
+            if (isMultiHit || targetType == TargetType.RandomBoth || targetType == TargetType.RandomEvery || targetType == TargetType.RandomAll)
             {
-                var possibleTargets = (targetType == TargetType.Every)
-                    ? (actor.IsPlayerControlled ? activeEnemies : activePlayers)
-                    : allActive;
-                if (possibleTargets.Any())
+                List<BattleCombatant> pool = new List<BattleCombatant>();
+
+                if (targetType == TargetType.RandomBoth || (isMultiHit && targetType == TargetType.Both))
                 {
-                    return new List<BattleCombatant> { possibleTargets[_random.Next(possibleTargets.Count)] };
+                    pool.AddRange(opponents);
+                }
+                else if (targetType == TargetType.RandomEvery || (isMultiHit && targetType == TargetType.Every))
+                {
+                    pool.AddRange(opponents);
+                    if (ally != null) pool.Add(ally);
+                }
+                else if (targetType == TargetType.RandomAll || (isMultiHit && targetType == TargetType.All))
+                {
+                    pool.AddRange(allActive);
+                }
+                // Fallback for standard multi-hit on single target moves
+                else if (isMultiHit && (targetType == TargetType.Single || targetType == TargetType.SingleTeam || targetType == TargetType.SingleAll))
+                {
+                    if (specifiedTarget != null && specifiedTarget.IsActiveOnField && !specifiedTarget.IsDefeated)
+                        return new List<BattleCombatant> { specifiedTarget };
+                    // If target dead, pick random opponent
+                    if (opponents.Any()) return new List<BattleCombatant> { opponents[_random.Next(opponents.Count)] };
+                    return new List<BattleCombatant>();
+                }
+
+                if (pool.Any())
+                {
+                    return new List<BattleCombatant> { pool[_random.Next(pool.Count)] };
                 }
                 return new List<BattleCombatant>();
             }
 
+            // --- STANDARD TARGET LOGIC ---
             switch (targetType)
             {
                 case TargetType.Single:
-                    // If specified target is dead or swapped out, redirect to random valid target
-                    if (specifiedTarget != null && specifiedTarget.IsActiveOnField && !specifiedTarget.IsDefeated)
+                    // Target ANYONE except SELF.
+                    // If specified target is valid, use it.
+                    if (specifiedTarget != null && specifiedTarget.IsActiveOnField && !specifiedTarget.IsDefeated && specifiedTarget != actor)
                         return new List<BattleCombatant> { specifiedTarget };
 
-                    var validFoes = actor.IsPlayerControlled ? activeEnemies : activePlayers;
-                    return validFoes.Any() ? new List<BattleCombatant> { validFoes[0] } : new List<BattleCombatant>();
+                    // Fallback: Default to first opponent
+                    if (opponents.Any()) return new List<BattleCombatant> { opponents[0] };
+                    return new List<BattleCombatant>();
+
+                case TargetType.SingleAll:
+                    // Target ANYONE including SELF.
+                    if (specifiedTarget != null && specifiedTarget.IsActiveOnField && !specifiedTarget.IsDefeated)
+                        return new List<BattleCombatant> { specifiedTarget };
+                    // Fallback: Self
+                    return new List<BattleCombatant> { actor };
+
+                case TargetType.Both:
+                    // Both Enemies
+                    return opponents;
 
                 case TargetType.Every:
-                    return actor.IsPlayerControlled ? activeEnemies : activePlayers;
-                case TargetType.SingleAll:
+                    // Both Enemies + Ally
+                    var everyTargets = new List<BattleCombatant>(opponents);
+                    if (ally != null) everyTargets.Add(ally);
+                    return everyTargets;
+
+                case TargetType.All:
+                    // Everyone
+                    return allActive;
+
+                case TargetType.Self:
+                    return new List<BattleCombatant> { actor };
+
+                case TargetType.Team:
+                    // Self + Ally
+                    var teamTargets = new List<BattleCombatant> { actor };
+                    if (ally != null) teamTargets.Add(ally);
+                    return teamTargets;
+
+                case TargetType.Ally:
+                    // Only Ally
+                    return ally != null ? new List<BattleCombatant> { ally } : new List<BattleCombatant>();
+
+                case TargetType.SingleTeam:
+                    // Specific target (Self or Ally)
                     if (specifiedTarget != null && specifiedTarget.IsActiveOnField && !specifiedTarget.IsDefeated)
                         return new List<BattleCombatant> { specifiedTarget };
                     return new List<BattleCombatant>();
-                case TargetType.EveryAll:
-                    return allActive;
-                case TargetType.Self:
-                    return new List<BattleCombatant> { actor };
+
                 case TargetType.None:
                 default:
                     return new List<BattleCombatant>();

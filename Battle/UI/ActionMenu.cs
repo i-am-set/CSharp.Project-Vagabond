@@ -370,9 +370,15 @@ namespace ProjectVagabond.Battle.UI
                     break;
 
                 case TargetType.Single:
-                case TargetType.SingleAll:
+                case TargetType.SingleTeam:
                 case TargetType.Every:
-                case TargetType.EveryAll:
+                case TargetType.All:
+                case TargetType.Both:
+                case TargetType.Team:
+                case TargetType.Ally:
+                case TargetType.RandomBoth:
+                case TargetType.RandomEvery:
+                case TargetType.RandomAll:
                     // Always go to targeting menu to confirm target(s)
                     SetState(MenuState.Targeting);
                     break;
@@ -1317,10 +1323,16 @@ namespace ProjectVagabond.Battle.UI
                     targetValue = move.Target switch
                     {
                         TargetType.Single => "SINGLE",
+                        TargetType.Both => "BOTH",
                         TargetType.Every => "MULTI",
-                        TargetType.SingleAll => "ANY",
-                        TargetType.EveryAll => "ALL",
+                        TargetType.All => "ALL",
                         TargetType.Self => "SELF",
+                        TargetType.Team => "TEAM",
+                        TargetType.Ally => "ALLY",
+                        TargetType.SingleTeam => "S-TEAM",
+                        TargetType.RandomBoth => "R-BOTH",
+                        TargetType.RandomEvery => "R-EVRY",
+                        TargetType.RandomAll => "R-ALL",
                         TargetType.None => "NONE",
                         _ => ""
                     };

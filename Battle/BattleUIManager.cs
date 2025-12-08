@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
@@ -11,6 +12,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.Battle.UI
 {
@@ -184,11 +186,11 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        public void Update(GameTime gameTime, MouseState currentMouseState, KeyboardState currentKeyboardState)
+        public void Update(GameTime gameTime, MouseState currentMouseState, KeyboardState currentKeyboardState, BattleCombatant currentActor)
         {
             SharedPulseTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
             _battleNarrator.Update(gameTime);
-            UpdateHoverHighlights(gameTime);
+            UpdateHoverHighlights(gameTime, currentActor);
             UpdateControlPrompt(gameTime);
 
             _actionMenu.Update(currentMouseState, gameTime);
@@ -468,7 +470,7 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private void UpdateHoverHighlights(GameTime gameTime)
+        private void UpdateHoverHighlights(GameTime gameTime, BattleCombatant currentActor)
         {
             HoverHighlightState.Timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
@@ -478,21 +480,60 @@ namespace ProjectVagabond.Battle.UI
             if (hoveredMove != HoverHighlightState.CurrentMove)
             {
                 HoverHighlightState.CurrentMove = hoveredMove;
+                HoverHighlightState.Timer = 0f; // Reset timer on move change
                 HoverHighlightState.Targets.Clear();
 
-                if (hoveredMove != null)
+                if (hoveredMove != null && currentActor != null)
                 {
-                    var player = allCombatants.First(c => c.IsPlayerControlled);
-                    var enemies = allCombatants.Where(c => !c.IsPlayerControlled && !c.IsDefeated).ToList();
-                    var all = allCombatants.Where(c => !c.IsDefeated).ToList();
+                    var enemies = allCombatants.Where(c => !c.IsPlayerControlled && !c.IsDefeated && c.IsActiveOnField).ToList();
+                    var allActive = allCombatants.Where(c => !c.IsDefeated && c.IsActiveOnField).ToList();
+                    var allies = allCombatants.Where(c => c.IsPlayerControlled && !c.IsDefeated && c.IsActiveOnField).ToList();
+                    var ally = allies.FirstOrDefault(c => c != currentActor);
 
                     switch (hoveredMove.Target)
                     {
-                        case TargetType.Single: HoverHighlightState.Targets.AddRange(enemies); break;
-                        case TargetType.Every: HoverHighlightState.Targets.AddRange(enemies); break;
-                        case TargetType.Self: HoverHighlightState.Targets.Add(player); break;
-                        case TargetType.SingleAll: HoverHighlightState.Targets.AddRange(all); break;
-                        case TargetType.EveryAll: HoverHighlightState.Targets.AddRange(all); break;
+                        case TargetType.Single:
+                            HoverHighlightState.Targets.AddRange(enemies);
+                            if (ally != null) HoverHighlightState.Targets.Add(ally);
+                            break;
+                        case TargetType.Both:
+                            HoverHighlightState.Targets.AddRange(enemies);
+                            break;
+                        case TargetType.Every:
+                            HoverHighlightState.Targets.AddRange(enemies);
+                            if (ally != null) HoverHighlightState.Targets.Add(ally);
+                            break;
+                        case TargetType.All:
+                            HoverHighlightState.Targets.AddRange(allActive);
+                            break;
+                        case TargetType.Self:
+                            HoverHighlightState.Targets.Add(currentActor);
+                            break;
+                        case TargetType.Team:
+                            HoverHighlightState.Targets.Add(currentActor);
+                            if (ally != null) HoverHighlightState.Targets.Add(ally);
+                            break;
+                        case TargetType.Ally:
+                            if (ally != null) HoverHighlightState.Targets.Add(ally);
+                            break;
+                        case TargetType.SingleTeam:
+                            // Default to self for preview
+                            HoverHighlightState.Targets.Add(currentActor);
+                            break;
+                        case TargetType.SingleAll:
+                            // Default to first enemy for preview
+                            if (enemies.Any()) HoverHighlightState.Targets.Add(enemies[0]);
+                            break;
+                        case TargetType.RandomBoth:
+                            HoverHighlightState.Targets.AddRange(enemies);
+                            break;
+                        case TargetType.RandomEvery:
+                            HoverHighlightState.Targets.AddRange(enemies);
+                            if (ally != null) HoverHighlightState.Targets.Add(ally);
+                            break;
+                        case TargetType.RandomAll:
+                            HoverHighlightState.Targets.AddRange(allActive);
+                            break;
                     }
                 }
             }

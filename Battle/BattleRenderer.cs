@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
@@ -12,6 +13,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.Battle.UI
 {
@@ -69,9 +71,6 @@ namespace ProjectVagabond.Battle.UI
         // Noise generator for organic sway
         private static readonly SeededPerlin _swayNoise = new SeededPerlin(9999);
 
-        // Targeting Cycle State
-        private float _targetingTimer = 0f;
-
         public BattleRenderer()
         {
             _spriteManager = ServiceLocator.Get<SpriteManager>();
@@ -93,7 +92,6 @@ namespace ProjectVagabond.Battle.UI
             _combatantVisualCenters.Clear();
             _playerSprites.Clear();
             _lastAttackerId = null;
-            _targetingTimer = 0f;
         }
 
         public List<TargetInfo> GetCurrentTargets() => _currentTargets;
@@ -205,22 +203,56 @@ namespace ProjectVagabond.Battle.UI
 
             TargetType? activeTargetType = null;
 
-            if (isTargetingPhase)
+            if (isTargetingPhase && currentActor != null)
             {
                 activeTargetType = uiManager.TargetTypeForSelection;
                 if (activeTargetType.HasValue)
                 {
-                    // Updated to include Every/EveryAll
-                    if (activeTargetType == TargetType.Single || activeTargetType == TargetType.SingleAll ||
-                        activeTargetType == TargetType.Every || activeTargetType == TargetType.EveryAll)
+                    // Determine valid targets based on the specific TargetType
+                    foreach (var c in allCombatants)
                     {
-                        foreach (var c in allCombatants)
+                        if (!c.IsDefeated && c.IsActiveOnField)
                         {
-                            if (!c.IsDefeated && c.IsActiveOnField)
+                            bool isValid = false;
+                            bool isOpponent = c.IsPlayerControlled != currentActor.IsPlayerControlled;
+                            bool isAlly = c.IsPlayerControlled == currentActor.IsPlayerControlled && c != currentActor;
+                            bool isUser = c == currentActor;
+
+                            switch (activeTargetType)
                             {
-                                if ((activeTargetType == TargetType.Single || activeTargetType == TargetType.Every) && !c.IsPlayerControlled) selectableTargets.Add(c);
-                                else if (activeTargetType == TargetType.SingleAll || activeTargetType == TargetType.EveryAll) selectableTargets.Add(c);
+                                case TargetType.Single:
+                                    if (!isUser) isValid = true;
+                                    break;
+                                case TargetType.SingleTeam:
+                                    if (!isOpponent) isValid = true; // User or Ally
+                                    break;
+                                case TargetType.SingleAll:
+                                    isValid = true;
+                                    break;
+                                case TargetType.Self:
+                                    if (isUser) isValid = true;
+                                    break;
+                                case TargetType.Ally:
+                                    if (isAlly) isValid = true;
+                                    break;
+                                case TargetType.Both:
+                                case TargetType.RandomBoth:
+                                    if (isOpponent) isValid = true;
+                                    break;
+                                case TargetType.Every:
+                                case TargetType.RandomEvery:
+                                    if (isOpponent || isAlly) isValid = true;
+                                    break;
+                                case TargetType.Team:
+                                    if (!isOpponent) isValid = true;
+                                    break;
+                                case TargetType.All:
+                                case TargetType.RandomAll:
+                                    isValid = true;
+                                    break;
                             }
+
+                            if (isValid) selectableTargets.Add(c);
                         }
                     }
                 }
@@ -246,7 +278,7 @@ namespace ProjectVagabond.Battle.UI
                 // 2. If hovering a valid target, turn it (or all if multi) Yellow (Active)
                 if (hoveredCombatant != null && selectableTargets.Contains(hoveredCombatant))
                 {
-                    bool isMultiTarget = activeTargetType == TargetType.Every || activeTargetType == TargetType.EveryAll;
+                    bool isMultiTarget = activeTargetType == TargetType.Every || activeTargetType == TargetType.Both || activeTargetType == TargetType.All || activeTargetType == TargetType.Team || activeTargetType == TargetType.RandomAll || activeTargetType == TargetType.RandomBoth || activeTargetType == TargetType.RandomEvery;
                     if (isMultiTarget)
                     {
                         foreach (var target in selectableTargets) silhouetteColors[target.CombatantID] = Color.Yellow;
@@ -256,13 +288,12 @@ namespace ProjectVagabond.Battle.UI
                         silhouetteColors[hoveredCombatant.CombatantID] = Color.Yellow;
                     }
                 }
-
-                _targetingTimer = 0f; // Reset timer so preview cycle restarts cleanly if we exit targeting
             }
             else if (selectableTargets.Any() && activeTargetType.HasValue)
             {
                 // --- MOVE PREVIEW LOGIC (Cycling/Blinking) ---
-                _targetingTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                // Use the shared timer from BattleUIManager to ensure reset on move change
+                float targetingTimer = uiManager.HoverHighlightState.Timer;
 
                 // Sort targets for stable cycling order
                 var sortedTargets = allCombatants
@@ -271,7 +302,7 @@ namespace ProjectVagabond.Battle.UI
                     .ThenBy(c => c.BattleSlot) // Then by slot
                     .ToList();
 
-                bool isMultiTarget = activeTargetType == TargetType.Every || activeTargetType == TargetType.EveryAll;
+                bool isMultiTarget = activeTargetType == TargetType.Every || activeTargetType == TargetType.Both || activeTargetType == TargetType.All || activeTargetType == TargetType.Team || activeTargetType == TargetType.RandomAll || activeTargetType == TargetType.RandomBoth || activeTargetType == TargetType.RandomEvery;
 
                 if (isMultiTarget)
                 {
@@ -284,7 +315,7 @@ namespace ProjectVagabond.Battle.UI
                     {
                         // Blink all in sync
                         // Flash Yellow (Active) then Red (Idle)
-                        bool isFlash = (_targetingTimer % _global.TargetingMultiBlinkSpeed) < (_global.TargetingMultiBlinkSpeed / 2f);
+                        bool isFlash = (targetingTimer % _global.TargetingMultiBlinkSpeed) < (_global.TargetingMultiBlinkSpeed / 2f);
                         Color color = isFlash ? Color.Yellow : _global.Palette_Red;
                         foreach (var target in sortedTargets)
                         {
@@ -292,7 +323,7 @@ namespace ProjectVagabond.Battle.UI
                         }
                     }
                 }
-                else // Single Target (Single or SingleAll)
+                else // Single Target (Single or SingleTeam or Self or Ally or SingleAll)
                 {
                     // Cycle through targets one by one
                     int count = sortedTargets.Count;
@@ -300,7 +331,7 @@ namespace ProjectVagabond.Battle.UI
                     {
                         // Wrap the timer to prevent overflow and ensure clean cycling
                         float cycleDuration = count * _global.TargetingSingleCycleSpeed;
-                        float currentCycleTime = _targetingTimer % cycleDuration;
+                        float currentCycleTime = targetingTimer % cycleDuration;
 
                         int activeIndex = (int)(currentCycleTime / _global.TargetingSingleCycleSpeed);
                         // Clamp just in case of float imprecision at the very end of the cycle
@@ -313,10 +344,6 @@ namespace ProjectVagabond.Battle.UI
                         }
                     }
                 }
-            }
-            else
-            {
-                _targetingTimer = 0f;
             }
 
 
@@ -333,7 +360,7 @@ namespace ProjectVagabond.Battle.UI
             DrawUITitle(spriteBatch, secondaryFont, gameTime, uiManager.SubMenuState);
 
             // --- Draw Highlights & Indicators ---
-            DrawHoverHighlights(spriteBatch, font, secondaryFont, allCombatants, uiManager.HoverHighlightState, uiManager.SharedPulseTimer);
+            DrawHoverHighlights(spriteBatch, font, secondaryFont, allCombatants, uiManager.HoverHighlightState, uiManager.SharedPulseTimer, silhouetteColors);
             DrawTurnIndicator(spriteBatch, font, gameTime, currentActor, allCombatants);
             DrawTargetingUI(spriteBatch, font, gameTime, uiManager, inputHandler);
 
@@ -633,7 +660,7 @@ namespace ProjectVagabond.Battle.UI
 
                 // --- NEW LOGIC FOR MULTI-TARGET HIGHLIGHTING ---
                 var targetType = uiManager.TargetTypeForSelection;
-                bool isMultiTarget = targetType == TargetType.Every || targetType == TargetType.EveryAll;
+                bool isMultiTarget = targetType == TargetType.Every || targetType == TargetType.Both || targetType == TargetType.All || targetType == TargetType.Team || targetType == TargetType.RandomAll || targetType == TargetType.RandomBoth || targetType == TargetType.RandomEvery;
                 bool isAnyHovered = inputHandler.HoveredTargetIndex != -1;
 
                 for (int i = 0; i < _currentTargets.Count; i++)
@@ -673,7 +700,7 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private void DrawHoverHighlights(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, IEnumerable<BattleCombatant> allCombatants, HoverHighlightState hoverHighlightState, float sharedBobbingTimer)
+        private void DrawHoverHighlights(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, IEnumerable<BattleCombatant> allCombatants, HoverHighlightState hoverHighlightState, float sharedBobbingTimer, Dictionary<string, Color> silhouetteColors)
         {
             if (hoverHighlightState.CurrentMove == null || !hoverHighlightState.Targets.Any()) return;
 
@@ -684,9 +711,10 @@ namespace ProjectVagabond.Battle.UI
             var state = hoverHighlightState;
             var targets = state.Targets;
 
+            // Default flash color for multi-target moves
             float cycleDuration = HoverHighlightState.MultiTargetFlashOnDuration + HoverHighlightState.MultiTargetFlashOffDuration;
             bool areAllFlashing = (state.Timer % cycleDuration) < HoverHighlightState.MultiTargetFlashOnDuration;
-            Color flashColor = areAllFlashing ? _global.Palette_Red : Color.White;
+            Color multiFlashColor = areAllFlashing ? _global.Palette_Red : Color.White;
 
             switch (move.Target)
             {
@@ -704,26 +732,48 @@ namespace ProjectVagabond.Battle.UI
                         if (_combatantVisualCenters.TryGetValue(player.CombatantID, out var center))
                         {
                             var arrowPos = new Vector2(center.X - 24 + swayOffset, center.Y - arrowRect.Height / 2);
-                            spriteBatch.DrawSnapped(arrowSheet, arrowPos, arrowRect, flashColor);
+                            spriteBatch.DrawSnapped(arrowSheet, arrowPos, arrowRect, multiFlashColor);
                         }
                     }
                     break;
 
                 case TargetType.Single:
+                case TargetType.SingleTeam:
                 case TargetType.SingleAll:
+                    // For single target cycling, only draw the arrow if the target is currently active (Yellow)
+                    foreach (var target in targets)
+                    {
+                        if (silhouetteColors.TryGetValue(target.CombatantID, out var color) && color == Color.Yellow)
+                        {
+                            Rectangle sourceRect = target.IsPlayerControlled ? arrowRects[2] : arrowRects[6]; // Up for player, Down for enemy
+
+                            // Calculate independent bobbing
+                            float phaseOffset = ((Math.Abs(target.CombatantID.GetHashCode()) * 12345) % 100) * 0.13f;
+                            float uniqueBobOffset = (MathF.Sin((sharedBobbingTimer + phaseOffset) * 4f) > 0) ? -1f : 0f;
+
+                            // Draw with White color to indicate active selection
+                            DrawTargetIndicator(spriteBatch, font, secondaryFont, allCombatants, target, sourceRect, Color.White, uniqueBobOffset);
+                        }
+                    }
+                    break;
+
                 case TargetType.Every:
-                case TargetType.EveryAll:
+                case TargetType.Both:
+                case TargetType.All:
+                case TargetType.Team:
+                case TargetType.Ally:
+                case TargetType.RandomBoth:
+                case TargetType.RandomEvery:
+                case TargetType.RandomAll:
+                    // For multi-target, draw arrows for everyone with the shared flash color
                     foreach (var target in targets)
                     {
                         Rectangle sourceRect = target.IsPlayerControlled ? arrowRects[2] : arrowRects[6]; // Up for player, Down for enemy
 
-                        // Calculate independent bobbing
-                        // Use hash code to offset the sine wave phase
-                        // FIX: Scramble the seed to ensure different targets have independent movement
                         float phaseOffset = ((Math.Abs(target.CombatantID.GetHashCode()) * 12345) % 100) * 0.13f;
                         float uniqueBobOffset = (MathF.Sin((sharedBobbingTimer + phaseOffset) * 4f) > 0) ? -1f : 0f;
 
-                        DrawTargetIndicator(spriteBatch, font, secondaryFont, allCombatants, target, sourceRect, flashColor, uniqueBobOffset);
+                        DrawTargetIndicator(spriteBatch, font, secondaryFont, allCombatants, target, sourceRect, multiFlashColor, uniqueBobOffset);
                     }
                     break;
             }
