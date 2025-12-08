@@ -358,8 +358,31 @@ namespace ProjectVagabond.Battle.UI
             DrawUITitle(spriteBatch, secondaryFont, gameTime, uiManager.SubMenuState);
 
             // --- Draw Highlights & Indicators ---
-            // Removed DrawHoverHighlights call to remove targeting arrows
-            DrawTurnIndicator(spriteBatch, font, gameTime, currentActor, allCombatants);
+            // 1. Draw Turn Indicator (Current Actor)
+            if (currentActor != null && !currentActor.IsDefeated)
+            {
+                DrawIndicatorArrow(spriteBatch, gameTime, currentActor);
+            }
+
+            // 2. Draw Targeting Indicators (Highlighted Targets)
+            foreach (var kvp in silhouetteColors)
+            {
+                if (kvp.Value == Color.Yellow) // Yellow indicates active targeting highlight
+                {
+                    var combatant = allCombatants.FirstOrDefault(c => c.CombatantID == kvp.Key);
+                    if (combatant != null && !combatant.IsDefeated)
+                    {
+                        // Only draw if it's NOT the current actor (to avoid double arrows)
+                        // Or if you want double arrows (one for turn, one for target), remove this check.
+                        // Usually, if you target yourself, you want to see the target arrow.
+                        if (combatant != currentActor)
+                        {
+                            DrawIndicatorArrow(spriteBatch, gameTime, combatant);
+                        }
+                    }
+                }
+            }
+
             DrawTargetingUI(spriteBatch, font, gameTime, uiManager, inputHandler);
 
             // --- Draw Divider ---
@@ -732,16 +755,14 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private void DrawTurnIndicator(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, BattleCombatant currentActor, IEnumerable<BattleCombatant> allCombatants)
+        private void DrawIndicatorArrow(SpriteBatch spriteBatch, GameTime gameTime, BattleCombatant combatant)
         {
-            if (currentActor == null || currentActor.IsDefeated) return;
-
             var arrowSheet = _spriteManager.ArrowIconSpriteSheet;
             var arrowRects = _spriteManager.ArrowIconSourceRects;
             if (arrowSheet == null || arrowRects == null) return;
 
             Vector2 targetPos;
-            if (_combatantVisualCenters.TryGetValue(currentActor.CombatantID, out var center))
+            if (_combatantVisualCenters.TryGetValue(combatant.CombatantID, out var center))
             {
                 targetPos = center;
             }
@@ -754,23 +775,22 @@ namespace ProjectVagabond.Battle.UI
             var arrowRect = arrowRects[6];
 
             // Calculate Attack Bob (Jump with sprite)
-            float attackBobOffset = CalculateAttackBobOffset(currentActor.CombatantID, currentActor.IsPlayerControlled);
+            float attackBobOffset = CalculateAttackBobOffset(combatant.CombatantID, combatant.IsPlayerControlled);
 
-            // NEW: Idle Bob (Up 1 pixel then down)
-            // Using same frequency (4f) as DrawHoverHighlights for consistency
+            // Idle Bob (Up 1 pixel then down)
             float idleBob = (MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * 4f) > 0) ? -1f : 0f;
 
             float topY;
-            if (currentActor.IsPlayerControlled)
+            if (combatant.IsPlayerControlled)
             {
                 topY = targetPos.Y - 16;
             }
             else
             {
-                bool isMajor = _spriteManager.IsMajorEnemySprite(currentActor.ArchetypeId);
+                bool isMajor = _spriteManager.IsMajorEnemySprite(combatant.ArchetypeId);
                 int height = isMajor ? 96 : 64;
-                float rectTop = targetPos.Y - (height / 2f);
-                topY = GetEnemySpriteStaticTopY(currentActor, rectTop);
+                float rectTop = targetPos.Y - (height / 2f) - 4;
+                topY = GetEnemySpriteStaticTopY(combatant, rectTop);
             }
 
             var arrowPos = new Vector2(targetPos.X - arrowRect.Width / 2, topY - arrowRect.Height - 1 + attackBobOffset + idleBob);
