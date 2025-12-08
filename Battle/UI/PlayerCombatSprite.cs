@@ -93,6 +93,55 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
+        public Rectangle GetVisibleBounds(BattleAnimationManager animationManager, BattleCombatant combatant)
+        {
+            Initialize();
+            if (_texture == null) return Rectangle.Empty;
+
+            var spriteManager = ServiceLocator.Get<SpriteManager>();
+
+            // Get hit flash state for shake
+            var hitFlashState = animationManager.GetHitFlashState(combatant.CombatantID);
+            Vector2 shakeOffset = hitFlashState?.ShakeOffset ?? Vector2.Zero;
+
+            // Calculate top-left position (same as Draw)
+            var topLeftPosition = new Point(
+                (int)MathF.Round(_position.X - _origin.X + shakeOffset.X),
+                (int)MathF.Round(_position.Y - _origin.Y + shakeOffset.Y)
+            );
+
+            // Get pixel offsets for the current frame
+            var topOffsets = spriteManager.GetEnemySpriteTopPixelOffsets(_archetypeId);
+            var leftOffsets = spriteManager.GetEnemySpriteLeftPixelOffsets(_archetypeId);
+            var rightOffsets = spriteManager.GetEnemySpriteRightPixelOffsets(_archetypeId);
+            var bottomOffsets = spriteManager.GetEnemySpriteBottomPixelOffsets(_archetypeId);
+
+            if (topOffsets == null || _frameIndex >= topOffsets.Length)
+            {
+                // Fallback to full frame if data missing
+                var fallbackRect = new Rectangle(topLeftPosition.X, topLeftPosition.Y, _frameWidth, _frameHeight);
+                fallbackRect.Inflate(2, 2);
+                return fallbackRect;
+            }
+
+            int t = topOffsets[_frameIndex];
+            int l = leftOffsets[_frameIndex];
+            int r = rightOffsets[_frameIndex];
+            int b = bottomOffsets[_frameIndex];
+
+            if (t == int.MaxValue) return Rectangle.Empty; // Empty frame
+
+            // Calculate precise rect
+            int x = topLeftPosition.X + l;
+            int y = topLeftPosition.Y + t;
+            int w = (r - l) + 1;
+            int h = (b - t) + 1;
+
+            var rect = new Rectangle(x, y, w, h);
+            rect.Inflate(2, 2); // Add 2px padding on all sides
+            return rect;
+        }
+
         public void Draw(SpriteBatch spriteBatch, BattleAnimationManager animationManager, BattleCombatant combatant, Color? tintColorOverride = null, bool isHighlighted = false, float pulseAlpha = 1f, bool asSilhouette = false, Color? silhouetteColor = null, GameTime? gameTime = null, Color? highlightColor = null)
         {
             Initialize();

@@ -404,15 +404,38 @@ namespace ProjectVagabond.Battle.UI
 
                 if (selectableTargets.Contains(enemy))
                 {
+                    // Calculate precise bounds for targeting
+                    // We need to reconstruct the base position used in DrawCombatantHud
                     bool isMajor = _spriteManager.IsMajorEnemySprite(enemy.ArchetypeId);
                     int spritePartSize = isMajor ? 96 : 64;
-                    float hudY = spritePartSize + 12;
-                    var hudCenterForBounds = new Vector2(slotCenter.X, hudY);
+                    float yBobOffset = CalculateAttackBobOffset(enemy.CombatantID, isPlayer: false);
+
+                    // Get spawn offset
+                    var spawnAnim = animationManager.GetSpawnAnimationState(enemy.CombatantID);
+                    float spawnYOffset = 0f;
+                    if (spawnAnim != null && spawnAnim.CurrentPhase == BattleAnimationManager.SpawnAnimationState.Phase.FadeIn)
+                    {
+                        float progress = Math.Clamp(spawnAnim.Timer / BattleAnimationManager.SpawnAnimationState.FADE_DURATION, 0f, 1f);
+                        spawnYOffset = MathHelper.Lerp(-BattleAnimationManager.SpawnAnimationState.DROP_HEIGHT, 0f, Easing.EaseOutCubic(progress));
+                    }
+                    else if (spawnAnim != null && spawnAnim.CurrentPhase == BattleAnimationManager.SpawnAnimationState.Phase.Flash)
+                    {
+                        spawnYOffset = -BattleAnimationManager.SpawnAnimationState.DROP_HEIGHT;
+                    }
+
+                    Vector2 spritePos = new Vector2((int)(slotCenter.X - spritePartSize / 2f), (int)(yBobOffset + spawnYOffset));
+                    Rectangle spriteBounds = GetEnemyDynamicSpriteBounds(enemy, spritePos);
+
+                    // Fallback if empty (e.g. invisible)
+                    if (spriteBounds.IsEmpty)
+                    {
+                        spriteBounds = new Rectangle((int)spritePos.X, 0, spritePartSize, spritePartSize);
+                    }
 
                     _currentTargets.Add(new TargetInfo
                     {
                         Combatant = enemy,
-                        Bounds = GetCombatantInteractionBounds(enemy, hudCenterForBounds, nameFont, statsFont)
+                        Bounds = spriteBounds
                     });
                 }
             }
@@ -540,10 +563,19 @@ namespace ProjectVagabond.Battle.UI
             // Add to targets if selectable
             if (isSelectable && isTargetingPhase)
             {
+                // Use the precise pixel bounds from the sprite
+                Rectangle spriteBounds = sprite.GetVisibleBounds(animationManager, player);
+
+                // Fallback if empty (e.g. invisible)
+                if (spriteBounds.IsEmpty)
+                {
+                    spriteBounds = new Rectangle((int)startX, playerHudY - 40, barWidth, 50);
+                }
+
                 _currentTargets.Add(new TargetInfo
                 {
                     Combatant = player,
-                    Bounds = new Rectangle((int)startX, playerHudY - 40, barWidth, 50) // Approx bounds
+                    Bounds = spriteBounds
                 });
             }
         }
@@ -1101,6 +1133,76 @@ namespace ProjectVagabond.Battle.UI
                     DrawEnemyHealthBar(spriteBatch, combatant, slotCenter.X, highestPixelY, animationManager, 1.0f);
                 }
             }
+
+            if (selectableTargets.Contains(combatant))
+            {
+                // Calculate precise bounds for targeting
+                Rectangle spriteBounds = GetEnemyDynamicSpriteBounds(combatant, new Vector2(spriteRect.X, spriteRect.Y));
+
+                // Fallback if empty (e.g. invisible)
+                if (spriteBounds.IsEmpty)
+                {
+                    spriteBounds = new Rectangle((int)(slotCenter.X - spritePartSize / 2), 0, spritePartSize, spritePartSize);
+                }
+
+                _currentTargets.Add(new TargetInfo
+                {
+                    Combatant = combatant,
+                    Bounds = spriteBounds
+                });
+            }
+        }
+
+        private Rectangle GetEnemyDynamicSpriteBounds(BattleCombatant enemy, Vector2 basePosition)
+        {
+            string archetypeId = enemy.ArchetypeId;
+            var topOffsets = _spriteManager.GetEnemySpriteTopPixelOffsets(archetypeId);
+            var leftOffsets = _spriteManager.GetEnemySpriteLeftPixelOffsets(archetypeId);
+            var rightOffsets = _spriteManager.GetEnemySpriteRightPixelOffsets(archetypeId);
+            var bottomOffsets = _spriteManager.GetEnemySpriteBottomPixelOffsets(archetypeId);
+
+            if (topOffsets == null) return Rectangle.Empty;
+
+            // Get current animation offsets
+            if (!_enemySpritePartOffsets.TryGetValue(enemy.CombatantID, out var partOffsets))
+            {
+                return Rectangle.Empty;
+            }
+
+            int minX = int.MaxValue;
+            int minY = int.MaxValue;
+            int maxX = int.MinValue;
+            int maxY = int.MinValue;
+
+            for (int i = 0; i < topOffsets.Length; i++)
+            {
+                // Skip empty parts
+                if (topOffsets[i] == int.MaxValue) continue;
+
+                Vector2 offset = partOffsets[i];
+
+                // Calculate part bounds in screen space
+                // The basePosition is the top-left of the sprite rect (which includes bob/spawn offset)
+                // The part is drawn at basePosition + offset
+                float partDrawX = basePosition.X + offset.X;
+                float partDrawY = basePosition.Y + offset.Y;
+
+                int partLeft = (int)partDrawX + leftOffsets[i];
+                int partRight = (int)partDrawX + rightOffsets[i] + 1; // +1 because right index is inclusive pixel
+                int partTop = (int)partDrawY + topOffsets[i];
+                int partBottom = (int)partDrawY + bottomOffsets[i] + 1;
+
+                if (partLeft < minX) minX = partLeft;
+                if (partRight > maxX) maxX = partRight;
+                if (partTop < minY) minY = partTop;
+                if (partBottom > maxY) maxY = partBottom;
+            }
+
+            if (minX == int.MaxValue) return Rectangle.Empty;
+
+            var rect = new Rectangle(minX, minY, maxX - minX, maxY - minY);
+            rect.Inflate(2, 2); // Add 2px padding
+            return rect;
         }
 
         private void DrawBarAnimationOverlay(SpriteBatch spriteBatch, Rectangle bgRect, float maxResource, BattleAnimationManager.ResourceBarAnimationState anim)
