@@ -358,7 +358,7 @@ namespace ProjectVagabond.Battle.UI
             DrawUITitle(spriteBatch, secondaryFont, gameTime, uiManager.SubMenuState);
 
             // --- Draw Highlights & Indicators ---
-            DrawHoverHighlights(spriteBatch, font, secondaryFont, allCombatants, uiManager.HoverHighlightState, uiManager.SharedPulseTimer, silhouetteColors);
+            // Removed DrawHoverHighlights call to remove targeting arrows
             DrawTurnIndicator(spriteBatch, font, gameTime, currentActor, allCombatants);
             DrawTargetingUI(spriteBatch, font, gameTime, uiManager, inputHandler);
 
@@ -424,7 +424,9 @@ namespace ProjectVagabond.Battle.UI
                     }
 
                     Vector2 spritePos = new Vector2((int)(slotCenter.X - spritePartSize / 2f), (int)(yBobOffset + spawnYOffset));
-                    Rectangle spriteBounds = GetEnemyDynamicSpriteBounds(enemy, spritePos);
+
+                    // Use STATIC bounds for the targeting box to prevent resizing during animation
+                    Rectangle spriteBounds = GetEnemyStaticSpriteBounds(enemy, spritePos);
 
                     // Fallback if empty (e.g. invisible)
                     if (spriteBounds.IsEmpty)
@@ -563,8 +565,8 @@ namespace ProjectVagabond.Battle.UI
             // Add to targets if selectable
             if (isSelectable && isTargetingPhase)
             {
-                // Use the precise pixel bounds from the sprite
-                Rectangle spriteBounds = sprite.GetVisibleBounds(animationManager, player);
+                // Use the STATIC bounds for the targeting box
+                Rectangle spriteBounds = sprite.GetStaticBounds(animationManager, player);
 
                 // Fallback if empty (e.g. invisible)
                 if (spriteBounds.IsEmpty)
@@ -730,118 +732,6 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private void DrawHoverHighlights(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, IEnumerable<BattleCombatant> allCombatants, HoverHighlightState hoverHighlightState, float sharedBobbingTimer, Dictionary<string, Color> silhouetteColors)
-        {
-            if (hoverHighlightState.CurrentMove == null || !hoverHighlightState.Targets.Any()) return;
-
-            var arrowRects = _spriteManager.ArrowIconSourceRects;
-            if (arrowRects == null) return;
-
-            var move = hoverHighlightState.CurrentMove;
-            var state = hoverHighlightState;
-            var targets = state.Targets;
-
-            // Default flash color for multi-target moves
-            float cycleDuration = HoverHighlightState.MultiTargetFlashOnDuration + HoverHighlightState.MultiTargetFlashOffDuration;
-            bool areAllFlashing = (state.Timer % cycleDuration) < HoverHighlightState.MultiTargetFlashOnDuration;
-            Color multiFlashColor = areAllFlashing ? _global.Palette_Red : Color.White;
-
-            switch (move.Target)
-            {
-                case TargetType.Self:
-                    var player = targets.FirstOrDefault(t => t.IsPlayerControlled);
-                    if (player != null)
-                    {
-                        // Use Down Arrow (Index 6)
-                        var arrowRect = arrowRects[6];
-
-                        // Calculate independent bobbing
-                        float phaseOffset = ((Math.Abs(player.CombatantID.GetHashCode()) * 12345) % 100) * 0.13f;
-                        float uniqueBobOffset = (MathF.Sin((sharedBobbingTimer + phaseOffset) * 4f) > 0) ? -1f : 0f;
-
-                        DrawTargetIndicator(spriteBatch, font, secondaryFont, allCombatants, player, arrowRect, multiFlashColor, uniqueBobOffset);
-                    }
-                    break;
-
-                case TargetType.Single:
-                case TargetType.SingleTeam:
-                case TargetType.SingleAll:
-                    // For single target cycling, only draw the arrow if the target is currently active (Yellow)
-                    foreach (var target in targets)
-                    {
-                        if (silhouetteColors.TryGetValue(target.CombatantID, out var color) && color == Color.Yellow)
-                        {
-                            // Always use Down Arrow (Index 6)
-                            Rectangle sourceRect = arrowRects[6];
-
-                            // Calculate independent bobbing
-                            float phaseOffset = ((Math.Abs(target.CombatantID.GetHashCode()) * 12345) % 100) * 0.13f;
-                            float uniqueBobOffset = (MathF.Sin((sharedBobbingTimer + phaseOffset) * 4f) > 0) ? -1f : 0f;
-
-                            // Draw with White color to indicate active selection
-                            DrawTargetIndicator(spriteBatch, font, secondaryFont, allCombatants, target, sourceRect, Color.White, uniqueBobOffset);
-                        }
-                    }
-                    break;
-
-                case TargetType.Every:
-                case TargetType.Both:
-                case TargetType.All:
-                case TargetType.Team:
-                case TargetType.Ally:
-                case TargetType.RandomBoth:
-                case TargetType.RandomEvery:
-                case TargetType.RandomAll:
-                    // For multi-target, draw arrows for everyone with the shared flash color
-                    foreach (var target in targets)
-                    {
-                        // Always use Down Arrow (Index 6)
-                        Rectangle sourceRect = arrowRects[6];
-
-                        float phaseOffset = ((Math.Abs(target.CombatantID.GetHashCode()) * 12345) % 100) * 0.13f;
-                        float uniqueBobOffset = (MathF.Sin((sharedBobbingTimer + phaseOffset) * 4f) > 0) ? -1f : 0f;
-
-                        DrawTargetIndicator(spriteBatch, font, secondaryFont, allCombatants, target, sourceRect, multiFlashColor, uniqueBobOffset);
-                    }
-                    break;
-            }
-        }
-
-        private void DrawTargetIndicator(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, IEnumerable<BattleCombatant> allCombatants, BattleCombatant combatant, Rectangle sourceRect, Color color, float bobOffset = 0f)
-        {
-            if (color.A == 0) return;
-
-            var arrowSheet = _spriteManager.ArrowIconSpriteSheet;
-            if (arrowSheet == null) return;
-
-            Vector2 arrowPos;
-
-            if (_combatantVisualCenters.TryGetValue(combatant.CombatantID, out var center))
-            {
-                float topY;
-                if (combatant.IsPlayerControlled)
-                {
-                    // Player sprite is 32x32, centered at 'center'
-                    topY = center.Y - 16;
-                }
-                else
-                {
-                    // Enemy sprite top calculation
-                    bool isMajor = _spriteManager.IsMajorEnemySprite(combatant.ArchetypeId);
-                    int height = isMajor ? 96 : 64;
-                    float rectTop = center.Y - (height / 2f);
-
-                    topY = GetEnemySpriteStaticTopY(combatant, rectTop);
-                }
-
-                // Position arrow above topY
-                arrowPos = new Vector2(center.X - sourceRect.Width / 2f, topY - sourceRect.Height - 4 + bobOffset);
-
-                if (color == _global.Palette_Red) arrowPos.Y += 1;
-                spriteBatch.DrawSnapped(arrowSheet, arrowPos, sourceRect, color);
-            }
-        }
-
         private void DrawTurnIndicator(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, BattleCombatant currentActor, IEnumerable<BattleCombatant> allCombatants)
         {
             if (currentActor == null || currentActor.IsDefeated) return;
@@ -863,8 +753,12 @@ namespace ProjectVagabond.Battle.UI
             // Always use Down Arrow (Index 6)
             var arrowRect = arrowRects[6];
 
-            // Calculate Bob Offset (Jump Down for everyone now)
-            float yBobOffset = CalculateAttackBobOffset(currentActor.CombatantID, currentActor.IsPlayerControlled);
+            // Calculate Attack Bob (Jump with sprite)
+            float attackBobOffset = CalculateAttackBobOffset(currentActor.CombatantID, currentActor.IsPlayerControlled);
+
+            // NEW: Idle Bob (Up 1 pixel then down)
+            // Using same frequency (4f) as DrawHoverHighlights for consistency
+            float idleBob = (MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * 4f) > 0) ? -1f : 0f;
 
             float topY;
             if (currentActor.IsPlayerControlled)
@@ -879,7 +773,7 @@ namespace ProjectVagabond.Battle.UI
                 topY = GetEnemySpriteStaticTopY(currentActor, rectTop);
             }
 
-            var arrowPos = new Vector2(targetPos.X - arrowRect.Width / 2, topY - arrowRect.Height - 1 + yBobOffset);
+            var arrowPos = new Vector2(targetPos.X - arrowRect.Width / 2, topY - arrowRect.Height - 1 + attackBobOffset + idleBob);
             spriteBatch.DrawSnapped(arrowSheet, arrowPos, arrowRect, Color.White);
         }
 
@@ -1138,7 +1032,8 @@ namespace ProjectVagabond.Battle.UI
             if (selectableTargets.Contains(combatant))
             {
                 // Calculate precise bounds for targeting
-                Rectangle spriteBounds = GetEnemyDynamicSpriteBounds(combatant, new Vector2(spriteRect.X, spriteRect.Y));
+                // Use STATIC bounds for the targeting box to prevent resizing during animation
+                Rectangle spriteBounds = GetEnemyStaticSpriteBounds(combatant, new Vector2(spriteRect.X, spriteRect.Y));
 
                 // Fallback if empty (e.g. invisible)
                 if (spriteBounds.IsEmpty)
@@ -1203,6 +1098,49 @@ namespace ProjectVagabond.Battle.UI
 
             var rect = new Rectangle(minX, minY, maxX - minX, maxY - minY);
             rect.Inflate(2, 2); // Add 2px padding
+            return rect;
+        }
+
+        private Rectangle GetEnemyStaticSpriteBounds(BattleCombatant enemy, Vector2 basePosition)
+        {
+            string archetypeId = enemy.ArchetypeId;
+            var topOffsets = _spriteManager.GetEnemySpriteTopPixelOffsets(archetypeId);
+            var leftOffsets = _spriteManager.GetEnemySpriteLeftPixelOffsets(archetypeId);
+            var rightOffsets = _spriteManager.GetEnemySpriteRightPixelOffsets(archetypeId);
+            var bottomOffsets = _spriteManager.GetEnemySpriteBottomPixelOffsets(archetypeId);
+
+            if (topOffsets == null) return Rectangle.Empty;
+
+            int minX = int.MaxValue;
+            int minY = int.MaxValue;
+            int maxX = int.MinValue;
+            int maxY = int.MinValue;
+
+            for (int i = 0; i < topOffsets.Length; i++)
+            {
+                if (topOffsets[i] == int.MaxValue) continue;
+
+                // Use Zero offset for static bounds
+                Vector2 offset = Vector2.Zero;
+
+                float partDrawX = basePosition.X + offset.X;
+                float partDrawY = basePosition.Y + offset.Y;
+
+                int partLeft = (int)partDrawX + leftOffsets[i];
+                int partRight = (int)partDrawX + rightOffsets[i] + 1;
+                int partTop = (int)partDrawY + topOffsets[i];
+                int partBottom = (int)partDrawY + bottomOffsets[i] + 1;
+
+                if (partLeft < minX) minX = partLeft;
+                if (partRight > maxX) maxX = partRight;
+                if (partTop < minY) minY = partTop;
+                if (partBottom > maxY) maxY = partBottom;
+            }
+
+            if (minX == int.MaxValue) return Rectangle.Empty;
+
+            var rect = new Rectangle(minX, minY, maxX - minX, maxY - minY);
+            rect.Inflate(4, 4); // Increased padding (was 2,2)
             return rect;
         }
 

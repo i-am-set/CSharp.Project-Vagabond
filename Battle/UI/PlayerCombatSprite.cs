@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -139,6 +138,55 @@ namespace ProjectVagabond.Battle.UI
 
             var rect = new Rectangle(x, y, w, h);
             rect.Inflate(2, 2); // Add 2px padding on all sides
+            return rect;
+        }
+
+        public Rectangle GetStaticBounds(BattleAnimationManager animationManager, BattleCombatant combatant)
+        {
+            Initialize();
+            if (_texture == null) return Rectangle.Empty;
+
+            var spriteManager = ServiceLocator.Get<SpriteManager>();
+
+            // Get hit flash state for shake (consistent with GetVisibleBounds)
+            var hitFlashState = animationManager.GetHitFlashState(combatant.CombatantID);
+            Vector2 shakeOffset = hitFlashState?.ShakeOffset ?? Vector2.Zero;
+
+            // Calculate top-left position
+            var topLeftPosition = new Point(
+                (int)MathF.Round(_position.X - _origin.X + shakeOffset.X),
+                (int)MathF.Round(_position.Y - _origin.Y + shakeOffset.Y)
+            );
+
+            // Use Frame 0 for static size
+            int staticFrameIndex = 0;
+
+            var topOffsets = spriteManager.GetEnemySpriteTopPixelOffsets(_archetypeId);
+            var leftOffsets = spriteManager.GetEnemySpriteLeftPixelOffsets(_archetypeId);
+            var rightOffsets = spriteManager.GetEnemySpriteRightPixelOffsets(_archetypeId);
+            var bottomOffsets = spriteManager.GetEnemySpriteBottomPixelOffsets(_archetypeId);
+
+            if (topOffsets == null || staticFrameIndex >= topOffsets.Length)
+            {
+                var fallbackRect = new Rectangle(topLeftPosition.X, topLeftPosition.Y, _frameWidth, _frameHeight);
+                fallbackRect.Inflate(4, 4); // Increased padding
+                return fallbackRect;
+            }
+
+            int t = topOffsets[staticFrameIndex];
+            int l = leftOffsets[staticFrameIndex];
+            int r = rightOffsets[staticFrameIndex];
+            int b = bottomOffsets[staticFrameIndex];
+
+            if (t == int.MaxValue) return Rectangle.Empty;
+
+            int x = topLeftPosition.X + l;
+            int y = topLeftPosition.Y + t;
+            int w = (r - l) + 1;
+            int h = (b - t) + 1;
+
+            var rect = new Rectangle(x, y, w, h);
+            rect.Inflate(4, 4); // Increased padding (was 2,2)
             return rect;
         }
 

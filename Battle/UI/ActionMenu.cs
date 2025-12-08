@@ -359,29 +359,14 @@ namespace ProjectVagabond.Battle.UI
             _selectedMove = move;
             _selectedSpellbookEntry = entry;
 
-            switch (move.Target)
+            // Force targeting menu for everything except None
+            if (move.Target == TargetType.None)
             {
-                case TargetType.Self:
-                    OnMoveSelected?.Invoke(move, entry, _player);
-                    break;
-
-                case TargetType.None:
-                    OnMoveSelected?.Invoke(move, entry, null);
-                    break;
-
-                case TargetType.Single:
-                case TargetType.SingleTeam:
-                case TargetType.Every:
-                case TargetType.All:
-                case TargetType.Both:
-                case TargetType.Team:
-                case TargetType.Ally:
-                case TargetType.RandomBoth:
-                case TargetType.RandomEvery:
-                case TargetType.RandomAll:
-                    // Always go to targeting menu to confirm target(s)
-                    SetState(MenuState.Targeting);
-                    break;
+                OnMoveSelected?.Invoke(move, entry, null);
+            }
+            else
+            {
+                SetState(MenuState.Targeting);
             }
         }
 
