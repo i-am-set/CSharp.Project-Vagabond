@@ -92,7 +92,7 @@ namespace ProjectVagabond.Battle.UI
 
         public List<TargetInfo> GetCurrentTargets() => _currentTargets;
 
-        public void Update(GameTime gameTime, IEnumerable<BattleCombatant> combatants)
+        public void Update(GameTime gameTime, IEnumerable<BattleCombatant> combatants, BattleAnimationManager animationManager)
         {
             UpdateEnemyAnimations(gameTime, combatants);
             UpdateStatusIconTooltips(combatants);
@@ -950,6 +950,9 @@ namespace ProjectVagabond.Battle.UI
             Texture2D enemySprite = _spriteManager.GetEnemySprite(combatant.ArchetypeId);
             Texture2D enemySilhouette = _spriteManager.GetEnemySpriteSilhouette(combatant.ArchetypeId);
 
+            // --- CALCULATE HIGHEST PIXEL Y FOR HEALTH BAR ---
+            float highestPixelY = float.MaxValue;
+
             if (enemySprite != null)
             {
                 int numParts = enemySprite.Width / spritePartSize;
@@ -997,6 +1000,15 @@ namespace ProjectVagabond.Battle.UI
                         var partOffset = offsets[i];
                         var drawPosition = new Vector2(spriteRect.X + partOffset.X, spriteRect.Y + partOffset.Y) + shakeOffset;
                         var drawRect = new Rectangle((int)drawPosition.X, (int)drawPosition.Y, spriteRect.Width, spriteRect.Height);
+
+                        // --- TRACK HIGHEST PIXEL ---
+                        // Use the static top offset relative to the sprite's base Y position (which includes bob/spawn)
+                        // This ensures the bar follows the main body movement but ignores limb animation.
+                        float currentPartTopY = GetEnemySpriteStaticTopY(combatant, spriteRect.Y);
+                        if (currentPartTopY < highestPixelY)
+                        {
+                            highestPixelY = currentPartTopY;
+                        }
 
                         if (silhouetteFactor >= 1.0f && enemySilhouette != null)
                         {
@@ -1071,26 +1083,23 @@ namespace ProjectVagabond.Battle.UI
             else
             {
                 spriteBatch.DrawSnapped(pixel, spriteRect, _global.Palette_Pink * finalAlpha);
+                highestPixelY = spriteRect.Top; // Fallback
             }
 
             DrawEnemyStatusIcons(spriteBatch, combatant, spriteRect);
 
             if (silhouetteFactor < 1.0f)
             {
-                float hudY = spriteRect.Bottom + 12;
-                var hudCenterPosition = new Vector2(slotCenter.X, hudY);
+                // --- HEALTH BAR LOGIC ---
+                // Visible if damaged or animating damage/heal
+                bool isDamaged = combatant.Stats.CurrentHP < combatant.Stats.MaxHP;
+                bool isVisuallyDamaged = combatant.VisualHP < (combatant.Stats.MaxHP - 0.1f);
 
-                Vector2 nameSize = nameFont.MeasureString(combatant.Name);
-                Vector2 namePos = new Vector2(hudCenterPosition.X - nameSize.X / 2, hudCenterPosition.Y - 8);
-
-                Color nameColor = tintColor;
-                if (hoverHighlightState.Targets.Contains(combatant))
+                if (isDamaged || isVisuallyDamaged)
                 {
-                    nameColor = _global.Palette_Yellow * finalAlpha;
+                    // Draw Health Bar above the highest pixel
+                    DrawEnemyHealthBar(spriteBatch, combatant, slotCenter.X, highestPixelY, animationManager, 1.0f);
                 }
-                spriteBatch.DrawStringSnapped(nameFont, combatant.Name, namePos, nameColor);
-
-                DrawEnemyHealthBar(spriteBatch, combatant, hudCenterPosition, animationManager);
             }
         }
 
@@ -1154,14 +1163,22 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private void DrawEnemyHealthBar(SpriteBatch spriteBatch, BattleCombatant combatant, Vector2 centerPosition, BattleAnimationManager animationManager)
+        private void DrawEnemyHealthBar(SpriteBatch spriteBatch, BattleCombatant combatant, float centerX, float spriteTopY, BattleAnimationManager animationManager, float alpha)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
             const int barWidth = 40;
             const int barHeight = 2;
+
+            // Calculate Y position: 2 pixels above the highest sprite pixel
+            // Added extra 8 pixels as requested
+            float barY = spriteTopY - barHeight - 2 - 8;
+
+            // Clamp to screen top (1px margin)
+            barY = Math.Max(1, barY);
+
             var barRect = new Rectangle(
-                (int)(centerPosition.X - barWidth / 2f),
-                (int)(centerPosition.Y + 2),
+                (int)(centerX - barWidth / 2f),
+                (int)barY,
                 barWidth,
                 barHeight
             );
@@ -1172,13 +1189,16 @@ namespace ProjectVagabond.Battle.UI
 
             var hpFgRect = new Rectangle(barRect.X, barRect.Y, fgWidth, barRect.Height);
 
-            spriteBatch.DrawSnapped(pixel, barRect, _global.Palette_DarkGray);
-            spriteBatch.DrawSnapped(pixel, hpFgRect, _global.Palette_LightGreen);
+            spriteBatch.DrawSnapped(pixel, barRect, _global.Palette_DarkGray * alpha);
+            spriteBatch.DrawSnapped(pixel, hpFgRect, _global.Palette_LightGreen * alpha);
 
             // Animation Overlay
             var hpAnim = animationManager.GetResourceBarAnimation(combatant.CombatantID, BattleAnimationManager.ResourceBarAnimationState.BarResourceType.HP);
             if (hpAnim != null)
             {
+                // We need to pass alpha to DrawBarAnimationOverlay, but it doesn't support it yet.
+                // For now, the overlay will draw at full opacity if active, which is acceptable as it implies recent damage.
+                // Ideally, refactor DrawBarAnimationOverlay to accept alpha.
                 DrawBarAnimationOverlay(spriteBatch, barRect, combatant.Stats.MaxHP, hpAnim);
             }
         }
