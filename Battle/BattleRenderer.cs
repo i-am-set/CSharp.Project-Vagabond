@@ -752,18 +752,14 @@ namespace ProjectVagabond.Battle.UI
                     var player = targets.FirstOrDefault(t => t.IsPlayerControlled);
                     if (player != null)
                     {
-                        var arrowSheet = _spriteManager.ArrowIconSpriteSheet;
-                        if (arrowSheet == null) return;
+                        // Use Down Arrow (Index 6)
+                        var arrowRect = arrowRects[6];
 
-                        var arrowRect = arrowRects[4];
-                        float swayOffset = MathF.Round(MathF.Sin(sharedBobbingTimer * 4f) * 1.5f);
+                        // Calculate independent bobbing
+                        float phaseOffset = ((Math.Abs(player.CombatantID.GetHashCode()) * 12345) % 100) * 0.13f;
+                        float uniqueBobOffset = (MathF.Sin((sharedBobbingTimer + phaseOffset) * 4f) > 0) ? -1f : 0f;
 
-                        // Use visual center
-                        if (_combatantVisualCenters.TryGetValue(player.CombatantID, out var center))
-                        {
-                            var arrowPos = new Vector2(center.X - 24 + swayOffset, center.Y - arrowRect.Height / 2);
-                            spriteBatch.DrawSnapped(arrowSheet, arrowPos, arrowRect, multiFlashColor);
-                        }
+                        DrawTargetIndicator(spriteBatch, font, secondaryFont, allCombatants, player, arrowRect, multiFlashColor, uniqueBobOffset);
                     }
                     break;
 
@@ -775,7 +771,8 @@ namespace ProjectVagabond.Battle.UI
                     {
                         if (silhouetteColors.TryGetValue(target.CombatantID, out var color) && color == Color.Yellow)
                         {
-                            Rectangle sourceRect = target.IsPlayerControlled ? arrowRects[2] : arrowRects[6]; // Up for player, Down for enemy
+                            // Always use Down Arrow (Index 6)
+                            Rectangle sourceRect = arrowRects[6];
 
                             // Calculate independent bobbing
                             float phaseOffset = ((Math.Abs(target.CombatantID.GetHashCode()) * 12345) % 100) * 0.13f;
@@ -798,7 +795,8 @@ namespace ProjectVagabond.Battle.UI
                     // For multi-target, draw arrows for everyone with the shared flash color
                     foreach (var target in targets)
                     {
-                        Rectangle sourceRect = target.IsPlayerControlled ? arrowRects[2] : arrowRects[6]; // Up for player, Down for enemy
+                        // Always use Down Arrow (Index 6)
+                        Rectangle sourceRect = arrowRects[6];
 
                         float phaseOffset = ((Math.Abs(target.CombatantID.GetHashCode()) * 12345) % 100) * 0.13f;
                         float uniqueBobOffset = (MathF.Sin((sharedBobbingTimer + phaseOffset) * 4f) > 0) ? -1f : 0f;
@@ -820,18 +818,24 @@ namespace ProjectVagabond.Battle.UI
 
             if (_combatantVisualCenters.TryGetValue(combatant.CombatantID, out var center))
             {
+                float topY;
                 if (combatant.IsPlayerControlled)
                 {
-                    // Arrow below
-                    arrowPos = new Vector2(center.X - sourceRect.Width / 2f, center.Y + 20 + bobOffset);
+                    // Player sprite is 32x32, centered at 'center'
+                    topY = center.Y - 16;
                 }
                 else
                 {
-                    // Arrow above
-                    // Need top Y. Approximate from center.
-                    float topY = GetEnemySpriteStaticTopY(combatant, center.Y - 32); // Assume 64 height
-                    arrowPos = new Vector2(center.X - sourceRect.Width / 2f, topY - sourceRect.Height - 4 + bobOffset);
+                    // Enemy sprite top calculation
+                    bool isMajor = _spriteManager.IsMajorEnemySprite(combatant.ArchetypeId);
+                    int height = isMajor ? 96 : 64;
+                    float rectTop = center.Y - (height / 2f);
+
+                    topY = GetEnemySpriteStaticTopY(combatant, rectTop);
                 }
+
+                // Position arrow above topY
+                arrowPos = new Vector2(center.X - sourceRect.Width / 2f, topY - sourceRect.Height - 4 + bobOffset);
 
                 if (color == _global.Palette_Red) arrowPos.Y += 1;
                 spriteBatch.DrawSnapped(arrowSheet, arrowPos, sourceRect, color);
@@ -856,30 +860,27 @@ namespace ProjectVagabond.Battle.UI
                 return;
             }
 
+            // Always use Down Arrow (Index 6)
+            var arrowRect = arrowRects[6];
+
+            // Calculate Bob Offset (Jump Down for everyone now)
+            float yBobOffset = CalculateAttackBobOffset(currentActor.CombatantID, currentActor.IsPlayerControlled);
+
+            float topY;
             if (currentActor.IsPlayerControlled)
             {
-                var arrowRect = arrowRects[4]; // Right arrow
-                float swayOffset = MathF.Round(MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * 4f) * 1.5f);
-
-                // Calculate Bob Offset for Player (Jump Up)
-                float yBobOffset = CalculateAttackBobOffset(currentActor.CombatantID, isPlayer: true);
-
-                // Position to the left of the sprite/heart, following the jump
-                var arrowPos = new Vector2(targetPos.X - 24 + swayOffset, targetPos.Y - arrowRect.Height / 2 + yBobOffset);
-                spriteBatch.DrawSnapped(arrowSheet, arrowPos, arrowRect, Color.White);
+                topY = targetPos.Y - 16;
             }
             else
             {
-                var arrowRect = arrowRects[6]; // Down arrow
-
-                // Calculate Bob Offset for Enemy (Jump Down)
-                float yBobOffset = CalculateAttackBobOffset(currentActor.CombatantID, isPlayer: false);
-
-                // Position above the enemy sprite, following the jump
-                float topY = GetEnemySpriteStaticTopY(currentActor, targetPos.Y - 32);
-                var arrowPos = new Vector2(targetPos.X - arrowRect.Width / 2, topY - arrowRect.Height - 1 + yBobOffset);
-                spriteBatch.DrawSnapped(arrowSheet, arrowPos, arrowRect, Color.White);
+                bool isMajor = _spriteManager.IsMajorEnemySprite(currentActor.ArchetypeId);
+                int height = isMajor ? 96 : 64;
+                float rectTop = targetPos.Y - (height / 2f);
+                topY = GetEnemySpriteStaticTopY(currentActor, rectTop);
             }
+
+            var arrowPos = new Vector2(targetPos.X - arrowRect.Width / 2, topY - arrowRect.Height - 1 + yBobOffset);
+            spriteBatch.DrawSnapped(arrowSheet, arrowPos, arrowRect, Color.White);
         }
 
         private void DrawCombatantHud(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, BattleCombatant combatant, Vector2 slotCenter, BattleCombatant currentActor, bool isTargetingPhase, bool shouldGrayOutUnselectable, HashSet<BattleCombatant> selectableTargets, BattleAnimationManager animationManager, HoverHighlightState hoverHighlightState, float pulseAlpha, GameTime gameTime, Color? highlightColor)
