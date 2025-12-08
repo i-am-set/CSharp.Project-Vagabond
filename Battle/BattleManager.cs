@@ -37,6 +37,12 @@ namespace ProjectVagabond.Battle
         private readonly List<BattleCombatant> _enemyParty;
         private readonly List<BattleCombatant> _allCombatants;
 
+        // --- OPTIMIZATION: Cached Lists ---
+        // We maintain these lists manually to avoid LINQ allocations in Update loops.
+        private readonly List<BattleCombatant> _cachedActivePlayers = new List<BattleCombatant>();
+        private readonly List<BattleCombatant> _cachedActiveEnemies = new List<BattleCombatant>();
+        private readonly List<BattleCombatant> _cachedAllActive = new List<BattleCombatant>();
+
         private List<QueuedAction> _actionQueue;
         private QueuedAction? _currentActionForEffects;
         private List<DamageCalculator.DamageResult> _currentActionDamageResults;
@@ -83,6 +89,9 @@ namespace ProjectVagabond.Battle
             InitializeSlots(_playerParty);
             InitializeSlots(_enemyParty);
 
+            // Initialize Caches
+            RefreshCombatantCaches();
+
             _actionQueue = new List<QueuedAction>();
             RoundNumber = 1;
             _currentPhase = BattlePhase.StartOfTurn;
@@ -99,6 +108,35 @@ namespace ProjectVagabond.Battle
             for (int i = 0; i < party.Count; i++)
             {
                 party[i].BattleSlot = i; // 0, 1 are active. 2, 3 are bench.
+            }
+        }
+
+        /// <summary>
+        /// Rebuilds the cached lists of active combatants.
+        /// Call this whenever a unit dies, spawns, or switches.
+        /// </summary>
+        private void RefreshCombatantCaches()
+        {
+            _cachedActivePlayers.Clear();
+            _cachedActiveEnemies.Clear();
+            _cachedAllActive.Clear();
+
+            foreach (var c in _playerParty)
+            {
+                if (c.IsActiveOnField && !c.IsDefeated)
+                {
+                    _cachedActivePlayers.Add(c);
+                    _cachedAllActive.Add(c);
+                }
+            }
+
+            foreach (var c in _enemyParty)
+            {
+                if (c.IsActiveOnField && !c.IsDefeated)
+                {
+                    _cachedActiveEnemies.Add(c);
+                    _cachedAllActive.Add(c);
+                }
             }
         }
 
@@ -154,7 +192,7 @@ namespace ProjectVagabond.Battle
                 _pendingSlot1Action = action;
 
                 // Check if there is a second active player combatant
-                var slot2 = _playerParty.FirstOrDefault(c => c.BattleSlot == 1 && !c.IsDefeated);
+                var slot2 = _cachedActivePlayers.FirstOrDefault(c => c.BattleSlot == 1);
                 if (slot2 != null && slot2.ChargingAction == null)
                 {
                     _currentPhase = BattlePhase.ActionSelection_Slot2;
@@ -182,7 +220,7 @@ namespace ProjectVagabond.Battle
             {
                 _pendingSlot1Action = null;
                 // Find Slot 0 player
-                var slot1 = _playerParty.FirstOrDefault(c => c.BattleSlot == 0 && !c.IsDefeated);
+                var slot1 = _cachedActivePlayers.FirstOrDefault(c => c.BattleSlot == 0);
                 if (slot1 != null)
                 {
                     CurrentActingCombatant = slot1;
@@ -202,16 +240,13 @@ namespace ProjectVagabond.Battle
             _pendingSlot1Action = null;
             CurrentActingCombatant = null;
 
-            // Generate Enemy Actions
-            var activeEnemies = _enemyParty.Where(c => c.IsActiveOnField && !c.IsDefeated).ToList();
-            var activePlayers = _playerParty.Where(c => c.IsActiveOnField && !c.IsDefeated).ToList();
-
-            foreach (var enemy in activeEnemies)
+            // Generate Enemy Actions using cached lists
+            foreach (var enemy in _cachedActiveEnemies)
             {
                 if (enemy.ChargingAction != null) continue;
 
                 // Simple AI: Target random active player
-                var target = activePlayers.Any() ? activePlayers[_random.Next(activePlayers.Count)] : null;
+                var target = _cachedActivePlayers.Any() ? _cachedActivePlayers[_random.Next(_cachedActivePlayers.Count)] : null;
 
                 if (target != null)
                 {
@@ -277,10 +312,9 @@ namespace ProjectVagabond.Battle
             _endOfTurnEffectsProcessed = false;
             var startOfTurnActions = new List<QueuedAction>();
 
-            foreach (var combatant in _allCombatants)
+            // Use cached list for active combatants
+            foreach (var combatant in _cachedAllActive)
             {
-                if (combatant.IsDefeated || !combatant.IsActiveOnField) continue;
-
                 if (combatant.ChargingAction != null)
                 {
                     combatant.ChargingAction.TurnsRemaining--;
@@ -310,7 +344,7 @@ namespace ProjectVagabond.Battle
             _actionQueue.InsertRange(0, startOfTurnActions);
 
             // Determine if Slot 1 needs input
-            var slot1 = _playerParty.FirstOrDefault(c => c.BattleSlot == 0 && !c.IsDefeated);
+            var slot1 = _cachedActivePlayers.FirstOrDefault(c => c.BattleSlot == 0);
             if (slot1 != null && slot1.ChargingAction == null)
             {
                 _currentPhase = BattlePhase.ActionSelection_Slot1;
@@ -319,7 +353,7 @@ namespace ProjectVagabond.Battle
             else
             {
                 // If Slot 1 is dead or charging, check Slot 2
-                var slot2 = _playerParty.FirstOrDefault(c => c.BattleSlot == 1 && !c.IsDefeated);
+                var slot2 = _cachedActivePlayers.FirstOrDefault(c => c.BattleSlot == 1);
                 if (slot2 != null && slot2.ChargingAction == null)
                 {
                     _currentPhase = BattlePhase.ActionSelection_Slot2;
@@ -419,6 +453,9 @@ namespace ProjectVagabond.Battle
 
             actor.BattleSlot = newSlot;
             target.BattleSlot = oldSlot;
+
+            // Refresh caches immediately after a switch
+            RefreshCombatantCaches();
 
             // Trigger OnEnter abilities for the new unit
             HandleOnEnterAbilities(target);
@@ -631,108 +668,51 @@ namespace ProjectVagabond.Battle
             var actor = action.Actor;
             var specifiedTarget = action.Target;
 
-            // Identify Teams
-            var activeEnemies = _enemyParty.Where(c => c.IsActiveOnField && !c.IsDefeated).ToList();
-            var activePlayers = _playerParty.Where(c => c.IsActiveOnField && !c.IsDefeated).ToList();
-            var allActive = _allCombatants.Where(c => c.IsActiveOnField && !c.IsDefeated).ToList();
-
-            // Determine "Opponents" and "Allies" relative to the actor
-            var opponents = actor.IsPlayerControlled ? activeEnemies : activePlayers;
-            var allies = actor.IsPlayerControlled ? activePlayers : activeEnemies;
-            var ally = allies.FirstOrDefault(c => c != actor); // The OTHER active team member
+            // Use TargetingHelper to get the pool of valid candidates
+            var validCandidates = TargetingHelper.GetValidTargets(actor, targetType, _allCombatants);
 
             // --- RANDOM TARGET LOGIC (For Multi-Hit or Random Moves) ---
             if (isMultiHit || targetType == TargetType.RandomBoth || targetType == TargetType.RandomEvery || targetType == TargetType.RandomAll)
             {
-                List<BattleCombatant> pool = new List<BattleCombatant>();
-
-                if (targetType == TargetType.RandomBoth || (isMultiHit && targetType == TargetType.Both))
-                {
-                    pool.AddRange(opponents);
-                }
-                else if (targetType == TargetType.RandomEvery || (isMultiHit && targetType == TargetType.Every))
-                {
-                    pool.AddRange(opponents);
-                    if (ally != null) pool.Add(ally);
-                }
-                else if (targetType == TargetType.RandomAll || (isMultiHit && targetType == TargetType.All))
-                {
-                    pool.AddRange(allActive);
-                }
-                // Fallback for standard multi-hit on single target moves
-                else if (isMultiHit && (targetType == TargetType.Single || targetType == TargetType.SingleTeam || targetType == TargetType.SingleAll))
+                // If it's a multi-hit move on a single target type, stick to the specified target if possible
+                if (isMultiHit && (targetType == TargetType.Single || targetType == TargetType.SingleTeam || targetType == TargetType.SingleAll))
                 {
                     if (specifiedTarget != null && specifiedTarget.IsActiveOnField && !specifiedTarget.IsDefeated)
                         return new List<BattleCombatant> { specifiedTarget };
-                    // If target dead, pick random opponent
-                    if (opponents.Any()) return new List<BattleCombatant> { opponents[_random.Next(opponents.Count)] };
+
+                    // If target dead, pick random from valid candidates
+                    if (validCandidates.Any()) return new List<BattleCombatant> { validCandidates[_random.Next(validCandidates.Count)] };
                     return new List<BattleCombatant>();
                 }
 
-                if (pool.Any())
+                // Otherwise, pick a random one from the valid pool
+                if (validCandidates.Any())
                 {
-                    return new List<BattleCombatant> { pool[_random.Next(pool.Count)] };
+                    return new List<BattleCombatant> { validCandidates[_random.Next(validCandidates.Count)] };
                 }
                 return new List<BattleCombatant>();
             }
 
             // --- STANDARD TARGET LOGIC ---
-            switch (targetType)
+            // If the user specified a target (e.g. via UI), and it's in the valid list, use it.
+            if (specifiedTarget != null && validCandidates.Contains(specifiedTarget))
             {
-                case TargetType.Single:
-                    // Target ANYONE except SELF.
-                    // If specified target is valid, use it.
-                    if (specifiedTarget != null && specifiedTarget.IsActiveOnField && !specifiedTarget.IsDefeated && specifiedTarget != actor)
-                        return new List<BattleCombatant> { specifiedTarget };
-
-                    // Fallback: Default to first opponent
-                    if (opponents.Any()) return new List<BattleCombatant> { opponents[0] };
-                    return new List<BattleCombatant>();
-
-                case TargetType.SingleAll:
-                    // Target ANYONE including SELF.
-                    if (specifiedTarget != null && specifiedTarget.IsActiveOnField && !specifiedTarget.IsDefeated)
-                        return new List<BattleCombatant> { specifiedTarget };
-                    // Fallback: Self
-                    return new List<BattleCombatant> { actor };
-
-                case TargetType.Both:
-                    // Both Enemies
-                    return opponents;
-
-                case TargetType.Every:
-                    // Both Enemies + Ally
-                    var everyTargets = new List<BattleCombatant>(opponents);
-                    if (ally != null) everyTargets.Add(ally);
-                    return everyTargets;
-
-                case TargetType.All:
-                    // Everyone
-                    return allActive;
-
-                case TargetType.Self:
-                    return new List<BattleCombatant> { actor };
-
-                case TargetType.Team:
-                    // Self + Ally
-                    var teamTargets = new List<BattleCombatant> { actor };
-                    if (ally != null) teamTargets.Add(ally);
-                    return teamTargets;
-
-                case TargetType.Ally:
-                    // Only Ally
-                    return ally != null ? new List<BattleCombatant> { ally } : new List<BattleCombatant>();
-
-                case TargetType.SingleTeam:
-                    // Specific target (Self or Ally)
-                    if (specifiedTarget != null && specifiedTarget.IsActiveOnField && !specifiedTarget.IsDefeated)
-                        return new List<BattleCombatant> { specifiedTarget };
-                    return new List<BattleCombatant>();
-
-                case TargetType.None:
-                default:
-                    return new List<BattleCombatant>();
+                return new List<BattleCombatant> { specifiedTarget };
             }
+
+            // If the target type implies multiple targets (All, Both, etc.), return the whole valid list.
+            if (targetType == TargetType.All || targetType == TargetType.Both || targetType == TargetType.Every || targetType == TargetType.Team || targetType == TargetType.Ally)
+            {
+                return validCandidates;
+            }
+
+            // Fallback for Single target types where no specific target was given (e.g. AI)
+            if (validCandidates.Any())
+            {
+                return new List<BattleCombatant> { validCandidates[0] };
+            }
+
+            return new List<BattleCombatant>();
         }
 
         private void HandleCheckForDefeat()
@@ -744,8 +724,13 @@ namespace ProjectVagabond.Battle
                 combatant.IsRemovalProcessed = true;
 
                 // Mark slot as empty (move to void)
-                // We do NOT fill the slot here anymore. That happens in Reinforcement phase.
                 combatant.BattleSlot = -1;
+            }
+
+            // Refresh caches if anyone died
+            if (finishedDying.Any())
+            {
+                RefreshCombatantCaches();
             }
 
             var newlyDefeated = _allCombatants.FirstOrDefault(c => c.IsDefeated && !c.IsDying && !c.IsRemovalProcessed);
@@ -790,10 +775,8 @@ namespace ProjectVagabond.Battle
         {
             _endOfTurnEffectsProcessed = true;
 
-            foreach (var combatant in _allCombatants)
+            foreach (var combatant in _cachedAllActive)
             {
-                if (combatant.IsDefeated || !combatant.IsActiveOnField) continue;
-
                 // Regen
                 foreach (var relic in combatant.ActiveRelics)
                 {
@@ -843,13 +826,12 @@ namespace ProjectVagabond.Battle
                 return;
             }
 
-            // Check if the current slot is empty
-            bool isSlotOccupied = _enemyParty.Any(c => c.BattleSlot == _reinforcementSlotIndex && !c.IsDefeated);
+            // Check if the current slot is occupied by an active enemy
+            bool isSlotOccupied = _cachedActiveEnemies.Any(c => c.BattleSlot == _reinforcementSlotIndex);
 
             if (!isSlotOccupied)
             {
                 // Check if there is a benched enemy available
-                // Benched enemies have slot >= 2 or -1 if they were just moved to void
                 var benchedEnemy = _enemyParty.FirstOrDefault(c => c.BattleSlot >= 2 && !c.IsDefeated);
 
                 if (benchedEnemy != null)
@@ -859,14 +841,16 @@ namespace ProjectVagabond.Battle
                         // Step 1: Announce via blocking narration
                         EventBus.Publish(new GameEvents.NextEnemyApproaches());
                         _reinforcementAnnounced = true;
-                        // We return here. The BattleScene will see the UI is busy (displaying text)
-                        // and pause the BattleManager updates until the user clicks.
                         return;
                     }
                     else
                     {
-                        // Step 2: Spawn (Only happens after UI clears and Update resumes)
+                        // Step 2: Spawn
                         benchedEnemy.BattleSlot = _reinforcementSlotIndex;
+
+                        // Refresh caches to include the new enemy
+                        RefreshCombatantCaches();
+
                         EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{benchedEnemy.Name} enters the battle!" });
                         EventBus.Publish(new GameEvents.CombatantSpawned { Combatant = benchedEnemy });
                         HandleOnEnterAbilities(benchedEnemy);
@@ -886,7 +870,7 @@ namespace ProjectVagabond.Battle
 
         private void HandleOnEnterAbilities(BattleCombatant specificCombatant = null)
         {
-            var targets = specificCombatant != null ? new List<BattleCombatant> { specificCombatant } : _allCombatants;
+            var targets = specificCombatant != null ? new List<BattleCombatant> { specificCombatant } : _cachedAllActive;
 
             foreach (var combatant in targets)
             {
@@ -896,18 +880,15 @@ namespace ProjectVagabond.Battle
                 {
                     if (relic.Effects.TryGetValue("IntimidateOnEnter", out var value) && EffectParser.TryParseStatStageAbilityParams(value, out var stat, out var amount))
                     {
-                        var opponents = combatant.IsPlayerControlled ? _enemyParty : _playerParty;
+                        var opponents = combatant.IsPlayerControlled ? _cachedActiveEnemies : _cachedActivePlayers;
                         bool anyAffected = false;
                         foreach (var opponent in opponents)
                         {
-                            if (!opponent.IsDefeated && opponent.IsActiveOnField)
+                            var (success, _) = opponent.ModifyStatStage(stat, amount);
+                            if (success)
                             {
-                                var (success, _) = opponent.ModifyStatStage(stat, amount);
-                                if (success)
-                                {
-                                    anyAffected = true;
-                                    EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = opponent, Stat = stat, Amount = amount });
-                                }
+                                anyAffected = true;
+                                EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = opponent, Stat = stat, Amount = amount });
                             }
                         }
                         if (anyAffected)

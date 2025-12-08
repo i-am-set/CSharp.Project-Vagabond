@@ -372,7 +372,7 @@
     "ImpactType": "Physical",
     "OffensiveStat": "Strength",
     "MakesContact": true,
-    "Target": "Both",
+    "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
     "Rarity": 1,

@@ -658,12 +658,12 @@ namespace ProjectVagabond
         /// <summary>
         /// The time in seconds for the single-target selection cycle to move to the next target.
         /// </summary>
-        public float TargetingSingleCycleSpeed { get; set; } = 0.5f;
+        public float TargetingSingleCycleSpeed { get; set; } = 1.0f;
 
         /// <summary>
         /// The duration in seconds of one full blink cycle (Red -> Yellow) for multi-target selection.
         /// </summary>
-        public float TargetingMultiBlinkSpeed { get; set; } = 1.0f;
+        public float TargetingMultiBlinkSpeed { get; set; } = 1.5f;
 
         public Color GetNarrationColor(string tag)
         {
