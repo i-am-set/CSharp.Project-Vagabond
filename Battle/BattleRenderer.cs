@@ -30,8 +30,6 @@ namespace ProjectVagabond.Battle.UI
         // Sprite Management
         private readonly Dictionary<string, PlayerCombatSprite> _playerSprites = new Dictionary<string, PlayerCombatSprite>();
 
-        private readonly Color _turnInactiveTintColor;
-
         // State
         private List<TargetInfo> _currentTargets = new List<TargetInfo>();
         private readonly List<StatusIconInfo> _playerStatusIcons = new List<StatusIconInfo>();
@@ -76,7 +74,6 @@ namespace ProjectVagabond.Battle.UI
             _global = ServiceLocator.Get<Global>();
             _core = ServiceLocator.Get<Core>();
             _tooltipManager = ServiceLocator.Get<TooltipManager>();
-            _turnInactiveTintColor = Color.Lerp(Color.White, _global.ButtonDisableColor, 0.5f);
         }
 
         public void Reset()
@@ -461,11 +458,6 @@ namespace ProjectVagabond.Battle.UI
 
             // Determine tint
             Color? playerSpriteTint = null;
-            bool isTurnInProgress = (currentActor != null);
-            if (isTurnInProgress && player != currentActor)
-            {
-                playerSpriteTint = _turnInactiveTintColor;
-            }
 
             bool isHighlighted = isSelectable && shouldGrayOutUnselectable;
             Color? highlightColor = null;
@@ -492,7 +484,6 @@ namespace ProjectVagabond.Battle.UI
             if (!isSilhouetted)
             {
                 Color nameColor = Color.White;
-                if (isTurnInProgress && player != currentActor) nameColor = _turnInactiveTintColor;
 
                 // --- Name Dimming & Font Logic ---
                 var battleManager = ServiceLocator.Get<BattleManager>();
@@ -563,8 +554,11 @@ namespace ProjectVagabond.Battle.UI
 
             // --- HP Bar ---
             float hpPercent = player.Stats.MaxHP > 0 ? Math.Clamp(player.VisualHP / player.Stats.MaxHP, 0f, 1f) : 0f;
+            int hpWidth = (int)(width * hpPercent);
+            if (hpPercent > 0 && hpWidth == 0) hpWidth = 1;
+
             var hpBgRect = new Rectangle((int)position.X, (int)position.Y + 1, width, 2);
-            var hpFgRect = new Rectangle((int)position.X, (int)position.Y + 1, (int)(width * hpPercent), 2);
+            var hpFgRect = new Rectangle((int)position.X, (int)position.Y + 1, hpWidth, 2);
 
             spriteBatch.DrawSnapped(pixel, hpBgRect, _global.Palette_DarkGray);
             spriteBatch.DrawSnapped(pixel, hpFgRect, _global.Palette_LightGreen);
@@ -578,8 +572,11 @@ namespace ProjectVagabond.Battle.UI
 
             // --- Mana Bar ---
             float manaPercent = player.Stats.MaxMana > 0 ? Math.Clamp((float)player.Stats.CurrentMana / player.Stats.MaxMana, 0f, 1f) : 0f;
+            int manaWidth = (int)(width * manaPercent);
+            if (manaPercent > 0 && manaWidth == 0) manaWidth = 1;
+
             var manaBgRect = new Rectangle((int)position.X, (int)position.Y + 4, width, 2);
-            var manaFgRect = new Rectangle((int)position.X, (int)position.Y + 4, (int)(width * manaPercent), 2);
+            var manaFgRect = new Rectangle((int)position.X, (int)position.Y + 4, manaWidth, 2);
 
             spriteBatch.DrawSnapped(pixel, manaBgRect, _global.Palette_DarkGray);
             spriteBatch.DrawSnapped(pixel, manaFgRect, _global.Palette_LightBlue);
@@ -905,15 +902,6 @@ namespace ProjectVagabond.Battle.UI
             Color tintColor = Color.White * finalAlpha;
             Color outlineColor = _global.Palette_DarkGray * finalAlpha;
 
-            bool isCurrentActor = (currentActor != null && combatant.CombatantID == currentActor.CombatantID);
-            bool isTurnInProgress = (currentActor != null);
-
-            if (isTurnInProgress && !isCurrentActor)
-            {
-                tintColor = _turnInactiveTintColor * finalAlpha;
-                outlineColor = _turnInactiveTintColor * finalAlpha * 0.5f;
-            }
-
             bool isSelectable = selectableTargets.Contains(combatant);
 
             // Apply spawn silhouette overrides if active
@@ -1179,7 +1167,10 @@ namespace ProjectVagabond.Battle.UI
             );
 
             float hpPercent = combatant.Stats.MaxHP > 0 ? Math.Clamp(combatant.VisualHP / combatant.Stats.MaxHP, 0f, 1f) : 0f;
-            var hpFgRect = new Rectangle(barRect.X, barRect.Y, (int)(barRect.Width * hpPercent), barRect.Height);
+            int fgWidth = (int)(barRect.Width * hpPercent);
+            if (hpPercent > 0 && fgWidth == 0) fgWidth = 1;
+
+            var hpFgRect = new Rectangle(barRect.X, barRect.Y, fgWidth, barRect.Height);
 
             spriteBatch.DrawSnapped(pixel, barRect, _global.Palette_DarkGray);
             spriteBatch.DrawSnapped(pixel, hpFgRect, _global.Palette_LightGreen);
