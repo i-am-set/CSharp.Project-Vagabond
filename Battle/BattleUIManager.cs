@@ -535,6 +535,30 @@ namespace ProjectVagabond.Battle.UI
                             HoverHighlightState.Targets.AddRange(allActive);
                             break;
                     }
+
+                    // --- SORTING LOGIC FOR SINGLE TARGET CYCLING ---
+                    // Priority: Enemy 1 -> Enemy 2 -> Ally -> Self
+                    if (hoveredMove.Target == TargetType.Single || hoveredMove.Target == TargetType.SingleTeam || hoveredMove.Target == TargetType.SingleAll)
+                    {
+                        HoverHighlightState.Targets.Sort((a, b) =>
+                        {
+                            // 1. Enemies first
+                            bool aIsEnemy = !a.IsPlayerControlled;
+                            bool bIsEnemy = !b.IsPlayerControlled;
+                            if (aIsEnemy && !bIsEnemy) return -1;
+                            if (!aIsEnemy && bIsEnemy) return 1;
+
+                            // 2. If both enemies, sort by slot (0 then 1)
+                            if (aIsEnemy) return a.BattleSlot.CompareTo(b.BattleSlot);
+
+                            // 3. If both players, Ally before Self
+                            if (a == currentActor) return 1; // Self goes last
+                            if (b == currentActor) return -1;
+
+                            // Fallback to slot for allies
+                            return a.BattleSlot.CompareTo(b.BattleSlot);
+                        });
+                    }
                 }
             }
         }

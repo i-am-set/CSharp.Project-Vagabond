@@ -19,7 +19,6 @@ namespace ProjectVagabond.Battle.UI
 {
     public struct TargetInfo { public BattleCombatant Combatant; public Rectangle Bounds; }
     public struct StatusIconInfo { public StatusEffectInstance Effect; public Rectangle Bounds; }
-
     public class BattleRenderer
     {
         // Dependencies
@@ -296,10 +295,12 @@ namespace ProjectVagabond.Battle.UI
                 float targetingTimer = uiManager.HoverHighlightState.Timer;
 
                 // Sort targets for stable cycling order
+                // Desired Order: Enemies (Slot 0->1), Ally, User
                 var sortedTargets = allCombatants
                     .Where(c => selectableTargets.Contains(c))
-                    .OrderBy(c => c.IsPlayerControlled ? 0 : 1) // Players first
-                    .ThenBy(c => c.BattleSlot) // Then by slot
+                    .OrderBy(c => c.IsPlayerControlled ? 1 : 0) // Enemies (0) first, Players (1) second
+                    .ThenBy(c => c.IsPlayerControlled ? (c == currentActor ? 1 : 0) : 0) // Within Players: Allies (0) first, User (1) last
+                    .ThenBy(c => c.BattleSlot) // Tie-breaker for Enemies and multiple Allies
                     .ToList();
 
                 bool isMultiTarget = activeTargetType == TargetType.Every || activeTargetType == TargetType.Both || activeTargetType == TargetType.All || activeTargetType == TargetType.Team || activeTargetType == TargetType.RandomAll || activeTargetType == TargetType.RandomBoth || activeTargetType == TargetType.RandomEvery;
