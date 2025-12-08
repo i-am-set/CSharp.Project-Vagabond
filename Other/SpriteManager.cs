@@ -234,8 +234,8 @@ namespace ProjectVagabond
             try { _softParticleSprite = _textureFactory.CreateSoftCircleParticleTexture(); }
             catch { _softParticleSprite = _textureFactory.CreateColoredTexture(16, 16, Color.Red); }
 
-            try { ShadowBlobSprite = _textureFactory.CreateSoftShadowTexture(); }
-            catch { ShadowBlobSprite = _textureFactory.CreateColoredTexture(16, 16, Color.Black); }
+            try { ShadowBlobSprite = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/battle_enemy_shadow"); }
+            catch { ShadowBlobSprite = _textureFactory.CreateColoredTexture(128, 128, Color.Black); }
 
             try { ArrowIconSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/arrow_icon_spritesheet"); }
             catch { ArrowIconSpriteSheet = _textureFactory.CreateColoredTexture(48, 48, Color.Magenta); }

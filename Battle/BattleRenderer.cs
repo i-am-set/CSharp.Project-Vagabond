@@ -871,27 +871,25 @@ namespace ProjectVagabond.Battle.UI
             // --- DRAW SHADOW ---
             if (silhouetteFactor < 1.0f && _spriteManager.ShadowBlobSprite != null)
             {
-                // Calculate shadow position and scale
+                // Calculate shadow position
                 // Ground Y is roughly at the bottom of the sprite rect when at rest (spawnYOffset = 0)
                 // We use the static rect bottom as the ground reference
                 float groundY = staticRect.Bottom;
 
-                // Calculate height factor for scaling (0 to 1, where 1 is on ground)
+                // Calculate height factor for Alpha fading (0 to 1, where 1 is on ground)
                 // spawnYOffset is negative when in air
                 float heightFactor = 1.0f - Math.Clamp(Math.Abs(spawnYOffset) / 50f, 0f, 1f);
 
-                // Base scale relative to sprite size
-                float shadowScaleX = (spritePartSize / 64f) * (0.8f + 0.2f * heightFactor);
-                float shadowScaleY = shadowScaleX * 0.2f; // Flattened
-
-                Vector2 shadowPos = new Vector2(spriteRect.Center.X, groundY - 4); // Slight offset up
+                // Center horizontally on the sprite, vertically on the ground line
+                Vector2 shadowPos = new Vector2(spriteRect.Center.X, groundY);
                 Vector2 shadowOrigin = new Vector2(_spriteManager.ShadowBlobSprite.Width / 2f, _spriteManager.ShadowBlobSprite.Height / 2f);
 
                 // Use White so the texture colors show through. 
-                // We still fade alpha based on height and spawn state.
+                // Fade alpha based on height and spawn state.
                 Color shadowTint = Color.White * (heightFactor * finalAlpha);
 
-                spriteBatch.DrawSnapped(_spriteManager.ShadowBlobSprite, shadowPos, null, shadowTint, 0f, shadowOrigin, new Vector2(shadowScaleX, shadowScaleY), SpriteEffects.None, 0f);
+                // Draw unscaled (1.0f) as requested
+                spriteBatch.DrawSnapped(_spriteManager.ShadowBlobSprite, shadowPos, null, shadowTint, 0f, shadowOrigin, 1.0f, SpriteEffects.None, 0f);
             }
 
             Texture2D enemySprite = _spriteManager.GetEnemySprite(combatant.ArchetypeId);
