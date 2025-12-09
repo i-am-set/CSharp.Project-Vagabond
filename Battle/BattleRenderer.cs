@@ -49,6 +49,13 @@ namespace ProjectVagabond.Battle.UI
         private const float ENEMY_ANIM_MIN_INTERVAL = 0.4f;
         private const float ENEMY_ANIM_MAX_INTERVAL = 0.6f;
 
+        // Shadow Animation State
+        private Dictionary<string, Vector2> _shadowOffsets = new Dictionary<string, Vector2>();
+        private Dictionary<string, float> _shadowTimers = new Dictionary<string, float>();
+        private Dictionary<string, float> _shadowIntervals = new Dictionary<string, float>();
+        private const float SHADOW_ANIM_MIN_INTERVAL = 0.8f; // Slower than limbs
+        private const float SHADOW_ANIM_MAX_INTERVAL = 1.2f;
+
         // Attacker Animation
         private readonly Dictionary<string, float> _attackAnimTimers = new();
         private string? _lastAttackerId;
@@ -84,6 +91,9 @@ namespace ProjectVagabond.Battle.UI
             _enemySpritePartOffsets.Clear();
             _enemyAnimationTimers.Clear();
             _enemyAnimationIntervals.Clear();
+            _shadowOffsets.Clear();
+            _shadowTimers.Clear();
+            _shadowIntervals.Clear();
             _attackAnimTimers.Clear();
             _combatantVisualCenters.Clear();
             _playerSprites.Clear();
@@ -95,6 +105,7 @@ namespace ProjectVagabond.Battle.UI
         public void Update(GameTime gameTime, IEnumerable<BattleCombatant> combatants, BattleAnimationManager animationManager)
         {
             UpdateEnemyAnimations(gameTime, combatants);
+            UpdateShadowAnimations(gameTime, combatants);
             UpdateStatusIconTooltips(combatants);
 
             foreach (var sprite in _playerSprites.Values)
@@ -404,12 +415,37 @@ namespace ProjectVagabond.Battle.UI
 
         private void DrawEnemyHuds(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, List<BattleCombatant> enemies, BattleCombatant currentActor, bool isTargetingPhase, bool shouldGrayOutUnselectable, HashSet<BattleCombatant> selectableTargets, BattleAnimationManager animationManager, HoverHighlightState hoverHighlightState, float pulseAlpha, GameTime gameTime, Dictionary<string, Color> silhouetteColors)
         {
-            if (!enemies.Any()) return;
-
             const int enemyAreaPadding = 40;
             int availableWidth = Global.VIRTUAL_WIDTH - (enemyAreaPadding * 2);
             // Fixed slots for enemies: 2 slots max
             int slotWidth = availableWidth / 2;
+
+            // --- DRAW FLOORS (Always Visible, Static) ---
+            for (int slotIndex = 0; slotIndex < 2; slotIndex++)
+            {
+                var slotCenter = new Vector2(enemyAreaPadding + (slotIndex * slotWidth) + (slotWidth / 2), 0);
+                var enemyInSlot = enemies.FirstOrDefault(e => e.BattleSlot == slotIndex);
+
+                int spriteSize = 64; // Default
+                if (enemyInSlot != null)
+                {
+                    bool isMajor = _spriteManager.IsMajorEnemySprite(enemyInSlot.ArchetypeId);
+                    spriteSize = isMajor ? 96 : 64;
+                }
+
+                // Ground Y is at the bottom of the sprite rect (Top=0 + Height=Size)
+                float groundY = spriteSize;
+
+                // Draw Floor
+                if (_spriteManager.BattleEnemyFloorSprite != null)
+                {
+                    Vector2 floorOrigin = new Vector2(_spriteManager.BattleEnemyFloorSprite.Width / 2f, _spriteManager.BattleEnemyFloorSprite.Height / 2f);
+                    // Draw at (CenterX, GroundY)
+                    spriteBatch.DrawSnapped(_spriteManager.BattleEnemyFloorSprite, new Vector2(slotCenter.X, groundY), null, Color.White, 0f, floorOrigin, 1f, SpriteEffects.None, 0f);
+                }
+            }
+
+            if (!enemies.Any()) return;
 
             foreach (var enemy in enemies)
             {
@@ -880,8 +916,15 @@ namespace ProjectVagabond.Battle.UI
                 // spawnYOffset is negative when in air
                 float heightFactor = 1.0f - Math.Clamp(Math.Abs(spawnYOffset) / 50f, 0f, 1f);
 
-                // Center horizontally on the sprite, vertically on the ground line
-                Vector2 shadowPos = new Vector2(spriteRect.Center.X, groundY);
+                // Get Shadow Animation Offset
+                Vector2 shadowAnimOffset = Vector2.Zero;
+                if (_shadowOffsets.TryGetValue(combatant.CombatantID, out var sOffset))
+                {
+                    shadowAnimOffset = sOffset;
+                }
+
+                // Center horizontally on the sprite, vertically on the ground line, plus animation offset
+                Vector2 shadowPos = new Vector2(spriteRect.Center.X, groundY) + shadowAnimOffset;
                 Vector2 shadowOrigin = new Vector2(_spriteManager.ShadowBlobSprite.Width / 2f, _spriteManager.ShadowBlobSprite.Height / 2f);
 
                 // Use White so the texture colors show through. 
@@ -925,16 +968,36 @@ namespace ProjectVagabond.Battle.UI
                     // Only draw outline if NOT highlighted (since highlight will be the full shape)
                     if (enemySilhouette != null && silhouetteFactor < 1.0f && !isHighlighted)
                     {
+                        Color outerBorderColor = _global.Palette_Black * finalAlpha;
+
                         for (int i = 0; i < numParts; i++)
                         {
                             var sourceRect = new Rectangle(i * spritePartSize, 0, spritePartSize, spritePartSize);
                             var partOffset = offsets[i];
                             var baseDrawPosition = new Vector2(spriteRect.X + partOffset.X, spriteRect.Y + partOffset.Y) + shakeOffset;
+                            int x = (int)baseDrawPosition.X;
+                            int y = (int)baseDrawPosition.Y;
+                            int w = spriteRect.Width;
+                            int h = spriteRect.Height;
 
-                            spriteBatch.DrawSnapped(enemySilhouette, new Rectangle((int)baseDrawPosition.X - 1, (int)baseDrawPosition.Y, spriteRect.Width, spriteRect.Height), sourceRect, outlineColor);
-                            spriteBatch.DrawSnapped(enemySilhouette, new Rectangle((int)baseDrawPosition.X + 1, (int)baseDrawPosition.Y, spriteRect.Width, spriteRect.Height), sourceRect, outlineColor);
-                            spriteBatch.DrawSnapped(enemySilhouette, new Rectangle((int)baseDrawPosition.X, (int)baseDrawPosition.Y - 1, spriteRect.Width, spriteRect.Height), sourceRect, outlineColor);
-                            // Removed bottom outline
+                            // Outer Black Border (Distance 2 Cardinals + Distance 1 Diagonals)
+                            // Cardinals (2px)
+                            spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x - 2, y, w, h), sourceRect, outerBorderColor);
+                            spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x + 2, y, w, h), sourceRect, outerBorderColor);
+                            spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x, y - 2, w, h), sourceRect, outerBorderColor);
+                            spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x, y + 2, w, h), sourceRect, outerBorderColor);
+
+                            // Diagonals (1px) - Fills the corners of the outer border
+                            spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x - 1, y - 1, w, h), sourceRect, outerBorderColor);
+                            spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x + 1, y - 1, w, h), sourceRect, outerBorderColor);
+                            spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x - 1, y + 1, w, h), sourceRect, outerBorderColor);
+                            spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x + 1, y + 1, w, h), sourceRect, outerBorderColor);
+
+                            // Inner Colored Border (Distance 1 Cardinals)
+                            spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x - 1, y, w, h), sourceRect, outlineColor);
+                            spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x + 1, y, w, h), sourceRect, outlineColor);
+                            spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x, y - 1, w, h), sourceRect, outlineColor);
+                            spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x, y + 1, w, h), sourceRect, outlineColor); // Added bottom
                         }
                     }
 
@@ -1350,6 +1413,48 @@ namespace ProjectVagabond.Battle.UI
                             }
                         }
                         currentOffsets[i] = pos;
+                    }
+                }
+            }
+        }
+
+        private void UpdateShadowAnimations(GameTime gameTime, IEnumerable<BattleCombatant> combatants)
+        {
+            float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            foreach (var combatant in combatants)
+            {
+                if (combatant.IsPlayerControlled || combatant.IsDefeated) continue;
+
+                string id = combatant.CombatantID;
+
+                if (!_shadowTimers.ContainsKey(id))
+                {
+                    _shadowTimers[id] = (float)_random.NextDouble();
+                    _shadowIntervals[id] = (float)(_random.NextDouble() * (SHADOW_ANIM_MAX_INTERVAL - SHADOW_ANIM_MIN_INTERVAL) + SHADOW_ANIM_MIN_INTERVAL);
+                    _shadowOffsets[id] = Vector2.Zero;
+                }
+
+                _shadowTimers[id] += deltaTime;
+                if (_shadowTimers[id] >= _shadowIntervals[id])
+                {
+                    _shadowTimers[id] = 0f;
+                    _shadowIntervals[id] = (float)(_random.NextDouble() * (SHADOW_ANIM_MAX_INTERVAL - SHADOW_ANIM_MIN_INTERVAL) + SHADOW_ANIM_MIN_INTERVAL);
+
+                    Vector2 current = _shadowOffsets[id];
+                    if (current != Vector2.Zero)
+                    {
+                        _shadowOffsets[id] = Vector2.Zero;
+                    }
+                    else
+                    {
+                        int dir = _random.Next(4);
+                        switch (dir)
+                        {
+                            case 0: _shadowOffsets[id] = new Vector2(0, -1); break;
+                            case 1: _shadowOffsets[id] = new Vector2(0, 1); break;
+                            case 2: _shadowOffsets[id] = new Vector2(-1, 0); break;
+                            case 3: _shadowOffsets[id] = new Vector2(1, 0); break;
+                        }
                     }
                 }
             }
