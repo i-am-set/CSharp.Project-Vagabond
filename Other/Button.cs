@@ -73,10 +73,13 @@ namespace ProjectVagabond.UI
         // Changed from event to property to allow reassignment (fixing CS0070)
         public Action? OnClick { get; set; }
         public Action? OnRightClick { get; set; }
+        public Action? OnMiddleClick { get; set; }
 
         public bool HasRightClickHint { get; set; } = false;
+        public bool HasMiddleClickHint { get; set; } = false;
         public bool HasLeftClickAction => OnClick != null;
         public bool HasRightClickAction => OnRightClick != null || HasRightClickHint;
+        public bool HasMiddleClickAction => OnMiddleClick != null || HasMiddleClickHint;
 
         protected MouseState _previousMouseState;
         protected readonly HoverAnimator _hoverAnimator = new HoverAnimator();
@@ -194,6 +197,19 @@ namespace ProjectVagabond.UI
                 if (!UseInputDebounce || UIInputManager.CanProcessMouseClick())
                 {
                     OnRightClick?.Invoke();
+                    if (UseInputDebounce)
+                    {
+                        UIInputManager.ConsumeMouseClick();
+                    }
+                }
+            }
+
+            bool middleMouseReleasedOverButton = IsHovered && currentMouseState.MiddleButton == ButtonState.Released && _previousMouseState.MiddleButton == ButtonState.Pressed;
+            if (middleMouseReleasedOverButton)
+            {
+                if (!UseInputDebounce || UIInputManager.CanProcessMouseClick())
+                {
+                    OnMiddleClick?.Invoke();
                     if (UseInputDebounce)
                     {
                         UIInputManager.ConsumeMouseClick();

@@ -6,6 +6,7 @@ using MonoGame.Extended.BitmapFonts;
 using MonoGame.Extended.Graphics;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Progression;
@@ -253,13 +254,16 @@ namespace ProjectVagabond
             ServiceLocator.Register<GraphicsDevice>(GraphicsDevice);
 
             // Initialize the virtual resolution render target (320x180)
+            // FIX: Use PreserveContents to prevent black screen when switching render targets in BattleRenderer
             _sceneRenderTarget = new RenderTarget2D(
                 GraphicsDevice,
                 Global.VIRTUAL_WIDTH,
                 Global.VIRTUAL_HEIGHT,
                 false,
                 GraphicsDevice.PresentationParameters.BackBufferFormat,
-                DepthFormat.Depth24);
+                DepthFormat.Depth24,
+                0,
+                RenderTargetUsage.PreserveContents);
 
             // Phase 3: Instantiate and Register Managers & Systems
             // Order matters here for dependencies.
@@ -406,13 +410,16 @@ namespace ProjectVagabond
             OnResize(null, null);
 
             // Initialize the full-screen composite render target
+            // FIX: Use PreserveContents here as well for safety
             _finalCompositeTarget = new RenderTarget2D(
                 GraphicsDevice,
                 Window.ClientBounds.Width,
                 Window.ClientBounds.Height,
                 false,
                 GraphicsDevice.PresentationParameters.BackBufferFormat,
-                DepthFormat.Depth24);
+                DepthFormat.Depth24,
+                0,
+                RenderTargetUsage.PreserveContents);
 
             // Initialize the custom blend state for the inverted cursor
             _cursorInvertBlendState = new BlendState
@@ -867,7 +874,16 @@ namespace ProjectVagabond
             _mouseTransformMatrix = Matrix.CreateTranslation(-destX, -destY, 0) * Matrix.CreateScale(1.0f / _finalScale);
 
             _finalCompositeTarget?.Dispose();
-            _finalCompositeTarget = new RenderTarget2D(GraphicsDevice, Window.ClientBounds.Width, Window.ClientBounds.Height, false, GraphicsDevice.PresentationParameters.BackBufferFormat, DepthFormat.Depth24);
+            // FIX: Use PreserveContents here as well
+            _finalCompositeTarget = new RenderTarget2D(
+                GraphicsDevice,
+                Window.ClientBounds.Width,
+                Window.ClientBounds.Height,
+                false,
+                GraphicsDevice.PresentationParameters.BackBufferFormat,
+                DepthFormat.Depth24,
+                0,
+                RenderTargetUsage.PreserveContents);
         }
 
         public static Vector2 TransformMouse(Point screenPoint)

@@ -9,6 +9,7 @@ using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 namespace ProjectVagabond.Battle.UI
 {
@@ -60,7 +61,10 @@ namespace ProjectVagabond.Battle.UI
             IconSourceRect = iconSourceRect;
             _animState = startVisible ? AnimationState.Idle : AnimationState.Hidden;
             _overlayFadeTimer = (float)(_random.NextDouble() * Math.PI * 2.0);
-            HasRightClickHint = true;
+
+            // Updated to use Middle Click for info
+            HasMiddleClickHint = true;
+            HasRightClickHint = false;
         }
 
         public void TriggerAppearAnimation()

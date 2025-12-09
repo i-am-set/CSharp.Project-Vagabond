@@ -30,6 +30,11 @@ namespace ProjectVagabond.Battle.UI
         // Sprite Management
         private readonly Dictionary<string, PlayerCombatSprite> _playerSprites = new Dictionary<string, PlayerCombatSprite>();
 
+        // Rendering Resources
+        private RenderTarget2D _flattenTarget;
+        private const int FLATTEN_TARGET_SIZE = 256;
+        private const int FLATTEN_MARGIN = 16; // Margin to prevent clipping of animated parts
+
         // State
         private List<TargetInfo> _currentTargets = new List<TargetInfo>();
         private readonly List<StatusIconInfo> _playerStatusIcons = new List<StatusIconInfo>();
@@ -67,6 +72,7 @@ namespace ProjectVagabond.Battle.UI
         private const int MAX_ENEMIES = 5;
         private const float PLAYER_INDICATOR_BOB_SPEED = 0.75f;
         private const float TITLE_INDICATOR_BOB_SPEED = PLAYER_INDICATOR_BOB_SPEED / 2f;
+        private const int ENEMY_SLOT_Y_OFFSET = 16; // Shift enemies down
 
         // --- Targeting Indicator Animation Tuning ---
         // Note: Rotation and Scale tuning variables are no longer used, but kept in Global for compatibility if needed later.
@@ -81,6 +87,10 @@ namespace ProjectVagabond.Battle.UI
             _global = ServiceLocator.Get<Global>();
             _core = ServiceLocator.Get<Core>();
             _tooltipManager = ServiceLocator.Get<TooltipManager>();
+
+            // Initialize the render target for flattening transparent sprites
+            // FIX: Use PreserveContents to prevent issues if we switch back and forth, though we clear it anyway.
+            _flattenTarget = new RenderTarget2D(_core.GraphicsDevice, FLATTEN_TARGET_SIZE, FLATTEN_TARGET_SIZE, false, SurfaceFormat.Color, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
         }
 
         public void Reset()
@@ -154,7 +164,8 @@ namespace ProjectVagabond.Battle.UI
             BattleUIManager uiManager,
             BattleInputHandler inputHandler,
             BattleAnimationManager animationManager,
-            float sharedBobbingTimer)
+            float sharedBobbingTimer,
+            Matrix transform)
         {
             var secondaryFont = _core.SecondaryFont;
             var pixel = ServiceLocator.Get<Texture2D>();
@@ -357,7 +368,7 @@ namespace ProjectVagabond.Battle.UI
 
 
             // --- Draw Enemy HUDs ---
-            DrawEnemyHuds(spriteBatch, font, secondaryFont, enemies, currentActor, isTargetingPhase, shouldGrayOutUnselectable, selectableTargets, animationManager, uiManager.HoverHighlightState, pulseAlpha, gameTime, silhouetteColors);
+            DrawEnemyHuds(spriteBatch, font, secondaryFont, enemies, currentActor, isTargetingPhase, shouldGrayOutUnselectable, selectableTargets, animationManager, uiManager.HoverHighlightState, pulseAlpha, gameTime, silhouetteColors, transform);
 
             // --- Draw Player HUDs (Slots 0 & 1) ---
             foreach (var playerCombatant in players)
@@ -413,7 +424,7 @@ namespace ProjectVagabond.Battle.UI
         {
         }
 
-        private void DrawEnemyHuds(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, List<BattleCombatant> enemies, BattleCombatant currentActor, bool isTargetingPhase, bool shouldGrayOutUnselectable, HashSet<BattleCombatant> selectableTargets, BattleAnimationManager animationManager, HoverHighlightState hoverHighlightState, float pulseAlpha, GameTime gameTime, Dictionary<string, Color> silhouetteColors)
+        private void DrawEnemyHuds(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, List<BattleCombatant> enemies, BattleCombatant currentActor, bool isTargetingPhase, bool shouldGrayOutUnselectable, HashSet<BattleCombatant> selectableTargets, BattleAnimationManager animationManager, HoverHighlightState hoverHighlightState, float pulseAlpha, GameTime gameTime, Dictionary<string, Color> silhouetteColors, Matrix transform)
         {
             const int enemyAreaPadding = 40;
             int availableWidth = Global.VIRTUAL_WIDTH - (enemyAreaPadding * 2);
@@ -423,7 +434,7 @@ namespace ProjectVagabond.Battle.UI
             // --- DRAW FLOORS (Always Visible, Static) ---
             for (int slotIndex = 0; slotIndex < 2; slotIndex++)
             {
-                var slotCenter = new Vector2(enemyAreaPadding + (slotIndex * slotWidth) + (slotWidth / 2), 0);
+                var slotCenter = new Vector2(enemyAreaPadding + (slotIndex * slotWidth) + (slotWidth / 2), ENEMY_SLOT_Y_OFFSET);
                 var enemyInSlot = enemies.FirstOrDefault(e => e.BattleSlot == slotIndex);
 
                 int spriteSize = 64; // Default
@@ -433,8 +444,8 @@ namespace ProjectVagabond.Battle.UI
                     spriteSize = isMajor ? 96 : 64;
                 }
 
-                // Ground Y is at the bottom of the sprite rect (Top=0 + Height=Size)
-                float groundY = spriteSize;
+                // Ground Y is at the bottom of the sprite rect (Top=0 + Height=Size) + Offset
+                float groundY = spriteSize + ENEMY_SLOT_Y_OFFSET;
 
                 // Draw Floor
                 if (_spriteManager.BattleEnemyFloorSprite != null)
@@ -451,7 +462,7 @@ namespace ProjectVagabond.Battle.UI
             {
                 // Slot 0 is Left, Slot 1 is Right
                 int slotIndex = enemy.BattleSlot;
-                var slotCenter = new Vector2(enemyAreaPadding + (slotIndex * slotWidth) + (slotWidth / 2), 0);
+                var slotCenter = new Vector2(enemyAreaPadding + (slotIndex * slotWidth) + (slotWidth / 2), ENEMY_SLOT_Y_OFFSET);
 
                 Color? highlightColor = null;
                 if (silhouetteColors.TryGetValue(enemy.CombatantID, out var color))
@@ -459,7 +470,7 @@ namespace ProjectVagabond.Battle.UI
                     highlightColor = color;
                 }
 
-                DrawCombatantHud(spriteBatch, nameFont, statsFont, enemy, slotCenter, currentActor, isTargetingPhase, shouldGrayOutUnselectable, selectableTargets, animationManager, hoverHighlightState, pulseAlpha, gameTime, highlightColor);
+                DrawCombatantHud(spriteBatch, nameFont, statsFont, enemy, slotCenter, currentActor, isTargetingPhase, shouldGrayOutUnselectable, selectableTargets, animationManager, hoverHighlightState, pulseAlpha, gameTime, highlightColor, transform);
 
                 if (selectableTargets.Contains(enemy))
                 {
@@ -482,7 +493,7 @@ namespace ProjectVagabond.Battle.UI
                         spawnYOffset = -BattleAnimationManager.SpawnAnimationState.DROP_HEIGHT;
                     }
 
-                    Vector2 spritePos = new Vector2((int)(slotCenter.X - spritePartSize / 2f), (int)(yBobOffset + spawnYOffset));
+                    Vector2 spritePos = new Vector2((int)(slotCenter.X - spritePartSize / 2f), (int)(slotCenter.Y + yBobOffset + spawnYOffset));
 
                     // Use STATIC bounds for the targeting box to prevent resizing during animation
                     Rectangle spriteBounds = GetEnemyStaticSpriteBounds(enemy, spritePos);
@@ -490,7 +501,7 @@ namespace ProjectVagabond.Battle.UI
                     // Fallback if empty (e.g. invisible)
                     if (spriteBounds.IsEmpty)
                     {
-                        spriteBounds = new Rectangle((int)spritePos.X, 0, spritePartSize, spritePartSize);
+                        spriteBounds = new Rectangle((int)spritePos.X, (int)slotCenter.Y, spritePartSize, spritePartSize);
                     }
 
                     _currentTargets.Add(new TargetInfo
@@ -833,7 +844,7 @@ namespace ProjectVagabond.Battle.UI
             spriteBatch.DrawSnapped(arrowSheet, arrowPos, arrowRect, Color.White);
         }
 
-        private void DrawCombatantHud(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, BattleCombatant combatant, Vector2 slotCenter, BattleCombatant currentActor, bool isTargetingPhase, bool shouldGrayOutUnselectable, HashSet<BattleCombatant> selectableTargets, BattleAnimationManager animationManager, HoverHighlightState hoverHighlightState, float pulseAlpha, GameTime gameTime, Color? highlightColor)
+        private void DrawCombatantHud(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, BattleCombatant combatant, Vector2 slotCenter, BattleCombatant currentActor, bool isTargetingPhase, bool shouldGrayOutUnselectable, HashSet<BattleCombatant> selectableTargets, BattleAnimationManager animationManager, HoverHighlightState hoverHighlightState, float pulseAlpha, GameTime gameTime, Color? highlightColor, Matrix transform)
         {
             // Calculate Attack Bob (Jump DOWN for enemies)
             float yBobOffset = CalculateAttackBobOffset(combatant.CombatantID, isPlayer: false);
@@ -874,11 +885,11 @@ namespace ProjectVagabond.Battle.UI
             int spritePartSize = isMajor ? 96 : 64;
 
             // Calculate STATIC center for targeting/damage numbers
-            var staticRect = new Rectangle((int)(slotCenter.X - spritePartSize / 2f), 0, spritePartSize, spritePartSize);
+            var staticRect = new Rectangle((int)(slotCenter.X - spritePartSize / 2f), (int)slotCenter.Y, spritePartSize, spritePartSize);
             _combatantVisualCenters[combatant.CombatantID] = staticRect.Center.ToVector2();
 
             // Calculate DYNAMIC rect for drawing the sprite (includes bob and spawn drop)
-            var spriteRect = new Rectangle((int)(slotCenter.X - spritePartSize / 2f), (int)(yBobOffset + spawnYOffset), spritePartSize, spritePartSize);
+            var spriteRect = new Rectangle((int)(slotCenter.X - spritePartSize / 2f), (int)(slotCenter.Y + yBobOffset + spawnYOffset), spritePartSize, spritePartSize);
 
             // Apply spawn alpha override if active
             float finalAlpha = combatant.VisualAlpha * spawnAlpha;
@@ -1002,44 +1013,117 @@ namespace ProjectVagabond.Battle.UI
                     }
 
                     // --- Fill Pass ---
-                    for (int i = 0; i < numParts; i++)
+                    // Check if we need to flatten transparency
+                    bool useFlattening = finalAlpha < 1.0f;
+
+                    if (useFlattening)
                     {
-                        var sourceRect = new Rectangle(i * spritePartSize, 0, spritePartSize, spritePartSize);
-                        var partOffset = offsets[i];
-                        var drawPosition = new Vector2(spriteRect.X + partOffset.X, spriteRect.Y + partOffset.Y) + shakeOffset;
-                        var drawRect = new Rectangle((int)drawPosition.X, (int)drawPosition.Y, spriteRect.Width, spriteRect.Height);
+                        // 1. Save current RTs
+                        var currentRTs = _core.GraphicsDevice.GetRenderTargets();
 
-                        // --- TRACK HIGHEST PIXEL ---
-                        // Use the static top offset relative to the sprite's base Y position (which includes bob/spawn)
-                        // This ensures the bar follows the main body movement but ignores limb animation.
-                        float currentPartTopY = GetEnemySpriteStaticTopY(combatant, spriteRect.Y);
-                        if (currentPartTopY < highestPixelY)
-                        {
-                            highestPixelY = currentPartTopY;
-                        }
+                        // 2. End current batch
+                        spriteBatch.End();
 
-                        if (silhouetteFactor >= 1.0f && enemySilhouette != null)
+                        // 3. Switch to flatten target
+                        _core.GraphicsDevice.SetRenderTarget(_flattenTarget);
+                        _core.GraphicsDevice.Clear(Color.Transparent);
+
+                        // 4. Begin local batch
+                        spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
+
+                        // 5. Draw parts to RT
+                        // We draw relative to (FLATTEN_MARGIN, FLATTEN_MARGIN) in the RT to avoid clipping negative offsets.
+                        Vector2 rtOffset = new Vector2(FLATTEN_MARGIN, FLATTEN_MARGIN);
+
+                        for (int i = 0; i < numParts; i++)
                         {
-                            spriteBatch.DrawSnapped(enemySilhouette, drawRect, sourceRect, silhouetteColor * finalAlpha);
-                        }
-                        else if (isHighlighted && enemySilhouette != null)
-                        {
-                            // Highlighted - Use specific color if provided, else Yellow
-                            Color hColor = highlightColor ?? Color.Yellow;
-                            spriteBatch.DrawSnapped(enemySilhouette, drawRect, sourceRect, hColor * finalAlpha);
-                        }
-                        else
-                        {
-                            spriteBatch.DrawSnapped(enemySprite, drawRect, sourceRect, tintColor);
-                            if (silhouetteFactor > 0f && enemySilhouette != null)
+                            var sourceRect = new Rectangle(i * spritePartSize, 0, spritePartSize, spritePartSize);
+                            var partOffset = offsets[i];
+                            // Draw at local position + shake
+                            var localDrawPos = rtOffset + partOffset + shakeOffset;
+
+                            if (silhouetteFactor >= 1.0f && enemySilhouette != null)
                             {
-                                spriteBatch.DrawSnapped(enemySilhouette, drawRect, sourceRect, silhouetteColor * silhouetteFactor * finalAlpha);
+                                spriteBatch.DrawSnapped(enemySilhouette, localDrawPos, sourceRect, silhouetteColor);
+                            }
+                            else if (isHighlighted && enemySilhouette != null)
+                            {
+                                Color hColor = highlightColor ?? Color.Yellow;
+                                spriteBatch.DrawSnapped(enemySilhouette, localDrawPos, sourceRect, hColor);
+                            }
+                            else
+                            {
+                                spriteBatch.DrawSnapped(enemySprite, localDrawPos, sourceRect, Color.White);
+                                if (silhouetteFactor > 0f && enemySilhouette != null)
+                                {
+                                    spriteBatch.DrawSnapped(enemySilhouette, localDrawPos, sourceRect, silhouetteColor * silhouetteFactor);
+                                }
+                            }
+
+                            if (isFlashingWhite && enemySilhouette != null)
+                            {
+                                spriteBatch.DrawSnapped(enemySilhouette, localDrawPos, sourceRect, Color.White * 0.8f);
                             }
                         }
 
-                        if (isFlashingWhite && enemySilhouette != null)
+                        // 6. End local batch
+                        spriteBatch.End();
+
+                        // 7. Restore RTs
+                        _core.GraphicsDevice.SetRenderTargets(currentRTs);
+
+                        // 8. Restart main batch with original transform
+                        spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
+
+                        // 9. Draw the RT
+                        // The sprite top-left in the RT is at (FLATTEN_MARGIN, FLATTEN_MARGIN).
+                        // We want that point to align with `spriteRect.Location`.
+                        // So we draw the RT at `spriteRect.Location - (FLATTEN_MARGIN, FLATTEN_MARGIN)`.
+                        Vector2 drawPos = spriteRect.Location.ToVector2() - new Vector2(FLATTEN_MARGIN, FLATTEN_MARGIN);
+
+                        // Optimization: Draw only the relevant part of the RT
+                        var srcRect = new Rectangle(0, 0, spritePartSize + FLATTEN_MARGIN * 2, spritePartSize + FLATTEN_MARGIN * 2);
+                        spriteBatch.Draw(_flattenTarget, drawPos, srcRect, Color.White * finalAlpha);
+                    }
+                    else
+                    {
+                        // Standard drawing loop for opaque sprites
+                        for (int i = 0; i < numParts; i++)
                         {
-                            spriteBatch.DrawSnapped(enemySilhouette, drawRect, sourceRect, Color.White * 0.8f);
+                            var sourceRect = new Rectangle(i * spritePartSize, 0, spritePartSize, spritePartSize);
+                            var partOffset = offsets[i];
+                            var drawPosition = new Vector2(spriteRect.X + partOffset.X, spriteRect.Y + partOffset.Y) + shakeOffset;
+                            var drawRect = new Rectangle((int)drawPosition.X, (int)drawPosition.Y, spriteRect.Width, spriteRect.Height);
+
+                            // --- TRACK HIGHEST PIXEL ---
+                            float currentPartTopY = GetEnemySpriteStaticTopY(combatant, spriteRect.Y);
+                            if (currentPartTopY < highestPixelY)
+                            {
+                                highestPixelY = currentPartTopY;
+                            }
+
+                            if (silhouetteFactor >= 1.0f && enemySilhouette != null)
+                            {
+                                spriteBatch.DrawSnapped(enemySilhouette, drawRect, sourceRect, silhouetteColor * finalAlpha);
+                            }
+                            else if (isHighlighted && enemySilhouette != null)
+                            {
+                                Color hColor = highlightColor ?? Color.Yellow;
+                                spriteBatch.DrawSnapped(enemySilhouette, drawRect, sourceRect, hColor * finalAlpha);
+                            }
+                            else
+                            {
+                                spriteBatch.DrawSnapped(enemySprite, drawRect, sourceRect, tintColor);
+                                if (silhouetteFactor > 0f && enemySilhouette != null)
+                                {
+                                    spriteBatch.DrawSnapped(enemySilhouette, drawRect, sourceRect, silhouetteColor * silhouetteFactor * finalAlpha);
+                                }
+                            }
+
+                            if (isFlashingWhite && enemySilhouette != null)
+                            {
+                                spriteBatch.DrawSnapped(enemySilhouette, drawRect, sourceRect, Color.White * 0.8f);
+                            }
                         }
                     }
 
@@ -1119,7 +1203,7 @@ namespace ProjectVagabond.Battle.UI
                 // Fallback if empty (e.g. invisible)
                 if (spriteBounds.IsEmpty)
                 {
-                    spriteBounds = new Rectangle((int)(slotCenter.X - spritePartSize / 2), 0, spritePartSize, spritePartSize);
+                    spriteBounds = new Rectangle((int)(slotCenter.X - spritePartSize / 2), (int)slotCenter.Y, spritePartSize, spritePartSize);
                 }
 
                 _currentTargets.Add(new TargetInfo

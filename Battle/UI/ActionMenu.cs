@@ -161,7 +161,8 @@ namespace ProjectVagabond.Battle.UI
             // Secondary Action Buttons (Strike, Attune, Stall) - Keep Secondary Font
             var strikeButton = new TextOverImageButton(Rectangle.Empty, "STRIKE", null, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[0], enableHoverSway: false, customHoverTextColor: Color.White)
             {
-                HasRightClickHint = true,
+                HasRightClickHint = false,
+                HasMiddleClickHint = true, // Updated to Middle Click
                 TintBackgroundOnHover = false,
                 DrawBorderOnHover = false,
                 HoverBorderColor = _global.Palette_Red
@@ -176,7 +177,8 @@ namespace ProjectVagabond.Battle.UI
 
             var attuneButton = new TextOverImageButton(Rectangle.Empty, "ATTUNE", null, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[3], enableHoverSway: false, customHoverTextColor: Color.White)
             {
-                HasRightClickHint = true,
+                HasRightClickHint = false,
+                HasMiddleClickHint = true, // Updated to Middle Click
                 TintBackgroundOnHover = false,
                 DrawBorderOnHover = false,
                 HoverBorderColor = _global.Palette_Red
@@ -191,7 +193,8 @@ namespace ProjectVagabond.Battle.UI
 
             var stallButton = new TextOverImageButton(Rectangle.Empty, "STALL", null, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[2], enableHoverSway: false, customHoverTextColor: Color.White)
             {
-                HasRightClickHint = true,
+                HasRightClickHint = false,
+                HasMiddleClickHint = true, // Updated to Middle Click
                 TintBackgroundOnHover = false,
                 DrawBorderOnHover = false,
                 HoverBorderColor = _global.Palette_Red
@@ -332,7 +335,7 @@ namespace ProjectVagabond.Battle.UI
                 sourceRect = rect;
             }
 
-            var moveButton = new MoveButton(move, entry, displayPower, font, background, spriteManager.ElementIconsSpriteSheet, sourceRect, startVisible) { HasRightClickHint = true };
+            var moveButton = new MoveButton(move, entry, displayPower, font, background, spriteManager.ElementIconsSpriteSheet, sourceRect, startVisible);
             moveButton.OnClick += () => HandleMoveButtonClick(move, entry, moveButton);
             return moveButton;
         }
@@ -599,7 +602,7 @@ namespace ProjectVagabond.Battle.UI
                     _hoveredMoveButton = null;
                     _shouldAttuneButtonPulse = false;
 
-                    bool rightClickHeldOnAButton = false;
+                    bool middleClickHeldOnAButton = false;
                     MoveData? moveForTooltip = null;
                     bool simpleTooltip = false;
 
@@ -619,9 +622,9 @@ namespace ProjectVagabond.Battle.UI
                                 _shouldAttuneButtonPulse = true;
                             }
 
-                            if (currentMouseState.RightButton == ButtonState.Pressed)
+                            if (currentMouseState.MiddleButton == ButtonState.Pressed)
                             {
-                                rightClickHeldOnAButton = true;
+                                middleClickHeldOnAButton = true;
                                 moveForTooltip = button.Move;
                                 simpleTooltip = false;
                             }
@@ -647,9 +650,9 @@ namespace ProjectVagabond.Battle.UI
                                 HoveredMove = move;
                                 _hoveredSpellbookEntry = null;
 
-                                if (currentMouseState.RightButton == ButtonState.Pressed)
+                                if (currentMouseState.MiddleButton == ButtonState.Pressed)
                                 {
-                                    rightClickHeldOnAButton = true;
+                                    middleClickHeldOnAButton = true;
                                     moveForTooltip = move;
                                     simpleTooltip = false;
                                 }
@@ -657,7 +660,7 @@ namespace ProjectVagabond.Battle.UI
                         }
                     }
 
-                    if (rightClickHeldOnAButton)
+                    if (middleClickHeldOnAButton)
                     {
                         _tooltipMove = moveForTooltip;
                         _useSimpleTooltip = simpleTooltip;
@@ -667,10 +670,7 @@ namespace ProjectVagabond.Battle.UI
                     // --- Right Click to Back Logic ---
                     if (currentMouseState.RightButton == ButtonState.Pressed && _previousMouseState.RightButton == ButtonState.Released)
                     {
-                        if (!rightClickHeldOnAButton)
-                        {
-                            GoBack();
-                        }
+                        GoBack();
                     }
 
                     if (HoveredMove != _lastHoveredMoveForScrolling)
@@ -690,7 +690,7 @@ namespace ProjectVagabond.Battle.UI
                     if (_backButton.IsHovered) HoveredButton = _backButton;
                     break;
                 case MenuState.Tooltip:
-                    if (currentMouseState.RightButton == ButtonState.Released)
+                    if (currentMouseState.MiddleButton == ButtonState.Released)
                     {
                         SetState(MenuState.Moves);
                     }

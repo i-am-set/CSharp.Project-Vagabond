@@ -321,6 +321,11 @@ namespace ProjectVagabond.Battle.UI
                 {
                     _promptTextures.Add(spriteManager.MousePromptRightClick);
                 }
+                // Added Middle Click Prompt
+                if (currentHoveredButton.HasMiddleClickAction)
+                {
+                    _promptTextures.Add(spriteManager.MousePromptMiddleClick);
+                }
             }
 
             if (_promptTextures.Count > 1)

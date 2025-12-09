@@ -663,7 +663,8 @@ namespace ProjectVagabond.Scenes
                 renderContextActor = _battleManager.CurrentActingCombatant;
             }
 
-            _renderer.Draw(spriteBatch, font, gameTime, _battleManager.AllCombatants, renderContextActor, _uiManager, _inputHandler, _animationManager, _uiManager.SharedPulseTimer);
+            // Pass the transform matrix to the renderer
+            _renderer.Draw(spriteBatch, font, gameTime, _battleManager.AllCombatants, renderContextActor, _uiManager, _inputHandler, _animationManager, _uiManager.SharedPulseTimer, transform);
             _moveAnimationManager.Draw(spriteBatch);
             _uiManager.Draw(spriteBatch, font, gameTime, transform);
             _animationManager.DrawDamageIndicators(spriteBatch, secondaryFont);
