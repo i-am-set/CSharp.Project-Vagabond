@@ -44,16 +44,17 @@ namespace ProjectVagabond.Battle
         public string DefaultStrikeMoveID { get; set; }
         public List<StatusEffectInstance> ActiveStatusEffects { get; set; } = new List<StatusEffectInstance>();
 
-        // Legacy list for UI tooltips
         public List<RelicData> ActiveRelics { get; set; } = new List<RelicData>();
 
-        // --- NEW ABILITY SYSTEM ---
         public List<IAbility> Abilities { get; private set; } = new List<IAbility>();
 
         // Cached Interface Lists
         public List<IStatModifier> StatModifiers { get; private set; } = new List<IStatModifier>();
         public List<IOutgoingDamageModifier> OutgoingDamageModifiers { get; private set; } = new List<IOutgoingDamageModifier>();
         public List<IIncomingDamageModifier> IncomingDamageModifiers { get; private set; } = new List<IIncomingDamageModifier>();
+        public List<IDefensePenetrationModifier> DefensePenetrationModifiers { get; private set; } = new List<IDefensePenetrationModifier>();
+        public List<IIncomingStatusModifier> IncomingStatusModifiers { get; private set; } = new List<IIncomingStatusModifier>();
+        public List<IOutgoingStatusModifier> OutgoingStatusModifiers { get; private set; } = new List<IOutgoingStatusModifier>();
         public List<IOnHitEffect> OnHitEffects { get; private set; } = new List<IOnHitEffect>();
         public List<IOnDamagedEffect> OnDamagedEffects { get; private set; } = new List<IOnDamagedEffect>();
         public List<ICritModifier> CritModifiers { get; private set; } = new List<ICritModifier>();
@@ -96,6 +97,9 @@ namespace ProjectVagabond.Battle
             if (ability is IStatModifier sm) StatModifiers.Add(sm);
             if (ability is IOutgoingDamageModifier odm) OutgoingDamageModifiers.Add(odm);
             if (ability is IIncomingDamageModifier idm) IncomingDamageModifiers.Add(idm);
+            if (ability is IDefensePenetrationModifier dpm) DefensePenetrationModifiers.Add(dpm);
+            if (ability is IIncomingStatusModifier ism) IncomingStatusModifiers.Add(ism);
+            if (ability is IOutgoingStatusModifier osm) OutgoingStatusModifiers.Add(osm);
             if (ability is IOnHitEffect ohe) OnHitEffects.Add(ohe);
             if (ability is IOnDamagedEffect ode) OnDamagedEffects.Add(ode);
             if (ability is ICritModifier cm) CritModifiers.Add(cm);
@@ -131,20 +135,10 @@ namespace ProjectVagabond.Battle
 
         public bool AddStatusEffect(StatusEffectInstance newEffect)
         {
-            // TODO: Port StatusImmunity to IAbility later
-            foreach (var relic in ActiveRelics)
+            // Check Immunity Abilities
+            foreach (var mod in IncomingStatusModifiers)
             {
-                if (relic.Effects.TryGetValue("StatusImmunity", out var immunityValue))
-                {
-                    var immuneTypes = immunityValue.Split(',');
-                    foreach (var typeStr in immuneTypes)
-                    {
-                        if (Enum.TryParse<StatusEffectType>(typeStr.Trim(), true, out var immuneType))
-                        {
-                            if (newEffect.EffectType == immuneType) return false;
-                        }
-                    }
-                }
+                if (mod.ShouldBlockStatus(newEffect.EffectType, this)) return false;
             }
 
             bool hadEffectBefore = HasStatusEffect(newEffect.EffectType);
@@ -182,8 +176,6 @@ namespace ProjectVagabond.Battle
             return effectiveElements;
         }
 
-        // --- STAT GETTERS ---
-
         public int GetEffectiveStrength()
         {
             float stat = Stats.Strength;
@@ -214,7 +206,11 @@ namespace ProjectVagabond.Battle
         public int GetEffectiveAgility()
         {
             float stat = Stats.Agility;
-            foreach (var mod in StatModifiers) stat = mod.ModifyStat(OffensiveStatType.Agility, (int)stat, this);
+            foreach (var mod in StatModifiers)
+            {
+                if (mod is CorneredAnimalAbility ca) stat = ca.ModifyStat(OffensiveStatType.Agility, (int)stat, this);
+                else stat = mod.ModifyStat(OffensiveStatType.Agility, (int)stat, this);
+            }
             stat *= BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Agility]];
             if (HasStatusEffect(StatusEffectType.Freeze)) stat *= 0.5f;
             if (HasStatusEffect(StatusEffectType.Fear)) stat *= 0.8f;
@@ -225,13 +221,8 @@ namespace ProjectVagabond.Battle
         {
             float accuracy = baseAccuracy;
             if (HasStatusEffect(StatusEffectType.Blind)) accuracy *= 0.5f;
-
             var ctx = new CombatContext { Actor = this };
-            foreach (var mod in AccuracyModifiers)
-            {
-                accuracy = mod.ModifyAccuracy((int)accuracy, ctx);
-            }
-
+            foreach (var mod in AccuracyModifiers) accuracy = mod.ModifyAccuracy((int)accuracy, ctx);
             return (int)Math.Round(accuracy);
         }
     }

@@ -37,36 +37,24 @@ namespace ProjectVagabond
             {
                 var sb = new StringBuilder();
                 sb.AppendLine("[palette_yellow]Available Commands:[/]");
-                sb.AppendLine("  [palette_teal]Party[/]");
-                sb.AppendLine("    addmember <id>      - Adds a party member (max 4).");
+                sb.AppendLine("  [palette_teal]System & Debug[/]");
+                sb.AppendLine("    test_abilities      - Runs unit tests on ability logic.");
+                sb.AppendLine("    clear               - Clears console.");
+                sb.AppendLine("    exit                - Exits game.");
+                sb.AppendLine("    debugcombat         - Starts a random forest combat.");
+                sb.AppendLine("    combatrun           - Flees from combat.");
+                sb.AppendLine("    givestatus <slot> <type> [dur] - Apply status.");
                 sb.AppendLine();
-                sb.AppendLine("  [palette_teal]Inventory & Items[/]");
-                sb.AppendLine("    inventory           - Shows all inventories (inc. spells/actions).");
+                sb.AppendLine("  [palette_teal]Party & Inventory[/]");
+                sb.AppendLine("    addmember <id>      - Adds a party member.");
+                sb.AppendLine("    inventory           - Shows all inventories.");
                 sb.AppendLine("    giveweapon <id> [n] - Adds weapon(s).");
                 sb.AppendLine("    equipweapon <id>    - Equips a weapon.");
                 sb.AppendLine("    unequipweapon       - Unequips current weapon.");
                 sb.AppendLine("    givearmor <id> [n]  - Adds armor(s).");
                 sb.AppendLine("    giverelic <id> [n]  - Adds relic(s).");
                 sb.AppendLine("    giveconsumable <id> [n] - Adds consumable(s).");
-                sb.AppendLine("    removeweapon <id> [n]");
-                sb.AppendLine("    removearmor <id> [n]");
-                sb.AppendLine("    removerelic <id> [n]");
-                sb.AppendLine("    removeconsumable <id> [n]");
-                sb.AppendLine();
-                sb.AppendLine("  [palette_teal]Moves[/]");
                 sb.AppendLine("    givespell <id>      - Adds a spell.");
-                sb.AppendLine("    removespell <id>    - Removes a spell.");
-                sb.AppendLine("    giveaction <id>     - Adds an action.");
-                sb.AppendLine("    removeaction <id>   - Removes an action.");
-                sb.AppendLine("    equip <moveId> <slot> - Equips a spell.");
-                sb.AppendLine("    unequip <slot>      - Unequips a spell.");
-                sb.AppendLine();
-                sb.AppendLine("  [palette_teal]System[/]");
-                sb.AppendLine("    clear               - Clears console.");
-                sb.AppendLine("    exit                - Exits game.");
-                sb.AppendLine("    debugcombat         - Starts a random forest combat (SplitMap only).");
-                sb.AppendLine("    combatrun           - Flees from combat if active.");
-                sb.AppendLine("    givestatus <slot> <type> [dur] - Apply status in combat.");
 
                 foreach (var line in sb.ToString().Split(new[] { Environment.NewLine }, StringSplitOptions.None))
                 {
@@ -75,6 +63,12 @@ namespace ProjectVagabond
             }, "help - Shows this help message.");
 
             _commands["clear"] = new Command("clear", (args) => ServiceLocator.Get<Utils.DebugConsole>().ClearHistory(), "clear - Clears history.");
+
+            // --- TEST COMMAND ---
+            _commands["test_abilities"] = new Command("test_abilities", (args) =>
+            {
+                AbilityTester.RunAllTests();
+            }, "test_abilities - Runs logic verification on ability classes.");
 
             // --- PARTY COMMANDS ---
             _commands["addmember"] = new Command("addmember", (args) =>
@@ -88,12 +82,9 @@ namespace ProjectVagabond
                 var newMember = PartyMemberFactory.CreateMember(memberId);
                 if (newMember != null)
                 {
-                    // Attempt to add using PlayerState logic (checks for duplicates and capacity)
                     if (_gameState.PlayerState.AddPartyMember(newMember))
                     {
                         EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_teal]Added {newMember.Name} to the party!" });
-
-                        // Add starting equipment to shared inventory ONLY if member was successfully added
                         if (BattleDataCache.PartyMembers.TryGetValue(memberId, out var data))
                         {
                             foreach (var kvp in data.StartingEquipment)
@@ -105,19 +96,7 @@ namespace ProjectVagabond
                     }
                     else
                     {
-                        // Provide specific feedback based on why it failed
-                        if (_gameState.PlayerState.Party.Any(m => m.Name.Equals(newMember.Name, StringComparison.OrdinalIgnoreCase)))
-                        {
-                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[error]Member '{newMember.Name}' is already in the party." });
-                        }
-                        else if (_gameState.PlayerState.Party.Count >= 4)
-                        {
-                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Party is full (Max 4)." });
-                        }
-                        else
-                        {
-                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Failed to add member." });
-                        }
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Failed to add member (Duplicate or Full)." });
                     }
                 }
                 else
@@ -129,11 +108,10 @@ namespace ProjectVagabond
             (args) => args.Length == 0 ? BattleDataCache.PartyMembers.Keys.ToList() : new List<string>());
 
             // --- INVENTORY COMMANDS ---
-            _commands["inventory"] = new Command("inventory", (args) => HandleShowInventory(), "inventory - Shows all items and moves.");
+            _commands["inventory"] = new Command("inventory", (args) => HandleShowInventory(), "inventory - Shows all inventories.");
 
             _commands["giveweapon"] = new Command("giveweapon", (args) => HandleGiveItem(args, "Weapon"), "giveweapon <id> [n]");
 
-            // NEW: Equip Weapon Command
             _commands["equipweapon"] = new Command("equipweapon", (args) =>
             {
                 _gameState ??= ServiceLocator.Get<GameState>();
@@ -279,12 +257,6 @@ namespace ProjectVagabond
                 var battleManager = ServiceLocator.Get<BattleManager>();
                 BattleCombatant target = null;
 
-                // Map slot 1-4 to combatants
-                // 1 -> Player Slot 0
-                // 2 -> Player Slot 1
-                // 3 -> Enemy Slot 0
-                // 4 -> Enemy Slot 1
-
                 if (slot == 1) target = battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && c.BattleSlot == 0);
                 else if (slot == 2) target = battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && c.BattleSlot == 1);
                 else if (slot == 3) target = battleManager.AllCombatants.FirstOrDefault(c => !c.IsPlayerControlled && c.BattleSlot == 0);
@@ -304,7 +276,7 @@ namespace ProjectVagabond
             {
                 if (args.Length == 0) return new List<string> { "1", "2", "3", "4" };
                 if (args.Length == 1) return Enum.GetNames(typeof(StatusEffectType)).ToList();
-                if (args.Length == 2) return new List<string> { "1", "2", "3", "4", "5" }; // Suggest durations
+                if (args.Length == 2) return new List<string> { "1", "2", "3", "4", "5" };
                 return new List<string>();
             });
 
@@ -359,7 +331,6 @@ namespace ProjectVagabond
             if (_gameState.PlayerState == null) return;
             var ps = _gameState.PlayerState;
 
-            // Show Equipped Weapon
             if (!string.IsNullOrEmpty(ps.EquippedWeaponId))
             {
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_teal]Equipped Weapon:[/] {ps.EquippedWeaponId}" });
@@ -411,7 +382,6 @@ namespace ProjectVagabond
             var spellEntry = _gameState.PlayerState.Spells.FirstOrDefault(s => s.MoveID.Equals(moveId, StringComparison.OrdinalIgnoreCase));
             if (spellEntry == null) { EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[error]You don't know the spell '{moveId}'." }); return; }
 
-            // Unequip from old slot if present
             for (int i = 0; i < 4; i++) if (_gameState.PlayerState.EquippedSpells[i] == spellEntry) _gameState.PlayerState.EquippedSpells[i] = null;
 
             _gameState.PlayerState.EquippedSpells[slot - 1] = spellEntry;

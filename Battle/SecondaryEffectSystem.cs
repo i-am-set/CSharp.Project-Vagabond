@@ -1,6 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using ProjectVagabond.Battle;
-using ProjectVagabond.Battle.Abilities; // New Namespace
+using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
@@ -42,9 +42,6 @@ namespace ProjectVagabond.Battle
                     }
                 }
             }
-
-            // OnHit effects are now handled in ProcessSecondaryEffects to ensure they happen after damage calculation
-            // or concurrently with it, but logically separated from move-specific effects.
         }
 
         public static void ProcessSecondaryEffects(QueuedAction action, List<BattleCombatant> finalTargets, List<DamageCalculator.DamageResult> damageResults)
@@ -81,8 +78,6 @@ namespace ProjectVagabond.Battle
 
                 ctx.IsCritical = wasCrit;
 
-                // --- NEW ABILITY SYSTEM HOOKS ---
-
                 // A. Attacker OnHit
                 foreach (var ability in attacker.OnHitEffects)
                 {
@@ -111,8 +106,6 @@ namespace ProjectVagabond.Battle
                         ability.OnCritReceived(defenderCtx);
                     }
                 }
-
-                // --- END NEW SYSTEM ---
 
                 // Legacy Move Effects (ExecuteOnKill)
                 if (move?.Effects != null)
@@ -188,7 +181,6 @@ namespace ProjectVagabond.Battle
         {
             bool handled = false;
 
-            // Check if any target has a reaction to lifesteal (e.g. Caustic Blood)
             foreach (var target in targets.Distinct())
             {
                 foreach (var reaction in target.LifestealReactions)
@@ -212,13 +204,10 @@ namespace ProjectVagabond.Battle
         {
             if (EffectParser.TryParseStatusEffectParams(value, out var type, out int chance, out int duration))
             {
-                // Check for duration bonuses (Legacy check, should be IAbility later)
-                foreach (var relic in actor.ActiveRelics)
+                // Apply Duration Bonuses from Abilities
+                foreach (var mod in actor.OutgoingStatusModifiers)
                 {
-                    if (relic.Effects.TryGetValue("StatusDurationBonus", out var bonusValue) && IsNegativeStatus(type))
-                    {
-                        if (EffectParser.TryParseInt(bonusValue, out int bonusDuration)) duration += bonusDuration;
-                    }
+                    duration = mod.ModifyStatusDuration(type, duration, actor);
                 }
 
                 if (_random.Next(1, 101) <= chance)
@@ -228,7 +217,6 @@ namespace ProjectVagabond.Battle
 
                     if (wasNewlyApplied && IsNegativeStatus(type))
                     {
-                        // --- NEW: Trigger OnStatusApplied Effects ---
                         var ctx = new CombatContext { Actor = actor, Target = target };
                         foreach (var effect in actor.OnStatusAppliedEffects)
                         {

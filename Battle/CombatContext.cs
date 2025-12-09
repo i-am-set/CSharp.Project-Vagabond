@@ -3,10 +3,6 @@ using System.Collections.Generic;
 
 namespace ProjectVagabond.Battle.Abilities
 {
-    /// <summary>
-    /// A container for all data relevant to a specific combat interaction.
-    /// Passed through ability hooks so they can make decisions.
-    /// </summary>
     public class CombatContext
     {
         public BattleCombatant Actor { get; set; }
@@ -14,12 +10,12 @@ namespace ProjectVagabond.Battle.Abilities
         public MoveData Move { get; set; }
         public ConsumableItemData Item { get; set; }
 
-        // For damage calculation context
+        // Context Data
         public float BaseDamage { get; set; }
         public bool IsCritical { get; set; }
         public float MultiTargetModifier { get; set; } = 1.0f;
+        public bool IsLastAction { get; set; } = false; // NEW: For Anchor Charm
 
-        // Helper to check tags easily
         public bool MoveHasTag(string tag)
         {
             return Move != null && Move.Tags.Contains(tag);

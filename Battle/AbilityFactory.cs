@@ -61,6 +61,11 @@ namespace ProjectVagabond.Battle.Abilities
                         return new ApplyStatusOnHitAbility(statusType, chance, duration, true);
                     break;
 
+                case "ApplyStatusOnBeingHitContact":
+                    if (EffectParser.TryParseStatusEffectParams(value, out var hitStatusType, out int hitChance, out int hitDuration))
+                        return new ReactiveStatusAbility(hitStatusType, hitChance, hitDuration, true);
+                    break;
+
                 case "IronBarbsOnContact":
                     if (EffectParser.TryParseFloat(value, out float thornsPercent))
                         return new ThornsAbility(thornsPercent);
@@ -109,6 +114,11 @@ namespace ProjectVagabond.Battle.Abilities
                         return new SunBlessedLeafAbility(immId, immHeal);
                     break;
 
+                case "ElementImmunity":
+                    if (int.TryParse(value, out int immIdOnly))
+                        return new ElementalImmunityAbility(immIdOnly);
+                    break;
+
                 case "AmbushPredator":
                     if (parts.Length == 2 && int.TryParse(parts[0], out int prio) && float.TryParse(parts[1], out float pwr))
                         return new AmbushPredatorAbility(prio, pwr);
@@ -146,6 +156,68 @@ namespace ProjectVagabond.Battle.Abilities
                 case "FirstAttackBonus":
                     if (float.TryParse(value, out float faBonus))
                         return new FirstAttackDamageAbility(faBonus);
+                    break;
+
+                case "DamageBonusVsStatused":
+                    if (float.TryParse(value, out float statusedBonus))
+                        return new StatusedTargetDamageAbility(statusedBonus);
+                    break;
+
+                case "PowerBonusLastAct":
+                    if (float.TryParse(value, out float lastActBonus))
+                        return new LastStandAbility(lastActBonus);
+                    break;
+
+                case "DamageBonusFullHP":
+                    if (float.TryParse(value, out float fullHpBonus))
+                        return new FullHPDamageAbility(fullHpBonus);
+                    break;
+
+                case "Vigor":
+                    if (parts.Length == 2 && float.TryParse(parts[0], out float vigThresh) && float.TryParse(parts[1], out float vigRed))
+                        return new VigorAbility(vigThresh, vigRed);
+                    break;
+
+                case "RecklessAbandon":
+                    if (parts.Length == 2 && float.TryParse(parts[0], out float raDmg) && int.TryParse(parts[1], out int raAcc))
+                        return new RecklessAbandonAbility(raDmg, raAcc);
+                    break;
+
+                case "Bloodletter":
+                    if (parts.Length == 2 && float.TryParse(parts[1], out float blBonus))
+                        return new BloodletterAbility(blBonus);
+                    break;
+
+                case "SanguineThirst":
+                    if (float.TryParse(value, out float stPercent))
+                        return new SanguineThirstAbility(stPercent);
+                    break;
+
+                case "ChainReaction":
+                    if (float.TryParse(value, out float crBonus))
+                        return new ChainReactionAbility(crBonus);
+                    break;
+
+                case "ArmorPiercer":
+                    if (float.TryParse(value, out float apPercent))
+                        return new DefensePenetrationAbility(apPercent);
+                    break;
+
+                case "DodgeMissChance":
+                    if (int.TryParse(value, out int dodgeChance))
+                        return new GhostlySlippersAbility(dodgeChance);
+                    break;
+
+                // --- NEW STATUS MAPPINGS ---
+                case "StatusImmunity":
+                    var types = new List<StatusEffectType>();
+                    foreach (var s in value.Split(','))
+                        if (Enum.TryParse<StatusEffectType>(s.Trim(), true, out var t)) types.Add(t);
+                    return new StatusImmunityAbility(types);
+
+                case "StatusDurationBonus":
+                    if (int.TryParse(value, out int durBonus))
+                        return new StatusDurationAbility(durBonus);
                     break;
             }
 

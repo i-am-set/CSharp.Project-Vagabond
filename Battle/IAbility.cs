@@ -38,16 +38,30 @@ namespace ProjectVagabond.Battle.Abilities
         float ModifyIncomingDamage(float currentDamage, CombatContext ctx);
     }
 
+    public interface IDefensePenetrationModifier : IAbility
+    {
+        float GetDefensePenetration(CombatContext ctx);
+    }
+
+    // --- STATUS EFFECTS ---
+    public interface IIncomingStatusModifier : IAbility
+    {
+        bool ShouldBlockStatus(StatusEffectType type, BattleCombatant owner);
+    }
+
+    public interface IOutgoingStatusModifier : IAbility
+    {
+        int ModifyStatusDuration(StatusEffectType type, int duration, BattleCombatant owner);
+    }
+
     // --- ACTION FLOW ---
     public interface IActionModifier : IAbility
     {
-        // Modifies an action before it is queued (e.g. Priority, Power)
         void ModifyAction(QueuedAction action, BattleCombatant owner);
     }
 
     public interface IOnActionComplete : IAbility
     {
-        // Triggers after an action finishes executing
         void OnActionComplete(QueuedAction action, BattleCombatant owner);
     }
 
@@ -79,7 +93,6 @@ namespace ProjectVagabond.Battle.Abilities
 
     public interface ILifestealReaction : IAbility
     {
-        // Returns true if the ability "consumed" the lifesteal event (preventing normal healing)
         bool OnLifestealReceived(BattleCombatant source, int amount, BattleCombatant owner);
     }
 
