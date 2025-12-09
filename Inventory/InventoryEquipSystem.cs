@@ -21,9 +21,11 @@ namespace ProjectVagabond.UI
             _equipMenuScrollIndex = 0;
             RefreshEquipSubmenuButtons();
         }
+
         private void RefreshEquipSubmenuButtons()
         {
             List<string> availableItems = new List<string>();
+            var member = _gameState.PlayerState.Party[_currentPartyMemberIndex];
 
             if (_activeEquipSlotType == EquipSlotType.Weapon)
             {
@@ -38,19 +40,24 @@ namespace ProjectVagabond.UI
                 // Get all owned relics
                 var allRelics = _gameState.PlayerState.Relics.Keys.ToList();
 
-                // Get set of currently equipped relics to filter them out
-                var equippedRelics = new HashSet<string>(_gameState.PlayerState.EquippedRelics.Where(r => !string.IsNullOrEmpty(r)));
+                // Get set of currently equipped relics for THIS member to filter them out
+                // We only care about duplicates on the SAME character.
+                // Actually, usually relics are unique per party, but let's assume unique per character for now to be safe,
+                // OR unique per party if we want to prevent duplicates across the team.
+                // Let's stick to unique per character for simplicity unless specified otherwise.
+                // Wait, the previous logic filtered out relics equipped in ANY slot of the current character.
+                var equippedRelics = new HashSet<string>(member.EquippedRelics.Where(r => !string.IsNullOrEmpty(r)));
 
-                // Filter out any relic that is currently equipped in ANY slot
+                // Filter out any relic that is currently equipped by THIS member
                 availableItems = allRelics.Where(r => !equippedRelics.Contains(r)).ToList();
             }
             else if (_activeEquipSlotType >= EquipSlotType.Spell1 && _activeEquipSlotType <= EquipSlotType.Spell4)
             {
-                // Get all owned spells
-                var allSpells = _gameState.PlayerState.Spells.Select(s => s.MoveID).ToList();
+                // Get all learned spells for THIS member
+                var allSpells = member.Spells.Select(s => s.MoveID).ToList();
 
-                // Get set of currently equipped spells to filter them out
-                var equippedSpells = new HashSet<string>(_gameState.PlayerState.EquippedSpells.Where(s => s != null).Select(s => s!.MoveID));
+                // Get set of currently equipped spells for THIS member
+                var equippedSpells = new HashSet<string>(member.EquippedSpells.Where(s => s != null).Select(s => s!.MoveID));
 
                 // Filter out any spell that is currently equipped in ANY slot
                 availableItems = allSpells.Where(s => !equippedSpells.Contains(s)).ToList();
@@ -68,7 +75,7 @@ namespace ProjectVagabond.UI
                 btn.IconTexture = null;
                 btn.IconSilhouette = null;
                 btn.OnClick = null;
-                btn.Rarity = -1; // Reset rarity
+                btn.Rarity = -1;
 
                 if (i % 2 == 0)
                 {
@@ -167,7 +174,6 @@ namespace ProjectVagabond.UI
                             btn.MainText = moveData.MoveName.ToUpper();
                             string path = $"Sprites/Items/Spells/{moveData.MoveID}";
 
-                            // Fallback logic for spell icons
                             int elementId = moveData.OffensiveElementIDs.FirstOrDefault();
                             string? fallbackPath = null;
                             if (BattleDataCache.Elements.TryGetValue(elementId, out var elementDef))
@@ -177,10 +183,9 @@ namespace ProjectVagabond.UI
                                 fallbackPath = $"Sprites/Items/Spells/default_{elName}";
                             }
 
-                            // Use the animated spell sprite
                             btn.IconTexture = _spriteManager.GetItemSprite(path, fallbackPath);
                             btn.IconSilhouette = _spriteManager.GetItemSpriteSilhouette(path, fallbackPath);
-                            btn.IconSourceRect = null; // Will be updated in Update loop for animation
+                            btn.IconSourceRect = null;
 
                             btn.Rarity = moveData.Rarity;
                             btn.IsEnabled = true;
@@ -196,7 +201,6 @@ namespace ProjectVagabond.UI
                 }
                 else
                 {
-                    // Empty slot
                     btn.TitleText = "";
                 }
             }
@@ -214,39 +218,41 @@ namespace ProjectVagabond.UI
 
         private void SelectEquipItem(string? itemId)
         {
+            var member = _gameState.PlayerState.Party[_currentPartyMemberIndex];
+
             if (_activeEquipSlotType == EquipSlotType.Weapon)
             {
-                _gameState.PlayerState.EquippedWeaponId = itemId;
+                member.EquippedWeaponId = itemId;
             }
             else if (_activeEquipSlotType == EquipSlotType.Armor)
             {
-                _gameState.PlayerState.EquippedArmorId = itemId;
+                member.EquippedArmorId = itemId;
             }
             else if (_activeEquipSlotType == EquipSlotType.Relic1)
             {
-                _gameState.PlayerState.EquippedRelics[0] = itemId;
+                member.EquippedRelics[0] = itemId;
             }
             else if (_activeEquipSlotType == EquipSlotType.Relic2)
             {
-                _gameState.PlayerState.EquippedRelics[1] = itemId;
+                member.EquippedRelics[1] = itemId;
             }
             else if (_activeEquipSlotType == EquipSlotType.Relic3)
             {
-                _gameState.PlayerState.EquippedRelics[2] = itemId;
+                member.EquippedRelics[2] = itemId;
             }
             else if (_activeEquipSlotType >= EquipSlotType.Spell1 && _activeEquipSlotType <= EquipSlotType.Spell4)
             {
                 int slotIndex = _activeEquipSlotType - EquipSlotType.Spell1;
                 if (itemId == null)
                 {
-                    _gameState.PlayerState.EquippedSpells[slotIndex] = null;
+                    member.EquippedSpells[slotIndex] = null;
                 }
                 else
                 {
-                    var spellEntry = _gameState.PlayerState.Spells.FirstOrDefault(s => s.MoveID == itemId);
+                    var spellEntry = member.Spells.FirstOrDefault(s => s.MoveID == itemId);
                     if (spellEntry != null)
                     {
-                        _gameState.PlayerState.EquippedSpells[slotIndex] = spellEntry;
+                        member.EquippedSpells[slotIndex] = spellEntry;
                     }
                 }
             }
@@ -255,19 +261,7 @@ namespace ProjectVagabond.UI
             _activeEquipSlotType = EquipSlotType.None;
             _hoveredItemData = null;
 
-            // Refresh the main equip buttons to show the new item
-            UpdateEquipButtonState(_weaponEquipButton!, _gameState.PlayerState.EquippedWeaponId, EquipSlotType.Weapon);
-            UpdateEquipButtonState(_armorEquipButton!, _gameState.PlayerState.EquippedArmorId, EquipSlotType.Armor);
-            UpdateEquipButtonState(_relicEquipButton1!, _gameState.PlayerState.EquippedRelics[0], EquipSlotType.Relic1);
-            UpdateEquipButtonState(_relicEquipButton2!, _gameState.PlayerState.EquippedRelics[1], EquipSlotType.Relic2);
-            UpdateEquipButtonState(_relicEquipButton3!, _gameState.PlayerState.EquippedRelics[2], EquipSlotType.Relic3);
-
-            // Refresh spell buttons
-            for (int i = 0; i < 4; i++)
-            {
-                UpdateSpellEquipButtonState(_spellEquipButtons[i], _gameState.PlayerState.EquippedSpells[i]);
-            }
-
+            RefreshEquipView();
             _hapticsManager.TriggerShake(4f, 0.1f, true, 2f);
         }
 
@@ -315,7 +309,7 @@ namespace ProjectVagabond.UI
             button.MainText = name;
             button.IconTexture = icon;
             button.IconSilhouette = silhouette;
-            button.IconSourceRect = null; // Use full texture
+            button.IconSourceRect = null;
             button.Rarity = rarity;
         }
 

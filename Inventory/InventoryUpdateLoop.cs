@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -49,13 +48,75 @@ namespace ProjectVagabond.UI
             _debugButton1?.Update(currentMouseState, cameraTransform);
             _debugButton2?.Update(currentMouseState, cameraTransform);
 
+            // UPDATE PARTY MEMBER BUTTONS
+            if (_selectedInventoryCategory == InventoryCategory.Equip && !_isEquipSubmenuOpen)
+            {
+                // Replicate layout logic from DrawStatsPanel to ensure hitboxes are correct
+                const int buttonHeight = 8;
+                const int suiteHeight = 32;
+
+                // Base Y position (must match DrawStatsPanel)
+                int currentY = _statsPanelArea.Y + 18;
+                // Match the X calculation from DrawStatsPanel:
+                int listX = _statsPanelArea.X + (_statsPanelArea.Width - 90) / 2 - 8;
+
+                for (int i = 0; i < _partySlotButtons.Count; i++)
+                {
+                    var btn = _partySlotButtons[i];
+
+                    // Update text and enabled state
+                    if (i < _gameState.PlayerState.Party.Count)
+                    {
+                        var member = _gameState.PlayerState.Party[i];
+                        btn.Text = member.Name.ToUpper();
+
+                        // Disable if selected (so it can't be clicked, effectively hiding it from interaction)
+                        if (i == _currentPartyMemberIndex)
+                        {
+                            btn.IsEnabled = false;
+                        }
+                        else
+                        {
+                            btn.IsEnabled = true;
+                            btn.CustomDefaultTextColor = _global.Palette_Gray;
+                        }
+
+                        // Shift text right to make room for 8x8 icon
+                        btn.TextRenderOffset = new Vector2(11, 0);
+                    }
+                    else
+                    {
+                        btn.Text = "EMPTY";
+                        btn.IsEnabled = false;
+                        btn.CustomDefaultTextColor = _global.Palette_DarkGray;
+                        btn.TextRenderOffset = Vector2.Zero;
+                    }
+
+                    // Update Position
+                    if (i == _currentPartyMemberIndex)
+                    {
+                        // This slot is occupied by the Info Suite visually.
+                        // We move the invisible button here just to keep the loop consistent, 
+                        // but since IsEnabled is false, it won't react.
+                        btn.Bounds = new Rectangle(listX, currentY, 90, suiteHeight);
+                        currentY += suiteHeight;
+                    }
+                    else
+                    {
+                        // Increased width from 90 to 100
+                        btn.Bounds = new Rectangle(listX, currentY, 100, buttonHeight);
+                        currentY += buttonHeight;
+                    }
+
+                    btn.Update(currentMouseState, cameraTransform);
+                }
+            }
+
             var slotFrames = _spriteManager.InventorySlotSourceRects;
             if (_selectedInventoryCategory != _previousInventoryCategory)
             {
                 _inventoryArrowAnimTimer = 0f;
-
                 _hapticsManager.TriggerShake(2f, 0.1f, true, 2f);
-
                 if (slotFrames != null)
                 {
                     foreach (var slot in _inventorySlots) slot.RandomizeFrame();
@@ -99,11 +160,14 @@ namespace ProjectVagabond.UI
                 }
                 else if (scrollDelta != 0)
                 {
+                    // Logic for scrolling equip submenu items
                     int totalItems = 1; // 1 for REMOVE
+                    var member = _gameState.PlayerState.Party[_currentPartyMemberIndex];
+
                     if (_activeEquipSlotType == EquipSlotType.Weapon) totalItems += _gameState.PlayerState.Weapons.Count;
                     else if (_activeEquipSlotType == EquipSlotType.Armor) totalItems += _gameState.PlayerState.Armors.Count;
                     else if (_activeEquipSlotType == EquipSlotType.Relic1 || _activeEquipSlotType == EquipSlotType.Relic2 || _activeEquipSlotType == EquipSlotType.Relic3) totalItems += _gameState.PlayerState.Relics.Count;
-                    else if (_activeEquipSlotType >= EquipSlotType.Spell1 && _activeEquipSlotType <= EquipSlotType.Spell4) totalItems += _gameState.PlayerState.Spells.Count;
+                    else if (_activeEquipSlotType >= EquipSlotType.Spell1 && _activeEquipSlotType <= EquipSlotType.Spell4) totalItems += member.Spells.Count; // Use member's learned spells
 
                     int maxScroll = Math.Max(0, totalItems - 7); // 7 visible slots
 
@@ -146,7 +210,7 @@ namespace ProjectVagabond.UI
 
             // Update Header Buttons
             int selectedIndex = _categoryOrder.IndexOf(_selectedInventoryCategory);
-            if (_selectedInventoryCategory == InventoryCategory.Equip) selectedIndex = -1; // Equip is separate
+            if (_selectedInventoryCategory == InventoryCategory.Equip) selectedIndex = -1;
 
             const float repulsionAmount = 8f;
             const float repulsionSpeed = 15f;
@@ -182,7 +246,6 @@ namespace ProjectVagabond.UI
                 float finalOffset = _inventoryHeaderButtonOffsets[button];
 
                 var baseBounds = _inventoryHeaderButtonBaseBounds[button];
-
                 button.IsSelected = ((int)_selectedInventoryCategory == button.MenuIndex);
 
                 float selectedBobY = 0f;
@@ -226,7 +289,6 @@ namespace ProjectVagabond.UI
                 float easedProgress = Easing.EaseOutCubic(progress);
                 float currentOffset = MathHelper.Lerp(16f, 13f, easedProgress);
 
-                // Use base bounds to calculate Y position without the selection bob effect
                 var baseBounds = _inventoryHeaderButtonBaseBounds[selectedButton];
                 int centerY = baseBounds.Center.Y + (int)MathF.Round(_inventoryPositionOffset.Y);
                 int centerX = selectedButton.Bounds.Center.X;
@@ -234,7 +296,6 @@ namespace ProjectVagabond.UI
                 _debugButton1.Bounds = new Rectangle(centerX - (int)currentOffset - (_debugButton1.Bounds.Width / 2), centerY - _debugButton1.Bounds.Height / 2 - 2, _debugButton1.Bounds.Width, _debugButton1.Bounds.Height);
                 _debugButton2.Bounds = new Rectangle(centerX + (int)currentOffset - (_debugButton2.Bounds.Width / 2), centerY - _debugButton2.Bounds.Height / 2 - 2, _debugButton2.Bounds.Width, _debugButton2.Bounds.Height);
 
-                // Determine if arrows should be enabled based on the ordered list
                 int currentIndex = _categoryOrder.IndexOf(_selectedInventoryCategory);
                 _debugButton1.IsEnabled = currentIndex > 0 && _selectedInventoryCategory != InventoryCategory.Equip;
                 _debugButton2.IsEnabled = currentIndex < _categoryOrder.Count - 1 && _selectedInventoryCategory != InventoryCategory.Equip;
@@ -243,8 +304,7 @@ namespace ProjectVagabond.UI
             // Update Slots or Equip UI
             if (_selectedInventoryCategory != InventoryCategory.Equip)
             {
-                _hoveredItemData = null; // Ensure this is cleared when not in equip mode
-
+                _hoveredItemData = null;
                 InventorySlot? bestSlot = null;
                 float minDistance = float.MaxValue;
                 var inverseCamera = Matrix.Invert(cameraTransform);
@@ -275,13 +335,10 @@ namespace ProjectVagabond.UI
                     var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
                     string pageText = $"{_currentPage + 1}/{_totalPages}";
                     var textSize = secondaryFont.MeasureString(pageText);
-
                     float textCenterX = _inventorySlotArea.Center.X;
                     float textY = _inventorySlotArea.Bottom - 2;
-
                     const int buttonGap = 5;
 
-                    // Calculate bob offsets
                     float leftBob = 0f;
                     if (_leftPageArrowBobTimer > 0)
                     {
@@ -323,15 +380,16 @@ namespace ProjectVagabond.UI
             }
             else if (_selectedInventoryCategory == InventoryCategory.Equip)
             {
-                _hoveredItemData = null; // Reset hover data each frame
+                _hoveredItemData = null;
 
                 if (_isEquipSubmenuOpen)
                 {
+                    var member = _gameState.PlayerState.Party[_currentPartyMemberIndex];
                     List<string> availableItems = new List<string>();
                     if (_activeEquipSlotType == EquipSlotType.Weapon) availableItems = _gameState.PlayerState.Weapons.Keys.ToList();
                     else if (_activeEquipSlotType == EquipSlotType.Armor) availableItems = _gameState.PlayerState.Armors.Keys.ToList();
                     else if (_activeEquipSlotType == EquipSlotType.Relic1 || _activeEquipSlotType == EquipSlotType.Relic2 || _activeEquipSlotType == EquipSlotType.Relic3) availableItems = _gameState.PlayerState.Relics.Keys.ToList();
-                    else if (_activeEquipSlotType >= EquipSlotType.Spell1 && _activeEquipSlotType <= EquipSlotType.Spell4) availableItems = _gameState.PlayerState.Spells.Select(s => s.MoveID).ToList();
+                    else if (_activeEquipSlotType >= EquipSlotType.Spell1 && _activeEquipSlotType <= EquipSlotType.Spell4) availableItems = member.Spells.Select(s => s.MoveID).ToList();
 
                     for (int i = 0; i < _equipSubmenuButtons.Count; i++)
                     {
@@ -341,7 +399,6 @@ namespace ProjectVagabond.UI
                         if (button.IsHovered && button.IsEnabled)
                         {
                             int virtualIndex = _equipMenuScrollIndex + i;
-                            // Index 0 is "REMOVE", so items start at index 1
                             if (virtualIndex > 0)
                             {
                                 int itemIndex = virtualIndex - 1;
@@ -363,7 +420,6 @@ namespace ProjectVagabond.UI
                         }
                     }
 
-                    // Animate icons for spells in submenu
                     if (_activeEquipSlotType >= EquipSlotType.Spell1 && _activeEquipSlotType <= EquipSlotType.Spell4)
                     {
                         foreach (var btn in _equipSubmenuButtons)
@@ -390,7 +446,6 @@ namespace ProjectVagabond.UI
                 }
             }
 
-            // Update Stat Cycle Timer
             _statCycleTimer += deltaTime;
             if (_hoveredItemData != _previousHoveredItemData)
             {
@@ -477,4 +532,3 @@ namespace ProjectVagabond.UI
         }
     }
 }
-﻿

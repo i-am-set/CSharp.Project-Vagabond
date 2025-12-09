@@ -21,7 +21,6 @@ namespace ProjectVagabond.UI
     public partial class SplitMapInventoryOverlay
     {
         public bool IsOpen { get; private set; } = false;
-        // Removed OnInventoryToggled event as control is now external
 
         // Expose hover state to block map interaction
         public bool IsHovered => _inventoryButton?.IsHovered ?? false;
@@ -46,6 +45,10 @@ namespace ProjectVagabond.UI
         private ImageButton? _debugButton2;
         private ImageButton? _pageLeftButton;
         private ImageButton? _pageRightButton;
+
+        // Party Member Switching
+        private readonly List<Button> _partySlotButtons = new();
+        private int _currentPartyMemberIndex = 0;
 
         // Equip Buttons
         private EquipButton? _relicEquipButton1;
@@ -134,6 +137,7 @@ namespace ProjectVagabond.UI
             _previousHoveredItemData = null;
             _leftPageArrowBobTimer = 0f;
             _rightPageArrowBobTimer = 0f;
+            _currentPartyMemberIndex = 0; // Default to leader
 
             _previousMouseState = Mouse.GetState();
             _previousKeyboardState = Keyboard.GetState();
@@ -146,7 +150,6 @@ namespace ProjectVagabond.UI
                 var inventoryIcon = _spriteManager.SplitMapInventoryButton;
                 var rects = _spriteManager.SplitMapInventoryButtonSourceRects;
                 _inventoryButton = new ImageButton(new Rectangle(7, 10, 16, 16), inventoryIcon, rects[0], rects[1], enableHoverSway: true);
-                // Instead of toggling internally, fire event
                 _inventoryButton.OnClick += () => OnInventoryButtonClicked?.Invoke();
             }
             _inventoryButton.ResetAnimationState();
@@ -266,16 +269,10 @@ namespace ProjectVagabond.UI
             var rightArrowRects = _spriteManager.InventoryRightArrowButtonSourceRects;
 
             _debugButton1 = new ImageButton(new Rectangle(0, 0, 5, 5), _spriteManager.InventoryLeftArrowButton, leftArrowRects[0], leftArrowRects[1]);
-            _debugButton1.OnClick += () =>
-            {
-                CycleCategory(-1);
-            };
+            _debugButton1.OnClick += () => CycleCategory(-1);
 
             _debugButton2 = new ImageButton(new Rectangle(0, 0, 5, 5), _spriteManager.InventoryRightArrowButton, rightArrowRects[0], rightArrowRects[1]);
-            _debugButton2.OnClick += () =>
-            {
-                CycleCategory(1);
-            };
+            _debugButton2.OnClick += () => CycleCategory(1);
 
             // Initialize Page Navigation Buttons
             _pageLeftButton = new ImageButton(new Rectangle(0, 0, 5, 5), _spriteManager.InventoryLeftArrowButton, leftArrowRects[0], leftArrowRects[1]);
@@ -284,8 +281,24 @@ namespace ProjectVagabond.UI
             _pageRightButton = new ImageButton(new Rectangle(0, 0, 5, 5), _spriteManager.InventoryRightArrowButton, rightArrowRects[0], rightArrowRects[1]);
             _pageRightButton.OnClick += () => ChangePage(1);
 
-            // Initialize Equip Buttons
+            // Initialize Party Slot Buttons (4 slots)
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+            _partySlotButtons.Clear();
+            for (int i = 0; i < 4; i++)
+            {
+                int index = i;
+                // Increased width from 90 to 100
+                var btn = new Button(new Rectangle(0, 0, 100, 8), "EMPTY", font: secondaryFont, enableHoverSway: false)
+                {
+                    CustomDefaultTextColor = _global.Palette_Gray,
+                    CustomHoverTextColor = _global.Palette_BrightWhite,
+                    AlignLeft = true // Left align text
+                };
+                btn.OnClick += () => SwitchToPartyMember(index);
+                _partySlotButtons.Add(btn);
+            }
+
+            // Initialize Equip Buttons
             int equipButtonX = (Global.VIRTUAL_WIDTH - 180) / 2 - 60;
             int relicButtonY = 250 + 19 + 16;
             int armorButtonY = relicButtonY - 16; // Middle
@@ -367,19 +380,7 @@ namespace ProjectVagabond.UI
 
             // Force open to Equip menu
             SwitchToCategory(InventoryCategory.Equip);
-
-            // Refresh equip button texts and icons
-            UpdateEquipButtonState(_weaponEquipButton!, _gameState.PlayerState.EquippedWeaponId, EquipSlotType.Weapon);
-            UpdateEquipButtonState(_armorEquipButton!, _gameState.PlayerState.EquippedArmorId, EquipSlotType.Armor);
-            UpdateEquipButtonState(_relicEquipButton1!, _gameState.PlayerState.EquippedRelics[0], EquipSlotType.Relic1);
-            UpdateEquipButtonState(_relicEquipButton2!, _gameState.PlayerState.EquippedRelics[1], EquipSlotType.Relic2);
-            UpdateEquipButtonState(_relicEquipButton3!, _gameState.PlayerState.EquippedRelics[2], EquipSlotType.Relic3);
-
-            // Refresh spell buttons
-            for (int i = 0; i < 4; i++)
-            {
-                UpdateSpellEquipButtonState(_spellEquipButtons[i], _gameState.PlayerState.EquippedSpells[i]);
-            }
+            RefreshEquipView();
         }
 
         public void Hide()
@@ -395,6 +396,31 @@ namespace ProjectVagabond.UI
             if (IsOpen)
             {
                 Hide();
+            }
+        }
+
+        private void SwitchToPartyMember(int index)
+        {
+            if (index < 0 || index >= _gameState.PlayerState.Party.Count) return;
+            _currentPartyMemberIndex = index;
+            RefreshEquipView();
+        }
+
+        private void RefreshEquipView()
+        {
+            if (_selectedInventoryCategory != InventoryCategory.Equip) return;
+
+            var member = _gameState.PlayerState.Party[_currentPartyMemberIndex];
+
+            UpdateEquipButtonState(_weaponEquipButton!, member.EquippedWeaponId, EquipSlotType.Weapon);
+            UpdateEquipButtonState(_armorEquipButton!, member.EquippedArmorId, EquipSlotType.Armor);
+            UpdateEquipButtonState(_relicEquipButton1!, member.EquippedRelics[0], EquipSlotType.Relic1);
+            UpdateEquipButtonState(_relicEquipButton2!, member.EquippedRelics[1], EquipSlotType.Relic2);
+            UpdateEquipButtonState(_relicEquipButton3!, member.EquippedRelics[2], EquipSlotType.Relic3);
+
+            for (int i = 0; i < 4; i++)
+            {
+                UpdateSpellEquipButtonState(_spellEquipButtons[i], member.EquippedSpells[i]);
             }
         }
     }

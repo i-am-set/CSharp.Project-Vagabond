@@ -1,6 +1,6 @@
 [
   {
-    "MemberID": "Oakley",
+    "MemberID": "0",
     "Name": "Oakley",
     "Description": "A wandering vagabond seeking fortune.",
     "MaxHP": 120,
@@ -19,25 +19,7 @@
     }
   },
   {
-    "MemberID": "Sylas",
-    "Name": "Sylas",
-    "Description": "A hedge mage with a quick temper.",
-    "MaxHP": 90,
-    "MaxMana": 150,
-    "Strength": 6,
-    "Intelligence": 15,
-    "Tenacity": 8,
-    "Agility": 14,
-    "DefensiveElementIDs": [ 101 ],
-    "DefaultStrikeMoveID": "EtherDart",
-    "StartingSpells": [ "EtherDart", "Pyrosphere" ],
-    "StartingActions": [ "Dodge" ],
-    "StartingEquipment": {
-      "ArchMageRobes": 1
-    }
-  },
-  {
-    "MemberID": "Luna",
+    "MemberID": "1",
     "Name": "Luna",
     "Description": "A silent hunter who strikes from the shadows.",
     "MaxHP": 85,
@@ -54,5 +36,24 @@
       "PoisonDagger": 1,
       "LeatherTunic": 1
     }
+  },
+  {
+    "MemberID": "2",
+    "Name": "Sylas",
+    "Description": "A hedge mage with a quick temper.",
+    "MaxHP": 90,
+    "MaxMana": 150,
+    "Strength": 6,
+    "Intelligence": 15,
+    "Tenacity": 8,
+    "Agility": 14,
+    "DefensiveElementIDs": [ 101 ],
+    "DefaultStrikeMoveID": "EtherDart",
+    "StartingSpells": [ "EtherDart", "Pyrosphere" ],
+    "StartingActions": [ "Dodge" ],
+    "StartingEquipment": {
+      "ArchMageRobes": 1
+    }
   }
+
 ]

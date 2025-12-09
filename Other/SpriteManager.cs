@@ -51,6 +51,10 @@ namespace ProjectVagabond
         public Texture2D PlayerPortraitsAltSpriteSheetSilhouette { get; private set; }
         public List<Rectangle> PlayerPortraitSourceRects { get; private set; } = new List<Rectangle>();
 
+        // Small Player Portraits (8x8)
+        public Texture2D PlayerPortraitsSmallSpriteSheet { get; private set; }
+        public List<Rectangle> PlayerPortraitSmallSourceRects { get; private set; } = new List<Rectangle>();
+
         // Inventory UI
         public Texture2D InventoryPlayerHealthBarEmpty { get; private set; }
         public Texture2D InventoryPlayerHealthBarFull { get; private set; }
@@ -1150,6 +1154,38 @@ namespace ProjectVagabond
 
                 PlayerPortraitSourceRects.Clear();
                 PlayerPortraitSourceRects.Add(new Rectangle(0, 0, 32, 32));
+            }
+
+            // Load 8x8 Portraits
+            try
+            {
+                PlayerPortraitsSmallSpriteSheet = _core.Content.Load<Texture2D>("Sprites/Player/cat_portraits_8x8");
+
+                // Parse 8x8
+                Color[] smallData = new Color[PlayerPortraitsSmallSpriteSheet.Width * PlayerPortraitsSmallSpriteSheet.Height];
+                PlayerPortraitsSmallSpriteSheet.GetData(smallData);
+
+                int smallCols = PlayerPortraitsSmallSpriteSheet.Width / 8;
+                int smallRows = PlayerPortraitsSmallSpriteSheet.Height / 8;
+
+                PlayerPortraitSmallSourceRects.Clear();
+                for (int y = 0; y < smallRows; y++)
+                {
+                    for (int x = 0; x < smallCols; x++)
+                    {
+                        if (IsFrameNotEmpty(smallData, PlayerPortraitsSmallSpriteSheet.Width, x * 8, y * 8, 8, 8))
+                        {
+                            PlayerPortraitSmallSourceRects.Add(new Rectangle(x * 8, y * 8, 8, 8));
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // Fallback
+                PlayerPortraitsSmallSpriteSheet = _textureFactory.CreateColoredTexture(8, 8, Color.Magenta);
+                PlayerPortraitSmallSourceRects.Clear();
+                PlayerPortraitSmallSourceRects.Add(new Rectangle(0, 0, 8, 8));
             }
         }
 

@@ -99,16 +99,16 @@ namespace ProjectVagabond
             PlayerState = new PlayerState();
             PlayerState.Party.Clear(); // Remove default dummy
 
-            // 2. Create "Oakley" (The Main Character)
-            var oakley = PartyMemberFactory.CreateMember("Oakley");
+            // 2. Create "Oakley" (The Main Character) using ID "0"
+            var oakley = PartyMemberFactory.CreateMember("0");
             if (oakley == null)
             {
-                throw new Exception("CRITICAL: Could not load 'Oakley' from PartyMembers.json");
+                throw new Exception("CRITICAL: Could not load 'Oakley' (ID: 0) from PartyMembers.json");
             }
             PlayerState.Party.Add(oakley);
 
             // 3. Add Oakley's starting gear to the shared inventory
-            if (BattleDataCache.PartyMembers.TryGetValue("Oakley", out var oakleyData))
+            if (BattleDataCache.PartyMembers.TryGetValue("0", out var oakleyData))
             {
                 foreach (var kvp in oakleyData.StartingEquipment)
                 {

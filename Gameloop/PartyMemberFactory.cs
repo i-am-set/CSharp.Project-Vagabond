@@ -30,7 +30,9 @@ namespace ProjectVagabond
                 Tenacity = data.Tenacity,
                 Agility = data.Agility,
                 DefensiveElementIDs = new List<int>(data.DefensiveElementIDs),
-                DefaultStrikeMoveID = data.DefaultStrikeMoveID
+                DefaultStrikeMoveID = data.DefaultStrikeMoveID,
+                // Parse the numeric ID for the sprite sheet index
+                PortraitIndex = int.TryParse(data.MemberID, out int pid) ? pid : 0
             };
 
             // Load Spells
