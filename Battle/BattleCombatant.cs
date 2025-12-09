@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
@@ -19,8 +20,6 @@ namespace ProjectVagabond.Battle
         public float VisualSilhouetteAmount { get; set; } = 0f;
         public Color? VisualSilhouetteColorOverride { get; set; } = null;
 
-        // --- VGC SLOT SYSTEM ---
-        // 0 = Left Active, 1 = Right Active, 2+ = Bench
         public int BattleSlot { get; set; } = -1;
         public bool IsActiveOnField => BattleSlot == 0 || BattleSlot == 1;
 
@@ -44,7 +43,30 @@ namespace ProjectVagabond.Battle
 
         public string DefaultStrikeMoveID { get; set; }
         public List<StatusEffectInstance> ActiveStatusEffects { get; set; } = new List<StatusEffectInstance>();
+
+        // Legacy list for UI tooltips
         public List<RelicData> ActiveRelics { get; set; } = new List<RelicData>();
+
+        // --- NEW ABILITY SYSTEM ---
+        public List<IAbility> Abilities { get; private set; } = new List<IAbility>();
+
+        // Cached Interface Lists
+        public List<IStatModifier> StatModifiers { get; private set; } = new List<IStatModifier>();
+        public List<IOutgoingDamageModifier> OutgoingDamageModifiers { get; private set; } = new List<IOutgoingDamageModifier>();
+        public List<IIncomingDamageModifier> IncomingDamageModifiers { get; private set; } = new List<IIncomingDamageModifier>();
+        public List<IOnHitEffect> OnHitEffects { get; private set; } = new List<IOnHitEffect>();
+        public List<IOnDamagedEffect> OnDamagedEffects { get; private set; } = new List<IOnDamagedEffect>();
+        public List<ICritModifier> CritModifiers { get; private set; } = new List<ICritModifier>();
+        public List<IAccuracyModifier> AccuracyModifiers { get; private set; } = new List<IAccuracyModifier>();
+        public List<ITurnLifecycle> TurnLifecycleEffects { get; private set; } = new List<ITurnLifecycle>();
+        public List<IBattleLifecycle> BattleLifecycleEffects { get; private set; } = new List<IBattleLifecycle>();
+        public List<IActionModifier> ActionModifiers { get; private set; } = new List<IActionModifier>();
+        public List<IOnActionComplete> OnActionCompleteEffects { get; private set; } = new List<IOnActionComplete>();
+        public List<IOnKill> OnKillEffects { get; private set; } = new List<IOnKill>();
+        public List<IOnCritReceived> OnCritReceivedEffects { get; private set; } = new List<IOnCritReceived>();
+        public List<IOnStatusApplied> OnStatusAppliedEffects { get; private set; } = new List<IOnStatusApplied>();
+        public List<ILifestealReaction> LifestealReactions { get; private set; } = new List<ILifestealReaction>();
+
         public List<int> DefensiveElementIDs { get; set; } = new List<int>();
         public bool IsPlayerControlled { get; set; }
         public bool IsDefeated => Stats.CurrentHP <= 0;
@@ -54,9 +76,6 @@ namespace ProjectVagabond.Battle
         public DelayedAction ChargingAction { get; set; }
         public Queue<DelayedAction> DelayedActions { get; set; } = new Queue<DelayedAction>();
         public bool HasUsedFirstAttack { get; set; } = false;
-        public bool IsSpellweaverActive { get; set; } = false;
-        public bool IsMomentumActive { get; set; } = false;
-        public int EscalationStacks { get; set; } = 0;
         public Dictionary<OffensiveStatType, int> StatStages { get; private set; }
 
         public BattleCombatant()
@@ -68,6 +87,32 @@ namespace ProjectVagabond.Battle
                 { OffensiveStatType.Tenacity, 0 },
                 { OffensiveStatType.Agility, 0 }
             };
+        }
+
+        public void RegisterAbility(IAbility ability)
+        {
+            Abilities.Add(ability);
+
+            if (ability is IStatModifier sm) StatModifiers.Add(sm);
+            if (ability is IOutgoingDamageModifier odm) OutgoingDamageModifiers.Add(odm);
+            if (ability is IIncomingDamageModifier idm) IncomingDamageModifiers.Add(idm);
+            if (ability is IOnHitEffect ohe) OnHitEffects.Add(ohe);
+            if (ability is IOnDamagedEffect ode) OnDamagedEffects.Add(ode);
+            if (ability is ICritModifier cm) CritModifiers.Add(cm);
+            if (ability is IAccuracyModifier am) AccuracyModifiers.Add(am);
+            if (ability is ITurnLifecycle tl) TurnLifecycleEffects.Add(tl);
+            if (ability is IBattleLifecycle bl) BattleLifecycleEffects.Add(bl);
+            if (ability is IActionModifier actm) ActionModifiers.Add(actm);
+            if (ability is IOnActionComplete oac) OnActionCompleteEffects.Add(oac);
+            if (ability is IOnKill ok) OnKillEffects.Add(ok);
+            if (ability is IOnCritReceived ocr) OnCritReceivedEffects.Add(ocr);
+            if (ability is IOnStatusApplied osa) OnStatusAppliedEffects.Add(osa);
+            if (ability is ILifestealReaction lsr) LifestealReactions.Add(lsr);
+        }
+
+        public void RegisterAbilities(IEnumerable<IAbility> abilities)
+        {
+            foreach (var ability in abilities) RegisterAbility(ability);
         }
 
         public void ApplyDamage(int damageAmount)
@@ -86,6 +131,7 @@ namespace ProjectVagabond.Battle
 
         public bool AddStatusEffect(StatusEffectInstance newEffect)
         {
+            // TODO: Port StatusImmunity to IAbility later
             foreach (var relic in ActiveRelics)
             {
                 if (relic.Effects.TryGetValue("StatusImmunity", out var immunityValue))
@@ -136,50 +182,42 @@ namespace ProjectVagabond.Battle
             return effectiveElements;
         }
 
+        // --- STAT GETTERS ---
+
         public int GetEffectiveStrength()
         {
-            float stat = Stats.Strength * BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Strength]];
+            float stat = Stats.Strength;
+            foreach (var mod in StatModifiers) stat = mod.ModifyStat(OffensiveStatType.Strength, (int)stat, this);
+            stat *= BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Strength]];
             if (HasStatusEffect(StatusEffectType.Fear)) stat *= 0.8f;
             return (int)Math.Round(stat);
         }
 
         public int GetEffectiveIntelligence()
         {
-            float stat = Stats.Intelligence * BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Intelligence]];
+            float stat = Stats.Intelligence;
+            foreach (var mod in StatModifiers) stat = mod.ModifyStat(OffensiveStatType.Intelligence, (int)stat, this);
+            stat *= BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Intelligence]];
             if (HasStatusEffect(StatusEffectType.Fear)) stat *= 0.8f;
             return (int)Math.Round(stat);
         }
 
         public int GetEffectiveTenacity()
         {
-            float stat = Stats.Tenacity * BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Tenacity]];
+            float stat = Stats.Tenacity;
+            foreach (var mod in StatModifiers) stat = mod.ModifyStat(OffensiveStatType.Tenacity, (int)stat, this);
+            stat *= BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Tenacity]];
             if (HasStatusEffect(StatusEffectType.Fear)) stat *= 0.8f;
             return (int)Math.Round(stat);
         }
 
         public int GetEffectiveAgility()
         {
-            float stat = Stats.Agility * BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Agility]];
+            float stat = Stats.Agility;
+            foreach (var mod in StatModifiers) stat = mod.ModifyStat(OffensiveStatType.Agility, (int)stat, this);
+            stat *= BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Agility]];
             if (HasStatusEffect(StatusEffectType.Freeze)) stat *= 0.5f;
             if (HasStatusEffect(StatusEffectType.Fear)) stat *= 0.8f;
-
-            foreach (var relic in ActiveRelics)
-            {
-                if (relic.Effects.TryGetValue("CorneredAnimal", out var value) && EffectParser.TryParseFloatArray(value, out float[] p) && p.Length == 3)
-                {
-                    var battleManager = ServiceLocator.Get<BattleManager>();
-                    bool hpCondition = (float)Stats.CurrentHP / Stats.MaxHP * 100f < p[0];
-                    int enemyCount = battleManager.AllCombatants.Count(c => c.IsPlayerControlled != this.IsPlayerControlled && !c.IsDefeated && c.IsActiveOnField);
-                    bool enemyCountCondition = enemyCount >= p[1];
-
-                    if (hpCondition || enemyCountCondition)
-                    {
-                        stat *= (1.0f + (p[2] / 100f));
-                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = this, Ability = relic });
-                    }
-                }
-            }
-
             return (int)Math.Round(stat);
         }
 
@@ -187,6 +225,13 @@ namespace ProjectVagabond.Battle
         {
             float accuracy = baseAccuracy;
             if (HasStatusEffect(StatusEffectType.Blind)) accuracy *= 0.5f;
+
+            var ctx = new CombatContext { Actor = this };
+            foreach (var mod in AccuracyModifiers)
+            {
+                accuracy = mod.ModifyAccuracy((int)accuracy, ctx);
+            }
+
             return (int)Math.Round(accuracy);
         }
     }

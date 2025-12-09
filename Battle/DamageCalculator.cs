@@ -1,18 +1,11 @@
 ﻿using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
-using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond;
 using ProjectVagabond.Battle;
-using ProjectVagabond.Progression;
-using ProjectVagabond.Scenes;
-using ProjectVagabond.UI;
+using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
 
 namespace ProjectVagabond.Battle
 {
@@ -20,11 +13,8 @@ namespace ProjectVagabond.Battle
     {
         private static readonly Random _random = new Random();
 
-        // This scalar controls the overall lethality of the game.
-        // 0.5f means an attack with equal stats (10 vs 10) deals 50% of the Move's Power.
-        // With 40 Power, that's 20 damage. Against 100 HP, that's a 5-hit kill (Average).
         private const float GLOBAL_DAMAGE_SCALAR = 0.25f;
-        private const int FLAT_DAMAGE_BONUS = 2; // Ensures attacks always do at least a tiny bit of chip damage
+        private const int FLAT_DAMAGE_BONUS = 2;
 
         public enum ElementalEffectiveness { Neutral, Effective, Resisted, Immune }
 
@@ -38,30 +28,6 @@ namespace ProjectVagabond.Battle
             public List<RelicData> DefenderAbilitiesTriggered;
         }
 
-        public static int GetEffectiveMovePower(BattleCombatant attacker, MoveData move)
-        {
-            float movePower = move.Power;
-
-            foreach (var relic in attacker.ActiveRelics)
-            {
-                if (relic.Effects.TryGetValue("DamageBonus", out var damageBonusValue))
-                {
-                    var parts = damageBonusValue.Split(',');
-                    if (parts.Length == 2 &&
-                        EffectParser.TryParseInt(parts[0].Trim(), out int elementId) &&
-                        EffectParser.TryParseFloat(parts[1].Trim(), out float bonusPercent))
-                    {
-                        if (move.MoveType == MoveType.Spell && move.OffensiveElementIDs.Contains(elementId))
-                        {
-                            movePower *= (1.0f + (bonusPercent / 100f));
-                        }
-                    }
-                }
-            }
-
-            return (int)Math.Round(movePower);
-        }
-
         public static DamageResult CalculateDamage(QueuedAction action, BattleCombatant target, MoveData move, float multiTargetModifier = 1.0f, bool? overrideCrit = null)
         {
             var attacker = action.Actor;
@@ -72,352 +38,215 @@ namespace ProjectVagabond.Battle
                 DefenderAbilitiesTriggered = new List<RelicData>()
             };
 
+            // 1. Handle Fixed Damage
             if (move.Effects.TryGetValue("FixedDamage", out var fixedDamageValue) && EffectParser.TryParseInt(fixedDamageValue, out int fixedDamage))
             {
                 result.DamageAmount = fixedDamage;
                 return result;
             }
 
-            if (move.Power == 0)
-            {
-                return result;
-            }
+            if (move.Power == 0) return result;
 
+            // 2. Build Combat Context
+            var ctx = new CombatContext
+            {
+                Actor = attacker,
+                Target = target,
+                Move = move,
+                MultiTargetModifier = multiTargetModifier
+            };
+
+            // 3. Accuracy Check
             if (move.Accuracy != -1)
             {
-                if (target.HasStatusEffect(StatusEffectType.Dodging))
+                // Check for Ignore Evasion abilities
+                bool ignoreEvasion = attacker.AccuracyModifiers.Any(m => m.ShouldIgnoreEvasion(ctx));
+
+                if (target.HasStatusEffect(StatusEffectType.Dodging) && !ignoreEvasion)
                 {
                     result.WasGraze = true;
                 }
                 else
                 {
                     int effectiveAccuracy = attacker.GetEffectiveAccuracy(move.Accuracy);
-                    if (_random.Next(1, 101) > effectiveAccuracy)
-                    {
-                        result.WasGraze = true;
-                    }
+                    if (_random.Next(1, 101) > effectiveAccuracy) result.WasGraze = true;
                 }
             }
 
-            float movePower = GetEffectiveMovePower(attacker, move);
-
-            if (action.IsLastActionInRound)
-            {
-                foreach (var relic in attacker.ActiveRelics)
-                {
-                    if (relic.Effects.TryGetValue("PowerBonusLastAct", out var value) && EffectParser.TryParseFloat(value, out float bonusPercent))
-                    {
-                        movePower *= (1.0f + (bonusPercent / 100f));
-                        result.AttackerAbilitiesTriggered.Add(relic);
-                    }
-                }
-            }
-
-            if (move.Effects.ContainsKey("RampUp") && attacker.RampingMoveCounters.TryGetValue(move.MoveID, out int useCount))
-            {
-                if (EffectParser.TryParseIntArray(move.Effects["RampUp"], out int[] rampParams) && rampParams.Length == 2)
-                {
-                    int bonusPerUse = rampParams[0];
-                    int maxBonus = rampParams[1];
-                    movePower += Math.Min(useCount * bonusPerUse, maxBonus);
-                }
-            }
-
-            float offensiveStat;
-            switch (move.OffensiveStat)
-            {
-                case OffensiveStatType.Strength: offensiveStat = attacker.GetEffectiveStrength(); break;
-                case OffensiveStatType.Intelligence: offensiveStat = attacker.GetEffectiveIntelligence(); break;
-                case OffensiveStatType.Tenacity: offensiveStat = attacker.GetEffectiveTenacity(); break;
-                case OffensiveStatType.Agility: offensiveStat = attacker.GetEffectiveAgility(); break;
-                default: offensiveStat = attacker.GetEffectiveStrength(); break;
-            }
-
+            // 4. Calculate Base Damage
+            float offensiveStat = GetOffensiveStat(attacker, move.OffensiveStat);
             float defensiveStat = target.GetEffectiveTenacity();
+
             if (move.Effects.TryGetValue("ArmorPierce", out var armorPierceValue) && EffectParser.TryParseFloat(armorPierceValue, out float piercePercent))
             {
                 defensiveStat *= (1.0f - (piercePercent / 100f));
             }
-
-            // Ensure we never divide by zero. 1 is the absolute floor for defense.
             if (defensiveStat < 1) defensiveStat = 1;
 
-            // --- DEBUG LOGGING ---
-            Debug.WriteLine($"[DamageCalc] {attacker.Name} uses {move.MoveName} on {target.Name}");
-            Debug.WriteLine($"   -> Power: {movePower}");
-            Debug.WriteLine($"   -> OffStat ({move.OffensiveStat}): {offensiveStat}");
-            Debug.WriteLine($"   -> DefStat (Tenacity): {defensiveStat}");
-            // ---------------------
-
-            // Damage = (Power * (Attack / Defense) * Scalar) + FlatBonus
             float statRatio = offensiveStat / defensiveStat;
-            float baseDamage = (movePower * statRatio * GLOBAL_DAMAGE_SCALAR) + FLAT_DAMAGE_BONUS;
+            float baseDamage = (move.Power * statRatio * GLOBAL_DAMAGE_SCALAR) + FLAT_DAMAGE_BONUS;
 
-            Debug.WriteLine($"   -> Calculation: ({movePower} * ({offensiveStat}/{defensiveStat}) * {GLOBAL_DAMAGE_SCALAR}) + {FLAT_DAMAGE_BONUS} = {baseDamage:F2}");
+            ctx.BaseDamage = baseDamage;
 
-            float finalDamage = baseDamage;
-
-            foreach (var relic in attacker.ActiveRelics)
+            // 5. Apply Outgoing Modifiers (Attacker Abilities)
+            float currentDamage = baseDamage;
+            foreach (var modifier in attacker.OutgoingDamageModifiers)
             {
-                if (relic.Effects.TryGetValue("DamageBonusLowHP", out var adrValue))
-                {
-                    var parts = adrValue.Split(',');
-                    if (parts.Length == 2 && EffectParser.TryParseFloat(parts[0], out float hpThreshold) && EffectParser.TryParseFloat(parts[1], out float bonus))
-                    {
-                        if ((float)attacker.Stats.CurrentHP / attacker.Stats.MaxHP * 100f < hpThreshold)
-                        {
-                            finalDamage *= (1.0f + (bonus / 100f));
-                            result.AttackerAbilitiesTriggered.Add(relic);
-                        }
-                    }
-                }
-
-                if (relic.Effects.TryGetValue("DamageBonusVsStatused", out var oppValue))
-                {
-                    if (target.ActiveStatusEffects.Any() && EffectParser.TryParseFloat(oppValue, out float bonus))
-                    {
-                        finalDamage *= (1.0f + (bonus / 100f));
-                        result.AttackerAbilitiesTriggered.Add(relic);
-                    }
-                }
-
-                if (!attacker.HasUsedFirstAttack && relic.Effects.TryGetValue("FirstAttackBonus", out var fbValue))
-                {
-                    if (EffectParser.TryParseFloat(fbValue, out float bonus))
-                    {
-                        finalDamage *= (1.0f + (bonus / 100f));
-                        result.AttackerAbilitiesTriggered.Add(relic);
-                    }
-                }
-
-                if (relic.Effects.TryGetValue("Bloodletter", out var bloodletterValue) && EffectParser.TryParseFloatArray(bloodletterValue, out float[] bloodletterParams) && bloodletterParams.Length == 2)
-                {
-                    if (move.MoveType == MoveType.Spell && move.OffensiveElementIDs.Contains(9))
-                    {
-                        finalDamage *= (1.0f + (bloodletterParams[1] / 100f));
-                        result.AttackerAbilitiesTriggered.Add(relic);
-                    }
-                }
-
-                if (attacker.IsSpellweaverActive && relic.Effects.TryGetValue("Spellweaver", out var spellweaverValue))
-                {
-                    if (move.MoveType == MoveType.Spell && EffectParser.TryParseFloat(spellweaverValue, out float bonus))
-                    {
-                        finalDamage *= (1.0f + (bonus / 100f));
-                        result.AttackerAbilitiesTriggered.Add(relic);
-                    }
-                }
-
-                if (attacker.IsMomentumActive && relic.Effects.TryGetValue("Momentum", out var momentumValue))
-                {
-                    if (move.Power > 0 && EffectParser.TryParseFloat(momentumValue, out float bonus))
-                    {
-                        finalDamage *= (1.0f + (bonus / 100f));
-                        result.AttackerAbilitiesTriggered.Add(relic);
-                    }
-                }
-
-                if (attacker.EscalationStacks > 0 && relic.Effects.TryGetValue("Escalation", out var escalationValue))
-                {
-                    if (EffectParser.TryParseIntArray(escalationValue, out int[] escalationParams) && escalationParams.Length == 2)
-                    {
-                        float bonusPerStack = escalationParams[0];
-                        float totalBonus = attacker.EscalationStacks * bonusPerStack;
-                        finalDamage *= (1.0f + (totalBonus / 100f));
-                        result.AttackerAbilitiesTriggered.Add(relic);
-                    }
-                }
+                currentDamage = modifier.ModifyOutgoingDamage(currentDamage, ctx);
             }
 
+            // 6. Move-Specific Logic (Execute)
             if (move.Effects.TryGetValue("Execute", out var executeValue) && EffectParser.TryParseFloatArray(executeValue, out float[] execParams) && execParams.Length == 2)
             {
                 float hpThreshold = execParams[0];
                 float damageMultiplier = execParams[1];
                 if ((float)target.Stats.CurrentHP / target.Stats.MaxHP <= (hpThreshold / 100f))
                 {
-                    finalDamage *= damageMultiplier;
+                    currentDamage *= damageMultiplier;
                 }
             }
 
-            finalDamage *= multiTargetModifier;
+            currentDamage *= multiTargetModifier;
 
+            // 7. Critical Hits
             if (!result.WasGraze)
             {
-                bool isCrit = false;
-
-                if (overrideCrit.HasValue)
-                {
-                    isCrit = overrideCrit.Value;
-                }
-                else
-                {
-                    double critChance = BattleConstants.CRITICAL_HIT_CHANCE;
-                    foreach (var relic in attacker.ActiveRelics)
-                    {
-                        if (relic.Effects.TryGetValue("CritChanceBonus", out var value) && EffectParser.TryParseFloat(value, out float bonus))
-                        {
-                            critChance += bonus / 100.0;
-                        }
-                    }
-
-                    if (target.HasStatusEffect(StatusEffectType.Root)) critChance *= 2.0;
-                    if (_random.NextDouble() < critChance)
-                    {
-                        isCrit = true;
-                    }
-                }
-
+                bool isCrit = overrideCrit ?? CheckCritical(attacker, target, ctx);
                 if (isCrit)
                 {
                     result.WasCritical = true;
-                    finalDamage *= BattleConstants.CRITICAL_HIT_MULTIPLIER;
+                    ctx.IsCritical = true;
 
-                    foreach (var relic in target.ActiveRelics)
+                    float critMultiplier = BattleConstants.CRITICAL_HIT_MULTIPLIER;
+
+                    // Apply Defender Crit Modifiers (e.g. Bulwark/CritDamageReduction)
+                    foreach (var mod in target.CritModifiers)
                     {
-                        if (relic.Effects.TryGetValue("CritDamageReduction", out var value) && EffectParser.TryParseFloat(value, out float reductionPercent))
-                        {
-                            finalDamage *= (1.0f - (reductionPercent / 100f));
-                            result.DefenderAbilitiesTriggered.Add(relic);
-                        }
+                        critMultiplier = mod.ModifyCritDamage(critMultiplier, ctx);
                     }
+
+                    currentDamage *= critMultiplier;
                 }
             }
 
-            float elementalMultiplier = GetElementalMultiplier(move, target, result.DefenderAbilitiesTriggered);
+            // 8. Elemental Calculation
+            float elementalMultiplier = GetElementalMultiplier(move, target);
             if (elementalMultiplier > 1.0f) result.Effectiveness = ElementalEffectiveness.Effective;
             else if (elementalMultiplier > 0f && elementalMultiplier < 1.0f) result.Effectiveness = ElementalEffectiveness.Resisted;
             else if (elementalMultiplier == 0f) result.Effectiveness = ElementalEffectiveness.Immune;
 
-            finalDamage *= elementalMultiplier;
+            currentDamage *= elementalMultiplier;
 
+            // 9. Apply Incoming Modifiers (Defender Abilities)
+            // This handles Absorption (Sun-Blessed Leaf), Damage Reduction, Glass Cannon (incoming), etc.
+            foreach (var modifier in target.IncomingDamageModifiers)
+            {
+                currentDamage = modifier.ModifyIncomingDamage(currentDamage, ctx);
+            }
+
+            // 10. Status Effect Modifiers
             if (target.HasStatusEffect(StatusEffectType.Freeze) && move.ImpactType == ImpactType.Physical)
             {
-                finalDamage *= 2.0f;
+                currentDamage *= 2.0f;
             }
 
-            foreach (var relic in target.ActiveRelics)
-            {
-                if (relic.Effects.TryGetValue("DamageReductionPhysical", out var value) && EffectParser.TryParseFloat(value, out float reduction))
-                {
-                    if (move.ImpactType == ImpactType.Physical)
-                    {
-                        finalDamage *= (1.0f - (reduction / 100f));
-                    }
-                }
-            }
+            // 11. Variance & Graze
+            currentDamage *= (float)(_random.NextDouble() * (BattleConstants.RANDOM_VARIANCE_MAX - BattleConstants.RANDOM_VARIANCE_MIN) + BattleConstants.RANDOM_VARIANCE_MIN);
+            if (result.WasGraze) currentDamage *= BattleConstants.GRAZE_MULTIPLIER;
 
-            foreach (var relic in target.ActiveRelics)
-            {
-                if (relic.Effects.TryGetValue("Vigor", out var vigorValue) && EffectParser.TryParseFloatArray(vigorValue, out float[] vigorParams) && vigorParams.Length == 2)
-                {
-                    float hpThreshold = vigorParams[0];
-                    float damageReduction = vigorParams[1];
+            // 12. Finalize
+            int finalDamageAmount = (int)Math.Floor(currentDamage);
 
-                    if ((float)target.Stats.CurrentHP / target.Stats.MaxHP * 100f > hpThreshold)
-                    {
-                        finalDamage *= (1.0f - (damageReduction / 100f));
-                        result.DefenderAbilitiesTriggered.Add(relic);
-                    }
-                }
-            }
-
-            finalDamage *= (float)(_random.NextDouble() * (BattleConstants.RANDOM_VARIANCE_MAX - BattleConstants.RANDOM_VARIANCE_MIN) + BattleConstants.RANDOM_VARIANCE_MIN);
-
-            if (result.WasGraze)
-            {
-                finalDamage *= BattleConstants.GRAZE_MULTIPLIER;
-            }
-
-            int finalDamageAmount = (int)Math.Floor(finalDamage);
-
-            if (finalDamage > 0 && finalDamageAmount == 0)
-            {
-                finalDamageAmount = 1;
-            }
+            // Ensure at least 1 damage unless it was explicitly negated (0 or less)
+            if (currentDamage > 0 && finalDamageAmount == 0) finalDamageAmount = 1;
+            if (finalDamageAmount < 0) finalDamageAmount = 0;
 
             result.DamageAmount = finalDamageAmount;
-            Debug.WriteLine($"   -> Final Damage: {finalDamageAmount}");
             return result;
         }
 
+        /// <summary>
+        /// Calculates the expected damage without variance or critical hits.
+        /// Used by UI to determine if a hit was significantly stronger than normal.
+        /// </summary>
         public static int CalculateBaselineDamage(BattleCombatant attacker, BattleCombatant target, MoveData move)
         {
             if (move.Power == 0) return 0;
 
-            float movePower = move.Power;
+            var ctx = new CombatContext { Actor = attacker, Target = target, Move = move };
 
-            float offensiveStat;
-            switch (move.OffensiveStat)
+            float offensiveStat = GetOffensiveStat(attacker, move.OffensiveStat);
+            float defensiveStat = target.GetEffectiveTenacity();
+
+            if (move.Effects.TryGetValue("ArmorPierce", out var armorPierceValue) && EffectParser.TryParseFloat(armorPierceValue, out float piercePercent))
             {
-                case OffensiveStatType.Strength: offensiveStat = attacker.Stats.Strength; break;
-                case OffensiveStatType.Intelligence: offensiveStat = attacker.Stats.Intelligence; break;
-                case OffensiveStatType.Tenacity: offensiveStat = attacker.Stats.Tenacity; break;
-                case OffensiveStatType.Agility: offensiveStat = attacker.Stats.Agility; break;
-                default: offensiveStat = attacker.Stats.Strength; break;
+                defensiveStat *= (1.0f - (piercePercent / 100f));
             }
-
-            float defensiveStat = target.Stats.Tenacity;
-            if (defensiveStat <= 0) defensiveStat = 1;
+            if (defensiveStat < 1) defensiveStat = 1;
 
             float statRatio = offensiveStat / defensiveStat;
-            float baseDamage = (movePower * statRatio * GLOBAL_DAMAGE_SCALAR) + FLAT_DAMAGE_BONUS;
+            float baseDamage = (move.Power * statRatio * GLOBAL_DAMAGE_SCALAR) + FLAT_DAMAGE_BONUS;
 
-            baseDamage *= BattleConstants.RANDOM_VARIANCE_MAX;
+            ctx.BaseDamage = baseDamage;
 
-            int finalDamageAmount = (int)Math.Floor(baseDamage);
-            if (baseDamage > 0 && finalDamageAmount == 0)
+            float currentDamage = baseDamage;
+
+            foreach (var modifier in attacker.OutgoingDamageModifiers)
             {
-                finalDamageAmount = 1;
+                currentDamage = modifier.ModifyOutgoingDamage(currentDamage, ctx);
             }
+
+            foreach (var modifier in target.IncomingDamageModifiers)
+            {
+                currentDamage = modifier.ModifyIncomingDamage(currentDamage, ctx);
+            }
+
+            currentDamage *= BattleConstants.RANDOM_VARIANCE_MAX;
+
+            int finalDamageAmount = (int)Math.Floor(currentDamage);
+            if (currentDamage > 0 && finalDamageAmount == 0) finalDamageAmount = 1;
 
             return finalDamageAmount;
         }
 
+        private static float GetOffensiveStat(BattleCombatant attacker, OffensiveStatType type)
+        {
+            return type switch
+            {
+                OffensiveStatType.Strength => attacker.GetEffectiveStrength(),
+                OffensiveStatType.Intelligence => attacker.GetEffectiveIntelligence(),
+                OffensiveStatType.Tenacity => attacker.GetEffectiveTenacity(),
+                OffensiveStatType.Agility => attacker.GetEffectiveAgility(),
+                _ => attacker.GetEffectiveStrength(),
+            };
+        }
+
+        private static bool CheckCritical(BattleCombatant attacker, BattleCombatant target, CombatContext ctx)
+        {
+            float critChance = BattleConstants.CRITICAL_HIT_CHANCE;
+
+            // Apply Ability Modifiers
+            foreach (var mod in attacker.CritModifiers)
+            {
+                critChance = mod.ModifyCritChance(critChance, ctx);
+            }
+
+            // Core Mechanic: Root doubles crit chance
+            if (target.HasStatusEffect(StatusEffectType.Root)) critChance *= 2.0f;
+
+            return _random.NextDouble() < critChance;
+        }
 
         public static float GetElementalMultiplier(MoveData move, BattleCombatant target)
         {
-            return GetElementalMultiplier(move, target, null);
-        }
-
-        public static float GetElementalMultiplier(MoveData move, BattleCombatant target, List<RelicData> defenderAbilitiesTriggered)
-        {
-            foreach (var relic in target.ActiveRelics)
-            {
-                if (relic.Effects.TryGetValue("ElementImmunityAndHeal", out var healValue))
-                {
-                    var parts = healValue.Split(',');
-                    if (parts.Length == 2 && EffectParser.TryParseInt(parts[0], out int immuneElementId))
-                    {
-                        if (move.OffensiveElementIDs.Contains(immuneElementId))
-                        {
-                            defenderAbilitiesTriggered?.Add(relic);
-                            return 0f;
-                        }
-                    }
-                }
-
-                if (relic.Effects.TryGetValue("ElementImmunity", out var immunityValue))
-                {
-                    if (EffectParser.TryParseInt(immunityValue, out int immuneElementId))
-                    {
-                        if (move.OffensiveElementIDs.Contains(immuneElementId))
-                        {
-                            defenderAbilitiesTriggered?.Add(relic);
-                            return 0f;
-                        }
-                    }
-                }
-            }
+            // Note: Specific immunity abilities (like Sun-Blessed Leaf) are now handled 
+            // via IIncomingDamageModifier in CalculateDamage, setting damage to 0.
+            // This method focuses purely on the Elemental Interaction Matrix.
 
             var targetDefensiveElements = target.GetEffectiveDefensiveElementIDs();
-            if (move.OffensiveElementIDs == null || !move.OffensiveElementIDs.Any() ||
-                targetDefensiveElements == null || !targetDefensiveElements.Any())
-            {
-                return 1.0f;
-            }
+            if (!move.OffensiveElementIDs.Any() || !targetDefensiveElements.Any()) return 1.0f;
 
             float finalMultiplier = 1.0f;
-
             foreach (int offensiveId in move.OffensiveElementIDs)
             {
                 if (BattleDataCache.InteractionMatrix.TryGetValue(offensiveId, out var attackRow))
@@ -431,8 +260,19 @@ namespace ProjectVagabond.Battle
                     }
                 }
             }
-
             return finalMultiplier;
+        }
+
+        public static int GetEffectiveMovePower(BattleCombatant attacker, MoveData move)
+        {
+            var ctx = new CombatContext { Actor = attacker, Move = move, BaseDamage = move.Power };
+            float power = move.Power;
+
+            foreach (var mod in attacker.OutgoingDamageModifiers)
+            {
+                power = mod.ModifyOutgoingDamage(power, ctx);
+            }
+            return (int)power;
         }
     }
 }

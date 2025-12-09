@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
 
 namespace ProjectVagabond.Battle
 {
@@ -47,7 +48,7 @@ namespace ProjectVagabond.Battle
                     Agility = statsComponent.Agility
                 },
                 DefensiveElementIDs = new List<int>(statsComponent.DefensiveElementIDs),
-                EscalationStacks = 0,
+                // EscalationStacks = 0, // REMOVED: Now handled by EscalationAbility state
                 IsPlayerControlled = componentStore.HasComponent<PlayerTagComponent>(entityId)
             };
 
@@ -56,20 +57,21 @@ namespace ProjectVagabond.Battle
             if (combatant.IsPlayerControlled)
             {
                 // 1. Set Default Strike Move
-                // If a weapon is equipped, use its move. Otherwise use the base default.
                 if (!string.IsNullOrEmpty(gameState.PlayerState.EquippedWeaponId) &&
                     BattleDataCache.Weapons.TryGetValue(gameState.PlayerState.EquippedWeaponId, out var weaponData))
                 {
                     combatant.DefaultStrikeMoveID = weaponData.MoveID;
 
-                    // 2. Apply Weapon Passives
-                    // We create a temporary RelicData object to represent the weapon's effects in combat.
-                    // This allows the existing SecondaryEffectSystem to process weapon effects seamlessly.
+                    // Register Weapon Abilities
+                    var weaponAbilities = AbilityFactory.CreateAbilitiesFromData(weaponData.Effects, weaponData.StatModifiers);
+                    combatant.RegisterAbilities(weaponAbilities);
+
+                    // Keep legacy list for UI tooltips
                     var weaponAsRelic = new RelicData
                     {
                         RelicID = weaponData.WeaponID,
                         RelicName = weaponData.WeaponName,
-                        AbilityName = "Weapon Ability", // Generic name or add specific field to WeaponData later
+                        AbilityName = "Weapon Ability",
                         Effects = weaponData.Effects,
                         StatModifiers = weaponData.StatModifiers
                     };
@@ -80,11 +82,14 @@ namespace ProjectVagabond.Battle
                     combatant.DefaultStrikeMoveID = gameState.PlayerState.DefaultStrikeMoveID;
                 }
 
-                // 3. Apply Armor Passives
+                // 2. Apply Armor Passives
                 if (!string.IsNullOrEmpty(gameState.PlayerState.EquippedArmorId) &&
                     BattleDataCache.Armors.TryGetValue(gameState.PlayerState.EquippedArmorId, out var armorData))
                 {
-                    // Only create a passive effect entry if the armor actually has effects or a named ability
+                    // Register Armor Abilities
+                    var armorAbilities = AbilityFactory.CreateAbilitiesFromData(armorData.Effects, armorData.StatModifiers);
+                    combatant.RegisterAbilities(armorAbilities);
+
                     if (armorData.Effects != null && armorData.Effects.Count > 0)
                     {
                         var armorAsRelic = new RelicData
@@ -101,8 +106,7 @@ namespace ProjectVagabond.Battle
 
                 combatant.EquippedSpells = gameState.PlayerState.EquippedSpells;
 
-                // Apply Effective Stats from PlayerState (Base + Relic + Weapon + Armor Modifiers)
-                // We overwrite the stats loaded from the component with the calculated effective stats.
+                // Apply Effective Stats from PlayerState
                 combatant.Stats.MaxHP = gameState.PlayerState.GetEffectiveStat("MaxHP");
                 combatant.Stats.MaxMana = gameState.PlayerState.GetEffectiveStat("MaxMana");
                 combatant.Stats.Strength = gameState.PlayerState.GetEffectiveStat("Strength");
@@ -113,18 +117,18 @@ namespace ProjectVagabond.Battle
                 combatant.Stats.CurrentMana = gameState.PlayerState.Leader.CurrentMana;
                 combatant.VisualHP = combatant.Stats.CurrentHP;
 
-                // Load Passive Abilities from EQUIPPED relics only
+                // 3. Load Relic Abilities
                 foreach (var relicId in gameState.PlayerState.EquippedRelics)
                 {
                     if (!string.IsNullOrEmpty(relicId))
                     {
                         if (BattleDataCache.Relics.TryGetValue(relicId, out var relicData))
                         {
+                            // Register Relic Abilities
+                            var relicAbilities = AbilityFactory.CreateAbilitiesFromData(relicData.Effects, relicData.StatModifiers);
+                            combatant.RegisterAbilities(relicAbilities);
+
                             combatant.ActiveRelics.Add(relicData);
-                        }
-                        else
-                        {
-                            Debug.WriteLine($"[BattleCombatantFactory] [WARNING] Relic ID '{relicId}' not found for player.");
                         }
                     }
                 }
@@ -150,7 +154,7 @@ namespace ProjectVagabond.Battle
                 }
                 combatant.SetStaticMoves(staticMoves);
 
-                // Load passive abilities from component (Enemies don't have inventory)
+                // Load passive abilities from component (Enemies)
                 var abilitiesComponent = componentStore.GetComponent<PassiveAbilitiesComponent>(entityId);
                 if (abilitiesComponent != null)
                 {
@@ -158,6 +162,10 @@ namespace ProjectVagabond.Battle
                     {
                         if (BattleDataCache.Relics.TryGetValue(relicId, out var relicData))
                         {
+                            // Register Enemy Abilities
+                            var enemyAbilities = AbilityFactory.CreateAbilitiesFromData(relicData.Effects, relicData.StatModifiers);
+                            combatant.RegisterAbilities(enemyAbilities);
+
                             combatant.ActiveRelics.Add(relicData);
                         }
                     }
