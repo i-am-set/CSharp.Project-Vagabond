@@ -272,17 +272,63 @@ namespace ProjectVagabond.UI
                     const int suiteHeight = 32; // Height reserved for the expanded suite (matches portrait)
 
                     // Base Y position
-                    int currentY = _statsPanelArea.Y + 18;
+                    int startY = _statsPanelArea.Y + 18;
 
                     // Base X position for list (centered in panel, shifted left by 8px)
                     int listX = _statsPanelArea.X + (_statsPanelArea.Width - 90) / 2 - 8;
 
+                    // 1. Calculate Y positions for all slots
+                    int[] yPositions = new int[4];
+                    int tempY = startY;
                     for (int i = 0; i < 4; i++)
                     {
+                        yPositions[i] = tempY;
+                        if (i == _currentPartyMemberIndex) tempY += suiteHeight;
+                        else tempY += buttonHeight;
+                    }
+
+                    // 2. Update Background Animation State (Once per frame)
+                    float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+                    _portraitBgTimer += dt;
+                    if (_portraitBgTimer >= _portraitBgDuration)
+                    {
+                        _portraitBgTimer = 0f;
+                        _portraitBgDuration = (float)(_rng.NextDouble() * (8.0 - 2.0) + 2.0);
+                        var frames = _spriteManager.InventorySlotSourceRects;
+                        if (frames != null && frames.Length > 0) _portraitBgFrame = frames[_rng.Next(frames.Length)];
+                    }
+                    if (_portraitBgFrame == Rectangle.Empty)
+                    {
+                        var frames = _spriteManager.InventorySlotSourceRects;
+                        if (frames != null && frames.Length > 0) _portraitBgFrame = frames[_rng.Next(frames.Length)];
+                    }
+
+                    // 3. Draw Background for Selected Member (Bottom Layer)
+                    // This ensures the shadow sprite is drawn behind all buttons
+                    if (_currentPartyMemberIndex >= 0 && _currentPartyMemberIndex < 4)
+                    {
+                        int i = _currentPartyMemberIndex;
+                        int portraitX = listX;
+                        int portraitY = yPositions[i];
+                        var destRect = new Rectangle(portraitX, portraitY, portraitSize, portraitSize);
+
+                        if (_portraitBgFrame != Rectangle.Empty)
+                        {
+                            Vector2 center = destRect.Center.ToVector2();
+                            Vector2 origin = new Vector2(_portraitBgFrame.Width / 2f, _portraitBgFrame.Height / 2f);
+                            spriteBatch.DrawSnapped(_spriteManager.InventorySlotIdleSpriteSheet, center, _portraitBgFrame, Color.White, 0f, origin, 1f, SpriteEffects.None, 0f);
+                        }
+                    }
+
+                    // 4. Draw Buttons and Portrait Foregrounds
+                    for (int i = 0; i < 4; i++)
+                    {
+                        int currentY = yPositions[i];
+
                         // Is this the selected member?
                         if (i == _currentPartyMemberIndex)
                         {
-                            // --- DRAW INFO SUITE (Portrait + Health) ---
+                            // --- DRAW INFO SUITE FOREGROUND ---
                             var member = _gameState.PlayerState.Party[i];
 
                             if (_spriteManager.PlayerPortraitsSpriteSheet != null && _spriteManager.PlayerPortraitSourceRects.Count > 0)
@@ -300,29 +346,6 @@ namespace ProjectVagabond.UI
                                 Texture2D silhouetteToDraw = frame == 0 ? _spriteManager.PlayerPortraitsSpriteSheetSilhouette : _spriteManager.PlayerPortraitsAltSpriteSheetSilhouette;
 
                                 var destRect = new Rectangle(portraitX, portraitY, portraitSize, portraitSize);
-
-                                // Background Frame Logic
-                                float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
-                                _portraitBgTimer += dt;
-                                if (_portraitBgTimer >= _portraitBgDuration)
-                                {
-                                    _portraitBgTimer = 0f;
-                                    _portraitBgDuration = (float)(_rng.NextDouble() * (8.0 - 2.0) + 2.0);
-                                    var frames = _spriteManager.InventorySlotSourceRects;
-                                    if (frames != null && frames.Length > 0) _portraitBgFrame = frames[_rng.Next(frames.Length)];
-                                }
-                                if (_portraitBgFrame == Rectangle.Empty)
-                                {
-                                    var frames = _spriteManager.InventorySlotSourceRects;
-                                    if (frames != null && frames.Length > 0) _portraitBgFrame = frames[_rng.Next(frames.Length)];
-                                }
-
-                                if (_portraitBgFrame != Rectangle.Empty)
-                                {
-                                    Vector2 center = destRect.Center.ToVector2();
-                                    Vector2 origin = new Vector2(_portraitBgFrame.Width / 2f, _portraitBgFrame.Height / 2f);
-                                    spriteBatch.DrawSnapped(_spriteManager.InventorySlotIdleSpriteSheet, center, _portraitBgFrame, Color.White, 0f, origin, 1f, SpriteEffects.None, 0f);
-                                }
 
                                 // Outline
                                 if (silhouetteToDraw != null)
@@ -366,9 +389,6 @@ namespace ProjectVagabond.UI
                                     spriteBatch.DrawStringSnapped(secondaryFont, hpText, hpTextPos, _global.Palette_DarkGray);
                                 }
                             }
-
-                            // Advance Y by the suite height
-                            currentY += suiteHeight;
                         }
                         else
                         {
@@ -433,9 +453,6 @@ namespace ProjectVagabond.UI
                                 var botRect = new Rectangle(barX, barY + 1, currentBarWidth, 1);
                                 spriteBatch.DrawSnapped(pixel, botRect, _global.Palette_DarkGreen);
                             }
-
-                            // Advance Y by button height
-                            currentY += buttonHeight;
                         }
                     }
                 }
@@ -572,7 +589,6 @@ namespace ProjectVagabond.UI
             }
         }
 
-        // ... (Helper methods like ParseAndWrapRichText, ParseColor, DrawSpellInfoPanel remain unchanged) ...
         private List<List<ColoredText>> ParseAndWrapRichText(BitmapFont font, string text, float maxWidth, Color defaultColor)
         {
             // (Implementation omitted for brevity, same as previous)

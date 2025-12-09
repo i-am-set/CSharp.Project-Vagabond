@@ -109,6 +109,9 @@ namespace ProjectVagabond.Battle
                 combatant.Stats.Intelligence = gameState.PlayerState.GetEffectiveStat("Intelligence");
                 combatant.Stats.Tenacity = gameState.PlayerState.GetEffectiveStat("Tenacity");
                 combatant.Stats.Agility = gameState.PlayerState.GetEffectiveStat("Agility");
+                combatant.Stats.CurrentHP = gameState.PlayerState.Leader.CurrentHP;
+                combatant.Stats.CurrentMana = gameState.PlayerState.Leader.CurrentMana;
+                combatant.VisualHP = combatant.Stats.CurrentHP;
 
                 // Load Passive Abilities from EQUIPPED relics only
                 foreach (var relicId in gameState.PlayerState.EquippedRelics)

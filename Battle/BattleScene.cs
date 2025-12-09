@@ -314,6 +314,13 @@ namespace ProjectVagabond.Scenes
                 EquippedSpells = member.EquippedSpells
             };
 
+            combatant.Stats.MaxHP = _gameState.PlayerState.GetEffectiveStat(member, "MaxHP");
+            combatant.Stats.MaxMana = _gameState.PlayerState.GetEffectiveStat(member, "MaxMana");
+            combatant.Stats.Strength = _gameState.PlayerState.GetEffectiveStat(member, "Strength");
+            combatant.Stats.Intelligence = _gameState.PlayerState.GetEffectiveStat(member, "Intelligence");
+            combatant.Stats.Tenacity = _gameState.PlayerState.GetEffectiveStat(member, "Tenacity");
+            combatant.Stats.Agility = _gameState.PlayerState.GetEffectiveStat(member, "Agility");
+
             combatant.VisualHP = combatant.Stats.CurrentHP;
 
             // Load Relics
@@ -352,12 +359,16 @@ namespace ProjectVagabond.Scenes
         {
             if (_battleManager != null)
             {
-                foreach (var combatant in _battleManager.AllCombatants.Where(c => c.IsPlayerControlled))
+                // Sync battle state back to persistent PartyMember objects
+                foreach (var member in _gameState.PlayerState.Party)
                 {
-                    if (combatant.BattleSlot == 0)
+                    // Find the combatant that represents this party member
+                    var combatant = _battleManager.AllCombatants.FirstOrDefault(c => c.Name == member.Name && c.IsPlayerControlled);
+
+                    if (combatant != null)
                     {
-                        _gameState.PlayerState.Leader.CurrentHP = combatant.Stats.CurrentHP;
-                        _gameState.PlayerState.Leader.CurrentMana = combatant.Stats.CurrentMana;
+                        member.CurrentHP = combatant.Stats.CurrentHP;
+                        member.CurrentMana = combatant.Stats.CurrentMana;
                     }
                 }
             }
