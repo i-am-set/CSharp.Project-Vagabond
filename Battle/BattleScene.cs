@@ -912,7 +912,7 @@ namespace ProjectVagabond.Scenes
         private void OnActionFailed(GameEvents.ActionFailed e)
         {
             _currentActor = e.Actor;
-            if (e.Reason.StartsWith("charging")) _uiManager.ShowNarration($"{e.Actor.Name} is\n{e.Reason}!");
+            if (e.Reason.StartsWith("charging")) _uiManager.ShowNarration($"{e.Actor.Name} is {e.Reason}!");
             else _uiManager.ShowNarration($"{e.Actor.Name} is {e.Reason} and cannot move!");
         }
 
@@ -927,7 +927,7 @@ namespace ProjectVagabond.Scenes
                 }
 
                 string effectName = e.EffectType == StatusEffectType.Burn ? "the burn" : e.EffectType.ToString();
-                _uiManager.ShowNarration($"{e.Combatant.Name} takes {e.Damage} damage\nfrom [cStatus]{effectName}[/]!");
+                _uiManager.ShowNarration($"{e.Combatant.Name} takes {e.Damage} damage from [cStatus]{effectName}[/]!");
 
                 _animationManager.StartHealthLossAnimation(e.Combatant.CombatantID, e.Combatant.VisualHP, e.Combatant.Stats.CurrentHP);
                 _animationManager.StartHealthAnimation(e.Combatant.CombatantID, (int)e.Combatant.VisualHP, e.Combatant.Stats.CurrentHP);
