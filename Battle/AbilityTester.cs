@@ -20,10 +20,20 @@ namespace ProjectVagabond.Utils
 
             LogInfo("--- STARTING ABILITY LOGIC TESTS ---");
 
+            // --- MOCK BATTLE ENVIRONMENT SETUP ---
+            var mockPlayer = CreateDummy(100, 100);
+            mockPlayer.IsPlayerControlled = true;
+            var mockEnemy = CreateDummy(100, 100);
+            mockEnemy.IsPlayerControlled = false;
+
+            // Register a temporary BattleManager
+            var mockBattleManager = new BattleManager(new List<BattleCombatant> { mockPlayer }, new List<BattleCombatant> { mockEnemy });
+            ServiceLocator.Register(mockBattleManager);
+
             try
             {
                 LogHeader("Testing Stat Modifiers...");
-                TestStatModifiers();
+                TestStatModifiers(mockPlayer, mockEnemy);
 
                 LogHeader("Testing Damage Modifiers (Basic)...");
                 TestDamageModifiers();
@@ -50,12 +60,17 @@ namespace ProjectVagabond.Utils
                 TestStatusAbilities();
 
                 LogHeader("Testing Battle Manager Dependent Abilities...");
-                TestBattleDependentAbilities();
+                TestBattleDependentAbilities(mockPlayer, mockEnemy);
             }
             catch (Exception ex)
             {
                 LogFail($"CRITICAL TEST SUITE FAILURE: {ex.Message}");
                 System.Diagnostics.Debug.WriteLine($"TEST FAILURE: {ex}");
+            }
+            finally
+            {
+                // Cleanup: Remove the mock manager so it doesn't interfere with the real game
+                ServiceLocator.Unregister<BattleManager>();
             }
 
             string resultColor = _failed == 0 ? "[green]" : "[red]";
@@ -69,13 +84,25 @@ namespace ProjectVagabond.Utils
             System.Diagnostics.Debug.WriteLine(msg);
         }
 
-        private static void TestStatModifiers()
+        private static void TestStatModifiers(BattleCombatant player, BattleCombatant enemy)
         {
             // 1. FlatStatBonusAbility
             var mods = new Dictionary<string, int> { { "Strength", 10 } };
             var ability = new FlatStatBonusAbility(mods);
             int result = ability.ModifyStat(OffensiveStatType.Strength, 10, new BattleCombatant());
             Assert(result == 20, "FlatStatBonus (Strength +10)");
+
+            // 2. CorneredAnimalAbility (HP Threshold)
+            var ca = new CorneredAnimalAbility(33f, 99, 50f); // 33% HP, Impossible Enemy Count, +50% Agi
+
+            player.Stats.CurrentHP = 10; player.Stats.MaxHP = 100; // Low HP
+            int lowResult = ca.ModifyStat(OffensiveStatType.Agility, 10, player);
+
+            player.Stats.CurrentHP = 100; // High HP
+            int highResult = ca.ModifyStat(OffensiveStatType.Agility, 10, player);
+
+            Assert(lowResult == 15, "CorneredAnimal (Low HP Trigger)");
+            Assert(highResult == 10, "CorneredAnimal (High HP Ignore)");
         }
 
         private static void TestDamageModifiers()
@@ -359,67 +386,27 @@ namespace ProjectVagabond.Utils
             Assert(modDur == 4, "StatusDuration (+1 Turn)");
         }
 
-        private static void TestBattleDependentAbilities()
+        private static void TestBattleDependentAbilities(BattleCombatant player, BattleCombatant enemy)
         {
-            // 1. CorneredAnimalAbility (HP Threshold)
-            try
-            {
-                var ca = new CorneredAnimalAbility(33f, 99, 50f); // 33% HP, Impossible Enemy Count, +50% Agi
-                var lowHpActor = CreateDummy(10, 100); // 10% HP
-                var highHpActor = CreateDummy(100, 100); // 100% HP
+            // 1. ToxicAuraAbility (Idol of Disease)
+            var aura = new ToxicAuraAbility(100, 3); // 100% chance
+            aura.OnTurnEnd(player); // Should poison the enemy
+            Assert(enemy.HasStatusEffect(StatusEffectType.Poison), "ToxicAura (Poisoned Enemy)");
 
-                int lowResult = ca.ModifyStat(OffensiveStatType.Agility, 10, lowHpActor);
-                int highResult = ca.ModifyStat(OffensiveStatType.Agility, 10, highHpActor);
+            // 2. IntimidateAbility (Gorgon's Gaze)
+            var intimidate = new IntimidateAbility(OffensiveStatType.Strength, -1);
+            intimidate.OnCombatantEnter(player); // Should lower enemy strength
+            Assert(enemy.StatStages[OffensiveStatType.Strength] == -1, "Intimidate (Lowered Strength)");
 
-                Assert(lowResult == 15, "CorneredAnimal (Low HP Trigger)");
-                Assert(highResult == 10, "CorneredAnimal (High HP Ignore)");
-            }
-            catch
-            {
-                LogSkipped("CorneredAnimal (BattleManager not active)");
-            }
-
-            // 2. ToxicAuraAbility (Idol of Disease)
-            try
-            {
-                var aura = new ToxicAuraAbility(100, 3); // 100% chance
-                var actor = CreateDummy(100, 100);
-                aura.OnTurnEnd(actor);
-                // We can't verify the effect without a mock BattleManager, but we verify it runs without crashing
-                Assert(true, "ToxicAura (Execution)");
-            }
-            catch
-            {
-                LogSkipped("ToxicAura (BattleManager not active)");
-            }
-
-            // 3. IntimidateAbility (Gorgon's Gaze)
-            try
-            {
-                var intimidate = new IntimidateAbility(OffensiveStatType.Strength, -1);
-                var actor = CreateDummy(100, 100);
-                intimidate.OnCombatantEnter(actor);
-                Assert(true, "Intimidate (Execution)");
-            }
-            catch
-            {
-                LogSkipped("Intimidate (BattleManager not active)");
-            }
-
-            // 4. ContagionAbility (Miasma Vial)
-            try
-            {
-                var contagion = new ContagionAbility(100, 1);
-                var actor = CreateDummy(100, 100);
-                var target = CreateDummy(100, 100);
-                var ctx = new CombatContext { Actor = actor, Target = target };
-                contagion.OnStatusApplied(ctx, new StatusEffectInstance(StatusEffectType.Poison, 3));
-                Assert(true, "Contagion (Execution)");
-            }
-            catch
-            {
-                LogSkipped("Contagion (BattleManager not active)");
-            }
+            // 3. ContagionAbility (Miasma Vial)
+            var contagion = new ContagionAbility(100, 1);
+            // Give player a status to spread
+            player.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Burn, 3));
+            var ctx = new CombatContext { Actor = player, Target = player }; // Self-inflicted or just context
+            // Contagion triggers when a status is applied.
+            // Let's manually trigger it.
+            contagion.OnStatusApplied(ctx, new StatusEffectInstance(StatusEffectType.Burn, 3));
+            Assert(enemy.HasStatusEffect(StatusEffectType.Burn), "Contagion (Spread Burn)");
         }
 
         private static void TestCritModifiers()
@@ -464,11 +451,15 @@ namespace ProjectVagabond.Utils
 
         private static BattleCombatant CreateDummy(int currentHp, int maxHp)
         {
-            return new BattleCombatant
+            var c = new BattleCombatant
             {
                 Name = "Dummy",
-                Stats = new CombatantStats { CurrentHP = currentHp, MaxHP = maxHp }
+                Stats = new CombatantStats { CurrentHP = currentHp, MaxHP = maxHp },
+                BattleSlot = 0
             };
+            // IsActiveOnField is read-only and derived from BattleSlot.
+            // Setting BattleSlot = 0 makes IsActiveOnField true.
+            return c;
         }
 
         private static void Assert(bool condition, string testName)
