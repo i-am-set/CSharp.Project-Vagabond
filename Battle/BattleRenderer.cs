@@ -713,9 +713,26 @@ namespace ProjectVagabond.Battle.UI
             const int iconPadding = 2;
             const int iconGap = 1;
 
-            // Draw icons below the bars
-            int currentX = (int)startX;
-            int iconY = hudY + 8;
+            // Draw icons ABOVE the bars
+            // hudY is the top of the HP bar area.
+            // We want to draw above it.
+            int iconY = hudY - iconSize - 2;
+
+            int currentX;
+            int step;
+
+            if (player.BattleSlot == 0)
+            {
+                // Slot 0 (Left): Start at left edge, expand right
+                currentX = (int)startX;
+                step = iconSize + iconGap;
+            }
+            else
+            {
+                // Slot 1 (Right): Start at right edge, expand left
+                currentX = (int)(startX + barWidth - iconSize);
+                step = -(iconSize + iconGap);
+            }
 
             foreach (var effect in player.ActiveStatusEffects)
             {
@@ -725,12 +742,14 @@ namespace ProjectVagabond.Battle.UI
                 var iconTexture = _spriteManager.GetStatusEffectIcon(effect.EffectType);
                 spriteBatch.DrawSnapped(iconTexture, iconBounds, Color.White);
 
-                var borderColor = IsNegativeStatus(effect.EffectType) ? _global.Palette_Red : _global.Palette_LightBlue;
-                var borderBounds = new Rectangle(iconBounds.X - 1, iconBounds.Y - 1, iconBounds.Width + 2, iconBounds.Height + 2);
-                float alpha = (_hoveredStatusIcon.HasValue && _hoveredStatusIcon.Value.Effect == effect) ? 0.25f : 0.1f;
-                DrawRectangleBorder(spriteBatch, pixel, borderBounds, 1, borderColor * alpha);
+                // Draw White Border if Hovered
+                if (_hoveredStatusIcon.HasValue && _hoveredStatusIcon.Value.Effect == effect)
+                {
+                    var borderBounds = new Rectangle(iconBounds.X - 1, iconBounds.Y - 1, iconBounds.Width + 2, iconBounds.Height + 2);
+                    DrawRectangleBorder(spriteBatch, pixel, borderBounds, 1, Color.White);
+                }
 
-                currentX += iconSize + iconGap;
+                currentX += step;
             }
         }
 
@@ -1178,7 +1197,20 @@ namespace ProjectVagabond.Battle.UI
                 highestPixelY = spriteRect.Top; // Fallback
             }
 
-            DrawEnemyStatusIcons(spriteBatch, combatant, spriteRect);
+            // Calculate Health Bar Y Position
+            const int barHeight = 2;
+            // Calculate Y position: 2 pixels above the highest sprite pixel
+            // Added extra 8 pixels as requested
+            float barY = highestPixelY - barHeight - 2 - 8;
+            // Clamp to screen top (1px margin)
+            barY = Math.Max(1, barY);
+
+            // Calculate Bar X Position (Centered on slot)
+            const int barWidth = 40;
+            float barX = slotCenter.X - barWidth / 2f;
+
+            // Draw Status Icons (ABOVE the health bar)
+            DrawEnemyStatusIcons(spriteBatch, combatant, barX, barY, barWidth);
 
             if (silhouetteFactor < 1.0f)
             {
@@ -1189,8 +1221,8 @@ namespace ProjectVagabond.Battle.UI
 
                 if (isDamaged || isVisuallyDamaged)
                 {
-                    // Draw Health Bar above the highest pixel
-                    DrawEnemyHealthBar(spriteBatch, combatant, slotCenter.X, highestPixelY, animationManager, 1.0f);
+                    // Draw Health Bar
+                    DrawEnemyHealthBar(spriteBatch, combatant, barX, barY, barWidth, barHeight, animationManager, 1.0f);
                 }
             }
 
@@ -1369,21 +1401,12 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private void DrawEnemyHealthBar(SpriteBatch spriteBatch, BattleCombatant combatant, float centerX, float spriteTopY, BattleAnimationManager animationManager, float alpha)
+        private void DrawEnemyHealthBar(SpriteBatch spriteBatch, BattleCombatant combatant, float barX, float barY, int barWidth, int barHeight, BattleAnimationManager animationManager, float alpha)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
-            const int barWidth = 40;
-            const int barHeight = 2;
-
-            // Calculate Y position: 2 pixels above the highest sprite pixel
-            // Added extra 8 pixels as requested
-            float barY = spriteTopY - barHeight - 2 - 8;
-
-            // Clamp to screen top (1px margin)
-            barY = Math.Max(1, barY);
 
             var barRect = new Rectangle(
-                (int)(centerX - barWidth / 2f),
+                (int)barX,
                 (int)barY,
                 barWidth,
                 barHeight
@@ -1409,7 +1432,7 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private void DrawEnemyStatusIcons(SpriteBatch spriteBatch, BattleCombatant combatant, Rectangle spriteRect)
+        private void DrawEnemyStatusIcons(SpriteBatch spriteBatch, BattleCombatant combatant, float barX, float barY, int barWidth)
         {
             if (!combatant.ActiveStatusEffects.Any()) return;
 
@@ -1423,8 +1446,15 @@ namespace ProjectVagabond.Battle.UI
             const int iconSize = 5;
             const int iconPadding = 1;
             const int iconGap = 1;
-            int currentX = spriteRect.Left + iconPadding;
-            int iconY = spriteRect.Top + iconPadding;
+
+            // Draw icons ABOVE the bars
+            // barY is the top of the HP bar.
+            // We want to draw above it.
+            int iconY = (int)barY - iconSize - 2;
+
+            // Start at Left edge of bar, expand Right
+            int currentX = (int)barX;
+            int step = iconSize + iconGap;
 
             foreach (var effect in combatant.ActiveStatusEffects)
             {
@@ -1433,12 +1463,14 @@ namespace ProjectVagabond.Battle.UI
                 var iconTexture = _spriteManager.GetStatusEffectIcon(effect.EffectType);
                 spriteBatch.DrawSnapped(iconTexture, iconBounds, Color.White);
 
-                var borderColor = IsNegativeStatus(effect.EffectType) ? _global.Palette_Red : _global.Palette_LightBlue;
-                var borderBounds = new Rectangle(iconBounds.X - 1, iconBounds.Y - 1, iconBounds.Width + 2, iconBounds.Height + 2);
-                float alpha = (_hoveredStatusIcon.HasValue && _hoveredStatusIcon.Value.Effect == effect) ? 0.25f : 0.1f;
-                DrawRectangleBorder(spriteBatch, pixel, borderBounds, 1, borderColor * alpha);
+                // Draw White Border if Hovered
+                if (_hoveredStatusIcon.HasValue && _hoveredStatusIcon.Value.Effect == effect)
+                {
+                    var borderBounds = new Rectangle(iconBounds.X - 1, iconBounds.Y - 1, iconBounds.Width + 2, iconBounds.Height + 2);
+                    DrawRectangleBorder(spriteBatch, pixel, borderBounds, 1, Color.White);
+                }
 
-                currentX += iconSize + iconPadding + iconGap;
+                currentX += step;
             }
         }
 

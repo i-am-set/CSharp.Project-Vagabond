@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
@@ -65,6 +66,7 @@ namespace ProjectVagabond
                 sb.AppendLine("    exit                - Exits game.");
                 sb.AppendLine("    debugcombat         - Starts a random forest combat (SplitMap only).");
                 sb.AppendLine("    combatrun           - Flees from combat if active.");
+                sb.AppendLine("    givestatus <slot> <type> [dur] - Apply status in combat.");
 
                 foreach (var line in sb.ToString().Split(new[] { Environment.NewLine }, StringSplitOptions.None))
                 {
@@ -243,6 +245,68 @@ namespace ProjectVagabond
                     EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Not in combat." });
                 }
             }, "combatrun - Flees from combat if active.");
+
+            _commands["givestatus"] = new Command("givestatus", (args) =>
+            {
+                var sceneManager = ServiceLocator.Get<SceneManager>();
+                if (!(sceneManager.CurrentActiveScene is BattleScene))
+                {
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Not in combat." });
+                    return;
+                }
+
+                if (args.Length < 3)
+                {
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Usage: givestatus <slot 1-4> <StatusType> [duration]" });
+                    return;
+                }
+
+                if (!int.TryParse(args[1], out int slot) || slot < 1 || slot > 4)
+                {
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Invalid slot. Use 1-4 (1=P1, 2=P2, 3=E1, 4=E2)." });
+                    return;
+                }
+
+                if (!Enum.TryParse<StatusEffectType>(args[2], true, out var statusType))
+                {
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[error]Invalid status type '{args[2]}'." });
+                    return;
+                }
+
+                int duration = 3;
+                if (args.Length > 3) int.TryParse(args[3], out duration);
+
+                var battleManager = ServiceLocator.Get<BattleManager>();
+                BattleCombatant target = null;
+
+                // Map slot 1-4 to combatants
+                // 1 -> Player Slot 0
+                // 2 -> Player Slot 1
+                // 3 -> Enemy Slot 0
+                // 4 -> Enemy Slot 1
+
+                if (slot == 1) target = battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && c.BattleSlot == 0);
+                else if (slot == 2) target = battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && c.BattleSlot == 1);
+                else if (slot == 3) target = battleManager.AllCombatants.FirstOrDefault(c => !c.IsPlayerControlled && c.BattleSlot == 0);
+                else if (slot == 4) target = battleManager.AllCombatants.FirstOrDefault(c => !c.IsPlayerControlled && c.BattleSlot == 1);
+
+                if (target == null || target.IsDefeated)
+                {
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[error]Slot {slot} is empty or defeated." });
+                    return;
+                }
+
+                target.AddStatusEffect(new StatusEffectInstance(statusType, duration));
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_teal]Applied {statusType} to {target.Name} for {duration} turns." });
+
+            }, "givestatus <slot> <type> [dur] - Apply status in combat.",
+            (args) =>
+            {
+                if (args.Length == 0) return new List<string> { "1", "2", "3", "4" };
+                if (args.Length == 1) return Enum.GetNames(typeof(StatusEffectType)).ToList();
+                if (args.Length == 2) return new List<string> { "1", "2", "3", "4", "5" }; // Suggest durations
+                return new List<string>();
+            });
 
             _commands["exit"] = new Command("exit", (args) => ServiceLocator.Get<Core>().ExitApplication(), "exit");
         }
