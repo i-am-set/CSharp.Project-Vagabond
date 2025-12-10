@@ -20,7 +20,7 @@
     "Rarity": 1,
     "LevelRequirement": 3,
     "Effects": {
-      "DamageReductionPhysical": "5"
+      "PhysicalDamageReduction": "5"
     },
     "StatModifiers": {
       "Tenacity": 8,
@@ -36,7 +36,7 @@
     "Rarity": 2,
     "LevelRequirement": 4,
     "Effects": {
-      "RegenEndOfTurn": "2"
+      "Regen": "2"
     },
     "StatModifiers": {
       "Intelligence": 4,
@@ -52,7 +52,7 @@
     "Rarity": 2,
     "LevelRequirement": 5,
     "Effects": {
-      "DamageBonusLowHP": "50,20"
+      "LowHPDamageBonus": "50,20"
     },
     "StatModifiers": {
       "Strength": 5,

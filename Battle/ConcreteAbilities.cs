@@ -241,6 +241,27 @@ namespace ProjectVagabond.Battle.Abilities
         }
     }
 
+    // --- ELEMENTAL MODIFIERS ---
+    public class AddDefensiveElementAbility : IDefensiveElementModifier
+    {
+        public string Name => "Elemental Attunement";
+        public string Description => "Adds a defensive element.";
+        private readonly int _elementId;
+
+        public AddDefensiveElementAbility(int elementId)
+        {
+            _elementId = elementId;
+        }
+
+        public void ModifyDefensiveElements(List<int> elements, BattleCombatant owner)
+        {
+            if (!elements.Contains(_elementId))
+            {
+                elements.Add(_elementId);
+            }
+        }
+    }
+
     // --- STATUS MODIFIERS ---
     public class StatusImmunityAbility : IIncomingStatusModifier
     {

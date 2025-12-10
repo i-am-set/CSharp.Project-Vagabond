@@ -66,7 +66,6 @@ namespace ProjectVagabond.Utils
                 UseScreenCoordinates = true,
                 CustomDefaultTextColor = Color.LightGray,
                 CustomHoverTextColor = Color.White,
-                // FIX: Disable input debounce so it works even when the game loop is paused/stalled
                 UseInputDebounce = false
             };
             _copyButton.OnClick += CopySelectionToClipboard;
@@ -182,11 +181,6 @@ namespace ProjectVagabond.Utils
             float logAreaBottom = panelHeight - (Global.TERMINAL_LINE_SPACING * 2) - 5;
 
             if (mouseState.Y > logAreaBottom) return;
-
-            // Calculate which line index is under the mouse
-            // Logic mirrors Draw loop: y = logAreaBottom - i * Spacing
-            // i = (logAreaBottom - mouseY) / Spacing
-            // historyIndex = startHistoryIndex - i
 
             int startHistoryIndex = _history.Count - 1 - _scrollOffset;
             float relativeY = logAreaBottom - mouseState.Y;
@@ -524,6 +518,7 @@ namespace ProjectVagabond.Utils
 
         private Color ParseColor(string colorName)
         {
+            // 1. Hardcoded Aliases
             switch (colorName.ToLower())
             {
                 case "error": return Color.Crimson;
@@ -531,12 +526,25 @@ namespace ProjectVagabond.Utils
                 case "cancel": return Color.Orange;
                 case "warning": return Color.Gold;
                 case "debug": return Color.Chartreuse;
-                case "palette_teal": return _global.Palette_Teal;
-                case "palette_yellow": return _global.Palette_Yellow;
-                case "palette_red": return _global.Palette_Red;
                 case "gray": return Color.Gray;
-                default: return _global.Palette_BrightWhite;
+                case "/": return _global.Palette_BrightWhite; // Reset
             }
+
+            // 2. Try Global Palette Properties (e.g. "Palette_Red", "StatColor_Strength")
+            var globalProp = typeof(Global).GetProperty(colorName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.IgnoreCase);
+            if (globalProp != null && globalProp.PropertyType == typeof(Color))
+            {
+                return (Color)globalProp.GetValue(_global);
+            }
+
+            // 3. Try MonoGame Color Struct (e.g. "Red", "Blue")
+            var colorProp = typeof(Color).GetProperty(colorName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.IgnoreCase);
+            if (colorProp != null && colorProp.PropertyType == typeof(Color))
+            {
+                return (Color)colorProp.GetValue(null);
+            }
+
+            return _global.Palette_BrightWhite;
         }
 
         private bool KeyPressed(Keys key, KeyboardState current, KeyboardState previous) => current.IsKeyDown(key) && !previous.IsKeyDown(key);

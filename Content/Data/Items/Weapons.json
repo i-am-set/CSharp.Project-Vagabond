@@ -32,7 +32,7 @@
     "LevelRequirement": 4,
     "MoveID": "VenomJab",
     "Effects": {
-      "ApplyStatusOnContact": "Poison,30,3"
+      "ApplyStatusOnHit": "Poison,30,3,true"
     },
     "StatModifiers": {
       "Agility": 3

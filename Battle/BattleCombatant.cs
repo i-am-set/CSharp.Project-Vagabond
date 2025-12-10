@@ -53,6 +53,7 @@ namespace ProjectVagabond.Battle
         public List<IOutgoingDamageModifier> OutgoingDamageModifiers { get; private set; } = new List<IOutgoingDamageModifier>();
         public List<IIncomingDamageModifier> IncomingDamageModifiers { get; private set; } = new List<IIncomingDamageModifier>();
         public List<IDefensePenetrationModifier> DefensePenetrationModifiers { get; private set; } = new List<IDefensePenetrationModifier>();
+        public List<IDefensiveElementModifier> DefensiveElementModifiers { get; private set; } = new List<IDefensiveElementModifier>(); // NEW
         public List<IIncomingStatusModifier> IncomingStatusModifiers { get; private set; } = new List<IIncomingStatusModifier>();
         public List<IOutgoingStatusModifier> OutgoingStatusModifiers { get; private set; } = new List<IOutgoingStatusModifier>();
         public List<IOnHitEffect> OnHitEffects { get; private set; } = new List<IOnHitEffect>();
@@ -98,6 +99,7 @@ namespace ProjectVagabond.Battle
             if (ability is IOutgoingDamageModifier odm) OutgoingDamageModifiers.Add(odm);
             if (ability is IIncomingDamageModifier idm) IncomingDamageModifiers.Add(idm);
             if (ability is IDefensePenetrationModifier dpm) DefensePenetrationModifiers.Add(dpm);
+            if (ability is IDefensiveElementModifier dem) DefensiveElementModifiers.Add(dem); // NEW
             if (ability is IIncomingStatusModifier ism) IncomingStatusModifiers.Add(ism);
             if (ability is IOutgoingStatusModifier osm) OutgoingStatusModifiers.Add(osm);
             if (ability is IOnHitEffect ohe) OnHitEffects.Add(ohe);
@@ -166,13 +168,13 @@ namespace ProjectVagabond.Battle
         public List<int> GetEffectiveDefensiveElementIDs()
         {
             var effectiveElements = new List<int>(this.DefensiveElementIDs);
-            foreach (var relic in ActiveRelics)
+
+            // Use the new interface list instead of hardcoded string checks
+            foreach (var mod in DefensiveElementModifiers)
             {
-                if (relic.Effects.TryGetValue("AddDefensiveElement", out var elementIdStr) && int.TryParse(elementIdStr, out int elementId))
-                {
-                    if (!effectiveElements.Contains(elementId)) effectiveElements.Add(elementId);
-                }
+                mod.ModifyDefensiveElements(effectiveElements, this);
             }
+
             return effectiveElements;
         }
 

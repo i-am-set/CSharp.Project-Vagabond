@@ -18,7 +18,7 @@ namespace ProjectVagabond.Utils
             _failed = 0;
             _skipped = 0;
 
-            LogInfo("--- STARTING ABILITY LOGIC TESTS ---");
+            LogHeader("=== STARTING ABILITY LOGIC TESTS ===");
 
             // --- MOCK BATTLE ENVIRONMENT SETUP ---
             var mockPlayer = CreateDummy(100, 100);
@@ -73,15 +73,18 @@ namespace ProjectVagabond.Utils
                 ServiceLocator.Unregister<BattleManager>();
             }
 
-            string resultColor = _failed == 0 ? "[green]" : "[red]";
-            string msg = $"--- TESTS COMPLETE: {resultColor}{_passed} PASSED[/], [red]{_failed} FAILED[/], [yellow]{_skipped} SKIPPED[/] ---";
+            string resultColor = _failed == 0 ? "[palette_lightgreen]" : "[palette_red]";
+            string msg = $"--- TESTS COMPLETE: {resultColor}{_passed} PASSED[/], [palette_red]{_failed} FAILED[/], [palette_yellow]{_skipped} SKIPPED[/] ---";
 
+            // Log to GameLogger directly to ensure tags are parsed by DebugConsole
+            GameLogger.Log(LogSeverity.Info, msg);
+
+            // Also publish to EventBus for the in-game terminal (if active)
             EventBus.Publish(new GameEvents.TerminalMessagePublished
             {
                 Message = msg,
                 BaseColor = _failed == 0 ? Color.Lime : Color.Red
             });
-            System.Diagnostics.Debug.WriteLine(msg);
         }
 
         private static void TestStatModifiers(BattleCombatant player, BattleCombatant enemy)
@@ -467,40 +470,46 @@ namespace ProjectVagabond.Utils
             if (condition)
             {
                 _passed++;
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"  [green]PASS:[/] {testName}" });
-                System.Diagnostics.Debug.WriteLine($"PASS: {testName}");
+                string msg = $"  [palette_lightgreen]PASS:[/] {testName}";
+                GameLogger.Log(LogSeverity.Info, msg);
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = msg });
             }
             else
             {
                 _failed++;
-                LogFail($"  FAIL: {testName}");
-                System.Diagnostics.Debug.WriteLine($"FAIL: {testName}");
+                string msg = $"  [palette_red]FAIL:[/] {testName}";
+                GameLogger.Log(LogSeverity.Error, msg);
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = msg });
             }
         }
 
         private static void LogInfo(string message)
         {
-            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = message, BaseColor = Color.Cyan });
-            System.Diagnostics.Debug.WriteLine(message);
+            string tagged = $"[palette_teal]{message}[/]";
+            GameLogger.Log(LogSeverity.Info, tagged);
+            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = tagged });
         }
 
         private static void LogHeader(string message)
         {
-            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = message, BaseColor = Color.Yellow });
-            System.Diagnostics.Debug.WriteLine(message);
+            string tagged = $"[palette_teal]{message}[/]";
+            GameLogger.Log(LogSeverity.Info, tagged);
+            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = tagged });
         }
 
         private static void LogFail(string message)
         {
-            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[red]{message}[/]" });
-            System.Diagnostics.Debug.WriteLine(message);
+            string tagged = $"[palette_red]{message}[/]";
+            GameLogger.Log(LogSeverity.Error, tagged);
+            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = tagged });
         }
 
         private static void LogSkipped(string message)
         {
             _skipped++;
-            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"  [yellow]SKIPPED:[/] {message}" });
-            System.Diagnostics.Debug.WriteLine($"SKIPPED: {message}");
+            string tagged = $"  [palette_yellow]SKIPPED:[/] {message}";
+            GameLogger.Log(LogSeverity.Warning, tagged);
+            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = tagged });
         }
     }
 }

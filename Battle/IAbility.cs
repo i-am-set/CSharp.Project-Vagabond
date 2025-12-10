@@ -43,6 +43,12 @@ namespace ProjectVagabond.Battle.Abilities
         float GetDefensePenetration(CombatContext ctx);
     }
 
+    // --- ELEMENTAL ---
+    public interface IDefensiveElementModifier : IAbility
+    {
+        void ModifyDefensiveElements(System.Collections.Generic.List<int> elements, BattleCombatant owner);
+    }
+
     // --- STATUS EFFECTS ---
     public interface IIncomingStatusModifier : IAbility
     {

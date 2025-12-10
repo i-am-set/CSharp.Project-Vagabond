@@ -39,6 +39,7 @@ namespace ProjectVagabond
                 sb.AppendLine("[palette_yellow]Available Commands:[/]");
                 sb.AppendLine("  [palette_teal]System & Debug[/]");
                 sb.AppendLine("    test_abilities      - Runs unit tests on ability logic.");
+                sb.AppendLine("    test_items          - Verifies all items load correctly."); // Added
                 sb.AppendLine("    clear               - Clears console.");
                 sb.AppendLine("    exit                - Exits game.");
                 sb.AppendLine("    debugcombat         - Starts a random forest combat.");
@@ -64,11 +65,16 @@ namespace ProjectVagabond
 
             _commands["clear"] = new Command("clear", (args) => ServiceLocator.Get<Utils.DebugConsole>().ClearHistory(), "clear - Clears history.");
 
-            // --- TEST COMMAND ---
+            // --- TEST COMMANDS ---
             _commands["test_abilities"] = new Command("test_abilities", (args) =>
             {
                 AbilityTester.RunAllTests();
             }, "test_abilities - Runs logic verification on ability classes.");
+
+            _commands["test_items"] = new Command("test_items", (args) =>
+            {
+                ItemIntegrityTester.RunIntegrityCheck();
+            }, "test_items - Checks if all defined items can instantiate their abilities.");
 
             // --- PARTY COMMANDS ---
             _commands["addmember"] = new Command("addmember", (args) =>
