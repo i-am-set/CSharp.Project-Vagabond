@@ -249,8 +249,313 @@ namespace ProjectVagabond.UI
 
         private void DrawInfoPanel(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, GameTime gameTime, bool drawBackground)
         {
-            // (Omitted for brevity - unchanged)
-            // ...
+            // --- Prepare Idle Slot Background ---
+            var slotFrames = _spriteManager.InventorySlotSourceRects;
+            Rectangle idleFrame = Rectangle.Empty;
+            Vector2 idleOrigin = Vector2.Zero;
+            if (slotFrames != null && slotFrames.Length > 0)
+            {
+                // Cycle frames slowly to simulate the idle animation
+                int frameIndex = (int)(gameTime.TotalGameTime.TotalSeconds / 2.0) % slotFrames.Length;
+                idleFrame = slotFrames[frameIndex];
+                idleOrigin = new Vector2(idleFrame.Width / 2f, idleFrame.Height / 2f);
+            }
+
+            InventorySlot? activeSlot = _inventorySlots.FirstOrDefault(s => s.IsSelected);
+            if (activeSlot == null)
+            {
+                activeSlot = _inventorySlots.FirstOrDefault(s => s.IsHovered);
+            }
+
+            // --- Empty State: Draw Idle Slot ---
+            if (activeSlot == null || !activeSlot.HasItem || string.IsNullOrEmpty(activeSlot.ItemId))
+            {
+                if (drawBackground && idleFrame != Rectangle.Empty)
+                {
+                    // Calculate position to match the "hovered" state as closely as possible.
+                    // Standardized to 18f for all categories to align them.
+                    float spriteYOffset = 18f;
+
+                    int idleSpriteX = _infoPanelArea.X + (_infoPanelArea.Width - 32) / 2;
+                    float spriteY = _infoPanelArea.Y + spriteYOffset;
+
+                    Vector2 itemCenter = new Vector2(idleSpriteX + 16, spriteY + 16);
+                    spriteBatch.DrawSnapped(_spriteManager.InventorySlotIdleSpriteSheet, itemCenter, idleFrame, Color.White, 0f, idleOrigin, 1f, SpriteEffects.None, 0f);
+                }
+                return;
+            }
+
+            string name = activeSlot.ItemId.ToUpper();
+            string description = "";
+            string iconPath = activeSlot.IconPath ?? "";
+            Texture2D? iconTexture = null;
+            Texture2D? iconSilhouette = null;
+            (List<string> Positives, List<string> Negatives) statLines = (new List<string>(), new List<string>());
+            string? fallbackPath = null;
+            MoveData? spellData = null;
+
+            // --- Data Retrieval ---
+            if (_selectedInventoryCategory == InventoryCategory.Relics)
+            {
+                var relic = BattleDataCache.Relics.Values.FirstOrDefault(r => r.RelicName.Equals(activeSlot.ItemId, StringComparison.OrdinalIgnoreCase));
+                if (relic != null)
+                {
+                    name = relic.RelicName.ToUpper();
+                    description = relic.Description.ToUpper();
+                    iconPath = $"Sprites/Items/Relics/{relic.RelicID}";
+                    statLines = GetStatModifierLines(relic.StatModifiers);
+                }
+            }
+            else if (_selectedInventoryCategory == InventoryCategory.Consumables)
+            {
+                var item = BattleDataCache.Consumables.Values.FirstOrDefault(c => c.ItemName.Equals(activeSlot.ItemId, StringComparison.OrdinalIgnoreCase));
+                if (item != null)
+                {
+                    name = item.ItemName.ToUpper();
+                    description = item.Description.ToUpper();
+                    iconPath = item.ImagePath;
+                }
+            }
+            else if (_selectedInventoryCategory == InventoryCategory.Misc) // <--- Added
+            {
+                var item = BattleDataCache.MiscItems.Values.FirstOrDefault(m => m.ItemName.Equals(activeSlot.ItemId, StringComparison.OrdinalIgnoreCase));
+                if (item != null)
+                {
+                    name = item.ItemName.ToUpper();
+                    description = item.Description.ToUpper();
+                    iconPath = item.ImagePath;
+                }
+            }
+            else if (_selectedInventoryCategory == InventoryCategory.Spells)
+            {
+                spellData = BattleDataCache.Moves.Values.FirstOrDefault(m => m.MoveName.Equals(activeSlot.ItemId, StringComparison.OrdinalIgnoreCase));
+                if (spellData != null)
+                {
+                    name = spellData.MoveName.ToUpper();
+                    description = spellData.Description.ToUpper();
+                    iconPath = $"Sprites/Items/Spells/{spellData.MoveID}";
+
+                    int elementId = spellData.OffensiveElementIDs.FirstOrDefault();
+                    if (BattleDataCache.Elements.TryGetValue(elementId, out var elementDef))
+                    {
+                        string elName = elementDef.ElementName.ToLowerInvariant();
+                        if (elName == "---") elName = "neutral";
+                        fallbackPath = $"Sprites/Items/Spells/default_{elName}";
+                    }
+                }
+            }
+            else if (_selectedInventoryCategory == InventoryCategory.Weapons)
+            {
+                var weapon = BattleDataCache.Weapons.Values.FirstOrDefault(w => w.WeaponName.Equals(activeSlot.ItemId, StringComparison.OrdinalIgnoreCase));
+                if (weapon != null)
+                {
+                    name = weapon.WeaponName.ToUpper();
+                    description = weapon.Description.ToUpper();
+                    iconPath = $"Sprites/Items/Weapons/{weapon.WeaponID}";
+                    statLines = GetStatModifierLines(weapon.StatModifiers);
+                }
+            }
+            else if (_selectedInventoryCategory == InventoryCategory.Armor)
+            {
+                var armor = BattleDataCache.Armors.Values.FirstOrDefault(a => a.ArmorName.Equals(activeSlot.ItemId, StringComparison.OrdinalIgnoreCase));
+                if (armor != null)
+                {
+                    name = armor.ArmorName.ToUpper();
+                    description = armor.Description.ToUpper();
+                    iconPath = $"Sprites/Items/Armor/{armor.ArmorID}";
+                    statLines = GetStatModifierLines(armor.StatModifiers);
+                }
+            }
+
+            if (!string.IsNullOrEmpty(iconPath))
+            {
+                iconTexture = _spriteManager.GetItemSprite(iconPath, fallbackPath);
+                iconSilhouette = _spriteManager.GetItemSpriteSilhouette(iconPath, fallbackPath);
+            }
+
+            Rectangle? sourceRect = null;
+            if (activeSlot.IsAnimated && iconTexture != null)
+            {
+                sourceRect = _spriteManager.GetAnimatedIconSourceRect(iconTexture, gameTime);
+            }
+
+            // --- SPECIAL RENDERING FOR SPELLS ---
+            if (_selectedInventoryCategory == InventoryCategory.Spells && spellData != null)
+            {
+                DrawSpellInfoPanel(spriteBatch, font, secondaryFont, spellData, iconTexture, iconSilhouette, sourceRect, activeSlot.IconTint, idleFrame, idleOrigin, drawBackground);
+                return;
+            }
+
+            // --- STANDARD RENDERING FOR OTHER CATEGORIES ---
+            const int spriteSize = 32;
+            const int gap = 4;
+
+            int maxTitleWidth = _infoPanelArea.Width - (4 * 2);
+            var titleLines = ParseAndWrapRichText(font, name, maxTitleWidth, _global.Palette_BrightWhite);
+            float totalTitleHeight = titleLines.Count * font.LineHeight;
+
+            float totalDescHeight = 0f;
+            List<List<ColoredText>> descLines = new List<List<ColoredText>>();
+            if (!string.IsNullOrEmpty(description))
+            {
+                float descWidth = _infoPanelArea.Width - (4 * 2);
+                descLines = ParseAndWrapRichText(secondaryFont, description, descWidth, _global.Palette_White);
+                totalDescHeight = descLines.Count * secondaryFont.LineHeight;
+            }
+
+            float totalStatHeight = Math.Max(statLines.Positives.Count, statLines.Negatives.Count) * secondaryFont.LineHeight;
+            float totalContentHeight = spriteSize + gap + totalTitleHeight + (totalDescHeight > 0 ? gap + totalDescHeight : 0) + (totalStatHeight > 0 ? gap + totalStatHeight : 0);
+
+            float currentY = _infoPanelArea.Y + (_infoPanelArea.Height - totalContentHeight) / 2f;
+            currentY -= 10f;
+
+            int spriteX = _infoPanelArea.X + (_infoPanelArea.Width - spriteSize) / 2;
+
+            if (drawBackground)
+            {
+                // Draw Idle Background Behind Item
+                if (idleFrame != Rectangle.Empty)
+                {
+                    Vector2 itemCenter = new Vector2(spriteX + 16, currentY + 16);
+                    spriteBatch.DrawSnapped(_spriteManager.InventorySlotIdleSpriteSheet, itemCenter, idleFrame, Color.White, 0f, idleOrigin, 1f, SpriteEffects.None, 0f);
+                }
+                return; // Exit if only drawing background
+            }
+
+            if (iconSilhouette != null)
+            {
+                Color mainOutlineColor = _global.ItemOutlineColor_Idle;
+                Color cornerOutlineColor = _global.ItemOutlineColor_Idle_Corner;
+
+                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX - 1, currentY - 1), sourceRect, cornerOutlineColor);
+                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX + 1, currentY - 1), sourceRect, cornerOutlineColor);
+                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX - 1, currentY + 1), sourceRect, cornerOutlineColor);
+                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX + 1, currentY + 1), sourceRect, cornerOutlineColor);
+
+                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX - 1, currentY), sourceRect, mainOutlineColor);
+                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX + 1, currentY), sourceRect, mainOutlineColor);
+                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX, currentY - 1), sourceRect, mainOutlineColor);
+                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX, currentY + 1), sourceRect, mainOutlineColor);
+            }
+
+            if (iconTexture != null)
+            {
+                Color tint = activeSlot.IconTint ?? Color.White;
+                spriteBatch.DrawSnapped(iconTexture, new Vector2(spriteX, currentY), sourceRect, tint);
+            }
+
+            currentY += spriteSize + gap;
+
+            foreach (var line in titleLines)
+            {
+                float lineWidth = 0;
+                foreach (var segment in line)
+                {
+                    if (string.IsNullOrWhiteSpace(segment.Text))
+                        lineWidth += segment.Text.Length * SPACE_WIDTH;
+                    else
+                        lineWidth += font.MeasureString(segment.Text).Width;
+                }
+
+                float lineX = _infoPanelArea.X + (_infoPanelArea.Width - lineWidth) / 2f;
+                float currentX = lineX;
+
+                foreach (var segment in line)
+                {
+                    float segWidth;
+                    if (string.IsNullOrWhiteSpace(segment.Text))
+                    {
+                        segWidth = segment.Text.Length * SPACE_WIDTH;
+                    }
+                    else
+                    {
+                        segWidth = font.MeasureString(segment.Text).Width;
+                        spriteBatch.DrawStringSnapped(font, segment.Text, new Vector2(currentX, currentY), segment.Color);
+                    }
+                    currentX += segWidth;
+                }
+                currentY += font.LineHeight;
+            }
+
+            if (descLines.Any())
+            {
+                currentY += gap;
+                foreach (var line in descLines)
+                {
+                    float lineWidth = 0;
+                    foreach (var segment in line)
+                    {
+                        if (string.IsNullOrWhiteSpace(segment.Text))
+                            lineWidth += segment.Text.Length * SPACE_WIDTH;
+                        else
+                            lineWidth += secondaryFont.MeasureString(segment.Text).Width;
+                    }
+
+                    var lineX = _infoPanelArea.X + (_infoPanelArea.Width - lineWidth) / 2;
+                    float currentX = lineX;
+
+                    foreach (var segment in line)
+                    {
+                        float segWidth;
+                        if (string.IsNullOrWhiteSpace(segment.Text))
+                        {
+                            segWidth = segment.Text.Length * SPACE_WIDTH;
+                        }
+                        else
+                        {
+                            segWidth = secondaryFont.MeasureString(segment.Text).Width;
+                            spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(currentX, currentY), segment.Color);
+                        }
+                        currentX += segWidth;
+                    }
+                    currentY += secondaryFont.LineHeight;
+                }
+            }
+
+            if (statLines.Positives.Any() || statLines.Negatives.Any())
+            {
+                currentY += gap;
+                float leftColX = _infoPanelArea.X + 8;
+                float rightColX = _infoPanelArea.X + 64;
+
+                int maxRows = Math.Max(statLines.Positives.Count, statLines.Negatives.Count);
+
+                for (int i = 0; i < maxRows; i++)
+                {
+                    if (i < statLines.Positives.Count)
+                    {
+                        var lineParts = ParseAndWrapRichText(secondaryFont, statLines.Positives[i], _infoPanelArea.Width / 2, _global.Palette_White);
+                        if (lineParts.Count > 0)
+                        {
+                            var segments = lineParts[0];
+                            float currentX = leftColX;
+                            foreach (var segment in segments)
+                            {
+                                float segWidth = string.IsNullOrWhiteSpace(segment.Text) ? segment.Text.Length * SPACE_WIDTH : secondaryFont.MeasureString(segment.Text).Width;
+                                spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(currentX, currentY), segment.Color);
+                                currentX += segWidth;
+                            }
+                        }
+                    }
+
+                    if (i < statLines.Negatives.Count)
+                    {
+                        var lineParts = ParseAndWrapRichText(secondaryFont, statLines.Negatives[i], _infoPanelArea.Width / 2, _global.Palette_White);
+                        if (lineParts.Count > 0)
+                        {
+                            var segments = lineParts[0];
+                            float currentX = rightColX;
+                            foreach (var segment in segments)
+                            {
+                                float segWidth = string.IsNullOrWhiteSpace(segment.Text) ? segment.Text.Length * SPACE_WIDTH : secondaryFont.MeasureString(segment.Text).Width;
+                                spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(currentX, currentY), segment.Color);
+                                currentX += segWidth;
+                            }
+                        }
+                    }
+                    currentY += secondaryFont.LineHeight;
+                }
+            }
         }
 
         private void DrawStatsPanel(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, GameTime gameTime)
@@ -258,8 +563,172 @@ namespace ProjectVagabond.UI
             // --- Draw Hovered Item Details ---
             if (_hoveredItemData != null)
             {
-                // (Omitted for brevity - unchanged)
-                // ...
+                // --- SPECIAL HANDLING FOR SPELLS ---
+                if (_hoveredItemData is MoveData move)
+                {
+                    string path = $"Sprites/Items/Spells/{move.MoveID}";
+
+                    // Fallback logic for spell icons
+                    int elementId = move.OffensiveElementIDs.FirstOrDefault();
+                    string? fallbackPath = null;
+                    if (BattleDataCache.Elements.TryGetValue(elementId, out var elementDef))
+                    {
+                        string elName = elementDef.ElementName.ToLowerInvariant();
+                        if (elName == "---") elName = "neutral";
+                        fallbackPath = $"Sprites/Items/Spells/default_{elName}";
+                    }
+
+                    var iconTexture = _spriteManager.GetItemSprite(path, fallbackPath);
+                    var iconSilhouette = _spriteManager.GetItemSpriteSilhouette(path, fallbackPath);
+                    var sourceRect = _spriteManager.GetAnimatedIconSourceRect(iconTexture, gameTime);
+
+                    DrawSpellInfoPanel(spriteBatch, font, secondaryFont, move, iconTexture, iconSilhouette, sourceRect, null, Rectangle.Empty, Vector2.Zero, false);
+                }
+                else
+                {
+                    const int padding = 2;
+                    const int spriteSize = 32;
+                    const int gap = 4;
+
+                    // 1. Sprite (Top Left - Centered Horizontally)
+                    int spriteX = _statsPanelArea.X + (_statsPanelArea.Width - spriteSize) / 2;
+                    int spriteY = _statsPanelArea.Y;
+
+                    string name = "";
+                    string description = "";
+                    string path = "";
+                    Texture2D? itemSprite = null;
+                    Texture2D? itemSilhouette = null;
+
+                    if (_hoveredItemData is RelicData relic)
+                    {
+                        name = relic.RelicName.ToUpper();
+                        description = relic.Description.ToUpper();
+                        path = $"Sprites/Items/Relics/{relic.RelicID}";
+                        itemSprite = _spriteManager.GetRelicSprite(path);
+                        itemSilhouette = _spriteManager.GetRelicSpriteSilhouette(path);
+                    }
+                    else if (_hoveredItemData is WeaponData weapon)
+                    {
+                        name = weapon.WeaponName.ToUpper();
+                        description = weapon.Description.ToUpper();
+                        path = $"Sprites/Items/Weapons/{weapon.WeaponID}";
+                        itemSprite = _spriteManager.GetItemSprite(path);
+                        itemSilhouette = _spriteManager.GetItemSpriteSilhouette(path);
+                    }
+                    else if (_hoveredItemData is ArmorData armor)
+                    {
+                        name = armor.ArmorName.ToUpper();
+                        description = armor.Description.ToUpper();
+                        path = $"Sprites/Items/Armor/{armor.ArmorID}";
+                        itemSprite = _spriteManager.GetItemSprite(path);
+                        itemSilhouette = _spriteManager.GetItemSpriteSilhouette(path);
+                    }
+
+                    if (itemSilhouette != null)
+                    {
+                        Color mainOutlineColor = _global.ItemOutlineColor_Idle;
+                        Color cornerOutlineColor = _global.ItemOutlineColor_Idle_Corner;
+
+                        spriteBatch.DrawSnapped(itemSilhouette, new Vector2(spriteX - 1, spriteY - 1), cornerOutlineColor);
+                        spriteBatch.DrawSnapped(itemSilhouette, new Vector2(spriteX + 1, spriteY - 1), cornerOutlineColor);
+                        spriteBatch.DrawSnapped(itemSilhouette, new Vector2(spriteX - 1, spriteY + 1), cornerOutlineColor);
+                        spriteBatch.DrawSnapped(itemSilhouette, new Vector2(spriteX + 1, spriteY + 1), cornerOutlineColor);
+
+                        spriteBatch.DrawSnapped(itemSilhouette, new Vector2(spriteX - 1, spriteY), mainOutlineColor);
+                        spriteBatch.DrawSnapped(itemSilhouette, new Vector2(spriteX + 1, spriteY), mainOutlineColor);
+                        spriteBatch.DrawSnapped(itemSilhouette, new Vector2(spriteX, spriteY - 1), mainOutlineColor);
+                        spriteBatch.DrawSnapped(itemSilhouette, new Vector2(spriteX, spriteY + 1), mainOutlineColor);
+                    }
+
+                    if (itemSprite != null)
+                    {
+                        spriteBatch.DrawSnapped(itemSprite, new Vector2(spriteX, spriteY), Color.White);
+                    }
+
+                    // 2. Title
+                    float titleBottomY = spriteY + spriteSize + gap;
+                    int maxTitleWidth = _statsPanelArea.Width - (4 * 2);
+
+                    var titleLines = ParseAndWrapRichText(font, name, maxTitleWidth, _global.Palette_BrightWhite);
+                    float totalTitleHeight = titleLines.Count * font.LineHeight;
+
+                    float currentTitleY = titleBottomY - totalTitleHeight;
+
+                    foreach (var line in titleLines)
+                    {
+                        float lineWidth = 0;
+                        foreach (var segment in line)
+                        {
+                            if (string.IsNullOrWhiteSpace(segment.Text))
+                                lineWidth += segment.Text.Length * SPACE_WIDTH;
+                            else
+                                lineWidth += font.MeasureString(segment.Text).Width;
+                        }
+
+                        float lineX = _statsPanelArea.X + (_statsPanelArea.Width - lineWidth) / 2f;
+                        float currentX = lineX;
+
+                        foreach (var segment in line)
+                        {
+                            float segWidth;
+                            if (string.IsNullOrWhiteSpace(segment.Text))
+                            {
+                                segWidth = segment.Text.Length * SPACE_WIDTH;
+                            }
+                            else
+                            {
+                                segWidth = font.MeasureString(segment.Text).Width;
+                                spriteBatch.DrawStringOutlinedSnapped(font, segment.Text, new Vector2(currentX, currentTitleY), segment.Color, _global.Palette_Black);
+                            }
+                            currentX += segWidth;
+                        }
+                        currentTitleY += font.LineHeight;
+                    }
+
+                    // 3. Description
+                    int statsStartY = _statsPanelArea.Y + 77;
+                    float descAreaTop = titleBottomY;
+                    float descAreaBottom = statsStartY;
+                    float descAreaHeight = descAreaBottom - descAreaTop;
+
+                    float descWidth = _statsPanelArea.Width - (4 * 2);
+                    var descLines = ParseAndWrapRichText(secondaryFont, description, descWidth, _global.Palette_White);
+                    float totalDescHeight = descLines.Count * secondaryFont.LineHeight;
+
+                    float currentDescY = descAreaTop + (descAreaHeight - totalDescHeight) / 2f;
+
+                    foreach (var line in descLines)
+                    {
+                        float lineWidth = 0;
+                        foreach (var segment in line)
+                        {
+                            if (string.IsNullOrWhiteSpace(segment.Text))
+                                lineWidth += segment.Text.Length * SPACE_WIDTH;
+                            else
+                                lineWidth += secondaryFont.MeasureString(segment.Text).Width;
+                        }
+
+                        var lineX = _statsPanelArea.X + (_statsPanelArea.Width - lineWidth) / 2;
+                        float currentX = lineX;
+
+                        foreach (var segment in line)
+                        {
+                            float segWidth;
+                            if (string.IsNullOrWhiteSpace(segment.Text))
+                            {
+                                segWidth = segment.Text.Length * SPACE_WIDTH;
+                            }
+                            else
+                            {
+                                segWidth = secondaryFont.MeasureString(segment.Text).Width;
+                                spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(currentX, currentDescY), segment.Color);
+                            }
+                            currentX += segWidth;
+                        }
+                        currentDescY += secondaryFont.LineHeight;
+                    }
+                }
             }
             else
             {
@@ -591,10 +1060,129 @@ namespace ProjectVagabond.UI
 
         private List<List<ColoredText>> ParseAndWrapRichText(BitmapFont font, string text, float maxWidth, Color defaultColor)
         {
-            // (Implementation omitted for brevity, same as previous)
-            return new List<List<ColoredText>>();
+            var lines = new List<List<ColoredText>>();
+            if (string.IsNullOrEmpty(text)) return lines;
+
+            var currentLine = new List<ColoredText>();
+            float currentLineWidth = 0f;
+            Color currentColor = defaultColor;
+
+            var parts = Regex.Split(text, @"(\[.*?\]|\s+)");
+
+            foreach (var part in parts)
+            {
+                if (string.IsNullOrEmpty(part)) continue;
+
+                if (part.StartsWith("[") && part.EndsWith("]"))
+                {
+                    string tagContent = part.Substring(1, part.Length - 2).ToLowerInvariant();
+                    if (tagContent == "/" || tagContent == "default")
+                    {
+                        currentColor = defaultColor;
+                    }
+                    else
+                    {
+                        currentColor = ParseColor(tagContent);
+                    }
+                }
+                else if (part.Contains("\n"))
+                {
+                    lines.Add(currentLine);
+                    currentLine = new List<ColoredText>();
+                    currentLineWidth = 0f;
+                }
+                else
+                {
+                    bool isWhitespace = string.IsNullOrWhiteSpace(part);
+                    float partWidth = isWhitespace ? (part.Length * SPACE_WIDTH) : font.MeasureString(part).Width;
+
+                    if (!isWhitespace && currentLineWidth + partWidth > maxWidth && currentLineWidth > 0)
+                    {
+                        lines.Add(currentLine);
+                        currentLine = new List<ColoredText>();
+                        currentLineWidth = 0f;
+                    }
+
+                    if (isWhitespace && currentLineWidth == 0)
+                    {
+                        continue;
+                    }
+
+                    currentLine.Add(new ColoredText(part, currentColor));
+                    currentLineWidth += partWidth;
+                }
+            }
+
+            if (currentLine.Count > 0)
+            {
+                lines.Add(currentLine);
+            }
+
+            return lines;
         }
-        private Color ParseColor(string colorName) { return Color.White; }
+
+        private Color ParseColor(string colorName)
+        {
+            string tag = colorName.ToLowerInvariant();
+
+            if (tag == "cstr") return _global.StatColor_Strength;
+            if (tag == "cint") return _global.StatColor_Intelligence;
+            if (tag == "cten") return _global.StatColor_Tenacity;
+            if (tag == "cagi") return _global.StatColor_Agility;
+
+            if (tag == "cpositive") return _global.ColorPositive;
+            if (tag == "cnegative") return _global.ColorNegative;
+            if (tag == "ccrit") return _global.ColorCrit;
+            if (tag == "cimmune") return _global.ColorImmune;
+            if (tag == "cctm") return _global.ColorConditionToMeet;
+            if (tag == "cetc") return _global.Palette_DarkGray;
+
+            if (tag == "cfire") return _global.ElementColors.GetValueOrDefault(2, Color.White);
+            if (tag == "cwater") return _global.ElementColors.GetValueOrDefault(3, Color.White);
+            if (tag == "carcane") return _global.ElementColors.GetValueOrDefault(4, Color.White);
+            if (tag == "cearth") return _global.ElementColors.GetValueOrDefault(5, Color.White);
+            if (tag == "cmetal") return _global.ElementColors.GetValueOrDefault(6, Color.White);
+            if (tag == "ctoxic") return _global.ElementColors.GetValueOrDefault(7, Color.White);
+            if (tag == "cwind") return _global.ElementColors.GetValueOrDefault(8, Color.White);
+            if (tag == "cvoid") return _global.ElementColors.GetValueOrDefault(9, Color.White);
+            if (tag == "clight") return _global.ElementColors.GetValueOrDefault(10, Color.White);
+            if (tag == "celectric") return _global.ElementColors.GetValueOrDefault(11, Color.White);
+            if (tag == "cice") return _global.ElementColors.GetValueOrDefault(12, Color.White);
+            if (tag == "cnature") return _global.ElementColors.GetValueOrDefault(13, Color.White);
+
+            if (tag.StartsWith("c"))
+            {
+                string effectName = tag.Substring(1);
+                if (effectName == "poison") return _global.StatusEffectColors.GetValueOrDefault(StatusEffectType.Poison, Color.White);
+                if (effectName == "stun") return _global.StatusEffectColors.GetValueOrDefault(StatusEffectType.Stun, Color.White);
+                if (effectName == "regen") return _global.StatusEffectColors.GetValueOrDefault(StatusEffectType.Regen, Color.White);
+                if (effectName == "dodging") return _global.StatusEffectColors.GetValueOrDefault(StatusEffectType.Dodging, Color.White);
+                if (effectName == "burn") return _global.StatusEffectColors.GetValueOrDefault(StatusEffectType.Burn, Color.White);
+                if (effectName == "freeze") return _global.StatusEffectColors.GetValueOrDefault(StatusEffectType.Freeze, Color.White);
+                if (effectName == "blind") return _global.StatusEffectColors.GetValueOrDefault(StatusEffectType.Blind, Color.White);
+                if (effectName == "confuse") return _global.StatusEffectColors.GetValueOrDefault(StatusEffectType.Confuse, Color.White);
+                if (effectName == "silence") return _global.StatusEffectColors.GetValueOrDefault(StatusEffectType.Silence, Color.White);
+                if (effectName == "fear") return _global.StatusEffectColors.GetValueOrDefault(StatusEffectType.Fear, Color.White);
+                if (effectName == "root") return _global.StatusEffectColors.GetValueOrDefault(StatusEffectType.Root, Color.White);
+            }
+
+            switch (tag)
+            {
+                case "teal": return _global.Palette_Teal;
+                case "red": return _global.Palette_Red;
+                case "blue": return _global.Palette_LightBlue;
+                case "green": return _global.Palette_LightGreen;
+                case "yellow": return _global.Palette_Yellow;
+                case "orange": return _global.Palette_Orange;
+                case "purple": return _global.Palette_LightPurple;
+                case "pink": return _global.Palette_Pink;
+                case "gray": return _global.Palette_Gray;
+                case "white": return _global.Palette_White;
+                case "brightwhite": return _global.Palette_BrightWhite;
+                case "darkgray": return _global.Palette_DarkGray;
+                default: return _global.Palette_White;
+            }
+        }
         private void DrawSpellInfoPanel(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, MoveData move, Texture2D? iconTexture, Texture2D? iconSilhouette, Rectangle? sourceRect, Color? iconTint, Rectangle idleFrame, Vector2 idleOrigin, bool drawBackground) { }
     }
 }

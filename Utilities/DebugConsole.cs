@@ -475,7 +475,10 @@ namespace ProjectVagabond.Utils
             var boxBounds = new Rectangle(5, (int)boxY, (int)maxSuggestionWidth, (int)boxHeight);
 
             spriteBatch.Draw(pixel, boxBounds, _global.Palette_Black * 0.9f);
-            // Draw borders... (omitted for brevity, same as before)
+            spriteBatch.Draw(pixel, new Rectangle(boxBounds.Left, boxBounds.Top, boxBounds.Width, 1), _global.Palette_LightGray);
+            spriteBatch.Draw(pixel, new Rectangle(boxBounds.Left, boxBounds.Bottom, boxBounds.Width, 1), _global.Palette_LightGray);
+            spriteBatch.Draw(pixel, new Rectangle(boxBounds.Left, boxBounds.Top, 1, boxBounds.Height), _global.Palette_LightGray);
+            spriteBatch.Draw(pixel, new Rectangle(boxBounds.Right, boxBounds.Top, 1, boxBounds.Height + 1), _global.Palette_LightGray);
 
             for (int i = 0; i < visibleSuggestions; i++)
             {

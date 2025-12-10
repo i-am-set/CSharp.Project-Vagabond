@@ -694,13 +694,48 @@ namespace ProjectVagabond.Battle.UI
 
             // Mana Cost Preview
             var hoveredMove = uiManager.HoveredMove;
-            // Only show preview if this player is the one acting
-            // This requires passing the acting player to this method or checking UI state
-            // For now, simple check:
+
             if (hoveredMove != null && hoveredMove.MoveType == MoveType.Spell && hoveredMove.ManaCost > 0)
             {
-                // Logic to check if this specific player is the one selecting the move
-                // Omitted for brevity, but standard logic applies
+                var battleManager = ServiceLocator.Get<BattleManager>();
+                // Only draw preview if this player is the one currently acting
+                if (battleManager.CurrentActingCombatant == player)
+                {
+                    if (player.Stats.CurrentMana >= hoveredMove.ManaCost)
+                    {
+                        // Animate color pulse
+                        const float PULSE_SPEED = 4f;
+                        float pulse = (MathF.Sin(uiManager.SharedPulseTimer * PULSE_SPEED) + 1f) / 2f; // Oscillates 0..1
+                        Color pulseColor = Color.Lerp(_global.Palette_Yellow, _global.Palette_BrightWhite, pulse);
+
+                        // Draw yellow cost preview
+                        float costPercent = (float)hoveredMove.ManaCost / player.Stats.MaxMana;
+                        int costWidth = (int)(width * costPercent);
+
+                        // Calculate position: Start of bar + Current Width - Cost Width
+                        int previewX = (int)(position.X + manaWidth - costWidth);
+
+                        var previewRect = new Rectangle(
+                            previewX,
+                            (int)position.Y + 4,
+                            costWidth,
+                            2
+                        );
+
+                        spriteBatch.DrawSnapped(pixel, previewRect, pulseColor);
+                    }
+                    else
+                    {
+                        // Draw red "not enough" indicator over the remaining mana
+                        var previewRect = new Rectangle(
+                            (int)position.X,
+                            (int)position.Y + 4,
+                            manaWidth,
+                            2
+                        );
+                        spriteBatch.DrawSnapped(pixel, previewRect, _global.Palette_Red);
+                    }
+                }
             }
         }
 
