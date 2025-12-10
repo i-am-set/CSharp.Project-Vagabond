@@ -8,7 +8,7 @@
     "LevelRequirement": 2,
     "Effects": {
       "AddDefensiveElement": "109",
-      "DamageBonus": "13,20"
+      "ElementalDamageBonus": "13,20"
     },
     "StatModifiers": {
       "Tenacity": 2
@@ -23,7 +23,7 @@
     "Rarity": 1,
     "LevelRequirement": 1,
     "Effects": {
-      "DamageBonus": "2,20"
+      "ElementalDamageBonus": "2,20"
     },
     "Tags": [ "Fire" ]
   },
@@ -35,7 +35,7 @@
     "Rarity": 1,
     "LevelRequirement": 1,
     "Effects": {
-      "DamageBonus": "3,20"
+      "ElementalDamageBonus": "3,20"
     },
     "Tags": [ "Water" ]
   },
@@ -47,7 +47,7 @@
     "Rarity": 1,
     "LevelRequirement": 1,
     "Effects": {
-      "DamageBonus": "4,20"
+      "ElementalDamageBonus": "4,20"
     },
     "Tags": [ "Arcane" ]
   },
@@ -59,7 +59,7 @@
     "Rarity": 1,
     "LevelRequirement": 1,
     "Effects": {
-      "DamageBonus": "5,20"
+      "ElementalDamageBonus": "5,20"
     },
     "Tags": [ "Earth" ]
   },
@@ -71,7 +71,7 @@
     "Rarity": 1,
     "LevelRequirement": 1,
     "Effects": {
-      "DamageBonus": "6,20"
+      "ElementalDamageBonus": "6,20"
     },
     "Tags": [ "Metal" ]
   },
@@ -83,7 +83,7 @@
     "Rarity": 1,
     "LevelRequirement": 1,
     "Effects": {
-      "DamageBonus": "7,20"
+      "ElementalDamageBonus": "7,20"
     },
     "Tags": [ "Toxic" ]
   },
@@ -95,7 +95,7 @@
     "Rarity": 1,
     "LevelRequirement": 1,
     "Effects": {
-      "DamageBonus": "8,20"
+      "ElementalDamageBonus": "8,20"
     },
     "Tags": [ "Wind" ]
   },
@@ -107,7 +107,7 @@
     "Rarity": 1,
     "LevelRequirement": 1,
     "Effects": {
-      "DamageBonus": "9,20"
+      "ElementalDamageBonus": "9,20"
     },
     "Tags": [ "Void" ]
   },
@@ -119,7 +119,7 @@
     "Rarity": 1,
     "LevelRequirement": 1,
     "Effects": {
-      "DamageBonus": "10,20"
+      "ElementalDamageBonus": "10,20"
     },
     "Tags": [ "Light" ]
   },
@@ -131,7 +131,7 @@
     "Rarity": 1,
     "LevelRequirement": 1,
     "Effects": {
-      "DamageBonus": "11,20"
+      "ElementalDamageBonus": "11,20"
     },
     "Tags": [ "Electric" ]
   },
@@ -143,7 +143,7 @@
     "Rarity": 1,
     "LevelRequirement": 1,
     "Effects": {
-      "DamageBonus": "12,20"
+      "ElementalDamageBonus": "12,20"
     },
     "Tags": [ "Ice" ]
   },
@@ -155,7 +155,7 @@
     "Rarity": 1,
     "LevelRequirement": 1,
     "Effects": {
-      "DamageBonus": "13,20"
+      "ElementalDamageBonus": "13,20"
     },
     "Tags": [ "Nature" ]
   },
@@ -167,7 +167,7 @@
     "Rarity": 1,
     "LevelRequirement": 2,
     "Effects": {
-      "ApplyStatusOnContact": "Poison,50,4"
+      "ApplyStatusOnHit": "Poison,50,4,true"
     },
     "Tags": [ "Toxic", "StatusEffect" ]
   },
@@ -179,7 +179,7 @@
     "Rarity": 0,
     "LevelRequirement": 0,
     "Effects": {
-      "DamageReductionPhysical": "20"
+      "PhysicalDamageReduction": "20"
     },
     "StatModifiers": {
       "Tenacity": 5
@@ -194,7 +194,7 @@
     "Rarity": 2,
     "LevelRequirement": 3,
     "Effects": {
-      "CritChanceBonus": "10"
+      "FlatCritBonus": "10"
     },
     "Tags": [ "Critical" ]
   },
@@ -206,7 +206,7 @@
     "Rarity": 2,
     "LevelRequirement": 3,
     "Effects": {
-      "RegenEndOfTurn": "5"
+      "Regen": "5"
     },
     "Tags": [ "Healing", "Defense" ]
   },
@@ -218,7 +218,7 @@
     "Rarity": 2,
     "LevelRequirement": 4,
     "Effects": {
-      "DamageBonusVsStatused": "100"
+      "StatusedTargetDamage": "100"
     },
     "Tags": [ "StatusEffect" ]
   },
@@ -230,7 +230,7 @@
     "Rarity": 1,
     "LevelRequirement": 2,
     "Effects": {
-      "ApplyStatusOnBeingHitContact": "Stun,30,1"
+      "ReactiveStatus": "Stun,30,1,true"
     },
     "Tags": [ "Electric", "StatusEffect", "Defense" ]
   },
@@ -242,7 +242,7 @@
     "Rarity": 2,
     "LevelRequirement": 4,
     "Effects": {
-      "DamageBonusLowHP": "33,100"
+      "LowHPDamageBonus": "33,100"
     },
     "StatModifiers": {
       "Strength": 5,
@@ -258,7 +258,7 @@
     "Rarity": 2,
     "LevelRequirement": 3,
     "Effects": {
-      "ElementImmunityAndHeal": "10,25"
+      "SunBlessedLeaf": "10,25"
     },
     "Tags": [ "Light", "Healing", "Defense" ]
   },
@@ -270,7 +270,7 @@
     "Rarity": 1,
     "LevelRequirement": 2,
     "Effects": {
-      "PowerBonusLastAct": "30"
+      "LastStand": "30"
     },
     "StatModifiers": {
       "Agility": -10,
@@ -286,7 +286,7 @@
     "Rarity": 2,
     "LevelRequirement": 4,
     "Effects": {
-      "StatusDurationBonus": "1"
+      "StatusDuration": "1"
     },
     "Tags": [ "StatusEffect" ]
   },
@@ -298,7 +298,7 @@
     "Rarity": 1,
     "LevelRequirement": 2,
     "Effects": {
-      "ElementImmunity": "11"
+      "ElementalImmunity": "11"
     },
     "Tags": [ "Electric", "Defense" ]
   },
@@ -310,7 +310,7 @@
     "Rarity": 2,
     "LevelRequirement": 3,
     "Effects": {
-      "AuraApplyStatusEndOfTurn": "Poison,50,2"
+      "ToxicAura": "50,2"
     },
     "Tags": [ "Toxic", "StatusEffect" ]
   },
@@ -349,7 +349,7 @@
     "Rarity": 2,
     "LevelRequirement": 1,
     "Effects": {
-      "FirstAttackBonus": "50"
+      "FirstAttackDamage": "50"
     },
     "StatModifiers": {
       "Agility": 5
@@ -364,7 +364,7 @@
     "Rarity": 2,
     "LevelRequirement": 3,
     "Effects": {
-      "IntimidateOnEnter": "Strength,-1"
+      "Intimidate": "Strength,-1"
     },
     "Tags": [ "StatusEffect" ]
   },
@@ -376,7 +376,7 @@
     "Rarity": 2,
     "LevelRequirement": 3,
     "Effects": {
-      "IronBarbsOnContact": "12.5"
+      "Thorns": "12.5"
     },
     "Tags": [ "Defense" ]
   },
@@ -388,7 +388,7 @@
     "Rarity": 1,
     "LevelRequirement": 2,
     "Effects": {
-      "DamageBonusFullHP": "50"
+      "FullHPDamage": "50"
     },
     "Tags": []
   },
@@ -400,7 +400,7 @@
     "Rarity": 1,
     "LevelRequirement": 1,
     "Effects": {
-      "IgnoreDodging": "true"
+      "IgnoreEvasion": ""
     },
     "StatModifiers": {
       "Intelligence": 2
@@ -415,7 +415,7 @@
     "Rarity": 2,
     "LevelRequirement": 3,
     "Effects": {
-      "DodgeMissChance": "50"
+      "GhostlySlippers": "50"
     },
     "StatModifiers": {
       "Agility": 3
@@ -474,7 +474,7 @@
     "Rarity": 2,
     "LevelRequirement": 4,
     "Effects": {
-      "ArmorPiercer": "25"
+      "DefensePenetration": "25"
     },
     "Tags": []
   },
@@ -552,7 +552,7 @@
     "Rarity": 2,
     "LevelRequirement": 3,
     "Effects": {
-      "Sadist": "true"
+      "Sadist": ""
     },
     "Tags": [ "StatusEffect", "Buff" ]
   },
@@ -564,7 +564,7 @@
     "Rarity": 3,
     "LevelRequirement": 5,
     "Effects": {
-      "Bloodletter": "5,50"
+      "Bloodletter": "50"
     },
     "Tags": [ "Void", "HPCost" ]
   },
@@ -620,7 +620,7 @@
     "Rarity": 2,
     "LevelRequirement": 3,
     "Effects": {
-      "PainFuel": "true"
+      "PainFuel": ""
     },
     "StatModifiers": {
       "MaxHP": 30
@@ -635,7 +635,7 @@
     "Rarity": 2,
     "LevelRequirement": 4,
     "Effects": {
-      "CausticBlood": "true"
+      "CausticBlood": ""
     },
     "Tags": [ "Lifesteal", "Defense" ]
   }
