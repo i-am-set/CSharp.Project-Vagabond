@@ -40,6 +40,9 @@ namespace ProjectVagabond.UI
         private Rectangle _statsPanelArea;
         private Rectangle _infoPanelArea;
 
+        // New Party Member Slot Panels (0 to 3)
+        private readonly Rectangle[] _partyMemberPanelAreas = new Rectangle[4];
+
         private ImageButton? _debugButton1;
         private ImageButton? _debugButton2;
         private ImageButton? _pageLeftButton;
@@ -50,9 +53,7 @@ namespace ProjectVagabond.UI
         private int _currentPartyMemberIndex = 0;
 
         // Equip Buttons
-        private EquipButton? _relicEquipButton1;
-        private EquipButton? _relicEquipButton2;
-        private EquipButton? _relicEquipButton3;
+        private EquipButton? _relicEquipButton;
         private EquipButton? _weaponEquipButton;
         private EquipButton? _armorEquipButton;
 
@@ -60,7 +61,7 @@ namespace ProjectVagabond.UI
         private readonly List<SpellEquipButton> _spellEquipButtons = new();
 
         // Submenu State
-        private enum EquipSlotType { None, Weapon, Armor, Relic1, Relic2, Relic3, Spell1, Spell2, Spell3, Spell4 }
+        private enum EquipSlotType { None, Weapon, Armor, Relic, Spell1, Spell2, Spell3, Spell4 }
         private EquipSlotType _activeEquipSlotType = EquipSlotType.None;
         private bool _isEquipSubmenuOpen = false;
         private readonly List<EquipButton> _equipSubmenuButtons = new();
@@ -232,6 +233,20 @@ namespace ProjectVagabond.UI
             // Initialize Info Panel Area (Identical to Stats Panel)
             _infoPanelArea = new Rectangle(statsPanelX, statsPanelY, statsPanelWidth, statsPanelHeight);
 
+            // Initialize Party Member Slot Panels (4 slots)
+            const int panelWidth = 75;
+            int panelStartX = 10;
+
+            for (int i = 0; i < 4; i++)
+            {
+                _partyMemberPanelAreas[i] = new Rectangle(
+                    panelStartX + (i * panelWidth),
+                    _statsPanelArea.Y,
+                    panelWidth,
+                    _statsPanelArea.Height
+                );
+            }
+
             _inventorySlots.Clear();
 
             // Calculate available space inside the padding
@@ -329,28 +344,12 @@ namespace ProjectVagabond.UI
             _armorEquipButton.OnClick += () => OpenEquipSubmenu(EquipSlotType.Armor);
 
             // Relic Button 1 (Even)
-            _relicEquipButton1 = new EquipButton(new Rectangle(equipButtonX, relicButtonY, 180, 16), "NOTHING");
-            _relicEquipButton1.TitleText = "RELIC";
-            _relicEquipButton1.Font = secondaryFont;
-            _relicEquipButton1.CustomDefaultTextColor = _global.Palette_BrightWhite;
-            _relicEquipButton1.CustomTitleTextColor = _global.Palette_DarkGray;
-            _relicEquipButton1.OnClick += () => OpenEquipSubmenu(EquipSlotType.Relic1);
-
-            // Relic Button 2 (Odd)
-            _relicEquipButton2 = new EquipButton(new Rectangle(equipButtonX, relicButtonY + 16, 180, 16), "NOTHING");
-            _relicEquipButton2.TitleText = "RELIC";
-            _relicEquipButton2.Font = secondaryFont;
-            _relicEquipButton2.CustomDefaultTextColor = _global.Palette_White;
-            _relicEquipButton2.CustomTitleTextColor = _global.Palette_DarkerGray;
-            _relicEquipButton2.OnClick += () => OpenEquipSubmenu(EquipSlotType.Relic2);
-
-            // Relic Button 3 (Even)
-            _relicEquipButton3 = new EquipButton(new Rectangle(equipButtonX, relicButtonY + 32, 180, 16), "NOTHING");
-            _relicEquipButton3.TitleText = "RELIC";
-            _relicEquipButton3.Font = secondaryFont;
-            _relicEquipButton3.CustomDefaultTextColor = _global.Palette_BrightWhite;
-            _relicEquipButton3.CustomTitleTextColor = _global.Palette_DarkGray;
-            _relicEquipButton3.OnClick += () => OpenEquipSubmenu(EquipSlotType.Relic3);
+            _relicEquipButton = new EquipButton(new Rectangle(equipButtonX, relicButtonY, 180, 16), "NOTHING");
+            _relicEquipButton.TitleText = "RELIC";
+            _relicEquipButton.Font = secondaryFont;
+            _relicEquipButton.CustomDefaultTextColor = _global.Palette_BrightWhite;
+            _relicEquipButton.CustomTitleTextColor = _global.Palette_DarkGray;
+            _relicEquipButton.OnClick += () => OpenEquipSubmenu(EquipSlotType.Relic);
 
             // Initialize Spell Equip Buttons
             _spellEquipButtons.Clear();
@@ -422,9 +421,7 @@ namespace ProjectVagabond.UI
 
             UpdateEquipButtonState(_weaponEquipButton!, member.EquippedWeaponId, EquipSlotType.Weapon);
             UpdateEquipButtonState(_armorEquipButton!, member.EquippedArmorId, EquipSlotType.Armor);
-            UpdateEquipButtonState(_relicEquipButton1!, member.EquippedRelics[0], EquipSlotType.Relic1);
-            UpdateEquipButtonState(_relicEquipButton2!, member.EquippedRelics[1], EquipSlotType.Relic2);
-            UpdateEquipButtonState(_relicEquipButton3!, member.EquippedRelics[2], EquipSlotType.Relic3);
+            UpdateEquipButtonState(_relicEquipButton!, member.EquippedRelicId, EquipSlotType.Relic);
 
             for (int i = 0; i < 4; i++)
             {

@@ -35,21 +35,20 @@ namespace ProjectVagabond.UI
             {
                 availableItems = _gameState.PlayerState.Armors.Keys.ToList();
             }
-            else if (_activeEquipSlotType == EquipSlotType.Relic1 || _activeEquipSlotType == EquipSlotType.Relic2 || _activeEquipSlotType == EquipSlotType.Relic3)
+            else if (_activeEquipSlotType == EquipSlotType.Relic)
             {
                 // Get all owned relics
                 var allRelics = _gameState.PlayerState.Relics.Keys.ToList();
 
-                // Get set of currently equipped relics for THIS member to filter them out
-                // We only care about duplicates on the SAME character.
-                // Actually, usually relics are unique per party, but let's assume unique per character for now to be safe,
-                // OR unique per party if we want to prevent duplicates across the team.
-                // Let's stick to unique per character for simplicity unless specified otherwise.
-                // Wait, the previous logic filtered out relics equipped in ANY slot of the current character.
-                var equippedRelics = new HashSet<string>(member.EquippedRelics.Where(r => !string.IsNullOrEmpty(r)));
-
                 // Filter out any relic that is currently equipped by THIS member
-                availableItems = allRelics.Where(r => !equippedRelics.Contains(r)).ToList();
+                if (!string.IsNullOrEmpty(member.EquippedRelicId))
+                {
+                    availableItems = allRelics.Where(r => r != member.EquippedRelicId).ToList();
+                }
+                else
+                {
+                    availableItems = allRelics;
+                }
             }
             else if (_activeEquipSlotType >= EquipSlotType.Spell1 && _activeEquipSlotType <= EquipSlotType.Spell4)
             {
@@ -146,7 +145,7 @@ namespace ProjectVagabond.UI
                             btn.OnClick = () => SelectEquipItem(itemId);
                         }
                     }
-                    else if (_activeEquipSlotType >= EquipSlotType.Relic1 && _activeEquipSlotType <= EquipSlotType.Relic3)
+                    else if (_activeEquipSlotType == EquipSlotType.Relic)
                     {
                         var relicData = GetRelicData(itemId);
                         if (relicData != null)
@@ -228,17 +227,9 @@ namespace ProjectVagabond.UI
             {
                 member.EquippedArmorId = itemId;
             }
-            else if (_activeEquipSlotType == EquipSlotType.Relic1)
+            else if (_activeEquipSlotType == EquipSlotType.Relic)
             {
-                member.EquippedRelics[0] = itemId;
-            }
-            else if (_activeEquipSlotType == EquipSlotType.Relic2)
-            {
-                member.EquippedRelics[1] = itemId;
-            }
-            else if (_activeEquipSlotType == EquipSlotType.Relic3)
-            {
-                member.EquippedRelics[2] = itemId;
+                member.EquippedRelicId = itemId;
             }
             else if (_activeEquipSlotType >= EquipSlotType.Spell1 && _activeEquipSlotType <= EquipSlotType.Spell4)
             {
@@ -287,7 +278,7 @@ namespace ProjectVagabond.UI
                     if (data != null) { name = data.ArmorName.ToUpper(); path = $"Sprites/Items/Armor/{data.ArmorID}"; rarity = data.Rarity; }
                     else name = itemId.ToUpper();
                 }
-                else if (type == EquipSlotType.Relic1 || type == EquipSlotType.Relic2 || type == EquipSlotType.Relic3)
+                else if (type == EquipSlotType.Relic)
                 {
                     var data = GetRelicData(itemId);
                     if (data != null) { name = data.RelicName.ToUpper(); path = $"Sprites/Items/Relics/{data.RelicID}"; rarity = data.Rarity; }

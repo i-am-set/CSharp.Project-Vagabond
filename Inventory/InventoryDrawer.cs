@@ -19,6 +19,7 @@ namespace ProjectVagabond.UI
         private float _portraitBgTimer;
         private float _portraitBgDuration;
         private static readonly Random _rng = new Random();
+
         public void DrawWorld(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
             if (!IsOpen) return;
@@ -143,7 +144,7 @@ namespace ProjectVagabond.UI
                         int totalItems = 1;
                         if (_activeEquipSlotType == EquipSlotType.Weapon) totalItems += _gameState.PlayerState.Weapons.Count;
                         else if (_activeEquipSlotType == EquipSlotType.Armor) totalItems += _gameState.PlayerState.Armors.Count;
-                        else if (_activeEquipSlotType == EquipSlotType.Relic1 || _activeEquipSlotType == EquipSlotType.Relic2 || _activeEquipSlotType == EquipSlotType.Relic3) totalItems += _gameState.PlayerState.Relics.Count;
+                        else if (_activeEquipSlotType == EquipSlotType.Relic) totalItems += _gameState.PlayerState.Relics.Count;
                         else if (_activeEquipSlotType >= EquipSlotType.Spell1 && _activeEquipSlotType <= EquipSlotType.Spell4) totalItems += _gameState.PlayerState.Spells.Count;
 
                         int maxScroll = Math.Max(0, totalItems - 7);
@@ -171,43 +172,9 @@ namespace ProjectVagabond.UI
                 }
                 else
                 {
-                    _relicEquipButton1?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
-                    _relicEquipButton2?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
-                    _relicEquipButton3?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
-                    _armorEquipButton?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
-                    _weaponEquipButton?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
-
-                    foreach (var button in _spellEquipButtons)
-                    {
-                        button.Draw(spriteBatch, font, gameTime, Matrix.Identity);
-                    }
-
-                    // --- Draw "SPELL LIST" Label ---
-                    if (_spellEquipButtons.Count > 0 && _weaponEquipButton != null)
-                    {
-                        var first = _spellEquipButtons[0];
-                        var last = _spellEquipButtons[_spellEquipButtons.Count - 1];
-                        float centerY = (first.Bounds.Top + last.Bounds.Bottom) / 2f;
-
-                        float labelX = _weaponEquipButton.Bounds.X;
-                        float labelWidth = 53f;
-
-                        string[] lines = { "SPELL", "LIST" };
-                        float totalHeight = lines.Length * font.LineHeight;
-                        float currentY = centerY - (totalHeight / 2f);
-
-                        foreach (var line in lines)
-                        {
-                            Vector2 lineSize = font.MeasureString(line);
-                            float lineX = labelX + (labelWidth - lineSize.X) / 2f;
-                            Vector2 linePos = new Vector2(MathF.Round(lineX), MathF.Round(currentY));
-                            spriteBatch.DrawStringSnapped(font, line, linePos, _global.Palette_Gray);
-                            currentY += font.LineHeight;
-                        }
-                    }
+                    // In Equip mode, we now ONLY draw the party member slots
+                    DrawPartyMemberSlots(spriteBatch, font, ServiceLocator.Get<Core>().SecondaryFont, gameTime);
                 }
-
-                DrawStatsPanel(spriteBatch, font, ServiceLocator.Get<Core>().SecondaryFont, gameTime);
             }
 
             if (_debugButton1 != null && _debugButton1.IsEnabled) _debugButton1.Draw(spriteBatch, font, gameTime, Matrix.Identity);
@@ -221,6 +188,13 @@ namespace ProjectVagabond.UI
                 if (_selectedInventoryCategory == InventoryCategory.Equip)
                 {
                     spriteBatch.DrawSnapped(pixel, _statsPanelArea, Color.HotPink * 0.5f);
+
+                    // Debug draw the 4 new party member slot panels
+                    Color[] debugColors = { Color.Green, Color.Yellow, Color.Orange, Color.Red };
+                    for (int i = 0; i < 4; i++)
+                    {
+                        spriteBatch.DrawSnapped(pixel, _partyMemberPanelAreas[i], debugColors[i] * 0.5f);
+                    }
 
                     // Debug draw party buttons
                     if (!_isEquipSubmenuOpen)
@@ -244,6 +218,143 @@ namespace ProjectVagabond.UI
         public void DrawScreen(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             _inventoryButton?.Draw(spriteBatch, font, gameTime, transform);
+        }
+
+        private void DrawPartyMemberSlots(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, GameTime gameTime)
+        {
+            var pixel = ServiceLocator.Get<Texture2D>();
+
+            for (int i = 0; i < 4; i++)
+            {
+                var bounds = _partyMemberPanelAreas[i];
+                if (i >= _gameState.PlayerState.Party.Count) continue;
+
+                var member = _gameState.PlayerState.Party[i];
+                int centerX = bounds.Center.X;
+                int currentY = bounds.Y + 4;
+
+                // 1. Name
+                string name = member.Name.ToUpper();
+                Vector2 nameSize = secondaryFont.MeasureString(name);
+                spriteBatch.DrawStringSnapped(secondaryFont, name, new Vector2(centerX - nameSize.X / 2, currentY), _global.Palette_BrightWhite);
+                currentY += (int)nameSize.Y + 4;
+
+                // 2. Sprite
+                // Draw Background Frame
+                if (_portraitBgFrame != Rectangle.Empty)
+                {
+                    Vector2 bgPos = new Vector2(centerX, currentY + 16);
+                    Vector2 origin = new Vector2(_portraitBgFrame.Width / 2f, _portraitBgFrame.Height / 2f);
+                    float scale = 32f / 24f;
+                    spriteBatch.DrawSnapped(_spriteManager.InventorySlotIdleSpriteSheet, bgPos, _portraitBgFrame, Color.White, 0f, origin, scale, SpriteEffects.None, 0f);
+                }
+
+                // Draw Portrait
+                if (_spriteManager.PlayerPortraitsSpriteSheet != null && _spriteManager.PlayerPortraitSourceRects.Count > 0)
+                {
+                    int portraitIndex = Math.Clamp(member.PortraitIndex, 0, _spriteManager.PlayerPortraitSourceRects.Count - 1);
+                    var sourceRect = _spriteManager.PlayerPortraitSourceRects[portraitIndex];
+
+                    float animSpeed = 1f;
+                    int frame = (int)(gameTime.TotalGameTime.TotalSeconds * animSpeed) % 2;
+                    Texture2D textureToDraw = frame == 0 ? _spriteManager.PlayerPortraitsSpriteSheet : _spriteManager.PlayerPortraitsAltSpriteSheet;
+
+                    var destRect = new Rectangle(centerX - 16, currentY, 32, 32);
+                    spriteBatch.DrawSnapped(textureToDraw, destRect, sourceRect, Color.White);
+                }
+                currentY += 32 + 2;
+
+                // 3. Health Bar
+                if (_spriteManager.InventoryPlayerHealthBarEmpty != null && _spriteManager.InventoryPlayerHealthBarFull != null)
+                {
+                    // Center the bar (width 72)
+                    int barX = centerX - (_spriteManager.InventoryPlayerHealthBarEmpty.Width / 2);
+                    spriteBatch.DrawSnapped(_spriteManager.InventoryPlayerHealthBarEmpty, new Vector2(barX, currentY), Color.White);
+
+                    int currentHP = member.CurrentHP;
+                    int maxHP = member.MaxHP;
+                    float hpPercent = (float)currentHP / Math.Max(1, maxHP);
+                    int fullWidth = _spriteManager.InventoryPlayerHealthBarFull.Width;
+                    int visibleWidth = (int)(fullWidth * hpPercent);
+
+                    var srcRect = new Rectangle(0, 0, visibleWidth, _spriteManager.InventoryPlayerHealthBarFull.Height);
+                    spriteBatch.DrawSnapped(_spriteManager.InventoryPlayerHealthBarFull, new Vector2(barX + 1, currentY), srcRect, Color.White);
+
+                    // HP Text
+                    string hpText = $"{currentHP}/{maxHP}";
+                    Vector2 hpSize = secondaryFont.MeasureString(hpText);
+                    spriteBatch.DrawStringSnapped(secondaryFont, hpText, new Vector2(centerX - hpSize.X / 2, currentY + 8), _global.Palette_White);
+                    currentY += 8 + (int)hpSize.Y + 4;
+                }
+
+                // 4. Equip Slots (Weapon, Armor, Relic)
+                int slotSize = 16;
+                int gap = 4;
+                int totalEquipWidth = (slotSize * 3) + (gap * 2);
+                int equipStartX = centerX - (totalEquipWidth / 2);
+
+                // Weapon
+                DrawEquipSlotIcon(spriteBatch, equipStartX, currentY, member.EquippedWeaponId, EquipSlotType.Weapon);
+
+                // Armor
+                DrawEquipSlotIcon(spriteBatch, equipStartX + slotSize + gap, currentY, member.EquippedArmorId, EquipSlotType.Armor);
+
+                // Relic
+                DrawEquipSlotIcon(spriteBatch, equipStartX + (slotSize + gap) * 2, currentY, member.EquippedRelicId, EquipSlotType.Relic);
+
+                currentY += slotSize + 6;
+
+                // 5. Stats
+                string[] statLabels = { "STR", "INT", "TEN", "AGI" };
+                string[] statKeys = { "Strength", "Intelligence", "Tenacity", "Agility" };
+
+                for (int s = 0; s < 4; s++)
+                {
+                    int val = _gameState.PlayerState.GetEffectiveStat(member, statKeys[s]);
+                    string text = $"{statLabels[s]} {val}";
+                    Vector2 size = secondaryFont.MeasureString(text);
+                    spriteBatch.DrawStringSnapped(secondaryFont, text, new Vector2(centerX - size.X / 2, currentY), _global.Palette_LightGray);
+                    currentY += (int)size.Y + 1;
+                }
+            }
+        }
+
+        private void DrawEquipSlotIcon(SpriteBatch spriteBatch, int x, int y, string? itemId, EquipSlotType type)
+        {
+            var pixel = ServiceLocator.Get<Texture2D>();
+            var destRect = new Rectangle(x, y, 16, 16);
+
+            // Draw background/border
+            spriteBatch.DrawSnapped(_spriteManager.InventoryEmptySlotSprite, destRect, Color.White);
+
+            if (!string.IsNullOrEmpty(itemId))
+            {
+                string path = "";
+                if (type == EquipSlotType.Weapon)
+                {
+                    var data = GetWeaponData(itemId);
+                    if (data != null) path = $"Sprites/Items/Weapons/{data.WeaponID}";
+                }
+                else if (type == EquipSlotType.Armor)
+                {
+                    var data = GetArmorData(itemId);
+                    if (data != null) path = $"Sprites/Items/Armor/{data.ArmorID}";
+                }
+                else if (type == EquipSlotType.Relic)
+                {
+                    var data = GetRelicData(itemId);
+                    if (data != null) path = $"Sprites/Items/Relics/{data.RelicID}";
+                }
+
+                if (!string.IsNullOrEmpty(path))
+                {
+                    var icon = _spriteManager.GetSmallRelicSprite(path);
+                    if (icon != null)
+                    {
+                        spriteBatch.DrawSnapped(icon, destRect, Color.White);
+                    }
+                }
+            }
         }
 
         private void DrawInfoPanel(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, GameTime gameTime, bool drawBackground)
@@ -316,7 +427,7 @@ namespace ProjectVagabond.UI
                     iconPath = item.ImagePath;
                 }
             }
-            else if (_selectedInventoryCategory == InventoryCategory.Misc) // <--- Added
+            else if (_selectedInventoryCategory == InventoryCategory.Misc)
             {
                 var item = BattleDataCache.MiscItems.Values.FirstOrDefault(m => m.ItemName.Equals(activeSlot.ItemId, StringComparison.OrdinalIgnoreCase));
                 if (item != null)
@@ -1169,10 +1280,9 @@ namespace ProjectVagabond.UI
                 int val2RightX = 107;
 
                 // Helper to get modifier from currently equipped items on THIS member
-                int GetEquippedModifier(int slotIndex, string statKey)
+                int GetEquippedModifier(string statKey)
                 {
-                    if (slotIndex >= member.EquippedRelics.Length) return 0;
-                    string? relicId = member.EquippedRelics[slotIndex];
+                    string? relicId = member.EquippedRelicId;
                     if (string.IsNullOrEmpty(relicId)) return 0;
                     if (BattleDataCache.Relics.TryGetValue(relicId, out var relic)) return relic.StatModifiers.GetValueOrDefault(statKey, 0);
                     return 0;
@@ -1210,7 +1320,7 @@ namespace ProjectVagabond.UI
                     int baseStat = _gameState.PlayerState.GetBaseStat(member, stat.StatKey);
 
                     int totalCurrentMod = 0;
-                    for (int slot = 0; slot < member.EquippedRelics.Length; slot++) totalCurrentMod += GetEquippedModifier(slot, stat.StatKey);
+                    totalCurrentMod += GetEquippedModifier(stat.StatKey);
                     totalCurrentMod += GetEquippedWeaponModifier(stat.StatKey);
                     totalCurrentMod += GetEquippedArmorModifier(stat.StatKey);
 
@@ -1224,9 +1334,7 @@ namespace ProjectVagabond.UI
                         int currentSlotMod = 0;
                         if (_activeEquipSlotType == EquipSlotType.Weapon) currentSlotMod = GetEquippedWeaponModifier(stat.StatKey);
                         else if (_activeEquipSlotType == EquipSlotType.Armor) currentSlotMod = GetEquippedArmorModifier(stat.StatKey);
-                        else if (_activeEquipSlotType == EquipSlotType.Relic1) currentSlotMod = GetEquippedModifier(0, stat.StatKey);
-                        else if (_activeEquipSlotType == EquipSlotType.Relic2) currentSlotMod = GetEquippedModifier(1, stat.StatKey);
-                        else if (_activeEquipSlotType == EquipSlotType.Relic3) currentSlotMod = GetEquippedModifier(2, stat.StatKey);
+                        else if (_activeEquipSlotType == EquipSlotType.Relic) currentSlotMod = GetEquippedModifier(stat.StatKey);
 
                         int newMod = GetHoveredModifier(stat.StatKey);
                         int projectedRaw = baseStat + totalCurrentMod - currentSlotMod + newMod;

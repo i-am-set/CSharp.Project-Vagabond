@@ -25,7 +25,10 @@ namespace ProjectVagabond
         // Equipment
         public string? EquippedWeaponId { get; set; }
         public string? EquippedArmorId { get; set; }
-        public string?[] EquippedRelics { get; set; } = new string?[3];
+
+        // Changed from array to single ID
+        public string? EquippedRelicId { get; set; }
+
         public MoveEntry?[] EquippedSpells { get; set; } = new MoveEntry?[4];
 
         // Learned Moves (Infinite storage)
@@ -44,7 +47,7 @@ namespace ProjectVagabond
             clone.Actions = new List<MoveEntry>();
             foreach (var a in this.Actions) clone.Actions.Add(a.Clone());
 
-            clone.EquippedRelics = (string?[])this.EquippedRelics.Clone();
+            // EquippedRelicId is a string (immutable), so shallow copy is fine
             clone.EquippedSpells = (MoveEntry?[])this.EquippedSpells.Clone();
 
             return clone;

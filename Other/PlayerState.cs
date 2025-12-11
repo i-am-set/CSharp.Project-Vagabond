@@ -38,7 +38,10 @@ namespace ProjectVagabond
 
         public string? EquippedWeaponId { get => Leader?.EquippedWeaponId; set { if (Leader != null) Leader.EquippedWeaponId = value; } }
         public string? EquippedArmorId { get => Leader?.EquippedArmorId; set { if (Leader != null) Leader.EquippedArmorId = value; } }
-        public string?[] EquippedRelics { get => Leader?.EquippedRelics ?? new string?[3]; set { if (Leader != null) Leader.EquippedRelics = value; } }
+
+        // Updated to single relic
+        public string? EquippedRelicId { get => Leader?.EquippedRelicId; set { if (Leader != null) Leader.EquippedRelicId = value; } }
+
         public MoveEntry?[] EquippedSpells { get => Leader?.EquippedSpells ?? new MoveEntry?[4]; set { if (Leader != null) Leader.EquippedSpells = value; } }
         public List<MoveEntry> Spells { get => Leader?.Spells ?? new List<MoveEntry>(); set { if (Leader != null) Leader.Spells = value; } }
         public List<MoveEntry> Actions { get => Leader?.Actions ?? new List<MoveEntry>(); set { if (Leader != null) Leader.Actions = value; } }
@@ -106,13 +109,10 @@ namespace ProjectVagabond
             int baseValue = GetBaseStat(member, statName);
             int bonus = 0;
 
-            // 1. Relic Bonuses
-            foreach (var relicId in member.EquippedRelics)
+            // 1. Relic Bonuses (Single Slot)
+            if (!string.IsNullOrEmpty(member.EquippedRelicId) && BattleDataCache.Relics.TryGetValue(member.EquippedRelicId, out var relic))
             {
-                if (!string.IsNullOrEmpty(relicId) && BattleDataCache.Relics.TryGetValue(relicId, out var relic))
-                {
-                    if (relic.StatModifiers.TryGetValue(statName, out int mod)) bonus += mod;
-                }
+                if (relic.StatModifiers.TryGetValue(statName, out int mod)) bonus += mod;
             }
 
             // 2. Weapon Bonuses
@@ -186,6 +186,12 @@ namespace ProjectVagabond
             {
                 Relics[relicId] = Math.Max(0, current - quantity);
                 if (Relics[relicId] == 0) Relics.Remove(relicId);
+
+                foreach (var member in Party)
+                {
+                    if (member.EquippedRelicId == relicId && Relics.GetValueOrDefault(relicId) == 0)
+                        member.EquippedRelicId = null;
+                }
             }
         }
 

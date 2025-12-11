@@ -76,15 +76,13 @@ namespace ProjectVagabond
                 }
             }
 
-            // Auto-Equip Relics (Up to 3)
-            int relicSlot = 0;
-            foreach (var kvp in data.StartingRelics)
+            // Auto-Equip Relic (Only 1 now)
+            if (data.StartingRelics.Any())
             {
-                if (relicSlot >= 3) break;
-                if (BattleDataCache.Relics.ContainsKey(kvp.Key))
+                string relicId = data.StartingRelics.First().Key;
+                if (BattleDataCache.Relics.ContainsKey(relicId))
                 {
-                    member.EquippedRelics[relicSlot] = kvp.Key;
-                    relicSlot++;
+                    member.EquippedRelicId = relicId;
                 }
             }
 

@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿#nullable enable
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -166,7 +167,7 @@ namespace ProjectVagabond.UI
 
                     if (_activeEquipSlotType == EquipSlotType.Weapon) totalItems += _gameState.PlayerState.Weapons.Count;
                     else if (_activeEquipSlotType == EquipSlotType.Armor) totalItems += _gameState.PlayerState.Armors.Count;
-                    else if (_activeEquipSlotType == EquipSlotType.Relic1 || _activeEquipSlotType == EquipSlotType.Relic2 || _activeEquipSlotType == EquipSlotType.Relic3) totalItems += _gameState.PlayerState.Relics.Count;
+                    else if (_activeEquipSlotType == EquipSlotType.Relic) totalItems += _gameState.PlayerState.Relics.Count;
                     else if (_activeEquipSlotType >= EquipSlotType.Spell1 && _activeEquipSlotType <= EquipSlotType.Spell4) totalItems += member.Spells.Count; // Use member's learned spells
 
                     int maxScroll = Math.Max(0, totalItems - 7); // 7 visible slots
@@ -388,7 +389,7 @@ namespace ProjectVagabond.UI
                     List<string> availableItems = new List<string>();
                     if (_activeEquipSlotType == EquipSlotType.Weapon) availableItems = _gameState.PlayerState.Weapons.Keys.ToList();
                     else if (_activeEquipSlotType == EquipSlotType.Armor) availableItems = _gameState.PlayerState.Armors.Keys.ToList();
-                    else if (_activeEquipSlotType == EquipSlotType.Relic1 || _activeEquipSlotType == EquipSlotType.Relic2 || _activeEquipSlotType == EquipSlotType.Relic3) availableItems = _gameState.PlayerState.Relics.Keys.ToList();
+                    else if (_activeEquipSlotType == EquipSlotType.Relic) availableItems = _gameState.PlayerState.Relics.Keys.ToList();
                     else if (_activeEquipSlotType >= EquipSlotType.Spell1 && _activeEquipSlotType <= EquipSlotType.Spell4) availableItems = member.Spells.Select(s => s.MoveID).ToList();
 
                     for (int i = 0; i < _equipSubmenuButtons.Count; i++)
@@ -407,7 +408,7 @@ namespace ProjectVagabond.UI
                                     string itemId = availableItems[itemIndex];
                                     if (_activeEquipSlotType == EquipSlotType.Weapon) _hoveredItemData = GetWeaponData(itemId);
                                     else if (_activeEquipSlotType == EquipSlotType.Armor) _hoveredItemData = GetArmorData(itemId);
-                                    else if (_activeEquipSlotType == EquipSlotType.Relic1 || _activeEquipSlotType == EquipSlotType.Relic2 || _activeEquipSlotType == EquipSlotType.Relic3) _hoveredItemData = GetRelicData(itemId);
+                                    else if (_activeEquipSlotType == EquipSlotType.Relic) _hoveredItemData = GetRelicData(itemId);
                                     else if (_activeEquipSlotType >= EquipSlotType.Spell1 && _activeEquipSlotType <= EquipSlotType.Spell4)
                                     {
                                         if (BattleDataCache.Moves.TryGetValue(itemId, out var move))
@@ -433,9 +434,7 @@ namespace ProjectVagabond.UI
                 }
                 else
                 {
-                    _relicEquipButton1?.Update(currentMouseState, cameraTransform);
-                    _relicEquipButton2?.Update(currentMouseState, cameraTransform);
-                    _relicEquipButton3?.Update(currentMouseState, cameraTransform);
+                    _relicEquipButton?.Update(currentMouseState, cameraTransform);
                     _armorEquipButton?.Update(currentMouseState, cameraTransform);
                     _weaponEquipButton?.Update(currentMouseState, cameraTransform);
 

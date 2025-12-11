@@ -323,10 +323,10 @@ namespace ProjectVagabond.Scenes
 
             combatant.VisualHP = combatant.Stats.CurrentHP;
 
-            // Load Relics
-            foreach (var relicId in member.EquippedRelics)
+            // Load Relic (Single Slot)
+            if (!string.IsNullOrEmpty(member.EquippedRelicId))
             {
-                if (!string.IsNullOrEmpty(relicId) && BattleDataCache.Relics.TryGetValue(relicId, out var relicData))
+                if (BattleDataCache.Relics.TryGetValue(member.EquippedRelicId, out var relicData))
                 {
                     combatant.ActiveRelics.Add(relicData);
                 }

@@ -3,10 +3,13 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace ProjectVagabond.UI
@@ -63,7 +66,8 @@ namespace ProjectVagabond.UI
                 case InventoryCategory.Weapons:
                     foreach (var kvp in _gameState.PlayerState.Weapons)
                     {
-                        bool isEquipped = kvp.Key == _gameState.PlayerState.EquippedWeaponId;
+                        // Check if equipped by ANY party member
+                        bool isEquipped = _gameState.PlayerState.Party.Any(m => m.EquippedWeaponId == kvp.Key);
                         if (BattleDataCache.Weapons.TryGetValue(kvp.Key, out var weaponData))
                         {
                             currentItems.Add((weaponData.WeaponName, kvp.Value, $"Sprites/Items/Weapons/{kvp.Key}", null, weaponData.Rarity, null, false, null, isEquipped));
@@ -77,7 +81,7 @@ namespace ProjectVagabond.UI
                 case InventoryCategory.Armor:
                     foreach (var kvp in _gameState.PlayerState.Armors)
                     {
-                        bool isEquipped = kvp.Key == _gameState.PlayerState.EquippedArmorId;
+                        bool isEquipped = _gameState.PlayerState.Party.Any(m => m.EquippedArmorId == kvp.Key);
                         if (BattleDataCache.Armors.TryGetValue(kvp.Key, out var armorData))
                         {
                             currentItems.Add((armorData.ArmorName, kvp.Value, $"Sprites/Items/Armor/{kvp.Key}", null, armorData.Rarity, null, false, null, isEquipped));
@@ -91,7 +95,7 @@ namespace ProjectVagabond.UI
                 case InventoryCategory.Relics:
                     foreach (var kvp in _gameState.PlayerState.Relics)
                     {
-                        bool isEquipped = _gameState.PlayerState.EquippedRelics.Contains(kvp.Key);
+                        bool isEquipped = _gameState.PlayerState.Party.Any(m => m.EquippedRelicId == kvp.Key);
                         if (BattleDataCache.Relics.TryGetValue(kvp.Key, out var data))
                             currentItems.Add((data.RelicName, kvp.Value, $"Sprites/Items/Relics/{data.RelicID}", null, data.Rarity, null, false, null, isEquipped));
                         else
@@ -102,7 +106,6 @@ namespace ProjectVagabond.UI
                     foreach (var kvp in _gameState.PlayerState.Consumables)
                     {
                         if (BattleDataCache.Consumables.TryGetValue(kvp.Key, out var data))
-                            // Use the new ID-based path format
                             currentItems.Add((data.ItemName, kvp.Value, $"Sprites/Items/Consumables/{data.ItemID}", null, 0, null, false, null, false));
                         else
                             currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Consumables/{kvp.Key}", null, 0, null, false, null, false));

@@ -48,7 +48,6 @@ namespace ProjectVagabond.Battle
                     Agility = statsComponent.Agility
                 },
                 DefensiveElementIDs = new List<int>(statsComponent.DefensiveElementIDs),
-                // EscalationStacks = 0, // REMOVED: Now handled by EscalationAbility state
                 IsPlayerControlled = componentStore.HasComponent<PlayerTagComponent>(entityId)
             };
 
@@ -117,19 +116,16 @@ namespace ProjectVagabond.Battle
                 combatant.Stats.CurrentMana = gameState.PlayerState.Leader.CurrentMana;
                 combatant.VisualHP = combatant.Stats.CurrentHP;
 
-                // 3. Load Relic Abilities
-                foreach (var relicId in gameState.PlayerState.EquippedRelics)
+                // 3. Load Relic Abilities (Single Slot)
+                if (!string.IsNullOrEmpty(gameState.PlayerState.EquippedRelicId))
                 {
-                    if (!string.IsNullOrEmpty(relicId))
+                    if (BattleDataCache.Relics.TryGetValue(gameState.PlayerState.EquippedRelicId, out var relicData))
                     {
-                        if (BattleDataCache.Relics.TryGetValue(relicId, out var relicData))
-                        {
-                            // Register Relic Abilities
-                            var relicAbilities = AbilityFactory.CreateAbilitiesFromData(relicData.Effects, relicData.StatModifiers);
-                            combatant.RegisterAbilities(relicAbilities);
+                        // Register Relic Abilities
+                        var relicAbilities = AbilityFactory.CreateAbilitiesFromData(relicData.Effects, relicData.StatModifiers);
+                        combatant.RegisterAbilities(relicAbilities);
 
-                            combatant.ActiveRelics.Add(relicData);
-                        }
+                        combatant.ActiveRelics.Add(relicData);
                     }
                 }
 
