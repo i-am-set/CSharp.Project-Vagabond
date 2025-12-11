@@ -19,7 +19,6 @@ namespace ProjectVagabond.UI
         private float _portraitBgTimer;
         private float _portraitBgDuration;
         private static readonly Random _rng = new Random();
-
         public void DrawWorld(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
             if (!IsOpen) return;
@@ -273,14 +272,15 @@ namespace ProjectVagabond.UI
                 if (drawBackground && idleFrame != Rectangle.Empty)
                 {
                     // Calculate position to match the "hovered" state as closely as possible.
-                    // Standardized to 18f for all categories to align them.
-                    float spriteYOffset = 18f;
+                    // Standardized to 6f for all categories to align them.
+                    float spriteYOffset = 6f;
 
-                    int idleSpriteX = _infoPanelArea.X + (_infoPanelArea.Width - 32) / 2;
+                    int idleSpriteX = _infoPanelArea.X + (_infoPanelArea.Width - 24) / 2;
                     float spriteY = _infoPanelArea.Y + spriteYOffset;
 
-                    Vector2 itemCenter = new Vector2(idleSpriteX + 16, spriteY + 16);
-                    spriteBatch.DrawSnapped(_spriteManager.InventorySlotIdleSpriteSheet, itemCenter, idleFrame, Color.White, 0f, idleOrigin, 1f, SpriteEffects.None, 0f);
+                    // Draw 24x24 frame at 1.0 scale
+                    Vector2 itemCenter = new Vector2(idleSpriteX + 12, spriteY + 12);
+                    spriteBatch.DrawSnapped(_spriteManager.InventorySlotIdleSpriteSheet, itemCenter, idleFrame, Color.White, 0f, idleOrigin, 1.0f, SpriteEffects.None, 0f);
                 }
                 return;
             }
@@ -387,7 +387,7 @@ namespace ProjectVagabond.UI
             }
 
             // --- STANDARD RENDERING FOR OTHER CATEGORIES ---
-            const int spriteSize = 32;
+            const int spriteSize = 16; // Native 16x16
             const int gap = 4;
 
             int maxTitleWidth = _infoPanelArea.Width - (4 * 2);
@@ -407,41 +407,53 @@ namespace ProjectVagabond.UI
             float totalContentHeight = spriteSize + gap + totalTitleHeight + (totalDescHeight > 0 ? gap + totalDescHeight : 0) + (totalStatHeight > 0 ? gap + totalStatHeight : 0);
 
             float currentY = _infoPanelArea.Y + (_infoPanelArea.Height - totalContentHeight) / 2f;
-            currentY -= 10f;
+            currentY -= 22f; // Moved up 12px (10 + 12)
 
             int spriteX = _infoPanelArea.X + (_infoPanelArea.Width - spriteSize) / 2;
+
+            // Scale factor for Info Panel (1.0x for 16x16 sprites)
+            float displayScale = 1.0f;
+            // Scale factor for background frame (24x24 -> 24x24)
+            float bgScale = 1.0f;
 
             if (drawBackground)
             {
                 // Draw Idle Background Behind Item
                 if (idleFrame != Rectangle.Empty)
                 {
-                    Vector2 itemCenter = new Vector2(spriteX + 16, currentY + 16);
-                    spriteBatch.DrawSnapped(_spriteManager.InventorySlotIdleSpriteSheet, itemCenter, idleFrame, Color.White, 0f, idleOrigin, 1f, SpriteEffects.None, 0f);
+                    // Center the 24x24 background on the 16x16 sprite position
+                    // Sprite center is (spriteX + 8, currentY + 8)
+                    Vector2 itemCenter = new Vector2(spriteX + 8, currentY + 8);
+                    spriteBatch.DrawSnapped(_spriteManager.InventorySlotIdleSpriteSheet, itemCenter, idleFrame, Color.White, 0f, idleOrigin, bgScale, SpriteEffects.None, 0f);
                 }
                 return; // Exit if only drawing background
             }
+
+            // Calculate origin for 16x16 sprite
+            Vector2 iconOrigin = new Vector2(8, 8); // Center of 16x16
+            Vector2 drawPos = new Vector2(spriteX + 8, currentY + 8); // Center of 16x16 area
 
             if (iconSilhouette != null)
             {
                 Color mainOutlineColor = _global.ItemOutlineColor_Idle;
                 Color cornerOutlineColor = _global.ItemOutlineColor_Idle_Corner;
 
-                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX - 1, currentY - 1), sourceRect, cornerOutlineColor);
-                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX + 1, currentY - 1), sourceRect, cornerOutlineColor);
-                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX - 1, currentY + 1), sourceRect, cornerOutlineColor);
-                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX + 1, currentY + 1), sourceRect, cornerOutlineColor);
+                // Draw scaled silhouette
+                spriteBatch.DrawSnapped(iconSilhouette, drawPos + new Vector2(-1, -1) * displayScale, sourceRect, cornerOutlineColor, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
+                spriteBatch.DrawSnapped(iconSilhouette, drawPos + new Vector2(1, -1) * displayScale, sourceRect, cornerOutlineColor, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
+                spriteBatch.DrawSnapped(iconSilhouette, drawPos + new Vector2(-1, 1) * displayScale, sourceRect, cornerOutlineColor, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
+                spriteBatch.DrawSnapped(iconSilhouette, drawPos + new Vector2(1, 1) * displayScale, sourceRect, cornerOutlineColor, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
 
-                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX - 1, currentY), sourceRect, mainOutlineColor);
-                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX + 1, currentY), sourceRect, mainOutlineColor);
-                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX, currentY - 1), sourceRect, mainOutlineColor);
-                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX, currentY + 1), sourceRect, mainOutlineColor);
+                spriteBatch.DrawSnapped(iconSilhouette, drawPos + new Vector2(-1, 0) * displayScale, sourceRect, mainOutlineColor, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
+                spriteBatch.DrawSnapped(iconSilhouette, drawPos + new Vector2(1, 0) * displayScale, sourceRect, mainOutlineColor, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
+                spriteBatch.DrawSnapped(iconSilhouette, drawPos + new Vector2(0, -1) * displayScale, sourceRect, mainOutlineColor, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
+                spriteBatch.DrawSnapped(iconSilhouette, drawPos + new Vector2(0, 1) * displayScale, sourceRect, mainOutlineColor, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
             }
 
             if (iconTexture != null)
             {
                 Color tint = activeSlot.IconTint ?? Color.White;
-                spriteBatch.DrawSnapped(iconTexture, new Vector2(spriteX, currentY), sourceRect, tint);
+                spriteBatch.DrawSnapped(iconTexture, drawPos, sourceRect, tint, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
             }
 
             currentY += spriteSize + gap;
@@ -560,7 +572,7 @@ namespace ProjectVagabond.UI
 
         private void DrawSpellInfoPanel(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, MoveData move, Texture2D? iconTexture, Texture2D? iconSilhouette, Rectangle? sourceRect, Color? iconTint, Rectangle idleFrame, Vector2 idleOrigin, bool drawBackground)
         {
-            const int spriteSize = 32;
+            const int spriteSize = 16; // Native 16x16
             const int padding = 4;
             const int gap = 2;
 
@@ -568,37 +580,45 @@ namespace ProjectVagabond.UI
             int spriteX = _infoPanelArea.X + (_infoPanelArea.Width - spriteSize) / 2;
             int spriteY = _infoPanelArea.Y + 2; // Moved up from 18 to 2
 
+            // Scale factors set to 1.0 for native resolution
+            float displayScale = 1.0f;
+            float bgScale = 1.0f;
+
             if (drawBackground)
             {
                 // Draw Idle Background Behind Item
                 if (idleFrame != Rectangle.Empty)
                 {
-                    Vector2 itemCenter = new Vector2(spriteX + 16, spriteY + 16);
-                    spriteBatch.DrawSnapped(_spriteManager.InventorySlotIdleSpriteSheet, itemCenter, idleFrame, Color.White, 0f, idleOrigin, 1f, SpriteEffects.None, 0f);
+                    Vector2 itemCenter = new Vector2(spriteX + 8, spriteY + 8);
+                    spriteBatch.DrawSnapped(_spriteManager.InventorySlotIdleSpriteSheet, itemCenter, idleFrame, Color.White, 0f, idleOrigin, bgScale, SpriteEffects.None, 0f);
                 }
                 return; // Exit if only drawing background
             }
+
+            // Calculate origin for 16x16 sprite
+            Vector2 iconOrigin = new Vector2(8, 8); // Center of 16x16
+            Vector2 drawPos = new Vector2(spriteX + 8, spriteY + 8); // Center of 16x16 area
 
             if (iconSilhouette != null)
             {
                 Color mainOutlineColor = _global.ItemOutlineColor_Idle;
                 Color cornerOutlineColor = _global.ItemOutlineColor_Idle_Corner;
 
-                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX - 1, spriteY - 1), sourceRect, cornerOutlineColor);
-                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX + 1, spriteY - 1), sourceRect, cornerOutlineColor);
-                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX - 1, spriteY + 1), sourceRect, cornerOutlineColor);
-                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX + 1, spriteY + 1), sourceRect, cornerOutlineColor);
+                spriteBatch.DrawSnapped(iconSilhouette, drawPos + new Vector2(-1, -1) * displayScale, sourceRect, cornerOutlineColor, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
+                spriteBatch.DrawSnapped(iconSilhouette, drawPos + new Vector2(1, -1) * displayScale, sourceRect, cornerOutlineColor, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
+                spriteBatch.DrawSnapped(iconSilhouette, drawPos + new Vector2(-1, 1) * displayScale, sourceRect, cornerOutlineColor, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
+                spriteBatch.DrawSnapped(iconSilhouette, drawPos + new Vector2(1, 1) * displayScale, sourceRect, cornerOutlineColor, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
 
-                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX - 1, spriteY), sourceRect, mainOutlineColor);
-                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX + 1, spriteY), sourceRect, mainOutlineColor);
-                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX, spriteY - 1), sourceRect, mainOutlineColor);
-                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX, spriteY + 1), sourceRect, mainOutlineColor);
+                spriteBatch.DrawSnapped(iconSilhouette, drawPos + new Vector2(-1, 0) * displayScale, sourceRect, mainOutlineColor, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
+                spriteBatch.DrawSnapped(iconSilhouette, drawPos + new Vector2(1, 0) * displayScale, sourceRect, mainOutlineColor, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
+                spriteBatch.DrawSnapped(iconSilhouette, drawPos + new Vector2(0, -1) * displayScale, sourceRect, mainOutlineColor, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
+                spriteBatch.DrawSnapped(iconSilhouette, drawPos + new Vector2(0, 1) * displayScale, sourceRect, mainOutlineColor, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
             }
 
             if (iconTexture != null)
             {
                 Color tint = iconTint ?? Color.White;
-                spriteBatch.DrawSnapped(iconTexture, new Vector2(spriteX, spriteY), sourceRect, tint);
+                spriteBatch.DrawSnapped(iconTexture, drawPos, sourceRect, tint, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
             }
 
             // 2. Draw Name (Overlapping Bottom of Sprite)
@@ -783,12 +803,12 @@ namespace ProjectVagabond.UI
                 else
                 {
                     const int padding = 2;
-                    const int spriteSize = 32;
+                    const int spriteSize = 16; // Use 16px for tight fit in stats panel
                     const int gap = 4;
 
                     // 1. Sprite (Top Left - Centered Horizontally)
                     int spriteX = _statsPanelArea.X + (_statsPanelArea.Width - spriteSize) / 2;
-                    int spriteY = _statsPanelArea.Y;
+                    int spriteY = _statsPanelArea.Y + 12; // Moved down 12px
 
                     string name = "";
                     string description = "";
@@ -843,7 +863,8 @@ namespace ProjectVagabond.UI
                     }
 
                     // 2. Title
-                    float titleBottomY = spriteY + spriteSize + gap;
+                    // Added + 12 to move it down as requested
+                    float titleBottomY = spriteY + spriteSize + gap + 12;
                     int maxTitleWidth = _statsPanelArea.Width - (4 * 2);
 
                     var titleLines = ParseAndWrapRichText(font, name, maxTitleWidth, _global.Palette_BrightWhite);
@@ -981,7 +1002,9 @@ namespace ProjectVagabond.UI
                         {
                             Vector2 center = destRect.Center.ToVector2();
                             Vector2 origin = new Vector2(_portraitBgFrame.Width / 2f, _portraitBgFrame.Height / 2f);
-                            spriteBatch.DrawSnapped(_spriteManager.InventorySlotIdleSpriteSheet, center, _portraitBgFrame, Color.White, 0f, origin, 1f, SpriteEffects.None, 0f);
+                            // Scale up the 24x24 frame to 32x32
+                            float scale = 32f / 24f;
+                            spriteBatch.DrawSnapped(_spriteManager.InventorySlotIdleSpriteSheet, center, _portraitBgFrame, Color.White, 0f, origin, scale, SpriteEffects.None, 0f);
                         }
                     }
 
@@ -1129,13 +1152,13 @@ namespace ProjectVagabond.UI
                 var member = _gameState.PlayerState.Party[_currentPartyMemberIndex];
 
                 var stats = new List<(string Label, string StatKey)>
-                {
-                    ("MAX HP", "MaxHP"),
-                    ("STRNTH", "Strength"),
-                    ("INTELL", "Intelligence"),
-                    ("TENACT", "Tenacity"),
-                    ("AGILTY", "Agility")
-                };
+            {
+                ("MAX HP", "MaxHP"),
+                ("STRNTH", "Strength"),
+                ("INTELL", "Intelligence"),
+                ("TENACT", "Tenacity"),
+                ("AGILTY", "Agility")
+            };
 
                 int startX = _statsPanelArea.X + 3;
                 int startY = _statsPanelArea.Y + 77;

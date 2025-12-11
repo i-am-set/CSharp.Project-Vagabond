@@ -6,6 +6,7 @@ using ProjectVagabond.Battle;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -203,17 +204,13 @@ namespace ProjectVagabond.UI
                         if (IsEquipped && spriteManager.InventorySlotEquipIconSprite != null)
                         {
                             var equipRect = spriteManager.GetEquipIconSourceRect(gameTime);
-                            // Draw at top-left of the slot (Bounds.X, Bounds.Y).
-                            // Since we are using center for other things, we can just use Bounds.Location.
-                            // We scale it with _visualScale to match the pop-in.
-                            // The icon is 32x32, slot is 48x48.
-                            // If we draw at Bounds.X, Bounds.Y, it aligns to top-left.
-                            // To scale from center of the icon (16,16), we need to adjust position.
-                            // Center of icon relative to slot top-left is (16, 16).
-                            // Target pos = Bounds.Location + (16, 16).
-                            Vector2 equipCenter = new Vector2(Bounds.X + 16, Bounds.Y + 16);
-                            Vector2 equipOrigin = new Vector2(16, 16);
-                            spriteBatch.DrawSnapped(spriteManager.InventorySlotEquipIconSprite, equipCenter, equipRect, Color.White, 0f, equipOrigin, _visualScale, SpriteEffects.None, 0f);
+                            // Draw centered on the slot.
+                            // The equip icon is 32x32. The slot is 24x24.
+                            // User requested full size (32x32).
+                            Vector2 equipOrigin = new Vector2(16, 16); // Center of 32x32 sprite
+                            float equipScale = 1.0f * _visualScale; // Full size + animation scale
+
+                            spriteBatch.DrawSnapped(spriteManager.InventorySlotEquipIconSprite, center, equipRect, Color.White, 0f, equipOrigin, equipScale, SpriteEffects.None, 0f);
                         }
 
                         // Draw Rarity Icon
@@ -223,7 +220,6 @@ namespace ProjectVagabond.UI
                             // Position at top-right of the item sprite.
                             // Item sprite is centered. Top-right relative to center is (Width/2, -Height/2).
                             // We want the rarity icon's center to be slightly inside the corner.
-                            // Let's align the top-right of the rarity icon with the top-right of the item.
                             // Rarity icon is 8x8. Origin is (4,4).
                             // Item Top-Right is (W/2, -H/2).
                             // Rarity Pos = Center + (W/2 - 4, -H/2 + 4) * Scale.
@@ -254,7 +250,7 @@ namespace ProjectVagabond.UI
                     string qty = $"x{Quantity}";
                     var qtySize = secondaryFont.MeasureString(qty);
                     // Position quantity at bottom right relative to center
-                    Vector2 qtyOffset = new Vector2(Bounds.Width / 2f - qtySize.Width - 4, Bounds.Height / 2f - qtySize.Height - 4);
+                    Vector2 qtyOffset = new Vector2(Bounds.Width / 2f - qtySize.Width - 2, Bounds.Height / 2f - qtySize.Height - 2);
                     // Scale the offset so it stays relative to the shrinking box
                     Vector2 qtyPos = center + qtyOffset * _visualScale;
                     // Scale the text itself

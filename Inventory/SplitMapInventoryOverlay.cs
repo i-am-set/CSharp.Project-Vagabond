@@ -21,7 +21,6 @@ namespace ProjectVagabond.UI
     public partial class SplitMapInventoryOverlay
     {
         public bool IsOpen { get; private set; } = false;
-
         // Expose hover state to block map interaction
         public bool IsHovered => _inventoryButton?.IsHovered ?? false;
         private readonly GameState _gameState;
@@ -70,7 +69,7 @@ namespace ProjectVagabond.UI
         // Pagination State
         private int _currentPage = 0;
         private int _totalPages = 0;
-        private const int ITEMS_PER_PAGE = 12;
+        private const int ITEMS_PER_PAGE = 30; // 6x5 grid
 
         private InventoryCategory _selectedInventoryCategory;
         private InventoryCategory _previousInventoryCategory;
@@ -78,14 +77,14 @@ namespace ProjectVagabond.UI
 
         // Navigation Order Definition
         private readonly List<InventoryCategory> _categoryOrder = new()
-        {
-            InventoryCategory.Weapons,
-            InventoryCategory.Armor,
-            InventoryCategory.Relics,
-            InventoryCategory.Spells,
-            InventoryCategory.Consumables,
-            InventoryCategory.Misc
-        };
+    {
+        InventoryCategory.Weapons,
+        InventoryCategory.Armor,
+        InventoryCategory.Relics,
+        InventoryCategory.Spells,
+        InventoryCategory.Consumables,
+        InventoryCategory.Misc
+    };
 
         // Animation State
         private float _inventoryArrowAnimTimer;
@@ -213,9 +212,11 @@ namespace ProjectVagabond.UI
             // Initialize inventory slot grid
             const int slotContainerWidth = 180;
             const int slotContainerHeight = 132;
-            const int slotColumns = 4;
-            const int slotRows = 3;
-            const int slotSize = 48;
+            const int slotColumns = 6;
+            const int slotRows = 5;
+            const int slotSize = 24;
+            const int gridPaddingX = 18; // 18px buffer on sides
+            const int gridPaddingY = 8;  // 8px buffer on top/bottom
 
             int containerX = (Global.VIRTUAL_WIDTH - slotContainerWidth) / 2 - 60;
             int containerY = 200 + 6 + 32 + 1;
@@ -233,8 +234,13 @@ namespace ProjectVagabond.UI
 
             _inventorySlots.Clear();
 
-            float spaceBetweenX = (slotColumns > 1) ? (float)(slotContainerWidth - (slotSize)) / (slotColumns - 1) : 0;
-            float spaceBetweenY = (slotRows > 1) ? (float)(slotContainerHeight - (slotSize)) / (slotRows - 1) : 0;
+            // Calculate available space inside the padding
+            float availableWidth = slotContainerWidth - (gridPaddingX * 2);
+            float availableHeight = slotContainerHeight - (gridPaddingY * 2);
+
+            // Calculate spacing based on available space
+            float spaceBetweenX = (slotColumns > 1) ? (availableWidth - slotSize) / (slotColumns - 1) : 0;
+            float spaceBetweenY = (slotRows > 1) ? (availableHeight - slotSize) / (slotRows - 1) : 0;
 
             var slotFrames = _spriteManager.InventorySlotSourceRects;
             if (slotFrames != null && slotFrames.Length > 0)
@@ -243,8 +249,10 @@ namespace ProjectVagabond.UI
                 {
                     for (int col = 0; col < slotColumns; col++)
                     {
-                        float nodeX = _inventorySlotArea.X + (slotSize / 2f) + (col * spaceBetweenX);
-                        float nodeY = _inventorySlotArea.Y + (slotSize / 2f) + (row * spaceBetweenY);
+                        // Start from Area.X + Padding + HalfSlot
+                        float nodeX = _inventorySlotArea.X + gridPaddingX + (slotSize / 2f) + (col * spaceBetweenX);
+                        float nodeY = _inventorySlotArea.Y + gridPaddingY + (slotSize / 2f) + (row * spaceBetweenY);
+
                         var position = new Vector2(MathF.Round(nodeX), MathF.Round(nodeY));
                         var bounds = new Rectangle((int)(position.X - slotSize / 2f), (int)(position.Y - slotSize / 2f), slotSize, slotSize);
 

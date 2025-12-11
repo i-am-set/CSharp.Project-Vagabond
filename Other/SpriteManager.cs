@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿#nullable enable
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -480,7 +481,7 @@ namespace ProjectVagabond
         private void InitializeInventorySlotRects()
         {
             if (InventorySlotIdleSpriteSheet == null) return;
-            const int frameSize = 48; // Frames are 48x48
+            const int frameSize = 24; // Updated to 24x24
             int frameCount = InventorySlotIdleSpriteSheet.Width / frameSize;
             InventorySlotSourceRects = new Rectangle[frameCount];
             for (int i = 0; i < frameCount; i++)
