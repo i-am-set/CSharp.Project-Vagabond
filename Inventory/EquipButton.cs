@@ -158,7 +158,8 @@ namespace ProjectVagabond.UI
                     // Rarity icon is 8x8.
                     // We want the rarity icon's top-right to align with destRect's top-right.
                     // Rarity Pos = (destRect.Right - 8, destRect.Top).
-                    Vector2 rarityPos = new Vector2(destRect.Right - 8, destRect.Top);
+                    // ADJUSTMENT: Moved Up 2px (-2) and Right 3px (+3)
+                    Vector2 rarityPos = new Vector2(destRect.Right - 8 + 3, destRect.Top - 2);
                     spriteBatch.DrawSnapped(spriteManager.RarityIconsSpriteSheet, rarityPos, rarityRect, Color.White);
                 }
             }

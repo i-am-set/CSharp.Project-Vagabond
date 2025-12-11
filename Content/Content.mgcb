@@ -422,6 +422,54 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/Items/Consumables/health_potion.png;Sprites/Items/Consumables/health_potion
 
+#begin Sprites/Items/item_armor_spritesheet.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Items/item_armor_spritesheet.png;Sprites/Items/item_armor_spritesheet
+
+#begin Sprites/Items/item_consumables_spritesheet.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Items/item_consumables_spritesheet.png;Sprites/Items/item_consumables_spritesheet
+
+#begin Sprites/Items/item_relics_spritesheet.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Items/item_relics_spritesheet.png;Sprites/Items/item_relics_spritesheet
+
+#begin Sprites/Items/item_weapons_spritesheet.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Items/item_weapons_spritesheet.png;Sprites/Items/item_weapons_spritesheet
+
 #begin Sprites/Items/Relics/allseeingeye.png
 /importer:TextureImporter
 /processor:TextureProcessor

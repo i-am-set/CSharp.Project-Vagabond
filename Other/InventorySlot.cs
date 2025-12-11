@@ -223,10 +223,11 @@ namespace ProjectVagabond.UI
                             // Rarity icon is 8x8. Origin is (4,4).
                             // Item Top-Right is (W/2, -H/2).
                             // Rarity Pos = Center + (W/2 - 4, -H/2 + 4) * Scale.
+                            // ADJUSTMENT: Moved Up 2px (-2) and Right 3px (+3)
                             float width = IsAnimated ? sourceRect.Value.Width : icon.Width;
                             float height = IsAnimated ? sourceRect.Value.Height : icon.Height;
 
-                            Vector2 rarityOffset = new Vector2(width / 2f - 4, -height / 2f + 4) * _visualScale;
+                            Vector2 rarityOffset = new Vector2(width / 2f - 4 + 3, -height / 2f + 4 - 2) * _visualScale;
                             Vector2 rarityPos = center + rarityOffset;
                             Vector2 rarityOrigin = new Vector2(4, 4);
 

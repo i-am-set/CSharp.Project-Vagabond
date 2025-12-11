@@ -7,7 +7,6 @@ namespace ProjectVagabond.Battle
         public string MemberID { get; set; }
         public string Name { get; set; }
         public string Description { get; set; }
-
         // Base Stats
         public int MaxHP { get; set; }
         public int MaxMana { get; set; }
@@ -22,6 +21,10 @@ namespace ProjectVagabond.Battle
         // Starting Loadout
         public List<string> StartingSpells { get; set; } = new List<string>();
         public List<string> StartingActions { get; set; } = new List<string>();
-        public Dictionary<string, int> StartingEquipment { get; set; } = new Dictionary<string, int>(); // "WeaponID": 1
+
+        // Split equipment to avoid ID collisions (since Weapon "0" and Armor "0" are different items)
+        public Dictionary<string, int> StartingWeapons { get; set; } = new Dictionary<string, int>();
+        public Dictionary<string, int> StartingArmor { get; set; } = new Dictionary<string, int>();
+        public Dictionary<string, int> StartingRelics { get; set; } = new Dictionary<string, int>();
     }
 }

@@ -13,9 +13,11 @@
     "DefaultStrikeMoveID": "ClawRake",
     "StartingSpells": [ "CinderSpark", "VampiricBite" ],
     "StartingActions": [ "ShoulderBash" ],
-    "StartingEquipment": {
-      "IronSword": 1,
-      "LeatherTunic": 1
+    "StartingWeapons": {
+      "0": 1
+    },
+    "StartingArmor": {
+      "0": 1
     }
   },
   {
@@ -32,9 +34,11 @@
     "DefaultStrikeMoveID": "VenomJab",
     "StartingSpells": [ "VenomJab", "SwiftStrike" ],
     "StartingActions": [ "Dodge" ],
-    "StartingEquipment": {
-      "PoisonDagger": 1,
-      "LeatherTunic": 1
+    "StartingWeapons": {
+      "2": 1
+    },
+    "StartingArmor": {
+      "0": 1
     }
   },
   {
@@ -51,9 +55,8 @@
     "DefaultStrikeMoveID": "EtherDart",
     "StartingSpells": [ "EtherDart", "Pyrosphere" ],
     "StartingActions": [ "Dodge" ],
-    "StartingEquipment": {
-      "ArchMageRobes": 1
+    "StartingArmor": {
+      "2": 1
     }
   }
-
 ]

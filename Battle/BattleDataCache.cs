@@ -21,9 +21,7 @@ namespace ProjectVagabond.Battle
         public static Dictionary<string, WeaponData> Weapons { get; private set; }
         public static Dictionary<string, ArmorData> Armors { get; private set; }
         public static Dictionary<string, MiscItemData> MiscItems { get; private set; }
-        // NEW: Party Members
         public static Dictionary<string, PartyMemberData> PartyMembers { get; private set; }
-
         public static void LoadData(ContentManager content)
         {
             var jsonOptions = new JsonSerializerOptions
@@ -101,7 +99,7 @@ namespace ProjectVagabond.Battle
             }
             else MiscItems = new Dictionary<string, MiscItemData>();
 
-            // --- PARTY MEMBERS (NEW) ---
+            // --- PARTY MEMBERS ---
             string partyPath = Path.Combine(content.RootDirectory, "Data", "PartyMembers.json");
             if (File.Exists(partyPath))
             {

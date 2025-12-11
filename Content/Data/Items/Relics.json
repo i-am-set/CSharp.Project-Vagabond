@@ -1,6 +1,6 @@
 [
   {
-    "RelicID": "verdanttalisman",
+    "RelicID": "0",
     "RelicName": "Verdant Talisman",
     "AbilityName": "Green Thumb",
     "Description": "[cnature]Nature[/] spells deal[cpositive] 1.2x[/] damage and holder has element '[cnature]Nature[/]'",
@@ -16,7 +16,7 @@
     "Tags": [ "Nature", "Defense" ]
   },
   {
-    "RelicID": "warmring",
+    "RelicID": "1",
     "RelicName": "Warm Ring",
     "AbilityName": "Pyromancer",
     "Description": "[cfire]Fire[/] spells deal[cpositive] 1.2x[/] damage",
@@ -28,7 +28,7 @@
     "Tags": [ "Fire" ]
   },
   {
-    "RelicID": "tidalstone",
+    "RelicID": "2",
     "RelicName": "Tidal Stone",
     "AbilityName": "Hydromancer",
     "Description": "[cwater]Water[/] spells deal[cpositive] 1.2x[/] damage",
@@ -40,7 +40,7 @@
     "Tags": [ "Water" ]
   },
   {
-    "RelicID": "arcanistsring",
+    "RelicID": "3",
     "RelicName": "Arcanist's Ring",
     "AbilityName": "Thaumomancer",
     "Description": "[carcane]Arcane[/] spells deal[cpositive] 1.2x[/] damage",
@@ -52,7 +52,7 @@
     "Tags": [ "Arcane" ]
   },
   {
-    "RelicID": "earthencore",
+    "RelicID": "4",
     "RelicName": "Earthen Core",
     "AbilityName": "Geomancer",
     "Description": "[cearth]Earth[/] spells deal[cpositive] 1.2x[/] damage",
@@ -64,7 +64,7 @@
     "Tags": [ "Earth" ]
   },
   {
-    "RelicID": "lodestone",
+    "RelicID": "5",
     "RelicName": "Lodestone",
     "AbilityName": "Ferromancer",
     "Description": "[cmetal]Metal[/] spells deal[cpositive] 1.2x[/] damage",
@@ -76,7 +76,7 @@
     "Tags": [ "Metal" ]
   },
   {
-    "RelicID": "serpentsfang",
+    "RelicID": "6",
     "RelicName": "Serpent's Fang",
     "AbilityName": "Venommancer",
     "Description": "[ctoxic]Toxic[/] spells deal[cpositive] 1.2x[/] damage",
@@ -88,7 +88,7 @@
     "Tags": [ "Toxic" ]
   },
   {
-    "RelicID": "zephyrcharm",
+    "RelicID": "7",
     "RelicName": "Zephyr Charm",
     "AbilityName": "Aeromancer",
     "Description": "[cwind]Wind[/] spells deal[cpositive] 1.2x[/] damage",
@@ -100,7 +100,7 @@
     "Tags": [ "Wind" ]
   },
   {
-    "RelicID": "voidheartshard",
+    "RelicID": "8",
     "RelicName": "Voidheart Shard",
     "AbilityName": "Umbramancer",
     "Description": "[cvoid]Void[/] spells deal[cpositive] 1.2x[/] damage",
@@ -112,7 +112,7 @@
     "Tags": [ "Void" ]
   },
   {
-    "RelicID": "sunstone",
+    "RelicID": "9",
     "RelicName": "Sunstone",
     "AbilityName": "Photomancer",
     "Description": "[clight]Light[/] spells deal[cpositive] 1.2x[/] damage",
@@ -124,7 +124,7 @@
     "Tags": [ "Light" ]
   },
   {
-    "RelicID": "stormcallerorb",
+    "RelicID": "10",
     "RelicName": "Stormcaller Orb",
     "AbilityName": "Electromancer",
     "Description": "[celectric]Electric[/] spells deal[cpositive] 1.2x[/] damage",
@@ -136,7 +136,7 @@
     "Tags": [ "Electric" ]
   },
   {
-    "RelicID": "hoarfrostcrystal",
+    "RelicID": "11",
     "RelicName": "Hoarfrost Crystal",
     "AbilityName": "Cryomancer",
     "Description": "[cice]Ice[/] spells deal[cpositive] 1.2x[/] damage",
@@ -148,7 +148,7 @@
     "Tags": [ "Ice" ]
   },
   {
-    "RelicID": "everblossomseed",
+    "RelicID": "12",
     "RelicName": "Everblossom Seed",
     "AbilityName": "Floramancer",
     "Description": "[cnature]Nature[/] spells deal[cpositive] 1.2x[/] damage",
@@ -160,7 +160,7 @@
     "Tags": [ "Nature" ]
   },
   {
-    "RelicID": "viperskiss",
+    "RelicID": "13",
     "RelicName": "Viper's Kiss",
     "AbilityName": "Venomous",
     "Description": "[cpositive]50%[/] chance to inflict [cpoison]poison[/] with [cctm]contact[/]",
@@ -172,7 +172,7 @@
     "Tags": [ "Toxic", "StatusEffect" ]
   },
   {
-    "RelicID": "trollhidebracers",
+    "RelicID": "14",
     "RelicName": "Trollhide Bracers",
     "AbilityName": "Thick Skin",
     "Description": "Receive [cpositive]0.8x[/] physical damage",
@@ -187,7 +187,7 @@
     "Tags": [ "Defense" ]
   },
   {
-    "RelicID": "eagleeyescope",
+    "RelicID": "15",
     "RelicName": "Eagle-Eye Scope",
     "AbilityName": "Sniper",
     "Description": "Increases [ccrit]crit[/] chance by [cpositive]10%[/]",
@@ -199,7 +199,7 @@
     "Tags": [ "Critical" ]
   },
   {
-    "RelicID": "phoenixash",
+    "RelicID": "16",
     "RelicName": "Phoenix Ash",
     "AbilityName": "Regeneration",
     "Description": "Restore [cpositive]5%[/] HP [cctm]at end of turn[/]",
@@ -211,7 +211,7 @@
     "Tags": [ "Healing", "Defense" ]
   },
   {
-    "RelicID": "vulturespendant",
+    "RelicID": "17",
     "RelicName": "Vulture's Pendant",
     "AbilityName": "Opportunist",
     "Description": "Targets with [cctm]status effects[/] take [cpositive]2.0x[/] damage",
@@ -223,7 +223,7 @@
     "Tags": [ "StatusEffect" ]
   },
   {
-    "RelicID": "voltaicmantle",
+    "RelicID": "18",
     "RelicName": "Voltaic Mantle",
     "AbilityName": "Static Charge",
     "Description": "[cpositive]30%[/] chance to stun attackers that [cctm]make contact[/]",
@@ -235,7 +235,7 @@
     "Tags": [ "Electric", "StatusEffect", "Defense" ]
   },
   {
-    "RelicID": "berserkersheart",
+    "RelicID": "19",
     "RelicName": "Berserker's Heart",
     "AbilityName": "Adrenaline Rush",
     "Description": "Deal [cpositive]2.0x[] damage [cctm]below 33% HP[/]",
@@ -251,7 +251,7 @@
     "Tags": [ "LowHP" ]
   },
   {
-    "RelicID": "sunblessedleaf",
+    "RelicID": "20",
     "RelicName": "Sun-Blessed Leaf",
     "AbilityName": "Photosynthesis",
     "Description": "[cimmune]Immune[/] to [clight]Light[/] based moves; heal [cpositive]25%[/] HP instead",
@@ -263,7 +263,7 @@
     "Tags": [ "Light", "Healing", "Defense" ]
   },
   {
-    "RelicID": "anchorcharm",
+    "RelicID": "21",
     "RelicName": "Anchor Charm",
     "AbilityName": "Last Stand",
     "Description": "[cpositive]2.0x[/] power of holder's attacks [cctm]when acting last in the turn[/]",
@@ -279,7 +279,7 @@
     "Tags": []
   },
   {
-    "RelicID": "cursedhourglass",
+    "RelicID": "22",
     "RelicName": "Cursed Hourglass",
     "AbilityName": "Lingering Curse",
     "Description": "Status effects inflicted by holder last [cpositive]+1 extra turn[/]",
@@ -291,7 +291,7 @@
     "Tags": [ "StatusEffect" ]
   },
   {
-    "RelicID": "rubbersoles",
+    "RelicID": "23",
     "RelicName": "Rubber Soles",
     "AbilityName": "Grounding",
     "Description": "[cimmune]Immune[/] to [celectric]Electric[/] based moves",
@@ -303,7 +303,7 @@
     "Tags": [ "Electric", "Defense" ]
   },
   {
-    "RelicID": "idolofdisease",
+    "RelicID": "24",
     "RelicName": "Idol of Disease",
     "AbilityName": "Toxic Aura",
     "Description": "[cpositive]50%[/] chance to [cpoison]poison[/] a random enemy [cctm]at end of turn[/]",
@@ -315,7 +315,7 @@
     "Tags": [ "Toxic", "StatusEffect" ]
   },
   {
-    "RelicID": "sealedenvelope",
+    "RelicID": "25",
     "RelicName": "Sealed Envelope",
     "AbilityName": "Unwavering",
     "Description": "[cimmune]Immune[/] to [cstun]Stun[/] and [cfear]Fear[/]",
@@ -327,7 +327,7 @@
     "Tags": [ "Defense", "StatusEffect" ]
   },
   {
-    "RelicID": "bulwarkshield",
+    "RelicID": "26",
     "RelicName": "Bulwark Shield",
     "AbilityName": "Bulwark",
     "Description": "Receive [cpositive]0.6x[/] [ccrit]crit[/] damage",
@@ -342,7 +342,7 @@
     "Tags": [ "Defense", "Critical" ]
   },
   {
-    "RelicID": "assassinsmark",
+    "RelicID": "27",
     "RelicName": "Assassin's Mark",
     "AbilityName": "First Blood",
     "Description": "Holder's [cctm]first[/] attack deals [cpositive]1.5x[/] damage",
@@ -357,7 +357,7 @@
     "Tags": []
   },
   {
-    "RelicID": "gorgonsgaze",
+    "RelicID": "28",
     "RelicName": "Gorgon's Gaze",
     "AbilityName": "Intimidate",
     "Description": "Lower all enemy [cstr]Strength[/] stat by [cpositive]-1[/] [cctm]on entering battle[/]",
@@ -369,7 +369,7 @@
     "Tags": [ "StatusEffect" ]
   },
   {
-    "RelicID": "spikedcarapace",
+    "RelicID": "29",
     "RelicName": "Spiked Carapace",
     "AbilityName": "Iron Barbs",
     "Description": "Attackers lose [cpositive]12.5%[/] max HP [cctm]on contact[/]",
@@ -381,7 +381,7 @@
     "Tags": [ "Defense" ]
   },
   {
-    "RelicID": "pristinegem",
+    "RelicID": "30",
     "RelicName": "Pristine Gem",
     "AbilityName": "Full Power",
     "Description": "Deal [cpositive]1.5x[/] damage [cctm]at full HP[/]",
@@ -393,7 +393,7 @@
     "Tags": []
   },
   {
-    "RelicID": "allseeingeye",
+    "RelicID": "31",
     "RelicName": "All-Seeing Eye",
     "AbilityName": "Keen Eye",
     "Description": "Holder's moves [cpositive]ignore[/] [cdodging]dodging[/] status effect",
@@ -408,7 +408,7 @@
     "Tags": []
   },
   {
-    "RelicID": "ghostlyslippers",
+    "RelicID": "32",
     "RelicName": "Ghostly Slippers",
     "AbilityName": "Nimble Feet",
     "Description": "WIP 50% chance attacks miss while dodging WIP",
@@ -423,7 +423,7 @@
     "Tags": [ "Defense" ]
   },
   {
-    "RelicID": "shatteredamulet",
+    "RelicID": "33",
     "RelicName": "Shattered Amulet",
     "AbilityName": "Glass Cannon",
     "Description": "Deal [cpositive]1.3x[/] damage but Receive [cnegative]1.15x[/] damage",
@@ -440,7 +440,7 @@
     "Tags": []
   },
   {
-    "RelicID": "dominostone",
+    "RelicID": "34",
     "RelicName": "Domino Stone",
     "AbilityName": "Chain Reaction",
     "Description": "Multi-hit moves gain [cpositive]5%[] damage per hit",
@@ -452,7 +452,7 @@
     "Tags": [ "MultiHit" ]
   },
   {
-    "RelicID": "crackedgauntlet",
+    "RelicID": "35",
     "RelicName": "Cracked Gauntlet",
     "AbilityName": "Reckless Abandon",
     "Description": "Contact moves deal [cpositive]1.5x[/] damage but [cnegative]-10%[/] accuracy",
@@ -467,7 +467,7 @@
     "Tags": []
   },
   {
-    "RelicID": "scorpionstinger",
+    "RelicID": "36",
     "RelicName": "Scorpion Stinger",
     "AbilityName": "Armor Piercer",
     "Description": "Ignore [cpositive]25%[/] of target's [cten]Tenacity[/]",
@@ -479,7 +479,7 @@
     "Tags": []
   },
   {
-    "RelicID": "leechtoothnecklace",
+    "RelicID": "37",
     "RelicName": "Leech-Tooth Necklace",
     "AbilityName": "Sanguine Thirst",
     "Description": "Heal [cpositive]25%[/] of damage dealt [cctm]with contact moves[/]",
@@ -491,7 +491,7 @@
     "Tags": [ "Lifesteal", "Healing" ]
   },
   {
-    "RelicID": "oakenheart",
+    "RelicID": "38",
     "RelicName": "Oaken Heart",
     "AbilityName": "Vigor",
     "Description": "Receive [cpositive]0.5x[/] damage [cctm]above 75% HP[/]",
@@ -506,7 +506,7 @@
     "Tags": [ "Defense" ]
   },
   {
-    "RelicID": "priestspendant",
+    "RelicID": "39",
     "RelicName": "Priest's Pendant",
     "AbilityName": "Cornered Animal",
     "Description": "[cpositive]1.5x[/] [cagi]Agility[/] [cctm]when below 33% HP[/] [cetc](or 4+ enemies)[/]",
@@ -518,7 +518,7 @@
     "Tags": [ "LowHP" ]
   },
   {
-    "RelicID": "miasmavial",
+    "RelicID": "40",
     "RelicName": "Miasma Vial",
     "AbilityName": "Contagion",
     "Description": "Status effects [cpositive]spread[/] to another enemy for [cpositive]+1[/] turn",
@@ -530,7 +530,7 @@
     "Tags": [ "StatusEffect" ]
   },
   {
-    "RelicID": "shadowcloak",
+    "RelicID": "41",
     "RelicName": "Shadow Cloak",
     "AbilityName": "Ambush Predator",
     "Description": "First attack gains [cpositive]+1[/] priority but [cnegative]0.8x[/] damage",
@@ -545,7 +545,7 @@
     "Tags": [ "Priority" ]
   },
   {
-    "RelicID": "ironmaidenfragment",
+    "RelicID": "42",
     "RelicName": "Iron Maiden Fragment",
     "AbilityName": "Sadist",
     "Description": "[cctm]Applying status effects[/] raises [cstr]Strength[/] by [cpositive]+1[/]",
@@ -557,7 +557,7 @@
     "Tags": [ "StatusEffect", "Buff" ]
   },
   {
-    "RelicID": "sacrificialdagger",
+    "RelicID": "43",
     "RelicName": "Sacrificial Dagger",
     "AbilityName": "Bloodletter",
     "Description": "[cvoid]Void[/] spells cost [cnegative]5%[/] HP but deal [cpositive]1.5x[/] damage",
@@ -569,7 +569,7 @@
     "Tags": [ "Void", "HPCost" ]
   },
   {
-    "RelicID": "runicweave",
+    "RelicID": "44",
     "RelicName": "Runic Weave",
     "AbilityName": "Spellweaver",
     "Description": "[cctm]After an Action[/], holder's next Spell deals [cpositive]1.5x[/] damage",
@@ -585,7 +585,7 @@
     "Tags": []
   },
   {
-    "RelicID": "leadhelmet",
+    "RelicID": "45",
     "RelicName": "Lead Helmet",
     "AbilityName": "Momentum",
     "Description": "[cctm]After defeating a target[/], next attack deals [cpositive]2.0x[/] damage",
@@ -601,7 +601,7 @@
     "Tags": []
   },
   {
-    "RelicID": "whetstone",
+    "RelicID": "46",
     "RelicName": "Whetstone",
     "AbilityName": "Escalation",
     "Description": "Gain [cpositive]1.1x[/] damage each round, up to [cpositive]2.0x[/]",
@@ -613,7 +613,7 @@
     "Tags": []
   },
   {
-    "RelicID": "masochistsmail",
+    "RelicID": "47",
     "RelicName": "Masochist's Mail",
     "AbilityName": "Pain Fuel",
     "Description": "Taking [ccrit]crit[/] damage raises [cstr]Strength[/] and [cint]Intelligence[/] by [cpositive]+1[/]",
@@ -628,7 +628,7 @@
     "Tags": [ "Critical", "Buff", "Defense" ]
   },
   {
-    "RelicID": "ichorousheart",
+    "RelicID": "48",
     "RelicName": "Ichorous Heart",
     "AbilityName": "Caustic Blood",
     "Description": "Lifesteal against holder [cpositive]damages[/] the attacker instead of healing",

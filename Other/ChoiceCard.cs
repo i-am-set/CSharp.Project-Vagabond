@@ -552,9 +552,10 @@ namespace ProjectVagabond.UI
                         var rarityRect = spriteManager.GetRarityIconSourceRect(_rarity, gameTime);
                         // Position at top-right of the relic icon.
                         // Relic icon is 32x32. Rarity icon is 8x8.
-                        // Align top-right of rarity icon with top-right of relic icon.
+                        // We want the rarity icon's top-right to align with relicRect's top-right.
                         // Rarity Pos = (relicRect.Right - 8, relicRect.Top).
-                        Vector2 rarityPos = new Vector2(relicRect.Right - 8, relicRect.Top);
+                        // ADJUSTMENT: Moved Up 2px (-2) and Right 3px (+3)
+                        Vector2 rarityPos = new Vector2(relicRect.Right - 8 + 3, relicRect.Top - 2);
                         spriteBatch.DrawSnapped(spriteManager.RarityIconsSpriteSheet, rarityPos, rarityRect, Color.White * alpha);
                     }
 

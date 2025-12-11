@@ -1,6 +1,6 @@
 [
   {
-    "ArmorID": "leathertunic",
+    "ArmorID": "0",
     "ArmorName": "Leather Tunic",
     "AbilityName": null,
     "Description": "[cetc]A simple tunic made of cured hide[/]",
@@ -13,7 +13,7 @@
     "Tags": [ "Leather", "Light" ]
   },
   {
-    "ArmorID": "ironplate",
+    "ArmorID": "1",
     "ArmorName": "Iron Plate",
     "AbilityName": "Heavy Plating",
     "Description": "[cetc]Iron sheets riveted together[/]",
@@ -29,7 +29,7 @@
     "Tags": [ "Metal", "Heavy" ]
   },
   {
-    "ArmorID": "archmagerobes",
+    "ArmorID": "2",
     "ArmorName": "Arch-Mage Robes",
     "AbilityName": "Mana Well",
     "Description": "[cetc]Silk robes enchanted to channel mage[/]",
@@ -45,7 +45,7 @@
     "Tags": [ "Cloth", "Magic" ]
   },
   {
-    "ArmorID": "berserkerscloak",
+    "ArmorID": "3",
     "ArmorName": "Berserker's Cloak",
     "AbilityName": "Savage Fury",
     "Description": "[cetc]A cloak made from the hide of a great beast[/]",

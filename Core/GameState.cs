@@ -27,7 +27,6 @@ namespace ProjectVagabond
     {
         World
     }
-
     public class GameState
     {
         private readonly NoiseMapManager _noiseManager;
@@ -110,10 +109,17 @@ namespace ProjectVagabond
             // 3. Add Oakley's starting gear to the shared inventory
             if (BattleDataCache.PartyMembers.TryGetValue("0", out var oakleyData))
             {
-                foreach (var kvp in oakleyData.StartingEquipment)
+                foreach (var kvp in oakleyData.StartingWeapons)
                 {
                     if (BattleDataCache.Weapons.ContainsKey(kvp.Key)) PlayerState.AddWeapon(kvp.Key, kvp.Value);
-                    else if (BattleDataCache.Armors.ContainsKey(kvp.Key)) PlayerState.AddArmor(kvp.Key, kvp.Value);
+                }
+                foreach (var kvp in oakleyData.StartingArmor)
+                {
+                    if (BattleDataCache.Armors.ContainsKey(kvp.Key)) PlayerState.AddArmor(kvp.Key, kvp.Value);
+                }
+                foreach (var kvp in oakleyData.StartingRelics)
+                {
+                    if (BattleDataCache.Relics.ContainsKey(kvp.Key)) PlayerState.AddRelic(kvp.Key, kvp.Value);
                 }
             }
 

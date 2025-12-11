@@ -102,12 +102,13 @@ namespace ProjectVagabond.UI
                     foreach (var kvp in _gameState.PlayerState.Consumables)
                     {
                         if (BattleDataCache.Consumables.TryGetValue(kvp.Key, out var data))
-                            currentItems.Add((data.ItemName, kvp.Value, data.ImagePath, null, 0, null, false, null, false)); // Consumables default to 0 rarity, never equipped
+                            // Use the new ID-based path format
+                            currentItems.Add((data.ItemName, kvp.Value, $"Sprites/Items/Consumables/{data.ItemID}", null, 0, null, false, null, false));
                         else
                             currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Consumables/{kvp.Key}", null, 0, null, false, null, false));
                     }
                     break;
-                case InventoryCategory.Misc: // <--- Added
+                case InventoryCategory.Misc:
                     foreach (var kvp in _gameState.PlayerState.MiscItems)
                     {
                         if (BattleDataCache.MiscItems.TryGetValue(kvp.Key, out var data))

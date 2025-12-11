@@ -15,11 +15,9 @@ namespace ProjectVagabond
                 Debug.WriteLine($"[PartyMemberFactory] Error: Member ID '{memberId}' not found in cache.");
                 return null;
             }
-
             var member = new PartyMember
             {
                 Name = data.Name,
-                // ArchetypeId is no longer set here. It defaults to "player" logic in BattleScene.
                 Level = 1,
                 MaxHP = data.MaxHP,
                 CurrentHP = data.MaxHP,
@@ -31,7 +29,6 @@ namespace ProjectVagabond
                 Agility = data.Agility,
                 DefensiveElementIDs = new List<int>(data.DefensiveElementIDs),
                 DefaultStrikeMoveID = data.DefaultStrikeMoveID,
-                // Parse the numeric ID for the sprite sheet index
                 PortraitIndex = int.TryParse(data.MemberID, out int pid) ? pid : 0
             };
 
@@ -59,17 +56,35 @@ namespace ProjectVagabond
                 member.EquippedSpells[i] = member.Spells[i];
             }
 
-            // Handle Equipment (Weapons/Armor)
-            foreach (var kvp in data.StartingEquipment)
+            // Auto-Equip Weapons
+            if (data.StartingWeapons.Any())
             {
-                string itemId = kvp.Key;
-                if (BattleDataCache.Weapons.ContainsKey(itemId))
+                string weaponId = data.StartingWeapons.First().Key;
+                if (BattleDataCache.Weapons.ContainsKey(weaponId))
                 {
-                    member.EquippedWeaponId = itemId;
+                    member.EquippedWeaponId = weaponId;
                 }
-                else if (BattleDataCache.Armors.ContainsKey(itemId))
+            }
+
+            // Auto-Equip Armor
+            if (data.StartingArmor.Any())
+            {
+                string armorId = data.StartingArmor.First().Key;
+                if (BattleDataCache.Armors.ContainsKey(armorId))
                 {
-                    member.EquippedArmorId = itemId;
+                    member.EquippedArmorId = armorId;
+                }
+            }
+
+            // Auto-Equip Relics (Up to 3)
+            int relicSlot = 0;
+            foreach (var kvp in data.StartingRelics)
+            {
+                if (relicSlot >= 3) break;
+                if (BattleDataCache.Relics.ContainsKey(kvp.Key))
+                {
+                    member.EquippedRelics[relicSlot] = kvp.Key;
+                    relicSlot++;
                 }
             }
 

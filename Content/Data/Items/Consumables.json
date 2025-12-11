@@ -1,9 +1,8 @@
 [
   {
-    "ItemID": "HealthPotion",
+    "ItemID": "0",
     "ItemName": "Health Potion",
     "Description": "A simple concoction that restores a small amount of health.",
-    "ImagePath": "Sprites/Items/Consumables/health_potion",
     "Type": "Heal",
     "Target": "Self",
     "PrimaryValue": 20,
@@ -12,10 +11,9 @@
     "Priority": 0
   },
   {
-    "ItemID": "StrengthTonic",
+    "ItemID": "1",
     "ItemName": "Strength Tonic",
     "Description": "Temporarily boosts the user's physical strength.",
-    "ImagePath": "Sprites/Items/Consumables/strength_tonic",
     "Type": "Buff",
     "Target": "Self",
     "PrimaryValue": 3,
@@ -24,10 +22,9 @@
     "Priority": 0
   },
   {
-    "ItemID": "FireScroll",
+    "ItemID": "2",
     "ItemName": "Fire Scroll",
     "Description": "A magical scroll that unleashes a fiery attack upon a single target.",
-    "ImagePath": "Sprites/Items/Consumables/fire_scroll",
     "Type": "Attack",
     "Target": "Single",
     "PrimaryValue": 0,

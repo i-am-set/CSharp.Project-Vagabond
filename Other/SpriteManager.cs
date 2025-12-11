@@ -34,7 +34,12 @@ namespace ProjectVagabond
         public Texture2D ActionIconsSpriteSheet { get; private set; }
         public Texture2D ActionButtonUsesSpriteSheet { get; private set; }
         public Texture2D RarityIconsSpriteSheet { get; private set; }
-        // Removed duplicate InventorySlotEquipIconSprite here
+
+        // Item Sprite Sheets
+        public Texture2D ItemArmorSpriteSheet { get; private set; }
+        public Texture2D ItemConsumablesSpriteSheet { get; private set; }
+        public Texture2D ItemRelicsSpriteSheet { get; private set; }
+        public Texture2D ItemWeaponsSpriteSheet { get; private set; }
 
         // Battle Borders
         public Texture2D BattleBorderMain { get; private set; }
@@ -282,6 +287,20 @@ namespace ProjectVagabond
 
             try { RarityIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/rarity_icons_8x8_spritesheet"); }
             catch { RarityIconsSpriteSheet = _textureFactory.CreateColoredTexture(16, 48, Color.Magenta); }
+
+            // Load Item Sprite Sheets
+            try { ItemArmorSpriteSheet = _core.Content.Load<Texture2D>("Sprites/Items/item_armor_spritesheet"); }
+            catch { ItemArmorSpriteSheet = _textureFactory.CreateColoredTexture(128, 256, Color.Magenta); }
+
+            try { ItemConsumablesSpriteSheet = _core.Content.Load<Texture2D>("Sprites/Items/item_consumables_spritesheet"); }
+            catch { ItemConsumablesSpriteSheet = _textureFactory.CreateColoredTexture(128, 256, Color.Magenta); }
+
+            try { ItemRelicsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/Items/item_relics_spritesheet"); }
+            catch { ItemRelicsSpriteSheet = _textureFactory.CreateColoredTexture(128, 256, Color.Magenta); }
+
+            try { ItemWeaponsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/Items/item_weapons_spritesheet"); }
+            catch { ItemWeaponsSpriteSheet = _textureFactory.CreateColoredTexture(128, 256, Color.Magenta); }
+
 
             // Load Battle Borders
             try { BattleBorderMain = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/battle_border_main"); }
@@ -783,7 +802,41 @@ namespace ProjectVagabond
                 return cachedTuple;
             }
 
-            Debug.WriteLine($"[SpriteManager] LoadAndCacheItem called for: '{imagePath}'");
+            // --- NEW LOGIC: Check for Sprite Sheet Paths ---
+            if (imagePath != null)
+            {
+                if (imagePath.StartsWith("Sprites/Items/Weapons/"))
+                {
+                    if (int.TryParse(imagePath.Substring("Sprites/Items/Weapons/".Length), out int id))
+                    {
+                        return ExtractSpriteFromSheet(ItemWeaponsSpriteSheet, id, cacheKey);
+                    }
+                }
+                else if (imagePath.StartsWith("Sprites/Items/Armor/"))
+                {
+                    if (int.TryParse(imagePath.Substring("Sprites/Items/Armor/".Length), out int id))
+                    {
+                        return ExtractSpriteFromSheet(ItemArmorSpriteSheet, id, cacheKey);
+                    }
+                }
+                else if (imagePath.StartsWith("Sprites/Items/Relics/"))
+                {
+                    if (int.TryParse(imagePath.Substring("Sprites/Items/Relics/".Length), out int id))
+                    {
+                        return ExtractSpriteFromSheet(ItemRelicsSpriteSheet, id, cacheKey);
+                    }
+                }
+                else if (imagePath.StartsWith("Sprites/Items/Consumables/"))
+                {
+                    if (int.TryParse(imagePath.Substring("Sprites/Items/Consumables/".Length), out int id))
+                    {
+                        return ExtractSpriteFromSheet(ItemConsumablesSpriteSheet, id, cacheKey);
+                    }
+                }
+            }
+
+            // --- FALLBACK: Legacy Individual File Loading ---
+            Debug.WriteLine($"[SpriteManager] LoadAndCacheItem called for legacy path: '{imagePath}'");
 
             Texture2D originalTexture;
             try
@@ -846,6 +899,42 @@ namespace ProjectVagabond
             return tuple;
         }
 
+        private (Texture2D Original, Texture2D Silhouette) ExtractSpriteFromSheet(Texture2D sheet, int index, string cacheKey)
+        {
+            if (sheet == null)
+            {
+                Debug.WriteLine($"[SpriteManager] ERROR: Sprite sheet is null for item index {index}.");
+                var placeholder = _textureFactory.CreateColoredTexture(16, 16, Color.Magenta);
+                var placeholderTuple = (placeholder, placeholder);
+                _itemSprites[cacheKey] = placeholderTuple;
+                return placeholderTuple;
+            }
+
+            const int spriteSize = 16;
+            const int columns = 8; // 128 / 16
+
+            int col = index % columns;
+            int row = index / columns;
+
+            var sourceRect = new Rectangle(col * spriteSize, row * spriteSize, spriteSize, spriteSize);
+
+            // Create new texture for the extracted sprite
+            var extractedTexture = new Texture2D(_core.GraphicsDevice, spriteSize, spriteSize);
+            var data = new Color[spriteSize * spriteSize];
+
+            // Get data from the sheet
+            // We need to get the full sheet data first? No, GetData allows specifying a rectangle.
+            sheet.GetData(0, sourceRect, data, 0, data.Length);
+            extractedTexture.SetData(data);
+
+            // Create Silhouette
+            var silhouetteTexture = CreateSilhouette(extractedTexture);
+
+            var tuple = (extractedTexture, silhouetteTexture);
+            _itemSprites[cacheKey] = tuple;
+            return tuple;
+        }
+
         public Texture2D GetSmallRelicSprite(string imagePath)
         {
             return LoadAndCacheSmallItem(imagePath, imagePath).Original;
@@ -863,15 +952,21 @@ namespace ProjectVagabond
                 return cachedTuple;
             }
 
-            // Get the original large texture (32x32)
+            // Get the original large texture (32x32 or 16x16)
             Texture2D largeTexture = GetItemSprite(imagePath); // This handles loading/caching of the large one
 
-            // Create 16x16 texture
+            // If the texture is already 16x16 (which it is for the new sprite sheets), just reuse it.
+            if (largeTexture.Width == 16 && largeTexture.Height == 16)
+            {
+                var silhouette = GetItemSpriteSilhouette(imagePath);
+                var tuple = (largeTexture, silhouette);
+                _smallItemSprites[cacheKey] = tuple;
+                return tuple;
+            }
+
+            // Otherwise, downscale (legacy support for old 32x32 sprites)
             int width = 16;
             int height = 16;
-
-            // We need to render the large texture scaled down into a new texture
-            // Since we are in Update loop usually, we can use GraphicsDevice
 
             RenderTarget2D renderTarget = new RenderTarget2D(_core.GraphicsDevice, width, height);
             _core.GraphicsDevice.SetRenderTarget(renderTarget);
@@ -884,21 +979,19 @@ namespace ProjectVagabond
 
             _core.GraphicsDevice.SetRenderTarget(null);
 
-            // Extract data to create a regular Texture2D (so we don't lose it if RT is reused/lost, though RT is fine usually, Texture2D is safer for caching)
             Color[] data = new Color[width * height];
             renderTarget.GetData(data);
 
             Texture2D smallTexture = new Texture2D(_core.GraphicsDevice, width, height);
             smallTexture.SetData(data);
 
-            renderTarget.Dispose(); // Clean up RT
+            renderTarget.Dispose();
 
-            // Create Silhouette
             Texture2D smallSilhouette = CreateSilhouette(smallTexture);
 
-            var tuple = (smallTexture, smallSilhouette);
-            _smallItemSprites[cacheKey] = tuple;
-            return tuple;
+            var tuple2 = (smallTexture, smallSilhouette);
+            _smallItemSprites[cacheKey] = tuple2;
+            return tuple2;
         }
 
 
@@ -1246,3 +1339,4 @@ namespace ProjectVagabond
         }
     }
 }
+﻿

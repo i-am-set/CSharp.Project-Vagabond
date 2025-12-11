@@ -1,6 +1,6 @@
 [
   {
-    "WeaponID": "IronSword",
+    "WeaponID": "0",
     "WeaponName": "Iron Sword",
     "Description": "[cetc]A standard issue iron sword[/]",
     "Rarity": 0,
@@ -12,7 +12,7 @@
     "Tags": [ "Metal", "Sword" ]
   },
   {
-    "WeaponID": "Warhammer",
+    "WeaponID": "1",
     "WeaponName": "Warhammer",
     "Description": "[cetc]A heavy hammer designed to crush armor[/]",
     "Rarity": 1,
@@ -25,7 +25,7 @@
     "Tags": [ "Metal", "Blunt" ]
   },
   {
-    "WeaponID": "PoisonDagger",
+    "WeaponID": "2",
     "WeaponName": "Poison Dagger",
     "Description": "[cetc]Small blade coated in a toxin.[/]\nMay inflict [cpoison]poison[/]",
     "Rarity": 2,
