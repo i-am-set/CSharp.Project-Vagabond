@@ -6,7 +6,7 @@
     <page id="0" file="3x3-ASCII_0.png" />
   </pages>
   <chars count="95">
-    <char id="32" x="89" y="4" width="3" height="1" xoffset="-1" yoffset="3" xadvance="1" page="0" chnl="15" />
+    <char id="32" x="89" y="4" width="3" height="1" xoffset="-1" yoffset="3" xadvance="3" page="0" chnl="15" />
     <char id="33" x="4" y="0" width="3" height="3" xoffset="0" yoffset="0" xadvance="4" page="0" chnl="15" />
     <char id="34" x="69" y="4" width="3" height="2" xoffset="0" yoffset="0" xadvance="4" page="0" chnl="15" />
     <char id="35" x="12" y="0" width="3" height="3" xoffset="0" yoffset="0" xadvance="4" page="0" chnl="15" />

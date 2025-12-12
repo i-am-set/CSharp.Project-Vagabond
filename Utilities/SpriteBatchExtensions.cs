@@ -19,7 +19,6 @@ namespace ProjectVagabond.Utils
         {
             return new Vector2(MathF.Round(vector.X), MathF.Round(vector.Y));
         }
-
         // --- DrawStringSnapped ---
 
         public static void DrawStringSnapped(this SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color color)
@@ -43,13 +42,13 @@ namespace ProjectVagabond.Utils
             spriteBatch.DrawString(font, text, RoundVector(position), color, rotation, origin, scale, effects, layerDepth);
         }
 
-        // --- DrawStringOutlinedSnapped ---
+        // --- DrawStringOutlinedSnapped (Circle/Cross Outline) ---
 
         public static void DrawStringOutlinedSnapped(this SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color textColor, Color outlineColor)
         {
             Vector2 roundedPosition = RoundVector(position);
 
-            // Draw outline in 4 directions
+            // Draw outline in 4 directions (Cardinals)
             spriteBatch.DrawString(font, text, roundedPosition + new Vector2(1, 0), outlineColor);
             spriteBatch.DrawString(font, text, roundedPosition + new Vector2(-1, 0), outlineColor);
             spriteBatch.DrawString(font, text, roundedPosition + new Vector2(0, 1), outlineColor);
@@ -84,6 +83,48 @@ namespace ProjectVagabond.Utils
             spriteBatch.DrawString(font, text, roundedPosition + new Vector2(0, -1), outlineColor, rotation, origin, scale, effects, layerDepth);
 
             // Draw main text
+            spriteBatch.DrawString(font, text, roundedPosition, textColor, rotation, origin, scale, effects, layerDepth);
+        }
+
+        // --- DrawStringSquareOutlinedSnapped (Full 8-Direction Outline) ---
+
+        public static void DrawStringSquareOutlinedSnapped(this SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color textColor, Color outlineColor)
+        {
+            Vector2 roundedPosition = RoundVector(position);
+
+            // Diagonals
+            spriteBatch.DrawString(font, text, roundedPosition + new Vector2(1, 1), outlineColor);
+            spriteBatch.DrawString(font, text, roundedPosition + new Vector2(1, -1), outlineColor);
+            spriteBatch.DrawString(font, text, roundedPosition + new Vector2(-1, 1), outlineColor);
+            spriteBatch.DrawString(font, text, roundedPosition + new Vector2(-1, -1), outlineColor);
+
+            // Cardinals
+            spriteBatch.DrawString(font, text, roundedPosition + new Vector2(1, 0), outlineColor);
+            spriteBatch.DrawString(font, text, roundedPosition + new Vector2(-1, 0), outlineColor);
+            spriteBatch.DrawString(font, text, roundedPosition + new Vector2(0, 1), outlineColor);
+            spriteBatch.DrawString(font, text, roundedPosition + new Vector2(0, -1), outlineColor);
+
+            // Main text
+            spriteBatch.DrawString(font, text, roundedPosition, textColor);
+        }
+
+        public static void DrawStringSquareOutlinedSnapped(this SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color textColor, Color outlineColor, float rotation, Vector2 origin, float scale, SpriteEffects effects, float layerDepth)
+        {
+            Vector2 roundedPosition = RoundVector(position);
+
+            // Diagonals
+            spriteBatch.DrawString(font, text, roundedPosition + new Vector2(1, 1), outlineColor, rotation, origin, scale, effects, layerDepth);
+            spriteBatch.DrawString(font, text, roundedPosition + new Vector2(1, -1), outlineColor, rotation, origin, scale, effects, layerDepth);
+            spriteBatch.DrawString(font, text, roundedPosition + new Vector2(-1, 1), outlineColor, rotation, origin, scale, effects, layerDepth);
+            spriteBatch.DrawString(font, text, roundedPosition + new Vector2(-1, -1), outlineColor, rotation, origin, scale, effects, layerDepth);
+
+            // Cardinals
+            spriteBatch.DrawString(font, text, roundedPosition + new Vector2(1, 0), outlineColor, rotation, origin, scale, effects, layerDepth);
+            spriteBatch.DrawString(font, text, roundedPosition + new Vector2(-1, 0), outlineColor, rotation, origin, scale, effects, layerDepth);
+            spriteBatch.DrawString(font, text, roundedPosition + new Vector2(0, 1), outlineColor, rotation, origin, scale, effects, layerDepth);
+            spriteBatch.DrawString(font, text, roundedPosition + new Vector2(0, -1), outlineColor, rotation, origin, scale, effects, layerDepth);
+
+            // Main text
             spriteBatch.DrawString(font, text, roundedPosition, textColor, rotation, origin, scale, effects, layerDepth);
         }
 

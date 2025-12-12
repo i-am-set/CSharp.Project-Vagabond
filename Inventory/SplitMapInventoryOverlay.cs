@@ -34,7 +34,6 @@ namespace ProjectVagabond.UI
         private InventoryHeaderButton? _inventoryEquipButton;
         private readonly List<InventorySlot> _inventorySlots = new();
         private Rectangle _inventorySlotArea;
-
         // New Party Member Slot Panels (0 to 3)
         private readonly Rectangle[] _partyMemberPanelAreas = new Rectangle[4];
 
@@ -69,14 +68,14 @@ namespace ProjectVagabond.UI
 
         // Navigation Order Definition
         private readonly List<InventoryCategory> _categoryOrder = new()
-        {
-            InventoryCategory.Weapons,
-            InventoryCategory.Armor,
-            InventoryCategory.Relics,
-            InventoryCategory.Spells,
-            InventoryCategory.Consumables,
-            InventoryCategory.Misc
-        };
+    {
+        InventoryCategory.Weapons,
+        InventoryCategory.Armor,
+        InventoryCategory.Relics,
+        InventoryCategory.Spells,
+        InventoryCategory.Consumables,
+        InventoryCategory.Misc
+    };
 
         // Animation State
         private float _inventoryArrowAnimTimer;
@@ -285,14 +284,13 @@ namespace ProjectVagabond.UI
                 currentY += (int)secondaryFont.LineHeight + 1; // TEN
                 currentY += (int)secondaryFont.LineHeight + 1; // AGI
 
-                // --- NEW: Spell Slot Buttons ---
                 // Positioned under the stats
                 // Button size: 64x8
                 // Centered horizontally in the panel (panelWidth = 76)
                 int spellButtonWidth = 64;
                 int spellButtonHeight = 8;
                 int spellButtonX = centerX - (spellButtonWidth / 2);
-                int spellButtonY = currentY + 2; // Add a small gap after stats
+                int spellButtonY = currentY + 2 - 8;
 
                 for (int s = 0; s < 4; s++)
                 {
