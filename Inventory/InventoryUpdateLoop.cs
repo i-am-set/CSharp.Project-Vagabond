@@ -49,66 +49,11 @@ namespace ProjectVagabond.UI
             _debugButton1?.Update(currentMouseState, cameraTransform);
             _debugButton2?.Update(currentMouseState, cameraTransform);
 
-            // UPDATE PARTY MEMBER BUTTONS
+            // UPDATE PARTY MEMBER EQUIP BUTTONS
             if (_selectedInventoryCategory == InventoryCategory.Equip && !_isEquipSubmenuOpen)
             {
-                // Replicate layout logic from DrawStatsPanel to ensure hitboxes are correct
-                const int buttonHeight = 8;
-                const int suiteHeight = 32;
-
-                // Base Y position (must match DrawStatsPanel)
-                int currentY = _statsPanelArea.Y + 18;
-                // Match the X calculation from DrawStatsPanel:
-                int listX = _statsPanelArea.X + (_statsPanelArea.Width - 90) / 2 - 8;
-
-                for (int i = 0; i < _partySlotButtons.Count; i++)
+                foreach (var btn in _partyEquipButtons)
                 {
-                    var btn = _partySlotButtons[i];
-
-                    // Update text and enabled state
-                    if (i < _gameState.PlayerState.Party.Count)
-                    {
-                        var member = _gameState.PlayerState.Party[i];
-                        btn.Text = member.Name.ToUpper();
-
-                        // Disable if selected (so it can't be clicked, effectively hiding it from interaction)
-                        if (i == _currentPartyMemberIndex)
-                        {
-                            btn.IsEnabled = false;
-                        }
-                        else
-                        {
-                            btn.IsEnabled = true;
-                            btn.CustomDefaultTextColor = _global.Palette_Gray;
-                        }
-
-                        // Shift text right to make room for 8x8 icon
-                        btn.TextRenderOffset = new Vector2(11, 0);
-                    }
-                    else
-                    {
-                        btn.Text = "EMPTY";
-                        btn.IsEnabled = false;
-                        btn.CustomDefaultTextColor = _global.Palette_DarkGray;
-                        btn.TextRenderOffset = Vector2.Zero;
-                    }
-
-                    // Update Position
-                    if (i == _currentPartyMemberIndex)
-                    {
-                        // This slot is occupied by the Info Suite visually.
-                        // We move the invisible button here just to keep the loop consistent, 
-                        // but since IsEnabled is false, it won't react.
-                        btn.Bounds = new Rectangle(listX, currentY, 90, suiteHeight);
-                        currentY += suiteHeight;
-                    }
-                    else
-                    {
-                        // Increased width from 90 to 100
-                        btn.Bounds = new Rectangle(listX, currentY, 100, buttonHeight);
-                        currentY += buttonHeight;
-                    }
-
                     btn.Update(currentMouseState, cameraTransform);
                 }
             }
@@ -168,7 +113,7 @@ namespace ProjectVagabond.UI
                     if (_activeEquipSlotType == EquipSlotType.Weapon) totalItems += _gameState.PlayerState.Weapons.Count;
                     else if (_activeEquipSlotType == EquipSlotType.Armor) totalItems += _gameState.PlayerState.Armors.Count;
                     else if (_activeEquipSlotType == EquipSlotType.Relic) totalItems += _gameState.PlayerState.Relics.Count;
-                    else if (_activeEquipSlotType >= EquipSlotType.Spell1 && _activeEquipSlotType <= EquipSlotType.Spell4) totalItems += member.Spells.Count; // Use member's learned spells
+                    else if (_activeEquipSlotType >= EquipSlotType.Spell1 && _activeEquipSlotType <= EquipSlotType.Spell4) totalItems += member.Spells.Count;
 
                     int maxScroll = Math.Max(0, totalItems - 7); // 7 visible slots
 
@@ -430,17 +375,6 @@ namespace ProjectVagabond.UI
                                 btn.IconSourceRect = _spriteManager.GetAnimatedIconSourceRect(btn.IconTexture, gameTime);
                             }
                         }
-                    }
-                }
-                else
-                {
-                    _relicEquipButton?.Update(currentMouseState, cameraTransform);
-                    _armorEquipButton?.Update(currentMouseState, cameraTransform);
-                    _weaponEquipButton?.Update(currentMouseState, cameraTransform);
-
-                    foreach (var button in _spellEquipButtons)
-                    {
-                        button.Update(currentMouseState, cameraTransform);
                     }
                 }
             }

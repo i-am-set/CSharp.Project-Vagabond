@@ -14,10 +14,11 @@ namespace ProjectVagabond.UI
 {
     public partial class SplitMapInventoryOverlay
     {
-        private void OpenEquipSubmenu(EquipSlotType slotType)
+        private void OpenEquipSubmenu(int memberIndex, EquipSlotType slotType)
         {
             _isEquipSubmenuOpen = true;
             _activeEquipSlotType = slotType;
+            _currentPartyMemberIndex = memberIndex;
             _equipMenuScrollIndex = 0;
             RefreshEquipSubmenuButtons();
         }
@@ -252,70 +253,7 @@ namespace ProjectVagabond.UI
             _activeEquipSlotType = EquipSlotType.None;
             _hoveredItemData = null;
 
-            RefreshEquipView();
             _hapticsManager.TriggerShake(4f, 0.1f, true, 2f);
-        }
-
-        private void UpdateEquipButtonState(EquipButton button, string? itemId, EquipSlotType type)
-        {
-            string name = "NOTHING";
-            Texture2D? icon = null;
-            Texture2D? silhouette = null;
-            int rarity = -1;
-
-            if (!string.IsNullOrEmpty(itemId))
-            {
-                string path = "";
-                if (type == EquipSlotType.Weapon)
-                {
-                    var data = GetWeaponData(itemId);
-                    if (data != null) { name = data.WeaponName.ToUpper(); path = $"Sprites/Items/Weapons/{data.WeaponID}"; rarity = data.Rarity; }
-                    else name = itemId.ToUpper();
-                }
-                else if (type == EquipSlotType.Armor)
-                {
-                    var data = GetArmorData(itemId);
-                    if (data != null) { name = data.ArmorName.ToUpper(); path = $"Sprites/Items/Armor/{data.ArmorID}"; rarity = data.Rarity; }
-                    else name = itemId.ToUpper();
-                }
-                else if (type == EquipSlotType.Relic)
-                {
-                    var data = GetRelicData(itemId);
-                    if (data != null) { name = data.RelicName.ToUpper(); path = $"Sprites/Items/Relics/{data.RelicID}"; rarity = data.Rarity; }
-                    else name = itemId.ToUpper();
-                }
-
-                if (!string.IsNullOrEmpty(path))
-                {
-                    icon = _spriteManager.GetSmallRelicSprite(path);
-                    silhouette = _spriteManager.GetSmallRelicSpriteSilhouette(path);
-                }
-            }
-            else
-            {
-                icon = _spriteManager.InventoryEmptySlotSprite;
-                silhouette = null;
-            }
-
-            button.MainText = name;
-            button.IconTexture = icon;
-            button.IconSilhouette = silhouette;
-            button.IconSourceRect = null;
-            button.Rarity = rarity;
-        }
-
-        private void UpdateSpellEquipButtonState(SpellEquipButton button, MoveEntry? spellEntry)
-        {
-            if (spellEntry != null && BattleDataCache.Moves.TryGetValue(spellEntry.MoveID, out var moveData))
-            {
-                button.SpellName = moveData.MoveName;
-                button.IsEquipped = true;
-            }
-            else
-            {
-                button.SpellName = "EMPTY";
-                button.IsEquipped = false;
-            }
         }
     }
 }

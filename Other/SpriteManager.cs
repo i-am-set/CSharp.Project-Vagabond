@@ -452,9 +452,9 @@ namespace ProjectVagabond
 
             // Load Health Bar Sprites
             try { InventoryPlayerHealthBarEmpty = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_player_health_bar_empty"); }
-            catch { InventoryPlayerHealthBarEmpty = _textureFactory.CreateColoredTexture(72, 7, Color.DarkGray); }
+            catch { InventoryPlayerHealthBarEmpty = _textureFactory.CreateColoredTexture(66, 7, Color.DarkGray); }
             try { InventoryPlayerHealthBarFull = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_player_health_bar_full"); }
-            catch { InventoryPlayerHealthBarFull = _textureFactory.CreateColoredTexture(70, 7, Color.Red); }
+            catch { InventoryPlayerHealthBarFull = _textureFactory.CreateColoredTexture(64, 7, Color.Red); }
 
 
             LoadAndCacheCursorSprite("cursor_default");

@@ -21,7 +21,6 @@ namespace ProjectVagabond.UI
     public partial class SplitMapInventoryOverlay
     {
         public bool IsOpen { get; private set; } = false;
-        // Expose hover state to block map interaction
         public bool IsHovered => _inventoryButton?.IsHovered ?? false;
         private readonly GameState _gameState;
         private readonly SpriteManager _spriteManager;
@@ -36,29 +35,18 @@ namespace ProjectVagabond.UI
         private readonly List<InventorySlot> _inventorySlots = new();
         private Rectangle _inventorySlotArea;
 
-        // Panels
-        private Rectangle _statsPanelArea;
-        private Rectangle _infoPanelArea;
-
         // New Party Member Slot Panels (0 to 3)
         private readonly Rectangle[] _partyMemberPanelAreas = new Rectangle[4];
+
+        // New Equip Slot Buttons (Invisible hitboxes for the panels)
+        private readonly List<Button> _partyEquipButtons = new();
 
         private ImageButton? _debugButton1;
         private ImageButton? _debugButton2;
         private ImageButton? _pageLeftButton;
         private ImageButton? _pageRightButton;
 
-        // Party Member Switching
-        private readonly List<Button> _partySlotButtons = new();
         private int _currentPartyMemberIndex = 0;
-
-        // Equip Buttons
-        private EquipButton? _relicEquipButton;
-        private EquipButton? _weaponEquipButton;
-        private EquipButton? _armorEquipButton;
-
-        // Spell Equip Buttons
-        private readonly List<SpellEquipButton> _spellEquipButtons = new();
 
         // Submenu State
         private enum EquipSlotType { None, Weapon, Armor, Relic, Spell1, Spell2, Spell3, Spell4 }
@@ -78,14 +66,14 @@ namespace ProjectVagabond.UI
 
         // Navigation Order Definition
         private readonly List<InventoryCategory> _categoryOrder = new()
-    {
-        InventoryCategory.Weapons,
-        InventoryCategory.Armor,
-        InventoryCategory.Relics,
-        InventoryCategory.Spells,
-        InventoryCategory.Consumables,
-        InventoryCategory.Misc
-    };
+        {
+            InventoryCategory.Weapons,
+            InventoryCategory.Armor,
+            InventoryCategory.Relics,
+            InventoryCategory.Spells,
+            InventoryCategory.Consumables,
+            InventoryCategory.Misc
+        };
 
         // Animation State
         private float _inventoryArrowAnimTimer;
@@ -137,7 +125,7 @@ namespace ProjectVagabond.UI
             _previousHoveredItemData = null;
             _leftPageArrowBobTimer = 0f;
             _rightPageArrowBobTimer = 0f;
-            _currentPartyMemberIndex = 0; // Default to leader
+            _currentPartyMemberIndex = 0;
 
             _previousMouseState = Mouse.GetState();
             _previousKeyboardState = Keyboard.GetState();
@@ -216,44 +204,82 @@ namespace ProjectVagabond.UI
             const int slotColumns = 6;
             const int slotRows = 5;
             const int slotSize = 24;
-            const int gridPaddingX = 18; // 18px buffer on sides
-            const int gridPaddingY = 8;  // 8px buffer on top/bottom
+            const int gridPaddingX = 18;
+            const int gridPaddingY = 8;
 
             int containerX = (Global.VIRTUAL_WIDTH - slotContainerWidth) / 2 - 60;
             int containerY = 200 + 6 + 32 + 1;
             _inventorySlotArea = new Rectangle(containerX, containerY, slotContainerWidth, slotContainerHeight);
 
-            // Initialize Stats Panel Area
+            // Initialize Party Member Slot Panels (4 slots)
+            // Positioned to the right of the inventory grid
             const int statsPanelWidth = 116;
             const int statsPanelHeight = 132;
             int statsPanelX = _inventorySlotArea.Right + 4;
             int statsPanelY = _inventorySlotArea.Y - 1;
-            _statsPanelArea = new Rectangle(statsPanelX, statsPanelY, statsPanelWidth, statsPanelHeight);
 
-            // Initialize Info Panel Area (Identical to Stats Panel)
-            _infoPanelArea = new Rectangle(statsPanelX, statsPanelY, statsPanelWidth, statsPanelHeight);
+            const int panelWidth = 76;
+            int panelStartX = 8; // Moved 2 pixels left (was 10)
 
-            // Initialize Party Member Slot Panels (4 slots)
-            const int panelWidth = 75;
-            int panelStartX = 10;
+            // Calculate layout for hitboxes
+            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+            var defaultFont = ServiceLocator.Get<BitmapFont>(); // Get default font
+
+            _partyEquipButtons.Clear();
 
             for (int i = 0; i < 4; i++)
             {
                 _partyMemberPanelAreas[i] = new Rectangle(
                     panelStartX + (i * panelWidth),
-                    _statsPanelArea.Y,
+                    statsPanelY,
                     panelWidth,
-                    _statsPanelArea.Height
+                    statsPanelHeight
                 );
+
+                // Calculate Y positions for hitboxes based on DrawPartyMemberSlots layout
+                int centerX = _partyMemberPanelAreas[i].Center.X;
+                int currentY = _partyMemberPanelAreas[i].Y + 4;
+
+                // Name (Default Font LineHeight) - 2
+                currentY += defaultFont.LineHeight - 2;
+
+                // Portrait (32) + 2
+                currentY += 32 + 2 - 6; // Moved up 6 pixels
+
+                // Health Bar (8 + LineHeight + 4)
+                currentY += 8 + secondaryFont.LineHeight + 4 - 3; // Moved up 3 pixels
+
+                // Equip Slots
+                int slotIconSize = 16;
+                int gap = 4;
+                int totalEquipWidth = (slotIconSize * 3) + (gap * 2);
+                int equipStartX = centerX - (totalEquipWidth / 2);
+
+                // Create buttons for this member
+                int memberIndex = i;
+
+                // Weapon Button
+                var weaponBtn = new Button(new Rectangle(equipStartX, currentY, slotIconSize, slotIconSize), "") { EnableHoverSway = false };
+                weaponBtn.OnClick += () => OpenEquipSubmenu(memberIndex, EquipSlotType.Weapon);
+                _partyEquipButtons.Add(weaponBtn);
+
+                // Armor Button
+                var armorBtn = new Button(new Rectangle(equipStartX + slotIconSize + gap, currentY, slotIconSize, slotIconSize), "") { EnableHoverSway = false };
+                armorBtn.OnClick += () => OpenEquipSubmenu(memberIndex, EquipSlotType.Armor);
+                _partyEquipButtons.Add(armorBtn);
+
+                // Relic Button
+                var relicBtn = new Button(new Rectangle(equipStartX + (slotIconSize + gap) * 2, currentY, slotIconSize, slotIconSize), "") { EnableHoverSway = false };
+                relicBtn.OnClick += () => OpenEquipSubmenu(memberIndex, EquipSlotType.Relic);
+                _partyEquipButtons.Add(relicBtn);
+
+                currentY += slotSize + 6 - 5; // Moved up 5 pixels
             }
 
             _inventorySlots.Clear();
 
-            // Calculate available space inside the padding
             float availableWidth = slotContainerWidth - (gridPaddingX * 2);
             float availableHeight = slotContainerHeight - (gridPaddingY * 2);
-
-            // Calculate spacing based on available space
             float spaceBetweenX = (slotColumns > 1) ? (availableWidth - slotSize) / (slotColumns - 1) : 0;
             float spaceBetweenY = (slotRows > 1) ? (availableHeight - slotSize) / (slotRows - 1) : 0;
 
@@ -264,7 +290,6 @@ namespace ProjectVagabond.UI
                 {
                     for (int col = 0; col < slotColumns; col++)
                     {
-                        // Start from Area.X + Padding + HalfSlot
                         float nodeX = _inventorySlotArea.X + gridPaddingX + (slotSize / 2f) + (col * spaceBetweenX);
                         float nodeY = _inventorySlotArea.Y + gridPaddingY + (slotSize / 2f) + (row * spaceBetweenY);
 
@@ -297,77 +322,16 @@ namespace ProjectVagabond.UI
             _debugButton2 = new ImageButton(new Rectangle(0, 0, 5, 5), _spriteManager.InventoryRightArrowButton, rightArrowRects[0], rightArrowRects[1]);
             _debugButton2.OnClick += () => CycleCategory(1);
 
-            // Initialize Page Navigation Buttons
             _pageLeftButton = new ImageButton(new Rectangle(0, 0, 5, 5), _spriteManager.InventoryLeftArrowButton, leftArrowRects[0], leftArrowRects[1]);
             _pageLeftButton.OnClick += () => ChangePage(-1);
 
             _pageRightButton = new ImageButton(new Rectangle(0, 0, 5, 5), _spriteManager.InventoryRightArrowButton, rightArrowRects[0], rightArrowRects[1]);
             _pageRightButton.OnClick += () => ChangePage(1);
 
-            // Initialize Party Slot Buttons (4 slots)
-            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-            _partySlotButtons.Clear();
-            for (int i = 0; i < 4; i++)
-            {
-                int index = i;
-                // Increased width from 90 to 100
-                var btn = new Button(new Rectangle(0, 0, 100, 8), "EMPTY", font: secondaryFont, enableHoverSway: false)
-                {
-                    CustomDefaultTextColor = _global.Palette_Gray,
-                    CustomHoverTextColor = _global.Palette_BrightWhite,
-                    AlignLeft = true // Left align text
-                };
-                btn.OnClick += () => SwitchToPartyMember(index);
-                _partySlotButtons.Add(btn);
-            }
-
-            // Initialize Equip Buttons
-            int equipButtonX = (Global.VIRTUAL_WIDTH - 180) / 2 - 60;
-            int relicButtonY = 250 + 19 + 16;
-            int armorButtonY = relicButtonY - 16; // Middle
-            int weaponButtonY = relicButtonY - 32; // Top
-
-            // Weapon Button (Even)
-            _weaponEquipButton = new EquipButton(new Rectangle(equipButtonX, weaponButtonY, 180, 16), "NOTHING");
-            _weaponEquipButton.TitleText = "WEAPN";
-            _weaponEquipButton.Font = secondaryFont;
-            _weaponEquipButton.CustomDefaultTextColor = _global.Palette_BrightWhite;
-            _weaponEquipButton.CustomTitleTextColor = _global.Palette_DarkGray;
-            _weaponEquipButton.OnClick += () => OpenEquipSubmenu(EquipSlotType.Weapon);
-
-            // Armor Button (Odd)
-            _armorEquipButton = new EquipButton(new Rectangle(equipButtonX, armorButtonY, 180, 16), "NOTHING");
-            _armorEquipButton.TitleText = "ARMOR";
-            _armorEquipButton.Font = secondaryFont;
-            _armorEquipButton.CustomDefaultTextColor = _global.Palette_White;
-            _armorEquipButton.CustomTitleTextColor = _global.Palette_DarkerGray;
-            _armorEquipButton.OnClick += () => OpenEquipSubmenu(EquipSlotType.Armor);
-
-            // Relic Button 1 (Even)
-            _relicEquipButton = new EquipButton(new Rectangle(equipButtonX, relicButtonY, 180, 16), "NOTHING");
-            _relicEquipButton.TitleText = "RELIC";
-            _relicEquipButton.Font = secondaryFont;
-            _relicEquipButton.CustomDefaultTextColor = _global.Palette_BrightWhite;
-            _relicEquipButton.CustomTitleTextColor = _global.Palette_DarkGray;
-            _relicEquipButton.OnClick += () => OpenEquipSubmenu(EquipSlotType.Relic);
-
-            // Initialize Spell Equip Buttons
-            _spellEquipButtons.Clear();
-            int spellButtonX = equipButtonX + (180 - 107) / 2 + 36;
-            int spellButtonStartY = relicButtonY + 48;
-
-            for (int i = 0; i < 4; i++)
-            {
-                int yPos = spellButtonStartY + (i * (8 + 1));
-                var button = new SpellEquipButton(new Rectangle(spellButtonX, yPos, 107, 8));
-                int slotIndex = i;
-                button.OnClick += () => OpenEquipSubmenu(EquipSlotType.Spell1 + slotIndex);
-                _spellEquipButtons.Add(button);
-            }
-
             // Initialize Submenu Buttons
             _equipSubmenuButtons.Clear();
-            int submenuStartY = weaponButtonY;
+            int equipButtonX = (Global.VIRTUAL_WIDTH - 180) / 2 - 60;
+            int submenuStartY = 250 + 19 + 16 - 32; // Approximate Y
 
             for (int i = 0; i < 7; i++)
             {
@@ -384,10 +348,7 @@ namespace ProjectVagabond.UI
         {
             IsOpen = true;
             _inventoryButton?.SetSprites(_spriteManager.SplitMapCloseInventoryButton, _spriteManager.SplitMapCloseInventoryButtonSourceRects[0], _spriteManager.SplitMapCloseInventoryButtonSourceRects[1]);
-
-            // Force open to Equip menu
             SwitchToCategory(InventoryCategory.Equip);
-            RefreshEquipView();
         }
 
         public void Hide()
@@ -403,29 +364,6 @@ namespace ProjectVagabond.UI
             if (IsOpen)
             {
                 Hide();
-            }
-        }
-
-        private void SwitchToPartyMember(int index)
-        {
-            if (index < 0 || index >= _gameState.PlayerState.Party.Count) return;
-            _currentPartyMemberIndex = index;
-            RefreshEquipView();
-        }
-
-        private void RefreshEquipView()
-        {
-            if (_selectedInventoryCategory != InventoryCategory.Equip) return;
-
-            var member = _gameState.PlayerState.Party[_currentPartyMemberIndex];
-
-            UpdateEquipButtonState(_weaponEquipButton!, member.EquippedWeaponId, EquipSlotType.Weapon);
-            UpdateEquipButtonState(_armorEquipButton!, member.EquippedArmorId, EquipSlotType.Armor);
-            UpdateEquipButtonState(_relicEquipButton!, member.EquippedRelicId, EquipSlotType.Relic);
-
-            for (int i = 0; i < 4; i++)
-            {
-                UpdateSpellEquipButtonState(_spellEquipButtons[i], member.EquippedSpells[i]);
             }
         }
     }
