@@ -3074,6 +3074,18 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/Inventory/inventory_left_arrow_button.png;Sprites/UI/Inventory/inventory_left_arrow_button
 
+#begin Sprites/UI/Inventory/inventory_player_health_bar_disabled.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/Inventory/inventory_player_health_bar_disabled.png;Sprites/UI/Inventory/inventory_player_health_bar_disabled
+
 #begin Sprites/UI/Inventory/inventory_player_health_bar_empty.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -3181,6 +3193,18 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/Inventory/inventory_slot_selected.png;Sprites/UI/Inventory/inventory_slot_selected
+
+#begin Sprites/UI/Inventory/inventory_stat_bar_disabled.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/Inventory/inventory_stat_bar_disabled.png;Sprites/UI/Inventory/inventory_stat_bar_disabled
 
 #begin Sprites/UI/Inventory/inventory_stat_bar_empty.png
 /importer:TextureImporter

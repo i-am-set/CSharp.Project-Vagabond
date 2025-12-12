@@ -63,8 +63,10 @@ namespace ProjectVagabond
 
         // Inventory UI
         public Texture2D InventoryPlayerHealthBarEmpty { get; private set; }
+        public Texture2D InventoryPlayerHealthBarDisabled { get; private set; } // New
         public Texture2D InventoryPlayerHealthBarFull { get; private set; }
         public Texture2D InventoryStatBarEmpty { get; private set; }
+        public Texture2D InventoryStatBarDisabled { get; private set; } // New
         public Texture2D InventoryStatBarFull { get; private set; }
 
         // Source Rectangles for UI elements
@@ -459,9 +461,10 @@ namespace ProjectVagabond
             // Load Health Bar Sprites
             try { InventoryPlayerHealthBarEmpty = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_player_health_bar_empty"); }
             catch { InventoryPlayerHealthBarEmpty = _textureFactory.CreateColoredTexture(66, 7, Color.DarkGray); }
+            try { InventoryPlayerHealthBarDisabled = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_player_health_bar_disabled"); }
+            catch { InventoryPlayerHealthBarDisabled = _textureFactory.CreateColoredTexture(66, 7, Color.Black); }
             try { InventoryPlayerHealthBarFull = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_player_health_bar_full"); }
             catch { InventoryPlayerHealthBarFull = _textureFactory.CreateColoredTexture(64, 7, Color.Red); }
-
 
             LoadAndCacheCursorSprite("cursor_default");
             LoadAndCacheCursorSprite("cursor_hover_clickable");
@@ -1220,11 +1223,11 @@ namespace ProjectVagabond
                 PlayerHeartSpriteSheet = _textureFactory.CreateColoredTexture(32, 32, Color.DeepPink);
                 PlayerHeartSpriteSheetSilhouette = _textureFactory.CreateColoredTexture(32, 32, Color.White);
             }
-
             // Load Stat Bars
             try { InventoryStatBarEmpty = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_stat_bar_empty"); }
             catch { InventoryStatBarEmpty = _textureFactory.CreateColoredTexture(40, 3, Color.DarkGray); }
-
+            try { InventoryStatBarDisabled = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_stat_bar_disabled"); }
+            catch { InventoryStatBarDisabled = _textureFactory.CreateColoredTexture(40, 3, Color.Black); }
             try { InventoryStatBarFull = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_stat_bar_full"); }
             catch { InventoryStatBarFull = _textureFactory.CreateColoredTexture(40, 3, Color.White); }
 

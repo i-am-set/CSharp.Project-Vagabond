@@ -242,14 +242,17 @@ namespace ProjectVagabond.UI
             for (int i = 0; i < 4; i++)
             {
                 var bounds = _partyMemberPanelAreas[i];
-                if (i >= _gameState.PlayerState.Party.Count) continue;
+                // Check if occupied
+                bool isOccupied = i < _gameState.PlayerState.Party.Count;
+                var member = isOccupied ? _gameState.PlayerState.Party[i] : null;
 
-                var member = _gameState.PlayerState.Party[i];
                 int centerX = bounds.Center.X;
                 int currentY = bounds.Y + 4;
 
-                // 1. Name (Calculated but drawn later)
-                string name = member.Name.ToUpper();
+                // 1. Name
+                string name = isOccupied ? member!.Name.ToUpper() : "EMPTY";
+                Color nameColor = isOccupied ? _global.Palette_BrightWhite : _global.Palette_DarkGray;
+
                 Vector2 nameSize = font.MeasureString(name);
                 Vector2 namePos = new Vector2(centerX - nameSize.X / 2, currentY);
                 currentY += (int)nameSize.Y - 2;
@@ -265,10 +268,10 @@ namespace ProjectVagabond.UI
                     spriteBatch.DrawSnapped(_spriteManager.InventorySlotIdleLargeSpriteSheet, bgPos, largeFrame, Color.White, 0f, origin, 1.0f, SpriteEffects.None, 0f);
                 }
 
-                // Draw Portrait
-                if (_spriteManager.PlayerPortraitsSpriteSheet != null && _spriteManager.PlayerPortraitSourceRects.Count > 0)
+                // Draw Portrait (Only if occupied)
+                if (isOccupied && _spriteManager.PlayerPortraitsSpriteSheet != null && _spriteManager.PlayerPortraitSourceRects.Count > 0)
                 {
-                    int portraitIndex = Math.Clamp(member.PortraitIndex, 0, _spriteManager.PlayerPortraitSourceRects.Count - 1);
+                    int portraitIndex = Math.Clamp(member!.PortraitIndex, 0, _spriteManager.PlayerPortraitSourceRects.Count - 1);
                     var sourceRect = _spriteManager.PlayerPortraitSourceRects[portraitIndex];
 
                     float animSpeed = 1f;
@@ -279,28 +282,34 @@ namespace ProjectVagabond.UI
                     spriteBatch.DrawSnapped(textureToDraw, destRect, sourceRect, Color.White);
                 }
 
-                // Draw Name (Now on top of shadow)
-                spriteBatch.DrawStringSnapped(font, name, namePos, _global.Palette_BrightWhite);
+                // Draw Name
+                spriteBatch.DrawStringSnapped(font, name, namePos, nameColor);
 
                 currentY += 32 + 2 - 6; // Moved up 6 pixels
 
                 // 3. Health Bar
-                if (_spriteManager.InventoryPlayerHealthBarEmpty != null && _spriteManager.InventoryPlayerHealthBarFull != null)
+                Texture2D healthBarBg = isOccupied ? _spriteManager.InventoryPlayerHealthBarEmpty : _spriteManager.InventoryPlayerHealthBarDisabled;
+                if (healthBarBg != null)
                 {
-                    int barX = centerX - (_spriteManager.InventoryPlayerHealthBarEmpty.Width / 2);
-                    spriteBatch.DrawSnapped(_spriteManager.InventoryPlayerHealthBarEmpty, new Vector2(barX, currentY), Color.White);
+                    int barX = centerX - (healthBarBg.Width / 2);
+                    spriteBatch.DrawSnapped(healthBarBg, new Vector2(barX, currentY), Color.White);
 
-                    int currentHP = member.CurrentHP;
-                    int maxHP = member.MaxHP;
-                    float hpPercent = (float)currentHP / Math.Max(1, maxHP);
-                    int fullWidth = _spriteManager.InventoryPlayerHealthBarFull.Width;
-                    int visibleWidth = (int)(fullWidth * hpPercent);
+                    if (isOccupied && _spriteManager.InventoryPlayerHealthBarFull != null)
+                    {
+                        int currentHP = member!.CurrentHP;
+                        int maxHP = member.MaxHP;
+                        float hpPercent = (float)currentHP / Math.Max(1, maxHP);
+                        int fullWidth = _spriteManager.InventoryPlayerHealthBarFull.Width;
+                        int visibleWidth = (int)(fullWidth * hpPercent);
 
-                    var srcRect = new Rectangle(0, 0, visibleWidth, _spriteManager.InventoryPlayerHealthBarFull.Height);
-                    spriteBatch.DrawSnapped(_spriteManager.InventoryPlayerHealthBarFull, new Vector2(barX + 1, currentY), srcRect, Color.White);
+                        var srcRect = new Rectangle(0, 0, visibleWidth, _spriteManager.InventoryPlayerHealthBarFull.Height);
+                        spriteBatch.DrawSnapped(_spriteManager.InventoryPlayerHealthBarFull, new Vector2(barX + 1, currentY), srcRect, Color.White);
+                    }
 
-                    string hpValText = $"{currentHP}/{maxHP}";
+                    string hpValText = isOccupied ? $"{member!.CurrentHP}/{member.MaxHP}" : "0/0";
+                    Color hpValColor = isOccupied ? _global.Palette_BrightWhite : _global.Palette_DarkGray;
                     string hpSuffix = " HP";
+
                     Vector2 valSize = secondaryFont.MeasureString(hpValText);
                     Vector2 suffixSize = secondaryFont.MeasureString(hpSuffix);
                     float totalHpWidth = valSize.X + suffixSize.X;
@@ -308,7 +317,7 @@ namespace ProjectVagabond.UI
                     float hpTextX = centerX - (totalHpWidth / 2f);
                     float hpTextY = currentY + 7;
 
-                    spriteBatch.DrawStringSnapped(secondaryFont, hpValText, new Vector2(hpTextX, hpTextY), _global.Palette_BrightWhite);
+                    spriteBatch.DrawStringSnapped(secondaryFont, hpValText, new Vector2(hpTextX, hpTextY), hpValColor);
                     spriteBatch.DrawStringSnapped(secondaryFont, hpSuffix, new Vector2(hpTextX + valSize.X, hpTextY), _global.Palette_Gray);
 
                     currentY += 8 + (int)valSize.Y + 4 - 3;
@@ -319,12 +328,6 @@ namespace ProjectVagabond.UI
                 int gap = 4;
                 int totalEquipWidth = (slotSize * 3) + (gap * 2);
                 int equipStartX = centerX - (totalEquipWidth / 2);
-
-                // Check hover state from the invisible buttons
-                int baseBtnIndex = i * 3;
-                bool weaponHover = _partyEquipButtons[baseBtnIndex].IsHovered;
-                bool armorHover = _partyEquipButtons[baseBtnIndex + 1].IsHovered;
-                bool relicHover = _partyEquipButtons[baseBtnIndex + 2].IsHovered;
 
                 // Determine random frames for slots based on the base frame index
                 Rectangle weaponFrame = Rectangle.Empty;
@@ -338,9 +341,25 @@ namespace ProjectVagabond.UI
                     relicFrame = slotFrames[(baseFrameIndex + 3) % slotFrames.Length];
                 }
 
-                DrawEquipSlotIcon(spriteBatch, equipStartX, currentY, member.EquippedWeaponId, EquipSlotType.Weapon, weaponHover, weaponFrame, i);
-                DrawEquipSlotIcon(spriteBatch, equipStartX + slotSize + gap, currentY, member.EquippedArmorId, EquipSlotType.Armor, armorHover, armorFrame, i);
-                DrawEquipSlotIcon(spriteBatch, equipStartX + (slotSize + gap) * 2, currentY, member.EquippedRelicId, EquipSlotType.Relic, relicHover, relicFrame, i);
+                if (isOccupied)
+                {
+                    // Check hover state from the invisible buttons
+                    int baseBtnIndex = i * 3;
+                    bool weaponHover = _partyEquipButtons[baseBtnIndex].IsHovered;
+                    bool armorHover = _partyEquipButtons[baseBtnIndex + 1].IsHovered;
+                    bool relicHover = _partyEquipButtons[baseBtnIndex + 2].IsHovered;
+
+                    DrawEquipSlotIcon(spriteBatch, equipStartX, currentY, member!.EquippedWeaponId, EquipSlotType.Weapon, weaponHover, weaponFrame, i);
+                    DrawEquipSlotIcon(spriteBatch, equipStartX + slotSize + gap, currentY, member.EquippedArmorId, EquipSlotType.Armor, armorHover, armorFrame, i);
+                    DrawEquipSlotIcon(spriteBatch, equipStartX + (slotSize + gap) * 2, currentY, member.EquippedRelicId, EquipSlotType.Relic, relicHover, relicFrame, i);
+                }
+                else
+                {
+                    // Draw empty slot backgrounds
+                    DrawEquipSlotBackground(spriteBatch, equipStartX, currentY, weaponFrame);
+                    DrawEquipSlotBackground(spriteBatch, equipStartX + slotSize + gap, currentY, armorFrame);
+                    DrawEquipSlotBackground(spriteBatch, equipStartX + (slotSize + gap) * 2, currentY, relicFrame);
+                }
 
                 currentY += slotSize + 6 - 5; // Moved up 5 pixels
 
@@ -350,13 +369,15 @@ namespace ProjectVagabond.UI
 
                 for (int s = 0; s < 4; s++)
                 {
-                    int val = _gameState.PlayerState.GetEffectiveStat(member, statKeys[s]);
+                    int val = isOccupied ? _gameState.PlayerState.GetEffectiveStat(member!, statKeys[s]) : 0;
+                    Color labelColor = isOccupied ? _global.Palette_LightGray : _global.Palette_DarkGray;
 
                     // Draw Label
-                    spriteBatch.DrawStringSnapped(secondaryFont, statLabels[s], new Vector2(equipStartX - 3, currentY), _global.Palette_LightGray);
+                    spriteBatch.DrawStringSnapped(secondaryFont, statLabels[s], new Vector2(equipStartX - 3, currentY), labelColor);
 
                     // Draw Bar
-                    if (_spriteManager.InventoryStatBarEmpty != null && _spriteManager.InventoryStatBarFull != null)
+                    Texture2D statBarBg = isOccupied ? _spriteManager.InventoryStatBarEmpty : _spriteManager.InventoryStatBarDisabled;
+                    if (statBarBg != null)
                     {
                         float labelWidth = secondaryFont.MeasureString(statLabels[s]).Width;
                         float barX = equipStartX - 3 + labelWidth + 3; // 3px gap
@@ -369,37 +390,51 @@ namespace ProjectVagabond.UI
                         float barY = currentY + (secondaryFont.LineHeight - 3) / 2f + barYOffset;
 
                         // Draw Empty
-                        spriteBatch.DrawSnapped(_spriteManager.InventoryStatBarEmpty, new Vector2(barX, barY), Color.White);
+                        spriteBatch.DrawSnapped(statBarBg, new Vector2(barX, barY), Color.White);
 
-                        // Draw Full
-                        int width = Math.Clamp(val, 1, 20) * 2;
-                        var src = new Rectangle(0, 0, width, 3);
-                        spriteBatch.DrawSnapped(_spriteManager.InventoryStatBarFull, new Vector2(barX, barY), src, Color.White);
-
-                        // Draw Excess Text
-                        if (val > 20)
+                        // Draw Full (Only if occupied)
+                        if (isOccupied && _spriteManager.InventoryStatBarFull != null)
                         {
-                            int excess = val - 20;
-                            string excessText = $"+{excess}";
+                            int width = Math.Clamp(val, 1, 20) * 2;
+                            var src = new Rectangle(0, 0, width, 3);
+                            spriteBatch.DrawSnapped(_spriteManager.InventoryStatBarFull, new Vector2(barX, barY), src, Color.White);
 
-                            Vector2 textSize = secondaryFont.MeasureString(excessText);
+                            // Draw Excess Text
+                            if (val > 20)
+                            {
+                                int excess = val - 20;
+                                string excessText = $"+{excess}";
 
-                            // Right align to the end of the bar (width 40)
-                            float textX = (barX + 40) - textSize.X;
+                                Vector2 textSize = secondaryFont.MeasureString(excessText);
 
-                            Vector2 textPos = new Vector2(textX, currentY);
+                                // Right align to the end of the bar (width 40)
+                                float textX = (barX + 40) - textSize.X;
 
-                            // Draw background rectangle to hide bar underneath
-                            var bgRect = new Rectangle((int)textPos.X - 1, (int)textPos.Y, (int)textSize.X + 2, (int)textSize.Y);
-                            spriteBatch.DrawSnapped(pixel, bgRect, _global.Palette_Black);
+                                Vector2 textPos = new Vector2(textX, currentY);
 
-                            spriteBatch.DrawStringOutlinedSnapped(secondaryFont, excessText, textPos, _global.Palette_BrightWhite, _global.Palette_Black);
+                                // Draw background rectangle to hide bar underneath
+                                var bgRect = new Rectangle((int)textPos.X - 1, (int)textPos.Y, (int)textSize.X + 2, (int)textSize.Y);
+                                spriteBatch.DrawSnapped(pixel, bgRect, _global.Palette_Black);
+
+                                spriteBatch.DrawStringOutlinedSnapped(secondaryFont, excessText, textPos, _global.Palette_BrightWhite, _global.Palette_Black);
+                            }
                         }
                     }
 
                     currentY += (int)secondaryFont.LineHeight + 1;
                 }
             }
+        }
+
+        private void DrawEquipSlotBackground(SpriteBatch spriteBatch, int x, int y, Rectangle bgFrame)
+        {
+            if (bgFrame == Rectangle.Empty) return;
+
+            Vector2 centerPos = new Vector2(x + 8, y + 8);
+            Vector2 origin = new Vector2(12, 12); // Center of 24x24 sprite
+            float scale = 1.0f;
+
+            spriteBatch.DrawSnapped(_spriteManager.InventorySlotIdleSpriteSheet, centerPos, bgFrame, Color.White, 0f, origin, scale, SpriteEffects.None, 0f);
         }
 
         private void DrawEquipSlotIcon(SpriteBatch spriteBatch, int x, int y, string? itemId, EquipSlotType type, bool isHovered, Rectangle bgFrame, int memberIndex)
