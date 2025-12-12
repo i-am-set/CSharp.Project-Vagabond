@@ -7,46 +7,46 @@
 	#define PS_SHADERMODEL ps_4_0_level_9_1
 #endif
 
-// --- Uniforms (Variables from C#) ---
+// --- Uniforms ---
 uniform float Time;
-uniform float2 ScreenResolution;
+uniform float2 ScreenResolution;  // Physical window size (e.g., 1920x1080)
+uniform float2 VirtualResolution; // Game resolution (e.g., 320x180)
 uniform float Gamma;
 uniform float3 FlashColor;
 uniform float FlashIntensity;
 uniform float ImpactGlitchIntensity;
 
-// --- Effect Toggles ---
-#define ENABLE_VIGNETTE
-#define ENABLE_CHROMATIC_ABERRATION
-#define ENABLE_CONTRAST
-#define ENABLE_IMPACT_GLITCH
+// --- Toggles ---
 #define ENABLE_SCANLINES
 #define ENABLE_WOBBLE
-#define ENABLE_DITHERING
+#define ENABLE_VIGNETTE
+#define ENABLE_CHROMATIC_ABERRATION
+#define ENABLE_NOISE
 
-// --- Effect Intensity Values ---
-static const float VIGNETTE_INTENSITY = 0.45;
-static const float CHROMATIC_ABERRATION_AMOUNT = 10.0;
-static const float CONTRAST_AMOUNT = 1.1;
-// --- Scanline Parameters ---
-static const float SCANLINE_INTENSITY = 0.5f;
-static const float SCANLINE_FREQUENCY = 1.0f; // Set to 1.0f for 1:1 pixel scanlines
-// --- Wobble Parameters ---
-static const float WOBBLE_AMOUNT = 0.505;
-static const float WOBBLE_FREQUENCY = -0.75;
-static const float WOBBLE_VERTICAL_FREQUENCY = 150.0;
-// --- Impact Glitch Parameters ---
-static const float IMPACT_GLITCH_BLOCK_HEIGHT = 0.002;
-static const float IMPACT_GLITCH_INTENSITY = 0.02;
+// --- Tuning ---
+// Scanlines
+static const float SCANLINE_OPACITY_MIN = 0.75f; // The darkness of the gap (1.0 = invisible, 0.0 = black)
+static const float SCANLINE_OPACITY_MAX = 1.0f;  // The brightness of the beam center
 
+// Wobble (Distortion)
+static const float WOBBLE_FREQUENCY = 1.0;
+static const float WOBBLE_AMPLITUDE = 1.0; // In physical pixels (keep small for crispness)
 
-// --- Shader Globals ---
+// Chromatic Aberration
+static const float CHROMATIC_OFFSET = 1.5; // In physical pixels
+
+// Vignette
+static const float VIGNETTE_INTENSITY = 0.3;
+static const float VIGNETTE_ROUNDNESS = 0.4;
+
+// Noise
+static const float NOISE_INTENSITY = 0.02;
+
+// --- Globals ---
 Texture2D SpriteTexture;
 sampler s0 = sampler_state { Texture = <SpriteTexture>; };
 
-// A simple hash function to generate pseudo-random numbers in the shader.
-float rand(float2 co)
-{
+float rand(float2 co) {
     return frac(sin(dot(co.xy, float2(12.9898, 78.233))) * 43758.5453);
 }
 
@@ -57,77 +57,77 @@ struct PixelShaderInput
 	float2 TexCoord : TEXCOORD0;
 };
 
-// --- Pixel Shader ---
 float4 MainPS(PixelShaderInput input) : COLOR
 {
-    float2 uv = input.TexCoord - 0.5; 
-    float2 sampleCoords = input.TexCoord;
-
+    float2 uv = input.TexCoord;
+    
+    // --- 1. WOBBLE (Distortion) ---
+    // We calculate the offset based on ScreenResolution so the wave stays tight and crisp
+    // regardless of how big the window is.
 #ifdef ENABLE_WOBBLE
-    float wobble_offset = sin(Time * WOBBLE_FREQUENCY + sampleCoords.y * WOBBLE_VERTICAL_FREQUENCY) * (WOBBLE_AMOUNT / ScreenResolution.x);
-    sampleCoords.x += wobble_offset;
-#endif
-
-#ifdef ENABLE_IMPACT_GLITCH
-    if (ImpactGlitchIntensity > 0.0)
-    {
-        float block_id = floor(input.TexCoord.y / IMPACT_GLITCH_BLOCK_HEIGHT);
-        float glitch_offset = (rand(float2(Time * 20.0, block_id)) - 0.5) * 2.0 * IMPACT_GLITCH_INTENSITY * ImpactGlitchIntensity;
-        sampleCoords.x += glitch_offset;
+    float wobble = sin(uv.y * ScreenResolution.y * 0.02 + Time * WOBBLE_FREQUENCY) * WOBBLE_AMPLITUDE;
+    // Apply glitch intensity if active
+    if (ImpactGlitchIntensity > 0.0) {
+        float block = floor(uv.y * 20.0); // Large blocks for glitch
+        wobble += (rand(float2(Time, block)) - 0.5) * 20.0 * ImpactGlitchIntensity;
     }
+    uv.x += wobble / ScreenResolution.x;
 #endif
 
-    float4 color = (float4)0;
-
+    // --- 2. CHROMATIC ABERRATION ---
+    // Sample colors with slight offsets (in physical pixels)
+    float3 color;
 #ifdef ENABLE_CHROMATIC_ABERRATION
-    // Note: Curvature is disabled, so we calculate a simplified distance for aberration.
-    float dist = dot(uv, uv);
-    float2 offset = uv * dist * (CHROMATIC_ABERRATION_AMOUNT / ScreenResolution.x);
-    float r = tex2D(s0, sampleCoords - offset).r;
-    float g = tex2D(s0, sampleCoords).g;
-    float b = tex2D(s0, sampleCoords + offset).b;
-    color = float4(r, g, b, 1.0);
+    float2 rOffset = float2(CHROMATIC_OFFSET / ScreenResolution.x, 0.0);
+    float2 bOffset = float2(-CHROMATIC_OFFSET / ScreenResolution.x, 0.0);
+    
+    color.r = tex2D(s0, uv + rOffset).r;
+    color.g = tex2D(s0, uv).g;
+    color.b = tex2D(s0, uv + bOffset).b;
 #else
-    color = tex2D(s0, sampleCoords);
+    color = tex2D(s0, uv).rgb;
 #endif
 
-#ifdef ENABLE_VIGNETTE
-    float vignette = smoothstep(0.2, 0.8, length(uv));
-    color.rgb *= 1.0 - (vignette * VIGNETTE_INTENSITY);
-#endif
-
-#ifdef ENABLE_CONTRAST
-    color.rgb = lerp(0.5, color.rgb, CONTRAST_AMOUNT);
-#endif
-
+    // --- 3. SCANLINES ---
+    // We use VirtualResolution.y to align scanlines with the game's fat pixels.
+    // We use a Sine wave to create a smooth "beam" profile instead of harsh black bars.
 #ifdef ENABLE_SCANLINES
-    float scanline_phase = input.TexCoord.y * ScreenResolution.y * SCANLINE_FREQUENCY;
-    // Use fmod to create sharp, alternating lines instead of a soft sine wave.
-    // This creates a 1-pixel on, 1-pixel off pattern for a classic sharp scanline look.
-    if (fmod(scanline_phase, 2.0) > 1.0)
-    {
-        color.rgb *= (1.0 - SCANLINE_INTENSITY);
-    }
+    // Calculate position in the virtual grid (0.0 to 1.0 within a single game pixel row)
+    float scanlinePos = uv.y * VirtualResolution.y * 3.14159 * 2.0;
+    
+    // Create a sine wave that oscillates between -1 and 1
+    float scanlineWave = sin(scanlinePos);
+    
+    // Map the wave to our opacity range (e.g., 0.7 to 1.0)
+    // This creates the "glow" in the center of the pixel and the "dim" at the edge.
+    float scanlineFactor = lerp(SCANLINE_OPACITY_MIN, SCANLINE_OPACITY_MAX, (scanlineWave * 0.5 + 0.5));
+    
+    color *= scanlineFactor;
 #endif
 
-    color.rgb = max(color.rgb, 0.0);
-    color.rgb = pow(color.rgb, 1.0 / Gamma);
-
-    color.rgb = lerp(color.rgb, FlashColor, FlashIntensity);
-
-#ifdef ENABLE_DITHERING
-    // Generate noise based on screen position to break up color bands.
-    // We use the screen resolution to ensure the noise is per-pixel.
-    float noise = rand(input.TexCoord * ScreenResolution);
-    
-    // Scale the noise to be very subtle (1/255 is the smallest color step in 8-bit color).
-    // We subtract 0.5 to center the noise around 0.
-    float dither = (noise - 0.5) * (1.0 / 255.0);
-    
-    color.rgb += dither;
+    // --- 4. VIGNETTE ---
+#ifdef ENABLE_VIGNETTE
+    float2 vUV = uv * (1.0 - uv.yx); // Classic vignette equation
+    float vig = vUV.x * vUV.y * 15.0;
+    vig = pow(vig, VIGNETTE_ROUNDNESS);
+    color *= float3(vig, vig, vig); // Multiply instead of mix for better color retention
 #endif
 
-	return color;
+    // --- 5. NOISE (Dithering) ---
+#ifdef ENABLE_NOISE
+    float noise = (rand(uv * Time) - 0.5) * NOISE_INTENSITY;
+    color += noise;
+#endif
+
+    // --- 6. GAMMA & FLASH ---
+    // Apply Gamma Correction
+    color = max(color, 0.0);
+    color = pow(color, 1.0 / Gamma);
+
+    // Apply Screen Flash
+    color = lerp(color, FlashColor, FlashIntensity);
+
+    return float4(color, 1.0);
 }
 
 technique CRT

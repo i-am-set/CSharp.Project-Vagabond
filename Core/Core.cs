@@ -751,6 +751,7 @@ namespace ProjectVagabond
             {
                 _crtEffect.Parameters["Time"]?.SetValue((float)gameTime.TotalGameTime.TotalSeconds);
                 _crtEffect.Parameters["ScreenResolution"]?.SetValue(new Vector2(GraphicsDevice.PresentationParameters.BackBufferWidth, GraphicsDevice.PresentationParameters.BackBufferHeight));
+                _crtEffect.Parameters["VirtualResolution"]?.SetValue(new Vector2(Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT)); // Pass the virtual resolution for pixel-perfect scaling
                 _crtEffect.Parameters["Gamma"]?.SetValue(_settings.Gamma);
 
                 float flashIntensity = 0f;
