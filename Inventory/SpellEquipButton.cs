@@ -7,29 +7,31 @@ using ProjectVagabond.Battle;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections.Generic;
 
 namespace ProjectVagabond.UI
 {
     public class SpellEquipButton : Button
     {
         public string SpellName { get; set; } = "EMPTY";
-        public bool IsEquipped { get; set; } = false;
+        public bool HasSpell { get; set; } = false;
+
         // Layout Constants
-        private const int WIDTH = 107;
-        private const int VISUAL_HEIGHT = 8;
-        private const int HITBOX_HEIGHT = 9; // Increased by 1 pixel downwards
+        private const int WIDTH = 64;
+        private const int HEIGHT = 8;
 
         public SpellEquipButton(Rectangle bounds) : base(bounds, "")
         {
             // Enforce width and height
-            Bounds = new Rectangle(bounds.X, bounds.Y, WIDTH, HITBOX_HEIGHT);
+            Bounds = new Rectangle(bounds.X, bounds.Y, WIDTH, HEIGHT);
             EnableHoverSway = false;
         }
 
         public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? horizontalOffset = null, float? verticalOffset = null, Color? tintColorOverride = null)
         {
-            var pixel = ServiceLocator.Get<Texture2D>();
+            var spriteManager = ServiceLocator.Get<SpriteManager>();
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+            var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont; // Use Tertiary Font as requested
 
             bool isActivated = IsEnabled && (IsHovered || forceHover);
 
@@ -38,56 +40,53 @@ namespace ProjectVagabond.UI
             float totalX = Bounds.X + (horizontalOffset ?? 0f) + shakeOffset.X;
             float totalY = Bounds.Y + (verticalOffset ?? 0f) + shakeOffset.Y;
 
-            // 2. Draw Border (No Background)
+            // 2. Determine Frame
+            int frameIndex = 0; // Empty
             if (isActivated)
             {
-                Color borderColor = _global.Palette_Red;
-                // Top
-                spriteBatch.DrawSnapped(pixel, new Rectangle((int)totalX, (int)totalY, WIDTH, 1), borderColor);
-                // Bottom (Extended down by 1 pixel relative to VISUAL_HEIGHT)
-                spriteBatch.DrawSnapped(pixel, new Rectangle((int)totalX, (int)totalY + VISUAL_HEIGHT, WIDTH, 1), borderColor);
-                // Left (Extended height by 1 relative to VISUAL_HEIGHT)
-                spriteBatch.DrawSnapped(pixel, new Rectangle((int)totalX, (int)totalY, 1, VISUAL_HEIGHT + 1), borderColor);
-                // Right (Extended height by 1 relative to VISUAL_HEIGHT)
-                spriteBatch.DrawSnapped(pixel, new Rectangle((int)totalX + WIDTH - 1, (int)totalY, 1, VISUAL_HEIGHT + 1), borderColor);
+                frameIndex = 2; // Hover
             }
-
-            // 3. Draw Text
-            // 5x5 Font, All Caps
-            string textToDraw = SpellName.ToUpper();
-
-            Color textColor;
-            if (isActivated)
+            else if (HasSpell)
             {
-                textColor = Color.White;
+                frameIndex = 1; // Filled
             }
-            else if (IsEquipped)
+
+            var sourceRect = spriteManager.InventorySpellSlotButtonSourceRects[frameIndex];
+            var texture = spriteManager.InventorySpellSlotButtonSpriteSheet;
+
+            // 3. Draw Sprite
+            if (texture != null)
             {
-                // Equipped spells are lighter (LightGray)
-                textColor = _global.Palette_LightGray;
+                spriteBatch.DrawSnapped(texture, new Vector2(totalX, totalY), sourceRect, Color.White);
             }
-            else
+
+            // 4. Draw Text (Only if filled or hovered)
+            if (HasSpell)
             {
-                // Empty slots are darker (Gray)
-                textColor = _global.Palette_Gray;
+                string textToDraw = SpellName.ToUpper();
+                Color textColor = _global.Palette_BrightWhite;
+
+                if (!IsEnabled) textColor = _global.Palette_DarkGray;
+                else if (isActivated) textColor = _global.ButtonHoverColor;
+
+                // Apply flash tint to text color if active
+                if (flashTint.HasValue)
+                {
+                    textColor = Color.Lerp(textColor, flashTint.Value, flashTint.Value.A / 255f);
+                }
+
+                // Center text
+                Vector2 textSize = tertiaryFont.MeasureString(textToDraw);
+                Vector2 textPos = new Vector2(
+                    totalX + (WIDTH - textSize.X) / 2f,
+                    totalY + (HEIGHT - textSize.Y) / 2f
+                );
+
+                // Round to pixel
+                textPos = new Vector2(MathF.Round(textPos.X), MathF.Round(textPos.Y));
+
+                spriteBatch.DrawStringSnapped(tertiaryFont, textToDraw, textPos, textColor);
             }
-
-            if (!IsEnabled) textColor = _global.Palette_DarkGray;
-
-            // Apply flash tint to text color if active
-            if (flashTint.HasValue)
-            {
-                textColor = Color.Lerp(textColor, flashTint.Value, flashTint.Value.A / 255f);
-            }
-
-            // Center text both horizontally and vertically based on VISUAL_HEIGHT
-            Vector2 textSize = secondaryFont.MeasureString(textToDraw);
-            Vector2 textPos = new Vector2(
-                totalX + (WIDTH - textSize.X) / 2f,
-                totalY + (VISUAL_HEIGHT - textSize.Y) / 2f
-            );
-
-            spriteBatch.DrawStringSnapped(secondaryFont, textToDraw, textPos, textColor);
         }
     }
 }

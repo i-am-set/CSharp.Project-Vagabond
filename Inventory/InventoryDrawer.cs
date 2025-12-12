@@ -423,6 +423,44 @@ namespace ProjectVagabond.UI
 
                     currentY += (int)secondaryFont.LineHeight + 1;
                 }
+
+                // --- NEW: Draw Spell Slot Buttons ---
+                currentY += 2; // Small gap after stats
+
+                for (int s = 0; s < 4; s++)
+                {
+                    int buttonIndex = (i * 4) + s;
+                    if (buttonIndex < _partySpellButtons.Count)
+                    {
+                        var btn = _partySpellButtons[buttonIndex];
+
+                        // Update button state
+                        if (isOccupied)
+                        {
+                            var spellEntry = member!.EquippedSpells[s];
+                            if (spellEntry != null && BattleDataCache.Moves.TryGetValue(spellEntry.MoveID, out var moveData))
+                            {
+                                btn.SpellName = moveData.MoveName;
+                                btn.HasSpell = true;
+                            }
+                            else
+                            {
+                                btn.SpellName = "EMPTY";
+                                btn.HasSpell = false;
+                            }
+                            btn.IsEnabled = true;
+                        }
+                        else
+                        {
+                            btn.SpellName = "EMPTY";
+                            btn.HasSpell = false;
+                            btn.IsEnabled = false;
+                        }
+
+                        // Draw the button
+                        btn.Draw(spriteBatch, font, gameTime, Matrix.Identity);
+                    }
+                }
             }
         }
 

@@ -41,6 +41,9 @@ namespace ProjectVagabond.UI
         // New Equip Slot Buttons (Invisible hitboxes for the panels)
         private readonly List<Button> _partyEquipButtons = new();
 
+        // NEW: Spell Slot Buttons
+        private readonly List<SpellEquipButton> _partySpellButtons = new();
+
         private ImageButton? _debugButton1;
         private ImageButton? _debugButton2;
         private ImageButton? _pageLeftButton;
@@ -226,6 +229,7 @@ namespace ProjectVagabond.UI
             var defaultFont = ServiceLocator.Get<BitmapFont>(); // Get default font
 
             _partyEquipButtons.Clear();
+            _partySpellButtons.Clear(); // Clear spell buttons
 
             for (int i = 0; i < 4; i++)
             {
@@ -274,6 +278,30 @@ namespace ProjectVagabond.UI
                 _partyEquipButtons.Add(relicBtn);
 
                 currentY += slotSize + 6 - 5; // Moved up 5 pixels
+
+                // Stats (4 lines)
+                currentY += (int)secondaryFont.LineHeight + 1; // STR
+                currentY += (int)secondaryFont.LineHeight + 1; // INT
+                currentY += (int)secondaryFont.LineHeight + 1; // TEN
+                currentY += (int)secondaryFont.LineHeight + 1; // AGI
+
+                // --- NEW: Spell Slot Buttons ---
+                // Positioned under the stats
+                // Button size: 64x8
+                // Centered horizontally in the panel (panelWidth = 76)
+                int spellButtonWidth = 64;
+                int spellButtonHeight = 8;
+                int spellButtonX = centerX - (spellButtonWidth / 2);
+                int spellButtonY = currentY + 2; // Add a small gap after stats
+
+                for (int s = 0; s < 4; s++)
+                {
+                    var spellBtn = new SpellEquipButton(new Rectangle(spellButtonX, spellButtonY, spellButtonWidth, spellButtonHeight));
+                    int slotIndex = s; // Capture for closure
+                    spellBtn.OnClick += () => OpenEquipSubmenu(memberIndex, EquipSlotType.Spell1 + slotIndex);
+                    _partySpellButtons.Add(spellBtn);
+                    spellButtonY += spellButtonHeight; // Stack vertically
+                }
             }
 
             _inventorySlots.Clear();

@@ -1,8 +1,8 @@
-﻿#nullable enable
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using MonoGame.Extended.Graphics;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.UI;
@@ -16,6 +16,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.Intrinsics.X86;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -68,6 +69,7 @@ namespace ProjectVagabond
         public Texture2D InventoryStatBarEmpty { get; private set; }
         public Texture2D InventoryStatBarDisabled { get; private set; } // New
         public Texture2D InventoryStatBarFull { get; private set; }
+        public Texture2D InventorySpellSlotButtonSpriteSheet { get; private set; } // NEW
 
         // Source Rectangles for UI elements
         public Rectangle[] ActionButtonSourceRects { get; private set; }
@@ -84,6 +86,7 @@ namespace ProjectVagabond
         public Rectangle[] InventoryLeftArrowButtonSourceRects { get; private set; }
         public Rectangle[] InventoryRightArrowButtonSourceRects { get; private set; }
         public Rectangle[] InventoryScrollArrowRects { get; private set; }
+        public Rectangle[] InventorySpellSlotButtonSourceRects { get; private set; } // NEW
 
 
         // Enemy Sprite Cache
@@ -457,6 +460,8 @@ namespace ProjectVagabond
             catch { InventorySlotEquipIconSprite = _textureFactory.CreateColoredTexture(64, 32, Color.Magenta); }
             try { TargetingIndicatorSprite = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/targeting_indicator"); }
             catch { TargetingIndicatorSprite = _textureFactory.CreateColoredTexture(32, 32, Color.Red); }
+            try { InventorySpellSlotButtonSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_spell_slot_button"); }
+            catch { InventorySpellSlotButtonSpriteSheet = _textureFactory.CreateColoredTexture(192, 8, Color.Magenta); }
 
             // Load Health Bar Sprites
             try { InventoryPlayerHealthBarEmpty = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_player_health_bar_empty"); }
@@ -484,6 +489,20 @@ namespace ProjectVagabond
             InitializeInventorySlotLargeRects(); // Initialize Large Rects
             InitializeInventoryArrowButtonRects();
             InitializeInventoryScrollArrowRects();
+            InitializeInventorySpellSlotButtonRects();
+        }
+
+        private void InitializeInventorySpellSlotButtonRects()
+        {
+            InventorySpellSlotButtonSourceRects = new Rectangle[3];
+            const int frameWidth = 64;
+            const int frameHeight = 8;
+            // Frame 0: Empty
+            InventorySpellSlotButtonSourceRects[0] = new Rectangle(0, 0, frameWidth, frameHeight);
+            // Frame 1: Filled
+            InventorySpellSlotButtonSourceRects[1] = new Rectangle(frameWidth, 0, frameWidth, frameHeight);
+            // Frame 2: Hover
+            InventorySpellSlotButtonSourceRects[2] = new Rectangle(frameWidth * 2, 0, frameWidth, frameHeight);
         }
 
         private void InitializeInventoryScrollArrowRects()

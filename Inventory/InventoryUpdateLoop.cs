@@ -67,6 +67,22 @@ namespace ProjectVagabond.UI
                         _partyEquipButtons[i].ResetAnimationState();
                     }
                 }
+
+                // UPDATE SPELL SLOT BUTTONS
+                for (int i = 0; i < _partySpellButtons.Count; i++)
+                {
+                    int memberIndex = i / 4;
+                    if (memberIndex < partyCount)
+                    {
+                        _partySpellButtons[i].IsEnabled = true;
+                        _partySpellButtons[i].Update(currentMouseState, cameraTransform);
+                    }
+                    else
+                    {
+                        _partySpellButtons[i].IsEnabled = false;
+                        _partySpellButtons[i].ResetAnimationState();
+                    }
+                }
             }
 
             var slotFrames = _spriteManager.InventorySlotSourceRects;
@@ -400,7 +416,6 @@ namespace ProjectVagabond.UI
             _previousMouseState = currentMouseState;
             _previousKeyboardState = currentKeyboardState;
         }
-
         private void ChangePage(int direction)
         {
             if (_totalPages <= 1) return;
