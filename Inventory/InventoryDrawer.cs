@@ -465,6 +465,14 @@ namespace ProjectVagabond.UI
                     }
                 }
             }
+            else
+            {
+                // Draw empty slot sprite if no item is equipped
+                if (_spriteManager.InventoryEmptySlotSprite != null)
+                {
+                    spriteBatch.DrawSnapped(_spriteManager.InventoryEmptySlotSprite, destRect, Color.White);
+                }
+            }
         }
 
         private void DrawInfoPanel(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, GameTime gameTime, bool drawBackground, Rectangle infoPanelArea)
