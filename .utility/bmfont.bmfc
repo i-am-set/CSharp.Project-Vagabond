@@ -2,10 +2,10 @@
 fileVersion=1
 
 # font settings
-fontName=5x5 Astro
-fontFile=../Content/Fonts/5x5_pixel.ttf
+fontName=3x3-ASCII
+fontFile=../Content/Fonts/3x3-ascii.ttf
 charSet=0
-fontSize=5
+fontSize=4
 aa=1
 scaleH=100
 useSmoothing=0

@@ -36,6 +36,7 @@ namespace ProjectVagabond
         private SpriteBatch _spriteBatch;
         private BitmapFont _defaultFont;
         private BitmapFont _secondaryFont;
+        private BitmapFont _tertiaryFont;
         private Texture2D _pixel;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
@@ -78,9 +79,19 @@ namespace ProjectVagabond
         public Matrix MouseTransformMatrix => _mouseTransformMatrix;
 
         /// <summary>
+        /// The default IBM BIOS font.
+        /// </summary>
+        public BitmapFont DefaultFont => _defaultFont;
+
+        /// <summary>
         /// The secondary, smaller pixel font used for UI elements.
         /// </summary>
         public BitmapFont SecondaryFont => _secondaryFont;
+
+        /// <summary>
+        /// The tertiary, smallest 3x3 pixel font used for very small UI elements or debug.
+        /// </summary>
+        public BitmapFont TertiaryFont => _tertiaryFont;
 
         /// <summary>
         /// The current integer scaling factor of the game window.
@@ -484,6 +495,16 @@ namespace ProjectVagabond
                 _secondaryFont = _defaultFont;
             }
 
+            try
+            {
+                _tertiaryFont = Content.Load<BitmapFont>("Fonts/3x3-ascii");
+            }
+            catch
+            {
+                Debug.WriteLine("[WARNING] Could not load tertiary font 'Fonts/3x3-ascii'. Using secondary font as fallback.");
+                _tertiaryFont = _secondaryFont;
+            }
+
             // Load essential assets
             _spriteManager.LoadEssentialContent();
             _backgroundManager.LoadContent();
@@ -792,7 +813,7 @@ namespace ProjectVagabond
             // 8. Draw Debug Overlays (No Shader)
             _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
             _sceneManager.DrawOverlay(_spriteBatch, _defaultFont, gameTime);
-            if (_debugConsole.IsVisible) _debugConsole.Draw(_spriteBatch, _defaultFont, gameTime);
+            if (_debugConsole.IsVisible) _debugConsole.Draw(_spriteBatch, _secondaryFont, gameTime); // Use Secondary Font as default
 
             if (_defaultFont != null)
             {

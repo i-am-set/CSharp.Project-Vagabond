@@ -29,6 +29,13 @@ namespace ProjectVagabond
             InitializeCommands();
         }
 
+        private void Log(string message)
+        {
+            // Log to both the debug console (via GameLogger) and the in-game terminal (via EventBus)
+            GameLogger.Log(LogSeverity.Info, message);
+            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = message });
+        }
+
         private void InitializeCommands()
         {
             _commands = new Dictionary<string, Command>();
@@ -38,29 +45,30 @@ namespace ProjectVagabond
                 var sb = new StringBuilder();
                 sb.AppendLine("[palette_yellow]Available Commands:[/]");
                 sb.AppendLine("  [palette_teal]System & Debug[/]");
-                sb.AppendLine("    test_abilities      - Runs unit tests on ability logic.");
-                sb.AppendLine("    test_items          - Verifies all items load correctly.");
-                sb.AppendLine("    clear               - Clears console.");
-                sb.AppendLine("    exit                - Exits game.");
-                sb.AppendLine("    debugcombat         - Starts a random forest combat.");
-                sb.AppendLine("    combatrun           - Flees from combat.");
-                sb.AppendLine("    givestatus <slot> <type> [dur] - Apply status.");
+                sb.AppendLine("    test_abilities                     - Runs unit tests on ability logic.");
+                sb.AppendLine("    test_items                          - Verifies all items load correctly.");
+                sb.AppendLine("    clear                                - Clears console.");
+                sb.AppendLine("    exit                                 - Exits game.");
+                sb.AppendLine("    debugcombat                         - Starts a random forest combat.");
+                sb.AppendLine("    combatrun                           - Flees from combat.");
+                sb.AppendLine("    givestatus <slot> <type> {dur}  - Apply status.");
+                sb.AppendLine("    debugconsolefont <0|1|2>         - Sets the debug console font.");
                 sb.AppendLine();
                 sb.AppendLine("  [palette_teal]Party & Inventory[/]");
-                sb.AppendLine("    addmember <id>      - Adds a party member.");
-                sb.AppendLine("    inventory           - Shows all inventories.");
-                sb.AppendLine("    giveall             - Gives 1 of every item.");
-                sb.AppendLine("    giveweapon <id> [n] - Adds weapon(s).");
-                sb.AppendLine("    equipweapon <id>    - Equips a weapon.");
-                sb.AppendLine("    unequipweapon       - Unequips current weapon.");
-                sb.AppendLine("    givearmor <id> [n]  - Adds armor(s).");
-                sb.AppendLine("    giverelic <id> [n]  - Adds relic(s).");
-                sb.AppendLine("    giveconsumable <id> [n] - Adds consumable(s).");
-                sb.AppendLine("    givespell <id>      - Adds a spell.");
+                sb.AppendLine("    addmember <id>                     - Adds a party member.");
+                sb.AppendLine("    inventory                           - Shows all inventories.");
+                sb.AppendLine("    giveall                             - Gives 1 of every item.");
+                sb.AppendLine("    giveweapon <id> {n}               - Adds weapon(s).");
+                sb.AppendLine("    equipweapon <id>                   - Equips a weapon.");
+                sb.AppendLine("    unequipweapon                      - Unequips current weapon.");
+                sb.AppendLine("    givearmor <id> {n}                - Adds armor(s).");
+                sb.AppendLine("    giverelic <id> {n}                - Adds relic(s).");
+                sb.AppendLine("    giveconsumable <id> {n}          - Adds consumable(s).");
+                sb.AppendLine("    givespell <id>                     - Adds a spell.");
 
                 foreach (var line in sb.ToString().Split(new[] { Environment.NewLine }, StringSplitOptions.None))
                 {
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = line });
+                    Log(line);
                 }
             }, "help - Shows this help message.");
 
@@ -82,7 +90,7 @@ namespace ProjectVagabond
             {
                 _gameState ??= ServiceLocator.Get<GameState>();
                 if (_gameState.PlayerState == null) return;
-                if (args.Length < 2) { EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Usage: addmember <MemberID>" }); return; }
+                if (args.Length < 2) { Log("[error]Usage: addmember <MemberID>"); return; }
 
                 string memberId = args[1];
 
@@ -91,7 +99,7 @@ namespace ProjectVagabond
                 {
                     if (_gameState.PlayerState.AddPartyMember(newMember))
                     {
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_teal]Added {newMember.Name} to the party!" });
+                        Log($"[palette_teal]Added {newMember.Name} to the party!");
                         if (BattleDataCache.PartyMembers.TryGetValue(memberId, out var data))
                         {
                             foreach (var kvp in data.StartingWeapons) _gameState.PlayerState.AddWeapon(kvp.Key, kvp.Value);
@@ -101,12 +109,12 @@ namespace ProjectVagabond
                     }
                     else
                     {
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Failed to add member (Duplicate or Full)." });
+                        Log("[error]Failed to add member (Duplicate or Full).");
                     }
                 }
                 else
                 {
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[error]Member ID '{memberId}' not found." });
+                    Log($"[error]Member ID '{memberId}' not found.");
                 }
 
             }, "addmember <id> - Adds a party member.",
@@ -121,23 +129,23 @@ namespace ProjectVagabond
             {
                 _gameState ??= ServiceLocator.Get<GameState>();
                 if (_gameState.PlayerState == null) return;
-                if (args.Length < 2) { EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Usage: equipweapon <WeaponID>" }); return; }
+                if (args.Length < 2) { Log("[error]Usage: equipweapon <WeaponID>"); return; }
 
                 string weaponId = args[1];
                 if (!_gameState.PlayerState.Weapons.ContainsKey(weaponId))
                 {
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[error]You do not have '{weaponId}' in your inventory." });
+                    Log($"[error]You do not have '{weaponId}' in your inventory.");
                     return;
                 }
 
                 if (!BattleDataCache.Weapons.ContainsKey(weaponId))
                 {
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[error]Weapon data for '{weaponId}' not found." });
+                    Log($"[error]Weapon data for '{weaponId}' not found.");
                     return;
                 }
 
                 _gameState.PlayerState.EquippedWeaponId = weaponId;
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_teal]Equipped {weaponId}." });
+                Log($"[palette_teal]Equipped {weaponId}.");
 
             }, "equipweapon <id> - Equips a weapon from inventory.",
             (args) => _gameState?.PlayerState?.Weapons.Keys.ToList() ?? new List<string>());
@@ -147,7 +155,7 @@ namespace ProjectVagabond
                 _gameState ??= ServiceLocator.Get<GameState>();
                 if (_gameState.PlayerState == null) return;
                 _gameState.PlayerState.EquippedWeaponId = null;
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "Unequipped weapon." });
+                Log("Unequipped weapon.");
             }, "unequipweapon - Unequips current weapon.");
 
             _commands["givearmor"] = new Command("givearmor", (args) => HandleGiveItem(args, "Armor"), "givearmor <id> [n]");
@@ -168,7 +176,7 @@ namespace ProjectVagabond
                 foreach (var id in BattleDataCache.Consumables.Keys) { _gameState.PlayerState.AddConsumable(id, 1); count++; }
                 foreach (var id in BattleDataCache.MiscItems.Keys) { _gameState.PlayerState.AddMiscItem(id, 1); count++; }
 
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_teal]Added {count} items (1 of every defined item) to inventory." });
+                Log($"[palette_teal]Added {count} items (1 of every defined item) to inventory.");
             }, "giveall - Adds 1 of every item to inventory.");
 
             _commands["removeweapon"] = new Command("removeweapon", (args) => HandleRemoveItem(args, "Weapon"), "removeweapon <id> [n]");
@@ -179,25 +187,25 @@ namespace ProjectVagabond
             // --- MOVE COMMANDS ---
             _commands["givespell"] = new Command("givespell", (args) =>
             {
-                if (args.Length < 2) { EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Usage: givespell <MoveID>" }); return; }
+                if (args.Length < 2) { Log("[error]Usage: givespell <MoveID>"); return; }
                 EventBus.Publish(new GameEvents.PlayerMoveAdded { MoveID = args[1], Type = GameEvents.AcquisitionType.Add });
             }, "givespell <id> - Adds spell.", (args) => args.Length == 0 ? BattleDataCache.Moves.Values.Where(m => m.MoveType == MoveType.Spell).Select(m => m.MoveID).ToList() : new List<string>());
 
             _commands["removespell"] = new Command("removespell", (args) =>
             {
-                if (args.Length < 2) { EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Usage: removespell <MoveID>" }); return; }
+                if (args.Length < 2) { Log("[error]Usage: removespell <MoveID>"); return; }
                 EventBus.Publish(new GameEvents.PlayerMoveAdded { MoveID = args[1], Type = GameEvents.AcquisitionType.Remove });
             }, "removespell <id>");
 
             _commands["giveaction"] = new Command("giveaction", (args) =>
             {
-                if (args.Length < 2) { EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Usage: giveaction <MoveID>" }); return; }
+                if (args.Length < 2) { Log("[error]Usage: giveaction <MoveID>"); return; }
                 EventBus.Publish(new GameEvents.PlayerMoveAdded { MoveID = args[1], Type = GameEvents.AcquisitionType.Add });
             }, "giveaction <id> - Adds action.", (args) => args.Length == 0 ? BattleDataCache.Moves.Values.Where(m => m.MoveType == MoveType.Action).Select(m => m.MoveID).ToList() : new List<string>());
 
             _commands["removeaction"] = new Command("removeaction", (args) =>
             {
-                if (args.Length < 2) { EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Usage: removeaction <MoveID>" }); return; }
+                if (args.Length < 2) { Log("[error]Usage: removeaction <MoveID>"); return; }
                 EventBus.Publish(new GameEvents.PlayerMoveAdded { MoveID = args[1], Type = GameEvents.AcquisitionType.Remove });
             }, "removeaction <id>");
 
@@ -217,16 +225,16 @@ namespace ProjectVagabond
                     if (encounter != null && encounter.Any())
                     {
                         splitScene.InitiateCombat(encounter);
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[palette_teal]Starting debug combat (Forest)..." });
+                        Log("[palette_teal]Starting debug combat (Forest)...");
                     }
                     else
                     {
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Could not load Forest encounter data." });
+                        Log("[error]Could not load Forest encounter data.");
                     }
                 }
                 else
                 {
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Command only available in Split Map Scene." });
+                    Log("[error]Command only available in Split Map Scene.");
                 }
             }, "debugcombat - Starts a random forest encounter (SplitMap only).");
 
@@ -236,11 +244,11 @@ namespace ProjectVagabond
                 if (sceneManager.CurrentActiveScene is BattleScene battleScene)
                 {
                     battleScene.TriggerFlee();
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "Attempting to flee..." });
+                    Log("Attempting to flee...");
                 }
                 else
                 {
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Not in combat." });
+                    Log("[error]Not in combat.");
                 }
             }, "combatrun - Flees from combat if active.");
 
@@ -249,25 +257,25 @@ namespace ProjectVagabond
                 var sceneManager = ServiceLocator.Get<SceneManager>();
                 if (!(sceneManager.CurrentActiveScene is BattleScene))
                 {
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Not in combat." });
+                    Log("[error]Not in combat.");
                     return;
                 }
 
                 if (args.Length < 3)
                 {
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Usage: givestatus <slot 1-4> <StatusType> [duration]" });
+                    Log("[error]Usage: givestatus <slot 1-4> <StatusType> [duration]");
                     return;
                 }
 
                 if (!int.TryParse(args[1], out int slot) || slot < 1 || slot > 4)
                 {
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Invalid slot. Use 1-4 (1=P1, 2=P2, 3=E1, 4=E2)." });
+                    Log("[error]Invalid slot. Use 1-4 (1=P1, 2=P2, 3=E1, 4=E2).");
                     return;
                 }
 
                 if (!Enum.TryParse<StatusEffectType>(args[2], true, out var statusType))
                 {
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[error]Invalid status type '{args[2]}'." });
+                    Log($"[error]Invalid status type '{args[2]}'.");
                     return;
                 }
 
@@ -284,12 +292,12 @@ namespace ProjectVagabond
 
                 if (target == null || target.IsDefeated)
                 {
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[error]Slot {slot} is empty or defeated." });
+                    Log($"[error]Slot {slot} is empty or defeated.");
                     return;
                 }
 
                 target.AddStatusEffect(new StatusEffectInstance(statusType, duration));
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_teal]Applied {statusType} to {target.Name} for {duration} turns." });
+                Log($"[palette_teal]Applied {statusType} to {target.Name} for {duration} turns.");
 
             }, "givestatus <slot> <type> [dur] - Apply status in combat.",
             (args) =>
@@ -300,6 +308,17 @@ namespace ProjectVagabond
                 return new List<string>();
             });
 
+            _commands["debugconsolefont"] = new Command("debugconsolefont", (args) =>
+            {
+                if (args.Length < 2 || !int.TryParse(args[1], out int index))
+                {
+                    Log("[error]Usage: debugconsolefont <0|1|2>");
+                    return;
+                }
+                ServiceLocator.Get<DebugConsole>().SetFontIndex(index);
+                Log($"[palette_teal]Debug Console Font set to index {index}.");
+            }, "debugconsolefont <0|1|2> - Sets the debug console font.");
+
             _commands["exit"] = new Command("exit", (args) => ServiceLocator.Get<Core>().ExitApplication(), "exit");
         }
 
@@ -309,7 +328,7 @@ namespace ProjectVagabond
         {
             _gameState ??= ServiceLocator.Get<GameState>();
             if (_gameState.PlayerState == null) return;
-            if (args.Length < 2) { EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Usage: give... <id> [qty]" }); return; }
+            if (args.Length < 2) { Log("[error]Usage: give... <id> [qty]"); return; }
 
             string id = args[1];
             int qty = 1;
@@ -322,14 +341,14 @@ namespace ProjectVagabond
                 case "Relic": _gameState.PlayerState.AddRelic(id, qty); break;
                 case "Consumable": _gameState.PlayerState.AddConsumable(id, qty); break;
             }
-            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Added {qty}x {id} to {type} inventory." });
+            Log($"Added {qty}x {id} to {type} inventory.");
         }
 
         private void HandleRemoveItem(string[] args, string type)
         {
             _gameState ??= ServiceLocator.Get<GameState>();
             if (_gameState.PlayerState == null) return;
-            if (args.Length < 2) { EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Usage: remove... <id> [qty]" }); return; }
+            if (args.Length < 2) { Log("[error]Usage: remove... <id> [qty]"); return; }
 
             string id = args[1];
             int qty = 1;
@@ -342,7 +361,7 @@ namespace ProjectVagabond
                 case "Relic": _gameState.PlayerState.RemoveRelic(id, qty); break;
                 case "Consumable": _gameState.PlayerState.RemoveConsumable(id, qty); break;
             }
-            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Removed {qty}x {id} from {type} inventory." });
+            Log($"Removed {qty}x {id} from {type} inventory.");
         }
 
         private void HandleShowInventory()
@@ -353,7 +372,7 @@ namespace ProjectVagabond
 
             if (!string.IsNullOrEmpty(ps.EquippedWeaponId))
             {
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_teal]Equipped Weapon:[/] {ps.EquippedWeaponId}" });
+                Log($"[palette_teal]Equipped Weapon:[/] {ps.EquippedWeaponId}");
             }
 
             PrintDict(ps.Weapons, "Weapons");
@@ -361,51 +380,51 @@ namespace ProjectVagabond
             PrintDict(ps.Relics, "Relics");
             PrintDict(ps.Consumables, "Consumables");
 
-            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[palette_teal]Spells:[/]" });
+            Log("[palette_teal]Spells:[/]");
             if (ps.Spells.Any())
             {
                 foreach (var spell in ps.Spells)
                 {
                     string equipped = Array.IndexOf(ps.EquippedSpells, spell) != -1 ? " [yellow][Equipped][/]" : "";
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"  {spell.MoveID} (Used: {spell.TimesUsed}){equipped}" });
+                    Log($"  {spell.MoveID} (Used: {spell.TimesUsed}){equipped}");
                 }
             }
-            else EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "  (Empty)" });
+            else Log("  (Empty)");
 
-            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[palette_teal]Actions:[/]" });
+            Log("[palette_teal]Actions:[/]");
             if (ps.Actions.Any())
             {
                 foreach (var action in ps.Actions)
                 {
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"  {action.MoveID} (Used: {action.TimesUsed})" });
+                    Log($"  {action.MoveID} (Used: {action.TimesUsed})");
                 }
             }
-            else EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "  (Empty)" });
+            else Log("  (Empty)");
         }
 
         private void PrintDict(Dictionary<string, int> dict, string title)
         {
-            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_teal]{title}:[/]" });
-            if (!dict.Any()) EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "  (Empty)" });
-            else foreach (var kvp in dict) EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"  {kvp.Key}: {kvp.Value}" });
+            Log($"[palette_teal]{title}:[/]");
+            if (!dict.Any()) Log("  (Empty)");
+            else foreach (var kvp in dict) Log($"  {kvp.Key}: {kvp.Value}");
         }
 
         private void HandleEquipSpell(string[] args)
         {
             _gameState ??= ServiceLocator.Get<GameState>();
             if (_gameState.PlayerState == null) return;
-            if (args.Length < 3 || !int.TryParse(args[2], out int slot)) { EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Usage: equip <MoveID> <slot>" }); return; }
+            if (args.Length < 3 || !int.TryParse(args[2], out int slot)) { Log("[error]Usage: equip <MoveID> <slot>"); return; }
             string moveId = args[1];
 
-            if (slot < 1 || slot > 4) { EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Slot must be 1-4." }); return; }
+            if (slot < 1 || slot > 4) { Log("[error]Slot must be 1-4."); return; }
 
             var spellEntry = _gameState.PlayerState.Spells.FirstOrDefault(s => s.MoveID.Equals(moveId, StringComparison.OrdinalIgnoreCase));
-            if (spellEntry == null) { EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[error]You don't know the spell '{moveId}'." }); return; }
+            if (spellEntry == null) { Log($"[error]You don't know the spell '{moveId}'."); return; }
 
             for (int i = 0; i < 4; i++) if (_gameState.PlayerState.EquippedSpells[i] == spellEntry) _gameState.PlayerState.EquippedSpells[i] = null;
 
             _gameState.PlayerState.EquippedSpells[slot - 1] = spellEntry;
-            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Equipped {spellEntry.MoveID} to slot {slot}." });
+            Log($"Equipped {spellEntry.MoveID} to slot {slot}.");
         }
 
         private void HandleUnequipSpell(string[] args)
@@ -414,7 +433,7 @@ namespace ProjectVagabond
             if (_gameState.PlayerState == null) return;
             if (args.Length < 2 || !int.TryParse(args[1], out int slot) || slot < 1 || slot > 4) return;
             _gameState.PlayerState.EquippedSpells[slot - 1] = null;
-            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Unequipped slot {slot}." });
+            Log($"Unequipped slot {slot}.");
         }
 
         public void ProcessCommand(string input)
@@ -424,7 +443,7 @@ namespace ProjectVagabond
             if (parts.Length == 0) return;
             string cmd = parts[0].ToLower();
             if (_commands.TryGetValue(cmd, out var command)) command.Action(parts);
-            else EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "Unknown command." });
+            else Log("Unknown command.");
         }
     }
 }

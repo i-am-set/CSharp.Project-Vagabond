@@ -53,6 +53,9 @@ namespace ProjectVagabond.Utils
         private bool _isSelecting = false;
         private Button _copyButton;
 
+        // Font Selection
+        private int _currentFontIndex = 0;
+
         public DebugConsole()
         {
             _gameState = ServiceLocator.Get<GameState>();
@@ -69,6 +72,11 @@ namespace ProjectVagabond.Utils
                 UseInputDebounce = false
             };
             _copyButton.OnClick += CopySelectionToClipboard;
+        }
+
+        public void SetFontIndex(int index)
+        {
+            _currentFontIndex = Math.Clamp(index, 0, 2);
         }
 
         public void ClearHistory()
@@ -128,6 +136,15 @@ namespace ProjectVagabond.Utils
             HandleTextInput(currentKeyboardState, gameTime);
             HandleScrolling(currentMouseState);
             HandleSelection(currentMouseState);
+
+            // Right-Click Copy Logic
+            if (currentMouseState.RightButton == ButtonState.Pressed && _previousMouseState.RightButton == ButtonState.Released)
+            {
+                if (_selectionStartLine != -1 && _selectionEndLine != -1)
+                {
+                    CopySelectionToClipboard();
+                }
+            }
 
             // Update Copy Button
             var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
@@ -253,7 +270,8 @@ namespace ProjectVagabond.Utils
             int scrollDelta = currentMouseState.ScrollWheelValue - _previousMouseState.ScrollWheelValue;
             if (scrollDelta != 0)
             {
-                _scrollOffset -= Math.Sign(scrollDelta) * 3;
+                // Inverted scrolling: Positive delta (Up) increases offset (looks further back)
+                _scrollOffset += Math.Sign(scrollDelta) * 3;
                 _scrollOffset = Math.Clamp(_scrollOffset, 0, Math.Max(0, _history.Count - 1));
             }
         }
@@ -391,6 +409,18 @@ namespace ProjectVagabond.Utils
             {
                 var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
                 var pixel = ServiceLocator.Get<Texture2D>();
+                var core = ServiceLocator.Get<Core>();
+
+                // Determine which font to use based on the index
+                // Index 0: Passed font (which Core now sends as Secondary)
+                // Index 1: Default Font (Px437)
+                // Index 2: Tertiary Font (3x3)
+                BitmapFont activeFont = _currentFontIndex switch
+                {
+                    1 => core.DefaultFont,
+                    2 => core.TertiaryFont,
+                    _ => font // Default passed from Core (Secondary)
+                };
 
                 int panelWidth = graphicsDevice.PresentationParameters.BackBufferWidth;
                 int panelHeight = (int)(graphicsDevice.PresentationParameters.BackBufferHeight * 3f / 5f);
@@ -427,8 +457,8 @@ namespace ProjectVagabond.Utils
                     var line = _history[historyIndex];
                     foreach (var segment in line.Segments)
                     {
-                        spriteBatch.DrawString(font, segment.Text, new Vector2(currentX, lineY), segment.Color);
-                        currentX += font.MeasureString(segment.Text).Width;
+                        spriteBatch.DrawString(activeFont, segment.Text, new Vector2(currentX, lineY), segment.Color);
+                        currentX += activeFont.MeasureString(segment.Text).Width;
                     }
                 }
 
@@ -438,12 +468,12 @@ namespace ProjectVagabond.Utils
 
                 _stringBuilder.Clear();
                 _stringBuilder.Append("> ").Append(_currentInput).Append(carat);
-                spriteBatch.DrawString(font, _stringBuilder.ToString(), new Vector2(5, inputLineY), _global.Palette_Yellow);
+                spriteBatch.DrawString(activeFont, _stringBuilder.ToString(), new Vector2(5, inputLineY), _global.Palette_Yellow);
 
-                DrawAutoComplete(spriteBatch, font, inputLineY);
+                DrawAutoComplete(spriteBatch, activeFont, inputLineY);
 
                 // Draw Copy Button
-                _copyButton.Draw(spriteBatch, font, gameTime, Matrix.Identity);
+                _copyButton.Draw(spriteBatch, activeFont, gameTime, Matrix.Identity);
             }
             catch (Exception ex)
             {
@@ -524,6 +554,7 @@ namespace ProjectVagabond.Utils
             // 1. Hardcoded Aliases
             switch (colorName.ToLower())
             {
+                case "system": return _global.Palette_DarkGray;
                 case "error": return Color.Crimson;
                 case "undo": return Color.DarkTurquoise;
                 case "cancel": return Color.Orange;
