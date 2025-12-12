@@ -299,10 +299,19 @@ namespace ProjectVagabond.UI
                     var srcRect = new Rectangle(0, 0, visibleWidth, _spriteManager.InventoryPlayerHealthBarFull.Height);
                     spriteBatch.DrawSnapped(_spriteManager.InventoryPlayerHealthBarFull, new Vector2(barX + 1, currentY), srcRect, Color.White);
 
-                    string hpText = $"{currentHP}/{maxHP}";
-                    Vector2 hpSize = secondaryFont.MeasureString(hpText);
-                    spriteBatch.DrawStringSnapped(secondaryFont, hpText, new Vector2(centerX - hpSize.X / 2, currentY + 8), _global.Palette_White);
-                    currentY += 8 + (int)hpSize.Y + 4 - 3; // Moved up 3 pixels
+                    string hpValText = $"{currentHP}/{maxHP}";
+                    string hpSuffix = " HP";
+                    Vector2 valSize = secondaryFont.MeasureString(hpValText);
+                    Vector2 suffixSize = secondaryFont.MeasureString(hpSuffix);
+                    float totalHpWidth = valSize.X + suffixSize.X;
+
+                    float hpTextX = centerX - (totalHpWidth / 2f);
+                    float hpTextY = currentY + 7;
+
+                    spriteBatch.DrawStringSnapped(secondaryFont, hpValText, new Vector2(hpTextX, hpTextY), _global.Palette_BrightWhite);
+                    spriteBatch.DrawStringSnapped(secondaryFont, hpSuffix, new Vector2(hpTextX + valSize.X, hpTextY), _global.Palette_Gray);
+
+                    currentY += 8 + (int)valSize.Y + 4 - 3;
                 }
 
                 // 4. Equip Slots (Weapon, Armor, Relic)
@@ -342,9 +351,52 @@ namespace ProjectVagabond.UI
                 for (int s = 0; s < 4; s++)
                 {
                     int val = _gameState.PlayerState.GetEffectiveStat(member, statKeys[s]);
-                    string text = $"{statLabels[s]} {val}";
-                    // Left align to the start of the equip slots - 3 pixels
-                    spriteBatch.DrawStringSnapped(secondaryFont, text, new Vector2(equipStartX - 3, currentY), _global.Palette_LightGray);
+
+                    // Draw Label
+                    spriteBatch.DrawStringSnapped(secondaryFont, statLabels[s], new Vector2(equipStartX - 3, currentY), _global.Palette_LightGray);
+
+                    // Draw Bar
+                    if (_spriteManager.InventoryStatBarEmpty != null && _spriteManager.InventoryStatBarFull != null)
+                    {
+                        float labelWidth = secondaryFont.MeasureString(statLabels[s]).Width;
+                        float barX = equipStartX - 3 + labelWidth + 3; // 3px gap
+
+                        // Center bar vertically with text. Text height is likely ~5-7. Bar is 3.
+                        // Apply specific offsets for INT (index 1) and AGI (index 3)
+                        float barYOffset = 0f;
+                        if (s == 1 || s == 3) barYOffset = 0.5f;
+
+                        float barY = currentY + (secondaryFont.LineHeight - 3) / 2f + barYOffset;
+
+                        // Draw Empty
+                        spriteBatch.DrawSnapped(_spriteManager.InventoryStatBarEmpty, new Vector2(barX, barY), Color.White);
+
+                        // Draw Full
+                        int width = Math.Clamp(val, 1, 20) * 2;
+                        var src = new Rectangle(0, 0, width, 3);
+                        spriteBatch.DrawSnapped(_spriteManager.InventoryStatBarFull, new Vector2(barX, barY), src, Color.White);
+
+                        // Draw Excess Text
+                        if (val > 20)
+                        {
+                            int excess = val - 20;
+                            string excessText = $"+{excess}";
+
+                            Vector2 textSize = secondaryFont.MeasureString(excessText);
+
+                            // Right align to the end of the bar (width 40)
+                            float textX = (barX + 40) - textSize.X;
+
+                            Vector2 textPos = new Vector2(textX, currentY);
+
+                            // Draw background rectangle to hide bar underneath
+                            var bgRect = new Rectangle((int)textPos.X - 1, (int)textPos.Y, (int)textSize.X + 2, (int)textSize.Y);
+                            spriteBatch.DrawSnapped(pixel, bgRect, _global.Palette_Black);
+
+                            spriteBatch.DrawStringOutlinedSnapped(secondaryFont, excessText, textPos, _global.Palette_BrightWhite, _global.Palette_Black);
+                        }
+                    }
+
                     currentY += (int)secondaryFont.LineHeight + 1;
                 }
             }

@@ -64,6 +64,8 @@ namespace ProjectVagabond
         // Inventory UI
         public Texture2D InventoryPlayerHealthBarEmpty { get; private set; }
         public Texture2D InventoryPlayerHealthBarFull { get; private set; }
+        public Texture2D InventoryStatBarEmpty { get; private set; }
+        public Texture2D InventoryStatBarFull { get; private set; }
 
         // Source Rectangles for UI elements
         public Rectangle[] ActionButtonSourceRects { get; private set; }
@@ -1218,6 +1220,13 @@ namespace ProjectVagabond
                 PlayerHeartSpriteSheet = _textureFactory.CreateColoredTexture(32, 32, Color.DeepPink);
                 PlayerHeartSpriteSheetSilhouette = _textureFactory.CreateColoredTexture(32, 32, Color.White);
             }
+
+            // Load Stat Bars
+            try { InventoryStatBarEmpty = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_stat_bar_empty"); }
+            catch { InventoryStatBarEmpty = _textureFactory.CreateColoredTexture(40, 3, Color.DarkGray); }
+
+            try { InventoryStatBarFull = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_stat_bar_full"); }
+            catch { InventoryStatBarFull = _textureFactory.CreateColoredTexture(40, 3, Color.White); }
 
             LoadPlayerPortraits();
         }

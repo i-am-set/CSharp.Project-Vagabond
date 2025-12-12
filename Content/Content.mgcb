@@ -3182,6 +3182,30 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/Inventory/inventory_slot_selected.png;Sprites/UI/Inventory/inventory_slot_selected
 
+#begin Sprites/UI/Inventory/inventory_stat_bar_empty.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/Inventory/inventory_stat_bar_empty.png;Sprites/UI/Inventory/inventory_stat_bar_empty
+
+#begin Sprites/UI/Inventory/inventory_stat_bar_full.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/Inventory/inventory_stat_bar_full.png;Sprites/UI/Inventory/inventory_stat_bar_full
+
 #begin Sprites/UI/KeyPrompts/mouse/ui_mouse_blank.png
 /importer:TextureImporter
 /processor:TextureProcessor
