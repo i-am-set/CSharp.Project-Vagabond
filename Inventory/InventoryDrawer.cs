@@ -240,6 +240,21 @@ namespace ProjectVagabond.UI
                 if (frames != null && frames.Length > 0) _portraitBgFrame = frames[_rng.Next(frames.Length)];
             }
 
+            // Determine base index for equip slot randomization
+            int baseFrameIndex = 0;
+            var slotFrames = _spriteManager.InventorySlotSourceRects;
+            if (slotFrames != null && slotFrames.Length > 0)
+            {
+                for (int f = 0; f < slotFrames.Length; f++)
+                {
+                    if (slotFrames[f] == _portraitBgFrame)
+                    {
+                        baseFrameIndex = f;
+                        break;
+                    }
+                }
+            }
+
             for (int i = 0; i < 4; i++)
             {
                 var bounds = _partyMemberPanelAreas[i];
@@ -313,9 +328,21 @@ namespace ProjectVagabond.UI
                 bool armorHover = _partyEquipButtons[baseBtnIndex + 1].IsHovered;
                 bool relicHover = _partyEquipButtons[baseBtnIndex + 2].IsHovered;
 
-                DrawEquipSlotIcon(spriteBatch, equipStartX, currentY, member.EquippedWeaponId, EquipSlotType.Weapon, weaponHover);
-                DrawEquipSlotIcon(spriteBatch, equipStartX + slotSize + gap, currentY, member.EquippedArmorId, EquipSlotType.Armor, armorHover);
-                DrawEquipSlotIcon(spriteBatch, equipStartX + (slotSize + gap) * 2, currentY, member.EquippedRelicId, EquipSlotType.Relic, relicHover);
+                // Determine random frames for slots based on the base frame index
+                Rectangle weaponFrame = Rectangle.Empty;
+                Rectangle armorFrame = Rectangle.Empty;
+                Rectangle relicFrame = Rectangle.Empty;
+
+                if (slotFrames != null && slotFrames.Length > 0)
+                {
+                    weaponFrame = slotFrames[(baseFrameIndex + 1) % slotFrames.Length];
+                    armorFrame = slotFrames[(baseFrameIndex + 2) % slotFrames.Length];
+                    relicFrame = slotFrames[(baseFrameIndex + 3) % slotFrames.Length];
+                }
+
+                DrawEquipSlotIcon(spriteBatch, equipStartX, currentY, member.EquippedWeaponId, EquipSlotType.Weapon, weaponHover, weaponFrame, i);
+                DrawEquipSlotIcon(spriteBatch, equipStartX + slotSize + gap, currentY, member.EquippedArmorId, EquipSlotType.Armor, armorHover, armorFrame, i);
+                DrawEquipSlotIcon(spriteBatch, equipStartX + (slotSize + gap) * 2, currentY, member.EquippedRelicId, EquipSlotType.Relic, relicHover, relicFrame, i);
 
                 currentY += slotSize + 6 - 5; // Moved up 5 pixels
 
@@ -334,13 +361,40 @@ namespace ProjectVagabond.UI
             }
         }
 
-        private void DrawEquipSlotIcon(SpriteBatch spriteBatch, int x, int y, string? itemId, EquipSlotType type, bool isHovered)
+        private void DrawEquipSlotIcon(SpriteBatch spriteBatch, int x, int y, string? itemId, EquipSlotType type, bool isHovered, Rectangle bgFrame, int memberIndex)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
             var destRect = new Rectangle(x, y, 16, 16);
 
-            // Draw background/border
-            spriteBatch.DrawSnapped(_spriteManager.InventoryEmptySlotSprite, destRect, Color.White);
+            // Calculate center
+            Vector2 centerPos = new Vector2(x + 8, y + 8);
+            Vector2 origin = new Vector2(12, 12); // Center of 24x24 sprite
+
+            // Use 1.0f scale to draw the 24x24 sprite at full size behind the 16x16 slot
+            float scale = 1.0f;
+
+            // Draw Background (Randomized Slot Sprite)
+            if (bgFrame != Rectangle.Empty)
+            {
+                spriteBatch.DrawSnapped(_spriteManager.InventorySlotIdleSpriteSheet, centerPos, bgFrame, Color.White, 0f, origin, scale, SpriteEffects.None, 0f);
+            }
+
+            // Check Selection State
+            bool isSelected = _isEquipSubmenuOpen && _currentPartyMemberIndex == memberIndex && _activeEquipSlotType == type;
+
+            if (isSelected || isHovered)
+            {
+                // Draw 1px border
+                Color borderColor = _global.Palette_BrightWhite;
+                // Top
+                spriteBatch.DrawSnapped(pixel, new Rectangle(destRect.X, destRect.Y, destRect.Width, 1), borderColor);
+                // Bottom
+                spriteBatch.DrawSnapped(pixel, new Rectangle(destRect.X, destRect.Bottom - 1, destRect.Width, 1), borderColor);
+                // Left
+                spriteBatch.DrawSnapped(pixel, new Rectangle(destRect.X, destRect.Y, 1, destRect.Height), borderColor);
+                // Right
+                spriteBatch.DrawSnapped(pixel, new Rectangle(destRect.Right - 1, destRect.Y, 1, destRect.Height), borderColor);
+            }
 
             if (!string.IsNullOrEmpty(itemId))
             {
@@ -369,17 +423,6 @@ namespace ProjectVagabond.UI
                         spriteBatch.DrawSnapped(icon, destRect, Color.White);
                     }
                 }
-            }
-
-            // Draw Highlight if hovered
-            if (isHovered)
-            {
-                // Draw a 1px white border
-                Color highlightColor = Color.White;
-                spriteBatch.DrawSnapped(pixel, new Rectangle(destRect.X, destRect.Y, destRect.Width, 1), highlightColor); // Top
-                spriteBatch.DrawSnapped(pixel, new Rectangle(destRect.X, destRect.Bottom - 1, destRect.Width, 1), highlightColor); // Bottom
-                spriteBatch.DrawSnapped(pixel, new Rectangle(destRect.X, destRect.Y, 1, destRect.Height), highlightColor); // Left
-                spriteBatch.DrawSnapped(pixel, new Rectangle(destRect.Right - 1, destRect.Y, 1, destRect.Height), highlightColor); // Right
             }
         }
 

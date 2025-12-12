@@ -52,9 +52,18 @@ namespace ProjectVagabond.UI
             // UPDATE PARTY MEMBER EQUIP BUTTONS
             if (_selectedInventoryCategory == InventoryCategory.Equip && !_isEquipSubmenuOpen)
             {
-                foreach (var btn in _partyEquipButtons)
+                int partyCount = _gameState.PlayerState.Party.Count;
+                for (int i = 0; i < _partyEquipButtons.Count; i++)
                 {
-                    btn.Update(currentMouseState, cameraTransform);
+                    int memberIndex = i / 3;
+                    if (memberIndex < partyCount)
+                    {
+                        _partyEquipButtons[i].Update(currentMouseState, cameraTransform);
+                    }
+                    else
+                    {
+                        _partyEquipButtons[i].ResetAnimationState();
+                    }
                 }
             }
 
