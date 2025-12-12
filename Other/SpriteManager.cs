@@ -76,6 +76,7 @@ namespace ProjectVagabond
         public Rectangle[] SplitMapSettingsButtonSourceRects { get; private set; }
         public Rectangle[] InventoryHeaderButtonSourceRects { get; private set; }
         public Rectangle[] InventorySlotSourceRects { get; private set; }
+        public Rectangle[] InventorySlotLargeSourceRects { get; private set; } // New Large Rects
         public Rectangle[] InventoryLeftArrowButtonSourceRects { get; private set; }
         public Rectangle[] InventoryRightArrowButtonSourceRects { get; private set; }
         public Rectangle[] InventoryScrollArrowRects { get; private set; }
@@ -172,6 +173,7 @@ namespace ProjectVagabond
         public Texture2D InventoryHeaderButtonMisc { get; private set; }
         public Texture2D InventoryHeaderButtonEquip { get; private set; }
         public Texture2D InventorySlotIdleSpriteSheet { get; private set; }
+        public Texture2D InventorySlotIdleLargeSpriteSheet { get; private set; } // New Large Sprite Sheet
         public Texture2D InventorySlotHoverSprite { get; private set; }
         public Texture2D InventorySlotSelectedSprite { get; private set; }
         public Texture2D InventoryLeftArrowButton { get; private set; }
@@ -427,6 +429,8 @@ namespace ProjectVagabond
             catch { InventoryHeaderButtonEquip = _textureFactory.CreateColoredTexture(96, 32, Color.Magenta); }
             try { InventorySlotIdleSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_slot_idle"); }
             catch { InventorySlotIdleSpriteSheet = _textureFactory.CreateColoredTexture(48, 48, Color.Magenta); }
+            try { InventorySlotIdleLargeSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_slot_idle_48x48"); }
+            catch { InventorySlotIdleLargeSpriteSheet = _textureFactory.CreateColoredTexture(96, 96, Color.Magenta); }
             try { InventorySlotHoverSprite = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_slot_hover"); }
             catch { InventorySlotHoverSprite = _textureFactory.CreateColoredTexture(48, 48, Color.Magenta); }
             try { InventorySlotSelectedSprite = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_slot_selected"); }
@@ -472,6 +476,7 @@ namespace ProjectVagabond
             InitializeSplitMapSettingsButtonRects();
             InitializeInventoryHeaderButtonRects();
             InitializeInventorySlotRects();
+            InitializeInventorySlotLargeRects(); // Initialize Large Rects
             InitializeInventoryArrowButtonRects();
             InitializeInventoryScrollArrowRects();
         }
@@ -506,6 +511,18 @@ namespace ProjectVagabond
             for (int i = 0; i < frameCount; i++)
             {
                 InventorySlotSourceRects[i] = new Rectangle(i * frameSize, 0, frameSize, frameSize);
+            }
+        }
+
+        private void InitializeInventorySlotLargeRects()
+        {
+            if (InventorySlotIdleLargeSpriteSheet == null) return;
+            const int frameSize = 48;
+            int frameCount = InventorySlotIdleLargeSpriteSheet.Width / frameSize;
+            InventorySlotLargeSourceRects = new Rectangle[frameCount];
+            for (int i = 0; i < frameCount; i++)
+            {
+                InventorySlotLargeSourceRects[i] = new Rectangle(i * frameSize, 0, frameSize, frameSize);
             }
         }
 
@@ -1339,4 +1356,3 @@ namespace ProjectVagabond
         }
     }
 }
-﻿

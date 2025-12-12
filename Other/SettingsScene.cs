@@ -559,7 +559,7 @@ namespace ProjectVagabond.Scenes
             {
                 Vector2 msgSize = font.MeasureString(_confirmationMessage);
                 Vector2 messagePosition = new Vector2(screenWidth / 2 - msgSize.X / 2, 5);
-                spriteBatch.DrawString(font, _confirmationMessage, messagePosition, _global.Palette_Teal);
+                spriteBatch.DrawStringOutlinedSnapped(font, _confirmationMessage, messagePosition, _global.Palette_Teal, _global.Palette_Black);
             }
 
             for (int i = 0; i < _uiElements.Count; i++)

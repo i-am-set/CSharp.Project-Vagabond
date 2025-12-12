@@ -58,10 +58,12 @@ namespace ProjectVagabond.UI
                     int memberIndex = i / 3;
                     if (memberIndex < partyCount)
                     {
+                        _partyEquipButtons[i].IsEnabled = true;
                         _partyEquipButtons[i].Update(currentMouseState, cameraTransform);
                     }
                     else
                     {
+                        _partyEquipButtons[i].IsEnabled = false;
                         _partyEquipButtons[i].ResetAnimationState();
                     }
                 }

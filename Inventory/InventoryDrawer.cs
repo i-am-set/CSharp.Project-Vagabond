@@ -16,7 +16,7 @@ namespace ProjectVagabond.UI
     public partial class SplitMapInventoryOverlay
     {
         // Fields for portrait background animation
-        private Rectangle _portraitBgFrame;
+        private int _portraitBgFrameIndex = 0; // Changed from Rectangle to int index
         private float _portraitBgTimer;
         private float _portraitBgDuration;
         private static readonly Random _rng = new Random();
@@ -231,29 +231,13 @@ namespace ProjectVagabond.UI
             {
                 _portraitBgTimer = 0f;
                 _portraitBgDuration = (float)(_rng.NextDouble() * (8.0 - 2.0) + 2.0);
-                var frames = _spriteManager.InventorySlotSourceRects;
-                if (frames != null && frames.Length > 0) _portraitBgFrame = frames[_rng.Next(frames.Length)];
-            }
-            if (_portraitBgFrame == Rectangle.Empty)
-            {
-                var frames = _spriteManager.InventorySlotSourceRects;
-                if (frames != null && frames.Length > 0) _portraitBgFrame = frames[_rng.Next(frames.Length)];
+                var frames = _spriteManager.InventorySlotLargeSourceRects;
+                if (frames != null && frames.Length > 0) _portraitBgFrameIndex = _rng.Next(frames.Length);
             }
 
             // Determine base index for equip slot randomization
-            int baseFrameIndex = 0;
+            int baseFrameIndex = _portraitBgFrameIndex;
             var slotFrames = _spriteManager.InventorySlotSourceRects;
-            if (slotFrames != null && slotFrames.Length > 0)
-            {
-                for (int f = 0; f < slotFrames.Length; f++)
-                {
-                    if (slotFrames[f] == _portraitBgFrame)
-                    {
-                        baseFrameIndex = f;
-                        break;
-                    }
-                }
-            }
 
             for (int i = 0; i < 4; i++)
             {
@@ -264,20 +248,21 @@ namespace ProjectVagabond.UI
                 int centerX = bounds.Center.X;
                 int currentY = bounds.Y + 4;
 
-                // 1. Name
+                // 1. Name (Calculated but drawn later)
                 string name = member.Name.ToUpper();
                 Vector2 nameSize = font.MeasureString(name);
-                spriteBatch.DrawStringSnapped(font, name, new Vector2(centerX - nameSize.X / 2, currentY), _global.Palette_BrightWhite);
+                Vector2 namePos = new Vector2(centerX - nameSize.X / 2, currentY);
                 currentY += (int)nameSize.Y - 2;
 
                 // 2. Sprite
-                // Draw Background Frame
-                if (_portraitBgFrame != Rectangle.Empty)
+                // Draw Background Frame (Using Large Sprite Sheet)
+                if (_spriteManager.InventorySlotLargeSourceRects != null && _spriteManager.InventorySlotLargeSourceRects.Length > 0)
                 {
+                    var largeFrame = _spriteManager.InventorySlotLargeSourceRects[_portraitBgFrameIndex];
                     Vector2 bgPos = new Vector2(centerX, currentY + 16);
-                    Vector2 origin = new Vector2(_portraitBgFrame.Width / 2f, _portraitBgFrame.Height / 2f);
-                    float scale = 32f / 24f;
-                    spriteBatch.DrawSnapped(_spriteManager.InventorySlotIdleSpriteSheet, bgPos, _portraitBgFrame, Color.White, 0f, origin, scale, SpriteEffects.None, 0f);
+                    Vector2 origin = new Vector2(largeFrame.Width / 2f, largeFrame.Height / 2f);
+                    // Draw unscaled (1.0f)
+                    spriteBatch.DrawSnapped(_spriteManager.InventorySlotIdleLargeSpriteSheet, bgPos, largeFrame, Color.White, 0f, origin, 1.0f, SpriteEffects.None, 0f);
                 }
 
                 // Draw Portrait
@@ -293,6 +278,10 @@ namespace ProjectVagabond.UI
                     var destRect = new Rectangle(centerX - 16, currentY, 32, 32);
                     spriteBatch.DrawSnapped(textureToDraw, destRect, sourceRect, Color.White);
                 }
+
+                // Draw Name (Now on top of shadow)
+                spriteBatch.DrawStringSnapped(font, name, namePos, _global.Palette_BrightWhite);
+
                 currentY += 32 + 2 - 6; // Moved up 6 pixels
 
                 // 3. Health Bar
