@@ -259,18 +259,22 @@ namespace ProjectVagabond.UI
                 // Create buttons for this member
                 int memberIndex = i;
 
+                // Hitbox adjustments: 4 pixels wider, centered (-2 offset)
+                int hitboxWidth = slotIconSize + 4;
+                int hitboxXOffset = -2;
+
                 // Weapon Button
-                var weaponBtn = new Button(new Rectangle(equipStartX, currentY, slotIconSize, slotIconSize), "") { EnableHoverSway = false };
+                var weaponBtn = new Button(new Rectangle(equipStartX + hitboxXOffset, currentY, hitboxWidth, slotIconSize), "") { EnableHoverSway = false };
                 weaponBtn.OnClick += () => OpenEquipSubmenu(memberIndex, EquipSlotType.Weapon);
                 _partyEquipButtons.Add(weaponBtn);
 
                 // Armor Button
-                var armorBtn = new Button(new Rectangle(equipStartX + slotIconSize + gap, currentY, slotIconSize, slotIconSize), "") { EnableHoverSway = false };
+                var armorBtn = new Button(new Rectangle(equipStartX + slotIconSize + gap + hitboxXOffset, currentY, hitboxWidth, slotIconSize), "") { EnableHoverSway = false };
                 armorBtn.OnClick += () => OpenEquipSubmenu(memberIndex, EquipSlotType.Armor);
                 _partyEquipButtons.Add(armorBtn);
 
                 // Relic Button
-                var relicBtn = new Button(new Rectangle(equipStartX + (slotIconSize + gap) * 2, currentY, slotIconSize, slotIconSize), "") { EnableHoverSway = false };
+                var relicBtn = new Button(new Rectangle(equipStartX + (slotIconSize + gap) * 2 + hitboxXOffset, currentY, hitboxWidth, slotIconSize), "") { EnableHoverSway = false };
                 relicBtn.OnClick += () => OpenEquipSubmenu(memberIndex, EquipSlotType.Relic);
                 _partyEquipButtons.Add(relicBtn);
 

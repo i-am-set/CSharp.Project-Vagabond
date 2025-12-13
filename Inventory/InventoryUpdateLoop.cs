@@ -53,6 +53,8 @@ namespace ProjectVagabond.UI
             {
                 // Reset hover data at start of frame for Equip view
                 _hoveredItemData = null;
+                // Only reset member index if we aren't in a submenu (to keep context if needed, though for hover it resets)
+                if (!_isEquipSubmenuOpen) _hoveredMemberIndex = -1;
 
                 if (!_isEquipSubmenuOpen)
                 {
@@ -62,12 +64,33 @@ namespace ProjectVagabond.UI
                     for (int i = 0; i < _partyEquipButtons.Count; i++)
                     {
                         int memberIndex = i / 3;
+                        int slotType = i % 3; // 0: Weapon, 1: Armor, 2: Relic
+
                         if (memberIndex < partyCount)
                         {
-                            _partyEquipButtons[i].IsEnabled = true;
-                            _partyEquipButtons[i].Update(currentMouseState, cameraTransform);
+                            var btn = _partyEquipButtons[i];
+                            btn.IsEnabled = true;
+                            btn.Update(currentMouseState, cameraTransform);
 
-                            // Optional: Add hover logic for equipment here if desired later
+                            // --- NEW: Hover Logic for Equipment Slots ---
+                            if (btn.IsHovered)
+                            {
+                                _hoveredMemberIndex = memberIndex;
+                                var member = _gameState.PlayerState.Party[memberIndex];
+
+                                if (slotType == 0 && !string.IsNullOrEmpty(member.EquippedWeaponId))
+                                {
+                                    _hoveredItemData = GetWeaponData(member.EquippedWeaponId);
+                                }
+                                else if (slotType == 1 && !string.IsNullOrEmpty(member.EquippedArmorId))
+                                {
+                                    _hoveredItemData = GetArmorData(member.EquippedArmorId);
+                                }
+                                else if (slotType == 2 && !string.IsNullOrEmpty(member.EquippedRelicId))
+                                {
+                                    _hoveredItemData = GetRelicData(member.EquippedRelicId);
+                                }
+                            }
                         }
                         else
                         {
@@ -91,7 +114,7 @@ namespace ProjectVagabond.UI
                             // Check for hover to populate info panel
                             if (btn.IsHovered)
                             {
-                                _hoveredMemberIndex = memberIndex; // NEW
+                                _hoveredMemberIndex = memberIndex;
                                 var member = _gameState.PlayerState.Party[memberIndex];
                                 var spellEntry = member.Spells[slotIndex];
                                 if (spellEntry != null && BattleDataCache.Moves.TryGetValue(spellEntry.MoveID, out var moveData))
@@ -110,7 +133,6 @@ namespace ProjectVagabond.UI
                 else
                 {
                     // If submenu is open, handle submenu button updates
-                    // (Logic moved here from below to consolidate Equip updates)
                     var member = _gameState.PlayerState.Party[_currentPartyMemberIndex];
                     List<string> availableItems = new List<string>();
                     if (_activeEquipSlotType == EquipSlotType.Weapon) availableItems = _gameState.PlayerState.Weapons.Keys.ToList();
@@ -333,7 +355,7 @@ namespace ProjectVagabond.UI
             if (_selectedInventoryCategory != InventoryCategory.Equip)
             {
                 _hoveredItemData = null;
-                _hoveredMemberIndex = -1; // Reset here too just in case
+                _hoveredMemberIndex = -1;
                 InventorySlot? bestSlot = null;
                 float minDistance = float.MaxValue;
                 var inverseCamera = Matrix.Invert(cameraTransform);

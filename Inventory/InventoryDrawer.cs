@@ -37,9 +37,9 @@ namespace ProjectVagabond.UI
 
                 DrawInfoPanel(spriteBatch, font, ServiceLocator.Get<Core>().SecondaryFont, gameTime, true, infoPanelArea);
             }
-            else if (_selectedInventoryCategory == InventoryCategory.Equip && _hoveredItemData is MoveData)
+            else if (_selectedInventoryCategory == InventoryCategory.Equip && _hoveredItemData != null)
             {
-                // NEW: Draw Info Panel Background for Spells in Equip Menu
+                // NEW: Draw Info Panel Background for Spells/Items in Equip Menu
                 const int statsPanelWidth = 116;
                 const int statsPanelHeight = 132;
                 int statsPanelY = _inventorySlotArea.Y - 1;
@@ -70,8 +70,12 @@ namespace ProjectVagabond.UI
                     idleOrigin = new Vector2(idleFrame.Width / 2f, idleFrame.Height / 2f);
                 }
 
-                // Call DrawSpellInfoPanel with drawBackground = true
-                DrawSpellInfoPanel(spriteBatch, font, ServiceLocator.Get<Core>().SecondaryFont, (MoveData)_hoveredItemData, null, null, null, null, idleFrame, idleOrigin, true, infoPanelArea);
+                // Draw the background using the idle frame
+                float spriteYOffset = 6f;
+                int idleSpriteX = infoPanelArea.X + (infoPanelArea.Width - 24) / 2;
+                float spriteY = infoPanelArea.Y + spriteYOffset;
+                Vector2 itemCenter = new Vector2(idleSpriteX + 12, spriteY + 12);
+                spriteBatch.DrawSnapped(_spriteManager.InventorySlotIdleSpriteSheet, itemCenter, idleFrame, Color.White, 0f, idleOrigin, 1.0f, SpriteEffects.None, 0f);
             }
 
             spriteBatch.DrawSnapped(_spriteManager.InventoryBorderHeader, headerPosition, Color.White);
@@ -202,8 +206,8 @@ namespace ProjectVagabond.UI
                     DrawPartyMemberSlots(spriteBatch, font, ServiceLocator.Get<Core>().SecondaryFont, gameTime);
                 }
 
-                // NEW: Draw Spell Info Panel Content if Hovered
-                if (_hoveredItemData is MoveData moveData)
+                // NEW: Draw Spell/Item Info Panel Content if Hovered
+                if (_hoveredItemData != null)
                 {
                     // Determine Panel Position and Background
                     Texture2D? overlayTex = null;
@@ -236,23 +240,62 @@ namespace ProjectVagabond.UI
                         spriteBatch.DrawSnapped(overlayTex, inventoryPosition, Color.White);
                     }
 
-                    // Prepare resources
-                    string iconPath = $"Sprites/Items/Spells/{moveData.MoveID}";
-                    int elementId = moveData.OffensiveElementIDs.FirstOrDefault();
-                    string? fallbackPath = null;
-                    if (BattleDataCache.Elements.TryGetValue(elementId, out var elementDef))
+                    if (_hoveredItemData is MoveData moveData)
                     {
-                        string elName = elementDef.ElementName.ToLowerInvariant();
-                        if (elName == "---") elName = "neutral";
-                        fallbackPath = $"Sprites/Items/Spells/default_{elName}";
+                        // Prepare resources for Spell
+                        string iconPath = $"Sprites/Items/Spells/{moveData.MoveID}";
+                        int elementId = moveData.OffensiveElementIDs.FirstOrDefault();
+                        string? fallbackPath = null;
+                        if (BattleDataCache.Elements.TryGetValue(elementId, out var elementDef))
+                        {
+                            string elName = elementDef.ElementName.ToLowerInvariant();
+                            if (elName == "---") elName = "neutral";
+                            fallbackPath = $"Sprites/Items/Spells/default_{elName}";
+                        }
+
+                        var iconTexture = _spriteManager.GetItemSprite(iconPath, fallbackPath);
+                        var iconSilhouette = _spriteManager.GetItemSpriteSilhouette(iconPath, fallbackPath);
+                        Rectangle? sourceRect = _spriteManager.GetAnimatedIconSourceRect(iconTexture, gameTime);
+
+                        // Call DrawSpellInfoPanel with drawBackground = false
+                        DrawSpellInfoPanel(spriteBatch, font, ServiceLocator.Get<Core>().SecondaryFont, moveData, iconTexture, iconSilhouette, sourceRect, null, Rectangle.Empty, Vector2.Zero, false, infoPanelArea);
                     }
+                    else
+                    {
+                        // Prepare resources for Item (Weapon/Armor/Relic)
+                        string name = "";
+                        string description = "";
+                        string iconPath = "";
+                        Dictionary<string, int> stats = new Dictionary<string, int>();
 
-                    var iconTexture = _spriteManager.GetItemSprite(iconPath, fallbackPath);
-                    var iconSilhouette = _spriteManager.GetItemSpriteSilhouette(iconPath, fallbackPath);
-                    Rectangle? sourceRect = _spriteManager.GetAnimatedIconSourceRect(iconTexture, gameTime);
+                        if (_hoveredItemData is WeaponData w)
+                        {
+                            name = w.WeaponName;
+                            description = w.Description;
+                            iconPath = $"Sprites/Items/Weapons/{w.WeaponID}";
+                            stats = w.StatModifiers;
+                        }
+                        else if (_hoveredItemData is ArmorData a)
+                        {
+                            name = a.ArmorName;
+                            description = a.Description;
+                            iconPath = $"Sprites/Items/Armor/{a.ArmorID}";
+                            stats = a.StatModifiers;
+                        }
+                        else if (_hoveredItemData is RelicData r)
+                        {
+                            name = r.RelicName;
+                            description = r.Description;
+                            iconPath = $"Sprites/Items/Relics/{r.RelicID}";
+                            stats = r.StatModifiers;
+                        }
 
-                    // Call DrawSpellInfoPanel with drawBackground = false
-                    DrawSpellInfoPanel(spriteBatch, font, ServiceLocator.Get<Core>().SecondaryFont, moveData, iconTexture, iconSilhouette, sourceRect, null, Rectangle.Empty, Vector2.Zero, false, infoPanelArea);
+                        var iconTexture = _spriteManager.GetItemSprite(iconPath);
+                        var iconSilhouette = _spriteManager.GetItemSpriteSilhouette(iconPath);
+
+                        // Use the generic item drawing logic
+                        DrawGenericItemInfoPanel(spriteBatch, font, ServiceLocator.Get<Core>().SecondaryFont, name, description, iconTexture, iconSilhouette, stats, infoPanelArea);
+                    }
                 }
             }
 
@@ -674,7 +717,7 @@ namespace ProjectVagabond.UI
             Texture2D? iconSilhouette = null;
             (List<string> Positives, List<string> Negatives) statLines = (new List<string>(), new List<string>());
             string? fallbackPath = null;
-            MoveData? spellData = null;
+            Dictionary<string, int> stats = new Dictionary<string, int>();
 
             // --- Data Retrieval ---
             if (_selectedInventoryCategory == InventoryCategory.Relics)
@@ -685,7 +728,7 @@ namespace ProjectVagabond.UI
                     name = relic.RelicName.ToUpper();
                     description = relic.Description.ToUpper();
                     iconPath = $"Sprites/Items/Relics/{relic.RelicID}";
-                    statLines = GetStatModifierLines(relic.StatModifiers);
+                    stats = relic.StatModifiers;
                 }
             }
             else if (_selectedInventoryCategory == InventoryCategory.Consumables)
@@ -716,7 +759,7 @@ namespace ProjectVagabond.UI
                     name = weapon.WeaponName.ToUpper();
                     description = weapon.Description.ToUpper();
                     iconPath = $"Sprites/Items/Weapons/{weapon.WeaponID}";
-                    statLines = GetStatModifierLines(weapon.StatModifiers);
+                    stats = weapon.StatModifiers;
                 }
             }
             else if (_selectedInventoryCategory == InventoryCategory.Armor)
@@ -727,7 +770,7 @@ namespace ProjectVagabond.UI
                     name = armor.ArmorName.ToUpper();
                     description = armor.Description.ToUpper();
                     iconPath = $"Sprites/Items/Armor/{armor.ArmorID}";
-                    statLines = GetStatModifierLines(armor.StatModifiers);
+                    stats = armor.StatModifiers;
                 }
             }
 
@@ -737,15 +780,32 @@ namespace ProjectVagabond.UI
                 iconSilhouette = _spriteManager.GetItemSpriteSilhouette(iconPath, fallbackPath);
             }
 
-            Rectangle? sourceRect = null;
-            if (activeSlot.IsAnimated && iconTexture != null)
+            // Use the generic helper to draw the content
+            if (!drawBackground)
             {
-                sourceRect = _spriteManager.GetAnimatedIconSourceRect(iconTexture, gameTime);
+                DrawGenericItemInfoPanel(spriteBatch, font, secondaryFont, name, description, iconTexture, iconSilhouette, stats, infoPanelArea);
             }
+            else
+            {
+                // Draw background logic (same as before)
+                const int spriteSize = 16;
+                int spriteX = infoPanelArea.X + (infoPanelArea.Width - spriteSize) / 2;
+                float currentY = infoPanelArea.Y + 6f; // Approximate Y from previous logic
 
-            // --- STANDARD RENDERING FOR OTHER CATEGORIES ---
+                if (idleFrame != Rectangle.Empty)
+                {
+                    Vector2 itemCenter = new Vector2(spriteX + 8, currentY + 8);
+                    spriteBatch.DrawSnapped(_spriteManager.InventorySlotIdleSpriteSheet, itemCenter, idleFrame, Color.White, 0f, idleOrigin, 1.0f, SpriteEffects.None, 0f);
+                }
+            }
+        }
+
+        private void DrawGenericItemInfoPanel(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, string name, string description, Texture2D? iconTexture, Texture2D? iconSilhouette, Dictionary<string, int> stats, Rectangle infoPanelArea)
+        {
             const int spriteSize = 16; // Native 16x16
             const int gap = 4;
+
+            var statLines = GetStatModifierLines(stats);
 
             int maxTitleWidth = infoPanelArea.Width - (4 * 2);
             var titleLines = ParseAndWrapRichText(font, name, maxTitleWidth, _global.Palette_BrightWhite);
@@ -769,18 +829,6 @@ namespace ProjectVagabond.UI
             int spriteX = infoPanelArea.X + (infoPanelArea.Width - spriteSize) / 2;
 
             float displayScale = 1.0f;
-            float bgScale = 1.0f;
-
-            if (drawBackground)
-            {
-                if (idleFrame != Rectangle.Empty)
-                {
-                    Vector2 itemCenter = new Vector2(spriteX + 8, currentY + 8);
-                    spriteBatch.DrawSnapped(_spriteManager.InventorySlotIdleSpriteSheet, itemCenter, idleFrame, Color.White, 0f, idleOrigin, bgScale, SpriteEffects.None, 0f);
-                }
-                return;
-            }
-
             Vector2 iconOrigin = new Vector2(8, 8);
             Vector2 drawPos = new Vector2(spriteX + 8, currentY + 8);
 
@@ -789,21 +837,20 @@ namespace ProjectVagabond.UI
                 Color mainOutlineColor = _global.ItemOutlineColor_Idle;
                 Color cornerOutlineColor = _global.ItemOutlineColor_Idle_Corner;
 
-                spriteBatch.DrawSnapped(iconSilhouette, drawPos + new Vector2(-1, -1) * displayScale, sourceRect, cornerOutlineColor, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
-                spriteBatch.DrawSnapped(iconSilhouette, drawPos + new Vector2(1, -1) * displayScale, sourceRect, cornerOutlineColor, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
-                spriteBatch.DrawSnapped(iconSilhouette, drawPos + new Vector2(-1, 1) * displayScale, sourceRect, cornerOutlineColor, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
-                spriteBatch.DrawSnapped(iconSilhouette, drawPos + new Vector2(1, 1) * displayScale, sourceRect, cornerOutlineColor, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
+                spriteBatch.DrawSnapped(iconSilhouette, drawPos + new Vector2(-1, -1) * displayScale, null, cornerOutlineColor, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
+                spriteBatch.DrawSnapped(iconSilhouette, drawPos + new Vector2(1, -1) * displayScale, null, cornerOutlineColor, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
+                spriteBatch.DrawSnapped(iconSilhouette, drawPos + new Vector2(-1, 1) * displayScale, null, cornerOutlineColor, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
+                spriteBatch.DrawSnapped(iconSilhouette, drawPos + new Vector2(1, 1) * displayScale, null, cornerOutlineColor, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
 
-                spriteBatch.DrawSnapped(iconSilhouette, drawPos + new Vector2(-1, 0) * displayScale, sourceRect, mainOutlineColor, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
-                spriteBatch.DrawSnapped(iconSilhouette, drawPos + new Vector2(1, 0) * displayScale, sourceRect, mainOutlineColor, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
-                spriteBatch.DrawSnapped(iconSilhouette, drawPos + new Vector2(0, -1) * displayScale, sourceRect, mainOutlineColor, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
-                spriteBatch.DrawSnapped(iconSilhouette, drawPos + new Vector2(0, 1) * displayScale, sourceRect, mainOutlineColor, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
+                spriteBatch.DrawSnapped(iconSilhouette, drawPos + new Vector2(-1, 0) * displayScale, null, mainOutlineColor, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
+                spriteBatch.DrawSnapped(iconSilhouette, drawPos + new Vector2(1, 0) * displayScale, null, mainOutlineColor, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
+                spriteBatch.DrawSnapped(iconSilhouette, drawPos + new Vector2(0, -1) * displayScale, null, mainOutlineColor, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
+                spriteBatch.DrawSnapped(iconSilhouette, drawPos + new Vector2(0, 1) * displayScale, null, mainOutlineColor, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
             }
 
             if (iconTexture != null)
             {
-                Color tint = activeSlot.IconTint ?? Color.White;
-                spriteBatch.DrawSnapped(iconTexture, drawPos, sourceRect, tint, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
+                spriteBatch.DrawSnapped(iconTexture, drawPos, null, Color.White, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
             }
 
             currentY += spriteSize + gap;
