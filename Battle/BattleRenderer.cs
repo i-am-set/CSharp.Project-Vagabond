@@ -129,6 +129,11 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
+        public void TriggerAttackAnimation(string combatantId)
+        {
+            _attackAnimTimers[combatantId] = 0f;
+        }
+
         private void UpdateStatusIconTooltips(IEnumerable<BattleCombatant> allCombatants)
         {
             var virtualMousePos = Core.TransformMouse(Mouse.GetState().Position);

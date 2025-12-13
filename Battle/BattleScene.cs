@@ -825,6 +825,10 @@ namespace ProjectVagabond.Scenes
         private void OnBattleActionExecuted(GameEvents.BattleActionExecuted e)
         {
             _currentActor = e.Actor;
+
+            // Trigger visual jump for the attacker
+            _renderer.TriggerAttackAnimation(e.Actor.CombatantID);
+
             bool isMultiHit = e.ChosenMove != null && e.ChosenMove.Effects.ContainsKey("MultiHit");
             if (isMultiHit) _isWaitingForMultiHitDelay = true;
 
