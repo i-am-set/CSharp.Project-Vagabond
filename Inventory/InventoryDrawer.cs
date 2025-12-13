@@ -71,10 +71,11 @@ namespace ProjectVagabond.UI
                 }
 
                 // Draw the background using the idle frame
-                float spriteYOffset = 6f;
-                int idleSpriteX = infoPanelArea.X + (infoPanelArea.Width - 24) / 2;
-                float spriteY = infoPanelArea.Y + spriteYOffset;
-                Vector2 itemCenter = new Vector2(idleSpriteX + 12, spriteY + 12);
+                int spriteSize = (_hoveredItemData is MoveData) ? 32 : 16;
+                int spriteX = infoPanelArea.X + (infoPanelArea.Width - spriteSize) / 2;
+                float spriteY = infoPanelArea.Y + 2; // Base Y offset used in DrawSpellInfoPanel/DrawGenericItemInfoPanel
+
+                Vector2 itemCenter = new Vector2(spriteX + spriteSize / 2f, spriteY + spriteSize / 2f);
                 spriteBatch.DrawSnapped(_spriteManager.InventorySlotIdleSpriteSheet, itemCenter, idleFrame, Color.White, 0f, idleOrigin, 1.0f, SpriteEffects.None, 0f);
             }
 
@@ -243,14 +244,14 @@ namespace ProjectVagabond.UI
                     if (_hoveredItemData is MoveData moveData)
                     {
                         // Prepare resources for Spell
-                        string iconPath = $"Sprites/Items/Spells/{moveData.MoveID}";
+                        string iconPath = $"Sprites/Spells/{moveData.MoveID}";
                         int elementId = moveData.OffensiveElementIDs.FirstOrDefault();
                         string? fallbackPath = null;
                         if (BattleDataCache.Elements.TryGetValue(elementId, out var elementDef))
                         {
                             string elName = elementDef.ElementName.ToLowerInvariant();
                             if (elName == "---") elName = "neutral";
-                            fallbackPath = $"Sprites/Items/Spells/default_{elName}";
+                            fallbackPath = $"Sprites/Spells/default_{elName}";
                         }
 
                         var iconTexture = _spriteManager.GetItemSprite(iconPath, fallbackPath);
@@ -337,6 +338,142 @@ namespace ProjectVagabond.UI
                     foreach (var btn in _partyEquipButtons)
                     {
                         spriteBatch.DrawSnapped(pixel, btn.Bounds, Color.Magenta * 0.5f);
+                    }
+
+                    // --- Draw Opaque Debug Box for Info Panel ---
+                    if (_hoveredItemData != null)
+                    {
+                        const int statsPanelWidth = 116;
+                        const int statsPanelHeight = 132;
+                        int statsPanelY = _inventorySlotArea.Y - 1;
+                        int statsPanelX = _inventorySlotArea.Right + 4; // Default
+
+                        if (_hoveredMemberIndex == 0 || _hoveredMemberIndex == 1)
+                        {
+                            statsPanelX = 194 - 16;
+                        }
+                        else if (_hoveredMemberIndex == 2 || _hoveredMemberIndex == 3)
+                        {
+                            statsPanelX = 10 + 16;
+                        }
+
+                        var infoPanelArea = new Rectangle(statsPanelX, statsPanelY, statsPanelWidth, statsPanelHeight);
+                        spriteBatch.DrawSnapped(pixel, infoPanelArea, Color.Lime); // Fully Opaque Lime
+
+                        // --- DEBUG LOGIC STARTS HERE ---
+                        var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+
+                        if (_hoveredItemData is MoveData move)
+                        {
+                            // --- SPELL LAYOUT DEBUG ---
+                            const int spriteSize = 32; // UPDATED to 32
+                            int spriteY = infoPanelArea.Y + 2;
+                            int spriteX = infoPanelArea.X + (infoPanelArea.Width - spriteSize) / 2;
+
+                            // Sprite
+                            spriteBatch.DrawSnapped(pixel, new Rectangle(spriteX, spriteY, spriteSize, spriteSize), Color.Red);
+
+                            // Name
+                            string name = move.MoveName.ToUpper();
+                            Vector2 nameSize = font.MeasureString(name);
+                            float nameY = spriteY + spriteSize - (font.LineHeight / 2f) - 2; // Updated to match new offset
+                            float nameX = infoPanelArea.X + (infoPanelArea.Width - nameSize.X) / 2f;
+                            spriteBatch.DrawSnapped(pixel, new Rectangle((int)nameX, (int)nameY, (int)nameSize.X, (int)nameSize.Y), Color.Yellow);
+
+                            float currentY = nameY + font.LineHeight + 2;
+
+                            // Stats (3 lines fixed)
+                            float statLineHeight = secondaryFont.LineHeight;
+                            float gap = 2;
+
+                            // Line 1: POW/ACC
+                            spriteBatch.DrawSnapped(pixel, new Rectangle(infoPanelArea.X + 8, (int)currentY, infoPanelArea.Width - 16, (int)statLineHeight), Color.Magenta);
+                            currentY += statLineHeight + gap;
+
+                            // Line 2: MP/TGT
+                            spriteBatch.DrawSnapped(pixel, new Rectangle(infoPanelArea.X + 8, (int)currentY, infoPanelArea.Width - 16, (int)statLineHeight), Color.Magenta);
+                            currentY += statLineHeight + gap;
+
+                            // Line 3: USE/TYP
+                            spriteBatch.DrawSnapped(pixel, new Rectangle(infoPanelArea.X + 8, (int)currentY, infoPanelArea.Width - 16, (int)statLineHeight), Color.Magenta);
+                            currentY += statLineHeight + gap;
+
+                            if (move.MakesContact)
+                            {
+                                spriteBatch.DrawSnapped(pixel, new Rectangle(infoPanelArea.X + 8, (int)currentY, infoPanelArea.Width - 16, (int)statLineHeight), Color.Orange);
+                                currentY += statLineHeight + gap;
+                            }
+
+                            // Description
+                            if (!string.IsNullOrEmpty(move.Description))
+                            {
+                                float descWidth = infoPanelArea.Width - 8;
+                                var descLines = ParseAndWrapRichText(secondaryFont, move.Description.ToUpper(), descWidth, Color.White);
+                                // Limit to max 8 lines as per draw logic
+                                int lineCount = Math.Min(descLines.Count, 8);
+                                float descHeight = lineCount * secondaryFont.LineHeight;
+
+                                // The draw logic adds +3 before desc
+                                currentY += 3 - gap; // Adjust for previous gap addition
+
+                                spriteBatch.DrawSnapped(pixel, new Rectangle(infoPanelArea.X + 4, (int)currentY, (int)descWidth, (int)descHeight), Color.Cyan);
+                            }
+                        }
+                        else
+                        {
+                            // --- GENERIC ITEM LAYOUT DEBUG ---
+                            string name = "";
+                            string description = "";
+                            Dictionary<string, int> stats = new Dictionary<string, int>();
+
+                            if (_hoveredItemData is WeaponData w) { name = w.WeaponName; description = w.Description; stats = w.StatModifiers; }
+                            else if (_hoveredItemData is ArmorData a) { name = a.ArmorName; description = a.Description; stats = a.StatModifiers; }
+                            else if (_hoveredItemData is RelicData r) { name = r.RelicName; description = r.Description; stats = r.StatModifiers; }
+
+                            const int spriteSize = 16;
+                            const int gap = 4;
+
+                            var statLines = GetStatModifierLines(stats);
+                            int maxTitleWidth = infoPanelArea.Width - 8;
+                            var titleLines = ParseAndWrapRichText(font, name.ToUpper(), maxTitleWidth, Color.White);
+                            float totalTitleHeight = titleLines.Count * font.LineHeight;
+
+                            float totalDescHeight = 0f;
+                            if (!string.IsNullOrEmpty(description))
+                            {
+                                var descLines = ParseAndWrapRichText(secondaryFont, description.ToUpper(), maxTitleWidth, Color.White);
+                                totalDescHeight = descLines.Count * secondaryFont.LineHeight;
+                            }
+
+                            float totalStatHeight = Math.Max(statLines.Positives.Count, statLines.Negatives.Count) * secondaryFont.LineHeight;
+                            float totalContentHeight = spriteSize + gap + totalTitleHeight + (totalDescHeight > 0 ? gap + totalDescHeight : 0) + (totalStatHeight > 0 ? gap + totalStatHeight : 0);
+
+                            float currentY = infoPanelArea.Y + (infoPanelArea.Height - totalContentHeight) / 2f - 22f;
+                            int spriteX = infoPanelArea.X + (infoPanelArea.Width - spriteSize) / 2;
+
+                            // Sprite
+                            spriteBatch.DrawSnapped(pixel, new Rectangle(spriteX, (int)currentY, spriteSize, spriteSize), Color.Red);
+                            currentY += spriteSize + gap;
+
+                            // Title
+                            spriteBatch.DrawSnapped(pixel, new Rectangle(infoPanelArea.X + 4, (int)currentY, maxTitleWidth, (int)totalTitleHeight), Color.Yellow);
+                            currentY += totalTitleHeight;
+
+                            // Description
+                            if (totalDescHeight > 0)
+                            {
+                                currentY += gap;
+                                spriteBatch.DrawSnapped(pixel, new Rectangle(infoPanelArea.X + 4, (int)currentY, maxTitleWidth, (int)totalDescHeight), Color.Cyan);
+                                currentY += totalDescHeight;
+                            }
+
+                            // Stats
+                            if (totalStatHeight > 0)
+                            {
+                                currentY += gap;
+                                spriteBatch.DrawSnapped(pixel, new Rectangle(infoPanelArea.X + 4, (int)currentY, maxTitleWidth, (int)totalStatHeight), Color.Magenta);
+                            }
+                        }
                     }
                 }
             }
@@ -969,7 +1106,7 @@ namespace ProjectVagabond.UI
 
         private void DrawSpellInfoPanel(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, MoveData move, Texture2D? iconTexture, Texture2D? iconSilhouette, Rectangle? sourceRect, Color? iconTint, Rectangle idleFrame, Vector2 idleOrigin, bool drawBackground, Rectangle infoPanelArea)
         {
-            const int spriteSize = 16;
+            const int spriteSize = 32; 
             const int padding = 4;
             const int gap = 2;
 
@@ -983,14 +1120,15 @@ namespace ProjectVagabond.UI
             {
                 if (idleFrame != Rectangle.Empty)
                 {
-                    Vector2 itemCenter = new Vector2(spriteX + 8, spriteY + 8);
+                    // Center the background relative to the sprite area
+                    Vector2 itemCenter = new Vector2(spriteX + spriteSize / 2f, spriteY + spriteSize / 2f);
                     spriteBatch.DrawSnapped(_spriteManager.InventorySlotIdleSpriteSheet, itemCenter, idleFrame, Color.White, 0f, idleOrigin, bgScale, SpriteEffects.None, 0f);
                 }
                 return;
             }
 
-            Vector2 iconOrigin = new Vector2(8, 8);
-            Vector2 drawPos = new Vector2(spriteX + 8, spriteY + 8);
+            Vector2 iconOrigin = new Vector2(16, 16); 
+            Vector2 drawPos = new Vector2(spriteX + 16, spriteY + 16);
 
             if (iconSilhouette != null)
             {
@@ -1019,7 +1157,7 @@ namespace ProjectVagabond.UI
 
             Vector2 namePos = new Vector2(
                 infoPanelArea.X + (infoPanelArea.Width - nameSize.X) / 2f,
-                spriteY + spriteSize - (font.LineHeight / 2f) + 2 + 12
+                spriteY + spriteSize - (font.LineHeight / 2f) - 2 // Moved up 16 pixels (was +14)
             );
 
             spriteBatch.DrawStringOutlinedSnapped(font, name, namePos, _global.Palette_BrightWhite, _global.Palette_Black);
