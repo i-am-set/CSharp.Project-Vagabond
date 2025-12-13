@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -49,6 +48,7 @@ namespace ProjectVagabond.UI
         private ImageButton? _pageRightButton;
 
         private int _currentPartyMemberIndex = 0;
+        private int _hoveredMemberIndex = -1; // NEW
 
         // Submenu State
         private enum EquipSlotType { None, Weapon, Armor, Relic, Spell1, Spell2, Spell3, Spell4 }

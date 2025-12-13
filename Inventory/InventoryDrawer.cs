@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -43,8 +42,21 @@ namespace ProjectVagabond.UI
                 // NEW: Draw Info Panel Background for Spells in Equip Menu
                 const int statsPanelWidth = 116;
                 const int statsPanelHeight = 132;
-                int statsPanelX = _inventorySlotArea.Right + 4;
                 int statsPanelY = _inventorySlotArea.Y - 1;
+
+                // Default position
+                int statsPanelX = _inventorySlotArea.Right + 4;
+
+                // Apply centering offset logic to background pass
+                if (_hoveredMemberIndex == 0 || _hoveredMemberIndex == 1)
+                {
+                    statsPanelX = 194 - 24; // Move Left towards center
+                }
+                else if (_hoveredMemberIndex == 2 || _hoveredMemberIndex == 3)
+                {
+                    statsPanelX = 10 + 24; // Move Right towards center
+                }
+
                 var infoPanelArea = new Rectangle(statsPanelX, statsPanelY, statsPanelWidth, statsPanelHeight);
 
                 // We need to pass a dummy idle frame to draw the background
@@ -193,11 +205,36 @@ namespace ProjectVagabond.UI
                 // NEW: Draw Spell Info Panel Content if Hovered
                 if (_hoveredItemData is MoveData moveData)
                 {
-                    const int statsPanelWidth = 116;
-                    const int statsPanelHeight = 132;
-                    int statsPanelX = _inventorySlotArea.Right + 4;
+                    // Determine Panel Position and Background
+                    Texture2D? overlayTex = null;
+                    Rectangle infoPanelArea;
+
+                    // Default to Right side (standard position)
+                    int statsPanelWidth = 116;
+                    int statsPanelHeight = 132;
                     int statsPanelY = _inventorySlotArea.Y - 1;
-                    var infoPanelArea = new Rectangle(statsPanelX, statsPanelY, statsPanelWidth, statsPanelHeight);
+                    int statsPanelX = _inventorySlotArea.Right + 4; // 194
+
+                    if (_hoveredMemberIndex == 0 || _hoveredMemberIndex == 1)
+                    {
+                        // Hovering Left -> Show on Right
+                        overlayTex = _spriteManager.InventoryBorderEquipInfoPanelRight;
+                        statsPanelX = 194 - 16; // Move Left towards center
+                    }
+                    else if (_hoveredMemberIndex == 2 || _hoveredMemberIndex == 3)
+                    {
+                        // Hovering Right -> Show on Left
+                        overlayTex = _spriteManager.InventoryBorderEquipInfoPanelLeft;
+                        statsPanelX = 10 + 16; // Move Right towards center
+                    }
+
+                    infoPanelArea = new Rectangle(statsPanelX, statsPanelY, statsPanelWidth, statsPanelHeight);
+
+                    // Draw Overlay
+                    if (overlayTex != null)
+                    {
+                        spriteBatch.DrawSnapped(overlayTex, inventoryPosition, Color.White);
+                    }
 
                     // Prepare resources
                     string iconPath = $"Sprites/Items/Spells/{moveData.MoveID}";

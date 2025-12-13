@@ -2875,6 +2875,30 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/Inventory/inventory_border_consumables.png;Sprites/UI/Inventory/inventory_border_consumables
 
+#begin Sprites/UI/Inventory/inventory_border_equip_info_panel_left.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/Inventory/inventory_border_equip_info_panel_left.png;Sprites/UI/Inventory/inventory_border_equip_info_panel_left
+
+#begin Sprites/UI/Inventory/inventory_border_equip_info_panel_right.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/Inventory/inventory_border_equip_info_panel_right.png;Sprites/UI/Inventory/inventory_border_equip_info_panel_right
+
 #begin Sprites/UI/Inventory/inventory_border_equip_submenu.png
 /importer:TextureImporter
 /processor:TextureProcessor

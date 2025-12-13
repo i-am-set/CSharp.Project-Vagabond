@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -92,6 +91,7 @@ namespace ProjectVagabond.UI
                             // Check for hover to populate info panel
                             if (btn.IsHovered)
                             {
+                                _hoveredMemberIndex = memberIndex; // NEW
                                 var member = _gameState.PlayerState.Party[memberIndex];
                                 var spellEntry = member.Spells[slotIndex];
                                 if (spellEntry != null && BattleDataCache.Moves.TryGetValue(spellEntry.MoveID, out var moveData))
@@ -333,6 +333,7 @@ namespace ProjectVagabond.UI
             if (_selectedInventoryCategory != InventoryCategory.Equip)
             {
                 _hoveredItemData = null;
+                _hoveredMemberIndex = -1; // Reset here too just in case
                 InventorySlot? bestSlot = null;
                 float minDistance = float.MaxValue;
                 var inverseCamera = Matrix.Invert(cameraTransform);
@@ -409,6 +410,8 @@ namespace ProjectVagabond.UI
             else if (_selectedInventoryCategory == InventoryCategory.Equip)
             {
                 // _hoveredItemData is now handled in the Equip Button update loop above
+                // Ensure we reset if nothing is hovered
+                if (_hoveredItemData == null) _hoveredMemberIndex = -1;
             }
 
             _statCycleTimer += deltaTime;
