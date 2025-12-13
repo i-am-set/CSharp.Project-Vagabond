@@ -112,15 +112,20 @@ namespace ProjectVagabond.Battle.UI
 
         public List<TargetInfo> GetCurrentTargets() => _currentTargets;
 
-        public void Update(GameTime gameTime, IEnumerable<BattleCombatant> combatants, BattleAnimationManager animationManager)
+        public void Update(GameTime gameTime, IEnumerable<BattleCombatant> combatants, BattleAnimationManager animationManager, BattleCombatant? currentActor)
         {
             UpdateEnemyAnimations(gameTime, combatants);
             UpdateShadowAnimations(gameTime, combatants);
             UpdateStatusIconTooltips(combatants);
 
-            foreach (var sprite in _playerSprites.Values)
+            foreach (var combatant in combatants)
             {
-                sprite.Update(gameTime);
+                if (combatant.IsPlayerControlled && _playerSprites.TryGetValue(combatant.CombatantID, out var sprite))
+                {
+                    // Only animate if this specific combatant is the one currently acting/selecting
+                    bool isActive = currentActor == combatant;
+                    sprite.Update(gameTime, isActive);
+                }
             }
         }
 
@@ -543,8 +548,8 @@ namespace ProjectVagabond.Battle.UI
             // --- Draw Sprite ---
             // Calculate sprite position relative to HUD
             const int heartHeight = 32;
-            // Moved down by 10 pixels as requested
-            float heartCenterY = playerHudY - font.LineHeight - 2 - (heartHeight / 2f) + 10;
+            // Moved down by 10 pixels as requested, then another 3 pixels
+            float heartCenterY = playerHudY - font.LineHeight - 2 - (heartHeight / 2f) + 10 + 3;
             float spriteCenterX = startX + (barWidth / 2f);
 
             // Store STATIC visual center for animations/targeting (so they don't bob with the sprite)

@@ -312,7 +312,7 @@ namespace ProjectVagabond.Scenes
                 },
                 DefensiveElementIDs = new List<int>(member.DefensiveElementIDs),
                 DefaultStrikeMoveID = member.DefaultStrikeMoveID,
-                Spells = member.Spells,
+                Spells = member.Spells, // FIX: Use Spells instead of EquippedSpells
                 PortraitIndex = member.PortraitIndex // Set Portrait Index
             };
 
@@ -405,7 +405,10 @@ namespace ProjectVagabond.Scenes
             _moveAnimationManager.Update(gameTime);
             _uiManager.Update(gameTime, currentMouseState, currentKeyboardState, _battleManager.CurrentActingCombatant);
             _inputHandler.Update(gameTime, _uiManager, _renderer);
-            _renderer.Update(gameTime, _battleManager.AllCombatants, _animationManager); // Pass _animationManager here
+
+            var activeCombatant = _battleManager.CurrentActingCombatant ?? _currentActor;
+            _renderer.Update(gameTime, _battleManager.AllCombatants, _animationManager, activeCombatant);
+
             _alertManager.Update(gameTime);
             _settingsButton?.Update(currentMouseState);
             _tooltipManager.Update(gameTime);

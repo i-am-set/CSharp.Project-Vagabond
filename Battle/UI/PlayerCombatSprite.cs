@@ -32,7 +32,6 @@ namespace ProjectVagabond.Battle.UI
         private int _frameWidth;
         private int _frameHeight;
         private const float FRAME_DURATION = 0.2f; // ~5 FPS for enemies
-        private const float PLAYER_FRAME_DURATION = 0.5f; // Slower for player idle
 
         private bool _useAltFrame = false; // NEW: Toggles between main and alt portrait
 
@@ -92,23 +91,29 @@ namespace ProjectVagabond.Battle.UI
             _position = newPosition;
         }
 
-        public void Update(GameTime gameTime)
+        public void Update(GameTime gameTime, bool isActive)
         {
             Initialize();
             if (_texture == null) return;
 
-            _frameTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+            // If not active (not their turn), reset to base frame and do not animate
+            if (!isActive)
+            {
+                _useAltFrame = false;
+                _frameIndex = 0;
+                _frameTimer = 0f;
+                return;
+            }
 
             if (_archetypeId == "player")
             {
-                if (_frameTimer >= PLAYER_FRAME_DURATION)
-                {
-                    _frameTimer -= PLAYER_FRAME_DURATION;
-                    _useAltFrame = !_useAltFrame;
-                }
+                // When active, simply use the alt frame (static pose)
+                _useAltFrame = true;
             }
             else
             {
+                // Enemy animation logic (cycling frames)
+                _frameTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
                 if (_frameCount > 1 && _frameTimer >= FRAME_DURATION)
                 {
                     _frameTimer -= FRAME_DURATION;
