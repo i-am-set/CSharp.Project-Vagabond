@@ -114,11 +114,12 @@ namespace ProjectVagabond.Battle
                     }
                 }
 
-                // Find the party member corresponding to this combatant to get their spells
+                // Find the party member corresponding to this combatant to get their spells and portrait
                 var partyMember = gameState.PlayerState.Party.FirstOrDefault(m => m.Name == combatant.Name);
                 if (partyMember != null)
                 {
                     combatant.Spells = partyMember.Spells;
+                    combatant.PortraitIndex = partyMember.PortraitIndex; // Set Portrait Index
                 }
 
                 // Apply Effective Stats from PlayerState

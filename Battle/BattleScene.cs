@@ -312,7 +312,8 @@ namespace ProjectVagabond.Scenes
                 },
                 DefensiveElementIDs = new List<int>(member.DefensiveElementIDs),
                 DefaultStrikeMoveID = member.DefaultStrikeMoveID,
-                Spells = member.Spells // FIX: Use Spells instead of EquippedSpells
+                Spells = member.Spells,
+                PortraitIndex = member.PortraitIndex // Set Portrait Index
             };
 
             combatant.Stats.MaxHP = _gameState.PlayerState.GetEffectiveStat(member, "MaxHP");

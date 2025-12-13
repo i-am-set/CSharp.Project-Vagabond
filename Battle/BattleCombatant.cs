@@ -52,6 +52,10 @@ namespace ProjectVagabond.Battle
         public MoveEntry?[] Spells { get; set; } = new MoveEntry?[4];
 
         public string DefaultStrikeMoveID { get; set; }
+
+        // Added PortraitIndex to support player sprite rendering in combat
+        public int PortraitIndex { get; set; } = 0;
+
         public List<StatusEffectInstance> ActiveStatusEffects { get; set; } = new List<StatusEffectInstance>();
 
         public List<RelicData> ActiveRelics { get; set; } = new List<RelicData>();
