@@ -58,6 +58,9 @@ namespace ProjectVagabond
             StatColor_Tenacity = Color.Lime;
             StatColor_Agility = Color.Yellow;
 
+            StatColor_Increase = Color.LawnGreen;
+            StatColor_Decrease = Color.MediumVioletRed;
+
             // Initialize Generic Feedback Colors
             ColorPositive = Palette_LightGreen;
             ColorNegative = Palette_Red;
@@ -265,6 +268,9 @@ namespace ProjectVagabond
         public Color StatColor_Intelligence { get; private set; }
         public Color StatColor_Tenacity { get; private set; }
         public Color StatColor_Agility { get; private set; }
+
+        public Color StatColor_Increase { get; private set; }
+        public Color StatColor_Decrease { get; private set; }
 
         // Generic Feedback Colors
         public Color ColorPositive { get; private set; }

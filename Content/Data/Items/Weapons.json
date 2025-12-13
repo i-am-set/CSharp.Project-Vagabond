@@ -7,7 +7,7 @@
     "LevelRequirement": 1,
     "MoveID": "SwordSlash",
     "StatModifiers": {
-      "Strength": 2
+      "Strength": -2
     },
     "Tags": [ "Metal", "Sword" ]
   },

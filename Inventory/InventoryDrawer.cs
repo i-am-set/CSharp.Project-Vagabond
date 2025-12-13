@@ -633,7 +633,7 @@ namespace ProjectVagabond.UI
                 string[] statLabels = { "STR", "INT", "TEN", "AGI" };
                 string[] statKeys = { "Strength", "Intelligence", "Tenacity", "Agility" };
 
-                // --- Determine Hovered Item Bonus ---
+                // --- NEW: Determine Hovered Item Bonus ---
                 Dictionary<string, int>? hoveredItemStats = null;
                 if (isOccupied && _hoveredMemberIndex == i && _hoveredItemData != null)
                 {
@@ -644,20 +644,39 @@ namespace ProjectVagabond.UI
 
                 for (int s = 0; s < 4; s++)
                 {
-                    int totalVal = isOccupied ? _gameState.PlayerState.GetEffectiveStat(member!, statKeys[s]) : 0;
+                    // Calculate Raw Total (Unclamped) to handle floor logic correctly
+                    int rawTotal = 0;
+                    if (isOccupied)
+                    {
+                        int baseStat = _gameState.PlayerState.GetBaseStat(member!, statKeys[s]);
+                        int weaponBonus = 0;
+                        if (!string.IsNullOrEmpty(member!.EquippedWeaponId) && BattleDataCache.Weapons.TryGetValue(member.EquippedWeaponId, out var w))
+                            w.StatModifiers.TryGetValue(statKeys[s], out weaponBonus);
+
+                        int armorBonus = 0;
+                        if (!string.IsNullOrEmpty(member.EquippedArmorId) && BattleDataCache.Armors.TryGetValue(member.EquippedArmorId, out var a))
+                            a.StatModifiers.TryGetValue(statKeys[s], out armorBonus);
+
+                        int relicBonus = 0;
+                        if (!string.IsNullOrEmpty(member.EquippedRelicId) && BattleDataCache.Relics.TryGetValue(member.EquippedRelicId, out var r))
+                            r.StatModifiers.TryGetValue(statKeys[s], out relicBonus);
+
+                        rawTotal = baseStat + weaponBonus + armorBonus + relicBonus;
+                    }
+
+                    int currentEffective = Math.Max(1, rawTotal);
                     Color labelColor = isOccupied ? _global.Palette_LightGray : _global.Palette_DarkGray;
 
-                    // Calculate Base Value (Total - Item Bonus)
+                    // Calculate Item Bonus
                     int itemBonus = 0;
                     if (hoveredItemStats != null && hoveredItemStats.TryGetValue(statKeys[s], out int bonus))
                     {
                         itemBonus = bonus;
                     }
 
-                    // Only handle positive bonuses for now as requested
-                    if (itemBonus < 0) itemBonus = 0;
-
-                    int baseVal = totalVal - itemBonus;
+                    // Calculate "Without Item" state
+                    int rawWithoutItem = rawTotal - itemBonus;
+                    int effectiveWithoutItem = Math.Max(1, rawWithoutItem);
 
                     // Draw Label
                     spriteBatch.DrawStringSnapped(secondaryFont, statLabels[s], new Vector2(equipStartX - 3, currentY), labelColor);
@@ -682,58 +701,112 @@ namespace ProjectVagabond.UI
                         // Draw Full (Only if occupied)
                         if (isOccupied && _spriteManager.InventoryStatBarFull != null)
                         {
-                            // Calculate widths for base and bonus parts
-                            // Max visual bar is 20 units (40 pixels)
-                            int baseBarPoints = Math.Clamp(baseVal, 1, 20);
-                            int totalBarPoints = Math.Clamp(totalVal, 1, 20);
+                            // --- VISUALIZATION LOGIC ---
+                            int whiteBarPoints;
+                            int coloredBarPoints;
+                            Color coloredBarColor;
 
-                            int baseWidth = baseBarPoints * 2;
-                            int bonusWidth = (totalBarPoints - baseBarPoints) * 2;
-
-                            // Draw Base (White)
-                            if (baseWidth > 0)
+                            if (itemBonus > 0)
                             {
-                                var srcBase = new Rectangle(0, 0, baseWidth, 3);
+                                // Positive Item: Show Gain (Green)
+                                // Base is WithoutItem. Total is Current.
+                                whiteBarPoints = Math.Clamp(effectiveWithoutItem, 1, 20);
+                                int totalPoints = Math.Clamp(currentEffective, 1, 20);
+                                coloredBarPoints = totalPoints - whiteBarPoints;
+                                coloredBarColor = _global.StatColor_Increase;
+                            }
+                            else if (itemBonus < 0)
+                            {
+                                // Negative Item: Show Loss (Red)
+                                // Base is Current. Total is WithoutItem.
+                                whiteBarPoints = Math.Clamp(currentEffective, 1, 20);
+                                int totalPoints = Math.Clamp(effectiveWithoutItem, 1, 20);
+                                coloredBarPoints = totalPoints - whiteBarPoints;
+                                coloredBarColor = _global.StatColor_Decrease;
+                            }
+                            else
+                            {
+                                // No change
+                                whiteBarPoints = Math.Clamp(currentEffective, 1, 20);
+                                coloredBarPoints = 0;
+                                coloredBarColor = Color.White; // Unused
+                            }
+
+                            int whiteWidth = whiteBarPoints * 2;
+                            int coloredWidth = coloredBarPoints * 2;
+
+                            // Draw White Base
+                            if (whiteWidth > 0)
+                            {
+                                var srcBase = new Rectangle(0, 0, whiteWidth, 3);
                                 spriteBatch.DrawSnapped(_spriteManager.InventoryStatBarFull, new Vector2(barX, barY), srcBase, Color.White);
                             }
 
-                            // Draw Bonus (Green)
-                            if (bonusWidth > 0)
+                            // Draw Colored Segment
+                            if (coloredWidth > 0)
                             {
-                                var srcBonus = new Rectangle(0, 0, bonusWidth, 3);
-                                // Draw starting from where the base bar ended
-                                spriteBatch.DrawSnapped(_spriteManager.InventoryStatBarFull, new Vector2(barX + baseWidth, barY), srcBonus, _global.Palette_LightGreen);
+                                var srcColor = new Rectangle(0, 0, coloredWidth, 3);
+                                spriteBatch.DrawSnapped(_spriteManager.InventoryStatBarFull, new Vector2(barX + whiteWidth, barY), srcColor, coloredBarColor);
                             }
 
                             // Draw Excess Text
-                            if (totalVal > 20)
+                            // We show text if EITHER current OR projected is > 20
+                            if (currentEffective > 20 || effectiveWithoutItem > 20)
                             {
-                                int excess = totalVal - 20;
-                                string excessText = $"+{excess}";
+                                int excessValue;
+                                Color textColor;
 
-                                Vector2 textSize = secondaryFont.MeasureString(excessText);
-
-                                // Right align to the end of the bar (width 40)
-                                float textX = (barX + 40) - textSize.X;
-
-                                Vector2 textPos = new Vector2(textX, currentY);
-
-                                // Draw background rectangle to hide bar underneath
-                                var bgRect = new Rectangle((int)textPos.X - 1, (int)textPos.Y, (int)textSize.X + 2, (int)textSize.Y);
-                                spriteBatch.DrawSnapped(pixel, bgRect, _global.Palette_Black);
-
-                                // Determine text color: Green if item contributes to overflow, else White
-                                Color textColor = _global.Palette_BrightWhite;
                                 if (itemBonus > 0)
                                 {
-                                    // If the item adds ANY value, and we are overflowing, highlight the overflow text.
-                                    // Logic:
-                                    // 1. Base < 20, Total > 20: Item pushed it over. Green.
-                                    // 2. Base >= 20, Total > 20: Item adds to existing overflow. Green.
-                                    textColor = _global.Palette_LightGreen;
+                                    // Positive Item
+                                    excessValue = currentEffective - 20;
+                                    // Highlight Green if the item contributes to the overflow
+                                    // i.e., if removing it would lower the value (even if still > 20)
+                                    if (effectiveWithoutItem < currentEffective)
+                                    {
+                                        textColor = _global.StatColor_Increase;
+                                    }
+                                    else
+                                    {
+                                        textColor = _global.Palette_BrightWhite;
+                                    }
+                                }
+                                else if (itemBonus < 0)
+                                {
+                                    // Negative Item
+                                    // Show what it WOULD be (Projected)
+                                    excessValue = effectiveWithoutItem - 20;
+                                    // Highlight Red if removing the item (increasing stat) causes/increases overflow
+                                    if (effectiveWithoutItem > currentEffective)
+                                    {
+                                        textColor = _global.StatColor_Decrease;
+                                    }
+                                    else
+                                    {
+                                        textColor = _global.Palette_BrightWhite;
+                                    }
+                                }
+                                else
+                                {
+                                    excessValue = currentEffective - 20;
+                                    textColor = _global.Palette_BrightWhite;
                                 }
 
-                                spriteBatch.DrawStringOutlinedSnapped(secondaryFont, excessText, textPos, textColor, _global.Palette_Black);
+                                if (excessValue > 0)
+                                {
+                                    string excessText = $"+{excessValue}";
+                                    Vector2 textSize = secondaryFont.MeasureString(excessText);
+
+                                    // Right align to the end of the bar (width 40)
+                                    float textX = (barX + 40) - textSize.X;
+                                    Vector2 textPos = new Vector2(textX, currentY);
+
+                                    // Draw background rectangle to hide bar underneath
+                                    var bgRect = new Rectangle((int)textPos.X - 1, (int)textPos.Y, (int)textSize.X + 2, (int)textSize.Y);
+                                    spriteBatch.DrawSnapped(pixel, bgRect, _global.Palette_Black);
+
+                                    spriteBatch.DrawStringOutlinedSnapped(secondaryFont, excessText, textPos, textColor, _global.Palette_Black);
+                                }
                             }
                         }
                     }
