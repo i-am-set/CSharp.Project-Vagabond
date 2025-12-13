@@ -1016,9 +1016,10 @@ namespace ProjectVagabond.UI
 
             string name = move.MoveName.ToUpper();
             Vector2 nameSize = font.MeasureString(name);
+
             Vector2 namePos = new Vector2(
                 infoPanelArea.X + (infoPanelArea.Width - nameSize.X) / 2f,
-                spriteY + spriteSize - (font.LineHeight / 2f) + 2
+                spriteY + spriteSize - (font.LineHeight / 2f) + 2 + 12
             );
 
             spriteBatch.DrawStringOutlinedSnapped(font, name, namePos, _global.Palette_BrightWhite, _global.Palette_Black);
@@ -1113,7 +1114,8 @@ namespace ProjectVagabond.UI
                 }
 
                 float totalDescHeight = descLines.Count * secondaryFont.LineHeight;
-                float bottomPadding = 8f;
+
+                float bottomPadding = 3f;
                 float startY = infoPanelArea.Bottom - bottomPadding - totalDescHeight;
 
                 float lineY = startY;
