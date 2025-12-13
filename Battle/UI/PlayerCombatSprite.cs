@@ -35,6 +35,16 @@ namespace ProjectVagabond.Battle.UI
 
         private bool _useAltFrame = false; // NEW: Toggles between main and alt portrait
 
+        // Selection Animation State
+        private enum SelectionState { None, Jumping, Bobbing }
+        private SelectionState _selectionState = SelectionState.None;
+        private float _selectionTimer = 0f;
+        private float _selectionOffsetY = 0f;
+
+        private const float SELECTION_JUMP_DURATION = 0.25f;
+        private const float SELECTION_JUMP_HEIGHT = 4f;
+        private const float SELECTION_BOB_CYCLE_DURATION = 1.0f;
+
         // Noise generator for organic sway
         private static readonly SeededPerlin _swayNoise = new SeededPerlin(8888);
 
@@ -99,21 +109,65 @@ namespace ProjectVagabond.Battle.UI
             // If not active (not their turn), reset to base frame and do not animate
             if (!isActive)
             {
+                _selectionState = SelectionState.None;
+                _selectionTimer = 0f;
+                _selectionOffsetY = 0f;
                 _useAltFrame = false;
                 _frameIndex = 0;
                 _frameTimer = 0f;
                 return;
             }
 
+            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
             if (_archetypeId == "player")
             {
-                // When active, simply use the alt frame (static pose)
-                _useAltFrame = true;
+                // Initialize jump if just started
+                if (_selectionState == SelectionState.None)
+                {
+                    _selectionState = SelectionState.Jumping;
+                    _selectionTimer = 0f;
+                }
+
+                if (_selectionState == SelectionState.Jumping)
+                {
+                    _selectionTimer += dt;
+                    float progress = Math.Clamp(_selectionTimer / SELECTION_JUMP_DURATION, 0f, 1f);
+
+                    // Parabolic jump: sin(0..pi)
+                    _selectionOffsetY = -MathF.Sin(progress * MathHelper.Pi) * SELECTION_JUMP_HEIGHT;
+                    _useAltFrame = true; // Always alt frame during jump
+
+                    if (progress >= 1f)
+                    {
+                        _selectionState = SelectionState.Bobbing;
+                        _selectionTimer = 0f;
+                        _selectionOffsetY = 0f;
+                    }
+                }
+                else if (_selectionState == SelectionState.Bobbing)
+                {
+                    _selectionTimer += dt;
+                    float t = _selectionTimer % SELECTION_BOB_CYCLE_DURATION;
+
+                    // First half: Up 1 pixel, Alt Sprite
+                    if (t < SELECTION_BOB_CYCLE_DURATION / 2f)
+                    {
+                        _selectionOffsetY = -1f;
+                        _useAltFrame = true;
+                    }
+                    // Second half: Down (Base), Main Sprite
+                    else
+                    {
+                        _selectionOffsetY = 0f;
+                        _useAltFrame = false;
+                    }
+                }
             }
             else
             {
                 // Enemy animation logic (cycling frames)
-                _frameTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                _frameTimer += dt;
                 if (_frameCount > 1 && _frameTimer >= FRAME_DURATION)
                 {
                     _frameTimer -= FRAME_DURATION;
@@ -133,10 +187,10 @@ namespace ProjectVagabond.Battle.UI
             var hitFlashState = animationManager.GetHitFlashState(combatant.CombatantID);
             Vector2 shakeOffset = hitFlashState?.ShakeOffset ?? Vector2.Zero;
 
-            // Calculate top-left position (same as Draw)
+            // Calculate top-left position (same as Draw, including selection offset)
             var topLeftPosition = new Point(
                 (int)MathF.Round(_position.X - _origin.X + shakeOffset.X),
-                (int)MathF.Round(_position.Y - _origin.Y + shakeOffset.Y)
+                (int)MathF.Round(_position.Y - _origin.Y + shakeOffset.Y + _selectionOffsetY)
             );
 
             if (_archetypeId == "player")
@@ -190,7 +244,7 @@ namespace ProjectVagabond.Battle.UI
             var hitFlashState = animationManager.GetHitFlashState(combatant.CombatantID);
             Vector2 shakeOffset = hitFlashState?.ShakeOffset ?? Vector2.Zero;
 
-            // Calculate top-left position
+            // Calculate top-left position (Static bounds do NOT include selection offset)
             var topLeftPosition = new Point(
                 (int)MathF.Round(_position.X - _origin.X + shakeOffset.X),
                 (int)MathF.Round(_position.Y - _origin.Y + shakeOffset.Y)
@@ -276,10 +330,10 @@ namespace ProjectVagabond.Battle.UI
             Vector2 shakeOffset = hitFlashState?.ShakeOffset ?? Vector2.Zero;
             bool isFlashingWhite = hitFlashState != null && hitFlashState.IsCurrentlyWhite;
 
-            // Calculate top-left position based on center position
+            // Calculate top-left position based on center position + selection offset
             var topLeftPosition = new Point(
                 (int)MathF.Round(_position.X - _origin.X + shakeOffset.X),
-                (int)MathF.Round(_position.Y - _origin.Y + shakeOffset.Y)
+                (int)MathF.Round(_position.Y - _origin.Y + shakeOffset.Y + _selectionOffsetY)
             );
 
             // --- Silhouette Mode (e.g. for non-selectable targets) ---
