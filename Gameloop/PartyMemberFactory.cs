@@ -1,8 +1,20 @@
-﻿using System;
+﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.UI;
+using ProjectVagabond.Utils;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using ProjectVagabond.Battle;
+using System.Text;
 
 namespace ProjectVagabond
 {
@@ -32,12 +44,14 @@ namespace ProjectVagabond
                 PortraitIndex = int.TryParse(data.MemberID, out int pid) ? pid : 0
             };
 
-            // Load Spells
+            // Load Spells into Slots
+            int spellSlotIndex = 0;
             foreach (var moveId in data.StartingSpells)
             {
-                if (BattleDataCache.Moves.ContainsKey(moveId))
+                if (BattleDataCache.Moves.ContainsKey(moveId) && spellSlotIndex < 4)
                 {
-                    member.Spells.Add(new MoveEntry(moveId, 0));
+                    member.Spells[spellSlotIndex] = new MoveEntry(moveId, 0);
+                    spellSlotIndex++;
                 }
             }
 
@@ -48,12 +62,6 @@ namespace ProjectVagabond
                 {
                     member.Actions.Add(new MoveEntry(moveId, 0));
                 }
-            }
-
-            // Auto-Equip Spells (First 4)
-            for (int i = 0; i < 4 && i < member.Spells.Count; i++)
-            {
-                member.EquippedSpells[i] = member.Spells[i];
             }
 
             // Auto-Equip Weapons

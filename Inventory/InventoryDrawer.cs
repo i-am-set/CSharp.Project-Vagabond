@@ -38,6 +38,29 @@ namespace ProjectVagabond.UI
 
                 DrawInfoPanel(spriteBatch, font, ServiceLocator.Get<Core>().SecondaryFont, gameTime, true, infoPanelArea);
             }
+            else if (_selectedInventoryCategory == InventoryCategory.Equip && _hoveredItemData is MoveData)
+            {
+                // NEW: Draw Info Panel Background for Spells in Equip Menu
+                const int statsPanelWidth = 116;
+                const int statsPanelHeight = 132;
+                int statsPanelX = _inventorySlotArea.Right + 4;
+                int statsPanelY = _inventorySlotArea.Y - 1;
+                var infoPanelArea = new Rectangle(statsPanelX, statsPanelY, statsPanelWidth, statsPanelHeight);
+
+                // We need to pass a dummy idle frame to draw the background
+                var slotFrames = _spriteManager.InventorySlotSourceRects;
+                Rectangle idleFrame = Rectangle.Empty;
+                Vector2 idleOrigin = Vector2.Zero;
+                if (slotFrames != null && slotFrames.Length > 0)
+                {
+                    int frameIndex = (int)(gameTime.TotalGameTime.TotalSeconds / 2.0) % slotFrames.Length;
+                    idleFrame = slotFrames[frameIndex];
+                    idleOrigin = new Vector2(idleFrame.Width / 2f, idleFrame.Height / 2f);
+                }
+
+                // Call DrawSpellInfoPanel with drawBackground = true
+                DrawSpellInfoPanel(spriteBatch, font, ServiceLocator.Get<Core>().SecondaryFont, (MoveData)_hoveredItemData, null, null, null, null, idleFrame, idleOrigin, true, infoPanelArea);
+            }
 
             spriteBatch.DrawSnapped(_spriteManager.InventoryBorderHeader, headerPosition, Color.White);
 
@@ -52,7 +75,6 @@ namespace ProjectVagabond.UI
                 {
                     InventoryCategory.Weapons => _spriteManager.InventoryBorderWeapons,
                     InventoryCategory.Armor => _spriteManager.InventoryBorderArmor,
-                    InventoryCategory.Spells => _spriteManager.InventoryBorderSpells,
                     InventoryCategory.Relics => _spriteManager.InventoryBorderRelics,
                     InventoryCategory.Consumables => _spriteManager.InventoryBorderConsumables,
                     InventoryCategory.Misc => _spriteManager.InventoryBorderMisc,
@@ -139,7 +161,6 @@ namespace ProjectVagabond.UI
                         if (_activeEquipSlotType == EquipSlotType.Weapon) totalItems += _gameState.PlayerState.Weapons.Count;
                         else if (_activeEquipSlotType == EquipSlotType.Armor) totalItems += _gameState.PlayerState.Armors.Count;
                         else if (_activeEquipSlotType == EquipSlotType.Relic) totalItems += _gameState.PlayerState.Relics.Count;
-                        else if (_activeEquipSlotType >= EquipSlotType.Spell1 && _activeEquipSlotType <= EquipSlotType.Spell4) totalItems += member.Spells.Count;
 
                         int maxScroll = Math.Max(0, totalItems - 7);
 
@@ -167,6 +188,34 @@ namespace ProjectVagabond.UI
                 else
                 {
                     DrawPartyMemberSlots(spriteBatch, font, ServiceLocator.Get<Core>().SecondaryFont, gameTime);
+                }
+
+                // NEW: Draw Spell Info Panel Content if Hovered
+                if (_hoveredItemData is MoveData moveData)
+                {
+                    const int statsPanelWidth = 116;
+                    const int statsPanelHeight = 132;
+                    int statsPanelX = _inventorySlotArea.Right + 4;
+                    int statsPanelY = _inventorySlotArea.Y - 1;
+                    var infoPanelArea = new Rectangle(statsPanelX, statsPanelY, statsPanelWidth, statsPanelHeight);
+
+                    // Prepare resources
+                    string iconPath = $"Sprites/Items/Spells/{moveData.MoveID}";
+                    int elementId = moveData.OffensiveElementIDs.FirstOrDefault();
+                    string? fallbackPath = null;
+                    if (BattleDataCache.Elements.TryGetValue(elementId, out var elementDef))
+                    {
+                        string elName = elementDef.ElementName.ToLowerInvariant();
+                        if (elName == "---") elName = "neutral";
+                        fallbackPath = $"Sprites/Items/Spells/default_{elName}";
+                    }
+
+                    var iconTexture = _spriteManager.GetItemSprite(iconPath, fallbackPath);
+                    var iconSilhouette = _spriteManager.GetItemSpriteSilhouette(iconPath, fallbackPath);
+                    Rectangle? sourceRect = _spriteManager.GetAnimatedIconSourceRect(iconTexture, gameTime);
+
+                    // Call DrawSpellInfoPanel with drawBackground = false
+                    DrawSpellInfoPanel(spriteBatch, font, ServiceLocator.Get<Core>().SecondaryFont, moveData, iconTexture, iconSilhouette, sourceRect, null, Rectangle.Empty, Vector2.Zero, false, infoPanelArea);
                 }
             }
 
@@ -437,7 +486,7 @@ namespace ProjectVagabond.UI
                         // Update button state
                         if (isOccupied)
                         {
-                            var spellEntry = member!.EquippedSpells[s];
+                            var spellEntry = member!.Spells[s];
                             if (spellEntry != null && BattleDataCache.Moves.TryGetValue(spellEntry.MoveID, out var moveData))
                             {
                                 btn.SpellName = moveData.MoveName;
@@ -622,24 +671,6 @@ namespace ProjectVagabond.UI
                     iconPath = item.ImagePath;
                 }
             }
-            else if (_selectedInventoryCategory == InventoryCategory.Spells)
-            {
-                spellData = BattleDataCache.Moves.Values.FirstOrDefault(m => m.MoveName.Equals(activeSlot.ItemId, StringComparison.OrdinalIgnoreCase));
-                if (spellData != null)
-                {
-                    name = spellData.MoveName.ToUpper();
-                    description = spellData.Description.ToUpper();
-                    iconPath = $"Sprites/Items/Spells/{spellData.MoveID}";
-
-                    int elementId = spellData.OffensiveElementIDs.FirstOrDefault();
-                    if (BattleDataCache.Elements.TryGetValue(elementId, out var elementDef))
-                    {
-                        string elName = elementDef.ElementName.ToLowerInvariant();
-                        if (elName == "---") elName = "neutral";
-                        fallbackPath = $"Sprites/Items/Spells/default_{elName}";
-                    }
-                }
-            }
             else if (_selectedInventoryCategory == InventoryCategory.Weapons)
             {
                 var weapon = BattleDataCache.Weapons.Values.FirstOrDefault(w => w.WeaponName.Equals(activeSlot.ItemId, StringComparison.OrdinalIgnoreCase));
@@ -673,13 +704,6 @@ namespace ProjectVagabond.UI
             if (activeSlot.IsAnimated && iconTexture != null)
             {
                 sourceRect = _spriteManager.GetAnimatedIconSourceRect(iconTexture, gameTime);
-            }
-
-            // --- SPECIAL RENDERING FOR SPELLS ---
-            if (_selectedInventoryCategory == InventoryCategory.Spells && spellData != null)
-            {
-                DrawSpellInfoPanel(spriteBatch, font, secondaryFont, spellData, iconTexture, iconSilhouette, sourceRect, activeSlot.IconTint, idleFrame, idleOrigin, drawBackground, infoPanelArea);
-                return;
             }
 
             // --- STANDARD RENDERING FOR OTHER CATEGORIES ---

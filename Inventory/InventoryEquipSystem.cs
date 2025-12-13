@@ -51,17 +51,6 @@ namespace ProjectVagabond.UI
                     availableItems = allRelics;
                 }
             }
-            else if (_activeEquipSlotType >= EquipSlotType.Spell1 && _activeEquipSlotType <= EquipSlotType.Spell4)
-            {
-                // Get all learned spells for THIS member
-                var allSpells = member.Spells.Select(s => s.MoveID).ToList();
-
-                // Get set of currently equipped spells for THIS member
-                var equippedSpells = new HashSet<string>(member.EquippedSpells.Where(s => s != null).Select(s => s!.MoveID));
-
-                // Filter out any spell that is currently equipped in ANY slot
-                availableItems = allSpells.Where(s => !equippedSpells.Contains(s)).ToList();
-            }
 
             int totalItems = 1 + availableItems.Count; // +1 for REMOVE
 
@@ -167,37 +156,6 @@ namespace ProjectVagabond.UI
                             btn.OnClick = () => SelectEquipItem(itemId);
                         }
                     }
-                    else if (_activeEquipSlotType >= EquipSlotType.Spell1 && _activeEquipSlotType <= EquipSlotType.Spell4)
-                    {
-                        if (BattleDataCache.Moves.TryGetValue(itemId, out var moveData))
-                        {
-                            btn.MainText = moveData.MoveName.ToUpper();
-                            string path = $"Sprites/Items/Spells/{moveData.MoveID}";
-
-                            int elementId = moveData.OffensiveElementIDs.FirstOrDefault();
-                            string? fallbackPath = null;
-                            if (BattleDataCache.Elements.TryGetValue(elementId, out var elementDef))
-                            {
-                                string elName = elementDef.ElementName.ToLowerInvariant();
-                                if (elName == "---") elName = "neutral";
-                                fallbackPath = $"Sprites/Items/Spells/default_{elName}";
-                            }
-
-                            btn.IconTexture = _spriteManager.GetItemSprite(path, fallbackPath);
-                            btn.IconSilhouette = _spriteManager.GetItemSpriteSilhouette(path, fallbackPath);
-                            btn.IconSourceRect = null;
-
-                            btn.Rarity = moveData.Rarity;
-                            btn.IsEnabled = true;
-                            btn.OnClick = () => SelectEquipItem(itemId);
-                        }
-                        else
-                        {
-                            btn.MainText = itemId.ToUpper();
-                            btn.IsEnabled = true;
-                            btn.OnClick = () => SelectEquipItem(itemId);
-                        }
-                    }
                 }
                 else
                 {
@@ -231,22 +189,6 @@ namespace ProjectVagabond.UI
             else if (_activeEquipSlotType == EquipSlotType.Relic)
             {
                 member.EquippedRelicId = itemId;
-            }
-            else if (_activeEquipSlotType >= EquipSlotType.Spell1 && _activeEquipSlotType <= EquipSlotType.Spell4)
-            {
-                int slotIndex = _activeEquipSlotType - EquipSlotType.Spell1;
-                if (itemId == null)
-                {
-                    member.EquippedSpells[slotIndex] = null;
-                }
-                else
-                {
-                    var spellEntry = member.Spells.FirstOrDefault(s => s.MoveID == itemId);
-                    if (spellEntry != null)
-                    {
-                        member.EquippedSpells[slotIndex] = spellEntry;
-                    }
-                }
             }
 
             _isEquipSubmenuOpen = false;

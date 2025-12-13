@@ -139,7 +139,12 @@ namespace ProjectVagabond
                 Tenacity = oakley.Tenacity,
                 Agility = oakley.Agility,
                 DefensiveElementIDs = new List<int>(oakley.DefensiveElementIDs),
-                AvailableMoveIDs = oakley.Spells.Select(m => m.MoveID).Concat(oakley.Actions.Select(m => m.MoveID)).ToList()
+                // FIX: Filter out nulls from the Spells array before selecting MoveID
+                AvailableMoveIDs = oakley.Spells
+                    .Where(m => m != null)
+                    .Select(m => m!.MoveID)
+                    .Concat(oakley.Actions.Select(m => m.MoveID))
+                    .ToList()
             };
             _componentStore.AddComponent(PlayerEntityId, liveStats);
 

@@ -1,10 +1,20 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Text;
 
 namespace ProjectVagabond.Battle
 {
@@ -29,7 +39,7 @@ namespace ProjectVagabond.Battle
             {
                 if (IsPlayerControlled)
                 {
-                    return EquippedSpells
+                    return Spells
                         .Where(entry => entry != null && BattleDataCache.Moves.ContainsKey(entry.MoveID))
                         .Select(entry => BattleDataCache.Moves[entry.MoveID])
                         .ToList();
@@ -39,7 +49,7 @@ namespace ProjectVagabond.Battle
         }
         private List<MoveData> _staticMoves = new List<MoveData>();
 
-        public MoveEntry?[] EquippedSpells { get; set; }
+        public MoveEntry?[] Spells { get; set; } = new MoveEntry?[4];
 
         public string DefaultStrikeMoveID { get; set; }
         public List<StatusEffectInstance> ActiveStatusEffects { get; set; } = new List<StatusEffectInstance>();
@@ -53,7 +63,7 @@ namespace ProjectVagabond.Battle
         public List<IOutgoingDamageModifier> OutgoingDamageModifiers { get; private set; } = new List<IOutgoingDamageModifier>();
         public List<IIncomingDamageModifier> IncomingDamageModifiers { get; private set; } = new List<IIncomingDamageModifier>();
         public List<IDefensePenetrationModifier> DefensePenetrationModifiers { get; private set; } = new List<IDefensePenetrationModifier>();
-        public List<IDefensiveElementModifier> DefensiveElementModifiers { get; private set; } = new List<IDefensiveElementModifier>(); // NEW
+        public List<IDefensiveElementModifier> DefensiveElementModifiers { get; private set; } = new List<IDefensiveElementModifier>();
         public List<IIncomingStatusModifier> IncomingStatusModifiers { get; private set; } = new List<IIncomingStatusModifier>();
         public List<IOutgoingStatusModifier> OutgoingStatusModifiers { get; private set; } = new List<IOutgoingStatusModifier>();
         public List<IOnHitEffect> OnHitEffects { get; private set; } = new List<IOnHitEffect>();
@@ -99,7 +109,7 @@ namespace ProjectVagabond.Battle
             if (ability is IOutgoingDamageModifier odm) OutgoingDamageModifiers.Add(odm);
             if (ability is IIncomingDamageModifier idm) IncomingDamageModifiers.Add(idm);
             if (ability is IDefensePenetrationModifier dpm) DefensePenetrationModifiers.Add(dpm);
-            if (ability is IDefensiveElementModifier dem) DefensiveElementModifiers.Add(dem); // NEW
+            if (ability is IDefensiveElementModifier dem) DefensiveElementModifiers.Add(dem);
             if (ability is IIncomingStatusModifier ism) IncomingStatusModifiers.Add(ism);
             if (ability is IOutgoingStatusModifier osm) OutgoingStatusModifiers.Add(osm);
             if (ability is IOnHitEffect ohe) OnHitEffects.Add(ohe);
@@ -137,7 +147,6 @@ namespace ProjectVagabond.Battle
 
         public bool AddStatusEffect(StatusEffectInstance newEffect)
         {
-            // Check Immunity Abilities
             foreach (var mod in IncomingStatusModifiers)
             {
                 if (mod.ShouldBlockStatus(newEffect.EffectType, this)) return false;
@@ -168,13 +177,10 @@ namespace ProjectVagabond.Battle
         public List<int> GetEffectiveDefensiveElementIDs()
         {
             var effectiveElements = new List<int>(this.DefensiveElementIDs);
-
-            // Use the new interface list instead of hardcoded string checks
             foreach (var mod in DefensiveElementModifiers)
             {
                 mod.ModifyDefensiveElements(effectiveElements, this);
             }
-
             return effectiveElements;
         }
 

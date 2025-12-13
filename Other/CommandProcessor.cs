@@ -209,10 +209,6 @@ namespace ProjectVagabond
                 EventBus.Publish(new GameEvents.PlayerMoveAdded { MoveID = args[1], Type = GameEvents.AcquisitionType.Remove });
             }, "removeaction <id>");
 
-            // --- EQUIP SPELL ---
-            _commands["equip"] = new Command("equip", (args) => HandleEquipSpell(args), "equip <moveId> <slot> - Equips a spell.");
-            _commands["unequip"] = new Command("unequip", (args) => HandleUnequipSpell(args), "unequip <slot>");
-
             // --- DEBUG COMBAT ---
             _commands["debugcombat"] = new Command("debugcombat", (args) =>
             {
@@ -381,12 +377,19 @@ namespace ProjectVagabond
             PrintDict(ps.Consumables, "Consumables");
 
             Log("[palette_teal]Spells:[/]");
-            if (ps.Spells.Any())
+            if (ps.Spells.Any(s => s != null))
             {
-                foreach (var spell in ps.Spells)
+                for (int i = 0; i < ps.Spells.Length; i++)
                 {
-                    string equipped = Array.IndexOf(ps.EquippedSpells, spell) != -1 ? " [yellow][Equipped][/]" : "";
-                    Log($"  {spell.MoveID} (Used: {spell.TimesUsed}){equipped}");
+                    var spell = ps.Spells[i];
+                    if (spell != null)
+                    {
+                        Log($"  Slot {i + 1}: {spell.MoveID} (Used: {spell.TimesUsed})");
+                    }
+                    else
+                    {
+                        Log($"  Slot {i + 1}: (Empty)");
+                    }
                 }
             }
             else Log("  (Empty)");
@@ -407,33 +410,6 @@ namespace ProjectVagabond
             Log($"[palette_teal]{title}:[/]");
             if (!dict.Any()) Log("  (Empty)");
             else foreach (var kvp in dict) Log($"  {kvp.Key}: {kvp.Value}");
-        }
-
-        private void HandleEquipSpell(string[] args)
-        {
-            _gameState ??= ServiceLocator.Get<GameState>();
-            if (_gameState.PlayerState == null) return;
-            if (args.Length < 3 || !int.TryParse(args[2], out int slot)) { Log("[error]Usage: equip <MoveID> <slot>"); return; }
-            string moveId = args[1];
-
-            if (slot < 1 || slot > 4) { Log("[error]Slot must be 1-4."); return; }
-
-            var spellEntry = _gameState.PlayerState.Spells.FirstOrDefault(s => s.MoveID.Equals(moveId, StringComparison.OrdinalIgnoreCase));
-            if (spellEntry == null) { Log($"[error]You don't know the spell '{moveId}'."); return; }
-
-            for (int i = 0; i < 4; i++) if (_gameState.PlayerState.EquippedSpells[i] == spellEntry) _gameState.PlayerState.EquippedSpells[i] = null;
-
-            _gameState.PlayerState.EquippedSpells[slot - 1] = spellEntry;
-            Log($"Equipped {spellEntry.MoveID} to slot {slot}.");
-        }
-
-        private void HandleUnequipSpell(string[] args)
-        {
-            _gameState ??= ServiceLocator.Get<GameState>();
-            if (_gameState.PlayerState == null) return;
-            if (args.Length < 2 || !int.TryParse(args[1], out int slot) || slot < 1 || slot > 4) return;
-            _gameState.PlayerState.EquippedSpells[slot - 1] = null;
-            Log($"Unequipped slot {slot}.");
         }
 
         public void ProcessCommand(string input)

@@ -17,7 +17,7 @@ using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.UI
 {
-    public enum InventoryCategory { Weapons, Armor, Spells, Relics, Consumables, Misc, Equip }
+    public enum InventoryCategory { Weapons, Armor, Relics, Consumables, Misc, Equip }
     public partial class SplitMapInventoryOverlay
     {
         public bool IsOpen { get; private set; } = false;
@@ -72,7 +72,6 @@ namespace ProjectVagabond.UI
         InventoryCategory.Weapons,
         InventoryCategory.Armor,
         InventoryCategory.Relics,
-        InventoryCategory.Spells,
         InventoryCategory.Consumables,
         InventoryCategory.Misc
     };
@@ -167,7 +166,6 @@ namespace ProjectVagabond.UI
                 {
                     InventoryCategory.Weapons => _spriteManager.InventoryHeaderButtonWeapons,
                     InventoryCategory.Armor => _spriteManager.InventoryHeaderButtonArmor,
-                    InventoryCategory.Spells => _spriteManager.InventoryHeaderButtonSpells,
                     InventoryCategory.Relics => _spriteManager.InventoryHeaderButtonRelics,
                     InventoryCategory.Consumables => _spriteManager.InventoryHeaderButtonConsumables,
                     InventoryCategory.Misc => _spriteManager.InventoryHeaderButtonMisc,
@@ -295,8 +293,6 @@ namespace ProjectVagabond.UI
                 for (int s = 0; s < 4; s++)
                 {
                     var spellBtn = new SpellEquipButton(new Rectangle(spellButtonX, spellButtonY, spellButtonWidth, spellButtonHeight));
-                    int slotIndex = s; // Capture for closure
-                    spellBtn.OnClick += () => OpenEquipSubmenu(memberIndex, EquipSlotType.Spell1 + slotIndex);
                     _partySpellButtons.Add(spellBtn);
                     spellButtonY += spellButtonHeight; // Stack vertically
                 }

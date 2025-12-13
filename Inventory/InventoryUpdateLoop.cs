@@ -50,37 +50,93 @@ namespace ProjectVagabond.UI
             _debugButton2?.Update(currentMouseState, cameraTransform);
 
             // UPDATE PARTY MEMBER EQUIP BUTTONS
-            if (_selectedInventoryCategory == InventoryCategory.Equip && !_isEquipSubmenuOpen)
+            if (_selectedInventoryCategory == InventoryCategory.Equip)
             {
-                int partyCount = _gameState.PlayerState.Party.Count;
-                for (int i = 0; i < _partyEquipButtons.Count; i++)
+                // Reset hover data at start of frame for Equip view
+                _hoveredItemData = null;
+
+                if (!_isEquipSubmenuOpen)
                 {
-                    int memberIndex = i / 3;
-                    if (memberIndex < partyCount)
+                    int partyCount = _gameState.PlayerState.Party.Count;
+
+                    // Update Equipment Slot Buttons (Weapon, Armor, Relic)
+                    for (int i = 0; i < _partyEquipButtons.Count; i++)
                     {
-                        _partyEquipButtons[i].IsEnabled = true;
-                        _partyEquipButtons[i].Update(currentMouseState, cameraTransform);
+                        int memberIndex = i / 3;
+                        if (memberIndex < partyCount)
+                        {
+                            _partyEquipButtons[i].IsEnabled = true;
+                            _partyEquipButtons[i].Update(currentMouseState, cameraTransform);
+
+                            // Optional: Add hover logic for equipment here if desired later
+                        }
+                        else
+                        {
+                            _partyEquipButtons[i].IsEnabled = false;
+                            _partyEquipButtons[i].ResetAnimationState();
+                        }
                     }
-                    else
+
+                    // UPDATE SPELL SLOT BUTTONS
+                    for (int i = 0; i < _partySpellButtons.Count; i++)
                     {
-                        _partyEquipButtons[i].IsEnabled = false;
-                        _partyEquipButtons[i].ResetAnimationState();
+                        int memberIndex = i / 4;
+                        int slotIndex = i % 4;
+
+                        if (memberIndex < partyCount)
+                        {
+                            var btn = _partySpellButtons[i];
+                            btn.IsEnabled = true;
+                            btn.Update(currentMouseState, cameraTransform);
+
+                            // Check for hover to populate info panel
+                            if (btn.IsHovered)
+                            {
+                                var member = _gameState.PlayerState.Party[memberIndex];
+                                var spellEntry = member.Spells[slotIndex];
+                                if (spellEntry != null && BattleDataCache.Moves.TryGetValue(spellEntry.MoveID, out var moveData))
+                                {
+                                    _hoveredItemData = moveData;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            _partySpellButtons[i].IsEnabled = false;
+                            _partySpellButtons[i].ResetAnimationState();
+                        }
                     }
                 }
-
-                // UPDATE SPELL SLOT BUTTONS
-                for (int i = 0; i < _partySpellButtons.Count; i++)
+                else
                 {
-                    int memberIndex = i / 4;
-                    if (memberIndex < partyCount)
+                    // If submenu is open, handle submenu button updates
+                    // (Logic moved here from below to consolidate Equip updates)
+                    var member = _gameState.PlayerState.Party[_currentPartyMemberIndex];
+                    List<string> availableItems = new List<string>();
+                    if (_activeEquipSlotType == EquipSlotType.Weapon) availableItems = _gameState.PlayerState.Weapons.Keys.ToList();
+                    else if (_activeEquipSlotType == EquipSlotType.Armor) availableItems = _gameState.PlayerState.Armors.Keys.ToList();
+                    else if (_activeEquipSlotType == EquipSlotType.Relic) availableItems = _gameState.PlayerState.Relics.Keys.ToList();
+
+                    for (int i = 0; i < _equipSubmenuButtons.Count; i++)
                     {
-                        _partySpellButtons[i].IsEnabled = true;
-                        _partySpellButtons[i].Update(currentMouseState, cameraTransform);
-                    }
-                    else
-                    {
-                        _partySpellButtons[i].IsEnabled = false;
-                        _partySpellButtons[i].ResetAnimationState();
+                        var button = _equipSubmenuButtons[i];
+                        button.Update(currentMouseState, cameraTransform);
+
+                        if (button.IsHovered && button.IsEnabled)
+                        {
+                            int virtualIndex = _equipMenuScrollIndex + i;
+                            if (virtualIndex > 0)
+                            {
+                                int itemIndex = virtualIndex - 1;
+                                if (itemIndex < availableItems.Count)
+                                {
+                                    string itemId = availableItems[itemIndex];
+                                    if (_activeEquipSlotType == EquipSlotType.Weapon) _hoveredItemData = GetWeaponData(itemId);
+                                    else if (_activeEquipSlotType == EquipSlotType.Armor) _hoveredItemData = GetArmorData(itemId);
+                                    else if (_activeEquipSlotType == EquipSlotType.Relic) _hoveredItemData = GetRelicData(itemId);
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -140,7 +196,6 @@ namespace ProjectVagabond.UI
                     if (_activeEquipSlotType == EquipSlotType.Weapon) totalItems += _gameState.PlayerState.Weapons.Count;
                     else if (_activeEquipSlotType == EquipSlotType.Armor) totalItems += _gameState.PlayerState.Armors.Count;
                     else if (_activeEquipSlotType == EquipSlotType.Relic) totalItems += _gameState.PlayerState.Relics.Count;
-                    else if (_activeEquipSlotType >= EquipSlotType.Spell1 && _activeEquipSlotType <= EquipSlotType.Spell4) totalItems += member.Spells.Count;
 
                     int maxScroll = Math.Max(0, totalItems - 7); // 7 visible slots
 
@@ -353,57 +408,7 @@ namespace ProjectVagabond.UI
             }
             else if (_selectedInventoryCategory == InventoryCategory.Equip)
             {
-                _hoveredItemData = null;
-
-                if (_isEquipSubmenuOpen)
-                {
-                    var member = _gameState.PlayerState.Party[_currentPartyMemberIndex];
-                    List<string> availableItems = new List<string>();
-                    if (_activeEquipSlotType == EquipSlotType.Weapon) availableItems = _gameState.PlayerState.Weapons.Keys.ToList();
-                    else if (_activeEquipSlotType == EquipSlotType.Armor) availableItems = _gameState.PlayerState.Armors.Keys.ToList();
-                    else if (_activeEquipSlotType == EquipSlotType.Relic) availableItems = _gameState.PlayerState.Relics.Keys.ToList();
-                    else if (_activeEquipSlotType >= EquipSlotType.Spell1 && _activeEquipSlotType <= EquipSlotType.Spell4) availableItems = member.Spells.Select(s => s.MoveID).ToList();
-
-                    for (int i = 0; i < _equipSubmenuButtons.Count; i++)
-                    {
-                        var button = _equipSubmenuButtons[i];
-                        button.Update(currentMouseState, cameraTransform);
-
-                        if (button.IsHovered && button.IsEnabled)
-                        {
-                            int virtualIndex = _equipMenuScrollIndex + i;
-                            if (virtualIndex > 0)
-                            {
-                                int itemIndex = virtualIndex - 1;
-                                if (itemIndex < availableItems.Count)
-                                {
-                                    string itemId = availableItems[itemIndex];
-                                    if (_activeEquipSlotType == EquipSlotType.Weapon) _hoveredItemData = GetWeaponData(itemId);
-                                    else if (_activeEquipSlotType == EquipSlotType.Armor) _hoveredItemData = GetArmorData(itemId);
-                                    else if (_activeEquipSlotType == EquipSlotType.Relic) _hoveredItemData = GetRelicData(itemId);
-                                    else if (_activeEquipSlotType >= EquipSlotType.Spell1 && _activeEquipSlotType <= EquipSlotType.Spell4)
-                                    {
-                                        if (BattleDataCache.Moves.TryGetValue(itemId, out var move))
-                                        {
-                                            _hoveredItemData = move;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    if (_activeEquipSlotType >= EquipSlotType.Spell1 && _activeEquipSlotType <= EquipSlotType.Spell4)
-                    {
-                        foreach (var btn in _equipSubmenuButtons)
-                        {
-                            if (btn.IconTexture != null)
-                            {
-                                btn.IconSourceRect = _spriteManager.GetAnimatedIconSourceRect(btn.IconTexture, gameTime);
-                            }
-                        }
-                    }
-                }
+                // _hoveredItemData is now handled in the Equip Button update loop above
             }
 
             _statCycleTimer += deltaTime;

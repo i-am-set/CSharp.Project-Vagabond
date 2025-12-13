@@ -1,5 +1,20 @@
-﻿using System.Collections.Generic;
+﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.UI;
+using ProjectVagabond.Utils;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Text;
 
 namespace ProjectVagabond
 {
@@ -25,30 +40,34 @@ namespace ProjectVagabond
         // Equipment
         public string? EquippedWeaponId { get; set; }
         public string? EquippedArmorId { get; set; }
-
-        // Changed from array to single ID
         public string? EquippedRelicId { get; set; }
 
-        public MoveEntry?[] EquippedSpells { get; set; } = new MoveEntry?[4];
+        // Fixed Spell Slots (Max 4)
+        // Replaces the old inventory/equip system.
+        public MoveEntry?[] Spells { get; set; } = new MoveEntry?[4];
 
-        // Learned Moves (Infinite storage)
-        public List<MoveEntry> Spells { get; set; } = new List<MoveEntry>();
+        // Actions (e.g. basic commands, not usually "equipped" to slots)
         public List<MoveEntry> Actions { get; set; } = new List<MoveEntry>();
 
         public PartyMember() { }
 
         public PartyMember Clone()
         {
-            // Shallow copy is mostly fine for strings/ints, but lists need care if modified
             var clone = (PartyMember)this.MemberwiseClone();
             clone.DefensiveElementIDs = new List<int>(this.DefensiveElementIDs);
-            clone.Spells = new List<MoveEntry>();
-            foreach (var s in this.Spells) clone.Spells.Add(s.Clone());
+
+            // Deep copy the spell slots
+            clone.Spells = new MoveEntry?[4];
+            for (int i = 0; i < 4; i++)
+            {
+                if (this.Spells[i] != null)
+                {
+                    clone.Spells[i] = this.Spells[i]!.Clone();
+                }
+            }
+
             clone.Actions = new List<MoveEntry>();
             foreach (var a in this.Actions) clone.Actions.Add(a.Clone());
-
-            // EquippedRelicId is a string (immutable), so shallow copy is fine
-            clone.EquippedSpells = (MoveEntry?[])this.EquippedSpells.Clone();
 
             return clone;
         }

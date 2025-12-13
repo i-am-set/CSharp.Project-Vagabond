@@ -1,9 +1,20 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.UI;
+using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 
 namespace ProjectVagabond
 {
@@ -38,12 +49,9 @@ namespace ProjectVagabond
 
         public string? EquippedWeaponId { get => Leader?.EquippedWeaponId; set { if (Leader != null) Leader.EquippedWeaponId = value; } }
         public string? EquippedArmorId { get => Leader?.EquippedArmorId; set { if (Leader != null) Leader.EquippedArmorId = value; } }
-
-        // Updated to single relic
         public string? EquippedRelicId { get => Leader?.EquippedRelicId; set { if (Leader != null) Leader.EquippedRelicId = value; } }
 
-        public MoveEntry?[] EquippedSpells { get => Leader?.EquippedSpells ?? new MoveEntry?[4]; set { if (Leader != null) Leader.EquippedSpells = value; } }
-        public List<MoveEntry> Spells { get => Leader?.Spells ?? new List<MoveEntry>(); set { if (Leader != null) Leader.Spells = value; } }
+        public MoveEntry?[] Spells { get => Leader?.Spells ?? new MoveEntry?[4]; set { if (Leader != null) Leader.Spells = value; } }
         public List<MoveEntry> Actions { get => Leader?.Actions ?? new List<MoveEntry>(); set { if (Leader != null) Leader.Actions = value; } }
 
         public PlayerState()
@@ -54,12 +62,6 @@ namespace ProjectVagabond
 
         // --- PARTY MANAGEMENT ---
 
-        /// <summary>
-        /// Attempts to add a new member to the party.
-        /// Checks for duplicates and party size limits.
-        /// </summary>
-        /// <param name="member">The member to add.</param>
-        /// <returns>True if added successfully, False otherwise.</returns>
         public bool AddPartyMember(PartyMember member)
         {
             if (Party.Count >= 4)
@@ -68,7 +70,6 @@ namespace ProjectVagabond
                 return false;
             }
 
-            // Check for duplicate by Name (assuming Name is unique for party members)
             if (Party.Any(m => m.Name.Equals(member.Name, StringComparison.OrdinalIgnoreCase)))
             {
                 Debug.WriteLine($"[error] Error: Cannot add member. '{member.Name}' is already in the party.");
@@ -81,7 +82,6 @@ namespace ProjectVagabond
 
         // --- STAT CALCULATIONS ---
 
-        // Overload for backward compatibility (defaults to Leader)
         public int GetBaseStat(string statName) => GetBaseStat(Leader, statName);
 
         public int GetBaseStat(PartyMember member, string statName)
@@ -100,7 +100,6 @@ namespace ProjectVagabond
             }
         }
 
-        // Overload for backward compatibility (defaults to Leader)
         public int GetEffectiveStat(string statName) => GetEffectiveStat(Leader, statName);
 
         public int GetEffectiveStat(PartyMember member, string statName)
@@ -109,19 +108,16 @@ namespace ProjectVagabond
             int baseValue = GetBaseStat(member, statName);
             int bonus = 0;
 
-            // 1. Relic Bonuses (Single Slot)
             if (!string.IsNullOrEmpty(member.EquippedRelicId) && BattleDataCache.Relics.TryGetValue(member.EquippedRelicId, out var relic))
             {
                 if (relic.StatModifiers.TryGetValue(statName, out int mod)) bonus += mod;
             }
 
-            // 2. Weapon Bonuses
             if (!string.IsNullOrEmpty(member.EquippedWeaponId) && BattleDataCache.Weapons.TryGetValue(member.EquippedWeaponId, out var weapon))
             {
                 if (weapon.StatModifiers.TryGetValue(statName, out int mod)) bonus += mod;
             }
 
-            // 3. Armor Bonuses
             if (!string.IsNullOrEmpty(member.EquippedArmorId) && BattleDataCache.Armors.TryGetValue(member.EquippedArmorId, out var armor))
             {
                 if (armor.StatModifiers.TryGetValue(statName, out int mod)) bonus += mod;
@@ -144,7 +140,6 @@ namespace ProjectVagabond
                 Weapons[weaponId] = Math.Max(0, current - quantity);
                 if (Weapons[weaponId] == 0) Weapons.Remove(weaponId);
 
-                // Check unequip for ALL party members
                 foreach (var member in Party)
                 {
                     if (member.EquippedWeaponId == weaponId && Weapons.GetValueOrDefault(weaponId) == 0)
@@ -237,7 +232,24 @@ namespace ProjectVagabond
 
             if (moveData.MoveType == MoveType.Spell)
             {
-                if (!target.Spells.Any(m => m.MoveID == moveId)) target.Spells.Add(new MoveEntry(moveId, 0));
+                // Check if already known
+                for (int i = 0; i < target.Spells.Length; i++)
+                {
+                    if (target.Spells[i]?.MoveID == moveId) return; // Already have it
+                }
+
+                // Find first empty slot
+                for (int i = 0; i < target.Spells.Length; i++)
+                {
+                    if (target.Spells[i] == null)
+                    {
+                        target.Spells[i] = new MoveEntry(moveId, 0);
+                        return;
+                    }
+                }
+
+                // If full, we do nothing for now (requires a replacement UI or logic)
+                Debug.WriteLine($"[PlayerState] Cannot add spell {moveId} to {target.Name}: Slots full.");
             }
             else if (moveData.MoveType == MoveType.Action)
             {
@@ -250,18 +262,17 @@ namespace ProjectVagabond
             var target = member ?? Leader;
             if (target == null) return;
 
-            var spellIndex = target.Spells.FindIndex(m => m.MoveID == moveId);
-            if (spellIndex != -1)
+            // Check Spells
+            for (int i = 0; i < target.Spells.Length; i++)
             {
-                var entry = target.Spells[spellIndex];
-                target.Spells.RemoveAt(spellIndex);
-                for (int i = 0; i < target.EquippedSpells.Length; i++)
+                if (target.Spells[i]?.MoveID == moveId)
                 {
-                    if (target.EquippedSpells[i] == entry) target.EquippedSpells[i] = null;
+                    target.Spells[i] = null;
+                    return;
                 }
-                return;
             }
 
+            // Check Actions
             var actionIndex = target.Actions.FindIndex(m => m.MoveID == moveId);
             if (actionIndex != -1) target.Actions.RemoveAt(actionIndex);
         }

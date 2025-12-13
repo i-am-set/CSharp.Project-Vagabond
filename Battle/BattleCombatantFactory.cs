@@ -1,9 +1,20 @@
-﻿using System;
+﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.UI;
+using ProjectVagabond.Utils;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using ProjectVagabond.Battle;
-using ProjectVagabond.Battle.Abilities;
+using System.Text;
 
 namespace ProjectVagabond.Battle
 {
@@ -103,7 +114,12 @@ namespace ProjectVagabond.Battle
                     }
                 }
 
-                combatant.EquippedSpells = gameState.PlayerState.EquippedSpells;
+                // Find the party member corresponding to this combatant to get their spells
+                var partyMember = gameState.PlayerState.Party.FirstOrDefault(m => m.Name == combatant.Name);
+                if (partyMember != null)
+                {
+                    combatant.Spells = partyMember.Spells;
+                }
 
                 // Apply Effective Stats from PlayerState
                 combatant.Stats.MaxHP = gameState.PlayerState.GetEffectiveStat("MaxHP");

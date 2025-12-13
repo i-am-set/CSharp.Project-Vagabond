@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Scenes;
@@ -11,6 +12,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.UI
 {
@@ -118,32 +120,6 @@ namespace ProjectVagabond.UI
                             currentItems.Add((data.ItemName, kvp.Value, data.ImagePath, null, data.Rarity, null, false, null, false));
                         else
                             currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Misc/{kvp.Key}", null, 0, null, false, null, false));
-                    }
-                    break;
-                case InventoryCategory.Spells:
-                    foreach (var entry in _gameState.PlayerState.Spells)
-                    {
-                        Color? tint = null;
-                        string name = entry.MoveID;
-                        string iconPath = $"Sprites/Items/Spells/{entry.MoveID}";
-                        int rarity = 0;
-                        string? fallbackPath = null;
-                        bool isEquipped = _gameState.PlayerState.EquippedSpells.Contains(entry);
-
-                        if (BattleDataCache.Moves.TryGetValue(entry.MoveID, out var moveData))
-                        {
-                            name = moveData.MoveName;
-                            rarity = moveData.Rarity;
-
-                            int elementId = moveData.OffensiveElementIDs.FirstOrDefault();
-                            if (BattleDataCache.Elements.TryGetValue(elementId, out var elementDef))
-                            {
-                                string elName = elementDef.ElementName.ToLowerInvariant();
-                                if (elName == "---") elName = "neutral";
-                                fallbackPath = $"Sprites/Items/Spells/default_{elName}";
-                            }
-                        }
-                        currentItems.Add((name, 1, iconPath, null, rarity, tint, true, fallbackPath, isEquipped));
                     }
                     break;
             }

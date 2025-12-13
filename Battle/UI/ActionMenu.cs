@@ -2,7 +2,11 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
+using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
@@ -301,12 +305,12 @@ namespace ProjectVagabond.Battle.UI
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
             var spriteManager = ServiceLocator.Get<SpriteManager>();
 
-            var equippedSpells = _player.EquippedSpells;
-            if (equippedSpells == null) return;
+            var spells = _player.Spells;
+            if (spells == null) return;
 
-            for (int i = 0; i < equippedSpells.Length; i++)
+            for (int i = 0; i < spells.Length; i++)
             {
-                var entry = equippedSpells[i];
+                var entry = spells[i];
                 if (entry == null || !BattleDataCache.Moves.TryGetValue(entry.MoveID, out var move))
                 {
                     _moveButtons[i] = null;

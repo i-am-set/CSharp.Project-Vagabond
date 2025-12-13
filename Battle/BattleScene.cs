@@ -13,6 +13,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.Scenes
 {
@@ -311,7 +312,7 @@ namespace ProjectVagabond.Scenes
                 },
                 DefensiveElementIDs = new List<int>(member.DefensiveElementIDs),
                 DefaultStrikeMoveID = member.DefaultStrikeMoveID,
-                EquippedSpells = member.EquippedSpells
+                Spells = member.Spells // FIX: Use Spells instead of EquippedSpells
             };
 
             combatant.Stats.MaxHP = _gameState.PlayerState.GetEffectiveStat(member, "MaxHP");
@@ -577,7 +578,7 @@ namespace ProjectVagabond.Scenes
             }
             else
             {
-                var playerSpells = _gameState.PlayerState?.Spells.Select(p => p.MoveID);
+                var playerSpells = _gameState.PlayerState?.Spells.Where(s => s != null).Select(p => p.MoveID);
                 var excludeIds = playerSpells != null ? new HashSet<string>(playerSpells) : null;
                 choices.AddRange(_choiceGenerator.GenerateSpellChoices(gameStage, numberOfChoices, excludeIds));
             }
