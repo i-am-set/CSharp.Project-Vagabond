@@ -633,10 +633,31 @@ namespace ProjectVagabond.UI
                 string[] statLabels = { "STR", "INT", "TEN", "AGI" };
                 string[] statKeys = { "Strength", "Intelligence", "Tenacity", "Agility" };
 
+                // --- Determine Hovered Item Bonus ---
+                Dictionary<string, int>? hoveredItemStats = null;
+                if (isOccupied && _hoveredMemberIndex == i && _hoveredItemData != null)
+                {
+                    if (_hoveredItemData is WeaponData w) hoveredItemStats = w.StatModifiers;
+                    else if (_hoveredItemData is ArmorData a) hoveredItemStats = a.StatModifiers;
+                    else if (_hoveredItemData is RelicData r) hoveredItemStats = r.StatModifiers;
+                }
+
                 for (int s = 0; s < 4; s++)
                 {
-                    int val = isOccupied ? _gameState.PlayerState.GetEffectiveStat(member!, statKeys[s]) : 0;
+                    int totalVal = isOccupied ? _gameState.PlayerState.GetEffectiveStat(member!, statKeys[s]) : 0;
                     Color labelColor = isOccupied ? _global.Palette_LightGray : _global.Palette_DarkGray;
+
+                    // Calculate Base Value (Total - Item Bonus)
+                    int itemBonus = 0;
+                    if (hoveredItemStats != null && hoveredItemStats.TryGetValue(statKeys[s], out int bonus))
+                    {
+                        itemBonus = bonus;
+                    }
+
+                    // Only handle positive bonuses for now as requested
+                    if (itemBonus < 0) itemBonus = 0;
+
+                    int baseVal = totalVal - itemBonus;
 
                     // Draw Label
                     spriteBatch.DrawStringSnapped(secondaryFont, statLabels[s], new Vector2(equipStartX - 3, currentY), labelColor);
@@ -661,14 +682,33 @@ namespace ProjectVagabond.UI
                         // Draw Full (Only if occupied)
                         if (isOccupied && _spriteManager.InventoryStatBarFull != null)
                         {
-                            int width = Math.Clamp(val, 1, 20) * 2;
-                            var src = new Rectangle(0, 0, width, 3);
-                            spriteBatch.DrawSnapped(_spriteManager.InventoryStatBarFull, new Vector2(barX, barY), src, Color.White);
+                            // Calculate widths for base and bonus parts
+                            // Max visual bar is 20 units (40 pixels)
+                            int baseBarPoints = Math.Clamp(baseVal, 1, 20);
+                            int totalBarPoints = Math.Clamp(totalVal, 1, 20);
+
+                            int baseWidth = baseBarPoints * 2;
+                            int bonusWidth = (totalBarPoints - baseBarPoints) * 2;
+
+                            // Draw Base (White)
+                            if (baseWidth > 0)
+                            {
+                                var srcBase = new Rectangle(0, 0, baseWidth, 3);
+                                spriteBatch.DrawSnapped(_spriteManager.InventoryStatBarFull, new Vector2(barX, barY), srcBase, Color.White);
+                            }
+
+                            // Draw Bonus (Green)
+                            if (bonusWidth > 0)
+                            {
+                                var srcBonus = new Rectangle(0, 0, bonusWidth, 3);
+                                // Draw starting from where the base bar ended
+                                spriteBatch.DrawSnapped(_spriteManager.InventoryStatBarFull, new Vector2(barX + baseWidth, barY), srcBonus, _global.Palette_LightGreen);
+                            }
 
                             // Draw Excess Text
-                            if (val > 20)
+                            if (totalVal > 20)
                             {
-                                int excess = val - 20;
+                                int excess = totalVal - 20;
                                 string excessText = $"+{excess}";
 
                                 Vector2 textSize = secondaryFont.MeasureString(excessText);
@@ -682,7 +722,18 @@ namespace ProjectVagabond.UI
                                 var bgRect = new Rectangle((int)textPos.X - 1, (int)textPos.Y, (int)textSize.X + 2, (int)textSize.Y);
                                 spriteBatch.DrawSnapped(pixel, bgRect, _global.Palette_Black);
 
-                                spriteBatch.DrawStringOutlinedSnapped(secondaryFont, excessText, textPos, _global.Palette_BrightWhite, _global.Palette_Black);
+                                // Determine text color: Green if item contributes to overflow, else White
+                                Color textColor = _global.Palette_BrightWhite;
+                                if (itemBonus > 0)
+                                {
+                                    // If the item adds ANY value, and we are overflowing, highlight the overflow text.
+                                    // Logic:
+                                    // 1. Base < 20, Total > 20: Item pushed it over. Green.
+                                    // 2. Base >= 20, Total > 20: Item adds to existing overflow. Green.
+                                    textColor = _global.Palette_LightGreen;
+                                }
+
+                                spriteBatch.DrawStringOutlinedSnapped(secondaryFont, excessText, textPos, textColor, _global.Palette_Black);
                             }
                         }
                     }
@@ -1106,7 +1157,7 @@ namespace ProjectVagabond.UI
 
         private void DrawSpellInfoPanel(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, MoveData move, Texture2D? iconTexture, Texture2D? iconSilhouette, Rectangle? sourceRect, Color? iconTint, Rectangle idleFrame, Vector2 idleOrigin, bool drawBackground, Rectangle infoPanelArea)
         {
-            const int spriteSize = 32; 
+            const int spriteSize = 32; // UPDATED
             const int padding = 4;
             const int gap = 2;
 
@@ -1127,8 +1178,8 @@ namespace ProjectVagabond.UI
                 return;
             }
 
-            Vector2 iconOrigin = new Vector2(16, 16); 
-            Vector2 drawPos = new Vector2(spriteX + 16, spriteY + 16);
+            Vector2 iconOrigin = new Vector2(16, 16); // UPDATED
+            Vector2 drawPos = new Vector2(spriteX + 16, spriteY + 16); // UPDATED
 
             if (iconSilhouette != null)
             {
