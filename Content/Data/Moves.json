@@ -3,7 +3,7 @@
   {
     "MoveID": "ShoulderBash",
     "MoveName": "Shoulder Bash",
-    "Description": "A powerful, straightforward charge that slams the user's body into the target. Can stagger unprepared opponents.",
+    "Description": "[cetc]A powerful, straightforward charge.[/]",
     "Power": 40,
     "ManaCost": 0,
     "MoveType": "Action",
@@ -24,7 +24,7 @@
   {
     "MoveID": "ClawRake",
     "MoveName": "Claw Rake",
-    "Description": "The user rakes the target with sharp claws or a handheld weapon. A basic but reliable attack.",
+    "Description": "[cetc]Rakes the target with sharp claws.[/]",
     "Power": 40,
     "ManaCost": 0,
     "MoveType": "Action",
@@ -45,7 +45,7 @@
   {
     "MoveID": "Bonecrusher",
     "MoveName": "Bonecrusher",
-    "Description": "A mighty blow from a heavy, blunt weapon aimed to shatter bone. It is powerful, but can be difficult to land.",
+    "Description": "[cetc]A mighty blow aimed to shatter bone.[/]",
     "Power": 80,
     "ManaCost": 0,
     "MoveType": "Action",
@@ -66,7 +66,7 @@
   {
     "MoveID": "SwiftStrike",
     "MoveName": "Swift Strike",
-    "Description": "A lightning-fast attack that almost always goes first. Perfect for finishing off a weakened foe.",
+    "Description": "[cetc]A lightning-fast attack.[/]\nUsually goes [cpositive]first[/].",
     "Power": 40,
     "ManaCost": 0,
     "MoveType": "Action",
@@ -88,7 +88,7 @@
   {
     "MoveID": "CinderSpark",
     "MoveName": "Cinder Spark",
-    "Description": "The user launches a small, smoldering ember at the target. It's a fundamental spell for aspiring pyromancers.",
+    "Description": "[cetc]Launches a small, smoldering ember.[/]",
     "Power": 40,
     "ManaCost": 10,
     "MoveType": "Spell",
@@ -109,7 +109,7 @@
   {
     "MoveID": "Pyrosphere",
     "MoveName": "Pyrosphere",
-    "Description": "A condensed ball of fire is hurled at the enemy. The intense heat can melt through lesser armors.",
+    "Description": "[cetc]A condensed ball of fire.[/]",
     "Power": 80,
     "ManaCost": 25,
     "MoveType": "Spell",
@@ -130,7 +130,7 @@
   {
     "MoveID": "InfernoSurge",
     "MoveName": "Inferno Surge",
-    "Description": "A massive pillar of flame erupts from beneath the target. Its power is immense, but its chaotic nature makes it unreliable.",
+    "Description": "[cetc]A massive pillar of flame erupts.[/]",
     "Power": 110,
     "ManaCost": 50,
     "MoveType": "Spell",
@@ -151,7 +151,7 @@
   {
     "MoveID": "Scorchbrand",
     "MoveName": "Scorchbrand",
-    "Description": "The user's weapon is magically wreathed in flames before striking. The resulting blow burns as much as it cuts.",
+    "Description": "[cetc]Weapon wreathed in flames.[/]",
     "Power": 70,
     "ManaCost": 20,
     "MoveType": "Spell",
@@ -173,7 +173,7 @@
   {
     "MoveID": "AbyssalWave",
     "MoveName": "Abyssal Wave",
-    "Description": "A crushing wave of magically summoned water crashes down on the target. The pressure is immense.",
+    "Description": "[cetc]A crushing wave of water.[/]",
     "Power": 60,
     "ManaCost": 25,
     "MoveType": "Spell",
@@ -194,7 +194,7 @@
   {
     "MoveID": "TorrentDash",
     "MoveName": "Torrent Dash",
-    "Description": "The user cloaks themselves in a sheath of water and dashes forward, striking before the opponent can react.",
+    "Description": "[cetc]Cloaks user in water to dash forward.[/]\nUsually goes [cpositive]first[/].",
     "Power": 40,
     "ManaCost": 15,
     "MoveType": "Spell",
@@ -215,7 +215,7 @@
   {
     "MoveID": "Maelstrom",
     "MoveName": "Maelstrom",
-    "Description": "A swirling vortex of water appears around the target, battering them from all sides with crushing force.",
+    "Description": "[cetc]A swirling vortex of water.[/]",
     "Power": 90,
     "ManaCost": 40,
     "MoveType": "Spell",
@@ -237,7 +237,7 @@
   {
     "MoveID": "EtherDart",
     "MoveName": "Ether Dart",
-    "Description": "A simple but effective bolt of pure magical energy. A staple for any magic user.",
+    "Description": "[cetc]A bolt of pure magical energy.[/]",
     "Power": 60,
     "ManaCost": 15,
     "MoveType": "Spell",
@@ -258,7 +258,7 @@
   {
     "MoveID": "Riftburst",
     "MoveName": "Riftburst",
-    "Description": "Tears a small hole in reality that explodes with arcane power. The unstable nature of the rift makes it hard to control.",
+    "Description": "[cetc]Tears a small hole in reality.[/]",
     "Power": 90,
     "ManaCost": 40,
     "MoveType": "Spell",
@@ -279,7 +279,7 @@
   {
     "MoveID": "Nullwave",
     "MoveName": "Nullwave",
-    "Description": "A wave of anti-magic energy washes over the target. While not powerful, it can disrupt magical defenses.",
+    "Description": "[cetc]A wave of anti-magic energy.[/]",
     "Power": 50,
     "ManaCost": 20,
     "MoveType": "Spell",
@@ -301,7 +301,7 @@
   {
     "MoveID": "StoneHurl",
     "MoveName": "Stone Hurl",
-    "Description": "The user rips a chunk of rock from the ground and throws it. A crude but effective use of geomancy.",
+    "Description": "[cetc]Rips a chunk of rock from the ground.[/]",
     "Power": 50,
     "ManaCost": 15,
     "MoveType": "Spell",
@@ -322,7 +322,7 @@
   {
     "MoveID": "Faultbreak",
     "MoveName": "Faultbreak",
-    "Description": "The ground beneath the target violently splits apart, releasing immense seismic energy. A devastating and precise spell.",
+    "Description": "[cetc]The ground violently splits apart.[/]",
     "Power": 100,
     "ManaCost": 45,
     "MoveType": "Spell",
@@ -343,7 +343,7 @@
   {
     "MoveID": "MagicMud",
     "MoveName": "Magic Mud",
-    "Description": "A splash of enchanted mud is launched at the target. It's a not very damaging, but is often used to slow opponents.",
+    "Description": "[cetc]A splash of enchanted mud.[/]",
     "Power": 20,
     "ManaCost": 10,
     "MoveType": "Spell",
@@ -365,7 +365,7 @@
   {
     "MoveID": "SwordSlash",
     "MoveName": "Sword Slash",
-    "Description": "A vicious slash with a metal weapon, aimed to tear through flesh and armor alike.",
+    "Description": "[cetc]A vicious slash with a metal weapon.[/]",
     "Power": 70,
     "ManaCost": 0,
     "MoveType": "Action",
@@ -386,7 +386,7 @@
   {
     "MoveID": "TitanSlam",
     "MoveName": "Titan Slam",
-    "Description": "A colossal, overhead slam with a massive metal weapon. The sheer weight behind the blow is staggering.",
+    "Description": "[cetc]A colossal, overhead slam.[/]",
     "Power": 95,
     "ManaCost": 0,
     "MoveType": "Action",
@@ -407,7 +407,7 @@
   {
     "MoveID": "MoonforgedEdge",
     "MoveName": "Moonforged Edge",
-    "Description": "A precise strike with a blade of summoned from moonlight, shining with a faint lunar glow.",
+    "Description": "[cetc]A precise strike with a lunar blade.[/]",
     "Power": 65,
     "ManaCost": 20,
     "MoveType": "Spell",
@@ -429,7 +429,7 @@
   {
     "MoveID": "VenomJab",
     "MoveName": "Venom Jab",
-    "Description": "A quick jab with a poisoned dagger or claw. The true danger lies in the poison that follows.",
+    "Description": "[cetc]A quick jab with a poisoned blade.[/]",
     "Power": 30,
     "ManaCost": 0,
     "MoveType": "Action",
@@ -450,7 +450,7 @@
   {
     "MoveID": "CorrosiveSpittle",
     "MoveName": "Corrosive Spittle",
-    "Description": "The user spits a glob of potent acid. It's a disgusting tactic, but highly effective at melting defenses.",
+    "Description": "[cetc]Spits a glob of potent acid.[/]",
     "Power": 50,
     "ManaCost": 15,
     "MoveType": "Spell",
@@ -472,7 +472,7 @@
   {
     "MoveID": "ZephyrTwist",
     "MoveName": "Zephyr Twist",
-    "Description": "A gentle but sharp gust of wind is sent toward the target. Often used to disrupt an opponent's balance.",
+    "Description": "[cetc]A sharp gust of wind.[/]",
     "Power": 40,
     "ManaCost": 10,
     "MoveType": "Spell",
@@ -493,7 +493,7 @@
   {
     "MoveID": "CycloneSpiral",
     "MoveName": "Cyclone Spiral",
-    "Description": "A miniature cyclone forms and rushes the target, battering them with ferocious winds.",
+    "Description": "[cetc]A miniature cyclone rushes the target.[/]",
     "Power": 85,
     "ManaCost": 35,
     "MoveType": "Spell",
@@ -515,7 +515,7 @@
   {
     "MoveID": "Bloodleech",
     "MoveName": "Bloodleech",
-    "Description": "Drains the target's life force, healing the user for 30% of the damage dealt.",
+    "Description": "[cetc]Drains the target's life force.[/]\nHeals for [cpositive]30%[/] of damage dealt.",
     "Power": 80,
     "ManaCost": 20,
     "MoveType": "Spell",
@@ -537,7 +537,7 @@
   {
     "MoveID": "SoulRot",
     "MoveName": "Soul Rot",
-    "Description": "A vile curse that causes the target's very essence to wither.",
+    "Description": "[cetc]A vile curse that withers the soul.[/]",
     "Power": 90,
     "ManaCost": 30,
     "MoveType": "Spell",
@@ -559,7 +559,7 @@
   {
     "MoveID": "RadiantJudgment",
     "MoveName": "Radiant Judgment",
-    "Description": "A column of holy light descends from the heavens to smite a foe. Particularly effective against the undead.",
+    "Description": "[cetc]A column of holy light descends.[/]",
     "Power": 75,
     "ManaCost": 25,
     "MoveType": "Spell",
@@ -580,7 +580,7 @@
   {
     "MoveID": "LuminousSpark",
     "MoveName": "Luminous Spark",
-    "Description": "A small, brilliant spark of light is fired at the target. While not powerful, it is blindingly fast.",
+    "Description": "[cetc]A small, brilliant spark of light.[/]\nUsually goes [cpositive]first[/].",
     "Power": 40,
     "ManaCost": 10,
     "MoveType": "Spell",
@@ -602,7 +602,7 @@
   {
     "MoveID": "SparkJolt",
     "MoveName": "Spark Jolt",
-    "Description": "A minor jolt of electricity shocks the target. It is a basic spell for learning control over lightning.",
+    "Description": "[cetc]A minor jolt of electricity.[/]",
     "Power": 40,
     "ManaCost": 10,
     "MoveType": "Spell",
@@ -623,7 +623,7 @@
   {
     "MoveID": "VoltLash",
     "MoveName": "Volt Lash",
-    "Description": "A whip-like arc of pure lightning strikes the target. Known for its startling speed and sound.",
+    "Description": "[cetc]A whip-like arc of pure lightning.[/]",
     "Power": 40,
     "ManaCost": 10,
     "MoveType": "Spell",
@@ -644,7 +644,7 @@
   {
     "MoveID": "Stormspear",
     "MoveName": "Stormspear",
-    "Description": "The user summons a spear of solidified lightning and hurls it at the target. It never fails to find its mark.",
+    "Description": "[cetc]Summons a spear of solidified lightning.[/]\n[cpositive]Never misses[/].",
     "Power": 90,
     "ManaCost": 40,
     "MoveType": "Spell",
@@ -666,7 +666,7 @@
   {
     "MoveID": "Shiverfang",
     "MoveName": "Shiverfang",
-    "Description": "A quick bite with fangs made of magical ice.",
+    "Description": "[cetc]A quick bite with frozen fangs.[/]\nUsually goes [cpositive]first[/].",
     "Power": 80,
     "ManaCost": 15,
     "MoveType": "Spell",
@@ -687,7 +687,7 @@
   {
     "MoveID": "WintersGrasp",
     "MoveName": "Winter’s Grasp",
-    "Description": "A spike of ice is conjured at the target's feet.",
+    "Description": "[cetc]Conjures a spike of ice.[/]",
     "Power": 95,
     "ManaCost": 40,
     "MoveType": "Spell",
@@ -708,7 +708,7 @@
   {
     "MoveID": "WhiteoutTempest",
     "MoveName": "Whiteout Tempest",
-    "Description": "A raging blizzard of ice and snow engulfs the target. The storm is incredibly powerful but difficult to aim.",
+    "Description": "[cetc]A raging blizzard engulfs the field.[/]",
     "Power": 110,
     "ManaCost": 50,
     "MoveType": "Spell",
@@ -730,7 +730,7 @@
   {
     "MoveID": "BriarLash",
     "MoveName": "Briar Lash",
-    "Description": "Summons thorny vines from the earth to strike a foe. A versatile spell for those attuned to the natural world.",
+    "Description": "[cetc]Summons thorny vines to strike.[/]",
     "Power": 55,
     "ManaCost": 15,
     "MoveType": "Spell",
@@ -751,7 +751,7 @@
   {
     "MoveID": "Needlestorm",
     "MoveName": "Needlestorm",
-    "Description": "A storm of magically hardened needles is unleashed upon the target. Each needle is small, but they strike many times.",
+    "Description": "[cetc]Unleashes a storm of needles.[/]",
     "Power": 25,
     "ManaCost": 20,
     "MoveType": "Spell",
@@ -772,7 +772,7 @@
   {
     "MoveID": "Sunlance",
     "MoveName": "Sunlance",
-    "Description": "A concentrated beam of pure sunlight, drawn down from the sky to sear a target. It is a powerful and undeniable force.",
+    "Description": "[cetc]A concentrated beam of pure sunlight.[/]",
     "Power": 120,
     "ManaCost": 55,
     "MoveType": "Spell",
@@ -815,7 +815,7 @@
   {
     "MoveID": "Dodge",
     "MoveName": "Dodge",
-    "Description": "The user focuses on evasion, dodging incoming dodgable attacks for 1 turn.",
+    "Description": "[cetc]Focus on evasion.[/]\nApply [cdodging]Dodging[/] for [cpositive]1[/] turn.",
     "Power": 0,
     "ManaCost": 0,
     "MoveType": "Action",
@@ -839,7 +839,7 @@
   {
     "MoveID": "Attune",
     "MoveName": "Attune",
-    "Description": "Focus your inner energy to restore all mana.",
+    "Description": "[cetc]Focus inner energy.[/]\nRestores [cpositive]100%[/] Mana.",
     "Power": 0,
     "ManaCost": 0,
     "MoveType": "Spell",
@@ -863,7 +863,7 @@
   {
     "MoveID": "FurySwipes",
     "MoveName": "Fury Swipes",
-    "Description": "Unleashes a flurry of rapid strikes. Hits 2 to 5 times.",
+    "Description": "[cetc]Unleashes a flurry of rapid strikes.[/]\nHits [cpositive]2-5[/] times.",
     "Power": 15,
     "ManaCost": 0,
     "MoveType": "Action",
@@ -885,7 +885,7 @@
   {
     "MoveID": "VampiricBite",
     "MoveName": "Vampiric Bite",
-    "Description": "A vicious bite that drains the target's life force, healing the user for 50% of the damage dealt.",
+    "Description": "[cetc]A vicious bite.[/]\nHeals for [cpositive]50%[/] of damage dealt.",
     "Power": 60,
     "ManaCost": 25,
     "MoveType": "Spell",
@@ -907,7 +907,7 @@
   {
     "MoveID": "FinishingBlow",
     "MoveName": "Finishing Blow",
-    "Description": "A calculated strike that deals triple damage to foes below 30% health.",
+    "Description": "[cetc]A calculated strike.[/]\nDeals [cpositive]3.0x[/] damage to foes below [cpositive]30% HP[/].",
     "Power": 50,
     "ManaCost": 0,
     "MoveType": "Action",
@@ -929,7 +929,7 @@
   {
     "MoveID": "SonicBoom",
     "MoveName": "Sonic Boom",
-    "Description": "Creates a shockwave that ignores defenses to deal a flat 40 damage.",
+    "Description": "[cetc]Creates a shockwave.[/]\nDeals [cpositive]40[/] fixed damage.",
     "Power": 0,
     "ManaCost": 20,
     "MoveType": "Spell",
@@ -951,7 +951,7 @@
   {
     "MoveID": "FocusEnergy",
     "MoveName": "Focus Energy",
-    "Description": "An arcane bolt that grows in power by 30 each time it is used, up to a maximum of 120 power.",
+    "Description": "[cetc]An arcane bolt that grows in power.[/]\nDamage increases by [cpositive]30[/] per use (Max 120).",
     "Power": 30,
     "ManaCost": 15,
     "MoveType": "Spell",
@@ -973,7 +973,7 @@
   {
     "MoveID": "Drill",
     "MoveName": "Drill",
-    "Description": "A spinning, armor-shattering attack that ignores 50% of the target's tenacity.",
+    "Description": "[cetc]A spinning, armor-shattering attack.[/]\nIgnores [cpositive]50%[/] of target's [cten]Tenacity[/].",
     "Power": 75,
     "ManaCost": 0,
     "MoveType": "Action",
@@ -995,7 +995,7 @@
   {
     "MoveID": "ToxicSting",
     "MoveName": "Toxic Sting",
-    "Description": "A sharp sting with a 100% chance to inflict Poison for 3 turns.",
+    "Description": "[cetc]A sharp sting.[/]\nInflicts [cpoison]Poison[/] for [cpositive]3[/] turns.",
     "Power": 20,
     "ManaCost": 0,
     "MoveType": "Action",
@@ -1017,7 +1017,7 @@
   {
     "MoveID": "SearingCoals",
     "MoveName": "Searing Coals",
-    "Description": "Hot coals are summoned at the targets feet, burning them for 3 turns.",
+    "Description": "[cetc]Summons hot coals.[/]\nInflicts [cburn]Burn[/] for [cpositive]3[/] turns.",
     "Power": 20,
     "ManaCost": 15,
     "MoveType": "Spell",
@@ -1041,7 +1041,7 @@
   {
     "MoveID": "Immolate",
     "MoveName": "Immolate",
-    "Description": "Consumes a Burn effect on the target, dealing all of its remaining damage instantly with a 50% bonus.",
+    "Description": "[cetc]Consumes [cburn]Burn[/] on target.[/]\nDeals remaining damage instantly with [cpositive]1.5x[/] bonus.",
     "Power": 30,
     "ManaCost": 20,
     "MoveType": "Spell",
@@ -1063,7 +1063,7 @@
   {
     "MoveID": "PurifyingLight",
     "MoveName": "Purifying Light",
-    "Description": "A wash of holy light that removes all negative status effects from the user.",
+    "Description": "[cetc]A wash of holy light.[/]\nRemoves all [cnegative]negative[/] status effects from self.",
     "Power": 0,
     "ManaCost": 15,
     "MoveType": "Spell",
@@ -1085,7 +1085,7 @@
   {
     "MoveID": "SiphonPower",
     "MoveName": "Siphon Power",
-    "Description": "An arcane spell that has a 75% chance to steal a beneficial status effect from the target.",
+    "Description": "[cetc]Steals magic.[/]\n[cpositive]75%[/] chance to steal a beneficial status effect.",
     "Power": 40,
     "ManaCost": 20,
     "MoveType": "Spell",
@@ -1107,7 +1107,7 @@
   {
     "MoveID": "SolarBeam",
     "MoveName": "Solar Beam",
-    "Description": "The user gathers sunlight for one turn, then unleashes a devastating beam on the next.",
+    "Description": "[cetc]Gathers sunlight.[/]\nCharges for [cctm]1 turn[/], then deals massive damage.",
     "Power": 120,
     "ManaCost": 40,
     "MoveType": "Spell",
@@ -1129,7 +1129,7 @@
   {
     "MoveID": "TimeBomb",
     "MoveName": "Time Bomb",
-    "Description": "Plants a magical explosive on the target that detonates for heavy damage after 2 turns.",
+    "Description": "[cetc]Plants a magical explosive.[/]\nDetonates for heavy damage after [cctm]2 turns[/].",
     "Power": 100,
     "ManaCost": 35,
     "MoveType": "Spell",
@@ -1151,7 +1151,7 @@
   {
     "MoveID": "Rampage",
     "MoveName": "Rampage",
-    "Description": "A furious attack. If it defeats a target, the user's Strength is boosted.",
+    "Description": "[cetc]A furious attack.[/]\nRaises [cstr]Strength[/] if target is defeated.",
     "Power": 65,
     "ManaCost": 0,
     "MoveType": "Action",
@@ -1173,7 +1173,7 @@
   {
     "MoveID": "OverCharge",
     "MoveName": "Over Charge",
-    "Description": "A reckless lightning burst. The user takes 25% of the damage dealt as recoil.",
+    "Description": "[cetc]A reckless lightning burst.[/]\nUser takes [cnegative]25%[/] recoil damage.",
     "Power": 90,
     "ManaCost": 0,
     "MoveType": "Action",
@@ -1195,7 +1195,7 @@
   {
     "MoveID": "BloodMagic",
     "MoveName": "Blood Magic",
-    "Description": "A forbidden spell that sacrifices 20% of the user's max HP to unleash a powerful void attack.",
+    "Description": "[cetc]A forbidden spell.[/]\nCosts [cnegative]20% HP[/] to deal massive damage.",
     "Power": 100,
     "ManaCost": 0,
     "MoveType": "Spell",
@@ -1217,7 +1217,7 @@
   {
     "MoveID": "Overload",
     "MoveName": "Overload",
-    "Description": "Discharges a massive amount of electrical energy, but has a 20% chance to leave the user stunned for the next turn.",
+    "Description": "[cetc]Discharges massive energy.[/]\n[cnegative]20%[/] chance to [cstun]Stun[/] self.",
     "Power": 130,
     "ManaCost": 50,
     "MoveType": "Spell",
@@ -1239,7 +1239,7 @@
   {
     "MoveID": "Misfire",
     "MoveName": "Misfire",
-    "Description": "A chaotic blast of arcane energy. Has a 50% chance to succeed, but will damage the user for 50 HP on failure.",
+    "Description": "[cetc]A chaotic blast of energy.[/]\n[cnegative]50%[/] chance to fail and take [cnegative]50[/] damage.",
     "Power": 150,
     "ManaCost": 50,
     "MoveType": "Spell",
@@ -1261,7 +1261,7 @@
   {
     "MoveID": "Leer",
     "MoveName": "Leer",
-    "Description": "The user gives a harsh glare that lowers the target's Tenacity.",
+    "Description": "[cetc]A harsh glare.[/]\nLowers target's [cten]Tenacity[/].",
     "Power": 0,
     "ManaCost": 0,
     "MoveType": "Action",
@@ -1285,7 +1285,7 @@
   {
     "MoveID": "BulkUp",
     "MoveName": "Bulk Up",
-    "Description": "The user tenses its muscles to boost its Strength and Tenacity.",
+    "Description": "[cetc]Tenses muscles.[/]\nRaises user's [cstr]Strength[/] and [cten]Tenacity[/].",
     "Power": 0,
     "ManaCost": 15,
     "MoveType": "Spell",
