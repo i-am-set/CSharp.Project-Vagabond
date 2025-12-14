@@ -45,6 +45,7 @@ namespace ProjectVagabond
                 var sb = new StringBuilder();
                 sb.AppendLine("[palette_yellow]Available Commands:[/]");
                 sb.AppendLine("  [palette_teal]System & Debug[/]");
+                sb.AppendLine("    debugcolors                         - Lists all colors in rainbow order.");
                 sb.AppendLine("    test_abilities                     - Runs unit tests on ability logic.");
                 sb.AppendLine("    test_items                          - Verifies all items load correctly.");
                 sb.AppendLine("    clear                                - Clears console.");
@@ -73,6 +74,92 @@ namespace ProjectVagabond
             }, "help - Shows this help message.");
 
             _commands["clear"] = new Command("clear", (args) => ServiceLocator.Get<Utils.DebugConsole>().ClearHistory(), "clear - Clears history.");
+
+            // --- COLORS COMMAND ---
+            _commands["debugcolors"] = new Command("debugcolors", (args) =>
+            {
+                var colorType = typeof(Color);
+                var properties = colorType.GetProperties(BindingFlags.Public | BindingFlags.Static);
+                var colorList = new List<(Color Color, string Name)>();
+
+                foreach (var p in properties)
+                {
+                    if (p.PropertyType == typeof(Color))
+                    {
+                        colorList.Add(((Color)p.GetValue(null), p.Name));
+                    }
+                }
+
+                // Helper to get Hue (0-360)
+                float GetHue(Color c)
+                {
+                    float r = c.R / 255f;
+                    float g = c.G / 255f;
+                    float b = c.B / 255f;
+                    float max = Math.Max(r, Math.Max(g, b));
+                    float min = Math.Min(r, Math.Min(g, b));
+                    float delta = max - min;
+
+                    if (delta == 0) return 0;
+                    if (max == r) return 60 * (((g - b) / delta) % 6);
+                    if (max == g) return 60 * (((b - r) / delta) + 2);
+                    return 60 * (((r - g) / delta) + 4);
+                }
+
+                // Helper to get Saturation (0-1)
+                float GetSaturation(Color c)
+                {
+                    float r = c.R / 255f;
+                    float g = c.G / 255f;
+                    float b = c.B / 255f;
+                    float max = Math.Max(r, Math.Max(g, b));
+                    float min = Math.Min(r, Math.Min(g, b));
+                    if (max == 0) return 0;
+                    return (max - min) / max;
+                }
+
+                // Helper to get Brightness/Value
+                float GetBrightness(Color c)
+                {
+                    return Math.Max(c.R, Math.Max(c.G, c.B)) / 255f;
+                }
+
+                // Sort: Rainbow (Hue) first, Grayscale last
+                colorList.Sort((a, b) =>
+                {
+                    float satA = GetSaturation(a.Color);
+                    float satB = GetSaturation(b.Color);
+                    bool grayA = satA < 0.1f || (a.Color.R == a.Color.G && a.Color.G == a.Color.B);
+                    bool grayB = satB < 0.1f || (b.Color.R == b.Color.G && b.Color.G == b.Color.B);
+
+                    // Put grayscale at the bottom
+                    if (grayA && !grayB) return 1;
+                    if (!grayA && grayB) return -1;
+
+                    if (grayA && grayB)
+                    {
+                        // Sort grayscale by brightness
+                        return GetBrightness(b.Color).CompareTo(GetBrightness(a.Color));
+                    }
+
+                    // Sort colors by Hue
+                    float hueA = GetHue(a.Color);
+                    float hueB = GetHue(b.Color);
+                    if (Math.Abs(hueA - hueB) > 1f) return hueA.CompareTo(hueB);
+
+                    // If Hue is similar, sort by Brightness
+                    return GetBrightness(b.Color).CompareTo(GetBrightness(a.Color));
+                });
+
+                Log("--- MonoGame Colors (Rainbow Order) ---");
+                foreach (var (color, name) in colorList)
+                {
+                    // Transparent doesn't render well
+                    if (color == Color.Transparent) continue;
+                    Log($"[{name}]{name}[/]");
+                }
+
+            }, "colors - Lists all MonoGame colors in rainbow order.");
 
             // --- TEST COMMANDS ---
             _commands["test_abilities"] = new Command("test_abilities", (args) =>
