@@ -14,7 +14,10 @@ namespace ProjectVagabond.Battle
         public int Intelligence { get; set; }
         public int Tenacity { get; set; }
         public int Agility { get; set; }
-        public List<int> DefensiveElementIDs { get; set; } = new List<int>();
+
+        public List<int> WeaknessElementIDs { get; set; } = new List<int>();
+        public List<int> ResistanceElementIDs { get; set; } = new List<int>();
+
         public List<string> StartingMoveIDs { get; set; } = new List<string>();
         public string DefaultStrikeMoveID { get; set; }
 
@@ -27,7 +30,8 @@ namespace ProjectVagabond.Battle
         public IComponent Clone()
         {
             var clone = (PlayerBaseStatsComponent)this.MemberwiseClone();
-            clone.DefensiveElementIDs = new List<int>(this.DefensiveElementIDs);
+            clone.WeaknessElementIDs = new List<int>(this.WeaknessElementIDs);
+            clone.ResistanceElementIDs = new List<int>(this.ResistanceElementIDs);
             clone.StartingMoveIDs = new List<string>(this.StartingMoveIDs);
 
             clone.StartingWeapons = new Dictionary<string, int>(this.StartingWeapons);

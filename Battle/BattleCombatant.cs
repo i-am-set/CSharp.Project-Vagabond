@@ -67,7 +67,7 @@ namespace ProjectVagabond.Battle
         public List<IOutgoingDamageModifier> OutgoingDamageModifiers { get; private set; } = new List<IOutgoingDamageModifier>();
         public List<IIncomingDamageModifier> IncomingDamageModifiers { get; private set; } = new List<IIncomingDamageModifier>();
         public List<IDefensePenetrationModifier> DefensePenetrationModifiers { get; private set; } = new List<IDefensePenetrationModifier>();
-        public List<IDefensiveElementModifier> DefensiveElementModifiers { get; private set; } = new List<IDefensiveElementModifier>();
+        public List<IElementalAffinityModifier> ElementalAffinityModifiers { get; private set; } = new List<IElementalAffinityModifier>();
         public List<IIncomingStatusModifier> IncomingStatusModifiers { get; private set; } = new List<IIncomingStatusModifier>();
         public List<IOutgoingStatusModifier> OutgoingStatusModifiers { get; private set; } = new List<IOutgoingStatusModifier>();
         public List<IOnHitEffect> OnHitEffects { get; private set; } = new List<IOnHitEffect>();
@@ -83,7 +83,9 @@ namespace ProjectVagabond.Battle
         public List<IOnStatusApplied> OnStatusAppliedEffects { get; private set; } = new List<IOnStatusApplied>();
         public List<ILifestealReaction> LifestealReactions { get; private set; } = new List<ILifestealReaction>();
 
-        public List<int> DefensiveElementIDs { get; set; } = new List<int>();
+        public List<int> WeaknessElementIDs { get; set; } = new List<int>();
+        public List<int> ResistanceElementIDs { get; set; } = new List<int>();
+
         public bool IsPlayerControlled { get; set; }
         public bool IsDefeated => Stats.CurrentHP <= 0;
         public bool IsDying { get; set; } = false;
@@ -113,7 +115,7 @@ namespace ProjectVagabond.Battle
             if (ability is IOutgoingDamageModifier odm) OutgoingDamageModifiers.Add(odm);
             if (ability is IIncomingDamageModifier idm) IncomingDamageModifiers.Add(idm);
             if (ability is IDefensePenetrationModifier dpm) DefensePenetrationModifiers.Add(dpm);
-            if (ability is IDefensiveElementModifier dem) DefensiveElementModifiers.Add(dem);
+            if (ability is IElementalAffinityModifier eam) ElementalAffinityModifiers.Add(eam);
             if (ability is IIncomingStatusModifier ism) IncomingStatusModifiers.Add(ism);
             if (ability is IOutgoingStatusModifier osm) OutgoingStatusModifiers.Add(osm);
             if (ability is IOnHitEffect ohe) OnHitEffects.Add(ohe);
@@ -178,14 +180,16 @@ namespace ProjectVagabond.Battle
             return (true, $"{Name}'s {stat} {changeText}!");
         }
 
-        public List<int> GetEffectiveDefensiveElementIDs()
+        public (List<int> Weaknesses, List<int> Resistances) GetEffectiveElementalAffinities()
         {
-            var effectiveElements = new List<int>(this.DefensiveElementIDs);
-            foreach (var mod in DefensiveElementModifiers)
+            var effectiveWeaknesses = new List<int>(this.WeaknessElementIDs);
+            var effectiveResistances = new List<int>(this.ResistanceElementIDs);
+
+            foreach (var mod in ElementalAffinityModifiers)
             {
-                mod.ModifyDefensiveElements(effectiveElements, this);
+                mod.ModifyElementalAffinities(effectiveWeaknesses, effectiveResistances, this);
             }
-            return effectiveElements;
+            return (effectiveWeaknesses, effectiveResistances);
         }
 
         public int GetEffectiveStrength()

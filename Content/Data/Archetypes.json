@@ -34,7 +34,8 @@
           "MaxTenacity": 35,
           "MinAgility": 1,
           "MaxAgility": 2,
-          "DefensiveElementIDs": [ 102 ],
+          "WeaknessElementIDs": [],
+          "ResistanceElementIDs": [],
           "MoveLearnset": [ "TitanSlam", "Faultbreak" ],
           "MinNumberOfMoves": 2,
           "MaxNumberOfMoves": 2
@@ -62,7 +63,8 @@
           "MaxTenacity": 10,
           "MinAgility": 4,
           "MaxAgility": 6,
-          "DefensiveElementIDs": [ 109 ],
+          "WeaknessElementIDs": [],
+          "ResistanceElementIDs": [],
           "MoveLearnset": [ "BriarLash", "ToxicSting" ],
           "MinNumberOfMoves": 1,
           "MaxNumberOfMoves": 2
@@ -90,7 +92,8 @@
           "MaxTenacity": 18,
           "MinAgility": 5,
           "MaxAgility": 7,
-          "DefensiveElementIDs": [ 101 ],
+          "WeaknessElementIDs": [],
+          "ResistanceElementIDs": [],
           "MoveLearnset": [ "ShoulderBash", "Rampage" ],
           "MinNumberOfMoves": 1,
           "MaxNumberOfMoves": 2
@@ -118,7 +121,8 @@
           "MaxTenacity": 15,
           "MinAgility": 6,
           "MaxAgility": 8,
-          "DefensiveElementIDs": [ 101, 106 ],
+          "WeaknessElementIDs": [],
+          "ResistanceElementIDs": [],
           "MoveLearnset": [ "MagicMud", "ShoulderBash" ],
           "MinNumberOfMoves": 1,
           "MaxNumberOfMoves": 2
@@ -146,7 +150,8 @@
           "MaxTenacity": 8,
           "MinAgility": 16,
           "MaxAgility": 20,
-          "DefensiveElementIDs": [ 101 ],
+          "WeaknessElementIDs": [],
+          "ResistanceElementIDs": [],
           "MoveLearnset": [ "VenomJab", "SwiftStrike" ],
           "MinNumberOfMoves": 2,
           "MaxNumberOfMoves": 2
@@ -174,7 +179,8 @@
           "MaxTenacity": 10,
           "MinAgility": 14,
           "MaxAgility": 18,
-          "DefensiveElementIDs": [ 101 ],
+          "WeaknessElementIDs": [],
+          "ResistanceElementIDs": [],
           "MoveLearnset": [ "ClawRake", "SwiftStrike", "FurySwipes", "Leer" ],
           "MinNumberOfMoves": 2,
           "MaxNumberOfMoves": 3
@@ -202,7 +208,8 @@
           "MaxTenacity": 9,
           "MinAgility": 12,
           "MaxAgility": 15,
-          "DefensiveElementIDs": [ 101 ],
+          "WeaknessElementIDs": [],
+          "ResistanceElementIDs": [],
           "MoveLearnset": [ "VenomJab", "ToxicSting" ],
           "MinNumberOfMoves": 1,
           "MaxNumberOfMoves": 2

@@ -138,8 +138,8 @@ namespace ProjectVagabond
                 Intelligence = oakley.Intelligence,
                 Tenacity = oakley.Tenacity,
                 Agility = oakley.Agility,
-                DefensiveElementIDs = new List<int>(oakley.DefensiveElementIDs),
-                // FIX: Filter out nulls from the Spells array before selecting MoveID
+                WeaknessElementIDs = new List<int>(oakley.WeaknessElementIDs),
+                ResistanceElementIDs = new List<int>(oakley.ResistanceElementIDs),
                 AvailableMoveIDs = oakley.Spells
                     .Where(m => m != null)
                     .Select(m => m!.MoveID)

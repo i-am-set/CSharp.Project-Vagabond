@@ -43,7 +43,10 @@ namespace ProjectVagabond
         public int Intelligence { get => Leader?.Intelligence ?? 10; set { if (Leader != null) Leader.Intelligence = value; } }
         public int Tenacity { get => Leader?.Tenacity ?? 10; set { if (Leader != null) Leader.Tenacity = value; } }
         public int Agility { get => Leader?.Agility ?? 10; set { if (Leader != null) Leader.Agility = value; } }
-        public List<int> DefensiveElementIDs { get => Leader?.DefensiveElementIDs ?? new List<int>(); set { if (Leader != null) Leader.DefensiveElementIDs = value; } }
+
+        public List<int> WeaknessElementIDs { get => Leader?.WeaknessElementIDs ?? new List<int>(); set { if (Leader != null) Leader.WeaknessElementIDs = value; } }
+        public List<int> ResistanceElementIDs { get => Leader?.ResistanceElementIDs ?? new List<int>(); set { if (Leader != null) Leader.ResistanceElementIDs = value; } }
+
         public string DefaultStrikeMoveID { get => Leader?.DefaultStrikeMoveID ?? ""; set { if (Leader != null) Leader.DefaultStrikeMoveID = value; } }
         public int PortraitIndex { get => Leader?.PortraitIndex ?? 0; set { if (Leader != null) Leader.PortraitIndex = value; } }
 

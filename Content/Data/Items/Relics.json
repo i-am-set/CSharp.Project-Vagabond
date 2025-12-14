@@ -7,7 +7,7 @@
     "Rarity": 1,
     "LevelRequirement": 2,
     "Effects": {
-      "AddDefensiveElement": "109",
+      "AddResistance": "13",
       "ElementalDamageBonus": "13,20"
     },
     "StatModifiers": {

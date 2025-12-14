@@ -33,7 +33,9 @@ namespace ProjectVagabond
         public int Tenacity { get; set; }
         public int Agility { get; set; }
 
-        public List<int> DefensiveElementIDs { get; set; } = new List<int>();
+        public List<int> WeaknessElementIDs { get; set; } = new List<int>();
+        public List<int> ResistanceElementIDs { get; set; } = new List<int>();
+
         public string DefaultStrikeMoveID { get; set; }
         public int PortraitIndex { get; set; } = 0;
 
@@ -54,7 +56,8 @@ namespace ProjectVagabond
         public PartyMember Clone()
         {
             var clone = (PartyMember)this.MemberwiseClone();
-            clone.DefensiveElementIDs = new List<int>(this.DefensiveElementIDs);
+            clone.WeaknessElementIDs = new List<int>(this.WeaknessElementIDs);
+            clone.ResistanceElementIDs = new List<int>(this.ResistanceElementIDs);
 
             // Deep copy the spell slots
             clone.Spells = new MoveEntry?[4];

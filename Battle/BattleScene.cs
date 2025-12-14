@@ -310,7 +310,8 @@ namespace ProjectVagabond.Scenes
                     Tenacity = member.Tenacity,
                     Agility = member.Agility
                 },
-                DefensiveElementIDs = new List<int>(member.DefensiveElementIDs),
+                WeaknessElementIDs = new List<int>(member.WeaknessElementIDs),
+                ResistanceElementIDs = new List<int>(member.ResistanceElementIDs),
                 DefaultStrikeMoveID = member.DefaultStrikeMoveID,
                 Spells = member.Spells, // FIX: Use Spells instead of EquippedSpells
                 PortraitIndex = member.PortraitIndex // Set Portrait Index

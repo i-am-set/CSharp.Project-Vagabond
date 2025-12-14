@@ -242,22 +242,22 @@ namespace ProjectVagabond.Battle.Abilities
     }
 
     // --- ELEMENTAL MODIFIERS ---
-    public class AddDefensiveElementAbility : IDefensiveElementModifier
+    public class AddResistanceAbility : IElementalAffinityModifier
     {
-        public string Name => "Elemental Attunement";
-        public string Description => "Adds a defensive element.";
+        public string Name => "Elemental Resistance";
+        public string Description => "Adds a resistance.";
         private readonly int _elementId;
 
-        public AddDefensiveElementAbility(int elementId)
+        public AddResistanceAbility(int elementId)
         {
             _elementId = elementId;
         }
 
-        public void ModifyDefensiveElements(List<int> elements, BattleCombatant owner)
+        public void ModifyElementalAffinities(List<int> weaknesses, List<int> resistances, BattleCombatant owner)
         {
-            if (!elements.Contains(_elementId))
+            if (!resistances.Contains(_elementId))
             {
-                elements.Add(_elementId);
+                resistances.Add(_elementId);
             }
         }
     }

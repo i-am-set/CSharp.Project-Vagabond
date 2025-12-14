@@ -39,7 +39,8 @@ namespace ProjectVagabond
                 Intelligence = data.Intelligence,
                 Tenacity = data.Tenacity,
                 Agility = data.Agility,
-                DefensiveElementIDs = new List<int>(data.DefensiveElementIDs),
+                WeaknessElementIDs = new List<int>(data.WeaknessElementIDs),
+                ResistanceElementIDs = new List<int>(data.ResistanceElementIDs),
                 DefaultStrikeMoveID = data.DefaultStrikeMoveID,
                 PortraitIndex = int.TryParse(data.MemberID, out int pid) ? pid : 0
             };

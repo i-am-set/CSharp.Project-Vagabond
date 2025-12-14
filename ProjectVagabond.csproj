@@ -63,9 +63,6 @@
 	  </Content>
 	</ItemGroup>
 	<ItemGroup>
-	  <None Update="Content\Data\ElementalInteractionMatrix.csv">
-	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	  </None>
 	  <None Update="Content\Data\Items\Consumables.json">
 	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </None>

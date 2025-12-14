@@ -14,7 +14,6 @@ namespace ProjectVagabond.Battle
     public static class BattleDataCache
     {
         public static Dictionary<int, ElementDefinition> Elements { get; private set; }
-        public static Dictionary<int, Dictionary<int, float>> InteractionMatrix { get; private set; }
         public static Dictionary<string, MoveData> Moves { get; private set; }
         public static Dictionary<string, ConsumableItemData> Consumables { get; private set; }
         public static Dictionary<string, RelicData> Relics { get; private set; }
@@ -38,9 +37,6 @@ namespace ProjectVagabond.Battle
             string elementsJson = File.ReadAllText(elementsPath);
             var elementList = JsonSerializer.Deserialize<List<ElementDefinition>>(elementsJson, jsonOptions);
             Elements = elementList.ToDictionary(e => e.ElementID, e => e);
-
-            // --- INTERACTION MATRIX ---
-            LoadInteractionMatrix(content);
 
             // --- MOVES ---
             string movesPath = Path.Combine(content.RootDirectory, "Data", "Moves.json");
@@ -112,58 +108,6 @@ namespace ProjectVagabond.Battle
             {
                 Debug.WriteLine("[BattleDataCache] WARNING: PartyMembers.json not found.");
                 PartyMembers = new Dictionary<string, PartyMemberData>();
-            }
-        }
-
-        private static void LoadInteractionMatrix(ContentManager content)
-        {
-            InteractionMatrix = new Dictionary<int, Dictionary<int, float>>();
-            string matrixPath = Path.Combine(content.RootDirectory, "Data", "ElementalInteractionMatrix.csv");
-            if (!File.Exists(matrixPath)) return;
-
-            var lines = File.ReadAllLines(matrixPath);
-            if (lines.Length < 2) return;
-
-            int headerRowIndex = -1;
-            for (int i = 0; i < lines.Length; i++)
-            {
-                var parts = lines[i].Split(',');
-                if (parts.Length > 0 && parts[0].Trim().Equals("Attacking", StringComparison.OrdinalIgnoreCase))
-                {
-                    headerRowIndex = i;
-                    break;
-                }
-            }
-            if (headerRowIndex == -1) return;
-
-            var header = lines[headerRowIndex].Split(',');
-            var defendingElementIds = new List<int>();
-            for (int i = 2; i < header.Length; i++)
-            {
-                if (int.TryParse(header[i].Trim(), out int id)) defendingElementIds.Add(id);
-            }
-
-            for (int i = headerRowIndex + 1; i < lines.Length; i++)
-            {
-                var values = lines[i].Split(',');
-                if (values.Length < 3) continue;
-                if (int.TryParse(values[1].Trim(), out int attackingId))
-                {
-                    var rowMatrix = new Dictionary<int, float>();
-                    for (int j = 2; j < values.Length; j++)
-                    {
-                        int defendingIdIndex = j - 2;
-                        if (defendingIdIndex < defendingElementIds.Count)
-                        {
-                            int defendingId = defendingElementIds[defendingIdIndex];
-                            if (float.TryParse(values[j].Trim(), CultureInfo.InvariantCulture, out float multiplier))
-                            {
-                                rowMatrix[defendingId] = multiplier;
-                            }
-                        }
-                    }
-                    InteractionMatrix[attackingId] = rowMatrix;
-                }
             }
         }
     }

@@ -15,7 +15,9 @@ namespace ProjectVagabond.Battle
         public int Tenacity { get; set; }
         public int Agility { get; set; }
 
-        public List<int> DefensiveElementIDs { get; set; } = new List<int>();
+        public List<int> WeaknessElementIDs { get; set; } = new List<int>();
+        public List<int> ResistanceElementIDs { get; set; } = new List<int>();
+
         public string DefaultStrikeMoveID { get; set; }
 
         // Starting Loadout

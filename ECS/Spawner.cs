@@ -106,7 +106,8 @@ namespace ProjectVagabond
             liveStats.Intelligence = _random.Next(profile.MinIntelligence, profile.MaxIntelligence + 1);
             liveStats.Tenacity = _random.Next(profile.MinTenacity, profile.MaxTenacity + 1);
             liveStats.Agility = _random.Next(profile.MinAgility, profile.MaxAgility + 1);
-            liveStats.DefensiveElementIDs = new List<int>(profile.DefensiveElementIDs);
+            liveStats.WeaknessElementIDs = new List<int>(profile.WeaknessElementIDs);
+            liveStats.ResistanceElementIDs = new List<int>(profile.ResistanceElementIDs);
 
             // Randomly select moves from the learnset
             if (profile.MoveLearnset.Any() && profile.MaxNumberOfMoves > 0)

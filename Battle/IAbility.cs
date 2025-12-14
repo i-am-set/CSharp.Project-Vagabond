@@ -44,9 +44,9 @@ namespace ProjectVagabond.Battle.Abilities
     }
 
     // --- ELEMENTAL ---
-    public interface IDefensiveElementModifier : IAbility
+    public interface IElementalAffinityModifier : IAbility
     {
-        void ModifyDefensiveElements(System.Collections.Generic.List<int> elements, BattleCombatant owner);
+        void ModifyElementalAffinities(System.Collections.Generic.List<int> weaknesses, System.Collections.Generic.List<int> resistances, BattleCombatant owner);
     }
 
     // --- STATUS EFFECTS ---

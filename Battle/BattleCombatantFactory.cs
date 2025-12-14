@@ -58,7 +58,8 @@ namespace ProjectVagabond.Battle
                     Tenacity = statsComponent.Tenacity,
                     Agility = statsComponent.Agility
                 },
-                DefensiveElementIDs = new List<int>(statsComponent.DefensiveElementIDs),
+                WeaknessElementIDs = new List<int>(statsComponent.WeaknessElementIDs),
+                ResistanceElementIDs = new List<int>(statsComponent.ResistanceElementIDs),
                 IsPlayerControlled = componentStore.HasComponent<PlayerTagComponent>(entityId)
             };
 

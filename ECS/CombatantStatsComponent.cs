@@ -18,13 +18,17 @@ namespace ProjectVagabond.Battle
         public int Intelligence { get; set; }
         public int Tenacity { get; set; }
         public int Agility { get; set; }
-        public List<int> DefensiveElementIDs { get; set; } = new List<int>();
+
+        public List<int> WeaknessElementIDs { get; set; } = new List<int>();
+        public List<int> ResistanceElementIDs { get; set; } = new List<int>();
+
         public List<string> AvailableMoveIDs { get; set; } = new List<string>();
 
         public IComponent Clone()
         {
             var clone = (CombatantStatsComponent)this.MemberwiseClone();
-            clone.DefensiveElementIDs = new List<int>(this.DefensiveElementIDs);
+            clone.WeaknessElementIDs = new List<int>(this.WeaknessElementIDs);
+            clone.ResistanceElementIDs = new List<int>(this.ResistanceElementIDs);
             clone.AvailableMoveIDs = new List<string>(this.AvailableMoveIDs);
             return clone;
         }

@@ -192,17 +192,21 @@ namespace ProjectVagabond.Battle
 
         public static float GetElementalMultiplier(MoveData move, BattleCombatant target)
         {
-            var targetDefensiveElements = target.GetEffectiveDefensiveElementIDs();
-            if (!move.OffensiveElementIDs.Any() || !targetDefensiveElements.Any()) return 1.0f;
+            if (!move.OffensiveElementIDs.Any()) return 1.0f;
+
+            var (weaknesses, resistances) = target.GetEffectiveElementalAffinities();
             float finalMultiplier = 1.0f;
+
             foreach (int offensiveId in move.OffensiveElementIDs)
             {
-                if (BattleDataCache.InteractionMatrix.TryGetValue(offensiveId, out var attackRow))
+                if (weaknesses.Contains(offensiveId))
                 {
-                    foreach (int defensiveId in targetDefensiveElements)
-                    {
-                        if (attackRow.TryGetValue(defensiveId, out float multiplier)) finalMultiplier *= multiplier;
-                    }
+                    finalMultiplier *= 2.0f;
+                }
+
+                if (resistances.Contains(offensiveId))
+                {
+                    finalMultiplier *= 0.5f;
                 }
             }
             return finalMultiplier;
