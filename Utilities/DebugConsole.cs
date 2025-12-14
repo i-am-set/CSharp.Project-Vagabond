@@ -23,6 +23,7 @@ namespace ProjectVagabond.Utils
         private readonly Global _global;
         private readonly CommandProcessor _commandProcessor;
         private readonly AutoCompleteManager _autoCompleteManager;
+        private readonly SceneManager _sceneManager; 
 
         // History
         private readonly List<ColoredLine> _history = new List<ColoredLine>();
@@ -61,6 +62,7 @@ namespace ProjectVagabond.Utils
             _gameState = ServiceLocator.Get<GameState>();
             _global = ServiceLocator.Get<Global>();
             _commandProcessor = ServiceLocator.Get<CommandProcessor>();
+            _sceneManager = ServiceLocator.Get<SceneManager>();
             _autoCompleteManager = new AutoCompleteManager();
 
             // Initialize Copy Button
@@ -101,6 +103,8 @@ namespace ProjectVagabond.Utils
             _gameState.IsPausedByConsole = false;
             _autoCompleteManager.HideSuggestions();
             ClearSelection();
+
+            _sceneManager.ResetInputState();
         }
 
         private void ClearSelection()

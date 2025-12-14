@@ -98,6 +98,16 @@ namespace ProjectVagabond
         }
 
         /// <summary>
+        /// Forces the current scene (and modal if active) to reset their input states.
+        /// This prevents input "leaking" when an overlay (like the Debug Console) closes.
+        /// </summary>
+        public void ResetInputState()
+        {
+            _currentScene?.ResetInputState();
+            _modalScene?.ResetInputState();
+        }
+
+        /// <summary>
         /// Changes the currently active scene via an outro/intro animation sequence.
         /// </summary>
         /// <param name="state">The state of the scene to switch to.</param>

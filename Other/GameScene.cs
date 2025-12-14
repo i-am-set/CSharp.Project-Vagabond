@@ -143,6 +143,18 @@ namespace ProjectVagabond.Scenes
         }
 
         /// <summary>
+        /// Forces the scene to update its previous input states to the current state.
+        /// This effectively "consumes" any currently held keys or buttons, preventing
+        /// them from triggering "JustPressed" logic in the next frame.
+        /// Used when closing overlays like the Debug Console.
+        /// </summary>
+        public void ResetInputState()
+        {
+            previousMouseState = Mouse.GetState();
+            _previousKeyboardState = Keyboard.GetState();
+        }
+
+        /// <summary>
         /// Called every frame to draw the scene.
         /// </summary>
         public virtual void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
@@ -214,4 +226,3 @@ namespace ProjectVagabond.Scenes
     }
 }
 #nullable restore
-﻿
