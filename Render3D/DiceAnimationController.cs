@@ -212,7 +212,7 @@ namespace ProjectVagabond.Dice
 
                             // Taper the thickness and fade the color along the trail's length
                             float progress = (float)i / result.TrailPoints.Count;
-                            float thickness = MathHelper.Lerp(1f, 8f, progress); // Reversed taper as requested
+                            float thickness = MathHelper.Lerp(1f, 8f, progress);
                             Color trailColor = Color.Lerp(result.TintColor, Color.Transparent, progress * progress); // Fade faster
 
                             spriteBatch.Draw(

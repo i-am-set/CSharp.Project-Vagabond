@@ -65,7 +65,7 @@ namespace ProjectVagabond.Battle.UI
         private const float TYPEWRITER_SPEED = 0.01f;
         private const float AUTO_ADVANCE_SECONDS = 5.0f;
         private const int LINE_SPACING = 3;
-        private const int SPACE_WIDTH = 5; // Fixed 5px width for spaces
+        private const int SPACE_WIDTH = 5;
 
         public bool IsAutoProgressEnabled { get; set; } = false;
         public bool IsBusy => _messageQueue.Count > 0 || _allTokens.Count > 0;

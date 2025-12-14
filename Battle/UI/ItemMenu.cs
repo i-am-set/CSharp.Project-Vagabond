@@ -425,7 +425,6 @@ namespace ProjectVagabond.Battle.UI
                 }
             }
 
-            // Fixed Y position to match ActionMenu
             int bottomBarY = 165;
             var backSize = secondaryFont.MeasureString(_backButton.Text);
             int backWidth = (int)backSize.Width + 16;

@@ -300,8 +300,8 @@ namespace ProjectVagabond.UI
                 }
             }
 
-            if (_debugButton1 != null && _debugButton1.IsEnabled) _debugButton1.Draw(spriteBatch, font, gameTime, Matrix.Identity);
-            if (_debugButton2 != null && _debugButton2.IsEnabled) _debugButton2.Draw(spriteBatch, font, gameTime, Matrix.Identity);
+            _debugButton1?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
+            _debugButton2?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
 
             if (_global.ShowSplitMapGrid)
             {
@@ -1377,8 +1377,17 @@ namespace ProjectVagabond.UI
 
                 float totalDescHeight = descLines.Count * secondaryFont.LineHeight;
 
+                // Calculate available space for centering
                 float bottomPadding = 3f;
-                float startY = infoPanelArea.Bottom - bottomPadding - totalDescHeight;
+                float areaTop = currentY;
+                float areaBottom = infoPanelArea.Bottom - bottomPadding;
+                float areaHeight = areaBottom - areaTop;
+
+                // Center vertically within the remaining space
+                float startY = areaTop + (areaHeight - totalDescHeight) / 2f;
+
+                // Clamp to top if text exceeds space (prevents overlap with stats)
+                if (startY < areaTop) startY = areaTop;
 
                 float lineY = startY;
                 foreach (var line in descLines)

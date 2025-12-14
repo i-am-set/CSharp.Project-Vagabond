@@ -117,21 +117,30 @@ namespace ProjectVagabond.Battle
 
                 // Find the party member corresponding to this combatant to get their spells and portrait
                 var partyMember = gameState.PlayerState.Party.FirstOrDefault(m => m.Name == combatant.Name);
+                if (partyMember == null && entityId == gameState.PlayerEntityId)
+                {
+                    partyMember = gameState.PlayerState.Leader;
+                }
+
                 if (partyMember != null)
                 {
+                    combatant.Name = partyMember.Name; // Sync name
                     combatant.Spells = partyMember.Spells;
                     combatant.PortraitIndex = partyMember.PortraitIndex; // Set Portrait Index
                 }
 
                 // Apply Effective Stats from PlayerState
-                combatant.Stats.MaxHP = gameState.PlayerState.GetEffectiveStat("MaxHP");
-                combatant.Stats.MaxMana = gameState.PlayerState.GetEffectiveStat("MaxMana");
-                combatant.Stats.Strength = gameState.PlayerState.GetEffectiveStat("Strength");
-                combatant.Stats.Intelligence = gameState.PlayerState.GetEffectiveStat("Intelligence");
-                combatant.Stats.Tenacity = gameState.PlayerState.GetEffectiveStat("Tenacity");
-                combatant.Stats.Agility = gameState.PlayerState.GetEffectiveStat("Agility");
-                combatant.Stats.CurrentHP = gameState.PlayerState.Leader.CurrentHP;
-                combatant.Stats.CurrentMana = gameState.PlayerState.Leader.CurrentMana;
+                // Note: We use the found partyMember (or Leader fallback) for stat calculation
+                var statSource = partyMember ?? gameState.PlayerState.Leader;
+
+                combatant.Stats.MaxHP = gameState.PlayerState.GetEffectiveStat(statSource, "MaxHP");
+                combatant.Stats.MaxMana = gameState.PlayerState.GetEffectiveStat(statSource, "MaxMana");
+                combatant.Stats.Strength = gameState.PlayerState.GetEffectiveStat(statSource, "Strength");
+                combatant.Stats.Intelligence = gameState.PlayerState.GetEffectiveStat(statSource, "Intelligence");
+                combatant.Stats.Tenacity = gameState.PlayerState.GetEffectiveStat(statSource, "Tenacity");
+                combatant.Stats.Agility = gameState.PlayerState.GetEffectiveStat(statSource, "Agility");
+                combatant.Stats.CurrentHP = statSource.CurrentHP;
+                combatant.Stats.CurrentMana = statSource.CurrentMana;
                 combatant.VisualHP = combatant.Stats.CurrentHP;
 
                 // 3. Load Relic Abilities (Single Slot)

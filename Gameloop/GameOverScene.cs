@@ -59,11 +59,11 @@ namespace ProjectVagabond.Scenes
         private void InitializeUI()
         {
             _buttons.Clear();
-            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+            var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
 
             const int buttonPaddingX = 10;
             const int buttonPaddingY = 4;
-            const int buttonSpacing = 0; // No gap as requested
+            const int buttonSpacing = 0;
 
             // --- Layout Calculation ---
             // Text at roughly 1/3 down the screen
@@ -71,7 +71,7 @@ namespace ProjectVagabond.Scenes
 
             // --- TRY AGAIN Button ---
             string text1 = "TRY AGAIN";
-            Vector2 size1 = secondaryFont.MeasureString(text1);
+            Vector2 size1 = tertiaryFont.MeasureString(text1);
             int w1 = (int)size1.X + buttonPaddingX * 2;
             int h1 = (int)size1.Y + buttonPaddingY * 2;
             int x1 = (Global.VIRTUAL_WIDTH - w1) / 2;
@@ -82,7 +82,7 @@ namespace ProjectVagabond.Scenes
             var tryAgainButton = new Button(
                 new Rectangle(x1, buttonStartY, w1, h1),
                 text1,
-                font: secondaryFont
+                font: tertiaryFont
             )
             {
                 HoverAnimation = HoverAnimationType.Hop
@@ -92,7 +92,7 @@ namespace ProjectVagabond.Scenes
 
             // --- MAIN MENU Button ---
             string text2 = "MAIN MENU";
-            Vector2 size2 = secondaryFont.MeasureString(text2);
+            Vector2 size2 = tertiaryFont.MeasureString(text2);
             int w2 = (int)size2.X + buttonPaddingX * 2;
             int h2 = (int)size2.Y + buttonPaddingY * 2;
             int x2 = (Global.VIRTUAL_WIDTH - w2) / 2;
@@ -101,7 +101,7 @@ namespace ProjectVagabond.Scenes
             var menuButton = new Button(
                 new Rectangle(x2, y2, w2, h2),
                 text2,
-                font: secondaryFont
+                font: tertiaryFont
             )
             {
                 HoverAnimation = HoverAnimationType.Hop
@@ -255,7 +255,7 @@ namespace ProjectVagabond.Scenes
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
-            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+            var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
 
             // Draw Background (Solid Black)
             spriteBatch.Draw(pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), _global.Palette_Black);
@@ -266,7 +266,7 @@ namespace ProjectVagabond.Scenes
 
             // Bobbing Animation
             float time = (float)gameTime.TotalGameTime.TotalSeconds;
-            float bobOffset = MathF.Sin(time * 4f) > 0 ? -1f : 0f; 
+            float bobOffset = MathF.Sin(time * 4f) > 0 ? -1f : 0f;
 
             // Position text at 1/3 height
             Vector2 titlePos = new Vector2(
@@ -279,8 +279,8 @@ namespace ProjectVagabond.Scenes
             for (int i = 0; i < _buttons.Count; i++)
             {
                 bool forceHover = (i == _selectedButtonIndex) && _sceneManager.LastInputDevice == InputDevice.Keyboard;
-                // Force secondary font
-                _buttons[i].Draw(spriteBatch, secondaryFont, gameTime, transform, forceHover);
+                // Force tertiary font
+                _buttons[i].Draw(spriteBatch, tertiaryFont, gameTime, transform, forceHover);
             }
 
             // --- DEBUG DRAWING (F1) ---

@@ -89,7 +89,6 @@ namespace ProjectVagabond.Battle.UI
             _tooltipManager = ServiceLocator.Get<TooltipManager>();
 
             // Initialize the render target for flattening transparent sprites
-            // FIX: Use PreserveContents to prevent issues if we switch back and forth, though we clear it anyway.
             _flattenTarget = new RenderTarget2D(_core.GraphicsDevice, FLATTEN_TARGET_SIZE, FLATTEN_TARGET_SIZE, false, SurfaceFormat.Color, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
         }
 
@@ -438,7 +437,6 @@ namespace ProjectVagabond.Battle.UI
         {
             const int enemyAreaPadding = 40;
             int availableWidth = Global.VIRTUAL_WIDTH - (enemyAreaPadding * 2);
-            // Fixed slots for enemies: 2 slots max
             int slotWidth = availableWidth / 2;
 
             // --- DRAW FLOORS (Always Visible, Static) ---
@@ -553,7 +551,6 @@ namespace ProjectVagabond.Battle.UI
             // --- Draw Sprite ---
             // Calculate sprite position relative to HUD
             const int heartHeight = 32;
-            // Moved down by 10 pixels as requested, then another 3 pixels
             float heartCenterY = playerHudY - font.LineHeight - 2 - (heartHeight / 2f) + 10 + 3;
             float spriteCenterX = startX + (barWidth / 2f);
 
@@ -1006,7 +1003,6 @@ namespace ProjectVagabond.Battle.UI
                 // Fade alpha based on height and spawn state.
                 Color shadowTint = Color.White * (heightFactor * finalAlpha);
 
-                // Draw unscaled (1.0f) as requested
                 spriteBatch.DrawSnapped(_spriteManager.ShadowBlobSprite, shadowPos, null, shadowTint, 0f, shadowOrigin, 1.0f, SpriteEffects.None, 0f);
             }
 
@@ -1210,7 +1206,6 @@ namespace ProjectVagabond.Battle.UI
                             // Apply Animation Math (Perlin Noise)
                             float t = (float)gameTime.TotalGameTime.TotalSeconds * _global.TargetIndicatorNoiseSpeed;
 
-                            // FIX: Scramble the seed significantly to ensure different targets have independent movement
                             int seed = (combatant.CombatantID.GetHashCode() + 1000) * 93821;
 
                             // Noise lookups (offsets ensure different axes don't sync)
@@ -1220,7 +1215,6 @@ namespace ProjectVagabond.Battle.UI
                             float swayX = nX * _global.TargetIndicatorOffsetX;
                             float swayY = nY * _global.TargetIndicatorOffsetY;
 
-                            // Removed rotation and scale noise as requested
                             float rotation = 0f;
                             float scale = 1.0f;
 
@@ -1245,7 +1239,6 @@ namespace ProjectVagabond.Battle.UI
             // Calculate Health Bar Y Position
             const int barHeight = 2;
             // Calculate Y position: 2 pixels above the highest sprite pixel
-            // Added extra 8 pixels as requested
             float barY = highestPixelY - barHeight - 2 - 8;
             // Clamp to screen top (1px margin)
             barY = Math.Max(1, barY);
@@ -1541,7 +1534,6 @@ namespace ProjectVagabond.Battle.UI
                 var intervals = _enemyAnimationIntervals[id];
                 var currentOffsets = _enemySpritePartOffsets[id];
 
-                // FIX: Explicitly ground the base (index 0)
                 currentOffsets[0] = Vector2.Zero;
 
                 for (int i = 1; i < currentOffsets.Length; i++)

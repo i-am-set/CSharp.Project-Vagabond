@@ -92,8 +92,8 @@
           "MaxTenacity": 18,
           "MinAgility": 5,
           "MaxAgility": 7,
-          "WeaknessElementIDs": [],
-          "ResistanceElementIDs": [],
+          "WeaknessElementIDs": [2],
+          "ResistanceElementIDs": [9],
           "MoveLearnset": [ "ShoulderBash", "Rampage" ],
           "MinNumberOfMoves": 1,
           "MaxNumberOfMoves": 2

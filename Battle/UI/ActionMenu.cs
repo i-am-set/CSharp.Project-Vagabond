@@ -506,7 +506,7 @@ namespace ProjectVagabond.Battle.UI
 
                     // Column 1: Secondary Actions (Left)
                     int secGridStartX = startX;
-                    int moveGridStartY = 128; // Fixed Y as requested
+                    int moveGridStartY = 128;
                     int secGridStartY = moveGridStartY + (MOVE_BLOCK_HEIGHT / 2) - (secBlockHeight / 2);
 
                     for (int i = 0; i < _secondaryActionButtons.Count; i++)
@@ -841,7 +841,7 @@ namespace ProjectVagabond.Battle.UI
                         int backButtonWidth = (int)(_backButton.Font ?? font).MeasureString(_backButton.Text).Width + backButtonPadding * 2;
                         _backButton.Bounds = new Rectangle(
                             horizontalPadding + (availableWidth - backButtonWidth) / 2 + 1, // Added +1 to X
-                            165, // Fixed Y position to fit at bottom
+                            165,
                             backButtonWidth,
                             backButtonHeight
                         );
@@ -1140,14 +1140,14 @@ namespace ProjectVagabond.Battle.UI
 
 
             int layoutBottomY = Math.Max(borderRect.Bottom, moveGridStartY + MOVE_BLOCK_HEIGHT);
-            int backButtonY = layoutBottomY - 2; // Adjusted to -2 to keep back button fixed at Y=165
+            int backButtonY = layoutBottomY - 2;
             var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
             int backWidth = (int)backSize.Width + 16;
             _backButton.Bounds = new Rectangle(
-                (Global.VIRTUAL_WIDTH - backWidth) / 2 + 1, // Added +1 to X
+                (Global.VIRTUAL_WIDTH - backWidth) / 2 + 1,
                 backButtonY,
                 backWidth,
-                15 // Increased from 7 to match ItemMenu
+                15 
             );
             _backButton.Draw(spriteBatch, font, gameTime, transform);
         }

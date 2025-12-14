@@ -73,7 +73,6 @@ namespace ProjectVagabond
             ItemOutlineColor_Hover = Palette_BrightWhite;
             ItemOutlineColor_Selected = Color.White;
 
-            // Initialize Item Outline Corner Colors (Red as requested)
             ItemOutlineColor_Idle_Corner = Palette_DarkGray;
             ItemOutlineColor_Hover_Corner = Palette_White;
             ItemOutlineColor_Selected_Corner = Palette_BrightWhite;

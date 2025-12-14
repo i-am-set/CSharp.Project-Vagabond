@@ -32,7 +32,7 @@ namespace ProjectVagabond.UI
         {
             var spriteManager = ServiceLocator.Get<SpriteManager>();
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-            var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont; // Use Tertiary Font as requested
+            var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
 
             bool isActivated = IsEnabled && (IsHovered || forceHover);
 

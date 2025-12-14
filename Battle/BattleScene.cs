@@ -296,7 +296,7 @@ namespace ProjectVagabond.Scenes
             {
                 CombatantID = id,
                 Name = member.Name,
-                ArchetypeId = "player", // Hardcoded as requested
+                ArchetypeId = "player",
                 IsPlayerControlled = true,
                 Stats = new CombatantStats
                 {
@@ -313,7 +313,7 @@ namespace ProjectVagabond.Scenes
                 WeaknessElementIDs = new List<int>(member.WeaknessElementIDs),
                 ResistanceElementIDs = new List<int>(member.ResistanceElementIDs),
                 DefaultStrikeMoveID = member.DefaultStrikeMoveID,
-                Spells = member.Spells, // FIX: Use Spells instead of EquippedSpells
+                Spells = member.Spells,
                 PortraitIndex = member.PortraitIndex // Set Portrait Index
             };
 
