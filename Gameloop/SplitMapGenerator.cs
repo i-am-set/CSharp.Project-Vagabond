@@ -27,7 +27,7 @@ namespace ProjectVagabond.Progression
         private static readonly SeededPerlin _nodeExclusionNoise;
         // --- Generation Tuning ---
         private const int MIN_NODES_PER_COLUMN = 2;
-        private const int MAX_NODES_PER_COLUMN = 3;
+        private const int MAX_NODES_PER_COLUMN = 4;
         public const int COLUMN_WIDTH = 96; // 6 * GRID_SIZE
         public const int HORIZONTAL_PADDING = 64; // 4 * GRID_SIZE
         private const float PATH_SEGMENT_LENGTH = 10f; // Smaller value = more wiggles
@@ -46,11 +46,11 @@ namespace ProjectVagabond.Progression
 
         private static readonly List<(SplitNodeType type, float weight)> _nodeTypeWeights = new()
         {
-            (SplitNodeType.Battle, 35f),
+            (SplitNodeType.Battle, 45f),
             (SplitNodeType.Narrative, 20f),
-            (SplitNodeType.Shop, 15f),
+            (SplitNodeType.Shop, 10f),
             (SplitNodeType.Rest, 15f),
-            (SplitNodeType.Recruit, 15f)
+            (SplitNodeType.Recruit, 10f)
         };
 
         // --- Tree Generation Tuning ---
