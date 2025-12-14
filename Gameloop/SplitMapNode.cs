@@ -20,17 +20,10 @@ namespace ProjectVagabond.Progression
         Origin,
         Battle,
         Narrative,
-        Reward,
         MajorBattle,
-        Kingdom,
-        Town,
-        Village,
-        Church,
-        Farm,
-        Cottage,
-        GuardOutpost,
-        WizardTower,
-        WatchPost
+        Recruit,
+        Rest,
+        Shop
     }
 
     public enum BattleDifficulty
@@ -76,4 +69,3 @@ namespace ProjectVagabond.Progression
         public static void ResetIdCounter() => _nextId = 0;
     }
 }
-#nullable restore

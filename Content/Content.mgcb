@@ -883,18 +883,6 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/map_marker.png
 
-#begin Sprites/MapNodes/Combat_Node_Player.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/MapNodes/Combat_Node_Player.png;Sprites/MapNodes/Combat_Node_Player
-
 #begin Sprites/MapNodes/MapNode_Combat.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -918,6 +906,18 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Sprites/MapNodes/MapNode_Event.png;Sprites/MapNodes/MapNode_Event
+
+#begin Sprites/MapNodes/MapNode_Player.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/MapNodes/MapNode_Player.png;Sprites/MapNodes/MapNode_Player
 
 #begin Sprites/MapNodes/MapNode_Recuit.png
 /importer:TextureImporter

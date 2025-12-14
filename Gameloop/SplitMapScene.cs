@@ -263,7 +263,15 @@ namespace ProjectVagabond.Scenes
                 if (WasMajorBattle && PlayerWonLastBattle)
                 {
                     WasMajorBattle = false;
-                    TriggerReward();
+                    // Major battle won - mark complete
+                    var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
+                    if (currentNode != null)
+                    {
+                        currentNode.IsCompleted = true;
+                        UpdateCameraTarget(currentNode.Position, false);
+                    }
+                    _mapState = SplitMapState.LoweringNode;
+                    _nodeLiftTimer = 0f;
                 }
                 else
                 {
@@ -932,8 +940,28 @@ namespace ProjectVagabond.Scenes
                     }
                     break;
 
-                case SplitNodeType.Reward:
-                    TriggerReward();
+                case SplitNodeType.Recruit:
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "Entered Recruitment Node (WIP)" });
+                    node.IsCompleted = true;
+                    UpdateCameraTarget(node.Position, false);
+                    _mapState = SplitMapState.LoweringNode;
+                    _nodeLiftTimer = 0f;
+                    break;
+
+                case SplitNodeType.Rest:
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "Entered Rest Node (WIP)" });
+                    node.IsCompleted = true;
+                    UpdateCameraTarget(node.Position, false);
+                    _mapState = SplitMapState.LoweringNode;
+                    _nodeLiftTimer = 0f;
+                    break;
+
+                case SplitNodeType.Shop:
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "Entered Shop Node (WIP)" });
+                    node.IsCompleted = true;
+                    UpdateCameraTarget(node.Position, false);
+                    _mapState = SplitMapState.LoweringNode;
+                    _nodeLiftTimer = 0f;
                     break;
 
                 default:
@@ -1199,17 +1227,10 @@ namespace ProjectVagabond.Scenes
                             _ => "COMBAT",
                         },
                         SplitNodeType.Narrative => "EVENT",
-                        SplitNodeType.Reward => "REWARD",
                         SplitNodeType.MajorBattle => "MAJOR BATTLE",
-                        SplitNodeType.Kingdom => "KINGDOM",
-                        SplitNodeType.Town => "TOWN",
-                        SplitNodeType.Village => "VILLAGE",
-                        SplitNodeType.Church => "CHURCH",
-                        SplitNodeType.Farm => "FARM",
-                        SplitNodeType.Cottage => "COTTAGE",
-                        SplitNodeType.GuardOutpost => "GUARD OUTPOST",
-                        SplitNodeType.WizardTower => "WIZARD TOWER",
-                        SplitNodeType.WatchPost => "WATCH POST",
+                        SplitNodeType.Recruit => "RECRUIT",
+                        SplitNodeType.Rest => "REST",
+                        SplitNodeType.Shop => "SHOP",
                         _ => ""
                     };
 
@@ -1378,56 +1399,25 @@ namespace ProjectVagabond.Scenes
                     texture = _spriteManager.SplitNodeStart;
                     break;
                 case SplitNodeType.Battle:
-                    texture = node.Difficulty switch
-                    {
-                        BattleDifficulty.Easy => _spriteManager.CombatNodeEasySprite,
-                        BattleDifficulty.Hard => _spriteManager.CombatNodeHardSprite,
-                        _ => _spriteManager.CombatNodeNormalSprite,
-                    };
+                    texture = _spriteManager.SplitNodeCombat;
                     break;
                 case SplitNodeType.Narrative:
                     texture = _spriteManager.SplitNodeNarrative;
                     break;
-                case SplitNodeType.Reward:
-                    texture = _spriteManager.SplitNodeReward;
-                    break;
                 case SplitNodeType.MajorBattle:
-                    texture = _spriteManager.SplitNodeBoss;
+                    texture = _spriteManager.SplitNodeCombat; // Use Combat sprite for Major Battle
                     break;
-                case SplitNodeType.Kingdom:
-                    texture = _spriteManager.SplitNodeCastle;
+                case SplitNodeType.Recruit:
+                    texture = _spriteManager.SplitNodeRecruit;
                     break;
-                case SplitNodeType.Town:
-                    texture = _spriteManager.SplitNodeTown2;
+                case SplitNodeType.Rest:
+                    texture = _spriteManager.SplitNodeRest;
                     break;
-                case SplitNodeType.Village:
-                    texture = _spriteManager.SplitNodeTown;
-                    break;
-                case SplitNodeType.Church:
-                    texture = _spriteManager.SplitNodeChurch;
-                    break;
-                case SplitNodeType.Farm:
-                    texture = _spriteManager.SplitNodeFarm;
-                    break;
-                case SplitNodeType.Cottage:
-                    texture = (node.Id % 3) switch
-                    {
-                        0 => _spriteManager.SplitNodeHouse,
-                        1 => _spriteManager.SplitNodeHouse2,
-                        _ => _spriteManager.SplitNodeHouse3,
-                    };
-                    break;
-                case SplitNodeType.GuardOutpost:
-                    texture = _spriteManager.SplitNodeTower;
-                    break;
-                case SplitNodeType.WizardTower:
-                    texture = _spriteManager.SplitNodeTower2;
-                    break;
-                case SplitNodeType.WatchPost:
-                    texture = _spriteManager.SplitNodeTower3;
+                case SplitNodeType.Shop:
+                    texture = _spriteManager.SplitNodeShop;
                     break;
                 default:
-                    texture = _spriteManager.CombatNodeNormalSprite;
+                    texture = _spriteManager.SplitNodeCombat;
                     break;
             }
 

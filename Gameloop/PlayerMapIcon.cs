@@ -30,7 +30,7 @@ namespace ProjectVagabond.UI
             // Lazy initialization: Get the texture only when it's first needed for drawing.
             if (_texture == null)
             {
-                _texture = ServiceLocator.Get<SpriteManager>().CombatNodePlayerSprite;
+                _texture = ServiceLocator.Get<SpriteManager>().MapNodePlayerSprite;
                 if (_texture != null)
                 {
                     // The origin is the center of a single 32x32 frame.

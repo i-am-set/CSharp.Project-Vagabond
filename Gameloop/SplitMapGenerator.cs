@@ -45,18 +45,13 @@ namespace ProjectVagabond.Progression
         private const float PATH_SMOOTHING_FACTOR = 0.25f; // Tries to straighten the line slightly to fix kinks
 
         private static readonly List<(SplitNodeType type, float weight)> _nodeTypeWeights = new()
-    {
-        (SplitNodeType.Narrative, 20f),
-        (SplitNodeType.Village, 8f),
-        (SplitNodeType.Cottage, 10f),
-        (SplitNodeType.WatchPost, 4f),
-        (SplitNodeType.Farm, 5f),
-        (SplitNodeType.Church, 3f),
-        (SplitNodeType.Town, 2f),
-        (SplitNodeType.WizardTower, 1f),
-        (SplitNodeType.GuardOutpost, 2f),
-        (SplitNodeType.Kingdom, 0.5f)
-    };
+        {
+            (SplitNodeType.Battle, 35f),
+            (SplitNodeType.Narrative, 20f),
+            (SplitNodeType.Shop, 15f),
+            (SplitNodeType.Rest, 15f),
+            (SplitNodeType.Recruit, 15f)
+        };
 
         // --- Tree Generation Tuning ---
         private const int TREE_DENSITY_STEP = 2; // Check for a tree every pixel for max density.
@@ -613,16 +608,9 @@ namespace ProjectVagabond.Progression
                         node.EventData = progressionManager.GetRandomNarrative()?.EventID;
                         break;
                     // New and existing non-event nodes fall through here
-                    case SplitNodeType.Reward:
-                    case SplitNodeType.Kingdom:
-                    case SplitNodeType.Town:
-                    case SplitNodeType.Village:
-                    case SplitNodeType.Church:
-                    case SplitNodeType.Farm:
-                    case SplitNodeType.Cottage:
-                    case SplitNodeType.GuardOutpost:
-                    case SplitNodeType.WizardTower:
-                    case SplitNodeType.WatchPost:
+                    case SplitNodeType.Recruit:
+                    case SplitNodeType.Rest:
+                    case SplitNodeType.Shop:
                         node.EventData = null;
                         break;
                 }
@@ -805,4 +793,3 @@ namespace ProjectVagabond.Progression
         }
     }
 }
-#nullable restore
