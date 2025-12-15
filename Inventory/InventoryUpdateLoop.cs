@@ -16,7 +16,7 @@ namespace ProjectVagabond.UI
 {
     public partial class SplitMapInventoryOverlay
     {
-        public void Update(GameTime gameTime, MouseState currentMouseState, KeyboardState currentKeyboardState, bool isMapIdle, Matrix cameraTransform)
+        public void Update(GameTime gameTime, MouseState currentMouseState, KeyboardState currentKeyboardState, bool allowAccess, Matrix cameraTransform)
         {
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
             var virtualMousePos = Core.TransformMouse(currentMouseState.Position);
@@ -25,7 +25,8 @@ namespace ProjectVagabond.UI
             // Update Toggle Button
             if (_inventoryButton != null)
             {
-                bool isVisible = IsOpen || isMapIdle;
+                // Button is visible if the overlay is open OR if access is allowed (Map Idle or Shop)
+                bool isVisible = IsOpen || allowAccess;
                 if (isVisible)
                 {
                     _inventoryButton.IsEnabled = true;

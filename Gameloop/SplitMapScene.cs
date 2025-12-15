@@ -20,6 +20,10 @@ namespace ProjectVagabond.Scenes
     {
         private enum SplitMapView { Map, Inventory, Settings, Shop }
         private SplitMapView _currentView = SplitMapView.Map;
+
+        // Tracks where to go back to when closing Inventory or Settings (Map or Shop)
+        private SplitMapView _viewToReturnTo = SplitMapView.Map;
+
         private struct DrawableMapObject
         {
             public enum ObjectType { Node, Player }
@@ -157,31 +161,47 @@ namespace ProjectVagabond.Scenes
                 noiseSpeed: 3f
             );
 
-            // Toggle Logic for Inventory Button
+            // --- INVENTORY BUTTON LOGIC ---
             _inventoryOverlay.OnInventoryButtonClicked += () =>
             {
-                // If currently in Settings, try to close safely first
+                // 1. If in Settings, try to close it first
                 if (_currentView == SplitMapView.Settings)
                 {
-                    _settingsOverlay.AttemptClose(() => SetView(SplitMapView.Inventory, snap: true));
+                    _settingsOverlay.AttemptClose(() =>
+                    {
+                        // After closing settings, go to Inventory
+                        // Keep _viewToReturnTo as whatever it was (Map or Shop)
+                        SetView(SplitMapView.Inventory, snap: true);
+                    });
                 }
+                // 2. If in Inventory, close it and return to previous view
                 else if (_currentView == SplitMapView.Inventory)
                 {
-                    SetView(SplitMapView.Map, snap: true);
+                    SetView(_viewToReturnTo, snap: true);
                 }
+                // 3. If in Map or Shop, open Inventory
                 else
                 {
+                    // Remember where we came from
+                    _viewToReturnTo = _currentView;
                     SetView(SplitMapView.Inventory, snap: true);
                 }
             };
 
-            // Subscribe to Settings Overlay Close Request
-            _settingsOverlay.OnCloseRequested += () => SetView(SplitMapView.Map, snap: true);
+            // --- SETTINGS OVERLAY CLOSE REQUEST ---
+            _settingsOverlay.OnCloseRequested += () =>
+            {
+                // Return to wherever we were before opening settings
+                SetView(_viewToReturnTo, snap: true);
+            };
 
-            // Subscribe to Shop Leave Request
+            // --- SHOP LEAVE REQUEST ---
             _shopOverlay.OnLeaveRequested += () =>
             {
+                // Leaving the shop always goes back to the Map and completes the node
+                _viewToReturnTo = SplitMapView.Map;
                 SetView(SplitMapView.Map, snap: true);
+
                 var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
                 if (currentNode != null)
                 {
@@ -203,6 +223,7 @@ namespace ProjectVagabond.Scenes
             _isPanning = false;
             _waitingForCombatCameraSettle = false;
             _pendingCombatArchetypes = null;
+            _viewToReturnTo = SplitMapView.Map; // Reset return view on entry
 
             _inventoryOverlay.Initialize();
             _settingsOverlay.Initialize();
@@ -217,16 +238,24 @@ namespace ProjectVagabond.Scenes
 
                 _settingsButton = new ImageButton(new Rectangle(settingsX, 10, buttonSize, buttonSize), settingsSheet, settingsRects[0], settingsRects[1], enableHoverSway: true);
 
-                // Toggle Logic for Settings Button
+                // --- SETTINGS BUTTON LOGIC ---
                 _settingsButton.OnClick += () =>
                 {
+                    // 1. If in Settings, try to close it
                     if (_currentView == SplitMapView.Settings)
                     {
-                        // Attempt to close settings safely (prompts if dirty)
-                        _settingsOverlay.AttemptClose(() => SetView(SplitMapView.Map, snap: true));
+                        _settingsOverlay.AttemptClose(() => SetView(_viewToReturnTo, snap: true));
                     }
+                    // 2. If in Inventory, switch to Settings
+                    else if (_currentView == SplitMapView.Inventory)
+                    {
+                        // Don't update _viewToReturnTo, keep it as Map or Shop
+                        SetView(SplitMapView.Settings, snap: true);
+                    }
+                    // 3. If in Map or Shop, open Settings
                     else
                     {
+                        _viewToReturnTo = _currentView;
                         SetView(SplitMapView.Settings, snap: true);
                     }
                 };
@@ -377,7 +406,7 @@ namespace ProjectVagabond.Scenes
                 case SplitMapView.Shop:
                     _inventoryOverlay.Hide();
                     _settingsOverlay.Hide();
-                    // Shop overlay is shown via TriggerNodeEvent logic
+                    _shopOverlay.Resume(); // FIX: Resume instead of Show to preserve stock
                     _targetCameraOffset = new Vector2(0, -600);
                     if (snap) _cameraOffset = _targetCameraOffset;
                     break;
@@ -508,9 +537,12 @@ namespace ProjectVagabond.Scenes
             var cameraTransform = Matrix.CreateTranslation(RoundedCameraOffset.X, RoundedCameraOffset.Y, 0);
 
             // Update Overlays
-            _inventoryOverlay.Update(gameTime, currentMouseState, currentKeyboardState, _mapState == SplitMapState.Idle, cameraTransform);
+            // Allow inventory interaction if Map is Idle OR if we are in the Shop view
+            bool allowInventoryInteraction = _mapState == SplitMapState.Idle || _currentView == SplitMapView.Shop;
+            _inventoryOverlay.Update(gameTime, currentMouseState, currentKeyboardState, allowInventoryInteraction, cameraTransform);
+
             _settingsOverlay.Update(gameTime, currentMouseState, currentKeyboardState, cameraTransform);
-            _shopOverlay.Update(gameTime, currentMouseState, cameraTransform); // Update Shop
+            _shopOverlay.Update(gameTime, currentMouseState, cameraTransform);
 
             // Update Settings Button
             _settingsButton?.Update(currentMouseState);
@@ -523,13 +555,18 @@ namespace ProjectVagabond.Scenes
                 {
                     if (_currentView == SplitMapView.Inventory)
                     {
-                        SetView(SplitMapView.Map, snap: true);
+                        SetView(_viewToReturnTo, snap: true);
                     }
-                    else if (_currentView == SplitMapView.Map)
+                    else if (_currentView == SplitMapView.Settings)
                     {
+                        // Settings overlay handles its own dirty check on Escape, so we don't force close here
+                        // unless we want to override it. The overlay's Update loop will catch Escape.
+                    }
+                    else if (_currentView == SplitMapView.Map || _currentView == SplitMapView.Shop)
+                    {
+                        _viewToReturnTo = _currentView;
                         SetView(SplitMapView.Settings, snap: true);
                     }
-                    // If in Settings view, do nothing here. The overlay handles its own Escape logic (checking for dirty state).
                 }
             }
 
@@ -1011,9 +1048,9 @@ namespace ProjectVagabond.Scenes
             int premiumCount = _random.Next(3, 5);
             var allPremium = new List<ShopItem>();
 
-            foreach (var w in BattleDataCache.Weapons.Values) allPremium.Add(new ShopItem { ItemId = w.WeaponID, DisplayName = w.WeaponName, Type = "Weapon", Price = 0, DataObject = w });
-            foreach (var a in BattleDataCache.Armors.Values) allPremium.Add(new ShopItem { ItemId = a.ArmorID, DisplayName = a.ArmorName, Type = "Armor", Price = 0, DataObject = a });
-            foreach (var r in BattleDataCache.Relics.Values) allPremium.Add(new ShopItem { ItemId = r.RelicID, DisplayName = r.RelicName, Type = "Relic", Price = 0, DataObject = r });
+            foreach (var w in BattleDataCache.Weapons.Values) allPremium.Add(new ShopItem { ItemId = w.WeaponID, DisplayName = w.WeaponName, Type = "Weapon", Price = 25, DataObject = w });
+            foreach (var a in BattleDataCache.Armors.Values) allPremium.Add(new ShopItem { ItemId = a.ArmorID, DisplayName = a.ArmorName, Type = "Armor", Price = 25, DataObject = a });
+            foreach (var r in BattleDataCache.Relics.Values) allPremium.Add(new ShopItem { ItemId = r.RelicID, DisplayName = r.RelicName, Type = "Relic", Price = 25, DataObject = r });
 
             for (int i = 0; i < premiumCount; i++)
             {
@@ -1033,7 +1070,7 @@ namespace ProjectVagabond.Scenes
                 if (allConsumables.Any())
                 {
                     var c = allConsumables[_random.Next(allConsumables.Count)];
-                    consumableStock.Add(new ShopItem { ItemId = c.ItemID, DisplayName = c.ItemName, Type = "Consumable", Price = 0, DataObject = c });
+                    consumableStock.Add(new ShopItem { ItemId = c.ItemID, DisplayName = c.ItemName, Type = "Consumable", Price = 25, DataObject = c });
                 }
             }
 

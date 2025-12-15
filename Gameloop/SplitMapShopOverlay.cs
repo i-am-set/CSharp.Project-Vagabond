@@ -11,16 +11,6 @@ using System.Linq;
 
 namespace ProjectVagabond.UI
 {
-    public class ShopItem
-    {
-        public string ItemId { get; set; }
-        public string DisplayName { get; set; }
-        public string Type { get; set; } // "Weapon", "Armor", "Relic", "Consumable"
-        public int Price { get; set; }
-        public bool IsSold { get; set; }
-        public object DataObject { get; set; } // WeaponData, ArmorData, etc.
-    }
-
     public class SplitMapShopOverlay
     {
         public bool IsOpen { get; private set; } = false;
@@ -29,32 +19,30 @@ namespace ProjectVagabond.UI
         private readonly GameState _gameState;
         private readonly Global _global;
         private readonly HapticsManager _hapticsManager;
+        private readonly SpriteManager _spriteManager;
 
         private List<ShopItem> _premiumItems = new List<ShopItem>();
         private List<ShopItem> _consumableItems = new List<ShopItem>();
 
-        private List<Button> _premiumButtons = new List<Button>();
-        private List<Button> _consumableButtons = new List<Button>();
+        private List<Button> _itemButtons = new List<Button>();
         private Button _leaveButton;
 
         // Layout Constants
         private const float WORLD_Y_OFFSET = 600f; // Below Settings
-        private const int PANEL_WIDTH = 280;
-        private const int PANEL_HEIGHT = 160;
         private const int BUTTON_HEIGHT = 15;
-        private const int BUTTON_SPACING = 4;
 
         public SplitMapShopOverlay()
         {
             _gameState = ServiceLocator.Get<GameState>();
             _global = ServiceLocator.Get<Global>();
             _hapticsManager = ServiceLocator.Get<HapticsManager>();
+            _spriteManager = ServiceLocator.Get<SpriteManager>();
 
             _leaveButton = new Button(Rectangle.Empty, "LEAVE SHOP", font: ServiceLocator.Get<Core>().SecondaryFont)
             {
                 CustomDefaultTextColor = _global.Palette_Red,
                 CustomHoverTextColor = _global.Palette_White,
-                UseScreenCoordinates = true // FIX: Essential for World Space UI
+                UseScreenCoordinates = true
             };
             _leaveButton.OnClick += () => OnLeaveRequested?.Invoke();
         }
@@ -67,6 +55,14 @@ namespace ProjectVagabond.UI
             RebuildButtons();
         }
 
+        public void Resume()
+        {
+            if (_premiumItems.Any() || _consumableItems.Any())
+            {
+                IsOpen = true;
+            }
+        }
+
         public void Hide()
         {
             IsOpen = false;
@@ -74,50 +70,78 @@ namespace ProjectVagabond.UI
 
         private void RebuildButtons()
         {
-            _premiumButtons.Clear();
-            _consumableButtons.Clear();
+            _itemButtons.Clear();
 
-            var font = ServiceLocator.Get<Core>().SecondaryFont;
+            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+            var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
 
-            // Layout Calculations
             int centerX = Global.VIRTUAL_WIDTH / 2;
-            int startY = (int)WORLD_Y_OFFSET + 40;
+            int startY = (int)WORLD_Y_OFFSET + 45; // Push down to make room for headers
 
-            // Premium Column (Left)
-            int premiumX = centerX - 80;
+            // --- GEAR GRID (Left Side) ---
+            // 2x2 Grid
+            // Center of Left Section is roughly centerX - 80
+            int gearCenterX = centerX - 80;
+            int gearSpacingX = 50; // Horizontal gap between columns
+            int gearSpacingY = 35; // Vertical gap between rows (accommodates text)
+
             for (int i = 0; i < _premiumItems.Count; i++)
             {
+                if (i >= 4) break; // Max 4 items in 2x2 grid
+
                 var item = _premiumItems[i];
-                var btn = CreateItemButton(item, premiumX, startY + (i * (BUTTON_HEIGHT + BUTTON_SPACING)), font);
-                _premiumButtons.Add(btn);
+
+                // Calculate Grid Position
+                // 0: TL, 1: TR, 2: BL, 3: BR
+                int col = i % 2;
+                int row = i / 2;
+
+                int x = gearCenterX + (col == 0 ? -gearSpacingX / 2 : gearSpacingX / 2) - 8; // -8 to center 16px button
+                int y = startY + (row * gearSpacingY);
+
+                var btn = CreateShopItemButton(item, x, y, secondaryFont, tertiaryFont);
+                _itemButtons.Add(btn);
             }
 
-            // Consumable Column (Right)
-            int consumableX = centerX + 80;
+            // --- CONSUMABLES (Right Side) ---
+            // Vertical Stack
+            int consumableCenterX = centerX + 80;
+            int consumableSpacingY = 35;
+
             for (int i = 0; i < _consumableItems.Count; i++)
             {
                 var item = _consumableItems[i];
-                var btn = CreateItemButton(item, consumableX, startY + (i * (BUTTON_HEIGHT + BUTTON_SPACING)), font);
-                _consumableButtons.Add(btn);
+                int x = consumableCenterX - 8; // Center 16px button
+                int y = startY + (i * consumableSpacingY);
+
+                var btn = CreateShopItemButton(item, x, y, secondaryFont, tertiaryFont);
+                _itemButtons.Add(btn);
             }
 
-            // Leave Button
-            int leaveY = startY + (Math.Max(_premiumItems.Count, _consumableItems.Count) * (BUTTON_HEIGHT + BUTTON_SPACING)) + 20;
+            // --- LEAVE BUTTON ---
+            // Position at absolute bottom of the screen (relative to the offset)
+            // The overlay is drawn at WORLD_Y_OFFSET, but the screen height is fixed.
+            // We want it at the bottom of the 180px view.
+            int screenBottom = (int)WORLD_Y_OFFSET + Global.VIRTUAL_HEIGHT;
+            int leaveMarginBottom = 10;
+            int leaveY = screenBottom - BUTTON_HEIGHT - leaveMarginBottom;
+
             _leaveButton.Bounds = new Rectangle(centerX - 40, leaveY, 80, BUTTON_HEIGHT);
         }
 
-        private Button CreateItemButton(ShopItem item, int centerX, int y, BitmapFont font)
+        private ShopItemButton CreateShopItemButton(ShopItem item, int x, int y, BitmapFont priceFont, BitmapFont nameFont)
         {
-            string text = item.IsSold ? "SOLD" : $"{item.DisplayName} - {item.Price}G";
-            int width = 140;
-            var bounds = new Rectangle(centerX - width / 2, y, width, BUTTON_HEIGHT);
+            // Resolve Sprite
+            string iconPath = "";
+            if (item.Type == "Weapon") iconPath = $"Sprites/Items/Weapons/{item.ItemId}";
+            else if (item.Type == "Armor") iconPath = $"Sprites/Items/Armor/{item.ItemId}";
+            else if (item.Type == "Relic") iconPath = $"Sprites/Items/Relics/{item.ItemId}";
+            else if (item.Type == "Consumable") iconPath = $"Sprites/Items/Consumables/{item.ItemId}";
 
-            var btn = new Button(bounds, text, font: font)
-            {
-                IsEnabled = !item.IsSold,
-                CustomDisabledTextColor = _global.Palette_DarkGray,
-                UseScreenCoordinates = true // FIX: Essential for World Space UI
-            };
+            var icon = _spriteManager.GetItemSprite(iconPath);
+            var silhouette = _spriteManager.GetItemSpriteSilhouette(iconPath);
+
+            var btn = new ShopItemButton(new Rectangle(x, y, 16, 16), item, icon, silhouette, priceFont, nameFont);
 
             btn.OnClick += () => TryBuyItem(item, btn);
             return btn;
@@ -131,8 +155,7 @@ namespace ProjectVagabond.UI
             {
                 _gameState.PlayerState.Coin -= item.Price;
                 item.IsSold = true;
-                btn.Text = "SOLD";
-                btn.IsEnabled = false;
+                btn.IsEnabled = false; // ShopItemButton handles visual state for disabled/sold
 
                 // Add to Inventory
                 if (item.Type == "Weapon") _gameState.PlayerState.AddWeapon(item.ItemId);
@@ -158,11 +181,10 @@ namespace ProjectVagabond.UI
             var virtualMousePos = Core.TransformMouse(mouseState.Position);
             var mouseInWorldSpace = Vector2.Transform(virtualMousePos, Matrix.Invert(cameraTransform));
 
-            // Create a fake mouse state for the buttons
+            // Create a fake mouse state for the buttons using world coordinates
             var worldMouseState = new MouseState((int)mouseInWorldSpace.X, (int)mouseInWorldSpace.Y, mouseState.ScrollWheelValue, mouseState.LeftButton, mouseState.MiddleButton, mouseState.RightButton, mouseState.XButton1, mouseState.XButton2);
 
-            foreach (var btn in _premiumButtons) btn.Update(worldMouseState);
-            foreach (var btn in _consumableButtons) btn.Update(worldMouseState);
+            foreach (var btn in _itemButtons) btn.Update(worldMouseState);
             _leaveButton.Update(worldMouseState);
         }
 
@@ -183,12 +205,6 @@ namespace ProjectVagabond.UI
             Vector2 titlePos = new Vector2((Global.VIRTUAL_WIDTH - titleSize.X) / 2, WORLD_Y_OFFSET + 10);
             spriteBatch.DrawStringSnapped(font, title, titlePos, _global.Palette_BrightWhite);
 
-            // Coin Display
-            string coinText = $"COIN: {_gameState.PlayerState.Coin}";
-            Vector2 coinSize = secondaryFont.MeasureString(coinText);
-            Vector2 coinPos = new Vector2(Global.VIRTUAL_WIDTH - coinSize.X - 10, WORLD_Y_OFFSET + 10);
-            spriteBatch.DrawStringSnapped(secondaryFont, coinText, coinPos, _global.Palette_Yellow);
-
             // Headers
             int centerX = Global.VIRTUAL_WIDTH / 2;
             int headerY = (int)WORLD_Y_OFFSET + 30;
@@ -202,8 +218,15 @@ namespace ProjectVagabond.UI
             spriteBatch.DrawStringSnapped(secondaryFont, itemHeader, new Vector2(centerX + 80 - itemSize.X / 2, headerY), _global.Palette_LightBlue);
 
             // Buttons
-            foreach (var btn in _premiumButtons) btn.Draw(spriteBatch, secondaryFont, gameTime, Matrix.Identity);
-            foreach (var btn in _consumableButtons) btn.Draw(spriteBatch, secondaryFont, gameTime, Matrix.Identity);
+            foreach (var btn in _itemButtons) btn.Draw(spriteBatch, secondaryFont, gameTime, Matrix.Identity);
+
+            // Coin Display (Centered above Leave Button)
+            string coinText = $"COIN: {_gameState.PlayerState.Coin}";
+            Vector2 coinSize = secondaryFont.MeasureString(coinText);
+            float coinX = (Global.VIRTUAL_WIDTH - coinSize.X) / 2f;
+            float coinY = _leaveButton.Bounds.Top - coinSize.Y - 4;
+            spriteBatch.DrawStringSnapped(secondaryFont, coinText, new Vector2(coinX, coinY), _global.Palette_Yellow);
+
             _leaveButton.Draw(spriteBatch, secondaryFont, gameTime, Matrix.Identity);
         }
     }
