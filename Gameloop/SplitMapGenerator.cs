@@ -27,7 +27,7 @@ namespace ProjectVagabond.Progression
         private static readonly SeededPerlin _nodeExclusionNoise;
         // --- Generation Tuning ---
         private const int MIN_NODES_PER_COLUMN = 2;
-        private const int MAX_NODES_PER_COLUMN = 4;
+        private const int MAX_NODES_PER_COLUMN = 4; // Updated to 4
         public const int COLUMN_WIDTH = 96; // 6 * GRID_SIZE
         public const int HORIZONTAL_PADDING = 64; // 4 * GRID_SIZE
         private const float PATH_SEGMENT_LENGTH = 10f; // Smaller value = more wiggles
@@ -44,6 +44,7 @@ namespace ProjectVagabond.Progression
         private const float PATH_REPULSION_FORCE = 2.5f; // Strength of the push
         private const float PATH_SMOOTHING_FACTOR = 0.25f; // Tries to straighten the line slightly to fix kinks
 
+        // Updated Weights
         private static readonly List<(SplitNodeType type, float weight)> _nodeTypeWeights = new()
         {
             (SplitNodeType.Battle, 45f),
@@ -159,13 +160,19 @@ namespace ProjectVagabond.Progression
                 allPaths.AddRange(newPaths);
             }
 
+            // --- Post-Processing: Bad Luck Protection (Rule #3) ---
+            // Ensure player isn't forced into too many consecutive fights without a rest.
+            // We run this BEFORE sanitization because this step might force a Rest node that creates a conflict.
+            EnforceRestAfterStreak(allNodesByColumn, allPaths);
+
             // --- Post-Processing: Anti-Clumping (Rule #2 from prompt) ---
-            // Ensure we don't have Shop->Shop or Rest->Rest
+            // Ensure we don't have Shop->Shop or Rest->Rest.
+            // This runs AFTER EnforceRest to clean up any messes it might have made.
             SanitizeNodeRepetition(allNodes, allPaths, splitData);
 
-            // --- Post-Processing: Bad Luck Protection (Rule #3) ---
-            // Ensure player isn't forced into too many consecutive fights without a rest
-            EnforceRestAfterStreak(allNodesByColumn, allPaths);
+            // --- Post-Processing: Restricted Column Failsafe (Rule #1) ---
+            // One final pass to absolutely guarantee no Shops/Rests in columns 1 and 2.
+            SanitizeRestrictedColumns(allNodes, splitData);
 
             // --- Post-Processing: Force-Directed Repulsion ---
             // This pushes paths apart to prevent ugly tangents and overlaps.
@@ -185,54 +192,80 @@ namespace ProjectVagabond.Progression
         /// <summary>
         /// Iterates through all paths to ensure no Shop connects to a Shop, and no Rest connects to a Rest.
         /// If a violation is found, the destination node is rerolled to a Battle, Narrative, or Recruit event.
+        /// This runs in a loop until no conflicts remain.
         /// </summary>
         private static void SanitizeNodeRepetition(List<SplitMapNode> allNodes, List<SplitMapPath> allPaths, SplitData splitData)
         {
             var progressionManager = ServiceLocator.Get<ProgressionManager>();
+            bool changesMade;
+            int iterations = 0;
+            const int MAX_ITERATIONS = 20; // Safety break
 
-            // We iterate multiple times to ensure cascading changes don't create new conflicts,
-            // though a single pass sorted by floor is usually sufficient.
-            // Sorting by floor ensures we fix parents before children.
-            var sortedNodes = allNodes.OrderBy(n => n.Floor).ToList();
-
-            foreach (var node in sortedNodes)
+            do
             {
-                // Skip fixed nodes
-                if (node.NodeType == SplitNodeType.MajorBattle || node.NodeType == SplitNodeType.Origin) continue;
+                changesMade = false;
+                iterations++;
 
-                // Check all incoming paths for this node
-                bool conflictFound = false;
-                foreach (var pathId in node.IncomingPathIds)
+                // Iterate over every connection in the map
+                foreach (var path in allPaths)
                 {
-                    var path = allPaths.FirstOrDefault(p => p.Id == pathId);
-                    if (path != null)
+                    var fromNode = allNodes.FirstOrDefault(n => n.Id == path.FromNodeId);
+                    var toNode = allNodes.FirstOrDefault(n => n.Id == path.ToNodeId);
+
+                    if (fromNode == null || toNode == null) continue;
+
+                    // Skip fixed nodes that cannot be changed
+                    if (toNode.NodeType == SplitNodeType.MajorBattle || toNode.NodeType == SplitNodeType.Origin) continue;
+
+                    bool conflict = false;
+
+                    // Check Rule: No Shop->Shop
+                    if (fromNode.NodeType == SplitNodeType.Shop && toNode.NodeType == SplitNodeType.Shop)
                     {
-                        var parent = allNodes.FirstOrDefault(n => n.Id == path.FromNodeId);
-                        if (parent != null)
-                        {
-                            if (node.NodeType == SplitNodeType.Shop && parent.NodeType == SplitNodeType.Shop)
-                            {
-                                conflictFound = true;
-                                break;
-                            }
-                            if (node.NodeType == SplitNodeType.Rest && parent.NodeType == SplitNodeType.Rest)
-                            {
-                                conflictFound = true;
-                                break;
-                            }
-                        }
+                        conflict = true;
+                    }
+                    // Check Rule: No Rest->Rest
+                    else if (fromNode.NodeType == SplitNodeType.Rest && toNode.NodeType == SplitNodeType.Rest)
+                    {
+                        conflict = true;
+                    }
+
+                    if (conflict)
+                    {
+                        // Reroll the destination node to something safe (Battle, Narrative, Recruit)
+                        RerollNode(toNode, splitData, progressionManager);
+                        changesMade = true;
                     }
                 }
 
-                if (conflictFound)
+            } while (changesMade && iterations < MAX_ITERATIONS);
+        }
+
+        /// <summary>
+        /// A final failsafe pass to ensure no Rest or Shop nodes exist in the first few columns.
+        /// </summary>
+        private static void SanitizeRestrictedColumns(List<SplitMapNode> allNodes, SplitData splitData)
+        {
+            var progressionManager = ServiceLocator.Get<ProgressionManager>();
+
+            foreach (var node in allNodes)
+            {
+                // Columns 0, 1, 2 are restricted.
+                if (node.Floor <= 2)
                 {
-                    RerollNode(node, splitData, progressionManager);
+                    if (node.NodeType == SplitNodeType.Rest || node.NodeType == SplitNodeType.Shop)
+                    {
+                        RerollNode(node, splitData, progressionManager);
+                    }
                 }
             }
         }
 
         private static void RerollNode(SplitMapNode node, SplitData splitData, ProgressionManager progressionManager)
         {
+            // Reroll into Battle, Narrative, or Recruit.
+            // Explicitly exclude Shop and Rest to guarantee the chain is broken.
+
             var validTypes = new List<(SplitNodeType type, float weight)>();
 
             if (splitData.PossibleBattles != null && splitData.PossibleBattles.Any())
@@ -243,7 +276,7 @@ namespace ProjectVagabond.Progression
 
             validTypes.Add((SplitNodeType.Recruit, 10f));
 
-            if (!validTypes.Any()) return;
+            if (!validTypes.Any()) return; // Should not happen
 
             float totalWeight = validTypes.Sum(x => x.weight);
             double roll = _random.NextDouble() * totalWeight;
@@ -260,7 +293,7 @@ namespace ProjectVagabond.Progression
             }
 
             node.NodeType = chosenType;
-            node.EventData = null;
+            node.EventData = null; // Reset data
 
             switch (chosenType)
             {
@@ -272,6 +305,7 @@ namespace ProjectVagabond.Progression
                     node.EventData = progressionManager.GetRandomNarrative()?.EventID;
                     break;
                 case SplitNodeType.Recruit:
+                    // No event data needed for now
                     break;
             }
         }
@@ -291,6 +325,7 @@ namespace ProjectVagabond.Progression
                 streaks[node.Id] = (node.NodeType == SplitNodeType.Battle) ? 1 : 0;
             }
 
+            // Iterate through columns 1 to N-1 (skipping the final boss column)
             for (int i = 1; i < columns.Count - 1; i++)
             {
                 foreach (var node in columns[i])
@@ -333,6 +368,9 @@ namespace ProjectVagabond.Progression
                             var luckyChild = children[_random.Next(children.Count)];
                             luckyChild.NodeType = SplitNodeType.Rest;
                             luckyChild.EventData = null; // Clear any battle data
+
+                            // Note: We don't need to update streaks for the next column immediately,
+                            // because the loop will handle it when it reaches column i+1.
                         }
                     }
                 }
