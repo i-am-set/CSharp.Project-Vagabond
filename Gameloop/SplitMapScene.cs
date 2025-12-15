@@ -18,7 +18,7 @@ namespace ProjectVagabond.Scenes
 {
     public class SplitMapScene : GameScene
     {
-        private enum SplitMapView { Map, Inventory, Settings, Shop } // Added Shop
+        private enum SplitMapView { Map, Inventory, Settings, Shop }
         private SplitMapView _currentView = SplitMapView.Map;
         private struct DrawableMapObject
         {
@@ -39,7 +39,7 @@ namespace ProjectVagabond.Scenes
         private readonly VoidEdgeEffect _voidEdgeEffect;
         private readonly SplitMapInventoryOverlay _inventoryOverlay;
         private readonly SplitMapSettingsOverlay _settingsOverlay;
-        private readonly SplitMapShopOverlay _shopOverlay; // Added Shop Overlay
+        private readonly SplitMapShopOverlay _shopOverlay;
         private readonly BirdManager _birdManager;
 
         private SplitMap? _currentMap;
@@ -143,7 +143,7 @@ namespace ProjectVagabond.Scenes
             _componentStore = ServiceLocator.Get<ComponentStore>();
             _inventoryOverlay = new SplitMapInventoryOverlay();
             _settingsOverlay = new SplitMapSettingsOverlay(this);
-            _shopOverlay = new SplitMapShopOverlay(); // Initialize Shop Overlay
+            _shopOverlay = new SplitMapShopOverlay();
             _birdManager = new BirdManager();
 
             var narratorBounds = new Rectangle(0, Global.VIRTUAL_HEIGHT - 50, Global.VIRTUAL_WIDTH, 50);
@@ -984,42 +984,7 @@ namespace ProjectVagabond.Scenes
                     break;
 
                 case SplitNodeType.Shop:
-                    // Generate Shop Stock
-                    var premiumStock = new List<ShopItem>();
-                    var consumableStock = new List<ShopItem>();
-
-                    // Randomly pick 3-4 premium items
-                    int premiumCount = _random.Next(3, 5);
-                    var allPremium = new List<ShopItem>();
-
-                    foreach (var w in BattleDataCache.Weapons.Values) allPremium.Add(new ShopItem { ItemId = w.WeaponID, DisplayName = w.WeaponName, Type = "Weapon", Price = 0, DataObject = w });
-                    foreach (var a in BattleDataCache.Armors.Values) allPremium.Add(new ShopItem { ItemId = a.ArmorID, DisplayName = a.ArmorName, Type = "Armor", Price = 0, DataObject = a });
-                    foreach (var r in BattleDataCache.Relics.Values) allPremium.Add(new ShopItem { ItemId = r.RelicID, DisplayName = r.RelicName, Type = "Relic", Price = 0, DataObject = r });
-
-                    for (int i = 0; i < premiumCount; i++)
-                    {
-                        if (allPremium.Any())
-                        {
-                            var item = allPremium[_random.Next(allPremium.Count)];
-                            premiumStock.Add(item);
-                            allPremium.Remove(item);
-                        }
-                    }
-
-                    // Randomly pick 2-3 consumables
-                    int consumableCount = _random.Next(2, 4);
-                    var allConsumables = BattleDataCache.Consumables.Values.ToList();
-                    for (int i = 0; i < consumableCount; i++)
-                    {
-                        if (allConsumables.Any())
-                        {
-                            var c = allConsumables[_random.Next(allConsumables.Count)];
-                            consumableStock.Add(new ShopItem { ItemId = c.ItemID, DisplayName = c.ItemName, Type = "Consumable", Price = 0, DataObject = c });
-                        }
-                    }
-
-                    _shopOverlay.Show(premiumStock, consumableStock);
-                    SetView(SplitMapView.Shop, snap: true);
+                    OpenRandomShop();
                     break;
 
                 default:
@@ -1029,6 +994,51 @@ namespace ProjectVagabond.Scenes
                     _nodeLiftTimer = 0f;
                     break;
             }
+        }
+
+        public void DebugTriggerShop()
+        {
+            OpenRandomShop();
+        }
+
+        private void OpenRandomShop()
+        {
+            // Generate Shop Stock
+            var premiumStock = new List<ShopItem>();
+            var consumableStock = new List<ShopItem>();
+
+            // Randomly pick 3-4 premium items
+            int premiumCount = _random.Next(3, 5);
+            var allPremium = new List<ShopItem>();
+
+            foreach (var w in BattleDataCache.Weapons.Values) allPremium.Add(new ShopItem { ItemId = w.WeaponID, DisplayName = w.WeaponName, Type = "Weapon", Price = 0, DataObject = w });
+            foreach (var a in BattleDataCache.Armors.Values) allPremium.Add(new ShopItem { ItemId = a.ArmorID, DisplayName = a.ArmorName, Type = "Armor", Price = 0, DataObject = a });
+            foreach (var r in BattleDataCache.Relics.Values) allPremium.Add(new ShopItem { ItemId = r.RelicID, DisplayName = r.RelicName, Type = "Relic", Price = 0, DataObject = r });
+
+            for (int i = 0; i < premiumCount; i++)
+            {
+                if (allPremium.Any())
+                {
+                    var item = allPremium[_random.Next(allPremium.Count)];
+                    premiumStock.Add(item);
+                    allPremium.Remove(item);
+                }
+            }
+
+            // Randomly pick 2-3 consumables
+            int consumableCount = _random.Next(2, 4);
+            var allConsumables = BattleDataCache.Consumables.Values.ToList();
+            for (int i = 0; i < consumableCount; i++)
+            {
+                if (allConsumables.Any())
+                {
+                    var c = allConsumables[_random.Next(allConsumables.Count)];
+                    consumableStock.Add(new ShopItem { ItemId = c.ItemID, DisplayName = c.ItemName, Type = "Consumable", Price = 0, DataObject = c });
+                }
+            }
+
+            _shopOverlay.Show(premiumStock, consumableStock);
+            SetView(SplitMapView.Shop, snap: true);
         }
 
         private void OnNarrativeChoiceSelected(NarrativeChoice choice)
