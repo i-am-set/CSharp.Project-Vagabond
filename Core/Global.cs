@@ -10,6 +10,7 @@ using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Dice;
+using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
@@ -193,6 +194,15 @@ namespace ProjectVagabond
 
         // Transition Settings
         public const float UniversalSlowFadeDuration = 3.0f;
+
+        // --- ECONOMY SETTINGS ---
+        public int BasePrice_Common { get; set; } = 50;
+        public int BasePrice_Uncommon { get; set; } = 120;
+        public int BasePrice_Rare { get; set; } = 300;
+        public int BasePrice_Epic { get; set; } = 750;
+        public int BasePrice_Mythic { get; set; } = 1500;
+        public int BasePrice_Legendary { get; set; } = 3000;
+        public float PriceMultiplier_Consumable { get; set; } = 0.4f; // Consumables are 40% of gear price
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         // INSTANCE VARIABLES

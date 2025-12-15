@@ -6,6 +6,7 @@ using ProjectVagabond.Battle;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections.Generic;
 
 namespace ProjectVagabond.UI
 {
@@ -66,7 +67,8 @@ namespace ProjectVagabond.UI
             // --- Draw Icon (Center) ---
             if (Item.IsSold)
             {
-                // Draw "SOLD" text (No background)
+                // Draw Empty Slot / Sold State
+                // No background
                 string soldText = "SOLD";
                 Vector2 soldSize = _nameFont.MeasureString(soldText);
                 Vector2 soldPos = new Vector2(centerPos.X - soldSize.X / 2f, centerPos.Y - soldSize.Y / 2f);

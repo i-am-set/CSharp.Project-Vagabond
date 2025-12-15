@@ -10,6 +10,7 @@ using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -1048,9 +1049,9 @@ namespace ProjectVagabond.Scenes
             int premiumCount = _random.Next(3, 5);
             var allPremium = new List<ShopItem>();
 
-            foreach (var w in BattleDataCache.Weapons.Values) allPremium.Add(new ShopItem { ItemId = w.WeaponID, DisplayName = w.WeaponName, Type = "Weapon", Price = 25, DataObject = w });
-            foreach (var a in BattleDataCache.Armors.Values) allPremium.Add(new ShopItem { ItemId = a.ArmorID, DisplayName = a.ArmorName, Type = "Armor", Price = 25, DataObject = a });
-            foreach (var r in BattleDataCache.Relics.Values) allPremium.Add(new ShopItem { ItemId = r.RelicID, DisplayName = r.RelicName, Type = "Relic", Price = 25, DataObject = r });
+            foreach (var w in BattleDataCache.Weapons.Values) allPremium.Add(new ShopItem { ItemId = w.WeaponID, DisplayName = w.WeaponName, Type = "Weapon", Price = PriceCalculator.CalculatePrice(w, 1.0f), DataObject = w });
+            foreach (var a in BattleDataCache.Armors.Values) allPremium.Add(new ShopItem { ItemId = a.ArmorID, DisplayName = a.ArmorName, Type = "Armor", Price = PriceCalculator.CalculatePrice(a, 1.0f), DataObject = a });
+            foreach (var r in BattleDataCache.Relics.Values) allPremium.Add(new ShopItem { ItemId = r.RelicID, DisplayName = r.RelicName, Type = "Relic", Price = PriceCalculator.CalculatePrice(r, 1.0f), DataObject = r });
 
             for (int i = 0; i < premiumCount; i++)
             {
@@ -1070,7 +1071,7 @@ namespace ProjectVagabond.Scenes
                 if (allConsumables.Any())
                 {
                     var c = allConsumables[_random.Next(allConsumables.Count)];
-                    consumableStock.Add(new ShopItem { ItemId = c.ItemID, DisplayName = c.ItemName, Type = "Consumable", Price = 25, DataObject = c });
+                    consumableStock.Add(new ShopItem { ItemId = c.ItemID, DisplayName = c.ItemName, Type = "Consumable", Price = PriceCalculator.CalculatePrice(c, 1.0f), DataObject = c });
                 }
             }
 
