@@ -1,7 +1,7 @@
 {
   "Theme": "Forest",
-  "SplitLengthMin": 8,
-  "SplitLengthMax": 12,
+  "SplitLengthMin": 10,
+  "SplitLengthMax": 14,
   "PossibleBattles": [
     [ "sapling" ],
     [ "sapling", "sapling" ],
