@@ -26,6 +26,9 @@ namespace ProjectVagabond
         // Helper to get the main character (Avatar)
         public PartyMember Leader => Party.Count > 0 ? Party[0] : null;
 
+        // --- ECONOMY ---
+        public int Coin { get; set; } = 100; // Default starting money
+
         // --- SHARED INVENTORY (Team Shared) ---
         public Dictionary<string, int> Weapons { get; set; } = new Dictionary<string, int>();
         public Dictionary<string, int> Armors { get; set; } = new Dictionary<string, int>();

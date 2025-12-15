@@ -18,7 +18,7 @@ namespace ProjectVagabond.Scenes
 {
     public class SplitMapScene : GameScene
     {
-        private enum SplitMapView { Map, Inventory, Settings }
+        private enum SplitMapView { Map, Inventory, Settings, Shop } // Added Shop
         private SplitMapView _currentView = SplitMapView.Map;
         private struct DrawableMapObject
         {
@@ -39,6 +39,7 @@ namespace ProjectVagabond.Scenes
         private readonly VoidEdgeEffect _voidEdgeEffect;
         private readonly SplitMapInventoryOverlay _inventoryOverlay;
         private readonly SplitMapSettingsOverlay _settingsOverlay;
+        private readonly SplitMapShopOverlay _shopOverlay; // Added Shop Overlay
         private readonly BirdManager _birdManager;
 
         private SplitMap? _currentMap;
@@ -142,6 +143,7 @@ namespace ProjectVagabond.Scenes
             _componentStore = ServiceLocator.Get<ComponentStore>();
             _inventoryOverlay = new SplitMapInventoryOverlay();
             _settingsOverlay = new SplitMapSettingsOverlay(this);
+            _shopOverlay = new SplitMapShopOverlay(); // Initialize Shop Overlay
             _birdManager = new BirdManager();
 
             var narratorBounds = new Rectangle(0, Global.VIRTUAL_HEIGHT - 50, Global.VIRTUAL_WIDTH, 50);
@@ -175,6 +177,20 @@ namespace ProjectVagabond.Scenes
 
             // Subscribe to Settings Overlay Close Request
             _settingsOverlay.OnCloseRequested += () => SetView(SplitMapView.Map, snap: true);
+
+            // Subscribe to Shop Leave Request
+            _shopOverlay.OnLeaveRequested += () =>
+            {
+                SetView(SplitMapView.Map, snap: true);
+                var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
+                if (currentNode != null)
+                {
+                    currentNode.IsCompleted = true;
+                    UpdateCameraTarget(currentNode.Position, false);
+                }
+                _mapState = SplitMapState.LoweringNode;
+                _nodeLiftTimer = 0f;
+            };
         }
 
         public override Rectangle GetAnimatedBounds() => new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
@@ -337,6 +353,7 @@ namespace ProjectVagabond.Scenes
                 case SplitMapView.Map:
                     _inventoryOverlay.Hide();
                     _settingsOverlay.Hide();
+                    _shopOverlay.Hide();
                     var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
                     if (currentNode != null)
                     {
@@ -346,13 +363,22 @@ namespace ProjectVagabond.Scenes
                 case SplitMapView.Inventory:
                     _inventoryOverlay.Show();
                     _settingsOverlay.Hide();
+                    _shopOverlay.Hide();
                     _targetCameraOffset = new Vector2(0, -200);
                     if (snap) _cameraOffset = _targetCameraOffset;
                     break;
                 case SplitMapView.Settings:
                     _inventoryOverlay.Hide();
                     _settingsOverlay.Show();
+                    _shopOverlay.Hide();
                     _targetCameraOffset = new Vector2(0, -400);
+                    if (snap) _cameraOffset = _targetCameraOffset;
+                    break;
+                case SplitMapView.Shop:
+                    _inventoryOverlay.Hide();
+                    _settingsOverlay.Hide();
+                    // Shop overlay is shown via TriggerNodeEvent logic
+                    _targetCameraOffset = new Vector2(0, -600);
                     if (snap) _cameraOffset = _targetCameraOffset;
                     break;
             }
@@ -484,6 +510,7 @@ namespace ProjectVagabond.Scenes
             // Update Overlays
             _inventoryOverlay.Update(gameTime, currentMouseState, currentKeyboardState, _mapState == SplitMapState.Idle, cameraTransform);
             _settingsOverlay.Update(gameTime, currentMouseState, currentKeyboardState, cameraTransform);
+            _shopOverlay.Update(gameTime, currentMouseState, cameraTransform); // Update Shop
 
             // Update Settings Button
             _settingsButton?.Update(currentMouseState);
@@ -957,11 +984,42 @@ namespace ProjectVagabond.Scenes
                     break;
 
                 case SplitNodeType.Shop:
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "Entered Shop Node (WIP)" });
-                    node.IsCompleted = true;
-                    UpdateCameraTarget(node.Position, false);
-                    _mapState = SplitMapState.LoweringNode;
-                    _nodeLiftTimer = 0f;
+                    // Generate Shop Stock
+                    var premiumStock = new List<ShopItem>();
+                    var consumableStock = new List<ShopItem>();
+
+                    // Randomly pick 3-4 premium items
+                    int premiumCount = _random.Next(3, 5);
+                    var allPremium = new List<ShopItem>();
+
+                    foreach (var w in BattleDataCache.Weapons.Values) allPremium.Add(new ShopItem { ItemId = w.WeaponID, DisplayName = w.WeaponName, Type = "Weapon", Price = 0, DataObject = w });
+                    foreach (var a in BattleDataCache.Armors.Values) allPremium.Add(new ShopItem { ItemId = a.ArmorID, DisplayName = a.ArmorName, Type = "Armor", Price = 0, DataObject = a });
+                    foreach (var r in BattleDataCache.Relics.Values) allPremium.Add(new ShopItem { ItemId = r.RelicID, DisplayName = r.RelicName, Type = "Relic", Price = 0, DataObject = r });
+
+                    for (int i = 0; i < premiumCount; i++)
+                    {
+                        if (allPremium.Any())
+                        {
+                            var item = allPremium[_random.Next(allPremium.Count)];
+                            premiumStock.Add(item);
+                            allPremium.Remove(item);
+                        }
+                    }
+
+                    // Randomly pick 2-3 consumables
+                    int consumableCount = _random.Next(2, 4);
+                    var allConsumables = BattleDataCache.Consumables.Values.ToList();
+                    for (int i = 0; i < consumableCount; i++)
+                    {
+                        if (allConsumables.Any())
+                        {
+                            var c = allConsumables[_random.Next(allConsumables.Count)];
+                            consumableStock.Add(new ShopItem { ItemId = c.ItemID, DisplayName = c.ItemName, Type = "Consumable", Price = 0, DataObject = c });
+                        }
+                    }
+
+                    _shopOverlay.Show(premiumStock, consumableStock);
+                    SetView(SplitMapView.Shop, snap: true);
                     break;
 
                 default:
@@ -1202,6 +1260,7 @@ namespace ProjectVagabond.Scenes
             _inventoryOverlay.DrawWorld(spriteBatch, font, gameTime);
             // Pass the finalTransform to the settings overlay so it can restore it after drawing dialogs
             _settingsOverlay.Draw(spriteBatch, font, gameTime, finalTransform);
+            _shopOverlay.Draw(spriteBatch, font, gameTime); // Draw Shop
 
             spriteBatch.End();
 
