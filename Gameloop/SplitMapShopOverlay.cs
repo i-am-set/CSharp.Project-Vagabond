@@ -99,6 +99,7 @@ namespace ProjectVagabond.UI
                 int x = gearCenterX + (col == 0 ? -gearSpacingX / 2 : gearSpacingX / 2) - 8; // -8 to center 16px button
                 int y = startY + (row * gearSpacingY);
 
+                // Pass secondaryFont for price, tertiaryFont for name
                 var btn = CreateShopItemButton(item, x, y, secondaryFont, tertiaryFont);
                 _itemButtons.Add(btn);
             }
@@ -114,14 +115,13 @@ namespace ProjectVagabond.UI
                 int x = consumableCenterX - 8; // Center 16px button
                 int y = startY + (i * consumableSpacingY);
 
+                // Pass secondaryFont for price, tertiaryFont for name
                 var btn = CreateShopItemButton(item, x, y, secondaryFont, tertiaryFont);
                 _itemButtons.Add(btn);
             }
 
             // --- LEAVE BUTTON ---
             // Position at absolute bottom of the screen (relative to the offset)
-            // The overlay is drawn at WORLD_Y_OFFSET, but the screen height is fixed.
-            // We want it at the bottom of the 180px view.
             int screenBottom = (int)WORLD_Y_OFFSET + Global.VIRTUAL_HEIGHT;
             int leaveMarginBottom = 10;
             int leaveY = screenBottom - BUTTON_HEIGHT - leaveMarginBottom;
@@ -199,35 +199,38 @@ namespace ProjectVagabond.UI
             var bgRect = new Rectangle(0, (int)WORLD_Y_OFFSET, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
             spriteBatch.DrawSnapped(pixel, bgRect, _global.GameBg);
 
+            // Draw Border
+            if (_spriteManager.ShopBorderMain != null)
+            {
+                spriteBatch.DrawSnapped(_spriteManager.ShopBorderMain, new Vector2(0, WORLD_Y_OFFSET), Color.White);
+            }
+
             // Title
-            string title = "MERCHANT";
+            string title = "SHOP";
             Vector2 titleSize = font.MeasureString(title);
             Vector2 titlePos = new Vector2((Global.VIRTUAL_WIDTH - titleSize.X) / 2, WORLD_Y_OFFSET + 10);
             spriteBatch.DrawStringSnapped(font, title, titlePos, _global.Palette_BrightWhite);
 
-            // Headers
-            int centerX = Global.VIRTUAL_WIDTH / 2;
-            int headerY = (int)WORLD_Y_OFFSET + 30;
-
-            string gearHeader = "GEAR";
-            Vector2 gearSize = secondaryFont.MeasureString(gearHeader);
-            spriteBatch.DrawStringSnapped(secondaryFont, gearHeader, new Vector2(centerX - 80 - gearSize.X / 2, headerY), _global.Palette_LightBlue);
-
-            string itemHeader = "ITEMS";
-            Vector2 itemSize = secondaryFont.MeasureString(itemHeader);
-            spriteBatch.DrawStringSnapped(secondaryFont, itemHeader, new Vector2(centerX + 80 - itemSize.X / 2, headerY), _global.Palette_LightBlue);
-
-            // Buttons
-            foreach (var btn in _itemButtons) btn.Draw(spriteBatch, secondaryFont, gameTime, Matrix.Identity);
-
-            // Coin Display (Centered above Leave Button)
+            // Coin Display
             string coinText = $"COIN: {_gameState.PlayerState.Coin}";
             Vector2 coinSize = secondaryFont.MeasureString(coinText);
             float coinX = (Global.VIRTUAL_WIDTH - coinSize.X) / 2f;
             float coinY = _leaveButton.Bounds.Top - coinSize.Y - 4;
             spriteBatch.DrawStringSnapped(secondaryFont, coinText, new Vector2(coinX, coinY), _global.Palette_Yellow);
 
+            // Buttons
+            foreach (var btn in _itemButtons) btn.Draw(spriteBatch, secondaryFont, gameTime, Matrix.Identity);
             _leaveButton.Draw(spriteBatch, secondaryFont, gameTime, Matrix.Identity);
+
+            // --- DEBUG DRAWING (F1) ---
+            if (_global.ShowSplitMapGrid)
+            {
+                foreach (var btn in _itemButtons)
+                {
+                    spriteBatch.DrawSnapped(pixel, btn.Bounds, Color.Cyan * 0.5f);
+                }
+                spriteBatch.DrawSnapped(pixel, _leaveButton.Bounds, Color.Red * 0.5f);
+            }
         }
     }
 }

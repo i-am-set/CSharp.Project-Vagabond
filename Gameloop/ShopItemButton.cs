@@ -41,31 +41,32 @@ namespace ProjectVagabond.UI
             float yOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
             var (shakeOffset, flashTint) = UpdateFeedbackAnimations(gameTime);
 
-            float totalX = Bounds.X + (horizontalOffset ?? 0f) + shakeOffset.X;
-            float totalY = Bounds.Y + (verticalOffset ?? 0f) + shakeOffset.Y + yOffset;
+            // Animated Y includes the hover bob (yOffset)
+            float animatedY = Bounds.Y + (verticalOffset ?? 0f) + shakeOffset.Y + yOffset;
+            // Static Y does NOT include hover bob, so price stays put
+            float staticY = Bounds.Y + (verticalOffset ?? 0f) + shakeOffset.Y;
 
-            Vector2 centerPos = new Vector2(totalX + Bounds.Width / 2f, totalY + Bounds.Height / 2f);
+            float totalX = Bounds.X + (horizontalOffset ?? 0f) + shakeOffset.X;
+
+            Vector2 centerPos = new Vector2(totalX + Bounds.Width / 2f, animatedY + Bounds.Height / 2f);
 
             // --- Draw Name (Above) - Only if Hovered ---
             if (isActivated && !Item.IsSold)
             {
                 string nameText = Item.DisplayName.ToUpper();
-                // No truncation
                 Vector2 nameSize = _nameFont.MeasureString(nameText);
                 Vector2 namePos = new Vector2(
                     centerPos.X - nameSize.X / 2f,
-                    totalY - nameSize.Y - 2
+                    animatedY - nameSize.Y - 2
                 );
 
-                // Draw background for readability if needed, but for now just text
                 spriteBatch.DrawStringSnapped(_nameFont, nameText, namePos, _global.Palette_BrightWhite);
             }
 
             // --- Draw Icon (Center) ---
             if (Item.IsSold)
             {
-                // Draw Empty Slot / Sold State
-                spriteBatch.DrawSnapped(pixel, new Rectangle((int)totalX, (int)totalY, 16, 16), _global.Palette_DarkestGray);
+                // Draw "SOLD" text (No background)
                 string soldText = "SOLD";
                 Vector2 soldSize = _nameFont.MeasureString(soldText);
                 Vector2 soldPos = new Vector2(centerPos.X - soldSize.X / 2f, centerPos.Y - soldSize.Y / 2f);
@@ -73,12 +74,6 @@ namespace ProjectVagabond.UI
             }
             else
             {
-                // Draw Background if hovered
-                if (isActivated)
-                {
-                    spriteBatch.DrawSnapped(pixel, new Rectangle((int)totalX - 1, (int)totalY - 1, 18, 18), _global.Palette_DarkGray);
-                }
-
                 // Draw Icon
                 if (_iconTexture != null)
                 {
@@ -86,24 +81,24 @@ namespace ProjectVagabond.UI
                     if (isActivated && _iconSilhouette != null)
                     {
                         Color outlineColor = _global.ItemOutlineColor_Hover;
-                        spriteBatch.DrawSnapped(_iconSilhouette, new Vector2(totalX - 1, totalY), Color.White);
-                        spriteBatch.DrawSnapped(_iconSilhouette, new Vector2(totalX + 1, totalY), Color.White);
-                        spriteBatch.DrawSnapped(_iconSilhouette, new Vector2(totalX, totalY - 1), Color.White);
-                        spriteBatch.DrawSnapped(_iconSilhouette, new Vector2(totalX, totalY + 1), Color.White);
+                        spriteBatch.DrawSnapped(_iconSilhouette, new Vector2(totalX - 1, animatedY), Color.White);
+                        spriteBatch.DrawSnapped(_iconSilhouette, new Vector2(totalX + 1, animatedY), Color.White);
+                        spriteBatch.DrawSnapped(_iconSilhouette, new Vector2(totalX, animatedY - 1), Color.White);
+                        spriteBatch.DrawSnapped(_iconSilhouette, new Vector2(totalX, animatedY + 1), Color.White);
                     }
 
-                    spriteBatch.DrawSnapped(_iconTexture, new Vector2(totalX, totalY), Color.White);
+                    spriteBatch.DrawSnapped(_iconTexture, new Vector2(totalX, animatedY), Color.White);
                 }
             }
 
-            // --- Draw Price (Below) ---
+            // --- Draw Price (Below) - Uses staticY ---
             if (!Item.IsSold)
             {
                 string priceText = $"{Item.Price}G";
                 Vector2 priceSize = _priceFont.MeasureString(priceText);
                 Vector2 pricePos = new Vector2(
-                    centerPos.X - priceSize.X / 2f,
-                    totalY + Bounds.Height + 2
+                    totalX + Bounds.Width / 2f - priceSize.X / 2f,
+                    staticY + Bounds.Height + 2
                 );
                 spriteBatch.DrawStringSnapped(_priceFont, priceText, pricePos, _global.Palette_Yellow);
             }

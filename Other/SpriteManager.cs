@@ -181,6 +181,7 @@ namespace ProjectVagabond
         public Texture2D InventoryEmptySlotSprite { get; private set; }
         public Texture2D InventorySlotEquipIconSprite { get; private set; }
         public Texture2D TargetingIndicatorSprite { get; private set; }
+        public Texture2D ShopBorderMain { get; private set; } // NEW
 
 
         // Mouse Prompt Sprites
@@ -432,6 +433,8 @@ namespace ProjectVagabond
             catch { TargetingIndicatorSprite = _textureFactory.CreateColoredTexture(32, 32, Color.Red); }
             try { InventorySpellSlotButtonSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_spell_slot_button"); }
             catch { InventorySpellSlotButtonSpriteSheet = _textureFactory.CreateColoredTexture(192, 8, Color.Magenta); }
+            try { ShopBorderMain = _core.Content.Load<Texture2D>("Sprites/UI/Shop/shop_border_main"); }
+            catch { ShopBorderMain = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
 
             // Load Health Bar Sprites
             try { InventoryPlayerHealthBarEmpty = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_player_health_bar_empty"); }
