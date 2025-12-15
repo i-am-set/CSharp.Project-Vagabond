@@ -130,7 +130,7 @@ namespace ProjectVagabond.Progression
                 }
 
                 allNodesByColumn.Add(newNodes);
-                AssignEvents(newNodes, splitData, totalColumns);
+                AssignEvents(newNodes, splitData, i, totalColumns);
             }
 
             // --- Final Column: Boss Node ---
@@ -159,6 +159,14 @@ namespace ProjectVagabond.Progression
                 allPaths.AddRange(newPaths);
             }
 
+            // --- Post-Processing: Anti-Clumping (Rule #2 from prompt) ---
+            // Ensure we don't have Shop->Shop or Rest->Rest
+            SanitizeNodeRepetition(allNodes, allPaths, splitData);
+
+            // --- Post-Processing: Bad Luck Protection (Rule #3) ---
+            // Ensure player isn't forced into too many consecutive fights without a rest
+            EnforceRestAfterStreak(allNodesByColumn, allPaths);
+
             // --- Post-Processing: Force-Directed Repulsion ---
             // This pushes paths apart to prevent ugly tangents and overlaps.
             ApplyForceDirectedLayout(allPaths, allNodes);
@@ -172,6 +180,163 @@ namespace ProjectVagabond.Progression
             var bakedScenery = BakeTreesToTexture(allNodes, allPaths, mapWidth);
 
             return new SplitMap(allNodes, allPaths, bakedScenery, totalColumns, startNodeId, mapWidth);
+        }
+
+        /// <summary>
+        /// Iterates through all paths to ensure no Shop connects to a Shop, and no Rest connects to a Rest.
+        /// If a violation is found, the destination node is rerolled to a Battle, Narrative, or Recruit event.
+        /// </summary>
+        private static void SanitizeNodeRepetition(List<SplitMapNode> allNodes, List<SplitMapPath> allPaths, SplitData splitData)
+        {
+            var progressionManager = ServiceLocator.Get<ProgressionManager>();
+
+            // We iterate multiple times to ensure cascading changes don't create new conflicts,
+            // though a single pass sorted by floor is usually sufficient.
+            // Sorting by floor ensures we fix parents before children.
+            var sortedNodes = allNodes.OrderBy(n => n.Floor).ToList();
+
+            foreach (var node in sortedNodes)
+            {
+                // Skip fixed nodes
+                if (node.NodeType == SplitNodeType.MajorBattle || node.NodeType == SplitNodeType.Origin) continue;
+
+                // Check all incoming paths for this node
+                bool conflictFound = false;
+                foreach (var pathId in node.IncomingPathIds)
+                {
+                    var path = allPaths.FirstOrDefault(p => p.Id == pathId);
+                    if (path != null)
+                    {
+                        var parent = allNodes.FirstOrDefault(n => n.Id == path.FromNodeId);
+                        if (parent != null)
+                        {
+                            if (node.NodeType == SplitNodeType.Shop && parent.NodeType == SplitNodeType.Shop)
+                            {
+                                conflictFound = true;
+                                break;
+                            }
+                            if (node.NodeType == SplitNodeType.Rest && parent.NodeType == SplitNodeType.Rest)
+                            {
+                                conflictFound = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (conflictFound)
+                {
+                    RerollNode(node, splitData, progressionManager);
+                }
+            }
+        }
+
+        private static void RerollNode(SplitMapNode node, SplitData splitData, ProgressionManager progressionManager)
+        {
+            var validTypes = new List<(SplitNodeType type, float weight)>();
+
+            if (splitData.PossibleBattles != null && splitData.PossibleBattles.Any())
+                validTypes.Add((SplitNodeType.Battle, 45f));
+
+            if (splitData.PossibleNarrativeEventIDs != null && splitData.PossibleNarrativeEventIDs.Any())
+                validTypes.Add((SplitNodeType.Narrative, 20f));
+
+            validTypes.Add((SplitNodeType.Recruit, 10f));
+
+            if (!validTypes.Any()) return;
+
+            float totalWeight = validTypes.Sum(x => x.weight);
+            double roll = _random.NextDouble() * totalWeight;
+            SplitNodeType chosenType = validTypes.Last().type;
+
+            foreach (var choice in validTypes)
+            {
+                if (roll < choice.weight)
+                {
+                    chosenType = choice.type;
+                    break;
+                }
+                roll -= choice.weight;
+            }
+
+            node.NodeType = chosenType;
+            node.EventData = null;
+
+            switch (chosenType)
+            {
+                case SplitNodeType.Battle:
+                    node.Difficulty = (BattleDifficulty)_random.Next(3);
+                    node.EventData = progressionManager.GetRandomBattle(node.Difficulty);
+                    break;
+                case SplitNodeType.Narrative:
+                    node.EventData = progressionManager.GetRandomNarrative()?.EventID;
+                    break;
+                case SplitNodeType.Recruit:
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Traverses the generated graph to ensure that after 3 consecutive battles,
+        /// at least one child node is a Rest site.
+        /// </summary>
+        private static void EnforceRestAfterStreak(List<List<SplitMapNode>> columns, List<SplitMapPath> allPaths)
+        {
+            // Map NodeID -> Consecutive Battle Count
+            var streaks = new Dictionary<int, int>();
+
+            // Initialize Start Node (Column 0)
+            foreach (var node in columns[0])
+            {
+                streaks[node.Id] = (node.NodeType == SplitNodeType.Battle) ? 1 : 0;
+            }
+
+            for (int i = 1; i < columns.Count - 1; i++)
+            {
+                foreach (var node in columns[i])
+                {
+                    // Calculate max streak from parents
+                    int maxParentStreak = 0;
+                    foreach (var pathId in node.IncomingPathIds)
+                    {
+                        var path = allPaths.FirstOrDefault(p => p.Id == pathId);
+                        if (path != null && streaks.TryGetValue(path.FromNodeId, out int parentStreak))
+                        {
+                            maxParentStreak = Math.Max(maxParentStreak, parentStreak);
+                        }
+                    }
+
+                    // Calculate current streak
+                    int currentStreak = (node.NodeType == SplitNodeType.Battle) ? maxParentStreak + 1 : 0;
+                    streaks[node.Id] = currentStreak;
+
+                    // Rule #3 Check: If streak >= 3, ensure children offer relief
+                    if (currentStreak >= 3)
+                    {
+                        var children = new List<SplitMapNode>();
+                        foreach (var pathId in node.OutgoingPathIds)
+                        {
+                            var path = allPaths.FirstOrDefault(p => p.Id == pathId);
+                            if (path != null)
+                            {
+                                // Find the child node in the next column
+                                var child = columns[i + 1].FirstOrDefault(n => n.Id == path.ToNodeId);
+                                if (child != null) children.Add(child);
+                            }
+                        }
+
+                        // If there are children, and NONE of them are non-combat (Rest/Shop/Event/Recruit)
+                        // Note: MajorBattle is excluded from this check as it's the end.
+                        if (children.Any() && children.All(c => c.NodeType == SplitNodeType.Battle))
+                        {
+                            // Force one random child to be a Rest site
+                            var luckyChild = children[_random.Next(children.Count)];
+                            luckyChild.NodeType = SplitNodeType.Rest;
+                            luckyChild.EventData = null; // Clear any battle data
+                        }
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -548,11 +713,31 @@ namespace ProjectVagabond.Progression
             return points;
         }
 
-        private static void AssignEvents(List<SplitMapNode> nodesToAssign, SplitData splitData, int totalColumns)
+        private static void AssignEvents(List<SplitMapNode> nodesToAssign, SplitData splitData, int columnIndex, int totalColumns)
         {
             var progressionManager = ServiceLocator.Get<ProgressionManager>();
 
+            // Rule #2: The column before the boss (totalColumns - 2) must be all Rest nodes.
+            if (columnIndex == totalColumns - 2)
+            {
+                foreach (var node in nodesToAssign)
+                {
+                    node.NodeType = SplitNodeType.Rest;
+                    node.EventData = null;
+                }
+                return;
+            }
+
             var availableChoices = new List<(SplitNodeType type, float weight)>(_nodeTypeWeights);
+
+            // Rule #1: No Rest or Shop nodes in the first two columns (0, 1, and 2).
+            // Column 0 is Origin. Column 1 is first choice. Column 2 is second choice.
+            // User requested "dont start generating until column 3 and on".
+            // So indices 0, 1, 2 are restricted.
+            if (columnIndex <= 2)
+            {
+                availableChoices.RemoveAll(c => c.type == SplitNodeType.Rest || c.type == SplitNodeType.Shop);
+            }
 
             // Filter out types if their corresponding data is missing in the current split
             if (splitData.PossibleNarrativeEventIDs == null || !splitData.PossibleNarrativeEventIDs.Any())
