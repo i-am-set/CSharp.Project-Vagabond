@@ -15,11 +15,11 @@ namespace ProjectVagabond.UI
     {
         public bool IsOpen { get; private set; } = false;
         public event Action OnLeaveRequested;
-
         private readonly GameState _gameState;
         private readonly Global _global;
         private readonly HapticsManager _hapticsManager;
         private readonly SpriteManager _spriteManager;
+        private readonly Core _core;
 
         private List<ShopItem> _premiumItems = new List<ShopItem>();
         private List<ShopItem> _consumableItems = new List<ShopItem>();
@@ -31,20 +31,30 @@ namespace ProjectVagabond.UI
         private const float WORLD_Y_OFFSET = 600f; // Below Settings
         private const int BUTTON_HEIGHT = 15;
 
+        // Background Animation State
+        private float _bgTimer;
+        private float _bgDuration;
+        private int _bgFrameIndex;
+        private static readonly Random _rng = new Random();
+
         public SplitMapShopOverlay()
         {
+            _core = ServiceLocator.Get<Core>();
             _gameState = ServiceLocator.Get<GameState>();
             _global = ServiceLocator.Get<Global>();
             _hapticsManager = ServiceLocator.Get<HapticsManager>();
             _spriteManager = ServiceLocator.Get<SpriteManager>();
 
-            _leaveButton = new Button(Rectangle.Empty, "LEAVE SHOP", font: ServiceLocator.Get<Core>().SecondaryFont)
+            _leaveButton = new Button(Rectangle.Empty, "LEAVE SHOP", font: _core.SecondaryFont)
             {
                 CustomDefaultTextColor = _global.Palette_Red,
                 CustomHoverTextColor = _global.Palette_White,
                 UseScreenCoordinates = true
             };
             _leaveButton.OnClick += () => OnLeaveRequested?.Invoke();
+
+            // Initialize random background timer
+            _bgDuration = (float)(_rng.NextDouble() * (8.0 - 2.0) + 2.0);
         }
 
         public void Show(List<ShopItem> premiumStock, List<ShopItem> consumableStock)
@@ -72,8 +82,8 @@ namespace ProjectVagabond.UI
         {
             _itemButtons.Clear();
 
-            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-            var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
+            var secondaryFont = _core.SecondaryFont;
+            var tertiaryFont = _core.TertiaryFont;
 
             int centerX = Global.VIRTUAL_WIDTH / 2;
             int startY = (int)WORLD_Y_OFFSET + 45; // Push down to make room for headers
@@ -96,10 +106,12 @@ namespace ProjectVagabond.UI
                 int col = i % 2;
                 int row = i / 2;
 
-                int x = gearCenterX + (col == 0 ? -gearSpacingX / 2 : gearSpacingX / 2) - 8; // -8 to center 16px button
-                int y = startY + (row * gearSpacingY);
+                // Center the 32px button on the grid point
+                int x = gearCenterX + (col == 0 ? -gearSpacingX / 2 : gearSpacingX / 2) - 16;
+                // Adjust Y to keep the sprite visually where it was.
+                int y = startY + (row * gearSpacingY) - 8;
 
-                // Pass secondaryFont for price, tertiaryFont for name
+                // Pass secondaryFont for price, tertiaryFont for currency symbol and name
                 var btn = CreateShopItemButton(item, x, y, secondaryFont, tertiaryFont);
                 _itemButtons.Add(btn);
             }
@@ -112,10 +124,12 @@ namespace ProjectVagabond.UI
             for (int i = 0; i < _consumableItems.Count; i++)
             {
                 var item = _consumableItems[i];
-                int x = consumableCenterX - 8; // Center 16px button
-                int y = startY + (i * consumableSpacingY);
+                // Center 32px button
+                int x = consumableCenterX - 16;
+                // Adjust Y to keep sprite visual position consistent
+                int y = startY + (i * consumableSpacingY) - 8;
 
-                // Pass secondaryFont for price, tertiaryFont for name
+                // Pass secondaryFont for price, tertiaryFont for currency symbol and name
                 var btn = CreateShopItemButton(item, x, y, secondaryFont, tertiaryFont);
                 _itemButtons.Add(btn);
             }
@@ -129,7 +143,7 @@ namespace ProjectVagabond.UI
             _leaveButton.Bounds = new Rectangle(centerX - 40, leaveY, 80, BUTTON_HEIGHT);
         }
 
-        private ShopItemButton CreateShopItemButton(ShopItem item, int x, int y, BitmapFont priceFont, BitmapFont nameFont)
+        private ShopItemButton CreateShopItemButton(ShopItem item, int x, int y, BitmapFont priceFont, BitmapFont tertiaryFont)
         {
             // Resolve Sprite
             string iconPath = "";
@@ -141,7 +155,9 @@ namespace ProjectVagabond.UI
             var icon = _spriteManager.GetItemSprite(iconPath);
             var silhouette = _spriteManager.GetItemSpriteSilhouette(iconPath);
 
-            var btn = new ShopItemButton(new Rectangle(x, y, 16, 16), item, icon, silhouette, priceFont, nameFont);
+            // Pass tertiaryFont for both Currency Symbol and Name
+            // Bounds are now 32x32 (handled in ShopItemButton constructor)
+            var btn = new ShopItemButton(new Rectangle(x, y, 32, 32), item, icon, silhouette, priceFont, tertiaryFont, tertiaryFont);
 
             btn.OnClick += () => TryBuyItem(item, btn);
             return btn;
@@ -164,18 +180,39 @@ namespace ProjectVagabond.UI
                 else if (item.Type == "Consumable") _gameState.PlayerState.AddConsumable(item.ItemId);
 
                 _hapticsManager.TriggerShake(2f, 0.1f);
+
+                // Trigger Smooth Screen Flash (White, 0.75s fade)
+                _core.TriggerFullscreenFlash(_global.Palette_LightGreen, 0.30f);
+
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Bought {item.DisplayName}!" });
             }
             else
             {
                 _hapticsManager.TriggerShake(4f, 0.1f);
                 EventBus.Publish(new GameEvents.AlertPublished { Message = "NOT ENOUGH COIN" });
+
+                // Trigger the X overlay animation
+                if (btn is ShopItemButton shopBtn)
+                {
+                    shopBtn.TriggerTooExpensiveAnimation();
+                }
             }
         }
 
         public void Update(GameTime gameTime, MouseState mouseState, Matrix cameraTransform)
         {
             if (!IsOpen) return;
+
+            // Update Background Animation
+            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            _bgTimer += dt;
+            if (_bgTimer >= _bgDuration)
+            {
+                _bgTimer = 0f;
+                _bgDuration = (float)(_rng.NextDouble() * (8.0 - 2.0) + 2.0);
+                var frames = _spriteManager.InventorySlotSourceRects;
+                if (frames != null && frames.Length > 0) _bgFrameIndex = _rng.Next(frames.Length);
+            }
 
             // Transform mouse to world space
             var virtualMousePos = Core.TransformMouse(mouseState.Position);
@@ -193,7 +230,7 @@ namespace ProjectVagabond.UI
             if (!IsOpen) return;
 
             var pixel = ServiceLocator.Get<Texture2D>();
-            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+            var secondaryFont = _core.SecondaryFont;
 
             // Draw Background
             var bgRect = new Rectangle(0, (int)WORLD_Y_OFFSET, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
@@ -217,6 +254,22 @@ namespace ProjectVagabond.UI
             float coinX = (Global.VIRTUAL_WIDTH - coinSize.X) / 2f;
             float coinY = _leaveButton.Bounds.Top - coinSize.Y - 4;
             spriteBatch.DrawStringSnapped(secondaryFont, coinText, new Vector2(coinX, coinY), _global.Palette_Yellow);
+
+            // --- Draw Background Slots (Shadows) ---
+            var slotFrames = _spriteManager.InventorySlotSourceRects;
+            if (slotFrames != null && slotFrames.Length > 0)
+            {
+                var currentFrame = slotFrames[_bgFrameIndex];
+                Vector2 origin = new Vector2(currentFrame.Width / 2f, currentFrame.Height / 2f);
+
+                foreach (var btn in _itemButtons)
+                {
+                    // Button is 32x32. Background is 24x24.
+                    // Center the background on the button center.
+                    Vector2 center = new Vector2(btn.Bounds.Center.X, btn.Bounds.Center.Y);
+                    spriteBatch.DrawSnapped(_spriteManager.InventorySlotIdleSpriteSheet, center, currentFrame, Color.White, 0f, origin, 1.0f, SpriteEffects.None, 0f);
+                }
+            }
 
             // Buttons
             foreach (var btn in _itemButtons) btn.Draw(spriteBatch, secondaryFont, gameTime, Matrix.Identity);

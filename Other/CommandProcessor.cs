@@ -60,6 +60,9 @@ namespace ProjectVagabond
                 sb.AppendLine("    addmember <id>                     - Adds a party member.");
                 sb.AppendLine("    inventory                           - Shows all inventories.");
                 sb.AppendLine("    giveall                             - Gives 1 of every item.");
+                sb.AppendLine("    givecoin <amount>                  - Adds coin.");
+                sb.AppendLine("    setcoin <amount>                   - Sets coin amount.");
+                sb.AppendLine("    removecoin <amount>                - Removes coin.");
                 sb.AppendLine("    giveweapon <id> {n}               - Adds weapon(s).");
                 sb.AppendLine("    equipweapon <id>                   - Equips a weapon.");
                 sb.AppendLine("    unequipweapon                      - Unequips current weapon.");
@@ -210,6 +213,33 @@ namespace ProjectVagabond
 
             // --- INVENTORY COMMANDS ---
             _commands["inventory"] = new Command("inventory", (args) => HandleShowInventory(), "inventory - Shows all inventories.");
+
+            _commands["givecoin"] = new Command("givecoin", (args) =>
+            {
+                _gameState ??= ServiceLocator.Get<GameState>();
+                if (_gameState.PlayerState == null) return;
+                if (args.Length < 2 || !int.TryParse(args[1], out int amount)) { Log("[error]Usage: givecoin <amount>"); return; }
+                _gameState.PlayerState.Coin += amount;
+                Log($"[palette_teal]Added {amount} coin. Total: {_gameState.PlayerState.Coin}");
+            }, "givecoin <amount> - Adds coin.");
+
+            _commands["setcoin"] = new Command("setcoin", (args) =>
+            {
+                _gameState ??= ServiceLocator.Get<GameState>();
+                if (_gameState.PlayerState == null) return;
+                if (args.Length < 2 || !int.TryParse(args[1], out int amount) || amount < 0) { Log("[error]Usage: setcoin <amount >= 0>"); return; }
+                _gameState.PlayerState.Coin = amount;
+                Log($"[palette_teal]Set coin to {amount}.");
+            }, "setcoin <amount> - Sets coin amount.");
+
+            _commands["removecoin"] = new Command("removecoin", (args) =>
+            {
+                _gameState ??= ServiceLocator.Get<GameState>();
+                if (_gameState.PlayerState == null) return;
+                if (args.Length < 2 || !int.TryParse(args[1], out int amount)) { Log("[error]Usage: removecoin <amount>"); return; }
+                _gameState.PlayerState.Coin -= amount;
+                Log($"[palette_teal]Removed {amount} coin. Total: {_gameState.PlayerState.Coin}");
+            }, "removecoin <amount> - Removes coin.");
 
             _commands["giveweapon"] = new Command("giveweapon", (args) => HandleGiveItem(args, "Weapon"), "giveweapon <id> [n]");
 
@@ -473,6 +503,8 @@ namespace ProjectVagabond
             {
                 Log($"[palette_teal]Equipped Weapon:[/] {ps.EquippedWeaponId}");
             }
+
+            Log($"[palette_teal]Coin:[/] {ps.Coin}");
 
             PrintDict(ps.Weapons, "Weapons");
             PrintDict(ps.Armors, "Armors");

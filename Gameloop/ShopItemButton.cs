@@ -15,50 +15,111 @@ namespace ProjectVagabond.UI
         public ShopItem Item { get; }
         private readonly Texture2D _iconTexture;
         private readonly Texture2D _iconSilhouette;
-        private readonly BitmapFont _priceFont;
+        private readonly BitmapFont _priceFont; // Secondary (5x5)
+        private readonly BitmapFont _currencyFont; // Tertiary (3x3)
         private readonly BitmapFont _nameFont;
+        // Animation State
+        private float _hoverTimer = 0f;
 
-        public ShopItemButton(Rectangle bounds, ShopItem item, Texture2D icon, Texture2D silhouette, BitmapFont priceFont, BitmapFont nameFont)
+        // TUNING: Animation Speed (Lower = Faster)
+        private const float HOVER_ANIM_DURATION = 0.075f;
+        private const float HOVER_LIFT_AMOUNT = 1f; // 1px lift
+
+        // Too Expensive Animation State
+        private float _xOverlayTimer = 0f;
+        private const float X_OVERLAY_DURATION = 0.25f;
+
+        // Layout Constants
+        private const int BUTTON_SIZE = 32;
+        private const int SPRITE_SIZE = 16;
+        private const int SPRITE_OFFSET = (BUTTON_SIZE - SPRITE_SIZE) / 2; // 8px offset to center sprite
+
+        public ShopItemButton(Rectangle bounds, ShopItem item, Texture2D icon, Texture2D silhouette, BitmapFont priceFont, BitmapFont currencyFont, BitmapFont nameFont)
             : base(bounds, "")
         {
             Item = item;
             _iconTexture = icon;
             _iconSilhouette = silhouette;
             _priceFont = priceFont;
+            _currencyFont = currencyFont;
             _nameFont = nameFont;
 
-            // Ensure button is 16x16
-            Bounds = new Rectangle(bounds.X, bounds.Y, 16, 16);
+            // Ensure button is 32x32 (Doubled size)
+            Bounds = new Rectangle(bounds.X, bounds.Y, BUTTON_SIZE, BUTTON_SIZE);
             UseScreenCoordinates = true;
-            EnableHoverSway = true;
+            EnableHoverSway = false; // Disable base sway, we handle custom lift
+        }
+
+        public void TriggerTooExpensiveAnimation()
+        {
+            _xOverlayTimer = X_OVERLAY_DURATION;
         }
 
         public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? horizontalOffset = null, float? verticalOffset = null, Color? tintColorOverride = null)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
+            var gameState = ServiceLocator.Get<GameState>();
+            var spriteManager = ServiceLocator.Get<SpriteManager>();
             bool isActivated = IsEnabled && (IsHovered || forceHover);
+            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            // Calculate Animation Offsets
-            float yOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
+            // --- 1. Update Timers ---
+            if (isActivated)
+            {
+                _hoverTimer += dt;
+            }
+            else
+            {
+                _hoverTimer -= dt;
+            }
+            _hoverTimer = Math.Clamp(_hoverTimer, 0f, HOVER_ANIM_DURATION);
+
+            if (_xOverlayTimer > 0)
+            {
+                _xOverlayTimer -= dt;
+            }
+
+            // --- 2. Calculate Offsets ---
+
+            // A. Hover Lift (Instant 1px up)
+            float liftOffset = isActivated ? -HOVER_LIFT_AMOUNT : 0f;
+
+            // B. Idle Bob (1 pixel up/down) - Only active when NOT hovered
+            float idleBob = 0f;
+            if (!isActivated)
+            {
+                // Use TotalGameTime for continuous loop. Speed 5f gives a nice gentle bob.
+                idleBob = MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * 5f) > 0 ? -1f : 0f;
+            }
+
+            // C. Shake (from base class)
             var (shakeOffset, flashTint) = UpdateFeedbackAnimations(gameTime);
 
-            // Animated Y includes the hover bob (yOffset)
-            float animatedY = Bounds.Y + (verticalOffset ?? 0f) + shakeOffset.Y + yOffset;
-            // Static Y does NOT include hover bob, so price stays put
-            float staticY = Bounds.Y + (verticalOffset ?? 0f) + shakeOffset.Y;
+            // --- 3. Calculate Positions ---
 
             float totalX = Bounds.X + (horizontalOffset ?? 0f) + shakeOffset.X;
 
-            Vector2 centerPos = new Vector2(totalX + Bounds.Width / 2f, animatedY + Bounds.Height / 2f);
+            // Static Y: The base position (includes shake/layout offset, but NO bob/lift)
+            // Used for Price and Sold text so they don't move.
+            float staticY = Bounds.Y + (verticalOffset ?? 0f) + shakeOffset.Y;
+
+            // Animated Y: The position for the sprite (includes bob + lift)
+            float animatedSpriteY = staticY + SPRITE_OFFSET + liftOffset + idleBob;
+            float spriteAnchorX = totalX + SPRITE_OFFSET;
+
+            // Center X for text alignment (Relative to the button center)
+            float centerX = totalX + Bounds.Width / 2f;
 
             // --- Draw Name (Above) - Only if Hovered ---
             if (isActivated && !Item.IsSold)
             {
                 string nameText = Item.DisplayName.ToUpper();
                 Vector2 nameSize = _nameFont.MeasureString(nameText);
+
+                // Position relative to the lifted sprite position
                 Vector2 namePos = new Vector2(
-                    centerPos.X - nameSize.X / 2f,
-                    animatedY - nameSize.Y - 2
+                    centerX - nameSize.X / 2f,
+                    animatedSpriteY - nameSize.Y - 2
                 );
 
                 spriteBatch.DrawStringSnapped(_nameFont, nameText, namePos, _global.Palette_BrightWhite);
@@ -68,10 +129,12 @@ namespace ProjectVagabond.UI
             if (Item.IsSold)
             {
                 // Draw Empty Slot / Sold State
-                // No background
+                // CEMENTED: Use staticY for vertical centering, ignoring bob/lift
                 string soldText = "SOLD";
                 Vector2 soldSize = _nameFont.MeasureString(soldText);
-                Vector2 soldPos = new Vector2(centerPos.X - soldSize.X / 2f, centerPos.Y - soldSize.Y / 2f);
+                // Center within the 32x32 bounds
+                Vector2 soldPos = new Vector2(centerX - soldSize.X / 2f, staticY + (Bounds.Height - soldSize.Y) / 2f);
+
                 spriteBatch.DrawStringSnapped(_nameFont, soldText, soldPos, _global.Palette_Red);
             }
             else
@@ -79,30 +142,98 @@ namespace ProjectVagabond.UI
                 // Draw Icon
                 if (_iconTexture != null)
                 {
-                    // Draw Silhouette Outline if hovered
-                    if (isActivated && _iconSilhouette != null)
+                    // Sprite uses animatedY (Bob + Lift)
+                    Vector2 drawPos = new Vector2(spriteAnchorX, animatedSpriteY);
+                    bool canAfford = gameState.PlayerState.Coin >= Item.Price;
+
+                    // 1. Draw Two-Tone Silhouette Outline (Always)
+                    if (_iconSilhouette != null)
                     {
-                        Color outlineColor = _global.ItemOutlineColor_Hover;
-                        spriteBatch.DrawSnapped(_iconSilhouette, new Vector2(totalX - 1, animatedY), Color.White);
-                        spriteBatch.DrawSnapped(_iconSilhouette, new Vector2(totalX + 1, animatedY), Color.White);
-                        spriteBatch.DrawSnapped(_iconSilhouette, new Vector2(totalX, animatedY - 1), Color.White);
-                        spriteBatch.DrawSnapped(_iconSilhouette, new Vector2(totalX, animatedY + 1), Color.White);
+                        Color mainOutlineColor;
+                        Color cornerOutlineColor;
+
+                        if (isActivated)
+                        {
+                            if (!canAfford)
+                            {
+                                // Expensive Hover: Red Outline
+                                mainOutlineColor = _global.Palette_Red;
+                                cornerOutlineColor = _global.Palette_Red;
+                            }
+                            else
+                            {
+                                // Normal Hover: Bright Outline
+                                mainOutlineColor = _global.ItemOutlineColor_Hover;
+                                cornerOutlineColor = _global.ItemOutlineColor_Hover_Corner;
+                            }
+                        }
+                        else
+                        {
+                            // Idle: Gray Outline
+                            mainOutlineColor = _global.ItemOutlineColor_Idle;
+                            cornerOutlineColor = _global.ItemOutlineColor_Idle_Corner;
+                        }
+
+                        // Draw Diagonals (Corners) FIRST (Behind)
+                        spriteBatch.DrawSnapped(_iconSilhouette, drawPos + new Vector2(-1, -1), null, cornerOutlineColor);
+                        spriteBatch.DrawSnapped(_iconSilhouette, drawPos + new Vector2(1, -1), null, cornerOutlineColor);
+                        spriteBatch.DrawSnapped(_iconSilhouette, drawPos + new Vector2(-1, 1), null, cornerOutlineColor);
+                        spriteBatch.DrawSnapped(_iconSilhouette, drawPos + new Vector2(1, 1), null, cornerOutlineColor);
+
+                        // Draw Cardinals (Main) SECOND (On Top)
+                        spriteBatch.DrawSnapped(_iconSilhouette, drawPos + new Vector2(-1, 0), null, mainOutlineColor);
+                        spriteBatch.DrawSnapped(_iconSilhouette, drawPos + new Vector2(1, 0), null, mainOutlineColor);
+                        spriteBatch.DrawSnapped(_iconSilhouette, drawPos + new Vector2(0, -1), null, mainOutlineColor);
+                        spriteBatch.DrawSnapped(_iconSilhouette, drawPos + new Vector2(0, 1), null, mainOutlineColor);
                     }
 
-                    spriteBatch.DrawSnapped(_iconTexture, new Vector2(totalX, animatedY), Color.White);
+                    // 2. Draw Body (Always Texture)
+                    spriteBatch.DrawSnapped(_iconTexture, drawPos, Color.White);
                 }
             }
 
-            // --- Draw Price (Below) - Uses staticY ---
+            // --- Draw Price (Below) - Uses staticY (Does not bob/lift) ---
             if (!Item.IsSold)
             {
-                string priceText = $"{Item.Price}G";
-                Vector2 priceSize = _priceFont.MeasureString(priceText);
-                Vector2 pricePos = new Vector2(
-                    totalX + Bounds.Width / 2f - priceSize.X / 2f,
-                    staticY + Bounds.Height + 2
-                );
-                spriteBatch.DrawStringSnapped(_priceFont, priceText, pricePos, _global.Palette_Yellow);
+                string priceNum = Item.Price.ToString();
+                string currencySymbol = "G";
+
+                // Measure parts
+                Vector2 numSize = _priceFont.MeasureString(priceNum);
+                Vector2 symSize = _currencyFont.MeasureString(currencySymbol);
+                const int spaceWidth = 2;
+
+                float totalWidth = numSize.X + spaceWidth + symSize.X;
+                float startX = centerX - totalWidth / 2f;
+
+                // Position relative to the bottom of the sprite slot (16px height)
+                // spriteAnchorY is the top of the sprite slot. +16 is bottom. +2 is padding.
+                float drawY = (staticY + SPRITE_OFFSET) + SPRITE_SIZE + 2;
+
+                // Determine Color
+                Color priceColor = _global.Palette_Yellow;
+                bool canAfford = gameState.PlayerState.Coin >= Item.Price;
+
+                if (isActivated && !canAfford)
+                {
+                    priceColor = _global.Palette_Red;
+                }
+
+                // Draw Number (Secondary Font)
+                spriteBatch.DrawStringSnapped(_priceFont, priceNum, new Vector2(startX, drawY), priceColor);
+
+                // Draw "G" (Tertiary Font) - Align baseline roughly
+                float symY = drawY + (numSize.Y - symSize.Y);
+                spriteBatch.DrawStringSnapped(_currencyFont, currencySymbol, new Vector2(startX + numSize.X + spaceWidth, symY), priceColor);
+            }
+
+            // --- Draw X Overlay (Too Expensive Animation) ---
+            if (_xOverlayTimer > 0 && spriteManager.ShopXIcon != null)
+            {
+                float alpha = _xOverlayTimer / X_OVERLAY_DURATION;
+                // Draw centered on the button (using staticY to avoid bobbing)
+                Vector2 xPos = new Vector2(totalX, staticY);
+                spriteBatch.DrawSnapped(spriteManager.ShopXIcon, xPos, Color.White * alpha);
             }
         }
     }

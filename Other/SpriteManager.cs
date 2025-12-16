@@ -35,7 +35,6 @@ namespace ProjectVagabond
         public Texture2D ActionIconsSpriteSheet { get; private set; }
         public Texture2D ActionButtonUsesSpriteSheet { get; private set; }
         public Texture2D RarityIconsSpriteSheet { get; private set; }
-
         // Item Sprite Sheets
         public Texture2D ItemArmorSpriteSheet { get; private set; }
         public Texture2D ItemConsumablesSpriteSheet { get; private set; }
@@ -182,6 +181,7 @@ namespace ProjectVagabond
         public Texture2D InventorySlotEquipIconSprite { get; private set; }
         public Texture2D TargetingIndicatorSprite { get; private set; }
         public Texture2D ShopBorderMain { get; private set; } // NEW
+        public Texture2D ShopXIcon { get; private set; } // NEW
 
 
         // Mouse Prompt Sprites
@@ -435,6 +435,8 @@ namespace ProjectVagabond
             catch { InventorySpellSlotButtonSpriteSheet = _textureFactory.CreateColoredTexture(192, 8, Color.Magenta); }
             try { ShopBorderMain = _core.Content.Load<Texture2D>("Sprites/UI/Shop/shop_border_main"); }
             catch { ShopBorderMain = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
+            try { ShopXIcon = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/X_32x32"); }
+            catch { ShopXIcon = _textureFactory.CreateColoredTexture(32, 32, Color.Red); }
 
             // Load Health Bar Sprites
             try { InventoryPlayerHealthBarEmpty = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_player_health_bar_empty"); }
@@ -603,15 +605,15 @@ namespace ProjectVagabond
             // Index 8 is the center star.
             var spriteSheetCoords = new Point[9]
             {
-            new Point(0, 1), // 0: W
-            new Point(0, 0), // 1: NW
-            new Point(1, 0), // 2: N (Up)
-            new Point(2, 0), // 3: NE
-            new Point(2, 1), // 4: E (Right)
-            new Point(2, 2), // 5: SE
-            new Point(1, 2), // 6: S (Down)
-            new Point(0, 2), // 7: SW
-            new Point(1, 1)  // 8: Center (Star)
+        new Point(0, 1), // 0: W
+        new Point(0, 0), // 1: NW
+        new Point(1, 0), // 2: N (Up)
+        new Point(2, 0), // 3: NE
+        new Point(2, 1), // 4: E (Right)
+        new Point(2, 2), // 5: SE
+        new Point(1, 2), // 6: S (Down)
+        new Point(0, 2), // 7: SW
+        new Point(1, 1)  // 8: Center (Star)
             };
 
             ArrowIconSourceRects = new Rectangle[9];

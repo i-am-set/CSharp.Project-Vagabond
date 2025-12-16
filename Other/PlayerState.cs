@@ -27,7 +27,12 @@ namespace ProjectVagabond
         public PartyMember Leader => Party.Count > 0 ? Party[0] : null;
 
         // --- ECONOMY ---
-        public int Coin { get; set; } = 100; // Default starting money
+        private int _coin = 100;
+        public int Coin
+        {
+            get => _coin;
+            set => _coin = Math.Max(0, value); // Universal rule: Coin cannot be negative
+        }
 
         // --- SHARED INVENTORY (Team Shared) ---
         public Dictionary<string, int> Weapons { get; set; } = new Dictionary<string, int>();
@@ -284,3 +289,4 @@ namespace ProjectVagabond
         }
     }
 }
+PlayerState.cs

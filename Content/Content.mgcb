@@ -2467,6 +2467,18 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/BasicIcons/ui_turn_indicator.png;Sprites/UI/BasicIcons/ui_turn_indicator
 
+#begin Sprites/UI/BasicIcons/X_32x32.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/BasicIcons/X_32x32.png;Sprites/UI/BasicIcons/X_32x32
+
 #begin Sprites/UI/BattleUI/battle_border_action.png
 /importer:TextureImporter
 /processor:TextureProcessor
