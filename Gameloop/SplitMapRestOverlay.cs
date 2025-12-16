@@ -32,7 +32,7 @@ namespace ProjectVagabond.UI
             _leaveButton = new Button(Rectangle.Empty, "SKIP", font: _core.SecondaryFont)
             {
                 CustomDefaultTextColor = _global.Palette_BrightWhite,
-                CustomHoverTextColor = _global.Palette_White,
+                CustomHoverTextColor = _global.Palette_Red,
                 UseScreenCoordinates = true
             };
             _leaveButton.OnClick += () => OnLeaveRequested?.Invoke();
