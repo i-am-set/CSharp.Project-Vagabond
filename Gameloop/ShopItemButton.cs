@@ -30,10 +30,20 @@ namespace ProjectVagabond.UI
         // Too Expensive / Rejection Animation State
         private float _rejectionShakeTimer = 0f;
 
-        // TUNING: Rejection Shake
+        // TUNING: Rejection Shake 
         private const float REJECTION_SHAKE_DURATION = 0.35f;
         private const float REJECTION_SHAKE_MAGNITUDE = 2f; // Pixels
-        private const float REJECTION_SHAKE_SPEED = 80f; // Frequency
+        private const float REJECTION_SHAKE_SPEED = 60f; // Frequency
+
+        // TUNING: Hover Jitter (Passive "Too Expensive" movement)
+        private Vector2 _jitterOffset;
+        private Vector2 _jitterTarget;
+        private float _jitterWaitTimer;
+        private bool _jitterReturningToCenter; // State: True = going to center, False = going out
+        private const float JITTER_RADIUS = 2f; // Max distance to wander
+        private const float JITTER_SPEED = 1f; // Lerp speed
+        private const float JITTER_HOLD_TIME = 0.1f; // How long to stay at a point before moving
+        private static readonly Random _rng = new Random();
 
         // Layout Constants
         private const int BUTTON_SIZE = 32;
@@ -68,6 +78,7 @@ namespace ProjectVagabond.UI
             var spriteManager = ServiceLocator.Get<SpriteManager>();
             bool isActivated = IsEnabled && (IsHovered || forceHover);
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            bool canAfford = gameState.PlayerState.Coin >= Item.Price;
 
             // --- 1. Update Timers ---
             if (isActivated)
@@ -85,7 +96,47 @@ namespace ProjectVagabond.UI
                 _rejectionShakeTimer -= dt;
             }
 
-            // --- 2. Calculate Offsets ---
+            // --- 2. Update Jitter Logic ---
+            // Only jitter if hovered, too expensive, AND not currently doing the violent shake
+            if (isActivated && !canAfford && _rejectionShakeTimer <= 0)
+            {
+                // Move towards target
+                _jitterOffset = Vector2.Lerp(_jitterOffset, _jitterTarget, JITTER_SPEED * dt);
+
+                // Check if close enough to target to pick a new one
+                if (Vector2.DistanceSquared(_jitterOffset, _jitterTarget) < 0.25f)
+                {
+                    _jitterWaitTimer += dt;
+                    if (_jitterWaitTimer >= JITTER_HOLD_TIME)
+                    {
+                        _jitterWaitTimer = 0f;
+
+                        if (_jitterReturningToCenter)
+                        {
+                            // Was returning to center, now pick a random point outward
+                            float angle = (float)(_rng.NextDouble() * Math.PI * 2);
+                            _jitterTarget = new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * JITTER_RADIUS;
+                            _jitterReturningToCenter = false;
+                        }
+                        else
+                        {
+                            // Was out, now return to center
+                            _jitterTarget = Vector2.Zero;
+                            _jitterReturningToCenter = true;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                // Reset jitter if not active
+                _jitterOffset = Vector2.Zero;
+                _jitterTarget = Vector2.Zero;
+                _jitterWaitTimer = 0f;
+                _jitterReturningToCenter = false; // Reset cycle to start by moving out
+            }
+
+            // --- 3. Calculate Offsets ---
 
             // A. Hover Lift (Instant 1px up)
             float liftOffset = isActivated ? -HOVER_LIFT_AMOUNT : 0f;
@@ -101,7 +152,7 @@ namespace ProjectVagabond.UI
             // C. Shake (from base class - usually unused here, but kept for compatibility)
             var (baseShakeOffset, flashTint) = UpdateFeedbackAnimations(gameTime);
 
-            // D. Rejection Shake (The violent X shake)
+            // D. Rejection Shake (The violent X shake on click)
             float rejectionOffsetX = 0f;
             if (_rejectionShakeTimer > 0)
             {
@@ -111,7 +162,7 @@ namespace ProjectVagabond.UI
                 rejectionOffsetX = MathF.Sin(_rejectionShakeTimer * REJECTION_SHAKE_SPEED) * REJECTION_SHAKE_MAGNITUDE * decay;
             }
 
-            // --- 3. Calculate Positions ---
+            // --- 4. Calculate Positions ---
 
             float totalX = Bounds.X + (horizontalOffset ?? 0f) + baseShakeOffset.X;
 
@@ -160,7 +211,6 @@ namespace ProjectVagabond.UI
                 {
                     // Sprite uses animatedY (Bob + Lift)
                     Vector2 drawPos = new Vector2(spriteAnchorX, animatedSpriteY);
-                    bool canAfford = gameState.PlayerState.Coin >= Item.Price;
 
                     // 1. Draw Two-Tone Silhouette Outline (Always)
                     if (_iconSilhouette != null)
@@ -171,12 +221,8 @@ namespace ProjectVagabond.UI
                         if (_rejectionShakeTimer > 0)
                         {
                             // Rejection Animation: Flash Red -> White -> Red -> White
-                            // Timer counts down from 0.5 to 0.
-                            // Divide into 4 segments of 0.125s each.
                             float flashInterval = REJECTION_SHAKE_DURATION / 4f;
                             int cycle = (int)(_rejectionShakeTimer / flashInterval);
-
-                            // Cycles: 3 (Red), 2 (White), 1 (Red), 0 (White)
                             bool isRed = cycle % 2 != 0;
 
                             mainOutlineColor = isRed ? _global.Palette_Red : Color.White;
@@ -226,13 +272,19 @@ namespace ProjectVagabond.UI
                     {
                         if (spriteManager.ShopXIcon != null)
                         {
-                            // Center the X on the sprite (16x16), but apply the rejection shake offset
-                            // The X icon is 32x32, so we center it on the 16x16 sprite
-                            // Sprite Center: drawPos.X + 8, drawPos.Y + 8
-                            // X TopLeft: Center - 16
+                            // Calculate X Position:
+                            // Base: Center of sprite (drawPos + 8)
+                            // Offset: -16 (to center the 32x32 X icon)
+                            // Modifiers: + rejectionOffsetX (violent shake) + _jitterOffset.X (hover wander)
+
+                            // Calculate Y Position:
+                            // Base: Center of sprite (drawPos + 8)
+                            // Offset: -16
+                            // Modifiers: + _jitterOffset.Y (hover wander)
+
                             Vector2 xPos = new Vector2(
-                                drawPos.X + 8 - 16 + rejectionOffsetX,
-                                drawPos.Y + 8 - 16
+                                drawPos.X + 8 - 16 + rejectionOffsetX + _jitterOffset.X,
+                                drawPos.Y + 8 - 16 + _jitterOffset.Y
                             );
 
                             spriteBatch.DrawSnapped(spriteManager.ShopXIcon, xPos, Color.White);
@@ -261,7 +313,6 @@ namespace ProjectVagabond.UI
 
                 // Determine Color
                 Color priceColor = _global.Palette_Yellow;
-                bool canAfford = gameState.PlayerState.Coin >= Item.Price;
 
                 if (isActivated)
                 {
