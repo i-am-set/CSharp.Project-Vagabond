@@ -52,6 +52,7 @@ namespace ProjectVagabond
                 sb.AppendLine("    exit                                 - Exits game.");
                 sb.AppendLine("    debugcombat                         - Starts a random forest combat.");
                 sb.AppendLine("    debugshop                           - Opens a random shop interface.");
+                sb.AppendLine("    debugrest                           - Opens the rest site interface.");
                 sb.AppendLine("    combatrun                           - Flees from combat.");
                 sb.AppendLine("    givestatus <slot> <type> {dur}  - Apply status.");
                 sb.AppendLine("    debugconsolefont <0|1|2>         - Sets the debug console font.");
@@ -366,6 +367,21 @@ namespace ProjectVagabond
                     Log("[error]Command only available in Split Map Scene.");
                 }
             }, "debugshop - Opens a random shop interface.");
+
+            // --- DEBUG REST ---
+            _commands["debugrest"] = new Command("debugrest", (args) =>
+            {
+                var sceneManager = ServiceLocator.Get<SceneManager>();
+                if (sceneManager.CurrentActiveScene is SplitMapScene splitScene)
+                {
+                    splitScene.DebugTriggerRest();
+                    Log("[palette_teal]Opening debug rest site...");
+                }
+                else
+                {
+                    Log("[error]Command only available in Split Map Scene.");
+                }
+            }, "debugrest - Opens the rest site interface.");
 
             _commands["combatrun"] = new Command("combatrun", (args) =>
             {

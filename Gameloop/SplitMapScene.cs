@@ -19,10 +19,10 @@ namespace ProjectVagabond.Scenes
 {
     public class SplitMapScene : GameScene
     {
-        private enum SplitMapView { Map, Inventory, Settings, Shop }
+        private enum SplitMapView { Map, Inventory, Settings, Shop, Rest }
         private SplitMapView _currentView = SplitMapView.Map;
 
-        // Tracks where to go back to when closing Inventory or Settings (Map or Shop)
+        // Tracks where to go back to when closing Inventory or Settings (Map, Shop, or Rest)
         private SplitMapView _viewToReturnTo = SplitMapView.Map;
 
         private struct DrawableMapObject
@@ -45,6 +45,7 @@ namespace ProjectVagabond.Scenes
         private readonly SplitMapInventoryOverlay _inventoryOverlay;
         private readonly SplitMapSettingsOverlay _settingsOverlay;
         private readonly SplitMapShopOverlay _shopOverlay;
+        private readonly SplitMapRestOverlay _restOverlay;
         private readonly BirdManager _birdManager;
 
         private SplitMap? _currentMap;
@@ -149,6 +150,7 @@ namespace ProjectVagabond.Scenes
             _inventoryOverlay = new SplitMapInventoryOverlay();
             _settingsOverlay = new SplitMapSettingsOverlay(this);
             _shopOverlay = new SplitMapShopOverlay();
+            _restOverlay = new SplitMapRestOverlay();
             _birdManager = new BirdManager();
 
             var narratorBounds = new Rectangle(0, Global.VIRTUAL_HEIGHT - 50, Global.VIRTUAL_WIDTH, 50);
@@ -171,7 +173,7 @@ namespace ProjectVagabond.Scenes
                     _settingsOverlay.AttemptClose(() =>
                     {
                         // After closing settings, go to Inventory
-                        // Keep _viewToReturnTo as whatever it was (Map or Shop)
+                        // Keep _viewToReturnTo as whatever it was (Map, Shop, or Rest)
                         SetView(SplitMapView.Inventory, snap: true);
                     });
                 }
@@ -180,7 +182,7 @@ namespace ProjectVagabond.Scenes
                 {
                     SetView(_viewToReturnTo, snap: true);
                 }
-                // 3. If in Map or Shop, open Inventory
+                // 3. If in Map, Shop, or Rest, open Inventory
                 else
                 {
                     // Remember where we came from
@@ -200,6 +202,23 @@ namespace ProjectVagabond.Scenes
             _shopOverlay.OnLeaveRequested += () =>
             {
                 // Leaving the shop always goes back to the Map and completes the node
+                _viewToReturnTo = SplitMapView.Map;
+                SetView(SplitMapView.Map, snap: true);
+
+                var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
+                if (currentNode != null)
+                {
+                    currentNode.IsCompleted = true;
+                    UpdateCameraTarget(currentNode.Position, false);
+                }
+                _mapState = SplitMapState.LoweringNode;
+                _nodeLiftTimer = 0f;
+            };
+
+            // --- REST LEAVE REQUEST ---
+            _restOverlay.OnLeaveRequested += () =>
+            {
+                // Leaving the rest site always goes back to the Map and completes the node
                 _viewToReturnTo = SplitMapView.Map;
                 SetView(SplitMapView.Map, snap: true);
 
@@ -250,10 +269,10 @@ namespace ProjectVagabond.Scenes
                     // 2. If in Inventory, switch to Settings
                     else if (_currentView == SplitMapView.Inventory)
                     {
-                        // Don't update _viewToReturnTo, keep it as Map or Shop
+                        // Don't update _viewToReturnTo, keep it as Map, Shop, or Rest
                         SetView(SplitMapView.Settings, snap: true);
                     }
-                    // 3. If in Map or Shop, open Settings
+                    // 3. If in Map, Shop, or Rest, open Settings
                     else
                     {
                         _viewToReturnTo = _currentView;
@@ -384,6 +403,7 @@ namespace ProjectVagabond.Scenes
                     _inventoryOverlay.Hide();
                     _settingsOverlay.Hide();
                     _shopOverlay.Hide();
+                    _restOverlay.Hide();
                     var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
                     if (currentNode != null)
                     {
@@ -394,6 +414,7 @@ namespace ProjectVagabond.Scenes
                     _inventoryOverlay.Show();
                     _settingsOverlay.Hide();
                     _shopOverlay.Hide();
+                    _restOverlay.Hide();
                     _targetCameraOffset = new Vector2(0, -200);
                     if (snap) _cameraOffset = _targetCameraOffset;
                     break;
@@ -401,14 +422,24 @@ namespace ProjectVagabond.Scenes
                     _inventoryOverlay.Hide();
                     _settingsOverlay.Show();
                     _shopOverlay.Hide();
+                    _restOverlay.Hide();
                     _targetCameraOffset = new Vector2(0, -400);
                     if (snap) _cameraOffset = _targetCameraOffset;
                     break;
                 case SplitMapView.Shop:
                     _inventoryOverlay.Hide();
                     _settingsOverlay.Hide();
-                    _shopOverlay.Resume(); // FIX: Resume instead of Show to preserve stock
+                    _shopOverlay.Resume(); // Resume to preserve stock
+                    _restOverlay.Hide();
                     _targetCameraOffset = new Vector2(0, -600);
+                    if (snap) _cameraOffset = _targetCameraOffset;
+                    break;
+                case SplitMapView.Rest:
+                    _inventoryOverlay.Hide();
+                    _settingsOverlay.Hide();
+                    _shopOverlay.Hide();
+                    _restOverlay.Show();
+                    _targetCameraOffset = new Vector2(0, -600); // Same offset as shop for now
                     if (snap) _cameraOffset = _targetCameraOffset;
                     break;
             }
@@ -538,12 +569,13 @@ namespace ProjectVagabond.Scenes
             var cameraTransform = Matrix.CreateTranslation(RoundedCameraOffset.X, RoundedCameraOffset.Y, 0);
 
             // Update Overlays
-            // Allow inventory interaction if Map is Idle OR if we are in the Shop view
-            bool allowInventoryInteraction = _mapState == SplitMapState.Idle || _currentView == SplitMapView.Shop;
+            // Allow inventory interaction if Map is Idle OR if we are in the Shop view OR Rest view
+            bool allowInventoryInteraction = _mapState == SplitMapState.Idle || _currentView == SplitMapView.Shop || _currentView == SplitMapView.Rest;
             _inventoryOverlay.Update(gameTime, currentMouseState, currentKeyboardState, allowInventoryInteraction, cameraTransform);
 
             _settingsOverlay.Update(gameTime, currentMouseState, currentKeyboardState, cameraTransform);
             _shopOverlay.Update(gameTime, currentMouseState, cameraTransform);
+            _restOverlay.Update(gameTime, currentMouseState, cameraTransform);
 
             // Update Settings Button
             _settingsButton?.Update(currentMouseState);
@@ -563,7 +595,7 @@ namespace ProjectVagabond.Scenes
                         // Settings overlay handles its own dirty check on Escape, so we don't force close here
                         // unless we want to override it. The overlay's Update loop will catch Escape.
                     }
-                    else if (_currentView == SplitMapView.Map || _currentView == SplitMapView.Shop)
+                    else if (_currentView == SplitMapView.Map || _currentView == SplitMapView.Shop || _currentView == SplitMapView.Rest)
                     {
                         _viewToReturnTo = _currentView;
                         SetView(SplitMapView.Settings, snap: true);
@@ -1014,11 +1046,7 @@ namespace ProjectVagabond.Scenes
                     break;
 
                 case SplitNodeType.Rest:
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "Entered Rest Node (WIP)" });
-                    node.IsCompleted = true;
-                    UpdateCameraTarget(node.Position, false);
-                    _mapState = SplitMapState.LoweringNode;
-                    _nodeLiftTimer = 0f;
+                    SetView(SplitMapView.Rest, snap: true);
                     break;
 
                 case SplitNodeType.Shop:
@@ -1037,6 +1065,11 @@ namespace ProjectVagabond.Scenes
         public void DebugTriggerShop()
         {
             OpenRandomShop();
+        }
+
+        public void DebugTriggerRest()
+        {
+            SetView(SplitMapView.Rest, snap: true);
         }
 
         private void OpenRandomShop()
@@ -1309,6 +1342,7 @@ namespace ProjectVagabond.Scenes
             // Pass the finalTransform to the settings overlay so it can restore it after drawing dialogs
             _settingsOverlay.Draw(spriteBatch, font, gameTime, finalTransform);
             _shopOverlay.Draw(spriteBatch, font, gameTime); // Draw Shop
+            _restOverlay.Draw(spriteBatch, font, gameTime); // Draw Rest
 
             spriteBatch.End();
 
