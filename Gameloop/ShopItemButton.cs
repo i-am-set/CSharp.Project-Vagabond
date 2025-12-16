@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿#nullable enable
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -18,6 +19,7 @@ namespace ProjectVagabond.UI
         private readonly BitmapFont _priceFont; // Secondary (5x5)
         private readonly BitmapFont _currencyFont; // Tertiary (3x3)
         private readonly BitmapFont _nameFont;
+
         // Animation State
         private float _hoverTimer = 0f;
 
@@ -25,9 +27,13 @@ namespace ProjectVagabond.UI
         private const float HOVER_ANIM_DURATION = 0.075f;
         private const float HOVER_LIFT_AMOUNT = 1f; // 1px lift
 
-        // Too Expensive Animation State
-        private float _xOverlayTimer = 0f;
-        private const float X_OVERLAY_DURATION = 0.25f;
+        // Too Expensive / Rejection Animation State
+        private float _rejectionShakeTimer = 0f;
+
+        // TUNING: Rejection Shake
+        private const float REJECTION_SHAKE_DURATION = 0.35f;
+        private const float REJECTION_SHAKE_MAGNITUDE = 2f; // Pixels
+        private const float REJECTION_SHAKE_SPEED = 80f; // Frequency
 
         // Layout Constants
         private const int BUTTON_SIZE = 32;
@@ -52,7 +58,7 @@ namespace ProjectVagabond.UI
 
         public void TriggerTooExpensiveAnimation()
         {
-            _xOverlayTimer = X_OVERLAY_DURATION;
+            _rejectionShakeTimer = REJECTION_SHAKE_DURATION;
         }
 
         public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? horizontalOffset = null, float? verticalOffset = null, Color? tintColorOverride = null)
@@ -74,9 +80,9 @@ namespace ProjectVagabond.UI
             }
             _hoverTimer = Math.Clamp(_hoverTimer, 0f, HOVER_ANIM_DURATION);
 
-            if (_xOverlayTimer > 0)
+            if (_rejectionShakeTimer > 0)
             {
-                _xOverlayTimer -= dt;
+                _rejectionShakeTimer -= dt;
             }
 
             // --- 2. Calculate Offsets ---
@@ -92,16 +98,26 @@ namespace ProjectVagabond.UI
                 idleBob = MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * 5f) > 0 ? -1f : 0f;
             }
 
-            // C. Shake (from base class)
-            var (shakeOffset, flashTint) = UpdateFeedbackAnimations(gameTime);
+            // C. Shake (from base class - usually unused here, but kept for compatibility)
+            var (baseShakeOffset, flashTint) = UpdateFeedbackAnimations(gameTime);
+
+            // D. Rejection Shake (The violent X shake)
+            float rejectionOffsetX = 0f;
+            if (_rejectionShakeTimer > 0)
+            {
+                // Ease down: (CurrentTime / TotalTime) goes from 1.0 to 0.0
+                float progress = _rejectionShakeTimer / REJECTION_SHAKE_DURATION;
+                float decay = Easing.EaseOutQuad(progress);
+                rejectionOffsetX = MathF.Sin(_rejectionShakeTimer * REJECTION_SHAKE_SPEED) * REJECTION_SHAKE_MAGNITUDE * decay;
+            }
 
             // --- 3. Calculate Positions ---
 
-            float totalX = Bounds.X + (horizontalOffset ?? 0f) + shakeOffset.X;
+            float totalX = Bounds.X + (horizontalOffset ?? 0f) + baseShakeOffset.X;
 
             // Static Y: The base position (includes shake/layout offset, but NO bob/lift)
             // Used for Price and Sold text so they don't move.
-            float staticY = Bounds.Y + (verticalOffset ?? 0f) + shakeOffset.Y;
+            float staticY = Bounds.Y + (verticalOffset ?? 0f) + baseShakeOffset.Y;
 
             // Animated Y: The position for the sprite (includes bob + lift)
             float animatedSpriteY = staticY + SPRITE_OFFSET + liftOffset + idleBob;
@@ -152,13 +168,27 @@ namespace ProjectVagabond.UI
                         Color mainOutlineColor;
                         Color cornerOutlineColor;
 
-                        if (isActivated)
+                        if (_rejectionShakeTimer > 0)
+                        {
+                            // Rejection Animation: Flash Red -> White -> Red -> White
+                            // Timer counts down from 0.5 to 0.
+                            // Divide into 4 segments of 0.125s each.
+                            float flashInterval = REJECTION_SHAKE_DURATION / 4f;
+                            int cycle = (int)(_rejectionShakeTimer / flashInterval);
+
+                            // Cycles: 3 (Red), 2 (White), 1 (Red), 0 (White)
+                            bool isRed = cycle % 2 != 0;
+
+                            mainOutlineColor = isRed ? _global.Palette_Red : Color.White;
+                            cornerOutlineColor = mainOutlineColor;
+                        }
+                        else if (isActivated)
                         {
                             if (!canAfford)
                             {
-                                // Expensive Hover: Red Outline
-                                mainOutlineColor = _global.Palette_Red;
-                                cornerOutlineColor = _global.Palette_Red;
+                                // Expensive Hover: White Outline
+                                mainOutlineColor = Color.White;
+                                cornerOutlineColor = Color.White;
                             }
                             else
                             {
@@ -189,6 +219,25 @@ namespace ProjectVagabond.UI
 
                     // 2. Draw Body (Always Texture)
                     spriteBatch.DrawSnapped(_iconTexture, drawPos, Color.White);
+
+                    // 3. Draw X Overlay (Too Expensive)
+                    // Condition: Hovering AND Too Expensive, OR Animation is playing
+                    if ((isActivated && !canAfford) || _rejectionShakeTimer > 0)
+                    {
+                        if (spriteManager.ShopXIcon != null)
+                        {
+                            // Center the X on the sprite (16x16), but apply the rejection shake offset
+                            // The X icon is 32x32, so we center it on the 16x16 sprite
+                            // Sprite Center: drawPos.X + 8, drawPos.Y + 8
+                            // X TopLeft: Center - 16
+                            Vector2 xPos = new Vector2(
+                                drawPos.X + 8 - 16 + rejectionOffsetX,
+                                drawPos.Y + 8 - 16
+                            );
+
+                            spriteBatch.DrawSnapped(spriteManager.ShopXIcon, xPos, Color.White);
+                        }
+                    }
                 }
             }
 
@@ -214,9 +263,16 @@ namespace ProjectVagabond.UI
                 Color priceColor = _global.Palette_Yellow;
                 bool canAfford = gameState.PlayerState.Coin >= Item.Price;
 
-                if (isActivated && !canAfford)
+                if (isActivated)
                 {
-                    priceColor = _global.Palette_Red;
+                    if (!canAfford)
+                    {
+                        priceColor = _global.Palette_Red;
+                    }
+                    else
+                    {
+                        priceColor = _global.Palette_BrightWhite;
+                    }
                 }
 
                 // Draw Number (Secondary Font)
@@ -225,15 +281,6 @@ namespace ProjectVagabond.UI
                 // Draw "G" (Tertiary Font) - Align baseline roughly
                 float symY = drawY + (numSize.Y - symSize.Y);
                 spriteBatch.DrawStringSnapped(_currencyFont, currencySymbol, new Vector2(startX + numSize.X + spaceWidth, symY), priceColor);
-            }
-
-            // --- Draw X Overlay (Too Expensive Animation) ---
-            if (_xOverlayTimer > 0 && spriteManager.ShopXIcon != null)
-            {
-                float alpha = _xOverlayTimer / X_OVERLAY_DURATION;
-                // Draw centered on the button (using staticY to avoid bobbing)
-                Vector2 xPos = new Vector2(totalX, staticY);
-                spriteBatch.DrawSnapped(spriteManager.ShopXIcon, xPos, Color.White * alpha);
             }
         }
     }

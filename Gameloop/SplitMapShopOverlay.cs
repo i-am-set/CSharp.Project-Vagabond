@@ -45,10 +45,10 @@ namespace ProjectVagabond.UI
             _hapticsManager = ServiceLocator.Get<HapticsManager>();
             _spriteManager = ServiceLocator.Get<SpriteManager>();
 
-            _leaveButton = new Button(Rectangle.Empty, "LEAVE SHOP", font: _core.SecondaryFont)
+            _leaveButton = new Button(Rectangle.Empty, "LEAVE", font: _core.SecondaryFont)
             {
-                CustomDefaultTextColor = _global.Palette_Red,
-                CustomHoverTextColor = _global.Palette_White,
+                CustomDefaultTextColor = _global.Palette_BrightWhite,
+                CustomHoverTextColor = _global.Palette_Red,
                 UseScreenCoordinates = true
             };
             _leaveButton.OnClick += () => OnLeaveRequested?.Invoke();
@@ -179,16 +179,16 @@ namespace ProjectVagabond.UI
                 else if (item.Type == "Relic") _gameState.PlayerState.AddRelic(item.ItemId);
                 else if (item.Type == "Consumable") _gameState.PlayerState.AddConsumable(item.ItemId);
 
-                _hapticsManager.TriggerShake(2f, 0.1f);
+                _hapticsManager.TriggerShake(10f, 0.1f);
 
                 // Trigger Smooth Screen Flash (White, 0.75s fade)
-                _core.TriggerFullscreenFlash(_global.Palette_LightGreen, 0.30f);
+                _core.TriggerFullscreenFlash(_global.Palette_LightGreen, 0.20f);
 
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Bought {item.DisplayName}!" });
             }
             else
             {
-                _hapticsManager.TriggerShake(4f, 0.1f);
+                _hapticsManager.TriggerShake(12f, 0.1f);
                 EventBus.Publish(new GameEvents.AlertPublished { Message = "NOT ENOUGH COIN" });
 
                 // Trigger the X overlay animation
