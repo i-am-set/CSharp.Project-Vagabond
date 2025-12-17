@@ -564,14 +564,31 @@ namespace ProjectVagabond.UI
                                 break;
                         }
 
-                        // Draw Description (Handle Newlines)
-                        float descY = hpTextY + secondaryFont.LineHeight + 4;
-
                         // Split by newline
                         var lines = descText.Split('\n');
 
-                        // Calculate total height to center vertically if needed, or just stack down
-                        // For now, just stack down from descY
+                        // --- VERTICAL CENTERING LOGIC ---
+                        // Calculate the area between the HP text and the buttons
+                        // Button layout constants from CreateActionButtonsForMember:
+                        // buttonHeight = 10, spacing = 1, 4 buttons.
+                        // startY = panelRect.Bottom - (4 * 11) - 5 - 9;
+                        float buttonsTopY = bounds.Bottom - (4 * 11) - 14;
+
+                        float textTopBoundary = hpTextY + secondaryFont.LineHeight + 2; // +2 padding from HP text
+                        float availableHeight = buttonsTopY - textTopBoundary;
+
+                        // Calculate total text height
+                        // LineHeight + 1 pixel spacing per line
+                        float totalTextHeight = lines.Length * (secondaryFont.LineHeight + 1) - 1;
+
+                        // Center it
+                        float startDescY = textTopBoundary + (availableHeight - totalTextHeight) / 2f;
+
+                        // Clamp to ensure it doesn't overlap if space is too tight
+                        if (startDescY < textTopBoundary) startDescY = textTopBoundary;
+
+                        float descY = startDescY;
+
                         foreach (var line in lines)
                         {
                             var lineSize = secondaryFont.MeasureString(line);
@@ -584,11 +601,19 @@ namespace ProjectVagabond.UI
                             if (action != RestAction.Guard)
                             {
                                 float speed = 5f;
-                                float val = MathF.Round((MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * speed) + 1f) * 0.5f);
+                                // Sine wave 0..1
+                                float t = (MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * speed) + 1f) * 0.5f;
+                                // Round to 0 or 1
+                                float val = MathF.Round(t);
+                                // Invert to move UP
                                 bobOffset = -val;
                             }
 
-                            spriteBatch.DrawStringSnapped(secondaryFont, line, new Vector2(lineX, descY + bobOffset), descColor);
+                            // IMPORTANT: Round the base Y first, then add the integer bob offset.
+                            // This prevents sub-pixel centering from eating the 1-pixel animation.
+                            float finalY = MathF.Round(descY) + bobOffset;
+
+                            spriteBatch.DrawStringSnapped(secondaryFont, line, new Vector2(lineX, finalY), descColor);
                             descY += secondaryFont.LineHeight + 1; // Spacing between lines
                         }
                     }
