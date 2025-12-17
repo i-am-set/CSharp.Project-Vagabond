@@ -182,6 +182,7 @@ namespace ProjectVagabond
         public Texture2D TargetingIndicatorSprite { get; private set; }
         public Texture2D ShopBorderMain { get; private set; } // NEW
         public Texture2D ShopXIcon { get; private set; } // NEW
+        public Texture2D RestBorderMain { get; private set; } // NEW
 
 
         // Mouse Prompt Sprites
@@ -437,6 +438,8 @@ namespace ProjectVagabond
             catch { ShopBorderMain = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
             try { ShopXIcon = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/X_32x32"); }
             catch { ShopXIcon = _textureFactory.CreateColoredTexture(32, 32, Color.Red); }
+            try { RestBorderMain = _core.Content.Load<Texture2D>("Sprites/UI/Rest/rest_border_main"); }
+            catch { RestBorderMain = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
 
             // Load Health Bar Sprites
             try { InventoryPlayerHealthBarEmpty = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_player_health_bar_empty"); }

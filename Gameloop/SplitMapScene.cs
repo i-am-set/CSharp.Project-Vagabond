@@ -150,7 +150,7 @@ namespace ProjectVagabond.Scenes
             _inventoryOverlay = new SplitMapInventoryOverlay();
             _settingsOverlay = new SplitMapSettingsOverlay(this);
             _shopOverlay = new SplitMapShopOverlay();
-            _restOverlay = new SplitMapRestOverlay();
+            _restOverlay = new SplitMapRestOverlay(this); // Pass 'this' as GameScene
             _birdManager = new BirdManager();
 
             var narratorBounds = new Rectangle(0, Global.VIRTUAL_HEIGHT - 50, Global.VIRTUAL_WIDTH, 50);
@@ -230,6 +230,18 @@ namespace ProjectVagabond.Scenes
                 }
                 _mapState = SplitMapState.LoweringNode;
                 _nodeLiftTimer = 0f;
+            };
+
+            // --- REST COMPLETE LOGIC ---
+            _restOverlay.OnRestCompleted += (summary) =>
+            {
+                // Close Rest Overlay
+                _viewToReturnTo = SplitMapView.Map;
+                SetView(SplitMapView.Map, snap: true);
+
+                // Show Summary via Narrator
+                _eventState = EventState.NarratingResult;
+                _resultNarrator.Show(summary);
             };
         }
 
@@ -1388,6 +1400,19 @@ namespace ProjectVagabond.Scenes
 
             if (_narrativeDialog.IsActive) _narrativeDialog.DrawContent(spriteBatch, font, gameTime, transform);
             if (_eventState == EventState.NarratingResult) _resultNarrator.Draw(spriteBatch, ServiceLocator.Get<Core>().SecondaryFont, gameTime);
+
+            // Draw Rest Overlay Dialogs (Screen Space)
+            _restOverlay.DrawDialogContent(spriteBatch, font, gameTime);
+        }
+
+        public override void DrawUnderlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
+        {
+            if (_narrativeDialog.IsActive)
+            {
+                _narrativeDialog.DrawOverlay(spriteBatch);
+            }
+            // Draw Rest Overlay Dialog Background
+            _restOverlay.DrawDialogOverlay(spriteBatch);
         }
 
         private void DrawAllPaths(SpriteBatch spriteBatch, Texture2D pixel)
@@ -1520,14 +1545,6 @@ namespace ProjectVagabond.Scenes
 
             var position = bounds.Center.ToVector2() + node.VisualOffset;
             spriteBatch.DrawSnapped(texture, position, sourceRect, color, 0f, origin, scale, SpriteEffects.None, 0.4f);
-        }
-
-        public override void DrawUnderlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
-        {
-            if (_narrativeDialog.IsActive)
-            {
-                _narrativeDialog.DrawOverlay(spriteBatch);
-            }
         }
 
         private (Texture2D texture, Rectangle? sourceRect, Vector2 origin) GetNodeDrawData(SplitMapNode node, GameTime gameTime)
