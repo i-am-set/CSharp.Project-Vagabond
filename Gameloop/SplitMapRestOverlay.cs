@@ -70,11 +70,39 @@ namespace ProjectVagabond.UI
         private readonly Color COLOR_DESC_SEARCH_GUARDED;
         private readonly Color COLOR_DESC_GUARD;
 
+        // --- TUNING: Sleep Particles ---
+        private const float SLEEP_PARTICLE_SPEED = 7f;                 // Pixels per second moving up
+        private const float SLEEP_PARTICLE_LIFETIME = 1.5f;             // How long a "Z" lasts
+        private const float SLEEP_PARTICLE_SPAWN_INTERVAL_BASE = 1.0f;  // Base time between spawns
+        private const float SLEEP_PARTICLE_SPAWN_INTERVAL_VARIANCE = 0.2f; // Random variance added to base
+        private const float SLEEP_PARTICLE_SWAY_AMOUNT = 5f;            // Horizontal sway distance
+        private const float SLEEP_PARTICLE_SWAY_SPEED = 3f;             // Speed of the sway
+        private const float SLEEP_PARTICLE_FADE_START_PERCENT = 0.7f;   // When to start fading out (0.0 to 1.0)
+
+        // Spawn Position relative to the CENTER of the 32x32 portrait
+        private const float SLEEP_PARTICLE_OFFSET_X = -8f;
+        private const float SLEEP_PARTICLE_OFFSET_Y = -12f; // Negative is Up
+
+        private readonly Color SLEEP_PARTICLE_COLOR;
+        private readonly Color SLEEP_PARTICLE_OUTLINE_COLOR;
+
         // Animation
         private int _portraitBgFrameIndex = 0;
         private float _portraitBgTimer;
         private float _portraitBgDuration;
         private static readonly Random _rng = new Random();
+
+        // Sleep Particles
+        private class SleepParticle
+        {
+            public Vector2 Position;
+            public float Timer;
+            public float MaxTime;
+            public float SwayPhase;
+            public float Speed;
+        }
+        private readonly List<SleepParticle> _sleepParticles = new List<SleepParticle>();
+        private readonly float[] _sleepSpawnTimers = new float[4];
 
         public SplitMapRestOverlay(GameScene parentScene)
         {
@@ -92,6 +120,10 @@ namespace ProjectVagabond.UI
             COLOR_DESC_SEARCH_NORMAL = _global.Palette_LightBlue;
             COLOR_DESC_SEARCH_GUARDED = Color.Aqua;
             COLOR_DESC_GUARD = _global.Palette_DarkGray;
+
+            // Initialize Sleep Particle Colors
+            SLEEP_PARTICLE_COLOR = _global.Palette_BrightWhite;
+            SLEEP_PARTICLE_OUTLINE_COLOR = _global.Palette_Black;
 
             _confirmationDialog = new ConfirmationDialog(parentScene);
 
@@ -120,6 +152,8 @@ namespace ProjectVagabond.UI
             IsOpen = true;
             InitializeActions();
             RebuildLayout();
+            _sleepParticles.Clear();
+            for (int i = 0; i < _sleepSpawnTimers.Length; i++) _sleepSpawnTimers[i] = 0f;
         }
 
         public void Hide()
@@ -381,6 +415,9 @@ namespace ProjectVagabond.UI
                 if (frames != null && frames.Length > 0) _portraitBgFrameIndex = _rng.Next(frames.Length);
             }
 
+            // Update Sleep Particles
+            UpdateParticles(dt);
+
             // Transform mouse to world space
             var virtualMousePos = Core.TransformMouse(mouseState.Position);
             var mouseInWorldSpace = Vector2.Transform(virtualMousePos, Matrix.Invert(cameraTransform));
@@ -411,6 +448,75 @@ namespace ProjectVagabond.UI
 
             _confirmButton.Update(worldMouseState);
             _skipButton.Update(worldMouseState);
+        }
+
+        private void UpdateParticles(float dt)
+        {
+            // Update existing particles
+            for (int i = _sleepParticles.Count - 1; i >= 0; i--)
+            {
+                var p = _sleepParticles[i];
+                p.Timer += dt;
+                if (p.Timer >= p.MaxTime)
+                {
+                    _sleepParticles.RemoveAt(i);
+                    continue;
+                }
+
+                // Move Up
+                p.Position.Y -= p.Speed * dt;
+                // Sway
+                p.Position.X += MathF.Sin(p.Timer * SLEEP_PARTICLE_SWAY_SPEED + p.SwayPhase) * SLEEP_PARTICLE_SWAY_AMOUNT * dt;
+            }
+
+            // Spawn new particles
+            for (int i = 0; i < 4; i++)
+            {
+                if (i >= _gameState.PlayerState.Party.Count) continue;
+
+                if (_selectedActions.TryGetValue(i, out var action) && action == RestAction.Rest)
+                {
+                    _sleepSpawnTimers[i] -= dt;
+                    if (_sleepSpawnTimers[i] <= 0)
+                    {
+                        _sleepSpawnTimers[i] = SLEEP_PARTICLE_SPAWN_INTERVAL_BASE + (float)(_rng.NextDouble() * SLEEP_PARTICLE_SPAWN_INTERVAL_VARIANCE);
+                        SpawnSleepParticle(i);
+                    }
+                }
+                else
+                {
+                    _sleepSpawnTimers[i] = 0; // Reset so it spawns immediately when switched to Rest
+                }
+            }
+        }
+
+        private void SpawnSleepParticle(int memberIndex)
+        {
+            var panelRect = _partyMemberPanelAreas[memberIndex];
+            var defaultFont = ServiceLocator.Get<BitmapFont>();
+            float nameHeight = defaultFont.LineHeight;
+
+            // Calculate portrait top-right position
+            // Portrait is drawn at: centerX - 16, currentY
+            // currentY = panelRect.Y + 4 + nameHeight - 2
+
+            float portraitY = panelRect.Y + 4 + nameHeight - 2;
+            float centerX = panelRect.Center.X;
+
+            // Calculate center of the 32x32 portrait
+            Vector2 portraitCenter = new Vector2(centerX, portraitY + 16);
+
+            // Apply tunable offset from center
+            Vector2 spawnPos = portraitCenter + new Vector2(SLEEP_PARTICLE_OFFSET_X, SLEEP_PARTICLE_OFFSET_Y);
+
+            _sleepParticles.Add(new SleepParticle
+            {
+                Position = spawnPos,
+                Timer = 0f,
+                MaxTime = SLEEP_PARTICLE_LIFETIME,
+                SwayPhase = (float)(_rng.NextDouble() * Math.PI * 2),
+                Speed = SLEEP_PARTICLE_SPEED
+            });
         }
 
         public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
@@ -623,6 +729,20 @@ namespace ProjectVagabond.UI
 
                     currentY += 8 + (int)valSize.Height + 4 - 3;
                 }
+            }
+
+            // Draw Sleep Particles
+            foreach (var p in _sleepParticles)
+            {
+                float alpha = 1.0f;
+                if (p.Timer > p.MaxTime * SLEEP_PARTICLE_FADE_START_PERCENT)
+                {
+                    float fadeDuration = p.MaxTime * (1.0f - SLEEP_PARTICLE_FADE_START_PERCENT);
+                    float timeInFade = p.Timer - (p.MaxTime * SLEEP_PARTICLE_FADE_START_PERCENT);
+                    alpha = 1.0f - (timeInFade / fadeDuration);
+                }
+                // Use Square Outline for Zs
+                spriteBatch.DrawStringSquareOutlinedSnapped(secondaryFont, "Z", p.Position, SLEEP_PARTICLE_COLOR * alpha, SLEEP_PARTICLE_OUTLINE_COLOR * alpha);
             }
 
             // Draw Action Buttons
