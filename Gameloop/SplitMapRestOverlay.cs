@@ -71,17 +71,18 @@ namespace ProjectVagabond.UI
         private readonly Color COLOR_DESC_GUARD;
 
         // --- TUNING: Sleep Particles ---
-        private const float SLEEP_PARTICLE_SPEED = 7f;                 // Pixels per second moving up
-        private const float SLEEP_PARTICLE_LIFETIME = 1.5f;             // How long a "Z" lasts
+        private const float SLEEP_PARTICLE_SPEED = 9f;                 // Pixels per second moving up
+        private const float SLEEP_PARTICLE_LIFETIME = 2.0f;             // How long a "Z" lasts
         private const float SLEEP_PARTICLE_SPAWN_INTERVAL_BASE = 1.0f;  // Base time between spawns
         private const float SLEEP_PARTICLE_SPAWN_INTERVAL_VARIANCE = 0.2f; // Random variance added to base
         private const float SLEEP_PARTICLE_SWAY_AMOUNT = 5f;            // Horizontal sway distance
         private const float SLEEP_PARTICLE_SWAY_SPEED = 3f;             // Speed of the sway
+        private const float SLEEP_PARTICLE_WIND_SPEED = -5f;            // Horizontal drift speed (Negative = Left, Positive = Right)
         private const float SLEEP_PARTICLE_FADE_START_PERCENT = 0.7f;   // When to start fading out (0.0 to 1.0)
 
         // Spawn Position relative to the CENTER of the 32x32 portrait
-        private const float SLEEP_PARTICLE_OFFSET_X = -8f;
-        private const float SLEEP_PARTICLE_OFFSET_Y = -12f; // Negative is Up
+        private const float SLEEP_PARTICLE_OFFSET_X = -12f;
+        private const float SLEEP_PARTICLE_OFFSET_Y = -8f; // Negative is Up
 
         private readonly Color SLEEP_PARTICLE_COLOR;
         private readonly Color SLEEP_PARTICLE_OUTLINE_COLOR;
@@ -465,8 +466,12 @@ namespace ProjectVagabond.UI
 
                 // Move Up
                 p.Position.Y -= p.Speed * dt;
-                // Sway
-                p.Position.X += MathF.Sin(p.Timer * SLEEP_PARTICLE_SWAY_SPEED + p.SwayPhase) * SLEEP_PARTICLE_SWAY_AMOUNT * dt;
+
+                // Sway + Wind
+                float swayOffset = MathF.Sin(p.Timer * SLEEP_PARTICLE_SWAY_SPEED + p.SwayPhase) * SLEEP_PARTICLE_SWAY_AMOUNT;
+                float windOffset = SLEEP_PARTICLE_WIND_SPEED;
+
+                p.Position.X += (swayOffset + windOffset) * dt;
             }
 
             // Spawn new particles
