@@ -69,9 +69,11 @@ namespace ProjectVagabond.UI
                 Vector2 centerPos = new Vector2(Bounds.Center.X + totalXOffset, Bounds.Center.Y + totalYOffset);
 
                 // Calculate line start/end
-                float lineY = centerPos.Y; // Center of text vertically
-                float startX = centerPos.X - (textSize.X / 2f);
-                float endX = centerPos.X + (textSize.X / 2f);
+                // Moved down 1 pixel (+1) and made wider (+2 padding on each side)
+                float lineY = centerPos.Y + 1;
+                float padding = 2f;
+                float startX = centerPos.X - (textSize.X / 2f) - padding;
+                float endX = centerPos.X + (textSize.X / 2f) + padding;
 
                 // Draw line
                 Color lineColor = CustomDisabledTextColor ?? _global.ButtonDisableColor;

@@ -44,13 +44,31 @@ namespace ProjectVagabond.UI
         private readonly Dictionary<int, RestAction> _selectedActions = new Dictionary<int, RestAction>();
         private readonly List<Button> _actionButtons = new List<Button>();
 
-        // Tuning
-        private const float REST_HEAL_PERCENT = 0.75f;
+        // --- TUNING: Logic ---
+        private const float HEAL_PERCENT_REST = 0.75f;
+        private const float HEAL_PERCENT_TRAIN = 0.0f;
+        private const float HEAL_PERCENT_SEARCH = 0.0f;
+        private const float HEAL_PERCENT_GUARD = 0.0f;
+
         private const float GUARD_HEAL_MULTIPLIER = 2.0f;
-        private const int SEARCH_CHANCE_1 = 30;
-        private const int SEARCH_CHANCE_2 = 55;
-        private const int SEARCH_CHANCE_3 = 75;
-        private const int SEARCH_CHANCE_4 = 90;
+
+        // Search Tuning
+        private const int SEARCH_CHANCE_UNGUARDED = 50;
+        private const int SEARCH_CHANCE_GUARDED = 90;
+
+        // Train Tuning
+        private const int TRAIN_AMOUNT_UNGUARDED = 1;
+        private const int TRAIN_AMOUNT_GUARDED_MAJOR = 2;
+        private const int TRAIN_AMOUNT_GUARDED_MINOR = 1;
+
+        // --- TUNING: Colors ---
+        private readonly Color COLOR_DESC_REST_NORMAL;
+        private readonly Color COLOR_DESC_REST_GUARDED;
+        private readonly Color COLOR_DESC_TRAIN_NORMAL;
+        private readonly Color COLOR_DESC_TRAIN_GUARDED;
+        private readonly Color COLOR_DESC_SEARCH_NORMAL;
+        private readonly Color COLOR_DESC_SEARCH_GUARDED;
+        private readonly Color COLOR_DESC_GUARD;
 
         // Animation
         private int _portraitBgFrameIndex = 0;
@@ -66,22 +84,34 @@ namespace ProjectVagabond.UI
             _gameState = ServiceLocator.Get<GameState>();
             _hapticsManager = ServiceLocator.Get<HapticsManager>();
 
+            // Initialize Tunable Colors
+            COLOR_DESC_REST_NORMAL = _global.Palette_LightGreen;
+            COLOR_DESC_REST_GUARDED = Color.Lime;
+            COLOR_DESC_TRAIN_NORMAL = _global.Palette_LightPurple;
+            COLOR_DESC_TRAIN_GUARDED = Color.Magenta;
+            COLOR_DESC_SEARCH_NORMAL = _global.Palette_LightBlue;
+            COLOR_DESC_SEARCH_GUARDED = Color.Aqua;
+            COLOR_DESC_GUARD = _global.Palette_DarkGray;
+
             _confirmationDialog = new ConfirmationDialog(parentScene);
 
             _confirmButton = new Button(Rectangle.Empty, "CONFIRM", font: _core.SecondaryFont)
             {
-                CustomDefaultTextColor = _global.Palette_LightGreen,
-                CustomHoverTextColor = Color.Lime,
+                CustomDefaultTextColor = _global.Palette_BrightWhite,
+                CustomHoverTextColor = _global.Palette_Red,
                 UseScreenCoordinates = true
             };
-            _confirmButton.OnClick += RequestConfirmRest;
+            // Direct execution for Confirm, no dialog
+            _confirmButton.OnClick += ExecuteRest;
 
-            _skipButton = new Button(Rectangle.Empty, "SKIP", font: _core.SecondaryFont)
+            // Skip button uses Tertiary font
+            _skipButton = new Button(Rectangle.Empty, "SKIP", font: _core.TertiaryFont)
             {
-                CustomDefaultTextColor = _global.Palette_Red,
-                CustomHoverTextColor = Color.Red,
+                CustomDefaultTextColor = _global.Palette_LightGray,
+                CustomHoverTextColor = _global.Palette_Red,
                 UseScreenCoordinates = true
             };
+            // Skip still requires confirmation
             _skipButton.OnClick += RequestSkipRest;
         }
 
@@ -112,19 +142,21 @@ namespace ProjectVagabond.UI
         {
             int centerX = Global.VIRTUAL_WIDTH / 2;
             int screenBottom = (int)WORLD_Y_OFFSET + Global.VIRTUAL_HEIGHT;
-            int margin = 10;
+
+            int margin = 3;
             int buttonY = screenBottom - BUTTON_HEIGHT - margin;
 
-            // Confirm Button
+            // Confirm Button (Centered)
             var font = _core.SecondaryFont;
             var confirmSize = font.MeasureString("CONFIRM");
             int confirmWidth = (int)confirmSize.Width + 16;
-            _confirmButton.Bounds = new Rectangle(centerX - confirmWidth - 5, buttonY, confirmWidth, BUTTON_HEIGHT);
+            _confirmButton.Bounds = new Rectangle((Global.VIRTUAL_WIDTH - confirmWidth) / 2, buttonY, confirmWidth, BUTTON_HEIGHT);
 
-            // Skip Button
-            var skipSize = font.MeasureString("SKIP");
+            // Skip Button (Bottom Right)
+            var skipFont = _core.TertiaryFont; // Using Tertiary Font
+            var skipSize = skipFont.MeasureString("SKIP");
             int skipWidth = (int)skipSize.Width + 16;
-            _skipButton.Bounds = new Rectangle(centerX + 5, buttonY, skipWidth, BUTTON_HEIGHT);
+            _skipButton.Bounds = new Rectangle(Global.VIRTUAL_WIDTH - skipWidth - 10, buttonY, skipWidth, BUTTON_HEIGHT);
 
             // Panel Areas - Always 4 slots centered
             int totalPanelWidth = (4 * PANEL_WIDTH);
@@ -155,8 +187,7 @@ namespace ProjectVagabond.UI
             int buttonHeight = 10;
             int spacing = 1;
             // Anchor to bottom of panel
-            // Moved up by 16 pixels as requested (-16)
-            int startY = panelRect.Bottom - (4 * (buttonHeight + spacing)) - 5 - 16;
+            int startY = panelRect.Bottom - (4 * (buttonHeight + spacing)) - 5 - 9;
             int centerX = panelRect.Center.X;
 
             // Helper to create toggle buttons
@@ -165,7 +196,7 @@ namespace ProjectVagabond.UI
                 var btn = new ToggleButton(
                     new Rectangle(centerX - buttonWidth / 2, startY, buttonWidth, buttonHeight),
                     text,
-                    font: _core.SecondaryFont, // Changed to SecondaryFont
+                    font: _core.SecondaryFont,
                     customToggledTextColor: _global.Palette_Yellow,
                     customDefaultTextColor: _global.Palette_Gray
                 )
@@ -209,19 +240,7 @@ namespace ProjectVagabond.UI
             }
 
             _selectedActions[memberIndex] = action;
-            _hapticsManager.TriggerHop(1f, 0.05f);
-        }
-
-        private void RequestConfirmRest()
-        {
-            _confirmationDialog.Show(
-                "Confirm rest actions?",
-                new List<Tuple<string, Action>>
-                {
-                    Tuple.Create("YES", new Action(() => { ExecuteRest(); _confirmationDialog.Hide(); })),
-                    Tuple.Create("[gray]NO", new Action(() => _confirmationDialog.Hide()))
-                }
-            );
+            _hapticsManager.TriggerHop(3f, 0.15f);
         }
 
         private void RequestSkipRest()
@@ -242,69 +261,86 @@ namespace ProjectVagabond.UI
             summary.AppendLine("Rest Complete!");
 
             bool guardActive = _selectedActions.Values.Any(a => a == RestAction.Guard);
-            int searchers = _selectedActions.Values.Count(a => a == RestAction.Search);
+            var allRelics = BattleDataCache.Relics.Keys.ToList();
 
-            // 1. Handle Search
-            if (searchers > 0)
-            {
-                int chance = searchers switch { 1 => SEARCH_CHANCE_1, 2 => SEARCH_CHANCE_2, 3 => SEARCH_CHANCE_3, 4 => SEARCH_CHANCE_4, _ => 0 };
-                int roll = _rng.Next(0, 100);
-                if (roll < chance)
-                {
-                    // Find a random relic
-                    var allRelics = BattleDataCache.Relics.Keys.ToList();
-                    if (allRelics.Any())
-                    {
-                        string relicId = allRelics[_rng.Next(allRelics.Count)];
-                        var relic = BattleDataCache.Relics[relicId];
-                        _gameState.PlayerState.AddRelic(relicId);
-                        summary.AppendLine($"[palette_teal]Found Relic: {relic.RelicName}![/]");
-                    }
-                }
-                else
-                {
-                    summary.AppendLine("[palette_gray]Search yielded nothing.[/]");
-                }
-            }
-
-            // 2. Process Each Member
+            // Process Each Member
             for (int i = 0; i < _gameState.PlayerState.Party.Count; i++)
             {
                 var member = _gameState.PlayerState.Party[i];
                 var action = _selectedActions[i];
 
+                // Calculate multiplier for this member
+                // Guarding members do not benefit from the guard multiplier (they are the source)
+                float multiplier = (guardActive && action != RestAction.Guard) ? GUARD_HEAL_MULTIPLIER : 1.0f;
+
                 switch (action)
                 {
                     case RestAction.Rest:
-                        float multiplier = guardActive ? GUARD_HEAL_MULTIPLIER : 1.0f;
-                        int healAmount = (int)(member.MaxHP * REST_HEAL_PERCENT * multiplier);
-                        int oldHP = member.CurrentHP;
-                        member.CurrentHP = Math.Min(member.MaxHP, member.CurrentHP + healAmount);
-                        int healed = member.CurrentHP - oldHP;
-                        if (healed > 0) summary.AppendLine($"{member.Name} rested: +{healed} HP.");
-                        else summary.AppendLine($"{member.Name} rested.");
-                        break;
+                        {
+                            int healAmount = (int)(member.MaxHP * HEAL_PERCENT_REST * multiplier);
+                            int oldHP = member.CurrentHP;
+                            member.CurrentHP = Math.Min(member.MaxHP, member.CurrentHP + healAmount);
+                            int healed = member.CurrentHP - oldHP;
+                            if (healed > 0) summary.AppendLine($"{member.Name} rested: +{healed} HP.");
+                            else summary.AppendLine($"{member.Name} rested.");
+                            break;
+                        }
 
                     case RestAction.Train:
-                        // Pick 2 distinct stats
-                        string[] stats = { "Strength", "Intelligence", "Tenacity", "Agility" };
-                        int idx1 = _rng.Next(4);
-                        int idx2;
-                        do { idx2 = _rng.Next(4); } while (idx2 == idx1);
+                        {
+                            string[] stats = { "Strength", "Intelligence", "Tenacity", "Agility" };
 
-                        ApplyStatBoost(member, stats[idx1], 2);
-                        ApplyStatBoost(member, stats[idx2], 1);
-                        summary.AppendLine($"{member.Name} trained: +2 {stats[idx1].Substring(0, 3)}, +1 {stats[idx2].Substring(0, 3)}.");
-                        break;
+                            if (guardActive)
+                            {
+                                // Guarded: +2 to one, +1 to another
+                                int idx1 = _rng.Next(4);
+                                int idx2;
+                                do { idx2 = _rng.Next(4); } while (idx2 == idx1);
 
-                    case RestAction.Guard:
-                        summary.AppendLine($"{member.Name} stood guard.");
-                        break;
+                                ApplyStatBoost(member, stats[idx1], TRAIN_AMOUNT_GUARDED_MAJOR);
+                                ApplyStatBoost(member, stats[idx2], TRAIN_AMOUNT_GUARDED_MINOR);
+                                summary.AppendLine($"{member.Name} trained (Guarded): +{TRAIN_AMOUNT_GUARDED_MAJOR} {stats[idx1].Substring(0, 3)}, +{TRAIN_AMOUNT_GUARDED_MINOR} {stats[idx2].Substring(0, 3)}.");
+                            }
+                            else
+                            {
+                                // Unguarded: +1 to one
+                                int idx1 = _rng.Next(4);
+                                ApplyStatBoost(member, stats[idx1], TRAIN_AMOUNT_UNGUARDED);
+                                summary.AppendLine($"{member.Name} trained: +{TRAIN_AMOUNT_UNGUARDED} {stats[idx1].Substring(0, 3)}.");
+                            }
+                            break;
+                        }
 
                     case RestAction.Search:
-                        // Already handled globally, just log action
-                        summary.AppendLine($"{member.Name} searched the area.");
-                        break;
+                        {
+                            int chance = guardActive ? SEARCH_CHANCE_GUARDED : SEARCH_CHANCE_UNGUARDED;
+
+                            if (_rng.Next(0, 100) < chance)
+                            {
+                                if (allRelics.Any())
+                                {
+                                    string relicId = allRelics[_rng.Next(allRelics.Count)];
+                                    var relic = BattleDataCache.Relics[relicId];
+                                    _gameState.PlayerState.AddRelic(relicId);
+                                    summary.AppendLine($"[palette_teal]{member.Name} found Relic: {relic.RelicName}![/]");
+                                }
+                                else
+                                {
+                                    summary.AppendLine($"{member.Name} searched but found nothing (Empty DB).");
+                                }
+                            }
+                            else
+                            {
+                                summary.AppendLine($"{member.Name} searched but found nothing.");
+                            }
+                            break;
+                        }
+
+                    case RestAction.Guard:
+                        {
+                            summary.AppendLine($"{member.Name} stood guard.");
+                            break;
+                        }
                 }
             }
 
@@ -381,6 +417,7 @@ namespace ProjectVagabond.UI
             var pixel = ServiceLocator.Get<Texture2D>();
             var secondaryFont = _core.SecondaryFont;
             var defaultFont = ServiceLocator.Get<BitmapFont>();
+            var tertiaryFont = _core.TertiaryFont;
 
             // Draw Background
             var bgRect = new Rectangle(0, (int)WORLD_Y_OFFSET, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
@@ -394,9 +431,12 @@ namespace ProjectVagabond.UI
 
             // Title
             string title = "REST";
-            var titleSize = font.MeasureString(title);
-            Vector2 titlePos = new Vector2((Global.VIRTUAL_WIDTH - titleSize.Width) / 2, WORLD_Y_OFFSET + 10);
+            Vector2 titleSize = font.MeasureString(title);
+            Vector2 titlePos = new Vector2((Global.VIRTUAL_WIDTH - titleSize.X) / 2, WORLD_Y_OFFSET + 10);
             spriteBatch.DrawStringSnapped(font, title, titlePos, _global.Palette_BrightWhite);
+
+            // Check if anyone is guarding to calculate potential heal multiplier
+            bool guardActive = _selectedActions.Values.Any(a => a == RestAction.Guard);
 
             // Draw Party Panels
             for (int i = 0; i < 4; i++)
@@ -438,10 +478,8 @@ namespace ProjectVagabond.UI
                     int frame = (int)(gameTime.TotalGameTime.TotalSeconds * animSpeed) % 2;
                     Texture2D textureToDraw = frame == 0 ? _spriteManager.PlayerPortraitsSpriteSheet : _spriteManager.PlayerPortraitsAltSpriteSheet;
 
-                    // Bob Logic: Move up 1 pixel when using Alt sprite
-                    float bobOffset = frame == 1 ? -1f : 0f;
-
-                    var destRect = new Rectangle(centerX - 16, (int)(currentY + bobOffset), 32, 32);
+                    // Removed bob logic (bobOffset = 0)
+                    var destRect = new Rectangle(centerX - 16, currentY, 32, 32);
                     spriteBatch.DrawSnapped(textureToDraw, destRect, sourceRect, Color.White);
                 }
 
@@ -476,10 +514,87 @@ namespace ProjectVagabond.UI
                     Color hpValColor = isOccupied ? _global.Palette_BrightWhite : _global.Palette_DarkGray;
                     spriteBatch.DrawStringSnapped(secondaryFont, hpValText, new Vector2(hpTextX, hpTextY), hpValColor);
                     spriteBatch.DrawStringSnapped(secondaryFont, hpSuffix, new Vector2(hpTextX + valSize.Width, hpTextY), _global.Palette_Gray);
+
+                    // --- NEW: Draw Action Description ---
+                    if (isOccupied && _selectedActions.TryGetValue(i, out var action))
+                    {
+                        string descText = "";
+                        Color descColor = _global.Palette_White;
+
+                        // Determine multiplier (Guard doesn't buff itself)
+                        float multiplier = (guardActive && action != RestAction.Guard) ? GUARD_HEAL_MULTIPLIER : 1.0f;
+
+                        switch (action)
+                        {
+                            case RestAction.Rest:
+                                int finalPercent = (int)(HEAL_PERCENT_REST * multiplier * 100);
+                                descText = $"+{finalPercent}% HP";
+                                if (guardActive)
+                                {
+                                    descColor = COLOR_DESC_REST_GUARDED;
+                                }
+                                else
+                                {
+                                    descColor = COLOR_DESC_REST_NORMAL;
+                                }
+                                break;
+
+                            case RestAction.Train:
+                                if (guardActive)
+                                {
+                                    descText = $"+{TRAIN_AMOUNT_GUARDED_MAJOR} STAT\n+{TRAIN_AMOUNT_GUARDED_MINOR} STAT";
+                                    descColor = COLOR_DESC_TRAIN_GUARDED;
+                                }
+                                else
+                                {
+                                    descText = $"+{TRAIN_AMOUNT_UNGUARDED} STAT";
+                                    descColor = COLOR_DESC_TRAIN_NORMAL;
+                                }
+                                break;
+
+                            case RestAction.Search:
+                                int chance = guardActive ? SEARCH_CHANCE_GUARDED : SEARCH_CHANCE_UNGUARDED;
+                                descText = $"{chance}% RELIC";
+                                descColor = guardActive ? COLOR_DESC_SEARCH_GUARDED : COLOR_DESC_SEARCH_NORMAL;
+                                break;
+
+                            case RestAction.Guard:
+                                descText = "+MODIFIER";
+                                descColor = COLOR_DESC_GUARD;
+                                break;
+                        }
+
+                        // Draw Description (Handle Newlines)
+                        float descY = hpTextY + secondaryFont.LineHeight + 4;
+
+                        // Split by newline
+                        var lines = descText.Split('\n');
+
+                        // Calculate total height to center vertically if needed, or just stack down
+                        // For now, just stack down from descY
+                        foreach (var line in lines)
+                        {
+                            var lineSize = secondaryFont.MeasureString(line);
+                            float lineX = centerX - (lineSize.Width / 2f);
+
+                            // --- ANIMATION: Bob Logic ---
+                            float bobOffset = 0f;
+                            // Only bob if it's a positive effect (Rest or Train/Search)
+                            // Guard is static
+                            if (action != RestAction.Guard)
+                            {
+                                float speed = 5f;
+                                float val = MathF.Round((MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * speed) + 1f) * 0.5f);
+                                bobOffset = -val;
+                            }
+
+                            spriteBatch.DrawStringSnapped(secondaryFont, line, new Vector2(lineX, descY + bobOffset), descColor);
+                            descY += secondaryFont.LineHeight + 1; // Spacing between lines
+                        }
+                    }
+
                     currentY += 8 + (int)valSize.Height + 4 - 3;
                 }
-
-                // 5. Stats (REMOVED)
             }
 
             // Draw Action Buttons
@@ -489,7 +604,7 @@ namespace ProjectVagabond.UI
             }
 
             _confirmButton.Draw(spriteBatch, secondaryFont, gameTime, Matrix.Identity);
-            _skipButton.Draw(spriteBatch, secondaryFont, gameTime, Matrix.Identity);
+            _skipButton.Draw(spriteBatch, tertiaryFont, gameTime, Matrix.Identity); // Use Tertiary Font
 
             // --- DEBUG DRAWING (F1) ---
             if (_global.ShowSplitMapGrid)
