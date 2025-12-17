@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
@@ -13,10 +14,37 @@ namespace ProjectVagabond.UI
         public bool IsSelected { get; set; }
         public Color? CustomToggledTextColor { get; set; }
 
+        /// <summary>
+        /// If true, the button will not respond to mouse input (hover/click) while IsSelected is true.
+        /// Useful for radio-style buttons where clicking the active one should do nothing.
+        /// </summary>
+        public bool DisableInputWhenSelected { get; set; } = false;
+
         public ToggleButton(Rectangle bounds, string text, string? function = null, Color? customDefaultTextColor = null, Color? customHoverTextColor = null, Color? customDisabledTextColor = null, Color? customToggledTextColor = null, bool zoomHapticOnClick = true, BitmapFont? font = null)
             : base(bounds, text, function, customDefaultTextColor, customHoverTextColor, customDisabledTextColor, font: font)
         {
             CustomToggledTextColor = customToggledTextColor;
+        }
+
+        public override void Update(MouseState currentMouseState, Matrix? worldTransform = null)
+        {
+            if (IsSelected && DisableInputWhenSelected)
+            {
+                // When selected and disabled, the button should be inert:
+                // 1. No Hover state (IsHovered = false)
+                // 2. No Click interaction
+                // 3. No Cursor change (handled by IsHovered = false)
+
+                IsHovered = false;
+                _isPressed = false;
+
+                // Important: Keep previous mouse state synced so we don't get weird edge cases 
+                // when deselecting later.
+                _previousMouseState = currentMouseState;
+                return;
+            }
+
+            base.Update(currentMouseState, worldTransform);
         }
 
         public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? horizontalOffset = null, float? verticalOffset = null, Color? tintColorOverride = null)
@@ -69,11 +97,11 @@ namespace ProjectVagabond.UI
                 Vector2 centerPos = new Vector2(Bounds.Center.X + totalXOffset, Bounds.Center.Y + totalYOffset);
 
                 // Calculate line start/end
-                // Moved down 1 pixel (+1) and made wider (+2 padding on each side)
-                float lineY = centerPos.Y + 1;
+                // Adjusted: Moved up 1 pixel (was +1, now +0) and right 2 pixels (was +5)
+                float lineY = centerPos.Y;
                 float padding = 2f;
-                float startX = centerPos.X - (textSize.X / 2f) - padding;
-                float endX = centerPos.X + (textSize.X / 2f) + padding;
+                float startX = centerPos.X - (textSize.X / 2f) - padding + 2;
+                float endX = centerPos.X + (textSize.X / 2f) + padding + 2;
 
                 // Draw line
                 Color lineColor = CustomDisabledTextColor ?? _global.ButtonDisableColor;

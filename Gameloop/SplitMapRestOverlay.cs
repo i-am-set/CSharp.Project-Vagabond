@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿#nullable enable
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -202,7 +203,8 @@ namespace ProjectVagabond.UI
                 {
                     UseScreenCoordinates = true,
                     AlignLeft = true, // Align text to left
-                    TextRenderOffset = new Vector2(11, -1) // Shift past icon (8px + 3px gap), adjust Y
+                    TextRenderOffset = new Vector2(8, -1), // Shift past icon (8px + 0px gap), adjust Y
+                    DisableInputWhenSelected = true // Prevent clicking/hovering when already selected
                 };
 
                 // Guard Logic: If party size is 1, disable the Guard button but still show it.
@@ -585,7 +587,7 @@ namespace ProjectVagabond.UI
                         // Center it
                         float startDescY = textTopBoundary + (availableHeight - totalTextHeight) / 2f;
 
-                        // Clamp to ensure it doesn't overlap if space is too tight
+                        // Clamp to top if text exceeds space (prevents overlap with stats)
                         if (startDescY < textTopBoundary) startDescY = textTopBoundary;
 
                         float descY = startDescY;
@@ -629,6 +631,15 @@ namespace ProjectVagabond.UI
                 var btn = (ToggleButton)_actionButtons[i];
                 btn.Draw(spriteBatch, secondaryFont, gameTime, Matrix.Identity);
 
+                // Calculate Bob Offset (Match ToggleButton logic)
+                float bobOffset = 0f;
+                if (btn.IsSelected)
+                {
+                    float speed = 5f;
+                    float val = MathF.Round((MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * speed) + 1f) * 0.5f);
+                    bobOffset = -val;
+                }
+
                 // Draw Icon
                 int actionIndex = i % 4; // 0=Rest, 1=Train, 2=Search, 3=Guard
                 int stateIndex = 0; // Idle
@@ -639,7 +650,8 @@ namespace ProjectVagabond.UI
 
                 // Calculate position: Left aligned in button, centered vertically
                 // Button Height is 10. Icon is 8. Y offset = 1.
-                Vector2 iconPos = new Vector2(btn.Bounds.X + 1, btn.Bounds.Y + 1);
+                // Apply bobOffset to Y
+                Vector2 iconPos = new Vector2(btn.Bounds.X + 1, btn.Bounds.Y + 1 + bobOffset);
 
                 spriteBatch.DrawSnapped(_spriteManager.RestActionIconsSpriteSheet, iconPos, iconRect, Color.White);
             }
