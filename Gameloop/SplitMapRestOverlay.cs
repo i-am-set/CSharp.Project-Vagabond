@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -201,7 +200,9 @@ namespace ProjectVagabond.UI
                     customDefaultTextColor: _global.Palette_Gray
                 )
                 {
-                    UseScreenCoordinates = true
+                    UseScreenCoordinates = true,
+                    AlignLeft = true, // Align text to left
+                    TextRenderOffset = new Vector2(11, -1) // Shift past icon (8px + 3px gap), adjust Y
                 };
 
                 // Guard Logic: If party size is 1, disable the Guard button but still show it.
@@ -623,9 +624,24 @@ namespace ProjectVagabond.UI
             }
 
             // Draw Action Buttons
-            foreach (var btn in _actionButtons)
+            for (int i = 0; i < _actionButtons.Count; i++)
             {
+                var btn = (ToggleButton)_actionButtons[i];
                 btn.Draw(spriteBatch, secondaryFont, gameTime, Matrix.Identity);
+
+                // Draw Icon
+                int actionIndex = i % 4; // 0=Rest, 1=Train, 2=Search, 3=Guard
+                int stateIndex = 0; // Idle
+                if (btn.IsSelected) stateIndex = 2; // Selected
+                else if (btn.IsHovered) stateIndex = 1; // Hover
+
+                var iconRect = _spriteManager.GetRestActionIconRect(actionIndex, stateIndex);
+
+                // Calculate position: Left aligned in button, centered vertically
+                // Button Height is 10. Icon is 8. Y offset = 1.
+                Vector2 iconPos = new Vector2(btn.Bounds.X + 1, btn.Bounds.Y + 1);
+
+                spriteBatch.DrawSnapped(_spriteManager.RestActionIconsSpriteSheet, iconPos, iconRect, Color.White);
             }
 
             _confirmButton.Draw(spriteBatch, secondaryFont, gameTime, Matrix.Identity);

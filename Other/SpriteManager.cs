@@ -183,6 +183,7 @@ namespace ProjectVagabond
         public Texture2D ShopBorderMain { get; private set; } // NEW
         public Texture2D ShopXIcon { get; private set; } // NEW
         public Texture2D RestBorderMain { get; private set; } // NEW
+        public Texture2D RestActionIconsSpriteSheet { get; private set; } // NEW
 
 
         // Mouse Prompt Sprites
@@ -440,6 +441,8 @@ namespace ProjectVagabond
             catch { ShopXIcon = _textureFactory.CreateColoredTexture(32, 32, Color.Red); }
             try { RestBorderMain = _core.Content.Load<Texture2D>("Sprites/UI/Rest/rest_border_main"); }
             catch { RestBorderMain = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
+            try { RestActionIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/Rest/rest_action_icons"); }
+            catch { RestActionIconsSpriteSheet = _textureFactory.CreateColoredTexture(24, 32, Color.Magenta); }
 
             // Load Health Bar Sprites
             try { InventoryPlayerHealthBarEmpty = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_player_health_bar_empty"); }
@@ -1363,6 +1366,11 @@ namespace ProjectVagabond
             const float frameDuration = 0.5f;
             int frameIndex = (int)(gameTime.TotalGameTime.TotalSeconds / frameDuration) % 2;
             return new Rectangle(frameIndex * 32, 0, 32, 32);
+        }
+
+        public Rectangle GetRestActionIconRect(int actionIndex, int stateIndex)
+        {
+            return new Rectangle(stateIndex * 8, actionIndex * 8, 8, 8);
         }
     }
 }
