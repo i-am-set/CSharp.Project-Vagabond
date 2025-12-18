@@ -85,6 +85,11 @@ namespace ProjectVagabond.UI
         private const float OVERLAY_PULSE_SPEED = 8.0f;
         private const float HEAL_ANIMATION_SPEED = 5.0f; // Speed of lerp
 
+        // --- TUNING: Text Pulse ---
+        private const float TEXT_PULSE_SPEED = 3.0f;
+        private const float TEXT_OPACITY_MIN = 0.65f;
+        private const float TEXT_OPACITY_MAX = 1.0f;
+
         // --- TUNING: Sleep Particles ---
         private const float SLEEP_PARTICLE_SPEED = 9f;                 // Pixels per second moving up
         private const float SLEEP_PARTICLE_LIFETIME = 2.0f;             // How long a "Z" lasts
@@ -113,6 +118,7 @@ namespace ProjectVagabond.UI
         private Dictionary<int, float> _targetHP = new Dictionary<int, float>();
         private bool _isAnimatingHeal = false;
         private float _overlayPulseTimer = 0f;
+        private float _textPulseTimer = 0f;
 
         // Hop Animation Controllers (One per slot)
         private readonly SpriteHopAnimationController[] _hopControllers = new SpriteHopAnimationController[4];
@@ -203,6 +209,7 @@ namespace ProjectVagabond.UI
             _targetHP.Clear();
             _isAnimatingHeal = false;
             _overlayPulseTimer = 0f;
+            _textPulseTimer = 0f;
 
             for (int i = 0; i < _gameState.PlayerState.Party.Count; i++)
             {
@@ -500,6 +507,9 @@ namespace ProjectVagabond.UI
                         }
                 }
             }
+
+            // Add final completion message
+            _narrator.Show("REST COMPLETE!");
         }
 
         private string GetStatTag(string statName)
@@ -576,6 +586,9 @@ namespace ProjectVagabond.UI
 
             // Update Pulse
             _overlayPulseTimer += dt * OVERLAY_PULSE_SPEED;
+
+            // Update Text Pulse
+            _textPulseTimer += dt * TEXT_PULSE_SPEED;
 
             // Update Heal Animation
             if (_isAnimatingHeal)
@@ -972,31 +985,24 @@ namespace ProjectVagabond.UI
 
                         float descY = startDescY;
 
+                        // --- PULSE OPACITY LOGIC ---
+                        float pulseOpacity = MathHelper.Lerp(TEXT_OPACITY_MIN, TEXT_OPACITY_MAX, (MathF.Sin(_textPulseTimer * TEXT_PULSE_SPEED) + 1f) / 2f);
+                        Color finalDescColor = descColor * pulseOpacity;
+
                         foreach (var line in lines)
                         {
                             var lineSize = secondaryFont.MeasureString(line);
                             float lineX = centerX - (lineSize.Width / 2f);
 
                             // --- ANIMATION: Bob Logic ---
+                            // REMOVED: User requested static text.
                             float bobOffset = 0f;
-                            // Only bob if it's a positive effect (Rest or Train/Search)
-                            // Guard is static
-                            if (descAction != RestAction.Guard)
-                            {
-                                float speed = 5f;
-                                // Sine wave 0..1
-                                float t = (MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * speed) + 1f) * 0.5f;
-                                // Round to 0 or 1
-                                float val = MathF.Round(t);
-                                // Invert to move UP
-                                bobOffset = -val;
-                            }
 
                             // IMPORTANT: Round the base Y first, then add the integer bob offset.
                             // This prevents sub-pixel centering from eating the 1-pixel animation.
                             float finalY = MathF.Round(descY) + bobOffset;
 
-                            spriteBatch.DrawStringSnapped(secondaryFont, line, new Vector2(lineX, finalY), descColor);
+                            spriteBatch.DrawStringSnapped(secondaryFont, line, new Vector2(lineX, finalY), finalDescColor);
                             descY += secondaryFont.LineHeight + 1; // Spacing between lines
                         }
                     }

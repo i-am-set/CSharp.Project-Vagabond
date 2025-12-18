@@ -70,6 +70,11 @@ namespace ProjectVagabond.UI
             if (_premiumItems.Any() || _consumableItems.Any())
             {
                 IsOpen = true;
+                // Safety check: If buttons are missing but items exist, rebuild.
+                if (!_itemButtons.Any())
+                {
+                    RebuildButtons();
+                }
             }
         }
 
