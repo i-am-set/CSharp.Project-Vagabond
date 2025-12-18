@@ -1,13 +1,15 @@
-﻿#nullable enable
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Dice;
+using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -17,7 +19,10 @@ namespace ProjectVagabond.UI
     public class SplitMapRestOverlay
     {
         public bool IsOpen { get; private set; } = false;
-        public event Action<string>? OnRestCompleted; // Returns summary text
+        public bool IsNarrating => _menuState == RestMenuState.Narrating;
+
+        // Signals that the entire sequence (selection + narration) is finished
+        public event Action? OnRestCompleted;
         public event Action? OnLeaveRequested; // For Skip
 
         private readonly Global _global;
@@ -29,6 +34,13 @@ namespace ProjectVagabond.UI
         private Button _confirmButton;
         private Button _skipButton;
         private ConfirmationDialog _confirmationDialog;
+
+        // Internal Narrator for results
+        private readonly StoryNarrator _narrator;
+
+        // State Machine
+        private enum RestMenuState { Selection, Narrating }
+        private RestMenuState _menuState = RestMenuState.Selection;
 
         // Layout Constants
         private const float WORLD_Y_OFFSET = 600f;
@@ -101,6 +113,7 @@ namespace ProjectVagabond.UI
             public float MaxTime;
             public float SwayPhase;
             public float Speed;
+            public int MemberIndex; // Track which member this particle belongs to
         }
         private readonly List<SleepParticle> _sleepParticles = new List<SleepParticle>();
         private readonly float[] _sleepSpawnTimers = new float[4];
@@ -128,6 +141,11 @@ namespace ProjectVagabond.UI
 
             _confirmationDialog = new ConfirmationDialog(parentScene);
 
+            // Initialize Narrator
+            var narratorBounds = new Rectangle(0, Global.VIRTUAL_HEIGHT - 50, Global.VIRTUAL_WIDTH, 50);
+            _narrator = new StoryNarrator(narratorBounds);
+            _narrator.OnFinished += FinalizeRestSequence;
+
             _confirmButton = new Button(Rectangle.Empty, "CONFIRM", font: _core.SecondaryFont)
             {
                 CustomDefaultTextColor = _global.Palette_BrightWhite,
@@ -151,6 +169,8 @@ namespace ProjectVagabond.UI
         public void Show()
         {
             IsOpen = true;
+            _menuState = RestMenuState.Selection;
+            _narrator.Clear();
             InitializeActions();
             RebuildLayout();
             _sleepParticles.Clear();
@@ -161,6 +181,7 @@ namespace ProjectVagabond.UI
         {
             IsOpen = false;
             _confirmationDialog.Hide();
+            _narrator.Clear();
         }
 
         private void InitializeActions()
@@ -382,7 +403,18 @@ namespace ProjectVagabond.UI
                 }
             }
 
-            OnRestCompleted?.Invoke(summary.ToString());
+            // Switch to Narrating state
+            _menuState = RestMenuState.Narrating;
+            _narrator.Show(summary.ToString());
+        }
+
+        private void FinalizeRestSequence()
+        {
+            // Only fire completion if we are actually in the narrating state
+            if (_menuState == RestMenuState.Narrating)
+            {
+                OnRestCompleted?.Invoke();
+            }
         }
 
         private void ApplyStatBoost(PartyMember member, string stat, int amount)
@@ -404,6 +436,13 @@ namespace ProjectVagabond.UI
             {
                 _confirmationDialog.Update(gameTime);
                 return; // Block other input
+            }
+
+            // If narrating, only update the narrator and block all other input
+            if (_menuState == RestMenuState.Narrating)
+            {
+                _narrator.Update(gameTime);
+                return;
             }
 
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -457,6 +496,14 @@ namespace ProjectVagabond.UI
             for (int i = _sleepParticles.Count - 1; i >= 0; i--)
             {
                 var p = _sleepParticles[i];
+
+                // Check if the member is still resting. If not, remove the particle immediately.
+                if (_selectedActions.TryGetValue(p.MemberIndex, out var action) && action != RestAction.Rest)
+                {
+                    _sleepParticles.RemoveAt(i);
+                    continue;
+                }
+
                 p.Timer += dt;
                 if (p.Timer >= p.MaxTime)
                 {
@@ -520,7 +567,8 @@ namespace ProjectVagabond.UI
                 Timer = 0f,
                 MaxTime = SLEEP_PARTICLE_LIFETIME,
                 SwayPhase = (float)(_rng.NextDouble() * Math.PI * 2),
-                Speed = SLEEP_PARTICLE_SPEED
+                Speed = SLEEP_PARTICLE_SPEED,
+                MemberIndex = memberIndex // Track owner
             });
         }
 
@@ -528,14 +576,14 @@ namespace ProjectVagabond.UI
         {
             if (!IsOpen) return;
 
-            var pixel = ServiceLocator.Get<Texture2D>();
+            var pixelTex = ServiceLocator.Get<Texture2D>();
             var secondaryFont = _core.SecondaryFont;
             var defaultFont = ServiceLocator.Get<BitmapFont>();
             var tertiaryFont = _core.TertiaryFont;
 
             // Draw Background
-            var bgRect = new Rectangle(0, (int)WORLD_Y_OFFSET, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
-            spriteBatch.DrawSnapped(pixel, bgRect, _global.GameBg);
+            var bgRectDraw = new Rectangle(0, (int)WORLD_Y_OFFSET, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
+            spriteBatch.DrawSnapped(pixelTex, bgRectDraw, _global.GameBg);
 
             // Draw Border
             if (_spriteManager.RestBorderMain != null)
@@ -587,12 +635,22 @@ namespace ProjectVagabond.UI
                     int portraitIndex = Math.Clamp(member!.PortraitIndex, 0, _spriteManager.PlayerPortraitSourceRects.Count - 1);
                     var sourceRect = _spriteManager.PlayerPortraitSourceRects[portraitIndex];
 
-                    // Animation Logic: Toggle between Main and Alt sprite
-                    float animSpeed = 1f;
-                    int frame = (int)(gameTime.TotalGameTime.TotalSeconds * animSpeed) % 2;
-                    Texture2D textureToDraw = frame == 0 ? _spriteManager.PlayerPortraitsSpriteSheet : _spriteManager.PlayerPortraitsAltSpriteSheet;
+                    Texture2D textureToDraw;
 
-                    // Removed bob logic (bobOffset = 0)
+                    // Check if resting
+                    if (_selectedActions.TryGetValue(i, out var action) && action == RestAction.Rest)
+                    {
+                        // Sleeping: Use sleep sprite, no animation
+                        textureToDraw = _spriteManager.PlayerPortraitsSleepSpriteSheet ?? _spriteManager.PlayerPortraitsSpriteSheet;
+                    }
+                    else
+                    {
+                        // Awake: Toggle animation
+                        float animSpeed = 1f;
+                        int frame = (int)(gameTime.TotalGameTime.TotalSeconds * animSpeed) % 2;
+                        textureToDraw = frame == 0 ? _spriteManager.PlayerPortraitsSpriteSheet : _spriteManager.PlayerPortraitsAltSpriteSheet;
+                    }
+
                     var destRect = new Rectangle(centerX - 16, currentY, 32, 32);
                     spriteBatch.DrawSnapped(textureToDraw, destRect, sourceRect, Color.White);
                 }
@@ -789,11 +847,11 @@ namespace ProjectVagabond.UI
             {
                 foreach (var rect in _partyMemberPanelAreas)
                 {
-                    spriteBatch.DrawSnapped(pixel, rect, Color.Blue * 0.2f);
+                    spriteBatch.DrawSnapped(pixelTex, rect, Color.Blue * 0.2f);
                 }
                 foreach (var btn in _actionButtons)
                 {
-                    spriteBatch.DrawSnapped(pixel, btn.Bounds, Color.Green * 0.5f);
+                    spriteBatch.DrawSnapped(pixelTex, btn.Bounds, Color.Green * 0.5f);
                 }
             }
         }
@@ -812,6 +870,12 @@ namespace ProjectVagabond.UI
             {
                 // Draw in screen space (Matrix.Identity)
                 _confirmationDialog.DrawContent(spriteBatch, font, gameTime, Matrix.Identity);
+            }
+
+            // Draw Narrator if active
+            if (_menuState == RestMenuState.Narrating)
+            {
+                _narrator.Draw(spriteBatch, ServiceLocator.Get<Core>().SecondaryFont, gameTime);
             }
         }
     }

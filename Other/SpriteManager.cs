@@ -53,8 +53,10 @@ namespace ProjectVagabond
         // Player Portraits
         public Texture2D PlayerPortraitsSpriteSheet { get; private set; }
         public Texture2D PlayerPortraitsAltSpriteSheet { get; private set; }
+        public Texture2D PlayerPortraitsSleepSpriteSheet { get; private set; } // NEW: Sleep Sprites
         public Texture2D PlayerPortraitsSpriteSheetSilhouette { get; private set; }
         public Texture2D PlayerPortraitsAltSpriteSheetSilhouette { get; private set; }
+        public Texture2D PlayerPortraitsSleepSpriteSheetSilhouette { get; private set; } // NEW: Sleep Silhouette
         public List<Rectangle> PlayerPortraitSourceRects { get; private set; } = new List<Rectangle>();
 
         // Small Player Portraits (8x8)
@@ -168,7 +170,7 @@ namespace ProjectVagabond
         public Texture2D InventoryHeaderButtonMisc { get; private set; }
         public Texture2D InventoryHeaderButtonEquip { get; private set; }
         public Texture2D InventorySlotIdleSpriteSheet { get; private set; }
-        public Texture2D InventorySlotIdleLargeSpriteSheet { get; private set; } // New Large Sprite Sheet
+        public Texture2D InventorySlotIdleLargeSpriteSheet { get; private set; } // New Large Rects
         public Texture2D InventorySlotHoverSprite { get; private set; }
         public Texture2D InventorySlotSelectedSprite { get; private set; }
         public Texture2D InventoryLeftArrowButton { get; private set; }
@@ -1278,6 +1280,19 @@ namespace ProjectVagabond
 
                 PlayerPortraitSourceRects.Clear();
                 PlayerPortraitSourceRects.Add(new Rectangle(0, 0, 32, 32));
+            }
+
+            // Load Sleep Sprites
+            try
+            {
+                PlayerPortraitsSleepSpriteSheet = _core.Content.Load<Texture2D>("Sprites/Player/cat_portraits_32x32_sleepsprites");
+                PlayerPortraitsSleepSpriteSheetSilhouette = CreateSilhouette(PlayerPortraitsSleepSpriteSheet);
+            }
+            catch
+            {
+                // Fallback
+                PlayerPortraitsSleepSpriteSheet = _textureFactory.CreateColoredTexture(32, 32, Color.Blue);
+                PlayerPortraitsSleepSpriteSheetSilhouette = CreateSilhouette(PlayerPortraitsSleepSpriteSheet);
             }
 
             // Load 8x8 Portraits

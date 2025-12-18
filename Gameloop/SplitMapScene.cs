@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -233,15 +232,21 @@ namespace ProjectVagabond.Scenes
             };
 
             // --- REST COMPLETE LOGIC ---
-            _restOverlay.OnRestCompleted += (summary) =>
+            _restOverlay.OnRestCompleted += () =>
             {
                 // Close Rest Overlay
                 _viewToReturnTo = SplitMapView.Map;
                 SetView(SplitMapView.Map, snap: true);
 
-                // Show Summary via Narrator
-                _eventState = EventState.NarratingResult;
-                _resultNarrator.Show(summary);
+                // Mark node complete and lower
+                var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
+                if (currentNode != null)
+                {
+                    currentNode.IsCompleted = true;
+                    UpdateCameraTarget(currentNode.Position, false);
+                }
+                _mapState = SplitMapState.LoweringNode;
+                _nodeLiftTimer = 0f;
             };
         }
 
@@ -582,18 +587,28 @@ namespace ProjectVagabond.Scenes
 
             // Update Overlays
             // Allow inventory interaction if Map is Idle OR if we are in the Shop view OR Rest view
-            bool allowInventoryInteraction = _mapState == SplitMapState.Idle || _currentView == SplitMapView.Shop || _currentView == SplitMapView.Rest;
+            // BUT: If Rest Overlay is narrating, block everything.
+            bool isRestNarrating = _restOverlay.IsNarrating;
+            bool allowInventoryInteraction = !isRestNarrating && (_mapState == SplitMapState.Idle || _currentView == SplitMapView.Shop || _currentView == SplitMapView.Rest);
+
             _inventoryOverlay.Update(gameTime, currentMouseState, currentKeyboardState, allowInventoryInteraction, cameraTransform);
 
-            _settingsOverlay.Update(gameTime, currentMouseState, currentKeyboardState, cameraTransform);
-            _shopOverlay.Update(gameTime, currentMouseState, cameraTransform);
+            if (!isRestNarrating)
+            {
+                _settingsOverlay.Update(gameTime, currentMouseState, currentKeyboardState, cameraTransform);
+                _shopOverlay.Update(gameTime, currentMouseState, cameraTransform);
+            }
+
             _restOverlay.Update(gameTime, currentMouseState, cameraTransform);
 
             // Update Settings Button
-            _settingsButton?.Update(currentMouseState);
+            if (!isRestNarrating)
+            {
+                _settingsButton?.Update(currentMouseState);
+            }
 
             // Handle Escape Key for Navigation
-            if (KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState))
+            if (KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState) && !isRestNarrating)
             {
                 // Only act if the view hasn't already changed this frame (e.g., by an overlay closing itself)
                 if (_currentView == viewAtStartOfFrame)
