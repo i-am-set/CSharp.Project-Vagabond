@@ -45,20 +45,21 @@ namespace ProjectVagabond
                 var sb = new StringBuilder();
                 sb.AppendLine("[palette_yellow]Available Commands:[/]");
                 sb.AppendLine("  [palette_teal]System & Debug[/]");
-                sb.AppendLine("    debugcolors                         - Lists all colors in rainbow order.");
+                sb.AppendLine("    debug_colors                         - Lists all colors in rainbow order.");
                 sb.AppendLine("    test_abilities                     - Runs unit tests on ability logic.");
                 sb.AppendLine("    test_items                          - Verifies all items load correctly.");
                 sb.AppendLine("    clear                                - Clears console.");
                 sb.AppendLine("    exit                                 - Exits game.");
-                sb.AppendLine("    debugcombat                         - Starts a random forest combat.");
-                sb.AppendLine("    debugshop                           - Opens a random shop interface.");
-                sb.AppendLine("    debugrest                           - Opens the rest site interface.");
+                sb.AppendLine("    debug_combat                         - Starts a random forest combat.");
+                sb.AppendLine("    debug_shop                           - Opens a random shop interface.");
+                sb.AppendLine("    debug_rest                           - Opens the rest site interface.");
                 sb.AppendLine("    combatrun                           - Flees from combat.");
                 sb.AppendLine("    givestatus <slot> <type> {dur}  - Apply status.");
-                sb.AppendLine("    debugconsolefont <0|1|2>         - Sets the debug console font.");
+                sb.AppendLine("    debug_consolefont <0|1|2>         - Sets the debug console font.");
                 sb.AppendLine();
                 sb.AppendLine("  [palette_teal]Party & Inventory[/]");
                 sb.AppendLine("    addmember <id>                     - Adds a party member.");
+                sb.AppendLine("    damageparty <slot> <%>             - Damages member by % of Max HP.");
                 sb.AppendLine("    inventory                           - Shows all inventories.");
                 sb.AppendLine("    giveall                             - Gives 1 of every item.");
                 sb.AppendLine("    givecoin <amount>                  - Adds coin.");
@@ -81,7 +82,7 @@ namespace ProjectVagabond
             _commands["clear"] = new Command("clear", (args) => ServiceLocator.Get<Utils.DebugConsole>().ClearHistory(), "clear - Clears history.");
 
             // --- COLORS COMMAND ---
-            _commands["debugcolors"] = new Command("debugcolors", (args) =>
+            _commands["debug_colors"] = new Command("debug_colors", (args) =>
             {
                 var colorType = typeof(Color);
                 var properties = colorType.GetProperties(BindingFlags.Public | BindingFlags.Static);
@@ -212,6 +213,46 @@ namespace ProjectVagabond
             }, "addmember <id> - Adds a party member.",
             (args) => args.Length == 0 ? BattleDataCache.PartyMembers.Keys.ToList() : new List<string>());
 
+            _commands["debug_damagepartymember"] = new Command("damageparty", (args) =>
+            {
+                _gameState ??= ServiceLocator.Get<GameState>();
+                if (_gameState.PlayerState == null) return;
+
+                if (args.Length < 3)
+                {
+                    Log("[error]Usage: damageparty <slot 1-4> <percent>");
+                    return;
+                }
+
+                if (!int.TryParse(args[1], out int slot) || slot < 1 || slot > 4)
+                {
+                    Log("[error]Invalid slot. Use 1-4.");
+                    return;
+                }
+
+                if (!float.TryParse(args[2], out float percent))
+                {
+                    Log("[error]Invalid percentage.");
+                    return;
+                }
+
+                int index = slot - 1;
+                if (index >= _gameState.PlayerState.Party.Count)
+                {
+                    Log($"[error]Slot {slot} is empty.");
+                    return;
+                }
+
+                var member = _gameState.PlayerState.Party[index];
+                int damage = (int)(member.MaxHP * (percent / 100f));
+                int oldHP = member.CurrentHP;
+                member.CurrentHP = Math.Max(0, member.CurrentHP - damage);
+
+                Log($"[palette_red]Damaged {member.Name} for {damage} HP ({oldHP} -> {member.CurrentHP}).");
+
+            }, "damageparty <slot> <percent> - Damages a party member by % of Max HP.",
+            (args) => args.Length == 0 ? new List<string> { "1", "2", "3", "4" } : new List<string>());
+
             // --- INVENTORY COMMANDS ---
             _commands["inventory"] = new Command("inventory", (args) => HandleShowInventory(), "inventory - Shows all inventories.");
 
@@ -329,7 +370,7 @@ namespace ProjectVagabond
             }, "removeaction <id>");
 
             // --- DEBUG COMBAT ---
-            _commands["debugcombat"] = new Command("debugcombat", (args) =>
+            _commands["debug_combat"] = new Command("debug_combat", (args) =>
             {
                 var sceneManager = ServiceLocator.Get<SceneManager>();
                 if (sceneManager.CurrentActiveScene is SplitMapScene splitScene)
@@ -354,7 +395,7 @@ namespace ProjectVagabond
             }, "debugcombat - Starts a random forest encounter (SplitMap only).");
 
             // --- DEBUG SHOP ---
-            _commands["debugshop"] = new Command("debugshop", (args) =>
+            _commands["debug_shop"] = new Command("debug_shop", (args) =>
             {
                 var sceneManager = ServiceLocator.Get<SceneManager>();
                 if (sceneManager.CurrentActiveScene is SplitMapScene splitScene)
@@ -366,10 +407,10 @@ namespace ProjectVagabond
                 {
                     Log("[error]Command only available in Split Map Scene.");
                 }
-            }, "debugshop - Opens a random shop interface.");
+            }, "debug_shop - Opens a random shop interface.");
 
             // --- DEBUG REST ---
-            _commands["debugrest"] = new Command("debugrest", (args) =>
+            _commands["debug_rest"] = new Command("debug_rest", (args) =>
             {
                 var sceneManager = ServiceLocator.Get<SceneManager>();
                 if (sceneManager.CurrentActiveScene is SplitMapScene splitScene)
@@ -381,7 +422,7 @@ namespace ProjectVagabond
                 {
                     Log("[error]Command only available in Split Map Scene.");
                 }
-            }, "debugrest - Opens the rest site interface.");
+            }, "debug_rest - Opens the rest site interface.");
 
             _commands["combatrun"] = new Command("combatrun", (args) =>
             {
@@ -453,16 +494,16 @@ namespace ProjectVagabond
                 return new List<string>();
             });
 
-            _commands["debugconsolefont"] = new Command("debugconsolefont", (args) =>
+            _commands["debug_consolefont"] = new Command("debug_consolefont", (args) =>
             {
                 if (args.Length < 2 || !int.TryParse(args[1], out int index))
                 {
-                    Log("[error]Usage: debugconsolefont <0|1|2>");
+                    Log("[error]Usage: debug_consolefont <0|1|2>");
                     return;
                 }
                 ServiceLocator.Get<DebugConsole>().SetFontIndex(index);
                 Log($"[palette_teal]Debug Console Font set to index {index}.");
-            }, "debugconsolefont <0|1|2> - Sets the debug console font.");
+            }, "debug_consolefont <0|1|2> - Sets the debug console font.");
 
             _commands["exit"] = new Command("exit", (args) => ServiceLocator.Get<Core>().ExitApplication(), "exit");
         }

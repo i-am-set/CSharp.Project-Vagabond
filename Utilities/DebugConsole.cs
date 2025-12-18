@@ -23,7 +23,7 @@ namespace ProjectVagabond.Utils
         private readonly Global _global;
         private readonly CommandProcessor _commandProcessor;
         private readonly AutoCompleteManager _autoCompleteManager;
-        private readonly SceneManager _sceneManager; 
+        private readonly SceneManager _sceneManager;
 
         // History
         private readonly List<ColoredLine> _history = new List<ColoredLine>();
@@ -494,7 +494,9 @@ namespace ProjectVagabond.Utils
             if (!_autoCompleteManager.ShowingAutoCompleteSuggestions || !_autoCompleteManager.AutoCompleteSuggestions.Any()) return;
 
             var pixel = ServiceLocator.Get<Texture2D>();
-            int visibleSuggestions = Math.Min(_autoCompleteManager.AutoCompleteSuggestions.Count, 5);
+
+            // Use the full count of suggestions instead of capping at 5
+            int visibleSuggestions = _autoCompleteManager.AutoCompleteSuggestions.Count;
             float maxSuggestionWidth = 0;
 
             for (int i = 0; i < visibleSuggestions; i++)

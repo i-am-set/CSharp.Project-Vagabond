@@ -67,6 +67,7 @@ namespace ProjectVagabond
         public Texture2D InventoryPlayerHealthBarEmpty { get; private set; }
         public Texture2D InventoryPlayerHealthBarDisabled { get; private set; } // New
         public Texture2D InventoryPlayerHealthBarFull { get; private set; }
+        public Texture2D InventoryPlayerHealthBarOverlay { get; private set; } // NEW: Healing Overlay
         public Texture2D InventoryStatBarEmpty { get; private set; }
         public Texture2D InventoryStatBarDisabled { get; private set; } // New
         public Texture2D InventoryStatBarFull { get; private set; }
@@ -453,6 +454,10 @@ namespace ProjectVagabond
             catch { InventoryPlayerHealthBarDisabled = _textureFactory.CreateColoredTexture(66, 7, Color.Black); }
             try { InventoryPlayerHealthBarFull = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_player_health_bar_full"); }
             catch { InventoryPlayerHealthBarFull = _textureFactory.CreateColoredTexture(64, 7, Color.Red); }
+
+            // NEW: Load Healing Overlay
+            try { InventoryPlayerHealthBarOverlay = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_player_health_bar_overlay"); }
+            catch { InventoryPlayerHealthBarOverlay = _textureFactory.CreateColoredTexture(64, 7, Color.LimeGreen); }
 
 
             LoadAndCacheCursorSprite("cursor_default");

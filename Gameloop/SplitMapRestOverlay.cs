@@ -3,13 +3,10 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
-using ProjectVagabond.Dice;
-using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -82,6 +79,12 @@ namespace ProjectVagabond.UI
         private readonly Color COLOR_DESC_SEARCH_GUARDED;
         private readonly Color COLOR_DESC_GUARD;
 
+        // --- TUNING: Visuals ---
+        private Color OVERLAY_COLOR_A = Color.Yellow;
+        private Color OVERLAY_COLOR_B = Color.White;
+        private const float OVERLAY_PULSE_SPEED = 8.0f;
+        private const float HEAL_ANIMATION_SPEED = 5.0f; // Speed of lerp
+
         // --- TUNING: Sleep Particles ---
         private const float SLEEP_PARTICLE_SPEED = 9f;                 // Pixels per second moving up
         private const float SLEEP_PARTICLE_LIFETIME = 2.0f;             // How long a "Z" lasts
@@ -104,6 +107,12 @@ namespace ProjectVagabond.UI
         private float _portraitBgTimer;
         private float _portraitBgDuration;
         private static readonly Random _rng = new Random();
+
+        // Animation State for Health Bars
+        private Dictionary<int, float> _visualHP = new Dictionary<int, float>();
+        private Dictionary<int, float> _targetHP = new Dictionary<int, float>();
+        private bool _isAnimatingHeal = false;
+        private float _overlayPulseTimer = 0f;
 
         // Sleep Particles
         private class SleepParticle
@@ -175,6 +184,19 @@ namespace ProjectVagabond.UI
             RebuildLayout();
             _sleepParticles.Clear();
             for (int i = 0; i < _sleepSpawnTimers.Length; i++) _sleepSpawnTimers[i] = 0f;
+
+            // Initialize Visual HP
+            _visualHP.Clear();
+            _targetHP.Clear();
+            _isAnimatingHeal = false;
+            _overlayPulseTimer = 0f;
+
+            for (int i = 0; i < _gameState.PlayerState.Party.Count; i++)
+            {
+                var member = _gameState.PlayerState.Party[i];
+                _visualHP[i] = member.CurrentHP;
+                _targetHP[i] = member.CurrentHP;
+            }
         }
 
         public void Hide()
@@ -316,39 +338,84 @@ namespace ProjectVagabond.UI
 
         private void ExecuteRest()
         {
-            StringBuilder summary = new StringBuilder();
-            summary.AppendLine("Rest Complete!");
+            // Switch to Narrating state immediately
+            _menuState = RestMenuState.Narrating;
+            _isAnimatingHeal = true;
 
             bool guardActive = _selectedActions.Values.Any(a => a == RestAction.Guard);
             var allRelics = BattleDataCache.Relics.Keys.ToList();
 
-            // Process Each Member
+            string guardName = "";
+            // Find Guard Name
             for (int i = 0; i < _gameState.PlayerState.Party.Count; i++)
             {
+                if (_selectedActions[i] == RestAction.Guard)
+                {
+                    guardName = _gameState.PlayerState.Party[i].Name.ToUpper();
+                    break;
+                }
+            }
+
+            // 1. Process Guard(s) First
+            for (int i = 0; i < _gameState.PlayerState.Party.Count; i++)
+            {
+                if (_selectedActions[i] == RestAction.Guard)
+                {
+                    var member = _gameState.PlayerState.Party[i];
+                    _targetHP[i] = member.CurrentHP; // No HP change for guard
+
+                    // Queue Guard Message
+                    _narrator.Show($"{member.Name} stood guard while the party rested.\n[palette_gray]+MODIFIER[/]");
+                }
+            }
+
+            // 2. Process Everyone Else (Left to Right)
+            for (int i = 0; i < _gameState.PlayerState.Party.Count; i++)
+            {
+                if (_selectedActions[i] == RestAction.Guard) continue; // Skip guards
+
                 var member = _gameState.PlayerState.Party[i];
                 var action = _selectedActions[i];
 
+                // Sync visual start point
+                _visualHP[i] = member.CurrentHP;
+
                 // Calculate multiplier for this member
-                // Guarding members do not benefit from the guard multiplier (they are the source)
-                float multiplier = (guardActive && action != RestAction.Guard) ? GUARD_HEAL_MULTIPLIER : 1.0f;
+                float multiplier = guardActive ? GUARD_HEAL_MULTIPLIER : 1.0f;
 
                 switch (action)
                 {
                     case RestAction.Rest:
                         {
-                            int healAmount = (int)(member.MaxHP * HEAL_PERCENT_REST * multiplier);
                             int oldHP = member.CurrentHP;
+                            int healAmount = (int)(member.MaxHP * HEAL_PERCENT_REST * multiplier);
                             member.CurrentHP = Math.Min(member.MaxHP, member.CurrentHP + healAmount);
-                            int healed = member.CurrentHP - oldHP;
-                            if (healed > 0) summary.AppendLine($"{member.Name} rested: +{healed} HP.");
-                            else summary.AppendLine($"{member.Name} rested.");
+                            _targetHP[i] = member.CurrentHP;
+
+                            int actualHealed = member.CurrentHP - oldHP;
+                            int percentDisplay = (int)((float)actualHealed / member.MaxHP * 100f);
+
+                            string msg;
+                            if (guardActive)
+                            {
+                                msg = $"THANKS TO {guardName}, {member.Name} RECOVERED WELL!\n";
+                            }
+                            else
+                            {
+                                msg = $"{member.Name} RESTED.\n";
+                            }
+                            msg += $"[palette_lightgreen]+{percentDisplay}% HP[/]";
+
+                            _narrator.Show(msg);
                             break;
                         }
 
                     case RestAction.Train:
                         {
                             string[] stats = { "Strength", "Intelligence", "Tenacity", "Agility" };
+                            _targetHP[i] = member.CurrentHP; // No HP change
 
+                            string msg = "";
                             if (guardActive)
                             {
                                 // Guarded: +2 to one, +1 to another
@@ -358,21 +425,31 @@ namespace ProjectVagabond.UI
 
                                 ApplyStatBoost(member, stats[idx1], TRAIN_AMOUNT_GUARDED_MAJOR);
                                 ApplyStatBoost(member, stats[idx2], TRAIN_AMOUNT_GUARDED_MINOR);
-                                summary.AppendLine($"{member.Name} trained (Guarded): +{TRAIN_AMOUNT_GUARDED_MAJOR} {stats[idx1].Substring(0, 3)}, +{TRAIN_AMOUNT_GUARDED_MINOR} {stats[idx2].Substring(0, 3)}.");
+
+                                msg = $"THANKS TO {guardName}, {member.Name} FOCUSED!\n";
+                                msg += $"{GetStatTag(stats[idx1])}+{TRAIN_AMOUNT_GUARDED_MAJOR} {stats[idx1].Substring(0, 3)}[/]  {GetStatTag(stats[idx2])}+{TRAIN_AMOUNT_GUARDED_MINOR} {stats[idx2].Substring(0, 3)}[/]";
                             }
                             else
                             {
                                 // Unguarded: +1 to one
                                 int idx1 = _rng.Next(4);
                                 ApplyStatBoost(member, stats[idx1], TRAIN_AMOUNT_UNGUARDED);
-                                summary.AppendLine($"{member.Name} trained: +{TRAIN_AMOUNT_UNGUARDED} {stats[idx1].Substring(0, 3)}.");
+
+                                msg = $"{member.Name} TRAINED.\n";
+                                msg += $"{GetStatTag(stats[idx1])}+{TRAIN_AMOUNT_UNGUARDED} {stats[idx1].Substring(0, 3)}[/]";
                             }
+                            _narrator.Show(msg);
                             break;
                         }
 
                     case RestAction.Search:
                         {
+                            _targetHP[i] = member.CurrentHP; // No HP change
                             int chance = guardActive ? SEARCH_CHANCE_GUARDED : SEARCH_CHANCE_UNGUARDED;
+                            string msg;
+
+                            if (guardActive) msg = $"THANKS TO {guardName}, {member.Name} LOOKED THOROUGHLY!\n";
+                            else msg = $"{member.Name} SEARCHED.\nThey looked around cautiously.\n";
 
                             if (_rng.Next(0, 100) < chance)
                             {
@@ -381,31 +458,52 @@ namespace ProjectVagabond.UI
                                     string relicId = allRelics[_rng.Next(allRelics.Count)];
                                     var relic = BattleDataCache.Relics[relicId];
                                     _gameState.PlayerState.AddRelic(relicId);
-                                    summary.AppendLine($"[palette_teal]{member.Name} found Relic: {relic.RelicName}![/]");
+
+                                    string rarityTag = GetRarityTag(relic.Rarity);
+                                    msg += $"Found {rarityTag}{relic.RelicName}[/]!";
                                 }
                                 else
                                 {
-                                    summary.AppendLine($"{member.Name} searched but found nothing (Empty DB).");
+                                    msg += "[gray]Found nothing (Empty DB).[/]";
                                 }
                             }
                             else
                             {
-                                summary.AppendLine($"{member.Name} searched but found nothing.");
+                                msg += "[gray]Found nothing.[/]";
                             }
-                            break;
-                        }
-
-                    case RestAction.Guard:
-                        {
-                            summary.AppendLine($"{member.Name} stood guard.");
+                            _narrator.Show(msg);
                             break;
                         }
                 }
             }
+        }
 
-            // Switch to Narrating state
-            _menuState = RestMenuState.Narrating;
-            _narrator.Show(summary.ToString());
+        private string GetStatTag(string statName)
+        {
+            // Use property names from Global.cs so StoryNarrator reflection can find them
+            return statName switch
+            {
+                "Strength" => "[StatColor_Strength]",
+                "Intelligence" => "[StatColor_Intelligence]",
+                "Tenacity" => "[StatColor_Tenacity]",
+                "Agility" => "[StatColor_Agility]",
+                _ => "[Palette_BrightWhite]"
+            };
+        }
+
+        private string GetRarityTag(int rarity)
+        {
+            // Use standard MonoGame color names supported by StoryNarrator reflection
+            return rarity switch
+            {
+                0 => "[White]", // Common
+                1 => "[Lime]", // Uncommon
+                2 => "[DeepSkyBlue]", // Rare
+                3 => "[DarkOrchid]", // Epic
+                4 => "[Red]", // Mythic
+                5 => "[Yellow]", // Legendary
+                _ => "[White]"
+            };
         }
 
         private void FinalizeRestSequence()
@@ -438,6 +536,38 @@ namespace ProjectVagabond.UI
                 return; // Block other input
             }
 
+            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            // Update Pulse
+            _overlayPulseTimer += dt * OVERLAY_PULSE_SPEED;
+
+            // Update Heal Animation
+            if (_isAnimatingHeal)
+            {
+                bool allDone = true;
+                for (int i = 0; i < _gameState.PlayerState.Party.Count; i++)
+                {
+                    float current = _visualHP[i];
+                    float target = _targetHP[i];
+
+                    if (Math.Abs(target - current) > 0.1f)
+                    {
+                        _visualHP[i] = MathHelper.Lerp(_visualHP[i], target, HEAL_ANIMATION_SPEED * dt);
+                        if (Math.Abs(target - _visualHP[i]) < 0.5f) _visualHP[i] = target;
+                        allDone = false;
+                    }
+                }
+                if (allDone) _isAnimatingHeal = false;
+            }
+            else if (_menuState == RestMenuState.Selection)
+            {
+                // Keep visual HP synced in selection mode
+                for (int i = 0; i < _gameState.PlayerState.Party.Count; i++)
+                {
+                    _visualHP[i] = _gameState.PlayerState.Party[i].CurrentHP;
+                }
+            }
+
             // If narrating, only update the narrator and block all other input
             if (_menuState == RestMenuState.Narrating)
             {
@@ -445,7 +575,6 @@ namespace ProjectVagabond.UI
                 return;
             }
 
-            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
             _portraitBgTimer += dt;
             if (_portraitBgTimer >= _portraitBgDuration)
             {
@@ -668,10 +797,52 @@ namespace ProjectVagabond.UI
 
                     if (isOccupied && _spriteManager.InventoryPlayerHealthBarFull != null)
                     {
-                        float hpPercent = (float)member!.CurrentHP / Math.Max(1, member.MaxHP);
+                        // Use _visualHP for the red bar
+                        float currentVisualHP = _visualHP.ContainsKey(i) ? _visualHP[i] : member!.CurrentHP;
+                        float hpPercent = currentVisualHP / Math.Max(1, member!.MaxHP);
                         int visibleWidth = (int)(_spriteManager.InventoryPlayerHealthBarFull.Width * hpPercent);
                         var srcRect = new Rectangle(0, 0, visibleWidth, _spriteManager.InventoryPlayerHealthBarFull.Height);
                         spriteBatch.DrawSnapped(_spriteManager.InventoryPlayerHealthBarFull, new Vector2(barX + 1, currentY), srcRect, Color.White);
+
+                        // --- NEW: Draw Healing Preview Overlay ---
+                        // Determine target HP (either projected or actual target if animating)
+                        float targetHP = currentVisualHP;
+                        bool showOverlay = false;
+
+                        if (_isAnimatingHeal)
+                        {
+                            targetHP = _targetHP[i];
+                            showOverlay = targetHP > currentVisualHP;
+                        }
+                        else if (_selectedActions.TryGetValue(i, out var healAction) && healAction == RestAction.Rest)
+                        {
+                            float multiplier = (guardActive && healAction != RestAction.Guard) ? GUARD_HEAL_MULTIPLIER : 1.0f;
+                            int healAmount = (int)(member.MaxHP * HEAL_PERCENT_REST * multiplier);
+                            targetHP = Math.Min(member.MaxHP, member.CurrentHP + healAmount);
+                            showOverlay = targetHP > member.CurrentHP;
+                        }
+
+                        if (showOverlay && _spriteManager.InventoryPlayerHealthBarOverlay != null)
+                        {
+                            int fullWidth = _spriteManager.InventoryPlayerHealthBarFull.Width;
+                            float currentPercent = currentVisualHP / member.MaxHP;
+                            float projectedPercent = targetHP / member.MaxHP;
+
+                            int startPixel = (int)(fullWidth * currentPercent);
+                            int endPixel = (int)(fullWidth * projectedPercent);
+                            int overlayWidth = endPixel - startPixel;
+
+                            if (overlayWidth > 0)
+                            {
+                                var srcOverlay = new Rectangle(startPixel, 0, overlayWidth, 7);
+
+                                // Pulse Color
+                                float t = (MathF.Sin(_overlayPulseTimer) + 1f) / 2f;
+                                Color overlayColor = Color.Lerp(OVERLAY_COLOR_A, OVERLAY_COLOR_B, t);
+
+                                spriteBatch.DrawSnapped(_spriteManager.InventoryPlayerHealthBarOverlay, new Vector2(barX + 1 + startPixel, currentY), srcOverlay, overlayColor);
+                            }
+                        }
                     }
 
                     string hpValText = isOccupied ? $"{member!.CurrentHP}/{member.MaxHP}" : "0/0";
@@ -688,15 +859,15 @@ namespace ProjectVagabond.UI
                     spriteBatch.DrawStringSnapped(secondaryFont, hpSuffix, new Vector2(hpTextX + valSize.Width, hpTextY), _global.Palette_Gray);
 
                     // --- NEW: Draw Action Description ---
-                    if (isOccupied && _selectedActions.TryGetValue(i, out var action))
+                    if (isOccupied && _selectedActions.TryGetValue(i, out var descAction))
                     {
                         string descText = "";
                         Color descColor = _global.Palette_White;
 
                         // Determine multiplier (Guard doesn't buff itself)
-                        float multiplier = (guardActive && action != RestAction.Guard) ? GUARD_HEAL_MULTIPLIER : 1.0f;
+                        float multiplier = (guardActive && descAction != RestAction.Guard) ? GUARD_HEAL_MULTIPLIER : 1.0f;
 
-                        switch (action)
+                        switch (descAction)
                         {
                             case RestAction.Rest:
                                 int finalPercent = (int)(HEAL_PERCENT_REST * multiplier * 100);
@@ -770,7 +941,7 @@ namespace ProjectVagabond.UI
                             float bobOffset = 0f;
                             // Only bob if it's a positive effect (Rest or Train/Search)
                             // Guard is static
-                            if (action != RestAction.Guard)
+                            if (descAction != RestAction.Guard)
                             {
                                 float speed = 5f;
                                 // Sine wave 0..1
@@ -853,6 +1024,17 @@ namespace ProjectVagabond.UI
                 {
                     spriteBatch.DrawSnapped(pixelTex, btn.Bounds, Color.Green * 0.5f);
                 }
+            }
+
+            // --- NARRATION OVERLAY ---
+            // If narrating, draw a dimmer and the narrator box on top of everything
+            if (_menuState == RestMenuState.Narrating)
+            {
+                // Dimmer
+                // spriteBatch.DrawSnapped(pixelTex, bgRectDraw, Color.Black * 0.7f); // REMOVED DIMMER
+
+                // Narrator
+                _narrator.Draw(spriteBatch, secondaryFont, gameTime);
             }
         }
 
