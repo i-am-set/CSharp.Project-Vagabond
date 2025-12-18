@@ -61,11 +61,9 @@ namespace ProjectVagabond.Battle.UI
         private const float SHADOW_ANIM_MIN_INTERVAL = 0.8f; // Slower than limbs
         private const float SHADOW_ANIM_MAX_INTERVAL = 1.2f;
 
-        // Attacker Animation
-        private readonly Dictionary<string, float> _attackAnimTimers = new();
+        // Attacker Animation (Refactored to use centralized controller)
+        private readonly Dictionary<string, SpriteHopAnimationController> _attackAnimControllers = new();
         private string? _lastAttackerId;
-        private const float ATTACK_BOB_DURATION = 0.35f; // Slightly increased to make the bounce readable
-        private const float ATTACK_BOB_AMOUNT = 6f; // Reduced for a "short" jump
 
         // Layout Constants
         private const int DIVIDER_Y = 123;
@@ -73,10 +71,6 @@ namespace ProjectVagabond.Battle.UI
         private const float PLAYER_INDICATOR_BOB_SPEED = 0.75f;
         private const float TITLE_INDICATOR_BOB_SPEED = PLAYER_INDICATOR_BOB_SPEED / 2f;
         private const int ENEMY_SLOT_Y_OFFSET = 16; // Shift enemies down
-
-        // --- Targeting Indicator Animation Tuning ---
-        // Note: Rotation and Scale tuning variables are no longer used, but kept in Global for compatibility if needed later.
-        // We only use Position Strength (Offset) and Speed now.
 
         // Noise generator for organic sway
         private static readonly SeededPerlin _swayNoise = new SeededPerlin(9999);
@@ -103,7 +97,7 @@ namespace ProjectVagabond.Battle.UI
             _shadowOffsets.Clear();
             _shadowTimers.Clear();
             _shadowIntervals.Clear();
-            _attackAnimTimers.Clear();
+            _attackAnimControllers.Clear();
             _combatantVisualCenters.Clear();
             _playerSprites.Clear();
             _lastAttackerId = null;
@@ -130,7 +124,11 @@ namespace ProjectVagabond.Battle.UI
 
         public void TriggerAttackAnimation(string combatantId)
         {
-            _attackAnimTimers[combatantId] = 0f;
+            if (!_attackAnimControllers.ContainsKey(combatantId))
+            {
+                _attackAnimControllers[combatantId] = new SpriteHopAnimationController();
+            }
+            _attackAnimControllers[combatantId].Trigger();
         }
 
         private void UpdateStatusIconTooltips(IEnumerable<BattleCombatant> allCombatants)
@@ -183,23 +181,15 @@ namespace ProjectVagabond.Battle.UI
             var currentAttackerId = (currentActor != null) ? currentActor.CombatantID : null;
             if (currentAttackerId != _lastAttackerId)
             {
-                if (currentAttackerId != null)
-                {
-                    _attackAnimTimers[currentAttackerId] = 0f;
-                }
+                // Reset logic if needed when actor changes, though TriggerAttackAnimation handles the hop
                 _lastAttackerId = currentAttackerId;
             }
 
-            var idsToRemove = new List<string>();
-            foreach (var id in _attackAnimTimers.Keys.ToList())
+            // Update all active hop controllers
+            foreach (var controller in _attackAnimControllers.Values)
             {
-                _attackAnimTimers[id] += (float)gameTime.ElapsedGameTime.TotalSeconds;
-                if (_attackAnimTimers[id] >= ATTACK_BOB_DURATION)
-                {
-                    idsToRemove.Add(id);
-                }
+                controller.Update(gameTime);
             }
-            foreach (var id in idsToRemove) _attackAnimTimers.Remove(id);
 
             // --- Capture Hovered Combatant from InputHandler BEFORE clearing targets ---
             BattleCombatant? hoveredCombatant = null;
@@ -1727,27 +1717,12 @@ namespace ProjectVagabond.Battle.UI
 
         private float CalculateAttackBobOffset(string combatantId, bool isPlayer)
         {
-            if (_attackAnimTimers.TryGetValue(combatantId, out float animTimer))
+            if (_attackAnimControllers.TryGetValue(combatantId, out var controller))
             {
-                float progress = Math.Clamp(animTimer / ATTACK_BOB_DURATION, 0f, 1f);
-                float bobValue = 0f;
-
-                // Phase 1: Main Jump (0% to 60% of duration)
-                if (progress < 0.6f)
-                {
-                    float p = progress / 0.6f;
-                    bobValue = MathF.Sin(p * MathHelper.Pi);
-                }
-                // Phase 2: The Bounce (60% to 100% of duration)
-                else
-                {
-                    float p = (progress - 0.6f) / 0.4f;
-                    bobValue = MathF.Sin(p * MathHelper.Pi) * 0.3f; // 30% height bounce
-                }
-
-                // Player: Up (-), Enemy: Down (+)
-                float direction = isPlayer ? -1f : 1f;
-                return bobValue * ATTACK_BOB_AMOUNT * direction;
+                // Pass 'isPlayer' as 'invert' to the controller.
+                // If isPlayer is true, invert is true, so it hops UP (negative Y).
+                // If isPlayer is false, invert is false, so it hops DOWN (positive Y).
+                return controller.GetOffset(isPlayer);
             }
             return 0f;
         }

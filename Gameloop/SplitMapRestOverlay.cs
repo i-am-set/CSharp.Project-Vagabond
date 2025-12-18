@@ -114,6 +114,12 @@ namespace ProjectVagabond.UI
         private bool _isAnimatingHeal = false;
         private float _overlayPulseTimer = 0f;
 
+        // Hop Animation Controllers (One per slot)
+        private readonly SpriteHopAnimationController[] _hopControllers = new SpriteHopAnimationController[4];
+
+        // Portrait Animation Timers (One per slot) - Controls the Normal/Alt sprite toggle
+        private readonly float[] _portraitAnimTimers = new float[4];
+
         // Sleep Particles
         private class SleepParticle
         {
@@ -134,6 +140,12 @@ namespace ProjectVagabond.UI
             _spriteManager = ServiceLocator.Get<SpriteManager>();
             _gameState = ServiceLocator.Get<GameState>();
             _hapticsManager = ServiceLocator.Get<HapticsManager>();
+
+            // Initialize Hop Controllers
+            for (int i = 0; i < 4; i++)
+            {
+                _hopControllers[i] = new SpriteHopAnimationController();
+            }
 
             // Initialize Tunable Colors
             COLOR_DESC_REST_NORMAL = _global.Palette_LightGreen;
@@ -184,6 +196,7 @@ namespace ProjectVagabond.UI
             RebuildLayout();
             _sleepParticles.Clear();
             for (int i = 0; i < _sleepSpawnTimers.Length; i++) _sleepSpawnTimers[i] = 0f;
+            for (int i = 0; i < _portraitAnimTimers.Length; i++) _portraitAnimTimers[i] = 0f; // Reset animation timers
 
             // Initialize Visual HP
             _visualHP.Clear();
@@ -321,7 +334,18 @@ namespace ProjectVagabond.UI
             }
 
             _selectedActions[memberIndex] = action;
-            _hapticsManager.TriggerHop(3f, 0.15f);
+
+            // Trigger the sprite hop animation for this member
+            if (memberIndex >= 0 && memberIndex < _hopControllers.Length)
+            {
+                _hopControllers[memberIndex].Trigger();
+            }
+
+            // Reset portrait animation timer to sync with the hop
+            if (memberIndex >= 0 && memberIndex < _portraitAnimTimers.Length)
+            {
+                _portraitAnimTimers[memberIndex] = 0f;
+            }
         }
 
         private void RequestSkipRest()
@@ -537,6 +561,18 @@ namespace ProjectVagabond.UI
             }
 
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            // Update Hop Controllers
+            foreach (var controller in _hopControllers)
+            {
+                controller.Update(gameTime);
+            }
+
+            // Update Portrait Animation Timers
+            for (int i = 0; i < 4; i++)
+            {
+                _portraitAnimTimers[i] += dt;
+            }
 
             // Update Pulse
             _overlayPulseTimer += dt * OVERLAY_PULSE_SPEED;
@@ -776,11 +812,15 @@ namespace ProjectVagabond.UI
                     {
                         // Awake: Toggle animation
                         float animSpeed = 1f;
-                        int frame = (int)(gameTime.TotalGameTime.TotalSeconds * animSpeed) % 2;
+                        // Use local timer for independent animation
+                        int frame = (int)(_portraitAnimTimers[i] * animSpeed) % 2;
                         textureToDraw = frame == 0 ? _spriteManager.PlayerPortraitsSpriteSheet : _spriteManager.PlayerPortraitsAltSpriteSheet;
                     }
 
-                    var destRect = new Rectangle(centerX - 16, currentY, 32, 32);
+                    // Apply Hop Offset
+                    float hopOffset = _hopControllers[i].GetOffset(true); // True = Invert (Up)
+
+                    var destRect = new Rectangle(centerX - 16, (int)(currentY + hopOffset), 32, 32);
                     spriteBatch.DrawSnapped(textureToDraw, destRect, sourceRect, Color.White);
                 }
 
