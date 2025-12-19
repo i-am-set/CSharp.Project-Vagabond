@@ -34,6 +34,11 @@ namespace ProjectVagabond.UI
         private List<Rectangle> _candidatePanelAreas = new List<Rectangle>();
         private int _selectedCandidateIndex = -1;
 
+        // Hover State for Sub-elements
+        private int _hoveredInternalCandidateIndex = -1;
+        private int _hoveredEquipSlotIndex = -1; // 0=Weapon, 1=Armor, 2=Relic
+        private int _hoveredSpellSlotIndex = -1; // 0-3
+
         // Layout Constants
         private const float WORLD_Y_OFFSET = 600f;
         private const int BUTTON_HEIGHT = 15;
@@ -78,29 +83,9 @@ namespace ProjectVagabond.UI
             _skipButton.OnClick += RequestSkip;
         }
 
-        public void Show()
+        public void GenerateNewCandidates()
         {
-            IsOpen = true;
             _selectedCandidateIndex = -1;
-            GenerateCandidates();
-            RebuildLayout();
-
-            // Reset animations
-            _hopControllers.Clear();
-            for (int i = 0; i < _candidates.Count; i++)
-            {
-                _hopControllers.Add(new SpriteHopAnimationController());
-            }
-        }
-
-        public void Hide()
-        {
-            IsOpen = false;
-            _confirmationDialog.Hide();
-        }
-
-        private void GenerateCandidates()
-        {
             _candidates.Clear();
 
             // 1. Get all potential members
@@ -129,6 +114,27 @@ namespace ProjectVagabond.UI
                     }
                 }
             }
+
+            // Reset animations for the new set of candidates
+            _hopControllers.Clear();
+            for (int i = 0; i < _candidates.Count; i++)
+            {
+                _hopControllers.Add(new SpriteHopAnimationController());
+            }
+        }
+
+        public void Show()
+        {
+            IsOpen = true;
+            // NOTE: We do NOT generate candidates here anymore. 
+            // They persist until GenerateNewCandidates is called explicitly.
+            RebuildLayout();
+        }
+
+        public void Hide()
+        {
+            IsOpen = false;
+            _confirmationDialog.Hide();
         }
 
         private void RebuildLayout()
@@ -143,7 +149,6 @@ namespace ProjectVagabond.UI
             var selectSize = selectFont.MeasureString("SELECT");
             int selectWidth = (int)selectSize.Width + 16;
 
-            // Moved down 8 pixels (10 -> 2 padding from bottom)
             int buttonY = screenBottom - BUTTON_HEIGHT - 2;
 
             int selectX = (Global.VIRTUAL_WIDTH - selectWidth) / 2;
@@ -165,7 +170,6 @@ namespace ProjectVagabond.UI
             int totalWidth = (count * PANEL_WIDTH); // Tightly packed
             int startX = (Global.VIRTUAL_WIDTH - totalWidth) / 2;
 
-            // Y position moved up 16 pixels (was +40)
             int panelY = (int)WORLD_Y_OFFSET + 24;
 
             for (int i = 0; i < count; i++)
@@ -204,7 +208,10 @@ namespace ProjectVagabond.UI
             {
                 _selectedCandidateIndex = index;
                 // Trigger hop for visual feedback
-                _hopControllers[index].Trigger();
+                if (index >= 0 && index < _hopControllers.Count)
+                {
+                    _hopControllers[index].Trigger();
+                }
             }
         }
 
@@ -268,6 +275,77 @@ namespace ProjectVagabond.UI
             var mouseInWorldSpace = Vector2.Transform(virtualMousePos, Matrix.Invert(cameraTransform));
             var worldMouseState = new MouseState((int)mouseInWorldSpace.X, (int)mouseInWorldSpace.Y, mouseState.ScrollWheelValue, mouseState.LeftButton, mouseState.MiddleButton, mouseState.RightButton, mouseState.XButton1, mouseState.XButton2);
 
+            // --- HIT TEST LOGIC FOR SUB-ELEMENTS ---
+            _hoveredInternalCandidateIndex = -1;
+            _hoveredEquipSlotIndex = -1;
+            _hoveredSpellSlotIndex = -1;
+
+            var defaultFont = ServiceLocator.Get<BitmapFont>();
+            var secondaryFont = _core.SecondaryFont;
+
+            for (int i = 0; i < _candidates.Count; i++)
+            {
+                var bounds = _candidatePanelAreas[i];
+                if (bounds.Contains(mouseInWorldSpace))
+                {
+                    _hoveredInternalCandidateIndex = i;
+
+                    int centerX = bounds.Center.X;
+                    int currentY = bounds.Y + 4;
+
+                    // Name
+                    string name = _candidates[i].Name.ToUpper();
+                    Vector2 nameSize = defaultFont.MeasureString(name);
+                    currentY += (int)nameSize.Y - 2;
+
+                    // Portrait
+                    currentY += 32 + 2 - 6;
+
+                    // Health Bar
+                    string hpValText = $"{_candidates[i].MaxHP}/{_candidates[i].MaxHP}";
+                    Vector2 valSize = secondaryFont.MeasureString(hpValText);
+                    currentY += 8 + (int)valSize.Y + 4 - 3;
+
+                    // Equip Slots
+                    int slotSize = 16;
+                    int gap = 4;
+                    int equipStartX = centerX - ((slotSize * 3 + gap * 2) / 2);
+
+                    // Check Weapon Slot
+                    Rectangle weaponRect = new Rectangle(equipStartX, currentY, slotSize, slotSize);
+                    if (weaponRect.Contains(mouseInWorldSpace)) _hoveredEquipSlotIndex = 0;
+
+                    // Check Armor Slot
+                    Rectangle armorRect = new Rectangle(equipStartX + slotSize + gap, currentY, slotSize, slotSize);
+                    if (armorRect.Contains(mouseInWorldSpace)) _hoveredEquipSlotIndex = 1;
+
+                    // Check Relic Slot
+                    Rectangle relicRect = new Rectangle(equipStartX + (slotSize + gap) * 2, currentY, slotSize, slotSize);
+                    if (relicRect.Contains(mouseInWorldSpace)) _hoveredEquipSlotIndex = 2;
+
+                    currentY += slotSize + 6 - 5;
+
+                    // Stats (4 lines)
+                    currentY += ((int)secondaryFont.LineHeight + 1) * 4;
+
+                    // Spells
+                    currentY += 2;
+                    int spellButtonWidth = 64;
+                    int spellButtonHeight = 8;
+                    int spellButtonX = centerX - (spellButtonWidth / 2);
+
+                    for (int s = 0; s < 4; s++)
+                    {
+                        Rectangle spellRect = new Rectangle(spellButtonX, currentY, spellButtonWidth, spellButtonHeight);
+                        if (spellRect.Contains(mouseInWorldSpace))
+                        {
+                            _hoveredSpellSlotIndex = s;
+                        }
+                        currentY += spellButtonHeight;
+                    }
+                }
+            }
+
             // Update Buttons
             for (int i = 0; i < _candidateButtons.Count; i++)
             {
@@ -278,7 +356,10 @@ namespace ProjectVagabond.UI
                 // Trigger hop on hover enter if not selected
                 if (btn.IsHovered && !wasHovered && i != _selectedCandidateIndex)
                 {
-                    _hopControllers[i].Trigger();
+                    if (i >= 0 && i < _hopControllers.Count)
+                    {
+                        _hopControllers[i].Trigger();
+                    }
                 }
             }
 
@@ -327,7 +408,10 @@ namespace ProjectVagabond.UI
             }
 
             _selectButton.Draw(spriteBatch, secondaryFont, gameTime, Matrix.Identity);
-            _skipButton.Draw(spriteBatch, secondaryFont, gameTime, Matrix.Identity);
+
+            // Force Tertiary font usage here visually, even though Button handles it
+            var tertiaryFont = _core.TertiaryFont;
+            _skipButton.Draw(spriteBatch, tertiaryFont, gameTime, Matrix.Identity);
         }
 
         private void DrawRecruitSlot(SpriteBatch spriteBatch, int index, BitmapFont font, BitmapFont secondaryFont, GameTime gameTime)
@@ -443,9 +527,15 @@ namespace ProjectVagabond.UI
                 relicFrame = slotFrames[(_portraitBgFrameIndex + 3) % slotFrames.Length];
             }
 
-            DrawEquipSlot(spriteBatch, equipStartX, currentY, member.EquippedWeaponId, "Weapon", weaponFrame);
-            DrawEquipSlot(spriteBatch, equipStartX + slotSize + gap, currentY, member.EquippedArmorId, "Armor", armorFrame);
-            DrawEquipSlot(spriteBatch, equipStartX + (slotSize + gap) * 2, currentY, member.EquippedRelicId, "Relic", relicFrame);
+            // Pass hover states based on internal hover calculation
+            bool hoveringThisCandidate = _hoveredInternalCandidateIndex == index;
+            bool hoverWeapon = hoveringThisCandidate && _hoveredEquipSlotIndex == 0;
+            bool hoverArmor = hoveringThisCandidate && _hoveredEquipSlotIndex == 1;
+            bool hoverRelic = hoveringThisCandidate && _hoveredEquipSlotIndex == 2;
+
+            DrawEquipSlot(spriteBatch, equipStartX, currentY, member.EquippedWeaponId, "Weapon", weaponFrame, hoverWeapon);
+            DrawEquipSlot(spriteBatch, equipStartX + slotSize + gap, currentY, member.EquippedArmorId, "Armor", armorFrame, hoverArmor);
+            DrawEquipSlot(spriteBatch, equipStartX + (slotSize + gap) * 2, currentY, member.EquippedRelicId, "Relic", relicFrame, hoverRelic);
 
             currentY += slotSize + 6 - 5;
 
@@ -489,7 +579,6 @@ namespace ProjectVagabond.UI
                 var spellEntry = member.Spells[s];
                 bool hasSpell = spellEntry != null && !string.IsNullOrEmpty(spellEntry.MoveID);
                 string spellName = "EMPTY";
-
                 int frameIndex = 0;
                 if (hasSpell)
                 {
@@ -500,13 +589,19 @@ namespace ProjectVagabond.UI
                     }
                 }
 
+                bool isSpellHovered = hoveringThisCandidate && _hoveredSpellSlotIndex == s;
+
+                // Draw Sprite
                 if (_spriteManager.InventorySpellSlotButtonSpriteSheet != null && _spriteManager.InventorySpellSlotButtonSourceRects != null)
                 {
-                    var sourceRect = _spriteManager.InventorySpellSlotButtonSourceRects[frameIndex];
+                    // Frame 2 is Hover state in sprite sheet
+                    int drawFrame = isSpellHovered ? 2 : frameIndex;
+                    var sourceRect = _spriteManager.InventorySpellSlotButtonSourceRects[drawFrame];
+
                     var destRect = new Rectangle(spellButtonX, (int)currentY, spellButtonWidth, spellButtonHeight);
                     spriteBatch.DrawSnapped(_spriteManager.InventorySpellSlotButtonSpriteSheet, destRect, sourceRect, Color.White);
 
-                    if (hasSpell)
+                    if (hasSpell || isSpellHovered)
                     {
                         Vector2 textSize = tertiaryFont.MeasureString(spellName);
                         Vector2 textPos = new Vector2(
@@ -514,14 +609,18 @@ namespace ProjectVagabond.UI
                             destRect.Y + (destRect.Height - textSize.Y) / 2f
                         );
                         textPos = new Vector2(MathF.Round(textPos.X), MathF.Round(textPos.Y));
-                        spriteBatch.DrawStringSquareOutlinedSnapped(tertiaryFont, spellName, textPos, _global.Palette_BrightWhite, _global.Palette_Black);
+
+                        Color textColor = isSpellHovered ? _global.ButtonHoverColor : _global.Palette_BrightWhite;
+
+                        // Use Square Outline
+                        spriteBatch.DrawStringSquareOutlinedSnapped(tertiaryFont, spellName, textPos, textColor, _global.Palette_Black);
                     }
                 }
                 currentY += spellButtonHeight;
             }
         }
 
-        private void DrawEquipSlot(SpriteBatch spriteBatch, int x, int y, string? itemId, string type, Rectangle bgFrame)
+        private void DrawEquipSlot(SpriteBatch spriteBatch, int x, int y, string? itemId, string type, Rectangle bgFrame, bool isHovered)
         {
             var destRect = new Rectangle(x, y, 16, 16);
             Vector2 centerPos = new Vector2(x + 8, y + 8);
@@ -530,6 +629,12 @@ namespace ProjectVagabond.UI
             if (bgFrame != Rectangle.Empty)
             {
                 spriteBatch.DrawSnapped(_spriteManager.InventorySlotIdleSpriteSheet, centerPos, bgFrame, Color.White, 0f, origin, 1.0f, SpriteEffects.None, 0f);
+            }
+
+            if (isHovered)
+            {
+                var pixel = ServiceLocator.Get<Texture2D>();
+                DrawRectangleBorder(spriteBatch, pixel, destRect, 1, Color.White);
             }
 
             if (!string.IsNullOrEmpty(itemId))

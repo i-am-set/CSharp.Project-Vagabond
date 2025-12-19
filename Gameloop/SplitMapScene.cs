@@ -1103,6 +1103,7 @@ namespace ProjectVagabond.Scenes
                     break;
 
                 case SplitNodeType.Recruit:
+                    _recruitOverlay.GenerateNewCandidates();
                     SetView(SplitMapView.Recruit, snap: true);
                     break;
 
@@ -1135,6 +1136,7 @@ namespace ProjectVagabond.Scenes
 
         public void DebugTriggerRecruit()
         {
+            _recruitOverlay.GenerateNewCandidates(); // New method
             SetView(SplitMapView.Recruit, snap: true);
         }
 
@@ -1623,7 +1625,7 @@ namespace ProjectVagabond.Scenes
                     texture = _spriteManager.SplitNodeNarrative;
                     break;
                 case SplitNodeType.MajorBattle:
-                    texture = _spriteManager.SplitNodeCombat;
+                    texture = _spriteManager.SplitNodeCombat; // Use Combat sprite for Major Battle
                     break;
                 case SplitNodeType.Recruit:
                     texture = _spriteManager.SplitNodeRecruit;
