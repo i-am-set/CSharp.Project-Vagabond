@@ -21,6 +21,9 @@ namespace ProjectVagabond.Scenes
     {
         // --- Tuning ---
         private const float MULTI_HIT_DELAY = 0.25f;
+        private const float FIXED_COIN_GROUND_Y = 115f; // Fixed floor level for coins
+        private const int ENEMY_SLOT_Y_OFFSET = 16; // Used for fallback position calculation
+
         // Core Battle Logic
         private BattleManager _battleManager;
 
@@ -67,6 +70,9 @@ namespace ProjectVagabond.Scenes
         // --- DEATH TRANSITION STATE ---
         private bool _isFadingOutOnDeath = false;
         private float _deathFadeTimer = 0f;
+
+        // Tracks which combatants have already started their visual death sequence to prevent double-triggering
+        private readonly HashSet<string> _processedDeathAnimations = new HashSet<string>();
 
         public BattleAnimationManager AnimationManager => _animationManager;
 
@@ -121,6 +127,7 @@ namespace ProjectVagabond.Scenes
             _actionJustDeclared = false;
             _isFadingOutOnDeath = false;
             _deathFadeTimer = 0f;
+            _processedDeathAnimations.Clear();
 
             // Reset Watchdog
             _watchdogTimer = 0f;
@@ -208,9 +215,11 @@ namespace ProjectVagabond.Scenes
                 var settingsIcon = _spriteManager.SettingsIconSprite;
                 var buttonSize = 16;
                 if (settingsIcon != null) buttonSize = Math.Max(settingsIcon.Width, settingsIcon.Height);
+
+                // UseScreenCoordinates = false because we are now drawing it in the virtual space overlay
                 _settingsButton = new ImageButton(new Rectangle(0, 0, buttonSize, buttonSize), settingsIcon, enableHoverSway: true)
                 {
-                    UseScreenCoordinates = true
+                    UseScreenCoordinates = false
                 };
             }
             _settingsButton.OnClick += OpenSettings;
@@ -411,8 +420,18 @@ namespace ProjectVagabond.Scenes
             _renderer.Update(gameTime, _battleManager.AllCombatants, _animationManager, activeCombatant);
 
             _alertManager.Update(gameTime);
-            _settingsButton?.Update(currentMouseState);
             _tooltipManager.Update(gameTime);
+
+            // Update Settings Button Position & State
+            if (_settingsButton != null)
+            {
+                int buttonSize = 16;
+                int padding = 2;
+                int buttonX = Global.VIRTUAL_WIDTH - buttonSize - padding;
+                int buttonY = padding;
+                _settingsButton.Bounds = new Rectangle(buttonX, buttonY, buttonSize, buttonSize);
+                _settingsButton.Update(currentMouseState);
+            }
 
             // --- 2. Handle End of Battle ---
             if (_isBattleOver)
@@ -652,7 +671,12 @@ namespace ProjectVagabond.Scenes
             _renderer.DrawOverlay(spriteBatch, font);
             _tooltipManager.Draw(spriteBatch, ServiceLocator.Get<Core>().SecondaryFont);
             _animationManager.DrawAbilityIndicators(spriteBatch, font);
+            _animationManager.DrawCoins(spriteBatch); // Draw Coins
             _alertManager.Draw(spriteBatch);
+
+            // Draw Settings Button in Overlay (Virtual Space)
+            _settingsButton?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
+
             spriteBatch.End();
         }
 
@@ -701,26 +725,53 @@ namespace ProjectVagabond.Scenes
 
         public override void DrawFullscreenUI(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
-            spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-            if (_settingsButton != null)
-            {
-                float scale = _core.FinalScale;
-                int buttonVirtualSize = 16;
-                int buttonScreenSize = (int)(buttonVirtualSize * scale);
-                var screenBounds = _core.GraphicsDevice.PresentationParameters.Bounds;
-                const int padding = 5;
-                int buttonX = screenBounds.Width - buttonScreenSize - padding;
-                int buttonY = padding;
-                _settingsButton.Bounds = new Rectangle(buttonX, buttonY, buttonScreenSize, buttonScreenSize);
-                _settingsButton.Draw(spriteBatch, font, gameTime, Matrix.Identity);
-            }
-            spriteBatch.End();
+            // Settings button is now drawn in DrawOverlay (Virtual Space)
         }
 
         // Public method to trigger flee logic
         public void TriggerFlee()
         {
             FleeBattle();
+        }
+
+        /// <summary>
+        /// Helper to trigger the death animation safely.
+        /// Ensures the animation is only started once per combatant per battle.
+        /// </summary>
+        private void TriggerDeathAnimation(BattleCombatant target)
+        {
+            if (_processedDeathAnimations.Contains(target.CombatantID)) return;
+
+            _processedDeathAnimations.Add(target.CombatantID);
+
+            // Calculate position for coin spawn
+            Vector2 centerPos = _renderer.GetCombatantVisualCenterPosition(target, _battleManager.AllCombatants);
+
+            // Fallback calculation if centerPos is Zero (e.g. if renderer hasn't cached it yet)
+            if (centerPos == Vector2.Zero)
+            {
+                const int enemyAreaPadding = 40;
+                int availableWidth = Global.VIRTUAL_WIDTH - (enemyAreaPadding * 2);
+                int slotWidth = availableWidth / 2;
+                int slotIndex = target.BattleSlot;
+                float slotCenterX = enemyAreaPadding + (slotIndex * slotWidth) + (slotWidth / 2);
+
+                bool isMajor = _spriteManager.IsMajorEnemySprite(target.ArchetypeId);
+                int spriteSize = isMajor ? 96 : 64;
+                float spriteCenterY = ENEMY_SLOT_Y_OFFSET + (spriteSize / 2f);
+
+                centerPos = new Vector2(slotCenterX, spriteCenterY);
+            }
+
+            // --- FIX: Add Visual Center Offset to ensure coins spawn from the "gut" ---
+            Vector2 visualOffset = _spriteManager.GetVisualCenterOffset(target.ArchetypeId);
+            centerPos += visualOffset;
+
+            // --- FIX: Use FIXED ground Y for coins ---
+            float groundY = FIXED_COIN_GROUND_Y;
+
+            _animationManager.StartDeathAnimation(target.CombatantID, centerPos, groundY);
+            target.VisualAlpha = 1.0f;
         }
 
         #region Event Handlers
@@ -854,7 +905,17 @@ namespace ProjectVagabond.Scenes
                     }
                     _animationManager.StartHealthLossAnimation(target.CombatantID, target.VisualHP, target.Stats.CurrentHP);
                     _animationManager.StartHealthAnimation(target.CombatantID, (int)target.VisualHP, target.Stats.CurrentHP);
-                    _animationManager.StartHitFlashAnimation(target.CombatantID);
+
+                    // --- INSTANT DEATH CHECK ---
+                    if (target.Stats.CurrentHP <= 0)
+                    {
+                        TriggerDeathAnimation(target);
+                        // Do NOT trigger hit flash if dying
+                    }
+                    else
+                    {
+                        if (!target.IsPlayerControlled) _animationManager.StartHitFlashAnimation(target.CombatantID);
+                    }
 
                     int baselineDamage = DamageCalculator.CalculateBaselineDamage(e.Actor, target, e.ChosenMove);
                     if (result.WasCritical || (result.DamageAmount >= baselineDamage * 1.5f && baselineDamage > 0))
@@ -926,8 +987,17 @@ namespace ProjectVagabond.Scenes
         private void OnCombatantDefeated(GameEvents.CombatantDefeated e)
         {
             _uiManager.ShowNarration($"{e.DefeatedCombatant.Name} was [cDefeat]DEFEATED[/]!");
-            _animationManager.StartDeathAnimation(e.DefeatedCombatant.CombatantID);
-            e.DefeatedCombatant.VisualAlpha = 1.0f;
+
+            // Only trigger death animation if it hasn't started already (e.g. from instant hit)
+            TriggerDeathAnimation(e.DefeatedCombatant);
+
+            // Award Coins if Enemy
+            if (!e.DefeatedCombatant.IsPlayerControlled)
+            {
+                int coinAmount = 50;
+                _gameState.PlayerState.Coin += coinAmount;
+                _uiManager.ShowNarration($"Gained {coinAmount} Coins!");
+            }
         }
 
         private void OnActionFailed(GameEvents.ActionFailed e)
@@ -952,8 +1022,17 @@ namespace ProjectVagabond.Scenes
 
                 _animationManager.StartHealthLossAnimation(e.Combatant.CombatantID, e.Combatant.VisualHP, e.Combatant.Stats.CurrentHP);
                 _animationManager.StartHealthAnimation(e.Combatant.CombatantID, (int)e.Combatant.VisualHP, e.Combatant.Stats.CurrentHP);
-                if (e.EffectType == StatusEffectType.Poison) _animationManager.StartPoisonEffectAnimation(e.Combatant.CombatantID);
-                else if (e.EffectType == StatusEffectType.Burn && !e.Combatant.IsPlayerControlled) _animationManager.StartHitFlashAnimation(e.Combatant.CombatantID);
+
+                // --- INSTANT DEATH CHECK FOR STATUS ---
+                if (e.Combatant.Stats.CurrentHP <= 0)
+                {
+                    TriggerDeathAnimation(e.Combatant);
+                }
+                else
+                {
+                    if (e.EffectType == StatusEffectType.Poison) _animationManager.StartPoisonEffectAnimation(e.Combatant.CombatantID);
+                    else if (e.EffectType == StatusEffectType.Burn && !e.Combatant.IsPlayerControlled) _animationManager.StartHitFlashAnimation(e.Combatant.CombatantID);
+                }
 
                 Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(e.Combatant, _battleManager.AllCombatants);
                 _animationManager.StartDamageNumberIndicator(e.Combatant.CombatantID, e.Damage, hudPosition);

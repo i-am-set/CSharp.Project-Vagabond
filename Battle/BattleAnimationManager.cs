@@ -2,10 +2,14 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.UI;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace ProjectVagabond.Battle.UI
@@ -29,6 +33,11 @@ namespace ProjectVagabond.Battle.UI
             public float Timer;
             public enum Phase { FlashWhite1, FlashGray, FlashWhite2, FadeOut }
             public Phase CurrentPhase;
+
+            // Data for Coin Spawning
+            public Vector2 CenterPosition;
+            public float GroundY;
+            public bool CoinsSpawned;
 
             // Tuning
             public const float FLASH_DURATION = 0.1f;
@@ -141,6 +150,32 @@ namespace ProjectVagabond.Battle.UI
             public const float RISE_DISTANCE = 5f;
         }
 
+        // --- COIN PARTICLE SYSTEM ---
+        public class CoinParticle
+        {
+            public Vector2 Position;
+            public Vector2 Velocity;
+            public float TargetGroundY; // Specific landing height for this coin
+            public bool IsResting;
+            public float Timer; // For despawn/flicker
+            public float Delay; // Staggered start delay
+        }
+        private readonly List<CoinParticle> _activeCoins = new List<CoinParticle>();
+
+        // --- COIN TUNING VARIABLES ---
+        private const float COIN_GRAVITY = 900f;
+        private const float COIN_BOUNCE_FACTOR = 0.5f;
+        private const float COIN_LIFETIME = 0.5f;
+
+        // Spawning Physics
+        private const float COIN_VELOCITY_X_RANGE = 45f; // +/- this value
+        private const float COIN_VELOCITY_Y_MIN = -200f; // Upward force min
+        private const float COIN_VELOCITY_Y_MAX = -100f; // Upward force max
+
+        // Floor Layout
+        private const float COIN_GROUND_OFFSET_Y = 38f; // Lift the baseline up 16px
+        private const float COIN_GROUND_DEPTH_HEIGHT = 18f; // The vertical spread of the floor (3D effect)
+
         private readonly List<HealthAnimationState> _activeHealthAnimations = new List<HealthAnimationState>();
         private readonly List<AlphaAnimationState> _activeAlphaAnimations = new List<AlphaAnimationState>();
         private readonly List<DeathAnimationState> _activeDeathAnimations = new List<DeathAnimationState>();
@@ -164,7 +199,7 @@ namespace ProjectVagabond.Battle.UI
         // Layout Constants mirrored from BattleRenderer for pixel-perfect alignment
         private const int DIVIDER_Y = 123;
 
-        public bool IsAnimating => _activeHealthAnimations.Any() || _activeAlphaAnimations.Any() || _activeDeathAnimations.Any() || _activeSpawnAnimations.Any() || _activeHealBounceAnimations.Any() || _activeHealFlashAnimations.Any() || _activePoisonEffectAnimations.Any() || _activeBarAnimations.Any() || _activeHitFlashAnimations.Any();
+        public bool IsAnimating => _activeHealthAnimations.Any() || _activeAlphaAnimations.Any() || _activeDeathAnimations.Any() || _activeSpawnAnimations.Any() || _activeHealBounceAnimations.Any() || _activeHealFlashAnimations.Any() || _activePoisonEffectAnimations.Any() || _activeBarAnimations.Any() || _activeHitFlashAnimations.Any() || _activeCoins.Any();
 
         public BattleAnimationManager()
         {
@@ -189,6 +224,7 @@ namespace ProjectVagabond.Battle.UI
             _activeDamageIndicators.Clear();
             _activeAbilityIndicators.Clear();
             _activeBarAnimations.Clear();
+            _activeCoins.Clear();
             _pendingTextIndicators.Clear();
             _indicatorCooldownTimer = 0f;
         }
@@ -277,15 +313,23 @@ namespace ProjectVagabond.Battle.UI
             });
         }
 
-        public void StartDeathAnimation(string combatantId)
+        public void StartDeathAnimation(string combatantId, Vector2 centerPos, float groundY)
         {
             _activeDeathAnimations.RemoveAll(a => a.CombatantID == combatantId);
             _activeDeathAnimations.Add(new DeathAnimationState
             {
                 CombatantID = combatantId,
                 Timer = 0f,
-                CurrentPhase = DeathAnimationState.Phase.FlashWhite1
+                CurrentPhase = DeathAnimationState.Phase.FlashWhite1,
+                CenterPosition = centerPos,
+                GroundY = groundY,
+                CoinsSpawned = false
             });
+        }
+
+        public bool IsDeathAnimating(string combatantId)
+        {
+            return _activeDeathAnimations.Any(a => a.CombatantID == combatantId);
         }
 
         public void StartSpawnAnimation(string combatantId)
@@ -534,6 +578,7 @@ namespace ProjectVagabond.Battle.UI
             UpdateDamageIndicators(gameTime);
             UpdateAbilityIndicators(gameTime);
             UpdateBarAnimations(gameTime);
+            UpdateCoins(gameTime);
         }
 
         private void UpdateIndicatorQueue(GameTime gameTime)
@@ -696,6 +741,13 @@ namespace ProjectVagabond.Battle.UI
                         {
                             anim.Timer = 0f;
                             anim.CurrentPhase = DeathAnimationState.Phase.FadeOut;
+
+                            // Trigger Coin Spawn here
+                            if (!anim.CoinsSpawned && !combatant.IsPlayerControlled)
+                            {
+                                SpawnCoins(anim.CenterPosition, 50, anim.GroundY);
+                                anim.CoinsSpawned = true;
+                            }
                         }
                         break;
                     case DeathAnimationState.Phase.FadeOut:
@@ -710,6 +762,96 @@ namespace ProjectVagabond.Battle.UI
                         }
                         break;
                 }
+            }
+        }
+
+        private void SpawnCoins(Vector2 origin, int amount, float referenceGroundY)
+        {
+            for (int i = 0; i < amount; i++)
+            {
+                // Calculate a random depth offset to create a 3D floor effect
+                float randomDepth = (float)(_random.NextDouble() * COIN_GROUND_DEPTH_HEIGHT) - (COIN_GROUND_DEPTH_HEIGHT / 2f);
+
+                // Apply the global offset (lift) and the random depth
+                float targetGroundY = (referenceGroundY - COIN_GROUND_OFFSET_Y) + randomDepth;
+
+                var coin = new CoinParticle
+                {
+                    Position = origin,
+                    Velocity = new Vector2(
+                        (float)(_random.NextDouble() * (COIN_VELOCITY_X_RANGE * 2) - COIN_VELOCITY_X_RANGE), // Spread X
+                        (float)(_random.NextDouble() * (COIN_VELOCITY_Y_MAX - COIN_VELOCITY_Y_MIN) + COIN_VELOCITY_Y_MIN) // Burst Up Y
+                    ),
+                    TargetGroundY = targetGroundY,
+                    IsResting = false,
+                    Timer = 0f,
+                    Delay = (float)(_random.NextDouble() * 0.0)
+                };
+                _activeCoins.Add(coin);
+            }
+        }
+
+        private void UpdateCoins(GameTime gameTime)
+        {
+            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            for (int i = _activeCoins.Count - 1; i >= 0; i--)
+            {
+                var coin = _activeCoins[i];
+
+                // Handle Delay
+                if (coin.Delay > 0)
+                {
+                    coin.Delay -= dt;
+                    continue; // Skip update until delay is over
+                }
+
+                if (!coin.IsResting)
+                {
+                    coin.Velocity.Y += COIN_GRAVITY * dt;
+                    coin.Position += coin.Velocity * dt;
+
+                    if (coin.Position.Y >= coin.TargetGroundY)
+                    {
+                        coin.Position.Y = coin.TargetGroundY;
+                        // Bounce
+                        if (Math.Abs(coin.Velocity.Y) > 50f)
+                        {
+                            coin.Velocity.Y = -coin.Velocity.Y * COIN_BOUNCE_FACTOR;
+                            coin.Velocity.X *= 0.8f; // Friction
+                        }
+                        else
+                        {
+                            coin.IsResting = true;
+                            coin.Velocity = Vector2.Zero;
+                        }
+                    }
+                }
+                else
+                {
+                    coin.Timer += dt;
+                    if (coin.Timer >= COIN_LIFETIME)
+                    {
+                        _activeCoins.RemoveAt(i);
+                    }
+                }
+            }
+        }
+
+        public void DrawCoins(SpriteBatch spriteBatch)
+        {
+            var pixel = ServiceLocator.Get<Texture2D>();
+            foreach (var coin in _activeCoins)
+            {
+                // Don't draw if still delayed
+                if (coin.Delay > 0) continue;
+
+                // Flicker out near end of life
+                if (coin.IsResting && coin.Timer > COIN_LIFETIME - 0.5f)
+                {
+                    if ((int)(coin.Timer * 20) % 2 == 0) continue;
+                }
+                spriteBatch.DrawSnapped(pixel, coin.Position, _global.Palette_Yellow);
             }
         }
 
