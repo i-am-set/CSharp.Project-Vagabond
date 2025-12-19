@@ -2,7 +2,7 @@
   {
     "MemberID": "0",
     "Name": "Oakley",
-    "Description": "A wandering vagabond seeking fortune.",
+    "Description": "A reckless pyromancer with a death wish.",
     "MaxHP": 120,
     "MaxMana": 100,
     "Strength": 12,
@@ -17,7 +17,7 @@
     "StartingWeapons": {
       "0": 1
     },
-    "StartingArmor": { 
+    "StartingArmor": {
       "0": 1
     }
   },
@@ -60,6 +60,72 @@
     "StartingActions": [ "Dodge" ],
     "StartingArmor": {
       "2": 1
+    }
+  },
+  {
+    "MemberID": "3",
+    "Name": "Snips",
+    "Description": "A priestess of the eternal sun.",
+    "MaxHP": 150,
+    "MaxMana": 60,
+    "Strength": 16,
+    "Intelligence": 4,
+    "Tenacity": 18,
+    "Agility": 5,
+    "WeaknessElementIDs": [ 3 ],
+    "ResistanceElementIDs": [ 1, 6 ],
+    "DefaultStrikeMoveID": "StoneHurl",
+    "StartingSpells": [ "StoneHurl", "BulkUp" ],
+    "StartingActions": [ "ShoulderBash" ],
+    "StartingWeapons": {
+      "1": 1
+    },
+    "StartingArmor": {
+      "1": 1
+    }
+  },
+  {
+    "MemberID": "4",
+    "Name": "Petey",
+    "Description": ".",
+    "MaxHP": 75,
+    "MaxMana": 180,
+    "Strength": 4,
+    "Intelligence": 14,
+    "Tenacity": 8,
+    "Agility": 10,
+    "WeaknessElementIDs": [ 9 ],
+    "ResistanceElementIDs": [ 2, 10 ],
+    "DefaultStrikeMoveID": "LuminousSpark",
+    "StartingSpells": [ "LuminousSpark", "PurifyingLight" ],
+    "StartingActions": [ "Dodge" ],
+    "StartingArmor": {
+      "2": 1
+    },
+    "StartingRelics": {
+      "20": 1
+    }
+  },
+  {
+    "MemberID": "5",
+    "Name": "Abu",
+    "Description": "",
+    "MaxHP": 100,
+    "MaxMana": 100,
+    "Strength": 15,
+    "Intelligence": 12,
+    "Tenacity": 4,
+    "Agility": 16,
+    "WeaknessElementIDs": [ 3, 5 ],
+    "ResistanceElementIDs": [ 2 ],
+    "DefaultStrikeMoveID": "Scorchbrand",
+    "StartingSpells": [ "Scorchbrand", "OverCharge" ],
+    "StartingActions": [ "Dodge" ],
+    "StartingWeapons": {
+      "0": 1
+    },
+    "StartingArmor": {
+      "3": 1
     }
   }
 ]

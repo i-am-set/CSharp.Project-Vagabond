@@ -61,7 +61,10 @@
     "mysterious_fountain",
     "training_dummy",
     "hermits_shack",
-    "fallen_star"
+    "fallen_star",
+    "whispering_tree",
+    "clockwork_trader",
+    "void_rift"
   ],
   "PossibleMajorBattles": [
     [ "golem" ]
