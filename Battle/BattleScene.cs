@@ -671,7 +671,7 @@ namespace ProjectVagabond.Scenes
             _renderer.DrawOverlay(spriteBatch, font);
             _tooltipManager.Draw(spriteBatch, ServiceLocator.Get<Core>().SecondaryFont);
             _animationManager.DrawAbilityIndicators(spriteBatch, font);
-            _animationManager.DrawCoins(spriteBatch); // Draw Coins
+            // Coins are now drawn inside DrawSceneContent via _renderer
             _alertManager.Draw(spriteBatch);
 
             // Draw Settings Button in Overlay (Virtual Space)

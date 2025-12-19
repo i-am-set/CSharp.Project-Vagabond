@@ -369,6 +369,9 @@ namespace ProjectVagabond.Battle.UI
             // --- Draw Enemy HUDs ---
             DrawEnemyHuds(spriteBatch, font, secondaryFont, enemies, currentActor, isTargetingPhase, shouldGrayOutUnselectable, selectableTargets, animationManager, uiManager.HoverHighlightState, pulseAlpha, gameTime, silhouetteColors, transform);
 
+            // --- Draw Coins (Behind Players) ---
+            animationManager.DrawCoins(spriteBatch);
+
             // --- Draw Player HUDs (Slots 0 & 1) ---
             foreach (var playerCombatant in players)
             {

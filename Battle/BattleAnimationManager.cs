@@ -1,15 +1,9 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond.Battle;
-using ProjectVagabond.Battle.UI;
-using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 
 namespace ProjectVagabond.Battle.UI
@@ -159,19 +153,30 @@ namespace ProjectVagabond.Battle.UI
             public bool IsResting;
             public float Timer; // For despawn/flicker
             public float Delay; // Staggered start delay
+
+            // Magnetization State
+            public bool IsMagnetizing;
+            public Vector2 MagnetTarget;
+            public float MagnetSpeed;
+            public float MagnetAcceleration;
         }
         private readonly List<CoinParticle> _activeCoins = new List<CoinParticle>();
 
         // --- COIN TUNING VARIABLES ---
         private const float COIN_GRAVITY = 900f;
         private const float COIN_BOUNCE_FACTOR = 0.5f;
-        private const float COIN_LIFETIME = 0.5f;
+        private const float COIN_LIFETIME = 0.5f; // Time to wait before magnetizing
         private const float COIN_INDIVIDUAL_DISPENSE_DELAY = 0.0f;
 
         // Spawning Physics
         private const float COIN_VELOCITY_X_RANGE = 45f; // +/- this value
         private const float COIN_VELOCITY_Y_MIN = -200f; // Upward force min
         private const float COIN_VELOCITY_Y_MAX = -100f; // Upward force max
+
+        // Magnetization Physics
+        private const float COIN_MAGNET_ACCEL_MIN = 1500f;
+        private const float COIN_MAGNET_ACCEL_MAX = 2000f;
+        private const float COIN_MAGNET_KILL_DIST_SQ = 100f; // 10px squared
 
         // Floor Layout
         private const float COIN_GROUND_OFFSET_Y = 42f; // Lift the baseline up 16px
@@ -579,7 +584,7 @@ namespace ProjectVagabond.Battle.UI
             UpdateDamageIndicators(gameTime);
             UpdateAbilityIndicators(gameTime);
             UpdateBarAnimations(gameTime);
-            UpdateCoins(gameTime);
+            UpdateCoins(gameTime, combatants);
         }
 
         private void UpdateIndicatorQueue(GameTime gameTime)
@@ -786,13 +791,16 @@ namespace ProjectVagabond.Battle.UI
                     TargetGroundY = targetGroundY,
                     IsResting = false,
                     Timer = 0f,
-                    Delay = (float)(_random.NextDouble() * COIN_INDIVIDUAL_DISPENSE_DELAY)
+                    Delay = (float)(_random.NextDouble() * COIN_INDIVIDUAL_DISPENSE_DELAY),
+                    IsMagnetizing = false,
+                    MagnetSpeed = 0f,
+                    MagnetAcceleration = (float)(_random.NextDouble() * (COIN_MAGNET_ACCEL_MAX - COIN_MAGNET_ACCEL_MIN) + COIN_MAGNET_ACCEL_MIN)
                 };
                 _activeCoins.Add(coin);
             }
         }
 
-        private void UpdateCoins(GameTime gameTime)
+        private void UpdateCoins(GameTime gameTime, IEnumerable<BattleCombatant> combatants)
         {
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
@@ -807,8 +815,25 @@ namespace ProjectVagabond.Battle.UI
                     continue; // Skip update until delay is over
                 }
 
-                if (!coin.IsResting)
+                if (coin.IsMagnetizing)
                 {
+                    // Magnetization Logic
+                    Vector2 direction = coin.MagnetTarget - coin.Position;
+                    float distanceSq = direction.LengthSquared();
+
+                    if (distanceSq < COIN_MAGNET_KILL_DIST_SQ)
+                    {
+                        _activeCoins.RemoveAt(i);
+                        continue;
+                    }
+
+                    direction.Normalize();
+                    coin.MagnetSpeed += coin.MagnetAcceleration * dt;
+                    coin.Position += direction * coin.MagnetSpeed * dt;
+                }
+                else if (!coin.IsResting)
+                {
+                    // Falling/Bouncing Logic
                     coin.Velocity.Y += COIN_GRAVITY * dt;
                     coin.Position += coin.Velocity * dt;
 
@@ -830,10 +855,61 @@ namespace ProjectVagabond.Battle.UI
                 }
                 else
                 {
+                    // Resting Logic -> Transition to Magnetize
                     coin.Timer += dt;
                     if (coin.Timer >= COIN_LIFETIME)
                     {
-                        _activeCoins.RemoveAt(i);
+                        // Find closest player target
+                        var players = combatants.Where(c => c.IsPlayerControlled && !c.IsDefeated && c.IsActiveOnField).ToList();
+                        if (players.Any())
+                        {
+                            // Calculate visual centers for players
+                            // Hardcoded logic based on BattleRenderer layout to avoid dependency cycle
+                            // Slot 0: Left, Slot 1: Right
+                            const int playerHudY = DIVIDER_Y - 10;
+                            const int playerHudPaddingX = 10;
+                            const int barWidth = 60;
+                            const int heartHeight = 32;
+                            var font = ServiceLocator.Get<BitmapFont>(); // Need font for line height
+                            float heartCenterY = playerHudY - font.LineHeight - 2 - (heartHeight / 2f) + 10 + 3;
+
+                            BattleCombatant closestPlayer = null;
+                            float minDistanceSq = float.MaxValue;
+                            Vector2 bestTargetPos = Vector2.Zero;
+
+                            foreach (var player in players)
+                            {
+                                float startX = (player.BattleSlot == 1)
+                                    ? Global.VIRTUAL_WIDTH - playerHudPaddingX - barWidth
+                                    : playerHudPaddingX;
+
+                                float spriteCenterX = startX + (barWidth / 2f);
+                                Vector2 targetPos = new Vector2(spriteCenterX, heartCenterY);
+
+                                float distSq = Vector2.DistanceSquared(coin.Position, targetPos);
+                                if (distSq < minDistanceSq)
+                                {
+                                    minDistanceSq = distSq;
+                                    closestPlayer = player;
+                                    bestTargetPos = targetPos;
+                                }
+                            }
+
+                            if (closestPlayer != null)
+                            {
+                                coin.IsMagnetizing = true;
+                                coin.MagnetTarget = bestTargetPos;
+                            }
+                            else
+                            {
+                                // No players? Just fade out (fallback)
+                                _activeCoins.RemoveAt(i);
+                            }
+                        }
+                        else
+                        {
+                            _activeCoins.RemoveAt(i);
+                        }
                     }
                 }
             }
@@ -847,11 +923,6 @@ namespace ProjectVagabond.Battle.UI
                 // Don't draw if still delayed
                 if (coin.Delay > 0) continue;
 
-                // Flicker out near end of life
-                if (coin.IsResting && coin.Timer > COIN_LIFETIME - 0.5f)
-                {
-                    if ((int)(coin.Timer * 20) % 2 == 0) continue;
-                }
                 spriteBatch.DrawSnapped(pixel, coin.Position, _global.Palette_Yellow);
             }
         }
