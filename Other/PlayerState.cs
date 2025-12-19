@@ -6,11 +6,13 @@ using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Dice;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -22,6 +24,9 @@ namespace ProjectVagabond
     {
         // --- PARTY SYSTEM ---
         public List<PartyMember> Party { get; set; } = new List<PartyMember>();
+
+        // Track IDs of all members who have ever been in the party to prevent duplicates
+        public HashSet<string> PastMemberIds { get; set; } = new HashSet<string>();
 
         // Helper to get the main character (Avatar)
         public PartyMember Leader => Party.Count > 0 ? Party[0] : null;
@@ -68,7 +73,7 @@ namespace ProjectVagabond
         public PlayerState()
         {
             // Ensure there is always at least one member (the leader)
-            Party.Add(new PartyMember { Name = "Player" });
+            // Note: The actual leader is loaded via InitializeWorld in GameState, this is just a constructor safety.
         }
 
         // --- PARTY MANAGEMENT ---
@@ -88,6 +93,17 @@ namespace ProjectVagabond
             }
 
             Party.Add(member);
+
+            // Track that this member has been recruited (using Name as ID for now, or MemberID if available)
+            // Assuming PartyMemberFactory sets the name correctly.
+            // Ideally we'd store the ID, but Name is unique enough for this scope.
+            // We will try to find the ID from the cache to be safe.
+            var kvp = BattleDataCache.PartyMembers.FirstOrDefault(x => x.Value.Name == member.Name);
+            if (!string.IsNullOrEmpty(kvp.Key))
+            {
+                PastMemberIds.Add(kvp.Key);
+            }
+
             return true;
         }
 

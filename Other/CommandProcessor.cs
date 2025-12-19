@@ -5,6 +5,7 @@ using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Dice;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
@@ -53,6 +54,7 @@ namespace ProjectVagabond
                 sb.AppendLine("    debug_combat                         - Starts a random forest combat.");
                 sb.AppendLine("    debug_shop                           - Opens a random shop interface.");
                 sb.AppendLine("    debug_rest                           - Opens the rest site interface.");
+                sb.AppendLine("    debug_recruit                        - Opens the recruit interface.");
                 sb.AppendLine("    combatrun                           - Flees from combat.");
                 sb.AppendLine("    givestatus <slot> <type> {dur}  - Apply status.");
                 sb.AppendLine("    debug_consolefont <0|1|2>         - Sets the debug console font.");
@@ -423,6 +425,21 @@ namespace ProjectVagabond
                     Log("[error]Command only available in Split Map Scene.");
                 }
             }, "debug_rest - Opens the rest site interface.");
+
+            // --- DEBUG RECRUIT ---
+            _commands["debug_recruit"] = new Command("debug_recruit", (args) =>
+            {
+                var sceneManager = ServiceLocator.Get<SceneManager>();
+                if (sceneManager.CurrentActiveScene is SplitMapScene splitScene)
+                {
+                    splitScene.DebugTriggerRecruit();
+                    Log("[palette_teal]Opening debug recruit menu...");
+                }
+                else
+                {
+                    Log("[error]Command only available in Split Map Scene.");
+                }
+            }, "debug_recruit - Opens the recruit interface.");
 
             _commands["combatrun"] = new Command("combatrun", (args) =>
             {

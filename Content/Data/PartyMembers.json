@@ -17,7 +17,7 @@
     "StartingWeapons": {
       "0": 1
     },
-    "StartingArmor": {
+    "StartingArmor": { 
       "0": 1
     }
   },
@@ -45,7 +45,7 @@
   },
   {
     "MemberID": "2",
-    "Name": "Sylas",
+    "Name": "Pretzel",
     "Description": "A hedge mage with a quick temper.",
     "MaxHP": 90,
     "MaxMana": 150,
