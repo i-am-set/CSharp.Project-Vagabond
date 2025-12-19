@@ -300,8 +300,11 @@ namespace ProjectVagabond.UI
                 }
             }
 
-            _debugButton1?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
-            _debugButton2?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
+            if (_selectedInventoryCategory != InventoryCategory.Equip)
+            {
+                _debugButton1?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
+                _debugButton2?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
+            }
 
             if (_global.ShowSplitMapGrid)
             {

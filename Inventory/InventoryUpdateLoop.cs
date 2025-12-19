@@ -351,6 +351,12 @@ namespace ProjectVagabond.UI
                 _debugButton1.IsEnabled = currentIndex > 0 && _selectedInventoryCategory != InventoryCategory.Equip;
                 _debugButton2.IsEnabled = currentIndex < _categoryOrder.Count - 1 && _selectedInventoryCategory != InventoryCategory.Equip;
             }
+            else if (_debugButton1 != null && _debugButton2 != null)
+            {
+                // Disable buttons if no header is selected (e.g. Equip mode)
+                _debugButton1.IsEnabled = false;
+                _debugButton2.IsEnabled = false;
+            }
 
             // Update Slots or Equip UI
             if (_selectedInventoryCategory != InventoryCategory.Equip)
