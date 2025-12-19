@@ -174,8 +174,8 @@ namespace ProjectVagabond.Battle.UI
         private const float COIN_VELOCITY_Y_MAX = -100f; // Upward force max
 
         // Floor Layout
-        private const float COIN_GROUND_OFFSET_Y = 38f; // Lift the baseline up 16px
-        private const float COIN_GROUND_DEPTH_HEIGHT = 18f; // The vertical spread of the floor (3D effect)
+        private const float COIN_GROUND_OFFSET_Y = 42f; // Lift the baseline up 16px
+        private const float COIN_GROUND_DEPTH_HEIGHT = 14f; // The vertical spread of the floor (3D effect)
 
         private readonly List<HealthAnimationState> _activeHealthAnimations = new List<HealthAnimationState>();
         private readonly List<AlphaAnimationState> _activeAlphaAnimations = new List<AlphaAnimationState>();

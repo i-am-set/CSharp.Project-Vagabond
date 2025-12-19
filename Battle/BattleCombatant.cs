@@ -33,6 +33,13 @@ namespace ProjectVagabond.Battle
         public int BattleSlot { get; set; } = -1;
         public bool IsActiveOnField => BattleSlot == 0 || BattleSlot == 1;
 
+        // --- ECONOMY ---
+        /// <summary>
+        /// The amount of coins this combatant drops upon defeat.
+        /// Calculated at spawn based on level and global economy settings.
+        /// </summary>
+        public int CoinReward { get; set; } = 0;
+
         public List<MoveData> AvailableMoves
         {
             get

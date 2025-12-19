@@ -994,7 +994,7 @@ namespace ProjectVagabond.Scenes
             // Award Coins if Enemy
             if (!e.DefeatedCombatant.IsPlayerControlled)
             {
-                int coinAmount = 50;
+                int coinAmount = e.DefeatedCombatant.CoinReward; // Use the calculated value
                 _gameState.PlayerState.Coin += coinAmount;
                 _uiManager.ShowNarration($"Gained {coinAmount} Coins!");
             }

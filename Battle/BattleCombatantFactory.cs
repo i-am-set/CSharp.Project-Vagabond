@@ -20,11 +20,15 @@ namespace ProjectVagabond.Battle
 {
     public static class BattleCombatantFactory
     {
+        private static readonly Random _random = new Random();
+
         public static BattleCombatant CreateFromEntity(int entityId, string combatantId)
         {
             var componentStore = ServiceLocator.Get<ComponentStore>();
             var archetypeManager = ServiceLocator.Get<ArchetypeManager>();
             var gameState = ServiceLocator.Get<GameState>();
+            var global = ServiceLocator.Get<Global>();
+
             var statsComponent = componentStore.GetComponent<CombatantStatsComponent>(entityId);
             if (statsComponent == null)
             {
@@ -167,6 +171,27 @@ namespace ProjectVagabond.Battle
             }
             else
             {
+                // --- ENEMY LOGIC ---
+
+                // 1. Calculate "Power Score" based on raw stats
+                // Weights: HP is cheap (0.2), Stats are valuable (1.0)
+                float powerScore = (combatant.Stats.MaxHP * 0.2f) +
+                                   (combatant.Stats.Strength * 1.0f) +
+                                   (combatant.Stats.Intelligence * 1.0f) +
+                                   (combatant.Stats.Tenacity * 1.0f) +
+                                   (combatant.Stats.Agility * 1.0f);
+
+                // 2. Apply Economy Logic
+                // Base Drop + (PowerScore * Scalar)
+                // This ensures stronger enemies (Boars) drop more than weaker ones (Snakes)
+                float calculatedValue = global.Economy_BaseDrop + (powerScore * global.Economy_GlobalScalar);
+
+                // 3. Apply Random Variance (+/- 20%)
+                float variance = (float)(_random.NextDouble() * (global.Economy_Variance * 2) - global.Economy_Variance);
+                float finalValue = calculatedValue * (1.0f + variance);
+
+                combatant.CoinReward = Math.Max(1, (int)Math.Round(finalValue));
+
                 var staticMoves = new List<MoveData>();
                 foreach (var moveId in statsComponent.AvailableMoveIDs)
                 {

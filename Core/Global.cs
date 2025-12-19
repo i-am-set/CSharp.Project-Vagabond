@@ -8,6 +8,7 @@ using MonoGame.Extended;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Progression;
@@ -203,6 +204,28 @@ namespace ProjectVagabond
         public int BasePrice_Mythic { get; set; } = 1500;
         public int BasePrice_Legendary { get; set; } = 3000;
         public float PriceMultiplier_Consumable { get; set; } = 0.4f; // Consumables are 40% of gear price
+
+        // --- DYNAMIC DROP TUNING ---
+        /// <summary>
+        /// The "Mother Value". Multiplies ALL coin drops by this amount.
+        /// </summary>
+        public float Economy_GlobalScalar { get; set; } = 1.0f;
+
+        /// <summary>
+        /// The base amount of coins an enemy drops, regardless of level.
+        /// </summary>
+        public int Economy_BaseDrop { get; set; } = 10;
+
+        /// <summary>
+        /// The amount of coins added per enemy Level.
+        /// </summary>
+        public float Economy_PerLevel { get; set; } = 5.0f;
+
+        /// <summary>
+        /// The random variance applied to drops
+        /// </summary>
+        public float Economy_Variance { get; set; } = 0.4f;
+
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         // INSTANCE VARIABLES
