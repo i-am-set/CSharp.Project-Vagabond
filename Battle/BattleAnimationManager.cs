@@ -166,6 +166,7 @@ namespace ProjectVagabond.Battle.UI
         private const float COIN_GRAVITY = 900f;
         private const float COIN_BOUNCE_FACTOR = 0.5f;
         private const float COIN_LIFETIME = 0.5f;
+        private const float COIN_INDIVIDUAL_DISPENSE_DELAY = 0.0f;
 
         // Spawning Physics
         private const float COIN_VELOCITY_X_RANGE = 45f; // +/- this value
@@ -785,7 +786,7 @@ namespace ProjectVagabond.Battle.UI
                     TargetGroundY = targetGroundY,
                     IsResting = false,
                     Timer = 0f,
-                    Delay = (float)(_random.NextDouble() * 0.0)
+                    Delay = (float)(_random.NextDouble() * COIN_INDIVIDUAL_DISPENSE_DELAY)
                 };
                 _activeCoins.Add(coin);
             }
