@@ -41,9 +41,9 @@ namespace ProjectVagabond.UI
         private object? _hoveredItemData; // Data for the info panel
 
         // Tooltip State
-        private float _tooltipHoverTimer = 0f;
+        private float _tooltipTimer = 0f;
         private object? _lastHoveredItemData = null;
-        private const float TOOLTIP_DELAY = 0.2f; // 1 second delay
+        private const float TOOLTIP_DELAY = 0.4f; // Tunable delay
 
         // Layout Constants
         private const float WORLD_Y_OFFSET = 600f;
@@ -141,7 +141,7 @@ namespace ProjectVagabond.UI
         public void Show()
         {
             IsOpen = true;
-            _tooltipHoverTimer = 0f;
+            _tooltipTimer = 0f;
             _lastHoveredItemData = null;
             RebuildLayout();
         }
@@ -222,7 +222,7 @@ namespace ProjectVagabond.UI
             else
             {
                 _selectedCandidateIndex = index;
-                // Trigger hop for visual feedback
+                // Trigger hop for visual feedback ONLY on selection
                 if (index >= 0 && index < _hopControllers.Count)
                 {
                     _hopControllers[index].Trigger();
@@ -381,37 +381,32 @@ namespace ProjectVagabond.UI
                 }
             }
 
+            // --- TOOLTIP TIMER LOGIC ---
+            if (_hoveredItemData != _lastHoveredItemData)
+            {
+                _tooltipTimer = 0f;
+                _lastHoveredItemData = _hoveredItemData;
+            }
+
+            if (_hoveredItemData != null)
+            {
+                _tooltipTimer += dt;
+            }
+            else
+            {
+                _tooltipTimer = 0f;
+            }
+
             // Update Buttons
             for (int i = 0; i < _candidateButtons.Count; i++)
             {
                 var btn = _candidateButtons[i];
-                bool wasHovered = btn.IsHovered;
                 btn.Update(worldMouseState);
-
-                // Trigger hop on hover enter if not selected
-                if (btn.IsHovered && !wasHovered && i != _selectedCandidateIndex)
-                {
-                    if (i >= 0 && i < _hopControllers.Count)
-                    {
-                        _hopControllers[i].Trigger();
-                    }
-                }
             }
 
             _selectButton.IsEnabled = _selectedCandidateIndex != -1;
             _selectButton.Update(worldMouseState);
             _skipButton.Update(worldMouseState);
-
-            // --- Tooltip Timer Logic ---
-            if (_hoveredItemData != _lastHoveredItemData)
-            {
-                _tooltipHoverTimer = 0f;
-                _lastHoveredItemData = _hoveredItemData;
-            }
-            else if (_hoveredItemData != null)
-            {
-                _tooltipHoverTimer += dt;
-            }
         }
 
         public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
@@ -459,8 +454,8 @@ namespace ProjectVagabond.UI
             var tertiaryFont = _core.TertiaryFont;
             _skipButton.Draw(spriteBatch, tertiaryFont, gameTime, Matrix.Identity);
 
-            // --- Draw Info Panel if Hovered AND Timer Exceeded ---
-            if (_hoveredItemData != null && _tooltipHoverTimer >= TOOLTIP_DELAY)
+            // --- Draw Info Panel if Hovered AND Timer Met ---
+            if (_hoveredItemData != null && _tooltipTimer >= TOOLTIP_DELAY)
             {
                 DrawDynamicTooltip(spriteBatch, defaultFont, secondaryFont, gameTime);
             }
@@ -707,27 +702,10 @@ namespace ProjectVagabond.UI
 
                 var destRect = new Rectangle(centerX - 16, (int)(currentY + hopOffset), 32, 32);
 
-                // --- SPRITE SELECTION LOGIC ---
-                Texture2D portraitTexture = _spriteManager.PlayerPortraitsSpriteSheet;
-
-                if (isSelected)
-                {
-                    // Animate back and forth
-                    float animSpeed = 4f; // Adjust speed as needed
-                    bool showAlt = (int)(gameTime.TotalGameTime.TotalSeconds * animSpeed) % 2 != 0;
-                    if (showAlt && _spriteManager.PlayerPortraitsAltSpriteSheet != null)
-                    {
-                        portraitTexture = _spriteManager.PlayerPortraitsAltSpriteSheet;
-                    }
-                }
-                else if (button.IsHovered && button.IsEnabled)
-                {
-                    // Static Alt on Hover
-                    if (_spriteManager.PlayerPortraitsAltSpriteSheet != null)
-                    {
-                        portraitTexture = _spriteManager.PlayerPortraitsAltSpriteSheet;
-                    }
-                }
+                // Determine Texture: Use Alt if Selected or Hovered
+                Texture2D portraitTexture = (isSelected || (button.IsHovered && button.IsEnabled))
+                    ? _spriteManager.PlayerPortraitsAltSpriteSheet
+                    : _spriteManager.PlayerPortraitsSpriteSheet;
 
                 spriteBatch.DrawSnapped(portraitTexture, destRect, sourceRect, Color.White);
             }
@@ -1150,8 +1128,6 @@ namespace ProjectVagabond.UI
             float totalContentHeight = spriteSize + gap + totalTitleHeight + (totalDescHeight > 0 ? gap + totalDescHeight : 0) + (totalStatHeight > 0 ? gap + totalStatHeight : 0);
 
             float currentY = infoPanelArea.Y + (infoPanelArea.Height - totalContentHeight) / 2f;
-            // Removed the -22f offset as requested for dynamic centering
-            // currentY -= 22f; 
 
             int spriteX = infoPanelArea.X + (infoPanelArea.Width - spriteSize) / 2;
 

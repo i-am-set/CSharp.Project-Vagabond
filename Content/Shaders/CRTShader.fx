@@ -25,7 +25,7 @@ uniform float ImpactGlitchIntensity;
 
 // --- Tuning ---
 // Scanlines
-static const float SCANLINE_OPACITY_MIN = 0.75f; // The darkness of the gap (1.0 = invisible, 0.0 = black)
+static const float SCANLINE_OPACITY_MIN = 0.85f; // The darkness of the gap (1.0 = invisible, 0.0 = black)
 static const float SCANLINE_OPACITY_MAX = 1.0f;  // The brightness of the beam center
 
 // Wobble (Distortion)
@@ -40,7 +40,7 @@ static const float VIGNETTE_INTENSITY = 0.3;
 static const float VIGNETTE_ROUNDNESS = 0.4;
 
 // Noise
-static const float NOISE_INTENSITY = 0.02;
+static const float NOISE_INTENSITY = 0.005;
 
 // --- Globals ---
 Texture2D SpriteTexture;
