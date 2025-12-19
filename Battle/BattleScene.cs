@@ -369,7 +369,7 @@ namespace ProjectVagabond.Scenes
 
         private void CleanupPlayerState()
         {
-            if (_battleManager != null)
+            if (_battleManager != null && _gameState.PlayerState != null)
             {
                 // Sync battle state back to persistent PartyMember objects
                 foreach (var member in _gameState.PlayerState.Party)

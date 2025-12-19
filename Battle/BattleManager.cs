@@ -229,24 +229,17 @@ namespace ProjectVagabond.Battle
             _pendingSlot1Action = null;
             CurrentActingCombatant = null;
 
+            // --- AI LOGIC INTEGRATION ---
             foreach (var enemy in _cachedActiveEnemies)
             {
                 if (enemy.ChargingAction != null) continue;
-                var target = _cachedActivePlayers.Any() ? _cachedActivePlayers[_random.Next(_cachedActivePlayers.Count)] : null;
 
-                if (target != null)
+                // Use the new EnemyAI system to determine the best action
+                var action = EnemyAI.DetermineBestAction(enemy, _allCombatants);
+
+                if (!HandlePreActionEffects(action))
                 {
-                    var possibleMoves = enemy.AvailableMoves;
-                    if (enemy.HasStatusEffect(StatusEffectType.Silence))
-                        possibleMoves = possibleMoves.Where(m => m.MoveType != MoveType.Spell).ToList();
-
-                    MoveData move = possibleMoves.Any() ? possibleMoves.First() : BattleDataCache.Moves["Stall"];
-                    var action = CreateActionFromMove(enemy, move, target);
-
-                    if (!HandlePreActionEffects(action))
-                    {
-                        _actionQueue.Add(action);
-                    }
+                    _actionQueue.Add(action);
                 }
             }
 
