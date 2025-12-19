@@ -221,21 +221,7 @@ namespace ProjectVagabond.UI
 
         private Color ParseColor(string colorName)
         {
-            // 1. Try Global Properties (e.g. "Palette_Red", "StatColor_Strength")
-            var globalProp = typeof(Global).GetProperty(colorName, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
-            if (globalProp != null && globalProp.PropertyType == typeof(Color))
-            {
-                return (Color)globalProp.GetValue(_global)!;
-            }
-
-            // 2. Try Standard MonoGame Colors (e.g. "Lime", "Red", "CornflowerBlue")
-            var colorProp = typeof(Color).GetProperty(colorName, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Static);
-            if (colorProp != null && colorProp.PropertyType == typeof(Color))
-            {
-                return (Color)colorProp.GetValue(null)!;
-            }
-
-            // 3. Fallback to Global helper (handles aliases like "cstr", "caction")
+            // Use the centralized Global parser
             return _global.GetNarrationColor(colorName);
         }
 
