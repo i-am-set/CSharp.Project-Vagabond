@@ -18,10 +18,9 @@ namespace ProjectVagabond.Scenes
 {
     public class SplitMapScene : GameScene
     {
-        private enum SplitMapView { Map, Inventory, Settings, Shop, Rest, Recruit } // Added Recruit
+        private enum SplitMapView { Map, Inventory, Settings, Shop, Rest, Recruit }
         private SplitMapView _currentView = SplitMapView.Map;
 
-        // Tracks where to go back to when closing Inventory or Settings (Map, Shop, or Rest)
         private SplitMapView _viewToReturnTo = SplitMapView.Map;
 
         private struct DrawableMapObject
@@ -45,7 +44,7 @@ namespace ProjectVagabond.Scenes
         private readonly SplitMapSettingsOverlay _settingsOverlay;
         private readonly SplitMapShopOverlay _shopOverlay;
         private readonly SplitMapRestOverlay _restOverlay;
-        private readonly SplitMapRecruitOverlay _recruitOverlay; // Added
+        private readonly SplitMapRecruitOverlay _recruitOverlay;
         private readonly BirdManager _birdManager;
 
         private SplitMap? _currentMap;
@@ -53,8 +52,7 @@ namespace ProjectVagabond.Scenes
         private readonly PlayerMapIcon _playerIcon;
         private NarrativeDialog _narrativeDialog;
 
-        // --- Animation Tuning ---
-        private const float PLAYER_MOVE_SPEED = 50f; // Pixels per second
+        private const float PLAYER_MOVE_SPEED = 50f;
         private const float CAMERA_LERP_SPEED = 5f;
         private const float NODE_LIFT_DURATION = 0.2f;
         private const float PULSE_DURATION = 0.15f;
@@ -71,32 +69,27 @@ namespace ProjectVagabond.Scenes
         private int _playerMoveTargetNodeId;
         private SplitMapPath? _playerMovePath;
 
-        // Node interaction state
         private int _hoveredNodeId = -1;
         private readonly HashSet<int> _visitedNodeIds = new HashSet<int>();
         private readonly HashSet<int> _traversedPathIds = new HashSet<int>();
         private int _nodeForPathReveal = -1;
 
-        // Path animation state
         private readonly Dictionary<int, float> _pathAnimationProgress = new();
         private readonly Dictionary<int, float> _pathAnimationDurations = new();
-        private const string PATH_DRAW_PATTERN = "1111110111010111111001110111110011111111110101100"; // 1 = draw, 0 = skip. Creates a dashed line effect.
+        private const string PATH_DRAW_PATTERN = "1111110111010111111001110111110011111111110101100";
         private static readonly Random _random = new Random();
 
-        // Path Color Variation Tuning
         private const float PATH_COLOR_VARIATION_MIN = 0.1f;
         private const float PATH_COLOR_VARIATION_MAX = 1.0f;
         private const float PATH_COLOR_NOISE_SCALE = 0.3f;
-        private const float PATH_EXCLUSION_RADIUS = 10f; // Half of a 20x20 exclusion zone
+        private const float PATH_EXCLUSION_RADIUS = 10f;
         private const float PATH_FADE_DISTANCE = 12f;
 
-        // Node pulse animation state
         private float _pulseTimer = 0f;
         private const float PULSE_AMOUNT = 0.3f;
 
         private bool _wasModalActiveLastFrame = false;
 
-        // Event/State Machine
         private enum EventState { Idle, AwaitingDiceRoll, NarratingResult }
         private EventState _eventState = EventState.Idle;
         private NarrativeChoice? _pendingChoiceForDiceRoll;
@@ -105,13 +98,11 @@ namespace ProjectVagabond.Scenes
         private enum SplitMapState { Idle, PlayerMoving, LiftingNode, PulsingNode, EventInProgress, LoweringNode, PostEventDelay }
         private SplitMapState _mapState = SplitMapState.Idle;
 
-        // Node Animation
         private const float NODE_FRAME_DURATION = 0.5f;
         private float _nodeHoverTextBobTimer = 0f;
         private float _nodeLiftTimer = 0f;
         private const float NODE_LIFT_AMOUNT = 15f;
 
-        // Camera Panning State
         private bool _isPanning = false;
         private Point _panStartMousePosition;
         private Point _lastPanMousePosition;
@@ -123,7 +114,6 @@ namespace ProjectVagabond.Scenes
         private const float SNAP_BACK_DELAY = 1f;
         private const float SCROLL_PAN_SPEED = 1f;
 
-        // Combat Transition State
         private List<string>? _pendingCombatArchetypes;
         private bool _waitingForCombatCameraSettle = false;
         private int _framesToWaitAfterSettle = 0;
@@ -132,7 +122,6 @@ namespace ProjectVagabond.Scenes
         public static bool PlayerWonLastBattle { get; set; } = true;
         public static bool WasMajorBattle { get; set; } = false;
 
-        // UI Buttons
         private ImageButton? _settingsButton;
 
         public SplitMapScene()
@@ -151,7 +140,7 @@ namespace ProjectVagabond.Scenes
             _settingsOverlay = new SplitMapSettingsOverlay(this);
             _shopOverlay = new SplitMapShopOverlay();
             _restOverlay = new SplitMapRestOverlay(this);
-            _recruitOverlay = new SplitMapRecruitOverlay(this); // Added
+            _recruitOverlay = new SplitMapRecruitOverlay(this);
             _birdManager = new BirdManager();
 
             var narratorBounds = new Rectangle(0, Global.VIRTUAL_HEIGHT - 50, Global.VIRTUAL_WIDTH, 50);
@@ -165,44 +154,33 @@ namespace ProjectVagabond.Scenes
                 noiseSpeed: 3f
             );
 
-            // --- INVENTORY BUTTON LOGIC ---
             _inventoryOverlay.OnInventoryButtonClicked += () =>
             {
-                // 1. If in Settings, try to close it first
                 if (_currentView == SplitMapView.Settings)
                 {
                     _settingsOverlay.AttemptClose(() =>
                     {
-                        // After closing settings, go to Inventory
-                        // Keep _viewToReturnTo as whatever it was (Map, Shop, Rest, Recruit)
                         SetView(SplitMapView.Inventory, snap: true);
                     });
                 }
-                // 2. If in Inventory, close it and return to previous view
                 else if (_currentView == SplitMapView.Inventory)
                 {
                     SetView(_viewToReturnTo, snap: true);
                 }
-                // 3. If in Map, Shop, Rest, or Recruit, open Inventory
                 else
                 {
-                    // Remember where we came from
                     _viewToReturnTo = _currentView;
                     SetView(SplitMapView.Inventory, snap: true);
                 }
             };
 
-            // --- SETTINGS OVERLAY CLOSE REQUEST ---
             _settingsOverlay.OnCloseRequested += () =>
             {
-                // Return to wherever we were before opening settings
                 SetView(_viewToReturnTo, snap: true);
             };
 
-            // --- SHOP LEAVE REQUEST ---
             _shopOverlay.OnLeaveRequested += () =>
             {
-                // Leaving the shop always goes back to the Map and completes the node
                 _viewToReturnTo = SplitMapView.Map;
                 SetView(SplitMapView.Map, snap: true);
 
@@ -216,10 +194,8 @@ namespace ProjectVagabond.Scenes
                 _nodeLiftTimer = 0f;
             };
 
-            // --- REST LEAVE REQUEST ---
             _restOverlay.OnLeaveRequested += () =>
             {
-                // Leaving the rest site always goes back to the Map and completes the node
                 _viewToReturnTo = SplitMapView.Map;
                 SetView(SplitMapView.Map, snap: true);
 
@@ -233,14 +209,11 @@ namespace ProjectVagabond.Scenes
                 _nodeLiftTimer = 0f;
             };
 
-            // --- REST COMPLETE LOGIC ---
             _restOverlay.OnRestCompleted += () =>
             {
-                // Close Rest Overlay
                 _viewToReturnTo = SplitMapView.Map;
                 SetView(SplitMapView.Map, snap: true);
 
-                // Mark node complete and lower
                 var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
                 if (currentNode != null)
                 {
@@ -251,7 +224,6 @@ namespace ProjectVagabond.Scenes
                 _nodeLiftTimer = 0f;
             };
 
-            // --- RECRUIT COMPLETE LOGIC ---
             _recruitOverlay.OnRecruitComplete += () =>
             {
                 _viewToReturnTo = SplitMapView.Map;
@@ -278,12 +250,11 @@ namespace ProjectVagabond.Scenes
             _isPanning = false;
             _waitingForCombatCameraSettle = false;
             _pendingCombatArchetypes = null;
-            _viewToReturnTo = SplitMapView.Map; // Reset return view on entry
+            _viewToReturnTo = SplitMapView.Map;
 
             _inventoryOverlay.Initialize();
             _settingsOverlay.Initialize();
 
-            // Initialize Settings Button
             if (_settingsButton == null)
             {
                 var settingsSheet = _spriteManager.SplitMapSettingsButton;
@@ -293,21 +264,16 @@ namespace ProjectVagabond.Scenes
 
                 _settingsButton = new ImageButton(new Rectangle(settingsX, 10, buttonSize, buttonSize), settingsSheet, settingsRects[0], settingsRects[1], enableHoverSway: true);
 
-                // --- SETTINGS BUTTON LOGIC ---
                 _settingsButton.OnClick += () =>
                 {
-                    // 1. If in Settings, try to close it
                     if (_currentView == SplitMapView.Settings)
                     {
                         _settingsOverlay.AttemptClose(() => SetView(_viewToReturnTo, snap: true));
                     }
-                    // 2. If in Inventory, switch to Settings
                     else if (_currentView == SplitMapView.Inventory)
                     {
-                        // Don't update _viewToReturnTo, keep it as Map, Shop, Rest, or Recruit
                         SetView(SplitMapView.Settings, snap: true);
                     }
-                    // 3. If in Map, Shop, Rest, or Recruit, open Settings
                     else
                     {
                         _viewToReturnTo = _currentView;
@@ -319,7 +285,6 @@ namespace ProjectVagabond.Scenes
 
             if (_progressionManager.CurrentSplitMap == null)
             {
-                // Full reset
                 _mapState = SplitMapState.Idle;
                 _eventState = EventState.Idle;
                 _playerMoveTimer = 0f;
@@ -350,20 +315,17 @@ namespace ProjectVagabond.Scenes
                     UpdateReachableNodes();
                     StartPathRevealAnimation();
 
-                    // Initialize birds
                     if (_currentMap != null)
                         _birdManager.Initialize(_currentMap, _playerIcon.Position);
                 }
-                SetView(SplitMapView.Map, snap: true); // Default view
+                SetView(SplitMapView.Map, snap: true);
             }
             else
             {
-                // Returning from battle
                 _currentMap = _progressionManager.CurrentSplitMap;
                 if (WasMajorBattle && PlayerWonLastBattle)
                 {
                     WasMajorBattle = false;
-                    // Major battle won - mark complete
                     var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
                     if (currentNode != null)
                     {
@@ -384,9 +346,8 @@ namespace ProjectVagabond.Scenes
                     _mapState = SplitMapState.LoweringNode;
                     _nodeLiftTimer = 0f;
                 }
-                SetView(SplitMapView.Map, snap: true); // Default view
+                SetView(SplitMapView.Map, snap: true);
 
-                // Ensure birds are initialized when returning
                 if (_currentMap != null)
                     _birdManager.Initialize(_currentMap, _playerIcon.Position);
             }
@@ -409,12 +370,10 @@ namespace ProjectVagabond.Scenes
             _cameraVelocity = Vector2.Zero;
             _snapBackDelayTimer = 0f;
 
-            // Update Settings Button Sprite based on view
             if (_settingsButton != null)
             {
                 if (view == SplitMapView.Settings)
                 {
-                    // Show "Map" icon (Close Settings)
                     _settingsButton.SetSprites(
                         _spriteManager.SplitMapCloseInventoryButton,
                         _spriteManager.SplitMapCloseInventoryButtonSourceRects[0],
@@ -423,7 +382,6 @@ namespace ProjectVagabond.Scenes
                 }
                 else
                 {
-                    // Show "Gear" icon (Open Settings)
                     _settingsButton.SetSprites(
                         _spriteManager.SplitMapSettingsButton,
                         _spriteManager.SplitMapSettingsButtonSourceRects[0],
@@ -467,7 +425,7 @@ namespace ProjectVagabond.Scenes
                 case SplitMapView.Shop:
                     _inventoryOverlay.Hide();
                     _settingsOverlay.Hide();
-                    _shopOverlay.Resume(); // Resume to preserve stock
+                    _shopOverlay.Resume();
                     _restOverlay.Hide();
                     _recruitOverlay.Hide();
                     _targetCameraOffset = new Vector2(0, -600);
@@ -479,7 +437,7 @@ namespace ProjectVagabond.Scenes
                     _shopOverlay.Hide();
                     _restOverlay.Show();
                     _recruitOverlay.Hide();
-                    _targetCameraOffset = new Vector2(0, -600); // Same offset as shop for now
+                    _targetCameraOffset = new Vector2(0, -600);
                     if (snap) _cameraOffset = _targetCameraOffset;
                     break;
                 case SplitMapView.Recruit:
@@ -488,7 +446,7 @@ namespace ProjectVagabond.Scenes
                     _shopOverlay.Hide();
                     _restOverlay.Hide();
                     _recruitOverlay.Show();
-                    _targetCameraOffset = new Vector2(0, -600); // Same offset as shop for now
+                    _targetCameraOffset = new Vector2(0, -600);
                     if (snap) _cameraOffset = _targetCameraOffset;
                     break;
             }
@@ -566,12 +524,10 @@ namespace ProjectVagabond.Scenes
             var currentMouseState = Mouse.GetState();
             var currentKeyboardState = Keyboard.GetState();
 
-            // Capture the view state at the start of the frame to detect changes by overlays
             var viewAtStartOfFrame = _currentView;
 
             _voidEdgeEffect.Update(gameTime, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), _cameraOffset);
 
-            // Update Birds - Pass camera offset for parallax
             _birdManager.Update(gameTime, _currentMap, _playerIcon.Position, _cameraOffset);
 
             if (_hoveredNodeId != -1)
@@ -617,9 +573,6 @@ namespace ProjectVagabond.Scenes
 
             var cameraTransform = Matrix.CreateTranslation(RoundedCameraOffset.X, RoundedCameraOffset.Y, 0);
 
-            // Update Overlays
-            // Allow inventory interaction if Map is Idle OR if we are in the Shop/Rest/Recruit view
-            // BUT: If Rest Overlay is narrating, block everything.
             bool isRestNarrating = _restOverlay.IsNarrating;
             bool allowInventoryInteraction = !isRestNarrating && (_mapState == SplitMapState.Idle || _currentView == SplitMapView.Shop || _currentView == SplitMapView.Rest || _currentView == SplitMapView.Recruit);
 
@@ -634,16 +587,13 @@ namespace ProjectVagabond.Scenes
 
             _restOverlay.Update(gameTime, currentMouseState, cameraTransform);
 
-            // Update Settings Button
             if (!isRestNarrating)
             {
                 _settingsButton?.Update(currentMouseState);
             }
 
-            // Handle Escape Key for Navigation
             if (KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState) && !isRestNarrating)
             {
-                // Only act if the view hasn't already changed this frame (e.g., by an overlay closing itself)
                 if (_currentView == viewAtStartOfFrame)
                 {
                     if (_currentView == SplitMapView.Inventory)
@@ -652,7 +602,6 @@ namespace ProjectVagabond.Scenes
                     }
                     else if (_currentView == SplitMapView.Settings)
                     {
-                        // Settings overlay handles its own dirty check on Escape
                     }
                     else if (_currentView == SplitMapView.Map || _currentView == SplitMapView.Shop || _currentView == SplitMapView.Rest || _currentView == SplitMapView.Recruit)
                     {
@@ -662,7 +611,6 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            // Handle camera logic
             if (_currentView == SplitMapView.Map)
             {
                 if (!_isPanning)
@@ -727,7 +675,6 @@ namespace ProjectVagabond.Scenes
             }
             else
             {
-                // FIX: Reset hovered node if not in Map view to prevent interaction/text drawing
                 _hoveredNodeId = -1;
             }
 
@@ -791,7 +738,6 @@ namespace ProjectVagabond.Scenes
                 cursorManager.SetState(CursorState.HoverDraggable);
             }
 
-            // Only allow panning if not hovering buttons
             bool hoveringButtons = (_inventoryOverlay.IsHovered || (_settingsButton?.IsHovered ?? false));
             if (!hoveringButtons)
             {
@@ -807,7 +753,6 @@ namespace ProjectVagabond.Scenes
             {
                 bool leftClickPressed = currentMouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released;
 
-                // FIX: Ensure we are in Map view before processing map clicks
                 if (leftClickPressed && _hoveredNodeId != -1 && UIInputManager.CanProcessMouseClick() && _currentView == SplitMapView.Map)
                 {
                     var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
@@ -1087,10 +1032,22 @@ namespace ProjectVagabond.Scenes
                         }
                         else
                         {
-                            node.IsCompleted = true;
-                            UpdateCameraTarget(node.Position, false);
-                            _mapState = SplitMapState.LoweringNode;
-                            _nodeLiftTimer = 0f;
+                            // FAILSAFE: If event data is missing, try to grab a random one
+                            var fallbackEvent = _progressionManager.GetRandomNarrative();
+                            if (fallbackEvent != null)
+                            {
+                                Debug.WriteLine($"[SplitMapScene] Recovered from missing event ID '{narrativeEventId}' by using '{fallbackEvent.EventID}'.");
+                                _narrativeDialog.Show(fallbackEvent, OnNarrativeChoiceSelected);
+                                _wasModalActiveLastFrame = true;
+                            }
+                            else
+                            {
+                                Debug.WriteLine($"[SplitMapScene] [ERROR] Failed to recover missing event ID '{narrativeEventId}'. Skipping node.");
+                                node.IsCompleted = true;
+                                UpdateCameraTarget(node.Position, false);
+                                _mapState = SplitMapState.LoweringNode;
+                                _nodeLiftTimer = 0f;
+                            }
                         }
                     }
                     else
@@ -1136,17 +1093,15 @@ namespace ProjectVagabond.Scenes
 
         public void DebugTriggerRecruit()
         {
-            _recruitOverlay.GenerateNewCandidates(); // New method
+            _recruitOverlay.GenerateNewCandidates();
             SetView(SplitMapView.Recruit, snap: true);
         }
 
         private void OpenRandomShop()
         {
-            // Generate Shop Stock
             var premiumStock = new List<ShopItem>();
             var consumableStock = new List<ShopItem>();
 
-            // Randomly pick 3-4 premium items
             int premiumCount = _random.Next(3, 5);
             var allPremium = new List<ShopItem>();
 
@@ -1164,7 +1119,6 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            // Randomly pick 2-3 consumables
             int consumableCount = _random.Next(2, 4);
             var allConsumables = BattleDataCache.Consumables.Values.ToList();
             for (int i = 0; i < consumableCount; i++)
@@ -1259,7 +1213,20 @@ namespace ProjectVagabond.Scenes
 
             if (selectedOutcome != null)
             {
-                _gameState.ApplyNarrativeOutcome(selectedOutcome.Outcome);
+                // Check for special "StartCombat" outcome
+                var combatOutcome = selectedOutcome.Outcomes.FirstOrDefault(o => o.OutcomeType == "StartCombat");
+
+                // Apply standard effects
+                _gameState.ApplyNarrativeOutcomes(selectedOutcome.Outcomes);
+
+                if (combatOutcome != null)
+                {
+                    // Handle combat trigger
+                    InitiateCombat(new List<string> { combatOutcome.Value });
+                    _eventState = EventState.Idle; // Clear event state so combat can take over
+                    return;
+                }
+
                 if (!string.IsNullOrEmpty(selectedOutcome.ResultText))
                 {
                     _eventState = EventState.NarratingResult;
@@ -1350,7 +1317,6 @@ namespace ProjectVagabond.Scenes
             var cameraTransform = Matrix.CreateTranslation(RoundedCameraOffset.X, RoundedCameraOffset.Y, 0);
             var finalTransform = cameraTransform * transform;
 
-            // --- Pass 1: World-space elements (Map Content) ---
             spriteBatch.End();
             spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: finalTransform);
 
@@ -1402,20 +1368,16 @@ namespace ProjectVagabond.Scenes
 
             _playerIcon.Draw(spriteBatch);
 
-            // Draw Birds (World Space)
             _birdManager.Draw(spriteBatch, _cameraOffset);
 
-            // Draw Overlays in World Space
             _inventoryOverlay.DrawWorld(spriteBatch, font, gameTime);
-            // Pass the finalTransform to the settings overlay so it can restore it after drawing dialogs
             _settingsOverlay.Draw(spriteBatch, font, gameTime, finalTransform);
-            _shopOverlay.Draw(spriteBatch, font, gameTime); // Draw Shop
-            _restOverlay.Draw(spriteBatch, font, gameTime); // Draw Rest
-            _recruitOverlay.Draw(spriteBatch, font, gameTime); // Draw Recruit
+            _shopOverlay.Draw(spriteBatch, font, gameTime);
+            _restOverlay.Draw(spriteBatch, font, gameTime);
+            _recruitOverlay.Draw(spriteBatch, font, gameTime);
 
             spriteBatch.End();
 
-            // --- Pass 2: Screen-space UI (Void Edge, Hover Text, Dialogs) ---
             spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
 
             var mapBounds = new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
@@ -1424,7 +1386,6 @@ namespace ProjectVagabond.Scenes
             _inventoryOverlay.DrawScreen(spriteBatch, font, gameTime, transform);
             _settingsButton?.Draw(spriteBatch, font, gameTime, transform);
 
-            // FIX: Only draw node hover text if we are actually in the Map view
             if (_hoveredNodeId != -1 && _mapState == SplitMapState.Idle && _currentView == SplitMapView.Map)
             {
                 if (_currentMap.Nodes.TryGetValue(_hoveredNodeId, out var hoveredNode) && hoveredNode.IsReachable)
@@ -1459,9 +1420,7 @@ namespace ProjectVagabond.Scenes
             if (_narrativeDialog.IsActive) _narrativeDialog.DrawContent(spriteBatch, font, gameTime, transform);
             if (_eventState == EventState.NarratingResult) _resultNarrator.Draw(spriteBatch, ServiceLocator.Get<Core>().SecondaryFont, gameTime);
 
-            // Draw Rest Overlay Dialogs (Screen Space)
             _restOverlay.DrawDialogContent(spriteBatch, font, gameTime);
-            // Draw Recruit Overlay Dialogs (Screen Space)
             _recruitOverlay.DrawDialogContent(spriteBatch, font, gameTime);
         }
 
@@ -1471,9 +1430,7 @@ namespace ProjectVagabond.Scenes
             {
                 _narrativeDialog.DrawOverlay(spriteBatch);
             }
-            // Draw Rest Overlay Dialog Background
             _restOverlay.DrawDialogOverlay(spriteBatch);
-            // Draw Recruit Overlay Dialog Background
             _recruitOverlay.DrawDialogOverlay(spriteBatch);
         }
 
@@ -1625,7 +1582,7 @@ namespace ProjectVagabond.Scenes
                     texture = _spriteManager.SplitNodeNarrative;
                     break;
                 case SplitNodeType.MajorBattle:
-                    texture = _spriteManager.SplitNodeCombat; // Use Combat sprite for Major Battle
+                    texture = _spriteManager.SplitNodeCombat;
                     break;
                 case SplitNodeType.Recruit:
                     texture = _spriteManager.SplitNodeRecruit;

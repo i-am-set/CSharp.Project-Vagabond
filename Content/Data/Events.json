@@ -1,0 +1,492 @@
+[
+  {
+    "EventID": "shrine_of_blood",
+    "Prompt": "You find a jagged obsidian altar stained with old rust. A faint whisper echoes in your mind: [cRed]'Power demands sacrifice.'[/]",
+    "Choices": [
+      {
+        "Text": "Offer Vitality [cRed](-20% HP)[/]",
+        "Outcomes": [
+          {
+            "Weight": 1,
+            "Outcomes": [
+              {
+                "OutcomeType": "DamagePercent",
+                "Amount": 20
+              },
+              {
+                "OutcomeType": "ModifyStat",
+                "Value": "Strength",
+                "Amount": 2
+              }
+            ],
+            "ResultText": "You carve a rune into your flesh. The pain is sharp, but your muscles swell with unnatural [cStr]STRENGTH[/]."
+          }
+        ]
+      },
+      {
+        "Text": "Offer Wealth [cYellow](-50 Gold)[/]",
+        "Requirement": "Gold:50",
+        "Outcomes": [
+          {
+            "Weight": 1,
+            "Outcomes": [
+              {
+                "OutcomeType": "Gold",
+                "Amount": -50
+              },
+              {
+                "OutcomeType": "GiveItem",
+                "Value": "HealthPotion"
+              },
+              {
+                "OutcomeType": "GiveItem",
+                "Value": "StrengthTonic"
+              }
+            ],
+            "ResultText": "The gold vanishes into the stone. In its place, two vials materialize."
+          }
+        ]
+      },
+      {
+        "Text": "Ignore the altar",
+        "Outcomes": [
+          {
+            "ResultText": "You step away from the ominous stone. The whispers fade, sounding disappointed."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "EventID": "wandering_smith",
+    "Prompt": "A massive figure hammers away at a portable anvil. He nods at your weapon. [cWhite]'Seen better days. I can sharpen it... for a price.'[/]",
+    "Choices": [
+      {
+        "Text": "Pay for sharpening [cYellow](-30 Gold)[/]",
+        "Requirement": "Gold:30",
+        "Outcomes": [
+          {
+            "Weight": 1,
+            "Outcomes": [
+              {
+                "OutcomeType": "Gold",
+                "Amount": -30
+              },
+              {
+                "OutcomeType": "ModifyStat",
+                "Value": "Strength",
+                "Amount": 1
+              }
+            ],
+            "ResultText": "He works with surprising delicacy. Your weapon feels lighter and deadlier. [cStr]+1 STR[/]"
+          }
+        ]
+      },
+      {
+        "Text": "Try to steal a whetstone",
+        "Dice": "1d6",
+        "Outcomes": [
+          {
+            "DifficultyClass": [ 4, 5, 6 ],
+            "Outcomes": [
+              {
+                "OutcomeType": "GiveItem",
+                "Value": "Whetstone"
+              }
+            ],
+            "ResultText": "While he wipes his brow, you swipe a high-quality Whetstone."
+          },
+          {
+            "DifficultyClass": [ 1, 2, 3 ],
+            "Outcomes": [
+              {
+                "OutcomeType": "Damage",
+                "Amount": 15
+              }
+            ],
+            "ResultText": "He catches your hand and smacks it with a hot pair of tongs! [cRed]You take damage.[/]"
+          }
+        ]
+      },
+      {
+        "Text": "Leave",
+        "Outcomes": [ { "ResultText": "You politely decline and move on." } ]
+      }
+    ]
+  },
+  {
+    "EventID": "cursed_mirror",
+    "Prompt": "An ornate mirror stands in the middle of the path. Your reflection moves independently, mocking you.",
+    "Choices": [
+      {
+        "Text": "Gaze into it",
+        "Dice": "1d6",
+        "Outcomes": [
+          {
+            "DifficultyClass": [ 5, 6 ],
+            "Outcomes": [
+              {
+                "OutcomeType": "ModifyStat",
+                "Value": "Intelligence",
+                "Amount": 2
+              }
+            ],
+            "ResultText": "You win the staring contest with your shadow self. Your mind feels sharper. [cInt]+2 INT[/]"
+          },
+          {
+            "DifficultyClass": [ 1, 2, 3, 4 ],
+            "Outcomes": [
+              {
+                "OutcomeType": "ModifyStat",
+                "Value": "Tenacity",
+                "Amount": -1
+              }
+            ],
+            "ResultText": "Your reflection whispers your deepest insecurities. You feel shaken. [cTen]-1 TEN[/]"
+          }
+        ]
+      },
+      {
+        "Text": "Smash it",
+        "Outcomes": [
+          {
+            "Outcomes": [
+              {
+                "OutcomeType": "AddBuff",
+                "Value": "Fear",
+                "Amount": 3
+              }
+            ],
+            "ResultText": "The glass shatters, but a cloud of dark mist enters your lungs. You feel [cStatus]FEAR[/]."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "EventID": "starving_beast",
+    "Prompt": "A large, wolf-like creature is trapped under a fallen log. It looks starving, but its eyes are intelligent.",
+    "Choices": [
+      {
+        "Text": "Feed it a Potion",
+        "Requirement": "Item:HealthPotion",
+        "Outcomes": [
+          {
+            "Outcomes": [
+              {
+                "OutcomeType": "RemoveItem",
+                "Value": "HealthPotion"
+              },
+              {
+                "OutcomeType": "GiveItem",
+                "Value": "MoonforgedEdge"
+              }
+            ],
+            "ResultText": "The beast laps up the potion and regains its strength. It leaves behind a strange, glowing blade."
+          }
+        ]
+      },
+      {
+        "Text": "Put it out of its misery",
+        "Outcomes": [
+          {
+            "Outcomes": [
+              {
+                "OutcomeType": "GiveItem",
+                "Value": "StrengthTonic"
+              }
+            ],
+            "ResultText": "You end its suffering. You find a half-digested tonic in its stomach. Gross, but useful."
+          }
+        ]
+      },
+      {
+        "Text": "Walk away",
+        "Outcomes": [ { "ResultText": "You leave nature to take its course." } ]
+      }
+    ]
+  },
+  {
+    "EventID": "ancient_library",
+    "Prompt": "You find a ruined library. Most books are dust, but one scroll remains preserved in a stasis field.",
+    "Choices": [
+      {
+        "Text": "Decipher the runes",
+        "Dice": "1d6",
+        "Outcomes": [
+          {
+            "DifficultyClass": [ 4, 5, 6 ],
+            "Outcomes": [
+              {
+                "OutcomeType": "GiveItem",
+                "Value": "FireScroll"
+              }
+            ],
+            "ResultText": "You disable the field and claim the [cItem]Fire Scroll[/]."
+          },
+          {
+            "DifficultyClass": [ 1, 2, 3 ],
+            "Outcomes": [
+              {
+                "OutcomeType": "Damage",
+                "Amount": 10
+              }
+            ],
+            "ResultText": "The field shocks you violently! You take damage and the scroll burns to ash."
+          }
+        ]
+      },
+      {
+        "Text": "Burn the library",
+        "Outcomes": [
+          {
+            "Outcomes": [
+              {
+                "OutcomeType": "AddBuff",
+                "Value": "Burn",
+                "Amount": 2
+              }
+            ],
+            "ResultText": "Some men just want to watch the world burn. You get too close and catch [cStatus]BURN[/]."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "EventID": "gamblers_den",
+    "Prompt": "A skeleton sits at a table with a deck of cards and a pile of gold. A sign reads: [cWhite]'High Card Wins'[/].",
+    "Choices": [
+      {
+        "Text": "Wager 50 Gold",
+        "Requirement": "Gold:50",
+        "Dice": "1d6",
+        "Outcomes": [
+          {
+            "DifficultyClass": [ 4, 5, 6 ],
+            "Outcomes": [
+              {
+                "OutcomeType": "Gold",
+                "Amount": 100
+              }
+            ],
+            "ResultText": "You draw a King! The skeleton's jaw drops off. You take the pot."
+          },
+          {
+            "DifficultyClass": [ 1, 2, 3 ],
+            "Outcomes": [
+              {
+                "OutcomeType": "Gold",
+                "Amount": -50
+              }
+            ],
+            "ResultText": "You draw a 2. The skeleton rattles in what sounds like laughter. You lose your stake."
+          }
+        ]
+      },
+      {
+        "Text": "Flip the table",
+        "Outcomes": [
+          {
+            "Outcomes": [
+              {
+                "OutcomeType": "StartCombat",
+                "Value": "skeleton_warrior"
+              }
+            ],
+            "ResultText": "The skeleton stands up, drawing a rusty blade. [cRed]Combat starts![/]"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "EventID": "mysterious_fountain",
+    "Prompt": "A fountain flows with glowing blue liquid. It smells like ozone and blueberries.",
+    "Choices": [
+      {
+        "Text": "Drink deeply",
+        "Dice": "1d6",
+        "Outcomes": [
+          {
+            "DifficultyClass": [ 1, 2 ],
+            "Outcomes": [
+              {
+                "OutcomeType": "ModifyStat",
+                "Value": "MaxHP",
+                "Amount": -5
+              }
+            ],
+            "ResultText": "It's acid! Your insides burn. [cRed]-5 Max HP[/]"
+          },
+          {
+            "DifficultyClass": [ 3, 4 ],
+            "Outcomes": [
+              {
+                "OutcomeType": "HealFull",
+                "Amount": 0
+              }
+            ],
+            "ResultText": "Refreshing! You are fully healed."
+          },
+          {
+            "DifficultyClass": [ 5, 6 ],
+            "Outcomes": [
+              {
+                "OutcomeType": "ModifyStat",
+                "Value": "MaxMana",
+                "Amount": 10
+              }
+            ],
+            "ResultText": "Your mind expands with arcane power! [cBlue]+10 Max Mana[/]"
+          }
+        ]
+      },
+      {
+        "Text": "Fill a bottle",
+        "Outcomes": [
+          {
+            "Outcomes": [
+              {
+                "OutcomeType": "GiveItem",
+                "Value": "HealthPotion"
+              }
+            ],
+            "ResultText": "You bottle the liquid. It stabilizes into a standard Health Potion."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "EventID": "training_dummy",
+    "Prompt": "An old training dummy stands in a field, surprisingly intact.",
+    "Choices": [
+      {
+        "Text": "Practice Agility",
+        "Outcomes": [
+          {
+            "Outcomes": [
+              {
+                "OutcomeType": "ModifyStat",
+                "Value": "Agility",
+                "Amount": 1
+              }
+            ],
+            "ResultText": "You spend an hour dodging its swinging arms. You feel faster. [cAgi]+1 AGI[/]"
+          }
+        ]
+      },
+      {
+        "Text": "Practice Strength",
+        "Outcomes": [
+          {
+            "Outcomes": [
+              {
+                "OutcomeType": "ModifyStat",
+                "Value": "Strength",
+                "Amount": 1
+              }
+            ],
+            "ResultText": "You beat the dummy until the wood splinters. You feel stronger. [cStr]+1 STR[/]"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "EventID": "hermits_shack",
+    "Prompt": "A hermit offers you a trade. [cWhite]'I need protection. Give me armor, I give you secrets.'[/]",
+    "Choices": [
+      {
+        "Text": "Give Leather Tunic",
+        "Requirement": "Item:Leather Tunic",
+        "Outcomes": [
+          {
+            "Outcomes": [
+              {
+                "OutcomeType": "RemoveItem",
+                "Value": "Leather Tunic"
+              },
+              {
+                "OutcomeType": "GiveItem",
+                "Value": "FireScroll"
+              },
+              {
+                "OutcomeType": "GiveItem",
+                "Value": "HealthPotion"
+              }
+            ],
+            "ResultText": "The hermit cackles and hands you a scroll and a potion."
+          }
+        ]
+      },
+      {
+        "Text": "Rob him",
+        "Dice": "1d6",
+        "Outcomes": [
+          {
+            "DifficultyClass": [ 4, 5, 6 ],
+            "Outcomes": [
+              {
+                "OutcomeType": "Gold",
+                "Amount": 50
+              }
+            ],
+            "ResultText": "You find a stash of gold under his mattress."
+          },
+          {
+            "DifficultyClass": [ 1, 2, 3 ],
+            "Outcomes": [
+              {
+                "OutcomeType": "AddBuff",
+                "Value": "Curse",
+                "Amount": 3
+              }
+            ],
+            "ResultText": "He casts a hex on you! You feel unlucky."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "EventID": "fallen_star",
+    "Prompt": "A meteorite has crashed here, glowing with [cPurple]Void[/] energy.",
+    "Choices": [
+      {
+        "Text": "Touch it",
+        "Outcomes": [
+          {
+            "Outcomes": [
+              {
+                "OutcomeType": "DamagePercent",
+                "Amount": 50
+              },
+              {
+                "OutcomeType": "GiveItem",
+                "Value": "Voidheart Shard"
+              }
+            ],
+            "ResultText": "The energy burns you severely, but a piece breaks off. You obtained [cItem]Voidheart Shard[/]."
+          }
+        ]
+      },
+      {
+        "Text": "Meditate near it",
+        "Outcomes": [
+          {
+            "Outcomes": [
+              {
+                "OutcomeType": "ModifyStat",
+                "Value": "MaxMana",
+                "Amount": 20
+              }
+            ],
+            "ResultText": "The hum of the stone resonates with your soul. [cBlue]+20 Max Mana[/]"
+          }
+        ]
+      }
+    ]
+  }
+]

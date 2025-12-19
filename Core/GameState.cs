@@ -353,60 +353,100 @@ namespace ProjectVagabond
             return false;
         }
 
-        public void ApplyNarrativeOutcome(NarrativeOutcome outcome)
+        public void ApplyNarrativeOutcomes(List<NarrativeOutcome> outcomes)
         {
-            if (outcome == null) return;
+            if (outcomes == null) return;
 
-            switch (outcome.OutcomeType)
+            foreach (var outcome in outcomes)
             {
-                case "GiveItem":
-                    PlayerState.AddConsumable(outcome.Value);
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_teal]Obtained {outcome.Value}!" });
-                    break;
-                case "AddBuff":
-                    if (Enum.TryParse<StatusEffectType>(outcome.Value, true, out var effectType))
-                    {
-                        var buffsComp = _componentStore.GetComponent<TemporaryBuffsComponent>(PlayerEntityId);
-                        if (buffsComp == null)
-                        {
-                            buffsComp = new TemporaryBuffsComponent();
-                            _componentStore.AddComponent(PlayerEntityId, buffsComp);
-                        }
-                        var existingBuff = buffsComp.Buffs.FirstOrDefault(b => b.EffectType == effectType);
-                        if (existingBuff != null)
-                        {
-                            existingBuff.RemainingBattles += outcome.Duration;
-                        }
-                        else
-                        {
-                            buffsComp.Buffs.Add(new TemporaryBuff { EffectType = effectType, RemainingBattles = outcome.Duration });
-                        }
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_teal]Gained a temporary buff: {outcome.Value}!" });
-                    }
-                    break;
-                case "AddStat":
-                    var statsComp = _componentStore.GetComponent<CombatantStatsComponent>(PlayerEntityId);
-                    if (statsComp == null) return;
+                switch (outcome.OutcomeType)
+                {
+                    case "GiveItem":
+                        PlayerState.AddConsumable(outcome.Value);
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_teal]Obtained {outcome.Value}!" });
+                        break;
 
-                    var parts = outcome.Value.Split(',');
-                    if (parts.Length == 2 && int.TryParse(parts[1], out int amount))
-                    {
-                        string statName = parts[0].Trim().ToLowerInvariant();
-                        string feedback = "";
-                        switch (statName)
+                    case "RemoveItem":
+                        bool removed = false;
+                        if (PlayerState.RemoveConsumable(outcome.Value)) removed = true;
+                        else if (PlayerState.Armors.ContainsKey(outcome.Value)) { PlayerState.RemoveArmor(outcome.Value); removed = true; }
+                        else if (PlayerState.Weapons.ContainsKey(outcome.Value)) { PlayerState.RemoveWeapon(outcome.Value); removed = true; }
+
+                        if (removed)
+                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_orange]Lost {outcome.Value}." });
+                        break;
+
+                    case "AddBuff":
+                        if (Enum.TryParse<StatusEffectType>(outcome.Value, true, out var effectType))
                         {
-                            case "strength": statsComp.Strength += amount; feedback = $"Strength increased by {amount}!"; break;
-                            case "intelligence": statsComp.Intelligence += amount; feedback = $"Intelligence increased by {amount}!"; break;
-                            case "tenacity": statsComp.Tenacity += amount; feedback = $"Tenacity increased by {amount}!"; break;
-                            case "agility": statsComp.Agility += amount; feedback = $"Agility increased by {amount}!"; break;
-                            case "maxhp": statsComp.MaxHP += amount; statsComp.CurrentHP += amount; feedback = $"Max HP increased by {amount}!"; break;
+                            var buffsComp = _componentStore.GetComponent<TemporaryBuffsComponent>(PlayerEntityId);
+                            if (buffsComp == null)
+                            {
+                                buffsComp = new TemporaryBuffsComponent();
+                                _componentStore.AddComponent(PlayerEntityId, buffsComp);
+                            }
+                            // Use Amount for duration
+                            buffsComp.Buffs.Add(new TemporaryBuff { EffectType = effectType, RemainingBattles = outcome.Amount });
+                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_teal]Gained {outcome.Value} ({outcome.Amount} battles)!" });
                         }
-                        if (!string.IsNullOrEmpty(feedback))
+                        break;
+
+                    case "ModifyStat":
+                        var statsComp = _componentStore.GetComponent<CombatantStatsComponent>(PlayerEntityId);
+                        if (statsComp != null)
                         {
-                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_teal]{feedback}" });
+                            string stat = outcome.Value.ToLowerInvariant();
+                            int amt = outcome.Amount;
+                            if (stat == "strength") statsComp.Strength += amt;
+                            else if (stat == "intelligence") statsComp.Intelligence += amt;
+                            else if (stat == "tenacity") statsComp.Tenacity += amt;
+                            else if (stat == "agility") statsComp.Agility += amt;
+                            else if (stat == "maxhp") { statsComp.MaxHP += amt; statsComp.CurrentHP += amt; }
+                            else if (stat == "maxmana") { statsComp.MaxMana += amt; statsComp.CurrentMana += amt; }
+
+                            string sign = amt > 0 ? "+" : "";
+                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_teal]{outcome.Value} {sign}{amt}" });
                         }
-                    }
-                    break;
+                        break;
+
+                    case "Damage":
+                        var dmgComp = _componentStore.GetComponent<CombatantStatsComponent>(PlayerEntityId);
+                        if (dmgComp != null)
+                        {
+                            dmgComp.CurrentHP = Math.Max(0, dmgComp.CurrentHP - outcome.Amount);
+                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_red]Took {outcome.Amount} damage!" });
+                        }
+                        break;
+
+                    case "DamagePercent":
+                        var dmgPerComp = _componentStore.GetComponent<CombatantStatsComponent>(PlayerEntityId);
+                        if (dmgPerComp != null)
+                        {
+                            int dmg = (int)(dmgPerComp.MaxHP * (outcome.Amount / 100f));
+                            dmgPerComp.CurrentHP = Math.Max(0, dmgPerComp.CurrentHP - dmg);
+                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_red]Took {dmg} damage!" });
+                        }
+                        break;
+
+                    case "HealFull":
+                        var healComp = _componentStore.GetComponent<CombatantStatsComponent>(PlayerEntityId);
+                        if (healComp != null)
+                        {
+                            healComp.CurrentHP = healComp.MaxHP;
+                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_lightgreen]Fully Healed!" });
+                        }
+                        break;
+
+                    case "Gold":
+                        PlayerState.Coin += outcome.Amount;
+                        string gSign = outcome.Amount > 0 ? "+" : "";
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_yellow]{gSign}{outcome.Amount} Gold" });
+                        break;
+
+                    case "StartCombat":
+                        // Handled by SplitMapScene
+                        break;
+                }
             }
         }
 
