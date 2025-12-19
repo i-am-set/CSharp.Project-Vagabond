@@ -54,6 +54,13 @@ namespace ProjectVagabond.Progression
             (SplitNodeType.Recruit, 10f)
         };
 
+        // --- Minimum Node Counts (Tunable) ---
+        private const int MIN_NODE_COUNT_SHOP = 2;
+        private const int MIN_NODE_COUNT_REST = 2;
+        private const int MIN_NODE_COUNT_RECRUIT = 2;
+        private const int MIN_NODE_COUNT_NARRATIVE = 2;
+        private const int MIN_NODE_COUNT_BATTLE = 2;
+
         // --- Tree Generation Tuning ---
         private const int TREE_DENSITY_STEP = 2; // Check for a tree every pixel for max density.
         private const float TREE_NOISE_SCALE = 8.0f; // Controls the size of clearings. Higher value = smaller, more frequent clearings.
@@ -162,12 +169,14 @@ namespace ProjectVagabond.Progression
 
             // --- Post-Processing: Bad Luck Protection (Rule #3) ---
             // Ensure player isn't forced into too many consecutive fights without a rest.
-            // We run this BEFORE sanitization because this step might force a Rest node that creates a conflict.
             EnforceRestAfterStreak(allNodesByColumn, allPaths);
+
+            // --- Post-Processing: Enforce Minimum Node Counts (New Rule) ---
+            // Ensures we have at least X of each node type, converting Combat nodes if necessary.
+            EnforceNodeMinimums(allNodes, allPaths, splitData);
 
             // --- Post-Processing: Anti-Clumping (Rule #2 from prompt) ---
             // Ensure we don't have Shop->Shop or Rest->Rest.
-            // This runs AFTER EnforceRest to clean up any messes it might have made.
             SanitizeNodeRepetition(allNodes, allPaths, splitData);
 
             // --- Post-Processing: Restricted Column Failsafe (Rule #1) ---
@@ -187,6 +196,96 @@ namespace ProjectVagabond.Progression
             var bakedScenery = BakeTreesToTexture(allNodes, allPaths, mapWidth);
 
             return new SplitMap(allNodes, allPaths, bakedScenery, totalColumns, startNodeId, mapWidth);
+        }
+
+        /// <summary>
+        /// Checks if the map meets the minimum requirements for each node type.
+        /// If not, it converts random Battle nodes into the missing types, respecting placement rules.
+        /// </summary>
+        private static void EnforceNodeMinimums(List<SplitMapNode> allNodes, List<SplitMapPath> allPaths, SplitData splitData)
+        {
+            var progressionManager = ServiceLocator.Get<ProgressionManager>();
+
+            // Define requirements
+            var requirements = new Dictionary<SplitNodeType, int>
+            {
+                { SplitNodeType.Shop, MIN_NODE_COUNT_SHOP },
+                { SplitNodeType.Rest, MIN_NODE_COUNT_REST },
+                { SplitNodeType.Recruit, MIN_NODE_COUNT_RECRUIT },
+                { SplitNodeType.Narrative, MIN_NODE_COUNT_NARRATIVE },
+                { SplitNodeType.Battle, MIN_NODE_COUNT_BATTLE }
+            };
+
+            foreach (var req in requirements)
+            {
+                SplitNodeType targetType = req.Key;
+                int minCount = req.Value;
+
+                // Count current nodes of this type
+                int currentCount = allNodes.Count(n => n.NodeType == targetType);
+
+                while (currentCount < minCount)
+                {
+                    // Find candidates to convert
+                    // Must be Battle nodes (we steal from combat)
+                    // Must NOT be MajorBattle or Origin
+                    var candidates = allNodes.Where(n =>
+                        n.NodeType == SplitNodeType.Battle &&
+                        n.NodeType != SplitNodeType.MajorBattle &&
+                        n.NodeType != SplitNodeType.Origin
+                    ).ToList();
+
+                    // Apply specific placement rules
+                    if (targetType == SplitNodeType.Shop || targetType == SplitNodeType.Rest)
+                    {
+                        // Shops and Rests cannot be in the first 2 columns (0, 1, 2)
+                        candidates = candidates.Where(n => n.Floor > 2).ToList();
+                    }
+
+                    if (!candidates.Any())
+                    {
+                        // No valid candidates left to convert. Break to avoid infinite loop.
+                        break;
+                    }
+
+                    // Smart Selection: Try to pick a node that isn't connected to a node of the same type
+                    // to avoid creating clumps that SanitizeNodeRepetition would just delete later.
+                    var smartCandidates = candidates.Where(n =>
+                    {
+                        // Check incoming neighbors
+                        bool incomingConflict = n.IncomingPathIds
+                            .Select(pid => allPaths.FirstOrDefault(p => p.Id == pid))
+                            .Where(p => p != null)
+                            .Select(p => allNodes.FirstOrDefault(node => node.Id == p.FromNodeId))
+                            .Any(neighbor => neighbor != null && neighbor.NodeType == targetType);
+
+                        // Check outgoing neighbors
+                        bool outgoingConflict = n.OutgoingPathIds
+                            .Select(pid => allPaths.FirstOrDefault(p => p.Id == pid))
+                            .Where(p => p != null)
+                            .Select(p => allNodes.FirstOrDefault(node => node.Id == p.ToNodeId))
+                            .Any(neighbor => neighbor != null && neighbor.NodeType == targetType);
+
+                        return !incomingConflict && !outgoingConflict;
+                    }).ToList();
+
+                    // If we have smart candidates, use them. Otherwise fall back to any valid candidate.
+                    var finalPool = smartCandidates.Any() ? smartCandidates : candidates;
+                    var nodeToConvert = finalPool[_random.Next(finalPool.Count)];
+
+                    // Convert the node
+                    nodeToConvert.NodeType = targetType;
+                    nodeToConvert.EventData = null; // Clear battle data
+
+                    // Assign specific data if needed
+                    if (targetType == SplitNodeType.Narrative)
+                    {
+                        nodeToConvert.EventData = progressionManager.GetRandomNarrative()?.EventID;
+                    }
+
+                    currentCount++;
+                }
+            }
         }
 
         /// <summary>
