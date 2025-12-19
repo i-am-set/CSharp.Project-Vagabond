@@ -62,7 +62,10 @@ namespace ProjectVagabond.UI
 
             // Ensure button is 32x32 (Doubled size)
             Bounds = new Rectangle(bounds.X, bounds.Y, BUTTON_SIZE, BUTTON_SIZE);
-            UseScreenCoordinates = true;
+
+            // at Y=600+ (World Space), and passes a world-space mouse state to Update().
+            UseScreenCoordinates = false;
+
             EnableHoverSway = false; // Disable base sway, we handle custom lift
         }
 

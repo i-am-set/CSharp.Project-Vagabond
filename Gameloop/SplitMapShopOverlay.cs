@@ -164,6 +164,10 @@ namespace ProjectVagabond.UI
             // Bounds are now 32x32 (handled in ShopItemButton constructor)
             var btn = new ShopItemButton(new Rectangle(x, y, 32, 32), item, icon, silhouette, priceFont, tertiaryFont, tertiaryFont);
 
+            // Since we are manually calculating world-space mouse coordinates in Update(),
+            // we don't want the Button class to re-transform them.
+            btn.UseScreenCoordinates = true;
+
             btn.OnClick += () => TryBuyItem(item, btn);
             return btn;
         }

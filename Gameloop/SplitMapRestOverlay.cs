@@ -16,7 +16,9 @@ namespace ProjectVagabond.UI
     public class SplitMapRestOverlay
     {
         public bool IsOpen { get; private set; } = false;
-        public bool IsNarrating => _menuState == RestMenuState.Narrating;
+
+        // FIX: Ensure IsNarrating is false if the menu isn't even open.
+        public bool IsNarrating => IsOpen && _menuState == RestMenuState.Narrating;
 
         // Signals that the entire sequence (selection + narration) is finished
         public event Action? OnRestCompleted;
@@ -86,8 +88,8 @@ namespace ProjectVagabond.UI
         private const float HEAL_ANIMATION_SPEED = 5.0f; // Speed of lerp
 
         // --- TUNING: Text Pulse ---
-        private const float TEXT_PULSE_SPEED = 3.0f;
-        private const float TEXT_OPACITY_MIN = 0.65f;
+        private const float TEXT_PULSE_SPEED = 4.0f;
+        private const float TEXT_OPACITY_MIN = 0.75f;
         private const float TEXT_OPACITY_MAX = 1.0f;
 
         // --- TUNING: Sleep Particles ---
@@ -139,6 +141,16 @@ namespace ProjectVagabond.UI
         private readonly List<SleepParticle> _sleepParticles = new List<SleepParticle>();
         private readonly float[] _sleepSpawnTimers = new float[4];
 
+        // --- SEQUENTIAL EXECUTION STATE ---
+        private class RestSequenceStep
+        {
+            public int MemberIndex; // -1 for global/system messages
+            public string Message;
+            public Action Effect;
+        }
+        private readonly Queue<RestSequenceStep> _sequenceQueue = new Queue<RestSequenceStep>();
+        private int _currentSpotlightIndex = -1; // -1 means no spotlight (or all visible)
+
         public SplitMapRestOverlay(GameScene parentScene)
         {
             _core = ServiceLocator.Get<Core>();
@@ -171,7 +183,9 @@ namespace ProjectVagabond.UI
             // Initialize Narrator
             var narratorBounds = new Rectangle(0, Global.VIRTUAL_HEIGHT - 50, Global.VIRTUAL_WIDTH, 50);
             _narrator = new StoryNarrator(narratorBounds);
-            _narrator.OnFinished += FinalizeRestSequence;
+
+            // Hook up the sequence advancer instead of immediate completion
+            _narrator.OnFinished += AdvanceSequence;
 
             _confirmButton = new Button(Rectangle.Empty, "CONFIRM", font: _core.SecondaryFont)
             {
@@ -210,6 +224,7 @@ namespace ProjectVagabond.UI
             _isAnimatingHeal = false;
             _overlayPulseTimer = 0f;
             _textPulseTimer = 0f;
+            _currentSpotlightIndex = -1;
 
             for (int i = 0; i < _gameState.PlayerState.Party.Count; i++)
             {
@@ -222,6 +237,7 @@ namespace ProjectVagabond.UI
         public void Hide()
         {
             IsOpen = false;
+            _menuState = RestMenuState.Selection; // FIX: Reset state so it doesn't get stuck
             _confirmationDialog.Hide();
             _narrator.Clear();
         }
@@ -371,7 +387,8 @@ namespace ProjectVagabond.UI
         {
             // Switch to Narrating state immediately
             _menuState = RestMenuState.Narrating;
-            _isAnimatingHeal = true;
+            _sequenceQueue.Clear();
+            _currentSpotlightIndex = -1;
 
             bool guardActive = _selectedActions.Values.Any(a => a == RestAction.Guard);
             var allRelics = BattleDataCache.Relics.Keys.ToList();
@@ -387,26 +404,30 @@ namespace ProjectVagabond.UI
                 }
             }
 
-            // 1. Process Guard(s) First
+            // 1. Queue Guard(s) First
             for (int i = 0; i < _gameState.PlayerState.Party.Count; i++)
             {
                 if (_selectedActions[i] == RestAction.Guard)
                 {
                     var member = _gameState.PlayerState.Party[i];
-                    _targetHP[i] = member.CurrentHP; // No HP change for guard
-
-                    // Queue Guard Message
-                    _narrator.Show($"{member.Name} stood guard while the party rested.\n[palette_gray]+MODIFIER[/]");
+                    int idx = i; // Capture for lambda
+                    _sequenceQueue.Enqueue(new RestSequenceStep
+                    {
+                        MemberIndex = idx,
+                        Message = $"{member.Name} stood guard while the party rested.\n[palette_gray]+MODIFIER[/]",
+                        Effect = () => { _targetHP[idx] = member.CurrentHP; } // No HP change
+                    });
                 }
             }
 
-            // 2. Process Everyone Else (Left to Right)
+            // 2. Queue Everyone Else (Left to Right)
             for (int i = 0; i < _gameState.PlayerState.Party.Count; i++)
             {
                 if (_selectedActions[i] == RestAction.Guard) continue; // Skip guards
 
                 var member = _gameState.PlayerState.Party[i];
                 var action = _selectedActions[i];
+                int idx = i; // Capture for lambda
 
                 // Sync visual start point
                 _visualHP[i] = member.CurrentHP;
@@ -420,33 +441,36 @@ namespace ProjectVagabond.UI
                         {
                             int oldHP = member.CurrentHP;
                             int healAmount = (int)(member.MaxHP * HEAL_PERCENT_REST * multiplier);
-                            member.CurrentHP = Math.Min(member.MaxHP, member.CurrentHP + healAmount);
-                            _targetHP[i] = member.CurrentHP;
+                            int newHP = Math.Min(member.MaxHP, member.CurrentHP + healAmount);
 
-                            int actualHealed = member.CurrentHP - oldHP;
+                            int actualHealed = newHP - oldHP;
                             int percentDisplay = (int)((float)actualHealed / member.MaxHP * 100f);
 
                             string msg;
-                            if (guardActive)
-                            {
-                                msg = $"THANKS TO {guardName}, {member.Name} RECOVERED WELL!\n";
-                            }
-                            else
-                            {
-                                msg = $"{member.Name} RESTED.\n";
-                            }
+                            if (guardActive) msg = $"THANKS TO {guardName}, {member.Name} RECOVERED WELL!\n";
+                            else msg = $"{member.Name} RESTED.\n";
                             msg += $"[palette_lightgreen]+{percentDisplay}% HP[/]";
 
-                            _narrator.Show(msg);
+                            _sequenceQueue.Enqueue(new RestSequenceStep
+                            {
+                                MemberIndex = idx,
+                                Message = msg,
+                                Effect = () =>
+                                {
+                                    member.CurrentHP = newHP;
+                                    _targetHP[idx] = newHP;
+                                    _isAnimatingHeal = true; // Trigger animation for this step
+                                }
+                            });
                             break;
                         }
 
                     case RestAction.Train:
                         {
                             string[] stats = { "Strength", "Intelligence", "Tenacity", "Agility" };
-                            _targetHP[i] = member.CurrentHP; // No HP change
-
                             string msg = "";
+                            Action effectAction;
+
                             if (guardActive)
                             {
                                 // Guarded: +2 to one, +1 to another
@@ -454,30 +478,44 @@ namespace ProjectVagabond.UI
                                 int idx2;
                                 do { idx2 = _rng.Next(4); } while (idx2 == idx1);
 
-                                ApplyStatBoost(member, stats[idx1], TRAIN_AMOUNT_GUARDED_MAJOR);
-                                ApplyStatBoost(member, stats[idx2], TRAIN_AMOUNT_GUARDED_MINOR);
-
                                 msg = $"THANKS TO {guardName}, {member.Name} FOCUSED!\n";
-                                msg += $"{GetStatTag(stats[idx1])}+{TRAIN_AMOUNT_GUARDED_MAJOR} {stats[idx1].Substring(0, 3)}[/]  {GetStatTag(stats[idx2])}+{TRAIN_AMOUNT_GUARDED_MINOR} {stats[idx2].Substring(0, 3)}[/]";
+                                msg += $"{GetStatTag(stats[idx1])}+{TRAIN_AMOUNT_GUARDED_MAJOR} {stats[idx1].ToUpper()}[/]  {GetStatTag(stats[idx2])}+{TRAIN_AMOUNT_GUARDED_MINOR} {stats[idx2].ToUpper()}[/]";
+
+                                effectAction = () =>
+                                {
+                                    ApplyStatBoost(member, stats[idx1], TRAIN_AMOUNT_GUARDED_MAJOR);
+                                    ApplyStatBoost(member, stats[idx2], TRAIN_AMOUNT_GUARDED_MINOR);
+                                    _targetHP[idx] = member.CurrentHP;
+                                };
                             }
                             else
                             {
                                 // Unguarded: +1 to one
                                 int idx1 = _rng.Next(4);
-                                ApplyStatBoost(member, stats[idx1], TRAIN_AMOUNT_UNGUARDED);
-
                                 msg = $"{member.Name} TRAINED.\n";
-                                msg += $"{GetStatTag(stats[idx1])}+{TRAIN_AMOUNT_UNGUARDED} {stats[idx1].Substring(0, 3)}[/]";
+                                msg += $"{GetStatTag(stats[idx1])}+{TRAIN_AMOUNT_UNGUARDED} {stats[idx1].ToUpper()}[/]";
+
+                                effectAction = () =>
+                                {
+                                    ApplyStatBoost(member, stats[idx1], TRAIN_AMOUNT_UNGUARDED);
+                                    _targetHP[idx] = member.CurrentHP;
+                                };
                             }
-                            _narrator.Show(msg);
+
+                            _sequenceQueue.Enqueue(new RestSequenceStep
+                            {
+                                MemberIndex = idx,
+                                Message = msg,
+                                Effect = effectAction
+                            });
                             break;
                         }
 
                     case RestAction.Search:
                         {
-                            _targetHP[i] = member.CurrentHP; // No HP change
                             int chance = guardActive ? SEARCH_CHANCE_GUARDED : SEARCH_CHANCE_UNGUARDED;
                             string msg;
+                            Action effectAction;
 
                             if (guardActive) msg = $"THANKS TO {guardName}, {member.Name} LOOKED THOROUGHLY!\n";
                             else msg = $"{member.Name} SEARCHED.\nThey looked around cautiously.\n";
@@ -488,28 +526,86 @@ namespace ProjectVagabond.UI
                                 {
                                     string relicId = allRelics[_rng.Next(allRelics.Count)];
                                     var relic = BattleDataCache.Relics[relicId];
-                                    _gameState.PlayerState.AddRelic(relicId);
-
                                     string rarityTag = GetRarityTag(relic.Rarity);
                                     msg += $"Found {rarityTag}{relic.RelicName}[/]!";
+
+                                    effectAction = () =>
+                                    {
+                                        _gameState.PlayerState.AddRelic(relicId);
+                                        _targetHP[idx] = member.CurrentHP;
+                                    };
                                 }
                                 else
                                 {
                                     msg += "[gray]Found nothing (Empty DB).[/]";
+                                    effectAction = () => { _targetHP[idx] = member.CurrentHP; };
                                 }
                             }
                             else
                             {
                                 msg += "[gray]Found nothing.[/]";
+                                effectAction = () => { _targetHP[idx] = member.CurrentHP; };
                             }
-                            _narrator.Show(msg);
+
+                            _sequenceQueue.Enqueue(new RestSequenceStep
+                            {
+                                MemberIndex = idx,
+                                Message = msg,
+                                Effect = effectAction
+                            });
                             break;
                         }
                 }
             }
 
             // Add final completion message
-            _narrator.Show("REST COMPLETE!");
+            _sequenceQueue.Enqueue(new RestSequenceStep
+            {
+                MemberIndex = -1, // Global spotlight (or none)
+                Message = "REST COMPLETE!",
+                Effect = () => { _currentSpotlightIndex = -1; }
+            });
+
+            // Start the sequence
+            ProcessNextSequenceStep();
+        }
+
+        private void ProcessNextSequenceStep()
+        {
+            if (_sequenceQueue.Count > 0)
+            {
+                var step = _sequenceQueue.Dequeue();
+
+                // Set spotlight
+                _currentSpotlightIndex = step.MemberIndex;
+
+                // Execute logic (apply stats/heals)
+                step.Effect?.Invoke();
+
+                // Show text
+                _narrator.Show(step.Message);
+            }
+            else
+            {
+                // Sequence finished
+                OnRestCompleted?.Invoke();
+            }
+        }
+
+        private void AdvanceSequence()
+        {
+            // This is called when the narrator finishes a message (user clicked/pressed space)
+            // We check if there are more steps in the queue.
+            if (_sequenceQueue.Count > 0)
+            {
+                ProcessNextSequenceStep();
+            }
+            else
+            {
+                // If queue is empty, we are done.
+                // The last step was "REST COMPLETE!", so now we exit.
+                OnRestCompleted?.Invoke();
+            }
         }
 
         private string GetStatTag(string statName)
@@ -538,15 +634,6 @@ namespace ProjectVagabond.UI
                 5 => "[Yellow]", // Legendary
                 _ => "[White]"
             };
-        }
-
-        private void FinalizeRestSequence()
-        {
-            // Only fire completion if we are actually in the narrating state
-            if (_menuState == RestMenuState.Narrating)
-            {
-                OnRestCompleted?.Invoke();
-            }
         }
 
         private void ApplyStatBoost(PartyMember member, string stat, int amount)
@@ -594,8 +681,15 @@ namespace ProjectVagabond.UI
             if (_isAnimatingHeal)
             {
                 bool allDone = true;
-                for (int i = 0; i < _gameState.PlayerState.Party.Count; i++)
+                // Only animate the currently spotlighted member if one is selected
+                // Or animate all if no spotlight (fallback)
+                int startIndex = _currentSpotlightIndex != -1 ? _currentSpotlightIndex : 0;
+                int endIndex = _currentSpotlightIndex != -1 ? _currentSpotlightIndex + 1 : _gameState.PlayerState.Party.Count;
+
+                for (int i = startIndex; i < endIndex; i++)
                 {
+                    if (i >= _gameState.PlayerState.Party.Count) continue;
+
                     float current = _visualHP[i];
                     float target = _targetHP[i];
 
@@ -617,6 +711,9 @@ namespace ProjectVagabond.UI
                 }
             }
 
+            // Update Sleep Particles (Always update to keep them moving)
+            UpdateParticles(dt);
+
             // If narrating, only update the narrator and block all other input
             if (_menuState == RestMenuState.Narrating)
             {
@@ -632,9 +729,6 @@ namespace ProjectVagabond.UI
                 var frames = _spriteManager.InventorySlotLargeSourceRects;
                 if (frames != null && frames.Length > 0) _portraitBgFrameIndex = _rng.Next(frames.Length);
             }
-
-            // Update Sleep Particles
-            UpdateParticles(dt);
 
             // Transform mouse to world space
             var virtualMousePos = Core.TransformMouse(mouseState.Position);
@@ -784,6 +878,19 @@ namespace ProjectVagabond.UI
                 var bounds = _partyMemberPanelAreas[i];
                 bool isOccupied = i < _gameState.PlayerState.Party.Count;
                 var member = isOccupied ? _gameState.PlayerState.Party[i] : null;
+
+                // --- SPOTLIGHT LOGIC ---
+                // If narrating, and this is NOT the spotlighted member, dim it.
+                // If spotlight index is -1 (e.g. "Rest Complete"), don't dim anyone (or dim everyone? usually none).
+                // Let's say if index != -1, we dim everyone else.
+                bool isDimmed = false;
+                if (_menuState == RestMenuState.Narrating && _currentSpotlightIndex != -1)
+                {
+                    if (i != _currentSpotlightIndex)
+                    {
+                        isDimmed = true;
+                    }
+                }
 
                 int centerX = bounds.Center.X;
                 int currentY = bounds.Y + 4;
@@ -1009,20 +1116,30 @@ namespace ProjectVagabond.UI
 
                     currentY += 8 + (int)valSize.Height + 4 - 3;
                 }
-            }
 
-            // Draw Sleep Particles
-            foreach (var p in _sleepParticles)
-            {
-                float alpha = 1.0f;
-                if (p.Timer > p.MaxTime * SLEEP_PARTICLE_FADE_START_PERCENT)
+                // Draw Sleep Particles for this member
+                foreach (var p in _sleepParticles)
                 {
-                    float fadeDuration = p.MaxTime * (1.0f - SLEEP_PARTICLE_FADE_START_PERCENT);
-                    float timeInFade = p.Timer - (p.MaxTime * SLEEP_PARTICLE_FADE_START_PERCENT);
-                    alpha = 1.0f - (timeInFade / fadeDuration);
+                    if (p.MemberIndex == i)
+                    {
+                        float alpha = 1.0f;
+                        if (p.Timer > p.MaxTime * SLEEP_PARTICLE_FADE_START_PERCENT)
+                        {
+                            float fadeDuration = p.MaxTime * (1.0f - SLEEP_PARTICLE_FADE_START_PERCENT);
+                            float timeInFade = p.Timer - (p.MaxTime * SLEEP_PARTICLE_FADE_START_PERCENT);
+                            alpha = 1.0f - (timeInFade / fadeDuration);
+                        }
+                        // Use Square Outline for Zs
+                        spriteBatch.DrawStringSquareOutlinedSnapped(secondaryFont, "Z", p.Position, SLEEP_PARTICLE_COLOR * alpha, SLEEP_PARTICLE_OUTLINE_COLOR * alpha);
+                    }
                 }
-                // Use Square Outline for Zs
-                spriteBatch.DrawStringSquareOutlinedSnapped(secondaryFont, "Z", p.Position, SLEEP_PARTICLE_COLOR * alpha, SLEEP_PARTICLE_OUTLINE_COLOR * alpha);
+
+                // --- APPLY DIMMER IF NEEDED ---
+                if (isDimmed)
+                {
+                    // Draw a semi-transparent black box over the entire panel area
+                    spriteBatch.DrawSnapped(pixelTex, bounds, Color.Black * 0.7f);
+                }
             }
 
             // Draw Action Buttons

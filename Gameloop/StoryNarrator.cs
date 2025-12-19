@@ -332,7 +332,7 @@ namespace ProjectVagabond.UI
 
         public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            if (!IsBusy) return;
+            if (_displayLines.Count == 0) return;
 
             var pixel = ServiceLocator.Get<Texture2D>();
             const int padding = 5;
@@ -341,8 +341,8 @@ namespace ProjectVagabond.UI
                 _bounds.Width - padding * 2, _bounds.Height - padding * 2
             );
 
-            // Draw Background
-            spriteBatch.DrawSnapped(pixel, panelBounds, _global.TerminalBg * 0.9f);
+            // Draw Background - Fully Opaque
+            spriteBatch.DrawSnapped(pixel, panelBounds, _global.TerminalBg);
             spriteBatch.DrawLineSnapped(new Vector2(panelBounds.Left, panelBounds.Top), new Vector2(panelBounds.Right, panelBounds.Top), _global.Palette_White);
             spriteBatch.DrawLineSnapped(new Vector2(panelBounds.Left, panelBounds.Bottom), new Vector2(panelBounds.Right, panelBounds.Bottom), _global.Palette_White);
             spriteBatch.DrawLineSnapped(new Vector2(panelBounds.Left, panelBounds.Top), new Vector2(panelBounds.Left, panelBounds.Bottom), _global.Palette_White);

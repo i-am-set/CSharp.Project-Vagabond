@@ -693,6 +693,11 @@ namespace ProjectVagabond.Scenes
             {
                 HandleMapInput(gameTime);
             }
+            else
+            {
+                // FIX: Reset hovered node if not in Map view to prevent interaction/text drawing
+                _hoveredNodeId = -1;
+            }
 
             switch (_mapState)
             {
@@ -770,7 +775,8 @@ namespace ProjectVagabond.Scenes
             {
                 bool leftClickPressed = currentMouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released;
 
-                if (leftClickPressed && _hoveredNodeId != -1 && UIInputManager.CanProcessMouseClick())
+                // FIX: Ensure we are in Map view before processing map clicks
+                if (leftClickPressed && _hoveredNodeId != -1 && UIInputManager.CanProcessMouseClick() && _currentView == SplitMapView.Map)
                 {
                     var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
                     if (currentNode != null)
@@ -1382,7 +1388,8 @@ namespace ProjectVagabond.Scenes
             _inventoryOverlay.DrawScreen(spriteBatch, font, gameTime, transform);
             _settingsButton?.Draw(spriteBatch, font, gameTime, transform);
 
-            if (_hoveredNodeId != -1 && _mapState == SplitMapState.Idle)
+            // FIX: Only draw node hover text if we are actually in the Map view
+            if (_hoveredNodeId != -1 && _mapState == SplitMapState.Idle && _currentView == SplitMapView.Map)
             {
                 if (_currentMap.Nodes.TryGetValue(_hoveredNodeId, out var hoveredNode) && hoveredNode.IsReachable)
                 {
