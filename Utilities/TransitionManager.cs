@@ -14,6 +14,7 @@ namespace ProjectVagabond
 
         private TransitionState _currentState = TransitionState.Idle;
         private ITransitionEffect _currentEffect;
+        private TransitionType _pendingInType;
         private Action _onMidpoint;
         private Action _onComplete;
 
@@ -31,25 +32,48 @@ namespace ProjectVagabond
             };
         }
 
-        public void StartTransition(TransitionType type, Action onMidpoint, Action onComplete = null)
+        public void StartTransition(TransitionType outType, TransitionType inType, Action onMidpoint, Action onComplete = null)
         {
-            if (type == TransitionType.None)
-            {
-                onMidpoint?.Invoke();
-                onComplete?.Invoke();
-                return;
-            }
-
-            if (!_effects.TryGetValue(type, out _currentEffect))
-            {
-                _currentEffect = _effects[TransitionType.Fade];
-            }
-
+            _pendingInType = inType;
             _onMidpoint = onMidpoint;
             _onComplete = onComplete;
 
-            _currentState = TransitionState.Out;
-            _currentEffect.Start(true);
+            // If Out is None, skip directly to Midpoint and In
+            if (outType == TransitionType.None)
+            {
+                _onMidpoint?.Invoke();
+                StartInTransition();
+            }
+            else
+            {
+                if (!_effects.TryGetValue(outType, out _currentEffect))
+                {
+                    _currentEffect = _effects[TransitionType.Fade];
+                }
+
+                _currentState = TransitionState.Out;
+                _currentEffect.Start(true);
+            }
+        }
+
+        private void StartInTransition()
+        {
+            // If In is None, we are done immediately
+            if (_pendingInType == TransitionType.None)
+            {
+                _currentState = TransitionState.Idle;
+                _onComplete?.Invoke();
+            }
+            else
+            {
+                if (!_effects.TryGetValue(_pendingInType, out _currentEffect))
+                {
+                    _currentEffect = _effects[TransitionType.Fade];
+                }
+
+                _currentState = TransitionState.In;
+                _currentEffect.Start(false);
+            }
         }
 
         public TransitionType GetRandomCombatTransition()
@@ -74,8 +98,7 @@ namespace ProjectVagabond
                     {
                         _currentState = TransitionState.Hold;
                         _onMidpoint?.Invoke();
-                        _currentState = TransitionState.In;
-                        _currentEffect.Start(false);
+                        StartInTransition();
                     }
                 }
                 else if (_currentState == TransitionState.In)

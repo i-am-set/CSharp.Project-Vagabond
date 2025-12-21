@@ -6,7 +6,9 @@ using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Particles;
+using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
@@ -63,27 +65,22 @@ namespace ProjectVagabond.Scenes
 
             const int horizontalPadding = 4;
             const int verticalPadding = 2;
-            const int buttonYSpacing = 0; // Vertical gap between buttons
+            const int buttonYSpacing = 0;
             float currentY = 90f;
 
-            // Define text for buttons
             string playText = "PLAY";
             string settingsText = "SETTINGS";
             string exitText = "EXIT";
 
-            // Measure all texts to determine the widest button
             Vector2 playSize = secondaryFont.MeasureString(playText);
             Vector2 settingsSize = secondaryFont.MeasureString(settingsText);
             Vector2 exitSize = secondaryFont.MeasureString(exitText);
 
-            // Calculate the maximum width required
             int maxTextWidth = (int)Math.Max(playSize.X, Math.Max(settingsSize.X, exitSize.X));
             int buttonWidth = maxTextWidth + horizontalPadding * 2;
 
-            // Calculate a common X position to center the column of buttons, then shift left by 80
             int buttonX = ((Global.VIRTUAL_WIDTH - buttonWidth) / 2) - 3 - 80;
 
-            // --- PLAY Button ---
             int playHeight = (int)playSize.Y + verticalPadding * 2;
             var playButton = new Button(
                 new Rectangle(buttonX, (int)currentY, buttonWidth, playHeight),
@@ -103,41 +100,36 @@ namespace ProjectVagabond.Scenes
                 var gameState = ServiceLocator.Get<GameState>();
                 var loadingScreen = ServiceLocator.Get<LoadingScreen>();
 
-                // Create a list of loading tasks
                 var loadingTasks = new List<LoadingTask>
                 {
                     new GenericTask("Loading game assets...", () => spriteManager.LoadGameContent()),
-                    // FIX: Point directly to the file to avoid directory confusion
                     new GenericTask("Loading archetypes...", () => archetypeManager.LoadArchetypes("Content/Data/Archetypes.json")),
                     new GenericTask("Initializing world...", () =>
                     {
                         gameState.InitializeWorld();
                         gameState.InitializeRenderableEntities();
                     }),
-                    new DiceWarmupTask() // This will run the hidden dice roll
+                    new DiceWarmupTask()
                 };
 
-                // Add tasks to the loading screen
                 loadingScreen.Clear();
                 foreach (var task in loadingTasks)
                 {
                     loadingScreen.AddTask(task);
                 }
 
-                // Define what happens when loading is complete
                 loadingScreen.OnComplete += () =>
                 {
                     core.SetGameLoaded(true);
-                    _sceneManager.ChangeScene(GameSceneState.Split);
+                    // Use None Out (Instant) -> Fade In (Smooth)
+                    _sceneManager.ChangeScene(GameSceneState.Split, TransitionType.None, TransitionType.Fade);
                 };
 
-                // Start the loading process
                 loadingScreen.Start();
             };
             _buttons.Add(playButton);
             currentY += playHeight + buttonYSpacing;
 
-            // --- SETTINGS Button ---
             int settingsHeight = (int)settingsSize.Y + verticalPadding * 2;
             var settingsButton = new Button(
                 new Rectangle(buttonX, (int)currentY, buttonWidth, settingsHeight),
@@ -153,7 +145,6 @@ namespace ProjectVagabond.Scenes
             _buttons.Add(settingsButton);
             currentY += settingsHeight + buttonYSpacing;
 
-            // --- EXIT Button ---
             int exitHeight = (int)exitSize.Y + verticalPadding * 2;
             var exitButton = new Button(
                 new Rectangle(buttonX, (int)currentY, buttonWidth, exitHeight),
@@ -177,7 +168,7 @@ namespace ProjectVagabond.Scenes
                 "Are you sure you want to exit?",
                 new List<Tuple<string, Action>>
                 {
-                    Tuple.Create("[gray]YES", new Action(() => _core.ExitApplication())),
+                    Tuple.Create("[gray]YES", new Action(() => ServiceLocator.Get<Core>().ExitApplication())),
                     Tuple.Create("NO", new Action(() => _confirmationDialog.Hide()))
                 }
             );
@@ -186,12 +177,11 @@ namespace ProjectVagabond.Scenes
         public override void Enter()
         {
             base.Enter();
-            InitializeUI(); // This will now run safely after fonts are loaded.
+            InitializeUI();
 
             _currentInputDelay = _inputDelay;
             _previousKeyboardState = Keyboard.GetState();
 
-            // Reset animation states of all buttons
             foreach (var button in _buttons)
             {
                 button.ResetAnimationState();
@@ -373,7 +363,6 @@ namespace ProjectVagabond.Scenes
 
         public override void DrawFullscreenUI(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
-            // This scene no longer draws particles directly. The Core engine handles it.
         }
 
         public override void DrawUnderlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)

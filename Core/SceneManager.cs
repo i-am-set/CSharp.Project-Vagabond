@@ -65,30 +65,31 @@ namespace ProjectVagabond
         }
 
         /// <summary>
-        /// Changes the scene using the new TransitionManager.
+        /// Changes the scene using the new TransitionManager with specific Out and In effects.
         /// </summary>
         /// <param name="state">Target scene.</param>
-        /// <param name="transitionType">Visual effect type.</param>
+        /// <param name="outTransition">Effect to use when leaving current scene.</param>
+        /// <param name="inTransition">Effect to use when entering new scene.</param>
         /// <param name="loadingTasks">Optional loading tasks.</param>
-        public void ChangeScene(GameSceneState state, TransitionType transitionType = TransitionType.Shutters, List<LoadingTask>? loadingTasks = null)
+        public void ChangeScene(GameSceneState state, TransitionType outTransition, TransitionType inTransition, List<LoadingTask>? loadingTasks = null)
         {
             _transitionManager ??= ServiceLocator.Get<TransitionManager>();
 
             if (_transitionManager.IsTransitioning) return;
             HideModal();
 
-            // If no transition requested, swap immediately
-            if (transitionType == TransitionType.None)
-            {
-                PerformSceneSwap(state, loadingTasks);
-                return;
-            }
-
             // Start the transition sequence
             _transitionManager.StartTransition(
-                transitionType,
+                outTransition,
+                inTransition,
                 onMidpoint: () => PerformSceneSwap(state, loadingTasks)
             );
+        }
+
+        // Overload for backward compatibility (Defaults to Fade/Fade)
+        public void ChangeScene(GameSceneState state, List<LoadingTask>? loadingTasks = null)
+        {
+            ChangeScene(state, TransitionType.Fade, TransitionType.Fade, loadingTasks);
         }
 
         private void PerformSceneSwap(GameSceneState state, List<LoadingTask>? loadingTasks)

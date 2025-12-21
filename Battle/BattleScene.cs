@@ -9,6 +9,7 @@ using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
+using ProjectVagabond.Transitions;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -19,15 +20,11 @@ namespace ProjectVagabond.Scenes
 {
     public class BattleScene : GameScene
     {
-        // --- Tuning ---
         private const float MULTI_HIT_DELAY = 0.25f;
-        private const float FIXED_COIN_GROUND_Y = 115f; // Fixed floor level for coins
-        private const int ENEMY_SLOT_Y_OFFSET = 16; // Used for fallback position calculation
+        private const float FIXED_COIN_GROUND_Y = 115f;
+        private const int ENEMY_SLOT_Y_OFFSET = 16;
 
-        // Core Battle Logic
         private BattleManager _battleManager;
-
-        // Specialized Managers
         private BattleUIManager _uiManager;
         private BattleRenderer _renderer;
         private BattleAnimationManager _animationManager;
@@ -35,8 +32,6 @@ namespace ProjectVagabond.Scenes
         private BattleInputHandler _inputHandler;
         private AlertManager _alertManager;
         private readonly ChoiceGenerator _choiceGenerator;
-
-        // Scene-level UI & Services
         private ImageButton _settingsButton;
         private ComponentStore _componentStore;
         private SceneManager _sceneManager;
@@ -46,7 +41,6 @@ namespace ProjectVagabond.Scenes
         private GameState _gameState;
         private readonly Global _global;
 
-        // State Tracking
         private List<int> _enemyEntityIds = new List<int>();
         private BattleManager.BattlePhase _previousBattlePhase;
         private bool _isBattleOver;
@@ -59,19 +53,13 @@ namespace ProjectVagabond.Scenes
         private bool _rewardScreenShown = false;
         private readonly Random _random = new Random();
         private bool _actionJustDeclared = false;
-
-        // --- FAILSAFE / WATCHDOG STATE ---
         private float _watchdogTimer = 0f;
         private const float WATCHDOG_TIMEOUT = 4.0f;
         private BattleManager.BattlePhase _lastFramePhase;
         private bool _wasUiBusyLastFrame;
         private bool _wasAnimatingLastFrame;
-
-        // --- DEATH TRANSITION STATE ---
         private bool _isFadingOutOnDeath = false;
         private float _deathFadeTimer = 0f;
-
-        // Tracks which combatants have already started their visual death sequence to prevent double-triggering
         private readonly HashSet<string> _processedDeathAnimations = new HashSet<string>();
 
         public BattleAnimationManager AnimationManager => _animationManager;
@@ -107,15 +95,11 @@ namespace ProjectVagabond.Scenes
         public override void Enter()
         {
             base.Enter();
-
-            // Reset all managers
             _uiManager.Reset();
             _renderer.Reset();
             _animationManager.Reset();
             _moveAnimationManager.SkipAll();
             _alertManager.Reset();
-
-            // Clear state
             _enemyEntityIds.Clear();
             _currentActor = null;
             _isBattleOver = false;
@@ -128,17 +112,9 @@ namespace ProjectVagabond.Scenes
             _isFadingOutOnDeath = false;
             _deathFadeTimer = 0f;
             _processedDeathAnimations.Clear();
-
-            // Reset Watchdog
             _watchdogTimer = 0f;
-
-            // Subscribe to events
             SubscribeToEvents();
-
-            // Initialize scene-level UI
             InitializeSettingsButton();
-
-            // Setup combatants and start the battle
             SetupBattle();
         }
 
@@ -215,8 +191,6 @@ namespace ProjectVagabond.Scenes
                 var settingsIcon = _spriteManager.SettingsIconSprite;
                 var buttonSize = 16;
                 if (settingsIcon != null) buttonSize = Math.Max(settingsIcon.Width, settingsIcon.Height);
-
-                // UseScreenCoordinates = false because we are now drawing it in the virtual space overlay
                 _settingsButton = new ImageButton(new Rectangle(0, 0, buttonSize, buttonSize), settingsIcon, enableHoverSway: true)
                 {
                     UseScreenCoordinates = false
@@ -229,42 +203,31 @@ namespace ProjectVagabond.Scenes
         private void SetupBattle()
         {
             var gameState = ServiceLocator.Get<GameState>();
-
-            // --- 1. Setup Player Party ---
             var playerParty = new List<BattleCombatant>();
-
-            // The main character (Entity) is always Slot 0
             int playerEntityId = gameState.PlayerEntityId;
             var leaderCombatant = BattleCombatantFactory.CreateFromEntity(playerEntityId, "player_leader");
             if (leaderCombatant != null)
             {
                 leaderCombatant.Name = gameState.PlayerState.Leader.Name;
-                leaderCombatant.BattleSlot = 0; // Active Left
+                leaderCombatant.BattleSlot = 0;
                 playerParty.Add(leaderCombatant);
             }
 
-            // Add other party members from PlayerState
             for (int i = 1; i < gameState.PlayerState.Party.Count; i++)
             {
                 var member = gameState.PlayerState.Party[i];
                 var memberCombatant = CreateCombatantFromPartyMember(member, $"player_ally_{i}");
-
-                // Assign Slot: 1 is Active Right, 2+ are Bench
                 memberCombatant.BattleSlot = i;
                 playerParty.Add(memberCombatant);
             }
 
-            // --- 2. Setup Enemy Party ---
             var enemyParty = new List<BattleCombatant>();
             var enemyArchetypesToSpawn = BattleSetup.EnemyArchetypes ?? new List<string>();
-
-            // Spawn all enemies requested (up to 4 max for the team)
             int enemyCount = Math.Min(enemyArchetypesToSpawn.Count, 4);
             for (int i = 0; i < enemyCount; i++)
             {
                 string archetypeId = enemyArchetypesToSpawn[i];
                 if (string.IsNullOrEmpty(archetypeId)) continue;
-
                 int newEnemyId = Spawner.Spawn(archetypeId, new Vector2(-1, -1));
                 if (newEnemyId != -1)
                 {
@@ -323,7 +286,7 @@ namespace ProjectVagabond.Scenes
                 ResistanceElementIDs = new List<int>(member.ResistanceElementIDs),
                 DefaultStrikeMoveID = member.DefaultStrikeMoveID,
                 Spells = member.Spells,
-                PortraitIndex = member.PortraitIndex // Set Portrait Index
+                PortraitIndex = member.PortraitIndex
             };
 
             combatant.Stats.MaxHP = _gameState.PlayerState.GetEffectiveStat(member, "MaxHP");
@@ -332,10 +295,8 @@ namespace ProjectVagabond.Scenes
             combatant.Stats.Intelligence = _gameState.PlayerState.GetEffectiveStat(member, "Intelligence");
             combatant.Stats.Tenacity = _gameState.PlayerState.GetEffectiveStat(member, "Tenacity");
             combatant.Stats.Agility = _gameState.PlayerState.GetEffectiveStat(member, "Agility");
-
             combatant.VisualHP = combatant.Stats.CurrentHP;
 
-            // Load Relic (Single Slot)
             if (!string.IsNullOrEmpty(member.EquippedRelicId))
             {
                 if (BattleDataCache.Relics.TryGetValue(member.EquippedRelicId, out var relicData))
@@ -344,7 +305,6 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            // Load Weapon/Armor Passives
             if (!string.IsNullOrEmpty(member.EquippedWeaponId) && BattleDataCache.Weapons.TryGetValue(member.EquippedWeaponId, out var weapon))
             {
                 combatant.DefaultStrikeMoveID = weapon.MoveID;
@@ -371,12 +331,9 @@ namespace ProjectVagabond.Scenes
         {
             if (_battleManager != null && _gameState.PlayerState != null)
             {
-                // Sync battle state back to persistent PartyMember objects
                 foreach (var member in _gameState.PlayerState.Party)
                 {
-                    // Find the combatant that represents this party member
                     var combatant = _battleManager.AllCombatants.FirstOrDefault(c => c.Name == member.Name && c.IsPlayerControlled);
-
                     if (combatant != null)
                     {
                         member.CurrentHP = combatant.Stats.CurrentHP;
@@ -396,13 +353,12 @@ namespace ProjectVagabond.Scenes
 
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            // --- DEATH FADE LOGIC ---
             if (_isFadingOutOnDeath)
             {
                 _deathFadeTimer += dt;
                 if (_deathFadeTimer >= Global.UniversalSlowFadeDuration)
                 {
-                    _sceneManager.ChangeScene(GameSceneState.GameOver);
+                    _sceneManager.ChangeScene(GameSceneState.GameOver, TransitionType.Fade, TransitionType.Fade);
                 }
                 return;
             }
@@ -410,7 +366,6 @@ namespace ProjectVagabond.Scenes
             var currentKeyboardState = Keyboard.GetState();
             var currentMouseState = Mouse.GetState();
 
-            // --- 1. Update Sub-Systems ---
             _animationManager.Update(gameTime, _battleManager.AllCombatants);
             _moveAnimationManager.Update(gameTime);
             _uiManager.Update(gameTime, currentMouseState, currentKeyboardState, _battleManager.CurrentActingCombatant);
@@ -422,7 +377,6 @@ namespace ProjectVagabond.Scenes
             _alertManager.Update(gameTime);
             _tooltipManager.Update(gameTime);
 
-            // Update Settings Button Position & State
             if (_settingsButton != null)
             {
                 int buttonSize = 16;
@@ -433,7 +387,6 @@ namespace ProjectVagabond.Scenes
                 _settingsButton.Update(currentMouseState);
             }
 
-            // --- 2. Handle End of Battle ---
             if (_isBattleOver)
             {
                 if (!_uiManager.IsBusy && !_animationManager.IsAnimating)
@@ -464,7 +417,6 @@ namespace ProjectVagabond.Scenes
                 return;
             }
 
-            // --- 3. Animation Skipping Logic ---
             bool isAnimating = _animationManager.IsAnimating || _moveAnimationManager.IsAnimating;
             bool clickDetected = UIInputManager.CanProcessMouseClick() &&
                                  currentMouseState.LeftButton == ButtonState.Released &&
@@ -479,14 +431,12 @@ namespace ProjectVagabond.Scenes
                 UIInputManager.ConsumeMouseClick();
             }
 
-            // --- 4. Process Pending Animations ---
             if (!_uiManager.IsBusy && !_animationManager.IsAnimating && _pendingAnimations.Any())
             {
                 var nextAnimation = _pendingAnimations.Dequeue();
                 nextAnimation.Invoke();
             }
 
-            // --- 5. Determine if Battle Can Advance ---
             bool uiBusy = _uiManager.IsBusy;
             bool animBusy = _animationManager.IsAnimating;
             bool moveAnimBusy = _moveAnimationManager.IsAnimating;
@@ -513,7 +463,6 @@ namespace ProjectVagabond.Scenes
                 else _multiHitDelayTimer = 0f;
             }
 
-            // --- 6. WATCHDOG FAILSAFE ---
             bool stateChanged = _battleManager.CurrentPhase != _lastFramePhase ||
                                 uiBusy != _wasUiBusyLastFrame ||
                                 animBusy != _wasAnimatingLastFrame;
@@ -545,7 +494,6 @@ namespace ProjectVagabond.Scenes
             _wasUiBusyLastFrame = uiBusy;
             _wasAnimatingLastFrame = animBusy;
 
-            // --- 7. Update Battle Manager ---
             _battleManager.CanAdvance = canAdvance;
             _battleManager.Update();
 
@@ -555,7 +503,6 @@ namespace ProjectVagabond.Scenes
                 _battleManager.ExecuteDeclaredAction();
             }
 
-            // --- 8. Handle Phase Changes ---
             var currentPhase = _battleManager.CurrentPhase;
             if (currentPhase != _previousBattlePhase)
             {
@@ -563,7 +510,6 @@ namespace ProjectVagabond.Scenes
                 _previousBattlePhase = currentPhase;
             }
 
-            // --- 9. Check Battle Over ---
             if (_battleManager.CurrentPhase == BattleManager.BattlePhase.BattleOver && !_isBattleOver)
             {
                 _isBattleOver = true;
@@ -572,7 +518,6 @@ namespace ProjectVagabond.Scenes
                 _uiManager.ShowNarration(player != null && player.IsDefeated ? "Player Loses!" : "Player Wins!");
             }
 
-            // --- 10. Failsafe for Move Animation Completion ---
             if (_battleManager.CurrentPhase == BattleManager.BattlePhase.AnimatingMove && !_moveAnimationManager.IsAnimating)
             {
                 EventBus.Publish(new GameEvents.MoveAnimationCompleted());
@@ -621,7 +566,7 @@ namespace ProjectVagabond.Scenes
         {
             SplitMapScene.PlayerWonLastBattle = true;
             DecrementTemporaryBuffs();
-            _sceneManager.ChangeScene(BattleSetup.ReturnSceneState);
+            _sceneManager.ChangeScene(BattleSetup.ReturnSceneState, TransitionType.Fade, TransitionType.Fade);
         }
 
         private void DecrementTemporaryBuffs()
@@ -671,12 +616,8 @@ namespace ProjectVagabond.Scenes
             _renderer.DrawOverlay(spriteBatch, font);
             _tooltipManager.Draw(spriteBatch, ServiceLocator.Get<Core>().SecondaryFont);
             _animationManager.DrawAbilityIndicators(spriteBatch, font);
-            // Coins are now drawn inside DrawSceneContent via _renderer
             _alertManager.Draw(spriteBatch);
-
-            // Draw Settings Button in Overlay (Virtual Space)
             _settingsButton?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
-
             spriteBatch.End();
         }
 
@@ -695,7 +636,6 @@ namespace ProjectVagabond.Scenes
             Vector2 roundTextPosition = new Vector2(5, 5);
             spriteBatch.DrawStringSnapped(font, roundText, roundTextPosition, ServiceLocator.Get<Global>().Palette_DarkGray);
 
-            // Determine correct actor for rendering context (e.g. for targeting validity checks)
             BattleCombatant renderContextActor = _currentActor;
             if (_battleManager != null &&
                (_battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection_Slot1 ||
@@ -704,7 +644,6 @@ namespace ProjectVagabond.Scenes
                 renderContextActor = _battleManager.CurrentActingCombatant;
             }
 
-            // Pass the transform matrix to the renderer
             _renderer.Draw(spriteBatch, font, gameTime, _battleManager.AllCombatants, renderContextActor, _uiManager, _inputHandler, _animationManager, _uiManager.SharedPulseTimer, transform);
             _moveAnimationManager.Draw(spriteBatch);
             _uiManager.Draw(spriteBatch, font, gameTime, transform);
@@ -725,29 +664,21 @@ namespace ProjectVagabond.Scenes
 
         public override void DrawFullscreenUI(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
-            // Settings button is now drawn in DrawOverlay (Virtual Space)
         }
 
-        // Public method to trigger flee logic
         public void TriggerFlee()
         {
             FleeBattle();
         }
 
-        /// <summary>
-        /// Helper to trigger the death animation safely.
-        /// Ensures the animation is only started once per combatant per battle.
-        /// </summary>
         private void TriggerDeathAnimation(BattleCombatant target)
         {
             if (_processedDeathAnimations.Contains(target.CombatantID)) return;
 
             _processedDeathAnimations.Add(target.CombatantID);
 
-            // Calculate position for coin spawn
             Vector2 centerPos = _renderer.GetCombatantVisualCenterPosition(target, _battleManager.AllCombatants);
 
-            // Fallback calculation if centerPos is Zero (e.g. if renderer hasn't cached it yet)
             if (centerPos == Vector2.Zero)
             {
                 const int enemyAreaPadding = 40;
@@ -763,11 +694,9 @@ namespace ProjectVagabond.Scenes
                 centerPos = new Vector2(slotCenterX, spriteCenterY);
             }
 
-            // --- FIX: Add Visual Center Offset to ensure coins spawn from the "gut" ---
             Vector2 visualOffset = _spriteManager.GetVisualCenterOffset(target.ArchetypeId);
             centerPos += visualOffset;
 
-            // --- FIX: Use FIXED ground Y for coins ---
             float groundY = FIXED_COIN_GROUND_Y;
 
             _animationManager.StartDeathAnimation(target.CombatantID, centerPos, groundY);
@@ -821,7 +750,7 @@ namespace ProjectVagabond.Scenes
             {
                 Actor = player,
                 Target = targetMember,
-                Priority = 6, // High priority for switching
+                Priority = 6,
                 ActorAgility = player.Stats.Agility,
                 Type = QueuedActionType.Switch
             };
@@ -877,8 +806,6 @@ namespace ProjectVagabond.Scenes
         private void OnBattleActionExecuted(GameEvents.BattleActionExecuted e)
         {
             _currentActor = e.Actor;
-
-            // Trigger visual jump for the attacker
             _renderer.TriggerAttackAnimation(e.Actor.CombatantID);
 
             bool isMultiHit = e.ChosenMove != null && e.ChosenMove.Effects.ContainsKey("MultiHit");
@@ -906,11 +833,9 @@ namespace ProjectVagabond.Scenes
                     _animationManager.StartHealthLossAnimation(target.CombatantID, target.VisualHP, target.Stats.CurrentHP);
                     _animationManager.StartHealthAnimation(target.CombatantID, (int)target.VisualHP, target.Stats.CurrentHP);
 
-                    // --- INSTANT DEATH CHECK ---
                     if (target.Stats.CurrentHP <= 0)
                     {
                         TriggerDeathAnimation(target);
-                        // Do NOT trigger hit flash if dying
                     }
                     else
                     {
@@ -987,14 +912,10 @@ namespace ProjectVagabond.Scenes
         private void OnCombatantDefeated(GameEvents.CombatantDefeated e)
         {
             _uiManager.ShowNarration($"{e.DefeatedCombatant.Name} was [cDefeat]DEFEATED[/]!");
-
-            // Only trigger death animation if it hasn't started already (e.g. from instant hit)
             TriggerDeathAnimation(e.DefeatedCombatant);
-
-            // Award Coins if Enemy
             if (!e.DefeatedCombatant.IsPlayerControlled)
             {
-                int coinAmount = e.DefeatedCombatant.CoinReward; // Use the calculated value
+                int coinAmount = e.DefeatedCombatant.CoinReward;
                 _gameState.PlayerState.Coin += coinAmount;
                 _uiManager.ShowNarration($"Gained {coinAmount} Coins!");
             }
@@ -1023,7 +944,6 @@ namespace ProjectVagabond.Scenes
                 _animationManager.StartHealthLossAnimation(e.Combatant.CombatantID, e.Combatant.VisualHP, e.Combatant.Stats.CurrentHP);
                 _animationManager.StartHealthAnimation(e.Combatant.CombatantID, (int)e.Combatant.VisualHP, e.Combatant.Stats.CurrentHP);
 
-                // --- INSTANT DEATH CHECK FOR STATUS ---
                 if (e.Combatant.Stats.CurrentHP <= 0)
                 {
                     TriggerDeathAnimation(e.Combatant);
@@ -1041,7 +961,6 @@ namespace ProjectVagabond.Scenes
 
         private void OnAbilityActivated(GameEvents.AbilityActivated e)
         {
-            System.Diagnostics.Debug.WriteLine($"[ABILITY TRIGGERED] Combatant: {e.Combatant.Name}, Ability: {e.Ability.AbilityName}");
             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[debug]Ability Activated: {e.Ability.AbilityName} ({e.Combatant.Name})" });
             _animationManager.StartAbilityIndicator(e.Ability.AbilityName);
             if (!string.IsNullOrEmpty(e.NarrationText)) _uiManager.ShowNarration(e.NarrationText);

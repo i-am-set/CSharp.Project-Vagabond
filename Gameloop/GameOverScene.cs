@@ -10,6 +10,7 @@ using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
+using ProjectVagabond.Transitions;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -29,12 +30,11 @@ namespace ProjectVagabond.Scenes
         private readonly List<Button> _buttons = new();
         private int _selectedButtonIndex = -1;
 
-        private float _inputDelay = 0.5f; // Longer delay to prevent accidental skips
+        private float _inputDelay = 0.5f;
         private float _currentInputDelay = 0f;
 
         private string _gameOverText = "GAME OVER";
 
-        // Fade In State
         private float _fadeInTimer = 0f;
 
         public GameOverScene()
@@ -53,7 +53,6 @@ namespace ProjectVagabond.Scenes
         public override void Initialize()
         {
             base.Initialize();
-            // Removed InitializeUI() from here. Fonts are not loaded yet.
         }
 
         private void InitializeUI()
@@ -65,18 +64,14 @@ namespace ProjectVagabond.Scenes
             const int buttonPaddingY = 4;
             const int buttonSpacing = 0;
 
-            // --- Layout Calculation ---
-            // Text at roughly 1/3 down the screen
             int textY = Global.VIRTUAL_HEIGHT / 3;
 
-            // --- TRY AGAIN Button ---
             string text1 = "TRY AGAIN";
             Vector2 size1 = tertiaryFont.MeasureString(text1);
             int w1 = (int)size1.X + buttonPaddingX * 2;
             int h1 = (int)size1.Y + buttonPaddingY * 2;
             int x1 = (Global.VIRTUAL_WIDTH - w1) / 2;
 
-            // Position buttons below text with some padding
             int buttonStartY = textY + 20;
 
             var tryAgainButton = new Button(
@@ -90,7 +85,6 @@ namespace ProjectVagabond.Scenes
             tryAgainButton.OnClick += RestartGame;
             _buttons.Add(tryAgainButton);
 
-            // --- MAIN MENU Button ---
             string text2 = "MAIN MENU";
             Vector2 size2 = tertiaryFont.MeasureString(text2);
             int w2 = (int)size2.X + buttonPaddingX * 2;
@@ -114,13 +108,11 @@ namespace ProjectVagabond.Scenes
         {
             base.Enter();
 
-            // Initialize UI here to ensure fonts are loaded
             InitializeUI();
 
             _currentInputDelay = _inputDelay;
-            _fadeInTimer = 0f; // Start fade in
+            _fadeInTimer = 0f;
 
-            // Reset button states
             foreach (var button in _buttons)
             {
                 button.ResetAnimationState();
@@ -140,14 +132,13 @@ namespace ProjectVagabond.Scenes
         private void RestartGame()
         {
             var core = ServiceLocator.Get<Core>();
-            core.ResetGame(); // Clears state
+            core.ResetGame();
 
             var spriteManager = ServiceLocator.Get<SpriteManager>();
             var archetypeManager = ServiceLocator.Get<ArchetypeManager>();
             var gameState = ServiceLocator.Get<GameState>();
             var loadingScreen = ServiceLocator.Get<LoadingScreen>();
 
-            // Re-run initialization tasks
             var loadingTasks = new List<LoadingTask>
         {
             new GenericTask("Initializing world...", () =>
@@ -166,7 +157,7 @@ namespace ProjectVagabond.Scenes
 
             loadingScreen.OnComplete += () =>
             {
-                _sceneManager.ChangeScene(GameSceneState.Split);
+                _sceneManager.ChangeScene(GameSceneState.Split, TransitionType.Fade, TransitionType.Fade);
             };
 
             loadingScreen.Start();
@@ -176,7 +167,7 @@ namespace ProjectVagabond.Scenes
         {
             var core = ServiceLocator.Get<Core>();
             core.ResetGame();
-            _sceneManager.ChangeScene(GameSceneState.MainMenu);
+            _sceneManager.ChangeScene(GameSceneState.MainMenu, TransitionType.Fade, TransitionType.Fade);
         }
 
         public override void Update(GameTime gameTime)
@@ -185,7 +176,6 @@ namespace ProjectVagabond.Scenes
 
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            // Update Fade In
             if (_fadeInTimer < Global.UniversalSlowFadeDuration)
             {
                 _fadeInTimer += dt;
@@ -194,7 +184,7 @@ namespace ProjectVagabond.Scenes
             if (_currentInputDelay > 0)
             {
                 _currentInputDelay -= dt;
-                return; // Block input during delay
+                return;
             }
 
             var currentMouseState = Mouse.GetState();
@@ -215,7 +205,6 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            // Keyboard Navigation
             if (KeyPressed(Keys.Up, currentKeyboardState, _previousKeyboardState))
             {
                 _sceneManager.LastInputDevice = InputDevice.Keyboard;
@@ -257,40 +246,31 @@ namespace ProjectVagabond.Scenes
             var pixel = ServiceLocator.Get<Texture2D>();
             var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
 
-            // Draw Background (Solid Black)
             spriteBatch.Draw(pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), _global.Palette_Black);
 
-            // Draw "GAME OVER"
             string title = _gameOverText;
             Vector2 titleSize = font.MeasureString(title);
 
-            // Bobbing Animation
             float time = (float)gameTime.TotalGameTime.TotalSeconds;
             float bobOffset = MathF.Sin(time * 4f) > 0 ? -1f : 0f;
 
-            // Position text at 1/3 height
             Vector2 titlePos = new Vector2(
                 (Global.VIRTUAL_WIDTH - titleSize.X) / 2,
                 (Global.VIRTUAL_HEIGHT / 3) - (titleSize.Y / 2) + bobOffset
             );
             spriteBatch.DrawStringSnapped(font, title, titlePos, _global.Palette_Red);
 
-            // Draw Buttons
             for (int i = 0; i < _buttons.Count; i++)
             {
                 bool forceHover = (i == _selectedButtonIndex) && _sceneManager.LastInputDevice == InputDevice.Keyboard;
-                // Force tertiary font
                 _buttons[i].Draw(spriteBatch, tertiaryFont, gameTime, transform, forceHover);
             }
 
-            // --- DEBUG DRAWING (F1) ---
             if (_global.ShowSplitMapGrid)
             {
-                // Title Bounds
                 var titleRect = new Rectangle((int)titlePos.X, (int)titlePos.Y, (int)titleSize.X, (int)titleSize.Y);
                 spriteBatch.DrawSnapped(pixel, titleRect, Color.Magenta * 0.5f);
 
-                // Button Bounds
                 foreach (var button in _buttons)
                 {
                     spriteBatch.DrawSnapped(pixel, button.Bounds, Color.Cyan * 0.5f);
@@ -300,7 +280,6 @@ namespace ProjectVagabond.Scenes
 
         public override void DrawOverlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            // Draw Fade In Overlay
             if (_fadeInTimer < Global.UniversalSlowFadeDuration)
             {
                 float alpha = 1.0f - Math.Clamp(_fadeInTimer / Global.UniversalSlowFadeDuration, 0f, 1f);

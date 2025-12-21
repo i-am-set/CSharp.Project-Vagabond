@@ -13,6 +13,7 @@ using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
+using ProjectVagabond.Transitions;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -641,7 +642,7 @@ namespace ProjectVagabond
             if (KeyPressed(Keys.F5, currentKeyboardState, _previousKeyboardState))
             {
                 ResetGame();
-                _sceneManager.ChangeScene(GameSceneState.MainMenu);
+                _sceneManager.ChangeScene(GameSceneState.MainMenu, TransitionType.None, TransitionType.None);
             }
             if (KeyPressed(Keys.F9, currentKeyboardState, _previousKeyboardState)) BattleDebugHelper.RunDamageCalculationTestSuite();
             if (KeyPressed(Keys.F10, currentKeyboardState, _previousKeyboardState)) MaximizeWindow(); // F10 to Maximize

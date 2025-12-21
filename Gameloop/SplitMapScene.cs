@@ -3,9 +3,11 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
@@ -46,6 +48,7 @@ namespace ProjectVagabond.Scenes
         private readonly SplitMapRestOverlay _restOverlay;
         private readonly SplitMapRecruitOverlay _recruitOverlay;
         private readonly BirdManager _birdManager;
+        private readonly TransitionManager _transitionManager;
 
         private SplitMap? _currentMap;
         private int _playerCurrentNodeId;
@@ -142,6 +145,7 @@ namespace ProjectVagabond.Scenes
             _restOverlay = new SplitMapRestOverlay(this);
             _recruitOverlay = new SplitMapRecruitOverlay(this);
             _birdManager = new BirdManager();
+            _transitionManager = ServiceLocator.Get<TransitionManager>();
 
             var narratorBounds = new Rectangle(0, Global.VIRTUAL_HEIGHT - 50, Global.VIRTUAL_WIDTH, 50);
             _resultNarrator = new StoryNarrator(narratorBounds);
@@ -1003,7 +1007,12 @@ namespace ProjectVagabond.Scenes
             _waitingForCombatCameraSettle = false;
             BattleSetup.EnemyArchetypes = _pendingCombatArchetypes;
             BattleSetup.ReturnSceneState = GameSceneState.Split;
-            _sceneManager.ChangeScene(GameSceneState.Battle);
+
+            // Use a random combat transition (Diamonds, Shutters, Blocks)
+            var transitionType = _transitionManager.GetRandomCombatTransition();
+            // Use the same transition for In and Out for consistency
+            _sceneManager.ChangeScene(GameSceneState.Battle, transitionType, transitionType);
+
             _pendingCombatArchetypes = null;
         }
 
@@ -1032,7 +1041,6 @@ namespace ProjectVagabond.Scenes
                         }
                         else
                         {
-                            // FAILSAFE: If event data is missing, try to grab a random one
                             var fallbackEvent = _progressionManager.GetRandomNarrative();
                             if (fallbackEvent != null)
                             {
@@ -1213,17 +1221,14 @@ namespace ProjectVagabond.Scenes
 
             if (selectedOutcome != null)
             {
-                // Check for special "StartCombat" outcome
                 var combatOutcome = selectedOutcome.Outcomes.FirstOrDefault(o => o.OutcomeType == "StartCombat");
 
-                // Apply standard effects
                 _gameState.ApplyNarrativeOutcomes(selectedOutcome.Outcomes);
 
                 if (combatOutcome != null)
                 {
-                    // Handle combat trigger
                     InitiateCombat(new List<string> { combatOutcome.Value });
-                    _eventState = EventState.Idle; // Clear event state so combat can take over
+                    _eventState = EventState.Idle;
                     return;
                 }
 
@@ -1291,7 +1296,7 @@ namespace ProjectVagabond.Scenes
         {
             SplitMapScene.PlayerWonLastBattle = true;
             DecrementTemporaryBuffs();
-            _sceneManager.ChangeScene(BattleSetup.ReturnSceneState);
+            _sceneManager.ChangeScene(BattleSetup.ReturnSceneState, TransitionType.Fade, TransitionType.Fade);
         }
 
         private void DecrementTemporaryBuffs()
