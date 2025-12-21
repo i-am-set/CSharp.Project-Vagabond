@@ -11,7 +11,7 @@ namespace ProjectVagabond.Transitions
     public class FadeTransition : ITransitionEffect
     {
         private float _timer;
-        private const float DURATION = 0.5f;
+        private const float DURATION = 0.2f;
         private bool _isOut;
         public bool IsComplete => _timer >= DURATION;
 
@@ -69,7 +69,7 @@ namespace ProjectVagabond.Transitions
             int height = Global.VIRTUAL_HEIGHT;
 
             float progress = Math.Clamp(_timer / DURATION, 0f, 1f);
-            float eased = _isOut ? Easing.EaseOutBounce(progress) : Easing.EaseInQuad(1.0f - progress);
+            float eased = _isOut ? Easing.EaseInOutExpo(progress) : Easing.EaseInQuad(1.0f - progress);
 
             int halfHeight = height / 2;
             int currentHeight = (int)(halfHeight * eased) + (_isOut && progress >= 0.9f ? 2 : 0);

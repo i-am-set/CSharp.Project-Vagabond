@@ -555,6 +555,9 @@ namespace ProjectVagabond
             _loadingScreen.Clear();
             _debugConsole.ClearHistory();
             _progressionManager.ClearCurrentSplitMap();
+
+            _transitionManager.Reset();
+
             var entityManager = ServiceLocator.Get<EntityManager>();
             var componentStore = ServiceLocator.Get<ComponentStore>();
             entityManager.Clear();
@@ -729,7 +732,7 @@ namespace ProjectVagabond
             // 1. Loading Screen (Exclusive Draw)
             if (_loadingScreen.IsActive)
             {
-                GraphicsDevice.Clear(Color.Black);
+                GraphicsDevice.Clear(_global.Palette_Black);
                 Matrix virtualToScreenTransform = Matrix.Invert(_mouseTransformMatrix);
                 _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, virtualToScreenTransform);
                 _loadingScreen.Draw(_spriteBatch, _secondaryFont);

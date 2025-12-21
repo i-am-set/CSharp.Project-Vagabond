@@ -3,13 +3,12 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
-using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
-using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
+using ProjectVagabond.Transitions;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -185,62 +184,74 @@ namespace ProjectVagabond.Scenes
 
             _shopOverlay.OnLeaveRequested += () =>
             {
-                _viewToReturnTo = SplitMapView.Map;
-                SetView(SplitMapView.Map, snap: true);
-
-                var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
-                if (currentNode != null)
+                _transitionManager.StartTransition(TransitionType.Fade, TransitionType.Fade, () =>
                 {
-                    currentNode.IsCompleted = true;
-                    UpdateCameraTarget(currentNode.Position, false);
-                }
-                _mapState = SplitMapState.LoweringNode;
-                _nodeLiftTimer = 0f;
+                    _viewToReturnTo = SplitMapView.Map;
+                    SetView(SplitMapView.Map, snap: true);
+
+                    var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
+                    if (currentNode != null)
+                    {
+                        currentNode.IsCompleted = true;
+                        UpdateCameraTarget(currentNode.Position, false);
+                    }
+                    _mapState = SplitMapState.LoweringNode;
+                    _nodeLiftTimer = 0f;
+                });
             };
 
             _restOverlay.OnLeaveRequested += () =>
             {
-                _viewToReturnTo = SplitMapView.Map;
-                SetView(SplitMapView.Map, snap: true);
-
-                var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
-                if (currentNode != null)
+                _transitionManager.StartTransition(TransitionType.Fade, TransitionType.Fade, () =>
                 {
-                    currentNode.IsCompleted = true;
-                    UpdateCameraTarget(currentNode.Position, false);
-                }
-                _mapState = SplitMapState.LoweringNode;
-                _nodeLiftTimer = 0f;
+                    _viewToReturnTo = SplitMapView.Map;
+                    SetView(SplitMapView.Map, snap: true);
+
+                    var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
+                    if (currentNode != null)
+                    {
+                        currentNode.IsCompleted = true;
+                        UpdateCameraTarget(currentNode.Position, false);
+                    }
+                    _mapState = SplitMapState.LoweringNode;
+                    _nodeLiftTimer = 0f;
+                });
             };
 
             _restOverlay.OnRestCompleted += () =>
             {
-                _viewToReturnTo = SplitMapView.Map;
-                SetView(SplitMapView.Map, snap: true);
-
-                var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
-                if (currentNode != null)
+                _transitionManager.StartTransition(TransitionType.Fade, TransitionType.Fade, () =>
                 {
-                    currentNode.IsCompleted = true;
-                    UpdateCameraTarget(currentNode.Position, false);
-                }
-                _mapState = SplitMapState.LoweringNode;
-                _nodeLiftTimer = 0f;
+                    _viewToReturnTo = SplitMapView.Map;
+                    SetView(SplitMapView.Map, snap: true);
+
+                    var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
+                    if (currentNode != null)
+                    {
+                        currentNode.IsCompleted = true;
+                        UpdateCameraTarget(currentNode.Position, false);
+                    }
+                    _mapState = SplitMapState.LoweringNode;
+                    _nodeLiftTimer = 0f;
+                });
             };
 
             _recruitOverlay.OnRecruitComplete += () =>
             {
-                _viewToReturnTo = SplitMapView.Map;
-                SetView(SplitMapView.Map, snap: true);
-
-                var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
-                if (currentNode != null)
+                _transitionManager.StartTransition(TransitionType.Fade, TransitionType.Fade, () =>
                 {
-                    currentNode.IsCompleted = true;
-                    UpdateCameraTarget(currentNode.Position, false);
-                }
-                _mapState = SplitMapState.LoweringNode;
-                _nodeLiftTimer = 0f;
+                    _viewToReturnTo = SplitMapView.Map;
+                    SetView(SplitMapView.Map, snap: true);
+
+                    var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
+                    if (currentNode != null)
+                    {
+                        currentNode.IsCompleted = true;
+                        UpdateCameraTarget(currentNode.Position, false);
+                    }
+                    _mapState = SplitMapState.LoweringNode;
+                    _nodeLiftTimer = 0f;
+                });
             };
         }
 
@@ -1068,16 +1079,20 @@ namespace ProjectVagabond.Scenes
                     break;
 
                 case SplitNodeType.Recruit:
-                    _recruitOverlay.GenerateNewCandidates();
-                    SetView(SplitMapView.Recruit, snap: true);
+                    _transitionManager.StartTransition(TransitionType.Fade, TransitionType.Fade, () => {
+                        _recruitOverlay.GenerateNewCandidates();
+                        SetView(SplitMapView.Recruit, snap: true);
+                    });
                     break;
 
                 case SplitNodeType.Rest:
-                    SetView(SplitMapView.Rest, snap: true);
+                    _transitionManager.StartTransition(TransitionType.Fade, TransitionType.Fade, () => {
+                        SetView(SplitMapView.Rest, snap: true);
+                    });
                     break;
 
                 case SplitNodeType.Shop:
-                    OpenRandomShop();
+                    _transitionManager.StartTransition(TransitionType.Fade, TransitionType.Fade, () => OpenRandomShop());
                     break;
 
                 default:

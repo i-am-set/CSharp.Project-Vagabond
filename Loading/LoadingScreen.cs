@@ -196,8 +196,8 @@ namespace ProjectVagabond.Scenes
             // 2. Draw the background and filled portion of the loading bar
             var barBgRect = new Rectangle(barX, barY, BAR_WIDTH, BAR_HEIGHT);
             var barFillRect = new Rectangle(barX, barY, filledWidth, BAR_HEIGHT);
-            spriteBatch.DrawSnapped(pixel, barBgRect, _global.Palette_DarkGray);
-            spriteBatch.DrawSnapped(pixel, barFillRect, _global.Palette_Black);
+            spriteBatch.DrawSnapped(pixel, barBgRect, _global.Palette_Black);
+            spriteBatch.DrawSnapped(pixel, barFillRect, _global.Palette_DarkGray);
 
             // 3. Get the current loading text
             string loadingText;
@@ -233,7 +233,7 @@ namespace ProjectVagabond.Scenes
                     (Global.VIRTUAL_WIDTH - textSize.X) / 2,
                     barY - textSize.Y - TEXT_PADDING_ABOVE_BAR
                 );
-                spriteBatch.DrawStringSnapped(font, loadingText, textPosition, _global.Palette_Black);
+                spriteBatch.DrawStringSnapped(font, loadingText, textPosition, _global.Palette_DarkGray);
             }
         }
 

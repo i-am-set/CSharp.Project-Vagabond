@@ -32,6 +32,19 @@ namespace ProjectVagabond
             };
         }
 
+        /// <summary>
+        /// Immediately stops any active transition and resets the manager to Idle.
+        /// Used during hard resets (e.g. F5) to ensure scene changes are accepted.
+        /// </summary>
+        public void Reset()
+        {
+            _currentState = TransitionState.Idle;
+            _currentEffect = null;
+            _pendingInType = TransitionType.None;
+            _onMidpoint = null;
+            _onComplete = null;
+        }
+
         public void StartTransition(TransitionType outType, TransitionType inType, Action onMidpoint, Action onComplete = null)
         {
             _pendingInType = inType;
