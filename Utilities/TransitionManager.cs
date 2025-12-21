@@ -18,6 +18,11 @@ namespace ProjectVagabond
         private Action _onMidpoint;
         private Action _onComplete;
 
+        // Delay Timer State
+        private float _holdDuration = 0f;
+        private float _holdTimer = 0f;
+        private bool _midpointExecuted = false;
+
         private readonly Dictionary<TransitionType, ITransitionEffect> _effects;
         private readonly Random _random = new Random();
 
@@ -43,19 +48,33 @@ namespace ProjectVagabond
             _pendingInType = TransitionType.None;
             _onMidpoint = null;
             _onComplete = null;
+            _holdDuration = 0f;
+            _holdTimer = 0f;
+            _midpointExecuted = false;
         }
 
-        public void StartTransition(TransitionType outType, TransitionType inType, Action onMidpoint, Action onComplete = null)
+        /// <summary>
+        /// Starts a transition sequence.
+        /// </summary>
+        /// <param name="outType">The effect to cover the screen.</param>
+        /// <param name="inType">The effect to reveal the new screen.</param>
+        /// <param name="onMidpoint">Action to execute when screen is fully obscured (scene swap).</param>
+        /// <param name="holdDuration">Time in seconds to wait while screen is obscured before starting In transition.</param>
+        /// <param name="onComplete">Action to execute when transition is fully finished.</param>
+        public void StartTransition(TransitionType outType, TransitionType inType, Action onMidpoint, float holdDuration = 0f, Action onComplete = null)
         {
             _pendingInType = inType;
             _onMidpoint = onMidpoint;
             _onComplete = onComplete;
+            _holdDuration = holdDuration;
+            _holdTimer = 0f;
+            _midpointExecuted = false;
 
-            // If Out is None, skip directly to Midpoint and In
+            // If Out is None, skip directly to Hold state logic
             if (outType == TransitionType.None)
             {
-                _onMidpoint?.Invoke();
-                StartInTransition();
+                _currentState = TransitionState.Hold;
+                // We will process the midpoint and delay in the Update loop
             }
             else
             {
@@ -101,21 +120,45 @@ namespace ProjectVagabond
         {
             if (_currentState == TransitionState.Idle) return;
 
-            if (_currentEffect != null)
-            {
-                _currentEffect.Update(gameTime);
+            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-                if (_currentState == TransitionState.Out)
+            // 1. Handle Out Transition
+            if (_currentState == TransitionState.Out)
+            {
+                if (_currentEffect != null)
                 {
+                    _currentEffect.Update(gameTime);
                     if (_currentEffect.IsComplete)
                     {
                         _currentState = TransitionState.Hold;
-                        _onMidpoint?.Invoke();
-                        StartInTransition();
+                        _holdTimer = 0f;
+                        _midpointExecuted = false;
                     }
                 }
-                else if (_currentState == TransitionState.In)
+            }
+            // 2. Handle Hold (Black Screen + Delay)
+            else if (_currentState == TransitionState.Hold)
+            {
+                // Execute the scene swap immediately upon entering Hold
+                if (!_midpointExecuted)
                 {
+                    _onMidpoint?.Invoke();
+                    _midpointExecuted = true;
+                }
+
+                // Wait for the delay timer
+                _holdTimer += dt;
+                if (_holdTimer >= _holdDuration)
+                {
+                    StartInTransition();
+                }
+            }
+            // 3. Handle In Transition
+            else if (_currentState == TransitionState.In)
+            {
+                if (_currentEffect != null)
+                {
+                    _currentEffect.Update(gameTime);
                     if (_currentEffect.IsComplete)
                     {
                         _currentState = TransitionState.Idle;

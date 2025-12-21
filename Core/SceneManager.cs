@@ -70,8 +70,9 @@ namespace ProjectVagabond
         /// <param name="state">Target scene.</param>
         /// <param name="outTransition">Effect to use when leaving current scene.</param>
         /// <param name="inTransition">Effect to use when entering new scene.</param>
+        /// <param name="transitionDelay">Time in seconds to hold the black screen before revealing the new scene.</param>
         /// <param name="loadingTasks">Optional loading tasks.</param>
-        public void ChangeScene(GameSceneState state, TransitionType outTransition, TransitionType inTransition, List<LoadingTask>? loadingTasks = null)
+        public void ChangeScene(GameSceneState state, TransitionType outTransition, TransitionType inTransition, float transitionDelay = 0f, List<LoadingTask>? loadingTasks = null)
         {
             _transitionManager ??= ServiceLocator.Get<TransitionManager>();
 
@@ -82,14 +83,15 @@ namespace ProjectVagabond
             _transitionManager.StartTransition(
                 outTransition,
                 inTransition,
-                onMidpoint: () => PerformSceneSwap(state, loadingTasks)
+                onMidpoint: () => PerformSceneSwap(state, loadingTasks),
+                holdDuration: transitionDelay
             );
         }
 
-        // Overload for backward compatibility (Defaults to Fade/Fade)
+        // Overload for backward compatibility (Defaults to Fade/Fade, No Delay)
         public void ChangeScene(GameSceneState state, List<LoadingTask>? loadingTasks = null)
         {
-            ChangeScene(state, TransitionType.Fade, TransitionType.Fade, loadingTasks);
+            ChangeScene(state, TransitionType.Fade, TransitionType.Fade, 0f, loadingTasks);
         }
 
         private void PerformSceneSwap(GameSceneState state, List<LoadingTask>? loadingTasks)

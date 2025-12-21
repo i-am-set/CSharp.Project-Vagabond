@@ -1022,7 +1022,7 @@ namespace ProjectVagabond.Scenes
             // Use a random combat transition (Diamonds, Shutters, Blocks)
             var transitionType = _transitionManager.GetRandomCombatTransition();
             // Use the same transition for In and Out for consistency
-            _sceneManager.ChangeScene(GameSceneState.Battle, transitionType, TransitionType.Shutters);
+            _sceneManager.ChangeScene(GameSceneState.Battle, transitionType, transitionType, 1.0f);
 
             _pendingCombatArchetypes = null;
         }

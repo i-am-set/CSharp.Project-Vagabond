@@ -234,6 +234,8 @@ namespace ProjectVagabond.Scenes
                     var enemyCombatant = BattleCombatantFactory.CreateFromEntity(newEnemyId, $"enemy_{i + 1}");
                     if (enemyCombatant != null)
                     {
+                        enemyCombatant.IsPlayerControlled = false;
+
                         enemyCombatant.BattleSlot = enemyParty.Count;
                         enemyParty.Add(enemyCombatant);
                         _enemyEntityIds.Add(newEnemyId);

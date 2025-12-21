@@ -39,6 +39,8 @@ namespace ProjectVagabond
 
             int entityId = entityManager.CreateEntity();
 
+            componentStore.EntityDestroyed(entityId);
+
             foreach (var templateComponent in template.TemplateComponents)
             {
                 try

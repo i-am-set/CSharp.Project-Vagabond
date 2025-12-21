@@ -11,7 +11,7 @@ namespace ProjectVagabond.Transitions
     public class FadeTransition : ITransitionEffect
     {
         private float _timer;
-        private const float DURATION = 0.2f;
+        private const float DURATION = 0.1f;
         private bool _isOut;
         public bool IsComplete => _timer >= DURATION;
 
@@ -45,7 +45,7 @@ namespace ProjectVagabond.Transitions
     public class ShuttersTransition : ITransitionEffect
     {
         private float _timer;
-        private const float DURATION = 0.6f;
+        private const float DURATION = 0.2f;
         private bool _isOut;
         public bool IsComplete => _timer >= DURATION;
 
@@ -234,6 +234,49 @@ namespace ProjectVagabond.Transitions
             if (_isOut && progress >= 0.95f)
             {
                 spriteBatch.Draw(pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), global.Palette_Black);
+            }
+        }
+
+        // --- 5. SHUTTERS SLOW (Top/Bottom Close) ---
+        public class ShuttersTransition : ITransitionEffect
+        {
+            private float _timer;
+            private const float DURATION = 0.6f;
+            private bool _isOut;
+            public bool IsComplete => _timer >= DURATION;
+
+            public void Start(bool isTransitioningOut)
+            {
+                _isOut = isTransitioningOut;
+                _timer = 0f;
+            }
+
+            public void Update(GameTime gameTime)
+            {
+                _timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+            }
+
+            public void Draw(SpriteBatch spriteBatch)
+            {
+                var global = ServiceLocator.Get<Global>();
+
+                // Use Virtual Resolution
+                int width = Global.VIRTUAL_WIDTH;
+                int height = Global.VIRTUAL_HEIGHT;
+
+                float progress = Math.Clamp(_timer / DURATION, 0f, 1f);
+                float eased = _isOut ? Easing.EaseInOutExpo(progress) : Easing.EaseInQuad(1.0f - progress);
+
+                int halfHeight = height / 2;
+                int currentHeight = (int)(halfHeight * eased) + (_isOut && progress >= 0.9f ? 2 : 0);
+
+                var pixel = ServiceLocator.Get<Texture2D>();
+
+                // Top Shutter
+                spriteBatch.Draw(pixel, new Rectangle(0, 0, width, currentHeight), global.Palette_Black);
+
+                // Bottom Shutter
+                spriteBatch.Draw(pixel, new Rectangle(0, height - currentHeight, width, currentHeight), global.Palette_Black);
             }
         }
     }
