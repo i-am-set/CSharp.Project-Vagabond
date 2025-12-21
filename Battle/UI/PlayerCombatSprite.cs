@@ -122,30 +122,14 @@ namespace ProjectVagabond.Battle.UI
 
             if (_archetypeId == "player")
             {
-                // Initialize jump if just started
+                // Initialize directly to Bobbing (Skip Jump)
                 if (_selectionState == SelectionState.None)
                 {
-                    _selectionState = SelectionState.Jumping;
+                    _selectionState = SelectionState.Bobbing;
                     _selectionTimer = 0f;
                 }
 
-                if (_selectionState == SelectionState.Jumping)
-                {
-                    _selectionTimer += dt;
-                    float progress = Math.Clamp(_selectionTimer / SELECTION_JUMP_DURATION, 0f, 1f);
-
-                    // Parabolic jump: sin(0..pi)
-                    _selectionOffsetY = -MathF.Sin(progress * MathHelper.Pi) * SELECTION_JUMP_HEIGHT;
-                    _useAltFrame = true; // Always alt frame during jump
-
-                    if (progress >= 1f)
-                    {
-                        _selectionState = SelectionState.Bobbing;
-                        _selectionTimer = 0f;
-                        _selectionOffsetY = 0f;
-                    }
-                }
-                else if (_selectionState == SelectionState.Bobbing)
+                if (_selectionState == SelectionState.Bobbing)
                 {
                     _selectionTimer += dt;
                     float t = _selectionTimer % SELECTION_BOB_CYCLE_DURATION;

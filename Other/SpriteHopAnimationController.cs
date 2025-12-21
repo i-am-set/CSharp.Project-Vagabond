@@ -21,7 +21,10 @@ namespace ProjectVagabond.Utils
     {
         // --- Tuning Constants (Centralized) ---
         private const float DURATION = 0.35f;
-        private const float HEIGHT = 6f;
+
+        // Separate heights for players (hop up) and enemies (lunge down)
+        private const float PLAYER_HOP_HEIGHT = 6f;
+        private const float ENEMY_LUNGE_HEIGHT = 16f; // Increased significantly for visibility
 
         private float _timer = 0f;
         public bool IsActive { get; private set; } = false;
@@ -47,7 +50,7 @@ namespace ProjectVagabond.Utils
         /// <summary>
         /// Calculates the current Y offset.
         /// </summary>
-        /// <param name="invert">If true, the hop goes UP (negative Y). If false, it goes DOWN (positive Y).</param>
+        /// <param name="invert">If true (Player), the hop goes UP (negative Y). If false (Enemy), it goes DOWN (positive Y).</param>
         /// <returns>The pixel offset to apply to the sprite.</returns>
         public float GetOffset(bool invert)
         {
@@ -69,8 +72,11 @@ namespace ProjectVagabond.Utils
                 bobValue = MathF.Sin(p * MathHelper.Pi) * 0.3f; // 30% height bounce
             }
 
+            // Determine magnitude and direction based on who is acting
+            float height = invert ? PLAYER_HOP_HEIGHT : ENEMY_LUNGE_HEIGHT;
             float direction = invert ? -1f : 1f;
-            return bobValue * HEIGHT * direction;
+
+            return bobValue * height * direction;
         }
     }
 }
