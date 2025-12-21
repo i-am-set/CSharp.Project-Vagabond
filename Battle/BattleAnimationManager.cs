@@ -1,10 +1,23 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Dice;
+using ProjectVagabond.Particles;
+using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.Transitions;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace ProjectVagabond.Battle.UI
 {
@@ -96,10 +109,10 @@ namespace ProjectVagabond.Battle.UI
             public float Timer;
 
             // Loss Animation Tuning
-            public const float PREVIEW_DURATION = 0.15f;
+            public const float PREVIEW_DURATION = 0.6f;
             public const float FLASH_BLACK_DURATION = 0.05f;
             public const float FLASH_WHITE_DURATION = 0.05f;
-            public const float SHRINK_DURATION = 0.4f;
+            public const float SHRINK_DURATION = 0.6f;
 
             // Recovery Animation Tuning
             public const float GHOST_FILL_DURATION = 0.5f;

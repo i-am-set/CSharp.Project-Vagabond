@@ -341,14 +341,14 @@
     "IsAnimationCentralized": false
   },
   {
-    "MoveID": "MagicMud",
-    "MoveName": "Magic Mud",
-    "Description": "[cetc]A splash of enchanted mud.[/]",
-    "Power": 20,
+    "MoveID": "SummonRock",
+    "MoveName": "Summon Rock",
+    "Description": "[cetc]Summons a rock above the target's head'.[/]",
+    "Power": 50,
     "ManaCost": 10,
     "MoveType": "Spell",
     "ImpactType": "Physical",
-    "OffensiveStat": "Strength",
+    "OffensiveStat": "Intelligence",
     "MakesContact": false,
     "Target": "Single",
     "Accuracy": 100,
@@ -357,7 +357,7 @@
     "LevelRequirement": 0,
     "OffensiveElementIDs": [ 5 ],
     "Tags": [ "Earth" ],
-    "AnimationSpriteSheet": "earth_mud_splat",
+    "AnimationSpriteSheet": "earth_stone_falling",
     "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },

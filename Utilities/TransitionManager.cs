@@ -112,11 +112,9 @@ namespace ProjectVagabond
 
         public TransitionType GetRandomCombatTransition()
         {
-            int roll = _random.Next(5);
+            int roll = _random.Next(3);
             if (roll == 0) return TransitionType.Diamonds;
             if (roll == 1) return TransitionType.Shutters;
-            if (roll == 2) return TransitionType.Blocks;
-            if (roll == 3) return TransitionType.Pixels;
             return TransitionType.BigBlocksEase;
         }
 

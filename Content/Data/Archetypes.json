@@ -123,7 +123,7 @@
           "MaxAgility": 8,
           "WeaknessElementIDs": [],
           "ResistanceElementIDs": [],
-          "MoveLearnset": [ "MagicMud", "ShoulderBash" ],
+          "MoveLearnset": [ "SummonRock", "ShoulderBash" ],
           "MinNumberOfMoves": 1,
           "MaxNumberOfMoves": 2
         }
