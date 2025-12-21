@@ -120,6 +120,7 @@ namespace ProjectVagabond
         private DebugConsole _debugConsole;
         private ProgressionManager _progressionManager;
         private CursorManager _cursorManager;
+        private TransitionManager _transitionManager;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         // GAME LOOP STATE
@@ -361,6 +362,9 @@ namespace ProjectVagabond
             _progressionManager = new ProgressionManager();
             ServiceLocator.Register<ProgressionManager>(_progressionManager);
 
+            _transitionManager = new TransitionManager();
+            ServiceLocator.Register<TransitionManager>(_transitionManager);
+
             _sceneManager = new SceneManager();
             ServiceLocator.Register<SceneManager>(_sceneManager);
             _sceneManager.AddScene(GameSceneState.Transition, new TransitionScene());
@@ -415,7 +419,7 @@ namespace ProjectVagabond
             _sceneManager.AddScene(GameSceneState.Battle, new BattleScene());
             _sceneManager.AddScene(GameSceneState.ChoiceMenu, new ChoiceMenuScene());
             _sceneManager.AddScene(GameSceneState.Split, new SplitMapScene());
-            _sceneManager.AddScene(GameSceneState.GameOver, new GameOverScene()); // Register GameOverScene
+            _sceneManager.AddScene(GameSceneState.GameOver, new GameOverScene());
 
             _previousResolution = new Point(Window.ClientBounds.Width, Window.ClientBounds.Height);
             OnResize(null, null);
@@ -675,6 +679,9 @@ namespace ProjectVagabond
                 _physicsTimeAccumulator -= Global.FIXED_PHYSICS_TIMESTEP;
             }
 
+            // --- UPDATE TRANSITION MANAGER ---
+            _transitionManager.Update(gameTime);
+
             // --- MODAL UPDATES ---
             if (_loadingScreen.IsActive)
             {
@@ -694,17 +701,21 @@ namespace ProjectVagabond
             }
 
             // --- STANDARD GAME UPDATE ---
-            _sceneManager.Update(gameTime);
-            _diceRollingSystem.Update(gameTime);
-            _animationManager.Update(gameTime);
-            _cursorManager.Update(gameTime);
-
-            if (!_gameState.IsPaused)
+            // Only update the scene if the transition isn't fully obscuring it
+            if (!_transitionManager.IsScreenObscured)
             {
-                if (_sceneManager.CurrentActiveScene is GameMapScene)
+                _sceneManager.Update(gameTime);
+                _diceRollingSystem.Update(gameTime);
+                _animationManager.Update(gameTime);
+                _cursorManager.Update(gameTime);
+
+                if (!_gameState.IsPaused)
                 {
-                    _gameState.UpdateActiveEntities();
-                    _systemManager.Update(gameTime);
+                    if (_sceneManager.CurrentActiveScene is GameMapScene)
+                    {
+                        _gameState.UpdateActiveEntities();
+                        _systemManager.Update(gameTime);
+                    }
                 }
             }
 
@@ -736,6 +747,13 @@ namespace ProjectVagabond
 
             // 3. Render Dice to Virtual Target (Overlay)
             var diceRenderTarget = _diceRollingSystem.Draw(_defaultFont);
+
+            // --- DRAW TRANSITIONS TO SCENE TARGET (Virtual Space) ---
+            // This ensures the transition is pixel-perfect and gets affected by the CRT shader later.
+            GraphicsDevice.SetRenderTarget(_sceneRenderTarget);
+            _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+            _transitionManager.Draw(_spriteBatch);
+            _spriteBatch.End();
 
             // 4. Composite to Fullscreen Target (Letterboxing)
             GraphicsDevice.SetRenderTarget(_finalCompositeTarget);
