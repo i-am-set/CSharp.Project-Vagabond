@@ -18,7 +18,7 @@
     "OffensiveElementIDs": [ 1 ],
     "Tags": [],
     "AnimationSpriteSheet": "basic_impact",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   {
@@ -39,7 +39,7 @@
     "OffensiveElementIDs": [ 1 ],
     "Tags": [],
     "AnimationSpriteSheet": "basic_claw",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   {
@@ -60,7 +60,7 @@
     "OffensiveElementIDs": [ 1 ],
     "Tags": [],
     "AnimationSpriteSheet": "basic_impact_3",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   {
@@ -81,7 +81,7 @@
     "OffensiveElementIDs": [ 1 ],
     "Tags": [ "Priority" ],
     "AnimationSpriteSheet": "basic_impact_2",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   // --- Fire ---
@@ -103,7 +103,7 @@
     "OffensiveElementIDs": [ 2 ],
     "Tags": [ "Fire" ],
     "AnimationSpriteSheet": "fire_flame_small",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   {
@@ -124,7 +124,7 @@
     "OffensiveElementIDs": [ 2 ],
     "Tags": [ "Fire" ],
     "AnimationSpriteSheet": "fire_impact",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   {
@@ -145,7 +145,7 @@
     "OffensiveElementIDs": [ 2 ],
     "Tags": [ "Fire" ],
     "AnimationSpriteSheet": "fire_flame_ground_large",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   {
@@ -166,7 +166,7 @@
     "OffensiveElementIDs": [ 2 ],
     "Tags": [ "Fire" ],
     "AnimationSpriteSheet": "fire_slash",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   // --- Water ---
@@ -188,7 +188,7 @@
     "OffensiveElementIDs": [ 3 ],
     "Tags": [ "Water" ],
     "AnimationSpriteSheet": "water_wave",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   {
@@ -209,7 +209,7 @@
     "OffensiveElementIDs": [ 3 ],
     "Tags": [ "Water", "Priority" ],
     "AnimationSpriteSheet": "water_slash",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   {
@@ -230,7 +230,7 @@
     "OffensiveElementIDs": [ 3 ],
     "Tags": [ "Water" ],
     "AnimationSpriteSheet": "wind_tornado",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   // --- Arcane ---
@@ -252,7 +252,7 @@
     "OffensiveElementIDs": [ 4 ],
     "Tags": [ "Arcane" ],
     "AnimationSpriteSheet": "basic_impact_2",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   {
@@ -273,7 +273,7 @@
     "OffensiveElementIDs": [ 4 ],
     "Tags": [ "Arcane" ],
     "AnimationSpriteSheet": "arcane_slash",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   {
@@ -294,7 +294,7 @@
     "OffensiveElementIDs": [ 4 ],
     "Tags": [ "Arcane" ],
     "AnimationSpriteSheet": "arcane_impact",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   // --- Earth ---
@@ -316,7 +316,7 @@
     "OffensiveElementIDs": [ 5 ],
     "Tags": [ "Earth" ],
     "AnimationSpriteSheet": "earth_stone_falling",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   {
@@ -337,7 +337,7 @@
     "OffensiveElementIDs": [ 5 ],
     "Tags": [ "Earth" ],
     "AnimationSpriteSheet": "basic_impact",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   {
@@ -358,7 +358,7 @@
     "OffensiveElementIDs": [ 5 ],
     "Tags": [ "Earth" ],
     "AnimationSpriteSheet": "earth_mud_splat",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   // --- Metal ---
@@ -380,7 +380,7 @@
     "OffensiveElementIDs": [ 6 ],
     "Tags": [ "Metal" ],
     "AnimationSpriteSheet": "basic_slash",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   {
@@ -422,7 +422,7 @@
     "OffensiveElementIDs": [ 6 ],
     "Tags": [ "Metal" ],
     "AnimationSpriteSheet": "basic_slash",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   // --- Toxic ---
@@ -444,7 +444,7 @@
     "OffensiveElementIDs": [ 7 ],
     "Tags": [ "Toxic" ],
     "AnimationSpriteSheet": "toxic_purple_slash",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   {
@@ -465,7 +465,7 @@
     "OffensiveElementIDs": [ 7 ],
     "Tags": [ "Toxic" ],
     "AnimationSpriteSheet": "toxic_green_spit",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   // --- Wind ---
@@ -508,7 +508,7 @@
     "OffensiveElementIDs": [ 8 ],
     "Tags": [ "Wind" ],
     "AnimationSpriteSheet": "wind_tornado",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   // --- Decay ---
@@ -531,7 +531,7 @@
     "Effects": { "Lifesteal": "30" },
     "Tags": [ "Void", "Lifesteal" ],
     "AnimationSpriteSheet": "void_leech",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   {
@@ -552,7 +552,7 @@
     "OffensiveElementIDs": [ 9 ],
     "Tags": [ "Void" ],
     "AnimationSpriteSheet": "void_orb",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   // --- Light ---
@@ -574,7 +574,7 @@
     "OffensiveElementIDs": [ 10 ],
     "Tags": [ "Light" ],
     "AnimationSpriteSheet": "arcane_impact_3",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   {
@@ -595,7 +595,7 @@
     "OffensiveElementIDs": [ 10 ],
     "Tags": [ "Light" ],
     "AnimationSpriteSheet": "arcane_impact_4",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   // --- Electric ---
@@ -617,7 +617,7 @@
     "OffensiveElementIDs": [ 11 ],
     "Tags": [ "Electric" ],
     "AnimationSpriteSheet": "electric_sparkle_spiral",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   {
@@ -638,7 +638,7 @@
     "OffensiveElementIDs": [ 11 ],
     "Tags": [ "Electric" ],
     "AnimationSpriteSheet": "electric_soundwave_small",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   {
@@ -659,7 +659,7 @@
     "OffensiveElementIDs": [ 11 ],
     "Tags": [ "Electric" ],
     "AnimationSpriteSheet": "electric_impact",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   // --- Ice ---
@@ -681,7 +681,7 @@
     "OffensiveElementIDs": [ 12 ],
     "Tags": [ "Ice" ],
     "AnimationSpriteSheet": "basic_bite",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   {
@@ -723,7 +723,7 @@
     "OffensiveElementIDs": [ 12 ],
     "Tags": [ "Ice" ],
     "AnimationSpriteSheet": "wind_blowing_large",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   // --- Nature ---
@@ -745,7 +745,7 @@
     "OffensiveElementIDs": [ 13 ],
     "Tags": [ "Nature" ],
     "AnimationSpriteSheet": "nature_impact",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   {
@@ -766,7 +766,7 @@
     "OffensiveElementIDs": [ 13 ],
     "Tags": [ "Nature" ],
     "AnimationSpriteSheet": "nature_impact",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   {
@@ -787,7 +787,7 @@
     "OffensiveElementIDs": [ 13 ],
     "Tags": [ "Nature", "Light" ],
     "AnimationSpriteSheet": "nature_impact",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   // --- Special ---
@@ -833,7 +833,7 @@
     },
     "Tags": [ "Defense" ],
     "AnimationSpriteSheet": "debug_null_animation",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   {
@@ -857,7 +857,7 @@
     },
     "Tags": [],
     "AnimationSpriteSheet": "basic_orb_pulse_2",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   {
@@ -879,7 +879,7 @@
     "Effects": { "MultiHit": "2,5" },
     "Tags": [ "MultiHit" ],
     "AnimationSpriteSheet": "basic_swipe",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   {
@@ -901,7 +901,7 @@
     "Effects": { "Lifesteal": "50" },
     "Tags": [ "Void", "Lifesteal" ],
     "AnimationSpriteSheet": "basic_bite",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   {
@@ -923,7 +923,7 @@
     "Effects": { "Execute": "30,3.0" },
     "Tags": [ "Metal" ],
     "AnimationSpriteSheet": "debug_null_animation",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   {
@@ -945,7 +945,7 @@
     "Effects": { "FixedDamage": "40" },
     "Tags": [ "Wind" ],
     "AnimationSpriteSheet": "basic_impact_2",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   {
@@ -967,7 +967,7 @@
     "Effects": { "RampUp": "30,120" },
     "Tags": [ "Arcane" ],
     "AnimationSpriteSheet": "basic_impact",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   {
@@ -989,7 +989,7 @@
     "Effects": { "ArmorPierce": "50" },
     "Tags": [],
     "AnimationSpriteSheet": "basic_impact_3",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   {
@@ -1011,7 +1011,7 @@
     "Effects": { "ApplyStatus": "Poison,100,3" },
     "Tags": [ "Toxic", "StatusEffect" ],
     "AnimationSpriteSheet": "toxic_purple_gas",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   {
@@ -1035,7 +1035,7 @@
     },
     "Tags": [ "Fire", "StatusEffect" ],
     "AnimationSpriteSheet": "fire_impact",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   {
@@ -1057,7 +1057,7 @@
     "Effects": { "DetonateStatus": "Burn,3" },
     "Tags": [ "Fire", "StatusEffect" ],
     "AnimationSpriteSheet": "fire_flame_ground_large",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   {
@@ -1079,7 +1079,7 @@
     "Effects": { "Cleanse": "Self,All" },
     "Tags": [ "Light", "Healing" ],
     "AnimationSpriteSheet": "basic_multi_sparkle",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   {
@@ -1101,7 +1101,7 @@
     "Effects": { "StealBuff": "75" },
     "Tags": [ "Arcane", "Buff" ],
     "AnimationSpriteSheet": "arcane_blue_flame",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   {
@@ -1123,7 +1123,7 @@
     "Effects": { "Charge": "1" },
     "Tags": [ "Light", "Nature", "Charge" ],
     "AnimationSpriteSheet": "basic_explosion_4",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   {
@@ -1145,7 +1145,7 @@
     "Effects": { "DelayedAttack": "2" },
     "Tags": [ "Fire" ],
     "AnimationSpriteSheet": "basic_explosion_5",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   {
@@ -1167,7 +1167,7 @@
     "Effects": { "ExecuteOnKill": "ApplyStatus(StrengthUp,100,3)" },
     "Tags": [ "Buff" ],
     "AnimationSpriteSheet": "basic_impact_2",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   {
@@ -1189,7 +1189,7 @@
     "Effects": { "Recoil": "25" },
     "Tags": [ "Electric" ],
     "AnimationSpriteSheet": "electric_impact",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   {
@@ -1211,7 +1211,7 @@
     "Effects": { "HPCost": "20" },
     "Tags": [ "Void", "HPCost" ],
     "AnimationSpriteSheet": "void_leech",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   {
@@ -1233,7 +1233,7 @@
     "Effects": { "SelfDebuff": "Stun,20,1" },
     "Tags": [ "Electric" ],
     "AnimationSpriteSheet": "electric_shock",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   {
@@ -1255,7 +1255,7 @@
     "Effects": { "Gamble": "50,SelfDamage(50)" },
     "Tags": [ "Arcane" ],
     "AnimationSpriteSheet": "basic_explosion",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   {
@@ -1279,7 +1279,7 @@
     },
     "Tags": [ "Debuff" ],
     "AnimationSpriteSheet": "eye_shimmer",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   {
@@ -1304,7 +1304,7 @@
     },
     "Tags": [ "Buff" ],
     "AnimationSpriteSheet": "status_stat_up",
-    "AnimationSpeed": 0.5,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   }
 ]
