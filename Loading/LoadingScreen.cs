@@ -185,7 +185,7 @@ namespace ProjectVagabond.Scenes
 
             // --- Bar Style Parameters ---
             const int BAR_WIDTH = 100;
-            const int BAR_HEIGHT = 3;
+            const int BAR_HEIGHT = 1;
             const int TEXT_PADDING_ABOVE_BAR = 5;
 
             // 1. Calculate positions in virtual space

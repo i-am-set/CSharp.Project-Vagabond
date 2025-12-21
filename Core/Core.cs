@@ -729,58 +729,75 @@ namespace ProjectVagabond
 
         protected override void Draw(GameTime gameTime)
         {
-            // 1. Loading Screen (Exclusive Draw)
+            RenderTarget2D diceRenderTarget = null;
+
+            // 1. Render Content to Virtual Target
+            GraphicsDevice.SetRenderTarget(_sceneRenderTarget);
+
             if (_loadingScreen.IsActive)
             {
+                // Draw Loading Screen directly to the virtual target
                 GraphicsDevice.Clear(_global.Palette_Black);
-                Matrix virtualToScreenTransform = Matrix.Invert(_mouseTransformMatrix);
-                _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, virtualToScreenTransform);
-                _loadingScreen.Draw(_spriteBatch, _secondaryFont);
+                _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
+                _loadingScreen.Draw(_spriteBatch, _tertiaryFont);
                 _spriteBatch.End();
-                base.Draw(gameTime);
-                return;
             }
-
-            // 2. Render Game Scene to Virtual Target
-            if (_sceneManager.CurrentActiveScene?.GetType() != typeof(TransitionScene))
+            else
             {
-                GraphicsDevice.SetRenderTarget(_sceneRenderTarget);
                 GraphicsDevice.Clear(Color.Transparent);
-                _sceneManager.Draw(_spriteBatch, _defaultFont, gameTime, Matrix.Identity);
+
+                // Draw Game Scene
+                if (_sceneManager.CurrentActiveScene?.GetType() != typeof(TransitionScene))
+                {
+                    _sceneManager.Draw(_spriteBatch, _defaultFont, gameTime, Matrix.Identity);
+                }
+
+                // Render Dice (returns a target, doesn't draw to current)
+                diceRenderTarget = _diceRollingSystem.Draw(_defaultFont);
+
+                // Draw Transitions (Overlay on scene)
+                _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+                _transitionManager.Draw(_spriteBatch);
+                _spriteBatch.End();
             }
 
-            // 3. Render Dice to Virtual Target (Overlay)
-            var diceRenderTarget = _diceRollingSystem.Draw(_defaultFont);
-
-            // --- DRAW TRANSITIONS TO SCENE TARGET (Virtual Space) ---
-            // This ensures the transition is pixel-perfect and gets affected by the CRT shader later.
-            GraphicsDevice.SetRenderTarget(_sceneRenderTarget);
-            _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-            _transitionManager.Draw(_spriteBatch);
-            _spriteBatch.End();
-
-            // 4. Composite to Fullscreen Target (Letterboxing)
+            // 2. Composite to Fullscreen Target (Letterboxing)
             GraphicsDevice.SetRenderTarget(_finalCompositeTarget);
             GraphicsDevice.Clear(_global.GameBg);
 
             _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-            if (!_sceneManager.IsLoadingBetweenScenes && !_sceneManager.IsHoldingBlack)
+
+            if (_loadingScreen.IsActive)
             {
+                // Draw the virtual target containing the loading screen
                 _spriteBatch.Draw(_sceneRenderTarget, _finalRenderRectangle, Color.White);
-                if (diceRenderTarget != null) _spriteBatch.Draw(diceRenderTarget, _finalRenderRectangle, Color.White);
+            }
+            else if (!_sceneManager.IsLoadingBetweenScenes && !_sceneManager.IsHoldingBlack)
+            {
+                // Draw Scene
+                _spriteBatch.Draw(_sceneRenderTarget, _finalRenderRectangle, Color.White);
+
+                // Draw Dice Overlay
+                if (diceRenderTarget != null)
+                {
+                    _spriteBatch.Draw(diceRenderTarget, _finalRenderRectangle, Color.White);
+                }
             }
             _spriteBatch.End();
 
-            // 5. Draw Fullscreen UI (Settings, etc.)
-            Matrix screenScaleMatrix = Matrix.Invert(_mouseTransformMatrix);
-            _sceneManager.CurrentActiveScene?.DrawFullscreenUI(_spriteBatch, _defaultFont, gameTime, screenScaleMatrix);
+            // 3. Draw Fullscreen UI (Settings, etc.) - Only if NOT loading
+            if (!_loadingScreen.IsActive)
+            {
+                Matrix screenScaleMatrix = Matrix.Invert(_mouseTransformMatrix);
+                _sceneManager.CurrentActiveScene?.DrawFullscreenUI(_spriteBatch, _defaultFont, gameTime, screenScaleMatrix);
+            }
 
-            // 6. Draw Custom Cursor (Inverted Blend)
+            // 4. Draw Custom Cursor
             _spriteBatch.Begin(blendState: _cursorInvertBlendState, samplerState: SamplerState.PointClamp);
             _cursorManager.Draw(_spriteBatch, Mouse.GetState().Position.ToVector2(), _finalScale);
             _spriteBatch.End();
 
-            // 7. Final Render to Backbuffer (Apply CRT Shader)
+            // 5. Final Render to Backbuffer (Apply CRT Shader)
             GraphicsDevice.SetRenderTarget(null);
             GraphicsDevice.Clear(_global.GameBg);
 
@@ -832,18 +849,21 @@ namespace ProjectVagabond
             _spriteBatch.Draw(_finalCompositeTarget, new Rectangle(drawX, drawY, targetWidth, targetHeight), Color.White);
             _spriteBatch.End();
 
-            // 8. Draw Debug Overlays (No Shader)
-            _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-            _sceneManager.DrawOverlay(_spriteBatch, _defaultFont, gameTime);
-            if (_debugConsole.IsVisible) _debugConsole.Draw(_spriteBatch, _secondaryFont, gameTime); // Use Secondary Font as default
-
-            if (_defaultFont != null)
+            // 6. Draw Debug Overlays (No Shader)
+            if (!_loadingScreen.IsActive)
             {
-                string versionText = $"v{Global.GAME_VERSION}";
-                var screenHeight = GraphicsDevice.PresentationParameters.BackBufferHeight;
-                _spriteBatch.DrawStringSnapped(_defaultFont, versionText, new Vector2(5f, screenHeight - _defaultFont.LineHeight - 5f), _global.Palette_DarkGray);
+                _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+                _sceneManager.DrawOverlay(_spriteBatch, _defaultFont, gameTime);
+                if (_debugConsole.IsVisible) _debugConsole.Draw(_spriteBatch, _secondaryFont, gameTime);
+
+                if (_defaultFont != null)
+                {
+                    string versionText = $"v{Global.GAME_VERSION}";
+                    var screenHeight = GraphicsDevice.PresentationParameters.BackBufferHeight;
+                    _spriteBatch.DrawStringSnapped(_defaultFont, versionText, new Vector2(5f, screenHeight - _defaultFont.LineHeight - 5f), _global.Palette_DarkGray);
+                }
+                _spriteBatch.End();
             }
-            _spriteBatch.End();
 
             if (_drawMouseDebugDot)
             {
