@@ -5,6 +5,7 @@ using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Dice;
+using ProjectVagabond.Particles;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
@@ -21,6 +22,7 @@ namespace ProjectVagabond.Scenes
     public class BattleScene : GameScene
     {
         private const float MULTI_HIT_DELAY = 0.25f;
+        private const float ACTION_EXECUTION_DELAY = 0.5f; // Tunable delay before attack execution
         private const float FIXED_COIN_GROUND_Y = 115f;
         private const int ENEMY_SLOT_Y_OFFSET = 16;
 
@@ -52,7 +54,11 @@ namespace ProjectVagabond.Scenes
         private readonly Queue<Action> _pendingAnimations = new Queue<Action>();
         private bool _rewardScreenShown = false;
         private readonly Random _random = new Random();
-        private bool _actionJustDeclared = false;
+
+        // Action Execution Delay State
+        private bool _isWaitingForActionExecution = false;
+        private float _actionExecutionTimer = 0f;
+
         private float _watchdogTimer = 0f;
         private const float WATCHDOG_TIMEOUT = 4.0f;
         private BattleManager.BattlePhase _lastFramePhase;
@@ -108,7 +114,8 @@ namespace ProjectVagabond.Scenes
             _multiHitDelayTimer = 0f;
             _pendingAnimations.Clear();
             _rewardScreenShown = false;
-            _actionJustDeclared = false;
+            _isWaitingForActionExecution = false;
+            _actionExecutionTimer = 0f;
             _isFadingOutOnDeath = false;
             _deathFadeTimer = 0f;
             _processedDeathAnimations.Clear();
@@ -499,10 +506,15 @@ namespace ProjectVagabond.Scenes
             _battleManager.CanAdvance = canAdvance;
             _battleManager.Update();
 
-            if (_actionJustDeclared)
+            if (_isWaitingForActionExecution)
             {
-                _actionJustDeclared = false;
-                _battleManager.ExecuteDeclaredAction();
+                _actionExecutionTimer += dt;
+                if (_actionExecutionTimer >= ACTION_EXECUTION_DELAY)
+                {
+                    _isWaitingForActionExecution = false;
+                    _actionExecutionTimer = 0f;
+                    _battleManager.ExecuteDeclaredAction();
+                }
             }
 
             var currentPhase = _battleManager.CurrentPhase;
@@ -762,7 +774,8 @@ namespace ProjectVagabond.Scenes
 
         private void OnActionDeclared(GameEvents.ActionDeclared e)
         {
-            _actionJustDeclared = true;
+            _isWaitingForActionExecution = true;
+            _actionExecutionTimer = 0f;
             _currentActor = e.Actor;
 
             if (e.Type == QueuedActionType.Switch)
@@ -782,7 +795,21 @@ namespace ProjectVagabond.Scenes
                     typeTag = "cItem";
                 }
 
-                _uiManager.ShowNarration($"{e.Actor.Name} USED\n[{typeTag}]{actionName}[/]!");
+                string message = $"{e.Actor.Name} USED\n[{typeTag}]{actionName}[/]!";
+
+                if (e.Move != null && e.Actor.IsPlayerControlled && e.Move.MoveID == e.Actor.DefaultStrikeMoveID)
+                {
+                    var partyMember = _gameState.PlayerState.Party.FirstOrDefault(p => p.Name == e.Actor.Name);
+                    if (partyMember != null && !string.IsNullOrEmpty(partyMember.EquippedWeaponId))
+                    {
+                        if (BattleDataCache.Weapons.TryGetValue(partyMember.EquippedWeaponId, out var weaponData))
+                        {
+                            message = $"{e.Actor.Name} USED\n[{typeTag}]{actionName}[/] WITH {weaponData.WeaponName.ToUpper()}!";
+                        }
+                    }
+                }
+
+                _uiManager.ShowNarration(message);
             }
         }
 

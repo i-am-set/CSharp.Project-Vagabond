@@ -56,7 +56,7 @@ namespace ProjectVagabond
             AlertColor = Color.Red;
             // Initialize Stat Colors
             StatColor_Strength = Color.Crimson;
-            StatColor_Intelligence = Color.Magenta;
+            StatColor_Intelligence = Color.MediumSpringGreen;
             StatColor_Tenacity = Color.Lime;
             StatColor_Agility = Color.Yellow;
 
