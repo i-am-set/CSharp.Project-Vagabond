@@ -156,16 +156,15 @@ namespace ProjectVagabond.Transitions
         }
     }
 
-    // --- 4. BLOCKS (Random Grid Fill) ---
+    // --- 4. BLOCKS (Random Grid Fill - Small) ---
     public class BlocksWipeTransition : ITransitionEffect
     {
         private float _timer;
-        private const float DURATION = 0.8f;
+        private const float DURATION = 0.5f;
         private bool _isOut;
         public bool IsComplete => _timer >= DURATION;
 
-        // Fixed virtual pixel size (40px on a 320px screen = 8 columns)
-        private const int BLOCK_SIZE = 40;
+        private const int BLOCK_SIZE = 10;
         private List<Point> _shuffledIndices = new List<Point>();
         private int _cols;
         private int _rows;
@@ -236,47 +235,166 @@ namespace ProjectVagabond.Transitions
                 spriteBatch.Draw(pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), global.Palette_Black);
             }
         }
+    }
 
-        // --- 5. SHUTTERS SLOW (Top/Bottom Close) ---
-        public class ShuttersTransition : ITransitionEffect
+    // --- 5. BIG BLOCKS EASE (Wave Scaling) ---
+    public class BigBlocksEaseTransition : ITransitionEffect
+    {
+        private float _timer;
+        private const float DURATION = 1.0f;
+        private bool _isOut;
+        public bool IsComplete => _timer >= DURATION;
+
+        // Uses the larger block size
+        private const int BLOCK_SIZE = 40;
+
+        public void Start(bool isTransitioningOut)
         {
-            private float _timer;
-            private const float DURATION = 0.6f;
-            private bool _isOut;
-            public bool IsComplete => _timer >= DURATION;
+            _isOut = isTransitioningOut;
+            _timer = 0f;
+        }
 
-            public void Start(bool isTransitioningOut)
+        public void Update(GameTime gameTime)
+        {
+            _timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+        }
+
+        public void Draw(SpriteBatch spriteBatch)
+        {
+            var global = ServiceLocator.Get<Global>();
+            var pixel = ServiceLocator.Get<Texture2D>();
+
+            int width = Global.VIRTUAL_WIDTH;
+            int height = Global.VIRTUAL_HEIGHT;
+
+            int cols = (int)Math.Ceiling((float)width / BLOCK_SIZE);
+            int rows = (int)Math.Ceiling((float)height / BLOCK_SIZE);
+
+            float maxDelay = 0.5f;
+            float growTime = 0.4f;
+
+            for (int y = 0; y < rows; y++)
             {
-                _isOut = isTransitioningOut;
-                _timer = 0f;
+                for (int x = 0; x < cols; x++)
+                {
+                    // Calculate delay based on diagonal position (Top-Left to Bottom-Right wave)
+                    float delay = ((float)(x + y) / (cols + rows)) * maxDelay;
+                    float localTime = _timer - delay;
+                    float progress = Math.Clamp(localTime / growTime, 0f, 1f);
+
+                    // Easing function for smooth pop
+                    float eased = Easing.EaseOutCubic(progress);
+                    float scale = _isOut ? eased : 1.0f - eased;
+
+                    if (scale > 0.01f)
+                    {
+                        // Calculate exact pixel size for the block
+                        // We add a small buffer (1.1f) at full scale to ensure they overlap slightly and seal gaps
+                        float finalScale = scale * 1.05f;
+                        int size = (int)(BLOCK_SIZE * finalScale);
+
+                        // Calculate center of the grid cell
+                        int centerX = x * BLOCK_SIZE + BLOCK_SIZE / 2;
+                        int centerY = y * BLOCK_SIZE + BLOCK_SIZE / 2;
+
+                        // Draw rectangle centered on the grid cell
+                        Rectangle rect = new Rectangle(
+                            centerX - size / 2,
+                            centerY - size / 2,
+                            size,
+                            size
+                        );
+
+                        spriteBatch.Draw(pixel, rect, global.Palette_Black);
+                    }
+                }
             }
 
-            public void Update(GameTime gameTime)
+            // Ensure full coverage at end of Out transition
+            if (_isOut && _timer > DURATION * 0.95f)
             {
-                _timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                spriteBatch.Draw(pixel, new Rectangle(0, 0, width, height), global.Palette_Black);
+            }
+        }
+    }
+
+    // --- 4. BLOCKS (Random Grid Fill - Small) ---
+    public class PixelWipeTransition : ITransitionEffect
+    {
+        private float _timer;
+        private const float DURATION = 1.0f;
+        private bool _isOut;
+        public bool IsComplete => _timer >= DURATION;
+
+        private const int BLOCK_SIZE = 1;
+        private List<Point> _shuffledIndices = new List<Point>();
+        private int _cols;
+        private int _rows;
+
+        public void Start(bool isTransitioningOut)
+        {
+            _isOut = isTransitioningOut;
+            _timer = 0f;
+
+            _cols = (int)Math.Ceiling((float)Global.VIRTUAL_WIDTH / BLOCK_SIZE);
+            _rows = (int)Math.Ceiling((float)Global.VIRTUAL_HEIGHT / BLOCK_SIZE);
+
+            _shuffledIndices.Clear();
+            for (int y = 0; y < _rows; y++)
+            {
+                for (int x = 0; x < _cols; x++)
+                {
+                    _shuffledIndices.Add(new Point(x, y));
+                }
             }
 
-            public void Draw(SpriteBatch spriteBatch)
+            var rng = new Random();
+            int n = _shuffledIndices.Count;
+            while (n > 1)
             {
-                var global = ServiceLocator.Get<Global>();
+                n--;
+                int k = rng.Next(n + 1);
+                var value = _shuffledIndices[k];
+                _shuffledIndices[k] = _shuffledIndices[n];
+                _shuffledIndices[n] = value;
+            }
+        }
 
-                // Use Virtual Resolution
-                int width = Global.VIRTUAL_WIDTH;
-                int height = Global.VIRTUAL_HEIGHT;
+        public void Update(GameTime gameTime)
+        {
+            _timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+        }
 
-                float progress = Math.Clamp(_timer / DURATION, 0f, 1f);
-                float eased = _isOut ? Easing.EaseInOutExpo(progress) : Easing.EaseInQuad(1.0f - progress);
+        public void Draw(SpriteBatch spriteBatch)
+        {
+            var global = ServiceLocator.Get<Global>();
+            var pixel = ServiceLocator.Get<Texture2D>();
 
-                int halfHeight = height / 2;
-                int currentHeight = (int)(halfHeight * eased) + (_isOut && progress >= 0.9f ? 2 : 0);
+            float progress = Math.Clamp(_timer / DURATION, 0f, 1f);
+            int totalBlocks = _shuffledIndices.Count;
 
-                var pixel = ServiceLocator.Get<Texture2D>();
+            int blocksToDraw = _isOut
+                ? (int)(totalBlocks * progress)
+                : (int)(totalBlocks * (1.0f - progress));
 
-                // Top Shutter
-                spriteBatch.Draw(pixel, new Rectangle(0, 0, width, currentHeight), global.Palette_Black);
+            for (int i = 0; i < blocksToDraw; i++)
+            {
+                if (i >= _shuffledIndices.Count) break;
 
-                // Bottom Shutter
-                spriteBatch.Draw(pixel, new Rectangle(0, height - currentHeight, width, currentHeight), global.Palette_Black);
+                Point index = _shuffledIndices[i];
+                Rectangle rect = new Rectangle(
+                    index.X * BLOCK_SIZE,
+                    index.Y * BLOCK_SIZE,
+                    BLOCK_SIZE,
+                    BLOCK_SIZE
+                );
+
+                spriteBatch.Draw(pixel, rect, global.Palette_Black);
+            }
+
+            if (_isOut && progress >= 0.95f)
+            {
+                spriteBatch.Draw(pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), global.Palette_Black);
             }
         }
     }

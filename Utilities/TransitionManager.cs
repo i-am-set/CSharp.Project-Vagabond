@@ -33,7 +33,9 @@ namespace ProjectVagabond
                 { TransitionType.Fade, new FadeTransition() },
                 { TransitionType.Shutters, new ShuttersTransition() },
                 { TransitionType.Diamonds, new DiamondWipeTransition() },
-                { TransitionType.Blocks, new BlocksWipeTransition() }
+                { TransitionType.Blocks, new BlocksWipeTransition() },
+                { TransitionType.BigBlocksEase, new BigBlocksEaseTransition() },
+                { TransitionType.Pixels, new PixelWipeTransition()   }
             };
         }
 
@@ -110,10 +112,12 @@ namespace ProjectVagabond
 
         public TransitionType GetRandomCombatTransition()
         {
-            int roll = _random.Next(3);
+            int roll = _random.Next(4);
             if (roll == 0) return TransitionType.Diamonds;
             if (roll == 1) return TransitionType.Shutters;
-            return TransitionType.Blocks;
+            if (roll == 2) return TransitionType.Blocks;
+            if (roll == 2) return TransitionType.Pixels;
+            return TransitionType.BigBlocksEase;
         }
 
         public void Update(GameTime gameTime)

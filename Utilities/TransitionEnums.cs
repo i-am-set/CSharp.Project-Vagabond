@@ -6,7 +6,9 @@
         Fade,
         Shutters,
         Diamonds,
-        Blocks    // Random Grid Fill
+        Blocks,
+        BigBlocksEase,
+        Pixels
     }
 
     public enum TransitionState
