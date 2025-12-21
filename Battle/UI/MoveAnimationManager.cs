@@ -78,10 +78,6 @@ namespace ProjectVagabond.Battle.UI
             {
                 foreach (var target in targets)
                 {
-                    if (target.IsDefeated) continue;
-
-                    // FIX: Always ask the renderer for the specific target's position.
-                    // This ensures animations play over the correct slot (0 or 1).
                     var position = renderer.GetCombatantVisualCenterPosition(target, ServiceLocator.Get<BattleManager>().AllCombatants);
 
                     var instance = new MoveAnimationInstance(animationData, position, move.AnimationSpeed);
@@ -122,4 +118,3 @@ namespace ProjectVagabond.Battle.UI
         }
     }
 }
-#nullable restore

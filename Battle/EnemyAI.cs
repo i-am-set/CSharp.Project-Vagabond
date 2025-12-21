@@ -32,13 +32,12 @@ namespace ProjectVagabond.Battle
         private const int PENALTY_IMMUNE = -20;
         private const int PENALTY_RESISTED = -5;
         private const int PENALTY_REDUNDANT = -10; // e.g. Paralyzing a paralyzed target
+        private const int PENALTY_HARMFUL_TO_ALLY = -100; // Strict prohibition against hurting teammates
 
-        // Team Synergy & Friendly Fire Logic
+        // Team Synergy
         private const int SCORE_HEAL_ALLY = 8;
         private const int SCORE_BUFF_ALLY = 7;
-        private const int PENALTY_DAMAGE_ALLY_MINOR = -5;  // Acceptable collateral damage if necessary
-        private const int PENALTY_DAMAGE_ALLY_MAJOR = -15; // Avoid heavy damage to teammates
-        private const int PENALTY_KILL_ALLY = -50;         // Absolute priority to avoid killing teammates
+        private const int SCORE_DEBUFF_ENEMY = 2;
 
         public static QueuedAction DetermineBestAction(BattleCombatant actor, List<BattleCombatant> allCombatants)
         {
@@ -130,8 +129,6 @@ namespace ProjectVagabond.Battle
 
             // --- Decision Variance ---
             // Applies a small RNG bonus to the base score of the move 20% of the time.
-            // This causes the AI to occasionally prefer a slightly sub-optimal move (like a status effect)
-            // over raw damage if the scores are close.
             int rngBonus = (_random.NextDouble() < 0.2) ? RNG_BONUS : 0;
 
             foreach (var target in targets)
@@ -147,101 +144,138 @@ namespace ProjectVagabond.Battle
                     var result = DamageCalculator.CalculateDamage(dummyAction, target, move);
                     int predictedDamage = result.DamageAmount;
 
-                    // Check Immunities
-                    if (result.Effectiveness == DamageCalculator.ElementalEffectiveness.Immune)
+                    if (isTargetAlly)
                     {
-                        targetScore += PENALTY_IMMUNE;
+                        // STRICT: Never attack allies
+                        targetScore += PENALTY_HARMFUL_TO_ALLY;
                     }
                     else if (isTargetEnemy)
                     {
-                        bool isKill = predictedDamage >= target.Stats.CurrentHP;
-                        bool isFaster = IsFaster(actor, target);
-
-                        // Check if this is the highest damaging move available against this target
-                        bool isHighestDamage = predictedDamage >= bestDamagePerTarget.GetValueOrDefault(target.CombatantID, 0);
-
-                        if (isKill)
+                        // Check Immunities
+                        if (result.Effectiveness == DamageCalculator.ElementalEffectiveness.Immune)
                         {
-                            // Prioritize kills where the actor moves first to prevent retaliation.
-                            if (isFaster || move.Priority > 0)
-                                targetScore = SCORE_FAST_KILL + rngBonus;
-                            else
-                                targetScore = SCORE_SLOW_KILL + rngBonus;
-                        }
-                        else if (isHighestDamage)
-                        {
-                            // If we can't kill, prioritize the move that deals the most damage.
-                            targetScore = SCORE_HIGHEST_DAMAGE + rngBonus;
+                            targetScore += PENALTY_IMMUNE;
                         }
                         else
                         {
-                            // Sub-optimal damage move (usually utility attacks).
-                            // Score remains at base unless modified by utility logic below.
-                        }
+                            bool isKill = predictedDamage >= target.Stats.CurrentHP;
+                            bool isFaster = IsFaster(actor, target);
 
-                        // Penalty for resisted moves if they aren't the best option available.
-                        if (result.Effectiveness == DamageCalculator.ElementalEffectiveness.Resisted && !isHighestDamage)
-                        {
-                            targetScore += PENALTY_RESISTED;
-                        }
-                    }
-                    else if (isTargetAlly)
-                    {
-                        // Friendly Fire Logic
-                        if (predictedDamage >= target.Stats.CurrentHP)
-                        {
-                            targetScore += PENALTY_KILL_ALLY; // Avoid killing teammate at all costs
-                        }
-                        else if (predictedDamage > target.Stats.MaxHP * 0.2f)
-                        {
-                            targetScore += PENALTY_DAMAGE_ALLY_MAJOR; // Avoid heavy damage
-                        }
-                        else
-                        {
-                            targetScore += PENALTY_DAMAGE_ALLY_MINOR; // Chip damage might be acceptable if side effect is good
+                            // Check if this is the highest damaging move available against this target
+                            bool isHighestDamage = predictedDamage >= bestDamagePerTarget.GetValueOrDefault(target.CombatantID, 0);
+
+                            if (isKill)
+                            {
+                                // Prioritize kills where the actor moves first to prevent retaliation.
+                                if (isFaster || move.Priority > 0)
+                                    targetScore = SCORE_FAST_KILL + rngBonus;
+                                else
+                                    targetScore = SCORE_SLOW_KILL + rngBonus;
+                            }
+                            else if (isHighestDamage)
+                            {
+                                // If we can't kill, prioritize the move that deals the most damage.
+                                targetScore = SCORE_HIGHEST_DAMAGE + rngBonus;
+                            }
+
+                            // Penalty for resisted moves if they aren't the best option available.
+                            if (result.Effectiveness == DamageCalculator.ElementalEffectiveness.Resisted && !isHighestDamage)
+                            {
+                                targetScore += PENALTY_RESISTED;
+                            }
                         }
                     }
                 }
 
-                // --- 2. STATUS & STAT EVALUATION ---
-                // Status moves start at the base score. We apply penalties if the move is redundant.
+                // --- 2. STAT STAGE MODIFIERS (Buffs/Debuffs) ---
+                if (move.Effects.TryGetValue("ModifyStatStage", out var statVal))
+                {
+                    if (EffectParser.TryParseStatStageParams(statVal, out var stat, out int amount, out int chance, out string targetStr))
+                    {
+                        bool isDebuff = amount < 0;
 
+                        if (isTargetAlly)
+                        {
+                            if (isDebuff)
+                            {
+                                targetScore += PENALTY_HARMFUL_TO_ALLY; // Never debuff ally
+                            }
+                            else
+                            {
+                                // Buffing ally is good
+                                targetScore += SCORE_BUFF_ALLY;
+                            }
+                        }
+                        else if (isTargetEnemy)
+                        {
+                            if (isDebuff)
+                            {
+                                // Debuffing enemy is good
+                                // Check redundancy: If stat is already min (-6), it's redundant.
+                                if (target.StatStages[stat] <= -6) targetScore += PENALTY_REDUNDANT;
+                                else targetScore += SCORE_DEBUFF_ENEMY;
+                            }
+                            else
+                            {
+                                // Buffing enemy is bad
+                                targetScore += PENALTY_HARMFUL_TO_ALLY; // Treat helping enemy as bad as hurting ally
+                            }
+                        }
+                    }
+                }
+
+                // --- 3. STATUS EFFECTS ---
                 if (move.Effects.TryGetValue("ApplyStatus", out var statusVal))
                 {
                     if (EffectParser.TryParseStatusEffectParams(statusVal, out var type, out int chance, out int duration))
                     {
-                        bool isBuff = type == StatusEffectType.Regen || type == StatusEffectType.Dodging;
+                        bool isBuff = IsBuff(type);
 
-                        if (isTargetEnemy && !isBuff)
+                        if (isTargetAlly)
                         {
-                            // Don't try to apply a status the target already has.
-                            if (target.HasStatusEffect(type)) targetScore += PENALTY_REDUNDANT;
+                            if (!isBuff)
+                            {
+                                targetScore += PENALTY_HARMFUL_TO_ALLY; // Never apply negative status to ally
+                            }
+                            else
+                            {
+                                // Incentivize buffing allies.
+                                if (target.HasStatusEffect(type)) targetScore += PENALTY_REDUNDANT;
+                                else targetScore += SCORE_BUFF_ALLY;
+                            }
                         }
-                        else if (isTargetAlly && isBuff)
+                        else if (isTargetEnemy)
                         {
-                            // Incentivize buffing allies.
-                            if (target.HasStatusEffect(type)) targetScore += PENALTY_REDUNDANT;
-                            else targetScore += 2;
+                            if (isBuff)
+                            {
+                                targetScore += PENALTY_HARMFUL_TO_ALLY; // Never buff enemy
+                            }
+                            else
+                            {
+                                // Don't try to apply a status the target already has.
+                                if (target.HasStatusEffect(type)) targetScore += PENALTY_REDUNDANT;
+                                else targetScore += SCORE_DEBUFF_ENEMY;
+                            }
                         }
                     }
                 }
 
-                // --- 3. HEALING LOGIC ---
+                // --- 4. HEALING LOGIC ---
                 if (move.Effects.ContainsKey("Heal"))
                 {
                     if (isTargetAlly)
                     {
                         float hpPercent = (float)target.Stats.CurrentHP / target.Stats.MaxHP;
                         if (hpPercent > 0.85f) targetScore += PENALTY_REDUNDANT; // Don't heal if healthy
-                        else if (hpPercent < 0.5f) targetScore += 3; // Prioritize low HP
+                        else if (hpPercent < 0.5f) targetScore += SCORE_HEAL_ALLY; // Prioritize low HP
                     }
                     else if (isTargetEnemy)
                     {
-                        targetScore += PENALTY_REDUNDANT; // Don't heal enemies
+                        targetScore += PENALTY_HARMFUL_TO_ALLY; // Don't heal enemies (Treat as harmful to self)
                     }
                 }
 
-                // --- 4. SPECIFIC MOVE LOGIC ---
+                // --- 5. SPECIFIC MOVE LOGIC ---
                 // Apply custom logic for complex moves that don't fit standard categories.
                 targetScore += GetMoveSpecificModifier(move, actor, target, enemies, allies);
 
@@ -264,7 +298,6 @@ namespace ProjectVagabond.Battle
             {
                 case "Counter Spell":
                     // Logic: If used last turn, apply penalty to prevent spamming predictable priority.
-                    // Implementation requires tracking last move history in BattleCombatant.
                     break;
 
                 case "Taze":
@@ -307,6 +340,11 @@ namespace ProjectVagabond.Battle
         {
             return type == TargetType.All || type == TargetType.Both || type == TargetType.Every ||
                    type == TargetType.RandomAll || type == TargetType.RandomBoth || type == TargetType.RandomEvery;
+        }
+
+        private static bool IsBuff(StatusEffectType type)
+        {
+            return type == StatusEffectType.Regen || type == StatusEffectType.Dodging;
         }
 
         private static QueuedAction CreateAction(BattleCombatant actor, MoveData move, BattleCombatant target)
