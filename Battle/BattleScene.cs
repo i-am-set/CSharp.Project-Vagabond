@@ -43,7 +43,7 @@ namespace ProjectVagabond.Scenes
         private GameState _gameState;
         private readonly Global _global;
         private HitstopManager _hitstopManager;
-        private ParticleSystemManager _particleSystemManager; // NEW
+        private ParticleSystemManager _particleSystemManager;
 
         private List<int> _enemyEntityIds = new List<int>();
         private BattleManager.BattlePhase _previousBattlePhase;
@@ -83,7 +83,7 @@ namespace ProjectVagabond.Scenes
             _gameState = ServiceLocator.Get<GameState>();
             _global = ServiceLocator.Get<Global>();
             _hitstopManager = ServiceLocator.Get<HitstopManager>();
-            _particleSystemManager = ServiceLocator.Get<ParticleSystemManager>(); // NEW
+            _particleSystemManager = ServiceLocator.Get<ParticleSystemManager>();
         }
 
         public override Rectangle GetAnimatedBounds()
@@ -860,7 +860,7 @@ namespace ProjectVagabond.Scenes
                 {
                     // --- DYNAMIC JUICE CALCULATION ---
                     float damageRatio = Math.Clamp((float)result.DamageAmount / target.Stats.MaxHP, 0f, 1f);
-                    
+
                     // Base scalar: 3.0 means 100% damage = 3x juice. 10% damage = 1.3x juice.
                     const float BASE_JUICE_SCALAR = 3.0f;
                     float juiceIntensity = 1.0f + (damageRatio * BASE_JUICE_SCALAR);
@@ -875,9 +875,20 @@ namespace ProjectVagabond.Scenes
                     {
                         float baseFreeze = result.WasCritical ? _global.HitstopDuration_Crit : _global.HitstopDuration_Normal;
                         _hitstopManager.Trigger(baseFreeze * juiceIntensity);
-                        
+
                         // Trigger Visual Pop (Flash/Scale)
                         _animationManager.StartHitstopVisuals(target.CombatantID, result.WasCritical);
+
+                        // NEW: Screen Flash for EVERY hit (White for enemies, Red for players)
+                        if (target.IsPlayerControlled)
+                        {
+                            _core.TriggerScreenFlashSequence(_global.Palette_Red);
+                        }
+                        else
+                        {
+                            // Use CRT shader flash for enemies too
+                            _core.TriggerFullscreenFlash(Color.White, 0.15f * juiceIntensity);
+                        }
                     }
 
                     // Directional Shake & Recoil
@@ -903,11 +914,6 @@ namespace ProjectVagabond.Scenes
                     ring.Position = targetPos;
                     ring.EmitBurst(1);
 
-                    if (target.IsPlayerControlled)
-                    {
-                        _core.TriggerScreenFlashSequence(_global.Palette_Red);
-                    }
-                    
                     _animationManager.StartHealthLossAnimation(target.CombatantID, target.VisualHP, target.Stats.CurrentHP);
                     _animationManager.StartHealthAnimation(target.CombatantID, (int)target.VisualHP, target.Stats.CurrentHP);
 
@@ -923,7 +929,7 @@ namespace ProjectVagabond.Scenes
                     }
                     else
                     {
-                        if (!target.IsPlayerControlled) _animationManager.StartHitFlashAnimation(target.CombatantID);
+                        // Removed StartHitFlashAnimation as we now use screen flash + recoil
                     }
 
                     int baselineDamage = DamageCalculator.CalculateBaselineDamage(e.Actor, target, e.ChosenMove);

@@ -19,7 +19,7 @@ namespace ProjectVagabond.Particles
             // Scale particle count and size based on intensity
             int baseCount = 12;
             int scaledCount = (int)(baseCount * intensity);
-            
+
             // Emitter
             settings.Shape = EmitterShape.Circle;
             settings.EmitFrom = EmissionSource.Volume;
@@ -32,12 +32,12 @@ namespace ProjectVagabond.Particles
             // Initial Particle
             settings.VelocityPattern = EmissionPattern.Radial;
             settings.Lifetime = new FloatRange(0.15f, 0.3f + (0.1f * intensity));
-            
+
             // Velocity scales with intensity to make debris fly further
-            float speedScale = 1.0f + (intensity * 0.5f); 
-            settings.InitialVelocityX = new FloatRange(150f * speedScale, 300f * speedScale); 
+            float speedScale = 1.0f + (intensity * 0.5f);
+            settings.InitialVelocityX = new FloatRange(150f * speedScale, 300f * speedScale);
             settings.InitialVelocityY = new FloatRange(0f);
-            
+
             settings.InitialSize = new FloatRange(2f * intensity, 4f * intensity);
             settings.EndSize = new FloatRange(0f);
             settings.InterpolateSize = true;
@@ -45,7 +45,7 @@ namespace ProjectVagabond.Particles
 
             // Over Lifetime
             settings.Gravity = new Vector2(0, 200f * intensity); // Heavier sparks fall faster
-            settings.Drag = 3.0f; 
+            settings.Drag = 3.0f;
             settings.StartColor = global.Palette_BrightWhite;
             settings.EndColor = global.Palette_Yellow;
             settings.StartAlpha = 1.0f;
@@ -72,14 +72,18 @@ namespace ProjectVagabond.Particles
             settings.EmissionRate = 0;
             settings.BurstCount = 1;
             settings.MaxParticles = 1;
-            settings.Duration = 0.2f + (0.1f * intensity);
+            settings.Duration = 0.1f + (0.1f * intensity);
 
             // Initial Particle
-            settings.Lifetime = new FloatRange(0.2f + (0.05f * intensity));
+            settings.Lifetime = new FloatRange(0.1f + (0.05f * intensity));
             settings.InitialVelocityX = new FloatRange(0f);
             settings.InitialVelocityY = new FloatRange(0f);
-            settings.InitialSize = new FloatRange(10f * intensity);
-            settings.EndSize = new FloatRange(60f * intensity); // Expands much larger on big hits
+
+            // The ring texture is 64x64.
+            // Scale 0.1 = 6.4px
+            // Scale 1.5 = 96px
+            settings.InitialSize = new FloatRange(0.1f * intensity);
+            settings.EndSize = new FloatRange(1.5f * intensity);
             settings.InterpolateSize = true;
 
             // Over Lifetime
@@ -89,14 +93,14 @@ namespace ProjectVagabond.Particles
             settings.EndAlpha = 0.0f;
 
             // Rendering
-            settings.Texture = ServiceLocator.Get<SpriteManager>().CircleTextureSprite; 
+            // Use the new hollow ring texture
+            settings.Texture = ServiceLocator.Get<SpriteManager>().RingTextureSprite;
             settings.BlendMode = BlendState.Additive;
             settings.LayerDepth = 0.94f;
 
             return settings;
         }
 
-        // ... (Keep existing methods like CreateDirtSpray, CreateUIFire, etc. unchanged) ...
         public static ParticleEmitterSettings CreateDirtSpray()
         {
             var settings = ParticleEmitterSettings.CreateDefault();
@@ -104,23 +108,23 @@ namespace ProjectVagabond.Particles
             settings.Shape = EmitterShape.Circle;
             settings.EmitFrom = EmissionSource.Volume;
             settings.EmitterSize = new Vector2(Global.GRID_CELL_SIZE / 2f, Global.GRID_CELL_SIZE / 2f);
-            settings.EmissionRate = 0; 
-            settings.MaxParticles = 100; 
-            settings.Duration = 0.5f; 
+            settings.EmissionRate = 0;
+            settings.MaxParticles = 100;
+            settings.Duration = 0.5f;
             settings.Lifetime = new FloatRange(0.1f, 0.4f);
-            settings.InitialVelocityX = new FloatRange(0f, 2f); 
-            settings.InitialVelocityY = new FloatRange(0f); 
+            settings.InitialVelocityX = new FloatRange(0f, 2f);
+            settings.InitialVelocityY = new FloatRange(0f);
             settings.InitialSize = new FloatRange(1f, 2f);
             settings.InitialRotation = new FloatRange(0, MathHelper.TwoPi);
             settings.InitialRotationSpeed = new FloatRange(-2f, 2f);
-            settings.Gravity = new Vector2(0, 10f); 
-            settings.Drag = 1.5f; 
+            settings.Gravity = new Vector2(0, 10f);
+            settings.Drag = 1.5f;
             settings.StartColor = global.Palette_Red;
-            settings.EndColor = new Color(100, 30, 25); 
-            settings.StartAlpha = 0.9f; 
-            settings.EndAlpha = 0.0f; 
+            settings.EndColor = new Color(100, 30, 25);
+            settings.StartAlpha = 0.9f;
+            settings.EndAlpha = 0.0f;
             settings.AlphaFadeInAndOut = true;
-            settings.Texture = ServiceLocator.Get<Texture2D>(); 
+            settings.Texture = ServiceLocator.Get<Texture2D>();
             settings.BlendMode = BlendState.AlphaBlend;
             return settings;
         }
@@ -130,27 +134,27 @@ namespace ProjectVagabond.Particles
             var settings = ParticleEmitterSettings.CreateDefault();
             var global = ServiceLocator.Get<Global>();
             settings.Shape = EmitterShape.Point;
-            settings.EmissionRate = 0; 
+            settings.EmissionRate = 0;
             settings.BurstCount = 20;
             settings.MaxParticles = 20;
-            settings.Duration = 0.3f; 
+            settings.Duration = 0.3f;
             settings.VelocityPattern = EmissionPattern.Radial;
-            settings.Lifetime = new FloatRange(0.1f, 0.25f); 
-            settings.InitialVelocityX = new FloatRange(250f, 400f); 
-            settings.InitialVelocityY = new FloatRange(0f); 
-            settings.InitialSize = new FloatRange(1f, 2f); 
+            settings.Lifetime = new FloatRange(0.1f, 0.25f);
+            settings.InitialVelocityX = new FloatRange(250f, 400f);
+            settings.InitialVelocityY = new FloatRange(0f);
+            settings.InitialSize = new FloatRange(1f, 2f);
             settings.InitialRotation = new FloatRange(0f);
             settings.InitialRotationSpeed = new FloatRange(0f);
-            settings.Gravity = new Vector2(0, 50f); 
-            settings.Drag = 2.5f; 
-            settings.StartColor = Color.White; 
-            settings.EndColor = global.Palette_LightYellow; 
-            settings.StartAlpha = 1.0f; 
+            settings.Gravity = new Vector2(0, 50f);
+            settings.Drag = 2.5f;
+            settings.StartColor = Color.White;
+            settings.EndColor = global.Palette_LightYellow;
+            settings.StartAlpha = 1.0f;
             settings.EndAlpha = 0.5f;
             settings.AlphaFadeInAndOut = false;
-            settings.Texture = ServiceLocator.Get<Texture2D>(); 
-            settings.BlendMode = BlendState.Additive; 
-            settings.LayerDepth = 0.9f; 
+            settings.Texture = ServiceLocator.Get<Texture2D>();
+            settings.BlendMode = BlendState.Additive;
+            settings.LayerDepth = 0.9f;
             return settings;
         }
 
@@ -161,26 +165,26 @@ namespace ProjectVagabond.Particles
             settings.Shape = EmitterShape.Circle;
             settings.EmitFrom = EmissionSource.Volume;
             settings.EmitterSize = new Vector2(40f, 40f);
-            settings.EmissionRate = 0; 
+            settings.EmissionRate = 0;
             settings.BurstCount = 25;
             settings.MaxParticles = 25;
-            settings.Duration = 1.1f; 
+            settings.Duration = 1.1f;
             settings.VelocityPattern = EmissionPattern.Radial;
             settings.Lifetime = new FloatRange(0.5f, 1.0f);
-            settings.InitialVelocityX = new FloatRange(0f, 50f); 
-            settings.InitialVelocityY = new FloatRange(0f); 
+            settings.InitialVelocityX = new FloatRange(0f, 50f);
+            settings.InitialVelocityY = new FloatRange(0f);
             settings.InitialSize = new FloatRange(0.1f, 2f);
             settings.EndSize = new FloatRange(5f, 8f);
             settings.InterpolateSize = true;
             settings.InitialRotation = new FloatRange(0, MathHelper.TwoPi);
             settings.InitialRotationSpeed = new FloatRange(-MathHelper.Pi, MathHelper.Pi);
-            settings.Gravity = Vector2.Zero; 
-            settings.Drag = 2f; 
+            settings.Gravity = Vector2.Zero;
+            settings.Drag = 2f;
             settings.StartColor = Color.White;
             settings.EndColor = Color.White;
             settings.StartAlpha = 0.35f;
             settings.EndAlpha = 0.0f;
-            settings.Texture = ServiceLocator.Get<Texture2D>(); 
+            settings.Texture = ServiceLocator.Get<Texture2D>();
             settings.BlendMode = BlendState.AlphaBlend;
             settings.LayerDepth = 0.8f;
             return settings;
@@ -192,27 +196,27 @@ namespace ProjectVagabond.Particles
             var global = ServiceLocator.Get<Global>();
             settings.Shape = EmitterShape.Circle;
             settings.EmitFrom = EmissionSource.Volume;
-            settings.EmitterSize = new Vector2(8f, 8f); 
-            settings.EmissionRate = 150f; 
+            settings.EmitterSize = new Vector2(8f, 8f);
+            settings.EmissionRate = 150f;
             settings.MaxParticles = 100;
-            settings.Duration = 0.7f; 
+            settings.Duration = 0.7f;
             settings.Lifetime = new FloatRange(0.3f, 0.6f);
-            settings.InitialVelocityX = new FloatRange(-15f, 15f); 
-            settings.InitialVelocityY = new FloatRange(-50f, -30f); 
+            settings.InitialVelocityX = new FloatRange(-15f, 15f);
+            settings.InitialVelocityY = new FloatRange(-50f, -30f);
             settings.InitialSize = new FloatRange(1f, 2.5f);
             settings.EndSize = new FloatRange(0f);
             settings.InterpolateSize = true;
             settings.InitialRotation = new FloatRange(0f);
             settings.InitialRotationSpeed = new FloatRange(0f);
-            settings.Gravity = new Vector2(0, 10f); 
+            settings.Gravity = new Vector2(0, 10f);
             settings.Drag = 1.0f;
             settings.StartColor = global.Palette_Orange;
-            settings.EndColor = global.Palette_Orange; 
+            settings.EndColor = global.Palette_Orange;
             settings.StartAlpha = 0.8f;
             settings.EndAlpha = 0.0f;
-            settings.Texture = ServiceLocator.Get<Texture2D>(); 
-            settings.BlendMode = BlendState.Additive; 
-            settings.LayerDepth = 0.3f; 
+            settings.Texture = ServiceLocator.Get<Texture2D>();
+            settings.BlendMode = BlendState.Additive;
+            settings.LayerDepth = 0.3f;
             return settings;
         }
 
@@ -221,24 +225,24 @@ namespace ProjectVagabond.Particles
             var settings = ParticleEmitterSettings.CreateDefault();
             var global = ServiceLocator.Get<Global>();
             settings.Shape = EmitterShape.Point;
-            settings.EmissionRate = 0; 
+            settings.EmissionRate = 0;
             settings.BurstCount = 50;
             settings.MaxParticles = 50;
-            settings.Duration = 0.5f; 
+            settings.Duration = 0.5f;
             settings.VelocityPattern = EmissionPattern.Radial;
             settings.Lifetime = new FloatRange(0.2f, 0.4f);
-            settings.InitialVelocityX = new FloatRange(150f, 300f); 
-            settings.InitialVelocityY = new FloatRange(0f); 
+            settings.InitialVelocityX = new FloatRange(150f, 300f);
+            settings.InitialVelocityY = new FloatRange(0f);
             settings.InitialSize = new FloatRange(1f, 2f);
             settings.InitialRotation = new FloatRange(0f);
             settings.InitialRotationSpeed = new FloatRange(0f);
             settings.Gravity = Vector2.Zero;
-            settings.Drag = 4f; 
+            settings.Drag = 4f;
             settings.StartColor = global.Palette_BrightWhite;
             settings.EndColor = global.Palette_Teal;
             settings.StartAlpha = 1.0f;
             settings.EndAlpha = 0.0f;
-            settings.Texture = ServiceLocator.Get<Texture2D>(); 
+            settings.Texture = ServiceLocator.Get<Texture2D>();
             settings.BlendMode = BlendState.Additive;
             settings.LayerDepth = 0.9f;
             return settings;
@@ -268,12 +272,12 @@ namespace ProjectVagabond.Particles
             redBase.VectorFieldInfluence = 0.8f;
             redBase.Texture = spriteManager.EmberParticleSprite;
             redBase.BlendMode = BlendState.Additive;
-            redBase.LayerDepth = 0.3f; 
+            redBase.LayerDepth = 0.3f;
             redBase.SpriteSheetColumns = 6;
             redBase.SpriteSheetRows = 1;
             redBase.SpriteSheetTotalFrames = 6;
-            redBase.StartColor = new Color(255, 50, 0); 
-            redBase.EndColor = new Color(20, 0, 0, 100); 
+            redBase.StartColor = new Color(255, 50, 0);
+            redBase.EndColor = new Color(20, 0, 0, 100);
             layers.Add(redBase);
             var orangeBody = ParticleEmitterSettings.CreateDefault();
             orangeBody.Shape = EmitterShape.Circle;
@@ -294,12 +298,12 @@ namespace ProjectVagabond.Particles
             orangeBody.VectorFieldInfluence = 0.8f;
             orangeBody.Texture = spriteManager.EmberParticleSprite;
             orangeBody.BlendMode = BlendState.Additive;
-            orangeBody.LayerDepth = 0.4f; 
+            orangeBody.LayerDepth = 0.4f;
             orangeBody.SpriteSheetColumns = 6;
             orangeBody.SpriteSheetRows = 1;
             orangeBody.SpriteSheetTotalFrames = 6;
-            orangeBody.StartColor = new Color(255, 120, 0); 
-            orangeBody.EndColor = new Color(200, 20, 0); 
+            orangeBody.StartColor = new Color(255, 120, 0);
+            orangeBody.EndColor = new Color(200, 20, 0);
             layers.Add(orangeBody);
             var yellowCore = ParticleEmitterSettings.CreateDefault();
             yellowCore.Shape = EmitterShape.Circle;
@@ -320,12 +324,12 @@ namespace ProjectVagabond.Particles
             yellowCore.VectorFieldInfluence = 0.8f;
             yellowCore.Texture = spriteManager.EmberParticleSprite;
             yellowCore.BlendMode = BlendState.Additive;
-            yellowCore.LayerDepth = 0.5f; 
+            yellowCore.LayerDepth = 0.5f;
             yellowCore.SpriteSheetColumns = 6;
             yellowCore.SpriteSheetRows = 1;
             yellowCore.SpriteSheetTotalFrames = 6;
-            yellowCore.StartColor = new Color(255, 255, 150); 
-            yellowCore.EndColor = new Color(255, 150, 0); 
+            yellowCore.StartColor = new Color(255, 255, 150);
+            yellowCore.EndColor = new Color(255, 150, 0);
             layers.Add(yellowCore);
             return layers;
         }
@@ -337,11 +341,11 @@ namespace ProjectVagabond.Particles
             settings.Shape = EmitterShape.Point;
             settings.EmissionRate = 200;
             settings.MaxParticles = 200;
-            settings.Duration = 1.5f; 
+            settings.Duration = 1.5f;
             settings.VelocityPattern = EmissionPattern.Radial;
             settings.Lifetime = new FloatRange(0.8f, 1.2f);
-            settings.InitialVelocityX = new FloatRange(80f); 
-            settings.InitialVelocityY = new FloatRange(0f); 
+            settings.InitialVelocityX = new FloatRange(80f);
+            settings.InitialVelocityY = new FloatRange(0f);
             settings.InitialSize = new FloatRange(1f, 2f);
             settings.EndSize = new FloatRange(0f);
             settings.InterpolateSize = true;
@@ -351,7 +355,7 @@ namespace ProjectVagabond.Particles
             settings.EndColor = global.Palette_Teal;
             settings.StartAlpha = 1.0f;
             settings.EndAlpha = 0.0f;
-            settings.VectorFieldInfluence = 1.0f; 
+            settings.VectorFieldInfluence = 1.0f;
             settings.Texture = ServiceLocator.Get<SpriteManager>().SoftParticleSprite;
             settings.BlendMode = BlendState.Additive;
             settings.LayerDepth = 0.7f;
@@ -369,19 +373,19 @@ namespace ProjectVagabond.Particles
             settings.Duration = 1.2f;
             settings.VelocityPattern = EmissionPattern.Radial;
             settings.Lifetime = new FloatRange(0.6f, 1.0f);
-            settings.InitialVelocityX = new FloatRange(30f, 100f); 
-            settings.InitialVelocityY = new FloatRange(0f); 
+            settings.InitialVelocityX = new FloatRange(30f, 100f);
+            settings.InitialVelocityY = new FloatRange(0f);
             settings.InitialSize = new FloatRange(1f, 2f);
             settings.EndSize = new FloatRange(0f);
             settings.InterpolateSize = true;
-            settings.Gravity = new Vector2(0, 155f); 
-            settings.Drag = 2.5f; 
+            settings.Gravity = new Vector2(0, 155f);
+            settings.Drag = 2.5f;
             settings.StartColor = global.Palette_Red;
             settings.EndColor = global.Palette_Yellow;
             settings.StartAlpha = 1.0f;
             settings.EndAlpha = 0.0f;
-            settings.Texture = ServiceLocator.Get<Texture2D>(); 
-            settings.BlendMode = BlendState.Additive; 
+            settings.Texture = ServiceLocator.Get<Texture2D>();
+            settings.BlendMode = BlendState.Additive;
             settings.LayerDepth = 0.9f;
             return settings;
         }
@@ -397,8 +401,8 @@ namespace ProjectVagabond.Particles
             settings.Duration = 0.6f;
             settings.VelocityPattern = EmissionPattern.Radial;
             settings.Lifetime = new FloatRange(0.3f, 0.5f);
-            settings.InitialVelocityX = new FloatRange(0f, 40f); 
-            settings.InitialVelocityY = new FloatRange(0f); 
+            settings.InitialVelocityX = new FloatRange(0f, 40f);
+            settings.InitialVelocityY = new FloatRange(0f);
             settings.InitialSize = new FloatRange(1f, 2f);
             settings.EndSize = new FloatRange(0f);
             settings.InterpolateSize = true;
@@ -425,18 +429,18 @@ namespace ProjectVagabond.Particles
             settings.Duration = 1.0f;
             settings.Lifetime = new FloatRange(0.6f, 0.9f);
             settings.InitialVelocityX = new FloatRange(-30f, 30f);
-            settings.InitialVelocityY = new FloatRange(-30f, -10f); 
+            settings.InitialVelocityY = new FloatRange(-30f, -10f);
             settings.InitialSize = new FloatRange(2f, 4f);
             settings.EndSize = new FloatRange(0.5f);
             settings.InterpolateSize = true;
-            settings.Gravity = new Vector2(0, 20f); 
+            settings.Gravity = new Vector2(0, 20f);
             settings.Drag = 1f;
             settings.StartColor = global.Palette_LightGreen;
             settings.EndColor = global.Palette_DarkGray;
             settings.StartAlpha = 0.6f;
             settings.EndAlpha = 0.0f;
             settings.InitialRotation = new FloatRange(0, MathHelper.TwoPi);
-            settings.InitialRotationSpeed = new FloatRange(-10f, 10f); 
+            settings.InitialRotationSpeed = new FloatRange(-10f, 10f);
             settings.Texture = ServiceLocator.Get<SpriteManager>().SoftParticleSprite;
             settings.BlendMode = BlendState.AlphaBlend;
             settings.LayerDepth = 0.8f;

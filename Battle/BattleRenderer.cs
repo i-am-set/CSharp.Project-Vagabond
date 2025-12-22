@@ -4,7 +4,9 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
@@ -26,7 +28,7 @@ namespace ProjectVagabond.Battle.UI
         private readonly Global _global;
         private readonly Core _core;
         private readonly TooltipManager _tooltipManager;
-        private readonly HitstopManager _hitstopManager; // NEW
+        private readonly HitstopManager _hitstopManager;
 
         // Sprite Management
         private readonly Dictionary<string, PlayerCombatSprite> _playerSprites = new Dictionary<string, PlayerCombatSprite>();
@@ -69,8 +71,9 @@ namespace ProjectVagabond.Battle.UI
         {
             public Vector2 Offset;
             public Vector2 Velocity;
-            public const float STIFFNESS = 150f;
-            public const float DAMPING = 10f;
+            // TUNING: Stiffer spring for snappier impact
+            public const float STIFFNESS = 600f;
+            public const float DAMPING = 15f;
         }
         private readonly Dictionary<string, RecoilState> _recoilStates = new Dictionary<string, RecoilState>();
 
@@ -100,7 +103,7 @@ namespace ProjectVagabond.Battle.UI
             _global = ServiceLocator.Get<Global>();
             _core = ServiceLocator.Get<Core>();
             _tooltipManager = ServiceLocator.Get<TooltipManager>();
-            _hitstopManager = ServiceLocator.Get<HitstopManager>(); // NEW
+            _hitstopManager = ServiceLocator.Get<HitstopManager>();
 
             _flattenTarget = new RenderTarget2D(_core.GraphicsDevice, FLATTEN_TARGET_SIZE, FLATTEN_TARGET_SIZE, false, SurfaceFormat.Color, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
         }
@@ -782,7 +785,6 @@ namespace ProjectVagabond.Battle.UI
                 var iconTexture = _spriteManager.GetStatusEffectIcon(effect.EffectType);
                 spriteBatch.DrawSnapped(iconTexture, iconBounds, Color.White);
 
-                // --- NEW: Flash White if Animating ---
                 if (isAnimating)
                 {
                     // Draw the icon again with Additive blending to make it glow white
@@ -1061,16 +1063,10 @@ namespace ProjectVagabond.Battle.UI
                             Vector2 origin = new Vector2(spritePartSize / 2f, spritePartSize / 2f);
                             Vector2 centerPos = baseDrawPosition + origin;
 
-                            // Draw outline using DrawSnapped with scale
-                            // Note: Outline logic is complex with scaling. For simplicity in hitstop, we might skip outline or just scale it.
-                            // Scaling the outline sprites individually works best.
-
                             // Simplified outline for scaled drawing:
                             if (scale > 1.0f)
                             {
-                                // Just draw the main silhouette scaled up slightly behind?
-                                // Or skip complex outline during hitstop pop.
-                                // Let's skip the complex 8-direction outline during hitstop pop to avoid artifacts.
+                                // Skip complex outline during hitstop pop to avoid artifacts.
                             }
                             else
                             {
@@ -1101,8 +1097,6 @@ namespace ProjectVagabond.Battle.UI
 
                     if (useFlattening)
                     {
-                        // ... (Flattening logic remains same, scaling not applied here as it's for fade out) ...
-                        // Existing flattening code...
                         var currentRTs = _core.GraphicsDevice.GetRenderTargets();
                         spriteBatch.End();
                         _core.GraphicsDevice.SetRenderTarget(_flattenTarget);
@@ -1267,7 +1261,6 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        // ... (Rest of the file remains unchanged) ...
         private Rectangle GetEnemyDynamicSpriteBounds(BattleCombatant enemy, Vector2 basePosition)
         {
             string archetypeId = enemy.ArchetypeId;
@@ -1474,7 +1467,6 @@ namespace ProjectVagabond.Battle.UI
                 var iconTexture = _spriteManager.GetStatusEffectIcon(effect.EffectType);
                 spriteBatch.DrawSnapped(iconTexture, iconBounds, Color.White);
 
-                // --- NEW: Flash White if Animating ---
                 if (isAnimating)
                 {
                     // Draw the icon again with Additive blending to make it glow white

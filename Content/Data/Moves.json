@@ -18,7 +18,7 @@
     "OffensiveElementIDs": [ 1 ],
     "Tags": [],
     "AnimationSpriteSheet": "basic_impact",
-    "AnimationSpeed": 1.0,
+    "AnimationSpeed": 2.0,
     "IsAnimationCentralized": false
   },
   {
@@ -444,7 +444,7 @@
     "OffensiveElementIDs": [ 7 ],
     "Tags": [ "Toxic" ],
     "AnimationSpriteSheet": "toxic_purple_slash",
-    "AnimationSpeed": 1.0,
+    "AnimationSpeed": 2.0,
     "IsAnimationCentralized": false
   },
   {

@@ -7,6 +7,7 @@ using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Dice;
+using ProjectVagabond.Particles;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
@@ -125,6 +126,7 @@ namespace ProjectVagabond
         private Texture2D _speedMarkSprite;
         private Texture2D _mapMarkerSprite;
         private Texture2D _circleTextureSprite;
+        private Texture2D _ringTextureSprite; // NEW
         private Texture2D _settingsIconSprite;
         private Texture2D _turnIndicatorSprite;
         private Texture2D _circleParticleSprite;
@@ -210,6 +212,7 @@ namespace ProjectVagabond
         public Texture2D SpeedMarkSprite => _speedMarkSprite;
         public Texture2D MapMarkerSprite => _mapMarkerSprite;
         public Texture2D CircleTextureSprite => _circleTextureSprite;
+        public Texture2D RingTextureSprite => _ringTextureSprite; // NEW
         public Texture2D SettingsIconSprite => _settingsIconSprite;
         public Texture2D TurnIndicatorSprite => _turnIndicatorSprite;
         public Texture2D CircleParticleSprite => _circleParticleSprite;
@@ -233,6 +236,9 @@ namespace ProjectVagabond
 
             try { _circleTextureSprite = _textureFactory.CreateCircleTexture(); }
             catch { _circleTextureSprite = _textureFactory.CreateColoredTexture(16, 16, Color.Red); }
+
+            try { _ringTextureSprite = _textureFactory.CreateRingTexture(); } // NEW
+            catch { _ringTextureSprite = _textureFactory.CreateColoredTexture(16, 16, Color.White); }
 
             try { _settingsIconSprite = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/ui_settings_icon"); }
             catch { _settingsIconSprite = _textureFactory.CreateColoredTexture(8, 8, Color.Red); }

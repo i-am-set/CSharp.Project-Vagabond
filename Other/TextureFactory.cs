@@ -5,6 +5,7 @@ using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Dice;
+using ProjectVagabond.Particles;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
@@ -275,6 +276,41 @@ namespace ProjectVagabond
 
                     // Use a hard edge for a crisp, pixelated circle
                     if (distance <= radius)
+                    {
+                        colorData[y * size + x] = Color.White;
+                    }
+                    else
+                    {
+                        colorData[y * size + x] = Color.Transparent;
+                    }
+                }
+            }
+
+            texture.SetData(colorData);
+            return texture;
+        }
+
+        /// <summary>
+        /// Creates a hollow ring texture for shockwave effects.
+        /// </summary>
+        public Texture2D CreateRingTexture(int size = 64, int thickness = 4)
+        {
+            var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
+            var texture = new Texture2D(graphicsDevice, size, size);
+            var colorData = new Color[size * size];
+
+            float radius = size / 2f;
+            float innerRadius = radius - thickness;
+            var center = new Vector2(radius - 0.5f, radius - 0.5f);
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    var position = new Vector2(x, y);
+                    float distance = Vector2.Distance(center, position);
+
+                    if (distance <= radius && distance >= innerRadius)
                     {
                         colorData[y * size + x] = Color.White;
                     }
