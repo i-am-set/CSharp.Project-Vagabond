@@ -55,8 +55,8 @@ namespace ProjectVagabond
                 sb.AppendLine("    debug_shop                           - Opens a random shop interface.");
                 sb.AppendLine("    debug_rest                           - Opens the rest site interface.");
                 sb.AppendLine("    debug_recruit                        - Opens the recruit interface.");
-                sb.AppendLine("    combatrun                           - Flees from combat.");
-                sb.AppendLine("    givestatus <slot> <type> {dur}  - Apply status to party member.");
+                sb.AppendLine("    debug_combatrun                           - Flees from combat.");
+                sb.AppendLine("    debug_givestatus <slot> <type> {dur}  - Apply status to party member.");
                 sb.AppendLine("    debug_consolefont <0|1|2>         - Sets the debug console font.");
                 sb.AppendLine();
                 sb.AppendLine("  [palette_teal]Party & Inventory[/]");
@@ -441,7 +441,7 @@ namespace ProjectVagabond
                 }
             }, "debug_recruit - Opens the recruit interface.");
 
-            _commands["combatrun"] = new Command("combatrun", (args) =>
+            _commands["debug_combatrun"] = new Command("debug_combatrun", (args) =>
             {
                 var sceneManager = ServiceLocator.Get<SceneManager>();
                 if (sceneManager.CurrentActiveScene is BattleScene battleScene)
@@ -453,9 +453,9 @@ namespace ProjectVagabond
                 {
                     Log("[error]Not in combat.");
                 }
-            }, "combatrun - Flees from combat if active.");
+            }, "debug_combatrun - Flees from combat if active.");
 
-            _commands["givestatus"] = new Command("givestatus", (args) =>
+            _commands["debug_givestatus"] = new Command("debug_givestatus", (args) =>
             {
                 var sceneManager = ServiceLocator.Get<SceneManager>();
                 if (!(sceneManager.CurrentActiveScene is BattleScene))
@@ -466,7 +466,7 @@ namespace ProjectVagabond
 
                 if (args.Length < 3)
                 {
-                    Log("[error]Usage: givestatus <party_slot_1-4> <StatusType> [duration]");
+                    Log("[error]Usage: debug_givestatus <party_slot_1-4> <StatusType> [duration]");
                     return;
                 }
 
@@ -528,7 +528,7 @@ namespace ProjectVagabond
                 string durText = isPerm ? "Permanent" : $"{duration} turns";
                 Log($"[palette_teal]Applied {statusType} to {combatant.Name} ({durText}).");
 
-            }, "givestatus <slot> <type> [dur] - Apply status to party member in combat.",
+            }, "debug_givestatus <slot> <type> [dur] - Apply status to party member in combat.",
             (args) =>
             {
                 if (args.Length == 0) return new List<string> { "1", "2", "3", "4" };
