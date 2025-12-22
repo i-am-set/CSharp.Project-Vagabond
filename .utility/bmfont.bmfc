@@ -2,10 +2,10 @@
 fileVersion=1
 
 # font settings
-fontName=5 x 5
-fontFile=../Content/Fonts/5x5_pixel.ttf
+fontName=3x4_SimpleOddHeight
+fontFile=../Content/Fonts/3x4_SimpleOddHeight.ttf
 charSet=0
-fontSize=5
+fontSize=-4
 aa=1
 scaleH=100
 useSmoothing=0
