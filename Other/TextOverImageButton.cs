@@ -226,6 +226,19 @@ namespace ProjectVagabond.UI
                 Vector2 textOrigin = new Vector2(0, MathF.Round(textSize.Y / 2f));
 
                 spriteBatch.DrawStringSnapped(font, Text, textPosition, textColor, 0f, textOrigin, 1f, SpriteEffects.None, 0f);
+
+                // --- Strikethrough Logic for Disabled State ---
+                if (!IsEnabled)
+                {
+                    // Calculate line position based on the text position
+                    // Center Y of text (textPosition.Y is the center due to origin)
+                    float lineY = textPosition.Y;
+                    float startX = textPosition.X - 2;
+                    float endX = textPosition.X + textSize.X + 2;
+
+                    // Use fully opaque color for the strikethrough
+                    spriteBatch.DrawLineSnapped(new Vector2(startX, lineY), new Vector2(endX, lineY), _global.ButtonDisableColor);
+                }
             }
         }
     }

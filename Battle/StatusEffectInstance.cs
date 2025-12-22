@@ -1,4 +1,7 @@
-﻿namespace ProjectVagabond.Battle
+﻿using ProjectVagabond.Utils;
+using System;
+
+namespace ProjectVagabond.Battle
 {
     /// <summary>
     /// Represents an active buff or debuff on a combatant.
@@ -62,9 +65,8 @@
         }
 
         /// <summary>
-        /// Gets the formatted text for the tooltip, including name and duration.
+        /// Gets the formatted text for the tooltip title, including name and duration.
         /// </summary>
-        /// <returns>A formatted string for the tooltip.</returns>
         public string GetTooltipText()
         {
             string name = GetDisplayName().ToUpper();
@@ -73,6 +75,36 @@
                 return name;
             }
             return $"{name} ({DurationInTurns})";
+        }
+
+        /// <summary>
+        /// Gets the description text for the tooltip, explaining the effect.
+        /// </summary>
+        public string GetDescription()
+        {
+            var global = ServiceLocator.Get<Global>();
+            switch (EffectType)
+            {
+                case StatusEffectType.Burn:
+                    return $"{global.BurnDamageMultiplier}x damage received";
+                case StatusEffectType.Poison:
+                    // Calculate next turn damage
+                    int safeTurnCount = Math.Min(PoisonTurnCount, 30);
+                    long dmg = (long)global.PoisonBaseDamage * (long)Math.Pow(2, safeTurnCount);
+                    return $"Does {dmg} damage at end of turn";
+                case StatusEffectType.Regen:
+                    return $"Restores {global.RegenPercent * 100}% HP at end of turn";
+                case StatusEffectType.Dodging:
+                    return $"{global.DodgingAccuracyMultiplier}x chance to be hit";
+                case StatusEffectType.Silence:
+                    return "Can't cast spells";
+                case StatusEffectType.Stun:
+                    return "Can't move this turn";
+                case StatusEffectType.Frostbite:
+                    return $"{global.FrostbiteAgilityMultiplier}x agility";
+                default:
+                    return "";
+            }
         }
     }
 }

@@ -189,7 +189,13 @@ namespace ProjectVagabond.Battle.UI
             {
                 if (iconInfo.Bounds.Contains(virtualMousePos))
                 {
-                    _tooltipManager.RequestTooltip(iconInfo.Effect, iconInfo.Effect.GetTooltipText(), new Vector2(iconInfo.Bounds.Center.X, iconInfo.Bounds.Top));
+                    _tooltipManager.RequestTooltip(
+                        iconInfo.Effect,
+                        iconInfo.Effect.GetTooltipText(),
+                        new Vector2(iconInfo.Bounds.Center.X, iconInfo.Bounds.Top),
+                        0.1f, // Fast delay
+                        iconInfo.Effect.GetDescription() // New description
+                    );
                     _hoveredStatusIcon = iconInfo;
                     return;
                 }
@@ -201,7 +207,13 @@ namespace ProjectVagabond.Battle.UI
                 {
                     if (iconInfo.Bounds.Contains(virtualMousePos))
                     {
-                        _tooltipManager.RequestTooltip(iconInfo.Effect, iconInfo.Effect.GetTooltipText(), new Vector2(iconInfo.Bounds.Center.X, iconInfo.Bounds.Top));
+                        _tooltipManager.RequestTooltip(
+                            iconInfo.Effect,
+                            iconInfo.Effect.GetTooltipText(),
+                            new Vector2(iconInfo.Bounds.Center.X, iconInfo.Bounds.Top),
+                            0.1f, // Fast delay
+                            iconInfo.Effect.GetDescription() // New description
+                        );
                         _hoveredStatusIcon = iconInfo;
                         return;
                     }

@@ -2,14 +2,17 @@
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Utils;
+using System;
 
 namespace ProjectVagabond
 {
     public class TooltipManager
     {
         private readonly Global _global;
+        private readonly Core _core;
 
         private string _text = "";
+        private string? _description = null;
         private Vector2 _anchorPosition;
         private bool _isVisible = false;
         private float _timer = 0f;
@@ -21,6 +24,7 @@ namespace ProjectVagabond
         public TooltipManager()
         {
             _global = ServiceLocator.Get<Global>();
+            _core = ServiceLocator.Get<Core>();
         }
 
         /// <summary>
@@ -31,7 +35,8 @@ namespace ProjectVagabond
         /// <param name="text">The text to display in the tooltip.</param>
         /// <param name="anchorPosition">The position to anchor the tooltip to (e.g., mouse position).</param>
         /// <param name="delay">The time in seconds to wait before showing the tooltip.</param>
-        public void RequestTooltip(object requestor, string text, Vector2 anchorPosition, float delay = Global.TOOLTIP_AVERAGE_POPUP_TIME)
+        /// <param name="description">Optional secondary line of text describing the item/effect.</param>
+        public void RequestTooltip(object requestor, string text, Vector2 anchorPosition, float delay = Global.TOOLTIP_AVERAGE_POPUP_TIME, string? description = null)
         {
             if (requestor == null) return;
 
@@ -43,6 +48,7 @@ namespace ProjectVagabond
             }
 
             _text = text;
+            _description = description;
             _anchorPosition = anchorPosition;
             _timeToAppear = delay;
             _requestThisFrame = true;
@@ -84,12 +90,27 @@ namespace ProjectVagabond
             }
 
             Texture2D pixel = ServiceLocator.Get<Texture2D>();
+            var tertiaryFont = _core.TertiaryFont;
+
             Vector2 textSize = font.MeasureString(_text);
+            Vector2 descSize = Vector2.Zero;
+
+            if (!string.IsNullOrEmpty(_description))
+            {
+                descSize = tertiaryFont.MeasureString(_description);
+            }
 
             const int paddingX = 8;
             const int paddingY = 4;
-            int tooltipWidth = (int)textSize.X + paddingX;
-            int tooltipHeight = (int)textSize.Y + paddingY - 1; // Reduced height by 1 pixel
+            const int lineGap = 2;
+
+            int tooltipWidth = (int)Math.Max(textSize.X, descSize.X) + paddingX;
+            int tooltipHeight = (int)textSize.Y + paddingY - 1;
+
+            if (!string.IsNullOrEmpty(_description))
+            {
+                tooltipHeight += (int)descSize.Y + lineGap;
+            }
 
             // Position the tooltip above the anchor, centered horizontally.
             Vector2 finalTopLeftPosition = new Vector2(
@@ -121,6 +142,12 @@ namespace ProjectVagabond
             spriteBatch.DrawSnapped(pixel, new Rectangle(tooltipBg.Right - 1, tooltipBg.Y, 1, tooltipBg.Height), _global.ToolTipBorderColor);
 
             spriteBatch.DrawStringSnapped(font, _text, textPosition, _global.ToolTipTextColor);
+
+            if (!string.IsNullOrEmpty(_description))
+            {
+                Vector2 descPosition = new Vector2(tooltipBg.X + (paddingX / 2), textPosition.Y + textSize.Y + lineGap);
+                spriteBatch.DrawStringSnapped(tertiaryFont, _description, descPosition, _global.Palette_Gray);
+            }
         }
     }
 }
