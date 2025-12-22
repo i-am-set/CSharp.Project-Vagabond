@@ -7,7 +7,7 @@
     "MaxMana": 100,
     "Strength": 12,
     "Intelligence": 8,
-    "Tenacity": 1,
+    "Tenacity": 10,
     "Agility": 12,
     "WeaknessElementIDs": [],
     "ResistanceElementIDs": [],
