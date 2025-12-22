@@ -92,6 +92,15 @@ namespace ProjectVagabond
             ColorNarration_Enemy = Palette_Red;
             ColorNarration_Status = Palette_LightPurple;
 
+            // Initialize Combat Indicator Colors
+            DamageIndicatorColor = Color.Crimson;
+            HealIndicatorColor = Color.Lime;
+            CritcalHitIndicatorColor = Color.Yellow;
+            GrazeIndicatorColor = Color.LightGray;
+            EffectiveIndicatorColor = Color.Cyan;
+            ResistedIndicatorColor = Color.Orange;
+            ImmuneIndicatorColor = Palette_White;
+
             // Initialize Color Mappings
             ElementColors = new Dictionary<int, Color>
         {
@@ -335,6 +344,15 @@ namespace ProjectVagabond
         public Color ColorNarration_Escaped { get; private set; }
         public Color ColorNarration_Enemy { get; private set; }
         public Color ColorNarration_Status { get; private set; }
+
+        // Combat Indicator Colors
+        public Color DamageIndicatorColor { get; set; }
+        public Color HealIndicatorColor { get; set; }
+        public Color CritcalHitIndicatorColor { get; set; }
+        public Color GrazeIndicatorColor { get; set; }
+        public Color EffectiveIndicatorColor { get; set; }
+        public Color ResistedIndicatorColor { get; set; }
+        public Color ImmuneIndicatorColor { get; set; }
 
         // Data-driven Colors
         public Dictionary<int, Color> ElementColors { get; private set; }

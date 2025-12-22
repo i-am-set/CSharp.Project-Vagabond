@@ -1225,19 +1225,21 @@ namespace ProjectVagabond.Battle.UI
                 if (indicator.Type == DamageIndicatorState.IndicatorType.EmphasizedNumber)
                 {
                     activeFont = defaultFont;
-                    const float flashInterval = 0.05f; // Faster flash
+                    const float flashInterval = 0.05f;
                     bool useRed = (int)(indicator.Timer / flashInterval) % 2 == 0;
-                    drawColor = useRed ? _global.Palette_Red : _global.Palette_BrightWhite;
+                    drawColor = useRed ? _global.DamageIndicatorColor : Color.White;
                 }
                 else if (indicator.Type == DamageIndicatorState.IndicatorType.Number)
                 {
-                    drawColor = _global.Palette_Red;
+                    const float flashInterval = 0.1f;
+                    bool useRed = (int)(indicator.Timer / flashInterval) % 2 == 0;
+                    drawColor = useRed ? _global.DamageIndicatorColor : _global.Palette_Red;
                 }
                 else if (indicator.Type == DamageIndicatorState.IndicatorType.HealNumber)
                 {
                     const float flashInterval = 0.1f;
                     bool useLightGreen = (int)(indicator.Timer / flashInterval) % 2 == 0;
-                    drawColor = useLightGreen ? _global.Palette_LightGreen : _global.Palette_DarkGreen;
+                    drawColor = useLightGreen ? _global.HealIndicatorColor : _global.Palette_DarkGreen;
                 }
                 else if (indicator.Type == DamageIndicatorState.IndicatorType.Effectiveness)
                 {
@@ -1246,13 +1248,13 @@ namespace ProjectVagabond.Battle.UI
                     switch (indicator.PrimaryText)
                     {
                         case "EFFECTIVE":
-                            drawColor = useAltColor ? _global.Palette_LightBlue : _global.Palette_Yellow;
+                            drawColor = useAltColor ? _global.EffectiveIndicatorColor : _global.Palette_Yellow;
                             break;
                         case "RESISTED":
-                            drawColor = useAltColor ? _global.Palette_Red : _global.Palette_White;
+                            drawColor = useAltColor ? _global.ResistedIndicatorColor : _global.Palette_White;
                             break;
                         case "IMMUNE":
-                            drawColor = useAltColor ? _global.Palette_White : _global.Palette_LightGray;
+                            drawColor = useAltColor ? _global.ImmuneIndicatorColor : _global.Palette_LightGray;
                             break;
                         default:
                             drawColor = Color.White;

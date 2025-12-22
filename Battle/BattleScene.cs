@@ -953,11 +953,11 @@ namespace ProjectVagabond.Scenes
                         _animationManager.StartDamageNumberIndicator(target.CombatantID, result.DamageAmount, hudPosition);
                 }
 
-                if (result.WasGraze) _animationManager.StartDamageIndicator(target.CombatantID, "GRAZE", hudPosition, ServiceLocator.Get<Global>().Palette_LightGray);
+                if (result.WasGraze) _animationManager.StartDamageIndicator(target.CombatantID, "GRAZE", hudPosition, ServiceLocator.Get<Global>().GrazeIndicatorColor);
 
                 if (result.WasCritical)
                 {
-                    _animationManager.StartDamageIndicator(target.CombatantID, "CRITICAL HIT", hudPosition, ServiceLocator.Get<Global>().Palette_Yellow);
+                    _animationManager.StartDamageIndicator(target.CombatantID, "CRITICAL HIT", hudPosition, ServiceLocator.Get<Global>().CritcalHitIndicatorColor);
                     if (!isMultiHit) _uiManager.ShowNarration($"A [cCrit]CRITICAL HIT[/] on {target.Name}!");
                 }
 

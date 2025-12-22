@@ -79,6 +79,16 @@ namespace ProjectVagabond.Battle.UI
                     }
                 }
 
+                // --- Inform UI Manager about Sprite Hover ---
+                if (_hoveredTargetIndex != -1)
+                {
+                    uiManager.CombatantHoveredViaSprite = currentTargets[_hoveredTargetIndex].Combatant;
+                }
+                else
+                {
+                    uiManager.CombatantHoveredViaSprite = null;
+                }
+
                 // Handle Click on Sprites (UI Buttons handle their own clicks in BattleUIManager)
                 if (UIInputManager.CanProcessMouseClick() && currentMouseState.LeftButton == ButtonState.Released && _previousMouseState.LeftButton == ButtonState.Pressed)
                 {
@@ -101,6 +111,7 @@ namespace ProjectVagabond.Battle.UI
             else
             {
                 _hoveredTargetIndex = -1;
+                uiManager.CombatantHoveredViaSprite = null;
             }
 
             _previousMouseState = currentMouseState;
