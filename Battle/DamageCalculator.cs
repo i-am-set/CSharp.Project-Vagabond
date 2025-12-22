@@ -59,12 +59,20 @@ namespace ProjectVagabond.Battle
             if (move.Accuracy != -1)
             {
                 bool ignoreEvasion = attacker.AccuracyModifiers.Any(m => m.ShouldIgnoreEvasion(ctx));
-                if (target.HasStatusEffect(StatusEffectType.Dodging) && !ignoreEvasion) result.WasGraze = true;
-                else
+
+                // Dodging Status Logic: Multiplies incoming accuracy
+                float accuracyMultiplier = 1.0f;
+                if (target.HasStatusEffect(StatusEffectType.Dodging) && !ignoreEvasion)
                 {
-                    int effectiveAccuracy = attacker.GetEffectiveAccuracy(move.Accuracy);
-                    if (_random.Next(1, 101) > effectiveAccuracy) result.WasGraze = true;
+                    accuracyMultiplier = Global.Instance.DodgingAccuracyMultiplier;
                 }
+
+                int effectiveAccuracy = attacker.GetEffectiveAccuracy(move.Accuracy);
+
+                // Apply Dodging multiplier to the hit chance
+                float hitChance = effectiveAccuracy * accuracyMultiplier;
+
+                if (_random.Next(1, 101) > hitChance) result.WasGraze = true;
             }
 
             // 4. Calculate Base Damage
@@ -132,7 +140,11 @@ namespace ProjectVagabond.Battle
                 currentDamage = modifier.ModifyIncomingDamage(currentDamage, ctx);
             }
 
-            if (target.HasStatusEffect(StatusEffectType.Freeze) && move.ImpactType == ImpactType.Physical) currentDamage *= 2.0f;
+            // Burn Status Logic: Multiplies incoming damage
+            if (target.HasStatusEffect(StatusEffectType.Burn))
+            {
+                currentDamage *= Global.Instance.BurnDamageMultiplier;
+            }
 
             currentDamage *= (float)(_random.NextDouble() * (BattleConstants.RANDOM_VARIANCE_MAX - BattleConstants.RANDOM_VARIANCE_MIN) + BattleConstants.RANDOM_VARIANCE_MIN);
             if (result.WasGraze) currentDamage *= BattleConstants.GRAZE_MULTIPLIER;
@@ -164,6 +176,13 @@ namespace ProjectVagabond.Battle
             float currentDamage = baseDamage;
             foreach (var modifier in attacker.OutgoingDamageModifiers) currentDamage = modifier.ModifyOutgoingDamage(currentDamage, ctx);
             foreach (var modifier in target.IncomingDamageModifiers) currentDamage = modifier.ModifyIncomingDamage(currentDamage, ctx);
+
+            // Apply Burn multiplier to baseline as well
+            if (target.HasStatusEffect(StatusEffectType.Burn))
+            {
+                currentDamage *= Global.Instance.BurnDamageMultiplier;
+            }
+
             currentDamage *= BattleConstants.RANDOM_VARIANCE_MAX;
             int finalDamageAmount = (int)Math.Floor(currentDamage);
             if (currentDamage > 0 && finalDamageAmount == 0) finalDamageAmount = 1;
@@ -186,7 +205,6 @@ namespace ProjectVagabond.Battle
         {
             float critChance = BattleConstants.CRITICAL_HIT_CHANCE;
             foreach (var mod in attacker.CritModifiers) critChance = mod.ModifyCritChance(critChance, ctx);
-            if (target.HasStatusEffect(StatusEffectType.Root)) critChance *= 2.0f;
             return _random.NextDouble() < critChance;
         }
 

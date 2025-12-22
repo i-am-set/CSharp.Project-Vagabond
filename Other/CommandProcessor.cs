@@ -56,7 +56,7 @@ namespace ProjectVagabond
                 sb.AppendLine("    debug_rest                           - Opens the rest site interface.");
                 sb.AppendLine("    debug_recruit                        - Opens the recruit interface.");
                 sb.AppendLine("    combatrun                           - Flees from combat.");
-                sb.AppendLine("    givestatus <slot> <type> {dur}  - Apply status.");
+                sb.AppendLine("    givestatus <slot> <type> {dur}  - Apply status to party member.");
                 sb.AppendLine("    debug_consolefont <0|1|2>         - Sets the debug console font.");
                 sb.AppendLine();
                 sb.AppendLine("  [palette_teal]Party & Inventory[/]");
@@ -460,49 +460,75 @@ namespace ProjectVagabond
                 var sceneManager = ServiceLocator.Get<SceneManager>();
                 if (!(sceneManager.CurrentActiveScene is BattleScene))
                 {
-                    Log("[error]Not in combat.");
+                    Log("[error]Command only available in combat.");
                     return;
                 }
 
                 if (args.Length < 3)
                 {
-                    Log("[error]Usage: givestatus <slot 1-4> <StatusType> [duration]");
+                    Log("[error]Usage: givestatus <party_slot_1-4> <StatusType> [duration]");
                     return;
                 }
 
+                // 1. Parse Slot
                 if (!int.TryParse(args[1], out int slot) || slot < 1 || slot > 4)
                 {
-                    Log("[error]Invalid slot. Use 1-4 (1=P1, 2=P2, 3=E1, 4=E2).");
+                    Log("[error]Invalid slot. Use 1-4.");
                     return;
                 }
 
+                var gameState = ServiceLocator.Get<GameState>();
+                if (slot > gameState.PlayerState.Party.Count)
+                {
+                    Log($"[error]Slot {slot} is empty.");
+                    return;
+                }
+
+                var partyMember = gameState.PlayerState.Party[slot - 1];
+                var battleManager = ServiceLocator.Get<BattleManager>();
+                var combatant = battleManager.AllCombatants.FirstOrDefault(c => c.Name == partyMember.Name && c.IsPlayerControlled);
+
+                if (combatant == null)
+                {
+                    Log($"[error]Combatant for {partyMember.Name} not found in battle (maybe defeated/removed?).");
+                    return;
+                }
+
+                // 2. Parse Status Type
                 if (!Enum.TryParse<StatusEffectType>(args[2], true, out var statusType))
                 {
                     Log($"[error]Invalid status type '{args[2]}'.");
                     return;
                 }
 
-                int duration = 3;
-                if (args.Length > 3) int.TryParse(args[3], out duration);
+                // 3. Check Temp/Perm and Duration
+                bool isPerm = statusType == StatusEffectType.Poison ||
+                              statusType == StatusEffectType.Burn ||
+                              statusType == StatusEffectType.Frostbite;
 
-                var battleManager = ServiceLocator.Get<BattleManager>();
-                BattleCombatant target = null;
+                int duration = -1;
 
-                if (slot == 1) target = battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && c.BattleSlot == 0);
-                else if (slot == 2) target = battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && c.BattleSlot == 1);
-                else if (slot == 3) target = battleManager.AllCombatants.FirstOrDefault(c => !c.IsPlayerControlled && c.BattleSlot == 0);
-                else if (slot == 4) target = battleManager.AllCombatants.FirstOrDefault(c => !c.IsPlayerControlled && c.BattleSlot == 1);
-
-                if (target == null || target.IsDefeated)
+                if (!isPerm)
                 {
-                    Log($"[error]Slot {slot} is empty or defeated.");
-                    return;
+                    if (args.Length < 4)
+                    {
+                        Log($"[error]Status '{statusType}' is temporary. Duration argument required.");
+                        return;
+                    }
+
+                    if (!int.TryParse(args[3], out duration) || duration <= 0)
+                    {
+                        Log("[error]Duration must be an integer > 0.");
+                        return;
+                    }
                 }
 
-                target.AddStatusEffect(new StatusEffectInstance(statusType, duration));
-                Log($"[palette_teal]Applied {statusType} to {target.Name} for {duration} turns.");
+                // 4. Apply
+                combatant.AddStatusEffect(new StatusEffectInstance(statusType, duration));
+                string durText = isPerm ? "Permanent" : $"{duration} turns";
+                Log($"[palette_teal]Applied {statusType} to {combatant.Name} ({durText}).");
 
-            }, "givestatus <slot> <type> [dur] - Apply status in combat.",
+            }, "givestatus <slot> <type> [dur] - Apply status to party member in combat.",
             (args) =>
             {
                 if (args.Length == 0) return new List<string> { "1", "2", "3", "4" };

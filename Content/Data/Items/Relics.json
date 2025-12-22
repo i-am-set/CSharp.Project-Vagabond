@@ -318,11 +318,11 @@
     "RelicID": "25",
     "RelicName": "Sealed Envelope",
     "AbilityName": "Unwavering",
-    "Description": "[cimmune]Immune[/] to [cstun]Stun[/] and [cfear]Fear[/]",
+    "Description": "[cimmune]Immune[/] to [cstun]Stun[/]",
     "Rarity": 1,
     "LevelRequirement": 2,
     "Effects": {
-      "StatusImmunity": "Stun,Fear"
+      "StatusImmunity": "Stun"
     },
     "Tags": [ "Defense", "StatusEffect" ]
   },

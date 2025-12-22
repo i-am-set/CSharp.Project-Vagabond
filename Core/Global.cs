@@ -91,47 +91,43 @@ namespace ProjectVagabond
 
             // Initialize Color Mappings
             ElementColors = new Dictionary<int, Color>
-        {
-            { 1, Palette_White },      // Neutral
-            { 2, Palette_Red },        // Fire
-            { 3, Palette_LightBlue },  // Water
-            { 4, Palette_Pink },       // Arcane
-            { 5, Palette_Orange },     // Earth
-            { 6, Palette_Gray },       // Metal
-            { 7, Palette_LightPurple },// Toxic
-            { 8, Palette_Teal },       // Wind
-            { 9, Palette_DarkPurple }, // Void
-            { 10, Palette_LightYellow },// Light
-            { 11, Palette_Yellow},     // Electric
-            { 12, Palette_LightBlue }, // Ice
-            { 13, Palette_LightGreen } // Nature
-        };
+            {
+                { 1, Palette_White },      // Neutral
+                { 2, Palette_Red },        // Fire
+                { 3, Palette_LightBlue },  // Water
+                { 4, Palette_Pink },       // Arcane
+                { 5, Palette_Orange },     // Earth
+                { 6, Palette_Gray },       // Metal
+                { 7, Palette_LightPurple },// Toxic
+                { 8, Palette_Teal },       // Wind
+                { 9, Palette_DarkPurple }, // Void
+                { 10, Palette_LightYellow },// Light
+                { 11, Palette_Yellow},     // Electric
+                { 12, Palette_LightBlue }, // Ice
+                { 13, Palette_LightGreen } // Nature
+            };
 
             RarityColors = new Dictionary<int, Color>
-        {
-            { -1, Palette_Gray },      // Basic/Action
-            { 0, Color.White },        // Common
-            { 1, Color.Lime },         // Uncommon
-            { 2, Color.DeepSkyBlue },  // Rare
-            { 3, Color.DarkOrchid },   // Epic
-            { 4, Color.Red },          // Mythic
-            { 5, Color.Yellow }        // Legendary
-        };
+            {
+                { -1, Palette_Gray },      // Basic/Action
+                { 0, Color.White },        // Common
+                { 1, Color.Lime },         // Uncommon
+                { 2, Color.DeepSkyBlue },  // Rare
+                { 3, Color.DarkOrchid },   // Epic
+                { 4, Color.Red },          // Mythic
+                { 5, Color.Yellow }        // Legendary
+            };
 
             StatusEffectColors = new Dictionary<StatusEffectType, Color>
-        {
-            { StatusEffectType.Poison, Palette_LightPurple },
-            { StatusEffectType.Stun, Palette_Yellow },
-            { StatusEffectType.Regen, Palette_LightGreen },
-            { StatusEffectType.Dodging, Palette_LightBlue },
-            { StatusEffectType.Burn, Palette_Red },
-            { StatusEffectType.Freeze, Palette_DarkBlue },
-            { StatusEffectType.Blind, Palette_LightGray },
-            { StatusEffectType.Confuse, Palette_Pink },
-            { StatusEffectType.Silence, Palette_LightGray },
-            { StatusEffectType.Fear, Palette_DarkPurple },
-            { StatusEffectType.Root, Palette_Orange }
-        };
+            {
+                { StatusEffectType.Poison, Palette_LightPurple },
+                { StatusEffectType.Stun, Palette_Yellow },
+                { StatusEffectType.Regen, Palette_LightGreen },
+                { StatusEffectType.Dodging, Palette_LightBlue },
+                { StatusEffectType.Burn, Palette_Red },
+                { StatusEffectType.Frostbite, Palette_DarkBlue },
+                { StatusEffectType.Silence, Palette_LightGray }
+            };
         }
 
         public static Global Instance => _instance;
@@ -210,6 +206,13 @@ namespace ProjectVagabond
         public int Economy_BaseDrop { get; set; } = 10;
         public float Economy_PerLevel { get; set; } = 5.0f;
         public float Economy_Variance { get; set; } = 0.4f;
+
+        // --- STATUS EFFECT TUNING ---
+        public int PoisonBaseDamage { get; set; } = 2;
+        public float RegenPercent { get; set; } = 0.0625f; // 1/16th
+        public float DodgingAccuracyMultiplier { get; set; } = 0.5f;
+        public float BurnDamageMultiplier { get; set; } = 2.0f;
+        public float FrostbiteAgilityMultiplier { get; set; } = 0.5f;
 
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //

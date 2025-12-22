@@ -369,7 +369,7 @@ namespace ProjectVagabond.Battle
             if (nextAction.Actor.HasStatusEffect(StatusEffectType.Stun))
             {
                 EventBus.Publish(new GameEvents.ActionFailed { Actor = nextAction.Actor, Reason = "stunned" });
-                nextAction.Actor.ActiveStatusEffects.RemoveAll(e => e.EffectType == StatusEffectType.Stun);
+                // Stun is temporary, duration decremented at end of turn
                 CanAdvance = false;
                 return;
             }
@@ -444,6 +444,15 @@ namespace ProjectVagabond.Battle
 
         private void ProcessMoveAction(QueuedAction action)
         {
+            // Silence Check
+            if (action.ChosenMove.MoveType == MoveType.Spell && action.Actor.HasStatusEffect(StatusEffectType.Silence))
+            {
+                EventBus.Publish(new GameEvents.ActionFailed { Actor = action.Actor, Reason = "silenced" });
+                CanAdvance = false;
+                _currentPhase = BattlePhase.CheckForDefeat;
+                return;
+            }
+
             if (action.Actor.Stats.CurrentMana < action.ChosenMove.ManaCost)
             {
                 EventBus.Publish(new GameEvents.ActionFailed { Actor = action.Actor, Reason = "not enough mana" });
@@ -527,7 +536,7 @@ namespace ProjectVagabond.Battle
                         DamageResults = damageResultsForThisHit
                     });
 
-                    // --- NEW: Trigger OnKill Effects ---
+                    // Trigger OnKill Effects
                     if (targetsForThisHit.All(t => t.IsDefeated))
                     {
                         var ctx = new CombatContext { Actor = action.Actor, Move = action.ChosenMove };
@@ -552,7 +561,7 @@ namespace ProjectVagabond.Battle
 
                 if (!actor.HasUsedFirstAttack) actor.HasUsedFirstAttack = true;
 
-                // --- NEW: Trigger OnActionComplete Effects ---
+                // Trigger OnActionComplete Effects
                 foreach (var effect in actor.OnActionCompleteEffects)
                 {
                     effect.OnActionComplete(_currentMultiHitAction, actor);
@@ -731,15 +740,46 @@ namespace ProjectVagabond.Battle
                 var effectsToRemove = new List<StatusEffectInstance>();
                 foreach (var effect in combatant.ActiveStatusEffects)
                 {
-                    effect.DurationInTurns--;
+                    // Only decrement duration for temporary effects
+                    if (!effect.IsPermanent)
+                    {
+                        effect.DurationInTurns--;
+                    }
+
+                    // Poison Logic: Exponential Damage
                     if (effect.EffectType == StatusEffectType.Poison)
                     {
-                        int poisonDamage = Math.Max(1, combatant.Stats.MaxHP / 16);
+                        // Damage = Base * 2^Turns
+                        int poisonDamage = Global.Instance.PoisonBaseDamage * (int)Math.Pow(2, effect.PoisonTurnCount);
+
+                        // Cap damage to prevent integer overflow or instant kills at high turns? 
+                        // For now, let it scale.
+
                         combatant.ApplyDamage(poisonDamage);
                         EventBus.Publish(new GameEvents.StatusEffectTriggered { Combatant = combatant, EffectType = StatusEffectType.Poison, Damage = poisonDamage });
+
+                        effect.PoisonTurnCount++;
                     }
-                    if (effect.DurationInTurns <= 0) effectsToRemove.Add(effect);
+
+                    // Regen Logic: % Max HP Heal
+                    if (effect.EffectType == StatusEffectType.Regen)
+                    {
+                        int healAmount = (int)(combatant.Stats.MaxHP * Global.Instance.RegenPercent);
+                        if (healAmount > 0)
+                        {
+                            int hpBefore = (int)combatant.VisualHP;
+                            combatant.ApplyHealing(healAmount);
+                            EventBus.Publish(new GameEvents.CombatantHealed { Actor = combatant, Target = combatant, HealAmount = healAmount, VisualHPBefore = hpBefore });
+                        }
+                    }
+
+                    // Remove expired temporary effects
+                    if (!effect.IsPermanent && effect.DurationInTurns <= 0)
+                    {
+                        effectsToRemove.Add(effect);
+                    }
                 }
+
                 foreach (var expiredEffect in effectsToRemove)
                 {
                     combatant.ActiveStatusEffects.Remove(expiredEffect);
@@ -820,7 +860,6 @@ namespace ProjectVagabond.Battle
                 Type = QueuedActionType.Move
             };
 
-            // --- NEW: Apply Action Modifiers (e.g. Ambush Predator) ---
             foreach (var mod in actor.ActionModifiers)
             {
                 mod.ModifyAction(action, actor);

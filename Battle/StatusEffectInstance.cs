@@ -12,14 +12,31 @@
 
         /// <summary>
         /// The remaining duration of the effect in turns.
+        /// For permanent effects, this value is ignored (usually set to -1 or 999).
         /// </summary>
         public int DurationInTurns { get; set; }
+
+        /// <summary>
+        /// Tracks how many turns this specific instance of Poison has been active.
+        /// Used to calculate the doubling damage.
+        /// </summary>
+        public int PoisonTurnCount { get; set; } = 0;
+
+        public bool IsPermanent
+        {
+            get
+            {
+                return EffectType == StatusEffectType.Poison ||
+                       EffectType == StatusEffectType.Burn ||
+                       EffectType == StatusEffectType.Frostbite;
+            }
+        }
 
         /// <summary>
         /// Initializes a new instance of the StatusEffectInstance class.
         /// </summary>
         /// <param name="effectType">The type of the status effect.</param>
-        /// <param name="durationInTurns">The duration of the effect in turns.</param>
+        /// <param name="durationInTurns">The duration of the effect in turns. Ignored for Perm effects.</param>
         public StatusEffectInstance(StatusEffectType effectType, int durationInTurns)
         {
             EffectType = effectType;
@@ -38,12 +55,8 @@
                 StatusEffectType.Regen => "Regeneration",
                 StatusEffectType.Dodging => "Dodging",
                 StatusEffectType.Burn => "Burn",
-                StatusEffectType.Freeze => "Frozen",
-                StatusEffectType.Blind => "Blind",
-                StatusEffectType.Confuse => "Confused",
+                StatusEffectType.Frostbite => "Frostbite",
                 StatusEffectType.Silence => "Silenced",
-                StatusEffectType.Fear => "Feared",
-                StatusEffectType.Root => "Rooted",
                 _ => EffectType.ToString(),
             };
         }
@@ -54,7 +67,12 @@
         /// <returns>A formatted string for the tooltip.</returns>
         public string GetTooltipText()
         {
-            return $"{GetDisplayName()} ({DurationInTurns})".ToUpper();
+            string name = GetDisplayName().ToUpper();
+            if (IsPermanent)
+            {
+                return $"{name} (PERM)";
+            }
+            return $"{name} ({DurationInTurns})";
         }
     }
 }

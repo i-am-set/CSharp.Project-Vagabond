@@ -125,49 +125,5 @@ namespace ProjectVagabond.UI
             }
             return currentItems;
         }
-
-        private (List<string> Positives, List<string> Negatives) GetStatModifierLines(Dictionary<string, int> mods)
-        {
-            var positives = new List<string>();
-            var negatives = new List<string>();
-            if (mods == null || mods.Count == 0) return (positives, negatives);
-
-            foreach (var kvp in mods)
-            {
-                if (kvp.Value == 0) continue;
-                string colorTag = kvp.Value > 0 ? "[cpositive]" : "[cnegative]";
-                string sign = kvp.Value > 0 ? "+" : "";
-
-                // Map full names to abbreviations
-                string statName = kvp.Key.ToLowerInvariant() switch
-                {
-                    "strength" => "STR",
-                    "intelligence" => "INT",
-                    "tenacity" => "TEN",
-                    "agility" => "AGI",
-                    "maxhp" => "HP",
-                    "maxmana" => "MP",
-                    _ => kvp.Key.ToUpper().Substring(0, Math.Min(3, kvp.Key.Length)) // Fallback
-                };
-
-                // Pad short names to 3 characters
-                if (statName.Length < 3)
-                {
-                    statName += " ";
-                }
-
-                string line = $"{statName} {colorTag}{sign}{kvp.Value}[/]";
-
-                if (kvp.Value > 0)
-                {
-                    positives.Add(line);
-                }
-                else
-                {
-                    negatives.Add(line);
-                }
-            }
-            return (positives, negatives);
-        }
     }
 }

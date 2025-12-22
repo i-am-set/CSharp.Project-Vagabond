@@ -127,5 +127,27 @@
     "StartingArmor": {
       "3": 1
     }
+  },
+  {
+    "MemberID": "6",
+    "Name": "Bento",
+    "Description": "",
+    "MaxHP": 100,
+    "MaxMana": 100,
+    "Strength": 15,
+    "Intelligence": 12,
+    "Tenacity": 4,
+    "Agility": 16,
+    "WeaknessElementIDs": [ 3, 5 ],
+    "ResistanceElementIDs": [ 2 ],
+    "DefaultStrikeMoveID": "Scorchbrand",
+    "StartingSpells": [ "Scorchbrand", "OverCharge" ],
+    "StartingActions": [ "Dodge" ],
+    "StartingWeapons": {
+      "0": 1
+    },
+    "StartingArmor": {
+      "3": 1
+    }
   }
 ]

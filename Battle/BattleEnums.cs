@@ -26,69 +26,18 @@ namespace ProjectVagabond.Battle
     /// </summary>
     public enum TargetType
     {
-        /// <summary>
-        /// Targets any single combatant on the field EXCEPT the user (Enemy 1, Enemy 2, or Ally).
-        /// </summary>
         Single,
-
-        /// <summary>
-        /// Targets ANY single combatant on the field, INCLUDING the user.
-        /// </summary>
         SingleAll,
-
-        /// <summary>
-        /// Targets BOTH enemies simultaneously. Cannot hit own party.
-        /// </summary>
         Both,
-
-        /// <summary>
-        /// Targets BOTH enemies AND the Ally. Does not hit the user.
-        /// </summary>
         Every,
-
-        /// <summary>
-        /// Targets EVERY combatant on the field (Enemies, Ally, and Self).
-        /// </summary>
         All,
-
-        /// <summary>
-        /// Targets ONLY the user.
-        /// </summary>
         Self,
-
-        /// <summary>
-        /// Targets the user AND the Ally.
-        /// </summary>
         Team,
-
-        /// <summary>
-        /// Targets ONLY the Ally.
-        /// </summary>
         Ally,
-
-        /// <summary>
-        /// Targets either the user OR the Ally (requires selection).
-        /// </summary>
         SingleTeam,
-
-        /// <summary>
-        /// Randomly targets ONE of the two enemies.
-        /// </summary>
         RandomBoth,
-
-        /// <summary>
-        /// Randomly targets ONE of: Enemy 1, Enemy 2, or Ally.
-        /// </summary>
         RandomEvery,
-
-        /// <summary>
-        /// Randomly targets ONE of: Enemy 1, Enemy 2, Ally, or Self.
-        /// </summary>
         RandomAll,
-
-        /// <summary>
-        /// No target (e.g. field effects).
-        /// </summary>
         None
     }
 
@@ -97,17 +46,16 @@ namespace ProjectVagabond.Battle
     /// </summary>
     public enum StatusEffectType
     {
+        // Perms
         Poison,
+        Burn,
+        Frostbite,
+
+        // Temps
         Stun,
         Regen,
         Dodging,
-        Burn,
-        Freeze,
-        Blind,
-        Confuse,
-        Silence,
-        Fear,
-        Root
+        Silence
     }
 
     /// <summary>

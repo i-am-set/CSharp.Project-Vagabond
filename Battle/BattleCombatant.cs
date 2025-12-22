@@ -34,10 +34,6 @@ namespace ProjectVagabond.Battle
         public bool IsActiveOnField => BattleSlot == 0 || BattleSlot == 1;
 
         // --- ECONOMY ---
-        /// <summary>
-        /// The amount of coins this combatant drops upon defeat.
-        /// Calculated at spawn based on level and global economy settings.
-        /// </summary>
         public int CoinReward { get; set; } = 0;
 
         public List<MoveData> AvailableMoves
@@ -60,7 +56,6 @@ namespace ProjectVagabond.Battle
 
         public string DefaultStrikeMoveID { get; set; }
 
-        // Added PortraitIndex to support player sprite rendering in combat
         public int PortraitIndex { get; set; } = 0;
 
         public List<StatusEffectInstance> ActiveStatusEffects { get; set; } = new List<StatusEffectInstance>();
@@ -167,7 +162,13 @@ namespace ProjectVagabond.Battle
 
             bool hadEffectBefore = HasStatusEffect(newEffect.EffectType);
             ActiveStatusEffects.RemoveAll(e => e.EffectType == newEffect.EffectType);
-            newEffect.DurationInTurns += 1;
+
+            // Only increment duration for temporary effects
+            if (!newEffect.IsPermanent)
+            {
+                newEffect.DurationInTurns += 1;
+            }
+
             ActiveStatusEffects.Add(newEffect);
             return !hadEffectBefore;
         }
@@ -204,7 +205,6 @@ namespace ProjectVagabond.Battle
             float stat = Stats.Strength;
             foreach (var mod in StatModifiers) stat = mod.ModifyStat(OffensiveStatType.Strength, (int)stat, this);
             stat *= BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Strength]];
-            if (HasStatusEffect(StatusEffectType.Fear)) stat *= 0.8f;
             return (int)Math.Round(stat);
         }
 
@@ -213,7 +213,6 @@ namespace ProjectVagabond.Battle
             float stat = Stats.Intelligence;
             foreach (var mod in StatModifiers) stat = mod.ModifyStat(OffensiveStatType.Intelligence, (int)stat, this);
             stat *= BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Intelligence]];
-            if (HasStatusEffect(StatusEffectType.Fear)) stat *= 0.8f;
             return (int)Math.Round(stat);
         }
 
@@ -222,7 +221,6 @@ namespace ProjectVagabond.Battle
             float stat = Stats.Tenacity;
             foreach (var mod in StatModifiers) stat = mod.ModifyStat(OffensiveStatType.Tenacity, (int)stat, this);
             stat *= BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Tenacity]];
-            if (HasStatusEffect(StatusEffectType.Fear)) stat *= 0.8f;
             return (int)Math.Round(stat);
         }
 
@@ -235,15 +233,19 @@ namespace ProjectVagabond.Battle
                 else stat = mod.ModifyStat(OffensiveStatType.Agility, (int)stat, this);
             }
             stat *= BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Agility]];
-            if (HasStatusEffect(StatusEffectType.Freeze)) stat *= 0.5f;
-            if (HasStatusEffect(StatusEffectType.Fear)) stat *= 0.8f;
+
+            // Frostbite cuts agility in half
+            if (HasStatusEffect(StatusEffectType.Frostbite))
+            {
+                stat *= Global.Instance.FrostbiteAgilityMultiplier;
+            }
+
             return (int)Math.Round(stat);
         }
 
         public int GetEffectiveAccuracy(int baseAccuracy)
         {
             float accuracy = baseAccuracy;
-            if (HasStatusEffect(StatusEffectType.Blind)) accuracy *= 0.5f;
             var ctx = new CombatContext { Actor = this };
             foreach (var mod in AccuracyModifiers) accuracy = mod.ModifyAccuracy((int)accuracy, ctx);
             return (int)Math.Round(accuracy);
