@@ -750,10 +750,10 @@ namespace ProjectVagabond.Battle
                     if (effect.EffectType == StatusEffectType.Poison)
                     {
                         // Damage = Base * 2^Turns
-                        int poisonDamage = Global.Instance.PoisonBaseDamage * (int)Math.Pow(2, effect.PoisonTurnCount);
+                        int safeTurnCount = Math.Min(effect.PoisonTurnCount, 30);
+                        long rawDamage = (long)Global.Instance.PoisonBaseDamage * (long)Math.Pow(2, safeTurnCount);
 
-                        // Cap damage to prevent integer overflow or instant kills at high turns? 
-                        // For now, let it scale.
+                        int poisonDamage = (int)Math.Min(rawDamage, int.MaxValue);
 
                         combatant.ApplyDamage(poisonDamage);
                         EventBus.Publish(new GameEvents.StatusEffectTriggered { Combatant = combatant, EffectType = StatusEffectType.Poison, Damage = poisonDamage });
