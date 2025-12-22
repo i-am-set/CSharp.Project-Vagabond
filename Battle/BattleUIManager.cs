@@ -25,7 +25,7 @@ namespace ProjectVagabond.Battle.UI
         public event Action<ConsumableItemData, BattleCombatant>? OnItemSelected;
         public event Action<BattleCombatant>? OnSwitchActionSelected;
         public event Action? OnFleeRequested;
-
+        public event Action<BattleCombatant>? OnTargetSelectedFromUI;
         private readonly BattleNarrator _battleNarrator;
         private readonly ActionMenu _actionMenu;
         private readonly ItemMenu _itemMenu;
@@ -46,6 +46,7 @@ namespace ProjectVagabond.Battle.UI
 
 
         private float _itemTargetingTextAnimTimer = 0f;
+        private float _targetingTextAnimTimer = 0f;
         private readonly Queue<Action> _narrationQueue = new Queue<Action>();
         public readonly HoverHighlightState HoverHighlightState = new HoverHighlightState();
         public float SharedPulseTimer { get; private set; } = 0f;
@@ -63,6 +64,13 @@ namespace ProjectVagabond.Battle.UI
         // Debug Bounds
         private Rectangle _narratorBounds;
         private Rectangle _controlPromptBounds;
+
+        // Targeting Buttons
+        private readonly List<ImageButton> _targetingButtons = new List<ImageButton>();
+        public BattleCombatant? HoveredCombatantFromUI { get; private set; }
+
+        // Input State
+        private MouseState _previousMouseState;
 
         public BattleUIManager()
         {
@@ -99,7 +107,8 @@ namespace ProjectVagabond.Battle.UI
             _itemMenu.OnItemTargetingRequested += OnItemTargetingRequested;
 
             _switchMenu.OnMemberSelected += (target) => OnSwitchActionSelected?.Invoke(target);
-            _switchMenu.OnBack += () => {
+            _switchMenu.OnBack += () =>
+            {
                 SubMenuState = BattleSubMenuState.ActionRoot;
                 _switchMenu.Hide();
 
@@ -111,15 +120,36 @@ namespace ProjectVagabond.Battle.UI
                     _actionMenu.Show(player, battleManager.AllCombatants.ToList());
                 }
             };
+
+            _previousMouseState = Mouse.GetState();
+        }
+
+        private void EnsureTargetingButtonsInitialized()
+        {
+            if (_targetingButtons.Count > 0) return;
+
+            var spriteManager = ServiceLocator.Get<SpriteManager>();
+            var sheet = spriteManager.TargetingButtonSpriteSheet;
+            var rects = spriteManager.TargetingButtonSourceRects;
+
+            // 2x2 Grid
+            // TL, TR, BL, BR
+            for (int i = 0; i < 4; i++)
+            {
+                var btn = new ImageButton(Rectangle.Empty, sheet, rects[0], rects[1], disabledSourceRect: rects[2], enableHoverSway: false);
+                _targetingButtons.Add(btn);
+            }
         }
 
         public void Reset()
         {
+            EnsureTargetingButtonsInitialized();
             _actionMenu.ResetAnimationState();
             _itemTargetingBackButton.ResetAnimationState();
             UIState = BattleUIState.Default;
             SubMenuState = BattleSubMenuState.None;
             _narrationQueue.Clear();
+            foreach (var btn in _targetingButtons) btn.ResetAnimationState();
         }
 
         public void ForceClearNarration()
@@ -130,10 +160,7 @@ namespace ProjectVagabond.Battle.UI
 
         public void ShowActionMenu(BattleCombatant player, List<BattleCombatant> allCombatants)
         {
-            // Clear any lingering narration text immediately before showing the menu.
-            // This ensures the text persists during the transition frames but vanishes instantly when the menu appears.
             ForceClearNarration();
-
             SubMenuState = BattleSubMenuState.ActionRoot;
             _actionMenu.Show(player, allCombatants);
             _itemMenu.Hide();
@@ -204,10 +231,13 @@ namespace ProjectVagabond.Battle.UI
                 _switchMenu.Update(currentMouseState);
             }
 
-            if (UIState == BattleUIState.ItemTargeting)
+            if (UIState == BattleUIState.ItemTargeting || UIState == BattleUIState.Targeting)
             {
-                _itemTargetingTextAnimTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-                _itemTargetingBackButton.Update(currentMouseState);
+                _targetingTextAnimTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                if (UIState == BattleUIState.ItemTargeting)
+                {
+                    _itemTargetingBackButton.Update(currentMouseState);
+                }
             }
 
             if (_actionMenu.CurrentMenuState == ActionMenu.MenuState.Targeting)
@@ -220,10 +250,87 @@ namespace ProjectVagabond.Battle.UI
                 UIState = BattleUIState.Default;
             }
 
+            if (UIState == BattleUIState.Targeting || UIState == BattleUIState.ItemTargeting)
+            {
+                UpdateTargetingButtons(currentMouseState, _previousMouseState, currentActor);
+            }
+
             if (!_battleNarrator.IsBusy && _narrationQueue.Any())
             {
                 var nextStep = _narrationQueue.Dequeue();
                 nextStep.Invoke();
+            }
+
+            _previousMouseState = currentMouseState;
+        }
+
+        private void UpdateTargetingButtons(MouseState currentMouseState, MouseState previousMouseState, BattleCombatant currentActor)
+        {
+            EnsureTargetingButtonsInitialized();
+
+            HoveredCombatantFromUI = null;
+            var battleManager = ServiceLocator.Get<BattleManager>();
+            var allCombatants = battleManager.AllCombatants.ToList();
+
+            // Layout Constants
+            const int btnWidth = 150;
+            const int btnHeight = 22;
+            const int gridX = 10; // (320 - 300) / 2
+            const int gridY = 126; // Moved up 2 pixels from 128
+
+            // 0: TL (Enemy 0), 1: TR (Enemy 1), 2: BL (Player 0), 3: BR (Player 1)
+            for (int i = 0; i < 4; i++)
+            {
+                var btn = _targetingButtons[i];
+                int col = i % 2;
+                int row = i / 2;
+
+                btn.Bounds = new Rectangle(gridX + col * btnWidth, gridY + row * btnHeight, btnWidth, btnHeight);
+
+                // Find Combatant
+                bool isPlayerSlot = row == 1;
+                int slotIndex = col; // 0 or 1
+
+                var combatant = allCombatants.FirstOrDefault(c => c.IsPlayerControlled == isPlayerSlot && c.BattleSlot == slotIndex && c.IsActiveOnField);
+
+                if (combatant != null)
+                {
+                    btn.Text = combatant.Name.ToUpper();
+
+                    // Check if valid target
+                    var validTargets = TargetingHelper.GetValidTargets(currentActor, TargetTypeForSelection ?? TargetType.None, allCombatants);
+                    bool isValid = validTargets.Contains(combatant);
+
+                    btn.IsEnabled = isValid;
+                    btn.CustomDisabledTextColor = _global.Palette_DarkGray;
+
+                    // Clear standard OnClick to prevent double firing or release-based firing
+                    btn.OnClick = null;
+
+                    // Manual "On Press" Logic
+                    if (btn.IsHovered && btn.IsEnabled &&
+                        UIInputManager.CanProcessMouseClick() &&
+                        currentMouseState.LeftButton == ButtonState.Pressed &&
+                        previousMouseState.LeftButton == ButtonState.Released)
+                    {
+                        OnTargetSelectedFromUI?.Invoke(combatant);
+                        UIInputManager.ConsumeMouseClick();
+                    }
+                }
+                else
+                {
+                    btn.Text = "EMPTY";
+                    btn.IsEnabled = false;
+                    btn.CustomDisabledTextColor = _global.Palette_DarkestGray;
+                    btn.OnClick = null;
+                }
+
+                btn.Update(currentMouseState);
+
+                if (btn.IsHovered && btn.IsEnabled && combatant != null)
+                {
+                    HoveredCombatantFromUI = combatant;
+                }
             }
         }
 
@@ -247,6 +354,13 @@ namespace ProjectVagabond.Battle.UI
                 DrawItemTargetingOverlay(spriteBatch, font, gameTime, transform);
             }
 
+            if (UIState == BattleUIState.Targeting)
+            {
+                DrawTargetingButtons(spriteBatch, font, gameTime, transform);
+                // Draw text AFTER buttons to ensure it's on top
+                DrawTargetingText(spriteBatch, font, gameTime);
+            }
+
             _battleNarrator.Draw(spriteBatch, ServiceLocator.Get<Core>().SecondaryFont, gameTime);
 
             DrawControlPrompt(spriteBatch);
@@ -265,6 +379,74 @@ namespace ProjectVagabond.Battle.UI
                     spriteBatch.DrawSnapped(pixel, _controlPromptBounds, Color.Purple * 0.5f);
                 }
             }
+        }
+
+        private void DrawTargetingButtons(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
+        {
+            EnsureTargetingButtonsInitialized();
+            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+            foreach (var btn in _targetingButtons)
+            {
+                // Draw the button sprite
+                btn.Draw(spriteBatch, secondaryFont, gameTime, transform);
+
+                // Draw the text
+                if (!string.IsNullOrEmpty(btn.Text))
+                {
+                    Vector2 textSize = secondaryFont.MeasureString(btn.Text);
+                    // Pixel-perfect centering
+                    Vector2 textPos = new Vector2(
+                        (int)(btn.Bounds.X + (btn.Bounds.Width - textSize.X) / 2f),
+                        (int)(btn.Bounds.Y + (btn.Bounds.Height - textSize.Y) / 2f)
+                    );
+
+                    // Determine color based on state
+                    Color textColor;
+                    if (!btn.IsEnabled)
+                    {
+                        textColor = btn.CustomDisabledTextColor ?? _global.Palette_DarkGray;
+                    }
+                    else if (btn.IsHovered)
+                    {
+                        textColor = _global.Palette_BrightWhite;
+                    }
+                    else
+                    {
+                        textColor = _global.Palette_LightGray;
+                    }
+
+                    spriteBatch.DrawStringSnapped(secondaryFont, btn.Text, textPos, textColor);
+                }
+            }
+        }
+
+        private void DrawTargetingText(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
+        {
+            // Layout Constants matching DrawItemTargetingOverlay
+            const int dividerY = 123;
+            const int backButtonHeight = 15;
+            const int backButtonTopMargin = 1;
+            const int horizontalPadding = 10;
+            const int verticalPadding = 2;
+            int availableWidth = Global.VIRTUAL_WIDTH - (horizontalPadding * 2);
+            int availableHeight = Global.VIRTUAL_HEIGHT - dividerY - (verticalPadding * 2);
+            int gridAreaHeight = availableHeight - backButtonHeight - backButtonTopMargin;
+            int gridStartY = dividerY + verticalPadding + 4;
+
+            string text = "CHOOSE A TARGET";
+            Vector2 textSize = font.MeasureString(text);
+
+            float animX = MathF.Sin(_targetingTextAnimTimer * 4f) * 1f;
+            float animY = MathF.Sin(_targetingTextAnimTimer * 8f) * 1f;
+            Vector2 animOffset = new Vector2(animX, animY);
+
+            Vector2 textPos = new Vector2(
+                horizontalPadding + (availableWidth - textSize.X) / 2,
+                gridStartY + (gridAreaHeight - textSize.Y) / 2
+            ) + animOffset;
+
+            // Use Outlined Text with Black Outline
+            spriteBatch.DrawStringOutlinedSnapped(font, text, textPos, Color.Red, _global.Palette_Black);
         }
 
         private void UpdateControlPrompt(GameTime gameTime)
@@ -286,6 +468,19 @@ namespace ProjectVagabond.Battle.UI
             else if (SubMenuState == BattleSubMenuState.Item)
             {
                 currentHoveredButton = _itemMenu.HoveredButton;
+            }
+
+            // Check targeting buttons
+            if (UIState == BattleUIState.Targeting || UIState == BattleUIState.ItemTargeting)
+            {
+                foreach (var btn in _targetingButtons)
+                {
+                    if (btn.IsHovered)
+                    {
+                        currentHoveredButton = btn;
+                        break;
+                    }
+                }
             }
 
             _isPromptVisible = true;
@@ -386,28 +581,11 @@ namespace ProjectVagabond.Battle.UI
             // Draw Border
             spriteBatch.DrawSnapped(spriteManager.BattleBorderTarget, Vector2.Zero, Color.White);
 
-            const int backButtonPadding = 8;
-            const int backButtonHeight = 15; // Match ItemMenu
-            const int backButtonTopMargin = 1;
-            const int horizontalPadding = 10;
-            const int verticalPadding = 2;
-            int availableWidth = Global.VIRTUAL_WIDTH - (horizontalPadding * 2);
-            int availableHeight = Global.VIRTUAL_HEIGHT - dividerY - (verticalPadding * 2);
-            int gridAreaHeight = availableHeight - backButtonHeight - backButtonTopMargin;
-            int gridStartY = dividerY + verticalPadding + 4;
+            // Draw Targeting Buttons (Moved here so text is on top)
+            DrawTargetingButtons(spriteBatch, font, gameTime, transform);
 
-            string text = "CHOOSE A TARGET";
-            Vector2 textSize = font.MeasureString(text);
-
-            float animX = MathF.Sin(_itemTargetingTextAnimTimer * 4f) * 1f;
-            float animY = MathF.Sin(_itemTargetingTextAnimTimer * 8f) * 1f;
-            Vector2 animOffset = new Vector2(animX, animY);
-
-            Vector2 textPos = new Vector2(
-                horizontalPadding + (availableWidth - textSize.X) / 2,
-                gridStartY + (gridAreaHeight - textSize.Y) / 2
-            ) + animOffset;
-            spriteBatch.DrawStringSnapped(font, text, textPos, Color.Red);
+            // Draw Text (Using shared helper)
+            DrawTargetingText(spriteBatch, font, gameTime);
 
             // Ensure button size matches ItemMenu
             var backSize = (_itemTargetingBackButton.Font ?? secondaryFont).MeasureString(_itemTargetingBackButton.Text);
@@ -458,7 +636,7 @@ namespace ProjectVagabond.Battle.UI
             UIState = BattleUIState.ItemTargeting;
             ItemForTargeting = item;
             _itemMenu.Hide();
-            _itemTargetingTextAnimTimer = 0f;
+            _targetingTextAnimTimer = 0f;
         }
 
         private void OnItemMenuBack()

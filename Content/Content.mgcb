@@ -2689,6 +2689,18 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/BattleUI/ui_action_tooltip_background.png;Sprites/UI/BattleUI/ui_action_tooltip_background
 
+#begin Sprites/UI/BattleUI/ui_choose_a_target_button_spritesheet.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/BattleUI/ui_choose_a_target_button_spritesheet.png;Sprites/UI/BattleUI/ui_choose_a_target_button_spritesheet
+
 #begin Sprites/UI/Cursor/cursor_default.png
 /importer:TextureImporter
 /processor:TextureProcessor

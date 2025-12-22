@@ -16,7 +16,6 @@ namespace ProjectVagabond.Battle.UI
         public event Action<MoveData, MoveEntry, BattleCombatant> OnMoveTargetSelected;
         public event Action<ConsumableItemData, BattleCombatant> OnItemTargetSelected;
         public event Action OnBackRequested;
-
         private int _hoveredTargetIndex = -1;
         public int HoveredTargetIndex => _hoveredTargetIndex;
 
@@ -53,18 +52,38 @@ namespace ProjectVagabond.Battle.UI
 
                 var currentTargets = renderer.GetCurrentTargets();
                 _hoveredTargetIndex = -1;
-                for (int i = 0; i < currentTargets.Count; i++)
+
+                // Check UI Buttons First for HOVER mapping
+                var uiHoveredCombatant = uiManager.HoveredCombatantFromUI;
+                if (uiHoveredCombatant != null)
                 {
-                    if (currentTargets[i].Bounds.Contains(virtualMousePos))
+                    for (int i = 0; i < currentTargets.Count; i++)
                     {
-                        _hoveredTargetIndex = i;
-                        break;
+                        if (currentTargets[i].Combatant == uiHoveredCombatant)
+                        {
+                            _hoveredTargetIndex = i;
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    // Fallback to Sprite Hover
+                    for (int i = 0; i < currentTargets.Count; i++)
+                    {
+                        if (currentTargets[i].Bounds.Contains(virtualMousePos))
+                        {
+                            _hoveredTargetIndex = i;
+                            break;
+                        }
                     }
                 }
 
+                // Handle Click on Sprites (UI Buttons handle their own clicks in BattleUIManager)
                 if (UIInputManager.CanProcessMouseClick() && currentMouseState.LeftButton == ButtonState.Released && _previousMouseState.LeftButton == ButtonState.Pressed)
                 {
-                    if (_hoveredTargetIndex != -1)
+                    // Only process sprite clicks if we aren't hovering a UI button
+                    if (_hoveredTargetIndex != -1 && uiHoveredCombatant == null)
                     {
                         var selectedTarget = currentTargets[_hoveredTargetIndex].Combatant;
                         if (uiManager.UIState == BattleUIState.Targeting)

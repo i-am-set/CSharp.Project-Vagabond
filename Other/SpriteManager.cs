@@ -92,6 +92,7 @@ namespace ProjectVagabond
         public Rectangle[] InventoryRightArrowButtonSourceRects { get; private set; }
         public Rectangle[] InventoryScrollArrowRects { get; private set; }
         public Rectangle[] InventorySpellSlotButtonSourceRects { get; private set; } // NEW
+        public Rectangle[] TargetingButtonSourceRects { get; private set; } // NEW
 
 
         // Enemy Sprite Cache
@@ -191,6 +192,7 @@ namespace ProjectVagabond
         public Texture2D ShopXIcon { get; private set; } // NEW
         public Texture2D RestBorderMain { get; private set; } // NEW
         public Texture2D RestActionIconsSpriteSheet { get; private set; } // NEW
+        public Texture2D TargetingButtonSpriteSheet { get; private set; } // NEW
 
         // Background Noise
         public Texture2D NoiseTexture { get; private set; }
@@ -456,6 +458,8 @@ namespace ProjectVagabond
             catch { RestBorderMain = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
             try { RestActionIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/Rest/rest_action_icons"); }
             catch { RestActionIconsSpriteSheet = _textureFactory.CreateColoredTexture(24, 32, Color.Magenta); }
+            try { TargetingButtonSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/ui_choose_a_target_button_spritesheet"); }
+            catch { TargetingButtonSpriteSheet = _textureFactory.CreateColoredTexture(450, 22, Color.Magenta); }
 
             // Load Health Bar Sprites
             try { InventoryPlayerHealthBarEmpty = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_player_health_bar_empty"); }
@@ -492,6 +496,20 @@ namespace ProjectVagabond
             InitializeInventoryArrowButtonRects();
             InitializeInventoryScrollArrowRects();
             InitializeInventorySpellSlotButtonRects();
+            InitializeTargetingButtonRects();
+        }
+
+        private void InitializeTargetingButtonRects()
+        {
+            TargetingButtonSourceRects = new Rectangle[3];
+            const int frameWidth = 150;
+            const int frameHeight = 22;
+            // Frame 0: Idle
+            TargetingButtonSourceRects[0] = new Rectangle(0, 0, frameWidth, frameHeight);
+            // Frame 1: Hover
+            TargetingButtonSourceRects[1] = new Rectangle(frameWidth, 0, frameWidth, frameHeight);
+            // Frame 2: Disabled
+            TargetingButtonSourceRects[2] = new Rectangle(frameWidth * 2, 0, frameWidth, frameHeight);
         }
 
         private void InitializeInventorySpellSlotButtonRects()

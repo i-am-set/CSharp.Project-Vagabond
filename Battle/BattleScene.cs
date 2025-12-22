@@ -25,7 +25,6 @@ namespace ProjectVagabond.Scenes
         private const float ACTION_EXECUTION_DELAY = 0.5f; // Tunable delay before attack execution
         private const float FIXED_COIN_GROUND_Y = 115f;
         private const int ENEMY_SLOT_Y_OFFSET = 16;
-
         private BattleManager _battleManager;
         private BattleUIManager _uiManager;
         private BattleRenderer _renderer;
@@ -161,6 +160,7 @@ namespace ProjectVagabond.Scenes
             _uiManager.OnItemSelected += OnPlayerItemSelected;
             _uiManager.OnSwitchActionSelected += OnPlayerSwitchSelected;
             _uiManager.OnFleeRequested += FleeBattle;
+            _uiManager.OnTargetSelectedFromUI += OnTargetSelectedFromUI; // NEW
             _inputHandler.OnMoveTargetSelected += OnPlayerMoveTargetSelected;
             _inputHandler.OnItemTargetSelected += OnPlayerItemSelected;
             _inputHandler.OnBackRequested += () => _uiManager.GoBack();
@@ -189,6 +189,7 @@ namespace ProjectVagabond.Scenes
             _uiManager.OnItemSelected -= OnPlayerItemSelected;
             _uiManager.OnSwitchActionSelected -= OnPlayerSwitchSelected;
             _uiManager.OnFleeRequested -= FleeBattle;
+            _uiManager.OnTargetSelectedFromUI -= OnTargetSelectedFromUI; // NEW
             _inputHandler.OnMoveTargetSelected -= OnPlayerMoveTargetSelected;
             _inputHandler.OnItemTargetSelected -= OnPlayerItemSelected;
             _inputHandler.OnBackRequested -= () => _uiManager.GoBack();
@@ -736,6 +737,18 @@ namespace ProjectVagabond.Scenes
         private void OnPlayerMoveTargetSelected(MoveData move, MoveEntry entry, BattleCombatant target)
         {
             OnPlayerMoveSelected(move, entry, target);
+        }
+
+        private void OnTargetSelectedFromUI(BattleCombatant target)
+        {
+            if (_uiManager.UIState == BattleUIState.Targeting)
+            {
+                OnPlayerMoveSelected(_uiManager.MoveForTargeting, _uiManager.SpellForTargeting, target);
+            }
+            else if (_uiManager.UIState == BattleUIState.ItemTargeting)
+            {
+                OnPlayerItemSelected(_uiManager.ItemForTargeting, target);
+            }
         }
 
         private void OnPlayerItemSelected(ConsumableItemData item, BattleCombatant target)
