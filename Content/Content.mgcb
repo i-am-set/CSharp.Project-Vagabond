@@ -15,7 +15,7 @@
 
 #---------------------------------- Content ---------------------------------#
 
-#begin Fonts/3x3-ascii_0.png
+#begin Fonts/3x4_SimpleOddHeight_0.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -25,12 +25,12 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Fonts/3x3-ascii_0.png
+/build:Fonts/3x4_SimpleOddHeight_0.png
 
-#begin Fonts/3x3-ascii.fnt
+#begin Fonts/3x4_SimpleOddHeight.fnt
 /importer:BitmapFontImporter
 /processor:BitmapFontProcessor
-/build:Fonts/3x3-ascii.fnt
+/build:Fonts/3x4_SimpleOddHeight.fnt
 
 #begin Fonts/5x5_pixel_0.png
 /importer:TextureImporter

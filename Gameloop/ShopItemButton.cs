@@ -17,7 +17,7 @@ namespace ProjectVagabond.UI
         private readonly Texture2D _iconTexture;
         private readonly Texture2D _iconSilhouette;
         private readonly BitmapFont _priceFont; // Secondary (5x5)
-        private readonly BitmapFont _currencyFont; // Tertiary (3x3)
+        private readonly BitmapFont _currencyFont; // Tertiary (3x4)
         private readonly BitmapFont _nameFont;
 
         // Animation State

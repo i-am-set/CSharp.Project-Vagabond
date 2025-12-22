@@ -2,10 +2,10 @@
 fileVersion=1
 
 # font settings
-fontName=3x3-ASCII
-fontFile=../Content/Fonts/3x3-ascii.ttf
+fontName=5 x 5
+fontFile=../Content/Fonts/5x5_pixel.ttf
 charSet=0
-fontSize=4
+fontSize=5
 aa=1
 scaleH=100
 useSmoothing=0

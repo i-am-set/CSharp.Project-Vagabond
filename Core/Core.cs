@@ -89,7 +89,7 @@ namespace ProjectVagabond
         public BitmapFont SecondaryFont => _secondaryFont;
 
         /// <summary>
-        /// The tertiary, smallest 3x3 pixel font used for very small UI elements or debug.
+        /// The tertiary, smallest 3x4 pixel font used for very small UI elements or debug.
         /// </summary>
         public BitmapFont TertiaryFont => _tertiaryFont;
 
@@ -509,11 +509,11 @@ namespace ProjectVagabond
 
             try
             {
-                _tertiaryFont = Content.Load<BitmapFont>("Fonts/3x3-ascii");
+                _tertiaryFont = Content.Load<BitmapFont>("Fonts/3x4_SimpleOddHeight");
             }
             catch
             {
-                Debug.WriteLine("[WARNING] Could not load tertiary font 'Fonts/3x3-ascii'. Using secondary font as fallback.");
+                Debug.WriteLine("[WARNING] Could not load tertiary font 'Fonts/3x4_SimpleOddHeight'. Using secondary font as fallback.");
                 _tertiaryFont = _secondaryFont;
             }
 

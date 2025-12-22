@@ -418,7 +418,7 @@ namespace ProjectVagabond.Utils
                 // Determine which font to use based on the index
                 // Index 0: Passed font (which Core now sends as Secondary)
                 // Index 1: Default Font (Px437)
-                // Index 2: Tertiary Font (3x3)
+                // Index 2: Tertiary Font (3x4)
                 BitmapFont activeFont = _currentFontIndex switch
                 {
                     1 => core.DefaultFont,
