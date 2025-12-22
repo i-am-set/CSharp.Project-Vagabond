@@ -89,7 +89,7 @@ namespace ProjectVagabond
             const int paddingX = 8;
             const int paddingY = 4;
             int tooltipWidth = (int)textSize.X + paddingX;
-            int tooltipHeight = (int)textSize.Y + paddingY;
+            int tooltipHeight = (int)textSize.Y + paddingY - 1; // Reduced height by 1 pixel
 
             // Position the tooltip above the anchor, centered horizontally.
             Vector2 finalTopLeftPosition = new Vector2(
@@ -110,7 +110,9 @@ namespace ProjectVagabond
             }
 
             Rectangle tooltipBg = new Rectangle((int)finalTopLeftPosition.X, (int)finalTopLeftPosition.Y, tooltipWidth, tooltipHeight);
-            Vector2 textPosition = new Vector2(tooltipBg.X + (paddingX / 2), tooltipBg.Y + (paddingY / 2));
+
+            // Moved text up by 1 pixel (-1)
+            Vector2 textPosition = new Vector2(tooltipBg.X + (paddingX / 2), tooltipBg.Y + (paddingY / 2) - 1);
 
             spriteBatch.DrawSnapped(pixel, tooltipBg, _global.ToolTipBGColor);
             spriteBatch.DrawSnapped(pixel, new Rectangle(tooltipBg.X, tooltipBg.Y, tooltipBg.Width, 1), _global.ToolTipBorderColor);

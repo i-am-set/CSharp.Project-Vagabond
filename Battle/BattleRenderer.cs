@@ -5,7 +5,6 @@ using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Scenes;
-using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
@@ -174,6 +173,11 @@ namespace ProjectVagabond.Battle.UI
                 return MathF.Sin(progress * MathHelper.Pi) * -StatusIconAnim.HEIGHT;
             }
             return 0f;
+        }
+
+        private bool IsStatusIconAnimating(string combatantId, StatusEffectType type)
+        {
+            return _activeStatusIconAnims.Any(a => a.CombatantID == combatantId && a.Type == type);
         }
 
         private void UpdateStatusIconTooltips(IEnumerable<BattleCombatant> allCombatants)
@@ -708,12 +712,25 @@ namespace ProjectVagabond.Battle.UI
             {
                 // Apply Hop Offset
                 float hopOffset = GetStatusIconOffset(player.CombatantID, effect.EffectType);
+                bool isAnimating = IsStatusIconAnimating(player.CombatantID, effect.EffectType);
 
                 var iconBounds = new Rectangle(currentX, (int)(iconY + hopOffset), iconSize, iconSize);
                 _playerStatusIcons.Add(new StatusIconInfo { Effect = effect, Bounds = iconBounds });
 
                 var iconTexture = _spriteManager.GetStatusEffectIcon(effect.EffectType);
                 spriteBatch.DrawSnapped(iconTexture, iconBounds, Color.White);
+
+                // --- NEW: Flash White if Animating ---
+                if (isAnimating)
+                {
+                    // Draw the icon again with Additive blending to make it glow white
+                    spriteBatch.End();
+                    spriteBatch.Begin(blendState: BlendState.Additive, samplerState: SamplerState.PointClamp);
+                    spriteBatch.DrawSnapped(iconTexture, iconBounds, Color.White);
+                    spriteBatch.End();
+                    // Resume normal drawing
+                    spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp);
+                }
 
                 if (_hoveredStatusIcon.HasValue && _hoveredStatusIcon.Value.Effect == effect)
                 {
@@ -1327,11 +1344,24 @@ namespace ProjectVagabond.Battle.UI
             {
                 // Apply Hop Offset
                 float hopOffset = GetStatusIconOffset(combatant.CombatantID, effect.EffectType);
+                bool isAnimating = IsStatusIconAnimating(combatant.CombatantID, effect.EffectType);
 
                 var iconBounds = new Rectangle(currentX, (int)(iconY + hopOffset), iconSize, iconSize);
                 _enemyStatusIcons[combatant.CombatantID].Add(new StatusIconInfo { Effect = effect, Bounds = iconBounds });
                 var iconTexture = _spriteManager.GetStatusEffectIcon(effect.EffectType);
                 spriteBatch.DrawSnapped(iconTexture, iconBounds, Color.White);
+
+                // --- NEW: Flash White if Animating ---
+                if (isAnimating)
+                {
+                    // Draw the icon again with Additive blending to make it glow white
+                    spriteBatch.End();
+                    spriteBatch.Begin(blendState: BlendState.Additive, samplerState: SamplerState.PointClamp);
+                    spriteBatch.DrawSnapped(iconTexture, iconBounds, Color.White);
+                    spriteBatch.End();
+                    // Resume normal drawing
+                    spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp);
+                }
 
                 if (_hoveredStatusIcon.HasValue && _hoveredStatusIcon.Value.Effect == effect)
                 {

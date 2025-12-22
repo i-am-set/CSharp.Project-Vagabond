@@ -70,7 +70,7 @@
             string name = GetDisplayName().ToUpper();
             if (IsPermanent)
             {
-                return $"{name} (PERM)";
+                return name;
             }
             return $"{name} ({DurationInTurns})";
         }

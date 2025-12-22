@@ -257,10 +257,12 @@ namespace ProjectVagabond.Battle.UI
                 // --- Strikethrough Logic for Disabled State ---
                 if (!IsEnabled)
                 {
-                    float lineY = animatedBounds.Center.Y;
+                    // Moved down 1 pixel (+1)
+                    float lineY = animatedBounds.Center.Y + 1;
                     float startX = textStartX - 2;
                     float endX = textStartX + Math.Min(moveNameTextSize.Width, textAvailableWidth) + 2;
-                    spriteBatch.DrawLineSnapped(new Vector2(startX, lineY), new Vector2(endX, lineY), _global.ButtonDisableColor * contentAlpha);
+                    // Use fully opaque color for the strikethrough
+                    spriteBatch.DrawLineSnapped(new Vector2(startX, lineY), new Vector2(endX, lineY), _global.ButtonDisableColor);
                 }
 
                 if (!canAfford && isActivated && IsEnabled)
