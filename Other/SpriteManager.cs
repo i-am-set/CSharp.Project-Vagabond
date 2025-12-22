@@ -10,6 +10,7 @@ using ProjectVagabond.Dice;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
@@ -17,6 +18,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics.X86;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -190,6 +192,8 @@ namespace ProjectVagabond
         public Texture2D RestBorderMain { get; private set; } // NEW
         public Texture2D RestActionIconsSpriteSheet { get; private set; } // NEW
 
+        // Background Noise
+        public Texture2D NoiseTexture { get; private set; }
 
         // Mouse Prompt Sprites
         public Texture2D MousePromptBlank { get; private set; }
@@ -465,6 +469,9 @@ namespace ProjectVagabond
             try { InventoryPlayerHealthBarOverlay = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_player_health_bar_overlay"); }
             catch { InventoryPlayerHealthBarOverlay = _textureFactory.CreateColoredTexture(64, 7, Color.LimeGreen); }
 
+            // Generate Noise Texture
+            try { NoiseTexture = _textureFactory.CreateNoiseTexture(256, 256); }
+            catch { NoiseTexture = _textureFactory.CreateColoredTexture(256, 256, Color.Gray); }
 
             LoadAndCacheCursorSprite("cursor_default");
             LoadAndCacheCursorSprite("cursor_hover_clickable");

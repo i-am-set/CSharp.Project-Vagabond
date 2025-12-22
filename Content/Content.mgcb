@@ -161,6 +161,12 @@
 /processorParam:TextureFormat=Compressed
 /build:Models/die.fbx
 
+#begin Shaders/BackgroundNoise.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/processorParam:DebugMode=Auto
+/build:Shaders/BackgroundNoise.fx
+
 #begin Shaders/CRTShader.fx
 /importer:EffectImporter
 /processor:EffectProcessor

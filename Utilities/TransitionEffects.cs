@@ -45,7 +45,7 @@ namespace ProjectVagabond.Transitions
     public class ShuttersTransition : ITransitionEffect
     {
         private float _timer;
-        private const float DURATION = 0.2f;
+        private const float DURATION = 0.8f;
         private bool _isOut;
         public bool IsComplete => _timer >= DURATION;
 

@@ -39,7 +39,6 @@ namespace ProjectVagabond
         private BitmapFont _secondaryFont;
         private BitmapFont _tertiaryFont;
         private Texture2D _pixel;
-
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         // RENDERING STATE & POST-PROCESSING
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
@@ -123,6 +122,7 @@ namespace ProjectVagabond
         private CursorManager _cursorManager;
         private TransitionManager _transitionManager;
         private HitstopManager _hitstopManager;
+        private BackgroundNoiseRenderer _backgroundNoiseRenderer;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         // GAME LOOP STATE
@@ -380,6 +380,9 @@ namespace ProjectVagabond
             _hitstopManager = new HitstopManager();
             ServiceLocator.Register<HitstopManager>(_hitstopManager);
 
+            _backgroundNoiseRenderer = new BackgroundNoiseRenderer();
+            ServiceLocator.Register<BackgroundNoiseRenderer>(_backgroundNoiseRenderer);
+
             // Phase 4: Final Setup
             GraphicsDevice.SamplerStates[0] = SamplerState.PointClamp;
 
@@ -517,6 +520,7 @@ namespace ProjectVagabond
             // Load essential assets
             _spriteManager.LoadEssentialContent();
             _backgroundManager.LoadContent();
+            _backgroundNoiseRenderer.LoadContent(); // Load noise shader
             BattleDataCache.LoadData(Content);
             _progressionManager.LoadSplits();
             _diceRollingSystem.Initialize(GraphicsDevice, Content);
@@ -697,6 +701,9 @@ namespace ProjectVagabond
             // --- UPDATE TRANSITION MANAGER ---
             _transitionManager.Update(gameTime);
 
+            // --- UPDATE BACKGROUND NOISE ---
+            _backgroundNoiseRenderer.Update(gameTime);
+
             // --- MODAL UPDATES ---
             if (_loadingScreen.IsActive)
             {
@@ -802,7 +809,57 @@ namespace ProjectVagabond
             }
             _spriteBatch.End();
 
-            // 3. Draw Fullscreen UI (Settings, etc.) - Only if NOT loading
+            // --- 3. APPLY BACKGROUND NOISE (POST-PROCESSING) ---
+            // This takes the composite target (scene + letterbox bars) and replaces black pixels with noise.
+            // The result is stored in _backgroundNoiseRenderer.Texture.
+            _backgroundNoiseRenderer.Apply(GraphicsDevice, _finalCompositeTarget, gameTime, _finalScale);
+
+            // 4. Draw Fullscreen UI (Settings, etc.) - Only if NOT loading
+            // We draw this directly to the backbuffer later, or we could composite it here.
+            // Actually, UI should probably be on top of the noise.
+            // But wait, UI is drawn in screen space.
+            // Let's stick to the plan: Noise replaces black in the *scene*.
+            // UI is drawn *after* the CRT effect usually, or before?
+            // In the previous code, UI was drawn to the backbuffer *before* the CRT shader pass?
+            // No, UI was drawn to the backbuffer *after* the composite draw but *before* the CRT shader pass?
+            // Wait, the CRT shader pass draws the composite target to the backbuffer.
+            // So UI needs to be drawn *after* that if we want it crisp, or *before* if we want it scanned.
+            // The previous code drew UI *after* the composite step but *before* the CRT shader step?
+            // Let's look at the old code:
+            // 1. Scene -> Virtual
+            // 2. Virtual -> Composite
+            // 3. UI -> Backbuffer (Wait, this is wrong if CRT shader clears backbuffer)
+            // Actually, the old code drew UI to the backbuffer *before* the CRT shader pass.
+            // But the CRT shader pass clears the backbuffer? No, it draws a quad.
+            // If the CRT shader draws a full screen quad, it overwrites the UI.
+            // Let's check the old code:
+            // ...
+            // _spriteBatch.End(); (Composite)
+            // 3. Draw Fullscreen UI ... _sceneManager...DrawFullscreenUI
+            // 4. Draw Custom Cursor
+            // 5. Final Render to Backbuffer (Apply CRT Shader) -> GraphicsDevice.SetRenderTarget(null); GraphicsDevice.Clear...
+            //
+            // AHA! The old code cleared the backbuffer in step 5, effectively erasing the UI drawn in step 3 and 4!
+            // Unless... wait.
+            // Step 3 and 4 were drawing to `_finalCompositeTarget`? No, the render target was set to `_finalCompositeTarget` in step 2.
+            // It was never unset until step 5.
+            // So UI and Cursor were being drawn onto `_finalCompositeTarget`.
+            // That means they were subject to the CRT shader.
+            //
+            // So, my new flow should be:
+            // 1. Scene -> Virtual
+            // 2. Virtual -> Composite (Letterboxed)
+            // 3. UI -> Composite
+            // 4. Cursor -> Composite
+            // 5. Noise Pass: Composite -> Noise Texture (Replaces black with noise)
+            // 6. CRT Pass: Noise Texture -> Backbuffer
+
+            // Let's adjust the render target logic to match this.
+
+            // ... (Step 2: Composite Scene) ...
+            // GraphicsDevice.SetRenderTarget(_finalCompositeTarget); is already set.
+
+            // 3. Draw Fullscreen UI
             if (!_loadingScreen.IsActive)
             {
                 Matrix screenScaleMatrix = Matrix.Invert(_mouseTransformMatrix);
@@ -814,7 +871,11 @@ namespace ProjectVagabond
             _cursorManager.Draw(_spriteBatch, Mouse.GetState().Position.ToVector2(), _finalScale);
             _spriteBatch.End();
 
-            // 5. Final Render to Backbuffer (Apply CRT Shader)
+            // 5. Apply Noise (Post-Processing)
+            // This reads from _finalCompositeTarget and writes to its internal target.
+            _backgroundNoiseRenderer.Apply(GraphicsDevice, _finalCompositeTarget, gameTime, _finalScale);
+
+            // 6. Final Render to Backbuffer (Apply CRT Shader)
             GraphicsDevice.SetRenderTarget(null);
             GraphicsDevice.Clear(_global.GameBg);
 
@@ -855,18 +916,20 @@ namespace ProjectVagabond
                 _crtEffect.CurrentTechnique.Passes[0].Apply();
             }
 
-            // Draw the composite target centered on screen
+            // Draw the NOISE TEXTURE (which contains the scene + UI + noise) to the backbuffer
             int backBufferWidth = GraphicsDevice.PresentationParameters.BackBufferWidth;
             int backBufferHeight = GraphicsDevice.PresentationParameters.BackBufferHeight;
-            int targetWidth = _finalCompositeTarget.Width;
-            int targetHeight = _finalCompositeTarget.Height;
-            int drawX = (backBufferWidth - targetWidth) / 2;
-            int drawY = (backBufferHeight - targetHeight) / 2;
 
-            _spriteBatch.Draw(_finalCompositeTarget, new Rectangle(drawX, drawY, targetWidth, targetHeight), Color.White);
+            // The noise texture is already the size of the backbuffer (or close to it based on scale)
+            // We draw it to fill the screen.
+            if (_backgroundNoiseRenderer.Texture != null)
+            {
+                _spriteBatch.Draw(_backgroundNoiseRenderer.Texture, new Rectangle(0, 0, backBufferWidth, backBufferHeight), Color.White);
+            }
+
             _spriteBatch.End();
 
-            // 6. Draw Debug Overlays (No Shader)
+            // 7. Draw Debug Overlays (No Shader)
             if (!_loadingScreen.IsActive)
             {
                 _spriteBatch.Begin(samplerState: SamplerState.PointClamp);

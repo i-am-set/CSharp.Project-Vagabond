@@ -63,7 +63,6 @@ namespace ProjectVagabond
             StatColor_Intelligence = Color.MediumSpringGreen;
             StatColor_Tenacity = Color.Lime;
             StatColor_Agility = Color.Yellow;
-
             StatColor_Increase = Color.Lime;
             StatColor_Decrease = Color.Red;
 
@@ -95,43 +94,43 @@ namespace ProjectVagabond
 
             // Initialize Color Mappings
             ElementColors = new Dictionary<int, Color>
-            {
-                { 1, Palette_White },      // Neutral
-                { 2, Palette_Red },        // Fire
-                { 3, Palette_LightBlue },  // Water
-                { 4, Palette_Pink },       // Arcane
-                { 5, Palette_Orange },     // Earth
-                { 6, Palette_Gray },       // Metal
-                { 7, Palette_LightPurple },// Toxic
-                { 8, Palette_Teal },       // Wind
-                { 9, Palette_DarkPurple }, // Void
-                { 10, Palette_LightYellow },// Light
-                { 11, Palette_Yellow},     // Electric
-                { 12, Palette_LightBlue }, // Ice
-                { 13, Palette_LightGreen } // Nature
-            };
+        {
+            { 1, Palette_White },      // Neutral
+            { 2, Palette_Red },        // Fire
+            { 3, Palette_LightBlue },  // Water
+            { 4, Palette_Pink },       // Arcane
+            { 5, Palette_Orange },     // Earth
+            { 6, Palette_Gray },       // Metal
+            { 7, Palette_LightPurple },// Toxic
+            { 8, Palette_Teal },       // Wind
+            { 9, Palette_DarkPurple }, // Void
+            { 10, Palette_LightYellow },// Light
+            { 11, Palette_Yellow},     // Electric
+            { 12, Palette_LightBlue }, // Ice
+            { 13, Palette_LightGreen } // Nature
+        };
 
             RarityColors = new Dictionary<int, Color>
-            {
-                { -1, Palette_Gray },      // Basic/Action
-                { 0, Color.White },        // Common
-                { 1, Color.Lime },         // Uncommon
-                { 2, Color.DeepSkyBlue },  // Rare
-                { 3, Color.DarkOrchid },   // Epic
-                { 4, Color.Red },          // Mythic
-                { 5, Color.Yellow }        // Legendary
-            };
+        {
+            { -1, Palette_Gray },      // Basic/Action
+            { 0, Color.White },        // Common
+            { 1, Color.Lime },         // Uncommon
+            { 2, Color.DeepSkyBlue },  // Rare
+            { 3, Color.DarkOrchid },   // Epic
+            { 4, Color.Red },          // Mythic
+            { 5, Color.Yellow }        // Legendary
+        };
 
             StatusEffectColors = new Dictionary<StatusEffectType, Color>
-            {
-                { StatusEffectType.Poison, Palette_LightPurple },
-                { StatusEffectType.Stun, Palette_Yellow },
-                { StatusEffectType.Regen, Palette_LightGreen },
-                { StatusEffectType.Dodging, Palette_LightBlue },
-                { StatusEffectType.Burn, Palette_Red },
-                { StatusEffectType.Frostbite, Palette_DarkBlue },
-                { StatusEffectType.Silence, Palette_LightGray }
-            };
+        {
+            { StatusEffectType.Poison, Palette_LightPurple },
+            { StatusEffectType.Stun, Palette_Yellow },
+            { StatusEffectType.Regen, Palette_LightGreen },
+            { StatusEffectType.Dodging, Palette_LightBlue },
+            { StatusEffectType.Burn, Palette_Red },
+            { StatusEffectType.Frostbite, Palette_DarkBlue },
+            { StatusEffectType.Silence, Palette_LightGray }
+        };
         }
 
         public static Global Instance => _instance;
@@ -221,6 +220,16 @@ namespace ProjectVagabond
         // --- HITSTOP (FRAME FREEZE) TUNING ---
         public float HitstopDuration_Normal { get; set; } = 0.12f;
         public float HitstopDuration_Crit { get; set; } = 0.25f;
+
+        // --- BACKGROUND NOISE TUNING ---
+        public Color BackgroundNoiseColor { get; set; } = new Color(42, 40, 57); // Palette_DarkGray
+        public float BackgroundNoiseOpacity { get; set; } = 0.3f;
+        public float BackgroundNoiseScale { get; set; } = 0.05f;
+        public float BackgroundScrollSpeedX { get; set; } = 0.01f;
+        public float BackgroundScrollSpeedY { get; set; } = 0.005f;
+        public float BackgroundDistortionScale { get; set; } = 100.0f;
+        public float BackgroundDistortionSpeed { get; set; } = 0.5f;
+        public float BackgroundNoiseThreshold { get; set; } = 0.01f; // Tolerance for "Black" detection
 
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //

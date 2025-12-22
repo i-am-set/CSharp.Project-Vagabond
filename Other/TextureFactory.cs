@@ -8,6 +8,7 @@ using ProjectVagabond.Dice;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
@@ -30,6 +31,23 @@ namespace ProjectVagabond
                 colorData[i] = color;
             }
             texture.SetData(colorData);
+            return texture;
+        }
+
+        public Texture2D CreateNoiseTexture(int width, int height)
+        {
+            var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
+            var texture = new Texture2D(graphicsDevice, width, height);
+            var data = new Color[width * height];
+            var random = new Random();
+
+            for (int i = 0; i < data.Length; i++)
+            {
+                float val = (float)random.NextDouble();
+                data[i] = new Color(val, val, val, 1.0f);
+            }
+
+            texture.SetData(data);
             return texture;
         }
 

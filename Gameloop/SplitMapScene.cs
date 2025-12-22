@@ -54,7 +54,7 @@ namespace ProjectVagabond.Scenes
         private readonly PlayerMapIcon _playerIcon;
         private NarrativeDialog _narrativeDialog;
 
-        private const float PLAYER_MOVE_SPEED = 50f;
+        private const float PLAYER_MOVE_SPEED = 30f;
         private const float CAMERA_LERP_SPEED = 5f;
         private const float NODE_LIFT_DURATION = 0.2f;
         private const float PULSE_DURATION = 0.15f;
@@ -1022,7 +1022,7 @@ namespace ProjectVagabond.Scenes
             // Use a random combat transition (Diamonds, Shutters, Blocks)
             var transitionType = _transitionManager.GetRandomCombatTransition();
             // Use the same transition for In and Out for consistency
-            _sceneManager.ChangeScene(GameSceneState.Battle, transitionType, transitionType, 1.0f);
+            _sceneManager.ChangeScene(GameSceneState.Battle, transitionType, transitionType, 0.5f);
 
             _pendingCombatArchetypes = null;
         }

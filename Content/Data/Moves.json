@@ -879,7 +879,7 @@
     "Effects": { "MultiHit": "2,5" },
     "Tags": [ "MultiHit" ],
     "AnimationSpriteSheet": "basic_swipe",
-    "AnimationSpeed": 1.0,
+    "AnimationSpeed": 2.0,
     "IsAnimationCentralized": false
   },
   {
