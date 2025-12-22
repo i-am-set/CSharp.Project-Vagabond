@@ -122,6 +122,7 @@ namespace ProjectVagabond
         private ProgressionManager _progressionManager;
         private CursorManager _cursorManager;
         private TransitionManager _transitionManager;
+        private HitstopManager _hitstopManager;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         // GAME LOOP STATE
@@ -376,6 +377,9 @@ namespace ProjectVagabond
             _cursorManager = new CursorManager();
             ServiceLocator.Register<CursorManager>(_cursorManager);
 
+            _hitstopManager = new HitstopManager();
+            ServiceLocator.Register<HitstopManager>(_hitstopManager);
+
             // Phase 4: Final Setup
             GraphicsDevice.SamplerStates[0] = SamplerState.PointClamp;
 
@@ -555,6 +559,7 @@ namespace ProjectVagabond
             _loadingScreen.Clear();
             _debugConsole.ClearHistory();
             _progressionManager.ClearCurrentSplitMap();
+            _hitstopManager.Reset();
 
             _transitionManager.Reset();
 
@@ -674,7 +679,13 @@ namespace ProjectVagabond
             // Cap huge delta times (e.g. after dragging window) to prevent "spiral of death"
             if (elapsedSeconds > 0.1f) elapsedSeconds = 0.1f;
 
-            _physicsTimeAccumulator += elapsedSeconds * _global.DiceSimulationSpeedMultiplier;
+            // --- HITSTOP LOGIC ---
+            // Update the hitstop manager with the real delta time.
+            // It returns a time scale (0 or 1) to apply to the rest of the game logic.
+            float timeScale = _hitstopManager.Update(elapsedSeconds);
+
+            // Apply time scale to physics accumulator
+            _physicsTimeAccumulator += (elapsedSeconds * timeScale) * _global.DiceSimulationSpeedMultiplier;
 
             while (_physicsTimeAccumulator >= Global.FIXED_PHYSICS_TIMESTEP)
             {
@@ -708,22 +719,28 @@ namespace ProjectVagabond
             // Only update the scene if the transition isn't fully obscuring it
             if (!_transitionManager.IsScreenObscured)
             {
-                _sceneManager.Update(gameTime);
-                _diceRollingSystem.Update(gameTime);
-                _animationManager.Update(gameTime);
-                _cursorManager.Update(gameTime);
+                // Create a scaled GameTime for logic updates affected by hitstop
+                GameTime scaledGameTime = new GameTime(gameTime.TotalGameTime, TimeSpan.FromSeconds(elapsedSeconds * timeScale));
+
+                _sceneManager.Update(scaledGameTime);
+                _diceRollingSystem.Update(scaledGameTime);
+                _animationManager.Update(scaledGameTime);
+                _cursorManager.Update(gameTime); // Cursor updates in real time
 
                 if (!_gameState.IsPaused)
                 {
                     if (_sceneManager.CurrentActiveScene is GameMapScene)
                     {
                         _gameState.UpdateActiveEntities();
-                        _systemManager.Update(gameTime);
+                        _systemManager.Update(scaledGameTime);
                     }
                 }
             }
 
+            // Haptics and Particles update in REAL time so screenshake/sparks persist during hitstop
             _hapticsManager.Update(gameTime);
+            _particleSystemManager.Update(elapsedSeconds); // Particles update with real time
+
             base.Update(gameTime);
         }
 
@@ -938,7 +955,7 @@ namespace ProjectVagabond
             _mouseTransformMatrix = Matrix.CreateTranslation(-destX, -destY, 0) * Matrix.CreateScale(1.0f / _finalScale);
 
             _finalCompositeTarget?.Dispose();
-            // FIX: Use PreserveContents here as well
+            // FIX: Use PreserveContents here as well for safety
             _finalCompositeTarget = new RenderTarget2D(
                 GraphicsDevice,
                 Window.ClientBounds.Width,

@@ -42,6 +42,8 @@ namespace ProjectVagabond.Scenes
         private TooltipManager _tooltipManager;
         private GameState _gameState;
         private readonly Global _global;
+        private HitstopManager _hitstopManager;
+        private ParticleSystemManager _particleSystemManager; // NEW
 
         private List<int> _enemyEntityIds = new List<int>();
         private BattleManager.BattlePhase _previousBattlePhase;
@@ -80,6 +82,8 @@ namespace ProjectVagabond.Scenes
             _choiceGenerator = new ChoiceGenerator();
             _gameState = ServiceLocator.Get<GameState>();
             _global = ServiceLocator.Get<Global>();
+            _hitstopManager = ServiceLocator.Get<HitstopManager>();
+            _particleSystemManager = ServiceLocator.Get<ParticleSystemManager>(); // NEW
         }
 
         public override Rectangle GetAnimatedBounds()
@@ -854,15 +858,60 @@ namespace ProjectVagabond.Scenes
 
                 if (result.DamageAmount > 0)
                 {
+                    // --- DYNAMIC JUICE CALCULATION ---
+                    float damageRatio = Math.Clamp((float)result.DamageAmount / target.Stats.MaxHP, 0f, 1f);
+                    
+                    // Base scalar: 3.0 means 100% damage = 3x juice. 10% damage = 1.3x juice.
+                    const float BASE_JUICE_SCALAR = 3.0f;
+                    float juiceIntensity = 1.0f + (damageRatio * BASE_JUICE_SCALAR);
+
+                    if (result.WasCritical) juiceIntensity *= 1.5f;
+
+                    // Cap to prevent game-breaking values on massive overkill
+                    juiceIntensity = Math.Min(juiceIntensity, 5.0f);
+
+                    // Apply Juice
+                    if (!result.WasGraze)
+                    {
+                        float baseFreeze = result.WasCritical ? _global.HitstopDuration_Crit : _global.HitstopDuration_Normal;
+                        _hitstopManager.Trigger(baseFreeze * juiceIntensity);
+                        
+                        // Trigger Visual Pop (Flash/Scale)
+                        _animationManager.StartHitstopVisuals(target.CombatantID, result.WasCritical);
+                    }
+
+                    // Directional Shake & Recoil
+                    // Calculate direction from attacker to target
+                    Vector2 attackerPos = _renderer.GetCombatantVisualCenterPosition(e.Actor, _battleManager.AllCombatants);
+                    Vector2 targetPos = _renderer.GetCombatantVisualCenterPosition(target, _battleManager.AllCombatants);
+                    Vector2 direction = targetPos - attackerPos;
+                    if (direction != Vector2.Zero) direction.Normalize();
+                    else direction = new Vector2(1, 0); // Fallback
+
+                    float shakeMag = 10f * juiceIntensity;
+                    float recoilMag = 20f * juiceIntensity;
+
+                    _hapticsManager.TriggerDirectionalShake(direction, shakeMag, 0.2f * juiceIntensity);
+                    _renderer.TriggerRecoil(target.CombatantID, direction, recoilMag);
+
+                    // Particles
+                    var sparks = _particleSystemManager.CreateEmitter(ParticleEffects.CreateHitSparks(juiceIntensity));
+                    sparks.Position = targetPos;
+                    sparks.EmitBurst(sparks.Settings.BurstCount);
+
+                    var ring = _particleSystemManager.CreateEmitter(ParticleEffects.CreateImpactRing(juiceIntensity));
+                    ring.Position = targetPos;
+                    ring.EmitBurst(1);
+
                     if (target.IsPlayerControlled)
                     {
                         _core.TriggerScreenFlashSequence(_global.Palette_Red);
-                        _hapticsManager.TriggerShake(magnitude: 10.0f, duration: 0.75f, frequency: 120f);
                     }
+                    
                     _animationManager.StartHealthLossAnimation(target.CombatantID, target.VisualHP, target.Stats.CurrentHP);
                     _animationManager.StartHealthAnimation(target.CombatantID, (int)target.VisualHP, target.Stats.CurrentHP);
 
-                    // --- NEW: Trigger Burn Icon Hop if target is burned and takes damage ---
+                    // Trigger Burn Icon Hop if target is burned and takes damage
                     if (target.HasStatusEffect(StatusEffectType.Burn))
                     {
                         _renderer.TriggerStatusIconHop(target.CombatantID, StatusEffectType.Burn);
@@ -962,7 +1011,7 @@ namespace ProjectVagabond.Scenes
             if (e.Reason.StartsWith("charging")) _uiManager.ShowNarration($"{e.Actor.Name} is {e.Reason}!");
             else _uiManager.ShowNarration($"{e.Actor.Name} is {e.Reason} and cannot move!");
 
-            // --- NEW: Trigger Status Icon Hop for Stun/Silence ---
+            // Trigger Status Icon Hop for Stun/Silence
             if (e.Reason == "stunned")
             {
                 _renderer.TriggerStatusIconHop(e.Actor.CombatantID, StatusEffectType.Stun);
@@ -989,7 +1038,7 @@ namespace ProjectVagabond.Scenes
                 _animationManager.StartHealthLossAnimation(e.Combatant.CombatantID, e.Combatant.VisualHP, e.Combatant.Stats.CurrentHP);
                 _animationManager.StartHealthAnimation(e.Combatant.CombatantID, (int)e.Combatant.VisualHP, e.Combatant.Stats.CurrentHP);
 
-                // --- NEW: Trigger Status Icon Hop for Poison/Burn ---
+                // Trigger Status Icon Hop for Poison/Burn
                 _renderer.TriggerStatusIconHop(e.Combatant.CombatantID, e.EffectType);
 
                 if (e.Combatant.Stats.CurrentHP <= 0)

@@ -195,6 +195,14 @@ namespace ProjectVagabond.Battle.UI
         private const float COIN_GROUND_OFFSET_Y = 42f; // Lift the baseline up 16px
         private const float COIN_GROUND_DEPTH_HEIGHT = 14f; // The vertical spread of the floor (3D effect)
 
+        // --- HITSTOP VISUAL STATE ---
+        public class HitstopVisualState
+        {
+            public string CombatantID;
+            public bool IsCrit;
+        }
+        private readonly List<HitstopVisualState> _activeHitstopVisuals = new List<HitstopVisualState>();
+
         private readonly List<HealthAnimationState> _activeHealthAnimations = new List<HealthAnimationState>();
         private readonly List<AlphaAnimationState> _activeAlphaAnimations = new List<AlphaAnimationState>();
         private readonly List<DeathAnimationState> _activeDeathAnimations = new List<DeathAnimationState>();
@@ -245,7 +253,25 @@ namespace ProjectVagabond.Battle.UI
             _activeBarAnimations.Clear();
             _activeCoins.Clear();
             _pendingTextIndicators.Clear();
+            _activeHitstopVisuals.Clear();
             _indicatorCooldownTimer = 0f;
+        }
+
+        public void StartHitstopVisuals(string combatantId, bool isCrit)
+        {
+            // Clear any existing hitstop visual for this combatant
+            _activeHitstopVisuals.RemoveAll(v => v.CombatantID == combatantId);
+            _activeHitstopVisuals.Add(new HitstopVisualState { CombatantID = combatantId, IsCrit = isCrit });
+        }
+
+        public HitstopVisualState GetHitstopVisualState(string combatantId)
+        {
+            return _activeHitstopVisuals.FirstOrDefault(v => v.CombatantID == combatantId);
+        }
+
+        public void ClearHitstopVisuals()
+        {
+            _activeHitstopVisuals.Clear();
         }
 
         public void StartHealthAnimation(string combatantId, int hpBefore, int hpAfter)

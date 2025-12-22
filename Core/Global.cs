@@ -11,8 +11,10 @@ using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Dice;
+using ProjectVagabond.Particles;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
@@ -21,8 +23,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 
 namespace ProjectVagabond
 {
@@ -213,6 +217,10 @@ namespace ProjectVagabond
         public float DodgingAccuracyMultiplier { get; set; } = 0.5f;
         public float BurnDamageMultiplier { get; set; } = 2.0f;
         public float FrostbiteAgilityMultiplier { get; set; } = 0.5f;
+
+        // --- HITSTOP (FRAME FREEZE) TUNING ---
+        public float HitstopDuration_Normal { get; set; } = 0.12f;
+        public float HitstopDuration_Crit { get; set; } = 0.25f;
 
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //

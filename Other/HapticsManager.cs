@@ -1,5 +1,13 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
+using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Utils;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ProjectVagabond
 {
@@ -11,7 +19,8 @@ namespace ProjectVagabond
         Wobble,
         Drift,
         Bounce,
-        ZoomPulse
+        ZoomPulse,
+        DirectionalShake // NEW
     }
 
     public class HapticsManager
@@ -24,6 +33,7 @@ namespace ProjectVagabond
         private readonly HapticEffect _drift = new(HapticType.Drift);
         private readonly HapticEffect _bounce = new(HapticType.Bounce);
         private readonly HapticEffect _zoomPulse = new(HapticType.ZoomPulse);
+        private readonly HapticEffect _directionalShake = new(HapticType.DirectionalShake); // NEW
         private Global _global;
 
         public HapticsManager()
@@ -33,8 +43,12 @@ namespace ProjectVagabond
 
         public void TriggerShake(float magnitude, float duration, bool isDecayed = true, float frequency = 0f)
         {
-            System.Diagnostics.Debug.WriteLine($"[DEBUG CHECK 2] STATE: HapticsManager received shake trigger. Duration: {duration}, Magnitude: {magnitude}");
             _shake.Trigger(magnitude, duration, decayed: isDecayed, frequency: frequency);
+        }
+
+        public void TriggerDirectionalShake(Vector2 direction, float intensity, float duration)
+        {
+            _directionalShake.Trigger(intensity, duration, direction: direction);
         }
 
         public void TriggerHop(float intensity, float duration)
@@ -87,6 +101,7 @@ namespace ProjectVagabond
             _drift.Reset();
             _bounce.Reset();
             _zoomPulse.Reset();
+            _directionalShake.Reset();
         }
 
         public void Update(GameTime gameTime)
@@ -98,14 +113,15 @@ namespace ProjectVagabond
             _drift.Update(gameTime, _random);
             _bounce.Update(gameTime, _random);
             _zoomPulse.Update(gameTime, _random);
+            _directionalShake.Update(gameTime, _random);
         }
 
         public Matrix GetHapticsMatrix()
         {
             _global ??= ServiceLocator.Get<Global>();
 
-            Vector2 totalOffset = _shake.Offset + _hop.Offset + _pulse.Offset + _wobble.Offset + _drift.Offset + _bounce.Offset + _zoomPulse.Offset;
-            float totalRotation = _shake.Rotation + _hop.Rotation + _pulse.Rotation + _wobble.Rotation + _drift.Rotation + _bounce.Rotation + _zoomPulse.Rotation;
+            Vector2 totalOffset = _shake.Offset + _hop.Offset + _pulse.Offset + _wobble.Offset + _drift.Offset + _bounce.Offset + _zoomPulse.Offset + _directionalShake.Offset;
+            float totalRotation = _shake.Rotation + _hop.Rotation + _pulse.Rotation + _wobble.Rotation + _drift.Rotation + _bounce.Rotation + _zoomPulse.Rotation + _directionalShake.Rotation;
             float totalScale = GetCurrentScale();
 
             var screenCenter = new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f);
@@ -126,12 +142,12 @@ namespace ProjectVagabond
 
         public bool IsAnyHapticActive()
         {
-            return _shake.Active || _hop.Active || _pulse.Active || _wobble.Active || _drift.Active || _bounce.Active || _zoomPulse.Active;
+            return _shake.Active || _hop.Active || _pulse.Active || _wobble.Active || _drift.Active || _bounce.Active || _zoomPulse.Active || _directionalShake.Active;
         }
 
         public Vector2 GetCurrentOffset()
         {
-            return _shake.Offset + _hop.Offset + _pulse.Offset + _wobble.Offset + _drift.Offset + _bounce.Offset + _zoomPulse.Offset;
+            return _shake.Offset + _hop.Offset + _pulse.Offset + _wobble.Offset + _drift.Offset + _bounce.Offset + _zoomPulse.Offset + _directionalShake.Offset;
         }
 
         public float GetCurrentScale()
@@ -221,6 +237,16 @@ namespace ProjectVagabond
                                 _offset = new Vector2(offsetX, offsetY);
                             }
                             _rotation = 0f;
+                        }
+                        break;
+                    case HapticType.DirectionalShake:
+                        if (_timer > 0)
+                        {
+                            // A violent shake along a specific vector.
+                            // Uses a high-frequency sine wave to oscillate back and forth along the direction vector.
+                            float decay = 1.0f - Easing.EaseOutQuad(progress);
+                            float oscillation = (float)Math.Sin(_timer * 60f); // High frequency shake
+                            _offset = _direction * oscillation * _intensity * decay;
                         }
                         break;
                     case HapticType.Hop:

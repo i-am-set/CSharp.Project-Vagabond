@@ -8,227 +8,247 @@ namespace ProjectVagabond.Particles
     public static class ParticleEffects
     {
         /// <summary>
-        /// Creates the settings for a dirt spray/dust kick-up effect.
+        /// Creates a burst of bright sparks for combat impacts.
         /// </summary>
-        public static ParticleEmitterSettings CreateDirtSpray()
+        /// <param name="intensity">Scalar for the size and violence of the effect (1.0 = Normal, 3.0+ = Heavy).</param>
+        public static ParticleEmitterSettings CreateHitSparks(float intensity = 1.0f)
         {
             var settings = ParticleEmitterSettings.CreateDefault();
             var global = ServiceLocator.Get<Global>();
 
+            // Scale particle count and size based on intensity
+            int baseCount = 12;
+            int scaledCount = (int)(baseCount * intensity);
+            
             // Emitter
             settings.Shape = EmitterShape.Circle;
             settings.EmitFrom = EmissionSource.Volume;
-            settings.EmitterSize = new Vector2(Global.GRID_CELL_SIZE / 2f, Global.GRID_CELL_SIZE / 2f);
-            settings.EmissionRate = 0; // We will use bursts, not a continuous rate
-            settings.MaxParticles = 100; // Increased for bursts
-            settings.Duration = 0.5f; // Auto-destroy after particles fade
+            settings.EmitterSize = new Vector2(10f * intensity, 10f * intensity);
+            settings.EmissionRate = 0; // Burst only
+            settings.BurstCount = scaledCount;
+            settings.MaxParticles = scaledCount * 2;
+            settings.Duration = 0.2f + (0.1f * intensity); // Lasts slightly longer on big hits
 
             // Initial Particle
-            settings.Lifetime = new FloatRange(0.1f, 0.4f);
-            // Velocity will be set dynamically based on movement direction.
-            // We set a base speed range here.
-            settings.InitialVelocityX = new FloatRange(0f, 2f); // This is speed, not a vector component
-            settings.InitialVelocityY = new FloatRange(0f); // Unused for this effect's velocity calculation
-            settings.InitialSize = new FloatRange(1f, 2f);
+            settings.VelocityPattern = EmissionPattern.Radial;
+            settings.Lifetime = new FloatRange(0.15f, 0.3f + (0.1f * intensity));
+            
+            // Velocity scales with intensity to make debris fly further
+            float speedScale = 1.0f + (intensity * 0.5f); 
+            settings.InitialVelocityX = new FloatRange(150f * speedScale, 300f * speedScale); 
+            settings.InitialVelocityY = new FloatRange(0f);
+            
+            settings.InitialSize = new FloatRange(2f * intensity, 4f * intensity);
+            settings.EndSize = new FloatRange(0f);
+            settings.InterpolateSize = true;
             settings.InitialRotation = new FloatRange(0, MathHelper.TwoPi);
-            settings.InitialRotationSpeed = new FloatRange(-2f, 2f);
 
             // Over Lifetime
-            settings.Gravity = new Vector2(0, 10f); // A little gravity to pull the dirt down
-            settings.Drag = 1.5f; // Particles will slow to a stop
-            settings.StartColor = global.Palette_Red;
-            settings.EndColor = new Color(100, 30, 25); // Dark, dusty red
-            settings.StartAlpha = 0.9f; // This is now the peak alpha
-            settings.EndAlpha = 0.0f; // This is ignored but good practice to set
-            settings.AlphaFadeInAndOut = true;
+            settings.Gravity = new Vector2(0, 200f * intensity); // Heavier sparks fall faster
+            settings.Drag = 3.0f; 
+            settings.StartColor = global.Palette_BrightWhite;
+            settings.EndColor = global.Palette_Yellow;
+            settings.StartAlpha = 1.0f;
+            settings.EndAlpha = 0.0f;
 
             // Rendering
-            settings.Texture = ServiceLocator.Get<Texture2D>(); // 1x1 white pixel
-            settings.BlendMode = BlendState.AlphaBlend;
+            settings.Texture = ServiceLocator.Get<Texture2D>(); // 1x1 pixel
+            settings.BlendMode = BlendState.Additive;
+            settings.LayerDepth = 0.95f; // Very top
 
             return settings;
         }
 
         /// <summary>
-        /// Creates the settings for a bright, sharp spark effect.
+        /// Creates an expanding ring shockwave.
         /// </summary>
-        public static ParticleEmitterSettings CreateSparks()
+        public static ParticleEmitterSettings CreateImpactRing(float intensity = 1.0f)
         {
             var settings = ParticleEmitterSettings.CreateDefault();
             var global = ServiceLocator.Get<Global>();
 
             // Emitter
             settings.Shape = EmitterShape.Point;
-            settings.EmissionRate = 0; // Burst only
-            settings.BurstCount = 20;
-            settings.MaxParticles = 20;
-            settings.Duration = 0.3f; // Auto-destroy after particles fade
+            settings.EmissionRate = 0;
+            settings.BurstCount = 1;
+            settings.MaxParticles = 1;
+            settings.Duration = 0.2f + (0.1f * intensity);
 
             // Initial Particle
-            settings.VelocityPattern = EmissionPattern.Radial;
-            settings.Lifetime = new FloatRange(0.1f, 0.25f); // Slightly longer lifetime for visible trails
-            settings.InitialVelocityX = new FloatRange(250f, 400f); // Represents speed
-            settings.InitialVelocityY = new FloatRange(0f); // Ignored
-            settings.InitialSize = new FloatRange(1f, 2f); // This will now be the trail's thickness
-            settings.InitialRotation = new FloatRange(0f);
-            settings.InitialRotationSpeed = new FloatRange(0f);
+            settings.Lifetime = new FloatRange(0.2f + (0.05f * intensity));
+            settings.InitialVelocityX = new FloatRange(0f);
+            settings.InitialVelocityY = new FloatRange(0f);
+            settings.InitialSize = new FloatRange(10f * intensity);
+            settings.EndSize = new FloatRange(60f * intensity); // Expands much larger on big hits
+            settings.InterpolateSize = true;
 
             // Over Lifetime
-            settings.Gravity = new Vector2(0, 50f); // A little gravity
-            settings.Drag = 2.5f; // High drag to stop sparks quickly
-            settings.StartColor = Color.White; // Start as pure white
-            settings.EndColor = global.Palette_LightYellow; // Fade to a pale yellow to simulate cooling
-            settings.StartAlpha = 1.0f; // Fully opaque at start
-            settings.EndAlpha = 0.5f;
-            settings.AlphaFadeInAndOut = false;
+            settings.StartColor = global.Palette_White;
+            settings.EndColor = global.Palette_White;
+            settings.StartAlpha = 0.8f;
+            settings.EndAlpha = 0.0f;
 
             // Rendering
-            settings.Texture = ServiceLocator.Get<Texture2D>(); // 1x1 white pixel
-            settings.BlendMode = BlendState.Additive; // Crucial for a bright, glowing effect
-            settings.LayerDepth = 0.9f; // Draw on top
+            settings.Texture = ServiceLocator.Get<SpriteManager>().CircleTextureSprite; 
+            settings.BlendMode = BlendState.Additive;
+            settings.LayerDepth = 0.94f;
 
             return settings;
         }
 
-        /// <summary>
-        /// Creates the settings for a white, explosive impact effect.
-        /// </summary>
+        // ... (Keep existing methods like CreateDirtSpray, CreateUIFire, etc. unchanged) ...
+        public static ParticleEmitterSettings CreateDirtSpray()
+        {
+            var settings = ParticleEmitterSettings.CreateDefault();
+            var global = ServiceLocator.Get<Global>();
+            settings.Shape = EmitterShape.Circle;
+            settings.EmitFrom = EmissionSource.Volume;
+            settings.EmitterSize = new Vector2(Global.GRID_CELL_SIZE / 2f, Global.GRID_CELL_SIZE / 2f);
+            settings.EmissionRate = 0; 
+            settings.MaxParticles = 100; 
+            settings.Duration = 0.5f; 
+            settings.Lifetime = new FloatRange(0.1f, 0.4f);
+            settings.InitialVelocityX = new FloatRange(0f, 2f); 
+            settings.InitialVelocityY = new FloatRange(0f); 
+            settings.InitialSize = new FloatRange(1f, 2f);
+            settings.InitialRotation = new FloatRange(0, MathHelper.TwoPi);
+            settings.InitialRotationSpeed = new FloatRange(-2f, 2f);
+            settings.Gravity = new Vector2(0, 10f); 
+            settings.Drag = 1.5f; 
+            settings.StartColor = global.Palette_Red;
+            settings.EndColor = new Color(100, 30, 25); 
+            settings.StartAlpha = 0.9f; 
+            settings.EndAlpha = 0.0f; 
+            settings.AlphaFadeInAndOut = true;
+            settings.Texture = ServiceLocator.Get<Texture2D>(); 
+            settings.BlendMode = BlendState.AlphaBlend;
+            return settings;
+        }
+
+        public static ParticleEmitterSettings CreateSparks()
+        {
+            var settings = ParticleEmitterSettings.CreateDefault();
+            var global = ServiceLocator.Get<Global>();
+            settings.Shape = EmitterShape.Point;
+            settings.EmissionRate = 0; 
+            settings.BurstCount = 20;
+            settings.MaxParticles = 20;
+            settings.Duration = 0.3f; 
+            settings.VelocityPattern = EmissionPattern.Radial;
+            settings.Lifetime = new FloatRange(0.1f, 0.25f); 
+            settings.InitialVelocityX = new FloatRange(250f, 400f); 
+            settings.InitialVelocityY = new FloatRange(0f); 
+            settings.InitialSize = new FloatRange(1f, 2f); 
+            settings.InitialRotation = new FloatRange(0f);
+            settings.InitialRotationSpeed = new FloatRange(0f);
+            settings.Gravity = new Vector2(0, 50f); 
+            settings.Drag = 2.5f; 
+            settings.StartColor = Color.White; 
+            settings.EndColor = global.Palette_LightYellow; 
+            settings.StartAlpha = 1.0f; 
+            settings.EndAlpha = 0.5f;
+            settings.AlphaFadeInAndOut = false;
+            settings.Texture = ServiceLocator.Get<Texture2D>(); 
+            settings.BlendMode = BlendState.Additive; 
+            settings.LayerDepth = 0.9f; 
+            return settings;
+        }
+
         public static ParticleEmitterSettings CreateSumImpact()
         {
             var settings = ParticleEmitterSettings.CreateDefault();
             var global = ServiceLocator.Get<Global>();
-
-            // Emitter
             settings.Shape = EmitterShape.Circle;
             settings.EmitFrom = EmissionSource.Volume;
             settings.EmitterSize = new Vector2(40f, 40f);
-            settings.EmissionRate = 0; // Burst only
+            settings.EmissionRate = 0; 
             settings.BurstCount = 25;
             settings.MaxParticles = 25;
-            settings.Duration = 1.1f; // Auto-destroy after particles fade
-
-            // Initial Particle
+            settings.Duration = 1.1f; 
             settings.VelocityPattern = EmissionPattern.Radial;
             settings.Lifetime = new FloatRange(0.5f, 1.0f);
-            settings.InitialVelocityX = new FloatRange(0f, 50f); // Speed
-            settings.InitialVelocityY = new FloatRange(0f); // Ignored
+            settings.InitialVelocityX = new FloatRange(0f, 50f); 
+            settings.InitialVelocityY = new FloatRange(0f); 
             settings.InitialSize = new FloatRange(0.1f, 2f);
             settings.EndSize = new FloatRange(5f, 8f);
             settings.InterpolateSize = true;
             settings.InitialRotation = new FloatRange(0, MathHelper.TwoPi);
             settings.InitialRotationSpeed = new FloatRange(-MathHelper.Pi, MathHelper.Pi);
-
-            // Over Lifetime
-            settings.Gravity = Vector2.Zero; // No gravity for a top-down effect
-            settings.Drag = 2f; // Particles slow down significantly
+            settings.Gravity = Vector2.Zero; 
+            settings.Drag = 2f; 
             settings.StartColor = Color.White;
             settings.EndColor = Color.White;
             settings.StartAlpha = 0.35f;
             settings.EndAlpha = 0.0f;
-
-            // Rendering
-            settings.Texture = ServiceLocator.Get<Texture2D>(); // 1x1 white pixel
+            settings.Texture = ServiceLocator.Get<Texture2D>(); 
             settings.BlendMode = BlendState.AlphaBlend;
             settings.LayerDepth = 0.8f;
-
             return settings;
         }
 
-        /// <summary>
-        /// Creates the settings for a generic, fiery UI effect.
-        /// The color and emitter size should be set on the emitter instance.
-        /// </summary>
         public static ParticleEmitterSettings CreateUIFire()
         {
             var settings = ParticleEmitterSettings.CreateDefault();
             var global = ServiceLocator.Get<Global>();
-
-            // Emitter
             settings.Shape = EmitterShape.Circle;
             settings.EmitFrom = EmissionSource.Volume;
-            settings.EmitterSize = new Vector2(8f, 8f); // Default size, should be overridden
-            settings.EmissionRate = 150f; // Continuous emission while active
+            settings.EmitterSize = new Vector2(8f, 8f); 
+            settings.EmissionRate = 150f; 
             settings.MaxParticles = 100;
-            settings.Duration = 0.7f; // Auto-destroy after particles fade
-
-            // Initial Particle
+            settings.Duration = 0.7f; 
             settings.Lifetime = new FloatRange(0.3f, 0.6f);
-            settings.InitialVelocityX = new FloatRange(-15f, 15f); // Horizontal spread
-            settings.InitialVelocityY = new FloatRange(-50f, -30f); // Upward velocity
+            settings.InitialVelocityX = new FloatRange(-15f, 15f); 
+            settings.InitialVelocityY = new FloatRange(-50f, -30f); 
             settings.InitialSize = new FloatRange(1f, 2.5f);
             settings.EndSize = new FloatRange(0f);
             settings.InterpolateSize = true;
             settings.InitialRotation = new FloatRange(0f);
             settings.InitialRotationSpeed = new FloatRange(0f);
-
-            // Over Lifetime
-            settings.Gravity = new Vector2(0, 10f); // Slight downward pull
+            settings.Gravity = new Vector2(0, 10f); 
             settings.Drag = 1.0f;
-            // Colors will be set dynamically on the emitter instance.
             settings.StartColor = global.Palette_Orange;
-            settings.EndColor = global.Palette_Orange; // Fade to same color (alpha handles transparency)
+            settings.EndColor = global.Palette_Orange; 
             settings.StartAlpha = 0.8f;
             settings.EndAlpha = 0.0f;
-
-            // Rendering
-            settings.Texture = ServiceLocator.Get<Texture2D>(); // 1x1 white pixel
-            settings.BlendMode = BlendState.Additive; // For a fiery glow
-            settings.LayerDepth = 0.3f; // Draw behind the box itself
-
+            settings.Texture = ServiceLocator.Get<Texture2D>(); 
+            settings.BlendMode = BlendState.Additive; 
+            settings.LayerDepth = 0.3f; 
             return settings;
         }
 
-        /// <summary>
-        /// Creates the settings for a digital, square particle burst.
-        /// </summary>
         public static ParticleEmitterSettings CreateDigitalBurst()
         {
             var settings = ParticleEmitterSettings.CreateDefault();
             var global = ServiceLocator.Get<Global>();
-
-            // Emitter
             settings.Shape = EmitterShape.Point;
-            settings.EmissionRate = 0; // Burst only
+            settings.EmissionRate = 0; 
             settings.BurstCount = 50;
             settings.MaxParticles = 50;
-            settings.Duration = 0.5f; // Auto-destroy after particles fade
-
-            // Initial Particle
+            settings.Duration = 0.5f; 
             settings.VelocityPattern = EmissionPattern.Radial;
             settings.Lifetime = new FloatRange(0.2f, 0.4f);
-            settings.InitialVelocityX = new FloatRange(150f, 300f); // Speed
-            settings.InitialVelocityY = new FloatRange(0f); // Ignored
+            settings.InitialVelocityX = new FloatRange(150f, 300f); 
+            settings.InitialVelocityY = new FloatRange(0f); 
             settings.InitialSize = new FloatRange(1f, 2f);
             settings.InitialRotation = new FloatRange(0f);
             settings.InitialRotationSpeed = new FloatRange(0f);
-
-            // Over Lifetime
             settings.Gravity = Vector2.Zero;
-            settings.Drag = 4f; // High drag for a quick stop
+            settings.Drag = 4f; 
             settings.StartColor = global.Palette_BrightWhite;
             settings.EndColor = global.Palette_Teal;
             settings.StartAlpha = 1.0f;
             settings.EndAlpha = 0.0f;
-
-            // Rendering
-            settings.Texture = ServiceLocator.Get<Texture2D>(); // 1x1 white pixel
+            settings.Texture = ServiceLocator.Get<Texture2D>(); 
             settings.BlendMode = BlendState.Additive;
             settings.LayerDepth = 0.9f;
-
             return settings;
         }
 
-        /// <summary>
-        /// Creates a composite fireball effect from multiple layered particle emitters.
-        /// </summary>
-        /// <returns>A list of ParticleEmitterSettings objects, one for each layer of the effect.</returns>
         public static List<ParticleEmitterSettings> CreateLayeredFireball()
         {
             var spriteManager = ServiceLocator.Get<SpriteManager>();
             var global = ServiceLocator.Get<Global>();
             var layers = new List<ParticleEmitterSettings>();
-
-            // --- Layer 1: Red Base (Back) ---
             var redBase = ParticleEmitterSettings.CreateDefault();
             redBase.Shape = EmitterShape.Circle;
             redBase.EmitFrom = EmissionSource.Volume;
@@ -248,15 +268,13 @@ namespace ProjectVagabond.Particles
             redBase.VectorFieldInfluence = 0.8f;
             redBase.Texture = spriteManager.EmberParticleSprite;
             redBase.BlendMode = BlendState.Additive;
-            redBase.LayerDepth = 0.3f; // Furthest back
+            redBase.LayerDepth = 0.3f; 
             redBase.SpriteSheetColumns = 6;
             redBase.SpriteSheetRows = 1;
             redBase.SpriteSheetTotalFrames = 6;
-            redBase.StartColor = new Color(255, 50, 0); // Deep Red
-            redBase.EndColor = new Color(20, 0, 0, 100); // Fades to a dark, smoky color
+            redBase.StartColor = new Color(255, 50, 0); 
+            redBase.EndColor = new Color(20, 0, 0, 100); 
             layers.Add(redBase);
-
-            // --- Layer 2: Orange Body (Middle) ---
             var orangeBody = ParticleEmitterSettings.CreateDefault();
             orangeBody.Shape = EmitterShape.Circle;
             orangeBody.EmitFrom = EmissionSource.Volume;
@@ -276,15 +294,13 @@ namespace ProjectVagabond.Particles
             orangeBody.VectorFieldInfluence = 0.8f;
             orangeBody.Texture = spriteManager.EmberParticleSprite;
             orangeBody.BlendMode = BlendState.Additive;
-            orangeBody.LayerDepth = 0.4f; // In the middle
+            orangeBody.LayerDepth = 0.4f; 
             orangeBody.SpriteSheetColumns = 6;
             orangeBody.SpriteSheetRows = 1;
             orangeBody.SpriteSheetTotalFrames = 6;
-            orangeBody.StartColor = new Color(255, 120, 0); // Bright Orange
-            orangeBody.EndColor = new Color(200, 20, 0); // Fades to Red
+            orangeBody.StartColor = new Color(255, 120, 0); 
+            orangeBody.EndColor = new Color(200, 20, 0); 
             layers.Add(orangeBody);
-
-            // --- Layer 3: Yellow Core (Front) ---
             var yellowCore = ParticleEmitterSettings.CreateDefault();
             yellowCore.Shape = EmitterShape.Circle;
             yellowCore.EmitFrom = EmissionSource.Volume;
@@ -304,161 +320,126 @@ namespace ProjectVagabond.Particles
             yellowCore.VectorFieldInfluence = 0.8f;
             yellowCore.Texture = spriteManager.EmberParticleSprite;
             yellowCore.BlendMode = BlendState.Additive;
-            yellowCore.LayerDepth = 0.5f; // Closest to camera
+            yellowCore.LayerDepth = 0.5f; 
             yellowCore.SpriteSheetColumns = 6;
             yellowCore.SpriteSheetRows = 1;
             yellowCore.SpriteSheetTotalFrames = 6;
-            yellowCore.StartColor = new Color(255, 255, 150); // White-Yellow
-            yellowCore.EndColor = new Color(255, 150, 0); // Fades to Orange
+            yellowCore.StartColor = new Color(255, 255, 150); 
+            yellowCore.EndColor = new Color(255, 150, 0); 
             layers.Add(yellowCore);
-
             return layers;
         }
 
-        /// <summary>
-        /// A swirling magical effect.
-        /// </summary>
         public static ParticleEmitterSettings CreateMagicSwirl()
         {
             var settings = ParticleEmitterSettings.CreateDefault();
             var global = ServiceLocator.Get<Global>();
-
             settings.Shape = EmitterShape.Point;
             settings.EmissionRate = 200;
             settings.MaxParticles = 200;
-            settings.Duration = 1.5f; // Emitter runs for 1.5s then stops, auto-cleans up
-
+            settings.Duration = 1.5f; 
             settings.VelocityPattern = EmissionPattern.Radial;
             settings.Lifetime = new FloatRange(0.8f, 1.2f);
-            settings.InitialVelocityX = new FloatRange(80f); // Speed
-            settings.InitialVelocityY = new FloatRange(0f); // Ignored
+            settings.InitialVelocityX = new FloatRange(80f); 
+            settings.InitialVelocityY = new FloatRange(0f); 
             settings.InitialSize = new FloatRange(1f, 2f);
             settings.EndSize = new FloatRange(0f);
             settings.InterpolateSize = true;
-
             settings.Gravity = Vector2.Zero;
             settings.Drag = 0.5f;
             settings.StartColor = global.Palette_LightPurple;
             settings.EndColor = global.Palette_Teal;
             settings.StartAlpha = 1.0f;
             settings.EndAlpha = 0.0f;
-
-            settings.VectorFieldInfluence = 1.0f; // Strong influence from the vector field for swirling
-
+            settings.VectorFieldInfluence = 1.0f; 
             settings.Texture = ServiceLocator.Get<SpriteManager>().SoftParticleSprite;
             settings.BlendMode = BlendState.Additive;
             settings.LayerDepth = 0.7f;
-
             return settings;
         }
 
-        /// <summary>
-        /// A puff of dark smoke for a bad dice roll.
-        /// </summary>
         public static ParticleEmitterSettings CreateBadRollParticles()
         {
             var settings = ParticleEmitterSettings.CreateDefault();
             var global = ServiceLocator.Get<Global>();
-
             settings.Shape = EmitterShape.Point;
             settings.EmissionRate = 0;
             settings.BurstCount = 100;
             settings.MaxParticles = 100;
             settings.Duration = 1.2f;
-
             settings.VelocityPattern = EmissionPattern.Radial;
             settings.Lifetime = new FloatRange(0.6f, 1.0f);
-            settings.InitialVelocityX = new FloatRange(30f, 100f); // Speed
-            settings.InitialVelocityY = new FloatRange(0f); // Ignored
+            settings.InitialVelocityX = new FloatRange(30f, 100f); 
+            settings.InitialVelocityY = new FloatRange(0f); 
             settings.InitialSize = new FloatRange(1f, 2f);
             settings.EndSize = new FloatRange(0f);
             settings.InterpolateSize = true;
-
-            settings.Gravity = new Vector2(0, 155f); // Add a bit of gravity for a nice arc
-            settings.Drag = 2.5f; // Sparks slow down
+            settings.Gravity = new Vector2(0, 155f); 
+            settings.Drag = 2.5f; 
             settings.StartColor = global.Palette_Red;
             settings.EndColor = global.Palette_Yellow;
             settings.StartAlpha = 1.0f;
             settings.EndAlpha = 0.0f;
-
-            settings.Texture = ServiceLocator.Get<Texture2D>(); // 1x1 white pixel for sharp sparks
-            settings.BlendMode = BlendState.Additive; // Glow
+            settings.Texture = ServiceLocator.Get<Texture2D>(); 
+            settings.BlendMode = BlendState.Additive; 
             settings.LayerDepth = 0.9f;
-
             return settings;
         }
 
-        /// <summary>
-        /// A subtle puff of particles for a neutral dice roll.
-        /// </summary>
         public static ParticleEmitterSettings CreateNeutralRollParticles()
         {
             var settings = ParticleEmitterSettings.CreateDefault();
             var global = ServiceLocator.Get<Global>();
-
             settings.Shape = EmitterShape.Point;
             settings.EmissionRate = 0;
             settings.BurstCount = 10;
             settings.MaxParticles = 10;
             settings.Duration = 0.6f;
-
             settings.VelocityPattern = EmissionPattern.Radial;
             settings.Lifetime = new FloatRange(0.3f, 0.5f);
-            settings.InitialVelocityX = new FloatRange(0f, 40f); // Speed
-            settings.InitialVelocityY = new FloatRange(0f); // Ignored
+            settings.InitialVelocityX = new FloatRange(0f, 40f); 
+            settings.InitialVelocityY = new FloatRange(0f); 
             settings.InitialSize = new FloatRange(1f, 2f);
             settings.EndSize = new FloatRange(0f);
             settings.InterpolateSize = true;
-
             settings.Gravity = Vector2.Zero;
             settings.Drag = 2f;
             settings.StartColor = global.Palette_White;
             settings.EndColor = global.Palette_LightGray;
             settings.StartAlpha = 0.7f;
             settings.EndAlpha = 0.0f;
-
             settings.Texture = ServiceLocator.Get<SpriteManager>().SoftParticleSprite;
             settings.BlendMode = BlendState.AlphaBlend;
             settings.LayerDepth = 0.8f;
-
             return settings;
         }
 
-        /// <summary>
-        /// A celebratory burst of particles for a good dice roll.
-        /// </summary>
         public static ParticleEmitterSettings CreateGoodRollParticles()
         {
             var settings = ParticleEmitterSettings.CreateDefault();
             var global = ServiceLocator.Get<Global>();
-
             settings.Shape = EmitterShape.Point;
             settings.EmissionRate = 0;
             settings.BurstCount = 15;
             settings.MaxParticles = 15;
             settings.Duration = 1.0f;
-
             settings.Lifetime = new FloatRange(0.6f, 0.9f);
             settings.InitialVelocityX = new FloatRange(-30f, 30f);
-            settings.InitialVelocityY = new FloatRange(-30f, -10f); // Slight downward drift
+            settings.InitialVelocityY = new FloatRange(-30f, -10f); 
             settings.InitialSize = new FloatRange(2f, 4f);
             settings.EndSize = new FloatRange(0.5f);
             settings.InterpolateSize = true;
-
-            settings.Gravity = new Vector2(0, 20f); // Falls down
+            settings.Gravity = new Vector2(0, 20f); 
             settings.Drag = 1f;
             settings.StartColor = global.Palette_LightGreen;
             settings.EndColor = global.Palette_DarkGray;
             settings.StartAlpha = 0.6f;
             settings.EndAlpha = 0.0f;
-
             settings.InitialRotation = new FloatRange(0, MathHelper.TwoPi);
-            settings.InitialRotationSpeed = new FloatRange(-10f, 10f); // Random rotation speed and direction
-
+            settings.InitialRotationSpeed = new FloatRange(-10f, 10f); 
             settings.Texture = ServiceLocator.Get<SpriteManager>().SoftParticleSprite;
             settings.BlendMode = BlendState.AlphaBlend;
             settings.LayerDepth = 0.8f;
-
             return settings;
         }
     }

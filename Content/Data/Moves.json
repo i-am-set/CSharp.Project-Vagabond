@@ -380,7 +380,7 @@
     "OffensiveElementIDs": [ 6 ],
     "Tags": [ "Metal" ],
     "AnimationSpriteSheet": "basic_slash",
-    "AnimationSpeed": 1.0,
+    "AnimationSpeed": 1.5,
     "IsAnimationCentralized": false
   },
   {

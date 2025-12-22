@@ -26,6 +26,7 @@ namespace ProjectVagabond.Battle.UI
         private readonly Global _global;
         private readonly Core _core;
         private readonly TooltipManager _tooltipManager;
+        private readonly HitstopManager _hitstopManager; // NEW
 
         // Sprite Management
         private readonly Dictionary<string, PlayerCombatSprite> _playerSprites = new Dictionary<string, PlayerCombatSprite>();
@@ -63,6 +64,16 @@ namespace ProjectVagabond.Battle.UI
         private readonly Dictionary<string, SpriteHopAnimationController> _attackAnimControllers = new();
         private string? _lastAttackerId;
 
+        // Recoil Animation State (Physical knockback on hit)
+        private class RecoilState
+        {
+            public Vector2 Offset;
+            public Vector2 Velocity;
+            public const float STIFFNESS = 150f;
+            public const float DAMPING = 10f;
+        }
+        private readonly Dictionary<string, RecoilState> _recoilStates = new Dictionary<string, RecoilState>();
+
         // Status Icon Animation State
         private class StatusIconAnim
         {
@@ -78,6 +89,7 @@ namespace ProjectVagabond.Battle.UI
         private const int DIVIDER_Y = 123;
         private const int ENEMY_SLOT_Y_OFFSET = 16;
         private const float TITLE_INDICATOR_BOB_SPEED = 0.375f;
+        private const float HITSTOP_SCALE_MULTIPLIER = 1.2f; // Scale up during hitstop
 
         // Noise generator for organic sway
         private static readonly SeededPerlin _swayNoise = new SeededPerlin(9999);
@@ -88,6 +100,7 @@ namespace ProjectVagabond.Battle.UI
             _global = ServiceLocator.Get<Global>();
             _core = ServiceLocator.Get<Core>();
             _tooltipManager = ServiceLocator.Get<TooltipManager>();
+            _hitstopManager = ServiceLocator.Get<HitstopManager>(); // NEW
 
             _flattenTarget = new RenderTarget2D(_core.GraphicsDevice, FLATTEN_TARGET_SIZE, FLATTEN_TARGET_SIZE, false, SurfaceFormat.Color, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
         }
@@ -107,6 +120,7 @@ namespace ProjectVagabond.Battle.UI
             _combatantVisualCenters.Clear();
             _playerSprites.Clear();
             _activeStatusIconAnims.Clear();
+            _recoilStates.Clear();
             _lastAttackerId = null;
         }
 
@@ -118,6 +132,7 @@ namespace ProjectVagabond.Battle.UI
             UpdateShadowAnimations(gameTime, combatants);
             UpdateStatusIconTooltips(combatants);
             UpdateStatusIconAnimations(gameTime);
+            UpdateRecoilAnimations(gameTime);
 
             foreach (var combatant in combatants)
             {
@@ -138,9 +153,37 @@ namespace ProjectVagabond.Battle.UI
             _attackAnimControllers[combatantId].Trigger();
         }
 
+        public void TriggerRecoil(string combatantId, Vector2 direction, float magnitude)
+        {
+            if (!_recoilStates.ContainsKey(combatantId))
+            {
+                _recoilStates[combatantId] = new RecoilState();
+            }
+            // Apply an impulse velocity away from the hit
+            _recoilStates[combatantId].Velocity = direction * magnitude * 10f; // Scale up for velocity
+        }
+
+        private void UpdateRecoilAnimations(GameTime gameTime)
+        {
+            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            foreach (var state in _recoilStates.Values)
+            {
+                // Spring physics: F = -kx - cv
+                Vector2 force = (-state.Offset * RecoilState.STIFFNESS) - (state.Velocity * RecoilState.DAMPING);
+                state.Velocity += force * dt;
+                state.Offset += state.Velocity * dt;
+
+                // Snap to zero if very small
+                if (state.Offset.LengthSquared() < 0.1f && state.Velocity.LengthSquared() < 0.1f)
+                {
+                    state.Offset = Vector2.Zero;
+                    state.Velocity = Vector2.Zero;
+                }
+            }
+        }
+
         public void TriggerStatusIconHop(string combatantId, StatusEffectType type)
         {
-            // Remove existing animation for this specific icon to restart it
             _activeStatusIconAnims.RemoveAll(a => a.CombatantID == combatantId && a.Type == type);
             _activeStatusIconAnims.Add(new StatusIconAnim
             {
@@ -193,8 +236,8 @@ namespace ProjectVagabond.Battle.UI
                         iconInfo.Effect,
                         iconInfo.Effect.GetTooltipText(),
                         new Vector2(iconInfo.Bounds.Center.X, iconInfo.Bounds.Top),
-                        0.1f, // Fast delay
-                        iconInfo.Effect.GetDescription() // New description
+                        0.1f,
+                        iconInfo.Effect.GetDescription()
                     );
                     _hoveredStatusIcon = iconInfo;
                     return;
@@ -211,8 +254,8 @@ namespace ProjectVagabond.Battle.UI
                             iconInfo.Effect,
                             iconInfo.Effect.GetTooltipText(),
                             new Vector2(iconInfo.Bounds.Center.X, iconInfo.Bounds.Top),
-                            0.1f, // Fast delay
-                            iconInfo.Effect.GetDescription() // New description
+                            0.1f,
+                            iconInfo.Effect.GetDescription()
                         );
                         _hoveredStatusIcon = iconInfo;
                         return;
@@ -547,13 +590,20 @@ namespace ProjectVagabond.Battle.UI
 
             float yBobOffset = CalculateAttackBobOffset(player.CombatantID, isPlayer: true);
 
+            // Apply Recoil Offset
+            Vector2 recoilOffset = Vector2.Zero;
+            if (_recoilStates.TryGetValue(player.CombatantID, out var recoil))
+            {
+                recoilOffset = recoil.Offset;
+            }
+
             if (!_playerSprites.TryGetValue(player.CombatantID, out var sprite))
             {
                 sprite = new PlayerCombatSprite(player.ArchetypeId);
                 _playerSprites[player.CombatantID] = sprite;
             }
 
-            sprite.SetPosition(new Vector2(spriteCenterX, heartCenterY + yBobOffset));
+            sprite.SetPosition(new Vector2(spriteCenterX, heartCenterY + yBobOffset) + recoilOffset);
             sprite.Draw(spriteBatch, animationManager, player, playerSpriteTint, isHighlighted, pulseAlpha, isSilhouetted, silhouetteColor, gameTime, highlightColor);
 
             if (!isSilhouetted)
@@ -838,6 +888,13 @@ namespace ProjectVagabond.Battle.UI
             float attackBobOffset = CalculateAttackBobOffset(combatant.CombatantID, combatant.IsPlayerControlled);
             float idleBob = (MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * 4f) > 0) ? -1f : 0f;
 
+            // Apply Recoil Offset
+            Vector2 recoilOffset = Vector2.Zero;
+            if (_recoilStates.TryGetValue(combatant.CombatantID, out var recoil))
+            {
+                recoilOffset = recoil.Offset;
+            }
+
             float topY;
             if (combatant.IsPlayerControlled)
             {
@@ -851,13 +908,20 @@ namespace ProjectVagabond.Battle.UI
                 topY = GetEnemySpriteStaticTopY(combatant, rectTop);
             }
 
-            var arrowPos = new Vector2(targetPos.X - arrowRect.Width / 2, topY - arrowRect.Height - 1 + attackBobOffset + idleBob);
+            var arrowPos = new Vector2(targetPos.X - arrowRect.Width / 2, topY - arrowRect.Height - 1 + attackBobOffset + idleBob) + recoilOffset;
             spriteBatch.DrawSnapped(arrowSheet, arrowPos, arrowRect, Color.White);
         }
 
         private void DrawCombatantHud(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, BattleCombatant combatant, Vector2 slotCenter, BattleCombatant currentActor, bool isTargetingPhase, bool shouldGrayOutUnselectable, HashSet<BattleCombatant> selectableTargets, BattleAnimationManager animationManager, HoverHighlightState hoverHighlightState, float pulseAlpha, GameTime gameTime, Color? highlightColor, Matrix transform)
         {
             float yBobOffset = CalculateAttackBobOffset(combatant.CombatantID, isPlayer: false);
+
+            // Apply Recoil Offset
+            Vector2 recoilOffset = Vector2.Zero;
+            if (_recoilStates.TryGetValue(combatant.CombatantID, out var recoil))
+            {
+                recoilOffset = recoil.Offset;
+            }
 
             var spawnAnim = animationManager.GetSpawnAnimationState(combatant.CombatantID);
             float spawnYOffset = 0f;
@@ -893,7 +957,13 @@ namespace ProjectVagabond.Battle.UI
             var staticRect = new Rectangle((int)(slotCenter.X - spritePartSize / 2f), (int)slotCenter.Y, spritePartSize, spritePartSize);
             _combatantVisualCenters[combatant.CombatantID] = staticRect.Center.ToVector2();
 
-            var spriteRect = new Rectangle((int)(slotCenter.X - spritePartSize / 2f), (int)(slotCenter.Y + yBobOffset + spawnYOffset), spritePartSize, spritePartSize);
+            // Apply recoil to the sprite rect
+            var spriteRect = new Rectangle(
+                (int)(slotCenter.X - spritePartSize / 2f + recoilOffset.X),
+                (int)(slotCenter.Y + yBobOffset + spawnYOffset + recoilOffset.Y),
+                spritePartSize,
+                spritePartSize
+            );
 
             float finalAlpha = combatant.VisualAlpha * spawnAlpha;
             Color tintColor = Color.White * finalAlpha;
@@ -915,6 +985,21 @@ namespace ProjectVagabond.Battle.UI
                 if (highlightColor == null) outlineColor = Color.Yellow * finalAlpha;
             }
 
+            // --- HITSTOP VISUAL OVERRIDE ---
+            // If hitstop is active for this combatant, override scale and color
+            float scale = 1.0f;
+            var hitstopState = animationManager.GetHitstopVisualState(combatant.CombatantID);
+            if (_hitstopManager.IsActive && hitstopState != null)
+            {
+                scale = HITSTOP_SCALE_MULTIPLIER;
+                // Override tint to flash color (White for normal, Red for crit)
+                tintColor = hitstopState.IsCrit ? _global.Palette_Red : Color.White;
+                // Ensure full opacity
+                finalAlpha = 1.0f;
+                // Disable silhouette during flash
+                silhouetteFactor = 0f;
+            }
+
             if (silhouetteFactor < 1.0f && _spriteManager.ShadowBlobSprite != null)
             {
                 float groundY = staticRect.Bottom;
@@ -926,6 +1011,7 @@ namespace ProjectVagabond.Battle.UI
                     shadowAnimOffset = sOffset;
                 }
 
+                // Shadow stays on the ground, but moves with recoil X
                 Vector2 shadowPos = new Vector2(spriteRect.Center.X, groundY) + shadowAnimOffset;
                 Vector2 shadowOrigin = new Vector2(_spriteManager.ShadowBlobSprite.Width / 2f, _spriteManager.ShadowBlobSprite.Height / 2f);
 
@@ -970,25 +1056,44 @@ namespace ProjectVagabond.Battle.UI
                             var sourceRect = new Rectangle(i * spritePartSize, 0, spritePartSize, spritePartSize);
                             var partOffset = offsets[i];
                             var baseDrawPosition = new Vector2(spriteRect.X + partOffset.X, spriteRect.Y + partOffset.Y) + shakeOffset;
-                            int x = (int)baseDrawPosition.X;
-                            int y = (int)baseDrawPosition.Y;
-                            int w = spriteRect.Width;
-                            int h = spriteRect.Height;
 
-                            spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x - 2, y, w, h), sourceRect, outerBorderColor);
-                            spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x + 2, y, w, h), sourceRect, outerBorderColor);
-                            spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x, y - 2, w, h), sourceRect, outerBorderColor);
-                            spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x, y + 2, w, h), sourceRect, outerBorderColor);
+                            // Apply Scale to Outline
+                            Vector2 origin = new Vector2(spritePartSize / 2f, spritePartSize / 2f);
+                            Vector2 centerPos = baseDrawPosition + origin;
 
-                            spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x - 1, y - 1, w, h), sourceRect, outerBorderColor);
-                            spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x + 1, y - 1, w, h), sourceRect, outerBorderColor);
-                            spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x - 1, y + 1, w, h), sourceRect, outerBorderColor);
-                            spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x + 1, y + 1, w, h), sourceRect, outerBorderColor);
+                            // Draw outline using DrawSnapped with scale
+                            // Note: Outline logic is complex with scaling. For simplicity in hitstop, we might skip outline or just scale it.
+                            // Scaling the outline sprites individually works best.
 
-                            spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x - 1, y, w, h), sourceRect, outlineColor);
-                            spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x + 1, y, w, h), sourceRect, outlineColor);
-                            spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x, y - 1, w, h), sourceRect, outlineColor);
-                            spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x, y + 1, w, h), sourceRect, outlineColor);
+                            // Simplified outline for scaled drawing:
+                            if (scale > 1.0f)
+                            {
+                                // Just draw the main silhouette scaled up slightly behind?
+                                // Or skip complex outline during hitstop pop.
+                                // Let's skip the complex 8-direction outline during hitstop pop to avoid artifacts.
+                            }
+                            else
+                            {
+                                int x = (int)baseDrawPosition.X;
+                                int y = (int)baseDrawPosition.Y;
+                                int w = spriteRect.Width;
+                                int h = spriteRect.Height;
+
+                                spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x - 2, y, w, h), sourceRect, outerBorderColor);
+                                spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x + 2, y, w, h), sourceRect, outerBorderColor);
+                                spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x, y - 2, w, h), sourceRect, outerBorderColor);
+                                spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x, y + 2, w, h), sourceRect, outerBorderColor);
+
+                                spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x - 1, y - 1, w, h), sourceRect, outerBorderColor);
+                                spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x + 1, y - 1, w, h), sourceRect, outerBorderColor);
+                                spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x - 1, y + 1, w, h), sourceRect, outerBorderColor);
+                                spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x + 1, y + 1, w, h), sourceRect, outerBorderColor);
+
+                                spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x - 1, y, w, h), sourceRect, outlineColor);
+                                spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x + 1, y, w, h), sourceRect, outlineColor);
+                                spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x, y - 1, w, h), sourceRect, outlineColor);
+                                spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x, y + 1, w, h), sourceRect, outlineColor);
+                            }
                         }
                     }
 
@@ -996,6 +1101,8 @@ namespace ProjectVagabond.Battle.UI
 
                     if (useFlattening)
                     {
+                        // ... (Flattening logic remains same, scaling not applied here as it's for fade out) ...
+                        // Existing flattening code...
                         var currentRTs = _core.GraphicsDevice.GetRenderTargets();
                         spriteBatch.End();
                         _core.GraphicsDevice.SetRenderTarget(_flattenTarget);
@@ -1049,7 +1156,10 @@ namespace ProjectVagabond.Battle.UI
                             var sourceRect = new Rectangle(i * spritePartSize, 0, spritePartSize, spritePartSize);
                             var partOffset = offsets[i];
                             var drawPosition = new Vector2(spriteRect.X + partOffset.X, spriteRect.Y + partOffset.Y) + shakeOffset;
-                            var drawRect = new Rectangle((int)drawPosition.X, (int)drawPosition.Y, spriteRect.Width, spriteRect.Height);
+
+                            // Calculate center for scaling
+                            Vector2 origin = new Vector2(spritePartSize / 2f, spritePartSize / 2f);
+                            Vector2 centerPos = drawPosition + origin;
 
                             float currentPartTopY = GetEnemySpriteStaticTopY(combatant, spriteRect.Y);
                             if (currentPartTopY < highestPixelY)
@@ -1059,25 +1169,25 @@ namespace ProjectVagabond.Battle.UI
 
                             if (silhouetteFactor >= 1.0f && enemySilhouette != null)
                             {
-                                spriteBatch.DrawSnapped(enemySilhouette, drawRect, sourceRect, silhouetteColor * finalAlpha);
+                                spriteBatch.DrawSnapped(enemySilhouette, centerPos, sourceRect, silhouetteColor * finalAlpha, 0f, origin, scale, SpriteEffects.None, 0f);
                             }
                             else if (isHighlighted && enemySilhouette != null)
                             {
                                 Color hColor = highlightColor ?? Color.Yellow;
-                                spriteBatch.DrawSnapped(enemySilhouette, drawRect, sourceRect, hColor * finalAlpha);
+                                spriteBatch.DrawSnapped(enemySilhouette, centerPos, sourceRect, hColor * finalAlpha, 0f, origin, scale, SpriteEffects.None, 0f);
                             }
                             else
                             {
-                                spriteBatch.DrawSnapped(enemySprite, drawRect, sourceRect, tintColor);
+                                spriteBatch.DrawSnapped(enemySprite, centerPos, sourceRect, tintColor, 0f, origin, scale, SpriteEffects.None, 0f);
                                 if (silhouetteFactor > 0f && enemySilhouette != null)
                                 {
-                                    spriteBatch.DrawSnapped(enemySilhouette, drawRect, sourceRect, silhouetteColor * silhouetteFactor * finalAlpha);
+                                    spriteBatch.DrawSnapped(enemySilhouette, centerPos, sourceRect, silhouetteColor * silhouetteFactor * finalAlpha, 0f, origin, scale, SpriteEffects.None, 0f);
                                 }
                             }
 
                             if (isFlashingWhite && enemySilhouette != null)
                             {
-                                spriteBatch.DrawSnapped(enemySilhouette, drawRect, sourceRect, Color.White * 0.8f);
+                                spriteBatch.DrawSnapped(enemySilhouette, centerPos, sourceRect, Color.White * 0.8f, 0f, origin, scale, SpriteEffects.None, 0f);
                             }
                         }
                     }
@@ -1101,14 +1211,14 @@ namespace ProjectVagabond.Battle.UI
                             float swayY = nY * _global.TargetIndicatorOffsetY;
 
                             float rotation = 0f;
-                            float scale = 1.0f;
+                            float indicatorScale = 1.0f;
 
                             Vector2 animatedPos = targetCenter + new Vector2(swayX, swayY) + shakeOffset;
                             Vector2 origin = new Vector2(indicator.Width / 2f, indicator.Height / 2f);
 
                             if (highlightColor == Color.Yellow)
                             {
-                                spriteBatch.DrawSnapped(indicator, animatedPos, null, Color.White, rotation, origin, scale, SpriteEffects.None, 0f);
+                                spriteBatch.DrawSnapped(indicator, animatedPos, null, Color.White, rotation, origin, indicatorScale, SpriteEffects.None, 0f);
                             }
                         }
                     }
@@ -1157,6 +1267,7 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
+        // ... (Rest of the file remains unchanged) ...
         private Rectangle GetEnemyDynamicSpriteBounds(BattleCombatant enemy, Vector2 basePosition)
         {
             string archetypeId = enemy.ArchetypeId;
