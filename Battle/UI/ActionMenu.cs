@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿#nullable enable
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -230,6 +231,17 @@ namespace ProjectVagabond.Battle.UI
             {
                 _backButton.TriggerClick();
             }
+        }
+
+        public void Reset()
+        {
+            SetState(MenuState.Main);
+            ResetAnimationState();
+            _selectedMove = null;
+            _selectedSpellbookEntry = null;
+            _tooltipMove = null;
+            _clickTimestamps.Clear();
+            _isSpamming = false;
         }
 
         public void ResetAnimationState()

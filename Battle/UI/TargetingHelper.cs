@@ -1,6 +1,15 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.UI;
+using ProjectVagabond.UI;
+using ProjectVagabond.Utils;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 
 namespace ProjectVagabond.Utils
 {
@@ -17,6 +26,9 @@ namespace ProjectVagabond.Utils
         public static List<BattleCombatant> GetValidTargets(BattleCombatant actor, TargetType targetType, IEnumerable<BattleCombatant> allCombatants)
         {
             var validTargets = new List<BattleCombatant>();
+
+            // Safety check: If actor is null (e.g. during initialization or scene transition), return empty list to prevent crash.
+            if (actor == null) return validTargets;
 
             // Filter for active combatants first (alive and on field)
             var activeCombatants = allCombatants.Where(c => !c.IsDefeated && c.IsActiveOnField).ToList();

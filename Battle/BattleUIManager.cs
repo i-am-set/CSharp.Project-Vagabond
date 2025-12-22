@@ -144,12 +144,18 @@ namespace ProjectVagabond.Battle.UI
         public void Reset()
         {
             EnsureTargetingButtonsInitialized();
-            _actionMenu.ResetAnimationState();
+            _actionMenu.Reset(); // Changed from ResetAnimationState to full Reset
+            _itemMenu.Hide(); // Ensure item menu is hidden/reset
+            _switchMenu.Hide(); // Ensure switch menu is hidden
             _itemTargetingBackButton.ResetAnimationState();
             UIState = BattleUIState.Default;
             SubMenuState = BattleSubMenuState.None;
             _narrationQueue.Clear();
             foreach (var btn in _targetingButtons) btn.ResetAnimationState();
+
+            // Also clear specific targeting state in UI Manager
+            MoveForTargeting = null;
+            ItemForTargeting = null;
         }
 
         public void ForceClearNarration()
