@@ -26,7 +26,6 @@ namespace ProjectVagabond.Battle.UI
         public event Action<BattleCombatant>? OnSwitchActionSelected;
         public event Action? OnFleeRequested;
         public event Action<BattleCombatant>? OnTargetSelectedFromUI;
-
         private readonly BattleNarrator _battleNarrator;
         private readonly ActionMenu _actionMenu;
         private readonly ItemMenu _itemMenu;
@@ -47,7 +46,7 @@ namespace ProjectVagabond.Battle.UI
 
 
         private float _itemTargetingTextAnimTimer = 0f;
-        private float _targetingTextAnimTimer = 0f; // Renamed from _itemTargetingTextAnimTimer to share
+        private float _targetingTextAnimTimer = 0f;
         private readonly Queue<Action> _narrationQueue = new Queue<Action>();
         public readonly HoverHighlightState HoverHighlightState = new HoverHighlightState();
         public float SharedPulseTimer { get; private set; } = 0f;
@@ -108,7 +107,8 @@ namespace ProjectVagabond.Battle.UI
             _itemMenu.OnItemTargetingRequested += OnItemTargetingRequested;
 
             _switchMenu.OnMemberSelected += (target) => OnSwitchActionSelected?.Invoke(target);
-            _switchMenu.OnBack += () => {
+            _switchMenu.OnBack += () =>
+            {
                 SubMenuState = BattleSubMenuState.ActionRoot;
                 _switchMenu.Hide();
 
@@ -321,7 +321,7 @@ namespace ProjectVagabond.Battle.UI
                 {
                     btn.Text = "EMPTY";
                     btn.IsEnabled = false;
-                    btn.CustomDisabledTextColor = _global.Palette_DarkestGray;
+                    btn.CustomDisabledTextColor = _global.Palette_DarkGray;
                     btn.OnClick = null;
                 }
 
@@ -385,8 +385,15 @@ namespace ProjectVagabond.Battle.UI
         {
             EnsureTargetingButtonsInitialized();
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-            foreach (var btn in _targetingButtons)
+
+            var battleManager = ServiceLocator.Get<BattleManager>();
+            var currentActor = battleManager.CurrentActingCombatant;
+            var allCombatants = battleManager.AllCombatants.ToList();
+
+            for (int i = 0; i < _targetingButtons.Count; i++)
             {
+                var btn = _targetingButtons[i];
+
                 // Draw the button sprite
                 btn.Draw(spriteBatch, secondaryFont, gameTime, transform);
 
@@ -402,17 +409,37 @@ namespace ProjectVagabond.Battle.UI
 
                     // Determine color based on state
                     Color textColor;
-                    if (!btn.IsEnabled)
+
+                    if (btn.Text == "EMPTY")
+                    {
+                        textColor = _global.Palette_DarkGray;
+                    }
+                    else if (!btn.IsEnabled)
                     {
                         textColor = btn.CustomDisabledTextColor ?? _global.Palette_DarkGray;
                     }
                     else if (btn.IsHovered)
                     {
-                        textColor = _global.Palette_BrightWhite;
+                        textColor = Color.Yellow;
                     }
                     else
                     {
-                        textColor = _global.Palette_LightGray;
+                        // Check if this button represents the current actor
+                        int col = i % 2;
+                        int row = i / 2;
+                        bool isPlayerSlot = row == 1;
+                        int slotIndex = col;
+
+                        var combatant = allCombatants.FirstOrDefault(c => c.IsPlayerControlled == isPlayerSlot && c.BattleSlot == slotIndex && c.IsActiveOnField);
+
+                        if (combatant != null && combatant == currentActor)
+                        {
+                            textColor = _global.Palette_BrightWhite;
+                        }
+                        else
+                        {
+                            textColor = _global.Palette_Red;
+                        }
                     }
 
                     spriteBatch.DrawStringSnapped(secondaryFont, btn.Text, textPos, textColor);
@@ -445,7 +472,8 @@ namespace ProjectVagabond.Battle.UI
                 gridStartY + (gridAreaHeight - textSize.Y) / 2
             ) + animOffset;
 
-            spriteBatch.DrawStringSnapped(font, text, textPos, Color.Red);
+            // Use Outlined Text with Black Outline
+            spriteBatch.DrawStringSquareOutlinedSnapped(font, text, textPos, Color.Red, _global.Palette_Black);
         }
 
         private void UpdateControlPrompt(GameTime gameTime)
