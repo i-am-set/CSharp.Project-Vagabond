@@ -892,9 +892,10 @@ namespace ProjectVagabond.Scenes
                         // Trigger Visual Pop (Flash/Scale)
                         _animationManager.StartHitstopVisuals(target.CombatantID, result.WasCritical);
 
-                        // NEW: Screen Flash for EVERY hit (White for enemies, Red for players)
+                        // Screen Flash for EVERY hit (White for enemies, Red for players)
                         if (target.IsPlayerControlled)
                         {
+                            _core.TriggerFullscreenFlash(Color.White, 0.15f * juiceIntensity);
                             _core.TriggerScreenFlashSequence(_global.Palette_Red);
                         }
                         else

@@ -995,7 +995,7 @@ namespace ProjectVagabond.Battle.UI
             {
                 scale = HITSTOP_SCALE_MULTIPLIER;
                 // Override tint to flash color (White for normal, Red for crit)
-                tintColor = hitstopState.IsCrit ? _global.Palette_Red : Color.White;
+                tintColor = hitstopState.IsCrit ? Color.Red : Color.White;
                 // Ensure full opacity
                 finalAlpha = 1.0f;
                 // Disable silhouette during flash
