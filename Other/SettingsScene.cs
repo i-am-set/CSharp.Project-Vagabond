@@ -489,6 +489,12 @@ namespace ProjectVagabond.Scenes
             if (applyButton != null) applyButton.IsEnabled = IsDirty();
             if (_currentInputDelay <= 0 && KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState)) AttemptToGoBack();
 
+            // Right Click to Go Back
+            if (currentMouseState.RightButton == ButtonState.Pressed && previousMouseState.RightButton == ButtonState.Released)
+            {
+                AttemptToGoBack();
+            }
+
             base.Update(gameTime);
         }
 

@@ -167,6 +167,10 @@ namespace ProjectVagabond.Battle.UI
             public float Timer; // For despawn/flicker
             public float Delay; // Staggered start delay
 
+            // Visuals
+            public float FlipTimer; // Controls the spin
+            public float FlipSpeed; // How fast it spins
+
             // Magnetization State
             public bool IsMagnetizing;
             public Vector2 MagnetTarget;
@@ -833,7 +837,9 @@ namespace ProjectVagabond.Battle.UI
                     Delay = (float)(_random.NextDouble() * COIN_INDIVIDUAL_DISPENSE_DELAY),
                     IsMagnetizing = false,
                     MagnetSpeed = 0f,
-                    MagnetAcceleration = (float)(_random.NextDouble() * (COIN_MAGNET_ACCEL_MAX - COIN_MAGNET_ACCEL_MIN) + COIN_MAGNET_ACCEL_MIN)
+                    MagnetAcceleration = (float)(_random.NextDouble() * (COIN_MAGNET_ACCEL_MAX - COIN_MAGNET_ACCEL_MIN) + COIN_MAGNET_ACCEL_MIN),
+                    FlipTimer = (float)(_random.NextDouble() * MathHelper.TwoPi),
+                    FlipSpeed = 10f + (float)(_random.NextDouble() * 10f)
                 };
                 _activeCoins.Add(coin);
             }
@@ -853,6 +859,9 @@ namespace ProjectVagabond.Battle.UI
                     coin.Delay -= dt;
                     continue; // Skip update until delay is over
                 }
+
+                // Update Flip Animation
+                coin.FlipTimer += dt * coin.FlipSpeed;
 
                 if (coin.IsMagnetizing)
                 {
@@ -962,7 +971,31 @@ namespace ProjectVagabond.Battle.UI
                 // Don't draw if still delayed
                 if (coin.Delay > 0) continue;
 
-                spriteBatch.DrawSnapped(pixel, coin.Position, _global.Palette_Yellow);
+                // Calculate Shimmer Color
+                // Sin wave from -1 to 1. Map to 0 to 1.
+                float shimmer = (MathF.Sin(coin.FlipTimer) + 1f) / 2f;
+                Color coinColor = Color.Lerp(_global.Palette_Yellow, _global.Palette_Orange, shimmer);
+
+                // Calculate Flip Scale (X-axis)
+                // Cos wave from -1 to 1. Abs to get 0 to 1 (flipping appearance).
+                float flipScale = MathF.Abs(MathF.Cos(coin.FlipTimer));
+
+                // Draw a small rectangle (3x3) scaled horizontally
+                // Origin at center (1.5, 1.5)
+                Vector2 origin = new Vector2(1f, 1f);
+                Vector2 scale = new Vector2(1.0f, 1.0f);
+
+                // Use a 3x3 source rect from the pixel texture (it's 1x1, so we just scale it up)
+                // Actually, DrawSnapped takes a destination rect or position + scale.
+                // Let's use position + scale.
+                // Base size 3x3.
+                Vector2 baseSize = new Vector2(1f, 1f);
+                Vector2 finalScale = baseSize * scale;
+
+                // Since DrawSnapped rounds positions, we need to be careful with small scales.
+                // Let's use the overload that takes scale.
+                // Note: DrawSnapped rounds the position. We want the visual center to be the coin position.
+                spriteBatch.DrawSnapped(pixel, coin.Position, null, coinColor, 0f, new Vector2(0.5f, 0.5f), finalScale, SpriteEffects.None, 0f);
             }
         }
 
