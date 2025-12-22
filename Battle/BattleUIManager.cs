@@ -26,6 +26,7 @@ namespace ProjectVagabond.Battle.UI
         public event Action<BattleCombatant>? OnSwitchActionSelected;
         public event Action? OnFleeRequested;
         public event Action<BattleCombatant>? OnTargetSelectedFromUI;
+
         private readonly BattleNarrator _battleNarrator;
         private readonly ActionMenu _actionMenu;
         private readonly ItemMenu _itemMenu;
@@ -46,7 +47,7 @@ namespace ProjectVagabond.Battle.UI
 
 
         private float _itemTargetingTextAnimTimer = 0f;
-        private float _targetingTextAnimTimer = 0f;
+        private float _targetingTextAnimTimer = 0f; // Renamed from _itemTargetingTextAnimTimer to share
         private readonly Queue<Action> _narrationQueue = new Queue<Action>();
         public readonly HoverHighlightState HoverHighlightState = new HoverHighlightState();
         public float SharedPulseTimer { get; private set; } = 0f;
@@ -107,8 +108,7 @@ namespace ProjectVagabond.Battle.UI
             _itemMenu.OnItemTargetingRequested += OnItemTargetingRequested;
 
             _switchMenu.OnMemberSelected += (target) => OnSwitchActionSelected?.Invoke(target);
-            _switchMenu.OnBack += () =>
-            {
+            _switchMenu.OnBack += () => {
                 SubMenuState = BattleSubMenuState.ActionRoot;
                 _switchMenu.Hide();
 
@@ -445,8 +445,7 @@ namespace ProjectVagabond.Battle.UI
                 gridStartY + (gridAreaHeight - textSize.Y) / 2
             ) + animOffset;
 
-            // Use Outlined Text with Black Outline
-            spriteBatch.DrawStringOutlinedSnapped(font, text, textPos, Color.Red, _global.Palette_Black);
+            spriteBatch.DrawStringSnapped(font, text, textPos, Color.Red);
         }
 
         private void UpdateControlPrompt(GameTime gameTime)
@@ -588,6 +587,7 @@ namespace ProjectVagabond.Battle.UI
             DrawTargetingText(spriteBatch, font, gameTime);
 
             // Ensure button size matches ItemMenu
+            const int backButtonHeight = 15;
             var backSize = (_itemTargetingBackButton.Font ?? secondaryFont).MeasureString(_itemTargetingBackButton.Text);
             int backWidth = (int)backSize.Width + 16;
 
