@@ -5,6 +5,7 @@ using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
@@ -63,10 +64,21 @@ namespace ProjectVagabond.Battle.UI
         private readonly Dictionary<string, SpriteHopAnimationController> _attackAnimControllers = new();
         private string? _lastAttackerId;
 
+        // Status Icon Animation State
+        private class StatusIconAnim
+        {
+            public string CombatantID;
+            public StatusEffectType Type;
+            public float Timer;
+            public const float DURATION = 0.3f;
+            public const float HEIGHT = 5f;
+        }
+        private readonly List<StatusIconAnim> _activeStatusIconAnims = new List<StatusIconAnim>();
+
         // Layout Constants
         private const int DIVIDER_Y = 123;
         private const int ENEMY_SLOT_Y_OFFSET = 16;
-        private const float TITLE_INDICATOR_BOB_SPEED = 0.375f; // Added missing constant
+        private const float TITLE_INDICATOR_BOB_SPEED = 0.375f;
 
         // Noise generator for organic sway
         private static readonly SeededPerlin _swayNoise = new SeededPerlin(9999);
@@ -95,6 +107,7 @@ namespace ProjectVagabond.Battle.UI
             _attackAnimControllers.Clear();
             _combatantVisualCenters.Clear();
             _playerSprites.Clear();
+            _activeStatusIconAnims.Clear();
             _lastAttackerId = null;
         }
 
@@ -105,6 +118,7 @@ namespace ProjectVagabond.Battle.UI
             UpdateEnemyAnimations(gameTime, combatants);
             UpdateShadowAnimations(gameTime, combatants);
             UpdateStatusIconTooltips(combatants);
+            UpdateStatusIconAnimations(gameTime);
 
             foreach (var combatant in combatants)
             {
@@ -123,6 +137,43 @@ namespace ProjectVagabond.Battle.UI
                 _attackAnimControllers[combatantId] = new SpriteHopAnimationController();
             }
             _attackAnimControllers[combatantId].Trigger();
+        }
+
+        public void TriggerStatusIconHop(string combatantId, StatusEffectType type)
+        {
+            // Remove existing animation for this specific icon to restart it
+            _activeStatusIconAnims.RemoveAll(a => a.CombatantID == combatantId && a.Type == type);
+            _activeStatusIconAnims.Add(new StatusIconAnim
+            {
+                CombatantID = combatantId,
+                Type = type,
+                Timer = 0f
+            });
+        }
+
+        private void UpdateStatusIconAnimations(GameTime gameTime)
+        {
+            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            for (int i = _activeStatusIconAnims.Count - 1; i >= 0; i--)
+            {
+                var anim = _activeStatusIconAnims[i];
+                anim.Timer += dt;
+                if (anim.Timer >= StatusIconAnim.DURATION)
+                {
+                    _activeStatusIconAnims.RemoveAt(i);
+                }
+            }
+        }
+
+        private float GetStatusIconOffset(string combatantId, StatusEffectType type)
+        {
+            var anim = _activeStatusIconAnims.FirstOrDefault(a => a.CombatantID == combatantId && a.Type == type);
+            if (anim != null)
+            {
+                float progress = anim.Timer / StatusIconAnim.DURATION;
+                return MathF.Sin(progress * MathHelper.Pi) * -StatusIconAnim.HEIGHT;
+            }
+            return 0f;
         }
 
         private void UpdateStatusIconTooltips(IEnumerable<BattleCombatant> allCombatants)
@@ -655,7 +706,10 @@ namespace ProjectVagabond.Battle.UI
 
             foreach (var effect in player.ActiveStatusEffects)
             {
-                var iconBounds = new Rectangle(currentX, iconY, iconSize, iconSize);
+                // Apply Hop Offset
+                float hopOffset = GetStatusIconOffset(player.CombatantID, effect.EffectType);
+
+                var iconBounds = new Rectangle(currentX, (int)(iconY + hopOffset), iconSize, iconSize);
                 _playerStatusIcons.Add(new StatusIconInfo { Effect = effect, Bounds = iconBounds });
 
                 var iconTexture = _spriteManager.GetStatusEffectIcon(effect.EffectType);
@@ -1271,7 +1325,10 @@ namespace ProjectVagabond.Battle.UI
 
             foreach (var effect in combatant.ActiveStatusEffects)
             {
-                var iconBounds = new Rectangle(currentX, iconY, iconSize, iconSize);
+                // Apply Hop Offset
+                float hopOffset = GetStatusIconOffset(combatant.CombatantID, effect.EffectType);
+
+                var iconBounds = new Rectangle(currentX, (int)(iconY + hopOffset), iconSize, iconSize);
                 _enemyStatusIcons[combatant.CombatantID].Add(new StatusIconInfo { Effect = effect, Bounds = iconBounds });
                 var iconTexture = _spriteManager.GetStatusEffectIcon(effect.EffectType);
                 spriteBatch.DrawSnapped(iconTexture, iconBounds, Color.White);

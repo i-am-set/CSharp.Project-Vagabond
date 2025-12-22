@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
@@ -610,9 +611,24 @@ namespace ProjectVagabond.Battle.UI
                     MoveData? moveForTooltip = null;
                     bool simpleTooltip = false;
 
+                    // Check for Silence Status
+                    bool isSilenced = _player != null && _player.HasStatusEffect(StatusEffectType.Silence);
+
                     foreach (var button in _moveButtons)
                     {
                         if (button == null) continue;
+
+                        // --- SILENCE LOGIC ---
+                        // If player is silenced and this move is a Spell, disable the button.
+                        if (isSilenced && button.Move.MoveType == MoveType.Spell)
+                        {
+                            button.IsEnabled = false;
+                        }
+                        else
+                        {
+                            button.IsEnabled = true;
+                        }
+
                         button.Update(currentMouseState);
                         if (button.IsHovered)
                         {
@@ -637,17 +653,32 @@ namespace ProjectVagabond.Battle.UI
 
                     foreach (var button in _secondaryActionButtons)
                     {
+                        // --- SILENCE LOGIC FOR SECONDARY BUTTONS ---
+                        // Check if the underlying move is a spell (e.g. Attune)
+                        string? moveId = button.Text switch
+                        {
+                            "STRIKE" => _player?.DefaultStrikeMoveID,
+                            "ATTUNE" => "Attune",
+                            "STALL" => "Stall",
+                            _ => null
+                        };
+
+                        if (!string.IsNullOrEmpty(moveId) && BattleDataCache.Moves.TryGetValue(moveId, out var moveData))
+                        {
+                            if (isSilenced && moveData.MoveType == MoveType.Spell)
+                            {
+                                button.IsEnabled = false;
+                            }
+                            else
+                            {
+                                button.IsEnabled = true;
+                            }
+                        }
+
                         button.Update(currentMouseState);
                         if (button.IsHovered)
                         {
                             HoveredButton = button;
-                            string? moveId = button.Text switch
-                            {
-                                "STRIKE" => _player?.DefaultStrikeMoveID,
-                                "ATTUNE" => "Attune",
-                                "STALL" => "Stall",
-                                _ => null
-                            };
 
                             if (!string.IsNullOrEmpty(moveId) && BattleDataCache.Moves.TryGetValue(moveId, out var move))
                             {
@@ -1147,7 +1178,7 @@ namespace ProjectVagabond.Battle.UI
                 (Global.VIRTUAL_WIDTH - backWidth) / 2 + 1,
                 backButtonY,
                 backWidth,
-                15 
+                15
             );
             _backButton.Draw(spriteBatch, font, gameTime, transform);
         }

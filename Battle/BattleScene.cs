@@ -862,6 +862,12 @@ namespace ProjectVagabond.Scenes
                     _animationManager.StartHealthLossAnimation(target.CombatantID, target.VisualHP, target.Stats.CurrentHP);
                     _animationManager.StartHealthAnimation(target.CombatantID, (int)target.VisualHP, target.Stats.CurrentHP);
 
+                    // --- NEW: Trigger Burn Icon Hop if target is burned and takes damage ---
+                    if (target.HasStatusEffect(StatusEffectType.Burn))
+                    {
+                        _renderer.TriggerStatusIconHop(target.CombatantID, StatusEffectType.Burn);
+                    }
+
                     if (target.Stats.CurrentHP <= 0)
                     {
                         TriggerDeathAnimation(target);
@@ -955,6 +961,16 @@ namespace ProjectVagabond.Scenes
             _currentActor = e.Actor;
             if (e.Reason.StartsWith("charging")) _uiManager.ShowNarration($"{e.Actor.Name} is {e.Reason}!");
             else _uiManager.ShowNarration($"{e.Actor.Name} is {e.Reason} and cannot move!");
+
+            // --- NEW: Trigger Status Icon Hop for Stun/Silence ---
+            if (e.Reason == "stunned")
+            {
+                _renderer.TriggerStatusIconHop(e.Actor.CombatantID, StatusEffectType.Stun);
+            }
+            else if (e.Reason == "silenced")
+            {
+                _renderer.TriggerStatusIconHop(e.Actor.CombatantID, StatusEffectType.Silence);
+            }
         }
 
         private void OnStatusEffectTriggered(GameEvents.StatusEffectTriggered e)
@@ -972,6 +988,9 @@ namespace ProjectVagabond.Scenes
 
                 _animationManager.StartHealthLossAnimation(e.Combatant.CombatantID, e.Combatant.VisualHP, e.Combatant.Stats.CurrentHP);
                 _animationManager.StartHealthAnimation(e.Combatant.CombatantID, (int)e.Combatant.VisualHP, e.Combatant.Stats.CurrentHP);
+
+                // --- NEW: Trigger Status Icon Hop for Poison/Burn ---
+                _renderer.TriggerStatusIconHop(e.Combatant.CombatantID, e.EffectType);
 
                 if (e.Combatant.Stats.CurrentHP <= 0)
                 {

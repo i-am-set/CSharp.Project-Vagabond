@@ -169,7 +169,8 @@ namespace ProjectVagabond.Battle.UI
             else
             {
                 finalTintColor = Color.White;
-                if (!canAfford) finalTintColor = _global.ButtonDisableColor * 0.5f;
+                if (!IsEnabled) finalTintColor = _global.ButtonDisableColor * 0.5f; // Dim if disabled
+                else if (!canAfford) finalTintColor = _global.ButtonDisableColor * 0.5f;
                 else if (_isPressed) finalTintColor = Color.Gray;
                 else if (isActivated) finalTintColor = _global.ButtonHoverColor;
             }
@@ -181,9 +182,6 @@ namespace ProjectVagabond.Battle.UI
                 // Draw background only if texture is provided
                 if (_backgroundSpriteSheet != null)
                 {
-                    // Assuming the background sprite sheet logic was here, but for now we just draw it if it exists.
-                    // If it's a 9-slice or similar, that logic would be here.
-                    // For this specific button, it seems it was just drawing the texture stretched or snapped.
                     spriteBatch.DrawSnapped(_backgroundSpriteSheet, animatedBounds, finalTintColor);
                 }
 
@@ -206,8 +204,8 @@ namespace ProjectVagabond.Battle.UI
                     spriteBatch.DrawSnapped(pixel, iconRect, _global.Palette_Pink * contentAlpha);
                 }
 
-                var textColor = isActivated && canAfford ? _global.ButtonHoverColor : _global.Palette_BrightWhite;
-                if (!canAfford)
+                var textColor = isActivated && canAfford && IsEnabled ? _global.ButtonHoverColor : _global.Palette_BrightWhite;
+                if (!canAfford || !IsEnabled)
                 {
                     textColor = _global.ButtonDisableColor;
                 }
@@ -256,7 +254,16 @@ namespace ProjectVagabond.Battle.UI
                     spriteBatch.DrawStringSnapped(_moveFont, this.Text, textPosition, textColor * contentAlpha);
                 }
 
-                if (!canAfford && isActivated)
+                // --- Strikethrough Logic for Disabled State ---
+                if (!IsEnabled)
+                {
+                    float lineY = animatedBounds.Center.Y;
+                    float startX = textStartX - 2;
+                    float endX = textStartX + Math.Min(moveNameTextSize.Width, textAvailableWidth) + 2;
+                    spriteBatch.DrawLineSnapped(new Vector2(startX, lineY), new Vector2(endX, lineY), _global.ButtonDisableColor * contentAlpha);
+                }
+
+                if (!canAfford && isActivated && IsEnabled)
                 {
                     string noManaText = "NOT ENOUGH MANA";
                     Vector2 noManaSize = _moveFont.MeasureString(noManaText);

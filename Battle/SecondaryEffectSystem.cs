@@ -115,27 +115,6 @@ namespace ProjectVagabond.Battle
                         HandleExecuteOnKill(attacker, val);
                     }
                 }
-
-                // Status Effect Triggers (Burn)
-                if (target.HasStatusEffect(StatusEffectType.Burn) && move != null && !target.IsDefeated)
-                {
-                    bool isPhysical = move.ImpactType == ImpactType.Physical;
-                    bool isFire = move.OffensiveElementIDs.Contains(2);
-
-                    if (isPhysical || isFire)
-                    {
-                        if (damageToTarget > 0)
-                        {
-                            target.ApplyDamage(damageToTarget);
-                            EventBus.Publish(new GameEvents.StatusEffectTriggered
-                            {
-                                Combatant = target,
-                                EffectType = StatusEffectType.Burn,
-                                Damage = damageToTarget
-                            });
-                        }
-                    }
-                }
             }
 
             EventBus.Publish(new GameEvents.SecondaryEffectComplete());
