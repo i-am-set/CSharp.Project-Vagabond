@@ -869,20 +869,6 @@ namespace ProjectVagabond.Battle.UI
                         int availableWidth = Global.VIRTUAL_WIDTH - (horizontalPadding * 2);
                         int availableHeight = Global.VIRTUAL_HEIGHT - dividerY - (verticalPadding * 2);
                         int gridAreaHeight = availableHeight - backButtonHeight - backButtonTopMargin;
-                        int gridStartY = dividerY + verticalPadding + 4;
-
-                        string text = "CHOOSE A TARGET";
-                        Vector2 textSize = font.MeasureString(text);
-
-                        float animX = MathF.Sin(_targetingTextAnimTimer * 4f) * 1f;
-                        float animY = MathF.Sin(_targetingTextAnimTimer * 8f) * 1f;
-                        Vector2 animOffset = new Vector2(animX, animY);
-
-                        Vector2 textPos = new Vector2(
-                            horizontalPadding + (availableWidth - textSize.X) / 2,
-                            gridStartY + (gridAreaHeight - textSize.Y) / 2
-                        ) + animOffset;
-                        spriteBatch.DrawStringSnapped(font, text, textPos, Color.Red);
 
                         int backButtonWidth = (int)(_backButton.Font ?? font).MeasureString(_backButton.Text).Width + backButtonPadding * 2;
                         _backButton.Bounds = new Rectangle(

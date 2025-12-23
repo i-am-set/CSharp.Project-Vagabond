@@ -412,8 +412,39 @@ namespace ProjectVagabond.Battle.UI
             {
                 var btn = _targetingButtons[i];
 
-                // Draw the button sprite
-                btn.Draw(spriteBatch, secondaryFont, gameTime, transform);
+                // Find the combatant associated with this button
+                int col = i % 2;
+                int row = i / 2;
+                bool isPlayerSlot = row == 1;
+                int slotIndex = col;
+                var buttonCombatant = allCombatants.FirstOrDefault(c => c.IsPlayerControlled == isPlayerSlot && c.BattleSlot == slotIndex && c.IsActiveOnField);
+
+                bool shouldHighlight = false;
+
+                // Highlight logic
+                if (btn.IsEnabled && focusCombatant != null && buttonCombatant != null)
+                {
+                    if (isMultiTarget)
+                    {
+                        // If multi-target, highlight if BOTH the focused combatant AND this button's combatant are valid targets.
+                        // This means hovering ANY valid target highlights ALL valid targets.
+                        if (validTargets.Contains(focusCombatant) && validTargets.Contains(buttonCombatant))
+                        {
+                            shouldHighlight = true;
+                        }
+                    }
+                    else
+                    {
+                        // Single target: Highlight only if this button matches the focused combatant
+                        if (buttonCombatant == focusCombatant)
+                        {
+                            shouldHighlight = true;
+                        }
+                    }
+                }
+
+                // Draw the button sprite with forceHover
+                btn.Draw(spriteBatch, secondaryFont, gameTime, transform, forceHover: shouldHighlight);
 
                 // Draw the text
                 if (!string.IsNullOrEmpty(btn.Text))
@@ -428,16 +459,18 @@ namespace ProjectVagabond.Battle.UI
                     // Determine color based on state
                     Color textColor;
 
-                    // Find the combatant associated with this button
-                    int col = i % 2;
-                    int row = i / 2;
-                    bool isPlayerSlot = row == 1;
-                    int slotIndex = col;
-                    var buttonCombatant = allCombatants.FirstOrDefault(c => c.IsPlayerControlled == isPlayerSlot && c.BattleSlot == slotIndex && c.IsActiveOnField);
-
                     if (btn.Text == "EMPTY")
                     {
                         textColor = _global.Palette_DarkGray;
+                    }
+                    else if (shouldHighlight)
+                    {
+                        textColor = Color.Yellow;
+                    }
+                    else if (buttonCombatant == currentActor)
+                    {
+                        // Override for current actor
+                        textColor = _global.Palette_Gray;
                     }
                     else if (!btn.IsEnabled)
                     {
@@ -445,47 +478,19 @@ namespace ProjectVagabond.Battle.UI
                     }
                     else
                     {
-                        // Default color logic
-                        if (buttonCombatant != null && buttonCombatant == currentActor)
-                        {
-                            textColor = _global.Palette_BrightWhite;
-                        }
-                        else
-                        {
-                            textColor = _global.Palette_Red;
-                        }
-
-                        // Highlight logic
-                        if (focusCombatant != null && buttonCombatant != null)
-                        {
-                            bool shouldHighlight = false;
-
-                            if (isMultiTarget)
-                            {
-                                // If multi-target, highlight if BOTH the focused combatant AND this button's combatant are valid targets.
-                                // This means hovering ANY valid target highlights ALL valid targets.
-                                if (validTargets.Contains(focusCombatant) && validTargets.Contains(buttonCombatant))
-                                {
-                                    shouldHighlight = true;
-                                }
-                            }
-                            else
-                            {
-                                // Single target: Highlight only if this button matches the focused combatant
-                                if (buttonCombatant == focusCombatant)
-                                {
-                                    shouldHighlight = true;
-                                }
-                            }
-
-                            if (shouldHighlight)
-                            {
-                                textColor = Color.Yellow;
-                            }
-                        }
+                        textColor = _global.Palette_Red;
                     }
 
                     spriteBatch.DrawStringSnapped(secondaryFont, btn.Text, textPos, textColor);
+
+                    // Strikethrough for unselectable targets (INCLUDING EMPTY if disabled)
+                    if (!btn.IsEnabled)
+                    {
+                        float lineY = textPos.Y + (secondaryFont.LineHeight / 2f) + 1; // Moved down 1 pixel
+                        float startX = textPos.X - 2;
+                        float endX = textPos.X + textSize.X + 2;
+                        spriteBatch.DrawLineSnapped(new Vector2(startX, lineY), new Vector2(endX, lineY), textColor);
+                    }
                 }
             }
         }
