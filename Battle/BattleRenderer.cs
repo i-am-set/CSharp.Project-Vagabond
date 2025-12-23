@@ -1049,48 +1049,66 @@ namespace ProjectVagabond.Battle.UI
                     bool isFlashingWhite = hitFlashState != null && hitFlashState.IsCurrentlyWhite;
                     Vector2 shakeOffset = hitFlashState?.ShakeOffset ?? Vector2.Zero;
 
+                    // --- NEW: Fused Outline Logic ---
                     if (enemySilhouette != null && silhouetteFactor < 1.0f && !isHighlighted)
                     {
-                        Color outerBorderColor = _global.Palette_Black * finalAlpha;
+                        // 1. Generate Composite Silhouette
+                        var currentRTs = _core.GraphicsDevice.GetRenderTargets();
+                        spriteBatch.End();
+                        _core.GraphicsDevice.SetRenderTarget(_flattenTarget);
+                        _core.GraphicsDevice.Clear(Color.Transparent);
+                        spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
+
+                        Vector2 rtBasePos = new Vector2(FLATTEN_MARGIN, FLATTEN_MARGIN);
 
                         for (int i = 0; i < numParts; i++)
                         {
                             var sourceRect = new Rectangle(i * spritePartSize, 0, spritePartSize, spritePartSize);
                             var partOffset = offsets[i];
-                            var baseDrawPosition = new Vector2(spriteRect.X + partOffset.X, spriteRect.Y + partOffset.Y) + shakeOffset;
-
-                            // Apply Scale to Outline
-                            Vector2 origin = new Vector2(spritePartSize / 2f, spritePartSize / 2f);
-                            Vector2 centerPos = baseDrawPosition + origin;
-
-                            // Simplified outline for scaled drawing:
-                            if (scale > 1.0f)
-                            {
-                                // Skip complex outline during hitstop pop to avoid artifacts.
-                            }
-                            else
-                            {
-                                int x = (int)baseDrawPosition.X;
-                                int y = (int)baseDrawPosition.Y;
-                                int w = spriteRect.Width;
-                                int h = spriteRect.Height;
-
-                                spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x - 2, y, w, h), sourceRect, outerBorderColor);
-                                spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x + 2, y, w, h), sourceRect, outerBorderColor);
-                                spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x, y - 2, w, h), sourceRect, outerBorderColor);
-                                spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x, y + 2, w, h), sourceRect, outerBorderColor);
-
-                                spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x - 1, y - 1, w, h), sourceRect, outerBorderColor);
-                                spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x + 1, y - 1, w, h), sourceRect, outerBorderColor);
-                                spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x - 1, y + 1, w, h), sourceRect, outerBorderColor);
-                                spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x + 1, y + 1, w, h), sourceRect, outerBorderColor);
-
-                                spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x - 1, y, w, h), sourceRect, outlineColor);
-                                spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x + 1, y, w, h), sourceRect, outlineColor);
-                                spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x, y - 1, w, h), sourceRect, outlineColor);
-                                spriteBatch.DrawSnapped(enemySilhouette, new Rectangle(x, y + 1, w, h), sourceRect, outlineColor);
-                            }
+                            // Draw silhouette in White
+                            spriteBatch.DrawSnapped(enemySilhouette, rtBasePos + partOffset, sourceRect, Color.White);
                         }
+
+                        spriteBatch.End();
+                        _core.GraphicsDevice.SetRenderTargets(currentRTs);
+                        spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
+
+                        // 2. Draw Outlines
+                        Vector2 screenDrawPos = new Vector2(spriteRect.X, spriteRect.Y) + shakeOffset - rtBasePos;
+                        Color cBlack = _global.Palette_Black * finalAlpha;
+                        Color cColored = outlineColor; // outlineColor already has alpha applied if needed? No, let's ensure it.
+                        // outlineColor was defined as `_global.Palette_DarkGray * finalAlpha` earlier.
+
+                        // Layer 3: Outer Black (3px)
+                        // Cardinals at 3
+                        DrawComposite(spriteBatch, _flattenTarget, screenDrawPos, new Vector2(-3, 0), cBlack);
+                        DrawComposite(spriteBatch, _flattenTarget, screenDrawPos, new Vector2(3, 0), cBlack);
+                        DrawComposite(spriteBatch, _flattenTarget, screenDrawPos, new Vector2(0, -3), cBlack);
+                        DrawComposite(spriteBatch, _flattenTarget, screenDrawPos, new Vector2(0, 3), cBlack);
+                        // Diagonals at 2
+                        DrawComposite(spriteBatch, _flattenTarget, screenDrawPos, new Vector2(-2, -2), cBlack);
+                        DrawComposite(spriteBatch, _flattenTarget, screenDrawPos, new Vector2(2, -2), cBlack);
+                        DrawComposite(spriteBatch, _flattenTarget, screenDrawPos, new Vector2(-2, 2), cBlack);
+                        DrawComposite(spriteBatch, _flattenTarget, screenDrawPos, new Vector2(2, 2), cBlack);
+
+                        // Layer 2: Middle Colored (2px)
+                        // Cardinals at 2
+                        DrawComposite(spriteBatch, _flattenTarget, screenDrawPos, new Vector2(-2, 0), cColored);
+                        DrawComposite(spriteBatch, _flattenTarget, screenDrawPos, new Vector2(2, 0), cColored);
+                        DrawComposite(spriteBatch, _flattenTarget, screenDrawPos, new Vector2(0, -2), cColored);
+                        DrawComposite(spriteBatch, _flattenTarget, screenDrawPos, new Vector2(0, 2), cColored);
+                        // Diagonals at 1
+                        DrawComposite(spriteBatch, _flattenTarget, screenDrawPos, new Vector2(-1, -1), cColored);
+                        DrawComposite(spriteBatch, _flattenTarget, screenDrawPos, new Vector2(1, -1), cColored);
+                        DrawComposite(spriteBatch, _flattenTarget, screenDrawPos, new Vector2(-1, 1), cColored);
+                        DrawComposite(spriteBatch, _flattenTarget, screenDrawPos, new Vector2(1, 1), cColored);
+
+                        // Layer 1: Inner Black (1px)
+                        // Cardinals at 1
+                        DrawComposite(spriteBatch, _flattenTarget, screenDrawPos, new Vector2(-1, 0), cBlack);
+                        DrawComposite(spriteBatch, _flattenTarget, screenDrawPos, new Vector2(1, 0), cBlack);
+                        DrawComposite(spriteBatch, _flattenTarget, screenDrawPos, new Vector2(0, -1), cBlack);
+                        DrawComposite(spriteBatch, _flattenTarget, screenDrawPos, new Vector2(0, 1), cBlack);
                     }
 
                     bool useFlattening = finalAlpha < 1.0f;
@@ -1259,6 +1277,11 @@ namespace ProjectVagabond.Battle.UI
                     Bounds = spriteBounds
                 });
             }
+        }
+
+        private void DrawComposite(SpriteBatch sb, Texture2D tex, Vector2 basePos, Vector2 offset, Color c)
+        {
+            sb.Draw(tex, basePos + offset, c);
         }
 
         private Rectangle GetEnemyDynamicSpriteBounds(BattleCombatant enemy, Vector2 basePosition)
