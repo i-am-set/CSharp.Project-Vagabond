@@ -33,7 +33,6 @@ namespace ProjectVagabond.Battle
             Reinforcement,
             BattleOver
         }
-
         private readonly List<BattleCombatant> _playerParty;
         private readonly List<BattleCombatant> _enemyParty;
         private readonly List<BattleCombatant> _allCombatants;
@@ -50,14 +49,6 @@ namespace ProjectVagabond.Battle
         public int RoundNumber { get; private set; }
         private static readonly Random _random = new Random();
 
-        private QueuedAction? _currentMultiHitAction;
-        private int _multiHitCountRemaining;
-        private int _totalHitsForNarration;
-        private int _actualHitsDelivered;
-        private bool _multiHitIsCritical;
-        private List<DamageCalculator.DamageResult> _multiHitAggregatedDamageResults;
-        private List<BattleCombatant> _multiHitAggregatedFinalTargets;
-
         private QueuedAction? _actionToExecute;
         private QueuedAction? _actionPendingAnimation;
         private bool _endOfTurnEffectsProcessed;
@@ -71,7 +62,7 @@ namespace ProjectVagabond.Battle
         public BattlePhase CurrentPhase => _currentPhase;
         public IEnumerable<BattleCombatant> AllCombatants => _allCombatants;
         public bool CanAdvance { get; set; } = true;
-        public bool IsProcessingMultiHit => _currentMultiHitAction != null;
+        public bool IsProcessingMultiHit => false; // MultiHit stripped
 
         public BattleManager(List<BattleCombatant> playerParty, List<BattleCombatant> enemyParty)
         {
@@ -141,7 +132,6 @@ namespace ProjectVagabond.Battle
         {
             _actionToExecute = null;
             _actionPendingAnimation = null;
-            _currentMultiHitAction = null;
 
             if (_currentPhase == BattlePhase.AnimatingMove ||
                 _currentPhase == BattlePhase.ActionResolution ||
@@ -265,12 +255,6 @@ namespace ProjectVagabond.Battle
             if (_currentPhase == BattlePhase.BattleOver) return;
             if (!CanAdvance) return;
 
-            if (_currentMultiHitAction != null)
-            {
-                ProcessHit();
-                return;
-            }
-
             switch (_currentPhase)
             {
                 case BattlePhase.StartOfTurn: HandleStartOfTurn(); break;
@@ -346,7 +330,7 @@ namespace ProjectVagabond.Battle
 
         private void HandleActionResolution()
         {
-            if (_currentMultiHitAction != null || _actionToExecute != null) return;
+            if (_actionToExecute != null) return;
 
             if (!_actionQueue.Any())
             {
@@ -475,119 +459,71 @@ namespace ProjectVagabond.Battle
                 action.SpellbookEntry.TimesUsed++;
             }
 
-            _multiHitIsCritical = false;
-            _actualHitsDelivered = 0;
-
-            if (action.ChosenMove.Effects.TryGetValue("MultiHit", out var multiHitValue) && EffectParser.TryParseIntArray(multiHitValue, out int[] hitParams) && hitParams.Length == 2)
-            {
-                _currentMultiHitAction = action;
-                _totalHitsForNarration = _random.Next(hitParams[0], hitParams[1] + 1);
-                _multiHitCountRemaining = _totalHitsForNarration;
-                _multiHitAggregatedDamageResults = new List<DamageCalculator.DamageResult>();
-                _multiHitAggregatedFinalTargets = new List<BattleCombatant>();
-            }
-            else
-            {
-                _currentMultiHitAction = action;
-                _multiHitCountRemaining = 1;
-                _totalHitsForNarration = 1;
-                _multiHitAggregatedDamageResults = new List<DamageCalculator.DamageResult>();
-                _multiHitAggregatedFinalTargets = new List<BattleCombatant>();
-            }
-            ProcessHit();
+            ProcessHit(action);
         }
 
-        private void ProcessHit()
+        private void ProcessHit(QueuedAction action)
         {
-            if (_multiHitCountRemaining > 0)
+            var targetsForThisHit = ResolveTargets(action);
+
+            if (targetsForThisHit.Any())
             {
-                _multiHitCountRemaining--;
-                var action = _currentMultiHitAction;
-                var targetsForThisHit = ResolveTargets(action, isMultiHit: _totalHitsForNarration > 1);
+                var damageResultsForThisHit = new List<DamageCalculator.DamageResult>();
+                float multiTargetModifier = (targetsForThisHit.Count > 1) ? BattleConstants.MULTI_TARGET_MODIFIER : 1.0f;
 
-                if (targetsForThisHit.Any())
+                foreach (var target in targetsForThisHit)
                 {
-                    _actualHitsDelivered++;
-                    var damageResultsForThisHit = new List<DamageCalculator.DamageResult>();
-                    float multiTargetModifier = (targetsForThisHit.Count > 1) ? BattleConstants.MULTI_TARGET_MODIFIER : 1.0f;
-
-                    foreach (var target in targetsForThisHit)
-                    {
-                        var moveInstance = HandlePreDamageEffects(action.ChosenMove, target);
-                        var result = DamageCalculator.CalculateDamage(action, target, moveInstance, multiTargetModifier);
-                        target.ApplyDamage(result.DamageAmount);
-                        SecondaryEffectSystem.ProcessPrimaryEffects(action, target);
-                        damageResultsForThisHit.Add(result);
-                        _multiHitAggregatedFinalTargets.Add(target);
-                    }
-                    _multiHitAggregatedDamageResults.AddRange(damageResultsForThisHit);
-
-                    if (!string.IsNullOrEmpty(action.ChosenMove.AnimationSpriteSheet))
-                    {
-                        MoveData animMove = action.ChosenMove;
-                        EventBus.Publish(new GameEvents.MoveAnimationTriggered { Move = animMove, Targets = targetsForThisHit });
-                    }
-
-                    EventBus.Publish(new GameEvents.BattleActionExecuted
-                    {
-                        Actor = action.Actor,
-                        ChosenMove = action.ChosenMove,
-                        Targets = targetsForThisHit,
-                        DamageResults = damageResultsForThisHit
-                    });
-
-                    // Trigger OnKill Effects
-                    if (targetsForThisHit.All(t => t.IsDefeated))
-                    {
-                        var ctx = new CombatContext { Actor = action.Actor, Move = action.ChosenMove };
-                        foreach (var effect in action.Actor.OnKillEffects)
-                        {
-                            effect.OnKill(ctx);
-                        }
-                    }
-
-                    if (targetsForThisHit.All(t => t.IsDefeated)) _multiHitCountRemaining = 0;
+                    var moveInstance = HandlePreDamageEffects(action.ChosenMove, target);
+                    var result = DamageCalculator.CalculateDamage(action, target, moveInstance, multiTargetModifier);
+                    target.ApplyDamage(result.DamageAmount);
+                    SecondaryEffectSystem.ProcessPrimaryEffects(action, target);
+                    damageResultsForThisHit.Add(result);
                 }
-                else
+
+                if (!string.IsNullOrEmpty(action.ChosenMove.AnimationSpriteSheet))
                 {
-                    _multiHitCountRemaining = 0;
+                    MoveData animMove = action.ChosenMove;
+                    EventBus.Publish(new GameEvents.MoveAnimationTriggered { Move = animMove, Targets = targetsForThisHit });
                 }
-                CanAdvance = false;
-            }
 
-            if (_multiHitCountRemaining <= 0)
-            {
-                var actor = _currentMultiHitAction.Actor;
+                EventBus.Publish(new GameEvents.BattleActionExecuted
+                {
+                    Actor = action.Actor,
+                    ChosenMove = action.ChosenMove,
+                    Targets = targetsForThisHit,
+                    DamageResults = damageResultsForThisHit
+                });
 
+                // Trigger OnKill Effects
+                if (targetsForThisHit.All(t => t.IsDefeated))
+                {
+                    var ctx = new CombatContext { Actor = action.Actor, Move = action.ChosenMove };
+                    foreach (var effect in action.Actor.OnKillEffects)
+                    {
+                        effect.OnKill(ctx);
+                    }
+                }
+
+                var actor = action.Actor;
                 if (!actor.HasUsedFirstAttack) actor.HasUsedFirstAttack = true;
 
                 // Trigger OnActionComplete Effects
                 foreach (var effect in actor.OnActionCompleteEffects)
                 {
-                    effect.OnActionComplete(_currentMultiHitAction, actor);
+                    effect.OnActionComplete(action, actor);
                 }
 
-                if (_totalHitsForNarration > 1)
-                {
-                    int criticalHitCount = _multiHitAggregatedDamageResults.Count(r => r.WasCritical);
-                    EventBus.Publish(new GameEvents.MultiHitActionCompleted
-                    {
-                        Actor = _currentMultiHitAction.Actor,
-                        ChosenMove = _currentMultiHitAction.ChosenMove,
-                        HitCount = _actualHitsDelivered,
-                        CriticalHitCount = criticalHitCount
-                    });
-                }
-
-                _currentActionForEffects = _currentMultiHitAction;
-                _currentActionDamageResults = _multiHitAggregatedDamageResults;
-                _currentActionFinalTargets = _multiHitAggregatedFinalTargets;
-
-                _currentMultiHitAction = null;
-                _multiHitAggregatedDamageResults = null;
-                _multiHitAggregatedFinalTargets = null;
+                _currentActionForEffects = action;
+                _currentActionDamageResults = damageResultsForThisHit;
+                _currentActionFinalTargets = targetsForThisHit;
 
                 _currentPhase = BattlePhase.SecondaryEffectResolution;
+                CanAdvance = false;
+            }
+            else
+            {
+                // No targets, skip to end
+                _currentPhase = BattlePhase.CheckForDefeat;
                 CanAdvance = false;
             }
         }
@@ -630,7 +566,7 @@ namespace ProjectVagabond.Battle
             _currentActionFinalTargets = targets;
         }
 
-        private List<BattleCombatant> ResolveTargets(QueuedAction action, bool isMultiHit = false)
+        private List<BattleCombatant> ResolveTargets(QueuedAction action)
         {
             var targetType = action.ChosenMove?.Target ?? action.ChosenItem?.Target ?? TargetType.None;
             var actor = action.Actor;
@@ -638,17 +574,8 @@ namespace ProjectVagabond.Battle
 
             var validCandidates = TargetingHelper.GetValidTargets(actor, targetType, _allCombatants);
 
-            if (isMultiHit || targetType == TargetType.RandomBoth || targetType == TargetType.RandomEvery || targetType == TargetType.RandomAll)
+            if (targetType == TargetType.RandomBoth || targetType == TargetType.RandomEvery || targetType == TargetType.RandomAll)
             {
-                if (isMultiHit && (targetType == TargetType.Single || targetType == TargetType.SingleTeam || targetType == TargetType.SingleAll))
-                {
-                    if (specifiedTarget != null && specifiedTarget.IsActiveOnField && !specifiedTarget.IsDefeated)
-                        return new List<BattleCombatant> { specifiedTarget };
-
-                    if (validCandidates.Any()) return new List<BattleCombatant> { validCandidates[_random.Next(validCandidates.Count)] };
-                    return new List<BattleCombatant>();
-                }
-
                 if (validCandidates.Any())
                 {
                     return new List<BattleCombatant> { validCandidates[_random.Next(validCandidates.Count)] };
@@ -710,7 +637,7 @@ namespace ProjectVagabond.Battle
                 return;
             }
 
-            if (_actionQueue.Any() || _currentMultiHitAction != null || _actionToExecute != null)
+            if (_actionQueue.Any() || _actionToExecute != null)
             {
                 _currentPhase = BattlePhase.ActionResolution;
             }
@@ -870,68 +797,20 @@ namespace ProjectVagabond.Battle
 
         private bool HandlePreActionEffects(QueuedAction action)
         {
-            var move = action.ChosenMove;
-            if (move == null) return false;
-
-            if (move.Effects.TryGetValue("Charge", out var chargeValue) && EffectParser.TryParseInt(chargeValue, out int chargeTurns))
-            {
-                action.Actor.ChargingAction = new DelayedAction { Action = action, TurnsRemaining = chargeTurns };
-                string typeTag = move.MoveType == MoveType.Spell ? "cSpell" : "cAction";
-                EventBus.Publish(new GameEvents.CombatantChargingAction { Actor = action.Actor, MoveName = $"[{typeTag}]{move.MoveName}[/]" });
-                return true;
-            }
-
-            if (move.Effects.TryGetValue("DelayedAttack", out var delayValue) && EffectParser.TryParseInt(delayValue, out int delayTurns))
-            {
-                action.Actor.DelayedActions.Enqueue(new DelayedAction { Action = action, TurnsRemaining = delayTurns });
-                return true;
-            }
-
+            // Stripped Charge and DelayedAttack logic
             return false;
         }
 
         private bool ProcessPreResolutionEffects(QueuedAction action)
         {
-            var move = action.ChosenMove;
-            if (move == null) return true;
-
-            if (move.Effects.TryGetValue("HPCost", out var hpCostValue) && EffectParser.TryParseFloat(hpCostValue, out float hpCostPercent))
-            {
-                int cost = (int)(action.Actor.Stats.MaxHP * (hpCostPercent / 100f));
-                action.Actor.ApplyDamage(cost);
-            }
-
-            if (move.Effects.TryGetValue("Gamble", out var gambleValue) && EffectParser.TryParseFloatArray(gambleValue, out float[] gambleParams) && gambleParams.Length >= 1)
-            {
-                float chance = gambleParams[0];
-                if (_random.Next(1, 101) > chance)
-                {
-                    EventBus.Publish(new GameEvents.ActionFailed { Actor = action.Actor, Reason = "bad luck" });
-                    return false;
-                }
-            }
-
+            // Stripped HPCost and Gamble logic
             return true;
         }
 
         private MoveData HandlePreDamageEffects(MoveData originalMove, BattleCombatant target)
         {
-            var moveInstance = originalMove;
-            if (moveInstance.Effects.TryGetValue("DetonateStatus", out var detonateValue))
-            {
-                var parts = detonateValue.Split(',');
-                if (parts.Length == 2 && Enum.TryParse<StatusEffectType>(parts[0].Trim(), true, out var statusTypeToDetonate) && EffectParser.TryParseFloat(parts[1].Trim(), out float multiplier))
-                {
-                    if (target.HasStatusEffect(statusTypeToDetonate))
-                    {
-                        moveInstance = originalMove.Clone();
-                        moveInstance.Power = (int)(moveInstance.Power * multiplier);
-                        target.ActiveStatusEffects.RemoveAll(e => e.EffectType == statusTypeToDetonate);
-                        EventBus.Publish(new GameEvents.StatusEffectRemoved { Combatant = target, EffectType = statusTypeToDetonate });
-                    }
-                }
-            }
-            return moveInstance;
+            // Stripped DetonateStatus logic
+            return originalMove;
         }
     }
 }

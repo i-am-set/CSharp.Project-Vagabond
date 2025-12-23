@@ -11,9 +11,9 @@
     "Agility": 12,
     "WeaknessElementIDs": [],
     "ResistanceElementIDs": [],
-    "DefaultStrikeMoveID": "ClawRake",
-    "StartingSpells": [ "CinderSpark", "VampiricBite" ],
-    "StartingActions": [ "ShoulderBash" ],
+    "DefaultStrikeMoveID": "4",
+    "StartingSpells": [],
+    "StartingActions": [],
     "StartingWeapons": {
       "0": 1
     },
@@ -33,9 +33,9 @@
     "Agility": 18,
     "WeaknessElementIDs": [],
     "ResistanceElementIDs": [],
-    "DefaultStrikeMoveID": "VenomJab",
-    "StartingSpells": [ "VenomJab", "SwiftStrike" ],
-    "StartingActions": [ "Dodge" ],
+    "DefaultStrikeMoveID": "2",
+    "StartingSpells": [],
+    "StartingActions": [],
     "StartingWeapons": {
       "2": 1
     },
@@ -55,9 +55,9 @@
     "Agility": 14,
     "WeaknessElementIDs": [],
     "ResistanceElementIDs": [],
-    "DefaultStrikeMoveID": "EtherDart",
-    "StartingSpells": [ "EtherDart", "Pyrosphere" ],
-    "StartingActions": [ "Dodge" ],
+    "DefaultStrikeMoveID": "5",
+    "StartingSpells": [],
+    "StartingActions": [],
     "StartingArmor": {
       "2": 1
     }
@@ -74,9 +74,9 @@
     "Agility": 5,
     "WeaknessElementIDs": [ 3 ],
     "ResistanceElementIDs": [ 1, 6 ],
-    "DefaultStrikeMoveID": "StoneHurl",
-    "StartingSpells": [ "StoneHurl", "BulkUp" ],
-    "StartingActions": [ "ShoulderBash" ],
+    "DefaultStrikeMoveID": "1",
+    "StartingSpells": [],
+    "StartingActions": [],
     "StartingWeapons": {
       "1": 1
     },
@@ -96,9 +96,9 @@
     "Agility": 10,
     "WeaknessElementIDs": [ 9 ],
     "ResistanceElementIDs": [ 2, 10 ],
-    "DefaultStrikeMoveID": "LuminousSpark",
-    "StartingSpells": [ "LuminousSpark", "PurifyingLight" ],
-    "StartingActions": [ "Dodge" ],
+    "DefaultStrikeMoveID": "5",
+    "StartingSpells": [],
+    "StartingActions": [],
     "StartingArmor": {
       "2": 1
     },
@@ -118,9 +118,9 @@
     "Agility": 16,
     "WeaknessElementIDs": [ 3, 5 ],
     "ResistanceElementIDs": [ 2 ],
-    "DefaultStrikeMoveID": "Scorchbrand",
-    "StartingSpells": [ "Scorchbrand", "OverCharge" ],
-    "StartingActions": [ "Dodge" ],
+    "DefaultStrikeMoveID": "0",
+    "StartingSpells": [],
+    "StartingActions": [],
     "StartingWeapons": {
       "0": 1
     },
@@ -140,9 +140,9 @@
     "Agility": 16,
     "WeaknessElementIDs": [ 3, 5 ],
     "ResistanceElementIDs": [ 2 ],
-    "DefaultStrikeMoveID": "Scorchbrand",
-    "StartingSpells": [ "Scorchbrand", "OverCharge" ],
-    "StartingActions": [ "Dodge" ],
+    "DefaultStrikeMoveID": "0",
+    "StartingSpells": [],
+    "StartingActions": [],
     "StartingWeapons": {
       "0": 1
     },

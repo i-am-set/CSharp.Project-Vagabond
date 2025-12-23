@@ -36,9 +36,9 @@
           "MaxAgility": 2,
           "WeaknessElementIDs": [],
           "ResistanceElementIDs": [],
-          "MoveLearnset": [ "TitanSlam", "Faultbreak" ],
-          "MinNumberOfMoves": 2,
-          "MaxNumberOfMoves": 2
+          "MoveLearnset": [ "1" ],
+          "MinNumberOfMoves": 1,
+          "MaxNumberOfMoves": 1
         }
       }
     ]
@@ -65,9 +65,9 @@
           "MaxAgility": 6,
           "WeaknessElementIDs": [],
           "ResistanceElementIDs": [],
-          "MoveLearnset": [ "BriarLash", "ToxicSting" ],
+          "MoveLearnset": [ "5" ],
           "MinNumberOfMoves": 1,
-          "MaxNumberOfMoves": 2
+          "MaxNumberOfMoves": 1
         }
       }
     ]
@@ -92,11 +92,11 @@
           "MaxTenacity": 18,
           "MinAgility": 5,
           "MaxAgility": 7,
-          "WeaknessElementIDs": [2],
-          "ResistanceElementIDs": [9],
-          "MoveLearnset": [ "ShoulderBash", "Rampage" ],
+          "WeaknessElementIDs": [ 2 ],
+          "ResistanceElementIDs": [ 9 ],
+          "MoveLearnset": [ "1" ],
           "MinNumberOfMoves": 1,
-          "MaxNumberOfMoves": 2
+          "MaxNumberOfMoves": 1
         }
       }
     ]
@@ -123,9 +123,9 @@
           "MaxAgility": 8,
           "WeaknessElementIDs": [],
           "ResistanceElementIDs": [],
-          "MoveLearnset": [ "SummonRock", "ShoulderBash" ],
+          "MoveLearnset": [ "1" ],
           "MinNumberOfMoves": 1,
-          "MaxNumberOfMoves": 2
+          "MaxNumberOfMoves": 1
         }
       }
     ]
@@ -152,9 +152,9 @@
           "MaxAgility": 20,
           "WeaknessElementIDs": [],
           "ResistanceElementIDs": [],
-          "MoveLearnset": [ "VenomJab", "SwiftStrike" ],
-          "MinNumberOfMoves": 2,
-          "MaxNumberOfMoves": 2
+          "MoveLearnset": [ "3" ],
+          "MinNumberOfMoves": 1,
+          "MaxNumberOfMoves": 1
         }
       }
     ]
@@ -181,9 +181,9 @@
           "MaxAgility": 18,
           "WeaknessElementIDs": [],
           "ResistanceElementIDs": [],
-          "MoveLearnset": [ "ClawRake", "SwiftStrike", "FurySwipes", "Leer" ],
-          "MinNumberOfMoves": 2,
-          "MaxNumberOfMoves": 3
+          "MoveLearnset": [ "3", "4" ],
+          "MinNumberOfMoves": 1,
+          "MaxNumberOfMoves": 2
         }
       }
     ]
@@ -210,9 +210,9 @@
           "MaxAgility": 15,
           "WeaknessElementIDs": [],
           "ResistanceElementIDs": [],
-          "MoveLearnset": [ "VenomJab", "ToxicSting" ],
+          "MoveLearnset": [ "3" ],
           "MinNumberOfMoves": 1,
-          "MaxNumberOfMoves": 2
+          "MaxNumberOfMoves": 1
         }
       }
     ]

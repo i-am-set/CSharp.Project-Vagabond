@@ -14,7 +14,6 @@ namespace ProjectVagabond.Battle
         private static readonly Random _random = new Random();
         private const float GLOBAL_DAMAGE_SCALAR = 0.25f;
         private const int FLAT_DAMAGE_BONUS = 2;
-
         public enum ElementalEffectiveness { Neutral, Effective, Resisted, Immune }
 
         public struct DamageResult
@@ -37,11 +36,7 @@ namespace ProjectVagabond.Battle
                 DefenderAbilitiesTriggered = new List<RelicData>()
             };
 
-            if (move.Effects.TryGetValue("FixedDamage", out var fixedDamageValue) && EffectParser.TryParseInt(fixedDamageValue, out int fixedDamage))
-            {
-                result.DamageAmount = fixedDamage;
-                return result;
-            }
+            // Stripped FixedDamage check
 
             if (move.Power == 0) return result;
 
@@ -81,10 +76,7 @@ namespace ProjectVagabond.Battle
 
             // Apply Armor Penetration (Move + Abilities)
             float penetration = 0f;
-            if (move.Effects.TryGetValue("ArmorPierce", out var armorPierceValue) && EffectParser.TryParseFloat(armorPierceValue, out float piercePercent))
-            {
-                penetration += (piercePercent / 100f);
-            }
+            // Stripped Move-based ArmorPierce check
             foreach (var mod in attacker.DefensePenetrationModifiers)
             {
                 penetration += mod.GetDefensePenetration(ctx);
@@ -105,10 +97,7 @@ namespace ProjectVagabond.Battle
                 currentDamage = modifier.ModifyOutgoingDamage(currentDamage, ctx);
             }
 
-            if (move.Effects.TryGetValue("Execute", out var executeValue) && EffectParser.TryParseFloatArray(executeValue, out float[] execParams) && execParams.Length == 2)
-            {
-                if ((float)target.Stats.CurrentHP / target.Stats.MaxHP <= (execParams[0] / 100f)) currentDamage *= execParams[1];
-            }
+            // Stripped Execute check
 
             currentDamage *= multiTargetModifier;
 
@@ -165,7 +154,7 @@ namespace ProjectVagabond.Battle
             float defensiveStat = target.GetEffectiveTenacity();
 
             float penetration = 0f;
-            if (move.Effects.TryGetValue("ArmorPierce", out var armorPierceValue) && EffectParser.TryParseFloat(armorPierceValue, out float piercePercent)) penetration += (piercePercent / 100f);
+            // Stripped Move-based ArmorPierce check
             foreach (var mod in attacker.DefensePenetrationModifiers) penetration += mod.GetDefensePenetration(ctx);
             defensiveStat *= (1.0f - Math.Clamp(penetration, 0f, 1f));
             if (defensiveStat < 1) defensiveStat = 1;

@@ -3,6 +3,7 @@ using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -365,7 +366,7 @@ namespace ProjectVagabond.Battle
             return new QueuedAction
             {
                 Actor = actor,
-                ChosenMove = BattleDataCache.Moves["Stall"],
+                ChosenMove = BattleDataCache.Moves["6"],
                 Target = actor,
                 Priority = 0,
                 ActorAgility = actor.GetEffectiveAgility(),

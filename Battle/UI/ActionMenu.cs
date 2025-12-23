@@ -190,7 +190,7 @@ namespace ProjectVagabond.Battle.UI
                 HoverBorderColor = _global.Palette_Red
             };
             attuneButton.OnClick += () => {
-                if (BattleDataCache.Moves.TryGetValue("Attune", out var attuneMove))
+                if (BattleDataCache.Moves.TryGetValue("7", out var attuneMove))
                 {
                     SelectMove(attuneMove, null);
                 }
@@ -206,7 +206,7 @@ namespace ProjectVagabond.Battle.UI
                 HoverBorderColor = _global.Palette_Red
             };
             stallButton.OnClick += () => {
-                if (BattleDataCache.Moves.TryGetValue("Stall", out var stallMove))
+                if (BattleDataCache.Moves.TryGetValue("6", out var stallMove))
                 {
                     SelectMove(stallMove, null);
                 }
@@ -670,8 +670,8 @@ namespace ProjectVagabond.Battle.UI
                         string? moveId = button.Text switch
                         {
                             "STRIKE" => _player?.DefaultStrikeMoveID,
-                            "ATTUNE" => "Attune",
-                            "STALL" => "Stall",
+                            "ATTUNE" => "7",
+                            "STALL" => "6", 
                             _ => null
                         };
 
