@@ -20,6 +20,8 @@ namespace ProjectVagabond
 {
     public static class PartyMemberFactory
     {
+        private static readonly Random _rng = new Random();
+
         public static PartyMember CreateMember(string memberId)
         {
             if (!BattleDataCache.PartyMembers.TryGetValue(memberId, out var data))
@@ -45,23 +47,30 @@ namespace ProjectVagabond
                 PortraitIndex = int.TryParse(data.MemberID, out int pid) ? pid : 0
             };
 
-            // Load Spells into Slots
-            int spellSlotIndex = 0;
-            foreach (var moveId in data.StartingSpells)
+            // --- Populate Combat Slots (Spells array) ---
+            // 1. Get the pool of moves
+            var movePool = new List<string>(data.StartingMoves);
+
+            // 2. Shuffle the pool to ensure random selection
+            int n = movePool.Count;
+            while (n > 1)
             {
-                if (BattleDataCache.Moves.ContainsKey(moveId) && spellSlotIndex < 4)
-                {
-                    member.Spells[spellSlotIndex] = new MoveEntry(moveId, 0);
-                    spellSlotIndex++;
-                }
+                n--;
+                int k = _rng.Next(n + 1);
+                (movePool[k], movePool[n]) = (movePool[n], movePool[k]);
             }
 
-            // Load Actions
-            foreach (var moveId in data.StartingActions)
+            // 3. Determine how many to assign (Max 4, or limited by pool size)
+            int countToAssign = Math.Clamp(data.NumberOfStartingMoves, 0, 4);
+            countToAssign = Math.Min(countToAssign, movePool.Count);
+
+            // 4. Assign to slots
+            for (int i = 0; i < countToAssign; i++)
             {
+                string moveId = movePool[i];
                 if (BattleDataCache.Moves.ContainsKey(moveId))
                 {
-                    member.Actions.Add(new MoveEntry(moveId, 0));
+                    member.Spells[i] = new MoveEntry(moveId, 0);
                 }
             }
 
