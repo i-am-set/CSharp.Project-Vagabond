@@ -1248,10 +1248,18 @@ namespace ProjectVagabond.Battle.UI
                     string accuracyText = move.Accuracy >= 0 ? $"ACC: {move.Accuracy}%" : "ACC: ---";
                     string powerText = move.Power > 0 ? $"POW: {move.Power}" : "POW: ---";
 
+                    Color accColor = _global.Palette_BrightWhite;
+                    if (move.Accuracy >= 0)
+                    {
+                        // Lerp from White (100%) to Red (50% or lower)
+                        float t = Math.Clamp((100f - move.Accuracy) / 50f, 0f, 1f);
+                        accColor = Color.Lerp(_global.Palette_BrightWhite, _global.Palette_Red, t);
+                    }
+
                     statsSegments.Insert(0, (separator, _global.Palette_DarkGray));
-                    statsSegments.Insert(0, (accuracyText, _global.Palette_White));
+                    statsSegments.Insert(0, (accuracyText, accColor));
                     statsSegments.Insert(0, (separator, _global.Palette_DarkGray));
-                    statsSegments.Insert(0, (powerText, _global.Palette_White));
+                    statsSegments.Insert(0, (powerText, _global.Palette_BrightWhite));
                 }
 
                 float totalStatsWidth = statsSegments.Sum(s => secondaryFont.MeasureString(s.Text).Width);
@@ -1349,7 +1357,7 @@ namespace ProjectVagabond.Battle.UI
             else
             {
                 float statsY = currentY;
-                Color valueColor = _global.Palette_White; // Default value color is now White
+                Color valueColor = _global.Palette_BrightWhite; // Changed to BrightWhite
                 Color labelColor = _global.Palette_DarkGray;
 
                 string powerLabel = "POWE:";
@@ -1399,7 +1407,19 @@ namespace ProjectVagabond.Battle.UI
                 {
                     accValuePos.X -= 5;
                 }
-                spriteBatch.DrawStringSnapped(secondaryFont, accValue, accValuePos, valueColor);
+                // Shift Accuracy Value 5 pixels right
+                accValuePos.X += 6;
+
+                // Calculate Accuracy Color
+                Color accColor = valueColor;
+                if (move != null && move.Accuracy >= 0)
+                {
+                    // Lerp from White (100%) to Red (50% or lower)
+                    float t = Math.Clamp((100f - move.Accuracy) / 50f, 0f, 1f);
+                    accColor = Color.Lerp(valueColor, _global.Palette_Red, t);
+                }
+
+                spriteBatch.DrawStringSnapped(secondaryFont, accValue, accValuePos, accColor);
 
                 string offStatVal = move?.OffensiveStat switch
                 {
@@ -1416,12 +1436,14 @@ namespace ProjectVagabond.Battle.UI
                     OffensiveStatType.Intelligence => _global.StatColor_Intelligence,
                     OffensiveStatType.Tenacity => _global.StatColor_Tenacity,
                     OffensiveStatType.Agility => _global.StatColor_Agility,
-                    _ => _global.Palette_White
+                    _ => _global.Palette_BrightWhite // Changed to BrightWhite
                 };
 
                 spriteBatch.DrawStringSnapped(secondaryFont, "USE", new Vector2(bounds.Center.X + 2, currentY), labelColor);
                 var offStatSize = secondaryFont.MeasureString(offStatVal);
                 var offStatPos = new Vector2(bounds.Right - horizontalPadding - offStatSize.Width, currentY);
+                // Shift Use Value 5 pixels left
+                offStatPos.X -= 6;
                 spriteBatch.DrawStringSnapped(secondaryFont, offStatVal, offStatPos, offColor);
 
                 string targetValue = "";
@@ -1440,7 +1462,7 @@ namespace ProjectVagabond.Battle.UI
                         TargetType.RandomBoth => "R-BOTH",
                         TargetType.RandomEvery => "R-EVRY",
                         TargetType.RandomAll => "R-ALL",
-                        TargetType.SingleAll => "ANY",
+                        TargetType.SingleAll => "ANY", // Added missing case
                         TargetType.None => "NONE",
                         _ => ""
                     };
@@ -1558,7 +1580,6 @@ namespace ProjectVagabond.Battle.UI
                         continue;
                     }
 
-                    // NEW LOGIC: Percentage-based color blending
                     Color finalColor = currentColor;
                     if (currentColor != defaultColor && !isWhitespace && part.EndsWith("%"))
                     {
