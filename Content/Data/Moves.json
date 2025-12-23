@@ -135,7 +135,7 @@
   {
     "MoveID": "6",
     "MoveName": "Stall",
-    "Description": "Does nothing for 1 turn.",
+    "Description": "Do nothing for 1 turn.",
     "Power": 0,
     "ManaCost": 0,
     "MoveType": "Action",
@@ -257,7 +257,7 @@
   {
     "MoveID": "11",
     "MoveName": "Scorch Front",
-    "Description": "A wave of super heated air that hits both enemies.\n[cpositive]10%[/] chance to [cburn]Burn[/].",
+    "Description": "[cetc]A wave of super heated air that hits both enemies.[/]\n[cpositive]10%[/] chance to [cburn]Burn[/].",
     "Power": 90,
     "ManaCost": 25,
     "MoveType": "Spell",
@@ -282,7 +282,7 @@
   {
     "MoveID": "12",
     "MoveName": "Searing Coals",
-    "Description": "Summons hot coals under the target.\n[cpositive]100%[/] chance to [cburn]Burn[/].",
+    "Description": "[cetc]Summons hot coals under the target.[/]\n[cpositive]100%[/] chance to [cburn]Burn[/].",
     "Power": 20,
     "ManaCost": 15,
     "MoveType": "Spell",
@@ -307,7 +307,7 @@
   {
     "MoveID": "13",
     "MoveName": "Fireball",
-    "Description": "Hurls a massive ball of fire.\n[cpositive]10%[/] chance to [cburn]Burn[/].",
+    "Description": "[cetc]Hurls a massive ball of fire.[/]\n[cpositive]10%[/] chance to [cburn]Burn[/].",
     "Power": 110,
     "ManaCost": 30,
     "MoveType": "Spell",
@@ -332,7 +332,7 @@
   {
     "MoveID": "14",
     "MoveName": "Flame Lash",
-    "Description": "Strikes with a whip of fire.\n[cpositive]30%[/] chance to [cburn]Burn[/].",
+    "Description": "[cetc]Strikes with a whip of fire.[/]\n[cpositive]30%[/] chance to [cburn]Burn[/].",
     "Power": 90,
     "ManaCost": 20,
     "MoveType": "Action",
@@ -357,7 +357,7 @@
   {
     "MoveID": "15",
     "MoveName": "Fiery Crash",
-    "Description": "A reckless, flaming tackle.\nUser takes [cnegative]30%[/] recoil damage.\n[cpositive]10%[/] chance to [cburn]Burn[/].",
+    "Description": "[cetc]A reckless, flaming tackle.[/]\nUser takes [cnegative]30%[/] recoil damage.\n[cpositive]10%[/] chance to [cburn]Burn[/].",
     "Power": 130,
     "ManaCost": 0,
     "MoveType": "Action",
@@ -383,7 +383,7 @@
   {
     "MoveID": "16",
     "MoveName": "Freezer Burn",
-    "Description": "A cold snap that burns the skin.\n[cpositive]30%[/] chance to [cburn]Burn[/] and/or [cburn]Frostbite[/].",
+    "Description": "[cetc]A cold snap that burns the skin.[/]\n[cpositive]30%[/] chance to [cburn]Burn[/] and/or [cburn]Frostbite[/].",
     "Power": 40,
     "ManaCost": 20,
     "MoveType": "Spell",

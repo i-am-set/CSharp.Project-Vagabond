@@ -87,7 +87,7 @@ namespace ProjectVagabond.UI
                 textPos = new Vector2(MathF.Round(textPos.X), MathF.Round(textPos.Y));
 
                 // Use the new Square Outline method with Palette_Black
-                spriteBatch.DrawStringSquareOutlinedSnapped(tertiaryFont, textToDraw, textPos, textColor, _global.Palette_Black);
+                spriteBatch.DrawStringSquareOutlinedSnapped(tertiaryFont, textToDraw, textPos, textColor, _global.Palette_DarkerGray);
             }
         }
     }
