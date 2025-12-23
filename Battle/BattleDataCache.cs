@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework.Content;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -44,6 +45,16 @@ namespace ProjectVagabond.Battle
             string movesJson = File.ReadAllText(movesPath);
             var moveList = JsonSerializer.Deserialize<List<MoveData>>(movesJson, jsonOptions);
             Moves = moveList.ToDictionary(m => m.MoveID, m => m, StringComparer.OrdinalIgnoreCase);
+
+            // Hydrate Moves with Abilities
+            foreach (var move in Moves.Values)
+            {
+                if (move.Effects != null && move.Effects.Count > 0)
+                {
+                    // We pass an empty stat dictionary because moves don't have stat modifiers in the same way items do
+                    move.Abilities = AbilityFactory.CreateAbilitiesFromData(move.Effects, new Dictionary<string, int>());
+                }
+            }
 
             // --- CONSUMABLES ---
             string consumablesPath = Path.Combine(content.RootDirectory, "Data", "Items", "Consumables.json");

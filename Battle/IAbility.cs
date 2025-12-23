@@ -28,6 +28,16 @@ namespace ProjectVagabond.Battle.Abilities
     }
 
     // --- DAMAGE CALCULATION ---
+
+    /// <summary>
+    /// Modifies the base variables of the damage formula (like Move Power) before defense is applied.
+    /// Useful for moves that scale based on HP, Speed, or Weight.
+    /// </summary>
+    public interface ICalculationModifier : IAbility
+    {
+        float ModifyBasePower(float basePower, CombatContext ctx);
+    }
+
     public interface IOutgoingDamageModifier : IAbility
     {
         float ModifyOutgoingDamage(float currentDamage, CombatContext ctx);

@@ -36,11 +36,7 @@ namespace ProjectVagabond.Battle
                 DefenderAbilitiesTriggered = new List<RelicData>()
             };
 
-            // Stripped FixedDamage check
-
-            if (move.Power == 0) return result;
-
-            // 2. Build Combat Context
+            // 1. Build Combat Context
             var ctx = new CombatContext
             {
                 Actor = attacker,
@@ -50,10 +46,23 @@ namespace ProjectVagabond.Battle
                 IsLastAction = action.IsLastActionInRound
             };
 
-            // 3. Accuracy Check
+            // 2. Accuracy Check
             if (move.Accuracy != -1)
             {
                 bool ignoreEvasion = attacker.AccuracyModifiers.Any(m => m.ShouldIgnoreEvasion(ctx));
+
+                // Check Move-specific abilities for IgnoreEvasion
+                if (!ignoreEvasion)
+                {
+                    foreach (var ability in move.Abilities)
+                    {
+                        if (ability is IAccuracyModifier am && am.ShouldIgnoreEvasion(ctx))
+                        {
+                            ignoreEvasion = true;
+                            break;
+                        }
+                    }
+                }
 
                 // Dodging Status Logic: Multiplies incoming accuracy
                 float accuracyMultiplier = 1.0f;
@@ -64,47 +73,79 @@ namespace ProjectVagabond.Battle
 
                 int effectiveAccuracy = attacker.GetEffectiveAccuracy(move.Accuracy);
 
+                // Apply Move-specific accuracy modifiers
+                foreach (var ability in move.Abilities)
+                {
+                    if (ability is IAccuracyModifier am)
+                    {
+                        effectiveAccuracy = am.ModifyAccuracy(effectiveAccuracy, ctx);
+                    }
+                }
+
                 // Apply Dodging multiplier to the hit chance
                 float hitChance = effectiveAccuracy * accuracyMultiplier;
 
                 if (_random.Next(1, 101) > hitChance) result.WasGraze = true;
             }
 
+            // 3. Calculate Base Power (Allow Move Abilities to modify Power)
+            float power = move.Power;
+            foreach (var ability in move.Abilities)
+            {
+                if (ability is ICalculationModifier cm)
+                {
+                    power = cm.ModifyBasePower(power, ctx);
+                }
+            }
+
+            if (power == 0) return result;
+
             // 4. Calculate Base Damage
             float offensiveStat = GetOffensiveStat(attacker, move.OffensiveStat);
             float defensiveStat = target.GetEffectiveTenacity();
 
-            // Apply Armor Penetration (Move + Abilities)
+            // Apply Armor Penetration (Attacker Abilities + Move Abilities)
             float penetration = 0f;
-            // Stripped Move-based ArmorPierce check
             foreach (var mod in attacker.DefensePenetrationModifiers)
             {
                 penetration += mod.GetDefensePenetration(ctx);
+            }
+            foreach (var ability in move.Abilities)
+            {
+                if (ability is IDefensePenetrationModifier dpm)
+                {
+                    penetration += dpm.GetDefensePenetration(ctx);
+                }
             }
 
             defensiveStat *= (1.0f - Math.Clamp(penetration, 0f, 1f));
             if (defensiveStat < 1) defensiveStat = 1;
 
             float statRatio = offensiveStat / defensiveStat;
-            float baseDamage = (move.Power * statRatio * GLOBAL_DAMAGE_SCALAR) + FLAT_DAMAGE_BONUS;
+            float baseDamage = (power * statRatio * GLOBAL_DAMAGE_SCALAR) + FLAT_DAMAGE_BONUS;
 
             ctx.BaseDamage = baseDamage;
 
-            // 5. Apply Outgoing Modifiers
+            // 5. Apply Outgoing Modifiers (Attacker + Move)
             float currentDamage = baseDamage;
             foreach (var modifier in attacker.OutgoingDamageModifiers)
             {
                 currentDamage = modifier.ModifyOutgoingDamage(currentDamage, ctx);
             }
-
-            // Stripped Execute check
+            foreach (var ability in move.Abilities)
+            {
+                if (ability is IOutgoingDamageModifier odm)
+                {
+                    currentDamage = odm.ModifyOutgoingDamage(currentDamage, ctx);
+                }
+            }
 
             currentDamage *= multiTargetModifier;
 
-            // 7. Critical Hits
+            // 6. Critical Hits
             if (!result.WasGraze)
             {
-                bool isCrit = overrideCrit ?? CheckCritical(attacker, target, ctx);
+                bool isCrit = overrideCrit ?? CheckCritical(attacker, target, ctx, move);
                 if (isCrit)
                 {
                     result.WasCritical = true;
@@ -115,7 +156,7 @@ namespace ProjectVagabond.Battle
                 }
             }
 
-            // 8. Elemental Calculation
+            // 7. Elemental Calculation
             float elementalMultiplier = GetElementalMultiplier(move, target);
             if (elementalMultiplier > 1.0f) result.Effectiveness = ElementalEffectiveness.Effective;
             else if (elementalMultiplier > 0f && elementalMultiplier < 1.0f) result.Effectiveness = ElementalEffectiveness.Resisted;
@@ -123,7 +164,7 @@ namespace ProjectVagabond.Battle
 
             currentDamage *= elementalMultiplier;
 
-            // 9. Apply Incoming Modifiers
+            // 8. Apply Incoming Modifiers
             foreach (var modifier in target.IncomingDamageModifiers)
             {
                 currentDamage = modifier.ModifyIncomingDamage(currentDamage, ctx);
@@ -150,23 +191,40 @@ namespace ProjectVagabond.Battle
         {
             if (move.Power == 0) return 0;
             var ctx = new CombatContext { Actor = attacker, Target = target, Move = move };
+
+            // Apply Calculation Modifiers to Power
+            float power = move.Power;
+            foreach (var ability in move.Abilities)
+            {
+                if (ability is ICalculationModifier cm) power = cm.ModifyBasePower(power, ctx);
+            }
+
             float offensiveStat = GetOffensiveStat(attacker, move.OffensiveStat);
             float defensiveStat = target.GetEffectiveTenacity();
 
             float penetration = 0f;
-            // Stripped Move-based ArmorPierce check
             foreach (var mod in attacker.DefensePenetrationModifiers) penetration += mod.GetDefensePenetration(ctx);
+            foreach (var ability in move.Abilities)
+            {
+                if (ability is IDefensePenetrationModifier dpm) penetration += dpm.GetDefensePenetration(ctx);
+            }
+
             defensiveStat *= (1.0f - Math.Clamp(penetration, 0f, 1f));
             if (defensiveStat < 1) defensiveStat = 1;
 
             float statRatio = offensiveStat / defensiveStat;
-            float baseDamage = (move.Power * statRatio * GLOBAL_DAMAGE_SCALAR) + FLAT_DAMAGE_BONUS;
+            float baseDamage = (power * statRatio * GLOBAL_DAMAGE_SCALAR) + FLAT_DAMAGE_BONUS;
             ctx.BaseDamage = baseDamage;
             float currentDamage = baseDamage;
+
             foreach (var modifier in attacker.OutgoingDamageModifiers) currentDamage = modifier.ModifyOutgoingDamage(currentDamage, ctx);
+            foreach (var ability in move.Abilities)
+            {
+                if (ability is IOutgoingDamageModifier odm) currentDamage = odm.ModifyOutgoingDamage(currentDamage, ctx);
+            }
+
             foreach (var modifier in target.IncomingDamageModifiers) currentDamage = modifier.ModifyIncomingDamage(currentDamage, ctx);
 
-            // Apply Burn multiplier to baseline as well
             if (target.HasStatusEffect(StatusEffectType.Burn))
             {
                 currentDamage *= Global.Instance.BurnDamageMultiplier;
@@ -190,10 +248,19 @@ namespace ProjectVagabond.Battle
             };
         }
 
-        private static bool CheckCritical(BattleCombatant attacker, BattleCombatant target, CombatContext ctx)
+        private static bool CheckCritical(BattleCombatant attacker, BattleCombatant target, CombatContext ctx, MoveData move)
         {
             float critChance = BattleConstants.CRITICAL_HIT_CHANCE;
+
+            // Attacker Modifiers
             foreach (var mod in attacker.CritModifiers) critChance = mod.ModifyCritChance(critChance, ctx);
+
+            // Move Modifiers
+            foreach (var ability in move.Abilities)
+            {
+                if (ability is ICritModifier cm) critChance = cm.ModifyCritChance(critChance, ctx);
+            }
+
             return _random.NextDouble() < critChance;
         }
 
@@ -223,7 +290,20 @@ namespace ProjectVagabond.Battle
         {
             var ctx = new CombatContext { Actor = attacker, Move = move, BaseDamage = move.Power };
             float power = move.Power;
+
+            // Apply Calculation Modifiers
+            foreach (var ability in move.Abilities)
+            {
+                if (ability is ICalculationModifier cm) power = cm.ModifyBasePower(power, ctx);
+            }
+
+            // Apply Outgoing Modifiers
             foreach (var mod in attacker.OutgoingDamageModifiers) power = mod.ModifyOutgoingDamage(power, ctx);
+            foreach (var ability in move.Abilities)
+            {
+                if (ability is IOutgoingDamageModifier odm) power = odm.ModifyOutgoingDamage(power, ctx);
+            }
+
             return (int)power;
         }
     }

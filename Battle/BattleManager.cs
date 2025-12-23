@@ -476,6 +476,25 @@ namespace ProjectVagabond.Battle
                     var moveInstance = HandlePreDamageEffects(action.ChosenMove, target);
                     var result = DamageCalculator.CalculateDamage(action, target, moveInstance, multiTargetModifier);
                     target.ApplyDamage(result.DamageAmount);
+
+                    // --- Execute Move Abilities (OnHit) ---
+                    var ctx = new CombatContext
+                    {
+                        Actor = action.Actor,
+                        Target = target,
+                        Move = action.ChosenMove,
+                        BaseDamage = result.DamageAmount,
+                        IsCritical = result.WasCritical
+                    };
+
+                    foreach (var ability in action.ChosenMove.Abilities)
+                    {
+                        if (ability is IOnHitEffect onHit)
+                        {
+                            onHit.OnHit(ctx, result.DamageAmount);
+                        }
+                    }
+
                     SecondaryEffectSystem.ProcessPrimaryEffects(action, target);
                     damageResultsForThisHit.Add(result);
                 }
@@ -507,10 +526,19 @@ namespace ProjectVagabond.Battle
                 var actor = action.Actor;
                 if (!actor.HasUsedFirstAttack) actor.HasUsedFirstAttack = true;
 
-                // Trigger OnActionComplete Effects
+                // Trigger OnActionComplete Effects (Relics)
                 foreach (var effect in actor.OnActionCompleteEffects)
                 {
                     effect.OnActionComplete(action, actor);
+                }
+
+                // --- NEW: Trigger OnActionComplete Effects (Move Abilities) ---
+                foreach (var ability in action.ChosenMove.Abilities)
+                {
+                    if (ability is IOnActionComplete onComplete)
+                    {
+                        onComplete.OnActionComplete(action, actor);
+                    }
                 }
 
                 _currentActionForEffects = action;
@@ -787,9 +815,19 @@ namespace ProjectVagabond.Battle
                 Type = QueuedActionType.Move
             };
 
+            // Apply Relic Action Modifiers
             foreach (var mod in actor.ActionModifiers)
             {
                 mod.ModifyAction(action, actor);
+            }
+
+            // --- NEW: Apply Move Action Modifiers ---
+            foreach (var ability in move.Abilities)
+            {
+                if (ability is IActionModifier am)
+                {
+                    am.ModifyAction(action, actor);
+                }
             }
 
             return action;

@@ -1,7 +1,8 @@
 ﻿#nullable enable
-using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace ProjectVagabond.Battle
 {
@@ -111,14 +112,23 @@ namespace ProjectVagabond.Battle
         /// </summary>
         public bool IsAnimationCentralized { get; set; } = false;
 
+        /// <summary>
+        /// The list of instantiated ability logic objects derived from the Effects dictionary.
+        /// </summary>
+        public List<IAbility> Abilities { get; set; } = new List<IAbility>();
 
         /// <summary>
         /// Creates a shallow copy of the MoveData object.
+        /// Note: Abilities are shared references (flyweight pattern) unless they are stateful, 
+        /// in which case specific logic would be needed. For now, we assume stateless abilities.
         /// </summary>
         public MoveData Clone()
         {
-            return (MoveData)this.MemberwiseClone();
+            var clone = (MoveData)this.MemberwiseClone();
+            // Shallow copy the list so we can modify the list structure if needed without affecting the original,
+            // but the Ability instances themselves remain shared.
+            clone.Abilities = new List<IAbility>(this.Abilities);
+            return clone;
         }
     }
 }
-#nullable restore

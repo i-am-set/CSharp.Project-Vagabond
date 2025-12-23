@@ -170,5 +170,77 @@
     "AnimationSpriteSheet": "basic_orb_pulse_2",
     "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
+  },
+  {
+    "MoveID": "8",
+    "MoveName": "Double-Edge",
+    "Description": "Deals massive damage but user takes [cnegative]25%[/] recoil.",
+    "Power": 120,
+    "ManaCost": 0,
+    "MoveType": "Action",
+    "ImpactType": "Physical",
+    "OffensiveStat": "Strength",
+    "MakesContact": true,
+    "Target": "Single",
+    "Accuracy": 100,
+    "Priority": 0,
+    "Rarity": 1,
+    "LevelRequirement": 2,
+    "OffensiveElementIDs": [ 1 ],
+    "Effects": {
+      "Recoil": "25"
+    },
+    "Tags": [],
+    "AnimationSpriteSheet": "basic_impact",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
+  },
+  {
+    "MoveID": "9",
+    "MoveName": "Harden",
+    "Description": "Raises [cten]Tenacity[/] by [cpositive]2[/] stages.",
+    "Power": 0,
+    "ManaCost": 10,
+    "MoveType": "Spell",
+    "ImpactType": "Status",
+    "OffensiveStat": "Tenacity",
+    "MakesContact": false,
+    "Target": "Self",
+    "Accuracy": -1,
+    "Priority": 0,
+    "Rarity": 0,
+    "LevelRequirement": 1,
+    "OffensiveElementIDs": [],
+    "Effects": {
+      "StatChange": "Tenacity,2"
+    },
+    "Tags": [],
+    "AnimationSpriteSheet": "basic_orb_pulse_2",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
+  },
+  {
+    "MoveID": "10",
+    "MoveName": "Renew Self",
+    "Description": "Gain [cregen]Regeneration[/] for [cpositive]3[/] turns.",
+    "Power": 0,
+    "ManaCost": 15,
+    "MoveType": "Spell",
+    "ImpactType": "Status",
+    "OffensiveStat": "Intelligence",
+    "MakesContact": false,
+    "Target": "Self",
+    "Accuracy": -1,
+    "Priority": 0,
+    "Rarity": 1,
+    "LevelRequirement": 2,
+    "OffensiveElementIDs": [],
+    "Effects": {
+      "SelfRegen": "3,100"
+    },
+    "Tags": [],
+    "AnimationSpriteSheet": "basic_orb_pulse_2",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   }
 ]
