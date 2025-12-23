@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿#nullable enable
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -1197,7 +1198,19 @@ namespace ProjectVagabond.UI
                         continue;
                     }
 
-                    currentLine.Add(new ColoredText(part, currentColor));
+                    Color finalColor = currentColor;
+                    if (currentColor != defaultColor && !isWhitespace && part.EndsWith("%"))
+                    {
+                        // Try to parse the number before the %
+                        string numberPart = part.Substring(0, part.Length - 1);
+                        if (int.TryParse(numberPart, out int percent))
+                        {
+                            float amount = Math.Clamp(percent / 100f, 0f, 1f);
+                            finalColor = Color.Lerp(_global.Palette_DarkGray, currentColor, amount);
+                        }
+                    }
+
+                    currentLine.Add(new ColoredText(part, finalColor));
                     currentLineWidth += partWidth;
                 }
             }

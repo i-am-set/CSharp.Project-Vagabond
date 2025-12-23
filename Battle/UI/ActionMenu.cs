@@ -17,6 +17,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.Battle.UI
 {
@@ -109,6 +110,8 @@ namespace ProjectVagabond.Battle.UI
         private Rectangle _tooltipBounds;
         private Rectangle _moveInfoPanelBounds;
 
+        // Text Formatting Tuning
+        private const int SPACE_WIDTH = 5;
 
         public ActionMenu()
         {
@@ -671,7 +674,7 @@ namespace ProjectVagabond.Battle.UI
                         {
                             "STRIKE" => _player?.DefaultStrikeMoveID,
                             "ATTUNE" => "7",
-                            "STALL" => "6", 
+                            "STALL" => "6",
                             _ => null
                         };
 
@@ -989,17 +992,37 @@ namespace ProjectVagabond.Battle.UI
                 if (!string.IsNullOrEmpty(_tooltipMove.Description))
                 {
                     float availableWidth = tooltipBounds.Width - 20;
-                    var wrappedLines = WrapText(_tooltipMove.Description.ToUpper(), availableWidth, secondaryFont);
+                    var wrappedLines = ParseAndWrapRichText(secondaryFont, _tooltipMove.Description.ToUpper(), availableWidth, _global.Palette_White);
                     float currentY = namePos.Y + nameSize.Height + 6;
 
                     foreach (var line in wrappedLines)
                     {
-                        var lineSize = secondaryFont.MeasureString(line);
-                        var linePos = new Vector2(
-                            tooltipBounds.Center.X - lineSize.Width / 2,
-                            currentY
-                        );
-                        spriteBatch.DrawStringSnapped(secondaryFont, line, linePos, _global.Palette_White);
+                        float lineWidth = 0;
+                        foreach (var segment in line)
+                        {
+                            if (string.IsNullOrWhiteSpace(segment.Text))
+                                lineWidth += segment.Text.Length * SPACE_WIDTH;
+                            else
+                                lineWidth += secondaryFont.MeasureString(segment.Text).Width;
+                        }
+
+                        float lineX = tooltipBounds.Center.X - lineWidth / 2f;
+                        float currentX = lineX;
+
+                        foreach (var segment in line)
+                        {
+                            float segWidth;
+                            if (string.IsNullOrWhiteSpace(segment.Text))
+                            {
+                                segWidth = segment.Text.Length * SPACE_WIDTH;
+                            }
+                            else
+                            {
+                                segWidth = secondaryFont.MeasureString(segment.Text).Width;
+                                spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(currentX, currentY), segment.Color);
+                            }
+                            currentX += segWidth;
+                        }
                         currentY += secondaryFont.LineHeight;
                     }
                 }
@@ -1286,12 +1309,39 @@ namespace ProjectVagabond.Battle.UI
                 if (!string.IsNullOrEmpty(move.Description))
                 {
                     float availableWidth = bounds.Width - (horizontalPadding * 2);
-                    var wrappedLines = WrapText(move.Description.ToUpper(), availableWidth, secondaryFont);
+                    // Use ParseAndWrapRichText for rich text support in tooltip
+                    var wrappedLines = ParseAndWrapRichText(secondaryFont, move.Description.ToUpper(), availableWidth, _global.Palette_White);
                     foreach (var line in wrappedLines)
                     {
                         if (currentY + secondaryFont.LineHeight > bounds.Bottom - verticalPadding) break;
-                        var descPos = new Vector2(bounds.X + horizontalPadding, currentY);
-                        spriteBatch.DrawStringSnapped(secondaryFont, line, descPos, _global.Palette_White);
+
+                        float lineWidth = 0;
+                        foreach (var segment in line)
+                        {
+                            if (string.IsNullOrWhiteSpace(segment.Text))
+                                lineWidth += segment.Text.Length * SPACE_WIDTH;
+                            else
+                                lineWidth += secondaryFont.MeasureString(segment.Text).Width;
+                        }
+
+                        // Left aligned for tooltip description
+                        float lineX = bounds.X + horizontalPadding;
+                        float lineCurrentX = lineX;
+
+                        foreach (var segment in line)
+                        {
+                            float segWidth;
+                            if (string.IsNullOrWhiteSpace(segment.Text))
+                            {
+                                segWidth = segment.Text.Length * SPACE_WIDTH;
+                            }
+                            else
+                            {
+                                segWidth = secondaryFont.MeasureString(segment.Text).Width;
+                                spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(lineCurrentX, currentY), segment.Color);
+                            }
+                            lineCurrentX += segWidth;
+                        }
                         currentY += secondaryFont.LineHeight;
                     }
                 }
@@ -1299,7 +1349,7 @@ namespace ProjectVagabond.Battle.UI
             else
             {
                 float statsY = currentY;
-                Color valueColor = _global.Palette_White;
+                Color valueColor = _global.Palette_White; // Default value color is now White
                 Color labelColor = _global.Palette_DarkGray;
 
                 string powerLabel = "POWE:";
@@ -1322,32 +1372,57 @@ namespace ProjectVagabond.Battle.UI
                     valueColor = labelColor;
                 }
 
+                // Row 1: Power (Left) and Mana (Right)
                 spriteBatch.DrawStringSnapped(secondaryFont, powerLabel, new Vector2(bounds.X + horizontalPadding, statsY), labelColor);
                 var powerValueSize = secondaryFont.MeasureString(powerValue);
                 var powerValuePos = new Vector2(bounds.Center.X - 9 - powerValueSize.Width, statsY);
                 spriteBatch.DrawStringSnapped(secondaryFont, powerValue, powerValuePos, valueColor);
 
-                var accLabelPos = new Vector2(bounds.Center.X + 2, statsY);
+                var manaLabelPos = new Vector2(bounds.Center.X + 2, statsY);
+                spriteBatch.DrawStringSnapped(secondaryFont, manaLabel, manaLabelPos, labelColor);
+                var manaValueSize = secondaryFont.MeasureString(manaValue);
+                var manaValuePos = new Vector2(bounds.Right - horizontalPadding - manaValueSize.Width, statsY);
+                if (!manaValue.Contains("%"))
+                {
+                    manaValuePos.X -= 5;
+                }
+                spriteBatch.DrawStringSnapped(secondaryFont, manaValue, manaValuePos, valueColor);
+
+                currentY += secondaryFont.LineHeight + 2;
+
+                // Row 2: Accuracy (Left) and Use (Right) - SWAPPED
+                var accLabelPos = new Vector2(bounds.X + horizontalPadding, currentY);
                 spriteBatch.DrawStringSnapped(secondaryFont, accLabel, accLabelPos, labelColor);
                 var accValueSize = secondaryFont.MeasureString(accValue);
-                var accValuePos = new Vector2(bounds.Right - horizontalPadding - accValueSize.Width, statsY);
+                var accValuePos = new Vector2(bounds.Center.X - 9 - accValueSize.Width, currentY);
                 if (!accValue.Contains("%"))
                 {
                     accValuePos.X -= 5;
                 }
                 spriteBatch.DrawStringSnapped(secondaryFont, accValue, accValuePos, valueColor);
 
-                currentY += secondaryFont.LineHeight + 2;
-
-                var manaLabelPos = new Vector2(bounds.X + horizontalPadding, currentY);
-                spriteBatch.DrawStringSnapped(secondaryFont, manaLabel, manaLabelPos, labelColor);
-                var manaValueSize = secondaryFont.MeasureString(manaValue);
-                var manaValuePos = new Vector2(bounds.Center.X - 3 - manaValueSize.Width, currentY);
-                if (!manaValue.Contains("%"))
+                string offStatVal = move?.OffensiveStat switch
                 {
-                    manaValuePos.X -= 6;
-                }
-                spriteBatch.DrawStringSnapped(secondaryFont, manaValue, manaValuePos, valueColor);
+                    OffensiveStatType.Strength => "STR",
+                    OffensiveStatType.Intelligence => "INT",
+                    OffensiveStatType.Tenacity => "TEN",
+                    OffensiveStatType.Agility => "AGI",
+                    _ => "---"
+                };
+
+                Color offColor = move?.OffensiveStat switch
+                {
+                    OffensiveStatType.Strength => _global.StatColor_Strength,
+                    OffensiveStatType.Intelligence => _global.StatColor_Intelligence,
+                    OffensiveStatType.Tenacity => _global.StatColor_Tenacity,
+                    OffensiveStatType.Agility => _global.StatColor_Agility,
+                    _ => _global.Palette_White
+                };
+
+                spriteBatch.DrawStringSnapped(secondaryFont, "USE", new Vector2(bounds.Center.X + 2, currentY), labelColor);
+                var offStatSize = secondaryFont.MeasureString(offStatVal);
+                var offStatPos = new Vector2(bounds.Right - horizontalPadding - offStatSize.Width, currentY);
+                spriteBatch.DrawStringSnapped(secondaryFont, offStatVal, offStatPos, offColor);
 
                 string targetValue = "";
                 if (move != null)
@@ -1365,6 +1440,7 @@ namespace ProjectVagabond.Battle.UI
                         TargetType.RandomBoth => "R-BOTH",
                         TargetType.RandomEvery => "R-EVRY",
                         TargetType.RandomAll => "R-ALL",
+                        TargetType.SingleAll => "ANY",
                         TargetType.None => "NONE",
                         _ => ""
                     };
@@ -1379,11 +1455,11 @@ namespace ProjectVagabond.Battle.UI
                 if (!string.IsNullOrEmpty(targetValue))
                 {
                     var targetValueSize = secondaryFont.MeasureString(targetValue);
-                    float yAfterMana = currentY + secondaryFont.LineHeight;
-                    float availableSpace = typeY - yAfterMana;
+                    float yAfterRow2 = currentY + secondaryFont.LineHeight;
+                    float availableSpace = typeY - yAfterRow2;
                     var targetValuePos = new Vector2(
                         bounds.X + (bounds.Width - targetValueSize.Width) / 2f,
-                        yAfterMana + (availableSpace - targetValueSize.Height) / 2f
+                        yAfterRow2 + (availableSpace - targetValueSize.Height) / 2f
                     );
                     spriteBatch.DrawStringSnapped(secondaryFont, targetValue, targetValuePos, _global.Palette_DarkGray);
                 }
@@ -1423,6 +1499,149 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
+        // --- Rich Text Helpers (Copied from SplitMapInventoryOverlay) ---
+
+        private class ColoredText
+        {
+            public string Text;
+            public Color Color;
+            public ColoredText(string text, Color color) { Text = text; Color = color; }
+        }
+
+        private List<List<ColoredText>> ParseAndWrapRichText(BitmapFont font, string text, float maxWidth, Color defaultColor)
+        {
+            var lines = new List<List<ColoredText>>();
+            if (string.IsNullOrEmpty(text)) return lines;
+
+            var currentLine = new List<ColoredText>();
+            float currentLineWidth = 0f;
+            Color currentColor = defaultColor;
+
+            var parts = Regex.Split(text, @"(\[.*?\]|\s+)");
+
+            foreach (var part in parts)
+            {
+                if (string.IsNullOrEmpty(part)) continue;
+
+                if (part.StartsWith("[") && part.EndsWith("]"))
+                {
+                    string tagContent = part.Substring(1, part.Length - 2).ToLowerInvariant();
+                    if (tagContent == "/" || tagContent == "default")
+                    {
+                        currentColor = defaultColor;
+                    }
+                    else
+                    {
+                        currentColor = ParseColor(tagContent);
+                    }
+                }
+                else if (part.Contains("\n"))
+                {
+                    lines.Add(currentLine);
+                    currentLine = new List<ColoredText>();
+                    currentLineWidth = 0f;
+                }
+                else
+                {
+                    bool isWhitespace = string.IsNullOrWhiteSpace(part);
+                    float partWidth = isWhitespace ? (part.Length * SPACE_WIDTH) : font.MeasureString(part).Width;
+
+                    if (!isWhitespace && currentLineWidth + partWidth > maxWidth && currentLineWidth > 0)
+                    {
+                        lines.Add(currentLine);
+                        currentLine = new List<ColoredText>();
+                        currentLineWidth = 0f;
+                    }
+
+                    if (isWhitespace && currentLineWidth == 0)
+                    {
+                        continue;
+                    }
+
+                    // NEW LOGIC: Percentage-based color blending
+                    Color finalColor = currentColor;
+                    if (currentColor != defaultColor && !isWhitespace && part.EndsWith("%"))
+                    {
+                        // Try to parse the number before the %
+                        string numberPart = part.Substring(0, part.Length - 1);
+                        if (int.TryParse(numberPart, out int percent))
+                        {
+                            float amount = Math.Clamp(percent / 100f, 0f, 1f);
+                            finalColor = Color.Lerp(_global.Palette_DarkGray, currentColor, amount);
+                        }
+                    }
+
+                    currentLine.Add(new ColoredText(part, finalColor));
+                    currentLineWidth += partWidth;
+                }
+            }
+
+            if (currentLine.Count > 0)
+            {
+                lines.Add(currentLine);
+            }
+
+            return lines;
+        }
+
+        private Color ParseColor(string colorName)
+        {
+            string tag = colorName.ToLowerInvariant();
+
+            if (tag == "cstr") return _global.StatColor_Strength;
+            if (tag == "cint") return _global.StatColor_Intelligence;
+            if (tag == "cten") return _global.StatColor_Tenacity;
+            if (tag == "cagi") return _global.StatColor_Agility;
+
+            if (tag == "cpositive") return _global.ColorPositive;
+            if (tag == "cnegative") return _global.ColorNegative;
+            if (tag == "ccrit") return _global.ColorCrit;
+            if (tag == "cimmune") return _global.ColorImmune;
+            if (tag == "cctm") return _global.ColorConditionToMeet;
+            if (tag == "cetc") return _global.Palette_DarkGray;
+
+            if (tag == "cfire") return _global.ElementColors.GetValueOrDefault(2, Color.White);
+            if (tag == "cwater") return _global.ElementColors.GetValueOrDefault(3, Color.White);
+            if (tag == "carcane") return _global.ElementColors.GetValueOrDefault(4, Color.White);
+            if (tag == "cearth") return _global.ElementColors.GetValueOrDefault(5, Color.White);
+            if (tag == "cmetal") return _global.ElementColors.GetValueOrDefault(6, Color.White);
+            if (tag == "ctoxic") return _global.ElementColors.GetValueOrDefault(7, Color.White);
+            if (tag == "cwind") return _global.ElementColors.GetValueOrDefault(8, Color.White);
+            if (tag == "cvoid") return _global.ElementColors.GetValueOrDefault(9, Color.White);
+            if (tag == "clight") return _global.ElementColors.GetValueOrDefault(10, Color.White);
+            if (tag == "celectric") return _global.ElementColors.GetValueOrDefault(11, Color.White);
+            if (tag == "cice") return _global.ElementColors.GetValueOrDefault(12, Color.White);
+            if (tag == "cnature") return _global.ElementColors.GetValueOrDefault(13, Color.White);
+
+            if (tag.StartsWith("c"))
+            {
+                string effectName = tag.Substring(1);
+                if (effectName == "poison") return _global.StatusEffectColors.GetValueOrDefault(StatusEffectType.Poison, Color.White);
+                if (effectName == "stun") return _global.StatusEffectColors.GetValueOrDefault(StatusEffectType.Stun, Color.White);
+                if (effectName == "regen") return _global.StatusEffectColors.GetValueOrDefault(StatusEffectType.Regen, Color.White);
+                if (effectName == "dodging") return _global.StatusEffectColors.GetValueOrDefault(StatusEffectType.Dodging, Color.White);
+                if (effectName == "burn") return _global.StatusEffectColors.GetValueOrDefault(StatusEffectType.Burn, Color.White);
+                if (effectName == "frostbite") return _global.StatusEffectColors.GetValueOrDefault(StatusEffectType.Frostbite, Color.White);
+                if (effectName == "silence") return _global.StatusEffectColors.GetValueOrDefault(StatusEffectType.Silence, Color.White);
+            }
+
+            switch (tag)
+            {
+                case "teal": return _global.Palette_Teal;
+                case "red": return _global.Palette_Red;
+                case "blue": return _global.Palette_LightBlue;
+                case "green": return _global.Palette_LightGreen;
+                case "yellow": return _global.Palette_Yellow;
+                case "orange": return _global.Palette_Orange;
+                case "purple": return _global.Palette_LightPurple;
+                case "pink": return _global.Palette_Pink;
+                case "gray": return _global.Palette_Gray;
+                case "white": return _global.Palette_White;
+                case "brightwhite": return _global.Palette_BrightWhite;
+                case "darkgray": return _global.Palette_DarkGray;
+                default: return _global.Palette_White;
+            }
+        }
 
         private List<string> WrapText(string text, float maxLineWidth, BitmapFont font)
         {
