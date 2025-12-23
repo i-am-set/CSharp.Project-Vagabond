@@ -3,7 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
-using ProjectVagabond.Battle.Abilities; // New Namespace
+using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
@@ -62,7 +62,7 @@ namespace ProjectVagabond.Battle
         public BattlePhase CurrentPhase => _currentPhase;
         public IEnumerable<BattleCombatant> AllCombatants => _allCombatants;
         public bool CanAdvance { get; set; } = true;
-        public bool IsProcessingMultiHit => false; // MultiHit stripped
+        public bool IsProcessingMultiHit => false;
 
         public BattleManager(List<BattleCombatant> playerParty, List<BattleCombatant> enemyParty)
         {
@@ -84,7 +84,6 @@ namespace ProjectVagabond.Battle
             EventBus.Subscribe<GameEvents.SecondaryEffectComplete>(OnSecondaryEffectComplete);
             EventBus.Subscribe<GameEvents.MoveAnimationCompleted>(OnMoveAnimationCompleted);
 
-            // Trigger Battle Start Effects
             foreach (var combatant in _cachedAllActive)
             {
                 foreach (var ability in combatant.BattleLifecycleEffects)
@@ -219,14 +218,10 @@ namespace ProjectVagabond.Battle
             _pendingSlot1Action = null;
             CurrentActingCombatant = null;
 
-            // --- AI LOGIC INTEGRATION ---
             foreach (var enemy in _cachedActiveEnemies)
             {
                 if (enemy.ChargingAction != null) continue;
-
-                // Use the new EnemyAI system to determine the best action
                 var action = EnemyAI.DetermineBestAction(enemy, _allCombatants);
-
                 if (!HandlePreActionEffects(action))
                 {
                     _actionQueue.Add(action);
@@ -353,7 +348,6 @@ namespace ProjectVagabond.Battle
             if (nextAction.Actor.HasStatusEffect(StatusEffectType.Stun))
             {
                 EventBus.Publish(new GameEvents.ActionFailed { Actor = nextAction.Actor, Reason = "stunned" });
-                // Stun is temporary, duration decremented at end of turn
                 CanAdvance = false;
                 return;
             }
@@ -428,7 +422,6 @@ namespace ProjectVagabond.Battle
 
         private void ProcessMoveAction(QueuedAction action)
         {
-            // Silence Check
             if (action.ChosenMove.MoveType == MoveType.Spell && action.Actor.HasStatusEffect(StatusEffectType.Silence))
             {
                 EventBus.Publish(new GameEvents.ActionFailed { Actor = action.Actor, Reason = "silenced" });
@@ -484,7 +477,8 @@ namespace ProjectVagabond.Battle
                         Target = target,
                         Move = action.ChosenMove,
                         BaseDamage = result.DamageAmount,
-                        IsCritical = result.WasCritical
+                        IsCritical = result.WasCritical,
+                        IsGraze = result.WasGraze
                     };
 
                     foreach (var ability in action.ChosenMove.Abilities)
@@ -513,7 +507,6 @@ namespace ProjectVagabond.Battle
                     DamageResults = damageResultsForThisHit
                 });
 
-                // Trigger OnKill Effects
                 if (targetsForThisHit.All(t => t.IsDefeated))
                 {
                     var ctx = new CombatContext { Actor = action.Actor, Move = action.ChosenMove };
@@ -526,13 +519,11 @@ namespace ProjectVagabond.Battle
                 var actor = action.Actor;
                 if (!actor.HasUsedFirstAttack) actor.HasUsedFirstAttack = true;
 
-                // Trigger OnActionComplete Effects (Relics)
                 foreach (var effect in actor.OnActionCompleteEffects)
                 {
                     effect.OnActionComplete(action, actor);
                 }
 
-                // --- NEW: Trigger OnActionComplete Effects (Move Abilities) ---
                 foreach (var ability in action.ChosenMove.Abilities)
                 {
                     if (ability is IOnActionComplete onComplete)
@@ -550,7 +541,6 @@ namespace ProjectVagabond.Battle
             }
             else
             {
-                // No targets, skip to end
                 _currentPhase = BattlePhase.CheckForDefeat;
                 CanAdvance = false;
             }
@@ -695,19 +685,15 @@ namespace ProjectVagabond.Battle
                 var effectsToRemove = new List<StatusEffectInstance>();
                 foreach (var effect in combatant.ActiveStatusEffects)
                 {
-                    // Only decrement duration for temporary effects
                     if (!effect.IsPermanent)
                     {
                         effect.DurationInTurns--;
                     }
 
-                    // Poison Logic: Exponential Damage
                     if (effect.EffectType == StatusEffectType.Poison)
                     {
-                        // Damage = Base * 2^Turns
                         int safeTurnCount = Math.Min(effect.PoisonTurnCount, 30);
                         long rawDamage = (long)Global.Instance.PoisonBaseDamage * (long)Math.Pow(2, safeTurnCount);
-
                         int poisonDamage = (int)Math.Min(rawDamage, int.MaxValue);
 
                         combatant.ApplyDamage(poisonDamage);
@@ -716,7 +702,6 @@ namespace ProjectVagabond.Battle
                         effect.PoisonTurnCount++;
                     }
 
-                    // Regen Logic: % Max HP Heal
                     if (effect.EffectType == StatusEffectType.Regen)
                     {
                         int healAmount = (int)(combatant.Stats.MaxHP * Global.Instance.RegenPercent);
@@ -728,7 +713,6 @@ namespace ProjectVagabond.Battle
                         }
                     }
 
-                    // Remove expired temporary effects
                     if (!effect.IsPermanent && effect.DurationInTurns <= 0)
                     {
                         effectsToRemove.Add(effect);
@@ -815,13 +799,11 @@ namespace ProjectVagabond.Battle
                 Type = QueuedActionType.Move
             };
 
-            // Apply Relic Action Modifiers
             foreach (var mod in actor.ActionModifiers)
             {
                 mod.ModifyAction(action, actor);
             }
 
-            // --- NEW: Apply Move Action Modifiers ---
             foreach (var ability in move.Abilities)
             {
                 if (ability is IActionModifier am)
@@ -835,19 +817,16 @@ namespace ProjectVagabond.Battle
 
         private bool HandlePreActionEffects(QueuedAction action)
         {
-            // Stripped Charge and DelayedAttack logic
             return false;
         }
 
         private bool ProcessPreResolutionEffects(QueuedAction action)
         {
-            // Stripped HPCost and Gamble logic
             return true;
         }
 
         private MoveData HandlePreDamageEffects(MoveData originalMove, BattleCombatant target)
         {
-            // Stripped DetonateStatus logic
             return originalMove;
         }
     }

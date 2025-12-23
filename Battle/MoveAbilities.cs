@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace ProjectVagabond.Battle.Abilities
 {
-    // --- EXISTING ABILITIES (Consolidated) ---
+    // --- EXISTING ABILITIES ---
 
     public class RestoreManaAbility : IOnHitEffect
     {
@@ -107,12 +107,10 @@ namespace ProjectVagabond.Battle.Abilities
             var random = new Random();
             if (random.Next(1, 101) <= _chance)
             {
-                // Check if Regen already exists
                 var existingRegen = owner.ActiveStatusEffects.FirstOrDefault(e => e.EffectType == StatusEffectType.Regen);
 
                 if (existingRegen != null)
                 {
-                    // Stack duration
                     existingRegen.DurationInTurns += _turns;
                     EventBus.Publish(new GameEvents.TerminalMessagePublished
                     {
@@ -121,7 +119,6 @@ namespace ProjectVagabond.Battle.Abilities
                 }
                 else
                 {
-                    // Apply new
                     bool applied = owner.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Regen, _turns));
                     if (applied)
                     {
@@ -151,16 +148,10 @@ namespace ProjectVagabond.Battle.Abilities
 
         public void OnActionComplete(QueuedAction action, BattleCombatant owner)
         {
-            // Get current stage
             int currentStage = owner.StatStages[_stat];
-
-            // Calculate new stage with clamping (-6 to 6)
             int newStage = Math.Clamp(currentStage + _amount, -6, 6);
-
-            // Apply
             owner.StatStages[_stat] = newStage;
 
-            // Calculate actual change for feedback
             int actualChange = newStage - currentStage;
 
             if (actualChange != 0)
@@ -183,6 +174,66 @@ namespace ProjectVagabond.Battle.Abilities
                 EventBus.Publish(new GameEvents.TerminalMessagePublished
                 {
                     Message = $"{owner.Name}'s {_stat} cannot go any {(_amount > 0 ? "higher" : "lower")}!"
+                });
+            }
+        }
+    }
+
+    public class InflictStatusBurnAbility : IOnHitEffect
+    {
+        public string Name => "Inflict Burn";
+        public string Description => "Chance to inflict Burn on hit.";
+
+        private readonly int _chance;
+        private static readonly Random _random = new Random();
+
+        public InflictStatusBurnAbility(int chance)
+        {
+            _chance = chance;
+        }
+
+        public void OnHit(CombatContext ctx, int damageDealt)
+        {
+            if (ctx.IsGraze) return;
+
+            if (_random.Next(1, 101) <= _chance)
+            {
+                // Burn is permanent, so duration is irrelevant (99)
+                bool applied = ctx.Target.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Burn, 99));
+                if (applied)
+                {
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished
+                    {
+                        Message = $"{ctx.Target.Name} was [cStatus]burned[/]!"
+                    });
+                }
+            }
+        }
+    }
+
+    public class DamageRecoilAbility : IOnHitEffect
+    {
+        public string Name => "Damage Recoil";
+        public string Description => "User takes recoil damage based on damage dealt.";
+
+        private readonly float _percent;
+
+        public DamageRecoilAbility(float percent)
+        {
+            _percent = percent;
+        }
+
+        public void OnHit(CombatContext ctx, int damageDealt)
+        {
+            int recoil = (int)(damageDealt * (_percent / 100f));
+            if (recoil > 0)
+            {
+                ctx.Actor.ApplyDamage(recoil);
+                EventBus.Publish(new GameEvents.CombatantRecoiled
+                {
+                    Actor = ctx.Actor,
+                    RecoilDamage = recoil,
+                    SourceAbility = null
                 });
             }
         }

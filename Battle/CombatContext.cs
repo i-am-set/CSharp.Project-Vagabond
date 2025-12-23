@@ -13,8 +13,9 @@ namespace ProjectVagabond.Battle.Abilities
         // Context Data
         public float BaseDamage { get; set; }
         public bool IsCritical { get; set; }
+        public bool IsGraze { get; set; } 
         public float MultiTargetModifier { get; set; } = 1.0f;
-        public bool IsLastAction { get; set; } = false; // NEW: For Anchor Charm
+        public bool IsLastAction { get; set; } = false;
 
         public bool MoveHasTag(string tag)
         {
