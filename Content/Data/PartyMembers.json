@@ -11,7 +11,7 @@
     "Agility": 12,
     "WeaknessElementIDs": [],
     "ResistanceElementIDs": [],
-    "DefaultStrikeMoveID": "9",
+    "DefaultStrikeMoveID": "4",
     "StartingSpells": [],
     "StartingActions": [],
     "StartingWeapons": {
@@ -33,7 +33,7 @@
     "Agility": 18,
     "WeaknessElementIDs": [],
     "ResistanceElementIDs": [],
-    "DefaultStrikeMoveID": "2",
+    "DefaultStrikeMoveID": "4",
     "StartingSpells": [],
     "StartingActions": [],
     "StartingWeapons": {
@@ -55,7 +55,7 @@
     "Agility": 14,
     "WeaknessElementIDs": [],
     "ResistanceElementIDs": [],
-    "DefaultStrikeMoveID": "5",
+    "DefaultStrikeMoveID": "4",
     "StartingSpells": [],
     "StartingActions": [],
     "StartingArmor": {
@@ -74,7 +74,7 @@
     "Agility": 5,
     "WeaknessElementIDs": [ 3 ],
     "ResistanceElementIDs": [ 1, 6 ],
-    "DefaultStrikeMoveID": "1",
+    "DefaultStrikeMoveID": "4",
     "StartingSpells": [],
     "StartingActions": [],
     "StartingWeapons": {
@@ -96,7 +96,7 @@
     "Agility": 10,
     "WeaknessElementIDs": [ 9 ],
     "ResistanceElementIDs": [ 2, 10 ],
-    "DefaultStrikeMoveID": "5",
+    "DefaultStrikeMoveID": "4",
     "StartingSpells": [],
     "StartingActions": [],
     "StartingArmor": {
@@ -118,7 +118,7 @@
     "Agility": 16,
     "WeaknessElementIDs": [ 3, 5 ],
     "ResistanceElementIDs": [ 2 ],
-    "DefaultStrikeMoveID": "0",
+    "DefaultStrikeMoveID": "4",
     "StartingSpells": [],
     "StartingActions": [],
     "StartingWeapons": {
@@ -140,7 +140,7 @@
     "Agility": 16,
     "WeaknessElementIDs": [ 3, 5 ],
     "ResistanceElementIDs": [ 2 ],
-    "DefaultStrikeMoveID": "0",
+    "DefaultStrikeMoveID": "4",
     "StartingSpells": [],
     "StartingActions": [],
     "StartingWeapons": {

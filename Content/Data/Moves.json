@@ -17,7 +17,8 @@
     "OffensiveElementIDs": [ 1 ],
     "Tags": [],
     "AnimationSpriteSheet": "basic_slash",
-    "AnimationSpeed": 1.5,
+    "AnimationSpeed": 2.0,
+    "DamageFrameIndex": 0,
     "IsAnimationCentralized": false
   },
   {
@@ -39,6 +40,7 @@
     "Tags": [],
     "AnimationSpriteSheet": "basic_impact",
     "AnimationSpeed": 1.0,
+    "DamageFrameIndex": 0,
     "IsAnimationCentralized": false
   },
   {
@@ -61,6 +63,7 @@
     "Tags": [],
     "AnimationSpriteSheet": "basic_pierce",
     "AnimationSpeed": 1.5,
+    "DamageFrameIndex": 2,
     "IsAnimationCentralized": false
   },
   {
@@ -82,6 +85,7 @@
     "Tags": [],
     "AnimationSpriteSheet": "basic_bite",
     "AnimationSpeed": 2.0,
+    "DamageFrameIndex": 4,
     "IsAnimationCentralized": false
   },
   {
@@ -103,6 +107,7 @@
     "Tags": [],
     "AnimationSpriteSheet": "basic_claw",
     "AnimationSpeed": 1.6,
+    "DamageFrameIndex": 2,
     "IsAnimationCentralized": false
   },
   {
@@ -124,6 +129,7 @@
     "Tags": [ "Priority" ],
     "AnimationSpriteSheet": "basic_swipe",
     "AnimationSpeed": 2.0,
+    "DamageFrameIndex": 2,
     "IsAnimationCentralized": false
   },
   {
@@ -145,6 +151,7 @@
     "Tags": [],
     "AnimationSpriteSheet": "stall",
     "AnimationSpeed": 0.2,
+    "DamageFrameIndex": 2,
     "IsAnimationCentralized": false
   },
   {
@@ -169,6 +176,7 @@
     "Tags": [],
     "AnimationSpriteSheet": "basic_orb_pulse_2",
     "AnimationSpeed": 1.0,
+    "DamageFrameIndex": 2,
     "IsAnimationCentralized": false
   },
   {
@@ -193,6 +201,7 @@
     "Tags": [],
     "AnimationSpriteSheet": "basic_impact",
     "AnimationSpeed": 1.0,
+    "DamageFrameIndex": 2,
     "IsAnimationCentralized": false
   },
   {
@@ -217,6 +226,7 @@
     "Tags": [],
     "AnimationSpriteSheet": "basic_orb_pulse_2",
     "AnimationSpeed": 1.0,
+    "DamageFrameIndex": 2,
     "IsAnimationCentralized": false
   },
   {
@@ -241,6 +251,7 @@
     "Tags": [],
     "AnimationSpriteSheet": "basic_orb_pulse_2",
     "AnimationSpeed": 1.0,
+    "DamageFrameIndex": 2,
     "IsAnimationCentralized": false
   },
   {
@@ -265,6 +276,7 @@
     "Tags": [ "Fire", "AoE" ],
     "AnimationSpriteSheet": "basic_orb_pulse_2",
     "AnimationSpeed": 1.0,
+    "DamageFrameIndex": 2,
     "IsAnimationCentralized": false
   },
   {
@@ -289,6 +301,7 @@
     "Tags": [ "Fire", "Status" ],
     "AnimationSpriteSheet": "basic_orb_pulse_2",
     "AnimationSpeed": 1.0,
+    "DamageFrameIndex": 2,
     "IsAnimationCentralized": false
   },
   {
@@ -313,6 +326,7 @@
     "Tags": [ "Fire", "Damage" ],
     "AnimationSpriteSheet": "basic_orb_pulse_2",
     "AnimationSpeed": 1.0,
+    "DamageFrameIndex": 2,
     "IsAnimationCentralized": false
   },
   {
@@ -337,6 +351,7 @@
     "Tags": [ "Fire", "Damage" ],
     "AnimationSpriteSheet": "basic_slash",
     "AnimationSpeed": 1.5,
+    "DamageFrameIndex": 2,
     "IsAnimationCentralized": false
   },
   {
@@ -362,6 +377,7 @@
     "Tags": [ "Fire", "Recoil" ],
     "AnimationSpriteSheet": "basic_impact",
     "AnimationSpeed": 1.0,
+    "DamageFrameIndex": 2,
     "IsAnimationCentralized": false
   },
   {
@@ -387,6 +403,7 @@
     "Tags": [ "Ice", "Status" ],
     "AnimationSpriteSheet": "basic_orb_pulse_2",
     "AnimationSpeed": 1.0,
+    "DamageFrameIndex": 2,
     "IsAnimationCentralized": false
   }
 ]

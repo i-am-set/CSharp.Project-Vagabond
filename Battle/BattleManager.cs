@@ -59,6 +59,15 @@ namespace ProjectVagabond.Battle
         private int _reinforcementSlotIndex = 0;
         private bool _reinforcementAnnounced = false;
 
+        // Pending Damage State for Delayed Application
+        private class PendingImpactData
+        {
+            public QueuedAction Action;
+            public List<BattleCombatant> Targets;
+            public List<DamageCalculator.DamageResult> Results;
+        }
+        private PendingImpactData _pendingImpact;
+
         public BattlePhase CurrentPhase => _currentPhase;
         public IEnumerable<BattleCombatant> AllCombatants => _allCombatants;
         public bool CanAdvance { get; set; } = true;
@@ -83,6 +92,7 @@ namespace ProjectVagabond.Battle
 
             EventBus.Subscribe<GameEvents.SecondaryEffectComplete>(OnSecondaryEffectComplete);
             EventBus.Subscribe<GameEvents.MoveAnimationCompleted>(OnMoveAnimationCompleted);
+            EventBus.Subscribe<GameEvents.MoveImpactOccurred>(OnMoveImpactOccurred);
 
             foreach (var combatant in _cachedAllActive)
             {
@@ -131,6 +141,7 @@ namespace ProjectVagabond.Battle
         {
             _actionToExecute = null;
             _actionPendingAnimation = null;
+            _pendingImpact = null;
 
             if (_currentPhase == BattlePhase.AnimatingMove ||
                 _currentPhase == BattlePhase.ActionResolution ||
@@ -163,8 +174,22 @@ namespace ProjectVagabond.Battle
         {
             if (_currentPhase == BattlePhase.AnimatingMove && _actionPendingAnimation != null)
             {
-                ProcessMoveAction(_actionPendingAnimation);
+                // Animation finished. If impact hasn't happened (e.g. animation skipped), force it now.
+                if (_pendingImpact != null)
+                {
+                    ApplyPendingImpact();
+                }
+
+                ProcessMoveActionPostImpact(_actionPendingAnimation);
                 _actionPendingAnimation = null;
+            }
+        }
+
+        private void OnMoveImpactOccurred(GameEvents.MoveImpactOccurred e)
+        {
+            if (_pendingImpact != null)
+            {
+                ApplyPendingImpact();
             }
         }
 
@@ -452,10 +477,10 @@ namespace ProjectVagabond.Battle
                 action.SpellbookEntry.TimesUsed++;
             }
 
-            ProcessHit(action);
+            PrepareHit(action);
         }
 
-        private void ProcessHit(QueuedAction action)
+        private void PrepareHit(QueuedAction action)
         {
             var targetsForThisHit = ResolveTargets(action);
 
@@ -464,86 +489,130 @@ namespace ProjectVagabond.Battle
                 var damageResultsForThisHit = new List<DamageCalculator.DamageResult>();
                 float multiTargetModifier = (targetsForThisHit.Count > 1) ? BattleConstants.MULTI_TARGET_MODIFIER : 1.0f;
 
+                // 1. Calculate Damage (Do NOT apply yet)
                 foreach (var target in targetsForThisHit)
                 {
                     var moveInstance = HandlePreDamageEffects(action.ChosenMove, target);
                     var result = DamageCalculator.CalculateDamage(action, target, moveInstance, multiTargetModifier);
-                    target.ApplyDamage(result.DamageAmount);
-
-                    // --- Execute Move Abilities (OnHit) ---
-                    var ctx = new CombatContext
-                    {
-                        Actor = action.Actor,
-                        Target = target,
-                        Move = action.ChosenMove,
-                        BaseDamage = result.DamageAmount,
-                        IsCritical = result.WasCritical,
-                        IsGraze = result.WasGraze
-                    };
-
-                    foreach (var ability in action.ChosenMove.Abilities)
-                    {
-                        if (ability is IOnHitEffect onHit)
-                        {
-                            onHit.OnHit(ctx, result.DamageAmount);
-                        }
-                    }
-
-                    SecondaryEffectSystem.ProcessPrimaryEffects(action, target);
                     damageResultsForThisHit.Add(result);
                 }
 
+                // 2. Store Pending Impact Data
+                _pendingImpact = new PendingImpactData
+                {
+                    Action = action,
+                    Targets = targetsForThisHit,
+                    Results = damageResultsForThisHit
+                };
+
+                // 3. Trigger Animation
                 if (!string.IsNullOrEmpty(action.ChosenMove.AnimationSpriteSheet))
                 {
                     MoveData animMove = action.ChosenMove;
                     EventBus.Publish(new GameEvents.MoveAnimationTriggered { Move = animMove, Targets = targetsForThisHit });
+                    _actionPendingAnimation = action;
+                    _currentPhase = BattlePhase.AnimatingMove;
+                    CanAdvance = false;
                 }
-
-                EventBus.Publish(new GameEvents.BattleActionExecuted
+                else
                 {
-                    Actor = action.Actor,
-                    ChosenMove = action.ChosenMove,
-                    Targets = targetsForThisHit,
-                    DamageResults = damageResultsForThisHit
-                });
-
-                if (targetsForThisHit.All(t => t.IsDefeated))
-                {
-                    var ctx = new CombatContext { Actor = action.Actor, Move = action.ChosenMove };
-                    foreach (var effect in action.Actor.OnKillEffects)
-                    {
-                        effect.OnKill(ctx);
-                    }
+                    // No animation, apply immediately
+                    ApplyPendingImpact();
+                    ProcessMoveActionPostImpact(action);
                 }
-
-                var actor = action.Actor;
-                if (!actor.HasUsedFirstAttack) actor.HasUsedFirstAttack = true;
-
-                foreach (var effect in actor.OnActionCompleteEffects)
-                {
-                    effect.OnActionComplete(action, actor);
-                }
-
-                foreach (var ability in action.ChosenMove.Abilities)
-                {
-                    if (ability is IOnActionComplete onComplete)
-                    {
-                        onComplete.OnActionComplete(action, actor);
-                    }
-                }
-
-                _currentActionForEffects = action;
-                _currentActionDamageResults = damageResultsForThisHit;
-                _currentActionFinalTargets = targetsForThisHit;
-
-                _currentPhase = BattlePhase.SecondaryEffectResolution;
-                CanAdvance = false;
             }
             else
             {
                 _currentPhase = BattlePhase.CheckForDefeat;
                 CanAdvance = false;
             }
+        }
+
+        private void ApplyPendingImpact()
+        {
+            if (_pendingImpact == null) return;
+
+            var action = _pendingImpact.Action;
+            var targets = _pendingImpact.Targets;
+            var results = _pendingImpact.Results;
+
+            for (int i = 0; i < targets.Count; i++)
+            {
+                var target = targets[i];
+                var result = results[i];
+
+                // Apply Damage
+                target.ApplyDamage(result.DamageAmount);
+
+                // Execute OnHit Abilities
+                var ctx = new CombatContext
+                {
+                    Actor = action.Actor,
+                    Target = target,
+                    Move = action.ChosenMove,
+                    BaseDamage = result.DamageAmount,
+                    IsCritical = result.WasCritical,
+                    IsGraze = result.WasGraze
+                };
+
+                foreach (var ability in action.ChosenMove.Abilities)
+                {
+                    if (ability is IOnHitEffect onHit)
+                    {
+                        onHit.OnHit(ctx, result.DamageAmount);
+                    }
+                }
+
+                SecondaryEffectSystem.ProcessPrimaryEffects(action, target);
+            }
+
+            // Publish Results (Triggers Visuals in BattleScene)
+            EventBus.Publish(new GameEvents.BattleActionExecuted
+            {
+                Actor = action.Actor,
+                ChosenMove = action.ChosenMove,
+                Targets = targets,
+                DamageResults = results
+            });
+
+            // Store for secondary effects phase
+            _currentActionForEffects = action;
+            _currentActionDamageResults = results;
+            _currentActionFinalTargets = targets;
+
+            _pendingImpact = null;
+        }
+
+        private void ProcessMoveActionPostImpact(QueuedAction action)
+        {
+            // Check for Kills
+            if (_currentActionFinalTargets != null && _currentActionFinalTargets.All(t => t.IsDefeated))
+            {
+                var ctx = new CombatContext { Actor = action.Actor, Move = action.ChosenMove };
+                foreach (var effect in action.Actor.OnKillEffects)
+                {
+                    effect.OnKill(ctx);
+                }
+            }
+
+            var actor = action.Actor;
+            if (!actor.HasUsedFirstAttack) actor.HasUsedFirstAttack = true;
+
+            foreach (var effect in actor.OnActionCompleteEffects)
+            {
+                effect.OnActionComplete(action, actor);
+            }
+
+            foreach (var ability in action.ChosenMove.Abilities)
+            {
+                if (ability is IOnActionComplete onComplete)
+                {
+                    onComplete.OnActionComplete(action, actor);
+                }
+            }
+
+            _currentPhase = BattlePhase.SecondaryEffectResolution;
+            CanAdvance = false;
         }
 
         private void ProcessItemAction(QueuedAction action)

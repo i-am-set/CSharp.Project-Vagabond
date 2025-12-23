@@ -18,6 +18,7 @@ namespace ProjectVagabond.Battle.UI
         private readonly Dictionary<string, MoveAnimation?> _animationCache = new();
         private readonly List<MoveAnimationInstance> _activeAnimations = new();
         private readonly ContentManager _content;
+        private bool _impactSignalSentForCurrentBatch = false;
 
         public bool IsAnimating => _activeAnimations.Any();
 
@@ -53,8 +54,12 @@ namespace ProjectVagabond.Battle.UI
         /// </summary>
         public void StartAnimation(MoveData move, List<BattleCombatant> targets, BattleRenderer renderer)
         {
+            _impactSignalSentForCurrentBatch = false;
+
             if (string.IsNullOrEmpty(move.AnimationSpriteSheet))
             {
+                // If no animation, fire impact immediately
+                EventBus.Publish(new GameEvents.MoveImpactOccurred { Move = move });
                 return;
             }
 
@@ -63,15 +68,19 @@ namespace ProjectVagabond.Battle.UI
             if (animationData == null)
             {
                 animationData = GetAnimationData("debug_null_animation");
-                if (animationData == null) return;
+                if (animationData == null)
+                {
+                    // Fallback if even debug animation fails
+                    EventBus.Publish(new GameEvents.MoveImpactOccurred { Move = move });
+                    return;
+                }
             }
 
             if (move.IsAnimationCentralized)
             {
-                // FIX: Centralized animations now anchor to the center of the screen,
-                // rather than relying on a specific player slot which might be empty.
                 var position = new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f);
-                var instance = new MoveAnimationInstance(animationData, position, move.AnimationSpeed);
+                var instance = new MoveAnimationInstance(animationData, position, move.AnimationSpeed, move.DamageFrameIndex);
+                instance.OnImpactFrameReached += () => HandleImpactTrigger(move);
                 _activeAnimations.Add(instance);
             }
             else
@@ -80,9 +89,21 @@ namespace ProjectVagabond.Battle.UI
                 {
                     var position = renderer.GetCombatantVisualCenterPosition(target, ServiceLocator.Get<BattleManager>().AllCombatants);
 
-                    var instance = new MoveAnimationInstance(animationData, position, move.AnimationSpeed);
+                    var instance = new MoveAnimationInstance(animationData, position, move.AnimationSpeed, move.DamageFrameIndex);
+                    instance.OnImpactFrameReached += () => HandleImpactTrigger(move);
                     _activeAnimations.Add(instance);
                 }
+            }
+        }
+
+        private void HandleImpactTrigger(MoveData move)
+        {
+            // Ensure we only send the impact signal once per move execution, 
+            // even if multiple instances (e.g. multi-target) trigger it.
+            if (!_impactSignalSentForCurrentBatch)
+            {
+                EventBus.Publish(new GameEvents.MoveImpactOccurred { Move = move });
+                _impactSignalSentForCurrentBatch = true;
             }
         }
 

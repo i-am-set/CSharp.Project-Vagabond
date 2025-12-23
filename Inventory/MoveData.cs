@@ -108,6 +108,12 @@ namespace ProjectVagabond.Battle
         public float AnimationSpeed { get; set; } = 1.0f;
 
         /// <summary>
+        /// The 0-indexed frame number at which damage and haptics should be applied.
+        /// Default is 2 (the 3rd frame).
+        /// </summary>
+        public int DamageFrameIndex { get; set; } = 2;
+
+        /// <summary>
         /// If true, one animation plays in the center of the screen. If false, an animation plays on each target.
         /// </summary>
         public bool IsAnimationCentralized { get; set; } = false;

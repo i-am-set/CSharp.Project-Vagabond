@@ -179,6 +179,36 @@ namespace ProjectVagabond.Battle.Abilities
         }
     }
 
+    public class DamageRecoilAbility : IOnHitEffect
+    {
+        public string Name => "Damage Recoil";
+        public string Description => "User takes recoil damage based on damage dealt.";
+
+        private readonly float _percent;
+
+        public DamageRecoilAbility(float percent)
+        {
+            _percent = percent;
+        }
+
+        public void OnHit(CombatContext ctx, int damageDealt)
+        {
+            int recoil = (int)(damageDealt * (_percent / 100f));
+            if (recoil > 0)
+            {
+                ctx.Actor.ApplyDamage(recoil);
+                EventBus.Publish(new GameEvents.CombatantRecoiled
+                {
+                    Actor = ctx.Actor,
+                    RecoilDamage = recoil,
+                    SourceAbility = null
+                });
+            }
+        }
+    }
+
+    // --- STATUS INFLICTION ABILITIES ---
+
     public class InflictStatusBurnAbility : IOnHitEffect
     {
         public string Name => "Inflict Burn";
@@ -211,30 +241,156 @@ namespace ProjectVagabond.Battle.Abilities
         }
     }
 
-    public class DamageRecoilAbility : IOnHitEffect
+    public class InflictStatusPoisonAbility : IOnHitEffect
     {
-        public string Name => "Damage Recoil";
-        public string Description => "User takes recoil damage based on damage dealt.";
+        public string Name => "Inflict Poison";
+        public string Description => "Chance to inflict Poison on hit.";
 
-        private readonly float _percent;
+        private readonly int _chance;
+        private static readonly Random _random = new Random();
 
-        public DamageRecoilAbility(float percent)
+        public InflictStatusPoisonAbility(int chance)
         {
-            _percent = percent;
+            _chance = chance;
         }
 
         public void OnHit(CombatContext ctx, int damageDealt)
         {
-            int recoil = (int)(damageDealt * (_percent / 100f));
-            if (recoil > 0)
+            if (ctx.IsGraze) return;
+
+            if (_random.Next(1, 101) <= _chance)
             {
-                ctx.Actor.ApplyDamage(recoil);
-                EventBus.Publish(new GameEvents.CombatantRecoiled
+                // Poison is permanent
+                bool applied = ctx.Target.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Poison, 99));
+                if (applied)
                 {
-                    Actor = ctx.Actor,
-                    RecoilDamage = recoil,
-                    SourceAbility = null
-                });
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished
+                    {
+                        Message = $"{ctx.Target.Name} was [cStatus]poisoned[/]!"
+                    });
+                }
+            }
+        }
+    }
+
+    public class InflictStatusFrostbiteAbility : IOnHitEffect
+    {
+        public string Name => "Inflict Frostbite";
+        public string Description => "Chance to inflict Frostbite on hit.";
+
+        private readonly int _chance;
+        private static readonly Random _random = new Random();
+
+        public InflictStatusFrostbiteAbility(int chance)
+        {
+            _chance = chance;
+        }
+
+        public void OnHit(CombatContext ctx, int damageDealt)
+        {
+            if (ctx.IsGraze) return;
+
+            if (_random.Next(1, 101) <= _chance)
+            {
+                // Frostbite is permanent
+                bool applied = ctx.Target.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Frostbite, 99));
+                if (applied)
+                {
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished
+                    {
+                        Message = $"{ctx.Target.Name} was [cStatus]frostbitten[/]!"
+                    });
+                }
+            }
+        }
+    }
+
+    public class InflictStatusStunAbility : IOnHitEffect
+    {
+        public string Name => "Inflict Stun";
+        public string Description => "Chance to inflict Stun on hit.";
+
+        private readonly int _chance;
+        private readonly int _duration;
+        private static readonly Random _random = new Random();
+
+        public InflictStatusStunAbility(int chance, int duration)
+        {
+            _chance = chance;
+            _duration = duration;
+        }
+
+        public void OnHit(CombatContext ctx, int damageDealt)
+        {
+            if (ctx.IsGraze) return;
+
+            if (_random.Next(1, 101) <= _chance)
+            {
+                var existing = ctx.Target.ActiveStatusEffects.FirstOrDefault(e => e.EffectType == StatusEffectType.Stun);
+                if (existing != null)
+                {
+                    existing.DurationInTurns += _duration;
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished
+                    {
+                        Message = $"{ctx.Target.Name}'s [cStatus]Stun[/] extended by {_duration} turns!"
+                    });
+                }
+                else
+                {
+                    bool applied = ctx.Target.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Stun, _duration));
+                    if (applied)
+                    {
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished
+                        {
+                            Message = $"{ctx.Target.Name} was [cStatus]stunned[/]!"
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    public class InflictStatusSilenceAbility : IOnHitEffect
+    {
+        public string Name => "Inflict Silence";
+        public string Description => "Chance to inflict Silence on hit.";
+
+        private readonly int _chance;
+        private readonly int _duration;
+        private static readonly Random _random = new Random();
+
+        public InflictStatusSilenceAbility(int chance, int duration)
+        {
+            _chance = chance;
+            _duration = duration;
+        }
+
+        public void OnHit(CombatContext ctx, int damageDealt)
+        {
+            if (ctx.IsGraze) return;
+
+            if (_random.Next(1, 101) <= _chance)
+            {
+                var existing = ctx.Target.ActiveStatusEffects.FirstOrDefault(e => e.EffectType == StatusEffectType.Silence);
+                if (existing != null)
+                {
+                    existing.DurationInTurns += _duration;
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished
+                    {
+                        Message = $"{ctx.Target.Name}'s [cStatus]Silence[/] extended by {_duration} turns!"
+                    });
+                }
+                else
+                {
+                    bool applied = ctx.Target.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Silence, _duration));
+                    if (applied)
+                    {
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished
+                        {
+                            Message = $"{ctx.Target.Name} was [cStatus]silenced[/]!"
+                        });
+                    }
+                }
             }
         }
     }

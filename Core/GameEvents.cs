@@ -277,6 +277,15 @@ namespace ProjectVagabond
         }
 
         /// <summary>
+        /// Published by the MoveAnimationManager when a specific animation instance reaches its impact frame.
+        /// This signals the BattleManager to apply damage and effects.
+        /// </summary>
+        public struct MoveImpactOccurred
+        {
+            public MoveData Move { get; set; }
+        }
+
+        /// <summary>
         /// Published by the BattleScene when a move animation has finished playing (or was skipped).
         /// </summary>
         public struct MoveAnimationCompleted { }
