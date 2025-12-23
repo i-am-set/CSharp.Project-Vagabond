@@ -152,7 +152,7 @@ namespace ProjectVagabond.UI
             // Use the defined order for button creation
             int numButtons = _categoryOrder.Count;
             const int buttonSpriteSize = 32;
-            const int spacing = 0;
+            const int spacing = 4; // Increased spacing from 0 to 2
             var buttonRects = _spriteManager.InventoryHeaderButtonSourceRects;
 
             int totalWidth = (numButtons * buttonSpriteSize) + ((numButtons - 1) * spacing);
@@ -390,6 +390,110 @@ namespace ProjectVagabond.UI
             if (IsOpen)
             {
                 Hide();
+            }
+        }
+
+        private void ChangePage(int direction)
+        {
+            if (_totalPages <= 1) return;
+
+            int totalItems = GetCurrentCategoryItems().Count;
+            int maxPage = Math.Max(0, (int)Math.Ceiling((double)totalItems / ITEMS_PER_PAGE) - 1);
+
+            _currentPage += direction;
+
+            // Wrap logic
+            if (_currentPage > maxPage) _currentPage = 0;
+            else if (_currentPage < 0) _currentPage = maxPage;
+
+            // Trigger animation
+            if (direction < 0) _leftPageArrowBobTimer = PAGE_ARROW_BOB_DURATION;
+            else if (direction > 0) _rightPageArrowBobTimer = PAGE_ARROW_BOB_DURATION;
+
+            _selectedSlotIndex = -1; // Clear selection on page change
+            RefreshInventorySlots();
+            TriggerSlotAnimations();
+        }
+
+        private void CycleCategory(int direction)
+        {
+            // Handle Equip Category (Index 5)
+            if (_selectedInventoryCategory == InventoryCategory.Equip)
+            {
+                // Scroll Down/Right (1) -> Go to first available category
+                if (direction > 0)
+                {
+                    int target = FindNextNonEmptyCategory(-1, 1);
+                    if (target != -1)
+                    {
+                        SwitchToCategory(_categoryOrder[target]);
+                    }
+                }
+                return;
+            }
+
+            // Handle Main Categories
+            int currentIndex = _categoryOrder.IndexOf(_selectedInventoryCategory);
+            int targetIndex = FindNextNonEmptyCategory(currentIndex, direction);
+
+            if (targetIndex != -1)
+            {
+                SwitchToCategory(_categoryOrder[targetIndex]);
+            }
+        }
+
+        private int FindNextNonEmptyCategory(int startIndex, int direction)
+        {
+            int checkIndex = startIndex + direction;
+            while (checkIndex >= 0 && checkIndex < _categoryOrder.Count)
+            {
+                if (HasItems(_categoryOrder[checkIndex]))
+                {
+                    return checkIndex;
+                }
+                checkIndex += direction;
+            }
+            return -1;
+        }
+
+        private bool HasItems(InventoryCategory category)
+        {
+            return category switch
+            {
+                InventoryCategory.Weapons => _gameState.PlayerState.Weapons.Any(),
+                InventoryCategory.Armor => _gameState.PlayerState.Armors.Any(),
+                InventoryCategory.Relics => _gameState.PlayerState.Relics.Any(),
+                InventoryCategory.Consumables => _gameState.PlayerState.Consumables.Any(),
+                InventoryCategory.Misc => _gameState.PlayerState.MiscItems.Any(),
+                _ => false
+            };
+        }
+
+        private void SwitchToCategory(InventoryCategory category)
+        {
+            CancelEquipSelection();
+            _selectedInventoryCategory = category;
+            _currentPage = 0;
+            _selectedSlotIndex = -1;
+            _selectedHeaderBobTimer = 0f;
+            RefreshInventorySlots();
+            if (category != InventoryCategory.Equip)
+            {
+                TriggerSlotAnimations();
+            }
+        }
+
+        private void TriggerSlotAnimations()
+        {
+            float delay = 0f;
+            const float stagger = 0.015f;
+            foreach (var slot in _inventorySlots)
+            {
+                if (slot.HasItem) // Only animate if it has an item
+                {
+                    slot.TriggerPopInAnimation(delay);
+                    delay += stagger;
+                }
             }
         }
     }

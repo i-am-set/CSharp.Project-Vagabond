@@ -281,6 +281,23 @@ namespace ProjectVagabond.UI
             float centeringCorrection = -(rawOffsetFirst + rawOffsetLast) / 2f;
 
             InventoryHeaderButton? selectedButton = null;
+
+            // Update Header Buttons Enable State based on Inventory Count
+            foreach (var btn in _inventoryHeaderButtons)
+            {
+                bool hasItems = HasItems((InventoryCategory)btn.MenuIndex);
+
+                // If currently selected, force enabled (so it draws fully opaque)
+                if (_selectedInventoryCategory == (InventoryCategory)btn.MenuIndex)
+                {
+                    btn.IsEnabled = true;
+                }
+                else
+                {
+                    btn.IsEnabled = hasItems;
+                }
+            }
+
             for (int i = 0; i < _inventoryHeaderButtons.Count; i++)
             {
                 var button = _inventoryHeaderButtons[i];
@@ -348,14 +365,25 @@ namespace ProjectVagabond.UI
                 _debugButton2.Bounds = new Rectangle(centerX + (int)currentOffset - (_debugButton2.Bounds.Width / 2), centerY - _debugButton2.Bounds.Height / 2 - 2, _debugButton2.Bounds.Width, _debugButton2.Bounds.Height);
 
                 int currentIndex = _categoryOrder.IndexOf(_selectedInventoryCategory);
-                _debugButton1.IsEnabled = currentIndex > 0 && _selectedInventoryCategory != InventoryCategory.Equip;
-                _debugButton2.IsEnabled = currentIndex < _categoryOrder.Count - 1 && _selectedInventoryCategory != InventoryCategory.Equip;
+
+                // Smart Enable/Disable based on content availability in that direction
+                _debugButton1.IsEnabled = FindNextNonEmptyCategory(currentIndex, -1) != -1;
+                _debugButton2.IsEnabled = FindNextNonEmptyCategory(currentIndex, 1) != -1;
             }
             else if (_debugButton1 != null && _debugButton2 != null)
             {
                 // Disable buttons if no header is selected (e.g. Equip mode)
-                _debugButton1.IsEnabled = false;
-                _debugButton2.IsEnabled = false;
+                // However, if in Equip mode, we might want to allow going Right to the first category
+                if (_selectedInventoryCategory == InventoryCategory.Equip)
+                {
+                    _debugButton1.IsEnabled = false; // Can't go left from Equip
+                    _debugButton2.IsEnabled = FindNextNonEmptyCategory(-1, 1) != -1; // Can go right if any category has items
+                }
+                else
+                {
+                    _debugButton1.IsEnabled = false;
+                    _debugButton2.IsEnabled = false;
+                }
             }
 
             // Update Slots or Equip UI
@@ -452,79 +480,6 @@ namespace ProjectVagabond.UI
 
             _previousMouseState = currentMouseState;
             _previousKeyboardState = currentKeyboardState;
-        }
-        private void ChangePage(int direction)
-        {
-            if (_totalPages <= 1) return;
-
-            int totalItems = GetCurrentCategoryItems().Count;
-            int maxPage = Math.Max(0, (int)Math.Ceiling((double)totalItems / ITEMS_PER_PAGE) - 1);
-
-            _currentPage += direction;
-
-            // Wrap logic
-            if (_currentPage > maxPage) _currentPage = 0;
-            else if (_currentPage < 0) _currentPage = maxPage;
-
-            // Trigger animation
-            if (direction < 0) _leftPageArrowBobTimer = PAGE_ARROW_BOB_DURATION;
-            else if (direction > 0) _rightPageArrowBobTimer = PAGE_ARROW_BOB_DURATION;
-
-            _selectedSlotIndex = -1; // Clear selection on page change
-            RefreshInventorySlots();
-            TriggerSlotAnimations();
-        }
-
-        private void CycleCategory(int direction)
-        {
-            // Handle Equip Category (Index 5)
-            if (_selectedInventoryCategory == InventoryCategory.Equip)
-            {
-                // Scroll Down/Right (1) -> Go to Weapons (0)
-                if (direction > 0)
-                {
-                    SwitchToCategory(InventoryCategory.Weapons);
-                }
-                // Scroll Up/Left (-1) -> Do nothing
-                return;
-            }
-
-            // Handle Main Categories using the ordered list
-            int currentIndex = _categoryOrder.IndexOf(_selectedInventoryCategory);
-            int newIndex = currentIndex + direction;
-
-            if (newIndex >= 0 && newIndex < _categoryOrder.Count)
-            {
-                SwitchToCategory(_categoryOrder[newIndex]);
-            }
-        }
-
-        private void SwitchToCategory(InventoryCategory category)
-        {
-            CancelEquipSelection();
-            _selectedInventoryCategory = category;
-            _currentPage = 0;
-            _selectedSlotIndex = -1;
-            _selectedHeaderBobTimer = 0f;
-            RefreshInventorySlots();
-            if (category != InventoryCategory.Equip)
-            {
-                TriggerSlotAnimations();
-            }
-        }
-
-        private void TriggerSlotAnimations()
-        {
-            float delay = 0f;
-            const float stagger = 0.015f;
-            foreach (var slot in _inventorySlots)
-            {
-                if (slot.HasItem) // Only animate if it has an item
-                {
-                    slot.TriggerPopInAnimation(delay);
-                    delay += stagger;
-                }
-            }
         }
     }
 }
