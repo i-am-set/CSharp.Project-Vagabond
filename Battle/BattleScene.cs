@@ -43,6 +43,7 @@ namespace ProjectVagabond.Scenes
         private readonly Global _global;
         private HitstopManager _hitstopManager;
         private ParticleSystemManager _particleSystemManager;
+        private readonly TransitionManager _transitionManager;
 
         private List<int> _enemyEntityIds = new List<int>();
         private BattleManager.BattlePhase _previousBattlePhase;
@@ -83,6 +84,7 @@ namespace ProjectVagabond.Scenes
             _global = ServiceLocator.Get<Global>();
             _hitstopManager = ServiceLocator.Get<HitstopManager>();
             _particleSystemManager = ServiceLocator.Get<ParticleSystemManager>();
+            _transitionManager = ServiceLocator.Get<TransitionManager>();
         }
 
         public override Rectangle GetAnimatedBounds()
@@ -585,7 +587,8 @@ namespace ProjectVagabond.Scenes
         {
             SplitMapScene.PlayerWonLastBattle = true;
             DecrementTemporaryBuffs();
-            _sceneManager.ChangeScene(BattleSetup.ReturnSceneState, TransitionType.Fade, TransitionType.Fade);
+            var transition = _transitionManager.GetRandomCombatTransition();
+            _sceneManager.ChangeScene(BattleSetup.ReturnSceneState, transition, transition);
         }
 
         private void DecrementTemporaryBuffs()

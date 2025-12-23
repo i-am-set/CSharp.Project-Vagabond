@@ -661,6 +661,7 @@ namespace ProjectVagabond.Battle
 
             var validCandidates = TargetingHelper.GetValidTargets(actor, targetType, _allCombatants);
 
+            // 1. Random Logic
             if (targetType == TargetType.RandomBoth || targetType == TargetType.RandomEvery || targetType == TargetType.RandomAll)
             {
                 if (validCandidates.Any())
@@ -670,16 +671,20 @@ namespace ProjectVagabond.Battle
                 return new List<BattleCombatant>();
             }
 
-            if (specifiedTarget != null && validCandidates.Contains(specifiedTarget))
-            {
-                return new List<BattleCombatant> { specifiedTarget };
-            }
-
+            // 2. Multi-Target Logic (FIX: Check this BEFORE checking specifiedTarget)
+            // These types apply to ALL valid candidates, regardless of who was clicked.
             if (targetType == TargetType.All || targetType == TargetType.Both || targetType == TargetType.Every || targetType == TargetType.Team || targetType == TargetType.Ally)
             {
                 return validCandidates;
             }
 
+            // 3. Single-Target Logic (Requires selection)
+            if (specifiedTarget != null && validCandidates.Contains(specifiedTarget))
+            {
+                return new List<BattleCombatant> { specifiedTarget };
+            }
+
+            // 4. Fallback
             if (validCandidates.Any())
             {
                 return new List<BattleCombatant> { validCandidates[0] };

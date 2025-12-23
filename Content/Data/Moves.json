@@ -274,9 +274,9 @@
       "InflictStatusBurn": "10"
     },
     "Tags": [ "Fire", "AoE" ],
-    "AnimationSpriteSheet": "basic_orb_pulse_2",
+    "AnimationSpriteSheet": "fire_flame_ground_large",
     "AnimationSpeed": 1.0,
-    "DamageFrameIndex": 2,
+    "DamageFrameIndex": 4,
     "IsAnimationCentralized": false
   },
   {
@@ -285,12 +285,12 @@
     "Description": "Summons hot coals under the target.\n[cpositive]100%[/] chance to [cburn]Burn[/].",
     "Power": 20,
     "ManaCost": 15,
-    "MoveType": "Action",
+    "MoveType": "Spell",
     "ImpactType": "Physical",
     "OffensiveStat": "Intelligence",
     "MakesContact": false,
     "Target": "SingleAll",
-    "Accuracy": 80,
+    "Accuracy": 70,
     "Priority": 0,
     "Rarity": 1,
     "LevelRequirement": 2,
@@ -299,9 +299,9 @@
       "InflictStatusBurn": "100"
     },
     "Tags": [ "Fire", "Status" ],
-    "AnimationSpriteSheet": "basic_orb_pulse_2",
+    "AnimationSpriteSheet": "fire_impact",
     "AnimationSpeed": 1.0,
-    "DamageFrameIndex": 2,
+    "DamageFrameIndex": 10,
     "IsAnimationCentralized": false
   },
   {
