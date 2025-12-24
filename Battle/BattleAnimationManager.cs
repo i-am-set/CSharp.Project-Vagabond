@@ -13,6 +13,7 @@ using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -69,16 +70,16 @@ namespace ProjectVagabond.Battle.UI
         {
             public string CombatantID;
             public float Timer;
-            public const float DURATION = 0.5f;
-            public const float LIFT_HEIGHT = 20f;
+            public const float DURATION = BattleConstants.SWITCH_ANIMATION_DURATION;
+            public const float LIFT_HEIGHT = BattleConstants.SWITCH_VERTICAL_OFFSET;
         }
 
         public class SwitchInAnimationState
         {
             public string CombatantID;
             public float Timer;
-            public const float DURATION = 0.5f;
-            public const float DROP_HEIGHT = 20f;
+            public const float DURATION = BattleConstants.SWITCH_ANIMATION_DURATION;
+            public const float DROP_HEIGHT = BattleConstants.SWITCH_VERTICAL_OFFSET;
         }
 
         public class HitFlashAnimationState
@@ -1574,3 +1575,4 @@ namespace ProjectVagabond.Battle.UI
         }
     }
 }
+﻿

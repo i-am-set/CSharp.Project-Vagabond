@@ -1,4 +1,14 @@
-﻿using System.Collections.Generic;
+﻿using Microsoft.VisualBasic;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Utils;
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ProjectVagabond.Battle
 {
@@ -14,6 +24,10 @@ namespace ProjectVagabond.Battle
         public const float RANDOM_VARIANCE_MAX = 1.00f;
         public const float GRAZE_MULTIPLIER = 0.25f;
         public const float MULTI_TARGET_MODIFIER = 0.75f;
+
+        // --- SWITCH ANIMATION TUNING ---
+        public const float SWITCH_ANIMATION_DURATION = 0.5f;
+        public const float SWITCH_VERTICAL_OFFSET = 20f;
 
         /// <summary>
         /// A lookup table for stat multipliers based on the current stat stage (-6 to +6).

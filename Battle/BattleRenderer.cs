@@ -616,13 +616,43 @@ namespace ProjectVagabond.Battle.UI
                 recoilOffset = recoil.Offset;
             }
 
+            // --- APPLY SWITCH ANIMATION OFFSETS ---
+            var switchOutAnim = animationManager.GetSwitchOutAnimationState(player.CombatantID);
+            var switchInAnim = animationManager.GetSwitchInAnimationState(player.CombatantID);
+
+            float spawnYOffset = 0f;
+            float spawnAlpha = 1.0f;
+
+            if (switchOutAnim != null)
+            {
+                float progress = Math.Clamp(switchOutAnim.Timer / BattleConstants.SWITCH_ANIMATION_DURATION, 0f, 1f);
+                float easedProgress = Easing.EaseOutCubic(progress);
+                // Players are at the bottom, so "Lift" means moving UP (negative Y).
+                spawnYOffset = MathHelper.Lerp(0f, -BattleConstants.SWITCH_VERTICAL_OFFSET, easedProgress);
+                spawnAlpha = 1.0f - easedProgress;
+            }
+            else if (switchInAnim != null)
+            {
+                float progress = Math.Clamp(switchInAnim.Timer / BattleConstants.SWITCH_ANIMATION_DURATION, 0f, 1f);
+                float easedProgress = Easing.EaseOutCubic(progress);
+                // Drop means coming from above.
+                // Start: -Height. End: 0.
+                spawnYOffset = MathHelper.Lerp(-BattleConstants.SWITCH_VERTICAL_OFFSET, 0f, easedProgress);
+                spawnAlpha = easedProgress;
+            }
+
+            // Apply spawn alpha to the tint color
+            if (playerSpriteTint == null) playerSpriteTint = Color.White;
+            playerSpriteTint = playerSpriteTint.Value * spawnAlpha;
+
             if (!_playerSprites.TryGetValue(player.CombatantID, out var sprite))
             {
                 sprite = new PlayerCombatSprite(player.ArchetypeId);
                 _playerSprites[player.CombatantID] = sprite;
             }
 
-            sprite.SetPosition(new Vector2(spriteCenterX, heartCenterY + yBobOffset) + recoilOffset);
+            // Apply spawnYOffset to the position
+            sprite.SetPosition(new Vector2(spriteCenterX, heartCenterY + yBobOffset + spawnYOffset) + recoilOffset);
             sprite.Draw(spriteBatch, animationManager, player, playerSpriteTint, isHighlighted, pulseAlpha, isSilhouetted, silhouetteColor, gameTime, highlightColor);
 
             if (!isSilhouetted)
