@@ -157,12 +157,13 @@ namespace ProjectVagabond.Scenes
             EventBus.Subscribe<GameEvents.MoveAnimationTriggered>(OnMoveAnimationTriggered);
             EventBus.Subscribe<GameEvents.NextEnemyApproaches>(OnNextEnemyApproaches);
             EventBus.Subscribe<GameEvents.CombatantSpawned>(OnCombatantSpawned);
+            EventBus.Subscribe<GameEvents.CombatantSwitchingOut>(OnCombatantSwitchingOut); // New subscription
             EventBus.Subscribe<GameEvents.MoveFailed>(OnMoveFailed);
 
             _uiManager.OnMoveSelected += OnPlayerMoveSelected;
             _uiManager.OnItemSelected += OnPlayerItemSelected;
             _uiManager.OnSwitchActionSelected += OnPlayerSwitchSelected;
-            _uiManager.OnForcedSwitchSelected += OnForcedSwitchSelected; // New handler
+            _uiManager.OnForcedSwitchSelected += OnForcedSwitchSelected;
             _uiManager.OnFleeRequested += FleeBattle;
             _uiManager.OnTargetSelectedFromUI += OnTargetSelectedFromUI;
             _inputHandler.OnMoveTargetSelected += OnPlayerMoveTargetSelected;
@@ -188,6 +189,7 @@ namespace ProjectVagabond.Scenes
             EventBus.Unsubscribe<GameEvents.MoveAnimationTriggered>(OnMoveAnimationTriggered);
             EventBus.Unsubscribe<GameEvents.NextEnemyApproaches>(OnNextEnemyApproaches);
             EventBus.Unsubscribe<GameEvents.CombatantSpawned>(OnCombatantSpawned);
+            EventBus.Unsubscribe<GameEvents.CombatantSwitchingOut>(OnCombatantSwitchingOut);
             EventBus.Unsubscribe<GameEvents.MoveFailed>(OnMoveFailed);
 
             _uiManager.OnMoveSelected -= OnPlayerMoveSelected;
@@ -515,7 +517,7 @@ namespace ProjectVagabond.Scenes
             _wasAnimatingLastFrame = animBusy;
 
             _battleManager.CanAdvance = canAdvance;
-            _battleManager.Update();
+            _battleManager.Update(dt); // Pass delta time
 
             if (_isWaitingForActionExecution)
             {
@@ -1136,7 +1138,20 @@ namespace ProjectVagabond.Scenes
 
         private void OnCombatantSpawned(GameEvents.CombatantSpawned e)
         {
-            _animationManager.StartSpawnAnimation(e.Combatant.CombatantID);
+            // If we are in the middle of a switch sequence, use the specific SwitchIn animation
+            if (_battleManager.CurrentPhase == BattleManager.BattlePhase.AnimatingSwitch)
+            {
+                _animationManager.StartSwitchInAnimation(e.Combatant.CombatantID);
+            }
+            else
+            {
+                _animationManager.StartSpawnAnimation(e.Combatant.CombatantID);
+            }
+        }
+
+        private void OnCombatantSwitchingOut(GameEvents.CombatantSwitchingOut e)
+        {
+            _animationManager.StartSwitchOutAnimation(e.Combatant.CombatantID);
         }
 
         private void OnMoveFailed(GameEvents.MoveFailed e)

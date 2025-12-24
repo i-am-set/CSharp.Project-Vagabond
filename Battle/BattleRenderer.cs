@@ -535,6 +535,22 @@ namespace ProjectVagabond.Battle.UI
                         spawnYOffset = -BattleAnimationManager.SpawnAnimationState.DROP_HEIGHT;
                     }
 
+                    // Apply Switch In Offset
+                    var switchInAnim = animationManager.GetSwitchInAnimationState(enemy.CombatantID);
+                    if (switchInAnim != null)
+                    {
+                        float progress = Math.Clamp(switchInAnim.Timer / BattleAnimationManager.SwitchInAnimationState.DURATION, 0f, 1f);
+                        spawnYOffset = MathHelper.Lerp(-BattleAnimationManager.SwitchInAnimationState.DROP_HEIGHT, 0f, Easing.EaseOutCubic(progress));
+                    }
+
+                    // Apply Switch Out Offset
+                    var switchOutAnim = animationManager.GetSwitchOutAnimationState(enemy.CombatantID);
+                    if (switchOutAnim != null)
+                    {
+                        float progress = Math.Clamp(switchOutAnim.Timer / BattleAnimationManager.SwitchOutAnimationState.DURATION, 0f, 1f);
+                        spawnYOffset = MathHelper.Lerp(0f, -BattleAnimationManager.SwitchOutAnimationState.LIFT_HEIGHT, Easing.EaseOutCubic(progress));
+                    }
+
                     Vector2 spritePos = new Vector2((int)(slotCenter.X - spritePartSize / 2f), (int)(slotCenter.Y + yBobOffset + spawnYOffset));
                     Rectangle spriteBounds = GetEnemyStaticSpriteBounds(enemy, spritePos);
 
@@ -926,6 +942,9 @@ namespace ProjectVagabond.Battle.UI
             }
 
             var spawnAnim = animationManager.GetSpawnAnimationState(combatant.CombatantID);
+            var switchOutAnim = animationManager.GetSwitchOutAnimationState(combatant.CombatantID);
+            var switchInAnim = animationManager.GetSwitchInAnimationState(combatant.CombatantID);
+
             float spawnYOffset = 0f;
             float spawnAlpha = 1.0f;
             float spawnSilhouetteAmount = 0f;
@@ -950,6 +969,20 @@ namespace ProjectVagabond.Battle.UI
                     spawnYOffset = MathHelper.Lerp(-BattleAnimationManager.SpawnAnimationState.DROP_HEIGHT, 0f, Easing.EaseOutCubic(progress));
                     spawnSilhouetteAmount = 0f;
                 }
+            }
+            else if (switchOutAnim != null)
+            {
+                float progress = Math.Clamp(switchOutAnim.Timer / BattleAnimationManager.SwitchOutAnimationState.DURATION, 0f, 1f);
+                float easedProgress = Easing.EaseOutCubic(progress);
+                spawnYOffset = MathHelper.Lerp(0f, -BattleAnimationManager.SwitchOutAnimationState.LIFT_HEIGHT, easedProgress);
+                spawnAlpha = 1.0f - easedProgress;
+            }
+            else if (switchInAnim != null)
+            {
+                float progress = Math.Clamp(switchInAnim.Timer / BattleAnimationManager.SwitchInAnimationState.DURATION, 0f, 1f);
+                float easedProgress = Easing.EaseOutCubic(progress);
+                spawnYOffset = MathHelper.Lerp(-BattleAnimationManager.SwitchInAnimationState.DROP_HEIGHT, 0f, easedProgress);
+                spawnAlpha = easedProgress;
             }
 
             var pixel = ServiceLocator.Get<Texture2D>();
@@ -978,11 +1011,11 @@ namespace ProjectVagabond.Battle.UI
 
             bool isHighlighted = isSelectable && shouldGrayOutUnselectable;
 
-            if (shouldGrayOutUnselectable && !isSelectable && spawnAnim == null)
+            if (shouldGrayOutUnselectable && !isSelectable && spawnAnim == null && switchOutAnim == null && switchInAnim == null)
             {
                 silhouetteFactor = 1.0f;
             }
-            else if (isSelectable && shouldGrayOutUnselectable && !isTargetingPhase && spawnAnim == null)
+            else if (isSelectable && shouldGrayOutUnselectable && !isTargetingPhase && spawnAnim == null && switchOutAnim == null && switchInAnim == null)
             {
                 if (highlightColor == null) outlineColor = Color.Yellow * finalAlpha;
             }

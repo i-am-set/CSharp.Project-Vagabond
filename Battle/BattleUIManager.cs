@@ -29,14 +29,14 @@ namespace ProjectVagabond.Battle.UI
         public event Action<MoveData, MoveEntry, BattleCombatant>? OnMoveSelected;
         public event Action<ConsumableItemData, BattleCombatant>? OnItemSelected;
         public event Action<BattleCombatant>? OnSwitchActionSelected;
-        public event Action<BattleCombatant>? OnForcedSwitchSelected; // New event for forced switch
+        public event Action<BattleCombatant>? OnForcedSwitchSelected;
         public event Action? OnFleeRequested;
         public event Action<BattleCombatant>? OnTargetSelectedFromUI;
         private readonly BattleNarrator _battleNarrator;
         private readonly ActionMenu _actionMenu;
         private readonly ItemMenu _itemMenu;
         private readonly SwitchMenu _switchMenu;
-        private readonly CombatSwitchDialog _combatSwitchDialog; // New Dialog
+        private readonly CombatSwitchDialog _combatSwitchDialog;
         private readonly Button _itemTargetingBackButton;
         private readonly Global _global;
 

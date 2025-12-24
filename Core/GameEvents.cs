@@ -294,15 +294,24 @@ namespace ProjectVagabond
 
         /// <summary>
         /// Published when enemy reinforcements are about to enter the battle.
-        /// This triggers a blocking narration message.
+        /// This triggers a visual alert or narration.
         /// </summary>
         public struct NextEnemyApproaches { }
 
         /// <summary>
-        /// Published when a combatant physically enters the battlefield (e.g. from reinforcements).
+        /// Published when a combatant physically enters the battlefield (e.g. from reinforcements or switching).
         /// Triggers the visual entrance animation.
         /// </summary>
         public struct CombatantSpawned
+        {
+            public BattleCombatant Combatant { get; set; }
+        }
+
+        /// <summary>
+        /// Published when a combatant is about to leave the battlefield (e.g. switching out).
+        /// Triggers the visual exit animation.
+        /// </summary>
+        public struct CombatantSwitchingOut
         {
             public BattleCombatant Combatant { get; set; }
         }
@@ -333,4 +342,3 @@ namespace ProjectVagabond
         }
     }
 }
-﻿

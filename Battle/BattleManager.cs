@@ -34,7 +34,8 @@ namespace ProjectVagabond.Battle
             EndOfTurn,
             Reinforcement,
             BattleOver,
-            ProcessingInteraction // Replaces WaitingForForcedSwitch
+            ProcessingInteraction,
+            AnimatingSwitch // New phase for the switch sequence
         }
         private readonly List<BattleCombatant> _playerParty;
         private readonly List<BattleCombatant> _enemyParty;
@@ -73,6 +74,13 @@ namespace ProjectVagabond.Battle
 
         // --- INTERRUPT SYSTEM ---
         private BattleInteraction _activeInteraction;
+
+        // --- SWITCH SEQUENCE STATE ---
+        private BattleCombatant _switchActor;
+        private BattleCombatant _switchTarget;
+        private float _switchTimer;
+        private bool _switchSwapDone;
+        private const float SWITCH_ANIMATION_DURATION = 0.5f; // Matches BattleAnimationManager duration
 
         public BattlePhase CurrentPhase => _currentPhase;
         public IEnumerable<BattleCombatant> AllCombatants => _allCombatants;
@@ -149,12 +157,13 @@ namespace ProjectVagabond.Battle
             _actionToExecute = null;
             _actionPendingAnimation = null;
             _pendingImpact = null;
-            _activeInteraction = null; // Clear any stuck interaction
+            _activeInteraction = null;
 
             if (_currentPhase == BattlePhase.AnimatingMove ||
                 _currentPhase == BattlePhase.ActionResolution ||
                 _currentPhase == BattlePhase.SecondaryEffectResolution ||
-                _currentPhase == BattlePhase.ProcessingInteraction)
+                _currentPhase == BattlePhase.ProcessingInteraction ||
+                _currentPhase == BattlePhase.AnimatingSwitch)
             {
                 _currentPhase = BattlePhase.CheckForDefeat;
             }
@@ -183,7 +192,6 @@ namespace ProjectVagabond.Battle
         {
             if (_currentPhase == BattlePhase.AnimatingMove && _actionPendingAnimation != null)
             {
-                // Animation finished. If impact hasn't happened (e.g. animation skipped), force it now.
                 if (_pendingImpact != null)
                 {
                     ApplyPendingImpact();
@@ -204,21 +212,17 @@ namespace ProjectVagabond.Battle
 
         private void OnDisengageTriggered(GameEvents.DisengageTriggered e)
         {
-            // Pause battle flow
             CanAdvance = false;
             _currentPhase = BattlePhase.ProcessingInteraction;
 
-            // Create and start the interaction
             _activeInteraction = new SwitchInteraction(e.Actor, (result) =>
             {
-                // Callback when interaction resolves
                 if (result is BattleCombatant target)
                 {
-                    PerformForcedSwap(e.Actor, target);
+                    StartSwitchSequence(e.Actor, target);
                 }
                 else
                 {
-                    // Null result means cancelled or no valid target
                     _currentPhase = BattlePhase.CheckForDefeat;
                     CanAdvance = true;
                 }
@@ -228,9 +232,6 @@ namespace ProjectVagabond.Battle
             _activeInteraction.Start(this);
         }
 
-        /// <summary>
-        /// Called by the UI (for player) or AI logic to submit the result of an interaction.
-        /// </summary>
         public void SubmitInteractionResult(object result)
         {
             if (_activeInteraction != null)
@@ -239,7 +240,48 @@ namespace ProjectVagabond.Battle
             }
         }
 
-        private void PerformForcedSwap(BattleCombatant actor, BattleCombatant incomingMember)
+        private void StartSwitchSequence(BattleCombatant actor, BattleCombatant incomingMember)
+        {
+            _switchActor = actor;
+            _switchTarget = incomingMember;
+            _switchSwapDone = false;
+            _switchTimer = SWITCH_ANIMATION_DURATION;
+            _currentPhase = BattlePhase.AnimatingSwitch;
+
+            // Trigger "Out" animation
+            EventBus.Publish(new GameEvents.CombatantSwitchingOut { Combatant = actor });
+        }
+
+        private void HandleAnimatingSwitch(float deltaTime)
+        {
+            _switchTimer -= deltaTime;
+
+            if (_switchTimer <= 0)
+            {
+                if (!_switchSwapDone)
+                {
+                    // Phase 1 Complete: Swap Logic
+                    PerformLogicSwap(_switchActor, _switchTarget);
+                    _switchSwapDone = true;
+                    _switchTimer = SWITCH_ANIMATION_DURATION;
+
+                    // Trigger "In" animation
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{_switchTarget.Name} steps in!" });
+                    EventBus.Publish(new GameEvents.CombatantSpawned { Combatant = _switchTarget });
+                    HandleOnEnterAbilities(_switchTarget);
+                }
+                else
+                {
+                    // Phase 2 Complete: Resume Battle
+                    _currentPhase = BattlePhase.CheckForDefeat;
+                    CanAdvance = true;
+                    _switchActor = null;
+                    _switchTarget = null;
+                }
+            }
+        }
+
+        private void PerformLogicSwap(BattleCombatant actor, BattleCombatant incomingMember)
         {
             if (actor == null || incomingMember == null) return;
 
@@ -251,7 +293,6 @@ namespace ProjectVagabond.Battle
 
             RefreshCombatantCaches();
 
-            // Redirect any pending attacks targeting the old combatant to the new one
             foreach (var action in _actionQueue)
             {
                 if (action.Target == actor)
@@ -259,13 +300,6 @@ namespace ProjectVagabond.Battle
                     action.Target = incomingMember;
                 }
             }
-
-            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{incomingMember.Name} steps in!" });
-            EventBus.Publish(new GameEvents.CombatantSpawned { Combatant = incomingMember });
-            HandleOnEnterAbilities(incomingMember);
-
-            _currentPhase = BattlePhase.CheckForDefeat; // Resume flow
-            CanAdvance = true;
         }
 
         public void SubmitAction(QueuedAction action)
@@ -345,10 +379,10 @@ namespace ProjectVagabond.Battle
             return reserved;
         }
 
-        public void Update()
+        public void Update(float deltaTime)
         {
             if (_currentPhase == BattlePhase.BattleOver) return;
-            if (!CanAdvance) return;
+            if (!CanAdvance && _currentPhase != BattlePhase.AnimatingSwitch) return;
 
             switch (_currentPhase)
             {
@@ -361,7 +395,8 @@ namespace ProjectVagabond.Battle
                 case BattlePhase.CheckForDefeat: HandleCheckForDefeat(); break;
                 case BattlePhase.EndOfTurn: HandleEndOfTurn(); break;
                 case BattlePhase.Reinforcement: HandleReinforcements(); break;
-                case BattlePhase.ProcessingInteraction: break; // Do nothing, waiting for interaction to resolve
+                case BattlePhase.ProcessingInteraction: break;
+                case BattlePhase.AnimatingSwitch: HandleAnimatingSwitch(deltaTime); break;
             }
         }
 
@@ -565,7 +600,6 @@ namespace ProjectVagabond.Battle
                 var damageResultsForThisHit = new List<DamageCalculator.DamageResult>();
                 float multiTargetModifier = (targetsForThisHit.Count > 1) ? BattleConstants.MULTI_TARGET_MODIFIER : 1.0f;
 
-                // 1. Calculate Damage (Do NOT apply yet)
                 foreach (var target in targetsForThisHit)
                 {
                     var moveInstance = HandlePreDamageEffects(action.ChosenMove, target);
@@ -573,7 +607,6 @@ namespace ProjectVagabond.Battle
                     damageResultsForThisHit.Add(result);
                 }
 
-                // 2. Store Pending Impact Data
                 _pendingImpact = new PendingImpactData
                 {
                     Action = action,
@@ -581,8 +614,6 @@ namespace ProjectVagabond.Battle
                     Results = damageResultsForThisHit
                 };
 
-                // 3. Trigger Animation
-                // Split targets into Normal and Protected groups for animation
                 var normalTargets = new List<BattleCombatant>();
                 var protectedTargets = new List<BattleCombatant>();
 
@@ -598,7 +629,6 @@ namespace ProjectVagabond.Battle
                     }
                 }
 
-                // Trigger Normal Animation
                 if (normalTargets.Any() && !string.IsNullOrEmpty(action.ChosenMove.AnimationSpriteSheet))
                 {
                     MoveData animMove = action.ChosenMove;
@@ -608,22 +638,18 @@ namespace ProjectVagabond.Battle
                     CanAdvance = false;
                 }
 
-                // Trigger Protect Animation
                 if (protectedTargets.Any())
                 {
-                    // Create a dummy move for the protect animation
                     var protectMove = action.ChosenMove.Clone();
                     protectMove.AnimationSpriteSheet = "basic_protect";
-                    protectMove.IsAnimationCentralized = false; // Play on each protected target
+                    protectMove.IsAnimationCentralized = false;
 
-                    // Apply Global Tuning
                     var global = ServiceLocator.Get<Global>();
                     protectMove.AnimationSpeed = global.ProtectAnimationSpeed;
                     protectMove.DamageFrameIndex = global.ProtectDamageFrameIndex;
 
                     EventBus.Publish(new GameEvents.MoveAnimationTriggered { Move = protectMove, Targets = protectedTargets });
 
-                    // If we didn't trigger a normal animation, we still need to wait for this one
                     if (_actionPendingAnimation == null)
                     {
                         _actionPendingAnimation = action;
@@ -632,7 +658,6 @@ namespace ProjectVagabond.Battle
                     }
                 }
 
-                // If no animation was triggered at all (e.g. move has no anim and no one protected), apply immediately
                 if (_actionPendingAnimation == null)
                 {
                     ApplyPendingImpact();
@@ -657,10 +682,8 @@ namespace ProjectVagabond.Battle
             for (int i = 0; i < targets.Count; i++)
             {
                 var target = targets[i];
-                // We need to modify the struct in the list, so we access by index
                 var result = results[i];
 
-                // --- PROTECT CHECK ---
                 if (target.HasStatusEffect(StatusEffectType.Protected))
                 {
                     EventBus.Publish(new GameEvents.TerminalMessagePublished
@@ -668,19 +691,14 @@ namespace ProjectVagabond.Battle
                         Message = $"{target.Name} [cStatus]protected[/] against the attack!"
                     });
 
-                    // Mark result as protected and zero out damage
                     result.WasProtected = true;
                     result.DamageAmount = 0;
-                    results[i] = result; // Update the struct in the list
-
-                    // Skip damage application and OnHit effects
+                    results[i] = result;
                     continue;
                 }
 
-                // Apply Damage
                 target.ApplyDamage(result.DamageAmount);
 
-                // Execute OnHit Abilities
                 var ctx = new CombatContext
                 {
                     Actor = action.Actor,
@@ -702,7 +720,6 @@ namespace ProjectVagabond.Battle
                 SecondaryEffectSystem.ProcessPrimaryEffects(action, target);
             }
 
-            // Publish Results (Triggers Visuals in BattleScene)
             EventBus.Publish(new GameEvents.BattleActionExecuted
             {
                 Actor = action.Actor,
@@ -711,7 +728,6 @@ namespace ProjectVagabond.Battle
                 DamageResults = results
             });
 
-            // Store for secondary effects phase
             _currentActionForEffects = action;
             _currentActionDamageResults = results;
             _currentActionFinalTargets = targets;
@@ -721,7 +737,6 @@ namespace ProjectVagabond.Battle
 
         private void ProcessMoveActionPostImpact(QueuedAction action)
         {
-            // Check for Kills
             if (_currentActionFinalTargets != null && _currentActionFinalTargets.All(t => t.IsDefeated))
             {
                 var ctx = new CombatContext { Actor = action.Actor, Move = action.ChosenMove };
@@ -747,7 +762,6 @@ namespace ProjectVagabond.Battle
                 }
             }
 
-            // If we are processing an interaction (e.g. Disengage), do NOT advance phase yet.
             if (_currentPhase != BattlePhase.ProcessingInteraction)
             {
                 _currentPhase = BattlePhase.SecondaryEffectResolution;
@@ -801,7 +815,6 @@ namespace ProjectVagabond.Battle
 
             var validCandidates = TargetingHelper.GetValidTargets(actor, targetType, _allCombatants);
 
-            // 1. Random Logic
             if (targetType == TargetType.RandomBoth || targetType == TargetType.RandomEvery || targetType == TargetType.RandomAll)
             {
                 if (validCandidates.Any())
@@ -811,20 +824,16 @@ namespace ProjectVagabond.Battle
                 return new List<BattleCombatant>();
             }
 
-            // 2. Multi-Target Logic (FIX: Check this BEFORE checking specifiedTarget)
-            // These types apply to ALL valid candidates, regardless of who was clicked.
             if (targetType == TargetType.All || targetType == TargetType.Both || targetType == TargetType.Every || targetType == TargetType.Team || targetType == TargetType.Ally)
             {
                 return validCandidates;
             }
 
-            // 3. Single-Target Logic (Requires selection)
             if (specifiedTarget != null && validCandidates.Contains(specifiedTarget))
             {
                 return new List<BattleCombatant> { specifiedTarget };
             }
 
-            // 4. Fallback
             if (validCandidates.Any())
             {
                 return new List<BattleCombatant> { validCandidates[0] };
@@ -896,12 +905,11 @@ namespace ProjectVagabond.Battle
                     ability.OnTurnEnd(combatant);
                 }
 
-                // --- PROTECT RESET LOGIC ---
                 if (!combatant.UsedProtectThisTurn)
                 {
                     combatant.ConsecutiveProtectUses = 0;
                 }
-                combatant.UsedProtectThisTurn = false; // Reset flag for next turn
+                combatant.UsedProtectThisTurn = false;
 
                 var effectsToRemove = new List<StatusEffectInstance>();
                 foreach (var effect in combatant.ActiveStatusEffects)
@@ -1049,6 +1057,18 @@ namespace ProjectVagabond.Battle
         private MoveData HandlePreDamageEffects(MoveData originalMove, BattleCombatant target)
         {
             return originalMove;
+        }
+    }
+
+    public class DisengageAbility : IOnActionComplete
+    {
+        public string Name => "Disengage";
+        public string Description => "Switches the user out after attacking.";
+
+        public void OnActionComplete(QueuedAction action, BattleCombatant owner)
+        {
+            // Removed IsPlayerControlled check to allow enemies to use it
+            EventBus.Publish(new GameEvents.DisengageTriggered { Actor = owner });
         }
     }
 }

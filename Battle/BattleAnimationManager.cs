@@ -65,6 +65,22 @@ namespace ProjectVagabond.Battle.UI
             public const float DROP_HEIGHT = 10f; // Reduced height for a subtle float down
         }
 
+        public class SwitchOutAnimationState
+        {
+            public string CombatantID;
+            public float Timer;
+            public const float DURATION = 0.5f;
+            public const float LIFT_HEIGHT = 20f;
+        }
+
+        public class SwitchInAnimationState
+        {
+            public string CombatantID;
+            public float Timer;
+            public const float DURATION = 0.5f;
+            public const float DROP_HEIGHT = 20f;
+        }
+
         public class HitFlashAnimationState
         {
             public string CombatantID;
@@ -211,6 +227,8 @@ namespace ProjectVagabond.Battle.UI
         private readonly List<AlphaAnimationState> _activeAlphaAnimations = new List<AlphaAnimationState>();
         private readonly List<DeathAnimationState> _activeDeathAnimations = new List<DeathAnimationState>();
         private readonly List<SpawnAnimationState> _activeSpawnAnimations = new List<SpawnAnimationState>();
+        private readonly List<SwitchOutAnimationState> _activeSwitchOutAnimations = new List<SwitchOutAnimationState>();
+        private readonly List<SwitchInAnimationState> _activeSwitchInAnimations = new List<SwitchInAnimationState>();
         private readonly List<HitFlashAnimationState> _activeHitFlashAnimations = new List<HitFlashAnimationState>();
         private readonly List<HealBounceAnimationState> _activeHealBounceAnimations = new List<HealBounceAnimationState>();
         private readonly List<HealFlashAnimationState> _activeHealFlashAnimations = new List<HealFlashAnimationState>();
@@ -230,7 +248,7 @@ namespace ProjectVagabond.Battle.UI
         // Layout Constants mirrored from BattleRenderer for pixel-perfect alignment
         private const int DIVIDER_Y = 123;
 
-        public bool IsAnimating => _activeHealthAnimations.Any() || _activeAlphaAnimations.Any() || _activeDeathAnimations.Any() || _activeSpawnAnimations.Any() || _activeHealBounceAnimations.Any() || _activeHealFlashAnimations.Any() || _activePoisonEffectAnimations.Any() || _activeBarAnimations.Any() || _activeHitFlashAnimations.Any() || _activeCoins.Any();
+        public bool IsAnimating => _activeHealthAnimations.Any() || _activeAlphaAnimations.Any() || _activeDeathAnimations.Any() || _activeSpawnAnimations.Any() || _activeSwitchOutAnimations.Any() || _activeSwitchInAnimations.Any() || _activeHealBounceAnimations.Any() || _activeHealFlashAnimations.Any() || _activePoisonEffectAnimations.Any() || _activeBarAnimations.Any() || _activeHitFlashAnimations.Any() || _activeCoins.Any();
 
         public BattleAnimationManager()
         {
@@ -248,6 +266,8 @@ namespace ProjectVagabond.Battle.UI
             _activeAlphaAnimations.Clear();
             _activeDeathAnimations.Clear();
             _activeSpawnAnimations.Clear();
+            _activeSwitchOutAnimations.Clear();
+            _activeSwitchInAnimations.Clear();
             _activeHitFlashAnimations.Clear();
             _activeHealBounceAnimations.Clear();
             _activeHealFlashAnimations.Clear();
@@ -389,6 +409,26 @@ namespace ProjectVagabond.Battle.UI
                 CombatantID = combatantId,
                 Timer = 0f,
                 CurrentPhase = SpawnAnimationState.Phase.Flash
+            });
+        }
+
+        public void StartSwitchOutAnimation(string combatantId)
+        {
+            _activeSwitchOutAnimations.RemoveAll(a => a.CombatantID == combatantId);
+            _activeSwitchOutAnimations.Add(new SwitchOutAnimationState
+            {
+                CombatantID = combatantId,
+                Timer = 0f
+            });
+        }
+
+        public void StartSwitchInAnimation(string combatantId)
+        {
+            _activeSwitchInAnimations.RemoveAll(a => a.CombatantID == combatantId);
+            _activeSwitchInAnimations.Add(new SwitchInAnimationState
+            {
+                CombatantID = combatantId,
+                Timer = 0f
             });
         }
 
@@ -640,6 +680,16 @@ namespace ProjectVagabond.Battle.UI
             return _activeSpawnAnimations.FirstOrDefault(a => a.CombatantID == combatantId);
         }
 
+        public SwitchOutAnimationState GetSwitchOutAnimationState(string combatantId)
+        {
+            return _activeSwitchOutAnimations.FirstOrDefault(a => a.CombatantID == combatantId);
+        }
+
+        public SwitchInAnimationState GetSwitchInAnimationState(string combatantId)
+        {
+            return _activeSwitchInAnimations.FirstOrDefault(a => a.CombatantID == combatantId);
+        }
+
         public ResourceBarAnimationState? GetResourceBarAnimation(string combatantId, ResourceBarAnimationState.BarResourceType type)
         {
             return _activeBarAnimations.FirstOrDefault(a => a.CombatantID == combatantId && a.ResourceType == type);
@@ -652,6 +702,7 @@ namespace ProjectVagabond.Battle.UI
             UpdateAlphaAnimations(gameTime, combatants);
             UpdateDeathAnimations(gameTime, combatants);
             UpdateSpawnAnimations(gameTime, combatants);
+            UpdateSwitchAnimations(gameTime, combatants);
             UpdateHitFlashAnimations(gameTime);
             UpdateHealAnimations(gameTime);
             UpdatePoisonEffectAnimations(gameTime);
@@ -1076,6 +1127,33 @@ namespace ProjectVagabond.Battle.UI
                         combatant.VisualAlpha = 1.0f;
                         _activeSpawnAnimations.RemoveAt(i);
                     }
+                }
+            }
+        }
+
+        private void UpdateSwitchAnimations(GameTime gameTime, IEnumerable<BattleCombatant> combatants)
+        {
+            float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            // Switch Out
+            for (int i = _activeSwitchOutAnimations.Count - 1; i >= 0; i--)
+            {
+                var anim = _activeSwitchOutAnimations[i];
+                anim.Timer += deltaTime;
+                if (anim.Timer >= SwitchOutAnimationState.DURATION)
+                {
+                    _activeSwitchOutAnimations.RemoveAt(i);
+                }
+            }
+
+            // Switch In
+            for (int i = _activeSwitchInAnimations.Count - 1; i >= 0; i--)
+            {
+                var anim = _activeSwitchInAnimations[i];
+                anim.Timer += deltaTime;
+                if (anim.Timer >= SwitchInAnimationState.DURATION)
+                {
+                    _activeSwitchInAnimations.RemoveAt(i);
                 }
             }
         }
