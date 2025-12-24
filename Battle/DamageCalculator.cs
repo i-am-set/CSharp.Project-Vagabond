@@ -21,6 +21,7 @@ namespace ProjectVagabond.Battle
             public int DamageAmount;
             public bool WasCritical;
             public bool WasGraze;
+            public bool WasProtected; // NEW: Flag for protected hits
             public ElementalEffectiveness Effectiveness;
             public List<RelicData> AttackerAbilitiesTriggered;
             public List<RelicData> DefenderAbilitiesTriggered;
@@ -33,7 +34,8 @@ namespace ProjectVagabond.Battle
             {
                 Effectiveness = ElementalEffectiveness.Neutral,
                 AttackerAbilitiesTriggered = new List<RelicData>(),
-                DefenderAbilitiesTriggered = new List<RelicData>()
+                DefenderAbilitiesTriggered = new List<RelicData>(),
+                WasProtected = false
             };
 
             // 1. Build Combat Context

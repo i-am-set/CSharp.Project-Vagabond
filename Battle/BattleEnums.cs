@@ -55,7 +55,8 @@ namespace ProjectVagabond.Battle
         Stun,
         Regen,
         Dodging,
-        Silence
+        Silence,
+        Protected
     }
 
     /// <summary>

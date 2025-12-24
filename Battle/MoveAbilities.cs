@@ -394,4 +394,44 @@ namespace ProjectVagabond.Battle.Abilities
             }
         }
     }
+
+    public class ProtectAbility : IOnActionComplete
+    {
+        public string Name => "Protect";
+        public string Description => "Protects the user from all effects of moves that target it during the turn.";
+
+        private static readonly Random _random = new Random();
+
+        public void OnActionComplete(QueuedAction action, BattleCombatant owner)
+        {
+            // Mark that we attempted to use Protect this turn
+            owner.UsedProtectThisTurn = true;
+
+            // Calculate success chance: 1 / (2 ^ consecutive_uses)
+            // 0 uses = 100%, 1 use = 50%, 2 uses = 25%, etc.
+            double chance = 1.0 / Math.Pow(2, owner.ConsecutiveProtectUses);
+
+            if (_random.NextDouble() < chance)
+            {
+                // Success
+                owner.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Protected, 1));
+                owner.ConsecutiveProtectUses++;
+                EventBus.Publish(new GameEvents.TerminalMessagePublished
+                {
+                    Message = $"{owner.Name} [cStatus]protected[/] itself!"
+                });
+            }
+            else
+            {
+                // Failure
+                owner.ConsecutiveProtectUses = 0;
+                EventBus.Publish(new GameEvents.TerminalMessagePublished
+                {
+                    Message = $"{owner.Name}'s protection failed!"
+                });
+                // Trigger visual indicator
+                EventBus.Publish(new GameEvents.MoveFailed { Actor = owner });
+            }
+        }
+    }
 }

@@ -100,6 +100,8 @@ namespace ProjectVagabond
             EffectiveIndicatorColor = Color.Cyan;
             ResistedIndicatorColor = Color.Orange;
             ImmuneIndicatorColor = Palette_White;
+            ProtectedIndicatorColor = Color.Cyan;
+            FailedIndicatorColor = Color.Red; // New: Red for Failed
 
             // Initialize Color Mappings
             ElementColors = new Dictionary<int, Color>
@@ -138,7 +140,8 @@ namespace ProjectVagabond
             { StatusEffectType.Dodging, Palette_LightBlue },
             { StatusEffectType.Burn, Palette_Red },
             { StatusEffectType.Frostbite, Palette_DarkBlue },
-            { StatusEffectType.Silence, Palette_LightGray }
+            { StatusEffectType.Silence, Palette_LightGray },
+            { StatusEffectType.Protected, Palette_BrightWhite }
         };
         }
 
@@ -239,6 +242,10 @@ namespace ProjectVagabond
         public float BackgroundDistortionScale { get; set; } = 100.0f;
         public float BackgroundDistortionSpeed { get; set; } = 0.5f;
         public float BackgroundNoiseThreshold { get; set; } = 0.01f; // Tolerance for "Black" detection
+
+        // --- PROTECT ANIMATION TUNING ---
+        public float ProtectAnimationSpeed { get; set; } = 1.0f;
+        public int ProtectDamageFrameIndex { get; set; } = 0;
 
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
@@ -353,6 +360,8 @@ namespace ProjectVagabond
         public Color EffectiveIndicatorColor { get; set; }
         public Color ResistedIndicatorColor { get; set; }
         public Color ImmuneIndicatorColor { get; set; }
+        public Color ProtectedIndicatorColor { get; set; }
+        public Color FailedIndicatorColor { get; set; } // New: Red for Failed
 
         // Data-driven Colors
         public Dictionary<int, Color> ElementColors { get; private set; }

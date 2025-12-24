@@ -157,6 +157,7 @@ namespace ProjectVagabond.Scenes
             EventBus.Subscribe<GameEvents.MoveAnimationTriggered>(OnMoveAnimationTriggered);
             EventBus.Subscribe<GameEvents.NextEnemyApproaches>(OnNextEnemyApproaches);
             EventBus.Subscribe<GameEvents.CombatantSpawned>(OnCombatantSpawned);
+            EventBus.Subscribe<GameEvents.MoveFailed>(OnMoveFailed); // New
 
             _uiManager.OnMoveSelected += OnPlayerMoveSelected;
             _uiManager.OnItemSelected += OnPlayerItemSelected;
@@ -186,6 +187,7 @@ namespace ProjectVagabond.Scenes
             EventBus.Unsubscribe<GameEvents.MoveAnimationTriggered>(OnMoveAnimationTriggered);
             EventBus.Unsubscribe<GameEvents.NextEnemyApproaches>(OnNextEnemyApproaches);
             EventBus.Unsubscribe<GameEvents.CombatantSpawned>(OnCombatantSpawned);
+            EventBus.Unsubscribe<GameEvents.MoveFailed>(OnMoveFailed); // New
 
             _uiManager.OnMoveSelected -= OnPlayerMoveSelected;
             _uiManager.OnItemSelected -= OnPlayerItemSelected;
@@ -964,6 +966,12 @@ namespace ProjectVagabond.Scenes
                     if (!isMultiHit) _uiManager.ShowNarration($"A [cCrit]CRITICAL HIT[/] on {target.Name}!");
                 }
 
+                // NEW: Protected Indicator
+                if (result.WasProtected)
+                {
+                    _animationManager.StartProtectedIndicator(target.CombatantID, hudPosition);
+                }
+
                 var font = ServiceLocator.Get<Core>().SecondaryFont;
                 Vector2 effectivenessPosition = hudPosition + new Vector2(0, font.LineHeight / 2f + 10);
                 switch (result.Effectiveness)
@@ -1121,6 +1129,12 @@ namespace ProjectVagabond.Scenes
         private void OnCombatantSpawned(GameEvents.CombatantSpawned e)
         {
             _animationManager.StartSpawnAnimation(e.Combatant.CombatantID);
+        }
+
+        private void OnMoveFailed(GameEvents.MoveFailed e)
+        {
+            Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(e.Actor, _battleManager.AllCombatants);
+            _animationManager.StartFailedIndicator(e.Actor.CombatantID, hudPosition);
         }
 
         private void FleeBattle()

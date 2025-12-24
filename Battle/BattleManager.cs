@@ -5,7 +5,9 @@ using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
@@ -506,17 +508,59 @@ namespace ProjectVagabond.Battle
                 };
 
                 // 3. Trigger Animation
-                if (!string.IsNullOrEmpty(action.ChosenMove.AnimationSpriteSheet))
+                // Split targets into Normal and Protected groups for animation
+                var normalTargets = new List<BattleCombatant>();
+                var protectedTargets = new List<BattleCombatant>();
+
+                foreach (var target in targetsForThisHit)
+                {
+                    if (target.HasStatusEffect(StatusEffectType.Protected))
+                    {
+                        protectedTargets.Add(target);
+                    }
+                    else
+                    {
+                        normalTargets.Add(target);
+                    }
+                }
+
+                // Trigger Normal Animation
+                if (normalTargets.Any() && !string.IsNullOrEmpty(action.ChosenMove.AnimationSpriteSheet))
                 {
                     MoveData animMove = action.ChosenMove;
-                    EventBus.Publish(new GameEvents.MoveAnimationTriggered { Move = animMove, Targets = targetsForThisHit });
+                    EventBus.Publish(new GameEvents.MoveAnimationTriggered { Move = animMove, Targets = normalTargets });
                     _actionPendingAnimation = action;
                     _currentPhase = BattlePhase.AnimatingMove;
                     CanAdvance = false;
                 }
-                else
+
+                // Trigger Protect Animation
+                if (protectedTargets.Any())
                 {
-                    // No animation, apply immediately
+                    // Create a dummy move for the protect animation
+                    var protectMove = action.ChosenMove.Clone();
+                    protectMove.AnimationSpriteSheet = "basic_protect";
+                    protectMove.IsAnimationCentralized = false; // Play on each protected target
+
+                    // Apply Global Tuning
+                    var global = ServiceLocator.Get<Global>();
+                    protectMove.AnimationSpeed = global.ProtectAnimationSpeed;
+                    protectMove.DamageFrameIndex = global.ProtectDamageFrameIndex;
+
+                    EventBus.Publish(new GameEvents.MoveAnimationTriggered { Move = protectMove, Targets = protectedTargets });
+
+                    // If we didn't trigger a normal animation, we still need to wait for this one
+                    if (_actionPendingAnimation == null)
+                    {
+                        _actionPendingAnimation = action;
+                        _currentPhase = BattlePhase.AnimatingMove;
+                        CanAdvance = false;
+                    }
+                }
+
+                // If no animation was triggered at all (e.g. move has no anim and no one protected), apply immediately
+                if (_actionPendingAnimation == null)
+                {
                     ApplyPendingImpact();
                     ProcessMoveActionPostImpact(action);
                 }
@@ -539,7 +583,25 @@ namespace ProjectVagabond.Battle
             for (int i = 0; i < targets.Count; i++)
             {
                 var target = targets[i];
+                // We need to modify the struct in the list, so we access by index
                 var result = results[i];
+
+                // --- PROTECT CHECK ---
+                if (target.HasStatusEffect(StatusEffectType.Protected))
+                {
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished
+                    {
+                        Message = $"{target.Name} [cStatus]protected[/] against the attack!"
+                    });
+
+                    // Mark result as protected and zero out damage
+                    result.WasProtected = true;
+                    result.DamageAmount = 0;
+                    results[i] = result; // Update the struct in the list
+
+                    // Skip damage application and OnHit effects
+                    continue;
+                }
 
                 // Apply Damage
                 target.ApplyDamage(result.DamageAmount);
@@ -755,6 +817,13 @@ namespace ProjectVagabond.Battle
                 {
                     ability.OnTurnEnd(combatant);
                 }
+
+                // --- PROTECT RESET LOGIC ---
+                if (!combatant.UsedProtectThisTurn)
+                {
+                    combatant.ConsecutiveProtectUses = 0;
+                }
+                combatant.UsedProtectThisTurn = false; // Reset flag for next turn
 
                 var effectsToRemove = new List<StatusEffectInstance>();
                 foreach (var effect in combatant.ActiveStatusEffects)

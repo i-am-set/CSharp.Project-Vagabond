@@ -98,6 +98,10 @@ namespace ProjectVagabond.Battle
         public bool HasUsedFirstAttack { get; set; } = false;
         public Dictionary<OffensiveStatType, int> StatStages { get; private set; }
 
+        // --- PROTECT MECHANIC STATE ---
+        public int ConsecutiveProtectUses { get; set; } = 0;
+        public bool UsedProtectThisTurn { get; set; } = false;
+
         public BattleCombatant()
         {
             StatStages = new Dictionary<OffensiveStatType, int>
@@ -163,11 +167,8 @@ namespace ProjectVagabond.Battle
             bool hadEffectBefore = HasStatusEffect(newEffect.EffectType);
             ActiveStatusEffects.RemoveAll(e => e.EffectType == newEffect.EffectType);
 
-            // Only increment duration for temporary effects
-            if (!newEffect.IsPermanent)
-            {
-                newEffect.DurationInTurns += 1;
-            }
+            // FIX: Removed the +1 duration logic. Status effects now last exactly the duration specified.
+            // This ensures 1-turn effects like Protect expire at the end of the turn they are used.
 
             ActiveStatusEffects.Add(newEffect);
             return !hadEffectBefore;

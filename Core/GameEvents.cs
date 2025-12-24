@@ -304,5 +304,14 @@ namespace ProjectVagabond
         {
             public BattleCombatant Combatant { get; set; }
         }
+
+        /// <summary>
+        /// Published when a move's effect fails to execute (e.g. Protect failure).
+        /// Triggers a visual "FAILED" indicator.
+        /// </summary>
+        public struct MoveFailed
+        {
+            public BattleCombatant Actor { get; set; }
+        }
     }
 }

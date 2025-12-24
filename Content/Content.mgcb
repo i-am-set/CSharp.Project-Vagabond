@@ -1237,6 +1237,18 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/MoveAnimationSpriteSheets/basic_orb_pulse.png;Sprites/MoveAnimationSpriteSheets/basic_orb_pulse
 
+#begin Sprites/MoveAnimationSpriteSheets/basic_protect.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/MoveAnimationSpriteSheets/basic_protect.png;Sprites/MoveAnimationSpriteSheets/basic_protect
+
 #begin Sprites/MoveAnimationSpriteSheets/basic_slash_2.png
 /importer:TextureImporter
 /processor:TextureProcessor

@@ -140,7 +140,7 @@ namespace ProjectVagabond.Battle.UI
         }
         public class DamageIndicatorState
         {
-            public enum IndicatorType { Text, Number, HealNumber, EmphasizedNumber, Effectiveness, StatChange }
+            public enum IndicatorType { Text, Number, HealNumber, EmphasizedNumber, Effectiveness, StatChange, Protected, Failed } // Added Failed
             public IndicatorType Type;
             public string CombatantID;
             public string PrimaryText;
@@ -484,6 +484,38 @@ namespace ProjectVagabond.Battle.UI
                     Position = startPosition,
                     InitialPosition = startPosition,
                     PrimaryColor = color,
+                    Timer = 0f
+                });
+            });
+        }
+
+        public void StartProtectedIndicator(string combatantId, Vector2 startPosition)
+        {
+            _pendingTextIndicators.Enqueue(() =>
+            {
+                _activeDamageIndicators.Add(new DamageIndicatorState
+                {
+                    Type = DamageIndicatorState.IndicatorType.Protected,
+                    CombatantID = combatantId,
+                    PrimaryText = "PROTECTED",
+                    Position = startPosition,
+                    InitialPosition = startPosition,
+                    Timer = 0f
+                });
+            });
+        }
+
+        public void StartFailedIndicator(string combatantId, Vector2 startPosition)
+        {
+            _pendingTextIndicators.Enqueue(() =>
+            {
+                _activeDamageIndicators.Add(new DamageIndicatorState
+                {
+                    Type = DamageIndicatorState.IndicatorType.Failed,
+                    CombatantID = combatantId,
+                    PrimaryText = "FAILED",
+                    Position = startPosition,
+                    InitialPosition = startPosition,
                     Timer = 0f
                 });
             });
@@ -1161,7 +1193,7 @@ namespace ProjectVagabond.Battle.UI
                     float yOffset = Easing.EaseOutQuad(progress) * DamageIndicatorState.RISE_DISTANCE; // Move down
                     indicator.Position = indicator.InitialPosition + new Vector2(0, yOffset);
                 }
-                else // Text indicators like GRAZE or StatChange
+                else // Text indicators like GRAZE, StatChange, Protected, Failed
                 {
                     float progress = indicator.Timer / DamageIndicatorState.DURATION;
                     float yOffset = -Easing.EaseOutQuad(progress) * DamageIndicatorState.RISE_DISTANCE;
@@ -1229,6 +1261,8 @@ namespace ProjectVagabond.Battle.UI
             DrawIndicatorsOfType(spriteBatch, font, DamageIndicatorState.IndicatorType.Text);
             DrawIndicatorsOfType(spriteBatch, font, DamageIndicatorState.IndicatorType.Effectiveness);
             DrawIndicatorsOfType(spriteBatch, font, DamageIndicatorState.IndicatorType.StatChange);
+            DrawIndicatorsOfType(spriteBatch, font, DamageIndicatorState.IndicatorType.Protected);
+            DrawIndicatorsOfType(spriteBatch, font, DamageIndicatorState.IndicatorType.Failed); // Draw Failed text
             DrawIndicatorsOfType(spriteBatch, font, DamageIndicatorState.IndicatorType.Number);
             DrawIndicatorsOfType(spriteBatch, font, DamageIndicatorState.IndicatorType.HealNumber);
             DrawIndicatorsOfType(spriteBatch, font, DamageIndicatorState.IndicatorType.EmphasizedNumber);
@@ -1293,6 +1327,18 @@ namespace ProjectVagabond.Battle.UI
                             drawColor = Color.White;
                             break;
                     }
+                }
+                else if (indicator.Type == DamageIndicatorState.IndicatorType.Protected)
+                {
+                    const float flashInterval = 0.1f; // Fast flash
+                    bool useCyan = (int)(indicator.Timer / flashInterval) % 2 == 0;
+                    drawColor = useCyan ? _global.ProtectedIndicatorColor : Color.White;
+                }
+                else if (indicator.Type == DamageIndicatorState.IndicatorType.Failed)
+                {
+                    const float flashInterval = 0.1f; // Fast flash
+                    bool useRed = (int)(indicator.Timer / flashInterval) % 2 == 0;
+                    drawColor = useRed ? _global.FailedIndicatorColor : _global.Palette_Red;
                 }
                 else // Text indicator (Graze, StatChange)
                 {

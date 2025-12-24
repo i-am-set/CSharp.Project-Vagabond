@@ -405,5 +405,30 @@
     "AnimationSpeed": 1.0,
     "DamageFrameIndex": 2,
     "IsAnimationCentralized": false
+  },
+  {
+    "MoveID": "17",
+    "MoveName": "Ward",
+    "Description": "Protects the user from all effects of moves that target it during the turn.\nChance of success drops with consecutive uses.",
+    "Power": 0,
+    "ManaCost": 10,
+    "MoveType": "Spell",
+    "ImpactType": "Status",
+    "OffensiveStat": "Intelligence",
+    "MakesContact": false,
+    "Target": "Self",
+    "Accuracy": -1,
+    "Priority": 4,
+    "Rarity": 1,
+    "LevelRequirement": 2,
+    "OffensiveElementIDs": [ 1 ],
+    "Effects": {
+      "Protect": ""
+    },
+    "Tags": [ "Defense", "Priority" ],
+    "AnimationSpriteSheet": "basic_orb_pulse_2",
+    "AnimationSpeed": 1.0,
+    "DamageFrameIndex": 2,
+    "IsAnimationCentralized": false
   }
 ]
