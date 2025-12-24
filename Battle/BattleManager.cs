@@ -588,6 +588,9 @@ namespace ProjectVagabond.Battle
                 action.SpellbookEntry.TimesUsed++;
             }
 
+            // Reset Disengage flag before processing the move
+            action.Actor.PendingDisengage = false;
+
             PrepareHit(action);
         }
 
@@ -1099,15 +1102,30 @@ namespace ProjectVagabond.Battle
         }
     }
 
-    public class DisengageAbility : IOnActionComplete
+    public class DisengageAbility : IOnActionComplete, IOnHitEffect
     {
         public string Name => "Disengage";
-        public string Description => "Switches the user out after attacking.";
+        public string Description => "Switches the user out after a successful attack.";
+
+        public void OnHit(CombatContext ctx, int damageDealt)
+        {
+            // Only trigger if the move actually hit (not a graze)
+            // Note: Protected targets are skipped in ApplyPendingImpact before OnHit is called,
+            // so we don't need to check for Protected here explicitly if we trust that flow.
+            // However, checking IsGraze is vital.
+            if (!ctx.IsGraze)
+            {
+                ctx.Actor.PendingDisengage = true;
+            }
+        }
 
         public void OnActionComplete(QueuedAction action, BattleCombatant owner)
         {
-            // Removed IsPlayerControlled check to allow enemies to use it
-            EventBus.Publish(new GameEvents.DisengageTriggered { Actor = owner });
+            if (owner.PendingDisengage)
+            {
+                EventBus.Publish(new GameEvents.DisengageTriggered { Actor = owner });
+                owner.PendingDisengage = false;
+            }
         }
     }
 }
