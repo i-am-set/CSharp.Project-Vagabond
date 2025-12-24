@@ -227,8 +227,8 @@ namespace ProjectVagabond
         public float FrostbiteAgilityMultiplier { get; set; } = 0.5f;
 
         // --- HITSTOP (FRAME FREEZE) TUNING ---
-        public float HitstopDuration_Normal { get; set; } = 0.12f;
-        public float HitstopDuration_Crit { get; set; } = 0.25f;
+        public float HitstopDuration_Normal { get; set; } = 0.1f;
+        public float HitstopDuration_Crit { get; set; } = 0.2f;
 
         // --- BACKGROUND NOISE TUNING ---
         public Color BackgroundNoiseColor { get; set; } = new Color(26, 25, 33); // Palette_DarkerGray

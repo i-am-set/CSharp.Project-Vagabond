@@ -22,7 +22,7 @@ namespace ProjectVagabond.Battle
     }
 
     /// <summary> 
-    /// Defines the targeting behavior of a move in a 2v2 VGC style context.
+    /// Defines the targeting behavior of a move in a 2v2 style
     /// </summary>
     public enum TargetType
     {

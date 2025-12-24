@@ -21,7 +21,7 @@ namespace ProjectVagabond.Battle
         Move,
         Item,
         Charging,
-        Switch // New type for VGC switching
+        Switch
     }
 
     public class QueuedAction
