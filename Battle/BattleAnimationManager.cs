@@ -640,7 +640,6 @@ namespace ProjectVagabond.Battle.UI
             return _activeSpawnAnimations.FirstOrDefault(a => a.CombatantID == combatantId);
         }
 
-        // NEW: Expose animation state for renderer
         public ResourceBarAnimationState? GetResourceBarAnimation(string combatantId, ResourceBarAnimationState.BarResourceType type)
         {
             return _activeBarAnimations.FirstOrDefault(a => a.CombatantID == combatantId && a.ResourceType == type);

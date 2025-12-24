@@ -929,7 +929,6 @@ namespace ProjectVagabond.Progression
                     case SplitNodeType.Narrative:
                         node.EventData = progressionManager.GetRandomNarrative()?.EventID;
                         break;
-                    // New and existing non-event nodes fall through here
                     case SplitNodeType.Recruit:
                     case SplitNodeType.Rest:
                     case SplitNodeType.Shop:

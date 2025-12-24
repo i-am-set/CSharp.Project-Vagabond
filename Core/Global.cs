@@ -101,7 +101,7 @@ namespace ProjectVagabond
             ResistedIndicatorColor = Color.Orange;
             ImmuneIndicatorColor = Palette_White;
             ProtectedIndicatorColor = Color.Cyan;
-            FailedIndicatorColor = Color.Red; // New: Red for Failed
+            FailedIndicatorColor = Color.Red;
 
             // Initialize Color Mappings
             ElementColors = new Dictionary<int, Color>
@@ -361,7 +361,7 @@ namespace ProjectVagabond
         public Color ResistedIndicatorColor { get; set; }
         public Color ImmuneIndicatorColor { get; set; }
         public Color ProtectedIndicatorColor { get; set; }
-        public Color FailedIndicatorColor { get; set; } // New: Red for Failed
+        public Color FailedIndicatorColor { get; set; } 
 
         // Data-driven Colors
         public Dictionary<int, Color> ElementColors { get; private set; }
@@ -505,7 +505,6 @@ namespace ProjectVagabond
                 if (lowerTag == "cenemy") return ColorNarration_Enemy;
                 if (lowerTag == "cstatus") return ColorNarration_Status;
 
-                // New JSON Tags
                 if (lowerTag == "cred") return Palette_Red;
                 if (lowerTag == "cyellow") return Palette_Yellow;
                 if (lowerTag == "cwhite") return Palette_White;

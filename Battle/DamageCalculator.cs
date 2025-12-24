@@ -21,7 +21,7 @@ namespace ProjectVagabond.Battle
             public int DamageAmount;
             public bool WasCritical;
             public bool WasGraze;
-            public bool WasProtected; // NEW: Flag for protected hits
+            public bool WasProtected;
             public ElementalEffectiveness Effectiveness;
             public List<RelicData> AttackerAbilitiesTriggered;
             public List<RelicData> DefenderAbilitiesTriggered;

@@ -18,7 +18,7 @@ namespace ProjectVagabond.UI
         public string? ItemId { get; private set; }
         public int Quantity { get; private set; }
         public string? IconPath { get; private set; }
-        public string? FallbackIconPath { get; private set; } // New property
+        public string? FallbackIconPath { get; private set; } 
         public Color? IconTint { get; private set; }
         public int Rarity { get; private set; } = -1; // -1 means no rarity icon
         public bool IsSelected { get; set; }

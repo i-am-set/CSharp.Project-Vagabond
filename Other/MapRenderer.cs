@@ -30,7 +30,6 @@ namespace ProjectVagabond
         public Vector2? HoveredGridPos => _hoveredGridPos;
         public ContextMenu MapContextMenu => _contextMenu;
 
-        // New public properties for dynamic layout
         public Rectangle MapScreenBounds { get; private set; }
         public int GridSizeX { get; private set; }
         public int GridSizeY { get; private set; }

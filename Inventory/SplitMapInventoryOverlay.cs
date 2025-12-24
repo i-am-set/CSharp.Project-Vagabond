@@ -33,13 +33,10 @@ namespace ProjectVagabond.UI
         private InventoryHeaderButton? _inventoryEquipButton;
         private readonly List<InventorySlot> _inventorySlots = new();
         private Rectangle _inventorySlotArea;
-        // New Party Member Slot Panels (0 to 3)
         private readonly Rectangle[] _partyMemberPanelAreas = new Rectangle[4];
 
-        // New Equip Slot Buttons (Invisible hitboxes for the panels)
         private readonly List<Button> _partyEquipButtons = new();
 
-        // NEW: Spell Slot Buttons
         private readonly List<SpellEquipButton> _partySpellButtons = new();
 
         private ImageButton? _debugButton1;
@@ -48,7 +45,7 @@ namespace ProjectVagabond.UI
         private ImageButton? _pageRightButton;
 
         private int _currentPartyMemberIndex = 0;
-        private int _hoveredMemberIndex = -1; // NEW
+        private int _hoveredMemberIndex = -1; 
 
         // Submenu State
         private enum EquipSlotType { None, Weapon, Armor, Relic, Spell1, Spell2, Spell3, Spell4 }

@@ -20,7 +20,7 @@ namespace ProjectVagabond
         Drift,
         Bounce,
         ZoomPulse,
-        DirectionalShake // NEW
+        DirectionalShake 
     }
 
     public class HapticsManager
@@ -33,7 +33,7 @@ namespace ProjectVagabond
         private readonly HapticEffect _drift = new(HapticType.Drift);
         private readonly HapticEffect _bounce = new(HapticType.Bounce);
         private readonly HapticEffect _zoomPulse = new(HapticType.ZoomPulse);
-        private readonly HapticEffect _directionalShake = new(HapticType.DirectionalShake); // NEW
+        private readonly HapticEffect _directionalShake = new(HapticType.DirectionalShake); 
         private Global _global;
 
         public HapticsManager()

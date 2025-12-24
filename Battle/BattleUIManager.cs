@@ -68,7 +68,7 @@ namespace ProjectVagabond.Battle.UI
         // Targeting Buttons
         private readonly List<ImageButton> _targetingButtons = new List<ImageButton>();
         public BattleCombatant? HoveredCombatantFromUI { get; private set; }
-        public BattleCombatant? CombatantHoveredViaSprite { get; set; } // NEW: Set by InputHandler
+        public BattleCombatant? CombatantHoveredViaSprite { get; set; } 
 
         // Input State
         private MouseState _previousMouseState;

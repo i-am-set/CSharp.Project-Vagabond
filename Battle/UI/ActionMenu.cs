@@ -834,7 +834,6 @@ namespace ProjectVagabond.Battle.UI
                             currentY += buttonHeight + buttonSpacing;
                         }
 
-                        // NEW: Draw Back Button for Slot 2
                         if (_player != null && _player.BattleSlot == 1)
                         {
                             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
@@ -904,7 +903,6 @@ namespace ProjectVagabond.Battle.UI
                     {
                         spriteBatch.DrawSnapped(pixel, button.Bounds, Color.Green * 0.5f);
                     }
-                    // NEW: Debug for Slot 2 Back Button
                     if (_player != null && _player.BattleSlot == 1)
                     {
                         spriteBatch.DrawSnapped(pixel, _slot2BackButton.Bounds, Color.Red * 0.5f);

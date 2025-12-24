@@ -21,7 +21,6 @@ namespace ProjectVagabond.Battle
         public List<string> StartingMoveIDs { get; set; } = new List<string>();
         public string DefaultStrikeMoveID { get; set; }
 
-        // New Inventory Initializers
         public Dictionary<string, int> StartingWeapons { get; set; } = new Dictionary<string, int>();
         public Dictionary<string, int> StartingArmor { get; set; } = new Dictionary<string, int>();
         public Dictionary<string, int> StartingRelics { get; set; } = new Dictionary<string, int>();

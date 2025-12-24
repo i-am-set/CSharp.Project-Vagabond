@@ -28,7 +28,7 @@ namespace ProjectVagabond.Battle.UI
         // Buttons
         private readonly Button _backButton;
         private readonly Button _sortButton;
-        private readonly Button _useButton; // New button for the Selected state
+        private readonly Button _useButton;
 
         private readonly ContextMenu _sortContextMenu;
 
@@ -539,7 +539,6 @@ namespace ProjectVagabond.Battle.UI
 
                 // Position directly above the back button, moved down 5 pixels from previous logic
                 // Previous logic: backButtonY - useHeight - 2
-                // New logic: backButtonY - useHeight + 3
                 int useX = (Global.VIRTUAL_WIDTH - useWidth) / 2; // Removed + 1 to shift left
                 int useY = backButtonY - useHeight + 3;
 

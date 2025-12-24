@@ -19,7 +19,6 @@ namespace ProjectVagabond.UI
         public Texture2D? IconTexture { get; set; }
         public Rectangle? IconSourceRect { get; set; }
 
-        // New properties for visual customization
         public bool TintBackgroundOnHover { get; set; } = true;
         public bool DrawBorderOnHover { get; set; } = false;
         public Color? HoverBorderColor { get; set; }

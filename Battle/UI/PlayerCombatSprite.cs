@@ -19,8 +19,8 @@ namespace ProjectVagabond.Battle.UI
     {
         private Texture2D? _texture;
         private Texture2D? _silhouette;
-        private Texture2D? _altTexture; // NEW: For player portrait animation
-        private Texture2D? _altSilhouette; // NEW: For player portrait animation
+        private Texture2D? _altTexture;
+        private Texture2D? _altSilhouette;
         private Vector2 _position;
         private Vector2 _origin;
         private string _archetypeId;
@@ -33,7 +33,7 @@ namespace ProjectVagabond.Battle.UI
         private int _frameHeight;
         private const float FRAME_DURATION = 0.2f; // ~5 FPS for enemies
 
-        private bool _useAltFrame = false; // NEW: Toggles between main and alt portrait
+        private bool _useAltFrame = false;
 
         // Selection Animation State
         private enum SelectionState { None, Jumping, Bobbing }
@@ -328,7 +328,6 @@ namespace ProjectVagabond.Battle.UI
                 return;
             }
 
-            // NEW: Highlight Mode (Full Yellow Silhouette)
             if (isHighlighted && silhouetteToDraw != null)
             {
                 var mainRect = new Rectangle(topLeftPosition.X, topLeftPosition.Y, _frameWidth, _frameHeight);

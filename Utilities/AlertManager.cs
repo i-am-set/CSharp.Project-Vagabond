@@ -61,7 +61,6 @@ namespace ProjectVagabond.Battle.UI
             const int gap = 2;
 
             // Recalculate all target positions every frame for stacking.
-            // New alerts appear at the top and push older ones down.
             float yStackOffset = 0;
             for (int i = _activeAlerts.Count - 1; i >= 0; i--)
             {

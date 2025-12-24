@@ -157,13 +157,13 @@ namespace ProjectVagabond.Scenes
             EventBus.Subscribe<GameEvents.MoveAnimationTriggered>(OnMoveAnimationTriggered);
             EventBus.Subscribe<GameEvents.NextEnemyApproaches>(OnNextEnemyApproaches);
             EventBus.Subscribe<GameEvents.CombatantSpawned>(OnCombatantSpawned);
-            EventBus.Subscribe<GameEvents.MoveFailed>(OnMoveFailed); // New
+            EventBus.Subscribe<GameEvents.MoveFailed>(OnMoveFailed);
 
             _uiManager.OnMoveSelected += OnPlayerMoveSelected;
             _uiManager.OnItemSelected += OnPlayerItemSelected;
             _uiManager.OnSwitchActionSelected += OnPlayerSwitchSelected;
             _uiManager.OnFleeRequested += FleeBattle;
-            _uiManager.OnTargetSelectedFromUI += OnTargetSelectedFromUI; // NEW
+            _uiManager.OnTargetSelectedFromUI += OnTargetSelectedFromUI;
             _inputHandler.OnMoveTargetSelected += OnPlayerMoveTargetSelected;
             _inputHandler.OnItemTargetSelected += OnPlayerItemSelected;
             _inputHandler.OnBackRequested += () => _uiManager.GoBack();
@@ -187,13 +187,13 @@ namespace ProjectVagabond.Scenes
             EventBus.Unsubscribe<GameEvents.MoveAnimationTriggered>(OnMoveAnimationTriggered);
             EventBus.Unsubscribe<GameEvents.NextEnemyApproaches>(OnNextEnemyApproaches);
             EventBus.Unsubscribe<GameEvents.CombatantSpawned>(OnCombatantSpawned);
-            EventBus.Unsubscribe<GameEvents.MoveFailed>(OnMoveFailed); // New
+            EventBus.Unsubscribe<GameEvents.MoveFailed>(OnMoveFailed); 
 
             _uiManager.OnMoveSelected -= OnPlayerMoveSelected;
             _uiManager.OnItemSelected -= OnPlayerItemSelected;
             _uiManager.OnSwitchActionSelected -= OnPlayerSwitchSelected;
             _uiManager.OnFleeRequested -= FleeBattle;
-            _uiManager.OnTargetSelectedFromUI -= OnTargetSelectedFromUI; // NEW
+            _uiManager.OnTargetSelectedFromUI -= OnTargetSelectedFromUI; 
             _inputHandler.OnMoveTargetSelected -= OnPlayerMoveTargetSelected;
             _inputHandler.OnItemTargetSelected -= OnPlayerItemSelected;
             _inputHandler.OnBackRequested -= () => _uiManager.GoBack();
@@ -966,7 +966,6 @@ namespace ProjectVagabond.Scenes
                     if (!isMultiHit) _uiManager.ShowNarration($"A [cCrit]CRITICAL HIT[/] on {target.Name}!");
                 }
 
-                // NEW: Protected Indicator
                 if (result.WasProtected)
                 {
                     _animationManager.StartProtectedIndicator(target.CombatantID, hudPosition);

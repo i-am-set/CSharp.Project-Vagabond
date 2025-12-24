@@ -16,6 +16,6 @@
         Idle,
         Out,        // Scene is visible, effect is covering it up
         Hold,       // Screen is fully black, waiting for scene swap
-        In          // New scene is visible, effect is revealing it
+        In
     }
 }
