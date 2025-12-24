@@ -35,7 +35,7 @@ namespace ProjectVagabond.Battle
             Reinforcement,
             BattleOver,
             ProcessingInteraction,
-            AnimatingSwitch // New phase for the switch sequence
+            WaitingForSwitchCompletion 
         }
         private readonly List<BattleCombatant> _playerParty;
         private readonly List<BattleCombatant> _enemyParty;
@@ -74,13 +74,6 @@ namespace ProjectVagabond.Battle
 
         // --- INTERRUPT SYSTEM ---
         private BattleInteraction _activeInteraction;
-
-        // --- SWITCH SEQUENCE STATE ---
-        private BattleCombatant _switchActor;
-        private BattleCombatant _switchTarget;
-        private float _switchTimer;
-        private bool _switchSwapDone;
-        private const float SWITCH_ANIMATION_DURATION = 0.5f; // Matches BattleAnimationManager duration
 
         public BattlePhase CurrentPhase => _currentPhase;
         public IEnumerable<BattleCombatant> AllCombatants => _allCombatants;
@@ -163,7 +156,7 @@ namespace ProjectVagabond.Battle
                 _currentPhase == BattlePhase.ActionResolution ||
                 _currentPhase == BattlePhase.SecondaryEffectResolution ||
                 _currentPhase == BattlePhase.ProcessingInteraction ||
-                _currentPhase == BattlePhase.AnimatingSwitch)
+                _currentPhase == BattlePhase.WaitingForSwitchCompletion)
             {
                 _currentPhase = BattlePhase.CheckForDefeat;
             }
@@ -219,10 +212,12 @@ namespace ProjectVagabond.Battle
             {
                 if (result is BattleCombatant target)
                 {
-                    StartSwitchSequence(e.Actor, target);
+                    // Hand off control to the Scene Director
+                    InitiateSwitchSequence(e.Actor, target);
                 }
                 else
                 {
+                    // Cancelled or failed
                     _currentPhase = BattlePhase.CheckForDefeat;
                     CanAdvance = true;
                 }
@@ -240,48 +235,25 @@ namespace ProjectVagabond.Battle
             }
         }
 
-        private void StartSwitchSequence(BattleCombatant actor, BattleCombatant incomingMember)
+        private void InitiateSwitchSequence(BattleCombatant actor, BattleCombatant incomingMember)
         {
-            _switchActor = actor;
-            _switchTarget = incomingMember;
-            _switchSwapDone = false;
-            _switchTimer = SWITCH_ANIMATION_DURATION;
-            _currentPhase = BattlePhase.AnimatingSwitch;
+            // Enter waiting state
+            _currentPhase = BattlePhase.WaitingForSwitchCompletion;
+            CanAdvance = false;
 
-            // Trigger "Out" animation
-            EventBus.Publish(new GameEvents.CombatantSwitchingOut { Combatant = actor });
-        }
-
-        private void HandleAnimatingSwitch(float deltaTime)
-        {
-            _switchTimer -= deltaTime;
-
-            if (_switchTimer <= 0)
+            // Signal the Scene Director to take over visuals
+            EventBus.Publish(new GameEvents.SwitchSequenceInitiated
             {
-                if (!_switchSwapDone)
-                {
-                    // Phase 1 Complete: Swap Logic
-                    PerformLogicSwap(_switchActor, _switchTarget);
-                    _switchSwapDone = true;
-                    _switchTimer = SWITCH_ANIMATION_DURATION;
-
-                    // Trigger "In" animation
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{_switchTarget.Name} steps in!" });
-                    EventBus.Publish(new GameEvents.CombatantSpawned { Combatant = _switchTarget });
-                    HandleOnEnterAbilities(_switchTarget);
-                }
-                else
-                {
-                    // Phase 2 Complete: Resume Battle
-                    _currentPhase = BattlePhase.CheckForDefeat;
-                    CanAdvance = true;
-                    _switchActor = null;
-                    _switchTarget = null;
-                }
-            }
+                OutgoingCombatant = actor,
+                IncomingCombatant = incomingMember
+            });
         }
 
-        private void PerformLogicSwap(BattleCombatant actor, BattleCombatant incomingMember)
+        /// <summary>
+        /// Called by the Scene Director (BattleScene) when the "Out" animation is finished.
+        /// Instantly swaps the data.
+        /// </summary>
+        public void PerformLogicalSwitch(BattleCombatant actor, BattleCombatant incomingMember)
         {
             if (actor == null || incomingMember == null) return;
 
@@ -293,6 +265,7 @@ namespace ProjectVagabond.Battle
 
             RefreshCombatantCaches();
 
+            // Retarget any pending actions
             foreach (var action in _actionQueue)
             {
                 if (action.Target == actor)
@@ -300,6 +273,19 @@ namespace ProjectVagabond.Battle
                     action.Target = incomingMember;
                 }
             }
+
+            // Trigger OnEnter abilities for the new guy
+            HandleOnEnterAbilities(incomingMember);
+        }
+
+        /// <summary>
+        /// Called by the Scene Director (BattleScene) when the "In" animation is finished.
+        /// Resumes the battle flow.
+        /// </summary>
+        public void ResumeAfterSwitch()
+        {
+            _currentPhase = BattlePhase.CheckForDefeat;
+            CanAdvance = true;
         }
 
         public void SubmitAction(QueuedAction action)
@@ -382,7 +368,7 @@ namespace ProjectVagabond.Battle
         public void Update(float deltaTime)
         {
             if (_currentPhase == BattlePhase.BattleOver) return;
-            if (!CanAdvance && _currentPhase != BattlePhase.AnimatingSwitch) return;
+            if (!CanAdvance && _currentPhase != BattlePhase.WaitingForSwitchCompletion) return;
 
             switch (_currentPhase)
             {
@@ -396,7 +382,7 @@ namespace ProjectVagabond.Battle
                 case BattlePhase.EndOfTurn: HandleEndOfTurn(); break;
                 case BattlePhase.Reinforcement: HandleReinforcements(); break;
                 case BattlePhase.ProcessingInteraction: break;
-                case BattlePhase.AnimatingSwitch: HandleAnimatingSwitch(deltaTime); break;
+                case BattlePhase.WaitingForSwitchCompletion: break; // Do nothing, wait for Director
             }
         }
 
@@ -769,7 +755,7 @@ namespace ProjectVagabond.Battle
                 }
             }
 
-            if (_currentPhase != BattlePhase.ProcessingInteraction)
+            if (_currentPhase != BattlePhase.ProcessingInteraction && _currentPhase != BattlePhase.WaitingForSwitchCompletion)
             {
                 _currentPhase = BattlePhase.SecondaryEffectResolution;
                 CanAdvance = false;
@@ -1102,30 +1088,15 @@ namespace ProjectVagabond.Battle
         }
     }
 
-    public class DisengageAbility : IOnActionComplete, IOnHitEffect
+    public class DisengageAbility : IOnActionComplete
     {
         public string Name => "Disengage";
-        public string Description => "Switches the user out after a successful attack.";
-
-        public void OnHit(CombatContext ctx, int damageDealt)
-        {
-            // Only trigger if the move actually hit (not a graze)
-            // Note: Protected targets are skipped in ApplyPendingImpact before OnHit is called,
-            // so we don't need to check for Protected here explicitly if we trust that flow.
-            // However, checking IsGraze is vital.
-            if (!ctx.IsGraze)
-            {
-                ctx.Actor.PendingDisengage = true;
-            }
-        }
+        public string Description => "Switches the user out after attacking.";
 
         public void OnActionComplete(QueuedAction action, BattleCombatant owner)
         {
-            if (owner.PendingDisengage)
-            {
-                EventBus.Publish(new GameEvents.DisengageTriggered { Actor = owner });
-                owner.PendingDisengage = false;
-            }
+            // Allow both players and enemies to trigger disengage
+            EventBus.Publish(new GameEvents.DisengageTriggered { Actor = owner });
         }
     }
 }

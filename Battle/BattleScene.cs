@@ -70,6 +70,13 @@ namespace ProjectVagabond.Scenes
         private float _deathFadeTimer = 0f;
         private readonly HashSet<string> _processedDeathAnimations = new HashSet<string>();
 
+        // --- SWITCH SEQUENCE DIRECTOR STATE ---
+        private enum SwitchSequenceState { None, AnimatingOut, Swapping, AnimatingIn }
+        private SwitchSequenceState _switchSequenceState = SwitchSequenceState.None;
+        private float _switchSequenceTimer = 0f;
+        private BattleCombatant _switchOutgoing;
+        private BattleCombatant _switchIncoming;
+
         public BattleAnimationManager AnimationManager => _animationManager;
 
         public BattleScene()
@@ -125,6 +132,7 @@ namespace ProjectVagabond.Scenes
             _deathFadeTimer = 0f;
             _processedDeathAnimations.Clear();
             _watchdogTimer = 0f;
+            _switchSequenceState = SwitchSequenceState.None;
             SubscribeToEvents();
             InitializeSettingsButton();
             SetupBattle();
@@ -159,6 +167,7 @@ namespace ProjectVagabond.Scenes
             EventBus.Subscribe<GameEvents.CombatantSpawned>(OnCombatantSpawned);
             EventBus.Subscribe<GameEvents.CombatantSwitchingOut>(OnCombatantSwitchingOut);
             EventBus.Subscribe<GameEvents.MoveFailed>(OnMoveFailed);
+            EventBus.Subscribe<GameEvents.SwitchSequenceInitiated>(OnSwitchSequenceInitiated);
 
             _uiManager.OnMoveSelected += OnPlayerMoveSelected;
             _uiManager.OnItemSelected += OnPlayerItemSelected;
@@ -191,6 +200,7 @@ namespace ProjectVagabond.Scenes
             EventBus.Unsubscribe<GameEvents.CombatantSpawned>(OnCombatantSpawned);
             EventBus.Unsubscribe<GameEvents.CombatantSwitchingOut>(OnCombatantSwitchingOut);
             EventBus.Unsubscribe<GameEvents.MoveFailed>(OnMoveFailed);
+            EventBus.Unsubscribe<GameEvents.SwitchSequenceInitiated>(OnSwitchSequenceInitiated);
 
             _uiManager.OnMoveSelected -= OnPlayerMoveSelected;
             _uiManager.OnItemSelected -= OnPlayerItemSelected;
@@ -385,6 +395,39 @@ namespace ProjectVagabond.Scenes
                 return;
             }
 
+            // --- SWITCH SEQUENCE DIRECTOR ---
+            if (_switchSequenceState != SwitchSequenceState.None)
+            {
+                _switchSequenceTimer -= dt;
+
+                if (_switchSequenceState == SwitchSequenceState.AnimatingOut)
+                {
+                    if (_switchSequenceTimer <= 0)
+                    {
+                        // Phase 1 Complete: Perform Logic Swap
+                        _battleManager.PerformLogicalSwitch(_switchOutgoing, _switchIncoming);
+
+                        // Start Phase 2: Animate In
+                        _switchSequenceState = SwitchSequenceState.AnimatingIn;
+                        _switchSequenceTimer = BattleAnimationManager.SwitchInAnimationState.DURATION;
+
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{_switchIncoming.Name} steps in!" });
+                        EventBus.Publish(new GameEvents.CombatantSpawned { Combatant = _switchIncoming });
+                    }
+                }
+                else if (_switchSequenceState == SwitchSequenceState.AnimatingIn)
+                {
+                    if (_switchSequenceTimer <= 0)
+                    {
+                        // Phase 2 Complete: Resume Battle
+                        _switchSequenceState = SwitchSequenceState.None;
+                        _battleManager.ResumeAfterSwitch();
+                        _switchOutgoing = null;
+                        _switchIncoming = null;
+                    }
+                }
+            }
+
             var currentKeyboardState = Keyboard.GetState();
             var currentMouseState = Mouse.GetState();
 
@@ -464,6 +507,7 @@ namespace ProjectVagabond.Scenes
             bool moveAnimBusy = _moveAnimationManager.IsAnimating;
             bool pendingBusy = _pendingAnimations.Any();
             bool isMultiHitActive = _battleManager.IsProcessingMultiHit;
+            bool isSwitching = _switchSequenceState != SwitchSequenceState.None;
 
             bool canAdvance;
 
@@ -473,7 +517,7 @@ namespace ProjectVagabond.Scenes
             }
             else
             {
-                canAdvance = !uiBusy && !animBusy && !moveAnimBusy && !pendingBusy;
+                canAdvance = !uiBusy && !animBusy && !moveAnimBusy && !pendingBusy && !isSwitching;
             }
 
             if (_isWaitingForMultiHitDelay && canAdvance)
@@ -506,6 +550,7 @@ namespace ProjectVagabond.Scenes
                 _moveAnimationManager.SkipAll();
                 _pendingAnimations.Clear();
                 _isWaitingForMultiHitDelay = false;
+                _switchSequenceState = SwitchSequenceState.None; // Reset switch state
                 _battleManager.ForceAdvance();
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[warning]Combat stalled. Watchdog forced advance." });
                 _watchdogTimer = 0f;
@@ -1139,7 +1184,7 @@ namespace ProjectVagabond.Scenes
         private void OnCombatantSpawned(GameEvents.CombatantSpawned e)
         {
             // If we are in the middle of a switch sequence, use the specific SwitchIn animation
-            if (_battleManager.CurrentPhase == BattleManager.BattlePhase.AnimatingSwitch)
+            if (_switchSequenceState != SwitchSequenceState.None)
             {
                 _animationManager.StartSwitchInAnimation(e.Combatant.CombatantID);
             }
@@ -1158,6 +1203,18 @@ namespace ProjectVagabond.Scenes
         {
             Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(e.Actor, _battleManager.AllCombatants);
             _animationManager.StartFailedIndicator(e.Actor.CombatantID, hudPosition);
+        }
+
+        private void OnSwitchSequenceInitiated(GameEvents.SwitchSequenceInitiated e)
+        {
+            // Start the visual sequence
+            _switchOutgoing = e.OutgoingCombatant;
+            _switchIncoming = e.IncomingCombatant;
+            _switchSequenceState = SwitchSequenceState.AnimatingOut;
+            _switchSequenceTimer = BattleAnimationManager.SwitchOutAnimationState.DURATION;
+
+            // Trigger the "Out" animation
+            EventBus.Publish(new GameEvents.CombatantSwitchingOut { Combatant = _switchOutgoing });
         }
 
         private void FleeBattle()

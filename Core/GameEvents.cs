@@ -6,7 +6,9 @@ using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
@@ -339,6 +341,16 @@ namespace ProjectVagabond
         public struct ForcedSwitchRequested
         {
             public BattleCombatant Actor { get; set; }
+        }
+
+        /// <summary>
+        /// Published by BattleManager when a switch is confirmed.
+        /// Signals the BattleScene to take control of the visual sequence.
+        /// </summary>
+        public struct SwitchSequenceInitiated
+        {
+            public BattleCombatant OutgoingCombatant { get; set; }
+            public BattleCombatant IncomingCombatant { get; set; }
         }
     }
 }
