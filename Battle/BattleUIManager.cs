@@ -823,12 +823,10 @@ namespace ProjectVagabond.Battle.UI
                             if (ally != null) HoverHighlightState.Targets.Add(ally);
                             break;
                         case TargetType.SingleTeam:
-                            // Default to self for preview
-                            HoverHighlightState.Targets.Add(currentActor);
+                            HoverHighlightState.Targets.AddRange(allies);
                             break;
                         case TargetType.SingleAll:
-                            // Default to first enemy for preview
-                            if (enemies.Any()) HoverHighlightState.Targets.Add(enemies[0]);
+                            HoverHighlightState.Targets.AddRange(allActive);
                             break;
                         case TargetType.RandomBoth:
                             HoverHighlightState.Targets.AddRange(enemies);

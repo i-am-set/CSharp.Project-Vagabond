@@ -6,9 +6,9 @@
     "MaxHP": 80,
     "MaxMana": 100,
     "Strength": 6,
-    "Intelligence": 19,
+    "Intelligence": 11,
     "Tenacity": 7,
-    "Agility": 17,
+    "Agility": 8,
     "WeaknessElementIDs": [],
     "ResistanceElementIDs": [],
     "DefaultStrikeMoveID": "4",
@@ -34,7 +34,7 @@
     "WeaknessElementIDs": [],
     "ResistanceElementIDs": [],
     "DefaultStrikeMoveID": "4",
-    "StartingMoves": [ "2", "12" ],
+    "StartingMoves": [ "2", "18" ],
     "NumberOfStartingMoves": 2,
     "StartingWeapons": {
       "2": 1
