@@ -147,7 +147,9 @@ namespace ProjectVagabond.Battle
 
                     if (isTargetAlly)
                     {
-                        // STRICT: Never attack allies
+                        // STRICT: Never attack allies with damaging moves unless they have beneficial side effects (handled below)
+                        // We start with a heavy penalty, but if the move has buffs, those scores might offset this slightly,
+                        // though usually -100 is a hard blocker.
                         targetScore += PENALTY_HARMFUL_TO_ALLY;
                     }
                     else if (isTargetEnemy)
@@ -189,6 +191,8 @@ namespace ProjectVagabond.Battle
                 }
 
                 // --- 2. STAT STAGE MODIFIERS (Buffs/Debuffs) ---
+
+                // Check ModifyStatStage (Standard)
                 if (move.Effects.TryGetValue("ModifyStatStage", out var statVal))
                 {
                     if (EffectParser.TryParseStatStageParams(statVal, out var stat, out int amount, out int chance, out string targetStr))
@@ -225,41 +229,48 @@ namespace ProjectVagabond.Battle
                     }
                 }
 
-                // --- 3. STATUS EFFECTS ---
-                if (move.Effects.TryGetValue("ApplyStatus", out var statusVal))
+                // Check InflictStatChange (On-Hit / Multi-Stat)
+                if (move.Effects.TryGetValue("InflictStatChange", out var inflictVal))
                 {
-                    if (EffectParser.TryParseStatusEffectParams(statusVal, out var type, out int chance, out int duration))
+                    // Parse manually: "Stat,Amount,Stat,Amount..."
+                    var parts = inflictVal.Split(',');
+                    for (int i = 0; i < parts.Length; i += 2)
                     {
-                        bool isBuff = IsBuff(type);
-
-                        if (isTargetAlly)
+                        if (i + 1 >= parts.Length) break;
+                        if (int.TryParse(parts[i + 1], out int amount))
                         {
-                            if (!isBuff)
+                            bool isDebuff = amount < 0;
+                            if (isTargetAlly)
                             {
-                                targetScore += PENALTY_HARMFUL_TO_ALLY; // Never apply negative status to ally
-                            }
-                            else
-                            {
-                                // Incentivize buffing allies.
-                                if (target.HasStatusEffect(type)) targetScore += PENALTY_REDUNDANT;
+                                if (isDebuff) targetScore += PENALTY_HARMFUL_TO_ALLY;
                                 else targetScore += SCORE_BUFF_ALLY;
                             }
-                        }
-                        else if (isTargetEnemy)
-                        {
-                            if (isBuff)
+                            else if (isTargetEnemy)
                             {
-                                targetScore += PENALTY_HARMFUL_TO_ALLY; // Never buff enemy
-                            }
-                            else
-                            {
-                                // Don't try to apply a status the target already has.
-                                if (target.HasStatusEffect(type)) targetScore += PENALTY_REDUNDANT;
-                                else targetScore += SCORE_DEBUFF_ENEMY;
+                                if (isDebuff) targetScore += SCORE_DEBUFF_ENEMY;
+                                else targetScore += PENALTY_HARMFUL_TO_ALLY;
                             }
                         }
                     }
                 }
+
+                // --- 3. STATUS EFFECTS ---
+
+                // Check ApplyStatus (Standard)
+                if (move.Effects.TryGetValue("ApplyStatus", out var statusVal))
+                {
+                    if (EffectParser.TryParseStatusEffectParams(statusVal, out var type, out int chance, out int duration))
+                    {
+                        EvaluateStatusEffect(type, target, isTargetAlly, isTargetEnemy, ref targetScore);
+                    }
+                }
+
+                // Check Specific InflictStatus Keys (On-Hit)
+                CheckInflictStatusKey(move, "InflictStatusPoison", StatusEffectType.Poison, target, isTargetAlly, isTargetEnemy, ref targetScore);
+                CheckInflictStatusKey(move, "InflictStatusBurn", StatusEffectType.Burn, target, isTargetAlly, isTargetEnemy, ref targetScore);
+                CheckInflictStatusKey(move, "InflictStatusFrostbite", StatusEffectType.Frostbite, target, isTargetAlly, isTargetEnemy, ref targetScore);
+                CheckInflictStatusKey(move, "InflictStatusStun", StatusEffectType.Stun, target, isTargetAlly, isTargetEnemy, ref targetScore);
+                CheckInflictStatusKey(move, "InflictStatusSilence", StatusEffectType.Silence, target, isTargetAlly, isTargetEnemy, ref targetScore);
 
                 // --- 4. HEALING LOGIC ---
                 if (move.Effects.ContainsKey("Heal"))
@@ -285,6 +296,46 @@ namespace ProjectVagabond.Battle
             }
 
             return totalScore;
+        }
+
+        private static void CheckInflictStatusKey(MoveData move, string key, StatusEffectType type, BattleCombatant target, bool isTargetAlly, bool isTargetEnemy, ref int targetScore)
+        {
+            if (move.Effects.ContainsKey(key))
+            {
+                EvaluateStatusEffect(type, target, isTargetAlly, isTargetEnemy, ref targetScore);
+            }
+        }
+
+        private static void EvaluateStatusEffect(StatusEffectType type, BattleCombatant target, bool isTargetAlly, bool isTargetEnemy, ref int targetScore)
+        {
+            bool isBuff = IsBuff(type);
+
+            if (isTargetAlly)
+            {
+                if (!isBuff)
+                {
+                    targetScore += PENALTY_HARMFUL_TO_ALLY; // Never apply negative status to ally
+                }
+                else
+                {
+                    // Incentivize buffing allies.
+                    if (target.HasStatusEffect(type)) targetScore += PENALTY_REDUNDANT;
+                    else targetScore += SCORE_BUFF_ALLY;
+                }
+            }
+            else if (isTargetEnemy)
+            {
+                if (isBuff)
+                {
+                    targetScore += PENALTY_HARMFUL_TO_ALLY; // Never buff enemy
+                }
+                else
+                {
+                    // Don't try to apply a status the target already has.
+                    if (target.HasStatusEffect(type)) targetScore += PENALTY_REDUNDANT;
+                    else targetScore += SCORE_DEBUFF_ENEMY;
+                }
+            }
         }
 
         /// <summary>
@@ -345,7 +396,7 @@ namespace ProjectVagabond.Battle
 
         private static bool IsBuff(StatusEffectType type)
         {
-            return type == StatusEffectType.Regen || type == StatusEffectType.Dodging;
+            return type == StatusEffectType.Regen || type == StatusEffectType.Dodging || type == StatusEffectType.Protected;
         }
 
         private static QueuedAction CreateAction(BattleCombatant actor, MoveData move, BattleCombatant target)

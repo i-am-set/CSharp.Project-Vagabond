@@ -666,6 +666,10 @@ namespace ProjectVagabond.Battle
             }
             else
             {
+                // --- TARGETING FAILED LOGIC ---
+                EventBus.Publish(new GameEvents.MoveFailed { Actor = action.Actor });
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{action.Actor.Name}'s attack failed!" });
+
                 _currentPhase = BattlePhase.CheckForDefeat;
                 CanAdvance = false;
             }
@@ -829,11 +833,46 @@ namespace ProjectVagabond.Battle
                 return validCandidates;
             }
 
-            if (specifiedTarget != null && validCandidates.Contains(specifiedTarget))
+            // --- SMART RETARGETING LOGIC ---
+            if (specifiedTarget != null)
             {
-                return new List<BattleCombatant> { specifiedTarget };
+                // Case A: Target is still valid
+                if (validCandidates.Contains(specifiedTarget))
+                {
+                    return new List<BattleCombatant> { specifiedTarget };
+                }
+
+                // Case B: Target is invalid (Dead/Switched) - SMART RETARGETING
+                // Determine original intent
+                bool wasHostile = actor.IsPlayerControlled != specifiedTarget.IsPlayerControlled;
+
+                if (wasHostile)
+                {
+                    // Look for other enemies
+                    var alternativeEnemies = validCandidates
+                        .Where(c => c.IsPlayerControlled != actor.IsPlayerControlled)
+                        .ToList();
+
+                    if (alternativeEnemies.Any())
+                        return new List<BattleCombatant> { alternativeEnemies.First() };
+                }
+                else
+                {
+                    // Look for other allies (including self)
+                    var alternativeAllies = validCandidates
+                        .Where(c => c.IsPlayerControlled == actor.IsPlayerControlled)
+                        .ToList();
+
+                    if (alternativeAllies.Any())
+                        return new List<BattleCombatant> { alternativeAllies.First() };
+                }
+
+                // If we are here, it means we couldn't find a valid target on the INTENDED side.
+                // Return empty to cause action failure rather than hitting the wrong team.
+                return new List<BattleCombatant>();
             }
 
+            // Fallback (No target specified initially)
             if (validCandidates.Any())
             {
                 return new List<BattleCombatant> { validCandidates[0] };

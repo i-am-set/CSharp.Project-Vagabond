@@ -157,7 +157,7 @@ namespace ProjectVagabond.Scenes
             EventBus.Subscribe<GameEvents.MoveAnimationTriggered>(OnMoveAnimationTriggered);
             EventBus.Subscribe<GameEvents.NextEnemyApproaches>(OnNextEnemyApproaches);
             EventBus.Subscribe<GameEvents.CombatantSpawned>(OnCombatantSpawned);
-            EventBus.Subscribe<GameEvents.CombatantSwitchingOut>(OnCombatantSwitchingOut); // New subscription
+            EventBus.Subscribe<GameEvents.CombatantSwitchingOut>(OnCombatantSwitchingOut);
             EventBus.Subscribe<GameEvents.MoveFailed>(OnMoveFailed);
 
             _uiManager.OnMoveSelected += OnPlayerMoveSelected;
