@@ -41,6 +41,18 @@ namespace ProjectVagabond.Battle
 
         public override void Start(BattleManager bm)
         {
+            // Check for valid bench members for the actor's team
+            var bench = bm.AllCombatants
+                .Where(c => c.IsPlayerControlled == Actor.IsPlayerControlled && !c.IsDefeated && c.BattleSlot >= 2)
+                .ToList();
+
+            if (!bench.Any())
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{Actor.Name} tries to switch, but has no allies!" });
+                Resolve(null);
+                return;
+            }
+
             if (Actor.IsPlayerControlled)
             {
                 // Player: Fire event to open UI
@@ -50,23 +62,9 @@ namespace ProjectVagabond.Battle
             else
             {
                 // AI: Pick best bench member
-                var bench = bm.AllCombatants
-                    .Where(c => !c.IsPlayerControlled && !c.IsDefeated && c.BattleSlot >= 2)
-                    .ToList();
-
-                if (bench.Any())
-                {
-                    // Simple AI: Pick highest HP %
-                    var target = bench.OrderByDescending(c => (float)c.Stats.CurrentHP / c.Stats.MaxHP).First();
-
-                    // Resolve immediately (BattleManager will handle the swap logic)
-                    Resolve(target);
-                }
-                else
-                {
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{Actor.Name} tries to switch, but has no allies!" });
-                    Resolve(null);
-                }
+                // Simple AI: Pick highest HP %
+                var target = bench.OrderByDescending(c => (float)c.Stats.CurrentHP / c.Stats.MaxHP).First();
+                Resolve(target);
             }
         }
     }

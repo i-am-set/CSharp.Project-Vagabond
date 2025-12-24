@@ -380,7 +380,9 @@ namespace ProjectVagabond.Battle.UI
             }
 
             Color mainColor = tintColorOverride ?? Color.White;
-            Color outlineColor = tintColorOverride ?? global.Palette_DarkGray;
+
+            float alpha = mainColor.A / 255f;
+            Color outlineColor = global.Palette_DarkGray * alpha;
 
             // --- Draw Outline ---
             if (silhouetteToDraw != null)
