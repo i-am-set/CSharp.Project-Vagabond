@@ -1,15 +1,20 @@
-﻿using Microsoft.Xna.Framework;
+﻿#nullable enable
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -24,12 +29,14 @@ namespace ProjectVagabond.Battle.UI
         public event Action<MoveData, MoveEntry, BattleCombatant>? OnMoveSelected;
         public event Action<ConsumableItemData, BattleCombatant>? OnItemSelected;
         public event Action<BattleCombatant>? OnSwitchActionSelected;
+        public event Action<BattleCombatant>? OnForcedSwitchSelected; // New event for forced switch
         public event Action? OnFleeRequested;
         public event Action<BattleCombatant>? OnTargetSelectedFromUI;
         private readonly BattleNarrator _battleNarrator;
         private readonly ActionMenu _actionMenu;
         private readonly ItemMenu _itemMenu;
         private readonly SwitchMenu _switchMenu;
+        private readonly CombatSwitchDialog _combatSwitchDialog; // New Dialog
         private readonly Button _itemTargetingBackButton;
         private readonly Global _global;
 
@@ -68,7 +75,7 @@ namespace ProjectVagabond.Battle.UI
         // Targeting Buttons
         private readonly List<ImageButton> _targetingButtons = new List<ImageButton>();
         public BattleCombatant? HoveredCombatantFromUI { get; private set; }
-        public BattleCombatant? CombatantHoveredViaSprite { get; set; } 
+        public BattleCombatant? CombatantHoveredViaSprite { get; set; }
 
         // Input State
         private MouseState _previousMouseState;
@@ -87,6 +94,11 @@ namespace ProjectVagabond.Battle.UI
             _actionMenu = new ActionMenu();
             _itemMenu = new ItemMenu();
             _switchMenu = new SwitchMenu();
+
+            // Initialize the new dialog
+            // We pass null for the scene because we handle drawing manually in Draw()
+            _combatSwitchDialog = new CombatSwitchDialog(null);
+            _combatSwitchDialog.OnMemberSelected += (member) => OnForcedSwitchSelected?.Invoke(member);
 
             _itemTargetingBackButton = new Button(Rectangle.Empty, "BACK", enableHoverSway: false) { CustomDefaultTextColor = _global.Palette_Gray };
             _itemTargetingBackButton.OnClick += () =>
@@ -122,7 +134,16 @@ namespace ProjectVagabond.Battle.UI
                 }
             };
 
+            EventBus.Subscribe<GameEvents.ForcedSwitchRequested>(OnForcedSwitchRequested);
+
             _previousMouseState = Mouse.GetState();
+        }
+
+        private void OnForcedSwitchRequested(GameEvents.ForcedSwitchRequested e)
+        {
+            // Open the dedicated forced switch dialog
+            var battleManager = ServiceLocator.Get<BattleManager>();
+            _combatSwitchDialog.Show(battleManager.AllCombatants.ToList());
         }
 
         private void EnsureTargetingButtonsInitialized()
@@ -145,16 +166,16 @@ namespace ProjectVagabond.Battle.UI
         public void Reset()
         {
             EnsureTargetingButtonsInitialized();
-            _actionMenu.Reset(); // Changed from ResetAnimationState to full Reset
-            _itemMenu.Hide(); // Ensure item menu is hidden/reset
-            _switchMenu.Hide(); // Ensure switch menu is hidden
+            _actionMenu.Reset();
+            _itemMenu.Hide();
+            _switchMenu.Hide();
+            _combatSwitchDialog.Hide(); // Ensure dialog is closed
             _itemTargetingBackButton.ResetAnimationState();
             UIState = BattleUIState.Default;
             SubMenuState = BattleSubMenuState.None;
             _narrationQueue.Clear();
             foreach (var btn in _targetingButtons) btn.ResetAnimationState();
 
-            // Also clear specific targeting state in UI Manager
             MoveForTargeting = null;
             ItemForTargeting = null;
             CombatantHoveredViaSprite = null;
@@ -227,6 +248,14 @@ namespace ProjectVagabond.Battle.UI
             _battleNarrator.Update(gameTime);
             UpdateHoverHighlights(gameTime, currentActor);
             UpdateControlPrompt(gameTime);
+
+            // If the forced switch dialog is active, it takes priority and blocks other UI
+            if (_combatSwitchDialog.IsActive)
+            {
+                _combatSwitchDialog.Update(gameTime);
+                _previousMouseState = currentMouseState;
+                return;
+            }
 
             _actionMenu.Update(currentMouseState, gameTime);
 
@@ -372,6 +401,24 @@ namespace ProjectVagabond.Battle.UI
             _battleNarrator.Draw(spriteBatch, ServiceLocator.Get<Core>().SecondaryFont, gameTime);
 
             DrawControlPrompt(spriteBatch);
+
+            // Draw the forced switch dialog on top of everything if active
+            if (_combatSwitchDialog.IsActive)
+            {
+                // End the current scene batch
+                spriteBatch.End();
+
+                // DrawOverlay starts and ends its own batch for the dimmer
+                _combatSwitchDialog.DrawOverlay(spriteBatch);
+
+                // Start a new batch for the dialog content (Screen Space)
+                spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: Matrix.Identity);
+                _combatSwitchDialog.DrawContent(spriteBatch, font, gameTime, Matrix.Identity);
+                spriteBatch.End();
+
+                // Resume the scene batch for subsequent draw calls
+                spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
+            }
 
             // --- DEBUG DRAWING (F1) ---
             if (_global.ShowSplitMapGrid)

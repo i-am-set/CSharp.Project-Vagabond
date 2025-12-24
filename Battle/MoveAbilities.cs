@@ -3,6 +3,7 @@ using ProjectVagabond.Battle;
 using ProjectVagabond.Utils;
 using System;
 using System.Linq;
+using System.Collections.Generic;
 
 namespace ProjectVagabond.Battle.Abilities
 {
@@ -434,4 +435,74 @@ namespace ProjectVagabond.Battle.Abilities
             }
         }
     }
+
+    public class InflictStatChangeAbility : IOnHitEffect
+    {
+        public string Name => "Inflict Stat Change";
+        public string Description => "Lowers the target's stats.";
+
+        private readonly List<(OffensiveStatType Stat, int Amount)> _changes = new List<(OffensiveStatType, int)>();
+
+        // Constructor accepts a comma-separated string: "Strength,-1,Intelligence,-1"
+        public InflictStatChangeAbility(string stat1, int amt1, string stat2 = null, int amt2 = 0)
+        {
+            if (Enum.TryParse<OffensiveStatType>(stat1, true, out var s1))
+            {
+                _changes.Add((s1, amt1));
+            }
+
+            if (!string.IsNullOrEmpty(stat2) && Enum.TryParse<OffensiveStatType>(stat2, true, out var s2))
+            {
+                _changes.Add((s2, amt2));
+            }
+        }
+
+        public void OnHit(CombatContext ctx, int damageDealt)
+        {
+            if (ctx.IsGraze) return;
+
+            foreach (var change in _changes)
+            {
+                var (success, _) = ctx.Target.ModifyStatStage(change.Stat, change.Amount);
+                if (success)
+                {
+                    EventBus.Publish(new GameEvents.CombatantStatStageChanged
+                    {
+                        Target = ctx.Target,
+                        Stat = change.Stat,
+                        Amount = change.Amount
+                    });
+
+                    string verb = change.Amount > 0 ? "rose" : "fell";
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished
+                    {
+                        Message = $"{ctx.Target.Name}'s {change.Stat} {verb}!"
+                    });
+                }
+                else
+                {
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished
+                    {
+                        Message = $"{ctx.Target.Name}'s {change.Stat} cannot go any {(change.Amount > 0 ? "higher" : "lower")}!"
+                    });
+                }
+            }
+        }
+    }
+
+    public class DisengageAbility : IOnActionComplete
+    {
+        public string Name => "Disengage";
+        public string Description => "Switches the user out after attacking.";
+
+        public void OnActionComplete(QueuedAction action, BattleCombatant owner)
+        {
+            // Only player-controlled characters can use the menu to switch
+            if (owner.IsPlayerControlled)
+            {
+                EventBus.Publish(new GameEvents.DisengageTriggered { Actor = owner });
+            }
+        }
+    }
 }
+﻿

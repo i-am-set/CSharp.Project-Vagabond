@@ -162,6 +162,7 @@ namespace ProjectVagabond.Scenes
             _uiManager.OnMoveSelected += OnPlayerMoveSelected;
             _uiManager.OnItemSelected += OnPlayerItemSelected;
             _uiManager.OnSwitchActionSelected += OnPlayerSwitchSelected;
+            _uiManager.OnForcedSwitchSelected += OnForcedSwitchSelected; // New handler
             _uiManager.OnFleeRequested += FleeBattle;
             _uiManager.OnTargetSelectedFromUI += OnTargetSelectedFromUI;
             _inputHandler.OnMoveTargetSelected += OnPlayerMoveTargetSelected;
@@ -187,13 +188,14 @@ namespace ProjectVagabond.Scenes
             EventBus.Unsubscribe<GameEvents.MoveAnimationTriggered>(OnMoveAnimationTriggered);
             EventBus.Unsubscribe<GameEvents.NextEnemyApproaches>(OnNextEnemyApproaches);
             EventBus.Unsubscribe<GameEvents.CombatantSpawned>(OnCombatantSpawned);
-            EventBus.Unsubscribe<GameEvents.MoveFailed>(OnMoveFailed); 
+            EventBus.Unsubscribe<GameEvents.MoveFailed>(OnMoveFailed);
 
             _uiManager.OnMoveSelected -= OnPlayerMoveSelected;
             _uiManager.OnItemSelected -= OnPlayerItemSelected;
             _uiManager.OnSwitchActionSelected -= OnPlayerSwitchSelected;
+            _uiManager.OnForcedSwitchSelected -= OnForcedSwitchSelected;
             _uiManager.OnFleeRequested -= FleeBattle;
-            _uiManager.OnTargetSelectedFromUI -= OnTargetSelectedFromUI; 
+            _uiManager.OnTargetSelectedFromUI -= OnTargetSelectedFromUI;
             _inputHandler.OnMoveTargetSelected -= OnPlayerMoveTargetSelected;
             _inputHandler.OnItemTargetSelected -= OnPlayerItemSelected;
             _inputHandler.OnBackRequested -= () => _uiManager.GoBack();
@@ -791,6 +793,13 @@ namespace ProjectVagabond.Scenes
                 Type = QueuedActionType.Switch
             };
             _battleManager.SubmitAction(action);
+            _uiManager.HideAllMenus();
+        }
+
+        private void OnForcedSwitchSelected(BattleCombatant targetMember)
+        {
+            // This is called when the player selects a replacement from the forced switch dialog
+            _battleManager.SubmitInteractionResult(targetMember);
             _uiManager.HideAllMenus();
         }
 

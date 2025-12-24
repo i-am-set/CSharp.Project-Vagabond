@@ -152,7 +152,7 @@
           "MaxAgility": 15,
           "WeaknessElementIDs": [],
           "ResistanceElementIDs": [],
-          "MoveLearnset": [ "3" ],
+          "MoveLearnset": [ "18" ],
           "MinNumberOfMoves": 1,
           "MaxNumberOfMoves": 1
         }

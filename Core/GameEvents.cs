@@ -4,11 +4,13 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -313,5 +315,22 @@ namespace ProjectVagabond
         {
             public BattleCombatant Actor { get; set; }
         }
+
+        /// <summary>
+        /// Published when a move triggers a forced switch (Disengage).
+        /// </summary>
+        public struct DisengageTriggered
+        {
+            public BattleCombatant Actor { get; set; }
+        }
+
+        /// <summary>
+        /// Published when the BattleManager needs to open the Switch Menu in forced mode.
+        /// </summary>
+        public struct ForcedSwitchRequested
+        {
+            public BattleCombatant Actor { get; set; }
+        }
     }
 }
+﻿

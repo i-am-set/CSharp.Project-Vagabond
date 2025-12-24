@@ -3,10 +3,12 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -30,11 +32,19 @@ namespace ProjectVagabond.Battle.UI
         private const int MENU_WIDTH = 160;
         private const int MENU_HEIGHT = 100; // Approximate
 
+        /// <summary>
+        /// If true, the menu is in "Forced Switch" mode (e.g. Disengage), and the Back button is disabled.
+        /// </summary>
+        public bool IsForced { get; set; } = false;
+
         public SwitchMenu()
         {
             _global = ServiceLocator.Get<Global>();
             _backButton = new Button(Rectangle.Empty, "BACK", enableHoverSway: false) { CustomDefaultTextColor = _global.Palette_Gray };
-            _backButton.OnClick += () => OnBack?.Invoke();
+            _backButton.OnClick += () =>
+            {
+                if (!IsForced) OnBack?.Invoke();
+            };
         }
 
         public void Show(List<BattleCombatant> allCombatants, List<BattleCombatant> excludedMembers = null)
@@ -55,6 +65,7 @@ namespace ProjectVagabond.Battle.UI
         public void Hide()
         {
             _isVisible = false;
+            IsForced = false; // Reset forced state on hide
         }
 
         private void InitializeButtons()
@@ -90,6 +101,7 @@ namespace ProjectVagabond.Battle.UI
             int backWidth = (int)backSize.Width + 16;
             _backButton.Bounds = new Rectangle(centerX - backWidth / 2, backY, backWidth, 15);
             _backButton.Font = secondaryFont;
+            _backButton.IsEnabled = !IsForced; // Disable if forced
         }
 
         public void Update(MouseState currentMouseState)
@@ -100,7 +112,11 @@ namespace ProjectVagabond.Battle.UI
             {
                 button.Update(currentMouseState);
             }
-            _backButton.Update(currentMouseState);
+
+            if (!IsForced)
+            {
+                _backButton.Update(currentMouseState);
+            }
         }
 
         public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
@@ -123,7 +139,7 @@ namespace ProjectVagabond.Battle.UI
             }
 
             // Draw Title
-            string title = "SWITCH MEMBER";
+            string title = IsForced ? "CHOOSE REPLACEMENT" : "SWITCH MEMBER";
             var titleSize = secondaryFont.MeasureString(title);
             var titlePos = new Vector2((Global.VIRTUAL_WIDTH - titleSize.Width) / 2, dividerY + 4);
             spriteBatch.DrawStringSnapped(secondaryFont, title, titlePos, _global.Palette_LightBlue);
@@ -134,7 +150,11 @@ namespace ProjectVagabond.Battle.UI
                 button.Draw(spriteBatch, font, gameTime, Matrix.Identity);
             }
 
-            _backButton.Draw(spriteBatch, font, gameTime, Matrix.Identity);
+            if (!IsForced)
+            {
+                _backButton.Draw(spriteBatch, font, gameTime, Matrix.Identity);
+            }
         }
     }
 }
+﻿

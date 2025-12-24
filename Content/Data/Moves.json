@@ -430,5 +430,31 @@
     "AnimationSpeed": 1.0,
     "DamageFrameIndex": 2,
     "IsAnimationCentralized": false
+  },
+  {
+    "MoveID": "18",
+    "MoveName": "Shadow Step",
+    "Description": "Lowers target's [cstr]Strength[/] and [cint]Intelligence[/], then switches the user out.",
+    "Power": 0,
+    "ManaCost": 20,
+    "MoveType": "Spell",
+    "ImpactType": "Physical",
+    "OffensiveStat": "Agility",
+    "MakesContact": false,
+    "Target": "Single",
+    "Accuracy": 100,
+    "Priority": 0,
+    "Rarity": 2,
+    "LevelRequirement": 3,
+    "OffensiveElementIDs": [ 9 ],
+    "Effects": {
+      "InflictStatChange": "Strength,-1,Intelligence,-1",
+      "Disengage": ""
+    },
+    "Tags": [ "Void", "Utility" ],
+    "AnimationSpriteSheet": "basic_orb_pulse_2",
+    "AnimationSpeed": 1.0,
+    "DamageFrameIndex": 2,
+    "IsAnimationCentralized": false
   }
 ]

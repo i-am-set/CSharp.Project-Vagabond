@@ -33,7 +33,8 @@ namespace ProjectVagabond.Battle
             CheckForDefeat,
             EndOfTurn,
             Reinforcement,
-            BattleOver
+            BattleOver,
+            ProcessingInteraction // Replaces WaitingForForcedSwitch
         }
         private readonly List<BattleCombatant> _playerParty;
         private readonly List<BattleCombatant> _enemyParty;
@@ -70,6 +71,9 @@ namespace ProjectVagabond.Battle
         }
         private PendingImpactData _pendingImpact;
 
+        // --- INTERRUPT SYSTEM ---
+        private BattleInteraction _activeInteraction;
+
         public BattlePhase CurrentPhase => _currentPhase;
         public IEnumerable<BattleCombatant> AllCombatants => _allCombatants;
         public bool CanAdvance { get; set; } = true;
@@ -95,6 +99,7 @@ namespace ProjectVagabond.Battle
             EventBus.Subscribe<GameEvents.SecondaryEffectComplete>(OnSecondaryEffectComplete);
             EventBus.Subscribe<GameEvents.MoveAnimationCompleted>(OnMoveAnimationCompleted);
             EventBus.Subscribe<GameEvents.MoveImpactOccurred>(OnMoveImpactOccurred);
+            EventBus.Subscribe<GameEvents.DisengageTriggered>(OnDisengageTriggered);
 
             foreach (var combatant in _cachedAllActive)
             {
@@ -144,10 +149,12 @@ namespace ProjectVagabond.Battle
             _actionToExecute = null;
             _actionPendingAnimation = null;
             _pendingImpact = null;
+            _activeInteraction = null; // Clear any stuck interaction
 
             if (_currentPhase == BattlePhase.AnimatingMove ||
                 _currentPhase == BattlePhase.ActionResolution ||
-                _currentPhase == BattlePhase.SecondaryEffectResolution)
+                _currentPhase == BattlePhase.SecondaryEffectResolution ||
+                _currentPhase == BattlePhase.ProcessingInteraction)
             {
                 _currentPhase = BattlePhase.CheckForDefeat;
             }
@@ -193,6 +200,72 @@ namespace ProjectVagabond.Battle
             {
                 ApplyPendingImpact();
             }
+        }
+
+        private void OnDisengageTriggered(GameEvents.DisengageTriggered e)
+        {
+            // Pause battle flow
+            CanAdvance = false;
+            _currentPhase = BattlePhase.ProcessingInteraction;
+
+            // Create and start the interaction
+            _activeInteraction = new SwitchInteraction(e.Actor, (result) =>
+            {
+                // Callback when interaction resolves
+                if (result is BattleCombatant target)
+                {
+                    PerformForcedSwap(e.Actor, target);
+                }
+                else
+                {
+                    // Null result means cancelled or no valid target
+                    _currentPhase = BattlePhase.CheckForDefeat;
+                    CanAdvance = true;
+                }
+                _activeInteraction = null;
+            });
+
+            _activeInteraction.Start(this);
+        }
+
+        /// <summary>
+        /// Called by the UI (for player) or AI logic to submit the result of an interaction.
+        /// </summary>
+        public void SubmitInteractionResult(object result)
+        {
+            if (_activeInteraction != null)
+            {
+                _activeInteraction.Resolve(result);
+            }
+        }
+
+        private void PerformForcedSwap(BattleCombatant actor, BattleCombatant incomingMember)
+        {
+            if (actor == null || incomingMember == null) return;
+
+            int oldSlot = actor.BattleSlot;
+            int newSlot = incomingMember.BattleSlot;
+
+            actor.BattleSlot = newSlot;
+            incomingMember.BattleSlot = oldSlot;
+
+            RefreshCombatantCaches();
+
+            // Redirect any pending attacks targeting the old combatant to the new one
+            foreach (var action in _actionQueue)
+            {
+                if (action.Target == actor)
+                {
+                    action.Target = incomingMember;
+                }
+            }
+
+            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{incomingMember.Name} steps in!" });
+            EventBus.Publish(new GameEvents.CombatantSpawned { Combatant = incomingMember });
+            HandleOnEnterAbilities(incomingMember);
+
+            _currentPhase = BattlePhase.CheckForDefeat; // Resume flow
+            CanAdvance = true;
         }
 
         public void SubmitAction(QueuedAction action)
@@ -288,6 +361,7 @@ namespace ProjectVagabond.Battle
                 case BattlePhase.CheckForDefeat: HandleCheckForDefeat(); break;
                 case BattlePhase.EndOfTurn: HandleEndOfTurn(); break;
                 case BattlePhase.Reinforcement: HandleReinforcements(); break;
+                case BattlePhase.ProcessingInteraction: break; // Do nothing, waiting for interaction to resolve
             }
         }
 
@@ -673,8 +747,12 @@ namespace ProjectVagabond.Battle
                 }
             }
 
-            _currentPhase = BattlePhase.SecondaryEffectResolution;
-            CanAdvance = false;
+            // If we are processing an interaction (e.g. Disengage), do NOT advance phase yet.
+            if (_currentPhase != BattlePhase.ProcessingInteraction)
+            {
+                _currentPhase = BattlePhase.SecondaryEffectResolution;
+                CanAdvance = false;
+            }
         }
 
         private void ProcessItemAction(QueuedAction action)
