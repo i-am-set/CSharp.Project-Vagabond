@@ -477,9 +477,9 @@
       "Disengage": ""
     },
     "Tags": [ "Utility" ],
-    "AnimationSpriteSheet": "basic_explosion_4",
+    "AnimationSpriteSheet": "basic_impact_3",
     "AnimationSpeed": 1.0,
-    "DamageFrameIndex": 6,
+    "DamageFrameIndex": 1,
     "IsAnimationCentralized": false
   }
 ]
