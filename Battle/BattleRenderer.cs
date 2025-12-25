@@ -691,7 +691,14 @@ namespace ProjectVagabond.Battle.UI
                     nameFontToUse = secondaryFont;
                 }
 
-                if (hoverHighlightState.Targets.Contains(player)) nameColor = _global.Palette_Yellow;
+                if (hoverHighlightState.Targets.Contains(player))
+                {
+                    nameColor = _global.Palette_Yellow;
+                }
+                else if (isHoveringAction && player == currentActor)
+                {
+                    nameColor = _global.Palette_DarkerGray;
+                }
 
                 Vector2 nameSize = nameFontToUse.MeasureString(player.Name);
                 float nameX;
