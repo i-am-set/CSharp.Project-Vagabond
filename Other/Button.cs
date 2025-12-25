@@ -68,24 +68,29 @@ namespace ProjectVagabond.UI
 
         // --- Text Wave Animation Settings ---
         /// <summary>
-        /// If true, the text will ripple/wave once when the button is first hovered.
+        /// If true, the text will ripple/wave when the button is hovered.
         /// </summary>
         public bool EnableTextWave { get; set; } = true;
 
         /// <summary>
         /// The speed of the wave animation.
         /// </summary>
-        public float WaveSpeed { get; set; } = 25f;
+        public float WaveSpeed { get; set; } = 30f;
 
         /// <summary>
         /// The frequency of the wave (higher = tighter ripples).
         /// </summary>
-        public float WaveFrequency { get; set; } = 1.0f;
+        public float WaveFrequency { get; set; } = 0.8f;
 
         /// <summary>
         /// The height of the wave in pixels.
         /// </summary>
         public float WaveAmplitude { get; set; } = 1.0f;
+
+        /// <summary>
+        /// The delay in seconds before the wave animation repeats.
+        /// </summary>
+        public float WaveRepeatDelay { get; set; } = 0.25f;
 
         /// <summary>
         /// If true (default), clicks are throttled by the global UIInputManager to prevent double-clicks.
@@ -110,6 +115,7 @@ namespace ProjectVagabond.UI
 
         // Wave Animation State
         protected float _waveTimer = 0f;
+        protected float _waveDelayTimer = 0f;
         protected bool _isWaveAnimating = false;
         protected bool _wasHoveredLastDraw = false;
 
@@ -295,6 +301,7 @@ namespace ProjectVagabond.UI
             _flashTimer = 0f;
             _isWaveAnimating = false;
             _waveTimer = 0f;
+            _waveDelayTimer = 0f;
             _wasHoveredLastDraw = false;
         }
 
@@ -329,21 +336,24 @@ namespace ProjectVagabond.UI
         /// </summary>
         protected void UpdateWaveTimer(float deltaTime, bool isHovered)
         {
-            // Trigger animation only on the rising edge of hover (One-Shot)
-            if (isHovered && !_wasHoveredLastDraw)
-            {
-                _isWaveAnimating = true;
-                _waveTimer = 0f;
-            }
-
-            // Stop animation immediately if no longer hovered
             if (!isHovered)
             {
                 _isWaveAnimating = false;
                 _waveTimer = 0f;
+                _waveDelayTimer = 0f;
+                _wasHoveredLastDraw = false;
+                return;
             }
 
-            _wasHoveredLastDraw = isHovered;
+            // Trigger animation only on the rising edge of hover
+            if (!_wasHoveredLastDraw)
+            {
+                _isWaveAnimating = true;
+                _waveTimer = 0f;
+                _waveDelayTimer = 0f;
+            }
+
+            _wasHoveredLastDraw = true;
 
             if (_isWaveAnimating)
             {
@@ -351,9 +361,26 @@ namespace ProjectVagabond.UI
                 // Stop animation after enough time has passed for the wave to traverse the text
                 // Heuristic: (TextLength * Frequency + Pi) / Speed is roughly when the last char finishes
                 float estimatedDuration = (Text.Length * WaveFrequency + MathHelper.Pi) / WaveSpeed + 0.5f;
+
                 if (_waveTimer > estimatedDuration)
                 {
                     _isWaveAnimating = false;
+                    _waveTimer = 0f;
+                    _waveDelayTimer = WaveRepeatDelay; // Start delay before repeating
+                }
+            }
+            else
+            {
+                // In delay phase
+                if (_waveDelayTimer > 0)
+                {
+                    _waveDelayTimer -= deltaTime;
+                    if (_waveDelayTimer <= 0)
+                    {
+                        // Restart animation
+                        _isWaveAnimating = true;
+                        _waveTimer = 0f;
+                    }
                 }
             }
         }
