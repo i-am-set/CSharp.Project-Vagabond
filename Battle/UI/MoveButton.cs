@@ -7,9 +7,11 @@ using ProjectVagabond.Battle.UI;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.Battle.UI
 {
@@ -251,7 +253,18 @@ namespace ProjectVagabond.Battle.UI
                 {
                     _isScrollingInitialized = false;
                     var textPosition = new Vector2(textStartX, animatedBounds.Y + (animatedBounds.Height - _moveFont.LineHeight) / 2);
-                    spriteBatch.DrawStringSnapped(_moveFont, this.Text, textPosition, textColor * contentAlpha);
+
+                    // --- Wave Animation Logic ---
+                    UpdateWaveTimer((float)gameTime.ElapsedGameTime.TotalSeconds, isActivated);
+
+                    if (EnableTextWave && _isWaveAnimating)
+                    {
+                        TextUtils.DrawWavedText(spriteBatch, _moveFont, this.Text, textPosition, textColor * contentAlpha, _waveTimer, WaveSpeed, WaveFrequency, WaveAmplitude);
+                    }
+                    else
+                    {
+                        spriteBatch.DrawStringSnapped(_moveFont, this.Text, textPosition, textColor * contentAlpha);
+                    }
                 }
 
                 // --- Strikethrough Logic for Disabled State ---

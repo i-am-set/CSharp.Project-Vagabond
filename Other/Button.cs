@@ -7,10 +7,12 @@ using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.UI
 {
@@ -28,6 +30,7 @@ namespace ProjectVagabond.UI
         /// </summary>
         SlideAndHold
     }
+
     /// <summary>
     /// Defines the reason a button might have a strikethrough.
     /// </summary>
@@ -320,6 +323,41 @@ namespace ProjectVagabond.UI
             return (shakeOffset, flashTint);
         }
 
+        /// <summary>
+        /// Updates the wave animation timer based on hover state.
+        /// Should be called in Draw methods before rendering text.
+        /// </summary>
+        protected void UpdateWaveTimer(float deltaTime, bool isHovered)
+        {
+            // Trigger animation only on the rising edge of hover (One-Shot)
+            if (isHovered && !_wasHoveredLastDraw)
+            {
+                _isWaveAnimating = true;
+                _waveTimer = 0f;
+            }
+
+            // Stop animation immediately if no longer hovered
+            if (!isHovered)
+            {
+                _isWaveAnimating = false;
+                _waveTimer = 0f;
+            }
+
+            _wasHoveredLastDraw = isHovered;
+
+            if (_isWaveAnimating)
+            {
+                _waveTimer += deltaTime;
+                // Stop animation after enough time has passed for the wave to traverse the text
+                // Heuristic: (TextLength * Frequency + Pi) / Speed is roughly when the last char finishes
+                float estimatedDuration = (Text.Length * WaveFrequency + MathHelper.Pi) / WaveSpeed + 0.5f;
+                if (_waveTimer > estimatedDuration)
+                {
+                    _isWaveAnimating = false;
+                }
+            }
+        }
+
         public virtual void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? horizontalOffset = null, float? verticalOffset = null, Color? tintColorOverride = null)
         {
             if (_spriteSheet != null)
@@ -374,33 +412,8 @@ namespace ProjectVagabond.UI
 
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            // --- Wave Animation State Management ---
-            // Trigger animation only on the rising edge of hover (One-Shot)
-            if (isActivated && !_wasHoveredLastDraw)
-            {
-                _isWaveAnimating = true;
-                _waveTimer = 0f;
-            }
-
-            // Stop animation immediately if no longer hovered
-            if (!isActivated)
-            {
-                _isWaveAnimating = false;
-                _waveTimer = 0f;
-            }
-
-            _wasHoveredLastDraw = isActivated;
-
-            if (_isWaveAnimating)
-            {
-                _waveTimer += deltaTime;
-                // Stop animation after enough time has passed for the wave to traverse the text
-                float estimatedDuration = (Text.Length * WaveFrequency + MathHelper.Pi) / WaveSpeed + 0.5f;
-                if (_waveTimer > estimatedDuration)
-                {
-                    _isWaveAnimating = false;
-                }
-            }
+            // Update Wave State
+            UpdateWaveTimer(deltaTime, isActivated);
 
             float xHoverOffset = 0f;
             float yHoverOffset = 0f;
@@ -441,34 +454,7 @@ namespace ProjectVagabond.UI
             // --- Wave Animation Logic ---
             if (EnableTextWave && _isWaveAnimating)
             {
-                float startX = textPosition.X;
-                float baseY = textPosition.Y;
-
-                for (int i = 0; i < Text.Length; i++)
-                {
-                    char c = Text[i];
-                    string charStr = c.ToString();
-
-                    // --- SENTINEL MEASUREMENT TRICK ---
-                    // Measure the string up to this character, including a sentinel character '|'.
-                    // Then subtract the width of the sentinel.
-                    // This forces MeasureString to include trailing spaces and kerning correctly.
-                    string sub = Text.Substring(0, i);
-                    float charOffsetX = font.MeasureString(sub + "|").Width - font.MeasureString("|").Width;
-
-                    // Calculate Wave Offset (Left to Right)
-                    float waveArg = _waveTimer * WaveSpeed - i * WaveFrequency;
-
-                    float yWaveOffset = 0f;
-                    if (waveArg > 0 && waveArg < MathHelper.Pi)
-                    {
-                        float waveVal = MathF.Sin(waveArg);
-                        // Bump UP (negative Y). Clamp to exactly WaveAmplitude (1px).
-                        yWaveOffset = -MathF.Round(waveVal * WaveAmplitude);
-                    }
-
-                    spriteBatch.DrawStringSnapped(font, charStr, new Vector2(startX + charOffsetX, baseY + yWaveOffset), textColor);
-                }
+                TextUtils.DrawWavedText(spriteBatch, font, Text, textPosition, textColor, _waveTimer, WaveSpeed, WaveFrequency, WaveAmplitude);
             }
             else
             {

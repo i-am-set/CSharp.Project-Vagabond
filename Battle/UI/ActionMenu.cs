@@ -142,11 +142,11 @@ namespace ProjectVagabond.Battle.UI
 
             // Main Menu Buttons - Converted to standard Buttons for 128x12 layout
             // Disabled hover sway, set custom hover text color to White.
-            // TextRenderOffset set to Zero to move text up 1 pixel.
+            // TextRenderOffset set to (0, 1) to move text down 1 pixel.
             // Font set to defaultFont.
-            var actButton = new Button(Rectangle.Empty, "ACT", function: "Act", font: defaultFont, enableHoverSway: false) { CustomHoverTextColor = Color.White, TextRenderOffset = Vector2.Zero };
-            var itemButton = new Button(Rectangle.Empty, "ITEM", function: "Item", font: defaultFont, enableHoverSway: false) { CustomHoverTextColor = Color.White, TextRenderOffset = Vector2.Zero };
-            var switchButton = new Button(Rectangle.Empty, "SWITCH", function: "Switch", font: defaultFont, enableHoverSway: false) { CustomHoverTextColor = Color.White, TextRenderOffset = Vector2.Zero };
+            var actButton = new Button(Rectangle.Empty, "ACT", function: "Act", font: defaultFont, enableHoverSway: false) { CustomHoverTextColor = Color.White, TextRenderOffset = new Vector2(0, 1) };
+            var itemButton = new Button(Rectangle.Empty, "ITEM", function: "Item", font: defaultFont, enableHoverSway: false) { CustomHoverTextColor = Color.White, TextRenderOffset = new Vector2(0, 1) };
+            var switchButton = new Button(Rectangle.Empty, "SWITCH", function: "Switch", font: defaultFont, enableHoverSway: false) { CustomHoverTextColor = Color.White, TextRenderOffset = new Vector2(0, 1) };
 
             actButton.OnClick += () => {
                 if (_isSpamming) { actButton.TriggerShake(); EventBus.Publish(new GameEvents.AlertPublished { Message = "Spam Prevention" }); return; }
