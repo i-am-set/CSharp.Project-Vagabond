@@ -653,7 +653,11 @@ namespace ProjectVagabond.Battle.UI
 
             // Apply spawnYOffset to the position
             sprite.SetPosition(new Vector2(spriteCenterX, heartCenterY + yBobOffset + spawnYOffset) + recoilOffset);
-            sprite.Draw(spriteBatch, animationManager, player, playerSpriteTint, isHighlighted, pulseAlpha, isSilhouetted, silhouetteColor, gameTime, highlightColor);
+
+            bool isTurn = player == currentActor;
+            Color outlineColor = isTurn ? _global.Palette_BrightWhite : _global.Palette_DarkGray;
+
+            sprite.Draw(spriteBatch, animationManager, player, playerSpriteTint, isHighlighted, pulseAlpha, isSilhouetted, silhouetteColor, gameTime, highlightColor, outlineColor);
 
             if (!isSilhouetted)
             {
@@ -1032,7 +1036,10 @@ namespace ProjectVagabond.Battle.UI
 
             float finalAlpha = combatant.VisualAlpha * spawnAlpha;
             Color tintColor = Color.White * finalAlpha;
-            Color outlineColor = _global.Palette_DarkGray * finalAlpha;
+
+            bool isTurn = combatant == currentActor;
+            Color baseOutline = isTurn ? _global.Palette_BrightWhite : _global.Palette_DarkGray;
+            Color outlineColor = baseOutline * finalAlpha;
 
             bool isSelectable = selectableTargets.Contains(combatant);
 
@@ -1139,8 +1146,7 @@ namespace ProjectVagabond.Battle.UI
                         // 2. Draw Outlines
                         Vector2 screenDrawPos = new Vector2(spriteRect.X, spriteRect.Y) + shakeOffset - rtBasePos;
                         Color cBlack = _global.Palette_Black * finalAlpha;
-                        Color cColored = outlineColor; // outlineColor already has alpha applied if needed? No, let's ensure it.
-                        // outlineColor was defined as `_global.Palette_DarkGray * finalAlpha` earlier.
+                        Color cColored = outlineColor;
 
                         // Layer 3: Outer Black (3px)
                         // Cardinals at 3

@@ -6,6 +6,7 @@ using ProjectVagabond.Battle.UI;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -273,7 +274,7 @@ namespace ProjectVagabond.Battle.UI
             return preciseRect;
         }
 
-        public void Draw(SpriteBatch spriteBatch, BattleAnimationManager animationManager, BattleCombatant combatant, Color? tintColorOverride = null, bool isHighlighted = false, float pulseAlpha = 1f, bool asSilhouette = false, Color? silhouetteColor = null, GameTime? gameTime = null, Color? highlightColor = null)
+        public void Draw(SpriteBatch spriteBatch, BattleAnimationManager animationManager, BattleCombatant combatant, Color? tintColorOverride = null, bool isHighlighted = false, float pulseAlpha = 1f, bool asSilhouette = false, Color? silhouetteColor = null, GameTime? gameTime = null, Color? highlightColor = null, Color? outlineColorOverride = null)
         {
             Initialize();
             if (_texture == null || combatant == null) return;
@@ -382,7 +383,7 @@ namespace ProjectVagabond.Battle.UI
             Color mainColor = tintColorOverride ?? Color.White;
 
             float alpha = mainColor.A / 255f;
-            Color outlineColor = global.Palette_DarkGray * alpha;
+            Color outlineColor = (outlineColorOverride ?? global.Palette_DarkGray) * alpha;
 
             // --- Draw Outline ---
             if (silhouetteToDraw != null)
