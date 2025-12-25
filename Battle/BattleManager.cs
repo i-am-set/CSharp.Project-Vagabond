@@ -35,7 +35,7 @@ namespace ProjectVagabond.Battle
             Reinforcement,
             BattleOver,
             ProcessingInteraction,
-            WaitingForSwitchCompletion 
+            WaitingForSwitchCompletion
         }
         private readonly List<BattleCombatant> _playerParty;
         private readonly List<BattleCombatant> _enemyParty;
@@ -502,8 +502,6 @@ namespace ProjectVagabond.Battle
             if (action.Type == QueuedActionType.Switch)
             {
                 ProcessSwitchAction(action);
-                _currentPhase = BattlePhase.CheckForDefeat;
-                CanAdvance = false;
             }
             else if (action.ChosenItem != null)
             {
@@ -524,14 +522,7 @@ namespace ProjectVagabond.Battle
 
             if (target == null) return;
 
-            int oldSlot = actor.BattleSlot;
-            int newSlot = target.BattleSlot;
-
-            actor.BattleSlot = newSlot;
-            target.BattleSlot = oldSlot;
-
-            RefreshCombatantCaches();
-            HandleOnEnterAbilities(target);
+            InitiateSwitchSequence(actor, target);
         }
 
         private void HandleSecondaryEffectResolution()

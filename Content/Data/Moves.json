@@ -456,5 +456,30 @@
     "AnimationSpeed": 1.0,
     "DamageFrameIndex": 2,
     "IsAnimationCentralized": false
+  },
+  {
+    "MoveID": "19",
+    "MoveName": "Hit n Run",
+    "Description": "Hits the target for physical damage, then switches the user out.",
+    "Power": 40,
+    "ManaCost": 0,
+    "MoveType": "Action",
+    "ImpactType": "Physical",
+    "OffensiveStat": "Strength",
+    "MakesContact": true,
+    "Target": "Single",
+    "Accuracy": 100,
+    "Priority": 0,
+    "Rarity": 2,
+    "LevelRequirement": 3,
+    "OffensiveElementIDs": [ 1 ],
+    "Effects": {
+      "Disengage": ""
+    },
+    "Tags": [ "Utility" ],
+    "AnimationSpriteSheet": "basic_explosion_4",
+    "AnimationSpeed": 1.0,
+    "DamageFrameIndex": 6,
+    "IsAnimationCentralized": false
   }
 ]

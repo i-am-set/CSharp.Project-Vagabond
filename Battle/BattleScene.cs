@@ -136,6 +136,19 @@ namespace ProjectVagabond.Scenes
             SubscribeToEvents();
             InitializeSettingsButton();
             SetupBattle();
+
+            if (_battleManager != null)
+            {
+                foreach (var combatant in _battleManager.AllCombatants)
+                {
+                    if (combatant.IsPlayerControlled)
+                    {
+                        combatant.Stats.CurrentHP = combatant.Stats.MaxHP;
+                        combatant.Stats.CurrentMana = combatant.Stats.MaxMana;
+                        combatant.VisualHP = combatant.Stats.MaxHP; // Sync visual HP
+                    }
+                }
+            }
         }
 
         public override void Exit()
@@ -178,6 +191,7 @@ namespace ProjectVagabond.Scenes
             _inputHandler.OnMoveTargetSelected += OnPlayerMoveTargetSelected;
             _inputHandler.OnItemTargetSelected += OnPlayerItemSelected;
             _inputHandler.OnBackRequested += () => _uiManager.GoBack();
+            if (_settingsButton != null) _settingsButton.OnClick -= OpenSettings;
         }
 
         private void UnsubscribeFromEvents()
