@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -402,24 +401,6 @@ namespace ProjectVagabond.Battle.UI
 
             DrawControlPrompt(spriteBatch);
 
-            // Draw the forced switch dialog on top of everything if active
-            if (_combatSwitchDialog.IsActive)
-            {
-                // End the current scene batch
-                spriteBatch.End();
-
-                // DrawOverlay starts and ends its own batch for the dimmer
-                _combatSwitchDialog.DrawOverlay(spriteBatch);
-
-                // Start a new batch for the dialog content (Screen Space)
-                spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: Matrix.Identity);
-                _combatSwitchDialog.DrawContent(spriteBatch, font, gameTime, Matrix.Identity);
-                spriteBatch.End();
-
-                // Resume the scene batch for subsequent draw calls
-                spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
-            }
-
             // --- DEBUG DRAWING (F1) ---
             if (_global.ShowSplitMapGrid)
             {
@@ -433,6 +414,20 @@ namespace ProjectVagabond.Battle.UI
                 {
                     spriteBatch.DrawSnapped(pixel, _controlPromptBounds, Color.Purple * 0.5f);
                 }
+            }
+        }
+
+        public void DrawFullscreenDialogs(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
+        {
+            if (_combatSwitchDialog.IsActive)
+            {
+                // DrawOverlay handles its own Begin/End with Identity transform (Screen Space)
+                _combatSwitchDialog.DrawOverlay(spriteBatch);
+
+                // Draw Content needs the Virtual->Screen transform
+                spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
+                _combatSwitchDialog.DrawContent(spriteBatch, font, gameTime, Matrix.Identity);
+                spriteBatch.End();
             }
         }
 

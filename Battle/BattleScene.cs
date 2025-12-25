@@ -751,6 +751,7 @@ namespace ProjectVagabond.Scenes
 
         public override void DrawFullscreenUI(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
+            _uiManager.DrawFullscreenDialogs(spriteBatch, font, gameTime, transform);
         }
 
         public void TriggerFlee()
