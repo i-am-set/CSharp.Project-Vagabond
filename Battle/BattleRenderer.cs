@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿#nullable enable
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -659,10 +660,26 @@ namespace ProjectVagabond.Battle.UI
 
             sprite.Draw(spriteBatch, animationManager, player, playerSpriteTint, isHighlighted, pulseAlpha, isSilhouetted, silhouetteColor, gameTime, highlightColor, outlineColor);
 
-            if (!isSilhouetted)
+            // --- HUD VISIBILITY LOGIC ---
+            var battleManager = ServiceLocator.Get<BattleManager>();
+            bool isBrowsingMoves = (battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection_Slot1 || battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection_Slot2) && uiManager.UIState == BattleUIState.Default;
+            bool isHoveringAction = isBrowsingMoves && uiManager.HoveredMove != null;
+
+            bool showName;
+            if (isHoveringAction)
+            {
+                showName = (player == currentActor);
+            }
+            else
+            {
+                showName = !isSilhouetted;
+            }
+
+            bool showBars = !isSilhouetted || isHoveringAction;
+
+            if (showName)
             {
                 Color nameColor = Color.White;
-                var battleManager = ServiceLocator.Get<BattleManager>();
                 bool isSelectionPhase = battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection_Slot1 || battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection_Slot2;
                 var selectingActor = battleManager.CurrentActingCombatant;
 
@@ -699,7 +716,10 @@ namespace ProjectVagabond.Battle.UI
 
                 Vector2 namePos = new Vector2(nameX, nameY);
                 spriteBatch.DrawStringSnapped(nameFontToUse, player.Name, namePos, nameColor);
+            }
 
+            if (showBars)
+            {
                 DrawPlayerResourceBars(spriteBatch, player, new Vector2(startX, playerHudY), barWidth, uiManager, animationManager);
             }
 

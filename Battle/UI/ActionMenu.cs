@@ -823,7 +823,10 @@ namespace ProjectVagabond.Battle.UI
                             if (!button.IsEnabled) borderColor = _global.Palette_DarkestGray;
                             else if (button.IsHovered) borderColor = _global.ButtonHoverColor;
 
-                            var borderRect = new Rectangle(button.Bounds.X + 1, button.Bounds.Y + 1, button.Bounds.Width - 2, button.Bounds.Height - 2);
+                            // --- MODIFIED: Increase height by 1 pixel downward ---
+                            // Original: button.Bounds.Height - 2
+                            // New: button.Bounds.Height - 1
+                            var borderRect = new Rectangle(button.Bounds.X + 1, button.Bounds.Y + 1, button.Bounds.Width - 2, button.Bounds.Height - 1);
 
                             spriteBatch.DrawSnapped(pixel, new Rectangle(borderRect.Left, borderRect.Top, borderRect.Width, 1), borderColor); // Top
                             spriteBatch.DrawSnapped(pixel, new Rectangle(borderRect.Left, borderRect.Bottom - 1, borderRect.Width, 1), borderColor); // Bottom
@@ -1648,35 +1651,46 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private List<string> WrapText(string text, float maxLineWidth, BitmapFont font)
+        private (List<string> Positives, List<string> Negatives) GetStatModifierLines(Dictionary<string, int> mods)
         {
-            var lines = new List<string>();
-            if (string.IsNullOrEmpty(text)) return lines;
+            var positives = new List<string>();
+            var negatives = new List<string>();
+            if (mods == null || mods.Count == 0) return (positives, negatives);
 
-            var words = text.Split(' ');
-            var currentLine = new StringBuilder();
-
-            foreach (var word in words)
+            foreach (var kvp in mods)
             {
-                var testLine = currentLine.Length > 0 ? currentLine.ToString() + " " + word : word;
-                if (font.MeasureString(testLine).Width > maxLineWidth)
+                if (kvp.Value == 0) continue;
+                string colorTag = kvp.Value > 0 ? "[cpositive]" : "[cnegative]";
+                string sign = kvp.Value > 0 ? "+" : "";
+
+                string statName = kvp.Key.ToLowerInvariant() switch
                 {
-                    lines.Add(currentLine.ToString());
-                    currentLine.Clear();
-                    currentLine.Append(word);
+                    "strength" => "STR",
+                    "intelligence" => "INT",
+                    "tenacity" => "TEN",
+                    "agility" => "AGI",
+                    "maxhp" => "HP",
+                    "maxmana" => "MP",
+                    _ => kvp.Key.ToUpper().Substring(0, Math.Min(3, kvp.Key.Length))
+                };
+
+                if (statName.Length < 3)
+                {
+                    statName += " ";
+                }
+
+                string line = $"{statName} {colorTag}{sign}{kvp.Value}[/]";
+
+                if (kvp.Value > 0)
+                {
+                    positives.Add(line);
                 }
                 else
                 {
-                    if (currentLine.Length > 0)
-                        currentLine.Append(" ");
-                    currentLine.Append(word);
+                    negatives.Add(line);
                 }
             }
-
-            if (currentLine.Length > 0)
-                lines.Add(currentLine.ToString());
-
-            return lines;
+            return (positives, negatives);
         }
     }
 }
