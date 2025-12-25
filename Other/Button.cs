@@ -28,7 +28,6 @@ namespace ProjectVagabond.UI
         /// </summary>
         SlideAndHold
     }
-
     /// <summary>
     /// Defines the reason a button might have a strikethrough.
     /// </summary>
@@ -64,6 +63,27 @@ namespace ProjectVagabond.UI
         public Color? DebugColor { get; set; }
         public HoverAnimationType HoverAnimation { get; set; } = HoverAnimationType.Hop;
 
+        // --- Text Wave Animation Settings ---
+        /// <summary>
+        /// If true, the text will ripple/wave once when the button is first hovered.
+        /// </summary>
+        public bool EnableTextWave { get; set; } = true;
+
+        /// <summary>
+        /// The speed of the wave animation.
+        /// </summary>
+        public float WaveSpeed { get; set; } = 25f;
+
+        /// <summary>
+        /// The frequency of the wave (higher = tighter ripples).
+        /// </summary>
+        public float WaveFrequency { get; set; } = 1.0f;
+
+        /// <summary>
+        /// The height of the wave in pixels.
+        /// </summary>
+        public float WaveAmplitude { get; set; } = 1.0f;
+
         /// <summary>
         /// If true (default), clicks are throttled by the global UIInputManager to prevent double-clicks.
         /// If false, the button can be clicked as fast as the update loop runs (useful for debug tools).
@@ -84,6 +104,11 @@ namespace ProjectVagabond.UI
         protected MouseState _previousMouseState;
         protected readonly HoverAnimator _hoverAnimator = new HoverAnimator();
         protected bool _isPressed = false;
+
+        // Wave Animation State
+        protected float _waveTimer = 0f;
+        protected bool _isWaveAnimating = false;
+        protected bool _wasHoveredLastDraw = false;
 
         // Sprite-based properties
         private readonly Texture2D? _spriteSheet;
@@ -265,6 +290,9 @@ namespace ProjectVagabond.UI
             _slideOffset = 0f;
             _shakeTimer = 0f;
             _flashTimer = 0f;
+            _isWaveAnimating = false;
+            _waveTimer = 0f;
+            _wasHoveredLastDraw = false;
         }
 
         protected (Vector2 shakeOffset, Color? flashTint) UpdateFeedbackAnimations(GameTime gameTime)
@@ -346,6 +374,34 @@ namespace ProjectVagabond.UI
 
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
+            // --- Wave Animation State Management ---
+            // Trigger animation only on the rising edge of hover (One-Shot)
+            if (isActivated && !_wasHoveredLastDraw)
+            {
+                _isWaveAnimating = true;
+                _waveTimer = 0f;
+            }
+
+            // Stop animation immediately if no longer hovered
+            if (!isActivated)
+            {
+                _isWaveAnimating = false;
+                _waveTimer = 0f;
+            }
+
+            _wasHoveredLastDraw = isActivated;
+
+            if (_isWaveAnimating)
+            {
+                _waveTimer += deltaTime;
+                // Stop animation after enough time has passed for the wave to traverse the text
+                float estimatedDuration = (Text.Length * WaveFrequency + MathHelper.Pi) / WaveSpeed + 0.5f;
+                if (_waveTimer > estimatedDuration)
+                {
+                    _isWaveAnimating = false;
+                }
+            }
+
             float xHoverOffset = 0f;
             float yHoverOffset = 0f;
             if (EnableHoverSway)
@@ -366,24 +422,59 @@ namespace ProjectVagabond.UI
             float totalYOffset = yHoverOffset + (verticalOffset ?? 0f);
 
             Vector2 textSize = font.MeasureString(Text);
-            Vector2 scale = Vector2.One;
-
-            Vector2 textOrigin = new Vector2(MathF.Round(textSize.X / 2f), MathF.Round(textSize.Y / 2f));
             Vector2 textPosition;
 
+            // Calculate starting position based on alignment
             if (AlignLeft)
             {
-                textOrigin.X = 0;
-                textPosition = new Vector2(Bounds.Left + totalXOffset + LEFT_ALIGN_PADDING, Bounds.Center.Y + totalYOffset);
+                // Left aligned: Start at Left + Padding
+                textPosition = new Vector2(Bounds.Left + totalXOffset + LEFT_ALIGN_PADDING, Bounds.Center.Y + totalYOffset - (textSize.Y / 2f));
             }
             else
             {
-                textPosition = new Vector2(Bounds.Center.X + totalXOffset, Bounds.Center.Y + totalYOffset);
+                // Center aligned: Start at Center - HalfWidth
+                textPosition = new Vector2(Bounds.Center.X + totalXOffset - (textSize.X / 2f), Bounds.Center.Y + totalYOffset - (textSize.Y / 2f));
             }
 
             textPosition += TextRenderOffset;
 
-            spriteBatch.DrawStringSnapped(font, Text, textPosition, textColor, 0f, textOrigin, scale, SpriteEffects.None, 0f);
+            // --- Wave Animation Logic ---
+            if (EnableTextWave && _isWaveAnimating)
+            {
+                float startX = textPosition.X;
+                float baseY = textPosition.Y;
+
+                for (int i = 0; i < Text.Length; i++)
+                {
+                    char c = Text[i];
+                    string charStr = c.ToString();
+
+                    // --- SENTINEL MEASUREMENT TRICK ---
+                    // Measure the string up to this character, including a sentinel character '|'.
+                    // Then subtract the width of the sentinel.
+                    // This forces MeasureString to include trailing spaces and kerning correctly.
+                    string sub = Text.Substring(0, i);
+                    float charOffsetX = font.MeasureString(sub + "|").Width - font.MeasureString("|").Width;
+
+                    // Calculate Wave Offset (Left to Right)
+                    float waveArg = _waveTimer * WaveSpeed - i * WaveFrequency;
+
+                    float yWaveOffset = 0f;
+                    if (waveArg > 0 && waveArg < MathHelper.Pi)
+                    {
+                        float waveVal = MathF.Sin(waveArg);
+                        // Bump UP (negative Y). Clamp to exactly WaveAmplitude (1px).
+                        yWaveOffset = -MathF.Round(waveVal * WaveAmplitude);
+                    }
+
+                    spriteBatch.DrawStringSnapped(font, charStr, new Vector2(startX + charOffsetX, baseY + yWaveOffset), textColor);
+                }
+            }
+            else
+            {
+                // Standard Draw
+                spriteBatch.DrawStringSnapped(font, Text, textPosition, textColor);
+            }
         }
     }
 }

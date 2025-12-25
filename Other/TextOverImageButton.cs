@@ -18,7 +18,6 @@ namespace ProjectVagabond.UI
         private readonly Texture2D? _backgroundTexture;
         public Texture2D? IconTexture { get; set; }
         public Rectangle? IconSourceRect { get; set; }
-
         public bool TintBackgroundOnHover { get; set; } = true;
         public bool DrawBorderOnHover { get; set; } = false;
         public Color? HoverBorderColor { get; set; }
@@ -71,12 +70,13 @@ namespace ProjectVagabond.UI
             bool isActivated = IsEnabled && (IsHovered || forceHover);
             BitmapFont font = this.Font ?? defaultFont;
             var pixel = ServiceLocator.Get<Texture2D>();
+            float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
             // --- Animation Scaling ---
             float verticalScale = 1.0f;
             if (_animState == AnimationState.Appearing)
             {
-                _appearTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                _appearTimer += deltaTime;
                 float progress = Math.Clamp(_appearTimer / APPEAR_DURATION, 0f, 1f);
                 verticalScale = Easing.EaseOutBack(progress);
                 if (progress >= 1.0f)
@@ -221,17 +221,77 @@ namespace ProjectVagabond.UI
                     textStartX = animatedBounds.X + (animatedBounds.Width - textSize.X) / 2f;
                 }
 
-                Vector2 textPosition = new Vector2(textStartX, animatedBounds.Center.Y) + TextRenderOffset;
-                Vector2 textOrigin = new Vector2(0, MathF.Round(textSize.Y / 2f));
+                Vector2 textPosition = new Vector2(textStartX, animatedBounds.Center.Y - (textSize.Y / 2f)) + TextRenderOffset;
 
-                spriteBatch.DrawStringSnapped(font, Text, textPosition, textColor, 0f, textOrigin, 1f, SpriteEffects.None, 0f);
+                // --- Wave Animation State Management ---
+                // Trigger animation only on the rising edge of hover (One-Shot)
+                if (isActivated && !_wasHoveredLastDraw)
+                {
+                    _isWaveAnimating = true;
+                    _waveTimer = 0f;
+                }
+
+                // Stop animation immediately if no longer hovered
+                if (!isActivated)
+                {
+                    _isWaveAnimating = false;
+                    _waveTimer = 0f;
+                }
+
+                _wasHoveredLastDraw = isActivated;
+
+                if (_isWaveAnimating)
+                {
+                    _waveTimer += deltaTime;
+                    float estimatedDuration = (Text.Length * WaveFrequency + MathHelper.Pi) / WaveSpeed + 0.5f;
+                    if (_waveTimer > estimatedDuration)
+                    {
+                        _isWaveAnimating = false;
+                    }
+                }
+
+                // --- Wave Animation Logic ---
+                if (EnableTextWave && _isWaveAnimating)
+                {
+                    float startX = textPosition.X;
+                    float baseY = textPosition.Y;
+
+                    for (int i = 0; i < Text.Length; i++)
+                    {
+                        char c = Text[i];
+                        string charStr = c.ToString();
+
+                        // --- SENTINEL MEASUREMENT TRICK ---
+                        // Measure the string up to this character, including a sentinel character '|'.
+                        // Then subtract the width of the sentinel.
+                        // This forces MeasureString to include trailing spaces and kerning correctly.
+                        string sub = Text.Substring(0, i);
+                        float charOffsetX = font.MeasureString(sub + "|").Width - font.MeasureString("|").Width;
+
+                        // Calculate Wave Offset (Left to Right)
+                        float waveArg = _waveTimer * WaveSpeed - i * WaveFrequency;
+
+                        float yWaveOffset = 0f;
+                        if (waveArg > 0 && waveArg < MathHelper.Pi)
+                        {
+                            float waveVal = MathF.Sin(waveArg);
+                            yWaveOffset = -MathF.Round(waveVal * WaveAmplitude);
+                        }
+
+                        spriteBatch.DrawStringSnapped(font, charStr, new Vector2(startX + charOffsetX, baseY + yWaveOffset), textColor);
+                    }
+                }
+                else
+                {
+                    spriteBatch.DrawStringSnapped(font, Text, textPosition, textColor);
+                }
 
                 // --- Strikethrough Logic for Disabled State ---
                 if (!IsEnabled)
                 {
                     // Calculate line position based on the text position
-                    // Center Y of text (textPosition.Y is the center due to origin)
-                    float lineY = textPosition.Y;
+                    // Center Y of text (textPosition.Y is top, so add half height)
+                    float lineY = textPosition.Y + (textSize.Y / 2f);
                     float startX = textPosition.X - 2;
                     float endX = textPosition.X + textSize.X + 2;
 
