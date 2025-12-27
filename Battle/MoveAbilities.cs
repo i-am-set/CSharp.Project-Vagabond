@@ -504,5 +504,124 @@ namespace ProjectVagabond.Battle.Abilities
             }
         }
     }
+
+    public class RandomStatChangeAbility : IOnActionComplete
+    {
+        public string Name => "Random Stat Change";
+        public string Description => "Modifies random stats of the user.";
+
+        private readonly int[] _amounts;
+        private static readonly Random _random = new Random();
+
+        public RandomStatChangeAbility(int[] amounts)
+        {
+            _amounts = amounts;
+        }
+
+        public void OnActionComplete(QueuedAction action, BattleCombatant owner)
+        {
+            var stats = new List<OffensiveStatType>
+            {
+                OffensiveStatType.Strength,
+                OffensiveStatType.Intelligence,
+                OffensiveStatType.Tenacity,
+                OffensiveStatType.Agility
+            };
+
+            // Shuffle stats to pick random ones without replacement
+            int n = stats.Count;
+            while (n > 1)
+            {
+                n--;
+                int k = _random.Next(n + 1);
+                (stats[k], stats[n]) = (stats[n], stats[k]);
+            }
+
+            int count = Math.Min(_amounts.Length, stats.Count);
+
+            for (int i = 0; i < count; i++)
+            {
+                var stat = stats[i];
+                var amount = _amounts[i];
+
+                var (success, _) = owner.ModifyStatStage(stat, amount);
+                if (success)
+                {
+                    EventBus.Publish(new GameEvents.CombatantStatStageChanged
+                    {
+                        Target = owner,
+                        Stat = stat,
+                        Amount = amount
+                    });
+
+                    string verb = amount > 0 ? "rose" : "fell";
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished
+                    {
+                        Message = $"{owner.Name}'s {stat} {verb}!"
+                    });
+                }
+            }
+        }
+    }
+
+    public class InflictRandomStatChangeAbility : IOnHitEffect
+    {
+        public string Name => "Inflict Random Stat Change";
+        public string Description => "Modifies random stats of the target.";
+
+        private readonly int[] _amounts;
+        private static readonly Random _random = new Random();
+
+        public InflictRandomStatChangeAbility(int[] amounts)
+        {
+            _amounts = amounts;
+        }
+
+        public void OnHit(CombatContext ctx, int damageDealt)
+        {
+            if (ctx.IsGraze) return;
+
+            var stats = new List<OffensiveStatType>
+            {
+                OffensiveStatType.Strength,
+                OffensiveStatType.Intelligence,
+                OffensiveStatType.Tenacity,
+                OffensiveStatType.Agility
+            };
+
+            // Shuffle
+            int n = stats.Count;
+            while (n > 1)
+            {
+                n--;
+                int k = _random.Next(n + 1);
+                (stats[k], stats[n]) = (stats[n], stats[k]);
+            }
+
+            int count = Math.Min(_amounts.Length, stats.Count);
+
+            for (int i = 0; i < count; i++)
+            {
+                var stat = stats[i];
+                var amount = _amounts[i];
+
+                var (success, _) = ctx.Target.ModifyStatStage(stat, amount);
+                if (success)
+                {
+                    EventBus.Publish(new GameEvents.CombatantStatStageChanged
+                    {
+                        Target = ctx.Target,
+                        Stat = stat,
+                        Amount = amount
+                    });
+
+                    string verb = amount > 0 ? "rose" : "fell";
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished
+                    {
+                        Message = $"{ctx.Target.Name}'s {stat} {verb}!"
+                    });
+                }
+            }
+        }
+    }
 }
-﻿

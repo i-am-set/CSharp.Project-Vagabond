@@ -5,7 +5,7 @@
   },
   {
     "ElementID": 2,
-    "ElementName": "Fire", // Fire, Lava, Heat, etc. Mostly a magic element, but can be used for physical attacks too like torches, etc.
+    "ElementName": "Fire", // Fire, Lava, Heat, etc
   },
   {
     "ElementID": 3,
@@ -21,7 +21,7 @@
   },
   {
     "ElementID": 6,
-    "ElementName": "Metal", // Iron, Steel, Silver, etc. There can be magic that uses this element offensively, but mostly used for physical weapon attacks
+    "ElementName": "Metal", // Iron, Steel, Silver, etc
   },
   {
     "ElementID": 7,
@@ -45,7 +45,7 @@
   },
   {
     "ElementID": 12,
-    "ElementName": "Ice", // Cold, Frost, Snow, etc. Not resisted by much, just hard things like stone and metal.
+    "ElementName": "Ice", // Cold, Frost, Snow, etc.
   },
   {
     "ElementID": 13,
