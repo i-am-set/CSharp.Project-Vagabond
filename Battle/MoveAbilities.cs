@@ -7,8 +7,41 @@ using System.Collections.Generic;
 
 namespace ProjectVagabond.Battle.Abilities
 {
-    // --- EXISTING ABILITIES ---
+    // ... (Previous abilities unchanged) ...
 
+    public class CounterAbility : IOutgoingDamageModifier, IOnHitEffect
+    {
+        public string Name => "Counter";
+        public string Description => "Fails if not used on first turn. Dazes target.";
+
+        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
+        {
+            // If user has already acted in this battle, the move fails (0 damage)
+            if (ctx.Actor.HasUsedFirstAttack)
+            {
+                // Only trigger events if this is a real execution, not a UI/AI simulation
+                if (!ctx.IsSimulation)
+                {
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "But it failed!" });
+                    EventBus.Publish(new GameEvents.MoveFailed { Actor = ctx.Actor });
+                }
+                return 0f;
+            }
+            return currentDamage;
+        }
+
+        public void OnHit(CombatContext ctx, int damageDealt)
+        {
+            // Only apply Daze if damage was actually dealt (move didn't fail)
+            if (damageDealt > 0)
+            {
+                ctx.Target.IsDazed = true;
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} was [cStatus]DAZED[/]!" });
+            }
+        }
+    }
+
+    // ... (Rest of file unchanged) ...
     public class RestoreManaAbility : IOnHitEffect
     {
         public string Name => "Restore Mana";
@@ -208,8 +241,6 @@ namespace ProjectVagabond.Battle.Abilities
         }
     }
 
-    // --- STATUS INFLICTION ABILITIES ---
-
     public class InflictStatusBurnAbility : IOnHitEffect
     {
         public string Name => "Inflict Burn";
@@ -229,7 +260,6 @@ namespace ProjectVagabond.Battle.Abilities
 
             if (_random.Next(1, 101) <= _chance)
             {
-                // Burn is permanent, so duration is irrelevant (99)
                 bool applied = ctx.Target.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Burn, 99));
                 if (applied)
                 {
@@ -261,7 +291,6 @@ namespace ProjectVagabond.Battle.Abilities
 
             if (_random.Next(1, 101) <= _chance)
             {
-                // Poison is permanent
                 bool applied = ctx.Target.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Poison, 99));
                 if (applied)
                 {
@@ -293,7 +322,6 @@ namespace ProjectVagabond.Battle.Abilities
 
             if (_random.Next(1, 101) <= _chance)
             {
-                // Frostbite is permanent
                 bool applied = ctx.Target.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Frostbite, 99));
                 if (applied)
                 {
@@ -405,16 +433,11 @@ namespace ProjectVagabond.Battle.Abilities
 
         public void OnActionComplete(QueuedAction action, BattleCombatant owner)
         {
-            // Mark that we attempted to use Protect this turn
             owner.UsedProtectThisTurn = true;
-
-            // Calculate success chance: 1 / (2 ^ consecutive_uses)
-            // 0 uses = 100%, 1 use = 50%, 2 uses = 25%, etc.
             double chance = 1.0 / Math.Pow(2, owner.ConsecutiveProtectUses);
 
             if (_random.NextDouble() < chance)
             {
-                // Success
                 owner.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Protected, 1));
                 owner.ConsecutiveProtectUses++;
                 EventBus.Publish(new GameEvents.TerminalMessagePublished
@@ -424,13 +447,11 @@ namespace ProjectVagabond.Battle.Abilities
             }
             else
             {
-                // Failure
                 owner.ConsecutiveProtectUses = 0;
                 EventBus.Publish(new GameEvents.TerminalMessagePublished
                 {
                     Message = $"{owner.Name}'s protection failed!"
                 });
-                // Trigger visual indicator
                 EventBus.Publish(new GameEvents.MoveFailed { Actor = owner });
             }
         }
@@ -443,7 +464,6 @@ namespace ProjectVagabond.Battle.Abilities
 
         private readonly List<(OffensiveStatType Stat, int Amount)> _changes = new List<(OffensiveStatType, int)>();
 
-        // Constructor accepts a comma-separated string: "Strength,-1,Intelligence,-1"
         public InflictStatChangeAbility(string stat1, int amt1, string stat2 = null, int amt2 = 0)
         {
             if (Enum.TryParse<OffensiveStatType>(stat1, true, out var s1))
@@ -497,7 +517,6 @@ namespace ProjectVagabond.Battle.Abilities
 
         public void OnActionComplete(QueuedAction action, BattleCombatant owner)
         {
-            // Only player-controlled characters can use the menu to switch
             if (owner.IsPlayerControlled)
             {
                 EventBus.Publish(new GameEvents.DisengageTriggered { Actor = owner });
@@ -528,7 +547,6 @@ namespace ProjectVagabond.Battle.Abilities
                 OffensiveStatType.Agility
             };
 
-            // Shuffle stats to pick random ones without replacement
             int n = stats.Count;
             while (n > 1)
             {
@@ -589,7 +607,6 @@ namespace ProjectVagabond.Battle.Abilities
                 OffensiveStatType.Agility
             };
 
-            // Shuffle
             int n = stats.Count;
             while (n > 1)
             {
@@ -625,30 +642,18 @@ namespace ProjectVagabond.Battle.Abilities
         }
     }
 
-    public class CounterAbility : IOutgoingDamageModifier, IOnHitEffect
+    public class ShieldBreakerAbility : IShieldBreaker
     {
-        public string Name => "Counter";
-        public string Description => "Fails if not used on first turn. Dazes target.";
+        public string Name => "Shield Breaker";
+        public string Description => "Breaks through protection.";
 
-        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
-        {
-            // If user has already acted in this battle, the move fails (0 damage)
-            if (ctx.Actor.HasUsedFirstAttack)
-            {
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "But it failed!" });
-                return 0f;
-            }
-            return currentDamage;
-        }
+        public float BreakDamageMultiplier { get; }
+        public bool FailsIfNoProtect { get; }
 
-        public void OnHit(CombatContext ctx, int damageDealt)
+        public ShieldBreakerAbility(float damageMultiplier, bool failsIfNoProtect)
         {
-            // Only apply Daze if damage was actually dealt (move didn't fail)
-            if (damageDealt > 0)
-            {
-                ctx.Target.IsDazed = true;
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} was [cStatus]DAZED[/]!" });
-            }
+            BreakDamageMultiplier = damageMultiplier;
+            FailsIfNoProtect = failsIfNoProtect;
         }
     }
 }

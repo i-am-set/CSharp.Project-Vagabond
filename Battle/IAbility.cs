@@ -124,4 +124,11 @@ namespace ProjectVagabond.Battle.Abilities
         void OnBattleStart(BattleCombatant owner);
         void OnCombatantEnter(BattleCombatant owner);
     }
+
+    // --- SPECIAL MECHANICS ---
+    public interface IShieldBreaker : IAbility
+    {
+        float BreakDamageMultiplier { get; }
+        bool FailsIfNoProtect { get; }
+    }
 }

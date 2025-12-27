@@ -679,7 +679,39 @@ namespace ProjectVagabond.Battle
                 var target = targets[i];
                 var result = results[i];
 
-                if (target.HasStatusEffect(StatusEffectType.Protected))
+                // --- SHIELD BREAKER LOGIC ---
+                var shieldBreaker = action.ChosenMove.Abilities.OfType<IShieldBreaker>().FirstOrDefault();
+                bool isProtecting = target.HasStatusEffect(StatusEffectType.Protected);
+
+                if (shieldBreaker != null)
+                {
+                    if (isProtecting)
+                    {
+                        // Break it
+                        target.ActiveStatusEffects.RemoveAll(e => e.EffectType == StatusEffectType.Protected);
+                        EventBus.Publish(new GameEvents.StatusEffectRemoved { Combatant = target, EffectType = StatusEffectType.Protected });
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{action.Actor.Name} shattered the guard!" });
+
+                        // Modify Damage
+                        result.DamageAmount = (int)(result.DamageAmount * shieldBreaker.BreakDamageMultiplier);
+
+                        // Update the result in the list so the event gets the right number
+                        results[i] = result;
+
+                        isProtecting = false; // Treat as not protecting for the rest of the logic
+                    }
+                    else if (shieldBreaker.FailsIfNoProtect)
+                    {
+                        // Fail the move
+                        result.DamageAmount = 0;
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "But it failed!" });
+                        EventBus.Publish(new GameEvents.MoveFailed { Actor = action.Actor });
+                        results[i] = result;
+                        continue; // Skip damage application
+                    }
+                }
+
+                if (isProtecting)
                 {
                     EventBus.Publish(new GameEvents.TerminalMessagePublished
                     {
@@ -1090,18 +1122,6 @@ namespace ProjectVagabond.Battle
         private MoveData HandlePreDamageEffects(MoveData originalMove, BattleCombatant target)
         {
             return originalMove;
-        }
-    }
-
-    public class DisengageAbility : IOnActionComplete
-    {
-        public string Name => "Disengage";
-        public string Description => "Switches the user out after attacking.";
-
-        public void OnActionComplete(QueuedAction action, BattleCombatant owner)
-        {
-            // Allow both players and enemies to trigger disengage
-            EventBus.Publish(new GameEvents.DisengageTriggered { Actor = owner });
         }
     }
 }

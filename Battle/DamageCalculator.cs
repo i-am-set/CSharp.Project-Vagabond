@@ -27,7 +27,7 @@ namespace ProjectVagabond.Battle
             public List<RelicData> DefenderAbilitiesTriggered;
         }
 
-        public static DamageResult CalculateDamage(QueuedAction action, BattleCombatant target, MoveData move, float multiTargetModifier = 1.0f, bool? overrideCrit = null)
+        public static DamageResult CalculateDamage(QueuedAction action, BattleCombatant target, MoveData move, float multiTargetModifier = 1.0f, bool? overrideCrit = null, bool isSimulation = false)
         {
             var attacker = action.Actor;
             var result = new DamageResult
@@ -45,7 +45,8 @@ namespace ProjectVagabond.Battle
                 Target = target,
                 Move = move,
                 MultiTargetModifier = multiTargetModifier,
-                IsLastAction = action.IsLastActionInRound
+                IsLastAction = action.IsLastActionInRound,
+                IsSimulation = isSimulation
             };
 
             // 2. Accuracy Check
@@ -192,7 +193,8 @@ namespace ProjectVagabond.Battle
         public static int CalculateBaselineDamage(BattleCombatant attacker, BattleCombatant target, MoveData move)
         {
             if (move.Power == 0) return 0;
-            var ctx = new CombatContext { Actor = attacker, Target = target, Move = move };
+            // Baseline calculation is also a simulation
+            var ctx = new CombatContext { Actor = attacker, Target = target, Move = move, IsSimulation = true };
 
             // Apply Calculation Modifiers to Power
             float power = move.Power;
@@ -290,7 +292,8 @@ namespace ProjectVagabond.Battle
 
         public static int GetEffectiveMovePower(BattleCombatant attacker, MoveData move)
         {
-            var ctx = new CombatContext { Actor = attacker, Move = move, BaseDamage = move.Power };
+            // Set IsSimulation = true to prevent side effects (like "Failed" messages) during UI rendering
+            var ctx = new CombatContext { Actor = attacker, Move = move, BaseDamage = move.Power, IsSimulation = true };
             float power = move.Power;
 
             // Apply Calculation Modifiers

@@ -13,9 +13,15 @@ namespace ProjectVagabond.Battle.Abilities
         // Context Data
         public float BaseDamage { get; set; }
         public bool IsCritical { get; set; }
-        public bool IsGraze { get; set; } 
+        public bool IsGraze { get; set; }
         public float MultiTargetModifier { get; set; } = 1.0f;
         public bool IsLastAction { get; set; } = false;
+
+        /// <summary>
+        /// If true, this calculation is for UI display or AI evaluation, not actual execution.
+        /// Abilities should NOT trigger side effects (events, animations, logs) when this is true.
+        /// </summary>
+        public bool IsSimulation { get; set; } = false;
 
         public bool MoveHasTag(string tag)
         {
