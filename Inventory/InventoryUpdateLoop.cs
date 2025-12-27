@@ -407,12 +407,32 @@ namespace ProjectVagabond.UI
 
                 foreach (var slot in _inventorySlots)
                 {
-                    if (slot == bestSlot) slot.Update(gameTime, currentMouseState, cameraTransform);
+                    if (slot == bestSlot)
+                    {
+                        slot.Update(gameTime, currentMouseState, cameraTransform);
+                    }
                     else
                     {
                         var dummyMouse = new MouseState(-10000, -10000, currentMouseState.ScrollWheelValue, currentMouseState.LeftButton, currentMouseState.MiddleButton, currentMouseState.RightButton, currentMouseState.XButton1, currentMouseState.XButton2);
                         slot.Update(gameTime, dummyMouse, cameraTransform);
                     }
+                }
+
+                // --- FIX: Prioritize Selected Slot over Hovered Slot for Info Panel Data ---
+                InventorySlot? activeSlot = _inventorySlots.FirstOrDefault(s => s.IsSelected);
+                if (activeSlot == null)
+                {
+                    activeSlot = bestSlot; // Fallback to hovered slot
+                }
+
+                if (activeSlot != null && activeSlot.HasItem && !string.IsNullOrEmpty(activeSlot.ItemId))
+                {
+                    // Determine item type based on category
+                    if (_selectedInventoryCategory == InventoryCategory.Weapons) _hoveredItemData = GetWeaponData(activeSlot.ItemId);
+                    else if (_selectedInventoryCategory == InventoryCategory.Armor) _hoveredItemData = GetArmorData(activeSlot.ItemId);
+                    else if (_selectedInventoryCategory == InventoryCategory.Relics) _hoveredItemData = GetRelicData(activeSlot.ItemId);
+                    else if (_selectedInventoryCategory == InventoryCategory.Consumables) _hoveredItemData = BattleDataCache.Consumables.GetValueOrDefault(activeSlot.ItemId);
+                    else if (_selectedInventoryCategory == InventoryCategory.Misc) _hoveredItemData = BattleDataCache.MiscItems.GetValueOrDefault(activeSlot.ItemId);
                 }
 
                 // Update Page Buttons
@@ -476,7 +496,19 @@ namespace ProjectVagabond.UI
             {
                 _statCycleTimer = 0f;
                 _previousHoveredItemData = _hoveredItemData;
+                _infoPanelNameWaveController.Reset(); // Reset wave animation on item change
             }
+
+            // Update Wave Controller for Info Panel Name
+            int nameLength = 0;
+            if (_hoveredItemData is MoveData md) nameLength = md.MoveName.Length;
+            else if (_hoveredItemData is WeaponData wd) nameLength = wd.WeaponName.Length;
+            else if (_hoveredItemData is ArmorData ad) nameLength = ad.ArmorName.Length;
+            else if (_hoveredItemData is RelicData rd) nameLength = rd.RelicName.Length;
+            else if (_hoveredItemData is ConsumableItemData cd) nameLength = cd.ItemName.Length;
+            else if (_hoveredItemData is MiscItemData mid) nameLength = mid.ItemName.Length;
+
+            _infoPanelNameWaveController.Update(deltaTime, _hoveredItemData != null, nameLength);
 
             _previousMouseState = currentMouseState;
             _previousKeyboardState = currentKeyboardState;

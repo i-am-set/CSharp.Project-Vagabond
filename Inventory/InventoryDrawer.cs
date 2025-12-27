@@ -21,6 +21,9 @@ namespace ProjectVagabond.UI
         private float _portraitBgDuration;
         private static readonly Random _rng = new Random();
 
+        // Wave Controller for Info Panel Name
+        private readonly TextWaveController _infoPanelNameWaveController = new TextWaveController();
+
         public void DrawWorld(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
             if (!IsOpen) return;
@@ -846,6 +849,8 @@ namespace ProjectVagabond.UI
 
             currentY += spriteSize + gap;
 
+            // --- WAVE ANIMATION FOR GENERIC ITEM NAME ---
+            int globalCharIndex = 0;
             foreach (var line in titleLines)
             {
                 float lineWidth = 0;
@@ -866,11 +871,21 @@ namespace ProjectVagabond.UI
                     if (string.IsNullOrWhiteSpace(segment.Text))
                     {
                         segWidth = segment.Text.Length * SPACE_WIDTH;
+                        globalCharIndex += segment.Text.Length;
                     }
                     else
                     {
                         segWidth = font.MeasureString(segment.Text).Width;
-                        spriteBatch.DrawStringSnapped(font, segment.Text, new Vector2(currentX, currentY), segment.Color);
+
+                        if (_infoPanelNameWaveController.IsAnimating)
+                        {
+                            TextUtils.DrawWavedText(spriteBatch, font, segment.Text, new Vector2(currentX, currentY), segment.Color, _infoPanelNameWaveController.CurrentTimer, _infoPanelNameWaveController.WaveSpeed, _infoPanelNameWaveController.WaveFrequency, _infoPanelNameWaveController.WaveAmplitude, globalCharIndex);
+                        }
+                        else
+                        {
+                            spriteBatch.DrawStringSnapped(font, segment.Text, new Vector2(currentX, currentY), segment.Color);
+                        }
+                        globalCharIndex += segment.Text.Length;
                     }
                     currentX += segWidth;
                 }
@@ -1005,6 +1020,14 @@ namespace ProjectVagabond.UI
                 spriteBatch.DrawSnapped(iconTexture, drawPos, sourceRect, tint, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
             }
 
+            // Draw Element Icon (Top Left)
+            int elementId = move.OffensiveElementIDs.FirstOrDefault();
+            if (elementId > 0 && _spriteManager.ElementIconSourceRects.TryGetValue(elementId, out var elementRect))
+            {
+                var elementPos = new Vector2(infoPanelArea.X + 3, infoPanelArea.Y + 3);
+                spriteBatch.DrawSnapped(_spriteManager.ElementIconsSpriteSheet, elementPos, elementRect, Color.White);
+            }
+
             string name = move.MoveName.ToUpper();
             Vector2 nameSize = font.MeasureString(name);
 
@@ -1013,7 +1036,15 @@ namespace ProjectVagabond.UI
                 spriteY + spriteSize - (font.LineHeight / 2f) - 2
             );
 
-            spriteBatch.DrawStringOutlinedSnapped(font, name, namePos, _global.Palette_BrightWhite, _global.Palette_Black);
+            // --- WAVE ANIMATION FOR SPELL NAME ---
+            if (_infoPanelNameWaveController.IsAnimating)
+            {
+                TextUtils.DrawWavedTextOutlined(spriteBatch, font, name, namePos, _global.Palette_BrightWhite, _global.Palette_Black, _infoPanelNameWaveController.CurrentTimer, _infoPanelNameWaveController.WaveSpeed, _infoPanelNameWaveController.WaveFrequency, _infoPanelNameWaveController.WaveAmplitude);
+            }
+            else
+            {
+                spriteBatch.DrawStringOutlinedSnapped(font, name, namePos, _global.Palette_BrightWhite, _global.Palette_Black);
+            }
 
             float currentY = namePos.Y + font.LineHeight + 2;
 

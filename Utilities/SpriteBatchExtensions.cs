@@ -48,13 +48,17 @@ namespace ProjectVagabond.Utils
         {
             Vector2 roundedPosition = RoundVector(position);
 
-            // Draw outline in 4 directions (Cardinals)
+            // 1. Draw outline in 4 directions
             spriteBatch.DrawString(font, text, roundedPosition + new Vector2(1, 0), outlineColor);
             spriteBatch.DrawString(font, text, roundedPosition + new Vector2(-1, 0), outlineColor);
             spriteBatch.DrawString(font, text, roundedPosition + new Vector2(0, 1), outlineColor);
             spriteBatch.DrawString(font, text, roundedPosition + new Vector2(0, -1), outlineColor);
 
-            // Draw main text
+            // 2. Draw Depth Shadow (Matches DrawStringSnapped style)
+            var shadowColor = new Color(textColor.R / 4, textColor.G / 4, textColor.B / 4, textColor.A);
+            spriteBatch.DrawString(font, text, roundedPosition + new Vector2(1, 0), shadowColor);
+
+            // 3. Draw main text
             spriteBatch.DrawString(font, text, roundedPosition, textColor);
         }
 
@@ -62,13 +66,17 @@ namespace ProjectVagabond.Utils
         {
             Vector2 roundedPosition = RoundVector(position);
 
-            // Draw outline in 4 directions
+            // 1. Draw outline in 4 directions
             spriteBatch.DrawString(font, text, roundedPosition + new Vector2(1, 0), outlineColor, rotation, origin, scale, effects, layerDepth);
             spriteBatch.DrawString(font, text, roundedPosition + new Vector2(-1, 0), outlineColor, rotation, origin, scale, effects, layerDepth);
             spriteBatch.DrawString(font, text, roundedPosition + new Vector2(0, 1), outlineColor, rotation, origin, scale, effects, layerDepth);
             spriteBatch.DrawString(font, text, roundedPosition + new Vector2(0, -1), outlineColor, rotation, origin, scale, effects, layerDepth);
 
-            // Draw main text
+            // 2. Draw Depth Shadow
+            var shadowColor = new Color(textColor.R / 4, textColor.G / 4, textColor.B / 4, textColor.A);
+            spriteBatch.DrawString(font, text, roundedPosition + new Vector2(1, 0), shadowColor, rotation, origin, scale, effects, layerDepth);
+
+            // 3. Draw main text
             spriteBatch.DrawString(font, text, roundedPosition, textColor, rotation, origin, scale, effects, layerDepth);
         }
 
@@ -76,13 +84,17 @@ namespace ProjectVagabond.Utils
         {
             Vector2 roundedPosition = RoundVector(position);
 
-            // Draw outline in 4 directions
+            // 1. Draw outline in 4 directions
             spriteBatch.DrawString(font, text, roundedPosition + new Vector2(1, 0), outlineColor, rotation, origin, scale, effects, layerDepth);
             spriteBatch.DrawString(font, text, roundedPosition + new Vector2(-1, 0), outlineColor, rotation, origin, scale, effects, layerDepth);
             spriteBatch.DrawString(font, text, roundedPosition + new Vector2(0, 1), outlineColor, rotation, origin, scale, effects, layerDepth);
             spriteBatch.DrawString(font, text, roundedPosition + new Vector2(0, -1), outlineColor, rotation, origin, scale, effects, layerDepth);
 
-            // Draw main text
+            // 2. Draw Depth Shadow
+            var shadowColor = new Color(textColor.R / 4, textColor.G / 4, textColor.B / 4, textColor.A);
+            spriteBatch.DrawString(font, text, roundedPosition + new Vector2(1, 0), shadowColor, rotation, origin, scale, effects, layerDepth);
+
+            // 3. Draw main text
             spriteBatch.DrawString(font, text, roundedPosition, textColor, rotation, origin, scale, effects, layerDepth);
         }
 
@@ -104,6 +116,10 @@ namespace ProjectVagabond.Utils
             spriteBatch.DrawString(font, text, roundedPosition + new Vector2(0, 1), outlineColor);
             spriteBatch.DrawString(font, text, roundedPosition + new Vector2(0, -1), outlineColor);
 
+            // Depth Shadow
+            var shadowColor = new Color(textColor.R / 4, textColor.G / 4, textColor.B / 4, textColor.A);
+            spriteBatch.DrawString(font, text, roundedPosition + new Vector2(1, 0), shadowColor);
+
             // Main text
             spriteBatch.DrawString(font, text, roundedPosition, textColor);
         }
@@ -123,6 +139,10 @@ namespace ProjectVagabond.Utils
             spriteBatch.DrawString(font, text, roundedPosition + new Vector2(-1, 0), outlineColor, rotation, origin, scale, effects, layerDepth);
             spriteBatch.DrawString(font, text, roundedPosition + new Vector2(0, 1), outlineColor, rotation, origin, scale, effects, layerDepth);
             spriteBatch.DrawString(font, text, roundedPosition + new Vector2(0, -1), outlineColor, rotation, origin, scale, effects, layerDepth);
+
+            // Depth Shadow
+            var shadowColor = new Color(textColor.R / 4, textColor.G / 4, textColor.B / 4, textColor.A);
+            spriteBatch.DrawString(font, text, roundedPosition + new Vector2(1, 0), shadowColor, rotation, origin, scale, effects, layerDepth);
 
             // Main text
             spriteBatch.DrawString(font, text, roundedPosition, textColor, rotation, origin, scale, effects, layerDepth);
