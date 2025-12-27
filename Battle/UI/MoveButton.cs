@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -267,12 +266,23 @@ namespace ProjectVagabond.Battle.UI
                     }
                 }
 
+                // --- Contact Tag (Left of Impact) ---
+                if (Move.MakesContact)
+                {
+                    // Impact is at Right - 3.
+                    // Gap 1.
+                    // Contact Line at Right - 5.
+                    // Height 4 (Centered: CenterY - 2).
+                    var contactTagRect = new Rectangle(animatedBounds.Right - 5, animatedBounds.Center.Y - 2, 1, 2);
+                    spriteBatch.DrawSnapped(pixel, contactTagRect, _global.Palette_Red * contentAlpha);
+                }
+
                 // --- Impact Type Color Tag (Inner) ---
                 Color impactColor = Move.ImpactType switch
                 {
                     ImpactType.Magical => _global.Palette_LightBlue,
                     ImpactType.Physical => _global.Palette_Orange,
-                    _ => _global.Palette_Gray
+                    _ => _global.Palette_BrightWhite
                 };
 
                 // Draw at Right - 3 (leaving 1px gap + 1px for MoveType)
@@ -291,6 +301,27 @@ namespace ProjectVagabond.Battle.UI
                 // Adjusted: 1 pixel gap at top, 1 pixel gap at bottom (Height - 2)
                 var moveTypeTagRect = new Rectangle(animatedBounds.Right - 1, animatedBounds.Y + 1, 1, animatedBounds.Height - 2);
                 spriteBatch.DrawSnapped(pixel, moveTypeTagRect, moveTypeColor * contentAlpha);
+
+                // --- Stat Tag (Right of MoveType) ---
+                // Only show if NOT Status impact type
+                if (Move.ImpactType != ImpactType.Status)
+                {
+                    // MoveType is at Right - 1.
+                    // Gap 1.
+                    // Stat Line at Right + 1.
+                    // Height 4 (Centered: CenterY - 2).
+                    Color statColor = Move.OffensiveStat switch
+                    {
+                        OffensiveStatType.Strength => _global.StatColor_Strength,
+                        OffensiveStatType.Intelligence => _global.StatColor_Intelligence,
+                        OffensiveStatType.Tenacity => _global.StatColor_Tenacity,
+                        OffensiveStatType.Agility => _global.StatColor_Agility,
+                        _ => _global.Palette_Gray
+                    };
+
+                    var statTagRect = new Rectangle(animatedBounds.Right + 1, animatedBounds.Center.Y - 2, 1, 4);
+                    spriteBatch.DrawSnapped(pixel, statTagRect, statColor * contentAlpha);
+                }
 
                 // --- Strikethrough Logic for Disabled State ---
                 if (!IsEnabled)

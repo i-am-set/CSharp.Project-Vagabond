@@ -1248,37 +1248,44 @@ namespace ProjectVagabond.Battle.UI
                     statsSegments.Insert(0, (powerText, _global.Palette_BrightWhite));
                 }
 
-                float totalStatsWidth = statsSegments.Sum(s => secondaryFont.MeasureString(s.Text).Width);
-                float statsY = currentY + (nameSize.Height - secondaryFont.LineHeight) / 2;
-                float statsStartX = bounds.Right - horizontalPadding - totalStatsWidth;
-
                 // --- NEW: Contact Text for Tooltip ---
                 float contactWidth = 0f;
                 if (move.MakesContact)
                 {
-                    string contactText = "[CONTACT]";
+                    string contactText = "[ CONTACT ]";
                     float textW = tertiaryFont.MeasureString(contactText).Width;
                     contactWidth = textW + 4; // Text + Gap
 
-                    // Center vertically relative to statsY (secondary font baseline)
-                    // statsY is top of secondary font.
-                    float contactY = statsY + (secondaryFont.LineHeight - tertiaryFont.LineHeight) / 2f;
-
-                    // Draw to the left of stats
-                    spriteBatch.DrawStringSnapped(tertiaryFont, contactText, new Vector2(statsStartX - contactWidth, contactY), _global.Palette_Red);
+                    // Insert "CONTACT" at the beginning of the segments list
+                    statsSegments.Insert(0, (contactText, _global.Palette_Red));
+                    statsSegments.Insert(1, (" ", Color.Transparent)); // Spacer
                 }
+
+                float totalStatsWidth = statsSegments.Sum(s =>
+                    s.Text == "[ CONTACT ]" ? tertiaryFont.MeasureString(s.Text).Width : secondaryFont.MeasureString(s.Text).Width
+                );
+
+                float statsY = currentY + (nameSize.Height - secondaryFont.LineHeight) / 2;
+                float statsStartX = bounds.Right - horizontalPadding - totalStatsWidth;
 
                 float currentX = statsStartX;
                 foreach (var segment in statsSegments)
                 {
-                    spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(currentX, statsY), segment.Color);
-                    currentX += secondaryFont.MeasureString(segment.Text).Width;
+                    if (segment.Text == "[ CONTACT ]")
+                    {
+                        // Center vertically relative to statsY (secondary font baseline)
+                        float contactY = statsY + (secondaryFont.LineHeight - tertiaryFont.LineHeight) / 2f;
+                        spriteBatch.DrawStringSnapped(tertiaryFont, segment.Text, new Vector2(currentX, contactY), segment.Color);
+                        currentX += tertiaryFont.MeasureString(segment.Text).Width;
+                    }
+                    else
+                    {
+                        spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(currentX, statsY), segment.Color);
+                        currentX += secondaryFont.MeasureString(segment.Text).Width;
+                    }
                 }
 
-                // Adjust available width for name scrolling to account for Contact text
-                float effectiveStatsLeft = statsStartX - (move.MakesContact ? contactWidth : 0);
-                float textAvailableWidth = effectiveStatsLeft - namePos.X - 4;
-
+                float textAvailableWidth = statsStartX - namePos.X - 4;
                 bool needsScrolling = nameSize.Width > textAvailableWidth;
                 if (needsScrolling)
                 {
@@ -1481,19 +1488,6 @@ namespace ProjectVagabond.Battle.UI
                         yAfterRow2 + (availableSpace - targetValueSize.Height) / 2f
                     );
                     spriteBatch.DrawStringSnapped(secondaryFont, targetValue, targetValuePos, _global.Palette_DarkGray);
-
-                    // --- NEW: Draw "CON" if Contact ---
-                    if (move != null && move.MakesContact)
-                    {
-                        string conText = "[CONTACT]";
-                        var conSize = tertiaryFont.MeasureString(conText);
-                        // Center vertically in the same space as targetValue
-                        var conPos = new Vector2(
-                            bounds.X + horizontalPadding,
-                            yAfterRow2 + (availableSpace - conSize.Height) / 2f
-                        );
-                        spriteBatch.DrawStringSnapped(tertiaryFont, conText, conPos, _global.Palette_Red);
-                    }
                 }
 
                 float impactX = gapCenter - (typeGap / 2f) - impactSize.Width;
@@ -1528,6 +1522,25 @@ namespace ProjectVagabond.Battle.UI
 
                 spriteBatch.DrawStringSnapped(secondaryFont, impactValue, impactPos, impactColor);
                 spriteBatch.DrawStringSnapped(secondaryFont, moveTypeValue, moveTypePos, moveTypeColor);
+
+                // --- NEW: Draw "CON" if Contact (Side Panel) ---
+                if (move != null && move.MakesContact)
+                {
+                    string conText = "[ CONTACT ]";
+                    var conSize = tertiaryFont.MeasureString(conText);
+
+                    // Position below the last row (USE/TYP)
+                    // typeY is the Y of the last row.
+                    float conY = typeY + secondaryFont.LineHeight + 2;
+
+                    // Center horizontally in the panel
+                    var conPos = new Vector2(
+                        bounds.Center.X - conSize.Width / 2f,
+                        conY
+                    );
+
+                    spriteBatch.DrawStringSnapped(tertiaryFont, conText, conPos, _global.Palette_Red);
+                }
             }
         }
 
