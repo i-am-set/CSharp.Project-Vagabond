@@ -273,7 +273,7 @@ namespace ProjectVagabond.Battle.UI
                     // Gap 1.
                     // Contact Line at Right - 5.
                     // Height 4 (Centered: CenterY - 2).
-                    var contactTagRect = new Rectangle(animatedBounds.Right - 5, animatedBounds.Center.Y - 2, 1, 2);
+                    var contactTagRect = new Rectangle(animatedBounds.Right - 5, animatedBounds.Center.Y, 1, 1);
                     spriteBatch.DrawSnapped(pixel, contactTagRect, _global.Palette_Red * contentAlpha);
                 }
 
@@ -282,7 +282,7 @@ namespace ProjectVagabond.Battle.UI
                 {
                     ImpactType.Magical => _global.Palette_LightBlue,
                     ImpactType.Physical => _global.Palette_Orange,
-                    _ => _global.Palette_BrightWhite
+                    _ => _global.Palette_Gray
                 };
 
                 // Draw at Right - 3 (leaving 1px gap + 1px for MoveType)
@@ -319,7 +319,7 @@ namespace ProjectVagabond.Battle.UI
                         _ => _global.Palette_Gray
                     };
 
-                    var statTagRect = new Rectangle(animatedBounds.Right + 1, animatedBounds.Center.Y - 2, 1, 4);
+                    var statTagRect = new Rectangle(animatedBounds.Right + 1, animatedBounds.Center.Y, 1, 1);
                     spriteBatch.DrawSnapped(pixel, statTagRect, statColor * contentAlpha);
                 }
 

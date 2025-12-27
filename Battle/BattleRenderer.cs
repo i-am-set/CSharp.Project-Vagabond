@@ -679,7 +679,7 @@ namespace ProjectVagabond.Battle.UI
 
             if (showName)
             {
-                Color nameColor = Color.White;
+                Color nameColor = _global.Palette_BrightWhite;
                 bool isSelectionPhase = battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection_Slot1 || battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection_Slot2;
                 var selectingActor = battleManager.CurrentActingCombatant;
 
@@ -691,13 +691,9 @@ namespace ProjectVagabond.Battle.UI
                     nameFontToUse = secondaryFont;
                 }
 
-                if (hoverHighlightState.Targets.Contains(player))
+                if (highlightColor.HasValue && highlightColor.Value == Color.Yellow)
                 {
                     nameColor = _global.Palette_Yellow;
-                }
-                else if (isHoveringAction && player == currentActor)
-                {
-                    nameColor = _global.Palette_DarkerGray;
                 }
 
                 Vector2 nameSize = nameFontToUse.MeasureString(player.Name);
@@ -1035,7 +1031,7 @@ namespace ProjectVagabond.Battle.UI
             {
                 float progress = Math.Clamp(switchOutAnim.Timer / BattleAnimationManager.SwitchOutAnimationState.DURATION, 0f, 1f);
                 float easedProgress = Easing.EaseOutCubic(progress);
-                spawnYOffset = MathHelper.Lerp(0f, -BattleAnimationManager.SwitchOutAnimationState.LIFT_HEIGHT, easedProgress);
+                spawnYOffset = MathHelper.Lerp(0f, -BattleAnimationManager.SwitchOutAnimationState.LIFT_HEIGHT, Easing.EaseOutCubic(progress));
                 spawnAlpha = 1.0f - easedProgress;
             }
             else if (switchInAnim != null)

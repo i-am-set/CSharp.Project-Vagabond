@@ -2,7 +2,6 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
@@ -1413,7 +1412,7 @@ namespace ProjectVagabond.Battle.UI
                 var accValuePos = new Vector2(bounds.Center.X - 9 - accValueSize.Width, currentY);
                 if (!accValue.Contains("%"))
                 {
-                    accValuePos.X -= 5;
+                    accValuePos.X -= 6; // Changed from 5 to 6
                 }
                 accValuePos.X += 6;
 
@@ -1444,11 +1443,14 @@ namespace ProjectVagabond.Battle.UI
                     _ => _global.Palette_BrightWhite
                 };
 
-                spriteBatch.DrawStringSnapped(secondaryFont, "USE", new Vector2(bounds.Center.X + 2, currentY), labelColor);
-                var offStatSize = secondaryFont.MeasureString(offStatVal);
-                var offStatPos = new Vector2(bounds.Right - horizontalPadding - offStatSize.Width, currentY);
-                offStatPos.X -= 6;
-                spriteBatch.DrawStringSnapped(secondaryFont, offStatVal, offStatPos, offColor);
+                if (move != null && move.ImpactType != ImpactType.Status)
+                {
+                    spriteBatch.DrawStringSnapped(secondaryFont, "USE", new Vector2(bounds.Center.X + 2, currentY), labelColor);
+                    var offStatSize = secondaryFont.MeasureString(offStatVal);
+                    var offStatPos = new Vector2(bounds.Right - horizontalPadding - offStatSize.Width, currentY);
+                    offStatPos.X -= 6;
+                    spriteBatch.DrawStringSnapped(secondaryFont, offStatVal, offStatPos, offColor);
+                }
 
                 string targetValue = "";
                 if (move != null)
