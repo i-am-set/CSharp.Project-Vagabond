@@ -705,5 +705,55 @@
     "AnimationSpeed": 1.5,
     "DamageFrameIndex": 2,
     "IsAnimationCentralized": false
+  },
+  {
+    "MoveID": "29",
+    "MoveName": "Cull the Weak",
+    "Description": "[cetc]Strikes a wounded foe.[/]\nDeals [cpositive]3.0x[/] damage if target is [cctm]below 50% HP[/].",
+    "Power": 40,
+    "ManaCost": 0,
+    "MoveType": "Spell",
+    "ImpactType": "Magical",
+    "OffensiveStat": "Intelligence",
+    "MakesContact": false,
+    "Target": "Both",
+    "Accuracy": 100,
+    "Priority": 0,
+    "Rarity": 1,
+    "LevelRequirement": 2,
+    "OffensiveElementIDs": [ 9 ],
+    "Effects": {
+      "Execute": "50,3.0"
+    },
+    "Tags": [ "Void", "Execution" ],
+    "AnimationSpriteSheet": "void_slash",
+    "AnimationSpeed": 1.5,
+    "DamageFrameIndex": 2,
+    "IsAnimationCentralized": false
+  },
+  {
+    "MoveID": "30",
+    "MoveName": "Execution",
+    "Description": "[cetc]A ruthless finishing blow.[/]\nGuaranteed [ccrit]CRIT[/] if target is [cctm]at or below 50% HP[/].",
+    "Power": 65,
+    "ManaCost": 0,
+    "MoveType": "Action",
+    "ImpactType": "Physical",
+    "OffensiveStat": "Strength",
+    "MakesContact": true,
+    "Target": "Single",
+    "Accuracy": 100,
+    "Priority": 0,
+    "Rarity": 2,
+    "LevelRequirement": 3,
+    "OffensiveElementIDs": [ 6 ],
+    "Effects": {
+      "Execute": "50,-99"
+    },
+    "Tags": [ "Metal", "Execution" ],
+    "AnimationSpriteSheet": "basic_slash",
+    "AnimationSpeed": 1.5,
+    "DamageFrameIndex": 2,
+    "IsAnimationCentralized": false
   }
 ]
