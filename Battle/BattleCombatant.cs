@@ -105,6 +105,9 @@ namespace ProjectVagabond.Battle
         // --- DISENGAGE MECHANIC STATE ---
         public bool PendingDisengage { get; set; } = false;
 
+        // --- DAZED MECHANIC STATE ---
+        public bool IsDazed { get; set; } = false;
+
         public BattleCombatant()
         {
             StatStages = new Dictionary<OffensiveStatType, int>

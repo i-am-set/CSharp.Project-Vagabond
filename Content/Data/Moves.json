@@ -586,10 +586,10 @@
   {
     "MoveID": "24",
     "MoveName": "Summon Tremors",
-    "Description": "[cetc]Summons an uncontrolable and destructive earthquake.[/]Hits [cnegative]all[/] combatants, including the [cnegative]user[/].",
+    "Description": "Earthquake that hits [cnegative]all[/] other combatants.",
     "Power": 150,
     "ManaCost": 40,
-    "MoveType": "Spell",
+    "MoveType": "Action",
     "ImpactType": "Physical",
     "OffensiveStat": "Intelligence",
     "MakesContact": false,
@@ -608,7 +608,7 @@
   {
     "MoveID": "25",
     "MoveName": "Beseech",
-    "Description": "[cetc]Siphons an ally's power to amplify the user.[/]\nLowers ally's random stat by [cnegative]2[/].\nRaises user's two random stats by [cpositive]2[/].",
+    "Description": "[cetc]Siphon your ally's power to amplify your own.[/]\nLowers ally's random stat by [cnegative]2[/].\nRaises user's two random stats by [cpositive]2[/].",
     "Power": 0,
     "ManaCost": 20,
     "MoveType": "Spell",
@@ -629,6 +629,31 @@
     "AnimationSpriteSheet": "basic_orb_pulse_2",
     "AnimationSpeed": 1.0,
     "DamageFrameIndex": 2,
+    "IsAnimationCentralized": false
+  },
+  {
+    "MoveID": "26",
+    "MoveName": "Counter",
+    "Description": "[cetc]A fast strike that[/] [cStatus]dazes[/] [cetc]the foe.[/]\n[cetc]Fails if not used on first turn.[/]",
+    "Power": 40,
+    "ManaCost": 10,
+    "MoveType": "Action",
+    "ImpactType": "Physical",
+    "OffensiveStat": "Agility",
+    "MakesContact": true,
+    "Target": "Single",
+    "Accuracy": 100,
+    "Priority": 3,
+    "Rarity": 1,
+    "LevelRequirement": 1,
+    "OffensiveElementIDs": [ 1 ],
+    "Effects": {
+      "Counter": ""
+    },
+    "Tags": [ "Priority", "Control" ],
+    "AnimationSpriteSheet": "basic_impact",
+    "AnimationSpeed": 2.0,
+    "DamageFrameIndex": 0,
     "IsAnimationCentralized": false
   }
 ]

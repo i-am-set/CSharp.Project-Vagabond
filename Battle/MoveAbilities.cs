@@ -624,4 +624,31 @@ namespace ProjectVagabond.Battle.Abilities
             }
         }
     }
+
+    public class CounterAbility : IOutgoingDamageModifier, IOnHitEffect
+    {
+        public string Name => "Counter";
+        public string Description => "Fails if not used on first turn. Dazes target.";
+
+        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
+        {
+            // If user has already acted in this battle, the move fails (0 damage)
+            if (ctx.Actor.HasUsedFirstAttack)
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "But it failed!" });
+                return 0f;
+            }
+            return currentDamage;
+        }
+
+        public void OnHit(CombatContext ctx, int damageDealt)
+        {
+            // Only apply Daze if damage was actually dealt (move didn't fail)
+            if (damageDealt > 0)
+            {
+                ctx.Target.IsDazed = true;
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} was [cStatus]DAZED[/]!" });
+            }
+        }
+    }
 }

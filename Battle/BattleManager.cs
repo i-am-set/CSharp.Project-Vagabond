@@ -263,6 +263,9 @@ namespace ProjectVagabond.Battle
             actor.BattleSlot = newSlot;
             incomingMember.BattleSlot = oldSlot;
 
+            // Reset "First Turn" flag for the incoming member so moves like Counter work again
+            incomingMember.HasUsedFirstAttack = false;
+
             RefreshCombatantCaches();
 
             // Retarget any pending actions
@@ -470,6 +473,14 @@ namespace ProjectVagabond.Battle
             if (nextAction.Actor.HasStatusEffect(StatusEffectType.Stun))
             {
                 EventBus.Publish(new GameEvents.ActionFailed { Actor = nextAction.Actor, Reason = "stunned" });
+                CanAdvance = false;
+                return;
+            }
+
+            // --- DAZED CHECK ---
+            if (nextAction.Actor.IsDazed)
+            {
+                EventBus.Publish(new GameEvents.ActionFailed { Actor = nextAction.Actor, Reason = "dazed" });
                 CanAdvance = false;
                 return;
             }
@@ -929,6 +940,9 @@ namespace ProjectVagabond.Battle
                     combatant.ConsecutiveProtectUses = 0;
                 }
                 combatant.UsedProtectThisTurn = false;
+
+                // Reset Dazed state at end of turn
+                combatant.IsDazed = false;
 
                 var effectsToRemove = new List<StatusEffectInstance>();
                 foreach (var effect in combatant.ActiveStatusEffects)
