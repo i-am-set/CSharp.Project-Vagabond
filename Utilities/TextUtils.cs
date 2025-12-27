@@ -100,5 +100,51 @@ namespace ProjectVagabond.Utils
                 spriteBatch.DrawString(font, charStr, charPos, textColor);
             }
         }
+
+        /// <summary>
+        /// Draws text with a full 8-direction square outline and wave animation.
+        /// </summary>
+        public static void DrawWavedTextSquareOutlined(SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color textColor, Color outlineColor, float waveTimer, float speed, float frequency, float amplitude, int charIndexOffset = 0)
+        {
+            float startX = position.X;
+            float baseY = position.Y;
+            var shadowColor = new Color(textColor.R / 4, textColor.G / 4, textColor.B / 4, textColor.A);
+
+            for (int i = 0; i < text.Length; i++)
+            {
+                char c = text[i];
+                string charStr = c.ToString();
+                string sub = text.Substring(0, i);
+                float charOffsetX = font.MeasureString(sub + "|").Width - font.MeasureString("|").Width;
+
+                float waveArg = waveTimer * speed - (i + charIndexOffset) * frequency;
+                float yWaveOffset = 0f;
+                if (waveArg > 0 && waveArg < MathHelper.Pi)
+                {
+                    float waveVal = MathF.Sin(waveArg);
+                    yWaveOffset = -MathF.Round(waveVal * amplitude);
+                }
+
+                Vector2 charPos = new Vector2(MathF.Round(startX + charOffsetX), MathF.Round(baseY + yWaveOffset));
+
+                // Diagonals
+                spriteBatch.DrawString(font, charStr, charPos + new Vector2(1, 1), outlineColor);
+                spriteBatch.DrawString(font, charStr, charPos + new Vector2(1, -1), outlineColor);
+                spriteBatch.DrawString(font, charStr, charPos + new Vector2(-1, 1), outlineColor);
+                spriteBatch.DrawString(font, charStr, charPos + new Vector2(-1, -1), outlineColor);
+
+                // Cardinals
+                spriteBatch.DrawString(font, charStr, charPos + new Vector2(1, 0), outlineColor);
+                spriteBatch.DrawString(font, charStr, charPos + new Vector2(-1, 0), outlineColor);
+                spriteBatch.DrawString(font, charStr, charPos + new Vector2(0, 1), outlineColor);
+                spriteBatch.DrawString(font, charStr, charPos + new Vector2(0, -1), outlineColor);
+
+                // Shadow
+                spriteBatch.DrawString(font, charStr, charPos + new Vector2(1, 0), shadowColor);
+
+                // Main
+                spriteBatch.DrawString(font, charStr, charPos, textColor);
+            }
+        }
     }
 }

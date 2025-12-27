@@ -523,7 +523,31 @@ namespace ProjectVagabond.Battle.UI
                         textColor = _global.Palette_Red;
                     }
 
-                    spriteBatch.DrawStringSnapped(secondaryFont, btn.Text, textPos, textColor);
+                    if (shouldHighlight)
+                    {
+                        // Use modulo timer to create a looping wave effect
+                        float cycleDuration = 2.0f; // 2 seconds per wave cycle
+                        float waveTimer = _targetingTextAnimTimer % cycleDuration;
+
+                        // Use the new Square Outlined Wave Text
+                        TextUtils.DrawWavedTextSquareOutlined(
+                            spriteBatch,
+                            secondaryFont,
+                            btn.Text,
+                            textPos,
+                            textColor,
+                            _global.Palette_Black,
+                            waveTimer,
+                            30f, // Speed
+                            0.8f, // Frequency
+                            1.0f // Amplitude
+                        );
+                    }
+                    else
+                    {
+                        // Use standard Square Outlined Text
+                        spriteBatch.DrawStringSquareOutlinedSnapped(secondaryFont, btn.Text, textPos, textColor, _global.Palette_Black);
+                    }
 
                     // Strikethrough for unselectable targets (INCLUDING EMPTY if disabled)
                     if (!btn.IsEnabled)

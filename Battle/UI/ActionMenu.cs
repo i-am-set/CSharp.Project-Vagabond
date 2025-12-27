@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -1207,6 +1206,7 @@ namespace ProjectVagabond.Battle.UI
 
         private void DrawMoveInfoPanelContent(SpriteBatch spriteBatch, MoveData? move, Rectangle bounds, BitmapFont font, BitmapFont secondaryFont, Matrix transform, bool isForTooltip)
         {
+            var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont; // Get Tertiary Font
             const int horizontalPadding = 4;
             const int verticalPadding = 3;
             float currentY = bounds.Y + verticalPadding;
@@ -1238,7 +1238,6 @@ namespace ProjectVagabond.Battle.UI
                     Color accColor = _global.Palette_BrightWhite;
                     if (move.Accuracy >= 0)
                     {
-                        // Lerp from White (100%) to Red (50% or lower)
                         float t = Math.Clamp((100f - move.Accuracy) / 50f, 0f, 1f);
                         accColor = Color.Lerp(_global.Palette_BrightWhite, _global.Palette_Red, t);
                     }
@@ -1253,6 +1252,22 @@ namespace ProjectVagabond.Battle.UI
                 float statsY = currentY + (nameSize.Height - secondaryFont.LineHeight) / 2;
                 float statsStartX = bounds.Right - horizontalPadding - totalStatsWidth;
 
+                // --- NEW: Contact Text for Tooltip ---
+                float contactWidth = 0f;
+                if (move.MakesContact)
+                {
+                    string contactText = "[CONTACT]";
+                    float textW = tertiaryFont.MeasureString(contactText).Width;
+                    contactWidth = textW + 4; // Text + Gap
+
+                    // Center vertically relative to statsY (secondary font baseline)
+                    // statsY is top of secondary font.
+                    float contactY = statsY + (secondaryFont.LineHeight - tertiaryFont.LineHeight) / 2f;
+
+                    // Draw to the left of stats
+                    spriteBatch.DrawStringSnapped(tertiaryFont, contactText, new Vector2(statsStartX - contactWidth, contactY), _global.Palette_Red);
+                }
+
                 float currentX = statsStartX;
                 foreach (var segment in statsSegments)
                 {
@@ -1260,7 +1275,10 @@ namespace ProjectVagabond.Battle.UI
                     currentX += secondaryFont.MeasureString(segment.Text).Width;
                 }
 
-                float textAvailableWidth = statsStartX - namePos.X - 4;
+                // Adjust available width for name scrolling to account for Contact text
+                float effectiveStatsLeft = statsStartX - (move.MakesContact ? contactWidth : 0);
+                float textAvailableWidth = effectiveStatsLeft - namePos.X - 4;
+
                 bool needsScrolling = nameSize.Width > textAvailableWidth;
                 if (needsScrolling)
                 {
@@ -1304,7 +1322,6 @@ namespace ProjectVagabond.Battle.UI
                 if (!string.IsNullOrEmpty(move.Description))
                 {
                     float availableWidth = bounds.Width - (horizontalPadding * 2);
-                    // Use ParseAndWrapRichText for rich text support in tooltip
                     var wrappedLines = ParseAndWrapRichText(secondaryFont, move.Description.ToUpper(), availableWidth, _global.Palette_White);
                     foreach (var line in wrappedLines)
                     {
@@ -1319,7 +1336,6 @@ namespace ProjectVagabond.Battle.UI
                                 lineWidth += secondaryFont.MeasureString(segment.Text).Width;
                         }
 
-                        // Left aligned for tooltip description
                         float lineX = bounds.X + horizontalPadding;
                         float lineCurrentX = lineX;
 
@@ -1344,7 +1360,7 @@ namespace ProjectVagabond.Battle.UI
             else
             {
                 float statsY = currentY;
-                Color valueColor = _global.Palette_BrightWhite; // Changed to BrightWhite
+                Color valueColor = _global.Palette_BrightWhite;
                 Color labelColor = _global.Palette_DarkGray;
 
                 string powerLabel = "POWE:";
@@ -1367,7 +1383,6 @@ namespace ProjectVagabond.Battle.UI
                     valueColor = labelColor;
                 }
 
-                // Row 1: Power (Left) and Mana (Right)
                 spriteBatch.DrawStringSnapped(secondaryFont, powerLabel, new Vector2(bounds.X + horizontalPadding, statsY), labelColor);
                 var powerValueSize = secondaryFont.MeasureString(powerValue);
                 var powerValuePos = new Vector2(bounds.Center.X - 9 - powerValueSize.Width, statsY);
@@ -1385,7 +1400,6 @@ namespace ProjectVagabond.Battle.UI
 
                 currentY += secondaryFont.LineHeight + 2;
 
-                // Row 2: Accuracy (Left) and Use (Right) - SWAPPED
                 var accLabelPos = new Vector2(bounds.X + horizontalPadding, currentY);
                 spriteBatch.DrawStringSnapped(secondaryFont, accLabel, accLabelPos, labelColor);
                 var accValueSize = secondaryFont.MeasureString(accValue);
@@ -1394,14 +1408,11 @@ namespace ProjectVagabond.Battle.UI
                 {
                     accValuePos.X -= 5;
                 }
-                // Shift Accuracy Value 5 pixels right
                 accValuePos.X += 6;
 
-                // Calculate Accuracy Color
                 Color accColor = valueColor;
                 if (move != null && move.Accuracy >= 0)
                 {
-                    // Lerp from White (100%) to Red (50% or lower)
                     float t = Math.Clamp((100f - move.Accuracy) / 50f, 0f, 1f);
                     accColor = Color.Lerp(valueColor, _global.Palette_Red, t);
                 }
@@ -1423,13 +1434,12 @@ namespace ProjectVagabond.Battle.UI
                     OffensiveStatType.Intelligence => _global.StatColor_Intelligence,
                     OffensiveStatType.Tenacity => _global.StatColor_Tenacity,
                     OffensiveStatType.Agility => _global.StatColor_Agility,
-                    _ => _global.Palette_BrightWhite // Changed to BrightWhite
+                    _ => _global.Palette_BrightWhite
                 };
 
                 spriteBatch.DrawStringSnapped(secondaryFont, "USE", new Vector2(bounds.Center.X + 2, currentY), labelColor);
                 var offStatSize = secondaryFont.MeasureString(offStatVal);
                 var offStatPos = new Vector2(bounds.Right - horizontalPadding - offStatSize.Width, currentY);
-                // Shift Use Value 5 pixels left
                 offStatPos.X -= 6;
                 spriteBatch.DrawStringSnapped(secondaryFont, offStatVal, offStatPos, offColor);
 
@@ -1449,7 +1459,7 @@ namespace ProjectVagabond.Battle.UI
                         TargetType.RandomBoth => "R-BOTH",
                         TargetType.RandomEvery => "R-EVRY",
                         TargetType.RandomAll => "R-ALL",
-                        TargetType.SingleAll => "ANY", // Added missing case
+                        TargetType.SingleAll => "ANY",
                         TargetType.None => "NONE",
                         _ => ""
                     };
@@ -1471,6 +1481,19 @@ namespace ProjectVagabond.Battle.UI
                         yAfterRow2 + (availableSpace - targetValueSize.Height) / 2f
                     );
                     spriteBatch.DrawStringSnapped(secondaryFont, targetValue, targetValuePos, _global.Palette_DarkGray);
+
+                    // --- NEW: Draw "CON" if Contact ---
+                    if (move != null && move.MakesContact)
+                    {
+                        string conText = "[CONTACT]";
+                        var conSize = tertiaryFont.MeasureString(conText);
+                        // Center vertically in the same space as targetValue
+                        var conPos = new Vector2(
+                            bounds.X + horizontalPadding,
+                            yAfterRow2 + (availableSpace - conSize.Height) / 2f
+                        );
+                        spriteBatch.DrawStringSnapped(tertiaryFont, conText, conPos, _global.Palette_Red);
+                    }
                 }
 
                 float impactX = gapCenter - (typeGap / 2f) - impactSize.Width;
@@ -1506,15 +1529,6 @@ namespace ProjectVagabond.Battle.UI
                 spriteBatch.DrawStringSnapped(secondaryFont, impactValue, impactPos, impactColor);
                 spriteBatch.DrawStringSnapped(secondaryFont, moveTypeValue, moveTypePos, moveTypeColor);
             }
-        }
-
-        // --- Rich Text Helpers (Copied from SplitMapInventoryOverlay) ---
-
-        private class ColoredText
-        {
-            public string Text;
-            public Color Color;
-            public ColoredText(string text, Color color) { Text = text; Color = color; }
         }
 
         private List<List<ColoredText>> ParseAndWrapRichText(BitmapFont font, string text, float maxWidth, Color defaultColor)
