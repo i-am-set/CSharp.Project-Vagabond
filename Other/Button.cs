@@ -66,31 +66,38 @@ namespace ProjectVagabond.UI
         public Color? DebugColor { get; set; }
         public HoverAnimationType HoverAnimation { get; set; } = HoverAnimationType.Hop;
 
-        // --- Text Wave Animation Settings ---
-        /// <summary>
-        /// If true, the text will ripple/wave when the button is hovered.
-        /// </summary>
-        public bool EnableTextWave { get; set; } = true;
+        // --- Text Wave Animation Settings (Delegated to Controller) ---
+        private readonly TextWaveController _waveController = new TextWaveController();
 
-        /// <summary>
-        /// The speed of the wave animation.
-        /// </summary>
-        public float WaveSpeed { get; set; } = 30f;
+        public bool EnableTextWave
+        {
+            get => _waveController.IsEnabled;
+            set => _waveController.IsEnabled = value;
+        }
 
-        /// <summary>
-        /// The frequency of the wave (higher = tighter ripples).
-        /// </summary>
-        public float WaveFrequency { get; set; } = 0.8f;
+        public float WaveSpeed
+        {
+            get => _waveController.WaveSpeed;
+            set => _waveController.WaveSpeed = value;
+        }
 
-        /// <summary>
-        /// The height of the wave in pixels.
-        /// </summary>
-        public float WaveAmplitude { get; set; } = 1.0f;
+        public float WaveFrequency
+        {
+            get => _waveController.WaveFrequency;
+            set => _waveController.WaveFrequency = value;
+        }
 
-        /// <summary>
-        /// The delay in seconds before the wave animation repeats.
-        /// </summary>
-        public float WaveRepeatDelay { get; set; } = 0.25f;
+        public float WaveAmplitude
+        {
+            get => _waveController.WaveAmplitude;
+            set => _waveController.WaveAmplitude = value;
+        }
+
+        public float WaveRepeatDelay
+        {
+            get => _waveController.WaveRepeatDelay;
+            set => _waveController.WaveRepeatDelay = value;
+        }
 
         /// <summary>
         /// If true (default), clicks are throttled by the global UIInputManager to prevent double-clicks.
@@ -112,12 +119,6 @@ namespace ProjectVagabond.UI
         protected MouseState _previousMouseState;
         protected readonly HoverAnimator _hoverAnimator = new HoverAnimator();
         protected bool _isPressed = false;
-
-        // Wave Animation State
-        protected float _waveTimer = 0f;
-        protected float _waveDelayTimer = 0f;
-        protected bool _isWaveAnimating = false;
-        protected bool _wasHoveredLastDraw = false;
 
         // Sprite-based properties
         private readonly Texture2D? _spriteSheet;
@@ -294,15 +295,12 @@ namespace ProjectVagabond.UI
         public virtual void ResetAnimationState()
         {
             _hoverAnimator.Reset();
+            _waveController.Reset();
             _isPressed = false;
             IsHovered = false;
             _slideOffset = 0f;
             _shakeTimer = 0f;
             _flashTimer = 0f;
-            _isWaveAnimating = false;
-            _waveTimer = 0f;
-            _waveDelayTimer = 0f;
-            _wasHoveredLastDraw = false;
         }
 
         protected (Vector2 shakeOffset, Color? flashTint) UpdateFeedbackAnimations(GameTime gameTime)
@@ -336,54 +334,12 @@ namespace ProjectVagabond.UI
         /// </summary>
         protected void UpdateWaveTimer(float deltaTime, bool isHovered)
         {
-            if (!isHovered)
-            {
-                _isWaveAnimating = false;
-                _waveTimer = 0f;
-                _waveDelayTimer = 0f;
-                _wasHoveredLastDraw = false;
-                return;
-            }
-
-            // Trigger animation only on the rising edge of hover
-            if (!_wasHoveredLastDraw)
-            {
-                _isWaveAnimating = true;
-                _waveTimer = 0f;
-                _waveDelayTimer = 0f;
-            }
-
-            _wasHoveredLastDraw = true;
-
-            if (_isWaveAnimating)
-            {
-                _waveTimer += deltaTime;
-                // Stop animation after enough time has passed for the wave to traverse the text
-                // Heuristic: (TextLength * Frequency + Pi) / Speed is roughly when the last char finishes
-                float estimatedDuration = (Text.Length * WaveFrequency + MathHelper.Pi) / WaveSpeed + 0.5f;
-
-                if (_waveTimer > estimatedDuration)
-                {
-                    _isWaveAnimating = false;
-                    _waveTimer = 0f;
-                    _waveDelayTimer = WaveRepeatDelay; // Start delay before repeating
-                }
-            }
-            else
-            {
-                // In delay phase
-                if (_waveDelayTimer > 0)
-                {
-                    _waveDelayTimer -= deltaTime;
-                    if (_waveDelayTimer <= 0)
-                    {
-                        // Restart animation
-                        _isWaveAnimating = true;
-                        _waveTimer = 0f;
-                    }
-                }
-            }
+            _waveController.Update(deltaTime, isHovered, Text.Length);
         }
+
+        // Expose internal wave state for subclasses if needed (like TextOverImageButton)
+        protected bool _isWaveAnimating => _waveController.IsAnimating;
+        protected float _waveTimer => _waveController.CurrentTimer;
 
         public virtual void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? horizontalOffset = null, float? verticalOffset = null, Color? tintColorOverride = null)
         {

@@ -126,6 +126,9 @@ namespace ProjectVagabond.Scenes
 
         private ImageButton? _settingsButton;
 
+        // --- Text Wave Controller for Node Hover Text ---
+        private readonly TextWaveController _nodeTextWaveController = new TextWaveController();
+
         public SplitMapScene()
         {
             _progressionManager = ServiceLocator.Get<ProgressionManager>();
@@ -266,6 +269,7 @@ namespace ProjectVagabond.Scenes
             _waitingForCombatCameraSettle = false;
             _pendingCombatArchetypes = null;
             _viewToReturnTo = SplitMapView.Map;
+            _nodeTextWaveController.Reset(); // Reset wave state on enter
 
             _inventoryOverlay.Initialize();
             _settingsOverlay.Initialize();
@@ -1430,11 +1434,28 @@ namespace ProjectVagabond.Scenes
                     {
                         var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
                         var nodeTextSize = secondaryFont.MeasureString(nodeText);
-                        float yOffset = (MathF.Sin(_nodeHoverTextBobTimer * 4f) > 0) ? -1f : 0f;
+                        float yOffset = (MathF.Sin(_nodeHoverTextBobTimer * 1f) > 0) ? -1f : 0f;
                         var textPosition = new Vector2((Global.VIRTUAL_WIDTH - nodeTextSize.Width) / 2f, Global.VIRTUAL_HEIGHT - nodeTextSize.Height - 3 + yOffset);
-                        spriteBatch.DrawStringSnapped(secondaryFont, nodeText, textPosition, _global.Palette_Yellow);
+
+                        // --- NEW: Use TextWaveController for animation ---
+                        bool isHovering = true; // We are inside the hover block
+                        _nodeTextWaveController.Update((float)gameTime.ElapsedGameTime.TotalSeconds, isHovering, nodeText.Length);
+
+                        if (_nodeTextWaveController.IsAnimating)
+                        {
+                            TextUtils.DrawWavedText(spriteBatch, secondaryFont, nodeText, textPosition, _global.Palette_Yellow, _nodeTextWaveController.CurrentTimer, _nodeTextWaveController.WaveSpeed, _nodeTextWaveController.WaveFrequency, _nodeTextWaveController.WaveAmplitude);
+                        }
+                        else
+                        {
+                            spriteBatch.DrawStringSnapped(secondaryFont, nodeText, textPosition, _global.Palette_Yellow);
+                        }
                     }
                 }
+            }
+            else
+            {
+                // Ensure controller resets when not hovering
+                _nodeTextWaveController.Reset();
             }
 
             if (_narrativeDialog.IsActive) _narrativeDialog.DrawContent(spriteBatch, font, gameTime, transform);
