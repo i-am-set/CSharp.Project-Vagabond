@@ -668,10 +668,17 @@ namespace ProjectVagabond.Battle.UI
             bool showName;
             if (isHoveringAction)
             {
-                showName = (player == currentActor);
+                // Show name only if it's the actor AND they are a valid target for the hovered move
+                showName = (player == currentActor) && selectableTargets.Contains(player);
+            }
+            else if (isTargetingPhase && player == currentActor)
+            {
+                // Targeting Menu: Always show actor name
+                showName = true;
             }
             else
             {
+                // Default: Hide if silhouetted
                 showName = !isSilhouetted;
             }
 
@@ -691,7 +698,28 @@ namespace ProjectVagabond.Battle.UI
                     nameFontToUse = secondaryFont;
                 }
 
-                if (highlightColor.HasValue && highlightColor.Value == Color.Yellow)
+                // Logic for Actor Name Color
+                if (player == currentActor)
+                {
+                    if (isHoveringAction || isTargetingPhase)
+                    {
+                        // If highlighted (Yellow), stay Yellow. Otherwise DarkGray.
+                        if (highlightColor.HasValue && highlightColor.Value == Color.Yellow)
+                        {
+                            nameColor = _global.Palette_Yellow;
+                        }
+                        else
+                        {
+                            nameColor = _global.Palette_DarkGray;
+                        }
+                    }
+                    else if (highlightColor.HasValue && highlightColor.Value == Color.Yellow)
+                    {
+                        // Fallback for other phases if highlighted
+                        nameColor = _global.Palette_Yellow;
+                    }
+                }
+                else if (highlightColor.HasValue && highlightColor.Value == Color.Yellow)
                 {
                     nameColor = _global.Palette_Yellow;
                 }

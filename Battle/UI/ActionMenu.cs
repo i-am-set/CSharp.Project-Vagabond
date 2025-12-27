@@ -1412,7 +1412,7 @@ namespace ProjectVagabond.Battle.UI
                 var accValuePos = new Vector2(bounds.Center.X - 9 - accValueSize.Width, currentY);
                 if (!accValue.Contains("%"))
                 {
-                    accValuePos.X -= 6; // Changed from 5 to 6
+                    accValuePos.X -= 6; 
                 }
                 accValuePos.X += 6;
 

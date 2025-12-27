@@ -512,7 +512,7 @@ namespace ProjectVagabond.Battle.UI
                     else if (buttonCombatant == currentActor)
                     {
                         // Override for current actor
-                        textColor = _global.Palette_Gray;
+                        textColor = _global.Palette_DarkGray;
                     }
                     else if (!btn.IsEnabled)
                     {
