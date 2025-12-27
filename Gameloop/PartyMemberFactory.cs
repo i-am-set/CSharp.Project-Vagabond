@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿#nullable enable
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -16,7 +17,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
-namespace ProjectVagabond
+namespace ProjectVagabond.Battle
 {
     public static class PartyMemberFactory
     {
@@ -74,6 +75,23 @@ namespace ProjectVagabond
                 }
             }
 
+            // --- SORT SPELLS ---
+            // Sort by Impact Type: Magical -> Physical -> Status
+            var activeSpells = member.Spells.Where(s => s != null).ToList();
+            activeSpells.Sort((a, b) =>
+            {
+                int scoreA = GetSortScore(a!.MoveID);
+                int scoreB = GetSortScore(b!.MoveID);
+                return scoreA.CompareTo(scoreB);
+            });
+
+            // Re-populate the array
+            for (int i = 0; i < 4; i++)
+            {
+                if (i < activeSpells.Count) member.Spells[i] = activeSpells[i];
+                else member.Spells[i] = null;
+            }
+
             // Auto-Equip Weapons
             if (data.StartingWeapons.Any())
             {
@@ -105,6 +123,18 @@ namespace ProjectVagabond
             }
 
             return member;
+        }
+
+        private static int GetSortScore(string moveId)
+        {
+            if (BattleDataCache.Moves.TryGetValue(moveId, out var move))
+            {
+                // Order: Magical (0), Physical (1), Status (2)
+                if (move.ImpactType == ImpactType.Magical) return 0;
+                if (move.ImpactType == ImpactType.Physical) return 1;
+                return 2; // Status
+            }
+            return 3; // Unknown/Fallback
         }
     }
 }

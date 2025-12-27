@@ -267,6 +267,31 @@ namespace ProjectVagabond.Battle.UI
                     }
                 }
 
+                // --- Impact Type Color Tag (Inner) ---
+                Color impactColor = Move.ImpactType switch
+                {
+                    ImpactType.Magical => _global.Palette_LightBlue,
+                    ImpactType.Physical => _global.Palette_Orange,
+                    _ => _global.Palette_Gray
+                };
+
+                // Draw at Right - 3 (leaving 1px gap + 1px for MoveType)
+                var impactTagRect = new Rectangle(animatedBounds.Right - 3, animatedBounds.Y, 1, animatedBounds.Height);
+                spriteBatch.DrawSnapped(pixel, impactTagRect, impactColor * contentAlpha);
+
+                // --- Move Type Color Tag (Outer) ---
+                Color moveTypeColor = Move.MoveType switch
+                {
+                    MoveType.Action => _global.Palette_Orange,
+                    MoveType.Spell => _global.Palette_LightBlue,
+                    _ => _global.Palette_Gray
+                };
+
+                // Draw at Right - 1 (Far right edge)
+                // Adjusted: 1 pixel gap at top, 1 pixel gap at bottom (Height - 2)
+                var moveTypeTagRect = new Rectangle(animatedBounds.Right - 1, animatedBounds.Y + 1, 1, animatedBounds.Height - 2);
+                spriteBatch.DrawSnapped(pixel, moveTypeTagRect, moveTypeColor * contentAlpha);
+
                 // --- Strikethrough Logic for Disabled State ---
                 if (!IsEnabled)
                 {

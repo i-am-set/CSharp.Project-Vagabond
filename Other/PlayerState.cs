@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿#nullable enable
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -271,6 +272,7 @@ namespace ProjectVagabond
                     if (target.Spells[i] == null)
                     {
                         target.Spells[i] = new MoveEntry(moveId, 0);
+                        SortSpells(target); // Auto-sort after adding
                         return;
                     }
                 }
@@ -295,6 +297,7 @@ namespace ProjectVagabond
                 if (target.Spells[i]?.MoveID == moveId)
                 {
                     target.Spells[i] = null;
+                    SortSpells(target); // Auto-sort after removing
                     return;
                 }
             }
@@ -302,6 +305,48 @@ namespace ProjectVagabond
             // Check Actions
             var actionIndex = target.Actions.FindIndex(m => m.MoveID == moveId);
             if (actionIndex != -1) target.Actions.RemoveAt(actionIndex);
+        }
+
+        /// <summary>
+        /// Sorts the spell slots of a party member based on ImpactType: Magical -> Physical -> Status.
+        /// </summary>
+        private void SortSpells(PartyMember member)
+        {
+            // 1. Extract all non-null entries
+            var activeSpells = member.Spells.Where(s => s != null).ToList();
+
+            // 2. Sort them
+            activeSpells.Sort((a, b) =>
+            {
+                int scoreA = GetSortScore(a!.MoveID);
+                int scoreB = GetSortScore(b!.MoveID);
+                return scoreA.CompareTo(scoreB);
+            });
+
+            // 3. Re-populate the array
+            for (int i = 0; i < 4; i++)
+            {
+                if (i < activeSpells.Count)
+                {
+                    member.Spells[i] = activeSpells[i];
+                }
+                else
+                {
+                    member.Spells[i] = null;
+                }
+            }
+        }
+
+        private int GetSortScore(string moveId)
+        {
+            if (BattleDataCache.Moves.TryGetValue(moveId, out var move))
+            {
+                // Order: Magical (0), Physical (1), Status (2)
+                if (move.ImpactType == ImpactType.Magical) return 0;
+                if (move.ImpactType == ImpactType.Physical) return 1;
+                return 2; // Status
+            }
+            return 3; // Unknown/Fallback
         }
     }
 }

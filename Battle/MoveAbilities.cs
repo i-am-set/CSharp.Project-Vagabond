@@ -7,8 +7,6 @@ using System.Collections.Generic;
 
 namespace ProjectVagabond.Battle.Abilities
 {
-    // ... (Previous abilities unchanged) ...
-
     public class CounterAbility : IOutgoingDamageModifier, IOnHitEffect
     {
         public string Name => "Counter";
@@ -41,6 +39,7 @@ namespace ProjectVagabond.Battle.Abilities
         }
     }
 
+    // ... (Rest of file unchanged) ...
     public class RestoreManaAbility : IOnHitEffect
     {
         public string Name => "Restore Mana";
@@ -653,56 +652,6 @@ namespace ProjectVagabond.Battle.Abilities
         {
             BreakDamageMultiplier = damageMultiplier;
             FailsIfNoProtect = failsIfNoProtect;
-        }
-    }
-
-    public class ExecuteAbility : ICalculationModifier, ICritModifier
-    {
-        public string Name => "Execute";
-        public string Description => "Deals bonus damage or crits low HP targets.";
-
-        private readonly float _threshold;
-        private readonly float _multiplier;
-
-        public ExecuteAbility(float threshold, float multiplier)
-        {
-            _threshold = threshold;
-            _multiplier = multiplier;
-        }
-
-        public float ModifyBasePower(float basePower, CombatContext ctx)
-        {
-            if (_multiplier == -99) return basePower;
-
-            // FIX: Check for null target (e.g. UI display)
-            if (ctx.Target == null) return basePower;
-
-            float hpPercent = (float)ctx.Target.Stats.CurrentHP / ctx.Target.Stats.MaxHP * 100f;
-            if (hpPercent <= _threshold)
-            {
-                return basePower * _multiplier;
-            }
-            return basePower;
-        }
-
-        public float ModifyCritChance(float currentChance, CombatContext ctx)
-        {
-            if (_multiplier != -99) return currentChance;
-
-            // FIX: Check for null target (e.g. UI display)
-            if (ctx.Target == null) return currentChance;
-
-            float hpPercent = (float)ctx.Target.Stats.CurrentHP / ctx.Target.Stats.MaxHP * 100f;
-            if (hpPercent <= _threshold)
-            {
-                return 1.0f; // Guaranteed crit
-            }
-            return currentChance;
-        }
-
-        public float ModifyCritDamage(float currentMultiplier, CombatContext ctx)
-        {
-            return currentMultiplier;
         }
     }
 }
