@@ -634,7 +634,7 @@
   {
     "MoveID": "26",
     "MoveName": "Sonicboom",
-    "Description": "[cetc]The user hits the target with a stream of super sonic air.[/]\n[cStatus]Dazes[/] [cetc]the foe.[/]\nFails if not used on first turn.",
+    "Description": "[cetc]A super sonic blast surprises the target.[/]\n[cStatus]Dazes[/] the foe.\nFails if not used on first turn.",
     "Power": 40,
     "ManaCost": 10,
     "MoveType": "Spell",
@@ -659,7 +659,7 @@
   {
     "MoveID": "27",
     "MoveName": "Shatter Guard",
-    "Description": "[cetc]A heavy blow that breaks defenses.[/]\n[cetc]Deals[/] [cnegative]0.5x[/] [cetc]damage if breaking[/] [cStatus]Protect[/].",
+    "Description": "[cetc]A heavy blow that breaks through wards.[/]\nDeals[/] [cnegative]0.5x[/] [cetc]damage if breaking[/] [cStatus]Protect[/].",
     "Power": 60,
     "ManaCost": 0,
     "MoveType": "Action",
@@ -684,7 +684,7 @@
   {
     "MoveID": "28",
     "MoveName": "Sunder",
-    "Description": "[cetc]A precise strike that punishes guarding foes.[/]\n[cetc]Fails if target is not[/] [cStatus]Protected[/].",
+    "Description": "[cetc]A precise strike that punishes guarding foes.[/]\nFails if target is not [cStatus]Protected[/].",
     "Power": 100,
     "ManaCost": 10,
     "MoveType": "Spell",
