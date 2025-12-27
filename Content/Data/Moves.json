@@ -586,10 +586,10 @@
   {
     "MoveID": "24",
     "MoveName": "Summon Tremors",
-    "Description": "Earthquake that hits [cnegative]all[/] other combatants.",
+    "Description": "[cetc]Summons an uncontrolable and destructive earthquake.[/]Hits [cnegative]all[/] combatants, including the [cnegative]user[/].",
     "Power": 150,
     "ManaCost": 40,
-    "MoveType": "Action",
+    "MoveType": "Spell",
     "ImpactType": "Physical",
     "OffensiveStat": "Intelligence",
     "MakesContact": false,
@@ -608,7 +608,7 @@
   {
     "MoveID": "25",
     "MoveName": "Beseech",
-    "Description": "[cetc]Siphon your ally's power to amplify your own.[/]\nLowers ally's random stat by [cnegative]2[/].\nRaises user's two random stats by [cpositive]2[/].",
+    "Description": "[cetc]Siphons an ally's power to amplify the user.[/]\nLowers ally's random stat by [cnegative]2[/].\nRaises user's two random stats by [cpositive]2[/].",
     "Power": 0,
     "ManaCost": 20,
     "MoveType": "Spell",
