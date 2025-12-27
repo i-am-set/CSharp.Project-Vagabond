@@ -1,14 +1,17 @@
-﻿#nullable enable
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Dice;
+using ProjectVagabond.Progression;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.UI
@@ -849,8 +852,8 @@ namespace ProjectVagabond.UI
 
             currentY += spriteSize + gap;
 
-            // --- WAVE ANIMATION FOR GENERIC ITEM NAME ---
-            int globalCharIndex = 0;
+            int globalCharIndex = 0; // Added for wave animation continuity
+
             foreach (var line in titleLines)
             {
                 float lineWidth = 0;
@@ -871,7 +874,7 @@ namespace ProjectVagabond.UI
                     if (string.IsNullOrWhiteSpace(segment.Text))
                     {
                         segWidth = segment.Text.Length * SPACE_WIDTH;
-                        globalCharIndex += segment.Text.Length;
+                        globalCharIndex += segment.Text.Length; // Advance index for spaces
                     }
                     else
                     {
@@ -885,7 +888,7 @@ namespace ProjectVagabond.UI
                         {
                             spriteBatch.DrawStringSnapped(font, segment.Text, new Vector2(currentX, currentY), segment.Color);
                         }
-                        globalCharIndex += segment.Text.Length;
+                        globalCharIndex += segment.Text.Length; // Advance index for text
                     }
                     currentX += segWidth;
                 }

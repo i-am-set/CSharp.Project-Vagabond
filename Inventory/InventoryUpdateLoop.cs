@@ -428,11 +428,16 @@ namespace ProjectVagabond.UI
                 if (activeSlot != null && activeSlot.HasItem && !string.IsNullOrEmpty(activeSlot.ItemId))
                 {
                     // Determine item type based on category
-                    if (_selectedInventoryCategory == InventoryCategory.Weapons) _hoveredItemData = GetWeaponData(activeSlot.ItemId);
-                    else if (_selectedInventoryCategory == InventoryCategory.Armor) _hoveredItemData = GetArmorData(activeSlot.ItemId);
-                    else if (_selectedInventoryCategory == InventoryCategory.Relics) _hoveredItemData = GetRelicData(activeSlot.ItemId);
-                    else if (_selectedInventoryCategory == InventoryCategory.Consumables) _hoveredItemData = BattleDataCache.Consumables.GetValueOrDefault(activeSlot.ItemId);
-                    else if (_selectedInventoryCategory == InventoryCategory.Misc) _hoveredItemData = BattleDataCache.MiscItems.GetValueOrDefault(activeSlot.ItemId);
+                    if (_selectedInventoryCategory == InventoryCategory.Weapons)
+                        _hoveredItemData = BattleDataCache.Weapons.Values.FirstOrDefault(w => w.WeaponName.Equals(activeSlot.ItemId, StringComparison.OrdinalIgnoreCase));
+                    else if (_selectedInventoryCategory == InventoryCategory.Armor)
+                        _hoveredItemData = BattleDataCache.Armors.Values.FirstOrDefault(a => a.ArmorName.Equals(activeSlot.ItemId, StringComparison.OrdinalIgnoreCase));
+                    else if (_selectedInventoryCategory == InventoryCategory.Relics)
+                        _hoveredItemData = BattleDataCache.Relics.Values.FirstOrDefault(r => r.RelicName.Equals(activeSlot.ItemId, StringComparison.OrdinalIgnoreCase));
+                    else if (_selectedInventoryCategory == InventoryCategory.Consumables)
+                        _hoveredItemData = BattleDataCache.Consumables.Values.FirstOrDefault(c => c.ItemName.Equals(activeSlot.ItemId, StringComparison.OrdinalIgnoreCase));
+                    else if (_selectedInventoryCategory == InventoryCategory.Misc)
+                        _hoveredItemData = BattleDataCache.MiscItems.Values.FirstOrDefault(m => m.ItemName.Equals(activeSlot.ItemId, StringComparison.OrdinalIgnoreCase));
                 }
 
                 // Update Page Buttons

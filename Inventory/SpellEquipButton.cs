@@ -86,8 +86,16 @@ namespace ProjectVagabond.UI
                 // Round to pixel
                 textPos = new Vector2(MathF.Round(textPos.X), MathF.Round(textPos.Y));
 
-                // Use the new Square Outline method with Palette_Black
-                spriteBatch.DrawStringSquareOutlinedSnapped(tertiaryFont, textToDraw, textPos, textColor, _global.Palette_DarkerGray);
+                if (isActivated)
+                {
+                    // No outline when hovered
+                    spriteBatch.DrawStringSnapped(tertiaryFont, textToDraw, textPos, textColor);
+                }
+                else
+                {
+                    // Outline when normal
+                    spriteBatch.DrawStringSquareOutlinedSnapped(tertiaryFont, textToDraw, textPos, textColor, _global.Palette_DarkerGray);
+                }
             }
         }
     }
