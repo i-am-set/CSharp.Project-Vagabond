@@ -1559,10 +1559,22 @@ namespace ProjectVagabond.Battle.UI
             {
                 bool isDamaged = combatant.Stats.CurrentHP < combatant.Stats.MaxHP;
                 bool isVisuallyDamaged = combatant.VisualHP < (combatant.Stats.MaxHP - 0.1f);
+                bool showHealth = isDamaged || isVisuallyDamaged;
 
-                if (isDamaged || isVisuallyDamaged)
+                // Check Mana
+                bool isManaMissing = combatant.Stats.CurrentMana < combatant.Stats.MaxMana;
+                bool showMana = isManaMissing && combatant.Stats.MaxMana > 0;
+
+                if (showHealth)
                 {
                     DrawEnemyHealthBar(spriteBatch, combatant, barX, barY, barWidth, barHeight, animationManager, 1.0f);
+                }
+
+                if (showMana)
+                {
+                    // Draw below health bar (barY + height + 1px gap)
+                    float manaBarY = barY + barHeight + 1;
+                    DrawEnemyManaBar(spriteBatch, combatant, barX, manaBarY, barWidth, barHeight, animationManager, 1.0f);
                 }
             }
 
@@ -1761,6 +1773,33 @@ namespace ProjectVagabond.Battle.UI
             if (hpAnim != null)
             {
                 DrawBarAnimationOverlay(spriteBatch, barRect, combatant.Stats.MaxHP, hpAnim);
+            }
+        }
+
+        private void DrawEnemyManaBar(SpriteBatch spriteBatch, BattleCombatant combatant, float barX, float barY, int barWidth, int barHeight, BattleAnimationManager animationManager, float alpha)
+        {
+            var pixel = ServiceLocator.Get<Texture2D>();
+
+            var barRect = new Rectangle(
+                (int)barX,
+                (int)barY,
+                barWidth,
+                barHeight
+            );
+
+            float manaPercent = combatant.Stats.MaxMana > 0 ? Math.Clamp((float)combatant.Stats.CurrentMana / combatant.Stats.MaxMana, 0f, 1f) : 0f;
+            int fgWidth = (int)(barRect.Width * manaPercent);
+            if (manaPercent > 0 && fgWidth == 0) fgWidth = 1;
+
+            var manaFgRect = new Rectangle(barRect.X, barRect.Y, fgWidth, barRect.Height);
+
+            spriteBatch.DrawSnapped(pixel, barRect, _global.Palette_DarkGray * alpha);
+            spriteBatch.DrawSnapped(pixel, manaFgRect, _global.Palette_LightBlue * alpha);
+
+            var manaAnim = animationManager.GetResourceBarAnimation(combatant.CombatantID, BattleAnimationManager.ResourceBarAnimationState.BarResourceType.Mana);
+            if (manaAnim != null)
+            {
+                DrawBarAnimationOverlay(spriteBatch, barRect, combatant.Stats.MaxMana, manaAnim);
             }
         }
 

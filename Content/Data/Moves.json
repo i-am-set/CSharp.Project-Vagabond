@@ -834,7 +834,7 @@
   {
     "MoveID": "34",
     "MoveName": "Mana Burn",
-    "Description": "[cetc]Disrupts the target's magical flow.[/]\nDestroys [cpositive]50[/] of target's [cmana]Current Mana[/].",
+    "Description": "[cetc]Detonates the target's stored magic.[/]\nUses up [cpositive]50[/] of target's [cmana]Current Mana[/]. Power is based on the amount of mana destroyed.",
     "Power": 0,
     "ManaCost": 20,
     "MoveType": "Spell",
