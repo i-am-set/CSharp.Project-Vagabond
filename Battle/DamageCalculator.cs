@@ -143,6 +143,12 @@ namespace ProjectVagabond.Battle
                 }
             }
 
+            // --- EMPOWERED STATUS CHECK ---
+            if (attacker.HasStatusEffect(StatusEffectType.Empowered))
+            {
+                currentDamage *= Global.Instance.EmpoweredDamageMultiplier;
+            }
+
             currentDamage *= multiTargetModifier;
 
             // 6. Critical Hits
@@ -227,6 +233,12 @@ namespace ProjectVagabond.Battle
                 if (ability is IOutgoingDamageModifier odm) currentDamage = odm.ModifyOutgoingDamage(currentDamage, ctx);
             }
 
+            // --- EMPOWERED STATUS CHECK ---
+            if (attacker.HasStatusEffect(StatusEffectType.Empowered))
+            {
+                currentDamage *= Global.Instance.EmpoweredDamageMultiplier;
+            }
+
             foreach (var modifier in target.IncomingDamageModifiers) currentDamage = modifier.ModifyIncomingDamage(currentDamage, ctx);
 
             if (target.HasStatusEffect(StatusEffectType.Burn))
@@ -307,6 +319,12 @@ namespace ProjectVagabond.Battle
             foreach (var ability in move.Abilities)
             {
                 if (ability is IOutgoingDamageModifier odm) power = odm.ModifyOutgoingDamage(power, ctx);
+            }
+
+            // --- EMPOWERED STATUS CHECK ---
+            if (attacker.HasStatusEffect(StatusEffectType.Empowered))
+            {
+                power *= Global.Instance.EmpoweredDamageMultiplier;
             }
 
             return (int)power;

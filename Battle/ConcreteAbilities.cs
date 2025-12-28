@@ -124,7 +124,13 @@ namespace ProjectVagabond.Battle.Abilities
         public string Description => "Deal more damage to statused targets.";
         private readonly float _multiplier;
         public StatusedTargetDamageAbility(float bonusPercent) { _multiplier = 1.0f + (bonusPercent / 100f); }
-        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx) => (ctx.Target.ActiveStatusEffects.Any()) ? currentDamage * _multiplier : currentDamage;
+        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
+        {
+            // Safety check: Target can be null during UI calculations (e.g. GetEffectiveMovePower)
+            if (ctx.Target == null) return currentDamage;
+
+            return (ctx.Target.ActiveStatusEffects.Any()) ? currentDamage * _multiplier : currentDamage;
+        }
     }
 
     public class LastStandAbility : IOutgoingDamageModifier

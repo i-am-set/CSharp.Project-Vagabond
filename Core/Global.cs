@@ -141,7 +141,8 @@ namespace ProjectVagabond
             { StatusEffectType.Burn, Palette_Red },
             { StatusEffectType.Frostbite, Palette_DarkBlue },
             { StatusEffectType.Silence, Palette_LightGray },
-            { StatusEffectType.Protected, Palette_BrightWhite }
+            { StatusEffectType.Protected, Palette_BrightWhite },
+            { StatusEffectType.Empowered, Palette_Orange }
         };
         }
 
@@ -228,6 +229,7 @@ namespace ProjectVagabond
         public float DodgingAccuracyMultiplier { get; set; } = 0.5f;
         public float BurnDamageMultiplier { get; set; } = 2.0f;
         public float FrostbiteAgilityMultiplier { get; set; } = 0.5f;
+        public float EmpoweredDamageMultiplier { get; set; } = 1.5f;
 
         // --- HITSTOP (FRAME FREEZE) TUNING ---
         public float HitstopDuration_Normal { get; set; } = 0.1f;
@@ -361,7 +363,7 @@ namespace ProjectVagabond
         public Color ResistedIndicatorColor { get; set; }
         public Color ImmuneIndicatorColor { get; set; }
         public Color ProtectedIndicatorColor { get; set; }
-        public Color FailedIndicatorColor { get; set; } 
+        public Color FailedIndicatorColor { get; set; }
 
         // Data-driven Colors
         public Dictionary<int, Color> ElementColors { get; private set; }
