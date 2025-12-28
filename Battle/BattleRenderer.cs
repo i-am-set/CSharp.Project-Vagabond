@@ -3,7 +3,6 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
-using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
@@ -290,6 +289,28 @@ namespace ProjectVagabond.Battle.UI
             var secondaryFont = _core.SecondaryFont;
             var pixel = ServiceLocator.Get<Texture2D>();
 
+            // --- STAT CHANGE TOOLTIP LOGIC (Moved to top for sprite tinting) ---
+            var battleManager = ServiceLocator.Get<BattleManager>();
+            bool isSelectionPhase = battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection_Slot1 || battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection_Slot2;
+            bool isDefaultUI = uiManager.UIState == BattleUIState.Default;
+
+            BattleCombatant? hoveredCombatant = null;
+            if (inputHandler.HoveredTargetIndex >= 0 && inputHandler.HoveredTargetIndex < _currentTargets.Count)
+            {
+                hoveredCombatant = _currentTargets[inputHandler.HoveredTargetIndex].Combatant;
+            }
+
+            if (isSelectionPhase && isDefaultUI && hoveredCombatant != null)
+            {
+                _statTooltipCombatantID = hoveredCombatant.CombatantID;
+                _statTooltipAlpha = 1.0f; // Instant appear
+            }
+            else
+            {
+                _statTooltipAlpha = 0.0f; // Instant disappear
+                _statTooltipCombatantID = null;
+            }
+
             var currentAttackerId = (currentActor != null) ? currentActor.CombatantID : null;
             if (currentAttackerId != _lastAttackerId)
             {
@@ -299,12 +320,6 @@ namespace ProjectVagabond.Battle.UI
             foreach (var controller in _attackAnimControllers.Values)
             {
                 controller.Update(gameTime);
-            }
-
-            BattleCombatant? hoveredCombatant = null;
-            if (inputHandler.HoveredTargetIndex >= 0 && inputHandler.HoveredTargetIndex < _currentTargets.Count)
-            {
-                hoveredCombatant = _currentTargets[inputHandler.HoveredTargetIndex].Combatant;
             }
 
             _currentTargets.Clear();
@@ -478,22 +493,6 @@ namespace ProjectVagabond.Battle.UI
                 }
             }
 
-            // --- STAT CHANGE TOOLTIP LOGIC ---
-            var battleManager = ServiceLocator.Get<BattleManager>();
-            bool isSelectionPhase = battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection_Slot1 || battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection_Slot2;
-            bool isDefaultUI = uiManager.UIState == BattleUIState.Default;
-
-            if (isSelectionPhase && isDefaultUI && hoveredCombatant != null)
-            {
-                _statTooltipCombatantID = hoveredCombatant.CombatantID;
-                _statTooltipAlpha += (float)gameTime.ElapsedGameTime.TotalSeconds * STAT_TOOLTIP_FADE_SPEED;
-            }
-            else
-            {
-                _statTooltipAlpha -= (float)gameTime.ElapsedGameTime.TotalSeconds * STAT_TOOLTIP_FADE_SPEED;
-            }
-            _statTooltipAlpha = Math.Clamp(_statTooltipAlpha, 0f, 1f);
-
             if (_statTooltipAlpha > 0.01f && _statTooltipCombatantID != null)
             {
                 var target = allCombatants.FirstOrDefault(c => c.CombatantID == _statTooltipCombatantID);
@@ -523,9 +522,6 @@ namespace ProjectVagabond.Battle.UI
             // 1. Center UI in the middle of the hitbox
             Vector2 centerPos = GetCombatantVisualCenterPosition(combatant, null);
             var bounds = new Rectangle((int)(centerPos.X - width / 2), (int)(centerPos.Y - height / 2), width, height);
-
-            // Draw Background
-            spriteBatch.DrawSnapped(pixel, bounds, _global.Palette_Black * (alpha * 0.90f));
 
             // Draw Stats
             string[] statLabels = { "STR", "INT", "TEN", "AGI" };
@@ -654,7 +650,19 @@ namespace ProjectVagabond.Battle.UI
                     highlightColor = color;
                 }
 
-                DrawCombatantHud(spriteBatch, nameFont, statsFont, enemy, slotCenter, currentActor, isTargetingPhase, shouldGrayOutUnselectable, selectableTargets, animationManager, hoverHighlightState, pulseAlpha, gameTime, highlightColor, transform);
+                // --- TINT LOGIC ---
+                Color? tintOverride = null;
+                bool localShouldGrayOut = shouldGrayOutUnselectable;
+
+                if (enemy.CombatantID == _statTooltipCombatantID && _statTooltipAlpha > 0f)
+                {
+                    // Force silhouette mode for this specific enemy
+                    localShouldGrayOut = true;
+                    // Override silhouette color to DarkerGray
+                    // We handle this by modifying the parameters passed to DrawCombatantHud
+                }
+
+                DrawCombatantHud(spriteBatch, nameFont, statsFont, enemy, slotCenter, currentActor, isTargetingPhase, localShouldGrayOut, selectableTargets, animationManager, hoverHighlightState, pulseAlpha, gameTime, highlightColor, transform, tintOverride);
 
                 // --- ALWAYS REGISTER HITBOX ---
                 // Calculate bounds for hover detection regardless of selection state
@@ -783,6 +791,14 @@ namespace ProjectVagabond.Battle.UI
             if (playerSpriteTint == null) playerSpriteTint = Color.White;
             playerSpriteTint = playerSpriteTint.Value * spawnAlpha;
 
+            // --- SILHOUETTE LOGIC FOR STAT TOOLTIP ---
+            bool isStatTooltipActive = player.CombatantID == _statTooltipCombatantID && _statTooltipAlpha > 0f;
+            if (isStatTooltipActive)
+            {
+                isSilhouetted = true;
+                silhouetteColor = _global.Palette_DarkerGray;
+            }
+
             if (!_playerSprites.TryGetValue(player.CombatantID, out var sprite))
             {
                 sprite = new PlayerCombatSprite(player.ArchetypeId);
@@ -815,11 +831,11 @@ namespace ProjectVagabond.Battle.UI
             }
             else
             {
-                // Default: Hide if silhouetted
-                showName = !isSilhouetted;
+                // Default: Hide if silhouetted, UNLESS it's the stat tooltip causing it
+                showName = !isSilhouetted || isStatTooltipActive;
             }
 
-            bool showBars = !isSilhouetted || isHoveringAction;
+            bool showBars = !isSilhouetted || isHoveringAction || isStatTooltipActive;
 
             if (showName)
             {
@@ -1150,7 +1166,7 @@ namespace ProjectVagabond.Battle.UI
             spriteBatch.DrawSnapped(arrowSheet, arrowPos, arrowRect, Color.White);
         }
 
-        private void DrawCombatantHud(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, BattleCombatant combatant, Vector2 slotCenter, BattleCombatant currentActor, bool isTargetingPhase, bool shouldGrayOutUnselectable, HashSet<BattleCombatant> selectableTargets, BattleAnimationManager animationManager, HoverHighlightState hoverHighlightState, float pulseAlpha, GameTime gameTime, Color? highlightColor, Matrix transform)
+        private void DrawCombatantHud(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, BattleCombatant combatant, Vector2 slotCenter, BattleCombatant currentActor, bool isTargetingPhase, bool shouldGrayOutUnselectable, HashSet<BattleCombatant> selectableTargets, BattleAnimationManager animationManager, HoverHighlightState hoverHighlightState, float pulseAlpha, GameTime gameTime, Color? highlightColor, Matrix transform, Color? tintOverride = null)
         {
             float yBobOffset = CalculateAttackBobOffset(combatant.CombatantID, isPlayer: false);
 
@@ -1221,7 +1237,8 @@ namespace ProjectVagabond.Battle.UI
             );
 
             float finalAlpha = combatant.VisualAlpha * spawnAlpha;
-            Color tintColor = Color.White * finalAlpha;
+            Color baseColor = tintOverride ?? Color.White;
+            Color tintColor = baseColor * finalAlpha;
 
             bool isTurn = combatant == currentActor;
             Color baseOutline = isTurn ? _global.Palette_BrightWhite : _global.Palette_DarkGray;
@@ -1241,6 +1258,13 @@ namespace ProjectVagabond.Battle.UI
             else if (isSelectable && shouldGrayOutUnselectable && !isTargetingPhase && spawnAnim == null && switchOutAnim == null && switchInAnim == null)
             {
                 if (highlightColor == null) outlineColor = Color.Yellow * finalAlpha;
+            }
+
+            // --- SILHOUETTE LOGIC FOR STAT TOOLTIP ---
+            if (combatant.CombatantID == _statTooltipCombatantID && _statTooltipAlpha > 0f)
+            {
+                silhouetteFactor = Math.Max(silhouetteFactor, _statTooltipAlpha);
+                silhouetteColor = _global.Palette_DarkerGray;
             }
 
             // --- HITSTOP VISUAL OVERRIDE ---
