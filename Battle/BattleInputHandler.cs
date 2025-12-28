@@ -2,11 +2,14 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
+using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace ProjectVagabond.Battle.UI
@@ -42,51 +45,55 @@ namespace ProjectVagabond.Battle.UI
                 OnBackRequested?.Invoke();
             }
 
+            // --- HOVER DETECTION (Always Active) ---
+            // We calculate the hovered target every frame so that tooltips (like Stat Changes)
+            // can work even in the default Action Selection menu.
+            var currentTargets = renderer.GetCurrentTargets();
+            _hoveredTargetIndex = -1;
+
+            // Check UI Buttons First for HOVER mapping (e.g. Targeting Buttons)
+            var uiHoveredCombatant = uiManager.HoveredCombatantFromUI;
+            if (uiHoveredCombatant != null)
+            {
+                for (int i = 0; i < currentTargets.Count; i++)
+                {
+                    if (currentTargets[i].Combatant == uiHoveredCombatant)
+                    {
+                        _hoveredTargetIndex = i;
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                // Fallback to Sprite Hover
+                for (int i = 0; i < currentTargets.Count; i++)
+                {
+                    if (currentTargets[i].Bounds.Contains(virtualMousePos))
+                    {
+                        _hoveredTargetIndex = i;
+                        break;
+                    }
+                }
+            }
+
+            // Inform UI Manager about Sprite Hover
+            if (_hoveredTargetIndex != -1)
+            {
+                uiManager.CombatantHoveredViaSprite = currentTargets[_hoveredTargetIndex].Combatant;
+            }
+            else
+            {
+                uiManager.CombatantHoveredViaSprite = null;
+            }
+
+            // --- CLICK HANDLING (State Dependent) ---
             if (uiManager.UIState == BattleUIState.Targeting || uiManager.UIState == BattleUIState.ItemTargeting)
             {
                 // Right Click to Go Back
                 if (currentMouseState.RightButton == ButtonState.Pressed && _previousMouseState.RightButton == ButtonState.Released)
                 {
                     OnBackRequested?.Invoke();
-                }
-
-                var currentTargets = renderer.GetCurrentTargets();
-                _hoveredTargetIndex = -1;
-
-                // Check UI Buttons First for HOVER mapping
-                var uiHoveredCombatant = uiManager.HoveredCombatantFromUI;
-                if (uiHoveredCombatant != null)
-                {
-                    for (int i = 0; i < currentTargets.Count; i++)
-                    {
-                        if (currentTargets[i].Combatant == uiHoveredCombatant)
-                        {
-                            _hoveredTargetIndex = i;
-                            break;
-                        }
-                    }
-                }
-                else
-                {
-                    // Fallback to Sprite Hover
-                    for (int i = 0; i < currentTargets.Count; i++)
-                    {
-                        if (currentTargets[i].Bounds.Contains(virtualMousePos))
-                        {
-                            _hoveredTargetIndex = i;
-                            break;
-                        }
-                    }
-                }
-
-                // --- Inform UI Manager about Sprite Hover ---
-                if (_hoveredTargetIndex != -1)
-                {
-                    uiManager.CombatantHoveredViaSprite = currentTargets[_hoveredTargetIndex].Combatant;
-                }
-                else
-                {
-                    uiManager.CombatantHoveredViaSprite = null;
                 }
 
                 // Handle Click on Sprites (UI Buttons handle their own clicks in BattleUIManager)
@@ -107,11 +114,6 @@ namespace ProjectVagabond.Battle.UI
                         UIInputManager.ConsumeMouseClick();
                     }
                 }
-            }
-            else
-            {
-                _hoveredTargetIndex = -1;
-                uiManager.CombatantHoveredViaSprite = null;
             }
 
             _previousMouseState = currentMouseState;

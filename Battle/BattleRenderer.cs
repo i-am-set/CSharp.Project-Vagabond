@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -89,6 +88,11 @@ namespace ProjectVagabond.Battle.UI
         }
         private readonly List<StatusIconAnim> _activeStatusIconAnims = new List<StatusIconAnim>();
 
+        // Stat Change Tooltip State
+        private float _statTooltipAlpha = 0f;
+        private string? _statTooltipCombatantID = null;
+        private const float STAT_TOOLTIP_FADE_SPEED = 5.0f;
+
         // Layout Constants
         private const int DIVIDER_Y = 123;
         private const int ENEMY_SLOT_Y_OFFSET = 16;
@@ -126,6 +130,8 @@ namespace ProjectVagabond.Battle.UI
             _activeStatusIconAnims.Clear();
             _recoilStates.Clear();
             _lastAttackerId = null;
+            _statTooltipAlpha = 0f;
+            _statTooltipCombatantID = null;
         }
 
         public List<TargetInfo> GetCurrentTargets() => _currentTargets;
@@ -470,6 +476,118 @@ namespace ProjectVagabond.Battle.UI
                     spriteBatch.DrawSnapped(pixel, target.Bounds, Color.Cyan * 0.5f);
                 }
             }
+
+            // --- STAT CHANGE TOOLTIP LOGIC ---
+            var battleManager = ServiceLocator.Get<BattleManager>();
+            bool isSelectionPhase = battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection_Slot1 || battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection_Slot2;
+            bool isDefaultUI = uiManager.UIState == BattleUIState.Default;
+
+            if (isSelectionPhase && isDefaultUI && hoveredCombatant != null)
+            {
+                _statTooltipCombatantID = hoveredCombatant.CombatantID;
+                _statTooltipAlpha += (float)gameTime.ElapsedGameTime.TotalSeconds * STAT_TOOLTIP_FADE_SPEED;
+            }
+            else
+            {
+                _statTooltipAlpha -= (float)gameTime.ElapsedGameTime.TotalSeconds * STAT_TOOLTIP_FADE_SPEED;
+            }
+            _statTooltipAlpha = Math.Clamp(_statTooltipAlpha, 0f, 1f);
+
+            if (_statTooltipAlpha > 0.01f && _statTooltipCombatantID != null)
+            {
+                var target = allCombatants.FirstOrDefault(c => c.CombatantID == _statTooltipCombatantID);
+                if (target != null)
+                {
+                    DrawStatChangeTooltip(spriteBatch, target, _statTooltipAlpha);
+                }
+            }
+        }
+
+        private void DrawStatChangeTooltip(SpriteBatch spriteBatch, BattleCombatant combatant, float alpha)
+        {
+            var tertiaryFont = _core.TertiaryFont;
+            var pixel = ServiceLocator.Get<Texture2D>();
+            var icons = _spriteManager.StatChangeIconsSpriteSheet;
+            var iconSilhouette = _spriteManager.StatChangeIconsSpriteSheetSilhouette;
+            var iconRects = _spriteManager.StatChangeIconSourceRects;
+
+            if (icons == null || iconRects == null || iconSilhouette == null) return;
+
+            const int width = 40;
+            const int height = 28;
+            const int rowHeight = 7;
+            const int iconSize = 3;
+            const int iconGap = 1;
+
+            // 1. Center UI in the middle of the hitbox
+            Vector2 centerPos = GetCombatantVisualCenterPosition(combatant, null);
+            var bounds = new Rectangle((int)(centerPos.X - width / 2), (int)(centerPos.Y - height / 2), width, height);
+
+            // Draw Background
+            spriteBatch.DrawSnapped(pixel, bounds, _global.Palette_Black * (alpha * 0.90f));
+
+            // Draw Stats
+            string[] statLabels = { "STR", "INT", "TEN", "AGI" };
+            OffensiveStatType[] statTypes = { OffensiveStatType.Strength, OffensiveStatType.Intelligence, OffensiveStatType.Tenacity, OffensiveStatType.Agility };
+            Color[] statColors = { _global.StatColor_Strength, _global.StatColor_Intelligence, _global.StatColor_Tenacity, _global.StatColor_Agility };
+
+            for (int i = 0; i < 4; i++)
+            {
+                int rowY = bounds.Y + (i * rowHeight);
+
+                // Draw Label with Square Outline
+                Vector2 labelPos = new Vector2(bounds.X + 2, rowY + 1);
+                spriteBatch.DrawStringSquareOutlinedSnapped(tertiaryFont, statLabels[i], labelPos, statColors[i] * alpha, _global.Palette_Black * alpha);
+
+                // Draw Icons
+                int stage = combatant.StatStages[statTypes[i]];
+                int absStage = Math.Abs(stage);
+                bool isPositive = stage > 0;
+
+                // 2. Move sprites Right 1, Up 1
+                // Original X: bounds.X + 14
+                // New X: bounds.X + 15
+                // Original Y: rowY + 2
+                // New Y: rowY + 1
+                int startIconX = bounds.X + 15;
+                int iconY = rowY + 1;
+
+                for (int j = 0; j < 6; j++)
+                {
+                    int iconIndex = 0; // Neutral
+                    if (j < absStage)
+                    {
+                        iconIndex = isPositive ? 1 : 2; // Up or Down
+                    }
+
+                    var destRect = new Rectangle(startIconX + (j * (iconSize + iconGap)), iconY, iconSize, iconSize);
+                    var sourceRect = iconRects[iconIndex];
+
+                    // 3. Draw Square Outline around sprites using Silhouette
+                    // Draw 8 offsets in Black
+                    Color outlineColor = _global.Palette_Black * alpha;
+
+                    // Top-Left
+                    spriteBatch.DrawSnapped(iconSilhouette, new Rectangle(destRect.X - 1, destRect.Y - 1, iconSize, iconSize), sourceRect, outlineColor);
+                    // Top
+                    spriteBatch.DrawSnapped(iconSilhouette, new Rectangle(destRect.X, destRect.Y - 1, iconSize, iconSize), sourceRect, outlineColor);
+                    // Top-Right
+                    spriteBatch.DrawSnapped(iconSilhouette, new Rectangle(destRect.X + 1, destRect.Y - 1, iconSize, iconSize), sourceRect, outlineColor);
+                    // Left
+                    spriteBatch.DrawSnapped(iconSilhouette, new Rectangle(destRect.X - 1, destRect.Y, iconSize, iconSize), sourceRect, outlineColor);
+                    // Right
+                    spriteBatch.DrawSnapped(iconSilhouette, new Rectangle(destRect.X + 1, destRect.Y, iconSize, iconSize), sourceRect, outlineColor);
+                    // Bottom-Left
+                    spriteBatch.DrawSnapped(iconSilhouette, new Rectangle(destRect.X - 1, destRect.Y + 1, iconSize, iconSize), sourceRect, outlineColor);
+                    // Bottom
+                    spriteBatch.DrawSnapped(iconSilhouette, new Rectangle(destRect.X, destRect.Y + 1, iconSize, iconSize), sourceRect, outlineColor);
+                    // Bottom-Right
+                    spriteBatch.DrawSnapped(iconSilhouette, new Rectangle(destRect.X + 1, destRect.Y + 1, iconSize, iconSize), sourceRect, outlineColor);
+
+                    // Draw Main Sprite
+                    spriteBatch.DrawSnapped(icons, destRect, sourceRect, Color.White * alpha);
+                }
+            }
         }
 
         public void DrawOverlay(SpriteBatch spriteBatch, BitmapFont font)
@@ -518,54 +636,53 @@ namespace ProjectVagabond.Battle.UI
 
                 DrawCombatantHud(spriteBatch, nameFont, statsFont, enemy, slotCenter, currentActor, isTargetingPhase, shouldGrayOutUnselectable, selectableTargets, animationManager, hoverHighlightState, pulseAlpha, gameTime, highlightColor, transform);
 
-                if (selectableTargets.Contains(enemy))
+                // --- ALWAYS REGISTER HITBOX ---
+                // Calculate bounds for hover detection regardless of selection state
+                bool isMajor = _spriteManager.IsMajorEnemySprite(enemy.ArchetypeId);
+                int spritePartSize = isMajor ? 96 : 64;
+                float yBobOffset = CalculateAttackBobOffset(enemy.CombatantID, isPlayer: false);
+
+                var spawnAnim = animationManager.GetSpawnAnimationState(enemy.CombatantID);
+                float spawnYOffset = 0f;
+                if (spawnAnim != null && spawnAnim.CurrentPhase == BattleAnimationManager.SpawnAnimationState.Phase.FadeIn)
                 {
-                    bool isMajor = _spriteManager.IsMajorEnemySprite(enemy.ArchetypeId);
-                    int spritePartSize = isMajor ? 96 : 64;
-                    float yBobOffset = CalculateAttackBobOffset(enemy.CombatantID, isPlayer: false);
-
-                    var spawnAnim = animationManager.GetSpawnAnimationState(enemy.CombatantID);
-                    float spawnYOffset = 0f;
-                    if (spawnAnim != null && spawnAnim.CurrentPhase == BattleAnimationManager.SpawnAnimationState.Phase.FadeIn)
-                    {
-                        float progress = Math.Clamp(spawnAnim.Timer / BattleAnimationManager.SpawnAnimationState.FADE_DURATION, 0f, 1f);
-                        spawnYOffset = MathHelper.Lerp(-BattleAnimationManager.SpawnAnimationState.DROP_HEIGHT, 0f, Easing.EaseOutCubic(progress));
-                    }
-                    else if (spawnAnim != null && spawnAnim.CurrentPhase == BattleAnimationManager.SpawnAnimationState.Phase.Flash)
-                    {
-                        spawnYOffset = -BattleAnimationManager.SpawnAnimationState.DROP_HEIGHT;
-                    }
-
-                    // Apply Switch In Offset
-                    var switchInAnim = animationManager.GetSwitchInAnimationState(enemy.CombatantID);
-                    if (switchInAnim != null)
-                    {
-                        float progress = Math.Clamp(switchInAnim.Timer / BattleAnimationManager.SwitchInAnimationState.DURATION, 0f, 1f);
-                        spawnYOffset = MathHelper.Lerp(-BattleAnimationManager.SwitchInAnimationState.DROP_HEIGHT, 0f, Easing.EaseOutCubic(progress));
-                    }
-
-                    // Apply Switch Out Offset
-                    var switchOutAnim = animationManager.GetSwitchOutAnimationState(enemy.CombatantID);
-                    if (switchOutAnim != null)
-                    {
-                        float progress = Math.Clamp(switchOutAnim.Timer / BattleAnimationManager.SwitchOutAnimationState.DURATION, 0f, 1f);
-                        spawnYOffset = MathHelper.Lerp(0f, -BattleAnimationManager.SwitchOutAnimationState.LIFT_HEIGHT, Easing.EaseOutCubic(progress));
-                    }
-
-                    Vector2 spritePos = new Vector2((int)(slotCenter.X - spritePartSize / 2f), (int)(slotCenter.Y + yBobOffset + spawnYOffset));
-                    Rectangle spriteBounds = GetEnemyStaticSpriteBounds(enemy, spritePos);
-
-                    if (spriteBounds.IsEmpty)
-                    {
-                        spriteBounds = new Rectangle((int)spritePos.X, (int)slotCenter.Y, spritePartSize, spritePartSize);
-                    }
-
-                    _currentTargets.Add(new TargetInfo
-                    {
-                        Combatant = enemy,
-                        Bounds = spriteBounds
-                    });
+                    float progress = Math.Clamp(spawnAnim.Timer / BattleAnimationManager.SpawnAnimationState.FADE_DURATION, 0f, 1f);
+                    spawnYOffset = MathHelper.Lerp(-BattleAnimationManager.SpawnAnimationState.DROP_HEIGHT, 0f, Easing.EaseOutCubic(progress));
                 }
+                else if (spawnAnim != null && spawnAnim.CurrentPhase == BattleAnimationManager.SpawnAnimationState.Phase.Flash)
+                {
+                    spawnYOffset = -BattleAnimationManager.SpawnAnimationState.DROP_HEIGHT;
+                }
+
+                // Apply Switch In Offset
+                var switchInAnim = animationManager.GetSwitchInAnimationState(enemy.CombatantID);
+                if (switchInAnim != null)
+                {
+                    float progress = Math.Clamp(switchInAnim.Timer / BattleAnimationManager.SwitchInAnimationState.DURATION, 0f, 1f);
+                    spawnYOffset = MathHelper.Lerp(-BattleAnimationManager.SwitchInAnimationState.DROP_HEIGHT, 0f, Easing.EaseOutCubic(progress));
+                }
+
+                // Apply Switch Out Offset
+                var switchOutAnim = animationManager.GetSwitchOutAnimationState(enemy.CombatantID);
+                if (switchOutAnim != null)
+                {
+                    float progress = Math.Clamp(switchOutAnim.Timer / BattleAnimationManager.SwitchOutAnimationState.DURATION, 0f, 1f);
+                    spawnYOffset = MathHelper.Lerp(0f, -BattleAnimationManager.SwitchOutAnimationState.LIFT_HEIGHT, Easing.EaseOutCubic(progress));
+                }
+
+                Vector2 spritePos = new Vector2((int)(slotCenter.X - spritePartSize / 2f), (int)(slotCenter.Y + yBobOffset + spawnYOffset));
+                Rectangle spriteBounds = GetEnemyStaticSpriteBounds(enemy, spritePos);
+
+                if (spriteBounds.IsEmpty)
+                {
+                    spriteBounds = new Rectangle((int)spritePos.X, (int)slotCenter.Y, spritePartSize, spritePartSize);
+                }
+
+                _currentTargets.Add(new TargetInfo
+                {
+                    Combatant = enemy,
+                    Bounds = spriteBounds
+                });
             }
         }
 
@@ -756,21 +873,19 @@ namespace ProjectVagabond.Battle.UI
 
             DrawPlayerStatusIcons(spriteBatch, player, secondaryFont, playerHudY, startX, barWidth);
 
-            if (isSelectable && isTargetingPhase)
+            // --- ALWAYS REGISTER HITBOX ---
+            Rectangle spriteBounds = sprite.GetStaticBounds(animationManager, player);
+
+            if (spriteBounds.IsEmpty)
             {
-                Rectangle spriteBounds = sprite.GetStaticBounds(animationManager, player);
-
-                if (spriteBounds.IsEmpty)
-                {
-                    spriteBounds = new Rectangle((int)startX, playerHudY - 40, barWidth, 50);
-                }
-
-                _currentTargets.Add(new TargetInfo
-                {
-                    Combatant = player,
-                    Bounds = spriteBounds
-                });
+                spriteBounds = new Rectangle((int)startX, playerHudY - 40, barWidth, 50);
             }
+
+            _currentTargets.Add(new TargetInfo
+            {
+                Combatant = player,
+                Bounds = spriteBounds
+            });
         }
 
         private void DrawPlayerResourceBars(SpriteBatch spriteBatch, BattleCombatant player, Vector2 position, int width, BattleUIManager uiManager, BattleAnimationManager animationManager)

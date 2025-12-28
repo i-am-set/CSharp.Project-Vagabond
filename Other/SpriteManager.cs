@@ -38,6 +38,9 @@ namespace ProjectVagabond
         public Texture2D ActionIconsSpriteSheet { get; private set; }
         public Texture2D ActionButtonUsesSpriteSheet { get; private set; }
         public Texture2D RarityIconsSpriteSheet { get; private set; }
+        public Texture2D StatChangeIconsSpriteSheet { get; private set; }
+        public Texture2D StatChangeIconsSpriteSheetSilhouette { get; private set; }
+
         // Item Sprite Sheets
         public Texture2D ItemArmorSpriteSheet { get; private set; }
         public Texture2D ItemConsumablesSpriteSheet { get; private set; }
@@ -47,7 +50,7 @@ namespace ProjectVagabond
         // Battle Borders
         public Texture2D BattleBorderMain { get; private set; }
         public Texture2D BattleBorderMain2 { get; private set; }
-        public Texture2D BattleBorderCombat { get; private set; } 
+        public Texture2D BattleBorderCombat { get; private set; }
         public Texture2D BattleBorderAction { get; private set; }
         public Texture2D BattleBorderItem { get; private set; }
         public Texture2D BattleBorderTarget { get; private set; }
@@ -68,13 +71,13 @@ namespace ProjectVagabond
 
         // Inventory UI
         public Texture2D InventoryPlayerHealthBarEmpty { get; private set; }
-        public Texture2D InventoryPlayerHealthBarDisabled { get; private set; } 
+        public Texture2D InventoryPlayerHealthBarDisabled { get; private set; }
         public Texture2D InventoryPlayerHealthBarFull { get; private set; }
-        public Texture2D InventoryPlayerHealthBarOverlay { get; private set; } 
+        public Texture2D InventoryPlayerHealthBarOverlay { get; private set; }
         public Texture2D InventoryStatBarEmpty { get; private set; }
-        public Texture2D InventoryStatBarDisabled { get; private set; } 
+        public Texture2D InventoryStatBarDisabled { get; private set; }
         public Texture2D InventoryStatBarFull { get; private set; }
-        public Texture2D InventorySpellSlotButtonSpriteSheet { get; private set; } 
+        public Texture2D InventorySpellSlotButtonSpriteSheet { get; private set; }
 
         // Source Rectangles for UI elements
         public Rectangle[] ActionButtonSourceRects { get; private set; }
@@ -91,8 +94,9 @@ namespace ProjectVagabond
         public Rectangle[] InventoryLeftArrowButtonSourceRects { get; private set; }
         public Rectangle[] InventoryRightArrowButtonSourceRects { get; private set; }
         public Rectangle[] InventoryScrollArrowRects { get; private set; }
-        public Rectangle[] InventorySpellSlotButtonSourceRects { get; private set; } 
-        public Rectangle[] TargetingButtonSourceRects { get; private set; } 
+        public Rectangle[] InventorySpellSlotButtonSourceRects { get; private set; }
+        public Rectangle[] TargetingButtonSourceRects { get; private set; }
+        public Rectangle[] StatChangeIconSourceRects { get; private set; }
 
 
         // Enemy Sprite Cache
@@ -129,7 +133,7 @@ namespace ProjectVagabond
         private Texture2D _speedMarkSprite;
         private Texture2D _mapMarkerSprite;
         private Texture2D _circleTextureSprite;
-        private Texture2D _ringTextureSprite; 
+        private Texture2D _ringTextureSprite;
         private Texture2D _settingsIconSprite;
         private Texture2D _turnIndicatorSprite;
         private Texture2D _circleParticleSprite;
@@ -167,8 +171,8 @@ namespace ProjectVagabond
         public Texture2D InventoryBorderMisc { get; private set; }
         public Texture2D InventoryBorderEquip { get; private set; }
         public Texture2D InventoryBorderEquipSubmenu { get; private set; }
-        public Texture2D InventoryBorderEquipInfoPanelLeft { get; private set; } 
-        public Texture2D InventoryBorderEquipInfoPanelRight { get; private set; } 
+        public Texture2D InventoryBorderEquipInfoPanelLeft { get; private set; }
+        public Texture2D InventoryBorderEquipInfoPanelRight { get; private set; }
         public Texture2D InventoryHeaderButtonWeapons { get; private set; }
         public Texture2D InventoryHeaderButtonArmor { get; private set; }
         public Texture2D InventoryHeaderButtonRelics { get; private set; }
@@ -176,7 +180,7 @@ namespace ProjectVagabond
         public Texture2D InventoryHeaderButtonMisc { get; private set; }
         public Texture2D InventoryHeaderButtonEquip { get; private set; }
         public Texture2D InventorySlotIdleSpriteSheet { get; private set; }
-        public Texture2D InventorySlotIdleLargeSpriteSheet { get; private set; } 
+        public Texture2D InventorySlotIdleLargeSpriteSheet { get; private set; }
         public Texture2D InventorySlotHoverSprite { get; private set; }
         public Texture2D InventorySlotSelectedSprite { get; private set; }
         public Texture2D InventoryLeftArrowButton { get; private set; }
@@ -188,11 +192,11 @@ namespace ProjectVagabond
         public Texture2D InventoryEmptySlotSprite { get; private set; }
         public Texture2D InventorySlotEquipIconSprite { get; private set; }
         public Texture2D TargetingIndicatorSprite { get; private set; }
-        public Texture2D ShopBorderMain { get; private set; } 
-        public Texture2D ShopXIcon { get; private set; } 
-        public Texture2D RestBorderMain { get; private set; } 
-        public Texture2D RestActionIconsSpriteSheet { get; private set; } 
-        public Texture2D TargetingButtonSpriteSheet { get; private set; } 
+        public Texture2D ShopBorderMain { get; private set; }
+        public Texture2D ShopXIcon { get; private set; }
+        public Texture2D RestBorderMain { get; private set; }
+        public Texture2D RestActionIconsSpriteSheet { get; private set; }
+        public Texture2D TargetingButtonSpriteSheet { get; private set; }
 
         // Background Noise
         public Texture2D NoiseTexture { get; private set; }
@@ -218,7 +222,7 @@ namespace ProjectVagabond
         public Texture2D SpeedMarkSprite => _speedMarkSprite;
         public Texture2D MapMarkerSprite => _mapMarkerSprite;
         public Texture2D CircleTextureSprite => _circleTextureSprite;
-        public Texture2D RingTextureSprite => _ringTextureSprite; 
+        public Texture2D RingTextureSprite => _ringTextureSprite;
         public Texture2D SettingsIconSprite => _settingsIconSprite;
         public Texture2D TurnIndicatorSprite => _turnIndicatorSprite;
         public Texture2D CircleParticleSprite => _circleParticleSprite;
@@ -243,7 +247,7 @@ namespace ProjectVagabond
             try { _circleTextureSprite = _textureFactory.CreateCircleTexture(); }
             catch { _circleTextureSprite = _textureFactory.CreateColoredTexture(16, 16, Color.Red); }
 
-            try { _ringTextureSprite = _textureFactory.CreateRingTexture(); } 
+            try { _ringTextureSprite = _textureFactory.CreateRingTexture(); }
             catch { _ringTextureSprite = _textureFactory.CreateColoredTexture(16, 16, Color.White); }
 
             try { _settingsIconSprite = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/ui_settings_icon"); }
@@ -303,6 +307,17 @@ namespace ProjectVagabond
 
             try { RarityIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/rarity_icons_8x8_spritesheet"); }
             catch { RarityIconsSpriteSheet = _textureFactory.CreateColoredTexture(16, 48, Color.Magenta); }
+
+            try
+            {
+                StatChangeIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/stat_change_icons_spritesheet");
+                StatChangeIconsSpriteSheetSilhouette = CreateSilhouette(StatChangeIconsSpriteSheet);
+            }
+            catch
+            {
+                StatChangeIconsSpriteSheet = _textureFactory.CreateColoredTexture(9, 3, Color.Magenta);
+                StatChangeIconsSpriteSheetSilhouette = _textureFactory.CreateColoredTexture(9, 3, Color.White);
+            }
 
             // Load Item Sprite Sheets
             try { ItemArmorSpriteSheet = _core.Content.Load<Texture2D>("Sprites/Items/item_armor_spritesheet"); }
@@ -495,6 +510,19 @@ namespace ProjectVagabond
             InitializeInventoryScrollArrowRects();
             InitializeInventorySpellSlotButtonRects();
             InitializeTargetingButtonRects();
+            InitializeStatChangeIconRects();
+        }
+
+        private void InitializeStatChangeIconRects()
+        {
+            StatChangeIconSourceRects = new Rectangle[3];
+            const int iconSize = 3;
+            // Frame 0: Neutral
+            StatChangeIconSourceRects[0] = new Rectangle(0, 0, iconSize, iconSize);
+            // Frame 1: Up
+            StatChangeIconSourceRects[1] = new Rectangle(iconSize, 0, iconSize, iconSize);
+            // Frame 2: Down
+            StatChangeIconSourceRects[2] = new Rectangle(iconSize * 2, 0, iconSize, iconSize);
         }
 
         private void InitializeTargetingButtonRects()
@@ -1267,6 +1295,17 @@ namespace ProjectVagabond
             catch { InventoryStatBarDisabled = _textureFactory.CreateColoredTexture(40, 3, Color.Black); }
             try { InventoryStatBarFull = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_stat_bar_full"); }
             catch { InventoryStatBarFull = _textureFactory.CreateColoredTexture(40, 3, Color.White); }
+
+            try
+            {
+                StatChangeIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/stat_change_icons_spritesheet");
+                StatChangeIconsSpriteSheetSilhouette = CreateSilhouette(StatChangeIconsSpriteSheet);
+            }
+            catch
+            {
+                StatChangeIconsSpriteSheet = _textureFactory.CreateColoredTexture(9, 3, Color.Magenta);
+                StatChangeIconsSpriteSheetSilhouette = _textureFactory.CreateColoredTexture(9, 3, Color.White);
+            }
 
             LoadPlayerPortraits();
         }
