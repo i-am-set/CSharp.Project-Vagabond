@@ -733,7 +733,7 @@
   },
   {
     "MoveID": "30",
-    "MoveName": "Execution",
+    "MoveName": "Execute",
     "Description": "[cetc]A ruthless finishing blow.[/]\nGuaranteed [ccrit]CRIT[/] if target is [cctm]at or below 50% HP[/].",
     "Power": 65,
     "ManaCost": 0,
@@ -758,7 +758,7 @@
   },
   {
     "MoveID": "31",
-    "MoveName": "Tormenting Words",
+    "MoveName": "Torment",
     "Description": "[cetc]A vile curse that punishes the afflicted.[/]\nDeals [cpositive]2.0x[/] damage if target has [cctm]any status effect[/].",
     "Power": 65,
     "ManaCost": 15,
