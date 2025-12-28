@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
@@ -513,7 +514,7 @@ namespace ProjectVagabond.Battle.UI
 
             if (icons == null || iconRects == null || iconSilhouette == null) return;
 
-            const int width = 40;
+            const int width = 55; // Increased width to fit value
             const int height = 28;
             const int rowHeight = 7;
             const int iconSize = 3;
@@ -535,8 +536,27 @@ namespace ProjectVagabond.Battle.UI
             {
                 int rowY = bounds.Y + (i * rowHeight);
 
+                // Calculate Effective Stat Value
+                int effectiveValue = 0;
+                switch (statTypes[i])
+                {
+                    case OffensiveStatType.Strength: effectiveValue = combatant.GetEffectiveStrength(); break;
+                    case OffensiveStatType.Intelligence: effectiveValue = combatant.GetEffectiveIntelligence(); break;
+                    case OffensiveStatType.Tenacity: effectiveValue = combatant.GetEffectiveTenacity(); break;
+                    case OffensiveStatType.Agility: effectiveValue = combatant.GetEffectiveAgility(); break;
+                }
+
+                // Draw Value (Right Aligned to Label X)
+                string valueText = effectiveValue.ToString();
+                Vector2 valueSize = tertiaryFont.MeasureString(valueText);
+
+                // Label starts at bounds.X + 16. Value ends at bounds.X + 14.
+                float valueX = bounds.X + 14 - valueSize.X;
+                Vector2 valuePos = new Vector2(valueX, rowY + 1);
+                spriteBatch.DrawStringSquareOutlinedSnapped(tertiaryFont, valueText, valuePos, _global.Palette_White * alpha, _global.Palette_Black * alpha);
+
                 // Draw Label with Square Outline
-                Vector2 labelPos = new Vector2(bounds.X + 2, rowY + 1);
+                Vector2 labelPos = new Vector2(bounds.X + 16, rowY + 1);
                 spriteBatch.DrawStringSquareOutlinedSnapped(tertiaryFont, statLabels[i], labelPos, statColors[i] * alpha, _global.Palette_Black * alpha);
 
                 // Draw Icons
@@ -546,10 +566,10 @@ namespace ProjectVagabond.Battle.UI
 
                 // 2. Move sprites Right 1, Up 1
                 // Original X: bounds.X + 14
-                // New X: bounds.X + 15
+                // New X: bounds.X + 29 (Shifted right to accommodate value + label)
                 // Original Y: rowY + 2
                 // New Y: rowY + 1
-                int startIconX = bounds.X + 15;
+                int startIconX = bounds.X + 29;
                 int iconY = rowY + 1;
 
                 for (int j = 0; j < 6; j++)
