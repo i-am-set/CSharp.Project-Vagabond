@@ -103,15 +103,35 @@ namespace ProjectVagabond.Battle.UI
                     if (_hoveredTargetIndex != -1 && uiHoveredCombatant == null)
                     {
                         var selectedTarget = currentTargets[_hoveredTargetIndex].Combatant;
+                        var battleManager = ServiceLocator.Get<BattleManager>();
+                        var actor = battleManager.CurrentActingCombatant;
+
                         if (uiManager.UIState == BattleUIState.Targeting)
                         {
-                            OnMoveTargetSelected?.Invoke(uiManager.MoveForTargeting, uiManager.SpellForTargeting, selectedTarget);
+                            var move = uiManager.MoveForTargeting;
+                            if (move != null && actor != null)
+                            {
+                                var validTargets = TargetingHelper.GetValidTargets(actor, move.Target, battleManager.AllCombatants);
+                                if (validTargets.Contains(selectedTarget))
+                                {
+                                    OnMoveTargetSelected?.Invoke(move, uiManager.SpellForTargeting, selectedTarget);
+                                    UIInputManager.ConsumeMouseClick();
+                                }
+                            }
                         }
-                        else
+                        else if (uiManager.UIState == BattleUIState.ItemTargeting)
                         {
-                            OnItemTargetSelected?.Invoke(uiManager.ItemForTargeting, selectedTarget);
+                            var item = uiManager.ItemForTargeting;
+                            if (item != null && actor != null)
+                            {
+                                var validTargets = TargetingHelper.GetValidTargets(actor, item.Target, battleManager.AllCombatants);
+                                if (validTargets.Contains(selectedTarget))
+                                {
+                                    OnItemTargetSelected?.Invoke(item, selectedTarget);
+                                    UIInputManager.ConsumeMouseClick();
+                                }
+                            }
                         }
-                        UIInputManager.ConsumeMouseClick();
                     }
                 }
             }

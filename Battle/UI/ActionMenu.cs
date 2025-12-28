@@ -2,17 +2,12 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond.Battle;
-using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
-using ProjectVagabond.Progression;
-using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -549,7 +544,7 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        public void Update(MouseState currentMouseState, GameTime gameTime)
+        public void Update(MouseState currentMouseState, GameTime gameTime, bool isInputBlocked = false)
         {
             InitializeButtons();
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -560,8 +555,14 @@ namespace ProjectVagabond.Battle.UI
                 return;
             }
 
+            // If input is blocked, use a dummy mouse state to prevent hover/click logic
+            // but still allow internal state updates (like timers)
+            MouseState effectiveMouseState = isInputBlocked
+                ? new MouseState(-10000, -10000, currentMouseState.ScrollWheelValue, ButtonState.Released, ButtonState.Released, ButtonState.Released, ButtonState.Released, ButtonState.Released)
+                : currentMouseState;
+
             UpdateLayout();
-            UpdateSpamDetection(gameTime, currentMouseState);
+            UpdateSpamDetection(gameTime, effectiveMouseState);
 
             HoveredButton = null;
 
@@ -584,7 +585,7 @@ namespace ProjectVagabond.Battle.UI
 
                     foreach (var button in _actionButtons)
                     {
-                        button.Update(currentMouseState);
+                        button.Update(effectiveMouseState);
                         if (button.IsHovered)
                         {
                             isAnyActionHovered = true;
@@ -595,10 +596,10 @@ namespace ProjectVagabond.Battle.UI
                     // Update Slot 2 Back Button
                     if (_player != null && _player.BattleSlot == 1)
                     {
-                        _slot2BackButton.Update(currentMouseState);
+                        _slot2BackButton.Update(effectiveMouseState);
                         if (_slot2BackButton.IsHovered) HoveredButton = _slot2BackButton;
 
-                        if (currentMouseState.RightButton == ButtonState.Pressed && _previousMouseState.RightButton == ButtonState.Released)
+                        if (effectiveMouseState.RightButton == ButtonState.Pressed && _previousMouseState.RightButton == ButtonState.Released)
                         {
                             OnSlot2BackRequested?.Invoke();
                         }
@@ -642,7 +643,7 @@ namespace ProjectVagabond.Battle.UI
                             button.IsEnabled = true;
                         }
 
-                        button.Update(currentMouseState);
+                        button.Update(effectiveMouseState);
                         if (button.IsHovered)
                         {
                             HoveredMove = button.Move;
@@ -655,7 +656,7 @@ namespace ProjectVagabond.Battle.UI
                                 _shouldAttuneButtonPulse = true;
                             }
 
-                            if (currentMouseState.MiddleButton == ButtonState.Pressed)
+                            if (effectiveMouseState.MiddleButton == ButtonState.Pressed)
                             {
                                 middleClickHeldOnAButton = true;
                                 moveForTooltip = button.Move;
@@ -688,7 +689,7 @@ namespace ProjectVagabond.Battle.UI
                             }
                         }
 
-                        button.Update(currentMouseState);
+                        button.Update(effectiveMouseState);
                         if (button.IsHovered)
                         {
                             HoveredButton = button;
@@ -698,7 +699,7 @@ namespace ProjectVagabond.Battle.UI
                                 HoveredMove = move;
                                 _hoveredSpellbookEntry = null;
 
-                                if (currentMouseState.MiddleButton == ButtonState.Pressed)
+                                if (effectiveMouseState.MiddleButton == ButtonState.Pressed)
                                 {
                                     middleClickHeldOnAButton = true;
                                     moveForTooltip = move;
@@ -716,7 +717,7 @@ namespace ProjectVagabond.Battle.UI
                     }
 
                     // --- Right Click to Back Logic ---
-                    if (currentMouseState.RightButton == ButtonState.Pressed && _previousMouseState.RightButton == ButtonState.Released)
+                    if (effectiveMouseState.RightButton == ButtonState.Pressed && _previousMouseState.RightButton == ButtonState.Released)
                     {
                         GoBack();
                     }
@@ -729,21 +730,21 @@ namespace ProjectVagabond.Battle.UI
 
                     UpdateHoverInfoScrolling(gameTime);
 
-                    _backButton.Update(currentMouseState);
+                    _backButton.Update(effectiveMouseState);
                     if (_backButton.IsHovered) HoveredButton = _backButton;
                     break;
                 case MenuState.Targeting:
                     _targetingTextAnimTimer += dt;
-                    _backButton.Update(currentMouseState);
+                    _backButton.Update(effectiveMouseState);
                     if (_backButton.IsHovered) HoveredButton = _backButton;
                     break;
                 case MenuState.Tooltip:
-                    if (currentMouseState.MiddleButton == ButtonState.Released)
+                    if (effectiveMouseState.MiddleButton == ButtonState.Released)
                     {
                         SetState(MenuState.Moves);
                     }
                     UpdateTooltipScrolling(gameTime);
-                    _backButton.Update(currentMouseState);
+                    _backButton.Update(effectiveMouseState);
                     if (_backButton.IsHovered) HoveredButton = _backButton;
                     break;
             }

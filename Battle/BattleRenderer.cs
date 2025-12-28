@@ -973,8 +973,8 @@ namespace ProjectVagabond.Battle.UI
             int manaWidth = (int)(width * manaPercent);
             if (manaPercent > 0 && manaWidth == 0) manaWidth = 1;
 
-            var manaBgRect = new Rectangle((int)position.X, (int)position.Y + 4, width, 2);
-            var manaFgRect = new Rectangle((int)position.X, (int)position.Y + 4, manaWidth, 2);
+            var manaBgRect = new Rectangle((int)position.X, (int)position.Y + 4, width, 1); // Changed to 1
+            var manaFgRect = new Rectangle((int)position.X, (int)position.Y + 4, manaWidth, 1); // Changed to 1
 
             spriteBatch.DrawSnapped(pixel, manaBgRect, _global.Palette_DarkGray);
             spriteBatch.DrawSnapped(pixel, manaFgRect, _global.Palette_LightBlue);
@@ -1007,7 +1007,7 @@ namespace ProjectVagabond.Battle.UI
                             previewX,
                             (int)position.Y + 4,
                             costWidth,
-                            2
+                            1 // Changed to 1
                         );
 
                         spriteBatch.DrawSnapped(pixel, previewRect, pulseColor);
@@ -1018,7 +1018,7 @@ namespace ProjectVagabond.Battle.UI
                             (int)position.X,
                             (int)position.Y + 4,
                             manaWidth,
-                            2
+                            1 // Changed to 1
                         );
                         spriteBatch.DrawSnapped(pixel, previewRect, _global.Palette_Red);
                     }
@@ -1111,8 +1111,17 @@ namespace ProjectVagabond.Battle.UI
                 bool isMultiTarget = targetType == TargetType.Every || targetType == TargetType.Both || targetType == TargetType.All || targetType == TargetType.Team || targetType == TargetType.RandomAll || targetType == TargetType.RandomBoth || targetType == TargetType.RandomEvery;
                 bool isAnyHovered = inputHandler.HoveredTargetIndex != -1;
 
+                // --- FIX: Filter for Valid Targets ---
+                var battleManager = ServiceLocator.Get<BattleManager>();
+                var currentActor = battleManager.CurrentActingCombatant;
+                var allCombatants = battleManager.AllCombatants;
+                var validTargets = TargetingHelper.GetValidTargets(currentActor, targetType ?? TargetType.None, allCombatants);
+
                 for (int i = 0; i < _currentTargets.Count; i++)
                 {
+                    // Only draw dots if this combatant is a valid target
+                    if (!validTargets.Contains(_currentTargets[i].Combatant)) continue;
+
                     bool shouldHighlight = false;
 
                     if (isMultiTarget && isAnyHovered)
@@ -1574,7 +1583,7 @@ namespace ProjectVagabond.Battle.UI
                 {
                     // Draw below health bar (barY + height + 1px gap)
                     float manaBarY = barY + barHeight + 1;
-                    DrawEnemyManaBar(spriteBatch, combatant, barX, manaBarY, barWidth, barHeight, animationManager, 1.0f);
+                    DrawEnemyManaBar(spriteBatch, combatant, barX, manaBarY, barWidth, 1, animationManager, 1.0f); // Changed height to 1
                 }
             }
 

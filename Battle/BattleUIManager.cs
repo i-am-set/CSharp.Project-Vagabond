@@ -256,7 +256,20 @@ namespace ProjectVagabond.Battle.UI
                 return;
             }
 
-            _actionMenu.Update(currentMouseState, gameTime);
+            // --- REORDERED UPDATE LOGIC FOR OVERLAP FIX ---
+
+            // 1. Update Targeting Buttons First (if active)
+            bool checkTargeting = (UIState == BattleUIState.Targeting || UIState == BattleUIState.ItemTargeting);
+            bool targetingHovered = false;
+
+            if (checkTargeting)
+            {
+                UpdateTargetingButtons(currentMouseState, _previousMouseState, currentActor);
+                targetingHovered = (HoveredCombatantFromUI != null);
+            }
+
+            // 2. Update Action Menu (Pass blocking flag)
+            _actionMenu.Update(currentMouseState, gameTime, isInputBlocked: targetingHovered);
 
             if (SubMenuState == BattleSubMenuState.Item)
             {
@@ -272,7 +285,15 @@ namespace ProjectVagabond.Battle.UI
                 _targetingTextAnimTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
                 if (UIState == BattleUIState.ItemTargeting)
                 {
-                    _itemTargetingBackButton.Update(currentMouseState);
+                    // Only update back button if no target is hovered
+                    if (targetingHovered)
+                    {
+                        _itemTargetingBackButton.ResetAnimationState();
+                    }
+                    else
+                    {
+                        _itemTargetingBackButton.Update(currentMouseState);
+                    }
                 }
             }
 
@@ -286,10 +307,7 @@ namespace ProjectVagabond.Battle.UI
                 UIState = BattleUIState.Default;
             }
 
-            if (UIState == BattleUIState.Targeting || UIState == BattleUIState.ItemTargeting)
-            {
-                UpdateTargetingButtons(currentMouseState, _previousMouseState, currentActor);
-            }
+            // Note: UpdateTargetingButtons was already called at step 1.
 
             if (!_battleNarrator.IsBusy && _narrationQueue.Any())
             {
