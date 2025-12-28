@@ -852,8 +852,6 @@ namespace ProjectVagabond.UI
 
             currentY += spriteSize + gap;
 
-            int globalCharIndex = 0; // Added for wave animation continuity
-
             foreach (var line in titleLines)
             {
                 float lineWidth = 0;
@@ -874,21 +872,11 @@ namespace ProjectVagabond.UI
                     if (string.IsNullOrWhiteSpace(segment.Text))
                     {
                         segWidth = segment.Text.Length * SPACE_WIDTH;
-                        globalCharIndex += segment.Text.Length; // Advance index for spaces
                     }
                     else
                     {
                         segWidth = font.MeasureString(segment.Text).Width;
-
-                        if (_infoPanelNameWaveController.IsAnimating)
-                        {
-                            TextUtils.DrawWavedText(spriteBatch, font, segment.Text, new Vector2(currentX, currentY), segment.Color, _infoPanelNameWaveController.CurrentTimer, _infoPanelNameWaveController.WaveSpeed, _infoPanelNameWaveController.WaveFrequency, _infoPanelNameWaveController.WaveAmplitude, globalCharIndex);
-                        }
-                        else
-                        {
-                            spriteBatch.DrawStringSnapped(font, segment.Text, new Vector2(currentX, currentY), segment.Color);
-                        }
-                        globalCharIndex += segment.Text.Length; // Advance index for text
+                        spriteBatch.DrawStringSnapped(font, segment.Text, new Vector2(currentX, currentY), segment.Color);
                     }
                     currentX += segWidth;
                 }
@@ -1023,14 +1011,6 @@ namespace ProjectVagabond.UI
                 spriteBatch.DrawSnapped(iconTexture, drawPos, sourceRect, tint, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
             }
 
-            // Draw Element Icon (Top Left)
-            int elementId = move.OffensiveElementIDs.FirstOrDefault();
-            if (elementId > 0 && _spriteManager.ElementIconSourceRects.TryGetValue(elementId, out var elementRect))
-            {
-                var elementPos = new Vector2(infoPanelArea.X + 3, infoPanelArea.Y + 3);
-                spriteBatch.DrawSnapped(_spriteManager.ElementIconsSpriteSheet, elementPos, elementRect, Color.White);
-            }
-
             string name = move.MoveName.ToUpper();
             Vector2 nameSize = font.MeasureString(name);
 
@@ -1064,7 +1044,7 @@ namespace ProjectVagabond.UI
                 spriteBatch.DrawStringSnapped(secondaryFont, value, new Vector2(valueRightX - valWidth, y), valColor);
             }
 
-            string powVal = move.Power > 0 ? move.Power.ToString() : "---";
+            string powVal = move.Power > 0 ? move.Power.ToString() : (move.Effects.ContainsKey("ManaDamage") ? "???" : "---");
             string accVal = move.Accuracy >= 0 ? $"{move.Accuracy}%" : "---";
             DrawStatPair("POW", powVal, leftLabelX, leftValueRightX, currentY, _global.Palette_White);
             DrawStatPair("ACC", accVal, rightLabelX, rightValueRightX, currentY, _global.Palette_White);

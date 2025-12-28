@@ -1232,7 +1232,7 @@ namespace ProjectVagabond.Battle.UI
                 {
                     string separator = " / ";
                     string accuracyText = move.Accuracy >= 0 ? $"ACC: {move.Accuracy}%" : "ACC: ---";
-                    string powerText = move.Power > 0 ? $"POW: {move.Power}" : "POW: ---";
+                    string powerText = move.Power > 0 ? $"POW: {move.Power}" : (move.Effects.ContainsKey("ManaDamage") ? "POW: ???" : "POW: ---");
 
                     Color accColor = _global.Palette_BrightWhite;
                     if (move.Accuracy >= 0)
@@ -1377,7 +1377,7 @@ namespace ProjectVagabond.Battle.UI
 
                 if (move != null)
                 {
-                    powerValue = move.Power > 0 ? move.Power.ToString() : "---";
+                    powerValue = move.Power > 0 ? move.Power.ToString() : (move.Effects.ContainsKey("ManaDamage") ? "???" : "---");
                     accValue = move.Accuracy >= 0 ? $"{move.Accuracy}%" : "---";
                     manaValue = move.ManaCost > 0 ? $"{move.ManaCost}%" : "---";
                     impactValue = move.ImpactType.ToString().ToUpper();
@@ -1412,7 +1412,7 @@ namespace ProjectVagabond.Battle.UI
                 var accValuePos = new Vector2(bounds.Center.X - 9 - accValueSize.Width, currentY);
                 if (!accValue.Contains("%"))
                 {
-                    accValuePos.X -= 6; 
+                    accValuePos.X -= 6;
                 }
                 accValuePos.X += 6;
 

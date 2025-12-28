@@ -826,7 +826,7 @@
       "CleanseStatus": ""
     },
     "Tags": [ "Water", "Support", "Utility" ],
-    "AnimationSpriteSheet": "basic_orb_pulse_2",
+    "AnimationSpriteSheet": "water_bubble_pop",
     "AnimationSpeed": 1.0,
     "DamageFrameIndex": 2,
     "IsAnimationCentralized": false
@@ -834,8 +834,8 @@
   {
     "MoveID": "34",
     "MoveName": "Mana Burn",
-    "Description": "[cetc]Disrupts the target's magical flow.[/]\nDestroys [cpositive]50%[/] of target's [cmana]Current Mana[/].",
-    "Power": 30,
+    "Description": "[cetc]Disrupts the target's magical flow.[/]\nDestroys [cpositive]50[/] of target's [cmana]Current Mana[/].",
+    "Power": 0,
     "ManaCost": 20,
     "MoveType": "Spell",
     "ImpactType": "Magical",
@@ -851,7 +851,7 @@
       "ManaDamage": "50"
     },
     "Tags": [ "Arcane", "ManaControl" ],
-    "AnimationSpriteSheet": "basic_orb_pulse_2",
+    "AnimationSpriteSheet": "arcane_blue_flame",
     "AnimationSpeed": 1.0,
     "DamageFrameIndex": 2,
     "IsAnimationCentralized": false

@@ -438,39 +438,56 @@ namespace ProjectVagabond.Battle.Abilities
         }
     }
 
-    public class ManaDamageAbility : IOnHitEffect
+    public class ManaDamageAbility : ICalculationModifier
     {
         public string Name => "Mana Burn";
-        public string Description => "Destroys target's mana.";
-        private readonly float _percent;
+        public string Description => "Destroys target's mana to fuel damage.";
+        private readonly int _maxBurnAmount;
 
-        public ManaDamageAbility(float percent)
+        public ManaDamageAbility(int amount)
         {
-            _percent = percent;
+            _maxBurnAmount = amount;
         }
 
-        public void OnHit(CombatContext ctx, int damageDealt)
+        public float ModifyBasePower(float basePower, CombatContext ctx)
         {
-            if (ctx.IsGraze) return;
+            // Fix: Handle null target (e.g. during UI rendering or AI estimation where target isn't decided)
+            if (ctx.Target == null)
+            {
+                return _maxBurnAmount;
+            }
 
-            var target = ctx.Target;
-            int burnAmount = (int)(target.Stats.CurrentMana * (_percent / 100f));
+            // Calculate how much we can burn
+            int currentMana = ctx.Target.Stats.CurrentMana;
+            int burnAmount = Math.Min(currentMana, _maxBurnAmount);
 
+            // If this is a simulation (UI tooltip, AI calc), just return the potential power
+            if (ctx.IsSimulation)
+            {
+                return burnAmount;
+            }
+
+            // Execute the burn
             if (burnAmount > 0)
             {
-                float before = target.Stats.CurrentMana;
-                target.Stats.CurrentMana = Math.Max(0, target.Stats.CurrentMana - burnAmount);
+                float before = ctx.Target.Stats.CurrentMana;
+                ctx.Target.Stats.CurrentMana -= burnAmount;
 
-                // Reuse the ManaConsumed event to trigger the visual bar drain
+                // Trigger visual updates
                 EventBus.Publish(new GameEvents.CombatantManaConsumed
                 {
-                    Actor = target, // The target is the one losing mana
+                    Actor = ctx.Target,
                     ManaBefore = before,
-                    ManaAfter = target.Stats.CurrentMana
+                    ManaAfter = ctx.Target.Stats.CurrentMana
                 });
 
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{target.Name} lost {burnAmount} Mana!" });
+                EventBus.Publish(new GameEvents.TerminalMessagePublished
+                {
+                    Message = $"{ctx.Target.Name} lost {burnAmount} Mana!"
+                });
             }
+
+            return burnAmount;
         }
     }
 }
