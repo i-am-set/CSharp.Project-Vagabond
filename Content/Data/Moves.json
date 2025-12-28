@@ -634,7 +634,7 @@
   {
     "MoveID": "26",
     "MoveName": "Sonicboom",
-    "Description": "[cetc]A super sonic blast surprises the target.[/]\n[cStatus]Dazes[/] the foe.\nFails if not used on first turn.",
+    "Description": "[cetc]A super sonic blast surprises the target.[/]\n[cStatus]Dazes[/] the foe. Fails if not used on first turn.",
     "Power": 40,
     "ManaCost": 10,
     "MoveType": "Spell",
