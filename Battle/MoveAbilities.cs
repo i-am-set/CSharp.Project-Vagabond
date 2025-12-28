@@ -33,10 +33,10 @@ namespace ProjectVagabond.Battle.Abilities
                 bool applied = ctx.Target.AddStatusEffect(new StatusEffectInstance(_type, _duration));
                 if (applied)
                 {
-                    string msg = _type == StatusEffectType.Empowered 
-                        ? $"{ctx.Target.Name} is [cStatus]Empowered[/]!" 
+                    string msg = _type == StatusEffectType.Empowered
+                        ? $"{ctx.Target.Name} is [cStatus]Empowered[/]!"
                         : $"{ctx.Target.Name} gained [cStatus]{_type}[/]!";
-                        
+
                     EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = msg });
                 }
             }
@@ -399,5 +399,78 @@ namespace ProjectVagabond.Battle.Abilities
         public float BreakDamageMultiplier { get; }
         public bool FailsIfNoProtect { get; }
         public ShieldBreakerAbility(float damageMultiplier, bool failsIfNoProtect) { BreakDamageMultiplier = damageMultiplier; FailsIfNoProtect = failsIfNoProtect; }
+    }
+
+    public class CleanseStatusAbility : IOnHitEffect
+    {
+        public string Name => "Cleanse";
+        public string Description => "Removes negative status effects.";
+
+        public void OnHit(CombatContext ctx, int damageDealt)
+        {
+            var target = ctx.Target;
+            var negativeTypes = new[]
+            {
+                StatusEffectType.Poison,
+                StatusEffectType.Burn,
+                StatusEffectType.Frostbite,
+                StatusEffectType.Stun,
+                StatusEffectType.Silence
+            };
+
+            var toRemove = target.ActiveStatusEffects
+                .Where(e => negativeTypes.Contains(e.EffectType))
+                .ToList();
+
+            if (toRemove.Any())
+            {
+                foreach (var effect in toRemove)
+                {
+                    target.ActiveStatusEffects.Remove(effect);
+                    EventBus.Publish(new GameEvents.StatusEffectRemoved { Combatant = target, EffectType = effect.EffectType });
+                }
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{target.Name} was [cStatus]cleansed[/]!" });
+            }
+            else
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "Nothing to cleanse." });
+            }
+        }
+    }
+
+    public class ManaDamageAbility : IOnHitEffect
+    {
+        public string Name => "Mana Burn";
+        public string Description => "Destroys target's mana.";
+        private readonly float _percent;
+
+        public ManaDamageAbility(float percent)
+        {
+            _percent = percent;
+        }
+
+        public void OnHit(CombatContext ctx, int damageDealt)
+        {
+            if (ctx.IsGraze) return;
+
+            var target = ctx.Target;
+            int burnAmount = (int)(target.Stats.CurrentMana * (_percent / 100f));
+
+            if (burnAmount > 0)
+            {
+                float before = target.Stats.CurrentMana;
+                target.Stats.CurrentMana = Math.Max(0, target.Stats.CurrentMana - burnAmount);
+
+                // Reuse the ManaConsumed event to trigger the visual bar drain
+                EventBus.Publish(new GameEvents.CombatantManaConsumed
+                {
+                    Actor = target, // The target is the one losing mana
+                    ManaBefore = before,
+                    ManaAfter = target.Stats.CurrentMana
+                });
+
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{target.Name} lost {burnAmount} Mana!" });
+            }
+        }
     }
 }

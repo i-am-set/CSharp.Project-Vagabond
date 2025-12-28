@@ -805,5 +805,55 @@
     "AnimationSpeed": 1.5,
     "DamageFrameIndex": 2,
     "IsAnimationCentralized": false
+  },
+  {
+    "MoveID": "33",
+    "MoveName": "Cleanse",
+    "Description": "[cetc]Purifies the body and mind.[/]\nRemoves all [cnegative]negative[/] status effects.",
+    "Power": 0,
+    "ManaCost": 15,
+    "MoveType": "Spell",
+    "ImpactType": "Status",
+    "OffensiveStat": "Intelligence",
+    "MakesContact": false,
+    "Target": "Single",
+    "Accuracy": -1,
+    "Priority": 0,
+    "Rarity": 1,
+    "LevelRequirement": 2,
+    "OffensiveElementIDs": [ 3 ],
+    "Effects": {
+      "CleanseStatus": ""
+    },
+    "Tags": [ "Water", "Support", "Utility" ],
+    "AnimationSpriteSheet": "basic_orb_pulse_2",
+    "AnimationSpeed": 1.0,
+    "DamageFrameIndex": 2,
+    "IsAnimationCentralized": false
+  },
+  {
+    "MoveID": "34",
+    "MoveName": "Mana Burn",
+    "Description": "[cetc]Disrupts the target's magical flow.[/]\nDestroys [cpositive]50%[/] of target's [cmana]Current Mana[/].",
+    "Power": 30,
+    "ManaCost": 20,
+    "MoveType": "Spell",
+    "ImpactType": "Magical",
+    "OffensiveStat": "Intelligence",
+    "MakesContact": false,
+    "Target": "Single",
+    "Accuracy": 100,
+    "Priority": 0,
+    "Rarity": 2,
+    "LevelRequirement": 4,
+    "OffensiveElementIDs": [ 4 ],
+    "Effects": {
+      "ManaDamage": "50"
+    },
+    "Tags": [ "Arcane", "ManaControl" ],
+    "AnimationSpriteSheet": "basic_orb_pulse_2",
+    "AnimationSpeed": 1.0,
+    "DamageFrameIndex": 2,
+    "IsAnimationCentralized": false
   }
 ]
