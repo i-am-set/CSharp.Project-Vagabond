@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
@@ -498,12 +499,14 @@ namespace ProjectVagabond.Battle.UI
                 var target = allCombatants.FirstOrDefault(c => c.CombatantID == _statTooltipCombatantID);
                 if (target != null)
                 {
-                    DrawStatChangeTooltip(spriteBatch, target, _statTooltipAlpha);
+                    // Check for Insight Ability
+                    bool hasInsight = allCombatants.Any(c => c.IsPlayerControlled && !c.IsDefeated && c.Abilities.Any(a => a is InsightAbility));
+                    DrawStatChangeTooltip(spriteBatch, target, _statTooltipAlpha, hasInsight);
                 }
             }
         }
 
-        private void DrawStatChangeTooltip(SpriteBatch spriteBatch, BattleCombatant combatant, float alpha)
+        private void DrawStatChangeTooltip(SpriteBatch spriteBatch, BattleCombatant combatant, float alpha, bool hasInsight)
         {
             var tertiaryFont = _core.TertiaryFont;
             var pixel = ServiceLocator.Get<Texture2D>();
@@ -521,7 +524,29 @@ namespace ProjectVagabond.Battle.UI
 
             // 1. Center UI in the middle of the hitbox
             Vector2 centerPos = GetCombatantVisualCenterPosition(combatant, null);
-            var bounds = new Rectangle((int)(centerPos.X - width / 2), (int)(centerPos.Y - height / 2), width, height);
+
+            // Apply Global Left Shift (-6)
+            int xPos = (int)(centerPos.X - width / 2) - 6;
+
+            // Adjust Y based on combatant type
+            float yPos;
+            if (combatant.IsPlayerControlled)
+            {
+                yPos = centerPos.Y - 16;
+            }
+            else
+            {
+                // Enemy: Base (-40) + Down Shift (+3) = -37
+                yPos = centerPos.Y - 3;
+            }
+
+            // Clamp to screen
+            if (yPos < 5) yPos = 5;
+
+            var bounds = new Rectangle(xPos, (int)yPos, width, height);
+
+            // Draw Background (Removed as requested, but keeping the bounds for layout)
+            // spriteBatch.DrawSnapped(pixel, bounds, _global.Palette_DarkGray * alpha);
 
             // Draw Stats
             string[] statLabels = { "STR", "INT", "TEN", "AGI" };
@@ -543,7 +568,7 @@ namespace ProjectVagabond.Battle.UI
                 }
 
                 // Draw Value (Right Aligned to Label X)
-                string valueText = effectiveValue.ToString();
+                string valueText = (combatant.IsPlayerControlled || hasInsight) ? effectiveValue.ToString() : "??";
                 Vector2 valueSize = tertiaryFont.MeasureString(valueText);
 
                 // Label starts at bounds.X + 16. Value ends at bounds.X + 14.

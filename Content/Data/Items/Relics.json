@@ -638,5 +638,17 @@
       "CausticBlood": ""
     },
     "Tags": [ "Lifesteal", "Defense" ]
+  },
+  {
+    "RelicID": "49",
+    "RelicName": "Seer's Lens",
+    "AbilityName": "Insight",
+    "Description": "Reveals the exact stats of enemies in combat",
+    "Rarity": 1,
+    "LevelRequirement": 1,
+    "Effects": {
+      "Insight": ""
+    },
+    "Tags": [ "Utility" ]
   }
 ]

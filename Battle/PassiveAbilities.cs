@@ -572,4 +572,10 @@ namespace ProjectVagabond.Battle.Abilities
             if (anyAffected) EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{owner.Name}'s {Name} lowered opponents' {_stat}!" });
         }
     }
+
+    public class InsightAbility : IAbility
+    {
+        public string Name => "Insight";
+        public string Description => "Reveals detailed enemy stats.";
+    }
 }
