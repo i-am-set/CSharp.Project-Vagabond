@@ -37,7 +37,7 @@ static const float CHROMATIC_OFFSET = 1.5; // In physical pixels
 
 // Vignette
 static const float VIGNETTE_INTENSITY = 0.3;
-static const float VIGNETTE_ROUNDNESS = 0.4;
+static const float VIGNETTE_ROUNDNESS = 0.2;
 
 // Noise
 static const float NOISE_INTENSITY = 0.005;
