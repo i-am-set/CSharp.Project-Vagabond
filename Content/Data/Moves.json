@@ -855,5 +855,80 @@
     "AnimationSpeed": 1.0,
     "DamageFrameIndex": 2,
     "IsAnimationCentralized": false
+  },
+  {
+    "MoveID": "35",
+    "MoveName": "Flux Discharge",
+    "Description": "Consumes all remaining [cMana]Mana[/] to deal massive damage to [cetc]both[/] enemies.\nPower is [cpositive]2x[/] consumed Mana.",
+    "Power": 0,
+    "ManaCost": 0,
+    "MoveType": "Spell",
+    "ImpactType": "Magical",
+    "OffensiveStat": "Intelligence",
+    "MakesContact": false,
+    "Target": "Both",
+    "Accuracy": 100,
+    "Priority": 0,
+    "Rarity": 3,
+    "LevelRequirement": 5,
+    "OffensiveElementIDs": [ 4 ],
+    "Effects": {
+      "ManaDump": "2.0"
+    },
+    "Tags": [ "Arcane", "AoE", "HighPower" ],
+    "AnimationSpriteSheet": "arcane_blue_flame",
+    "AnimationSpeed": 1.0,
+    "DamageFrameIndex": 2,
+    "IsAnimationCentralized": false
+  },
+  {
+    "MoveID": "36",
+    "MoveName": "Leech Root",
+    "Description": "Drains life from the target.\nHeals user for [cpositive]50%[/] of damage dealt.",
+    "Power": 60,
+    "ManaCost": 15,
+    "MoveType": "Spell",
+    "ImpactType": "Magical",
+    "OffensiveStat": "Intelligence",
+    "MakesContact": false,
+    "Target": "Single",
+    "Accuracy": 100,
+    "Priority": 0,
+    "Rarity": 2,
+    "LevelRequirement": 3,
+    "OffensiveElementIDs": [ 13 ],
+    "Effects": {
+      "Lifesteal": "50"
+    },
+    "Tags": [ "Nature", "Lifesteal", "Healing" ],
+    "AnimationSpriteSheet": "basic_orb_pulse_2",
+    "AnimationSpeed": 1.0,
+    "DamageFrameIndex": 2,
+    "IsAnimationCentralized": false
+  },
+  {
+    "MoveID": "37",
+    "MoveName": "Vampiric Bite",
+    "Description": "A draining bite.\nHeals user for [cpositive]75%[/] of damage dealt.",
+    "Power": 60,
+    "ManaCost": 0,
+    "MoveType": "Action",
+    "ImpactType": "Physical",
+    "OffensiveStat": "Strength",
+    "MakesContact": true,
+    "Target": "Single",
+    "Accuracy": 100,
+    "Priority": 0,
+    "Rarity": 2,
+    "LevelRequirement": 4,
+    "OffensiveElementIDs": [ 9 ],
+    "Effects": {
+      "Lifesteal": "75"
+    },
+    "Tags": [ "Void", "Lifesteal", "Healing", "Contact" ],
+    "AnimationSpriteSheet": "basic_bite",
+    "AnimationSpeed": 2.0,
+    "DamageFrameIndex": 4,
+    "IsAnimationCentralized": false
   }
 ]

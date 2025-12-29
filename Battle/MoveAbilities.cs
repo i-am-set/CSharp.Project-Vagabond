@@ -1,9 +1,16 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Battle.UI;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.Battle.Abilities
 {
@@ -451,17 +458,14 @@ namespace ProjectVagabond.Battle.Abilities
 
         public float ModifyBasePower(float basePower, CombatContext ctx)
         {
-            // Fix: Handle null target (e.g. during UI rendering or AI estimation where target isn't decided)
             if (ctx.Target == null)
             {
                 return _maxBurnAmount;
             }
 
-            // Calculate how much we can burn
             int currentMana = ctx.Target.Stats.CurrentMana;
             int burnAmount = Math.Min(currentMana, _maxBurnAmount);
 
-            // If target has no mana, the move fails
             if (burnAmount <= 0)
             {
                 if (!ctx.IsSimulation)
@@ -472,17 +476,14 @@ namespace ProjectVagabond.Battle.Abilities
                 return 0;
             }
 
-            // If this is a simulation (UI tooltip, AI calc), just return the potential power
             if (ctx.IsSimulation)
             {
                 return burnAmount;
             }
 
-            // Execute the burn
             float before = ctx.Target.Stats.CurrentMana;
             ctx.Target.Stats.CurrentMana -= burnAmount;
 
-            // Trigger visual updates
             EventBus.Publish(new GameEvents.CombatantManaConsumed
             {
                 Actor = ctx.Target,
@@ -496,6 +497,82 @@ namespace ProjectVagabond.Battle.Abilities
             });
 
             return burnAmount;
+        }
+    }
+
+    public class ManaDumpAbility : ICalculationModifier, IOnActionComplete
+    {
+        public string Name => "Flux Discharge";
+        public string Description => "Consumes all mana to deal damage.";
+        public float Multiplier { get; }
+
+        public ManaDumpAbility(float multiplier)
+        {
+            Multiplier = multiplier;
+        }
+
+        public float ModifyBasePower(float basePower, CombatContext ctx)
+        {
+            // Calculate power based on current mana
+            return ctx.Actor.Stats.CurrentMana * Multiplier;
+        }
+
+        public void OnActionComplete(QueuedAction action, BattleCombatant owner)
+        {
+            // Drain mana after the move is executed
+            float before = owner.Stats.CurrentMana;
+            if (before > 0)
+            {
+                owner.Stats.CurrentMana = 0;
+                EventBus.Publish(new GameEvents.CombatantManaConsumed
+                {
+                    Actor = owner,
+                    ManaBefore = before,
+                    ManaAfter = 0
+                });
+                EventBus.Publish(new GameEvents.TerminalMessagePublished
+                {
+                    Message = $"{owner.Name} discharged all mana!"
+                });
+            }
+        }
+    }
+
+    public class LifestealAbility : IOnHitEffect
+    {
+        public string Name => "Lifesteal";
+        public string Description => "Heals user for a percentage of damage dealt.";
+        private readonly float _percent;
+
+        public LifestealAbility(float percent)
+        {
+            _percent = percent;
+        }
+
+        public void OnHit(CombatContext ctx, int damageDealt)
+        {
+            if (damageDealt > 0)
+            {
+                int healAmount = (int)(damageDealt * (_percent / 100f));
+                if (healAmount > 0)
+                {
+                    int hpBefore = (int)ctx.Actor.VisualHP;
+                    ctx.Actor.ApplyHealing(healAmount);
+                    EventBus.Publish(new GameEvents.CombatantHealed
+                    {
+                        Actor = ctx.Actor,
+                        Target = ctx.Actor,
+                        HealAmount = healAmount,
+                        VisualHPBefore = hpBefore
+                    });
+
+                    // Check for Lifesteal Reactions (e.g. Caustic Blood)
+                    foreach (var reaction in ctx.Target.LifestealReactions)
+                    {
+                        reaction.OnLifestealReceived(ctx.Actor, healAmount, ctx.Target);
+                    }
+                }
+            }
         }
     }
 }

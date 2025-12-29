@@ -2,6 +2,8 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
@@ -129,7 +131,19 @@ namespace ProjectVagabond.Battle.UI
 
             var pixel = ServiceLocator.Get<Texture2D>();
             var player = ServiceLocator.Get<BattleManager>().AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
-            bool canAfford = player != null && player.Stats.CurrentMana >= Move.ManaCost;
+
+            // --- MANA DUMP LOGIC ---
+            var manaDump = Move.Abilities.OfType<ManaDumpAbility>().FirstOrDefault();
+            bool canAfford;
+            if (manaDump != null)
+            {
+                // If ManaDump is present, cost is "All Remaining", so we can afford it as long as we have > 0.
+                canAfford = player != null && player.Stats.CurrentMana > 0;
+            }
+            else
+            {
+                canAfford = player != null && player.Stats.CurrentMana >= Move.ManaCost;
+            }
 
             bool isActivated = IsEnabled && (IsHovered || forceHover);
 

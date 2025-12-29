@@ -3,6 +3,8 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Progression;
 using ProjectVagabond.UI;
@@ -1046,11 +1048,18 @@ namespace ProjectVagabond.UI
 
             string powVal = move.Power > 0 ? move.Power.ToString() : (move.Effects.ContainsKey("ManaDamage") ? "???" : "---");
             string accVal = move.Accuracy >= 0 ? $"{move.Accuracy}%" : "---";
-            DrawStatPair("POW", powVal, leftLabelX, leftValueRightX, currentY, _global.Palette_White);
-            DrawStatPair("ACC", accVal, rightLabelX, rightValueRightX, currentY, _global.Palette_White);
-            currentY += secondaryFont.LineHeight + gap;
-
             string mpVal = move.ManaCost > 0 ? move.ManaCost.ToString() : "0";
+
+            // --- MANA DUMP LOGIC ---
+            var manaDump = move.Abilities.OfType<ManaDumpAbility>().FirstOrDefault();
+            // Check if we have a valid member context for the calculation
+            if (manaDump != null && _hoveredMemberIndex != -1 && _hoveredMemberIndex < _gameState.PlayerState.Party.Count)
+            {
+                var member = _gameState.PlayerState.Party[_hoveredMemberIndex];
+                powVal = ((int)(member.CurrentMana * manaDump.Multiplier)).ToString();
+                mpVal = member.CurrentMana.ToString() + "%"; // Added %
+            }
+
             string targetVal = move.Target switch
             {
                 TargetType.Single => "SINGL",
@@ -1068,6 +1077,11 @@ namespace ProjectVagabond.UI
                 TargetType.None => "NONE",
                 _ => "---"
             };
+
+            DrawStatPair("POW", powVal, leftLabelX, leftValueRightX, currentY, _global.Palette_White);
+            DrawStatPair("ACC", accVal, rightLabelX, rightValueRightX, currentY, _global.Palette_White);
+            currentY += secondaryFont.LineHeight + gap;
+
             DrawStatPair("MP ", mpVal, leftLabelX, leftValueRightX, currentY, _global.Palette_LightBlue);
             DrawStatPair("TGT", targetVal, rightLabelX, rightValueRightX, currentY, _global.Palette_White);
             currentY += secondaryFont.LineHeight + gap;

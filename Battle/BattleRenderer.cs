@@ -982,57 +982,19 @@ namespace ProjectVagabond.Battle.UI
             // --- NEW: Draw Animated Mana Bar Texture ---
             if (spriteManager.ManaBarPattern != null)
             {
-                // Calculate scroll offset based on time
-                // Speed: 15 pixels per second
                 int scrollX = (int)(gameTime.TotalGameTime.TotalSeconds * 15.0);
-
-                // Create a source rectangle that scrolls horizontally
-                // The texture is 16x16, so we modulo by 16 to keep the source rect valid if needed,
-                // but SpriteBatch.Draw with sourceRect doesn't tile automatically.
-                // However, since we are drawing a 1px high slice, we can just sample a 1px high strip.
-                // To make it tile, we need to draw it multiple times or use a shader.
-                // BUT, since we are in PointClamp, we can just draw the texture with a source rect that is wider than the texture?
-                // No, that clamps.
-
-                // Simple Tiling Logic:
-                // Draw the texture repeatedly to fill the width.
-                // Or, since the bar is small (60px), just draw it enough times.
-
-                // Better approach for pixel art:
-                // The texture is 16x16. We want a 1px high slice.
-                // We can just draw the texture with a source rect of (scroll % 16, 0, width, 1).
-                // Wait, if width > 16, we need tiling.
-
-                // Let's just draw the texture stretched? No, that ruins the pixel art.
-                // Let's draw it tiled manually.
-
-                int textureWidth = spriteManager.ManaBarPattern.Width;
-                int currentX = manaFgRect.X;
-                int remainingWidth = manaFgRect.Width;
-                int textureScroll = scrollX % textureWidth;
-
-                // Scissor test to clip the bar to the correct width
-                var originalScissor = spriteBatch.GraphicsDevice.ScissorRectangle;
-                var originalRasterizer = spriteBatch.GraphicsDevice.RasterizerState;
 
                 spriteBatch.End();
                 spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointWrap, null, new RasterizerState { ScissorTestEnable = true });
-
-                // Set scissor to the mana bar area
-                // Note: Scissor rect needs screen coordinates. Since we are in a scaled viewport, this is tricky.
-                // Actually, we can just use the source rect tiling trick if we set SamplerState to PointWrap!
-                // I set SamplerState.PointWrap above.
 
                 var sourceRect = new Rectangle(scrollX, 0, manaWidth, 1);
                 spriteBatch.Draw(spriteManager.ManaBarPattern, manaFgRect, sourceRect, _global.Palette_LightBlue);
 
                 spriteBatch.End();
-                // Restore original batch settings
                 spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
             }
             else
             {
-                // Fallback
                 spriteBatch.DrawSnapped(pixel, manaFgRect, _global.Palette_LightBlue);
             }
 
@@ -1044,18 +1006,27 @@ namespace ProjectVagabond.Battle.UI
 
             var hoveredMove = uiManager.HoveredMove;
 
-            if (hoveredMove != null && hoveredMove.MoveType == MoveType.Spell && hoveredMove.ManaCost > 0)
+            // Check for ManaDump ability
+            bool isManaDump = hoveredMove != null && hoveredMove.Abilities.Any(a => a is ManaDumpAbility);
+
+            if (hoveredMove != null && hoveredMove.MoveType == MoveType.Spell && (hoveredMove.ManaCost > 0 || isManaDump))
             {
                 var battleManager = ServiceLocator.Get<BattleManager>();
                 if (battleManager.CurrentActingCombatant == player)
                 {
-                    if (player.Stats.CurrentMana >= hoveredMove.ManaCost)
+                    int effectiveCost = hoveredMove.ManaCost;
+                    if (isManaDump)
+                    {
+                        effectiveCost = player.Stats.CurrentMana;
+                    }
+
+                    if (player.Stats.CurrentMana >= effectiveCost && effectiveCost > 0)
                     {
                         const float PULSE_SPEED = 4f;
                         float pulse = (MathF.Sin(uiManager.SharedPulseTimer * PULSE_SPEED) + 1f) / 2f;
                         Color pulseColor = Color.Lerp(_global.Palette_Yellow, _global.Palette_BrightWhite, pulse);
 
-                        float costPercent = (float)hoveredMove.ManaCost / player.Stats.MaxMana;
+                        float costPercent = (float)effectiveCost / player.Stats.MaxMana;
                         int costWidth = (int)(width * costPercent);
 
                         int previewX = (int)(position.X + manaWidth - costWidth);

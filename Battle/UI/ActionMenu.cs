@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
@@ -355,7 +356,19 @@ namespace ProjectVagabond.Battle.UI
 
         private void HandleMoveButtonClick(MoveData move, MoveEntry? entry, MoveButton button)
         {
-            if (_player.Stats.CurrentMana < move.ManaCost)
+            // --- MANA DUMP LOGIC ---
+            var manaDump = move.Abilities.OfType<ManaDumpAbility>().FirstOrDefault();
+            bool canAfford;
+            if (manaDump != null)
+            {
+                canAfford = _player != null && _player.Stats.CurrentMana > 0;
+            }
+            else
+            {
+                canAfford = _player != null && _player.Stats.CurrentMana >= move.ManaCost;
+            }
+
+            if (!canAfford)
             {
                 EventBus.Publish(new GameEvents.AlertPublished { Message = "NOT ENOUGH MANA" });
                 var attuneButton = _secondaryActionButtons.FirstOrDefault(b => b.Text == "ATTUNE");
@@ -1235,6 +1248,13 @@ namespace ProjectVagabond.Battle.UI
                     string accuracyText = move.Accuracy >= 0 ? $"ACC: {move.Accuracy}%" : "ACC: ---";
                     string powerText = move.Power > 0 ? $"POW: {move.Power}" : (move.Effects.ContainsKey("ManaDamage") ? "POW: ???" : "POW: ---");
 
+                    // --- MANA DUMP LOGIC ---
+                    var manaDump = move.Abilities.OfType<ManaDumpAbility>().FirstOrDefault();
+                    if (manaDump != null && _player != null)
+                    {
+                        powerText = $"POW: {(int)(_player.Stats.CurrentMana * manaDump.Multiplier)}";
+                    }
+
                     Color accColor = _global.Palette_BrightWhite;
                     if (move.Accuracy >= 0)
                     {
@@ -1383,6 +1403,14 @@ namespace ProjectVagabond.Battle.UI
                     manaValue = move.ManaCost > 0 ? $"{move.ManaCost}%" : "---";
                     impactValue = move.ImpactType.ToString().ToUpper();
                     moveTypeValue = move.MoveType.ToString().ToUpper();
+
+                    // --- MANA DUMP LOGIC ---
+                    var manaDump = move.Abilities.OfType<ManaDumpAbility>().FirstOrDefault();
+                    if (manaDump != null && _player != null)
+                    {
+                        powerValue = ((int)(_player.Stats.CurrentMana * manaDump.Multiplier)).ToString();
+                        manaValue = _player.Stats.CurrentMana.ToString() + "%"; // Added %
+                    }
                 }
                 else
                 {
@@ -1679,48 +1707,6 @@ namespace ProjectVagabond.Battle.UI
                 case "darkgray": return _global.Palette_DarkGray;
                 default: return _global.Palette_White;
             }
-        }
-
-        private (List<string> Positives, List<string> Negatives) GetStatModifierLines(Dictionary<string, int> mods)
-        {
-            var positives = new List<string>();
-            var negatives = new List<string>();
-            if (mods == null || mods.Count == 0) return (positives, negatives);
-
-            foreach (var kvp in mods)
-            {
-                if (kvp.Value == 0) continue;
-                string colorTag = kvp.Value > 0 ? "[cpositive]" : "[cnegative]";
-                string sign = kvp.Value > 0 ? "+" : "";
-
-                string statName = kvp.Key.ToLowerInvariant() switch
-                {
-                    "strength" => "STR",
-                    "intelligence" => "INT",
-                    "tenacity" => "TEN",
-                    "agility" => "AGI",
-                    "maxhp" => "HP",
-                    "maxmana" => "MP",
-                    _ => kvp.Key.ToUpper().Substring(0, Math.Min(3, kvp.Key.Length))
-                };
-
-                if (statName.Length < 3)
-                {
-                    statName += " ";
-                }
-
-                string line = $"{statName} {colorTag}{sign}{kvp.Value}[/]";
-
-                if (kvp.Value > 0)
-                {
-                    positives.Add(line);
-                }
-                else
-                {
-                    negatives.Add(line);
-                }
-            }
-            return (positives, negatives);
         }
     }
 }
