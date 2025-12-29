@@ -350,7 +350,7 @@ namespace ProjectVagabond.Battle.Abilities
         public string Description => "Switches the user out after attacking.";
         public void OnActionComplete(QueuedAction action, BattleCombatant owner)
         {
-            if (owner.IsPlayerControlled) EventBus.Publish(new GameEvents.DisengageTriggered { Actor = owner });
+            EventBus.Publish(new GameEvents.DisengageTriggered { Actor = owner });
         }
     }
 
