@@ -999,12 +999,7 @@ namespace ProjectVagabond.Battle.UI
                             // Calculate visual centers for players
                             // Hardcoded logic based on BattleRenderer layout to avoid dependency cycle
                             // Slot 0: Left, Slot 1: Right
-                            const int playerHudY = DIVIDER_Y - 10;
-                            const int playerHudPaddingX = 10;
-                            const int barWidth = 60;
-                            const int heartHeight = 32;
-                            var font = ServiceLocator.Get<BitmapFont>(); // Need font for line height
-                            float heartCenterY = playerHudY - font.LineHeight - 2 - (heartHeight / 2f) + 10 + 3;
+                            float heartCenterY = 96f; // Hardcoded new Y
 
                             BattleCombatant closestPlayer = null;
                             float minDistanceSq = float.MaxValue;
@@ -1012,11 +1007,11 @@ namespace ProjectVagabond.Battle.UI
 
                             foreach (var player in players)
                             {
-                                float startX = (player.BattleSlot == 1)
-                                    ? Global.VIRTUAL_WIDTH - playerHudPaddingX - barWidth
-                                    : playerHudPaddingX;
+                                // New X Logic
+                                float spriteCenterX = (player.BattleSlot == 1)
+                                    ? (Global.VIRTUAL_WIDTH * 0.75f)
+                                    : (Global.VIRTUAL_WIDTH * 0.25f);
 
-                                float spriteCenterX = startX + (barWidth / 2f);
                                 Vector2 targetPos = new Vector2(spriteCenterX, heartCenterY);
 
                                 float distSq = Vector2.DistanceSquared(coin.Position, targetPos);

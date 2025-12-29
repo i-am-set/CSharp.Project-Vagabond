@@ -3,15 +3,17 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
-using ProjectVagabond.Transitions;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -24,7 +26,7 @@ namespace ProjectVagabond.Scenes
         private const float MULTI_HIT_DELAY = 0.25f;
         private const float ACTION_EXECUTION_DELAY = 0.5f; // Tunable delay before attack execution
         private const float FIXED_COIN_GROUND_Y = 115f;
-        private const int ENEMY_SLOT_Y_OFFSET = 16;
+        private const int ENEMY_SLOT_Y_OFFSET = 12;
         private BattleManager _battleManager;
         private BattleUIManager _uiManager;
         private BattleRenderer _renderer;
@@ -731,6 +733,7 @@ namespace ProjectVagabond.Scenes
                 renderContextActor = _battleManager.CurrentActingCombatant;
             }
 
+            _renderer.Update(gameTime, _battleManager.AllCombatants, _animationManager, renderContextActor); // Update renderer state before drawing
             _renderer.Draw(spriteBatch, font, gameTime, _battleManager.AllCombatants, renderContextActor, _uiManager, _inputHandler, _animationManager, _uiManager.SharedPulseTimer, transform);
             _moveAnimationManager.Draw(spriteBatch);
             _uiManager.Draw(spriteBatch, font, gameTime, transform);
@@ -947,6 +950,9 @@ namespace ProjectVagabond.Scenes
 
                 if (result.DamageAmount > 0)
                 {
+                    // Set visibility timer for health bar
+                    target.HealthBarVisibleTimer = 6.0f;
+
                     // --- DYNAMIC JUICE CALCULATION ---
                     float damageRatio = Math.Clamp((float)result.DamageAmount / target.Stats.MaxHP, 0f, 1f);
 
@@ -1055,6 +1061,9 @@ namespace ProjectVagabond.Scenes
 
         private void OnCombatantHealed(GameEvents.CombatantHealed e)
         {
+            // Set visibility timer for health bar
+            e.Target.HealthBarVisibleTimer = 6.0f;
+
             // Define the visual effects as an Action to be executed when the narration appears
             Action playVisuals = () =>
             {
@@ -1085,17 +1094,26 @@ namespace ProjectVagabond.Scenes
 
         private void OnCombatantManaRestored(GameEvents.CombatantManaRestored e)
         {
+            // Set visibility timer for mana bar
+            e.Target.ManaBarVisibleTimer = 6.0f;
+
             _uiManager.ShowNarration($"{e.Target.Name} restored\n{e.AmountRestored} Mana!");
             _animationManager.StartManaRecoveryAnimation(e.Target.CombatantID, e.ManaBefore, e.ManaAfter);
         }
 
         private void OnCombatantManaConsumed(GameEvents.CombatantManaConsumed e)
         {
+            // Set visibility timer for mana bar
+            e.Actor.ManaBarVisibleTimer = 6.0f;
+
             _animationManager.StartManaLossAnimation(e.Actor.CombatantID, e.ManaBefore, e.ManaAfter);
         }
 
         private void OnCombatantRecoiled(GameEvents.CombatantRecoiled e)
         {
+            // Set visibility timer for health bar
+            e.Actor.HealthBarVisibleTimer = 6.0f;
+
             if (e.Actor.IsPlayerControlled)
             {
                 _core.TriggerScreenFlashSequence(_global.Palette_Red);
@@ -1146,6 +1164,9 @@ namespace ProjectVagabond.Scenes
         {
             if (e.Damage > 0)
             {
+                // Set visibility timer for health bar
+                e.Combatant.HealthBarVisibleTimer = 6.0f;
+
                 if (e.Combatant.IsPlayerControlled)
                 {
                     _core.TriggerScreenFlashSequence(_global.Palette_Red);

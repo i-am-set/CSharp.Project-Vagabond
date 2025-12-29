@@ -25,6 +25,11 @@ namespace ProjectVagabond.Battle.UI
     public struct StatusIconInfo { public StatusEffectInstance Effect; public Rectangle Bounds; }
     public class BattleRenderer
     {
+        // --- TUNING ---
+        public const float BAR_MIN_ALPHA = 0.0f;
+        public const float BAR_FADE_SPEED = 5.0f;
+        public const float BAR_VISIBILITY_DURATION = 6.0f;
+
         // Dependencies
         private readonly SpriteManager _spriteManager;
         private readonly Global _global;
@@ -97,7 +102,7 @@ namespace ProjectVagabond.Battle.UI
 
         // Layout Constants
         private const int DIVIDER_Y = 123;
-        private const int ENEMY_SLOT_Y_OFFSET = 16;
+        private const int ENEMY_SLOT_Y_OFFSET = 12; // Moved up 16 pixels (was 16)
         private const float TITLE_INDICATOR_BOB_SPEED = 0.375f;
         private const float HITSTOP_SCALE_MULTIPLIER = 1.2f; // Scale up during hitstop
 
@@ -140,6 +145,23 @@ namespace ProjectVagabond.Battle.UI
 
         public void Update(GameTime gameTime, IEnumerable<BattleCombatant> combatants, BattleAnimationManager animationManager, BattleCombatant? currentActor)
         {
+            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            // Update visibility timers
+            foreach (var combatant in combatants)
+            {
+                if (combatant.HealthBarVisibleTimer > 0)
+                {
+                    combatant.HealthBarVisibleTimer -= dt;
+                    if (combatant.HealthBarVisibleTimer < 0) combatant.HealthBarVisibleTimer = 0;
+                }
+                if (combatant.ManaBarVisibleTimer > 0)
+                {
+                    combatant.ManaBarVisibleTimer -= dt;
+                    if (combatant.ManaBarVisibleTimer < 0) combatant.ManaBarVisibleTimer = 0;
+                }
+            }
+
             UpdateEnemyAnimations(gameTime, combatants);
             UpdateShadowAnimations(gameTime, combatants);
             UpdateStatusIconTooltips(combatants);
@@ -454,12 +476,12 @@ namespace ProjectVagabond.Battle.UI
                 }
             }
 
-            DrawEnemyHuds(spriteBatch, font, secondaryFont, enemies, currentActor, isTargetingPhase, shouldGrayOutUnselectable, selectableTargets, animationManager, uiManager.HoverHighlightState, pulseAlpha, gameTime, silhouetteColors, transform);
+            DrawEnemyHuds(spriteBatch, font, secondaryFont, enemies, currentActor, isTargetingPhase, shouldGrayOutUnselectable, selectableTargets, animationManager, uiManager.HoverHighlightState, pulseAlpha, gameTime, silhouetteColors, transform, inputHandler, uiManager);
             animationManager.DrawCoins(spriteBatch);
 
             foreach (var playerCombatant in players)
             {
-                DrawPlayerHud(spriteBatch, font, secondaryFont, playerCombatant, currentActor, gameTime, animationManager, uiManager, uiManager.HoverHighlightState, shouldGrayOutUnselectable, selectableTargets, isTargetingPhase, pulseAlpha, silhouetteColors);
+                DrawPlayerHud(spriteBatch, font, secondaryFont, playerCombatant, currentActor, gameTime, animationManager, uiManager, uiManager.HoverHighlightState, shouldGrayOutUnselectable, selectableTargets, isTargetingPhase, pulseAlpha, silhouetteColors, inputHandler);
             }
 
             DrawUITitle(spriteBatch, secondaryFont, gameTime, uiManager.SubMenuState);
@@ -636,7 +658,7 @@ namespace ProjectVagabond.Battle.UI
         {
         }
 
-        private void DrawEnemyHuds(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, List<BattleCombatant> enemies, BattleCombatant currentActor, bool isTargetingPhase, bool shouldGrayOutUnselectable, HashSet<BattleCombatant> selectableTargets, BattleAnimationManager animationManager, HoverHighlightState hoverHighlightState, float pulseAlpha, GameTime gameTime, Dictionary<string, Color> silhouetteColors, Matrix transform)
+        private void DrawEnemyHuds(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, List<BattleCombatant> enemies, BattleCombatant currentActor, bool isTargetingPhase, bool shouldGrayOutUnselectable, HashSet<BattleCombatant> selectableTargets, BattleAnimationManager animationManager, HoverHighlightState hoverHighlightState, float pulseAlpha, GameTime gameTime, Dictionary<string, Color> silhouetteColors, Matrix transform, BattleInputHandler inputHandler, BattleUIManager uiManager, Color? tintOverride = null)
         {
             const int enemyAreaPadding = 40;
             int availableWidth = Global.VIRTUAL_WIDTH - (enemyAreaPadding * 2);
@@ -677,7 +699,7 @@ namespace ProjectVagabond.Battle.UI
                 }
 
                 // --- TINT LOGIC ---
-                Color? tintOverride = null;
+                Color? tintOverrideLocal = tintOverride;
                 bool localShouldGrayOut = shouldGrayOutUnselectable;
 
                 if (enemy.CombatantID == _statTooltipCombatantID && _statTooltipAlpha > 0f)
@@ -695,10 +717,10 @@ namespace ProjectVagabond.Battle.UI
                     float progress = healFlash.Timer / BattleAnimationManager.HealFlashAnimationState.Duration;
                     float flashIntensity = 1.0f - Easing.EaseOutQuad(progress);
                     // Tint Greenish-White
-                    tintOverride = Color.Lerp(Color.White, _global.Palette_LightGreen, flashIntensity * 0.8f);
+                    tintOverrideLocal = Color.Lerp(Color.White, _global.Palette_LightGreen, flashIntensity * 0.8f);
                 }
 
-                DrawCombatantHud(spriteBatch, nameFont, statsFont, enemy, slotCenter, currentActor, isTargetingPhase, localShouldGrayOut, selectableTargets, animationManager, hoverHighlightState, pulseAlpha, gameTime, highlightColor, transform, tintOverride);
+                DrawCombatantHud(spriteBatch, nameFont, statsFont, enemy, slotCenter, currentActor, isTargetingPhase, localShouldGrayOut, selectableTargets, animationManager, hoverHighlightState, pulseAlpha, gameTime, highlightColor, transform, inputHandler, uiManager, tintOverrideLocal);
 
                 // --- ALWAYS REGISTER HITBOX ---
                 // Calculate bounds for hover detection regardless of selection state
@@ -759,32 +781,26 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private void DrawPlayerHud(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, BattleCombatant player, BattleCombatant currentActor, GameTime gameTime, BattleAnimationManager animationManager, BattleUIManager uiManager, HoverHighlightState hoverHighlightState, bool shouldGrayOutUnselectable, HashSet<BattleCombatant> selectableTargets, bool isTargetingPhase, float pulseAlpha, Dictionary<string, Color> silhouetteColors)
+        private void DrawPlayerHud(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, BattleCombatant player, BattleCombatant currentActor, GameTime gameTime, BattleAnimationManager animationManager, BattleUIManager uiManager, HoverHighlightState hoverHighlightState, bool shouldGrayOutUnselectable, HashSet<BattleCombatant> selectableTargets, bool isTargetingPhase, float pulseAlpha, Dictionary<string, Color> silhouetteColors, BattleInputHandler inputHandler)
         {
             if (player == null) return;
 
             bool isRightSide = player.BattleSlot == 1;
-            const int playerHudY = DIVIDER_Y - 10;
-            const int playerHudPaddingX = 10;
             const int barWidth = 60;
 
-            float startX;
-            if (isRightSide)
-            {
-                startX = Global.VIRTUAL_WIDTH - playerHudPaddingX - barWidth;
-            }
-            else
-            {
-                startX = playerHudPaddingX;
-            }
+            // --- NEW LAYOUT ---
+            // 1. Horizontal Centering (1/4 and 3/4 of screen)
+            float spriteCenterX = isRightSide ? (Global.VIRTUAL_WIDTH * 0.75f) : (Global.VIRTUAL_WIDTH * 0.25f);
+            float startX = spriteCenterX - (barWidth / 2f);
+
+            // 2. Vertical Positioning
+            float heartCenterY = 99f; // Sprite Center (Moved down 1px from 98)
+            float barsY = 78f;        // Bars Top (Unchanged)
+            float nameY = 111f;       // Name Top (Moved up 3px from 114)
 
             bool isSelectable = selectableTargets.Contains(player);
             bool isSilhouetted = shouldGrayOutUnselectable && !isSelectable;
             Color? silhouetteColor = isSilhouetted ? _global.Palette_DarkerGray : null;
-
-            const int heartHeight = 32;
-            float heartCenterY = playerHudY - font.LineHeight - 2 - (heartHeight / 2f) + 10 + 3;
-            float spriteCenterX = startX + (barWidth / 2f);
 
             _combatantVisualCenters[player.CombatantID] = new Vector2(spriteCenterX, heartCenterY);
             if (player.BattleSlot == 0) PlayerSpritePosition = new Vector2(spriteCenterX, heartCenterY);
@@ -899,7 +915,23 @@ namespace ProjectVagabond.Battle.UI
                 showName = !isSilhouetted || isStatTooltipActive;
             }
 
-            bool showBars = !isSilhouetted || isHoveringAction || isStatTooltipActive;
+            // --- VISIBILITY LOGIC FOR BARS ---
+            // Check if this combatant is hovered
+            bool isHovered = (inputHandler.HoveredTargetIndex != -1 && _currentTargets.Count > inputHandler.HoveredTargetIndex && _currentTargets[inputHandler.HoveredTargetIndex].Combatant == player) || (uiManager.HoveredCombatantFromUI == player);
+
+            if (isHovered)
+            {
+                player.HealthBarVisibleTimer = BAR_VISIBILITY_DURATION;
+                player.ManaBarVisibleTimer = BAR_VISIBILITY_DURATION;
+            }
+
+            // Update Visual Alphas (Logic Alpha)
+            UpdateBarAlpha(player, (float)gameTime.ElapsedGameTime.TotalSeconds);
+
+            // Determine Draw Alphas (Logic Alpha vs Targeting Override)
+            // If selectable (targeting), force 1.0. When unselected, it snaps back to VisualAlpha (which is 0.1 if timer is 0).
+            float hpDrawAlpha = selectableTargets.Contains(player) ? 1.0f : player.VisualHealthBarAlpha;
+            float manaDrawAlpha = selectableTargets.Contains(player) ? 1.0f : player.VisualManaBarAlpha;
 
             if (showName)
             {
@@ -942,43 +974,31 @@ namespace ProjectVagabond.Battle.UI
                 }
 
                 Vector2 nameSize = nameFontToUse.MeasureString(player.Name);
-                float nameX;
-                const int centerPadding = 10;
 
-                float nameY = playerHudY - 2;
+                // Center name on sprite
+                float nameX = spriteCenterX - (nameSize.X / 2f);
 
+                float finalNameY = nameY;
                 if (nameFontToUse == secondaryFont)
                 {
                     float heightDiff = font.LineHeight - secondaryFont.LineHeight;
-                    nameY += heightDiff / 2f;
+                    finalNameY += heightDiff / 2f;
                 }
 
-                if (isRightSide)
-                {
-                    nameX = (Global.VIRTUAL_WIDTH / 2) + centerPadding;
-                }
-                else
-                {
-                    nameX = (Global.VIRTUAL_WIDTH / 2) - nameSize.X - centerPadding;
-                }
-
-                Vector2 namePos = new Vector2(nameX, nameY);
+                Vector2 namePos = new Vector2(nameX, finalNameY);
                 spriteBatch.DrawStringSnapped(nameFontToUse, player.Name, namePos, nameColor);
             }
 
-            if (showBars)
-            {
-                DrawPlayerResourceBars(spriteBatch, player, new Vector2(startX, playerHudY), barWidth, uiManager, animationManager, gameTime);
-            }
+            DrawPlayerResourceBars(spriteBatch, player, new Vector2(startX, barsY), barWidth, uiManager, animationManager, gameTime, hpDrawAlpha, manaDrawAlpha);
 
-            DrawPlayerStatusIcons(spriteBatch, player, secondaryFont, playerHudY, startX, barWidth);
+            DrawPlayerStatusIcons(spriteBatch, player, secondaryFont, (int)barsY, startX, barWidth);
 
             // --- ALWAYS REGISTER HITBOX ---
             Rectangle spriteBounds = sprite.GetStaticBounds(animationManager, player);
 
             if (spriteBounds.IsEmpty)
             {
-                spriteBounds = new Rectangle((int)startX, playerHudY - 40, barWidth, 50);
+                spriteBounds = new Rectangle((int)startX, (int)heartCenterY - 25, barWidth, 50);
             }
 
             _currentTargets.Add(new TargetInfo
@@ -988,11 +1008,92 @@ namespace ProjectVagabond.Battle.UI
             });
         }
 
-        private void DrawPlayerResourceBars(SpriteBatch spriteBatch, BattleCombatant player, Vector2 position, int width, BattleUIManager uiManager, BattleAnimationManager animationManager, GameTime gameTime)
+        private void DrawBarAnimationOverlay(SpriteBatch spriteBatch, Rectangle bgRect, float maxResource, BattleAnimationManager.ResourceBarAnimationState anim)
+        {
+            var pixel = ServiceLocator.Get<Texture2D>();
+            float percentBefore = anim.ValueBefore / maxResource;
+            float percentAfter = anim.ValueAfter / maxResource;
+
+            int widthBefore = (int)(bgRect.Width * percentBefore);
+            int widthAfter = (int)(bgRect.Width * percentAfter);
+
+            if (anim.AnimationType == BattleAnimationManager.ResourceBarAnimationState.BarAnimationType.Loss)
+            {
+                int previewStartX = bgRect.X + widthAfter;
+                int previewWidth = widthBefore - widthAfter;
+                var previewRect = new Rectangle(previewStartX, bgRect.Y, previewWidth, bgRect.Height);
+
+                switch (anim.CurrentLossPhase)
+                {
+                    case BattleAnimationManager.ResourceBarAnimationState.LossPhase.Preview:
+                        Color previewColor = (anim.ResourceType == BattleAnimationManager.ResourceBarAnimationState.BarResourceType.HP)
+                            ? _global.Palette_Red
+                            : Color.White;
+                        spriteBatch.DrawSnapped(pixel, previewRect, previewColor);
+                        break;
+                    case BattleAnimationManager.ResourceBarAnimationState.LossPhase.FlashBlack:
+                        spriteBatch.DrawSnapped(pixel, previewRect, Color.Black);
+                        break;
+                    case BattleAnimationManager.ResourceBarAnimationState.LossPhase.FlashWhite:
+                        spriteBatch.DrawSnapped(pixel, previewRect, Color.White);
+                        break;
+                    case BattleAnimationManager.ResourceBarAnimationState.LossPhase.Shrink:
+                        float progress = anim.Timer / BattleAnimationManager.ResourceBarAnimationState.SHRINK_DURATION;
+                        float easedProgress = Easing.EaseOutCubic(progress);
+                        int shrinkingWidth = (int)(previewWidth * (1.0f - easedProgress));
+                        var shrinkingRect = new Rectangle(previewRect.X, previewRect.Y, shrinkingWidth, previewRect.Height);
+
+                        Color shrinkColor = (anim.ResourceType == BattleAnimationManager.ResourceBarAnimationState.BarResourceType.HP)
+                            ? _global.Palette_Red
+                            : _global.Palette_White;
+
+                        spriteBatch.DrawSnapped(pixel, shrinkingRect, shrinkColor);
+                        break;
+                }
+            }
+            else // Recovery
+            {
+                float progress = anim.Timer / BattleAnimationManager.ResourceBarAnimationState.GHOST_FILL_DURATION;
+                float easedProgress = Easing.EaseOutCubic(progress);
+                float currentFillPercent = MathHelper.Lerp(percentBefore, percentAfter, easedProgress);
+
+                // Draw the "Ghost Fill" - a bright bar representing the amount being healed
+                // It starts at the old value and extends to the new value.
+                // We fade it out slightly as it fills.
+
+                int ghostStartX = (int)(bgRect.X + bgRect.Width * percentBefore);
+                int ghostWidth = (int)(bgRect.Width * (percentAfter - percentBefore));
+
+                // Ensure at least 1 pixel if healing occurred
+                if (percentAfter > percentBefore && ghostWidth == 0) ghostWidth = 1;
+
+                if (ghostWidth > 0)
+                {
+                    var ghostRect = new Rectangle(ghostStartX, bgRect.Y, ghostWidth, bgRect.Height);
+
+                    // Bright color for the ghost fill
+                    Color ghostColor = (anim.ResourceType == BattleAnimationManager.ResourceBarAnimationState.BarResourceType.HP)
+                        ? Color.Lerp(Color.White, _global.Palette_LightGreen, 0.5f)
+                        : Color.Lerp(Color.White, _global.Palette_LightBlue, 0.5f);
+
+                    // Fade out near the end
+                    float alpha = 1.0f;
+                    if (progress > 0.7f)
+                    {
+                        alpha = 1.0f - ((progress - 0.7f) / 0.3f);
+                    }
+
+                    spriteBatch.DrawSnapped(pixel, ghostRect, ghostColor * alpha);
+                }
+            }
+        }
+
+        private void DrawPlayerResourceBars(SpriteBatch spriteBatch, BattleCombatant player, Vector2 position, int width, BattleUIManager uiManager, BattleAnimationManager animationManager, GameTime gameTime, float hpAlpha, float manaAlpha)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
             var spriteManager = ServiceLocator.Get<SpriteManager>();
 
+            // --- HEALTH BAR ---
             float hpPercent = player.Stats.MaxHP > 0 ? Math.Clamp(player.VisualHP / player.Stats.MaxHP, 0f, 1f) : 0f;
             int hpWidth = (int)(width * hpPercent);
             if (hpPercent > 0 && hpWidth == 0) hpWidth = 1;
@@ -1000,8 +1101,14 @@ namespace ProjectVagabond.Battle.UI
             var hpBgRect = new Rectangle((int)position.X, (int)position.Y + 1, width, 2);
             var hpFgRect = new Rectangle((int)position.X, (int)position.Y + 1, hpWidth, 2);
 
-            spriteBatch.DrawSnapped(pixel, hpBgRect, _global.Palette_DarkGray);
-            spriteBatch.DrawSnapped(pixel, hpFgRect, _global.Palette_LightGreen);
+            // Draw Black Outline for HP Bar ONLY if alpha is high enough (e.g. > 0.5)
+            // User requested: "When the are transparent, get rid of their outline too"
+            // "Lasily, get rid of the palette_black outline around the active bars" -> Removed completely.
+            // var hpBorderRect = new Rectangle(hpBgRect.X - 1, hpBgRect.Y - 1, hpBgRect.Width + 2, hpBgRect.Height + 2);
+            // DrawRectangleBorder(spriteBatch, pixel, hpBorderRect, 1, _global.Palette_Black);
+
+            spriteBatch.DrawSnapped(pixel, hpBgRect, _global.Palette_DarkGray * hpAlpha);
+            spriteBatch.DrawSnapped(pixel, hpFgRect, _global.Palette_LightGreen * hpAlpha);
 
             var hpAnim = animationManager.GetResourceBarAnimation(player.CombatantID, BattleAnimationManager.ResourceBarAnimationState.BarResourceType.HP);
             if (hpAnim != null)
@@ -1009,6 +1116,7 @@ namespace ProjectVagabond.Battle.UI
                 DrawBarAnimationOverlay(spriteBatch, hpBgRect, player.Stats.MaxHP, hpAnim);
             }
 
+            // --- MANA BAR ---
             float manaPercent = player.Stats.MaxMana > 0 ? Math.Clamp((float)player.Stats.CurrentMana / player.Stats.MaxMana, 0f, 1f) : 0f;
             int manaWidth = (int)(width * manaPercent);
             if (manaPercent > 0 && manaWidth == 0) manaWidth = 1;
@@ -1016,7 +1124,11 @@ namespace ProjectVagabond.Battle.UI
             var manaBgRect = new Rectangle((int)position.X, (int)position.Y + 4, width, 1); // Changed to 1
             var manaFgRect = new Rectangle((int)position.X, (int)position.Y + 4, manaWidth, 1); // Changed to 1
 
-            spriteBatch.DrawSnapped(pixel, manaBgRect, _global.Palette_DarkGray);
+            // Draw Black Outline for Mana Bar - Removed
+            // var manaBorderRect = new Rectangle(manaBgRect.X - 1, manaBgRect.Y - 1, manaBgRect.Width + 2, manaBgRect.Height + 2);
+            // DrawRectangleBorder(spriteBatch, pixel, manaBorderRect, 1, _global.Palette_Black);
+
+            spriteBatch.DrawSnapped(pixel, manaBgRect, _global.Palette_DarkGray * manaAlpha);
 
             // --- NEW: Draw Animated Mana Bar Texture ---
             if (spriteManager.ManaBarPattern != null)
@@ -1027,14 +1139,14 @@ namespace ProjectVagabond.Battle.UI
                 spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointWrap, null, new RasterizerState { ScissorTestEnable = true });
 
                 var sourceRect = new Rectangle(scrollX, 0, manaWidth, 1);
-                spriteBatch.Draw(spriteManager.ManaBarPattern, manaFgRect, sourceRect, _global.Palette_LightBlue);
+                spriteBatch.Draw(spriteManager.ManaBarPattern, manaFgRect, sourceRect, _global.Palette_LightBlue * manaAlpha);
 
                 spriteBatch.End();
                 spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
             }
             else
             {
-                spriteBatch.DrawSnapped(pixel, manaFgRect, _global.Palette_LightBlue);
+                spriteBatch.DrawSnapped(pixel, manaFgRect, _global.Palette_LightBlue * manaAlpha);
             }
 
             var manaAnim = animationManager.GetResourceBarAnimation(player.CombatantID, BattleAnimationManager.ResourceBarAnimationState.BarResourceType.Mana);
@@ -1077,7 +1189,7 @@ namespace ProjectVagabond.Battle.UI
                             1 // Changed to 1
                         );
 
-                        spriteBatch.DrawSnapped(pixel, previewRect, pulseColor);
+                        spriteBatch.DrawSnapped(pixel, previewRect, pulseColor * manaAlpha);
                     }
                     else
                     {
@@ -1087,7 +1199,7 @@ namespace ProjectVagabond.Battle.UI
                             manaWidth,
                             1 // Changed to 1
                         );
-                        spriteBatch.DrawSnapped(pixel, previewRect, _global.Palette_Red);
+                        spriteBatch.DrawSnapped(pixel, previewRect, _global.Palette_Red * manaAlpha);
                     }
                 }
             }
@@ -1267,7 +1379,7 @@ namespace ProjectVagabond.Battle.UI
             spriteBatch.DrawSnapped(arrowSheet, arrowPos, arrowRect, Color.White);
         }
 
-        private void DrawCombatantHud(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, BattleCombatant combatant, Vector2 slotCenter, BattleCombatant currentActor, bool isTargetingPhase, bool shouldGrayOutUnselectable, HashSet<BattleCombatant> selectableTargets, BattleAnimationManager animationManager, HoverHighlightState hoverHighlightState, float pulseAlpha, GameTime gameTime, Color? highlightColor, Matrix transform, Color? tintOverride = null)
+        private void DrawCombatantHud(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, BattleCombatant combatant, Vector2 slotCenter, BattleCombatant currentActor, bool isTargetingPhase, bool shouldGrayOutUnselectable, HashSet<BattleCombatant> selectableTargets, BattleAnimationManager animationManager, HoverHighlightState hoverHighlightState, float pulseAlpha, GameTime gameTime, Color? highlightColor, Matrix transform, BattleInputHandler inputHandler, BattleUIManager uiManager, Color? tintOverride = null)
         {
             float yBobOffset = CalculateAttackBobOffset(combatant.CombatantID, isPlayer: false);
 
@@ -1633,25 +1745,32 @@ namespace ProjectVagabond.Battle.UI
 
             if (silhouetteFactor < 1.0f)
             {
-                bool isDamaged = combatant.Stats.CurrentHP < combatant.Stats.MaxHP;
-                bool isVisuallyDamaged = combatant.VisualHP < (combatant.Stats.MaxHP - 0.1f);
-                bool showHealth = isDamaged || isVisuallyDamaged;
+                // --- VISIBILITY LOGIC FOR BARS ---
+                // Check if this combatant is hovered
+                bool isHovered = (inputHandler.HoveredTargetIndex != -1 && _currentTargets.Count > inputHandler.HoveredTargetIndex && _currentTargets[inputHandler.HoveredTargetIndex].Combatant == combatant) || (uiManager.HoveredCombatantFromUI == combatant);
 
-                // Check Mana
-                bool isManaMissing = combatant.Stats.CurrentMana < combatant.Stats.MaxMana;
-                bool showMana = isManaMissing && combatant.Stats.MaxMana > 0;
-
-                if (showHealth)
+                if (isHovered)
                 {
-                    DrawEnemyHealthBar(spriteBatch, combatant, barX, barY, barWidth, barHeight, animationManager, 1.0f, gameTime);
+                    combatant.HealthBarVisibleTimer = BAR_VISIBILITY_DURATION;
+                    combatant.ManaBarVisibleTimer = BAR_VISIBILITY_DURATION;
                 }
 
-                if (showMana)
-                {
-                    // Draw below health bar (barY + height + 1px gap)
-                    float manaBarY = barY + barHeight + 1;
-                    DrawEnemyManaBar(spriteBatch, combatant, barX, manaBarY, barWidth, 1, animationManager, 1.0f, gameTime); // Changed height to 1
-                }
+                // --- UPDATE VISUAL ALPHA ---
+                float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+                // Health Bar Alpha
+                UpdateBarAlpha(combatant, dt);
+
+                // Determine Draw Alphas (Logic Alpha vs Targeting Override)
+                // If selectable (targeting), force 1.0. When unselected, it snaps back to VisualAlpha (which is 0.1 if timer is 0).
+                float hpDrawAlpha = selectableTargets.Contains(combatant) ? 1.0f : combatant.VisualHealthBarAlpha;
+                float manaDrawAlpha = selectableTargets.Contains(combatant) ? 1.0f : combatant.VisualManaBarAlpha;
+
+                DrawEnemyHealthBar(spriteBatch, combatant, barX, barY, barWidth, barHeight, animationManager, hpDrawAlpha, gameTime);
+
+                // Draw below health bar (barY + height + 1px gap)
+                float manaBarY = barY + barHeight + 1;
+                DrawEnemyManaBar(spriteBatch, combatant, barX, manaBarY, barWidth, 1, animationManager, manaDrawAlpha, gameTime); // Changed height to 1
             }
 
             if (selectableTargets.Contains(combatant))
@@ -1671,178 +1790,17 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private void DrawComposite(SpriteBatch sb, Texture2D tex, Vector2 basePos, Vector2 offset, Color c)
+        private void UpdateBarAlpha(BattleCombatant c, float dt)
         {
-            sb.Draw(tex, basePos + offset, c);
-        }
+            // Health
+            float targetHealth = c.HealthBarVisibleTimer > 0 ? 1.0f : BAR_MIN_ALPHA;
+            if (targetHealth > c.VisualHealthBarAlpha) c.VisualHealthBarAlpha = targetHealth; // Instant appear
+            else c.VisualHealthBarAlpha = MathHelper.Lerp(c.VisualHealthBarAlpha, targetHealth, dt * BAR_FADE_SPEED); // Smooth fade
 
-        private Rectangle GetEnemyDynamicSpriteBounds(BattleCombatant enemy, Vector2 basePosition)
-        {
-            string archetypeId = enemy.ArchetypeId;
-            var topOffsets = _spriteManager.GetEnemySpriteTopPixelOffsets(archetypeId);
-            var leftOffsets = _spriteManager.GetEnemySpriteLeftPixelOffsets(archetypeId);
-            var rightOffsets = _spriteManager.GetEnemySpriteRightPixelOffsets(archetypeId);
-            var bottomOffsets = _spriteManager.GetEnemySpriteBottomPixelOffsets(archetypeId);
-
-            if (topOffsets == null) return Rectangle.Empty;
-
-            if (!_enemySpritePartOffsets.TryGetValue(enemy.CombatantID, out var partOffsets))
-            {
-                return Rectangle.Empty;
-            }
-
-            int minX = int.MaxValue;
-            int minY = int.MaxValue;
-            int maxX = int.MinValue;
-            int maxY = int.MinValue;
-
-            for (int i = 0; i < topOffsets.Length; i++)
-            {
-                if (topOffsets[i] == int.MaxValue) continue;
-
-                Vector2 offset = partOffsets[i];
-
-                float partDrawX = basePosition.X + offset.X;
-                float partDrawY = basePosition.Y + offset.Y;
-
-                int partLeft = (int)partDrawX + leftOffsets[i];
-                int partRight = (int)partDrawX + rightOffsets[i] + 1;
-                int partTop = (int)partDrawY + topOffsets[i];
-                int partBottom = (int)partDrawY + bottomOffsets[i] + 1;
-
-                if (partLeft < minX) minX = partLeft;
-                if (partRight > maxX) maxX = partRight;
-                if (partTop < minY) minY = partTop;
-                if (partBottom > maxY) maxY = partBottom;
-            }
-
-            if (minX == int.MaxValue) return Rectangle.Empty;
-
-            var rect = new Rectangle(minX, minY, maxX - minX, maxY - minY);
-            rect.Inflate(2, 2);
-            return rect;
-        }
-
-        private Rectangle GetEnemyStaticSpriteBounds(BattleCombatant enemy, Vector2 basePosition)
-        {
-            string archetypeId = enemy.ArchetypeId;
-            var topOffsets = _spriteManager.GetEnemySpriteTopPixelOffsets(archetypeId);
-            var leftOffsets = _spriteManager.GetEnemySpriteLeftPixelOffsets(archetypeId);
-            var rightOffsets = _spriteManager.GetEnemySpriteRightPixelOffsets(archetypeId);
-            var bottomOffsets = _spriteManager.GetEnemySpriteBottomPixelOffsets(archetypeId);
-
-            if (topOffsets == null) return Rectangle.Empty;
-
-            int minX = int.MaxValue;
-            int minY = int.MaxValue;
-            int maxX = int.MinValue;
-            int maxY = int.MinValue;
-
-            for (int i = 0; i < topOffsets.Length; i++)
-            {
-                if (topOffsets[i] == int.MaxValue) continue;
-
-                Vector2 offset = Vector2.Zero;
-
-                float partDrawX = basePosition.X + offset.X;
-                float partDrawY = basePosition.Y + offset.Y;
-
-                int partLeft = (int)partDrawX + leftOffsets[i];
-                int partRight = (int)partDrawX + rightOffsets[i] + 1;
-                int partTop = (int)partDrawY + topOffsets[i];
-                int partBottom = (int)partDrawY + bottomOffsets[i] + 1;
-
-                if (partLeft < minX) minX = partLeft;
-                if (partRight > maxX) maxX = partRight;
-                if (partTop < minY) minY = partTop;
-                if (partBottom > maxY) maxY = partBottom;
-            }
-
-            if (minX == int.MaxValue) return Rectangle.Empty;
-
-            var rect = new Rectangle(minX, minY, maxX - minX, maxY - minY);
-            rect.Inflate(4, 4);
-            return rect;
-        }
-
-        private void DrawBarAnimationOverlay(SpriteBatch spriteBatch, Rectangle bgRect, float maxResource, BattleAnimationManager.ResourceBarAnimationState anim)
-        {
-            var pixel = ServiceLocator.Get<Texture2D>();
-            float percentBefore = anim.ValueBefore / maxResource;
-            float percentAfter = anim.ValueAfter / maxResource;
-
-            int widthBefore = (int)(bgRect.Width * percentBefore);
-            int widthAfter = (int)(bgRect.Width * percentAfter);
-
-            if (anim.AnimationType == BattleAnimationManager.ResourceBarAnimationState.BarAnimationType.Loss)
-            {
-                int previewStartX = bgRect.X + widthAfter;
-                int previewWidth = widthBefore - widthAfter;
-                var previewRect = new Rectangle(previewStartX, bgRect.Y, previewWidth, bgRect.Height);
-
-                switch (anim.CurrentLossPhase)
-                {
-                    case BattleAnimationManager.ResourceBarAnimationState.LossPhase.Preview:
-                        Color previewColor = (anim.ResourceType == BattleAnimationManager.ResourceBarAnimationState.BarResourceType.HP)
-                            ? _global.Palette_Red
-                            : Color.White;
-                        spriteBatch.DrawSnapped(pixel, previewRect, previewColor);
-                        break;
-                    case BattleAnimationManager.ResourceBarAnimationState.LossPhase.FlashBlack:
-                        spriteBatch.DrawSnapped(pixel, previewRect, Color.Black);
-                        break;
-                    case BattleAnimationManager.ResourceBarAnimationState.LossPhase.FlashWhite:
-                        spriteBatch.DrawSnapped(pixel, previewRect, Color.White);
-                        break;
-                    case BattleAnimationManager.ResourceBarAnimationState.LossPhase.Shrink:
-                        float progress = anim.Timer / BattleAnimationManager.ResourceBarAnimationState.SHRINK_DURATION;
-                        float easedProgress = Easing.EaseOutCubic(progress);
-                        int shrinkingWidth = (int)(previewWidth * (1.0f - easedProgress));
-                        var shrinkingRect = new Rectangle(previewRect.X, previewRect.Y, shrinkingWidth, previewRect.Height);
-
-                        Color shrinkColor = (anim.ResourceType == BattleAnimationManager.ResourceBarAnimationState.BarResourceType.HP)
-                            ? _global.Palette_Red
-                            : _global.Palette_White;
-
-                        spriteBatch.DrawSnapped(pixel, shrinkingRect, shrinkColor);
-                        break;
-                }
-            }
-            else // Recovery
-            {
-                float progress = anim.Timer / BattleAnimationManager.ResourceBarAnimationState.GHOST_FILL_DURATION;
-                float easedProgress = Easing.EaseOutCubic(progress);
-                float currentFillPercent = MathHelper.Lerp(percentBefore, percentAfter, easedProgress);
-
-                // Draw the "Ghost Fill" - a bright bar representing the amount being healed
-                // It starts at the old value and extends to the new value.
-                // We fade it out slightly as it fills.
-
-                int ghostStartX = (int)(bgRect.X + bgRect.Width * percentBefore);
-                int ghostWidth = (int)(bgRect.Width * (percentAfter - percentBefore));
-
-                // Ensure at least 1 pixel if healing occurred
-                if (percentAfter > percentBefore && ghostWidth == 0) ghostWidth = 1;
-
-                if (ghostWidth > 0)
-                {
-                    var ghostRect = new Rectangle(ghostStartX, bgRect.Y, ghostWidth, bgRect.Height);
-
-                    // Bright color for the ghost fill
-                    Color ghostColor = (anim.ResourceType == BattleAnimationManager.ResourceBarAnimationState.BarResourceType.HP)
-                        ? Color.Lerp(Color.White, _global.Palette_LightGreen, 0.5f)
-                        : Color.Lerp(Color.White, _global.Palette_LightBlue, 0.5f);
-
-                    // Fade out near the end
-                    float alpha = 1.0f;
-                    if (progress > 0.7f)
-                    {
-                        alpha = 1.0f - ((progress - 0.7f) / 0.3f);
-                    }
-
-                    spriteBatch.DrawSnapped(pixel, ghostRect, ghostColor * alpha);
-                }
-            }
+            // Mana
+            float targetMana = c.ManaBarVisibleTimer > 0 ? 1.0f : BAR_MIN_ALPHA;
+            if (targetMana > c.VisualManaBarAlpha) c.VisualManaBarAlpha = targetMana;
+            else c.VisualManaBarAlpha = MathHelper.Lerp(c.VisualManaBarAlpha, targetMana, dt * BAR_FADE_SPEED);
         }
 
         private void DrawEnemyHealthBar(SpriteBatch spriteBatch, BattleCombatant combatant, float barX, float barY, int barWidth, int barHeight, BattleAnimationManager animationManager, float alpha, GameTime gameTime)
@@ -1861,6 +1819,15 @@ namespace ProjectVagabond.Battle.UI
             if (hpPercent > 0 && fgWidth == 0) fgWidth = 1;
 
             var hpFgRect = new Rectangle(barRect.X, barRect.Y, fgWidth, barRect.Height);
+
+            // Draw Black Outline for HP Bar ONLY if alpha is high enough
+            // Removed as requested: "When the are transparent, get rid of their outline too"
+            // "Lasily, get rid of the palette_black outline around the active bars" -> Removed completely.
+            // if (alpha > 0.5f)
+            // {
+            //     var hpBorderRect = new Rectangle(barRect.X - 1, barRect.Y - 1, barRect.Width + 2, barRect.Height + 2);
+            //     DrawRectangleBorder(spriteBatch, pixel, hpBorderRect, 1, _global.Palette_Black);
+            // }
 
             spriteBatch.DrawSnapped(pixel, barRect, _global.Palette_DarkGray * alpha);
             spriteBatch.DrawSnapped(pixel, hpFgRect, _global.Palette_LightGreen * alpha);
@@ -1888,6 +1855,14 @@ namespace ProjectVagabond.Battle.UI
             if (manaPercent > 0 && fgWidth == 0) fgWidth = 1;
 
             var manaFgRect = new Rectangle(barRect.X, barRect.Y, fgWidth, barRect.Height);
+
+            // Draw Black Outline for Mana Bar ONLY if alpha is high enough
+            // Removed as requested
+            // if (alpha > 0.5f)
+            // {
+            //     var manaBorderRect = new Rectangle(barRect.X - 1, barRect.Y - 1, barRect.Width + 2, barRect.Height + 2);
+            //     DrawRectangleBorder(spriteBatch, pixel, manaBorderRect, 1, _global.Palette_Black);
+            // }
 
             spriteBatch.DrawSnapped(pixel, barRect, _global.Palette_DarkGray * alpha);
 
@@ -2163,6 +2138,53 @@ namespace ProjectVagabond.Battle.UI
                 return controller.GetOffset(isPlayer);
             }
             return 0f;
+        }
+
+        private void DrawComposite(SpriteBatch sb, Texture2D tex, Vector2 basePos, Vector2 offset, Color c)
+        {
+            sb.Draw(tex, basePos + offset, c);
+        }
+
+        private Rectangle GetEnemyStaticSpriteBounds(BattleCombatant enemy, Vector2 basePosition)
+        {
+            string archetypeId = enemy.ArchetypeId;
+            var topOffsets = _spriteManager.GetEnemySpriteTopPixelOffsets(archetypeId);
+            var leftOffsets = _spriteManager.GetEnemySpriteLeftPixelOffsets(archetypeId);
+            var rightOffsets = _spriteManager.GetEnemySpriteRightPixelOffsets(archetypeId);
+            var bottomOffsets = _spriteManager.GetEnemySpriteBottomPixelOffsets(archetypeId);
+
+            if (topOffsets == null) return Rectangle.Empty;
+
+            int minX = int.MaxValue;
+            int minY = int.MaxValue;
+            int maxX = int.MinValue;
+            int maxY = int.MinValue;
+
+            for (int i = 0; i < topOffsets.Length; i++)
+            {
+                if (topOffsets[i] == int.MaxValue) continue;
+
+                Vector2 offset = Vector2.Zero;
+
+                float partDrawX = basePosition.X + offset.X;
+                float partDrawY = basePosition.Y + offset.Y;
+
+                int partLeft = (int)partDrawX + leftOffsets[i];
+                int partRight = (int)partDrawX + rightOffsets[i] + 1;
+                int partTop = (int)partDrawY + topOffsets[i];
+                int partBottom = (int)partDrawY + bottomOffsets[i] + 1;
+
+                if (partLeft < minX) minX = partLeft;
+                if (partRight > maxX) maxX = partRight;
+                if (partTop < minY) minY = partTop;
+                if (partBottom > maxY) maxY = partBottom;
+            }
+
+            if (minX == int.MaxValue) return Rectangle.Empty;
+
+            var rect = new Rectangle(minX, minY, maxX - minX, maxY - minY);
+            rect.Inflate(4, 4);
+            return rect;
         }
     }
 }
