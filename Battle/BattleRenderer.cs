@@ -929,7 +929,7 @@ namespace ProjectVagabond.Battle.UI
 
             if (showBars)
             {
-                DrawPlayerResourceBars(spriteBatch, player, new Vector2(startX, playerHudY), barWidth, uiManager, animationManager);
+                DrawPlayerResourceBars(spriteBatch, player, new Vector2(startX, playerHudY), barWidth, uiManager, animationManager, gameTime);
             }
 
             DrawPlayerStatusIcons(spriteBatch, player, secondaryFont, playerHudY, startX, barWidth);
@@ -949,9 +949,10 @@ namespace ProjectVagabond.Battle.UI
             });
         }
 
-        private void DrawPlayerResourceBars(SpriteBatch spriteBatch, BattleCombatant player, Vector2 position, int width, BattleUIManager uiManager, BattleAnimationManager animationManager)
+        private void DrawPlayerResourceBars(SpriteBatch spriteBatch, BattleCombatant player, Vector2 position, int width, BattleUIManager uiManager, BattleAnimationManager animationManager, GameTime gameTime)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
+            var spriteManager = ServiceLocator.Get<SpriteManager>();
 
             float hpPercent = player.Stats.MaxHP > 0 ? Math.Clamp(player.VisualHP / player.Stats.MaxHP, 0f, 1f) : 0f;
             int hpWidth = (int)(width * hpPercent);
@@ -977,7 +978,63 @@ namespace ProjectVagabond.Battle.UI
             var manaFgRect = new Rectangle((int)position.X, (int)position.Y + 4, manaWidth, 1); // Changed to 1
 
             spriteBatch.DrawSnapped(pixel, manaBgRect, _global.Palette_DarkGray);
-            spriteBatch.DrawSnapped(pixel, manaFgRect, _global.Palette_LightBlue);
+
+            // --- NEW: Draw Animated Mana Bar Texture ---
+            if (spriteManager.ManaBarPattern != null)
+            {
+                // Calculate scroll offset based on time
+                // Speed: 15 pixels per second
+                int scrollX = (int)(gameTime.TotalGameTime.TotalSeconds * 15.0);
+
+                // Create a source rectangle that scrolls horizontally
+                // The texture is 16x16, so we modulo by 16 to keep the source rect valid if needed,
+                // but SpriteBatch.Draw with sourceRect doesn't tile automatically.
+                // However, since we are drawing a 1px high slice, we can just sample a 1px high strip.
+                // To make it tile, we need to draw it multiple times or use a shader.
+                // BUT, since we are in PointClamp, we can just draw the texture with a source rect that is wider than the texture?
+                // No, that clamps.
+
+                // Simple Tiling Logic:
+                // Draw the texture repeatedly to fill the width.
+                // Or, since the bar is small (60px), just draw it enough times.
+
+                // Better approach for pixel art:
+                // The texture is 16x16. We want a 1px high slice.
+                // We can just draw the texture with a source rect of (scroll % 16, 0, width, 1).
+                // Wait, if width > 16, we need tiling.
+
+                // Let's just draw the texture stretched? No, that ruins the pixel art.
+                // Let's draw it tiled manually.
+
+                int textureWidth = spriteManager.ManaBarPattern.Width;
+                int currentX = manaFgRect.X;
+                int remainingWidth = manaFgRect.Width;
+                int textureScroll = scrollX % textureWidth;
+
+                // Scissor test to clip the bar to the correct width
+                var originalScissor = spriteBatch.GraphicsDevice.ScissorRectangle;
+                var originalRasterizer = spriteBatch.GraphicsDevice.RasterizerState;
+
+                spriteBatch.End();
+                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointWrap, null, new RasterizerState { ScissorTestEnable = true });
+
+                // Set scissor to the mana bar area
+                // Note: Scissor rect needs screen coordinates. Since we are in a scaled viewport, this is tricky.
+                // Actually, we can just use the source rect tiling trick if we set SamplerState to PointWrap!
+                // I set SamplerState.PointWrap above.
+
+                var sourceRect = new Rectangle(scrollX, 0, manaWidth, 1);
+                spriteBatch.Draw(spriteManager.ManaBarPattern, manaFgRect, sourceRect, _global.Palette_LightBlue);
+
+                spriteBatch.End();
+                // Restore original batch settings
+                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
+            }
+            else
+            {
+                // Fallback
+                spriteBatch.DrawSnapped(pixel, manaFgRect, _global.Palette_LightBlue);
+            }
 
             var manaAnim = animationManager.GetResourceBarAnimation(player.CombatantID, BattleAnimationManager.ResourceBarAnimationState.BarResourceType.Mana);
             if (manaAnim != null)
@@ -1576,14 +1633,14 @@ namespace ProjectVagabond.Battle.UI
 
                 if (showHealth)
                 {
-                    DrawEnemyHealthBar(spriteBatch, combatant, barX, barY, barWidth, barHeight, animationManager, 1.0f);
+                    DrawEnemyHealthBar(spriteBatch, combatant, barX, barY, barWidth, barHeight, animationManager, 1.0f, gameTime);
                 }
 
                 if (showMana)
                 {
                     // Draw below health bar (barY + height + 1px gap)
                     float manaBarY = barY + barHeight + 1;
-                    DrawEnemyManaBar(spriteBatch, combatant, barX, manaBarY, barWidth, 1, animationManager, 1.0f); // Changed height to 1
+                    DrawEnemyManaBar(spriteBatch, combatant, barX, manaBarY, barWidth, 1, animationManager, 1.0f, gameTime); // Changed height to 1
                 }
             }
 
@@ -1758,7 +1815,7 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private void DrawEnemyHealthBar(SpriteBatch spriteBatch, BattleCombatant combatant, float barX, float barY, int barWidth, int barHeight, BattleAnimationManager animationManager, float alpha)
+        private void DrawEnemyHealthBar(SpriteBatch spriteBatch, BattleCombatant combatant, float barX, float barY, int barWidth, int barHeight, BattleAnimationManager animationManager, float alpha, GameTime gameTime)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
 
@@ -1785,7 +1842,7 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private void DrawEnemyManaBar(SpriteBatch spriteBatch, BattleCombatant combatant, float barX, float barY, int barWidth, int barHeight, BattleAnimationManager animationManager, float alpha)
+        private void DrawEnemyManaBar(SpriteBatch spriteBatch, BattleCombatant combatant, float barX, float barY, int barWidth, int barHeight, BattleAnimationManager animationManager, float alpha, GameTime gameTime)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
 
@@ -1803,7 +1860,25 @@ namespace ProjectVagabond.Battle.UI
             var manaFgRect = new Rectangle(barRect.X, barRect.Y, fgWidth, barRect.Height);
 
             spriteBatch.DrawSnapped(pixel, barRect, _global.Palette_DarkGray * alpha);
-            spriteBatch.DrawSnapped(pixel, manaFgRect, _global.Palette_LightBlue * alpha);
+
+            // --- Draw Animated Mana Bar Texture ---
+            if (_spriteManager.ManaBarPattern != null)
+            {
+                int scrollX = (int)(gameTime.TotalGameTime.TotalSeconds * 15.0);
+
+                spriteBatch.End();
+                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointWrap, null, new RasterizerState { ScissorTestEnable = true });
+
+                var sourceRect = new Rectangle(scrollX, 0, fgWidth, 1);
+                spriteBatch.Draw(_spriteManager.ManaBarPattern, manaFgRect, sourceRect, _global.Palette_LightBlue * alpha);
+
+                spriteBatch.End();
+                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
+            }
+            else
+            {
+                spriteBatch.DrawSnapped(pixel, manaFgRect, _global.Palette_LightBlue * alpha);
+            }
 
             var manaAnim = animationManager.GetResourceBarAnimation(combatant.CombatantID, BattleAnimationManager.ResourceBarAnimationState.BarResourceType.Mana);
             if (manaAnim != null)

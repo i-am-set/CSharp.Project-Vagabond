@@ -5,6 +5,7 @@ using MonoGame.Extended.BitmapFonts;
 using MonoGame.Extended.Graphics;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Particles;
@@ -78,6 +79,7 @@ namespace ProjectVagabond
         public Texture2D InventoryStatBarDisabled { get; private set; }
         public Texture2D InventoryStatBarFull { get; private set; }
         public Texture2D InventorySpellSlotButtonSpriteSheet { get; private set; }
+        public Texture2D ManaBarPattern { get; private set; } // New Mana Bar Texture
 
         // Source Rectangles for UI elements
         public Rectangle[] ActionButtonSourceRects { get; private set; }
@@ -489,6 +491,10 @@ namespace ProjectVagabond
             // Generate Noise Texture
             try { NoiseTexture = _textureFactory.CreateNoiseTexture(256, 256); }
             catch { NoiseTexture = _textureFactory.CreateColoredTexture(256, 256, Color.Gray); }
+
+            // Generate Mana Bar Pattern Texture
+            try { ManaBarPattern = _textureFactory.CreateManaPatternTexture(); }
+            catch { ManaBarPattern = _textureFactory.CreateColoredTexture(16, 16, Color.White); }
 
             LoadAndCacheCursorSprite("cursor_default");
             LoadAndCacheCursorSprite("cursor_hover_clickable");

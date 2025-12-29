@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Progression;
@@ -12,6 +13,7 @@ using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -413,6 +415,41 @@ namespace ProjectVagabond
                     // Simple gradient for some visual interest
                     float gradient = (float)y / height;
                     colorData[y * width + x] = Color.Lerp(Color.MediumPurple, Color.DarkSlateBlue, gradient);
+                }
+            }
+
+            texture.SetData(colorData);
+            return texture;
+        }
+
+        /// <summary>
+        /// Creates a seamless diagonal stripe pattern for mana bars.
+        /// </summary>
+        public Texture2D CreateManaPatternTexture()
+        {
+            var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
+            const int width = 16;
+            const int height = 16;
+            var texture = new Texture2D(graphicsDevice, width, height);
+            var colorData = new Color[width * height];
+
+            // Create diagonal stripes
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    // Pattern: (x + y) % 4 < 2
+                    // This creates diagonal bands of 2 pixels wide
+                    bool isBand = (x + y) % 8 < 4;
+
+                    if (isBand)
+                    {
+                        colorData[y * width + x] = Color.White; // Full opacity
+                    }
+                    else
+                    {
+                        colorData[y * width + x] = Color.White * 0.75f; // Half opacity
+                    }
                 }
             }
 
