@@ -57,7 +57,9 @@ namespace ProjectVagabond.Battle
         Dodging,
         Silence,
         Protected,
-        Empowered
+        Empowered,
+        TargetMe,
+        Provoked
     }
 
     /// <summary>

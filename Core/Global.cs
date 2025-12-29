@@ -142,7 +142,9 @@ namespace ProjectVagabond
             { StatusEffectType.Frostbite, Palette_DarkBlue },
             { StatusEffectType.Silence, Palette_LightGray },
             { StatusEffectType.Protected, Palette_BrightWhite },
-            { StatusEffectType.Empowered, Palette_Orange }
+            { StatusEffectType.Empowered, Palette_Orange },
+            { StatusEffectType.TargetMe, Palette_Red },
+            { StatusEffectType.Provoked, Palette_Orange }
         };
         }
 

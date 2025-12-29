@@ -57,6 +57,10 @@ namespace ProjectVagabond.Battle
             {
                 moves = moves.Where(m => m.MoveType != MoveType.Spell).ToList();
             }
+            if (actor.HasStatusEffect(StatusEffectType.Provoked))
+            {
+                moves = moves.Where(m => m.ImpactType != ImpactType.Status).ToList();
+            }
 
             if (!moves.Any()) return CreateStallAction(actor);
 
@@ -80,6 +84,8 @@ namespace ProjectVagabond.Battle
             // 4. Evaluate Moves
             foreach (var move in moves)
             {
+                // TargetingHelper now handles TargetMe logic internally, so validTargets
+                // will already be restricted to the taunter if applicable.
                 var validTargets = TargetingHelper.GetValidTargets(actor, move.Target, allCombatants);
 
                 // If the move targets a specific unit (Single, Ally, etc.)
@@ -398,7 +404,7 @@ namespace ProjectVagabond.Battle
 
         private static bool IsBuff(StatusEffectType type)
         {
-            return type == StatusEffectType.Regen || type == StatusEffectType.Dodging || type == StatusEffectType.Protected;
+            return type == StatusEffectType.Regen || type == StatusEffectType.Dodging || type == StatusEffectType.Protected || type == StatusEffectType.Empowered;
         }
 
         private static QueuedAction CreateAction(BattleCombatant actor, MoveData move, BattleCombatant target)

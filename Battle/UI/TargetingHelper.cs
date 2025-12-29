@@ -88,6 +88,27 @@ namespace ProjectVagabond.Utils
                     break;
             }
 
+            bool isMultiTarget = targetType == TargetType.Both ||
+                                 targetType == TargetType.Every ||
+                                 targetType == TargetType.All ||
+                                 targetType == TargetType.Team;
+
+            if (!isMultiTarget)
+            {
+                var tauntingEnemies = validTargets
+                    .Where(t => t.IsPlayerControlled != actor.IsPlayerControlled && t.HasStatusEffect(StatusEffectType.TargetMe))
+                    .ToList();
+
+                if (tauntingEnemies.Any())
+                {
+
+                    validTargets.RemoveAll(t =>
+                        t.IsPlayerControlled != actor.IsPlayerControlled && 
+                        !t.HasStatusEffect(StatusEffectType.TargetMe)       
+                    );
+                }
+            }
+
             return validTargets;
         }
     }

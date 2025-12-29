@@ -60,6 +60,8 @@ namespace ProjectVagabond.Battle
                 StatusEffectType.Burn => "Burn",
                 StatusEffectType.Frostbite => "Frostbite",
                 StatusEffectType.Silence => "Silenced",
+                StatusEffectType.TargetMe => "Draw Fire",
+                StatusEffectType.Provoked => "Provoked",
                 _ => EffectType.ToString(),
             };
         }
@@ -102,6 +104,10 @@ namespace ProjectVagabond.Battle
                     return "Can't move this turn";
                 case StatusEffectType.Frostbite:
                     return $"{global.FrostbiteAgilityMultiplier}x agility";
+                case StatusEffectType.TargetMe:
+                    return "Enemies must target this unit";
+                case StatusEffectType.Provoked:
+                    return "Can't use status moves";
                 default:
                     return "";
             }
