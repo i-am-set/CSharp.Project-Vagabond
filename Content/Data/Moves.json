@@ -433,7 +433,7 @@
   },
   {
     "MoveID": "18",
-    "MoveName": "Last Laugh",
+    "MoveName": "Fleeing Curse",
     "Description": "Lowers target's [cstr]Strength[/] and [cint]Intelligence[/], then switches the user out.",
     "Power": 0,
     "ManaCost": 20,
