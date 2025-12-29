@@ -484,7 +484,7 @@
   },
   {
     "MoveID": "20",
-    "MoveName": "Flashbang",
+    "MoveName": "Sonicboom",
     "Description": "Hits the target for magical damage, then switches the user out.",
     "Power": 30,
     "ManaCost": 15,
@@ -497,7 +497,7 @@
     "Priority": 0,
     "Rarity": 2,
     "LevelRequirement": 3,
-    "OffensiveElementIDs": [ 10 ],
+    "OffensiveElementIDs": [ 8 ],
     "Effects": {
       "Disengage": ""
     },
@@ -560,7 +560,7 @@
   {
     "MoveID": "23",
     "MoveName": "Meditate",
-    "Description": "Focus mind to raise [cint]Intelligence[/] by 2 and restore [cpositive]10%[/] mana.",
+    "Description": "[cetc]The user Focuses their mind.[/]\nRaises [cint]Intelligence[/] by 2 and restores [cpositive]10%[/] mana.",
     "Power": 0,
     "ManaCost": 0,
     "MoveType": "Spell",
@@ -633,8 +633,8 @@
   },
   {
     "MoveID": "26",
-    "MoveName": "Sonicboom",
-    "Description": "[cetc]A super sonic blast surprises the target.[/]\n[cStatus]Dazes[/] the foe. Fails if not used on first turn.",
+    "MoveName": "Flashbang",
+    "Description": "[cetc]Surprises the target with a bright flash of light.[/]\n[cStatus]Dazes[/] the foe. Fails if not used on first turn.",
     "Power": 40,
     "ManaCost": 10,
     "MoveType": "Spell",
@@ -646,7 +646,7 @@
     "Priority": 3,
     "Rarity": 1,
     "LevelRequirement": 1,
-    "OffensiveElementIDs": [ 8 ],
+    "OffensiveElementIDs": [ 10 ],
     "Effects": {
       "Counter": ""
     },
