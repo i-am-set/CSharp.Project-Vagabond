@@ -38,6 +38,15 @@ namespace ProjectVagabond.Battle.Abilities
         float ModifyBasePower(float basePower, CombatContext ctx);
     }
 
+    /// <summary>
+    /// Allows an ability to completely override the damage calculation with a fixed value.
+    /// This bypasses defense, stats, and random variance, but respects type immunity.
+    /// </summary>
+    public interface IFixedDamageModifier : IAbility
+    {
+        int GetFixedDamage(CombatContext ctx);
+    }
+
     public interface IOutgoingDamageModifier : IAbility
     {
         float ModifyOutgoingDamage(float currentDamage, CombatContext ctx);

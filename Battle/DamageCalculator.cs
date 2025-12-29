@@ -91,6 +91,28 @@ namespace ProjectVagabond.Battle
                 if (_random.Next(1, 101) > hitChance) result.WasGraze = true;
             }
 
+            // --- NEW: Fixed Damage Check ---
+            var fixedDamageMod = move.Abilities.OfType<IFixedDamageModifier>().FirstOrDefault();
+            if (fixedDamageMod != null)
+            {
+                // Fixed damage bypasses stats, power, and crit, but respects immunity/resistance below
+                float fixedDamage = fixedDamageMod.GetFixedDamage(ctx);
+
+                // Apply Elemental Calculation (Immunity check)
+                float elemMult = GetElementalMultiplier(move, target);
+                if (elemMult > 1.0f) result.Effectiveness = ElementalEffectiveness.Effective;
+                else if (elemMult > 0f && elemMult < 1.0f) result.Effectiveness = ElementalEffectiveness.Resisted;
+                else if (elemMult == 0f) result.Effectiveness = ElementalEffectiveness.Immune;
+
+                // Fixed damage usually ignores resistance (0.5x) but respects immunity (0x).
+                // However, standard RPG logic often makes fixed damage "True Damage" except for immunity.
+                // Let's make it respect immunity (0x) but ignore resistance/weakness (1x).
+                if (elemMult == 0f) fixedDamage = 0;
+
+                result.DamageAmount = (int)fixedDamage;
+                return result;
+            }
+
             // 3. Calculate Base Power (Allow Move Abilities to modify Power)
             float power = move.Power;
             foreach (var ability in move.Abilities)

@@ -97,8 +97,8 @@
     "WeaknessElementIDs": [ 9 ],
     "ResistanceElementIDs": [ 2, 10 ],
     "DefaultStrikeMoveID": "4",
-    "StartingMoves": [],
-    "NumberOfStartingMoves": 1,
+    "StartingMoves": [ "42", "43", "44" ],
+    "NumberOfStartingMoves": 4,
     "StartingArmor": {
       "2": 1
     },

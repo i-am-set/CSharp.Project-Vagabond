@@ -46,6 +46,10 @@ namespace ProjectVagabond.Battle
         private readonly List<BattleCombatant> _cachedAllActive = new List<BattleCombatant>();
 
         private List<QueuedAction> _actionQueue;
+
+        // --- PUBLIC ACCESSOR FOR ABILITIES ---
+        public IReadOnlyList<QueuedAction> ActionQueue => _actionQueue;
+
         private QueuedAction? _currentActionForEffects;
         private List<DamageCalculator.DamageResult> _currentActionDamageResults;
         private List<BattleCombatant> _currentActionFinalTargets;
@@ -75,10 +79,15 @@ namespace ProjectVagabond.Battle
         // --- INTERRUPT SYSTEM ---
         private BattleInteraction _activeInteraction;
 
+        // --- MULTI-HIT STATE ---
+        private int _multiHitRemaining = 0;
+        private int _multiHitTotalExecuted = 0;
+        private int _multiHitCrits = 0;
+        public bool IsProcessingMultiHit => _multiHitRemaining > 0;
+
         public BattlePhase CurrentPhase => _currentPhase;
         public IEnumerable<BattleCombatant> AllCombatants => _allCombatants;
         public bool CanAdvance { get; set; } = true;
-        public bool IsProcessingMultiHit => false;
 
         public BattleManager(List<BattleCombatant> playerParty, List<BattleCombatant> enemyParty)
         {
@@ -151,6 +160,7 @@ namespace ProjectVagabond.Battle
             _actionPendingAnimation = null;
             _pendingImpact = null;
             _activeInteraction = null;
+            _multiHitRemaining = 0; // Reset multi-hit on force advance
 
             if (_currentPhase == BattlePhase.AnimatingMove ||
                 _currentPhase == BattlePhase.ActionResolution ||
@@ -185,13 +195,21 @@ namespace ProjectVagabond.Battle
         {
             if (_currentPhase == BattlePhase.AnimatingMove && _actionPendingAnimation != null)
             {
+                // Capture the action locally
+                var action = _actionPendingAnimation;
+
                 if (_pendingImpact != null)
                 {
                     ApplyPendingImpact();
                 }
 
-                ProcessMoveActionPostImpact(_actionPendingAnimation);
+                // CRITICAL FIX: Clear the pending animation flag BEFORE calling post-impact logic.
+                // ProcessMoveActionPostImpact may trigger a NEW animation (for multi-hit moves),
+                // which would set _actionPendingAnimation to a new value.
+                // If we cleared it AFTER, we would wipe out the flag for the new animation, causing a soft lock.
                 _actionPendingAnimation = null;
+
+                ProcessMoveActionPostImpact(action);
             }
         }
 
@@ -249,10 +267,6 @@ namespace ProjectVagabond.Battle
             });
         }
 
-        /// <summary>
-        /// Called by the Scene Director (BattleScene) when the "Out" animation is finished.
-        /// Instantly swaps the data.
-        /// </summary>
         public void PerformLogicalSwitch(BattleCombatant actor, BattleCombatant incomingMember)
         {
             if (actor == null || incomingMember == null) return;
@@ -281,10 +295,6 @@ namespace ProjectVagabond.Battle
             HandleOnEnterAbilities(incomingMember);
         }
 
-        /// <summary>
-        /// Called by the Scene Director (BattleScene) when the "In" animation is finished.
-        /// Resumes the battle flow.
-        /// </summary>
         public void ResumeAfterSwitch()
         {
             _currentPhase = BattlePhase.CheckForDefeat;
@@ -385,14 +395,12 @@ namespace ProjectVagabond.Battle
                 case BattlePhase.EndOfTurn: HandleEndOfTurn(); break;
                 case BattlePhase.Reinforcement: HandleReinforcements(); break;
                 case BattlePhase.ProcessingInteraction: break;
-                case BattlePhase.WaitingForSwitchCompletion: break; // Do nothing, wait for Director
+                case BattlePhase.WaitingForSwitchCompletion: break;
             }
         }
 
         private void HandleStartOfTurn()
         {
-            // --- Sanitize Battlefield ---
-            // This ensures no dead combatants linger in active slots, and fills empty slots if possible.
             SanitizeBattlefield();
 
             _endOfTurnEffectsProcessed = false;
@@ -456,28 +464,20 @@ namespace ProjectVagabond.Battle
         {
             bool changesMade = false;
 
-            // 1. Force remove any dead combatants still in active slots
             foreach (var combatant in _allCombatants)
             {
-                // Check if they are in a valid slot (0 or 1) BUT are dead
                 if (combatant.IsActiveOnField && (combatant.IsDefeated || combatant.Stats.CurrentHP <= 0))
                 {
                     combatant.BattleSlot = -1;
                     combatant.IsDying = false;
                     combatant.IsRemovalProcessed = true;
-
-                    // Remove any pending actions for this ghost
                     _actionQueue.RemoveAll(a => a.Actor == combatant);
-
                     changesMade = true;
-                    Debug.WriteLine($"[BattleManager] SAFETY: Removed ghost combatant {combatant.Name} from field.");
                 }
             }
 
             if (changesMade) RefreshCombatantCaches();
 
-            // 2. Force Reinforcements if slots are empty and bench has units
-            // Enemies
             for (int slot = 0; slot < 2; slot++)
             {
                 if (!_cachedActiveEnemies.Any(c => c.BattleSlot == slot))
@@ -489,12 +489,10 @@ namespace ProjectVagabond.Battle
                         changesMade = true;
                         EventBus.Publish(new GameEvents.CombatantSpawned { Combatant = reinforcement });
                         HandleOnEnterAbilities(reinforcement);
-                        Debug.WriteLine($"[BattleManager] SAFETY: Forced reinforcement {reinforcement.Name} into slot {slot}.");
                     }
                 }
             }
 
-            // Players
             for (int slot = 0; slot < 2; slot++)
             {
                 if (!_cachedActivePlayers.Any(c => c.BattleSlot == slot))
@@ -506,7 +504,6 @@ namespace ProjectVagabond.Battle
                         changesMade = true;
                         EventBus.Publish(new GameEvents.CombatantSpawned { Combatant = reinforcement });
                         HandleOnEnterAbilities(reinforcement);
-                        Debug.WriteLine($"[BattleManager] SAFETY: Forced reinforcement {reinforcement.Name} into slot {slot}.");
                     }
                 }
             }
@@ -527,8 +524,6 @@ namespace ProjectVagabond.Battle
             var nextAction = _actionQueue[0];
             _actionQueue.RemoveAt(0);
 
-            // --- SAFETY CHECK: Ensure actor is actually alive and on field ---
-            // This prevents "ghost" actions from dead enemies that were queued before they died.
             if (nextAction.Actor.IsDefeated || !nextAction.Actor.IsActiveOnField || nextAction.Actor.Stats.CurrentHP <= 0)
             {
                 return;
@@ -548,7 +543,6 @@ namespace ProjectVagabond.Battle
                 return;
             }
 
-            // --- DAZED CHECK ---
             if (nextAction.Actor.IsDazed)
             {
                 EventBus.Publish(new GameEvents.ActionFailed { Actor = nextAction.Actor, Reason = "dazed" });
@@ -647,8 +641,23 @@ namespace ProjectVagabond.Battle
                 action.SpellbookEntry.TimesUsed++;
             }
 
-            // Reset Disengage flag before processing the move
             action.Actor.PendingDisengage = false;
+
+            // --- MULTI-HIT INITIALIZATION ---
+            var multiHit = action.ChosenMove.Abilities.OfType<MultiHitAbility>().FirstOrDefault();
+            if (multiHit != null)
+            {
+                int hits = _random.Next(multiHit.MinHits, multiHit.MaxHits + 1);
+                _multiHitTotalExecuted = 0;
+                _multiHitRemaining = hits;
+                _multiHitCrits = 0;
+            }
+            else
+            {
+                _multiHitTotalExecuted = 0;
+                _multiHitRemaining = 1;
+                _multiHitCrits = 0;
+            }
 
             PrepareHit(action);
         }
@@ -728,7 +737,6 @@ namespace ProjectVagabond.Battle
             }
             else
             {
-                // --- TARGETING FAILED LOGIC ---
                 EventBus.Publish(new GameEvents.MoveFailed { Actor = action.Actor });
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{action.Actor.Name}'s attack failed!" });
 
@@ -750,7 +758,6 @@ namespace ProjectVagabond.Battle
                 var target = targets[i];
                 var result = results[i];
 
-                // --- SHIELD BREAKER LOGIC ---
                 var shieldBreaker = action.ChosenMove.Abilities.OfType<IShieldBreaker>().FirstOrDefault();
                 bool isProtecting = target.HasStatusEffect(StatusEffectType.Protected);
 
@@ -758,27 +765,21 @@ namespace ProjectVagabond.Battle
                 {
                     if (isProtecting)
                     {
-                        // Break it
                         target.ActiveStatusEffects.RemoveAll(e => e.EffectType == StatusEffectType.Protected);
                         EventBus.Publish(new GameEvents.StatusEffectRemoved { Combatant = target, EffectType = StatusEffectType.Protected });
                         EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{action.Actor.Name} shattered the guard!" });
 
-                        // Modify Damage
                         result.DamageAmount = (int)(result.DamageAmount * shieldBreaker.BreakDamageMultiplier);
-
-                        // Update the result in the list so the event gets the right number
                         results[i] = result;
-
-                        isProtecting = false; // Treat as not protecting for the rest of the logic
+                        isProtecting = false;
                     }
                     else if (shieldBreaker.FailsIfNoProtect)
                     {
-                        // Fail the move
                         result.DamageAmount = 0;
                         EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "But it failed!" });
                         EventBus.Publish(new GameEvents.MoveFailed { Actor = action.Actor });
                         results[i] = result;
-                        continue; // Skip damage application
+                        continue;
                     }
                 }
 
@@ -835,6 +836,34 @@ namespace ProjectVagabond.Battle
 
         private void ProcessMoveActionPostImpact(QueuedAction action)
         {
+            // --- MULTI-HIT LOGIC ---
+            if (_currentActionDamageResults != null)
+            {
+                foreach (var res in _currentActionDamageResults)
+                {
+                    if (res.WasCritical) _multiHitCrits++;
+                }
+            }
+
+            _multiHitTotalExecuted++;
+            _multiHitRemaining--;
+
+            if (_multiHitRemaining > 0)
+            {
+                // Check if targets are still alive
+                if (_currentActionFinalTargets != null && _currentActionFinalTargets.All(t => t.IsDefeated))
+                {
+                    _multiHitRemaining = 0; // Stop if all targets dead
+                }
+                else
+                {
+                    // Loop back for next hit
+                    PrepareHit(action);
+                    return; // Return early, do not finish action yet
+                }
+            }
+
+            // --- ACTION COMPLETION ---
             if (_currentActionFinalTargets != null && _currentActionFinalTargets.All(t => t.IsDefeated))
             {
                 var ctx = new CombatContext { Actor = action.Actor, Move = action.ChosenMove };
@@ -858,6 +887,18 @@ namespace ProjectVagabond.Battle
                 {
                     onComplete.OnActionComplete(action, actor);
                 }
+            }
+
+            // Fire MultiHit completion event if it was a multi-hit move
+            if (_multiHitTotalExecuted > 1)
+            {
+                EventBus.Publish(new GameEvents.MultiHitActionCompleted
+                {
+                    Actor = action.Actor,
+                    ChosenMove = action.ChosenMove,
+                    HitCount = _multiHitTotalExecuted,
+                    CriticalHitCount = _multiHitCrits
+                });
             }
 
             if (_currentPhase != BattlePhase.ProcessingInteraction && _currentPhase != BattlePhase.WaitingForSwitchCompletion)
@@ -927,22 +968,17 @@ namespace ProjectVagabond.Battle
                 return validCandidates;
             }
 
-            // --- SMART RETARGETING LOGIC ---
             if (specifiedTarget != null)
             {
-                // Case A: Target is still valid
                 if (validCandidates.Contains(specifiedTarget))
                 {
                     return new List<BattleCombatant> { specifiedTarget };
                 }
 
-                // Case B: Target is invalid (Dead/Switched) - SMART RETARGETING
-                // Determine original intent
                 bool wasHostile = actor.IsPlayerControlled != specifiedTarget.IsPlayerControlled;
 
                 if (wasHostile)
                 {
-                    // Look for other enemies
                     var alternativeEnemies = validCandidates
                         .Where(c => c.IsPlayerControlled != actor.IsPlayerControlled)
                         .ToList();
@@ -952,7 +988,6 @@ namespace ProjectVagabond.Battle
                 }
                 else
                 {
-                    // Look for other allies (including self)
                     var alternativeAllies = validCandidates
                         .Where(c => c.IsPlayerControlled == actor.IsPlayerControlled)
                         .ToList();
@@ -961,12 +996,9 @@ namespace ProjectVagabond.Battle
                         return new List<BattleCombatant> { alternativeAllies.First() };
                 }
 
-                // If we are here, it means we couldn't find a valid target on the INTENDED side.
-                // Return empty to cause action failure rather than hitting the wrong team.
                 return new List<BattleCombatant>();
             }
 
-            // Fallback (No target specified initially)
             if (validCandidates.Any())
             {
                 return new List<BattleCombatant> { validCandidates[0] };
@@ -1046,7 +1078,6 @@ namespace ProjectVagabond.Battle
                 }
                 combatant.UsedProtectThisTurn = false;
 
-                // Reset Dazed state at end of turn
                 combatant.IsDazed = false;
 
                 var effectsToRemove = new List<StatusEffectInstance>();

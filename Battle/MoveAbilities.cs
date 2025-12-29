@@ -575,4 +575,79 @@ namespace ProjectVagabond.Battle.Abilities
             }
         }
     }
+
+    // --- NEW ABILITIES ---
+
+    public class ConditionalCounterAbility : IOutgoingDamageModifier
+    {
+        public string Name => "Predator's Instinct";
+        public string Description => "Fails if target is not attacking.";
+
+        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
+        {
+            // In simulation (UI/AI), assume it works to show potential damage
+            if (ctx.IsSimulation) return currentDamage;
+
+            var bm = ServiceLocator.Get<BattleManager>();
+
+            // Check the action queue for the target's action
+            var targetAction = bm.ActionQueue.FirstOrDefault(a => a.Actor == ctx.Target);
+
+            bool isAttacking = false;
+
+            if (targetAction != null)
+            {
+                if (targetAction.Type == QueuedActionType.Move && targetAction.ChosenMove != null && targetAction.ChosenMove.Power > 0)
+                {
+                    isAttacking = true;
+                }
+                else if (targetAction.Type == QueuedActionType.Item && targetAction.ChosenItem != null && targetAction.ChosenItem.Type == ConsumableType.Attack)
+                {
+                    isAttacking = true;
+                }
+            }
+
+            if (!isAttacking)
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "But it failed!" });
+                EventBus.Publish(new GameEvents.MoveFailed { Actor = ctx.Actor });
+                return 0f;
+            }
+
+            return currentDamage;
+        }
+    }
+
+    public class PercentageDamageAbility : IFixedDamageModifier
+    {
+        public string Name => "Gravity Crush";
+        public string Description => "Deals fixed percentage of current HP.";
+        private readonly float _percent;
+
+        public PercentageDamageAbility(float percent)
+        {
+            _percent = percent;
+        }
+
+        public int GetFixedDamage(CombatContext ctx)
+        {
+            if (ctx.Target == null) return 0;
+            int damage = (int)(ctx.Target.Stats.CurrentHP * (_percent / 100f));
+            return Math.Max(1, damage); // Always deal at least 1 damage
+        }
+    }
+
+    public class MultiHitAbility : IAbility
+    {
+        public string Name => "Multi-Hit";
+        public string Description => "Hits multiple times.";
+        public int MinHits { get; }
+        public int MaxHits { get; }
+
+        public MultiHitAbility(int min, int max)
+        {
+            MinHits = min;
+            MaxHits = max;
+        }
+    }
 }

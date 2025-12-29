@@ -267,10 +267,10 @@ namespace ProjectVagabond.Particles
         public void Draw(SpriteBatch spriteBatch)
         {
             if (Settings.Texture == null) return;
-            if (_activeParticleCount > 0)
-            {
-                Debug.WriteLine($"[Emitter] Draw called. Drawing {_activeParticleCount} particles.");
-            }
+            //if (_activeParticleCount > 0)
+            //{
+            //    Debug.WriteLine($"[Emitter] Draw called. Drawing {_activeParticleCount} particles.");
+            //}
 
 
             for (int i = 0; i < _activeParticleCount; i++)
