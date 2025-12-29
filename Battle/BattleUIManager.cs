@@ -61,7 +61,7 @@ namespace ProjectVagabond.Battle.UI
         public bool IsWaitingForInput => _battleNarrator.IsWaitingForInput;
 
         private bool _isPromptVisible;
-        private readonly List<Texture2D> _promptTextures = new List<Texture2D>();
+        private readonly List<(Texture2D Texture, Texture2D Silhouette)> _promptTextures = new List<(Texture2D, Texture2D)>();
         private int _promptTextureIndex;
         private float _promptCycleTimer;
         private const float PROMPT_CYCLE_INTERVAL = 0.5f;
@@ -653,13 +653,13 @@ namespace ProjectVagabond.Battle.UI
                 if (_lastHoveredButton != null)
                 {
                     _promptTextures.Clear();
-                    _promptTextures.Add(spriteManager.MousePromptBlank);
+                    _promptTextures.Add((spriteManager.MousePromptBlank, spriteManager.MousePromptBlankSilhouette));
                     _promptTextureIndex = 0;
                     _lastHoveredButton = null;
                 }
                 else if (!_promptTextures.Any())
                 {
-                    _promptTextures.Add(spriteManager.MousePromptBlank);
+                    _promptTextures.Add((spriteManager.MousePromptBlank, spriteManager.MousePromptBlankSilhouette));
                 }
                 return;
             }
@@ -673,16 +673,16 @@ namespace ProjectVagabond.Battle.UI
 
                 if (currentHoveredButton.HasLeftClickAction)
                 {
-                    _promptTextures.Add(spriteManager.MousePromptLeftClick);
+                    _promptTextures.Add((spriteManager.MousePromptLeftClick, spriteManager.MousePromptLeftClickSilhouette));
                 }
                 if (currentHoveredButton.HasRightClickAction)
                 {
-                    _promptTextures.Add(spriteManager.MousePromptRightClick);
+                    _promptTextures.Add((spriteManager.MousePromptRightClick, spriteManager.MousePromptRightClickSilhouette));
                 }
                 // Added Middle Click Prompt
                 if (currentHoveredButton.HasMiddleClickAction)
                 {
-                    _promptTextures.Add(spriteManager.MousePromptMiddleClick);
+                    _promptTextures.Add((spriteManager.MousePromptMiddleClick, spriteManager.MousePromptMiddleClickSilhouette));
                 }
             }
 
@@ -708,7 +708,7 @@ namespace ProjectVagabond.Battle.UI
                 return;
             }
 
-            var textureToDraw = _promptTextures[_promptTextureIndex];
+            var (textureToDraw, silhouetteToDraw) = _promptTextures[_promptTextureIndex];
             const int padding = 2;
             var position = new Vector2(
                 Global.VIRTUAL_WIDTH - textureToDraw.Width - padding,
@@ -721,11 +721,13 @@ namespace ProjectVagabond.Battle.UI
             var global = ServiceLocator.Get<Global>();
             var outlineColor = global.Palette_Black;
 
-            // Draw Outline
-            spriteBatch.DrawSnapped(textureToDraw, position + new Vector2(-1, 0), outlineColor);
-            spriteBatch.DrawSnapped(textureToDraw, position + new Vector2(1, 0), outlineColor);
-            spriteBatch.DrawSnapped(textureToDraw, position + new Vector2(0, -1), outlineColor);
-            spriteBatch.DrawSnapped(textureToDraw, position + new Vector2(0, 1), outlineColor);
+            // Draw Outline using Silhouette if available, otherwise fallback to texture
+            var outlineTexture = silhouetteToDraw ?? textureToDraw;
+
+            spriteBatch.DrawSnapped(outlineTexture, position + new Vector2(-1, 0), outlineColor);
+            spriteBatch.DrawSnapped(outlineTexture, position + new Vector2(1, 0), outlineColor);
+            spriteBatch.DrawSnapped(outlineTexture, position + new Vector2(0, -1), outlineColor);
+            spriteBatch.DrawSnapped(outlineTexture, position + new Vector2(0, 1), outlineColor);
 
             spriteBatch.DrawSnapped(textureToDraw, position, Color.White);
         }

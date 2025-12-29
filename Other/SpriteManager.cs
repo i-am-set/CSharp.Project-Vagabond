@@ -206,10 +206,15 @@ namespace ProjectVagabond
 
         // Mouse Prompt Sprites
         public Texture2D MousePromptBlank { get; private set; }
+        public Texture2D MousePromptBlankSilhouette { get; private set; }
         public Texture2D MousePromptLeftClick { get; private set; }
+        public Texture2D MousePromptLeftClickSilhouette { get; private set; }
         public Texture2D MousePromptRightClick { get; private set; }
+        public Texture2D MousePromptRightClickSilhouette { get; private set; }
         public Texture2D MousePromptMiddleClick { get; private set; }
+        public Texture2D MousePromptMiddleClickSilhouette { get; private set; }
         public Texture2D MousePromptDisabled { get; private set; }
+        public Texture2D MousePromptDisabledSilhouette { get; private set; }
 
         public Texture2D LogoSprite => _logoSprite;
         public Texture2D WaterSprite => _waterSprite;
@@ -361,18 +366,23 @@ namespace ProjectVagabond
             // Load Mouse Prompt Sprites
             try { MousePromptBlank = _core.Content.Load<Texture2D>("Sprites/UI/KeyPrompts/mouse/ui_mouse_blank"); }
             catch { MousePromptBlank = _textureFactory.CreateColoredTexture(5, 7, Color.Magenta); }
+            MousePromptBlankSilhouette = CreateSilhouette(MousePromptBlank);
 
             try { MousePromptLeftClick = _core.Content.Load<Texture2D>("Sprites/UI/KeyPrompts/mouse/ui_mouse_left_click"); }
             catch { MousePromptLeftClick = _textureFactory.CreateColoredTexture(5, 7, Color.Magenta); }
+            MousePromptLeftClickSilhouette = CreateSilhouette(MousePromptLeftClick);
 
             try { MousePromptRightClick = _core.Content.Load<Texture2D>("Sprites/UI/KeyPrompts/mouse/ui_mouse_right_click"); }
             catch { MousePromptRightClick = _textureFactory.CreateColoredTexture(5, 7, Color.Magenta); }
+            MousePromptRightClickSilhouette = CreateSilhouette(MousePromptRightClick);
 
             try { MousePromptMiddleClick = _core.Content.Load<Texture2D>("Sprites/UI/KeyPrompts/mouse/ui_mouse_middle_click"); }
             catch { MousePromptMiddleClick = _textureFactory.CreateColoredTexture(5, 7, Color.Magenta); }
+            MousePromptMiddleClickSilhouette = CreateSilhouette(MousePromptMiddleClick);
 
             try { MousePromptDisabled = _core.Content.Load<Texture2D>("Sprites/UI/KeyPrompts/mouse/ui_mouse_disabled"); }
             catch { MousePromptDisabled = _textureFactory.CreateColoredTexture(5, 7, Color.Magenta); }
+            MousePromptDisabledSilhouette = CreateSilhouette(MousePromptDisabled);
 
             try { SpellbookPageSprite = _core.Content.Load<Texture2D>("Sprites/SpellBook/spellbook_page"); }
             catch { SpellbookPageSprite = _textureFactory.CreateColoredTexture(35, 35, Color.Magenta); }
@@ -465,8 +475,6 @@ namespace ProjectVagabond
             catch { InventorySlotEquipIconSprite = _textureFactory.CreateColoredTexture(64, 32, Color.Magenta); }
             try { TargetingIndicatorSprite = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/targeting_indicator"); }
             catch { TargetingIndicatorSprite = _textureFactory.CreateColoredTexture(32, 32, Color.Red); }
-            try { InventorySpellSlotButtonSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_spell_slot_button"); }
-            catch { InventorySpellSlotButtonSpriteSheet = _textureFactory.CreateColoredTexture(192, 8, Color.Magenta); }
             try { ShopBorderMain = _core.Content.Load<Texture2D>("Sprites/UI/Shop/shop_border_main"); }
             catch { ShopBorderMain = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
             try { ShopXIcon = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/X_32x32"); }
