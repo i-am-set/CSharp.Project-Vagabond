@@ -1055,13 +1055,32 @@ namespace ProjectVagabond.Scenes
 
         private void OnCombatantHealed(GameEvents.CombatantHealed e)
         {
-            _uiManager.ShowNarration($"{e.Target.Name} recovered\n{e.HealAmount} HP!");
-            _animationManager.StartHealthRecoveryAnimation(e.Target.CombatantID, e.VisualHPBefore, e.Target.Stats.CurrentHP);
-            _animationManager.StartHealthAnimation(e.Target.CombatantID, e.VisualHPBefore, e.Target.Stats.CurrentHP);
-            _animationManager.StartHealBounceAnimation(e.Target.CombatantID);
-            _animationManager.StartHealFlashAnimation(e.Target.CombatantID);
-            Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(e.Target, _battleManager.AllCombatants);
-            _animationManager.StartHealNumberIndicator(e.Target.CombatantID, e.HealAmount, hudPosition);
+            // Define the visual effects as an Action to be executed when the narration appears
+            Action playVisuals = () =>
+            {
+                // 1. Trigger Particles
+                Vector2 targetPos = _renderer.GetCombatantVisualCenterPosition(e.Target, _battleManager.AllCombatants);
+                var healParticles = _particleSystemManager.CreateEmitter(ParticleEffects.CreateHealBurst());
+                healParticles.Position = targetPos;
+                healParticles.EmitBurst(healParticles.Settings.BurstCount);
+
+                // 2. Trigger Sprite Bounce & Flash
+                _animationManager.StartHealBounceAnimation(e.Target.CombatantID);
+                _animationManager.StartHealFlashAnimation(e.Target.CombatantID);
+
+                // 3. Trigger Health Bar "Ghost Fill" Animation
+                _animationManager.StartHealthRecoveryAnimation(e.Target.CombatantID, e.VisualHPBefore, e.Target.Stats.CurrentHP);
+
+                // 4. Standard Health Lerp
+                _animationManager.StartHealthAnimation(e.Target.CombatantID, e.VisualHPBefore, e.Target.Stats.CurrentHP);
+
+                // 5. Number Indicator
+                Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(e.Target, _battleManager.AllCombatants);
+                _animationManager.StartHealNumberIndicator(e.Target.CombatantID, e.HealAmount, hudPosition);
+            };
+
+            // Pass the action to the UI manager to be executed alongside the text
+            _uiManager.ShowNarration($"{e.Target.Name} recovered\n{e.HealAmount} HP!", playVisuals);
         }
 
         private void OnCombatantManaRestored(GameEvents.CombatantManaRestored e)

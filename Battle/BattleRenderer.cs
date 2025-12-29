@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using MonoGame.Extended.Particles;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
@@ -687,6 +688,16 @@ namespace ProjectVagabond.Battle.UI
                     // We handle this by modifying the parameters passed to DrawCombatantHud
                 }
 
+                // --- HEAL FLASH LOGIC ---
+                var healFlash = animationManager.GetHealFlashAnimationState(enemy.CombatantID);
+                if (healFlash != null)
+                {
+                    float progress = healFlash.Timer / BattleAnimationManager.HealFlashAnimationState.Duration;
+                    float flashIntensity = 1.0f - Easing.EaseOutQuad(progress);
+                    // Tint Greenish-White
+                    tintOverride = Color.Lerp(Color.White, _global.Palette_LightGreen, flashIntensity * 0.8f);
+                }
+
                 DrawCombatantHud(spriteBatch, nameFont, statsFont, enemy, slotCenter, currentActor, isTargetingPhase, localShouldGrayOut, selectableTargets, animationManager, hoverHighlightState, pulseAlpha, gameTime, highlightColor, transform, tintOverride);
 
                 // --- ALWAYS REGISTER HITBOX ---
@@ -694,6 +705,15 @@ namespace ProjectVagabond.Battle.UI
                 bool isMajor = _spriteManager.IsMajorEnemySprite(enemy.ArchetypeId);
                 int spritePartSize = isMajor ? 96 : 64;
                 float yBobOffset = CalculateAttackBobOffset(enemy.CombatantID, isPlayer: false);
+
+                // Apply Heal Bounce Offset
+                var healBounce = animationManager.GetHealBounceAnimationState(enemy.CombatantID);
+                if (healBounce != null)
+                {
+                    float progress = healBounce.Timer / BattleAnimationManager.HealBounceAnimationState.Duration;
+                    float bounce = MathF.Sin(progress * MathHelper.Pi) * -BattleAnimationManager.HealBounceAnimationState.Height;
+                    yBobOffset += bounce;
+                }
 
                 var spawnAnim = animationManager.GetSpawnAnimationState(enemy.CombatantID);
                 float spawnYOffset = 0f;
@@ -771,6 +791,16 @@ namespace ProjectVagabond.Battle.UI
 
             Color? playerSpriteTint = null;
 
+            // --- HEAL FLASH LOGIC ---
+            var healFlash = animationManager.GetHealFlashAnimationState(player.CombatantID);
+            if (healFlash != null)
+            {
+                float progress = healFlash.Timer / BattleAnimationManager.HealFlashAnimationState.Duration;
+                float flashIntensity = 1.0f - Easing.EaseOutQuad(progress);
+                // Tint Greenish-White
+                playerSpriteTint = Color.Lerp(Color.White, _global.Palette_LightGreen, flashIntensity * 0.8f);
+            }
+
             bool isHighlighted = isSelectable && shouldGrayOutUnselectable;
             Color? highlightColor = null;
             if (isHighlighted && silhouetteColors.TryGetValue(player.CombatantID, out var color))
@@ -779,6 +809,15 @@ namespace ProjectVagabond.Battle.UI
             }
 
             float yBobOffset = CalculateAttackBobOffset(player.CombatantID, isPlayer: true);
+
+            // Apply Heal Bounce Offset
+            var healBounce = animationManager.GetHealBounceAnimationState(player.CombatantID);
+            if (healBounce != null)
+            {
+                float progress = healBounce.Timer / BattleAnimationManager.HealBounceAnimationState.Duration;
+                float bounce = MathF.Sin(progress * MathHelper.Pi) * -BattleAnimationManager.HealBounceAnimationState.Height;
+                yBobOffset += bounce;
+            }
 
             // Apply Recoil Offset
             Vector2 recoilOffset = Vector2.Zero;
@@ -1769,20 +1808,40 @@ namespace ProjectVagabond.Battle.UI
                         break;
                 }
             }
-            else
+            else // Recovery
             {
                 float progress = anim.Timer / BattleAnimationManager.ResourceBarAnimationState.GHOST_FILL_DURATION;
                 float easedProgress = Easing.EaseOutCubic(progress);
                 float currentFillPercent = MathHelper.Lerp(percentBefore, percentAfter, easedProgress);
 
+                // Draw the "Ghost Fill" - a bright bar representing the amount being healed
+                // It starts at the old value and extends to the new value.
+                // We fade it out slightly as it fills.
+
                 int ghostStartX = (int)(bgRect.X + bgRect.Width * percentBefore);
-                int ghostWidth = (int)(bgRect.Width * (currentFillPercent - percentBefore));
-                var ghostRect = new Rectangle(ghostStartX, bgRect.Y, ghostWidth, bgRect.Height);
+                int ghostWidth = (int)(bgRect.Width * (percentAfter - percentBefore));
 
-                Color ghostColor = (anim.ResourceType == BattleAnimationManager.ResourceBarAnimationState.BarResourceType.HP) ? _global.Palette_LightGreen : _global.Palette_LightBlue;
-                float alpha = 1.0f - easedProgress;
+                // Ensure at least 1 pixel if healing occurred
+                if (percentAfter > percentBefore && ghostWidth == 0) ghostWidth = 1;
 
-                spriteBatch.DrawSnapped(pixel, ghostRect, ghostColor * alpha * 0.75f);
+                if (ghostWidth > 0)
+                {
+                    var ghostRect = new Rectangle(ghostStartX, bgRect.Y, ghostWidth, bgRect.Height);
+
+                    // Bright color for the ghost fill
+                    Color ghostColor = (anim.ResourceType == BattleAnimationManager.ResourceBarAnimationState.BarResourceType.HP)
+                        ? Color.Lerp(Color.White, _global.Palette_LightGreen, 0.5f)
+                        : Color.Lerp(Color.White, _global.Palette_LightBlue, 0.5f);
+
+                    // Fade out near the end
+                    float alpha = 1.0f;
+                    if (progress > 0.7f)
+                    {
+                        alpha = 1.0f - ((progress - 0.7f) / 0.3f);
+                    }
+
+                    spriteBatch.DrawSnapped(pixel, ghostRect, ghostColor * alpha);
+                }
             }
         }
 

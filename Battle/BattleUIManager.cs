@@ -205,10 +205,14 @@ namespace ProjectVagabond.Battle.UI
             _switchMenu.Hide();
         }
 
-        public void ShowNarration(string message)
+        public void ShowNarration(string message, Action? onShow = null)
         {
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-            _narrationQueue.Enqueue(() => _battleNarrator.Show(message, secondaryFont));
+            _narrationQueue.Enqueue(() =>
+            {
+                onShow?.Invoke();
+                _battleNarrator.Show(message, secondaryFont);
+            });
         }
 
         public void GoBack()

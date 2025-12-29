@@ -446,5 +446,46 @@ namespace ProjectVagabond.Particles
             settings.LayerDepth = 0.8f;
             return settings;
         }
+
+        /// <summary>
+        /// Creates a burst of rising green sparkles for healing effects.
+        /// </summary>
+        public static ParticleEmitterSettings CreateHealBurst()
+        {
+            var settings = ParticleEmitterSettings.CreateDefault();
+            var global = ServiceLocator.Get<Global>();
+
+            // Emitter
+            settings.Shape = EmitterShape.Circle;
+            settings.EmitFrom = EmissionSource.Volume;
+            settings.EmitterSize = new Vector2(30f, 30f); // Wide and flat
+            settings.EmissionRate = 5;
+            settings.BurstCount = 20; // Increased count
+            settings.Duration = 1.0f; // Give the emitter plenty of time to exist while particles float
+
+            // Initial Particle
+            settings.Lifetime = new FloatRange(2.0f, 3.0f); // Live much longer
+            settings.InitialVelocityX = new FloatRange(-5f, 5f); // Reduced spread speed
+            settings.InitialVelocityY = new FloatRange(-20f, -5f); // Very slow rise
+            settings.InitialSize = new FloatRange(3f, 6f); // Hard-edged squares (3-6px)
+            settings.EndSize = new FloatRange(0f);
+            settings.InterpolateSize = true;
+
+            // Over Lifetime
+            settings.Gravity = new Vector2(0, -5f); // Tiny upward drift
+            settings.Drag = 0.3f; // Low drag to let them drift
+            settings.StartColor = global.Palette_LightGreen;
+            settings.EndColor = global.Palette_White;
+            settings.StartAlpha = 1.0f;
+            settings.EndAlpha = 0.0f;
+
+            // Rendering
+            // Use 1x1 pixel texture for hard edges
+            settings.Texture = ServiceLocator.Get<Texture2D>();
+            settings.BlendMode = BlendState.Additive;
+            settings.LayerDepth = 0.9f;
+
+            return settings;
+        }
     }
 }

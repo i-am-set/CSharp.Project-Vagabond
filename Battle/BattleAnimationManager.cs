@@ -2,8 +2,10 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using MonoGame.Extended.Particles;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Particles;
@@ -104,7 +106,7 @@ namespace ProjectVagabond.Battle.UI
             public const float TOTAL_SHAKE_DURATION = SHAKE_LEFT_DURATION + SHAKE_RIGHT_DURATION + SHAKE_SETTLE_DURATION;
             public const float SHAKE_MAGNITUDE = 2f;
         }
-        public class HealBounceAnimationState { public string CombatantID; public float Timer; public const float Duration = 0.1f; }
+        public class HealBounceAnimationState { public string CombatantID; public float Timer; public const float Duration = 0.3f; public const float Height = 5f; }
         public class HealFlashAnimationState { public string CombatantID; public float Timer; public const float Duration = 0.5f; }
         public class PoisonEffectAnimationState { public string CombatantID; public float Timer; public const float Duration = 1.5f; }
 
@@ -1575,4 +1577,3 @@ namespace ProjectVagabond.Battle.UI
         }
     }
 }
-﻿
