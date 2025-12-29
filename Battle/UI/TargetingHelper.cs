@@ -30,8 +30,7 @@ namespace ProjectVagabond.Utils
             // Safety check: If actor is null (e.g. during initialization or scene transition), return empty list to prevent crash.
             if (actor == null) return validTargets;
 
-            // Filter for active combatants first (alive and on field)
-            var activeCombatants = allCombatants.Where(c => !c.IsDefeated && c.IsActiveOnField).ToList();
+            var activeCombatants = allCombatants.Where(c => !c.IsDefeated && c.IsActiveOnField && c.Stats.CurrentHP > 0).ToList();
 
             var enemies = activeCombatants.Where(c => c.IsPlayerControlled != actor.IsPlayerControlled).ToList();
             var allies = activeCombatants.Where(c => c.IsPlayerControlled == actor.IsPlayerControlled && c != actor).ToList();

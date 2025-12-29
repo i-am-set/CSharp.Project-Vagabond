@@ -391,6 +391,10 @@ namespace ProjectVagabond.Battle
 
         private void HandleStartOfTurn()
         {
+            // --- Sanitize Battlefield ---
+            // This ensures no dead combatants linger in active slots, and fills empty slots if possible.
+            SanitizeBattlefield();
+
             _endOfTurnEffectsProcessed = false;
             var startOfTurnActions = new List<QueuedAction>();
 
@@ -448,6 +452,68 @@ namespace ProjectVagabond.Battle
             }
         }
 
+        private void SanitizeBattlefield()
+        {
+            bool changesMade = false;
+
+            // 1. Force remove any dead combatants still in active slots
+            foreach (var combatant in _allCombatants)
+            {
+                // Check if they are in a valid slot (0 or 1) BUT are dead
+                if (combatant.IsActiveOnField && (combatant.IsDefeated || combatant.Stats.CurrentHP <= 0))
+                {
+                    combatant.BattleSlot = -1;
+                    combatant.IsDying = false;
+                    combatant.IsRemovalProcessed = true;
+
+                    // Remove any pending actions for this ghost
+                    _actionQueue.RemoveAll(a => a.Actor == combatant);
+
+                    changesMade = true;
+                    Debug.WriteLine($"[BattleManager] SAFETY: Removed ghost combatant {combatant.Name} from field.");
+                }
+            }
+
+            if (changesMade) RefreshCombatantCaches();
+
+            // 2. Force Reinforcements if slots are empty and bench has units
+            // Enemies
+            for (int slot = 0; slot < 2; slot++)
+            {
+                if (!_cachedActiveEnemies.Any(c => c.BattleSlot == slot))
+                {
+                    var reinforcement = _enemyParty.FirstOrDefault(c => c.BattleSlot >= 2 && !c.IsDefeated);
+                    if (reinforcement != null)
+                    {
+                        reinforcement.BattleSlot = slot;
+                        changesMade = true;
+                        EventBus.Publish(new GameEvents.CombatantSpawned { Combatant = reinforcement });
+                        HandleOnEnterAbilities(reinforcement);
+                        Debug.WriteLine($"[BattleManager] SAFETY: Forced reinforcement {reinforcement.Name} into slot {slot}.");
+                    }
+                }
+            }
+
+            // Players
+            for (int slot = 0; slot < 2; slot++)
+            {
+                if (!_cachedActivePlayers.Any(c => c.BattleSlot == slot))
+                {
+                    var reinforcement = _playerParty.FirstOrDefault(c => c.BattleSlot >= 2 && !c.IsDefeated);
+                    if (reinforcement != null)
+                    {
+                        reinforcement.BattleSlot = slot;
+                        changesMade = true;
+                        EventBus.Publish(new GameEvents.CombatantSpawned { Combatant = reinforcement });
+                        HandleOnEnterAbilities(reinforcement);
+                        Debug.WriteLine($"[BattleManager] SAFETY: Forced reinforcement {reinforcement.Name} into slot {slot}.");
+                    }
+                }
+            }
+
+            if (changesMade) RefreshCombatantCaches();
+        }
+
         private void HandleActionResolution()
         {
             if (_actionToExecute != null) return;
@@ -461,7 +527,12 @@ namespace ProjectVagabond.Battle
             var nextAction = _actionQueue[0];
             _actionQueue.RemoveAt(0);
 
-            if (nextAction.Actor.IsDefeated || !nextAction.Actor.IsActiveOnField) return;
+            // --- SAFETY CHECK: Ensure actor is actually alive and on field ---
+            // This prevents "ghost" actions from dead enemies that were queued before they died.
+            if (nextAction.Actor.IsDefeated || !nextAction.Actor.IsActiveOnField || nextAction.Actor.Stats.CurrentHP <= 0)
+            {
+                return;
+            }
 
             if (nextAction.Type == QueuedActionType.Charging)
             {
@@ -912,6 +983,8 @@ namespace ProjectVagabond.Battle
                 combatant.IsDying = false;
                 combatant.IsRemovalProcessed = true;
                 combatant.BattleSlot = -1;
+
+                _actionQueue.RemoveAll(a => a.Actor == combatant);
             }
 
             if (finishedDying.Any())
