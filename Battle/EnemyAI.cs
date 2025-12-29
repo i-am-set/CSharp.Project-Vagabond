@@ -70,7 +70,8 @@ namespace ProjectVagabond.Battle
                 foreach (var move in moves.Where(m => m.Power > 0))
                 {
                     var dummyAction = new QueuedAction { Actor = actor, ChosenMove = move, Target = enemy };
-                    var result = DamageCalculator.CalculateDamage(dummyAction, enemy, move);
+                    // Pass isSimulation: true to prevent side effects (like Mana Burn triggering)
+                    var result = DamageCalculator.CalculateDamage(dummyAction, enemy, move, isSimulation: true);
                     if (result.DamageAmount > maxDmg) maxDmg = result.DamageAmount;
                 }
                 bestDamagePerTarget[enemy.CombatantID] = maxDmg;
@@ -142,7 +143,8 @@ namespace ProjectVagabond.Battle
                 if (isDamagingMove)
                 {
                     var dummyAction = new QueuedAction { Actor = actor, ChosenMove = move, Target = target };
-                    var result = DamageCalculator.CalculateDamage(dummyAction, target, move);
+                    // Pass isSimulation: true to prevent side effects
+                    var result = DamageCalculator.CalculateDamage(dummyAction, target, move, isSimulation: true);
                     int predictedDamage = result.DamageAmount;
 
                     if (isTargetAlly)

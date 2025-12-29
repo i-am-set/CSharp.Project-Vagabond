@@ -461,6 +461,17 @@ namespace ProjectVagabond.Battle.Abilities
             int currentMana = ctx.Target.Stats.CurrentMana;
             int burnAmount = Math.Min(currentMana, _maxBurnAmount);
 
+            // If target has no mana, the move fails
+            if (burnAmount <= 0)
+            {
+                if (!ctx.IsSimulation)
+                {
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "But it failed!" });
+                    EventBus.Publish(new GameEvents.MoveFailed { Actor = ctx.Actor });
+                }
+                return 0;
+            }
+
             // If this is a simulation (UI tooltip, AI calc), just return the potential power
             if (ctx.IsSimulation)
             {
@@ -468,24 +479,21 @@ namespace ProjectVagabond.Battle.Abilities
             }
 
             // Execute the burn
-            if (burnAmount > 0)
+            float before = ctx.Target.Stats.CurrentMana;
+            ctx.Target.Stats.CurrentMana -= burnAmount;
+
+            // Trigger visual updates
+            EventBus.Publish(new GameEvents.CombatantManaConsumed
             {
-                float before = ctx.Target.Stats.CurrentMana;
-                ctx.Target.Stats.CurrentMana -= burnAmount;
+                Actor = ctx.Target,
+                ManaBefore = before,
+                ManaAfter = ctx.Target.Stats.CurrentMana
+            });
 
-                // Trigger visual updates
-                EventBus.Publish(new GameEvents.CombatantManaConsumed
-                {
-                    Actor = ctx.Target,
-                    ManaBefore = before,
-                    ManaAfter = ctx.Target.Stats.CurrentMana
-                });
-
-                EventBus.Publish(new GameEvents.TerminalMessagePublished
-                {
-                    Message = $"{ctx.Target.Name} lost {burnAmount} Mana!"
-                });
-            }
+            EventBus.Publish(new GameEvents.TerminalMessagePublished
+            {
+                Message = $"{ctx.Target.Name} lost {burnAmount} Mana!"
+            });
 
             return burnAmount;
         }
