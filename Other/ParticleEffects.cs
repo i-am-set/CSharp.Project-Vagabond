@@ -464,10 +464,12 @@ namespace ProjectVagabond.Particles
             settings.Duration = 1.0f; // Give the emitter plenty of time to exist while particles float
 
             // Initial Particle
-            settings.Lifetime = new FloatRange(2.0f, 3.0f); // Live much longer
+            settings.Lifetime = new FloatRange(4.0f, 6.0f); // Live much longer
             settings.InitialVelocityX = new FloatRange(-5f, 5f); // Reduced spread speed
             settings.InitialVelocityY = new FloatRange(-20f, -5f); // Very slow rise
-            settings.InitialSize = new FloatRange(3f, 6f); // Hard-edged squares (3-6px)
+
+            // Scale 1.0 = 3x3 pixels. Scale 2.0 = 6x6 pixels.
+            settings.InitialSize = new FloatRange(1f, 3f);
             settings.EndSize = new FloatRange(0f);
             settings.InterpolateSize = true;
 
@@ -480,8 +482,8 @@ namespace ProjectVagabond.Particles
             settings.EndAlpha = 0.0f;
 
             // Rendering
-            // Use 1x1 pixel texture for hard edges
-            settings.Texture = ServiceLocator.Get<Texture2D>();
+            // Use the new 3x3 plus sprite
+            settings.Texture = ServiceLocator.Get<SpriteManager>().HealParticleSprite;
             settings.BlendMode = BlendState.Additive;
             settings.LayerDepth = 0.9f;
 

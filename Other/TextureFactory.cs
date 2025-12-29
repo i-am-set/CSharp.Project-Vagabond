@@ -456,5 +456,33 @@ namespace ProjectVagabond
             texture.SetData(colorData);
             return texture;
         }
+
+        /// <summary>
+        /// Creates a 3x3 plus-shaped texture for heal particles.
+        /// </summary>
+        public Texture2D CreatePlusParticleTexture()
+        {
+            var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
+            const int size = 3;
+            var texture = new Texture2D(graphicsDevice, size, size);
+            var colorData = new Color[size * size];
+
+            // 3x3 Plus Pattern:
+            // . X .
+            // X X X
+            // . X .
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    bool isFilled = (x == 1) || (y == 1);
+                    colorData[y * size + x] = isFilled ? Color.White : Color.Transparent;
+                }
+            }
+
+            texture.SetData(colorData);
+            return texture;
+        }
     }
 }

@@ -151,6 +151,7 @@ namespace ProjectVagabond
         public Texture2D PlayerHeartSpriteSheetSilhouette { get; private set; }
         public Texture2D ShadowBlobSprite { get; private set; }
         public Texture2D BattleEnemyFloorSprite { get; private set; }
+        public Texture2D HealParticleSprite { get; private set; }
 
         // Split Map Node Sprites
         public Texture2D SplitNodeStart { get; private set; }
@@ -495,6 +496,10 @@ namespace ProjectVagabond
             // Generate Mana Bar Pattern Texture
             try { ManaBarPattern = _textureFactory.CreateManaPatternTexture(); }
             catch { ManaBarPattern = _textureFactory.CreateColoredTexture(16, 16, Color.White); }
+
+            // Load Heal Particle Sprite
+            try { HealParticleSprite = _core.Content.Load<Texture2D>("Sprites/Particles/heal_plus"); }
+            catch { HealParticleSprite = _textureFactory.CreatePlusParticleTexture(); }
 
             LoadAndCacheCursorSprite("cursor_default");
             LoadAndCacheCursorSprite("cursor_hover_clickable");
