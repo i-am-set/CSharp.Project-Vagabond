@@ -1,0 +1,123 @@
+﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Utils;
+using System;
+using System.Collections.Generic;
+
+namespace ProjectVagabond.Battle.UI
+{
+    /// <summary>
+    /// Handles visual effects in battle that are not strictly part of the entity or the HUD,
+    /// such as shadows, floor rendering, and tooltips.
+    /// </summary>
+    public class BattleVfxRenderer
+    {
+        private readonly SpriteManager _spriteManager;
+        private readonly Global _global;
+        private readonly Core _core;
+
+        public BattleVfxRenderer()
+        {
+            _spriteManager = ServiceLocator.Get<SpriteManager>();
+            _global = ServiceLocator.Get<Global>();
+            _core = ServiceLocator.Get<Core>();
+        }
+
+        public void DrawShadow(SpriteBatch spriteBatch, Vector2 position, float alpha, Vector2 offset)
+        {
+            if (_spriteManager.ShadowBlobSprite == null) return;
+
+            Vector2 shadowOrigin = new Vector2(_spriteManager.ShadowBlobSprite.Width / 2f, _spriteManager.ShadowBlobSprite.Height / 2f);
+            Vector2 drawPos = position + offset;
+
+            spriteBatch.DrawSnapped(_spriteManager.ShadowBlobSprite, drawPos, null, Color.White * alpha, 0f, shadowOrigin, 1.0f, SpriteEffects.None, 0f);
+        }
+
+        public void DrawFloor(SpriteBatch spriteBatch, Vector2 slotCenter, float groundY)
+        {
+            if (_spriteManager.BattleEnemyFloorSprite != null)
+            {
+                Vector2 floorOrigin = new Vector2(_spriteManager.BattleEnemyFloorSprite.Width / 2f, _spriteManager.BattleEnemyFloorSprite.Height / 2f);
+                spriteBatch.DrawSnapped(_spriteManager.BattleEnemyFloorSprite, new Vector2(slotCenter.X, groundY), null, Color.White, 0f, floorOrigin, 1f, SpriteEffects.None, 0f);
+            }
+        }
+
+        public void DrawStatChangeTooltip(SpriteBatch spriteBatch, BattleCombatant combatant, float alpha, bool hasInsight, Vector2 visualCenter)
+        {
+            var tertiaryFont = _core.TertiaryFont;
+            var icons = _spriteManager.StatChangeIconsSpriteSheet;
+            var iconSilhouette = _spriteManager.StatChangeIconsSpriteSheetSilhouette;
+            var iconRects = _spriteManager.StatChangeIconSourceRects;
+
+            if (icons == null || iconRects == null || iconSilhouette == null) return;
+
+            const int width = 55;
+            const int height = 28;
+            const int rowHeight = 7;
+            const int iconSize = 3;
+            const int iconGap = 1;
+
+            // Apply Global Left Shift (was -6, moved right by 4 -> -2)
+            int xPos = (int)(visualCenter.X - width / 2) - 2;
+
+            float yPos = combatant.IsPlayerControlled ? visualCenter.Y - 16 : visualCenter.Y - 3;
+            if (yPos < 5) yPos = 5;
+
+            var bounds = new Rectangle(xPos, (int)yPos, width, height);
+
+            string[] statLabels = { "STR", "INT", "TEN", "AGI" };
+            OffensiveStatType[] statTypes = { OffensiveStatType.Strength, OffensiveStatType.Intelligence, OffensiveStatType.Tenacity, OffensiveStatType.Agility };
+            Color[] statColors = { _global.StatColor_Strength, _global.StatColor_Intelligence, _global.StatColor_Tenacity, _global.StatColor_Agility };
+
+            for (int i = 0; i < 4; i++)
+            {
+                int rowY = bounds.Y + (i * rowHeight);
+                int effectiveValue = 0;
+                switch (statTypes[i])
+                {
+                    case OffensiveStatType.Strength: effectiveValue = combatant.GetEffectiveStrength(); break;
+                    case OffensiveStatType.Intelligence: effectiveValue = combatant.GetEffectiveIntelligence(); break;
+                    case OffensiveStatType.Tenacity: effectiveValue = combatant.GetEffectiveTenacity(); break;
+                    case OffensiveStatType.Agility: effectiveValue = combatant.GetEffectiveAgility(); break;
+                }
+
+                string valueText = (combatant.IsPlayerControlled || hasInsight) ? effectiveValue.ToString() : "??";
+                Vector2 valueSize = tertiaryFont.MeasureString(valueText);
+                float valueX = bounds.X + 14 - valueSize.X;
+
+                spriteBatch.DrawStringSquareOutlinedSnapped(tertiaryFont, valueText, new Vector2(valueX, rowY + 1), _global.Palette_White * alpha, _global.Palette_Black * alpha);
+                spriteBatch.DrawStringSquareOutlinedSnapped(tertiaryFont, statLabels[i], new Vector2(bounds.X + 16, rowY + 1), statColors[i] * alpha, _global.Palette_Black * alpha);
+
+                int stage = combatant.StatStages[statTypes[i]];
+                int absStage = Math.Abs(stage);
+                bool isPositive = stage > 0;
+                int startIconX = bounds.X + 29;
+                int iconY = rowY + 1;
+
+                for (int j = 0; j < 6; j++)
+                {
+                    int iconIndex = 0;
+                    if (j < absStage) iconIndex = isPositive ? 1 : 2;
+
+                    var destRect = new Rectangle(startIconX + (j * (iconSize + iconGap)), iconY, iconSize, iconSize);
+                    var sourceRect = iconRects[iconIndex];
+
+                    // Draw Outline
+                    Color outlineColor = _global.Palette_Black * alpha;
+                    for (int ox = -1; ox <= 1; ox++)
+                    {
+                        for (int oy = -1; oy <= 1; oy++)
+                        {
+                            if (ox == 0 && oy == 0) continue;
+                            spriteBatch.DrawSnapped(iconSilhouette, new Rectangle(destRect.X + ox, destRect.Y + oy, iconSize, iconSize), sourceRect, outlineColor);
+                        }
+                    }
+
+                    // Draw Icon
+                    spriteBatch.DrawSnapped(icons, destRect, sourceRect, Color.White * alpha);
+                }
+            }
+        }
+    }
+}

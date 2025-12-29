@@ -44,7 +44,7 @@ namespace ProjectVagabond.Battle.UI
 
         private const float SELECTION_JUMP_DURATION = 0.25f;
         private const float SELECTION_JUMP_HEIGHT = 4f;
-        private const float SELECTION_BOB_CYCLE_DURATION = 1.0f;
+        private const float SELECTION_BOB_CYCLE_DURATION = 4.0f;
 
         // Noise generator for organic sway
         private static readonly SeededPerlin _swayNoise = new SeededPerlin(8888);
