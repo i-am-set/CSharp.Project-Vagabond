@@ -911,7 +911,7 @@ namespace ProjectVagabond.Scenes
 
         private void OnMoveAnimationTriggered(GameEvents.MoveAnimationTriggered e)
         {
-            _moveAnimationManager.StartAnimation(e.Move, e.Targets, _renderer);
+            _moveAnimationManager.StartAnimation(e.Move, e.Targets, _renderer, e.GrazeStatus);
         }
 
         private void OnMultiHitActionCompleted(GameEvents.MultiHitActionCompleted e)

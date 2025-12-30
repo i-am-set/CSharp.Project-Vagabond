@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -278,6 +279,11 @@ namespace ProjectVagabond
             public BattleCombatant Actor { get; set; }
             public MoveData Move { get; set; }
             public List<BattleCombatant> Targets { get; set; }
+            /// <summary>
+            /// A map indicating which targets were grazed (missed/glanced) by the attack.
+            /// Used to offset the animation visually.
+            /// </summary>
+            public Dictionary<BattleCombatant, bool> GrazeStatus { get; set; }
         }
 
         /// <summary>

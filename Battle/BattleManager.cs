@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -670,12 +671,14 @@ namespace ProjectVagabond.Battle
             {
                 var damageResultsForThisHit = new List<DamageCalculator.DamageResult>();
                 float multiTargetModifier = (targetsForThisHit.Count > 1) ? BattleConstants.MULTI_TARGET_MODIFIER : 1.0f;
+                var grazeStatus = new Dictionary<BattleCombatant, bool>();
 
                 foreach (var target in targetsForThisHit)
                 {
                     var moveInstance = HandlePreDamageEffects(action.ChosenMove, target);
                     var result = DamageCalculator.CalculateDamage(action, target, moveInstance, multiTargetModifier);
                     damageResultsForThisHit.Add(result);
+                    grazeStatus[target] = result.WasGraze;
                 }
 
                 _pendingImpact = new PendingImpactData
@@ -703,7 +706,7 @@ namespace ProjectVagabond.Battle
                 if (normalTargets.Any() && !string.IsNullOrEmpty(action.ChosenMove.AnimationSpriteSheet))
                 {
                     MoveData animMove = action.ChosenMove;
-                    EventBus.Publish(new GameEvents.MoveAnimationTriggered { Move = animMove, Targets = normalTargets });
+                    EventBus.Publish(new GameEvents.MoveAnimationTriggered { Move = animMove, Targets = normalTargets, GrazeStatus = grazeStatus });
                     _actionPendingAnimation = action;
                     _currentPhase = BattlePhase.AnimatingMove;
                     CanAdvance = false;
@@ -719,7 +722,7 @@ namespace ProjectVagabond.Battle
                     protectMove.AnimationSpeed = global.ProtectAnimationSpeed;
                     protectMove.DamageFrameIndex = global.ProtectDamageFrameIndex;
 
-                    EventBus.Publish(new GameEvents.MoveAnimationTriggered { Move = protectMove, Targets = protectedTargets });
+                    EventBus.Publish(new GameEvents.MoveAnimationTriggered { Move = protectMove, Targets = protectedTargets, GrazeStatus = grazeStatus });
 
                     if (_actionPendingAnimation == null)
                     {

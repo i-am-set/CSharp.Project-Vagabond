@@ -2,6 +2,14 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Particles;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.Transitions;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
@@ -19,6 +27,7 @@ namespace ProjectVagabond.Battle.UI
         private readonly List<MoveAnimationInstance> _activeAnimations = new();
         private readonly ContentManager _content;
         private bool _impactSignalSentForCurrentBatch = false;
+        private readonly Random _random = new Random();
 
         public bool IsAnimating => _activeAnimations.Any();
 
@@ -52,7 +61,7 @@ namespace ProjectVagabond.Battle.UI
         /// <summary>
         /// Starts playing an animation for a given move and its targets.
         /// </summary>
-        public void StartAnimation(MoveData move, List<BattleCombatant> targets, BattleRenderer renderer)
+        public void StartAnimation(MoveData move, List<BattleCombatant> targets, BattleRenderer renderer, Dictionary<BattleCombatant, bool>? grazeStatus = null)
         {
             _impactSignalSentForCurrentBatch = false;
 
@@ -88,6 +97,15 @@ namespace ProjectVagabond.Battle.UI
                 foreach (var target in targets)
                 {
                     var position = renderer.GetCombatantVisualCenterPosition(target, ServiceLocator.Get<BattleManager>().AllCombatants);
+
+                    // Apply Graze Offset if applicable
+                    if (grazeStatus != null && grazeStatus.TryGetValue(target, out bool isGraze) && isGraze)
+                    {
+                        // Offset between 16 and 32 pixels, left or right
+                        float offset = (float)_random.Next(16, 33);
+                        if (_random.Next(2) == 0) offset *= -1;
+                        position.X += offset;
+                    }
 
                     var instance = new MoveAnimationInstance(animationData, position, move.AnimationSpeed, move.DamageFrameIndex);
                     instance.OnImpactFrameReached += () => HandleImpactTrigger(move);
