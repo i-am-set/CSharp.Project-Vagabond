@@ -35,6 +35,11 @@ namespace ProjectVagabond.Battle.UI
         private readonly Dictionary<string, PlayerCombatSprite> _playerSprites = new Dictionary<string, PlayerCombatSprite>();
         private readonly Dictionary<string, SpriteHopAnimationController> _attackAnimControllers = new Dictionary<string, SpriteHopAnimationController>();
 
+        // Active Turn Offset State (Tweening players forward/backward)
+        private readonly Dictionary<string, float> _turnActiveOffsets = new Dictionary<string, float>();
+        private const float INACTIVE_Y_OFFSET = 8f;
+        private const float ACTIVE_TWEEN_SPEED = 5f;
+
         // Enemy Animation Data
         private Dictionary<string, Vector2[]> _enemySpritePartOffsets = new Dictionary<string, Vector2[]>();
         private Dictionary<string, float[]> _enemyAnimationTimers = new Dictionary<string, float[]>();
@@ -92,6 +97,7 @@ namespace ProjectVagabond.Battle.UI
             _enemyStatusIcons.Clear();
             _playerSprites.Clear();
             _attackAnimControllers.Clear();
+            _turnActiveOffsets.Clear();
             _enemySpritePartOffsets.Clear();
             _enemyAnimationTimers.Clear();
             _enemyAnimationIntervals.Clear();
@@ -154,6 +160,7 @@ namespace ProjectVagabond.Battle.UI
             UpdateRecoilAnimations(dt);
             UpdateStatusIconAnimations(dt);
             UpdateStatusIconTooltips(combatants);
+            UpdateActiveTurnOffsets(dt, combatants, currentActor);
 
             foreach (var controller in _attackAnimControllers.Values) controller.Update(gameTime);
 
@@ -473,6 +480,11 @@ namespace ProjectVagabond.Battle.UI
             foreach (var player in players)
             {
                 var center = BattleLayout.GetPlayerSpriteCenter(player.BattleSlot);
+
+                // --- Apply Active Turn Offset ---
+                float yOffset = _turnActiveOffsets.TryGetValue(player.CombatantID, out var off) ? off : INACTIVE_Y_OFFSET;
+                center.Y += yOffset;
+
                 if (player.BattleSlot == 0) PlayerSpritePosition = center;
 
                 Color? highlight = silhouetteColors.ContainsKey(player.CombatantID) ? silhouetteColors[player.CombatantID] : null;
@@ -557,12 +569,12 @@ namespace ProjectVagabond.Battle.UI
 
                 UpdateBarAlpha(player, (float)gameTime.ElapsedGameTime.TotalSeconds, showBars);
 
-                if (!isSilhouetted || player.CombatantID == _statTooltipCombatantID)
+                // Only draw name if it is the current actor
+                if (player == currentActor && (!isSilhouetted || player.CombatantID == _statTooltipCombatantID))
                 {
                     Vector2 nameSize = font.MeasureString(player.Name);
                     Vector2 namePos = new Vector2(center.X - nameSize.X / 2f, BattleLayout.PLAYER_NAME_TOP_Y);
-                    Color nameColor = (player == currentActor) ? (highlight == Color.Yellow ? _global.Palette_Yellow : _global.Palette_DarkGray) : _global.Palette_BrightWhite;
-                    if (highlight == Color.Yellow) nameColor = _global.Palette_Yellow;
+                    Color nameColor = (highlight == Color.Yellow) ? _global.Palette_Yellow : _global.Palette_BrightWhite;
                     spriteBatch.DrawStringSnapped(font, player.Name, namePos, nameColor);
                 }
 
@@ -737,6 +749,21 @@ namespace ProjectVagabond.Battle.UI
                         );
                         return;
                     }
+                }
+            }
+        }
+
+        private void UpdateActiveTurnOffsets(float dt, IEnumerable<BattleCombatant> combatants, BattleCombatant currentActor)
+        {
+            foreach (var c in combatants)
+            {
+                if (c.IsPlayerControlled)
+                {
+                    float targetOffset = (c == currentActor) ? 0f : INACTIVE_Y_OFFSET;
+                    if (!_turnActiveOffsets.ContainsKey(c.CombatantID)) _turnActiveOffsets[c.CombatantID] = INACTIVE_Y_OFFSET;
+
+                    float current = _turnActiveOffsets[c.CombatantID];
+                    _turnActiveOffsets[c.CombatantID] = MathHelper.Lerp(current, targetOffset, dt * ACTIVE_TWEEN_SPEED);
                 }
             }
         }
