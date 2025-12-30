@@ -195,6 +195,9 @@ namespace ProjectVagabond.Battle.UI
             public Vector2 MagnetTarget;
             public float MagnetSpeed;
             public float MagnetAcceleration;
+
+            // --- NEW: Pre-calculated Target ---
+            public Vector2? PreCalculatedTarget;
         }
         private readonly List<CoinParticle> _activeCoins = new List<CoinParticle>();
 
@@ -879,7 +882,9 @@ namespace ProjectVagabond.Battle.UI
                             // Trigger Coin Spawn here
                             if (!anim.CoinsSpawned && !combatant.IsPlayerControlled)
                             {
-                                SpawnCoins(anim.CenterPosition, 50, anim.GroundY);
+                                // Pass the list of active players to SpawnCoins
+                                var players = combatants.Where(c => c.IsPlayerControlled && !c.IsDefeated && c.IsActiveOnField).ToList();
+                                SpawnCoins(anim.CenterPosition, 50, anim.GroundY, players);
                                 anim.CoinsSpawned = true;
                             }
                         }
@@ -899,7 +904,7 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private void SpawnCoins(Vector2 origin, int amount, float referenceGroundY)
+        private void SpawnCoins(Vector2 origin, int amount, float referenceGroundY, List<BattleCombatant> players)
         {
             for (int i = 0; i < amount; i++)
             {
@@ -908,6 +913,26 @@ namespace ProjectVagabond.Battle.UI
 
                 // Apply the global offset (lift) and the random depth
                 float targetGroundY = (referenceGroundY - COIN_GROUND_OFFSET_Y) + randomDepth;
+
+                // --- ROUND ROBIN TARGET ASSIGNMENT ---
+                Vector2? targetPos = null;
+                if (players.Any())
+                {
+                    // Distribute coins evenly among players
+                    var targetPlayer = players[i % players.Count];
+
+                    // Calculate visual center for the target player
+                    // Hardcoded logic based on BattleRenderer layout to avoid dependency cycle
+                    // Slot 0: Left, Slot 1: Right
+                    float spriteCenterX = (targetPlayer.BattleSlot == 1)
+                        ? (Global.VIRTUAL_WIDTH * 0.75f)
+                        : (Global.VIRTUAL_WIDTH * 0.25f);
+
+                    // Use fixed Y for player heart center
+                    float heartCenterY = 96f;
+
+                    targetPos = new Vector2(spriteCenterX, heartCenterY);
+                }
 
                 var coin = new CoinParticle
                 {
@@ -924,7 +949,8 @@ namespace ProjectVagabond.Battle.UI
                     MagnetSpeed = 0f,
                     MagnetAcceleration = (float)(_random.NextDouble() * (COIN_MAGNET_ACCEL_MAX - COIN_MAGNET_ACCEL_MIN) + COIN_MAGNET_ACCEL_MIN),
                     FlipTimer = (float)(_random.NextDouble() * MathHelper.TwoPi),
-                    FlipSpeed = 10f + (float)(_random.NextDouble() * 10f)
+                    FlipSpeed = 10f + (float)(_random.NextDouble() * 10f),
+                    PreCalculatedTarget = targetPos // Assign the specific target
                 };
                 _activeCoins.Add(coin);
             }
@@ -992,50 +1018,15 @@ namespace ProjectVagabond.Battle.UI
                     coin.Timer += dt;
                     if (coin.Timer >= COIN_LIFETIME)
                     {
-                        // Find closest player target
-                        var players = combatants.Where(c => c.IsPlayerControlled && !c.IsDefeated && c.IsActiveOnField).ToList();
-                        if (players.Any())
+                        // Use the pre-calculated target if available
+                        if (coin.PreCalculatedTarget.HasValue)
                         {
-                            // Calculate visual centers for players
-                            // Hardcoded logic based on BattleRenderer layout to avoid dependency cycle
-                            // Slot 0: Left, Slot 1: Right
-                            float heartCenterY = 96f; // Hardcoded new Y
-
-                            BattleCombatant closestPlayer = null;
-                            float minDistanceSq = float.MaxValue;
-                            Vector2 bestTargetPos = Vector2.Zero;
-
-                            foreach (var player in players)
-                            {
-                                // New X Logic
-                                float spriteCenterX = (player.BattleSlot == 1)
-                                    ? (Global.VIRTUAL_WIDTH * 0.75f)
-                                    : (Global.VIRTUAL_WIDTH * 0.25f);
-
-                                Vector2 targetPos = new Vector2(spriteCenterX, heartCenterY);
-
-                                float distSq = Vector2.DistanceSquared(coin.Position, targetPos);
-                                if (distSq < minDistanceSq)
-                                {
-                                    minDistanceSq = distSq;
-                                    closestPlayer = player;
-                                    bestTargetPos = targetPos;
-                                }
-                            }
-
-                            if (closestPlayer != null)
-                            {
-                                coin.IsMagnetizing = true;
-                                coin.MagnetTarget = bestTargetPos;
-                            }
-                            else
-                            {
-                                // No players? Just fade out (fallback)
-                                _activeCoins.RemoveAt(i);
-                            }
+                            coin.IsMagnetizing = true;
+                            coin.MagnetTarget = coin.PreCalculatedTarget.Value;
                         }
                         else
                         {
+                            // No target (e.g. all players dead?), just fade out
                             _activeCoins.RemoveAt(i);
                         }
                     }

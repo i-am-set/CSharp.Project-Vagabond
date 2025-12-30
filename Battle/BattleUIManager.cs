@@ -178,6 +178,7 @@ namespace ProjectVagabond.Battle.UI
             MoveForTargeting = null;
             ItemForTargeting = null;
             CombatantHoveredViaSprite = null;
+            HoveredCombatantFromUI = null; // Ensure this is cleared on reset
         }
 
         public void ForceClearNarration()
@@ -270,6 +271,10 @@ namespace ProjectVagabond.Battle.UI
             {
                 UpdateTargetingButtons(currentMouseState, _previousMouseState, currentActor);
                 targetingHovered = (HoveredCombatantFromUI != null);
+            }
+            else
+            {
+                HoveredCombatantFromUI = null;
             }
 
             // 2. Update Action Menu (Pass blocking flag)

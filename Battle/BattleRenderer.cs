@@ -25,7 +25,6 @@ namespace ProjectVagabond.Battle.UI
         private readonly BattleVfxRenderer _vfxRenderer;
         private readonly TooltipManager _tooltipManager;
         private readonly HitstopManager _hitstopManager;
-
         // --- State Management ---
         private readonly List<TargetInfo> _currentTargets = new List<TargetInfo>();
         private readonly List<StatusIconInfo> _playerStatusIcons = new List<StatusIconInfo>();
@@ -402,10 +401,32 @@ namespace ProjectVagabond.Battle.UI
                 }
                 else
                 {
-                    // Tween towards target
                     float currentX = _enemyVisualXPositions[enemy.CombatantID];
-                    _enemyVisualXPositions[enemy.CombatantID] = MathHelper.Lerp(currentX, targetX, dt * ENEMY_POSITION_TWEEN_SPEED);
+
+                    // SAFETY FIX: If the position is 0 (uninitialized) or wildly off-screen, snap it.
+                    // This prevents enemies from "flying in" from (0,0) when they switch in.
+                    if (Math.Abs(currentX) < 1.0f || Math.Abs(currentX - targetX) > Global.VIRTUAL_WIDTH)
+                    {
+                        _enemyVisualXPositions[enemy.CombatantID] = targetX;
+                    }
+                    else
+                    {
+                        // Tween towards target
+                        _enemyVisualXPositions[enemy.CombatantID] = MathHelper.Lerp(currentX, targetX, dt * ENEMY_POSITION_TWEEN_SPEED);
+                    }
                 }
+            }
+
+            // Cleanup stale entries from the position cache.
+            // We keep entries for Active enemies AND Dying enemies (so they don't snap while fading out).
+            // Benched enemies are removed so they snap correctly when they return.
+            var keepIds = activeEnemies.Select(e => e.CombatantID).ToHashSet();
+            foreach (var d in dyingEnemies) keepIds.Add(d.CombatantID);
+
+            var keysToRemove = _enemyVisualXPositions.Keys.Where(k => !keepIds.Contains(k)).ToList();
+            foreach (var key in keysToRemove)
+            {
+                _enemyVisualXPositions.Remove(key);
             }
         }
 
@@ -555,7 +576,7 @@ namespace ProjectVagabond.Battle.UI
                 float scale = 1.0f;
                 if (_hitstopManager.IsActive && hitstop != null)
                 {
-                    scale = 1.2f;
+                    scale = 1.0f; // Keep scale at 1.0f
                     tint = hitstop.IsCrit ? Color.Red : Color.White;
                     alpha = 1.0f;
                     silhouetteAmt = 0f;

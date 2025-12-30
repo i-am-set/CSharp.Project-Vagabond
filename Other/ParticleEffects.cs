@@ -459,9 +459,9 @@ namespace ProjectVagabond.Particles
             settings.Shape = EmitterShape.Circle;
             settings.EmitFrom = EmissionSource.Volume;
             settings.EmitterSize = new Vector2(30f, 30f); // Wide and flat
-            settings.EmissionRate = 5;
-            settings.BurstCount = 20; // Increased count
-            settings.Duration = 1.0f; // Give the emitter plenty of time to exist while particles float
+            settings.EmissionRate = 10;
+            settings.BurstCount = 1; // Increased count
+            settings.Duration = 2.0f; // Give the emitter plenty of time to exist while particles float
 
             // Initial Particle
             settings.Lifetime = new FloatRange(4.0f, 6.0f); // Live much longer
@@ -469,7 +469,7 @@ namespace ProjectVagabond.Particles
             settings.InitialVelocityY = new FloatRange(-20f, -5f); // Very slow rise
 
             // Scale 1.0 = 3x3 pixels. Scale 2.0 = 6x6 pixels.
-            settings.InitialSize = new FloatRange(1f, 3f);
+            settings.InitialSize = new FloatRange(2f, 2f);
             settings.EndSize = new FloatRange(0f);
             settings.InterpolateSize = true;
 
