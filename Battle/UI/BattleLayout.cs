@@ -40,6 +40,14 @@ namespace ProjectVagabond.Battle.UI
             return new Vector2(ENEMY_AREA_PADDING + (slotIndex * slotWidth) + (slotWidth / 2), ENEMY_SLOT_Y_OFFSET);
         }
 
+        /// <summary>
+        /// Gets the center position used when only one enemy remains.
+        /// </summary>
+        public static Vector2 GetEnemyCenter()
+        {
+            return new Vector2(Global.VIRTUAL_WIDTH / 2f, ENEMY_SLOT_Y_OFFSET);
+        }
+
         public static Vector2 GetPlayerSpriteCenter(int slotIndex)
         {
             bool isRightSide = slotIndex == 1;

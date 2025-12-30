@@ -40,6 +40,15 @@ namespace ProjectVagabond.Battle.UI
         private const float INACTIVE_Y_OFFSET = 8f;
         private const float ACTIVE_TWEEN_SPEED = 5f;
 
+        // Enemy Positioning State (Dynamic Centering)
+        private readonly Dictionary<string, float> _enemyVisualXPositions = new Dictionary<string, float>();
+        private const float ENEMY_POSITION_TWEEN_SPEED = 4.0f;
+
+        // Centering Transition State
+        private bool _centeringSequenceStarted = false;
+        private float _centeringDelayTimer = 0f;
+        private const float CENTERING_DELAY_DURATION = 0.5f;
+
         // Enemy Animation Data
         private Dictionary<string, Vector2[]> _enemySpritePartOffsets = new Dictionary<string, Vector2[]>();
         private Dictionary<string, float[]> _enemyAnimationTimers = new Dictionary<string, float[]>();
@@ -98,6 +107,7 @@ namespace ProjectVagabond.Battle.UI
             _playerSprites.Clear();
             _attackAnimControllers.Clear();
             _turnActiveOffsets.Clear();
+            _enemyVisualXPositions.Clear();
             _enemySpritePartOffsets.Clear();
             _enemyAnimationTimers.Clear();
             _enemyAnimationIntervals.Clear();
@@ -109,6 +119,8 @@ namespace ProjectVagabond.Battle.UI
             _combatantVisualCenters.Clear();
             _statTooltipAlpha = 0f;
             _statTooltipCombatantID = null;
+            _centeringSequenceStarted = false;
+            _centeringDelayTimer = 0f;
         }
 
         public List<TargetInfo> GetCurrentTargets() => _currentTargets;
@@ -155,6 +167,7 @@ namespace ProjectVagabond.Battle.UI
             }
 
             // Update Animations
+            UpdateEnemyPositions(dt, combatants, animationManager);
             UpdateEnemyAnimations(dt, combatants);
             UpdateShadowAnimations(dt, combatants);
             UpdateRecoilAnimations(dt);
@@ -197,7 +210,7 @@ namespace ProjectVagabond.Battle.UI
             bool shouldGrayOut = uiManager.UIState == BattleUIState.Targeting || uiManager.UIState == BattleUIState.ItemTargeting || (uiManager.HoveredMove != null && uiManager.HoveredMove.Target != TargetType.None);
 
             // --- Draw Enemies ---
-            DrawEnemies(spriteBatch, enemies, currentActor, shouldGrayOut, selectableTargets, animationManager, silhouetteColors, transform, gameTime, uiManager, hoveredCombatant);
+            DrawEnemies(spriteBatch, enemies, allCombatants, currentActor, shouldGrayOut, selectableTargets, animationManager, silhouetteColors, transform, gameTime, uiManager, hoveredCombatant);
 
             // --- Draw Coins ---
             animationManager.DrawCoins(spriteBatch);
@@ -321,21 +334,159 @@ namespace ProjectVagabond.Battle.UI
             return colors;
         }
 
-        private void DrawEnemies(SpriteBatch spriteBatch, List<BattleCombatant> enemies, BattleCombatant currentActor, bool shouldGrayOut, HashSet<BattleCombatant> selectable, BattleAnimationManager animManager, Dictionary<string, Color> silhouetteColors, Matrix transform, GameTime gameTime, BattleUIManager uiManager, BattleCombatant hoveredCombatant)
+        private void UpdateEnemyPositions(float dt, IEnumerable<BattleCombatant> combatants, BattleAnimationManager animManager)
         {
-            // Draw Floor
-            for (int i = 0; i < 2; i++)
-            {
-                var center = BattleLayout.GetEnemySlotCenter(i);
-                var enemy = enemies.FirstOrDefault(e => e.BattleSlot == i);
-                int size = (enemy != null && _spriteManager.IsMajorEnemySprite(enemy.ArchetypeId)) ? BattleLayout.ENEMY_SPRITE_SIZE_MAJOR : BattleLayout.ENEMY_SPRITE_SIZE_NORMAL;
+            var enemies = combatants.Where(c => !c.IsPlayerControlled).ToList();
+            var activeEnemies = enemies.Where(c => !c.IsDefeated && c.IsActiveOnField).ToList();
+            var benchedEnemies = enemies.Where(c => !c.IsDefeated && c.BattleSlot >= 2).ToList();
+            var dyingEnemies = enemies.Where(c => animManager.IsDeathAnimating(c.CombatantID)).ToList();
 
-                _vfxRenderer.DrawFloor(spriteBatch, center, center.Y + size + BattleLayout.ENEMY_SLOT_Y_OFFSET - 12);
+            // Visual Enemies = Active + Dying
+            var visualEnemies = activeEnemies.Concat(dyingEnemies).Distinct().ToList();
+
+            // Eligibility: 
+            // 1. Exactly 1 visual enemy (Active or Dying)
+            // OR
+            // 2. 0 visual enemies (Victory state), BUT we were already centering. 
+            //    This prevents snapping back to 2 slots when the last enemy finishes dying.
+            bool isVictoryState = visualEnemies.Count == 0 && _centeringSequenceStarted;
+
+            bool eligibleForCentering = (visualEnemies.Count == 1 || isVictoryState) && !benchedEnemies.Any();
+
+            // Check Battle Phase
+            var battleManager = ServiceLocator.Get<BattleManager>();
+            bool isActionSelection = battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection_Slot1;
+
+            // State Machine for Centering Sequence
+            if (!eligibleForCentering)
+            {
+                _centeringSequenceStarted = false;
+                _centeringDelayTimer = 0f;
+            }
+            else if (isActionSelection && !_centeringSequenceStarted)
+            {
+                // Only start the sequence (remove other floor -> wait -> move) when turn starts
+                _centeringSequenceStarted = true;
+                _centeringDelayTimer = 0f;
             }
 
-            foreach (var enemy in enemies)
+            // Update Timer
+            bool moveNow = false;
+            if (_centeringSequenceStarted)
             {
-                var center = BattleLayout.GetEnemySlotCenter(enemy.BattleSlot);
+                _centeringDelayTimer += dt;
+                if (_centeringDelayTimer >= CENTERING_DELAY_DURATION)
+                {
+                    moveNow = true;
+                }
+            }
+
+            float centerX = BattleLayout.GetEnemyCenter().X;
+
+            foreach (var enemy in activeEnemies)
+            {
+                float targetX;
+                if (moveNow)
+                {
+                    targetX = centerX;
+                }
+                else
+                {
+                    targetX = BattleLayout.GetEnemySlotCenter(enemy.BattleSlot).X;
+                }
+
+                if (!_enemyVisualXPositions.ContainsKey(enemy.CombatantID))
+                {
+                    // Initialize immediately if not present
+                    _enemyVisualXPositions[enemy.CombatantID] = targetX;
+                }
+                else
+                {
+                    // Tween towards target
+                    float currentX = _enemyVisualXPositions[enemy.CombatantID];
+                    _enemyVisualXPositions[enemy.CombatantID] = MathHelper.Lerp(currentX, targetX, dt * ENEMY_POSITION_TWEEN_SPEED);
+                }
+            }
+        }
+
+        private void DrawEnemies(SpriteBatch spriteBatch, List<BattleCombatant> activeEnemies, IEnumerable<BattleCombatant> allCombatants, BattleCombatant currentActor, bool shouldGrayOut, HashSet<BattleCombatant> selectable, BattleAnimationManager animManager, Dictionary<string, Color> silhouetteColors, Matrix transform, GameTime gameTime, BattleUIManager uiManager, BattleCombatant hoveredCombatant)
+        {
+            // --- FLOOR DRAWING LOGIC ---
+            // Identify enemies that are dying (playing death animation) to draw their floors
+            var dyingEnemies = allCombatants.Where(c => !c.IsPlayerControlled && animManager.IsDeathAnimating(c.CombatantID)).ToList();
+
+            // Combine active and dying enemies for floor rendering
+            var floorEntities = new List<BattleCombatant>(activeEnemies);
+            foreach (var dying in dyingEnemies)
+            {
+                if (!floorEntities.Contains(dying))
+                {
+                    floorEntities.Add(dying);
+                }
+            }
+
+            // Determine if we should hide empty floors (Sequence Started)
+            bool hideEmptyFloors = _centeringSequenceStarted;
+
+            if (hideEmptyFloors)
+            {
+                if (floorEntities.Count == 0)
+                {
+                    // Victory State: No enemies left, but we want to keep the centered floor visible
+                    // so it doesn't just pop out of existence or revert to 2 slots.
+                    var center = BattleLayout.GetEnemyCenter();
+                    // Use Normal size as default for the lingering floor
+                    int size = BattleLayout.ENEMY_SPRITE_SIZE_NORMAL;
+                    _vfxRenderer.DrawFloor(spriteBatch, center, center.Y + size + BattleLayout.ENEMY_SLOT_Y_OFFSET - 12);
+                }
+                else
+                {
+                    // Draw floor ONLY for floorEntities (Active + Dying)
+                    foreach (var enemy in floorEntities)
+                    {
+                        // Use dynamic visual X position if available, else slot center
+                        float visualX;
+                        if (_enemyVisualXPositions.TryGetValue(enemy.CombatantID, out float pos))
+                        {
+                            visualX = pos;
+                        }
+                        else
+                        {
+                            visualX = BattleLayout.GetEnemySlotCenter(Math.Max(0, enemy.BattleSlot)).X;
+                        }
+
+                        var center = new Vector2(visualX, BattleLayout.ENEMY_SLOT_Y_OFFSET);
+                        int size = _spriteManager.IsMajorEnemySprite(enemy.ArchetypeId) ? BattleLayout.ENEMY_SPRITE_SIZE_MAJOR : BattleLayout.ENEMY_SPRITE_SIZE_NORMAL;
+                        _vfxRenderer.DrawFloor(spriteBatch, center, center.Y + size + BattleLayout.ENEMY_SLOT_Y_OFFSET - 12);
+                    }
+                }
+            }
+            else
+            {
+                // Draw floors for BOTH slots (0 and 1) to define the arena, regardless of occupancy
+                for (int i = 0; i < 2; i++)
+                {
+                    var center = BattleLayout.GetEnemySlotCenter(i);
+
+                    // Determine size based on occupant (Active or Dying)
+                    // If empty, default to Normal size
+                    var occupant = floorEntities.FirstOrDefault(e => e.BattleSlot == i);
+                    int size = (occupant != null && _spriteManager.IsMajorEnemySprite(occupant.ArchetypeId)) ? BattleLayout.ENEMY_SPRITE_SIZE_MAJOR : BattleLayout.ENEMY_SPRITE_SIZE_NORMAL;
+
+                    _vfxRenderer.DrawFloor(spriteBatch, center, center.Y + size + BattleLayout.ENEMY_SLOT_Y_OFFSET - 12);
+                }
+            }
+
+            // --- SPRITE DRAWING LOGIC ---
+            // We must draw sprites for BOTH active and dying enemies.
+            var spritesToDraw = new List<BattleCombatant>(activeEnemies);
+            spritesToDraw.AddRange(dyingEnemies);
+
+            foreach (var enemy in spritesToDraw)
+            {
+                // Use dynamic visual X position
+                float visualX = _enemyVisualXPositions.ContainsKey(enemy.CombatantID) ? _enemyVisualXPositions[enemy.CombatantID] : BattleLayout.GetEnemySlotCenter(enemy.BattleSlot).X;
+                var center = new Vector2(visualX, BattleLayout.ENEMY_SLOT_Y_OFFSET);
 
                 Color? highlight = silhouetteColors.ContainsKey(enemy.CombatantID) ? silhouetteColors[enemy.CombatantID] : null;
                 bool isSelectable = selectable.Contains(enemy);
@@ -440,37 +591,41 @@ namespace ProjectVagabond.Battle.UI
 
                 _entityRenderer.DrawEnemy(spriteBatch, enemy, spriteRect, offsets, shake, alpha, silhouetteAmt, silhouetteColor, isHighlighted, highlight, outlineColor, flashWhite, tint, scale, transform);
 
-                Rectangle hitBox = new Rectangle((int)(center.X - spriteSize / 2f), (int)(center.Y + bob + spawnY), spriteSize, spriteSize);
-                _currentTargets.Add(new TargetInfo { Combatant = enemy, Bounds = hitBox });
-                _combatantVisualCenters[enemy.CombatantID] = hitBox.Center.ToVector2();
-
-                // --- VISIBILITY LOGIC ---
-                bool showBars = (hoveredCombatant == enemy) || (uiManager.HoveredCombatantFromUI == enemy) || selectable.Contains(enemy);
-                UpdateBarAlpha(enemy, (float)gameTime.ElapsedGameTime.TotalSeconds, showBars);
-
-                // --- POSITIONING LOGIC ---
-                // 1. Calculate Visual Center Y (Middle of sprite)
-                float visualCenterY = center.Y + spriteSize / 2f;
-
-                // 2. Calculate Tooltip Top Y (relative to visual center, matching BattleVfxRenderer)
-                float tooltipTopY = visualCenterY - 3;
-                if (tooltipTopY < 5) tooltipTopY = 5;
-
-                // 3. Calculate Sprite Top Pixel Y (Highest non-animated pixel)
-                float spriteTopY = GetEnemyStaticVisualTop(enemy, center.Y);
-
-                // 4. Determine Anchor (Highest point between tooltip top and sprite top)
-                // We want the bar to be above whichever is higher up on the screen (smaller Y value).
-                float anchorY = Math.Min(tooltipTopY - 2, spriteTopY);
-
-                // 5. Place Bars above Anchor (4px height)
-                float barY = anchorY - 4;
-                float barX = center.X - BattleLayout.ENEMY_BAR_WIDTH / 2f;
-
-                if (enemy.VisualHealthBarAlpha > 0.01f || enemy.VisualManaBarAlpha > 0.01f)
+                // Only add hitboxes for ACTIVE enemies (not dying ones)
+                if (!enemy.IsDefeated)
                 {
-                    _hudRenderer.DrawStatusIcons(spriteBatch, enemy, barX, barY, BattleLayout.ENEMY_BAR_WIDTH, false, _enemyStatusIcons.ContainsKey(enemy.CombatantID) ? _enemyStatusIcons[enemy.CombatantID] : null, GetStatusIconOffset, IsStatusIconAnimating);
-                    _hudRenderer.DrawEnemyBars(spriteBatch, enemy, barX, barY, BattleLayout.ENEMY_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, enemy.VisualHealthBarAlpha, enemy.VisualManaBarAlpha, gameTime);
+                    Rectangle hitBox = new Rectangle((int)(center.X - spriteSize / 2f), (int)(center.Y + bob + spawnY), spriteSize, spriteSize);
+                    _currentTargets.Add(new TargetInfo { Combatant = enemy, Bounds = hitBox });
+                    _combatantVisualCenters[enemy.CombatantID] = hitBox.Center.ToVector2();
+
+                    // --- VISIBILITY LOGIC ---
+                    bool showBars = (hoveredCombatant == enemy) || (uiManager.HoveredCombatantFromUI == enemy) || selectable.Contains(enemy);
+                    UpdateBarAlpha(enemy, (float)gameTime.ElapsedGameTime.TotalSeconds, showBars);
+
+                    // --- POSITIONING LOGIC ---
+                    // 1. Calculate Visual Center Y (Middle of sprite)
+                    float visualCenterY = center.Y + spriteSize / 2f;
+
+                    // 2. Calculate Tooltip Top Y (relative to visual center, matching BattleVfxRenderer)
+                    float tooltipTopY = visualCenterY - 3;
+                    if (tooltipTopY < 5) tooltipTopY = 5;
+
+                    // 3. Calculate Sprite Top Pixel Y (Highest non-animated pixel)
+                    float spriteTopY = GetEnemyStaticVisualTop(enemy, center.Y);
+
+                    // 4. Determine Anchor (Highest point between tooltip top and sprite top)
+                    // We want the bar to be above whichever is higher up on the screen (smaller Y value).
+                    float anchorY = Math.Min(tooltipTopY - 2, spriteTopY);
+
+                    // 5. Place Bars above Anchor (4px height)
+                    float barY = anchorY - 4;
+                    float barX = center.X - BattleLayout.ENEMY_BAR_WIDTH / 2f;
+
+                    if (enemy.VisualHealthBarAlpha > 0.01f || enemy.VisualManaBarAlpha > 0.01f)
+                    {
+                        _hudRenderer.DrawStatusIcons(spriteBatch, enemy, barX, barY, BattleLayout.ENEMY_BAR_WIDTH, false, _enemyStatusIcons.ContainsKey(enemy.CombatantID) ? _enemyStatusIcons[enemy.CombatantID] : null, GetStatusIconOffset, IsStatusIconAnimating);
+                        _hudRenderer.DrawEnemyBars(spriteBatch, enemy, barX, barY, BattleLayout.ENEMY_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, enemy.VisualHealthBarAlpha, enemy.VisualManaBarAlpha, gameTime);
+                    }
                 }
             }
         }
