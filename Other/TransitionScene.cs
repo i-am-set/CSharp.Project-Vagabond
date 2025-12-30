@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Utils;
 
 namespace ProjectVagabond.Scenes
 {
@@ -38,9 +39,9 @@ namespace ProjectVagabond.Scenes
 
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
-            // This scene intentionally draws nothing here.
-            // It relies on the Core.Draw method to clear the screen to black
-            // and then the SceneManager.DrawOverlay to draw the transition animations.
+            // Draw a solid black background to cover the default palette background
+            var pixel = ServiceLocator.Get<Texture2D>();
+            spriteBatch.Draw(pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), Color.Black);
         }
 
         // This scene does not draw any underlay or overlay content itself.

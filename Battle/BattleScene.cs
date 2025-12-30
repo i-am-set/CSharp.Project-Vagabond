@@ -406,7 +406,7 @@ namespace ProjectVagabond.Scenes
                 _deathFadeTimer += dt;
                 if (_deathFadeTimer >= Global.UniversalSlowFadeDuration)
                 {
-                    _sceneManager.ChangeScene(GameSceneState.GameOver, TransitionType.Fade, TransitionType.Fade);
+                    _sceneManager.ChangeScene(GameSceneState.GameOver, TransitionType.Diamonds, TransitionType.Diamonds);
                 }
                 return;
             }

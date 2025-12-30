@@ -187,7 +187,7 @@ namespace ProjectVagabond.Scenes
 
             _shopOverlay.OnLeaveRequested += () =>
             {
-                _transitionManager.StartTransition(TransitionType.Fade, TransitionType.Fade, () =>
+                _transitionManager.StartTransition(TransitionType.Diamonds, TransitionType.Diamonds, () =>
                 {
                     _viewToReturnTo = SplitMapView.Map;
                     SetView(SplitMapView.Map, snap: true);
@@ -205,7 +205,7 @@ namespace ProjectVagabond.Scenes
 
             _restOverlay.OnLeaveRequested += () =>
             {
-                _transitionManager.StartTransition(TransitionType.Fade, TransitionType.Fade, () =>
+                _transitionManager.StartTransition(TransitionType.Diamonds, TransitionType.Diamonds, () =>
                 {
                     _viewToReturnTo = SplitMapView.Map;
                     SetView(SplitMapView.Map, snap: true);
@@ -223,7 +223,7 @@ namespace ProjectVagabond.Scenes
 
             _restOverlay.OnRestCompleted += () =>
             {
-                _transitionManager.StartTransition(TransitionType.Fade, TransitionType.Fade, () =>
+                _transitionManager.StartTransition(TransitionType.Diamonds, TransitionType.Diamonds, () =>
                 {
                     _viewToReturnTo = SplitMapView.Map;
                     SetView(SplitMapView.Map, snap: true);
@@ -241,7 +241,7 @@ namespace ProjectVagabond.Scenes
 
             _recruitOverlay.OnRecruitComplete += () =>
             {
-                _transitionManager.StartTransition(TransitionType.Fade, TransitionType.Fade, () =>
+                _transitionManager.StartTransition(TransitionType.Diamonds, TransitionType.Diamonds, () =>
                 {
                     _viewToReturnTo = SplitMapView.Map;
                     SetView(SplitMapView.Map, snap: true);
@@ -1083,20 +1083,20 @@ namespace ProjectVagabond.Scenes
                     break;
 
                 case SplitNodeType.Recruit:
-                    _transitionManager.StartTransition(TransitionType.Fade, TransitionType.Fade, () => {
+                    _transitionManager.StartTransition(TransitionType.Diamonds, TransitionType.Diamonds, () => {
                         _recruitOverlay.GenerateNewCandidates();
                         SetView(SplitMapView.Recruit, snap: true);
                     });
                     break;
 
                 case SplitNodeType.Rest:
-                    _transitionManager.StartTransition(TransitionType.Fade, TransitionType.Fade, () => {
+                    _transitionManager.StartTransition(TransitionType.Diamonds, TransitionType.Diamonds, () => {
                         SetView(SplitMapView.Rest, snap: true);
                     });
                     break;
 
                 case SplitNodeType.Shop:
-                    _transitionManager.StartTransition(TransitionType.Fade, TransitionType.Fade, () => OpenRandomShop());
+                    _transitionManager.StartTransition(TransitionType.Diamonds, TransitionType.Diamonds, () => OpenRandomShop());
                     break;
 
                 default:
@@ -1315,7 +1315,7 @@ namespace ProjectVagabond.Scenes
         {
             SplitMapScene.PlayerWonLastBattle = true;
             DecrementTemporaryBuffs();
-            _sceneManager.ChangeScene(BattleSetup.ReturnSceneState, TransitionType.Fade, TransitionType.Fade);
+            _sceneManager.ChangeScene(BattleSetup.ReturnSceneState, TransitionType.Diamonds, TransitionType.Diamonds);
         }
 
         private void DecrementTemporaryBuffs()

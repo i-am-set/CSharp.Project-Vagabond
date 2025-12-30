@@ -176,7 +176,7 @@ namespace ProjectVagabond
             {
                 var pixel = ServiceLocator.Get<Texture2D>();
                 // Draw black over the entire virtual resolution
-                spriteBatch.Draw(pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), ServiceLocator.Get<Global>().Palette_Black);
+                spriteBatch.Draw(pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), Color.Black);
             }
             else if (_currentEffect != null)
             {

@@ -91,7 +91,7 @@ namespace ProjectVagabond
         // Overload for backward compatibility (Defaults to Fade/Fade, No Delay)
         public void ChangeScene(GameSceneState state, List<LoadingTask>? loadingTasks = null)
         {
-            ChangeScene(state, TransitionType.Fade, TransitionType.Fade, 0f, loadingTasks);
+            ChangeScene(state, TransitionType.Diamonds, TransitionType.Diamonds, 0f, loadingTasks);
         }
 
         private void PerformSceneSwap(GameSceneState state, List<LoadingTask>? loadingTasks)

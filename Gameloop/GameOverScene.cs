@@ -157,7 +157,7 @@ namespace ProjectVagabond.Scenes
 
             loadingScreen.OnComplete += () =>
             {
-                _sceneManager.ChangeScene(GameSceneState.Split, TransitionType.Fade, TransitionType.Fade);
+                _sceneManager.ChangeScene(GameSceneState.Split, TransitionType.Diamonds, TransitionType.Diamonds);
             };
 
             loadingScreen.Start();
@@ -167,7 +167,7 @@ namespace ProjectVagabond.Scenes
         {
             var core = ServiceLocator.Get<Core>();
             core.ResetGame();
-            _sceneManager.ChangeScene(GameSceneState.MainMenu, TransitionType.Fade, TransitionType.Fade);
+            _sceneManager.ChangeScene(GameSceneState.MainMenu, TransitionType.Diamonds, TransitionType.Diamonds);
         }
 
         public override void Update(GameTime gameTime)

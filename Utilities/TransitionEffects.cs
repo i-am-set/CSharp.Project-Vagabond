@@ -37,7 +37,7 @@ namespace ProjectVagabond.Transitions
             // Draw to Virtual Resolution
             var bounds = new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
 
-            spriteBatch.Draw(pixel, bounds, global.Palette_Black * alpha);
+            spriteBatch.Draw(pixel, bounds, Color.Black * alpha);
         }
     }
 
@@ -77,10 +77,10 @@ namespace ProjectVagabond.Transitions
             var pixel = ServiceLocator.Get<Texture2D>();
 
             // Top Shutter
-            spriteBatch.Draw(pixel, new Rectangle(0, 0, width, currentHeight), global.Palette_Black);
+            spriteBatch.Draw(pixel, new Rectangle(0, 0, width, currentHeight), Color.Black);
 
             // Bottom Shutter
-            spriteBatch.Draw(pixel, new Rectangle(0, height - currentHeight, width, currentHeight), global.Palette_Black);
+            spriteBatch.Draw(pixel, new Rectangle(0, height - currentHeight, width, currentHeight), Color.Black);
         }
     }
 
@@ -138,7 +138,7 @@ namespace ProjectVagabond.Transitions
                             pixel,
                             center,
                             null,
-                            global.Palette_Black,
+                            Color.Black,
                             MathHelper.PiOver4,
                             new Vector2(0.5f, 0.5f),
                             size,
@@ -151,7 +151,7 @@ namespace ProjectVagabond.Transitions
 
             if (_isOut && _timer > DURATION * 0.9f)
             {
-                spriteBatch.Draw(pixel, new Rectangle(0, 0, width, height), global.Palette_Black);
+                spriteBatch.Draw(pixel, new Rectangle(0, 0, width, height), Color.Black);
             }
         }
     }
@@ -227,12 +227,12 @@ namespace ProjectVagabond.Transitions
                     BLOCK_SIZE
                 );
 
-                spriteBatch.Draw(pixel, rect, global.Palette_Black);
+                spriteBatch.Draw(pixel, rect, Color.Black);
             }
 
             if (_isOut && progress >= 0.95f)
             {
-                spriteBatch.Draw(pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), global.Palette_Black);
+                spriteBatch.Draw(pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), Color.Black);
             }
         }
     }
@@ -305,7 +305,7 @@ namespace ProjectVagabond.Transitions
                             size
                         );
 
-                        spriteBatch.Draw(pixel, rect, global.Palette_Black);
+                        spriteBatch.Draw(pixel, rect, Color.Black);
                     }
                 }
             }
@@ -313,7 +313,7 @@ namespace ProjectVagabond.Transitions
             // Ensure full coverage at end of Out transition
             if (_isOut && _timer > DURATION * 0.95f)
             {
-                spriteBatch.Draw(pixel, new Rectangle(0, 0, width, height), global.Palette_Black);
+                spriteBatch.Draw(pixel, new Rectangle(0, 0, width, height), Color.Black);
             }
         }
     }
@@ -389,12 +389,12 @@ namespace ProjectVagabond.Transitions
                     BLOCK_SIZE
                 );
 
-                spriteBatch.Draw(pixel, rect, global.Palette_Black);
+                spriteBatch.Draw(pixel, rect, Color.Black);
             }
 
             if (_isOut && progress >= 0.95f)
             {
-                spriteBatch.Draw(pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), global.Palette_Black);
+                spriteBatch.Draw(pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), Color.Black);
             }
         }
     }

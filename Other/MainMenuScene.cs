@@ -122,7 +122,7 @@ namespace ProjectVagabond.Scenes
                 {
                     core.SetGameLoaded(true);
                     // Use None Out (Instant) -> Fade In (Smooth)
-                    _sceneManager.ChangeScene(GameSceneState.Split, TransitionType.None, TransitionType.Fade);
+                    _sceneManager.ChangeScene(GameSceneState.Split, TransitionType.None, TransitionType.Diamonds);
                 };
 
                 loadingScreen.Start();

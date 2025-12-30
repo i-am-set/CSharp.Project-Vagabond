@@ -25,6 +25,7 @@ namespace ProjectVagabond.Scenes
     /// </summary>
     public enum GameSceneState
     {
+        Startup, // Added Startup state
         MainMenu,
         TerminalMap,
         Settings,
@@ -33,7 +34,7 @@ namespace ProjectVagabond.Scenes
         Battle,
         ChoiceMenu,
         Split,
-        GameOver // Added GameOver state
+        GameOver
     }
 
     /// <summary>
@@ -225,4 +226,3 @@ namespace ProjectVagabond.Scenes
         protected bool KeyPressed(Keys key, KeyboardState current, KeyboardState previous) => current.IsKeyDown(key) && !previous.IsKeyDown(key);
     }
 }
-#nullable restore
