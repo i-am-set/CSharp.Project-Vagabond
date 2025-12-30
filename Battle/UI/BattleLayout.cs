@@ -13,6 +13,7 @@ namespace ProjectVagabond.Battle.UI
         // --- Screen Constants ---
         public const int DIVIDER_Y = 123;
         public const int ENEMY_SLOT_Y_OFFSET = 12;
+
         // --- Enemy Layout ---
         public const int ENEMY_AREA_PADDING = 40;
         public const int ENEMY_SPRITE_SIZE_NORMAL = 64;
@@ -22,7 +23,9 @@ namespace ProjectVagabond.Battle.UI
         public const float PLAYER_HEART_CENTER_Y = 99f;
         public const float PLAYER_BARS_TOP_Y = 78f;
         public const float PLAYER_NAME_TOP_Y = 111f;
-        public const int PLAYER_BAR_WIDTH = 60;
+
+        // FIX: Reduced width to 40 to match enemies
+        public const int PLAYER_BAR_WIDTH = 40;
 
         // --- HUD Constants ---
         public const int STATUS_ICON_SIZE = 5;

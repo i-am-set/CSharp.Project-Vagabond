@@ -66,7 +66,6 @@ namespace ProjectVagabond.Battle.UI
         private string _statTooltipCombatantID = null;
         private const float STAT_TOOLTIP_FADE_SPEED = 5.0f;
 
-        private string _lastAttackerId;
         private readonly Random _random = new Random();
 
         // Public Accessors
@@ -104,7 +103,6 @@ namespace ProjectVagabond.Battle.UI
             _combatantVisualCenters.Clear();
             _statTooltipAlpha = 0f;
             _statTooltipCombatantID = null;
-            _lastAttackerId = null;
         }
 
         public List<TargetInfo> GetCurrentTargets() => _currentTargets;
@@ -202,9 +200,6 @@ namespace ProjectVagabond.Battle.UI
 
             // --- Draw UI Title ---
             DrawUITitle(spriteBatch, gameTime, uiManager.SubMenuState);
-
-            // --- Draw Indicators ---
-            DrawIndicators(spriteBatch, gameTime, allCombatants, currentActor, silhouetteColors);
 
             // --- Draw Stat Tooltip ---
             if (_statTooltipAlpha > 0.01f && _statTooltipCombatantID != null)
@@ -447,19 +442,28 @@ namespace ProjectVagabond.Battle.UI
                 UpdateBarAlpha(enemy, (float)gameTime.ElapsedGameTime.TotalSeconds, showBars);
 
                 // --- POSITIONING LOGIC ---
-                Vector2 barPos = GetCombatantBarPosition(enemy);
-                float barX = barPos.X - BattleLayout.ENEMY_BAR_WIDTH / 2f;
-                float barY = barPos.Y;
+                // 1. Calculate Visual Center Y (Middle of sprite)
+                float visualCenterY = center.Y + spriteSize / 2f;
+
+                // 2. Calculate Tooltip Top Y (relative to visual center, matching BattleVfxRenderer)
+                float tooltipTopY = visualCenterY - 3;
+                if (tooltipTopY < 5) tooltipTopY = 5;
+
+                // 3. Calculate Sprite Top Pixel Y (Highest non-animated pixel)
+                float spriteTopY = GetEnemyStaticVisualTop(enemy, center.Y);
+
+                // 4. Determine Anchor (Highest point between tooltip top and sprite top)
+                // We want the bar to be above whichever is higher up on the screen (smaller Y value).
+                float anchorY = Math.Min(tooltipTopY - 2, spriteTopY);
+
+                // 5. Place Bars above Anchor (4px height)
+                float barY = anchorY - 4;
+                float barX = center.X - BattleLayout.ENEMY_BAR_WIDTH / 2f;
 
                 if (enemy.VisualHealthBarAlpha > 0.01f || enemy.VisualManaBarAlpha > 0.01f)
                 {
                     _hudRenderer.DrawStatusIcons(spriteBatch, enemy, barX, barY, BattleLayout.ENEMY_BAR_WIDTH, false, _enemyStatusIcons.ContainsKey(enemy.CombatantID) ? _enemyStatusIcons[enemy.CombatantID] : null, GetStatusIconOffset, IsStatusIconAnimating);
                     _hudRenderer.DrawEnemyBars(spriteBatch, enemy, barX, barY, BattleLayout.ENEMY_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, enemy.VisualHealthBarAlpha, enemy.VisualManaBarAlpha, gameTime);
-                }
-                else if (enemy == currentActor)
-                {
-                    // Draw Arrow at the same position as the bars would be
-                    DrawArrowAtPosition(spriteBatch, gameTime, enemy, new Vector2(center.X, barY - 12));
                 }
             }
         }
@@ -476,7 +480,7 @@ namespace ProjectVagabond.Battle.UI
                 bool isSilhouetted = shouldGrayOut && !isSelectable;
                 if (player.CombatantID == _statTooltipCombatantID && _statTooltipAlpha > 0) isSilhouetted = true;
 
-                Color silhouetteColor = isSilhouetted ? _global.Palette_DarkerGray : _global.Palette_DarkGray;
+                Color silhouetteColor = isSilhouetted ? _global.Palette_DarkerGray : _global.Palette_DarkerGray;
                 Color outlineColor = (player == currentActor) ? _global.Palette_BrightWhite : _global.Palette_DarkGray;
 
                 var spawnAnim = animManager.GetSpawnAnimationState(player.CombatantID);
@@ -535,7 +539,22 @@ namespace ProjectVagabond.Battle.UI
                 _combatantVisualCenters[player.CombatantID] = bounds.Center.ToVector2();
 
                 // --- VISIBILITY LOGIC ---
-                bool showBars = (hoveredCombatant == player) || (uiManager.HoveredCombatantFromUI == player) || selectable.Contains(player);
+                // Check if this player is the current actor AND hovering a mana move
+                bool isActingAndHoveringManaMove = false;
+                if (player == currentActor && uiManager.HoveredMove != null)
+                {
+                    bool usesMana = uiManager.HoveredMove.ManaCost > 0 || uiManager.HoveredMove.Abilities.Any(a => a is ManaDumpAbility);
+                    if (usesMana)
+                    {
+                        isActingAndHoveringManaMove = true;
+                    }
+                }
+
+                bool showBars = (hoveredCombatant == player) ||
+                                (uiManager.HoveredCombatantFromUI == player) ||
+                                selectable.Contains(player) ||
+                                isActingAndHoveringManaMove;
+
                 UpdateBarAlpha(player, (float)gameTime.ElapsedGameTime.TotalSeconds, showBars);
 
                 if (!isSilhouetted || player.CombatantID == _statTooltipCombatantID)
@@ -555,12 +574,9 @@ namespace ProjectVagabond.Battle.UI
                 if (player.VisualHealthBarAlpha > 0.01f || player.VisualManaBarAlpha > 0.01f)
                 {
                     _hudRenderer.DrawStatusIcons(spriteBatch, player, barX, barY, BattleLayout.PLAYER_BAR_WIDTH, true, _playerStatusIcons, GetStatusIconOffset, IsStatusIconAnimating);
-                    _hudRenderer.DrawEnemyBars(spriteBatch, player, barX, barY, BattleLayout.PLAYER_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, player.VisualHealthBarAlpha, player.VisualManaBarAlpha, gameTime);
-                }
-                else if (player == currentActor)
-                {
-                    // Draw Arrow at the same position as the bars would be
-                    DrawArrowAtPosition(spriteBatch, gameTime, player, new Vector2(center.X, barY - 12));
+
+                    // Pass uiManager and isActiveActor to DrawPlayerBars
+                    _hudRenderer.DrawPlayerBars(spriteBatch, player, barX, barY, BattleLayout.PLAYER_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, player.VisualHealthBarAlpha, player.VisualManaBarAlpha, gameTime, uiManager, player == currentActor);
                 }
             }
         }
@@ -576,30 +592,6 @@ namespace ProjectVagabond.Battle.UI
                 var pos = new Vector2((Global.VIRTUAL_WIDTH - size.Width) / 2, BattleLayout.DIVIDER_Y + 3 + bob);
                 spriteBatch.DrawStringSnapped(font, title, pos, _global.Palette_LightGray);
             }
-        }
-
-        private void DrawIndicators(SpriteBatch spriteBatch, GameTime gameTime, IEnumerable<BattleCombatant> allCombatants, BattleCombatant currentActor, Dictionary<string, Color> silhouetteColors)
-        {
-            if (currentActor != null && !currentActor.IsDefeated)
-                DrawArrow(spriteBatch, gameTime, currentActor);
-
-            foreach (var kvp in silhouetteColors)
-            {
-                if (kvp.Value == Color.Yellow)
-                {
-                    var c = allCombatants.FirstOrDefault(x => x.CombatantID == kvp.Key);
-                    if (c != null && !c.IsDefeated && c != currentActor)
-                        DrawArrow(spriteBatch, gameTime, c);
-                }
-            }
-        }
-
-        private void DrawArrow(SpriteBatch spriteBatch, GameTime gameTime, BattleCombatant c)
-        {
-            Vector2 barPos = GetCombatantBarPosition(c);
-            if (barPos == Vector2.Zero) return;
-
-            DrawArrowAtPosition(spriteBatch, gameTime, c, new Vector2(barPos.X, barPos.Y - 12));
         }
 
         private void UpdateEnemyAnimations(float dt, IEnumerable<BattleCombatant> combatants)
@@ -819,21 +811,6 @@ namespace ProjectVagabond.Battle.UI
             float barY = tooltipTopY - 6;
 
             return new Vector2(center.X, barY);
-        }
-
-        private void DrawArrowAtPosition(SpriteBatch spriteBatch, GameTime gameTime, BattleCombatant c, Vector2 position)
-        {
-            var sheet = _spriteManager.ArrowIconSpriteSheet;
-            var rects = _spriteManager.ArrowIconSourceRects;
-            if (sheet == null || rects == null) return;
-
-            var rect = rects[6];
-            float bob = CalculateAttackBobOffset(c.CombatantID, c.IsPlayerControlled);
-            float idle = (MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * 4f) > 0) ? -1f : 0f;
-            Vector2 recoil = _recoilStates.TryGetValue(c.CombatantID, out var r) ? r.Offset : Vector2.Zero;
-
-            var pos = new Vector2(position.X - rect.Width / 2, position.Y + bob + idle) + recoil;
-            spriteBatch.DrawSnapped(sheet, pos, rect, Color.White);
         }
     }
 }

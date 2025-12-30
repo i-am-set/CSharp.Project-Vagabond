@@ -1,8 +1,13 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -66,8 +71,6 @@ namespace ProjectVagabond.Battle.UI
 
             if (_spriteManager.ManaBarPattern != null)
             {
-                // Note: Scissor test handling should be done by caller or wrapped here if needed. 
-                // For simplicity, we assume standard drawing or simple texture draw.
                 spriteBatch.DrawSnapped(_pixel, manaFgRect, _global.Palette_LightBlue * manaAlpha);
             }
             else
@@ -79,6 +82,68 @@ namespace ProjectVagabond.Battle.UI
             if (manaAnim != null)
             {
                 DrawBarAnimationOverlay(spriteBatch, manaRect, combatant.Stats.MaxMana, manaAnim);
+            }
+        }
+
+        public void DrawPlayerBars(SpriteBatch spriteBatch, BattleCombatant player, float barX, float barY, int barWidth, int barHeight, BattleAnimationManager animationManager, float hpAlpha, float manaAlpha, GameTime gameTime, BattleUIManager uiManager, bool isActiveActor)
+        {
+            // Reuse Enemy Bar logic for base drawing, then add overlays
+            DrawEnemyBars(spriteBatch, player, barX, barY, barWidth, barHeight, animationManager, hpAlpha, manaAlpha, gameTime);
+
+            // --- MANA COST PREVIEW ---
+            if (isActiveActor && uiManager.HoveredMove != null && manaAlpha > 0.01f)
+            {
+                var move = uiManager.HoveredMove;
+                bool isManaDump = move.Abilities.Any(a => a is ManaDumpAbility);
+                int cost = move.ManaCost;
+
+                if (isManaDump)
+                {
+                    cost = player.Stats.CurrentMana;
+                }
+
+                if (cost > 0)
+                {
+                    float manaBarY = barY + barHeight + 1;
+
+                    // Calculate widths
+                    float currentPercent = player.Stats.MaxMana > 0 ? Math.Clamp((float)player.Stats.CurrentMana / player.Stats.MaxMana, 0f, 1f) : 0f;
+                    int currentWidth = (int)(barWidth * currentPercent);
+
+                    float costPercent = (float)cost / player.Stats.MaxMana;
+                    int costWidth = (int)(barWidth * costPercent);
+
+                    // Determine if affordable
+                    bool affordable = player.Stats.CurrentMana >= cost;
+
+                    Rectangle previewRect;
+                    Color previewColor;
+
+                    if (affordable)
+                    {
+                        // Draw at the end of the current bar
+                        int previewX = (int)barX + currentWidth - costWidth;
+                        // Clamp
+                        if (previewX < (int)barX) previewX = (int)barX;
+
+                        previewRect = new Rectangle(previewX, (int)manaBarY, costWidth, 1);
+
+                        // Pulse Color
+                        float pulse = (MathF.Sin(uiManager.SharedPulseTimer * 4f) + 1f) / 2f;
+                        previewColor = Color.Lerp(_global.Palette_Yellow, _global.Palette_BrightWhite, pulse);
+                    }
+                    else
+                    {
+                        // Draw over the whole current bar (or required amount) in red
+                        // If we can't afford it, show the whole cost width starting from 0, clamped to bar width?
+                        // Or just flash the current bar red?
+                        // Let's flash the current bar red to indicate "Not enough".
+                        previewRect = new Rectangle((int)barX, (int)manaBarY, currentWidth, 1);
+                        previewColor = _global.Palette_Red;
+                    }
+
+                    spriteBatch.DrawSnapped(_pixel, previewRect, previewColor * manaAlpha);
+                }
             }
         }
 
