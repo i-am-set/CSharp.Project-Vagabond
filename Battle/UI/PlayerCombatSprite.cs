@@ -1,7 +1,9 @@
-﻿using Microsoft.Xna.Framework;
+﻿#nullable enable
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
@@ -274,7 +276,7 @@ namespace ProjectVagabond.Battle.UI
             return preciseRect;
         }
 
-        public void Draw(SpriteBatch spriteBatch, BattleAnimationManager animationManager, BattleCombatant combatant, Color? tintColorOverride = null, bool isHighlighted = false, float pulseAlpha = 1f, bool asSilhouette = false, Color? silhouetteColor = null, GameTime? gameTime = null, Color? highlightColor = null, Color? outlineColorOverride = null)
+        public void Draw(SpriteBatch spriteBatch, BattleAnimationManager animationManager, BattleCombatant combatant, Color? tintColorOverride = null, bool isHighlighted = false, float pulseAlpha = 1f, bool asSilhouette = false, Color? silhouetteColor = null, GameTime? gameTime = null, Color? highlightColor = null, Color? outlineColorOverride = null, float scale = 1.0f)
         {
             Initialize();
             if (_texture == null || combatant == null) return;
@@ -324,20 +326,23 @@ namespace ProjectVagabond.Battle.UI
             // --- Silhouette Mode (e.g. for non-selectable targets) ---
             if (asSilhouette && silhouetteToDraw != null)
             {
-                var mainRect = new Rectangle(topLeftPosition.X, topLeftPosition.Y, _frameWidth, _frameHeight);
-                spriteBatch.Draw(silhouetteToDraw, mainRect, sourceRectangle, silhouetteColor ?? Color.Gray, 0f, Vector2.Zero, SpriteEffects.None, 0.5f);
+                // Use DrawSnapped with scale
+                Vector2 drawPos = new Vector2(topLeftPosition.X + _frameWidth / 2f, topLeftPosition.Y + _frameHeight / 2f);
+                Vector2 origin = new Vector2(_frameWidth / 2f, _frameHeight / 2f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, drawPos, sourceRectangle, silhouetteColor ?? Color.Gray, 0f, origin, scale, SpriteEffects.None, 0.5f);
                 return;
             }
 
             if (isHighlighted && silhouetteToDraw != null)
             {
-                var mainRect = new Rectangle(topLeftPosition.X, topLeftPosition.Y, _frameWidth, _frameHeight);
+                Vector2 drawPos = new Vector2(topLeftPosition.X + _frameWidth / 2f, topLeftPosition.Y + _frameHeight / 2f);
+                Vector2 origin = new Vector2(_frameWidth / 2f, _frameHeight / 2f);
                 SpriteEffects effects = SpriteEffects.None;
                 if (_archetypeId != "player") effects = SpriteEffects.FlipHorizontally;
 
                 // Use specific highlight color if provided, else default to Yellow
                 Color hColor = highlightColor ?? Color.Yellow;
-                spriteBatch.Draw(silhouetteToDraw, mainRect, sourceRectangle, hColor, 0f, Vector2.Zero, effects, 0.5f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, drawPos, sourceRectangle, hColor, 0f, origin, scale, effects, 0.5f);
 
                 // Draw Indicator ONLY if the color is Yellow (The "Flash" state)
                 if (hColor == Color.Yellow)
@@ -349,7 +354,7 @@ namespace ProjectVagabond.Battle.UI
                         Vector2 visualCenterOffset = ServiceLocator.Get<SpriteManager>().GetVisualCenterOffset(_archetypeId);
 
                         // Base center of the sprite rect
-                        Vector2 spriteCenter = new Vector2(mainRect.Center.X, mainRect.Center.Y);
+                        Vector2 spriteCenter = new Vector2(topLeftPosition.X + _frameWidth / 2f, topLeftPosition.Y + _frameHeight / 2f);
 
                         // Apply visual center offset
                         // X is geometric center, Y is visual center (center of mass)
@@ -372,9 +377,9 @@ namespace ProjectVagabond.Battle.UI
                         float indicatorScale = 1.0f;
 
                         Vector2 animatedPos = targetCenter + new Vector2(swayX, swayY) + shakeOffset;
-                        Vector2 origin = new Vector2(indicator.Width / 2f, indicator.Height / 2f);
+                        Vector2 indOrigin = new Vector2(indicator.Width / 2f, indicator.Height / 2f);
 
-                        spriteBatch.DrawSnapped(indicator, animatedPos, null, Color.White, rotation, origin, indicatorScale, SpriteEffects.None, 0f);
+                        spriteBatch.DrawSnapped(indicator, animatedPos, null, Color.White, rotation, indOrigin, indicatorScale, SpriteEffects.None, 0f);
                     }
                 }
                 return;
@@ -389,23 +394,19 @@ namespace ProjectVagabond.Battle.UI
             if (silhouetteToDraw != null)
             {
                 // Draw outline using integer-based rectangles offset from the snapped top-left position.
-                var rect = new Rectangle(0, 0, _frameWidth, _frameHeight);
+                // We need to use DrawSnapped with scale for the outline too.
+                Vector2 drawPos = new Vector2(topLeftPosition.X + _frameWidth / 2f, topLeftPosition.Y + _frameHeight / 2f);
+                Vector2 origin = new Vector2(_frameWidth / 2f, _frameHeight / 2f);
 
-                rect.Location = new Point(topLeftPosition.X - 1, topLeftPosition.Y);
-                spriteBatch.Draw(silhouetteToDraw, rect, sourceRectangle, outlineColor, 0f, Vector2.Zero, SpriteEffects.None, 0.49f);
-
-                rect.Location = new Point(topLeftPosition.X + 1, topLeftPosition.Y);
-                spriteBatch.Draw(silhouetteToDraw, rect, sourceRectangle, outlineColor, 0f, Vector2.Zero, SpriteEffects.None, 0.49f);
-
-                rect.Location = new Point(topLeftPosition.X, topLeftPosition.Y - 1);
-                spriteBatch.Draw(silhouetteToDraw, rect, sourceRectangle, outlineColor, 0f, Vector2.Zero, SpriteEffects.None, 0.49f);
-
-                rect.Location = new Point(topLeftPosition.X, topLeftPosition.Y + 1);
-                spriteBatch.Draw(silhouetteToDraw, rect, sourceRectangle, outlineColor, 0f, Vector2.Zero, SpriteEffects.None, 0.49f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, drawPos + new Vector2(-1, 0), sourceRectangle, outlineColor, 0f, origin, scale, SpriteEffects.None, 0.49f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, drawPos + new Vector2(1, 0), sourceRectangle, outlineColor, 0f, origin, scale, SpriteEffects.None, 0.49f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, drawPos + new Vector2(0, -1), sourceRectangle, outlineColor, 0f, origin, scale, SpriteEffects.None, 0.49f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, drawPos + new Vector2(0, 1), sourceRectangle, outlineColor, 0f, origin, scale, SpriteEffects.None, 0.49f);
             }
 
             // --- Draw Main Sprite ---
-            var mainRectDraw = new Rectangle(topLeftPosition.X, topLeftPosition.Y, _frameWidth, _frameHeight);
+            Vector2 mainDrawPos = new Vector2(topLeftPosition.X + _frameWidth / 2f, topLeftPosition.Y + _frameHeight / 2f);
+            Vector2 mainOrigin = new Vector2(_frameWidth / 2f, _frameHeight / 2f);
 
             // Flip horizontally if it's NOT the player (assuming allies face right like enemies)
             // Actually, usually allies face right (towards enemies) and enemies face left.
@@ -418,12 +419,12 @@ namespace ProjectVagabond.Battle.UI
                 spriteEffects = SpriteEffects.FlipHorizontally;
             }
 
-            spriteBatch.Draw(textureToDraw, mainRectDraw, sourceRectangle, mainColor, 0f, Vector2.Zero, spriteEffects, 0.5f);
+            spriteBatch.DrawSnapped(textureToDraw, mainDrawPos, sourceRectangle, mainColor, 0f, mainOrigin, scale, spriteEffects, 0.5f);
 
             // --- Draw Flash Overlay ---
             if (isFlashingWhite && silhouetteToDraw != null)
             {
-                spriteBatch.Draw(silhouetteToDraw, mainRectDraw, sourceRectangle, Color.White * 0.8f, 0f, Vector2.Zero, spriteEffects, 0.51f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos, sourceRectangle, Color.White * 0.8f, 0f, mainOrigin, scale, spriteEffects, 0.51f);
             }
         }
     }

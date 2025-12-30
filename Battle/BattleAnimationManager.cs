@@ -198,6 +198,7 @@ namespace ProjectVagabond.Battle.UI
 
             // --- NEW: Pre-calculated Target ---
             public Vector2? PreCalculatedTarget;
+            public string TargetCombatantID; // ID of the combatant who will "catch" this coin
         }
         private readonly List<CoinParticle> _activeCoins = new List<CoinParticle>();
 
@@ -220,6 +221,15 @@ namespace ProjectVagabond.Battle.UI
         // Floor Layout
         private const float COIN_GROUND_OFFSET_Y = 42f; // Lift the baseline up 16px
         private const float COIN_GROUND_DEPTH_HEIGHT = 14f; // The vertical spread of the floor (3D effect)
+
+        // --- COIN CATCH ANIMATION ---
+        public class CoinCatchAnimationState
+        {
+            public string CombatantID;
+            public float Timer;
+            public const float DURATION = 0.15f; // Very quick pop
+        }
+        private readonly List<CoinCatchAnimationState> _activeCoinCatchAnimations = new List<CoinCatchAnimationState>();
 
         // --- HITSTOP VISUAL STATE ---
         public class HitstopVisualState
@@ -284,6 +294,7 @@ namespace ProjectVagabond.Battle.UI
             _activeCoins.Clear();
             _pendingTextIndicators.Clear();
             _activeHitstopVisuals.Clear();
+            _activeCoinCatchAnimations.Clear();
             _indicatorCooldownTimer = 0f;
         }
 
@@ -480,6 +491,29 @@ namespace ProjectVagabond.Battle.UI
                 CombatantID = combatantId,
                 Timer = 0f
             });
+        }
+
+        public void StartCoinCatchAnimation(string combatantId)
+        {
+            // Reset timer if already exists to keep it popping
+            var existing = _activeCoinCatchAnimations.FirstOrDefault(a => a.CombatantID == combatantId);
+            if (existing != null)
+            {
+                existing.Timer = 0f;
+            }
+            else
+            {
+                _activeCoinCatchAnimations.Add(new CoinCatchAnimationState
+                {
+                    CombatantID = combatantId,
+                    Timer = 0f
+                });
+            }
+        }
+
+        public CoinCatchAnimationState GetCoinCatchAnimationState(string combatantId)
+        {
+            return _activeCoinCatchAnimations.FirstOrDefault(a => a.CombatantID == combatantId);
         }
 
         public void StartAbilityIndicator(string abilityName)
@@ -716,6 +750,7 @@ namespace ProjectVagabond.Battle.UI
             UpdateAbilityIndicators(gameTime);
             UpdateBarAnimations(gameTime);
             UpdateCoins(gameTime, combatants);
+            UpdateCoinCatchAnimations(gameTime);
         }
 
         private void UpdateIndicatorQueue(GameTime gameTime)
@@ -916,10 +951,13 @@ namespace ProjectVagabond.Battle.UI
 
                 // --- ROUND ROBIN TARGET ASSIGNMENT ---
                 Vector2? targetPos = null;
+                string targetId = null;
+
                 if (players.Any())
                 {
                     // Distribute coins evenly among players
                     var targetPlayer = players[i % players.Count];
+                    targetId = targetPlayer.CombatantID;
 
                     // Calculate visual center for the target player
                     // Hardcoded logic based on BattleRenderer layout to avoid dependency cycle
@@ -950,7 +988,8 @@ namespace ProjectVagabond.Battle.UI
                     MagnetAcceleration = (float)(_random.NextDouble() * (COIN_MAGNET_ACCEL_MAX - COIN_MAGNET_ACCEL_MIN) + COIN_MAGNET_ACCEL_MIN),
                     FlipTimer = (float)(_random.NextDouble() * MathHelper.TwoPi),
                     FlipSpeed = 10f + (float)(_random.NextDouble() * 10f),
-                    PreCalculatedTarget = targetPos // Assign the specific target
+                    PreCalculatedTarget = targetPos, // Assign the specific target
+                    TargetCombatantID = targetId
                 };
                 _activeCoins.Add(coin);
             }
@@ -982,6 +1021,11 @@ namespace ProjectVagabond.Battle.UI
 
                     if (distanceSq < COIN_MAGNET_KILL_DIST_SQ)
                     {
+                        // Coin Collected
+                        if (!string.IsNullOrEmpty(coin.TargetCombatantID))
+                        {
+                            StartCoinCatchAnimation(coin.TargetCombatantID);
+                        }
                         _activeCoins.RemoveAt(i);
                         continue;
                     }
@@ -1030,6 +1074,20 @@ namespace ProjectVagabond.Battle.UI
                             _activeCoins.RemoveAt(i);
                         }
                     }
+                }
+            }
+        }
+
+        private void UpdateCoinCatchAnimations(GameTime gameTime)
+        {
+            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            for (int i = _activeCoinCatchAnimations.Count - 1; i >= 0; i--)
+            {
+                var anim = _activeCoinCatchAnimations[i];
+                anim.Timer += dt;
+                if (anim.Timer >= CoinCatchAnimationState.DURATION)
+                {
+                    _activeCoinCatchAnimations.RemoveAt(i);
                 }
             }
         }

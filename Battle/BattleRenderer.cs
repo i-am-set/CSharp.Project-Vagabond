@@ -418,10 +418,10 @@ namespace ProjectVagabond.Battle.UI
             }
 
             // Cleanup stale entries from the position cache.
-            // We keep entries for Active enemies AND Dying enemies (so they don't snap while fading out).
-            // Benched enemies are removed so they snap correctly when they return.
-            var keepIds = activeEnemies.Select(e => e.CombatantID).ToHashSet();
-            foreach (var d in dyingEnemies) keepIds.Add(d.CombatantID);
+            // FIX: We must keep entries for ALL enemies currently on the field, even if they are defeated (Zombies).
+            // This prevents the floor/sprite from snapping back to the slot position during the death animation fade-out.
+            var allOnFieldEnemies = enemies.Where(c => c.IsActiveOnField).ToList();
+            var keepIds = allOnFieldEnemies.Select(e => e.CombatantID).ToHashSet();
 
             var keysToRemove = _enemyVisualXPositions.Keys.Where(k => !keepIds.Contains(k)).ToList();
             foreach (var key in keysToRemove)
@@ -677,9 +677,11 @@ namespace ProjectVagabond.Battle.UI
                 var healFlash = animManager.GetHealFlashAnimationState(player.CombatantID);
                 var hitFlash = animManager.GetHitFlashState(player.CombatantID);
                 var healBounce = animManager.GetHealBounceAnimationState(player.CombatantID);
+                var coinCatch = animManager.GetCoinCatchAnimationState(player.CombatantID);
 
                 float spawnY = 0f;
                 float alpha = player.VisualAlpha;
+                float scale = 1.0f;
 
                 if (switchOut != null)
                 {
@@ -707,6 +709,15 @@ namespace ProjectVagabond.Battle.UI
                     float p = healBounce.Timer / BattleAnimationManager.HealBounceAnimationState.Duration;
                     bob += MathF.Sin(p * MathHelper.Pi) * -BattleAnimationManager.HealBounceAnimationState.Height;
                 }
+
+                // --- COIN CATCH ANIMATION ---
+                if (coinCatch != null)
+                {
+                    float p = coinCatch.Timer / BattleAnimationManager.CoinCatchAnimationState.DURATION;
+                    float s = MathF.Sin(p * MathHelper.Pi); // 0 -> 1 -> 0
+                    scale += s * 0.15f; // Max scale 1.15
+                }
+
                 Vector2 recoil = _recoilStates.TryGetValue(player.CombatantID, out var r) ? r.Offset : Vector2.Zero;
                 Vector2 shake = hitFlash != null ? hitFlash.ShakeOffset : Vector2.Zero;
 
@@ -720,7 +731,7 @@ namespace ProjectVagabond.Battle.UI
                 bool isHighlighted = selectable.Contains(player) && shouldGrayOut;
                 float pulse = 0f;
 
-                sprite.Draw(spriteBatch, animManager, player, tint, isHighlighted, pulse, isSilhouetted, silhouetteColor, gameTime, highlight, outlineColor);
+                sprite.Draw(spriteBatch, animManager, player, tint, isHighlighted, pulse, isSilhouetted, silhouetteColor, gameTime, highlight, outlineColor, scale);
 
                 Rectangle bounds = sprite.GetStaticBounds(animManager, player);
                 _currentTargets.Add(new TargetInfo { Combatant = player, Bounds = bounds });
