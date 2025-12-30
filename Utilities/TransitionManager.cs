@@ -30,7 +30,6 @@ namespace ProjectVagabond
         {
             _effects = new Dictionary<TransitionType, ITransitionEffect>
             {
-                { TransitionType.Fade, new FadeTransition() },
                 { TransitionType.Shutters, new ShuttersTransition() },
                 { TransitionType.Diamonds, new DiamondWipeTransition() },
                 { TransitionType.Blocks, new BlocksWipeTransition() },
@@ -82,7 +81,7 @@ namespace ProjectVagabond
             {
                 if (!_effects.TryGetValue(outType, out _currentEffect))
                 {
-                    _currentEffect = _effects[TransitionType.Fade];
+                    _currentEffect = _effects[TransitionType.Diamonds];
                 }
 
                 _currentState = TransitionState.Out;
@@ -102,7 +101,7 @@ namespace ProjectVagabond
             {
                 if (!_effects.TryGetValue(_pendingInType, out _currentEffect))
                 {
-                    _currentEffect = _effects[TransitionType.Fade];
+                    _currentEffect = _effects[TransitionType.Diamonds];
                 }
 
                 _currentState = TransitionState.In;

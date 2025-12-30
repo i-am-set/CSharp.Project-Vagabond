@@ -137,13 +137,13 @@ namespace ProjectVagabond.Battle.UI
                     _selectionTimer += dt;
                     float t = _selectionTimer % SELECTION_BOB_CYCLE_DURATION;
 
-                    // First half: Up 1 pixel, Alt Sprite
+                    // First half: Alt Sprite (No vertical bob)
                     if (t < SELECTION_BOB_CYCLE_DURATION / 2f)
                     {
-                        _selectionOffsetY = -1f;
+                        _selectionOffsetY = 0f;
                         _useAltFrame = true;
                     }
-                    // Second half: Down (Base), Main Sprite
+                    // Second half: Main Sprite
                     else
                     {
                         _selectionOffsetY = 0f;
