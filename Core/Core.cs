@@ -763,7 +763,7 @@ namespace ProjectVagabond
             if (_loadingScreen.IsActive)
             {
                 // Draw Loading Screen directly to the virtual target
-                GraphicsDevice.Clear(_global.Palette_Black);
+                GraphicsDevice.Clear(Color.Black); // Changed from _global.Palette_Black to Color.Black
                 _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
                 _loadingScreen.Draw(_spriteBatch, _tertiaryFont);
                 _spriteBatch.End();
@@ -778,15 +778,19 @@ namespace ProjectVagabond
                 // Render Dice (returns a target, doesn't draw to current)
                 diceRenderTarget = _diceRollingSystem.Draw(_defaultFont);
 
-                // Draw Transitions (Overlay on scene)
-                _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-                _transitionManager.Draw(_spriteBatch);
-                _spriteBatch.End();
+                // Draw Transitions (Overlay on scene) - REMOVED FROM HERE
+                // _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+                // _transitionManager.Draw(_spriteBatch);
+                // _spriteBatch.End();
             }
 
             // 2. Composite to Fullscreen Target (Letterboxing)
+            // Determine the background color for the letterbox bars
+            bool forceBlackBg = _loadingScreen.IsActive || _sceneManager.CurrentActiveScene is StartupScene;
+            Color letterboxColor = forceBlackBg ? Color.Black : _global.GameBg;
+
             GraphicsDevice.SetRenderTarget(_finalCompositeTarget);
-            GraphicsDevice.Clear(_global.GameBg);
+            GraphicsDevice.Clear(letterboxColor);
 
             _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
 
@@ -831,7 +835,7 @@ namespace ProjectVagabond
 
             // 6. Final Render to Backbuffer (Apply CRT Shader)
             GraphicsDevice.SetRenderTarget(null);
-            GraphicsDevice.Clear(_global.GameBg);
+            GraphicsDevice.Clear(letterboxColor);
 
             Matrix shakeMatrix = _hapticsManager.GetHapticsMatrix();
             shakeMatrix.M41 = MathF.Round(shakeMatrix.M41);
@@ -883,12 +887,13 @@ namespace ProjectVagabond
 
             _spriteBatch.End();
 
-            // 7. FORCE BLACK OVERLAY DURING TRANSITION HOLD
-            // This covers up the Palette_Black background and any noise artifacts during scene swaps.
-            if (_transitionManager.IsScreenObscured)
+            // 7. DRAW TRANSITIONS (Covering everything)
+            if (_transitionManager.IsTransitioning)
             {
-                _spriteBatch.Begin();
-                _spriteBatch.Draw(_pixel, new Rectangle(0, 0, GraphicsDevice.PresentationParameters.BackBufferWidth, GraphicsDevice.PresentationParameters.BackBufferHeight), Color.Black);
+                _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+                // Use full backbuffer bounds to cover letterbox bars
+                var screenBounds = new Rectangle(0, 0, GraphicsDevice.PresentationParameters.BackBufferWidth, GraphicsDevice.PresentationParameters.BackBufferHeight);
+                _transitionManager.Draw(_spriteBatch, screenBounds, _finalScale);
                 _spriteBatch.End();
             }
 

@@ -17,6 +17,13 @@ namespace ProjectVagabond.Transitions
         void Start(bool isTransitioningOut);
 
         void Update(GameTime gameTime);
-        void Draw(SpriteBatch spriteBatch);
+
+        /// <summary>
+        /// Draws the transition effect.
+        /// </summary>
+        /// <param name="spriteBatch">The sprite batch to draw with.</param>
+        /// <param name="bounds">The full screen bounds to cover.</param>
+        /// <param name="scale">The current game scale factor, used to size retro elements correctly.</param>
+        void Draw(SpriteBatch spriteBatch, Rectangle bounds, float scale);
     }
 }

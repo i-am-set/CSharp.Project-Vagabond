@@ -30,6 +30,7 @@ namespace ProjectVagabond
         {
             _effects = new Dictionary<TransitionType, ITransitionEffect>
             {
+                { TransitionType.Fade, new FadeTransition() },
                 { TransitionType.Shutters, new ShuttersTransition() },
                 { TransitionType.Diamonds, new DiamondWipeTransition() },
                 { TransitionType.Blocks, new BlocksWipeTransition() },
@@ -168,19 +169,19 @@ namespace ProjectVagabond
             }
         }
 
-        public void Draw(SpriteBatch spriteBatch)
+        public void Draw(SpriteBatch spriteBatch, Rectangle bounds, float scale)
         {
             if (_currentState == TransitionState.Idle) return;
 
             if (_currentState == TransitionState.Hold)
             {
                 var pixel = ServiceLocator.Get<Texture2D>();
-                // Draw black over the entire virtual resolution
-                spriteBatch.Draw(pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), Color.Black);
+                // Draw black over the entire bounds
+                spriteBatch.Draw(pixel, bounds, Color.Black);
             }
             else if (_currentEffect != null)
             {
-                _currentEffect.Draw(spriteBatch);
+                _currentEffect.Draw(spriteBatch, bounds, scale);
             }
         }
     }

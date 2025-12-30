@@ -26,17 +26,12 @@ namespace ProjectVagabond.Transitions
             _timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
         }
 
-        public void Draw(SpriteBatch spriteBatch)
+        public void Draw(SpriteBatch spriteBatch, Rectangle bounds, float scale)
         {
-            var global = ServiceLocator.Get<Global>();
-
             float progress = Math.Clamp(_timer / DURATION, 0f, 1f);
             float alpha = _isOut ? progress : 1.0f - progress;
 
             var pixel = ServiceLocator.Get<Texture2D>();
-            // Draw to Virtual Resolution
-            var bounds = new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
-
             spriteBatch.Draw(pixel, bounds, Color.Black * alpha);
         }
     }
@@ -60,13 +55,10 @@ namespace ProjectVagabond.Transitions
             _timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
         }
 
-        public void Draw(SpriteBatch spriteBatch)
+        public void Draw(SpriteBatch spriteBatch, Rectangle bounds, float scale)
         {
-            var global = ServiceLocator.Get<Global>();
-
-            // Use Virtual Resolution
-            int width = Global.VIRTUAL_WIDTH;
-            int height = Global.VIRTUAL_HEIGHT;
+            int width = bounds.Width;
+            int height = bounds.Height;
 
             float progress = Math.Clamp(_timer / DURATION, 0f, 1f);
             float eased = _isOut ? Easing.EaseInOutExpo(progress) : Easing.EaseInQuad(1.0f - progress);
@@ -92,7 +84,7 @@ namespace ProjectVagabond.Transitions
         private bool _isOut;
         public bool IsComplete => _timer >= DURATION;
 
-        // Fixed virtual pixel size (20px on a 320px screen = 16 columns)
+        // Virtual pixel size
         private const int GRID_SIZE = 20;
 
         public void Start(bool isTransitioningOut)
@@ -106,16 +98,18 @@ namespace ProjectVagabond.Transitions
             _timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
         }
 
-        public void Draw(SpriteBatch spriteBatch)
+        public void Draw(SpriteBatch spriteBatch, Rectangle bounds, float scale)
         {
-            var global = ServiceLocator.Get<Global>();
             var pixel = ServiceLocator.Get<Texture2D>();
 
-            int width = Global.VIRTUAL_WIDTH;
-            int height = Global.VIRTUAL_HEIGHT;
+            int width = bounds.Width;
+            int height = bounds.Height;
 
-            int cols = (int)Math.Ceiling((float)width / GRID_SIZE) + 2;
-            int rows = (int)Math.Ceiling((float)height / GRID_SIZE) + 2;
+            // Scale the grid size to match the window scale
+            float scaledGridSize = GRID_SIZE * scale;
+
+            int cols = (int)Math.Ceiling(width / scaledGridSize) + 2;
+            int rows = (int)Math.Ceiling(height / scaledGridSize) + 2;
 
             float maxDelay = 0.6f;
             float growTime = 0.4f;
@@ -127,12 +121,12 @@ namespace ProjectVagabond.Transitions
                     float delay = ((float)(x + y) / (cols + rows)) * maxDelay;
                     float localTime = _timer - delay;
                     float progress = Math.Clamp(localTime / growTime, 0f, 1f);
-                    float scale = _isOut ? progress : 1.0f - progress;
+                    float sizeScale = _isOut ? progress : 1.0f - progress;
 
-                    if (scale > 0)
+                    if (sizeScale > 0)
                     {
-                        Vector2 center = new Vector2(x * GRID_SIZE, y * GRID_SIZE);
-                        float size = GRID_SIZE * 1.5f * scale;
+                        Vector2 center = new Vector2(x * scaledGridSize, y * scaledGridSize);
+                        float size = scaledGridSize * 1.5f * sizeScale;
 
                         spriteBatch.Draw(
                             pixel,
@@ -151,7 +145,7 @@ namespace ProjectVagabond.Transitions
 
             if (_isOut && _timer > DURATION * 0.9f)
             {
-                spriteBatch.Draw(pixel, new Rectangle(0, 0, width, height), Color.Black);
+                spriteBatch.Draw(pixel, bounds, Color.Black);
             }
         }
     }
@@ -165,37 +159,13 @@ namespace ProjectVagabond.Transitions
         public bool IsComplete => _timer >= DURATION;
 
         private const int BLOCK_SIZE = 10;
-        private List<Point> _shuffledIndices = new List<Point>();
-        private int _cols;
-        private int _rows;
+        // We can't pre-calculate indices in Start() anymore because bounds might change or scale might change.
+        // We'll use a deterministic random approach based on coordinates.
 
         public void Start(bool isTransitioningOut)
         {
             _isOut = isTransitioningOut;
             _timer = 0f;
-
-            _cols = (int)Math.Ceiling((float)Global.VIRTUAL_WIDTH / BLOCK_SIZE);
-            _rows = (int)Math.Ceiling((float)Global.VIRTUAL_HEIGHT / BLOCK_SIZE);
-
-            _shuffledIndices.Clear();
-            for (int y = 0; y < _rows; y++)
-            {
-                for (int x = 0; x < _cols; x++)
-                {
-                    _shuffledIndices.Add(new Point(x, y));
-                }
-            }
-
-            var rng = new Random();
-            int n = _shuffledIndices.Count;
-            while (n > 1)
-            {
-                n--;
-                int k = rng.Next(n + 1);
-                var value = _shuffledIndices[k];
-                _shuffledIndices[k] = _shuffledIndices[n];
-                _shuffledIndices[n] = value;
-            }
         }
 
         public void Update(GameTime gameTime)
@@ -203,36 +173,60 @@ namespace ProjectVagabond.Transitions
             _timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
         }
 
-        public void Draw(SpriteBatch spriteBatch)
+        public void Draw(SpriteBatch spriteBatch, Rectangle bounds, float scale)
         {
-            var global = ServiceLocator.Get<Global>();
             var pixel = ServiceLocator.Get<Texture2D>();
 
+            float scaledBlockSize = BLOCK_SIZE * scale;
+            int cols = (int)Math.Ceiling(bounds.Width / scaledBlockSize);
+            int rows = (int)Math.Ceiling(bounds.Height / scaledBlockSize);
+
             float progress = Math.Clamp(_timer / DURATION, 0f, 1f);
-            int totalBlocks = _shuffledIndices.Count;
 
-            int blocksToDraw = _isOut
-                ? (int)(totalBlocks * progress)
-                : (int)(totalBlocks * (1.0f - progress));
+            // Use a fixed seed for stability during the transition
+            var rng = new Random(12345);
 
-            for (int i = 0; i < blocksToDraw; i++)
+            // We need to determine which blocks are "on" based on progress.
+            // To do this efficiently without re-shuffling every frame, we can assign a random threshold to each block.
+
+            for (int y = 0; y < rows; y++)
             {
-                if (i >= _shuffledIndices.Count) break;
+                for (int x = 0; x < cols; x++)
+                {
+                    // Generate a deterministic random value for this block (0.0 to 1.0)
+                    // Simple hash of coordinates
+                    double blockThreshold = ((x * 37 + y * 113) % 1000) / 1000.0;
 
-                Point index = _shuffledIndices[i];
-                Rectangle rect = new Rectangle(
-                    index.X * BLOCK_SIZE,
-                    index.Y * BLOCK_SIZE,
-                    BLOCK_SIZE,
-                    BLOCK_SIZE
-                );
+                    // Scramble it a bit more with Random seeded by coord
+                    var blockRng = new Random(x * 1000 + y);
+                    blockThreshold = blockRng.NextDouble();
 
-                spriteBatch.Draw(pixel, rect, Color.Black);
+                    bool shouldDraw;
+                    if (_isOut)
+                    {
+                        shouldDraw = progress >= blockThreshold;
+                    }
+                    else
+                    {
+                        shouldDraw = (1.0f - progress) >= blockThreshold;
+                    }
+
+                    if (shouldDraw)
+                    {
+                        Rectangle rect = new Rectangle(
+                            (int)(x * scaledBlockSize),
+                            (int)(y * scaledBlockSize),
+                            (int)Math.Ceiling(scaledBlockSize),
+                            (int)Math.Ceiling(scaledBlockSize)
+                        );
+                        spriteBatch.Draw(pixel, rect, Color.Black);
+                    }
+                }
             }
 
             if (_isOut && progress >= 0.95f)
             {
-                spriteBatch.Draw(pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), Color.Black);
+                spriteBatch.Draw(pixel, bounds, Color.Black);
             }
         }
     }
@@ -245,7 +239,6 @@ namespace ProjectVagabond.Transitions
         private bool _isOut;
         public bool IsComplete => _timer >= DURATION;
 
-        // Uses the larger block size
         private const int BLOCK_SIZE = 40;
 
         public void Start(bool isTransitioningOut)
@@ -259,16 +252,13 @@ namespace ProjectVagabond.Transitions
             _timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
         }
 
-        public void Draw(SpriteBatch spriteBatch)
+        public void Draw(SpriteBatch spriteBatch, Rectangle bounds, float scale)
         {
-            var global = ServiceLocator.Get<Global>();
             var pixel = ServiceLocator.Get<Texture2D>();
 
-            int width = Global.VIRTUAL_WIDTH;
-            int height = Global.VIRTUAL_HEIGHT;
-
-            int cols = (int)Math.Ceiling((float)width / BLOCK_SIZE);
-            int rows = (int)Math.Ceiling((float)height / BLOCK_SIZE);
+            float scaledBlockSize = BLOCK_SIZE * scale;
+            int cols = (int)Math.Ceiling(bounds.Width / scaledBlockSize);
+            int rows = (int)Math.Ceiling(bounds.Height / scaledBlockSize);
 
             float maxDelay = 0.5f;
             float growTime = 0.4f;
@@ -277,32 +267,26 @@ namespace ProjectVagabond.Transitions
             {
                 for (int x = 0; x < cols; x++)
                 {
-                    // Calculate delay based on diagonal position (Top-Left to Bottom-Right wave)
                     float delay = ((float)(x + y) / (cols + rows)) * maxDelay;
                     float localTime = _timer - delay;
                     float progress = Math.Clamp(localTime / growTime, 0f, 1f);
 
-                    // Easing function for smooth pop
                     float eased = Easing.EaseOutCubic(progress);
-                    float scale = _isOut ? eased : 1.0f - eased;
+                    float sizeScale = _isOut ? eased : 1.0f - eased;
 
-                    if (scale > 0.01f)
+                    if (sizeScale > 0.01f)
                     {
-                        // Calculate exact pixel size for the block
-                        // We add a small buffer (1.1f) at full scale to ensure they overlap slightly and seal gaps
-                        float finalScale = scale * 1.05f;
-                        int size = (int)(BLOCK_SIZE * finalScale);
+                        float finalScale = sizeScale * 1.05f; // Overlap buffer
+                        float size = scaledBlockSize * finalScale;
 
-                        // Calculate center of the grid cell
-                        int centerX = x * BLOCK_SIZE + BLOCK_SIZE / 2;
-                        int centerY = y * BLOCK_SIZE + BLOCK_SIZE / 2;
+                        float centerX = x * scaledBlockSize + scaledBlockSize / 2;
+                        float centerY = y * scaledBlockSize + scaledBlockSize / 2;
 
-                        // Draw rectangle centered on the grid cell
                         Rectangle rect = new Rectangle(
-                            centerX - size / 2,
-                            centerY - size / 2,
-                            size,
-                            size
+                            (int)(centerX - size / 2),
+                            (int)(centerY - size / 2),
+                            (int)size,
+                            (int)size
                         );
 
                         spriteBatch.Draw(pixel, rect, Color.Black);
@@ -310,15 +294,14 @@ namespace ProjectVagabond.Transitions
                 }
             }
 
-            // Ensure full coverage at end of Out transition
             if (_isOut && _timer > DURATION * 0.95f)
             {
-                spriteBatch.Draw(pixel, new Rectangle(0, 0, width, height), Color.Black);
+                spriteBatch.Draw(pixel, bounds, Color.Black);
             }
         }
     }
 
-    // --- 4. BLOCKS (Random Grid Fill - Small) ---
+    // --- 6. PIXELS (Small Grid) ---
     public class PixelWipeTransition : ITransitionEffect
     {
         private float _timer;
@@ -326,38 +309,12 @@ namespace ProjectVagabond.Transitions
         private bool _isOut;
         public bool IsComplete => _timer >= DURATION;
 
-        private const int BLOCK_SIZE = 1;
-        private List<Point> _shuffledIndices = new List<Point>();
-        private int _cols;
-        private int _rows;
+        private const int BLOCK_SIZE = 1; // Virtual pixel size
 
         public void Start(bool isTransitioningOut)
         {
             _isOut = isTransitioningOut;
             _timer = 0f;
-
-            _cols = (int)Math.Ceiling((float)Global.VIRTUAL_WIDTH / BLOCK_SIZE);
-            _rows = (int)Math.Ceiling((float)Global.VIRTUAL_HEIGHT / BLOCK_SIZE);
-
-            _shuffledIndices.Clear();
-            for (int y = 0; y < _rows; y++)
-            {
-                for (int x = 0; x < _cols; x++)
-                {
-                    _shuffledIndices.Add(new Point(x, y));
-                }
-            }
-
-            var rng = new Random();
-            int n = _shuffledIndices.Count;
-            while (n > 1)
-            {
-                n--;
-                int k = rng.Next(n + 1);
-                var value = _shuffledIndices[k];
-                _shuffledIndices[k] = _shuffledIndices[n];
-                _shuffledIndices[n] = value;
-            }
         }
 
         public void Update(GameTime gameTime)
@@ -365,36 +322,52 @@ namespace ProjectVagabond.Transitions
             _timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
         }
 
-        public void Draw(SpriteBatch spriteBatch)
+        public void Draw(SpriteBatch spriteBatch, Rectangle bounds, float scale)
         {
-            var global = ServiceLocator.Get<Global>();
             var pixel = ServiceLocator.Get<Texture2D>();
 
+            float scaledBlockSize = BLOCK_SIZE * scale;
+            int cols = (int)Math.Ceiling(bounds.Width / scaledBlockSize);
+            int rows = (int)Math.Ceiling(bounds.Height / scaledBlockSize);
+
             float progress = Math.Clamp(_timer / DURATION, 0f, 1f);
-            int totalBlocks = _shuffledIndices.Count;
 
-            int blocksToDraw = _isOut
-                ? (int)(totalBlocks * progress)
-                : (int)(totalBlocks * (1.0f - progress));
-
-            for (int i = 0; i < blocksToDraw; i++)
+            // Deterministic random drawing
+            for (int y = 0; y < rows; y++)
             {
-                if (i >= _shuffledIndices.Count) break;
+                for (int x = 0; x < cols; x++)
+                {
+                    // Simple hash for threshold
+                    double blockThreshold = ((x * 73 + y * 179) % 1000) / 1000.0;
+                    var blockRng = new Random(x * 5000 + y);
+                    blockThreshold = blockRng.NextDouble();
 
-                Point index = _shuffledIndices[i];
-                Rectangle rect = new Rectangle(
-                    index.X * BLOCK_SIZE,
-                    index.Y * BLOCK_SIZE,
-                    BLOCK_SIZE,
-                    BLOCK_SIZE
-                );
+                    bool shouldDraw;
+                    if (_isOut)
+                    {
+                        shouldDraw = progress >= blockThreshold;
+                    }
+                    else
+                    {
+                        shouldDraw = (1.0f - progress) >= blockThreshold;
+                    }
 
-                spriteBatch.Draw(pixel, rect, Color.Black);
+                    if (shouldDraw)
+                    {
+                        Rectangle rect = new Rectangle(
+                            (int)(x * scaledBlockSize),
+                            (int)(y * scaledBlockSize),
+                            (int)Math.Ceiling(scaledBlockSize),
+                            (int)Math.Ceiling(scaledBlockSize)
+                        );
+                        spriteBatch.Draw(pixel, rect, Color.Black);
+                    }
+                }
             }
 
             if (_isOut && progress >= 0.95f)
             {
-                spriteBatch.Draw(pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), Color.Black);
+                spriteBatch.Draw(pixel, bounds, Color.Black);
             }
         }
     }
