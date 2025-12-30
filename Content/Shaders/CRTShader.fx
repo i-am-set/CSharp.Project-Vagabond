@@ -15,6 +15,8 @@ uniform float Gamma;
 uniform float3 FlashColor;
 uniform float FlashIntensity;
 uniform float ImpactGlitchIntensity;
+uniform float Saturation;
+uniform float Vibrance;
 
 // --- Toggles ---
 #define ENABLE_SCANLINES
@@ -33,7 +35,7 @@ static const float WOBBLE_FREQUENCY = 1.0;
 static const float WOBBLE_AMPLITUDE = 1.0; // In physical pixels (keep small for crispness)
 
 // Chromatic Aberration
-static const float CHROMATIC_OFFSET = 1.5; // In physical pixels
+static const float CHROMATIC_OFFSET = 1.2; // In physical pixels
 
 // Vignette
 static const float VIGNETTE_INTENSITY = 0.3;
@@ -105,7 +107,25 @@ float4 MainPS(PixelShaderInput input) : COLOR
     color *= scanlineFactor;
 #endif
 
-    // --- 4. VIGNETTE ---
+    // --- 4. SATURATION & VIBRANCE ---
+    // Luminance coefficient
+    float3 lumaCoef = float3(0.299, 0.587, 0.114);
+    float luma = dot(color, lumaCoef);
+
+    // Standard Saturation
+    color = lerp(float3(luma, luma, luma), color, Saturation);
+
+    // Vibrance (Smart Saturation)
+    // Calculate current saturation level roughly
+    float max_color = max(color.r, max(color.g, color.b));
+    float min_color = min(color.r, min(color.g, color.b));
+    float color_sat = max_color - min_color;
+
+    // Increase saturation based on how low the current saturation is
+    // If Vibrance is positive, we boost muted colors more.
+    color = lerp(float3(luma, luma, luma), color, 1.0 + (Vibrance * (1.0 - color_sat)));
+
+    // --- 5. VIGNETTE ---
 #ifdef ENABLE_VIGNETTE
     float2 vUV = uv * (1.0 - uv.yx); // Classic vignette equation
     float vig = vUV.x * vUV.y * 15.0;
@@ -113,13 +133,13 @@ float4 MainPS(PixelShaderInput input) : COLOR
     color *= float3(vig, vig, vig); // Multiply instead of mix for better color retention
 #endif
 
-    // --- 5. NOISE (Dithering) ---
+    // --- 6. NOISE (Dithering) ---
 #ifdef ENABLE_NOISE
     float noise = (rand(uv * Time) - 0.5) * NOISE_INTENSITY;
     color += noise;
 #endif
 
-    // --- 6. GAMMA & FLASH ---
+    // --- 7. GAMMA & FLASH ---
     // Apply Gamma Correction
     color = max(color, 0.0);
     color = pow(color, 1.0 / Gamma);

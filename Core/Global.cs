@@ -247,6 +247,10 @@ namespace ProjectVagabond
         public float BackgroundDistortionSpeed { get; set; } = 0.5f;
         public float BackgroundNoiseThreshold { get; set; } = 0.01f; // Tolerance for "Black" detection
 
+        // --- CRT & COLOR TUNING ---
+        public float CrtSaturation { get; set; } = 1.1f; // 1.0 is default, >1.0 pops colors
+        public float CrtVibrance { get; set; } = 0.15f;  // Boosts muted colors
+
         // --- PROTECT ANIMATION TUNING ---
         public float ProtectAnimationSpeed { get; set; } = 1.0f;
         public int ProtectDamageFrameIndex { get; set; } = 0;

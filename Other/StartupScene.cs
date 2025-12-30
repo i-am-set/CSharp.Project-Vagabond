@@ -43,8 +43,7 @@ namespace ProjectVagabond.Scenes
                 if (_timer >= DURATION)
                 {
                     _transitionTriggered = true;
-                    // Transition to Main Menu with a Diamond Wipe
-                    _sceneManager.ChangeScene(GameSceneState.MainMenu, TransitionType.Diamonds, TransitionType.Diamonds);
+                    _sceneManager.ChangeScene(GameSceneState.MainMenu, TransitionType.None, TransitionType.Diamonds);
                 }
             }
         }

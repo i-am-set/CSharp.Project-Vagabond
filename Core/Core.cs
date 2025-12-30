@@ -48,6 +48,7 @@ namespace ProjectVagabond
         private float _finalScale = 1f;
 
         private RenderTarget2D _sceneRenderTarget;
+        private RenderTarget2D _transitionRenderTarget; // New target for pixel-perfect full-screen transitions
         private RenderTarget2D _finalCompositeTarget;
         private Effect _crtEffect;
         private BlendState _cursorInvertBlendState;
@@ -784,7 +785,20 @@ namespace ProjectVagabond
                 // _spriteBatch.End();
             }
 
-            // 2. Composite to Fullscreen Target (Letterboxing)
+            // 2. Render Transitions to Low-Res Target
+            // This ensures pixel-perfect chunkiness while covering the full window aspect ratio.
+            if (_transitionManager.IsTransitioning)
+            {
+                GraphicsDevice.SetRenderTarget(_transitionRenderTarget);
+                GraphicsDevice.Clear(Color.Transparent);
+                _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+                // Draw transition at 1.0 scale relative to this low-res target
+                var transitionBounds = new Rectangle(0, 0, _transitionRenderTarget.Width, _transitionRenderTarget.Height);
+                _transitionManager.Draw(_spriteBatch, transitionBounds, 1.0f);
+                _spriteBatch.End();
+            }
+
+            // 3. Composite to Fullscreen Target (Letterboxing)
             // Determine the background color for the letterbox bars
             bool forceBlackBg = _loadingScreen.IsActive || _sceneManager.CurrentActiveScene is StartupScene;
             Color letterboxColor = forceBlackBg ? Color.Black : _global.GameBg;
@@ -810,30 +824,41 @@ namespace ProjectVagabond
                     _spriteBatch.Draw(diceRenderTarget, _finalRenderRectangle, Color.White);
                 }
             }
+
+            // --- DRAW TRANSITIONS HERE (Before CRT Shader) ---
+            // Draw the low-res transition target scaled up to cover the full window.
+            if (_transitionManager.IsTransitioning)
+            {
+                // Draw at 0,0 scaled up by _finalScale.
+                // Since _transitionRenderTarget size was calculated as Ceil(WindowSize / Scale),
+                // scaling it back up by Scale ensures it covers the window.
+                _spriteBatch.Draw(_transitionRenderTarget, Vector2.Zero, null, Color.White, 0f, Vector2.Zero, _finalScale, SpriteEffects.None, 0f);
+            }
+
             _spriteBatch.End();
 
-            // --- 3. APPLY BACKGROUND NOISE (POST-PROCESSING) ---
+            // --- 4. APPLY BACKGROUND NOISE (POST-PROCESSING) ---
             // This takes the composite target (scene + letterbox bars) and replaces black pixels with noise.
             // The result is stored in _backgroundNoiseRenderer.Texture.
             _backgroundNoiseRenderer.Apply(GraphicsDevice, _finalCompositeTarget, gameTime, _finalScale);
 
-            // 3. Draw Fullscreen UI
+            // 5. Draw Fullscreen UI
             if (!_loadingScreen.IsActive)
             {
                 Matrix screenScaleMatrix = Matrix.Invert(_mouseTransformMatrix);
                 _sceneManager.CurrentActiveScene?.DrawFullscreenUI(_spriteBatch, _defaultFont, gameTime, screenScaleMatrix);
             }
 
-            // 4. Draw Custom Cursor
+            // 6. Draw Custom Cursor
             _spriteBatch.Begin(blendState: _cursorInvertBlendState, samplerState: SamplerState.PointClamp);
             _cursorManager.Draw(_spriteBatch, Mouse.GetState().Position.ToVector2(), _finalScale);
             _spriteBatch.End();
 
-            // 5. Apply Noise (Post-Processing)
+            // 7. Apply Noise (Post-Processing)
             // This reads from _finalCompositeTarget and writes to its internal target.
             _backgroundNoiseRenderer.Apply(GraphicsDevice, _finalCompositeTarget, gameTime, _finalScale);
 
-            // 6. Final Render to Backbuffer (Apply CRT Shader)
+            // 8. Final Render to Backbuffer (Apply CRT Shader)
             GraphicsDevice.SetRenderTarget(null);
             GraphicsDevice.Clear(letterboxColor);
 
@@ -849,6 +874,8 @@ namespace ProjectVagabond
                 _crtEffect.Parameters["ScreenResolution"]?.SetValue(new Vector2(GraphicsDevice.PresentationParameters.BackBufferWidth, GraphicsDevice.PresentationParameters.BackBufferHeight));
                 _crtEffect.Parameters["VirtualResolution"]?.SetValue(new Vector2(Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT)); // Pass the virtual resolution for pixel-perfect scaling
                 _crtEffect.Parameters["Gamma"]?.SetValue(_settings.Gamma);
+                _crtEffect.Parameters["Saturation"]?.SetValue(_global.CrtSaturation);
+                _crtEffect.Parameters["Vibrance"]?.SetValue(_global.CrtVibrance);
 
                 float flashIntensity = 0f;
                 Color flashColor = Color.Transparent;
@@ -887,17 +914,7 @@ namespace ProjectVagabond
 
             _spriteBatch.End();
 
-            // 7. DRAW TRANSITIONS (Covering everything)
-            if (_transitionManager.IsTransitioning)
-            {
-                _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-                // Use full backbuffer bounds to cover letterbox bars
-                var screenBounds = new Rectangle(0, 0, GraphicsDevice.PresentationParameters.BackBufferWidth, GraphicsDevice.PresentationParameters.BackBufferHeight);
-                _transitionManager.Draw(_spriteBatch, screenBounds, _finalScale);
-                _spriteBatch.End();
-            }
-
-            // 8. Draw Debug Overlays (No Shader)
+            // 9. Draw Debug Overlays (No Shader)
             if (!_loadingScreen.IsActive)
             {
                 _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
@@ -991,6 +1008,20 @@ namespace ProjectVagabond
                 GraphicsDevice,
                 Window.ClientBounds.Width,
                 Window.ClientBounds.Height,
+                false,
+                GraphicsDevice.PresentationParameters.BackBufferFormat,
+                DepthFormat.Depth24,
+                0,
+                RenderTargetUsage.PreserveContents);
+
+            // --- RECREATE TRANSITION TARGET ---
+            _transitionRenderTarget?.Dispose();
+            int transWidth = (int)Math.Ceiling((float)screenWidth / _finalScale);
+            int transHeight = (int)Math.Ceiling((float)screenHeight / _finalScale);
+            _transitionRenderTarget = new RenderTarget2D(
+                GraphicsDevice,
+                transWidth,
+                transHeight,
                 false,
                 GraphicsDevice.PresentationParameters.BackBufferFormat,
                 DepthFormat.Depth24,
