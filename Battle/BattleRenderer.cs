@@ -568,6 +568,29 @@ namespace ProjectVagabond.Battle.UI
                 if (introSlide != null)
                 {
                     slideOffset = introSlide.CurrentOffset;
+
+                    if (introSlide.IsEnemy)
+                    {
+                        // Phase 1: Sliding (Fade in alpha, keep silhouette)
+                        if (introSlide.CurrentPhase == BattleAnimationManager.IntroSlideAnimationState.Phase.Sliding)
+                        {
+                            silhouetteAmt = 1.0f;
+                            silhouetteColor = _global.Palette_DarkGray;
+                        }
+                        // Phase 2: Waiting (Hold silhouette)
+                        else if (introSlide.CurrentPhase == BattleAnimationManager.IntroSlideAnimationState.Phase.Waiting)
+                        {
+                            silhouetteAmt = 1.0f;
+                            silhouetteColor = _global.Palette_DarkGray;
+                        }
+                        // Phase 3: Revealing (Fade out silhouette)
+                        else if (introSlide.CurrentPhase == BattleAnimationManager.IntroSlideAnimationState.Phase.Revealing)
+                        {
+                            float revealProgress = Math.Clamp(introSlide.RevealTimer / BattleAnimationManager.IntroSlideAnimationState.REVEAL_DURATION, 0f, 1f);
+                            silhouetteAmt = 1.0f - Easing.EaseInQuad(revealProgress);
+                            silhouetteColor = _global.Palette_DarkGray;
+                        }
+                    }
                     // Alpha is handled by the animation manager update loop
                 }
                 else if (spawnAnim != null)

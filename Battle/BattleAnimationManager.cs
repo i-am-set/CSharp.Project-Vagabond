@@ -72,10 +72,24 @@ namespace ProjectVagabond.Battle.UI
         public class IntroSlideAnimationState
         {
             public string CombatantID;
-            public float Timer;
+            public bool IsEnemy; // Flag to determine behavior
+
+            public enum Phase { Sliding, Waiting, Revealing }
+            public Phase CurrentPhase;
+
+            // Timers
+            public float SlideTimer;
+            public float WaitTimer;
+            public float RevealTimer;
+
+            // Offsets
             public Vector2 StartOffset;
-            public const float DURATION = 0.5f; // Slide duration
             public Vector2 CurrentOffset;
+
+            // Tuning
+            public const float SLIDE_DURATION = 0.5f;
+            public const float WAIT_DURATION = 0.5f; // 0.5s delay for enemies
+            public const float REVEAL_DURATION = 0.5f; // Fade out silhouette
         }
         private readonly List<IntroSlideAnimationState> _activeIntroSlideAnimations = new List<IntroSlideAnimationState>();
 
@@ -451,13 +465,17 @@ namespace ProjectVagabond.Battle.UI
             });
         }
 
-        public void StartIntroSlideAnimation(string combatantId, Vector2 startOffset)
+        public void StartIntroSlideAnimation(string combatantId, Vector2 startOffset, bool isEnemy)
         {
             _activeIntroSlideAnimations.RemoveAll(a => a.CombatantID == combatantId);
             _activeIntroSlideAnimations.Add(new IntroSlideAnimationState
             {
                 CombatantID = combatantId,
-                Timer = 0f,
+                IsEnemy = isEnemy,
+                CurrentPhase = IntroSlideAnimationState.Phase.Sliding,
+                SlideTimer = 0f,
+                WaitTimer = 0f,
+                RevealTimer = 0f,
                 StartOffset = startOffset,
                 CurrentOffset = startOffset
             });
@@ -956,7 +974,7 @@ namespace ProjectVagabond.Battle.UI
                         }
                         break;
                     case DeathAnimationState.Phase.FlashGray:
-                        combatant.VisualSilhouetteColorOverride = _global.Palette_DarkGray;
+                        combatant.VisualSilhouetteColorOverride = ServiceLocator.Get<Global>().Palette_DarkGray;
                         if (anim.Timer >= DeathAnimationState.FLASH_DURATION)
                         {
                             anim.Timer = 0f;
@@ -1247,18 +1265,63 @@ namespace ProjectVagabond.Battle.UI
                     continue;
                 }
 
-                anim.Timer += deltaTime;
-                float progress = Math.Clamp(anim.Timer / IntroSlideAnimationState.DURATION, 0f, 1f);
-                float easedProgress = Easing.EaseOutCubic(progress);
-
-                // Lerp from StartOffset to Zero
-                anim.CurrentOffset = Vector2.Lerp(anim.StartOffset, Vector2.Zero, easedProgress);
-                combatant.VisualAlpha = easedProgress; // Fade in
-
-                if (progress >= 1.0f)
+                if (!anim.IsEnemy)
                 {
-                    combatant.VisualAlpha = 1.0f;
-                    _activeIntroSlideAnimations.RemoveAt(i);
+                    // --- PLAYER LOGIC (Simple Slide) ---
+                    anim.SlideTimer += deltaTime; // Changed from Timer
+                    float progress = Math.Clamp(anim.SlideTimer / IntroSlideAnimationState.SLIDE_DURATION, 0f, 1f); // Changed from Timer
+                    float easedProgress = Easing.EaseOutCubic(progress);
+
+                    anim.CurrentOffset = Vector2.Lerp(anim.StartOffset, Vector2.Zero, easedProgress);
+                    combatant.VisualAlpha = easedProgress; // Fade in
+
+                    if (progress >= 1.0f)
+                    {
+                        combatant.VisualAlpha = 1.0f;
+                        _activeIntroSlideAnimations.RemoveAt(i);
+                    }
+                }
+                else
+                {
+                    // --- ENEMY LOGIC (Slide -> Wait -> Reveal) ---
+                    switch (anim.CurrentPhase)
+                    {
+                        case IntroSlideAnimationState.Phase.Sliding:
+                            anim.SlideTimer += deltaTime;
+                            float slideProgress = Math.Clamp(anim.SlideTimer / IntroSlideAnimationState.SLIDE_DURATION, 0f, 1f);
+                            float easedSlide = Easing.EaseOutCubic(slideProgress);
+
+                            anim.CurrentOffset = Vector2.Lerp(anim.StartOffset, Vector2.Zero, easedSlide);
+
+                            // Fade in alpha, but keep silhouette active (handled in Renderer)
+                            combatant.VisualAlpha = easedSlide;
+
+                            if (slideProgress >= 1.0f)
+                            {
+                                anim.CurrentPhase = IntroSlideAnimationState.Phase.Waiting;
+                            }
+                            break;
+
+                        case IntroSlideAnimationState.Phase.Waiting:
+                            anim.WaitTimer += deltaTime;
+                            if (anim.WaitTimer >= IntroSlideAnimationState.WAIT_DURATION)
+                            {
+                                anim.CurrentPhase = IntroSlideAnimationState.Phase.Revealing;
+                            }
+                            break;
+
+                        case IntroSlideAnimationState.Phase.Revealing:
+                            anim.RevealTimer += deltaTime;
+                            float revealProgress = Math.Clamp(anim.RevealTimer / IntroSlideAnimationState.REVEAL_DURATION, 0f, 1f);
+
+                            // Renderer will use this timer to fade the silhouette overlay
+
+                            if (revealProgress >= 1.0f)
+                            {
+                                _activeIntroSlideAnimations.RemoveAt(i);
+                            }
+                            break;
+                    }
                 }
             }
         }

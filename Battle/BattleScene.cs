@@ -506,7 +506,8 @@ namespace ProjectVagabond.Scenes
                             // Drop from top (negative Y offset relative to final position)
                             Vector2 startOffset = new Vector2(0, -INTRO_SLIDE_DISTANCE);
 
-                            _animationManager.StartIntroSlideAnimation(nextCombatant.CombatantID, startOffset);
+                            // Pass isEnemy = true for the new multi-phase animation
+                            _animationManager.StartIntroSlideAnimation(nextCombatant.CombatantID, startOffset, true);
                             _introTimer = INTRO_STAGGER_DELAY;
                         }
                         else
@@ -749,7 +750,8 @@ namespace ProjectVagabond.Scenes
             foreach (var p in players)
             {
                 // Slide up from bottom
-                _animationManager.StartIntroSlideAnimation(p.CombatantID, new Vector2(0, INTRO_SLIDE_DISTANCE));
+                // Pass isEnemy = false for simple slide
+                _animationManager.StartIntroSlideAnimation(p.CombatantID, new Vector2(0, INTRO_SLIDE_DISTANCE), false);
             }
             _uiSlideTimer = 0f;
         }
