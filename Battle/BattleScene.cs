@@ -831,6 +831,11 @@ namespace ProjectVagabond.Scenes
                     _uiManager.ShowActionMenu(actingCombatant, _battleManager.AllCombatants.ToList());
                 }
             }
+            else if (newPhase == BattleManager.BattlePhase.StartOfTurn)
+            {
+                // Do nothing. Keep previous state (Visible) until ActionSelection triggers or something else happens.
+                // This prevents the 1-frame flicker if BattleManager is blocked.
+            }
             else
             {
                 _uiManager.HideAllMenus();
