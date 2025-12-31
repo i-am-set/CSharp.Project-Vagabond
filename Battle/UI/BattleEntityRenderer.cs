@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Utils;
 using System;
 
@@ -64,8 +65,8 @@ namespace ProjectVagabond.Battle.UI
             int numParts = enemySprite.Width / spritePartSize;
 
             // --- COMPOSITE OUTLINE LOGIC ---
-            // If we need a complex outline (not highlighted, not fully silhouetted), we generate it here.
-            if (enemySilhouette != null && silhouetteFactor < 1.0f && !isHighlighted)
+            // Always draw the composite outline if a silhouette exists.
+            if (enemySilhouette != null)
             {
                 DrawCompositeOutline(spriteBatch, enemySilhouette, spriteRect, partOffsets, shakeOffset, finalAlpha, outlineColor, numParts, spritePartSize, transform);
             }
@@ -80,7 +81,8 @@ namespace ProjectVagabond.Battle.UI
             }
             else
             {
-                DrawDirectEnemy(spriteBatch, enemySprite, enemySilhouette, spriteRect, partOffsets, shakeOffset, tintColor, silhouetteFactor, silhouetteColor, isHighlighted, highlightColor, isFlashingWhite, scale, numParts, spritePartSize);
+                // Pass Color.Transparent for the outline override since we drew the composite one above.
+                DrawDirectEnemy(spriteBatch, enemySprite, enemySilhouette, spriteRect, partOffsets, shakeOffset, tintColor, silhouetteFactor, silhouetteColor, isHighlighted, highlightColor, isFlashingWhite, scale, numParts, spritePartSize, Color.Transparent);
             }
 
             // --- TARGETING INDICATOR ---
@@ -112,20 +114,19 @@ namespace ProjectVagabond.Battle.UI
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
 
             Vector2 screenDrawPos = new Vector2(spriteRect.X, spriteRect.Y) + shakeOffset - rtBasePos;
-            Color cBlack = _global.Palette_Black * finalAlpha;
-            Color cColored = outlineColor;
+            Color cInner = _global.Palette_Black * finalAlpha;
+            Color cOuter = outlineColor;
 
-            // Draw 3-layer outline (Outer Black, Middle Color, Inner Black)
-            // Layer 3: Outer Black (3px)
-            DrawOffsets(spriteBatch, _flattenTarget, screenDrawPos, 3, cBlack);
-            DrawOffsets(spriteBatch, _flattenTarget, screenDrawPos, 2, cBlack, true); // Diagonals
+            // Draw 2-layer outline (Outer Color, Inner Black)
 
-            // Layer 2: Middle Colored (2px)
-            DrawOffsets(spriteBatch, _flattenTarget, screenDrawPos, 2, cColored);
-            DrawOffsets(spriteBatch, _flattenTarget, screenDrawPos, 1, cColored, true);
+            // Layer 2: Outer Color
+            // Cardinals at 2px, Diagonals at 1px. This creates a rounded "circle" shape wrapping the inner 1px outline.
+            DrawOffsets(spriteBatch, _flattenTarget, screenDrawPos, 2, cOuter); // Cardinals
+            DrawOffsets(spriteBatch, _flattenTarget, screenDrawPos, 1, cOuter, true); // Diagonals
 
-            // Layer 1: Inner Black (1px)
-            DrawOffsets(spriteBatch, _flattenTarget, screenDrawPos, 1, cBlack);
+            // Layer 1: Inner Black
+            // Cardinals at 1px.
+            DrawOffsets(spriteBatch, _flattenTarget, screenDrawPos, 1, cInner);
         }
 
         private void DrawOffsets(SpriteBatch sb, Texture2D tex, Vector2 basePos, int dist, Color c, bool diagonal = false)
@@ -195,8 +196,10 @@ namespace ProjectVagabond.Battle.UI
             spriteBatch.Draw(_flattenTarget, drawPos, srcRect, Color.White * finalAlpha);
         }
 
-        private void DrawDirectEnemy(SpriteBatch spriteBatch, Texture2D sprite, Texture2D silhouette, Rectangle spriteRect, Vector2[] offsets, Vector2 shakeOffset, Color tintColor, float silhouetteFactor, Color silhouetteColor, bool isHighlighted, Color? highlightColor, bool isFlashingWhite, float scale, int numParts, int partSize)
+        private void DrawDirectEnemy(SpriteBatch spriteBatch, Texture2D sprite, Texture2D silhouette, Rectangle spriteRect, Vector2[] offsets, Vector2 shakeOffset, Color tintColor, float silhouetteFactor, Color silhouetteColor, bool isHighlighted, Color? highlightColor, bool isFlashingWhite, float scale, int numParts, int partSize, Color? outlineColorOverride)
         {
+            Color outlineColor = (outlineColorOverride ?? _global.Palette_DarkGray) * (tintColor.A / 255f);
+
             for (int i = 0; i < numParts; i++)
             {
                 var sourceRect = new Rectangle(i * partSize, 0, partSize, partSize);
@@ -206,15 +209,22 @@ namespace ProjectVagabond.Battle.UI
                 Vector2 origin = new Vector2(partSize / 2f, partSize / 2f);
                 Vector2 centerPos = drawPosition + origin;
 
+                // --- Draw Outline ---
+                if (silhouette != null && outlineColor.A > 0)
+                {
+                    spriteBatch.DrawSnapped(silhouette, centerPos + new Vector2(-1, 0), sourceRect, outlineColor, 0f, origin, scale, SpriteEffects.None, 0.49f);
+                    spriteBatch.DrawSnapped(silhouette, centerPos + new Vector2(1, 0), sourceRect, outlineColor, 0f, origin, scale, SpriteEffects.None, 0.49f);
+                    spriteBatch.DrawSnapped(silhouette, centerPos + new Vector2(0, -1), sourceRect, outlineColor, 0f, origin, scale, SpriteEffects.None, 0.49f);
+                    spriteBatch.DrawSnapped(silhouette, centerPos + new Vector2(0, 1), sourceRect, outlineColor, 0f, origin, scale, SpriteEffects.None, 0.49f);
+                }
+
                 if (silhouetteFactor >= 1.0f && silhouette != null)
                 {
-                    // FIX: Parentheses added to ensure float division happens before Color multiplication
                     spriteBatch.DrawSnapped(silhouette, centerPos, sourceRect, silhouetteColor * (tintColor.A / 255f), 0f, origin, scale, SpriteEffects.None, 0f);
                 }
                 else if (isHighlighted && silhouette != null)
                 {
                     Color hColor = highlightColor ?? Color.Yellow;
-                    // FIX: Parentheses added
                     spriteBatch.DrawSnapped(silhouette, centerPos, sourceRect, hColor * (tintColor.A / 255f), 0f, origin, scale, SpriteEffects.None, 0f);
                 }
                 else
@@ -222,7 +232,6 @@ namespace ProjectVagabond.Battle.UI
                     spriteBatch.DrawSnapped(sprite, centerPos, sourceRect, tintColor, 0f, origin, scale, SpriteEffects.None, 0f);
                     if (silhouetteFactor > 0f && silhouette != null)
                     {
-                        // FIX: Parentheses added
                         spriteBatch.DrawSnapped(silhouette, centerPos, sourceRect, silhouetteColor * silhouetteFactor * (tintColor.A / 255f), 0f, origin, scale, SpriteEffects.None, 0f);
                     }
                 }
@@ -243,7 +252,6 @@ namespace ProjectVagabond.Battle.UI
                 Vector2 spriteCenter = new Vector2(spriteRect.Center.X, spriteRect.Center.Y);
                 Vector2 targetCenter = new Vector2(spriteCenter.X, spriteCenter.Y + visualCenterOffset.Y);
 
-                // Simple sway calculation
                 float t = (float)DateTime.Now.TimeOfDay.TotalSeconds * _global.TargetIndicatorNoiseSpeed;
                 float swayX = (float)Math.Sin(t) * _global.TargetIndicatorOffsetX;
                 float swayY = (float)Math.Cos(t * 1.3f) * _global.TargetIndicatorOffsetY;

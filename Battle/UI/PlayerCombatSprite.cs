@@ -323,26 +323,55 @@ namespace ProjectVagabond.Battle.UI
                 (int)MathF.Round(_position.Y - _origin.Y + shakeOffset.Y + _selectionOffsetY)
             );
 
-            // --- Silhouette Mode (e.g. for non-selectable targets) ---
-            if (asSilhouette && silhouetteToDraw != null)
+            Color mainColor = tintColorOverride ?? Color.White;
+            float alpha = mainColor.A / 255f;
+            Color outlineColor = (outlineColorOverride ?? global.Palette_DarkGray) * alpha;
+
+            // Flip horizontally if it's NOT the player (assuming allies face right like enemies)
+            SpriteEffects spriteEffects = SpriteEffects.None;
+            if (_archetypeId != "player")
             {
-                // Use DrawSnapped with scale
-                Vector2 drawPos = new Vector2(topLeftPosition.X + _frameWidth / 2f, topLeftPosition.Y + _frameHeight / 2f);
-                Vector2 origin = new Vector2(_frameWidth / 2f, _frameHeight / 2f);
-                spriteBatch.DrawSnapped(silhouetteToDraw, drawPos, sourceRectangle, silhouetteColor ?? Color.Gray, 0f, origin, scale, SpriteEffects.None, 0.5f);
-                return;
+                spriteEffects = SpriteEffects.FlipHorizontally;
             }
 
-            if (isHighlighted && silhouetteToDraw != null)
-            {
-                Vector2 drawPos = new Vector2(topLeftPosition.X + _frameWidth / 2f, topLeftPosition.Y + _frameHeight / 2f);
-                Vector2 origin = new Vector2(_frameWidth / 2f, _frameHeight / 2f);
-                SpriteEffects effects = SpriteEffects.None;
-                if (_archetypeId != "player") effects = SpriteEffects.FlipHorizontally;
+            Vector2 mainDrawPos = new Vector2(topLeftPosition.X + _frameWidth / 2f, topLeftPosition.Y + _frameHeight / 2f);
+            Vector2 mainOrigin = new Vector2(_frameWidth / 2f, _frameHeight / 2f);
 
-                // Use specific highlight color if provided, else default to Yellow
+            // --- Draw Outline (Always, if silhouette exists) ---
+            if (silhouetteToDraw != null)
+            {
+                Color cInner = global.Palette_Black * alpha;
+                Color cOuter = outlineColor;
+
+                // Layer 2: Outer Color (Cardinals 2, Diagonals 1)
+                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(-2, 0), sourceRectangle, cOuter, 0f, mainOrigin, scale, spriteEffects, 0.49f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(2, 0), sourceRectangle, cOuter, 0f, mainOrigin, scale, spriteEffects, 0.49f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(0, -2), sourceRectangle, cOuter, 0f, mainOrigin, scale, spriteEffects, 0.49f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(0, 2), sourceRectangle, cOuter, 0f, mainOrigin, scale, spriteEffects, 0.49f);
+
+                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(-1, -1), sourceRectangle, cOuter, 0f, mainOrigin, scale, spriteEffects, 0.49f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(1, -1), sourceRectangle, cOuter, 0f, mainOrigin, scale, spriteEffects, 0.49f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(-1, 1), sourceRectangle, cOuter, 0f, mainOrigin, scale, spriteEffects, 0.49f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(1, 1), sourceRectangle, cOuter, 0f, mainOrigin, scale, spriteEffects, 0.49f);
+
+                // Layer 1: Inner Black (Cardinals 1)
+                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(-1, 0), sourceRectangle, cInner, 0f, mainOrigin, scale, spriteEffects, 0.49f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(1, 0), sourceRectangle, cInner, 0f, mainOrigin, scale, spriteEffects, 0.49f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(0, -1), sourceRectangle, cInner, 0f, mainOrigin, scale, spriteEffects, 0.49f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(0, 1), sourceRectangle, cInner, 0f, mainOrigin, scale, spriteEffects, 0.49f);
+            }
+
+            // --- Draw Body ---
+            if (asSilhouette && silhouetteToDraw != null)
+            {
+                // Draw Silhouette Body
+                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos, sourceRectangle, silhouetteColor ?? Color.Gray, 0f, mainOrigin, scale, spriteEffects, 0.5f);
+            }
+            else if (isHighlighted && silhouetteToDraw != null)
+            {
+                // Draw Highlight Body
                 Color hColor = highlightColor ?? Color.Yellow;
-                spriteBatch.DrawSnapped(silhouetteToDraw, drawPos, sourceRectangle, hColor, 0f, origin, scale, effects, 0.5f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos, sourceRectangle, hColor, 0f, mainOrigin, scale, spriteEffects, 0.5f);
 
                 // Draw Indicator ONLY if the color is Yellow (The "Flash" state)
                 if (hColor == Color.Yellow)
@@ -382,49 +411,17 @@ namespace ProjectVagabond.Battle.UI
                         spriteBatch.DrawSnapped(indicator, animatedPos, null, Color.White, rotation, indOrigin, indicatorScale, SpriteEffects.None, 0f);
                     }
                 }
-                return;
             }
-
-            Color mainColor = tintColorOverride ?? Color.White;
-
-            float alpha = mainColor.A / 255f;
-            Color outlineColor = (outlineColorOverride ?? global.Palette_DarkGray) * alpha;
-
-            // --- Draw Outline ---
-            if (silhouetteToDraw != null)
+            else
             {
-                // Draw outline using integer-based rectangles offset from the snapped top-left position.
-                // We need to use DrawSnapped with scale for the outline too.
-                Vector2 drawPos = new Vector2(topLeftPosition.X + _frameWidth / 2f, topLeftPosition.Y + _frameHeight / 2f);
-                Vector2 origin = new Vector2(_frameWidth / 2f, _frameHeight / 2f);
+                // Draw Main Sprite
+                spriteBatch.DrawSnapped(textureToDraw, mainDrawPos, sourceRectangle, mainColor, 0f, mainOrigin, scale, spriteEffects, 0.5f);
 
-                spriteBatch.DrawSnapped(silhouetteToDraw, drawPos + new Vector2(-1, 0), sourceRectangle, outlineColor, 0f, origin, scale, SpriteEffects.None, 0.49f);
-                spriteBatch.DrawSnapped(silhouetteToDraw, drawPos + new Vector2(1, 0), sourceRectangle, outlineColor, 0f, origin, scale, SpriteEffects.None, 0.49f);
-                spriteBatch.DrawSnapped(silhouetteToDraw, drawPos + new Vector2(0, -1), sourceRectangle, outlineColor, 0f, origin, scale, SpriteEffects.None, 0.49f);
-                spriteBatch.DrawSnapped(silhouetteToDraw, drawPos + new Vector2(0, 1), sourceRectangle, outlineColor, 0f, origin, scale, SpriteEffects.None, 0.49f);
-            }
-
-            // --- Draw Main Sprite ---
-            Vector2 mainDrawPos = new Vector2(topLeftPosition.X + _frameWidth / 2f, topLeftPosition.Y + _frameHeight / 2f);
-            Vector2 mainOrigin = new Vector2(_frameWidth / 2f, _frameHeight / 2f);
-
-            // Flip horizontally if it's NOT the player (assuming allies face right like enemies)
-            // Actually, usually allies face right (towards enemies) and enemies face left.
-            // If the sprite is an enemy sprite reused, it faces left by default.
-            // So we flip it to face right.
-            // The Player Portraits face right by default.
-            SpriteEffects spriteEffects = SpriteEffects.None;
-            if (_archetypeId != "player")
-            {
-                spriteEffects = SpriteEffects.FlipHorizontally;
-            }
-
-            spriteBatch.DrawSnapped(textureToDraw, mainDrawPos, sourceRectangle, mainColor, 0f, mainOrigin, scale, spriteEffects, 0.5f);
-
-            // --- Draw Flash Overlay ---
-            if (isFlashingWhite && silhouetteToDraw != null)
-            {
-                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos, sourceRectangle, Color.White * 0.8f, 0f, mainOrigin, scale, spriteEffects, 0.51f);
+                // --- Draw Flash Overlay ---
+                if (isFlashingWhite && silhouetteToDraw != null)
+                {
+                    spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos, sourceRectangle, Color.White * 0.8f, 0f, mainOrigin, scale, spriteEffects, 0.51f);
+                }
             }
         }
     }
