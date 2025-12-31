@@ -51,20 +51,9 @@ namespace ProjectVagabond.Scenes
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
-            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
 
             // Draw Solid Black Background
             spriteBatch.Draw(pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), Color.Black);
-
-            // Draw Splash Text
-            string text = "PROJECT VAGABOND";
-            Vector2 textSize = secondaryFont.MeasureString(text);
-            Vector2 position = new Vector2(
-                (Global.VIRTUAL_WIDTH - textSize.X) / 2,
-                (Global.VIRTUAL_HEIGHT - textSize.Y) / 2
-            );
-
-            spriteBatch.DrawStringSnapped(secondaryFont, text, position, _global.Palette_White);
         }
     }
 }
