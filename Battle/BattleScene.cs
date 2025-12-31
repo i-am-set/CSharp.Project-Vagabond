@@ -133,6 +133,7 @@ namespace ProjectVagabond.Scenes
             _animationManager.Reset();
             _moveAnimationManager.SkipAll();
             _alertManager.Reset();
+            _inputHandler.Reset();
             _enemyEntityIds.Clear();
             _currentActor = null;
             _isBattleOver = false;

@@ -113,8 +113,8 @@ namespace ProjectVagabond.Battle
         public float ManaBarVisibleTimer { get; set; } = 0f;
 
         // --- UI FADE STATE ---
-        public float VisualHealthBarAlpha { get; set; } = 0.1f;
-        public float VisualManaBarAlpha { get; set; } = 0.1f;
+        public float VisualHealthBarAlpha { get; set; } = 0f;
+        public float VisualManaBarAlpha { get; set; } = 0f;
 
         public BattleCombatant()
         {
