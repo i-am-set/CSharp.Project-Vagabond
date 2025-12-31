@@ -54,6 +54,7 @@ namespace ProjectVagabond.Battle.UI
         private const float CENTERING_DELAY_DURATION = 0.5f;
         private bool _floorOutroTriggered = false;
         private bool _waitingForFloorOutro = false;
+        private bool _hasInitializedPositions = false; // Tracks if we've processed at least one frame with enemies
 
         // Enemy Animation Data
         private Dictionary<string, Vector2[]> _enemySpritePartOffsets = new Dictionary<string, Vector2[]>();
@@ -129,6 +130,7 @@ namespace ProjectVagabond.Battle.UI
             _centeringDelayTimer = 0f;
             _floorOutroTriggered = false;
             _waitingForFloorOutro = false;
+            _hasInitializedPositions = false;
         }
 
         public List<TargetInfo> GetCurrentTargets() => _currentTargets;
@@ -355,7 +357,7 @@ namespace ProjectVagabond.Battle.UI
             // --- FIRST FRAME DETECTION ---
             // If this is the very first update (no positions cached), and we have exactly 1 enemy,
             // assume we started in Single Enemy Mode.
-            if (_enemyVisualXPositions.Count == 0 && visualEnemies.Count == 1)
+            if (!_hasInitializedPositions && visualEnemies.Count == 1)
             {
                 _centeringSequenceStarted = true; // Start centered immediately
                 _floorOutroTriggered = true; // Skip outro logic
@@ -483,6 +485,11 @@ namespace ProjectVagabond.Battle.UI
             foreach (var key in keysToRemove)
             {
                 _enemyVisualXPositions.Remove(key);
+            }
+
+            if (visualEnemies.Count > 0)
+            {
+                _hasInitializedPositions = true;
             }
         }
 
