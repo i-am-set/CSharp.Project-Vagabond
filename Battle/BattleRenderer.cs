@@ -1096,9 +1096,94 @@ namespace ProjectVagabond.Battle.UI
 
         private void UpdateBarAlpha(BattleCombatant c, float dt, bool shouldBeVisible)
         {
-            float target = (shouldBeVisible || c.HealthBarVisibleTimer > 0 || c.ManaBarVisibleTimer > 0) ? 1.0f : 0.0f;
-            c.VisualHealthBarAlpha = target;
-            c.VisualManaBarAlpha = target;
+            var battleManager = ServiceLocator.Get<BattleManager>();
+            bool inCombatPhase = battleManager.CurrentPhase != BattleManager.BattlePhase.ActionSelection_Slot1 &&
+                                 battleManager.CurrentPhase != BattleManager.BattlePhase.ActionSelection_Slot2 &&
+                                 battleManager.CurrentPhase != BattleManager.BattlePhase.StartOfTurn &&
+                                 battleManager.CurrentPhase != BattleManager.BattlePhase.BattleStartIntro;
+
+            bool isHealthVisuallyActive = c.VisualHealthBarAlpha > 0f || c.HealthBarVisibleTimer > 0f || c.HealthBarWhiteHoldTimer > 0f || c.HealthBarDisappearTimer > 0f;
+
+            // HP Logic
+            bool hpForceVisible = inCombatPhase && isHealthVisuallyActive;
+            bool hpVisible = shouldBeVisible || c.HealthBarVisibleTimer > 0 || hpForceVisible;
+
+            if (hpVisible)
+            {
+                c.VisualHealthBarAlpha = 1.0f;
+                c.HealthBarWhiteExpandTimer = 0f; // Reset
+                c.HealthBarWhiteHoldTimer = 0f;
+                c.HealthBarDisappearTimer = 0f;
+            }
+            else
+            {
+                if (c.VisualHealthBarAlpha > 0f)
+                {
+                    // Phase 1: Expand White
+                    if (c.HealthBarWhiteExpandTimer < BattleCombatant.BAR_WHITE_EXPAND_DURATION)
+                    {
+                        c.HealthBarWhiteExpandTimer += dt;
+                    }
+                    // Phase 2: Hold White
+                    else if (c.HealthBarWhiteHoldTimer < BattleCombatant.BAR_WHITE_HOLD_DURATION)
+                    {
+                        c.HealthBarWhiteHoldTimer += dt;
+                    }
+                    // Phase 3: Collapse
+                    else
+                    {
+                        c.HealthBarDisappearTimer += dt;
+                        if (c.HealthBarDisappearTimer >= BattleCombatant.BAR_DISAPPEAR_DURATION)
+                        {
+                            c.VisualHealthBarAlpha = 0f;
+                            c.HealthBarWhiteExpandTimer = 0f;
+                            c.HealthBarWhiteHoldTimer = 0f;
+                            c.HealthBarDisappearTimer = 0f;
+                        }
+                    }
+                }
+            }
+
+            // Mana Logic
+            bool isManaVisuallyActive = c.VisualManaBarAlpha > 0f || c.ManaBarVisibleTimer > 0f || c.ManaBarWhiteHoldTimer > 0f || c.ManaBarDisappearTimer > 0f;
+            bool manaForceVisible = inCombatPhase && isManaVisuallyActive;
+            bool manaVisible = shouldBeVisible || c.ManaBarVisibleTimer > 0 || manaForceVisible;
+
+            if (manaVisible)
+            {
+                c.VisualManaBarAlpha = 1.0f;
+                c.ManaBarWhiteExpandTimer = 0f; // Reset
+                c.ManaBarWhiteHoldTimer = 0f;
+                c.ManaBarDisappearTimer = 0f;
+            }
+            else
+            {
+                if (c.VisualManaBarAlpha > 0f)
+                {
+                    // Phase 1: Expand White
+                    if (c.ManaBarWhiteExpandTimer < BattleCombatant.BAR_WHITE_EXPAND_DURATION)
+                    {
+                        c.ManaBarWhiteExpandTimer += dt;
+                    }
+                    // Phase 2: Hold White
+                    else if (c.ManaBarWhiteHoldTimer < BattleCombatant.BAR_WHITE_HOLD_DURATION)
+                    {
+                        c.ManaBarWhiteHoldTimer += dt;
+                    }
+                    // Phase 3: Collapse
+                    else
+                    {
+                        c.ManaBarDisappearTimer += dt;
+                        if (c.ManaBarDisappearTimer >= BattleCombatant.BAR_DISAPPEAR_DURATION)
+                        {
+                            c.VisualManaBarAlpha = 0f;
+                            c.ManaBarWhiteExpandTimer = 0f;
+                            c.ManaBarWhiteHoldTimer = 0f;
+                            c.ManaBarDisappearTimer = 0f;
+                        }
+                    }
+                }
+            }
         }
 
         private float CalculateAttackBobOffset(string id, bool isPlayer)

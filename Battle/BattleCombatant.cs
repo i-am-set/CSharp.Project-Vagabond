@@ -116,6 +116,18 @@ namespace ProjectVagabond.Battle
         public float VisualHealthBarAlpha { get; set; } = 0f;
         public float VisualManaBarAlpha { get; set; } = 0f;
 
+        // --- UI DISAPPEAR ANIMATION STATE ---
+        public float HealthBarWhiteExpandTimer { get; set; } = 0f;
+        public float ManaBarWhiteExpandTimer { get; set; } = 0f;
+        public float HealthBarWhiteHoldTimer { get; set; } = 0f;
+        public float ManaBarWhiteHoldTimer { get; set; } = 0f;
+        public float HealthBarDisappearTimer { get; set; } = 0f;
+        public float ManaBarDisappearTimer { get; set; } = 0f;
+
+        public const float BAR_DISAPPEAR_DURATION = 0.5f;
+        public const float BAR_WHITE_EXPAND_DURATION = 0.1f;
+        public const float BAR_WHITE_HOLD_DURATION = 0.1f;
+
         public BattleCombatant()
         {
             StatStages = new Dictionary<OffensiveStatType, int>
