@@ -271,6 +271,12 @@ namespace ProjectVagabond.Battle.UI
             _player = player;
             _allCombatants = allCombatants;
             _allTargets = allCombatants.Where(c => !c.IsPlayerControlled && !c.IsDefeated).ToList();
+
+            // Ensure buttons are initialized and update their state immediately based on the new combatant list.
+            // This prevents the UI from animating in with stale state from a previous battle.
+            InitializeButtons();
+            UpdateSwitchButtonState();
+
             SetState(MenuState.Main);
         }
 
@@ -563,6 +569,18 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
+        private void UpdateSwitchButtonState()
+        {
+            // Update Switch Button Enable State
+            if (_allCombatants != null && _actionButtons.Count > 2)
+            {
+                // Check if there are any player-controlled combatants on the bench (Slot >= 2)
+                bool hasBench = _allCombatants.Any(c => c.IsPlayerControlled && !c.IsDefeated && c.BattleSlot >= 2);
+                // The Switch button is the 3rd button (index 2)
+                _actionButtons[2].IsEnabled = hasBench;
+            }
+        }
+
         public void Update(MouseState currentMouseState, GameTime gameTime, bool isInputBlocked = false)
         {
             InitializeButtons();
@@ -590,17 +608,7 @@ namespace ProjectVagabond.Battle.UI
                 case MenuState.Main:
                     bool isAnyActionHovered = false;
 
-                    // Update Switch Button Enable State
-                    if (_allCombatants != null)
-                    {
-                        // Check if there are any player-controlled combatants on the bench (Slot >= 2)
-                        bool hasBench = _allCombatants.Any(c => c.IsPlayerControlled && !c.IsDefeated && c.BattleSlot >= 2);
-                        // The Switch button is the 3rd button (index 2)
-                        if (_actionButtons.Count > 2)
-                        {
-                            _actionButtons[2].IsEnabled = hasBench;
-                        }
-                    }
+                    UpdateSwitchButtonState();
 
                     foreach (var button in _actionButtons)
                     {
