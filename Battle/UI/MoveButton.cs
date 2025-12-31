@@ -24,8 +24,6 @@ namespace ProjectVagabond.Battle.UI
         private readonly BitmapFont _moveFont;
         private readonly Texture2D? _backgroundSpriteSheet; // Made nullable
         public bool IsAnimating => _animState == AnimationState.Appearing;
-
-
         public Texture2D IconTexture { get; set; }
         public Rectangle? IconSourceRect { get; set; }
 
@@ -356,7 +354,8 @@ namespace ProjectVagabond.Battle.UI
                         animatedBounds.Center.X - noManaSize.X / 2f,
                         animatedBounds.Center.Y - noManaSize.Y / 2f
                     );
-                    spriteBatch.DrawStringOutlinedSnapped(_moveFont, noManaText, noManaPos, _global.Palette_Red * contentAlpha, Color.Black * contentAlpha);
+                    // Use Square Outline for better visibility
+                    spriteBatch.DrawStringSquareOutlinedSnapped(_moveFont, noManaText, noManaPos, _global.Palette_Red * contentAlpha, Color.Black * contentAlpha);
                 }
             }
         }
