@@ -1,15 +1,15 @@
-﻿#nullable enable
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond.Battle.UI;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.Battle.UI
 {
@@ -422,19 +422,27 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
+        public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Vector2 offset)
         {
             if (_displayLines.Count == 0) return;
 
             const int padding = 5;
             var panelBounds = new Rectangle(
-                _bounds.X + padding,
-                _bounds.Y + padding,
+                (int)(_bounds.X + padding + offset.X),
+                (int)(_bounds.Y + padding + offset.Y),
                 _bounds.Width - padding * 2,
                 _bounds.Height - padding * 2
             );
 
-            // Draw text
+            // Draw Background - Fully Opaque
+            var pixel = ServiceLocator.Get<Texture2D>();
+            spriteBatch.DrawSnapped(pixel, panelBounds, _global.TerminalBg);
+            spriteBatch.DrawLineSnapped(new Vector2(panelBounds.Left, panelBounds.Top), new Vector2(panelBounds.Right, panelBounds.Top), _global.Palette_White);
+            spriteBatch.DrawLineSnapped(new Vector2(panelBounds.Left, panelBounds.Bottom), new Vector2(panelBounds.Right, panelBounds.Bottom), _global.Palette_White);
+            spriteBatch.DrawLineSnapped(new Vector2(panelBounds.Left, panelBounds.Top), new Vector2(panelBounds.Left, panelBounds.Bottom), _global.Palette_White);
+            spriteBatch.DrawLineSnapped(new Vector2(panelBounds.Right, panelBounds.Top), new Vector2(panelBounds.Right, panelBounds.Bottom), _global.Palette_White);
+
+            // Draw Text
             for (int i = 0; i < _displayLines.Count; i++)
             {
                 var line = _displayLines[i];
@@ -452,7 +460,7 @@ namespace ProjectVagabond.Battle.UI
                 }
             }
 
-            // Draw "next" indicator
+            // Draw "Next" Indicator
             if (_isWaitingForInput)
             {
                 const string arrow = "v";

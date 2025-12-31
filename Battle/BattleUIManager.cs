@@ -79,6 +79,12 @@ namespace ProjectVagabond.Battle.UI
         // Input State
         private MouseState _previousMouseState;
 
+        // --- INTRO ANIMATION SUPPORT ---
+        /// <summary>
+        /// Offset applied to the main battle border (and attached UI) for intro animations.
+        /// </summary>
+        public Vector2 IntroOffset { get; set; } = Vector2.Zero;
+
         public BattleUIManager()
         {
             _global = ServiceLocator.Get<Global>();
@@ -179,6 +185,7 @@ namespace ProjectVagabond.Battle.UI
             ItemForTargeting = null;
             CombatantHoveredViaSprite = null;
             HoveredCombatantFromUI = null; // Ensure this is cleared on reset
+            IntroOffset = Vector2.Zero; // Reset offset
         }
 
         public void ForceClearNarration()
@@ -409,7 +416,8 @@ namespace ProjectVagabond.Battle.UI
             }
             else
             {
-                _actionMenu.Draw(spriteBatch, font, gameTime, transform);
+                // Pass IntroOffset to ActionMenu.Draw
+                _actionMenu.Draw(spriteBatch, font, gameTime, transform, IntroOffset);
             }
 
             if (UIState == BattleUIState.ItemTargeting)
@@ -424,7 +432,8 @@ namespace ProjectVagabond.Battle.UI
                 DrawTargetingText(spriteBatch, font, gameTime);
             }
 
-            _battleNarrator.Draw(spriteBatch, ServiceLocator.Get<Core>().SecondaryFont, gameTime);
+            // Pass IntroOffset to Narrator Draw
+            _battleNarrator.Draw(spriteBatch, ServiceLocator.Get<Core>().SecondaryFont, gameTime, IntroOffset);
 
             DrawControlPrompt(spriteBatch);
 
@@ -749,7 +758,8 @@ namespace ProjectVagabond.Battle.UI
             spriteBatch.DrawSnapped(pixel, bgRect, _global.Palette_Black);
 
             // Draw Border
-            spriteBatch.DrawSnapped(spriteManager.BattleBorderTarget, Vector2.Zero, Color.White);
+            // Apply IntroOffset to the border
+            spriteBatch.DrawSnapped(spriteManager.BattleBorderTarget, IntroOffset, Color.White);
 
             // Draw Targeting Buttons (Moved here so text is on top)
             DrawTargetingButtons(spriteBatch, font, gameTime, transform);

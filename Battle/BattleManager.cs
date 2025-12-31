@@ -25,6 +25,7 @@ namespace ProjectVagabond.Battle
     {
         public enum BattlePhase
         {
+            BattleStartIntro, // New Phase
             StartOfTurn,
             ActionSelection_Slot1,
             ActionSelection_Slot2,
@@ -104,7 +105,9 @@ namespace ProjectVagabond.Battle
 
             _actionQueue = new List<QueuedAction>();
             RoundNumber = 1;
-            _currentPhase = BattlePhase.StartOfTurn;
+
+            // Start in Intro phase. BattleScene will manually advance this when animations are done.
+            _currentPhase = BattlePhase.BattleStartIntro;
             _endOfTurnEffectsProcessed = false;
 
             EventBus.Subscribe<GameEvents.SecondaryEffectComplete>(OnSecondaryEffectComplete);
@@ -163,7 +166,11 @@ namespace ProjectVagabond.Battle
             _activeInteraction = null;
             _multiHitRemaining = 0; // Reset multi-hit on force advance
 
-            if (_currentPhase == BattlePhase.AnimatingMove ||
+            if (_currentPhase == BattlePhase.BattleStartIntro)
+            {
+                _currentPhase = BattlePhase.StartOfTurn;
+            }
+            else if (_currentPhase == BattlePhase.AnimatingMove ||
                 _currentPhase == BattlePhase.ActionResolution ||
                 _currentPhase == BattlePhase.SecondaryEffectResolution ||
                 _currentPhase == BattlePhase.ProcessingInteraction ||
@@ -386,6 +393,7 @@ namespace ProjectVagabond.Battle
 
             switch (_currentPhase)
             {
+                case BattlePhase.BattleStartIntro: break; // Do nothing, wait for Scene to advance
                 case BattlePhase.StartOfTurn: HandleStartOfTurn(); break;
                 case BattlePhase.ActionSelection_Slot1: break;
                 case BattlePhase.ActionSelection_Slot2: break;

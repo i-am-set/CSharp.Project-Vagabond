@@ -79,6 +79,19 @@ namespace ProjectVagabond.Scenes
         private BattleCombatant _switchOutgoing;
         private BattleCombatant _switchIncoming;
 
+        // --- INTRO SEQUENCE STATE ---
+        private enum IntroPhase { EnemyDrop, PlayerRise }
+        private IntroPhase _currentIntroPhase;
+        private Queue<BattleCombatant> _introSequenceQueue = new Queue<BattleCombatant>();
+        private float _introTimer = 0f;
+        private const float INTRO_STAGGER_DELAY = 0.3f;
+        private const float INTRO_SLIDE_DISTANCE = 150f;
+
+        // UI Slide State
+        private float _uiSlideTimer = 0f;
+        private const float UI_SLIDE_DURATION = 0.5f;
+        private const float UI_SLIDE_DISTANCE = 100f; // Distance to slide up from bottom
+
         public BattleAnimationManager AnimationManager => _animationManager;
 
         public BattleScene()
@@ -141,6 +154,38 @@ namespace ProjectVagabond.Scenes
 
             if (_battleManager != null)
             {
+                // --- INTRO SEQUENCE SETUP ---
+                _currentIntroPhase = IntroPhase.EnemyDrop;
+                _introSequenceQueue.Clear();
+                _introTimer = 0f;
+                _uiSlideTimer = 0f;
+
+                // 1. Hide Players and UI initially
+                var players = _battleManager.AllCombatants
+                    .Where(c => c.IsPlayerControlled && c.IsActiveOnField)
+                    .ToList();
+
+                foreach (var p in players)
+                {
+                    p.VisualAlpha = 0f; // Hidden
+                }
+
+                // Set UI Border Offset (Push down off-screen)
+                _uiManager.IntroOffset = new Vector2(0, UI_SLIDE_DISTANCE);
+
+                // 2. Queue Enemies (Slot 0 then Slot 1) for animation
+                var enemies = _battleManager.AllCombatants
+                    .Where(c => !c.IsPlayerControlled && c.IsActiveOnField)
+                    .OrderBy(c => c.BattleSlot)
+                    .ToList();
+
+                foreach (var e in enemies)
+                {
+                    _introSequenceQueue.Enqueue(e);
+                    e.VisualAlpha = 0f; // Hidden initially
+                }
+
+                // Sync stats for players
                 foreach (var combatant in _battleManager.AllCombatants)
                 {
                     if (combatant.IsPlayerControlled)
@@ -411,6 +456,58 @@ namespace ProjectVagabond.Scenes
                 return;
             }
 
+            // --- INTRO SEQUENCE LOGIC ---
+            if (_battleManager.CurrentPhase == BattleManager.BattlePhase.BattleStartIntro)
+            {
+                // Wait for transition to clear
+                if (_transitionManager.IsTransitioning) return;
+
+                if (_currentIntroPhase == IntroPhase.EnemyDrop)
+                {
+                    _introTimer -= dt;
+                    if (_introTimer <= 0)
+                    {
+                        if (_introSequenceQueue.Count > 0)
+                        {
+                            var nextCombatant = _introSequenceQueue.Dequeue();
+
+                            // Drop from top (negative Y offset relative to final position)
+                            Vector2 startOffset = new Vector2(0, -INTRO_SLIDE_DISTANCE);
+
+                            _animationManager.StartIntroSlideAnimation(nextCombatant.CombatantID, startOffset);
+                            _introTimer = INTRO_STAGGER_DELAY;
+                        }
+                        else
+                        {
+                            // Queue empty. Wait for animations to finish.
+                            if (_introTimer <= -0.5f) // Wait 0.5s after last spawn
+                            {
+                                _currentIntroPhase = IntroPhase.PlayerRise;
+                                StartPlayerIntro();
+                            }
+                        }
+                    }
+                }
+                else if (_currentIntroPhase == IntroPhase.PlayerRise)
+                {
+                    // Animate UI
+                    _uiSlideTimer += dt;
+                    float progress = Math.Clamp(_uiSlideTimer / UI_SLIDE_DURATION, 0f, 1f);
+                    float eased = Easing.EaseOutCubic(progress);
+                    _uiManager.IntroOffset = Vector2.Lerp(new Vector2(0, UI_SLIDE_DISTANCE), Vector2.Zero, eased);
+
+                    if (progress >= 1.0f)
+                    {
+                        _battleManager.ForceAdvance(); // Move to StartOfTurn
+                    }
+                }
+
+                // Update animations during intro
+                _animationManager.Update(gameTime, _battleManager.AllCombatants);
+                _renderer.Update(gameTime, _battleManager.AllCombatants, _animationManager, null);
+                return; // Skip normal update loop
+            }
+
             // --- SWITCH SEQUENCE DIRECTOR ---
             if (_switchSequenceState != SwitchSequenceState.None)
             {
@@ -612,6 +709,17 @@ namespace ProjectVagabond.Scenes
             }
 
             base.Update(gameTime);
+        }
+
+        private void StartPlayerIntro()
+        {
+            var players = _battleManager.AllCombatants.Where(c => c.IsPlayerControlled && c.IsActiveOnField).ToList();
+            foreach (var p in players)
+            {
+                // Slide up from bottom
+                _animationManager.StartIntroSlideAnimation(p.CombatantID, new Vector2(0, INTRO_SLIDE_DISTANCE));
+            }
+            _uiSlideTimer = 0f;
         }
 
         private void ShowRewardScreen()

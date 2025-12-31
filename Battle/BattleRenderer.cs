@@ -519,6 +519,9 @@ namespace ProjectVagabond.Battle.UI
                 Color outlineColor = (enemy == currentActor) ? _global.Palette_BrightWhite : _global.Palette_DarkGray;
                 if (isSilhouetted) outlineColor = outlineColor * 0.5f;
 
+                // FIX: Multiply outline color by alpha to ensure it fades out correctly
+                outlineColor = outlineColor * enemy.VisualAlpha;
+
                 // Animations
                 var spawnAnim = animManager.GetSpawnAnimationState(enemy.CombatantID);
                 var switchOut = animManager.GetSwitchOutAnimationState(enemy.CombatantID);
@@ -526,17 +529,24 @@ namespace ProjectVagabond.Battle.UI
                 var healFlash = animManager.GetHealFlashAnimationState(enemy.CombatantID);
                 var hitFlash = animManager.GetHitFlashState(enemy.CombatantID);
                 var healBounce = animManager.GetHealBounceAnimationState(enemy.CombatantID);
+                var introSlide = animManager.GetIntroSlideAnimationState(enemy.CombatantID); // NEW
 
                 float spawnY = 0f;
                 float alpha = enemy.VisualAlpha;
                 float silhouetteAmt = enemy.VisualSilhouetteAmount;
+                Vector2 slideOffset = Vector2.Zero;
 
-                if (isSilhouetted && spawnAnim == null && switchOut == null && switchIn == null)
+                if (isSilhouetted && spawnAnim == null && switchOut == null && switchIn == null && introSlide == null)
                 {
                     silhouetteAmt = 1.0f;
                 }
 
-                if (spawnAnim != null)
+                if (introSlide != null)
+                {
+                    slideOffset = introSlide.CurrentOffset;
+                    // Alpha is handled by the animation manager update loop
+                }
+                else if (spawnAnim != null)
                 {
                     if (spawnAnim.CurrentPhase == BattleAnimationManager.SpawnAnimationState.Phase.Flash)
                     {
@@ -565,7 +575,7 @@ namespace ProjectVagabond.Battle.UI
                     alpha = Easing.EaseOutCubic(p);
                 }
 
-                Color tint = Color.White;
+                Color tint = Color.White; // For enemies, tint is usually white, alpha applied in DrawDirectEnemy
                 if (healFlash != null)
                 {
                     float p = healFlash.Timer / BattleAnimationManager.HealFlashAnimationState.Duration;
@@ -594,8 +604,8 @@ namespace ProjectVagabond.Battle.UI
 
                 int spriteSize = _spriteManager.IsMajorEnemySprite(enemy.ArchetypeId) ? 96 : 64;
                 var spriteRect = new Rectangle(
-                    (int)(center.X - spriteSize / 2f + recoil.X),
-                    (int)(center.Y + bob + spawnY + recoil.Y),
+                    (int)(center.X - spriteSize / 2f + recoil.X + slideOffset.X),
+                    (int)(center.Y + bob + spawnY + recoil.Y + slideOffset.Y),
                     spriteSize, spriteSize
                 );
 
@@ -610,7 +620,8 @@ namespace ProjectVagabond.Battle.UI
                 Vector2[] offsets = _enemySpritePartOffsets.TryGetValue(enemy.CombatantID, out var o) ? o : null;
                 bool isHighlighted = isSelectable && shouldGrayOut;
 
-                _entityRenderer.DrawEnemy(spriteBatch, enemy, spriteRect, offsets, shake, alpha, silhouetteAmt, silhouetteColor, isHighlighted, highlight, outlineColor, flashWhite, tint, scale, transform);
+                // FIX: Pass tint * alpha to ensure transparency works correctly
+                _entityRenderer.DrawEnemy(spriteBatch, enemy, spriteRect, offsets, shake, alpha, silhouetteAmt, silhouetteColor, isHighlighted, highlight, outlineColor, flashWhite, tint * alpha, scale, transform);
 
                 // Only add hitboxes for ACTIVE enemies (not dying ones)
                 if (!enemy.IsDefeated)
@@ -671,6 +682,9 @@ namespace ProjectVagabond.Battle.UI
                 Color silhouetteColor = isSilhouetted ? _global.Palette_DarkerGray : _global.Palette_DarkerGray;
                 Color outlineColor = (player == currentActor) ? _global.Palette_BrightWhite : _global.Palette_DarkGray;
 
+                // FIX: Multiply outline color by alpha
+                outlineColor = outlineColor * player.VisualAlpha;
+
                 var spawnAnim = animManager.GetSpawnAnimationState(player.CombatantID);
                 var switchOut = animManager.GetSwitchOutAnimationState(player.CombatantID);
                 var switchIn = animManager.GetSwitchInAnimationState(player.CombatantID);
@@ -678,12 +692,19 @@ namespace ProjectVagabond.Battle.UI
                 var hitFlash = animManager.GetHitFlashState(player.CombatantID);
                 var healBounce = animManager.GetHealBounceAnimationState(player.CombatantID);
                 var coinCatch = animManager.GetCoinCatchAnimationState(player.CombatantID);
+                var introSlide = animManager.GetIntroSlideAnimationState(player.CombatantID); // NEW
 
                 float spawnY = 0f;
                 float alpha = player.VisualAlpha;
                 float scale = 1.0f;
+                Vector2 slideOffset = Vector2.Zero;
 
-                if (switchOut != null)
+                if (introSlide != null)
+                {
+                    slideOffset = introSlide.CurrentOffset;
+                    // Alpha handled by manager
+                }
+                else if (switchOut != null)
                 {
                     float p = Math.Clamp(switchOut.Timer / BattleConstants.SWITCH_ANIMATION_DURATION, 0f, 1f);
                     spawnY = MathHelper.Lerp(0f, -BattleConstants.SWITCH_VERTICAL_OFFSET, Easing.EaseOutCubic(p));
@@ -726,7 +747,7 @@ namespace ProjectVagabond.Battle.UI
                     sprite = new PlayerCombatSprite(player.ArchetypeId);
                     _playerSprites[player.CombatantID] = sprite;
                 }
-                sprite.SetPosition(new Vector2(center.X, center.Y + bob + spawnY) + recoil);
+                sprite.SetPosition(new Vector2(center.X, center.Y + bob + spawnY) + recoil + slideOffset);
 
                 bool isHighlighted = selectable.Contains(player) && shouldGrayOut;
                 float pulse = 0f;

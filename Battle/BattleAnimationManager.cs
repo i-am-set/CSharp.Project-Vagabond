@@ -68,6 +68,17 @@ namespace ProjectVagabond.Battle.UI
             public const float DROP_HEIGHT = 10f; // Reduced height for a subtle float down
         }
 
+        // --- NEW: Intro Slide Animation ---
+        public class IntroSlideAnimationState
+        {
+            public string CombatantID;
+            public float Timer;
+            public Vector2 StartOffset;
+            public const float DURATION = 0.5f; // Slide duration
+            public Vector2 CurrentOffset;
+        }
+        private readonly List<IntroSlideAnimationState> _activeIntroSlideAnimations = new List<IntroSlideAnimationState>();
+
         public class SwitchOutAnimationState
         {
             public string CombatantID;
@@ -264,7 +275,7 @@ namespace ProjectVagabond.Battle.UI
         // Layout Constants mirrored from BattleRenderer for pixel-perfect alignment
         private const int DIVIDER_Y = 123;
 
-        public bool IsAnimating => _activeHealthAnimations.Any() || _activeAlphaAnimations.Any() || _activeDeathAnimations.Any() || _activeSpawnAnimations.Any() || _activeSwitchOutAnimations.Any() || _activeSwitchInAnimations.Any() || _activeHealBounceAnimations.Any() || _activeHealFlashAnimations.Any() || _activePoisonEffectAnimations.Any() || _activeBarAnimations.Any() || _activeHitFlashAnimations.Any() || _activeCoins.Any();
+        public bool IsAnimating => _activeHealthAnimations.Any() || _activeAlphaAnimations.Any() || _activeDeathAnimations.Any() || _activeSpawnAnimations.Any() || _activeSwitchOutAnimations.Any() || _activeSwitchInAnimations.Any() || _activeHealBounceAnimations.Any() || _activeHealFlashAnimations.Any() || _activePoisonEffectAnimations.Any() || _activeBarAnimations.Any() || _activeHitFlashAnimations.Any() || _activeCoins.Any() || _activeIntroSlideAnimations.Any();
 
         public BattleAnimationManager()
         {
@@ -295,6 +306,7 @@ namespace ProjectVagabond.Battle.UI
             _pendingTextIndicators.Clear();
             _activeHitstopVisuals.Clear();
             _activeCoinCatchAnimations.Clear();
+            _activeIntroSlideAnimations.Clear();
             _indicatorCooldownTimer = 0f;
         }
 
@@ -427,6 +439,23 @@ namespace ProjectVagabond.Battle.UI
                 Timer = 0f,
                 CurrentPhase = SpawnAnimationState.Phase.Flash
             });
+        }
+
+        public void StartIntroSlideAnimation(string combatantId, Vector2 startOffset)
+        {
+            _activeIntroSlideAnimations.RemoveAll(a => a.CombatantID == combatantId);
+            _activeIntroSlideAnimations.Add(new IntroSlideAnimationState
+            {
+                CombatantID = combatantId,
+                Timer = 0f,
+                StartOffset = startOffset,
+                CurrentOffset = startOffset
+            });
+        }
+
+        public IntroSlideAnimationState GetIntroSlideAnimationState(string combatantId)
+        {
+            return _activeIntroSlideAnimations.FirstOrDefault(a => a.CombatantID == combatantId);
         }
 
         public void StartSwitchOutAnimation(string combatantId)
@@ -742,6 +771,7 @@ namespace ProjectVagabond.Battle.UI
             UpdateAlphaAnimations(gameTime, combatants);
             UpdateDeathAnimations(gameTime, combatants);
             UpdateSpawnAnimations(gameTime, combatants);
+            UpdateIntroSlideAnimations(gameTime, combatants);
             UpdateSwitchAnimations(gameTime, combatants);
             UpdateHitFlashAnimations(gameTime);
             UpdateHealAnimations(gameTime);
@@ -1174,6 +1204,35 @@ namespace ProjectVagabond.Battle.UI
                         combatant.VisualAlpha = 1.0f;
                         _activeSpawnAnimations.RemoveAt(i);
                     }
+                }
+            }
+        }
+
+        private void UpdateIntroSlideAnimations(GameTime gameTime, IEnumerable<BattleCombatant> combatants)
+        {
+            float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            for (int i = _activeIntroSlideAnimations.Count - 1; i >= 0; i--)
+            {
+                var anim = _activeIntroSlideAnimations[i];
+                var combatant = combatants.FirstOrDefault(c => c.CombatantID == anim.CombatantID);
+                if (combatant == null)
+                {
+                    _activeIntroSlideAnimations.RemoveAt(i);
+                    continue;
+                }
+
+                anim.Timer += deltaTime;
+                float progress = Math.Clamp(anim.Timer / IntroSlideAnimationState.DURATION, 0f, 1f);
+                float easedProgress = Easing.EaseOutCubic(progress);
+
+                // Lerp from StartOffset to Zero
+                anim.CurrentOffset = Vector2.Lerp(anim.StartOffset, Vector2.Zero, easedProgress);
+                combatant.VisualAlpha = easedProgress; // Fade in
+
+                if (progress >= 1.0f)
+                {
+                    combatant.VisualAlpha = 1.0f;
+                    _activeIntroSlideAnimations.RemoveAt(i);
                 }
             }
         }

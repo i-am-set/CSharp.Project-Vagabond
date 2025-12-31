@@ -2,13 +2,17 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Particles;
+using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -26,6 +30,8 @@ namespace ProjectVagabond.Battle.UI
         public event Action? OnSlot2BackRequested;
 
         private bool _isVisible;
+        public bool IsVisible => _isVisible;
+
         private BattleCombatant? _player;
         private List<BattleCombatant>? _allCombatants;
         private List<BattleCombatant>? _allTargets;
@@ -765,7 +771,7 @@ namespace ProjectVagabond.Battle.UI
             _previousMouseState = currentMouseState;
         }
 
-        public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
+        public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform, Vector2 offset)
         {
             InitializeButtons();
 
@@ -773,13 +779,14 @@ namespace ProjectVagabond.Battle.UI
             var pixel = ServiceLocator.Get<Texture2D>();
             var bgColor = _global.Palette_Black; // Changed to fully opaque black
             const int dividerY = 123;
-            var bgRect = new Rectangle(0, dividerY, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT - dividerY);
+            var bgRect = new Rectangle(0, dividerY + (int)offset.Y, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT - dividerY);
             spriteBatch.DrawSnapped(pixel, bgRect, bgColor);
 
             if (!_isVisible)
             {
                 // Draw the combat border when the menu is hidden (e.g. during narration/animations)
-                spriteBatch.DrawSnapped(spriteManager.BattleBorderCombat, Vector2.Zero, Color.White);
+                // Apply offset to the border position
+                spriteBatch.DrawSnapped(spriteManager.BattleBorderCombat, offset, Color.White);
                 return;
             }
 
@@ -789,15 +796,15 @@ namespace ProjectVagabond.Battle.UI
                 // --- DYNAMIC BORDER SELECTION ---
                 // If the acting player is in Slot 1 (the second slot), use the alternate border.
                 var border = (_player != null && _player.BattleSlot == 1) ? spriteManager.BattleBorderMain2 : spriteManager.BattleBorderMain;
-                spriteBatch.DrawSnapped(border, Vector2.Zero, Color.White);
+                spriteBatch.DrawSnapped(border, offset, Color.White);
             }
             else if (_currentState == MenuState.Targeting)
             {
-                spriteBatch.DrawSnapped(spriteManager.BattleBorderTarget, Vector2.Zero, Color.White);
+                spriteBatch.DrawSnapped(spriteManager.BattleBorderTarget, offset, Color.White);
             }
             else if (_currentState == MenuState.Moves || _currentState == MenuState.Tooltip)
             {
-                spriteBatch.DrawSnapped(spriteManager.BattleBorderAction, Vector2.Zero, Color.White);
+                spriteBatch.DrawSnapped(spriteManager.BattleBorderAction, offset, Color.White);
             }
 
             switch (_currentState)
@@ -840,12 +847,14 @@ namespace ProjectVagabond.Battle.UI
                             // New: button.Bounds.Height - 1
                             var borderRect = new Rectangle(button.Bounds.X + 1, button.Bounds.Y + 1, button.Bounds.Width - 2, button.Bounds.Height - 1);
 
-                            spriteBatch.DrawSnapped(pixel, new Rectangle(borderRect.Left, borderRect.Top, borderRect.Width, 1), borderColor); // Top
-                            spriteBatch.DrawSnapped(pixel, new Rectangle(borderRect.Left, borderRect.Bottom - 1, borderRect.Width, 1), borderColor); // Bottom
-                            spriteBatch.DrawSnapped(pixel, new Rectangle(borderRect.Left, borderRect.Top, 1, borderRect.Height), borderColor); // Left
-                            spriteBatch.DrawSnapped(pixel, new Rectangle(borderRect.Right - 1, borderRect.Top, 1, borderRect.Height), borderColor); // Right
+                            // Apply offset to border drawing
+                            spriteBatch.DrawSnapped(pixel, new Rectangle(borderRect.Left, borderRect.Top + (int)offset.Y, borderRect.Width, 1), borderColor); // Top
+                            spriteBatch.DrawSnapped(pixel, new Rectangle(borderRect.Left, borderRect.Bottom - 1 + (int)offset.Y, borderRect.Width, 1), borderColor); // Bottom
+                            spriteBatch.DrawSnapped(pixel, new Rectangle(borderRect.Left, borderRect.Top + (int)offset.Y, 1, borderRect.Height), borderColor); // Left
+                            spriteBatch.DrawSnapped(pixel, new Rectangle(borderRect.Right - 1, borderRect.Top + (int)offset.Y, 1, borderRect.Height), borderColor); // Right
 
-                            button.Draw(spriteBatch, font, gameTime, transform);
+                            // Pass offset to button draw
+                            button.Draw(spriteBatch, font, gameTime, transform, false, null, offset.Y);
                             currentY += buttonHeight + buttonSpacing;
                         }
 
@@ -864,13 +873,13 @@ namespace ProjectVagabond.Battle.UI
                             int backX = startX + (buttonWidth - backWidth) / 2 + 2; // Added +2 pixels
 
                             _slot2BackButton.Bounds = new Rectangle(backX, backButtonY, backWidth, backButtonHeight);
-                            _slot2BackButton.Draw(spriteBatch, font, gameTime, transform);
+                            _slot2BackButton.Draw(spriteBatch, font, gameTime, transform, false, null, offset.Y);
                         }
                         break;
                     }
                 case MenuState.Moves:
                     {
-                        DrawMovesMenu(spriteBatch, font, gameTime, transform);
+                        DrawMovesMenu(spriteBatch, font, gameTime, transform, offset);
                         break;
                     }
                 case MenuState.Targeting:
@@ -891,18 +900,18 @@ namespace ProjectVagabond.Battle.UI
                             backButtonWidth,
                             backButtonHeight
                         );
-                        _backButton.Draw(spriteBatch, font, gameTime, transform);
+                        _backButton.Draw(spriteBatch, font, gameTime, transform, false, null, offset.Y);
                         break;
                     }
                 case MenuState.Tooltip:
                     {
                         if (_useSimpleTooltip)
                         {
-                            DrawSimpleTooltip(spriteBatch, font, gameTime, transform);
+                            DrawSimpleTooltip(spriteBatch, font, gameTime, transform, offset);
                         }
                         else
                         {
-                            DrawComplexTooltip(spriteBatch, font, gameTime, transform);
+                            DrawComplexTooltip(spriteBatch, font, gameTime, transform, offset);
                         }
                         break;
                     }
@@ -916,11 +925,15 @@ namespace ProjectVagabond.Battle.UI
                 {
                     foreach (var button in _actionButtons)
                     {
-                        spriteBatch.DrawSnapped(pixel, button.Bounds, Color.Green * 0.5f);
+                        var debugRect = button.Bounds;
+                        debugRect.Y += (int)offset.Y;
+                        spriteBatch.DrawSnapped(pixel, debugRect, Color.Green * 0.5f);
                     }
                     if (_player != null && _player.BattleSlot == 1)
                     {
-                        spriteBatch.DrawSnapped(pixel, _slot2BackButton.Bounds, Color.Red * 0.5f);
+                        var debugRect = _slot2BackButton.Bounds;
+                        debugRect.Y += (int)offset.Y;
+                        spriteBatch.DrawSnapped(pixel, debugRect, Color.Red * 0.5f);
                     }
                 }
 
@@ -931,33 +944,49 @@ namespace ProjectVagabond.Battle.UI
                     {
                         if (button != null)
                         {
-                            spriteBatch.DrawSnapped(pixel, button.Bounds, Color.Yellow * 0.5f);
+                            var debugRect = button.Bounds;
+                            debugRect.Y += (int)offset.Y;
+                            spriteBatch.DrawSnapped(pixel, debugRect, Color.Yellow * 0.5f);
                         }
                     }
                     foreach (var button in _secondaryActionButtons)
                     {
-                        spriteBatch.DrawSnapped(pixel, button.Bounds, Color.Orange * 0.5f);
+                        var debugRect = button.Bounds;
+                        debugRect.Y += (int)offset.Y;
+                        spriteBatch.DrawSnapped(pixel, debugRect, Color.Orange * 0.5f);
                     }
-                    spriteBatch.DrawSnapped(pixel, _backButton.Bounds, Color.Red * 0.5f);
-                    spriteBatch.DrawSnapped(pixel, _moveInfoPanelBounds, Color.Magenta * 0.5f);
+                    var backDebugRect = _backButton.Bounds;
+                    backDebugRect.Y += (int)offset.Y;
+                    spriteBatch.DrawSnapped(pixel, backDebugRect, Color.Red * 0.5f);
+
+                    var infoDebugRect = _moveInfoPanelBounds;
+                    infoDebugRect.Y += (int)offset.Y;
+                    spriteBatch.DrawSnapped(pixel, infoDebugRect, Color.Magenta * 0.5f);
                 }
 
                 // Tooltip
                 if (_currentState == MenuState.Tooltip)
                 {
-                    spriteBatch.DrawSnapped(pixel, _tooltipBounds, Color.Magenta * 0.5f);
-                    spriteBatch.DrawSnapped(pixel, _backButton.Bounds, Color.Red * 0.5f);
+                    var debugRect = _tooltipBounds;
+                    debugRect.Y += (int)offset.Y;
+                    spriteBatch.DrawSnapped(pixel, debugRect, Color.Magenta * 0.5f);
+
+                    var backDebugRect = _backButton.Bounds;
+                    backDebugRect.Y += (int)offset.Y;
+                    spriteBatch.DrawSnapped(pixel, backDebugRect, Color.Red * 0.5f);
                 }
 
                 // Targeting
                 if (_currentState == MenuState.Targeting)
                 {
-                    spriteBatch.DrawSnapped(pixel, _backButton.Bounds, Color.Red * 0.5f);
+                    var backDebugRect = _backButton.Bounds;
+                    backDebugRect.Y += (int)offset.Y;
+                    spriteBatch.DrawSnapped(pixel, backDebugRect, Color.Red * 0.5f);
                 }
             }
         }
 
-        private void DrawSimpleTooltip(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
+        private void DrawSimpleTooltip(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform, Vector2 offset)
         {
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
             var pixel = ServiceLocator.Get<Texture2D>();
@@ -966,7 +995,7 @@ namespace ProjectVagabond.Battle.UI
             const int boxHeight = 47;
             const int boxY = 113; // Moved up from 117 to fit larger back button
             int boxX = (Global.VIRTUAL_WIDTH - boxWidth) / 2;
-            var tooltipBounds = new Rectangle(boxX, boxY, boxWidth, boxHeight);
+            var tooltipBounds = new Rectangle(boxX, boxY + (int)offset.Y, boxWidth, boxHeight);
             _tooltipBounds = tooltipBounds; // Store for debug
 
             // Draw opaque black background
@@ -1027,7 +1056,7 @@ namespace ProjectVagabond.Battle.UI
                 }
             }
 
-            int backButtonY = tooltipBounds.Bottom + 5;
+            int backButtonY = 113 + boxHeight + 5; // Use base Y + height + padding
             var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
             int backWidth = (int)backSize.Width + 16;
             _backButton.Bounds = new Rectangle(
@@ -1036,10 +1065,10 @@ namespace ProjectVagabond.Battle.UI
                 backWidth,
                 15 // Increased from 7 to match ItemMenu
             );
-            _backButton.Draw(spriteBatch, font, gameTime, transform);
+            _backButton.Draw(spriteBatch, font, gameTime, transform, false, null, offset.Y);
         }
 
-        private void DrawComplexTooltip(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
+        private void DrawComplexTooltip(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform, Vector2 offset)
         {
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
             var pixel = ServiceLocator.Get<Texture2D>(); // Added pixel retrieval
@@ -1056,7 +1085,7 @@ namespace ProjectVagabond.Battle.UI
 
             var spriteManager = ServiceLocator.Get<SpriteManager>();
             var tooltipBg = spriteManager.ActionTooltipBackgroundSprite;
-            var tooltipBgRect = new Rectangle(gridStartX, gridStartY, totalGridWidth, gridHeight);
+            var tooltipBgRect = new Rectangle(gridStartX, gridStartY + (int)offset.Y, totalGridWidth, gridHeight);
             _tooltipBounds = tooltipBgRect; // Store for debug
 
             // Draw opaque black background
@@ -1070,7 +1099,7 @@ namespace ProjectVagabond.Battle.UI
             }
 
             const int backButtonTopMargin = 0;
-            int backButtonY = gridStartY + gridHeight + backButtonTopMargin + 2; // Moved down by 2 pixels (was +0)
+            int backButtonY = 123 + gridHeight + backButtonTopMargin + 2; // Use base Y
             var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
             int backWidth = (int)backSize.Width + 16;
             _backButton.Bounds = new Rectangle(
@@ -1079,10 +1108,10 @@ namespace ProjectVagabond.Battle.UI
                 backWidth,
                 15 // Increased from 7 to match ItemMenu
             );
-            _backButton.Draw(spriteBatch, font, gameTime, transform);
+            _backButton.Draw(spriteBatch, font, gameTime, transform, false, null, offset.Y);
         }
 
-        private void DrawMovesMenu(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
+        private void DrawMovesMenu(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform, Vector2 offset)
         {
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
             var pixel = ServiceLocator.Get<Texture2D>();
@@ -1111,7 +1140,7 @@ namespace ProjectVagabond.Battle.UI
             int borderX = moveGridStartX + MOVE_BUTTON_WIDTH + layoutGap;
             int borderY = moveGridStartY + (MOVE_BLOCK_HEIGHT / 2) - (borderHeight / 2);
 
-            var borderRect = new Rectangle(borderX, borderY, borderWidth, borderHeight);
+            var borderRect = new Rectangle(borderX, borderY + (int)offset.Y, borderWidth, borderHeight);
             _moveInfoPanelBounds = borderRect; // Store for debug
 
             // Removed manual border drawing here as it's now handled by the background sprite
@@ -1135,16 +1164,18 @@ namespace ProjectVagabond.Battle.UI
                 if (button == null)
                 {
                     var placeholderFillColor = Color.Transparent; // Changed from Black to Transparent
-                    spriteBatch.DrawSnapped(pixel, visualBounds, placeholderFillColor);
+                    // Apply offset to placeholder
+                    var offsetBounds = new Rectangle(visualBounds.X, visualBounds.Y + (int)offset.Y, visualBounds.Width, visualBounds.Height);
+                    spriteBatch.DrawSnapped(pixel, offsetBounds, placeholderFillColor);
                     var placeholderBorderColor = _global.Palette_DarkerGray;
 
                     const int dashLength = 1;
                     const int gapLength = 3;
                     const int patternLength = dashLength + gapLength;
 
-                    int lineY = visualBounds.Center.Y;
-                    int lineStartX = visualBounds.Left + 3;
-                    int lineEndX = visualBounds.Right - 1;
+                    int lineY = offsetBounds.Center.Y;
+                    int lineStartX = offsetBounds.Left + 3;
+                    int lineEndX = offsetBounds.Right - 1;
 
                     for (int x = lineStartX; x < lineEndX; x += patternLength)
                     {
@@ -1159,20 +1190,23 @@ namespace ProjectVagabond.Battle.UI
                     {
                         buttonBorderColor = Color.Transparent;
                     }
-                    spriteBatch.DrawSnapped(pixel, new Rectangle(visualBounds.Left, visualBounds.Top, visualBounds.Width, 1), buttonBorderColor); // Top
-                    spriteBatch.DrawSnapped(pixel, new Rectangle(visualBounds.Left, visualBounds.Bottom - 1, visualBounds.Width, 1), buttonBorderColor); // Bottom
-                    spriteBatch.DrawSnapped(pixel, new Rectangle(visualBounds.Left, visualBounds.Top, 1, visualBounds.Height), buttonBorderColor); // Left
-                    spriteBatch.DrawSnapped(pixel, new Rectangle(visualBounds.Right - 1, visualBounds.Top, 1, visualBounds.Height), buttonBorderColor); // Right
+                    // Apply offset to border drawing
+                    var offsetBounds = new Rectangle(visualBounds.X, visualBounds.Y + (int)offset.Y, visualBounds.Width, visualBounds.Height);
+
+                    spriteBatch.DrawSnapped(pixel, new Rectangle(offsetBounds.Left, offsetBounds.Top, offsetBounds.Width, 1), buttonBorderColor); // Top
+                    spriteBatch.DrawSnapped(pixel, new Rectangle(offsetBounds.Left, offsetBounds.Bottom - 1, offsetBounds.Width, 1), buttonBorderColor); // Bottom
+                    spriteBatch.DrawSnapped(pixel, new Rectangle(offsetBounds.Left, offsetBounds.Top, 1, offsetBounds.Height), buttonBorderColor); // Left
+                    spriteBatch.DrawSnapped(pixel, new Rectangle(offsetBounds.Right - 1, offsetBounds.Top, 1, offsetBounds.Height), buttonBorderColor); // Right
 
                     if (button == _hoveredMoveButton && button.IsEnabled)
                     {
-                        var hoverBgRect = new Rectangle(visualBounds.X + 1, visualBounds.Y + 1, visualBounds.Width - 2, visualBounds.Height - 2);
+                        var hoverBgRect = new Rectangle(offsetBounds.X + 1, offsetBounds.Y + 1, offsetBounds.Width - 2, offsetBounds.Height - 2);
                         spriteBatch.DrawSnapped(pixel, hoverBgRect, _global.Palette_DarkerGray);
                     }
 
                     var originalBounds = button.Bounds;
                     button.Bounds = visualBounds;
-                    button.Draw(spriteBatch, font, gameTime, transform);
+                    button.Draw(spriteBatch, font, gameTime, transform, false, null, offset.Y);
                     button.Bounds = originalBounds;
                 }
             }
@@ -1194,17 +1228,17 @@ namespace ProjectVagabond.Battle.UI
                 // So inset by 1.
                 var buttonBorderRect = new Rectangle(button.Bounds.X + 1, button.Bounds.Y + 1, button.Bounds.Width - 2, button.Bounds.Height - 2);
 
-                // Draw lines
-                spriteBatch.DrawSnapped(pixel, new Rectangle(buttonBorderRect.Left, buttonBorderRect.Top, buttonBorderRect.Width, 1), borderColor); // Top
-                spriteBatch.DrawSnapped(pixel, new Rectangle(buttonBorderRect.Left, buttonBorderRect.Bottom - 1, buttonBorderRect.Width, 1), borderColor); // Bottom
-                spriteBatch.DrawSnapped(pixel, new Rectangle(buttonBorderRect.Left, buttonBorderRect.Top, 1, buttonBorderRect.Height), borderColor); // Left
-                spriteBatch.DrawSnapped(pixel, new Rectangle(buttonBorderRect.Right - 1, buttonBorderRect.Top, 1, buttonBorderRect.Height), borderColor); // Right
+                // Apply offset to border drawing
+                spriteBatch.DrawSnapped(pixel, new Rectangle(buttonBorderRect.Left, buttonBorderRect.Top + (int)offset.Y, buttonBorderRect.Width, 1), borderColor); // Top
+                spriteBatch.DrawSnapped(pixel, new Rectangle(buttonBorderRect.Left, buttonBorderRect.Bottom - 1 + (int)offset.Y, buttonBorderRect.Width, 1), borderColor); // Bottom
+                spriteBatch.DrawSnapped(pixel, new Rectangle(buttonBorderRect.Left, buttonBorderRect.Top + (int)offset.Y, 1, buttonBorderRect.Height), borderColor); // Left
+                spriteBatch.DrawSnapped(pixel, new Rectangle(buttonBorderRect.Right - 1, buttonBorderRect.Top + (int)offset.Y, 1, buttonBorderRect.Height), borderColor); // Right
 
-                button.Draw(spriteBatch, font, gameTime, transform, false, null, null, button.Text == "ATTUNE" ? attunePulseColor : null);
+                button.Draw(spriteBatch, font, gameTime, transform, false, null, offset.Y, button.Text == "ATTUNE" ? attunePulseColor : null);
             }
 
 
-            int layoutBottomY = Math.Max(borderRect.Bottom, moveGridStartY + MOVE_BLOCK_HEIGHT);
+            int layoutBottomY = Math.Max(borderRect.Bottom - (int)offset.Y, moveGridStartY + MOVE_BLOCK_HEIGHT);
             int backButtonY = layoutBottomY - 2;
             var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
             int backWidth = (int)backSize.Width + 16;
@@ -1214,7 +1248,7 @@ namespace ProjectVagabond.Battle.UI
                 backWidth,
                 15
             );
-            _backButton.Draw(spriteBatch, font, gameTime, transform);
+            _backButton.Draw(spriteBatch, font, gameTime, transform, false, null, offset.Y);
         }
 
         private void DrawMoveInfoPanelContent(SpriteBatch spriteBatch, MoveData? move, Rectangle bounds, BitmapFont font, BitmapFont secondaryFont, Matrix transform, bool isForTooltip)
