@@ -150,6 +150,13 @@ namespace ProjectVagabond.Scenes
             _switchSequenceState = SwitchSequenceState.None;
             SubscribeToEvents();
             InitializeSettingsButton();
+
+            if (!_componentStore.HasComponent<CombatantStatsComponent>(_gameState.PlayerEntityId))
+            {
+                Debug.WriteLine($"[BattleScene] [FATAL] Player entity {_gameState.PlayerEntityId} is missing stats! Aborting battle setup.");
+                return;
+            }
+
             SetupBattle();
 
             if (_battleManager != null)
@@ -172,6 +179,12 @@ namespace ProjectVagabond.Scenes
 
                 // Set UI Border Offset (Push down off-screen)
                 _uiManager.IntroOffset = new Vector2(0, UI_SLIDE_DISTANCE);
+
+                var leader = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && c.BattleSlot == 0);
+                if (leader != null)
+                {
+                    _uiManager.ShowActionMenu(leader, _battleManager.AllCombatants.ToList());
+                }
 
                 // 2. Queue Enemies (Slot 0 then Slot 1) for animation
                 var enemies = _battleManager.AllCombatants
@@ -329,7 +342,11 @@ namespace ProjectVagabond.Scenes
 
                         enemyCombatant.BattleSlot = enemyParty.Count;
                         enemyParty.Add(enemyCombatant);
-                        _enemyEntityIds.Add(newEnemyId);
+
+                        if (newEnemyId != gameState.PlayerEntityId)
+                        {
+                            _enemyEntityIds.Add(newEnemyId);
+                        }
                     }
                     else
                     {
@@ -411,8 +428,17 @@ namespace ProjectVagabond.Scenes
             if (_enemyEntityIds.Any())
             {
                 var entityManager = ServiceLocator.Get<EntityManager>();
+                var gameState = ServiceLocator.Get<GameState>();
+                int playerId = gameState.PlayerEntityId;
+
                 foreach (var id in _enemyEntityIds)
                 {
+                    if (id == playerId)
+                    {
+                        Debug.WriteLine($"[BattleScene] [WARNING] Attempted to cleanup Player Entity ID {id}. Skipping.");
+                        continue;
+                    }
+
                     _componentStore.EntityDestroyed(id);
                     entityManager.DestroyEntity(id);
                 }
