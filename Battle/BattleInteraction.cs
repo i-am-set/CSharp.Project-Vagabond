@@ -64,6 +64,7 @@ namespace ProjectVagabond.Battle
                 // AI: Pick best bench member
                 // Simple AI: Pick highest HP %
                 var target = bench.OrderByDescending(c => (float)c.Stats.CurrentHP / c.Stats.MaxHP).First();
+                System.Diagnostics.Debug.WriteLine($"[SwitchInteraction] AI {Actor.Name} switching to {target.Name}.");
                 Resolve(target);
             }
         }

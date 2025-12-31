@@ -576,6 +576,12 @@ namespace ProjectVagabond.Scenes
                         // Phase 2 Complete: Resume Battle
                         _switchSequenceState = SwitchSequenceState.None;
                         _battleManager.ResumeAfterSwitch();
+
+                        if (_switchIncoming != null)
+                        {
+                            _switchIncoming.VisualAlpha = 1.0f;
+                        }
+
                         _switchOutgoing = null;
                         _switchIncoming = null;
                     }

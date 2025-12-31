@@ -42,7 +42,6 @@ namespace ProjectVagabond.Battle
         private readonly List<BattleCombatant> _playerParty;
         private readonly List<BattleCombatant> _enemyParty;
         private readonly List<BattleCombatant> _allCombatants;
-
         private readonly List<BattleCombatant> _cachedActivePlayers = new List<BattleCombatant>();
         private readonly List<BattleCombatant> _cachedActiveEnemies = new List<BattleCombatant>();
         private readonly List<BattleCombatant> _cachedAllActive = new List<BattleCombatant>();
@@ -231,6 +230,7 @@ namespace ProjectVagabond.Battle
 
         private void OnDisengageTriggered(GameEvents.DisengageTriggered e)
         {
+            Debug.WriteLine($"[BattleManager] Disengage triggered for {e.Actor.Name}. Starting interaction.");
             CanAdvance = false;
             _currentPhase = BattlePhase.ProcessingInteraction;
 
@@ -238,11 +238,13 @@ namespace ProjectVagabond.Battle
             {
                 if (result is BattleCombatant target)
                 {
+                    Debug.WriteLine($"[BattleManager] SwitchInteraction resolved. Target: {target.Name}. Initiating sequence.");
                     // Hand off control to the Scene Director
                     InitiateSwitchSequence(e.Actor, target);
                 }
                 else
                 {
+                    Debug.WriteLine($"[BattleManager] SwitchInteraction resolved with NULL. Cancelling switch.");
                     // Cancelled or failed
                     _currentPhase = BattlePhase.CheckForDefeat;
                     CanAdvance = true;
@@ -278,6 +280,9 @@ namespace ProjectVagabond.Battle
         public void PerformLogicalSwitch(BattleCombatant actor, BattleCombatant incomingMember)
         {
             if (actor == null || incomingMember == null) return;
+
+            incomingMember.IsDying = false;
+            incomingMember.IsRemovalProcessed = false;
 
             int oldSlot = actor.BattleSlot;
             int newSlot = incomingMember.BattleSlot;
