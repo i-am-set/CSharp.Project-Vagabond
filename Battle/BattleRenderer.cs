@@ -52,6 +52,8 @@ namespace ProjectVagabond.Battle.UI
         private bool _centeringSequenceStarted = false;
         private float _centeringDelayTimer = 0f;
         private const float CENTERING_DELAY_DURATION = 0.5f;
+        private bool _floorOutroTriggered = false;
+        private bool _waitingForFloorOutro = false;
 
         // Enemy Animation Data
         private Dictionary<string, Vector2[]> _enemySpritePartOffsets = new Dictionary<string, Vector2[]>();
@@ -125,6 +127,8 @@ namespace ProjectVagabond.Battle.UI
             _statTooltipCombatantID = null;
             _centeringSequenceStarted = false;
             _centeringDelayTimer = 0f;
+            _floorOutroTriggered = false;
+            _waitingForFloorOutro = false;
         }
 
         public List<TargetInfo> GetCurrentTargets() => _currentTargets;
@@ -338,15 +342,25 @@ namespace ProjectVagabond.Battle.UI
             return colors;
         }
 
-        private void UpdateEnemyPositions(float dt, IEnumerable<BattleCombatant> combatants, BattleAnimationManager animManager)
+        private void UpdateEnemyPositions(float dt, IEnumerable<BattleCombatant> combatants, BattleAnimationManager animationManager)
         {
             var enemies = combatants.Where(c => !c.IsPlayerControlled).ToList();
             var activeEnemies = enemies.Where(c => !c.IsDefeated && c.IsActiveOnField).ToList();
             var benchedEnemies = enemies.Where(c => !c.IsDefeated && c.BattleSlot >= 2).ToList();
-            var dyingEnemies = enemies.Where(c => animManager.IsDeathAnimating(c.CombatantID)).ToList();
+            var dyingEnemies = enemies.Where(c => animationManager.IsDeathAnimating(c.CombatantID)).ToList();
 
             // Visual Enemies = Active + Dying
             var visualEnemies = activeEnemies.Concat(dyingEnemies).Distinct().ToList();
+
+            // --- FIRST FRAME DETECTION ---
+            // If this is the very first update (no positions cached), and we have exactly 1 enemy,
+            // assume we started in Single Enemy Mode.
+            if (_enemyVisualXPositions.Count == 0 && visualEnemies.Count == 1)
+            {
+                _centeringSequenceStarted = true; // Start centered immediately
+                _floorOutroTriggered = true; // Skip outro logic
+                _waitingForFloorOutro = false;
+            }
 
             // Eligibility: 
             // 1. Exactly 1 visual enemy (Active or Dying)
@@ -354,7 +368,6 @@ namespace ProjectVagabond.Battle.UI
             // 2. 0 visual enemies (Victory state), BUT we were already centering. 
             //    This prevents snapping back to 2 slots when the last enemy finishes dying.
             bool isVictoryState = visualEnemies.Count == 0 && _centeringSequenceStarted;
-
             bool eligibleForCentering = (visualEnemies.Count == 1 || isVictoryState) && !benchedEnemies.Any();
 
             // Check Battle Phase
@@ -366,15 +379,53 @@ namespace ProjectVagabond.Battle.UI
             {
                 _centeringSequenceStarted = false;
                 _centeringDelayTimer = 0f;
+                _floorOutroTriggered = false;
+                _waitingForFloorOutro = false;
             }
             else if (isActionSelection && !_centeringSequenceStarted)
             {
-                // Only start the sequence (remove other floor -> wait -> move) when turn starts
-                _centeringSequenceStarted = true;
-                _centeringDelayTimer = 0f;
+                // We are eligible (1 enemy left) and it's the start of a turn.
+                // Trigger the transition sequence.
+
+                if (!_floorOutroTriggered)
+                {
+                    // Identify the empty slot
+                    // If visualEnemies has 1, find which slot is empty (0 or 1).
+                    // If visualEnemies has 0 (victory), it doesn't matter, but we shouldn't be here if victory wasn't already centered.
+                    int emptySlot = -1;
+                    if (visualEnemies.Count == 1)
+                    {
+                        int occupiedSlot = visualEnemies[0].BattleSlot;
+                        emptySlot = (occupiedSlot == 0) ? 1 : 0;
+                    }
+
+                    if (emptySlot != -1)
+                    {
+                        animationManager.StartFloorOutroAnimation("floor_" + emptySlot);
+                        _waitingForFloorOutro = true;
+                        _floorOutroTriggered = true;
+                    }
+                    else
+                    {
+                        // Fallback if logic fails (e.g. weird state), just start centering
+                        _centeringSequenceStarted = true;
+                    }
+                }
+
+                if (_waitingForFloorOutro)
+                {
+                    // Check if any floor outro is still playing
+                    bool isAnimating = animationManager.IsFloorAnimatingOut("floor_0") || animationManager.IsFloorAnimatingOut("floor_1");
+                    if (!isAnimating)
+                    {
+                        _waitingForFloorOutro = false;
+                        _centeringSequenceStarted = true; // Start the slide
+                        _centeringDelayTimer = 0f;
+                    }
+                }
             }
 
-            // Update Timer
+            // Update Timer for Slide
             bool moveNow = false;
             if (_centeringSequenceStarted)
             {
@@ -486,7 +537,8 @@ namespace ProjectVagabond.Battle.UI
 
                         // --- FLOOR ANIMATION LOGIC ---
                         float floorScale = 1.0f;
-                        var floorAnim = animManager.GetFloorIntroAnimationState("floor_" + enemy.BattleSlot);
+                        // Check for "floor_center" intro animation (Single Enemy Start)
+                        var floorAnim = animManager.GetFloorIntroAnimationState("floor_center");
                         if (floorAnim != null)
                         {
                             float progress = Math.Clamp(floorAnim.Timer / BattleAnimationManager.FloorIntroAnimationState.DURATION, 0f, 1f);
@@ -511,11 +563,23 @@ namespace ProjectVagabond.Battle.UI
 
                     // --- FLOOR ANIMATION LOGIC ---
                     float floorScale = 1.0f;
-                    var floorAnim = animManager.GetFloorIntroAnimationState("floor_" + i);
-                    if (floorAnim != null)
+
+                    // Check Outro First
+                    var outroAnim = animManager.GetFloorOutroAnimationState("floor_" + i);
+                    if (outroAnim != null)
                     {
-                        float progress = Math.Clamp(floorAnim.Timer / BattleAnimationManager.FloorIntroAnimationState.DURATION, 0f, 1f);
-                        floorScale = Easing.EaseOutBack(progress);
+                        float progress = Math.Clamp(outroAnim.Timer / BattleAnimationManager.FloorOutroAnimationState.DURATION, 0f, 1f);
+                        floorScale = 1.0f - Easing.EaseInBack(progress); // Shrink out
+                    }
+                    else
+                    {
+                        // Check Intro
+                        var floorAnim = animManager.GetFloorIntroAnimationState("floor_" + i);
+                        if (floorAnim != null)
+                        {
+                            float progress = Math.Clamp(floorAnim.Timer / BattleAnimationManager.FloorIntroAnimationState.DURATION, 0f, 1f);
+                            floorScale = Easing.EaseOutBack(progress);
+                        }
                     }
 
                     _vfxRenderer.DrawFloor(spriteBatch, center, center.Y + size + BattleLayout.ENEMY_SLOT_Y_OFFSET - 12, floorScale);

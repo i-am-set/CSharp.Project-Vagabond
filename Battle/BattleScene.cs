@@ -199,10 +199,18 @@ namespace ProjectVagabond.Scenes
                 }
 
                 // --- TRIGGER FLOOR ANIMATIONS ---
-                // Trigger animations for both slots 0 and 1, regardless of occupancy,
-                // to match the "arena" drawing logic in BattleRenderer.
-                _animationManager.StartFloorIntroAnimation("floor_0");
-                _animationManager.StartFloorIntroAnimation("floor_1");
+                // Check enemy count to decide which floor intro to play
+                if (enemies.Count == 1)
+                {
+                    // Single enemy: Use centered floor
+                    _animationManager.StartFloorIntroAnimation("floor_center");
+                }
+                else
+                {
+                    // Multiple enemies: Use standard slots
+                    _animationManager.StartFloorIntroAnimation("floor_0");
+                    _animationManager.StartFloorIntroAnimation("floor_1");
+                }
 
                 // Sync stats for players
                 foreach (var combatant in _battleManager.AllCombatants)

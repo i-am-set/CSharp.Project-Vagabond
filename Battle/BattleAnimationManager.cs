@@ -96,11 +96,20 @@ namespace ProjectVagabond.Battle.UI
         // --- NEW: Floor Intro Animation ---
         public class FloorIntroAnimationState
         {
-            public string ID; // "floor_0", "floor_1", etc.
+            public string ID; // "floor_0", "floor_1", "floor_center"
             public float Timer;
             public const float DURATION = 0.5f;
         }
         private readonly List<FloorIntroAnimationState> _activeFloorIntroAnimations = new List<FloorIntroAnimationState>();
+
+        // --- NEW: Floor Outro Animation ---
+        public class FloorOutroAnimationState
+        {
+            public string ID; // "floor_0", "floor_1"
+            public float Timer;
+            public const float DURATION = 0.5f;
+        }
+        private readonly List<FloorOutroAnimationState> _activeFloorOutroAnimations = new List<FloorOutroAnimationState>();
 
         public class SwitchOutAnimationState
         {
@@ -298,7 +307,7 @@ namespace ProjectVagabond.Battle.UI
         // Layout Constants mirrored from BattleRenderer for pixel-perfect alignment
         private const int DIVIDER_Y = 123;
 
-        public bool IsAnimating => _activeHealthAnimations.Any() || _activeAlphaAnimations.Any() || _activeDeathAnimations.Any() || _activeSpawnAnimations.Any() || _activeSwitchOutAnimations.Any() || _activeSwitchInAnimations.Any() || _activeHealBounceAnimations.Any() || _activeHealFlashAnimations.Any() || _activePoisonEffectAnimations.Any() || _activeBarAnimations.Any() || _activeHitFlashAnimations.Any() || _activeCoins.Any() || _activeIntroSlideAnimations.Any() || _activeFloorIntroAnimations.Any();
+        public bool IsAnimating => _activeHealthAnimations.Any() || _activeAlphaAnimations.Any() || _activeDeathAnimations.Any() || _activeSpawnAnimations.Any() || _activeSwitchOutAnimations.Any() || _activeSwitchInAnimations.Any() || _activeHealBounceAnimations.Any() || _activeHealFlashAnimations.Any() || _activePoisonEffectAnimations.Any() || _activeBarAnimations.Any() || _activeHitFlashAnimations.Any() || _activeCoins.Any() || _activeIntroSlideAnimations.Any() || _activeFloorIntroAnimations.Any() || _activeFloorOutroAnimations.Any();
 
         public BattleAnimationManager()
         {
@@ -331,6 +340,7 @@ namespace ProjectVagabond.Battle.UI
             _activeCoinCatchAnimations.Clear();
             _activeIntroSlideAnimations.Clear();
             _activeFloorIntroAnimations.Clear();
+            _activeFloorOutroAnimations.Clear();
             _indicatorCooldownTimer = 0f;
         }
 
@@ -499,6 +509,26 @@ namespace ProjectVagabond.Battle.UI
         public FloorIntroAnimationState GetFloorIntroAnimationState(string id)
         {
             return _activeFloorIntroAnimations.FirstOrDefault(a => a.ID == id);
+        }
+
+        public void StartFloorOutroAnimation(string id)
+        {
+            _activeFloorOutroAnimations.RemoveAll(a => a.ID == id);
+            _activeFloorOutroAnimations.Add(new FloorOutroAnimationState
+            {
+                ID = id,
+                Timer = 0f
+            });
+        }
+
+        public FloorOutroAnimationState GetFloorOutroAnimationState(string id)
+        {
+            return _activeFloorOutroAnimations.FirstOrDefault(a => a.ID == id);
+        }
+
+        public bool IsFloorAnimatingOut(string id)
+        {
+            return _activeFloorOutroAnimations.Any(a => a.ID == id);
         }
 
         public void StartSwitchOutAnimation(string combatantId)
@@ -816,6 +846,7 @@ namespace ProjectVagabond.Battle.UI
             UpdateSpawnAnimations(gameTime, combatants);
             UpdateIntroSlideAnimations(gameTime, combatants);
             UpdateFloorIntroAnimations(gameTime);
+            UpdateFloorOutroAnimations(gameTime);
             UpdateSwitchAnimations(gameTime, combatants);
             UpdateHitFlashAnimations(gameTime);
             UpdateHealAnimations(gameTime);
@@ -1336,6 +1367,20 @@ namespace ProjectVagabond.Battle.UI
                 if (anim.Timer >= FloorIntroAnimationState.DURATION)
                 {
                     _activeFloorIntroAnimations.RemoveAt(i);
+                }
+            }
+        }
+
+        private void UpdateFloorOutroAnimations(GameTime gameTime)
+        {
+            float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            for (int i = _activeFloorOutroAnimations.Count - 1; i >= 0; i--)
+            {
+                var anim = _activeFloorOutroAnimations[i];
+                anim.Timer += deltaTime;
+                if (anim.Timer >= FloorOutroAnimationState.DURATION)
+                {
+                    _activeFloorOutroAnimations.RemoveAt(i);
                 }
             }
         }
