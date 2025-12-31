@@ -1,9 +1,18 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Particles;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.Transitions;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 
 namespace ProjectVagabond.Battle.UI
 {
@@ -34,12 +43,12 @@ namespace ProjectVagabond.Battle.UI
             spriteBatch.DrawSnapped(_spriteManager.ShadowBlobSprite, drawPos, null, Color.White * alpha, 0f, shadowOrigin, 1.0f, SpriteEffects.None, 0f);
         }
 
-        public void DrawFloor(SpriteBatch spriteBatch, Vector2 slotCenter, float groundY)
+        public void DrawFloor(SpriteBatch spriteBatch, Vector2 slotCenter, float groundY, float scale = 1.0f)
         {
-            if (_spriteManager.BattleEnemyFloorSprite != null)
+            if (_spriteManager.BattleEnemyFloorSprite != null && scale > 0.01f)
             {
                 Vector2 floorOrigin = new Vector2(_spriteManager.BattleEnemyFloorSprite.Width / 2f, _spriteManager.BattleEnemyFloorSprite.Height / 2f);
-                spriteBatch.DrawSnapped(_spriteManager.BattleEnemyFloorSprite, new Vector2(slotCenter.X, groundY), null, Color.White, 0f, floorOrigin, 1f, SpriteEffects.None, 0f);
+                spriteBatch.DrawSnapped(_spriteManager.BattleEnemyFloorSprite, new Vector2(slotCenter.X, groundY), null, Color.White, 0f, floorOrigin, scale, SpriteEffects.None, 0f);
             }
         }
 

@@ -198,6 +198,12 @@ namespace ProjectVagabond.Scenes
                     e.VisualAlpha = 0f; // Hidden initially
                 }
 
+                // --- TRIGGER FLOOR ANIMATIONS ---
+                // Trigger animations for both slots 0 and 1, regardless of occupancy,
+                // to match the "arena" drawing logic in BattleRenderer.
+                _animationManager.StartFloorIntroAnimation("floor_0");
+                _animationManager.StartFloorIntroAnimation("floor_1");
+
                 // Sync stats for players
                 foreach (var combatant in _battleManager.AllCombatants)
                 {

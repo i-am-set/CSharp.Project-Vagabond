@@ -79,6 +79,15 @@ namespace ProjectVagabond.Battle.UI
         }
         private readonly List<IntroSlideAnimationState> _activeIntroSlideAnimations = new List<IntroSlideAnimationState>();
 
+        // --- NEW: Floor Intro Animation ---
+        public class FloorIntroAnimationState
+        {
+            public string ID; // "floor_0", "floor_1", etc.
+            public float Timer;
+            public const float DURATION = 0.5f;
+        }
+        private readonly List<FloorIntroAnimationState> _activeFloorIntroAnimations = new List<FloorIntroAnimationState>();
+
         public class SwitchOutAnimationState
         {
             public string CombatantID;
@@ -275,7 +284,7 @@ namespace ProjectVagabond.Battle.UI
         // Layout Constants mirrored from BattleRenderer for pixel-perfect alignment
         private const int DIVIDER_Y = 123;
 
-        public bool IsAnimating => _activeHealthAnimations.Any() || _activeAlphaAnimations.Any() || _activeDeathAnimations.Any() || _activeSpawnAnimations.Any() || _activeSwitchOutAnimations.Any() || _activeSwitchInAnimations.Any() || _activeHealBounceAnimations.Any() || _activeHealFlashAnimations.Any() || _activePoisonEffectAnimations.Any() || _activeBarAnimations.Any() || _activeHitFlashAnimations.Any() || _activeCoins.Any() || _activeIntroSlideAnimations.Any();
+        public bool IsAnimating => _activeHealthAnimations.Any() || _activeAlphaAnimations.Any() || _activeDeathAnimations.Any() || _activeSpawnAnimations.Any() || _activeSwitchOutAnimations.Any() || _activeSwitchInAnimations.Any() || _activeHealBounceAnimations.Any() || _activeHealFlashAnimations.Any() || _activePoisonEffectAnimations.Any() || _activeBarAnimations.Any() || _activeHitFlashAnimations.Any() || _activeCoins.Any() || _activeIntroSlideAnimations.Any() || _activeFloorIntroAnimations.Any();
 
         public BattleAnimationManager()
         {
@@ -307,6 +316,7 @@ namespace ProjectVagabond.Battle.UI
             _activeHitstopVisuals.Clear();
             _activeCoinCatchAnimations.Clear();
             _activeIntroSlideAnimations.Clear();
+            _activeFloorIntroAnimations.Clear();
             _indicatorCooldownTimer = 0f;
         }
 
@@ -456,6 +466,21 @@ namespace ProjectVagabond.Battle.UI
         public IntroSlideAnimationState GetIntroSlideAnimationState(string combatantId)
         {
             return _activeIntroSlideAnimations.FirstOrDefault(a => a.CombatantID == combatantId);
+        }
+
+        public void StartFloorIntroAnimation(string id)
+        {
+            _activeFloorIntroAnimations.RemoveAll(a => a.ID == id);
+            _activeFloorIntroAnimations.Add(new FloorIntroAnimationState
+            {
+                ID = id,
+                Timer = 0f
+            });
+        }
+
+        public FloorIntroAnimationState GetFloorIntroAnimationState(string id)
+        {
+            return _activeFloorIntroAnimations.FirstOrDefault(a => a.ID == id);
         }
 
         public void StartSwitchOutAnimation(string combatantId)
@@ -772,6 +797,7 @@ namespace ProjectVagabond.Battle.UI
             UpdateDeathAnimations(gameTime, combatants);
             UpdateSpawnAnimations(gameTime, combatants);
             UpdateIntroSlideAnimations(gameTime, combatants);
+            UpdateFloorIntroAnimations(gameTime);
             UpdateSwitchAnimations(gameTime, combatants);
             UpdateHitFlashAnimations(gameTime);
             UpdateHealAnimations(gameTime);
@@ -1233,6 +1259,20 @@ namespace ProjectVagabond.Battle.UI
                 {
                     combatant.VisualAlpha = 1.0f;
                     _activeIntroSlideAnimations.RemoveAt(i);
+                }
+            }
+        }
+
+        private void UpdateFloorIntroAnimations(GameTime gameTime)
+        {
+            float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            for (int i = _activeFloorIntroAnimations.Count - 1; i >= 0; i--)
+            {
+                var anim = _activeFloorIntroAnimations[i];
+                anim.Timer += deltaTime;
+                if (anim.Timer >= FloorIntroAnimationState.DURATION)
+                {
+                    _activeFloorIntroAnimations.RemoveAt(i);
                 }
             }
         }

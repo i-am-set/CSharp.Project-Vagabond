@@ -5,9 +5,14 @@ using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Particles;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.Transitions;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace ProjectVagabond.Battle.UI
@@ -478,7 +483,17 @@ namespace ProjectVagabond.Battle.UI
 
                         var center = new Vector2(visualX, BattleLayout.ENEMY_SLOT_Y_OFFSET);
                         int size = _spriteManager.IsMajorEnemySprite(enemy.ArchetypeId) ? BattleLayout.ENEMY_SPRITE_SIZE_MAJOR : BattleLayout.ENEMY_SPRITE_SIZE_NORMAL;
-                        _vfxRenderer.DrawFloor(spriteBatch, center, center.Y + size + BattleLayout.ENEMY_SLOT_Y_OFFSET - 12);
+
+                        // --- FLOOR ANIMATION LOGIC ---
+                        float floorScale = 1.0f;
+                        var floorAnim = animManager.GetFloorIntroAnimationState("floor_" + enemy.BattleSlot);
+                        if (floorAnim != null)
+                        {
+                            float progress = Math.Clamp(floorAnim.Timer / BattleAnimationManager.FloorIntroAnimationState.DURATION, 0f, 1f);
+                            floorScale = Easing.EaseOutBack(progress);
+                        }
+
+                        _vfxRenderer.DrawFloor(spriteBatch, center, center.Y + size + BattleLayout.ENEMY_SLOT_Y_OFFSET - 12, floorScale);
                     }
                 }
             }
@@ -494,7 +509,16 @@ namespace ProjectVagabond.Battle.UI
                     var occupant = floorEntities.FirstOrDefault(e => e.BattleSlot == i);
                     int size = (occupant != null && _spriteManager.IsMajorEnemySprite(occupant.ArchetypeId)) ? BattleLayout.ENEMY_SPRITE_SIZE_MAJOR : BattleLayout.ENEMY_SPRITE_SIZE_NORMAL;
 
-                    _vfxRenderer.DrawFloor(spriteBatch, center, center.Y + size + BattleLayout.ENEMY_SLOT_Y_OFFSET - 12);
+                    // --- FLOOR ANIMATION LOGIC ---
+                    float floorScale = 1.0f;
+                    var floorAnim = animManager.GetFloorIntroAnimationState("floor_" + i);
+                    if (floorAnim != null)
+                    {
+                        float progress = Math.Clamp(floorAnim.Timer / BattleAnimationManager.FloorIntroAnimationState.DURATION, 0f, 1f);
+                        floorScale = Easing.EaseOutBack(progress);
+                    }
+
+                    _vfxRenderer.DrawFloor(spriteBatch, center, center.Y + size + BattleLayout.ENEMY_SLOT_Y_OFFSET - 12, floorScale);
                 }
             }
 
