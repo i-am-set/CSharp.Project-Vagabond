@@ -778,11 +778,6 @@ namespace ProjectVagabond
 
                 // Render Dice (returns a target, doesn't draw to current)
                 diceRenderTarget = _diceRollingSystem.Draw(_defaultFont);
-
-                // Draw Transitions (Overlay on scene) - REMOVED FROM HERE
-                // _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-                // _transitionManager.Draw(_spriteBatch);
-                // _spriteBatch.End();
             }
 
             // 2. Render Transitions to Low-Res Target
@@ -806,7 +801,29 @@ namespace ProjectVagabond
             GraphicsDevice.SetRenderTarget(_finalCompositeTarget);
             GraphicsDevice.Clear(letterboxColor);
 
-            _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+            // --- CALCULATE SHAKE MATRIX FOR COMPOSITE PASS ---
+            // We apply the shake here so it affects the game content but NOT the final CRT/Noise pass.
+            var (shakeOffset, shakeRotation, shakeScale) = _hapticsManager.GetTotalShakeParams();
+            Vector2 screenCenter = _finalRenderRectangle.Center.ToVector2();
+
+            // Construct the matrix:
+            // 1. Move to origin (center of screen)
+            // 2. Scale (Zoom Pulse)
+            // 3. Rotate (Screen Shake)
+            // 4. Move back to center
+            // 5. Translate (Screen Shake Offset) - Scaled by FinalScale to match resolution
+            Matrix compositeShakeMatrix =
+                Matrix.CreateTranslation(-screenCenter.X, -screenCenter.Y, 0) *
+                Matrix.CreateScale(shakeScale, shakeScale, 1.0f) *
+                Matrix.CreateRotationZ(shakeRotation) *
+                Matrix.CreateTranslation(screenCenter.X, screenCenter.Y, 0) *
+                Matrix.CreateTranslation(shakeOffset.X * _finalScale, shakeOffset.Y * _finalScale, 0);
+
+            // Round translation components to prevent sub-pixel shimmering
+            compositeShakeMatrix.M41 = MathF.Round(compositeShakeMatrix.M41);
+            compositeShakeMatrix.M42 = MathF.Round(compositeShakeMatrix.M42);
+
+            _spriteBatch.Begin(samplerState: SamplerState.PointClamp, transformMatrix: compositeShakeMatrix);
 
             if (_loadingScreen.IsActive)
             {
@@ -842,15 +859,24 @@ namespace ProjectVagabond
             // The result is stored in _backgroundNoiseRenderer.Texture.
             _backgroundNoiseRenderer.Apply(GraphicsDevice, _finalCompositeTarget, gameTime, _finalScale);
 
-            // 5. Draw Fullscreen UI
+            // 5. Draw Fullscreen UI (With Shake)
             if (!_loadingScreen.IsActive)
             {
+                // Fullscreen UI is drawn in screen space, so we apply the shake matrix directly.
+                // However, DrawFullscreenUI usually expects a matrix to convert Virtual->Screen.
+                // We need to combine that with our shake.
                 Matrix screenScaleMatrix = Matrix.Invert(_mouseTransformMatrix);
-                _sceneManager.CurrentActiveScene?.DrawFullscreenUI(_spriteBatch, _defaultFont, gameTime, screenScaleMatrix);
+                Matrix uiMatrix = screenScaleMatrix * compositeShakeMatrix;
+
+                // Note: DrawFullscreenUI usually handles its own Begin/End.
+                // We might need to pass the matrix to it, or wrap it.
+                // Current implementation of DrawFullscreenUI in GameScene takes a transform.
+                _sceneManager.CurrentActiveScene?.DrawFullscreenUI(_spriteBatch, _defaultFont, gameTime, uiMatrix);
             }
 
-            // 6. Draw Custom Cursor
-            _spriteBatch.Begin(blendState: _cursorInvertBlendState, samplerState: SamplerState.PointClamp);
+            // 6. Draw Custom Cursor (With Shake)
+            // The cursor should shake with the UI/World to stay aligned.
+            _spriteBatch.Begin(blendState: _cursorInvertBlendState, samplerState: SamplerState.PointClamp, transformMatrix: compositeShakeMatrix);
             _cursorManager.Draw(_spriteBatch, Mouse.GetState().Position.ToVector2(), _finalScale);
             _spriteBatch.End();
 
@@ -862,11 +888,8 @@ namespace ProjectVagabond
             GraphicsDevice.SetRenderTarget(null);
             GraphicsDevice.Clear(letterboxColor);
 
-            Matrix shakeMatrix = _hapticsManager.GetHapticsMatrix();
-            shakeMatrix.M41 = MathF.Round(shakeMatrix.M41);
-            shakeMatrix.M42 = MathF.Round(shakeMatrix.M42);
-
-            _spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.Opaque, SamplerState.PointClamp, null, null, null, shakeMatrix);
+            // Use Identity Matrix here so the CRT effect and Noise stay static
+            _spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.Opaque, SamplerState.PointClamp, null, null, null, Matrix.Identity);
 
             if (_crtEffect != null)
             {
@@ -914,7 +937,7 @@ namespace ProjectVagabond
 
             _spriteBatch.End();
 
-            // 9. Draw Debug Overlays (No Shader)
+            // 9. Draw Debug Overlays (No Shader, No Shake)
             if (!_loadingScreen.IsActive)
             {
                 _spriteBatch.Begin(samplerState: SamplerState.PointClamp);

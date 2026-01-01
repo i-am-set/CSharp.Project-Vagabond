@@ -20,7 +20,7 @@ namespace ProjectVagabond
         Drift,
         Bounce,
         ZoomPulse,
-        DirectionalShake 
+        DirectionalShake
     }
 
     public class HapticsManager
@@ -33,7 +33,7 @@ namespace ProjectVagabond
         private readonly HapticEffect _drift = new(HapticType.Drift);
         private readonly HapticEffect _bounce = new(HapticType.Bounce);
         private readonly HapticEffect _zoomPulse = new(HapticType.ZoomPulse);
-        private readonly HapticEffect _directionalShake = new(HapticType.DirectionalShake); 
+        private readonly HapticEffect _directionalShake = new(HapticType.DirectionalShake);
         private Global _global;
 
         public HapticsManager()
@@ -116,13 +116,24 @@ namespace ProjectVagabond
             _directionalShake.Update(gameTime, _random);
         }
 
+        /// <summary>
+        /// Returns the raw aggregated values for Offset, Rotation, and Scale.
+        /// This allows the renderer to construct the matrix relative to the actual screen center and scale.
+        /// </summary>
+        public (Vector2 Offset, float Rotation, float Scale) GetTotalShakeParams()
+        {
+            Vector2 totalOffset = _shake.Offset + _hop.Offset + _pulse.Offset + _wobble.Offset + _drift.Offset + _bounce.Offset + _zoomPulse.Offset + _directionalShake.Offset;
+            float totalRotation = _shake.Rotation + _hop.Rotation + _pulse.Rotation + _wobble.Rotation + _drift.Rotation + _bounce.Rotation + _zoomPulse.Rotation + _directionalShake.Rotation;
+            float totalScale = GetCurrentScale();
+
+            return (totalOffset, totalRotation, totalScale);
+        }
+
         public Matrix GetHapticsMatrix()
         {
             _global ??= ServiceLocator.Get<Global>();
 
-            Vector2 totalOffset = _shake.Offset + _hop.Offset + _pulse.Offset + _wobble.Offset + _drift.Offset + _bounce.Offset + _zoomPulse.Offset + _directionalShake.Offset;
-            float totalRotation = _shake.Rotation + _hop.Rotation + _pulse.Rotation + _wobble.Rotation + _drift.Rotation + _bounce.Rotation + _zoomPulse.Rotation + _directionalShake.Rotation;
-            float totalScale = GetCurrentScale();
+            var (totalOffset, totalRotation, totalScale) = GetTotalShakeParams();
 
             var screenCenter = new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f);
 
