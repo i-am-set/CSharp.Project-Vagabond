@@ -81,6 +81,15 @@ namespace ProjectVagabond.Battle.UI
 
             float time = (float)gameTime.TotalGameTime.TotalSeconds;
 
+            // --- Icon Wave Animation Constants ---
+            const float WAVE_SPEED = 6f; // Icons per second (Fast ripple)
+            const float WAVE_WIDTH = 1f;  // Width of the wave in icons (1 full row)
+            const float WAVE_HEIGHT = 1f; // Pixel height of the jump
+            const float WAVE_PAUSE = 0f; // Gap in "icon units" before loop repeats (approx 0.5s pause)
+
+            float totalSequenceLength = 24f + WAVE_PAUSE; // 4 rows * 6 icons + gap
+            float waveCursor = (time * WAVE_SPEED) % totalSequenceLength;
+
             for (int i = 0; i < 4; i++)
             {
                 int rowY = bounds.Y + (i * rowHeight);
@@ -99,7 +108,7 @@ namespace ProjectVagabond.Battle.UI
 
                 // --- Stat Value Bob Animation ---
                 // Stagger the bob based on the row index 'i'
-                float bobSpeed = 8f;
+                float bobSpeed = 2f;
                 float bobOffset = (MathF.Sin(time * bobSpeed + (i * 0.8f)) > 0) ? -1f : 0f;
 
                 spriteBatch.DrawStringSquareOutlinedSnapped(tertiaryFont, valueText, new Vector2(valueX, rowY + 1 + bobOffset), _global.Palette_White * alpha, _global.Palette_Black * alpha);
@@ -116,7 +125,19 @@ namespace ProjectVagabond.Battle.UI
                     int iconIndex = 0;
                     if (j < absStage) iconIndex = isPositive ? 1 : 2;
 
-                    var destRect = new Rectangle(startIconX + (j * (iconSize + iconGap)), iconY, iconSize, iconSize);
+                    // --- Calculate Wave Offset ---
+                    int globalIconIndex = (i * 6) + j; // 0 to 23
+                    float dist = waveCursor - globalIconIndex;
+                    float iconWaveOffset = 0f;
+
+                    if (dist > 0 && dist < WAVE_WIDTH)
+                    {
+                        // Sine wave hump: sin(0..pi)
+                        float progress = dist / WAVE_WIDTH;
+                        iconWaveOffset = -MathF.Sin(progress * MathHelper.Pi) * WAVE_HEIGHT;
+                    }
+
+                    var destRect = new Rectangle(startIconX + (j * (iconSize + iconGap)), (int)(iconY + iconWaveOffset), iconSize, iconSize);
                     var sourceRect = iconRects[iconIndex];
 
                     // Draw Outline

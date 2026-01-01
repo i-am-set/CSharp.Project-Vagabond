@@ -231,6 +231,10 @@ namespace ProjectVagabond.Battle.UI
             int widthBefore = (int)(bgRect.Width * percentBefore);
             int widthAfter = (int)(bgRect.Width * percentAfter);
 
+            // so the overlay doesn't draw over the last sliver if the unit is still alive.
+            if (percentAfter > 0 && widthAfter == 0) widthAfter = 1;
+            if (percentBefore > 0 && widthBefore == 0) widthBefore = 1;
+
             // Define the visible area of the bar (in screen space)
             // Since we collapse from right to left, the visible area starts at X and has width - cropOffset
             int visibleStartX = bgRect.X;
