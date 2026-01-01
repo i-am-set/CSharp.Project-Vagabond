@@ -11,6 +11,7 @@ using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -123,8 +124,8 @@ namespace ProjectVagabond.Battle
         public float ManaBarDisappearTimer { get; set; } = 0f;
 
         // --- TUNING: Bar Animation ---
-        public const float BAR_DISAPPEAR_DURATION = 0.5f; // Time to shrink
-        public const float BAR_DELAY_DURATION = 1.2f;     // Time to wait before shrinking
+        public const float BAR_DISAPPEAR_DURATION = 2.0f; // Time to fade out (Slowed down from 0.5f)
+        public const float BAR_DELAY_DURATION = 1.2f;     // Time to wait before fading
         public const float BAR_VARIANCE_MAX = 0.5f;       // Max random added delay
 
         // Instance-specific variance to desynchronize bars

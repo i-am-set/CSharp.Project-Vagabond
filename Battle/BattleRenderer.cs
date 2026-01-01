@@ -1183,10 +1183,13 @@ namespace ProjectVagabond.Battle.UI
                     {
                         c.HealthBarDelayTimer += dt;
                     }
-                    // Phase 2: Crop/Disappear
+                    // Phase 2: Fade Out
                     else
                     {
                         c.HealthBarDisappearTimer += dt;
+                        float progress = c.HealthBarDisappearTimer / BattleCombatant.BAR_DISAPPEAR_DURATION;
+                        c.VisualHealthBarAlpha = 1.0f - Math.Clamp(progress, 0f, 1f);
+
                         if (c.HealthBarDisappearTimer >= BattleCombatant.BAR_DISAPPEAR_DURATION)
                         {
                             c.VisualHealthBarAlpha = 0f;
@@ -1219,10 +1222,13 @@ namespace ProjectVagabond.Battle.UI
                     {
                         c.ManaBarDelayTimer += dt;
                     }
-                    // Phase 2: Crop/Disappear
+                    // Phase 2: Fade Out
                     else
                     {
                         c.ManaBarDisappearTimer += dt;
+                        float progress = c.ManaBarDisappearTimer / BattleCombatant.BAR_DISAPPEAR_DURATION;
+                        c.VisualManaBarAlpha = 1.0f - Math.Clamp(progress, 0f, 1f);
+
                         if (c.ManaBarDisappearTimer >= BattleCombatant.BAR_DISAPPEAR_DURATION)
                         {
                             c.VisualManaBarAlpha = 0f;

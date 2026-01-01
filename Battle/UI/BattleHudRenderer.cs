@@ -32,88 +32,56 @@ namespace ProjectVagabond.Battle.UI
         public void DrawEnemyBars(SpriteBatch spriteBatch, BattleCombatant combatant, float barX, float barY, int barWidth, int barHeight, BattleAnimationManager animationManager, float hpAlpha, float manaAlpha, GameTime gameTime)
         {
             // --- HEALTH BAR ---
-            int hpCrop = 0;
-            if (combatant.HealthBarDisappearTimer > 0)
-            {
-                float progress = Math.Clamp(combatant.HealthBarDisappearTimer / BattleCombatant.BAR_DISAPPEAR_DURATION, 0f, 1f);
-                float eased = Easing.EaseInCubic(progress);
-                hpCrop = (int)(barWidth * eased);
-            }
+            var barRect = new Rectangle((int)barX, (int)barY, barWidth, barHeight);
+            float hpPercent = combatant.Stats.MaxHP > 0 ? Math.Clamp(combatant.VisualHP / combatant.Stats.MaxHP, 0f, 1f) : 0f;
+            var hpAnim = animationManager.GetResourceBarAnimation(combatant.CombatantID, BattleAnimationManager.ResourceBarAnimationState.BarResourceType.HP);
 
-            if (hpCrop < barWidth)
-            {
-                var barRect = new Rectangle((int)barX, (int)barY, barWidth, barHeight);
-                float hpPercent = combatant.Stats.MaxHP > 0 ? Math.Clamp(combatant.VisualHP / combatant.Stats.MaxHP, 0f, 1f) : 0f;
-                var hpAnim = animationManager.GetResourceBarAnimation(combatant.CombatantID, BattleAnimationManager.ResourceBarAnimationState.BarResourceType.HP);
-
-                DrawClippedBar(spriteBatch, barRect, hpPercent, _global.Palette_DarkGray, _global.Palette_LightGreen, _global.Palette_Black, hpAlpha, hpCrop, hpAnim, combatant.Stats.MaxHP);
-            }
+            DrawBar(spriteBatch, barRect, hpPercent, _global.Palette_DarkGray, _global.Palette_LightGreen, _global.Palette_Black, hpAlpha, hpAnim, combatant.Stats.MaxHP);
 
             // --- MANA BAR ---
             float manaBarY = barY + barHeight + 1;
-            int manaCrop = 0;
-            if (combatant.ManaBarDisappearTimer > 0)
-            {
-                float progress = Math.Clamp(combatant.ManaBarDisappearTimer / BattleCombatant.BAR_DISAPPEAR_DURATION, 0f, 1f);
-                float eased = Easing.EaseInCubic(progress);
-                manaCrop = (int)(barWidth * eased);
-            }
+            var manaRect = new Rectangle((int)barX, (int)manaBarY, barWidth, 1);
+            float manaPercent = combatant.Stats.MaxMana > 0 ? Math.Clamp((float)combatant.Stats.CurrentMana / combatant.Stats.MaxMana, 0f, 1f) : 0f;
+            var manaAnim = animationManager.GetResourceBarAnimation(combatant.CombatantID, BattleAnimationManager.ResourceBarAnimationState.BarResourceType.Mana);
 
-            if (manaCrop < barWidth)
-            {
-                var manaRect = new Rectangle((int)barX, (int)manaBarY, barWidth, 1);
-                float manaPercent = combatant.Stats.MaxMana > 0 ? Math.Clamp((float)combatant.Stats.CurrentMana / combatant.Stats.MaxMana, 0f, 1f) : 0f;
-                var manaAnim = animationManager.GetResourceBarAnimation(combatant.CombatantID, BattleAnimationManager.ResourceBarAnimationState.BarResourceType.Mana);
-
-                DrawClippedBar(spriteBatch, manaRect, manaPercent, _global.Palette_DarkGray, _global.Palette_LightBlue, _global.Palette_Black, manaAlpha, manaCrop, manaAnim, combatant.Stats.MaxMana);
-            }
+            DrawBar(spriteBatch, manaRect, manaPercent, _global.Palette_DarkGray, _global.Palette_LightBlue, _global.Palette_Black, manaAlpha, manaAnim, combatant.Stats.MaxMana);
         }
 
-        private void DrawClippedBar(SpriteBatch spriteBatch, Rectangle fullBarRect, float fillPercent, Color bgColor, Color fgColor, Color borderColor, float alpha, int cropOffset, BattleAnimationManager.ResourceBarAnimationState? anim, float maxResource)
+        private void DrawBar(SpriteBatch spriteBatch, Rectangle fullBarRect, float fillPercent, Color bgColor, Color fgColor, Color borderColor, float alpha, BattleAnimationManager.ResourceBarAnimationState? anim, float maxResource)
         {
-            if (cropOffset >= fullBarRect.Width) return;
+            if (alpha <= 0.01f) return;
 
-            // --- RIGHT-TO-LEFT COLLAPSE LOGIC ---
-            // The bar stays anchored to the LEFT (X).
-            // The width reduces by the crop amount.
-            int visibleWidth = fullBarRect.Width - cropOffset;
-            int currentX = fullBarRect.X; // Anchor Left
+            int currentX = fullBarRect.X;
             int y = fullBarRect.Y;
+            int w = fullBarRect.Width;
             int h = fullBarRect.Height;
 
             // Background
-            spriteBatch.DrawSnapped(_pixel, new Rectangle(currentX, y, visibleWidth, h), bgColor * alpha);
+            spriteBatch.DrawSnapped(_pixel, new Rectangle(currentX, y, w, h), bgColor * alpha);
 
             // Foreground
-            int totalFgWidth = (int)(fullBarRect.Width * fillPercent);
+            int totalFgWidth = (int)(w * fillPercent);
             if (fillPercent > 0 && totalFgWidth == 0) totalFgWidth = 1;
 
-            // If the crop hasn't eaten the foreground yet
-            // Since we crop from the right, we just clamp the foreground width to the visible width.
-            int visibleFgWidth = Math.Min(totalFgWidth, visibleWidth);
-
-            if (visibleFgWidth > 0)
+            if (totalFgWidth > 0)
             {
-                spriteBatch.DrawSnapped(_pixel, new Rectangle(currentX, y, visibleFgWidth, h), fgColor * alpha);
+                spriteBatch.DrawSnapped(_pixel, new Rectangle(currentX, y, totalFgWidth, h), fgColor * alpha);
             }
 
             // Outline
             // Top
-            spriteBatch.DrawSnapped(_pixel, new Rectangle(currentX, y - 1, visibleWidth, 1), borderColor * alpha);
+            spriteBatch.DrawSnapped(_pixel, new Rectangle(currentX, y - 1, w, 1), borderColor * alpha);
             // Bottom
-            spriteBatch.DrawSnapped(_pixel, new Rectangle(currentX, y + h, visibleWidth, 1), borderColor * alpha);
-
-            // Left (Always visible if bar is visible)
+            spriteBatch.DrawSnapped(_pixel, new Rectangle(currentX, y + h, w, 1), borderColor * alpha);
+            // Left
             spriteBatch.DrawSnapped(_pixel, new Rectangle(currentX - 1, y - 1, 1, h + 2), borderColor * alpha);
-
-            // Right (Moves with the crop)
-            // Position is X + visibleWidth
-            spriteBatch.DrawSnapped(_pixel, new Rectangle(currentX + visibleWidth, y - 1, 1, h + 2), borderColor * alpha);
+            // Right
+            spriteBatch.DrawSnapped(_pixel, new Rectangle(currentX + w, y - 1, 1, h + 2), borderColor * alpha);
 
             // Animation Overlay
             if (anim != null)
             {
-                DrawBarAnimationOverlay(spriteBatch, fullBarRect, maxResource, anim, cropOffset);
+                DrawBarAnimationOverlay(spriteBatch, fullBarRect, maxResource, anim, alpha);
             }
         }
 
@@ -223,7 +191,7 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private void DrawBarAnimationOverlay(SpriteBatch spriteBatch, Rectangle bgRect, float maxResource, BattleAnimationManager.ResourceBarAnimationState anim, int cropOffset)
+        private void DrawBarAnimationOverlay(SpriteBatch spriteBatch, Rectangle bgRect, float maxResource, BattleAnimationManager.ResourceBarAnimationState anim, float alpha)
         {
             float percentBefore = anim.ValueBefore / maxResource;
             float percentAfter = anim.ValueAfter / maxResource;
@@ -231,14 +199,13 @@ namespace ProjectVagabond.Battle.UI
             int widthBefore = (int)(bgRect.Width * percentBefore);
             int widthAfter = (int)(bgRect.Width * percentAfter);
 
-            // so the overlay doesn't draw over the last sliver if the unit is still alive.
+            // FIX: Ensure we respect the minimum 1-pixel width for remaining health
             if (percentAfter > 0 && widthAfter == 0) widthAfter = 1;
             if (percentBefore > 0 && widthBefore == 0) widthBefore = 1;
 
             // Define the visible area of the bar (in screen space)
-            // Since we collapse from right to left, the visible area starts at X and has width - cropOffset
             int visibleStartX = bgRect.X;
-            int visibleWidth = bgRect.Width - cropOffset;
+            int visibleWidth = bgRect.Width;
             int visibleEndX = visibleStartX + visibleWidth;
 
             if (visibleWidth <= 0) return;
@@ -270,7 +237,7 @@ namespace ProjectVagabond.Battle.UI
 
                 if (color != Color.Transparent && previewWidth > 0)
                 {
-                    // Clip against the visible area (which shrinks from the right)
+                    // Clip against the visible area
                     int drawStartX = Math.Max(previewStartX, visibleStartX);
                     int drawEndX = Math.Min(previewStartX + previewWidth, visibleEndX);
                     int drawWidth = drawEndX - drawStartX;
@@ -278,18 +245,15 @@ namespace ProjectVagabond.Battle.UI
                     if (drawWidth > 0)
                     {
                         var previewRect = new Rectangle(drawStartX, bgRect.Y, drawWidth, bgRect.Height);
-                        spriteBatch.DrawSnapped(_pixel, previewRect, color);
+                        spriteBatch.DrawSnapped(_pixel, previewRect, color * alpha);
                     }
                 }
             }
             else // Recovery
             {
-                // Calculate widths based on integer truncation to match the main bar's rendering logic
-                // This ensures the overlay aligns perfectly with the filled segments
                 int wBefore = (int)(bgRect.Width * percentBefore);
                 int wAfter = (int)(bgRect.Width * percentAfter);
 
-                // Match the "at least 1 pixel" logic from DrawClippedBar
                 if (percentBefore > 0 && wBefore == 0) wBefore = 1;
                 if (percentAfter > 0 && wAfter == 0) wAfter = 1;
 
@@ -311,14 +275,14 @@ namespace ProjectVagabond.Battle.UI
                             ? _global.HealOverlayColor
                             : _global.ManaOverlayColor;
 
-                        float alpha = 1.0f;
+                        float overlayAlpha = alpha;
                         if (anim.CurrentRecoveryPhase == BattleAnimationManager.ResourceBarAnimationState.RecoveryPhase.Fade)
                         {
                             float progress = anim.Timer / _global.HealOverlayFadeDuration;
-                            alpha = 1.0f - progress;
+                            overlayAlpha *= (1.0f - progress);
                         }
 
-                        spriteBatch.DrawSnapped(_pixel, ghostRect, ghostColor * alpha);
+                        spriteBatch.DrawSnapped(_pixel, ghostRect, ghostColor * overlayAlpha);
                     }
                 }
             }
