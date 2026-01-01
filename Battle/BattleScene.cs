@@ -568,10 +568,22 @@ namespace ProjectVagabond.Scenes
 
                         // Start Phase 2: Animate In
                         _switchSequenceState = SwitchSequenceState.AnimatingIn;
-                        _switchSequenceTimer = BattleAnimationManager.SwitchInAnimationState.DURATION;
+
+                        bool isEnemy = !_switchIncoming.IsPlayerControlled;
+
+                        // Calculate duration based on animation type
+                        float duration = BattleAnimationManager.IntroSlideAnimationState.SLIDE_DURATION;
+                        if (isEnemy)
+                        {
+                            duration += BattleAnimationManager.IntroSlideAnimationState.WAIT_DURATION +
+                                        BattleAnimationManager.IntroSlideAnimationState.REVEAL_DURATION;
+                        }
+                        _switchSequenceTimer = duration;
+
+                        Vector2 offset = isEnemy ? new Vector2(0, -INTRO_SLIDE_DISTANCE) : new Vector2(0, INTRO_SLIDE_DISTANCE);
+                        _animationManager.StartIntroSlideAnimation(_switchIncoming.CombatantID, offset, isEnemy);
 
                         EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{_switchIncoming.Name} steps in!" });
-                        EventBus.Publish(new GameEvents.CombatantSpawned { Combatant = _switchIncoming });
                     }
                 }
                 else if (_switchSequenceState == SwitchSequenceState.AnimatingIn)
@@ -1445,20 +1457,18 @@ namespace ProjectVagabond.Scenes
 
         private void OnCombatantSpawned(GameEvents.CombatantSpawned e)
         {
-            // If we are in the middle of a switch sequence, use the specific SwitchIn animation
-            if (_switchSequenceState != SwitchSequenceState.None)
-            {
-                _animationManager.StartSwitchInAnimation(e.Combatant.CombatantID);
-            }
-            else
-            {
-                _animationManager.StartSpawnAnimation(e.Combatant.CombatantID);
-            }
+            // If we are in the middle of a switch sequence, we handle the animation manually in Update
+            if (_switchSequenceState != SwitchSequenceState.None) return;
+
+            bool isEnemy = !e.Combatant.IsPlayerControlled;
+            Vector2 offset = isEnemy ? new Vector2(0, -INTRO_SLIDE_DISTANCE) : new Vector2(0, INTRO_SLIDE_DISTANCE);
+            _animationManager.StartIntroSlideAnimation(e.Combatant.CombatantID, offset, isEnemy);
         }
 
         private void OnCombatantSwitchingOut(GameEvents.CombatantSwitchingOut e)
         {
-            _animationManager.StartSwitchOutAnimation(e.Combatant.CombatantID);
+            bool isEnemy = !e.Combatant.IsPlayerControlled;
+            _animationManager.StartSwitchOutAnimation(e.Combatant.CombatantID, isEnemy);
         }
 
         private void OnMoveFailed(GameEvents.MoveFailed e)
@@ -1473,7 +1483,20 @@ namespace ProjectVagabond.Scenes
             _switchOutgoing = e.OutgoingCombatant;
             _switchIncoming = e.IncomingCombatant;
             _switchSequenceState = SwitchSequenceState.AnimatingOut;
-            _switchSequenceTimer = BattleAnimationManager.SwitchOutAnimationState.DURATION;
+
+            // Determine duration based on who is switching
+            bool isEnemy = !_switchOutgoing.IsPlayerControlled;
+            if (isEnemy)
+            {
+                // Enemy: Silhouette + Lift
+                _switchSequenceTimer = BattleAnimationManager.SwitchOutAnimationState.SILHOUETTE_DURATION +
+                                       BattleAnimationManager.SwitchOutAnimationState.LIFT_DURATION;
+            }
+            else
+            {
+                // Player: Simple Lift
+                _switchSequenceTimer = BattleAnimationManager.SwitchOutAnimationState.DURATION;
+            }
 
             // Trigger the "Out" animation
             EventBus.Publish(new GameEvents.CombatantSwitchingOut { Combatant = _switchOutgoing });

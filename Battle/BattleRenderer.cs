@@ -682,9 +682,31 @@ namespace ProjectVagabond.Battle.UI
                 }
                 else if (switchOut != null)
                 {
-                    float p = Math.Clamp(switchOut.Timer / BattleAnimationManager.SwitchOutAnimationState.DURATION, 0f, 1f);
-                    spawnY = MathHelper.Lerp(0f, -BattleAnimationManager.SwitchOutAnimationState.LIFT_HEIGHT, Easing.EaseOutCubic(p));
-                    alpha = 1.0f - Easing.EaseOutCubic(p);
+                    if (switchOut.IsEnemy)
+                    {
+                        if (switchOut.CurrentPhase == BattleAnimationManager.SwitchOutAnimationState.Phase.Silhouetting)
+                        {
+                            float p = Math.Clamp(switchOut.SilhouetteTimer / BattleAnimationManager.SwitchOutAnimationState.SILHOUETTE_DURATION, 0f, 1f);
+                            silhouetteAmt = Easing.EaseOutQuad(p); // 0 -> 1
+                            silhouetteColor = _global.Palette_Black;
+                        }
+                        else if (switchOut.CurrentPhase == BattleAnimationManager.SwitchOutAnimationState.Phase.Lifting)
+                        {
+                            float p = Math.Clamp(switchOut.LiftTimer / BattleAnimationManager.SwitchOutAnimationState.LIFT_DURATION, 0f, 1f);
+                            float eased = Easing.EaseInCubic(p); // Accelerate up
+                            spawnY = MathHelper.Lerp(0f, -BattleAnimationManager.SwitchOutAnimationState.LIFT_HEIGHT, eased);
+                            alpha = 1.0f - eased; // Fade out
+                            silhouetteAmt = 1.0f;
+                            silhouetteColor = _global.Palette_Black;
+                        }
+                    }
+                    else
+                    {
+                        // Legacy/Player logic
+                        float p = Math.Clamp(switchOut.Timer / BattleAnimationManager.SwitchOutAnimationState.DURATION, 0f, 1f);
+                        spawnY = MathHelper.Lerp(0f, -BattleAnimationManager.SwitchOutAnimationState.SIMPLE_LIFT_HEIGHT, Easing.EaseOutCubic(p));
+                        alpha = 1.0f - Easing.EaseOutCubic(p);
+                    }
                 }
                 else if (switchIn != null)
                 {
@@ -824,14 +846,14 @@ namespace ProjectVagabond.Battle.UI
                 }
                 else if (switchOut != null)
                 {
-                    float p = Math.Clamp(switchOut.Timer / BattleConstants.SWITCH_ANIMATION_DURATION, 0f, 1f);
-                    spawnY = MathHelper.Lerp(0f, -BattleConstants.SWITCH_VERTICAL_OFFSET, Easing.EaseOutCubic(p));
+                    float p = Math.Clamp(switchOut.Timer / BattleAnimationManager.SwitchOutAnimationState.DURATION, 0f, 1f);
+                    spawnY = MathHelper.Lerp(0f, -BattleAnimationManager.SwitchOutAnimationState.SIMPLE_LIFT_HEIGHT, Easing.EaseInCubic(p));
                     alpha = 1.0f - Easing.EaseOutCubic(p);
                 }
                 else if (switchIn != null)
                 {
-                    float p = Math.Clamp(switchIn.Timer / BattleConstants.SWITCH_ANIMATION_DURATION, 0f, 1f);
-                    spawnY = MathHelper.Lerp(-BattleConstants.SWITCH_VERTICAL_OFFSET, 0f, Easing.EaseOutCubic(p));
+                    float p = Math.Clamp(switchIn.Timer / BattleAnimationManager.SwitchInAnimationState.DURATION, 0f, 1f);
+                    spawnY = MathHelper.Lerp(-BattleAnimationManager.SwitchInAnimationState.DROP_HEIGHT, 0f, Easing.EaseOutCubic(p));
                     alpha = Easing.EaseOutCubic(p);
                 }
 

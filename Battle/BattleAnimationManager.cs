@@ -114,9 +114,22 @@ namespace ProjectVagabond.Battle.UI
         public class SwitchOutAnimationState
         {
             public string CombatantID;
+            public bool IsEnemy;
             public float Timer;
+
+            // For Enemy Sequence
+            public enum Phase { Silhouetting, Lifting }
+            public Phase CurrentPhase;
+            public float SilhouetteTimer;
+            public float LiftTimer;
+
+            public const float SILHOUETTE_DURATION = 0.5f;
+            public const float LIFT_DURATION = 0.5f;
+            public const float LIFT_HEIGHT = 150f; // Match INTRO_SLIDE_DISTANCE
+
+            // For Player (Legacy/Simple)
             public const float DURATION = BattleConstants.SWITCH_ANIMATION_DURATION;
-            public const float LIFT_HEIGHT = BattleConstants.SWITCH_VERTICAL_OFFSET;
+            public const float SIMPLE_LIFT_HEIGHT = BattleConstants.SWITCH_VERTICAL_OFFSET;
         }
 
         public class SwitchInAnimationState
@@ -531,13 +544,17 @@ namespace ProjectVagabond.Battle.UI
             return _activeFloorOutroAnimations.Any(a => a.ID == id);
         }
 
-        public void StartSwitchOutAnimation(string combatantId)
+        public void StartSwitchOutAnimation(string combatantId, bool isEnemy)
         {
             _activeSwitchOutAnimations.RemoveAll(a => a.CombatantID == combatantId);
             _activeSwitchOutAnimations.Add(new SwitchOutAnimationState
             {
                 CombatantID = combatantId,
-                Timer = 0f
+                IsEnemy = isEnemy,
+                Timer = 0f,
+                CurrentPhase = SwitchOutAnimationState.Phase.Silhouetting,
+                SilhouetteTimer = 0f,
+                LiftTimer = 0f
             });
         }
 
@@ -1393,10 +1410,35 @@ namespace ProjectVagabond.Battle.UI
             for (int i = _activeSwitchOutAnimations.Count - 1; i >= 0; i--)
             {
                 var anim = _activeSwitchOutAnimations[i];
-                anim.Timer += deltaTime;
-                if (anim.Timer >= SwitchOutAnimationState.DURATION)
+
+                if (anim.IsEnemy)
                 {
-                    _activeSwitchOutAnimations.RemoveAt(i);
+                    // --- ENEMY SWITCH OUT (Multi-Phase) ---
+                    if (anim.CurrentPhase == SwitchOutAnimationState.Phase.Silhouetting)
+                    {
+                        anim.SilhouetteTimer += deltaTime;
+                        if (anim.SilhouetteTimer >= SwitchOutAnimationState.SILHOUETTE_DURATION)
+                        {
+                            anim.CurrentPhase = SwitchOutAnimationState.Phase.Lifting;
+                        }
+                    }
+                    else if (anim.CurrentPhase == SwitchOutAnimationState.Phase.Lifting)
+                    {
+                        anim.LiftTimer += deltaTime;
+                        if (anim.LiftTimer >= SwitchOutAnimationState.LIFT_DURATION)
+                        {
+                            _activeSwitchOutAnimations.RemoveAt(i);
+                        }
+                    }
+                }
+                else
+                {
+                    // --- PLAYER SWITCH OUT (Legacy) ---
+                    anim.Timer += deltaTime;
+                    if (anim.Timer >= SwitchOutAnimationState.DURATION)
+                    {
+                        _activeSwitchOutAnimations.RemoveAt(i);
+                    }
                 }
             }
 
