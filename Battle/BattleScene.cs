@@ -92,6 +92,9 @@ namespace ProjectVagabond.Scenes
         private const float UI_SLIDE_DURATION = 0.5f;
         private const float UI_SLIDE_DISTANCE = 100f; // Distance to slide up from bottom
 
+        // --- VICTORY SEQUENCE STATE ---
+        private bool _victorySequenceTriggered = false;
+
         public BattleAnimationManager AnimationManager => _animationManager;
 
         public BattleScene()
@@ -149,6 +152,7 @@ namespace ProjectVagabond.Scenes
             _processedDeathAnimations.Clear();
             _watchdogTimer = 0f;
             _switchSequenceState = SwitchSequenceState.None;
+            _victorySequenceTriggered = false;
             SubscribeToEvents();
             InitializeSettingsButton();
 
@@ -622,7 +626,16 @@ namespace ProjectVagabond.Scenes
 
                     if (playerWon)
                     {
-                        FinalizeVictory();
+                        if (!_victorySequenceTriggered)
+                        {
+                            TriggerVictoryRestoration();
+                            _victorySequenceTriggered = true;
+                        }
+                        // Check IsAnimating again because TriggerVictoryRestoration might have started animations
+                        else if (!_animationManager.IsAnimating)
+                        {
+                            FinalizeVictory();
+                        }
                     }
                     else
                     {
@@ -807,10 +820,42 @@ namespace ProjectVagabond.Scenes
             _sceneManager.ShowModal(GameSceneState.ChoiceMenu);
         }
 
+        private void TriggerVictoryRestoration()
+        {
+            if (_battleManager != null)
+            {
+                bool anyRestored = false;
+                foreach (var combatant in _battleManager.AllCombatants)
+                {
+                    if (combatant.IsPlayerControlled && !combatant.IsDefeated)
+                    {
+                        if (combatant.Stats.CurrentMana < combatant.Stats.MaxMana)
+                        {
+                            float oldMana = combatant.Stats.CurrentMana;
+                            combatant.Stats.CurrentMana = combatant.Stats.MaxMana;
+
+                            // Trigger the ghost fill animation
+                            _animationManager.StartManaRecoveryAnimation(combatant.CombatantID, oldMana, combatant.Stats.MaxMana);
+
+                            // Force the bar to stay visible
+                            combatant.ManaBarVisibleTimer = 2.0f;
+                            anyRestored = true;
+                        }
+                    }
+                }
+
+                if (anyRestored)
+                {
+                    // Optional: Add a small delay or sound here if needed, but the animation duration acts as a delay.
+                }
+            }
+        }
+
         private void FinalizeVictory()
         {
             SplitMapScene.PlayerWonLastBattle = true;
             DecrementTemporaryBuffs();
+
             var transition = _transitionManager.GetRandomCombatTransition();
             _sceneManager.ChangeScene(BattleSetup.ReturnSceneState, transition, transition);
         }

@@ -27,6 +27,7 @@ namespace ProjectVagabond.Scenes
         private readonly SpriteManager _spriteManager;
         private readonly Global _global;
         private readonly ParticleSystemManager _particleSystemManager;
+        private readonly TransitionManager _transitionManager;
 
         private readonly List<Button> _buttons = new();
         private int _selectedButtonIndex = -1;
@@ -37,12 +38,25 @@ namespace ProjectVagabond.Scenes
         private ConfirmationDialog _confirmationDialog;
         private bool _uiInitialized = false;
 
+        // --- Intro Animation State ---
+        private bool _introSequenceStarted = false;
+        private float _staggerTimer = 0f;
+        private int _animatingButtonIndex = 0;
+        private List<float> _buttonAnimTimers = new List<float>();
+
+        // Tuning
+        private const float BUTTON_STAGGER_DELAY = 0.15f; // Time between each button starting
+        private const float BUTTON_ANIM_DURATION = 0.5f; // How long the pop-in takes
+        private const float JIGGLE_FREQUENCY = 20f;
+        private const float JIGGLE_MAGNITUDE = 0.15f; // Radians (approx 8 degrees)
+
         public MainMenuScene()
         {
             _sceneManager = ServiceLocator.Get<SceneManager>();
             _spriteManager = ServiceLocator.Get<SpriteManager>();
             _global = ServiceLocator.Get<Global>();
             _particleSystemManager = ServiceLocator.Get<ParticleSystemManager>();
+            _transitionManager = ServiceLocator.Get<TransitionManager>();
         }
 
         public override Rectangle GetAnimatedBounds()
@@ -182,9 +196,15 @@ namespace ProjectVagabond.Scenes
             _currentInputDelay = _inputDelay;
             _previousKeyboardState = Keyboard.GetState();
 
-            foreach (var button in _buttons)
+            // Reset Animation State
+            _introSequenceStarted = false;
+            _animatingButtonIndex = 0;
+            _staggerTimer = 0f;
+            _buttonAnimTimers.Clear();
+            for (int i = 0; i < _buttons.Count; i++)
             {
-                button.ResetAnimationState();
+                _buttons[i].ResetAnimationState();
+                _buttonAnimTimers.Add(-1f); // -1 indicates animation hasn't started
             }
 
             if (this.LastUsedInputForNav == InputDevice.Keyboard && !firstTimeOpened)
@@ -231,6 +251,42 @@ namespace ProjectVagabond.Scenes
         {
             base.Update(gameTime);
 
+            // 1. CRITICAL FIX: Block all input and logic if the transition is still active.
+            if (_transitionManager.IsTransitioning)
+            {
+                return;
+            }
+
+            // 2. Start Intro Sequence once transition is done
+            if (!_introSequenceStarted)
+            {
+                _introSequenceStarted = true;
+                _staggerTimer = 0f;
+            }
+
+            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            // 3. Update Stagger Timer to trigger next button
+            if (_animatingButtonIndex < _buttons.Count)
+            {
+                _staggerTimer += dt;
+                if (_staggerTimer >= BUTTON_STAGGER_DELAY)
+                {
+                    _buttonAnimTimers[_animatingButtonIndex] = 0f; // Start this button
+                    _animatingButtonIndex++;
+                    _staggerTimer = 0f;
+                }
+            }
+
+            // 4. Update Individual Button Animation Timers
+            for (int i = 0; i < _buttonAnimTimers.Count; i++)
+            {
+                if (_buttonAnimTimers[i] >= 0f)
+                {
+                    _buttonAnimTimers[i] += dt;
+                }
+            }
+
             var currentMouseState = Mouse.GetState();
             var virtualMousePos = Core.TransformMouse(currentMouseState.Position);
 
@@ -254,15 +310,19 @@ namespace ProjectVagabond.Scenes
 
             if (_currentInputDelay > 0)
             {
-                _currentInputDelay -= (float)gameTime.ElapsedGameTime.TotalSeconds;
+                _currentInputDelay -= dt;
             }
 
             for (int i = 0; i < _buttons.Count; i++)
             {
-                _buttons[i].Update(currentMouseState);
-                if (_buttons[i].IsHovered)
+                // Only allow interaction if the button's entrance animation is mostly complete
+                if (_buttonAnimTimers[i] >= BUTTON_ANIM_DURATION * 0.8f)
                 {
-                    _selectedButtonIndex = i;
+                    _buttons[i].Update(currentMouseState);
+                    if (_buttons[i].IsHovered)
+                    {
+                        _selectedButtonIndex = i;
+                    }
                 }
             }
 
@@ -302,16 +362,21 @@ namespace ProjectVagabond.Scenes
 
                     _sceneManager.LastInputDevice = InputDevice.Keyboard;
                     var selectedButton = _buttons[_selectedButtonIndex];
-                    if (selectedButton.IsHovered)
-                    {
-                        selectedButton.TriggerClick();
-                    }
-                    else
-                    {
-                        Point screenPos = Core.TransformVirtualToScreen(selectedButton.Bounds.Center);
-                        Mouse.SetPosition(screenPos.X, screenPos.Y);
 
-                        keyboardNavigatedLastFrame = true;
+                    // Only trigger if animation is done
+                    if (_buttonAnimTimers[_selectedButtonIndex] >= BUTTON_ANIM_DURATION * 0.8f)
+                    {
+                        if (selectedButton.IsHovered)
+                        {
+                            selectedButton.TriggerClick();
+                        }
+                        else
+                        {
+                            Point screenPos = Core.TransformVirtualToScreen(selectedButton.Bounds.Center);
+                            Mouse.SetPosition(screenPos.X, screenPos.Y);
+
+                            keyboardNavigatedLastFrame = true;
+                        }
                     }
                 }
 
@@ -329,29 +394,71 @@ namespace ProjectVagabond.Scenes
 
             spriteBatch.DrawSnapped(_spriteManager.LogoSprite, new Vector2(screenWidth / 2 - _spriteManager.LogoSprite.Width / 2, 25), Color.White);
 
+            // End the main batch to allow individual button transforms
+            spriteBatch.End();
+
             for (int i = 0; i < _buttons.Count; i++)
             {
+                // Skip drawing if animation hasn't started
+                if (_buttonAnimTimers[i] < 0f) continue;
+
+                float timer = _buttonAnimTimers[i];
+                float progress = Math.Clamp(timer / BUTTON_ANIM_DURATION, 0f, 1f);
+
+                // Scale: EaseOutBack for overshoot
+                float scale = Easing.EaseOutBack(progress);
+
+                // Rotation: Damped Sine Wave (Jiggle)
+                float rotation = 0f;
+                if (progress < 1.0f)
+                {
+                    float decay = 1.0f - progress;
+                    rotation = MathF.Sin(timer * JIGGLE_FREQUENCY) * JIGGLE_MAGNITUDE * decay;
+                }
+
+                // Create local transformation matrix for this button
+                Vector2 center = _buttons[i].Bounds.Center.ToVector2();
+                Matrix animMatrix = Matrix.CreateTranslation(-center.X, -center.Y, 0) *
+                                    Matrix.CreateRotationZ(rotation) *
+                                    Matrix.CreateScale(scale) *
+                                    Matrix.CreateTranslation(center.X, center.Y, 0);
+
+                // Combine with global transform
+                Matrix finalTransform = animMatrix * transform;
+
+                // Start a new batch for this specific button with its unique transform
+                spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: finalTransform);
+
                 bool forceHover = (i == _selectedButtonIndex) && (_sceneManager.LastInputDevice == InputDevice.Keyboard || keyboardNavigatedLastFrame);
-                _buttons[i].Draw(spriteBatch, font, gameTime, transform, forceHover);
+                _buttons[i].Draw(spriteBatch, font, gameTime, Matrix.Identity, forceHover);
+
+                spriteBatch.End();
             }
+
+            // Restart the main batch for the rest of the UI (Arrows, Dialogs)
+            spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
 
             if (_selectedButtonIndex >= 0 && _selectedButtonIndex < _buttons.Count)
             {
-                var selectedButton = _buttons[_selectedButtonIndex];
-                if (selectedButton.IsHovered)
+                // Only draw arrow if button is fully visible
+                if (_buttonAnimTimers[_selectedButtonIndex] >= BUTTON_ANIM_DURATION)
                 {
-                    var bounds = selectedButton.Bounds;
-                    var color = _global.ButtonHoverColor;
-                    var fontToUse = selectedButton.Font ?? secondaryFont;
+                    var selectedButton = _buttons[_selectedButtonIndex];
+                    if (selectedButton.IsHovered)
+                    {
+                        var bounds = selectedButton.Bounds;
+                        var color = _global.ButtonHoverColor;
+                        var fontToUse = selectedButton.Font ?? secondaryFont;
 
-                    string leftArrow = ">";
-                    var arrowSize = fontToUse.MeasureString(leftArrow);
+                        string leftArrow = ">";
+                        var arrowSize = fontToUse.MeasureString(leftArrow);
 
-                    float pressOffset = selectedButton.IsPressed ? 2f : 0f;
+                        float pressOffset = selectedButton.IsPressed ? 2f : 0f;
 
-                    var leftPos = new Vector2(bounds.Left - arrowSize.Width - 4 + pressOffset, bounds.Center.Y - arrowSize.Height / 2f + selectedButton.TextRenderOffset.Y);
+                        var leftPos = new Vector2(bounds.Left - arrowSize.Width - 4 + pressOffset, bounds.Center.Y - arrowSize.Height / 2f + selectedButton.TextRenderOffset.Y);
 
-                    spriteBatch.DrawStringSnapped(fontToUse, leftArrow, leftPos, color);
+                        spriteBatch.DrawStringSnapped(fontToUse, leftArrow, leftPos, color);
+                    }
                 }
             }
 
