@@ -178,6 +178,24 @@ namespace ProjectVagabond.Battle.UI
             {
                 if (c.HealthBarVisibleTimer > 0) c.HealthBarVisibleTimer = Math.Max(0, c.HealthBarVisibleTimer - dt);
                 if (c.ManaBarVisibleTimer > 0) c.ManaBarVisibleTimer = Math.Max(0, c.ManaBarVisibleTimer - dt);
+
+                // --- LOW HEALTH FLASH LOGIC ---
+                float hpPercent = (float)c.Stats.CurrentHP / c.Stats.MaxHP;
+                if (hpPercent <= _global.LowHealthThreshold && c.Stats.CurrentHP > 0)
+                {
+                    // Calculate speed based on how low HP is (0% to Threshold%)
+                    // Normalized ratio: 0.0 (at 0 HP) to 1.0 (at Threshold)
+                    float ratio = hpPercent / _global.LowHealthThreshold;
+                    // Invert ratio so 0 HP is fastest (1.0) and Threshold is slowest (0.0)
+                    float intensity = 1.0f - ratio;
+
+                    float speed = MathHelper.Lerp(_global.LowHealthFlashSpeedMin, _global.LowHealthFlashSpeedMax, intensity);
+                    c.LowHealthFlashTimer += dt * speed;
+                }
+                else
+                {
+                    c.LowHealthFlashTimer = 0f;
+                }
             }
 
             // Update Animations
@@ -776,8 +794,16 @@ namespace ProjectVagabond.Battle.UI
                 Vector2[] offsets = _enemySpritePartOffsets.TryGetValue(enemy.CombatantID, out var o) ? o : null;
                 bool isHighlighted = isSelectable && shouldGrayOut;
 
+                // --- LOW HEALTH FLASH LOGIC ---
+                Color? lowHealthOverlay = null;
+                if (enemy.LowHealthFlashTimer > 0f && !enemy.IsDefeated)
+                {
+                    float flashAlpha = (MathF.Sin(enemy.LowHealthFlashTimer) + 1f) / 2f * 0.6f; // Max 0.6 alpha
+                    lowHealthOverlay = _global.LowHealthFlashColor * flashAlpha;
+                }
+
                 // FIX: Pass tint * alpha to ensure transparency works correctly
-                _entityRenderer.DrawEnemy(spriteBatch, enemy, spriteRect, offsets, shake, alpha, silhouetteAmt, silhouetteColor, isHighlighted, highlight, outlineColor, flashWhite, tint * alpha, scale, transform);
+                _entityRenderer.DrawEnemy(spriteBatch, enemy, spriteRect, offsets, shake, alpha, silhouetteAmt, silhouetteColor, isHighlighted, highlight, outlineColor, flashWhite, tint * alpha, scale, transform, lowHealthOverlay);
 
                 // Only add hitboxes for ACTIVE enemies (not dying ones)
                 if (!enemy.IsDefeated)
@@ -922,7 +948,15 @@ namespace ProjectVagabond.Battle.UI
                 var baseCenter = BattleLayout.GetPlayerSpriteCenter(player.BattleSlot);
                 _vfxRenderer.DrawPlayerFloor(spriteBatch, baseCenter + slideOffset, player.VisualAlpha, 1.0f);
 
-                sprite.Draw(spriteBatch, animManager, player, tint, isHighlighted, pulse, isSilhouetted, silhouetteColor, gameTime, highlight, outlineColor, scale);
+                // --- LOW HEALTH FLASH LOGIC ---
+                Color? lowHealthOverlay = null;
+                if (player.LowHealthFlashTimer > 0f && !player.IsDefeated)
+                {
+                    float flashAlpha = (MathF.Sin(player.LowHealthFlashTimer) + 1f) / 2f * 0.6f; // Max 0.6 alpha
+                    lowHealthOverlay = _global.LowHealthFlashColor * flashAlpha;
+                }
+
+                sprite.Draw(spriteBatch, animManager, player, tint, isHighlighted, pulse, isSilhouetted, silhouetteColor, gameTime, highlight, outlineColor, scale, lowHealthOverlay);
 
                 Rectangle bounds = sprite.GetStaticBounds(animManager, player);
                 _currentTargets.Add(new TargetInfo { Combatant = player, Bounds = bounds });

@@ -53,7 +53,8 @@ namespace ProjectVagabond.Battle.UI
             bool isFlashingWhite,
             Color tintColor,
             float scale,
-            Matrix transform)
+            Matrix transform,
+            Color? lowHealthOverlay = null) // Added lowHealthOverlay
         {
             Texture2D enemySprite = _spriteManager.GetEnemySprite(enemy.ArchetypeId);
             Texture2D enemySilhouette = _spriteManager.GetEnemySpriteSilhouette(enemy.ArchetypeId);
@@ -77,12 +78,12 @@ namespace ProjectVagabond.Battle.UI
 
             if (useFlattening)
             {
-                DrawFlattenedEnemy(spriteBatch, enemySprite, enemySilhouette, spriteRect, partOffsets, shakeOffset, finalAlpha, silhouetteFactor, silhouetteColor, isHighlighted, highlightColor, isFlashingWhite, numParts, spritePartSize, transform);
+                DrawFlattenedEnemy(spriteBatch, enemySprite, enemySilhouette, spriteRect, partOffsets, shakeOffset, finalAlpha, silhouetteFactor, silhouetteColor, isHighlighted, highlightColor, isFlashingWhite, numParts, spritePartSize, transform, lowHealthOverlay);
             }
             else
             {
                 // Pass Color.Transparent for the outline override since we drew the composite one above.
-                DrawDirectEnemy(spriteBatch, enemySprite, enemySilhouette, spriteRect, partOffsets, shakeOffset, tintColor, silhouetteFactor, silhouetteColor, isHighlighted, highlightColor, isFlashingWhite, scale, numParts, spritePartSize, Color.Transparent);
+                DrawDirectEnemy(spriteBatch, enemySprite, enemySilhouette, spriteRect, partOffsets, shakeOffset, tintColor, silhouetteFactor, silhouetteColor, isHighlighted, highlightColor, isFlashingWhite, scale, numParts, spritePartSize, Color.Transparent, lowHealthOverlay);
             }
 
             // --- TARGETING INDICATOR ---
@@ -147,7 +148,7 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private void DrawFlattenedEnemy(SpriteBatch spriteBatch, Texture2D sprite, Texture2D silhouette, Rectangle spriteRect, Vector2[] offsets, Vector2 shakeOffset, float finalAlpha, float silhouetteFactor, Color silhouetteColor, bool isHighlighted, Color? highlightColor, bool isFlashingWhite, int numParts, int partSize, Matrix transform)
+        private void DrawFlattenedEnemy(SpriteBatch spriteBatch, Texture2D sprite, Texture2D silhouette, Rectangle spriteRect, Vector2[] offsets, Vector2 shakeOffset, float finalAlpha, float silhouetteFactor, Color silhouetteColor, bool isHighlighted, Color? highlightColor, bool isFlashingWhite, int numParts, int partSize, Matrix transform, Color? lowHealthOverlay)
         {
             var currentRTs = _core.GraphicsDevice.GetRenderTargets();
             spriteBatch.End();
@@ -185,6 +186,12 @@ namespace ProjectVagabond.Battle.UI
                 {
                     spriteBatch.DrawSnapped(silhouette, localDrawPos, sourceRect, Color.White * 0.8f);
                 }
+
+                // Draw Low Health Overlay
+                if (lowHealthOverlay.HasValue && silhouette != null)
+                {
+                    spriteBatch.DrawSnapped(silhouette, localDrawPos, sourceRect, lowHealthOverlay.Value);
+                }
             }
 
             spriteBatch.End();
@@ -196,7 +203,7 @@ namespace ProjectVagabond.Battle.UI
             spriteBatch.Draw(_flattenTarget, drawPos, srcRect, Color.White * finalAlpha);
         }
 
-        private void DrawDirectEnemy(SpriteBatch spriteBatch, Texture2D sprite, Texture2D silhouette, Rectangle spriteRect, Vector2[] offsets, Vector2 shakeOffset, Color tintColor, float silhouetteFactor, Color silhouetteColor, bool isHighlighted, Color? highlightColor, bool isFlashingWhite, float scale, int numParts, int partSize, Color? outlineColorOverride)
+        private void DrawDirectEnemy(SpriteBatch spriteBatch, Texture2D sprite, Texture2D silhouette, Rectangle spriteRect, Vector2[] offsets, Vector2 shakeOffset, Color tintColor, float silhouetteFactor, Color silhouetteColor, bool isHighlighted, Color? highlightColor, bool isFlashingWhite, float scale, int numParts, int partSize, Color? outlineColorOverride, Color? lowHealthOverlay)
         {
             Color outlineColor = (outlineColorOverride ?? _global.Palette_DarkGray) * (tintColor.A / 255f);
 
@@ -239,6 +246,12 @@ namespace ProjectVagabond.Battle.UI
                 if (isFlashingWhite && silhouette != null)
                 {
                     spriteBatch.DrawSnapped(silhouette, centerPos, sourceRect, Color.White * 0.8f, 0f, origin, scale, SpriteEffects.None, 0f);
+                }
+
+                // Draw Low Health Overlay
+                if (lowHealthOverlay.HasValue && silhouette != null)
+                {
+                    spriteBatch.DrawSnapped(silhouette, centerPos, sourceRect, lowHealthOverlay.Value * (tintColor.A / 255f), 0f, origin, scale, SpriteEffects.None, 0f);
                 }
             }
         }

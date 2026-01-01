@@ -123,6 +123,9 @@ namespace ProjectVagabond.Battle
         public float HealthBarDisappearTimer { get; set; } = 0f;
         public float ManaBarDisappearTimer { get; set; } = 0f;
 
+        // --- LOW HEALTH FLASH STATE ---
+        public float LowHealthFlashTimer { get; set; } = 0f;
+
         // --- TUNING: Bar Animation ---
         public const float BAR_DISAPPEAR_DURATION = 2.0f; // Time to fade out (Slowed down from 0.5f)
         public const float BAR_DELAY_DURATION = 1.2f;     // Time to wait before fading

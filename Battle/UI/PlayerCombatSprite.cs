@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -276,7 +275,7 @@ namespace ProjectVagabond.Battle.UI
             return preciseRect;
         }
 
-        public void Draw(SpriteBatch spriteBatch, BattleAnimationManager animationManager, BattleCombatant combatant, Color? tintColorOverride = null, bool isHighlighted = false, float pulseAlpha = 1f, bool asSilhouette = false, Color? silhouetteColor = null, GameTime? gameTime = null, Color? highlightColor = null, Color? outlineColorOverride = null, float scale = 1.0f)
+        public void Draw(SpriteBatch spriteBatch, BattleAnimationManager animationManager, BattleCombatant combatant, Color? tintColorOverride = null, bool isHighlighted = false, float pulseAlpha = 1f, bool asSilhouette = false, Color? silhouetteColor = null, GameTime? gameTime = null, Color? highlightColor = null, Color? outlineColorOverride = null, float scale = 1.0f, Color? lowHealthOverlay = null)
         {
             Initialize();
             if (_texture == null || combatant == null) return;
@@ -421,6 +420,12 @@ namespace ProjectVagabond.Battle.UI
                 if (isFlashingWhite && silhouetteToDraw != null)
                 {
                     spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos, sourceRectangle, Color.White * 0.8f, 0f, mainOrigin, scale, spriteEffects, 0.51f);
+                }
+
+                // --- Draw Low Health Overlay ---
+                if (lowHealthOverlay.HasValue && silhouetteToDraw != null)
+                {
+                    spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos, sourceRectangle, lowHealthOverlay.Value * alpha, 0f, mainOrigin, scale, spriteEffects, 0.51f);
                 }
             }
         }

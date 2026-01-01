@@ -261,6 +261,12 @@ namespace ProjectVagabond
         public float HealOverlayFadeDuration { get; set; } = 0.5f;
         public Color ManaOverlayColor { get; set; } = Color.White;
 
+        // --- LOW HEALTH FLASH TUNING ---
+        public Color LowHealthFlashColor { get; set; } = new Color(181, 65, 49);
+        public float LowHealthThreshold { get; set; } = 0.25f; // 50%
+        public float LowHealthFlashSpeedMin { get; set; } = 2.0f; // Speed at 50% HP
+        public float LowHealthFlashSpeedMax { get; set; } = 10.0f; // Speed at 1% HP
+
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         // INSTANCE VARIABLES
