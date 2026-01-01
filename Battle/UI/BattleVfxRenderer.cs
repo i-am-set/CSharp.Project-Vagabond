@@ -52,7 +52,7 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        public void DrawStatChangeTooltip(SpriteBatch spriteBatch, BattleCombatant combatant, float alpha, bool hasInsight, Vector2 visualCenter)
+        public void DrawStatChangeTooltip(SpriteBatch spriteBatch, BattleCombatant combatant, float alpha, bool hasInsight, Vector2 visualCenter, GameTime gameTime)
         {
             var tertiaryFont = _core.TertiaryFont;
             var icons = _spriteManager.StatChangeIconsSpriteSheet;
@@ -79,6 +79,8 @@ namespace ProjectVagabond.Battle.UI
             OffensiveStatType[] statTypes = { OffensiveStatType.Strength, OffensiveStatType.Intelligence, OffensiveStatType.Tenacity, OffensiveStatType.Agility };
             Color[] statColors = { _global.StatColor_Strength, _global.StatColor_Intelligence, _global.StatColor_Tenacity, _global.StatColor_Agility };
 
+            float time = (float)gameTime.TotalGameTime.TotalSeconds;
+
             for (int i = 0; i < 4; i++)
             {
                 int rowY = bounds.Y + (i * rowHeight);
@@ -95,7 +97,12 @@ namespace ProjectVagabond.Battle.UI
                 Vector2 valueSize = tertiaryFont.MeasureString(valueText);
                 float valueX = bounds.X + 14 - valueSize.X;
 
-                spriteBatch.DrawStringSquareOutlinedSnapped(tertiaryFont, valueText, new Vector2(valueX, rowY + 1), _global.Palette_White * alpha, _global.Palette_Black * alpha);
+                // --- Stat Value Bob Animation ---
+                // Stagger the bob based on the row index 'i'
+                float bobSpeed = 8f;
+                float bobOffset = (MathF.Sin(time * bobSpeed + (i * 0.8f)) > 0) ? -1f : 0f;
+
+                spriteBatch.DrawStringSquareOutlinedSnapped(tertiaryFont, valueText, new Vector2(valueX, rowY + 1 + bobOffset), _global.Palette_White * alpha, _global.Palette_Black * alpha);
                 spriteBatch.DrawStringSquareOutlinedSnapped(tertiaryFont, statLabels[i], new Vector2(bounds.X + 16, rowY + 1), statColors[i] * alpha, _global.Palette_Black * alpha);
 
                 int stage = combatant.StatStages[statTypes[i]];

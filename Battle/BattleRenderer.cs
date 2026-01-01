@@ -93,6 +93,9 @@ namespace ProjectVagabond.Battle.UI
         public Vector2 PlayerSpritePosition { get; private set; }
         private Dictionary<string, Vector2> _combatantVisualCenters = new Dictionary<string, Vector2>();
 
+        // --- Static Centers for Tooltips (Unaffected by bob/shake) ---
+        private Dictionary<string, Vector2> _combatantStaticCenters = new Dictionary<string, Vector2>();
+
         public BattleRenderer()
         {
             _global = ServiceLocator.Get<Global>();
@@ -124,6 +127,7 @@ namespace ProjectVagabond.Battle.UI
             _recoilStates.Clear();
             _activeStatusIconAnims.Clear();
             _combatantVisualCenters.Clear();
+            _combatantStaticCenters.Clear();
             _statTooltipAlpha = 0f;
             _statTooltipCombatantID = null;
             _centeringSequenceStarted = false;
@@ -238,8 +242,20 @@ namespace ProjectVagabond.Battle.UI
                 if (target != null)
                 {
                     bool hasInsight = allCombatants.Any(c => c.IsPlayerControlled && !c.IsDefeated && c.Abilities.Any(a => a is InsightAbility));
-                    Vector2 center = GetCombatantVisualCenterPosition(target, allCombatants);
-                    _vfxRenderer.DrawStatChangeTooltip(spriteBatch, target, _statTooltipAlpha, hasInsight, center);
+
+                    // Use Static Center for Tooltip to prevent bobbing
+                    Vector2 center = Vector2.Zero;
+                    if (_combatantStaticCenters.TryGetValue(target.CombatantID, out var staticPos))
+                    {
+                        center = staticPos;
+                    }
+                    else
+                    {
+                        // Fallback
+                        center = GetCombatantVisualCenterPosition(target, allCombatants);
+                    }
+
+                    _vfxRenderer.DrawStatChangeTooltip(spriteBatch, target, _statTooltipAlpha, hasInsight, center, gameTime);
                 }
             }
         }
@@ -253,11 +269,11 @@ namespace ProjectVagabond.Battle.UI
 
         private void UpdateStatTooltipState(BattleCombatant hoveredCombatant, BattleUIManager uiManager)
         {
-            var battleManager = ServiceLocator.Get<BattleManager>();
-            bool isSelectionPhase = battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection_Slot1 || battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection_Slot2;
+            // Allow stat tooltips whenever the UI is in the default state (not targeting/menus),
+            // regardless of the battle phase (Selection, Resolution, etc.).
             bool isDefaultUI = uiManager.UIState == BattleUIState.Default;
 
-            if (isSelectionPhase && isDefaultUI && hoveredCombatant != null)
+            if (isDefaultUI && hoveredCombatant != null)
             {
                 _statTooltipCombatantID = hoveredCombatant.CombatantID;
                 _statTooltipAlpha = 1.0f;
@@ -770,6 +786,14 @@ namespace ProjectVagabond.Battle.UI
                     _currentTargets.Add(new TargetInfo { Combatant = enemy, Bounds = hitBox });
                     _combatantVisualCenters[enemy.CombatantID] = hitBox.Center.ToVector2();
 
+                    // --- Calculate and Store Static Center ---
+                    // The sprite is drawn at center.Y + bob + spawnY.
+                    // The static base Y is center.Y.
+                    // The sprite rect is (center.X - size/2, center.Y, size, size).
+                    // The center of that rect is (center.X, center.Y + size/2).
+                    // Note: center.X includes the dynamic slide offset from _enemyVisualXPositions, which is correct for "final position".
+                    _combatantStaticCenters[enemy.CombatantID] = new Vector2(center.X, center.Y + spriteSize / 2f);
+
                     // --- VISIBILITY LOGIC ---
                     bool showBars = (hoveredCombatant == enemy) || (uiManager.HoveredCombatantFromUI == enemy) || selectable.Contains(enemy);
                     UpdateBarAlpha(enemy, (float)gameTime.ElapsedGameTime.TotalSeconds, showBars);
@@ -897,6 +921,12 @@ namespace ProjectVagabond.Battle.UI
                 Rectangle bounds = sprite.GetStaticBounds(animManager, player);
                 _currentTargets.Add(new TargetInfo { Combatant = player, Bounds = bounds });
                 _combatantVisualCenters[player.CombatantID] = bounds.Center.ToVector2();
+
+                // --- Calculate and Store Static Center ---
+                // For players, the sprite is drawn centered on 'center' (which includes turn offset).
+                // The static bounds are centered on 'center'.
+                // So the static center is just 'center'.
+                _combatantStaticCenters[player.CombatantID] = center;
 
                 // --- VISIBILITY LOGIC ---
                 // Check if this player is the current actor AND hovering a mana move
@@ -1135,13 +1165,15 @@ namespace ProjectVagabond.Battle.UI
                 c.VisualHealthBarAlpha = 1.0f;
                 c.HealthBarDelayTimer = 0f;
                 c.HealthBarDisappearTimer = 0f;
+                // Reset variance when becoming visible so next hide is random
+                c.CurrentBarVariance = (float)(_random.NextDouble() * BattleCombatant.BAR_VARIANCE_MAX);
             }
             else
             {
                 if (c.VisualHealthBarAlpha > 0f)
                 {
-                    // Phase 1: Delay
-                    if (c.HealthBarDelayTimer < BattleCombatant.BAR_DELAY_DURATION)
+                    // Phase 1: Delay (with variance)
+                    if (c.HealthBarDelayTimer < BattleCombatant.BAR_DELAY_DURATION + c.CurrentBarVariance)
                     {
                         c.HealthBarDelayTimer += dt;
                     }
@@ -1169,13 +1201,15 @@ namespace ProjectVagabond.Battle.UI
                 c.VisualManaBarAlpha = 1.0f;
                 c.ManaBarDelayTimer = 0f;
                 c.ManaBarDisappearTimer = 0f;
+                // Reuse same variance for mana so they sync per-unit, or generate new if desired.
+                // Let's reuse to keep the unit's bars together.
             }
             else
             {
                 if (c.VisualManaBarAlpha > 0f)
                 {
-                    // Phase 1: Delay
-                    if (c.ManaBarDelayTimer < BattleCombatant.BAR_DELAY_DURATION)
+                    // Phase 1: Delay (with variance)
+                    if (c.ManaBarDelayTimer < BattleCombatant.BAR_DELAY_DURATION + c.CurrentBarVariance)
                     {
                         c.ManaBarDelayTimer += dt;
                     }

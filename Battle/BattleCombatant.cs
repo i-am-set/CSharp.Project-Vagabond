@@ -122,8 +122,13 @@ namespace ProjectVagabond.Battle
         public float HealthBarDisappearTimer { get; set; } = 0f;
         public float ManaBarDisappearTimer { get; set; } = 0f;
 
-        public const float BAR_DISAPPEAR_DURATION = 0.5f;
-        public const float BAR_DELAY_DURATION = 0.25f;
+        // --- TUNING: Bar Animation ---
+        public const float BAR_DISAPPEAR_DURATION = 0.5f; // Time to shrink
+        public const float BAR_DELAY_DURATION = 1.2f;     // Time to wait before shrinking
+        public const float BAR_VARIANCE_MAX = 0.5f;       // Max random added delay
+
+        // Instance-specific variance to desynchronize bars
+        public float CurrentBarVariance { get; set; } = 0f;
 
         public BattleCombatant()
         {

@@ -73,8 +73,11 @@ namespace ProjectVagabond.Battle.UI
         {
             if (cropOffset >= fullBarRect.Width) return;
 
+            // --- RIGHT-TO-LEFT COLLAPSE LOGIC ---
+            // The bar stays anchored to the LEFT (X).
+            // The width reduces by the crop amount.
             int visibleWidth = fullBarRect.Width - cropOffset;
-            int currentX = fullBarRect.X + cropOffset;
+            int currentX = fullBarRect.X; // Anchor Left
             int y = fullBarRect.Y;
             int h = fullBarRect.Height;
 
@@ -85,9 +88,12 @@ namespace ProjectVagabond.Battle.UI
             int totalFgWidth = (int)(fullBarRect.Width * fillPercent);
             if (fillPercent > 0 && totalFgWidth == 0) totalFgWidth = 1;
 
-            if (cropOffset < totalFgWidth)
+            // If the crop hasn't eaten the foreground yet
+            // Since we crop from the right, we just clamp the foreground width to the visible width.
+            int visibleFgWidth = Math.Min(totalFgWidth, visibleWidth);
+
+            if (visibleFgWidth > 0)
             {
-                int visibleFgWidth = totalFgWidth - cropOffset;
                 spriteBatch.DrawSnapped(_pixel, new Rectangle(currentX, y, visibleFgWidth, h), fgColor * alpha);
             }
 
@@ -96,13 +102,13 @@ namespace ProjectVagabond.Battle.UI
             spriteBatch.DrawSnapped(_pixel, new Rectangle(currentX, y - 1, visibleWidth, 1), borderColor * alpha);
             // Bottom
             spriteBatch.DrawSnapped(_pixel, new Rectangle(currentX, y + h, visibleWidth, 1), borderColor * alpha);
-            // Right (Always visible if bar is visible)
-            spriteBatch.DrawSnapped(_pixel, new Rectangle(fullBarRect.Right, y - 1, 1, h + 2), borderColor * alpha);
-            // Left (Only if not cropped)
-            if (cropOffset == 0)
-            {
-                spriteBatch.DrawSnapped(_pixel, new Rectangle(fullBarRect.X - 1, y - 1, 1, h + 2), borderColor * alpha);
-            }
+
+            // Left (Always visible if bar is visible)
+            spriteBatch.DrawSnapped(_pixel, new Rectangle(currentX - 1, y - 1, 1, h + 2), borderColor * alpha);
+
+            // Right (Moves with the crop)
+            // Position is X + visibleWidth
+            spriteBatch.DrawSnapped(_pixel, new Rectangle(currentX + visibleWidth, y - 1, 1, h + 2), borderColor * alpha);
 
             // Animation Overlay
             if (anim != null)
@@ -226,8 +232,12 @@ namespace ProjectVagabond.Battle.UI
             int widthAfter = (int)(bgRect.Width * percentAfter);
 
             // Define the visible area of the bar (in screen space)
-            int visibleStartX = bgRect.X + cropOffset;
-            int visibleEndX = bgRect.Right;
+            // Since we collapse from right to left, the visible area starts at X and has width - cropOffset
+            int visibleStartX = bgRect.X;
+            int visibleWidth = bgRect.Width - cropOffset;
+            int visibleEndX = visibleStartX + visibleWidth;
+
+            if (visibleWidth <= 0) return;
 
             if (anim.AnimationType == BattleAnimationManager.ResourceBarAnimationState.BarAnimationType.Loss)
             {
@@ -256,7 +266,7 @@ namespace ProjectVagabond.Battle.UI
 
                 if (color != Color.Transparent && previewWidth > 0)
                 {
-                    // Clip
+                    // Clip against the visible area (which shrinks from the right)
                     int drawStartX = Math.Max(previewStartX, visibleStartX);
                     int drawEndX = Math.Min(previewStartX + previewWidth, visibleEndX);
                     int drawWidth = drawEndX - drawStartX;
