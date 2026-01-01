@@ -151,6 +151,7 @@ namespace ProjectVagabond
         public Texture2D PlayerHeartSpriteSheetSilhouette { get; private set; }
         public Texture2D ShadowBlobSprite { get; private set; }
         public Texture2D BattleEnemyFloorSprite { get; private set; }
+        public Texture2D BattlePlayerFloorSprite { get; private set; } // NEW
         public Texture2D HealParticleSprite { get; private set; }
 
         // Split Map Node Sprites
@@ -278,6 +279,9 @@ namespace ProjectVagabond
 
             try { BattleEnemyFloorSprite = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/battle_enemy_floor"); }
             catch { BattleEnemyFloorSprite = _textureFactory.CreateColoredTexture(128, 128, Color.DarkGray); }
+
+            try { BattlePlayerFloorSprite = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/party_member_enemy_floor"); }
+            catch { BattlePlayerFloorSprite = _textureFactory.CreateColoredTexture(128, 128, Color.DarkBlue); }
 
             try { ArrowIconSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/arrow_icon_spritesheet"); }
             catch { ArrowIconSpriteSheet = _textureFactory.CreateColoredTexture(48, 48, Color.Magenta); }

@@ -92,6 +92,12 @@ namespace ProjectVagabond.Scenes
         private const float UI_SLIDE_DURATION = 0.5f;
         private const float UI_SLIDE_DISTANCE = 100f; // Distance to slide up from bottom
 
+        // --- SETTINGS BUTTON ANIMATION STATE ---
+        private enum SettingsButtonState { Hidden, AnimatingIn, Visible }
+        private SettingsButtonState _settingsButtonState = SettingsButtonState.Hidden;
+        private float _settingsButtonAnimTimer = 0f;
+        private const float SETTINGS_BUTTON_ANIM_DURATION = 1.0f;
+
         // --- VICTORY SEQUENCE STATE ---
         private bool _victorySequenceTriggered = false;
 
@@ -155,6 +161,10 @@ namespace ProjectVagabond.Scenes
             _victorySequenceTriggered = false;
             SubscribeToEvents();
             InitializeSettingsButton();
+
+            // Reset Settings Button Animation
+            _settingsButtonState = SettingsButtonState.Hidden;
+            _settingsButtonAnimTimer = 0f;
 
             if (!_componentStore.HasComponent<CombatantStatsComponent>(_gameState.PlayerEntityId))
             {
@@ -545,6 +555,7 @@ namespace ProjectVagabond.Scenes
                     if (progress >= 1.0f)
                     {
                         _battleManager.ForceAdvance(); // Move to StartOfTurn
+                        _settingsButtonState = SettingsButtonState.AnimatingIn; // Trigger settings button animation
                     }
                 }
 
@@ -619,14 +630,37 @@ namespace ProjectVagabond.Scenes
             _alertManager.Update(gameTime);
             _tooltipManager.Update(gameTime);
 
+            // Update Settings Button Animation & Logic
             if (_settingsButton != null)
             {
-                int buttonSize = 16;
-                int padding = 2;
-                int buttonX = Global.VIRTUAL_WIDTH - buttonSize - padding;
-                int buttonY = padding;
-                _settingsButton.Bounds = new Rectangle(buttonX, buttonY, buttonSize, buttonSize);
-                _settingsButton.Update(currentMouseState);
+                if (_settingsButtonState == SettingsButtonState.AnimatingIn)
+                {
+                    _settingsButtonAnimTimer += dt;
+                    float progress = Math.Clamp(_settingsButtonAnimTimer / SETTINGS_BUTTON_ANIM_DURATION, 0f, 1f);
+                    float eased = Easing.EaseOutBack(progress);
+
+                    float startX = Global.VIRTUAL_WIDTH + 20;
+                    float targetX = Global.VIRTUAL_WIDTH - 16 - 2; // 16 size, 2 padding
+
+                    float currentX = MathHelper.Lerp(startX, targetX, eased);
+                    _settingsButton.Bounds = new Rectangle((int)currentX, 2, 16, 16);
+
+                    if (progress >= 1.0f) _settingsButtonState = SettingsButtonState.Visible;
+                }
+                else if (_settingsButtonState == SettingsButtonState.Visible)
+                {
+                    int buttonSize = 16;
+                    int padding = 2;
+                    int buttonX = Global.VIRTUAL_WIDTH - buttonSize - padding;
+                    int buttonY = padding;
+                    _settingsButton.Bounds = new Rectangle(buttonX, buttonY, buttonSize, buttonSize);
+                }
+
+                // Only update input if visible
+                if (_settingsButtonState != SettingsButtonState.Hidden)
+                {
+                    _settingsButton.Update(currentMouseState);
+                }
             }
 
             if (_isBattleOver)
@@ -925,7 +959,13 @@ namespace ProjectVagabond.Scenes
             _tooltipManager.Draw(spriteBatch, ServiceLocator.Get<Core>().SecondaryFont);
             _animationManager.DrawAbilityIndicators(spriteBatch, font);
             _alertManager.Draw(spriteBatch);
-            _settingsButton?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
+
+            // Only draw settings button if visible
+            if (_settingsButtonState != SettingsButtonState.Hidden)
+            {
+                _settingsButton?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
+            }
+
             spriteBatch.End();
         }
 

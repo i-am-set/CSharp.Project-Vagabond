@@ -916,6 +916,12 @@ namespace ProjectVagabond.Battle.UI
                 bool isHighlighted = selectable.Contains(player) && shouldGrayOut;
                 float pulse = 0f;
 
+                // --- DRAW FLOOR ---
+                // Use baseCenter (from BattleLayout) + slideOffset (Intro)
+                // Do NOT include yOffset (Turn Active) or bob/spawnY
+                var baseCenter = BattleLayout.GetPlayerSpriteCenter(player.BattleSlot);
+                _vfxRenderer.DrawPlayerFloor(spriteBatch, baseCenter + slideOffset, player.VisualAlpha, 1.0f);
+
                 sprite.Draw(spriteBatch, animManager, player, tint, isHighlighted, pulse, isSilhouetted, silhouetteColor, gameTime, highlight, outlineColor, scale);
 
                 Rectangle bounds = sprite.GetStaticBounds(animManager, player);

@@ -2629,6 +2629,18 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/BattleUI/battle_enemy_shadow.png;Sprites/UI/BattleUI/battle_enemy_shadow
 
+#begin Sprites/UI/BattleUI/party_member_enemy_floor.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/BattleUI/party_member_enemy_floor.png;Sprites/UI/BattleUI/party_member_enemy_floor
+
 #begin Sprites/UI/BattleUI/ui_action_button_template_secondary.png
 /importer:TextureImporter
 /processor:TextureProcessor
