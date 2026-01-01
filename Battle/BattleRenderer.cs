@@ -646,20 +646,20 @@ namespace ProjectVagabond.Battle.UI
                         if (introSlide.CurrentPhase == BattleAnimationManager.IntroSlideAnimationState.Phase.Sliding)
                         {
                             silhouetteAmt = 1.0f;
-                            silhouetteColor = _global.Palette_DarkGray;
+                            silhouetteColor = _global.Palette_Black; // Changed from DarkGray
                         }
                         // Phase 2: Waiting (Hold silhouette)
                         else if (introSlide.CurrentPhase == BattleAnimationManager.IntroSlideAnimationState.Phase.Waiting)
                         {
                             silhouetteAmt = 1.0f;
-                            silhouetteColor = _global.Palette_DarkGray;
+                            silhouetteColor = _global.Palette_Black; // Changed from DarkGray
                         }
                         // Phase 3: Revealing (Fade out silhouette)
                         else if (introSlide.CurrentPhase == BattleAnimationManager.IntroSlideAnimationState.Phase.Revealing)
                         {
                             float revealProgress = Math.Clamp(introSlide.RevealTimer / BattleAnimationManager.IntroSlideAnimationState.REVEAL_DURATION, 0f, 1f);
                             silhouetteAmt = 1.0f - Easing.EaseInQuad(revealProgress);
-                            silhouetteColor = _global.Palette_DarkGray;
+                            silhouetteColor = _global.Palette_Black; // Changed from DarkGray
                         }
                     }
                     // Alpha is handled by the animation manager update loop
