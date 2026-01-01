@@ -255,6 +255,12 @@ namespace ProjectVagabond
         public float ProtectAnimationSpeed { get; set; } = 1.0f;
         public int ProtectDamageFrameIndex { get; set; } = 0;
 
+        // --- HEAL OVERLAY TUNING ---
+        public Color HealOverlayColor { get; set; } = Color.White;
+        public float HealOverlayHangDuration { get; set; } = 0.5f;
+        public float HealOverlayFadeDuration { get; set; } = 0.5f;
+        public Color ManaOverlayColor { get; set; } = Color.White;
+
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         // INSTANCE VARIABLES

@@ -270,11 +270,17 @@ namespace ProjectVagabond.Battle.UI
             }
             else // Recovery
             {
-                float progress = anim.Timer / BattleAnimationManager.ResourceBarAnimationState.GHOST_FILL_DURATION;
+                // Calculate widths based on integer truncation to match the main bar's rendering logic
+                // This ensures the overlay aligns perfectly with the filled segments
+                int wBefore = (int)(bgRect.Width * percentBefore);
+                int wAfter = (int)(bgRect.Width * percentAfter);
 
-                int ghostStartX = (int)(bgRect.X + bgRect.Width * percentBefore);
-                int ghostWidth = (int)(bgRect.Width * (percentAfter - percentBefore));
-                if (percentAfter > percentBefore && ghostWidth == 0) ghostWidth = 1;
+                // Match the "at least 1 pixel" logic from DrawClippedBar
+                if (percentBefore > 0 && wBefore == 0) wBefore = 1;
+                if (percentAfter > 0 && wAfter == 0) wAfter = 1;
+
+                int ghostStartX = bgRect.X + wBefore;
+                int ghostWidth = wAfter - wBefore;
 
                 if (ghostWidth > 0)
                 {
@@ -286,12 +292,17 @@ namespace ProjectVagabond.Battle.UI
                     if (drawWidth > 0)
                     {
                         var ghostRect = new Rectangle(drawStartX, bgRect.Y, drawWidth, bgRect.Height);
+
                         Color ghostColor = (anim.ResourceType == BattleAnimationManager.ResourceBarAnimationState.BarResourceType.HP)
-                            ? Color.Lerp(Color.White, _global.Palette_LightGreen, 0.5f)
-                            : Color.Lerp(Color.White, _global.Palette_LightBlue, 0.5f);
+                            ? _global.HealOverlayColor
+                            : _global.ManaOverlayColor;
 
                         float alpha = 1.0f;
-                        if (progress > 0.7f) alpha = 1.0f - ((progress - 0.7f) / 0.3f);
+                        if (anim.CurrentRecoveryPhase == BattleAnimationManager.ResourceBarAnimationState.RecoveryPhase.Fade)
+                        {
+                            float progress = anim.Timer / _global.HealOverlayFadeDuration;
+                            alpha = 1.0f - progress;
+                        }
 
                         spriteBatch.DrawSnapped(_pixel, ghostRect, ghostColor * alpha);
                     }

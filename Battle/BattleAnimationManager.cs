@@ -172,11 +172,13 @@ namespace ProjectVagabond.Battle.UI
             public enum BarResourceType { HP, Mana }
             public enum BarAnimationType { Loss, Recovery }
             public enum LossPhase { Preview, FlashBlack, FlashWhite, Shrink }
+            public enum RecoveryPhase { Hang, Fade } // Added RecoveryPhase
 
             public string CombatantID;
             public BarResourceType ResourceType;
             public BarAnimationType AnimationType;
             public LossPhase CurrentLossPhase;
+            public RecoveryPhase CurrentRecoveryPhase; // Added CurrentRecoveryPhase
 
             public float ValueBefore; // e.g. 100 HP
             public float ValueAfter;  // e.g. 80 HP
@@ -188,9 +190,6 @@ namespace ProjectVagabond.Battle.UI
             public const float FLASH_BLACK_DURATION = 0.05f;
             public const float FLASH_WHITE_DURATION = 0.05f;
             public const float SHRINK_DURATION = 0.6f;
-
-            // Recovery Animation Tuning
-            public const float GHOST_FILL_DURATION = 0.5f;
         }
         public class AbilityIndicatorState
         {
@@ -427,6 +426,7 @@ namespace ProjectVagabond.Battle.UI
                 CombatantID = combatantId,
                 ResourceType = ResourceBarAnimationState.BarResourceType.HP,
                 AnimationType = ResourceBarAnimationState.BarAnimationType.Recovery,
+                CurrentRecoveryPhase = ResourceBarAnimationState.RecoveryPhase.Hang,
                 ValueBefore = hpBefore,
                 ValueAfter = hpAfter,
                 Timer = 0f
@@ -441,6 +441,7 @@ namespace ProjectVagabond.Battle.UI
                 CombatantID = combatantId,
                 ResourceType = ResourceBarAnimationState.BarResourceType.Mana,
                 AnimationType = ResourceBarAnimationState.BarAnimationType.Recovery,
+                CurrentRecoveryPhase = ResourceBarAnimationState.RecoveryPhase.Hang,
                 ValueBefore = manaBefore,
                 ValueAfter = manaAfter,
                 Timer = 0f
@@ -933,9 +934,20 @@ namespace ProjectVagabond.Battle.UI
                 }
                 else // Recovery
                 {
-                    if (anim.Timer >= ResourceBarAnimationState.GHOST_FILL_DURATION)
+                    if (anim.CurrentRecoveryPhase == ResourceBarAnimationState.RecoveryPhase.Hang)
                     {
-                        _activeBarAnimations.RemoveAt(i);
+                        if (anim.Timer >= _global.HealOverlayHangDuration)
+                        {
+                            anim.Timer = 0;
+                            anim.CurrentRecoveryPhase = ResourceBarAnimationState.RecoveryPhase.Fade;
+                        }
+                    }
+                    else if (anim.CurrentRecoveryPhase == ResourceBarAnimationState.RecoveryPhase.Fade)
+                    {
+                        if (anim.Timer >= _global.HealOverlayFadeDuration)
+                        {
+                            _activeBarAnimations.RemoveAt(i);
+                        }
                     }
                 }
             }
