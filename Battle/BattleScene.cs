@@ -99,13 +99,18 @@ namespace ProjectVagabond.Scenes
         private const float SETTINGS_BUTTON_ANIM_DURATION = 0.6f;
 
         // --- ROUND NUMBER ANIMATION STATE ---
-        private enum RoundAnimState { Hidden, Entering, Idle, Incrementing }
+        private enum RoundAnimState { Hidden, Entering, Idle, Pop, Hang, Settle }
         private RoundAnimState _roundAnimState = RoundAnimState.Hidden;
         private float _roundAnimTimer = 0f;
         private int _lastRoundNumber = 1;
+
         private const float ROUND_ANIM_ENTER_DURATION = 0.5f;
-        private const float ROUND_ANIM_INCREMENT_DURATION = 0.6f;
+        private const float ROUND_ANIM_POP_DURATION = 0.1f;
+        private const float ROUND_ANIM_HANG_DURATION = 0.25f;
+        private const float ROUND_ANIM_SETTLE_DURATION = 0.25f;
         private const float ROUND_MAX_SCALE = 1.5f;
+        private const float ROUND_SHAKE_MAGNITUDE = 0.25f; // Radians
+        private const float ROUND_SHAKE_FREQUENCY = 20f;
 
         // --- VICTORY SEQUENCE STATE ---
         private bool _victorySequenceTriggered = false;
@@ -578,7 +583,7 @@ namespace ProjectVagabond.Scenes
                     {
                         _battleManager.ForceAdvance(); // Move to StartOfTurn
                         _settingsButtonState = SettingsButtonState.AnimatingIn; // Trigger settings button animation
-                        _roundAnimState = RoundAnimState.Entering; // Trigger round number animation
+                        _roundAnimState = RoundAnimState.Pop; // Trigger round number animation
                         _roundAnimTimer = 0f;
                     }
                 }
@@ -702,14 +707,32 @@ namespace ProjectVagabond.Scenes
                 if (_battleManager.RoundNumber > _lastRoundNumber)
                 {
                     _lastRoundNumber = _battleManager.RoundNumber;
-                    _roundAnimState = RoundAnimState.Incrementing;
+                    _roundAnimState = RoundAnimState.Pop;
                     _roundAnimTimer = 0f;
                 }
             }
-            else if (_roundAnimState == RoundAnimState.Incrementing)
+            else if (_roundAnimState == RoundAnimState.Pop)
             {
                 _roundAnimTimer += dt;
-                if (_roundAnimTimer >= ROUND_ANIM_INCREMENT_DURATION)
+                if (_roundAnimTimer >= ROUND_ANIM_POP_DURATION)
+                {
+                    _roundAnimState = RoundAnimState.Hang;
+                    _roundAnimTimer = 0f;
+                }
+            }
+            else if (_roundAnimState == RoundAnimState.Hang)
+            {
+                _roundAnimTimer += dt;
+                if (_roundAnimTimer >= ROUND_ANIM_HANG_DURATION)
+                {
+                    _roundAnimState = RoundAnimState.Settle;
+                    _roundAnimTimer = 0f;
+                }
+            }
+            else if (_roundAnimState == RoundAnimState.Settle)
+            {
+                _roundAnimTimer += dt;
+                if (_roundAnimTimer >= ROUND_ANIM_SETTLE_DURATION)
                 {
                     _roundAnimState = RoundAnimState.Idle;
                     _roundAnimTimer = 0f;
@@ -1014,7 +1037,12 @@ namespace ProjectVagabond.Scenes
             _alertManager.Draw(spriteBatch);
 
             // Only draw settings button if visible
-            if (_settingsButtonState != SettingsButtonState.Hidden)
+            if (_settingsButtonState != SettingsButtonState.Visible && _settingsButtonState != SettingsButtonState.Hidden)
+            {
+                // If animating, draw with current bounds
+                _settingsButton?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
+            }
+            else if (_settingsButtonState == SettingsButtonState.Visible)
             {
                 _settingsButton?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
             }
@@ -1044,6 +1072,7 @@ namespace ProjectVagabond.Scenes
                 Vector2 drawPos = roundTextPosition + origin; // Adjust for origin centering
 
                 float scale = 1.0f;
+                float rotation = 0f;
                 Color color = ServiceLocator.Get<Global>().Palette_DarkGray;
 
                 if (_roundAnimState == RoundAnimState.Entering)
@@ -1051,25 +1080,30 @@ namespace ProjectVagabond.Scenes
                     float progress = Math.Clamp(_roundAnimTimer / ROUND_ANIM_ENTER_DURATION, 0f, 1f);
                     scale = Easing.EaseOutBack(progress);
                 }
-                else if (_roundAnimState == RoundAnimState.Incrementing)
+                else if (_roundAnimState == RoundAnimState.Pop)
                 {
-                    float progress = Math.Clamp(_roundAnimTimer / ROUND_ANIM_INCREMENT_DURATION, 0f, 1f);
-                    // Pop up to max scale then back to 1
-                    if (progress < 0.5f)
-                    {
-                        float p = progress / 0.5f;
-                        scale = MathHelper.Lerp(1.0f, ROUND_MAX_SCALE, Easing.EaseOutCubic(p));
-                        color = Color.Lerp(ServiceLocator.Get<Global>().Palette_DarkGray, Color.White, p);
-                    }
-                    else
-                    {
-                        float p = (progress - 0.5f) / 0.5f;
-                        scale = MathHelper.Lerp(ROUND_MAX_SCALE, 1.0f, Easing.EaseInCubic(p));
-                        color = Color.Lerp(Color.White, ServiceLocator.Get<Global>().Palette_DarkGray, p);
-                    }
+                    float progress = Math.Clamp(_roundAnimTimer / ROUND_ANIM_POP_DURATION, 0f, 1f);
+                    scale = MathHelper.Lerp(1.0f, ROUND_MAX_SCALE, Easing.EaseOutCubic(progress));
+                    color = Color.Lerp(ServiceLocator.Get<Global>().Palette_DarkGray, Color.White, progress);
+                }
+                else if (_roundAnimState == RoundAnimState.Hang)
+                {
+                    scale = ROUND_MAX_SCALE;
+                    color = Color.White;
+
+                    // Violent Rotation with Decay
+                    float progress = Math.Clamp(_roundAnimTimer / ROUND_ANIM_HANG_DURATION, 0f, 1f);
+                    float decay = 1.0f - Easing.EaseOutQuad(progress);
+                    rotation = MathF.Sin(_roundAnimTimer * ROUND_SHAKE_FREQUENCY) * ROUND_SHAKE_MAGNITUDE * decay;
+                }
+                else if (_roundAnimState == RoundAnimState.Settle)
+                {
+                    float progress = Math.Clamp(_roundAnimTimer / ROUND_ANIM_SETTLE_DURATION, 0f, 1f);
+                    scale = MathHelper.Lerp(ROUND_MAX_SCALE, 1.0f, Easing.EaseInCubic(progress));
+                    color = Color.Lerp(Color.White, ServiceLocator.Get<Global>().Palette_DarkGray, progress);
                 }
 
-                spriteBatch.DrawStringSnapped(font, roundText, drawPos, color, 0f, origin, scale, SpriteEffects.None, 0f);
+                spriteBatch.DrawStringSnapped(font, roundText, drawPos, color, rotation, origin, scale, SpriteEffects.None, 0f);
             }
 
             BattleCombatant renderContextActor = _currentActor;
