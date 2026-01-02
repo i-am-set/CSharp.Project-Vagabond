@@ -93,8 +93,8 @@
   },
   {
     "MoveID": "4",
-    "MoveName": "Claw",
-    "ActionPhrase": "{user} CLAWED AT {IsTargetProperNoun}{target}",
+    "MoveName": "Scratch",
+    "ActionPhrase": "{user} SCRATCHED {IsTargetProperNoun}{target}",
     "Description": "[cetc]Rakes the target with sharp claws.[/]",
     "Power": 40,
     "ManaCost": 0,
@@ -163,7 +163,7 @@
   {
     "MoveID": "7",
     "MoveName": "Attune",
-    "ActionPhrase": "{user} ATTUNED, RESTORING {user_pronoun} MANA",
+    "ActionPhrase": "{user} RESTORED {user_pronoun} MANA",
     "Description": "[cetc]Focus inner energy.[/]\nRestores [cpositive]100%[/] Mana.",
     "Power": 0,
     "ManaCost": 0,
@@ -267,7 +267,7 @@
   {
     "MoveID": "11",
     "MoveName": "Scorch Front",
-    "ActionPhrase": "{user} SCORCHED THE AREA",
+    "ActionPhrase": "{user} SCORCHED THE SURROUNDING AIR",
     "Description": "[cetc]A wave of super heated air that hits both enemies.[/]\n[cpositive]10%[/] chance to [cburn]Burn[/].",
     "Power": 90,
     "ManaCost": 25,
@@ -293,7 +293,7 @@
   {
     "MoveID": "12",
     "MoveName": "Searing Coals",
-    "ActionPhrase": "{user} SUMMONED COALS UNDER {IsTargetProperNoun}{target}",
+    "ActionPhrase": "{user} SUMMONED COALS UNDER {IsTargetProperNoun}{target}'S FEET",
     "Description": "[cetc]Summons hot coals under the target.[/]\n[cpositive]100%[/] chance to [cburn]Burn[/].",
     "Power": 20,
     "ManaCost": 15,
@@ -425,7 +425,7 @@
   {
     "MoveID": "17",
     "MoveName": "Ward",
-    "ActionPhrase": "{user} WARDED {user_pronoun} SELF",
+    "ActionPhrase": "{user} WARDED {user_reflexive}",
     "Description": "Protects the user from all effects of moves that target it during the turn.\nChance of success drops with consecutive uses.",
     "Power": 0,
     "ManaCost": 10,
@@ -478,7 +478,7 @@
   {
     "MoveID": "19",
     "MoveName": "Shadow Step",
-    "ActionPhrase": "{user} STEPPED THROUGH SHADOW TO STRIKE {IsTargetProperNoun}{target}",
+    "ActionPhrase": "{user} STEPPED THROUGH THE SHADOWS TO STRIKE {IsTargetProperNoun}{target}",
     "Description": "Hits the target for physical damage, then switches the user out.",
     "Power": 40,
     "ManaCost": 10,
@@ -659,7 +659,7 @@
   {
     "MoveID": "26",
     "MoveName": "Flashbang",
-    "ActionPhrase": "{user} THREW A FLASHBANG AT {IsTargetProperNoun}{target}",
+    "ActionPhrase": "{user} EMITTED A BLINDING FLASH OF LIGHT TOWARD {IsTargetProperNoun}{target}",
     "Description": "[cetc]Surprises the target with a bright flash of light.[/]\n[cStatus]Dazes[/] the foe. Fails if not used on first turn.",
     "Power": 40,
     "ManaCost": 10,
@@ -684,8 +684,8 @@
   },
   {
     "MoveID": "27",
-    "MoveName": "Shatter Guard",
-    "ActionPhrase": "{user} SHATTERED {IsTargetProperNoun}{target}'S GUARD",
+    "MoveName": "Sunder",
+    "ActionPhrase": "{user} SUNDERED {IsTargetProperNoun}{target}",
     "Description": "[cetc]A heavy blow that breaks through wards.[/]\nDeals[/] [cnegative]0.5x[/] [cetc]damage if breaking[/] [cStatus]Protect[/].",
     "Power": 60,
     "ManaCost": 0,
@@ -710,9 +710,9 @@
   },
   {
     "MoveID": "28",
-    "MoveName": "Sunder",
-    "ActionPhrase": "{user} SUNDERED {IsTargetProperNoun}{target}",
-    "Description": "[cetc]A precise strike that punishes guarding foes.[/]\nFails if target is not [cStatus]Protected[/].",
+    "MoveName": "Shatter Guard",
+    "ActionPhrase": "{user} SHATTERED {IsTargetProperNoun}{target}'S GUARD",
+    "Description": "[cetc]A precise arcane strike that punishes guarding foes.[/]\nFails if target is not [cStatus]Protected[/].",
     "Power": 100,
     "ManaCost": 10,
     "MoveType": "Spell",
@@ -841,15 +841,15 @@
   {
     "MoveID": "33",
     "MoveName": "Cleanse",
-    "ActionPhrase": "{user} CLEANSED {IsTargetProperNoun}{target}",
-    "Description": "[cetc]Purifies the body and mind.[/]\nRemoves all [cnegative]negative[/] status effects.",
+    "ActionPhrase": "{user} CLEANSED {user_pronoun} SIDE",
+    "Description": "[cetc]Purifies the body and mind.[/]\nRemoves all [cnegative]negative[/] status effects of both allies.",
     "Power": 0,
     "ManaCost": 15,
     "MoveType": "Spell",
     "ImpactType": "Status",
     "OffensiveStat": "Intelligence",
     "MakesContact": false,
-    "Target": "Single",
+    "Target": "Team",
     "Accuracy": -1,
     "Priority": 0,
     "Rarity": 1,
@@ -867,7 +867,7 @@
   {
     "MoveID": "34",
     "MoveName": "Mana Burn",
-    "ActionPhrase": "{user} BURNED {IsTargetProperNoun}{target}'S MANA",
+    "ActionPhrase": "{user} DETONATED {IsTargetProperNoun}{target}'S MANA",
     "Description": "[cetc]Detonates the target's stored magic.[/]\nUses up [cpositive]50[/] of target's [cmana]Current Mana[/]. Power is based on the amount of mana destroyed.",
     "Power": 0,
     "ManaCost": 20,
@@ -892,8 +892,8 @@
   },
   {
     "MoveID": "35",
-    "MoveName": "Flux Discharge",
-    "ActionPhrase": "{user} DISCHARGED FLUX",
+    "MoveName": "Flux Eruption",
+    "ActionPhrase": "{user} DETONATED {user_pronoun} STORED ARCANE ENERGY",
     "Description": "Consumes all remaining [cMana]Mana[/] to deal massive damage to [cetc]both[/] enemies.\nPower is [cpositive]2x[/] consumed Mana.",
     "Power": 0,
     "ManaCost": 0,
@@ -919,7 +919,7 @@
   {
     "MoveID": "36",
     "MoveName": "Leech Root",
-    "ActionPhrase": "{user} DRAINED {IsTargetProperNoun}{target} WITH ROOTS",
+    "ActionPhrase": "{user} DRAINED {IsTargetProperNoun}{target} LIFE FORCE WITH ROOTS",
     "Description": "Drains life from the target.\nHeals user for [cpositive]50%[/] of damage dealt.",
     "Power": 60,
     "ManaCost": 15,
@@ -945,7 +945,7 @@
   {
     "MoveID": "37",
     "MoveName": "Vampiric Bite",
-    "ActionPhrase": "{user} BIT {IsTargetProperNoun}{target} AND DRANK {user_pronoun} BLOOD",
+    "ActionPhrase": "{user} BIT {IsTargetProperNoun}{target} AND ABSORBED {target_pronoun} LIFE FORCE",
     "Description": "A draining bite.\nHeals user for [cpositive]75%[/] of damage dealt.",
     "Power": 60,
     "ManaCost": 0,
@@ -971,7 +971,7 @@
   {
     "MoveID": "38",
     "MoveName": "Distract",
-    "ActionPhrase": "{user} DISTRACTED THE ENEMY",
+    "ActionPhrase": "{user} MADE A SPECTACLE OF {user_reflexive}, DISTRACTING THE OTHERS",
     "Description": "Forces enemies to target the user.",
     "Power": 0,
     "ManaCost": 10,
@@ -1023,7 +1023,7 @@
   {
     "MoveID": "40",
     "MoveName": "Silence",
-    "ActionPhrase": "{user} SILENCED {IsTargetProperNoun}{target}",
+    "ActionPhrase": "{user} CAST SILENCE ON {IsTargetProperNoun}{target}",
     "Description": "[cetc]Silences the foe.[/]\nPrevents the target from using [cPositive]Spells[/] for 3 turns.",
     "Power": 0,
     "ManaCost": 15,
@@ -1101,7 +1101,7 @@
   {
     "MoveID": "43",
     "MoveName": "Gravity Crush",
-    "ActionPhrase": "{user} CRUSHED {IsTargetProperNoun}{target} WITH GRAVITY",
+    "ActionPhrase": "{user} CRUSHED {IsTargetProperNoun}{target} WITH INTENSE GRAVITY",
     "Description": "[cetc]Crushes the target with gravity.[/]\nDeals damage equal to [cpositive]50%[/] of target's current HP.",
     "Power": 0,
     "ManaCost": 25,

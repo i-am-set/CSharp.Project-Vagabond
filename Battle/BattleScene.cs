@@ -1313,35 +1313,60 @@ namespace ProjectVagabond.Scenes
         {
             var sb = new StringBuilder(phrase);
 
-            // User
+            // User Name
             sb.Replace("{user}", user.Name.ToUpper());
 
-            // Pronoun
-            string pronoun = "THEIR";
+            // User Pronouns
+            string userPronoun = "THEIR";
+            string userReflexive = "THEMSELVES";
+
             switch (user.Gender)
             {
-                case Gender.Male: pronoun = "HIS"; break;
-                case Gender.Female: pronoun = "HER"; break;
-                case Gender.Thing: pronoun = "ITS"; break;
+                case Gender.Male:
+                    userPronoun = "HIS";
+                    userReflexive = "HIMSELF";
+                    break;
+                case Gender.Female:
+                    userPronoun = "HER";
+                    userReflexive = "HERSELF";
+                    break;
+                case Gender.Thing:
+                    userPronoun = "ITS";
+                    userReflexive = "ITSELF";
+                    break;
             }
-            sb.Replace("{user_pronoun}", pronoun);
+            sb.Replace("{user_pronoun}", userPronoun);
+            sb.Replace("{user_reflexive}", userReflexive);
 
-            // Item
+            // Item Name
             sb.Replace("{item_name}", itemName != null ? itemName.ToUpper() : "HANDS");
 
-            // Target
+            // Target Name & Pronouns
+            string targetPronoun = "THEIR"; // Default
+
             if (target != null)
             {
                 sb.Replace("{target}", target.Name.ToUpper());
                 string properNounPrefix = target.IsProperNoun ? "" : "THE ";
                 sb.Replace("{IsTargetProperNoun}", properNounPrefix);
+
+                // Determine Target Pronoun
+                switch (target.Gender)
+                {
+                    case Gender.Male: targetPronoun = "HIS"; break;
+                    case Gender.Female: targetPronoun = "HER"; break;
+                    case Gender.Thing: targetPronoun = "ITS"; break;
+                }
             }
             else
             {
-                // Fallback for non-targeted moves or self moves if the phrase uses {target} erroneously
+                // Fallback for non-targeted moves
                 sb.Replace("{target}", "THE AIR");
                 sb.Replace("{IsTargetProperNoun}", "");
+                targetPronoun = "ITS"; // "The Air's" -> Its
             }
+
+            sb.Replace("{target_pronoun}", targetPronoun);
 
             return sb.ToString();
         }
