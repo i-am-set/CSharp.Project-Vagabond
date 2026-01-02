@@ -653,9 +653,7 @@ namespace ProjectVagabond
             // This syncs with the cursor's visual "down" movement.
             if (currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released)
             {
-                // 0.15f intensity adds a nice, snappy punch.
-                // 0.3f duration ensures the decay isn't instant, allowing rapid clicks to build up.
-                _hapticsManager.TriggerCompoundShake(0.15f, 0.3f);
+                _hapticsManager.TriggerCompoundShake(0.5f);
             }
 
             // Debug Toggles

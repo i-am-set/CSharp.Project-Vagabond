@@ -254,7 +254,7 @@ namespace ProjectVagabond
                         }
                         else
                         {
-                            if (colorTag == "error") _hapticsManager.TriggerCompoundShake(0.1f, 0.05f);
+                            if (colorTag == "error") _hapticsManager.TriggerCompoundShake(0.1f);
                             currentColor = ParseColor(colorTag);
                         }
                     }
