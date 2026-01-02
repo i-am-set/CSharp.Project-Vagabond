@@ -38,5 +38,652 @@
       "Agility": 3
     },
     "Tags": [ "Toxic", "Dagger" ]
+  },
+  {
+    "WeaponID": "3",
+    "WeaponName": "Rusty Shiv",
+    "Description": "[cetc]A piece of scrap metal sharpened on a rock. Tetanus included.[/]",
+    "Rarity": 0,
+    "LevelRequirement": 1,
+    "MoveID": "2",
+    "StatModifiers": {
+      "Agility": 2,
+      "Strength": -1
+    },
+    "Tags": [ "Metal", "Dagger", "Junk" ]
+  },
+  {
+    "WeaponID": "4",
+    "WeaponName": "Brick on a Rope",
+    "Description": "[cetc]Crude, heavy, and effective.[/]",
+    "Rarity": 0,
+    "LevelRequirement": 1,
+    "MoveID": "1",
+    "StatModifiers": {
+      "Strength": 2,
+      "Agility": -2
+    },
+    "Tags": [ "Stone", "Blunt", "Junk" ]
+  },
+  {
+    "WeaponID": "5",
+    "WeaponName": "Broken Bottle",
+    "Description": "[cetc]Sharp glass held together by a label and bad intentions. Fragile.[/]",
+    "Rarity": 0,
+    "LevelRequirement": 1,
+    "MoveID": "0",
+    "StatModifiers": {
+      "Agility": 3,
+      "Tenacity": -2
+    },
+    "Tags": [ "Glass", "Sword", "Junk" ]
+  },
+  {
+    "WeaponID": "6",
+    "WeaponName": "Board with Nail",
+    "Description": "[cetc]A classic.[/]",
+    "Rarity": 0,
+    "LevelRequirement": 1,
+    "MoveID": "1",
+    "StatModifiers": {
+      "Strength": 1
+    },
+    "Tags": [ "Wood", "Blunt", "Junk" ]
+  },
+  {
+    "WeaponID": "7",
+    "WeaponName": "Meat Cleaver",
+    "Description": "[cetc]Heavy top-weighted blade stained with old grease.[/]",
+    "Rarity": 0,
+    "LevelRequirement": 2,
+    "MoveID": "0",
+    "StatModifiers": {
+      "Strength": 3,
+      "Agility": -1
+    },
+    "Tags": [ "Metal", "Axe", "Kitchen" ]
+  },
+  {
+    "WeaponID": "8",
+    "WeaponName": "Wood Axe",
+    "Description": "[cetc]Good for splitting wood, fairly dull.[/]",
+    "Rarity": 0,
+    "LevelRequirement": 2,
+    "MoveID": "1",
+    "StatModifiers": {
+      "Strength": 2
+    },
+    "Tags": [ "Metal", "Blunt", "Tool" ]
+  },
+  {
+    "WeaponID": "9",
+    "WeaponName": "Frying Pan",
+    "Description": "[cetc]It's wide surface protects against minor blows.[/]",
+    "Rarity": 0,
+    "LevelRequirement": 2,
+    "MoveID": "1",
+    "StatModifiers": {
+      "Tenacity": 3,
+      "Agility": -1
+    },
+    "Tags": [ "Metal", "Blunt", "Kitchen" ]
+  },
+  {
+    "WeaponID": "10",
+    "WeaponName": "Wooden Sword",
+    "Description": "[cetc]Used for training.[/]",
+    "Rarity": 0,
+    "LevelRequirement": 3,
+    "MoveID": "1",
+    "StatModifiers": {
+      "Strength": 1
+    },
+    "Tags": [ "Wood", "Tool" ]
+  },
+  {
+    "WeaponID": "11",
+    "WeaponName": "Fishing Spear",
+    "Description": "[cetc]Barbed tips make it hard to pull out.[/]",
+    "Rarity": 0,
+    "LevelRequirement": 2,
+    "MoveID": "2",
+    "StatModifiers": {
+      "Agility": 3,
+      "Strength": 1
+    },
+    "Tags": [ "Wood", "Spear", "Tool" ]
+  },
+  {
+    "WeaponID": "12",
+    "WeaponName": "Shovel",
+    "Description": "[cetc]Worn from digging into hard earth.[/]",
+    "Rarity": 0,
+    "LevelRequirement": 2,
+    "MoveID": "1",
+    "StatModifiers": {
+      "Strength": 3,
+      "Tenacity": 1
+    },
+    "Tags": [ "Metal", "Blunt", "Tool" ]
+  },
+  {
+    "WeaponID": "13",
+    "WeaponName": "Footman's Sword",
+    "Description": "[cetc]Mass-produced steel. Reliable and boring.[/]",
+    "Rarity": 1,
+    "LevelRequirement": 3,
+    "MoveID": "0",
+    "StatModifiers": {
+      "Strength": 2,
+      "Agility": 1
+    },
+    "Tags": [ "Metal", "Sword", "Military" ]
+  },
+  {
+    "WeaponID": "14",
+    "WeaponName": "Guard Halberd",
+    "Description": "[cetc]Offers reach and authority. Mostly used for leaning on.[/]",
+    "Rarity": 1,
+    "LevelRequirement": 3,
+    "MoveID": "2",
+    "StatModifiers": {
+      "Strength": 3,
+      "Tenacity": 2
+    },
+    "Tags": [ "Metal", "Spear", "Military" ]
+  },
+  {
+    "WeaponID": "15",
+    "WeaponName": "Mercenary Claymore",
+    "Description": "[cetc]A sword as tall as a man. Requires wide swings.[/]",
+    "Rarity": 1,
+    "LevelRequirement": 4,
+    "MoveID": "0",
+    "StatModifiers": {
+      "Strength": 5,
+      "Agility": -2
+    },
+    "Tags": [ "Metal", "Sword", "Heavy" ]
+  },
+  {
+    "WeaponID": "16",
+    "WeaponName": "Estoc",
+    "Description": "[cetc]A needle-like sword designed to punch through mail.[/]",
+    "Rarity": 1,
+    "LevelRequirement": 4,
+    "MoveID": "2",
+    "StatModifiers": {
+      "Agility": 4,
+      "Strength": 1
+    },
+    "Tags": [ "Metal", "Sword", "Light" ]
+  },
+  {
+    "WeaponID": "17",
+    "WeaponName": "Flanged Mace",
+    "Description": "[cetc]Designed to dent plate armor and crush ribs.[/]",
+    "Rarity": 1,
+    "LevelRequirement": 4,
+    "MoveID": "1",
+    "StatModifiers": {
+      "Strength": 4,
+      "Tenacity": 1
+    },
+    "Tags": [ "Metal", "Blunt", "Military" ]
+  },
+  {
+    "WeaponID": "18",
+    "WeaponName": "Maul",
+    "Description": "[cetc]A massive sledgehammer. Subtlety is not an option.[/]",
+    "Rarity": 1,
+    "LevelRequirement": 5,
+    "MoveID": "1",
+    "StatModifiers": {
+      "Strength": 6,
+      "Agility": -3
+    },
+    "Tags": [ "Metal", "Blunt", "Heavy" ]
+  },
+  {
+    "WeaponID": "19",
+    "WeaponName": "Main-Gauche",
+    "Description": "[cetc]A parrying dagger. Good for defense.[/]",
+    "Rarity": 1,
+    "LevelRequirement": 3,
+    "MoveID": "2",
+    "StatModifiers": {
+      "Agility": 2,
+      "Tenacity": 3
+    },
+    "Tags": [ "Metal", "Dagger", "Defensive" ]
+  },
+  {
+    "WeaponID": "20",
+    "WeaponName": "Zweihander",
+    "Description": "[cetc]Requires momentum to keep moving. Devastating impact.[/]",
+    "Rarity": 2,
+    "LevelRequirement": 5,
+    "MoveID": "0",
+    "StatModifiers": {
+      "Strength": 6,
+      "Agility": -3
+    },
+    "Tags": [ "Metal", "Sword", "Heavy" ]
+  },
+  {
+    "WeaponID": "21",
+    "WeaponName": "Officer's Sabre",
+    "Description": "[cetc]Curved for cutting. Fancy handguard.[/]",
+    "Rarity": 2,
+    "LevelRequirement": 4,
+    "MoveID": "0",
+    "StatModifiers": {
+      "Agility": 3,
+      "Strength": 2
+    },
+    "Tags": [ "Metal", "Sword", "Light" ]
+  },
+  {
+    "WeaponID": "22",
+    "WeaponName": "Tower Shield",
+    "Description": "[cetc]Sometimes the best offense is a massive wall of wood and iron.[/]",
+    "Rarity": 2,
+    "LevelRequirement": 4,
+    "MoveID": "1",
+    "StatModifiers": {
+      "Tenacity": 8,
+      "Strength": 1,
+      "Agility": -4
+    },
+    "Tags": [ "Wood", "Shield", "Defensive" ]
+  },
+  {
+    "WeaponID": "23",
+    "WeaponName": "Stiletto",
+    "Description": "[cetc]A thin blade that leaves almost no mark.[/]",
+    "Rarity": 1,
+    "LevelRequirement": 3,
+    "MoveID": "2",
+    "StatModifiers": {
+      "Agility": 5,
+      "Strength": -2
+    },
+    "Tags": [ "Metal", "Dagger", "Stealth" ]
+  },
+  {
+    "WeaponID": "24",
+    "WeaponName": "Blackjack",
+    "Description": "[cetc]A club made from a leather pouch filled with lead shot.[/]",
+    "Rarity": 1,
+    "LevelRequirement": 2,
+    "MoveID": "1",
+    "StatModifiers": {
+      "Strength": 2,
+      "Agility": 1
+    },
+    "Tags": [ "Leather", "Blunt", "Stealth" ]
+  },
+  {
+    "WeaponID": "25",
+    "WeaponName": "Brass Knuckles",
+    "Description": "[cetc]For when you want to punch harder without breaking your hand.[/]",
+    "Rarity": 1,
+    "LevelRequirement": 2,
+    "MoveID": "1",
+    "StatModifiers": {
+      "Strength": 2,
+      "Agility": 2
+    },
+    "Tags": [ "Metal", "Blunt", "Brawl" ]
+  },
+  {
+    "WeaponID": "26",
+    "WeaponName": "Wire",
+    "Description": "[cetc]A piano wire whipped around wildly.[/]",
+    "Rarity": 2,
+    "LevelRequirement": 3,
+    "MoveID": "0",
+    "StatModifiers": {
+      "Agility": 4,
+      "Strength": 1
+    },
+    "Tags": [ "Metal", "Whip", "Stealth" ]
+  },
+  {
+    "WeaponID": "27",
+    "WeaponName": "Serrated Dagger",
+    "Description": "[cetc]A nasty blade designed to cause bleeding.[/]",
+    "Rarity": 2,
+    "LevelRequirement": 3,
+    "MoveID": "2",
+    "StatModifiers": {
+      "Agility": 3,
+      "Strength": 1
+    },
+    "Tags": [ "Metal", "Dagger", "Cruel" ]
+  },
+  {
+    "WeaponID": "28",
+    "WeaponName": "Katar",
+    "Description": "[cetc]A punch-dagger. Drives the force of the arm into the point.[/]",
+    "Rarity": 2,
+    "LevelRequirement": 4,
+    "MoveID": "2",
+    "StatModifiers": {
+      "Strength": 2,
+      "Agility": 3
+    },
+    "Tags": [ "Metal", "Dagger", "Brawl" ]
+  },
+  {
+    "WeaponID": "29",
+    "WeaponName": "Hook Hand",
+    "Description": "[cetc]Replaces a hand, or fits over one. Great for sailing![/]",
+    "Rarity": 1,
+    "LevelRequirement": 3,
+    "MoveID": "0",
+    "StatModifiers": {
+      "Agility": 2,
+      "Tenacity": 1
+    },
+    "Tags": [ "Metal", "Hook", "Pirate" ]
+  },
+  {
+    "WeaponID": "30",
+    "WeaponName": "Ritual Athame",
+    "Description": "[cetc]An obsidian dagger used for sacrifices.[/]",
+    "Rarity": 2,
+    "LevelRequirement": 4,
+    "MoveID": "2",
+    "StatModifiers": {
+      "Intelligence": 3,
+      "Strength": -1
+    },
+    "Tags": [ "Stone", "Dagger", "Magic" ]
+  },
+  {
+    "WeaponID": "31",
+    "WeaponName": "Gnarled Staff",
+    "Description": "[cetc]A twist of oak that hums with low vibration.[/]",
+    "Rarity": 2,
+    "LevelRequirement": 3,
+    "MoveID": "1",
+    "StatModifiers": {
+      "Intelligence": 2,
+      "Strength": 1
+    },
+    "Tags": [ "Wood", "Staff", "Magic" ]
+  },
+  {
+    "WeaponID": "32",
+    "WeaponName": "Censer Flail",
+    "Description": "[cetc]A heavy incense burner on a chain. Smells like myrrh and blood.[/]",
+    "Rarity": 2,
+    "LevelRequirement": 4,
+    "MoveID": "1",
+    "StatModifiers": {
+      "Intelligence": 2,
+      "Strength": 2
+    },
+    "Tags": [ "Metal", "Flail", "Holy" ]
+  },
+  {
+    "WeaponID": "33",
+    "WeaponName": "Grimoire",
+    "Description": "[cetc]A heavy book full of arcane magic and knowledge.[/]",
+    "Rarity": 3,
+    "LevelRequirement": 5,
+    "MoveID": "1",
+    "StatModifiers": {
+      "Intelligence": 5,
+      "Strength": -2
+    },
+    "Tags": [ "Paper", "Book", "Magic" ]
+  },
+  {
+    "WeaponID": "34",
+    "WeaponName": "Sun-Bleached Rib",
+    "Description": "[cetc]A sharpened rib bone from a giant. Channels void magic.[/]",
+    "Rarity": 2,
+    "LevelRequirement": 4,
+    "MoveID": "2",
+    "StatModifiers": {
+      "Intelligence": 4,
+      "Agility": 1
+    },
+    "Tags": [ "Bone", "Dagger", "Necro" ]
+  },
+  {
+    "WeaponID": "35",
+    "WeaponName": "Crystal Wand",
+    "Description": "[cetc]Extremely fragile, but channels mana efficiently.[/]",
+    "Rarity": 3,
+    "LevelRequirement": 5,
+    "MoveID": "1",
+    "StatModifiers": {
+      "Intelligence": 6,
+      "Strength": -3
+    },
+    "Tags": [ "Crystal", "Wand", "Magic" ]
+  },
+  {
+    "WeaponID": "36",
+    "WeaponName": "Cultist's Kris",
+    "Description": "[cetc]A wavy blade wielded by cultists.[/]",
+    "Rarity": 2,
+    "LevelRequirement": 4,
+    "MoveID": "0",
+    "StatModifiers": {
+      "Intelligence": 3,
+      "Agility": 2
+    },
+    "Tags": [ "Metal", "Dagger", "Magic" ]
+  },
+  {
+    "WeaponID": "37",
+    "WeaponName": "Petrified Eye",
+    "Description": "[cetc]A stone eye the size of a fist. It feels like it's watching.[/]",
+    "Rarity": 3,
+    "LevelRequirement": 5,
+    "MoveID": "1",
+    "StatModifiers": {
+      "Intelligence": 4,
+      "Tenacity": 1
+    },
+    "Tags": [ "Stone", "Orb", "Magic" ]
+  },
+  {
+    "WeaponID": "38",
+    "WeaponName": "Bone Club",
+    "Description": "[cetc]The femur of a large creature. Still has marrow inside.[/]",
+    "Rarity": 1,
+    "LevelRequirement": 4,
+    "MoveID": "1",
+    "StatModifiers": {
+      "Strength": 5,
+      "Intelligence": -2
+    },
+    "Tags": [ "Bone", "Club", "Primal" ]
+  },
+  {
+    "WeaponID": "39",
+    "WeaponName": "Sparring Gloves",
+    "Description": "[cetc]Leather gloves with sewn in padding.[/]",
+    "Rarity": 2,
+    "LevelRequirement": 4,
+    "MoveID": "0",
+    "StatModifiers": {
+      "Strength": -4
+    },
+    "Tags": []
+  },
+  {
+    "WeaponID": "40",
+    "WeaponName": "Rusted Chain",
+    "Description": "[cetc]A length of heavy chain. Unpredictable and painful.[/]",
+    "Rarity": 1,
+    "LevelRequirement": 3,
+    "MoveID": "1",
+    "StatModifiers": {
+      "Strength": 2,
+      "Agility": 2
+    },
+    "Tags": [ "Metal", "Whip", "Primal" ]
+  },
+  {
+    "WeaponID": "41",
+    "WeaponName": "Jawbone Axe",
+    "Description": "[cetc]An axe made from the jaw of a predator, teeth acting as the blade.[/]",
+    "Rarity": 2,
+    "LevelRequirement": 3,
+    "MoveID": "0",
+    "StatModifiers": {
+      "Strength": 3,
+      "Tenacity": 1
+    },
+    "Tags": [ "Bone", "Axe", "Primal" ]
+  },
+  {
+    "WeaponID": "42",
+    "WeaponName": "Stone Head Spear",
+    "Description": "[cetc]Primitive but perfectly balanced.[/]",
+    "Rarity": 1,
+    "LevelRequirement": 2,
+    "MoveID": "2",
+    "StatModifiers": {
+      "Strength": 3,
+      "Agility": 1
+    },
+    "Tags": [ "Stone", "Spear", "Primal" ]
+  },
+  {
+    "WeaponID": "43",
+    "WeaponName": "Executioner's Axe",
+    "Description": "[cetc]A large axe designed for chopping off heads.[/]",
+    "Rarity": 3,
+    "LevelRequirement": 5,
+    "MoveID": "0",
+    "StatModifiers": {
+      "Strength": 7,
+      "Agility": -4
+    },
+    "Tags": [ "Metal", "Axe", "Unique" ]
+  },
+  {
+    "WeaponID": "44",
+    "WeaponName": "Bard's Lute",
+    "Description": "[cetc]A string instrument made of fine wood.[/]",
+    "Rarity": 2,
+    "LevelRequirement": 3,
+    "MoveID": "1",
+    "StatModifiers": {
+      "Intelligence": 2,
+      "Agility": 2
+    },
+    "Tags": [ "Wood", "Instrument", "Unique" ]
+  },
+  {
+    "WeaponID": "45",
+    "WeaponName": "Mage Mincer",
+    "Description": "[cetc]A short sword designed to disrupt spellcasting movements.[/]",
+    "Rarity": 3,
+    "LevelRequirement": 5,
+    "MoveID": "2",
+    "StatModifiers": {
+      "Strength": 2,
+      "Tenacity": 3
+    },
+    "Tags": [ "Metal", "Dagger", "AntiMagic" ]
+  },
+  {
+    "WeaponID": "46",
+    "WeaponName": "Trident",
+    "Description": "[cetc]Three points are better than one.[/]",
+    "Rarity": 2,
+    "LevelRequirement": 4,
+    "MoveID": "2",
+    "StatModifiers": {
+      "Strength": 4,
+      "Agility": 1
+    },
+    "Tags": [ "Metal", "Spear", "Arena" ]
+  },
+  {
+    "WeaponID": "47",
+    "WeaponName": "Scourge Whip",
+    "Description": "[cetc]A whip with multiple lashes.[/]",
+    "Rarity": 3,
+    "LevelRequirement": 5,
+    "MoveID": "0",
+    "StatModifiers": {
+      "Agility": 5,
+      "Strength": -1
+    },
+    "Tags": [ "Leather", "Whip", "Unique" ]
+  },
+  {
+    "WeaponID": "48",
+    "WeaponName": "Rapier",
+    "Description": "[cetc]A gentleman's weapon. Precise and deadly.[/]",
+    "Rarity": 3,
+    "LevelRequirement": 5,
+    "MoveID": "2",
+    "StatModifiers": {
+      "Agility": 6,
+      "Strength": -1
+    },
+    "Tags": [ "Metal", "Sword", "Fencing" ]
+  },
+  {
+    "WeaponID": "49",
+    "WeaponName": "Ball and Chain",
+    "Description": "[cetc]A prisoner's shackle weaponized. Incredibly heavy.[/]",
+    "Rarity": 3,
+    "LevelRequirement": 5,
+    "MoveID": "1",
+    "StatModifiers": {
+      "Strength": 6,
+      "Agility": -5
+    },
+    "Tags": [ "Metal", "Flail", "Heavy" ]
+  },
+  {
+    "WeaponID": "50",
+    "WeaponName": "Pickaxe",
+    "Description": "[cetc]Punches holes in rock and plate mail alike.[/]",
+    "Rarity": 2,
+    "LevelRequirement": 4,
+    "MoveID": "2",
+    "StatModifiers": {
+      "Strength": 4,
+      "Tenacity": -1
+    },
+    "Tags": [ "Metal", "Pick", "Tool" ]
+  },
+  {
+    "WeaponID": "51",
+    "WeaponName": "Meteorite Chunk",
+    "Description": "[cetc]A rock from the stars. It feels warm.[/]",
+    "Rarity": 4,
+    "LevelRequirement": 6,
+    "MoveID": "1",
+    "StatModifiers": {
+      "Strength": 4,
+      "Intelligence": 1
+    },
+    "Tags": [ "Stone", "Ancient", "Rare" ]
+  },
+  {
+    "WeaponID": "52",
+    "WeaponName": "Ancient Wrench",
+    "Description": "[cetc]A tool from a forgotten age. Indestructible.[/]",
+    "Rarity": 4,
+    "LevelRequirement": 6,
+    "MoveID": "1",
+    "StatModifiers": {
+      "Strength": 3,
+      "Tenacity": 2
+    },
+    "Tags": [ "Metal", "Tool", "Ancient" ]
   }
 ]
