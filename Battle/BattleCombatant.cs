@@ -16,6 +16,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.Battle
 {
@@ -55,9 +56,63 @@ namespace ProjectVagabond.Battle
 
         public MoveEntry?[] Spells { get; set; } = new MoveEntry?[4];
 
+        // Reverted to string ID for serialization/simplicity
         public string DefaultStrikeMoveID { get; set; }
 
+        // Cache for the generated weapon move to avoid rebuilding it every frame
+        private MoveData _cachedWeaponMove;
+        private string _cachedWeaponId;
+
+        /// <summary>
+        /// Gets the actual MoveData to use for the "Strike" command.
+        /// If a weapon is equipped, returns the weapon's custom move.
+        /// Otherwise, returns the move defined by DefaultStrikeMoveID.
+        /// </summary>
+        public MoveData StrikeMove
+        {
+            get
+            {
+                // 1. Check for Equipped Weapon
+                if (!string.IsNullOrEmpty(EquippedWeaponId))
+                {
+                    // If weapon changed or cache is empty, rebuild
+                    if (_cachedWeaponId != EquippedWeaponId)
+                    {
+                        if (BattleDataCache.Weapons.TryGetValue(EquippedWeaponId, out var weapon))
+                        {
+                            _cachedWeaponMove = weapon.ToMoveData();
+                            _cachedWeaponId = EquippedWeaponId;
+                        }
+                    }
+
+                    if (_cachedWeaponMove != null)
+                    {
+                        return _cachedWeaponMove;
+                    }
+                }
+
+                // 2. Fallback to Default ID (Unarmed)
+                if (!string.IsNullOrEmpty(DefaultStrikeMoveID) && BattleDataCache.Moves.TryGetValue(DefaultStrikeMoveID, out var move))
+                {
+                    return move;
+                }
+
+                // 3. Absolute Failsafe (Punch)
+                if (BattleDataCache.Moves.TryGetValue("0", out var punch))
+                {
+                    return punch;
+                }
+
+                return null;
+            }
+        }
+
         public int PortraitIndex { get; set; } = 0;
+
+        // Equipment
+        public string? EquippedWeaponId { get; set; }
+        public string? EquippedArmorId { get; set; }
+        public string? EquippedRelicId { get; set; }
 
         public List<StatusEffectInstance> ActiveStatusEffects { get; set; } = new List<StatusEffectInstance>();
 

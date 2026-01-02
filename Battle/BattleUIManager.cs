@@ -120,6 +120,22 @@ namespace ProjectVagabond.Battle.UI
             _actionMenu.OnFleeRequested += () => OnFleeRequested?.Invoke();
             _actionMenu.OnSlot2BackRequested += () => ServiceLocator.Get<BattleManager>().CancelSlot2Selection();
 
+            // --- UPDATED STRIKE HANDLER ---
+            _actionMenu.OnStrikeRequested += (player) =>
+            {
+                if (player != null)
+                {
+                    // Use the smart property that resolves weapon vs default
+                    var strikeMove = player.StrikeMove;
+                    if (strikeMove != null)
+                    {
+                        // Manually trigger move selection flow
+                        // We pass null for MoveEntry because this is a basic action, not a spell slot
+                        _actionMenu.SelectMoveExternal(strikeMove, null);
+                    }
+                }
+            };
+
             _itemMenu.OnBack += OnItemMenuBack;
             _itemMenu.OnItemConfirmed += HandlePlayerItemSelected;
             _itemMenu.OnItemTargetingRequested += OnItemTargetingRequested;

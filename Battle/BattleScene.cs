@@ -46,7 +46,6 @@ namespace ProjectVagabond.Scenes
         private HitstopManager _hitstopManager;
         private ParticleSystemManager _particleSystemManager;
         private readonly TransitionManager _transitionManager;
-
         private List<int> _enemyEntityIds = new List<int>();
         private BattleManager.BattlePhase _previousBattlePhase;
         private bool _isBattleOver;
@@ -452,7 +451,10 @@ namespace ProjectVagabond.Scenes
                 ResistanceElementIDs = new List<int>(member.ResistanceElementIDs),
                 DefaultStrikeMoveID = member.DefaultStrikeMoveID,
                 Spells = member.Spells,
-                PortraitIndex = member.PortraitIndex
+                PortraitIndex = member.PortraitIndex,
+                EquippedWeaponId = member.EquippedWeaponId,
+                EquippedArmorId = member.EquippedArmorId,
+                EquippedRelicId = member.EquippedRelicId
             };
 
             combatant.Stats.MaxHP = _gameState.PlayerState.GetEffectiveStat(member, "MaxHP");
@@ -471,10 +473,8 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            if (!string.IsNullOrEmpty(member.EquippedWeaponId) && BattleDataCache.Weapons.TryGetValue(member.EquippedWeaponId, out var weapon))
-            {
-                combatant.DefaultStrikeMoveID = weapon.MoveID;
-            }
+            // Removed the block that tried to set DefaultStrikeMoveID from weapon.MoveID
+            // The combatant.StrikeMove property handles this logic dynamically now.
 
             return combatant;
         }

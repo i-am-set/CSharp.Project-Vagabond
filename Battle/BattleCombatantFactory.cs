@@ -21,7 +21,6 @@ namespace ProjectVagabond.Battle
     public static class BattleCombatantFactory
     {
         private static readonly Random _random = new Random();
-
         public static BattleCombatant CreateFromEntity(int entityId, string combatantId)
         {
             var componentStore = ServiceLocator.Get<ComponentStore>();
@@ -71,35 +70,27 @@ namespace ProjectVagabond.Battle
 
             if (combatant.IsPlayerControlled)
             {
-                // 1. Set Default Strike Move
-                if (!string.IsNullOrEmpty(gameState.PlayerState.EquippedWeaponId) &&
-                    BattleDataCache.Weapons.TryGetValue(gameState.PlayerState.EquippedWeaponId, out var weaponData))
+                // Find the party member corresponding to this combatant
+                var partyMember = gameState.PlayerState.Party.FirstOrDefault(m => m.Name == combatant.Name);
+                if (partyMember == null && entityId == gameState.PlayerEntityId)
                 {
-                    combatant.DefaultStrikeMoveID = weaponData.MoveID;
-
-                    // Register Weapon Abilities
-                    var weaponAbilities = AbilityFactory.CreateAbilitiesFromData(weaponData.Effects, weaponData.StatModifiers);
-                    combatant.RegisterAbilities(weaponAbilities);
-
-                    // Keep legacy list for UI tooltips
-                    var weaponAsRelic = new RelicData
-                    {
-                        RelicID = weaponData.WeaponID,
-                        RelicName = weaponData.WeaponName,
-                        AbilityName = "Weapon Ability",
-                        Effects = weaponData.Effects,
-                        StatModifiers = weaponData.StatModifiers
-                    };
-                    combatant.ActiveRelics.Add(weaponAsRelic);
-                }
-                else
-                {
-                    combatant.DefaultStrikeMoveID = gameState.PlayerState.DefaultStrikeMoveID;
+                    partyMember = gameState.PlayerState.Leader;
                 }
 
-                // 2. Apply Armor Passives
-                if (!string.IsNullOrEmpty(gameState.PlayerState.EquippedArmorId) &&
-                    BattleDataCache.Armors.TryGetValue(gameState.PlayerState.EquippedArmorId, out var armorData))
+                if (partyMember != null)
+                {
+                    combatant.Name = partyMember.Name; // Sync name
+                    combatant.Spells = partyMember.Spells;
+                    combatant.PortraitIndex = partyMember.PortraitIndex;
+                    combatant.EquippedWeaponId = partyMember.EquippedWeaponId;
+                    combatant.EquippedArmorId = partyMember.EquippedArmorId;
+                    combatant.EquippedRelicId = partyMember.EquippedRelicId;
+                    combatant.DefaultStrikeMoveID = partyMember.DefaultStrikeMoveID;
+                }
+
+                // 1. Apply Armor Passives
+                if (!string.IsNullOrEmpty(combatant.EquippedArmorId) &&
+                    BattleDataCache.Armors.TryGetValue(combatant.EquippedArmorId, out var armorData))
                 {
                     // Register Armor Abilities
                     var armorAbilities = AbilityFactory.CreateAbilitiesFromData(armorData.Effects, armorData.StatModifiers);
@@ -119,22 +110,31 @@ namespace ProjectVagabond.Battle
                     }
                 }
 
-                // Find the party member corresponding to this combatant to get their spells and portrait
-                var partyMember = gameState.PlayerState.Party.FirstOrDefault(m => m.Name == combatant.Name);
-                if (partyMember == null && entityId == gameState.PlayerEntityId)
+                // 2. Apply Weapon Passives (Stats only, effects are on the move)
+                if (!string.IsNullOrEmpty(combatant.EquippedWeaponId) &&
+                    BattleDataCache.Weapons.TryGetValue(combatant.EquippedWeaponId, out var weaponData))
                 {
-                    partyMember = gameState.PlayerState.Leader;
-                }
+                    // Only register stat modifiers from the weapon as global passives.
+                    // The move-specific effects are handled by the MoveData generated in BattleCombatant.StrikeMove.
+                    if (weaponData.StatModifiers != null && weaponData.StatModifiers.Count > 0)
+                    {
+                        var weaponStatAbilities = AbilityFactory.CreateAbilitiesFromData(null, weaponData.StatModifiers);
+                        combatant.RegisterAbilities(weaponStatAbilities);
+                    }
 
-                if (partyMember != null)
-                {
-                    combatant.Name = partyMember.Name; // Sync name
-                    combatant.Spells = partyMember.Spells;
-                    combatant.PortraitIndex = partyMember.PortraitIndex; // Set Portrait Index
+                    // Add to ActiveRelics for UI tooltip purposes
+                    var weaponAsRelic = new RelicData
+                    {
+                        RelicID = weaponData.WeaponID,
+                        RelicName = weaponData.WeaponName,
+                        AbilityName = "Weapon Ability",
+                        Effects = weaponData.Effects,
+                        StatModifiers = weaponData.StatModifiers
+                    };
+                    combatant.ActiveRelics.Add(weaponAsRelic);
                 }
 
                 // Apply Effective Stats from PlayerState
-                // Note: We use the found partyMember (or Leader fallback) for stat calculation
                 var statSource = partyMember ?? gameState.PlayerState.Leader;
 
                 combatant.Stats.MaxHP = gameState.PlayerState.GetEffectiveStat(statSource, "MaxHP");
@@ -148,9 +148,9 @@ namespace ProjectVagabond.Battle
                 combatant.VisualHP = combatant.Stats.CurrentHP;
 
                 // 3. Load Relic Abilities (Single Slot)
-                if (!string.IsNullOrEmpty(gameState.PlayerState.EquippedRelicId))
+                if (!string.IsNullOrEmpty(combatant.EquippedRelicId))
                 {
-                    if (BattleDataCache.Relics.TryGetValue(gameState.PlayerState.EquippedRelicId, out var relicData))
+                    if (BattleDataCache.Relics.TryGetValue(combatant.EquippedRelicId, out var relicData))
                     {
                         // Register Relic Abilities
                         var relicAbilities = AbilityFactory.CreateAbilitiesFromData(relicData.Effects, relicData.StatModifiers);
@@ -174,7 +174,6 @@ namespace ProjectVagabond.Battle
                 // --- ENEMY LOGIC ---
 
                 // 1. Calculate "Power Score" based on raw stats
-                // Weights: HP is cheap (0.2), Stats are valuable (1.0)
                 float powerScore = (combatant.Stats.MaxHP * 0.2f) +
                                    (combatant.Stats.Strength * 1.0f) +
                                    (combatant.Stats.Intelligence * 1.0f) +
@@ -182,8 +181,6 @@ namespace ProjectVagabond.Battle
                                    (combatant.Stats.Agility * 1.0f);
 
                 // 2. Apply Economy Logic
-                // Base Drop + (PowerScore * Scalar)
-                // This ensures stronger enemies (Boars) drop more than weaker ones (Snakes)
                 float calculatedValue = global.Economy_BaseDrop + (powerScore * global.Economy_GlobalScalar);
 
                 // 3. Apply Random Variance (+/- 20%)

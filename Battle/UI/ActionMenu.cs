@@ -29,6 +29,9 @@ namespace ProjectVagabond.Battle.UI
         public event Action? OnFleeRequested;
         public event Action? OnSlot2BackRequested;
 
+        // --- NEW EVENT FOR STRIKE ---
+        public event Action<BattleCombatant>? OnStrikeRequested;
+
         private bool _isVisible;
         public bool IsVisible => _isVisible;
 
@@ -177,10 +180,8 @@ namespace ProjectVagabond.Battle.UI
                 HoverBorderColor = _global.Palette_Red
             };
             strikeButton.OnClick += () => {
-                if (_player != null && !string.IsNullOrEmpty(_player.DefaultStrikeMoveID) && BattleDataCache.Moves.TryGetValue(_player.DefaultStrikeMoveID, out var strikeMove))
-                {
-                    SelectMove(strikeMove, null);
-                }
+                // Delegate to BattleUIManager to handle the logic
+                OnStrikeRequested?.Invoke(_player);
             };
             _secondaryActionButtons.Add(strikeButton);
 
@@ -392,6 +393,12 @@ namespace ProjectVagabond.Battle.UI
                 return;
             }
 
+            SelectMove(move, entry);
+        }
+
+        // Made public so BattleUIManager can call it for Strike
+        public void SelectMoveExternal(MoveData move, MoveEntry? entry)
+        {
             SelectMove(move, entry);
         }
 
@@ -698,13 +705,24 @@ namespace ProjectVagabond.Battle.UI
                         // Check if the underlying move is a spell (e.g. Attune)
                         string? moveId = button.Text switch
                         {
-                            "STRIKE" => _player?.DefaultStrikeMoveID,
+                            "STRIKE" => _player?.DefaultStrikeMoveID, // This is just an ID, but StrikeMove logic handles the object
                             "ATTUNE" => "7",
                             "STALL" => "6",
                             _ => null
                         };
 
-                        if (!string.IsNullOrEmpty(moveId) && BattleDataCache.Moves.TryGetValue(moveId, out var moveData))
+                        // For Strike, we need to check the actual move object
+                        MoveData? moveData = null;
+                        if (button.Text == "STRIKE" && _player != null)
+                        {
+                            moveData = _player.StrikeMove;
+                        }
+                        else if (!string.IsNullOrEmpty(moveId) && BattleDataCache.Moves.TryGetValue(moveId, out var cachedMove))
+                        {
+                            moveData = cachedMove;
+                        }
+
+                        if (moveData != null)
                         {
                             if (isSilenced && moveData.MoveType == MoveType.Spell)
                             {
@@ -721,15 +739,15 @@ namespace ProjectVagabond.Battle.UI
                         {
                             HoveredButton = button;
 
-                            if (!string.IsNullOrEmpty(moveId) && BattleDataCache.Moves.TryGetValue(moveId, out var move))
+                            if (moveData != null)
                             {
-                                HoveredMove = move;
+                                HoveredMove = moveData;
                                 _hoveredSpellbookEntry = null;
 
                                 if (effectiveMouseState.MiddleButton == ButtonState.Pressed)
                                 {
                                     middleClickHeldOnAButton = true;
-                                    moveForTooltip = move;
+                                    moveForTooltip = moveData;
                                     simpleTooltip = false;
                                 }
                             }
