@@ -10,6 +10,7 @@ namespace ProjectVagabond.UI
     public class SliderSettingControl : ISettingControl
     {
         private readonly Global _global;
+        private readonly HapticsManager _hapticsManager;
         private readonly Slider _slider;
         private readonly Func<float> _getter;
         private readonly Action<float> _setter;
@@ -25,6 +26,7 @@ namespace ProjectVagabond.UI
         public SliderSettingControl(string label, float min, float max, float step, Func<float> getter, Action<float> setter)
         {
             _global = ServiceLocator.Get<Global>();
+            _hapticsManager = ServiceLocator.Get<HapticsManager>();
             _getter = getter;
             _setter = setter;
             _savedValue = getter();
@@ -46,10 +48,12 @@ namespace ProjectVagabond.UI
             if (!IsEnabled) return;
             if (key == Keys.Left)
             {
+                _hapticsManager.TriggerCompoundShake(0.75f);
                 _slider.SetValue(_slider.CurrentValue - _slider.Step);
             }
             else if (key == Keys.Right)
             {
+                _hapticsManager.TriggerCompoundShake(0.75f);
                 _slider.SetValue(_slider.CurrentValue + _slider.Step);
             }
         }

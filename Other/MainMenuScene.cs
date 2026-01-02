@@ -28,6 +28,7 @@ namespace ProjectVagabond.Scenes
         private readonly Global _global;
         private readonly ParticleSystemManager _particleSystemManager;
         private readonly TransitionManager _transitionManager;
+        private readonly HapticsManager _hapticsManager;
 
         private readonly List<Button> _buttons = new();
         private int _selectedButtonIndex = -1;
@@ -57,6 +58,7 @@ namespace ProjectVagabond.Scenes
             _global = ServiceLocator.Get<Global>();
             _particleSystemManager = ServiceLocator.Get<ParticleSystemManager>();
             _transitionManager = ServiceLocator.Get<TransitionManager>();
+            _hapticsManager = ServiceLocator.Get<HapticsManager>();
         }
 
         public override Rectangle GetAnimatedBounds()
@@ -108,6 +110,7 @@ namespace ProjectVagabond.Scenes
             };
             playButton.OnClick += () =>
             {
+                _hapticsManager.TriggerCompoundShake(0.75f);
                 var core = ServiceLocator.Get<Core>();
                 var spriteManager = ServiceLocator.Get<SpriteManager>();
                 var archetypeManager = ServiceLocator.Get<ArchetypeManager>();
@@ -155,7 +158,11 @@ namespace ProjectVagabond.Scenes
                 TextRenderOffset = new Vector2(0, -1),
                 HoverAnimation = HoverAnimationType.SlideAndHold
             };
-            settingsButton.OnClick += () => _sceneManager.ShowModal(GameSceneState.Settings);
+            settingsButton.OnClick += () =>
+            {
+                _hapticsManager.TriggerCompoundShake(0.75f);
+                _sceneManager.ShowModal(GameSceneState.Settings);
+            };
             _buttons.Add(settingsButton);
             currentY += settingsHeight + buttonYSpacing;
 
@@ -178,12 +185,13 @@ namespace ProjectVagabond.Scenes
 
         private void ConfirmExit()
         {
+            _hapticsManager.TriggerCompoundShake(0.75f);
             _confirmationDialog.Show(
                 "Are you sure you want to exit?",
                 new List<Tuple<string, Action>>
                 {
-                    Tuple.Create("[gray]YES", new Action(() => ServiceLocator.Get<Core>().ExitApplication())),
-                    Tuple.Create("NO", new Action(() => _confirmationDialog.Hide()))
+                    Tuple.Create("[gray]YES", new Action(() => { _hapticsManager.TriggerCompoundShake(0.75f); ServiceLocator.Get<Core>().ExitApplication(); })),
+                    Tuple.Create("NO", new Action(() => { _hapticsManager.TriggerCompoundShake(0.75f); _confirmationDialog.Hide(); }))
                 }
             );
         }

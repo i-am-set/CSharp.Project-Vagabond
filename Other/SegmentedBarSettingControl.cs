@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 
@@ -10,6 +11,7 @@ namespace ProjectVagabond.UI
     public class SegmentedBarSettingControl : ISettingControl
     {
         private readonly Global _global;
+        private readonly HapticsManager _hapticsManager;
         private readonly Func<float> _getter;
         private readonly Action<float> _setter;
 
@@ -39,6 +41,7 @@ namespace ProjectVagabond.UI
         public SegmentedBarSettingControl(string label, float min, float max, int segments, Func<float> getter, Action<float> setter)
         {
             _global = ServiceLocator.Get<Global>();
+            _hapticsManager = ServiceLocator.Get<HapticsManager>();
             Label = label;
             _minValue = min;
             _maxValue = max;
@@ -74,10 +77,12 @@ namespace ProjectVagabond.UI
             if (!IsEnabled) return;
             if (key == Keys.Left)
             {
+                _hapticsManager.TriggerCompoundShake(0.75f);
                 SetValue(_currentValue - _step);
             }
             else if (key == Keys.Right)
             {
+                _hapticsManager.TriggerCompoundShake(0.75f);
                 SetValue(_currentValue + _step);
             }
         }
@@ -108,6 +113,7 @@ namespace ProjectVagabond.UI
             {
                 if (_barAreaRect.Contains(virtualMousePos))
                 {
+                    _hapticsManager.TriggerCompoundShake(0.75f);
                     _isDragging = true;
                     UpdateValueFromMousePosition(virtualMousePos); // Update on initial click
                     UIInputManager.ConsumeMouseClick();

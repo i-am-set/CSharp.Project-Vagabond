@@ -13,6 +13,7 @@ namespace ProjectVagabond.UI
     public class OptionSettingControl<T> : ISettingControl
     {
         private readonly Global _global;
+        private readonly HapticsManager _hapticsManager;
 
         public string Label { get; }
         public bool IsDirty => !_savedValue.Equals(_currentValue);
@@ -39,6 +40,7 @@ namespace ProjectVagabond.UI
         public OptionSettingControl(string label, List<KeyValuePair<string, T>> options, Func<T> getter, Action<T> setter)
         {
             _global = ServiceLocator.Get<Global>();
+            _hapticsManager = ServiceLocator.Get<HapticsManager>();
             Label = label;
             _options = options;
             _getter = getter;
@@ -74,8 +76,16 @@ namespace ProjectVagabond.UI
         public void HandleInput(Keys key)
         {
             if (!IsEnabled) return;
-            if (key == Keys.Left) Decrement();
-            if (key == Keys.Right || key == Keys.Enter) Increment();
+            if (key == Keys.Left)
+            {
+                _hapticsManager.TriggerCompoundShake(0.75f);
+                Decrement();
+            }
+            if (key == Keys.Right || key == Keys.Enter)
+            {
+                _hapticsManager.TriggerCompoundShake(0.75f);
+                Increment();
+            }
         }
 
         private void CalculateBounds(Vector2 position, BitmapFont font)
@@ -121,11 +131,13 @@ namespace ProjectVagabond.UI
                 bool consumed = false;
                 if (_isLeftArrowHovered)
                 {
+                    _hapticsManager.TriggerCompoundShake(0.75f);
                     Decrement();
                     consumed = true;
                 }
                 else if (_isRightArrowHovered)
                 {
+                    _hapticsManager.TriggerCompoundShake(0.75f);
                     Increment();
                     consumed = true;
                 }

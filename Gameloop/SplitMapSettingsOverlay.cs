@@ -23,6 +23,7 @@ namespace ProjectVagabond.UI
         private readonly Global _global;
         private readonly Core _core;
         private readonly GameScene _parentScene;
+        private readonly HapticsManager _hapticsManager;
 
         private List<object> _uiElements = new();
         private List<Vector2> _uiElementPositions = new();
@@ -62,6 +63,7 @@ namespace ProjectVagabond.UI
             _graphics = ServiceLocator.Get<GraphicsDeviceManager>();
             _global = ServiceLocator.Get<Global>();
             _core = ServiceLocator.Get<Core>();
+            _hapticsManager = ServiceLocator.Get<HapticsManager>();
 
             _confirmationDialog = new ConfirmationDialog(_parentScene);
             _revertDialog = new RevertDialog(_parentScene);
@@ -115,11 +117,13 @@ namespace ProjectVagabond.UI
                     "Discard unsaved changes?",
                     new List<Tuple<string, Action>> {
                     Tuple.Create("YES", new Action(() => {
+                        _hapticsManager.TriggerCompoundShake(0.75f);
                         RevertChanges();
                         _confirmationDialog.Hide();
                         onClose?.Invoke();
                     })),
                     Tuple.Create("[gray]NO", new Action(() => {
+                        _hapticsManager.TriggerCompoundShake(0.75f);
                         _confirmationDialog.Hide();
                     }))
                     }
@@ -222,7 +226,7 @@ namespace ProjectVagabond.UI
                 TextRenderOffset = new Vector2(0, 1),
                 UseScreenCoordinates = true
             };
-            applyButton.OnClick += ApplySettings;
+            applyButton.OnClick += () => { _hapticsManager.TriggerCompoundShake(0.75f); ApplySettings(); };
             _uiElements.Add(applyButton);
 
             var discardButton = new Button(new Rectangle(0, 0, 125, 10), "Discard")
@@ -230,7 +234,7 @@ namespace ProjectVagabond.UI
                 TextRenderOffset = new Vector2(0, 1),
                 UseScreenCoordinates = true
             };
-            discardButton.OnClick += () => AttemptClose(() => OnCloseRequested?.Invoke());
+            discardButton.OnClick += () => { _hapticsManager.TriggerCompoundShake(0.75f); AttemptClose(() => OnCloseRequested?.Invoke()); };
             _uiElements.Add(discardButton);
 
             var resetButton = new Button(new Rectangle(0, 0, 125, 10), "Restore Defaults")
@@ -239,7 +243,7 @@ namespace ProjectVagabond.UI
                 TextRenderOffset = new Vector2(0, 1),
                 UseScreenCoordinates = true
             };
-            resetButton.OnClick += ConfirmResetSettings;
+            resetButton.OnClick += () => { _hapticsManager.TriggerCompoundShake(0.75f); ConfirmResetSettings(); };
             _uiElements.Add(resetButton);
 
             CalculateLayoutPositions();
@@ -296,9 +300,10 @@ namespace ProjectVagabond.UI
 
                 _revertDialog.Show(
                     "Keep these display settings?",
-                    onConfirm: () => FinalizeAndSaveAllSettings(),
+                    onConfirm: () => { _hapticsManager.TriggerCompoundShake(0.75f); FinalizeAndSaveAllSettings(); },
                     onRevert: () =>
                     {
+                        _hapticsManager.TriggerCompoundShake(0.75f);
                         revertState.ApplyGraphicsSettings(_graphics, _core);
                         RevertChanges();
                     },
@@ -353,7 +358,7 @@ namespace ProjectVagabond.UI
 
         private void ConfirmResetSettings()
         {
-            _confirmationDialog.Show("Reset all settings to default?\n\nThis cannot be undone.", new List<Tuple<string, Action>> { Tuple.Create("YES", new Action(() => { ExecuteResetSettings(); _confirmationDialog.Hide(); })), Tuple.Create("[gray]NO", new Action(() => _confirmationDialog.Hide())) });
+            _confirmationDialog.Show("Reset all settings to default?\n\nThis cannot be undone.", new List<Tuple<string, Action>> { Tuple.Create("YES", new Action(() => { _hapticsManager.TriggerCompoundShake(0.75f); ExecuteResetSettings(); _confirmationDialog.Hide(); })), Tuple.Create("[gray]NO", new Action(() => { _hapticsManager.TriggerCompoundShake(0.75f); _confirmationDialog.Hide(); })) });
         }
 
         private void ExecuteResetSettings()
@@ -377,9 +382,9 @@ namespace ProjectVagabond.UI
                 _confirmationDialog.Show(
                     "You have unsaved changes.",
                     new List<Tuple<string, Action>> {
-                        Tuple.Create("APPLY", new Action(() => { ApplySettings(); OnCloseRequested?.Invoke(); })),
-                        Tuple.Create("DISCARD", new Action(() => { RevertChanges(); OnCloseRequested?.Invoke(); })),
-                        Tuple.Create("[gray]CANCEL", new Action(() => _confirmationDialog.Hide()))
+                        Tuple.Create("APPLY", new Action(() => { _hapticsManager.TriggerCompoundShake(0.75f); ApplySettings(); OnCloseRequested?.Invoke(); })),
+                        Tuple.Create("DISCARD", new Action(() => { _hapticsManager.TriggerCompoundShake(0.75f); RevertChanges(); OnCloseRequested?.Invoke(); })),
+                        Tuple.Create("[gray]CANCEL", new Action(() => { _hapticsManager.TriggerCompoundShake(0.75f); _confirmationDialog.Hide(); }))
                     }
                 );
             }
@@ -446,7 +451,7 @@ namespace ProjectVagabond.UI
                 {
                     if (button.Bounds.Contains(mouseInWorldSpace) && button.IsEnabled) { _selectedIndex = i; }
 
-                    // Create a fake mouse state that matches the world space for the button's logic.
+                    // Create a fake mouse state for the buttons using world coordinates
                     var worldMouseState = new MouseState((int)mouseInWorldSpace.X, (int)mouseInWorldSpace.Y, currentMouseState.ScrollWheelValue, currentMouseState.LeftButton, currentMouseState.MiddleButton, currentMouseState.RightButton, currentMouseState.XButton1, currentMouseState.XButton2);
 
                     // Pass the world-space mouse state. Because UseScreenCoordinates is true, 

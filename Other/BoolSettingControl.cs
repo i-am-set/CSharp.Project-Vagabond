@@ -2,14 +2,17 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections.Generic;
 
 namespace ProjectVagabond.UI
 {
     public class BoolSettingControl : ISettingControl
     {
         private readonly Global _global;
+        private readonly HapticsManager _hapticsManager;
 
         public string Label { get; }
         public bool IsDirty => _currentValue != _savedValue;
@@ -30,6 +33,7 @@ namespace ProjectVagabond.UI
         public BoolSettingControl(string label, Func<bool> getter, Action<bool> onApply)
         {
             _global = ServiceLocator.Get<Global>();
+            _hapticsManager = ServiceLocator.Get<HapticsManager>();
             Label = label;
             _getter = getter;
             _savedValue = getter();
@@ -51,6 +55,7 @@ namespace ProjectVagabond.UI
             if (!IsEnabled) return;
             if (key == Keys.Left || key == Keys.Right)
             {
+                _hapticsManager.TriggerCompoundShake(0.75f);
                 ToggleValue();
             }
         }
@@ -97,6 +102,7 @@ namespace ProjectVagabond.UI
             {
                 if (_isLeftArrowHovered || _isRightArrowHovered)
                 {
+                    _hapticsManager.TriggerCompoundShake(0.75f);
                     ToggleValue();
                     UIInputManager.ConsumeMouseClick();
                 }

@@ -45,13 +45,14 @@ namespace ProjectVagabond
         // --- Compound Shake Configuration ---
 
         // 1. The maximum limits of the shake at 100% Trauma
-        public float MaxTranslation { get; set; } = 0.5f; // Pixels
-        public float MaxRotation { get; set; } = 0.025f;  // Radians (~15 degrees)
+        public float MaxTranslation { get; set; } = 0.3f; // Pixels
+        public float MaxRotation { get; set; } = 0.01f;  // Radians (~15 degrees)
 
         // 2. The "Feel" of the shake
         public float TraumaExponent { get; set; } = 2.0f; // 2.0 = Quadratic (Smooth), 3.0 = Cubic (Snappy)
-        public float Frequency { get; set; } = 6f;       // How fast it vibrates
-        public float RecoverySpeed { get; set; } = 1.0f;  // How fast trauma decays per second (1.5 = fully recovers in ~0.66s)
+        public float Frequency { get; set; } = 10f;       // How fast it vibrates
+        public float RecoverySpeed { get; set; } = 2.0f;  // How fast trauma decays per second (1.5 = fully recovers in ~0.66s)
+        public float NoiseFloor { get; set; } = 0.3f;
 
         // 3. Global Multiplier
         public float MasterIntensity { get; set; } = 1.0f;
@@ -194,12 +195,32 @@ namespace ProjectVagabond
                 float noiseY = _perlin.Noise(0, _time * Frequency + 100);
                 float noiseRot = _perlin.Noise(_time * Frequency + 200, _time * Frequency + 200);
 
+                // Apply Noise Floor to ensure shake is always perceptible if trauma is high
+                noiseX = ApplyNoiseFloor(noiseX);
+                noiseY = ApplyNoiseFloor(noiseY);
+                noiseRot = ApplyNoiseFloor(noiseRot);
+
                 totalOffset.X += MaxTranslation * shake * noiseX;
                 totalOffset.Y += MaxTranslation * shake * noiseY;
                 totalRotation += MaxRotation * shake * noiseRot;
             }
 
             return (totalOffset, totalRotation, totalScale);
+        }
+
+        /// <summary>
+        /// Ensures the noise value is never closer to 0 than the NoiseFloor.
+        /// This prevents "dead zones" in the shake where the Perlin noise crosses zero.
+        /// </summary>
+        private float ApplyNoiseFloor(float noise)
+        {
+            if (Math.Abs(noise) < NoiseFloor)
+            {
+                // Push to the floor value in the direction of the noise (or positive if 0)
+                float sign = noise >= 0 ? 1f : -1f;
+                return sign * NoiseFloor;
+            }
+            return noise;
         }
 
         public Matrix GetHapticsMatrix()

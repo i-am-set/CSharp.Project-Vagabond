@@ -17,6 +17,7 @@ namespace ProjectVagabond.Scenes
         private readonly SceneManager _sceneManager;
         private readonly GraphicsDeviceManager _graphics;
         private readonly Global _global;
+        private readonly HapticsManager _hapticsManager;
         private List<object> _uiElements = new();
         private List<Vector2> _uiElementPositions = new(); // To store calculated positions
         private int _selectedIndex = -1;
@@ -48,6 +49,7 @@ namespace ProjectVagabond.Scenes
             _sceneManager = ServiceLocator.Get<SceneManager>();
             _graphics = ServiceLocator.Get<GraphicsDeviceManager>();
             _global = ServiceLocator.Get<Global>();
+            _hapticsManager = ServiceLocator.Get<HapticsManager>();
         }
 
         public override Rectangle GetAnimatedBounds()
@@ -217,14 +219,14 @@ namespace ProjectVagabond.Scenes
             {
                 TextRenderOffset = new Vector2(0, 1)
             };
-            applyButton.OnClick += ApplySettings;
+            applyButton.OnClick += () => { _hapticsManager.TriggerCompoundShake(0.75f); ApplySettings(); };
             _uiElements.Add(applyButton);
 
             var backButton = new Button(new Rectangle(0, 0, 125, 10), "Back")
             {
                 TextRenderOffset = new Vector2(0, 1)
             };
-            backButton.OnClick += AttemptToGoBack;
+            backButton.OnClick += () => { _hapticsManager.TriggerCompoundShake(0.75f); AttemptToGoBack(); };
             _uiElements.Add(backButton);
 
             var resetButton = new Button(new Rectangle(0, 0, 125, 10), "Restore Defaults")
@@ -232,7 +234,7 @@ namespace ProjectVagabond.Scenes
                 CustomDefaultTextColor = _global.Palette_LightYellow,
                 TextRenderOffset = new Vector2(0, 1)
             };
-            resetButton.OnClick += ConfirmResetSettings;
+            resetButton.OnClick += () => { _hapticsManager.TriggerCompoundShake(0.75f); ConfirmResetSettings(); };
             _uiElements.Add(resetButton);
 
             CalculateLayoutPositions(); // Ensure positions are calculated after building the list.
@@ -300,10 +302,12 @@ namespace ProjectVagabond.Scenes
                     "Keep these display settings?",
                     onConfirm: () =>
                     {
+                        _hapticsManager.TriggerCompoundShake(0.75f);
                         FinalizeAndSaveAllSettings();
                     },
                     onRevert: () =>
                     {
+                        _hapticsManager.TriggerCompoundShake(0.75f);
                         revertState.ApplyGraphicsSettings(_graphics, _core);
                         RevertChanges();
                     },
@@ -358,7 +362,7 @@ namespace ProjectVagabond.Scenes
 
         private void ConfirmResetSettings()
         {
-            _confirmationDialog.Show("Reset all settings to default?\n\nThis cannot be undone.", new List<Tuple<string, Action>> { Tuple.Create("YES", new Action(() => { ExecuteResetSettings(); _confirmationDialog.Hide(); })), Tuple.Create("[gray]NO", new Action(() => _confirmationDialog.Hide())) });
+            _confirmationDialog.Show("Reset all settings to default?\n\nThis cannot be undone.", new List<Tuple<string, Action>> { Tuple.Create("YES", new Action(() => { _hapticsManager.TriggerCompoundShake(0.75f); ExecuteResetSettings(); _confirmationDialog.Hide(); })), Tuple.Create("[gray]NO", new Action(() => { _hapticsManager.TriggerCompoundShake(0.75f); _confirmationDialog.Hide(); })) });
         }
 
         private void ExecuteResetSettings()
@@ -390,7 +394,7 @@ namespace ProjectVagabond.Scenes
         {
             if (IsDirty())
             {
-                _confirmationDialog.Show("You have unsaved changes.", new List<Tuple<string, Action>> { Tuple.Create("APPLY", new Action(() => { ApplySettings(); _sceneManager.HideModal(); })), Tuple.Create("DISCARD", new Action(() => { RevertChanges(); _sceneManager.HideModal(); })), Tuple.Create("[gray]CANCEL", new Action(() => _confirmationDialog.Hide())) });
+                _confirmationDialog.Show("You have unsaved changes.", new List<Tuple<string, Action>> { Tuple.Create("APPLY", new Action(() => { _hapticsManager.TriggerCompoundShake(0.75f); ApplySettings(); _sceneManager.HideModal(); })), Tuple.Create("DISCARD", new Action(() => { _hapticsManager.TriggerCompoundShake(0.75f); RevertChanges(); _sceneManager.HideModal(); })), Tuple.Create("[gray]CANCEL", new Action(() => { _hapticsManager.TriggerCompoundShake(0.75f); _confirmationDialog.Hide(); })) });
             }
             else
             {

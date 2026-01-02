@@ -648,14 +648,6 @@ namespace ProjectVagabond
             KeyboardState currentKeyboardState = Keyboard.GetState();
             MouseState currentMouseState = Mouse.GetState();
 
-            // --- GLOBAL CLICK SHAKE ---
-            // Trigger a small compound shake whenever the user clicks.
-            // This syncs with the cursor's visual "down" movement.
-            if (currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released)
-            {
-                _hapticsManager.TriggerCompoundShake(0.5f);
-            }
-
             // Debug Toggles
             if (currentKeyboardState.IsKeyDown(Keys.OemTilde) && _previousKeyboardState.IsKeyUp(Keys.OemTilde))
             {

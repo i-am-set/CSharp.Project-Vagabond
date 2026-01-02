@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 
@@ -10,6 +11,7 @@ namespace ProjectVagabond.UI
     public class Slider
     {
         private readonly Global _global;
+        private readonly HapticsManager _hapticsManager;
 
         public Rectangle Bounds { get; set; }
         public string Label { get; }
@@ -34,6 +36,7 @@ namespace ProjectVagabond.UI
         public Slider(Rectangle bounds, string label, float minValue, float maxValue, float initialValue, float step = 1f)
         {
             _global = ServiceLocator.Get<Global>();
+            _hapticsManager = ServiceLocator.Get<HapticsManager>();
             Bounds = bounds;
             Label = label;
             MinValue = minValue;
@@ -79,6 +82,7 @@ namespace ProjectVagabond.UI
             {
                 if (isHoveringHandle || isHoveringTrack)
                 {
+                    _hapticsManager.TriggerCompoundShake(0.75f);
                     _isDragging = true;
                 }
             }
