@@ -195,7 +195,7 @@ namespace ProjectVagabond.UI
             _activeEquipSlotType = EquipSlotType.None;
             _hoveredItemData = null;
 
-            _hapticsManager.TriggerShake(4f, 0.1f, true, 2f);
+            _hapticsManager.TriggerCompoundShake(0.75f);
         }
     }
 }

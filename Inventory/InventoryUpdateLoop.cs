@@ -168,7 +168,7 @@ namespace ProjectVagabond.UI
             if (_selectedInventoryCategory != _previousInventoryCategory)
             {
                 _inventoryArrowAnimTimer = 0f;
-                _hapticsManager.TriggerShake(2f, 0.1f, true, 2f);
+                _hapticsManager.TriggerCompoundShake(0.75f);
                 if (slotFrames != null)
                 {
                     foreach (var slot in _inventorySlots) slot.RandomizeFrame();

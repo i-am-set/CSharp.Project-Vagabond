@@ -1366,6 +1366,8 @@ namespace ProjectVagabond.Scenes
                             // Use CRT shader flash for enemies too
                             _core.TriggerFullscreenFlash(Color.White, 0.15f * juiceIntensity);
                         }
+
+                        _hapticsManager.TriggerCompoundShake(0.75f * juiceIntensity);
                     }
 
                     // Directional Shake & Recoil
@@ -1498,7 +1500,7 @@ namespace ProjectVagabond.Scenes
             if (e.Actor.IsPlayerControlled)
             {
                 _core.TriggerScreenFlashSequence(_global.Palette_Red);
-                _hapticsManager.TriggerShake(magnitude: 10.0f, duration: 0.75f, frequency: 120f);
+                _hapticsManager.TriggerWobble(intensity: 10.0f, duration: 0.75f, frequency: 120f);
             }
 
             if (e.SourceAbility != null) _uiManager.ShowNarration($"{e.Actor.Name} was hurt by\n{e.SourceAbility.AbilityName}!");
@@ -1551,7 +1553,7 @@ namespace ProjectVagabond.Scenes
                 if (e.Combatant.IsPlayerControlled)
                 {
                     _core.TriggerScreenFlashSequence(_global.Palette_Red);
-                    _hapticsManager.TriggerShake(magnitude: 10.0f, duration: 0.75f, frequency: 120f);
+                    _hapticsManager.TriggerWobble(intensity: 10.0f, duration: 0.75f, frequency: 120f);
                 }
 
                 string effectName = e.EffectType == StatusEffectType.Burn ? "the burn" : e.EffectType.ToString();
