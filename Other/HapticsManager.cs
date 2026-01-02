@@ -26,6 +26,8 @@ namespace ProjectVagabond
     public class HapticsManager
     {
         private readonly Random _random = new();
+
+        // Legacy effects (Consider replacing _shake with Compound Shake entirely in the future)
         private readonly HapticEffect _shake = new(HapticType.Shake);
         private readonly HapticEffect _hop = new(HapticType.Hop);
         private readonly HapticEffect _pulse = new(HapticType.Pulse);
@@ -34,12 +36,37 @@ namespace ProjectVagabond
         private readonly HapticEffect _bounce = new(HapticType.Bounce);
         private readonly HapticEffect _zoomPulse = new(HapticType.ZoomPulse);
         private readonly HapticEffect _directionalShake = new(HapticType.DirectionalShake);
+
+        // --- Compound Shake State (Trauma System) ---
+        private readonly SeededPerlin _perlin;
+        private float _trauma = 0f;
+        private float _time = 0f;
+
+        // --- Compound Shake Configuration ---
+        public float CompoundShakeCeiling { get; set; } = 1.0f; // Usually 1.0 is the standard max
+        public float CompoundShakeMultiplier { get; set; } = 1.0f;
+        public float CompoundShakeExponent { get; set; } = 2.0f; // Square falloff is standard
+        public float CompoundShakeLinearFloor { get; set; } = 0.1f; // Lowered slightly
+
+        // Max displacement at full trauma (Trauma = 1.0)
+        public float CompoundShakeMaxOffset { get; set; } = 25f;
+        public float CompoundShakeMaxRotation { get; set; } = 0.15f; // ~8 degrees
+        public float CompoundShakeFrequency { get; set; } = 12f; // Speed of the noise
+
+        // Standard decay rate (Trauma per second). 
+        // 1.0 means a full trauma (1.0) shake takes 1 second to settle.
+        // 0.5 means it takes 2 seconds.
+        private const float BASE_DECAY_RATE = 1.5f;
+
         private Global _global;
 
         public HapticsManager()
         {
+            _perlin = new SeededPerlin(12345);
             StopAll();
         }
+
+        // ... [Keep existing Trigger methods for Hop, Pulse, etc.] ...
 
         public void TriggerShake(float magnitude, float duration, bool isDecayed = true, float frequency = 0f)
         {
@@ -92,6 +119,24 @@ namespace ProjectVagabond
             TriggerHop(randomIntensity, duration);
         }
 
+        /// <summary>
+        /// Adds trauma to the system.
+        /// </summary>
+        /// <param name="intensity">Trauma to add (0.0 to 1.0). 0.2 is a hit, 0.5 is an explosion.</param>
+        /// <param name="duration">
+        /// IGNORED in this improved implementation. 
+        /// In a Trauma system, duration is implicit. Higher intensity = longer shake.
+        /// If you need a specific long, low rumble, call this method repeatedly in Update().
+        /// </param>
+        public void TriggerCompoundShake(float intensity, float duration = 0f)
+        {
+            // Apply multiplier
+            float amount = intensity * CompoundShakeMultiplier;
+
+            // Add to current trauma (clamped)
+            _trauma = Math.Clamp(_trauma + amount, 0f, CompoundShakeCeiling);
+        }
+
         public void StopAll()
         {
             _shake.Reset();
@@ -102,10 +147,21 @@ namespace ProjectVagabond
             _bounce.Reset();
             _zoomPulse.Reset();
             _directionalShake.Reset();
+            _trauma = 0f;
         }
 
         public void Update(GameTime gameTime)
         {
+            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            _time += dt;
+
+            // Linear Decay
+            if (_trauma > 0)
+            {
+                _trauma -= BASE_DECAY_RATE * dt;
+                if (_trauma < 0) _trauma = 0;
+            }
+
             _shake.Update(gameTime, _random);
             _hop.Update(gameTime, _random);
             _pulse.Update(gameTime, _random);
@@ -116,15 +172,32 @@ namespace ProjectVagabond
             _directionalShake.Update(gameTime, _random);
         }
 
-        /// <summary>
-        /// Returns the raw aggregated values for Offset, Rotation, and Scale.
-        /// This allows the renderer to construct the matrix relative to the actual screen center and scale.
-        /// </summary>
         public (Vector2 Offset, float Rotation, float Scale) GetTotalShakeParams()
         {
             Vector2 totalOffset = _shake.Offset + _hop.Offset + _pulse.Offset + _wobble.Offset + _drift.Offset + _bounce.Offset + _zoomPulse.Offset + _directionalShake.Offset;
             float totalRotation = _shake.Rotation + _hop.Rotation + _pulse.Rotation + _wobble.Rotation + _drift.Rotation + _bounce.Rotation + _zoomPulse.Rotation + _directionalShake.Rotation;
             float totalScale = GetCurrentScale();
+
+            // Add Compound Shake (Trauma-based)
+            if (_trauma > 0)
+            {
+                // Calculate shake magnitude: Max(Trauma^Exponent, Trauma * Floor)
+                float exponentialShake = MathF.Pow(_trauma, CompoundShakeExponent);
+                float linearShake = _trauma * CompoundShakeLinearFloor;
+                float shake = Math.Max(exponentialShake, linearShake);
+
+                // Use Perlin noise with large offsets to avoid diagonal syncing
+                // Seed 0 for X, Seed 100 for Y, Seed 200 for Rotation
+                float noiseX = _perlin.Noise(_time * CompoundShakeFrequency, 0);
+                float noiseY = _perlin.Noise(0, _time * CompoundShakeFrequency + 100);
+                float noiseRot = _perlin.Noise(_time * CompoundShakeFrequency + 200, 0);
+
+                totalOffset.X += CompoundShakeMaxOffset * shake * noiseX;
+                totalOffset.Y += CompoundShakeMaxOffset * shake * noiseY;
+
+                // Rotation often feels better if it decays slightly faster than position
+                totalRotation += CompoundShakeMaxRotation * shake * noiseRot;
+            }
 
             return (totalOffset, totalRotation, totalScale);
         }
@@ -147,13 +220,12 @@ namespace ProjectVagabond
                                   Matrix.CreateScale(totalScale, totalScale, 1.0f) *
                                   Matrix.CreateTranslation(screenCenter.X, screenCenter.Y, 0);
 
-            // Apply effects in order: Scale, then Rotate, then Translate.
             return scaleMatrix * rotationMatrix * offsetMatrix;
         }
 
         public bool IsAnyHapticActive()
         {
-            return _shake.Active || _hop.Active || _pulse.Active || _wobble.Active || _drift.Active || _bounce.Active || _zoomPulse.Active || _directionalShake.Active;
+            return _shake.Active || _hop.Active || _pulse.Active || _wobble.Active || _drift.Active || _bounce.Active || _zoomPulse.Active || _directionalShake.Active || _trauma > 0;
         }
 
         public Vector2 GetCurrentOffset()
@@ -163,10 +235,10 @@ namespace ProjectVagabond
 
         public float GetCurrentScale()
         {
-            // If multiple effects modify scale in the future, they should be multiplied together.
             return _zoomPulse.Scale;
         }
 
+        // ... [Keep HapticEffect inner class unchanged] ...
         private class HapticEffect
         {
             private readonly HapticType _type;
@@ -176,7 +248,7 @@ namespace ProjectVagabond
             private Vector2 _offset;
             private float _rotation;
             private float _scale;
-            private float _initialIntensity; // Store the starting intensity for stable decay
+            private float _initialIntensity;
 
             public HapticEffect(HapticType type)
             {
@@ -192,7 +264,7 @@ namespace ProjectVagabond
             public void Trigger(float intensity, float duration, bool decayed = true, float frequency = 0f, Vector2 direction = default)
             {
                 _intensity = intensity;
-                _initialIntensity = intensity; // Store the starting intensity
+                _initialIntensity = intensity;
                 _duration = duration;
                 _timer = duration;
                 _decayed = decayed;
@@ -253,10 +325,8 @@ namespace ProjectVagabond
                     case HapticType.DirectionalShake:
                         if (_timer > 0)
                         {
-                            // A violent shake along a specific vector.
-                            // Uses a high-frequency sine wave to oscillate back and forth along the direction vector.
                             float decay = 1.0f - Easing.EaseOutQuad(progress);
-                            float oscillation = (float)Math.Sin(_timer * 60f); // High frequency shake
+                            float oscillation = (float)Math.Sin(_timer * 60f);
                             _offset = _direction * oscillation * _intensity * decay;
                         }
                         break;
@@ -311,7 +381,6 @@ namespace ProjectVagabond
                     case HapticType.ZoomPulse:
                         if (_timer > 0)
                         {
-                            // A pulse that goes from 1.0 -> intensity -> 1.0 using a sine wave.
                             float pulseValue = (float)Math.Sin(progress * Math.PI);
                             _scale = 1.0f + (_intensity - 1.0f) * pulseValue;
                         }

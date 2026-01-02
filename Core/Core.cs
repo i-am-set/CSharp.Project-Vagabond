@@ -131,6 +131,7 @@ namespace ProjectVagabond
 
         // Input
         private KeyboardState _previousKeyboardState;
+        private MouseState _previousMouseState; // Added for click detection
         private bool _drawMouseDebugDot = false;
 
         // Physics
@@ -457,6 +458,9 @@ namespace ProjectVagabond
                 AlphaDestinationBlend = Blend.One
             };
 
+            // Initialize previous mouse state
+            _previousMouseState = Mouse.GetState();
+
             base.Initialize();
         }
 
@@ -642,6 +646,17 @@ namespace ProjectVagabond
             }
 
             KeyboardState currentKeyboardState = Keyboard.GetState();
+            MouseState currentMouseState = Mouse.GetState();
+
+            // --- GLOBAL CLICK SHAKE ---
+            // Trigger a small compound shake whenever the user clicks.
+            // This syncs with the cursor's visual "down" movement.
+            if (currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released)
+            {
+                // 0.15f intensity adds a nice, snappy punch.
+                // 0.3f duration ensures the decay isn't instant, allowing rapid clicks to build up.
+                _hapticsManager.TriggerCompoundShake(0.15f, 0.3f);
+            }
 
             // Debug Toggles
             if (currentKeyboardState.IsKeyDown(Keys.OemTilde) && _previousKeyboardState.IsKeyUp(Keys.OemTilde))
@@ -664,6 +679,7 @@ namespace ProjectVagabond
             if (KeyPressed(Keys.F12, currentKeyboardState, _previousKeyboardState)) _sceneManager.ChangeScene(GameSceneState.AnimationEditor);
 
             _previousKeyboardState = currentKeyboardState;
+            _previousMouseState = currentMouseState;
 
             // Handle delayed saving of custom resolutions
             if (_isCustomResolutionSavePending)
