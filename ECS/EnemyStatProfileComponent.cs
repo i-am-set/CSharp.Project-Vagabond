@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using ProjectVagabond.Battle;
+using System.Collections.Generic;
 
 namespace ProjectVagabond.Battle
 {
@@ -9,6 +10,11 @@ namespace ProjectVagabond.Battle
     public class EnemyStatProfileComponent : IComponent, ICloneableComponent
     {
         public int Level { get; set; }
+
+        // Narration Data
+        public Gender Gender { get; set; } = Gender.Thing; // Default to "It" for monsters
+        public bool IsProperNoun { get; set; } = false; // Default to false for generic enemies (e.g. "The Spider")
+
         public int MinHP { get; set; }
         public int MaxHP { get; set; }
         public int MaxMana { get; set; } = 100;

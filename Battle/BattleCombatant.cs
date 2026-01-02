@@ -20,12 +20,25 @@ using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.Battle
 {
+    public enum Gender
+    {
+        Male,
+        Female,
+        Thing, // It
+        Neutral // They
+    }
+
     public class BattleCombatant
     {
         public int EntityId { get; set; }
         public string ArchetypeId { get; set; }
         public string CombatantID { get; set; }
         public string Name { get; set; }
+
+        // --- NARRATION DATA ---
+        public Gender Gender { get; set; } = Gender.Neutral;
+        public bool IsProperNoun { get; set; } = false; // If true, "THE" is omitted (e.g. "Oakley"). If false, "THE" is added (e.g. "The Spider").
+
         public CombatantStats Stats { get; set; }
         public float VisualHP { get; set; }
         public float VisualAlpha { get; set; } = 1.0f;

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using ProjectVagabond.Battle;
+using System.Collections.Generic;
 
 namespace ProjectVagabond.Battle
 {
@@ -7,6 +8,11 @@ namespace ProjectVagabond.Battle
         public string MemberID { get; set; }
         public string Name { get; set; }
         public string Description { get; set; }
+
+        // Narration Data
+        public Gender Gender { get; set; } = Gender.Neutral;
+        public bool IsProperNoun { get; set; } = true; // Default to true for named characters
+
         // Base Stats
         public int MaxHP { get; set; }
         public int MaxMana { get; set; }

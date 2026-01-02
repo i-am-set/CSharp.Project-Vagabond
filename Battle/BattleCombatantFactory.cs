@@ -86,6 +86,17 @@ namespace ProjectVagabond.Battle
                     combatant.EquippedArmorId = partyMember.EquippedArmorId;
                     combatant.EquippedRelicId = partyMember.EquippedRelicId;
                     combatant.DefaultStrikeMoveID = partyMember.DefaultStrikeMoveID;
+
+                    // --- Populate Narration Data from PartyMemberData ---
+                    // We need to look up the original data to get Gender/ProperNoun
+                    // Assuming PartyMember.Name matches PartyMemberData.Name or we can find it via ID if stored.
+                    // Since PartyMember doesn't store ID, we iterate cache.
+                    var data = BattleDataCache.PartyMembers.Values.FirstOrDefault(p => p.Name == partyMember.Name);
+                    if (data != null)
+                    {
+                        combatant.Gender = data.Gender;
+                        combatant.IsProperNoun = data.IsProperNoun;
+                    }
                 }
 
                 // 1. Apply Armor Passives
@@ -172,6 +183,14 @@ namespace ProjectVagabond.Battle
             else
             {
                 // --- ENEMY LOGIC ---
+
+                // Populate Narration Data from Profile
+                var profile = archetype.TemplateComponents.OfType<EnemyStatProfileComponent>().FirstOrDefault();
+                if (profile != null)
+                {
+                    combatant.Gender = profile.Gender;
+                    combatant.IsProperNoun = profile.IsProperNoun;
+                }
 
                 // 1. Calculate "Power Score" based on raw stats
                 float powerScore = (combatant.Stats.MaxHP * 0.2f) +

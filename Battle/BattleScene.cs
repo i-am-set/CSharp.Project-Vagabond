@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Text;
 
 namespace ProjectVagabond.Scenes
 {
@@ -473,8 +474,13 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            // Removed the block that tried to set DefaultStrikeMoveID from weapon.MoveID
-            // The combatant.StrikeMove property handles this logic dynamically now.
+            // --- Populate Narration Data from PartyMemberData ---
+            var data = BattleDataCache.PartyMembers.Values.FirstOrDefault(p => p.Name == member.Name);
+            if (data != null)
+            {
+                combatant.Gender = data.Gender;
+                combatant.IsProperNoun = data.IsProperNoun;
+            }
 
             return combatant;
         }
@@ -1272,22 +1278,72 @@ namespace ProjectVagabond.Scenes
                     typeTag = "cItem";
                 }
 
-                string message = $"{e.Actor.Name} USED\n[{typeTag}]{actionName}[/]!";
+                // --- CUSTOM NARRATION LOGIC ---
+                string message = "";
+                string actionPhrase = e.Item != null ? null : e.Move?.ActionPhrase;
 
-                if (e.Move != null && e.Actor.IsPlayerControlled && e.Move.MoveID == e.Actor.DefaultStrikeMoveID)
+                if (!string.IsNullOrEmpty(actionPhrase))
                 {
-                    var partyMember = _gameState.PlayerState.Party.FirstOrDefault(p => p.Name == e.Actor.Name);
-                    if (partyMember != null && !string.IsNullOrEmpty(partyMember.EquippedWeaponId))
+                    // Use custom phrase
+                    message = ParseActionPhrase(actionPhrase, e.Actor, e.Target, e.Move?.SourceItemName ?? e.Item?.ItemName);
+                }
+                else
+                {
+                    // Fallback to default
+                    message = $"{e.Actor.Name} USED\n[{typeTag}]{actionName}[/]!";
+
+                    if (e.Move != null && e.Actor.IsPlayerControlled && e.Move.MoveID == e.Actor.DefaultStrikeMoveID)
                     {
-                        if (BattleDataCache.Weapons.TryGetValue(partyMember.EquippedWeaponId, out var weaponData))
+                        var partyMember = _gameState.PlayerState.Party.FirstOrDefault(p => p.Name == e.Actor.Name);
+                        if (partyMember != null && !string.IsNullOrEmpty(partyMember.EquippedWeaponId))
                         {
-                            message = $"{e.Actor.Name} USED\n[{typeTag}]{actionName}[/] WITH {weaponData.WeaponName.ToUpper()}!";
+                            if (BattleDataCache.Weapons.TryGetValue(partyMember.EquippedWeaponId, out var weaponData))
+                            {
+                                message = $"{e.Actor.Name} USED\n[{typeTag}]{actionName}[/] WITH {weaponData.WeaponName.ToUpper()}!";
+                            }
                         }
                     }
                 }
 
                 _uiManager.ShowNarration(message);
             }
+        }
+
+        private string ParseActionPhrase(string phrase, BattleCombatant user, BattleCombatant? target, string? itemName)
+        {
+            var sb = new StringBuilder(phrase);
+
+            // User
+            sb.Replace("{user}", user.Name.ToUpper());
+
+            // Pronoun
+            string pronoun = "THEIR";
+            switch (user.Gender)
+            {
+                case Gender.Male: pronoun = "HIS"; break;
+                case Gender.Female: pronoun = "HER"; break;
+                case Gender.Thing: pronoun = "ITS"; break;
+            }
+            sb.Replace("{user_pronoun}", pronoun);
+
+            // Item
+            sb.Replace("{item_name}", itemName != null ? itemName.ToUpper() : "HANDS");
+
+            // Target
+            if (target != null)
+            {
+                sb.Replace("{target}", target.Name.ToUpper());
+                string properNounPrefix = target.IsProperNoun ? "" : "THE ";
+                sb.Replace("{IsTargetProperNoun}", properNounPrefix);
+            }
+            else
+            {
+                // Fallback for non-targeted moves or self moves if the phrase uses {target} erroneously
+                sb.Replace("{target}", "THE AIR");
+                sb.Replace("{IsTargetProperNoun}", "");
+            }
+
+            return sb.ToString();
         }
 
         private void OnMoveAnimationTriggered(GameEvents.MoveAnimationTriggered e)

@@ -1,4 +1,5 @@
 ﻿#nullable enable
+using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using System;
 using System.Collections.Generic;
@@ -25,6 +26,18 @@ namespace ProjectVagabond.Battle
         /// Flavor text or a brief explanation of the move's effects.
         /// </summary>
         public string Description { get; set; } = "";
+
+        /// <summary>
+        /// A custom phrase to display when this move is used.
+        /// Supports tags: {user}, {target}, {user_pronoun}, {item_name}, {IsTargetProperNoun}
+        /// </summary>
+        public string? ActionPhrase { get; set; }
+
+        /// <summary>
+        /// If this move was generated from a weapon, this holds the weapon's name (e.g. "Iron Sword").
+        /// Used to populate the {item_name} tag.
+        /// </summary>
+        public string? SourceItemName { get; set; }
 
         /// <summary>
         /// The base power of the move, used in damage calculation.

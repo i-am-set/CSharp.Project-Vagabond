@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
@@ -28,6 +29,7 @@ namespace ProjectVagabond.Battle
 
         // --- Embedded Move Data ---
         public string MoveName { get; set; }
+        public string? ActionPhrase { get; set; } // Custom narration for this weapon
         public int Power { get; set; }
         public int ManaCost { get; set; }
         public MoveType MoveType { get; set; }
@@ -66,6 +68,8 @@ namespace ProjectVagabond.Battle
                 MoveID = $"WEAPON_{WeaponID}", // Synthetic ID
                 MoveName = MoveName,
                 Description = Description, // Use weapon description
+                ActionPhrase = ActionPhrase, // Pass the custom phrase
+                SourceItemName = WeaponName, // Pass the weapon name for {item_name} tag
                 Power = Power,
                 ManaCost = ManaCost,
                 MoveType = MoveType,
