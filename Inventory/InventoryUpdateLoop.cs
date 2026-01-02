@@ -168,7 +168,19 @@ namespace ProjectVagabond.UI
             if (_selectedInventoryCategory != _previousInventoryCategory)
             {
                 _inventoryArrowAnimTimer = 0f;
-                _hapticsManager.TriggerCompoundShake(0.75f);
+
+                // Haptic Feedback Logic
+                if (_selectedInventoryCategory == InventoryCategory.Equip)
+                {
+                    // Zoom Pulse for Equip Menu
+                    _hapticsManager.TriggerZoomPulse(1.01f, 0.1f);
+                }
+                else
+                {
+                    // Compound Shake for other categories
+                    _hapticsManager.TriggerCompoundShake(0.75f);
+                }
+
                 if (slotFrames != null)
                 {
                     foreach (var slot in _inventorySlots) slot.RandomizeFrame();

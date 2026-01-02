@@ -129,6 +129,9 @@ namespace ProjectVagabond.Scenes
         // --- Text Wave Controller for Node Hover Text ---
         private readonly TextWaveController _nodeTextWaveController = new TextWaveController();
 
+        // Haptics Manager
+        private readonly HapticsManager _hapticsManager;
+
         public SplitMapScene()
         {
             _progressionManager = ServiceLocator.Get<ProgressionManager>();
@@ -148,6 +151,7 @@ namespace ProjectVagabond.Scenes
             _recruitOverlay = new SplitMapRecruitOverlay(this);
             _birdManager = new BirdManager();
             _transitionManager = ServiceLocator.Get<TransitionManager>();
+            _hapticsManager = ServiceLocator.Get<HapticsManager>();
 
             var narratorBounds = new Rectangle(0, Global.VIRTUAL_HEIGHT - 50, Global.VIRTUAL_WIDTH, 50);
             _resultNarrator = new StoryNarrator(narratorBounds);
@@ -162,6 +166,7 @@ namespace ProjectVagabond.Scenes
 
             _inventoryOverlay.OnInventoryButtonClicked += () =>
             {
+                _hapticsManager.TriggerZoomPulse(1.01f, 0.1f);
                 if (_currentView == SplitMapView.Settings)
                 {
                     _settingsOverlay.AttemptClose(() =>
@@ -182,11 +187,13 @@ namespace ProjectVagabond.Scenes
 
             _settingsOverlay.OnCloseRequested += () =>
             {
+                _hapticsManager.TriggerZoomPulse(1.01f, 0.1f);
                 SetView(_viewToReturnTo, snap: true);
             };
 
             _shopOverlay.OnLeaveRequested += () =>
             {
+                _hapticsManager.TriggerZoomPulse(1.01f, 0.1f);
                 _transitionManager.StartTransition(TransitionType.Diamonds, TransitionType.Diamonds, () =>
                 {
                     _viewToReturnTo = SplitMapView.Map;
@@ -205,6 +212,7 @@ namespace ProjectVagabond.Scenes
 
             _restOverlay.OnLeaveRequested += () =>
             {
+                _hapticsManager.TriggerZoomPulse(1.01f, 0.1f);
                 _transitionManager.StartTransition(TransitionType.Diamonds, TransitionType.Diamonds, () =>
                 {
                     _viewToReturnTo = SplitMapView.Map;
@@ -241,6 +249,7 @@ namespace ProjectVagabond.Scenes
 
             _recruitOverlay.OnRecruitComplete += () =>
             {
+                _hapticsManager.TriggerZoomPulse(1.01f, 0.1f);
                 _transitionManager.StartTransition(TransitionType.Diamonds, TransitionType.Diamonds, () =>
                 {
                     _viewToReturnTo = SplitMapView.Map;
@@ -274,33 +283,7 @@ namespace ProjectVagabond.Scenes
             _inventoryOverlay.Initialize();
             _settingsOverlay.Initialize();
 
-            if (_settingsButton == null)
-            {
-                var settingsSheet = _spriteManager.SplitMapSettingsButton;
-                var settingsRects = _spriteManager.SplitMapSettingsButtonSourceRects;
-                int buttonSize = 16;
-                int settingsX = Global.VIRTUAL_WIDTH - 7 - buttonSize;
-
-                _settingsButton = new ImageButton(new Rectangle(settingsX, 10, buttonSize, buttonSize), settingsSheet, settingsRects[0], settingsRects[1], enableHoverSway: true);
-
-                _settingsButton.OnClick += () =>
-                {
-                    if (_currentView == SplitMapView.Settings)
-                    {
-                        _settingsOverlay.AttemptClose(() => SetView(_viewToReturnTo, snap: true));
-                    }
-                    else if (_currentView == SplitMapView.Inventory)
-                    {
-                        SetView(SplitMapView.Settings, snap: true);
-                    }
-                    else
-                    {
-                        _viewToReturnTo = _currentView;
-                        SetView(SplitMapView.Settings, snap: true);
-                    }
-                };
-            }
-            _settingsButton.ResetAnimationState();
+            InitializeSettingsButton();
 
             if (_progressionManager.CurrentSplitMap == null)
             {
@@ -380,6 +363,36 @@ namespace ProjectVagabond.Scenes
             {
                 _progressionManager.ClearCurrentSplitMap();
             }
+        }
+
+        private void InitializeSettingsButton()
+        {
+            int buttonSize = 16;
+            int offScreenX = Global.VIRTUAL_WIDTH + 20; // Safe off-screen position
+
+            if (_settingsButton == null)
+            {
+                var settingsIcon = _spriteManager.SettingsIconSprite;
+                if (settingsIcon != null) buttonSize = Math.Max(settingsIcon.Width, settingsIcon.Height);
+
+                // Initialize off-screen
+                _settingsButton = new ImageButton(new Rectangle(offScreenX, 2, buttonSize, buttonSize), settingsIcon, enableHoverSway: true)
+                {
+                    UseScreenCoordinates = false
+                };
+            }
+
+            // Always reset position to off-screen on initialization/re-entry
+            _settingsButton.Bounds = new Rectangle(offScreenX, 2, buttonSize, buttonSize);
+
+            // Clear previous handlers to prevent stacking
+            _settingsButton.OnClick = null;
+            _settingsButton.OnClick += () =>
+            {
+                _hapticsManager.TriggerZoomPulse(1.01f, 0.1f);
+                OpenSettings();
+            };
+            _settingsButton.ResetAnimationState();
         }
 
         private void SetView(SplitMapView view, bool snap = true)
@@ -1649,6 +1662,11 @@ namespace ProjectVagabond.Scenes
             var sourceRect = new Rectangle(frameIndex * 32, 0, 32, 32);
             var origin = new Vector2(16, 16);
             return (texture, sourceRect, origin);
+        }
+
+        private void OpenSettings()
+        {
+            _sceneManager.ShowModal(GameSceneState.Settings);
         }
     }
 }
