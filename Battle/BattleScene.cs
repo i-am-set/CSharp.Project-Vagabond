@@ -557,8 +557,8 @@ namespace ProjectVagabond.Scenes
             // --- INTRO SEQUENCE LOGIC ---
             if (_battleManager.CurrentPhase == BattleManager.BattlePhase.BattleStartIntro)
             {
-                // Wait for transition to clear
-                if (_transitionManager.IsTransitioning) return;
+                // REMOVED: Wait for transition to clear check.
+                // This allows animations to start immediately upon scene entry.
 
                 if (_currentIntroPhase == IntroPhase.EnemyDrop)
                 {

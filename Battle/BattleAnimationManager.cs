@@ -261,7 +261,7 @@ namespace ProjectVagabond.Battle.UI
         private const float COIN_GRAVITY = 900f;
         private const float COIN_BOUNCE_FACTOR = 0.5f;
         private const float COIN_LIFETIME = 0.5f; // Time to wait before magnetizing
-        private const float COIN_INDIVIDUAL_DISPENSE_DELAY = 0.0f;
+        private const float COIN_INDIVIDUAL_DISPENSE_DELAY = 1.75f; // Increased stagger to prevent clumping
 
         // Spawning Physics
         private const float COIN_VELOCITY_X_RANGE = 45f; // +/- this value
@@ -282,9 +282,12 @@ namespace ProjectVagabond.Battle.UI
         {
             public string CombatantID;
             public float Timer;
+            public float CurrentRotation; // Rotation in radians
             public const float DURATION = 0.15f; // Very quick pop
+            public const float ROTATION_DECAY_SPEED = 10f; // How fast rotation returns to 0
         }
         private readonly List<CoinCatchAnimationState> _activeCoinCatchAnimations = new List<CoinCatchAnimationState>();
+        private const float COIN_CATCH_ROTATION_STRENGTH = 0.1f; // Tunable max rotation (radians)
 
         // --- HITSTOP VISUAL STATE ---
         public class HitstopVisualState
@@ -620,13 +623,18 @@ namespace ProjectVagabond.Battle.UI
             if (existing != null)
             {
                 existing.Timer = 0f;
+                // Add a new random rotation kick to the existing one
+                float kick = (float)(_random.NextDouble() * (COIN_CATCH_ROTATION_STRENGTH * 2) - COIN_CATCH_ROTATION_STRENGTH);
+                existing.CurrentRotation += kick;
             }
             else
             {
+                float initialRotation = (float)(_random.NextDouble() * (COIN_CATCH_ROTATION_STRENGTH * 2) - COIN_CATCH_ROTATION_STRENGTH);
                 _activeCoinCatchAnimations.Add(new CoinCatchAnimationState
                 {
                     CombatantID = combatantId,
-                    Timer = 0f
+                    Timer = 0f,
+                    CurrentRotation = initialRotation
                 });
             }
         }
@@ -1219,6 +1227,10 @@ namespace ProjectVagabond.Battle.UI
             {
                 var anim = _activeCoinCatchAnimations[i];
                 anim.Timer += dt;
+
+                // Decay rotation
+                anim.CurrentRotation = MathHelper.Lerp(anim.CurrentRotation, 0f, dt * CoinCatchAnimationState.ROTATION_DECAY_SPEED);
+
                 if (anim.Timer >= CoinCatchAnimationState.DURATION)
                 {
                     _activeCoinCatchAnimations.RemoveAt(i);

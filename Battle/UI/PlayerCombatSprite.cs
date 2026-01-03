@@ -2,15 +2,21 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Particles;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.Battle.UI
 {
@@ -292,7 +298,7 @@ namespace ProjectVagabond.Battle.UI
             return preciseRect;
         }
 
-        public void Draw(SpriteBatch spriteBatch, BattleAnimationManager animationManager, BattleCombatant combatant, Color? tintColorOverride = null, bool isHighlighted = false, float pulseAlpha = 1f, bool asSilhouette = false, Color? silhouetteColor = null, GameTime? gameTime = null, Color? highlightColor = null, Color? outlineColorOverride = null, float scale = 1.0f, Color? lowHealthOverlay = null)
+        public void Draw(SpriteBatch spriteBatch, BattleAnimationManager animationManager, BattleCombatant combatant, Color? tintColorOverride = null, bool isHighlighted = false, float pulseAlpha = 1f, bool asSilhouette = false, Color? silhouetteColor = null, GameTime? gameTime = null, Color? highlightColor = null, Color? outlineColorOverride = null, float scale = 1.0f, Color? lowHealthOverlay = null, float rotation = 0f)
         {
             Initialize();
             if (_texture == null || combatant == null) return;
@@ -363,34 +369,34 @@ namespace ProjectVagabond.Battle.UI
                 Color cOuter = outlineColor;
 
                 // Layer 2: Outer Color (Cardinals 2, Diagonals 1)
-                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(-2, 0), sourceRectangle, cOuter, 0f, mainOrigin, finalScale, spriteEffects, 0.49f);
-                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(2, 0), sourceRectangle, cOuter, 0f, mainOrigin, finalScale, spriteEffects, 0.49f);
-                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(0, -2), sourceRectangle, cOuter, 0f, mainOrigin, finalScale, spriteEffects, 0.49f);
-                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(0, 2), sourceRectangle, cOuter, 0f, mainOrigin, finalScale, spriteEffects, 0.49f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(-2, 0), sourceRectangle, cOuter, rotation, mainOrigin, finalScale, spriteEffects, 0.49f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(2, 0), sourceRectangle, cOuter, rotation, mainOrigin, finalScale, spriteEffects, 0.49f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(0, -2), sourceRectangle, cOuter, rotation, mainOrigin, finalScale, spriteEffects, 0.49f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(0, 2), sourceRectangle, cOuter, rotation, mainOrigin, finalScale, spriteEffects, 0.49f);
 
-                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(-1, -1), sourceRectangle, cOuter, 0f, mainOrigin, finalScale, spriteEffects, 0.49f);
-                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(1, -1), sourceRectangle, cOuter, 0f, mainOrigin, finalScale, spriteEffects, 0.49f);
-                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(-1, 1), sourceRectangle, cOuter, 0f, mainOrigin, finalScale, spriteEffects, 0.49f);
-                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(1, 1), sourceRectangle, cOuter, 0f, mainOrigin, finalScale, spriteEffects, 0.49f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(-1, -1), sourceRectangle, cOuter, rotation, mainOrigin, finalScale, spriteEffects, 0.49f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(1, -1), sourceRectangle, cOuter, rotation, mainOrigin, finalScale, spriteEffects, 0.49f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(-1, 1), sourceRectangle, cOuter, rotation, mainOrigin, finalScale, spriteEffects, 0.49f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(1, 1), sourceRectangle, cOuter, rotation, mainOrigin, finalScale, spriteEffects, 0.49f);
 
                 // Layer 1: Inner Black (Cardinals 1)
-                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(-1, 0), sourceRectangle, cInner, 0f, mainOrigin, finalScale, spriteEffects, 0.49f);
-                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(1, 0), sourceRectangle, cInner, 0f, mainOrigin, finalScale, spriteEffects, 0.49f);
-                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(0, -1), sourceRectangle, cInner, 0f, mainOrigin, finalScale, spriteEffects, 0.49f);
-                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(0, 1), sourceRectangle, cInner, 0f, mainOrigin, finalScale, spriteEffects, 0.49f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(-1, 0), sourceRectangle, cInner, rotation, mainOrigin, finalScale, spriteEffects, 0.49f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(1, 0), sourceRectangle, cInner, rotation, mainOrigin, finalScale, spriteEffects, 0.49f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(0, -1), sourceRectangle, cInner, rotation, mainOrigin, finalScale, spriteEffects, 0.49f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(0, 1), sourceRectangle, cInner, rotation, mainOrigin, finalScale, spriteEffects, 0.49f);
             }
 
             // --- Draw Body ---
             if (asSilhouette && silhouetteToDraw != null)
             {
                 // Draw Silhouette Body
-                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos, sourceRectangle, silhouetteColor ?? Color.Gray, 0f, mainOrigin, finalScale, spriteEffects, 0.5f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos, sourceRectangle, silhouetteColor ?? Color.Gray, rotation, mainOrigin, finalScale, spriteEffects, 0.5f);
             }
             else if (isHighlighted && silhouetteToDraw != null)
             {
                 // Draw Highlight Body
                 Color hColor = highlightColor ?? Color.Yellow;
-                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos, sourceRectangle, hColor, 0f, mainOrigin, finalScale, spriteEffects, 0.5f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos, sourceRectangle, hColor, rotation, mainOrigin, finalScale, spriteEffects, 0.5f);
 
                 // Draw Indicator ONLY if the color is Yellow (The "Flash" state)
                 if (hColor == Color.Yellow)
@@ -421,31 +427,31 @@ namespace ProjectVagabond.Battle.UI
                         float swayX = nX * global.TargetIndicatorOffsetX;
                         float swayY = nY * global.TargetIndicatorOffsetY;
 
-                        float rotation = 0f;
+                        float indRotation = 0f;
                         float indicatorScale = 1.0f;
 
                         Vector2 animatedPos = targetCenter + new Vector2(swayX, swayY) + shakeOffset;
                         Vector2 indOrigin = new Vector2(indicator.Width / 2f, indicator.Height / 2f);
 
-                        spriteBatch.DrawSnapped(indicator, animatedPos, null, Color.White, rotation, indOrigin, indicatorScale, SpriteEffects.None, 0f);
+                        spriteBatch.DrawSnapped(indicator, animatedPos, null, Color.White, indRotation, indOrigin, indicatorScale, SpriteEffects.None, 0f);
                     }
                 }
             }
             else
             {
                 // Draw Main Sprite
-                spriteBatch.DrawSnapped(textureToDraw, mainDrawPos, sourceRectangle, mainColor, 0f, mainOrigin, finalScale, spriteEffects, 0.5f);
+                spriteBatch.DrawSnapped(textureToDraw, mainDrawPos, sourceRectangle, mainColor, rotation, mainOrigin, finalScale, spriteEffects, 0.5f);
 
                 // --- Draw Flash Overlay ---
                 if (isFlashingWhite && silhouetteToDraw != null)
                 {
-                    spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos, sourceRectangle, Color.White * 0.8f, 0f, mainOrigin, finalScale, spriteEffects, 0.51f);
+                    spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos, sourceRectangle, Color.White * 0.8f, rotation, mainOrigin, finalScale, spriteEffects, 0.51f);
                 }
 
                 // --- Draw Low Health Overlay ---
                 if (lowHealthOverlay.HasValue && silhouetteToDraw != null)
                 {
-                    spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos, sourceRectangle, lowHealthOverlay.Value * alpha, 0f, mainOrigin, finalScale, spriteEffects, 0.51f);
+                    spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos, sourceRectangle, lowHealthOverlay.Value * alpha, rotation, mainOrigin, finalScale, spriteEffects, 0.51f);
                 }
             }
         }

@@ -14,6 +14,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.Battle.UI
 {
@@ -390,10 +392,10 @@ namespace ProjectVagabond.Battle.UI
 
         private void DrawRectangleBorder(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, int thickness, Color color)
         {
-            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.Left, rect.Top, rect.Width, thickness), color);
-            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.Left, rect.Bottom - thickness, rect.Width, thickness), color);
-            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.Left, rect.Top, thickness, rect.Height), color);
-            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.Right - thickness, rect.Top, thickness, rect.Height), color);
+            spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Top, rect.Width, thickness), color);
+            spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Bottom - thickness, rect.Width, thickness), color);
+            spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Top, thickness, rect.Height), color);
+            spriteBatch.Draw(pixel, new Rectangle(rect.Right - thickness, rect.Top, thickness, rect.Height), color);
         }
 
         public void DrawOverlay(SpriteBatch spriteBatch, BitmapFont font)
@@ -975,6 +977,7 @@ namespace ProjectVagabond.Battle.UI
                 float spawnY = 0f;
                 float alpha = player.VisualAlpha;
                 float scale = 1.0f;
+                float rotation = 0f;
                 Vector2 slideOffset = Vector2.Zero;
 
                 if (introSlide != null)
@@ -1013,6 +1016,7 @@ namespace ProjectVagabond.Battle.UI
                     float p = coinCatch.Timer / BattleAnimationManager.CoinCatchAnimationState.DURATION;
                     float s = MathF.Sin(p * MathHelper.Pi);
                     scale += s * 0.15f;
+                    rotation = coinCatch.CurrentRotation; // Apply rotation from animation state
                 }
 
                 Vector2 recoil = _recoilStates.TryGetValue(player.CombatantID, out var r) ? r.Offset : Vector2.Zero;
@@ -1038,7 +1042,8 @@ namespace ProjectVagabond.Battle.UI
                     lowHealthOverlay = _global.LowHealthFlashColor * flashAlpha;
                 }
 
-                sprite.Draw(spriteBatch, animManager, player, tint, isHighlighted, pulse, isSilhouetted, silhouetteColor, gameTime, highlight, outlineColor, scale, lowHealthOverlay);
+                // Pass rotation to sprite draw
+                sprite.Draw(spriteBatch, animManager, player, tint, isHighlighted, pulse, isSilhouetted, silhouetteColor, gameTime, highlight, outlineColor, scale, lowHealthOverlay, rotation);
 
                 Rectangle bounds = new Rectangle((int)(baseCenter.X - 16), (int)(baseCenter.Y - 16), 32, 32);
                 Rectangle hitBox = GetPatternAlignedRect(bounds);
