@@ -147,7 +147,8 @@ namespace ProjectVagabond.Battle.UI
         {
             _allTokens.Clear();
             var colorStack = new Stack<Color>();
-            colorStack.Push(_global.Palette_BrightWhite); // Default color
+
+            colorStack.Push(_global.ColorNarration_Default);
 
             StringBuilder currentWord = new StringBuilder();
 

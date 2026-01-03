@@ -1330,9 +1330,9 @@ namespace ProjectVagabond.Scenes
                 // Check if there are multiple enemies with the exact same name
                 if (activeEnemies.Count(c => c.Name == combatant.Name) > 1)
                 {
-                    // Wrap the prefix in the new tag
-                    if (combatant.BattleSlot == 0) name = "[cPrefix]FIRST[/] " + name;
-                    else if (combatant.BattleSlot == 1) name = "[cPrefix]SECOND[/] " + name;
+                    // Append the number suffix
+                    if (combatant.BattleSlot == 0) name = name + " [cPrefix]#1[/]";
+                    else if (combatant.BattleSlot == 1) name = name + " [cPrefix]#2[/]";
                 }
             }
             return name;

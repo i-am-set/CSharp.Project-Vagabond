@@ -2,7 +2,7 @@
   {
     "MoveID": "0",
     "MoveName": "Punch",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]THREW A PUNCH AT[/] {IsTargetProperNoun}[cBrightWhite]{target}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]THROWS A PUNCH AT[/] {IsTargetProperNoun}[cSlot]{target}[/].",
     "Description": "[cetc]A basic unarmed strike.[/]",
     "Power": 50,
     "ManaCost": 0,
@@ -25,7 +25,7 @@
   {
     "MoveID": "1",
     "MoveName": "Kick",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]KICKED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]KICKS[/] {IsTargetProperNoun}[cSlot]{target}[/].",
     "Description": "[cetc]A powerful kick.[/]",
     "Power": 60,
     "ManaCost": 0,
@@ -48,7 +48,7 @@
   {
     "MoveID": "2",
     "MoveName": "Headbutt",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]HEADBUTTED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]HEADBUTTS[/] {IsTargetProperNoun}[cSlot]{target}[/].",
     "Description": "[cetc]A reckless headbutt.[/]",
     "Power": 45,
     "ManaCost": 0,
@@ -71,7 +71,7 @@
   {
     "MoveID": "3",
     "MoveName": "Bite",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]BIT[/] {IsTargetProperNoun}[cBrightWhite]{target}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]BITES[/] {IsTargetProperNoun}[cSlot]{target}[/].",
     "Description": "[cetc]A vicious chomp.[/]",
     "Power": 55,
     "ManaCost": 0,
@@ -94,7 +94,7 @@
   {
     "MoveID": "4",
     "MoveName": "Scratch",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]SCRATCHED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]SCRATCHES[/] {IsTargetProperNoun}[cSlot]{target}[/].",
     "Description": "[cetc]Rakes the target with sharp claws.[/]",
     "Power": 40,
     "ManaCost": 0,
@@ -117,7 +117,7 @@
   {
     "MoveID": "5",
     "MoveName": "Slap",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]SLAPPED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]SLAPS[/] {IsTargetProperNoun}[cSlot]{target}[/].",
     "Description": "[cetc]A quick, disrespectful strike.[/]",
     "Power": 30,
     "ManaCost": 0,
@@ -140,7 +140,7 @@
   {
     "MoveID": "6",
     "MoveName": "Stall",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]DID NOTHING[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]DOES NOTHING.[/]",
     "Description": "Do nothing for 1 turn.",
     "Power": 0,
     "ManaCost": 0,
@@ -163,7 +163,7 @@
   {
     "MoveID": "7",
     "MoveName": "Attune",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cSpell]RESTORED[/] {user_pronoun} [cArcane]MANA[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]RESTORES[/] {user_pronoun} [cArcane]MANA[/].",
     "Description": "[cetc]Focus inner energy.[/]\nRestores [cpositive]100%[/] Mana.",
     "Power": 0,
     "ManaCost": 0,
@@ -189,7 +189,7 @@
   {
     "MoveID": "8",
     "MoveName": "Reckless Tackle",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]TACKLED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] [cAction]RECKLESSLY[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]TACKLES[/] {IsTargetProperNoun}[cSlot]{target}[/] [cAction]RECKLESSLY[/].",
     "Description": "Deals massive damage but user takes [cnegative]25%[/] recoil.",
     "Power": 120,
     "ManaCost": 0,
@@ -215,7 +215,7 @@
   {
     "MoveID": "9",
     "MoveName": "Harden",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]HARDENED[/] {user_pronoun} [cStatus]DEFENSES[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]HARDENS[/] {user_pronoun} [cStatus]DEFENSES[/].",
     "Description": "Raises [cten]Tenacity[/] by [cpositive]2[/] stages.",
     "Power": 0,
     "ManaCost": 10,
@@ -241,7 +241,7 @@
   {
     "MoveID": "10",
     "MoveName": "Renew Self",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cSpell]RENEWED[/] {user_pronoun} [cStatus]VITALITY[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]RENEWS[/] {user_pronoun} [cStatus]VITALITY[/].",
     "Description": "Gain [cregen]Regeneration[/] for [cpositive]3[/] turns.",
     "Power": 0,
     "ManaCost": 15,
@@ -267,7 +267,7 @@
   {
     "MoveID": "11",
     "MoveName": "Scorch Front",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cSpell]SCORCHED[/] THE SURROUNDING AIR",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]SCORCHES[/] THE SURROUNDING AIR.",
     "Description": "[cetc]A wave of super heated air that hits both enemies.[/]\n[cpositive]10%[/] chance to [cburn]Burn[/].",
     "Power": 90,
     "ManaCost": 25,
@@ -293,7 +293,7 @@
   {
     "MoveID": "12",
     "MoveName": "Searing Coals",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cSpell]SUMMONED COALS[/] UNDER {IsTargetProperNoun}[cBrightWhite]{target}[/]'S FEET",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]SUMMONS COALS[/] UNDER {IsTargetProperNoun}[cSlot]{target}[/]'S FEET.",
     "Description": "[cetc]Summons hot coals under the target.[/]\n[cpositive]100%[/] chance to [cburn]Burn[/].",
     "Power": 20,
     "ManaCost": 15,
@@ -319,7 +319,7 @@
   {
     "MoveID": "13",
     "MoveName": "Fireball",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cSpell]HURLED A FIREBALL AT[/] {IsTargetProperNoun}[cBrightWhite]{target}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]HURLS A FIREBALL AT[/] {IsTargetProperNoun}[cSlot]{target}[/].",
     "Description": "[cetc]Hurls a massive ball of fire.[/]\n[cpositive]10%[/] chance to [cburn]Burn[/].",
     "Power": 110,
     "ManaCost": 30,
@@ -345,7 +345,7 @@
   {
     "MoveID": "14",
     "MoveName": "Flame Lash",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]LASHED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH [cFire]FIRE[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]LASHES[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH [cFire]FIRE[/].",
     "Description": "[cetc]Strikes with a whip of fire.[/]\n[cpositive]30%[/] chance to [cburn]Burn[/].",
     "Power": 90,
     "ManaCost": 20,
@@ -371,7 +371,7 @@
   {
     "MoveID": "15",
     "MoveName": "Fiery Crash",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]CRASHED INTO[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] IN A [cFire]BLAZE[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]CRASHES INTO[/] {IsTargetProperNoun}[cSlot]{target}[/] IN A [cFire]BLAZE[/].",
     "Description": "[cetc]A reckless, flaming tackle.[/]\nUser takes [cnegative]30%[/] recoil damage.\n[cpositive]10%[/] chance to [cburn]Burn[/].",
     "Power": 130,
     "ManaCost": 0,
@@ -398,7 +398,7 @@
   {
     "MoveID": "16",
     "MoveName": "Freezer Burn",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cSpell]UNLEASHED A COLD SNAP[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]UNLEASHES A COLD SNAP[/].",
     "Description": "[cetc]A cold snap that burns the skin.[/]\n[cpositive]30%[/] chance to [cburn]Burn[/] and/or [cburn]Frostbite[/].",
     "Power": 40,
     "ManaCost": 20,
@@ -425,7 +425,7 @@
   {
     "MoveID": "17",
     "MoveName": "Ward",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cSpell]WARDED[/] {user_reflexive}",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]WARDS[/] {user_reflexive}.",
     "Description": "Protects the user from all effects of moves that target it during the turn.\nChance of success drops with consecutive uses.",
     "Power": 0,
     "ManaCost": 10,
@@ -451,7 +451,7 @@
   {
     "MoveID": "18",
     "MoveName": "Fleeing Curse",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cSpell]CURSED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] AND [cAction]FLED[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]CURSES[/] {IsTargetProperNoun}[cSlot]{target}[/] AND [cAction]FLEES[/].",
     "Description": "Lowers target's [cstr]Strength[/] and [cint]Intelligence[/], then switches the user out.",
     "Power": 0,
     "ManaCost": 20,
@@ -478,7 +478,7 @@
   {
     "MoveID": "19",
     "MoveName": "Shadow Step",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cSpell]STEPPED THROUGH THE SHADOWS TO STRIKE[/] {IsTargetProperNoun}[cBrightWhite]{target}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]STEPS THROUGH THE SHADOWS TO STRIKE[/] {IsTargetProperNoun}[cSlot]{target}[/].",
     "Description": "Hits the target for physical damage, then switches the user out.",
     "Power": 40,
     "ManaCost": 10,
@@ -504,7 +504,7 @@
   {
     "MoveID": "20",
     "MoveName": "Sonicboom",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cSpell]HIT[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH A [cWind]SONIC BOOM[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]HITS[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH A [cWind]SONIC BOOM[/].",
     "Description": "Hits the target for magical damage, then switches the user out.",
     "Power": 30,
     "ManaCost": 15,
@@ -530,7 +530,7 @@
   {
     "MoveID": "21",
     "MoveName": "Wind Shear",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cSpell]SHEARED THE AIR[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]SHEARS THE AIR[/].",
     "Description": "Hits both enemies.\nLowers [cagi]Agility[/] by [cnegative]1[/].",
     "Power": 55,
     "ManaCost": 20,
@@ -556,7 +556,7 @@
   {
     "MoveID": "22",
     "MoveName": "Goaded Strike",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]STRUCK[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH [cAction]ABANDON[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]STRIKES[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH [cAction]ABANDON[/].",
     "Description": "Massive damage but lowers user's [cten]Tenacity[/].",
     "Power": 120,
     "ManaCost": 0,
@@ -582,7 +582,7 @@
   {
     "MoveID": "23",
     "MoveName": "Meditate",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cSpell]MEDITATED[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]MEDITATES[/].",
     "Description": "[cetc]The user Focuses their mind.[/]\nRaises [cint]Intelligence[/] by 2 and restores [cpositive]10%[/] mana.",
     "Power": 0,
     "ManaCost": 0,
@@ -609,7 +609,7 @@
   {
     "MoveID": "24",
     "MoveName": "Summon Tremors",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cSpell]SUMMONED TREMORS[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]SUMMONS TREMORS[/].",
     "Description": "Earthquake that hits [cnegative]all[/] other combatants.",
     "Power": 150,
     "ManaCost": 40,
@@ -632,7 +632,7 @@
   {
     "MoveID": "25",
     "MoveName": "Beseech",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cSpell]BESEECHED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] FOR [cVoid]POWER[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]BESEECHES[/] {IsTargetProperNoun}[cSlot]{target}[/] FOR [cVoid]POWER[/].",
     "Description": "[cetc]Siphon your ally's power to amplify your own.[/]\nLowers ally's random stat by [cnegative]2[/].\nRaises user's two random stats by [cpositive]2[/].",
     "Power": 0,
     "ManaCost": 20,
@@ -659,7 +659,7 @@
   {
     "MoveID": "26",
     "MoveName": "Flashbang",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cSpell]EMITTED A BLINDING FLASH OF LIGHT TOWARD[/] {IsTargetProperNoun}[cBrightWhite]{target}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]EMITS A BLINDING FLASH OF LIGHT TOWARD[/] {IsTargetProperNoun}[cSlot]{target}[/].",
     "Description": "[cetc]Surprises the target with a bright flash of light.[/]\n[cStatus]Dazes[/] the foe. Fails if not used on first turn.",
     "Power": 40,
     "ManaCost": 10,
@@ -685,7 +685,7 @@
   {
     "MoveID": "27",
     "MoveName": "Sunder",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]SUNDERED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]SUNDERS[/] {IsTargetProperNoun}[cSlot]{target}[/].",
     "Description": "[cetc]A heavy blow that breaks through wards.[/]\nDeals[/] [cnegative]0.5x[/] [cetc]damage if breaking[/] [cStatus]Protect[/].",
     "Power": 60,
     "ManaCost": 0,
@@ -711,7 +711,7 @@
   {
     "MoveID": "28",
     "MoveName": "Shatter Guard",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cSpell]SHATTERED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/]'S [cStatus]GUARD[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]SHATTERS[/] {IsTargetProperNoun}[cSlot]{target}[/]'S [cStatus]GUARD[/].",
     "Description": "[cetc]A precise arcane strike that punishes guarding foes.[/]\nFails if target is not [cStatus]Protected[/].",
     "Power": 100,
     "ManaCost": 10,
@@ -737,7 +737,7 @@
   {
     "MoveID": "29",
     "MoveName": "Cull the Weak",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cSpell]CULLED THE WEAK[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]CULLS THE WEAK[/].",
     "Description": "Deals [cpositive]3.0x[/] damage if target is [cctm]below 50% HP[/].",
     "Power": 40,
     "ManaCost": 0,
@@ -763,7 +763,7 @@
   {
     "MoveID": "30",
     "MoveName": "Execute",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]EXECUTED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]EXECUTES[/] {IsTargetProperNoun}[cSlot]{target}[/].",
     "Description": "[cetc]A ruthless finishing blow.[/]\nGuaranteed [ccrit]CRIT[/] if target is [cctm]at or below 50% HP[/].",
     "Power": 65,
     "ManaCost": 0,
@@ -789,7 +789,7 @@
   {
     "MoveID": "31",
     "MoveName": "Torment",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cSpell]TORMENTED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]TORMENTS[/] {IsTargetProperNoun}[cSlot]{target}[/].",
     "Description": "[cetc]A vile curse that punishes the afflicted.[/]\nDeals [cpositive]2.0x[/] damage if target has [cctm]any status effect[/].",
     "Power": 65,
     "ManaCost": 15,
@@ -815,7 +815,7 @@
   {
     "MoveID": "32",
     "MoveName": "Empower",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cSpell]EMPOWERED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]EMPOWERS[/] {IsTargetProperNoun}[cSlot]{target}[/].",
     "Description": "[cetc]Channels energy to an ally.[/]\nBoosts damage dealt by [cpositive]1.5x[/] for 1 turn.",
     "Power": 0,
     "ManaCost": 20,
@@ -841,7 +841,7 @@
   {
     "MoveID": "33",
     "MoveName": "Cleanse",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cSpell]CLEANSED[/] {user_pronoun} SIDE",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]CLEANSES[/] {user_pronoun} SIDE.",
     "Description": "[cetc]Purifies the body and mind.[/]\nRemoves all [cnegative]negative[/] status effects of both allies.",
     "Power": 0,
     "ManaCost": 15,
@@ -867,7 +867,7 @@
   {
     "MoveID": "34",
     "MoveName": "Mana Burn",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cSpell]DETONATED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/]'S [cArcane]MANA[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]DETONATES[/] {IsTargetProperNoun}[cSlot]{target}[/]'S [cArcane]MANA[/].",
     "Description": "[cetc]Detonates the target's stored magic.[/]\nUses up [cpositive]50[/] of target's [cmana]Current Mana[/]. Power is based on the amount of mana destroyed.",
     "Power": 0,
     "ManaCost": 20,
@@ -893,7 +893,7 @@
   {
     "MoveID": "35",
     "MoveName": "Flux Eruption",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cSpell]DETONATED[/] {user_pronoun} STORED [cArcane]ARCANE ENERGY[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]DETONATES[/] {user_pronoun} STORED [cArcane]ARCANE ENERGY[/].",
     "Description": "Consumes all remaining [cMana]Mana[/] to deal massive damage to [cetc]both[/] enemies.\nPower is [cpositive]2x[/] consumed Mana.",
     "Power": 0,
     "ManaCost": 0,
@@ -919,7 +919,7 @@
   {
     "MoveID": "36",
     "MoveName": "Leech Root",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cSpell]DRAINED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] [cNature]LIFE FORCE WITH ROOTS[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]DRAINS[/] {IsTargetProperNoun}[cSlot]{target}[/] [cNature]LIFE FORCE WITH ROOTS[/].",
     "Description": "Drains life from the target.\nHeals user for [cpositive]50%[/] of damage dealt.",
     "Power": 60,
     "ManaCost": 15,
@@ -945,7 +945,7 @@
   {
     "MoveID": "37",
     "MoveName": "Vampiric Bite",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]BIT[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] AND [cVoid]ABSORBED[/] {target_pronoun} LIFE FORCE",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]BITES[/] {IsTargetProperNoun}[cSlot]{target}[/] AND [cVoid]ABSORBS[/] {target_pronoun} LIFE FORCE.",
     "Description": "A draining bite.\nHeals user for [cpositive]75%[/] of damage dealt.",
     "Power": 60,
     "ManaCost": 0,
@@ -971,7 +971,7 @@
   {
     "MoveID": "38",
     "MoveName": "Distract",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]MADE A SPECTACLE OF[/] {user_reflexive}, [cAction]DISTRACTING[/] THE OTHERS",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]MAKES A SPECTACLE OF[/] {user_reflexive}, [cAction]DISTRACTING[/] THE OTHERS.",
     "Description": "Forces enemies to target the user.",
     "Power": 0,
     "ManaCost": 10,
@@ -997,7 +997,7 @@
   {
     "MoveID": "39",
     "MoveName": "Quicksand",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cSpell]SUMMONED QUICKSAND[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]SUMMONS QUICKSAND[/].",
     "Description": "[cetc]Summons quicksand at both enemies' feet.[/]\nLowers [cagi]Agility[/] of [cetc]both[/] enemies.",
     "Power": 0,
     "ManaCost": 20,
@@ -1023,7 +1023,7 @@
   {
     "MoveID": "40",
     "MoveName": "Silence",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cSpell]CAST SILENCE ON[/] {IsTargetProperNoun}[cBrightWhite]{target}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]CASTS SILENCE ON[/] {IsTargetProperNoun}[cSlot]{target}[/].",
     "Description": "[cetc]Silences the foe.[/]\nPrevents the target from using [cPositive]Spells[/] for 3 turns.",
     "Power": 0,
     "ManaCost": 15,
@@ -1049,7 +1049,7 @@
   {
     "MoveID": "41",
     "MoveName": "Provoke",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]PROVOKED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]PROVOKES[/] {IsTargetProperNoun}[cSlot]{target}[/].",
     "Description": "[cetc]Enrages the foe.[/]\nPrevents the target from using [cPositive]Status[/] moves for 3 turns.",
     "Power": 0,
     "ManaCost": 15,
@@ -1075,7 +1075,7 @@
   {
     "MoveID": "42",
     "MoveName": "Counter",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]PREPARED TO COUNTER[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]PREPARES TO COUNTER[/].",
     "Description": "[cetc]A defensive strike.[/]\nFails if target is not attacking.",
     "Power": 80,
     "ManaCost": 0,
@@ -1101,7 +1101,7 @@
   {
     "MoveID": "43",
     "MoveName": "Gravity Crush",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cSpell]CRUSHED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH [cEarth]INTENSE GRAVITY[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]CRUSHES[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH [cEarth]INTENSE GRAVITY[/].",
     "Description": "[cetc]Crushes the target with gravity.[/]\nDeals damage equal to [cpositive]50%[/] of target's current HP.",
     "Power": 0,
     "ManaCost": 25,
@@ -1127,7 +1127,7 @@
   {
     "MoveID": "44",
     "MoveName": "Gnaw",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]GNAWED ON[/] {IsTargetProperNoun}[cBrightWhite]{target}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]GNAWS ON[/] {IsTargetProperNoun}[cSlot]{target}[/].",
     "Description": "[cetc]Savagely gnaws on the target.[/]\nHits [cpositive]2-5[/] times.",
     "Power": 15,
     "ManaCost": 0,

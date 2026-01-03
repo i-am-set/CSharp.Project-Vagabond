@@ -2,7 +2,7 @@
   {
     "WeaponID": "0",
     "WeaponName": "Iron Sword",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]SLASHED$SWUNG_AT$STRUCK[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]SLASHES$SLICES$STRIKES[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
     "Description": "[cetc]A standard issue iron sword[/]",
     "Rarity": 0,
     "LevelRequirement": 1,
@@ -29,7 +29,7 @@
   {
     "WeaponID": "1",
     "WeaponName": "Warhammer",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]CRUSHED$SMASHED$POUNDED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]CRUSHES$SMASHES$POUNDS[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
     "Description": "[cetc]A heavy hammer designed to crush armor[/]",
     "Rarity": 1,
     "LevelRequirement": 3,
@@ -57,7 +57,7 @@
   {
     "WeaponID": "2",
     "WeaponName": "Poison Dagger",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]STABBED$PUNCTURED$JABBED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]STABS$PUNCTURES$JABS[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
     "Description": "[cetc]Small blade coated in a toxin.[/]\nMay inflict [cpoison]poison[/]",
     "Rarity": 2,
     "LevelRequirement": 4,
@@ -88,7 +88,7 @@
   {
     "WeaponID": "3",
     "WeaponName": "Rusty Shiv",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]SHANKED$STABBED$GOUGED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH A [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]SHANKS$STABS$GOUGES[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH A [cItem]{item_name}[/].",
     "Description": "[cetc]A piece of scrap metal sharpened on a rock. Tetanus included.[/]",
     "Rarity": 0,
     "LevelRequirement": 1,
@@ -119,7 +119,7 @@
   {
     "WeaponID": "4",
     "WeaponName": "Brick on a Rope",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]CLOBBERED$SMACKED$WHACKED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH A [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]CLOBBERS$SMACKS$WHACKS[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH A [cItem]{item_name}[/].",
     "Description": "[cetc]Crude, heavy, and effective.[/]",
     "Rarity": 0,
     "LevelRequirement": 1,
@@ -147,7 +147,7 @@
   {
     "WeaponID": "5",
     "WeaponName": "Broken Bottle",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]SLASHED$GASHED$CUT[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH A [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]SLASHES$GASHES$CUTS[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH A [cItem]{item_name}[/].",
     "Description": "[cetc]Sharp glass held together by a label and bad intentions. Fragile.[/]",
     "Rarity": 0,
     "LevelRequirement": 1,
@@ -175,7 +175,7 @@
   {
     "WeaponID": "6",
     "WeaponName": "Board",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]BASHED$WHACKED$THWACKED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH A [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]BASHES$WHACKS$THWACKS[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH A [cItem]{item_name}[/].",
     "Description": "[cetc]A wooden board.[/]",
     "Rarity": 0,
     "LevelRequirement": 1,
@@ -202,7 +202,7 @@
   {
     "WeaponID": "7",
     "WeaponName": "Meat Cleaver",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]CHOPPED$HACKED$CLEAVED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]CHOPS$HACKS$CLEAVES[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
     "Description": "[cetc]Heavy top-weighted blade stained with old grease.[/]",
     "Rarity": 0,
     "LevelRequirement": 2,
@@ -230,7 +230,7 @@
   {
     "WeaponID": "8",
     "WeaponName": "Wood Axe",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]SWUNG_AT$CHOPPED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]CLEAVES$CHOPS[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
     "Description": "[cetc]Good for splitting wood, fairly dull.[/]",
     "Rarity": 0,
     "LevelRequirement": 2,
@@ -257,7 +257,7 @@
   {
     "WeaponID": "9",
     "WeaponName": "Frying Pan",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]WHACKED$CLANGED$SMACKED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]WHACKS$CLANGS$SMACKS[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
     "Description": "[cetc]It's wide surface protects against minor blows.[/]",
     "Rarity": 0,
     "LevelRequirement": 2,
@@ -285,7 +285,7 @@
   {
     "WeaponID": "10",
     "WeaponName": "Wooden Sword",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]SMACKED$WHACKED$BOPPED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]SMACKS$WHACKS$BOPS[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
     "Description": "[cetc]Used for training.[/]",
     "Rarity": 0,
     "LevelRequirement": 3,
@@ -312,7 +312,7 @@
   {
     "WeaponID": "11",
     "WeaponName": "Fishing Spear",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]THRUST$JABBED$LUNGED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]THRUSTS$JABS$LUNGES[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
     "Description": "[cetc]Barbed tips make it hard to pull out.[/]",
     "Rarity": 0,
     "LevelRequirement": 2,
@@ -343,7 +343,7 @@
   {
     "WeaponID": "12",
     "WeaponName": "Shovel",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]SMACKED$BASHED$CLANGED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]SMACKS$BASHES$CLANGS[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
     "Description": "[cetc]Worn from digging into hard earth.[/]",
     "Rarity": 0,
     "LevelRequirement": 2,
@@ -371,7 +371,7 @@
   {
     "WeaponID": "13",
     "WeaponName": "Footman's Sword",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]SLASHED$CUT$STRUCK[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]SLASHES$CUTS$STRIKES[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
     "Description": "[cetc]Mass-produced steel. Reliable and boring.[/]",
     "Rarity": 1,
     "LevelRequirement": 3,
@@ -399,7 +399,7 @@
   {
     "WeaponID": "14",
     "WeaponName": "Halberd",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]PIERCED$SLASHED$THRUST[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]PIERCES$SLASHES$THRUSTS[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
     "Description": "[cetc]Offers reach and authority. Mostly used for leaning on.[/]",
     "Rarity": 1,
     "LevelRequirement": 3,
@@ -430,7 +430,7 @@
   {
     "WeaponID": "15",
     "WeaponName": "Claymore",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]HEAVED$SWUNG$CLEAVED[/] {user_pronoun} [cItem]{item_name}[/] THROUGH {user_pronoun} [cEnemy]ENEMIES[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]HEAVES$SWINGS$CLEAVES[/] {user_pronoun} [cItem]{item_name}[/] THROUGH {user_pronoun} [cEnemy]ENEMIES[/].",
     "Description": "[cetc]A sword as tall as an adult kitty. Requires wide swings.[/]",
     "Rarity": 1,
     "LevelRequirement": 4,
@@ -458,7 +458,7 @@
   {
     "WeaponID": "16",
     "WeaponName": "Estoc",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]LUNGED$THRUST$PIERCED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]LUNGES$THRUSTS$PIERCES[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
     "Description": "[cetc]A needle-like sword designed to punch through mail.[/]",
     "Rarity": 1,
     "LevelRequirement": 4,
@@ -489,7 +489,7 @@
   {
     "WeaponID": "17",
     "WeaponName": "Flanged Mace",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]CRUSHED$BASHED$DENTED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]CRUSHES$BASHES$DENTS[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
     "Description": "[cetc]Designed to dent plate armor and crush ribs.[/]",
     "Rarity": 1,
     "LevelRequirement": 4,
@@ -517,7 +517,7 @@
   {
     "WeaponID": "18",
     "WeaponName": "Maul",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]POUNDED$SMASHED$CRUSHED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]POUNDS$SMASHES$CRUSHES[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
     "Description": "[cetc]A massive sledgehammer. Subtlety is not an option.[/]",
     "Rarity": 1,
     "LevelRequirement": 5,
@@ -545,7 +545,7 @@
   {
     "WeaponID": "19",
     "WeaponName": "Main-Gauche",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]STABBED$PUNCTURED$JABBED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]STABS$PUNCTURES$JABS[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
     "Description": "[cetc]A parrying dagger. Good for defense.[/]",
     "Rarity": 1,
     "LevelRequirement": 3,
@@ -576,7 +576,7 @@
   {
     "WeaponID": "20",
     "WeaponName": "Zweihander",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]CLEAVED$HEWED$SLASHED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]CLEAVES$HEWS$SLASHES[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
     "Description": "[cetc]Requires momentum to keep moving. Devastating impact.[/]",
     "Rarity": 2,
     "LevelRequirement": 5,
@@ -604,7 +604,7 @@
   {
     "WeaponID": "21",
     "WeaponName": "Officer's Sabre",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]CUT$SLASHED$SLICED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]CUTS$SLASHES$SLICES[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
     "Description": "[cetc]Curved for cutting. Fancy handguard.[/]",
     "Rarity": 2,
     "LevelRequirement": 4,
@@ -632,7 +632,7 @@
   {
     "WeaponID": "22",
     "WeaponName": "Tower Shield",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]SLAMMED$BASHED$CHECKED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]SLAMS$BASHES$CHECKS[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
     "Description": "[cetc]Sometimes the best offense is a massive wall of wood and iron.[/]",
     "Rarity": 2,
     "LevelRequirement": 4,
@@ -661,7 +661,7 @@
   {
     "WeaponID": "23",
     "WeaponName": "Stiletto",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]PUNCTURED$STABBED$PIERCED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]PUNCTURES$STABS$PIERCES[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
     "Description": "[cetc]A thin blade that leaves almost no mark.[/]",
     "Rarity": 1,
     "LevelRequirement": 3,
@@ -692,7 +692,7 @@
   {
     "WeaponID": "24",
     "WeaponName": "Blackjack",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]CLOCKED$THUMPED$STRUCK[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]CLOCKS$THUMPS$STRIKES[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
     "Description": "[cetc]A club made from a leather pouch filled with lead shot.[/]",
     "Rarity": 1,
     "LevelRequirement": 2,
@@ -720,7 +720,7 @@
   {
     "WeaponID": "25",
     "WeaponName": "Brass Knuckles",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]PUNCHED$POMMELED$STRUCK[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]PUNCHES$POMMELS$STRIKES[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
     "Description": "[cetc]For when you want to punch harder without breaking your hand.[/]",
     "Rarity": 1,
     "LevelRequirement": 2,
@@ -748,7 +748,7 @@
   {
     "WeaponID": "26",
     "WeaponName": "Wire",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]WHIPPED$GARROTED$SLICED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]WHIPS$GARROTES$SLICES[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
     "Description": "[cetc]A coarse piano wire.[/]",
     "Rarity": 2,
     "LevelRequirement": 3,
@@ -776,7 +776,7 @@
   {
     "WeaponID": "27",
     "WeaponName": "Serrated Dagger",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]STABBED$SAWED$GASHED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]STABS$SAWS$GASHES[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
     "Description": "[cetc]A nasty blade designed to cause bleeding.[/]",
     "Rarity": 2,
     "LevelRequirement": 3,
@@ -807,7 +807,7 @@
   {
     "WeaponID": "28",
     "WeaponName": "Punch-Dagger",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]PUNCHED$STABBED$THRUST[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]PUNCHES$STABS$THRUSTS[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
     "Description": "[cetc]Drives the force of the arm into the point.[/]",
     "Rarity": 2,
     "LevelRequirement": 4,
@@ -838,7 +838,7 @@
   {
     "WeaponID": "29",
     "WeaponName": "Hook Hand",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]GOUGED$SLASHED$HOOKED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]GOUGES$SLASHES$HOOKS[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
     "Description": "[cetc]Replaces a hand, or fits over one. Great for sailing![/]",
     "Rarity": 1,
     "LevelRequirement": 3,
@@ -866,7 +866,7 @@
   {
     "WeaponID": "30",
     "WeaponName": "Ritual Athame",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]CARVED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]CARVES[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
     "Description": "[cetc]An obsidian dagger used for sacrifices.[/]",
     "Rarity": 2,
     "LevelRequirement": 4,
@@ -897,7 +897,7 @@
   {
     "WeaponID": "31",
     "WeaponName": "Gnarled Staff",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]BASHED$THUMPED$CRACKED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]BASHES$THUMPS$CRACKS[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
     "Description": "[cetc]A twist of oak that hums with low vibration.[/]",
     "Rarity": 2,
     "LevelRequirement": 3,
@@ -925,7 +925,7 @@
   {
     "WeaponID": "32",
     "WeaponName": "Censer Flail",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]SWUNG_AT$LASHED$STRUCK[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]BASHES$LASHES$STRIKES[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
     "Description": "[cetc]A heavy incense burner on a chain. Smells like myrrh and blood.[/]",
     "Rarity": 2,
     "LevelRequirement": 4,
@@ -953,7 +953,7 @@
   {
     "WeaponID": "33",
     "WeaponName": "Grimoire",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]SLAMMED$BASHED$THUMPED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]SLAMS$BASHES$THUMPS[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
     "Description": "[cetc]A heavy book full of arcane magic and knowledge.[/]",
     "Rarity": 3,
     "LevelRequirement": 5,
@@ -981,7 +981,7 @@
   {
     "WeaponID": "34",
     "WeaponName": "Cursed Rib",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]STABBED$PIERCED$GORED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH A [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]STABS$PIERCES$GORES[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH A [cItem]{item_name}[/].",
     "Description": "[cetc]A sharpened rib bone from a large creature. Channels void magic.[/]",
     "Rarity": 2,
     "LevelRequirement": 4,
@@ -1012,7 +1012,7 @@
   {
     "WeaponID": "35",
     "WeaponName": "Crystal Wand",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]WHACKED$ZAPPED$STRUCK[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]WHACKS$ZAPS$STRIKES[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
     "Description": "[cetc]Extremely fragile, but channels mana efficiently.[/]",
     "Rarity": 3,
     "LevelRequirement": 5,
@@ -1040,7 +1040,7 @@
   {
     "WeaponID": "36",
     "WeaponName": "Cultist's Kris",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]SLICED$STABBED$CUT[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]SLICES$STABS$CUTS[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
     "Description": "[cetc]A wavy blade wielded by cultists.[/]",
     "Rarity": 2,
     "LevelRequirement": 4,
@@ -1068,7 +1068,7 @@
   {
     "WeaponID": "37",
     "WeaponName": "Petrified Eye",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]BLUDGEONED$SMASHED$CRUSHED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH A [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]BLUDGEONS$SMASHES$CRUSHES[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH A [cItem]{item_name}[/].",
     "Description": "[cetc]A stone eye the size of a fist. It feels like it's watching.[/]",
     "Rarity": 3,
     "LevelRequirement": 5,
@@ -1096,7 +1096,7 @@
   {
     "WeaponID": "38",
     "WeaponName": "Femur",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]CLUBBED$BASHED$WHACKED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH A [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]CLUBS$BASHES$WHACKS[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH A [cItem]{item_name}[/].",
     "Description": "[cetc]The femur of a large creature. Can be used as an improvised club.[/]",
     "Rarity": 1,
     "LevelRequirement": 4,
@@ -1124,7 +1124,7 @@
   {
     "WeaponID": "39",
     "WeaponName": "Sparring Gloves",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]PUNCHED$JABBED$HOOKED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]PUNCHES$JABS$HOOKS[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
     "Description": "[cetc]Leather gloves with sewn in padding.[/]",
     "Rarity": 2,
     "LevelRequirement": 4,
@@ -1151,7 +1151,7 @@
   {
     "WeaponID": "40",
     "WeaponName": "Rusted Chain",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]WHIPPED$LASHED$STRUCK[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH A [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]WHIPS$LASHES$STRIKES[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH A [cItem]{item_name}[/].",
     "Description": "[cetc]A length of heavy chain. Unpredictable and painful.[/]",
     "Rarity": 1,
     "LevelRequirement": 3,
@@ -1179,7 +1179,7 @@
   {
     "WeaponID": "41",
     "WeaponName": "Jawbone Axe",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]HACKED$GNAWED$BIT[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH A [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]HACKS$GNAWS$BITES[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH A [cItem]{item_name}[/].",
     "Description": "[cetc]An axe made from the jaw of a predator, teeth acting as the blade.[/]",
     "Rarity": 2,
     "LevelRequirement": 3,
@@ -1207,7 +1207,7 @@
   {
     "WeaponID": "42",
     "WeaponName": "Stone-Head Spear",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]JABBED$THRUST$POKED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH A [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]JABS$THRUSTS$POKES[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH A [cItem]{item_name}[/].",
     "Description": "[cetc]Primitive but well crafted.[/]",
     "Rarity": 1,
     "LevelRequirement": 2,
@@ -1238,7 +1238,7 @@
   {
     "WeaponID": "43",
     "WeaponName": "Execution Axe",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]SWUNG_AT$CHOPPED$SEVERED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]BASHES$CHOPS$SEVERS[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
     "Description": "[cetc]A large axe designed for chopping off heads.[/]",
     "Rarity": 3,
     "LevelRequirement": 5,
@@ -1266,7 +1266,7 @@
   {
     "WeaponID": "44",
     "WeaponName": "Bard's Lute",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]BONKED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]BONKS[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
     "Description": "[cetc]A string instrument made of fine wood.[/]",
     "Rarity": 2,
     "LevelRequirement": 3,
@@ -1294,7 +1294,7 @@
   {
     "WeaponID": "45",
     "WeaponName": "Mage Mincer",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]SLASHED$MINCED$CUT[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]SLASHES$MINCES$CUTS[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
     "Description": "[cetc]A short sword designed to disrupt spellcasting movements.[/]",
     "Rarity": 3,
     "LevelRequirement": 5,
@@ -1325,7 +1325,7 @@
   {
     "WeaponID": "46",
     "WeaponName": "Trident",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]SKEWERED$FORKED$PIERCED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]SKEWERS$FORKS$PIERCES[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
     "Description": "[cetc]Three points are better than one.[/]",
     "Rarity": 2,
     "LevelRequirement": 4,
@@ -1356,7 +1356,7 @@
   {
     "WeaponID": "47",
     "WeaponName": "Scourge Whip",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]FLAYED$LASHED$WHIPPED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]FLAYS$LASHES$WHIPS[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
     "Description": "[cetc]A whip with multiple lashes.[/]",
     "Rarity": 3,
     "LevelRequirement": 5,
@@ -1384,7 +1384,7 @@
   {
     "WeaponID": "48",
     "WeaponName": "Rapier",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]PIERCED$PRICKED$STUNG[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]PIERCES$PRICKS$STINGS[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
     "Description": "[cetc]A gentleman's weapon. Precise and deadly.[/]",
     "Rarity": 3,
     "LevelRequirement": 5,
@@ -1415,7 +1415,7 @@
   {
     "WeaponID": "49",
     "WeaponName": "Ball and Chain",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]BASHED$CRUSHED$DEMOLISHED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]BASHES$CRUSHES$DEMOLISHES[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
     "Description": "[cetc]A prisoner's shackle weaponized. Incredibly heavy.[/]",
     "Rarity": 3,
     "LevelRequirement": 5,
@@ -1443,7 +1443,7 @@
   {
     "WeaponID": "50",
     "WeaponName": "Pickaxe",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]PIERCED$MINED$PICKED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]PIERCES$MINES$PICKS[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
     "Description": "[cetc]Punches holes in rock and plate mail alike.[/]",
     "Rarity": 2,
     "LevelRequirement": 4,
@@ -1474,7 +1474,7 @@
   {
     "WeaponID": "51",
     "WeaponName": "Meteorite Chunk",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]BLUDGEONED$CRUSHED$IMPACTED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH A [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]BLUDGEONS$CRUSHES$IMPACTS[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH A [cItem]{item_name}[/].",
     "Description": "[cetc]A rock from the stars. It's warm to the touch.[/]",
     "Rarity": 4,
     "LevelRequirement": 6,
@@ -1502,7 +1502,7 @@
   {
     "WeaponID": "52",
     "WeaponName": "Ancient Wrench",
-    "ActionPhrase": "{IsUserProperNoun}[cBrightWhite]{user}[/] [cAction]BONKED$CLANKED$FIXED[/] {IsTargetProperNoun}[cBrightWhite]{target}[/] WITH AN [cItem]{item_name}[/]",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]BONKS$CLANKS$FIXES[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH AN [cItem]{item_name}[/].",
     "Description": "[cetc]A tool from a forgotten age. Indestructible.[/]",
     "Rarity": 4,
     "LevelRequirement": 6,

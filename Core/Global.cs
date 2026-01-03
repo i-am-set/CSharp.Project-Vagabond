@@ -84,12 +84,12 @@ namespace ProjectVagabond
 
             // Initialize Narration Colors
             ColorNarration_Default = Palette_LightGray; // Default text color
-            ColorNarration_Prefix = Palette_Gray;       // "First", "Second" prefix color
-            ColorNarration_Action = Palette_Orange;
-            ColorNarration_Spell = Palette_LightBlue;
-            ColorNarration_Item = Palette_Teal;
-            ColorNarration_Critical = Palette_Yellow;
-            ColorNarration_Defeated = Palette_Red;
+            ColorNarration_Prefix = Palette_DarkGray;       // "First", "Second" prefix color
+            ColorNarration_Action = Color.DarkOrange;
+            ColorNarration_Spell = Color.Cyan;
+            ColorNarration_Item = Color.PaleGreen;
+            ColorNarration_Critical = Color.Yellow;
+            ColorNarration_Defeated = Color.Crimson;
             ColorNarration_Escaped = Palette_LightBlue;
             ColorNarration_Enemy = Palette_Red;
             ColorNarration_Status = Palette_LightPurple;
@@ -530,6 +530,7 @@ namespace ProjectVagabond
                 if (lowerTag == "cescape") return ColorNarration_Escaped;
                 if (lowerTag == "cenemy") return ColorNarration_Enemy;
                 if (lowerTag == "cstatus") return ColorNarration_Status;
+                if (lowerTag == "cslot") return ColorNarration_Default; 
                 if (lowerTag == "cbrightwhite") return Palette_BrightWhite;
 
                 if (lowerTag == "cred") return Palette_Red;

@@ -182,7 +182,8 @@ namespace ProjectVagabond.UI
         {
             var tokens = new List<NarratorToken>();
             var colorStack = new Stack<Color>();
-            colorStack.Push(_global.Palette_BrightWhite); // Default
+
+            colorStack.Push(_global.ColorNarration_Default);
 
             // Regex to split by tags [tag] or newlines
             var parts = Regex.Split(text, @"(\[.*?\]|\n)");

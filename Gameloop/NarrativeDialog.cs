@@ -143,23 +143,6 @@ namespace ProjectVagabond.UI
                         float x = button.Bounds.X + 4;
                         float y = button.Bounds.Center.Y - (secondaryFont.LineHeight / 2f);
 
-                        // Apply hover sway if enabled (Button.cs logic)
-                        // We need to match the button's internal sway logic to keep text pinned
-                        // Since we can't easily access the private animator state, we rely on the fact
-                        // that Button.Draw handles the box.
-                        // Actually, Button.Draw applies the sway to the TEXT position.
-                        // Since we are drawing the text ourselves, we need to apply the sway.
-                        // However, Button.cs applies sway to the *whole button* if it's an image button,
-                        // or just text if it's a text button.
-                        // For text buttons, the background usually doesn't move?
-                        // Wait, Button.cs DrawText applies `totalYOffset`.
-                        // To keep it simple and robust, we will just draw at the button's current bounds center.
-                        // If the button moves, we might lag a frame, but standard buttons don't move their bounds rect.
-
-                        // Let's just draw it static relative to the button bounds.
-                        // If the button has a hover animation that moves text, we might miss it, 
-                        // but for choice buttons, static is fine.
-
                         DrawRichTextLine(spriteBatch, secondaryFont, richText, new Vector2(x, y), button.IsHovered);
                     }
                 }
@@ -176,12 +159,11 @@ namespace ProjectVagabond.UI
 
             foreach (var token in tokens)
             {
-                // If hovered, override default white text to hover color (Red), 
+                // If hovered, override default text to hover color (Red), 
                 // BUT keep specific colored tags (like [cGreen]) as is.
                 Color drawColor = token.Color;
 
-                // If the token color is the default white, and the button is hovered, switch to hover color.
-                if (drawColor == _global.Palette_BrightWhite && isHovered)
+                if (drawColor == _global.ColorNarration_Default && isHovered)
                 {
                     drawColor = _global.ButtonHoverColor;
                 }
@@ -195,7 +177,8 @@ namespace ProjectVagabond.UI
         {
             var tokens = new List<RichTextToken>();
             var colorStack = new Stack<Color>();
-            colorStack.Push(_global.Palette_BrightWhite);
+
+            colorStack.Push(_global.ColorNarration_Default);
 
             var parts = Regex.Split(text, @"(\[.*?\])");
 
