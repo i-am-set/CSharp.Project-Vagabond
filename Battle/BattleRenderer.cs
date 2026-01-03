@@ -78,6 +78,10 @@ namespace ProjectVagabond.Battle.UI
         private class RecoilState { public Vector2 Offset; public Vector2 Velocity; public const float STIFFNESS = 600f; public const float DAMPING = 15f; }
         private readonly Dictionary<string, RecoilState> _recoilStates = new Dictionary<string, RecoilState>();
 
+        // --- SQUASH AND STRETCH STATE (Enemies) ---
+        private readonly Dictionary<string, Vector2> _enemySquashScales = new Dictionary<string, Vector2>();
+        private const float SQUASH_RECOVERY_SPEED = 4f;
+
         // Status Icon Hop Data
         private class StatusIconAnim { public string CombatantID; public StatusEffectType Type; public float Timer; public const float DURATION = 0.3f; public const float HEIGHT = 5f; }
         private readonly List<StatusIconAnim> _activeStatusIconAnims = new List<StatusIconAnim>();
@@ -135,6 +139,7 @@ namespace ProjectVagabond.Battle.UI
             _floorOutroTriggered = false;
             _waitingForFloorOutro = false;
             _hasInitializedPositions = false;
+            _enemySquashScales.Clear();
         }
 
         public List<TargetInfo> GetCurrentTargets() => _currentTargets;
@@ -155,12 +160,35 @@ namespace ProjectVagabond.Battle.UI
             if (!_attackAnimControllers.ContainsKey(combatantId))
                 _attackAnimControllers[combatantId] = new SpriteHopAnimationController();
             _attackAnimControllers[combatantId].Trigger();
+
+            // --- JUICE: Stretch on Jump ---
+            // If it's a player, trigger the stretch via the sprite class
+            if (_playerSprites.TryGetValue(combatantId, out var sprite))
+            {
+                sprite.TriggerSquash(0.6f, 1.4f); // Noodle stretch
+            }
+            else
+            {
+                // If it's an enemy, set the scale directly
+                _enemySquashScales[combatantId] = new Vector2(0.6f, 1.4f);
+            }
         }
 
         public void TriggerRecoil(string combatantId, Vector2 direction, float magnitude)
         {
             if (!_recoilStates.ContainsKey(combatantId)) _recoilStates[combatantId] = new RecoilState();
             _recoilStates[combatantId].Velocity = direction * magnitude * 10f;
+
+            // --- JUICE: Squash on Impact ---
+            // Flatten the sprite (Wide X, Short Y)
+            if (_playerSprites.TryGetValue(combatantId, out var sprite))
+            {
+                sprite.TriggerSquash(1.5f, 0.5f); // Pancake
+            }
+            else
+            {
+                _enemySquashScales[combatantId] = new Vector2(1.5f, 0.5f);
+            }
         }
 
         public void TriggerStatusIconHop(string combatantId, StatusEffectType type)
@@ -183,12 +211,8 @@ namespace ProjectVagabond.Battle.UI
                 float hpPercent = (float)c.Stats.CurrentHP / c.Stats.MaxHP;
                 if (hpPercent <= _global.LowHealthThreshold && c.Stats.CurrentHP > 0)
                 {
-                    // Calculate speed based on how low HP is (0% to Threshold%)
-                    // Normalized ratio: 0.0 (at 0 HP) to 1.0 (at Threshold)
                     float ratio = hpPercent / _global.LowHealthThreshold;
-                    // Invert ratio so 0 HP is fastest (1.0) and Threshold is slowest (0.0)
                     float intensity = 1.0f - ratio;
-
                     float speed = MathHelper.Lerp(_global.LowHealthFlashSpeedMin, _global.LowHealthFlashSpeedMax, intensity);
                     c.LowHealthFlashTimer += dt * speed;
                 }
@@ -206,6 +230,7 @@ namespace ProjectVagabond.Battle.UI
             UpdateStatusIconAnimations(dt);
             UpdateStatusIconTooltips(combatants);
             UpdateActiveTurnOffsets(dt, combatants, currentActor);
+            UpdateEnemySquash(dt); // New
 
             foreach (var controller in _attackAnimControllers.Values) controller.Update(gameTime);
 
@@ -215,6 +240,16 @@ namespace ProjectVagabond.Battle.UI
                 {
                     sprite.Update(gameTime, currentActor == c);
                 }
+            }
+        }
+
+        private void UpdateEnemySquash(float dt)
+        {
+            // Recover enemy scales to (1,1)
+            var keys = _enemySquashScales.Keys.ToList();
+            foreach (var key in keys)
+            {
+                _enemySquashScales[key] = Vector2.Lerp(_enemySquashScales[key], Vector2.One, dt * SQUASH_RECOVERY_SPEED);
             }
         }
 
@@ -251,7 +286,6 @@ namespace ProjectVagabond.Battle.UI
             DrawPlayers(spriteBatch, font, players, currentActor, shouldGrayOut, selectableTargets, animationManager, silhouetteColors, gameTime, uiManager, hoveredCombatant);
 
             // --- Draw Targeting Highlights (Dotted Rectangles) ---
-            // Pass the effective focused combatant (either from sprite hover or UI button hover)
             var effectiveFocus = hoveredCombatant ?? uiManager.HoveredCombatantFromUI;
             DrawTargetingHighlights(spriteBatch, uiManager, gameTime, silhouetteColors, effectiveFocus);
 
@@ -266,7 +300,6 @@ namespace ProjectVagabond.Battle.UI
                 {
                     bool hasInsight = allCombatants.Any(c => c.IsPlayerControlled && !c.IsDefeated && c.Abilities.Any(a => a is InsightAbility));
 
-                    // Use Static Center for Tooltip to prevent bobbing
                     Vector2 center = Vector2.Zero;
                     if (_combatantStaticCenters.TryGetValue(target.CombatantID, out var staticPos))
                     {
@@ -274,7 +307,6 @@ namespace ProjectVagabond.Battle.UI
                     }
                     else
                     {
-                        // Fallback
                         center = GetCombatantVisualCenterPosition(target, allCombatants);
                     }
 
@@ -285,21 +317,17 @@ namespace ProjectVagabond.Battle.UI
 
         private void DrawTargetingHighlights(SpriteBatch spriteBatch, BattleUIManager uiManager, GameTime gameTime, Dictionary<string, Color> silhouetteColors, BattleCombatant focusedCombatant)
         {
-            // Only draw if a move is hovered in the action menu (not during explicit targeting state, which has its own UI)
             if (uiManager.HoveredMove == null) return;
 
-            // Get the list of valid targets for the hovered move
             var targets = uiManager.HoverHighlightState.Targets;
             if (targets == null || !targets.Any()) return;
 
-            // --- FILTERING LOGIC ---
             IEnumerable<BattleCombatant> targetsToDraw = targets;
             bool isTargetingMode = uiManager.UIState == BattleUIState.Targeting || uiManager.UIState == BattleUIState.ItemTargeting;
 
             if (isTargetingMode && focusedCombatant != null)
             {
                 var type = uiManager.TargetTypeForSelection ?? TargetType.None;
-                // Check for multi-target types (including Random ones which usually select group)
                 bool isMulti = type == TargetType.All || type == TargetType.Both || type == TargetType.Every ||
                                type == TargetType.Team || type == TargetType.RandomAll || type == TargetType.RandomBoth || type == TargetType.RandomEvery;
 
@@ -307,77 +335,54 @@ namespace ProjectVagabond.Battle.UI
                 {
                     if (targets.Contains(focusedCombatant))
                     {
-                        // Single target mode: Only draw the rect for the focused guy
                         targetsToDraw = new List<BattleCombatant> { focusedCombatant };
                     }
                     else
                     {
-                        // Hovering something invalid? Don't draw anything.
                         targetsToDraw = Enumerable.Empty<BattleCombatant>();
                     }
                 }
-                // If Multi, we keep 'targetsToDraw' as is (all valid targets), because hovering one implies selecting the group.
             }
 
             var pixel = ServiceLocator.Get<Texture2D>();
-            float offset = (float)gameTime.TotalGameTime.TotalSeconds * 20f; // Animation speed
+            float offset = (float)gameTime.TotalGameTime.TotalSeconds * 20f;
 
-            // Pattern constants
             const float dashLength = 4f;
             const float gapLength = 4f;
 
             foreach (var target in targetsToDraw)
             {
-                // Find the bounds for this target in _currentTargets
                 var targetInfo = _currentTargets.FirstOrDefault(t => t.Combatant == target);
 
-                // If found (it should be, unless off-screen or dead/hidden)
                 if (targetInfo.Combatant != null)
                 {
-                    // --- INVERSE COLOR LOGIC ---
-                    // Default to Red if not found
                     Color highlightColor = silhouetteColors.ContainsKey(target.CombatantID) ? silhouetteColors[target.CombatantID] : _global.Palette_Red;
-
-                    // If Highlight is Yellow (Color.Yellow), Rect is Red. 
-                    // If Highlight is Red (Palette_Red), Rect is Yellow (Color.Yellow).
                     Color rectColor = (highlightColor == Color.Yellow) ? _global.Palette_Red : Color.Yellow;
 
-                    // Use the pre-calculated snapped bounds directly
                     var rect = targetInfo.Bounds;
 
-                    // --- DRAW OUTLINED ANTS ---
-                    // Draw the dotted line 4 times in black (offset by 1px) to create an outline around the dots
                     spriteBatch.DrawAnimatedDottedRectangle(pixel, new Rectangle(rect.X - 1, rect.Y, rect.Width, rect.Height), _global.Palette_Black, 1f, dashLength, gapLength, offset);
                     spriteBatch.DrawAnimatedDottedRectangle(pixel, new Rectangle(rect.X + 1, rect.Y, rect.Width, rect.Height), _global.Palette_Black, 1f, dashLength, gapLength, offset);
                     spriteBatch.DrawAnimatedDottedRectangle(pixel, new Rectangle(rect.X, rect.Y - 1, rect.Width, rect.Height), _global.Palette_Black, 1f, dashLength, gapLength, offset);
                     spriteBatch.DrawAnimatedDottedRectangle(pixel, new Rectangle(rect.X, rect.Y + 1, rect.Width, rect.Height), _global.Palette_Black, 1f, dashLength, gapLength, offset);
 
-                    // Draw Main Colored Dotted Line
                     spriteBatch.DrawAnimatedDottedRectangle(pixel, rect, rectColor, 1f, dashLength, gapLength, offset);
                 }
             }
         }
 
-        /// <summary>
-        /// Calculates a rectangle that tightly fits the sprite but is expanded to be a perfect multiple of the dotted line pattern (8px).
-        /// This ensures corners line up seamlessly during animation.
-        /// </summary>
         private Rectangle GetPatternAlignedRect(Rectangle baseRect)
         {
-            const int patternLength = 8; // 4 dash + 4 gap
-
-            // Ensure at least 2 pixels of padding on every side (Total +4)
+            const int patternLength = 8;
             float minW = baseRect.Width + 4;
             float minH = baseRect.Height + 4;
 
-            // Round up to next multiple of patternLength
             float targetW = MathF.Ceiling(minW / patternLength) * patternLength;
             float targetH = MathF.Ceiling(minH / patternLength) * patternLength;
 
             int newW = (int)targetW;
             int newH = (int)targetH;
 
-            // Center the new larger rect on the original rect's center
             int newX = baseRect.Center.X - (newW / 2);
             int newY = baseRect.Center.Y - (newH / 2);
 
@@ -394,15 +399,10 @@ namespace ProjectVagabond.Battle.UI
 
         public void DrawOverlay(SpriteBatch spriteBatch, BitmapFont font)
         {
-            // Tooltips for status icons are handled by TooltipManager.
         }
-
-        // --- Private Helpers ---
 
         private void UpdateStatTooltipState(BattleCombatant hoveredCombatant, BattleUIManager uiManager)
         {
-            // Allow stat tooltips whenever the UI is in the default state (not targeting/menus),
-            // regardless of the battle phase (Selection, Resolution, etc.).
             bool isDefaultUI = uiManager.UIState == BattleUIState.Default;
 
             if (isDefaultUI && hoveredCombatant != null)
@@ -499,32 +499,21 @@ namespace ProjectVagabond.Battle.UI
             var benchedEnemies = enemies.Where(c => !c.IsDefeated && c.BattleSlot >= 2).ToList();
             var dyingEnemies = enemies.Where(c => animationManager.IsDeathAnimating(c.CombatantID)).ToList();
 
-            // Visual Enemies = Active + Dying
             var visualEnemies = activeEnemies.Concat(dyingEnemies).Distinct().ToList();
 
-            // --- FIRST FRAME DETECTION ---
-            // If this is the very first update (no positions cached), and we have exactly 1 enemy,
-            // assume we started in Single Enemy Mode.
             if (!_hasInitializedPositions && visualEnemies.Count == 1)
             {
-                _centeringSequenceStarted = true; // Start centered immediately
-                _floorOutroTriggered = true; // Skip outro logic
+                _centeringSequenceStarted = true;
+                _floorOutroTriggered = true;
                 _waitingForFloorOutro = false;
             }
 
-            // Eligibility: 
-            // 1. Exactly 1 visual enemy (Active or Dying)
-            // OR
-            // 2. 0 visual enemies (Victory state), BUT we were already centering. 
-            //    This prevents snapping back to 2 slots when the last enemy finishes dying.
             bool isVictoryState = visualEnemies.Count == 0 && _centeringSequenceStarted;
             bool eligibleForCentering = (visualEnemies.Count == 1 || isVictoryState) && !benchedEnemies.Any();
 
-            // Check Battle Phase
             var battleManager = ServiceLocator.Get<BattleManager>();
             bool isActionSelection = battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection_Slot1;
 
-            // State Machine for Centering Sequence
             if (!eligibleForCentering)
             {
                 _centeringSequenceStarted = false;
@@ -534,14 +523,8 @@ namespace ProjectVagabond.Battle.UI
             }
             else if (isActionSelection && !_centeringSequenceStarted)
             {
-                // We are eligible (1 enemy left) and it's the start of a turn.
-                // Trigger the transition sequence.
-
                 if (!_floorOutroTriggered)
                 {
-                    // Identify the empty slot
-                    // If visualEnemies has 1, find which slot is empty (0 or 1).
-                    // If visualEnemies has 0 (victory), it doesn't matter, but we shouldn't be here if victory wasn't already centered.
                     int emptySlot = -1;
                     if (visualEnemies.Count == 1)
                     {
@@ -557,25 +540,22 @@ namespace ProjectVagabond.Battle.UI
                     }
                     else
                     {
-                        // Fallback if logic fails (e.g. weird state), just start centering
                         _centeringSequenceStarted = true;
                     }
                 }
 
                 if (_waitingForFloorOutro)
                 {
-                    // Check if any floor outro is still playing
                     bool isAnimating = animationManager.IsFloorAnimatingOut("floor_0") || animationManager.IsFloorAnimatingOut("floor_1");
                     if (!isAnimating)
                     {
                         _waitingForFloorOutro = false;
-                        _centeringSequenceStarted = true; // Start the slide
+                        _centeringSequenceStarted = true;
                         _centeringDelayTimer = 0f;
                     }
                 }
             }
 
-            // Update Timer for Slide
             bool moveNow = false;
             if (_centeringSequenceStarted)
             {
@@ -602,30 +582,22 @@ namespace ProjectVagabond.Battle.UI
 
                 if (!_enemyVisualXPositions.ContainsKey(enemy.CombatantID))
                 {
-                    // Initialize immediately if not present
                     _enemyVisualXPositions[enemy.CombatantID] = targetX;
                 }
                 else
                 {
                     float currentX = _enemyVisualXPositions[enemy.CombatantID];
-
-                    // SAFETY FIX: If the position is 0 (uninitialized) or wildly off-screen, snap it.
-                    // This prevents enemies from "flying in" from (0,0) when they switch in.
                     if (Math.Abs(currentX) < 1.0f || Math.Abs(currentX - targetX) > Global.VIRTUAL_WIDTH)
                     {
                         _enemyVisualXPositions[enemy.CombatantID] = targetX;
                     }
                     else
                     {
-                        // Tween towards target
                         _enemyVisualXPositions[enemy.CombatantID] = MathHelper.Lerp(currentX, targetX, dt * ENEMY_POSITION_TWEEN_SPEED);
                     }
                 }
             }
 
-            // Cleanup stale entries from the position cache.
-            // FIX: We must keep entries for ALL enemies currently on the field, even if they are defeated (Zombies).
-            // This prevents the floor/sprite from snapping back to the slot position during the death animation fade-out.
             var allOnFieldEnemies = enemies.Where(c => c.IsActiveOnField).ToList();
             var keepIds = allOnFieldEnemies.Select(e => e.CombatantID).ToHashSet();
 
@@ -643,11 +615,7 @@ namespace ProjectVagabond.Battle.UI
 
         private void DrawEnemies(SpriteBatch spriteBatch, List<BattleCombatant> activeEnemies, IEnumerable<BattleCombatant> allCombatants, BattleCombatant currentActor, bool shouldGrayOut, HashSet<BattleCombatant> selectable, BattleAnimationManager animManager, Dictionary<string, Color> silhouetteColors, Matrix transform, GameTime gameTime, BattleUIManager uiManager, BattleCombatant hoveredCombatant)
         {
-            // --- FLOOR DRAWING LOGIC ---
-            // Identify enemies that are dying (playing death animation) to draw their floors
             var dyingEnemies = allCombatants.Where(c => !c.IsPlayerControlled && animManager.IsDeathAnimating(c.CombatantID)).ToList();
-
-            // Combine active and dying enemies for floor rendering
             var floorEntities = new List<BattleCombatant>(activeEnemies);
             foreach (var dying in dyingEnemies)
             {
@@ -657,26 +625,20 @@ namespace ProjectVagabond.Battle.UI
                 }
             }
 
-            // Determine if we should hide empty floors (Sequence Started)
             bool hideEmptyFloors = _centeringSequenceStarted;
 
             if (hideEmptyFloors)
             {
                 if (floorEntities.Count == 0)
                 {
-                    // Victory State: No enemies left, but we want to keep the centered floor visible
-                    // so it doesn't just pop out of existence or revert to 2 slots.
                     var center = BattleLayout.GetEnemyCenter();
-                    // Use Normal size as default for the lingering floor
                     int size = BattleLayout.ENEMY_SPRITE_SIZE_NORMAL;
                     _vfxRenderer.DrawFloor(spriteBatch, center, center.Y + size + BattleLayout.ENEMY_SLOT_Y_OFFSET - 12);
                 }
                 else
                 {
-                    // Draw floor ONLY for floorEntities (Active + Dying)
                     foreach (var enemy in floorEntities)
                     {
-                        // Use dynamic visual X position if available, else slot center
                         float visualX;
                         if (_enemyVisualXPositions.TryGetValue(enemy.CombatantID, out float pos))
                         {
@@ -690,9 +652,7 @@ namespace ProjectVagabond.Battle.UI
                         var center = new Vector2(visualX, BattleLayout.ENEMY_SLOT_Y_OFFSET);
                         int size = _spriteManager.IsMajorEnemySprite(enemy.ArchetypeId) ? BattleLayout.ENEMY_SPRITE_SIZE_MAJOR : BattleLayout.ENEMY_SPRITE_SIZE_NORMAL;
 
-                        // --- FLOOR ANIMATION LOGIC ---
                         float floorScale = 1.0f;
-                        // Check for "floor_center" intro animation (Single Enemy Start)
                         var floorAnim = animManager.GetFloorIntroAnimationState("floor_center");
                         if (floorAnim != null)
                         {
@@ -706,29 +666,21 @@ namespace ProjectVagabond.Battle.UI
             }
             else
             {
-                // Draw floors for BOTH slots (0 and 1) to define the arena, regardless of occupancy
                 for (int i = 0; i < 2; i++)
                 {
                     var center = BattleLayout.GetEnemySlotCenter(i);
-
-                    // Determine size based on occupant (Active or Dying)
-                    // If empty, default to Normal size
                     var occupant = floorEntities.FirstOrDefault(e => e.BattleSlot == i);
                     int size = (occupant != null && _spriteManager.IsMajorEnemySprite(occupant.ArchetypeId)) ? BattleLayout.ENEMY_SPRITE_SIZE_MAJOR : BattleLayout.ENEMY_SPRITE_SIZE_NORMAL;
 
-                    // --- FLOOR ANIMATION LOGIC ---
                     float floorScale = 1.0f;
-
-                    // Check Outro First
                     var outroAnim = animManager.GetFloorOutroAnimationState("floor_" + i);
                     if (outroAnim != null)
                     {
                         float progress = Math.Clamp(outroAnim.Timer / BattleAnimationManager.FloorOutroAnimationState.DURATION, 0f, 1f);
-                        floorScale = 1.0f - Easing.EaseInBack(progress); // Shrink out
+                        floorScale = 1.0f - Easing.EaseInBack(progress);
                     }
                     else
                     {
-                        // Check Intro
                         var floorAnim = animManager.GetFloorIntroAnimationState("floor_" + i);
                         if (floorAnim != null)
                         {
@@ -741,14 +693,11 @@ namespace ProjectVagabond.Battle.UI
                 }
             }
 
-            // --- SPRITE DRAWING LOGIC ---
-            // We must draw sprites for BOTH active and dying enemies.
             var spritesToDraw = new List<BattleCombatant>(activeEnemies);
             spritesToDraw.AddRange(dyingEnemies);
 
             foreach (var enemy in spritesToDraw)
             {
-                // Use dynamic visual X position
                 float visualX = _enemyVisualXPositions.ContainsKey(enemy.CombatantID) ? _enemyVisualXPositions[enemy.CombatantID] : BattleLayout.GetEnemySlotCenter(enemy.BattleSlot).X;
                 var center = new Vector2(visualX, BattleLayout.ENEMY_SLOT_Y_OFFSET);
 
@@ -762,17 +711,15 @@ namespace ProjectVagabond.Battle.UI
                 Color outlineColor = (enemy == currentActor) ? _global.Palette_BrightWhite : _global.Palette_DarkGray;
                 if (isSilhouetted) outlineColor = outlineColor * 0.5f;
 
-                // FIX: Multiply outline color by alpha to ensure it fades out correctly
                 outlineColor = outlineColor * enemy.VisualAlpha;
 
-                // Animations
                 var spawnAnim = animManager.GetSpawnAnimationState(enemy.CombatantID);
                 var switchOut = animManager.GetSwitchOutAnimationState(enemy.CombatantID);
                 var switchIn = animManager.GetSwitchInAnimationState(enemy.CombatantID);
                 var healFlash = animManager.GetHealFlashAnimationState(enemy.CombatantID);
                 var hitFlash = animManager.GetHitFlashState(enemy.CombatantID);
                 var healBounce = animManager.GetHealBounceAnimationState(enemy.CombatantID);
-                var introSlide = animManager.GetIntroSlideAnimationState(enemy.CombatantID); // NEW
+                var introSlide = animManager.GetIntroSlideAnimationState(enemy.CombatantID);
 
                 float spawnY = 0f;
                 float alpha = enemy.VisualAlpha;
@@ -790,27 +737,23 @@ namespace ProjectVagabond.Battle.UI
 
                     if (introSlide.IsEnemy)
                     {
-                        // Phase 1: Sliding (Fade in alpha, keep silhouette)
                         if (introSlide.CurrentPhase == BattleAnimationManager.IntroSlideAnimationState.Phase.Sliding)
                         {
                             silhouetteAmt = 1.0f;
-                            silhouetteColor = _global.Palette_Black; // Changed from DarkGray
+                            silhouetteColor = _global.Palette_Black;
                         }
-                        // Phase 2: Waiting (Hold silhouette)
                         else if (introSlide.CurrentPhase == BattleAnimationManager.IntroSlideAnimationState.Phase.Waiting)
                         {
                             silhouetteAmt = 1.0f;
-                            silhouetteColor = _global.Palette_Black; // Changed from DarkGray
+                            silhouetteColor = _global.Palette_Black;
                         }
-                        // Phase 3: Revealing (Fade out silhouette)
                         else if (introSlide.CurrentPhase == BattleAnimationManager.IntroSlideAnimationState.Phase.Revealing)
                         {
                             float revealProgress = Math.Clamp(introSlide.RevealTimer / BattleAnimationManager.IntroSlideAnimationState.REVEAL_DURATION, 0f, 1f);
                             silhouetteAmt = 1.0f - Easing.EaseInQuad(revealProgress);
-                            silhouetteColor = _global.Palette_Black; // Changed from DarkGray
+                            silhouetteColor = _global.Palette_Black;
                         }
                     }
-                    // Alpha is handled by the animation manager update loop
                 }
                 else if (spawnAnim != null)
                 {
@@ -835,22 +778,21 @@ namespace ProjectVagabond.Battle.UI
                         if (switchOut.CurrentPhase == BattleAnimationManager.SwitchOutAnimationState.Phase.Silhouetting)
                         {
                             float p = Math.Clamp(switchOut.SilhouetteTimer / BattleAnimationManager.SwitchOutAnimationState.SILHOUETTE_DURATION, 0f, 1f);
-                            silhouetteAmt = Easing.EaseOutQuad(p); // 0 -> 1
+                            silhouetteAmt = Easing.EaseOutQuad(p);
                             silhouetteColor = _global.Palette_Black;
                         }
                         else if (switchOut.CurrentPhase == BattleAnimationManager.SwitchOutAnimationState.Phase.Lifting)
                         {
                             float p = Math.Clamp(switchOut.LiftTimer / BattleAnimationManager.SwitchOutAnimationState.LIFT_DURATION, 0f, 1f);
-                            float eased = Easing.EaseInCubic(p); // Accelerate up
+                            float eased = Easing.EaseInCubic(p);
                             spawnY = MathHelper.Lerp(0f, -BattleAnimationManager.SwitchOutAnimationState.LIFT_HEIGHT, eased);
-                            alpha = 1.0f - eased; // Fade out
+                            alpha = 1.0f - eased;
                             silhouetteAmt = 1.0f;
                             silhouetteColor = _global.Palette_Black;
                         }
                     }
                     else
                     {
-                        // Legacy/Player logic
                         float p = Math.Clamp(switchOut.Timer / BattleAnimationManager.SwitchOutAnimationState.DURATION, 0f, 1f);
                         spawnY = MathHelper.Lerp(0f, -BattleAnimationManager.SwitchOutAnimationState.SIMPLE_LIFT_HEIGHT, Easing.EaseOutCubic(p));
                         alpha = 1.0f - Easing.EaseOutCubic(p);
@@ -863,7 +805,7 @@ namespace ProjectVagabond.Battle.UI
                     alpha = Easing.EaseOutCubic(p);
                 }
 
-                Color tint = Color.White; // For enemies, tint is usually white, alpha applied in DrawDirectEnemy
+                Color tint = Color.White;
                 if (healFlash != null)
                 {
                     float p = healFlash.Timer / BattleAnimationManager.HealFlashAnimationState.Duration;
@@ -871,13 +813,19 @@ namespace ProjectVagabond.Battle.UI
                 }
 
                 var hitstop = animManager.GetHitstopVisualState(enemy.CombatantID);
-                float scale = 1.0f;
+                Vector2 scale = Vector2.One;
                 if (_hitstopManager.IsActive && hitstop != null)
                 {
-                    scale = 1.0f; // Keep scale at 1.0f
+                    scale = Vector2.One;
                     tint = hitstop.IsCrit ? Color.Red : Color.White;
                     alpha = 1.0f;
                     silhouetteAmt = 0f;
+                }
+
+                // Apply Squash and Stretch
+                if (_enemySquashScales.TryGetValue(enemy.CombatantID, out var squashScale))
+                {
+                    scale = squashScale;
                 }
 
                 float bob = CalculateAttackBobOffset(enemy.CombatantID, false);
@@ -908,28 +856,17 @@ namespace ProjectVagabond.Battle.UI
                 Vector2[] offsets = _enemySpritePartOffsets.TryGetValue(enemy.CombatantID, out var o) ? o : null;
                 bool isHighlighted = isSelectable && shouldGrayOut;
 
-                // --- LOW HEALTH FLASH LOGIC ---
                 Color? lowHealthOverlay = null;
                 if (enemy.LowHealthFlashTimer > 0f && !enemy.IsDefeated)
                 {
-                    float flashAlpha = (MathF.Sin(enemy.LowHealthFlashTimer) + 1f) / 2f * 0.6f; // Max 0.6 alpha
+                    float flashAlpha = (MathF.Sin(enemy.LowHealthFlashTimer) + 1f) / 2f * 0.6f;
                     lowHealthOverlay = _global.LowHealthFlashColor * flashAlpha;
                 }
 
-                // FIX: Pass tint * alpha to ensure transparency works correctly
                 _entityRenderer.DrawEnemy(spriteBatch, enemy, spriteRect, offsets, shake, alpha, silhouetteAmt, silhouetteColor, isHighlighted, highlight, outlineColor, flashWhite, tint * alpha, scale, transform, lowHealthOverlay);
 
-                // Only add hitboxes for ACTIVE enemies (not dying ones)
                 if (!enemy.IsDefeated)
                 {
-                    // --- HITBOX CALCULATION FIX ---
-                    // The hitbox should be based on the STATIC position (center.X, center.Y)
-                    // excluding bob, spawnY, recoil, and slideOffset.
-                    // center.X already includes the centering slide, which is correct for the slot position.
-
-                    // --- NEW: Calculate Precise Static Bounds (Union of all parts) ---
-                    // Instead of a generic box, we use the pixel offsets from the sprite manager.
-                    // We use Frame 0 (static) offsets.
                     var topOffsets = _spriteManager.GetEnemySpriteTopPixelOffsets(enemy.ArchetypeId);
                     var leftOffsets = _spriteManager.GetEnemySpriteLeftPixelOffsets(enemy.ArchetypeId);
                     var rightOffsets = _spriteManager.GetEnemySpriteRightPixelOffsets(enemy.ArchetypeId);
@@ -939,14 +876,12 @@ namespace ProjectVagabond.Battle.UI
 
                     if (topOffsets != null && topOffsets.Length > 0)
                     {
-                        // Calculate the union of all parts
                         int minX = int.MaxValue;
                         int minY = int.MaxValue;
                         int maxX = int.MinValue;
                         int maxY = int.MinValue;
                         bool foundAny = false;
 
-                        // Iterate through all parts (limbs)
                         for (int i = 0; i < topOffsets.Length; i++)
                         {
                             int top = topOffsets[i];
@@ -966,64 +901,38 @@ namespace ProjectVagabond.Battle.UI
 
                         if (foundAny)
                         {
-                            // Calculate top-left of the sprite frame
-                            // center is (visualX, ENEMY_SLOT_Y_OFFSET)
-                            // Top-Left of frame is (center.X - spriteSize/2, center.Y)
                             int frameX = (int)(center.X - spriteSize / 2f);
                             int frameY = (int)center.Y;
 
-                            // Apply offsets
                             int x = frameX + minX;
                             int y = frameY + minY;
                             int w = (maxX - minX) + 1;
                             int h = (maxY - minY) + 1;
 
-                            // Use the snapped rect helper to ensure seamless animation
                             hitBox = GetPatternAlignedRect(new Rectangle(x, y, w, h));
                         }
                         else
                         {
-                            // Fallback if all frames empty
                             hitBox = GetPatternAlignedRect(new Rectangle((int)(center.X - spriteSize / 2f), (int)(center.Y), spriteSize, spriteSize));
                         }
                     }
                     else
                     {
-                        // Fallback if no offsets available
                         hitBox = GetPatternAlignedRect(new Rectangle((int)(center.X - spriteSize / 2f), (int)(center.Y), spriteSize, spriteSize));
                     }
 
                     _currentTargets.Add(new TargetInfo { Combatant = enemy, Bounds = hitBox });
                     _combatantVisualCenters[enemy.CombatantID] = hitBox.Center.ToVector2();
-
-                    // --- Calculate and Store Static Center ---
-                    // The sprite is drawn at center.Y + bob + spawnY.
-                    // The static base Y is center.Y.
-                    // The sprite rect is (center.X - size/2, center.Y, size, size).
-                    // The center of that rect is (center.X, center.Y + size/2).
-                    // Note: center.X includes the dynamic slide offset from _enemyVisualXPositions, which is correct for "final position".
                     _combatantStaticCenters[enemy.CombatantID] = new Vector2(center.X, center.Y + spriteSize / 2f);
 
-                    // --- VISIBILITY LOGIC ---
                     bool showBars = (hoveredCombatant == enemy) || (uiManager.HoveredCombatantFromUI == enemy) || selectable.Contains(enemy);
                     UpdateBarAlpha(enemy, (float)gameTime.ElapsedGameTime.TotalSeconds, showBars);
 
-                    // --- POSITIONING LOGIC ---
-                    // 1. Calculate Visual Center Y (Middle of sprite)
                     float visualCenterY = center.Y + spriteSize / 2f;
-
-                    // 2. Calculate Tooltip Top Y (relative to visual center, matching BattleVfxRenderer)
                     float tooltipTopY = visualCenterY - 3;
                     if (tooltipTopY < 5) tooltipTopY = 5;
-
-                    // 3. Calculate Sprite Top Pixel Y (Highest non-animated pixel)
                     float spriteTopY = GetEnemyStaticVisualTop(enemy, center.Y);
-
-                    // 4. Determine Anchor (Highest point between tooltip top and sprite top)
-                    // We want the bar to be above whichever is higher up on the screen (smaller Y value).
                     float anchorY = Math.Min(tooltipTopY - 2, spriteTopY);
-
-                    // 5. Place Bars above Anchor (4px height)
                     float barY = anchorY - 4;
                     float barX = center.X - BattleLayout.ENEMY_BAR_WIDTH / 2f;
 
@@ -1041,8 +950,6 @@ namespace ProjectVagabond.Battle.UI
             foreach (var player in players)
             {
                 var center = BattleLayout.GetPlayerSpriteCenter(player.BattleSlot);
-
-                // --- Apply Active Turn Offset ---
                 float yOffset = _turnActiveOffsets.TryGetValue(player.CombatantID, out var off) ? off : INACTIVE_Y_OFFSET;
                 center.Y += yOffset;
 
@@ -1055,8 +962,6 @@ namespace ProjectVagabond.Battle.UI
 
                 Color silhouetteColor = isSilhouetted ? _global.Palette_DarkerGray : _global.Palette_DarkerGray;
                 Color outlineColor = (player == currentActor) ? _global.Palette_BrightWhite : _global.Palette_DarkGray;
-
-                // FIX: Multiply outline color by alpha
                 outlineColor = outlineColor * player.VisualAlpha;
 
                 var spawnAnim = animManager.GetSpawnAnimationState(player.CombatantID);
@@ -1066,7 +971,7 @@ namespace ProjectVagabond.Battle.UI
                 var hitFlash = animManager.GetHitFlashState(player.CombatantID);
                 var healBounce = animManager.GetHealBounceAnimationState(player.CombatantID);
                 var coinCatch = animManager.GetCoinCatchAnimationState(player.CombatantID);
-                var introSlide = animManager.GetIntroSlideAnimationState(player.CombatantID); // NEW
+                var introSlide = animManager.GetIntroSlideAnimationState(player.CombatantID);
 
                 float spawnY = 0f;
                 float alpha = player.VisualAlpha;
@@ -1076,7 +981,6 @@ namespace ProjectVagabond.Battle.UI
                 if (introSlide != null)
                 {
                     slideOffset = introSlide.CurrentOffset;
-                    // Alpha handled by manager
                 }
                 else if (switchOut != null)
                 {
@@ -1105,12 +1009,11 @@ namespace ProjectVagabond.Battle.UI
                     bob += MathF.Sin(p * MathHelper.Pi) * -BattleAnimationManager.HealBounceAnimationState.Height;
                 }
 
-                // --- COIN CATCH ANIMATION ---
                 if (coinCatch != null)
                 {
                     float p = coinCatch.Timer / BattleAnimationManager.CoinCatchAnimationState.DURATION;
-                    float s = MathF.Sin(p * MathHelper.Pi); // 0 -> 1 -> 0
-                    scale += s * 0.15f; // Max scale 1.15
+                    float s = MathF.Sin(p * MathHelper.Pi);
+                    scale += s * 0.15f;
                 }
 
                 Vector2 recoil = _recoilStates.TryGetValue(player.CombatantID, out var r) ? r.Offset : Vector2.Zero;
@@ -1126,42 +1029,25 @@ namespace ProjectVagabond.Battle.UI
                 bool isHighlighted = selectable.Contains(player) && shouldGrayOut;
                 float pulse = 0f;
 
-                // --- DRAW FLOOR ---
-                // Use baseCenter (from BattleLayout) + slideOffset (Intro)
-                // Do NOT include yOffset (Turn Active) or bob/spawnY
                 var baseCenter = BattleLayout.GetPlayerSpriteCenter(player.BattleSlot);
                 _vfxRenderer.DrawPlayerFloor(spriteBatch, baseCenter + slideOffset, player.VisualAlpha, 1.0f);
 
-                // --- LOW HEALTH FLASH LOGIC ---
                 Color? lowHealthOverlay = null;
                 if (player.LowHealthFlashTimer > 0f && !player.IsDefeated)
                 {
-                    float flashAlpha = (MathF.Sin(player.LowHealthFlashTimer) + 1f) / 2f * 0.6f; // Max 0.6 alpha
+                    float flashAlpha = (MathF.Sin(player.LowHealthFlashTimer) + 1f) / 2f * 0.6f;
                     lowHealthOverlay = _global.LowHealthFlashColor * flashAlpha;
                 }
 
                 sprite.Draw(spriteBatch, animManager, player, tint, isHighlighted, pulse, isSilhouetted, silhouetteColor, gameTime, highlight, outlineColor, scale, lowHealthOverlay);
 
-                // --- HITBOX CALCULATION FIX ---
-                // Use the base slot position (baseCenter) for the hitbox, ignoring the turn offset (yOffset).
-                // This ensures the hitbox stays in the "exact slot position" as requested.
-                // Player sprites are 32x32.
                 Rectangle bounds = new Rectangle((int)(baseCenter.X - 16), (int)(baseCenter.Y - 16), 32, 32);
-
-                // Use the snapped rect helper to ensure seamless animation
                 Rectangle hitBox = GetPatternAlignedRect(bounds);
 
                 _currentTargets.Add(new TargetInfo { Combatant = player, Bounds = hitBox });
                 _combatantVisualCenters[player.CombatantID] = hitBox.Center.ToVector2();
-
-                // --- Calculate and Store Static Center ---
-                // For players, the sprite is drawn centered on 'center' (which includes turn offset).
-                // The static bounds are centered on 'baseCenter'.
-                // So the static center is 'baseCenter'.
                 _combatantStaticCenters[player.CombatantID] = baseCenter;
 
-                // --- VISIBILITY LOGIC ---
-                // Check if this player is the current actor AND hovering a mana move
                 bool isActingAndHoveringManaMove = false;
                 if (player == currentActor && uiManager.HoveredMove != null)
                 {
@@ -1179,7 +1065,6 @@ namespace ProjectVagabond.Battle.UI
 
                 UpdateBarAlpha(player, (float)gameTime.ElapsedGameTime.TotalSeconds, showBars);
 
-                // Only draw name if it is the current actor
                 if (player == currentActor && (!isSilhouetted || player.CombatantID == _statTooltipCombatantID))
                 {
                     Vector2 nameSize = font.MeasureString(player.Name);
@@ -1188,7 +1073,6 @@ namespace ProjectVagabond.Battle.UI
                     spriteBatch.DrawStringSnapped(font, player.Name, namePos, nameColor);
                 }
 
-                // --- POSITIONING LOGIC ---
                 Vector2 barPos = GetCombatantBarPosition(player);
                 float barX = barPos.X - BattleLayout.PLAYER_BAR_WIDTH / 2f;
                 float barY = barPos.Y;
@@ -1196,8 +1080,6 @@ namespace ProjectVagabond.Battle.UI
                 if (player.VisualHealthBarAlpha > 0.01f || player.VisualManaBarAlpha > 0.01f)
                 {
                     _hudRenderer.DrawStatusIcons(spriteBatch, player, barX, barY, BattleLayout.PLAYER_BAR_WIDTH, true, _playerStatusIcons, GetStatusIconOffset, IsStatusIconAnimating);
-
-                    // Pass uiManager and isActiveActor to DrawPlayerBars
                     _hudRenderer.DrawPlayerBars(spriteBatch, player, barX, barY, BattleLayout.PLAYER_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, player.VisualHealthBarAlpha, player.VisualManaBarAlpha, gameTime, uiManager, player == currentActor);
                 }
             }
@@ -1263,7 +1145,6 @@ namespace ProjectVagabond.Battle.UI
                         }
                         else
                         {
-                            // TUNING: Restricted to Up/Down only
                             int dir = _random.Next(2);
                             offsets[i] = dir == 0 ? new Vector2(0, -1) : new Vector2(0, 1);
                         }
@@ -1388,7 +1269,6 @@ namespace ProjectVagabond.Battle.UI
 
             bool isHealthVisuallyActive = c.VisualHealthBarAlpha > 0f || c.HealthBarVisibleTimer > 0f || c.HealthBarDelayTimer > 0f || c.HealthBarDisappearTimer > 0f;
 
-            // HP Logic
             bool hpForceVisible = inCombatPhase && isHealthVisuallyActive;
             bool hpVisible = shouldBeVisible || c.HealthBarVisibleTimer > 0 || hpForceVisible;
 
@@ -1397,19 +1277,16 @@ namespace ProjectVagabond.Battle.UI
                 c.VisualHealthBarAlpha = 1.0f;
                 c.HealthBarDelayTimer = 0f;
                 c.HealthBarDisappearTimer = 0f;
-                // Reset variance when becoming visible so next hide is random
                 c.CurrentBarVariance = (float)(_random.NextDouble() * BattleCombatant.BAR_VARIANCE_MAX);
             }
             else
             {
                 if (c.VisualHealthBarAlpha > 0f)
                 {
-                    // Phase 1: Delay (with variance)
                     if (c.HealthBarDelayTimer < BattleCombatant.BAR_DELAY_DURATION + c.CurrentBarVariance)
                     {
                         c.HealthBarDelayTimer += dt;
                     }
-                    // Phase 2: Fade Out
                     else
                     {
                         c.HealthBarDisappearTimer += dt;
@@ -1426,7 +1303,6 @@ namespace ProjectVagabond.Battle.UI
                 }
             }
 
-            // Mana Logic
             bool isManaVisuallyActive = c.VisualManaBarAlpha > 0f || c.ManaBarVisibleTimer > 0f || c.ManaBarDelayTimer > 0f || c.ManaBarDisappearTimer > 0f;
             bool manaForceVisible = inCombatPhase && isManaVisuallyActive;
             bool manaVisible = shouldBeVisible || c.ManaBarVisibleTimer > 0 || manaForceVisible;
@@ -1436,19 +1312,15 @@ namespace ProjectVagabond.Battle.UI
                 c.VisualManaBarAlpha = 1.0f;
                 c.ManaBarDelayTimer = 0f;
                 c.ManaBarDisappearTimer = 0f;
-                // Reuse same variance for mana so they sync per-unit, or generate new if desired.
-                // Let's reuse to keep the unit's bars together.
             }
             else
             {
                 if (c.VisualManaBarAlpha > 0f)
                 {
-                    // Phase 1: Delay (with variance)
                     if (c.ManaBarDelayTimer < BattleCombatant.BAR_DELAY_DURATION + c.CurrentBarVariance)
                     {
                         c.ManaBarDelayTimer += dt;
                     }
-                    // Phase 2: Fade Out
                     else
                     {
                         c.ManaBarDisappearTimer += dt;
@@ -1505,10 +1377,8 @@ namespace ProjectVagabond.Battle.UI
 
         private Vector2 GetCombatantBarPosition(BattleCombatant c)
         {
-            // 1. Get Visual Center
             if (!_combatantVisualCenters.TryGetValue(c.CombatantID, out var center)) return Vector2.Zero;
 
-            // 2. Calculate Tooltip Top
             float tooltipTopY;
             if (c.IsPlayerControlled)
             {
@@ -1523,9 +1393,6 @@ namespace ProjectVagabond.Battle.UI
 
             if (tooltipTopY < 5) tooltipTopY = 5;
 
-            // 3. Calculate Bar Position
-            // AnchorY = tooltipTopY - 2
-            // BarY = AnchorY - 4
             float barY = tooltipTopY - 6;
 
             return new Vector2(center.X, barY);

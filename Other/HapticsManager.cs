@@ -45,14 +45,14 @@ namespace ProjectVagabond
         // --- Compound Shake Configuration ---
 
         // 1. The maximum limits of the shake at 100% Trauma
-        public float MaxTranslation { get; set; } = 0.3f; // Pixels
-        public float MaxRotation { get; set; } = 0.01f;  // Radians (~15 degrees)
+        public float MaxTranslation { get; set; } = 6.0f; // Pixels (Increased for juice)
+        public float MaxRotation { get; set; } = 0.05f;  // Radians (~3 degrees)
 
         // 2. The "Feel" of the shake
         public float TraumaExponent { get; set; } = 2.0f; // 2.0 = Quadratic (Smooth), 3.0 = Cubic (Snappy)
-        public float Frequency { get; set; } = 10f;       // How fast it vibrates
-        public float RecoverySpeed { get; set; } = 2.0f;  // How fast trauma decays per second (1.5 = fully recovers in ~0.66s)
-        public float NoiseFloor { get; set; } = 0.3f;
+        public float Frequency { get; set; } = 25f;       // How fast it vibrates
+        public float RecoverySpeed { get; set; } = 1.5f;  // How fast trauma decays per second
+        public float NoiseFloor { get; set; } = 0.1f;
 
         // 3. Global Multiplier
         public float MasterIntensity { get; set; } = 1.0f;
@@ -124,8 +124,8 @@ namespace ProjectVagabond
         /// Adds trauma to the system.
         /// </summary>
         /// <param name="stress">Amount of stress to add (0.0 to 1.0). 
-        /// 0.1 = Subtle bump. 
-        /// 0.4 = Heavy hit. 
+        /// 0.2 = Subtle bump. 
+        /// 0.5 = Heavy hit. 
         /// 1.0 = Catastrophic damage.</param>
         public void TriggerCompoundShake(float stress)
         {
@@ -230,6 +230,10 @@ namespace ProjectVagabond
             var (totalOffset, totalRotation, totalScale) = GetTotalShakeParams();
 
             var screenCenter = new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f);
+
+            // Round the offset to ensure pixel-perfect rendering
+            totalOffset.X = MathF.Round(totalOffset.X);
+            totalOffset.Y = MathF.Round(totalOffset.Y);
 
             Matrix offsetMatrix = Matrix.CreateTranslation(totalOffset.X, totalOffset.Y, 0);
 

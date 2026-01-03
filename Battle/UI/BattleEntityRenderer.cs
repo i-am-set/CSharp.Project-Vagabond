@@ -1,8 +1,15 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 
 namespace ProjectVagabond.Battle.UI
 {
@@ -52,9 +59,9 @@ namespace ProjectVagabond.Battle.UI
             Color outlineColor,
             bool isFlashingWhite,
             Color tintColor,
-            float scale,
+            Vector2 scale, // CHANGED: Now accepts Vector2 for non-uniform scaling
             Matrix transform,
-            Color? lowHealthOverlay = null) // Added lowHealthOverlay
+            Color? lowHealthOverlay = null)
         {
             Texture2D enemySprite = _spriteManager.GetEnemySprite(enemy.ArchetypeId);
             Texture2D enemySilhouette = _spriteManager.GetEnemySpriteSilhouette(enemy.ArchetypeId);
@@ -69,7 +76,7 @@ namespace ProjectVagabond.Battle.UI
             // Always draw the composite outline if a silhouette exists.
             if (enemySilhouette != null)
             {
-                DrawCompositeOutline(spriteBatch, enemySilhouette, spriteRect, partOffsets, shakeOffset, finalAlpha, outlineColor, numParts, spritePartSize, transform);
+                DrawCompositeOutline(spriteBatch, enemySilhouette, spriteRect, partOffsets, shakeOffset, finalAlpha, outlineColor, numParts, spritePartSize, transform, scale);
             }
 
             // --- FLATTENING LOGIC ---
@@ -78,7 +85,7 @@ namespace ProjectVagabond.Battle.UI
 
             if (useFlattening)
             {
-                DrawFlattenedEnemy(spriteBatch, enemySprite, enemySilhouette, spriteRect, partOffsets, shakeOffset, finalAlpha, silhouetteFactor, silhouetteColor, isHighlighted, highlightColor, isFlashingWhite, numParts, spritePartSize, transform, lowHealthOverlay);
+                DrawFlattenedEnemy(spriteBatch, enemySprite, enemySilhouette, spriteRect, partOffsets, shakeOffset, finalAlpha, silhouetteFactor, silhouetteColor, isHighlighted, highlightColor, isFlashingWhite, numParts, spritePartSize, transform, lowHealthOverlay, scale);
             }
             else
             {
@@ -93,7 +100,7 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private void DrawCompositeOutline(SpriteBatch spriteBatch, Texture2D silhouette, Rectangle spriteRect, Vector2[] offsets, Vector2 shakeOffset, float finalAlpha, Color outlineColor, int numParts, int partSize, Matrix transform)
+        private void DrawCompositeOutline(SpriteBatch spriteBatch, Texture2D silhouette, Rectangle spriteRect, Vector2[] offsets, Vector2 shakeOffset, float finalAlpha, Color outlineColor, int numParts, int partSize, Matrix transform, Vector2 scale)
         {
             var currentRTs = _core.GraphicsDevice.GetRenderTargets();
             spriteBatch.End();
@@ -102,12 +109,15 @@ namespace ProjectVagabond.Battle.UI
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
 
             Vector2 rtBasePos = new Vector2(FLATTEN_MARGIN, FLATTEN_MARGIN);
+            Vector2 origin = new Vector2(partSize / 2f, partSize / 2f);
 
             for (int i = 0; i < numParts; i++)
             {
                 var sourceRect = new Rectangle(i * partSize, 0, partSize, partSize);
                 var partOffset = offsets != null && i < offsets.Length ? offsets[i] : Vector2.Zero;
-                spriteBatch.DrawSnapped(silhouette, rtBasePos + partOffset, sourceRect, Color.White);
+
+                // Draw to RT with scale applied
+                spriteBatch.DrawSnapped(silhouette, rtBasePos + partOffset + origin, sourceRect, Color.White, 0f, origin, scale, SpriteEffects.None, 0f);
             }
 
             spriteBatch.End();
@@ -119,14 +129,13 @@ namespace ProjectVagabond.Battle.UI
             Color cOuter = outlineColor;
 
             // Draw 2-layer outline (Outer Color, Inner Black)
+            // Note: The texture in _flattenTarget is already scaled, so we draw it at 1.0 scale here.
 
             // Layer 2: Outer Color
-            // Cardinals at 2px, Diagonals at 1px. This creates a rounded "circle" shape wrapping the inner 1px outline.
             DrawOffsets(spriteBatch, _flattenTarget, screenDrawPos, 2, cOuter); // Cardinals
             DrawOffsets(spriteBatch, _flattenTarget, screenDrawPos, 1, cOuter, true); // Diagonals
 
             // Layer 1: Inner Black
-            // Cardinals at 1px.
             DrawOffsets(spriteBatch, _flattenTarget, screenDrawPos, 1, cInner);
         }
 
@@ -148,7 +157,7 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private void DrawFlattenedEnemy(SpriteBatch spriteBatch, Texture2D sprite, Texture2D silhouette, Rectangle spriteRect, Vector2[] offsets, Vector2 shakeOffset, float finalAlpha, float silhouetteFactor, Color silhouetteColor, bool isHighlighted, Color? highlightColor, bool isFlashingWhite, int numParts, int partSize, Matrix transform, Color? lowHealthOverlay)
+        private void DrawFlattenedEnemy(SpriteBatch spriteBatch, Texture2D sprite, Texture2D silhouette, Rectangle spriteRect, Vector2[] offsets, Vector2 shakeOffset, float finalAlpha, float silhouetteFactor, Color silhouetteColor, bool isHighlighted, Color? highlightColor, bool isFlashingWhite, int numParts, int partSize, Matrix transform, Color? lowHealthOverlay, Vector2 scale)
         {
             var currentRTs = _core.GraphicsDevice.GetRenderTargets();
             spriteBatch.End();
@@ -157,40 +166,43 @@ namespace ProjectVagabond.Battle.UI
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
 
             Vector2 rtOffset = new Vector2(FLATTEN_MARGIN, FLATTEN_MARGIN);
+            Vector2 origin = new Vector2(partSize / 2f, partSize / 2f);
 
             for (int i = 0; i < numParts; i++)
             {
                 var sourceRect = new Rectangle(i * partSize, 0, partSize, partSize);
                 var partOffset = offsets != null && i < offsets.Length ? offsets[i] : Vector2.Zero;
-                var localDrawPos = rtOffset + partOffset + shakeOffset;
+
+                // Center position for scaling
+                var localDrawPos = rtOffset + partOffset + shakeOffset + origin;
 
                 if (silhouetteFactor >= 1.0f && silhouette != null)
                 {
-                    spriteBatch.DrawSnapped(silhouette, localDrawPos, sourceRect, silhouetteColor);
+                    spriteBatch.DrawSnapped(silhouette, localDrawPos, sourceRect, silhouetteColor, 0f, origin, scale, SpriteEffects.None, 0f);
                 }
                 else if (isHighlighted && silhouette != null)
                 {
                     Color hColor = highlightColor ?? Color.Yellow;
-                    spriteBatch.DrawSnapped(silhouette, localDrawPos, sourceRect, hColor);
+                    spriteBatch.DrawSnapped(silhouette, localDrawPos, sourceRect, hColor, 0f, origin, scale, SpriteEffects.None, 0f);
                 }
                 else
                 {
-                    spriteBatch.DrawSnapped(sprite, localDrawPos, sourceRect, Color.White);
+                    spriteBatch.DrawSnapped(sprite, localDrawPos, sourceRect, Color.White, 0f, origin, scale, SpriteEffects.None, 0f);
                     if (silhouetteFactor > 0f && silhouette != null)
                     {
-                        spriteBatch.DrawSnapped(silhouette, localDrawPos, sourceRect, silhouetteColor * silhouetteFactor);
+                        spriteBatch.DrawSnapped(silhouette, localDrawPos, sourceRect, silhouetteColor * silhouetteFactor, 0f, origin, scale, SpriteEffects.None, 0f);
                     }
                 }
 
                 if (isFlashingWhite && silhouette != null)
                 {
-                    spriteBatch.DrawSnapped(silhouette, localDrawPos, sourceRect, Color.White * 0.8f);
+                    spriteBatch.DrawSnapped(silhouette, localDrawPos, sourceRect, Color.White * 0.8f, 0f, origin, scale, SpriteEffects.None, 0f);
                 }
 
                 // Draw Low Health Overlay
                 if (lowHealthOverlay.HasValue && silhouette != null)
                 {
-                    spriteBatch.DrawSnapped(silhouette, localDrawPos, sourceRect, lowHealthOverlay.Value);
+                    spriteBatch.DrawSnapped(silhouette, localDrawPos, sourceRect, lowHealthOverlay.Value, 0f, origin, scale, SpriteEffects.None, 0f);
                 }
             }
 
@@ -199,11 +211,12 @@ namespace ProjectVagabond.Battle.UI
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
 
             Vector2 drawPos = spriteRect.Location.ToVector2() - new Vector2(FLATTEN_MARGIN, FLATTEN_MARGIN);
-            var srcRect = new Rectangle(0, 0, partSize + FLATTEN_MARGIN * 2, partSize + FLATTEN_MARGIN * 2);
+            // Note: The RT content is already scaled, so we draw the RT at 1.0 scale
+            var srcRect = new Rectangle(0, 0, _flattenTarget.Width, _flattenTarget.Height);
             spriteBatch.Draw(_flattenTarget, drawPos, srcRect, Color.White * finalAlpha);
         }
 
-        private void DrawDirectEnemy(SpriteBatch spriteBatch, Texture2D sprite, Texture2D silhouette, Rectangle spriteRect, Vector2[] offsets, Vector2 shakeOffset, Color tintColor, float silhouetteFactor, Color silhouetteColor, bool isHighlighted, Color? highlightColor, bool isFlashingWhite, float scale, int numParts, int partSize, Color? outlineColorOverride, Color? lowHealthOverlay)
+        private void DrawDirectEnemy(SpriteBatch spriteBatch, Texture2D sprite, Texture2D silhouette, Rectangle spriteRect, Vector2[] offsets, Vector2 shakeOffset, Color tintColor, float silhouetteFactor, Color silhouetteColor, bool isHighlighted, Color? highlightColor, bool isFlashingWhite, Vector2 scale, int numParts, int partSize, Color? outlineColorOverride, Color? lowHealthOverlay)
         {
             Color outlineColor = (outlineColorOverride ?? _global.Palette_DarkGray) * (tintColor.A / 255f);
 

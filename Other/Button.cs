@@ -28,7 +28,11 @@ namespace ProjectVagabond.UI
         /// <summary>
         /// Slides to the right and holds the position until unhovered.
         /// </summary>
-        SlideAndHold
+        SlideAndHold,
+        /// <summary>
+        /// Scales up elastically.
+        /// </summary>
+        Scale
     }
 
     /// <summary>
@@ -64,7 +68,7 @@ namespace ProjectVagabond.UI
         public BitmapFont? Font { get; set; }
         public Vector2 TextRenderOffset { get; set; } = Vector2.Zero;
         public Color? DebugColor { get; set; }
-        public HoverAnimationType HoverAnimation { get; set; } = HoverAnimationType.Hop;
+        public HoverAnimationType HoverAnimation { get; set; } = HoverAnimationType.Scale; // Default to Scale for juice
 
         // --- Text Wave Animation Settings (Delegated to Controller) ---
         private readonly TextWaveController _waveController = new TextWaveController();
@@ -137,6 +141,13 @@ namespace ProjectVagabond.UI
         private const float SLIDE_TARGET_OFFSET = -1f;
         private const float SLIDE_SPEED = 80f;
 
+        // Scale Animation State
+        private float _currentScale = 1.0f;
+        private float _targetScale = 1.0f;
+        private const float SCALE_SPEED = 15f;
+        private const float HOVER_SCALE = 1.1f;
+        private const float PRESS_SCALE = 0.95f;
+
         // Feedback Animation State
         protected float _shakeTimer = 0f;
         private const float SHAKE_DURATION = 0.3f;
@@ -188,6 +199,7 @@ namespace ProjectVagabond.UI
                 IsHovered = false;
                 _isPressed = false;
                 _previousMouseState = currentMouseState;
+                _targetScale = 1.0f;
                 return;
             }
 
@@ -225,6 +237,11 @@ namespace ProjectVagabond.UI
 
             // Visual pressed state is active as long as mouse is down over the button.
             _isPressed = IsHovered && mouseIsDown;
+
+            // Update Target Scale
+            if (_isPressed) _targetScale = PRESS_SCALE;
+            else if (IsHovered) _targetScale = HOVER_SCALE;
+            else _targetScale = 1.0f;
 
             bool rightMouseReleasedOverButton = IsHovered && currentMouseState.RightButton == ButtonState.Released && _previousMouseState.RightButton == ButtonState.Pressed;
             if (rightMouseReleasedOverButton)
@@ -301,6 +318,8 @@ namespace ProjectVagabond.UI
             _slideOffset = 0f;
             _shakeTimer = 0f;
             _flashTimer = 0f;
+            _currentScale = 1.0f;
+            _targetScale = 1.0f;
         }
 
         protected (Vector2 shakeOffset, Color? flashTint) UpdateFeedbackAnimations(GameTime gameTime)
@@ -325,11 +344,14 @@ namespace ProjectVagabond.UI
                 flashTint = new Color(_flashColor, alpha);
             }
 
+            // Update Scale
+            _currentScale = MathHelper.Lerp(_currentScale, _targetScale, dt * SCALE_SPEED);
+
             return (shakeOffset, flashTint);
         }
 
         /// <summary>
-        /// Updates the wave animation timer based on hover state.
+        /// Updates the wave timer based on hover state.
         /// Should be called in Draw methods before rendering text.
         /// </summary>
         protected void UpdateWaveTimer(float deltaTime, bool isHovered)
@@ -362,7 +384,10 @@ namespace ProjectVagabond.UI
             else if (_isPressed && _clickedSourceRect.HasValue) sourceRectToDraw = _clickedSourceRect;
             else if (isActivated && _hoverSourceRect.HasValue) sourceRectToDraw = _hoverSourceRect;
 
-            Vector2 scale = Vector2.One;
+            // Update animations to get scale
+            UpdateFeedbackAnimations(gameTime);
+
+            Vector2 scale = new Vector2(_currentScale);
             var position = new Vector2(Bounds.Center.X + (horizontalOffset ?? 0f), Bounds.Center.Y + (verticalOffset ?? 0f));
 
             if (_spriteSheet != null && sourceRectToDraw.HasValue)
@@ -397,6 +422,7 @@ namespace ProjectVagabond.UI
 
             // Update Wave State
             UpdateWaveTimer(deltaTime, isActivated);
+            UpdateFeedbackAnimations(gameTime); // Updates _currentScale
 
             float xHoverOffset = 0f;
             float yHoverOffset = 0f;
@@ -406,12 +432,13 @@ namespace ProjectVagabond.UI
                 {
                     yHoverOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
                 }
-                else // SlideAndHold
+                else if (HoverAnimation == HoverAnimationType.SlideAndHold)
                 {
                     float targetOffset = isActivated ? SLIDE_TARGET_OFFSET : 0f;
                     _slideOffset = MathHelper.Lerp(_slideOffset, targetOffset, SLIDE_SPEED * deltaTime);
                     xHoverOffset = _slideOffset;
                 }
+                // Scale is handled in UpdateFeedbackAnimations
             }
 
             float totalXOffset = xHoverOffset + (horizontalOffset ?? 0f);
@@ -434,15 +461,20 @@ namespace ProjectVagabond.UI
 
             textPosition += TextRenderOffset;
 
+            // Apply Scale: We need to draw from center to scale correctly
+            Vector2 origin = textSize / 2f;
+            Vector2 drawPos = textPosition + origin;
+
             // --- Wave Animation Logic ---
             if (EnableTextWave && _isWaveAnimating)
             {
+                // Wave animation doesn't support scaling easily yet, fallback to standard draw
                 TextUtils.DrawWavedText(spriteBatch, font, Text, textPosition, textColor, _waveTimer, WaveSpeed, WaveFrequency, WaveAmplitude);
             }
             else
             {
-                // Standard Draw
-                spriteBatch.DrawStringSnapped(font, Text, textPosition, textColor);
+                // Standard Draw with Scale
+                spriteBatch.DrawStringSnapped(font, Text, drawPos, textColor, 0f, origin, _currentScale, SpriteEffects.None, 0f);
             }
         }
     }

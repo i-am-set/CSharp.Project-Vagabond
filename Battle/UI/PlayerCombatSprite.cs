@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.UI;
@@ -9,6 +10,7 @@ using ProjectVagabond.Utils;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
@@ -46,6 +48,13 @@ namespace ProjectVagabond.Battle.UI
         private const float SELECTION_JUMP_DURATION = 0.25f;
         private const float SELECTION_JUMP_HEIGHT = 4f;
         private const float SELECTION_BOB_CYCLE_DURATION = 4.0f;
+
+        // Squash and Stretch State
+        private Vector2 _scale = Vector2.One;
+
+        // TUNING: Lower speed = bouncier/longer deformation. Higher = stiffer.
+        // 8f gives a nice visible "jelly" feel.
+        private const float SQUASH_RECOVERY_SPEED = 4f;
 
         // Noise generator for organic sway
         private static readonly SeededPerlin _swayNoise = new SeededPerlin(8888);
@@ -103,10 +112,26 @@ namespace ProjectVagabond.Battle.UI
             _position = newPosition;
         }
 
+        /// <summary>
+        /// Applies an immediate scale distortion that decays over time.
+        /// </summary>
+        /// <param name="x">X Scale (e.g. 1.5 for wide)</param>
+        /// <param name="y">Y Scale (e.g. 0.5 for flat)</param>
+        public void TriggerSquash(float x, float y)
+        {
+            _scale = new Vector2(x, y);
+        }
+
         public void Update(GameTime gameTime, bool isActive)
         {
             Initialize();
             if (_texture == null) return;
+
+            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            // Update Squash and Stretch (Elastic Recovery)
+            // We use a simple lerp here, but with the high initial values, it looks bouncy.
+            _scale = Vector2.Lerp(_scale, Vector2.One, dt * SQUASH_RECOVERY_SPEED);
 
             // If not active (not their turn), reset to base frame and do not animate
             if (!isActive)
@@ -119,8 +144,6 @@ namespace ProjectVagabond.Battle.UI
                 _frameTimer = 0f;
                 return;
             }
-
-            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
             if (_archetypeId == "player")
             {
@@ -336,6 +359,9 @@ namespace ProjectVagabond.Battle.UI
             Vector2 mainDrawPos = new Vector2(topLeftPosition.X + _frameWidth / 2f, topLeftPosition.Y + _frameHeight / 2f);
             Vector2 mainOrigin = new Vector2(_frameWidth / 2f, _frameHeight / 2f);
 
+            // Combine external scale with internal squash/stretch
+            Vector2 finalScale = new Vector2(scale * _scale.X, scale * _scale.Y);
+
             // --- Draw Outline (Always, if silhouette exists) ---
             if (silhouetteToDraw != null)
             {
@@ -343,34 +369,34 @@ namespace ProjectVagabond.Battle.UI
                 Color cOuter = outlineColor;
 
                 // Layer 2: Outer Color (Cardinals 2, Diagonals 1)
-                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(-2, 0), sourceRectangle, cOuter, 0f, mainOrigin, scale, spriteEffects, 0.49f);
-                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(2, 0), sourceRectangle, cOuter, 0f, mainOrigin, scale, spriteEffects, 0.49f);
-                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(0, -2), sourceRectangle, cOuter, 0f, mainOrigin, scale, spriteEffects, 0.49f);
-                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(0, 2), sourceRectangle, cOuter, 0f, mainOrigin, scale, spriteEffects, 0.49f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(-2, 0), sourceRectangle, cOuter, 0f, mainOrigin, finalScale, spriteEffects, 0.49f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(2, 0), sourceRectangle, cOuter, 0f, mainOrigin, finalScale, spriteEffects, 0.49f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(0, -2), sourceRectangle, cOuter, 0f, mainOrigin, finalScale, spriteEffects, 0.49f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(0, 2), sourceRectangle, cOuter, 0f, mainOrigin, finalScale, spriteEffects, 0.49f);
 
-                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(-1, -1), sourceRectangle, cOuter, 0f, mainOrigin, scale, spriteEffects, 0.49f);
-                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(1, -1), sourceRectangle, cOuter, 0f, mainOrigin, scale, spriteEffects, 0.49f);
-                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(-1, 1), sourceRectangle, cOuter, 0f, mainOrigin, scale, spriteEffects, 0.49f);
-                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(1, 1), sourceRectangle, cOuter, 0f, mainOrigin, scale, spriteEffects, 0.49f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(-1, -1), sourceRectangle, cOuter, 0f, mainOrigin, finalScale, spriteEffects, 0.49f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(1, -1), sourceRectangle, cOuter, 0f, mainOrigin, finalScale, spriteEffects, 0.49f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(-1, 1), sourceRectangle, cOuter, 0f, mainOrigin, finalScale, spriteEffects, 0.49f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(1, 1), sourceRectangle, cOuter, 0f, mainOrigin, finalScale, spriteEffects, 0.49f);
 
                 // Layer 1: Inner Black (Cardinals 1)
-                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(-1, 0), sourceRectangle, cInner, 0f, mainOrigin, scale, spriteEffects, 0.49f);
-                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(1, 0), sourceRectangle, cInner, 0f, mainOrigin, scale, spriteEffects, 0.49f);
-                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(0, -1), sourceRectangle, cInner, 0f, mainOrigin, scale, spriteEffects, 0.49f);
-                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(0, 1), sourceRectangle, cInner, 0f, mainOrigin, scale, spriteEffects, 0.49f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(-1, 0), sourceRectangle, cInner, 0f, mainOrigin, finalScale, spriteEffects, 0.49f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(1, 0), sourceRectangle, cInner, 0f, mainOrigin, finalScale, spriteEffects, 0.49f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(0, -1), sourceRectangle, cInner, 0f, mainOrigin, finalScale, spriteEffects, 0.49f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos + new Vector2(0, 1), sourceRectangle, cInner, 0f, mainOrigin, finalScale, spriteEffects, 0.49f);
             }
 
             // --- Draw Body ---
             if (asSilhouette && silhouetteToDraw != null)
             {
                 // Draw Silhouette Body
-                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos, sourceRectangle, silhouetteColor ?? Color.Gray, 0f, mainOrigin, scale, spriteEffects, 0.5f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos, sourceRectangle, silhouetteColor ?? Color.Gray, 0f, mainOrigin, finalScale, spriteEffects, 0.5f);
             }
             else if (isHighlighted && silhouetteToDraw != null)
             {
                 // Draw Highlight Body
                 Color hColor = highlightColor ?? Color.Yellow;
-                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos, sourceRectangle, hColor, 0f, mainOrigin, scale, spriteEffects, 0.5f);
+                spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos, sourceRectangle, hColor, 0f, mainOrigin, finalScale, spriteEffects, 0.5f);
 
                 // Draw Indicator ONLY if the color is Yellow (The "Flash" state)
                 if (hColor == Color.Yellow)
@@ -414,18 +440,18 @@ namespace ProjectVagabond.Battle.UI
             else
             {
                 // Draw Main Sprite
-                spriteBatch.DrawSnapped(textureToDraw, mainDrawPos, sourceRectangle, mainColor, 0f, mainOrigin, scale, spriteEffects, 0.5f);
+                spriteBatch.DrawSnapped(textureToDraw, mainDrawPos, sourceRectangle, mainColor, 0f, mainOrigin, finalScale, spriteEffects, 0.5f);
 
                 // --- Draw Flash Overlay ---
                 if (isFlashingWhite && silhouetteToDraw != null)
                 {
-                    spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos, sourceRectangle, Color.White * 0.8f, 0f, mainOrigin, scale, spriteEffects, 0.51f);
+                    spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos, sourceRectangle, Color.White * 0.8f, 0f, mainOrigin, finalScale, spriteEffects, 0.51f);
                 }
 
                 // --- Draw Low Health Overlay ---
                 if (lowHealthOverlay.HasValue && silhouetteToDraw != null)
                 {
-                    spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos, sourceRectangle, lowHealthOverlay.Value * alpha, 0f, mainOrigin, scale, spriteEffects, 0.51f);
+                    spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos, sourceRectangle, lowHealthOverlay.Value * alpha, 0f, mainOrigin, finalScale, spriteEffects, 0.51f);
                 }
             }
         }
