@@ -919,7 +919,7 @@
   {
     "MoveID": "36",
     "MoveName": "Leech Root",
-    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]DRAINS[/] {IsTargetProperNoun}[cSlot]{target}'S[/] LIFE FORCE WITH ROOTS.",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]DRAINS[/] {IsTargetProperNoun}[cSlot]{target}[/]'S LIFE FORCE WITH ROOTS.",
     "Description": "Drains life from the target.\nHeals user for [cpositive]50%[/] of damage dealt.",
     "Power": 60,
     "ManaCost": 15,
