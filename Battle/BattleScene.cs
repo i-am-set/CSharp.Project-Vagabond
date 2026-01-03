@@ -115,6 +115,13 @@ namespace ProjectVagabond.Scenes
         // --- VICTORY SEQUENCE STATE ---
         private bool _victorySequenceTriggered = false;
 
+        // --- REGEX FOR RANDOM WORD PARSING ---
+        // Matches words separated by $, e.g. "WORD$WORD$WORD"
+        // \b: Word boundary
+        // [\w\-\']+: A word (alphanumeric, hyphens, apostrophes)
+        // (?:\$[\w\-\']+)+: Non-capturing group for $ followed by another word, repeated 1+ times
+        private static readonly Regex _randomWordRegex = new Regex(@"\b[\w\-\']+(?:\$[\w\-\']+)+\b", RegexOptions.Compiled);
+
         public BattleAnimationManager AnimationManager => _animationManager;
 
         public BattleScene()
@@ -1311,7 +1318,15 @@ namespace ProjectVagabond.Scenes
 
         private string ParseActionPhrase(string phrase, BattleCombatant user, BattleCombatant? target, string? itemName)
         {
-            var sb = new StringBuilder(phrase);
+            // 1. Handle Random Variations FIRST
+            // This ensures that if a random word contains a tag (unlikely but possible), it gets processed later.
+            string processedPhrase = _randomWordRegex.Replace(phrase, (match) =>
+            {
+                var options = match.Value.Split('$');
+                return options[_random.Next(options.Length)];
+            });
+
+            var sb = new StringBuilder(processedPhrase);
 
             // User Name
             sb.Replace("{user}", user.Name.ToUpper());
