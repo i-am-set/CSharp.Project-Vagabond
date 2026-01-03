@@ -28,6 +28,10 @@ namespace ProjectVagabond.Scenes
         private const float ACTION_EXECUTION_DELAY = 0.5f; // Tunable delay before attack execution
         private const float FIXED_COIN_GROUND_Y = 115f;
         private const int ENEMY_SLOT_Y_OFFSET = 12;
+
+        // --- TUNING: Battle Entry ---
+        private const float BATTLE_ENTRY_INITIAL_DELAY = 0.0f; // Delay before enemies start dropping
+
         private BattleManager _battleManager;
         private BattleUIManager _uiManager;
         private BattleRenderer _renderer;
@@ -205,7 +209,10 @@ namespace ProjectVagabond.Scenes
                 // --- INTRO SEQUENCE SETUP ---
                 _currentIntroPhase = IntroPhase.EnemyDrop;
                 _introSequenceQueue.Clear();
-                _introTimer = 0f;
+
+                // Initialize timer with the requested delay
+                _introTimer = BATTLE_ENTRY_INITIAL_DELAY;
+
                 _uiSlideTimer = 0f;
 
                 // 1. Hide Players and UI initially
@@ -557,8 +564,8 @@ namespace ProjectVagabond.Scenes
             // --- INTRO SEQUENCE LOGIC ---
             if (_battleManager.CurrentPhase == BattleManager.BattlePhase.BattleStartIntro)
             {
-                // REMOVED: Wait for transition to clear check.
-                // This allows animations to start immediately upon scene entry.
+                // Wait for transition to clear
+                if (_transitionManager.IsTransitioning) return;
 
                 if (_currentIntroPhase == IntroPhase.EnemyDrop)
                 {

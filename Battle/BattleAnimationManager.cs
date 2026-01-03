@@ -264,7 +264,7 @@ namespace ProjectVagabond.Battle.UI
         private const float COIN_INDIVIDUAL_DISPENSE_DELAY = 1.75f; // Increased stagger to prevent clumping
 
         // Spawning Physics
-        private const float COIN_VELOCITY_X_RANGE = 45f; // +/- this value
+        private const float COIN_VELOCITY_X_RANGE = 120f; // Increased from 45f to spread coins wider
         private const float COIN_VELOCITY_Y_MIN = -200f; // Upward force min
         private const float COIN_VELOCITY_Y_MAX = -100f; // Upward force max
 
@@ -1116,7 +1116,7 @@ namespace ProjectVagabond.Battle.UI
 
                 var coin = new CoinParticle
                 {
-                    Position = origin,
+                    Position = origin + new Vector2((float)(_random.NextDouble() * 20 - 10), 0), // Add jitter to start pos
                     Velocity = new Vector2(
                         (float)(_random.NextDouble() * (COIN_VELOCITY_X_RANGE * 2) - COIN_VELOCITY_X_RANGE), // Spread X
                         (float)(_random.NextDouble() * (COIN_VELOCITY_Y_MAX - COIN_VELOCITY_Y_MIN) + COIN_VELOCITY_Y_MIN) // Burst Up Y
