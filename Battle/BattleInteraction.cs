@@ -43,7 +43,10 @@ namespace ProjectVagabond.Battle
         {
             // Check for valid bench members for the actor's team
             var bench = bm.AllCombatants
-                .Where(c => c.IsPlayerControlled == Actor.IsPlayerControlled && !c.IsDefeated && c.BattleSlot >= 2)
+                .Where(c => c != Actor &&
+                            c.IsPlayerControlled == Actor.IsPlayerControlled &&
+                            !c.IsDefeated &&
+                            c.BattleSlot >= 2)
                 .ToList();
 
             if (!bench.Any())
@@ -63,9 +66,18 @@ namespace ProjectVagabond.Battle
             {
                 // AI: Pick best bench member
                 // Simple AI: Pick highest HP %
-                var target = bench.OrderByDescending(c => (float)c.Stats.CurrentHP / c.Stats.MaxHP).First();
-                System.Diagnostics.Debug.WriteLine($"[SwitchInteraction] AI {Actor.Name} switching to {target.Name}.");
-                Resolve(target);
+                var target = bench.OrderByDescending(c => (float)c.Stats.CurrentHP / c.Stats.MaxHP).FirstOrDefault();
+
+                if (target != null)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[SwitchInteraction] AI {Actor.Name} switching to {target.Name}.");
+                    Resolve(target);
+                }
+                else
+                {
+                    // Should be covered by bench.Any() check, but safe fallback
+                    Resolve(null);
+                }
             }
         }
     }

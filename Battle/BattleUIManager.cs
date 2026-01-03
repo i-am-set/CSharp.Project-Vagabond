@@ -301,7 +301,8 @@ namespace ProjectVagabond.Battle.UI
             }
 
             // 2. Update Action Menu (Pass blocking flag)
-            _actionMenu.Update(currentMouseState, gameTime, isInputBlocked: targetingHovered);
+            bool isPhaseBlocked = currentActor == null;
+            _actionMenu.Update(currentMouseState, gameTime, isInputBlocked: targetingHovered || isPhaseBlocked);
 
             if (SubMenuState == BattleSubMenuState.Item)
             {

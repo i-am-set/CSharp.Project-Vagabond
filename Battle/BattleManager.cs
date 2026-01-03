@@ -236,7 +236,7 @@ namespace ProjectVagabond.Battle
 
             _activeInteraction = new SwitchInteraction(e.Actor, (result) =>
             {
-                if (result is BattleCombatant target)
+                if (result is BattleCombatant target && target != e.Actor)
                 {
                     Debug.WriteLine($"[BattleManager] SwitchInteraction resolved. Target: {target.Name}. Initiating sequence.");
                     // Hand off control to the Scene Director
@@ -244,7 +244,7 @@ namespace ProjectVagabond.Battle
                 }
                 else
                 {
-                    Debug.WriteLine($"[BattleManager] SwitchInteraction resolved with NULL. Cancelling switch.");
+                    Debug.WriteLine($"[BattleManager] SwitchInteraction resolved with NULL or Invalid Target. Cancelling switch.");
                     // Cancelled or failed
                     _currentPhase = BattlePhase.CheckForDefeat;
                     CanAdvance = true;
@@ -279,7 +279,8 @@ namespace ProjectVagabond.Battle
 
         public void PerformLogicalSwitch(BattleCombatant actor, BattleCombatant incomingMember)
         {
-            if (actor == null || incomingMember == null) return;
+            // FIX: Guard against self-switch
+            if (actor == null || incomingMember == null || actor == incomingMember) return;
 
             incomingMember.IsDying = false;
             incomingMember.IsRemovalProcessed = false;

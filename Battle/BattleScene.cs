@@ -551,6 +551,9 @@ namespace ProjectVagabond.Scenes
                 return;
             }
 
+            var currentKeyboardState = Keyboard.GetState();
+            var currentMouseState = Mouse.GetState();
+
             // --- INTRO SEQUENCE LOGIC ---
             if (_battleManager.CurrentPhase == BattleManager.BattlePhase.BattleStartIntro)
             {
@@ -604,6 +607,9 @@ namespace ProjectVagabond.Scenes
                 // Update animations during intro
                 _animationManager.Update(gameTime, _battleManager.AllCombatants);
                 _renderer.Update(gameTime, _battleManager.AllCombatants, _animationManager, null);
+
+                _uiManager.Update(gameTime, currentMouseState, currentKeyboardState, null);
+
                 return; // Skip normal update loop
             }
 
@@ -657,9 +663,6 @@ namespace ProjectVagabond.Scenes
                     }
                 }
             }
-
-            var currentKeyboardState = Keyboard.GetState();
-            var currentMouseState = Mouse.GetState();
 
             _animationManager.Update(gameTime, _battleManager.AllCombatants);
             _moveAnimationManager.Update(gameTime);
