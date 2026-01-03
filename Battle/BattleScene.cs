@@ -1465,8 +1465,8 @@ namespace ProjectVagabond.Scenes
 
             if (e.CriticalHitCount > 0)
             {
-                if (e.CriticalHitCount == 1) _uiManager.ShowNarration("Landed a\n[Bounce][cCrit]CRITICAL HIT[/][/]!");
-                else _uiManager.ShowNarration($"Landed {e.CriticalHitCount}\n[Bounce][cCrit]CRITICAL HITS[/][/]!");
+                if (e.CriticalHitCount == 1) _uiManager.ShowNarration("Landed a\n[DriftWave][cCrit]CRITICAL HIT[/][/]!");
+                else _uiManager.ShowNarration($"Landed {e.CriticalHitCount}\n[DriftWave][cCrit]CRITICAL HITS[/][/]!");
             }
             _isWaitingForMultiHitDelay = false;
             _multiHitDelayTimer = 0f;
@@ -1501,7 +1501,7 @@ namespace ProjectVagabond.Scenes
                 foreach (var target in sortedGrazes)
                 {
                     string targetName = GetSmartName(target);
-                    _uiManager.ShowNarration($"{targetName} WAS [drift]GRAZED[/].");
+                    _uiManager.ShowNarration($"{targetName} WAS [DriftWave][cgraze]GRAZED[/][/].");
                 }
             }
 
@@ -1611,7 +1611,7 @@ namespace ProjectVagabond.Scenes
                 if (result.WasCritical)
                 {
                     _animationManager.StartDamageIndicator(target.CombatantID, "CRITICAL HIT", hudPosition, ServiceLocator.Get<Global>().CritcalHitIndicatorColor);
-                    if (!isMultiHit) _uiManager.ShowNarration($"A [Bounce][cCrit]CRITICAL HIT[/][/] on {target.Name}!");
+                    if (!isMultiHit) _uiManager.ShowNarration($"A [DriftWave][cCrit]CRITICAL HIT[/][/] on {target.Name}!");
                 }
 
                 if (result.WasProtected)
@@ -1704,7 +1704,7 @@ namespace ProjectVagabond.Scenes
 
         private void OnCombatantDefeated(GameEvents.CombatantDefeated e)
         {
-            _uiManager.ShowNarration($"{e.DefeatedCombatant.Name} was [flicker][cDefeat]DEFEATED[/][/]!");
+            _uiManager.ShowNarration($"{e.DefeatedCombatant.Name} was [FlickerWave][cDefeat]DEFEATED[/][/]!");
             TriggerDeathAnimation(e.DefeatedCombatant);
             if (!e.DefeatedCombatant.IsPlayerControlled)
             {

@@ -535,6 +535,7 @@ namespace ProjectVagabond
                 if (lowerTag == "cenemy") return ColorNarration_Enemy;
                 if (lowerTag == "cstatus") return ColorNarration_Status;
                 if (lowerTag == "cslot") return ColorNarration_Default;
+                if (lowerTag == "cgraze") return GrazeIndicatorColor;
                 if (lowerTag == "cbrightwhite") return Palette_BrightWhite;
 
                 if (lowerTag == "cred") return Palette_Red;

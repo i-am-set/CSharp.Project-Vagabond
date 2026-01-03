@@ -1103,12 +1103,17 @@ namespace ProjectVagabond.Battle.UI
                     Vector2 nameSize = font.MeasureString(player.Name);
                     Vector2 namePos = new Vector2(center.X - nameSize.X / 2f, BattleLayout.PLAYER_NAME_TOP_Y);
                     Color nameColor = (highlight == Color.Yellow) ? _global.Palette_Yellow : _global.Palette_BrightWhite;
+
+                    // --- NAME DIMMING LOGIC ---
+                    bool isHovered = (hoveredCombatant == player) || (uiManager.HoveredCombatantFromUI == player);
+                    if (isHovered) nameColor = _global.Palette_Gray;
+
                     spriteBatch.DrawStringSnapped(font, player.Name, namePos, nameColor);
                 }
 
                 Vector2 barPos = GetCombatantBarPosition(player);
                 float barX = barPos.X - BattleLayout.PLAYER_BAR_WIDTH / 2f;
-                float barY = barPos.Y;
+                float barY = barPos.Y + 4; // Shift down 4 pixels
 
                 if (player.VisualHealthBarAlpha > 0.01f || player.VisualManaBarAlpha > 0.01f)
                 {

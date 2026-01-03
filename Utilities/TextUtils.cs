@@ -1,10 +1,42 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.Utils;
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using System.Text;
 
 namespace ProjectVagabond.Utils
 {
+    public enum TextEffectType
+    {
+        None,
+        Wave,           // Standard Sine Wave (Y offset)
+        Shake,          // Random Jitter
+        PopWave,        // Wave + Scaling (Balatro style)
+        Wobble,         // Sine Wave Rotation
+        Nervous,        // Fast, small shake + slight rotation
+        Rainbow,        // Color Cycle (No movement)
+        RainbowWave,    // Color Cycle + Wave
+        Pop,            // Scaling Pulse (No movement)
+        Bounce,         // Bouncing ball motion (Absolute Sine)
+        Drift,          // Horizontal Sine Wave
+        Glitch,         // Chaotic offsets and color tints
+        Flicker,        // Opacity pulsing
+        DriftBounce,    // Horizontal Drift + Vertical Bounce
+        DriftWave,      // Horizontal Drift + Vertical Wave
+        FlickerBounce,  // Opacity Pulse + Vertical Bounce
+        FlickerWave     // Opacity Pulse + Vertical Wave
+    }
+
     public static class TextUtils
     {
         // --- TUNING PARAMETERS ---
@@ -166,6 +198,40 @@ namespace ProjectVagabond.Utils
                     float alphaNoise = (f1 - MathF.Floor(f1));
                     float alpha = MathHelper.Lerp(FLICKER_MIN_ALPHA, FLICKER_MAX_ALPHA, alphaNoise);
                     color = baseColor * alpha;
+                    break;
+
+                case TextEffectType.DriftBounce:
+                    float dbDriftArg = time * DRIFT_SPEED + charIndex * DRIFT_FREQUENCY;
+                    offset.X = MathF.Sin(dbDriftArg) * DRIFT_AMPLITUDE;
+                    float dbBounceArg = time * BOUNCE_SPEED + charIndex * BOUNCE_FREQUENCY;
+                    offset.Y = -MathF.Abs(MathF.Sin(dbBounceArg)) * BOUNCE_AMPLITUDE;
+                    break;
+
+                case TextEffectType.DriftWave:
+                    float dwDriftArg = time * DRIFT_SPEED + charIndex * DRIFT_FREQUENCY;
+                    offset.X = MathF.Sin(dwDriftArg) * DRIFT_AMPLITUDE;
+                    float dwWaveArg = time * WAVE_SPEED + charIndex * WAVE_FREQUENCY;
+                    offset.Y = MathF.Sin(dwWaveArg) * WAVE_AMPLITUDE;
+                    break;
+
+                case TextEffectType.FlickerBounce:
+                    float fbTime = MathF.Floor(time * FLICKER_SPEED);
+                    float fb1 = MathF.Sin(fbTime * 12.9898f + charIndex) * 43758.5453f;
+                    float fbAlphaNoise = (fb1 - MathF.Floor(fb1));
+                    float fbAlpha = MathHelper.Lerp(FLICKER_MIN_ALPHA, FLICKER_MAX_ALPHA, fbAlphaNoise);
+                    color = baseColor * fbAlpha;
+                    float fbBounceArg = time * BOUNCE_SPEED + charIndex * BOUNCE_FREQUENCY;
+                    offset.Y = -MathF.Abs(MathF.Sin(fbBounceArg)) * BOUNCE_AMPLITUDE;
+                    break;
+
+                case TextEffectType.FlickerWave:
+                    float fwTime = MathF.Floor(time * FLICKER_SPEED);
+                    float fw1 = MathF.Sin(fwTime * 12.9898f + charIndex) * 43758.5453f;
+                    float fwAlphaNoise = (fw1 - MathF.Floor(fw1));
+                    float fwAlpha = MathHelper.Lerp(FLICKER_MIN_ALPHA, FLICKER_MAX_ALPHA, fwAlphaNoise);
+                    color = baseColor * fwAlpha;
+                    float fwWaveArg = time * WAVE_SPEED + charIndex * WAVE_FREQUENCY;
+                    offset.Y = MathF.Sin(fwWaveArg) * WAVE_AMPLITUDE;
                     break;
             }
 

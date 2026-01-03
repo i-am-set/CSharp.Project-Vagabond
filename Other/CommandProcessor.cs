@@ -93,7 +93,10 @@ namespace ProjectVagabond
                 Log("[drift]Drift: The quick brown fox jumps over the lazy dog.[/]");
                 Log("[glitch]Glitch: The quick brown fox jumps over the lazy dog.[/]");
                 Log("[flicker]Flicker: The quick brown fox jumps over the lazy dog.[/]");
-                Log("[wave][rainbow]Combo (Wave+Rainbow): The quick brown fox jumps over the lazy dog.[/][/]");
+                Log("[driftbounce]DriftBounce: The quick brown fox jumps over the lazy dog.[/]");
+                Log("[driftwave]DriftWave: The quick brown fox jumps over the lazy dog.[/]");
+                Log("[flickerbounce]FlickerBounce: The quick brown fox jumps over the lazy dog.[/]");
+                Log("[flickerwave]FlickerWave: The quick brown fox jumps over the lazy dog.[/]");
             }, "debug_text_anims - Displays all available text animations.");
 
             // --- COLORS COMMAND ---
