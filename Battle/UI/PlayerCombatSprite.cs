@@ -2,7 +2,6 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.UI;
@@ -10,7 +9,6 @@ using ProjectVagabond.Utils;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
@@ -51,10 +49,6 @@ namespace ProjectVagabond.Battle.UI
 
         // Squash and Stretch State
         private Vector2 _scale = Vector2.One;
-
-        // TUNING: Lower speed = bouncier/longer deformation. Higher = stiffer.
-        // 8f gives a nice visible "jelly" feel.
-        private const float SQUASH_RECOVERY_SPEED = 4f;
 
         // Noise generator for organic sway
         private static readonly SeededPerlin _swayNoise = new SeededPerlin(8888);
@@ -130,8 +124,8 @@ namespace ProjectVagabond.Battle.UI
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
             // Update Squash and Stretch (Elastic Recovery)
-            // We use a simple lerp here, but with the high initial values, it looks bouncy.
-            _scale = Vector2.Lerp(_scale, Vector2.One, dt * SQUASH_RECOVERY_SPEED);
+            var global = ServiceLocator.Get<Global>();
+            _scale = Vector2.Lerp(_scale, Vector2.One, dt * global.SquashRecoverySpeed);
 
             // If not active (not their turn), reset to base frame and do not animate
             if (!isActive)

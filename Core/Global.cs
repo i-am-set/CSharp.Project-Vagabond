@@ -269,6 +269,9 @@ namespace ProjectVagabond
         public float LowHealthFlashSpeedMin { get; set; } = 2.0f; // Speed at 50% HP
         public float LowHealthFlashSpeedMax { get; set; } = 10.0f; // Speed at 1% HP
 
+        // --- ANIMATION TUNING ---
+        public float SquashRecoverySpeed { get; set; } = 4f;
+
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         // INSTANCE VARIABLES
@@ -530,7 +533,7 @@ namespace ProjectVagabond
                 if (lowerTag == "cescape") return ColorNarration_Escaped;
                 if (lowerTag == "cenemy") return ColorNarration_Enemy;
                 if (lowerTag == "cstatus") return ColorNarration_Status;
-                if (lowerTag == "cslot") return ColorNarration_Default; 
+                if (lowerTag == "cslot") return ColorNarration_Default;
                 if (lowerTag == "cbrightwhite") return Palette_BrightWhite;
 
                 if (lowerTag == "cred") return Palette_Red;

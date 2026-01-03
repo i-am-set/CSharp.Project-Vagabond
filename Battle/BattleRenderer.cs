@@ -80,7 +80,6 @@ namespace ProjectVagabond.Battle.UI
 
         // --- SQUASH AND STRETCH STATE (Enemies) ---
         private readonly Dictionary<string, Vector2> _enemySquashScales = new Dictionary<string, Vector2>();
-        private const float SQUASH_RECOVERY_SPEED = 4f;
 
         // Status Icon Hop Data
         private class StatusIconAnim { public string CombatantID; public StatusEffectType Type; public float Timer; public const float DURATION = 0.3f; public const float HEIGHT = 5f; }
@@ -249,7 +248,7 @@ namespace ProjectVagabond.Battle.UI
             var keys = _enemySquashScales.Keys.ToList();
             foreach (var key in keys)
             {
-                _enemySquashScales[key] = Vector2.Lerp(_enemySquashScales[key], Vector2.One, dt * SQUASH_RECOVERY_SPEED);
+                _enemySquashScales[key] = Vector2.Lerp(_enemySquashScales[key], Vector2.One, dt * _global.SquashRecoverySpeed);
             }
         }
 
