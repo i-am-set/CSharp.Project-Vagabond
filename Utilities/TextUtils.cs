@@ -19,7 +19,7 @@ namespace ProjectVagabond.Utils
         private const float POP_FREQUENCY = 0.4f;
         private const float POP_AMPLITUDE = 1.0f;
         private const float POP_SCALE_MIN = 0.8f;
-        private const float POP_SCALE_MAX = 1.3f;
+        private const float POP_SCALE_MAX = 1.2f;
 
         // Wobble
         private const float WOBBLE_SPEED = 3f;
@@ -50,7 +50,7 @@ namespace ProjectVagabond.Utils
         // Drift
         private const float DRIFT_SPEED = 3f;
         private const float DRIFT_FREQUENCY = 0.3f;
-        private const float DRIFT_AMPLITUDE = 1.0f;
+        private const float DRIFT_AMPLITUDE = 0.75f;
 
         // Glitch
         private const float GLITCH_SPEED = 20f; // Faster

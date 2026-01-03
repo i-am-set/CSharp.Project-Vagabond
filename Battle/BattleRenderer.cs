@@ -1073,12 +1073,13 @@ namespace ProjectVagabond.Battle.UI
                 // Pass rotation to sprite draw
                 sprite.Draw(spriteBatch, animManager, player, tint, isHighlighted, pulse, isSilhouetted, silhouetteColor, gameTime, highlight, outlineColor, scale, lowHealthOverlay, rotation);
 
-                Rectangle bounds = new Rectangle((int)(baseCenter.X - 16), (int)(baseCenter.Y - 16), 32, 32);
+                // Use 'center' (animated) instead of 'baseCenter' (static) for bounds calculation
+                Rectangle bounds = new Rectangle((int)(center.X - 16), (int)(center.Y - 16), 32, 32);
                 Rectangle hitBox = GetPatternAlignedRect(bounds);
 
                 _currentTargets.Add(new TargetInfo { Combatant = player, Bounds = hitBox });
                 _combatantVisualCenters[player.CombatantID] = hitBox.Center.ToVector2();
-                _combatantStaticCenters[player.CombatantID] = baseCenter;
+                _combatantStaticCenters[player.CombatantID] = center; // Use center here too
 
                 bool isActingAndHoveringManaMove = false;
                 if (player == currentActor && uiManager.HoveredMove != null)

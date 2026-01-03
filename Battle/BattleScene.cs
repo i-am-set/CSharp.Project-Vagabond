@@ -1465,8 +1465,8 @@ namespace ProjectVagabond.Scenes
 
             if (e.CriticalHitCount > 0)
             {
-                if (e.CriticalHitCount == 1) _uiManager.ShowNarration("Landed a\n[shake][cCrit]CRITICAL HIT[/][/]!");
-                else _uiManager.ShowNarration($"Landed {e.CriticalHitCount}\n[shake][cCrit]CRITICAL HITS[/][/]!");
+                if (e.CriticalHitCount == 1) _uiManager.ShowNarration("Landed a\n[Bounce][cCrit]CRITICAL HIT[/][/]!");
+                else _uiManager.ShowNarration($"Landed {e.CriticalHitCount}\n[Bounce][cCrit]CRITICAL HITS[/][/]!");
             }
             _isWaitingForMultiHitDelay = false;
             _multiHitDelayTimer = 0f;
@@ -1611,7 +1611,7 @@ namespace ProjectVagabond.Scenes
                 if (result.WasCritical)
                 {
                     _animationManager.StartDamageIndicator(target.CombatantID, "CRITICAL HIT", hudPosition, ServiceLocator.Get<Global>().CritcalHitIndicatorColor);
-                    if (!isMultiHit) _uiManager.ShowNarration($"A [shake][cCrit]CRITICAL HIT[/][/] on {target.Name}!");
+                    if (!isMultiHit) _uiManager.ShowNarration($"A [Bounce][cCrit]CRITICAL HIT[/][/] on {target.Name}!");
                 }
 
                 if (result.WasProtected)
@@ -1804,7 +1804,7 @@ namespace ProjectVagabond.Scenes
 
         private void OnNextEnemyApproaches(GameEvents.NextEnemyApproaches e)
         {
-            _uiManager.ShowNarration("Another [nervous][cEnemy]ENEMY[/][/] approaches...");
+            _uiManager.ShowNarration("[Wave]Another [Bounce][cEnemy]ENEMY[/][/][Wave] approaches...[/]");
         }
 
         private void OnCombatantSpawned(GameEvents.CombatantSpawned e)
