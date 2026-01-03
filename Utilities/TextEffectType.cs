@@ -7,7 +7,13 @@
         Shake,          // Random Jitter
         PopWave,        // Wave + Scaling (Balatro style)
         Wobble,         // Sine Wave Rotation
-        Rainbow,        // Color Cycle
-        Nervous         // Fast, small shake + slight rotation
+        Nervous,        // Fast, small shake + slight rotation
+        Rainbow,        // Color Cycle (No movement)
+        RainbowWave,    // Color Cycle + Wave
+        Pop,            // Scaling Pulse (No movement)
+        Bounce,         // Bouncing ball motion (Absolute Sine)
+        Drift,          // Horizontal Sine Wave
+        Glitch,         // Chaotic offsets and color tints
+        Flicker         // Opacity pulsing
     }
 }

@@ -78,15 +78,21 @@ namespace ProjectVagabond
             _commands["clear"] = new Command("clear", (args) => ServiceLocator.Get<Utils.DebugConsole>().ClearHistory(), "clear - Clears history.");
 
             // --- TEXT ANIMATION DEBUG ---
-            _commands["debug_textanims"] = new Command("debug_text_anims", (args) =>
+            _commands["debug_text_anims"] = new Command("debug_text_anims", (args) =>
             {
                 Log("--- Text Animation Showcase ---");
                 Log("[wave]Wave: The quick brown fox jumps over the lazy dog.[/]");
                 Log("[popwave]PopWave: The quick brown fox jumps over the lazy dog.[/]");
+                Log("[pop]Pop: The quick brown fox jumps over the lazy dog.[/]");
                 Log("[shake]Shake: The quick brown fox jumps over the lazy dog.[/]");
                 Log("[wobble]Wobble: The quick brown fox jumps over the lazy dog.[/]");
                 Log("[nervous]Nervous: The quick brown fox jumps over the lazy dog.[/]");
                 Log("[rainbow]Rainbow: The quick brown fox jumps over the lazy dog.[/]");
+                Log("[rainbowwave]RainbowWave: The quick brown fox jumps over the lazy dog.[/]");
+                Log("[bounce]Bounce: The quick brown fox jumps over the lazy dog.[/]");
+                Log("[drift]Drift: The quick brown fox jumps over the lazy dog.[/]");
+                Log("[glitch]Glitch: The quick brown fox jumps over the lazy dog.[/]");
+                Log("[flicker]Flicker: The quick brown fox jumps over the lazy dog.[/]");
                 Log("[wave][rainbow]Combo (Wave+Rainbow): The quick brown fox jumps over the lazy dog.[/][/]");
             }, "debug_text_anims - Displays all available text animations.");
 
