@@ -250,6 +250,11 @@ namespace ProjectVagabond.Battle.UI
             // --- Draw Players ---
             DrawPlayers(spriteBatch, font, players, currentActor, shouldGrayOut, selectableTargets, animationManager, silhouetteColors, gameTime, uiManager, hoveredCombatant);
 
+            // --- Draw Targeting Highlights (Dotted Rectangles) ---
+            // Pass the effective focused combatant (either from sprite hover or UI button hover)
+            var effectiveFocus = hoveredCombatant ?? uiManager.HoveredCombatantFromUI;
+            DrawTargetingHighlights(spriteBatch, uiManager, gameTime, silhouetteColors, effectiveFocus);
+
             // --- Draw UI Title ---
             DrawUITitle(spriteBatch, gameTime, uiManager.SubMenuState);
 
@@ -276,6 +281,115 @@ namespace ProjectVagabond.Battle.UI
                     _vfxRenderer.DrawStatChangeTooltip(spriteBatch, target, _statTooltipAlpha, hasInsight, center, gameTime);
                 }
             }
+        }
+
+        private void DrawTargetingHighlights(SpriteBatch spriteBatch, BattleUIManager uiManager, GameTime gameTime, Dictionary<string, Color> silhouetteColors, BattleCombatant focusedCombatant)
+        {
+            // Only draw if a move is hovered in the action menu (not during explicit targeting state, which has its own UI)
+            if (uiManager.HoveredMove == null) return;
+
+            // Get the list of valid targets for the hovered move
+            var targets = uiManager.HoverHighlightState.Targets;
+            if (targets == null || !targets.Any()) return;
+
+            // --- FILTERING LOGIC ---
+            IEnumerable<BattleCombatant> targetsToDraw = targets;
+            bool isTargetingMode = uiManager.UIState == BattleUIState.Targeting || uiManager.UIState == BattleUIState.ItemTargeting;
+
+            if (isTargetingMode && focusedCombatant != null)
+            {
+                var type = uiManager.TargetTypeForSelection ?? TargetType.None;
+                // Check for multi-target types (including Random ones which usually select group)
+                bool isMulti = type == TargetType.All || type == TargetType.Both || type == TargetType.Every ||
+                               type == TargetType.Team || type == TargetType.RandomAll || type == TargetType.RandomBoth || type == TargetType.RandomEvery;
+
+                if (!isMulti)
+                {
+                    if (targets.Contains(focusedCombatant))
+                    {
+                        // Single target mode: Only draw the rect for the focused guy
+                        targetsToDraw = new List<BattleCombatant> { focusedCombatant };
+                    }
+                    else
+                    {
+                        // Hovering something invalid? Don't draw anything.
+                        targetsToDraw = Enumerable.Empty<BattleCombatant>();
+                    }
+                }
+                // If Multi, we keep 'targetsToDraw' as is (all valid targets), because hovering one implies selecting the group.
+            }
+
+            var pixel = ServiceLocator.Get<Texture2D>();
+            float offset = (float)gameTime.TotalGameTime.TotalSeconds * 20f; // Animation speed
+
+            // Pattern constants
+            const float dashLength = 4f;
+            const float gapLength = 4f;
+
+            foreach (var target in targetsToDraw)
+            {
+                // Find the bounds for this target in _currentTargets
+                var targetInfo = _currentTargets.FirstOrDefault(t => t.Combatant == target);
+
+                // If found (it should be, unless off-screen or dead/hidden)
+                if (targetInfo.Combatant != null)
+                {
+                    // --- INVERSE COLOR LOGIC ---
+                    // Default to Red if not found
+                    Color highlightColor = silhouetteColors.ContainsKey(target.CombatantID) ? silhouetteColors[target.CombatantID] : _global.Palette_Red;
+
+                    // If Highlight is Yellow (Color.Yellow), Rect is Red. 
+                    // If Highlight is Red (Palette_Red), Rect is Yellow (Color.Yellow).
+                    Color rectColor = (highlightColor == Color.Yellow) ? _global.Palette_Red : Color.Yellow;
+
+                    // Use the pre-calculated snapped bounds directly
+                    var rect = targetInfo.Bounds;
+
+                    // --- DRAW OUTLINED ANTS ---
+                    // Draw the dotted line 4 times in black (offset by 1px) to create an outline around the dots
+                    spriteBatch.DrawAnimatedDottedRectangle(pixel, new Rectangle(rect.X - 1, rect.Y, rect.Width, rect.Height), _global.Palette_Black, 1f, dashLength, gapLength, offset);
+                    spriteBatch.DrawAnimatedDottedRectangle(pixel, new Rectangle(rect.X + 1, rect.Y, rect.Width, rect.Height), _global.Palette_Black, 1f, dashLength, gapLength, offset);
+                    spriteBatch.DrawAnimatedDottedRectangle(pixel, new Rectangle(rect.X, rect.Y - 1, rect.Width, rect.Height), _global.Palette_Black, 1f, dashLength, gapLength, offset);
+                    spriteBatch.DrawAnimatedDottedRectangle(pixel, new Rectangle(rect.X, rect.Y + 1, rect.Width, rect.Height), _global.Palette_Black, 1f, dashLength, gapLength, offset);
+
+                    // Draw Main Colored Dotted Line
+                    spriteBatch.DrawAnimatedDottedRectangle(pixel, rect, rectColor, 1f, dashLength, gapLength, offset);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Calculates a rectangle that tightly fits the sprite but is expanded to be a perfect multiple of the dotted line pattern (8px).
+        /// This ensures corners line up seamlessly during animation.
+        /// </summary>
+        private Rectangle GetPatternAlignedRect(Rectangle baseRect)
+        {
+            const int patternLength = 8; // 4 dash + 4 gap
+
+            // Ensure at least 2 pixels of padding on every side (Total +4)
+            float minW = baseRect.Width + 4;
+            float minH = baseRect.Height + 4;
+
+            // Round up to next multiple of patternLength
+            float targetW = MathF.Ceiling(minW / patternLength) * patternLength;
+            float targetH = MathF.Ceiling(minH / patternLength) * patternLength;
+
+            int newW = (int)targetW;
+            int newH = (int)targetH;
+
+            // Center the new larger rect on the original rect's center
+            int newX = baseRect.Center.X - (newW / 2);
+            int newY = baseRect.Center.Y - (newH / 2);
+
+            return new Rectangle(newX, newY, newW, newH);
+        }
+
+        private void DrawRectangleBorder(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, int thickness, Color color)
+        {
+            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.Left, rect.Top, rect.Width, thickness), color);
+            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.Left, rect.Bottom - thickness, rect.Width, thickness), color);
+            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.Left, rect.Top, thickness, rect.Height), color);
+            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.Right - thickness, rect.Top, thickness, rect.Height), color);
         }
 
         public void DrawOverlay(SpriteBatch spriteBatch, BitmapFont font)
@@ -812,7 +926,73 @@ namespace ProjectVagabond.Battle.UI
                     // The hitbox should be based on the STATIC position (center.X, center.Y)
                     // excluding bob, spawnY, recoil, and slideOffset.
                     // center.X already includes the centering slide, which is correct for the slot position.
-                    Rectangle hitBox = new Rectangle((int)(center.X - spriteSize / 2f), (int)(center.Y), spriteSize, spriteSize);
+
+                    // --- NEW: Calculate Precise Static Bounds (Union of all parts) ---
+                    // Instead of a generic box, we use the pixel offsets from the sprite manager.
+                    // We use Frame 0 (static) offsets.
+                    var topOffsets = _spriteManager.GetEnemySpriteTopPixelOffsets(enemy.ArchetypeId);
+                    var leftOffsets = _spriteManager.GetEnemySpriteLeftPixelOffsets(enemy.ArchetypeId);
+                    var rightOffsets = _spriteManager.GetEnemySpriteRightPixelOffsets(enemy.ArchetypeId);
+                    var bottomOffsets = _spriteManager.GetEnemySpriteBottomPixelOffsets(enemy.ArchetypeId);
+
+                    Rectangle hitBox;
+
+                    if (topOffsets != null && topOffsets.Length > 0)
+                    {
+                        // Calculate the union of all parts
+                        int minX = int.MaxValue;
+                        int minY = int.MaxValue;
+                        int maxX = int.MinValue;
+                        int maxY = int.MinValue;
+                        bool foundAny = false;
+
+                        // Iterate through all parts (limbs)
+                        for (int i = 0; i < topOffsets.Length; i++)
+                        {
+                            int top = topOffsets[i];
+                            int left = leftOffsets[i];
+                            int right = rightOffsets[i];
+                            int bottom = bottomOffsets[i];
+
+                            if (top != int.MaxValue)
+                            {
+                                foundAny = true;
+                                if (left < minX) minX = left;
+                                if (top < minY) minY = top;
+                                if (right > maxX) maxX = right;
+                                if (bottom > maxY) maxY = bottom;
+                            }
+                        }
+
+                        if (foundAny)
+                        {
+                            // Calculate top-left of the sprite frame
+                            // center is (visualX, ENEMY_SLOT_Y_OFFSET)
+                            // Top-Left of frame is (center.X - spriteSize/2, center.Y)
+                            int frameX = (int)(center.X - spriteSize / 2f);
+                            int frameY = (int)center.Y;
+
+                            // Apply offsets
+                            int x = frameX + minX;
+                            int y = frameY + minY;
+                            int w = (maxX - minX) + 1;
+                            int h = (maxY - minY) + 1;
+
+                            // Use the snapped rect helper to ensure seamless animation
+                            hitBox = GetPatternAlignedRect(new Rectangle(x, y, w, h));
+                        }
+                        else
+                        {
+                            // Fallback if all frames empty
+                            hitBox = GetPatternAlignedRect(new Rectangle((int)(center.X - spriteSize / 2f), (int)(center.Y), spriteSize, spriteSize));
+                        }
+                    }
+                    else
+                    {
+                        // Fallback if no offsets available
+                        hitBox = GetPatternAlignedRect(new Rectangle((int)(center.X - spriteSize / 2f), (int)(center.Y), spriteSize, spriteSize));
+                    }
+
                     _currentTargets.Add(new TargetInfo { Combatant = enemy, Bounds = hitBox });
                     _combatantVisualCenters[enemy.CombatantID] = hitBox.Center.ToVector2();
 
@@ -965,11 +1145,14 @@ namespace ProjectVagabond.Battle.UI
                 // --- HITBOX CALCULATION FIX ---
                 // Use the base slot position (baseCenter) for the hitbox, ignoring the turn offset (yOffset).
                 // This ensures the hitbox stays in the "exact slot position" as requested.
+                // Player sprites are 32x32.
                 Rectangle bounds = new Rectangle((int)(baseCenter.X - 16), (int)(baseCenter.Y - 16), 32, 32);
-                bounds.Inflate(4, 4); // Match padding in PlayerCombatSprite
 
-                _currentTargets.Add(new TargetInfo { Combatant = player, Bounds = bounds });
-                _combatantVisualCenters[player.CombatantID] = bounds.Center.ToVector2();
+                // Use the snapped rect helper to ensure seamless animation
+                Rectangle hitBox = GetPatternAlignedRect(bounds);
+
+                _currentTargets.Add(new TargetInfo { Combatant = player, Bounds = hitBox });
+                _combatantVisualCenters[player.CombatantID] = hitBox.Center.ToVector2();
 
                 // --- Calculate and Store Static Center ---
                 // For players, the sprite is drawn centered on 'center' (which includes turn offset).
