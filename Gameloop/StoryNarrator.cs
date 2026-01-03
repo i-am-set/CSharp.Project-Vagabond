@@ -28,13 +28,15 @@ namespace ProjectVagabond.UI
             public Color Color;
             public float Width;
             public bool IsNewline;
+            public bool IsSmall; // New flag for font switching
 
-            public NarratorToken(string text, Color color, float width, bool isNewline = false)
+            public NarratorToken(string text, Color color, float width, bool isNewline = false, bool isSmall = false)
             {
                 Text = text;
                 Color = color;
                 Width = width;
                 IsNewline = isNewline;
+                IsSmall = isSmall;
             }
         }
 
@@ -51,6 +53,7 @@ namespace ProjectVagabond.UI
         private float _wrapWidth;
         private int _maxVisibleLines;
         private BitmapFont? _font;
+        private BitmapFont? _tertiaryFont; // Added for small text
 
         private MouseState _previousMouseState;
         private KeyboardState _previousKeyboardState;
@@ -122,6 +125,8 @@ namespace ProjectVagabond.UI
         private void ParseAndLayoutMessage(string message)
         {
             _font ??= ServiceLocator.Get<Core>().SecondaryFont;
+            _tertiaryFont ??= ServiceLocator.Get<Core>().TertiaryFont;
+
             const int padding = 5;
             _wrapWidth = _bounds.Width - (padding * 4);
             _maxVisibleLines = (_bounds.Height - (padding * 2)) / (_font.LineHeight + LINE_SPACING);
@@ -130,7 +135,7 @@ namespace ProjectVagabond.UI
             var currentLine = new List<NarratorToken>();
             float currentLineWidth = 0f;
 
-            // 1. Parse into raw tokens (Text + Color)
+            // 1. Parse into raw tokens (Text + Color + Font)
             var rawTokens = ParseRichText(message);
 
             // 2. Layout tokens into lines (Word Wrapping)
@@ -145,7 +150,7 @@ namespace ProjectVagabond.UI
                 }
 
                 // Split token text by spaces to handle word wrapping
-                // We keep the color of the original token
+                // We keep the color and font of the original token
                 string[] words = Regex.Split(token.Text, @"( )"); // Split but keep delimiters
 
                 foreach (var word in words)
@@ -153,7 +158,17 @@ namespace ProjectVagabond.UI
                     if (string.IsNullOrEmpty(word)) continue;
 
                     // Use fixed width for spaces, otherwise measure font
-                    float wordWidth = (word == " ") ? SPACE_WIDTH : _font.MeasureString(word).Width;
+                    float wordWidth;
+                    if (word == " ")
+                    {
+                        wordWidth = SPACE_WIDTH;
+                    }
+                    else
+                    {
+                        // Measure using the correct font
+                        var fontToUse = token.IsSmall ? _tertiaryFont : _font;
+                        wordWidth = fontToUse.MeasureString(word).Width;
+                    }
 
                     // Check if word fits
                     if (currentLineWidth + wordWidth > _wrapWidth && currentLine.Count > 0)
@@ -167,7 +182,7 @@ namespace ProjectVagabond.UI
                     }
 
                     // Add word as a new token to the line
-                    currentLine.Add(new NarratorToken(word, token.Color, wordWidth));
+                    currentLine.Add(new NarratorToken(word, token.Color, wordWidth, false, token.IsSmall));
                     currentLineWidth += wordWidth;
                 }
             }
@@ -182,8 +197,10 @@ namespace ProjectVagabond.UI
         {
             var tokens = new List<NarratorToken>();
             var colorStack = new Stack<Color>();
+            var fontStack = new Stack<bool>(); // true = small, false = normal
 
             colorStack.Push(_global.ColorNarration_Default);
+            fontStack.Push(false); // Default to normal font
 
             // Regex to split by tags [tag] or newlines
             var parts = Regex.Split(text, @"(\[.*?\]|\n)");
@@ -199,12 +216,23 @@ namespace ProjectVagabond.UI
                 else if (part.StartsWith("[") && part.EndsWith("]"))
                 {
                     string tagContent = part.Substring(1, part.Length - 2);
-                    if (tagContent == "/" || tagContent.Equals("default", StringComparison.OrdinalIgnoreCase))
+
+                    // Handle Font Tags
+                    if (tagContent.Equals("small", StringComparison.OrdinalIgnoreCase))
                     {
+                        fontStack.Push(true);
+                    }
+                    else if (tagContent == "/" || tagContent.Equals("default", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Pop color stack if > 1
                         if (colorStack.Count > 1) colorStack.Pop();
+
+                        // Pop font stack if > 1
+                        if (fontStack.Count > 1) fontStack.Pop();
                     }
                     else
                     {
+                        // Assume color tag
                         colorStack.Push(ParseColor(tagContent));
                     }
                 }
@@ -213,7 +241,7 @@ namespace ProjectVagabond.UI
                     // Regular text
                     // Uppercase it here to match game style
                     string content = part.ToUpper();
-                    tokens.Add(new NarratorToken(content, colorStack.Peek(), 0)); // Width calculated later
+                    tokens.Add(new NarratorToken(content, colorStack.Peek(), 0, false, fontStack.Peek())); // Width calculated later
                 }
             }
 
@@ -359,7 +387,17 @@ namespace ProjectVagabond.UI
                         textToDraw = token.Text.Substring(0, _currentCharIndex);
                     }
 
-                    spriteBatch.DrawStringSnapped(font, textToDraw, new Vector2(currentX, currentY), token.Color);
+                    // Select font based on token property
+                    var fontToUse = token.IsSmall ? _tertiaryFont : font;
+
+                    // Adjust Y for small font to align baseline roughly
+                    float yOffset = 0;
+                    if (token.IsSmall)
+                    {
+                        yOffset = (font.LineHeight - fontToUse.LineHeight) / 2f + 1;
+                    }
+
+                    spriteBatch.DrawStringSnapped(fontToUse, textToDraw, new Vector2(currentX, currentY + yOffset), token.Color);
                     currentX += token.Width;
                 }
             }

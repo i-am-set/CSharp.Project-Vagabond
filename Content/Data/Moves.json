@@ -451,7 +451,7 @@
   {
     "MoveID": "18",
     "MoveName": "Fleeing Curse",
-    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]CURSES[/] {IsTargetProperNoun}[cSlot]{target}[/] AND [cAction]FLEES[/].",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]CURSES[/] {IsTargetProperNoun}[cSlot]{target}[/] AND FLEES.",
     "Description": "Lowers target's [cstr]Strength[/] and [cint]Intelligence[/], then switches the user out.",
     "Power": 0,
     "ManaCost": 20,

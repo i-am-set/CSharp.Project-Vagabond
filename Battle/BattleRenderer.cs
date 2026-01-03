@@ -808,7 +808,11 @@ namespace ProjectVagabond.Battle.UI
                 // Only add hitboxes for ACTIVE enemies (not dying ones)
                 if (!enemy.IsDefeated)
                 {
-                    Rectangle hitBox = new Rectangle((int)(center.X - spriteSize / 2f), (int)(center.Y + bob + spawnY), spriteSize, spriteSize);
+                    // --- HITBOX CALCULATION FIX ---
+                    // The hitbox should be based on the STATIC position (center.X, center.Y)
+                    // excluding bob, spawnY, recoil, and slideOffset.
+                    // center.X already includes the centering slide, which is correct for the slot position.
+                    Rectangle hitBox = new Rectangle((int)(center.X - spriteSize / 2f), (int)(center.Y), spriteSize, spriteSize);
                     _currentTargets.Add(new TargetInfo { Combatant = enemy, Bounds = hitBox });
                     _combatantVisualCenters[enemy.CombatantID] = hitBox.Center.ToVector2();
 
@@ -958,15 +962,20 @@ namespace ProjectVagabond.Battle.UI
 
                 sprite.Draw(spriteBatch, animManager, player, tint, isHighlighted, pulse, isSilhouetted, silhouetteColor, gameTime, highlight, outlineColor, scale, lowHealthOverlay);
 
-                Rectangle bounds = sprite.GetStaticBounds(animManager, player);
+                // --- HITBOX CALCULATION FIX ---
+                // Use the base slot position (baseCenter) for the hitbox, ignoring the turn offset (yOffset).
+                // This ensures the hitbox stays in the "exact slot position" as requested.
+                Rectangle bounds = new Rectangle((int)(baseCenter.X - 16), (int)(baseCenter.Y - 16), 32, 32);
+                bounds.Inflate(4, 4); // Match padding in PlayerCombatSprite
+
                 _currentTargets.Add(new TargetInfo { Combatant = player, Bounds = bounds });
                 _combatantVisualCenters[player.CombatantID] = bounds.Center.ToVector2();
 
                 // --- Calculate and Store Static Center ---
                 // For players, the sprite is drawn centered on 'center' (which includes turn offset).
-                // The static bounds are centered on 'center'.
-                // So the static center is just 'center'.
-                _combatantStaticCenters[player.CombatantID] = center;
+                // The static bounds are centered on 'baseCenter'.
+                // So the static center is 'baseCenter'.
+                _combatantStaticCenters[player.CombatantID] = baseCenter;
 
                 // --- VISIBILITY LOGIC ---
                 // Check if this player is the current actor AND hovering a mana move

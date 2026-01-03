@@ -1330,9 +1330,9 @@ namespace ProjectVagabond.Scenes
                 // Check if there are multiple enemies with the exact same name
                 if (activeEnemies.Count(c => c.Name == combatant.Name) > 1)
                 {
-                    // Append the number suffix
-                    if (combatant.BattleSlot == 0) name = name + " [cPrefix]#1[/]";
-                    else if (combatant.BattleSlot == 1) name = name + " [cPrefix]#2[/]";
+                    // Append the number suffix wrapped in [small] tag
+                    if (combatant.BattleSlot == 0) name = name + " [small][cPrefix]#1[/][/]";
+                    else if (combatant.BattleSlot == 1) name = name + " [small][cPrefix]#2[/][/]";
                 }
             }
             return name;
@@ -1341,7 +1341,6 @@ namespace ProjectVagabond.Scenes
         private string ParseActionPhrase(string phrase, BattleCombatant user, BattleCombatant? target, string? itemName)
         {
             // 1. Handle Random Variations FIRST
-            // This ensures that if a random word contains a tag (unlikely but possible), it gets processed later.
             string processedPhrase = _randomWordRegex.Replace(phrase, (match) =>
             {
                 var options = match.Value.Split('$');
@@ -1355,6 +1354,27 @@ namespace ProjectVagabond.Scenes
             sb.Replace("{IsUserProperNoun}", userProperNounPrefix);
 
             // Use Smart Name for User
+            sb.Replace("{user}", GetSmartName(user));
+
+            // --- CONTEXTUAL SLOT COLOR REPLACEMENT ---
+            // 1. Replace [cSlot] for User
+            string userColor = user.IsPlayerControlled ? "[cDefault]" : "[cEnemy]";
+            sb.Replace("[cSlot]{user}", $"{userColor}{{user}}");
+
+            // 2. Replace [cSlot] for Target
+            if (target != null)
+            {
+                string targetColor = target.IsPlayerControlled ? "[cDefault]" : "[cEnemy]";
+                sb.Replace("[cSlot]{target}", $"{targetColor}{{target}}");
+            }
+            else
+            {
+                // Cleanup if no target
+                sb.Replace("[cSlot]{target}", "{target}");
+            }
+
+            // 3. Now proceed with Name replacements
+            sb.Replace("{IsUserProperNoun}", userProperNounPrefix);
             sb.Replace("{user}", GetSmartName(user));
 
             // User Pronouns
@@ -1440,6 +1460,34 @@ namespace ProjectVagabond.Scenes
 
             bool isMultiHit = e.ChosenMove != null && e.ChosenMove.Effects.ContainsKey("MultiHit");
             if (isMultiHit) _isWaitingForMultiHitDelay = true;
+
+            // --- GRAZE NARRATION LOGIC ---
+            var grazedTargets = new List<BattleCombatant>();
+            for (int i = 0; i < e.Targets.Count; i++)
+            {
+                if (e.DamageResults[i].WasGraze)
+                {
+                    grazedTargets.Add(e.Targets[i]);
+                }
+            }
+
+            if (grazedTargets.Any())
+            {
+                // Sort: Players first, then Enemies. Within group, Slot 0 then Slot 1.
+                // IsPlayerControlled: true for players.
+                // OrderByDescending(IsPlayerControlled) puts true (Players) before false (Enemies).
+                // ThenBy(BattleSlot) puts 0 before 1.
+                var sortedGrazes = grazedTargets
+                    .OrderByDescending(c => c.IsPlayerControlled)
+                    .ThenBy(c => c.BattleSlot)
+                    .ToList();
+
+                foreach (var target in sortedGrazes)
+                {
+                    string targetName = GetSmartName(target);
+                    _uiManager.ShowNarration($"{targetName} WAS GRAZED.");
+                }
+            }
 
             for (int i = 0; i < e.Targets.Count; i++)
             {
