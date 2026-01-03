@@ -14,8 +14,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.Battle.UI
 {
@@ -860,8 +858,23 @@ namespace ProjectVagabond.Battle.UI
                 Color? lowHealthOverlay = null;
                 if (enemy.LowHealthFlashTimer > 0f && !enemy.IsDefeated)
                 {
-                    float flashAlpha = (MathF.Sin(enemy.LowHealthFlashTimer) + 1f) / 2f * 0.6f;
-                    lowHealthOverlay = _global.LowHealthFlashColor * flashAlpha;
+                    // Double Flash Pattern: Flash -> Flash -> Pause
+                    // Cycle length is tunable via Global
+                    float patternLen = _global.LowHealthFlashPatternLength;
+                    float cycleT = enemy.LowHealthFlashTimer % patternLen;
+                    float rawAlpha = 0f;
+
+                    if (cycleT < 1.0f)
+                        rawAlpha = 1.0f - cycleT; // First Flash (Fade Out)
+                    else if (cycleT >= 1.0f && cycleT < 2.0f)
+                        rawAlpha = 1.0f - (cycleT - 1.0f); // Second Flash (Fade Out)
+                    // Else: Pause (0 alpha)
+
+                    // Apply max intensity (0.6)
+                    float flashAlpha = rawAlpha * 0.6f;
+
+                    if (flashAlpha > 0)
+                        lowHealthOverlay = _global.LowHealthFlashColor * flashAlpha;
                 }
 
                 _entityRenderer.DrawEnemy(spriteBatch, enemy, spriteRect, offsets, shake, alpha, silhouetteAmt, silhouetteColor, isHighlighted, highlight, outlineColor, flashWhite, tint * alpha, scale, transform, lowHealthOverlay);
@@ -977,7 +990,7 @@ namespace ProjectVagabond.Battle.UI
                 float spawnY = 0f;
                 float alpha = player.VisualAlpha;
                 float scale = 1.0f;
-                float rotation = 0f;
+                float rotation = 0f; // New rotation variable
                 Vector2 slideOffset = Vector2.Zero;
 
                 if (introSlide != null)
@@ -1038,8 +1051,23 @@ namespace ProjectVagabond.Battle.UI
                 Color? lowHealthOverlay = null;
                 if (player.LowHealthFlashTimer > 0f && !player.IsDefeated)
                 {
-                    float flashAlpha = (MathF.Sin(player.LowHealthFlashTimer) + 1f) / 2f * 0.6f;
-                    lowHealthOverlay = _global.LowHealthFlashColor * flashAlpha;
+                    // Double Flash Pattern: Flash -> Flash -> Pause
+                    // Cycle length is tunable via Global
+                    float patternLen = _global.LowHealthFlashPatternLength;
+                    float cycleT = player.LowHealthFlashTimer % patternLen;
+                    float rawAlpha = 0f;
+
+                    if (cycleT < 1.0f)
+                        rawAlpha = 1.0f - cycleT; // First Flash (Fade Out)
+                    else if (cycleT >= 1.0f && cycleT < 2.0f)
+                        rawAlpha = 1.0f - (cycleT - 1.0f); // Second Flash (Fade Out)
+                    // Else: Pause (0 alpha)
+
+                    // Apply max intensity (0.6)
+                    float flashAlpha = rawAlpha * 0.6f;
+
+                    if (flashAlpha > 0)
+                        lowHealthOverlay = _global.LowHealthFlashColor * flashAlpha;
                 }
 
                 // Pass rotation to sprite draw

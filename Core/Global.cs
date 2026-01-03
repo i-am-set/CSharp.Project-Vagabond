@@ -266,8 +266,9 @@ namespace ProjectVagabond
         // --- LOW HEALTH FLASH TUNING ---
         public Color LowHealthFlashColor { get; set; } = new Color(181, 65, 49);
         public float LowHealthThreshold { get; set; } = 0.25f; // 50%
-        public float LowHealthFlashSpeedMin { get; set; } = 2.0f; // Speed at 50% HP
-        public float LowHealthFlashSpeedMax { get; set; } = 10.0f; // Speed at 1% HP
+        public float LowHealthFlashSpeedMin { get; set; } = 1.5f; // Reduced from 2.0
+        public float LowHealthFlashSpeedMax { get; set; } = 4.0f; // Reduced from 10.0
+        public float LowHealthFlashPatternLength { get; set; } = 7.0f; // Controls the cycle length (Flash-Flash-Pause)
 
         // --- ANIMATION TUNING ---
         public float SquashRecoverySpeed { get; set; } = 4f;
