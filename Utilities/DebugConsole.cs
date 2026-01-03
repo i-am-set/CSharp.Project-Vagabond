@@ -13,12 +13,11 @@ namespace ProjectVagabond.Utils
 {
     /// <summary>
     /// A debug console overlay for entering commands and viewing logs.
-    /// Features: History, Auto-Complete, Line Selection, Copy-Paste.
+    /// Features: History, Auto-Complete, Line Selection, Copy-Paste, Rich Text Animations.
     /// </summary>
     public class DebugConsole
     {
         public bool IsVisible { get; private set; }
-
         private readonly GameState _gameState;
         private readonly Global _global;
         private readonly CommandProcessor _commandProcessor;
@@ -175,7 +174,7 @@ namespace ProjectVagabond.Utils
                     case LogSeverity.Info: baseColor = _global.Palette_LightGray; break;
                 }
 
-                var coloredLine = ParseColoredText(log.Text, baseColor);
+                var coloredLine = ParseRichText(log.Text, baseColor);
                 _history.Add(coloredLine);
                 newLogsAdded = true;
             }
@@ -416,9 +415,6 @@ namespace ProjectVagabond.Utils
                 var core = ServiceLocator.Get<Core>();
 
                 // Determine which font to use based on the index
-                // Index 0: Passed font (which Core now sends as Secondary)
-                // Index 1: Default Font (Px437)
-                // Index 2: Tertiary Font (3x4)
                 BitmapFont activeFont = _currentFontIndex switch
                 {
                     1 => core.DefaultFont,
@@ -459,10 +455,45 @@ namespace ProjectVagabond.Utils
 
                     float currentX = 5;
                     var line = _history[historyIndex];
+
                     foreach (var segment in line.Segments)
                     {
-                        spriteBatch.DrawString(activeFont, segment.Text, new Vector2(currentX, lineY), segment.Color);
-                        currentX += activeFont.MeasureString(segment.Text).Width;
+                        if (segment.Effect == TextEffectType.None)
+                        {
+                            spriteBatch.DrawString(activeFont, segment.Text, new Vector2(currentX, lineY), segment.Color);
+                            currentX += activeFont.MeasureString(segment.Text).Width;
+                        }
+                        else
+                        {
+                            // Render character by character for effects
+                            for (int c = 0; c < segment.Text.Length; c++)
+                            {
+                                char charToDraw = segment.Text[c];
+                                string charStr = charToDraw.ToString();
+
+                                // Sentinel trick for correct spacing
+                                string sub = segment.Text.Substring(0, c);
+                                float charOffsetX = activeFont.MeasureString(sub + "|").Width - activeFont.MeasureString("|").Width;
+
+                                // Calculate transform
+                                // Use a pseudo-global index to keep waves continuous across the line
+                                int globalIndex = c + (historyIndex * 10);
+
+                                var (offset, scale, rotation, color) = TextUtils.GetTextEffectTransform(
+                                    segment.Effect,
+                                    (float)gameTime.TotalGameTime.TotalSeconds,
+                                    globalIndex,
+                                    segment.Color
+                                );
+
+                                Vector2 pos = new Vector2(currentX + charOffsetX, lineY) + offset;
+                                Vector2 origin = activeFont.MeasureString(charStr) / 2f;
+
+                                // Draw centered on the character position to support rotation/scale
+                                spriteBatch.DrawString(activeFont, charStr, pos + origin, color, rotation, origin, scale, SpriteEffects.None, 0f);
+                            }
+                            currentX += activeFont.MeasureString(segment.Text).Width;
+                        }
                     }
                 }
 
@@ -528,30 +559,76 @@ namespace ProjectVagabond.Utils
             }
         }
 
-        private ColoredLine ParseColoredText(string text, Color? baseColor = null)
+        private ColoredLine ParseRichText(string text, Color? baseColor = null)
         {
             var line = new ColoredLine();
-            var currentColor = baseColor ?? _global.Palette_BrightWhite;
+            var colorStack = new Stack<Color>();
+            var effectStack = new Stack<TextEffectType>();
+
+            colorStack.Push(baseColor ?? _global.Palette_BrightWhite);
+            effectStack.Push(TextEffectType.None);
+
             var currentText = "";
 
             for (int i = 0; i < text.Length; i++)
             {
                 if (text[i] == '[')
                 {
-                    if (i + 1 < text.Length && text[i + 1] == '[') { currentText += '['; i++; continue; }
-                    if (currentText.Length > 0) { line.Segments.Add(new ColoredText(currentText, currentColor)); currentText = ""; }
+                    // Check for escaped bracket [[
+                    if (i + 1 < text.Length && text[i + 1] == '[')
+                    {
+                        currentText += '[';
+                        i++;
+                        continue;
+                    }
+
+                    // Flush current text
+                    if (currentText.Length > 0)
+                    {
+                        line.Segments.Add(new ColoredText(currentText, colorStack.Peek(), effectStack.Peek()));
+                        currentText = "";
+                    }
+
                     int closeIndex = text.IndexOf(']', i);
                     if (closeIndex != -1)
                     {
-                        string colorTag = text.Substring(i + 1, closeIndex - i - 1);
+                        string tagContent = text.Substring(i + 1, closeIndex - i - 1);
                         i = closeIndex;
-                        currentColor = colorTag == "/" ? (baseColor ?? _global.Palette_BrightWhite) : ParseColor(colorTag);
+
+                        if (tagContent == "/")
+                        {
+                            // Pop stacks, but keep at least one item
+                            if (colorStack.Count > 1) colorStack.Pop();
+                            if (effectStack.Count > 1) effectStack.Pop();
+                        }
+                        else if (Enum.TryParse<TextEffectType>(tagContent, true, out var effect))
+                        {
+                            effectStack.Push(effect);
+                            // Push current color again to keep stacks aligned in depth? 
+                            // No, we track them independently. The current segment uses Peek() from both.
+                        }
+                        else
+                        {
+                            // Assume color
+                            colorStack.Push(ParseColor(tagContent));
+                        }
                     }
-                    else currentText += text[i];
+                    else
+                    {
+                        currentText += text[i];
+                    }
                 }
-                else currentText += text[i];
+                else
+                {
+                    currentText += text[i];
+                }
             }
-            if (currentText.Length > 0) line.Segments.Add(new ColoredText(currentText, currentColor));
+
+            if (currentText.Length > 0)
+            {
+                line.Segments.Add(new ColoredText(currentText, colorStack.Peek(), effectStack.Peek()));
+            }
+
             return line;
         }
 

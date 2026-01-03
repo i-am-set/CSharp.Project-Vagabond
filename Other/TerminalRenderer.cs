@@ -29,7 +29,6 @@ namespace ProjectVagabond
         private List<ColoredLine> _wrappedCombatHistory = new List<ColoredLine>();
         private bool _historyDirty = true;
         private bool _combatHistoryDirty = true;
-
         public int ScrollOffset = 0;
         public int CombatScrollOffset = 0;
 
@@ -79,7 +78,7 @@ namespace ProjectVagabond
                 unwrappedHistory.Clear();
                 scrollOffset = 0;
 
-                var truncationMessage = ParseColoredText("--- HISTORY TRUNCATED ---", _global.Palette_Gray);
+                var truncationMessage = ParseRichText("--- HISTORY TRUNCATED ---", _global.Palette_Gray);
                 truncationMessage.LineNumber = 1;
                 unwrappedHistory.Add(truncationMessage);
                 unwrappedHistory.AddRange(keptLines);
@@ -95,7 +94,7 @@ namespace ProjectVagabond
                 nextLineNumber = currentLineNum;
             }
 
-            var coloredLine = ParseColoredText(message, baseColor ?? _global.OutputTextColor);
+            var coloredLine = ParseRichText(message, baseColor ?? _global.OutputTextColor);
             coloredLine.LineNumber = nextLineNumber++;
             unwrappedHistory.Add(coloredLine);
             historyDirty = true;
@@ -206,18 +205,57 @@ namespace ProjectVagabond
 
                 foreach (var segment in line.Segments)
                 {
-                    spriteBatch.DrawStringSnapped(font, segment.Text, new Vector2(x, y), segment.Color);
-                    x += font.MeasureString(segment.Text).Width;
+                    if (segment.Effect == TextEffectType.None)
+                    {
+                        spriteBatch.DrawStringSnapped(font, segment.Text, new Vector2(x, y), segment.Color);
+                        x += font.MeasureString(segment.Text).Width;
+                    }
+                    else
+                    {
+                        // Render character by character for effects
+                        for (int c = 0; c < segment.Text.Length; c++)
+                        {
+                            char charToDraw = segment.Text[c];
+                            string charStr = charToDraw.ToString();
+
+                            // Sentinel trick for correct spacing
+                            string sub = segment.Text.Substring(0, c);
+                            float charOffsetX = font.MeasureString(sub + "|").Width - font.MeasureString("|").Width;
+
+                            // Calculate transform
+                            // Use a pseudo-global index to keep waves continuous across the line
+                            int globalIndex = c + (historyIndex * 10);
+
+                            var (offset, scale, rotation, color) = TextUtils.GetTextEffectTransform(
+                                segment.Effect,
+                                (float)gameTime.TotalGameTime.TotalSeconds,
+                                globalIndex,
+                                segment.Color
+                            );
+
+                            Vector2 pos = new Vector2(x + charOffsetX, y) + offset;
+                            Vector2 origin = font.MeasureString(charStr) / 2f;
+
+                            // Draw centered on the character position to support rotation/scale
+                            spriteBatch.DrawString(font, charStr, pos + origin, color, rotation, origin, scale, SpriteEffects.None, 0f);
+                        }
+                        x += font.MeasureString(segment.Text).Width;
+                    }
                 }
             }
         }
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
-        private ColoredLine ParseColoredText(string text, Color? baseColor = null)
+        private ColoredLine ParseRichText(string text, Color? baseColor = null)
         {
             var line = new ColoredLine();
-            var currentColor = baseColor ?? _global.InputTextColor;
+            var colorStack = new Stack<Color>();
+            var effectStack = new Stack<TextEffectType>();
+
+            colorStack.Push(baseColor ?? _global.InputTextColor);
+            effectStack.Push(TextEffectType.None);
+
             var currentText = "";
 
             for (int i = 0; i < text.Length; i++)
@@ -234,28 +272,38 @@ namespace ProjectVagabond
 
                     if (currentText.Length > 0)
                     {
-                        line.Segments.Add(new ColoredText(currentText, currentColor));
+                        line.Segments.Add(new ColoredText(currentText, colorStack.Peek(), effectStack.Peek()));
                         currentText = "";
                     }
 
                     int closeIndex = text.IndexOf(']', i);
                     if (closeIndex != -1)
                     {
-                        string colorTag = text.Substring(i + 1, closeIndex - i - 1);
+                        string tagContent = text.Substring(i + 1, closeIndex - i - 1);
                         i = closeIndex;
 
-                        if (colorTag == "/")
+                        if (tagContent == "/")
                         {
-                            currentColor = _global.InputTextColor;
+                            // Pop stacks, but keep at least one item
+                            if (colorStack.Count > 1) colorStack.Pop();
+                            if (effectStack.Count > 1) effectStack.Pop();
                         }
-                        else if (colorTag == "/o")
+                        else if (tagContent == "/o")
                         {
-                            currentColor = _global.OutputTextColor;
+                            // Reset to output color (legacy support)
+                            colorStack.Clear();
+                            colorStack.Push(_global.OutputTextColor);
+                            effectStack.Clear();
+                            effectStack.Push(TextEffectType.None);
+                        }
+                        else if (Enum.TryParse<TextEffectType>(tagContent, true, out var effect))
+                        {
+                            effectStack.Push(effect);
                         }
                         else
                         {
-                            if (colorTag == "error") _hapticsManager.TriggerCompoundShake(0.1f);
-                            currentColor = ParseColor(colorTag);
+                            if (tagContent == "error") _hapticsManager.TriggerCompoundShake(0.1f);
+                            colorStack.Push(ParseColor(tagContent));
                         }
                     }
                     else
@@ -271,7 +319,7 @@ namespace ProjectVagabond
 
             if (currentText.Length > 0)
             {
-                line.Segments.Add(new ColoredText(currentText, currentColor));
+                line.Segments.Add(new ColoredText(currentText, colorStack.Peek(), effectStack.Peek()));
             }
 
             return line;
@@ -405,14 +453,16 @@ namespace ProjectVagabond
                     }
 
                     // Add the token to the now-current line.
-                    // First, merge with last segment if colors match.
-                    if (currentLine.Segments.Any() && currentLine.Segments.Last().Color == segment.Color)
+                    // First, merge with last segment if colors AND effects match.
+                    if (currentLine.Segments.Any() &&
+                        currentLine.Segments.Last().Color == segment.Color &&
+                        currentLine.Segments.Last().Effect == segment.Effect)
                     {
                         currentLine.Segments.Last().Text += token;
                     }
                     else // Otherwise, create a new segment.
                     {
-                        currentLine.Segments.Add(new ColoredText(token, segment.Color));
+                        currentLine.Segments.Add(new ColoredText(token, segment.Color, segment.Effect));
                     }
                     // Append to our text tracker for measurement.
                     currentLineText.Append(token);
@@ -432,49 +482,6 @@ namespace ProjectVagabond
             }
 
             return wrappedLines;
-        }
-
-        private string WrapText(string text, float maxWidthInPixels, BitmapFont font)
-        {
-            if (string.IsNullOrEmpty(text))
-                return text;
-
-            var finalLines = new List<string>();
-            string[] existingLines = text.Split('\n');
-
-            foreach (string line in existingLines)
-            {
-                if (font.MeasureString(line).Width <= maxWidthInPixels)
-                {
-                    finalLines.Add(line);
-                }
-                else
-                {
-                    var words = Regex.Split(line, @"(\s+)").Where(s => !string.IsNullOrEmpty(s)).ToArray();
-                    var currentLine = new StringBuilder();
-
-                    foreach (string word in words)
-                    {
-                        bool isSpace = string.IsNullOrWhiteSpace(word);
-                        float potentialWidth = font.MeasureString(currentLine.ToString() + word).Width;
-
-                        if (!isSpace && currentLine.Length > 0 && potentialWidth > maxWidthInPixels)
-                        {
-                            finalLines.Add(currentLine.ToString());
-                            currentLine.Clear();
-                        }
-
-                        currentLine.Append(word);
-                    }
-
-                    if (currentLine.Length > 0)
-                    {
-                        finalLines.Add(currentLine.ToString());
-                    }
-                }
-            }
-
-            return string.Join("\n", finalLines);
         }
 
         private float GetTerminalContentWidthInPixels()

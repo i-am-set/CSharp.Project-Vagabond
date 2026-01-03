@@ -1,8 +1,4 @@
 ﻿using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
-using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Dice;
@@ -32,7 +28,6 @@ namespace ProjectVagabond
 
         private void Log(string message)
         {
-            // Log to both the debug console (via GameLogger) and the in-game terminal (via EventBus)
             GameLogger.Log(LogSeverity.Info, message);
             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = message });
         }
@@ -46,33 +41,32 @@ namespace ProjectVagabond
                 var sb = new StringBuilder();
                 sb.AppendLine("[palette_yellow]Available Commands:[/]");
                 sb.AppendLine("  [palette_teal]System & Debug[/]");
-                sb.AppendLine("    debug_colors                         - Lists all colors in rainbow order.");
-                sb.AppendLine("    test_abilities                     - Runs unit tests on ability logic.");
-                sb.AppendLine("    test_items                          - Verifies all items load correctly.");
-                sb.AppendLine("    clear                                - Clears console.");
-                sb.AppendLine("    exit                                 - Exits game.");
-                sb.AppendLine("    debug_combat                         - Starts a random forest combat.");
-                sb.AppendLine("    debug_shop                           - Opens a random shop interface.");
-                sb.AppendLine("    debug_rest                           - Opens the rest site interface.");
-                sb.AppendLine("    debug_recruit                        - Opens the recruit interface.");
-                sb.AppendLine("    debug_combatrun                           - Flees from combat.");
-                sb.AppendLine("    debug_givestatus <slot> <type> {dur}  - Apply status to party member.");
-                sb.AppendLine("    debug_consolefont <0|1|2>         - Sets the debug console font.");
+                sb.AppendLine("    debug_text_anims                   - Shows all text animations.");
+                sb.AppendLine("    debug_colors                       - Lists all colors.");
+                sb.AppendLine("    clear                              - Clears console.");
+                sb.AppendLine("    exit                               - Exits game.");
+                sb.AppendLine("    debug_combat                       - Starts a random forest combat.");
+                sb.AppendLine("    debug_shop                         - Opens a random shop interface.");
+                sb.AppendLine("    debug_rest                         - Opens the rest site interface.");
+                sb.AppendLine("    debug_recruit                      - Opens the recruit interface.");
+                sb.AppendLine("    debug_combatrun                    - Flees from combat.");
+                sb.AppendLine("    debug_givestatus <slot> <type> {dur} - Apply status.");
+                sb.AppendLine("    debug_consolefont <0|1|2>          - Sets the debug console font.");
+                sb.AppendLine("    debug_damageparty <slot> <%>             - Damages member.");
                 sb.AppendLine();
                 sb.AppendLine("  [palette_teal]Party & Inventory[/]");
                 sb.AppendLine("    addmember <id>                     - Adds a party member.");
-                sb.AppendLine("    damageparty <slot> <%>             - Damages member by % of Max HP.");
-                sb.AppendLine("    inventory                           - Shows all inventories.");
-                sb.AppendLine("    giveall                             - Gives 1 of every item.");
+                sb.AppendLine("    inventory                          - Shows all inventories.");
+                sb.AppendLine("    giveall                            - Gives 1 of every item.");
                 sb.AppendLine("    givecoin <amount>                  - Adds coin.");
                 sb.AppendLine("    setcoin <amount>                   - Sets coin amount.");
                 sb.AppendLine("    removecoin <amount>                - Removes coin.");
-                sb.AppendLine("    giveweapon <id> {n}               - Adds weapon(s).");
+                sb.AppendLine("    giveweapon <id> {n}                - Adds weapon(s).");
                 sb.AppendLine("    equipweapon <id>                   - Equips a weapon.");
                 sb.AppendLine("    unequipweapon                      - Unequips current weapon.");
-                sb.AppendLine("    givearmor <id> {n}                - Adds armor(s).");
-                sb.AppendLine("    giverelic <id> {n}                - Adds relic(s).");
-                sb.AppendLine("    giveconsumable <id> {n}          - Adds consumable(s).");
+                sb.AppendLine("    givearmor <id> {n}                 - Adds armor(s).");
+                sb.AppendLine("    giverelic <id> {n}                 - Adds relic(s).");
+                sb.AppendLine("    giveconsumable <id> {n}            - Adds consumable(s).");
                 sb.AppendLine("    givespell <id>                     - Adds a spell.");
 
                 foreach (var line in sb.ToString().Split(new[] { Environment.NewLine }, StringSplitOptions.None))
@@ -82,6 +76,19 @@ namespace ProjectVagabond
             }, "help - Shows this help message.");
 
             _commands["clear"] = new Command("clear", (args) => ServiceLocator.Get<Utils.DebugConsole>().ClearHistory(), "clear - Clears history.");
+
+            // --- TEXT ANIMATION DEBUG ---
+            _commands["debug_textanims"] = new Command("debug_text_anims", (args) =>
+            {
+                Log("--- Text Animation Showcase ---");
+                Log("[wave]Wave: The quick brown fox jumps over the lazy dog.[/]");
+                Log("[popwave]PopWave: The quick brown fox jumps over the lazy dog.[/]");
+                Log("[shake]Shake: The quick brown fox jumps over the lazy dog.[/]");
+                Log("[wobble]Wobble: The quick brown fox jumps over the lazy dog.[/]");
+                Log("[nervous]Nervous: The quick brown fox jumps over the lazy dog.[/]");
+                Log("[rainbow]Rainbow: The quick brown fox jumps over the lazy dog.[/]");
+                Log("[wave][rainbow]Combo (Wave+Rainbow): The quick brown fox jumps over the lazy dog.[/][/]");
+            }, "debug_text_anims - Displays all available text animations.");
 
             // --- COLORS COMMAND ---
             _commands["debug_colors"] = new Command("debug_colors", (args) =>
@@ -140,29 +147,24 @@ namespace ProjectVagabond
                     bool grayA = satA < 0.1f || (a.Color.R == a.Color.G && a.Color.G == a.Color.B);
                     bool grayB = satB < 0.1f || (b.Color.R == b.Color.G && b.Color.G == b.Color.B);
 
-                    // Put grayscale at the bottom
                     if (grayA && !grayB) return 1;
                     if (!grayA && grayB) return -1;
 
                     if (grayA && grayB)
                     {
-                        // Sort grayscale by brightness
                         return GetBrightness(b.Color).CompareTo(GetBrightness(a.Color));
                     }
 
-                    // Sort colors by Hue
                     float hueA = GetHue(a.Color);
                     float hueB = GetHue(b.Color);
                     if (Math.Abs(hueA - hueB) > 1f) return hueA.CompareTo(hueB);
 
-                    // If Hue is similar, sort by Brightness
                     return GetBrightness(b.Color).CompareTo(GetBrightness(a.Color));
                 });
 
                 Log("--- MonoGame Colors (Rainbow Order) ---");
                 foreach (var (color, name) in colorList)
                 {
-                    // Transparent doesn't render well
                     if (color == Color.Transparent) continue;
                     Log($"[{name}]{name}[/]");
                 }
