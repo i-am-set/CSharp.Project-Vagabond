@@ -118,7 +118,7 @@ namespace ProjectVagabond.Scenes
         // --- REGEX FOR RANDOM WORD PARSING ---
         // Matches words separated by $, e.g. "WORD$WORD$WORD"
         // \b: Word boundary
-        // [\w\-\']+: A word (alphanumeric, hyphens, apostrophes)
+        // [\w\-\']+: A word (alphanumeric, hyphens, apostrophes, underscores)
         // (?:\$[\w\-\']+)+: Non-capturing group for $ followed by another word, repeated 1+ times
         private static readonly Regex _randomWordRegex = new Regex(@"\b[\w\-\']+(?:\$[\w\-\']+)+\b", RegexOptions.Compiled);
 
@@ -1316,6 +1316,27 @@ namespace ProjectVagabond.Scenes
             }
         }
 
+        private string GetSmartName(BattleCombatant combatant)
+        {
+            string name = combatant.Name.ToUpper();
+
+            // Only apply numbering to enemies
+            if (!combatant.IsPlayerControlled && _battleManager != null)
+            {
+                var activeEnemies = _battleManager.AllCombatants
+                    .Where(c => !c.IsPlayerControlled && c.IsActiveOnField && !c.IsDefeated)
+                    .ToList();
+
+                // Check if there are multiple enemies with the exact same name
+                if (activeEnemies.Count(c => c.Name == combatant.Name) > 1)
+                {
+                    if (combatant.BattleSlot == 0) name = "FIRST " + name;
+                    else if (combatant.BattleSlot == 1) name = "SECOND " + name;
+                }
+            }
+            return name;
+        }
+
         private string ParseActionPhrase(string phrase, BattleCombatant user, BattleCombatant? target, string? itemName)
         {
             // 1. Handle Random Variations FIRST
@@ -1323,13 +1344,17 @@ namespace ProjectVagabond.Scenes
             string processedPhrase = _randomWordRegex.Replace(phrase, (match) =>
             {
                 var options = match.Value.Split('$');
-                return options[_random.Next(options.Length)];
+                return options[_random.Next(options.Length)].Replace('_', ' ');
             });
 
             var sb = new StringBuilder(processedPhrase);
 
-            // User Name
-            sb.Replace("{user}", user.Name.ToUpper());
+            // User Name & Proper Noun
+            string userProperNounPrefix = user.IsProperNoun ? "" : "THE ";
+            sb.Replace("{IsUserProperNoun}", userProperNounPrefix);
+
+            // Use Smart Name for User
+            sb.Replace("{user}", GetSmartName(user));
 
             // User Pronouns
             string userPronoun = "THEIR";
@@ -1361,7 +1386,9 @@ namespace ProjectVagabond.Scenes
 
             if (target != null)
             {
-                sb.Replace("{target}", target.Name.ToUpper());
+                // Use Smart Name for Target as well for consistency
+                sb.Replace("{target}", GetSmartName(target));
+
                 string properNounPrefix = target.IsProperNoun ? "" : "THE ";
                 sb.Replace("{IsTargetProperNoun}", properNounPrefix);
 

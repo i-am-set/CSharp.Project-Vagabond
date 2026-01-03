@@ -24,6 +24,7 @@
         "Type": "ProjectVagabond.Battle.EnemyStatProfileComponent",
         "Properties": {
           "Level": 10,
+          "Gender": "Thing",
           "MinHP": 100,
           "MaxHP": 120,
           "MinStrength": 25,
@@ -53,6 +54,7 @@
         "Type": "ProjectVagabond.Battle.EnemyStatProfileComponent",
         "Properties": {
           "Level": 4,
+          "Gender": "Thing",
           "MinHP": 15,
           "MaxHP": 20,
           "MinStrength": 4,
@@ -82,6 +84,7 @@
         "Type": "ProjectVagabond.Battle.EnemyStatProfileComponent",
         "Properties": {
           "Level": 8,
+          "Gender": "Thing",
           "MinHP": 45,
           "MaxHP": 55,
           "MinStrength": 8,
@@ -111,6 +114,7 @@
         "Type": "ProjectVagabond.Battle.EnemyStatProfileComponent",
         "Properties": {
           "Level": 7,
+          "Gender": "Thing",
           "MinHP": 35,
           "MaxHP": 45,
           "MinStrength": 6,
@@ -140,6 +144,7 @@
         "Type": "ProjectVagabond.Battle.EnemyStatProfileComponent",
         "Properties": {
           "Level": 6,
+          "Gender": "Thing",
           "MinHP": 20,
           "MaxHP": 30,
           "MinStrength": 7,
@@ -169,6 +174,7 @@
         "Type": "ProjectVagabond.Battle.EnemyStatProfileComponent",
         "Properties": {
           "Level": 6,
+          "Gender": "Thing",
           "MinHP": 35,
           "MaxHP": 45,
           "MinStrength": 9,
@@ -198,6 +204,7 @@
         "Type": "ProjectVagabond.Battle.EnemyStatProfileComponent",
         "Properties": {
           "Level": 5,
+          "Gender": "Thing",
           "MinHP": 45,
           "MaxHP": 55,
           "MinStrength": 6,
