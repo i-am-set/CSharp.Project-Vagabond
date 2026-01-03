@@ -83,6 +83,8 @@ namespace ProjectVagabond
             ItemOutlineColor_Selected_Corner = Palette_BrightWhite;
 
             // Initialize Narration Colors
+            ColorNarration_Default = Palette_LightGray; // Default text color
+            ColorNarration_Prefix = Palette_Gray;       // "First", "Second" prefix color
             ColorNarration_Action = Palette_Orange;
             ColorNarration_Spell = Palette_LightBlue;
             ColorNarration_Item = Palette_Teal;
@@ -363,6 +365,8 @@ namespace ProjectVagabond
         public Color ItemOutlineColor_Selected_Corner { get; private set; }
 
         // Narration Colors
+        public Color ColorNarration_Default { get; private set; }
+        public Color ColorNarration_Prefix { get; private set; }
         public Color ColorNarration_Action { get; private set; }
         public Color ColorNarration_Spell { get; private set; }
         public Color ColorNarration_Item { get; private set; }
@@ -517,6 +521,8 @@ namespace ProjectVagabond
                 }
 
                 // Narration Specific
+                if (lowerTag == "cdefault") return ColorNarration_Default;
+                if (lowerTag == "cprefix") return ColorNarration_Prefix;
                 if (lowerTag == "caction") return ColorNarration_Action;
                 if (lowerTag == "cspell") return ColorNarration_Spell;
                 if (lowerTag == "citem") return ColorNarration_Item;
@@ -524,6 +530,7 @@ namespace ProjectVagabond
                 if (lowerTag == "cescape") return ColorNarration_Escaped;
                 if (lowerTag == "cenemy") return ColorNarration_Enemy;
                 if (lowerTag == "cstatus") return ColorNarration_Status;
+                if (lowerTag == "cbrightwhite") return Palette_BrightWhite;
 
                 if (lowerTag == "cred") return Palette_Red;
                 if (lowerTag == "cyellow") return Palette_Yellow;
