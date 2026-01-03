@@ -82,7 +82,7 @@ namespace ProjectVagabond.UI
             {
                 if (isHoveringHandle || isHoveringTrack)
                 {
-                    _hapticsManager.TriggerCompoundShake(0.75f);
+                    _hapticsManager.TriggerCompoundShake(0.5f);
                     _isDragging = true;
                 }
             }

@@ -45,14 +45,14 @@ namespace ProjectVagabond
         // --- Compound Shake Configuration ---
 
         // 1. The maximum limits of the shake at 100% Trauma
-        public float MaxTranslation { get; set; } = 6.0f; // Pixels (Increased for juice)
-        public float MaxRotation { get; set; } = 0.05f;  // Radians (~3 degrees)
+        public float MaxTranslation { get; set; } = 1.0f; // Pixels (Increased for juice)
+        public float MaxRotation { get; set; } = 0.025f;  // Radians (~3 degrees)
 
         // 2. The "Feel" of the shake
         public float TraumaExponent { get; set; } = 2.0f; // 2.0 = Quadratic (Smooth), 3.0 = Cubic (Snappy)
         public float Frequency { get; set; } = 25f;       // How fast it vibrates
-        public float RecoverySpeed { get; set; } = 1.5f;  // How fast trauma decays per second
-        public float NoiseFloor { get; set; } = 0.1f;
+        public float RecoverySpeed { get; set; } = 2.0f;  // How fast trauma decays per second
+        public float NoiseFloor { get; set; } = 0.5f;
 
         // 3. Global Multiplier
         public float MasterIntensity { get; set; } = 1.0f;
@@ -61,7 +61,7 @@ namespace ProjectVagabond
 
         public HapticsManager()
         {
-            _perlin = new SeededPerlin(02040818);
+            _perlin = new SeededPerlin(18020808);
             StopAll();
         }
 

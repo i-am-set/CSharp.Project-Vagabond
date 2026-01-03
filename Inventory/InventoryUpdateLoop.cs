@@ -178,7 +178,7 @@ namespace ProjectVagabond.UI
                 else
                 {
                     // Compound Shake for other categories
-                    _hapticsManager.TriggerCompoundShake(0.75f);
+                    _hapticsManager.TriggerCompoundShake(0.5f);
                 }
 
                 if (slotFrames != null)

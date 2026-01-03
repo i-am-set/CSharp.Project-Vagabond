@@ -238,7 +238,7 @@ namespace ProjectVagabond.UI
 
             if (_gameState.PlayerState.AddPartyMember(candidate))
             {
-                _hapticsManager.TriggerCompoundShake(0.75f);
+                _hapticsManager.TriggerCompoundShake(0.5f);
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_teal]Recruited {candidate.Name}!" });
                 OnRecruitComplete?.Invoke();
             }

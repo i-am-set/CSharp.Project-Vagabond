@@ -527,7 +527,7 @@ namespace ProjectVagabond.UI
                                     string relicId = allRelics[_rng.Next(allRelics.Count)];
                                     var relic = BattleDataCache.Relics[relicId];
                                     string rarityTag = GetRarityTag(relic.Rarity);
-                                    msg += $"Found {rarityTag}{relic.RelicName}[/]!";
+                                    msg += $"Found [pop]{rarityTag}{relic.RelicName}[/][/]!";
 
                                     effectAction = () =>
                                     {
@@ -562,7 +562,7 @@ namespace ProjectVagabond.UI
             _sequenceQueue.Enqueue(new RestSequenceStep
             {
                 MemberIndex = -1, // Global spotlight (or none)
-                Message = "REST COMPLETE!",
+                Message = "[wave]REST COMPLETE![/]",
                 Effect = () => { _currentSpotlightIndex = -1; }
             });
 

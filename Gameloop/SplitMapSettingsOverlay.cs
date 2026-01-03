@@ -117,13 +117,13 @@ namespace ProjectVagabond.UI
                     "Discard unsaved changes?",
                     new List<Tuple<string, Action>> {
                     Tuple.Create("YES", new Action(() => {
-                        _hapticsManager.TriggerCompoundShake(0.75f);
+                        _hapticsManager.TriggerCompoundShake(0.5f);
                         RevertChanges();
                         _confirmationDialog.Hide();
                         onClose?.Invoke();
                     })),
                     Tuple.Create("[gray]NO", new Action(() => {
-                        _hapticsManager.TriggerCompoundShake(0.75f);
+                        _hapticsManager.TriggerCompoundShake(0.5f);
                         _confirmationDialog.Hide();
                     }))
                     }
@@ -226,7 +226,7 @@ namespace ProjectVagabond.UI
                 TextRenderOffset = new Vector2(0, 1),
                 UseScreenCoordinates = true
             };
-            applyButton.OnClick += () => { _hapticsManager.TriggerCompoundShake(0.75f); ApplySettings(); };
+            applyButton.OnClick += () => { _hapticsManager.TriggerCompoundShake(0.5f); ApplySettings(); };
             _uiElements.Add(applyButton);
 
             var discardButton = new Button(new Rectangle(0, 0, 125, 10), "Discard")
@@ -234,7 +234,7 @@ namespace ProjectVagabond.UI
                 TextRenderOffset = new Vector2(0, 1),
                 UseScreenCoordinates = true
             };
-            discardButton.OnClick += () => { _hapticsManager.TriggerCompoundShake(0.75f); AttemptClose(() => OnCloseRequested?.Invoke()); };
+            discardButton.OnClick += () => { _hapticsManager.TriggerCompoundShake(0.5f); AttemptClose(() => OnCloseRequested?.Invoke()); };
             _uiElements.Add(discardButton);
 
             var resetButton = new Button(new Rectangle(0, 0, 125, 10), "Restore Defaults")
@@ -243,7 +243,7 @@ namespace ProjectVagabond.UI
                 TextRenderOffset = new Vector2(0, 1),
                 UseScreenCoordinates = true
             };
-            resetButton.OnClick += () => { _hapticsManager.TriggerCompoundShake(0.75f); ConfirmResetSettings(); };
+            resetButton.OnClick += () => { _hapticsManager.TriggerCompoundShake(0.5f); ConfirmResetSettings(); };
             _uiElements.Add(resetButton);
 
             CalculateLayoutPositions();
@@ -300,10 +300,10 @@ namespace ProjectVagabond.UI
 
                 _revertDialog.Show(
                     "Keep these display settings?",
-                    onConfirm: () => { _hapticsManager.TriggerCompoundShake(0.75f); FinalizeAndSaveAllSettings(); },
+                    onConfirm: () => { _hapticsManager.TriggerCompoundShake(0.5f); FinalizeAndSaveAllSettings(); },
                     onRevert: () =>
                     {
-                        _hapticsManager.TriggerCompoundShake(0.75f);
+                        _hapticsManager.TriggerCompoundShake(0.5f);
                         revertState.ApplyGraphicsSettings(_graphics, _core);
                         RevertChanges();
                     },
@@ -358,7 +358,7 @@ namespace ProjectVagabond.UI
 
         private void ConfirmResetSettings()
         {
-            _confirmationDialog.Show("Reset all settings to default?\n\nThis cannot be undone.", new List<Tuple<string, Action>> { Tuple.Create("YES", new Action(() => { _hapticsManager.TriggerCompoundShake(0.75f); ExecuteResetSettings(); _confirmationDialog.Hide(); })), Tuple.Create("[gray]NO", new Action(() => { _hapticsManager.TriggerCompoundShake(0.75f); _confirmationDialog.Hide(); })) });
+            _confirmationDialog.Show("Reset all settings to default?\n\nThis cannot be undone.", new List<Tuple<string, Action>> { Tuple.Create("YES", new Action(() => { _hapticsManager.TriggerCompoundShake(0.5f); ExecuteResetSettings(); _confirmationDialog.Hide(); })), Tuple.Create("[gray]NO", new Action(() => { _hapticsManager.TriggerCompoundShake(0.5f); _confirmationDialog.Hide(); })) });
         }
 
         private void ExecuteResetSettings()
@@ -382,9 +382,9 @@ namespace ProjectVagabond.UI
                 _confirmationDialog.Show(
                     "You have unsaved changes.",
                     new List<Tuple<string, Action>> {
-                        Tuple.Create("APPLY", new Action(() => { _hapticsManager.TriggerCompoundShake(0.75f); ApplySettings(); OnCloseRequested?.Invoke(); })),
-                        Tuple.Create("DISCARD", new Action(() => { _hapticsManager.TriggerCompoundShake(0.75f); RevertChanges(); OnCloseRequested?.Invoke(); })),
-                        Tuple.Create("[gray]CANCEL", new Action(() => { _hapticsManager.TriggerCompoundShake(0.75f); _confirmationDialog.Hide(); }))
+                        Tuple.Create("APPLY", new Action(() => { _hapticsManager.TriggerCompoundShake(0.5f); ApplySettings(); OnCloseRequested?.Invoke(); })),
+                        Tuple.Create("DISCARD", new Action(() => { _hapticsManager.TriggerCompoundShake(0.5f); RevertChanges(); OnCloseRequested?.Invoke(); })),
+                        Tuple.Create("[gray]CANCEL", new Action(() => { _hapticsManager.TriggerCompoundShake(0.5f); _confirmationDialog.Hide(); }))
                     }
                 );
             }

@@ -55,7 +55,7 @@ namespace ProjectVagabond.UI
             if (!IsEnabled) return;
             if (key == Keys.Left || key == Keys.Right)
             {
-                _hapticsManager.TriggerCompoundShake(0.75f);
+                _hapticsManager.TriggerCompoundShake(0.5f);
                 ToggleValue();
             }
         }
@@ -102,7 +102,7 @@ namespace ProjectVagabond.UI
             {
                 if (_isLeftArrowHovered || _isRightArrowHovered)
                 {
-                    _hapticsManager.TriggerCompoundShake(0.75f);
+                    _hapticsManager.TriggerCompoundShake(0.5f);
                     ToggleValue();
                     UIInputManager.ConsumeMouseClick();
                 }

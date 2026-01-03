@@ -906,7 +906,16 @@ namespace ProjectVagabond.Scenes
                 _isBattleOver = true;
                 _uiManager.HideAllMenus();
                 var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
-                _uiManager.ShowNarration(player != null && player.IsDefeated ? "Player Loses!" : "Player Wins!");
+                bool playerWon = player != null && !player.IsDefeated;
+
+                if (playerWon)
+                {
+                    _uiManager.ShowNarration("[rainbowwave]Player Wins![/]");
+                }
+                else
+                {
+                    _uiManager.ShowNarration("[glitch][cDefeat]Player Loses![/][/]");
+                }
             }
 
             if (_battleManager.CurrentPhase == BattleManager.BattlePhase.AnimatingMove && !_moveAnimationManager.IsAnimating)
@@ -1456,8 +1465,8 @@ namespace ProjectVagabond.Scenes
 
             if (e.CriticalHitCount > 0)
             {
-                if (e.CriticalHitCount == 1) _uiManager.ShowNarration("Landed a\n[cCrit]CRITICAL HIT[/]!");
-                else _uiManager.ShowNarration($"Landed {e.CriticalHitCount}\n[cCrit]CRITICAL HITS[/]!");
+                if (e.CriticalHitCount == 1) _uiManager.ShowNarration("Landed a\n[shake][cCrit]CRITICAL HIT[/][/]!");
+                else _uiManager.ShowNarration($"Landed {e.CriticalHitCount}\n[shake][cCrit]CRITICAL HITS[/][/]!");
             }
             _isWaitingForMultiHitDelay = false;
             _multiHitDelayTimer = 0f;
@@ -1484,9 +1493,6 @@ namespace ProjectVagabond.Scenes
             if (grazedTargets.Any())
             {
                 // Sort: Players first, then Enemies. Within group, Slot 0 then Slot 1.
-                // IsPlayerControlled: true for players.
-                // OrderByDescending(IsPlayerControlled) puts true (Players) before false (Enemies).
-                // ThenBy(BattleSlot) puts 0 before 1.
                 var sortedGrazes = grazedTargets
                     .OrderByDescending(c => c.IsPlayerControlled)
                     .ThenBy(c => c.BattleSlot)
@@ -1495,7 +1501,7 @@ namespace ProjectVagabond.Scenes
                 foreach (var target in sortedGrazes)
                 {
                     string targetName = GetSmartName(target);
-                    _uiManager.ShowNarration($"{targetName} WAS GRAZED.");
+                    _uiManager.ShowNarration($"{targetName} WAS [drift]GRAZED[/].");
                 }
             }
 
@@ -1605,7 +1611,7 @@ namespace ProjectVagabond.Scenes
                 if (result.WasCritical)
                 {
                     _animationManager.StartDamageIndicator(target.CombatantID, "CRITICAL HIT", hudPosition, ServiceLocator.Get<Global>().CritcalHitIndicatorColor);
-                    if (!isMultiHit) _uiManager.ShowNarration($"A [cCrit]CRITICAL HIT[/] on {target.Name}!");
+                    if (!isMultiHit) _uiManager.ShowNarration($"A [shake][cCrit]CRITICAL HIT[/][/] on {target.Name}!");
                 }
 
                 if (result.WasProtected)
@@ -1698,7 +1704,7 @@ namespace ProjectVagabond.Scenes
 
         private void OnCombatantDefeated(GameEvents.CombatantDefeated e)
         {
-            _uiManager.ShowNarration($"{e.DefeatedCombatant.Name} was [cDefeat]DEFEATED[/]!");
+            _uiManager.ShowNarration($"{e.DefeatedCombatant.Name} was [flicker][cDefeat]DEFEATED[/][/]!");
             TriggerDeathAnimation(e.DefeatedCombatant);
             if (!e.DefeatedCombatant.IsPlayerControlled)
             {
@@ -1798,7 +1804,7 @@ namespace ProjectVagabond.Scenes
 
         private void OnNextEnemyApproaches(GameEvents.NextEnemyApproaches e)
         {
-            _uiManager.ShowNarration("Another [cEnemy]ENEMY[/] approaches...");
+            _uiManager.ShowNarration("Another [nervous][cEnemy]ENEMY[/][/] approaches...");
         }
 
         private void OnCombatantSpawned(GameEvents.CombatantSpawned e)
@@ -1853,7 +1859,7 @@ namespace ProjectVagabond.Scenes
             _isBattleOver = true;
             _uiManager.HideAllMenus();
             var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
-            _uiManager.ShowNarration(player != null ? $"{player.Name} [cEscape]ESCAPED[/]." : "Got away safely!");
+            _uiManager.ShowNarration(player != null ? $"{player.Name} [drift][cEscape]ESCAPED[/][/]." : "[drift]Got away safely![/]");
         }
 
         private void OpenSettings()

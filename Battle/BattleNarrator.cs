@@ -24,14 +24,16 @@ namespace ProjectVagabond.Battle.UI
             public Color Color;
             public TokenType Type;
             public float Width;
+            public TextEffectType Effect; // Added Effect
             public int Length => Text.Length;
 
-            public NarratorToken(string text, Color color, TokenType type, float width)
+            public NarratorToken(string text, Color color, TokenType type, float width, TextEffectType effect = TextEffectType.None)
             {
                 Text = text;
                 Color = color;
                 Type = type;
                 Width = width;
+                Effect = effect;
             }
         }
 
@@ -141,14 +143,16 @@ namespace ProjectVagabond.Battle.UI
         }
 
         /// <summary>
-        /// High-performance, single-pass parser with Color Stack support.
+        /// High-performance, single-pass parser with Color and Effect Stack support.
         /// </summary>
         private void ParseMessage(string message)
         {
             _allTokens.Clear();
             var colorStack = new Stack<Color>();
+            var effectStack = new Stack<TextEffectType>();
 
             colorStack.Push(_global.ColorNarration_Default);
+            effectStack.Push(TextEffectType.None);
 
             StringBuilder currentWord = new StringBuilder();
 
@@ -161,7 +165,7 @@ namespace ProjectVagabond.Battle.UI
                     // 1. Flush existing word
                     if (currentWord.Length > 0)
                     {
-                        FlushWord(currentWord, colorStack.Peek());
+                        FlushWord(currentWord, colorStack.Peek(), effectStack.Peek());
                     }
 
                     // 2. Parse Tag
@@ -174,6 +178,12 @@ namespace ProjectVagabond.Battle.UI
                         {
                             // Pop color, but never pop the base default color
                             if (colorStack.Count > 1) colorStack.Pop();
+                            // Pop effect, but never pop base
+                            if (effectStack.Count > 1) effectStack.Pop();
+                        }
+                        else if (Enum.TryParse<TextEffectType>(tagContent, true, out var effect))
+                        {
+                            effectStack.Push(effect);
                         }
                         else
                         {
@@ -195,7 +205,7 @@ namespace ProjectVagabond.Battle.UI
                     // 1. Flush existing word
                     if (currentWord.Length > 0)
                     {
-                        FlushWord(currentWord, colorStack.Peek());
+                        FlushWord(currentWord, colorStack.Peek(), effectStack.Peek());
                     }
 
                     // 2. Add Space Token
@@ -206,7 +216,7 @@ namespace ProjectVagabond.Battle.UI
                     // 1. Flush existing word
                     if (currentWord.Length > 0)
                     {
-                        FlushWord(currentWord, colorStack.Peek());
+                        FlushWord(currentWord, colorStack.Peek(), effectStack.Peek());
                     }
 
                     // 2. Add Newline Token
@@ -222,15 +232,15 @@ namespace ProjectVagabond.Battle.UI
             // Flush remaining word
             if (currentWord.Length > 0)
             {
-                FlushWord(currentWord, colorStack.Peek());
+                FlushWord(currentWord, colorStack.Peek(), effectStack.Peek());
             }
         }
 
-        private void FlushWord(StringBuilder sb, Color color)
+        private void FlushWord(StringBuilder sb, Color color, TextEffectType effect)
         {
             string text = sb.ToString().ToUpper(); // Enforce uppercase style
             float width = _font!.MeasureString(text).Width;
-            _allTokens.Add(new NarratorToken(text, color, TokenType.Word, width));
+            _allTokens.Add(new NarratorToken(text, color, TokenType.Word, width, effect));
             sb.Clear();
         }
 
@@ -264,11 +274,6 @@ namespace ProjectVagabond.Battle.UI
             }
 
             // Check wrapping
-            // If it's a space, we generally allow it at the end of a line, but if it pushes us over, 
-            // we might wrap. However, standard behavior is usually to wrap WORDS, not spaces.
-            // For simplicity: If adding this token exceeds width, wrap.
-            // Exception: If the line is empty, we must add it (to prevent infinite loops on huge words).
-
             if (currentLineWidth + token.Width > _wrapWidth && currentLine.Count > 0)
             {
                 // If the token causing the wrap is a Space, just ignore it (eat trailing space)
@@ -367,7 +372,6 @@ namespace ProjectVagabond.Battle.UI
                 foreach (var t in currentLine) currentLineWidth += t.Width;
 
                 // Determine if this token needs to wrap
-                // We create a "Partial" token for the layout, but we check the FULL width for wrapping
                 if (token.Type == TokenType.Newline)
                 {
                     _displayLines.Add(new List<NarratorToken>());
@@ -392,7 +396,6 @@ namespace ProjectVagabond.Battle.UI
                 }
 
                 // Add a placeholder token to the display list that we will "fill up"
-                // For spaces, we just add them fully immediately
                 if (token.Type == TokenType.Space)
                 {
                     _displayLines.Last().Add(token);
@@ -402,7 +405,7 @@ namespace ProjectVagabond.Battle.UI
                 else
                 {
                     // Add an empty clone of the token to the display line
-                    _displayLines.Last().Add(new NarratorToken("", token.Color, token.Type, 0f));
+                    _displayLines.Last().Add(new NarratorToken("", token.Color, token.Type, 0f, token.Effect));
                 }
             }
 
@@ -444,6 +447,8 @@ namespace ProjectVagabond.Battle.UI
             spriteBatch.DrawLineSnapped(new Vector2(panelBounds.Right, panelBounds.Top), new Vector2(panelBounds.Right, panelBounds.Bottom), _global.Palette_White);
 
             // Draw Text
+            int globalCharIndex = 0; // For animation continuity
+
             for (int i = 0; i < _displayLines.Count; i++)
             {
                 var line = _displayLines[i];
@@ -454,7 +459,38 @@ namespace ProjectVagabond.Battle.UI
                 {
                     if (token.Type == TokenType.Word)
                     {
-                        spriteBatch.DrawStringSnapped(font, token.Text, new Vector2(currentX, currentY), token.Color);
+                        if (token.Effect == TextEffectType.None)
+                        {
+                            spriteBatch.DrawStringSnapped(font, token.Text, new Vector2(currentX, currentY), token.Color);
+                            globalCharIndex += token.Text.Length;
+                        }
+                        else
+                        {
+                            // Render character by character for effects
+                            for (int c = 0; c < token.Text.Length; c++)
+                            {
+                                char charToDraw = token.Text[c];
+                                string charStr = charToDraw.ToString();
+
+                                // Sentinel trick for correct spacing
+                                string sub = token.Text.Substring(0, c);
+                                float charOffsetX = font.MeasureString(sub + "|").Width - font.MeasureString("|").Width;
+
+                                var (animOffset, scale, rotation, color) = TextUtils.GetTextEffectTransform(
+                                    token.Effect,
+                                    (float)gameTime.TotalGameTime.TotalSeconds,
+                                    globalCharIndex + c,
+                                    token.Color
+                                );
+
+                                Vector2 pos = new Vector2(currentX + charOffsetX, currentY) + animOffset;
+                                Vector2 origin = font.MeasureString(charStr) / 2f;
+
+                                // Draw centered on the character position to support rotation/scale
+                                spriteBatch.DrawString(font, charStr, pos + origin, color, rotation, origin, scale, SpriteEffects.None, 0f);
+                            }
+                            globalCharIndex += token.Text.Length;
+                        }
                     }
                     // Spaces just advance X, they don't draw
                     currentX += token.Width;

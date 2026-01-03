@@ -48,12 +48,12 @@ namespace ProjectVagabond.UI
             if (!IsEnabled) return;
             if (key == Keys.Left)
             {
-                _hapticsManager.TriggerCompoundShake(0.75f);
+                _hapticsManager.TriggerCompoundShake(0.5f);
                 _slider.SetValue(_slider.CurrentValue - _slider.Step);
             }
             else if (key == Keys.Right)
             {
-                _hapticsManager.TriggerCompoundShake(0.75f);
+                _hapticsManager.TriggerCompoundShake(0.5f);
                 _slider.SetValue(_slider.CurrentValue + _slider.Step);
             }
         }

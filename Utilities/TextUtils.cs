@@ -28,13 +28,12 @@ namespace ProjectVagabond.Utils
         private const float WOBBLE_Y_AMPLITUDE = 1.0f; // Slight vertical float
 
         // Shake
-        private const float SHAKE_SPEED = 20f;
-        private const float SHAKE_AMPLITUDE = 1.5f;
+        private const float SHAKE_SPEED = 30f;
+        private const float SHAKE_AMPLITUDE = 1.0f;
 
         // Nervous
-        private const float NERVOUS_SPEED = 20f; // Faster
-        private const float NERVOUS_AMPLITUDE = 0.5f; // Visible pixel offset
-        private const float NERVOUS_ROTATION = 0.3f; // Visible rotation jitter
+        private const float NERVOUS_SPEED = 25f;
+        private const float NERVOUS_AMPLITUDE = 0.75f;
 
         // Rainbow
         private const float RAINBOW_SPEED = 0.5f;
@@ -51,11 +50,12 @@ namespace ProjectVagabond.Utils
         // Drift
         private const float DRIFT_SPEED = 3f;
         private const float DRIFT_FREQUENCY = 0.3f;
-        private const float DRIFT_AMPLITUDE = 2.0f;
+        private const float DRIFT_AMPLITUDE = 1.0f;
 
         // Glitch
-        private const float GLITCH_SPEED = 12f;
-        private const float GLITCH_AMPLITUDE = 2.0f;
+        private const float GLITCH_SPEED = 20f; // Faster
+        private const float GLITCH_AMPLITUDE = 0.5f; // Visible pixel offset
+        private const float GLITCH_ROTATION = 0.05f; // Visible rotation jitter
 
         // Flicker
         private const float FLICKER_SPEED = 10f;
@@ -118,16 +118,11 @@ namespace ProjectVagabond.Utils
 
                 case TextEffectType.Nervous:
                     float nervousTime = MathF.Floor(time * NERVOUS_SPEED);
-                    float n1 = MathF.Sin(nervousTime * 12.9898f + charIndex) * 43758.5453f;
-                    float n2 = MathF.Sin(nervousTime * 93.9898f + charIndex) * 43758.5453f;
-
-                    float noise1 = n1 - MathF.Floor(n1); // 0 to 1
-                    float noise2 = n2 - MathF.Floor(n2); // 0 to 1
-
-                    // Map 0..1 to -1..1 for centering
-                    offset.X = (noise1 * 2f - 1f) * NERVOUS_AMPLITUDE;
-                    offset.Y = (noise2 * 2f - 1f) * NERVOUS_AMPLITUDE;
-                    rotation = (noise1 * 2f - 1f) * NERVOUS_ROTATION;
+                    float n1 = MathF.Sin(nervousTime * 12.9898f + charIndex * 78.233f) * 43758.5453f;
+                    float n2 = MathF.Sin(nervousTime * 39.7867f + charIndex * 12.9898f) * 43758.5453f;
+                    float nervousRndX = (n1 - MathF.Floor(n1)) * 2f - 1f;
+                    float nervousRndY = (n2 - MathF.Floor(n2)) * 2f - 1f;
+                    offset = new Vector2(nervousRndX, nervousRndY) * NERVOUS_AMPLITUDE;
                     break;
 
                 case TextEffectType.Rainbow:
@@ -153,17 +148,16 @@ namespace ProjectVagabond.Utils
 
                 case TextEffectType.Glitch:
                     float glitchTime = MathF.Floor(time * GLITCH_SPEED);
-                    float g1 = MathF.Sin(glitchTime * 12.9898f + charIndex * 43.23f) * 43758.5453f;
-                    float g2 = MathF.Sin(glitchTime * 39.7867f + charIndex * 21.98f) * 43758.5453f;
-                    float gX = (g1 - MathF.Floor(g1)) * 2f - 1f;
-                    float gY = (g2 - MathF.Floor(g2)) * 2f - 1f;
-                    offset = new Vector2(gX, gY) * GLITCH_AMPLITUDE;
+                    float g1 = MathF.Sin(glitchTime * 12.9898f + charIndex) * 43758.5453f;
+                    float g2 = MathF.Sin(glitchTime * 93.9898f + charIndex) * 43758.5453f;
 
-                    float g3 = MathF.Sin(glitchTime * 7.123f + charIndex) * 43758.5453f;
-                    if ((g3 - MathF.Floor(g3)) > 0.8f)
-                    {
-                        color = Color.Lerp(baseColor, Color.Lime, 0.8f);
-                    }
+                    float glitchNoise1 = g1 - MathF.Floor(g1); // 0 to 1
+                    float glitchNoise2 = g2 - MathF.Floor(g2); // 0 to 1
+
+                    // Map 0..1 to -1..1 for centering
+                    offset.X = (glitchNoise1 * 2f - 1f) * GLITCH_AMPLITUDE;
+                    offset.Y = (glitchNoise2 * 2f - 1f) * GLITCH_AMPLITUDE;
+                    rotation = (glitchNoise1 * 2f - 1f) * GLITCH_ROTATION;
                     break;
 
                 case TextEffectType.Flicker:

@@ -5,6 +5,7 @@ using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
@@ -41,8 +42,8 @@ namespace ProjectVagabond.Battle.Abilities
                 if (applied)
                 {
                     string msg = _type == StatusEffectType.Empowered
-                        ? $"{ctx.Target.Name} is [cStatus]Empowered[/]!"
-                        : $"{ctx.Target.Name} gained [cStatus]{_type}[/]!";
+                        ? $"{ctx.Target.Name} is [pop][cStatus]Empowered[/][/]!"
+                        : $"{ctx.Target.Name} gained [pop][cStatus]{_type}[/][/]!";
 
                     EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = msg });
                 }
@@ -61,7 +62,7 @@ namespace ProjectVagabond.Battle.Abilities
             {
                 if (!ctx.IsSimulation)
                 {
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "But it failed!" });
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[wobble]But it failed![/]" });
                     EventBus.Publish(new GameEvents.MoveFailed { Actor = ctx.Actor });
                 }
                 return 0f;
@@ -74,7 +75,7 @@ namespace ProjectVagabond.Battle.Abilities
             if (damageDealt > 0)
             {
                 ctx.Target.IsDazed = true;
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} was [cStatus]DAZED[/]!" });
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} was [shake][cStatus]DAZED[/][/]!" });
             }
         }
     }
@@ -143,7 +144,7 @@ namespace ProjectVagabond.Battle.Abilities
                 else
                 {
                     bool applied = owner.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Regen, _turns));
-                    if (applied) EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{owner.Name} gained [cStatus]Regeneration[/]!" });
+                    if (applied) EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{owner.Name} gained [pop][cStatus]Regeneration[/][/]!" });
                 }
             }
         }
@@ -162,7 +163,9 @@ namespace ProjectVagabond.Battle.Abilities
             if (success)
             {
                 EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = owner, Stat = _stat, Amount = _amount });
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = msg });
+                // Add animation tags to the message
+                string animatedMsg = msg.Replace("rose", "[wave]rose[/]").Replace("fell", "[shake]fell[/]");
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = animatedMsg });
             }
             else
             {
@@ -201,7 +204,7 @@ namespace ProjectVagabond.Battle.Abilities
             if (_random.Next(1, 101) <= _chance)
             {
                 bool applied = ctx.Target.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Burn, 99));
-                if (applied) EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} was [cStatus]burned[/]!" });
+                if (applied) EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} was [pop][cStatus]burned[/][/]!" });
             }
         }
     }
@@ -219,7 +222,7 @@ namespace ProjectVagabond.Battle.Abilities
             if (_random.Next(1, 101) <= _chance)
             {
                 bool applied = ctx.Target.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Poison, 99));
-                if (applied) EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} was [cStatus]poisoned[/]!" });
+                if (applied) EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} was [pop][cStatus]poisoned[/][/]!" });
             }
         }
     }
@@ -237,7 +240,7 @@ namespace ProjectVagabond.Battle.Abilities
             if (_random.Next(1, 101) <= _chance)
             {
                 bool applied = ctx.Target.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Frostbite, 99));
-                if (applied) EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} was [cStatus]frostbitten[/]!" });
+                if (applied) EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} was [pop][cStatus]frostbitten[/][/]!" });
             }
         }
     }
@@ -264,7 +267,7 @@ namespace ProjectVagabond.Battle.Abilities
                 else
                 {
                     bool applied = ctx.Target.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Stun, _duration));
-                    if (applied) EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} was [cStatus]stunned[/]!" });
+                    if (applied) EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} was [shake][cStatus]stunned[/][/]!" });
                 }
             }
         }
@@ -292,7 +295,7 @@ namespace ProjectVagabond.Battle.Abilities
                 else
                 {
                     bool applied = ctx.Target.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Silence, _duration));
-                    if (applied) EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} was [cStatus]silenced[/]!" });
+                    if (applied) EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} was [wobble][cStatus]silenced[/][/]!" });
                 }
             }
         }
@@ -311,12 +314,12 @@ namespace ProjectVagabond.Battle.Abilities
             {
                 owner.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Protected, 1));
                 owner.ConsecutiveProtectUses++;
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{owner.Name} [cStatus]protected[/] itself!" });
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{owner.Name} [popwave][cStatus]protected[/][/] itself!" });
             }
             else
             {
                 owner.ConsecutiveProtectUses = 0;
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{owner.Name}'s protection failed!" });
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{owner.Name}'s protection [shake]failed[/]!" });
                 EventBus.Publish(new GameEvents.MoveFailed { Actor = owner });
             }
         }
@@ -339,7 +342,8 @@ namespace ProjectVagabond.Battle.Abilities
             {
                 var (success, msg) = ctx.Target.ModifyStatStage(change.Stat, change.Amount);
                 if (success) EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = ctx.Target, Stat = change.Stat, Amount = change.Amount });
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = msg });
+                string animatedMsg = msg.Replace("rose", "[wave]rose[/]").Replace("fell", "[shake]fell[/]");
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = animatedMsg });
             }
         }
     }
@@ -371,7 +375,8 @@ namespace ProjectVagabond.Battle.Abilities
             {
                 var (success, msg) = owner.ModifyStatStage(stats[i], _amounts[i]);
                 if (success) EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = owner, Stat = stats[i], Amount = _amounts[i] });
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = msg });
+                string animatedMsg = msg.Replace("rose", "[wave]rose[/]").Replace("fell", "[shake]fell[/]");
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = animatedMsg });
             }
         }
     }
@@ -394,7 +399,8 @@ namespace ProjectVagabond.Battle.Abilities
             {
                 var (success, msg) = ctx.Target.ModifyStatStage(stats[i], _amounts[i]);
                 if (success) EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = ctx.Target, Stat = stats[i], Amount = _amounts[i] });
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = msg });
+                string animatedMsg = msg.Replace("rose", "[wave]rose[/]").Replace("fell", "[shake]fell[/]");
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = animatedMsg });
             }
         }
     }
@@ -436,7 +442,7 @@ namespace ProjectVagabond.Battle.Abilities
                     target.ActiveStatusEffects.Remove(effect);
                     EventBus.Publish(new GameEvents.StatusEffectRemoved { Combatant = target, EffectType = effect.EffectType });
                 }
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{target.Name} was [cStatus]cleansed[/]!" });
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{target.Name} was [pop][cStatus]cleansed[/][/]!" });
             }
             else
             {
@@ -470,7 +476,7 @@ namespace ProjectVagabond.Battle.Abilities
             {
                 if (!ctx.IsSimulation)
                 {
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "But it failed!" });
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[wobble]But it failed![/]" });
                     EventBus.Publish(new GameEvents.MoveFailed { Actor = ctx.Actor });
                 }
                 return 0;
@@ -609,7 +615,7 @@ namespace ProjectVagabond.Battle.Abilities
 
             if (!isAttacking)
             {
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "But it failed!" });
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[wobble]But it failed![/]" });
                 EventBus.Publish(new GameEvents.MoveFailed { Actor = ctx.Actor });
                 return 0f;
             }

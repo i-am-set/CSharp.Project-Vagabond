@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -29,14 +28,16 @@ namespace ProjectVagabond.UI
             public float Width;
             public bool IsNewline;
             public bool IsSmall; // New flag for font switching
+            public TextEffectType Effect; // Added Effect support
 
-            public NarratorToken(string text, Color color, float width, bool isNewline = false, bool isSmall = false)
+            public NarratorToken(string text, Color color, float width, bool isNewline = false, bool isSmall = false, TextEffectType effect = TextEffectType.None)
             {
                 Text = text;
                 Color = color;
                 Width = width;
                 IsNewline = isNewline;
                 IsSmall = isSmall;
+                Effect = effect;
             }
         }
 
@@ -135,7 +136,7 @@ namespace ProjectVagabond.UI
             var currentLine = new List<NarratorToken>();
             float currentLineWidth = 0f;
 
-            // 1. Parse into raw tokens (Text + Color + Font)
+            // 1. Parse into raw tokens (Text + Color + Font + Effect)
             var rawTokens = ParseRichText(message);
 
             // 2. Layout tokens into lines (Word Wrapping)
@@ -150,7 +151,7 @@ namespace ProjectVagabond.UI
                 }
 
                 // Split token text by spaces to handle word wrapping
-                // We keep the color and font of the original token
+                // We keep the color, font, and effect of the original token
                 string[] words = Regex.Split(token.Text, @"( )"); // Split but keep delimiters
 
                 foreach (var word in words)
@@ -182,7 +183,7 @@ namespace ProjectVagabond.UI
                     }
 
                     // Add word as a new token to the line
-                    currentLine.Add(new NarratorToken(word, token.Color, wordWidth, false, token.IsSmall));
+                    currentLine.Add(new NarratorToken(word, token.Color, wordWidth, false, token.IsSmall, token.Effect));
                     currentLineWidth += wordWidth;
                 }
             }
@@ -198,9 +199,11 @@ namespace ProjectVagabond.UI
             var tokens = new List<NarratorToken>();
             var colorStack = new Stack<Color>();
             var fontStack = new Stack<bool>(); // true = small, false = normal
+            var effectStack = new Stack<TextEffectType>();
 
             colorStack.Push(_global.ColorNarration_Default);
             fontStack.Push(false); // Default to normal font
+            effectStack.Push(TextEffectType.None);
 
             // Regex to split by tags [tag] or newlines
             var parts = Regex.Split(text, @"(\[.*?\]|\n)");
@@ -229,6 +232,13 @@ namespace ProjectVagabond.UI
 
                         // Pop font stack if > 1
                         if (fontStack.Count > 1) fontStack.Pop();
+
+                        // Pop effect stack if > 1
+                        if (effectStack.Count > 1) effectStack.Pop();
+                    }
+                    else if (Enum.TryParse<TextEffectType>(tagContent, true, out var effect))
+                    {
+                        effectStack.Push(effect);
                     }
                     else
                     {
@@ -241,7 +251,7 @@ namespace ProjectVagabond.UI
                     // Regular text
                     // Uppercase it here to match game style
                     string content = part.ToUpper();
-                    tokens.Add(new NarratorToken(content, colorStack.Peek(), 0, false, fontStack.Peek())); // Width calculated later
+                    tokens.Add(new NarratorToken(content, colorStack.Peek(), 0, false, fontStack.Peek(), effectStack.Peek())); // Width calculated later
                 }
             }
 
@@ -364,6 +374,8 @@ namespace ProjectVagabond.UI
             spriteBatch.DrawLineSnapped(new Vector2(panelBounds.Right, panelBounds.Top), new Vector2(panelBounds.Right, panelBounds.Bottom), _global.Palette_White);
 
             // Draw Text
+            int globalCharIndex = 0; // For animation continuity
+
             for (int i = 0; i < _displayLines.Count; i++)
             {
                 // Only draw up to the current typing line
@@ -397,8 +409,40 @@ namespace ProjectVagabond.UI
                         yOffset = (font.LineHeight - fontToUse.LineHeight) / 2f + 1;
                     }
 
-                    spriteBatch.DrawStringSnapped(fontToUse, textToDraw, new Vector2(currentX, currentY + yOffset), token.Color);
-                    currentX += token.Width;
+                    if (token.Effect == TextEffectType.None)
+                    {
+                        spriteBatch.DrawStringSnapped(fontToUse, textToDraw, new Vector2(currentX, currentY + yOffset), token.Color);
+                        currentX += token.Width;
+                        globalCharIndex += textToDraw.Length;
+                    }
+                    else
+                    {
+                        // Render character by character for effects
+                        for (int c = 0; c < textToDraw.Length; c++)
+                        {
+                            char charToDraw = textToDraw[c];
+                            string charStr = charToDraw.ToString();
+
+                            // Sentinel trick for correct spacing
+                            string sub = textToDraw.Substring(0, c);
+                            float charOffsetX = fontToUse.MeasureString(sub + "|").Width - fontToUse.MeasureString("|").Width;
+
+                            var (offset, scale, rotation, color) = TextUtils.GetTextEffectTransform(
+                                token.Effect,
+                                (float)gameTime.TotalGameTime.TotalSeconds,
+                                globalCharIndex + c,
+                                token.Color
+                            );
+
+                            Vector2 pos = new Vector2(currentX + charOffsetX, currentY + yOffset) + offset;
+                            Vector2 origin = fontToUse.MeasureString(charStr) / 2f;
+
+                            // Draw centered on the character position to support rotation/scale
+                            spriteBatch.DrawString(fontToUse, charStr, pos + origin, color, rotation, origin, scale, SpriteEffects.None, 0f);
+                        }
+                        currentX += token.Width;
+                        globalCharIndex += textToDraw.Length;
+                    }
                 }
             }
 

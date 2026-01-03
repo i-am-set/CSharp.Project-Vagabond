@@ -78,12 +78,12 @@ namespace ProjectVagabond.UI
             if (!IsEnabled) return;
             if (key == Keys.Left)
             {
-                _hapticsManager.TriggerCompoundShake(0.75f);
+                _hapticsManager.TriggerCompoundShake(0.5f);
                 Decrement();
             }
             if (key == Keys.Right || key == Keys.Enter)
             {
-                _hapticsManager.TriggerCompoundShake(0.75f);
+                _hapticsManager.TriggerCompoundShake(0.5f);
                 Increment();
             }
         }
@@ -131,13 +131,13 @@ namespace ProjectVagabond.UI
                 bool consumed = false;
                 if (_isLeftArrowHovered)
                 {
-                    _hapticsManager.TriggerCompoundShake(0.75f);
+                    _hapticsManager.TriggerCompoundShake(0.5f);
                     Decrement();
                     consumed = true;
                 }
                 else if (_isRightArrowHovered)
                 {
-                    _hapticsManager.TriggerCompoundShake(0.75f);
+                    _hapticsManager.TriggerCompoundShake(0.5f);
                     Increment();
                     consumed = true;
                 }

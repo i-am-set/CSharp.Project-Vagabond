@@ -110,7 +110,7 @@ namespace ProjectVagabond.Scenes
             };
             playButton.OnClick += () =>
             {
-                _hapticsManager.TriggerCompoundShake(0.75f);
+                _hapticsManager.TriggerCompoundShake(0.5f);
                 var core = ServiceLocator.Get<Core>();
                 var spriteManager = ServiceLocator.Get<SpriteManager>();
                 var archetypeManager = ServiceLocator.Get<ArchetypeManager>();
@@ -160,7 +160,7 @@ namespace ProjectVagabond.Scenes
             };
             settingsButton.OnClick += () =>
             {
-                _hapticsManager.TriggerCompoundShake(0.75f);
+                _hapticsManager.TriggerCompoundShake(0.5f);
                 _sceneManager.ShowModal(GameSceneState.Settings);
             };
             _buttons.Add(settingsButton);
@@ -185,13 +185,13 @@ namespace ProjectVagabond.Scenes
 
         private void ConfirmExit()
         {
-            _hapticsManager.TriggerCompoundShake(0.75f);
+            _hapticsManager.TriggerCompoundShake(0.5f);
             _confirmationDialog.Show(
                 "Are you sure you want to exit?",
                 new List<Tuple<string, Action>>
                 {
-                    Tuple.Create("[gray]YES", new Action(() => { _hapticsManager.TriggerCompoundShake(0.75f); ServiceLocator.Get<Core>().ExitApplication(); })),
-                    Tuple.Create("NO", new Action(() => { _hapticsManager.TriggerCompoundShake(0.75f); _confirmationDialog.Hide(); }))
+                    Tuple.Create("[gray]YES", new Action(() => { _hapticsManager.TriggerCompoundShake(0.5f); ServiceLocator.Get<Core>().ExitApplication(); })),
+                    Tuple.Create("NO", new Action(() => { _hapticsManager.TriggerCompoundShake(0.5f); _confirmationDialog.Hide(); }))
                 }
             );
         }
