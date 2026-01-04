@@ -83,6 +83,20 @@ namespace ProjectVagabond.Utils
 
     public static class TextUtils
     {
+        // --- OPTIMIZATION: String Cache ---
+        // Pre-allocate strings for the first 1024 characters (Basic Latin + Extended).
+        // This covers almost all standard RPG text, eliminating 'new string()' allocations in the draw loop.
+        private static readonly string[] _charStringCache;
+
+        static TextUtils()
+        {
+            _charStringCache = new string[1024];
+            for (int i = 0; i < _charStringCache.Length; i++)
+            {
+                _charStringCache[i] = ((char)i).ToString();
+            }
+        }
+
         private enum OutlineStyle
         {
             None,
@@ -319,13 +333,8 @@ namespace ProjectVagabond.Utils
         {
             if (string.IsNullOrEmpty(text)) return;
 
-            // Layout Scale: Controls spacing/positioning of characters (e.g. expanding/contracting text)
             Vector2 layoutScale = baseScale ?? Vector2.One;
-
-            // Draw Scale: Controls the size of the glyphs. 
-            // User requested "rigid" text that doesn't scale, so we force this to One for the base.
             Vector2 drawScaleBase = Vector2.One;
-
             var shadowColor = new Color(color.R / 4, color.G / 4, color.B / 4, color.A);
 
             var glyphs = font.GetGlyphs(text, position);
@@ -337,12 +346,10 @@ namespace ProjectVagabond.Utils
             foreach (var glyph in glyphs)
             {
                 // Sync charIndex with the glyphs returned.
-                // GetGlyphs skips newlines in the output list, so we must skip them in the source string too.
                 while (charIndex < text.Length && text[charIndex] == '\n') charIndex++;
                 if (charIndex >= text.Length) break;
 
                 char c = text[charIndex];
-                string charStr = c.ToString();
 
                 // Optimization: Skip drawing whitespace, but we MUST increment charIndex
                 if (char.IsWhiteSpace(c))
@@ -351,11 +358,20 @@ namespace ProjectVagabond.Utils
                     continue;
                 }
 
-                // 1. Calculate Layout Position
-                // glyph.Position is the absolute position at scale 1.0
-                Vector2 relativePos = glyph.Position - position;
+                // --- OPTIMIZATION: Use String Cache ---
+                // Avoids 'new string()' allocation for every character every frame.
+                string charStr;
+                if (c < _charStringCache.Length)
+                {
+                    charStr = _charStringCache[c];
+                }
+                else
+                {
+                    charStr = c.ToString(); // Fallback for exotic characters
+                }
 
-                // Apply Layout Scale (Spacing)
+                // 1. Calculate Layout Position
+                Vector2 relativePos = glyph.Position - position;
                 Vector2 scaledPos = position + (relativePos * layoutScale);
 
                 // 2. Calculate Effect Transform
@@ -366,13 +382,9 @@ namespace ProjectVagabond.Utils
                 Vector2 origin = new Vector2(charSize.X / 2f, font.LineHeight / 2f);
 
                 // 4. Calculate Final Draw Position
-                // We use Line Center Y for the Y-axis to ensure stable baseline rotation
                 Vector2 targetCenterPos = new Vector2(scaledPos.X + origin.X, lineCenterY) + animOffset;
 
-                // 5. Pixel Snapping (The "Mangled K" Fix)
-                // We need the top-left corner of the texture to land on an integer pixel.
-                // TopLeft = Center - Origin.
-                // We round TopLeft, then reconstruct Center.
+                // 5. Pixel Snapping
                 Vector2 snappedTopLeft = new Vector2(
                     MathF.Round(targetCenterPos.X - origin.X),
                     MathF.Round(targetCenterPos.Y - origin.Y)
@@ -380,7 +392,6 @@ namespace ProjectVagabond.Utils
                 Vector2 finalDrawPos = snappedTopLeft + origin;
 
                 // 6. Final Draw Scale
-                // Combine the rigid base scale (1.0) with any effect scaling (like Pop)
                 Vector2 finalScale = drawScaleBase * effectScale;
 
                 // Draw Outline / Shadow based on style
@@ -417,9 +428,6 @@ namespace ProjectVagabond.Utils
 
         private static void DrawGlyph(SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color color, float rotation, Vector2 origin, Vector2 scale)
         {
-            // We draw at 'position' which is the calculated center point.
-            // DrawString uses 'origin' to offset the texture relative to 'position'.
-            // Since we set 'position' to the center and 'origin' to the center, it draws correctly centered.
             spriteBatch.DrawString(font, text, position, color, rotation, origin, scale, SpriteEffects.None, 0f);
         }
     }
