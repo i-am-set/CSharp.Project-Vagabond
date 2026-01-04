@@ -227,14 +227,18 @@ namespace ProjectVagabond.UI
                 Vector2 textPosition = new Vector2(textStartX, animatedBounds.Center.Y - (textSize.Y / 2f)) + TextRenderOffset;
 
                 // --- Wave Animation Logic ---
-                UpdateWaveTimer(deltaTime, isActivated);
-
-                if (EnableTextWave && _isWaveAnimating)
+                if (EnableTextWave && isActivated)
                 {
-                    TextUtils.DrawWavedText(spriteBatch, font, Text, textPosition, textColor, _waveTimer, WaveSpeed, WaveFrequency, WaveAmplitude);
+                    _waveTimer += deltaTime;
+                    float duration = TextUtils.GetSmallWaveDuration(Text.Length);
+                    if (_waveTimer > duration + 0.1f) _waveTimer = 0f;
+
+                    // Use the new SmallWave effect via TextUtils, passing Vector2.One as TextOverImageButton doesn't scale text on hover
+                    TextUtils.DrawTextWithEffect(spriteBatch, font, Text, textPosition, textColor, TextEffectType.SmallWave, _waveTimer, Vector2.One);
                 }
                 else
                 {
+                    _waveTimer = 0f;
                     spriteBatch.DrawStringSnapped(font, Text, textPosition, textColor);
                 }
 

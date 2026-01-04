@@ -159,11 +159,23 @@ namespace ProjectVagabond.Battle
 
         public void ForceAdvance()
         {
+            // If we are in the middle of an animation, ensure the impact logic runs before we skip.
+            if (_currentPhase == BattlePhase.AnimatingMove && _pendingImpact != null)
+            {
+                ApplyPendingImpact();
+                if (_actionPendingAnimation != null)
+                {
+                    ProcessMoveActionPostImpact(_actionPendingAnimation);
+                }
+            }
+
             _actionToExecute = null;
             _actionPendingAnimation = null;
             _pendingImpact = null;
             _activeInteraction = null;
-            _multiHitRemaining = 0; // Reset multi-hit on force advance
+
+            // Do NOT reset multi-hit remaining here, as we might be skipping through a multi-hit sequence.
+            // Instead, let the loop continue naturally.
 
             if (_currentPhase == BattlePhase.BattleStartIntro)
             {
@@ -175,7 +187,13 @@ namespace ProjectVagabond.Battle
                 _currentPhase == BattlePhase.ProcessingInteraction ||
                 _currentPhase == BattlePhase.WaitingForSwitchCompletion)
             {
-                _currentPhase = BattlePhase.CheckForDefeat;
+                // If we are skipping, we want to move to the next logical step.
+                // If multi-hit is active, we loop back to PrepareHit (handled in ProcessMoveActionPostImpact).
+                // If not, we go to CheckForDefeat.
+                if (!IsProcessingMultiHit)
+                {
+                    _currentPhase = BattlePhase.CheckForDefeat;
+                }
             }
             else if (_currentPhase == BattlePhase.CheckForDefeat || _currentPhase == BattlePhase.EndOfTurn)
             {

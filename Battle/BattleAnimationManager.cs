@@ -20,6 +20,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 
 namespace ProjectVagabond.Battle.UI
@@ -322,7 +324,33 @@ namespace ProjectVagabond.Battle.UI
         // Layout Constants mirrored from BattleRenderer for pixel-perfect alignment
         private const int DIVIDER_Y = 123;
 
-        public bool IsAnimating => _activeHealthAnimations.Any() || _activeAlphaAnimations.Any() || _activeDeathAnimations.Any() || _activeSpawnAnimations.Any() || _activeSwitchOutAnimations.Any() || _activeSwitchInAnimations.Any() || _activeHealBounceAnimations.Any() || _activeHealFlashAnimations.Any() || _activePoisonEffectAnimations.Any() || _activeBarAnimations.Any() || _activeHitFlashAnimations.Any() || _activeCoins.Any() || _activeIntroSlideAnimations.Any() || _activeFloorIntroAnimations.Any() || _activeFloorOutroAnimations.Any();
+        /// <summary>
+        /// Returns true if any BLOCKING animation is currently playing.
+        /// This excludes cosmetic effects like coins, damage numbers, and hit flashes,
+        /// allowing the game logic to proceed while these play in the background.
+        /// </summary>
+        public bool IsAnimating =>
+            _activeHealthAnimations.Any() ||
+            _activeAlphaAnimations.Any() ||
+            _activeDeathAnimations.Any() ||
+            _activeSpawnAnimations.Any() ||
+            _activeSwitchOutAnimations.Any() ||
+            _activeSwitchInAnimations.Any() ||
+            _activeBarAnimations.Any() ||
+            _activeIntroSlideAnimations.Any() ||
+            _activeFloorIntroAnimations.Any() ||
+            _activeFloorOutroAnimations.Any();
+
+        /// <summary>
+        /// Returns true if ANY visual effect is active, including non-blocking ones like coins and damage numbers.
+        /// Used to delay the end of battle until the screen is clean.
+        /// </summary>
+        public bool IsVisuallyBusy =>
+            IsAnimating ||
+            _activeCoins.Any() ||
+            _activeCoinCatchAnimations.Any() ||
+            _activeDamageIndicators.Any() ||
+            _activeAbilityIndicators.Any();
 
         public BattleAnimationManager()
         {
@@ -357,6 +385,77 @@ namespace ProjectVagabond.Battle.UI
             _activeFloorIntroAnimations.Clear();
             _activeFloorOutroAnimations.Clear();
             _indicatorCooldownTimer = 0f;
+        }
+
+        /// <summary>
+        /// Instantly completes all "blocking" animations (health bars, movement, etc.)
+        /// so the game logic can proceed immediately.
+        /// Does NOT clear non-blocking visuals like damage numbers or particles.
+        /// </summary>
+        public void CompleteBlockingAnimations(IEnumerable<BattleCombatant> combatants)
+        {
+            // 1. Snap Health/Mana Bars
+            foreach (var anim in _activeHealthAnimations)
+            {
+                var combatant = combatants.FirstOrDefault(c => c.CombatantID == anim.CombatantID);
+                if (combatant != null)
+                {
+                    combatant.VisualHP = anim.TargetHP;
+                }
+            }
+            _activeHealthAnimations.Clear();
+            _activeBarAnimations.Clear();
+
+            // 2. Snap Alpha/Visibility
+            foreach (var anim in _activeAlphaAnimations)
+            {
+                var combatant = combatants.FirstOrDefault(c => c.CombatantID == anim.CombatantID);
+                if (combatant != null)
+                {
+                    combatant.VisualAlpha = anim.TargetAlpha;
+                }
+            }
+            _activeAlphaAnimations.Clear();
+
+            // 3. Snap Intro/Switch Animations
+            foreach (var anim in _activeIntroSlideAnimations)
+            {
+                var combatant = combatants.FirstOrDefault(c => c.CombatantID == anim.CombatantID);
+                if (combatant != null)
+                {
+                    combatant.VisualAlpha = 1.0f;
+                }
+            }
+            _activeIntroSlideAnimations.Clear();
+            _activeSwitchInAnimations.Clear();
+            _activeSwitchOutAnimations.Clear();
+            _activeFloorIntroAnimations.Clear();
+            _activeFloorOutroAnimations.Clear();
+
+            // 4. Handle Death Animations: Ensure coins spawn if skipped
+            foreach (var anim in _activeDeathAnimations)
+            {
+                var combatant = combatants.FirstOrDefault(c => c.CombatantID == anim.CombatantID);
+                if (combatant != null)
+                {
+                    if (!anim.CoinsSpawned && !combatant.IsPlayerControlled)
+                    {
+                        // Logic copied from UpdateDeathAnimations to ensure coins spawn
+                        var players = combatants.Where(c => c.IsPlayerControlled && !c.IsDefeated && c.IsActiveOnField).ToList();
+                        SpawnCoins(anim.CenterPosition, 50, anim.GroundY, players);
+                    }
+                    // Ensure alpha is 0 (dead)
+                    combatant.VisualAlpha = 0f;
+                }
+            }
+            _activeDeathAnimations.Clear();
+
+            // 5. Clear other blocking states
+            _activeSpawnAnimations.Clear();
+
+            // Note: We do NOT clear DamageIndicators, AbilityIndicators, Coins, or HitFlashes.
+            // These are "fire and forget" visuals that don't block game logic.
+            // Clearing them looks jarring; letting them fade out naturally while the next turn starts looks better.
         }
 
         public void StartHitstopVisuals(string combatantId, bool isCrit)

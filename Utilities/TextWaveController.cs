@@ -11,26 +11,28 @@ namespace ProjectVagabond.Utils
     {
         // --- Configuration ---
         public float WaveSpeed { get; set; } = 30f;
-        public float WaveFrequency { get; set; } = 0.8f;
+        public float WaveFrequency { get; set; } = 1.0f;
         public float WaveAmplitude { get; set; } = 1.0f;
-        public float WaveRepeatDelay { get; set; } = 0.25f;
+
+        // Deprecated but kept for compatibility, effectively ignored in the new seamless loop
+        public float WaveRepeatDelay { get; set; } = 0f;
+
         public bool IsEnabled { get; set; } = true;
 
         // --- State ---
         private float _waveTimer = 0f;
-        private float _waveDelayTimer = 0f;
         private bool _isWaveAnimating = false;
-        private bool _wasActiveLastFrame = false;
 
         public float CurrentTimer => _waveTimer;
+
+        // Returns true if the animation logic is active. 
+        // Now stays true continuously while hovered to prevent rendering artifacts.
         public bool IsAnimating => _isWaveAnimating;
 
         public void Reset()
         {
             _waveTimer = 0f;
-            _waveDelayTimer = 0f;
             _isWaveAnimating = false;
-            _wasActiveLastFrame = false;
         }
 
         /// <summary>
@@ -51,48 +53,24 @@ namespace ProjectVagabond.Utils
             {
                 _isWaveAnimating = false;
                 _waveTimer = 0f;
-                _waveDelayTimer = 0f;
-                _wasActiveLastFrame = false;
                 return;
             }
 
-            // Trigger animation only on the rising edge of activation
-            if (!_wasActiveLastFrame)
+            // If active, we are always animating to ensure consistent text rendering
+            _isWaveAnimating = true;
+            _waveTimer += deltaTime;
+
+            // Calculate the duration of one full pass of the wave
+            // Formula: (TextLength * Frequency + Pi) / Speed
+            // This calculates the exact time it takes for the sine wave (0 to Pi) to traverse the entire string length
+            float loopDuration = (textLength * WaveFrequency + MathHelper.Pi) / WaveSpeed;
+
+            // Seamless loop: If we exceed the duration, wrap around.
+            // We add a tiny buffer (0.1s) just to ensure the tail has fully cleared before restarting, 
+            // though mathematically the formula covers it.
+            if (_waveTimer > loopDuration + 0.1f)
             {
-                _isWaveAnimating = true;
                 _waveTimer = 0f;
-                _waveDelayTimer = 0f;
-            }
-
-            _wasActiveLastFrame = true;
-
-            if (_isWaveAnimating)
-            {
-                _waveTimer += deltaTime;
-
-                // Heuristic: (TextLength * Frequency + Pi) / Speed is roughly when the last char finishes the wave
-                float estimatedDuration = (textLength * WaveFrequency + MathHelper.Pi) / WaveSpeed + 0.5f;
-
-                if (_waveTimer > estimatedDuration)
-                {
-                    _isWaveAnimating = false;
-                    _waveTimer = 0f;
-                    _waveDelayTimer = WaveRepeatDelay; // Start delay before repeating
-                }
-            }
-            else
-            {
-                // In delay phase
-                if (_waveDelayTimer > 0)
-                {
-                    _waveDelayTimer -= deltaTime;
-                    if (_waveDelayTimer <= 0)
-                    {
-                        // Restart animation
-                        _isWaveAnimating = true;
-                        _waveTimer = 0f;
-                    }
-                }
             }
         }
     }

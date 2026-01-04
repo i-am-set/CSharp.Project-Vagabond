@@ -62,7 +62,7 @@ namespace ProjectVagabond.Battle.Abilities
             {
                 if (!ctx.IsSimulation)
                 {
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[wobble]But it failed![/]" });
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[DriftWave]But it failed![/]" });
                     EventBus.Publish(new GameEvents.MoveFailed { Actor = ctx.Actor });
                 }
                 return 0f;
@@ -295,7 +295,7 @@ namespace ProjectVagabond.Battle.Abilities
                 else
                 {
                     bool applied = ctx.Target.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Silence, _duration));
-                    if (applied) EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} was [wobble][cStatus]silenced[/][/]!" });
+                    if (applied) EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} was [DriftWave][cStatus]silenced[/][/]!" });
                 }
             }
         }
@@ -476,7 +476,7 @@ namespace ProjectVagabond.Battle.Abilities
             {
                 if (!ctx.IsSimulation)
                 {
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[wobble]But it failed![/]" });
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[DriftWave]But it failed![/]" });
                     EventBus.Publish(new GameEvents.MoveFailed { Actor = ctx.Actor });
                 }
                 return 0;
@@ -615,7 +615,7 @@ namespace ProjectVagabond.Battle.Abilities
 
             if (!isAttacking)
             {
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[wobble]But it failed![/]" });
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[DriftWave]But it failed![/]" });
                 EventBus.Publish(new GameEvents.MoveFailed { Actor = ctx.Actor });
                 return 0f;
             }

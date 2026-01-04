@@ -70,38 +70,11 @@ namespace ProjectVagabond.UI
         public Color? DebugColor { get; set; }
         public HoverAnimationType HoverAnimation { get; set; } = HoverAnimationType.Scale; // Default to Scale for juice
 
-        // --- Text Wave Animation Settings (Delegated to Controller) ---
-        private readonly TextWaveController _waveController = new TextWaveController();
+        // --- Text Wave Animation State ---
+        public bool EnableTextWave { get; set; } = true;
 
-        public bool EnableTextWave
-        {
-            get => _waveController.IsEnabled;
-            set => _waveController.IsEnabled = value;
-        }
-
-        public float WaveSpeed
-        {
-            get => _waveController.WaveSpeed;
-            set => _waveController.WaveSpeed = value;
-        }
-
-        public float WaveFrequency
-        {
-            get => _waveController.WaveFrequency;
-            set => _waveController.WaveFrequency = value;
-        }
-
-        public float WaveAmplitude
-        {
-            get => _waveController.WaveAmplitude;
-            set => _waveController.WaveAmplitude = value;
-        }
-
-        public float WaveRepeatDelay
-        {
-            get => _waveController.WaveRepeatDelay;
-            set => _waveController.WaveRepeatDelay = value;
-        }
+        // Changed to protected so derived classes (MoveButton, TextOverImageButton) can use it
+        protected float _waveTimer = 0f;
 
         /// <summary>
         /// If true (default), clicks are throttled by the global UIInputManager to prevent double-clicks.
@@ -312,7 +285,7 @@ namespace ProjectVagabond.UI
         public virtual void ResetAnimationState()
         {
             _hoverAnimator.Reset();
-            _waveController.Reset();
+            _waveTimer = 0f;
             _isPressed = false;
             IsHovered = false;
             _slideOffset = 0f;
@@ -349,19 +322,6 @@ namespace ProjectVagabond.UI
 
             return (shakeOffset, flashTint);
         }
-
-        /// <summary>
-        /// Updates the wave timer based on hover state.
-        /// Should be called in Draw methods before rendering text.
-        /// </summary>
-        protected void UpdateWaveTimer(float deltaTime, bool isHovered)
-        {
-            _waveController.Update(deltaTime, isHovered, Text.Length);
-        }
-
-        // Expose internal wave state for subclasses if needed (like TextOverImageButton)
-        protected bool _isWaveAnimating => _waveController.IsAnimating;
-        protected float _waveTimer => _waveController.CurrentTimer;
 
         public virtual void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? horizontalOffset = null, float? verticalOffset = null, Color? tintColorOverride = null)
         {
@@ -421,7 +381,17 @@ namespace ProjectVagabond.UI
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
             // Update Wave State
-            UpdateWaveTimer(deltaTime, isActivated);
+            if (EnableTextWave && isActivated)
+            {
+                _waveTimer += deltaTime;
+                float duration = TextUtils.GetSmallWaveDuration(Text.Length);
+                if (_waveTimer > duration + 0.1f) _waveTimer = 0f;
+            }
+            else
+            {
+                _waveTimer = 0f;
+            }
+
             UpdateFeedbackAnimations(gameTime); // Updates _currentScale
 
             float xHoverOffset = 0f;
@@ -466,10 +436,10 @@ namespace ProjectVagabond.UI
             Vector2 drawPos = textPosition + origin;
 
             // --- Wave Animation Logic ---
-            if (EnableTextWave && _isWaveAnimating)
+            if (EnableTextWave && isActivated)
             {
-                // Wave animation doesn't support scaling easily yet, fallback to standard draw
-                TextUtils.DrawWavedText(spriteBatch, font, Text, textPosition, textColor, _waveTimer, WaveSpeed, WaveFrequency, WaveAmplitude);
+                // Use the new SmallWave effect via TextUtils, passing the current scale
+                TextUtils.DrawTextWithEffect(spriteBatch, font, Text, textPosition, textColor, TextEffectType.SmallWave, _waveTimer, new Vector2(_currentScale));
             }
             else
             {

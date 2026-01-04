@@ -120,10 +120,6 @@ namespace ProjectVagabond.Scenes
         private bool _victorySequenceTriggered = false;
 
         // --- REGEX FOR RANDOM WORD PARSING ---
-        // Matches words separated by $, e.g. "WORD$WORD$WORD"
-        // \b: Word boundary
-        // [\w\-\']+: A word (alphanumeric, hyphens, apostrophes, underscores)
-        // (?:\$[\w\-\']+)+: Non-capturing group for $ followed by another word, repeated 1+ times
         private static readonly Regex _randomWordRegex = new Regex(@"\b[\w\-\']+(?:\$[\w\-\']+)+\b", RegexOptions.Compiled);
 
         public BattleAnimationManager AnimationManager => _animationManager;
@@ -764,7 +760,8 @@ namespace ProjectVagabond.Scenes
 
             if (_isBattleOver)
             {
-                if (!_uiManager.IsBusy && !_animationManager.IsAnimating)
+                // Wait for UI, structural animations, AND coins/cosmetics before finishing
+                if (!_uiManager.IsBusy && !_animationManager.IsVisuallyBusy)
                 {
                     var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
                     bool playerWon = player != null && !player.IsDefeated;
@@ -806,13 +803,46 @@ namespace ProjectVagabond.Scenes
                                  currentMouseState.LeftButton == ButtonState.Released &&
                                  previousMouseState.LeftButton == ButtonState.Pressed;
 
-            bool isAttackAnimationPlaying = _moveAnimationManager.IsAnimating || _battleManager.IsProcessingMultiHit;
-
-            if (isAnimating && clickDetected && !isAttackAnimationPlaying)
+            // --- AGGRESSIVE CLICK-TO-SKIP LOGIC ---
+            if (clickDetected)
             {
-                _animationManager.SkipAllHealthAnimations(_battleManager.AllCombatants);
-                _animationManager.SkipAllBarAnimations();
-                UIInputManager.ConsumeMouseClick();
+                bool skippedSomething = false;
+
+                // 1. Skip Action Start Delay
+                if (_isWaitingForActionExecution)
+                {
+                    _actionExecutionTimer = ACTION_EXECUTION_DELAY; // Force trigger next frame
+                    skippedSomething = true;
+                }
+
+                // 2. Skip Multi-Hit Delay
+                if (_isWaitingForMultiHitDelay)
+                {
+                    _multiHitDelayTimer = 0f; // Force trigger next frame
+                    skippedSomething = true;
+                }
+
+                // 3. Snap Visuals (Health Bars, etc.)
+                if (isAnimating)
+                {
+                    _animationManager.CompleteBlockingAnimations(_battleManager.AllCombatants);
+                    _moveAnimationManager.CompleteCurrentAnimation();
+                    skippedSomething = true;
+                }
+
+                // 4. Push Logic if stuck in a wait state
+                if (_battleManager.CurrentPhase == BattleManager.BattlePhase.CheckForDefeat ||
+                    _battleManager.CurrentPhase == BattleManager.BattlePhase.EndOfTurn ||
+                    _battleManager.CurrentPhase == BattleManager.BattlePhase.Reinforcement)
+                {
+                    _battleManager.ForceAdvance();
+                    skippedSomething = true;
+                }
+
+                if (skippedSomething)
+                {
+                    UIInputManager.ConsumeMouseClick();
+                }
             }
 
             if (!_uiManager.IsBusy && !_animationManager.IsAnimating && _pendingAnimations.Any())

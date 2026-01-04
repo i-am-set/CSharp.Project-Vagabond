@@ -266,14 +266,18 @@ namespace ProjectVagabond.Battle.UI
                     var textPosition = new Vector2(textStartX, animatedBounds.Y + (animatedBounds.Height - _moveFont.LineHeight) / 2);
 
                     // --- Wave Animation Logic ---
-                    UpdateWaveTimer((float)gameTime.ElapsedGameTime.TotalSeconds, isActivated);
-
-                    if (EnableTextWave && _isWaveAnimating)
+                    if (EnableTextWave && isActivated)
                     {
-                        TextUtils.DrawWavedText(spriteBatch, _moveFont, this.Text, textPosition, textColor * contentAlpha, _waveTimer, WaveSpeed, WaveFrequency, WaveAmplitude);
+                        _waveTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                        float duration = TextUtils.GetSmallWaveDuration(Text.Length);
+                        if (_waveTimer > duration + 0.1f) _waveTimer = 0f;
+
+                        // Use the new SmallWave effect via TextUtils, passing the current scale (which is 1.0 for MoveButton usually, but good to be consistent)
+                        TextUtils.DrawTextWithEffect(spriteBatch, _moveFont, this.Text, textPosition, textColor * contentAlpha, TextEffectType.SmallWave, _waveTimer, new Vector2(scaleX, scaleY));
                     }
                     else
                     {
+                        _waveTimer = 0f;
                         spriteBatch.DrawStringSnapped(_moveFont, this.Text, textPosition, textColor * contentAlpha);
                     }
                 }

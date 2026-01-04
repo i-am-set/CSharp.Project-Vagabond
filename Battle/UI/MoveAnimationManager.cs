@@ -151,6 +151,51 @@ namespace ProjectVagabond.Battle.UI
             _activeAnimations.Clear();
         }
 
+        /// <summary>
+        /// Instantly completes all active animations, ensuring their impact logic fires.
+        /// </summary>
+        public void CompleteCurrentAnimation()
+        {
+            if (!_activeAnimations.Any()) return;
+
+            // If impact hasn't fired yet, fire it now.
+            // We check the flag because multiple instances might exist for one move.
+            if (!_impactSignalSentForCurrentBatch)
+            {
+                // We need the MoveData to fire the event.
+                // Since MoveAnimationInstance doesn't store MoveData directly, we rely on the closure
+                // created in StartAnimation. However, we can't access that here easily.
+                // BUT, the instances have an event OnImpactFrameReached.
+                // We can just trigger that on the first active instance.
+
+                var firstInstance = _activeAnimations.First();
+                // This will invoke HandleImpactTrigger via the event subscription
+                // We simulate reaching the frame.
+                // Note: This relies on the event handler being robust (which it is, checking _impactSignalSentForCurrentBatch).
+
+                // Force update the instance to a state where it triggers? 
+                // Or just clear them and assume the BattleManager handles the state transition?
+                // Actually, BattleManager waits for MoveAnimationCompleted.
+                // If we clear the list, BattleScene fires MoveAnimationCompleted.
+                // BUT BattleManager expects MoveImpactOccurred to have happened first to apply damage.
+
+                // So we MUST trigger the impact logic.
+                // Since we can't easily invoke the private event from outside without reflection or changing the class,
+                // we will iterate and force update them with a huge delta time? No, that might overshoot.
+
+                // Better approach: Just clear the list. 
+                // Wait, if we clear the list, BattleScene fires MoveAnimationCompleted.
+                // In BattleManager.OnMoveAnimationCompleted:
+                // if (_pendingImpact != null) ApplyPendingImpact();
+
+                // So BattleManager ALREADY has a failsafe!
+                // If the animation completes (or is skipped), it checks for pending impact.
+                // So we just need to clear the animations.
+            }
+
+            _activeAnimations.Clear();
+        }
+
         public void ForceClear()
         {
             SkipAll();

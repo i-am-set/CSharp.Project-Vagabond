@@ -34,7 +34,8 @@ namespace ProjectVagabond.Utils
         DriftBounce,    // Horizontal Drift + Vertical Bounce
         DriftWave,      // Horizontal Drift + Vertical Wave
         FlickerBounce,  // Opacity Pulse + Vertical Bounce
-        FlickerWave     // Opacity Pulse + Vertical Wave
+        FlickerWave,    // Opacity Pulse + Vertical Wave
+        SmallWave       // Single pass "hump" wave for buttons
     }
 
     public static class TextUtils
@@ -45,6 +46,11 @@ namespace ProjectVagabond.Utils
         private const float WAVE_SPEED = 5f;
         private const float WAVE_FREQUENCY = 0.5f;
         private const float WAVE_AMPLITUDE = 1.0f;
+
+        // Small Wave (Button Hover)
+        private const float SMALL_WAVE_SPEED = 15f;
+        private const float SMALL_WAVE_FREQUENCY = 0.5f;
+        private const float SMALL_WAVE_AMPLITUDE = 2.0f;
 
         // Pop / PopWave
         private const float POP_SPEED = 6f;
@@ -95,6 +101,17 @@ namespace ProjectVagabond.Utils
         private const float FLICKER_MAX_ALPHA = 1.0f;
 
         /// <summary>
+        /// Calculates the duration required for the SmallWave effect to traverse the entire text string once.
+        /// Used to create seamless loops.
+        /// </summary>
+        public static float GetSmallWaveDuration(int textLength)
+        {
+            // Formula: (Length * Frequency + Pi) / Speed
+            // This ensures the sine wave (0 to Pi) has fully cleared the last character.
+            return (textLength * SMALL_WAVE_FREQUENCY + MathHelper.Pi) / SMALL_WAVE_SPEED;
+        }
+
+        /// <summary>
         /// Calculates the visual transformation for a single character based on a text effect.
         /// </summary>
         public static (Vector2 Offset, Vector2 Scale, float Rotation, Color Color) GetTextEffectTransform(
@@ -113,6 +130,16 @@ namespace ProjectVagabond.Utils
                 case TextEffectType.Wave:
                     float waveArg = time * WAVE_SPEED + charIndex * WAVE_FREQUENCY;
                     offset.Y = MathF.Sin(waveArg) * WAVE_AMPLITUDE;
+                    break;
+
+                case TextEffectType.SmallWave:
+                    // Single pass hump: sin(arg) where arg is 0..Pi
+                    // Note: We subtract index to make it travel left-to-right
+                    float smallWaveArg = time * SMALL_WAVE_SPEED - charIndex * SMALL_WAVE_FREQUENCY;
+                    if (smallWaveArg > 0 && smallWaveArg < MathHelper.Pi)
+                    {
+                        offset.Y = -MathF.Sin(smallWaveArg) * SMALL_WAVE_AMPLITUDE;
+                    }
                     break;
 
                 case TextEffectType.PopWave:
@@ -268,34 +295,61 @@ namespace ProjectVagabond.Utils
             return p;
         }
 
-        // --- Existing Methods (Kept for compatibility) ---
-
-        public static void DrawWavedText(SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color color, float waveTimer, float speed, float frequency, float amplitude, int charIndexOffset = 0)
+        /// <summary>
+        /// Draws text with a specific effect applied to each character.
+        /// Replaces the old DrawWavedText with a unified system.
+        /// </summary>
+        public static void DrawTextWithEffect(SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color color, TextEffectType effect, float time, Vector2? baseScale = null)
         {
             float startX = position.X;
             float baseY = position.Y;
+            Vector2 scaleFactor = baseScale ?? Vector2.One;
 
             for (int i = 0; i < text.Length; i++)
             {
                 char c = text[i];
                 string charStr = c.ToString();
                 string sub = text.Substring(0, i);
-                float charOffsetX = font.MeasureString(sub + "|").Width - font.MeasureString("|").Width;
 
-                float waveArg = waveTimer * speed - (i + charIndexOffset) * frequency;
-                float yWaveOffset = 0f;
-                if (waveArg > 0 && waveArg < MathHelper.Pi)
-                {
-                    float waveVal = MathF.Sin(waveArg);
-                    yWaveOffset = -MathF.Round(waveVal * amplitude);
-                }
+                // Sentinel trick for correct spacing, scaled by the base scale
+                float charOffsetX = (font.MeasureString(sub + "|").Width - font.MeasureString("|").Width) * scaleFactor.X;
 
-                spriteBatch.DrawStringSnapped(font, charStr, new Vector2(startX + charOffsetX, baseY + yWaveOffset), color);
+                var (offset, effectScale, rotation, finalColor) = GetTextEffectTransform(effect, time, i, color);
+
+                // Apply base scale to the offset as well if needed, though usually offset is absolute pixels.
+                // Let's keep offset absolute for now, but position is scaled.
+                Vector2 pos = new Vector2(startX + charOffsetX, baseY) + offset;
+
+                // Round to nearest pixel to match DrawStringSnapped behavior and prevent sub-pixel blur
+                pos = new Vector2(MathF.Round(pos.X), MathF.Round(pos.Y));
+
+                Vector2 origin = font.MeasureString(charStr) / 2f;
+
+                // Combine effect scale with base scale
+                Vector2 finalScale = effectScale * scaleFactor;
+
+                // Draw Shadow (Right side outline)
+                var shadowColor = new Color(finalColor.R / 4, finalColor.G / 4, finalColor.B / 4, finalColor.A);
+                spriteBatch.DrawString(font, charStr, pos + origin + new Vector2(1, 0), shadowColor, rotation, origin, finalScale, SpriteEffects.None, 0f);
+
+                // Draw Main Text
+                // Draw centered on the character position to support rotation/scale
+                spriteBatch.DrawString(font, charStr, pos + origin, finalColor, rotation, origin, finalScale, SpriteEffects.None, 0f);
             }
+        }
+
+        // --- Legacy Methods (Kept for compatibility if needed, but deprecated) ---
+
+        public static void DrawWavedText(SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color color, float waveTimer, float speed, float frequency, float amplitude, int charIndexOffset = 0)
+        {
+            // Redirect to new system using SmallWave if parameters match roughly, or just use Wave
+            // For now, we'll just use the new DrawTextWithEffect with SmallWave as that's what the user requested to replace this.
+            DrawTextWithEffect(spriteBatch, font, text, position, color, TextEffectType.SmallWave, waveTimer);
         }
 
         public static void DrawWavedTextOutlined(SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color textColor, Color outlineColor, float waveTimer, float speed, float frequency, float amplitude, int charIndexOffset = 0)
         {
+            // Re-implement using GetTextEffectTransform for consistency
             float startX = position.X;
             float baseY = position.Y;
             var shadowColor = new Color(textColor.R / 4, textColor.G / 4, textColor.B / 4, textColor.A);
@@ -307,22 +361,26 @@ namespace ProjectVagabond.Utils
                 string sub = text.Substring(0, i);
                 float charOffsetX = font.MeasureString(sub + "|").Width - font.MeasureString("|").Width;
 
-                float waveArg = waveTimer * speed - (i + charIndexOffset) * frequency;
-                float yWaveOffset = 0f;
-                if (waveArg > 0 && waveArg < MathHelper.Pi)
-                {
-                    float waveVal = MathF.Sin(waveArg);
-                    yWaveOffset = -MathF.Round(waveVal * amplitude);
-                }
+                var (offset, scale, rotation, finalColor) = GetTextEffectTransform(TextEffectType.Wave, waveTimer, i + charIndexOffset, textColor);
 
-                Vector2 charPos = new Vector2(MathF.Round(startX + charOffsetX), MathF.Round(baseY + yWaveOffset));
+                // Override amplitude/speed/freq with passed values? 
+                // The user requested "Small Wave" for buttons, but this method is used by BattleNarrator for "Wave" tag.
+                // So we should stick to the Wave logic here, but maybe use the passed params if we want to support custom tags.
+                // For now, let's just use the passed params to calculate offset manually to support the custom tag params.
 
-                spriteBatch.DrawString(font, charStr, charPos + new Vector2(1, 0), outlineColor);
-                spriteBatch.DrawString(font, charStr, charPos + new Vector2(-1, 0), outlineColor);
-                spriteBatch.DrawString(font, charStr, charPos + new Vector2(0, 1), outlineColor);
-                spriteBatch.DrawString(font, charStr, charPos + new Vector2(0, -1), outlineColor);
-                spriteBatch.DrawString(font, charStr, charPos + new Vector2(1, 0), shadowColor);
-                spriteBatch.DrawString(font, charStr, charPos, textColor);
+                float waveArg = waveTimer * speed + (i + charIndexOffset) * frequency;
+                offset.Y = MathF.Sin(waveArg) * amplitude;
+
+                Vector2 pos = new Vector2(startX + charOffsetX, baseY) + offset;
+                Vector2 origin = font.MeasureString(charStr) / 2f;
+                Vector2 drawPos = pos + origin;
+
+                spriteBatch.DrawString(font, charStr, drawPos + new Vector2(1, 0), outlineColor, rotation, origin, scale, SpriteEffects.None, 0f);
+                spriteBatch.DrawString(font, charStr, drawPos + new Vector2(-1, 0), outlineColor, rotation, origin, scale, SpriteEffects.None, 0f);
+                spriteBatch.DrawString(font, charStr, drawPos + new Vector2(0, 1), outlineColor, rotation, origin, scale, SpriteEffects.None, 0f);
+                spriteBatch.DrawString(font, charStr, drawPos + new Vector2(0, -1), outlineColor, rotation, origin, scale, SpriteEffects.None, 0f);
+                spriteBatch.DrawString(font, charStr, drawPos + new Vector2(1, 0), shadowColor, rotation, origin, scale, SpriteEffects.None, 0f);
+                spriteBatch.DrawString(font, charStr, drawPos, finalColor, rotation, origin, scale, SpriteEffects.None, 0f);
             }
         }
 
@@ -339,26 +397,25 @@ namespace ProjectVagabond.Utils
                 string sub = text.Substring(0, i);
                 float charOffsetX = font.MeasureString(sub + "|").Width - font.MeasureString("|").Width;
 
-                float waveArg = waveTimer * speed - (i + charIndexOffset) * frequency;
-                float yWaveOffset = 0f;
-                if (waveArg > 0 && waveArg < MathHelper.Pi)
-                {
-                    float waveVal = MathF.Sin(waveArg);
-                    yWaveOffset = -MathF.Round(waveVal * amplitude);
-                }
+                float waveArg = waveTimer * speed + (i + charIndexOffset) * frequency;
+                Vector2 offset = new Vector2(0, MathF.Sin(waveArg) * amplitude);
 
-                Vector2 charPos = new Vector2(MathF.Round(startX + charOffsetX), MathF.Round(baseY + yWaveOffset));
+                Vector2 pos = new Vector2(startX + charOffsetX, baseY) + offset;
+                Vector2 origin = font.MeasureString(charStr) / 2f;
+                Vector2 drawPos = pos + origin;
+                Vector2 scale = Vector2.One;
+                float rotation = 0f;
 
-                spriteBatch.DrawString(font, charStr, charPos + new Vector2(1, 1), outlineColor);
-                spriteBatch.DrawString(font, charStr, charPos + new Vector2(1, -1), outlineColor);
-                spriteBatch.DrawString(font, charStr, charPos + new Vector2(-1, 1), outlineColor);
-                spriteBatch.DrawString(font, charStr, charPos + new Vector2(-1, -1), outlineColor);
-                spriteBatch.DrawString(font, charStr, charPos + new Vector2(1, 0), outlineColor);
-                spriteBatch.DrawString(font, charStr, charPos + new Vector2(-1, 0), outlineColor);
-                spriteBatch.DrawString(font, charStr, charPos + new Vector2(0, 1), outlineColor);
-                spriteBatch.DrawString(font, charStr, charPos + new Vector2(0, -1), outlineColor);
-                spriteBatch.DrawString(font, charStr, charPos + new Vector2(1, 0), shadowColor);
-                spriteBatch.DrawString(font, charStr, charPos, textColor);
+                spriteBatch.DrawString(font, charStr, drawPos + new Vector2(1, 1), outlineColor, rotation, origin, scale, SpriteEffects.None, 0f);
+                spriteBatch.DrawString(font, charStr, drawPos + new Vector2(1, -1), outlineColor, rotation, origin, scale, SpriteEffects.None, 0f);
+                spriteBatch.DrawString(font, charStr, drawPos + new Vector2(-1, 1), outlineColor, rotation, origin, scale, SpriteEffects.None, 0f);
+                spriteBatch.DrawString(font, charStr, drawPos + new Vector2(-1, -1), outlineColor, rotation, origin, scale, SpriteEffects.None, 0f);
+                spriteBatch.DrawString(font, charStr, drawPos + new Vector2(1, 0), outlineColor, rotation, origin, scale, SpriteEffects.None, 0f);
+                spriteBatch.DrawString(font, charStr, drawPos + new Vector2(-1, 0), outlineColor, rotation, origin, scale, SpriteEffects.None, 0f);
+                spriteBatch.DrawString(font, charStr, drawPos + new Vector2(0, 1), outlineColor, rotation, origin, scale, SpriteEffects.None, 0f);
+                spriteBatch.DrawString(font, charStr, drawPos + new Vector2(0, -1), outlineColor, rotation, origin, scale, SpriteEffects.None, 0f);
+                spriteBatch.DrawString(font, charStr, drawPos + new Vector2(1, 0), shadowColor, rotation, origin, scale, SpriteEffects.None, 0f);
+                spriteBatch.DrawString(font, charStr, drawPos, textColor, rotation, origin, scale, SpriteEffects.None, 0f);
             }
         }
     }
