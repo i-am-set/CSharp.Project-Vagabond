@@ -107,7 +107,8 @@ namespace ProjectVagabond.Scenes
             )
             {
                 TextRenderOffset = new Vector2(0, -1),
-                HoverAnimation = HoverAnimationType.SlideAndHold
+                HoverAnimation = HoverAnimationType.SlideAndHold,
+                WaveEffectType = TextEffectType.LeftAlignedSmallWave // Use new left-aligned wave
             };
             playButton.OnClick += () =>
             {
@@ -157,7 +158,8 @@ namespace ProjectVagabond.Scenes
             )
             {
                 TextRenderOffset = new Vector2(0, -1),
-                HoverAnimation = HoverAnimationType.SlideAndHold
+                HoverAnimation = HoverAnimationType.SlideAndHold,
+                WaveEffectType = TextEffectType.LeftAlignedSmallWave // Use new left-aligned wave
             };
             settingsButton.OnClick += () =>
             {
@@ -176,7 +178,8 @@ namespace ProjectVagabond.Scenes
             )
             {
                 TextRenderOffset = new Vector2(0, -1),
-                HoverAnimation = HoverAnimationType.SlideAndHold
+                HoverAnimation = HoverAnimationType.SlideAndHold,
+                WaveEffectType = TextEffectType.LeftAlignedSmallWave // Use new left-aligned wave
             };
             exitButton.OnClick += ConfirmExit;
             _buttons.Add(exitButton);

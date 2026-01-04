@@ -1,6 +1,10 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Particles;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
@@ -26,7 +30,8 @@ namespace ProjectVagabond.Utils
         DriftWave,      // Horizontal Drift + Vertical Wave
         FlickerBounce,  // Opacity Pulse + Vertical Bounce
         FlickerWave,    // Opacity Pulse + Vertical Wave
-        SmallWave       // Single pass "hump" wave for buttons
+        SmallWave,      // Single pass "hump" wave (Center Aligned Expansion)
+        LeftAlignedSmallWave // Single pass "hump" wave (Left Aligned Expansion)
     }
 
     /// <summary>
@@ -135,6 +140,7 @@ namespace ProjectVagabond.Utils
                     break;
 
                 case TextEffectType.SmallWave:
+                case TextEffectType.LeftAlignedSmallWave:
                     float smallWaveArg = time * TextAnimationSettings.SmallWaveSpeed - charIndex * TextAnimationSettings.SmallWaveFrequency;
                     if (smallWaveArg > 0 && smallWaveArg < MathHelper.Pi)
                     {
@@ -338,14 +344,17 @@ namespace ProjectVagabond.Utils
             Vector2 drawScaleBase = Vector2.One;
             var shadowColor = new Color(color.R / 4, color.G / 4, color.B / 4, color.A);
 
-            // --- CENTER ALIGNMENT ---
+            // --- CENTER ALIGNMENT LOGIC ---
             // Calculate the total width of the text to determine the centering offset.
-            // If layoutScale is > 1, the text grows. We want it to grow from the center,
-            // so we shift the starting position left by half the growth amount.
-            // Offset = (UnscaledWidth - ScaledWidth) / 2
-            //        = (W - W*S) / 2 = W(1-S)/2
-            Vector2 totalSize = font.MeasureString(text);
-            Vector2 centeringOffset = (totalSize * (Vector2.One - layoutScale)) / 2f;
+            // If layoutScale is > 1, the text grows.
+            // If effect is LeftAlignedSmallWave, we do NOT apply centering offset, so it grows to the right.
+            // Otherwise, we shift left by half the growth to grow from center.
+            Vector2 centeringOffset = Vector2.Zero;
+            if (effect != TextEffectType.LeftAlignedSmallWave)
+            {
+                Vector2 totalSize = font.MeasureString(text);
+                centeringOffset = (totalSize * (Vector2.One - layoutScale)) / 2f;
+            }
 
             var glyphs = font.GetGlyphs(text, position);
             int charIndex = 0;

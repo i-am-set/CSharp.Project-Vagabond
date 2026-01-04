@@ -3,7 +3,9 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
@@ -72,6 +74,12 @@ namespace ProjectVagabond.UI
 
         // --- Text Wave Animation State ---
         public bool EnableTextWave { get; set; } = true;
+
+        /// <summary>
+        /// The type of wave effect to apply when EnableTextWave is true.
+        /// Defaults to SmallWave (Center Aligned).
+        /// </summary>
+        public TextEffectType WaveEffectType { get; set; } = TextEffectType.SmallWave;
 
         // Changed to protected so derived classes (MoveButton, TextOverImageButton) can use it
         protected float _waveTimer = 0f;
@@ -438,8 +446,8 @@ namespace ProjectVagabond.UI
             // --- Wave Animation Logic ---
             if (EnableTextWave && isActivated)
             {
-                // Use the new SmallWave effect via TextUtils, passing the current scale
-                TextUtils.DrawTextWithEffect(spriteBatch, font, Text, textPosition, textColor, TextEffectType.SmallWave, _waveTimer, new Vector2(_currentScale));
+                // Use the configured WaveEffectType (SmallWave or LeftAlignedSmallWave)
+                TextUtils.DrawTextWithEffect(spriteBatch, font, Text, textPosition, textColor, WaveEffectType, _waveTimer, new Vector2(_currentScale));
             }
             else
             {
