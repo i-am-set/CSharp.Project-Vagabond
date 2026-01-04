@@ -31,6 +31,7 @@ namespace ProjectVagabond.Scenes
         private readonly HapticsManager _hapticsManager;
 
         private readonly List<Button> _buttons = new();
+        private readonly List<UIAnimator> _buttonAnimators = new();
         private int _selectedButtonIndex = -1;
 
         private float _inputDelay = 0.1f;
@@ -39,18 +40,9 @@ namespace ProjectVagabond.Scenes
         private ConfirmationDialog _confirmationDialog;
         private bool _uiInitialized = false;
 
-        // --- Intro Animation State ---
-        private bool _introSequenceStarted = false;
-        private float _staggerTimer = 0f;
-        private int _animatingButtonIndex = 0;
-        private List<float> _buttonAnimTimers = new List<float>();
-        private float _safetyTimer = 0f; // Watchdog timer for intro sequence
-
         // Tuning
         private const float BUTTON_STAGGER_DELAY = 0.15f; // Time between each button starting
         private const float BUTTON_ANIM_DURATION = 0.5f; // How long the pop-in takes
-        private const float JIGGLE_FREQUENCY = 20f;
-        private const float JIGGLE_MAGNITUDE = 0.15f; // Radians (approx 8 degrees)
 
         public MainMenuScene()
         {
@@ -108,7 +100,7 @@ namespace ProjectVagabond.Scenes
             {
                 TextRenderOffset = new Vector2(0, -1),
                 HoverAnimation = HoverAnimationType.SlideAndHold,
-                WaveEffectType = TextEffectType.LeftAlignedSmallWave // Use new left-aligned wave
+                WaveEffectType = TextEffectType.LeftAlignedSmallWave
             };
             playButton.OnClick += () =>
             {
@@ -159,7 +151,7 @@ namespace ProjectVagabond.Scenes
             {
                 TextRenderOffset = new Vector2(0, -1),
                 HoverAnimation = HoverAnimationType.SlideAndHold,
-                WaveEffectType = TextEffectType.LeftAlignedSmallWave // Use new left-aligned wave
+                WaveEffectType = TextEffectType.LeftAlignedSmallWave
             };
             settingsButton.OnClick += () =>
             {
@@ -179,7 +171,7 @@ namespace ProjectVagabond.Scenes
             {
                 TextRenderOffset = new Vector2(0, -1),
                 HoverAnimation = HoverAnimationType.SlideAndHold,
-                WaveEffectType = TextEffectType.LeftAlignedSmallWave // Use new left-aligned wave
+                WaveEffectType = TextEffectType.LeftAlignedSmallWave
             };
             exitButton.OnClick += ConfirmExit;
             _buttons.Add(exitButton);
@@ -209,15 +201,19 @@ namespace ProjectVagabond.Scenes
             _previousKeyboardState = Keyboard.GetState();
 
             // Reset Animation State
-            _introSequenceStarted = false;
-            _animatingButtonIndex = 0;
-            _staggerTimer = 0f;
-            _safetyTimer = 0f; // Reset watchdog
-            _buttonAnimTimers.Clear();
+            _buttonAnimators.Clear();
             for (int i = 0; i < _buttons.Count; i++)
             {
                 _buttons[i].ResetAnimationState();
-                _buttonAnimTimers.Add(-1f); // -1 indicates animation hasn't started
+
+                var animator = new UIAnimator
+                {
+                    Style = TextUtils.EntryExitStyle.PopJiggle,
+                    Duration = BUTTON_ANIM_DURATION
+                };
+                // Stagger the start of each button
+                animator.Show(delay: i * BUTTON_STAGGER_DELAY);
+                _buttonAnimators.Add(animator);
             }
 
             if (this.LastUsedInputForNav == InputDevice.Keyboard && !firstTimeOpened)
@@ -266,53 +262,16 @@ namespace ProjectVagabond.Scenes
 
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            // 1. CRITICAL FIX: Block all input and logic if the transition is still active.
+            // Block all input and logic if the transition is still active.
             if (_transitionManager.IsTransitioning)
             {
                 return;
             }
 
-            // 2. Start Intro Sequence once transition is done
-            if (!_introSequenceStarted)
+            // Update Animators
+            foreach (var animator in _buttonAnimators)
             {
-                _introSequenceStarted = true;
-                _staggerTimer = 0f;
-            }
-
-            // --- WATCHDOG SAFETY ---
-            // If for any reason the intro sequence stalls (e.g. logic error, frame skip),
-            // force all buttons to be visible after 2 seconds.
-            _safetyTimer += dt;
-            if (_safetyTimer > 2.0f)
-            {
-                for (int i = 0; i < _buttonAnimTimers.Count; i++)
-                {
-                    if (_buttonAnimTimers[i] < BUTTON_ANIM_DURATION)
-                    {
-                        _buttonAnimTimers[i] = BUTTON_ANIM_DURATION;
-                    }
-                }
-            }
-
-            // 3. Update Stagger Timer to trigger next button
-            if (_animatingButtonIndex < _buttons.Count)
-            {
-                _staggerTimer += dt;
-                if (_staggerTimer >= BUTTON_STAGGER_DELAY)
-                {
-                    _buttonAnimTimers[_animatingButtonIndex] = 0f; // Start this button
-                    _animatingButtonIndex++;
-                    _staggerTimer = 0f;
-                }
-            }
-
-            // 4. Update Individual Button Animation Timers
-            for (int i = 0; i < _buttonAnimTimers.Count; i++)
-            {
-                if (_buttonAnimTimers[i] >= 0f)
-                {
-                    _buttonAnimTimers[i] += dt;
-                }
+                animator.Update(dt);
             }
 
             var currentMouseState = Mouse.GetState();
@@ -343,8 +302,9 @@ namespace ProjectVagabond.Scenes
 
             for (int i = 0; i < _buttons.Count; i++)
             {
-                // Only allow interaction if the button's entrance animation is mostly complete
-                if (_buttonAnimTimers[i] >= BUTTON_ANIM_DURATION * 0.8f)
+                // Only allow interaction if the button is mostly visible (Scale > 0.8)
+                var visualState = _buttonAnimators[i].GetCurrentState();
+                if (visualState.IsVisible && visualState.Scale.X > 0.8f)
                 {
                     _buttons[i].Update(currentMouseState);
                     if (_buttons[i].IsHovered)
@@ -391,8 +351,9 @@ namespace ProjectVagabond.Scenes
                     _sceneManager.LastInputDevice = InputDevice.Keyboard;
                     var selectedButton = _buttons[_selectedButtonIndex];
 
-                    // Only trigger if animation is done
-                    if (_buttonAnimTimers[_selectedButtonIndex] >= BUTTON_ANIM_DURATION * 0.8f)
+                    // Only trigger if animation is mostly done
+                    var visualState = _buttonAnimators[_selectedButtonIndex].GetCurrentState();
+                    if (visualState.IsVisible && visualState.Scale.X > 0.8f)
                     {
                         if (selectedButton.IsHovered)
                         {
@@ -427,29 +388,16 @@ namespace ProjectVagabond.Scenes
 
             for (int i = 0; i < _buttons.Count; i++)
             {
-                // Skip drawing if animation hasn't started
-                if (_buttonAnimTimers[i] < 0f) continue;
-
-                float timer = _buttonAnimTimers[i];
-                float progress = Math.Clamp(timer / BUTTON_ANIM_DURATION, 0f, 1f);
-
-                // Scale: EaseOutBack for overshoot
-                float scale = Easing.EaseOutBack(progress);
-
-                // Rotation: Damped Sine Wave (Jiggle)
-                float rotation = 0f;
-                if (progress < 1.0f)
-                {
-                    float decay = 1.0f - progress;
-                    rotation = MathF.Sin(timer * JIGGLE_FREQUENCY) * JIGGLE_MAGNITUDE * decay;
-                }
+                var state = _buttonAnimators[i].GetCurrentState();
+                if (!state.IsVisible) continue;
 
                 // Create local transformation matrix for this button
                 Vector2 center = _buttons[i].Bounds.Center.ToVector2();
                 Matrix animMatrix = Matrix.CreateTranslation(-center.X, -center.Y, 0) *
-                                    Matrix.CreateRotationZ(rotation) *
-                                    Matrix.CreateScale(scale) *
-                                    Matrix.CreateTranslation(center.X, center.Y, 0);
+                                    Matrix.CreateRotationZ(state.Rotation) *
+                                    Matrix.CreateScale(state.Scale.X, state.Scale.Y, 1.0f) *
+                                    Matrix.CreateTranslation(center.X, center.Y, 0) *
+                                    Matrix.CreateTranslation(state.Offset.X, state.Offset.Y, 0);
 
                 // Combine with global transform
                 Matrix finalTransform = animMatrix * transform;
@@ -469,7 +417,8 @@ namespace ProjectVagabond.Scenes
             if (_selectedButtonIndex >= 0 && _selectedButtonIndex < _buttons.Count)
             {
                 // Only draw arrow if button is fully visible
-                if (_buttonAnimTimers[_selectedButtonIndex] >= BUTTON_ANIM_DURATION)
+                var state = _buttonAnimators[_selectedButtonIndex].GetCurrentState();
+                if (state.IsVisible && state.Scale.X >= 0.95f)
                 {
                     var selectedButton = _buttons[_selectedButtonIndex];
                     if (selectedButton.IsHovered)

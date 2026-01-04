@@ -179,15 +179,15 @@ namespace ProjectVagabond.Utils
 
             bool isEntering = _state == AnimationState.AnimatingIn;
 
-            // Pass the configured magnitude (see improvement below)
-            var (scale, opacity, offset) = TextUtils.CalculateEntryExitTransform(Style, progress, isEntering, Magnitude);
+            // Pass the configured magnitude
+            var (scale, opacity, offset, rotation) = TextUtils.CalculateEntryExitTransform(Style, progress, isEntering, Magnitude);
 
             return new VisualState
             {
                 Scale = scale,
                 Opacity = opacity,
                 Offset = offset,
-                Rotation = 0f,
+                Rotation = rotation,
                 IsVisible = true
             };
         }

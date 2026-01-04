@@ -116,26 +116,28 @@ namespace ProjectVagabond.Utils
 
         public enum EntryExitStyle
         {
-            Pop,    // Scale 0->1 with overshoot
-            Fade,   // Opacity 0->1
-            SlideUp, // Moves up from an offset
-            SlideDown, // Moves down from an offset
-            Zoom    // Scale 0->1 linear (no overshoot)
+            Pop,        // Scale 0->1 with overshoot
+            Fade,       // Opacity 0->1
+            SlideUp,    // Moves up from an offset
+            SlideDown,  // Moves down from an offset
+            Zoom,       // Scale 0->1 linear (no overshoot)
+            PopJiggle   // Scale 0->1 with overshoot AND a damped rotation wiggle (Main Menu Style)
         }
 
         /// <summary>
-        /// Calculates the visual state (Scale, Alpha, Offset) for an element based on its animation progress.
+        /// Calculates the visual state (Scale, Alpha, Offset, Rotation) for an element based on its animation progress.
         /// </summary>
         /// <param name="style">The style of animation.</param>
         /// <param name="progress">0.0 (Start) to 1.0 (End).</param>
         /// <param name="isEntering">True if appearing, False if disappearing.</param>
-        /// <returns>A tuple containing Scale, Opacity, and Position Offset.</returns>
-        public static (Vector2 Scale, float Opacity, Vector2 Offset) CalculateEntryExitTransform(EntryExitStyle style, float progress, bool isEntering, float magnitude = 20f)
+        /// <returns>A tuple containing Scale, Opacity, Position Offset, and Rotation.</returns>
+        public static (Vector2 Scale, float Opacity, Vector2 Offset, float Rotation) CalculateEntryExitTransform(EntryExitStyle style, float progress, bool isEntering, float magnitude = 20f)
         {
             float t = Math.Clamp(progress, 0f, 1f);
             Vector2 scale = Vector2.One;
             float opacity = 1f;
             Vector2 offset = Vector2.Zero;
+            float rotation = 0f;
 
             switch (style)
             {
@@ -156,6 +158,31 @@ namespace ProjectVagabond.Utils
                     }
                     break;
 
+                case EntryExitStyle.PopJiggle:
+                    if (isEntering)
+                    {
+                        // Scale: EaseOutBack for overshoot
+                        float s = Easing.EaseOutBack(t);
+                        scale = new Vector2(s);
+                        opacity = t;
+
+                        // Rotation: Damped Sine Wave (Jiggle)
+                        // Simulates: MathF.Sin(timer * 20f) * 0.15f * (1.0f - progress)
+                        // We map 't' (0 to 1) to an angle. 
+                        // Assuming a typical duration of 0.5s, 20f * 0.5s = 10 radians.
+                        float angle = t * 10f;
+                        float decay = 1.0f - t;
+                        rotation = MathF.Sin(angle) * 0.15f * decay;
+                    }
+                    else
+                    {
+                        // Pop Out
+                        float s = 1.0f - Easing.EaseInBack(t);
+                        scale = new Vector2(s);
+                        opacity = 1.0f - t;
+                    }
+                    break;
+
                 case EntryExitStyle.Fade:
                     opacity = isEntering ? t : (1.0f - t);
                     break;
@@ -167,7 +194,6 @@ namespace ProjectVagabond.Utils
                     break;
 
                 case EntryExitStyle.SlideUp:
-                    // Use magnitude instead of hardcoded 20f
                     if (isEntering)
                     {
                         float y = MathHelper.Lerp(magnitude, 0f, Easing.EaseOutCubic(t));
@@ -183,7 +209,6 @@ namespace ProjectVagabond.Utils
                     break;
 
                 case EntryExitStyle.SlideDown:
-                    // Use magnitude instead of hardcoded 20f
                     if (isEntering)
                     {
                         float y = MathHelper.Lerp(-magnitude, 0f, Easing.EaseOutCubic(t));
@@ -199,7 +224,7 @@ namespace ProjectVagabond.Utils
                     break;
             }
 
-            return (scale, opacity, offset);
+            return (scale, opacity, offset, rotation);
         }
 
         // ==========================================================================================
