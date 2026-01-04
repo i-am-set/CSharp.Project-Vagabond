@@ -44,6 +44,7 @@ namespace ProjectVagabond.Scenes
         private float _staggerTimer = 0f;
         private int _animatingButtonIndex = 0;
         private List<float> _buttonAnimTimers = new List<float>();
+        private float _safetyTimer = 0f; // Watchdog timer for intro sequence
 
         // Tuning
         private const float BUTTON_STAGGER_DELAY = 0.15f; // Time between each button starting
@@ -208,6 +209,7 @@ namespace ProjectVagabond.Scenes
             _introSequenceStarted = false;
             _animatingButtonIndex = 0;
             _staggerTimer = 0f;
+            _safetyTimer = 0f; // Reset watchdog
             _buttonAnimTimers.Clear();
             for (int i = 0; i < _buttons.Count; i++)
             {
@@ -259,6 +261,8 @@ namespace ProjectVagabond.Scenes
         {
             base.Update(gameTime);
 
+            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
             // 1. CRITICAL FIX: Block all input and logic if the transition is still active.
             if (_transitionManager.IsTransitioning)
             {
@@ -272,7 +276,20 @@ namespace ProjectVagabond.Scenes
                 _staggerTimer = 0f;
             }
 
-            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            // --- WATCHDOG SAFETY ---
+            // If for any reason the intro sequence stalls (e.g. logic error, frame skip),
+            // force all buttons to be visible after 2 seconds.
+            _safetyTimer += dt;
+            if (_safetyTimer > 2.0f)
+            {
+                for (int i = 0; i < _buttonAnimTimers.Count; i++)
+                {
+                    if (_buttonAnimTimers[i] < BUTTON_ANIM_DURATION)
+                    {
+                        _buttonAnimTimers[i] = BUTTON_ANIM_DURATION;
+                    }
+                }
+            }
 
             // 3. Update Stagger Timer to trigger next button
             if (_animatingButtonIndex < _buttons.Count)

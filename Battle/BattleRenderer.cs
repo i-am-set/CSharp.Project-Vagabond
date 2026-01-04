@@ -1157,10 +1157,12 @@ namespace ProjectVagabond.Battle.UI
             if (!string.IsNullOrEmpty(title))
             {
                 var font = ServiceLocator.Get<Core>().SecondaryFont;
-                float bob = (MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * 0.375f * MathF.PI) > 0) ? -1f : 0f;
+                // Use TextUtils for the title effect (Bounce)
                 var size = font.MeasureString(title);
-                var pos = new Vector2((Global.VIRTUAL_WIDTH - size.Width) / 2, BattleLayout.DIVIDER_Y + 3 + bob);
-                spriteBatch.DrawStringSnapped(font, title, pos, _global.Palette_LightGray);
+                var pos = new Vector2((Global.VIRTUAL_WIDTH - size.Width) / 2, BattleLayout.DIVIDER_Y + 3);
+
+                // Use Bounce effect
+                TextUtils.DrawTextWithEffect(spriteBatch, font, title, pos, _global.Palette_LightGray, TextEffectType.Bounce, (float)gameTime.TotalGameTime.TotalSeconds);
             }
         }
 

@@ -1,18 +1,8 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond;
-using ProjectVagabond.Battle;
-using ProjectVagabond.Battle.UI;
-using ProjectVagabond.Progression;
-using ProjectVagabond.Scenes;
-using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Text;
 
 namespace ProjectVagabond.Utils
 {
@@ -38,77 +28,74 @@ namespace ProjectVagabond.Utils
         SmallWave       // Single pass "hump" wave for buttons
     }
 
+    /// <summary>
+    /// Centralized configuration for text animation parameters.
+    /// </summary>
+    public static class TextAnimationSettings
+    {
+        public static float WaveSpeed = 5f;
+        public static float WaveFrequency = 0.5f;
+        public static float WaveAmplitude = 1.0f;
+
+        public static float SmallWaveSpeed = 15f;
+        public static float SmallWaveFrequency = 0.5f;
+        public static float SmallWaveAmplitude = 2.0f;
+
+        public static float PopSpeed = 6f;
+        public static float PopFrequency = 0.4f;
+        public static float PopAmplitude = 1.0f;
+        public static float PopScaleMin = 0.8f;
+        public static float PopScaleMax = 1.2f;
+
+        public static float WobbleSpeed = 3f;
+        public static float WobbleFrequency = 0.5f;
+        public static float WobbleRotationMagnitude = 0.25f;
+        public static float WobbleYAmplitude = 1.0f;
+
+        public static float ShakeSpeed = 30f;
+        public static float ShakeAmplitude = 1.0f;
+
+        public static float NervousSpeed = 25f;
+        public static float NervousAmplitude = 0.75f;
+
+        public static float RainbowSpeed = 0.5f;
+        public static float RainbowFrequency = 0.1f;
+        public static float RainbowWaveSpeed = 4f;
+        public static float RainbowWaveFreq = 0.5f;
+        public static float RainbowWaveAmplitude = 1.0f;
+
+        public static float BounceSpeed = 6f;
+        public static float BounceFrequency = 0.5f;
+        public static float BounceAmplitude = 2.0f;
+
+        public static float DriftSpeed = 3f;
+        public static float DriftFrequency = 0.3f;
+        public static float DriftAmplitude = 0.75f;
+
+        public static float GlitchSpeed = 20f;
+        public static float GlitchAmplitude = 0.5f;
+        public static float GlitchRotation = 0.05f;
+
+        public static float FlickerSpeed = 10f;
+        public static float FlickerMinAlpha = 0.3f;
+        public static float FlickerMaxAlpha = 1.0f;
+    }
+
     public static class TextUtils
     {
-        // --- TUNING PARAMETERS ---
-
-        // Wave
-        private const float WAVE_SPEED = 5f;
-        private const float WAVE_FREQUENCY = 0.5f;
-        private const float WAVE_AMPLITUDE = 1.0f;
-
-        // Small Wave (Button Hover)
-        private const float SMALL_WAVE_SPEED = 15f;
-        private const float SMALL_WAVE_FREQUENCY = 0.5f;
-        private const float SMALL_WAVE_AMPLITUDE = 2.0f;
-
-        // Pop / PopWave
-        private const float POP_SPEED = 6f;
-        private const float POP_FREQUENCY = 0.4f;
-        private const float POP_AMPLITUDE = 1.0f;
-        private const float POP_SCALE_MIN = 0.8f;
-        private const float POP_SCALE_MAX = 1.2f;
-
-        // Wobble
-        private const float WOBBLE_SPEED = 3f;
-        private const float WOBBLE_FREQUENCY = 0.5f;
-        private const float WOBBLE_ROTATION_MAGNITUDE = 0.25f; // ~20 degrees
-        private const float WOBBLE_Y_AMPLITUDE = 1.0f; // Slight vertical float
-
-        // Shake
-        private const float SHAKE_SPEED = 30f;
-        private const float SHAKE_AMPLITUDE = 1.0f;
-
-        // Nervous
-        private const float NERVOUS_SPEED = 25f;
-        private const float NERVOUS_AMPLITUDE = 0.75f;
-
-        // Rainbow
-        private const float RAINBOW_SPEED = 0.5f;
-        private const float RAINBOW_FREQUENCY = 0.1f;
-        private const float RAINBOW_WAVE_SPEED = 4f;
-        private const float RAINBOW_WAVE_FREQ = 0.5f;
-        private const float RAINBOW_WAVE_AMPLITUDE = 1.0f;
-
-        // Bounce
-        private const float BOUNCE_SPEED = 6f;
-        private const float BOUNCE_FREQUENCY = 0.5f;
-        private const float BOUNCE_AMPLITUDE = 2.0f;
-
-        // Drift
-        private const float DRIFT_SPEED = 3f;
-        private const float DRIFT_FREQUENCY = 0.3f;
-        private const float DRIFT_AMPLITUDE = 0.75f;
-
-        // Glitch
-        private const float GLITCH_SPEED = 20f; // Faster
-        private const float GLITCH_AMPLITUDE = 0.5f; // Visible pixel offset
-        private const float GLITCH_ROTATION = 0.05f; // Visible rotation jitter
-
-        // Flicker
-        private const float FLICKER_SPEED = 10f;
-        private const float FLICKER_MIN_ALPHA = 0.3f;
-        private const float FLICKER_MAX_ALPHA = 1.0f;
+        private enum OutlineStyle
+        {
+            None,
+            Cross, // 4-way
+            Square // 8-way
+        }
 
         /// <summary>
         /// Calculates the duration required for the SmallWave effect to traverse the entire text string once.
-        /// Used to create seamless loops.
         /// </summary>
         public static float GetSmallWaveDuration(int textLength)
         {
-            // Formula: (Length * Frequency + Pi) / Speed
-            // This ensures the sine wave (0 to Pi) has fully cleared the last character.
-            return (textLength * SMALL_WAVE_FREQUENCY + MathHelper.Pi) / SMALL_WAVE_SPEED;
+            return (textLength * TextAnimationSettings.SmallWaveFrequency + MathHelper.Pi) / TextAnimationSettings.SmallWaveSpeed;
         }
 
         /// <summary>
@@ -128,137 +115,133 @@ namespace ProjectVagabond.Utils
             switch (effect)
             {
                 case TextEffectType.Wave:
-                    float waveArg = time * WAVE_SPEED + charIndex * WAVE_FREQUENCY;
-                    offset.Y = MathF.Sin(waveArg) * WAVE_AMPLITUDE;
+                    float waveArg = time * TextAnimationSettings.WaveSpeed + charIndex * TextAnimationSettings.WaveFrequency;
+                    offset.Y = MathF.Sin(waveArg) * TextAnimationSettings.WaveAmplitude;
                     break;
 
                 case TextEffectType.SmallWave:
-                    // Single pass hump: sin(arg) where arg is 0..Pi
-                    // Note: We subtract index to make it travel left-to-right
-                    float smallWaveArg = time * SMALL_WAVE_SPEED - charIndex * SMALL_WAVE_FREQUENCY;
+                    float smallWaveArg = time * TextAnimationSettings.SmallWaveSpeed - charIndex * TextAnimationSettings.SmallWaveFrequency;
                     if (smallWaveArg > 0 && smallWaveArg < MathHelper.Pi)
                     {
-                        offset.Y = -MathF.Sin(smallWaveArg) * SMALL_WAVE_AMPLITUDE;
+                        offset.Y = -MathF.Sin(smallWaveArg) * TextAnimationSettings.SmallWaveAmplitude;
                     }
                     break;
 
                 case TextEffectType.PopWave:
-                    float popArg = time * POP_SPEED + charIndex * POP_FREQUENCY;
+                    float popArg = time * TextAnimationSettings.PopSpeed + charIndex * TextAnimationSettings.PopFrequency;
                     float sinVal = MathF.Sin(popArg);
-                    offset.Y = sinVal * POP_AMPLITUDE;
+                    offset.Y = sinVal * TextAnimationSettings.PopAmplitude;
                     float scalePulse = (sinVal + 1f) * 0.5f;
-                    float scaleFactor = MathHelper.Lerp(POP_SCALE_MIN, POP_SCALE_MAX, scalePulse);
+                    float scaleFactor = MathHelper.Lerp(TextAnimationSettings.PopScaleMin, TextAnimationSettings.PopScaleMax, scalePulse);
                     scale = new Vector2(scaleFactor);
                     break;
 
                 case TextEffectType.Pop:
-                    float pArg = time * POP_SPEED + charIndex * POP_FREQUENCY;
+                    float pArg = time * TextAnimationSettings.PopSpeed + charIndex * TextAnimationSettings.PopFrequency;
                     float pSin = MathF.Sin(pArg);
                     float pPulse = (pSin + 1f) * 0.5f;
-                    float pFactor = MathHelper.Lerp(POP_SCALE_MIN, POP_SCALE_MAX, pPulse);
+                    float pFactor = MathHelper.Lerp(TextAnimationSettings.PopScaleMin, TextAnimationSettings.PopScaleMax, pPulse);
                     scale = new Vector2(pFactor);
                     break;
 
                 case TextEffectType.Wobble:
-                    float wobbleArg = time * WOBBLE_SPEED + charIndex * WOBBLE_FREQUENCY;
-                    rotation = MathF.Sin(wobbleArg) * WOBBLE_ROTATION_MAGNITUDE;
-                    // Add slight vertical movement to make it feel like it's floating
-                    offset.Y = MathF.Cos(wobbleArg) * WOBBLE_Y_AMPLITUDE;
+                    float wobbleArg = time * TextAnimationSettings.WobbleSpeed + charIndex * TextAnimationSettings.WobbleFrequency;
+                    rotation = MathF.Sin(wobbleArg) * TextAnimationSettings.WobbleRotationMagnitude;
+                    offset.Y = MathF.Cos(wobbleArg) * TextAnimationSettings.WobbleYAmplitude;
                     break;
 
                 case TextEffectType.Shake:
-                    float flickerTime = MathF.Floor(time * SHAKE_SPEED);
+                    float flickerTime = MathF.Floor(time * TextAnimationSettings.ShakeSpeed);
                     float r1 = MathF.Sin(flickerTime * 12.9898f + charIndex * 78.233f) * 43758.5453f;
                     float r2 = MathF.Sin(flickerTime * 39.7867f + charIndex * 12.9898f) * 43758.5453f;
                     float rndX = (r1 - MathF.Floor(r1)) * 2f - 1f;
                     float rndY = (r2 - MathF.Floor(r2)) * 2f - 1f;
-                    offset = new Vector2(rndX, rndY) * SHAKE_AMPLITUDE;
+                    offset = new Vector2(rndX, rndY) * TextAnimationSettings.ShakeAmplitude;
                     break;
 
                 case TextEffectType.Nervous:
-                    float nervousTime = MathF.Floor(time * NERVOUS_SPEED);
+                    float nervousTime = MathF.Floor(time * TextAnimationSettings.NervousSpeed);
                     float n1 = MathF.Sin(nervousTime * 12.9898f + charIndex * 78.233f) * 43758.5453f;
                     float n2 = MathF.Sin(nervousTime * 39.7867f + charIndex * 12.9898f) * 43758.5453f;
                     float nervousRndX = (n1 - MathF.Floor(n1)) * 2f - 1f;
                     float nervousRndY = (n2 - MathF.Floor(n2)) * 2f - 1f;
-                    offset = new Vector2(nervousRndX, nervousRndY) * NERVOUS_AMPLITUDE;
+                    offset = new Vector2(nervousRndX, nervousRndY) * TextAnimationSettings.NervousAmplitude;
                     break;
 
                 case TextEffectType.Rainbow:
-                    float hue = (time * RAINBOW_SPEED + charIndex * RAINBOW_FREQUENCY) % 1.0f;
+                    float hue = (time * TextAnimationSettings.RainbowSpeed + charIndex * TextAnimationSettings.RainbowFrequency) % 1.0f;
                     color = HslToRgb(hue, 0.8f, 0.6f);
                     break;
 
                 case TextEffectType.RainbowWave:
-                    float hueW = (time * RAINBOW_SPEED + charIndex * RAINBOW_FREQUENCY) % 1.0f;
+                    float hueW = (time * TextAnimationSettings.RainbowSpeed + charIndex * TextAnimationSettings.RainbowFrequency) % 1.0f;
                     color = HslToRgb(hueW, 0.8f, 0.6f);
-                    offset.Y = MathF.Sin(time * RAINBOW_WAVE_SPEED + charIndex * RAINBOW_WAVE_FREQ) * RAINBOW_WAVE_AMPLITUDE;
+                    offset.Y = MathF.Sin(time * TextAnimationSettings.RainbowWaveSpeed + charIndex * TextAnimationSettings.RainbowWaveFreq) * TextAnimationSettings.RainbowWaveAmplitude;
                     break;
 
                 case TextEffectType.Bounce:
-                    float bounceArg = time * BOUNCE_SPEED + charIndex * BOUNCE_FREQUENCY;
-                    offset.Y = -MathF.Abs(MathF.Sin(bounceArg)) * BOUNCE_AMPLITUDE;
+                    float bounceArg = time * TextAnimationSettings.BounceSpeed + charIndex * TextAnimationSettings.BounceFrequency;
+                    offset.Y = -MathF.Abs(MathF.Sin(bounceArg)) * TextAnimationSettings.BounceAmplitude;
                     break;
 
                 case TextEffectType.Drift:
-                    float driftArg = time * DRIFT_SPEED + charIndex * DRIFT_FREQUENCY;
-                    offset.X = MathF.Sin(driftArg) * DRIFT_AMPLITUDE;
+                    float driftArg = time * TextAnimationSettings.DriftSpeed + charIndex * TextAnimationSettings.DriftFrequency;
+                    offset.X = MathF.Sin(driftArg) * TextAnimationSettings.DriftAmplitude;
                     break;
 
                 case TextEffectType.Glitch:
-                    float glitchTime = MathF.Floor(time * GLITCH_SPEED);
+                    float glitchTime = MathF.Floor(time * TextAnimationSettings.GlitchSpeed);
                     float g1 = MathF.Sin(glitchTime * 12.9898f + charIndex) * 43758.5453f;
                     float g2 = MathF.Sin(glitchTime * 93.9898f + charIndex) * 43758.5453f;
 
-                    float glitchNoise1 = g1 - MathF.Floor(g1); // 0 to 1
-                    float glitchNoise2 = g2 - MathF.Floor(g2); // 0 to 1
+                    float glitchNoise1 = g1 - MathF.Floor(g1);
+                    float glitchNoise2 = g2 - MathF.Floor(g2);
 
-                    // Map 0..1 to -1..1 for centering
-                    offset.X = (glitchNoise1 * 2f - 1f) * GLITCH_AMPLITUDE;
-                    offset.Y = (glitchNoise2 * 2f - 1f) * GLITCH_AMPLITUDE;
-                    rotation = (glitchNoise1 * 2f - 1f) * GLITCH_ROTATION;
+                    offset.X = (glitchNoise1 * 2f - 1f) * TextAnimationSettings.GlitchAmplitude;
+                    offset.Y = (glitchNoise2 * 2f - 1f) * TextAnimationSettings.GlitchAmplitude;
+                    rotation = (glitchNoise1 * 2f - 1f) * TextAnimationSettings.GlitchRotation;
                     break;
 
                 case TextEffectType.Flicker:
-                    float fTime = MathF.Floor(time * FLICKER_SPEED);
+                    float fTime = MathF.Floor(time * TextAnimationSettings.FlickerSpeed);
                     float f1 = MathF.Sin(fTime * 12.9898f + charIndex) * 43758.5453f;
                     float alphaNoise = (f1 - MathF.Floor(f1));
-                    float alpha = MathHelper.Lerp(FLICKER_MIN_ALPHA, FLICKER_MAX_ALPHA, alphaNoise);
+                    float alpha = MathHelper.Lerp(TextAnimationSettings.FlickerMinAlpha, TextAnimationSettings.FlickerMaxAlpha, alphaNoise);
                     color = baseColor * alpha;
                     break;
 
                 case TextEffectType.DriftBounce:
-                    float dbDriftArg = time * DRIFT_SPEED + charIndex * DRIFT_FREQUENCY;
-                    offset.X = MathF.Sin(dbDriftArg) * DRIFT_AMPLITUDE;
-                    float dbBounceArg = time * BOUNCE_SPEED + charIndex * BOUNCE_FREQUENCY;
-                    offset.Y = -MathF.Abs(MathF.Sin(dbBounceArg)) * BOUNCE_AMPLITUDE;
+                    float dbDriftArg = time * TextAnimationSettings.DriftSpeed + charIndex * TextAnimationSettings.DriftFrequency;
+                    offset.X = MathF.Sin(dbDriftArg) * TextAnimationSettings.DriftAmplitude;
+                    float dbBounceArg = time * TextAnimationSettings.BounceSpeed + charIndex * TextAnimationSettings.BounceFrequency;
+                    offset.Y = -MathF.Abs(MathF.Sin(dbBounceArg)) * TextAnimationSettings.BounceAmplitude;
                     break;
 
                 case TextEffectType.DriftWave:
-                    float dwDriftArg = time * DRIFT_SPEED + charIndex * DRIFT_FREQUENCY;
-                    offset.X = MathF.Sin(dwDriftArg) * DRIFT_AMPLITUDE;
-                    float dwWaveArg = time * WAVE_SPEED + charIndex * WAVE_FREQUENCY;
-                    offset.Y = MathF.Sin(dwWaveArg) * WAVE_AMPLITUDE;
+                    float dwDriftArg = time * TextAnimationSettings.DriftSpeed + charIndex * TextAnimationSettings.DriftFrequency;
+                    offset.X = MathF.Sin(dwDriftArg) * TextAnimationSettings.DriftAmplitude;
+                    float dwWaveArg = time * TextAnimationSettings.WaveSpeed + charIndex * TextAnimationSettings.WaveFrequency;
+                    offset.Y = MathF.Sin(dwWaveArg) * TextAnimationSettings.WaveAmplitude;
                     break;
 
                 case TextEffectType.FlickerBounce:
-                    float fbTime = MathF.Floor(time * FLICKER_SPEED);
+                    float fbTime = MathF.Floor(time * TextAnimationSettings.FlickerSpeed);
                     float fb1 = MathF.Sin(fbTime * 12.9898f + charIndex) * 43758.5453f;
                     float fbAlphaNoise = (fb1 - MathF.Floor(fb1));
-                    float fbAlpha = MathHelper.Lerp(FLICKER_MIN_ALPHA, FLICKER_MAX_ALPHA, fbAlphaNoise);
+                    float fbAlpha = MathHelper.Lerp(TextAnimationSettings.FlickerMinAlpha, TextAnimationSettings.FlickerMaxAlpha, fbAlphaNoise);
                     color = baseColor * fbAlpha;
-                    float fbBounceArg = time * BOUNCE_SPEED + charIndex * BOUNCE_FREQUENCY;
-                    offset.Y = -MathF.Abs(MathF.Sin(fbBounceArg)) * BOUNCE_AMPLITUDE;
+                    float fbBounceArg = time * TextAnimationSettings.BounceSpeed + charIndex * TextAnimationSettings.BounceFrequency;
+                    offset.Y = -MathF.Abs(MathF.Sin(fbBounceArg)) * TextAnimationSettings.BounceAmplitude;
                     break;
 
                 case TextEffectType.FlickerWave:
-                    float fwTime = MathF.Floor(time * FLICKER_SPEED);
+                    float fwTime = MathF.Floor(time * TextAnimationSettings.FlickerSpeed);
                     float fw1 = MathF.Sin(fwTime * 12.9898f + charIndex) * 43758.5453f;
                     float fwAlphaNoise = (fw1 - MathF.Floor(fw1));
-                    float fwAlpha = MathHelper.Lerp(FLICKER_MIN_ALPHA, FLICKER_MAX_ALPHA, fwAlphaNoise);
+                    float fwAlpha = MathHelper.Lerp(TextAnimationSettings.FlickerMinAlpha, TextAnimationSettings.FlickerMaxAlpha, fwAlphaNoise);
                     color = baseColor * fwAlpha;
-                    float fwWaveArg = time * WAVE_SPEED + charIndex * WAVE_FREQUENCY;
-                    offset.Y = MathF.Sin(fwWaveArg) * WAVE_AMPLITUDE;
+                    float fwWaveArg = time * TextAnimationSettings.WaveSpeed + charIndex * TextAnimationSettings.WaveFrequency;
+                    offset.Y = MathF.Sin(fwWaveArg) * TextAnimationSettings.WaveAmplitude;
                     break;
             }
 
@@ -297,131 +280,147 @@ namespace ProjectVagabond.Utils
 
         /// <summary>
         /// Draws text with a specific effect applied to each character.
-        /// Replaces the old DrawWavedText with a unified system.
         /// </summary>
         public static void DrawTextWithEffect(SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color color, TextEffectType effect, float time, Vector2? baseScale = null)
         {
-            float startX = position.X;
-            float baseY = position.Y;
-            Vector2 scaleFactor = baseScale ?? Vector2.One;
-
-            for (int i = 0; i < text.Length; i++)
-            {
-                char c = text[i];
-                string charStr = c.ToString();
-                string sub = text.Substring(0, i);
-
-                // Sentinel trick for correct spacing, scaled by the base scale
-                float charOffsetX = (font.MeasureString(sub + "|").Width - font.MeasureString("|").Width) * scaleFactor.X;
-
-                var (offset, effectScale, rotation, finalColor) = GetTextEffectTransform(effect, time, i, color);
-
-                // Apply base scale to the offset as well if needed, though usually offset is absolute pixels.
-                // Let's keep offset absolute for now, but position is scaled.
-                Vector2 pos = new Vector2(startX + charOffsetX, baseY) + offset;
-
-                // Round to nearest pixel to match DrawStringSnapped behavior and prevent sub-pixel blur
-                pos = new Vector2(MathF.Round(pos.X), MathF.Round(pos.Y));
-
-                Vector2 origin = font.MeasureString(charStr) / 2f;
-
-                // Combine effect scale with base scale
-                Vector2 finalScale = effectScale * scaleFactor;
-
-                // Draw Shadow (Right side outline)
-                var shadowColor = new Color(finalColor.R / 4, finalColor.G / 4, finalColor.B / 4, finalColor.A);
-                spriteBatch.DrawString(font, charStr, pos + origin + new Vector2(1, 0), shadowColor, rotation, origin, finalScale, SpriteEffects.None, 0f);
-
-                // Draw Main Text
-                // Draw centered on the character position to support rotation/scale
-                spriteBatch.DrawString(font, charStr, pos + origin, finalColor, rotation, origin, finalScale, SpriteEffects.None, 0f);
-            }
+            DrawTextCore(spriteBatch, font, text, position, color, Color.Transparent, effect, time, baseScale, OutlineStyle.None);
         }
 
         /// <summary>
         /// Draws text with a specific effect, including a 4-way outline.
-        /// Used for UI elements that require high contrast (like Inventory Info Panel).
         /// </summary>
         public static void DrawTextWithEffectOutlined(SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color color, Color outlineColor, TextEffectType effect, float time, Vector2? baseScale = null)
         {
-            float startX = position.X;
-            float baseY = position.Y;
-            Vector2 scaleFactor = baseScale ?? Vector2.One;
-            var shadowColor = new Color(color.R / 4, color.G / 4, color.B / 4, color.A);
-
-            for (int i = 0; i < text.Length; i++)
-            {
-                char c = text[i];
-                string charStr = c.ToString();
-                string sub = text.Substring(0, i);
-
-                float charOffsetX = (font.MeasureString(sub + "|").Width - font.MeasureString("|").Width) * scaleFactor.X;
-
-                var (offset, effectScale, rotation, finalColor) = GetTextEffectTransform(effect, time, i, color);
-
-                Vector2 pos = new Vector2(startX + charOffsetX, baseY) + offset;
-                pos = new Vector2(MathF.Round(pos.X), MathF.Round(pos.Y));
-
-                Vector2 origin = font.MeasureString(charStr) / 2f;
-                Vector2 finalScale = effectScale * scaleFactor;
-
-                // Draw 4-way Outline
-                spriteBatch.DrawString(font, charStr, pos + origin + new Vector2(1, 0), outlineColor, rotation, origin, finalScale, SpriteEffects.None, 0f);
-                spriteBatch.DrawString(font, charStr, pos + origin + new Vector2(-1, 0), outlineColor, rotation, origin, finalScale, SpriteEffects.None, 0f);
-                spriteBatch.DrawString(font, charStr, pos + origin + new Vector2(0, 1), outlineColor, rotation, origin, finalScale, SpriteEffects.None, 0f);
-                spriteBatch.DrawString(font, charStr, pos + origin + new Vector2(0, -1), outlineColor, rotation, origin, finalScale, SpriteEffects.None, 0f);
-
-                // Draw Shadow
-                spriteBatch.DrawString(font, charStr, pos + origin + new Vector2(1, 0), shadowColor, rotation, origin, finalScale, SpriteEffects.None, 0f);
-
-                // Draw Main Text
-                spriteBatch.DrawString(font, charStr, pos + origin, finalColor, rotation, origin, finalScale, SpriteEffects.None, 0f);
-            }
+            DrawTextCore(spriteBatch, font, text, position, color, outlineColor, effect, time, baseScale, OutlineStyle.Cross);
         }
 
         /// <summary>
         /// Draws text with a specific effect, including a full 8-way square outline.
-        /// Used for battle targeting text.
         /// </summary>
         public static void DrawTextWithEffectSquareOutlined(SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color color, Color outlineColor, TextEffectType effect, float time, Vector2? baseScale = null)
         {
-            float startX = position.X;
-            float baseY = position.Y;
-            Vector2 scaleFactor = baseScale ?? Vector2.One;
+            DrawTextCore(spriteBatch, font, text, position, color, outlineColor, effect, time, baseScale, OutlineStyle.Square);
+        }
+
+        /// <summary>
+        /// Core drawing logic that iterates glyphs efficiently (O(N)) and handles effects/outlines.
+        /// </summary>
+        private static void DrawTextCore(
+            SpriteBatch spriteBatch,
+            BitmapFont font,
+            string text,
+            Vector2 position,
+            Color color,
+            Color outlineColor,
+            TextEffectType effect,
+            float time,
+            Vector2? baseScale,
+            OutlineStyle outlineStyle)
+        {
+            if (string.IsNullOrEmpty(text)) return;
+
+            // Layout Scale: Controls spacing/positioning of characters (e.g. expanding/contracting text)
+            Vector2 layoutScale = baseScale ?? Vector2.One;
+
+            // Draw Scale: Controls the size of the glyphs. 
+            // User requested "rigid" text that doesn't scale, so we force this to One for the base.
+            Vector2 drawScaleBase = Vector2.One;
+
             var shadowColor = new Color(color.R / 4, color.G / 4, color.B / 4, color.A);
 
-            for (int i = 0; i < text.Length; i++)
+            var glyphs = font.GetGlyphs(text, position);
+            int charIndex = 0;
+
+            // Calculate the vertical center of the line to use as a stable rotation origin.
+            float lineCenterY = position.Y + (font.LineHeight / 2f);
+
+            foreach (var glyph in glyphs)
             {
-                char c = text[i];
+                // Sync charIndex with the glyphs returned.
+                // GetGlyphs skips newlines in the output list, so we must skip them in the source string too.
+                while (charIndex < text.Length && text[charIndex] == '\n') charIndex++;
+                if (charIndex >= text.Length) break;
+
+                char c = text[charIndex];
                 string charStr = c.ToString();
-                string sub = text.Substring(0, i);
 
-                float charOffsetX = (font.MeasureString(sub + "|").Width - font.MeasureString("|").Width) * scaleFactor.X;
+                // Optimization: Skip drawing whitespace, but we MUST increment charIndex
+                if (char.IsWhiteSpace(c))
+                {
+                    charIndex++;
+                    continue;
+                }
 
-                var (offset, effectScale, rotation, finalColor) = GetTextEffectTransform(effect, time, i, color);
+                // 1. Calculate Layout Position
+                // glyph.Position is the absolute position at scale 1.0
+                Vector2 relativePos = glyph.Position - position;
 
-                Vector2 pos = new Vector2(startX + charOffsetX, baseY) + offset;
-                pos = new Vector2(MathF.Round(pos.X), MathF.Round(pos.Y));
+                // Apply Layout Scale (Spacing)
+                Vector2 scaledPos = position + (relativePos * layoutScale);
 
-                Vector2 origin = font.MeasureString(charStr) / 2f;
-                Vector2 finalScale = effectScale * scaleFactor;
+                // 2. Calculate Effect Transform
+                var (animOffset, effectScale, rotation, finalColor) = GetTextEffectTransform(effect, time, charIndex, color);
 
-                // Draw 8-way Outline
-                spriteBatch.DrawString(font, charStr, pos + origin + new Vector2(1, 1), outlineColor, rotation, origin, finalScale, SpriteEffects.None, 0f);
-                spriteBatch.DrawString(font, charStr, pos + origin + new Vector2(1, -1), outlineColor, rotation, origin, finalScale, SpriteEffects.None, 0f);
-                spriteBatch.DrawString(font, charStr, pos + origin + new Vector2(-1, 1), outlineColor, rotation, origin, finalScale, SpriteEffects.None, 0f);
-                spriteBatch.DrawString(font, charStr, pos + origin + new Vector2(-1, -1), outlineColor, rotation, origin, finalScale, SpriteEffects.None, 0f);
-                spriteBatch.DrawString(font, charStr, pos + origin + new Vector2(1, 0), outlineColor, rotation, origin, finalScale, SpriteEffects.None, 0f);
-                spriteBatch.DrawString(font, charStr, pos + origin + new Vector2(-1, 0), outlineColor, rotation, origin, finalScale, SpriteEffects.None, 0f);
-                spriteBatch.DrawString(font, charStr, pos + origin + new Vector2(0, 1), outlineColor, rotation, origin, finalScale, SpriteEffects.None, 0f);
-                spriteBatch.DrawString(font, charStr, pos + origin + new Vector2(0, -1), outlineColor, rotation, origin, finalScale, SpriteEffects.None, 0f);
+                // 3. Calculate Origin (Center of character)
+                Vector2 charSize = font.MeasureString(charStr);
+                Vector2 origin = new Vector2(charSize.X / 2f, font.LineHeight / 2f);
 
-                // Draw Shadow
-                spriteBatch.DrawString(font, charStr, pos + origin + new Vector2(1, 0), shadowColor, rotation, origin, finalScale, SpriteEffects.None, 0f);
+                // 4. Calculate Final Draw Position
+                // We use Line Center Y for the Y-axis to ensure stable baseline rotation
+                Vector2 targetCenterPos = new Vector2(scaledPos.X + origin.X, lineCenterY) + animOffset;
 
-                // Draw Main Text
-                spriteBatch.DrawString(font, charStr, pos + origin, finalColor, rotation, origin, finalScale, SpriteEffects.None, 0f);
+                // 5. Pixel Snapping (The "Mangled K" Fix)
+                // We need the top-left corner of the texture to land on an integer pixel.
+                // TopLeft = Center - Origin.
+                // We round TopLeft, then reconstruct Center.
+                Vector2 snappedTopLeft = new Vector2(
+                    MathF.Round(targetCenterPos.X - origin.X),
+                    MathF.Round(targetCenterPos.Y - origin.Y)
+                );
+                Vector2 finalDrawPos = snappedTopLeft + origin;
+
+                // 6. Final Draw Scale
+                // Combine the rigid base scale (1.0) with any effect scaling (like Pop)
+                Vector2 finalScale = drawScaleBase * effectScale;
+
+                // Draw Outline / Shadow based on style
+                if (outlineStyle == OutlineStyle.Cross)
+                {
+                    DrawGlyph(spriteBatch, font, charStr, finalDrawPos + new Vector2(1, 0), outlineColor, rotation, origin, finalScale);
+                    DrawGlyph(spriteBatch, font, charStr, finalDrawPos + new Vector2(-1, 0), outlineColor, rotation, origin, finalScale);
+                    DrawGlyph(spriteBatch, font, charStr, finalDrawPos + new Vector2(0, 1), outlineColor, rotation, origin, finalScale);
+                    DrawGlyph(spriteBatch, font, charStr, finalDrawPos + new Vector2(0, -1), outlineColor, rotation, origin, finalScale);
+                }
+                else if (outlineStyle == OutlineStyle.Square)
+                {
+                    // Diagonals
+                    DrawGlyph(spriteBatch, font, charStr, finalDrawPos + new Vector2(1, 1), outlineColor, rotation, origin, finalScale);
+                    DrawGlyph(spriteBatch, font, charStr, finalDrawPos + new Vector2(1, -1), outlineColor, rotation, origin, finalScale);
+                    DrawGlyph(spriteBatch, font, charStr, finalDrawPos + new Vector2(-1, 1), outlineColor, rotation, origin, finalScale);
+                    DrawGlyph(spriteBatch, font, charStr, finalDrawPos + new Vector2(-1, -1), outlineColor, rotation, origin, finalScale);
+                    // Cardinals
+                    DrawGlyph(spriteBatch, font, charStr, finalDrawPos + new Vector2(1, 0), outlineColor, rotation, origin, finalScale);
+                    DrawGlyph(spriteBatch, font, charStr, finalDrawPos + new Vector2(-1, 0), outlineColor, rotation, origin, finalScale);
+                    DrawGlyph(spriteBatch, font, charStr, finalDrawPos + new Vector2(0, 1), outlineColor, rotation, origin, finalScale);
+                    DrawGlyph(spriteBatch, font, charStr, finalDrawPos + new Vector2(0, -1), outlineColor, rotation, origin, finalScale);
+                }
+
+                // Always draw shadow (Right side depth)
+                DrawGlyph(spriteBatch, font, charStr, finalDrawPos + new Vector2(1, 0), shadowColor, rotation, origin, finalScale);
+
+                // Draw Main Character
+                DrawGlyph(spriteBatch, font, charStr, finalDrawPos, finalColor, rotation, origin, finalScale);
+
+                charIndex++;
             }
+        }
+
+        private static void DrawGlyph(SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color color, float rotation, Vector2 origin, Vector2 scale)
+        {
+            // We draw at 'position' which is the calculated center point.
+            // DrawString uses 'origin' to offset the texture relative to 'position'.
+            // Since we set 'position' to the center and 'origin' to the center, it draws correctly centered.
+            spriteBatch.DrawString(font, text, position, color, rotation, origin, scale, SpriteEffects.None, 0f);
         }
     }
 }

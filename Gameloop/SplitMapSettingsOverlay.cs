@@ -221,7 +221,7 @@ namespace ProjectVagabond.UI
             _uiElements.Add(framerateControl);
 
             // IMPORTANT: Set UseScreenCoordinates = true for these buttons.
-            var applyButton = new Button(new Rectangle(0, 0, 125, 10), "Apply")
+            var applyButton = new Button(new Rectangle(0, 0, 125, 10), "APPLY")
             {
                 TextRenderOffset = new Vector2(0, 1),
                 UseScreenCoordinates = true
@@ -229,7 +229,7 @@ namespace ProjectVagabond.UI
             applyButton.OnClick += () => { _hapticsManager.TriggerCompoundShake(0.5f); ApplySettings(); };
             _uiElements.Add(applyButton);
 
-            var discardButton = new Button(new Rectangle(0, 0, 125, 10), "Discard")
+            var discardButton = new Button(new Rectangle(0, 0, 125, 10), "DISCARD")
             {
                 TextRenderOffset = new Vector2(0, 1),
                 UseScreenCoordinates = true
@@ -237,7 +237,7 @@ namespace ProjectVagabond.UI
             discardButton.OnClick += () => { _hapticsManager.TriggerCompoundShake(0.5f); AttemptClose(() => OnCloseRequested?.Invoke()); };
             _uiElements.Add(discardButton);
 
-            var resetButton = new Button(new Rectangle(0, 0, 125, 10), "Restore Defaults")
+            var resetButton = new Button(new Rectangle(0, 0, 125, 10), "RESTORE DEFAULTS")
             {
                 CustomDefaultTextColor = _global.Palette_LightYellow,
                 TextRenderOffset = new Vector2(0, 1),

@@ -215,21 +215,21 @@ namespace ProjectVagabond.Scenes
             framerateControl.IsEnabled = _tempSettings.IsFrameLimiterEnabled;
             _uiElements.Add(framerateControl);
 
-            var applyButton = new Button(new Rectangle(0, 0, 125, 10), "Apply")
+            var applyButton = new Button(new Rectangle(0, 0, 125, 10), "APPLY")
             {
                 TextRenderOffset = new Vector2(0, 1)
             };
             applyButton.OnClick += () => { _hapticsManager.TriggerCompoundShake(0.5f); ApplySettings(); };
             _uiElements.Add(applyButton);
 
-            var backButton = new Button(new Rectangle(0, 0, 125, 10), "Back")
+            var backButton = new Button(new Rectangle(0, 0, 125, 10), "BACK")
             {
                 TextRenderOffset = new Vector2(0, 1)
             };
             backButton.OnClick += () => { _hapticsManager.TriggerCompoundShake(0.5f); AttemptToGoBack(); };
             _uiElements.Add(backButton);
 
-            var resetButton = new Button(new Rectangle(0, 0, 125, 10), "Restore Defaults")
+            var resetButton = new Button(new Rectangle(0, 0, 125, 10), "RESTORE DEFAULTS")
             {
                 CustomDefaultTextColor = _global.Palette_LightYellow,
                 TextRenderOffset = new Vector2(0, 1)

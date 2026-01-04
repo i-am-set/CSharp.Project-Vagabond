@@ -1891,7 +1891,16 @@ namespace ProjectVagabond.Battle.UI
                     if (left < screenPadding) textPosition.X += (screenPadding - left);
                     if (right > Global.VIRTUAL_WIDTH - screenPadding) textPosition.X -= (right - (Global.VIRTUAL_WIDTH - screenPadding));
 
-                    spriteBatch.DrawStringOutlinedSnapped(activeFont, indicator.PrimaryText, textPosition, drawColor * alpha, _global.Palette_Black * alpha);
+                    // --- OPTIMIZATION: Use TextUtils for Critical Hits ---
+                    if (indicator.Type == DamageIndicatorState.IndicatorType.EmphasizedNumber)
+                    {
+                        // Use Shake effect for critical hits
+                        TextUtils.DrawTextWithEffectOutlined(spriteBatch, activeFont, indicator.PrimaryText, textPosition, drawColor * alpha, _global.Palette_Black * alpha, TextEffectType.Shake, indicator.Timer);
+                    }
+                    else
+                    {
+                        spriteBatch.DrawStringOutlinedSnapped(activeFont, indicator.PrimaryText, textPosition, drawColor * alpha, _global.Palette_Black * alpha);
+                    }
                 }
             }
         }
