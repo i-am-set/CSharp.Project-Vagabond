@@ -12,12 +12,8 @@ using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using ProjectVagabond.Transitions;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Runtime.InteropServices;
-using System.Threading;
 
 namespace ProjectVagabond.Scenes
 {
@@ -28,6 +24,7 @@ namespace ProjectVagabond.Scenes
         private readonly Global _global;
         private readonly SpriteManager _spriteManager;
         private readonly TransitionManager _transitionManager;
+
         private readonly List<Button> _buttons = new();
         private int _selectedButtonIndex = -1;
 
@@ -36,26 +33,14 @@ namespace ProjectVagabond.Scenes
 
         private string _gameOverText = "GAME OVER";
 
-        // --- Intro Animation State ---
-        private enum IntroState
-        {
-            Waiting,
-            TitleAnimating,
-            Button1Animating,
-            Button2Animating,
-            Done
-        }
-        private IntroState _introState = IntroState.Waiting;
-        private float _stateTimer = 0f;
-
-        // Individual animation timers (0.0 to 1.0 progress)
-        private float _titleAnimTimer = 0f;
-        private float _btn1AnimTimer = 0f;
-        private float _btn2AnimTimer = 0f;
+        // --- UI Animators ---
+        private readonly UIAnimator _titleAnimator;
+        private readonly UIAnimator _retryBtnAnimator;
+        private readonly UIAnimator _menuBtnAnimator;
 
         // Tuning
         private const float INITIAL_DELAY = 0.5f;
-        private const float STAGGER_DELAY = 0.3f;
+        private const float STAGGER_DELAY = 0.2f; // Delay between elements
         private const float POP_DURATION = 0.5f;
 
         public GameOverScene()
@@ -65,6 +50,25 @@ namespace ProjectVagabond.Scenes
             _global = ServiceLocator.Get<Global>();
             _spriteManager = ServiceLocator.Get<SpriteManager>();
             _transitionManager = ServiceLocator.Get<TransitionManager>();
+
+            // Initialize Animators
+            _titleAnimator = new UIAnimator
+            {
+                Style = TextUtils.EntryExitStyle.Pop,
+                Duration = POP_DURATION
+            };
+
+            _retryBtnAnimator = new UIAnimator
+            {
+                Style = TextUtils.EntryExitStyle.Pop,
+                Duration = POP_DURATION
+            };
+
+            _menuBtnAnimator = new UIAnimator
+            {
+                Style = TextUtils.EntryExitStyle.Pop,
+                Duration = POP_DURATION
+            };
         }
 
         public override Rectangle GetAnimatedBounds()
@@ -134,12 +138,15 @@ namespace ProjectVagabond.Scenes
 
             _currentInputDelay = _inputDelay;
 
-            // Reset Animation State
-            _introState = IntroState.Waiting;
-            _stateTimer = 0f;
-            _titleAnimTimer = 0f;
-            _btn1AnimTimer = 0f;
-            _btn2AnimTimer = 0f;
+            // Reset and Trigger Animations
+            _titleAnimator.Reset();
+            _retryBtnAnimator.Reset();
+            _menuBtnAnimator.Reset();
+
+            // Staggered Show
+            _titleAnimator.Show(delay: INITIAL_DELAY);
+            _retryBtnAnimator.Show(delay: INITIAL_DELAY + STAGGER_DELAY);
+            _menuBtnAnimator.Show(delay: INITIAL_DELAY + (STAGGER_DELAY * 2));
 
             foreach (var button in _buttons)
             {
@@ -163,19 +170,18 @@ namespace ProjectVagabond.Scenes
             core.ResetGame();
 
             var spriteManager = ServiceLocator.Get<SpriteManager>();
-            var archetypeManager = ServiceLocator.Get<ArchetypeManager>();
             var gameState = ServiceLocator.Get<GameState>();
             var loadingScreen = ServiceLocator.Get<LoadingScreen>();
 
             var loadingTasks = new List<LoadingTask>
-        {
-            new GenericTask("Initializing world...", () =>
             {
-                gameState.InitializeWorld();
-                gameState.InitializeRenderableEntities();
-            }),
-            new DiceWarmupTask()
-        };
+                new GenericTask("Initializing world...", () =>
+                {
+                    gameState.InitializeWorld();
+                    gameState.InitializeRenderableEntities();
+                }),
+                new DiceWarmupTask()
+            };
 
             loadingScreen.Clear();
             foreach (var task in loadingTasks)
@@ -185,7 +191,6 @@ namespace ProjectVagabond.Scenes
 
             loadingScreen.OnComplete += () =>
             {
-                // Use random transition
                 var transition = _transitionManager.GetRandomTransition();
                 _sceneManager.ChangeScene(GameSceneState.Split, transition, transition);
             };
@@ -197,7 +202,6 @@ namespace ProjectVagabond.Scenes
         {
             var core = ServiceLocator.Get<Core>();
             core.ResetGame();
-            // Use random transition
             var transition = _transitionManager.GetRandomTransition();
             _sceneManager.ChangeScene(GameSceneState.MainMenu, transition, transition);
         }
@@ -208,51 +212,13 @@ namespace ProjectVagabond.Scenes
 
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            // --- Update Intro Sequence ---
-            _stateTimer += dt;
+            // Update Animators
+            _titleAnimator.Update(dt);
+            _retryBtnAnimator.Update(dt);
+            _menuBtnAnimator.Update(dt);
 
-            // Always update individual animation timers if they have started
-            if (_introState >= IntroState.TitleAnimating) _titleAnimTimer += dt;
-            if (_introState >= IntroState.Button1Animating) _btn1AnimTimer += dt;
-            if (_introState >= IntroState.Button2Animating) _btn2AnimTimer += dt;
-
-            // State Machine for triggering the next element
-            switch (_introState)
-            {
-                case IntroState.Waiting:
-                    if (_stateTimer >= INITIAL_DELAY)
-                    {
-                        _introState = IntroState.TitleAnimating;
-                        _stateTimer = 0f;
-                    }
-                    break;
-                case IntroState.TitleAnimating:
-                    if (_stateTimer >= STAGGER_DELAY)
-                    {
-                        _introState = IntroState.Button1Animating;
-                        _stateTimer = 0f;
-                    }
-                    break;
-                case IntroState.Button1Animating:
-                    if (_stateTimer >= STAGGER_DELAY)
-                    {
-                        _introState = IntroState.Button2Animating;
-                        _stateTimer = 0f;
-                    }
-                    break;
-                case IntroState.Button2Animating:
-                    if (_stateTimer >= STAGGER_DELAY)
-                    {
-                        _introState = IntroState.Done;
-                    }
-                    break;
-                case IntroState.Done:
-                    // Animation sequence finished, allow input
-                    break;
-            }
-
-            // Block input until animations are done
-            if (_introState != IntroState.Done) return;
+            // Block input until the last button starts appearing
+            if (!_menuBtnAnimator.IsVisible) return;
 
             if (_currentInputDelay > 0)
             {
@@ -271,10 +237,15 @@ namespace ProjectVagabond.Scenes
 
             for (int i = 0; i < _buttons.Count; i++)
             {
-                _buttons[i].Update(currentMouseState);
-                if (_buttons[i].IsHovered)
+                // Only update button logic if its specific animator is visible
+                var animator = (i == 0) ? _retryBtnAnimator : _menuBtnAnimator;
+                if (animator.IsVisible)
                 {
-                    _selectedButtonIndex = i;
+                    _buttons[i].Update(currentMouseState);
+                    if (_buttons[i].IsHovered)
+                    {
+                        _selectedButtonIndex = i;
+                    }
                 }
             }
 
@@ -323,7 +294,8 @@ namespace ProjectVagabond.Scenes
             spriteBatch.Draw(pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), Color.Black);
 
             // --- Draw Title ---
-            if (_introState >= IntroState.TitleAnimating)
+            var titleState = _titleAnimator.GetCurrentState();
+            if (titleState.IsVisible)
             {
                 string title = _gameOverText;
                 Vector2 titleSize = font.MeasureString(title);
@@ -335,13 +307,11 @@ namespace ProjectVagabond.Scenes
                 Vector2 titlePos = new Vector2(
                     (Global.VIRTUAL_WIDTH) / 2,
                     (Global.VIRTUAL_HEIGHT / 3) + bobOffset
-                );
+                ) + titleState.Offset;
 
-                // Calculate Pop Scale
-                float progress = Math.Clamp(_titleAnimTimer / POP_DURATION, 0f, 1f);
-                float scale = Easing.EaseOutBack(progress);
+                Color drawColor = _global.Palette_Red * titleState.Opacity;
 
-                spriteBatch.DrawStringSnapped(font, title, titlePos, _global.Palette_Red, 0f, origin, scale, SpriteEffects.None, 0f);
+                spriteBatch.DrawStringSnapped(font, title, titlePos, drawColor, 0f, origin, titleState.Scale, SpriteEffects.None, 0f);
             }
 
             // --- Draw Buttons ---
@@ -350,25 +320,32 @@ namespace ProjectVagabond.Scenes
 
             for (int i = 0; i < _buttons.Count; i++)
             {
-                float animTimer = (i == 0) ? _btn1AnimTimer : _btn2AnimTimer;
-                bool shouldDraw = (i == 0 && _introState >= IntroState.Button1Animating) ||
-                                  (i == 1 && _introState >= IntroState.Button2Animating);
+                var animator = (i == 0) ? _retryBtnAnimator : _menuBtnAnimator;
+                var state = animator.GetCurrentState();
 
-                if (shouldDraw)
+                if (state.IsVisible)
                 {
-                    float progress = Math.Clamp(animTimer / POP_DURATION, 0f, 1f);
-                    float scale = Easing.EaseOutBack(progress);
-
                     // Create a transform matrix for this specific button to scale from its center
                     Vector2 center = _buttons[i].Bounds.Center.ToVector2();
+
                     Matrix buttonTransform = Matrix.CreateTranslation(-center.X, -center.Y, 0) *
-                                             Matrix.CreateScale(scale) *
+                                             Matrix.CreateScale(state.Scale.X, state.Scale.Y, 1.0f) *
                                              Matrix.CreateTranslation(center.X, center.Y, 0) *
+                                             Matrix.CreateTranslation(state.Offset.X, state.Offset.Y, 0) *
                                              transform; // Combine with global transform
 
                     spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: buttonTransform);
 
                     bool forceHover = (i == _selectedButtonIndex) && _sceneManager.LastInputDevice == InputDevice.Keyboard;
+
+                    // Pass opacity via tint color override if needed, or let button handle it.
+                    // Button.Draw doesn't take an alpha multiplier directly, but we can pass a tint.
+                    // However, Button.Draw logic might override tint based on hover state.
+                    // For simplicity, we rely on the button drawing itself fully opaque, 
+                    // but since we are popping in, the scale handles most of the visual entrance.
+                    // If we want fade-in, we'd need to modify Button.Draw to accept an alpha multiplier.
+                    // For "Pop" style, scale is the primary driver, so this is fine.
+
                     _buttons[i].Draw(spriteBatch, tertiaryFont, gameTime, Matrix.Identity, forceHover);
 
                     spriteBatch.End();

@@ -90,8 +90,6 @@ namespace ProjectVagabond.Utils
     public static class TextUtils
     {
         // --- OPTIMIZATION: String Cache ---
-        // Pre-allocate strings for the first 1024 characters (Basic Latin + Extended).
-        // This covers almost all standard RPG text, eliminating 'new string()' allocations in the draw loop.
         private static readonly string[] _charStringCache;
 
         static TextUtils()
@@ -110,17 +108,110 @@ namespace ProjectVagabond.Utils
             Square // 8-way
         }
 
+        // ==========================================================================================
+        // REGION: ENTRY / EXIT ANIMATION MATH
+        // These functions calculate the transform for one-off UI animations (Pop In, Slide Out, etc).
+        // They are stateless and rely on a normalized progress value (0.0 to 1.0).
+        // ==========================================================================================
+
+        public enum EntryExitStyle
+        {
+            Pop,    // Scale 0->1 with overshoot
+            Fade,   // Opacity 0->1
+            SlideUp, // Moves up from an offset
+            SlideDown, // Moves down from an offset
+            Zoom    // Scale 0->1 linear (no overshoot)
+        }
+
         /// <summary>
-        /// Calculates the duration required for the SmallWave effect to traverse the entire text string once.
+        /// Calculates the visual state (Scale, Alpha, Offset) for an element based on its animation progress.
         /// </summary>
+        /// <param name="style">The style of animation.</param>
+        /// <param name="progress">0.0 (Start) to 1.0 (End).</param>
+        /// <param name="isEntering">True if appearing, False if disappearing.</param>
+        /// <returns>A tuple containing Scale, Opacity, and Position Offset.</returns>
+        public static (Vector2 Scale, float Opacity, Vector2 Offset) CalculateEntryExitTransform(EntryExitStyle style, float progress, bool isEntering, float magnitude = 20f)
+        {
+            float t = Math.Clamp(progress, 0f, 1f);
+            Vector2 scale = Vector2.One;
+            float opacity = 1f;
+            Vector2 offset = Vector2.Zero;
+
+            switch (style)
+            {
+                case EntryExitStyle.Pop:
+                    if (isEntering)
+                    {
+                        // Pop In: Overshoot
+                        float s = Easing.EaseOutBack(t);
+                        scale = new Vector2(s);
+                        opacity = t; // Linear fade in
+                    }
+                    else
+                    {
+                        // Pop Out: Anticipate (Shrink slightly then disappear)
+                        float s = 1.0f - Easing.EaseInBack(t);
+                        scale = new Vector2(s);
+                        opacity = 1.0f - t;
+                    }
+                    break;
+
+                case EntryExitStyle.Fade:
+                    opacity = isEntering ? t : (1.0f - t);
+                    break;
+
+                case EntryExitStyle.Zoom:
+                    float zoomS = isEntering ? Easing.EaseOutCubic(t) : (1.0f - Easing.EaseInCubic(t));
+                    scale = new Vector2(zoomS);
+                    opacity = isEntering ? t : (1.0f - t);
+                    break;
+
+                case EntryExitStyle.SlideUp:
+                    // Use magnitude instead of hardcoded 20f
+                    if (isEntering)
+                    {
+                        float y = MathHelper.Lerp(magnitude, 0f, Easing.EaseOutCubic(t));
+                        offset = new Vector2(0, y);
+                        opacity = t;
+                    }
+                    else
+                    {
+                        float y = MathHelper.Lerp(0f, -magnitude, Easing.EaseInCubic(t));
+                        offset = new Vector2(0, y);
+                        opacity = 1.0f - t;
+                    }
+                    break;
+
+                case EntryExitStyle.SlideDown:
+                    // Use magnitude instead of hardcoded 20f
+                    if (isEntering)
+                    {
+                        float y = MathHelper.Lerp(-magnitude, 0f, Easing.EaseOutCubic(t));
+                        offset = new Vector2(0, y);
+                        opacity = t;
+                    }
+                    else
+                    {
+                        float y = MathHelper.Lerp(0f, magnitude, Easing.EaseInCubic(t));
+                        offset = new Vector2(0, y);
+                        opacity = 1.0f - t;
+                    }
+                    break;
+            }
+
+            return (scale, opacity, offset);
+        }
+
+        // ==========================================================================================
+        // REGION: CONTINUOUS TEXT EFFECTS
+        // These functions handle looping effects like Waving, Shaking, etc.
+        // ==========================================================================================
+
         public static float GetSmallWaveDuration(int textLength)
         {
             return (textLength * TextAnimationSettings.SmallWaveFrequency + MathHelper.Pi) / TextAnimationSettings.SmallWaveSpeed;
         }
 
-        /// <summary>
-        /// Calculates the visual transformation for a single character based on a text effect.
-        /// </summary>
         public static (Vector2 Offset, Vector2 Scale, float Rotation, Color Color) GetTextEffectTransform(
             TextEffectType effect,
             float time,
@@ -299,33 +390,21 @@ namespace ProjectVagabond.Utils
             return p;
         }
 
-        /// <summary>
-        /// Draws text with a specific effect applied to each character.
-        /// </summary>
         public static void DrawTextWithEffect(SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color color, TextEffectType effect, float time, Vector2? baseScale = null)
         {
             DrawTextCore(spriteBatch, font, text, position, color, Color.Transparent, effect, time, baseScale, OutlineStyle.None);
         }
 
-        /// <summary>
-        /// Draws text with a specific effect, including a 4-way outline.
-        /// </summary>
         public static void DrawTextWithEffectOutlined(SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color color, Color outlineColor, TextEffectType effect, float time, Vector2? baseScale = null)
         {
             DrawTextCore(spriteBatch, font, text, position, color, outlineColor, effect, time, baseScale, OutlineStyle.Cross);
         }
 
-        /// <summary>
-        /// Draws text with a specific effect, including a full 8-way square outline.
-        /// </summary>
         public static void DrawTextWithEffectSquareOutlined(SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color color, Color outlineColor, TextEffectType effect, float time, Vector2? baseScale = null)
         {
             DrawTextCore(spriteBatch, font, text, position, color, outlineColor, effect, time, baseScale, OutlineStyle.Square);
         }
 
-        /// <summary>
-        /// Core drawing logic that iterates glyphs efficiently (O(N)) and handles effects/outlines.
-        /// </summary>
         private static void DrawTextCore(
             SpriteBatch spriteBatch,
             BitmapFont font,
@@ -344,11 +423,6 @@ namespace ProjectVagabond.Utils
             Vector2 drawScaleBase = Vector2.One;
             var shadowColor = new Color(color.R / 4, color.G / 4, color.B / 4, color.A);
 
-            // --- CENTER ALIGNMENT LOGIC ---
-            // Calculate the total width of the text to determine the centering offset.
-            // If layoutScale is > 1, the text grows.
-            // If effect is LeftAlignedSmallWave, we do NOT apply centering offset, so it grows to the right.
-            // Otherwise, we shift left by half the growth to grow from center.
             Vector2 centeringOffset = Vector2.Zero;
             if (effect != TextEffectType.LeftAlignedSmallWave)
             {
@@ -359,26 +433,21 @@ namespace ProjectVagabond.Utils
             var glyphs = font.GetGlyphs(text, position);
             int charIndex = 0;
 
-            // Calculate the vertical center of the line to use as a stable rotation origin.
             float lineCenterY = position.Y + (font.LineHeight / 2f);
 
             foreach (var glyph in glyphs)
             {
-                // Sync charIndex with the glyphs returned.
                 while (charIndex < text.Length && text[charIndex] == '\n') charIndex++;
                 if (charIndex >= text.Length) break;
 
                 char c = text[charIndex];
 
-                // Optimization: Skip drawing whitespace, but we MUST increment charIndex
                 if (char.IsWhiteSpace(c))
                 {
                     charIndex++;
                     continue;
                 }
 
-                // --- OPTIMIZATION: Use String Cache ---
-                // Avoids 'new string()' allocation for every character every frame.
                 string charStr;
                 if (c < _charStringCache.Length)
                 {
@@ -386,35 +455,27 @@ namespace ProjectVagabond.Utils
                 }
                 else
                 {
-                    charStr = c.ToString(); // Fallback for exotic characters
+                    charStr = c.ToString();
                 }
 
-                // 1. Calculate Layout Position
                 Vector2 relativePos = glyph.Position - position;
-                // Apply layout scale AND the centering offset
                 Vector2 scaledPos = position + (relativePos * layoutScale) + centeringOffset;
 
-                // 2. Calculate Effect Transform
                 var (animOffset, effectScale, rotation, finalColor) = GetTextEffectTransform(effect, time, charIndex, color);
 
-                // 3. Calculate Origin (Center of character)
                 Vector2 charSize = font.MeasureString(charStr);
                 Vector2 origin = new Vector2(charSize.X / 2f, font.LineHeight / 2f);
 
-                // 4. Calculate Final Draw Position
                 Vector2 targetCenterPos = new Vector2(scaledPos.X + origin.X, lineCenterY) + animOffset;
 
-                // 5. Pixel Snapping
                 Vector2 snappedTopLeft = new Vector2(
                     MathF.Round(targetCenterPos.X - origin.X),
                     MathF.Round(targetCenterPos.Y - origin.Y)
                 );
                 Vector2 finalDrawPos = snappedTopLeft + origin;
 
-                // 6. Final Draw Scale
                 Vector2 finalScale = drawScaleBase * effectScale;
 
-                // Draw Outline / Shadow based on style
                 if (outlineStyle == OutlineStyle.Cross)
                 {
                     DrawGlyph(spriteBatch, font, charStr, finalDrawPos + new Vector2(1, 0), outlineColor, rotation, origin, finalScale);
@@ -424,22 +485,17 @@ namespace ProjectVagabond.Utils
                 }
                 else if (outlineStyle == OutlineStyle.Square)
                 {
-                    // Diagonals
                     DrawGlyph(spriteBatch, font, charStr, finalDrawPos + new Vector2(1, 1), outlineColor, rotation, origin, finalScale);
                     DrawGlyph(spriteBatch, font, charStr, finalDrawPos + new Vector2(1, -1), outlineColor, rotation, origin, finalScale);
                     DrawGlyph(spriteBatch, font, charStr, finalDrawPos + new Vector2(-1, 1), outlineColor, rotation, origin, finalScale);
                     DrawGlyph(spriteBatch, font, charStr, finalDrawPos + new Vector2(-1, -1), outlineColor, rotation, origin, finalScale);
-                    // Cardinals
                     DrawGlyph(spriteBatch, font, charStr, finalDrawPos + new Vector2(1, 0), outlineColor, rotation, origin, finalScale);
                     DrawGlyph(spriteBatch, font, charStr, finalDrawPos + new Vector2(-1, 0), outlineColor, rotation, origin, finalScale);
                     DrawGlyph(spriteBatch, font, charStr, finalDrawPos + new Vector2(0, 1), outlineColor, rotation, origin, finalScale);
                     DrawGlyph(spriteBatch, font, charStr, finalDrawPos + new Vector2(0, -1), outlineColor, rotation, origin, finalScale);
                 }
 
-                // Always draw shadow (Right side depth)
                 DrawGlyph(spriteBatch, font, charStr, finalDrawPos + new Vector2(1, 0), shadowColor, rotation, origin, finalScale);
-
-                // Draw Main Character
                 DrawGlyph(spriteBatch, font, charStr, finalDrawPos, finalColor, rotation, origin, finalScale);
 
                 charIndex++;
