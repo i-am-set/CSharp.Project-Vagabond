@@ -1,11 +1,10 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using ProjectVagabond.Transitions;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 
-namespace ProjectVagabond
+namespace ProjectVagabond.Transitions
 {
     public class TransitionManager
     {
@@ -30,15 +29,18 @@ namespace ProjectVagabond
         {
             _effects = new Dictionary<TransitionType, ITransitionEffect>
             {
-                // Mapped removed transitions to BigBlocksEase to prevent crashes if old data requests them
                 { TransitionType.None, new BigBlocksEaseTransition() }, // Fallback
                 
-                // Valid Transitions
-                { TransitionType.Shutters, new ShuttersTransition() },
+                // Standard Transitions
+                { TransitionType.Shutter, new ShutterTransition() },
+                { TransitionType.Curtain, new CurtainTransition() },
+                { TransitionType.Aperture, new ApertureTransition() },
                 { TransitionType.Diamonds, new DiamondWipeTransition() },
                 { TransitionType.BigBlocksEase, new BigBlocksEaseTransition() },
+                
+                // Shape Transitions
                 { TransitionType.SpinningSquare, new SpinningSquareTransition() },
-                { TransitionType.Curtain, new CurtainTransition() },
+                { TransitionType.CenterSquare, new CenterSquareTransition() },
                 { TransitionType.CenterDiamond, new CenterDiamondTransition() }
             };
         }
@@ -102,13 +104,16 @@ namespace ProjectVagabond
         public TransitionType GetRandomCombatTransition()
         {
             // Pick from the high-quality transitions
-            int roll = _random.Next(4);
+            int roll = _random.Next(5);
             return roll switch
             {
                 0 => TransitionType.SpinningSquare,
                 1 => TransitionType.Curtain,
-                2 => TransitionType.SpinningSquare,
-                _ => TransitionType.Curtain
+                2 => TransitionType.Shutter,
+                3 => TransitionType.CenterDiamond,
+                4 => TransitionType.CenterSquare,
+                5 => TransitionType.Aperture,
+                _ => TransitionType.BigBlocksEase
             };
         }
 
@@ -175,3 +180,5 @@ namespace ProjectVagabond
         }
     }
 }
+
+    

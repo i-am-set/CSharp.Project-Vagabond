@@ -3,12 +3,14 @@
     public enum TransitionType
     {
         None,
-        Shutters,
-        Diamonds,      // The grid-based diamond wipe
-        BigBlocksEase, // The "good" block transition
-        SpinningSquare, // New: Rotates and expands
-        Curtain,        // New: Slides in from sides
-        CenterDiamond   // New: Single large diamond expansion
+        Shutter,       // Vertical Curtain (Top/Bottom)
+        Curtain,       // Horizontal Curtain (Left/Right)
+        Aperture,      // All sides closing in
+        Diamonds,      // Grid-based diamond wipe
+        BigBlocksEase, // Block transition
+        SpinningSquare,// Rotates and expands
+        CenterSquare,  // Expands without rotation
+        CenterDiamond  // Expands rotated 45 degrees
     }
 
     public enum TransitionState
