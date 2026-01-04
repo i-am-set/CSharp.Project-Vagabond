@@ -26,8 +26,8 @@ namespace ProjectVagabond.Scenes
 
         // --- Layout Tuning ---
         private const int SETTINGS_START_Y = 30; // Moved up 5px (was 35)
-        private const int ITEM_VERTICAL_SPACING = 15;
-        private const int BUTTON_VERTICAL_SPACING = 14;
+        private const int ITEM_VERTICAL_SPACING = 12; // Standardized to 12px
+        private const int BUTTON_VERTICAL_SPACING = 12; // Standardized to 12px
         private const int SETTINGS_PANEL_WIDTH = 280;
         private const int SETTINGS_PANEL_X = (Global.VIRTUAL_WIDTH - SETTINGS_PANEL_WIDTH) / 2;
 
@@ -138,6 +138,7 @@ namespace ProjectVagabond.Scenes
             if (_uiElements.Count > 0 && _uiElementPositions.Count > 0)
             {
                 var firstPos = _uiElementPositions[0];
+                // Return the exact 12px high slot
                 return new Rectangle((int)firstPos.X - 5, (int)firstPos.Y, SETTINGS_PANEL_WIDTH + 10, ITEM_VERTICAL_SPACING);
             }
             return null;
@@ -215,21 +216,22 @@ namespace ProjectVagabond.Scenes
             framerateControl.IsEnabled = _tempSettings.IsFrameLimiterEnabled;
             _uiElements.Add(framerateControl);
 
-            var applyButton = new Button(new Rectangle(0, 0, 125, 10), "APPLY")
+            // Buttons now 12px high
+            var applyButton = new Button(new Rectangle(0, 0, 125, 12), "APPLY")
             {
                 TextRenderOffset = new Vector2(0, 1)
             };
             applyButton.OnClick += () => { _hapticsManager.TriggerCompoundShake(0.5f); ApplySettings(); };
             _uiElements.Add(applyButton);
 
-            var backButton = new Button(new Rectangle(0, 0, 125, 10), "BACK")
+            var backButton = new Button(new Rectangle(0, 0, 125, 12), "BACK")
             {
                 TextRenderOffset = new Vector2(0, 1)
             };
             backButton.OnClick += () => { _hapticsManager.TriggerCompoundShake(0.5f); AttemptToGoBack(); };
             _uiElements.Add(backButton);
 
-            var resetButton = new Button(new Rectangle(0, 0, 125, 10), "RESTORE DEFAULTS")
+            var resetButton = new Button(new Rectangle(0, 0, 125, 12), "RESTORE DEFAULTS")
             {
                 CustomDefaultTextColor = _global.Palette_LightYellow,
                 TextRenderOffset = new Vector2(0, 1)
@@ -244,29 +246,36 @@ namespace ProjectVagabond.Scenes
         private void CalculateLayoutPositions()
         {
             _uiElementPositions.Clear();
-            Vector2 currentPos = new Vector2(SETTINGS_PANEL_X, SETTINGS_START_Y);
+            Vector2 currentSettingPos = new Vector2(SETTINGS_PANEL_X, SETTINGS_START_Y);
+
+            // Anchor buttons to bottom of screen
+            // 3 buttons * 12px spacing = 36px height.
+            // Add some margin from bottom (e.g. 8px).
+            int bottomMargin = 8;
+            int startButtonY = Global.VIRTUAL_HEIGHT - bottomMargin - (3 * BUTTON_VERTICAL_SPACING);
+            Vector2 currentButtonPos = new Vector2(SETTINGS_PANEL_X, startButtonY);
 
             foreach (var item in _uiElements)
             {
-                _uiElementPositions.Add(currentPos);
-
-                if (item is Button button)
+                if (item is ISettingControl)
                 {
-                    // Match the visual border rectangle dimensions and position
-                    // Border Rect logic from DrawSceneContent: X = currentPos.X - 5, Y = currentPos.Y - 2, W = SETTINGS_PANEL_WIDTH + 10, H = BUTTON_VERTICAL_SPACING
+                    _uiElementPositions.Add(currentSettingPos);
+                    currentSettingPos.Y += ITEM_VERTICAL_SPACING;
+                }
+                else if (item is Button button)
+                {
+                    _uiElementPositions.Add(currentButtonPos);
 
+                    // Update button bounds immediately to reflect the new anchored position
+                    // Height is 12, no Y offset
                     button.Bounds = new Rectangle(
-                        (int)currentPos.X - 5,
-                        (int)currentPos.Y - 2,
+                        (int)currentButtonPos.X - 5,
+                        (int)currentButtonPos.Y,
                         SETTINGS_PANEL_WIDTH + 10,
                         BUTTON_VERTICAL_SPACING
                     );
 
-                    currentPos.Y += BUTTON_VERTICAL_SPACING;
-                }
-                else if (item is ISettingControl)
-                {
-                    currentPos.Y += ITEM_VERTICAL_SPACING;
+                    currentButtonPos.Y += BUTTON_VERTICAL_SPACING;
                 }
             }
         }
@@ -394,7 +403,14 @@ namespace ProjectVagabond.Scenes
         {
             if (IsDirty())
             {
-                _confirmationDialog.Show("You have unsaved changes.", new List<Tuple<string, Action>> { Tuple.Create("APPLY", new Action(() => { _hapticsManager.TriggerCompoundShake(0.5f); ApplySettings(); _sceneManager.HideModal(); })), Tuple.Create("DISCARD", new Action(() => { _hapticsManager.TriggerCompoundShake(0.5f); RevertChanges(); _sceneManager.HideModal(); })), Tuple.Create("[gray]CANCEL", new Action(() => { _hapticsManager.TriggerCompoundShake(0.5f); _confirmationDialog.Hide(); })) });
+                _confirmationDialog.Show(
+                    "You have unsaved changes.",
+                    new List<Tuple<string, Action>> {
+                        Tuple.Create("APPLY", new Action(() => { _hapticsManager.TriggerCompoundShake(0.5f); ApplySettings(); _sceneManager.HideModal(); })),
+                        Tuple.Create("DISCARD", new Action(() => { _hapticsManager.TriggerCompoundShake(0.5f); RevertChanges(); _sceneManager.HideModal(); })),
+                        Tuple.Create("[gray]CANCEL", new Action(() => { _hapticsManager.TriggerCompoundShake(0.5f); _confirmationDialog.Hide(); }))
+                    }
+                );
             }
             else
             {
@@ -478,7 +494,7 @@ namespace ProjectVagabond.Scenes
                     var hoverRect = new Rectangle((int)currentPos.X - 5, (int)currentPos.Y, SETTINGS_PANEL_WIDTH + 10, ITEM_VERTICAL_SPACING);
                     // Only allow selection if the setting is enabled
                     if (hoverRect.Contains(virtualMousePos) && setting.IsEnabled) { _selectedIndex = i; }
-                    if (_currentInputDelay <= 0) setting.Update(new Vector2(currentPos.X, currentPos.Y + 2), i == _selectedIndex, currentMouseState, previousMouseState, virtualMousePos, font);
+                    if (_currentInputDelay <= 0) setting.Update(new Vector2(currentPos.X, currentPos.Y + 3), i == _selectedIndex, currentMouseState, previousMouseState, virtualMousePos, font);
                 }
                 else if (item is Button button)
                 {
@@ -489,8 +505,11 @@ namespace ProjectVagabond.Scenes
             }
 
             if (_currentInputDelay <= 0) HandleKeyboardInput(currentKeyboardState);
-            var applyButton = _uiElements.OfType<Button>().FirstOrDefault(b => b.Text == "Apply");
+
+            // FIX: Use "APPLY" (uppercase) to match button creation
+            var applyButton = _uiElements.OfType<Button>().FirstOrDefault(b => b.Text == "APPLY");
             if (applyButton != null) applyButton.IsEnabled = IsDirty();
+
             if (_currentInputDelay <= 0 && KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState)) AttemptToGoBack();
 
             // Right Click to Go Back
@@ -547,6 +566,7 @@ namespace ProjectVagabond.Scenes
             int screenWidth = Global.VIRTUAL_WIDTH;
             var virtualMousePos = Core.TransformMouse(Mouse.GetState().Position);
             var pixel = ServiceLocator.Get<Texture2D>();
+            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
 
             string title = "SETTINGS";
             Vector2 titleSize = font.MeasureString(title);
@@ -584,13 +604,16 @@ namespace ProjectVagabond.Scenes
                     if (isHovered || keyboardNavigatedLastFrame)
                     {
                         float itemHeight = (item is ISettingControl) ? ITEM_VERTICAL_SPACING : (item is Button) ? BUTTON_VERTICAL_SPACING : 0;
-                        if (itemHeight > 0) DrawRectangleBorder(spriteBatch, pixel, new Rectangle((int)currentPos.X - 5, (int)currentPos.Y - 2, SETTINGS_PANEL_WIDTH + 10, (int)itemHeight), 1, _global.ButtonHoverColor);
+                        // Draw highlight box expanded by 1px up and down to make it 14px tall
+                        if (itemHeight > 0) DrawRectangleBorder(spriteBatch, pixel, new Rectangle((int)currentPos.X - 5, (int)currentPos.Y - 1, SETTINGS_PANEL_WIDTH + 10, (int)itemHeight + 2), 1, _global.ButtonHoverColor);
                     }
                 }
 
                 if (item is ISettingControl setting)
                 {
-                    setting.Draw(spriteBatch, font, new Vector2(currentPos.X, currentPos.Y + 2), isSelected, gameTime);
+                    // Pass secondaryFont for labels, font (IBM) for values
+                    // Pass Y + 3 for text centering
+                    setting.Draw(spriteBatch, secondaryFont, font, new Vector2(currentPos.X, currentPos.Y + 3), isSelected, gameTime);
                 }
                 else if (item is Button button)
                 {

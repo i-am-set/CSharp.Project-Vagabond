@@ -16,8 +16,13 @@ namespace ProjectVagabond.UI
         HoverAnimator HoverAnimator { get; }
         string GetCurrentValueAsString();
         string GetSavedValueAsString();
-        void Draw(SpriteBatch spriteBatch, BitmapFont font, Vector2 position, bool isSelected, GameTime gameTime);
-        void Update(Vector2 position, bool isSelected, MouseState currentMouseState, MouseState previousMouseState, Vector2 virtualMousePos, BitmapFont font);
+
+        // Updated to take two fonts
+        void Draw(SpriteBatch spriteBatch, BitmapFont labelFont, BitmapFont valueFont, Vector2 position, bool isSelected, GameTime gameTime);
+
+        // Update usually only needs the value font for measuring hitboxes of arrows/values
+        void Update(Vector2 position, bool isSelected, MouseState currentMouseState, MouseState previousMouseState, Vector2 virtualMousePos, BitmapFont valueFont);
+
         void HandleInput(Keys key);
         void Apply();
         void Revert();

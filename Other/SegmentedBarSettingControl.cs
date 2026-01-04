@@ -33,10 +33,14 @@ namespace ProjectVagabond.UI
         private readonly HoverAnimator _hoverAnimator = new HoverAnimator();
         public HoverAnimator HoverAnimator => _hoverAnimator;
 
+        // Animation State
+        private float _waveTimer = 0f;
+
         // --- Visual Tuning Constants ---
         private const int SEGMENT_WIDTH = 6;
         private const int SEGMENT_HEIGHT = 8;
         private const int SEGMENT_GAP = 2;
+        private const float VALUE_AREA_X_OFFSET = 155f; // Reduced from 175f to widen value area
 
         public SegmentedBarSettingControl(string label, float min, float max, int segments, Func<float> getter, Action<float> setter)
         {
@@ -87,7 +91,7 @@ namespace ProjectVagabond.UI
             }
         }
 
-        public void Update(Vector2 position, bool isSelected, MouseState currentMouseState, MouseState previousMouseState, Vector2 virtualMousePos, BitmapFont font)
+        public void Update(Vector2 position, bool isSelected, MouseState currentMouseState, MouseState previousMouseState, Vector2 virtualMousePos, BitmapFont valueFont)
         {
             if (!IsEnabled)
             {
@@ -97,7 +101,8 @@ namespace ProjectVagabond.UI
             }
 
             // Calculate the bounds of the interactive elements for this frame
-            CalculateBounds(position, font);
+            // Use valueFont for height calculation if needed, though bars are fixed size
+            CalculateBounds(position, valueFont);
 
             _hoveredSegmentIndex = -1; // Reset hover index each frame
             if (_barAreaRect.Contains(virtualMousePos))
@@ -177,30 +182,44 @@ namespace ProjectVagabond.UI
         private void CalculateBounds(Vector2 position, BitmapFont font)
         {
             int totalBarWidth = (_segmentCount * SEGMENT_WIDTH) + ((_segmentCount - 1) * SEGMENT_GAP);
-            const float valueAreaXOffset = 175f;
 
             // Center the bar within the standard value area used by other controls.
-            float valueAreaX = position.X + valueAreaXOffset;
+            float valueAreaX = position.X + VALUE_AREA_X_OFFSET;
             float valueAreaWidth = Global.VALUE_DISPLAY_WIDTH;
             float barStartX = valueAreaX + (valueAreaWidth - totalBarWidth) / 2;
 
             _barAreaRect = new Rectangle((int)barStartX, (int)position.Y, totalBarWidth, font.LineHeight);
         }
 
-        public void Draw(SpriteBatch spriteBatch, BitmapFont font, Vector2 position, bool isSelected, GameTime gameTime)
+        public void Draw(SpriteBatch spriteBatch, BitmapFont labelFont, BitmapFont valueFont, Vector2 position, bool isSelected, GameTime gameTime)
         {
             // Recalculate bounds every frame to ensure correct positioning
-            CalculateBounds(position, font);
+            CalculateBounds(position, labelFont);
 
             var pixel = ServiceLocator.Get<Texture2D>();
             float xOffset = HoverAnimator.UpdateAndGetOffset(gameTime, isSelected && IsEnabled);
             Vector2 animatedPosition = new Vector2(position.X + xOffset, position.Y);
 
             Color labelColor = isSelected && IsEnabled ? _global.ButtonHoverColor : (IsEnabled ? _global.Palette_BrightWhite : _global.ButtonDisableColor);
-            spriteBatch.DrawString(font, Label, animatedPosition, labelColor);
+
+            // --- Label Drawing with Wave (Using labelFont) ---
+            if (isSelected && IsEnabled)
+            {
+                _waveTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                float duration = TextUtils.GetSmallWaveDuration(Label.Length);
+                if (_waveTimer > duration + 0.1f) _waveTimer = 0f;
+
+                TextUtils.DrawTextWithEffect(spriteBatch, labelFont, Label, animatedPosition, labelColor, TextEffectType.LeftAlignedSmallWave, _waveTimer, Vector2.One);
+            }
+            else
+            {
+                _waveTimer = 0f;
+                spriteBatch.DrawString(labelFont, Label, animatedPosition, labelColor);
+            }
 
             // --- Segmented Bar Drawing Logic ---
-            Vector2 barStartPosition = new Vector2(_barAreaRect.X + xOffset, position.Y + (font.LineHeight - SEGMENT_HEIGHT) / 2);
+            // Center bar vertically relative to label font
+            Vector2 barStartPosition = new Vector2(_barAreaRect.X + xOffset, position.Y + (labelFont.LineHeight - SEGMENT_HEIGHT) / 2);
 
             float progress = (_currentValue - _minValue) / (_maxValue - _minValue);
             int filledSegments = (int)Math.Round(progress * (_segmentCount - 1)) + 1;
@@ -231,18 +250,22 @@ namespace ProjectVagabond.UI
                 }
             }
 
-            // --- Numeric Value ---
+            // --- Numeric Value (Using valueFont) ---
             string valueString = GetCurrentValueAsString();
-            Vector2 valueSize = font.MeasureString(valueString);
-            Vector2 valuePosition = new Vector2(_barAreaRect.Left - valueSize.X - 5 + xOffset, animatedPosition.Y);
-            spriteBatch.DrawString(font, valueString, valuePosition, IsEnabled ? _global.Palette_DarkGray : _global.ButtonDisableColor);
+            Vector2 valueSize = valueFont.MeasureString(valueString);
+
+            // Align value text vertically with label
+            float valueYOffset = (labelFont.LineHeight - valueFont.LineHeight) / 2f;
+            Vector2 valuePosition = new Vector2(_barAreaRect.Left - valueSize.X - 5 + xOffset, animatedPosition.Y + valueYOffset);
+
+            spriteBatch.DrawString(valueFont, valueString, valuePosition, IsEnabled ? _global.Palette_DarkGray : _global.ButtonDisableColor);
 
             // --- Strikethrough ---
             if (!IsEnabled)
             {
                 float startX = animatedPosition.X;
                 float endX = _barAreaRect.Right + xOffset;
-                float lineY = animatedPosition.Y + font.LineHeight / 2f;
+                float lineY = animatedPosition.Y + labelFont.LineHeight / 2f;
                 spriteBatch.DrawLineSnapped(new Vector2(startX, lineY), new Vector2(endX, lineY), _global.ButtonDisableColor);
             }
         }

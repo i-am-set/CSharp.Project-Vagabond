@@ -199,7 +199,10 @@ namespace ProjectVagabond
 
         // UI settings Global
         public const float DEFAULT_OVERFLOW_SCROLL_SPEED = 20.0f;
-        public const float VALUE_DISPLAY_WIDTH = 100f;
+
+        // Increased from 100f to 120f to widen the value area
+        public const float VALUE_DISPLAY_WIDTH = 120f;
+
         public const int APPLY_OPTION_DIFFERENCE_TEXT_LINE_SPACING = 5;
         public const float TOOLTIP_AVERAGE_POPUP_TIME = 0.5f;
         public const int TERMINAL_Y = 25;

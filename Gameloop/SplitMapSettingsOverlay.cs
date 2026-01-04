@@ -33,8 +33,8 @@ namespace ProjectVagabond.UI
 
         // --- Layout Tuning (Identical to SettingsScene) ---
         private const int SETTINGS_START_Y = 30;
-        private const int ITEM_VERTICAL_SPACING = 15;
-        private const int BUTTON_VERTICAL_SPACING = 14;
+        private const int ITEM_VERTICAL_SPACING = 12; // Standardized to 12px
+        private const int BUTTON_VERTICAL_SPACING = 12; // Standardized to 12px
         private const int SETTINGS_PANEL_WIDTH = 280;
         private const int SETTINGS_PANEL_X = (Global.VIRTUAL_WIDTH - SETTINGS_PANEL_WIDTH) / 2;
 
@@ -220,8 +220,8 @@ namespace ProjectVagabond.UI
             framerateControl.IsEnabled = _tempSettings.IsFrameLimiterEnabled;
             _uiElements.Add(framerateControl);
 
-            // IMPORTANT: Set UseScreenCoordinates = true for these buttons.
-            var applyButton = new Button(new Rectangle(0, 0, 125, 10), "APPLY")
+            // Buttons now 12px high
+            var applyButton = new Button(new Rectangle(0, 0, 125, 12), "APPLY")
             {
                 TextRenderOffset = new Vector2(0, 1),
                 UseScreenCoordinates = true
@@ -229,7 +229,7 @@ namespace ProjectVagabond.UI
             applyButton.OnClick += () => { _hapticsManager.TriggerCompoundShake(0.5f); ApplySettings(); };
             _uiElements.Add(applyButton);
 
-            var discardButton = new Button(new Rectangle(0, 0, 125, 10), "DISCARD")
+            var discardButton = new Button(new Rectangle(0, 0, 125, 12), "DISCARD")
             {
                 TextRenderOffset = new Vector2(0, 1),
                 UseScreenCoordinates = true
@@ -237,7 +237,7 @@ namespace ProjectVagabond.UI
             discardButton.OnClick += () => { _hapticsManager.TriggerCompoundShake(0.5f); AttemptClose(() => OnCloseRequested?.Invoke()); };
             _uiElements.Add(discardButton);
 
-            var resetButton = new Button(new Rectangle(0, 0, 125, 10), "RESTORE DEFAULTS")
+            var resetButton = new Button(new Rectangle(0, 0, 125, 12), "RESTORE DEFAULTS")
             {
                 CustomDefaultTextColor = _global.Palette_LightYellow,
                 TextRenderOffset = new Vector2(0, 1),
@@ -255,25 +255,31 @@ namespace ProjectVagabond.UI
         {
             _uiElementPositions.Clear();
             // Base position is offset by WORLD_Y_OFFSET
-            Vector2 currentPos = new Vector2(SETTINGS_PANEL_X, SETTINGS_START_Y + WORLD_Y_OFFSET);
+            Vector2 currentSettingPos = new Vector2(SETTINGS_PANEL_X, SETTINGS_START_Y + WORLD_Y_OFFSET);
+
+            // Anchor buttons to bottom of screen (relative to world offset)
+            int bottomMargin = 8;
+            int startButtonY = (int)WORLD_Y_OFFSET + Global.VIRTUAL_HEIGHT - bottomMargin - (3 * BUTTON_VERTICAL_SPACING);
+            Vector2 currentButtonPos = new Vector2(SETTINGS_PANEL_X, startButtonY);
 
             foreach (var item in _uiElements)
             {
-                _uiElementPositions.Add(currentPos);
-
-                if (item is Button button)
+                if (item is ISettingControl)
                 {
+                    _uiElementPositions.Add(currentSettingPos);
+                    currentSettingPos.Y += ITEM_VERTICAL_SPACING;
+                }
+                else if (item is Button button)
+                {
+                    _uiElementPositions.Add(currentButtonPos);
+
                     button.Bounds = new Rectangle(
-                        (int)currentPos.X - 5,
-                        (int)currentPos.Y - 2,
+                        (int)currentButtonPos.X - 5,
+                        (int)currentButtonPos.Y - 2,
                         SETTINGS_PANEL_WIDTH + 10,
                         BUTTON_VERTICAL_SPACING
                     );
-                    currentPos.Y += BUTTON_VERTICAL_SPACING;
-                }
-                else if (item is ISettingControl)
-                {
-                    currentPos.Y += ITEM_VERTICAL_SPACING;
+                    currentButtonPos.Y += BUTTON_VERTICAL_SPACING;
                 }
             }
         }
@@ -353,7 +359,7 @@ namespace ProjectVagabond.UI
             _tempSettings.DisplayIndex = _settings.DisplayIndex;
             _tempSettings.Gamma = _settings.Gamma;
             foreach (var item in _uiElements.OfType<ISettingControl>()) item.RefreshValue();
-            _isApplyingSettings = false;
+            _isApplyingSettings = false; // Unset flag
         }
 
         private void ConfirmResetSettings()
@@ -445,10 +451,11 @@ namespace ProjectVagabond.UI
                 {
                     var hoverRect = new Rectangle((int)currentPos.X - 5, (int)currentPos.Y, SETTINGS_PANEL_WIDTH + 10, ITEM_VERTICAL_SPACING);
                     if (hoverRect.Contains(mouseInWorldSpace) && setting.IsEnabled) { _selectedIndex = i; }
-                    if (_currentInputDelay <= 0) setting.Update(new Vector2(currentPos.X, currentPos.Y + 2), i == _selectedIndex, currentMouseState, _previousMouseState, mouseInWorldSpace, ServiceLocator.Get<BitmapFont>());
+                    if (_currentInputDelay <= 0) setting.Update(new Vector2(currentPos.X, currentPos.Y + 3), i == _selectedIndex, currentMouseState, _previousMouseState, mouseInWorldSpace, ServiceLocator.Get<BitmapFont>());
                 }
                 else if (item is Button button)
                 {
+                    // Only allow selection if the button is enabled
                     if (button.Bounds.Contains(mouseInWorldSpace) && button.IsEnabled) { _selectedIndex = i; }
 
                     // Create a fake mouse state for the buttons using world coordinates
@@ -464,10 +471,11 @@ namespace ProjectVagabond.UI
 
             // Update button enabled states based on dirty status
             bool isDirty = IsDirty();
-            var applyButton = _uiElements.OfType<Button>().FirstOrDefault(b => b.Text == "Apply");
+            // FIX: Use "APPLY" (uppercase) to match button creation
+            var applyButton = _uiElements.OfType<Button>().FirstOrDefault(b => b.Text == "APPLY");
             if (applyButton != null) applyButton.IsEnabled = isDirty;
 
-            var discardButton = _uiElements.OfType<Button>().FirstOrDefault(b => b.Text == "Discard");
+            var discardButton = _uiElements.OfType<Button>().FirstOrDefault(b => b.Text == "DISCARD");
             if (discardButton != null) discardButton.IsEnabled = isDirty;
 
             // Handle Escape to close
@@ -518,6 +526,7 @@ namespace ProjectVagabond.UI
             if (!IsOpen) return;
 
             var pixel = ServiceLocator.Get<Texture2D>();
+            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
             int screenWidth = Global.VIRTUAL_WIDTH;
 
             // Draw Background for the settings area
@@ -556,17 +565,20 @@ namespace ProjectVagabond.UI
                 {
                     // Draw highlight box
                     float itemHeight = (item is ISettingControl) ? ITEM_VERTICAL_SPACING : (item is Button) ? BUTTON_VERTICAL_SPACING : 0;
-                    if (itemHeight > 0) DrawRectangleBorder(spriteBatch, pixel, new Rectangle((int)currentPos.X - 5, (int)currentPos.Y - 2, SETTINGS_PANEL_WIDTH + 10, (int)itemHeight), 1, _global.ButtonHoverColor);
+                    // Draw highlight box expanded by 1px up and down to make it 14px tall
+                    if (itemHeight > 0) DrawRectangleBorder(spriteBatch, pixel, new Rectangle((int)currentPos.X - 5, (int)currentPos.Y - 1, SETTINGS_PANEL_WIDTH + 10, (int)itemHeight + 2), 1, _global.ButtonHoverColor);
                 }
 
                 if (item is ISettingControl setting)
                 {
-                    setting.Draw(spriteBatch, font, new Vector2(currentPos.X, currentPos.Y + 2), isSelected, gameTime);
+                    // Pass secondaryFont for labels, font (IBM) for values
+                    // Pass Y + 3 for text centering
+                    setting.Draw(spriteBatch, secondaryFont, font, new Vector2(currentPos.X, currentPos.Y + 3), isSelected, gameTime);
                 }
                 else if (item is Button button)
                 {
                     // Button draws itself based on its Bounds, which are already in world space
-                    button.Draw(spriteBatch, font, gameTime, Matrix.Identity, isSelected);
+                    button.Draw(spriteBatch, font, gameTime, currentTransform, isSelected);
                 }
             }
 
