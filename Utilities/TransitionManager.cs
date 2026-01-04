@@ -1,8 +1,20 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Particles;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.Transitions;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.Transitions
 {
@@ -117,6 +129,17 @@ namespace ProjectVagabond.Transitions
             };
         }
 
+        public TransitionType GetRandomTransition()
+        {
+            var values = Enum.GetValues(typeof(TransitionType));
+            var list = new List<TransitionType>();
+            foreach (TransitionType t in values)
+            {
+                if (t != TransitionType.None) list.Add(t);
+            }
+            return list[_random.Next(list.Count)];
+        }
+
         public void Update(GameTime gameTime)
         {
             if (_currentState == TransitionState.Idle) return;
@@ -180,5 +203,3 @@ namespace ProjectVagabond.Transitions
         }
     }
 }
-
-    

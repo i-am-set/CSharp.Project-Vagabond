@@ -1,9 +1,20 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Particles;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.Transitions;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.Transitions
 {
@@ -300,7 +311,7 @@ namespace ProjectVagabond.Transitions
     public class DiamondWipeTransition : ITransitionEffect
     {
         private float _timer;
-        private const float DURATION = 1.0f;
+        private const float DURATION = 0.8f;
         private bool _isOut;
         public bool IsComplete => _timer >= DURATION;
 
@@ -328,8 +339,8 @@ namespace ProjectVagabond.Transitions
             int cols = (int)Math.Ceiling(width / scaledGridSize) + 2;
             int rows = (int)Math.Ceiling(height / scaledGridSize) + 2;
 
-            float maxDelay = 0.5f;
-            float growTime = 0.5f;
+            float maxDelay = DURATION * 0.5f;
+            float growTime = DURATION * 0.5f;
 
             for (int y = 0; y < rows; y++)
             {
@@ -396,8 +407,8 @@ namespace ProjectVagabond.Transitions
             int cols = (int)Math.Ceiling(bounds.Width / scaledBlockSize);
             int rows = (int)Math.Ceiling(bounds.Height / scaledBlockSize);
 
-            float maxDelay = 0.4f;
-            float growTime = 0.4f;
+            float maxDelay = DURATION * 0.5f;
+            float growTime = DURATION * 0.5f;
 
             for (int y = 0; y < rows; y++)
             {
@@ -437,3 +448,5 @@ namespace ProjectVagabond.Transitions
         }
     }
 }
+
+    

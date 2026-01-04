@@ -944,7 +944,7 @@ namespace ProjectVagabond.Scenes
                 }
                 else
                 {
-                    _uiManager.ShowNarration("[glitch][cDefeat]Player Loses![/][/]");
+                    _uiManager.ShowNarration("[driftwave][cDefeat]Player Loses![/][/]");
                 }
             }
 
@@ -1040,7 +1040,8 @@ namespace ProjectVagabond.Scenes
             SplitMapScene.PlayerWonLastBattle = true;
             DecrementTemporaryBuffs();
 
-            var transition = _transitionManager.GetRandomCombatTransition();
+            // Use random transition
+            var transition = _transitionManager.GetRandomTransition();
             _sceneManager.ChangeScene(BattleSetup.ReturnSceneState, transition, transition);
         }
 

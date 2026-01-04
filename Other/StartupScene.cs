@@ -1,8 +1,13 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Scenes;
 using ProjectVagabond.Transitions;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
+using System;
+using System.Collections.Generic;
 
 namespace ProjectVagabond.Scenes
 {
@@ -10,6 +15,7 @@ namespace ProjectVagabond.Scenes
     {
         private readonly SceneManager _sceneManager;
         private readonly Global _global;
+        private readonly TransitionManager _transitionManager;
         private float _timer;
         private const float DURATION = 1.5f; // 1.5 seconds of splash screen
         private bool _transitionTriggered;
@@ -18,6 +24,7 @@ namespace ProjectVagabond.Scenes
         {
             _sceneManager = ServiceLocator.Get<SceneManager>();
             _global = ServiceLocator.Get<Global>();
+            _transitionManager = ServiceLocator.Get<TransitionManager>();
         }
 
         public override Rectangle GetAnimatedBounds()
@@ -43,7 +50,9 @@ namespace ProjectVagabond.Scenes
                 if (_timer >= DURATION)
                 {
                     _transitionTriggered = true;
-                    _sceneManager.ChangeScene(GameSceneState.MainMenu, TransitionType.None, TransitionType.Diamonds);
+                    // Use random transition
+                    var transition = _transitionManager.GetRandomTransition();
+                    _sceneManager.ChangeScene(GameSceneState.MainMenu, transition, transition);
                 }
             }
         }

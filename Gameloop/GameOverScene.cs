@@ -27,6 +27,7 @@ namespace ProjectVagabond.Scenes
         private readonly GameState _gameState;
         private readonly Global _global;
         private readonly SpriteManager _spriteManager;
+        private readonly TransitionManager _transitionManager;
         private readonly List<Button> _buttons = new();
         private int _selectedButtonIndex = -1;
 
@@ -43,6 +44,7 @@ namespace ProjectVagabond.Scenes
             _gameState = ServiceLocator.Get<GameState>();
             _global = ServiceLocator.Get<Global>();
             _spriteManager = ServiceLocator.Get<SpriteManager>();
+            _transitionManager = ServiceLocator.Get<TransitionManager>();
         }
 
         public override Rectangle GetAnimatedBounds()
@@ -157,7 +159,9 @@ namespace ProjectVagabond.Scenes
 
             loadingScreen.OnComplete += () =>
             {
-                _sceneManager.ChangeScene(GameSceneState.Split, TransitionType.Diamonds, TransitionType.Diamonds);
+                // Use random transition
+                var transition = _transitionManager.GetRandomTransition();
+                _sceneManager.ChangeScene(GameSceneState.Split, transition, transition);
             };
 
             loadingScreen.Start();
@@ -167,7 +171,9 @@ namespace ProjectVagabond.Scenes
         {
             var core = ServiceLocator.Get<Core>();
             core.ResetGame();
-            _sceneManager.ChangeScene(GameSceneState.MainMenu, TransitionType.Diamonds, TransitionType.Diamonds);
+            // Use random transition
+            var transition = _transitionManager.GetRandomTransition();
+            _sceneManager.ChangeScene(GameSceneState.MainMenu, transition, transition);
         }
 
         public override void Update(GameTime gameTime)
