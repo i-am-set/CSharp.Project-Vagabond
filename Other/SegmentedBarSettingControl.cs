@@ -40,7 +40,7 @@ namespace ProjectVagabond.UI
         private const int SEGMENT_WIDTH = 6;
         private const int SEGMENT_HEIGHT = 8;
         private const int SEGMENT_GAP = 2;
-        private const float VALUE_AREA_X_OFFSET = 155f; // Reduced from 175f to widen value area
+        private const float VALUE_AREA_X_OFFSET = 155f;
 
         public SegmentedBarSettingControl(string label, float min, float max, int segments, Func<float> getter, Action<float> setter)
         {
@@ -101,7 +101,6 @@ namespace ProjectVagabond.UI
             }
 
             // Calculate the bounds of the interactive elements for this frame
-            // Use valueFont for height calculation if needed, though bars are fixed size
             CalculateBounds(position, valueFont);
 
             _hoveredSegmentIndex = -1; // Reset hover index each frame
@@ -214,7 +213,7 @@ namespace ProjectVagabond.UI
             else
             {
                 _waveTimer = 0f;
-                spriteBatch.DrawString(labelFont, Label, animatedPosition, labelColor);
+                spriteBatch.DrawStringSnapped(labelFont, Label, animatedPosition, labelColor);
             }
 
             // --- Segmented Bar Drawing Logic ---
@@ -250,15 +249,16 @@ namespace ProjectVagabond.UI
                 }
             }
 
-            // --- Numeric Value (Using valueFont) ---
+            // --- Numeric Value (Using labelFont for Secondary Font) ---
             string valueString = GetCurrentValueAsString();
-            Vector2 valueSize = valueFont.MeasureString(valueString);
 
-            // Align value text vertically with label
-            float valueYOffset = (labelFont.LineHeight - valueFont.LineHeight) / 2f;
-            Vector2 valuePosition = new Vector2(_barAreaRect.Left - valueSize.X - 5 + xOffset, animatedPosition.Y + valueYOffset);
+            // Use labelFont (Secondary) for measuring and drawing
+            Vector2 valueSize = labelFont.MeasureString(valueString);
 
-            spriteBatch.DrawString(valueFont, valueString, valuePosition, IsEnabled ? _global.Palette_DarkGray : _global.ButtonDisableColor);
+            // Align value text vertically with label (no offset needed since fonts match)
+            Vector2 valuePosition = new Vector2(_barAreaRect.Left - valueSize.X - 5 + xOffset, animatedPosition.Y);
+
+            spriteBatch.DrawStringSnapped(labelFont, valueString, valuePosition, IsEnabled ? _global.Palette_DarkGray : _global.ButtonDisableColor);
 
             // --- Strikethrough ---
             if (!IsEnabled)

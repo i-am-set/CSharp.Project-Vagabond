@@ -438,14 +438,6 @@ namespace ProjectVagabond.Battle.UI
                 _bounds.Height - padding * 2
             );
 
-            // Draw Background - Fully Opaque
-            var pixel = ServiceLocator.Get<Texture2D>();
-            spriteBatch.DrawSnapped(pixel, panelBounds, _global.TerminalBg);
-            spriteBatch.DrawLineSnapped(new Vector2(panelBounds.Left, panelBounds.Top), new Vector2(panelBounds.Right, panelBounds.Top), _global.Palette_White);
-            spriteBatch.DrawLineSnapped(new Vector2(panelBounds.Left, panelBounds.Bottom), new Vector2(panelBounds.Right, panelBounds.Bottom), _global.Palette_White);
-            spriteBatch.DrawLineSnapped(new Vector2(panelBounds.Left, panelBounds.Top), new Vector2(panelBounds.Left, panelBounds.Bottom), _global.Palette_White);
-            spriteBatch.DrawLineSnapped(new Vector2(panelBounds.Right, panelBounds.Top), new Vector2(panelBounds.Right, panelBounds.Bottom), _global.Palette_White);
-
             // Draw Text
             int globalCharIndex = 0; // For animation continuity
 

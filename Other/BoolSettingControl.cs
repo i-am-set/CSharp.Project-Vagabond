@@ -34,7 +34,7 @@ namespace ProjectVagabond.UI
         private float _waveTimer = 0f;
 
         // --- Visual Tuning Constants ---
-        private const float VALUE_AREA_X_OFFSET = 155f; // Reduced from 175f to widen value area
+        private const float VALUE_AREA_X_OFFSET = 155f;
 
         public BoolSettingControl(string label, Func<bool> getter, Action<bool> onApply)
         {
@@ -141,8 +141,11 @@ namespace ProjectVagabond.UI
 
         public void Draw(SpriteBatch spriteBatch, BitmapFont labelFont, BitmapFont valueFont, Vector2 position, bool isSelected, GameTime gameTime)
         {
-            float yOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isSelected && IsEnabled);
-            Vector2 animatedPosition = new Vector2(position.X, position.Y + yOffset);
+            // Calculate Horizontal Offset (Left movement)
+            float xOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isSelected && IsEnabled);
+
+            // Apply offset to X, keep Y static
+            Vector2 animatedPosition = new Vector2(position.X + xOffset, position.Y);
 
             Color labelColor = isSelected && IsEnabled ? _global.ButtonHoverColor : (IsEnabled ? _global.Palette_BrightWhite : _global.ButtonDisableColor);
 
@@ -162,6 +165,7 @@ namespace ProjectVagabond.UI
             }
 
             const float valueDisplayWidth = Global.VALUE_DISPLAY_WIDTH;
+            // Value area moves with the label (using animatedPosition.X)
             Vector2 valueAreaPosition = new Vector2(animatedPosition.X + VALUE_AREA_X_OFFSET, animatedPosition.Y);
 
             string leftArrowText = "<";

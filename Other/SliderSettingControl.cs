@@ -29,7 +29,7 @@ namespace ProjectVagabond.UI
         private float _waveTimer = 0f;
 
         // --- Visual Tuning Constants ---
-        private const float VALUE_AREA_X_OFFSET = 155f; // Reduced from 175f to widen value area
+        private const float VALUE_AREA_X_OFFSET = 155f;
 
         public SliderSettingControl(string label, float min, float max, float step, Func<float> getter, Action<float> setter)
         {
@@ -72,9 +72,8 @@ namespace ProjectVagabond.UI
         public void Update(Vector2 position, bool isSelected, MouseState currentMouseState, MouseState previousMouseState, Vector2 virtualMousePos, BitmapFont valueFont)
         {
             // Dynamically update the slider's position and bounds.
-            // Use 12px height to match the new standard.
-            // Position is passed as the top of the slot + 3px (text center).
-            // We want the slider to fill the slot, so we subtract 3 to get back to the top.
+            // Note: We don't apply the hover offset here in Update, only in Draw for visuals.
+            // The hitbox remains static to prevent jittery mouse interaction.
             var sliderBounds = new Rectangle((int)(position.X + VALUE_AREA_X_OFFSET), (int)position.Y - 3, (int)Global.VALUE_DISPLAY_WIDTH, 12);
             _slider.Bounds = sliderBounds;
             _slider.IsEnabled = this.IsEnabled;
@@ -111,7 +110,10 @@ namespace ProjectVagabond.UI
 
         public void Draw(SpriteBatch spriteBatch, BitmapFont labelFont, BitmapFont valueFont, Vector2 position, bool isSelected, GameTime gameTime)
         {
+            // Calculate Horizontal Offset (Left movement)
             float xOffset = HoverAnimator.UpdateAndGetOffset(gameTime, isSelected && IsEnabled);
+
+            // Apply offset to X, keep Y static
             Vector2 animatedPosition = new Vector2(position.X + xOffset, position.Y);
 
             Color labelColor = isSelected && IsEnabled ? _global.ButtonHoverColor : (IsEnabled ? _global.Palette_BrightWhite : _global.ButtonDisableColor);
@@ -135,8 +137,15 @@ namespace ProjectVagabond.UI
             Color valueColor = IsEnabled ? (IsDirty ? _global.Palette_Teal : _global.Palette_BrightWhite) : _global.ButtonDisableColor;
             _slider.CustomValueColor = valueColor;
 
-            // Pass valueFont to the slider for drawing the numeric value
-            _slider.Draw(spriteBatch, valueFont);
+            // Temporarily shift the slider bounds for drawing to match the animation
+            var originalBounds = _slider.Bounds;
+            _slider.Bounds = new Rectangle((int)(originalBounds.X + xOffset), originalBounds.Y, originalBounds.Width, originalBounds.Height);
+
+            // FIX: Pass labelFont (Secondary/Pixel) instead of valueFont (IBM) so the number matches the requested style.
+            _slider.Draw(spriteBatch, labelFont);
+
+            // Restore bounds
+            _slider.Bounds = originalBounds;
         }
     }
 }
