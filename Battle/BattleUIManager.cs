@@ -582,18 +582,16 @@ namespace ProjectVagabond.Battle.UI
                         float cycleDuration = 2.0f; // 2 seconds per wave cycle
                         float waveTimer = _targetingTextAnimTimer % cycleDuration;
 
-                        // Use the new Square Outlined Wave Text
-                        TextUtils.DrawWavedTextSquareOutlined(
+                        // Use the new Square Outlined Wave Text with SmallWave effect
+                        TextUtils.DrawTextWithEffectSquareOutlined(
                             spriteBatch,
                             secondaryFont,
                             btn.Text,
                             textPos,
                             textColor,
                             _global.Palette_Black,
-                            waveTimer,
-                            30f, // Speed
-                            0.8f, // Frequency
-                            1.0f // Amplitude
+                            TextEffectType.SmallWave,
+                            waveTimer
                         );
                     }
                     else

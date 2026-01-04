@@ -513,10 +513,10 @@ namespace ProjectVagabond.UI
             {
                 _statCycleTimer = 0f;
                 _previousHoveredItemData = _hoveredItemData;
-                _infoPanelNameWaveController.Reset(); // Reset wave animation on item change
+                _infoPanelNameWaveTimer = 0f; // Reset wave timer on item change
             }
 
-            // Update Wave Controller for Info Panel Name
+            // Update Wave Timer for Info Panel Name
             int nameLength = 0;
             if (_hoveredItemData is MoveData md) nameLength = md.MoveName.Length;
             else if (_hoveredItemData is WeaponData wd) nameLength = wd.WeaponName.Length;
@@ -525,7 +525,16 @@ namespace ProjectVagabond.UI
             else if (_hoveredItemData is ConsumableItemData cd) nameLength = cd.ItemName.Length;
             else if (_hoveredItemData is MiscItemData mid) nameLength = mid.ItemName.Length;
 
-            _infoPanelNameWaveController.Update(deltaTime, _hoveredItemData != null, nameLength);
+            if (_hoveredItemData != null)
+            {
+                _infoPanelNameWaveTimer += deltaTime;
+                float duration = TextUtils.GetSmallWaveDuration(nameLength);
+                if (_infoPanelNameWaveTimer > duration + 0.1f) _infoPanelNameWaveTimer = 0f;
+            }
+            else
+            {
+                _infoPanelNameWaveTimer = 0f;
+            }
 
             _previousMouseState = currentMouseState;
             _previousKeyboardState = currentKeyboardState;

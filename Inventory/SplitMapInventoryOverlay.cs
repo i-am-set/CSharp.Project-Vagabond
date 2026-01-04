@@ -5,11 +5,13 @@ using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Progression;
+using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -45,7 +47,7 @@ namespace ProjectVagabond.UI
         private ImageButton? _pageRightButton;
 
         private int _currentPartyMemberIndex = 0;
-        private int _hoveredMemberIndex = -1; 
+        private int _hoveredMemberIndex = -1;
 
         // Submenu State
         private enum EquipSlotType { None, Weapon, Armor, Relic, Spell1, Spell2, Spell3, Spell4 }
@@ -102,6 +104,9 @@ namespace ProjectVagabond.UI
 
         // External Control Event
         public event Action? OnInventoryButtonClicked;
+
+        // --- REPLACED CONTROLLER WITH SIMPLE TIMER ---
+        private float _infoPanelNameWaveTimer = 0f;
 
         public SplitMapInventoryOverlay()
         {

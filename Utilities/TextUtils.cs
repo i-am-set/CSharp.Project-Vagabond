@@ -338,84 +338,89 @@ namespace ProjectVagabond.Utils
             }
         }
 
-        // --- Legacy Methods (Kept for compatibility if needed, but deprecated) ---
-
-        public static void DrawWavedText(SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color color, float waveTimer, float speed, float frequency, float amplitude, int charIndexOffset = 0)
+        /// <summary>
+        /// Draws text with a specific effect, including a 4-way outline.
+        /// Used for UI elements that require high contrast (like Inventory Info Panel).
+        /// </summary>
+        public static void DrawTextWithEffectOutlined(SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color color, Color outlineColor, TextEffectType effect, float time, Vector2? baseScale = null)
         {
-            // Redirect to new system using SmallWave if parameters match roughly, or just use Wave
-            // For now, we'll just use the new DrawTextWithEffect with SmallWave as that's what the user requested to replace this.
-            DrawTextWithEffect(spriteBatch, font, text, position, color, TextEffectType.SmallWave, waveTimer);
-        }
-
-        public static void DrawWavedTextOutlined(SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color textColor, Color outlineColor, float waveTimer, float speed, float frequency, float amplitude, int charIndexOffset = 0)
-        {
-            // Re-implement using GetTextEffectTransform for consistency
             float startX = position.X;
             float baseY = position.Y;
-            var shadowColor = new Color(textColor.R / 4, textColor.G / 4, textColor.B / 4, textColor.A);
+            Vector2 scaleFactor = baseScale ?? Vector2.One;
+            var shadowColor = new Color(color.R / 4, color.G / 4, color.B / 4, color.A);
 
             for (int i = 0; i < text.Length; i++)
             {
                 char c = text[i];
                 string charStr = c.ToString();
                 string sub = text.Substring(0, i);
-                float charOffsetX = font.MeasureString(sub + "|").Width - font.MeasureString("|").Width;
 
-                var (offset, scale, rotation, finalColor) = GetTextEffectTransform(TextEffectType.Wave, waveTimer, i + charIndexOffset, textColor);
+                float charOffsetX = (font.MeasureString(sub + "|").Width - font.MeasureString("|").Width) * scaleFactor.X;
 
-                // Override amplitude/speed/freq with passed values? 
-                // The user requested "Small Wave" for buttons, but this method is used by BattleNarrator for "Wave" tag.
-                // So we should stick to the Wave logic here, but maybe use the passed params if we want to support custom tags.
-                // For now, let's just use the passed params to calculate offset manually to support the custom tag params.
-
-                float waveArg = waveTimer * speed + (i + charIndexOffset) * frequency;
-                offset.Y = MathF.Sin(waveArg) * amplitude;
+                var (offset, effectScale, rotation, finalColor) = GetTextEffectTransform(effect, time, i, color);
 
                 Vector2 pos = new Vector2(startX + charOffsetX, baseY) + offset;
-                Vector2 origin = font.MeasureString(charStr) / 2f;
-                Vector2 drawPos = pos + origin;
+                pos = new Vector2(MathF.Round(pos.X), MathF.Round(pos.Y));
 
-                spriteBatch.DrawString(font, charStr, drawPos + new Vector2(1, 0), outlineColor, rotation, origin, scale, SpriteEffects.None, 0f);
-                spriteBatch.DrawString(font, charStr, drawPos + new Vector2(-1, 0), outlineColor, rotation, origin, scale, SpriteEffects.None, 0f);
-                spriteBatch.DrawString(font, charStr, drawPos + new Vector2(0, 1), outlineColor, rotation, origin, scale, SpriteEffects.None, 0f);
-                spriteBatch.DrawString(font, charStr, drawPos + new Vector2(0, -1), outlineColor, rotation, origin, scale, SpriteEffects.None, 0f);
-                spriteBatch.DrawString(font, charStr, drawPos + new Vector2(1, 0), shadowColor, rotation, origin, scale, SpriteEffects.None, 0f);
-                spriteBatch.DrawString(font, charStr, drawPos, finalColor, rotation, origin, scale, SpriteEffects.None, 0f);
+                Vector2 origin = font.MeasureString(charStr) / 2f;
+                Vector2 finalScale = effectScale * scaleFactor;
+
+                // Draw 4-way Outline
+                spriteBatch.DrawString(font, charStr, pos + origin + new Vector2(1, 0), outlineColor, rotation, origin, finalScale, SpriteEffects.None, 0f);
+                spriteBatch.DrawString(font, charStr, pos + origin + new Vector2(-1, 0), outlineColor, rotation, origin, finalScale, SpriteEffects.None, 0f);
+                spriteBatch.DrawString(font, charStr, pos + origin + new Vector2(0, 1), outlineColor, rotation, origin, finalScale, SpriteEffects.None, 0f);
+                spriteBatch.DrawString(font, charStr, pos + origin + new Vector2(0, -1), outlineColor, rotation, origin, finalScale, SpriteEffects.None, 0f);
+
+                // Draw Shadow
+                spriteBatch.DrawString(font, charStr, pos + origin + new Vector2(1, 0), shadowColor, rotation, origin, finalScale, SpriteEffects.None, 0f);
+
+                // Draw Main Text
+                spriteBatch.DrawString(font, charStr, pos + origin, finalColor, rotation, origin, finalScale, SpriteEffects.None, 0f);
             }
         }
 
-        public static void DrawWavedTextSquareOutlined(SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color textColor, Color outlineColor, float waveTimer, float speed, float frequency, float amplitude, int charIndexOffset = 0)
+        /// <summary>
+        /// Draws text with a specific effect, including a full 8-way square outline.
+        /// Used for battle targeting text.
+        /// </summary>
+        public static void DrawTextWithEffectSquareOutlined(SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color color, Color outlineColor, TextEffectType effect, float time, Vector2? baseScale = null)
         {
             float startX = position.X;
             float baseY = position.Y;
-            var shadowColor = new Color(textColor.R / 4, textColor.G / 4, textColor.B / 4, textColor.A);
+            Vector2 scaleFactor = baseScale ?? Vector2.One;
+            var shadowColor = new Color(color.R / 4, color.G / 4, color.B / 4, color.A);
 
             for (int i = 0; i < text.Length; i++)
             {
                 char c = text[i];
                 string charStr = c.ToString();
                 string sub = text.Substring(0, i);
-                float charOffsetX = font.MeasureString(sub + "|").Width - font.MeasureString("|").Width;
 
-                float waveArg = waveTimer * speed + (i + charIndexOffset) * frequency;
-                Vector2 offset = new Vector2(0, MathF.Sin(waveArg) * amplitude);
+                float charOffsetX = (font.MeasureString(sub + "|").Width - font.MeasureString("|").Width) * scaleFactor.X;
+
+                var (offset, effectScale, rotation, finalColor) = GetTextEffectTransform(effect, time, i, color);
 
                 Vector2 pos = new Vector2(startX + charOffsetX, baseY) + offset;
-                Vector2 origin = font.MeasureString(charStr) / 2f;
-                Vector2 drawPos = pos + origin;
-                Vector2 scale = Vector2.One;
-                float rotation = 0f;
+                pos = new Vector2(MathF.Round(pos.X), MathF.Round(pos.Y));
 
-                spriteBatch.DrawString(font, charStr, drawPos + new Vector2(1, 1), outlineColor, rotation, origin, scale, SpriteEffects.None, 0f);
-                spriteBatch.DrawString(font, charStr, drawPos + new Vector2(1, -1), outlineColor, rotation, origin, scale, SpriteEffects.None, 0f);
-                spriteBatch.DrawString(font, charStr, drawPos + new Vector2(-1, 1), outlineColor, rotation, origin, scale, SpriteEffects.None, 0f);
-                spriteBatch.DrawString(font, charStr, drawPos + new Vector2(-1, -1), outlineColor, rotation, origin, scale, SpriteEffects.None, 0f);
-                spriteBatch.DrawString(font, charStr, drawPos + new Vector2(1, 0), outlineColor, rotation, origin, scale, SpriteEffects.None, 0f);
-                spriteBatch.DrawString(font, charStr, drawPos + new Vector2(-1, 0), outlineColor, rotation, origin, scale, SpriteEffects.None, 0f);
-                spriteBatch.DrawString(font, charStr, drawPos + new Vector2(0, 1), outlineColor, rotation, origin, scale, SpriteEffects.None, 0f);
-                spriteBatch.DrawString(font, charStr, drawPos + new Vector2(0, -1), outlineColor, rotation, origin, scale, SpriteEffects.None, 0f);
-                spriteBatch.DrawString(font, charStr, drawPos + new Vector2(1, 0), shadowColor, rotation, origin, scale, SpriteEffects.None, 0f);
-                spriteBatch.DrawString(font, charStr, drawPos, textColor, rotation, origin, scale, SpriteEffects.None, 0f);
+                Vector2 origin = font.MeasureString(charStr) / 2f;
+                Vector2 finalScale = effectScale * scaleFactor;
+
+                // Draw 8-way Outline
+                spriteBatch.DrawString(font, charStr, pos + origin + new Vector2(1, 1), outlineColor, rotation, origin, finalScale, SpriteEffects.None, 0f);
+                spriteBatch.DrawString(font, charStr, pos + origin + new Vector2(1, -1), outlineColor, rotation, origin, finalScale, SpriteEffects.None, 0f);
+                spriteBatch.DrawString(font, charStr, pos + origin + new Vector2(-1, 1), outlineColor, rotation, origin, finalScale, SpriteEffects.None, 0f);
+                spriteBatch.DrawString(font, charStr, pos + origin + new Vector2(-1, -1), outlineColor, rotation, origin, finalScale, SpriteEffects.None, 0f);
+                spriteBatch.DrawString(font, charStr, pos + origin + new Vector2(1, 0), outlineColor, rotation, origin, finalScale, SpriteEffects.None, 0f);
+                spriteBatch.DrawString(font, charStr, pos + origin + new Vector2(-1, 0), outlineColor, rotation, origin, finalScale, SpriteEffects.None, 0f);
+                spriteBatch.DrawString(font, charStr, pos + origin + new Vector2(0, 1), outlineColor, rotation, origin, finalScale, SpriteEffects.None, 0f);
+                spriteBatch.DrawString(font, charStr, pos + origin + new Vector2(0, -1), outlineColor, rotation, origin, finalScale, SpriteEffects.None, 0f);
+
+                // Draw Shadow
+                spriteBatch.DrawString(font, charStr, pos + origin + new Vector2(1, 0), shadowColor, rotation, origin, finalScale, SpriteEffects.None, 0f);
+
+                // Draw Main Text
+                spriteBatch.DrawString(font, charStr, pos + origin, finalColor, rotation, origin, finalScale, SpriteEffects.None, 0f);
             }
         }
     }

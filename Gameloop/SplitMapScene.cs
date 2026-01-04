@@ -126,8 +126,8 @@ namespace ProjectVagabond.Scenes
 
         private ImageButton? _settingsButton;
 
-        // --- Text Wave Controller for Node Hover Text ---
-        private readonly TextWaveController _nodeTextWaveController = new TextWaveController();
+        // --- REPLACED CONTROLLER WITH SIMPLE TIMER ---
+        private float _nodeTextWaveTimer = 0f;
 
         // Haptics Manager
         private readonly HapticsManager _hapticsManager;
@@ -278,7 +278,7 @@ namespace ProjectVagabond.Scenes
             _waitingForCombatCameraSettle = false;
             _pendingCombatArchetypes = null;
             _viewToReturnTo = SplitMapView.Map;
-            _nodeTextWaveController.Reset(); // Reset wave state on enter
+            _nodeTextWaveTimer = 0f; // Reset wave timer
 
             _inventoryOverlay.Initialize();
             _settingsOverlay.Initialize();
@@ -1452,23 +1452,21 @@ namespace ProjectVagabond.Scenes
 
                         // --- NEW: Use TextWaveController for animation ---
                         bool isHovering = true; // We are inside the hover block
-                        _nodeTextWaveController.Update((float)gameTime.ElapsedGameTime.TotalSeconds, isHovering, nodeText.Length);
 
-                        if (_nodeTextWaveController.IsAnimating)
-                        {
-                            TextUtils.DrawWavedText(spriteBatch, secondaryFont, nodeText, textPosition, _global.Palette_Yellow, _nodeTextWaveController.CurrentTimer, _nodeTextWaveController.WaveSpeed, _nodeTextWaveController.WaveFrequency, _nodeTextWaveController.WaveAmplitude);
-                        }
-                        else
-                        {
-                            spriteBatch.DrawStringSnapped(secondaryFont, nodeText, textPosition, _global.Palette_Yellow);
-                        }
+                        // Use the simple timer logic instead of the controller
+                        _nodeTextWaveTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                        float duration = TextUtils.GetSmallWaveDuration(nodeText.Length);
+                        if (_nodeTextWaveTimer > duration + 0.1f) _nodeTextWaveTimer = 0f;
+
+                        // Use SmallWave effect
+                        TextUtils.DrawTextWithEffect(spriteBatch, secondaryFont, nodeText, textPosition, _global.Palette_Yellow, TextEffectType.SmallWave, _nodeTextWaveTimer);
                     }
                 }
             }
             else
             {
-                // Ensure controller resets when not hovering
-                _nodeTextWaveController.Reset();
+                // Reset timer when not hovering
+                _nodeTextWaveTimer = 0f;
             }
 
             if (_narrativeDialog.IsActive) _narrativeDialog.DrawContent(spriteBatch, font, gameTime, transform);

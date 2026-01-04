@@ -26,8 +26,8 @@ namespace ProjectVagabond.UI
         private float _portraitBgDuration;
         private static readonly Random _rng = new Random();
 
-        // Wave Controller for Info Panel Name
-        private readonly TextWaveController _infoPanelNameWaveController = new TextWaveController();
+        // Removed TextWaveController field as it is no longer needed.
+        // We use _infoPanelNameWaveTimer defined in the main partial class.
 
         public void DrawWorld(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
@@ -1022,9 +1022,9 @@ namespace ProjectVagabond.UI
             );
 
             // --- WAVE ANIMATION FOR SPELL NAME ---
-            if (_infoPanelNameWaveController.IsAnimating)
+            if (_infoPanelNameWaveTimer > 0)
             {
-                TextUtils.DrawWavedTextOutlined(spriteBatch, font, name, namePos, _global.Palette_BrightWhite, _global.Palette_Black, _infoPanelNameWaveController.CurrentTimer, _infoPanelNameWaveController.WaveSpeed, _infoPanelNameWaveController.WaveFrequency, _infoPanelNameWaveController.WaveAmplitude);
+                TextUtils.DrawTextWithEffectOutlined(spriteBatch, font, name, namePos, _global.Palette_BrightWhite, _global.Palette_Black, TextEffectType.SmallWave, _infoPanelNameWaveTimer);
             }
             else
             {
