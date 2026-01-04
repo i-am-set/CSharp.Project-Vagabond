@@ -99,6 +99,9 @@ namespace ProjectVagabond.Battle.UI
         // --- Static Centers for Tooltips (Unaffected by bob/shake) ---
         private Dictionary<string, Vector2> _combatantStaticCenters = new Dictionary<string, Vector2>();
 
+        // --- Cache for Bar Bottom Positions ---
+        private Dictionary<string, float> _combatantBarBottomYs = new Dictionary<string, float>();
+
         public BattleRenderer()
         {
             _global = ServiceLocator.Get<Global>();
@@ -131,6 +134,7 @@ namespace ProjectVagabond.Battle.UI
             _activeStatusIconAnims.Clear();
             _combatantVisualCenters.Clear();
             _combatantStaticCenters.Clear();
+            _combatantBarBottomYs.Clear();
             _statTooltipAlpha = 0f;
             _statTooltipCombatantID = null;
             _centeringSequenceStarted = false;
@@ -309,7 +313,19 @@ namespace ProjectVagabond.Battle.UI
                         center = GetCombatantVisualCenterPosition(target, allCombatants);
                     }
 
-                    _vfxRenderer.DrawStatChangeTooltip(spriteBatch, target, _statTooltipAlpha, hasInsight, center, gameTime);
+                    // Retrieve the cached bar bottom Y
+                    float barBottomY = 0f;
+                    if (_combatantBarBottomYs.TryGetValue(target.CombatantID, out float cachedY))
+                    {
+                        barBottomY = cachedY;
+                    }
+                    else
+                    {
+                        // Fallback if not cached (shouldn't happen if drawn)
+                        barBottomY = center.Y;
+                    }
+
+                    _vfxRenderer.DrawStatChangeTooltip(spriteBatch, target, _statTooltipAlpha, hasInsight, center, barBottomY, gameTime);
                 }
             }
         }
@@ -950,6 +966,12 @@ namespace ProjectVagabond.Battle.UI
                     float barY = anchorY - 4;
                     float barX = center.X - BattleLayout.ENEMY_BAR_WIDTH / 2f;
 
+                    // Calculate and cache the bottom Y of the mana bar for stat panel positioning
+                    // HP Bar Height (2) + Gap (1) + Mana Bar Height (1) = 4 pixels tall total
+                    // barY is the top. Bottom is barY + 4.
+                    float barBottomY = barY + 4;
+                    _combatantBarBottomYs[enemy.CombatantID] = barBottomY;
+
                     if (enemy.VisualHealthBarAlpha > 0.01f || enemy.VisualManaBarAlpha > 0.01f)
                     {
                         _hudRenderer.DrawStatusIcons(spriteBatch, enemy, barX, barY, BattleLayout.ENEMY_BAR_WIDTH, false, _enemyStatusIcons.ContainsKey(enemy.CombatantID) ? _enemyStatusIcons[enemy.CombatantID] : null, GetStatusIconOffset, IsStatusIconAnimating);
@@ -1106,7 +1128,7 @@ namespace ProjectVagabond.Battle.UI
 
                     // --- NAME DIMMING LOGIC ---
                     bool isHovered = (hoveredCombatant == player) || (uiManager.HoveredCombatantFromUI == player);
-                    if (isHovered) nameColor = _global.Palette_Gray;
+                    if (isHovered) nameColor = _global.Palette_DarkGray;
 
                     spriteBatch.DrawStringSnapped(font, player.Name, namePos, nameColor);
                 }
@@ -1114,6 +1136,12 @@ namespace ProjectVagabond.Battle.UI
                 Vector2 barPos = GetCombatantBarPosition(player);
                 float barX = barPos.X - BattleLayout.PLAYER_BAR_WIDTH / 2f;
                 float barY = barPos.Y + 4; // Shift down 4 pixels
+
+                // Calculate and cache the bottom Y of the mana bar for stat panel positioning
+                // HP Bar Height (2) + Gap (1) + Mana Bar Height (1) = 4 pixels tall total
+                // barY is the top. Bottom is barY + 4.
+                float barBottomY = barY + 4;
+                _combatantBarBottomYs[player.CombatantID] = barBottomY;
 
                 if (player.VisualHealthBarAlpha > 0.01f || player.VisualManaBarAlpha > 0.01f)
                 {

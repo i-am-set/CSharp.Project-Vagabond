@@ -1704,7 +1704,8 @@ namespace ProjectVagabond.Scenes
 
         private void OnCombatantDefeated(GameEvents.CombatantDefeated e)
         {
-            _uiManager.ShowNarration($"{e.DefeatedCombatant.Name} was [FlickerWave][cDefeat]DEFEATED[/][/]!");
+            string name = (e.DefeatedCombatant.IsProperNoun ? "" : "THE ") + e.DefeatedCombatant.Name;
+            _uiManager.ShowNarration($"{name} was [FlickerWave][cDefeat]DEFEATED[/][/]!");
             TriggerDeathAnimation(e.DefeatedCombatant);
             if (!e.DefeatedCombatant.IsPlayerControlled)
             {
@@ -1804,7 +1805,7 @@ namespace ProjectVagabond.Scenes
 
         private void OnNextEnemyApproaches(GameEvents.NextEnemyApproaches e)
         {
-            _uiManager.ShowNarration("[Wave]Another [Bounce][cEnemy]ENEMY[/][/][Wave] approaches...[/]");
+            _uiManager.ShowNarration("[Drift]Another [DriftBounce][cEnemy]ENEMY[/][/][Drift] approaches...[/]");
         }
 
         private void OnCombatantSpawned(GameEvents.CombatantSpawned e)

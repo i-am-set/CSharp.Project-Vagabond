@@ -15,6 +15,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.Battle.UI
 {
@@ -63,7 +65,7 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        public void DrawStatChangeTooltip(SpriteBatch spriteBatch, BattleCombatant combatant, float alpha, bool hasInsight, Vector2 visualCenter, GameTime gameTime)
+        public void DrawStatChangeTooltip(SpriteBatch spriteBatch, BattleCombatant combatant, float alpha, bool hasInsight, Vector2 visualCenter, float barBottomY, GameTime gameTime)
         {
             var tertiaryFont = _core.TertiaryFont;
             var icons = _spriteManager.StatChangeIconsSpriteSheet;
@@ -81,8 +83,8 @@ namespace ProjectVagabond.Battle.UI
             // Apply Global Left Shift (was -6, moved right by 4 -> -2)
             int xPos = (int)(visualCenter.X - width / 2) - 2;
 
-            float yPos = combatant.IsPlayerControlled ? visualCenter.Y - 16 : visualCenter.Y - 3;
-            if (yPos < 5) yPos = 5;
+            // Position exactly 1 pixel below the mana bar
+            float yPos = barBottomY + 1;
 
             var bounds = new Rectangle(xPos, (int)yPos, width, height);
 

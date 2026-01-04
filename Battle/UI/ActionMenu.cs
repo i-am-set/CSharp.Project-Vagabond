@@ -292,6 +292,8 @@ namespace ProjectVagabond.Battle.UI
             _currentState = newState;
             HoveredMove = null;
 
+            _previousMouseState = Mouse.GetState();
+
             if (oldState == MenuState.Moves && newState != MenuState.Moves)
             {
                 _isHoverInfoScrollingInitialized = false;
