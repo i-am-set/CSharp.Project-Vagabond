@@ -3,12 +3,12 @@
     public enum TransitionType
     {
         None,
-        Fade,
         Shutters,
-        Diamonds,
-        Blocks,
-        BigBlocksEase,
-        Pixels
+        Diamonds,      // The grid-based diamond wipe
+        BigBlocksEase, // The "good" block transition
+        SpinningSquare, // New: Rotates and expands
+        Curtain,        // New: Slides in from sides
+        CenterDiamond   // New: Single large diamond expansion
     }
 
     public enum TransitionState

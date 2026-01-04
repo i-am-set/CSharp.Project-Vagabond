@@ -30,19 +30,19 @@ namespace ProjectVagabond
         {
             _effects = new Dictionary<TransitionType, ITransitionEffect>
             {
-                { TransitionType.Fade, new FadeTransition() },
+                // Mapped removed transitions to BigBlocksEase to prevent crashes if old data requests them
+                { TransitionType.None, new BigBlocksEaseTransition() }, // Fallback
+                
+                // Valid Transitions
                 { TransitionType.Shutters, new ShuttersTransition() },
                 { TransitionType.Diamonds, new DiamondWipeTransition() },
-                { TransitionType.Blocks, new BlocksWipeTransition() },
                 { TransitionType.BigBlocksEase, new BigBlocksEaseTransition() },
-                { TransitionType.Pixels, new PixelWipeTransition()   }
+                { TransitionType.SpinningSquare, new SpinningSquareTransition() },
+                { TransitionType.Curtain, new CurtainTransition() },
+                { TransitionType.CenterDiamond, new CenterDiamondTransition() }
             };
         }
 
-        /// <summary>
-        /// Immediately stops any active transition and resets the manager to Idle.
-        /// Used during hard resets (e.g. F5) to ensure scene changes are accepted.
-        /// </summary>
         public void Reset()
         {
             _currentState = TransitionState.Idle;
@@ -55,14 +55,6 @@ namespace ProjectVagabond
             _midpointExecuted = false;
         }
 
-        /// <summary>
-        /// Starts a transition sequence.
-        /// </summary>
-        /// <param name="outType">The effect to cover the screen.</param>
-        /// <param name="inType">The effect to reveal the new screen.</param>
-        /// <param name="onMidpoint">Action to execute when screen is fully obscured (scene swap).</param>
-        /// <param name="holdDuration">Time in seconds to wait while screen is obscured before starting In transition.</param>
-        /// <param name="onComplete">Action to execute when transition is fully finished.</param>
         public void StartTransition(TransitionType outType, TransitionType inType, Action onMidpoint, float holdDuration = 0f, Action onComplete = null)
         {
             _pendingInType = inType;
@@ -72,17 +64,15 @@ namespace ProjectVagabond
             _holdTimer = 0f;
             _midpointExecuted = false;
 
-            // If Out is None, skip directly to Hold state logic
             if (outType == TransitionType.None)
             {
                 _currentState = TransitionState.Hold;
-                // We will process the midpoint and delay in the Update loop
             }
             else
             {
                 if (!_effects.TryGetValue(outType, out _currentEffect))
                 {
-                    _currentEffect = _effects[TransitionType.Diamonds];
+                    _currentEffect = _effects[TransitionType.BigBlocksEase]; // Default fallback
                 }
 
                 _currentState = TransitionState.Out;
@@ -92,7 +82,6 @@ namespace ProjectVagabond
 
         private void StartInTransition()
         {
-            // If In is None, we are done immediately
             if (_pendingInType == TransitionType.None)
             {
                 _currentState = TransitionState.Idle;
@@ -102,7 +91,7 @@ namespace ProjectVagabond
             {
                 if (!_effects.TryGetValue(_pendingInType, out _currentEffect))
                 {
-                    _currentEffect = _effects[TransitionType.Diamonds];
+                    _currentEffect = _effects[TransitionType.BigBlocksEase];
                 }
 
                 _currentState = TransitionState.In;
@@ -112,9 +101,15 @@ namespace ProjectVagabond
 
         public TransitionType GetRandomCombatTransition()
         {
-            int roll = _random.Next(2);
-            if (roll == 0) return TransitionType.Diamonds;
-            return TransitionType.BigBlocksEase;
+            // Pick from the high-quality transitions
+            int roll = _random.Next(4);
+            return roll switch
+            {
+                0 => TransitionType.SpinningSquare,
+                1 => TransitionType.Curtain,
+                2 => TransitionType.SpinningSquare,
+                _ => TransitionType.Curtain
+            };
         }
 
         public void Update(GameTime gameTime)
@@ -123,7 +118,6 @@ namespace ProjectVagabond
 
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            // 1. Handle Out Transition
             if (_currentState == TransitionState.Out)
             {
                 if (_currentEffect != null)
@@ -137,24 +131,20 @@ namespace ProjectVagabond
                     }
                 }
             }
-            // 2. Handle Hold (Black Screen + Delay)
             else if (_currentState == TransitionState.Hold)
             {
-                // Execute the scene swap immediately upon entering Hold
                 if (!_midpointExecuted)
                 {
                     _onMidpoint?.Invoke();
                     _midpointExecuted = true;
                 }
 
-                // Wait for the delay timer
                 _holdTimer += dt;
                 if (_holdTimer >= _holdDuration)
                 {
                     StartInTransition();
                 }
             }
-            // 3. Handle In Transition
             else if (_currentState == TransitionState.In)
             {
                 if (_currentEffect != null)
@@ -176,7 +166,6 @@ namespace ProjectVagabond
             if (_currentState == TransitionState.Hold)
             {
                 var pixel = ServiceLocator.Get<Texture2D>();
-                // Draw black over the entire bounds
                 spriteBatch.Draw(pixel, bounds, Color.Black);
             }
             else if (_currentEffect != null)

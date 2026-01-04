@@ -9,50 +9,19 @@ namespace ProjectVagabond.Transitions
 {
     /// <summary>
     /// Helper class for deterministic, allocation-free pseudo-random numbers in transitions.
-    /// Replaces 'new Random(seed)' inside loops.
     /// </summary>
     internal static class TransitionMath
     {
         public static float Hash(int x, int y)
         {
-            // Bitwise hash for speed and distribution
             int h = x * 374761393 + y * 668265263;
             h = (h ^ (h >> 13)) * 1274126177;
             return ((h ^ (h >> 16)) & 0x7FFFFFFF) / (float)0x7FFFFFFF;
         }
     }
 
-    // --- 1. STANDARD FADE ---
-    public class FadeTransition : ITransitionEffect
-    {
-        private float _timer;
-        private const float DURATION = 0.1f;
-        private bool _isOut;
-        public bool IsComplete => _timer >= DURATION;
-
-        public void Start(bool isTransitioningOut)
-        {
-            _isOut = isTransitioningOut;
-            _timer = 0f;
-        }
-
-        public void Update(GameTime gameTime)
-        {
-            _timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-        }
-
-        public void Draw(SpriteBatch spriteBatch, Rectangle bounds, float scale)
-        {
-            float progress = Math.Clamp(_timer / DURATION, 0f, 1f);
-            float alpha = _isOut ? progress : 1.0f - progress;
-
-            var pixel = ServiceLocator.Get<Texture2D>();
-            spriteBatch.Draw(pixel, bounds, Color.Black * alpha);
-        }
-    }
-
-    // --- 2. SHUTTERS (Top/Bottom Close) ---
-    public class ShuttersTransition : ITransitionEffect
+    // --- 1. SPINNING SQUARE ---
+    public class SpinningSquareTransition : ITransitionEffect
     {
         private float _timer;
         private const float DURATION = 0.8f;
@@ -72,14 +41,160 @@ namespace ProjectVagabond.Transitions
 
         public void Draw(SpriteBatch spriteBatch, Rectangle bounds, float scale)
         {
+            var pixel = ServiceLocator.Get<Texture2D>();
+            float progress = Math.Clamp(_timer / DURATION, 0f, 1f);
+
+            // Use Exponential easing for a snappy, dramatic effect
+            float eased = _isOut ? Easing.EaseInOutExpo(progress) : Easing.EaseInOutQuart(1.0f - progress);
+
+            // Calculate max size needed to cover screen (diagonal length)
+            float maxDimension = (float)Math.Sqrt(bounds.Width * bounds.Width + bounds.Height * bounds.Height);
+
+            // Current size
+            float currentSize = maxDimension * eased;
+
+            // Rotation: 0 to 360 degrees (TwoPi)
+            float rotation = eased * MathHelper.Pi;
+
+            Vector2 center = new Vector2(bounds.Center.X, bounds.Center.Y);
+            Vector2 origin = new Vector2(0.5f, 0.5f); // Center of the 1x1 pixel
+            Vector2 scaleVec = new Vector2(currentSize, currentSize);
+
+            spriteBatch.Draw(
+                pixel,
+                center,
+                null,
+                Color.Black,
+                rotation,
+                origin,
+                scaleVec,
+                SpriteEffects.None,
+                0f
+            );
+        }
+    }
+
+    // --- 2. CURTAIN (Sides closing in) ---
+    public class CurtainTransition : ITransitionEffect
+    {
+        private float _timer;
+        private const float DURATION = 0.4f;
+        private bool _isOut;
+        public bool IsComplete => _timer >= DURATION;
+
+        public void Start(bool isTransitioningOut)
+        {
+            _isOut = isTransitioningOut;
+            _timer = 0f;
+        }
+
+        public void Update(GameTime gameTime)
+        {
+            _timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+        }
+
+        public void Draw(SpriteBatch spriteBatch, Rectangle bounds, float scale)
+        {
+            var pixel = ServiceLocator.Get<Texture2D>();
+            float progress = Math.Clamp(_timer / DURATION, 0f, 1f);
+
+            // Smooth cubic easing
+            float eased = _isOut ? Easing.EaseInOutCubic(progress) : Easing.EaseInCubic(1.0f - progress);
+
+            int halfWidth = bounds.Width / 2;
+            int currentWidth = (int)(halfWidth * eased);
+
+            // Ensure full closure at end of Out
+            if (_isOut && progress >= 0.99f) currentWidth = halfWidth + 2;
+
+            // Left Curtain
+            spriteBatch.Draw(pixel, new Rectangle(0, 0, currentWidth, bounds.Height), Color.Black);
+
+            // Right Curtain
+            spriteBatch.Draw(pixel, new Rectangle(bounds.Width - currentWidth, 0, currentWidth, bounds.Height), Color.Black);
+        }
+    }
+
+    // --- 3. CENTER DIAMOND (Single shape expansion) ---
+    public class CenterDiamondTransition : ITransitionEffect
+    {
+        private float _timer;
+        private const float DURATION = 0.7f;
+        private bool _isOut;
+        public bool IsComplete => _timer >= DURATION;
+
+        public void Start(bool isTransitioningOut)
+        {
+            _isOut = isTransitioningOut;
+            _timer = 0f;
+        }
+
+        public void Update(GameTime gameTime)
+        {
+            _timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+        }
+
+        public void Draw(SpriteBatch spriteBatch, Rectangle bounds, float scale)
+        {
+            var pixel = ServiceLocator.Get<Texture2D>();
+            float progress = Math.Clamp(_timer / DURATION, 0f, 1f);
+
+            float eased = _isOut ? Easing.EaseInQuint(progress) : Easing.EaseOutQuint(1.0f - progress);
+
+            // Calculate size needed to cover screen when rotated 45 degrees
+            // Diagonal of screen is roughly the diameter needed
+            float maxDimension = (float)Math.Sqrt(bounds.Width * bounds.Width + bounds.Height * bounds.Height) * 1.5f;
+            float currentSize = maxDimension * eased;
+
+            Vector2 center = new Vector2(bounds.Center.X, bounds.Center.Y);
+            Vector2 origin = new Vector2(0.5f, 0.5f);
+
+            spriteBatch.Draw(
+                pixel,
+                center,
+                null,
+                Color.Black,
+                MathHelper.PiOver4, // 45 degrees
+                origin,
+                new Vector2(currentSize, currentSize),
+                SpriteEffects.None,
+                0f
+            );
+        }
+    }
+
+    // --- 4. SHUTTERS (Top/Bottom Close - Kept as it's decent) ---
+    public class ShuttersTransition : ITransitionEffect
+    {
+        private float _timer;
+        private const float DURATION = 0.6f; // Sped up slightly
+        private bool _isOut;
+        public bool IsComplete => _timer >= DURATION;
+
+        public void Start(bool isTransitioningOut)
+        {
+            _isOut = isTransitioningOut;
+            _timer = 0f;
+        }
+
+        public void Update(GameTime gameTime)
+        {
+            _timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+        }
+
+        public void Draw(SpriteBatch spriteBatch, Rectangle bounds, float scale)
+        {
             int width = bounds.Width;
             int height = bounds.Height;
 
             float progress = Math.Clamp(_timer / DURATION, 0f, 1f);
-            float eased = _isOut ? Easing.EaseInOutExpo(progress) : Easing.EaseInQuad(1.0f - progress);
+            float eased = _isOut ? Easing.EaseOutBounce(progress) : Easing.EaseInQuad(1.0f - progress);
 
             int halfHeight = height / 2;
-            int currentHeight = (int)(halfHeight * eased) + (_isOut && progress >= 0.9f ? 2 : 0);
+            int currentHeight = (int)(halfHeight * eased);
+
+            // Overlap fix
+            if (_isOut && progress >= 0.9f) currentHeight = halfHeight + 2;
 
             var pixel = ServiceLocator.Get<Texture2D>();
 
@@ -91,15 +206,14 @@ namespace ProjectVagabond.Transitions
         }
     }
 
-    // --- 3. DIAMONDS ---
+    // --- 5. DIAMONDS (Grid based - Kept as it's retro) ---
     public class DiamondWipeTransition : ITransitionEffect
     {
         private float _timer;
-        private const float DURATION = 1.2f;
+        private const float DURATION = 1.0f;
         private bool _isOut;
         public bool IsComplete => _timer >= DURATION;
 
-        // Virtual pixel size 
         private const int GRID_SIZE = 20;
 
         public void Start(bool isTransitioningOut)
@@ -119,15 +233,13 @@ namespace ProjectVagabond.Transitions
 
             int width = bounds.Width;
             int height = bounds.Height;
-
-            // Scale the grid size to match the window scale
             float scaledGridSize = GRID_SIZE * scale;
 
             int cols = (int)Math.Ceiling(width / scaledGridSize) + 2;
             int rows = (int)Math.Ceiling(height / scaledGridSize) + 2;
 
-            float maxDelay = 0.6f;
-            float growTime = 0.4f;
+            float maxDelay = 0.5f;
+            float growTime = 0.5f;
 
             for (int y = 0; y < rows; y++)
             {
@@ -141,7 +253,7 @@ namespace ProjectVagabond.Transitions
                     if (sizeScale > 0)
                     {
                         Vector2 center = new Vector2(x * scaledGridSize, y * scaledGridSize);
-                        float size = scaledGridSize * 1.5f * sizeScale;
+                        float size = scaledGridSize * 1.8f * sizeScale; // 1.8 to ensure overlap
 
                         spriteBatch.Draw(
                             pixel,
@@ -165,80 +277,11 @@ namespace ProjectVagabond.Transitions
         }
     }
 
-    // --- 4. BLOCKS (Optimized Performance) ---
-    public class BlocksWipeTransition : ITransitionEffect
-    {
-        private float _timer;
-        private const float DURATION = 0.5f;
-        private bool _isOut;
-        public bool IsComplete => _timer >= DURATION;
-
-        private const int BLOCK_SIZE = 10;
-
-        public void Start(bool isTransitioningOut)
-        {
-            _isOut = isTransitioningOut;
-            _timer = 0f;
-        }
-
-        public void Update(GameTime gameTime)
-        {
-            _timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-        }
-
-        public void Draw(SpriteBatch spriteBatch, Rectangle bounds, float scale)
-        {
-            var pixel = ServiceLocator.Get<Texture2D>();
-
-            float scaledBlockSize = BLOCK_SIZE * scale;
-            int cols = (int)Math.Ceiling(bounds.Width / scaledBlockSize);
-            int rows = (int)Math.Ceiling(bounds.Height / scaledBlockSize);
-
-            float progress = Math.Clamp(_timer / DURATION, 0f, 1f);
-            int drawSize = (int)Math.Ceiling(scaledBlockSize);
-
-            for (int y = 0; y < rows; y++)
-            {
-                for (int x = 0; x < cols; x++)
-                {
-                    // Optimization: Use fast hash instead of new Random()
-                    float blockThreshold = TransitionMath.Hash(x, y);
-
-                    bool shouldDraw;
-                    if (_isOut)
-                    {
-                        shouldDraw = progress >= blockThreshold;
-                    }
-                    else
-                    {
-                        shouldDraw = (1.0f - progress) >= blockThreshold;
-                    }
-
-                    if (shouldDraw)
-                    {
-                        Rectangle rect = new Rectangle(
-                            (int)(x * scaledBlockSize),
-                            (int)(y * scaledBlockSize),
-                            drawSize,
-                            drawSize
-                        );
-                        spriteBatch.Draw(pixel, rect, Color.Black);
-                    }
-                }
-            }
-
-            if (_isOut && progress >= 0.95f)
-            {
-                spriteBatch.Draw(pixel, bounds, Color.Black);
-            }
-        }
-    }
-
-    // --- 5. BIG BLOCKS EASE ---
+    // --- 6. BIG BLOCKS EASE (The "Good" Block transition) ---
     public class BigBlocksEaseTransition : ITransitionEffect
     {
         private float _timer;
-        private const float DURATION = 1.0f;
+        private const float DURATION = 0.8f;
         private bool _isOut;
         public bool IsComplete => _timer >= DURATION;
 
@@ -263,13 +306,14 @@ namespace ProjectVagabond.Transitions
             int cols = (int)Math.Ceiling(bounds.Width / scaledBlockSize);
             int rows = (int)Math.Ceiling(bounds.Height / scaledBlockSize);
 
-            float maxDelay = 0.5f;
+            float maxDelay = 0.4f;
             float growTime = 0.4f;
 
             for (int y = 0; y < rows; y++)
             {
                 for (int x = 0; x < cols; x++)
                 {
+                    // Diagonal wave pattern
                     float delay = ((float)(x + y) / (cols + rows)) * maxDelay;
                     float localTime = _timer - delay;
                     float progress = Math.Clamp(localTime / growTime, 0f, 1f);
@@ -298,79 +342,6 @@ namespace ProjectVagabond.Transitions
             }
 
             if (_isOut && _timer > DURATION * 0.95f)
-            {
-                spriteBatch.Draw(pixel, bounds, Color.Black);
-            }
-        }
-    }
-
-    // --- 6. PIXELS (Optimized Performance) ---
-    public class PixelWipeTransition : ITransitionEffect
-    {
-        private float _timer;
-        private const float DURATION = 1.0f;
-        private bool _isOut;
-        public bool IsComplete => _timer >= DURATION;
-
-        private const int BLOCK_SIZE = 1; // Virtual pixel size
-
-        public void Start(bool isTransitioningOut)
-        {
-            _isOut = isTransitioningOut;
-            _timer = 0f;
-        }
-
-        public void Update(GameTime gameTime)
-        {
-            _timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-        }
-
-        public void Draw(SpriteBatch spriteBatch, Rectangle bounds, float scale)
-        {
-            var pixel = ServiceLocator.Get<Texture2D>();
-
-            float scaledBlockSize = BLOCK_SIZE * scale;
-            int cols = (int)Math.Ceiling(bounds.Width / scaledBlockSize);
-            int rows = (int)Math.Ceiling(bounds.Height / scaledBlockSize);
-
-            float progress = Math.Clamp(_timer / DURATION, 0f, 1f);
-            int drawSize = (int)Math.Ceiling(scaledBlockSize);
-
-            // Optimization: If progress is 0 (start of Out) or 1 (end of In), we can skip or fill
-            if (_isOut && progress <= 0f) return;
-            if (!_isOut && progress >= 1f) return;
-
-            for (int y = 0; y < rows; y++)
-            {
-                for (int x = 0; x < cols; x++)
-                {
-                    // Optimization: Use fast hash instead of new Random()
-                    float blockThreshold = TransitionMath.Hash(x, y);
-
-                    bool shouldDraw;
-                    if (_isOut)
-                    {
-                        shouldDraw = progress >= blockThreshold;
-                    }
-                    else
-                    {
-                        shouldDraw = (1.0f - progress) >= blockThreshold;
-                    }
-
-                    if (shouldDraw)
-                    {
-                        Rectangle rect = new Rectangle(
-                            (int)(x * scaledBlockSize),
-                            (int)(y * scaledBlockSize),
-                            drawSize,
-                            drawSize
-                        );
-                        spriteBatch.Draw(pixel, rect, Color.Black);
-                    }
-                }
-            }
-
-            if (_isOut && progress >= 0.95f)
             {
                 spriteBatch.Draw(pixel, bounds, Color.Black);
             }
