@@ -261,9 +261,7 @@ namespace ProjectVagabond.Scenes
                 {
                     if (combatant.IsPlayerControlled)
                     {
-                        combatant.Stats.CurrentHP = combatant.Stats.MaxHP;
-                        combatant.Stats.CurrentMana = combatant.Stats.MaxMana;
-                        combatant.VisualHP = combatant.Stats.MaxHP; // Sync visual HP
+                        combatant.VisualHP = combatant.Stats.CurrentHP; // Sync visual HP
                     }
                 }
             }
@@ -474,6 +472,8 @@ namespace ProjectVagabond.Scenes
             combatant.Stats.Intelligence = _gameState.PlayerState.GetEffectiveStat(member, "Intelligence");
             combatant.Stats.Tenacity = _gameState.PlayerState.GetEffectiveStat(member, "Tenacity");
             combatant.Stats.Agility = _gameState.PlayerState.GetEffectiveStat(member, "Agility");
+            combatant.Stats.CurrentHP = member.CurrentHP;
+            combatant.Stats.CurrentMana = member.CurrentMana;
             combatant.VisualHP = combatant.Stats.CurrentHP;
 
             if (!string.IsNullOrEmpty(member.EquippedRelicId))
@@ -549,7 +549,7 @@ namespace ProjectVagabond.Scenes
                 _deathFadeTimer += dt;
                 if (_deathFadeTimer >= Global.UniversalSlowFadeDuration)
                 {
-                    _sceneManager.ChangeScene(GameSceneState.GameOver, TransitionType.Diamonds, TransitionType.Diamonds);
+                    _sceneManager.ChangeScene(GameSceneState.GameOver, TransitionType.None, TransitionType.None);
                 }
                 return;
             }

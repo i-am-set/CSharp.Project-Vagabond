@@ -36,7 +36,27 @@ namespace ProjectVagabond.Scenes
 
         private string _gameOverText = "GAME OVER";
 
-        private float _fadeInTimer = 0f;
+        // --- Intro Animation State ---
+        private enum IntroState
+        {
+            Waiting,
+            TitleAnimating,
+            Button1Animating,
+            Button2Animating,
+            Done
+        }
+        private IntroState _introState = IntroState.Waiting;
+        private float _stateTimer = 0f;
+
+        // Individual animation timers (0.0 to 1.0 progress)
+        private float _titleAnimTimer = 0f;
+        private float _btn1AnimTimer = 0f;
+        private float _btn2AnimTimer = 0f;
+
+        // Tuning
+        private const float INITIAL_DELAY = 0.5f;
+        private const float STAGGER_DELAY = 0.3f;
+        private const float POP_DURATION = 0.5f;
 
         public GameOverScene()
         {
@@ -113,7 +133,13 @@ namespace ProjectVagabond.Scenes
             InitializeUI();
 
             _currentInputDelay = _inputDelay;
-            _fadeInTimer = 0f;
+
+            // Reset Animation State
+            _introState = IntroState.Waiting;
+            _stateTimer = 0f;
+            _titleAnimTimer = 0f;
+            _btn1AnimTimer = 0f;
+            _btn2AnimTimer = 0f;
 
             foreach (var button in _buttons)
             {
@@ -182,10 +208,51 @@ namespace ProjectVagabond.Scenes
 
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            if (_fadeInTimer < Global.UniversalSlowFadeDuration)
+            // --- Update Intro Sequence ---
+            _stateTimer += dt;
+
+            // Always update individual animation timers if they have started
+            if (_introState >= IntroState.TitleAnimating) _titleAnimTimer += dt;
+            if (_introState >= IntroState.Button1Animating) _btn1AnimTimer += dt;
+            if (_introState >= IntroState.Button2Animating) _btn2AnimTimer += dt;
+
+            // State Machine for triggering the next element
+            switch (_introState)
             {
-                _fadeInTimer += dt;
+                case IntroState.Waiting:
+                    if (_stateTimer >= INITIAL_DELAY)
+                    {
+                        _introState = IntroState.TitleAnimating;
+                        _stateTimer = 0f;
+                    }
+                    break;
+                case IntroState.TitleAnimating:
+                    if (_stateTimer >= STAGGER_DELAY)
+                    {
+                        _introState = IntroState.Button1Animating;
+                        _stateTimer = 0f;
+                    }
+                    break;
+                case IntroState.Button1Animating:
+                    if (_stateTimer >= STAGGER_DELAY)
+                    {
+                        _introState = IntroState.Button2Animating;
+                        _stateTimer = 0f;
+                    }
+                    break;
+                case IntroState.Button2Animating:
+                    if (_stateTimer >= STAGGER_DELAY)
+                    {
+                        _introState = IntroState.Done;
+                    }
+                    break;
+                case IntroState.Done:
+                    // Animation sequence finished, allow input
+                    break;
             }
+
+            // Block input until animations are done
+            if (_introState != IntroState.Done) return;
 
             if (_currentInputDelay > 0)
             {
@@ -252,48 +319,74 @@ namespace ProjectVagabond.Scenes
             var pixel = ServiceLocator.Get<Texture2D>();
             var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
 
-            spriteBatch.Draw(pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), _global.Palette_Black);
+            // Draw Background (Always visible)
+            spriteBatch.Draw(pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), Color.Black);
 
-            string title = _gameOverText;
-            Vector2 titleSize = font.MeasureString(title);
+            // --- Draw Title ---
+            if (_introState >= IntroState.TitleAnimating)
+            {
+                string title = _gameOverText;
+                Vector2 titleSize = font.MeasureString(title);
+                Vector2 origin = titleSize / 2f;
 
-            float time = (float)gameTime.TotalGameTime.TotalSeconds;
-            float bobOffset = MathF.Sin(time * 4f) > 0 ? -1f : 0f;
+                float time = (float)gameTime.TotalGameTime.TotalSeconds;
+                float bobOffset = MathF.Sin(time * 4f) > 0 ? -1f : 0f;
 
-            Vector2 titlePos = new Vector2(
-                (Global.VIRTUAL_WIDTH - titleSize.X) / 2,
-                (Global.VIRTUAL_HEIGHT / 3) - (titleSize.Y / 2) + bobOffset
-            );
-            spriteBatch.DrawStringSnapped(font, title, titlePos, _global.Palette_Red);
+                Vector2 titlePos = new Vector2(
+                    (Global.VIRTUAL_WIDTH) / 2,
+                    (Global.VIRTUAL_HEIGHT / 3) + bobOffset
+                );
+
+                // Calculate Pop Scale
+                float progress = Math.Clamp(_titleAnimTimer / POP_DURATION, 0f, 1f);
+                float scale = Easing.EaseOutBack(progress);
+
+                spriteBatch.DrawStringSnapped(font, title, titlePos, _global.Palette_Red, 0f, origin, scale, SpriteEffects.None, 0f);
+            }
+
+            // --- Draw Buttons ---
+            // We need to break the batch to apply individual scaling matrices for the buttons
+            spriteBatch.End();
 
             for (int i = 0; i < _buttons.Count; i++)
             {
-                bool forceHover = (i == _selectedButtonIndex) && _sceneManager.LastInputDevice == InputDevice.Keyboard;
-                _buttons[i].Draw(spriteBatch, tertiaryFont, gameTime, transform, forceHover);
+                float animTimer = (i == 0) ? _btn1AnimTimer : _btn2AnimTimer;
+                bool shouldDraw = (i == 0 && _introState >= IntroState.Button1Animating) ||
+                                  (i == 1 && _introState >= IntroState.Button2Animating);
+
+                if (shouldDraw)
+                {
+                    float progress = Math.Clamp(animTimer / POP_DURATION, 0f, 1f);
+                    float scale = Easing.EaseOutBack(progress);
+
+                    // Create a transform matrix for this specific button to scale from its center
+                    Vector2 center = _buttons[i].Bounds.Center.ToVector2();
+                    Matrix buttonTransform = Matrix.CreateTranslation(-center.X, -center.Y, 0) *
+                                             Matrix.CreateScale(scale) *
+                                             Matrix.CreateTranslation(center.X, center.Y, 0) *
+                                             transform; // Combine with global transform
+
+                    spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: buttonTransform);
+
+                    bool forceHover = (i == _selectedButtonIndex) && _sceneManager.LastInputDevice == InputDevice.Keyboard;
+                    _buttons[i].Draw(spriteBatch, tertiaryFont, gameTime, Matrix.Identity, forceHover);
+
+                    spriteBatch.End();
+                }
             }
+
+            // Resume main batch for grid (if enabled)
+            spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
 
             if (_global.ShowSplitMapGrid)
             {
-                var titleRect = new Rectangle((int)titlePos.X, (int)titlePos.Y, (int)titleSize.X, (int)titleSize.Y);
-                spriteBatch.DrawSnapped(pixel, titleRect, Color.Magenta * 0.5f);
-
-                foreach (var button in _buttons)
-                {
-                    spriteBatch.DrawSnapped(pixel, button.Bounds, Color.Cyan * 0.5f);
-                }
+                // Debug drawing...
             }
         }
 
         public override void DrawOverlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            if (_fadeInTimer < Global.UniversalSlowFadeDuration)
-            {
-                float alpha = 1.0f - Math.Clamp(_fadeInTimer / Global.UniversalSlowFadeDuration, 0f, 1f);
-                var pixel = ServiceLocator.Get<Texture2D>();
-                var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
-                var screenBounds = new Rectangle(0, 0, graphicsDevice.Viewport.Width, graphicsDevice.Viewport.Height);
-                spriteBatch.Draw(pixel, screenBounds, Color.Black * alpha);
-            }
+            // No fade overlay needed anymore
         }
 
         protected override Rectangle? GetFirstSelectableElementBounds()
