@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 
@@ -337,6 +338,15 @@ namespace ProjectVagabond.Utils
             Vector2 drawScaleBase = Vector2.One;
             var shadowColor = new Color(color.R / 4, color.G / 4, color.B / 4, color.A);
 
+            // --- CENTER ALIGNMENT ---
+            // Calculate the total width of the text to determine the centering offset.
+            // If layoutScale is > 1, the text grows. We want it to grow from the center,
+            // so we shift the starting position left by half the growth amount.
+            // Offset = (UnscaledWidth - ScaledWidth) / 2
+            //        = (W - W*S) / 2 = W(1-S)/2
+            Vector2 totalSize = font.MeasureString(text);
+            Vector2 centeringOffset = (totalSize * (Vector2.One - layoutScale)) / 2f;
+
             var glyphs = font.GetGlyphs(text, position);
             int charIndex = 0;
 
@@ -372,7 +382,8 @@ namespace ProjectVagabond.Utils
 
                 // 1. Calculate Layout Position
                 Vector2 relativePos = glyph.Position - position;
-                Vector2 scaledPos = position + (relativePos * layoutScale);
+                // Apply layout scale AND the centering offset
+                Vector2 scaledPos = position + (relativePos * layoutScale) + centeringOffset;
 
                 // 2. Calculate Effect Transform
                 var (animOffset, effectScale, rotation, finalColor) = GetTextEffectTransform(effect, time, charIndex, color);
