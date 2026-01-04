@@ -7,6 +7,21 @@ using System.Linq;
 
 namespace ProjectVagabond.Transitions
 {
+    /// <summary>
+    /// Helper class for deterministic, allocation-free pseudo-random numbers in transitions.
+    /// Replaces 'new Random(seed)' inside loops.
+    /// </summary>
+    internal static class TransitionMath
+    {
+        public static float Hash(int x, int y)
+        {
+            // Bitwise hash for speed and distribution
+            int h = x * 374761393 + y * 668265263;
+            h = (h ^ (h >> 13)) * 1274126177;
+            return ((h ^ (h >> 16)) & 0x7FFFFFFF) / (float)0x7FFFFFFF;
+        }
+    }
+
     // --- 1. STANDARD FADE ---
     public class FadeTransition : ITransitionEffect
     {
@@ -84,7 +99,7 @@ namespace ProjectVagabond.Transitions
         private bool _isOut;
         public bool IsComplete => _timer >= DURATION;
 
-        // Virtual pixel size
+        // Virtual pixel size 
         private const int GRID_SIZE = 20;
 
         public void Start(bool isTransitioningOut)
@@ -150,7 +165,7 @@ namespace ProjectVagabond.Transitions
         }
     }
 
-    // --- 4. BLOCKS (Random Grid Fill - Small) ---
+    // --- 4. BLOCKS (Optimized Performance) ---
     public class BlocksWipeTransition : ITransitionEffect
     {
         private float _timer;
@@ -159,8 +174,6 @@ namespace ProjectVagabond.Transitions
         public bool IsComplete => _timer >= DURATION;
 
         private const int BLOCK_SIZE = 10;
-        // We can't pre-calculate indices in Start() anymore because bounds might change or scale might change.
-        // We'll use a deterministic random approach based on coordinates.
 
         public void Start(bool isTransitioningOut)
         {
@@ -182,24 +195,14 @@ namespace ProjectVagabond.Transitions
             int rows = (int)Math.Ceiling(bounds.Height / scaledBlockSize);
 
             float progress = Math.Clamp(_timer / DURATION, 0f, 1f);
-
-            // Use a fixed seed for stability during the transition
-            var rng = new Random(12345);
-
-            // We need to determine which blocks are "on" based on progress.
-            // To do this efficiently without re-shuffling every frame, we can assign a random threshold to each block.
+            int drawSize = (int)Math.Ceiling(scaledBlockSize);
 
             for (int y = 0; y < rows; y++)
             {
                 for (int x = 0; x < cols; x++)
                 {
-                    // Generate a deterministic random value for this block (0.0 to 1.0)
-                    // Simple hash of coordinates
-                    double blockThreshold = ((x * 37 + y * 113) % 1000) / 1000.0;
-
-                    // Scramble it a bit more with Random seeded by coord
-                    var blockRng = new Random(x * 1000 + y);
-                    blockThreshold = blockRng.NextDouble();
+                    // Optimization: Use fast hash instead of new Random()
+                    float blockThreshold = TransitionMath.Hash(x, y);
 
                     bool shouldDraw;
                     if (_isOut)
@@ -216,8 +219,8 @@ namespace ProjectVagabond.Transitions
                         Rectangle rect = new Rectangle(
                             (int)(x * scaledBlockSize),
                             (int)(y * scaledBlockSize),
-                            (int)Math.Ceiling(scaledBlockSize),
-                            (int)Math.Ceiling(scaledBlockSize)
+                            drawSize,
+                            drawSize
                         );
                         spriteBatch.Draw(pixel, rect, Color.Black);
                     }
@@ -231,7 +234,7 @@ namespace ProjectVagabond.Transitions
         }
     }
 
-    // --- 5. BIG BLOCKS EASE (Wave Scaling) ---
+    // --- 5. BIG BLOCKS EASE ---
     public class BigBlocksEaseTransition : ITransitionEffect
     {
         private float _timer;
@@ -301,7 +304,7 @@ namespace ProjectVagabond.Transitions
         }
     }
 
-    // --- 6. PIXELS (Small Grid) ---
+    // --- 6. PIXELS (Optimized Performance) ---
     public class PixelWipeTransition : ITransitionEffect
     {
         private float _timer;
@@ -331,16 +334,18 @@ namespace ProjectVagabond.Transitions
             int rows = (int)Math.Ceiling(bounds.Height / scaledBlockSize);
 
             float progress = Math.Clamp(_timer / DURATION, 0f, 1f);
+            int drawSize = (int)Math.Ceiling(scaledBlockSize);
 
-            // Deterministic random drawing
+            // Optimization: If progress is 0 (start of Out) or 1 (end of In), we can skip or fill
+            if (_isOut && progress <= 0f) return;
+            if (!_isOut && progress >= 1f) return;
+
             for (int y = 0; y < rows; y++)
             {
                 for (int x = 0; x < cols; x++)
                 {
-                    // Simple hash for threshold
-                    double blockThreshold = ((x * 73 + y * 179) % 1000) / 1000.0;
-                    var blockRng = new Random(x * 5000 + y);
-                    blockThreshold = blockRng.NextDouble();
+                    // Optimization: Use fast hash instead of new Random()
+                    float blockThreshold = TransitionMath.Hash(x, y);
 
                     bool shouldDraw;
                     if (_isOut)
@@ -357,8 +362,8 @@ namespace ProjectVagabond.Transitions
                         Rectangle rect = new Rectangle(
                             (int)(x * scaledBlockSize),
                             (int)(y * scaledBlockSize),
-                            (int)Math.Ceiling(scaledBlockSize),
-                            (int)Math.Ceiling(scaledBlockSize)
+                            drawSize,
+                            drawSize
                         );
                         spriteBatch.Draw(pixel, rect, Color.Black);
                     }
