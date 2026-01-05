@@ -127,7 +127,7 @@ namespace ProjectVagabond.Utils
 
         private static void LogHeader(string message)
         {
-            string tagged = $"[palette_teal]{message}[/]";
+            string tagged = $"[palette_blue]{message}[/]";
             Debug.WriteLine(tagged);
             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = tagged });
         }

@@ -39,7 +39,7 @@ namespace ProjectVagabond
                     _gameState.PlayerState.AddRelic(e.RelicID);
 
                     if (BattleDataCache.Relics.TryGetValue(e.RelicID, out var relic))
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_teal]Obtained {relic.RelicName}!" });
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_blue]Obtained {relic.RelicName}!" });
                     else
                         EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[error]Relic ID '{e.RelicID}' not found." });
 

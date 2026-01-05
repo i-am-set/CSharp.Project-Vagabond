@@ -1294,7 +1294,6 @@ namespace ProjectVagabond.UI
 
             switch (tag)
             {
-                case "teal": return _global.Palette_Teal;
                 case "red": return _global.Palette_Red;
                 case "blue": return _global.Palette_LightBlue;
                 case "green": return _global.Palette_LightGreen;

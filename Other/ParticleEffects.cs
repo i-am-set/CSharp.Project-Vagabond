@@ -239,7 +239,7 @@ namespace ProjectVagabond.Particles
             settings.Gravity = Vector2.Zero;
             settings.Drag = 4f;
             settings.StartColor = global.Palette_BlueWhite;
-            settings.EndColor = global.Palette_Teal;
+            settings.EndColor = global.Palette_DarkBlue;
             settings.StartAlpha = 1.0f;
             settings.EndAlpha = 0.0f;
             settings.Texture = ServiceLocator.Get<Texture2D>();
@@ -352,7 +352,7 @@ namespace ProjectVagabond.Particles
             settings.Gravity = Vector2.Zero;
             settings.Drag = 0.5f;
             settings.StartColor = global.Palette_LightPurple;
-            settings.EndColor = global.Palette_Teal;
+            settings.EndColor = global.Palette_DarkBlue;
             settings.StartAlpha = 1.0f;
             settings.EndAlpha = 0.0f;
             settings.VectorFieldInfluence = 1.0f;

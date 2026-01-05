@@ -170,7 +170,7 @@ namespace ProjectVagabond.Scenes
             else if (choiceData is ConsumableItemData item)
             {
                 _gameState.PlayerState.AddConsumable(item.ItemID);
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_teal]Obtained {item.ItemName}!" });
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_blue]Obtained {item.ItemName}!" });
             }
 
             if (_onChoiceMade != null)

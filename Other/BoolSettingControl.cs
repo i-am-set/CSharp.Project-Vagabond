@@ -172,7 +172,7 @@ namespace ProjectVagabond.UI
             string valueText = _currentValue ? "ON" : "OFF";
             string rightArrowText = ">";
 
-            Color baseValueColor = IsEnabled ? (IsDirty ? _global.Palette_Teal : _global.Palette_BlueWhite) : _global.ButtonDisableColor;
+            Color baseValueColor = IsEnabled ? (IsDirty ? _global.ConfirmSettingsColor : _global.Palette_BlueWhite) : _global.ButtonDisableColor;
             Color leftArrowColor = IsEnabled ? (_isLeftArrowHovered ? _global.ButtonHoverColor : baseValueColor) : _global.ButtonDisableColor;
             Color rightArrowColor = IsEnabled ? (_isRightArrowHovered ? _global.ButtonHoverColor : baseValueColor) : _global.ButtonDisableColor;
 

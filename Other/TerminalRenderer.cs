@@ -342,7 +342,6 @@ namespace ProjectVagabond
                 case "palette_gray": return _global.Palette_Gray;
                 case "palette_lightgray": return _global.Palette_LightGray;
                 case "palette_white": return _global.Palette_White;
-                case "palette_teal": return _global.Palette_Teal;
                 case "palette_lightblue": return _global.Palette_LightBlue;
                 case "palette_darkblue": return _global.Palette_DarkBlue;
                 case "palette_darkgreen": return _global.Palette_DarkGreen;

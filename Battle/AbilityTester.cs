@@ -145,14 +145,14 @@ namespace ProjectVagabond.Utils
 
         private static void LogInfo(string message)
         {
-            string tagged = $"[palette_teal]{message}[/]";
+            string tagged = $"[palette_blue]{message}[/]";
             GameLogger.Log(LogSeverity.Info, tagged);
             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = tagged });
         }
 
         private static void LogHeader(string message)
         {
-            string tagged = $"[palette_teal]{message}[/]";
+            string tagged = $"[palette_blue]{message}[/]";
             GameLogger.Log(LogSeverity.Info, tagged);
             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = tagged });
         }

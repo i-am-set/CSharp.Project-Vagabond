@@ -235,7 +235,7 @@ namespace ProjectVagabond.UI
                 }
                 else if (IsDirty)
                 {
-                    baseValueColor = _global.Palette_Teal;
+                    baseValueColor = _global.ConfirmSettingsColor;
                 }
                 else
                 {

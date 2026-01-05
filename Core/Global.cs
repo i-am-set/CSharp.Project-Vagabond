@@ -35,15 +35,18 @@ namespace ProjectVagabond
         private static readonly Global _instance = new Global();
         private Global()
         {
-            WaterColor = Palette_DarkBlue;
+            // Initialize World Colors
+            WaterColor = Palette_Blue;
             FlatlandColor = Palette_DarkGray;
-            HillColor = Palette_DarkGray;
-            MountainColor = Palette_Gray;
-            PeakColor = Palette_LightGray;
+            HillColor = Palette_Gray;
+            MountainColor = Palette_LightGray;
+            PeakColor = Palette_White;
             PlayerColor = Palette_Red;
             PathColor = Palette_Yellow;
             RunPathColor = Palette_Orange;
             PathEndColor = Palette_Red;
+
+            // Initialize UI Colors
             GameBg = Palette_Black;
             TerminalBg = Palette_Black;
             MapBg = Palette_Black;
@@ -56,8 +59,10 @@ namespace ProjectVagabond
             ToolTipTextColor = Palette_BlueWhite;
             ToolTipBorderColor = Palette_BlueWhite;
             TerminalDarkGray = Palette_DarkGray;
-            InputCaratColor = Color.Khaki;
+            InputCaratColor = Palette_Yellow;
             AlertColor = Color.Red;
+            ConfirmSettingsColor = Color.LightGreen;
+
             // Initialize Stat Colors
             StatColor_Strength = Color.Crimson;
             StatColor_Intelligence = Color.MediumSpringGreen;
@@ -68,9 +73,9 @@ namespace ProjectVagabond
 
             // Initialize Generic Feedback Colors
             ColorPositive = Palette_LightGreen;
-            ColorNegative = Palette_Red;
+            ColorNegative = Palette_LightRed;
             ColorCrit = Palette_Yellow;
-            ColorImmune = Palette_Teal;
+            ColorImmune = Palette_DarkBlue;
             ColorConditionToMeet = Palette_LightYellow;
 
             // Initialize Item Outline Colors
@@ -83,13 +88,13 @@ namespace ProjectVagabond
             ItemOutlineColor_Selected_Corner = Palette_BlueWhite;
 
             // Initialize Narration Colors
-            ColorNarration_Default = Palette_LightGray; // Default text color
-            ColorNarration_Prefix = Palette_DarkGray;       // "First", "Second" prefix color
-            ColorNarration_Action = Color.DarkOrange;
-            ColorNarration_Spell = Color.Cyan;
-            ColorNarration_Item = Color.PaleGreen;
-            ColorNarration_Critical = Color.Yellow;
-            ColorNarration_Defeated = Color.Crimson;
+            ColorNarration_Default = Palette_LightGray;
+            ColorNarration_Prefix = Palette_DarkGray;
+            ColorNarration_Action = Palette_Orange;
+            ColorNarration_Spell = Palette_Blue;
+            ColorNarration_Item = Palette_PaleGreen;
+            ColorNarration_Critical = Palette_Yellow;
+            ColorNarration_Defeated = Palette_DarkRed;
             ColorNarration_Escaped = Palette_LightBlue;
             ColorNarration_Enemy = Palette_Red;
             ColorNarration_Status = Palette_LightPurple;
@@ -107,21 +112,21 @@ namespace ProjectVagabond
 
             // Initialize Color Mappings
             ElementColors = new Dictionary<int, Color>
-        {
-            { 1, Palette_White },      // Neutral
-            { 2, Palette_Red },        // Fire
-            { 3, Palette_LightBlue },  // Water
-            { 4, Palette_Pink },       // Arcane
-            { 5, Palette_Orange },     // Earth
-            { 6, Palette_Gray },       // Metal
-            { 7, Palette_LightPurple },// Toxic
-            { 8, Palette_Teal },       // Wind
-            { 9, Palette_DarkPurple }, // Void
-            { 10, Palette_LightYellow },// Light
-            { 11, Palette_Yellow},     // Electric
-            { 12, Palette_LightBlue }, // Ice
-            { 13, Palette_LightGreen } // Nature
-        };
+            {
+                { 1, Palette_White },       // Neutral
+                { 2, Palette_Red },         // Fire
+                { 3, Palette_Blue },        // Water
+                { 4, Palette_Pink },        // Arcane
+                { 5, Palette_Orange },      // Earth
+                { 6, Palette_Gray },        // Metal
+                { 7, Palette_Purple },      // Toxic
+                { 8, Palette_BlueWhite },   // Wind
+                { 9, Palette_DarkPurple },  // Void
+                { 10, Palette_LightYellow },// Light
+                { 11, Palette_Yellow},      // Electric
+                { 12, Palette_LightBlue },  // Ice
+                { 13, Palette_Green }       // Nature
+            };
 
             RarityColors = new Dictionary<int, Color>
         {
@@ -135,20 +140,20 @@ namespace ProjectVagabond
         };
 
             StatusEffectColors = new Dictionary<StatusEffectType, Color>
-        {
-            { StatusEffectType.Poison, Palette_LightPurple },
-            { StatusEffectType.Stun, Palette_Yellow },
-            { StatusEffectType.Regen, Palette_LightGreen },
-            { StatusEffectType.Dodging, Palette_LightBlue },
-            { StatusEffectType.Burn, Palette_Red },
-            { StatusEffectType.Frostbite, Palette_DarkBlue },
-            { StatusEffectType.Silence, Palette_LightGray },
-            { StatusEffectType.Protected, Palette_BlueWhite },
-            { StatusEffectType.Empowered, Palette_Orange },
-            { StatusEffectType.TargetMe, Palette_Red },
-            { StatusEffectType.Provoked, Palette_Orange },
-            { StatusEffectType.Bleeding, Palette_Red }
-        };
+            {
+                { StatusEffectType.Poison, Palette_Purple },
+                { StatusEffectType.Stun, Palette_Yellow },
+                { StatusEffectType.Regen, Palette_LightGreen },
+                { StatusEffectType.Dodging, Palette_Blue },
+                { StatusEffectType.Burn, Palette_Red },
+                { StatusEffectType.Frostbite, Palette_DarkBlue },
+                { StatusEffectType.Silence, Palette_LightGray },
+                { StatusEffectType.Protected, Palette_BlueWhite },
+                { StatusEffectType.Empowered, Palette_Orange },
+                { StatusEffectType.TargetMe, Palette_Red },
+                { StatusEffectType.Provoked, Palette_Orange },
+                { StatusEffectType.Bleeding, Palette_DarkRed }
+            };
         }
 
         public static Global Instance => _instance;
@@ -244,7 +249,7 @@ namespace ProjectVagabond
         public float HitstopDuration_Crit { get; set; } = 0.2f;
 
         // --- BACKGROUND NOISE TUNING ---
-        public Color BackgroundNoiseColor { get; set; } = new Color(24, 23, 30); // Palette_DarkerGray
+        public Color BackgroundNoiseColor { get; set; } = new Color(24, 23, 30);
         public float BackgroundNoiseOpacity { get; set; } = 1.0f;
         public float BackgroundNoiseScale { get; set; } = 0.05f;
         public float BackgroundScrollSpeedX { get; set; } = 0.01f;
@@ -268,7 +273,7 @@ namespace ProjectVagabond
         public Color ManaOverlayColor { get; set; } = Color.White;
 
         // --- LOW HEALTH FLASH TUNING ---
-        public Color LowHealthFlashColor { get; set; } = new Color(181, 65, 49);
+        public Color LowHealthFlashColor { get; set; } = new Color(181, 65, 49); // Palette_Red
         public float LowHealthThreshold { get; set; } = 0.25f; // 50%
         public float LowHealthFlashSpeedMin { get; set; } = 1.5f; // Reduced from 2.0
         public float LowHealthFlashSpeedMax { get; set; } = 4.0f; // Reduced from 10.0
@@ -300,26 +305,34 @@ namespace ProjectVagabond
         public float MountainsLevel { get; set; } = 0.8f;
 
         // Static Color Palette
-        public Color Palette_Black { get; set; } = new Color(23, 22, 28);
-        public Color Palette_DarkestGray { get; set; } = new Color(26, 25, 33);
-        public Color Palette_DarkerGray { get; set; } = new Color(36, 35, 46);
-        public Color Palette_DarkGray { get; set; } = new Color(42, 40, 57);
-        public Color Palette_Gray { get; set; } = new Color(62, 65, 95);
-        public Color Palette_LightGray { get; set; } = new Color(85, 96, 125);
-        public Color Palette_White { get; set; } = new Color(116, 125, 136);
-        public Color Palette_Teal { get; set; } = new Color(65, 222, 149);
-        public Color Palette_LightBlue { get; set; } = new Color(42, 164, 170);
-        public Color Palette_DarkBlue { get; set; } = new Color(59, 119, 166);
-        public Color Palette_DarkGreen { get; set; } = new Color(36, 147, 55);
-        public Color Palette_LightGreen { get; set; } = new Color(86, 190, 68);
-        public Color Palette_LightYellow { get; set; } = new Color(198, 222, 120);
-        public Color Palette_Yellow { get; set; } = new Color(243, 194, 32);
-        public Color Palette_Orange { get; set; } = new Color(196, 101, 28);
+        public Color Palette_LightPink { get; set; } = new Color(222, 172, 230);
+        public Color Palette_Pink { get; set; } = new Color(213, 87, 168);
+        public Color Palette_LightPurple { get; set; } = new Color(189, 76, 180);
+        public Color Palette_Purple { get; set; } = new Color(154, 64, 131);
+        public Color Palette_DarkPurple { get; set; } = new Color(123, 54, 89);
+        public Color Palette_DarkRed { get; set; } = new Color(154, 50, 50);
         public Color Palette_Red { get; set; } = new Color(181, 65, 49);
-        public Color Palette_DarkPurple { get; set; } = new Color(97, 64, 122);
-        public Color Palette_LightPurple { get; set; } = new Color(143, 61, 167);
-        public Color Palette_Pink { get; set; } = new Color(234, 97, 157);
+        public Color Palette_LightRed { get; set; } = new Color(193, 77, 47);
+        public Color Palette_Orange { get; set; } = new Color(196, 101, 28);
+        public Color Palette_LightOrange { get; set; } = new Color(212, 130, 37);
+        public Color Palette_Yellow { get; set; } = new Color(231, 201, 55);
+        public Color Palette_LightYellow { get; set; } = new Color(231, 232, 91);
+        public Color Palette_YellowGreen { get; set; } = new Color(198, 222, 120);
+        public Color Palette_PaleGreen { get; set; } = new Color(144, 191, 92);
+        public Color Palette_LightGreen { get; set; } = new Color(86, 190, 68);
+        public Color Palette_Green { get; set; } = new Color(68, 173, 80);
+        public Color Palette_DarkGreen { get; set; } = new Color(55, 161, 87);
+        public Color Palette_DarkBlue { get; set; } = new Color(48, 180, 156);
+        public Color Palette_Blue { get; set; } = new Color(106, 200, 195);
+        public Color Palette_LightBlue { get; set; } = new Color(151, 216, 225);
         public Color Palette_BlueWhite { get; set; } = new Color(193, 229, 234);
+        public Color Palette_White { get; set; } = new Color(113, 132, 154);
+        public Color Palette_LightGray { get; set; } = new Color(85, 96, 125);
+        public Color Palette_Gray { get; set; } = new Color(62, 65, 95);
+        public Color Palette_DarkGray { get; set; } = new Color(42, 40, 57);
+        public Color Palette_DarkerGray { get; set; } = new Color(36, 35, 46);
+        public Color Palette_DarkestGray { get; set; } = new Color(26, 25, 33);
+        public Color Palette_Black { get; set; } = new Color(23, 22, 28);
 
         // Colors
         public Color WaterColor { get; private set; }
@@ -345,6 +358,7 @@ namespace ProjectVagabond
         public Color TerminalDarkGray { get; set; }
         public Color InputCaratColor { get; set; }
         public Color AlertColor { get; private set; }
+        public Color ConfirmSettingsColor { get; private set; }
 
         // Stat-specific Colors
         public Color StatColor_Strength { get; private set; }
@@ -540,31 +554,48 @@ namespace ProjectVagabond
                 if (lowerTag == "cstatus") return ColorNarration_Status;
                 if (lowerTag == "cslot") return ColorNarration_Default;
                 if (lowerTag == "cgraze") return GrazeIndicatorColor;
-                if (lowerTag == "cBlueWhite") return Palette_BlueWhite;
+                if (lowerTag == "cbluewhite") return Palette_BlueWhite;
 
                 if (lowerTag == "cred") return Palette_Red;
                 if (lowerTag == "cyellow") return Palette_Yellow;
                 if (lowerTag == "cwhite") return Palette_White;
-                if (lowerTag == "cpurple") return Palette_LightPurple;
-                if (lowerTag == "cblue") return Palette_LightBlue;
-                if (lowerTag == "cgreen") return Palette_LightGreen;
+                if (lowerTag == "cpurple") return Palette_Purple;
+                if (lowerTag == "cblue") return Palette_Blue;
+                if (lowerTag == "cgreen") return Palette_Green;
+                if (lowerTag == "cpink") return Palette_Pink;
+                if (lowerTag == "corange") return Palette_Orange;
             }
 
             // 2. Handle Standard Color Names (Fallback)
             switch (lowerTag)
             {
-                case "teal": return Palette_Teal;
                 case "red": return Palette_Red;
-                case "blue": return Palette_LightBlue;
-                case "green": return Palette_LightGreen;
+                case "blue": return Palette_Blue;
+                case "green": return Palette_Green;
                 case "yellow": return Palette_Yellow;
                 case "orange": return Palette_Orange;
-                case "purple": return Palette_LightPurple;
+                case "purple": return Palette_Purple;
                 case "pink": return Palette_Pink;
                 case "gray": return Palette_Gray;
                 case "white": return Palette_White;
-                case "BlueWhite": return Palette_BlueWhite;
+                case "bluewhite": return Palette_BlueWhite;
                 case "darkgray": return Palette_DarkGray;
+                case "lightpink": return Palette_LightPink;
+                case "lightpurple": return Palette_LightPurple;
+                case "darkpurple": return Palette_DarkPurple;
+                case "darkred": return Palette_DarkRed;
+                case "lightred": return Palette_LightRed;
+                case "lightorange": return Palette_LightOrange;
+                case "yellowgreen": return Palette_YellowGreen;
+                case "palegreen": return Palette_PaleGreen;
+                case "lightgreen": return Palette_LightGreen;
+                case "darkgreen": return Palette_DarkGreen;
+                case "darkblue": return Palette_DarkBlue;
+                case "lightblue": return Palette_LightBlue;
+                case "lightgray": return Palette_LightGray;
+                case "darkergray": return Palette_DarkerGray;
+                case "darkestgray": return Palette_DarkestGray;
+                case "black": return Palette_Black;
                 default: return Palette_BlueWhite;
             }
         }

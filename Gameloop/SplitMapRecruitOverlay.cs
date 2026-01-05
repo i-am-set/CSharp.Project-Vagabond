@@ -239,7 +239,7 @@ namespace ProjectVagabond.UI
             if (_gameState.PlayerState.AddPartyMember(candidate))
             {
                 _hapticsManager.TriggerCompoundShake(0.5f);
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_teal]Recruited {candidate.Name}!" });
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_blue]Recruited {candidate.Name}!" });
                 OnRecruitComplete?.Invoke();
             }
             else
@@ -1377,7 +1377,6 @@ namespace ProjectVagabond.UI
 
             switch (tag)
             {
-                case "teal": return _global.Palette_Teal;
                 case "red": return _global.Palette_Red;
                 case "blue": return _global.Palette_LightBlue;
                 case "green": return _global.Palette_LightGreen;

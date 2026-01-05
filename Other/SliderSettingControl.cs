@@ -134,7 +134,7 @@ namespace ProjectVagabond.UI
             }
 
             // The slider draws itself, but we need to provide the correct value color.
-            Color valueColor = IsEnabled ? (IsDirty ? _global.Palette_Teal : _global.Palette_BlueWhite) : _global.ButtonDisableColor;
+            Color valueColor = IsEnabled ? (IsDirty ? _global.ConfirmSettingsColor : _global.Palette_BlueWhite) : _global.ButtonDisableColor;
             _slider.CustomValueColor = valueColor;
 
             // Temporarily shift the slider bounds for drawing to match the animation

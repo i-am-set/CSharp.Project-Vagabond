@@ -363,7 +363,7 @@ namespace ProjectVagabond
                 {
                     case "GiveItem":
                         PlayerState.AddConsumable(outcome.Value);
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_teal]Obtained {outcome.Value}!" });
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_blue]Obtained {outcome.Value}!" });
                         break;
 
                     case "RemoveItem":
@@ -387,7 +387,7 @@ namespace ProjectVagabond
                             }
                             // Use Amount for duration
                             buffsComp.Buffs.Add(new TemporaryBuff { EffectType = effectType, RemainingBattles = outcome.Amount });
-                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_teal]Gained {outcome.Value} ({outcome.Amount} battles)!" });
+                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_blue]Gained {outcome.Value} ({outcome.Amount} battles)!" });
                         }
                         break;
 
@@ -405,7 +405,7 @@ namespace ProjectVagabond
                             else if (stat == "maxmana") { statsComp.MaxMana += amt; statsComp.CurrentMana += amt; }
 
                             string sign = amt > 0 ? "+" : "";
-                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_teal]{outcome.Value} {sign}{amt}" });
+                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_blue]{outcome.Value} {sign}{amt}" });
                         }
                         break;
 

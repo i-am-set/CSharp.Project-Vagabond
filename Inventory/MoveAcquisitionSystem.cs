@@ -27,7 +27,7 @@ namespace ProjectVagabond
                 case GameEvents.AcquisitionType.Add:
                     _gameState.PlayerState.AddMove(e.MoveID);
                     if (BattleDataCache.Moves.TryGetValue(e.MoveID, out var move))
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_teal]Obtained {move.MoveName}!" });
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_blue]Obtained {move.MoveName}!" });
                     else
                         EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[error]Move ID '{e.MoveID}' not found." });
                     break;
