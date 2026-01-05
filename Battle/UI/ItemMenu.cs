@@ -477,7 +477,7 @@ namespace ProjectVagabond.Battle.UI
                 // Name
                 var itemName = item.ItemName.ToUpper();
                 var namePos = new Vector2(tooltipBgRect.X + horizontalPadding, currentY);
-                spriteBatch.DrawStringSnapped(font, itemName, namePos, _global.Palette_BrightWhite);
+                spriteBatch.DrawStringSnapped(font, itemName, namePos, _global.Palette_BlueWhite);
 
                 // Type (Right aligned)
                 string typeText = "CONSUMABLE";

@@ -147,7 +147,7 @@ namespace ProjectVagabond.UI
                 else
                 {
                     backgroundTintColor = Color.White;
-                    textColor = CustomDefaultTextColor ?? _global.Palette_BrightWhite;
+                    textColor = CustomDefaultTextColor ?? _global.Palette_BlueWhite;
                     iconColor = Color.White;
                 }
             }

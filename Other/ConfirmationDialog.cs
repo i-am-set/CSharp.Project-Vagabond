@@ -212,7 +212,7 @@ namespace ProjectVagabond.UI
             foreach (var line in wrappedPrompt)
             {
                 var promptSize = secondaryFont.MeasureString(line);
-                spriteBatch.DrawString(secondaryFont, line, new Vector2(_dialogBounds.Center.X - promptSize.Width / 2, currentY), _global.Palette_BrightWhite);
+                spriteBatch.DrawString(secondaryFont, line, new Vector2(_dialogBounds.Center.X - promptSize.Width / 2, currentY), _global.Palette_BlueWhite);
                 currentY += secondaryFont.LineHeight;
             }
 

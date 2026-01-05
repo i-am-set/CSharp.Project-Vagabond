@@ -217,7 +217,7 @@ namespace ProjectVagabond.Battle.UI
                     spriteBatch.DrawSnapped(pixel, iconRect, _global.Palette_Pink * contentAlpha);
                 }
 
-                var textColor = isActivated && canAfford && IsEnabled ? _global.ButtonHoverColor : _global.Palette_BrightWhite;
+                var textColor = isActivated && canAfford && IsEnabled ? _global.ButtonHoverColor : _global.Palette_BlueWhite;
                 if (!canAfford || !IsEnabled)
                 {
                     textColor = _global.ButtonDisableColor;

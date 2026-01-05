@@ -543,7 +543,7 @@ namespace ProjectVagabond.UI
             Vector2 titlePosition = new Vector2(screenWidth / 2 - titleSize.X / 2, titleBaseY + yOffset);
 
             // Use DrawStringSnapped for pixel perfection
-            spriteBatch.DrawStringSnapped(font, title, titlePosition, _global.Palette_BrightWhite);
+            spriteBatch.DrawStringSnapped(font, title, titlePosition, _global.Palette_BlueWhite);
 
             int dividerY = (int)(titleBaseY + titleSize.Y + 5);
             spriteBatch.Draw(pixel, new Rectangle(screenWidth / 2 - 90, dividerY, 180, 1), _global.Palette_Gray);

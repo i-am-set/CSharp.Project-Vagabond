@@ -103,7 +103,7 @@ namespace ProjectVagabond.UI
                 Color titleColor;
                 if (isActivated)
                 {
-                    titleColor = _global.Palette_BrightWhite;
+                    titleColor = _global.Palette_BlueWhite;
                 }
                 else
                 {
@@ -180,8 +180,8 @@ namespace ProjectVagabond.UI
                 // Round to pixel
                 mainPos = new Vector2(MathF.Round(mainPos.X), MathF.Round(mainPos.Y));
 
-                // Use CustomDefaultTextColor if set, otherwise BrightWhite
-                Color defaultColor = CustomDefaultTextColor ?? _global.Palette_BrightWhite;
+                // Use CustomDefaultTextColor if set, otherwise BlueWhite
+                Color defaultColor = CustomDefaultTextColor ?? _global.Palette_BlueWhite;
 
                 // Change: Use Color.White when hovered instead of ButtonHoverColor (Red)
                 Color mainColor = isActivated ? Color.White : defaultColor;

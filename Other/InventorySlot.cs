@@ -242,7 +242,7 @@ namespace ProjectVagabond.UI
                     if (displayName.Length > 8) displayName = displayName.Substring(0, 6) + "..";
                     var textSize = secondaryFont.MeasureString(displayName);
                     Vector2 textOrigin = textSize / 2f;
-                    spriteBatch.DrawStringSnapped(secondaryFont, displayName, center, global.Palette_BrightWhite, 0f, textOrigin, _visualScale, SpriteEffects.None, 0f);
+                    spriteBatch.DrawStringSnapped(secondaryFont, displayName, center, global.Palette_BlueWhite, 0f, textOrigin, _visualScale, SpriteEffects.None, 0f);
                 }
 
                 // Draw Quantity

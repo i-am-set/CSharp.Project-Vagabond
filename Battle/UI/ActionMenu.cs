@@ -1056,7 +1056,7 @@ namespace ProjectVagabond.Battle.UI
                     tooltipBounds.Center.X - nameSize.Width / 2,
                     tooltipBounds.Y + 8
                 );
-                spriteBatch.DrawStringSnapped(font, moveName, namePos, _global.Palette_BrightWhite);
+                spriteBatch.DrawStringSnapped(font, moveName, namePos, _global.Palette_BlueWhite);
 
                 if (!string.IsNullOrEmpty(_tooltipMove.Description))
                 {
@@ -1324,17 +1324,17 @@ namespace ProjectVagabond.Battle.UI
                         powerText = $"POW: {(int)(_player.Stats.CurrentMana * manaDump.Multiplier)}";
                     }
 
-                    Color accColor = _global.Palette_BrightWhite;
+                    Color accColor = _global.Palette_BlueWhite;
                     if (move.Accuracy >= 0)
                     {
                         float t = Math.Clamp((100f - move.Accuracy) / 50f, 0f, 1f);
-                        accColor = Color.Lerp(_global.Palette_BrightWhite, _global.Palette_Red, t);
+                        accColor = Color.Lerp(_global.Palette_BlueWhite, _global.Palette_Red, t);
                     }
 
                     statsSegments.Insert(0, (separator, _global.Palette_DarkGray));
                     statsSegments.Insert(0, (accuracyText, accColor));
                     statsSegments.Insert(0, (separator, _global.Palette_DarkGray));
-                    statsSegments.Insert(0, (powerText, _global.Palette_BrightWhite));
+                    statsSegments.Insert(0, (powerText, _global.Palette_BlueWhite));
                 }
 
                 // --- NEW: Contact Text for Tooltip ---
@@ -1397,7 +1397,7 @@ namespace ProjectVagabond.Battle.UI
                     spriteBatch.GraphicsDevice.ScissorRectangle = clipRect;
 
                     var scrollingTextPosition = new Vector2(namePos.X - _tooltipScrollPosition, namePos.Y);
-                    spriteBatch.DrawStringSnapped(font, move.MoveName.ToUpper(), scrollingTextPosition, _global.Palette_BrightWhite);
+                    spriteBatch.DrawStringSnapped(font, move.MoveName.ToUpper(), scrollingTextPosition, _global.Palette_BlueWhite);
 
                     spriteBatch.End();
                     spriteBatch.GraphicsDevice.ScissorRectangle = originalScissorRect;
@@ -1406,7 +1406,7 @@ namespace ProjectVagabond.Battle.UI
                 else
                 {
                     _isTooltipScrollingInitialized = false;
-                    spriteBatch.DrawStringSnapped(font, moveName, namePos, _global.Palette_BrightWhite);
+                    spriteBatch.DrawStringSnapped(font, moveName, namePos, _global.Palette_BlueWhite);
                 }
                 currentY += nameSize.Height + 1;
 
@@ -1456,7 +1456,7 @@ namespace ProjectVagabond.Battle.UI
             else
             {
                 float statsY = currentY;
-                Color valueColor = _global.Palette_BrightWhite;
+                Color valueColor = _global.Palette_BlueWhite;
                 Color labelColor = _global.Palette_DarkGray;
 
                 string powerLabel = "POWE:";
@@ -1538,7 +1538,7 @@ namespace ProjectVagabond.Battle.UI
                     OffensiveStatType.Intelligence => _global.StatColor_Intelligence,
                     OffensiveStatType.Tenacity => _global.StatColor_Tenacity,
                     OffensiveStatType.Agility => _global.StatColor_Agility,
-                    _ => _global.Palette_BrightWhite
+                    _ => _global.Palette_BlueWhite
                 };
 
                 if (move != null && move.ImpactType != ImpactType.Status)
@@ -1772,7 +1772,7 @@ namespace ProjectVagabond.Battle.UI
                 case "pink": return _global.Palette_Pink;
                 case "gray": return _global.Palette_Gray;
                 case "white": return _global.Palette_White;
-                case "brightwhite": return _global.Palette_BrightWhite;
+                case "BlueWhite": return _global.Palette_BlueWhite;
                 case "darkgray": return _global.Palette_DarkGray;
                 default: return _global.Palette_White;
             }

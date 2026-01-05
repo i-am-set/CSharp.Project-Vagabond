@@ -199,7 +199,7 @@ namespace ProjectVagabond.UI
             float xOffset = HoverAnimator.UpdateAndGetOffset(gameTime, isSelected && IsEnabled);
             Vector2 animatedPosition = new Vector2(position.X + xOffset, position.Y);
 
-            Color labelColor = isSelected && IsEnabled ? _global.ButtonHoverColor : (IsEnabled ? _global.Palette_BrightWhite : _global.ButtonDisableColor);
+            Color labelColor = isSelected && IsEnabled ? _global.ButtonHoverColor : (IsEnabled ? _global.Palette_BlueWhite : _global.ButtonDisableColor);
 
             // --- Label Drawing with Wave (Using labelFont) ---
             if (isSelected && IsEnabled)
@@ -224,7 +224,7 @@ namespace ProjectVagabond.UI
             int filledSegments = (int)Math.Round(progress * (_segmentCount - 1)) + 1;
 
             Color emptyColor = IsEnabled ? _global.Palette_DarkGray : new Color(40, 40, 40);
-            Color baseFillColor = IsEnabled ? (IsDirty ? _global.Palette_Teal : _global.Palette_BrightWhite) : _global.ButtonDisableColor;
+            Color baseFillColor = IsEnabled ? (IsDirty ? _global.Palette_Teal : _global.Palette_BlueWhite) : _global.ButtonDisableColor;
             Color hoverColor = _global.ButtonHoverColor;
 
             // Draw the segments

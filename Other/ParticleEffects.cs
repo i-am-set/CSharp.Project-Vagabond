@@ -46,7 +46,7 @@ namespace ProjectVagabond.Particles
             // Over Lifetime
             settings.Gravity = new Vector2(0, 200f * intensity); // Heavier sparks fall faster
             settings.Drag = 3.0f;
-            settings.StartColor = global.Palette_BrightWhite;
+            settings.StartColor = global.Palette_BlueWhite;
             settings.EndColor = global.Palette_Yellow;
             settings.StartAlpha = 1.0f;
             settings.EndAlpha = 0.0f;
@@ -238,7 +238,7 @@ namespace ProjectVagabond.Particles
             settings.InitialRotationSpeed = new FloatRange(0f);
             settings.Gravity = Vector2.Zero;
             settings.Drag = 4f;
-            settings.StartColor = global.Palette_BrightWhite;
+            settings.StartColor = global.Palette_BlueWhite;
             settings.EndColor = global.Palette_Teal;
             settings.StartAlpha = 1.0f;
             settings.EndAlpha = 0.0f;

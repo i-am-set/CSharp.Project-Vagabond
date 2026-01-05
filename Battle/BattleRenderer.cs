@@ -723,7 +723,7 @@ namespace ProjectVagabond.Battle.UI
                 if (enemy.CombatantID == _statTooltipCombatantID && _statTooltipAlpha > 0) isSilhouetted = true;
 
                 Color silhouetteColor = isSilhouetted ? _global.Palette_DarkerGray : _global.Palette_DarkGray;
-                Color outlineColor = (enemy == currentActor) ? _global.Palette_BrightWhite : _global.Palette_DarkGray;
+                Color outlineColor = (enemy == currentActor) ? _global.Palette_BlueWhite : _global.Palette_DarkGray;
                 if (isSilhouetted) outlineColor = outlineColor * 0.5f;
 
                 outlineColor = outlineColor * enemy.VisualAlpha;
@@ -997,7 +997,7 @@ namespace ProjectVagabond.Battle.UI
                 if (player.CombatantID == _statTooltipCombatantID && _statTooltipAlpha > 0) isSilhouetted = true;
 
                 Color silhouetteColor = isSilhouetted ? _global.Palette_DarkerGray : _global.Palette_DarkerGray;
-                Color outlineColor = (player == currentActor) ? _global.Palette_BrightWhite : _global.Palette_DarkGray;
+                Color outlineColor = (player == currentActor) ? _global.Palette_BlueWhite : _global.Palette_DarkGray;
                 outlineColor = outlineColor * player.VisualAlpha;
 
                 var spawnAnim = animManager.GetSpawnAnimationState(player.CombatantID);
@@ -1124,7 +1124,7 @@ namespace ProjectVagabond.Battle.UI
                 {
                     Vector2 nameSize = font.MeasureString(player.Name);
                     Vector2 namePos = new Vector2(center.X - nameSize.X / 2f, BattleLayout.PLAYER_NAME_TOP_Y);
-                    Color nameColor = (highlight == Color.Yellow) ? _global.Palette_Yellow : _global.Palette_BrightWhite;
+                    Color nameColor = (highlight == Color.Yellow) ? _global.Palette_Yellow : _global.Palette_BlueWhite;
 
                     // --- NAME DIMMING LOGIC ---
                     bool isHovered = (hoveredCombatant == player) || (uiManager.HoveredCombatantFromUI == player);

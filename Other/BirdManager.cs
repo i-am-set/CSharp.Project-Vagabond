@@ -309,7 +309,7 @@ namespace ProjectVagabond.Scenes
                     spriteBatch.DrawSnapped(pixel, drawPos + new Vector2(1, 0), _global.Palette_Black);  // Right
 
                     // 1x1 Bright White Dot
-                    spriteBatch.DrawSnapped(pixel, drawPos, _global.Palette_BrightWhite);
+                    spriteBatch.DrawSnapped(pixel, drawPos, _global.Palette_BlueWhite);
                 }
             }
         }

@@ -76,7 +76,7 @@ namespace ProjectVagabond.Battle.UI
             }
 
             // --- Item Name Drawing ---
-            var nameColor = isActivated ? _global.ButtonHoverColor : _global.Palette_BrightWhite;
+            var nameColor = isActivated ? _global.ButtonHoverColor : _global.Palette_BlueWhite;
             if (!IsEnabled)
             {
                 nameColor = _global.ButtonDisableColor;

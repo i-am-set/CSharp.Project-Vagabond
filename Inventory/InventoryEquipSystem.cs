@@ -68,7 +68,7 @@ namespace ProjectVagabond.UI
 
                 if (i % 2 == 0)
                 {
-                    btn.CustomDefaultTextColor = _global.Palette_BrightWhite;
+                    btn.CustomDefaultTextColor = _global.Palette_BlueWhite;
                     btn.CustomTitleTextColor = _global.Palette_DarkGray;
                 }
                 else

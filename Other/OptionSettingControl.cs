@@ -192,7 +192,7 @@ namespace ProjectVagabond.UI
             string labelText = Label;
             string extraInfoText = ExtraInfoTextGetter?.Invoke();
             Vector2 labelSize = labelFont.MeasureString(labelText);
-            Color labelColor = isSelected && IsEnabled ? _global.ButtonHoverColor : (IsEnabled ? _global.Palette_BrightWhite : _global.ButtonDisableColor);
+            Color labelColor = isSelected && IsEnabled ? _global.ButtonHoverColor : (IsEnabled ? _global.Palette_BlueWhite : _global.ButtonDisableColor);
 
             if (isSelected && IsEnabled)
             {
@@ -240,7 +240,7 @@ namespace ProjectVagabond.UI
                 else
                 {
                     var customColor = GetValueColor?.Invoke(_currentValue);
-                    baseValueColor = customColor ?? _global.Palette_BrightWhite;
+                    baseValueColor = customColor ?? _global.Palette_BlueWhite;
                 }
             }
 

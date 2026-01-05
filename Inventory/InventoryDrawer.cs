@@ -140,7 +140,7 @@ namespace ProjectVagabond.UI
                     );
                     spriteBatch.DrawSnapped(pixel, bgRect, _global.Palette_Black);
 
-                    spriteBatch.DrawStringSnapped(secondaryFont, pageText, textPos, _global.Palette_BrightWhite);
+                    spriteBatch.DrawStringSnapped(secondaryFont, pageText, textPos, _global.Palette_BlueWhite);
 
                     _pageLeftButton?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
                     _pageRightButton?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
@@ -341,7 +341,7 @@ namespace ProjectVagabond.UI
                 int currentY = bounds.Y + 4;
 
                 string name = isOccupied ? member!.Name.ToUpper() : "EMPTY";
-                Color nameColor = isOccupied ? _global.Palette_BrightWhite : _global.Palette_DarkGray;
+                Color nameColor = isOccupied ? _global.Palette_BlueWhite : _global.Palette_DarkGray;
 
                 Vector2 nameSize = font.MeasureString(name);
                 Vector2 namePos = new Vector2(centerX - nameSize.X / 2, currentY);
@@ -391,7 +391,7 @@ namespace ProjectVagabond.UI
                     }
 
                     string hpValText = isOccupied ? $"{member!.CurrentHP}/{member.MaxHP}" : "0/0";
-                    Color hpValColor = isOccupied ? _global.Palette_BrightWhite : _global.Palette_DarkGray;
+                    Color hpValColor = isOccupied ? _global.Palette_BlueWhite : _global.Palette_DarkGray;
                     string hpSuffix = " HP";
 
                     Vector2 valSize = secondaryFont.MeasureString(hpValText);
@@ -552,18 +552,18 @@ namespace ProjectVagabond.UI
                                 {
                                     excessValue = currentEffective - 20;
                                     if (effectiveWithoutItem < currentEffective) textColor = _global.StatColor_Increase;
-                                    else textColor = _global.Palette_BrightWhite;
+                                    else textColor = _global.Palette_BlueWhite;
                                 }
                                 else if (itemBonus < 0)
                                 {
                                     excessValue = effectiveWithoutItem - 20;
                                     if (effectiveWithoutItem > currentEffective) textColor = _global.StatColor_Decrease;
-                                    else textColor = _global.Palette_BrightWhite;
+                                    else textColor = _global.Palette_BlueWhite;
                                 }
                                 else
                                 {
                                     excessValue = currentEffective - 20;
-                                    textColor = _global.Palette_BrightWhite;
+                                    textColor = _global.Palette_BlueWhite;
                                 }
 
                                 if (excessValue > 0)
@@ -641,7 +641,7 @@ namespace ProjectVagabond.UI
 
             if (isSelected || isHovered)
             {
-                Color borderColor = _global.Palette_BrightWhite;
+                Color borderColor = _global.Palette_BlueWhite;
                 spriteBatch.DrawSnapped(pixel, new Rectangle(destRect.X, destRect.Y, destRect.Width, 1), borderColor);
                 spriteBatch.DrawSnapped(pixel, new Rectangle(destRect.X, destRect.Bottom - 1, destRect.Width, 1), borderColor);
                 spriteBatch.DrawSnapped(pixel, new Rectangle(destRect.X, destRect.Y, 1, destRect.Height), borderColor);
@@ -807,7 +807,7 @@ namespace ProjectVagabond.UI
             var statLines = GetStatModifierLines(stats);
 
             int maxTitleWidth = infoPanelArea.Width - (4 * 2);
-            var titleLines = ParseAndWrapRichText(font, name, maxTitleWidth, _global.Palette_BrightWhite);
+            var titleLines = ParseAndWrapRichText(font, name, maxTitleWidth, _global.Palette_BlueWhite);
             float totalTitleHeight = titleLines.Count * font.LineHeight;
 
             float totalDescHeight = 0f;
@@ -1024,11 +1024,11 @@ namespace ProjectVagabond.UI
             // --- WAVE ANIMATION FOR SPELL NAME ---
             if (_infoPanelNameWaveTimer > 0)
             {
-                TextUtils.DrawTextWithEffectOutlined(spriteBatch, font, name, namePos, _global.Palette_BrightWhite, _global.Palette_Black, TextEffectType.SmallWave, _infoPanelNameWaveTimer);
+                TextUtils.DrawTextWithEffectOutlined(spriteBatch, font, name, namePos, _global.Palette_BlueWhite, _global.Palette_Black, TextEffectType.SmallWave, _infoPanelNameWaveTimer);
             }
             else
             {
-                spriteBatch.DrawStringOutlinedSnapped(font, name, namePos, _global.Palette_BrightWhite, _global.Palette_Black);
+                spriteBatch.DrawStringOutlinedSnapped(font, name, namePos, _global.Palette_BlueWhite, _global.Palette_Black);
             }
 
             float currentY = namePos.Y + font.LineHeight + 2;
@@ -1304,7 +1304,7 @@ namespace ProjectVagabond.UI
                 case "pink": return _global.Palette_Pink;
                 case "gray": return _global.Palette_Gray;
                 case "white": return _global.Palette_White;
-                case "brightwhite": return _global.Palette_BrightWhite;
+                case "BlueWhite": return _global.Palette_BlueWhite;
                 case "darkgray": return _global.Palette_DarkGray;
                 default: return _global.Palette_White;
             }

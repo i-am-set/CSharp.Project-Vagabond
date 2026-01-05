@@ -47,7 +47,7 @@ namespace ProjectVagabond.UI
 
             _leaveButton = new Button(Rectangle.Empty, "LEAVE", font: _core.SecondaryFont)
             {
-                CustomDefaultTextColor = _global.Palette_BrightWhite,
+                CustomDefaultTextColor = _global.Palette_BlueWhite,
                 CustomHoverTextColor = _global.Palette_Red,
                 UseScreenCoordinates = true
             };
@@ -255,7 +255,7 @@ namespace ProjectVagabond.UI
             string title = "SHOP";
             Vector2 titleSize = font.MeasureString(title);
             Vector2 titlePos = new Vector2((Global.VIRTUAL_WIDTH - titleSize.X) / 2, WORLD_Y_OFFSET + 10);
-            spriteBatch.DrawStringSnapped(font, title, titlePos, _global.Palette_BrightWhite);
+            spriteBatch.DrawStringSnapped(font, title, titlePos, _global.Palette_BlueWhite);
 
             // Coin Display
             string coinText = $"COIN: {_gameState.PlayerState.Coin}";

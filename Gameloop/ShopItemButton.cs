@@ -192,7 +192,7 @@ namespace ProjectVagabond.UI
                     animatedSpriteY - nameSize.Y - 2
                 );
 
-                spriteBatch.DrawStringSnapped(_nameFont, nameText, namePos, _global.Palette_BrightWhite);
+                spriteBatch.DrawStringSnapped(_nameFont, nameText, namePos, _global.Palette_BlueWhite);
             }
 
             // --- Draw Icon (Center) ---
@@ -325,7 +325,7 @@ namespace ProjectVagabond.UI
                     }
                     else
                     {
-                        priceColor = _global.Palette_BrightWhite;
+                        priceColor = _global.Palette_BlueWhite;
                     }
                 }
 

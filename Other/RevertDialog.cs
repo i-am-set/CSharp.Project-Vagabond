@@ -106,7 +106,7 @@ namespace ProjectVagabond.UI
             // Draw Prompt
             Vector2 promptSize = font.MeasureString(_prompt);
             Vector2 promptPosition = new Vector2(_dialogBounds.Center.X - promptSize.X / 2, _dialogBounds.Y + 10);
-            spriteBatch.DrawStringSnapped(font, _prompt, promptPosition, _global.Palette_BrightWhite);
+            spriteBatch.DrawStringSnapped(font, _prompt, promptPosition, _global.Palette_BlueWhite);
 
             // Draw Countdown Timer
             _stringBuilder.Clear();

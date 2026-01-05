@@ -133,7 +133,7 @@ namespace ProjectVagabond.Battle.UI
 
                         // Pulse Color
                         float pulse = (MathF.Sin(uiManager.SharedPulseTimer * 4f) + 1f) / 2f;
-                        previewColor = Color.Lerp(_global.Palette_Yellow, _global.Palette_BrightWhite, pulse);
+                        previewColor = Color.Lerp(_global.Palette_Yellow, _global.Palette_BlueWhite, pulse);
                     }
                     else
                     {

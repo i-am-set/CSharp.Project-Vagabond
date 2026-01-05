@@ -376,11 +376,11 @@ namespace ProjectVagabond.UI
             Color titleColor;
             if (_cardType == ChoiceType.Spell)
             {
-                titleColor = _global.ElementColors.GetValueOrDefault(_elementId, _global.Palette_BrightWhite);
+                titleColor = _global.ElementColors.GetValueOrDefault(_elementId, _global.Palette_BlueWhite);
             }
             else
             {
-                titleColor = _global.Palette_BrightWhite;
+                titleColor = _global.Palette_BlueWhite;
             }
 
             Color numericColor = (_rarity == 0) ? _global.Palette_Red : rarityColor;
@@ -519,7 +519,7 @@ namespace ProjectVagabond.UI
                 {
                     var headerTextSize = secondaryFont.MeasureString(headerText);
                     var headerTextPos = new Vector2(drawBounds.Center.X - headerTextSize.Width / 2, drawBounds.Y + topPadding);
-                    Color headerColor = isActivated ? _global.Palette_BrightWhite : _global.Palette_DarkGray;
+                    Color headerColor = isActivated ? _global.Palette_BlueWhite : _global.Palette_DarkGray;
                     spriteBatch.DrawStringSnapped(secondaryFont, headerText, headerTextPos, headerColor * alpha);
                     headerOffset = headerTextSize.Height + 2;
                 }

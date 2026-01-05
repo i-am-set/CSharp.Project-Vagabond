@@ -116,7 +116,7 @@ namespace ProjectVagabond.UI
             // Apply offset to X, keep Y static
             Vector2 animatedPosition = new Vector2(position.X + xOffset, position.Y);
 
-            Color labelColor = isSelected && IsEnabled ? _global.ButtonHoverColor : (IsEnabled ? _global.Palette_BrightWhite : _global.ButtonDisableColor);
+            Color labelColor = isSelected && IsEnabled ? _global.ButtonHoverColor : (IsEnabled ? _global.Palette_BlueWhite : _global.ButtonDisableColor);
 
             // --- Label Drawing with Wave (Using labelFont) ---
             if (isSelected && IsEnabled)
@@ -134,7 +134,7 @@ namespace ProjectVagabond.UI
             }
 
             // The slider draws itself, but we need to provide the correct value color.
-            Color valueColor = IsEnabled ? (IsDirty ? _global.Palette_Teal : _global.Palette_BrightWhite) : _global.ButtonDisableColor;
+            Color valueColor = IsEnabled ? (IsDirty ? _global.Palette_Teal : _global.Palette_BlueWhite) : _global.ButtonDisableColor;
             _slider.CustomValueColor = valueColor;
 
             // Temporarily shift the slider bounds for drawing to match the animation

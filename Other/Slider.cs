@@ -27,7 +27,7 @@ namespace ProjectVagabond.UI
         private readonly int _handleWidth = 8;
         private readonly int _handleHeight = 15;
 
-        public Color ElementColor => _global.Palette_BrightWhite;
+        public Color ElementColor => _global.Palette_BlueWhite;
         public Color SubElementColor => _global.Palette_LightGray;
         public Color DisabledSliderColor => _global.Palette_Gray;
 

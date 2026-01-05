@@ -53,8 +53,8 @@ namespace ProjectVagabond
             OutputTextColor = Palette_LightGray;
             InputTextColor = Palette_Gray;
             ToolTipBGColor = Palette_Black;
-            ToolTipTextColor = Palette_BrightWhite;
-            ToolTipBorderColor = Palette_BrightWhite;
+            ToolTipTextColor = Palette_BlueWhite;
+            ToolTipBorderColor = Palette_BlueWhite;
             TerminalDarkGray = Palette_DarkGray;
             InputCaratColor = Color.Khaki;
             AlertColor = Color.Red;
@@ -75,12 +75,12 @@ namespace ProjectVagabond
 
             // Initialize Item Outline Colors
             ItemOutlineColor_Idle = Palette_Gray;
-            ItemOutlineColor_Hover = Palette_BrightWhite;
+            ItemOutlineColor_Hover = Palette_BlueWhite;
             ItemOutlineColor_Selected = Color.White;
 
             ItemOutlineColor_Idle_Corner = Palette_DarkGray;
             ItemOutlineColor_Hover_Corner = Palette_White;
-            ItemOutlineColor_Selected_Corner = Palette_BrightWhite;
+            ItemOutlineColor_Selected_Corner = Palette_BlueWhite;
 
             // Initialize Narration Colors
             ColorNarration_Default = Palette_LightGray; // Default text color
@@ -143,7 +143,7 @@ namespace ProjectVagabond
             { StatusEffectType.Burn, Palette_Red },
             { StatusEffectType.Frostbite, Palette_DarkBlue },
             { StatusEffectType.Silence, Palette_LightGray },
-            { StatusEffectType.Protected, Palette_BrightWhite },
+            { StatusEffectType.Protected, Palette_BlueWhite },
             { StatusEffectType.Empowered, Palette_Orange },
             { StatusEffectType.TargetMe, Palette_Red },
             { StatusEffectType.Provoked, Palette_Orange },
@@ -244,7 +244,7 @@ namespace ProjectVagabond
         public float HitstopDuration_Crit { get; set; } = 0.2f;
 
         // --- BACKGROUND NOISE TUNING ---
-        public Color BackgroundNoiseColor { get; set; } = new Color(26, 25, 33); // Palette_DarkerGray
+        public Color BackgroundNoiseColor { get; set; } = new Color(24, 23, 30); // Palette_DarkerGray
         public float BackgroundNoiseOpacity { get; set; } = 1.0f;
         public float BackgroundNoiseScale { get; set; } = 0.05f;
         public float BackgroundScrollSpeedX { get; set; } = 0.01f;
@@ -302,7 +302,7 @@ namespace ProjectVagabond
         // Static Color Palette
         public Color Palette_Black { get; set; } = new Color(23, 22, 28);
         public Color Palette_DarkestGray { get; set; } = new Color(26, 25, 33);
-        public Color Palette_DarkerGray { get; set; } = new Color(31, 29, 47);
+        public Color Palette_DarkerGray { get; set; } = new Color(36, 35, 46);
         public Color Palette_DarkGray { get; set; } = new Color(42, 40, 57);
         public Color Palette_Gray { get; set; } = new Color(62, 65, 95);
         public Color Palette_LightGray { get; set; } = new Color(85, 96, 125);
@@ -319,7 +319,7 @@ namespace ProjectVagabond
         public Color Palette_DarkPurple { get; set; } = new Color(97, 64, 122);
         public Color Palette_LightPurple { get; set; } = new Color(143, 61, 167);
         public Color Palette_Pink { get; set; } = new Color(234, 97, 157);
-        public Color Palette_BrightWhite { get; set; } = new Color(193, 229, 234);
+        public Color Palette_BlueWhite { get; set; } = new Color(193, 229, 234);
 
         // Colors
         public Color WaterColor { get; private set; }
@@ -540,7 +540,7 @@ namespace ProjectVagabond
                 if (lowerTag == "cstatus") return ColorNarration_Status;
                 if (lowerTag == "cslot") return ColorNarration_Default;
                 if (lowerTag == "cgraze") return GrazeIndicatorColor;
-                if (lowerTag == "cbrightwhite") return Palette_BrightWhite;
+                if (lowerTag == "cBlueWhite") return Palette_BlueWhite;
 
                 if (lowerTag == "cred") return Palette_Red;
                 if (lowerTag == "cyellow") return Palette_Yellow;
@@ -563,9 +563,9 @@ namespace ProjectVagabond
                 case "pink": return Palette_Pink;
                 case "gray": return Palette_Gray;
                 case "white": return Palette_White;
-                case "brightwhite": return Palette_BrightWhite;
+                case "BlueWhite": return Palette_BlueWhite;
                 case "darkgray": return Palette_DarkGray;
-                default: return Palette_BrightWhite;
+                default: return Palette_BlueWhite;
             }
         }
     }

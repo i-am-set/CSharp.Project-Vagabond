@@ -354,7 +354,7 @@ namespace ProjectVagabond
                 case "palette_darkpurple": return _global.Palette_DarkPurple;
                 case "palette_lightpurple": return _global.Palette_LightPurple;
                 case "palette_pink": return _global.Palette_Pink;
-                case "palette_brightwhite": return _global.Palette_BrightWhite;
+                case "palette_BlueWhite": return _global.Palette_BlueWhite;
 
                 case "khaki": return Color.Khaki;
                 case "red": return Color.Red;
