@@ -3,11 +3,11 @@
     "WeaponID": "0",
     "WeaponName": "Iron Sword",
     "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]SLASHES$SLICES$STRIKES[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
-    "Description": "[cetc]A standard issue iron sword[/]",
+    "Description": "[cetc]A standard issue iron sword. Reliable and balanced.[/]",
     "Rarity": 0,
     "LevelRequirement": 1,
     "MoveName": "Slash",
-    "Power": 50,
+    "Power": 70,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
@@ -22,7 +22,7 @@
     "DamageFrameIndex": 0,
     "IsAnimationCentralized": false,
     "StatModifiers": {
-      "Strength": -2
+      "Strength": 1
     },
     "Tags": [ "Metal", "Sword" ]
   },
@@ -30,18 +30,18 @@
     "WeaponID": "1",
     "WeaponName": "Warhammer",
     "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]CRUSHES$SMASHES$POUNDS[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
-    "Description": "[cetc]A heavy hammer designed to crush armor[/]",
+    "Description": "[cetc]A heavy hammer designed to crush armor.[/]",
     "Rarity": 1,
     "LevelRequirement": 3,
     "MoveName": "Bash",
-    "Power": 60,
+    "Power": 85,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
     "OffensiveStat": "Strength",
     "MakesContact": true,
     "Target": "Single",
-    "Accuracy": 90,
+    "Accuracy": 85,
     "Priority": 0,
     "OffensiveElementIDs": [ 6 ],
     "AnimationSpriteSheet": "basic_impact",
@@ -49,8 +49,8 @@
     "DamageFrameIndex": 0,
     "IsAnimationCentralized": false,
     "StatModifiers": {
-      "Strength": 5,
-      "Agility": -2
+      "Strength": 2,
+      "Agility": -1
     },
     "Tags": [ "Metal", "Blunt" ]
   },
@@ -62,7 +62,7 @@
     "Rarity": 2,
     "LevelRequirement": 4,
     "MoveName": "Stab",
-    "Power": 45,
+    "Power": 50,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
@@ -81,7 +81,7 @@
       "ArmorPierce": "50"
     },
     "StatModifiers": {
-      "Agility": 3
+      "Agility": 1
     },
     "Tags": [ "Toxic", "Dagger" ]
   },
@@ -93,14 +93,14 @@
     "Rarity": 0,
     "LevelRequirement": 1,
     "MoveName": "Stab",
-    "Power": 45,
+    "Power": 50,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
     "OffensiveStat": "Agility",
     "MakesContact": true,
     "Target": "Single",
-    "Accuracy": 100,
+    "Accuracy": 95,
     "Priority": 0,
     "OffensiveElementIDs": [ 6 ],
     "AnimationSpriteSheet": "basic_swipe",
@@ -108,10 +108,11 @@
     "DamageFrameIndex": 2,
     "IsAnimationCentralized": false,
     "Effects": {
+      "ApplyStatusOnHit": "Poison,10,99,true",
       "ArmorPierce": "50"
     },
     "StatModifiers": {
-      "Agility": 2,
+      "Agility": 1,
       "Strength": -1
     },
     "Tags": [ "Metal", "Dagger", "Junk" ]
@@ -124,14 +125,14 @@
     "Rarity": 0,
     "LevelRequirement": 1,
     "MoveName": "Bash",
-    "Power": 60,
+    "Power": 70,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
     "OffensiveStat": "Strength",
     "MakesContact": true,
     "Target": "Single",
-    "Accuracy": 90,
+    "Accuracy": 85,
     "Priority": 0,
     "OffensiveElementIDs": [ 5 ],
     "AnimationSpriteSheet": "basic_impact",
@@ -139,8 +140,8 @@
     "DamageFrameIndex": 0,
     "IsAnimationCentralized": false,
     "StatModifiers": {
-      "Strength": 2,
-      "Agility": -2
+      "Strength": 1,
+      "Agility": -1
     },
     "Tags": [ "Stone", "Blunt", "Junk" ]
   },
@@ -152,23 +153,26 @@
     "Rarity": 0,
     "LevelRequirement": 1,
     "MoveName": "Slash",
-    "Power": 50,
+    "Power": 55,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
     "OffensiveStat": "Strength",
     "MakesContact": true,
     "Target": "Single",
-    "Accuracy": 100,
+    "Accuracy": 95,
     "Priority": 0,
     "OffensiveElementIDs": [ 1 ],
     "AnimationSpriteSheet": "basic_slash",
     "AnimationSpeed": 2.0,
     "DamageFrameIndex": 0,
     "IsAnimationCentralized": false,
+    "Effects": {
+      "//Comment": "High critical hit chance, 1/6 chance to break item on use, small chance to bleed target"
+    },
     "StatModifiers": {
-      "Agility": 3,
-      "Tenacity": -2
+      "Agility": 1,
+      "Tenacity": -1
     },
     "Tags": [ "Glass", "Sword", "Junk" ]
   },
@@ -176,7 +180,7 @@
     "WeaponID": "6",
     "WeaponName": "Board",
     "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]BASHES$WHACKS$THWACKS[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH A [cItem]{item_name}[/].",
-    "Description": "[cetc]A wooden board.[/]",
+    "Description": "[cetc]A wooden board with a nail in it.[/]",
     "Rarity": 0,
     "LevelRequirement": 1,
     "MoveName": "Bash",
@@ -187,7 +191,7 @@
     "OffensiveStat": "Strength",
     "MakesContact": true,
     "Target": "Single",
-    "Accuracy": 90,
+    "Accuracy": 95,
     "Priority": 0,
     "OffensiveElementIDs": [ 13 ],
     "AnimationSpriteSheet": "basic_impact",
@@ -207,14 +211,14 @@
     "Rarity": 0,
     "LevelRequirement": 2,
     "MoveName": "Slash",
-    "Power": 50,
+    "Power": 65,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
     "OffensiveStat": "Strength",
     "MakesContact": true,
     "Target": "Single",
-    "Accuracy": 100,
+    "Accuracy": 95,
     "Priority": 0,
     "OffensiveElementIDs": [ 6 ],
     "AnimationSpriteSheet": "basic_slash",
@@ -222,8 +226,7 @@
     "DamageFrameIndex": 0,
     "IsAnimationCentralized": false,
     "StatModifiers": {
-      "Strength": 3,
-      "Agility": -1
+      "Strength": 1
     },
     "Tags": [ "Metal", "Axe", "Kitchen" ]
   },
@@ -235,7 +238,7 @@
     "Rarity": 0,
     "LevelRequirement": 2,
     "MoveName": "Bash",
-    "Power": 60,
+    "Power": 65,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
@@ -250,7 +253,7 @@
     "DamageFrameIndex": 0,
     "IsAnimationCentralized": false,
     "StatModifiers": {
-      "Strength": 2
+      "Strength": 1
     },
     "Tags": [ "Metal", "Blunt", "Tool" ]
   },
@@ -269,7 +272,7 @@
     "OffensiveStat": "Strength",
     "MakesContact": true,
     "Target": "Single",
-    "Accuracy": 90,
+    "Accuracy": 95,
     "Priority": 0,
     "OffensiveElementIDs": [ 6 ],
     "AnimationSpriteSheet": "basic_impact",
@@ -277,8 +280,7 @@
     "DamageFrameIndex": 0,
     "IsAnimationCentralized": false,
     "StatModifiers": {
-      "Tenacity": 3,
-      "Agility": -1
+      "Tenacity": 2
     },
     "Tags": [ "Metal", "Blunt", "Kitchen" ]
   },
@@ -286,18 +288,18 @@
     "WeaponID": "10",
     "WeaponName": "Wooden Sword",
     "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]SMACKS$WHACKS$BOPS[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
-    "Description": "[cetc]Used for training.[/]",
+    "Description": "[cetc]Used for training. Doesn't hurt much.[/]",
     "Rarity": 0,
     "LevelRequirement": 3,
     "MoveName": "Bash",
-    "Power": 60,
+    "Power": 50,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
     "OffensiveStat": "Strength",
     "MakesContact": true,
     "Target": "Single",
-    "Accuracy": 90,
+    "Accuracy": 100,
     "Priority": 0,
     "OffensiveElementIDs": [ 13 ],
     "AnimationSpriteSheet": "basic_impact",
@@ -305,7 +307,7 @@
     "DamageFrameIndex": 0,
     "IsAnimationCentralized": false,
     "StatModifiers": {
-      "Strength": 1
+      "Tenacity": 1
     },
     "Tags": [ "Wood", "Tool" ]
   },
@@ -317,14 +319,14 @@
     "Rarity": 0,
     "LevelRequirement": 2,
     "MoveName": "Stab",
-    "Power": 45,
+    "Power": 60,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
     "OffensiveStat": "Agility",
     "MakesContact": true,
     "Target": "Single",
-    "Accuracy": 100,
+    "Accuracy": 95,
     "Priority": 0,
     "OffensiveElementIDs": [ 13 ],
     "AnimationSpriteSheet": "basic_swipe",
@@ -332,11 +334,10 @@
     "DamageFrameIndex": 2,
     "IsAnimationCentralized": false,
     "Effects": {
-      "ArmorPierce": "50"
+      "ArmorPierce": "25"
     },
     "StatModifiers": {
-      "Agility": 3,
-      "Strength": 1
+      "Agility": 1
     },
     "Tags": [ "Wood", "Spear", "Tool" ]
   },
@@ -348,7 +349,7 @@
     "Rarity": 0,
     "LevelRequirement": 2,
     "MoveName": "Bash",
-    "Power": 60,
+    "Power": 65,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
@@ -363,7 +364,7 @@
     "DamageFrameIndex": 0,
     "IsAnimationCentralized": false,
     "StatModifiers": {
-      "Strength": 3,
+      "Strength": 1,
       "Tenacity": 1
     },
     "Tags": [ "Metal", "Blunt", "Tool" ]
@@ -376,7 +377,7 @@
     "Rarity": 1,
     "LevelRequirement": 3,
     "MoveName": "Slash",
-    "Power": 50,
+    "Power": 75,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
@@ -391,8 +392,7 @@
     "DamageFrameIndex": 0,
     "IsAnimationCentralized": false,
     "StatModifiers": {
-      "Strength": 2,
-      "Agility": 1
+      "Strength": 1
     },
     "Tags": [ "Metal", "Sword", "Military" ]
   },
@@ -404,14 +404,14 @@
     "Rarity": 1,
     "LevelRequirement": 3,
     "MoveName": "Stab",
-    "Power": 45,
+    "Power": 80,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
-    "OffensiveStat": "Agility",
+    "OffensiveStat": "Strength",
     "MakesContact": true,
     "Target": "Single",
-    "Accuracy": 100,
+    "Accuracy": 90,
     "Priority": 0,
     "OffensiveElementIDs": [ 6 ],
     "AnimationSpriteSheet": "basic_swipe",
@@ -419,11 +419,10 @@
     "DamageFrameIndex": 2,
     "IsAnimationCentralized": false,
     "Effects": {
-      "ArmorPierce": "50"
+      "ArmorPierce": "25"
     },
     "StatModifiers": {
-      "Strength": 3,
-      "Tenacity": 2
+      "Strength": 2
     },
     "Tags": [ "Metal", "Spear", "Military" ]
   },
@@ -435,14 +434,14 @@
     "Rarity": 1,
     "LevelRequirement": 4,
     "MoveName": "Slash",
-    "Power": 90,
+    "Power": 70,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
     "OffensiveStat": "Strength",
     "MakesContact": true,
     "Target": "Both",
-    "Accuracy": 100,
+    "Accuracy": 90,
     "Priority": 0,
     "OffensiveElementIDs": [ 6 ],
     "AnimationSpriteSheet": "basic_slash",
@@ -450,8 +449,8 @@
     "DamageFrameIndex": 0,
     "IsAnimationCentralized": false,
     "StatModifiers": {
-      "Strength": 5,
-      "Agility": -2
+      "Strength": 2,
+      "Agility": -1
     },
     "Tags": [ "Metal", "Sword", "Heavy" ]
   },
@@ -463,7 +462,7 @@
     "Rarity": 1,
     "LevelRequirement": 4,
     "MoveName": "Stab",
-    "Power": 45,
+    "Power": 60,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
@@ -478,11 +477,10 @@
     "DamageFrameIndex": 2,
     "IsAnimationCentralized": false,
     "Effects": {
-      "ArmorPierce": "50"
+      "ArmorPierce": "75"
     },
     "StatModifiers": {
-      "Agility": 4,
-      "Strength": 1
+      "Agility": 1
     },
     "Tags": [ "Metal", "Sword", "Light" ]
   },
@@ -494,7 +492,7 @@
     "Rarity": 1,
     "LevelRequirement": 4,
     "MoveName": "Bash",
-    "Power": 60,
+    "Power": 75,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
@@ -509,8 +507,7 @@
     "DamageFrameIndex": 0,
     "IsAnimationCentralized": false,
     "StatModifiers": {
-      "Strength": 4,
-      "Tenacity": 1
+      "Strength": 2
     },
     "Tags": [ "Metal", "Blunt", "Military" ]
   },
@@ -522,14 +519,14 @@
     "Rarity": 1,
     "LevelRequirement": 5,
     "MoveName": "Bash",
-    "Power": 60,
+    "Power": 100,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
     "OffensiveStat": "Strength",
     "MakesContact": true,
     "Target": "Single",
-    "Accuracy": 90,
+    "Accuracy": 80,
     "Priority": 0,
     "OffensiveElementIDs": [ 6 ],
     "AnimationSpriteSheet": "basic_impact",
@@ -537,8 +534,8 @@
     "DamageFrameIndex": 0,
     "IsAnimationCentralized": false,
     "StatModifiers": {
-      "Strength": 6,
-      "Agility": -3
+      "Strength": 3,
+      "Agility": -2
     },
     "Tags": [ "Metal", "Blunt", "Heavy" ]
   },
@@ -550,7 +547,7 @@
     "Rarity": 1,
     "LevelRequirement": 3,
     "MoveName": "Stab",
-    "Power": 45,
+    "Power": 50,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
@@ -565,11 +562,11 @@
     "DamageFrameIndex": 2,
     "IsAnimationCentralized": false,
     "Effects": {
-      "ArmorPierce": "50"
+      "ArmorPierce": "25"
     },
     "StatModifiers": {
-      "Agility": 2,
-      "Tenacity": 3
+      "Agility": 1,
+      "Tenacity": 2
     },
     "Tags": [ "Metal", "Dagger", "Defensive" ]
   },
@@ -581,14 +578,14 @@
     "Rarity": 2,
     "LevelRequirement": 5,
     "MoveName": "Slash",
-    "Power": 50,
+    "Power": 110,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
     "OffensiveStat": "Strength",
     "MakesContact": true,
     "Target": "Single",
-    "Accuracy": 100,
+    "Accuracy": 80,
     "Priority": 0,
     "OffensiveElementIDs": [ 6 ],
     "AnimationSpriteSheet": "basic_slash",
@@ -596,8 +593,8 @@
     "DamageFrameIndex": 0,
     "IsAnimationCentralized": false,
     "StatModifiers": {
-      "Strength": 6,
-      "Agility": -3
+      "Strength": 3,
+      "Agility": -2
     },
     "Tags": [ "Metal", "Sword", "Heavy" ]
   },
@@ -609,7 +606,7 @@
     "Rarity": 2,
     "LevelRequirement": 4,
     "MoveName": "Slash",
-    "Power": 50,
+    "Power": 75,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
@@ -624,8 +621,8 @@
     "DamageFrameIndex": 0,
     "IsAnimationCentralized": false,
     "StatModifiers": {
-      "Agility": 3,
-      "Strength": 2
+      "Agility": 1,
+      "Strength": 1
     },
     "Tags": [ "Metal", "Sword", "Light" ]
   },
@@ -637,7 +634,7 @@
     "Rarity": 2,
     "LevelRequirement": 4,
     "MoveName": "Bash",
-    "Power": 60,
+    "Power": 50,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
@@ -652,9 +649,8 @@
     "DamageFrameIndex": 0,
     "IsAnimationCentralized": false,
     "StatModifiers": {
-      "Tenacity": 8,
-      "Strength": 1,
-      "Agility": -4
+      "Tenacity": 4,
+      "Agility": -3
     },
     "Tags": [ "Wood", "Shield", "Defensive" ]
   },
@@ -662,11 +658,11 @@
     "WeaponID": "23",
     "WeaponName": "Stiletto",
     "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]PUNCTURES$STABS$PIERCES[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
-    "Description": "[cetc]A thin blade that leaves almost no mark.[/]",
+    "Description": "[cetc]A thin blade that leaves almost no mark.[/]\nAlways lands a crit.",
     "Rarity": 1,
     "LevelRequirement": 3,
     "MoveName": "Stab",
-    "Power": 45,
+    "Power": 50,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
@@ -681,11 +677,11 @@
     "DamageFrameIndex": 2,
     "IsAnimationCentralized": false,
     "Effects": {
-      "ArmorPierce": "50"
+      "//Comment": "High critical hit chance"
     },
     "StatModifiers": {
-      "Agility": 5,
-      "Strength": -2
+      "Agility": 3,
+      "Strength": -1
     },
     "Tags": [ "Metal", "Dagger", "Stealth" ]
   },
@@ -697,23 +693,24 @@
     "Rarity": 1,
     "LevelRequirement": 2,
     "MoveName": "Bash",
-    "Power": 60,
+    "Power": 55,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
     "OffensiveStat": "Strength",
     "MakesContact": true,
     "Target": "Single",
-    "Accuracy": 90,
+    "Accuracy": 95,
     "Priority": 0,
     "OffensiveElementIDs": [ 1 ],
     "AnimationSpriteSheet": "basic_impact",
     "AnimationSpeed": 1.0,
     "DamageFrameIndex": 0,
     "IsAnimationCentralized": false,
+    "Effects": {
+      "//Comment": "Chance to Flinch or Stun target"
+    },
     "StatModifiers": {
-      "Strength": 2,
-      "Agility": 1
     },
     "Tags": [ "Leather", "Blunt", "Stealth" ]
   },
@@ -732,7 +729,7 @@
     "OffensiveStat": "Strength",
     "MakesContact": true,
     "Target": "Single",
-    "Accuracy": 90,
+    "Accuracy": 95,
     "Priority": 0,
     "OffensiveElementIDs": [ 6 ],
     "AnimationSpriteSheet": "basic_impact",
@@ -740,7 +737,6 @@
     "DamageFrameIndex": 0,
     "IsAnimationCentralized": false,
     "StatModifiers": {
-      "Strength": 2,
       "Agility": 2
     },
     "Tags": [ "Metal", "Blunt", "Brawl" ]
@@ -749,11 +745,11 @@
     "WeaponID": "26",
     "WeaponName": "Wire",
     "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]WHIPS$GARROTES$SLICES[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
-    "Description": "[cetc]A coarse piano wire.[/]",
-    "Rarity": 2,
+    "Description": "[cetc]A length of metal wire. Can be used as a whip.[/]",
+    "Rarity": 0,
     "LevelRequirement": 3,
     "MoveName": "Slash",
-    "Power": 50,
+    "Power": 60,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
@@ -767,9 +763,11 @@
     "AnimationSpeed": 2.0,
     "DamageFrameIndex": 0,
     "IsAnimationCentralized": false,
+    "Effects": {
+      "//Comment": "Chance to inflict Bleed"
+    },
     "StatModifiers": {
-      "Agility": 4,
-      "Strength": 1
+      "Agility": 2
     },
     "Tags": [ "Metal", "Whip", "Stealth" ]
   },
@@ -781,7 +779,7 @@
     "Rarity": 2,
     "LevelRequirement": 3,
     "MoveName": "Stab",
-    "Power": 45,
+    "Power": 55,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
@@ -796,11 +794,11 @@
     "DamageFrameIndex": 2,
     "IsAnimationCentralized": false,
     "Effects": {
-      "ArmorPierce": "50"
+      "ArmorPierce": "25",
+      "//Comment": "High chance to inflict Bleed"
     },
     "StatModifiers": {
-      "Agility": 3,
-      "Strength": 1
+      "Agility": 1
     },
     "Tags": [ "Metal", "Dagger", "Cruel" ]
   },
@@ -812,14 +810,14 @@
     "Rarity": 2,
     "LevelRequirement": 4,
     "MoveName": "Stab",
-    "Power": 45,
+    "Power": 65,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
     "OffensiveStat": "Agility",
     "MakesContact": true,
     "Target": "Single",
-    "Accuracy": 100,
+    "Accuracy": 95,
     "Priority": 0,
     "OffensiveElementIDs": [ 6 ],
     "AnimationSpriteSheet": "basic_swipe",
@@ -830,8 +828,7 @@
       "ArmorPierce": "50"
     },
     "StatModifiers": {
-      "Strength": 2,
-      "Agility": 3
+      "Agility": 2
     },
     "Tags": [ "Metal", "Dagger", "Brawl" ]
   },
@@ -843,22 +840,24 @@
     "Rarity": 1,
     "LevelRequirement": 3,
     "MoveName": "Slash",
-    "Power": 50,
+    "Power": 65,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
     "OffensiveStat": "Strength",
     "MakesContact": true,
     "Target": "Single",
-    "Accuracy": 100,
+    "Accuracy": 95,
     "Priority": 0,
     "OffensiveElementIDs": [ 6 ],
     "AnimationSpriteSheet": "basic_slash",
     "AnimationSpeed": 2.0,
     "DamageFrameIndex": 0,
     "IsAnimationCentralized": false,
+    "Effects": {
+      "//Comment": "Low chance to inflict Bleed"
+    },
     "StatModifiers": {
-      "Agility": 2,
       "Tenacity": 1
     },
     "Tags": [ "Metal", "Hook", "Pirate" ]
@@ -871,7 +870,7 @@
     "Rarity": 2,
     "LevelRequirement": 4,
     "MoveName": "Stab",
-    "Power": 45,
+    "Power": 50,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
@@ -886,11 +885,11 @@
     "DamageFrameIndex": 2,
     "IsAnimationCentralized": false,
     "Effects": {
-      "ArmorPierce": "50"
+      "ArmorPierce": "25",
+      "//Comment": "Restores all Mana on kill"
     },
     "StatModifiers": {
-      "Intelligence": 3,
-      "Strength": -1
+      "Intelligence": 2
     },
     "Tags": [ "Stone", "Dagger", "Magic" ]
   },
@@ -899,7 +898,7 @@
     "WeaponName": "Gnarled Staff",
     "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]BASHES$THUMPS$CRACKS[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
     "Description": "[cetc]A twist of oak that hums with low vibration.[/]",
-    "Rarity": 2,
+    "Rarity": 1,
     "LevelRequirement": 3,
     "MoveName": "Bash",
     "Power": 60,
@@ -909,7 +908,7 @@
     "OffensiveStat": "Strength",
     "MakesContact": true,
     "Target": "Single",
-    "Accuracy": 90,
+    "Accuracy": 95,
     "Priority": 0,
     "OffensiveElementIDs": [ 13 ],
     "AnimationSpriteSheet": "basic_impact",
@@ -917,7 +916,7 @@
     "DamageFrameIndex": 0,
     "IsAnimationCentralized": false,
     "StatModifiers": {
-      "Intelligence": 2,
+      "Intelligence": 1,
       "Strength": 1
     },
     "Tags": [ "Wood", "Staff", "Magic" ]
@@ -925,18 +924,18 @@
   {
     "WeaponID": "32",
     "WeaponName": "Censer Flail",
-    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]BASHES$LASHES$STRIKES[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]BASHES$LASHES$STRIKES[/] {user_pronoun} ENEMIES WITH {user_pronoun} [cItem]{item_name}[/].",
     "Description": "[cetc]A heavy incense burner on a chain. Smells like myrrh and blood.[/]",
     "Rarity": 2,
     "LevelRequirement": 4,
     "MoveName": "Bash",
-    "Power": 60,
+    "Power": 50,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
     "OffensiveStat": "Strength",
     "MakesContact": true,
-    "Target": "Single",
+    "Target": "Both",
     "Accuracy": 90,
     "Priority": 0,
     "OffensiveElementIDs": [ 6 ],
@@ -946,7 +945,7 @@
     "IsAnimationCentralized": false,
     "StatModifiers": {
       "Intelligence": 2,
-      "Strength": 2
+      "Tenacity": 1
     },
     "Tags": [ "Metal", "Flail", "Holy" ]
   },
@@ -958,7 +957,7 @@
     "Rarity": 3,
     "LevelRequirement": 5,
     "MoveName": "Bash",
-    "Power": 60,
+    "Power": 55,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
@@ -973,8 +972,8 @@
     "DamageFrameIndex": 0,
     "IsAnimationCentralized": false,
     "StatModifiers": {
-      "Intelligence": 5,
-      "Strength": -2
+      "Intelligence": 3,
+      "Agility": -1
     },
     "Tags": [ "Paper", "Book", "Magic" ]
   },
@@ -986,7 +985,7 @@
     "Rarity": 2,
     "LevelRequirement": 4,
     "MoveName": "Stab",
-    "Power": 45,
+    "Power": 60,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
@@ -1001,10 +1000,12 @@
     "DamageFrameIndex": 2,
     "IsAnimationCentralized": false,
     "Effects": {
-      "ArmorPierce": "50"
+      "ArmorPierce": "25",
+      "//Comment": "Heals user on hit for 50% damage dealt"
+
     },
     "StatModifiers": {
-      "Intelligence": 4,
+      "Intelligence": 2,
       "Agility": 1
     },
     "Tags": [ "Bone", "Dagger", "Necro" ]
@@ -1017,23 +1018,26 @@
     "Rarity": 3,
     "LevelRequirement": 5,
     "MoveName": "Bash",
-    "Power": 60,
+    "Power": 70,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
     "OffensiveStat": "Strength",
     "MakesContact": true,
     "Target": "Single",
-    "Accuracy": 90,
+    "Accuracy": 95,
     "Priority": 0,
     "OffensiveElementIDs": [ 5 ],
     "AnimationSpriteSheet": "basic_impact",
     "AnimationSpeed": 1.0,
     "DamageFrameIndex": 0,
     "IsAnimationCentralized": false,
+    "Effects": {
+      "//Comment": "1/6 chance to break on use"
+    },
     "StatModifiers": {
-      "Intelligence": 6,
-      "Strength": -3
+      "Intelligence": 4,
+      "Tenacity": -1
     },
     "Tags": [ "Crystal", "Wand", "Magic" ]
   },
@@ -1045,7 +1049,7 @@
     "Rarity": 2,
     "LevelRequirement": 4,
     "MoveName": "Slash",
-    "Power": 50,
+    "Power": 60,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
@@ -1059,9 +1063,12 @@
     "AnimationSpeed": 2.0,
     "DamageFrameIndex": 0,
     "IsAnimationCentralized": false,
+    "Effects": {
+      "//Comment": "1.5x void and arcane damage"
+    },
     "StatModifiers": {
-      "Intelligence": 3,
-      "Agility": 2
+      "Intelligence": 1,
+      "Agility": 1
     },
     "Tags": [ "Metal", "Dagger", "Magic" ]
   },
@@ -1073,14 +1080,14 @@
     "Rarity": 3,
     "LevelRequirement": 5,
     "MoveName": "Bash",
-    "Power": 60,
+    "Power": 65,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
     "OffensiveStat": "Strength",
     "MakesContact": true,
     "Target": "Single",
-    "Accuracy": 90,
+    "Accuracy": -1,
     "Priority": 0,
     "OffensiveElementIDs": [ 5 ],
     "AnimationSpriteSheet": "basic_impact",
@@ -1088,8 +1095,7 @@
     "DamageFrameIndex": 0,
     "IsAnimationCentralized": false,
     "StatModifiers": {
-      "Intelligence": 4,
-      "Tenacity": 1
+      "Intelligence": 2
     },
     "Tags": [ "Stone", "Orb", "Magic" ]
   },
@@ -1101,7 +1107,7 @@
     "Rarity": 1,
     "LevelRequirement": 4,
     "MoveName": "Bash",
-    "Power": 60,
+    "Power": 65,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
@@ -1116,27 +1122,27 @@
     "DamageFrameIndex": 0,
     "IsAnimationCentralized": false,
     "StatModifiers": {
-      "Strength": 5,
-      "Intelligence": -2
+      "Strength": 2,
+      "Intelligence": -1
     },
     "Tags": [ "Bone", "Club", "Primal" ]
   },
   {
     "WeaponID": "39",
     "WeaponName": "Sparring Gloves",
-    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]PUNCHES$JABS$HOOKS[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
-    "Description": "[cetc]Leather gloves with sewn in padding.[/]",
-    "Rarity": 2,
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]PUNCHES$JABS$HOOKS$UPPERCUTS[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
+    "Description": "[cetc]Leather gloves with sewn in padding. Softens blows.[/]",
+    "Rarity": 0,
     "LevelRequirement": 4,
     "MoveName": "Bash",
-    "Power": 60,
+    "Power": 30,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
     "OffensiveStat": "Strength",
     "MakesContact": true,
     "Target": "Single",
-    "Accuracy": 90,
+    "Accuracy": 100,
     "Priority": 0,
     "OffensiveElementIDs": [ 1 ],
     "AnimationSpriteSheet": "basic_impact",
@@ -1144,14 +1150,14 @@
     "DamageFrameIndex": 0,
     "IsAnimationCentralized": false,
     "StatModifiers": {
-      "Strength": -4
+      "Tenacity": 2
     },
     "Tags": []
   },
   {
     "WeaponID": "40",
     "WeaponName": "Rusted Chain",
-    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]WHIPS$LASHES$STRIKES[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH A [cItem]{item_name}[/].",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]WHIPS$LASHES$STRIKES[/] {user_pronoun} ENEMIES WITH A [cItem]{item_name}[/].",
     "Description": "[cetc]A length of heavy chain. Unpredictable and painful.[/]",
     "Rarity": 1,
     "LevelRequirement": 3,
@@ -1162,8 +1168,8 @@
     "ImpactType": "Physical",
     "OffensiveStat": "Strength",
     "MakesContact": true,
-    "Target": "Single",
-    "Accuracy": 90,
+    "Target": "Both",
+    "Accuracy": 85,
     "Priority": 0,
     "OffensiveElementIDs": [ 6 ],
     "AnimationSpriteSheet": "basic_impact",
@@ -1171,8 +1177,7 @@
     "DamageFrameIndex": 0,
     "IsAnimationCentralized": false,
     "StatModifiers": {
-      "Strength": 2,
-      "Agility": 2
+      "Agility": 1
     },
     "Tags": [ "Metal", "Whip", "Primal" ]
   },
@@ -1184,14 +1189,14 @@
     "Rarity": 2,
     "LevelRequirement": 3,
     "MoveName": "Slash",
-    "Power": 50,
+    "Power": 70,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
     "OffensiveStat": "Strength",
     "MakesContact": true,
     "Target": "Single",
-    "Accuracy": 100,
+    "Accuracy": 95,
     "Priority": 0,
     "OffensiveElementIDs": [ 1 ],
     "AnimationSpriteSheet": "basic_slash",
@@ -1199,8 +1204,7 @@
     "DamageFrameIndex": 0,
     "IsAnimationCentralized": false,
     "StatModifiers": {
-      "Strength": 3,
-      "Tenacity": 1
+      "Strength": 2
     },
     "Tags": [ "Bone", "Axe", "Primal" ]
   },
@@ -1212,14 +1216,14 @@
     "Rarity": 1,
     "LevelRequirement": 2,
     "MoveName": "Stab",
-    "Power": 45,
+    "Power": 80,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
     "OffensiveStat": "Agility",
     "MakesContact": true,
     "Target": "Single",
-    "Accuracy": 100,
+    "Accuracy": 85,
     "Priority": 0,
     "OffensiveElementIDs": [ 5 ],
     "AnimationSpriteSheet": "basic_swipe",
@@ -1227,10 +1231,9 @@
     "DamageFrameIndex": 2,
     "IsAnimationCentralized": false,
     "Effects": {
-      "ArmorPierce": "50"
+      "ArmorPierce": "25"
     },
     "StatModifiers": {
-      "Strength": 3,
       "Agility": 1
     },
     "Tags": [ "Stone", "Spear", "Primal" ]
@@ -1243,14 +1246,14 @@
     "Rarity": 3,
     "LevelRequirement": 5,
     "MoveName": "Slash",
-    "Power": 50,
+    "Power": 120,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
     "OffensiveStat": "Strength",
     "MakesContact": true,
     "Target": "Single",
-    "Accuracy": 100,
+    "Accuracy": 70,
     "Priority": 0,
     "OffensiveElementIDs": [ 6 ],
     "AnimationSpriteSheet": "basic_slash",
@@ -1258,8 +1261,8 @@
     "DamageFrameIndex": 0,
     "IsAnimationCentralized": false,
     "StatModifiers": {
-      "Strength": 7,
-      "Agility": -4
+      "Strength": 4,
+      "Agility": -2
     },
     "Tags": [ "Metal", "Axe", "Unique" ]
   },
@@ -1268,26 +1271,29 @@
     "WeaponName": "Bard's Lute",
     "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]BONKS[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
     "Description": "[cetc]A string instrument made of fine wood.[/]",
-    "Rarity": 2,
+    "Rarity": 3,
     "LevelRequirement": 3,
     "MoveName": "Bash",
-    "Power": 60,
+    "Power": 50,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
     "OffensiveStat": "Strength",
     "MakesContact": true,
     "Target": "Single",
-    "Accuracy": 90,
+    "Accuracy": 95,
     "Priority": 0,
     "OffensiveElementIDs": [ 13 ],
     "AnimationSpriteSheet": "basic_impact",
     "AnimationSpeed": 1.0,
     "DamageFrameIndex": 0,
     "IsAnimationCentralized": false,
+    "Effects": {
+      "//Comment": "Buffs allies stats slightly on use"
+    },
     "StatModifiers": {
-      "Intelligence": 2,
-      "Agility": 2
+      "Intelligence": 1,
+      "Agility": 1
     },
     "Tags": [ "Wood", "Instrument", "Unique" ]
   },
@@ -1299,7 +1305,7 @@
     "Rarity": 3,
     "LevelRequirement": 5,
     "MoveName": "Stab",
-    "Power": 45,
+    "Power": 60,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
@@ -1314,11 +1320,11 @@
     "DamageFrameIndex": 2,
     "IsAnimationCentralized": false,
     "Effects": {
-      "ArmorPierce": "50"
+      "ArmorPierce": "25",
+      "//Comment": "Removes 25% of the targets mana"
     },
     "StatModifiers": {
-      "Strength": 2,
-      "Tenacity": 3
+      "Intelligence": -1
     },
     "Tags": [ "Metal", "Dagger", "AntiMagic" ]
   },
@@ -1330,14 +1336,14 @@
     "Rarity": 2,
     "LevelRequirement": 4,
     "MoveName": "Stab",
-    "Power": 45,
+    "Power": 70,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
     "OffensiveStat": "Agility",
     "MakesContact": true,
     "Target": "Single",
-    "Accuracy": 100,
+    "Accuracy": 95,
     "Priority": 0,
     "OffensiveElementIDs": [ 6 ],
     "AnimationSpriteSheet": "basic_swipe",
@@ -1345,10 +1351,11 @@
     "DamageFrameIndex": 2,
     "IsAnimationCentralized": false,
     "Effects": {
-      "ArmorPierce": "50"
+      "ArmorPierce": "25"
+      "//Comment": "Has 1.25x more damage for every water spell the user has when attacking"
     },
     "StatModifiers": {
-      "Strength": 4,
+      "Strength": 1,
       "Agility": 1
     },
     "Tags": [ "Metal", "Spear", "Arena" ]
@@ -1357,18 +1364,18 @@
     "WeaponID": "47",
     "WeaponName": "Scourge Whip",
     "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]FLAYS$LASHES$WHIPS[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
-    "Description": "[cetc]A whip with multiple lashes.[/]",
+    "Description": "[cetc]A whip with multiple lashes. Hits both enemies.[/]",
     "Rarity": 3,
     "LevelRequirement": 5,
     "MoveName": "Slash",
-    "Power": 50,
+    "Power": 55,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
     "OffensiveStat": "Strength",
     "MakesContact": true,
-    "Target": "Single",
-    "Accuracy": 100,
+    "Target": "Both",
+    "Accuracy": 95,
     "Priority": 0,
     "OffensiveElementIDs": [ 1 ],
     "AnimationSpriteSheet": "basic_slash",
@@ -1376,8 +1383,7 @@
     "DamageFrameIndex": 0,
     "IsAnimationCentralized": false,
     "StatModifiers": {
-      "Agility": 5,
-      "Strength": -1
+      "Agility": 1
     },
     "Tags": [ "Leather", "Whip", "Unique" ]
   },
@@ -1389,7 +1395,7 @@
     "Rarity": 3,
     "LevelRequirement": 5,
     "MoveName": "Stab",
-    "Power": 45,
+    "Power": 65,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
@@ -1404,11 +1410,11 @@
     "DamageFrameIndex": 2,
     "IsAnimationCentralized": false,
     "Effects": {
-      "ArmorPierce": "50"
+      "ArmorPierce": "50",
+      "//Comment": "High critical hit chance"
     },
     "StatModifiers": {
-      "Agility": 6,
-      "Strength": -1
+      "Agility": 3
     },
     "Tags": [ "Metal", "Sword", "Fencing" ]
   },
@@ -1417,17 +1423,17 @@
     "WeaponName": "Ball and Chain",
     "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]BASHES$CRUSHES$DEMOLISHES[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
     "Description": "[cetc]A prisoner's shackle weaponized. Incredibly heavy.[/]",
-    "Rarity": 3,
+    "Rarity": 0,
     "LevelRequirement": 5,
     "MoveName": "Bash",
-    "Power": 60,
+    "Power": 110,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
     "OffensiveStat": "Strength",
     "MakesContact": true,
     "Target": "Single",
-    "Accuracy": 90,
+    "Accuracy": 75,
     "Priority": 0,
     "OffensiveElementIDs": [ 6 ],
     "AnimationSpriteSheet": "basic_impact",
@@ -1435,8 +1441,7 @@
     "DamageFrameIndex": 0,
     "IsAnimationCentralized": false,
     "StatModifiers": {
-      "Strength": 6,
-      "Agility": -5
+      "Agility": -3
     },
     "Tags": [ "Metal", "Flail", "Heavy" ]
   },
@@ -1448,14 +1453,14 @@
     "Rarity": 2,
     "LevelRequirement": 4,
     "MoveName": "Stab",
-    "Power": 45,
+    "Power": 70,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
     "OffensiveStat": "Agility",
     "MakesContact": true,
     "Target": "Single",
-    "Accuracy": 100,
+    "Accuracy": 90,
     "Priority": 0,
     "OffensiveElementIDs": [ 6 ],
     "AnimationSpriteSheet": "basic_swipe",
@@ -1463,10 +1468,10 @@
     "DamageFrameIndex": 2,
     "IsAnimationCentralized": false,
     "Effects": {
-      "ArmorPierce": "50"
+      "ArmorPierce": "75"
     },
     "StatModifiers": {
-      "Strength": 4,
+      "Strength": 1,
       "Tenacity": -1
     },
     "Tags": [ "Metal", "Pick", "Tool" ]
@@ -1479,14 +1484,14 @@
     "Rarity": 4,
     "LevelRequirement": 6,
     "MoveName": "Bash",
-    "Power": 60,
+    "Power": 50,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
     "OffensiveStat": "Strength",
     "MakesContact": true,
     "Target": "Single",
-    "Accuracy": 90,
+    "Accuracy": 80,
     "Priority": 0,
     "OffensiveElementIDs": [ 5 ],
     "AnimationSpriteSheet": "basic_impact",
@@ -1494,8 +1499,8 @@
     "DamageFrameIndex": 0,
     "IsAnimationCentralized": false,
     "StatModifiers": {
-      "Strength": 4,
-      "Intelligence": 1
+      "Strength": 3,
+      "Intelligence": 3
     },
     "Tags": [ "Stone", "Ancient", "Rare" ]
   },
@@ -1503,18 +1508,18 @@
     "WeaponID": "52",
     "WeaponName": "Ancient Wrench",
     "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]BONKS$CLANKS$FIXES[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH AN [cItem]{item_name}[/].",
-    "Description": "[cetc]A tool from a forgotten age. Indestructible.[/]",
+    "Description": "[cetc]A tool from a forgotten age. Seamingly indestructible.[/]",
     "Rarity": 4,
     "LevelRequirement": 6,
     "MoveName": "Bash",
-    "Power": 60,
+    "Power": 80,
     "ManaCost": 0,
     "MoveType": "Action",
     "ImpactType": "Physical",
     "OffensiveStat": "Strength",
     "MakesContact": true,
     "Target": "Single",
-    "Accuracy": 90,
+    "Accuracy": 95,
     "Priority": 0,
     "OffensiveElementIDs": [ 6 ],
     "AnimationSpriteSheet": "basic_impact",
@@ -1522,8 +1527,8 @@
     "DamageFrameIndex": 0,
     "IsAnimationCentralized": false,
     "StatModifiers": {
-      "Strength": 3,
-      "Tenacity": 2
+      "Strength": 2,
+      "Tenacity": 3
     },
     "Tags": [ "Metal", "Tool", "Ancient" ]
   }
