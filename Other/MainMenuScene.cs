@@ -85,14 +85,19 @@ namespace ProjectVagabond.Scenes
             Vector2 settingsSize = secondaryFont.MeasureString(settingsText);
             Vector2 exitSize = secondaryFont.MeasureString(exitText);
 
-            int maxTextWidth = (int)Math.Max(playSize.X, Math.Max(settingsSize.X, exitSize.X));
-            int buttonWidth = maxTextWidth + horizontalPadding * 2;
+            // Calculate widths independently so buttons don't affect each other
+            int playWidth = (int)playSize.X + horizontalPadding * 2;
+            int settingsWidth = (int)settingsSize.X + horizontalPadding * 2;
+            int exitWidth = (int)exitSize.X + horizontalPadding * 2;
 
-            int buttonX = ((Global.VIRTUAL_WIDTH - buttonWidth) / 2) - 3 - 80;
+            // Use a fixed X coordinate to anchor the left side.
+            // This value (48) matches the original visual position for the default text length.
+            // Original Calc: ((320 - ~60) / 2) - 83 ~= 47/48 pixels.
+            int buttonX = 48;
 
             int playHeight = (int)playSize.Y + verticalPadding * 2;
             var playButton = new Button(
-                new Rectangle(buttonX, (int)currentY, buttonWidth, playHeight),
+                new Rectangle(buttonX, (int)currentY, playWidth, playHeight),
                 playText,
                 font: secondaryFont,
                 alignLeft: true
@@ -143,7 +148,7 @@ namespace ProjectVagabond.Scenes
 
             int settingsHeight = (int)settingsSize.Y + verticalPadding * 2;
             var settingsButton = new Button(
-                new Rectangle(buttonX, (int)currentY, buttonWidth, settingsHeight),
+                new Rectangle(buttonX, (int)currentY, settingsWidth, settingsHeight),
                 settingsText,
                 font: secondaryFont,
                 alignLeft: true
@@ -163,7 +168,7 @@ namespace ProjectVagabond.Scenes
 
             int exitHeight = (int)exitSize.Y + verticalPadding * 2;
             var exitButton = new Button(
-                new Rectangle(buttonX, (int)currentY, buttonWidth, exitHeight),
+                new Rectangle(buttonX, (int)currentY, exitWidth, exitHeight),
                 exitText,
                 font: secondaryFont,
                 alignLeft: true
@@ -208,7 +213,7 @@ namespace ProjectVagabond.Scenes
 
                 var animator = new UIAnimator
                 {
-                    Style = TextUtils.EntryExitStyle.PopJiggle,
+                    Style = EntryExitStyle.PopJiggle,
                     Duration = BUTTON_ANIM_DURATION
                 };
                 // Stagger the start of each button

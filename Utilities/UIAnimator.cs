@@ -20,7 +20,7 @@ namespace ProjectVagabond.Utils
         }
 
         /// <summary>
-        /// The current visual state of the element.
+        /// The current visual state of the element, calculated based on the animation progress.
         /// </summary>
         public struct VisualState
         {
@@ -30,12 +30,27 @@ namespace ProjectVagabond.Utils
             public float Rotation;
             public bool IsVisible; // True if anything should be drawn
 
-            public static VisualState Default => new VisualState { Scale = Vector2.One, Opacity = 1f, Offset = Vector2.Zero, Rotation = 0f, IsVisible = true };
-            public static VisualState Hidden => new VisualState { Scale = Vector2.Zero, Opacity = 0f, Offset = Vector2.Zero, Rotation = 0f, IsVisible = false };
+            public static VisualState Default => new VisualState
+            {
+                Scale = Vector2.One,
+                Opacity = 1f,
+                Offset = Vector2.Zero,
+                Rotation = 0f,
+                IsVisible = true
+            };
+
+            public static VisualState Hidden => new VisualState
+            {
+                Scale = Vector2.Zero,
+                Opacity = 0f,
+                Offset = Vector2.Zero,
+                Rotation = 0f,
+                IsVisible = false
+            };
         }
 
         // Configuration
-        public TextUtils.EntryExitStyle Style { get; set; } = TextUtils.EntryExitStyle.Pop;
+        public EntryExitStyle Style { get; set; } = EntryExitStyle.Pop;
         public float Duration { get; set; } = 0.5f;
         public float Magnitude { get; set; } = 20f;
 
@@ -43,7 +58,6 @@ namespace ProjectVagabond.Utils
         private AnimationState _state = AnimationState.Hidden;
         private float _timer = 0f;
         private float _delayTimer = 0f;
-
 
         // Callbacks
         public event Action OnInComplete;
@@ -170,16 +184,10 @@ namespace ProjectVagabond.Utils
                 return VisualState.Default;
             }
 
-            // FIX: Handle 0 duration to prevent NaN
-            float progress = 1f;
-            if (Duration > 0)
-            {
-                progress = Math.Clamp(_timer / Duration, 0f, 1f);
-            }
-
+            // Handle 0 duration to prevent NaN
+            float progress = Duration > 0 ? Math.Clamp(_timer / Duration, 0f, 1f) : 1f;
             bool isEntering = _state == AnimationState.AnimatingIn;
 
-            // Pass the configured magnitude
             var (scale, opacity, offset, rotation) = TextUtils.CalculateEntryExitTransform(Style, progress, isEntering, Magnitude);
 
             return new VisualState

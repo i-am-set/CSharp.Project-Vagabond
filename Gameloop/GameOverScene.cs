@@ -54,19 +54,19 @@ namespace ProjectVagabond.Scenes
             // Initialize Animators
             _titleAnimator = new UIAnimator
             {
-                Style = TextUtils.EntryExitStyle.Pop,
+                Style = EntryExitStyle.Pop,
                 Duration = POP_DURATION
             };
 
             _retryBtnAnimator = new UIAnimator
             {
-                Style = TextUtils.EntryExitStyle.Pop,
+                Style = EntryExitStyle.Pop,
                 Duration = POP_DURATION
             };
 
             _menuBtnAnimator = new UIAnimator
             {
-                Style = TextUtils.EntryExitStyle.Pop,
+                Style = EntryExitStyle.Pop,
                 Duration = POP_DURATION
             };
         }
