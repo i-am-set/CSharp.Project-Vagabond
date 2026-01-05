@@ -950,7 +950,7 @@
     "Power": 60,
     "ManaCost": 0,
     "MoveType": "Action",
-    "ImpactType": "Physical",
+    "ImpactType": "Magical",
     "OffensiveStat": "Strength",
     "MakesContact": true,
     "Target": "Single",

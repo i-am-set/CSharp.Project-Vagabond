@@ -862,7 +862,7 @@ namespace ProjectVagabond.Battle.UI
                 case MenuState.Main:
                     {
                         const int buttonWidth = 128;
-                        const int buttonHeight = 14; // Increased from 13
+                        const int buttonHeight = 14;
                         const int buttonSpacing = 0; // No gap
 
                         int totalHeight = (buttonHeight * _actionButtons.Count) + (buttonSpacing * (_actionButtons.Count - 1));
@@ -885,13 +885,13 @@ namespace ProjectVagabond.Battle.UI
                         int currentY = startY;
                         foreach (var button in _actionButtons)
                         {
-                            button.Bounds = new Rectangle(startX, currentY, buttonWidth, buttonHeight);
+                            var buttonBounds = new Rectangle(startX, currentY, buttonWidth, buttonHeight);
+                            button.Bounds = buttonBounds;
+                            var hoverRect = new Rectangle(buttonBounds.X, buttonBounds.Y + 1, buttonBounds.Width, buttonBounds.Height - 1);
 
-                            // CHANGED: Removed DrawRectangleBorder. Added solid background fill on hover.
                             if (button.IsHovered && button.IsEnabled)
                             {
-                                // Draw filled rectangle
-                                spriteBatch.DrawSnapped(pixel, button.Bounds, _global.Palette_DarkGray);
+                                DrawBeveledBackground(spriteBatch, pixel, hoverRect, _global.Palette_DarkGray);
                             }
 
                             // Pass offset to button draw
@@ -1163,7 +1163,8 @@ namespace ProjectVagabond.Battle.UI
             const int borderHeight = 37;
             const int layoutGap = 5; // Increased gap for spacing
 
-            int moveGridStartY = 128;
+            // CHANGED: Shift down 1 pixel as requested
+            int moveGridStartY = 129;
 
             // Calculate total width of the three columns
             int totalWidth = secButtonWidth + layoutGap + MOVE_BUTTON_WIDTH + layoutGap + borderWidth;
@@ -1226,13 +1227,12 @@ namespace ProjectVagabond.Battle.UI
                 }
                 else
                 {
-                    // CHANGED: Removed border drawing. Added solid background fill on hover.
                     var offsetBounds = new Rectangle(visualBounds.X, visualBounds.Y + (int)offset.Y, visualBounds.Width, visualBounds.Height);
 
                     if (button == _hoveredMoveButton && button.IsEnabled)
                     {
-                        // Draw filled rectangle
-                        spriteBatch.DrawSnapped(pixel, offsetBounds, _global.Palette_DarkGray);
+                        var hoverRect = new Rectangle(offsetBounds.X, offsetBounds.Y - 1, offsetBounds.Width, offsetBounds.Height + 1);
+                        DrawBeveledBackground(spriteBatch, pixel, hoverRect, _global.Palette_DarkGray);
                     }
 
                     var originalBounds = button.Bounds;
@@ -1253,13 +1253,12 @@ namespace ProjectVagabond.Battle.UI
             {
                 var button = _secondaryActionButtons[i];
 
-                // CHANGED: Removed border drawing. Added solid background fill on hover.
                 var buttonRect = new Rectangle(button.Bounds.X, button.Bounds.Y + (int)offset.Y, button.Bounds.Width, button.Bounds.Height);
 
                 if (button.IsHovered && button.IsEnabled)
                 {
-                    // Draw filled rectangle
-                    spriteBatch.DrawSnapped(pixel, buttonRect, _global.Palette_DarkGray);
+                    var hoverRect = new Rectangle(buttonRect.X, buttonRect.Y, buttonRect.Width, buttonRect.Height);
+                    DrawBeveledBackground(spriteBatch, pixel, hoverRect, _global.Palette_DarkGray);
                 }
 
                 button.Draw(spriteBatch, font, gameTime, transform, false, null, offset.Y, button.Text == "ATTUNE" ? attunePulseColor : null);
@@ -1277,6 +1276,14 @@ namespace ProjectVagabond.Battle.UI
                 15
             );
             _backButton.Draw(spriteBatch, font, gameTime, transform, false, null, offset.Y);
+        }
+
+        private void DrawBeveledBackground(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, Color color)
+        {
+            // Draw vertical center strip (full height, width - 2)
+            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 1, rect.Y, rect.Width - 2, rect.Height), color);
+            // Draw horizontal center strip (full width, height - 2)
+            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X, rect.Y + 1, rect.Width, rect.Height - 2), color);
         }
 
         private void DrawMoveInfoPanelContent(SpriteBatch spriteBatch, MoveData? move, Rectangle bounds, BitmapFont font, BitmapFont secondaryFont, Matrix transform, bool isForTooltip)
