@@ -392,8 +392,12 @@ namespace ProjectVagabond.UI
             if (EnableTextWave && isActivated)
             {
                 _waveTimer += deltaTime;
-                float duration = TextUtils.GetSmallWaveDuration(Text.Length);
-                if (_waveTimer > duration + 0.1f) _waveTimer = 0f;
+
+                if (WaveEffectType == TextEffectType.SmallWave || WaveEffectType == TextEffectType.LeftAlignedSmallWave)
+                {
+                    float duration = TextUtils.GetSmallWaveDuration(Text.Length);
+                    if (_waveTimer > duration + 0.1f) _waveTimer = 0f;
+                }
             }
             else
             {
