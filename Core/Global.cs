@@ -146,7 +146,8 @@ namespace ProjectVagabond
             { StatusEffectType.Protected, Palette_BrightWhite },
             { StatusEffectType.Empowered, Palette_Orange },
             { StatusEffectType.TargetMe, Palette_Red },
-            { StatusEffectType.Provoked, Palette_Orange }
+            { StatusEffectType.Provoked, Palette_Orange },
+            { StatusEffectType.Bleeding, Palette_Red }
         };
         }
 

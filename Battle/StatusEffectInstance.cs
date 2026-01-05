@@ -31,7 +31,8 @@ namespace ProjectVagabond.Battle
             {
                 return EffectType == StatusEffectType.Poison ||
                        EffectType == StatusEffectType.Burn ||
-                       EffectType == StatusEffectType.Frostbite;
+                       EffectType == StatusEffectType.Frostbite ||
+                       EffectType == StatusEffectType.Bleeding;
             }
         }
 
@@ -62,6 +63,7 @@ namespace ProjectVagabond.Battle
                 StatusEffectType.Silence => "Silenced",
                 StatusEffectType.TargetMe => "Draw Fire",
                 StatusEffectType.Provoked => "Provoked",
+                StatusEffectType.Bleeding => "Bleeding", 
                 _ => EffectType.ToString(),
             };
         }
@@ -108,6 +110,8 @@ namespace ProjectVagabond.Battle
                     return "Enemies must target this unit";
                 case StatusEffectType.Provoked:
                     return "Can't use status moves";
+                case StatusEffectType.Bleeding:
+                    return "Takes 10% Max HP damage at end of turn";
                 default:
                     return "";
             }

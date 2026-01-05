@@ -1104,7 +1104,7 @@ namespace ProjectVagabond.Battle
             {
                 foreach (var ability in combatant.TurnLifecycleEffects)
                 {
-                    ability.OnTurnEnd(combatant);
+                    ability.OnTurnStart(combatant);
                 }
 
                 if (!combatant.UsedProtectThisTurn)
@@ -1133,6 +1133,14 @@ namespace ProjectVagabond.Battle
                         EventBus.Publish(new GameEvents.StatusEffectTriggered { Combatant = combatant, EffectType = StatusEffectType.Poison, Damage = poisonDamage });
 
                         effect.PoisonTurnCount++;
+                    }
+
+                    // --- NEW: Bleeding Logic ---
+                    if (effect.EffectType == StatusEffectType.Bleeding)
+                    {
+                        int bleedDamage = Math.Max(1, (int)(combatant.Stats.MaxHP * 0.1f));
+                        combatant.ApplyDamage(bleedDamage);
+                        EventBus.Publish(new GameEvents.StatusEffectTriggered { Combatant = combatant, EffectType = StatusEffectType.Bleeding, Damage = bleedDamage });
                     }
 
                     if (effect.EffectType == StatusEffectType.Regen)

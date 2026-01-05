@@ -15,8 +15,6 @@ using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.Battle.Abilities
 {
-    // --- MOVE SPECIFIC ABILITIES ---
-
     public class ApplyStatusAbility : IOnHitEffect
     {
         public string Name => "Apply Status";
@@ -34,7 +32,6 @@ namespace ProjectVagabond.Battle.Abilities
 
         public void OnHit(CombatContext ctx, int damageDealt)
         {
-            // Works even if damage is 0 (for Status moves)
             var random = new Random();
             if (random.Next(1, 101) <= _chance)
             {
@@ -163,7 +160,6 @@ namespace ProjectVagabond.Battle.Abilities
             if (success)
             {
                 EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = owner, Stat = _stat, Amount = _amount });
-                // Add animation tags to the message
                 string animatedMsg = msg.Replace("rose", "[wave]rose[/]").Replace("fell", "[shake]fell[/]");
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = animatedMsg });
             }
@@ -223,6 +219,24 @@ namespace ProjectVagabond.Battle.Abilities
             {
                 bool applied = ctx.Target.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Poison, 99));
                 if (applied) EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} was [pop][cStatus]poisoned[/][/]!" });
+            }
+        }
+    }
+
+    public class InflictStatusBleedAbility : IOnHitEffect
+    {
+        public string Name => "Inflict Bleed";
+        public string Description => "Chance to inflict Bleeding on hit.";
+        private readonly int _chance;
+        private static readonly Random _random = new Random();
+        public InflictStatusBleedAbility(int chance) { _chance = chance; }
+        public void OnHit(CombatContext ctx, int damageDealt)
+        {
+            if (ctx.IsGraze) return;
+            if (_random.Next(1, 101) <= _chance)
+            {
+                bool applied = ctx.Target.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Bleeding, 99));
+                if (applied) EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} is [pop][cStatus]bleeding[/][/]!" });
             }
         }
     }
@@ -297,6 +311,29 @@ namespace ProjectVagabond.Battle.Abilities
                     bool applied = ctx.Target.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Silence, _duration));
                     if (applied) EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} was [DriftWave][cStatus]silenced[/][/]!" });
                 }
+            }
+        }
+    }
+
+    public class DazzlingAbility : IOnHitEffect
+    {
+        public string Name => "Dazzling";
+        public string Description => "Chance to daze the target.";
+        private readonly int _chance;
+        private static readonly Random _random = new Random();
+
+        public DazzlingAbility(int chance)
+        {
+            _chance = chance;
+        }
+
+        public void OnHit(CombatContext ctx, int damageDealt)
+        {
+            if (ctx.IsGraze) return;
+            if (_random.Next(1, 101) <= _chance)
+            {
+                ctx.Target.IsDazed = true;
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} was [shake]DAZED[/] by the blow!" });
             }
         }
     }
@@ -428,7 +465,8 @@ namespace ProjectVagabond.Battle.Abilities
                 StatusEffectType.Burn,
                 StatusEffectType.Frostbite,
                 StatusEffectType.Stun,
-                StatusEffectType.Silence
+                StatusEffectType.Silence,
+                StatusEffectType.Bleeding
             };
 
             var toRemove = target.ActiveStatusEffects
@@ -582,8 +620,6 @@ namespace ProjectVagabond.Battle.Abilities
         }
     }
 
-    // --- NEW ABILITIES ---
-
     public class ConditionalCounterAbility : IOutgoingDamageModifier
     {
         public string Name => "Predator's Instinct";
@@ -654,6 +690,220 @@ namespace ProjectVagabond.Battle.Abilities
         {
             MinHits = min;
             MaxHits = max;
+        }
+    }
+
+    public class BreakOnUseAbility : IOnActionComplete
+    {
+        public string Name => "Fragile";
+        public string Description => "Chance to break on use.";
+        private readonly int _chance;
+
+        public BreakOnUseAbility(int chance)
+        {
+            _chance = chance;
+        }
+
+        public void OnActionComplete(QueuedAction action, BattleCombatant owner)
+        {
+            if (!owner.IsPlayerControlled) return;
+
+            var random = new Random();
+            if (random.Next(1, 101) <= _chance)
+            {
+                var gameState = ServiceLocator.Get<GameState>();
+                if (!string.IsNullOrEmpty(owner.EquippedWeaponId))
+                {
+                    string weaponId = owner.EquippedWeaponId;
+                    if (BattleDataCache.Weapons.TryGetValue(weaponId, out var weaponData))
+                    {
+                        // Remove from inventory
+                        gameState.PlayerState.RemoveWeapon(weaponId);
+
+                        // If count reached 0, unequip
+                        if (!gameState.PlayerState.Weapons.ContainsKey(weaponId))
+                        {
+                            owner.EquippedWeaponId = null;
+                        }
+
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_red]{owner.Name}'s {weaponData.WeaponName} shattered![/]" });
+                        _hapticsManager.TriggerCompoundShake(0.5f);
+                    }
+                }
+            }
+        }
+        private readonly HapticsManager _hapticsManager = ServiceLocator.Get<HapticsManager>();
+    }
+
+    public class AlwaysCritAbility : ICritModifier
+    {
+        public string Name => "Precision";
+        public string Description => "Always lands a critical hit.";
+
+        public float ModifyCritChance(float currentChance, CombatContext ctx)
+        {
+            return 1.0f; // 100% chance
+        }
+
+        public float ModifyCritDamage(float currentMultiplier, CombatContext ctx) => currentMultiplier;
+    }
+
+    public class RestoreManaOnKillAbility : IOnKill
+    {
+        public string Name => "Soul Siphon";
+        public string Description => "Restores Mana on kill.";
+        private readonly float _percent;
+
+        public RestoreManaOnKillAbility(float percent)
+        {
+            _percent = percent;
+        }
+
+        public void OnKill(CombatContext ctx)
+        {
+            int amount = (int)(ctx.Actor.Stats.MaxMana * (_percent / 100f));
+            float before = ctx.Actor.Stats.CurrentMana;
+            ctx.Actor.Stats.CurrentMana = Math.Min(ctx.Actor.Stats.MaxMana, ctx.Actor.Stats.CurrentMana + amount);
+
+            if (ctx.Actor.Stats.CurrentMana > before)
+            {
+                EventBus.Publish(new GameEvents.CombatantManaRestored
+                {
+                    Target = ctx.Actor,
+                    AmountRestored = (int)(ctx.Actor.Stats.CurrentMana - before),
+                    ManaBefore = before,
+                    ManaAfter = ctx.Actor.Stats.CurrentMana
+                });
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Actor.Name} absorbed the soul!" });
+            }
+        }
+    }
+
+    public class InspireOnHitAbility : IOnHitEffect
+    {
+        public string Name => "Inspire";
+        public string Description => "Buffs a random ally on hit.";
+        private readonly List<OffensiveStatType> _stats;
+        private readonly int _amount;
+        private static readonly Random _random = new Random();
+
+        public InspireOnHitAbility(string stat1, string stat2, int amount)
+        {
+            _stats = new List<OffensiveStatType>();
+            if (Enum.TryParse<OffensiveStatType>(stat1, true, out var s1)) _stats.Add(s1);
+            if (Enum.TryParse<OffensiveStatType>(stat2, true, out var s2)) _stats.Add(s2);
+            _amount = amount;
+        }
+
+        public void OnHit(CombatContext ctx, int damageDealt)
+        {
+            var battleManager = ServiceLocator.Get<BattleManager>();
+            var allies = battleManager.AllCombatants
+                .Where(c => c.IsPlayerControlled == ctx.Actor.IsPlayerControlled && !c.IsDefeated && c.IsActiveOnField)
+                .ToList();
+
+            if (allies.Any())
+            {
+                var target = allies[_random.Next(allies.Count)];
+                foreach (var stat in _stats)
+                {
+                    var (success, msg) = target.ModifyStatStage(stat, _amount);
+                    if (success)
+                    {
+                        EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = target, Stat = stat, Amount = _amount });
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Actor.Name}'s song inspired {target.Name}!" });
+                    }
+                }
+            }
+        }
+    }
+
+    public class ManaBurnOnHitAbility : IOnHitEffect
+    {
+        public string Name => "Mana Sever";
+        public string Description => "Destroys target's mana on hit.";
+        private readonly float _percent;
+
+        public ManaBurnOnHitAbility(float percent)
+        {
+            _percent = percent;
+        }
+
+        public void OnHit(CombatContext ctx, int damageDealt)
+        {
+            int burnAmount = (int)(ctx.Target.Stats.CurrentMana * (_percent / 100f));
+            if (burnAmount > 0)
+            {
+                float before = ctx.Target.Stats.CurrentMana;
+                ctx.Target.Stats.CurrentMana -= burnAmount;
+
+                EventBus.Publish(new GameEvents.CombatantManaConsumed
+                {
+                    Actor = ctx.Target,
+                    ManaBefore = before,
+                    ManaAfter = ctx.Target.Stats.CurrentMana
+                });
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} lost {burnAmount} Mana!" });
+            }
+        }
+    }
+
+    public class HydroScalingAbility : IOutgoingDamageModifier
+    {
+        public string Name => "Hydro Scaling";
+        public string Description => "Damage scales with Water spells.";
+        private readonly float _multiplierPerSpell;
+
+        public HydroScalingAbility(float multiplier)
+        {
+            _multiplierPerSpell = multiplier;
+        }
+
+        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
+        {
+            int waterSpellCount = 0;
+            foreach (var entry in ctx.Actor.Spells)
+            {
+                if (entry != null && BattleDataCache.Moves.TryGetValue(entry.MoveID, out var move))
+                {
+                    if (move.OffensiveElementIDs.Contains(3)) // 3 is Water
+                    {
+                        waterSpellCount++;
+                    }
+                }
+            }
+
+            if (waterSpellCount > 0)
+            {
+                // Base 1.0 + (Count * (Multiplier - 1.0))
+                // e.g. 1.25x per spell. 2 spells = 1.5x total? Or multiplicative?
+                // Prompt says "1.25x more damage for every water spell".
+                // Usually implies additive stacking of the bonus: 1 + (0.25 * count).
+                float bonus = (_multiplierPerSpell - 1.0f) * waterSpellCount;
+                return currentDamage * (1.0f + bonus);
+            }
+            return currentDamage;
+        }
+    }
+
+    public class VoidArcaneMasteryAbility : IOutgoingDamageModifier
+    {
+        public string Name => "Cultist Mastery";
+        public string Description => "Boosts Void and Arcane damage.";
+        private readonly float _multiplier;
+
+        public VoidArcaneMasteryAbility(float multiplier)
+        {
+            _multiplier = multiplier;
+        }
+
+        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
+        {
+            if (ctx.MoveHasElement(9) || ctx.MoveHasElement(4)) // 9=Void, 4=Arcane
+            {
+                return currentDamage * _multiplier;
+            }
+            return currentDamage;
         }
     }
 }

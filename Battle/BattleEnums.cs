@@ -1,4 +1,12 @@
-﻿using ProjectVagabond.Battle;
+﻿using Microsoft.Xna.Framework.Input;
+using ProjectVagabond;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Utils;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 
 namespace ProjectVagabond.Battle
 {
@@ -50,6 +58,7 @@ namespace ProjectVagabond.Battle
         Poison,
         Burn,
         Frostbite,
+        Bleeding,
 
         // Temps
         Stun,
