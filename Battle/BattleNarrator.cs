@@ -2,7 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond.UI;
+using ProjectVagabond.UI; // Added for TextAnimator and TextEffectType
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
@@ -17,7 +17,6 @@ namespace ProjectVagabond.Battle.UI
     {
         // --- Internal Data Structures ---
         private enum TokenType { Word, Space, Newline }
-
         private class NarratorToken
         {
             public string Text;
@@ -468,7 +467,8 @@ namespace ProjectVagabond.Battle.UI
                                 string sub = token.Text.Substring(0, c);
                                 float charOffsetX = font.MeasureString(sub + "|").Width - font.MeasureString("|").Width;
 
-                                var (animOffset, scale, rotation, color) = TextUtils.GetTextEffectTransform(
+                                // FIX: Use TextAnimator instead of AnimationUtils/TextUtils
+                                var (animOffset, scale, rotation, color) = TextAnimator.GetTextEffectTransform(
                                     token.Effect,
                                     (float)gameTime.TotalGameTime.TotalSeconds,
                                     globalCharIndex + c,

@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.UI; // Added for TextAnimator and TextEffectType
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
@@ -15,7 +16,6 @@ namespace ProjectVagabond.UI
     public class StoryNarrator
     {
         public event Action? OnFinished;
-
         private readonly Global _global;
         private readonly Rectangle _bounds;
         private readonly Queue<string> _messageQueue = new Queue<string>();
@@ -427,7 +427,8 @@ namespace ProjectVagabond.UI
                             string sub = textToDraw.Substring(0, c);
                             float charOffsetX = fontToUse.MeasureString(sub + "|").Width - fontToUse.MeasureString("|").Width;
 
-                            var (offset, scale, rotation, color) = TextUtils.GetTextEffectTransform(
+                            // FIX: Use TextAnimator instead of AnimationUtils/TextUtils
+                            var (offset, scale, rotation, color) = TextAnimator.GetTextEffectTransform(
                                 token.Effect,
                                 (float)gameTime.TotalGameTime.TotalSeconds,
                                 globalCharIndex + c,

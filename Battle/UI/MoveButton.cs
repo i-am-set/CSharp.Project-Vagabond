@@ -5,7 +5,7 @@ using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
-using ProjectVagabond.UI;
+using ProjectVagabond.UI; // Added for TextAnimator and TextEffectType
 using ProjectVagabond.Utils;
 using System;
 using System.Collections;
@@ -269,11 +269,11 @@ namespace ProjectVagabond.Battle.UI
                     if (EnableTextWave && isActivated)
                     {
                         _waveTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-                        float duration = TextUtils.GetSmallWaveDuration(Text.Length);
+                        float duration = TextAnimator.GetSmallWaveDuration(Text.Length);
                         if (_waveTimer > duration + 0.1f) _waveTimer = 0f;
 
-                        // Use the new SmallWave effect via TextUtils, passing the current scale (which is 1.0 for MoveButton usually, but good to be consistent)
-                        TextUtils.DrawTextWithEffect(spriteBatch, _moveFont, this.Text, textPosition, textColor * contentAlpha, TextEffectType.SmallWave, _waveTimer, new Vector2(scaleX, scaleY));
+                        // Use the new SmallWave effect via TextAnimator, passing the current scale (which is 1.0 for MoveButton usually, but good to be consistent)
+                        TextAnimator.DrawTextWithEffect(spriteBatch, _moveFont, this.Text, textPosition, textColor * contentAlpha, WaveEffectType, _waveTimer, new Vector2(scaleX, scaleY));
                     }
                     else
                     {
@@ -302,7 +302,8 @@ namespace ProjectVagabond.Battle.UI
                         animatedBounds.Center.Y - noManaSize.Y / 2f
                     );
                     // Use Square Outline for better visibility
-                    spriteBatch.DrawStringSquareOutlinedSnapped(_moveFont, noManaText, noManaPos, _global.Palette_Red * contentAlpha, Color.Black * contentAlpha);
+                    // FIX: Use TextAnimator instead of AnimationUtils/TextUtils
+                    TextAnimator.DrawTextWithEffectSquareOutlined(spriteBatch, _moveFont, noManaText, noManaPos, _global.Palette_Red * contentAlpha, Color.Black * contentAlpha, TextEffectType.None, 0f);
                 }
             }
         }

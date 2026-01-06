@@ -1891,11 +1891,11 @@ namespace ProjectVagabond.Battle.UI
                     if (left < screenPadding) textPosition.X += (screenPadding - left);
                     if (right > Global.VIRTUAL_WIDTH - screenPadding) textPosition.X -= (right - (Global.VIRTUAL_WIDTH - screenPadding));
 
-                    // --- OPTIMIZATION: Use TextUtils for Critical Hits ---
+                    // --- OPTIMIZATION: Use TextAnimator for Critical Hits ---
                     if (indicator.Type == DamageIndicatorState.IndicatorType.EmphasizedNumber)
                     {
                         // Use Shake effect for critical hits
-                        TextUtils.DrawTextWithEffectOutlined(spriteBatch, activeFont, indicator.PrimaryText, textPosition, drawColor * alpha, _global.Palette_Black * alpha, TextEffectType.Shake, indicator.Timer);
+                        TextAnimator.DrawTextWithEffectOutlined(spriteBatch, activeFont, indicator.PrimaryText, textPosition, drawColor * alpha, _global.Palette_Black * alpha, TextEffectType.Shake, indicator.Timer);
                     }
                     else
                     {

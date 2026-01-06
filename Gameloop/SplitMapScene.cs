@@ -1425,11 +1425,11 @@ namespace ProjectVagabond.Scenes
 
                         // Use the simple timer logic instead of the controller
                         _nodeTextWaveTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-                        float duration = TextUtils.GetSmallWaveDuration(nodeText.Length);
+                        float duration = TextAnimator.GetSmallWaveDuration(nodeText.Length);
                         if (_nodeTextWaveTimer > duration + 0.1f) _nodeTextWaveTimer = 0f;
 
                         // Use SmallWave effect
-                        TextUtils.DrawTextWithEffect(spriteBatch, secondaryFont, nodeText, textPosition, _global.Palette_Yellow, TextEffectType.SmallWave, _nodeTextWaveTimer);
+                        TextAnimator.DrawTextWithEffect(spriteBatch, secondaryFont, nodeText, textPosition, _global.Palette_Yellow, TextEffectType.SmallWave, _nodeTextWaveTimer);
                     }
                 }
             }

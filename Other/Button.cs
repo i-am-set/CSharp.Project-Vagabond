@@ -19,25 +19,6 @@ using System.Text.RegularExpressions;
 namespace ProjectVagabond.UI
 {
     /// <summary>
-    /// Defines the type of animation to play when a button is hovered.
-    /// </summary>
-    public enum HoverAnimationType
-    {
-        /// <summary>
-        /// A quick "hop" to the right and back.
-        /// </summary>
-        Hop,
-        /// <summary>
-        /// Slides to the right and holds the position until unhovered.
-        /// </summary>
-        SlideAndHold,
-        /// <summary>
-        /// Scales up elastically.
-        /// </summary>
-        Scale
-    }
-
-    /// <summary>
     /// Defines the reason a button might have a strikethrough.
     /// </summary>
     public enum StrikethroughType
@@ -48,7 +29,6 @@ namespace ProjectVagabond.UI
         /// </summary>
         Exhausted
     }
-
     public class Button
     {
         protected readonly Global _global;
@@ -70,7 +50,9 @@ namespace ProjectVagabond.UI
         public BitmapFont? Font { get; set; }
         public Vector2 TextRenderOffset { get; set; } = Vector2.Zero;
         public Color? DebugColor { get; set; }
-        public HoverAnimationType HoverAnimation { get; set; } = HoverAnimationType.Scale; // Default to Scale for juice
+
+        // Uses the shared enum from AnimationUtils now
+        public HoverAnimationType HoverAnimation { get; set; } = HoverAnimationType.Scale;
 
         // --- Text Wave Animation State ---
         public bool EnableTextWave { get; set; } = true;
@@ -395,7 +377,7 @@ namespace ProjectVagabond.UI
 
                 if (WaveEffectType == TextEffectType.SmallWave || WaveEffectType == TextEffectType.LeftAlignedSmallWave)
                 {
-                    float duration = TextUtils.GetSmallWaveDuration(Text.Length);
+                    float duration = TextAnimator.GetSmallWaveDuration(Text.Length);
                     if (_waveTimer > duration + 0.1f) _waveTimer = 0f;
                 }
             }
@@ -451,7 +433,8 @@ namespace ProjectVagabond.UI
             if (EnableTextWave && isActivated)
             {
                 // Use the configured WaveEffectType (SmallWave or LeftAlignedSmallWave)
-                TextUtils.DrawTextWithEffect(spriteBatch, font, Text, textPosition, textColor, WaveEffectType, _waveTimer, new Vector2(_currentScale));
+                // Use TextAnimator instead of TextUtils
+                TextAnimator.DrawTextWithEffect(spriteBatch, font, Text, textPosition, textColor, WaveEffectType, _waveTimer, new Vector2(_currentScale));
             }
             else
             {

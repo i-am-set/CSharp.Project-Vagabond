@@ -153,10 +153,10 @@ namespace ProjectVagabond.UI
             if (isSelected && IsEnabled)
             {
                 _waveTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-                float duration = TextUtils.GetSmallWaveDuration(Label.Length);
+                float duration = TextAnimator.GetSmallWaveDuration(Label.Length);
                 if (_waveTimer > duration + 0.1f) _waveTimer = 0f;
 
-                TextUtils.DrawTextWithEffect(spriteBatch, labelFont, Label, animatedPosition, labelColor, TextEffectType.LeftAlignedSmallWave, _waveTimer, Vector2.One);
+                TextAnimator.DrawTextWithEffect(spriteBatch, labelFont, Label, animatedPosition, labelColor, TextEffectType.LeftAlignedSmallWave, _waveTimer, Vector2.One);
             }
             else
             {

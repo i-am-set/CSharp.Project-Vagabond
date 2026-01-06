@@ -5,12 +5,10 @@ using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
-using ProjectVagabond.Particles;
-using ProjectVagabond.Scenes;
-using ProjectVagabond.Transitions;
-using ProjectVagabond.UI;
+using ProjectVagabond.UI; // Added for TextAnimator
 using ProjectVagabond.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -1157,12 +1155,12 @@ namespace ProjectVagabond.Battle.UI
             if (!string.IsNullOrEmpty(title))
             {
                 var font = ServiceLocator.Get<Core>().SecondaryFont;
-                // Use TextUtils for the title effect (Bounce)
+                // Use TextAnimator for the title effect (Bounce)
                 var size = font.MeasureString(title);
                 var pos = new Vector2((Global.VIRTUAL_WIDTH - size.Width) / 2, BattleLayout.DIVIDER_Y + 3);
 
                 // Use Bounce effect
-                TextUtils.DrawTextWithEffect(spriteBatch, font, title, pos, _global.Palette_LightGray, TextEffectType.Bounce, (float)gameTime.TotalGameTime.TotalSeconds);
+                TextAnimator.DrawTextWithEffect(spriteBatch, font, title, pos, _global.Palette_LightGray, TextEffectType.Bounce, (float)gameTime.TotalGameTime.TotalSeconds);
             }
         }
 

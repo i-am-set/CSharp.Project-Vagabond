@@ -8,7 +8,7 @@ using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.Transitions;
-using ProjectVagabond.UI;
+using ProjectVagabond.UI; // Added for TextAnimator and TextEffectType
 using ProjectVagabond.Utils;
 using System;
 using System.Collections;
@@ -583,7 +583,8 @@ namespace ProjectVagabond.Battle.UI
                         float waveTimer = _targetingTextAnimTimer % cycleDuration;
 
                         // Use the new Square Outlined Wave Text with SmallWave effect
-                        TextUtils.DrawTextWithEffectSquareOutlined(
+                        // FIX: Use TextAnimator instead of AnimationUtils/TextUtils
+                        TextAnimator.DrawTextWithEffectSquareOutlined(
                             spriteBatch,
                             secondaryFont,
                             btn.Text,

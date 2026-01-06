@@ -1024,7 +1024,7 @@ namespace ProjectVagabond.UI
             // --- WAVE ANIMATION FOR SPELL NAME ---
             if (_infoPanelNameWaveTimer > 0)
             {
-                TextUtils.DrawTextWithEffectOutlined(spriteBatch, font, name, namePos, _global.Palette_BlueWhite, _global.Palette_Black, TextEffectType.SmallWave, _infoPanelNameWaveTimer);
+                TextAnimator.DrawTextWithEffectOutlined(spriteBatch, font, name, namePos, _global.Palette_BlueWhite, _global.Palette_Black, TextEffectType.SmallWave, _infoPanelNameWaveTimer);
             }
             else
             {

@@ -4,6 +4,7 @@ using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.UI; // Added to resolve TextEffectType
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
@@ -17,7 +18,6 @@ namespace ProjectVagabond
         public string Text { get; set; }
         public Color Color { get; set; }
         public TextEffectType Effect { get; set; } = TextEffectType.None;
-
         public ColoredText(string text, Color color, TextEffectType effect = TextEffectType.None)
         {
             Text = text;

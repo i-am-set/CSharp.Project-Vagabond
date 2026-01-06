@@ -3,15 +3,17 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
-using ProjectVagabond.Transitions;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -54,20 +56,26 @@ namespace ProjectVagabond.Scenes
             // Initialize Animators
             _titleAnimator = new UIAnimator
             {
-                Style = EntryExitStyle.Pop,
-                Duration = POP_DURATION
+                EntryStyle = EntryExitStyle.Pop,
+                ExitStyle = EntryExitStyle.Pop,
+                DurationIn = POP_DURATION,
+                DurationOut = POP_DURATION
             };
 
             _retryBtnAnimator = new UIAnimator
             {
-                Style = EntryExitStyle.Pop,
-                Duration = POP_DURATION
+                EntryStyle = EntryExitStyle.Pop,
+                ExitStyle = EntryExitStyle.Pop,
+                DurationIn = POP_DURATION,
+                DurationOut = POP_DURATION
             };
 
             _menuBtnAnimator = new UIAnimator
             {
-                Style = EntryExitStyle.Pop,
-                Duration = POP_DURATION
+                EntryStyle = EntryExitStyle.Pop,
+                ExitStyle = EntryExitStyle.Pop,
+                DurationIn = POP_DURATION,
+                DurationOut = POP_DURATION
             };
         }
 
@@ -293,7 +301,7 @@ namespace ProjectVagabond.Scenes
             spriteBatch.Draw(pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), Color.Black);
 
             // --- Draw Title ---
-            var titleState = _titleAnimator.GetCurrentState();
+            var titleState = _titleAnimator.GetVisualState();
             if (titleState.IsVisible)
             {
                 string title = _gameOverText;
@@ -320,7 +328,7 @@ namespace ProjectVagabond.Scenes
             for (int i = 0; i < _buttons.Count; i++)
             {
                 var animator = (i == 0) ? _retryBtnAnimator : _menuBtnAnimator;
-                var state = animator.GetCurrentState();
+                var state = animator.GetVisualState();
 
                 if (state.IsVisible)
                 {

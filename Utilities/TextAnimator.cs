@@ -1,10 +1,11 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 
-namespace ProjectVagabond.Utils
+namespace ProjectVagabond.UI
 {
     /// <summary>
     /// Defines the specific animation pattern applied to text characters.
@@ -12,41 +13,27 @@ namespace ProjectVagabond.Utils
     public enum TextEffectType
     {
         None,
-        Wave,           // Standard Sine Wave (Y offset)
-        Shake,          // Random Jitter
-        PopWave,        // Wave + Scaling (Balatro style)
-        Wobble,         // Sine Wave Rotation
-        Nervous,        // Fast, small shake + slight rotation
-        Rainbow,        // Color Cycle (No movement)
-        RainbowWave,    // Color Cycle + Wave
-        Pop,            // Scaling Pulse (No movement)
-        Bounce,         // Bouncing ball motion (Absolute Sine)
-        Drift,          // Horizontal Sine Wave
-        Glitch,         // Chaotic offsets and color tints
-        Flicker,        // Opacity pulsing
-        DriftBounce,    // Horizontal Drift + Vertical Bounce
-        DriftWave,      // Horizontal Drift + Vertical Wave
-        FlickerBounce,  // Opacity Pulse + Vertical Bounce
-        FlickerWave,    // Opacity Pulse + Vertical Wave
-        SmallWave,      // Single pass "hump" wave (Center Aligned Expansion)
+        Wave, // Standard Sine Wave (Y offset)
+        Shake, // Random Jitter
+        PopWave, // Wave + Scaling (Balatro style)
+        Wobble, // Sine Wave Rotation
+        Nervous, // Fast, small shake + slight rotation
+        Rainbow, // Color Cycle (No movement)
+        RainbowWave, // Color Cycle + Wave
+        Pop, // Scaling Pulse (No movement)
+        Bounce, // Bouncing ball motion (Absolute Sine)
+        Drift, // Horizontal Sine Wave
+        Glitch, // Chaotic offsets and color tints
+        Flicker, // Opacity pulsing
+        DriftBounce, // Horizontal Drift + Vertical Bounce
+        DriftWave, // Horizontal Drift + Vertical Wave
+        FlickerBounce, // Opacity Pulse + Vertical Bounce
+        FlickerWave, // Opacity Pulse + Vertical Wave
+        SmallWave, // Single pass "hump" wave (Center Aligned Expansion)
         LeftAlignedSmallWave // Single pass "hump" wave (Left Aligned Expansion)
     }
-
     /// <summary>
-    /// Defines the mathematical curve used for UI entry and exit animations.
-    /// </summary>
-    public enum EntryExitStyle
-    {
-        Pop,        // Scale 0->1 with overshoot
-        Fade,       // Opacity 0->1
-        SlideUp,    // Moves up from an offset
-        SlideDown,  // Moves down from an offset
-        Zoom,       // Scale 0->1 linear (no overshoot)
-        PopJiggle   // Scale 0->1 with overshoot AND a damped rotation wiggle
-    }
-
-    /// <summary>
-    /// Parameter object to simplify Draw calls and allow future expansion without breaking signatures.
+    /// Parameter object to simplify Draw calls.
     /// </summary>
     public struct TextDrawOptions
     {
@@ -77,7 +64,6 @@ namespace ProjectVagabond.Utils
 
     /// <summary>
     /// Centralized configuration for text animation parameters.
-    /// Adjust these values to tune the "feel" of the text effects globally.
     /// </summary>
     public static class TextAnimationSettings
     {
@@ -140,20 +126,17 @@ namespace ProjectVagabond.Utils
         public static float FlickerMaxAlpha = 1.0f;
     }
 
-    public static class TextUtils
+    /// <summary>
+    /// Handles rendering of rich text with per-character animations.
+    /// </summary>
+    public static class TextAnimator
     {
         // --- OPTIMIZATION: Caches ---
-
-        // Pre-allocated strings for single characters to avoid garbage collection pressure.
         private static readonly string[] _charStringCache;
-
-        // Cache the center origin of characters to avoid calling MeasureString per char per frame.
-        // Key: Font, Value: Array of Vector2 origins indexed by char code.
         private static readonly Dictionary<BitmapFont, Vector2[]> _fontOriginCache = new Dictionary<BitmapFont, Vector2[]>();
+        private const int CACHE_SIZE = 256;
 
-        private const int CACHE_SIZE = 256; // Cache standard ASCII range
-
-        static TextUtils()
+        static TextAnimator()
         {
             _charStringCache = new string[CACHE_SIZE];
             for (int i = 0; i < CACHE_SIZE; i++)
@@ -162,31 +145,21 @@ namespace ProjectVagabond.Utils
             }
         }
 
-        /// <summary>
-        /// Clears the font origin cache. Call this when unloading content to prevent memory leaks
-        /// if BitmapFonts are unloaded but the static cache remains.
-        /// </summary>
         public static void ClearFontCache()
         {
             _fontOriginCache.Clear();
         }
 
-        /// <summary>
-        /// Retrieves the cached origin (center) for a character in a specific font.
-        /// Falls back to dynamic measurement for non-ASCII characters.
-        /// </summary>
         private static Vector2 GetCachedOrigin(BitmapFont font, char c)
         {
             if (c >= CACHE_SIZE)
             {
-                // Fallback for non-ASCII: Measure dynamically (slow path)
                 var size = font.MeasureString(c.ToString());
                 return new Vector2(size.Width / 2f, font.LineHeight / 2f);
             }
 
             if (!_fontOriginCache.TryGetValue(font, out var origins))
             {
-                // Initialize cache for this font
                 origins = new Vector2[CACHE_SIZE];
                 for (int i = 0; i < CACHE_SIZE; i++)
                 {
@@ -197,79 +170,6 @@ namespace ProjectVagabond.Utils
             }
 
             return origins[c];
-        }
-
-        /// <summary>
-        /// Calculates the visual state (Scale, Opacity, Offset, Rotation) for an element based on its animation progress.
-        /// </summary>
-        /// <param name="style">The style of animation.</param>
-        /// <param name="progress">0.0 (Start) to 1.0 (End).</param>
-        /// <param name="isEntering">True if appearing, False if disappearing.</param>
-        /// <param name="magnitude">The distance to slide for slide effects.</param>
-        /// <returns>A tuple containing Scale, Opacity, Position Offset, and Rotation.</returns>
-        public static (Vector2 Scale, float Opacity, Vector2 Offset, float Rotation) CalculateEntryExitTransform(
-            EntryExitStyle style,
-            float progress,
-            bool isEntering,
-            float magnitude = 20f)
-        {
-            float t = Math.Clamp(progress, 0f, 1f);
-            Vector2 scale = Vector2.One;
-            float opacity = 1f;
-            Vector2 offset = Vector2.Zero;
-            float rotation = 0f;
-
-            switch (style)
-            {
-                case EntryExitStyle.Pop:
-                    float s = isEntering ? Easing.EaseOutBack(t) : 1.0f - Easing.EaseInBack(t);
-                    scale = new Vector2(s);
-                    opacity = isEntering ? t : 1.0f - t;
-                    break;
-
-                case EntryExitStyle.PopJiggle:
-                    if (isEntering)
-                    {
-                        scale = new Vector2(Easing.EaseOutBack(t));
-                        opacity = t;
-                        // Damped sine wave rotation
-                        float angle = t * 10f;
-                        float decay = 1.0f - t;
-                        rotation = MathF.Sin(angle) * 0.15f * decay;
-                    }
-                    else
-                    {
-                        scale = new Vector2(1.0f - Easing.EaseInBack(t));
-                        opacity = 1.0f - t;
-                    }
-                    break;
-
-                case EntryExitStyle.Fade:
-                    opacity = isEntering ? t : (1.0f - t);
-                    break;
-
-                case EntryExitStyle.Zoom:
-                    float zoomS = isEntering ? Easing.EaseOutCubic(t) : (1.0f - Easing.EaseInCubic(t));
-                    scale = new Vector2(zoomS);
-                    opacity = isEntering ? t : (1.0f - t);
-                    break;
-
-                case EntryExitStyle.SlideUp:
-                    offset.Y = isEntering
-                        ? MathHelper.Lerp(magnitude, 0f, Easing.EaseOutCubic(t))
-                        : MathHelper.Lerp(0f, -magnitude, Easing.EaseInCubic(t));
-                    opacity = isEntering ? t : 1.0f - t;
-                    break;
-
-                case EntryExitStyle.SlideDown:
-                    offset.Y = isEntering
-                        ? MathHelper.Lerp(-magnitude, 0f, Easing.EaseOutCubic(t))
-                        : MathHelper.Lerp(0f, magnitude, Easing.EaseInCubic(t));
-                    opacity = isEntering ? t : 1.0f - t;
-                    break;
-            }
-
-            return (scale, opacity, offset, rotation);
         }
 
         public static float GetSmallWaveDuration(int textLength)
@@ -415,7 +315,7 @@ namespace ProjectVagabond.Utils
             return p;
         }
 
-        // --- Overloads for backward compatibility ---
+        // --- Public Draw Methods ---
 
         public static void DrawTextWithEffect(SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color color, TextEffectType effect, float time, Vector2? baseScale = null)
         {
@@ -450,10 +350,6 @@ namespace ProjectVagabond.Utils
             DrawTextCore(spriteBatch, font, text, opts);
         }
 
-        /// <summary>
-        /// The core drawing logic for animated text.
-        /// Iterates through characters, applies effects, and draws them with optional outlines.
-        /// </summary>
         private static void DrawTextCore(SpriteBatch spriteBatch, BitmapFont font, string text, TextDrawOptions options)
         {
             if (string.IsNullOrEmpty(text)) return;
@@ -491,7 +387,6 @@ namespace ProjectVagabond.Utils
 
                 var (animOffset, effectScale, rotation, finalColor) = GetTextEffectTransform(options.Effect, options.Time, charIndex, options.Color);
 
-                // OPTIMIZATION: Use cached origin
                 Vector2 origin = GetCachedOrigin(font, c);
 
                 Vector2 targetCenterPos = new Vector2(scaledPos.X + origin.X, lineCenterY) + animOffset;
@@ -503,23 +398,18 @@ namespace ProjectVagabond.Utils
                 {
                     if (options.UseSquareOutline)
                     {
-                        // Diagonals
                         DrawGlyph(spriteBatch, font, charStr, finalDrawPos + new Vector2(1, 1), options.OutlineColor, rotation, origin, finalScale);
                         DrawGlyph(spriteBatch, font, charStr, finalDrawPos + new Vector2(1, -1), options.OutlineColor, rotation, origin, finalScale);
                         DrawGlyph(spriteBatch, font, charStr, finalDrawPos + new Vector2(-1, 1), options.OutlineColor, rotation, origin, finalScale);
                         DrawGlyph(spriteBatch, font, charStr, finalDrawPos + new Vector2(-1, -1), options.OutlineColor, rotation, origin, finalScale);
                     }
-                    // Cardinals
                     DrawGlyph(spriteBatch, font, charStr, finalDrawPos + new Vector2(1, 0), options.OutlineColor, rotation, origin, finalScale);
                     DrawGlyph(spriteBatch, font, charStr, finalDrawPos + new Vector2(-1, 0), options.OutlineColor, rotation, origin, finalScale);
                     DrawGlyph(spriteBatch, font, charStr, finalDrawPos + new Vector2(0, 1), options.OutlineColor, rotation, origin, finalScale);
                     DrawGlyph(spriteBatch, font, charStr, finalDrawPos + new Vector2(0, -1), options.OutlineColor, rotation, origin, finalScale);
                 }
 
-                // Shadow
                 DrawGlyph(spriteBatch, font, charStr, finalDrawPos + new Vector2(1, 0), shadowColor, rotation, origin, finalScale);
-
-                // Main Character
                 DrawGlyph(spriteBatch, font, charStr, finalDrawPos, finalColor, rotation, origin, finalScale);
 
                 charIndex++;

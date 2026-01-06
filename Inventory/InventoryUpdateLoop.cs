@@ -528,7 +528,7 @@ namespace ProjectVagabond.UI
             if (_hoveredItemData != null)
             {
                 _infoPanelNameWaveTimer += deltaTime;
-                float duration = TextUtils.GetSmallWaveDuration(nameLength);
+                float duration = TextAnimator.GetSmallWaveDuration(nameLength);
                 if (_infoPanelNameWaveTimer > duration + 0.1f) _infoPanelNameWaveTimer = 0f;
             }
             else

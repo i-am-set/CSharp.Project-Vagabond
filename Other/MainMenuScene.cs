@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Particles;
@@ -12,6 +13,7 @@ using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -213,8 +215,10 @@ namespace ProjectVagabond.Scenes
 
                 var animator = new UIAnimator
                 {
-                    Style = EntryExitStyle.PopJiggle,
-                    Duration = BUTTON_ANIM_DURATION
+                    EntryStyle = EntryExitStyle.PopJiggle,
+                    ExitStyle = EntryExitStyle.Pop,
+                    DurationIn = BUTTON_ANIM_DURATION,
+                    DurationOut = BUTTON_ANIM_DURATION
                 };
                 // Stagger the start of each button
                 animator.Show(delay: i * BUTTON_STAGGER_DELAY);
@@ -308,7 +312,7 @@ namespace ProjectVagabond.Scenes
             for (int i = 0; i < _buttons.Count; i++)
             {
                 // Only allow interaction if the button is mostly visible (Scale > 0.8)
-                var visualState = _buttonAnimators[i].GetCurrentState();
+                var visualState = _buttonAnimators[i].GetVisualState();
                 if (visualState.IsVisible && visualState.Scale.X > 0.8f)
                 {
                     _buttons[i].Update(currentMouseState);
@@ -357,7 +361,7 @@ namespace ProjectVagabond.Scenes
                     var selectedButton = _buttons[_selectedButtonIndex];
 
                     // Only trigger if animation is mostly done
-                    var visualState = _buttonAnimators[_selectedButtonIndex].GetCurrentState();
+                    var visualState = _buttonAnimators[_selectedButtonIndex].GetVisualState();
                     if (visualState.IsVisible && visualState.Scale.X > 0.8f)
                     {
                         if (selectedButton.IsHovered)
@@ -393,7 +397,7 @@ namespace ProjectVagabond.Scenes
 
             for (int i = 0; i < _buttons.Count; i++)
             {
-                var state = _buttonAnimators[i].GetCurrentState();
+                var state = _buttonAnimators[i].GetVisualState();
                 if (!state.IsVisible) continue;
 
                 // Create local transformation matrix for this button
@@ -422,7 +426,7 @@ namespace ProjectVagabond.Scenes
             if (_selectedButtonIndex >= 0 && _selectedButtonIndex < _buttons.Count)
             {
                 // Only draw arrow if button is fully visible
-                var state = _buttonAnimators[_selectedButtonIndex].GetCurrentState();
+                var state = _buttonAnimators[_selectedButtonIndex].GetVisualState();
                 if (state.IsVisible && state.Scale.X >= 0.95f)
                 {
                     var selectedButton = _buttons[_selectedButtonIndex];

@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.UI; // Added for TextAnimator and TextEffectType
 using ProjectVagabond.Utils;
 using System;
 using System.Collections;
@@ -31,7 +32,6 @@ namespace ProjectVagabond
         private bool _combatHistoryDirty = true;
         public int ScrollOffset = 0;
         public int CombatScrollOffset = 0;
-
         private int _nextLineNumber = 1;
         private int _nextCombatLineNumber = 1;
         private readonly StringBuilder _stringBuilder = new StringBuilder(256);
@@ -226,7 +226,8 @@ namespace ProjectVagabond
                             // Use a pseudo-global index to keep waves continuous across the line
                             int globalIndex = c + (historyIndex * 10);
 
-                            var (offset, scale, rotation, color) = TextUtils.GetTextEffectTransform(
+                            // FIX: Use TextAnimator instead of AnimationUtils/TextUtils
+                            var (offset, scale, rotation, color) = TextAnimator.GetTextEffectTransform(
                                 segment.Effect,
                                 (float)gameTime.TotalGameTime.TotalSeconds,
                                 globalIndex,
