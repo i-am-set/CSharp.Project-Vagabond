@@ -39,7 +39,6 @@ namespace ProjectVagabond.Scenes
         private MoveAnimationManager _moveAnimationManager;
         private BattleInputHandler _inputHandler;
         private AlertManager _alertManager;
-        private readonly ChoiceGenerator _choiceGenerator;
         private ImageButton _settingsButton;
         private ComponentStore _componentStore;
         private SceneManager _sceneManager;
@@ -131,7 +130,6 @@ namespace ProjectVagabond.Scenes
             _spriteManager = ServiceLocator.Get<SpriteManager>();
             _hapticsManager = ServiceLocator.Get<HapticsManager>();
             _tooltipManager = ServiceLocator.Get<TooltipManager>();
-            _choiceGenerator = new ChoiceGenerator();
             _gameState = ServiceLocator.Get<GameState>();
             _global = ServiceLocator.Get<Global>();
             _hitstopManager = ServiceLocator.Get<HitstopManager>();

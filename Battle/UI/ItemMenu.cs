@@ -24,15 +24,12 @@ namespace ProjectVagabond.Battle.UI
         private bool _isVisible;
         private readonly Global _global;
 
-        // Changed from IInventoryMenuItem to InventoryItemButton
         private readonly List<InventoryItemButton> _displayItems = new List<InventoryItemButton>();
 
         // Buttons
         private readonly Button _backButton;
         private readonly Button _sortButton;
         private readonly Button _useButton;
-
-        private readonly ContextMenu _sortContextMenu;
 
         // Scrolling / List State
         private int _scrollIndex = 0;
@@ -60,7 +57,6 @@ namespace ProjectVagabond.Battle.UI
         public ItemMenu()
         {
             _global = ServiceLocator.Get<Global>();
-            _sortContextMenu = new ContextMenu();
 
             _backButton = new Button(Rectangle.Empty, "BACK", function: "Back", enableHoverSway: false) { CustomDefaultTextColor = _global.Palette_Gray };
             _backButton.OnClick += HandleBack;
@@ -176,7 +172,7 @@ namespace ProjectVagabond.Battle.UI
 
         private void OpenSortMenu()
         {
-            // Sort logic placeholder
+            // Sort logic placeholder - ContextMenu removed
         }
 
         public void Update(MouseState currentMouseState, GameTime gameTime)
@@ -184,26 +180,16 @@ namespace ProjectVagabond.Battle.UI
             InitializeButtons();
             if (!_isVisible) return;
 
-            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-            var virtualMousePos = Core.TransformMouse(currentMouseState.Position);
-
             HoveredButton = null;
 
-            if (_sortContextMenu.IsOpen)
+            switch (_currentState)
             {
-                _sortContextMenu.Update(currentMouseState, _previousMouseState, virtualMousePos, secondaryFont);
-            }
-            else
-            {
-                switch (_currentState)
-                {
-                    case MenuState.List:
-                        UpdateList(currentMouseState);
-                        break;
-                    case MenuState.Selected:
-                        UpdateSelected(currentMouseState);
-                        break;
-                }
+                case MenuState.List:
+                    UpdateList(currentMouseState);
+                    break;
+                case MenuState.Selected:
+                    UpdateSelected(currentMouseState);
+                    break;
             }
             _previousMouseState = currentMouseState;
         }
@@ -433,7 +419,6 @@ namespace ProjectVagabond.Battle.UI
 
             _sortButton.Draw(spriteBatch, font, gameTime, transform);
             _backButton.Draw(spriteBatch, font, gameTime, transform);
-            _sortContextMenu.Draw(spriteBatch, secondaryFont);
         }
 
         /// <summary>
