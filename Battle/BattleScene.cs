@@ -12,6 +12,8 @@ using ProjectVagabond.Scenes;
 using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
+using ProjectVagabond.Systems; // Added for LootManager
+using ProjectVagabond.Items; // Added for BaseItem
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -118,6 +120,10 @@ namespace ProjectVagabond.Scenes
         // --- VICTORY SEQUENCE STATE ---
         private bool _victorySequenceTriggered = false;
 
+        // --- LOOT SCREEN STATE ---
+        private LootScreen _lootScreen;
+        private bool _lootScreenHasShown = false;
+
         // --- REGEX FOR RANDOM WORD PARSING ---
         private static readonly Regex _randomWordRegex = new Regex(@"\b[\w\-\']+(?:\$[\w\-\']+)+\b", RegexOptions.Compiled);
 
@@ -151,6 +157,7 @@ namespace ProjectVagabond.Scenes
             _moveAnimationManager = new MoveAnimationManager();
             _inputHandler = new BattleInputHandler();
             _alertManager = new AlertManager();
+            _lootScreen = new LootScreen(); // Initialize Loot Screen
         }
 
         public override void Enter()
@@ -178,6 +185,8 @@ namespace ProjectVagabond.Scenes
             _watchdogTimer = 0f;
             _switchSequenceState = SwitchSequenceState.None;
             _victorySequenceTriggered = false;
+            _lootScreenHasShown = false; // Reset loot flag
+            _lootScreen.Reset(); // Ensure loot screen is clean on entry
             SubscribeToEvents();
             InitializeSettingsButton();
 
@@ -268,6 +277,7 @@ namespace ProjectVagabond.Scenes
         public override void Exit()
         {
             base.Exit();
+            _lootScreen.Reset(); // Ensure loot screen is closed on exit (e.g. F5 reset)
             UnsubscribeFromEvents();
             CleanupEntities();
             CleanupPlayerState();
@@ -541,6 +551,18 @@ namespace ProjectVagabond.Scenes
 
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
+            // --- LOOT SCREEN UPDATE ---
+            if (_lootScreen != null && _lootScreen.IsActive)
+            {
+                _lootScreen.Update(gameTime);
+                if (!_lootScreen.IsActive)
+                {
+                    // Loot screen closed, proceed to victory
+                    FinalizeVictory();
+                }
+                return; // Block other updates
+            }
+
             if (_isFadingOutOnDeath)
             {
                 _deathFadeTimer += dt;
@@ -773,7 +795,18 @@ namespace ProjectVagabond.Scenes
                         // Check IsAnimating again because TriggerVictoryRestoration might have started animations
                         else if (!_animationManager.IsAnimating)
                         {
-                            FinalizeVictory();
+                            // --- LOOT SCREEN INTEGRATION ---
+                            if (!_lootScreenHasShown)
+                            {
+                                var lootManager = ServiceLocator.Get<LootManager>();
+                                var loot = lootManager.GenerateCombatLoot();
+                                _lootScreen.Show(loot);
+                                _lootScreenHasShown = true;
+                            }
+                            else if (!_lootScreen.IsActive)
+                            {
+                                FinalizeVictory();
+                            }
                         }
                     }
                     else
@@ -1069,6 +1102,12 @@ namespace ProjectVagabond.Scenes
             else if (_settingsButtonState == SettingsButtonState.Visible)
             {
                 _settingsButton?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
+            }
+
+            // --- DRAW LOOT SCREEN ---
+            if (_lootScreen != null && _lootScreen.IsActive)
+            {
+                _lootScreen.Draw(spriteBatch, font, gameTime); // Pass GameTime here
             }
 
             spriteBatch.End();

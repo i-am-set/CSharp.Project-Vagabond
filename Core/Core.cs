@@ -11,6 +11,7 @@ using ProjectVagabond.Dice;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.Systems; // Added for LootManager
 using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
@@ -21,6 +22,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 
 namespace ProjectVagabond
@@ -124,6 +126,7 @@ namespace ProjectVagabond
         private TransitionManager _transitionManager;
         private HitstopManager _hitstopManager;
         private BackgroundNoiseRenderer _backgroundNoiseRenderer;
+        private LootManager _lootManager; // Added LootManager
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         // GAME LOOP STATE
@@ -497,6 +500,11 @@ namespace ProjectVagabond
             BattleDataCache.LoadData(Content);
             _progressionManager.LoadSplits();
             _diceRollingSystem.Initialize(GraphicsDevice, Content);
+
+            // --- LOOT MANAGER INIT ---
+            _lootManager = new LootManager();
+            _lootManager.BuildLootTables();
+            ServiceLocator.Register<LootManager>(_lootManager);
 
             // --- STARTUP TRANSITION LOGIC ---
             // Start immediately in the Startup Scene (Splash Screen)
