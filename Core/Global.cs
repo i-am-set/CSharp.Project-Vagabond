@@ -24,6 +24,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -35,17 +36,6 @@ namespace ProjectVagabond
         private static readonly Global _instance = new Global();
         private Global()
         {
-            // Initialize World Colors
-            WaterColor = Palette_Blue;
-            FlatlandColor = Palette_DarkGray;
-            HillColor = Palette_Gray;
-            MountainColor = Palette_LightGray;
-            PeakColor = Palette_White;
-            PlayerColor = Palette_Red;
-            PathColor = Palette_Yellow;
-            RunPathColor = Palette_Orange;
-            PathEndColor = Palette_Red;
-
             // Initialize UI Colors
             GameBg = Palette_Black;
             TerminalBg = Palette_Black;
@@ -129,15 +119,15 @@ namespace ProjectVagabond
             };
 
             RarityColors = new Dictionary<int, Color>
-        {
-            { -1, Palette_Gray },      // Basic/Action
-            { 0, Color.White },        // Common
-            { 1, Color.Lime },         // Uncommon
-            { 2, Color.DeepSkyBlue },  // Rare
-            { 3, Color.DarkOrchid },   // Epic
-            { 4, Color.Red },          // Mythic
-            { 5, Color.Yellow }        // Legendary
-        };
+            {
+                { -1, Palette_Gray },      // Basic/Action
+                { 0, Color.White },        // Common
+                { 1, Color.Lime },         // Uncommon
+                { 2, Color.DeepSkyBlue },  // Rare
+                { 3, Color.DarkOrchid },   // Epic
+                { 4, Color.Red },          // Mythic
+                { 5, Color.Yellow }        // Legendary
+            };
 
             StatusEffectColors = new Dictionary<StatusEffectType, Color>
             {
@@ -165,11 +155,6 @@ namespace ProjectVagabond
         // Game version
         public const string GAME_VERSION = "0.1.0";
 
-        // World constants
-        public const float FEET_PER_WORLD_TILE = 200f; // The physical distance of a single world tile  
-        public const float FEET_PER_SECOND_PER_SPEED_UNIT = 4.0f; // A character with speed 1.0 moves at X ft/s.
-        public const float ACTION_TICK_DURATION_SECONDS = 0.3f; // Real-world duration of a single move/action tick at 1x speed.
-
         // Physics constants
         public const float PHYSICS_UPDATES_PER_SECOND = 60f;
         public const float FIXED_PHYSICS_TIMESTEP = 1f / PHYSICS_UPDATES_PER_SECOND;
@@ -179,10 +164,7 @@ namespace ProjectVagabond
         public const int VIRTUAL_HEIGHT = 180;
 
         // Map settings Global
-        public const float MAP_AREA_WIDTH_PERCENT = 0.8f;
-        public const int MAP_TOP_PADDING = 10;
         public const int TERMINAL_AREA_HEIGHT = 75;
-        public const int GRID_CELL_SIZE = 5;
         public const int FONT_SIZE = 12;
         public const int TERMINAL_LINE_SPACING = 12;
         public const int PROMPT_LINE_SPACING = 16;
@@ -297,12 +279,6 @@ namespace ProjectVagabond
         // Input variables
         public int previousScrollValue = Mouse.GetState().ScrollWheelValue;
 
-        // Terrain levels
-        public float WaterLevel { get; set; } = 0.3f;
-        public float FlatlandsLevel { get; set; } = 0.6f;
-        public float HillsLevel { get; set; } = 0.7f;
-        public float MountainsLevel { get; set; } = 0.8f;
-
         // Static Color Palette
         public Color Palette_LightPink { get; set; } = new Color(222, 172, 230);
         public Color Palette_Pink { get; set; } = new Color(213, 87, 168);
@@ -334,15 +310,7 @@ namespace ProjectVagabond
         public Color Palette_Black { get; set; } = new Color(23, 22, 28);
 
         // Colors
-        public Color WaterColor { get; private set; }
-        public Color FlatlandColor { get; private set; }
-        public Color HillColor { get; private set; }
-        public Color MountainColor { get; private set; }
-        public Color PeakColor { get; private set; }
-        public Color PlayerColor { get; private set; }
-        public Color PathColor { get; private set; }
-        public Color RunPathColor { get; private set; }
-        public Color PathEndColor { get; private set; }
+        public Color PlayerColor { get; private set; } = new Color(181, 65, 49); // Palette_Red
         public Color GameBg { get; private set; }
         public Color TerminalBg { get; private set; }
         public Color MapBg { get; private set; }

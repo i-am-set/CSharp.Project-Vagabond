@@ -40,7 +40,6 @@ namespace ProjectVagabond
             {
                 new ArchetypeIdComponent { ArchetypeId = "player" },
                 new PositionComponent(),
-                new ActionQueueComponent(),
                 new PlayerTagComponent(),
                 new HighImportanceComponent(),
                 new RenderableComponent { Color = ServiceLocator.Get<Global>().PlayerColor },
@@ -99,7 +98,16 @@ namespace ProjectVagabond
                                 foreach (var componentDef in archetypeDto.Components)
                                 {
                                     string typeName = componentDef["Type"].ToString();
-                                    Type componentType = Type.GetType(typeName, throwOnError: true);
+
+                                    // Use throwOnError: false to handle cases where a component class was deleted (like ActionQueueComponent)
+                                    Type componentType = Type.GetType(typeName, throwOnError: false);
+
+                                    if (componentType == null)
+                                    {
+                                        Debug.WriteLine($"[ArchetypeManager] Warning: Component type '{typeName}' not found. Skipping.");
+                                        continue;
+                                    }
+
                                     object componentInstance = Activator.CreateInstance(componentType);
 
                                     if (componentDef.TryGetValue("Properties", out object props) && props is JsonElement propertiesElement)

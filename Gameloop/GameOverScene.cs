@@ -178,7 +178,6 @@ namespace ProjectVagabond.Scenes
                 new GenericTask("Initializing world...", () =>
                 {
                     gameState.InitializeWorld();
-                    gameState.InitializeRenderableEntities();
                 }),
                 new DiceWarmupTask()
             };

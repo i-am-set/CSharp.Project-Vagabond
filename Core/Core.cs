@@ -11,13 +11,14 @@ using ProjectVagabond.Dice;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
-using ProjectVagabond.Transitions;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
@@ -106,13 +107,14 @@ namespace ProjectVagabond
         private GameSettings _settings;
         private SceneManager _sceneManager;
         private HapticsManager _hapticsManager;
-        private SystemManager _systemManager;
         private TooltipManager _tooltipManager;
         private ParticleSystemManager _particleSystemManager;
         private GameState _gameState;
-        private ActionExecutionSystem _actionExecutionSystem;
+
+        // Event-based systems (no update loop needed)
         private MoveAcquisitionSystem _moveAcquisitionSystem;
         private RelicAcquisitionSystem _relicAcquisitionSystem;
+
         private SpriteManager _spriteManager;
         private DiceRollingSystem _diceRollingSystem;
         private BackgroundManager _backgroundManager;
@@ -289,12 +291,6 @@ namespace ProjectVagabond
             var componentStore = new ComponentStore();
             ServiceLocator.Register<ComponentStore>(componentStore);
 
-            var chunkManager = new ChunkManager();
-            ServiceLocator.Register<ChunkManager>(chunkManager);
-
-            _systemManager = new SystemManager();
-            ServiceLocator.Register<SystemManager>(_systemManager);
-
             var archetypeManager = new ArchetypeManager();
             ServiceLocator.Register<ArchetypeManager>(archetypeManager);
 
@@ -333,34 +329,20 @@ namespace ProjectVagabond
             _backgroundManager = new BackgroundManager();
             ServiceLocator.Register<BackgroundManager>(_backgroundManager);
 
-            _gameState = new GameState(noiseManager, componentStore, chunkManager, _global, _spriteManager);
+            _gameState = new GameState(noiseManager, componentStore, _global, _spriteManager);
             ServiceLocator.Register<GameState>(_gameState);
 
-            var playerInputSystem = new PlayerInputSystem();
-            ServiceLocator.Register<PlayerInputSystem>(playerInputSystem);
-
-            _actionExecutionSystem = new ActionExecutionSystem();
-            ServiceLocator.Register<ActionExecutionSystem>(_actionExecutionSystem);
-
+            // Event-based systems (no update loop needed)
             _moveAcquisitionSystem = new MoveAcquisitionSystem();
-            ServiceLocator.Register<MoveAcquisitionSystem>(_moveAcquisitionSystem);
-
             _relicAcquisitionSystem = new RelicAcquisitionSystem();
-            ServiceLocator.Register<RelicAcquisitionSystem>(_relicAcquisitionSystem);
 
             var terminalRenderer = new TerminalRenderer();
             ServiceLocator.Register<TerminalRenderer>(terminalRenderer);
 
-            var mapRenderer = new MapRenderer();
-            ServiceLocator.Register<MapRenderer>(mapRenderer);
-
-            var mapInputHandler = new MapInputHandler(mapRenderer.MapContextMenu, mapRenderer);
-            ServiceLocator.Register<MapInputHandler>(mapInputHandler);
-
             var autoCompleteManager = new AutoCompleteManager();
             ServiceLocator.Register<AutoCompleteManager>(autoCompleteManager);
 
-            var commandProcessor = new CommandProcessor(playerInputSystem);
+            var commandProcessor = new CommandProcessor();
             ServiceLocator.Register<CommandProcessor>(commandProcessor);
 
             _progressionManager = new ProgressionManager();
@@ -419,13 +401,8 @@ namespace ProjectVagabond
             _pixel.SetData(new[] { Color.White });
             ServiceLocator.Register<Texture2D>(_pixel);
 
-            _systemManager.RegisterSystem(_actionExecutionSystem, 0f);
-            _systemManager.RegisterSystem(_moveAcquisitionSystem, 0f);
-            _systemManager.RegisterSystem(_relicAcquisitionSystem, 0f);
-
             _sceneManager.AddScene(GameSceneState.Startup, new StartupScene());
             _sceneManager.AddScene(GameSceneState.MainMenu, new MainMenuScene());
-            _sceneManager.AddScene(GameSceneState.TerminalMap, new GameMapScene());
             _sceneManager.AddScene(GameSceneState.Settings, new SettingsScene());
             _sceneManager.AddScene(GameSceneState.Battle, new BattleScene());
             _sceneManager.AddScene(GameSceneState.Split, new SplitMapScene());
@@ -562,7 +539,6 @@ namespace ProjectVagabond
         public void ResetGame()
         {
             _diceRollingSystem.ClearRoll();
-            _actionExecutionSystem.HandleInterruption();
             _particleSystemManager.ClearAllEmitters();
             _hapticsManager.StopAll();
             _tooltipManager.Hide();
@@ -744,11 +720,7 @@ namespace ProjectVagabond
 
                 if (!_gameState.IsPaused)
                 {
-                    if (_sceneManager.CurrentActiveScene is GameMapScene)
-                    {
-                        _gameState.UpdateActiveEntities();
-                        _systemManager.Update(scaledGameTime);
-                    }
+                    // Removed legacy system updates
                 }
             }
 

@@ -107,7 +107,7 @@ namespace ProjectVagabond.Particles
             var global = ServiceLocator.Get<Global>();
             settings.Shape = EmitterShape.Circle;
             settings.EmitFrom = EmissionSource.Volume;
-            settings.EmitterSize = new Vector2(Global.GRID_CELL_SIZE / 2f, Global.GRID_CELL_SIZE / 2f);
+            settings.EmitterSize = new Vector2(2.5f, 2.5f);
             settings.EmissionRate = 0;
             settings.MaxParticles = 100;
             settings.Duration = 0.5f;

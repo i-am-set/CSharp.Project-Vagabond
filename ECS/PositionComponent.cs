@@ -1,4 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
+using ProjectVagabond;
+using ProjectVagabond.Battle;
+using System.Collections.Generic;
 
 namespace ProjectVagabond
 {
@@ -8,7 +11,6 @@ namespace ProjectVagabond
     public class PositionComponent : IComponent, ICloneableComponent
     {
         public Vector2 WorldPosition { get; set; }
-        public Point CurrentChunk { get; set; }
 
         public IComponent Clone()
         {

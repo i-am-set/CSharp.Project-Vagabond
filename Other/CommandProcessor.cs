@@ -16,13 +16,13 @@ namespace ProjectVagabond
 {
     public class CommandProcessor
     {
-        private readonly PlayerInputSystem _playerInputSystem;
         private GameState _gameState;
         private Dictionary<string, Command> _commands;
         public Dictionary<string, Command> Commands => _commands;
-        public CommandProcessor(PlayerInputSystem playerInputSystem)
+
+        // Removed PlayerInputSystem dependency
+        public CommandProcessor()
         {
-            _playerInputSystem = playerInputSystem;
             InitializeCommands();
         }
 

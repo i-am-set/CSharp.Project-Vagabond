@@ -1,10 +1,20 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Particles;
+using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.Transitions;
+using ProjectVagabond.UI;
+using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Text.Json;
 
 namespace ProjectVagabond
@@ -28,7 +38,6 @@ namespace ProjectVagabond
             var archetypeManager = ServiceLocator.Get<ArchetypeManager>();
             var entityManager = ServiceLocator.Get<EntityManager>();
             var componentStore = ServiceLocator.Get<ComponentStore>();
-            var chunkManager = ServiceLocator.Get<ChunkManager>();
 
             var template = archetypeManager.GetArchetypeTemplate(archetypeId);
             if (template == null)
@@ -85,9 +94,6 @@ namespace ProjectVagabond
             {
                 posComp.WorldPosition = worldPosition;
             }
-
-            // Register the new entity with the spatial partitioning system
-            chunkManager.RegisterEntity(entityId, worldPosition);
 
             return entityId;
         }

@@ -21,6 +21,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics.X86;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -122,15 +123,7 @@ namespace ProjectVagabond
 
 
         private Texture2D _logoSprite;
-        private Texture2D _waterSprite;
-        private Texture2D _flatlandSprite;
-        private Texture2D _hillSprite;
-        private Texture2D _mountainSprite;
-        private Texture2D _peakSprite;
         private Texture2D _playerSprite;
-        private Texture2D _pathSprite;
-        private Texture2D _runPathSprite;
-        private Texture2D _pathEndSprite;
         private Texture2D _emptySprite;
         private Texture2D _speedMarkSprite;
         private Texture2D _mapMarkerSprite;
@@ -141,7 +134,6 @@ namespace ProjectVagabond
         private Texture2D _circleParticleSprite;
         private Texture2D _emberParticleSprite;
         private Texture2D _softParticleSprite;
-        private Texture2D _fogOfWarSprite;
         public Effect FireballParticleShaderEffect { get; private set; }
         public Texture2D ArrowIconSpriteSheet { get; private set; }
         public Rectangle[] ArrowIconSourceRects { get; private set; }
@@ -218,15 +210,7 @@ namespace ProjectVagabond
         public Texture2D MousePromptDisabledSilhouette { get; private set; }
 
         public Texture2D LogoSprite => _logoSprite;
-        public Texture2D WaterSprite => _waterSprite;
-        public Texture2D FlatlandSprite => _flatlandSprite;
-        public Texture2D HillSprite => _hillSprite;
-        public Texture2D MountainSprite => _mountainSprite;
-        public Texture2D PeakSprite => _peakSprite;
         public Texture2D PlayerSprite => _playerSprite;
-        public Texture2D PathSprite => _pathSprite;
-        public Texture2D RunPathSprite => _runPathSprite;
-        public Texture2D PathEndSprite => _pathEndSprite;
         public Texture2D EmptySprite => _emptySprite;
         public Texture2D SpeedMarkSprite => _speedMarkSprite;
         public Texture2D MapMarkerSprite => _mapMarkerSprite;
@@ -237,7 +221,6 @@ namespace ProjectVagabond
         public Texture2D CircleParticleSprite => _circleParticleSprite;
         public Texture2D EmberParticleSprite => _emberParticleSprite;
         public Texture2D SoftParticleSprite => _softParticleSprite;
-        public Texture2D FogOfWarSprite => _fogOfWarSprite;
 
         public SpriteManager()
         {
@@ -1264,41 +1247,14 @@ namespace ProjectVagabond
 
         public void LoadGameContent()
         {
-            try { _waterSprite = _core.Content.Load<Texture2D>("Sprites/water"); }
-            catch { _waterSprite = _textureFactory.CreateWaterTexture(); }
-
-            try { _flatlandSprite = _core.Content.Load<Texture2D>("Sprites/flatland"); }
-            catch { _flatlandSprite = _textureFactory.CreateColoredTexture(8, 8, Color.White); }
-
-            try { _hillSprite = _core.Content.Load<Texture2D>("Sprites/hill"); }
-            catch { _hillSprite = _textureFactory.CreateColoredTexture(8, 8, Color.White); }
-
-            try { _mountainSprite = _core.Content.Load<Texture2D>("Sprites/mountain"); }
-            catch { _mountainSprite = _textureFactory.CreateColoredTexture(8, 8, Color.White); }
-
-            try { _peakSprite = _core.Content.Load<Texture2D>("Sprites/peak"); }
-            catch { _peakSprite = _textureFactory.CreateColoredTexture(8, 8, Color.White); }
-
             try { _playerSprite = _core.Content.Load<Texture2D>("Sprites/player"); }
             catch { _playerSprite = _textureFactory.CreatePlayerTexture(); }
-
-            try { _pathSprite = _core.Content.Load<Texture2D>("Sprites/path"); }
-            catch { _pathSprite = _textureFactory.CreatePathTexture(); }
-
-            try { _runPathSprite = _core.Content.Load<Texture2D>("Sprites/runPathEnd"); }
-            catch { _runPathSprite = _textureFactory.CreateRunPathTexture(); }
-
-            try { _pathEndSprite = _core.Content.Load<Texture2D>("Sprites/pathEnd"); }
-            catch { _pathEndSprite = _textureFactory.CreatePathEndTexture(); }
 
             try { _emptySprite = _textureFactory.CreateEmptyTexture(); }
             catch { _emptySprite = _textureFactory.CreateColoredTexture(8, 8, Color.Red); }
 
             try { _speedMarkSprite = _core.Content.Load<Texture2D>("Sprites/speedMark"); }
             catch { _speedMarkSprite = _textureFactory.CreateColoredTexture(8, 8, Color.Red); }
-
-            try { _fogOfWarSprite = _core.Content.Load<Texture2D>("Sprites/UI/GameMap/ui_map_fog_of_war"); }
-            catch { _fogOfWarSprite = _textureFactory.CreateColoredTexture(5, 5, Color.Black); }
 
             try
             {

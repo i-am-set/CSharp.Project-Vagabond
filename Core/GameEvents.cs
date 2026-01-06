@@ -1,22 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Content;
-using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
-using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
-using ProjectVagabond.Battle.UI;
-using ProjectVagabond.Particles;
-using ProjectVagabond.Scenes;
-using ProjectVagabond.Transitions;
-using ProjectVagabond.UI;
-using ProjectVagabond.Utils;
-using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 
 namespace ProjectVagabond
 {
@@ -43,60 +28,23 @@ namespace ProjectVagabond
         }
 
         /// <summary>
-        /// Published when the player's action queue is modified.
-        /// </summary>
-        public struct ActionQueueChanged { }
-
-        /// <summary>
-        /// Published when the player entity completes a move to a new tile.
-        /// </summary>
-        public struct PlayerMoved
-        {
-            public Microsoft.Xna.Framework.Vector2 NewPosition { get; set; }
-        }
-
-        /// <summary>
         /// Published by the physics system when two dice colliders make contact.
         /// An event is published for each dynamic body involved in the collision.
         /// </summary>
         public struct DiceCollisionOccurred
         {
-            /// <summary>
-            /// The position of the collision in 3D world space.
-            /// </summary>
             public System.Numerics.Vector3 WorldPosition;
-
-            /// <summary>
-            /// The handle of the dynamic body (the die) this event pertains to.
-            /// </summary>
             public BepuPhysics.BodyHandle BodyHandle;
-
-            /// <summary>
-            /// True if the collision was fast enough to generate a spark effect.
-            /// </summary>
             public bool IsSparking;
         }
 
         /// <summary>
-        /// Published when the screen resolution or UI theme changes, signaling
-        /// UI elements to recalculate their layouts.
+        /// Published when the screen resolution or UI theme changes.
         /// </summary>
-        public struct UIThemeOrResolutionChanged
-        {
-        }
-
-        /// <summary>
-        /// Published when the player entity completes a single action from its queue.
-        /// This signals to other systems, like AI, that they can take their turn.
-        /// </summary>
-        public struct PlayerActionExecuted
-        {
-            public IAction Action { get; set; }
-        }
+        public struct UIThemeOrResolutionChanged { }
 
         /// <summary>
         /// Published at the start of an action's resolution, before any effects are calculated.
-        /// Used for initial narration like "Player uses Tackle!".
         /// </summary>
         public struct ActionDeclared
         {
@@ -108,8 +56,7 @@ namespace ProjectVagabond
         }
 
         /// <summary>
-        /// Published when a single action in a battle is resolved, providing detailed results for narration and animation.
-        /// For multi-hit moves, this event is published for each individual hit.
+        /// Published when a single action in a battle is resolved.
         /// </summary>
         public struct BattleActionExecuted
         {
@@ -131,36 +78,20 @@ namespace ProjectVagabond
             public int CriticalHitCount { get; set; }
         }
 
-        /// <summary>
-        /// Defines whether an item/move is being added or removed.
-        /// </summary>
-        public enum AcquisitionType
-        {
-            Add,
-            Remove
-        }
+        public enum AcquisitionType { Add, Remove }
 
-        /// <summary>
-        /// Published when the player gains or loses a move (Spell or Action).
-        /// </summary>
         public struct PlayerMoveAdded
         {
             public string MoveID { get; set; }
             public AcquisitionType Type { get; set; }
         }
 
-        /// <summary>
-        /// Published when the player gains or loses a relic (Ability).
-        /// </summary>
         public struct PlayerRelicAdded
         {
             public string RelicID { get; set; }
             public AcquisitionType Type { get; set; }
         }
 
-        /// <summary>
-        /// Published when a combatant's HP drops to 0 or below, signaling the start of their defeat sequence.
-        /// </summary>
         public struct CombatantDefeated
         {
             public BattleCombatant DefeatedCombatant { get; set; }
@@ -168,9 +99,6 @@ namespace ProjectVagabond
 
         public struct SecondaryEffectComplete { }
 
-        /// <summary>
-        /// Published when a status effect triggers a passive event, like dealing damage or healing.
-        /// </summary>
         public struct StatusEffectTriggered
         {
             public BattleCombatant Combatant { get; set; }
@@ -179,36 +107,24 @@ namespace ProjectVagabond
             public int Healing { get; set; }
         }
 
-        /// <summary>
-        /// Published when a status effect is removed from a combatant.
-        /// </summary>
         public struct StatusEffectRemoved
         {
             public BattleCombatant Combatant { get; set; }
             public StatusEffectType EffectType { get; set; }
         }
 
-        /// <summary>
-        /// Published when a combatant's action fails due to a status effect or other reason.
-        /// </summary>
         public struct ActionFailed
         {
             public BattleCombatant Actor { get; set; }
             public string Reason { get; set; }
         }
 
-        /// <summary>
-        /// Published when a combatant begins charging a move.
-        /// </summary>
         public struct CombatantChargingAction
         {
             public BattleCombatant Actor { get; set; }
             public string MoveName { get; set; }
         }
 
-        /// <summary>
-        /// Published whenever a combatant is healed, either by an item or a move effect.
-        /// </summary>
         public struct CombatantHealed
         {
             public BattleCombatant Actor { get; set; }
@@ -217,9 +133,6 @@ namespace ProjectVagabond
             public int VisualHPBefore { get; set; }
         }
 
-        /// <summary>
-        /// Published whenever a combatant's mana is restored.
-        /// </summary>
         public struct CombatantManaRestored
         {
             public BattleCombatant Target { get; set; }
@@ -228,9 +141,6 @@ namespace ProjectVagabond
             public float ManaAfter { get; set; }
         }
 
-        /// <summary>
-        /// Published whenever a combatant consumes mana to use a move.
-        /// </summary>
         public struct CombatantManaConsumed
         {
             public BattleCombatant Actor { get; set; }
@@ -238,9 +148,6 @@ namespace ProjectVagabond
             public float ManaAfter { get; set; }
         }
 
-        /// <summary>
-        /// Published when a combatant takes recoil damage from their own move.
-        /// </summary>
         public struct CombatantRecoiled
         {
             public BattleCombatant Actor { get; set; }
@@ -248,22 +155,13 @@ namespace ProjectVagabond
             public RelicData? SourceAbility { get; set; }
         }
 
-        /// <summary>
-        /// Published when a passive ability activates, for narration and debug logging purposes.
-        /// </summary>
         public struct AbilityActivated
         {
             public BattleCombatant Combatant { get; set; }
             public RelicData Ability { get; set; }
-            /// <summary>
-            /// Optional text for the player-facing battle narrator.
-            /// </summary>
             public string? NarrationText { get; set; }
         }
 
-        /// <summary>
-        /// Published when a combatant's stat stage is modified.
-        /// </summary>
         public struct CombatantStatStageChanged
         {
             public BattleCombatant Target { get; set; }
@@ -271,88 +169,48 @@ namespace ProjectVagabond
             public int Amount { get; set; }
         }
 
-        /// <summary>
-        /// Published by the BattleManager to request that a move's animation be played.
-        /// </summary>
         public struct MoveAnimationTriggered
         {
             public BattleCombatant Actor { get; set; }
             public MoveData Move { get; set; }
             public List<BattleCombatant> Targets { get; set; }
-            /// <summary>
-            /// A map indicating which targets were grazed (missed/glanced) by the attack.
-            /// Used to offset the animation visually.
-            /// </summary>
             public Dictionary<BattleCombatant, bool> GrazeStatus { get; set; }
         }
 
-        /// <summary>
-        /// Published by the MoveAnimationManager when a specific animation instance reaches its impact frame.
-        /// This signals the BattleManager to apply damage and effects.
-        /// </summary>
         public struct MoveImpactOccurred
         {
             public MoveData Move { get; set; }
         }
 
-        /// <summary>
-        /// Published by the BattleScene when a move animation has finished playing (or was skipped).
-        /// </summary>
         public struct MoveAnimationCompleted { }
 
-        /// <summary>
-        /// Published when enemy reinforcements are about to enter the battle.
-        /// This triggers a visual alert or narration.
-        /// </summary>
         public struct NextEnemyApproaches { }
 
-        /// <summary>
-        /// Published when a combatant physically enters the battlefield (e.g. from reinforcements or switching).
-        /// Triggers the visual entrance animation.
-        /// </summary>
         public struct CombatantSpawned
         {
             public BattleCombatant Combatant { get; set; }
         }
 
-        /// <summary>
-        /// Published when a combatant is about to leave the battlefield (e.g. switching out).
-        /// Triggers the visual exit animation.
-        /// </summary>
         public struct CombatantSwitchingOut
         {
             public BattleCombatant Combatant { get; set; }
         }
 
-        /// <summary>
-        /// Published when a move's effect fails to execute (e.g. Protect failure).
-        /// Triggers a visual "FAILED" indicator.
-        /// </summary>
         public struct MoveFailed
         {
             public BattleCombatant Actor { get; set; }
         }
 
-        /// <summary>
-        /// Published when a move triggers a forced switch (Disengage).
-        /// </summary>
         public struct DisengageTriggered
         {
             public BattleCombatant Actor { get; set; }
         }
 
-        /// <summary>
-        /// Published when the BattleManager needs to open the Switch Menu in forced mode.
-        /// </summary>
         public struct ForcedSwitchRequested
         {
             public BattleCombatant Actor { get; set; }
         }
 
-        /// <summary>
-        /// Published by BattleManager when a switch is confirmed.
-        /// Signals the BattleScene to take control of the visual sequence.
-        /// </summary>
         public struct SwitchSequenceInitiated
         {
             public BattleCombatant OutgoingCombatant { get; set; }
