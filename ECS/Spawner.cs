@@ -1,21 +1,10 @@
 ﻿using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
-using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
-using ProjectVagabond.Particles;
-using ProjectVagabond.Progression;
-using ProjectVagabond.Scenes;
-using ProjectVagabond.Transitions;
-using ProjectVagabond.UI;
-using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Text.Json;
 
 namespace ProjectVagabond
 {
@@ -27,11 +16,10 @@ namespace ProjectVagabond
         private static readonly Random _random = new Random();
 
         /// <summary>
-        /// Spawns a new entity based on a specified archetype at a given position.
-        /// This method uses a fast cloning mechanism and avoids runtime reflection for property setting.
+        /// Spawns a new entity based on a specified archetype.
         /// </summary>
-        /// <param name="archetypeId">The ID of the archetype to spawn (e.g., "player", "wanderer_npc").</param>
-        /// <param name="worldPosition">The world position where the entity should be spawned.</param>
+        /// <param name="archetypeId">The ID of the archetype to spawn.</param>
+        /// <param name="worldPosition">Legacy parameter, ignored.</param>
         /// <returns>The entity ID of the newly spawned entity, or -1 if spawning fails.</returns>
         public static int Spawn(string archetypeId, Vector2 worldPosition)
         {
@@ -58,20 +46,6 @@ namespace ProjectVagabond
                     IComponent clonedComponent = ((ICloneableComponent)templateComponent).Clone();
                     Type componentType = clonedComponent.GetType();
 
-                    // Post-clone logic to handle components that need runtime data.
-                    if (clonedComponent is RenderableComponent renderable && renderable.Texture == null)
-                    {
-                        var spriteManager = ServiceLocator.Get<SpriteManager>();
-                        if (template.TemplateComponents.Any(c => c is PlayerTagComponent))
-                        {
-                            renderable.Texture = spriteManager.PlayerSprite;
-                        }
-                        else
-                        {
-                            renderable.Texture = ServiceLocator.Get<Texture2D>();
-                        }
-                    }
-
                     MethodInfo addComponentMethod = typeof(ComponentStore).GetMethod("AddComponent").MakeGenericMethod(componentType);
                     addComponentMethod.Invoke(componentStore, new object[] { entityId, clonedComponent });
                 }
@@ -86,13 +60,6 @@ namespace ProjectVagabond
             {
                 var liveStats = GenerateStatsFromProfile(profile);
                 componentStore.AddComponent(entityId, liveStats);
-            }
-
-            // After all components are added, set the specific spawn positions
-            var posComp = componentStore.GetComponent<PositionComponent>(entityId);
-            if (posComp != null)
-            {
-                posComp.WorldPosition = worldPosition;
             }
 
             return entityId;

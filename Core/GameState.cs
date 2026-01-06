@@ -1,10 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Progression;
-using ProjectVagabond.Scenes;
-using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
@@ -31,7 +28,6 @@ namespace ProjectVagabond
 
         public string LastRunKiller { get; set; } = "Unknown";
 
-        // Removed ChunkManager dependency as it is no longer used
         public GameState(NoiseMapManager noiseManager, ComponentStore componentStore, Global global, SpriteManager spriteManager)
         {
             _noiseManager = noiseManager;
@@ -71,7 +67,7 @@ namespace ProjectVagabond
                 }
             }
 
-            // 4. Spawn the Entity in the world (Position is now just for reference, not grid logic)
+            // 4. Spawn the Entity in the world (Position is ignored by Spawner now)
             PlayerEntityId = Spawner.Spawn("player", Vector2.Zero);
 
             // 5. Sync Entity Components with Oakley's Stats

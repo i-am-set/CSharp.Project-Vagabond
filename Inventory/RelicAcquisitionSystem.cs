@@ -1,25 +1,14 @@
 ﻿using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
-using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
-using ProjectVagabond.Progression;
-using ProjectVagabond.Scenes;
-using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
 
 namespace ProjectVagabond
 {
     /// <summary>
     /// Handles acquiring new relics (which grant passive abilities).
     /// </summary>
-    public class RelicAcquisitionSystem : ISystem
+    public class RelicAcquisitionSystem
     {
         private readonly GameState _gameState;
 
@@ -50,7 +39,5 @@ namespace ProjectVagabond
                     break;
             }
         }
-
-        public void Update(GameTime gameTime) { }
     }
 }

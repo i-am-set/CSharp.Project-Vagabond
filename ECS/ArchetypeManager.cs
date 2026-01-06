@@ -1,22 +1,11 @@
 ﻿using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
-using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
-using ProjectVagabond.Battle.UI;
-using ProjectVagabond.Dice;
-using ProjectVagabond.Particles;
-using ProjectVagabond.Scenes;
-using ProjectVagabond.UI;
-using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Text.Json;
 
 namespace ProjectVagabond
@@ -39,10 +28,7 @@ namespace ProjectVagabond
             var playerComponents = new List<IComponent>
             {
                 new ArchetypeIdComponent { ArchetypeId = "player" },
-                new PositionComponent(),
                 new PlayerTagComponent(),
-                new HighImportanceComponent(),
-                new RenderableComponent { Color = ServiceLocator.Get<Global>().PlayerColor },
                 new TemporaryBuffsComponent()
             };
             _archetypes["player"] = new ArchetypeTemplate("player", "Player", playerComponents);
@@ -55,11 +41,6 @@ namespace ProjectVagabond
         /// <param name="filePath">The path to the Archetypes.json file.</param>
         public void LoadArchetypes(string filePath)
         {
-            // Robust path handling:
-            // 1. If it's a directory, look for Archetypes.json inside.
-            // 2. If it's a file path, use it directly.
-            // 3. If it doesn't exist, try appending .json if missing.
-
             string finalPath = filePath;
 
             if (Directory.Exists(filePath))
@@ -99,12 +80,12 @@ namespace ProjectVagabond
                                 {
                                     string typeName = componentDef["Type"].ToString();
 
-                                    // Use throwOnError: false to handle cases where a component class was deleted (like ActionQueueComponent)
+                                    // Use throwOnError: false to handle cases where a component class was deleted
                                     Type componentType = Type.GetType(typeName, throwOnError: false);
 
                                     if (componentType == null)
                                     {
-                                        Debug.WriteLine($"[ArchetypeManager] Warning: Component type '{typeName}' not found. Skipping.");
+                                        // Silently skip deleted components (Renderable, Position, etc)
                                         continue;
                                     }
 
@@ -113,11 +94,6 @@ namespace ProjectVagabond
                                     if (componentDef.TryGetValue("Properties", out object props) && props is JsonElement propertiesElement)
                                     {
                                         PopulateComponentProperties(componentInstance, propertiesElement);
-                                    }
-
-                                    if (componentInstance is IInitializableComponent initializable)
-                                    {
-                                        initializable.Initialize();
                                     }
 
                                     if (componentInstance is ICloneableComponent cloneableComponent)

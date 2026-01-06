@@ -8,7 +8,7 @@ namespace ProjectVagabond
     /// <summary>
     /// Handles acquiring new moves (Spells or Actions).
     /// </summary>
-    public class MoveAcquisitionSystem : ISystem
+    public class MoveAcquisitionSystem
     {
         private readonly GameState _gameState;
 
@@ -37,7 +37,5 @@ namespace ProjectVagabond
                     break;
             }
         }
-
-        public void Update(GameTime gameTime) { }
     }
 }
