@@ -37,7 +37,7 @@ namespace ProjectVagabond.UI
         private float _waveTimer = 0f;
 
         // --- Visual Tuning Constants ---
-        private const float VALUE_AREA_X_OFFSET = 155f; // Reduced from 175f to widen value area
+        private const float VALUE_AREA_X_OFFSET = 155f;
 
         public Func<T, Color?> GetValueColor { get; set; }
         public Func<T, bool> IsOptionNotRecommended { get; set; }
@@ -185,8 +185,8 @@ namespace ProjectVagabond.UI
 
         public void Draw(SpriteBatch spriteBatch, BitmapFont labelFont, BitmapFont valueFont, Vector2 position, bool isSelected, GameTime gameTime)
         {
-            float yOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isSelected && IsEnabled);
-            Vector2 animatedPosition = new Vector2(position.X, position.Y + yOffset);
+            float xOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isSelected && IsEnabled);
+            Vector2 animatedPosition = new Vector2(position.X + xOffset, position.Y);
 
             // --- Label and Extra Info (Using labelFont) ---
             string labelText = Label;

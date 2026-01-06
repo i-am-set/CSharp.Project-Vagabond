@@ -218,6 +218,7 @@ namespace ProjectVagabond.UI
 
             // --- Segmented Bar Drawing Logic ---
             // Center bar vertically relative to label font
+            // Apply xOffset to the bar position as well
             Vector2 barStartPosition = new Vector2(_barAreaRect.X + xOffset, position.Y + (labelFont.LineHeight - SEGMENT_HEIGHT) / 2);
 
             float progress = (_currentValue - _minValue) / (_maxValue - _minValue);
@@ -256,6 +257,7 @@ namespace ProjectVagabond.UI
             Vector2 valueSize = labelFont.MeasureString(valueString);
 
             // Align value text vertically with label (no offset needed since fonts match)
+            // Apply xOffset to value text
             Vector2 valuePosition = new Vector2(_barAreaRect.Left - valueSize.X - 5 + xOffset, animatedPosition.Y);
 
             spriteBatch.DrawStringSnapped(labelFont, valueString, valuePosition, IsEnabled ? _global.Palette_DarkGray : _global.ButtonDisableColor);
