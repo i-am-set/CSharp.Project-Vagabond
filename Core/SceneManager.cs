@@ -47,7 +47,7 @@ namespace ProjectVagabond
         {
             if (IsModalActive || !_scenes.TryGetValue(state, out var newModal)) return;
             _modalScene = newModal;
-            _modalScene.LastUsedInputForNav = _currentScene?.LastUsedInputForNav ?? InputDevice.Mouse;
+            _modalScene.LastInputDevice = _currentScene?.LastInputDevice ?? InputDevice.Mouse;
             _modalScene.Enter();
         }
 
@@ -102,7 +102,7 @@ namespace ProjectVagabond
             {
                 _currentScene?.Exit();
                 _currentScene = newScene;
-                _currentScene.LastUsedInputForNav = this.LastInputDevice;
+                _currentScene.LastInputDevice = this.LastInputDevice;
                 _currentScene.Enter();
 
                 // Handle Loading Tasks if present

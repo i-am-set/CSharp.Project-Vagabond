@@ -221,7 +221,7 @@ namespace ProjectVagabond.Scenes
                 _buttonAnimators.Add(animator);
             }
 
-            if (this.LastUsedInputForNav == InputDevice.Keyboard && !firstTimeOpened)
+            if (this.LastInputDevice == InputDevice.Keyboard && !firstTimeOpened)
             {
                 _selectedButtonIndex = 0;
                 PositionMouseOnFirstSelectable();

@@ -153,7 +153,7 @@ namespace ProjectVagabond.Scenes
                 button.ResetAnimationState();
             }
 
-            if (this.LastUsedInputForNav == InputDevice.Keyboard)
+            if (this.LastInputDevice == InputDevice.Keyboard)
             {
                 _selectedButtonIndex = 0;
                 PositionMouseOnFirstSelectable();
@@ -337,14 +337,6 @@ namespace ProjectVagabond.Scenes
                     spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: buttonTransform);
 
                     bool forceHover = (i == _selectedButtonIndex) && _sceneManager.LastInputDevice == InputDevice.Keyboard;
-
-                    // Pass opacity via tint color override if needed, or let button handle it.
-                    // Button.Draw doesn't take an alpha multiplier directly, but we can pass a tint.
-                    // However, Button.Draw logic might override tint based on hover state.
-                    // For simplicity, we rely on the button drawing itself fully opaque, 
-                    // but since we are popping in, the scale handles most of the visual entrance.
-                    // If we want fade-in, we'd need to modify Button.Draw to accept an alpha multiplier.
-                    // For "Pop" style, scale is the primary driver, so this is fine.
 
                     _buttons[i].Draw(spriteBatch, tertiaryFont, gameTime, Matrix.Identity, forceHover);
 

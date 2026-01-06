@@ -967,41 +967,6 @@ namespace ProjectVagabond.Scenes
             _uiSlideTimer = 0f;
         }
 
-        private void ShowRewardScreen()
-        {
-            var choiceMenu = _sceneManager.GetScene(GameSceneState.ChoiceMenu) as ChoiceMenuScene;
-            if (choiceMenu == null)
-            {
-                FinalizeVictory();
-                return;
-            }
-
-            var choices = new List<object>();
-            const int numberOfChoices = 3;
-
-            if (SplitMapScene.WasMajorBattle)
-            {
-                var playerAbilities = _componentStore.GetComponent<PassiveAbilitiesComponent>(_gameState.PlayerEntityId)?.RelicIDs;
-                var excludeIds = playerAbilities != null ? new HashSet<string>(playerAbilities) : null;
-                choices.AddRange(_choiceGenerator.GenerateAbilityChoices(numberOfChoices, excludeIds));
-            }
-            else
-            {
-                var playerSpells = _gameState.PlayerState?.Spells.Where(s => s != null).Select(p => p.MoveID);
-                var excludeIds = playerSpells != null ? new HashSet<string>(playerSpells) : null;
-                choices.AddRange(_choiceGenerator.GenerateSpellChoices(numberOfChoices, excludeIds));
-            }
-
-            if (!choices.Any())
-            {
-                FinalizeVictory();
-                return;
-            }
-
-            choiceMenu.Show(choices, FinalizeVictory);
-            _sceneManager.ShowModal(GameSceneState.ChoiceMenu);
-        }
-
         private void TriggerVictoryRestoration()
         {
             if (_battleManager != null)

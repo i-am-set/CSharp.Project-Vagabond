@@ -3,12 +3,14 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
@@ -16,6 +18,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 
 namespace ProjectVagabond.Scenes
@@ -25,14 +29,13 @@ namespace ProjectVagabond.Scenes
     /// </summary>
     public enum GameSceneState
     {
-        Startup, // Added Startup state
+        Startup,
         MainMenu,
         TerminalMap,
         Settings,
         Transition,
         AnimationEditor,
         Battle,
-        ChoiceMenu,
         Split,
         GameOver
     }
@@ -64,7 +67,7 @@ namespace ProjectVagabond.Scenes
         /// <summary>
         /// The input device used to navigate to this scene.
         /// </summary>
-        public InputDevice LastUsedInputForNav { get; set; } = InputDevice.Mouse;
+        public InputDevice LastInputDevice { get; set; } = InputDevice.Mouse;
 
         /// <summary>
         /// Returns true if the scene is currently blocking input, e.g., for a short duration after entering.
@@ -101,7 +104,7 @@ namespace ProjectVagabond.Scenes
             _previousKeyboardState = Keyboard.GetState();
             _inputBlockTimer = INPUT_BLOCK_DURATION;
 
-            if (this.LastUsedInputForNav == InputDevice.Keyboard)
+            if (this.LastInputDevice == InputDevice.Keyboard)
             {
                 keyboardNavigatedLastFrame = true;
             }

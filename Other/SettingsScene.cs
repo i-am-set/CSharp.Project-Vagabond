@@ -82,7 +82,7 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            if (this.LastUsedInputForNav == InputDevice.Keyboard)
+            if (this.LastInputDevice == InputDevice.Keyboard)
             {
                 _selectedIndex = FindNextSelectable(-1, 1);
                 PositionMouseOnFirstSelectable();
