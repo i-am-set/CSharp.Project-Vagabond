@@ -23,7 +23,9 @@ namespace ProjectVagabond.Battle.UI
         public event Action<ConsumableItemData>? OnItemTargetingRequested;
         private bool _isVisible;
         private readonly Global _global;
-        private readonly List<IInventoryMenuItem> _displayItems = new List<IInventoryMenuItem>();
+
+        // Changed from IInventoryMenuItem to InventoryItemButton
+        private readonly List<InventoryItemButton> _displayItems = new List<InventoryItemButton>();
 
         // Buttons
         private readonly Button _backButton;
@@ -226,20 +228,18 @@ namespace ProjectVagabond.Battle.UI
 
             for (int i = 0; i < _displayItems.Count; i++)
             {
-                if (_displayItems[i] is InventoryItemButton button)
+                var button = _displayItems[i];
+                if (i >= startIndex && i < endIndex)
                 {
-                    if (i >= startIndex && i < endIndex)
+                    button.Update(currentMouseState);
+                    if (button.IsHovered)
                     {
-                        button.Update(currentMouseState);
-                        if (button.IsHovered)
-                        {
-                            HoveredButton = button;
-                        }
+                        HoveredButton = button;
                     }
-                    else
-                    {
-                        button.IsHovered = false;
-                    }
+                }
+                else
+                {
+                    button.IsHovered = false;
                 }
             }
 
@@ -373,31 +373,28 @@ namespace ProjectVagabond.Battle.UI
                 for (int i = 0; i < visibleItemCount; i++)
                 {
                     int itemIndex = startIndex + i;
-                    var item = _displayItems[itemIndex];
-                    if (item == null) continue;
+                    var itemButton = _displayItems[itemIndex];
+                    if (itemButton == null) continue;
 
                     int row = i / columns;
                     int col = i % columns;
 
-                    if (item is InventoryItemButton itemButton)
-                    {
-                        var itemBounds = new Rectangle(
-                            gridStartX + col * (itemWidth + columnSpacing),
-                            gridStartY + row * itemHeight,
-                            itemWidth,
-                            itemHeight
-                        );
-                        itemButton.Bounds = itemBounds;
+                    var itemBounds = new Rectangle(
+                        gridStartX + col * (itemWidth + columnSpacing),
+                        gridStartY + row * itemHeight,
+                        itemWidth,
+                        itemHeight
+                    );
+                    itemButton.Bounds = itemBounds;
 
-                        // Defer drawing if hovered to ensure it draws on top
-                        if (itemButton.IsHovered)
-                        {
-                            hoveredItemButton = itemButton;
-                        }
-                        else
-                        {
-                            itemButton.Draw(spriteBatch, secondaryFont, gameTime, transform);
-                        }
+                    // Defer drawing if hovered to ensure it draws on top
+                    if (itemButton.IsHovered)
+                    {
+                        hoveredItemButton = itemButton;
+                    }
+                    else
+                    {
+                        itemButton.Draw(spriteBatch, secondaryFont, gameTime, transform);
                     }
                 }
 

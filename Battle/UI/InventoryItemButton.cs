@@ -7,7 +7,7 @@ using ProjectVagabond.Utils;
 
 namespace ProjectVagabond.Battle.UI
 {
-    public class InventoryItemButton : Button, IInventoryMenuItem
+    public class InventoryItemButton : Button
     {
         private readonly BitmapFont _itemFont;
         public ConsumableItemData Item { get; }

@@ -117,7 +117,6 @@ namespace ProjectVagabond
 
         private SpriteManager _spriteManager;
         private DiceRollingSystem _diceRollingSystem;
-        private BackgroundManager _backgroundManager;
         private LoadingScreen _loadingScreen;
         private DebugConsole _debugConsole;
         private ProgressionManager _progressionManager;
@@ -322,9 +321,6 @@ namespace ProjectVagabond
             _diceRollingSystem = new DiceRollingSystem();
             ServiceLocator.Register<DiceRollingSystem>(_diceRollingSystem);
 
-            _backgroundManager = new BackgroundManager();
-            ServiceLocator.Register<BackgroundManager>(_backgroundManager);
-
             _gameState = new GameState(noiseManager, componentStore, _global, _spriteManager);
             ServiceLocator.Register<GameState>(_gameState);
 
@@ -497,7 +493,6 @@ namespace ProjectVagabond
 
             // Load essential assets
             _spriteManager.LoadEssentialContent();
-            _backgroundManager.LoadContent();
             _backgroundNoiseRenderer.LoadContent(); // Load noise shader
             BattleDataCache.LoadData(Content);
             _progressionManager.LoadSplits();
