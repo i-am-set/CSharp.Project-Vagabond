@@ -119,7 +119,6 @@ namespace ProjectVagabond
         private DiceRollingSystem _diceRollingSystem;
         private BackgroundManager _backgroundManager;
         private LoadingScreen _loadingScreen;
-        private AnimationManager _animationManager;
         private DebugConsole _debugConsole;
         private ProgressionManager _progressionManager;
         private CursorManager _cursorManager;
@@ -308,9 +307,6 @@ namespace ProjectVagabond
 
             _hapticsManager = new HapticsManager();
             ServiceLocator.Register<HapticsManager>(_hapticsManager);
-
-            _animationManager = new AnimationManager();
-            ServiceLocator.Register<AnimationManager>(_animationManager);
 
             _tooltipManager = new TooltipManager();
             ServiceLocator.Register<TooltipManager>(_tooltipManager);
@@ -715,7 +711,6 @@ namespace ProjectVagabond
 
                 _sceneManager.Update(scaledGameTime);
                 _diceRollingSystem.Update(scaledGameTime);
-                _animationManager.Update(scaledGameTime);
                 _cursorManager.Update(gameTime); // Cursor updates in real time
 
                 if (!_gameState.IsPaused)
