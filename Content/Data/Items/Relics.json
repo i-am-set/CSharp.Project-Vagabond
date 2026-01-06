@@ -5,7 +5,6 @@
     "AbilityName": "Green Thumb",
     "Description": "[cnature]Nature[/] spells deal[cpositive] 1.2x[/] damage and holder has element '[cnature]Nature[/]'",
     "Rarity": 1,
-    "LevelRequirement": 2,
     "Effects": {
       "AddResistance": "13",
       "ElementalDamageBonus": "13,20"
@@ -21,7 +20,6 @@
     "AbilityName": "Pyromancer",
     "Description": "[cfire]Fire[/] spells deal[cpositive] 1.2x[/] damage",
     "Rarity": 1,
-    "LevelRequirement": 1,
     "Effects": {
       "ElementalDamageBonus": "2,20"
     },
@@ -33,7 +31,6 @@
     "AbilityName": "Hydromancer",
     "Description": "[cwater]Water[/] spells deal[cpositive] 1.2x[/] damage",
     "Rarity": 1,
-    "LevelRequirement": 1,
     "Effects": {
       "ElementalDamageBonus": "3,20"
     },
@@ -45,7 +42,6 @@
     "AbilityName": "Thaumomancer",
     "Description": "[carcane]Arcane[/] spells deal[cpositive] 1.2x[/] damage",
     "Rarity": 1,
-    "LevelRequirement": 1,
     "Effects": {
       "ElementalDamageBonus": "4,20"
     },
@@ -57,7 +53,6 @@
     "AbilityName": "Geomancer",
     "Description": "[cearth]Earth[/] spells deal[cpositive] 1.2x[/] damage",
     "Rarity": 1,
-    "LevelRequirement": 1,
     "Effects": {
       "ElementalDamageBonus": "5,20"
     },
@@ -69,7 +64,6 @@
     "AbilityName": "Ferromancer",
     "Description": "[cmetal]Metal[/] spells deal[cpositive] 1.2x[/] damage",
     "Rarity": 1,
-    "LevelRequirement": 1,
     "Effects": {
       "ElementalDamageBonus": "6,20"
     },
@@ -81,7 +75,6 @@
     "AbilityName": "Venommancer",
     "Description": "[ctoxic]Toxic[/] spells deal[cpositive] 1.2x[/] damage",
     "Rarity": 1,
-    "LevelRequirement": 1,
     "Effects": {
       "ElementalDamageBonus": "7,20"
     },
@@ -93,7 +86,6 @@
     "AbilityName": "Aeromancer",
     "Description": "[cwind]Wind[/] spells deal[cpositive] 1.2x[/] damage",
     "Rarity": 1,
-    "LevelRequirement": 1,
     "Effects": {
       "ElementalDamageBonus": "8,20"
     },
@@ -105,7 +97,6 @@
     "AbilityName": "Umbramancer",
     "Description": "[cvoid]Void[/] spells deal[cpositive] 1.2x[/] damage",
     "Rarity": 1,
-    "LevelRequirement": 1,
     "Effects": {
       "ElementalDamageBonus": "9,20"
     },
@@ -117,7 +108,6 @@
     "AbilityName": "Photomancer",
     "Description": "[clight]Light[/] spells deal[cpositive] 1.2x[/] damage",
     "Rarity": 1,
-    "LevelRequirement": 1,
     "Effects": {
       "ElementalDamageBonus": "10,20"
     },
@@ -129,7 +119,6 @@
     "AbilityName": "Electromancer",
     "Description": "[celectric]Electric[/] spells deal[cpositive] 1.2x[/] damage",
     "Rarity": 1,
-    "LevelRequirement": 1,
     "Effects": {
       "ElementalDamageBonus": "11,20"
     },
@@ -141,7 +130,6 @@
     "AbilityName": "Cryomancer",
     "Description": "[cice]Ice[/] spells deal[cpositive] 1.2x[/] damage",
     "Rarity": 1,
-    "LevelRequirement": 1,
     "Effects": {
       "ElementalDamageBonus": "12,20"
     },
@@ -153,7 +141,6 @@
     "AbilityName": "Floramancer",
     "Description": "[cnature]Nature[/] spells deal[cpositive] 1.2x[/] damage",
     "Rarity": 1,
-    "LevelRequirement": 1,
     "Effects": {
       "ElementalDamageBonus": "13,20"
     },
@@ -165,7 +152,6 @@
     "AbilityName": "Venomous",
     "Description": "[cpositive]50%[/] chance to inflict [cpoison]poison[/] with [cctm]contact[/]",
     "Rarity": 1,
-    "LevelRequirement": 2,
     "Effects": {
       "ApplyStatusOnHit": "Poison,50,4,true"
     },
@@ -177,7 +163,6 @@
     "AbilityName": "Thick Skin",
     "Description": "Receive [cpositive]0.8x[/] physical damage",
     "Rarity": 0,
-    "LevelRequirement": 0,
     "Effects": {
       "PhysicalDamageReduction": "20"
     },
@@ -192,7 +177,6 @@
     "AbilityName": "Sniper",
     "Description": "Increases [ccrit]crit[/] chance by [cpositive]10%[/]",
     "Rarity": 2,
-    "LevelRequirement": 3,
     "Effects": {
       "FlatCritBonus": "10"
     },
@@ -204,7 +188,6 @@
     "AbilityName": "Regeneration",
     "Description": "Restore [cpositive]5%[/] HP [cctm]at end of turn[/]",
     "Rarity": 2,
-    "LevelRequirement": 3,
     "Effects": {
       "Regen": "5"
     },
@@ -216,7 +199,6 @@
     "AbilityName": "Opportunist",
     "Description": "Targets with [cctm]status effects[/] take [cpositive]2.0x[/] damage",
     "Rarity": 2,
-    "LevelRequirement": 4,
     "Effects": {
       "StatusedTargetDamage": "100"
     },
@@ -228,7 +210,6 @@
     "AbilityName": "Static Charge",
     "Description": "[cpositive]30%[/] chance to stun attackers that [cctm]make contact[/]",
     "Rarity": 1,
-    "LevelRequirement": 2,
     "Effects": {
       "ReactiveStatus": "Stun,30,1,true"
     },
@@ -240,7 +221,6 @@
     "AbilityName": "Adrenaline Rush",
     "Description": "Deal [cpositive]2.0x[] damage [cctm]below 33% HP[/]",
     "Rarity": 2,
-    "LevelRequirement": 4,
     "Effects": {
       "LowHPDamageBonus": "33,100"
     },
@@ -256,7 +236,6 @@
     "AbilityName": "Photosynthesis",
     "Description": "[cimmune]Immune[/] to [clight]Light[/] based moves; heal [cpositive]25%[/] HP instead",
     "Rarity": 2,
-    "LevelRequirement": 3,
     "Effects": {
       "SunBlessedLeaf": "10,25"
     },
@@ -268,7 +247,6 @@
     "AbilityName": "Last Stand",
     "Description": "[cpositive]2.0x[/] power of holder's attacks [cctm]when acting last in the turn[/]",
     "Rarity": 1,
-    "LevelRequirement": 2,
     "Effects": {
       "LastStand": "30"
     },
@@ -284,7 +262,6 @@
     "AbilityName": "Lingering Curse",
     "Description": "Status effects inflicted by holder last [cpositive]+1 extra turn[/]",
     "Rarity": 2,
-    "LevelRequirement": 4,
     "Effects": {
       "StatusDuration": "1"
     },
@@ -296,7 +273,6 @@
     "AbilityName": "Grounding",
     "Description": "[cimmune]Immune[/] to [celectric]Electric[/] based moves",
     "Rarity": 1,
-    "LevelRequirement": 2,
     "Effects": {
       "ElementalImmunity": "11"
     },
@@ -308,7 +284,6 @@
     "AbilityName": "Toxic Aura",
     "Description": "[cpositive]50%[/] chance to [cpoison]poison[/] a random enemy [cctm]at end of turn[/]",
     "Rarity": 2,
-    "LevelRequirement": 3,
     "Effects": {
       "ToxicAura": "50,2"
     },
@@ -320,7 +295,6 @@
     "AbilityName": "Unwavering",
     "Description": "[cimmune]Immune[/] to [cstun]Stun[/]",
     "Rarity": 1,
-    "LevelRequirement": 2,
     "Effects": {
       "StatusImmunity": "Stun"
     },
@@ -332,7 +306,6 @@
     "AbilityName": "Bulwark",
     "Description": "Receive [cpositive]0.6x[/] [ccrit]crit[/] damage",
     "Rarity": 1,
-    "LevelRequirement": 3,
     "Effects": {
       "CritDamageReduction": "40"
     },
@@ -347,7 +320,6 @@
     "AbilityName": "First Blood",
     "Description": "Holder's [cctm]first[/] attack deals [cpositive]1.5x[/] damage",
     "Rarity": 2,
-    "LevelRequirement": 1,
     "Effects": {
       "FirstAttackDamage": "50"
     },
@@ -362,7 +334,6 @@
     "AbilityName": "Intimidate",
     "Description": "Lower all enemy [cstr]Strength[/] stat by [cpositive]-1[/] [cctm]on entering battle[/]",
     "Rarity": 2,
-    "LevelRequirement": 3,
     "Effects": {
       "Intimidate": "Strength,-1"
     },
@@ -374,7 +345,6 @@
     "AbilityName": "Iron Barbs",
     "Description": "Attackers lose [cpositive]12.5%[/] max HP [cctm]on contact[/]",
     "Rarity": 2,
-    "LevelRequirement": 3,
     "Effects": {
       "Thorns": "12.5"
     },
@@ -386,7 +356,6 @@
     "AbilityName": "Full Power",
     "Description": "Deal [cpositive]1.5x[/] damage [cctm]at full HP[/]",
     "Rarity": 1,
-    "LevelRequirement": 2,
     "Effects": {
       "FullHPDamage": "50"
     },
@@ -398,7 +367,6 @@
     "AbilityName": "Keen Eye",
     "Description": "Holder's moves [cpositive]ignore[/] [cdodging]dodging[/] status effect",
     "Rarity": 1,
-    "LevelRequirement": 1,
     "Effects": {
       "IgnoreEvasion": ""
     },
@@ -413,7 +381,6 @@
     "AbilityName": "Nimble Feet",
     "Description": "WIP 50% chance attacks miss while dodging WIP",
     "Rarity": 2,
-    "LevelRequirement": 3,
     "Effects": {
       "GhostlySlippers": "50"
     },
@@ -428,7 +395,6 @@
     "AbilityName": "Glass Cannon",
     "Description": "Deal [cpositive]1.3x[/] damage but Receive [cnegative]1.15x[/] damage",
     "Rarity": 2,
-    "LevelRequirement": 4,
     "Effects": {
       "GlassCannon": "30,15"
     },
@@ -445,7 +411,6 @@
     "AbilityName": "Chain Reaction",
     "Description": "Multi-hit moves gain [cpositive]5%[] damage per hit",
     "Rarity": 2,
-    "LevelRequirement": 3,
     "Effects": {
       "ChainReaction": "5"
     },
@@ -457,7 +422,6 @@
     "AbilityName": "Reckless Abandon",
     "Description": "Contact moves deal [cpositive]1.5x[/] damage but [cnegative]-10%[/] accuracy",
     "Rarity": 1,
-    "LevelRequirement": 2,
     "Effects": {
       "RecklessAbandon": "50,-10"
     },
@@ -472,7 +436,6 @@
     "AbilityName": "Armor Piercer",
     "Description": "Ignore [cpositive]25%[/] of target's [cten]Tenacity[/]",
     "Rarity": 2,
-    "LevelRequirement": 4,
     "Effects": {
       "DefensePenetration": "25"
     },
@@ -484,7 +447,6 @@
     "AbilityName": "Sanguine Thirst",
     "Description": "Heal [cpositive]25%[/] of damage dealt [cctm]with contact moves[/]",
     "Rarity": 2,
-    "LevelRequirement": 3,
     "Effects": {
       "SanguineThirst": "25"
     },
@@ -496,7 +458,6 @@
     "AbilityName": "Vigor",
     "Description": "Receive [cpositive]0.5x[/] damage [cctm]above 75% HP[/]",
     "Rarity": 0,
-    "LevelRequirement": 0,
     "Effects": {
       "Vigor": "75,50"
     },
@@ -511,7 +472,6 @@
     "AbilityName": "Cornered Animal",
     "Description": "[cpositive]1.5x[/] [cagi]Agility[/] [cctm]when below 33% HP[/] [cetc](or 4+ enemies)[/]",
     "Rarity": 1,
-    "LevelRequirement": 2,
     "Effects": {
       "CorneredAnimal": "33,4,50"
     },
@@ -523,7 +483,6 @@
     "AbilityName": "Contagion",
     "Description": "Status effects [cpositive]spread[/] to another enemy for [cpositive]+1[/] turn",
     "Rarity": 3,
-    "LevelRequirement": 5,
     "Effects": {
       "Contagion": "100,1"
     },
@@ -535,7 +494,6 @@
     "AbilityName": "Ambush Predator",
     "Description": "First attack gains [cpositive]+1[/] priority but [cnegative]0.8x[/] damage",
     "Rarity": 1,
-    "LevelRequirement": 2,
     "Effects": {
       "AmbushPredator": "1,-20"
     },
@@ -550,7 +508,6 @@
     "AbilityName": "Sadist",
     "Description": "[cctm]Applying status effects[/] raises [cstr]Strength[/] by [cpositive]+1[/]",
     "Rarity": 2,
-    "LevelRequirement": 3,
     "Effects": {
       "Sadist": ""
     },
@@ -562,7 +519,6 @@
     "AbilityName": "Bloodletter",
     "Description": "[cvoid]Void[/] spells cost [cnegative]5%[/] HP but deal [cpositive]1.5x[/] damage",
     "Rarity": 3,
-    "LevelRequirement": 5,
     "Effects": {
       "Bloodletter": "50"
     },
@@ -574,7 +530,6 @@
     "AbilityName": "Spellweaver",
     "Description": "[cctm]After an Action[/], holder's next Spell deals [cpositive]1.5x[/] damage",
     "Rarity": 2,
-    "LevelRequirement": 3,
     "Effects": {
       "Spellweaver": "50"
     },
@@ -590,7 +545,6 @@
     "AbilityName": "Momentum",
     "Description": "[cctm]After defeating a target[/], next attack deals [cpositive]2.0x[/] damage",
     "Rarity": 3,
-    "LevelRequirement": 4,
     "Effects": {
       "Momentum": "50"
     },
@@ -606,7 +560,6 @@
     "AbilityName": "Escalation",
     "Description": "Gain [cpositive]1.1x[/] damage each round, up to [cpositive]2.0x[/]",
     "Rarity": 3,
-    "LevelRequirement": 5,
     "Effects": {
       "Escalation": "10,100"
     },
@@ -618,7 +571,6 @@
     "AbilityName": "Pain Fuel",
     "Description": "Taking [ccrit]crit[/] damage raises [cstr]Strength[/] and [cint]Intelligence[/] by [cpositive]+1[/]",
     "Rarity": 2,
-    "LevelRequirement": 3,
     "Effects": {
       "PainFuel": ""
     },
@@ -633,7 +585,6 @@
     "AbilityName": "Caustic Blood",
     "Description": "Lifesteal against holder [cpositive]damages[/] the attacker instead of healing",
     "Rarity": 2,
-    "LevelRequirement": 4,
     "Effects": {
       "CausticBlood": ""
     },
@@ -645,7 +596,6 @@
     "AbilityName": "Insight",
     "Description": "Reveals the exact stats of enemies in combat",
     "Rarity": 1,
-    "LevelRequirement": 1,
     "Effects": {
       "Insight": ""
     },

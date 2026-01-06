@@ -51,7 +51,6 @@ namespace ProjectVagabond.Battle
                 Name = archetype.Name,
                 Stats = new CombatantStats
                 {
-                    Level = statsComponent.Level,
                     MaxHP = statsComponent.MaxHP,
                     CurrentHP = statsComponent.CurrentHP,
                     MaxMana = statsComponent.MaxMana,
@@ -88,9 +87,6 @@ namespace ProjectVagabond.Battle
                     combatant.DefaultStrikeMoveID = partyMember.DefaultStrikeMoveID;
 
                     // --- Populate Narration Data from PartyMemberData ---
-                    // We need to look up the original data to get Gender/ProperNoun
-                    // Assuming PartyMember.Name matches PartyMemberData.Name or we can find it via ID if stored.
-                    // Since PartyMember doesn't store ID, we iterate cache.
                     var data = BattleDataCache.PartyMembers.Values.FirstOrDefault(p => p.Name == partyMember.Name);
                     if (data != null)
                     {
@@ -125,15 +121,12 @@ namespace ProjectVagabond.Battle
                 if (!string.IsNullOrEmpty(combatant.EquippedWeaponId) &&
                     BattleDataCache.Weapons.TryGetValue(combatant.EquippedWeaponId, out var weaponData))
                 {
-                    // Only register stat modifiers from the weapon as global passives.
-                    // The move-specific effects are handled by the MoveData generated in BattleCombatant.StrikeMove.
                     if (weaponData.StatModifiers != null && weaponData.StatModifiers.Count > 0)
                     {
                         var weaponStatAbilities = AbilityFactory.CreateAbilitiesFromData(null, weaponData.StatModifiers);
                         combatant.RegisterAbilities(weaponStatAbilities);
                     }
 
-                    // Add to ActiveRelics for UI tooltip purposes
                     var weaponAsRelic = new RelicData
                     {
                         RelicID = weaponData.WeaponID,
@@ -163,7 +156,6 @@ namespace ProjectVagabond.Battle
                 {
                     if (BattleDataCache.Relics.TryGetValue(combatant.EquippedRelicId, out var relicData))
                     {
-                        // Register Relic Abilities
                         var relicAbilities = AbilityFactory.CreateAbilitiesFromData(relicData.Effects, relicData.StatModifiers);
                         combatant.RegisterAbilities(relicAbilities);
 
@@ -184,7 +176,6 @@ namespace ProjectVagabond.Battle
             {
                 // --- ENEMY LOGIC ---
 
-                // Populate Narration Data from Profile
                 var profile = archetype.TemplateComponents.OfType<EnemyStatProfileComponent>().FirstOrDefault();
                 if (profile != null)
                 {
@@ -192,17 +183,13 @@ namespace ProjectVagabond.Battle
                     combatant.IsProperNoun = profile.IsProperNoun;
                 }
 
-                // 1. Calculate "Power Score" based on raw stats
                 float powerScore = (combatant.Stats.MaxHP * 0.2f) +
                                    (combatant.Stats.Strength * 1.0f) +
                                    (combatant.Stats.Intelligence * 1.0f) +
                                    (combatant.Stats.Tenacity * 1.0f) +
                                    (combatant.Stats.Agility * 1.0f);
 
-                // 2. Apply Economy Logic
                 float calculatedValue = global.Economy_BaseDrop + (powerScore * global.Economy_GlobalScalar);
-
-                // 3. Apply Random Variance (+/- 20%)
                 float variance = (float)(_random.NextDouble() * (global.Economy_Variance * 2) - global.Economy_Variance);
                 float finalValue = calculatedValue * (1.0f + variance);
 
@@ -218,7 +205,6 @@ namespace ProjectVagabond.Battle
                 }
                 combatant.SetStaticMoves(staticMoves);
 
-                // Load passive abilities from component (Enemies)
                 var abilitiesComponent = componentStore.GetComponent<PassiveAbilitiesComponent>(entityId);
                 if (abilitiesComponent != null)
                 {
@@ -226,10 +212,8 @@ namespace ProjectVagabond.Battle
                     {
                         if (BattleDataCache.Relics.TryGetValue(relicId, out var relicData))
                         {
-                            // Register Enemy Abilities
                             var enemyAbilities = AbilityFactory.CreateAbilitiesFromData(relicData.Effects, relicData.StatModifiers);
                             combatant.RegisterAbilities(enemyAbilities);
-
                             combatant.ActiveRelics.Add(relicData);
                         }
                     }

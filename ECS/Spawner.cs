@@ -99,7 +99,6 @@ namespace ProjectVagabond
         {
             var liveStats = new CombatantStatsComponent();
 
-            liveStats.Level = profile.Level;
             liveStats.MaxHP = _random.Next(profile.MinHP, profile.MaxHP + 1);
             liveStats.CurrentHP = liveStats.MaxHP;
             liveStats.MaxMana = profile.MaxMana;

@@ -446,7 +446,6 @@ namespace ProjectVagabond.Scenes
                 IsPlayerControlled = true,
                 Stats = new CombatantStats
                 {
-                    Level = member.Level,
                     MaxHP = member.MaxHP,
                     CurrentHP = member.CurrentHP,
                     MaxMana = member.MaxMana,
@@ -979,19 +978,18 @@ namespace ProjectVagabond.Scenes
 
             var choices = new List<object>();
             const int numberOfChoices = 3;
-            int gameStage = 1;
 
             if (SplitMapScene.WasMajorBattle)
             {
                 var playerAbilities = _componentStore.GetComponent<PassiveAbilitiesComponent>(_gameState.PlayerEntityId)?.RelicIDs;
                 var excludeIds = playerAbilities != null ? new HashSet<string>(playerAbilities) : null;
-                choices.AddRange(_choiceGenerator.GenerateAbilityChoices(gameStage, numberOfChoices, excludeIds));
+                choices.AddRange(_choiceGenerator.GenerateAbilityChoices(numberOfChoices, excludeIds));
             }
             else
             {
                 var playerSpells = _gameState.PlayerState?.Spells.Where(s => s != null).Select(p => p.MoveID);
                 var excludeIds = playerSpells != null ? new HashSet<string>(playerSpells) : null;
-                choices.AddRange(_choiceGenerator.GenerateSpellChoices(gameStage, numberOfChoices, excludeIds));
+                choices.AddRange(_choiceGenerator.GenerateSpellChoices(numberOfChoices, excludeIds));
             }
 
             if (!choices.Any())

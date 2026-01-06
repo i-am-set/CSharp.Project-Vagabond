@@ -233,7 +233,6 @@ namespace ProjectVagabond
         // --- DYNAMIC DROP TUNING ---
         public float Economy_GlobalScalar { get; set; } = 1.0f;
         public int Economy_BaseDrop { get; set; } = 10;
-        public float Economy_PerLevel { get; set; } = 5.0f;
         public float Economy_Variance { get; set; } = 0.4f;
 
         // --- STATUS EFFECT TUNING ---

@@ -34,7 +34,6 @@ namespace ProjectVagabond.Battle
             var member = new PartyMember
             {
                 Name = data.Name,
-                Level = 1,
                 MaxHP = data.MaxHP,
                 CurrentHP = data.MaxHP,
                 MaxMana = data.MaxMana,

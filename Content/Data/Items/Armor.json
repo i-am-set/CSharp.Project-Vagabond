@@ -5,7 +5,6 @@
     "AbilityName": null,
     "Description": "[cetc]A simple tunic made of cured hide[/]",
     "Rarity": 0,
-    "LevelRequirement": 1,
     "StatModifiers": {
       "Tenacity": 3,
       "Agility": 1
@@ -18,7 +17,6 @@
     "AbilityName": "Heavy Plating",
     "Description": "[cetc]Iron sheets riveted together[/]",
     "Rarity": 1,
-    "LevelRequirement": 3,
     "Effects": {
       "PhysicalDamageReduction": "5"
     },
@@ -34,7 +32,6 @@
     "AbilityName": "Mana Well",
     "Description": "[cetc]Silk robes enchanted to channel mage[/]",
     "Rarity": 2,
-    "LevelRequirement": 4,
     "Effects": {
       "Regen": "2"
     },
@@ -50,7 +47,6 @@
     "AbilityName": "Savage Fury",
     "Description": "[cetc]A cloak made from the hide of a great beast[/]",
     "Rarity": 2,
-    "LevelRequirement": 5,
     "Effects": {
       "LowHPDamageBonus": "50,20"
     },

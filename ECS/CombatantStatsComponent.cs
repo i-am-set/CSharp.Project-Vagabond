@@ -9,7 +9,6 @@ namespace ProjectVagabond.Battle
     /// </summary>
     public class CombatantStatsComponent : IComponent, ICloneableComponent
     {
-        public int Level { get; set; }
         public int MaxHP { get; set; }
         public int CurrentHP { get; set; }
         public int MaxMana { get; set; }

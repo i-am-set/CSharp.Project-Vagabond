@@ -1,5 +1,10 @@
-﻿using ProjectVagabond.Battle;
+﻿using Microsoft.Xna.Framework.Input;
+using ProjectVagabond;
+using ProjectVagabond.Battle;
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 
 namespace ProjectVagabond.Battle
 {
@@ -8,11 +13,6 @@ namespace ProjectVagabond.Battle
     /// </summary>
     public class CombatantStats
     {
-        /// <summary>
-        /// The primary scalar for a combatant's power, directly influencing damage output.
-        /// </summary>
-        public int Level { get; set; }
-
         /// <summary>
         /// A combatant's maximum vitality.
         /// </summary>

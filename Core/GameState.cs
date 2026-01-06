@@ -129,7 +129,6 @@ namespace ProjectVagabond
             // 5. Sync Entity Components with Oakley's Stats
             var liveStats = new CombatantStatsComponent
             {
-                Level = oakley.Level,
                 MaxHP = oakley.MaxHP,
                 CurrentHP = oakley.MaxHP,
                 MaxMana = oakley.MaxMana,

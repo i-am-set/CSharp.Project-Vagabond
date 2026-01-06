@@ -1,5 +1,10 @@
-﻿using ProjectVagabond.Battle;
+﻿using Microsoft.Xna.Framework.Input;
+using ProjectVagabond;
+using ProjectVagabond.Battle;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 
 namespace ProjectVagabond.Battle
 {
@@ -9,8 +14,6 @@ namespace ProjectVagabond.Battle
     /// </summary>
     public class EnemyStatProfileComponent : IComponent, ICloneableComponent
     {
-        public int Level { get; set; }
-
         // Narration Data
         public Gender Gender { get; set; } = Gender.Thing; // Default to "It" for monsters
         public bool IsProperNoun { get; set; } = false; // Default to false for generic enemies (e.g. "The Spider")

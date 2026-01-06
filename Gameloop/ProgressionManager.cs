@@ -155,11 +155,11 @@ namespace ProjectVagabond.Progression
             }
 
             var archetypeManager = ServiceLocator.Get<ArchetypeManager>();
-            var encountersWithLevels = new List<(List<string> Encounter, int TotalLevel)>();
+            var encountersWithPower = new List<(List<string> Encounter, int PowerScore)>();
 
             foreach (var encounter in splitData.PossibleBattles)
             {
-                int totalLevel = 0;
+                int powerScore = 0;
                 foreach (var archetypeId in encounter)
                 {
                     var template = archetypeManager.GetArchetypeTemplate(archetypeId);
@@ -168,14 +168,16 @@ namespace ProjectVagabond.Progression
                         var statProfile = template.TemplateComponents.OfType<EnemyStatProfileComponent>().FirstOrDefault();
                         if (statProfile != null)
                         {
-                            totalLevel += statProfile.Level;
+                            // Calculate a rough power score based on stats since Level is gone.
+                            // HP is worth 1, Stats are worth 10.
+                            powerScore += statProfile.MinHP + (statProfile.MinStrength + statProfile.MinIntelligence + statProfile.MinTenacity + statProfile.MinAgility) * 10;
                         }
                     }
                 }
-                encountersWithLevels.Add((encounter, totalLevel));
+                encountersWithPower.Add((encounter, powerScore));
             }
 
-            var sortedEncounters = encountersWithLevels.OrderBy(e => e.TotalLevel).ToList();
+            var sortedEncounters = encountersWithPower.OrderBy(e => e.PowerScore).ToList();
 
             int totalCount = sortedEncounters.Count;
             if (totalCount == 0) return;

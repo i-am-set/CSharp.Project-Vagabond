@@ -47,7 +47,6 @@ namespace ProjectVagabond
         public Dictionary<string, int> MiscItems { get; set; } = new Dictionary<string, int>();
 
         // --- LEGACY ACCESSORS (Redirect to Leader for backward compatibility) ---
-        public int Level { get => Leader?.Level ?? 1; set { if (Leader != null) Leader.Level = value; } }
         public int MaxHP { get => Leader?.MaxHP ?? 100; set { if (Leader != null) Leader.MaxHP = value; } }
         public int CurrentHP { get => Leader?.CurrentHP ?? 100; set { if (Leader != null) Leader.CurrentHP = value; } }
         public int MaxMana { get => Leader?.MaxMana ?? 100; set { if (Leader != null) Leader.MaxMana = value; } }
@@ -122,7 +121,6 @@ namespace ProjectVagabond
                 case "agility": return member.Agility;
                 case "maxhp": return member.MaxHP;
                 case "maxmana": return member.MaxMana;
-                case "level": return member.Level;
                 default: return 0;
             }
         }

@@ -23,7 +23,6 @@ namespace ProjectVagabond
         public string Name { get; set; }
 
         // Stats
-        public int Level { get; set; }
         public int MaxHP { get; set; }
         public int CurrentHP { get; set; }
         public int MaxMana { get; set; }

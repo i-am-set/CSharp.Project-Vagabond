@@ -1,8 +1,11 @@
 ﻿#nullable enable
+using Microsoft.Xna.Framework.Input;
+using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace ProjectVagabond.Battle
@@ -88,11 +91,6 @@ namespace ProjectVagabond.Battle
         /// The rarity level of the move. -1 for basic actions, 0 (Common) to 5 (Legendary) for spells/techniques.
         /// </summary>
         public int Rarity { get; set; } = -1;
-
-        /// <summary>
-        /// The game stage at which this move becomes available as a potential reward.
-        /// </summary>
-        public int LevelRequirement { get; set; } = 0;
 
         /// <summary>
         /// A list of element IDs associated with this move's attack type.

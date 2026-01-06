@@ -25,7 +25,6 @@ namespace ProjectVagabond.Battle
         public string WeaponName { get; set; }
         public string Description { get; set; }
         public int Rarity { get; set; } = 0;
-        public int LevelRequirement { get; set; } = 0;
 
         // --- Embedded Move Data ---
         public string MoveName { get; set; }

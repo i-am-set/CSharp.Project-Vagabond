@@ -33,10 +33,9 @@ namespace ProjectVagabond.Utils
         private const float SUBSEQUENT_TAG_BONUS_FACTOR = 0.5f;
         private const float MAX_TAG_BONUS = 380f;
 
-        public List<MoveData> GenerateSpellChoices(int gameStage, int count, HashSet<string>? excludeIds = null)
+        public List<MoveData> GenerateSpellChoices(int count, HashSet<string>? excludeIds = null)
         {
             return GenerateChoices(
-                gameStage,
                 count,
                 BattleDataCache.Moves.Values.Where(m => m.MoveType == MoveType.Spell),
                 item => item.Rarity,
@@ -47,10 +46,9 @@ namespace ProjectVagabond.Utils
             );
         }
 
-        public List<RelicData> GenerateAbilityChoices(int gameStage, int count, HashSet<string>? excludeIds = null)
+        public List<RelicData> GenerateAbilityChoices(int count, HashSet<string>? excludeIds = null)
         {
             return GenerateChoices(
-                gameStage,
                 count,
                 BattleDataCache.Relics.Values,
                 item => item.Rarity,
@@ -62,7 +60,6 @@ namespace ProjectVagabond.Utils
         }
 
         private List<T> GenerateChoices<T>(
-            int gameStage,
             int count,
             IEnumerable<T> allItems,
             Func<T, int> getRarity,
@@ -90,13 +87,7 @@ namespace ProjectVagabond.Utils
                 log.AppendLine("  - No relevant tags found in current build.");
             }
 
-
-            var availableItemsQuery = allItems.Where(item =>
-            {
-                var prop = typeof(T).GetProperty("LevelRequirement");
-                int levelReq = (int)(prop?.GetValue(item) ?? 0);
-                return levelReq <= gameStage;
-            });
+            var availableItemsQuery = allItems;
 
             if (excludeIds != null)
             {
