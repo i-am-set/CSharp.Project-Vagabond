@@ -35,6 +35,7 @@ namespace ProjectVagabond.UI
 
         // Animation State
         private float _waveTimer = 0f;
+        private const TextEffectType ActiveEffect = TextEffectType.LeftAlignedSmallWave;
 
         // --- Visual Tuning Constants ---
         private const float VALUE_AREA_X_OFFSET = 155f;
@@ -197,10 +198,15 @@ namespace ProjectVagabond.UI
             if (isSelected && IsEnabled)
             {
                 _waveTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-                float duration = TextAnimator.GetSmallWaveDuration(labelText.Length);
-                if (_waveTimer > duration + 0.1f) _waveTimer = 0f;
 
-                TextAnimator.DrawTextWithEffect(spriteBatch, labelFont, labelText, animatedPosition, labelColor, TextEffectType.LeftAlignedSmallWave, _waveTimer, Vector2.One);
+                // Only reset timer if it's a one-shot effect like SmallWave
+                if (TextAnimator.IsOneShotEffect(ActiveEffect))
+                {
+                    float duration = TextAnimator.GetSmallWaveDuration(labelText.Length);
+                    if (_waveTimer > duration + 0.1f) _waveTimer = 0f;
+                }
+
+                TextAnimator.DrawTextWithEffect(spriteBatch, labelFont, labelText, animatedPosition, labelColor, ActiveEffect, _waveTimer, Vector2.One);
             }
             else
             {

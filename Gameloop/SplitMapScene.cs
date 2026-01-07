@@ -1429,7 +1429,7 @@ namespace ProjectVagabond.Scenes
                         if (_nodeTextWaveTimer > duration + 0.1f) _nodeTextWaveTimer = 0f;
 
                         // Use SmallWave effect
-                        TextAnimator.DrawTextWithEffect(spriteBatch, secondaryFont, nodeText, textPosition, _global.Palette_Yellow, TextEffectType.SmallWave, _nodeTextWaveTimer);
+                        TextAnimator.DrawTextWithEffect(spriteBatch, secondaryFont, nodeText, textPosition, _global.Palette_Yellow, TextEffectType.Wave, _nodeTextWaveTimer);
                     }
                 }
             }

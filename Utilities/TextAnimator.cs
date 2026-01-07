@@ -1,8 +1,14 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Battle.UI;
+using ProjectVagabond.UI;
+using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace ProjectVagabond.UI
 {
@@ -45,6 +51,7 @@ namespace ProjectVagabond.UI
         public Vector2 Scale;
         public bool UseOutline;
         public bool UseSquareOutline;
+        public float EaseInDuration; // New: Duration to ramp up intensity
 
         public static TextDrawOptions Default(Vector2 position, Color color)
         {
@@ -57,7 +64,8 @@ namespace ProjectVagabond.UI
                 Time = 0f,
                 UseOutline = false,
                 OutlineColor = Color.Black,
-                UseSquareOutline = false
+                UseSquareOutline = false,
+                EaseInDuration = TextAnimationSettings.DefaultEaseInDuration
             };
         }
     }
@@ -67,6 +75,9 @@ namespace ProjectVagabond.UI
     /// </summary>
     public static class TextAnimationSettings
     {
+        // Global Settings
+        public static float DefaultEaseInDuration = 0.5f;
+
         // Wave
         public static float WaveSpeed = 5f;
         public static float WaveFrequency = 0.5f;
@@ -142,6 +153,17 @@ namespace ProjectVagabond.UI
         }
 
         /// <summary>
+        /// Determines if an effect is a "one-shot" animation that requires a timer reset loop (like SmallWave),
+        /// or a continuous animation that runs on infinite time (like Drift, Wave, Shake).
+        /// </summary>
+        public static bool IsOneShotEffect(TextEffectType effect)
+        {
+            return effect == TextEffectType.SmallWave ||
+                   effect == TextEffectType.LeftAlignedSmallWave ||
+                   effect == TextEffectType.RightAlignedSmallWave;
+        }
+
+        /// <summary>
         /// Calculates the transform for a single character based on the active text effect.
         /// </summary>
         public static (Vector2 Offset, Vector2 Scale, float Rotation, Color Color) GetTextEffectTransform(
@@ -149,7 +171,8 @@ namespace ProjectVagabond.UI
             float time,
             int charIndex,
             Color baseColor,
-            int textLength = 0) // Added optional textLength parameter
+            int textLength = 0,
+            float? easeInDuration = null)
         {
             Vector2 offset = Vector2.Zero;
             Vector2 scale = Vector2.One;
@@ -174,9 +197,6 @@ namespace ProjectVagabond.UI
                 case TextEffectType.RightAlignedSmallWave:
                     if (textLength > 0)
                     {
-                        // Invert the index logic: Start from the end (textLength - 1)
-                        // Delay = (Length - 1 - Index) * Freq
-                        // So Index = Length-1 has 0 delay. Index = 0 has max delay.
                         float delay = (textLength - 1 - charIndex) * TextAnimationSettings.SmallWaveFrequency;
                         float rightWaveArg = time * TextAnimationSettings.SmallWaveSpeed - delay;
 
@@ -187,7 +207,6 @@ namespace ProjectVagabond.UI
                     }
                     else
                     {
-                        // Fallback to LeftAligned if length is unknown
                         float fallbackArg = time * TextAnimationSettings.SmallWaveSpeed - charIndex * TextAnimationSettings.SmallWaveFrequency;
                         if (fallbackArg > 0 && fallbackArg < MathHelper.Pi)
                         {
@@ -284,6 +303,20 @@ namespace ProjectVagabond.UI
                     break;
             }
 
+            // --- Apply Intensity Ramp (Ease-In) ---
+            // Only apply easing to continuous effects. One-shot effects (SmallWave) handle their own timing/shape.
+            float duration = easeInDuration ?? TextAnimationSettings.DefaultEaseInDuration;
+            if (!IsOneShotEffect(effect) && duration > 0f)
+            {
+                float intensity = Math.Clamp(time / duration, 0f, 1f);
+                intensity = Easing.EaseOutCubic(intensity); // Smooth ramp up
+
+                offset *= intensity;
+                rotation *= intensity;
+                scale = Vector2.Lerp(Vector2.One, scale, intensity);
+                color = Color.Lerp(baseColor, color, intensity);
+            }
+
             return (offset, scale, rotation, color);
         }
 
@@ -307,16 +340,17 @@ namespace ProjectVagabond.UI
 
         // --- Public Draw Methods ---
 
-        public static void DrawTextWithEffect(SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color color, TextEffectType effect, float time, Vector2? baseScale = null)
+        public static void DrawTextWithEffect(SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color color, TextEffectType effect, float time, Vector2? baseScale = null, float? easeInDuration = null)
         {
             var opts = TextDrawOptions.Default(position, color);
             opts.Effect = effect;
             opts.Time = time;
             opts.Scale = baseScale ?? Vector2.One;
+            if (easeInDuration.HasValue) opts.EaseInDuration = easeInDuration.Value;
             DrawTextCore(spriteBatch, font, text, opts);
         }
 
-        public static void DrawTextWithEffectOutlined(SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color color, Color outlineColor, TextEffectType effect, float time, Vector2? baseScale = null)
+        public static void DrawTextWithEffectOutlined(SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color color, Color outlineColor, TextEffectType effect, float time, Vector2? baseScale = null, float? easeInDuration = null)
         {
             var opts = TextDrawOptions.Default(position, color);
             opts.Effect = effect;
@@ -325,10 +359,11 @@ namespace ProjectVagabond.UI
             opts.UseOutline = true;
             opts.OutlineColor = outlineColor;
             opts.UseSquareOutline = false;
+            if (easeInDuration.HasValue) opts.EaseInDuration = easeInDuration.Value;
             DrawTextCore(spriteBatch, font, text, opts);
         }
 
-        public static void DrawTextWithEffectSquareOutlined(SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color color, Color outlineColor, TextEffectType effect, float time, Vector2? baseScale = null)
+        public static void DrawTextWithEffectSquareOutlined(SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color color, Color outlineColor, TextEffectType effect, float time, Vector2? baseScale = null, float? easeInDuration = null)
         {
             var opts = TextDrawOptions.Default(position, color);
             opts.Effect = effect;
@@ -337,6 +372,7 @@ namespace ProjectVagabond.UI
             opts.UseOutline = true;
             opts.OutlineColor = outlineColor;
             opts.UseSquareOutline = true;
+            if (easeInDuration.HasValue) opts.EaseInDuration = easeInDuration.Value;
             DrawTextCore(spriteBatch, font, text, opts);
         }
 
@@ -383,8 +419,15 @@ namespace ProjectVagabond.UI
                 // Apply layout scaling and centering
                 Vector2 scaledPos = options.Position + (relativePos * layoutScale) + centeringOffset;
 
-                // Get animation transform, passing text length
-                var (animOffset, effectScale, rotation, finalColor) = GetTextEffectTransform(options.Effect, options.Time, charIndex, options.Color, text.Length);
+                // Get animation transform, passing text length and easeInDuration
+                var (animOffset, effectScale, rotation, finalColor) = GetTextEffectTransform(
+                    options.Effect,
+                    options.Time,
+                    charIndex,
+                    options.Color,
+                    text.Length,
+                    options.EaseInDuration
+                );
 
                 // Get the texture region for the glyph
                 var character = glyph.Character;
@@ -397,12 +440,9 @@ namespace ProjectVagabond.UI
                         Vector2 origin = new Vector2(region.Width / 2f, region.Height / 2f);
 
                         // Calculate the draw position (Center of the glyph)
-                        // glyph.Position is Top-Left. We want Center.
-                        // So Base Center = scaledPos + origin.
                         Vector2 targetCenter = scaledPos + origin + animOffset;
 
                         // Snap the center position to integer coordinates to prevent jitter
-                        // We snap the Top-Left equivalent to ensure the texture pixels align with screen pixels
                         Vector2 snappedTopLeft = new Vector2(MathF.Round(targetCenter.X - origin.X), MathF.Round(targetCenter.Y - origin.Y));
                         Vector2 finalDrawPos = snappedTopLeft + origin;
 

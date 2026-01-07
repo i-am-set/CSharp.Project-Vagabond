@@ -295,8 +295,14 @@ namespace ProjectVagabond.Battle.UI
                     if (EnableTextWave && isActivated)
                     {
                         _waveTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-                        float duration = TextAnimator.GetSmallWaveDuration(Text.Length);
-                        if (_waveTimer > duration + 0.1f) _waveTimer = 0f;
+
+                        // Only reset timer if it's a one-shot effect like SmallWave
+                        if (TextAnimator.IsOneShotEffect(WaveEffectType))
+                        {
+                            float duration = TextAnimator.GetSmallWaveDuration(Text.Length);
+                            if (_waveTimer > duration + 0.1f) _waveTimer = 0f;
+                        }
+                        // Else: Continuous effects just keep growing _waveTimer
 
                         // Use TextAnimator for the wave effect, passing the combined scale
                         TextAnimator.DrawTextWithEffect(spriteBatch, _moveFont, this.Text, textPosition, textColor * contentAlpha, WaveEffectType, _waveTimer, new Vector2(finalScaleX, finalScaleY));

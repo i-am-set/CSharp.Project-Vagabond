@@ -230,11 +230,17 @@ namespace ProjectVagabond.UI
                 if (EnableTextWave && isActivated)
                 {
                     _waveTimer += deltaTime;
-                    float duration = TextAnimator.GetSmallWaveDuration(Text.Length);
-                    if (_waveTimer > duration + 0.1f) _waveTimer = 0f;
+
+                    // Only reset timer if it's a one-shot effect like SmallWave
+                    if (TextAnimator.IsOneShotEffect(WaveEffectType))
+                    {
+                        float duration = TextAnimator.GetSmallWaveDuration(Text.Length);
+                        if (_waveTimer > duration + 0.1f) _waveTimer = 0f;
+                    }
+                    // Else: Continuous effects just keep growing _waveTimer
 
                     // Use the new SmallWave effect via TextUtils, passing Vector2.One as TextOverImageButton doesn't scale text on hover
-                    TextAnimator.DrawTextWithEffect(spriteBatch, font, Text, textPosition, textColor, TextEffectType.SmallWave, _waveTimer, Vector2.One);
+                    TextAnimator.DrawTextWithEffect(spriteBatch, font, Text, textPosition, textColor, WaveEffectType, _waveTimer, Vector2.One);
                 }
                 else
                 {
