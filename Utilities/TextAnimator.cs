@@ -1,7 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 
@@ -73,7 +72,7 @@ namespace ProjectVagabond.UI
         public static float WaveAmplitude = 1.0f;
 
         // Small Wave
-        public static float SmallWaveSpeed = 15f;
+        public static float SmallWaveSpeed = 10f;
         public static float SmallWaveFrequency = 0.5f;
         public static float SmallWaveAmplitude = 2.0f;
 
@@ -131,45 +130,9 @@ namespace ProjectVagabond.UI
     /// </summary>
     public static class TextAnimator
     {
-        // --- OPTIMIZATION: Caches ---
-        private static readonly string[] _charStringCache;
-        private static readonly Dictionary<BitmapFont, Vector2[]> _fontOriginCache = new Dictionary<BitmapFont, Vector2[]>();
-        private const int CACHE_SIZE = 256;
-
-        static TextAnimator()
-        {
-            _charStringCache = new string[CACHE_SIZE];
-            for (int i = 0; i < CACHE_SIZE; i++)
-            {
-                _charStringCache[i] = ((char)i).ToString();
-            }
-        }
-
         public static void ClearFontCache()
         {
-            _fontOriginCache.Clear();
-        }
-
-        private static Vector2 GetCachedOrigin(BitmapFont font, char c)
-        {
-            if (c >= CACHE_SIZE)
-            {
-                var size = font.MeasureString(c.ToString());
-                return new Vector2(size.Width / 2f, font.LineHeight / 2f);
-            }
-
-            if (!_fontOriginCache.TryGetValue(font, out var origins))
-            {
-                origins = new Vector2[CACHE_SIZE];
-                for (int i = 0; i < CACHE_SIZE; i++)
-                {
-                    var size = font.MeasureString(_charStringCache[i]);
-                    origins[i] = new Vector2(size.Width / 2f, font.LineHeight / 2f);
-                }
-                _fontOriginCache[font] = origins;
-            }
-
-            return origins[c];
+            // No-op, caches removed
         }
 
         public static float GetSmallWaveDuration(int textLength)
@@ -354,6 +317,9 @@ namespace ProjectVagabond.UI
         {
             if (string.IsNullOrEmpty(text)) return;
 
+            // Round the base position to prevent sub-pixel jitter
+            options.Position = new Vector2(MathF.Round(options.Position.X), MathF.Round(options.Position.Y));
+
             Vector2 layoutScale = options.Scale;
             var shadowColor = new Color(options.Color.R / 4, options.Color.G / 4, options.Color.B / 4, options.Color.A);
 
@@ -362,11 +328,11 @@ namespace ProjectVagabond.UI
             {
                 Vector2 totalSize = font.MeasureString(text);
                 centeringOffset = (totalSize * (Vector2.One - layoutScale)) / 2f;
+                centeringOffset = new Vector2(MathF.Round(centeringOffset.X), MathF.Round(centeringOffset.Y));
             }
 
             var glyphs = font.GetGlyphs(text, options.Position);
             int charIndex = 0;
-            float lineCenterY = options.Position.Y + (font.LineHeight / 2f);
 
             foreach (var glyph in glyphs)
             {
@@ -380,45 +346,70 @@ namespace ProjectVagabond.UI
                     continue;
                 }
 
-                string charStr = (c < CACHE_SIZE) ? _charStringCache[c] : c.ToString();
-
+                // Calculate relative position from the start of the string
                 Vector2 relativePos = glyph.Position - options.Position;
+
+                // Round relative position to lock character spacing to the pixel grid
+                relativePos = new Vector2(MathF.Round(relativePos.X), MathF.Round(relativePos.Y));
+
+                // Apply layout scaling and centering
                 Vector2 scaledPos = options.Position + (relativePos * layoutScale) + centeringOffset;
 
+                // Get animation transform
                 var (animOffset, effectScale, rotation, finalColor) = GetTextEffectTransform(options.Effect, options.Time, charIndex, options.Color);
 
-                Vector2 origin = GetCachedOrigin(font, c);
-
-                Vector2 targetCenterPos = new Vector2(scaledPos.X + origin.X, lineCenterY) + animOffset;
-                Vector2 snappedTopLeft = new Vector2(MathF.Round(targetCenterPos.X - origin.X), MathF.Round(targetCenterPos.Y - origin.Y));
-                Vector2 finalDrawPos = snappedTopLeft + origin;
-                Vector2 finalScale = layoutScale * effectScale;
-
-                if (options.UseOutline)
+                // Get the texture region for the glyph
+                var character = glyph.Character;
+                if (character != null)
                 {
-                    if (options.UseSquareOutline)
+                    var region = character.TextureRegion;
+                    if (region != null)
                     {
-                        DrawGlyph(spriteBatch, font, charStr, finalDrawPos + new Vector2(1, 1), options.OutlineColor, rotation, origin, finalScale);
-                        DrawGlyph(spriteBatch, font, charStr, finalDrawPos + new Vector2(1, -1), options.OutlineColor, rotation, origin, finalScale);
-                        DrawGlyph(spriteBatch, font, charStr, finalDrawPos + new Vector2(-1, 1), options.OutlineColor, rotation, origin, finalScale);
-                        DrawGlyph(spriteBatch, font, charStr, finalDrawPos + new Vector2(-1, -1), options.OutlineColor, rotation, origin, finalScale);
-                    }
-                    DrawGlyph(spriteBatch, font, charStr, finalDrawPos + new Vector2(1, 0), options.OutlineColor, rotation, origin, finalScale);
-                    DrawGlyph(spriteBatch, font, charStr, finalDrawPos + new Vector2(-1, 0), options.OutlineColor, rotation, origin, finalScale);
-                    DrawGlyph(spriteBatch, font, charStr, finalDrawPos + new Vector2(0, 1), options.OutlineColor, rotation, origin, finalScale);
-                    DrawGlyph(spriteBatch, font, charStr, finalDrawPos + new Vector2(0, -1), options.OutlineColor, rotation, origin, finalScale);
-                }
+                        // Calculate origin as the center of the glyph texture
+                        Vector2 origin = new Vector2(region.Width / 2f, region.Height / 2f);
 
-                DrawGlyph(spriteBatch, font, charStr, finalDrawPos + new Vector2(1, 0), shadowColor, rotation, origin, finalScale);
-                DrawGlyph(spriteBatch, font, charStr, finalDrawPos, finalColor, rotation, origin, finalScale);
+                        // Calculate the draw position (Center of the glyph)
+                        // glyph.Position is Top-Left. We want Center.
+                        // So Base Center = scaledPos + origin.
+                        Vector2 targetCenter = scaledPos + origin + animOffset;
+
+                        // Snap the center position to integer coordinates to prevent jitter
+                        // We snap the Top-Left equivalent to ensure the texture pixels align with screen pixels
+                        Vector2 snappedTopLeft = new Vector2(MathF.Round(targetCenter.X - origin.X), MathF.Round(targetCenter.Y - origin.Y));
+                        Vector2 finalDrawPos = snappedTopLeft + origin;
+
+                        Vector2 finalScale = layoutScale * effectScale;
+
+                        if (options.UseOutline)
+                        {
+                            if (options.UseSquareOutline)
+                            {
+                                DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(1, 1), options.OutlineColor, rotation, origin, finalScale);
+                                DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(1, -1), options.OutlineColor, rotation, origin, finalScale);
+                                DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(-1, 1), options.OutlineColor, rotation, origin, finalScale);
+                                DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(-1, -1), options.OutlineColor, rotation, origin, finalScale);
+                            }
+                            DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(1, 0), options.OutlineColor, rotation, origin, finalScale);
+                            DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(-1, 0), options.OutlineColor, rotation, origin, finalScale);
+                            DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(0, 1), options.OutlineColor, rotation, origin, finalScale);
+                            DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(0, -1), options.OutlineColor, rotation, origin, finalScale);
+                        }
+
+                        // Shadow
+                        DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(1, 0), shadowColor, rotation, origin, finalScale);
+
+                        // Main Character
+                        DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos, finalColor, rotation, origin, finalScale);
+                    }
+                }
 
                 charIndex++;
             }
         }
 
-        private static void DrawGlyph(SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color color, float rotation, Vector2 origin, Vector2 scale)
+        private static void DrawGlyph(SpriteBatch spriteBatch, Texture2D texture, Rectangle sourceRect, Vector2 position, Color color, float rotation, Vector2 origin, Vector2 scale)
         {
-            spriteBatch.DrawString(font, text, position, color, rotation, origin, scale, SpriteEffects.None, 0f);
+            spriteBatch.Draw(texture, position, sourceRect, color, rotation, origin, scale, SpriteEffects.None, 0f);
         }
     }
 }

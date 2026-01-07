@@ -866,7 +866,8 @@ namespace ProjectVagabond.UI
                 }
 
                 float lineX = infoPanelArea.X + (infoPanelArea.Width - lineWidth) / 2f;
-                float currentX = lineX;
+
+                float currentX = MathF.Round(lineX);
 
                 foreach (var segment in line)
                 {
@@ -1020,6 +1021,8 @@ namespace ProjectVagabond.UI
                 infoPanelArea.X + (infoPanelArea.Width - nameSize.X) / 2f,
                 spriteY + spriteSize - (font.LineHeight / 2f) - 2
             );
+
+            namePos = new Vector2(MathF.Round(namePos.X), MathF.Round(namePos.Y));
 
             // --- WAVE ANIMATION FOR SPELL NAME ---
             if (_infoPanelNameWaveTimer > 0)
