@@ -5,7 +5,7 @@ using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
-using ProjectVagabond.UI; // Added for TextAnimator and TextEffectType
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections;
@@ -22,7 +22,7 @@ namespace ProjectVagabond.Battle.UI
         public MoveEntry Entry { get; }
         public int DisplayPower { get; }
         private readonly BitmapFont _moveFont;
-        private readonly Texture2D? _backgroundSpriteSheet; // Made nullable
+        private readonly Texture2D? _backgroundSpriteSheet;
         public bool IsAnimating => _animState == AnimationState.Appearing;
         public Texture2D IconTexture { get; set; }
         public Rectangle? IconSourceRect { get; set; }
@@ -49,6 +49,11 @@ namespace ProjectVagabond.Battle.UI
         private float _overlayFadeTimer;
         private const float OVERLAY_FADE_SPEED = 2.0f;
 
+        // Hover Scaling State (Replicated from Button.cs since _currentScale is private there)
+        private float _currentHoverScale = 1.0f;
+        private const float HOVER_SCALE = 1.1f;
+        private const float PRESS_SCALE = 0.95f;
+        private const float SCALE_SPEED = 15f;
 
         public MoveButton(MoveData move, MoveEntry entry, int displayPower, BitmapFont font, Texture2D? backgroundSpriteSheet, Texture2D iconTexture, Rectangle? iconSourceRect, bool startVisible = true)
             : base(Rectangle.Empty, move.MoveName.ToUpper(), function: move.MoveID)
@@ -66,6 +71,11 @@ namespace ProjectVagabond.Battle.UI
             // Updated to use Middle Click for info
             HasMiddleClickHint = true;
             HasRightClickHint = false;
+
+            // Configure Text Animation
+            EnableTextWave = true;
+            // Use RightAlignedSmallWave to match the leftward expansion of text
+            WaveEffectType = TextEffectType.SmallWave;
         }
 
         public void TriggerAppearAnimation()
@@ -122,7 +132,6 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-
         public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? horizontalOffset = null, float? verticalOffset = null, Color? tintColorOverride = null)
         {
             if (_animState == AnimationState.Hidden) return;
@@ -135,7 +144,6 @@ namespace ProjectVagabond.Battle.UI
             bool canAfford;
             if (manaDump != null)
             {
-                // If ManaDump is present, cost is "All Remaining", so we can afford it as long as we have > 0.
                 canAfford = player != null && player.Stats.CurrentMana > 0;
             }
             else
@@ -148,14 +156,23 @@ namespace ProjectVagabond.Battle.UI
             float hoverOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
             _overlayFadeTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            float scaleX = 1.0f;
-            float scaleY = 1.0f;
+            // --- Calculate Hover Scale ---
+            float targetHoverScale = 1.0f;
+            if (_isPressed) targetHoverScale = PRESS_SCALE;
+            else if (isActivated) targetHoverScale = HOVER_SCALE;
+
+            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            _currentHoverScale = MathHelper.Lerp(_currentHoverScale, targetHoverScale, dt * SCALE_SPEED);
+
+            // --- Calculate Appear Animation Scale ---
+            float appearScaleX = 1.0f;
+            float appearScaleY = 1.0f;
             if (_animState == AnimationState.Appearing)
             {
-                _appearTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                _appearTimer += dt;
                 float progress = Math.Clamp(_appearTimer / APPEAR_DURATION, 0f, 1f);
 
-                scaleY = Easing.EaseOutBack(progress);
+                appearScaleY = Easing.EaseOutBack(progress);
 
                 if (progress >= 1.0f)
                 {
@@ -163,10 +180,14 @@ namespace ProjectVagabond.Battle.UI
                 }
             }
 
-            if (scaleX < 0.01f || scaleY < 0.01f) return;
+            // Combine scales
+            float finalScaleX = appearScaleX * _currentHoverScale;
+            float finalScaleY = appearScaleY * _currentHoverScale;
 
-            int animatedWidth = (int)(Bounds.Width * scaleX);
-            int animatedHeight = (int)(Bounds.Height * scaleY);
+            if (finalScaleX < 0.01f || finalScaleY < 0.01f) return;
+
+            int animatedWidth = (int)(Bounds.Width * finalScaleX);
+            int animatedHeight = (int)(Bounds.Height * finalScaleY);
             var animatedBounds = new Rectangle(
                 Bounds.Center.X - animatedWidth / 2 + (int)(horizontalOffset ?? 0f) - (int)hoverOffset,
                 Bounds.Center.Y - animatedHeight / 2 + (int)(verticalOffset ?? 0f),
@@ -182,25 +203,29 @@ namespace ProjectVagabond.Battle.UI
             else
             {
                 finalTintColor = Color.White;
-                if (!IsEnabled) finalTintColor = _global.ButtonDisableColor * 0.5f; // Dim if disabled
+                if (!IsEnabled) finalTintColor = _global.ButtonDisableColor * 0.5f;
                 else if (!canAfford) finalTintColor = _global.ButtonDisableColor * 0.5f;
                 else if (_isPressed) finalTintColor = Color.Gray;
                 else if (isActivated) finalTintColor = _global.ButtonHoverColor;
             }
 
-            if (scaleX > 0.1f && scaleY > 0.1f)
+            if (finalScaleX > 0.1f && finalScaleY > 0.1f)
             {
                 float contentAlpha = finalTintColor.A / 255f;
 
-                // Draw background only if texture is provided
+                // Draw background
                 if (_backgroundSpriteSheet != null)
                 {
-                    spriteBatch.DrawSnapped(_backgroundSpriteSheet, animatedBounds, finalTintColor);
+                    // Round origin to prevent sub-pixel rendering artifacts
+                    var origin = new Vector2(MathF.Round(Bounds.Width / 2f), MathF.Round(Bounds.Height / 2f));
+                    // Use the center of the animated bounds as the position
+                    var drawPos = new Vector2(animatedBounds.Center.X, animatedBounds.Center.Y);
+
+                    spriteBatch.DrawSnapped(_backgroundSpriteSheet, drawPos, null, finalTintColor, 0f, origin, new Vector2(finalScaleX, finalScaleY), SpriteEffects.None, 0f);
                 }
 
                 const int iconSize = 9;
                 const int iconPadding = 4;
-                // Shift content 1 pixel to the right
                 var iconRect = new Rectangle(
                     animatedBounds.X + iconPadding + 1,
                     animatedBounds.Y + (animatedBounds.Height - iconSize) / 2,
@@ -252,9 +277,10 @@ namespace ProjectVagabond.Battle.UI
                     spriteBatch.GraphicsDevice.ScissorRectangle = clipRect;
 
                     var scrollingTextPosition = new Vector2(textStartX - _scrollPosition, animatedBounds.Y + (animatedBounds.Height - _moveFont.LineHeight) / 2);
+
+                    // Scrolling text doesn't wave to avoid visual chaos
                     spriteBatch.DrawStringSnapped(_moveFont, this.Text, scrollingTextPosition, textColor * contentAlpha);
                     spriteBatch.DrawStringSnapped(_moveFont, this.Text, scrollingTextPosition + new Vector2(_loopWidth, 0), textColor * contentAlpha);
-
 
                     spriteBatch.End();
                     spriteBatch.GraphicsDevice.ScissorRectangle = originalScissorRect;
@@ -272,8 +298,8 @@ namespace ProjectVagabond.Battle.UI
                         float duration = TextAnimator.GetSmallWaveDuration(Text.Length);
                         if (_waveTimer > duration + 0.1f) _waveTimer = 0f;
 
-                        // Use the new SmallWave effect via TextAnimator, passing the current scale (which is 1.0 for MoveButton usually, but good to be consistent)
-                        TextAnimator.DrawTextWithEffect(spriteBatch, _moveFont, this.Text, textPosition, textColor * contentAlpha, WaveEffectType, _waveTimer, new Vector2(scaleX, scaleY));
+                        // Use TextAnimator for the wave effect, passing the combined scale
+                        TextAnimator.DrawTextWithEffect(spriteBatch, _moveFont, this.Text, textPosition, textColor * contentAlpha, WaveEffectType, _waveTimer, new Vector2(finalScaleX, finalScaleY));
                     }
                     else
                     {
@@ -285,11 +311,9 @@ namespace ProjectVagabond.Battle.UI
                 // --- Strikethrough Logic for Disabled State ---
                 if (!IsEnabled)
                 {
-                    // Moved down 1 pixel (+1)
                     float lineY = animatedBounds.Center.Y + 1;
                     float startX = textStartX - 2;
                     float endX = textStartX + Math.Min(moveNameTextSize.Width, textAvailableWidth) + 2;
-                    // Use fully opaque color for the strikethrough
                     spriteBatch.DrawLineSnapped(new Vector2(startX, lineY), new Vector2(endX, lineY), _global.ButtonDisableColor);
                 }
 
@@ -301,8 +325,6 @@ namespace ProjectVagabond.Battle.UI
                         animatedBounds.Center.X - noManaSize.X / 2f,
                         animatedBounds.Center.Y - noManaSize.Y / 2f
                     );
-                    // Use Square Outline for better visibility
-                    // FIX: Use TextAnimator instead of AnimationUtils/TextUtils
                     TextAnimator.DrawTextWithEffectSquareOutlined(spriteBatch, _moveFont, noManaText, noManaPos, _global.Palette_Red * contentAlpha, Color.Black * contentAlpha, TextEffectType.None, 0f);
                 }
             }

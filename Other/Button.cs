@@ -342,7 +342,9 @@ namespace ProjectVagabond.UI
 
             if (_spriteSheet != null && sourceRectToDraw.HasValue)
             {
-                var origin = sourceRectToDraw.Value.Size.ToVector2() / 2f;
+                // Round origin to prevent sub-pixel rendering artifacts
+                var origin = new Vector2(MathF.Round(sourceRectToDraw.Value.Width / 2f), MathF.Round(sourceRectToDraw.Value.Height / 2f));
+
                 spriteBatch.DrawSnapped(_spriteSheet, position, sourceRectToDraw, tintColorOverride ?? Color.White, 0f, origin, scale, SpriteEffects.None, 0f);
             }
             else if (DebugColor.HasValue)
@@ -426,7 +428,10 @@ namespace ProjectVagabond.UI
             textPosition += TextRenderOffset;
 
             // Apply Scale: We need to draw from center to scale correctly
-            Vector2 origin = textSize / 2f;
+            Vector2 origin = new Vector2(MathF.Round(textSize.X / 2f), MathF.Round(textSize.Y / 2f));
+
+            // Calculate the draw position such that (DrawPos - Origin) equals the desired Top-Left (textPosition).
+            // Since DrawStringSnapped rounds the DrawPos, and Origin is integer, the result is integer-aligned.
             Vector2 drawPos = textPosition + origin;
 
             // --- Wave Animation Logic ---
@@ -434,6 +439,7 @@ namespace ProjectVagabond.UI
             {
                 // Use the configured WaveEffectType (SmallWave or LeftAlignedSmallWave)
                 // Use TextAnimator instead of TextUtils
+                // Note: TextAnimator handles its own origin/centering logic, so we pass the top-left textPosition.
                 TextAnimator.DrawTextWithEffect(spriteBatch, font, Text, textPosition, textColor, WaveEffectType, _waveTimer, new Vector2(_currentScale));
             }
             else

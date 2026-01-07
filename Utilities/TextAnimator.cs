@@ -29,7 +29,8 @@ namespace ProjectVagabond.UI
         FlickerBounce, // Opacity Pulse + Vertical Bounce
         FlickerWave, // Opacity Pulse + Vertical Wave
         SmallWave, // Single pass "hump" wave (Center Aligned Expansion)
-        LeftAlignedSmallWave // Single pass "hump" wave (Left Aligned Expansion)
+        LeftAlignedSmallWave, // Single pass "hump" wave (Left-to-Right)
+        RightAlignedSmallWave // Single pass "hump" wave (Right-to-Left)
     }
     /// <summary>
     /// Parameter object to simplify Draw calls.
@@ -147,7 +148,8 @@ namespace ProjectVagabond.UI
             TextEffectType effect,
             float time,
             int charIndex,
-            Color baseColor)
+            Color baseColor,
+            int textLength = 0) // Added optional textLength parameter
         {
             Vector2 offset = Vector2.Zero;
             Vector2 scale = Vector2.One;
@@ -166,6 +168,31 @@ namespace ProjectVagabond.UI
                     if (smallWaveArg > 0 && smallWaveArg < MathHelper.Pi)
                     {
                         offset.Y = -MathF.Sin(smallWaveArg) * TextAnimationSettings.SmallWaveAmplitude;
+                    }
+                    break;
+
+                case TextEffectType.RightAlignedSmallWave:
+                    if (textLength > 0)
+                    {
+                        // Invert the index logic: Start from the end (textLength - 1)
+                        // Delay = (Length - 1 - Index) * Freq
+                        // So Index = Length-1 has 0 delay. Index = 0 has max delay.
+                        float delay = (textLength - 1 - charIndex) * TextAnimationSettings.SmallWaveFrequency;
+                        float rightWaveArg = time * TextAnimationSettings.SmallWaveSpeed - delay;
+
+                        if (rightWaveArg > 0 && rightWaveArg < MathHelper.Pi)
+                        {
+                            offset.Y = -MathF.Sin(rightWaveArg) * TextAnimationSettings.SmallWaveAmplitude;
+                        }
+                    }
+                    else
+                    {
+                        // Fallback to LeftAligned if length is unknown
+                        float fallbackArg = time * TextAnimationSettings.SmallWaveSpeed - charIndex * TextAnimationSettings.SmallWaveFrequency;
+                        if (fallbackArg > 0 && fallbackArg < MathHelper.Pi)
+                        {
+                            offset.Y = -MathF.Sin(fallbackArg) * TextAnimationSettings.SmallWaveAmplitude;
+                        }
                     }
                     break;
 
@@ -324,7 +351,8 @@ namespace ProjectVagabond.UI
             var shadowColor = new Color(options.Color.R / 4, options.Color.G / 4, options.Color.B / 4, options.Color.A);
 
             Vector2 centeringOffset = Vector2.Zero;
-            if (options.Effect != TextEffectType.LeftAlignedSmallWave)
+            // Don't center offset for aligned waves to keep anchor point stable
+            if (options.Effect != TextEffectType.LeftAlignedSmallWave && options.Effect != TextEffectType.RightAlignedSmallWave)
             {
                 Vector2 totalSize = font.MeasureString(text);
                 centeringOffset = (totalSize * (Vector2.One - layoutScale)) / 2f;
@@ -355,8 +383,8 @@ namespace ProjectVagabond.UI
                 // Apply layout scaling and centering
                 Vector2 scaledPos = options.Position + (relativePos * layoutScale) + centeringOffset;
 
-                // Get animation transform
-                var (animOffset, effectScale, rotation, finalColor) = GetTextEffectTransform(options.Effect, options.Time, charIndex, options.Color);
+                // Get animation transform, passing text length
+                var (animOffset, effectScale, rotation, finalColor) = GetTextEffectTransform(options.Effect, options.Time, charIndex, options.Color, text.Length);
 
                 // Get the texture region for the glyph
                 var character = glyph.Character;
