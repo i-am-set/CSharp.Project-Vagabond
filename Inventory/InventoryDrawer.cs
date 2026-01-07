@@ -22,6 +22,7 @@ namespace ProjectVagabond.UI
     {
         private readonly SplitMapInventoryOverlay _overlay;
         private readonly InventoryDataProcessor _dataProcessor;
+        private readonly InventoryEquipSystem _equipSystem;
 
         // Fields for portrait background animation
         private int _portraitBgFrameIndex = 0;
@@ -29,10 +30,11 @@ namespace ProjectVagabond.UI
         private float _portraitBgDuration;
         private static readonly Random _rng = new Random();
 
-        public InventoryDrawer(SplitMapInventoryOverlay overlay, InventoryDataProcessor dataProcessor)
+        public InventoryDrawer(SplitMapInventoryOverlay overlay, InventoryDataProcessor dataProcessor, InventoryEquipSystem equipSystem)
         {
             _overlay = overlay;
             _dataProcessor = dataProcessor;
+            _equipSystem = equipSystem;
         }
 
         public void DrawWorld(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
@@ -85,7 +87,7 @@ namespace ProjectVagabond.UI
             spriteBatch.DrawSnapped(_overlay.SpriteManager.InventoryBorderHeader, headerPosition, Color.White);
 
             Texture2D selectedBorderSprite;
-            if (_overlay.SelectedInventoryCategory == InventoryCategory.Equip && _overlay.IsEquipSubmenuOpen)
+            if (_overlay.SelectedInventoryCategory == InventoryCategory.Equip && _overlay.CurrentState == InventoryState.EquipItemSelection)
             {
                 selectedBorderSprite = _overlay.SpriteManager.InventoryBorderEquipSubmenu;
             }
@@ -162,9 +164,9 @@ namespace ProjectVagabond.UI
             }
             else
             {
-                if (_overlay.IsEquipSubmenuOpen)
+                if (_overlay.CurrentState == InventoryState.EquipItemSelection)
                 {
-                    foreach (var button in _overlay.EquipSubmenuButtons)
+                    foreach (var button in _equipSystem.EquipSubmenuButtons)
                     {
                         button.Draw(spriteBatch, font, gameTime, Matrix.Identity);
                     }
@@ -172,19 +174,19 @@ namespace ProjectVagabond.UI
                     var arrowTexture = _overlay.SpriteManager.InventoryScrollArrowsSprite;
                     var arrowRects = _overlay.SpriteManager.InventoryScrollArrowRects;
 
-                    if (arrowTexture != null && arrowRects != null && _overlay.EquipSubmenuButtons.Count > 0)
+                    if (arrowTexture != null && arrowRects != null && _equipSystem.EquipSubmenuButtons.Count > 0)
                     {
                         int totalItems = 1;
                         var member = _overlay.GameState.PlayerState.Party[_overlay.CurrentPartyMemberIndex];
-                        if (_overlay.ActiveEquipSlotType == EquipSlotType.Weapon) totalItems += _overlay.GameState.PlayerState.Weapons.Count;
-                        else if (_overlay.ActiveEquipSlotType == EquipSlotType.Armor) totalItems += _overlay.GameState.PlayerState.Armors.Count;
-                        else if (_overlay.ActiveEquipSlotType == EquipSlotType.Relic) totalItems += _overlay.GameState.PlayerState.Relics.Count;
+                        if (_equipSystem.ActiveEquipSlotType == EquipSlotType.Weapon) totalItems += _overlay.GameState.PlayerState.Weapons.Count;
+                        else if (_equipSystem.ActiveEquipSlotType == EquipSlotType.Armor) totalItems += _overlay.GameState.PlayerState.Armors.Count;
+                        else if (_equipSystem.ActiveEquipSlotType == EquipSlotType.Relic) totalItems += _overlay.GameState.PlayerState.Relics.Count;
 
                         int maxScroll = Math.Max(0, totalItems - 7);
 
-                        if (_overlay.EquipMenuScrollIndex > 0)
+                        if (_equipSystem.EquipMenuScrollIndex > 0)
                         {
-                            var firstButton = _overlay.EquipSubmenuButtons[0];
+                            var firstButton = _equipSystem.EquipSubmenuButtons[0];
                             var arrowPos = new Vector2(
                                 firstButton.Bounds.Center.X - arrowRects[0].Width / 2f,
                                 firstButton.Bounds.Top - arrowRects[0].Height
@@ -192,9 +194,9 @@ namespace ProjectVagabond.UI
                             spriteBatch.DrawSnapped(arrowTexture, arrowPos, arrowRects[0], Color.White);
                         }
 
-                        if (_overlay.EquipMenuScrollIndex < maxScroll)
+                        if (_equipSystem.EquipMenuScrollIndex < maxScroll)
                         {
-                            var lastButton = _overlay.EquipSubmenuButtons.Last();
+                            var lastButton = _equipSystem.EquipSubmenuButtons.Last();
                             var arrowPos = new Vector2(
                                 lastButton.Bounds.Center.X - arrowRects[1].Width / 2f,
                                 lastButton.Bounds.Bottom
@@ -293,7 +295,7 @@ namespace ProjectVagabond.UI
                     var infoPanelArea = new Rectangle(statsPanelX, statsPanelY, statsPanelWidth, statsPanelHeight);
                     spriteBatch.DrawSnapped(pixel, infoPanelArea, Color.Cyan * 0.5f);
                 }
-                else if (_overlay.IsEquipSubmenuOpen)
+                else if (_overlay.CurrentState == InventoryState.EquipItemSelection)
                 {
                     spriteBatch.DrawSnapped(pixel, _overlay.InventorySlotArea, Color.Blue * 0.5f);
                 }
@@ -643,7 +645,7 @@ namespace ProjectVagabond.UI
                 spriteBatch.DrawSnapped(_overlay.SpriteManager.InventorySlotIdleSpriteSheet, centerPos, bgFrame, Color.White, 0f, origin, 1.0f, SpriteEffects.None, 0f);
             }
 
-            bool isSelected = _overlay.IsEquipSubmenuOpen && _overlay.CurrentPartyMemberIndex == memberIndex && _overlay.ActiveEquipSlotType == type;
+            bool isSelected = _overlay.CurrentState == InventoryState.EquipItemSelection && _overlay.CurrentPartyMemberIndex == memberIndex && _overlay.EquipSystem.ActiveEquipSlotType == type;
 
             if (isSelected || isHovered)
             {
@@ -974,7 +976,7 @@ namespace ProjectVagabond.UI
 
         private void DrawSpellInfoPanel(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, MoveData move, Texture2D? iconTexture, Texture2D? iconSilhouette, Rectangle? sourceRect, Color? iconTint, Rectangle idleFrame, Vector2 idleOrigin, bool drawBackground, Rectangle infoPanelArea)
         {
-            var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
+            var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont; // Get Tertiary Font
             const int spriteSize = 32;
             const int padding = 4;
             const int gap = 2;

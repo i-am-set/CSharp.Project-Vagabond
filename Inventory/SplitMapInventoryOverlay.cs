@@ -3,65 +3,78 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.UI
 {
     public enum InventoryCategory { Weapons, Armor, Relics, Consumables, Misc, Equip }
     public enum EquipSlotType { None, Weapon, Armor, Relic, Spell1, Spell2, Spell3, Spell4 }
 
+    // Formal State Machine
+    internal enum InventoryState
+    {
+        Browse,             // Viewing items in grid
+        EquipTargetSelection, // Viewing party members to choose a slot
+        EquipItemSelection    // Submenu open, picking an item to equip
+    }
+
     public class SplitMapInventoryOverlay
     {
-        // --- Public State (Accessed by Helpers) ---
-        public bool IsOpen { get; set; } = false;
+        // --- Public API (Minimal Surface Area) ---
+        public bool IsOpen { get; private set; } = false;
         public bool IsHovered => InventoryButton?.IsHovered ?? false;
+        public event Action? OnInventoryButtonClicked;
+
+        // --- Internal State (Accessible only to Helpers) ---
+        internal InventoryState CurrentState { get; set; } = InventoryState.Browse;
 
         // Services
-        public GameState GameState { get; private set; }
-        public SpriteManager SpriteManager { get; private set; }
-        public Global Global { get; private set; }
-        public HapticsManager HapticsManager { get; private set; }
-        public ComponentStore ComponentStore { get; private set; }
+        internal GameState GameState { get; private set; }
+        internal SpriteManager SpriteManager { get; private set; }
+        internal Global Global { get; private set; }
+        internal HapticsManager HapticsManager { get; private set; }
+        internal ComponentStore ComponentStore { get; private set; }
 
-        // UI Elements
-        public ImageButton? InventoryButton { get; set; }
-        public List<InventoryHeaderButton> InventoryHeaderButtons { get; } = new();
-        public Dictionary<InventoryHeaderButton, float> InventoryHeaderButtonOffsets { get; } = new();
-        public Dictionary<InventoryHeaderButton, Rectangle> InventoryHeaderButtonBaseBounds { get; } = new();
-        public InventoryHeaderButton? InventoryEquipButton { get; set; }
-        public List<InventorySlot> InventorySlots { get; } = new();
-        public Rectangle InventorySlotArea { get; set; }
-        public Rectangle[] PartyMemberPanelAreas { get; } = new Rectangle[4];
-        public List<Button> PartyEquipButtons { get; } = new();
-        public List<SpellEquipButton> PartySpellButtons { get; } = new();
+        // Shared UI Elements (Owned by Coordinator as they are used by multiple helpers)
+        internal ImageButton? InventoryButton { get; set; }
+        internal List<InventoryHeaderButton> InventoryHeaderButtons { get; } = new();
+        internal Dictionary<InventoryHeaderButton, float> InventoryHeaderButtonOffsets { get; } = new();
+        internal Dictionary<InventoryHeaderButton, Rectangle> InventoryHeaderButtonBaseBounds { get; } = new();
+        internal InventoryHeaderButton? InventoryEquipButton { get; set; }
+
+        internal List<InventorySlot> InventorySlots { get; } = new();
+        internal Rectangle InventorySlotArea { get; set; }
+
+        internal Rectangle[] PartyMemberPanelAreas { get; } = new Rectangle[4];
+        internal List<Button> PartyEquipButtons { get; } = new();
+        internal List<SpellEquipButton> PartySpellButtons { get; } = new();
 
         // Navigation Buttons
-        public ImageButton? DebugButton1 { get; set; }
-        public ImageButton? DebugButton2 { get; set; }
-        public ImageButton? PageLeftButton { get; set; }
-        public ImageButton? PageRightButton { get; set; }
+        internal ImageButton? DebugButton1 { get; set; }
+        internal ImageButton? DebugButton2 { get; set; }
+        internal ImageButton? PageLeftButton { get; set; }
+        internal ImageButton? PageRightButton { get; set; }
 
-        // State Variables
-        public int CurrentPartyMemberIndex { get; set; } = 0;
-        public int HoveredMemberIndex { get; set; } = -1;
-        public EquipSlotType ActiveEquipSlotType { get; set; } = EquipSlotType.None;
-        public bool IsEquipSubmenuOpen { get; set; } = false;
-        public List<EquipButton> EquipSubmenuButtons { get; } = new();
-        public int EquipMenuScrollIndex { get; set; } = 0;
+        // Shared State Variables
+        internal int CurrentPartyMemberIndex { get; set; } = 0;
+        internal int HoveredMemberIndex { get; set; } = -1;
 
-        public int CurrentPage { get; set; } = 0;
-        public int TotalPages { get; set; } = 0;
-        public const int ITEMS_PER_PAGE = 30;
+        internal int CurrentPage { get; set; } = 0;
+        internal int TotalPages { get; set; } = 0;
+        internal const int ITEMS_PER_PAGE = 30;
 
-        public InventoryCategory SelectedInventoryCategory { get; set; }
-        public InventoryCategory PreviousInventoryCategory { get; set; }
-        public int SelectedSlotIndex { get; set; } = -1;
+        internal InventoryCategory SelectedInventoryCategory { get; set; }
+        internal InventoryCategory PreviousInventoryCategory { get; set; }
+        internal int SelectedSlotIndex { get; set; } = -1;
 
-        public List<InventoryCategory> CategoryOrder { get; } = new()
+        internal List<InventoryCategory> CategoryOrder { get; } = new()
         {
             InventoryCategory.Weapons,
             InventoryCategory.Armor,
@@ -71,32 +84,29 @@ namespace ProjectVagabond.UI
         };
 
         // Animation State
-        public float InventoryArrowAnimTimer { get; set; }
-        public const float INVENTORY_ARROW_ANIM_DURATION = 0.2f;
-        public Vector2 InventoryPositionOffset { get; set; } = Vector2.Zero;
-        public float SelectedHeaderBobTimer { get; set; }
-        public float LeftPageArrowBobTimer { get; set; } = 0f;
-        public float RightPageArrowBobTimer { get; set; } = 0f;
-        public const float PAGE_ARROW_BOB_DURATION = 0.05f;
-        public float StatCycleTimer { get; set; } = 0f;
-        public object? PreviousHoveredItemData { get; set; }
-        public float InfoPanelNameWaveTimer { get; set; } = 0f;
+        internal float InventoryArrowAnimTimer { get; set; }
+        internal const float INVENTORY_ARROW_ANIM_DURATION = 0.2f;
+        internal Vector2 InventoryPositionOffset { get; set; } = Vector2.Zero;
+        internal float SelectedHeaderBobTimer { get; set; }
+        internal float LeftPageArrowBobTimer { get; set; } = 0f;
+        internal float RightPageArrowBobTimer { get; set; } = 0f;
+        internal const float PAGE_ARROW_BOB_DURATION = 0.05f;
+        internal float StatCycleTimer { get; set; } = 0f;
+        internal object? PreviousHoveredItemData { get; set; }
+        internal float InfoPanelNameWaveTimer { get; set; } = 0f;
 
         // Input State
-        public MouseState PreviousMouseState { get; set; }
-        public KeyboardState PreviousKeyboardState { get; set; }
+        internal MouseState PreviousMouseState { get; set; }
+        internal KeyboardState PreviousKeyboardState { get; set; }
 
         // Hover Data
-        public object? HoveredItemData { get; set; }
+        internal object? HoveredItemData { get; set; }
 
-        // Events
-        public event Action? OnInventoryButtonClicked;
-
-        // --- Helpers ---
-        private readonly InventoryDataProcessor _dataProcessor;
+        // --- Subsystems (Exposed internally for cross-communication) ---
+        internal readonly InventoryDataProcessor DataProcessor;
+        internal readonly InventoryEquipSystem EquipSystem;
         private readonly InventoryDrawer _drawer;
         private readonly InventoryInputHandler _inputHandler;
-        private readonly InventoryEquipSystem _equipSystem;
 
         public SplitMapInventoryOverlay()
         {
@@ -107,15 +117,17 @@ namespace ProjectVagabond.UI
             ComponentStore = ServiceLocator.Get<ComponentStore>();
 
             // Instantiate Helpers
-            _dataProcessor = new InventoryDataProcessor(this);
-            _equipSystem = new InventoryEquipSystem(this, _dataProcessor);
-            _drawer = new InventoryDrawer(this, _dataProcessor);
-            _inputHandler = new InventoryInputHandler(this, _dataProcessor, _equipSystem);
+            DataProcessor = new InventoryDataProcessor(this);
+            EquipSystem = new InventoryEquipSystem(this, DataProcessor);
+            _drawer = new InventoryDrawer(this, DataProcessor, EquipSystem);
+            _inputHandler = new InventoryInputHandler(this, DataProcessor, EquipSystem);
         }
 
         public void Initialize()
         {
             _inputHandler.InitializeInventoryUI();
+            EquipSystem.Initialize(); // Initialize Equip System UI
+
             PreviousInventoryCategory = SelectedInventoryCategory;
             InventoryArrowAnimTimer = INVENTORY_ARROW_ANIM_DURATION;
             InventoryPositionOffset = Vector2.Zero;
@@ -125,6 +137,7 @@ namespace ProjectVagabond.UI
             LeftPageArrowBobTimer = 0f;
             RightPageArrowBobTimer = 0f;
             CurrentPartyMemberIndex = 0;
+            CurrentState = InventoryState.Browse;
 
             PreviousMouseState = Mouse.GetState();
             PreviousKeyboardState = Keyboard.GetState();
@@ -141,8 +154,9 @@ namespace ProjectVagabond.UI
         {
             IsOpen = false;
             InventoryButton?.SetSprites(SpriteManager.SplitMapInventoryButton, SpriteManager.SplitMapInventoryButtonSourceRects[0], SpriteManager.SplitMapInventoryButtonSourceRects[1]);
-            _equipSystem.CancelEquipSelection();
+            EquipSystem.CancelEquipSelection();
             SelectedSlotIndex = -1;
+            CurrentState = InventoryState.Browse;
         }
 
         public void ForceClose()

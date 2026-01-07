@@ -1,17 +1,31 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.UI
 {
+    /// <summary>
+    /// Manages the logic and state for the Equipment Submenu.
+    /// Owns the buttons and scroll state for the equip list.
+    /// </summary>
     public class InventoryEquipSystem
     {
         private readonly SplitMapInventoryOverlay _overlay;
         private readonly InventoryDataProcessor _dataProcessor;
+
+        // --- State Ownership ---
+        internal List<EquipButton> EquipSubmenuButtons { get; } = new();
+        internal int EquipMenuScrollIndex { get; set; } = 0;
+        internal EquipSlotType ActiveEquipSlotType { get; set; } = EquipSlotType.None;
 
         public InventoryEquipSystem(SplitMapInventoryOverlay overlay, InventoryDataProcessor dataProcessor)
         {
@@ -19,12 +33,30 @@ namespace ProjectVagabond.UI
             _dataProcessor = dataProcessor;
         }
 
+        public void Initialize()
+        {
+            EquipSubmenuButtons.Clear();
+            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+            int equipButtonX = (Global.VIRTUAL_WIDTH - 180) / 2 - 60;
+            int submenuStartY = 250 + 19 + 16 - 32;
+
+            for (int i = 0; i < 7; i++)
+            {
+                int yPos = submenuStartY + (i * 16);
+                var button = new EquipButton(new Rectangle(equipButtonX, yPos, 180, 16), "");
+                button.TitleText = "";
+                button.Font = secondaryFont;
+                button.IsEnabled = false;
+                EquipSubmenuButtons.Add(button);
+            }
+        }
+
         public void OpenEquipSubmenu(int memberIndex, EquipSlotType slotType)
         {
-            _overlay.IsEquipSubmenuOpen = true;
-            _overlay.ActiveEquipSlotType = slotType;
+            _overlay.CurrentState = InventoryState.EquipItemSelection;
+            ActiveEquipSlotType = slotType;
             _overlay.CurrentPartyMemberIndex = memberIndex;
-            _overlay.EquipMenuScrollIndex = 0;
+            EquipMenuScrollIndex = 0;
             RefreshEquipSubmenuButtons();
         }
 
@@ -33,15 +65,15 @@ namespace ProjectVagabond.UI
             List<string> availableItems = new List<string>();
             var member = _overlay.GameState.PlayerState.Party[_overlay.CurrentPartyMemberIndex];
 
-            if (_overlay.ActiveEquipSlotType == EquipSlotType.Weapon)
+            if (ActiveEquipSlotType == EquipSlotType.Weapon)
             {
                 availableItems = _overlay.GameState.PlayerState.Weapons.Keys.ToList();
             }
-            else if (_overlay.ActiveEquipSlotType == EquipSlotType.Armor)
+            else if (ActiveEquipSlotType == EquipSlotType.Armor)
             {
                 availableItems = _overlay.GameState.PlayerState.Armors.Keys.ToList();
             }
-            else if (_overlay.ActiveEquipSlotType == EquipSlotType.Relic)
+            else if (ActiveEquipSlotType == EquipSlotType.Relic)
             {
                 var allRelics = _overlay.GameState.PlayerState.Relics.Keys.ToList();
                 if (!string.IsNullOrEmpty(member.EquippedRelicId))
@@ -56,10 +88,10 @@ namespace ProjectVagabond.UI
 
             int totalItems = 1 + availableItems.Count; // +1 for REMOVE
 
-            for (int i = 0; i < _overlay.EquipSubmenuButtons.Count; i++)
+            for (int i = 0; i < EquipSubmenuButtons.Count; i++)
             {
-                var btn = _overlay.EquipSubmenuButtons[i];
-                int virtualIndex = _overlay.EquipMenuScrollIndex + i;
+                var btn = EquipSubmenuButtons[i];
+                int virtualIndex = EquipMenuScrollIndex + i;
 
                 btn.IsEnabled = false;
                 btn.MainText = "";
@@ -95,7 +127,7 @@ namespace ProjectVagabond.UI
                     int itemIndex = virtualIndex - 1;
                     string itemId = availableItems[itemIndex];
 
-                    if (_overlay.ActiveEquipSlotType == EquipSlotType.Weapon)
+                    if (ActiveEquipSlotType == EquipSlotType.Weapon)
                     {
                         var weaponData = _dataProcessor.GetWeaponData(itemId);
                         if (weaponData != null)
@@ -116,7 +148,7 @@ namespace ProjectVagabond.UI
                             btn.OnClick = () => SelectEquipItem(itemId);
                         }
                     }
-                    else if (_overlay.ActiveEquipSlotType == EquipSlotType.Armor)
+                    else if (ActiveEquipSlotType == EquipSlotType.Armor)
                     {
                         var armorData = _dataProcessor.GetArmorData(itemId);
                         if (armorData != null)
@@ -137,7 +169,7 @@ namespace ProjectVagabond.UI
                             btn.OnClick = () => SelectEquipItem(itemId);
                         }
                     }
-                    else if (_overlay.ActiveEquipSlotType == EquipSlotType.Relic)
+                    else if (ActiveEquipSlotType == EquipSlotType.Relic)
                     {
                         var relicData = _dataProcessor.GetRelicData(itemId);
                         if (relicData != null)
@@ -168,10 +200,10 @@ namespace ProjectVagabond.UI
 
         public void CancelEquipSelection()
         {
-            if (_overlay.IsEquipSubmenuOpen)
+            if (_overlay.CurrentState == InventoryState.EquipItemSelection)
             {
-                _overlay.IsEquipSubmenuOpen = false;
-                _overlay.ActiveEquipSlotType = EquipSlotType.None;
+                _overlay.CurrentState = InventoryState.EquipTargetSelection;
+                ActiveEquipSlotType = EquipSlotType.None;
                 _overlay.HoveredItemData = null;
             }
         }
@@ -180,21 +212,21 @@ namespace ProjectVagabond.UI
         {
             var member = _overlay.GameState.PlayerState.Party[_overlay.CurrentPartyMemberIndex];
 
-            if (_overlay.ActiveEquipSlotType == EquipSlotType.Weapon)
+            if (ActiveEquipSlotType == EquipSlotType.Weapon)
             {
                 member.EquippedWeaponId = itemId;
             }
-            else if (_overlay.ActiveEquipSlotType == EquipSlotType.Armor)
+            else if (ActiveEquipSlotType == EquipSlotType.Armor)
             {
                 member.EquippedArmorId = itemId;
             }
-            else if (_overlay.ActiveEquipSlotType == EquipSlotType.Relic)
+            else if (ActiveEquipSlotType == EquipSlotType.Relic)
             {
                 member.EquippedRelicId = itemId;
             }
 
-            _overlay.IsEquipSubmenuOpen = false;
-            _overlay.ActiveEquipSlotType = EquipSlotType.None;
+            _overlay.CurrentState = InventoryState.EquipTargetSelection;
+            ActiveEquipSlotType = EquipSlotType.None;
             _overlay.HoveredItemData = null;
 
             _overlay.HapticsManager.TriggerCompoundShake(0.5f);

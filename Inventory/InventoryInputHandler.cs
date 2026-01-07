@@ -3,11 +3,13 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.UI
 {
@@ -217,20 +219,6 @@ namespace ProjectVagabond.UI
 
             _overlay.PageRightButton = new ImageButton(new Rectangle(0, 0, 5, 5), _overlay.SpriteManager.InventoryRightArrowButton, rightArrowRects[0], rightArrowRects[1]);
             _overlay.PageRightButton.OnClick += () => ChangePage(1);
-
-            _overlay.EquipSubmenuButtons.Clear();
-            int equipButtonX = (Global.VIRTUAL_WIDTH - 180) / 2 - 60;
-            int submenuStartY = 250 + 19 + 16 - 32;
-
-            for (int i = 0; i < 7; i++)
-            {
-                int yPos = submenuStartY + (i * 16);
-                var button = new EquipButton(new Rectangle(equipButtonX, yPos, 180, 16), "");
-                button.TitleText = "";
-                button.Font = secondaryFont;
-                button.IsEnabled = false;
-                _overlay.EquipSubmenuButtons.Add(button);
-            }
         }
 
         public void Update(GameTime gameTime, MouseState currentMouseState, KeyboardState currentKeyboardState, bool allowAccess, Matrix cameraTransform)
@@ -266,9 +254,9 @@ namespace ProjectVagabond.UI
             if (_overlay.SelectedInventoryCategory == InventoryCategory.Equip)
             {
                 _overlay.HoveredItemData = null;
-                if (!_overlay.IsEquipSubmenuOpen) _overlay.HoveredMemberIndex = -1;
+                if (_overlay.CurrentState != InventoryState.EquipItemSelection) _overlay.HoveredMemberIndex = -1;
 
-                if (!_overlay.IsEquipSubmenuOpen)
+                if (_overlay.CurrentState == InventoryState.EquipTargetSelection)
                 {
                     int partyCount = _overlay.GameState.PlayerState.Party.Count;
 
@@ -332,31 +320,31 @@ namespace ProjectVagabond.UI
                         }
                     }
                 }
-                else
+                else if (_overlay.CurrentState == InventoryState.EquipItemSelection)
                 {
                     var member = _overlay.GameState.PlayerState.Party[_overlay.CurrentPartyMemberIndex];
                     List<string> availableItems = new List<string>();
-                    if (_overlay.ActiveEquipSlotType == EquipSlotType.Weapon) availableItems = _overlay.GameState.PlayerState.Weapons.Keys.ToList();
-                    else if (_overlay.ActiveEquipSlotType == EquipSlotType.Armor) availableItems = _overlay.GameState.PlayerState.Armors.Keys.ToList();
-                    else if (_overlay.ActiveEquipSlotType == EquipSlotType.Relic) availableItems = _overlay.GameState.PlayerState.Relics.Keys.ToList();
+                    if (_equipSystem.ActiveEquipSlotType == EquipSlotType.Weapon) availableItems = _overlay.GameState.PlayerState.Weapons.Keys.ToList();
+                    else if (_equipSystem.ActiveEquipSlotType == EquipSlotType.Armor) availableItems = _overlay.GameState.PlayerState.Armors.Keys.ToList();
+                    else if (_equipSystem.ActiveEquipSlotType == EquipSlotType.Relic) availableItems = _overlay.GameState.PlayerState.Relics.Keys.ToList();
 
-                    for (int i = 0; i < _overlay.EquipSubmenuButtons.Count; i++)
+                    for (int i = 0; i < _equipSystem.EquipSubmenuButtons.Count; i++)
                     {
-                        var button = _overlay.EquipSubmenuButtons[i];
+                        var button = _equipSystem.EquipSubmenuButtons[i];
                         button.Update(currentMouseState, cameraTransform);
 
                         if (button.IsHovered && button.IsEnabled)
                         {
-                            int virtualIndex = _overlay.EquipMenuScrollIndex + i;
+                            int virtualIndex = _equipSystem.EquipMenuScrollIndex + i;
                             if (virtualIndex > 0)
                             {
                                 int itemIndex = virtualIndex - 1;
                                 if (itemIndex < availableItems.Count)
                                 {
                                     string itemId = availableItems[itemIndex];
-                                    if (_overlay.ActiveEquipSlotType == EquipSlotType.Weapon) _overlay.HoveredItemData = _dataProcessor.GetWeaponData(itemId);
-                                    else if (_overlay.ActiveEquipSlotType == EquipSlotType.Armor) _overlay.HoveredItemData = _dataProcessor.GetArmorData(itemId);
-                                    else if (_overlay.ActiveEquipSlotType == EquipSlotType.Relic) _overlay.HoveredItemData = _dataProcessor.GetRelicData(itemId);
+                                    if (_equipSystem.ActiveEquipSlotType == EquipSlotType.Weapon) _overlay.HoveredItemData = _dataProcessor.GetWeaponData(itemId);
+                                    else if (_equipSystem.ActiveEquipSlotType == EquipSlotType.Armor) _overlay.HoveredItemData = _dataProcessor.GetArmorData(itemId);
+                                    else if (_equipSystem.ActiveEquipSlotType == EquipSlotType.Relic) _overlay.HoveredItemData = _dataProcessor.GetRelicData(itemId);
                                 }
                             }
                         }
@@ -406,7 +394,7 @@ namespace ProjectVagabond.UI
             bool isHoveringHeader = headerArea.Contains(mouseInWorldSpace);
             bool rightClickPressed = currentMouseState.RightButton == ButtonState.Pressed && _overlay.PreviousMouseState.RightButton == ButtonState.Released;
 
-            if (_overlay.IsEquipSubmenuOpen)
+            if (_overlay.CurrentState == InventoryState.EquipItemSelection)
             {
                 if (rightClickPressed)
                 {
@@ -417,25 +405,25 @@ namespace ProjectVagabond.UI
                     int totalItems = 1;
                     var member = _overlay.GameState.PlayerState.Party[_overlay.CurrentPartyMemberIndex];
 
-                    if (_overlay.ActiveEquipSlotType == EquipSlotType.Weapon) totalItems += _overlay.GameState.PlayerState.Weapons.Count;
-                    else if (_overlay.ActiveEquipSlotType == EquipSlotType.Armor) totalItems += _overlay.GameState.PlayerState.Armors.Count;
-                    else if (_overlay.ActiveEquipSlotType == EquipSlotType.Relic) totalItems += _overlay.GameState.PlayerState.Relics.Count;
+                    if (_equipSystem.ActiveEquipSlotType == EquipSlotType.Weapon) totalItems += _overlay.GameState.PlayerState.Weapons.Count;
+                    else if (_equipSystem.ActiveEquipSlotType == EquipSlotType.Armor) totalItems += _overlay.GameState.PlayerState.Armors.Count;
+                    else if (_equipSystem.ActiveEquipSlotType == EquipSlotType.Relic) totalItems += _overlay.GameState.PlayerState.Relics.Count;
 
                     int maxScroll = Math.Max(0, totalItems - 7);
 
-                    if (scrollDelta < 0 && _overlay.EquipMenuScrollIndex < maxScroll)
+                    if (scrollDelta < 0 && _equipSystem.EquipMenuScrollIndex < maxScroll)
                     {
-                        _overlay.EquipMenuScrollIndex++;
+                        _equipSystem.EquipMenuScrollIndex++;
                         _equipSystem.RefreshEquipSubmenuButtons();
                     }
-                    else if (scrollDelta > 0 && _overlay.EquipMenuScrollIndex > 0)
+                    else if (scrollDelta > 0 && _equipSystem.EquipMenuScrollIndex > 0)
                     {
-                        _overlay.EquipMenuScrollIndex--;
+                        _equipSystem.EquipMenuScrollIndex--;
                         _equipSystem.RefreshEquipSubmenuButtons();
                     }
                 }
             }
-            else if (!_overlay.IsEquipSubmenuOpen)
+            else if (_overlay.CurrentState != InventoryState.EquipItemSelection)
             {
                 if (leftPressed)
                 {
@@ -718,6 +706,7 @@ namespace ProjectVagabond.UI
             _overlay.CurrentPage = 0;
             _overlay.SelectedSlotIndex = -1;
             _overlay.SelectedHeaderBobTimer = 0f;
+            _overlay.CurrentState = category == InventoryCategory.Equip ? InventoryState.EquipTargetSelection : InventoryState.Browse;
             _dataProcessor.RefreshInventorySlots();
             if (category != InventoryCategory.Equip)
             {

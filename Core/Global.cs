@@ -51,7 +51,7 @@ namespace ProjectVagabond
             TerminalDarkGray = Palette_DarkGray;
             InputCaratColor = Palette_Yellow;
             AlertColor = Color.Red;
-            ConfirmSettingsColor = Color.LightGreen;
+            ConfirmSettingsColor = Palette_Green;
 
             // Initialize Stat Colors
             StatColor_Strength = Color.Crimson;
@@ -62,7 +62,7 @@ namespace ProjectVagabond
             StatColor_Decrease = Color.Red;
 
             // Initialize Generic Feedback Colors
-            ColorPositive = Palette_LightGreen;
+            ColorPositive = Palette_Green;
             ColorNegative = Palette_LightRed;
             ColorCrit = Palette_Yellow;
             ColorImmune = Palette_DarkBlue;
