@@ -1,75 +1,74 @@
 ﻿using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
-using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond;
 using ProjectVagabond.Battle;
-using ProjectVagabond.Battle.UI;
-using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
-using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.UI
 {
-    public partial class SplitMapInventoryOverlay
+    public class InventoryDataProcessor
     {
-        private RelicData? GetRelicData(string relicId)
+        private readonly SplitMapInventoryOverlay _overlay;
+
+        public InventoryDataProcessor(SplitMapInventoryOverlay overlay)
+        {
+            _overlay = overlay;
+        }
+
+        public RelicData? GetRelicData(string relicId)
         {
             if (BattleDataCache.Relics.TryGetValue(relicId, out var data)) return data;
             return null;
         }
 
-        private WeaponData? GetWeaponData(string weaponId)
+        public WeaponData? GetWeaponData(string weaponId)
         {
             if (BattleDataCache.Weapons.TryGetValue(weaponId, out var data)) return data;
             return null;
         }
 
-        private ArmorData? GetArmorData(string armorId)
+        public ArmorData? GetArmorData(string armorId)
         {
             if (BattleDataCache.Armors.TryGetValue(armorId, out var data)) return data;
             return null;
         }
 
-        private void RefreshInventorySlots()
+        public void RefreshInventorySlots()
         {
-            foreach (var slot in _inventorySlots) slot.Clear();
+            foreach (var slot in _overlay.InventorySlots) slot.Clear();
 
             var items = GetCurrentCategoryItems();
 
             int totalItems = items.Count;
-            _totalPages = (int)Math.Ceiling((double)totalItems / ITEMS_PER_PAGE);
+            _overlay.TotalPages = (int)Math.Ceiling((double)totalItems / SplitMapInventoryOverlay.ITEMS_PER_PAGE);
 
-            int startIndex = _currentPage * ITEMS_PER_PAGE;
-            int itemsToDisplay = Math.Min(ITEMS_PER_PAGE, items.Count - startIndex);
+            int startIndex = _overlay.CurrentPage * SplitMapInventoryOverlay.ITEMS_PER_PAGE;
+            int itemsToDisplay = Math.Min(SplitMapInventoryOverlay.ITEMS_PER_PAGE, items.Count - startIndex);
 
             for (int i = 0; i < itemsToDisplay; i++)
             {
                 var item = items[startIndex + i];
-                _inventorySlots[i].AssignItem(item.Name, item.Quantity, item.IconPath, item.Rarity, item.IconTint, item.IsAnimated, item.FallbackIconPath, item.IsEquipped);
+                _overlay.InventorySlots[i].AssignItem(item.Name, item.Quantity, item.IconPath, item.Rarity, item.IconTint, item.IsAnimated, item.FallbackIconPath, item.IsEquipped);
 
-                if (_selectedSlotIndex == i)
+                if (_overlay.SelectedSlotIndex == i)
                 {
-                    _inventorySlots[i].IsSelected = true;
+                    _overlay.InventorySlots[i].IsSelected = true;
                 }
             }
         }
 
-        private List<(string Name, int Quantity, string? IconPath, int? Uses, int Rarity, Color? IconTint, bool IsAnimated, string? FallbackIconPath, bool IsEquipped)> GetCurrentCategoryItems()
+        public List<(string Name, int Quantity, string? IconPath, int? Uses, int Rarity, Color? IconTint, bool IsAnimated, string? FallbackIconPath, bool IsEquipped)> GetCurrentCategoryItems()
         {
             var currentItems = new List<(string Name, int Quantity, string? IconPath, int? Uses, int Rarity, Color? IconTint, bool IsAnimated, string? FallbackIconPath, bool IsEquipped)>();
-            switch (_selectedInventoryCategory)
+            var playerState = _overlay.GameState.PlayerState;
+
+            switch (_overlay.SelectedInventoryCategory)
             {
                 case InventoryCategory.Weapons:
-                    foreach (var kvp in _gameState.PlayerState.Weapons)
+                    foreach (var kvp in playerState.Weapons)
                     {
-                        // Check if equipped by ANY party member
-                        bool isEquipped = _gameState.PlayerState.Party.Any(m => m.EquippedWeaponId == kvp.Key);
+                        bool isEquipped = playerState.Party.Any(m => m.EquippedWeaponId == kvp.Key);
                         if (BattleDataCache.Weapons.TryGetValue(kvp.Key, out var weaponData))
                         {
                             currentItems.Add((weaponData.WeaponName, kvp.Value, $"Sprites/Items/Weapons/{kvp.Key}", null, weaponData.Rarity, null, false, null, isEquipped));
@@ -81,9 +80,9 @@ namespace ProjectVagabond.UI
                     }
                     break;
                 case InventoryCategory.Armor:
-                    foreach (var kvp in _gameState.PlayerState.Armors)
+                    foreach (var kvp in playerState.Armors)
                     {
-                        bool isEquipped = _gameState.PlayerState.Party.Any(m => m.EquippedArmorId == kvp.Key);
+                        bool isEquipped = playerState.Party.Any(m => m.EquippedArmorId == kvp.Key);
                         if (BattleDataCache.Armors.TryGetValue(kvp.Key, out var armorData))
                         {
                             currentItems.Add((armorData.ArmorName, kvp.Value, $"Sprites/Items/Armor/{kvp.Key}", null, armorData.Rarity, null, false, null, isEquipped));
@@ -95,9 +94,9 @@ namespace ProjectVagabond.UI
                     }
                     break;
                 case InventoryCategory.Relics:
-                    foreach (var kvp in _gameState.PlayerState.Relics)
+                    foreach (var kvp in playerState.Relics)
                     {
-                        bool isEquipped = _gameState.PlayerState.Party.Any(m => m.EquippedRelicId == kvp.Key);
+                        bool isEquipped = playerState.Party.Any(m => m.EquippedRelicId == kvp.Key);
                         if (BattleDataCache.Relics.TryGetValue(kvp.Key, out var data))
                             currentItems.Add((data.RelicName, kvp.Value, $"Sprites/Items/Relics/{data.RelicID}", null, data.Rarity, null, false, null, isEquipped));
                         else
@@ -105,7 +104,7 @@ namespace ProjectVagabond.UI
                     }
                     break;
                 case InventoryCategory.Consumables:
-                    foreach (var kvp in _gameState.PlayerState.Consumables)
+                    foreach (var kvp in playerState.Consumables)
                     {
                         if (BattleDataCache.Consumables.TryGetValue(kvp.Key, out var data))
                             currentItems.Add((data.ItemName, kvp.Value, $"Sprites/Items/Consumables/{data.ItemID}", null, 0, null, false, null, false));
@@ -114,7 +113,7 @@ namespace ProjectVagabond.UI
                     }
                     break;
                 case InventoryCategory.Misc:
-                    foreach (var kvp in _gameState.PlayerState.MiscItems)
+                    foreach (var kvp in playerState.MiscItems)
                     {
                         if (BattleDataCache.MiscItems.TryGetValue(kvp.Key, out var data))
                             currentItems.Add((data.ItemName, kvp.Value, data.ImagePath, null, data.Rarity, null, false, null, false));
