@@ -140,7 +140,7 @@ namespace ProjectVagabond.UI
             {
                 var inventoryIcon = _spriteManager.SplitMapInventoryButton;
                 var rects = _spriteManager.SplitMapInventoryButtonSourceRects;
-                _inventoryButton = new ImageButton(new Rectangle(7, 10, 16, 16), inventoryIcon, rects[0], rects[1], enableHoverSway: true);
+                _inventoryButton = new ImageButton(new Rectangle(2, 2, 16, 16), inventoryIcon, rects[0], rects[1], enableHoverSway: true);
                 _inventoryButton.OnClick += () => OnInventoryButtonClicked?.Invoke();
             }
             _inventoryButton.ResetAnimationState();

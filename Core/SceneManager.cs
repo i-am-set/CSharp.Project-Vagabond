@@ -56,6 +56,8 @@ namespace ProjectVagabond
             if (!IsModalActive) return;
             _modalScene?.Exit();
             _modalScene = null;
+
+            _currentScene?.ResetInputState();
         }
 
         public void ResetInputState()

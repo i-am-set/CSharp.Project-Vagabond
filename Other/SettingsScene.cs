@@ -414,6 +414,7 @@ namespace ProjectVagabond.Scenes
             }
             else
             {
+                _hapticsManager.TriggerCompoundShake(0.3f);
                 _sceneManager.HideModal();
             }
         }
