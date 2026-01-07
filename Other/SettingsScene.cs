@@ -511,11 +511,16 @@ namespace ProjectVagabond.Scenes
             var applyButton = _uiElements.OfType<Button>().FirstOrDefault(b => b.Text == "APPLY");
             if (applyButton != null) applyButton.IsEnabled = IsDirty();
 
-            if (_currentInputDelay <= 0 && KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState)) AttemptToGoBack();
+            if (_currentInputDelay <= 0 && KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState))
+            {
+                _hapticsManager.TriggerCompoundShake(0.3f);
+                AttemptToGoBack();
+            }
 
             // Right Click to Go Back
             if (currentMouseState.RightButton == ButtonState.Pressed && previousMouseState.RightButton == ButtonState.Released)
             {
+                _hapticsManager.TriggerCompoundShake(0.3f);
                 AttemptToGoBack();
             }
 
