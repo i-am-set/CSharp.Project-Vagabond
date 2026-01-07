@@ -100,7 +100,6 @@ namespace ProjectVagabond.Scenes
         private SplitMapState _mapState = SplitMapState.Idle;
 
         private const float NODE_FRAME_DURATION = 0.5f;
-        private float _nodeHoverTextBobTimer = 0f;
         private float _nodeLiftTimer = 0f;
         private const float NODE_LIFT_AMOUNT = 15f;
 
@@ -164,20 +163,22 @@ namespace ProjectVagabond.Scenes
 
             _inventoryOverlay.OnInventoryButtonClicked += () =>
             {
-                _hapticsManager.TriggerZoomPulse(1.01f, 0.1f);
                 if (_currentView == SplitMapView.Settings)
                 {
                     _settingsOverlay.AttemptClose(() =>
                     {
+                        _hapticsManager.TriggerZoomPulse(1.01f, 0.1f);
                         SetView(SplitMapView.Inventory, snap: true);
                     });
                 }
                 else if (_currentView == SplitMapView.Inventory)
                 {
+                    _hapticsManager.TriggerZoomPulse(0.99f, 0.1f);
                     SetView(_viewToReturnTo, snap: true);
                 }
                 else
                 {
+                    _hapticsManager.TriggerZoomPulse(1.01f, 0.1f);
                     _viewToReturnTo = _currentView;
                     SetView(SplitMapView.Inventory, snap: true);
                 }
@@ -559,11 +560,6 @@ namespace ProjectVagabond.Scenes
             _voidEdgeEffect.Update(gameTime, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), _cameraOffset);
 
             _birdManager.Update(gameTime, _currentMap, _playerIcon.Position, _cameraOffset);
-
-            if (_hoveredNodeId != -1)
-            {
-                _nodeHoverTextBobTimer += deltaTime;
-            }
 
             if (_narrativeDialog.IsActive || _sceneManager.IsModalActive)
             {
@@ -1417,18 +1413,17 @@ namespace ProjectVagabond.Scenes
                     {
                         var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
                         var nodeTextSize = secondaryFont.MeasureString(nodeText);
-                        float yOffset = (MathF.Sin(_nodeHoverTextBobTimer * 1f) > 0) ? -1f : 0f;
-                        var textPosition = new Vector2((Global.VIRTUAL_WIDTH - nodeTextSize.Width) / 2f, Global.VIRTUAL_HEIGHT - nodeTextSize.Height - 3 + yOffset);
+
+                        // Removed bob offset calculation
+                        var textPosition = new Vector2((Global.VIRTUAL_WIDTH - nodeTextSize.Width) / 2f, Global.VIRTUAL_HEIGHT - nodeTextSize.Height - 3);
 
                         // --- NEW: Use TextWaveController for animation ---
                         bool isHovering = true; // We are inside the hover block
 
                         // Use the simple timer logic instead of the controller
                         _nodeTextWaveTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-                        float duration = TextAnimator.GetSmallWaveDuration(nodeText.Length);
-                        if (_nodeTextWaveTimer > duration + 0.1f) _nodeTextWaveTimer = 0f;
 
-                        // Use SmallWave effect
+                        // Use Wave effect
                         TextAnimator.DrawTextWithEffect(spriteBatch, secondaryFont, nodeText, textPosition, _global.Palette_Yellow, TextEffectType.Wave, _nodeTextWaveTimer);
                     }
                 }
