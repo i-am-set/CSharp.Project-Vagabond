@@ -76,6 +76,9 @@ namespace ProjectVagabond.UI
         private float _delayTimer = 0f;
         private float _totalTime = 0f; // For continuous idle animations
 
+        // Independent timer for sway to allow speed changes without phase jumps
+        private float _accumulatedSwayTime = 0f;
+
         // Current interpolated values for smooth transitions
         private Vector2 _currentScale = Vector2.Zero;
         private Vector2 _currentOffset = Vector2.Zero;
@@ -176,6 +179,7 @@ namespace ProjectVagabond.UI
             _delayTimer = 0f;
             _currentScale = Vector2.Zero;
             _currentOpacity = 0f;
+            _accumulatedSwayTime = 0f;
         }
 
         /// <summary>
@@ -278,36 +282,41 @@ namespace ProjectVagabond.UI
                 targetOffset = idleOffset;
                 targetScale = idleScale;
 
+                // --- JUICY STYLE LOGIC (Always Active, Variable Intensity) ---
+                if (HoverStyle == Utils.HoverAnimationType.Juicy)
+                {
+                    // Determine multipliers based on state
+                    bool isHovered = _state == AnimationState.Hovered;
+                    float speedMult = isHovered ? 1.0f : 0.5f;
+                    float distMult = isHovered ? 1.0f : 0.5f;
+
+                    // Accumulate time based on current speed multiplier to prevent phase jumps
+                    _accumulatedSwayTime += deltaTime * HoverSwaySpeed * speedMult;
+
+                    // Calculate Sway
+                    float t = _accumulatedSwayTime + _swayOffset;
+                    float currentDist = HoverSwayDistance * distMult;
+
+                    // Combine two sine waves for X to make it feel less like a perfect circle
+                    float swayX = (MathF.Sin(t * 1.1f) * currentDist) + (MathF.Cos(t * 0.4f) * (currentDist * 0.5f));
+                    float swayY = MathF.Sin(t * 1.4f) * currentDist;
+
+                    targetOffset.X += swayX;
+                    targetOffset.Y += swayY;
+
+                    // Apply Lift only when hovered
+                    if (isHovered)
+                    {
+                        targetOffset.Y += HoverLift;
+                    }
+                }
+
+                // --- Standard Hover Logic ---
                 if (_state == AnimationState.Hovered)
                 {
                     if (HoverStyle == Utils.HoverAnimationType.Lift) targetOffset.Y += HoverLift;
                     if (HoverStyle == Utils.HoverAnimationType.ScaleUp) targetScale *= HoverScale;
                     if (HoverStyle == Utils.HoverAnimationType.Wiggle) targetRotation = MathF.Sin(_totalTime * 10f) * 0.1f;
-
-                    // --- NEW: Juicy Style (Balatro-like) ---
-                    if (HoverStyle == Utils.HoverAnimationType.Juicy)
-                    {
-                        // Scale: Locked to 1.0x to prevent mangling
-                        targetScale *= 1.0f;
-
-                        // Lift: Standard lift
-                        targetOffset.Y += HoverLift;
-
-                        // Rotation: REMOVED per request
-                        targetRotation = 0f;
-
-                        // Floaty Sway (Imprecise Figure-8)
-                        // Apply Tunable Sway Speed
-                        float t = (_totalTime * HoverSwaySpeed) + _swayOffset;
-
-                        // Combine two sine waves for X to make it feel less like a perfect circle
-                        // Use HoverSwayDistance to control magnitude
-                        float swayX = (MathF.Sin(t * 1.1f) * HoverSwayDistance) + (MathF.Cos(t * 0.4f) * (HoverSwayDistance * 0.5f));
-                        float swayY = MathF.Sin(t * 1.4f) * HoverSwayDistance;
-
-                        targetOffset.X += swayX;
-                        targetOffset.Y += swayY;
-                    }
                 }
                 else if (_state == AnimationState.Pressed)
                 {

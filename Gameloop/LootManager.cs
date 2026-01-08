@@ -57,26 +57,51 @@ namespace ProjectVagabond.Systems
         public List<BaseItem> GenerateLoot(int count)
         {
             List<BaseItem> loot = new List<BaseItem>();
+            HashSet<string> pickedIds = new HashSet<string>();
 
             for (int i = 0; i < count; i++)
             {
+                // 1. Roll for a target rarity
                 int rarity = RollRarity();
 
-                // Fallback: If we rolled a rarity that has no items (e.g. no Legendaries defined yet),
-                // step down until we find a populated pool.
-                while (rarity >= 0 && _lootTable[rarity].Count == 0)
+                // 2. Try to find a unique item of that rarity
+                BaseItem selectedItem = GetRandomUniqueItem(rarity, pickedIds);
+
+                // 3. Fallback: If that rarity pool is exhausted (or empty), try to find ANY unique item
+                // We iterate through all rarities to find something valid.
+                if (selectedItem == null)
                 {
-                    rarity--;
+                    // Try Common -> Legendary order to fill the slot
+                    for (int r = 0; r <= 5; r++)
+                    {
+                        selectedItem = GetRandomUniqueItem(r, pickedIds);
+                        if (selectedItem != null) break;
+                    }
                 }
 
-                if (rarity >= 0)
+                // 4. Add to loot if we found something
+                if (selectedItem != null)
                 {
-                    var pool = _lootTable[rarity];
-                    loot.Add(pool[_rng.Next(pool.Count)]);
+                    loot.Add(selectedItem);
+                    pickedIds.Add(selectedItem.ID);
                 }
             }
 
             return loot;
+        }
+
+        private BaseItem GetRandomUniqueItem(int rarity, HashSet<string> excludeIds)
+        {
+            if (!_lootTable.ContainsKey(rarity)) return null;
+
+            var pool = _lootTable[rarity];
+
+            // Filter the pool to only items we haven't picked yet
+            var validCandidates = pool.Where(item => !excludeIds.Contains(item.ID)).ToList();
+
+            if (validCandidates.Count == 0) return null;
+
+            return validCandidates[_rng.Next(validCandidates.Count)];
         }
 
         private int RollRarity()

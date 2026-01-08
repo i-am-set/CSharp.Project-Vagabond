@@ -105,12 +105,12 @@ namespace ProjectVagabond.Scenes
                     {
                         EntryStyle = EntryExitStyle.PopJiggle,
                         ExitStyle = EntryExitStyle.JuicyCollect, // Juicy spring animation
-                        IdleStyle = IdleAnimationType.None, // No idle bobbing
+                        IdleStyle = IdleAnimationType.None, // No idle bobbing (Juicy handles it)
 
                         // --- JUICY HOVER CONFIGURATION ---
                         HoverStyle = HoverAnimationType.Juicy,
                         HoverScale = 1.0f,      // Locked to 1.0x to prevent mangling
-                        HoverLift = -3f,       // Lift up 10 pixels
+                        HoverLift = -3f,       // Lift up 3 pixels
                         InteractionSpeed = 15f, // Very snappy response
 
                         // Apply Tunable Speeds & Distance
