@@ -256,6 +256,9 @@ namespace ProjectVagabond.Battle.UI
             // --- NEW: Pre-calculated Target ---
             public Vector2? PreCalculatedTarget;
             public string TargetCombatantID; // ID of the combatant who will "catch" this coin
+
+            // --- NEW: Failsafe Timer ---
+            public float AbsoluteTimer; // Tracks total existence time
         }
         private readonly List<CoinParticle> _activeCoins = new List<CoinParticle>();
 
@@ -264,6 +267,7 @@ namespace ProjectVagabond.Battle.UI
         private const float COIN_BOUNCE_FACTOR = 0.5f;
         private const float COIN_LIFETIME = 0.5f; // Time to wait before magnetizing
         private const float COIN_INDIVIDUAL_DISPENSE_DELAY = 1.75f; // Increased stagger to prevent clumping
+        private const float COIN_MAX_LIFETIME = 8.0f; // Failsafe: Auto-collect after 8 seconds
 
         // Spawning Physics
         private const float COIN_VELOCITY_X_RANGE = 120f; // Increased from 45f to spread coins wider
@@ -1230,7 +1234,8 @@ namespace ProjectVagabond.Battle.UI
                     FlipTimer = (float)(_random.NextDouble() * MathHelper.TwoPi),
                     FlipSpeed = 10f + (float)(_random.NextDouble() * 10f),
                     PreCalculatedTarget = targetPos, // Assign the specific target
-                    TargetCombatantID = targetId
+                    TargetCombatantID = targetId,
+                    AbsoluteTimer = 0f // Initialize failsafe timer
                 };
                 _activeCoins.Add(coin);
             }
@@ -1240,9 +1245,38 @@ namespace ProjectVagabond.Battle.UI
         {
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
+            // --- PHYSICS SUB-STEPPING ---
+            // We use a fixed time step for physics to ensure stability at low framerates.
+            // 120 Hz (0.00833s) is a good balance for simple particle physics.
+            const float PHYSICS_STEP = 0.00833f;
+            float timeLeft = dt;
+
+            while (timeLeft > 0)
+            {
+                float step = Math.Min(timeLeft, PHYSICS_STEP);
+                UpdateCoinsPhysicsStep(step);
+                timeLeft -= step;
+            }
+        }
+
+        private void UpdateCoinsPhysicsStep(float dt)
+        {
             for (int i = _activeCoins.Count - 1; i >= 0; i--)
             {
                 var coin = _activeCoins[i];
+
+                // --- FAILSAFE: Auto-Collect after 8 seconds ---
+                coin.AbsoluteTimer += dt;
+                if (coin.AbsoluteTimer >= COIN_MAX_LIFETIME)
+                {
+                    // Force collect logic
+                    if (!string.IsNullOrEmpty(coin.TargetCombatantID))
+                    {
+                        StartCoinCatchAnimation(coin.TargetCombatantID);
+                    }
+                    _activeCoins.RemoveAt(i);
+                    continue;
+                }
 
                 // Handle Delay
                 if (coin.Delay > 0)
@@ -1259,8 +1293,15 @@ namespace ProjectVagabond.Battle.UI
                     // Magnetization Logic
                     Vector2 direction = coin.MagnetTarget - coin.Position;
                     float distanceSq = direction.LengthSquared();
+                    float distance = MathF.Sqrt(distanceSq);
 
-                    if (distanceSq < COIN_MAGNET_KILL_DIST_SQ)
+                    // Calculate movement amount for this step
+                    coin.MagnetSpeed += coin.MagnetAcceleration * dt;
+                    float moveAmount = coin.MagnetSpeed * dt;
+
+                    // --- TUNNELING FIX ---
+                    // If the movement amount is greater than the distance to target, snap to target.
+                    if (distance <= moveAmount || distanceSq < COIN_MAGNET_KILL_DIST_SQ)
                     {
                         // Coin Collected
                         if (!string.IsNullOrEmpty(coin.TargetCombatantID))
@@ -1272,8 +1313,7 @@ namespace ProjectVagabond.Battle.UI
                     }
 
                     direction.Normalize();
-                    coin.MagnetSpeed += coin.MagnetAcceleration * dt;
-                    coin.Position += direction * coin.MagnetSpeed * dt;
+                    coin.Position += direction * moveAmount;
                 }
                 else if (!coin.IsResting)
                 {
