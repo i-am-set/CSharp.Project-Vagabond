@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle.UI;
 using ProjectVagabond.UI; // Added for TextAnimator and TextEffectType
 using ProjectVagabond.Utils;
 using System;
@@ -437,14 +438,30 @@ namespace ProjectVagabond.Battle.UI
                 _bounds.Height - padding * 2
             );
 
-            // Draw Text
+            // --- DYNAMIC CENTERING LOGIC ---
+
+            // 1. Calculate Total Height of currently visible text
+            float lineHeight = font.LineHeight + LINE_SPACING;
+            float totalHeight = _displayLines.Count * lineHeight - LINE_SPACING; // Subtract last gap
+
+            // 2. Calculate Starting Y to center vertically
+            float startY = panelBounds.Center.Y - (totalHeight / 2f);
+            // Adjust for font baseline visual preference
+            startY -= 2;
+
             int globalCharIndex = 0; // For animation continuity
 
             for (int i = 0; i < _displayLines.Count; i++)
             {
                 var line = _displayLines[i];
-                float currentX = panelBounds.X + padding;
-                float currentY = panelBounds.Y + padding - 2 + (i * (font.LineHeight + LINE_SPACING));
+
+                // 3. Calculate Width of this specific line
+                float lineWidth = 0f;
+                foreach (var t in line) lineWidth += t.Width;
+
+                // 4. Calculate Starting X to center horizontally
+                float currentX = panelBounds.Center.X - (lineWidth / 2f);
+                float currentY = startY + (i * lineHeight);
 
                 foreach (var token in line)
                 {

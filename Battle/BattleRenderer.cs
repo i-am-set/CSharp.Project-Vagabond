@@ -5,6 +5,10 @@ using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Particles;
+using ProjectVagabond.Progression;
+using ProjectVagabond.Systems;
+using ProjectVagabond.Transitions;
 using ProjectVagabond.UI; // Added for TextAnimator
 using ProjectVagabond.Utils;
 using System;
@@ -12,6 +16,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.Battle.UI
 {
@@ -53,6 +59,9 @@ namespace ProjectVagabond.Battle.UI
         private bool _floorOutroTriggered = false;
         private bool _waitingForFloorOutro = false;
         private bool _hasInitializedPositions = false; // Tracks if we've processed at least one frame with enemies
+
+        // --- NEW: Forced Center Floor State ---
+        public bool ForceDrawCenterFloor { get; set; } = false;
 
         // Enemy Animation Data
         private Dictionary<string, Vector2[]> _enemySpritePartOffsets = new Dictionary<string, Vector2[]>();
@@ -141,6 +150,7 @@ namespace ProjectVagabond.Battle.UI
             _waitingForFloorOutro = false;
             _hasInitializedPositions = false;
             _enemySquashScales.Clear();
+            ForceDrawCenterFloor = false; // Reset forced state
         }
 
         public List<TargetInfo> GetCurrentTargets() => _currentTargets;
@@ -638,15 +648,28 @@ namespace ProjectVagabond.Battle.UI
                 }
             }
 
-            bool hideEmptyFloors = _centeringSequenceStarted;
+            // --- MODIFIED: Check ForceDrawCenterFloor ---
+            bool hideEmptyFloors = _centeringSequenceStarted || ForceDrawCenterFloor;
 
             if (hideEmptyFloors)
             {
-                if (floorEntities.Count == 0)
+                // If forced or no entities, draw center floor
+                if (floorEntities.Count == 0 || ForceDrawCenterFloor)
                 {
                     var center = BattleLayout.GetEnemyCenter();
                     int size = BattleLayout.ENEMY_SPRITE_SIZE_NORMAL;
-                    _vfxRenderer.DrawFloor(spriteBatch, center, center.Y + size + BattleLayout.ENEMY_SLOT_Y_OFFSET - 12);
+
+                    float floorScale = 1.0f;
+
+                    // Check for center intro animation
+                    var centerIntro = animManager.GetFloorIntroAnimationState("floor_center");
+                    if (centerIntro != null)
+                    {
+                        float progress = Math.Clamp(centerIntro.Timer / BattleAnimationManager.FloorIntroAnimationState.DURATION, 0f, 1f);
+                        floorScale = Easing.EaseOutBack(progress);
+                    }
+
+                    _vfxRenderer.DrawFloor(spriteBatch, center, center.Y + size + BattleLayout.ENEMY_SLOT_Y_OFFSET - 12, floorScale);
                 }
                 else
                 {
@@ -666,11 +689,22 @@ namespace ProjectVagabond.Battle.UI
                         int size = _spriteManager.IsMajorEnemySprite(enemy.ArchetypeId) ? BattleLayout.ENEMY_SPRITE_SIZE_MAJOR : BattleLayout.ENEMY_SPRITE_SIZE_NORMAL;
 
                         float floorScale = 1.0f;
-                        var floorAnim = animManager.GetFloorIntroAnimationState("floor_center");
-                        if (floorAnim != null)
+
+                        // CHECK OUTRO FIRST
+                        var outroAnim = animManager.GetFloorOutroAnimationState("floor_center");
+                        if (outroAnim != null)
                         {
-                            float progress = Math.Clamp(floorAnim.Timer / BattleAnimationManager.FloorIntroAnimationState.DURATION, 0f, 1f);
-                            floorScale = Easing.EaseOutBack(progress);
+                            float progress = Math.Clamp(outroAnim.Timer / BattleAnimationManager.FloorOutroAnimationState.DURATION, 0f, 1f);
+                            floorScale = 1.0f - Easing.EaseInBack(progress);
+                        }
+                        else
+                        {
+                            var floorAnim = animManager.GetFloorIntroAnimationState("floor_center");
+                            if (floorAnim != null)
+                            {
+                                float progress = Math.Clamp(floorAnim.Timer / BattleAnimationManager.FloorIntroAnimationState.DURATION, 0f, 1f);
+                                floorScale = Easing.EaseOutBack(progress);
+                            }
                         }
 
                         _vfxRenderer.DrawFloor(spriteBatch, center, center.Y + size + BattleLayout.ENEMY_SLOT_Y_OFFSET - 12, floorScale);
@@ -703,6 +737,21 @@ namespace ProjectVagabond.Battle.UI
                     }
 
                     _vfxRenderer.DrawFloor(spriteBatch, center, center.Y + size + BattleLayout.ENEMY_SLOT_Y_OFFSET - 12, floorScale);
+                }
+
+                // --- NEW: Check for Center Floor Animation even in multi-slot mode ---
+                // This allows the center floor to animate IN while the side floors animate OUT during the loot transition.
+                var centerIntro = animManager.GetFloorIntroAnimationState("floor_center");
+                if (centerIntro != null)
+                {
+                    var centerPos = BattleLayout.GetEnemyCenter();
+                    // Use a default size since we don't have a specific enemy to reference
+                    int size = BattleLayout.ENEMY_SPRITE_SIZE_NORMAL;
+
+                    float progress = Math.Clamp(centerIntro.Timer / BattleAnimationManager.FloorIntroAnimationState.DURATION, 0f, 1f);
+                    float floorScale = Easing.EaseOutBack(progress);
+
+                    _vfxRenderer.DrawFloor(spriteBatch, centerPos, centerPos.Y + size + BattleLayout.ENEMY_SLOT_Y_OFFSET - 12, floorScale);
                 }
             }
 
@@ -1065,8 +1114,17 @@ namespace ProjectVagabond.Battle.UI
                 bool isHighlighted = selectable.Contains(player) && shouldGrayOut;
                 float pulse = 0f;
 
+                // --- NEW: Check for Player Floor Outro ---
+                float floorScale = 1.0f;
+                var floorOutro = animManager.GetFloorOutroAnimationState($"player_floor_{player.BattleSlot}");
+                if (floorOutro != null)
+                {
+                    float progress = Math.Clamp(floorOutro.Timer / BattleAnimationManager.FloorOutroAnimationState.DURATION, 0f, 1f);
+                    floorScale = 1.0f - Easing.EaseInBack(progress);
+                }
+
                 var baseCenter = BattleLayout.GetPlayerSpriteCenter(player.BattleSlot);
-                _vfxRenderer.DrawPlayerFloor(spriteBatch, baseCenter + slideOffset, player.VisualAlpha, 1.0f);
+                _vfxRenderer.DrawPlayerFloor(spriteBatch, baseCenter + slideOffset, player.VisualAlpha, floorScale);
 
                 Color? lowHealthOverlay = null;
                 if (player.LowHealthFlashTimer > 0f && !player.IsDefeated)

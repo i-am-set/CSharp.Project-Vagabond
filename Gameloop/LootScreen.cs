@@ -39,7 +39,7 @@ namespace ProjectVagabond.Scenes
         // Layout Constants
         private Rectangle _lootArea;
         private const int CARD_SIZE = 32;
-        private const int AREA_WIDTH = 140; // Reduced from 280
+        private const int AREA_WIDTH = 90; // Reduced to 90
         private const int AREA_HEIGHT = 60;
         private const float CARD_MOVE_SPEED = 10f; // Speed of re-centering tween
 
@@ -70,7 +70,8 @@ namespace ProjectVagabond.Scenes
 
             // Center the loot area
             int x = (Global.VIRTUAL_WIDTH - AREA_WIDTH) / 2;
-            int y = (Global.VIRTUAL_HEIGHT - AREA_HEIGHT) / 2;
+            // Moved up 24 pixels as requested
+            int y = (Global.VIRTUAL_HEIGHT - AREA_HEIGHT) / 2 - 24;
             _lootArea = new Rectangle(x, y, AREA_WIDTH, AREA_HEIGHT);
 
             // Initialize Control Buttons
@@ -253,7 +254,7 @@ namespace ProjectVagabond.Scenes
             // Recalculate layout targets based on remaining cards
             UpdateCardLayout();
 
-            // Update Animators & Input
+            // 1. Update Animators & Positions for ALL cards
             foreach (var card in _cards)
             {
                 // Tween position
@@ -272,28 +273,53 @@ namespace ProjectVagabond.Scenes
                 }
 
                 card.Animator.Update(dt);
+            }
 
-                // Only handle input if not already collected and not in auto-collect mode
-                if (!_isCollectingAll && !card.IsCollected && card.Animator.IsInteractive)
+            // 2. Handle Input (Exclusive Hover - Topmost/Rightmost wins)
+            if (!_isCollectingAll)
+            {
+                LootCard topHoveredCard = null;
+
+                // Iterate backwards to find the top-most card under the mouse
+                // The list is ordered Left->Right (Bottom->Top), so last index is top.
+                for (int i = _cards.Count - 1; i >= 0; i--)
                 {
-                    bool isHovered = card.CurrentBounds.Contains(mousePos);
-
-                    // Store explicit mouse hover state for instant visual feedback
-                    card.IsMouseHovering = isHovered;
-
-                    // Pass hover state to animator for physics/movement
-                    card.Animator.SetHover(isHovered);
-
-                    if (isHovered && clicked)
+                    var card = _cards[i];
+                    // Only consider cards that are not collected and are interactive
+                    if (!card.IsCollected && card.Animator.IsInteractive && card.CurrentBounds.Contains(mousePos))
                     {
-                        CollectCard(card);
-                        // CRITICAL FIX: Break loop to prevent double-collection or click-through issues in the same frame
-                        break;
+                        topHoveredCard = card;
+                        break; // Stop at the first (highest) card found
                     }
                 }
-                else
+
+                // Apply hover state to all cards
+                foreach (var card in _cards)
                 {
-                    card.IsMouseHovering = false;
+                    // Only update interactive cards
+                    if (!card.IsCollected && card.Animator.IsInteractive)
+                    {
+                        bool isTarget = (card == topHoveredCard);
+
+                        // Update visual hover state
+                        card.IsMouseHovering = isTarget;
+
+                        // Update animator state
+                        card.Animator.SetHover(isTarget);
+
+                        if (isTarget && clicked)
+                        {
+                            CollectCard(card);
+                            // Consume click so it doesn't trigger anything else this frame
+                            clicked = false;
+                        }
+                    }
+                    else
+                    {
+                        // Ensure non-interactive cards don't get stuck in hover state
+                        card.IsMouseHovering = false;
+                        card.Animator.SetHover(false);
+                    }
                 }
             }
 
@@ -338,8 +364,6 @@ namespace ProjectVagabond.Scenes
             if (!IsActive) return;
 
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-
-            // Removed the background dimmer draw call as requested
 
             // Draw Cards
             foreach (var card in _cards)
@@ -409,7 +433,30 @@ namespace ProjectVagabond.Scenes
             string title = "VICTORY!";
             Vector2 titleSize = font.MeasureString(title);
             float titleBob = MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * 3f) * 2f;
-            spriteBatch.DrawString(font, title, new Vector2(_lootArea.Center.X - titleSize.X / 2, _lootArea.Top - 40 + titleBob), _global.Palette_Yellow);
+
+            // Decoupled position: Fixed Y near top (20px), centered horizontally
+            float titleY = 20f;
+            spriteBatch.DrawString(font, title, new Vector2((Global.VIRTUAL_WIDTH - titleSize.X) / 2, titleY + titleBob), _global.Palette_Yellow);
+
+            // --- DEBUG DRAWING (F1) ---
+            if (_global.ShowSplitMapGrid)
+            {
+                var pixel = ServiceLocator.Get<Texture2D>();
+
+                // Draw Area Background
+                spriteBatch.DrawSnapped(pixel, _lootArea, Color.Magenta * 0.3f);
+
+                // Draw Border
+                spriteBatch.DrawLineSnapped(new Vector2(_lootArea.Left, _lootArea.Top), new Vector2(_lootArea.Right, _lootArea.Top), Color.Magenta);
+                spriteBatch.DrawLineSnapped(new Vector2(_lootArea.Left, _lootArea.Bottom), new Vector2(_lootArea.Right, _lootArea.Bottom), Color.Magenta);
+                spriteBatch.DrawLineSnapped(new Vector2(_lootArea.Left, _lootArea.Top), new Vector2(_lootArea.Left, _lootArea.Bottom), Color.Magenta);
+                spriteBatch.DrawLineSnapped(new Vector2(_lootArea.Right, _lootArea.Top), new Vector2(_lootArea.Right, _lootArea.Bottom), Color.Magenta);
+
+                // Draw Dimensions Text
+                string debugText = $"RECT: {_lootArea.X},{_lootArea.Y} {_lootArea.Width}x{_lootArea.Height}";
+                Vector2 textPos = new Vector2(_lootArea.X, _lootArea.Bottom + 2);
+                spriteBatch.DrawStringSnapped(secondaryFont, debugText, textPos, Color.Yellow);
+            }
         }
     }
 }

@@ -52,6 +52,8 @@ namespace ProjectVagabond.Scenes
         private HitstopManager _hitstopManager;
         private ParticleSystemManager _particleSystemManager;
         private readonly TransitionManager _transitionManager;
+        private readonly ProgressionManager _progressionManager;
+
         private List<int> _enemyEntityIds = new List<int>();
         private BattleManager.BattlePhase _previousBattlePhase;
         private bool _isBattleOver;
@@ -123,6 +125,7 @@ namespace ProjectVagabond.Scenes
         // --- LOOT SCREEN STATE ---
         private LootScreen _lootScreen;
         private bool _lootScreenHasShown = false;
+        private bool _floorTransitionTriggered = false; // NEW: Track if we started the floor swap
 
         // --- REGEX FOR RANDOM WORD PARSING ---
         private static readonly Regex _randomWordRegex = new Regex(@"\b[\w\-\']+(?:\$[\w\-\']+)+\b", RegexOptions.Compiled);
@@ -141,6 +144,7 @@ namespace ProjectVagabond.Scenes
             _hitstopManager = ServiceLocator.Get<HitstopManager>();
             _particleSystemManager = ServiceLocator.Get<ParticleSystemManager>();
             _transitionManager = ServiceLocator.Get<TransitionManager>();
+            _progressionManager = ServiceLocator.Get<ProgressionManager>();
         }
 
         public override Rectangle GetAnimatedBounds()
@@ -186,6 +190,7 @@ namespace ProjectVagabond.Scenes
             _switchSequenceState = SwitchSequenceState.None;
             _victorySequenceTriggered = false;
             _lootScreenHasShown = false; // Reset loot flag
+            _floorTransitionTriggered = false; // Reset floor transition flag
             _lootScreen.Reset(); // Ensure loot screen is clean on entry
             SubscribeToEvents();
             InitializeSettingsButton();
@@ -277,6 +282,10 @@ namespace ProjectVagabond.Scenes
         public override void Exit()
         {
             base.Exit();
+            if (BattleSetup.ReturnSceneState != GameSceneState.Split)
+            {
+                _progressionManager.ClearCurrentSplitMap();
+            }
             _lootScreen.Reset(); // Ensure loot screen is closed on exit (e.g. F5 reset)
             UnsubscribeFromEvents();
             CleanupEntities();
@@ -555,6 +564,10 @@ namespace ProjectVagabond.Scenes
             if (_lootScreen != null && _lootScreen.IsActive)
             {
                 _lootScreen.Update(gameTime);
+
+                // Update animations so floors can slide out while loot screen is active
+                _animationManager.Update(gameTime, _battleManager.AllCombatants);
+
                 if (!_lootScreen.IsActive)
                 {
                     // Loot screen closed, proceed to victory
@@ -798,10 +811,44 @@ namespace ProjectVagabond.Scenes
                             // --- LOOT SCREEN INTEGRATION ---
                             if (!_lootScreenHasShown)
                             {
-                                var lootManager = ServiceLocator.Get<LootManager>();
-                                var loot = lootManager.GenerateCombatLoot();
-                                _lootScreen.Show(loot);
-                                _lootScreenHasShown = true;
+                                if (!_floorTransitionTriggered)
+                                {
+                                    // 1. Trigger the transition
+                                    _uiManager.ForceClearNarration();
+
+                                    // Animate floors
+                                    if (!SplitMapScene.WasMajorBattle)
+                                    {
+                                        _animationManager.StartFloorOutroAnimation("floor_0");
+                                        _animationManager.StartFloorOutroAnimation("floor_1");
+                                        _animationManager.StartFloorIntroAnimation("floor_center");
+                                    }
+
+                                    _animationManager.StartFloorOutroAnimation("player_floor_0");
+                                    _animationManager.StartFloorOutroAnimation("player_floor_1");
+
+                                    // Force the renderer to draw the center floor even if it thinks it shouldn't
+                                    _renderer.ForceDrawCenterFloor = true;
+
+                                    _floorTransitionTriggered = true;
+                                }
+                                else
+                                {
+                                    // 2. Wait for the transition to finish
+                                    // We check if any floor animations are still active.
+                                    bool floorsBusy = _animationManager.IsFloorAnimatingOut("floor_0") ||
+                                                      _animationManager.IsFloorAnimatingOut("floor_1") ||
+                                                      _animationManager.GetFloorIntroAnimationState("floor_center") != null;
+
+                                    if (!floorsBusy)
+                                    {
+                                        // 3. Show Loot Screen
+                                        var lootManager = ServiceLocator.Get<LootManager>();
+                                        var loot = lootManager.GenerateCombatLoot();
+                                        _lootScreen.Show(loot);
+                                        _lootScreenHasShown = true;
+                                    }
+                                }
                             }
                             else if (!_lootScreen.IsActive)
                             {
