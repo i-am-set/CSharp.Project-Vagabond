@@ -109,7 +109,8 @@ namespace ProjectVagabond.UI
         private float _targetScale = 1.0f;
         private const float SCALE_SPEED = 15f;
         private const float HOVER_SCALE = 1.1f;
-        private const float PRESS_SCALE = 0.95f;
+        // FIX: Set PRESS_SCALE to match HOVER_SCALE to prevent shrinking/shifting on click
+        private const float PRESS_SCALE = 1.1f;
 
         // Feedback Animation State
         protected float _shakeTimer = 0f;

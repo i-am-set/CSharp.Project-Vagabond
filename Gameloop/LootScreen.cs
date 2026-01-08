@@ -44,9 +44,9 @@ namespace ProjectVagabond.Scenes
         private const float CARD_MOVE_SPEED = 10f; // Speed of re-centering tween
 
         // --- TUNING: Hover Animation Speeds ---
-        private const float LOOT_HOVER_FLOAT_SPEED = 1.0f;    // Multiplier for the figure-8 sway speed
+        private const float LOOT_HOVER_FLOAT_SPEED = 3.0f;    // Multiplier for the figure-8 sway speed
         private const float LOOT_HOVER_ROTATION_SPEED = 1.0f; // Multiplier for the tilt speed
-        private const float LOOT_HOVER_FLOAT_DISTANCE = 1.5f; // Max distance to sway (pixels)
+        private const float LOOT_HOVER_FLOAT_DISTANCE = 1.0f; // Max distance to sway (pixels)
 
         // Buttons
         private Button _collectAllButton;

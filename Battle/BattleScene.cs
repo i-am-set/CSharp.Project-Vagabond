@@ -1586,7 +1586,7 @@ namespace ProjectVagabond.Scenes
                             _core.TriggerFullscreenFlash(Color.White, 0.15f * juiceIntensity);
                         }
 
-                        _hapticsManager.TriggerCompoundShake(0.75f * juiceIntensity);
+                        _hapticsManager.TriggerCompoundShake(0.25f * juiceIntensity);
                     }
 
                     // Directional Shake & Recoil

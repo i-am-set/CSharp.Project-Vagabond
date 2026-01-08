@@ -49,11 +49,10 @@ namespace ProjectVagabond.Battle.UI
         private float _overlayFadeTimer;
         private const float OVERLAY_FADE_SPEED = 2.0f;
 
-        // Hover Scaling State (Replicated from Button.cs since _currentScale is private there)
-        private float _currentHoverScale = 1.0f;
-        private const float HOVER_SCALE = 1.1f;
-        private const float PRESS_SCALE = 0.95f;
-        private const float SCALE_SPEED = 15f;
+        // --- Content Shift Logic ---
+        private float _currentContentShiftX = 0f;
+        private const float HOVER_CONTENT_SHIFT_TARGET = -3f; // Shift 3 pixels left
+        private const float SHIFT_SPEED = 15f; // Speed of the tween
 
         public MoveButton(MoveData move, MoveEntry entry, int displayPower, BitmapFont font, Texture2D? backgroundSpriteSheet, Texture2D iconTexture, Rectangle? iconSourceRect, bool startVisible = true)
             : base(Rectangle.Empty, move.MoveName.ToUpper(), function: move.MoveID)
@@ -153,27 +152,16 @@ namespace ProjectVagabond.Battle.UI
 
             bool isActivated = IsEnabled && (IsHovered || forceHover);
 
-            float hoverOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
-
-            // FIX: If the button is pressed, do not apply the hover offset (which causes the slide).
-            if (_isPressed)
-            {
-                hoverOffset = 0f;
-            }
+            // Update the animator state but ignore the offset result since we handle shifting manually
+            _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
 
             _overlayFadeTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-
-            // --- Calculate Hover Scale ---
-            float targetHoverScale = 1.0f;
-            if (_isPressed) targetHoverScale = PRESS_SCALE;
-            else if (isActivated) targetHoverScale = HOVER_SCALE;
-
-            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
-            _currentHoverScale = MathHelper.Lerp(_currentHoverScale, targetHoverScale, dt * SCALE_SPEED);
 
             // --- Calculate Appear Animation Scale ---
             float appearScaleX = 1.0f;
             float appearScaleY = 1.0f;
+            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
             if (_animState == AnimationState.Appearing)
             {
                 _appearTimer += dt;
@@ -187,16 +175,23 @@ namespace ProjectVagabond.Battle.UI
                 }
             }
 
-            // Combine scales
-            float finalScaleX = appearScaleX * _currentHoverScale;
-            float finalScaleY = appearScaleY * _currentHoverScale;
+            // Use only appear scale, no hover scaling
+            float finalScaleX = appearScaleX;
+            float finalScaleY = appearScaleY;
 
             if (finalScaleX < 0.01f || finalScaleY < 0.01f) return;
+
+            // --- Calculate Content Shift (Tweened) ---
+            float targetShift = isActivated ? HOVER_CONTENT_SHIFT_TARGET : 0f;
+            _currentContentShiftX = MathHelper.Lerp(_currentContentShiftX, targetShift, dt * SHIFT_SPEED);
+
+            // Round to integer for pixel-perfect movement
+            int pixelShiftX = (int)MathF.Round(_currentContentShiftX);
 
             int animatedWidth = (int)(Bounds.Width * finalScaleX);
             int animatedHeight = (int)(Bounds.Height * finalScaleY);
             var animatedBounds = new Rectangle(
-                Bounds.Center.X - animatedWidth / 2 + (int)(horizontalOffset ?? 0f) - (int)hoverOffset,
+                Bounds.Center.X - animatedWidth / 2 + (int)(horizontalOffset ?? 0f),
                 Bounds.Center.Y - animatedHeight / 2 + (int)(verticalOffset ?? 0f),
                 animatedWidth,
                 animatedHeight
@@ -220,7 +215,7 @@ namespace ProjectVagabond.Battle.UI
             {
                 float contentAlpha = finalTintColor.A / 255f;
 
-                // Draw background
+                // Draw background (No Shift)
                 if (_backgroundSpriteSheet != null)
                 {
                     // Round origin to prevent sub-pixel rendering artifacts
@@ -233,8 +228,10 @@ namespace ProjectVagabond.Battle.UI
 
                 const int iconSize = 9;
                 const int iconPadding = 4;
+
+                // Apply content shift to icon
                 var iconRect = new Rectangle(
-                    animatedBounds.X + iconPadding + 1,
+                    animatedBounds.X + iconPadding + 1 + pixelShiftX,
                     animatedBounds.Y + (animatedBounds.Height - iconSize) / 2,
                     iconSize,
                     iconSize
@@ -255,9 +252,16 @@ namespace ProjectVagabond.Battle.UI
                     textColor = _global.ButtonDisableColor;
                 }
 
+                // Apply content shift to text start position
+                // Note: iconRect already includes the shift, so textStartX is relative to the shifted icon
                 float textStartX = iconRect.Right + iconPadding;
                 const int textRightMargin = 4;
+
+                // Calculate available width based on the *original* bounds to prevent jitter in scrolling calculation
+                // But visually clip based on the shifted position?
+                // Actually, if we shift everything left, the right margin effectively increases by 1.
                 float textAvailableWidth = animatedBounds.Right - textStartX - textRightMargin;
+
                 var moveNameTextSize = _moveFont.MeasureString(this.Text);
                 bool needsScrolling = moveNameTextSize.Width > textAvailableWidth;
 

@@ -311,12 +311,12 @@ namespace ProjectVagabond.Scenes
                     "Keep these display settings?",
                     onConfirm: () =>
                     {
-                        _hapticsManager.TriggerCompoundShake(0.5f);
+                        _hapticsManager.TriggerCompoundShake(0.25f);
                         FinalizeAndSaveAllSettings();
                     },
                     onRevert: () =>
                     {
-                        _hapticsManager.TriggerCompoundShake(0.5f);
+                        _hapticsManager.TriggerCompoundShake(0.25f);
                         revertState.ApplyGraphicsSettings(_graphics, _core);
                         RevertChanges();
                     },
@@ -371,7 +371,7 @@ namespace ProjectVagabond.Scenes
 
         private void ConfirmResetSettings()
         {
-            _confirmationDialog.Show("Reset all settings to default?\n\nThis cannot be undone.", new List<Tuple<string, Action>> { Tuple.Create("YES", new Action(() => { _hapticsManager.TriggerCompoundShake(0.5f); ExecuteResetSettings(); _confirmationDialog.Hide(); })), Tuple.Create("[gray]NO", new Action(() => { _hapticsManager.TriggerCompoundShake(0.5f); _confirmationDialog.Hide(); })) });
+            _confirmationDialog.Show("Reset all settings to default?\n\nThis cannot be undone.", new List<Tuple<string, Action>> { Tuple.Create("YES", new Action(() => { _hapticsManager.TriggerCompoundShake(0.25f); ; ExecuteResetSettings(); _confirmationDialog.Hide(); })), Tuple.Create("[gray]NO", new Action(() => { _hapticsManager.TriggerCompoundShake(0.5f); _confirmationDialog.Hide(); })) });
         }
 
         private void ExecuteResetSettings()
@@ -406,15 +406,15 @@ namespace ProjectVagabond.Scenes
                 _confirmationDialog.Show(
                     "You have unsaved changes.",
                     new List<Tuple<string, Action>> {
-                        Tuple.Create("APPLY", new Action(() => { _hapticsManager.TriggerCompoundShake(0.5f); ApplySettings(); _sceneManager.HideModal(); })),
-                        Tuple.Create("DISCARD", new Action(() => { _hapticsManager.TriggerCompoundShake(0.5f); RevertChanges(); _sceneManager.HideModal(); })),
-                        Tuple.Create("[gray]CANCEL", new Action(() => { _hapticsManager.TriggerCompoundShake(0.5f); _confirmationDialog.Hide(); }))
+                        Tuple.Create("APPLY", new Action(() => { _hapticsManager.TriggerCompoundShake(0.25f); ApplySettings(); _sceneManager.HideModal(); })),
+                        Tuple.Create("DISCARD", new Action(() => { _hapticsManager.TriggerCompoundShake(0.25f); RevertChanges(); _sceneManager.HideModal(); })),
+                        Tuple.Create("[gray]CANCEL", new Action(() => { _hapticsManager.TriggerCompoundShake(0.25f); _confirmationDialog.Hide(); }))
                     }
                 );
             }
             else
             {
-                _hapticsManager.TriggerCompoundShake(0.3f);
+                _hapticsManager.TriggerCompoundShake(0.25f);
                 _sceneManager.HideModal();
             }
         }
@@ -513,14 +513,14 @@ namespace ProjectVagabond.Scenes
 
             if (_currentInputDelay <= 0 && KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState))
             {
-                _hapticsManager.TriggerCompoundShake(0.3f);
+                _hapticsManager.TriggerCompoundShake(0.25f);
                 AttemptToGoBack();
             }
 
             // Right Click to Go Back
             if (currentMouseState.RightButton == ButtonState.Pressed && previousMouseState.RightButton == ButtonState.Released)
             {
-                _hapticsManager.TriggerCompoundShake(0.3f);
+                _hapticsManager.TriggerCompoundShake(0.25f);
                 AttemptToGoBack();
             }
 
