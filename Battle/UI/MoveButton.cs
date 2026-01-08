@@ -154,6 +154,13 @@ namespace ProjectVagabond.Battle.UI
             bool isActivated = IsEnabled && (IsHovered || forceHover);
 
             float hoverOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
+
+            // FIX: If the button is pressed, do not apply the hover offset (which causes the slide).
+            if (_isPressed)
+            {
+                hoverOffset = 0f;
+            }
+
             _overlayFadeTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
             // --- Calculate Hover Scale ---

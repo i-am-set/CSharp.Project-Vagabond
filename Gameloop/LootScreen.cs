@@ -7,6 +7,7 @@ using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace ProjectVagabond.Scenes
 {
@@ -16,17 +17,36 @@ namespace ProjectVagabond.Scenes
         private Global _global;
         private SpriteManager _spriteManager;
         private GameState _gameState;
+        private HapticsManager _hapticsManager;
         // State
         public bool IsActive { get; private set; }
-        private List<BaseItem> _currentLoot;
-        private List<UIAnimator> _cardAnimators; // One animator per card
+
+        // Wrapper class to manage item state + animation state together
+        private class LootCard
+        {
+            public BaseItem Item;
+            public UIAnimator Animator;
+            public bool IsCollected; // True if clicked/collecting, but animation not finished
+            public bool IsMouseHovering; // True if mouse is physically over the rect (Instant feedback)
+            public Rectangle CurrentBounds;
+
+            // Layout Animation
+            public Vector2 VisualPosition; // Current X,Y for drawing
+            public Vector2 TargetPosition; // Where it wants to go
+        }
+        private List<LootCard> _cards;
 
         // Layout Constants
         private Rectangle _lootArea;
         private const int CARD_SIZE = 32;
-        private const int CARD_PADDING = 2;
-        private const int AREA_WIDTH = 280;
+        private const int AREA_WIDTH = 140; // Reduced from 280
         private const int AREA_HEIGHT = 60;
+        private const float CARD_MOVE_SPEED = 10f; // Speed of re-centering tween
+
+        // --- TUNING: Hover Animation Speeds ---
+        private const float LOOT_HOVER_FLOAT_SPEED = 1.0f;    // Multiplier for the figure-8 sway speed
+        private const float LOOT_HOVER_ROTATION_SPEED = 1.0f; // Multiplier for the tilt speed
+        private const float LOOT_HOVER_FLOAT_DISTANCE = 1.5f; // Max distance to sway (pixels)
 
         // Buttons
         private Button _collectAllButton;
@@ -35,13 +55,18 @@ namespace ProjectVagabond.Scenes
         // Input State
         private MouseState _prevMouse;
 
+        // Collection Sequence State
+        private bool _isCollectingAll = false;
+        private float _collectTimer = 0f;
+        private const float COLLECT_DELAY = 0.1f;
+
         public LootScreen()
         {
             _global = ServiceLocator.Get<Global>();
             _spriteManager = ServiceLocator.Get<SpriteManager>();
             _gameState = ServiceLocator.Get<GameState>();
-            _currentLoot = new List<BaseItem>();
-            _cardAnimators = new List<UIAnimator>();
+            _hapticsManager = ServiceLocator.Get<HapticsManager>();
+            _cards = new List<LootCard>();
 
             // Center the loot area
             int x = (Global.VIRTUAL_WIDTH - AREA_WIDTH) / 2;
@@ -52,7 +77,7 @@ namespace ProjectVagabond.Scenes
             int btnY = _lootArea.Bottom + 20;
 
             _collectAllButton = new Button(new Rectangle(x, btnY, 80, 15), "COLLECT ALL", font: ServiceLocator.Get<Core>().SecondaryFont);
-            _collectAllButton.OnClick += CollectAll;
+            _collectAllButton.OnClick += StartCollectAllSequence;
 
             _skipButton = new Button(new Rectangle(_lootArea.Right - 60, btnY, 60, 15), "SKIP", font: ServiceLocator.Get<Core>().SecondaryFont);
             _skipButton.OnClick += SkipAll;
@@ -60,34 +85,68 @@ namespace ProjectVagabond.Scenes
 
         public void Show(List<BaseItem> loot)
         {
-            _currentLoot = loot ?? new List<BaseItem>();
+            _cards.Clear();
             IsActive = true;
             _prevMouse = Mouse.GetState();
+            _isCollectingAll = false;
+            _collectTimer = 0f;
 
-            // Initialize Animators
-            _cardAnimators.Clear();
-            for (int i = 0; i < _currentLoot.Count; i++)
+            if (loot != null)
             {
-                var animator = new UIAnimator
+                // Pre-calculate initial positions so they don't fly in from (0,0)
+                int count = loot.Count;
+                float segmentWidth = (float)_lootArea.Width / count;
+                int cardY = _lootArea.Center.Y - (CARD_SIZE / 2);
+
+                for (int i = 0; i < count; i++)
                 {
-                    EntryStyle = EntryExitStyle.PopJiggle,
-                    ExitStyle = EntryExitStyle.Zoom, // Default exit (Collect)
-                    IdleStyle = IdleAnimationType.Bob,
-                    HoverStyle = HoverAnimationType.Lift,
-                    DurationIn = 0.4f,
-                    DurationOut = 0.25f
-                };
-                // Stagger entrance
-                animator.Show(delay: i * 0.1f);
-                _cardAnimators.Add(animator);
+                    var animator = new UIAnimator
+                    {
+                        EntryStyle = EntryExitStyle.PopJiggle,
+                        ExitStyle = EntryExitStyle.JuicyCollect, // Juicy spring animation
+                        IdleStyle = IdleAnimationType.None, // No idle bobbing
+
+                        // --- JUICY HOVER CONFIGURATION ---
+                        HoverStyle = HoverAnimationType.Juicy,
+                        HoverScale = 1.0f,      // Locked to 1.0x to prevent mangling
+                        HoverLift = -3f,       // Lift up 10 pixels
+                        InteractionSpeed = 15f, // Very snappy response
+
+                        // Apply Tunable Speeds & Distance
+                        HoverSwaySpeed = LOOT_HOVER_FLOAT_SPEED,
+                        HoverRotationSpeed = LOOT_HOVER_ROTATION_SPEED,
+                        HoverSwayDistance = LOOT_HOVER_FLOAT_DISTANCE,
+
+                        DurationIn = 0.4f,
+                        DurationOut = 0.15f // Snappy exit (was 0.35f)
+                    };
+                    // Stagger entrance
+                    animator.Show(delay: i * 0.1f);
+
+                    // Calculate initial centered position
+                    float centerX = _lootArea.X + (segmentWidth * i) + (segmentWidth / 2f);
+                    float targetX = centerX - (CARD_SIZE / 2f);
+                    Vector2 pos = new Vector2(targetX, cardY);
+
+                    _cards.Add(new LootCard
+                    {
+                        Item = loot[i],
+                        Animator = animator,
+                        IsCollected = false,
+                        IsMouseHovering = false,
+                        VisualPosition = pos,
+                        TargetPosition = pos,
+                        CurrentBounds = new Rectangle((int)pos.X, (int)pos.Y, CARD_SIZE, CARD_SIZE)
+                    });
+                }
             }
         }
 
         public void Close()
         {
             IsActive = false;
-            _currentLoot.Clear();
-            _cardAnimators.Clear();
+            _cards.Clear();
+            _isCollectingAll = false;
         }
 
         public void Reset()
@@ -97,49 +156,56 @@ namespace ProjectVagabond.Scenes
             _skipButton.ResetAnimationState();
         }
 
-        private void CollectAll()
+        private void StartCollectAllSequence()
         {
-            // Trigger exit animation for all cards
-            for (int i = 0; i < _cardAnimators.Count; i++)
+            if (_cards.Count == 0)
             {
-                // Collect style: Zoom out
-                _cardAnimators[i].Hide(delay: i * 0.05f, overrideStyle: EntryExitStyle.Zoom);
+                Close();
+                return;
             }
 
-            // Actually add items logic is handled when animation finishes or we force close?
-            // For simplicity in this refactor, we add them now but wait to close.
-            foreach (var item in _currentLoot) AddItemToInventory(item);
-
-            // We need a way to wait for animations. For now, just close after a delay or immediately.
-            // A robust system would wait for OnOutComplete.
-            // Let's just close immediately for now to keep logic simple, 
-            // or we could implement a "Closing" state.
-            Close();
+            _isCollectingAll = true;
+            _collectTimer = 0f; // Immediate start
         }
 
         private void SkipAll()
         {
             // Trigger exit animation for all cards
-            for (int i = 0; i < _cardAnimators.Count; i++)
+            foreach (var card in _cards)
             {
-                // Skip style: Slide Down
-                _cardAnimators[i].Hide(delay: i * 0.05f, overrideStyle: EntryExitStyle.SlideDown);
+                if (!card.IsCollected)
+                {
+                    // Bake current offset to prevent snapping
+                    Vector2 currentOffset = card.Animator.GetCurrentOffset();
+                    card.VisualPosition += currentOffset;
+                    card.Animator.ForceOffset(Vector2.Zero);
+
+                    // Skip style: Slide Down
+                    card.Animator.Hide(delay: 0f, overrideStyle: EntryExitStyle.SlideDown);
+                    card.IsCollected = true; // Mark as collected so we don't interact with them
+                }
             }
-            Close();
         }
 
-        private void CollectItem(int index)
+        private void CollectCard(LootCard card)
         {
-            if (index < 0 || index >= _currentLoot.Count) return;
+            if (card.IsCollected) return;
 
-            var item = _currentLoot[index];
-            AddItemToInventory(item);
+            // Bake the current hover/animation offset into the visual position
+            // so the exit animation starts exactly where the item currently is.
+            Vector2 currentOffset = card.Animator.GetCurrentOffset();
+            card.VisualPosition += currentOffset;
 
-            // Remove from lists
-            _currentLoot.RemoveAt(index);
-            _cardAnimators.RemoveAt(index);
+            // Reset the animator's offset so it doesn't double-apply
+            card.Animator.ForceOffset(Vector2.Zero);
 
-            if (_currentLoot.Count == 0) Close();
+            card.IsCollected = true;
+            AddItemToInventory(card.Item);
+
+            // Trigger the juicy exit animation
+            card.Animator.Hide();
+
+            _hapticsManager.TriggerCompoundShake(0.2f);
         }
 
         private void AddItemToInventory(BaseItem item)
@@ -161,114 +227,177 @@ namespace ProjectVagabond.Scenes
             Vector2 mousePos = Core.TransformMouse(mouse.Position);
             bool clicked = mouse.LeftButton == ButtonState.Released && _prevMouse.LeftButton == ButtonState.Pressed;
 
-            _collectAllButton.Update(mouse);
-            _skipButton.Update(mouse);
+            // --- Collect All Sequence Logic ---
+            if (_isCollectingAll)
+            {
+                _collectTimer -= dt;
+                if (_collectTimer <= 0f)
+                {
+                    // Find next uncollected card
+                    var nextCard = _cards.FirstOrDefault(c => !c.IsCollected);
+                    if (nextCard != null)
+                    {
+                        CollectCard(nextCard);
+                        _collectTimer = COLLECT_DELAY;
+                    }
+                }
+                // Block other input while collecting
+                _prevMouse = mouse;
+            }
+            else
+            {
+                _collectAllButton.Update(mouse);
+                _skipButton.Update(mouse);
+            }
 
-            List<Rectangle> cardRects = CalculateCardPositions();
+            // Recalculate layout targets based on remaining cards
+            UpdateCardLayout();
 
             // Update Animators & Input
-            for (int i = 0; i < _cardAnimators.Count; i++)
+            foreach (var card in _cards)
             {
-                var animator = _cardAnimators[i];
-                animator.Update(dt);
-
-                // Only handle input if fully visible/interactive
-                if (animator.IsInteractive && i < cardRects.Count)
+                // Tween position
+                // Only tween if not collected (collected cards stay put and animate out)
+                if (!card.IsCollected)
                 {
-                    bool isHovered = cardRects[i].Contains(mousePos);
-                    animator.SetHover(isHovered);
+                    card.VisualPosition = Vector2.Lerp(card.VisualPosition, card.TargetPosition, dt * CARD_MOVE_SPEED);
+
+                    // Update bounds for hit detection
+                    card.CurrentBounds = new Rectangle(
+                        (int)card.VisualPosition.X,
+                        (int)card.VisualPosition.Y,
+                        CARD_SIZE,
+                        CARD_SIZE
+                    );
+                }
+
+                card.Animator.Update(dt);
+
+                // Only handle input if not already collected and not in auto-collect mode
+                if (!_isCollectingAll && !card.IsCollected && card.Animator.IsInteractive)
+                {
+                    bool isHovered = card.CurrentBounds.Contains(mousePos);
+
+                    // Store explicit mouse hover state for instant visual feedback
+                    card.IsMouseHovering = isHovered;
+
+                    // Pass hover state to animator for physics/movement
+                    card.Animator.SetHover(isHovered);
 
                     if (isHovered && clicked)
                     {
-                        CollectItem(i);
-                        // Adjust index since we removed one
-                        i--;
+                        CollectCard(card);
+                        // CRITICAL FIX: Break loop to prevent double-collection or click-through issues in the same frame
+                        break;
                     }
                 }
+                else
+                {
+                    card.IsMouseHovering = false;
+                }
+            }
+
+            // Cleanup: Remove cards that have finished animating out
+            _cards.RemoveAll(c => c.IsCollected && !c.Animator.IsVisible);
+
+            // If all cards are gone, close
+            if (_cards.Count == 0)
+            {
+                Close();
             }
 
             _prevMouse = mouse;
         }
 
-        private List<Rectangle> CalculateCardPositions()
+        private void UpdateCardLayout()
         {
-            List<Rectangle> rects = new List<Rectangle>();
-            int count = _currentLoot.Count;
-            if (count == 0) return rects;
+            // Filter to only active (uncollected) cards for layout purposes
+            var activeCards = _cards.Where(c => !c.IsCollected).ToList();
+            int count = activeCards.Count;
+            if (count == 0) return;
 
             int cardY = _lootArea.Center.Y - (CARD_SIZE / 2);
-            float naturalWidth = (count * CARD_SIZE) + ((count - 1) * CARD_PADDING);
 
-            if (naturalWidth <= _lootArea.Width)
+            // Divide the total area width into equal segments
+            float segmentWidth = (float)_lootArea.Width / count;
+
+            for (int i = 0; i < count; i++)
             {
-                float startX = _lootArea.Center.X - (naturalWidth / 2);
-                for (int i = 0; i < count; i++)
-                {
-                    rects.Add(new Rectangle((int)(startX + i * (CARD_SIZE + CARD_PADDING)), cardY, CARD_SIZE, CARD_SIZE));
-                }
+                // Calculate the center X of the segment
+                float segmentCenterX = _lootArea.X + (segmentWidth * i) + (segmentWidth / 2f);
+
+                // Center the card within that segment
+                float targetX = segmentCenterX - (CARD_SIZE / 2f);
+
+                activeCards[i].TargetPosition = new Vector2(targetX, cardY);
             }
-            else
-            {
-                float startX = _lootArea.X;
-                float endX = _lootArea.Right - CARD_SIZE;
-                float step = (endX - startX) / (count - 1);
-                for (int i = 0; i < count; i++)
-                {
-                    rects.Add(new Rectangle((int)(startX + (i * step)), cardY, CARD_SIZE, CARD_SIZE));
-                }
-            }
-            return rects;
         }
 
         public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
             if (!IsActive) return;
 
-            var pixel = ServiceLocator.Get<Texture2D>();
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
 
-            // Dimmer
-            spriteBatch.Draw(pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), Color.Black * 0.7f);
-
-            List<Rectangle> cardRects = CalculateCardPositions();
+            // Removed the background dimmer draw call as requested
 
             // Draw Cards
-            for (int i = 0; i < _currentLoot.Count; i++)
+            foreach (var card in _cards)
             {
-                if (i >= cardRects.Count) break;
-
-                var item = _currentLoot[i];
-                var baseRect = cardRects[i];
-                var animator = _cardAnimators[i];
-                var state = animator.GetVisualState();
-
+                var state = card.Animator.GetVisualState();
                 if (!state.IsVisible) continue;
 
-                // Apply Animator Transform
-                // Calculate center for scaling/rotation
-                Vector2 center = baseRect.Center.ToVector2();
+                // Apply Animator Transform to the VisualPosition
+                // VisualPosition is the top-left of the card's current layout slot
+                Vector2 basePos = card.VisualPosition;
+                Vector2 center = basePos + new Vector2(CARD_SIZE / 2f, CARD_SIZE / 2f);
+
+                // The animator offset is relative to the center
                 Vector2 drawPos = center + state.Offset;
 
-                // We need to draw manually with scale/rotation, so we can't use simple Draw(rect).
-                // We'll draw the background box centered.
+                // --- SHADOW LOGIC ---
+                // Draw shadow at the BASE position (the "floor"), not the animated position.
+                // Scale shadow down as the item lifts up to simulate height.
+                // Max lift is roughly -10px.
+                float liftRatio = Math.Abs(state.Offset.Y) / 10f; // 0 to 1
+                float shadowScale = MathHelper.Lerp(1.0f, 0.6f, liftRatio) * state.Scale.X; // Shrink shadow
+                float shadowAlpha = MathHelper.Lerp(0.5f, 0.2f, liftRatio) * state.Opacity; // Fade shadow
 
-                Color cardColor = _global.RarityColors.ContainsKey(item.Rarity) ? _global.RarityColors[item.Rarity] : Color.White;
+                // Draw Item Sprite Shadow (Silhouette)
+                Texture2D icon = _spriteManager.GetItemSprite(card.Item.SpritePath);
+                Texture2D silhouette = _spriteManager.GetItemSpriteSilhouette(card.Item.SpritePath);
 
-                // Draw Shadow (Offset, no rotation/scale usually, but let's scale it)
-                spriteBatch.Draw(pixel, drawPos + new Vector2(2, 2), null, Color.Black * 0.5f * state.Opacity, state.Rotation, new Vector2(0.5f), new Vector2(CARD_SIZE, CARD_SIZE) * state.Scale, SpriteEffects.None, 0f);
-
-                // Draw Card Background
-                spriteBatch.Draw(pixel, drawPos, null, cardColor * state.Opacity, state.Rotation, new Vector2(0.5f), new Vector2(CARD_SIZE, CARD_SIZE) * state.Scale, SpriteEffects.None, 0f);
-
-                // Draw Inner Dark Background
-                spriteBatch.Draw(pixel, drawPos, null, _global.Palette_DarkGray * state.Opacity, state.Rotation, new Vector2(0.5f), new Vector2(CARD_SIZE - 2, CARD_SIZE - 2) * state.Scale, SpriteEffects.None, 0f);
-
-                // Draw Item Sprite
-                Texture2D icon = _spriteManager.GetItemSprite(item.SpritePath);
                 if (icon != null)
                 {
-                    // Draw sprite centered
                     Vector2 origin = new Vector2(icon.Width / 2f, icon.Height / 2f);
+
+                    // 1. Draw Floor Shadow: Flattened Y, Tinted Black
+                    // FIX: Added state.Offset.X to position so shadow follows horizontal sway
+                    spriteBatch.Draw(icon, center + new Vector2(state.Offset.X, 8), null, Color.Black * shadowAlpha, state.Rotation, origin, new Vector2(state.Scale.X, state.Scale.Y * 0.3f), SpriteEffects.None, 0f);
+
+                    // 2. Draw Outline (If Silhouette exists)
+                    if (silhouette != null)
+                    {
+                        // Determine colors based on explicit mouse hover state (Instant feedback)
+                        bool isHovered = card.IsMouseHovering;
+
+                        Color mainOutlineColor = isHovered ? _global.ItemOutlineColor_Hover : _global.Palette_DarkGray;
+                        Color cornerOutlineColor = isHovered ? _global.ItemOutlineColor_Hover_Corner : _global.Palette_DarkerGray;
+
+                        // Draw Diagonals (Corners)
+                        spriteBatch.Draw(silhouette, drawPos + new Vector2(-1, -1), null, cornerOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
+                        spriteBatch.Draw(silhouette, drawPos + new Vector2(1, -1), null, cornerOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
+                        spriteBatch.Draw(silhouette, drawPos + new Vector2(-1, 1), null, cornerOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
+                        spriteBatch.Draw(silhouette, drawPos + new Vector2(1, 1), null, cornerOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
+
+                        // Draw Cardinals (Main)
+                        spriteBatch.Draw(silhouette, drawPos + new Vector2(-1, 0), null, mainOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
+                        spriteBatch.Draw(silhouette, drawPos + new Vector2(1, 0), null, mainOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
+                        spriteBatch.Draw(silhouette, drawPos + new Vector2(0, -1), null, mainOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
+                        spriteBatch.Draw(silhouette, drawPos + new Vector2(0, 1), null, mainOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
+                    }
+
+                    // 3. Draw Item Sprite Body
                     spriteBatch.Draw(icon, drawPos, null, Color.White * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
                 }
             }

@@ -394,7 +394,7 @@ namespace ProjectVagabond
                     if (encounter != null && encounter.Any())
                     {
                         splitScene.InitiateCombat(encounter);
-                        Log("[palette_blue]Starting debug combat (Forest)...");
+                        Log("[palette_green]Starting debug combat (Forest)...");
                     }
                     else
                     {

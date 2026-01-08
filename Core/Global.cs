@@ -81,7 +81,7 @@ namespace ProjectVagabond
             ColorNarration_Default = Palette_LightGray;
             ColorNarration_Prefix = Palette_DarkGray;
             ColorNarration_Action = Palette_Orange;
-            ColorNarration_Spell = Palette_Blue;
+            ColorNarration_Spell = Palette_DarkBlue;
             ColorNarration_Item = Palette_PaleGreen;
             ColorNarration_Critical = Palette_Yellow;
             ColorNarration_Defeated = Palette_DarkRed;

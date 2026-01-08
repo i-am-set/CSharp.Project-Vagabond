@@ -4,7 +4,7 @@ using System;
 namespace ProjectVagabond.Utils
 {
     /// <summary>
-    /// Defines the mathematical curve used for UI entry and exit animations.
+    /// Defines the mathematical curve used for entry and exit animations.
     /// </summary>
     public enum EntryExitStyle
     {
@@ -15,7 +15,8 @@ namespace ProjectVagabond.Utils
         Zoom, // Scale 0->1 linear (no overshoot)
         PopJiggle, // Scale 0->1 with overshoot AND a damped rotation wiggle
         SwoopLeft, // Slides in from left
-        SwoopRight // Slides in from right
+        SwoopRight, // Slides in from right
+        JuicyCollect // Scale Up (Anticipation) -> Scale Down (Vanish)
     }
     /// <summary>
     /// Defines the pattern for Idle animations.
@@ -38,6 +39,7 @@ namespace ProjectVagabond.Utils
         Lift,           // Moves up slightly (Standard UIAnimator)
         ScaleUp,        // Grows slightly (Standard UIAnimator)
         Wiggle,         // Rotates back and forth (Standard UIAnimator)
+        Juicy,          // Balatro-style: Scale Up + Lift + Subtle Rotation
 
         // --- Legacy / Button.cs Support ---
         Hop,            // A quick "hop" to the right and back.
@@ -58,12 +60,14 @@ namespace ProjectVagabond.Utils
         /// <param name="progress">0.0 (Start) to 1.0 (End).</param>
         /// <param name="isEntering">True if appearing, False if disappearing.</param>
         /// <param name="magnitude">The distance to slide for slide effects.</param>
+        /// <param name="seed">A random seed value (0-1 or similar) to randomize shakes/wiggles.</param>
         /// <returns>A tuple containing Scale, Opacity, Position Offset, and Rotation.</returns>
         public static (Vector2 Scale, float Opacity, Vector2 Offset, float Rotation) CalculateEntryExitTransform(
             EntryExitStyle style,
             float progress,
             bool isEntering,
-            float magnitude = 20f)
+            float magnitude = 20f,
+            float seed = 0f)
         {
             float t = Math.Clamp(progress, 0f, 1f);
             Vector2 scale = Vector2.One;
@@ -132,6 +136,36 @@ namespace ProjectVagabond.Utils
                         ? MathHelper.Lerp(magnitude, 0f, Easing.EaseOutCubic(t))
                         : MathHelper.Lerp(0f, magnitude, Easing.EaseInCubic(t));
                     opacity = isEntering ? t : 1.0f - t;
+                    break;
+
+                case EntryExitStyle.JuicyCollect:
+                    if (isEntering)
+                    {
+                        // Standard pop in
+                        scale = new Vector2(Easing.EaseOutBack(t));
+                        opacity = t;
+                    }
+                    else
+                    {
+                        // Exit: Violent Shake + Rapid Shrink
+                        // No growing anticipation. Just snap away.
+
+                        // Scale: 1.0 -> 0.0 (EaseInBack for a slight "suck in" feel, or EaseInQuart for speed)
+                        float sVal = MathHelper.Lerp(1.0f, 0.0f, Easing.EaseInBack(t));
+                        scale = new Vector2(sVal);
+
+                        // Opacity: Fade out near the end
+                        opacity = 1.0f - Easing.EaseInQuad(t);
+
+                        // Shake: Violent shake that decays as t goes 0->1
+                        float shakeIntensity = 1f; // Max pixels to shake
+                        float shakeDecay = 1.0f - t; // Linear decay
+                        float shakeFrequency = 30f; // Very fast vibration
+
+                        // Use seed to randomize X vs Y phase
+                        offset.X = MathF.Sin(t * shakeFrequency + seed) * shakeIntensity * shakeDecay;
+                        offset.Y = MathF.Cos(t * shakeFrequency * 0.9f + seed) * shakeIntensity * shakeDecay;
+                    }
                     break;
             }
 

@@ -30,7 +30,6 @@ namespace ProjectVagabond.UI
             public Vector2 Offset;
             public float Rotation;
             public bool IsVisible; // True if anything should be drawn
-
             public static VisualState Default => new VisualState
             {
                 Scale = Vector2.One,
@@ -66,6 +65,11 @@ namespace ProjectVagabond.UI
         public float PressScale { get; set; } = 0.95f;
         public float InteractionSpeed { get; set; } = 15f; // Lerp speed for hover/press
 
+        // --- NEW: Tunable Speeds for Juicy Hover ---
+        public float HoverSwaySpeed { get; set; } = 1.0f;
+        public float HoverRotationSpeed { get; set; } = 1.0f;
+        public float HoverSwayDistance { get; set; } = 3.0f; // Default distance
+
         // --- State ---
         private AnimationState _state = AnimationState.Hidden;
         private float _timer = 0f;
@@ -78,6 +82,10 @@ namespace ProjectVagabond.UI
         private float _currentOpacity = 0f;
         private float _currentRotation = 0f;
 
+        // Randomization for organic sway
+        private static readonly Random _rng = new Random();
+        private readonly float _swayOffset;
+
         // Callbacks
         public event Action OnInComplete;
         public event Action OnOutComplete;
@@ -85,7 +93,11 @@ namespace ProjectVagabond.UI
         public bool IsVisible => _state != AnimationState.Hidden;
         public bool IsInteractive => _state == AnimationState.Idle || _state == AnimationState.Hovered || _state == AnimationState.Pressed;
 
-        public UIAnimator() { }
+        public UIAnimator()
+        {
+            // Initialize with a random offset so multiple elements don't sway in perfect unison
+            _swayOffset = (float)(_rng.NextDouble() * Math.PI * 2);
+        }
 
         /// <summary>
         /// Starts the entry animation.
@@ -166,6 +178,20 @@ namespace ProjectVagabond.UI
             _currentOpacity = 0f;
         }
 
+        /// <summary>
+        /// Gets the current internal offset. Used for baking positions before state changes.
+        /// </summary>
+        public Vector2 GetCurrentOffset() => _currentOffset;
+
+        /// <summary>
+        /// Manually forces the internal offset to a specific value.
+        /// Used to reset the offset after baking it into the parent's position.
+        /// </summary>
+        public void ForceOffset(Vector2 offset)
+        {
+            _currentOffset = offset;
+        }
+
         public void Update(float deltaTime)
         {
             _totalTime += deltaTime;
@@ -219,7 +245,7 @@ namespace ProjectVagabond.UI
             if (_state == AnimationState.Hidden || _state == AnimationState.InDelay)
             {
                 // Use the "Start" state of the Entry animation as the hidden state
-                var startTransform = Utils.AnimationUtils.CalculateEntryExitTransform(EntryStyle, 0f, true, Magnitude);
+                var startTransform = Utils.AnimationUtils.CalculateEntryExitTransform(EntryStyle, 0f, true, Magnitude, _swayOffset);
                 targetScale = startTransform.Scale;
                 targetOpacity = startTransform.Opacity;
                 targetOffset = startTransform.Offset;
@@ -228,7 +254,7 @@ namespace ProjectVagabond.UI
             else if (_state == AnimationState.AnimatingIn)
             {
                 float progress = DurationIn > 0 ? Math.Clamp(_timer / DurationIn, 0f, 1f) : 1f;
-                var transform = Utils.AnimationUtils.CalculateEntryExitTransform(EntryStyle, progress, true, Magnitude);
+                var transform = Utils.AnimationUtils.CalculateEntryExitTransform(EntryStyle, progress, true, Magnitude, _swayOffset);
                 targetScale = transform.Scale;
                 targetOpacity = transform.Opacity;
                 targetOffset = transform.Offset;
@@ -237,7 +263,7 @@ namespace ProjectVagabond.UI
             else if (_state == AnimationState.AnimatingOut || _state == AnimationState.OutDelay)
             {
                 float progress = DurationOut > 0 ? Math.Clamp(_timer / DurationOut, 0f, 1f) : 1f;
-                var transform = Utils.AnimationUtils.CalculateEntryExitTransform(ExitStyle, progress, false, Magnitude);
+                var transform = Utils.AnimationUtils.CalculateEntryExitTransform(ExitStyle, progress, false, Magnitude, _swayOffset);
                 targetScale = transform.Scale;
                 targetOpacity = transform.Opacity;
                 targetOffset = transform.Offset;
@@ -257,6 +283,31 @@ namespace ProjectVagabond.UI
                     if (HoverStyle == Utils.HoverAnimationType.Lift) targetOffset.Y += HoverLift;
                     if (HoverStyle == Utils.HoverAnimationType.ScaleUp) targetScale *= HoverScale;
                     if (HoverStyle == Utils.HoverAnimationType.Wiggle) targetRotation = MathF.Sin(_totalTime * 10f) * 0.1f;
+
+                    // --- NEW: Juicy Style (Balatro-like) ---
+                    if (HoverStyle == Utils.HoverAnimationType.Juicy)
+                    {
+                        // Scale: Locked to 1.0x to prevent mangling
+                        targetScale *= 1.0f;
+
+                        // Lift: Standard lift
+                        targetOffset.Y += HoverLift;
+
+                        // Rotation: REMOVED per request
+                        targetRotation = 0f;
+
+                        // Floaty Sway (Imprecise Figure-8)
+                        // Apply Tunable Sway Speed
+                        float t = (_totalTime * HoverSwaySpeed) + _swayOffset;
+
+                        // Combine two sine waves for X to make it feel less like a perfect circle
+                        // Use HoverSwayDistance to control magnitude
+                        float swayX = (MathF.Sin(t * 1.1f) * HoverSwayDistance) + (MathF.Cos(t * 0.4f) * (HoverSwayDistance * 0.5f));
+                        float swayY = MathF.Sin(t * 1.4f) * HoverSwayDistance;
+
+                        targetOffset.X += swayX;
+                        targetOffset.Y += swayY;
+                    }
                 }
                 else if (_state == AnimationState.Pressed)
                 {
