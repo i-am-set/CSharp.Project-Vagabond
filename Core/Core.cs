@@ -127,6 +127,7 @@ namespace ProjectVagabond
         private HitstopManager _hitstopManager;
         private BackgroundNoiseRenderer _backgroundNoiseRenderer;
         private LootManager _lootManager; // Added LootManager
+        private ItemTooltipRenderer _itemTooltipRenderer; // Added ItemTooltipRenderer
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         // GAME LOOP STATE
@@ -361,6 +362,11 @@ namespace ProjectVagabond
 
             _backgroundNoiseRenderer = new BackgroundNoiseRenderer();
             ServiceLocator.Register<BackgroundNoiseRenderer>(_backgroundNoiseRenderer);
+
+            // --- ITEM TOOLTIP RENDERER INIT ---
+            // Moved here from LoadContent to ensure it exists before Scenes are initialized
+            _itemTooltipRenderer = new ItemTooltipRenderer();
+            ServiceLocator.Register<ItemTooltipRenderer>(_itemTooltipRenderer);
 
             // Phase 4: Final Setup
             GraphicsDevice.SamplerStates[0] = SamplerState.PointClamp;

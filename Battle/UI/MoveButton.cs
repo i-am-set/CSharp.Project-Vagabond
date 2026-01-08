@@ -183,7 +183,9 @@ namespace ProjectVagabond.Battle.UI
 
             // --- Calculate Content Shift (Tweened) ---
             float targetShift = isActivated ? HOVER_CONTENT_SHIFT_TARGET : 0f;
-            _currentContentShiftX = MathHelper.Lerp(_currentContentShiftX, targetShift, dt * SHIFT_SPEED);
+            // FIX: Use Time-Corrected Damping to prevent overshoot at low FPS
+            float shiftDamping = 1.0f - MathF.Exp(-SHIFT_SPEED * dt);
+            _currentContentShiftX = MathHelper.Lerp(_currentContentShiftX, targetShift, shiftDamping);
 
             // Round to integer for pixel-perfect movement
             int pixelShiftX = (int)MathF.Round(_currentContentShiftX);
@@ -348,3 +350,4 @@ namespace ProjectVagabond.Battle.UI
         }
     }
 }
+﻿

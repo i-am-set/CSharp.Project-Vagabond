@@ -2,7 +2,9 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle;
 using ProjectVagabond.Items;
+using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
@@ -18,6 +20,8 @@ namespace ProjectVagabond.Scenes
         private SpriteManager _spriteManager;
         private GameState _gameState;
         private HapticsManager _hapticsManager;
+        private ItemTooltipRenderer _tooltipRenderer; // New dependency
+
         // State
         public bool IsActive { get; private set; }
 
@@ -60,12 +64,19 @@ namespace ProjectVagabond.Scenes
         private float _collectTimer = 0f;
         private const float COLLECT_DELAY = 0.1f;
 
+        // Tooltip State
+        private object? _hoveredItemData;
+        private object? _lastHoveredItemData;
+        private float _tooltipTimer = 0f;
+        private const float TOOLTIP_DELAY = 0.4f; // Tunable delay
+
         public LootScreen()
         {
             _global = ServiceLocator.Get<Global>();
             _spriteManager = ServiceLocator.Get<SpriteManager>();
             _gameState = ServiceLocator.Get<GameState>();
             _hapticsManager = ServiceLocator.Get<HapticsManager>();
+            _tooltipRenderer = ServiceLocator.Get<ItemTooltipRenderer>();
             _cards = new List<LootCard>();
 
             // Center the loot area
@@ -91,6 +102,9 @@ namespace ProjectVagabond.Scenes
             _prevMouse = Mouse.GetState();
             _isCollectingAll = false;
             _collectTimer = 0f;
+            _hoveredItemData = null;
+            _lastHoveredItemData = null;
+            _tooltipTimer = 0f;
 
             if (loot != null)
             {
@@ -276,6 +290,8 @@ namespace ProjectVagabond.Scenes
             }
 
             // 2. Handle Input (Exclusive Hover - Topmost/Rightmost wins)
+            _hoveredItemData = null; // Reset hover data
+
             if (!_isCollectingAll)
             {
                 LootCard topHoveredCard = null;
@@ -307,11 +323,16 @@ namespace ProjectVagabond.Scenes
                         // Update animator state
                         card.Animator.SetHover(isTarget);
 
-                        if (isTarget && clicked)
+                        if (isTarget)
                         {
-                            CollectCard(card);
-                            // Consume click so it doesn't trigger anything else this frame
-                            clicked = false;
+                            _hoveredItemData = card.Item.OriginalData; // Set tooltip data
+
+                            if (clicked)
+                            {
+                                CollectCard(card);
+                                // Consume click so it doesn't trigger anything else this frame
+                                clicked = false;
+                            }
                         }
                     }
                     else
@@ -321,6 +342,22 @@ namespace ProjectVagabond.Scenes
                         card.Animator.SetHover(false);
                     }
                 }
+            }
+
+            // --- TOOLTIP TIMER LOGIC ---
+            if (_hoveredItemData != _lastHoveredItemData)
+            {
+                _tooltipTimer = 0f;
+                _lastHoveredItemData = _hoveredItemData;
+            }
+
+            if (_hoveredItemData != null)
+            {
+                _tooltipTimer += dt;
+            }
+            else
+            {
+                _tooltipTimer = 0f;
             }
 
             // Cleanup: Remove cards that have finished animating out
@@ -437,6 +474,23 @@ namespace ProjectVagabond.Scenes
             // Decoupled position: Fixed Y near top (20px), centered horizontally
             float titleY = 20f;
             spriteBatch.DrawString(font, title, new Vector2((Global.VIRTUAL_WIDTH - titleSize.X) / 2, titleY + titleBob), _global.Palette_Yellow);
+
+            // --- Draw Tooltip ---
+            if (_hoveredItemData != null && _tooltipTimer >= TOOLTIP_DELAY)
+            {
+                // Find the card that corresponds to the hovered data to get its position
+                var hoveredCard = _cards.FirstOrDefault(c => c.Item.OriginalData == _hoveredItemData);
+                if (hoveredCard != null)
+                {
+                    // Use the visual center of the card as the anchor
+                    var state = hoveredCard.Animator.GetVisualState();
+                    Vector2 basePos = hoveredCard.VisualPosition;
+                    Vector2 center = basePos + new Vector2(CARD_SIZE / 2f, CARD_SIZE / 2f);
+                    Vector2 anchor = center + state.Offset;
+
+                    _tooltipRenderer.DrawTooltip(spriteBatch, _hoveredItemData, anchor, gameTime);
+                }
+            }
 
             // --- DEBUG DRAWING (F1) ---
             if (_global.ShowSplitMapGrid)

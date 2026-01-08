@@ -52,7 +52,6 @@ namespace ProjectVagabond.UI
         public bool UseOutline;
         public bool UseSquareOutline;
         public float EaseInDuration; // New: Duration to ramp up intensity
-
         public static TextDrawOptions Default(Vector2 position, Color color)
         {
             return new TextDrawOptions
@@ -234,17 +233,18 @@ namespace ProjectVagabond.UI
                     break;
 
                 case TextEffectType.Shake:
-                    float shakeTime = MathF.Floor(time * TextAnimationSettings.ShakeSpeed);
-                    float r1 = MathF.Sin(shakeTime * 12.9898f + charIndex * 78.233f);
-                    float r2 = MathF.Sin(shakeTime * 39.7867f + charIndex * 12.9898f);
-                    offset = new Vector2((r1 - MathF.Floor(r1)) * 2f - 1f, (r2 - MathF.Floor(r2)) * 2f - 1f) * TextAnimationSettings.ShakeAmplitude;
+                    // FIX: Removed MathF.Floor to prevent aliasing at low FPS.
+                    // Use continuous sine waves with non-integer frequencies to simulate randomness.
+                    float r1 = MathF.Sin(time * TextAnimationSettings.ShakeSpeed + charIndex * 78.233f);
+                    float r2 = MathF.Sin(time * TextAnimationSettings.ShakeSpeed * 1.3f + charIndex * 12.9898f);
+                    offset = new Vector2(r1, r2) * TextAnimationSettings.ShakeAmplitude;
                     break;
 
                 case TextEffectType.Nervous:
-                    float nervTime = MathF.Floor(time * TextAnimationSettings.NervousSpeed);
-                    float n1 = MathF.Sin(nervTime * 12.9898f + charIndex * 78.233f);
-                    float n2 = MathF.Sin(nervTime * 39.7867f + charIndex * 12.9898f);
-                    offset = new Vector2((n1 - MathF.Floor(n1)) * 2f - 1f, (n2 - MathF.Floor(n2)) * 2f - 1f) * TextAnimationSettings.NervousAmplitude;
+                    // FIX: Removed MathF.Floor.
+                    float n1 = MathF.Sin(time * TextAnimationSettings.NervousSpeed + charIndex * 78.233f);
+                    float n2 = MathF.Sin(time * TextAnimationSettings.NervousSpeed * 1.1f + charIndex * 12.9898f);
+                    offset = new Vector2(n1, n2) * TextAnimationSettings.NervousAmplitude;
                     break;
 
                 case TextEffectType.Rainbow:
@@ -265,17 +265,18 @@ namespace ProjectVagabond.UI
                     break;
 
                 case TextEffectType.Glitch:
-                    float gTime = MathF.Floor(time * TextAnimationSettings.GlitchSpeed);
-                    float g1 = MathF.Sin(gTime * 12.9898f + charIndex);
-                    float gNoise = g1 - MathF.Floor(g1);
-                    offset = new Vector2(gNoise * 2f - 1f) * TextAnimationSettings.GlitchAmplitude;
-                    rotation = (gNoise * 2f - 1f) * TextAnimationSettings.GlitchRotation;
+                    // FIX: Removed MathF.Floor. Use high frequency sine for chaotic movement.
+                    float g1 = MathF.Sin(time * TextAnimationSettings.GlitchSpeed + charIndex);
+                    offset = new Vector2(g1, -g1) * TextAnimationSettings.GlitchAmplitude;
+                    rotation = g1 * TextAnimationSettings.GlitchRotation;
                     break;
 
                 case TextEffectType.Flicker:
-                    float fTime = MathF.Floor(time * TextAnimationSettings.FlickerSpeed);
-                    float f1 = MathF.Sin(fTime * 12.9898f + charIndex);
-                    color = baseColor * MathHelper.Lerp(TextAnimationSettings.FlickerMinAlpha, TextAnimationSettings.FlickerMaxAlpha, f1 - MathF.Floor(f1));
+                    // FIX: Removed MathF.Floor. Use continuous sine for alpha.
+                    float f1 = MathF.Sin(time * TextAnimationSettings.FlickerSpeed + charIndex);
+                    // Map sine (-1 to 1) to (0 to 1)
+                    float alphaNorm = (f1 + 1f) * 0.5f;
+                    color = baseColor * MathHelper.Lerp(TextAnimationSettings.FlickerMinAlpha, TextAnimationSettings.FlickerMaxAlpha, alphaNorm);
                     break;
 
                 case TextEffectType.DriftBounce:
@@ -289,16 +290,18 @@ namespace ProjectVagabond.UI
                     break;
 
                 case TextEffectType.FlickerBounce:
-                    float fbTime = MathF.Floor(time * TextAnimationSettings.FlickerSpeed);
-                    float fb1 = MathF.Sin(fbTime * 12.9898f + charIndex);
-                    color = baseColor * MathHelper.Lerp(TextAnimationSettings.FlickerMinAlpha, TextAnimationSettings.FlickerMaxAlpha, fb1 - MathF.Floor(fb1));
+                    // FIX: Updated Flicker logic here too
+                    float fb1 = MathF.Sin(time * TextAnimationSettings.FlickerSpeed + charIndex);
+                    float fbAlpha = (fb1 + 1f) * 0.5f;
+                    color = baseColor * MathHelper.Lerp(TextAnimationSettings.FlickerMinAlpha, TextAnimationSettings.FlickerMaxAlpha, fbAlpha);
                     offset.Y = -MathF.Abs(MathF.Sin(time * TextAnimationSettings.BounceSpeed + charIndex * TextAnimationSettings.BounceFrequency)) * TextAnimationSettings.BounceAmplitude;
                     break;
 
                 case TextEffectType.FlickerWave:
-                    float fwTime = MathF.Floor(time * TextAnimationSettings.FlickerSpeed);
-                    float fw1 = MathF.Sin(fwTime * 12.9898f + charIndex);
-                    color = baseColor * MathHelper.Lerp(TextAnimationSettings.FlickerMinAlpha, TextAnimationSettings.FlickerMaxAlpha, fw1 - MathF.Floor(fw1));
+                    // FIX: Updated Flicker logic here too
+                    float fw1 = MathF.Sin(time * TextAnimationSettings.FlickerSpeed + charIndex);
+                    float fwAlpha = (fw1 + 1f) * 0.5f;
+                    color = baseColor * MathHelper.Lerp(TextAnimationSettings.FlickerMinAlpha, TextAnimationSettings.FlickerMaxAlpha, fwAlpha);
                     offset.Y = MathF.Sin(time * TextAnimationSettings.WaveSpeed + charIndex * TextAnimationSettings.WaveFrequency) * TextAnimationSettings.WaveAmplitude;
                     break;
             }

@@ -38,7 +38,6 @@ namespace ProjectVagabond.UI
                 Rotation = 0f,
                 IsVisible = true
             };
-
             public static VisualState Hidden => new VisualState
             {
                 Scale = Vector2.Zero,
@@ -337,11 +336,16 @@ namespace ProjectVagabond.UI
             }
             else
             {
-                float lerpT = Math.Clamp(deltaTime * InteractionSpeed, 0f, 1f);
-                _currentScale = Vector2.Lerp(_currentScale, targetScale, lerpT);
-                _currentOpacity = MathHelper.Lerp(_currentOpacity, targetOpacity, lerpT);
-                _currentOffset = Vector2.Lerp(_currentOffset, targetOffset, lerpT);
-                _currentRotation = MathHelper.Lerp(_currentRotation, targetRotation, lerpT);
+                // FIX: Use Time-Corrected Damping instead of simple Lerp.
+                // Simple Lerp (dt * speed) behaves differently at different framerates.
+                // At 30 FPS, dt is larger, causing a larger jump (or overshoot if not clamped).
+                // 1 - Exp(-speed * dt) provides a consistent decay rate regardless of FPS.
+                float dampingFactor = 1.0f - MathF.Exp(-InteractionSpeed * deltaTime);
+
+                _currentScale = Vector2.Lerp(_currentScale, targetScale, dampingFactor);
+                _currentOpacity = MathHelper.Lerp(_currentOpacity, targetOpacity, dampingFactor);
+                _currentOffset = Vector2.Lerp(_currentOffset, targetOffset, dampingFactor);
+                _currentRotation = MathHelper.Lerp(_currentRotation, targetRotation, dampingFactor);
             }
         }
 

@@ -633,7 +633,8 @@ namespace ProjectVagabond.Scenes
                     if (_cameraVelocity.LengthSquared() > 0.1f)
                     {
                         _cameraOffset += _cameraVelocity;
-                        _cameraVelocity = Vector2.Lerp(_cameraVelocity, Vector2.Zero, PAN_FRICTION * deltaTime);
+                        float frictionDamping = 1.0f - MathF.Exp(-PAN_FRICTION * deltaTime);
+                        _cameraVelocity = Vector2.Lerp(_cameraVelocity, Vector2.Zero, frictionDamping);
                         ClampCameraOffset();
                         _targetCameraOffset.X = _cameraOffset.X;
                         _snapBackDelayTimer = SNAP_BACK_DELAY;
@@ -657,7 +658,9 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            _cameraOffset = Vector2.Lerp(_cameraOffset, _targetCameraOffset, deltaTime * CAMERA_LERP_SPEED);
+            // FIX: Use Time-Corrected Damping for camera movement
+            float cameraDamping = 1.0f - MathF.Exp(-CAMERA_LERP_SPEED * deltaTime);
+            _cameraOffset = Vector2.Lerp(_cameraOffset, _targetCameraOffset, cameraDamping);
 
             if (_waitingForCombatCameraSettle)
             {

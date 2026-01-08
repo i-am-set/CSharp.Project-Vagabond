@@ -3,7 +3,10 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Dice;
 using ProjectVagabond.Particles;
+using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
@@ -308,8 +311,10 @@ namespace ProjectVagabond.UI
                 flashTint = new Color(_flashColor, alpha);
             }
 
-            // Update Scale
-            _currentScale = MathHelper.Lerp(_currentScale, _targetScale, dt * SCALE_SPEED);
+            // Update Scale using Time-Corrected Damping
+            // 1 - Exp(-speed * dt) ensures we never overshoot 1.0, preventing explosion at low FPS.
+            float scaleDamping = 1.0f - MathF.Exp(-SCALE_SPEED * dt);
+            _currentScale = MathHelper.Lerp(_currentScale, _targetScale, scaleDamping);
 
             return (shakeOffset, flashTint);
         }
@@ -402,7 +407,9 @@ namespace ProjectVagabond.UI
                 else if (HoverAnimation == HoverAnimationType.SlideAndHold)
                 {
                     float targetOffset = isActivated ? SLIDE_TARGET_OFFSET : 0f;
-                    _slideOffset = MathHelper.Lerp(_slideOffset, targetOffset, SLIDE_SPEED * deltaTime);
+                    // FIX: Use Time-Corrected Damping to prevent overshoot at low FPS
+                    float slideDamping = 1.0f - MathF.Exp(-SLIDE_SPEED * deltaTime);
+                    _slideOffset = MathHelper.Lerp(_slideOffset, targetOffset, slideDamping);
                     xHoverOffset = _slideOffset;
                 }
                 // Scale is handled in UpdateFeedbackAnimations
@@ -451,3 +458,4 @@ namespace ProjectVagabond.UI
         }
     }
 }
+﻿

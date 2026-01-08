@@ -5,6 +5,7 @@ using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Dice;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Systems;
@@ -260,7 +261,9 @@ namespace ProjectVagabond.Battle.UI
             var keys = _enemySquashScales.Keys.ToList();
             foreach (var key in keys)
             {
-                _enemySquashScales[key] = Vector2.Lerp(_enemySquashScales[key], Vector2.One, dt * _global.SquashRecoverySpeed);
+                // FIX: Use Time-Corrected Damping for framerate independence
+                float damping = 1.0f - MathF.Exp(-_global.SquashRecoverySpeed * dt);
+                _enemySquashScales[key] = Vector2.Lerp(_enemySquashScales[key], Vector2.One, damping);
             }
         }
 
@@ -616,7 +619,9 @@ namespace ProjectVagabond.Battle.UI
                     }
                     else
                     {
-                        _enemyVisualXPositions[enemy.CombatantID] = MathHelper.Lerp(currentX, targetX, dt * ENEMY_POSITION_TWEEN_SPEED);
+                        // FIX: Use Time-Corrected Damping for framerate independence
+                        float damping = 1.0f - MathF.Exp(-ENEMY_POSITION_TWEEN_SPEED * dt);
+                        _enemyVisualXPositions[enemy.CombatantID] = MathHelper.Lerp(currentX, targetX, damping);
                     }
                 }
             }
@@ -1033,7 +1038,14 @@ namespace ProjectVagabond.Battle.UI
             foreach (var player in players)
             {
                 var center = BattleLayout.GetPlayerSpriteCenter(player.BattleSlot);
-                float yOffset = _turnActiveOffsets.TryGetValue(player.CombatantID, out var off) ? off : INACTIVE_Y_OFFSET;
+                // FIX: Use Time-Corrected Damping for turn offset
+                float targetOffset = (player == currentActor) ? 0f : INACTIVE_Y_OFFSET;
+                if (!_turnActiveOffsets.ContainsKey(player.CombatantID)) _turnActiveOffsets[player.CombatantID] = INACTIVE_Y_OFFSET;
+                float current = _turnActiveOffsets[player.CombatantID];
+                float damping = 1.0f - MathF.Exp(-ACTIVE_TWEEN_SPEED * (float)gameTime.ElapsedGameTime.TotalSeconds);
+                _turnActiveOffsets[player.CombatantID] = MathHelper.Lerp(current, targetOffset, damping);
+
+                float yOffset = _turnActiveOffsets[player.CombatantID];
                 center.Y += yOffset;
 
                 if (player.BattleSlot == 0) PlayerSpritePosition = center;
@@ -1378,7 +1390,9 @@ namespace ProjectVagabond.Battle.UI
                     if (!_turnActiveOffsets.ContainsKey(c.CombatantID)) _turnActiveOffsets[c.CombatantID] = INACTIVE_Y_OFFSET;
 
                     float current = _turnActiveOffsets[c.CombatantID];
-                    _turnActiveOffsets[c.CombatantID] = MathHelper.Lerp(current, targetOffset, dt * ACTIVE_TWEEN_SPEED);
+                    // FIX: Use Time-Corrected Damping for framerate independence
+                    float damping = 1.0f - MathF.Exp(-ACTIVE_TWEEN_SPEED * dt);
+                    _turnActiveOffsets[c.CombatantID] = MathHelper.Lerp(current, targetOffset, damping);
                 }
             }
         }
@@ -1523,3 +1537,4 @@ namespace ProjectVagabond.Battle.UI
         }
     }
 }
+﻿
