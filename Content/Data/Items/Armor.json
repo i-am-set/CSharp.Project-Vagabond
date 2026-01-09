@@ -4,7 +4,7 @@
     "ArmorName": "Leather Tunic",
     "AbilityName": null,
     "Description": "",
-    "Flavor": "A simple tunic made of cured hide",
+    "Flavor": "A simple tunic made of cured hide.",
     "Rarity": 0,
     "StatModifiers": {
       "Tenacity": 3,
@@ -17,7 +17,7 @@
     "ArmorName": "Iron Plate",
     "AbilityName": "Heavy Plating",
     "Description": "",
-    "Flavor": "Iron sheets riveted together",
+    "Flavor": "Iron sheets riveted together.",
     "Rarity": 1,
     "Effects": {
       "PhysicalDamageReduction": "5"
@@ -33,7 +33,7 @@
     "ArmorName": "Arch-Mage Robes",
     "AbilityName": "Mana Well",
     "Description": "",
-    "Flavor": "Silk robes enchanted to channel mage",
+    "Flavor": "Silk robes enchanted to channel mage.",
     "Rarity": 2,
     "Effects": {
       "Regen": "2"
@@ -49,7 +49,7 @@
     "ArmorName": "Berserker's Cloak",
     "AbilityName": "Savage Fury",
     "Description": "",
-    "Flavor": "A cloak made from the hide of a great beast",
+    "Flavor": "A cloak made from the hide of a great beast.",
     "Rarity": 2,
     "Effects": {
       "LowHPDamageBonus": "50,20"

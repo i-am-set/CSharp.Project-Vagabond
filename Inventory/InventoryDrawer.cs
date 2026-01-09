@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -41,6 +40,9 @@ namespace ProjectVagabond.UI
         private const int LAYOUT_VAR_ROW_HEIGHT = 9; // 7px font + 2px gap
         private const int LAYOUT_CONTACT_Y = LAYOUT_VARS_START_Y + (3 * LAYOUT_VAR_ROW_HEIGHT); // Row 4
         private const int LAYOUT_DESC_START_Y = LAYOUT_CONTACT_Y + LAYOUT_VAR_ROW_HEIGHT - 3;
+
+        // Fixed width for spaces in text wrapping
+        private const int SPACE_WIDTH = 5;
 
         public InventoryDrawer(SplitMapInventoryOverlay overlay, InventoryDataProcessor dataProcessor, InventoryEquipSystem equipSystem)
         {
@@ -290,20 +292,37 @@ namespace ProjectVagabond.UI
 
                         DrawWeaponInfoPanel(spriteBatch, font, ServiceLocator.Get<Core>().SecondaryFont, weaponData, iconTexture, iconSilhouette, infoPanelArea, gameTime);
                     }
+                    else if (_overlay.HoveredItemData is ArmorData armorData)
+                    {
+                        string iconPath = $"Sprites/Items/Armor/{armorData.ArmorID}";
+                        var iconTexture = _overlay.SpriteManager.GetItemSprite(iconPath);
+                        var iconSilhouette = _overlay.SpriteManager.GetItemSpriteSilhouette(iconPath);
+
+                        DrawArmorRelicInfoPanel(spriteBatch, font, ServiceLocator.Get<Core>().SecondaryFont, armorData.ArmorName, armorData.Description, armorData.Flavor, iconTexture, iconSilhouette, armorData.StatModifiers, infoPanelArea, gameTime, $"Sprites/Items/Armor/{armorData.ArmorID}");
+                    }
+                    else if (_overlay.HoveredItemData is RelicData relicData)
+                    {
+                        string iconPath = $"Sprites/Items/Relics/{relicData.RelicID}";
+                        var iconTexture = _overlay.SpriteManager.GetItemSprite(iconPath);
+                        var iconSilhouette = _overlay.SpriteManager.GetItemSpriteSilhouette(iconPath);
+
+                        DrawArmorRelicInfoPanel(spriteBatch, font, ServiceLocator.Get<Core>().SecondaryFont, relicData.RelicName, relicData.Description, relicData.Flavor, iconTexture, iconSilhouette, relicData.StatModifiers, infoPanelArea, gameTime);
+                    }
                     else
                     {
                         string name = "";
                         string description = "";
+                        string flavor = "";
                         string iconPath = "";
                         Dictionary<string, int> stats = new Dictionary<string, int>();
 
-                        if (_overlay.HoveredItemData is ArmorData a) { name = a.ArmorName.ToUpper(); description = a.Description; iconPath = $"Sprites/Items/Armor/{a.ArmorID}"; stats = a.StatModifiers; }
-                        else if (_overlay.HoveredItemData is RelicData r) { name = r.RelicName.ToUpper(); description = r.Description; iconPath = $"Sprites/Items/Relics/{r.RelicID}"; stats = r.StatModifiers; }
+                        if (_overlay.HoveredItemData is ConsumableItemData c) { name = c.ItemName.ToUpper(); description = c.Description; flavor = c.Flavor; iconPath = c.ImagePath; }
+                        else if (_overlay.HoveredItemData is MiscItemData m) { name = m.ItemName.ToUpper(); description = m.Description; flavor = m.Flavor; iconPath = m.ImagePath; }
 
                         var iconTexture = _overlay.SpriteManager.GetItemSprite(iconPath);
                         var iconSilhouette = _overlay.SpriteManager.GetItemSpriteSilhouette(iconPath);
 
-                        DrawGenericItemInfoPanel(spriteBatch, font, ServiceLocator.Get<Core>().SecondaryFont, name, description, iconTexture, iconSilhouette, stats, infoPanelArea, gameTime);
+                        DrawGenericItemInfoPanel(spriteBatch, font, ServiceLocator.Get<Core>().SecondaryFont, name, description, flavor, iconTexture, iconSilhouette, stats, infoPanelArea, gameTime);
                     }
                 }
             }
@@ -431,21 +450,28 @@ namespace ProjectVagabond.UI
                         spriteBatch.DrawSnapped(_overlay.SpriteManager.InventoryPlayerHealthBarFull, new Vector2(barX + 1, currentY), srcRect, Color.White);
                     }
 
-                    string hpValText = isOccupied ? $"{member!.CurrentHP}/{member.MaxHP}" : "0/0";
-                    Color hpValColor = isOccupied ? _overlay.Global.Palette_BlueWhite : _overlay.Global.Palette_DarkGray;
-                    string hpSuffix = " HP";
+                    // Calculate height for layout spacing regardless of whether we draw text
+                    float textHeight = secondaryFont.MeasureString("0/0").Height; // Fixed .Y to .Height
 
-                    Vector2 valSize = secondaryFont.MeasureString(hpValText);
-                    Vector2 suffixSize = secondaryFont.MeasureString(hpSuffix);
-                    float totalHpWidth = valSize.X + suffixSize.X;
+                    if (isOccupied)
+                    {
+                        string hpValText = $"{member!.CurrentHP}/{member.MaxHP}";
+                        Color hpValColor = _overlay.Global.Palette_BlueWhite;
+                        string hpSuffix = " HP";
 
-                    float hpTextX = centerX - (totalHpWidth / 2f);
-                    float hpTextY = currentY + 7;
+                        Vector2 valSize = secondaryFont.MeasureString(hpValText);
+                        Vector2 suffixSize = secondaryFont.MeasureString(hpSuffix);
+                        float totalHpWidth = valSize.X + suffixSize.X;
+                        textHeight = valSize.Y;
 
-                    spriteBatch.DrawStringSnapped(secondaryFont, hpValText, new Vector2(hpTextX, hpTextY), hpValColor);
-                    spriteBatch.DrawStringSnapped(secondaryFont, hpSuffix, new Vector2(hpTextX + valSize.X, hpTextY), _overlay.Global.Palette_Gray);
+                        float hpTextX = centerX - (totalHpWidth / 2f);
+                        float hpTextY = currentY + 7;
 
-                    currentY += 8 + (int)valSize.Y + 4 - 3;
+                        spriteBatch.DrawStringSnapped(secondaryFont, hpValText, new Vector2(hpTextX, hpTextY), hpValColor);
+                        spriteBatch.DrawStringSnapped(secondaryFont, hpSuffix, new Vector2(hpTextX + valSize.X, hpTextY), _overlay.Global.Palette_Gray);
+                    }
+
+                    currentY += 8 + (int)textHeight + 4 - 3;
                 }
 
                 int slotSize = 16;
@@ -769,6 +795,7 @@ namespace ProjectVagabond.UI
 
             string name = activeSlot.ItemId.ToUpper();
             string description = "";
+            string flavor = "";
             string iconPath = activeSlot.IconPath ?? "";
             Texture2D? iconTexture = null;
             Texture2D? iconSilhouette = null;
@@ -780,10 +807,13 @@ namespace ProjectVagabond.UI
                 var relic = BattleDataCache.Relics.Values.FirstOrDefault(r => r.RelicName.Equals(activeSlot.ItemId, StringComparison.OrdinalIgnoreCase));
                 if (relic != null)
                 {
-                    name = relic.RelicName.ToUpper();
-                    description = relic.Description.ToUpper();
+                    // Pass RelicData to the specialized drawer
+                    if (!drawBackground)
+                    {
+                        DrawArmorRelicInfoPanel(spriteBatch, font, secondaryFont, relic.RelicName, relic.Description, relic.Flavor, null, null, relic.StatModifiers, infoPanelArea, gameTime, $"Sprites/Items/Relics/{relic.RelicID}");
+                        return;
+                    }
                     iconPath = $"Sprites/Items/Relics/{relic.RelicID}";
-                    stats = relic.StatModifiers;
                 }
             }
             else if (_overlay.SelectedInventoryCategory == InventoryCategory.Consumables)
@@ -793,6 +823,7 @@ namespace ProjectVagabond.UI
                 {
                     name = item.ItemName.ToUpper();
                     description = item.Description.ToUpper();
+                    flavor = item.Flavor;
                     iconPath = item.ImagePath;
                 }
             }
@@ -803,6 +834,7 @@ namespace ProjectVagabond.UI
                 {
                     name = item.ItemName.ToUpper();
                     description = item.Description.ToUpper();
+                    flavor = item.Flavor;
                     iconPath = item.ImagePath;
                 }
             }
@@ -826,10 +858,13 @@ namespace ProjectVagabond.UI
                 var armor = BattleDataCache.Armors.Values.FirstOrDefault(a => a.ArmorName.Equals(activeSlot.ItemId, StringComparison.OrdinalIgnoreCase));
                 if (armor != null)
                 {
-                    name = armor.ArmorName.ToUpper();
-                    description = armor.Description.ToUpper();
+                    // Pass ArmorData to the specialized drawer
+                    if (!drawBackground)
+                    {
+                        DrawArmorRelicInfoPanel(spriteBatch, font, secondaryFont, armor.ArmorName, armor.Description, armor.Flavor, null, null, armor.StatModifiers, infoPanelArea, gameTime, $"Sprites/Items/Armor/{armor.ArmorID}");
+                        return;
+                    }
                     iconPath = $"Sprites/Items/Armor/{armor.ArmorID}";
-                    stats = armor.StatModifiers;
                 }
             }
 
@@ -841,7 +876,15 @@ namespace ProjectVagabond.UI
 
             if (!drawBackground)
             {
-                DrawGenericItemInfoPanel(spriteBatch, font, secondaryFont, name, description, iconTexture, iconSilhouette, stats, infoPanelArea, gameTime);
+                // For Relics, also use the new specialized drawer
+                if (_overlay.SelectedInventoryCategory == InventoryCategory.Relics)
+                {
+                    DrawArmorRelicInfoPanel(spriteBatch, font, secondaryFont, name, description, flavor, iconTexture, iconSilhouette, stats, infoPanelArea, gameTime);
+                }
+                else
+                {
+                    DrawGenericItemInfoPanel(spriteBatch, font, secondaryFont, name, description, flavor, iconTexture, iconSilhouette, stats, infoPanelArea, gameTime);
+                }
             }
             else
             {
@@ -876,6 +919,160 @@ namespace ProjectVagabond.UI
             float swayY = MathF.Sin(t * 1.4f) * dist;
 
             return new Vector2(swayX, swayY);
+        }
+
+        private void DrawArmorRelicInfoPanel(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, string name, string description, string flavor, Texture2D? iconTexture, Texture2D? iconSilhouette, Dictionary<string, int> stats, Rectangle infoPanelArea, GameTime gameTime, string? iconPath = null)
+        {
+            // Load textures if not provided
+            if (iconTexture == null && !string.IsNullOrEmpty(iconPath))
+            {
+                iconTexture = _overlay.SpriteManager.GetItemSprite(iconPath);
+                iconSilhouette = _overlay.SpriteManager.GetItemSpriteSilhouette(iconPath);
+            }
+
+            var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
+            const int spriteSize = 16;
+            const int padding = 4;
+
+            // --- 1. Draw Icon ---
+            int spriteX = infoPanelArea.X + (infoPanelArea.Width - spriteSize) / 2;
+            float currentY = infoPanelArea.Y + LAYOUT_SPRITE_Y + 2;
+
+            Vector2 drawPos = new Vector2(spriteX + 8, currentY + 8);
+            Vector2 iconOrigin = new Vector2(8, 8);
+            float displayScale = 1.0f;
+
+            // Apply Juicy Animation
+            Vector2 animOffset = GetJuicyOffset(gameTime);
+            drawPos += animOffset;
+
+            if (iconSilhouette != null)
+            {
+                Color mainOutlineColor = _overlay.Global.ItemOutlineColor_Idle;
+                Color cornerOutlineColor = _overlay.Global.ItemOutlineColor_Idle_Corner;
+
+                spriteBatch.DrawSnapped(iconSilhouette, drawPos + new Vector2(-1, -1) * displayScale, null, cornerOutlineColor, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
+                spriteBatch.DrawSnapped(iconSilhouette, drawPos + new Vector2(1, -1) * displayScale, null, cornerOutlineColor, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
+                spriteBatch.DrawSnapped(iconSilhouette, drawPos + new Vector2(-1, 1) * displayScale, null, cornerOutlineColor, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
+                spriteBatch.DrawSnapped(iconSilhouette, drawPos + new Vector2(1, 1) * displayScale, null, cornerOutlineColor, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
+
+                spriteBatch.DrawSnapped(iconSilhouette, drawPos + new Vector2(-1, 0) * displayScale, null, mainOutlineColor, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
+                spriteBatch.DrawSnapped(iconSilhouette, drawPos + new Vector2(1, 0) * displayScale, null, mainOutlineColor, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
+                spriteBatch.DrawSnapped(iconSilhouette, drawPos + new Vector2(0, -1) * displayScale, null, mainOutlineColor, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
+                spriteBatch.DrawSnapped(iconSilhouette, drawPos + new Vector2(0, 1) * displayScale, null, mainOutlineColor, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
+            }
+
+            if (iconTexture != null)
+            {
+                spriteBatch.DrawSnapped(iconTexture, drawPos, null, Color.White, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
+            }
+
+            // --- 2. Draw Name ---
+            Vector2 nameSize = font.MeasureString(name.ToUpper());
+            Vector2 namePos = new Vector2(
+                infoPanelArea.X + (infoPanelArea.Width - nameSize.X) / 2f,
+                infoPanelArea.Y + LAYOUT_TITLE_Y
+            );
+            namePos = new Vector2(MathF.Round(namePos.X), MathF.Round(namePos.Y));
+
+            TextAnimator.DrawTextWithEffectOutlined(spriteBatch, font, name.ToUpper(), namePos, _overlay.Global.Palette_BlueWhite, _overlay.Global.Palette_Black, TextEffectType.DriftWave, (float)gameTime.TotalGameTime.TotalSeconds);
+
+            // --- 3. Draw Stat Grid ---
+            currentY = infoPanelArea.Y + LAYOUT_VARS_START_Y;
+
+            float leftLabelX = infoPanelArea.X + 8;
+            float leftValueX = infoPanelArea.X + 28;
+            float rightLabelX = infoPanelArea.X + 62;
+            float rightValueX = infoPanelArea.X + 80;
+
+            void DrawStat(string label, string key, float labelX, float valueX, float y)
+            {
+                // Center label vertically relative to value font
+                float yOffset = (secondaryFont.LineHeight - tertiaryFont.LineHeight) / 2f;
+                yOffset = MathF.Round(yOffset);
+
+                spriteBatch.DrawStringSnapped(tertiaryFont, label, new Vector2(labelX, y + yOffset), _overlay.Global.Palette_Gray);
+
+                int val = 0;
+                if (stats.TryGetValue(key, out int v)) val = v;
+
+                string text;
+                Color c;
+
+                if (val == 0)
+                {
+                    text = "+0";
+                    c = _overlay.Global.Palette_Gray;
+                }
+                else
+                {
+                    text = (val > 0 ? "+" : "") + val;
+                    c = val > 0 ? _overlay.Global.Palette_LightGreen : _overlay.Global.Palette_Red;
+                }
+                spriteBatch.DrawStringSnapped(secondaryFont, text, new Vector2(valueX, y), c);
+            }
+
+            // Row 1
+            DrawStat("STR", "Strength", leftLabelX, leftValueX, currentY);
+            DrawStat("INT", "Intelligence", rightLabelX, rightValueX, currentY);
+            currentY += LAYOUT_VAR_ROW_HEIGHT;
+
+            // Row 2
+            DrawStat("TEN", "Tenacity", leftLabelX, leftValueX, currentY);
+            DrawStat("AGI", "Agility", rightLabelX, rightValueX, currentY);
+            currentY += LAYOUT_VAR_ROW_HEIGHT;
+
+            // --- Draw Flavor Text (Bottom) ---
+            float flavorHeight = DrawFlavorText(spriteBatch, infoPanelArea, flavor);
+
+            // --- 4. Draw Description ---
+            // Start description below the stat grid area
+            // The stat grid takes 2 rows.
+            // LAYOUT_DESC_START_Y is calculated for weapons (3 rows + contact).
+            // For Armor/Relic, we want it after 2 rows.
+            // Let's calculate it dynamically based on where we left off.
+            // currentY is now at the start of Row 3.
+            // Add a small gap.
+            float descStartY = currentY + 2;
+
+            if (!string.IsNullOrEmpty(description))
+            {
+                float descWidth = infoPanelArea.Width - (padding * 2);
+                var descLines = ParseAndWrapRichText(secondaryFont, description.ToUpper(), descWidth, _overlay.Global.Palette_White);
+
+                float lineY = descStartY;
+                foreach (var line in descLines)
+                {
+                    // Stop drawing if we hit the flavor text area
+                    if (lineY + secondaryFont.LineHeight > infoPanelArea.Bottom - padding - flavorHeight) break;
+
+                    float lineWidth = 0;
+                    foreach (var segment in line)
+                    {
+                        if (string.IsNullOrWhiteSpace(segment.Text)) lineWidth += segment.Text.Length * SPACE_WIDTH;
+                        else lineWidth += secondaryFont.MeasureString(segment.Text).Width;
+                    }
+
+                    float lineX = infoPanelArea.X + (infoPanelArea.Width - lineWidth) / 2;
+                    float currentX = lineX;
+
+                    foreach (var segment in line)
+                    {
+                        float segWidth;
+                        if (string.IsNullOrWhiteSpace(segment.Text)) segWidth = segment.Text.Length * SPACE_WIDTH;
+                        else
+                        {
+                            segWidth = secondaryFont.MeasureString(segment.Text).Width;
+                            if (segment.Effect != TextEffectType.None)
+                                TextAnimator.DrawTextWithEffect(spriteBatch, secondaryFont, segment.Text, new Vector2(currentX, lineY), segment.Color, segment.Effect, (float)gameTime.TotalGameTime.TotalSeconds);
+                            else
+                                spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(currentX, lineY), segment.Color);
+                        }
+                        currentX += segWidth;
+                    }
+                    lineY += secondaryFont.LineHeight;
+                }
+            }
         }
 
         private void DrawWeaponInfoPanel(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, WeaponData weapon, Texture2D? iconTexture, Texture2D? iconSilhouette, Rectangle infoPanelArea, GameTime gameTime)
@@ -959,24 +1156,7 @@ namespace ProjectVagabond.UI
                 yOffset = MathF.Round(yOffset);
 
                 spriteBatch.DrawStringSnapped(tertiaryFont, label, new Vector2(labelX, y + yOffset), _overlay.Global.Palette_Gray);
-
-                if (value.EndsWith("%"))
-                {
-                    string numberPart = value.Substring(0, value.Length - 1);
-                    string suffix = "%";
-
-                    Vector2 numberSize = secondaryFont.MeasureString(numberPart);
-
-                    // Draw Number
-                    spriteBatch.DrawStringSnapped(secondaryFont, numberPart, new Vector2(valueX, y), valColor);
-
-                    // Draw Suffix (%) immediately after with +1 pixel offset
-                    spriteBatch.DrawStringSnapped(tertiaryFont, suffix, new Vector2(valueX + numberSize.X + 1, y + yOffset), _overlay.Global.Palette_Gray);
-                }
-                else
-                {
-                    spriteBatch.DrawStringSnapped(secondaryFont, value, new Vector2(valueX, y), valColor);
-                }
+                spriteBatch.DrawStringSnapped(secondaryFont, value, new Vector2(valueX, y), valColor);
             }
 
             // Row 1: POW / ACC
@@ -1044,9 +1224,12 @@ namespace ProjectVagabond.UI
             {
                 string contactText = "[MAKES CONTACT]";
                 Vector2 contactSize = tertiaryFont.MeasureString(contactText);
-                Vector2 contactPos = new Vector2(infoPanelArea.X + (infoPanelArea.Width - contactSize.X) / 2f, currentY);
+                Vector2 contactPos = new Vector2(infoPanelArea.X + (infoPanelArea.Width - contactSize.X) / 2f, currentY + (secondaryFont.LineHeight - tertiaryFont.LineHeight) / 2f);
                 spriteBatch.DrawStringSnapped(tertiaryFont, contactText, contactPos, _overlay.Global.Palette_Red);
             }
+
+            // --- Draw Flavor Text (Bottom) ---
+            float flavorHeight = DrawFlavorText(spriteBatch, infoPanelArea, weapon.Flavor);
 
             // --- 4. Draw Description ---
             currentY = infoPanelArea.Y + LAYOUT_DESC_START_Y;
@@ -1057,10 +1240,13 @@ namespace ProjectVagabond.UI
 
                 foreach (var line in descLines)
                 {
+                    // Stop drawing if we hit the flavor text area
+                    if (currentY + secondaryFont.LineHeight > infoPanelArea.Bottom - padding - flavorHeight) break;
+
                     float lineWidth = 0;
                     foreach (var segment in line)
                     {
-                        if (string.IsNullOrWhiteSpace(segment.Text)) lineWidth += segment.Text.Length * 5;
+                        if (string.IsNullOrWhiteSpace(segment.Text)) lineWidth += segment.Text.Length * SPACE_WIDTH;
                         else lineWidth += secondaryFont.MeasureString(segment.Text).Width;
                     }
 
@@ -1070,7 +1256,7 @@ namespace ProjectVagabond.UI
                     foreach (var segment in line)
                     {
                         float segWidth;
-                        if (string.IsNullOrWhiteSpace(segment.Text)) segWidth = segment.Text.Length * 5;
+                        if (string.IsNullOrWhiteSpace(segment.Text)) segWidth = segment.Text.Length * SPACE_WIDTH;
                         else
                         {
                             segWidth = secondaryFont.MeasureString(segment.Text).Width;
@@ -1098,6 +1284,9 @@ namespace ProjectVagabond.UI
 
                 for (int i = 0; i < maxRows; i++)
                 {
+                    // Stop drawing if we hit the flavor text area
+                    if (currentY + secondaryFont.LineHeight > infoPanelArea.Bottom - padding - flavorHeight) break;
+
                     if (i < statLines.Positives.Count)
                     {
                         var lineParts = ParseAndWrapRichText(secondaryFont, statLines.Positives[i], infoPanelArea.Width / 2, _overlay.Global.Palette_White);
@@ -1107,7 +1296,7 @@ namespace ProjectVagabond.UI
                             float currentX = leftColX;
                             foreach (var segment in segments)
                             {
-                                float segWidth = string.IsNullOrWhiteSpace(segment.Text) ? segment.Text.Length * 5 : secondaryFont.MeasureString(segment.Text).Width;
+                                float segWidth = string.IsNullOrWhiteSpace(segment.Text) ? segment.Text.Length * SPACE_WIDTH : secondaryFont.MeasureString(segment.Text).Width;
                                 spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(currentX, currentY), segment.Color);
                                 currentX += segWidth;
                             }
@@ -1123,7 +1312,7 @@ namespace ProjectVagabond.UI
                             float currentX = rightColX;
                             foreach (var segment in segments)
                             {
-                                float segWidth = string.IsNullOrWhiteSpace(segment.Text) ? segment.Text.Length * 5 : secondaryFont.MeasureString(segment.Text).Width;
+                                float segWidth = string.IsNullOrWhiteSpace(segment.Text) ? segment.Text.Length * SPACE_WIDTH : secondaryFont.MeasureString(segment.Text).Width;
                                 spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(currentX, currentY), segment.Color);
                                 currentX += segWidth;
                             }
@@ -1215,24 +1404,7 @@ namespace ProjectVagabond.UI
                 yOffset = MathF.Round(yOffset);
 
                 spriteBatch.DrawStringSnapped(tertiaryFont, label, new Vector2(labelX, y + yOffset), _overlay.Global.Palette_Gray);
-
-                if (value.EndsWith("%"))
-                {
-                    string numberPart = value.Substring(0, value.Length - 1);
-                    string suffix = "%";
-
-                    Vector2 numberSize = secondaryFont.MeasureString(numberPart);
-
-                    // Draw Number
-                    spriteBatch.DrawStringSnapped(secondaryFont, numberPart, new Vector2(valueX, y), valColor);
-
-                    // Draw Suffix (%) immediately after with +1 pixel offset
-                    spriteBatch.DrawStringSnapped(tertiaryFont, suffix, new Vector2(valueX + numberSize.X + 1, y + yOffset), _overlay.Global.Palette_Gray);
-                }
-                else
-                {
-                    spriteBatch.DrawStringSnapped(secondaryFont, value, new Vector2(valueX, y), valColor);
-                }
+                spriteBatch.DrawStringSnapped(secondaryFont, value, new Vector2(valueX, y), valColor);
             }
 
             string powVal = move.Power > 0 ? move.Power.ToString() : (move.Effects.ContainsKey("ManaDamage") ? "???" : "---");
@@ -1240,11 +1412,9 @@ namespace ProjectVagabond.UI
             string mpVal = (move.ManaCost > 0 ? move.ManaCost.ToString() : "0") + "%";
 
             var manaDump = move.Abilities.OfType<ManaDumpAbility>().FirstOrDefault();
-            if (manaDump != null && _overlay.HoveredMemberIndex != -1 && _overlay.HoveredMemberIndex < _overlay.GameState.PlayerState.Party.Count)
+            if (manaDump != null)
             {
-                var member = _overlay.GameState.PlayerState.Party[_overlay.HoveredMemberIndex];
-                powVal = ((int)(member.CurrentMana * manaDump.Multiplier)).ToString();
-                mpVal = member.CurrentMana.ToString() + "%";
+                powVal = "???";
             }
 
             string targetVal = move.Target switch
@@ -1304,11 +1474,14 @@ namespace ProjectVagabond.UI
             currentY = infoPanelArea.Y + LAYOUT_CONTACT_Y;
             if (move.MakesContact)
             {
-                string contactText = "[MAKES CONTACT]";
+                string contactText = "[ CONTACT ]";
                 Vector2 contactSize = tertiaryFont.MeasureString(contactText);
-                Vector2 contactPos = new Vector2(infoPanelArea.X + (infoPanelArea.Width - contactSize.X) / 2f, currentY);
+                Vector2 contactPos = new Vector2(infoPanelArea.X + (infoPanelArea.Width - contactSize.X) / 2f, currentY + (secondaryFont.LineHeight - tertiaryFont.LineHeight) / 2f);
                 spriteBatch.DrawStringSnapped(tertiaryFont, contactText, contactPos, _overlay.Global.Palette_Red);
             }
+
+            // --- Draw Flavor Text (Bottom) ---
+            float flavorHeight = DrawFlavorText(spriteBatch, infoPanelArea, move.Flavor);
 
             string description = move.Description.ToUpper();
             if (!string.IsNullOrEmpty(description))
@@ -1317,27 +1490,21 @@ namespace ProjectVagabond.UI
                 var descLines = ParseAndWrapRichText(secondaryFont, description, descWidth, _overlay.Global.Palette_White);
 
                 int maxLines = 8;
-                if (descLines.Count > maxLines)
-                {
-                    descLines = descLines.Take(maxLines).ToList();
-                }
+                if (descLines.Count > maxLines) descLines = descLines.Take(maxLines).ToList();
 
-                float totalDescHeight = descLines.Count * secondaryFont.LineHeight;
-
-                float bottomPadding = 3f;
-                float areaTop = infoPanelArea.Y + LAYOUT_DESC_START_Y;
-                float areaBottom = infoPanelArea.Bottom - bottomPadding;
-                float areaHeight = areaBottom - areaTop;
-
-                float startY = areaTop; // Fixed top alignment
+                // --- CHANGED: Top Align starting at LAYOUT_DESC_START_Y ---
+                float startY = infoPanelArea.Y + LAYOUT_DESC_START_Y;
 
                 float lineY = startY;
                 foreach (var line in descLines)
                 {
+                    // Stop drawing if we hit the flavor text area
+                    if (lineY + secondaryFont.LineHeight > infoPanelArea.Bottom - padding - flavorHeight) break;
+
                     float lineWidth = 0;
                     foreach (var segment in line)
                     {
-                        if (string.IsNullOrWhiteSpace(segment.Text)) lineWidth += segment.Text.Length * 5;
+                        if (string.IsNullOrWhiteSpace(segment.Text)) lineWidth += segment.Text.Length * SPACE_WIDTH;
                         else lineWidth += secondaryFont.MeasureString(segment.Text).Width;
                     }
 
@@ -1347,15 +1514,11 @@ namespace ProjectVagabond.UI
                     foreach (var segment in line)
                     {
                         float segWidth;
-                        if (string.IsNullOrWhiteSpace(segment.Text)) segWidth = segment.Text.Length * 5;
+                        if (string.IsNullOrWhiteSpace(segment.Text)) segWidth = segment.Text.Length * SPACE_WIDTH;
                         else
                         {
                             segWidth = secondaryFont.MeasureString(segment.Text).Width;
-                            // Check for effect
-                            if (segment.Effect != TextEffectType.None)
-                                TextAnimator.DrawTextWithEffect(spriteBatch, secondaryFont, segment.Text, new Vector2(currentX, lineY), segment.Color, segment.Effect, (float)gameTime.TotalGameTime.TotalSeconds);
-                            else
-                                spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(currentX, lineY), segment.Color);
+                            spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(currentX, lineY), segment.Color);
                         }
                         currentX += segWidth;
                     }
@@ -1364,16 +1527,31 @@ namespace ProjectVagabond.UI
             }
         }
 
-        private void DrawGenericItemInfoPanel(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, string name, string description, Texture2D? iconTexture, Texture2D? iconSilhouette, Dictionary<string, int> stats, Rectangle infoPanelArea, GameTime gameTime)
+        private void DrawGenericItemInfoPanel(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, string name, string description, string flavor, Texture2D? iconTexture, Texture2D? iconSilhouette, Dictionary<string, int> stats, Rectangle infoPanelArea, GameTime gameTime)
         {
             const int spriteSize = 16;
             const int gap = 4;
 
             var statLines = GetStatModifierLines(stats);
 
-            // Use Fixed Layout Y
-            // Move DOWN 2px
-            float currentY = infoPanelArea.Y + LAYOUT_SPRITE_Y + 2;
+            int maxTitleWidth = infoPanelArea.Width - (4 * 2);
+            var titleLines = ParseAndWrapRichText(font, name, maxTitleWidth, _overlay.Global.Palette_BlueWhite);
+            float totalTitleHeight = titleLines.Count * font.LineHeight;
+
+            float totalDescHeight = 0f;
+            List<List<ColoredText>> descLines = new List<List<ColoredText>>();
+            if (!string.IsNullOrEmpty(description))
+            {
+                float descWidth = infoPanelArea.Width - (4 * 2);
+                descLines = ParseAndWrapRichText(secondaryFont, description, descWidth, _overlay.Global.Palette_White);
+                totalDescHeight = descLines.Count * secondaryFont.LineHeight;
+            }
+
+            float totalStatHeight = Math.Max(statLines.Positives.Count, statLines.Negatives.Count) * secondaryFont.LineHeight;
+            float totalContentHeight = spriteSize + gap + totalTitleHeight + (totalDescHeight > 0 ? gap + totalDescHeight : 0) + (totalStatHeight > 0 ? gap + totalStatHeight : 0);
+
+            float currentY = infoPanelArea.Y + (infoPanelArea.Height - totalContentHeight) / 2f;
+            currentY -= 22f;
 
             int spriteX = infoPanelArea.X + (infoPanelArea.Width - spriteSize) / 2;
 
@@ -1406,21 +1584,67 @@ namespace ProjectVagabond.UI
                 spriteBatch.DrawSnapped(iconTexture, drawPos, null, Color.White, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
             }
 
-            // --- 2. Draw Name (Animated) ---
-            Vector2 nameSize = font.MeasureString(name);
-            Vector2 namePos = new Vector2(
-                infoPanelArea.X + (infoPanelArea.Width - nameSize.X) / 2f,
-                infoPanelArea.Y + LAYOUT_TITLE_Y
-            );
-            namePos = new Vector2(MathF.Round(namePos.X), MathF.Round(namePos.Y));
+            currentY += spriteSize + gap;
 
-            // Use DriftWave for title text
-            TextAnimator.DrawTextWithEffectOutlined(spriteBatch, font, name, namePos, _overlay.Global.Palette_BlueWhite, _overlay.Global.Palette_Black, TextEffectType.DriftWave, (float)gameTime.TotalGameTime.TotalSeconds);
+            foreach (var line in titleLines)
+            {
+                float lineWidth = 0;
+                foreach (var segment in line)
+                {
+                    if (string.IsNullOrWhiteSpace(segment.Text)) lineWidth += segment.Text.Length * SPACE_WIDTH;
+                    else lineWidth += font.MeasureString(segment.Text).Width;
+                }
 
-            // Draw Stats in the Variables Area
-            currentY = infoPanelArea.Y + LAYOUT_VARS_START_Y;
+                float lineX = infoPanelArea.X + (infoPanelArea.Width - lineWidth) / 2f;
+                float currentX = lineX;
+
+                foreach (var segment in line)
+                {
+                    float segWidth;
+                    if (string.IsNullOrWhiteSpace(segment.Text)) segWidth = segment.Text.Length * SPACE_WIDTH;
+                    else
+                    {
+                        segWidth = font.MeasureString(segment.Text).Width;
+                        spriteBatch.DrawStringSnapped(font, segment.Text, new Vector2(currentX, currentY), segment.Color);
+                    }
+                    currentX += segWidth;
+                }
+                currentY += font.LineHeight;
+            }
+
+            if (descLines.Any())
+            {
+                currentY += gap;
+                foreach (var line in descLines)
+                {
+                    float lineWidth = 0;
+                    foreach (var segment in line)
+                    {
+                        if (string.IsNullOrWhiteSpace(segment.Text)) lineWidth += segment.Text.Length * SPACE_WIDTH;
+                        else lineWidth += secondaryFont.MeasureString(segment.Text).Width;
+                    }
+
+                    var lineX = infoPanelArea.X + (infoPanelArea.Width - lineWidth) / 2;
+                    float currentX = lineX;
+
+                    foreach (var segment in line)
+                    {
+                        float segWidth;
+                        if (string.IsNullOrWhiteSpace(segment.Text)) segWidth = segment.Text.Length * SPACE_WIDTH;
+                        else
+                        {
+                            segWidth = secondaryFont.MeasureString(segment.Text).Width;
+                            spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(currentX, currentY), segment.Color);
+                        }
+                        currentX += segWidth;
+                    }
+                    currentY += secondaryFont.LineHeight;
+                }
+            }
+
             if (statLines.Positives.Any() || statLines.Negatives.Any())
             {
+                currentY += gap;
                 float leftColX = infoPanelArea.X + 8;
                 float rightColX = infoPanelArea.X + 64;
 
@@ -1437,12 +1661,8 @@ namespace ProjectVagabond.UI
                             float currentX = leftColX;
                             foreach (var segment in segments)
                             {
-                                float segWidth = string.IsNullOrWhiteSpace(segment.Text) ? segment.Text.Length * 5 : secondaryFont.MeasureString(segment.Text).Width;
-                                // Check for effect
-                                if (segment.Effect != TextEffectType.None)
-                                    TextAnimator.DrawTextWithEffect(spriteBatch, secondaryFont, segment.Text, new Vector2(currentX, currentY), segment.Color, segment.Effect, (float)gameTime.TotalGameTime.TotalSeconds);
-                                else
-                                    spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(currentX, currentY), segment.Color);
+                                float segWidth = string.IsNullOrWhiteSpace(segment.Text) ? segment.Text.Length * SPACE_WIDTH : secondaryFont.MeasureString(segment.Text).Width;
+                                spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(currentX, currentY), segment.Color);
                                 currentX += segWidth;
                             }
                         }
@@ -1457,12 +1677,8 @@ namespace ProjectVagabond.UI
                             float currentX = rightColX;
                             foreach (var segment in segments)
                             {
-                                float segWidth = string.IsNullOrWhiteSpace(segment.Text) ? segment.Text.Length * 5 : secondaryFont.MeasureString(segment.Text).Width;
-                                // Check for effect
-                                if (segment.Effect != TextEffectType.None)
-                                    TextAnimator.DrawTextWithEffect(spriteBatch, secondaryFont, segment.Text, new Vector2(currentX, currentY), segment.Color, segment.Effect, (float)gameTime.TotalGameTime.TotalSeconds);
-                                else
-                                    spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(currentX, currentY), segment.Color);
+                                float segWidth = string.IsNullOrWhiteSpace(segment.Text) ? segment.Text.Length * SPACE_WIDTH : secondaryFont.MeasureString(segment.Text).Width;
+                                spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(currentX, currentY), segment.Color);
                                 currentX += segWidth;
                             }
                         }
@@ -1470,47 +1686,68 @@ namespace ProjectVagabond.UI
                     currentY += secondaryFont.LineHeight;
                 }
             }
-
-            // Draw Description in the Description Area
-            currentY = infoPanelArea.Y + LAYOUT_DESC_START_Y;
-            if (!string.IsNullOrEmpty(description))
-            {
-                float descWidth = infoPanelArea.Width - (gap * 2);
-                var descLines = ParseAndWrapRichText(secondaryFont, description, descWidth, _overlay.Global.Palette_White);
-
-                foreach (var line in descLines)
-                {
-                    float lineWidth = 0;
-                    foreach (var segment in line)
-                    {
-                        if (string.IsNullOrWhiteSpace(segment.Text)) lineWidth += segment.Text.Length * 5; // SPACE_WIDTH
-                        else lineWidth += secondaryFont.MeasureString(segment.Text).Width;
-                    }
-
-                    var lineX = infoPanelArea.X + (infoPanelArea.Width - lineWidth) / 2;
-                    float currentX = lineX;
-
-                    foreach (var segment in line)
-                    {
-                        float segWidth;
-                        if (string.IsNullOrWhiteSpace(segment.Text)) segWidth = segment.Text.Length * 5; // SPACE_WIDTH
-                        else
-                        {
-                            segWidth = secondaryFont.MeasureString(segment.Text).Width;
-                            // Check for effect
-                            if (segment.Effect != TextEffectType.None)
-                                TextAnimator.DrawTextWithEffect(spriteBatch, secondaryFont, segment.Text, new Vector2(currentX, currentY), segment.Color, segment.Effect, (float)gameTime.TotalGameTime.TotalSeconds);
-                            else
-                                spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(currentX, currentY), segment.Color);
-                        }
-                        currentX += segWidth;
-                    }
-                    currentY += secondaryFont.LineHeight;
-                }
-            }
         }
 
-        private List<List<ColoredText>> ParseAndWrapRichText(BitmapFont font, string text, float maxWidth, Color defaultColor)
+        private float DrawFlavorText(SpriteBatch spriteBatch, Rectangle infoPanelArea, string flavorText)
+        {
+            if (string.IsNullOrEmpty(flavorText)) return 0f;
+
+            var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
+            const int padding = 4;
+            const int spaceWidth = 3; // Tertiary space width
+            const int lineSpacing = 1; // Requested 1px gap
+
+            float width = infoPanelArea.Width - (padding * 2);
+
+            // Wrap text using tertiary font and custom space width
+            var lines = ParseAndWrapRichText(tertiaryFont, flavorText.ToUpper(), width, _overlay.Global.Palette_DarkGray, spaceWidth);
+
+            if (lines.Count == 0) return 0f;
+
+            float lineHeight = tertiaryFont.LineHeight;
+            // Calculate total height including the gap between lines
+            float totalHeight = (lines.Count * lineHeight) + ((lines.Count - 1) * lineSpacing);
+
+            // Bottom aligned: Start Y is Bottom - Padding - TotalHeight
+            // Add 3 pixels to push it down as requested
+            float startY = infoPanelArea.Bottom - padding - totalHeight + 3;
+
+            foreach (var line in lines)
+            {
+                float lineWidth = 0;
+                foreach (var segment in line)
+                {
+                    if (string.IsNullOrWhiteSpace(segment.Text)) lineWidth += segment.Text.Length * spaceWidth;
+                    else lineWidth += tertiaryFont.MeasureString(segment.Text).Width;
+                }
+
+                // Center horizontally
+                float currentX = infoPanelArea.X + (infoPanelArea.Width - lineWidth) / 2f;
+
+                foreach (var segment in line)
+                {
+                    float segWidth;
+                    if (string.IsNullOrWhiteSpace(segment.Text))
+                    {
+                        segWidth = segment.Text.Length * spaceWidth;
+                    }
+                    else
+                    {
+                        segWidth = tertiaryFont.MeasureString(segment.Text).Width;
+                        spriteBatch.DrawStringSnapped(tertiaryFont, segment.Text, new Vector2(currentX, startY), segment.Color);
+                    }
+                    currentX += segWidth;
+                }
+                // Increment Y by height + spacing
+                startY += lineHeight + lineSpacing;
+            }
+
+            // Return height + small gap for the description above to respect
+            // Subtract 3 because we pushed it down, so it effectively takes up less space from the bottom up relative to the description area
+            return totalHeight + 2 - 3;
+        }
+
+        private List<List<ColoredText>> ParseAndWrapRichText(BitmapFont font, string text, float maxWidth, Color defaultColor, int spaceWidth = 5)
         {
             var lines = new List<List<ColoredText>>();
             if (string.IsNullOrEmpty(text)) return lines;
@@ -1546,7 +1783,7 @@ namespace ProjectVagabond.UI
                 else
                 {
                     bool isWhitespace = string.IsNullOrWhiteSpace(part);
-                    float partWidth = isWhitespace ? (part.Length * 5) : font.MeasureString(part).Width;
+                    float partWidth = isWhitespace ? (part.Length * spaceWidth) : font.MeasureString(part).Width;
 
                     if (!isWhitespace && currentLineWidth + partWidth > maxWidth && currentLineWidth > 0)
                     {
@@ -1568,7 +1805,7 @@ namespace ProjectVagabond.UI
                         {
                             float amount = Math.Clamp(percent / 100f, 0f, 1f);
                             // CHANGED: Lerp from Palette_LightRed instead of defaultColor
-                            finalColor = Color.Lerp(_overlay.Global.Palette_LightRed, currentColor, amount);
+                            finalColor = Color.Lerp(_overlay.Global.Palette_Gray, currentColor, amount);
                         }
                     }
 

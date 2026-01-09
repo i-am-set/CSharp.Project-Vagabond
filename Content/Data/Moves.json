@@ -929,7 +929,7 @@
     "MoveID": "35",
     "MoveName": "Flux Eruption",
     "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]DETONATES[/] {user_pronoun} STORED [cArcane]ARCANE ENERGY[/].",
-    "Description": "Consumes all remaining [cMana]Mana[/] to deal massive damage to [cpositive]both[/] enemies.\nPower is [cpositive]2x[/] consumed Mana.",
+    "Description": "Consumes all remaining [cMana]Mana[/] to deal [cpositive]2x[/] consumed Mana damage.",
     "Flavor": "Unleashes all stored energy in a violent burst.",
     "Power": 0,
     "ManaCost": 0,

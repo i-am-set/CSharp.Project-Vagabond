@@ -41,12 +41,6 @@ namespace ProjectVagabond.UI
         private const int ICON_X = TITLE_X + TITLE_WIDTH + GAP;
         private const int MAIN_X = ICON_X + ICON_WIDTH + GAP + 5;
 
-        // Animation State
-        private bool _lastFrameActivated = false;
-        private float _iconHopTimer = 0.0f; // Start finished
-        private const float ICON_HOP_DURATION = 0.1f;
-        private const float ICON_HOP_HEIGHT = 1.0f;
-
         public EquipButton(Rectangle bounds, string mainText, string? hoverMainText = null)
             : base(bounds, "") // Pass empty string to base, we handle text rendering manually
         {
@@ -76,15 +70,6 @@ namespace ProjectVagabond.UI
             {
                 _waveTimer = 0f;
             }
-
-            // --- Icon Hop Logic ---
-            // Trigger hop on state change (Not Hovered -> Hovered)
-            if (isActivated && !_lastFrameActivated)
-            {
-                _iconHopTimer = 0f;
-            }
-            _lastFrameActivated = isActivated;
-            _iconHopTimer += dt;
 
             // 2. Calculate Animation Offsets
             float yOffset = 0f;
@@ -153,18 +138,12 @@ namespace ProjectVagabond.UI
             // --- Icon (16x16) ---
             if (IconTexture != null)
             {
-                // Calculate Hop Offset
-                float hopY = 0f;
-                if (_iconHopTimer < ICON_HOP_DURATION)
-                {
-                    float progress = _iconHopTimer / ICON_HOP_DURATION;
-                    // Sine wave 0 -> 1 -> 0
-                    hopY = -MathF.Sin(progress * MathHelper.Pi) * ICON_HOP_HEIGHT;
-                }
+                // Calculate Lift Offset (1px up when hovered)
+                float spriteLiftY = isActivated ? -1f : 0f;
 
                 Rectangle destRect = new Rectangle(
                     (int)(totalX + ICON_X),
-                    (int)(totalY + hopY),
+                    (int)(totalY + spriteLiftY),
                     ICON_WIDTH,
                     HEIGHT
                 );
@@ -198,13 +177,19 @@ namespace ProjectVagabond.UI
                 if (Rarity >= 0 && spriteManager.RarityIconsSpriteSheet != null)
                 {
                     var rarityRect = spriteManager.GetRarityIconSourceRect(Rarity, gameTime);
+
                     // Position at top-right of the icon area.
                     // destRect is 16x16.
                     // Rarity icon is 8x8.
-                    // We want the rarity icon's top-right to align with destRect's top-right.
-                    // Rarity Pos = (destRect.Right - 8, destRect.Top).
+                    // We want the rarity icon's top-right to align with the icon area's top-right.
+                    // IMPORTANT: Use base coordinates (totalX, totalY) so it doesn't move with the sprite lift.
+
+                    float baseRight = totalX + ICON_X + ICON_WIDTH;
+                    float baseTop = totalY;
+
+                    // Rarity Pos = (Right - 8, Top).
                     // ADJUSTMENT: Moved Up 2px (-2) and Right 3px (+3)
-                    Vector2 rarityPos = new Vector2(destRect.Right - 8 + 3, destRect.Top - 2);
+                    Vector2 rarityPos = new Vector2(baseRight - 8 + 3, baseTop - 2);
                     spriteBatch.DrawSnapped(spriteManager.RarityIconsSpriteSheet, rarityPos, rarityRect, Color.White);
                 }
             }
