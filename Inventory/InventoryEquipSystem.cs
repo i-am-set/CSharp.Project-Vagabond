@@ -47,6 +47,7 @@ namespace ProjectVagabond.UI
                 button.TitleText = "";
                 button.Font = secondaryFont;
                 button.IsEnabled = false;
+                button.EnableTextWave = true; // Ensure wave animation is enabled
                 EquipSubmenuButtons.Add(button);
             }
         }

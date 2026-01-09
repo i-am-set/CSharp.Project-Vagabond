@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 using ProjectVagabond.Battle; // Assuming this is where WeaponData etc are
 
 namespace ProjectVagabond.Items
@@ -13,6 +14,7 @@ namespace ProjectVagabond.Items
         public string ID { get; set; }
         public string Name { get; set; }
         public string Description { get; set; }
+        public string Flavor { get; set; } // Added Flavor
         public int Rarity { get; set; } // 0: Common, 1: Uncommon, 2: Rare, etc.
         public ItemType Type { get; set; }
 
@@ -30,6 +32,7 @@ namespace ProjectVagabond.Items
                 ID = data.WeaponID,
                 Name = data.WeaponName,
                 Description = data.Description,
+                Flavor = data.Flavor,
                 Rarity = data.Rarity,
                 Type = ItemType.Weapon,
                 SpritePath = $"Sprites/Items/Weapons/{data.WeaponID}",
@@ -44,6 +47,7 @@ namespace ProjectVagabond.Items
                 ID = data.ArmorID,
                 Name = data.ArmorName,
                 Description = data.Description,
+                Flavor = data.Flavor,
                 Rarity = data.Rarity,
                 Type = ItemType.Armor,
                 SpritePath = $"Sprites/Items/Armor/{data.ArmorID}",
@@ -58,6 +62,7 @@ namespace ProjectVagabond.Items
                 ID = data.RelicID,
                 Name = data.RelicName,
                 Description = data.Description,
+                Flavor = data.Flavor,
                 Rarity = data.Rarity,
                 Type = ItemType.Relic,
                 SpritePath = $"Sprites/Items/Relics/{data.RelicID}",

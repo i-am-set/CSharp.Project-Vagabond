@@ -2,7 +2,8 @@
   {
     "ItemID": "0",
     "ItemName": "Health Potion",
-    "Description": "A simple concoction that restores a small amount of health.",
+    "Description": "Restores a small amount of health.",
+    "Flavor": "A simple concoction.",
     "Type": "Heal",
     "Target": "Self",
     "PrimaryValue": 20,
@@ -14,6 +15,7 @@
     "ItemID": "1",
     "ItemName": "Strength Tonic",
     "Description": "Temporarily boosts the user's physical strength.",
+    "Flavor": "",
     "Type": "Buff",
     "Target": "Self",
     "PrimaryValue": 3,
@@ -24,7 +26,8 @@
   {
     "ItemID": "2",
     "ItemName": "Fire Scroll",
-    "Description": "A magical scroll that unleashes a fiery attack upon a single target.",
+    "Description": "Unleashes a fiery attack upon a single target.",
+    "Flavor": "A magical scroll.",
     "Type": "Attack",
     "Target": "Single",
     "PrimaryValue": 0,

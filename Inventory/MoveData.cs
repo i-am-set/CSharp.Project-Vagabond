@@ -1,8 +1,10 @@
 ﻿#nullable enable
+using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Items;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -26,9 +28,14 @@ namespace ProjectVagabond.Battle
         public string MoveName { get; set; } = "";
 
         /// <summary>
-        /// Flavor text or a brief explanation of the move's effects.
+        /// Practical explanation of the move's effects.
         /// </summary>
         public string Description { get; set; } = "";
+
+        /// <summary>
+        /// Lore or visual description of the move.
+        /// </summary>
+        public string Flavor { get; set; } = "";
 
         /// <summary>
         /// A custom phrase to display when this move is used.

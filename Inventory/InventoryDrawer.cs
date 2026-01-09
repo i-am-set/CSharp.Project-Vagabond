@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿#nullable enable
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -869,7 +870,7 @@ namespace ProjectVagabond.UI
         private Vector2 GetJuicyOffset(GameTime gameTime)
         {
             float t = (float)gameTime.TotalGameTime.TotalSeconds * 1.5f; // Was 3.0f
-            float dist =1.0f; // Was 1.0f
+            float dist = 1.0f; // Was 1.0f
 
             float swayX = (MathF.Sin(t * 1.1f) * dist) + (MathF.Cos(t * 0.4f) * (dist * 0.5f));
             float swayY = MathF.Sin(t * 1.4f) * dist;
@@ -944,12 +945,14 @@ namespace ProjectVagabond.UI
             // --- 3. Draw Move Stats ---
             currentY = infoPanelArea.Y + LAYOUT_VARS_START_Y;
 
+            // --- TIGHTENED LAYOUT COORDINATES ---
             float leftLabelX = infoPanelArea.X + 8;
-            float leftValueRightX = infoPanelArea.X + 51;
-            float rightLabelX = infoPanelArea.X + 59;
-            float rightValueRightX = infoPanelArea.X + 112;
+            float leftValueX = infoPanelArea.X + 28; // Fixed start for left values
 
-            void DrawStatPair(string label, string value, float labelX, float valueRightX, float y, Color valColor, float xOffset = 0f)
+            float rightLabelX = infoPanelArea.X + 62;
+            float rightValueX = infoPanelArea.X + 80; // Fixed start for right values
+
+            void DrawStatPair(string label, string value, float labelX, float valueX, float y, Color valColor)
             {
                 // Center label vertically relative to value font
                 float yOffset = (secondaryFont.LineHeight - tertiaryFont.LineHeight) / 2f;
@@ -957,28 +960,22 @@ namespace ProjectVagabond.UI
 
                 spriteBatch.DrawStringSnapped(tertiaryFont, label, new Vector2(labelX, y + yOffset), _overlay.Global.Palette_Gray);
 
-                float effectiveRightX = valueRightX + xOffset;
-
                 if (value.EndsWith("%"))
                 {
                     string numberPart = value.Substring(0, value.Length - 1);
                     string suffix = "%";
 
                     Vector2 numberSize = secondaryFont.MeasureString(numberPart);
-                    Vector2 suffixSize = tertiaryFont.MeasureString(suffix);
-
-                    // Draw Suffix (%)
-                    Vector2 suffixPos = new Vector2(effectiveRightX - suffixSize.X, y + yOffset);
-                    spriteBatch.DrawStringSnapped(tertiaryFont, suffix, suffixPos, _overlay.Global.Palette_Gray);
 
                     // Draw Number
-                    Vector2 numberPos = new Vector2(suffixPos.X - numberSize.X - 1, y);
-                    spriteBatch.DrawStringSnapped(secondaryFont, numberPart, numberPos, valColor);
+                    spriteBatch.DrawStringSnapped(secondaryFont, numberPart, new Vector2(valueX, y), valColor);
+
+                    // Draw Suffix (%) immediately after with +1 pixel offset
+                    spriteBatch.DrawStringSnapped(tertiaryFont, suffix, new Vector2(valueX + numberSize.X + 1, y + yOffset), _overlay.Global.Palette_Gray);
                 }
                 else
                 {
-                    float valWidth = secondaryFont.MeasureString(value).Width;
-                    spriteBatch.DrawStringSnapped(secondaryFont, value, new Vector2(effectiveRightX - valWidth, y), valColor);
+                    spriteBatch.DrawStringSnapped(secondaryFont, value, new Vector2(valueX, y), valColor);
                 }
             }
 
@@ -986,12 +983,8 @@ namespace ProjectVagabond.UI
             string powVal = weapon.Power > 0 ? weapon.Power.ToString() : "---";
             string accVal = weapon.Accuracy >= 0 ? $"{weapon.Accuracy}%" : "---";
 
-            // POW: No shift (0)
-            DrawStatPair("POW", powVal, leftLabelX, leftValueRightX, currentY, _overlay.Global.Palette_White, 0f);
-
-            // ACC: Shift +5 if percentage (matched to Spell panel)
-            float accOffset = accVal.Contains("%") ? 5f : 0f;
-            DrawStatPair("ACC", accVal, rightLabelX, rightValueRightX, currentY, _overlay.Global.Palette_White, accOffset);
+            DrawStatPair("POW", powVal, leftLabelX, leftValueX, currentY, _overlay.Global.Palette_White);
+            DrawStatPair("ACC", accVal, rightLabelX, rightValueX, currentY, _overlay.Global.Palette_White);
 
             currentY += LAYOUT_VAR_ROW_HEIGHT;
 
@@ -1014,8 +1007,7 @@ namespace ProjectVagabond.UI
                 _ => "---"
             };
 
-            // TGT: No shift (0)
-            DrawStatPair("TGT", targetVal, rightLabelX, rightValueRightX, currentY, _overlay.Global.Palette_White, 0f);
+            DrawStatPair("TGT", targetVal, rightLabelX, rightValueX, currentY, _overlay.Global.Palette_White);
 
             // No MP draw call here, leaving the left side empty.
 
@@ -1043,9 +1035,8 @@ namespace ProjectVagabond.UI
             string impactVal = weapon.ImpactType.ToString().ToUpper().Substring(0, Math.Min(4, weapon.ImpactType.ToString().Length));
             Color impactColor = weapon.ImpactType == ImpactType.Magical ? _overlay.Global.Palette_LightBlue : (weapon.ImpactType == ImpactType.Physical ? _overlay.Global.Palette_Orange : _overlay.Global.Palette_Gray);
 
-            // USE/TYP: No shift (0)
-            DrawStatPair("USE", offStatVal, leftLabelX, leftValueRightX, currentY, offColor, 0f);
-            DrawStatPair("TYP", impactVal, rightLabelX, rightValueRightX, currentY, impactColor, 0f);
+            DrawStatPair("USE", offStatVal, leftLabelX, leftValueX, currentY, offColor);
+            DrawStatPair("TYP", impactVal, rightLabelX, rightValueX, currentY, impactColor);
 
             // Row 4: Contact
             currentY = infoPanelArea.Y + LAYOUT_CONTACT_Y;
@@ -1083,7 +1074,11 @@ namespace ProjectVagabond.UI
                         else
                         {
                             segWidth = secondaryFont.MeasureString(segment.Text).Width;
-                            spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(currentX, currentY), segment.Color);
+                            // Check for effect
+                            if (segment.Effect != TextEffectType.None)
+                                TextAnimator.DrawTextWithEffect(spriteBatch, secondaryFont, segment.Text, new Vector2(currentX, currentY), segment.Color, segment.Effect, (float)gameTime.TotalGameTime.TotalSeconds);
+                            else
+                                spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(currentX, currentY), segment.Color);
                         }
                         currentX += segWidth;
                     }
@@ -1206,13 +1201,14 @@ namespace ProjectVagabond.UI
 
             float currentY = infoPanelArea.Y + LAYOUT_VARS_START_Y;
 
+            // --- TIGHTENED LAYOUT COORDINATES ---
             float leftLabelX = infoPanelArea.X + 8;
-            float leftValueRightX = infoPanelArea.X + 51;
+            float leftValueX = infoPanelArea.X + 28; // Fixed start for left values
 
-            float rightLabelX = infoPanelArea.X + 59;
-            float rightValueRightX = infoPanelArea.X + 112;
+            float rightLabelX = infoPanelArea.X + 62;
+            float rightValueX = infoPanelArea.X + 80; // Fixed start for right values
 
-            void DrawStatPair(string label, string value, float labelX, float valueRightX, float y, Color valColor, float xOffset = 0f)
+            void DrawStatPair(string label, string value, float labelX, float valueX, float y, Color valColor)
             {
                 // Center label vertically relative to value font
                 float yOffset = (secondaryFont.LineHeight - tertiaryFont.LineHeight) / 2f;
@@ -1220,28 +1216,22 @@ namespace ProjectVagabond.UI
 
                 spriteBatch.DrawStringSnapped(tertiaryFont, label, new Vector2(labelX, y + yOffset), _overlay.Global.Palette_Gray);
 
-                float effectiveRightX = valueRightX + xOffset;
-
                 if (value.EndsWith("%"))
                 {
                     string numberPart = value.Substring(0, value.Length - 1);
                     string suffix = "%";
 
                     Vector2 numberSize = secondaryFont.MeasureString(numberPart);
-                    Vector2 suffixSize = tertiaryFont.MeasureString(suffix);
-
-                    // Draw Suffix (%)
-                    Vector2 suffixPos = new Vector2(effectiveRightX - suffixSize.X, y + yOffset);
-                    spriteBatch.DrawStringSnapped(tertiaryFont, suffix, suffixPos, _overlay.Global.Palette_Gray);
 
                     // Draw Number
-                    Vector2 numberPos = new Vector2(suffixPos.X - numberSize.X - 1, y);
-                    spriteBatch.DrawStringSnapped(secondaryFont, numberPart, numberPos, valColor);
+                    spriteBatch.DrawStringSnapped(secondaryFont, numberPart, new Vector2(valueX, y), valColor);
+
+                    // Draw Suffix (%) immediately after with +1 pixel offset
+                    spriteBatch.DrawStringSnapped(tertiaryFont, suffix, new Vector2(valueX + numberSize.X + 1, y + yOffset), _overlay.Global.Palette_Gray);
                 }
                 else
                 {
-                    float valWidth = secondaryFont.MeasureString(value).Width;
-                    spriteBatch.DrawStringSnapped(secondaryFont, value, new Vector2(effectiveRightX - valWidth, y), valColor);
+                    spriteBatch.DrawStringSnapped(secondaryFont, value, new Vector2(valueX, y), valColor);
                 }
             }
 
@@ -1275,16 +1265,14 @@ namespace ProjectVagabond.UI
                 _ => "---"
             };
 
-            DrawStatPair("POW", powVal, leftLabelX, leftValueRightX, currentY, _overlay.Global.Palette_White, 0f);
-
-            float accOffset = accVal.Contains("%") ? 5f : 0f;
-            DrawStatPair("ACC", accVal, rightLabelX, rightValueRightX, currentY, _overlay.Global.Palette_White, accOffset);
+            DrawStatPair("POW", powVal, leftLabelX, leftValueX, currentY, _overlay.Global.Palette_White);
+            DrawStatPair("ACC", accVal, rightLabelX, rightValueX, currentY, _overlay.Global.Palette_White);
 
             currentY += LAYOUT_VAR_ROW_HEIGHT;
 
-            DrawStatPair("MANA ", mpVal, leftLabelX, leftValueRightX, currentY, _overlay.Global.Palette_White, 5f); // Changed to White
+            DrawStatPair("MANA ", mpVal, leftLabelX, leftValueX, currentY, _overlay.Global.Palette_White);
 
-            DrawStatPair("TGT", targetVal, rightLabelX, rightValueRightX, currentY, _overlay.Global.Palette_White, 0f);
+            DrawStatPair("TGT", targetVal, rightLabelX, rightValueX, currentY, _overlay.Global.Palette_White);
 
             currentY += LAYOUT_VAR_ROW_HEIGHT;
 
@@ -1309,9 +1297,8 @@ namespace ProjectVagabond.UI
             string impactVal = move.ImpactType.ToString().ToUpper().Substring(0, Math.Min(4, move.ImpactType.ToString().Length));
             Color impactColor = move.ImpactType == ImpactType.Magical ? _overlay.Global.Palette_LightBlue : (move.ImpactType == ImpactType.Physical ? _overlay.Global.Palette_Orange : _overlay.Global.Palette_Gray);
 
-            // Shift USE and TYP values left by 6
-            DrawStatPair("USE", offStatVal, leftLabelX, leftValueRightX, currentY, offColor, 0f);
-            DrawStatPair("TYP", impactVal, rightLabelX, rightValueRightX, currentY, impactColor, 0f);
+            DrawStatPair("USE", offStatVal, leftLabelX, leftValueX, currentY, offColor);
+            DrawStatPair("TYP", impactVal, rightLabelX, rightValueX, currentY, impactColor);
 
             // Row 4: Contact
             currentY = infoPanelArea.Y + LAYOUT_CONTACT_Y;
@@ -1364,7 +1351,11 @@ namespace ProjectVagabond.UI
                         else
                         {
                             segWidth = secondaryFont.MeasureString(segment.Text).Width;
-                            spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(currentX, lineY), segment.Color);
+                            // Check for effect
+                            if (segment.Effect != TextEffectType.None)
+                                TextAnimator.DrawTextWithEffect(spriteBatch, secondaryFont, segment.Text, new Vector2(currentX, lineY), segment.Color, segment.Effect, (float)gameTime.TotalGameTime.TotalSeconds);
+                            else
+                                spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(currentX, lineY), segment.Color);
                         }
                         currentX += segWidth;
                     }
@@ -1447,7 +1438,11 @@ namespace ProjectVagabond.UI
                             foreach (var segment in segments)
                             {
                                 float segWidth = string.IsNullOrWhiteSpace(segment.Text) ? segment.Text.Length * 5 : secondaryFont.MeasureString(segment.Text).Width;
-                                spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(currentX, currentY), segment.Color);
+                                // Check for effect
+                                if (segment.Effect != TextEffectType.None)
+                                    TextAnimator.DrawTextWithEffect(spriteBatch, secondaryFont, segment.Text, new Vector2(currentX, currentY), segment.Color, segment.Effect, (float)gameTime.TotalGameTime.TotalSeconds);
+                                else
+                                    spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(currentX, currentY), segment.Color);
                                 currentX += segWidth;
                             }
                         }
@@ -1463,7 +1458,11 @@ namespace ProjectVagabond.UI
                             foreach (var segment in segments)
                             {
                                 float segWidth = string.IsNullOrWhiteSpace(segment.Text) ? segment.Text.Length * 5 : secondaryFont.MeasureString(segment.Text).Width;
-                                spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(currentX, currentY), segment.Color);
+                                // Check for effect
+                                if (segment.Effect != TextEffectType.None)
+                                    TextAnimator.DrawTextWithEffect(spriteBatch, secondaryFont, segment.Text, new Vector2(currentX, currentY), segment.Color, segment.Effect, (float)gameTime.TotalGameTime.TotalSeconds);
+                                else
+                                    spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(currentX, currentY), segment.Color);
                                 currentX += segWidth;
                             }
                         }
@@ -1498,7 +1497,11 @@ namespace ProjectVagabond.UI
                         else
                         {
                             segWidth = secondaryFont.MeasureString(segment.Text).Width;
-                            spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(currentX, currentY), segment.Color);
+                            // Check for effect
+                            if (segment.Effect != TextEffectType.None)
+                                TextAnimator.DrawTextWithEffect(spriteBatch, secondaryFont, segment.Text, new Vector2(currentX, currentY), segment.Color, segment.Effect, (float)gameTime.TotalGameTime.TotalSeconds);
+                            else
+                                spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(currentX, currentY), segment.Color);
                         }
                         currentX += segWidth;
                     }
@@ -1564,11 +1567,17 @@ namespace ProjectVagabond.UI
                         if (int.TryParse(numberPart, out int percent))
                         {
                             float amount = Math.Clamp(percent / 100f, 0f, 1f);
-                            finalColor = Color.Lerp(_overlay.Global.Palette_DarkGray, currentColor, amount);
+                            // CHANGED: Lerp from Palette_LightRed instead of defaultColor
+                            finalColor = Color.Lerp(_overlay.Global.Palette_LightRed, currentColor, amount);
                         }
                     }
 
-                    currentLine.Add(new ColoredText(part, finalColor));
+                    TextEffectType effect = TextEffectType.None;
+                    if (Regex.IsMatch(part, @"\d+%"))
+                    {
+                        effect = TextEffectType.Drift;
+                    }
+                    currentLine.Add(new ColoredText(part, finalColor, effect));
                     currentLineWidth += partWidth;
                 }
             }

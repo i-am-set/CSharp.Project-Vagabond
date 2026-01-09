@@ -41,6 +41,12 @@ namespace ProjectVagabond.UI
         private const int ICON_X = TITLE_X + TITLE_WIDTH + GAP;
         private const int MAIN_X = ICON_X + ICON_WIDTH + GAP + 5;
 
+        // Animation State
+        private bool _lastFrameActivated = false;
+        private float _iconHopTimer = 0.0f; // Start finished
+        private const float ICON_HOP_DURATION = 0.1f;
+        private const float ICON_HOP_HEIGHT = 1.0f;
+
         public EquipButton(Rectangle bounds, string mainText, string? hoverMainText = null)
             : base(bounds, "") // Pass empty string to base, we handle text rendering manually
         {
@@ -49,6 +55,7 @@ namespace ProjectVagabond.UI
             MainText = mainText;
             HoverMainText = hoverMainText;
             EnableHoverSway = false; // Disable the vertical lift on hover
+            EnableTextWave = true;   // Enable wave timer updates
         }
 
         public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? horizontalOffset = null, float? verticalOffset = null, Color? tintColorOverride = null)
@@ -58,6 +65,26 @@ namespace ProjectVagabond.UI
             BitmapFont font = this.Font ?? defaultFont;
             var pixel = ServiceLocator.Get<Texture2D>();
             var spriteManager = ServiceLocator.Get<SpriteManager>();
+            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            // Update Wave Timer manually since we override base.Draw
+            if (isActivated)
+            {
+                _waveTimer += dt;
+            }
+            else
+            {
+                _waveTimer = 0f;
+            }
+
+            // --- Icon Hop Logic ---
+            // Trigger hop on state change (Not Hovered -> Hovered)
+            if (isActivated && !_lastFrameActivated)
+            {
+                _iconHopTimer = 0f;
+            }
+            _lastFrameActivated = isActivated;
+            _iconHopTimer += dt;
 
             // 2. Calculate Animation Offsets
             float yOffset = 0f;
@@ -82,7 +109,14 @@ namespace ProjectVagabond.UI
 
             if (bgTexture != null)
             {
-                spriteBatch.DrawSnapped(bgTexture, new Vector2(totalX, totalY), Color.White);
+                // Expand by 1 pixel in all directions when hovered
+                var bgRect = new Rectangle(
+                    (int)totalX - 1,
+                    (int)totalY - 1,
+                    WIDTH + 2,
+                    HEIGHT + 2
+                );
+                spriteBatch.DrawSnapped(bgTexture, bgRect, Color.White);
             }
 
             // 4. Draw Content
@@ -104,22 +138,33 @@ namespace ProjectVagabond.UI
                 if (isActivated)
                 {
                     titleColor = _global.Palette_BlueWhite;
+                    // Use TextAnimator for wave effect when hovered
+                    // Use TextEffectType.Wave for continuous looping
+                    TextAnimator.DrawTextWithEffect(spriteBatch, defaultFont, TitleText, titlePos, titleColor, TextEffectType.Wave, _waveTimer);
                 }
                 else
                 {
                     // Use custom color if set (e.g. for submenu striping), otherwise default to Gray
                     titleColor = CustomTitleTextColor ?? _global.Palette_Gray;
+                    spriteBatch.DrawStringSnapped(defaultFont, TitleText, titlePos, titleColor);
                 }
-
-                spriteBatch.DrawStringSnapped(defaultFont, TitleText, titlePos, titleColor);
             }
 
             // --- Icon (16x16) ---
             if (IconTexture != null)
             {
+                // Calculate Hop Offset
+                float hopY = 0f;
+                if (_iconHopTimer < ICON_HOP_DURATION)
+                {
+                    float progress = _iconHopTimer / ICON_HOP_DURATION;
+                    // Sine wave 0 -> 1 -> 0
+                    hopY = -MathF.Sin(progress * MathHelper.Pi) * ICON_HOP_HEIGHT;
+                }
+
                 Rectangle destRect = new Rectangle(
                     (int)(totalX + ICON_X),
-                    (int)(totalY),
+                    (int)(totalY + hopY),
                     ICON_WIDTH,
                     HEIGHT
                 );

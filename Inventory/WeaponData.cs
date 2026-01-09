@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Items;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
@@ -23,7 +24,17 @@ namespace ProjectVagabond.Battle
     {
         public string WeaponID { get; set; }
         public string WeaponName { get; set; }
+
+        /// <summary>
+        /// Practical information about the item's effect.
+        /// </summary>
         public string Description { get; set; }
+
+        /// <summary>
+        /// Lore or visual description of the item.
+        /// </summary>
+        public string Flavor { get; set; }
+
         public int Rarity { get; set; } = 0;
 
         // --- Embedded Move Data ---
@@ -66,7 +77,8 @@ namespace ProjectVagabond.Battle
             {
                 MoveID = $"WEAPON_{WeaponID}", // Synthetic ID
                 MoveName = MoveName,
-                Description = Description, // Use weapon description
+                Description = Description, // Use weapon description (Practical only)
+                Flavor = Flavor,           // Pass flavor text
                 ActionPhrase = ActionPhrase, // Pass the custom phrase
                 SourceItemName = WeaponName, // Pass the weapon name for {item_name} tag
                 Power = Power,

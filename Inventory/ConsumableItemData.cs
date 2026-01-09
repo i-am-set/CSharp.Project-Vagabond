@@ -1,4 +1,5 @@
 ﻿using ProjectVagabond.Battle;
+using ProjectVagabond.Items;
 using System;
 using System.Collections.Generic;
 
@@ -11,7 +12,17 @@ namespace ProjectVagabond.Battle
     {
         public string ItemID { get; set; }
         public string ItemName { get; set; }
+
+        /// <summary>
+        /// Practical information about the item's effect.
+        /// </summary>
         public string Description { get; set; }
+
+        /// <summary>
+        /// Lore or visual description of the item.
+        /// </summary>
+        public string Flavor { get; set; }
+
         public string ImagePath { get; set; }
         public ConsumableType Type { get; set; }
         public TargetType Target { get; set; }

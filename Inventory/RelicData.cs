@@ -1,4 +1,6 @@
-﻿using System;
+﻿using ProjectVagabond.Battle;
+using ProjectVagabond.Items;
+using System;
 using System.Collections.Generic;
 
 namespace ProjectVagabond.Battle
@@ -11,7 +13,17 @@ namespace ProjectVagabond.Battle
         public string RelicID { get; set; }
         public string RelicName { get; set; }
         public string AbilityName { get; set; }
+
+        /// <summary>
+        /// Practical information about the item's effect.
+        /// </summary>
         public string Description { get; set; }
+
+        /// <summary>
+        /// Lore or visual description of the item.
+        /// </summary>
+        public string Flavor { get; set; }
+
         public int Rarity { get; set; } = 0;
         public Dictionary<string, string> Effects { get; set; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
