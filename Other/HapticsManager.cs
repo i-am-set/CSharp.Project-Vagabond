@@ -55,7 +55,7 @@ namespace ProjectVagabond
         public float NoiseFloor { get; set; } = 0.5f;
 
         // 3. Global Multiplier
-        public float MasterIntensity { get; set; } = 1.0f;
+        public float MasterIntensity { get; set; } = 0.75f;
 
         private Global _global;
 
