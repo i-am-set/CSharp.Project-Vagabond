@@ -908,15 +908,39 @@ namespace ProjectVagabond.UI
                 yOffset = MathF.Round(yOffset);
 
                 spriteBatch.DrawStringSnapped(tertiaryFont, label, new Vector2(labelX, y + yOffset), _overlay.Global.Palette_Gray);
-                float valWidth = secondaryFont.MeasureString(value).Width;
-                spriteBatch.DrawStringSnapped(secondaryFont, value, new Vector2(valueRightX - valWidth, y), valColor);
+
+                float effectiveRightX = valueRightX;
+
+                if (value.EndsWith("%"))
+                {
+                    string numberPart = value.Substring(0, value.Length - 1);
+                    string suffix = "%";
+
+                    Vector2 numberSize = secondaryFont.MeasureString(numberPart);
+                    Vector2 suffixSize = tertiaryFont.MeasureString(suffix);
+
+                    // Draw Suffix (%)
+                    Vector2 suffixPos = new Vector2(effectiveRightX - suffixSize.X, y + yOffset);
+                    spriteBatch.DrawStringSnapped(tertiaryFont, suffix, suffixPos, _overlay.Global.Palette_Gray);
+
+                    // Draw Number
+                    Vector2 numberPos = new Vector2(suffixPos.X - numberSize.X - 1, y);
+                    spriteBatch.DrawStringSnapped(secondaryFont, numberPart, numberPos, valColor);
+                }
+                else
+                {
+                    float valWidth = secondaryFont.MeasureString(value).Width;
+                    spriteBatch.DrawStringSnapped(secondaryFont, value, new Vector2(effectiveRightX - valWidth, y), valColor);
+                }
             }
 
             // Row 1: POW / ACC
             string powVal = weapon.Power > 0 ? weapon.Power.ToString() : "---";
             string accVal = weapon.Accuracy >= 0 ? $"{weapon.Accuracy}%" : "---";
+
             DrawStatPair("POW", powVal, leftLabelX, leftValueRightX, currentY, _overlay.Global.Palette_White);
             DrawStatPair("ACC", accVal, rightLabelX, rightValueRightX, currentY, _overlay.Global.Palette_White);
+
             currentY += secondaryFont.LineHeight + gap;
 
             // Row 2: MP (Empty) / TGT (Right)
@@ -1144,13 +1168,35 @@ namespace ProjectVagabond.UI
                 yOffset = MathF.Round(yOffset);
 
                 spriteBatch.DrawStringSnapped(tertiaryFont, label, new Vector2(labelX, y + yOffset), _overlay.Global.Palette_Gray);
-                float valWidth = secondaryFont.MeasureString(value).Width;
-                spriteBatch.DrawStringSnapped(secondaryFont, value, new Vector2(valueRightX - valWidth, y), valColor);
+
+                float effectiveRightX = valueRightX;
+
+                if (value.EndsWith("%"))
+                {
+                    string numberPart = value.Substring(0, value.Length - 1);
+                    string suffix = "%";
+
+                    Vector2 numberSize = secondaryFont.MeasureString(numberPart);
+                    Vector2 suffixSize = tertiaryFont.MeasureString(suffix);
+
+                    // Draw Suffix (%)
+                    Vector2 suffixPos = new Vector2(effectiveRightX - suffixSize.X, y + yOffset);
+                    spriteBatch.DrawStringSnapped(tertiaryFont, suffix, suffixPos, _overlay.Global.Palette_Gray);
+
+                    // Draw Number
+                    Vector2 numberPos = new Vector2(suffixPos.X - numberSize.X - 1, y);
+                    spriteBatch.DrawStringSnapped(secondaryFont, numberPart, numberPos, valColor);
+                }
+                else
+                {
+                    float valWidth = secondaryFont.MeasureString(value).Width;
+                    spriteBatch.DrawStringSnapped(secondaryFont, value, new Vector2(effectiveRightX - valWidth, y), valColor);
+                }
             }
 
             string powVal = move.Power > 0 ? move.Power.ToString() : (move.Effects.ContainsKey("ManaDamage") ? "???" : "---");
             string accVal = move.Accuracy >= 0 ? $"{move.Accuracy}%" : "---";
-            string mpVal = move.ManaCost > 0 ? move.ManaCost.ToString() : "0";
+            string mpVal = (move.ManaCost > 0 ? move.ManaCost.ToString() : "0") + "%";
 
             var manaDump = move.Abilities.OfType<ManaDumpAbility>().FirstOrDefault();
             if (manaDump != null && _overlay.HoveredMemberIndex != -1 && _overlay.HoveredMemberIndex < _overlay.GameState.PlayerState.Party.Count)
@@ -1215,7 +1261,7 @@ namespace ProjectVagabond.UI
             {
                 string contactText = "[MAKES CONTACT]";
                 Vector2 contactSize = tertiaryFont.MeasureString(contactText);
-                Vector2 contactPos = new Vector2(infoPanelArea.X + (infoPanelArea.Width - contactSize.X) / 2f, currentY + (secondaryFont.LineHeight - tertiaryFont.LineHeight) / 2f);
+                Vector2 contactPos = new Vector2(infoPanelArea.X + (infoPanelArea.Width - contactSize.X) / 2f, currentY);
                 spriteBatch.DrawStringSnapped(tertiaryFont, contactText, contactPos, _overlay.Global.Palette_Red);
                 currentY += secondaryFont.LineHeight + gap;
             }
