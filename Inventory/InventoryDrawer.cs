@@ -297,7 +297,7 @@ namespace ProjectVagabond.UI
                         Dictionary<string, int> stats = new Dictionary<string, int>();
 
                         if (_overlay.HoveredItemData is ArmorData a) { name = a.ArmorName.ToUpper(); description = a.Description; iconPath = $"Sprites/Items/Armor/{a.ArmorID}"; stats = a.StatModifiers; }
-                        else if (_overlay.HoveredItemData is RelicData r) { name = r.RelicName; description = r.Description; iconPath = $"Sprites/Items/Relics/{r.RelicID}"; stats = r.StatModifiers; }
+                        else if (_overlay.HoveredItemData is RelicData r) { name = r.RelicName.ToUpper(); description = r.Description; iconPath = $"Sprites/Items/Relics/{r.RelicID}"; stats = r.StatModifiers; }
 
                         var iconTexture = _overlay.SpriteManager.GetItemSprite(iconPath);
                         var iconSilhouette = _overlay.SpriteManager.GetItemSpriteSilhouette(iconPath);
@@ -868,8 +868,8 @@ namespace ProjectVagabond.UI
 
         private Vector2 GetJuicyOffset(GameTime gameTime)
         {
-            float t = (float)gameTime.TotalGameTime.TotalSeconds * 3.0f; // Speed 3.0
-            float dist = 1.0f; // Distance 1.0
+            float t = (float)gameTime.TotalGameTime.TotalSeconds * 1.5f; // Was 3.0f
+            float dist =1.0f; // Was 1.0f
 
             float swayX = (MathF.Sin(t * 1.1f) * dist) + (MathF.Cos(t * 0.4f) * (dist * 0.5f));
             float swayY = MathF.Sin(t * 1.4f) * dist;
@@ -938,14 +938,8 @@ namespace ProjectVagabond.UI
 
             namePos = new Vector2(MathF.Round(namePos.X), MathF.Round(namePos.Y));
 
-            if (_overlay.InfoPanelNameWaveTimer > 0)
-            {
-                TextAnimator.DrawTextWithEffectOutlined(spriteBatch, font, name, namePos, _overlay.Global.Palette_BlueWhite, _overlay.Global.Palette_Black, TextEffectType.SmallWave, _overlay.InfoPanelNameWaveTimer);
-            }
-            else
-            {
-                spriteBatch.DrawStringOutlinedSnapped(font, name, namePos, _overlay.Global.Palette_BlueWhite, _overlay.Global.Palette_Black);
-            }
+            // Use DriftWave for title text
+            TextAnimator.DrawTextWithEffectOutlined(spriteBatch, font, name, namePos, _overlay.Global.Palette_BlueWhite, _overlay.Global.Palette_Black, TextEffectType.DriftWave, (float)gameTime.TotalGameTime.TotalSeconds);
 
             // --- 3. Draw Move Stats ---
             currentY = infoPanelArea.Y + LAYOUT_VARS_START_Y;
@@ -1207,14 +1201,8 @@ namespace ProjectVagabond.UI
 
             namePos = new Vector2(MathF.Round(namePos.X), MathF.Round(namePos.Y));
 
-            if (_overlay.InfoPanelNameWaveTimer > 0)
-            {
-                TextAnimator.DrawTextWithEffectOutlined(spriteBatch, font, name, namePos, _overlay.Global.Palette_BlueWhite, _overlay.Global.Palette_Black, TextEffectType.SmallWave, _overlay.InfoPanelNameWaveTimer);
-            }
-            else
-            {
-                spriteBatch.DrawStringOutlinedSnapped(font, name, namePos, _overlay.Global.Palette_BlueWhite, _overlay.Global.Palette_Black);
-            }
+            // Use DriftWave for title text
+            TextAnimator.DrawTextWithEffectOutlined(spriteBatch, font, name, namePos, _overlay.Global.Palette_BlueWhite, _overlay.Global.Palette_Black, TextEffectType.DriftWave, (float)gameTime.TotalGameTime.TotalSeconds);
 
             float currentY = infoPanelArea.Y + LAYOUT_VARS_START_Y;
 
@@ -1392,22 +1380,6 @@ namespace ProjectVagabond.UI
 
             var statLines = GetStatModifierLines(stats);
 
-            int maxTitleWidth = infoPanelArea.Width - (4 * 2);
-            var titleLines = ParseAndWrapRichText(font, name, maxTitleWidth, _overlay.Global.Palette_BlueWhite);
-            float totalTitleHeight = titleLines.Count * font.LineHeight;
-
-            float totalDescHeight = 0f;
-            List<List<ColoredText>> descLines = new List<List<ColoredText>>();
-            if (!string.IsNullOrEmpty(description))
-            {
-                float descWidth = infoPanelArea.Width - (4 * 2);
-                descLines = ParseAndWrapRichText(secondaryFont, description, descWidth, _overlay.Global.Palette_White);
-                totalDescHeight = descLines.Count * secondaryFont.LineHeight;
-            }
-
-            float totalStatHeight = Math.Max(statLines.Positives.Count, statLines.Negatives.Count) * secondaryFont.LineHeight;
-            float totalContentHeight = spriteSize + gap + totalTitleHeight + (totalDescHeight > 0 ? gap + totalDescHeight : 0) + (totalStatHeight > 0 ? gap + totalStatHeight : 0);
-
             // Use Fixed Layout Y
             // Move DOWN 2px
             float currentY = infoPanelArea.Y + LAYOUT_SPRITE_Y + 2;
@@ -1443,33 +1415,16 @@ namespace ProjectVagabond.UI
                 spriteBatch.DrawSnapped(iconTexture, drawPos, null, Color.White, 0f, iconOrigin, displayScale, SpriteEffects.None, 0f);
             }
 
-            currentY = infoPanelArea.Y + LAYOUT_TITLE_Y;
+            // --- 2. Draw Name (Animated) ---
+            Vector2 nameSize = font.MeasureString(name);
+            Vector2 namePos = new Vector2(
+                infoPanelArea.X + (infoPanelArea.Width - nameSize.X) / 2f,
+                infoPanelArea.Y + LAYOUT_TITLE_Y
+            );
+            namePos = new Vector2(MathF.Round(namePos.X), MathF.Round(namePos.Y));
 
-            foreach (var line in titleLines)
-            {
-                float lineWidth = 0;
-                foreach (var segment in line)
-                {
-                    if (string.IsNullOrWhiteSpace(segment.Text)) lineWidth += segment.Text.Length * 5; // SPACE_WIDTH
-                    else lineWidth += font.MeasureString(segment.Text).Width;
-                }
-
-                float lineX = infoPanelArea.X + (infoPanelArea.Width - lineWidth) / 2f;
-                float currentX = lineX;
-
-                foreach (var segment in line)
-                {
-                    float segWidth;
-                    if (string.IsNullOrWhiteSpace(segment.Text)) segWidth = segment.Text.Length * 5; // SPACE_WIDTH
-                    else
-                    {
-                        segWidth = font.MeasureString(segment.Text).Width;
-                        spriteBatch.DrawStringSnapped(font, segment.Text, new Vector2(currentX, currentY), segment.Color);
-                    }
-                    currentX += segWidth;
-                }
-                currentY += font.LineHeight;
-            }
+            // Use DriftWave for title text
+            TextAnimator.DrawTextWithEffectOutlined(spriteBatch, font, name, namePos, _overlay.Global.Palette_BlueWhite, _overlay.Global.Palette_Black, TextEffectType.DriftWave, (float)gameTime.TotalGameTime.TotalSeconds);
 
             // Draw Stats in the Variables Area
             currentY = infoPanelArea.Y + LAYOUT_VARS_START_Y;
@@ -1519,8 +1474,11 @@ namespace ProjectVagabond.UI
 
             // Draw Description in the Description Area
             currentY = infoPanelArea.Y + LAYOUT_DESC_START_Y;
-            if (descLines.Any())
+            if (!string.IsNullOrEmpty(description))
             {
+                float descWidth = infoPanelArea.Width - (gap * 2);
+                var descLines = ParseAndWrapRichText(secondaryFont, description, descWidth, _overlay.Global.Palette_White);
+
                 foreach (var line in descLines)
                 {
                     float lineWidth = 0;
