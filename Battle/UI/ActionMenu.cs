@@ -1301,7 +1301,7 @@ namespace ProjectVagabond.Battle.UI
                 var nameSize = font.MeasureString(moveName);
                 var namePos = new Vector2(bounds.X + horizontalPadding, currentY);
 
-                var statsSegments = new List<(string Text, Color Color, BitmapFont Font)>();
+                // --- 1. Prepare Stack Data (Move Type & Impact Type) ---
                 string moveTypeText = move.MoveType.ToString().ToUpper();
                 Color moveTypeColor = move.MoveType switch
                 {
@@ -1309,7 +1309,19 @@ namespace ProjectVagabond.Battle.UI
                     MoveType.Action => _global.ColorNarration_Action,
                     _ => _global.Palette_White
                 };
-                statsSegments.Add((moveTypeText, moveTypeColor, secondaryFont));
+
+                string impactTypeText = move.ImpactType.ToString().ToUpper();
+                Color impactTypeColor = move.ImpactType switch
+                {
+                    ImpactType.Physical => _global.ColorNarration_Action,
+                    ImpactType.Magical => _global.ColorNarration_Spell,
+                    _ => _global.Palette_Gray
+                };
+
+                // --- 2. Build Stats List ---
+                var statsSegments = new List<(string Text, Color Color, BitmapFont Font)>();
+
+                // Note: Move Type is no longer added to this list. It is drawn manually as part of the stack.
 
                 if (move.ImpactType != ImpactType.Status)
                 {
@@ -1324,7 +1336,11 @@ namespace ProjectVagabond.Battle.UI
                         powerText = $"{(int)(_player.Stats.CurrentMana * manaDump.Multiplier)}";
                     }
 
-                    // Insert in reverse order to prepend
+                    // Insert in reverse order (Right to Left)
+
+                    // Separator between Stats and Stack
+                    statsSegments.Insert(0, (separator, _global.Palette_DarkGray, secondaryFont));
+
                     statsSegments.Insert(0, (accuracyText, _global.Palette_BlueWhite, secondaryFont)); // Value BlueWhite
                     statsSegments.Insert(0, ("  ", Color.Transparent, secondaryFont)); // Spacer
                     statsSegments.Insert(0, ("ACC", _global.Palette_DarkGray, tertiaryFont)); // Label DarkGray
@@ -1334,41 +1350,58 @@ namespace ProjectVagabond.Battle.UI
                     statsSegments.Insert(0, ("POW", _global.Palette_DarkGray, tertiaryFont)); // Label DarkGray
                 }
 
-                // --- NEW: Contact Text for Tooltip ---
-                float contactWidth = 0f;
+                // --- Contact Text ---
                 if (move.MakesContact)
                 {
                     string contactText = "[ CONTACT ]";
-                    float textW = tertiaryFont.MeasureString(contactText).Width;
-                    contactWidth = textW + 4; // Text + Gap
-
-                    // Insert "CONTACT" at the beginning of the segments list
+                    // Insert "CONTACT" at the beginning
                     statsSegments.Insert(0, (contactText, _global.Palette_Red, tertiaryFont));
                     statsSegments.Insert(1, (" ", Color.Transparent, secondaryFont)); // Spacer
                 }
 
+                // --- 3. Calculate Widths ---
                 float totalStatsWidth = 0f;
                 foreach (var segment in statsSegments)
                 {
                     totalStatsWidth += segment.Font.MeasureString(segment.Text).Width;
                 }
 
-                float statsY = currentY + (nameSize.Height - secondaryFont.LineHeight) / 2;
-                float statsStartX = bounds.Right - horizontalPadding - totalStatsWidth;
+                // Calculate Stack Width (Max of MoveType and ImpactType)
+                float moveTypeWidth = tertiaryFont.MeasureString(moveTypeText).Width;
+                float impactTypeWidth = tertiaryFont.MeasureString(impactTypeText).Width;
+                float stackWidth = Math.Max(moveTypeWidth, impactTypeWidth);
 
-                float currentX = statsStartX;
+                float totalContentWidth = totalStatsWidth + stackWidth;
+
+                float statsY = (currentY + (nameSize.Height - secondaryFont.LineHeight) / 2 )- 1;
+                float startX = bounds.Right - horizontalPadding - totalContentWidth;
+
+                // --- 4. Draw Stats ---
+                float currentX = startX;
                 foreach (var segment in statsSegments)
                 {
                     // Center vertically relative to the secondary font line height
                     float yOffset = (secondaryFont.LineHeight - segment.Font.LineHeight) / 2f;
-                    // Round to nearest pixel
                     yOffset = MathF.Round(yOffset);
 
                     spriteBatch.DrawStringSnapped(segment.Font, segment.Text, new Vector2(currentX, statsY + yOffset), segment.Color);
                     currentX += segment.Font.MeasureString(segment.Text).Width;
                 }
 
-                float textAvailableWidth = statsStartX - namePos.X - 4;
+                // --- 5. Draw Stack (Move Type & Impact Type) ---
+                // Center vertically relative to secondary font
+                float tertiaryYOffset = (secondaryFont.LineHeight - tertiaryFont.LineHeight) / 2f;
+                tertiaryYOffset = MathF.Round(tertiaryYOffset);
+                float stackBaseY = statsY + tertiaryYOffset;
+
+                // Draw Move Type (Bottom)
+                spriteBatch.DrawStringSnapped(tertiaryFont, moveTypeText, new Vector2(currentX, stackBaseY + 3), moveTypeColor);
+
+                // Draw Impact Type (Top - 4 pixels up)
+                spriteBatch.DrawStringSnapped(tertiaryFont, impactTypeText, new Vector2(currentX, stackBaseY - 2), impactTypeColor);
+
+                // --- 6. Scrolling Title Logic ---
+                float textAvailableWidth = startX - namePos.X - 4;
                 bool needsScrolling = nameSize.Width > textAvailableWidth;
                 if (needsScrolling)
                 {
@@ -1707,7 +1740,6 @@ namespace ProjectVagabond.Battle.UI
                     Color finalColor = currentColor;
                     if (currentColor != defaultColor && !isWhitespace && part.EndsWith("%"))
                     {
-                        // Try to parse the number before the %
                         string numberPart = part.Substring(0, part.Length - 1);
                         if (int.TryParse(numberPart, out int percent))
                         {
