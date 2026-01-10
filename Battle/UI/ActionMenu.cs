@@ -1373,7 +1373,7 @@ namespace ProjectVagabond.Battle.UI
 
                 float totalContentWidth = totalStatsWidth + stackWidth;
 
-                float statsY = (currentY + (nameSize.Height - secondaryFont.LineHeight) / 2 )- 1;
+                float statsY = (currentY + (nameSize.Height - secondaryFont.LineHeight) / 2) - 1;
                 float startX = bounds.Right - horizontalPadding - totalContentWidth;
 
                 // --- 4. Draw Stats ---
@@ -1494,9 +1494,15 @@ namespace ProjectVagabond.Battle.UI
             }
             else
             {
+                // Action 1: Move everything up 4 pixels
+                currentY -= 4;
                 float statsY = currentY;
+
                 Color valueColor = _global.Palette_BlueWhite;
-                Color labelColor = _global.Palette_DarkGray;
+
+                // Action 2: Darker labels when empty
+                // If move is null, use DarkerGray. If move exists, use DarkGray.
+                Color labelColor = (move != null) ? _global.Palette_DarkGray : _global.Palette_DarkestGray;
 
                 string powerLabel = "POW";
                 string accLabel = "ACC";
@@ -1618,7 +1624,9 @@ namespace ProjectVagabond.Battle.UI
                 var impactSize = secondaryFont.MeasureString(impactValue);
                 var moveTypeSize = secondaryFont.MeasureString(moveTypeValue);
                 const int typeGap = 5;
-                float typeY = bounds.Bottom - verticalPadding - secondaryFont.LineHeight;
+
+                // Action 1: Move bottom text up 4 pixels as well
+                float typeY = bounds.Bottom - verticalPadding - secondaryFont.LineHeight - 3;
                 float gapCenter = bounds.Center.X + 5;
 
                 if (!string.IsNullOrEmpty(targetValue))
