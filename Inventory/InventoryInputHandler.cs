@@ -138,15 +138,27 @@ namespace ProjectVagabond.UI
                 int hitboxXOffset = -2;
 
                 var weaponBtn = new Button(new Rectangle(equipStartX + hitboxXOffset, currentY, hitboxWidth, slotIconSize), "") { EnableHoverSway = false };
-                weaponBtn.OnClick += () => _equipSystem.OpenEquipSubmenu(memberIndex, EquipSlotType.Weapon);
+                weaponBtn.OnClick += () =>
+                {
+                    _overlay.HapticsManager.TriggerZoomPulse(1.01f, 0.1f); // Add Haptic
+                    _equipSystem.OpenEquipSubmenu(memberIndex, EquipSlotType.Weapon);
+                };
                 _overlay.PartyEquipButtons.Add(weaponBtn);
 
                 var armorBtn = new Button(new Rectangle(equipStartX + slotIconSize + gap + hitboxXOffset, currentY, hitboxWidth, slotIconSize), "") { EnableHoverSway = false };
-                armorBtn.OnClick += () => _equipSystem.OpenEquipSubmenu(memberIndex, EquipSlotType.Armor);
+                armorBtn.OnClick += () =>
+                {
+                    _overlay.HapticsManager.TriggerZoomPulse(1.01f, 0.1f); // Add Haptic
+                    _equipSystem.OpenEquipSubmenu(memberIndex, EquipSlotType.Armor);
+                };
                 _overlay.PartyEquipButtons.Add(armorBtn);
 
                 var relicBtn = new Button(new Rectangle(equipStartX + (slotIconSize + gap) * 2 + hitboxXOffset, currentY, hitboxWidth, slotIconSize), "") { EnableHoverSway = false };
-                relicBtn.OnClick += () => _equipSystem.OpenEquipSubmenu(memberIndex, EquipSlotType.Relic);
+                relicBtn.OnClick += () =>
+                {
+                    _overlay.HapticsManager.TriggerZoomPulse(1.01f, 0.1f); // Add Haptic
+                    _equipSystem.OpenEquipSubmenu(memberIndex, EquipSlotType.Relic);
+                };
                 _overlay.PartyEquipButtons.Add(relicBtn);
 
                 currentY += slotSize + 6 - 5;

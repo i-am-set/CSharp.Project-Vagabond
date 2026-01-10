@@ -709,11 +709,6 @@ namespace ProjectVagabond.UI
                 Color emptyColor = (isSelected || isHovered) ? _overlay.Global.Palette_LightGray : _overlay.Global.Palette_DarkGray;
                 spriteBatch.DrawSnapped(_overlay.SpriteManager.InventoryEmptySlotSprite, destRect, emptyColor);
             }
-
-            if (isHovered)
-            {
-                DrawRectangleBorder(spriteBatch, pixel, destRect, 1, Color.White);
-            }
         }
 
         private void DrawRectangleBorder(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, int thickness, Color color)

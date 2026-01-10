@@ -11,7 +11,6 @@
       "ElementalDamageBonus": "13,20"
     },
     "StatModifiers": {
-      "Tenacity": 2
     },
     "Tags": [ "Nature", "Defense" ]
   },
@@ -182,7 +181,6 @@
       "PhysicalDamageReduction": "20"
     },
     "StatModifiers": {
-      "Tenacity": 5
     },
     "Tags": [ "Defense" ]
   },
@@ -245,8 +243,6 @@
       "LowHPDamageBonus": "33,100"
     },
     "StatModifiers": {
-      "Strength": 5,
-      "Tenacity": -5
     },
     "Tags": [ "LowHP" ]
   },
@@ -273,8 +269,6 @@
       "LastStand": "30"
     },
     "StatModifiers": {
-      "Agility": -10,
-      "Tenacity": 5
     },
     "Tags": []
   },
@@ -337,7 +331,6 @@
       "CritDamageReduction": "40"
     },
     "StatModifiers": {
-      "Tenacity": 3
     },
     "Tags": [ "Defense", "Critical" ]
   },
@@ -352,7 +345,6 @@
       "FirstAttackDamage": "50"
     },
     "StatModifiers": {
-      "Agility": 5
     },
     "Tags": []
   },
@@ -403,7 +395,6 @@
       "IgnoreEvasion": ""
     },
     "StatModifiers": {
-      "Intelligence": 2
     },
     "Tags": []
   },
@@ -418,7 +409,6 @@
       "GhostlySlippers": "50"
     },
     "StatModifiers": {
-      "Agility": 3
     },
     "Tags": [ "Defense" ]
   },
@@ -433,9 +423,6 @@
       "GlassCannon": "30,15"
     },
     "StatModifiers": {
-      "Strength": 5,
-      "Intelligence": 5,
-      "Tenacity": -10
     },
     "Tags": []
   },
@@ -462,7 +449,6 @@
       "RecklessAbandon": "50,-10"
     },
     "StatModifiers": {
-      "Strength": 3
     },
     "Tags": []
   },
@@ -501,7 +487,6 @@
       "Vigor": "75,50"
     },
     "StatModifiers": {
-      "MaxHP": 20
     },
     "Tags": [ "Defense" ]
   },
@@ -540,7 +525,6 @@
       "AmbushPredator": "1,-20"
     },
     "StatModifiers": {
-      "Agility": 2
     },
     "Tags": [ "Priority" ]
   },
@@ -579,8 +563,6 @@
       "Spellweaver": "50"
     },
     "StatModifiers": {
-      "Intelligence": 3,
-      "MaxMana": 20
     },
     "Tags": []
   },
@@ -595,8 +577,6 @@
       "Momentum": "50"
     },
     "StatModifiers": {
-      "Tenacity": 5,
-      "Agility": -2
     },
     "Tags": []
   },
@@ -623,7 +603,6 @@
       "PainFuel": ""
     },
     "StatModifiers": {
-      "MaxHP": 30
     },
     "Tags": [ "Critical", "Buff", "Defense" ]
   },

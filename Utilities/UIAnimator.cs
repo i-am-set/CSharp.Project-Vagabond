@@ -287,7 +287,7 @@ namespace ProjectVagabond.UI
                     // Determine multipliers based on state
                     bool isHovered = _state == AnimationState.Hovered;
                     float speedMult = isHovered ? 1.0f : 0.5f;
-                    float distMult = isHovered ? 1.0f : 0.5f;
+                    float distMult = isHovered ? 1.0f : 0.75f;
 
                     // Accumulate time based on current speed multiplier to prevent phase jumps
                     _accumulatedSwayTime += deltaTime * HoverSwaySpeed * speedMult;
