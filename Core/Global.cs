@@ -129,7 +129,7 @@ namespace ProjectVagabond
                 { 1, Color.Lime },         // Uncommon
                 { 2, Color.DeepSkyBlue },  // Rare
                 { 3, Color.DarkOrchid },   // Epic
-                { 4, Color.Red },          // Mythic
+                { 4, Color.Crimson },          // Mythic
                 { 5, Color.Yellow }        // Legendary
             };
 

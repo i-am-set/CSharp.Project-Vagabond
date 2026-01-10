@@ -30,7 +30,7 @@ namespace ProjectVagabond.UI
         private readonly Core _core;
 
         // --- TUNING ---
-        private const int MIN_TOOLTIP_WIDTH = 160;
+        private const int MIN_TOOLTIP_WIDTH = 120;
         private const int SCREEN_EDGE_MARGIN = 10;
         private const int SPACE_WIDTH = 5;
 
@@ -72,19 +72,25 @@ namespace ProjectVagabond.UI
             float contentHeight = MeasureContentHeight(font, secondaryFont, itemData, panelWidth);
             int panelHeight = (int)Math.Ceiling(contentHeight) + 8 + 2;
 
-            // 3. Determine Y Position (Centered on anchor, shifted up if spell)
-            float panelY = anchorPosition.Y - panelHeight / 2;
-            if (itemData is MoveData) panelY -= 16;
+            // 3. Determine Y Position (Align Sprite Slot to Anchor)
+            int spriteSlotCenterOffsetY = 16;
+            if (itemData is MoveData)
+            {
+                spriteSlotCenterOffsetY = 19;
+            }
+
+            float panelY = anchorPosition.Y - spriteSlotCenterOffsetY;
+            float panelX = anchorPosition.X - (panelWidth / 2);
 
             // 4. Create Rectangle
             var infoPanelArea = new Rectangle(
-                (int)(anchorPosition.X - panelWidth / 2),
+                (int)panelX,
                 (int)panelY,
                 panelWidth,
                 panelHeight
             );
 
-            // 5. Clamp to Screen (Logic applied to the unscaled rect)
+            // 5. Clamp to Screen
             int screenTop = SCREEN_EDGE_MARGIN;
             int screenBottom = Global.VIRTUAL_HEIGHT - SCREEN_EDGE_MARGIN;
             int screenLeft = SCREEN_EDGE_MARGIN;
@@ -98,16 +104,17 @@ namespace ProjectVagabond.UI
             // 6. Prepare Animation Matrix
             spriteBatch.End();
 
-            Vector2 center = infoPanelArea.Center.ToVector2();
-            Matrix transform = Matrix.CreateTranslation(-center.X, -center.Y, 0) *
+            Vector2 spriteSlotCenter = new Vector2(infoPanelArea.X + (panelWidth / 2), infoPanelArea.Y + spriteSlotCenterOffsetY);
+
+            Matrix transform = Matrix.CreateTranslation(-spriteSlotCenter.X, -spriteSlotCenter.Y, 0) *
                                Matrix.CreateScale(drawScale.X, drawScale.Y, 1.0f) *
-                               Matrix.CreateTranslation(center.X, center.Y, 0);
+                               Matrix.CreateTranslation(spriteSlotCenter.X, spriteSlotCenter.Y, 0);
 
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
 
             // 7. Draw Background
             var pixel = ServiceLocator.Get<Texture2D>();
-            spriteBatch.DrawSnapped(pixel, infoPanelArea, _global.Palette_DarkestGray * opacity);
+            spriteBatch.DrawSnapped(pixel, infoPanelArea, _global.Palette_Black * opacity);
 
             // Black Outline
             DrawRectangleBorder(spriteBatch, pixel, infoPanelArea, 1, _global.Palette_BlueWhite * opacity);
@@ -120,6 +127,31 @@ namespace ProjectVagabond.UI
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
         }
 
+        private List<string> WrapName(string name)
+        {
+            var words = name.Split(' ');
+            var lines = new List<string>();
+            string currentLine = "";
+
+            foreach (var word in words)
+            {
+                if ((currentLine + (currentLine.Length > 0 ? " " : "") + word).Length > 12)
+                {
+                    if (!string.IsNullOrEmpty(currentLine))
+                    {
+                        lines.Add(currentLine);
+                        currentLine = "";
+                    }
+                }
+
+                if (currentLine.Length > 0) currentLine += " ";
+                currentLine += word;
+            }
+            if (!string.IsNullOrEmpty(currentLine)) lines.Add(currentLine);
+
+            return lines;
+        }
+
         private int CalculateDynamicWidth(object itemData, BitmapFont font)
         {
             string name = "";
@@ -130,12 +162,16 @@ namespace ProjectVagabond.UI
             else if (itemData is ConsumableItemData c) name = c.ItemName;
             else if (itemData is MiscItemData misc) name = misc.ItemName;
 
-            float nameWidth = font.MeasureString(name.ToUpper()).Width;
+            var lines = WrapName(name.ToUpper());
 
-            // Width = Name + Padding on both sides
-            int calculatedWidth = (int)Math.Ceiling(nameWidth) + (SIDE_PADDING * 2);
+            float maxLineWidth = 0;
+            foreach (var line in lines)
+            {
+                float w = font.MeasureString(line).Width;
+                if (w > maxLineWidth) maxLineWidth = w;
+            }
 
-            // Enforce minimum width for layout stability (stat grids need space)
+            int calculatedWidth = (int)Math.Ceiling(maxLineWidth) + (SIDE_PADDING * 2);
             return Math.Max(MIN_TOOLTIP_WIDTH, calculatedWidth);
         }
 
@@ -180,10 +216,7 @@ namespace ProjectVagabond.UI
             string rarityText = GetRarityName(rarity);
             Color rarityColor = _global.RarityColors.ContainsKey(rarity) ? _global.RarityColors[rarity] : Color.White;
 
-            // Draw Type (Top Left)
             spriteBatch.DrawStringSnapped(tertiaryFont, typeText, new Vector2(bounds.X + 4, bounds.Y + 2), _global.Palette_DarkGray * opacity);
-
-            // Draw Rarity (Top Right)
             Vector2 raritySize = tertiaryFont.MeasureString(rarityText);
             spriteBatch.DrawStringSnapped(tertiaryFont, rarityText, new Vector2(bounds.Right - 4 - raritySize.X, bounds.Y + 2), rarityColor * opacity);
 
@@ -321,6 +354,33 @@ namespace ProjectVagabond.UI
 
         // --- DRAWING METHODS ---
 
+        private void DrawItemName(SpriteBatch spriteBatch, BitmapFont font, string name, Rectangle infoPanelArea, float opacity, GameTime gameTime)
+        {
+            var lines = WrapName(name.ToUpper());
+
+            // Bottom aligned to LAYOUT_TITLE_Y
+            float bottomY = infoPanelArea.Y + LAYOUT_TITLE_Y;
+
+            // Iterate backwards to draw from bottom up
+            for (int i = lines.Count - 1; i >= 0; i--)
+            {
+                string line = lines[i];
+                Vector2 lineSize = font.MeasureString(line);
+
+                // Calculate Y offset based on line index from the bottom (0 = bottom line)
+                int linesFromBottom = (lines.Count - 1) - i;
+                float yPos = bottomY - (linesFromBottom * font.LineHeight);
+
+                Vector2 namePos = new Vector2(
+                    infoPanelArea.X + (infoPanelArea.Width - lineSize.X) / 2f,
+                    yPos
+                );
+                namePos = new Vector2(MathF.Round(namePos.X), MathF.Round(namePos.Y));
+
+                TextAnimator.DrawTextWithEffectOutlined(spriteBatch, font, line, namePos, _global.Palette_BlueWhite * opacity, _global.Palette_Black * opacity, TextEffectType.DriftWave, (float)gameTime.TotalGameTime.TotalSeconds);
+            }
+        }
+
         private void DrawWeaponInfoPanel(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, WeaponData weapon, Texture2D? iconTexture, Texture2D? iconSilhouette, Rectangle infoPanelArea, GameTime gameTime, float opacity)
         {
             if (iconTexture == null)
@@ -338,38 +398,31 @@ namespace ProjectVagabond.UI
             int spriteX = infoPanelArea.X + (infoPanelArea.Width - spriteSize) / 2;
             float currentY = infoPanelArea.Y + LAYOUT_SPRITE_Y + 2;
 
-            Vector2 drawPos = new Vector2(spriteX + 8, currentY + 8);
+            Vector2 staticDrawPos = new Vector2(spriteX + 8, currentY + 8);
             Vector2 iconOrigin = new Vector2(8, 8);
             float displayScale = 1.0f;
 
             Vector2 animOffset = GetJuicyOffset(gameTime);
-            drawPos += animOffset;
+            Vector2 animatedDrawPos = staticDrawPos + animOffset;
 
-            DrawIconWithSilhouette(spriteBatch, iconTexture, iconSilhouette, drawPos, iconOrigin, displayScale, opacity: opacity);
+            // Draw Inventory Slot Background behind the item (Static Position)
+            DrawInventorySlotBackground(spriteBatch, staticDrawPos, gameTime, opacity);
 
-            // 2. Draw Name
-            string name = weapon.WeaponName.ToUpper();
-            Vector2 nameSize = font.MeasureString(name);
+            // Draw Item (Animated Position)
+            DrawIconWithSilhouette(spriteBatch, iconTexture, iconSilhouette, animatedDrawPos, iconOrigin, displayScale, opacity: opacity);
 
-            Vector2 namePos = new Vector2(
-                infoPanelArea.X + (infoPanelArea.Width - nameSize.X) / 2f,
-                infoPanelArea.Y + LAYOUT_TITLE_Y
-            );
-            namePos = new Vector2(MathF.Round(namePos.X), MathF.Round(namePos.Y));
-
-            TextAnimator.DrawTextWithEffectOutlined(spriteBatch, font, name, namePos, _global.Palette_BlueWhite * opacity, _global.Palette_Black * opacity, TextEffectType.DriftWave, (float)gameTime.TotalGameTime.TotalSeconds);
+            // 2. Draw Name (Wrapped & Bottom Aligned)
+            DrawItemName(spriteBatch, font, weapon.WeaponName, infoPanelArea, opacity, gameTime);
 
             // 3. Draw Move Stats
             currentY = infoPanelArea.Y + LAYOUT_VARS_START_Y;
 
-            // --- DYNAMIC CENTERING LOGIC ---
-            // Anchor columns relative to the center of the panel
             float centerX = infoPanelArea.Center.X;
             float leftCenter = centerX - COLUMN_CENTER_OFFSET;
             float rightCenter = centerX + COLUMN_CENTER_OFFSET;
 
-            float labelOffset = 18f; // To the left of column center
-            float valueOffset = 2f;  // To the right of column center
+            float labelOffset = 18f;
+            float valueOffset = 2f;
 
             float leftLabelX = leftCenter - labelOffset;
             float leftValueX = leftCenter + valueOffset;
@@ -392,45 +445,12 @@ namespace ProjectVagabond.UI
 
             currentY += LAYOUT_VAR_ROW_HEIGHT;
 
-            string targetVal = weapon.Target switch
-            {
-                TargetType.Single => "SINGL",
-                TargetType.SingleAll => "ANY",
-                TargetType.Both => "BOTH",
-                TargetType.Every => "MULTI",
-                TargetType.All => "ALL",
-                TargetType.Self => "SELF",
-                TargetType.Team => "TEAM",
-                TargetType.Ally => "ALLY",
-                TargetType.SingleTeam => "S-TEAM",
-                TargetType.RandomBoth => "R-BOTH",
-                TargetType.RandomEvery => "R-EVRY",
-                TargetType.RandomAll => "R-ALL",
-                TargetType.None => "NONE",
-                _ => "---"
-            };
-
+            string targetVal = GetTargetString(weapon.Target);
             DrawStatPair("TGT", targetVal, rightLabelX, rightValueX, currentY, _global.Palette_White);
             currentY += LAYOUT_VAR_ROW_HEIGHT;
 
-            string offStatVal = weapon.OffensiveStat switch
-            {
-                OffensiveStatType.Strength => "STR",
-                OffensiveStatType.Intelligence => "INT",
-                OffensiveStatType.Tenacity => "TEN",
-                OffensiveStatType.Agility => "AGI",
-                _ => "---"
-            };
-
-            Color offColor = weapon.OffensiveStat switch
-            {
-                OffensiveStatType.Strength => _global.StatColor_Strength,
-                OffensiveStatType.Intelligence => _global.StatColor_Intelligence,
-                OffensiveStatType.Tenacity => _global.StatColor_Tenacity,
-                OffensiveStatType.Agility => _global.StatColor_Agility,
-                _ => _global.Palette_White
-            };
-
+            string offStatVal = GetStatString(weapon.OffensiveStat);
+            Color offColor = GetStatColor(weapon.OffensiveStat);
             string impactVal = weapon.ImpactType.ToString().ToUpper().Substring(0, Math.Min(4, weapon.ImpactType.ToString().Length));
             Color impactColor = weapon.ImpactType == ImpactType.Magical ? _global.Palette_LightBlue : (weapon.ImpactType == ImpactType.Physical ? _global.Palette_Orange : _global.Palette_Gray);
 
@@ -449,42 +469,7 @@ namespace ProjectVagabond.UI
             float flavorHeight = DrawFlavorText(spriteBatch, infoPanelArea, weapon.Flavor, opacity);
 
             currentY = infoPanelArea.Y + LAYOUT_DESC_START_Y;
-            if (!string.IsNullOrEmpty(weapon.Description))
-            {
-                float descWidth = infoPanelArea.Width - (padding * 2);
-                var descLines = ParseAndWrapRichText(secondaryFont, weapon.Description.ToUpper(), descWidth, _global.Palette_White);
-
-                foreach (var line in descLines)
-                {
-                    if (currentY + secondaryFont.LineHeight > infoPanelArea.Bottom - padding - flavorHeight) break;
-
-                    float lineWidth = 0;
-                    foreach (var segment in line)
-                    {
-                        if (string.IsNullOrWhiteSpace(segment.Text)) lineWidth += segment.Text.Length * SPACE_WIDTH;
-                        else lineWidth += secondaryFont.MeasureString(segment.Text).Width;
-                    }
-
-                    float lineX = infoPanelArea.X + (infoPanelArea.Width - lineWidth) / 2;
-                    float currentX = lineX;
-
-                    foreach (var segment in line)
-                    {
-                        float segWidth;
-                        if (string.IsNullOrWhiteSpace(segment.Text)) segWidth = segment.Text.Length * SPACE_WIDTH;
-                        else
-                        {
-                            segWidth = secondaryFont.MeasureString(segment.Text).Width;
-                            if (segment.Effect != TextEffectType.None)
-                                TextAnimator.DrawTextWithEffect(spriteBatch, secondaryFont, segment.Text, new Vector2(currentX, currentY), segment.Color * opacity, segment.Effect, (float)gameTime.TotalGameTime.TotalSeconds);
-                            else
-                                spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(currentX, currentY), segment.Color * opacity);
-                        }
-                        currentX += segWidth;
-                    }
-                    currentY += secondaryFont.LineHeight;
-                }
-            }
+            DrawDescription(spriteBatch, secondaryFont, weapon.Description, infoPanelArea, currentY, flavorHeight, gameTime, opacity);
         }
 
         private void DrawArmorRelicInfoPanel(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, string name, string description, string flavor, Texture2D? iconTexture, Texture2D? iconSilhouette, Dictionary<string, int> stats, Rectangle infoPanelArea, GameTime gameTime, float opacity, string? iconPath = null)
@@ -500,21 +485,22 @@ namespace ProjectVagabond.UI
 
             int spriteX = infoPanelArea.X + (infoPanelArea.Width - spriteSize) / 2;
             float currentY = infoPanelArea.Y + LAYOUT_SPRITE_Y + 2;
-            Vector2 drawPos = new Vector2(spriteX + 8, currentY + 8);
+            Vector2 staticDrawPos = new Vector2(spriteX + 8, currentY + 8);
             Vector2 iconOrigin = new Vector2(8, 8);
             Vector2 animOffset = GetJuicyOffset(gameTime);
-            drawPos += animOffset;
+            Vector2 animatedDrawPos = staticDrawPos + animOffset;
 
-            DrawIconWithSilhouette(spriteBatch, iconTexture, iconSilhouette, drawPos, iconOrigin, 1.0f, opacity: opacity);
+            // NEW: Draw Inventory Slot Background behind the item (Static Position)
+            DrawInventorySlotBackground(spriteBatch, staticDrawPos, gameTime, opacity);
 
-            Vector2 nameSize = font.MeasureString(name.ToUpper());
-            Vector2 namePos = new Vector2(infoPanelArea.X + (infoPanelArea.Width - nameSize.X) / 2f, infoPanelArea.Y + LAYOUT_TITLE_Y);
-            namePos = new Vector2(MathF.Round(namePos.X), MathF.Round(namePos.Y));
-            TextAnimator.DrawTextWithEffectOutlined(spriteBatch, font, name.ToUpper(), namePos, _global.Palette_BlueWhite * opacity, _global.Palette_Black * opacity, TextEffectType.DriftWave, (float)gameTime.TotalGameTime.TotalSeconds);
+            // Draw Item (Animated Position)
+            DrawIconWithSilhouette(spriteBatch, iconTexture, iconSilhouette, animatedDrawPos, iconOrigin, 1.0f, opacity: opacity);
+
+            // Draw Name (Wrapped & Bottom Aligned)
+            DrawItemName(spriteBatch, font, name, infoPanelArea, opacity, gameTime);
 
             currentY = infoPanelArea.Y + LAYOUT_VARS_START_Y;
 
-            // --- DYNAMIC CENTERING LOGIC ---
             float centerX = infoPanelArea.Center.X;
             float leftCenter = centerX - COLUMN_CENTER_OFFSET;
             float rightCenter = centerX + COLUMN_CENTER_OFFSET;
@@ -541,25 +527,30 @@ namespace ProjectVagabond.UI
         {
             var tertiaryFont = _core.TertiaryFont; // Get Tertiary Font
             const int spriteSize = 32;
-            const int gap = 2;
 
             int spriteX = infoPanelArea.X + (infoPanelArea.Width - spriteSize) / 2;
             int spriteY = infoPanelArea.Y + LAYOUT_SPRITE_Y - 3;
 
             Vector2 iconOrigin = new Vector2(16, 16);
-            Vector2 drawPos = new Vector2(spriteX + 16, spriteY + 16);
+            Vector2 staticDrawPos = new Vector2(spriteX + 16, spriteY + 16);
 
-            DrawIconWithSilhouette(spriteBatch, iconTexture, iconSilhouette, drawPos, iconOrigin, 1.0f, sourceRect, iconTint, opacity);
+            // NEW: Draw Inventory Slot Background behind the item (Static Position)
+            DrawInventorySlotBackground(spriteBatch, staticDrawPos, gameTime, opacity);
 
-            string name = move.MoveName.ToUpper();
-            Vector2 nameSize = font.MeasureString(name);
-            Vector2 namePos = new Vector2(infoPanelArea.X + (infoPanelArea.Width - nameSize.X) / 2f, infoPanelArea.Y + LAYOUT_TITLE_Y);
-            namePos = new Vector2(MathF.Round(namePos.X), MathF.Round(namePos.Y));
-            TextAnimator.DrawTextWithEffectOutlined(spriteBatch, font, name, namePos, _global.Palette_BlueWhite * opacity, _global.Palette_Black * opacity, TextEffectType.DriftWave, (float)gameTime.TotalGameTime.TotalSeconds);
+            // Draw Item (Static Position for Spells as they don't usually bob in tooltips, or if they do, apply offset here)
+            // Spells in tooltips usually don't bob in this codebase, but if we want consistency:
+            // Vector2 animOffset = GetJuicyOffset(gameTime);
+            // Vector2 animatedDrawPos = staticDrawPos + animOffset;
+            // DrawIconWithSilhouette(spriteBatch, iconTexture, iconSilhouette, animatedDrawPos, iconOrigin, 1.0f, sourceRect, iconTint, opacity);
+
+            // For now, keeping spells static as per original logic, but ensuring background is drawn.
+            DrawIconWithSilhouette(spriteBatch, iconTexture, iconSilhouette, staticDrawPos, iconOrigin, 1.0f, sourceRect, iconTint, opacity);
+
+            // Draw Name (Wrapped & Bottom Aligned)
+            DrawItemName(spriteBatch, font, move.MoveName, infoPanelArea, opacity, gameTime);
 
             float currentY = infoPanelArea.Y + LAYOUT_VARS_START_Y;
 
-            // --- DYNAMIC CENTERING LOGIC ---
             float centerX = infoPanelArea.Center.X;
             float leftCenter = centerX - COLUMN_CENTER_OFFSET;
             float rightCenter = centerX + COLUMN_CENTER_OFFSET;
@@ -620,17 +611,18 @@ namespace ProjectVagabond.UI
             const int spriteSize = 16;
             int spriteX = infoPanelArea.X + (infoPanelArea.Width - spriteSize) / 2;
             float currentY = infoPanelArea.Y + LAYOUT_SPRITE_Y + 2;
-            Vector2 drawPos = new Vector2(spriteX + 8, currentY + 8);
+            Vector2 staticDrawPos = new Vector2(spriteX + 8, currentY + 8);
             Vector2 iconOrigin = new Vector2(8, 8);
             Vector2 animOffset = GetJuicyOffset(gameTime);
-            drawPos += animOffset;
+            Vector2 animatedDrawPos = staticDrawPos + animOffset;
 
-            DrawIconWithSilhouette(spriteBatch, iconTexture, iconSilhouette, drawPos, iconOrigin, 1.0f, opacity: opacity);
+            // NEW: Draw Inventory Slot Background behind the item (Static Position)
+            DrawInventorySlotBackground(spriteBatch, staticDrawPos, gameTime, opacity);
 
-            Vector2 nameSize = font.MeasureString(name.ToUpper());
-            Vector2 namePos = new Vector2(infoPanelArea.X + (infoPanelArea.Width - nameSize.X) / 2f, infoPanelArea.Y + LAYOUT_TITLE_Y);
-            namePos = new Vector2(MathF.Round(namePos.X), MathF.Round(namePos.Y));
-            TextAnimator.DrawTextWithEffectOutlined(spriteBatch, font, name.ToUpper(), namePos, _global.Palette_BlueWhite * opacity, _global.Palette_Black * opacity, TextEffectType.DriftWave, (float)gameTime.TotalGameTime.TotalSeconds);
+            DrawIconWithSilhouette(spriteBatch, iconTexture, iconSilhouette, animatedDrawPos, iconOrigin, 1.0f, opacity: opacity);
+
+            // Draw Name (Wrapped & Bottom Aligned)
+            DrawItemName(spriteBatch, font, name, infoPanelArea, opacity, gameTime);
 
             float flavorHeight = DrawFlavorText(spriteBatch, infoPanelArea, flavor, opacity);
             currentY = infoPanelArea.Y + LAYOUT_TITLE_Y + font.LineHeight + 4;
@@ -638,6 +630,23 @@ namespace ProjectVagabond.UI
         }
 
         // --- Helpers ---
+
+        private void DrawInventorySlotBackground(SpriteBatch spriteBatch, Vector2 centerPos, GameTime gameTime, float opacity)
+        {
+            var sheet = _spriteManager.InventorySlotIdleSpriteSheet;
+            var frames = _spriteManager.InventorySlotSourceRects;
+
+            if (sheet != null && frames != null && frames.Length > 0)
+            {
+                // Simulate random idle behavior using time
+                // Change frame every 2 seconds
+                int frameIndex = (int)(gameTime.TotalGameTime.TotalSeconds / 2.0) % frames.Length;
+                var sourceRect = frames[frameIndex];
+                var origin = new Vector2(sourceRect.Width / 2f, sourceRect.Height / 2f);
+
+                spriteBatch.DrawSnapped(sheet, centerPos, sourceRect, Color.White * opacity, 0f, origin, 1.0f, SpriteEffects.None, 0f);
+            }
+        }
 
         private void DrawIconWithSilhouette(SpriteBatch spriteBatch, Texture2D? texture, Texture2D? silhouette, Vector2 pos, Vector2 origin, float scale, Rectangle? sourceRect = null, Color? tint = null, float opacity = 1.0f)
         {

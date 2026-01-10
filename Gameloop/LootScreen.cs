@@ -86,6 +86,9 @@ namespace ProjectVagabond.Scenes
         // Tooltip Animation
         private UIAnimator _tooltipAnimator;
 
+        // Text Wave Timer
+        private float _textWaveTimer = 0f;
+
         public LootScreen()
         {
             _global = ServiceLocator.Get<Global>();
@@ -128,6 +131,7 @@ namespace ProjectVagabond.Scenes
             _hoveredItemData = null;
             _lastHoveredItemData = null;
             _tooltipTimer = 0f;
+            _textWaveTimer = 0f;
             _tooltipAnimator.Reset();
 
             if (loot != null)
@@ -405,6 +409,8 @@ namespace ProjectVagabond.Scenes
             Vector2 mousePos = Core.TransformMouse(mouse.Position);
             bool clicked = mouse.LeftButton == ButtonState.Released && _prevMouse.LeftButton == ButtonState.Pressed;
 
+            _textWaveTimer += dt;
+
             // --- Collect All Sequence Logic ---
             if (_isCollectingAll)
             {
@@ -641,8 +647,8 @@ namespace ProjectVagabond.Scenes
                     }
 
                     // --- 2.5. Draw Rarity Tracer & Pulse ---
-                    // Only draw if not collected and visible
-                    if (!card.IsCollected && state.Opacity > 0.5f && card.TracerPath != null && card.TracerPath.Count > 0)
+                    // Only draw if not collected, visible, AND NOT HOVERED
+                    if (!card.IsCollected && !card.IsMouseHovering && state.Opacity > 0.5f && card.TracerPath != null && card.TracerPath.Count > 0)
                     {
                         Color rarityColor = _global.RarityColors.GetValueOrDefault(card.Item.Rarity, Color.White);
                         int pathLength = card.TracerPath.Count;
@@ -718,24 +724,57 @@ namespace ProjectVagabond.Scenes
                     // 3. Draw Item Sprite Body
                     spriteBatch.Draw(icon, drawPos, null, Color.White * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
 
+                    // --- 3.5 Draw Rarity Symbol (Top Right) ---
+                    if (card.Item.Rarity >= 0 && _spriteManager.RarityIconsSpriteSheet != null)
+                    {
+                        var rarityRect = _spriteManager.GetRarityIconSourceRect(card.Item.Rarity, gameTime);
+
+                        // Calculate position relative to the SLOT CENTER (center)
+                        // This ensures the rarity icon stays fixed to the slot layout and doesn't bob with the sprite.
+                        // Sprite is 32x32 (max), so half width is 16.
+                        // Rarity icon is 8x8.
+                        // We want it at the top-right corner of the slot.
+                        // Offset X: +16 (edge) - 4 (half icon width) + nudge
+                        // Offset Y: -16 (edge) + 4 (half icon height) + nudge
+
+                        // Adjust these values to taste. 
+                        // +12, -12 puts the center of the star 4px inside the corner.
+                        Vector2 rarityOffset = new Vector2(12, -12) * state.Scale;
+
+                        // Note: We do NOT rotate the rarity icon offset, as it is anchored to the static slot, not the rotating sprite.
+
+                        Vector2 rarityPos = center + rarityOffset;
+                        Vector2 rarityOrigin = new Vector2(4, 4); // Center of 8x8 icon
+
+                        spriteBatch.DrawSnapped(_spriteManager.RarityIconsSpriteSheet, rarityPos, rarityRect, Color.White * state.Opacity, 0f, rarityOrigin, state.Scale, SpriteEffects.None, 0f);
+                    }
+
                     // 4. Draw Instant Name on Hover (NEW)
                     if (card.IsMouseHovering && !card.IsCollected)
                     {
                         string name = card.Item.Name.ToUpper();
                         Vector2 nameSize = secondaryFont.MeasureString(name);
 
-                        // Position: Center X, Above Sprite Y
-                        // Assuming max sprite height is roughly CARD_SIZE (32), half is 16.
-                        // Add padding (2px).
+                        // Position: Center X relative to the STATIC layout position (center)
+                        // Y: Fixed height above the slot
                         Vector2 textPos = new Vector2(
-                            drawPos.X - nameSize.X / 2f,
-                            drawPos.Y - 16 - nameSize.Y - 2
+                            center.X - nameSize.X / 2f,
+                            center.Y - 24 // Fixed height above the slot center
                         );
 
                         // Snap to pixels
                         textPos = new Vector2(MathF.Round(textPos.X), MathF.Round(textPos.Y));
 
-                        spriteBatch.DrawStringSnapped(secondaryFont, name, textPos, _global.Palette_BlueWhite * state.Opacity);
+                        // Use TextAnimator for Wave effect
+                        TextAnimator.DrawTextWithEffect(
+                            spriteBatch,
+                            secondaryFont,
+                            name,
+                            textPos,
+                            _global.Palette_BlueWhite * state.Opacity,
+                            TextEffectType.Wave,
+                            _textWaveTimer
+                        );
                     }
                 }
             }
@@ -797,13 +836,13 @@ namespace ProjectVagabond.Scenes
         {
             return rarity switch
             {
-                0 => (15f, 1, 4, 0.5f),  // Common: Slow, faint, short
-                1 => (20f, 1, 6, 0.7f),  // Uncommon: Slightly faster/brighter
-                2 => (30f, 1, 8, 1.0f),  // Rare: Baseline
-                3 => (40f, 2, 10, 1.0f), // Epic: Fast, 2 dots
-                4 => (50f, 3, 12, 1.0f), // Mythic: Very fast, 3 dots
-                5 => (60f, 4, 15, 1.0f), // Legendary: Hyper, 4 dots
-                _ => (30f, 1, 8, 1.0f)   // Default
+                0 => (15f, 1, 4, 0.15f),  // Common: Very faint
+                1 => (20f, 1, 6, 0.20f),  // Uncommon: Faint
+                2 => (30f, 1, 8, 0.25f),  // Rare: Subtle
+                3 => (40f, 2, 10, 0.30f), // Epic: Visible
+                4 => (50f, 3, 12, 0.35f), // Mythic: Clear
+                5 => (60f, 4, 15, 0.40f), // Legendary: Distinct
+                _ => (30f, 1, 8, 0.25f)   // Default
             };
         }
 
@@ -814,13 +853,13 @@ namespace ProjectVagabond.Scenes
         {
             return rarity switch
             {
-                0 => 0.15f, // Common: Very faint
-                1 => 0.25f, // Uncommon: Faint
-                2 => 0.40f, // Rare: Visible
-                3 => 0.60f, // Epic: Bright
-                4 => 0.80f, // Mythic: Very Bright
-                5 => 1.00f, // Legendary: Full Opacity
-                _ => 0.40f
+                0 => 0.10f, // Common: Barely visible
+                1 => 0.15f, // Uncommon
+                2 => 0.20f, // Rare
+                3 => 0.25f, // Epic
+                4 => 0.30f, // Mythic
+                5 => 0.35f, // Legendary
+                _ => 0.20f
             };
         }
     }
