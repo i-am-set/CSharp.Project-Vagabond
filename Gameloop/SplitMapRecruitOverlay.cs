@@ -7,6 +7,7 @@ using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -463,7 +464,8 @@ namespace ProjectVagabond.UI
                 Vector2 slotCenter = GetHoveredSlotCenter();
 
                 // 2. Draw Tooltip using the new renderer
-                _tooltipRenderer.DrawTooltip(spriteBatch, _hoveredItemData, slotCenter, gameTime);
+                // Pass default scale and opacity
+                _tooltipRenderer.DrawTooltip(spriteBatch, _hoveredItemData, slotCenter, gameTime, Vector2.One, 1.0f);
             }
         }
 
@@ -779,3 +781,4 @@ namespace ProjectVagabond.UI
         }
     }
 }
+﻿

@@ -20,7 +20,7 @@ namespace ProjectVagabond.Scenes
         private SpriteManager _spriteManager;
         private GameState _gameState;
         private HapticsManager _hapticsManager;
-        private ItemTooltipRenderer _tooltipRenderer; // New dependency
+        private ItemTooltipRenderer _tooltipRenderer;
 
         // State
         public bool IsActive { get; private set; }
@@ -43,7 +43,7 @@ namespace ProjectVagabond.Scenes
         // Layout Constants
         private Rectangle _lootArea;
         private const int CARD_SIZE = 32;
-        private const int AREA_WIDTH = 90; // Reduced to 90
+        private const int AREA_WIDTH = 90;
         private const int AREA_HEIGHT = 60;
         private const float CARD_MOVE_SPEED = 10f; // Speed of re-centering tween
 
@@ -70,6 +70,9 @@ namespace ProjectVagabond.Scenes
         private float _tooltipTimer = 0f;
         private const float TOOLTIP_DELAY = 0.35f;
 
+        // Tooltip Animation
+        private UIAnimator _tooltipAnimator;
+
         public LootScreen()
         {
             _global = ServiceLocator.Get<Global>();
@@ -79,9 +82,16 @@ namespace ProjectVagabond.Scenes
             _tooltipRenderer = ServiceLocator.Get<ItemTooltipRenderer>();
             _cards = new List<LootCard>();
 
+            // Initialize Tooltip Animator
+            _tooltipAnimator = new UIAnimator
+            {
+                EntryStyle = EntryExitStyle.Pop,
+                DurationIn = 0.2f,
+                DurationOut = 0.1f // Instant hide handled by Reset(), but good to have
+            };
+
             // Center the loot area
             int x = (Global.VIRTUAL_WIDTH - AREA_WIDTH) / 2;
-            // Moved up 24 pixels as requested
             int y = (Global.VIRTUAL_HEIGHT - AREA_HEIGHT) / 2 - 24;
             _lootArea = new Rectangle(x, y, AREA_WIDTH, AREA_HEIGHT);
 
@@ -105,6 +115,7 @@ namespace ProjectVagabond.Scenes
             _hoveredItemData = null;
             _lastHoveredItemData = null;
             _tooltipTimer = 0f;
+            _tooltipAnimator.Reset();
 
             if (loot != null)
             {
@@ -162,6 +173,7 @@ namespace ProjectVagabond.Scenes
             IsActive = false;
             _cards.Clear();
             _isCollectingAll = false;
+            _tooltipAnimator.Reset();
         }
 
         public void Reset()
@@ -344,21 +356,28 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            // --- TOOLTIP TIMER LOGIC ---
+            // --- TOOLTIP TIMER & ANIMATION LOGIC ---
             if (_hoveredItemData != _lastHoveredItemData)
             {
                 _tooltipTimer = 0f;
                 _lastHoveredItemData = _hoveredItemData;
+                _tooltipAnimator.Reset(); // Instant hide on switch
             }
 
             if (_hoveredItemData != null)
             {
                 _tooltipTimer += dt;
+                if (_tooltipTimer >= TOOLTIP_DELAY && !_tooltipAnimator.IsVisible)
+                {
+                    _tooltipAnimator.Show();
+                }
             }
             else
             {
                 _tooltipTimer = 0f;
+                _tooltipAnimator.Reset();
             }
+            _tooltipAnimator.Update(dt);
 
             // Cleanup: Remove cards that have finished animating out
             _cards.RemoveAll(c => c.IsCollected && !c.Animator.IsVisible);
@@ -459,6 +478,26 @@ namespace ProjectVagabond.Scenes
 
                     // 3. Draw Item Sprite Body
                     spriteBatch.Draw(icon, drawPos, null, Color.White * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
+
+                    // 4. Draw Instant Name on Hover (NEW)
+                    if (card.IsMouseHovering && !card.IsCollected)
+                    {
+                        string name = card.Item.Name.ToUpper();
+                        Vector2 nameSize = secondaryFont.MeasureString(name);
+
+                        // Position: Center X, Above Sprite Y
+                        // Assuming max sprite height is roughly CARD_SIZE (32), half is 16.
+                        // Add padding (2px).
+                        Vector2 textPos = new Vector2(
+                            drawPos.X - nameSize.X / 2f,
+                            drawPos.Y - 16 - nameSize.Y - 2
+                        );
+
+                        // Snap to pixels
+                        textPos = new Vector2(MathF.Round(textPos.X), MathF.Round(textPos.Y));
+
+                        spriteBatch.DrawStringSnapped(secondaryFont, name, textPos, _global.Palette_BlueWhite * state.Opacity);
+                    }
                 }
             }
 
@@ -475,20 +514,21 @@ namespace ProjectVagabond.Scenes
             spriteBatch.DrawString(font, title, new Vector2((Global.VIRTUAL_WIDTH - titleSize.X) / 2, titleY + titleBob), _global.Palette_Yellow);
 
             // --- Draw Tooltip ---
-            if (_hoveredItemData != null && _tooltipTimer >= TOOLTIP_DELAY)
+            if (_hoveredItemData != null && _tooltipAnimator.IsVisible)
             {
                 // Find the card that corresponds to the hovered data to get its position
                 var hoveredCard = _cards.FirstOrDefault(c => c.Item.OriginalData == _hoveredItemData);
                 if (hoveredCard != null)
                 {
                     // Use the visual center of the card as the anchor
-                    // CHANGED: Use static center (VisualPosition) instead of animated position (drawPos)
-                    // to prevent the tooltip from bobbing with the item.
                     Vector2 basePos = hoveredCard.VisualPosition;
                     Vector2 center = basePos + new Vector2(CARD_SIZE / 2f, CARD_SIZE / 2f);
 
-                    // Pass the static center as the anchor
-                    _tooltipRenderer.DrawTooltip(spriteBatch, _hoveredItemData, center, gameTime);
+                    var state = _tooltipAnimator.GetVisualState();
+
+                    // Pass the static center as the anchor, and the animator state
+                    // Force opacity to 1.0f to prevent fade-in, but use scale for pop-in
+                    _tooltipRenderer.DrawTooltip(spriteBatch, _hoveredItemData, center, gameTime, state.Scale, 1.0f);
                 }
             }
 
