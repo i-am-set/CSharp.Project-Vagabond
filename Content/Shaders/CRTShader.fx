@@ -19,6 +19,7 @@ uniform float Saturation;
 uniform float Vibrance;
 
 // --- Toggles ---
+#define ENABLE_CURVATURE
 #define ENABLE_SCANLINES
 #define ENABLE_WOBBLE
 #define ENABLE_VIGNETTE
@@ -26,6 +27,10 @@ uniform float Vibrance;
 #define ENABLE_NOISE
 
 // --- Tuning ---
+
+// Curvature (Lens Distortion)
+static const float CURVATURE = 0.1; // 0.0 = Flat, 0.15 = Standard CRT, 0.4 = Fish eye
+
 // Scanlines
 static const float SCANLINE_OPACITY_MIN = 0.85f; // The darkness of the gap (1.0 = invisible, 0.0 = black)
 static const float SCANLINE_OPACITY_MAX = 1.0f;  // The brightness of the beam center
@@ -62,6 +67,27 @@ struct PixelShaderInput
 float4 MainPS(PixelShaderInput input) : COLOR
 {
     float2 uv = input.TexCoord;
+
+    // --- 0. CURVATURE (Lens Distortion) ---
+    // This must happen first so all other effects (scanlines, wobble) follow the curve.
+#ifdef ENABLE_CURVATURE
+    // Transform UV to -0.5 to 0.5 range (center of screen is 0,0)
+    float2 centeredUV = uv - 0.5;
+    float r2 = dot(centeredUV, centeredUV); // Distance squared from center
+    
+    // Apply barrel distortion: uv = uv * (1 + k * r^2)
+    // We adjust the formula slightly to keep the center 1:1 scale
+    float2 distortedUV = centeredUV * (1.0 + CURVATURE * r2);
+    
+    // Transform back to 0.0 to 1.0 range
+    uv = distortedUV + 0.5;
+
+    // Bezel Mask: If the distorted UV is outside the texture, draw black
+    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0)
+    {
+        return float4(0.0, 0.0, 0.0, 1.0);
+    }
+#endif
     
     // --- 1. WOBBLE (Distortion) ---
     // We calculate the offset based on ScreenResolution so the wave stays tight and crisp
