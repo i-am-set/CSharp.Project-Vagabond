@@ -1626,7 +1626,7 @@ namespace ProjectVagabond.Battle.UI
                 const int typeGap = 5;
 
                 // Action 1: Move bottom text up 4 pixels as well
-                float typeY = bounds.Bottom - verticalPadding - secondaryFont.LineHeight - 3;
+                float typeY = bounds.Bottom - verticalPadding - secondaryFont.LineHeight - 2;
                 float gapCenter = bounds.Center.X + 5;
 
                 if (!string.IsNullOrEmpty(targetValue))
