@@ -64,7 +64,7 @@ namespace ProjectVagabond.Battle.UI
         private KeyboardState _previousKeyboardState;
 
         // --- Tuning ---
-        private const float TYPEWRITER_SPEED = 0.025f;
+        private const float TYPEWRITER_SPEED = 0.015f;
         private const float AUTO_ADVANCE_SECONDS = 5.0f;
         private const int LINE_SPACING = 3;
         private const int SPACE_WIDTH = 5;

@@ -30,7 +30,8 @@ namespace ProjectVagabond.Scenes
         {
             public BaseItem Item;
             public UIAnimator Animator;
-            public bool IsCollected; // True if clicked/collecting, but animation not finished
+            public bool IsCollected; // True if clicked/collecting
+            public bool IsDiscarded; // True if another card was picked
             public bool IsMouseHovering; // True if mouse is physically over the rect (Instant feedback)
             public Rectangle CurrentBounds;
 
@@ -66,16 +67,15 @@ namespace ProjectVagabond.Scenes
         private const float PULSE_SPEED = 4.0f; // Speed of the sine wave
 
         // Buttons
-        private Button _collectAllButton;
         private Button _skipButton;
 
         // Input State
         private MouseState _prevMouse;
 
-        // Collection Sequence State
-        private bool _isCollectingAll = false;
-        private float _collectTimer = 0f;
-        private const float COLLECT_DELAY = 0.1f;
+        // Selection State
+        private bool _selectionMade = false;
+        private float _autoCloseTimer = 0f;
+        private const float AUTO_CLOSE_DELAY = 1.5f; // Time to wait after picking before closing
 
         // Tooltip State
         private object? _hoveredItemData;
@@ -103,7 +103,7 @@ namespace ProjectVagabond.Scenes
             {
                 EntryStyle = EntryExitStyle.Pop,
                 DurationIn = 0.2f,
-                DurationOut = 0.1f // Instant hide handled by Reset(), but good to have
+                DurationOut = 0.1f
             };
 
             // Center the loot area
@@ -112,12 +112,9 @@ namespace ProjectVagabond.Scenes
             _lootArea = new Rectangle(x, y, AREA_WIDTH, AREA_HEIGHT);
 
             // Initialize Control Buttons
-            int btnY = _lootArea.Bottom + 20;
+            int btnY = _lootArea.Bottom + 30;
 
-            _collectAllButton = new Button(new Rectangle(x, btnY, 80, 15), "COLLECT ALL", font: ServiceLocator.Get<Core>().SecondaryFont);
-            _collectAllButton.OnClick += StartCollectAllSequence;
-
-            _skipButton = new Button(new Rectangle(_lootArea.Right - 60, btnY, 60, 15), "SKIP", font: ServiceLocator.Get<Core>().SecondaryFont);
+            _skipButton = new Button(new Rectangle((Global.VIRTUAL_WIDTH - 60) / 2, btnY, 60, 15), "SKIP", font: ServiceLocator.Get<Core>().SecondaryFont);
             _skipButton.OnClick += SkipAll;
         }
 
@@ -126,17 +123,18 @@ namespace ProjectVagabond.Scenes
             _cards.Clear();
             IsActive = true;
             _prevMouse = Mouse.GetState();
-            _isCollectingAll = false;
-            _collectTimer = 0f;
+            _selectionMade = false;
+            _autoCloseTimer = 0f;
             _hoveredItemData = null;
             _lastHoveredItemData = null;
             _tooltipTimer = 0f;
             _textWaveTimer = 0f;
             _tooltipAnimator.Reset();
+            _skipButton.ResetAnimationState();
 
             if (loot != null)
             {
-                // Pre-calculate initial positions so they don't fly in from (0,0)
+                // Pre-calculate initial positions
                 int count = loot.Count;
                 float segmentWidth = (float)_lootArea.Width / count;
                 int cardY = _lootArea.Center.Y - (CARD_SIZE / 2);
@@ -161,7 +159,7 @@ namespace ProjectVagabond.Scenes
                         HoverSwayDistance = LOOT_HOVER_FLOAT_DISTANCE,
 
                         DurationIn = 0.4f,
-                        DurationOut = 0.15f // Snappy exit (was 0.35f)
+                        DurationOut = 0.15f // Snappy exit
                     };
                     // Stagger entrance
                     animator.Show(delay: i * 0.1f);
@@ -180,6 +178,7 @@ namespace ProjectVagabond.Scenes
                         Item = loot[i],
                         Animator = animator,
                         IsCollected = false,
+                        IsDiscarded = false,
                         IsMouseHovering = false,
                         VisualPosition = pos,
                         TargetPosition = pos,
@@ -204,7 +203,6 @@ namespace ProjectVagabond.Scenes
             texture.GetData(data);
 
             // 1. Create a boolean grid representing the "Dilated" shape (Sprite + 1px Outline)
-            // We add padding to the grid to handle the expansion
             int gridW = w + 4; // +2 for dilation, +2 for safety padding
             int gridH = h + 4;
             bool[,] grid = new bool[gridW, gridH];
@@ -220,7 +218,6 @@ namespace ProjectVagabond.Scenes
                     if (data[y * w + x].A > 0)
                     {
                         // Mark this pixel and all 8 neighbors as solid
-                        // This simulates the 1px outline added by the silhouette renderer
                         for (int dy = -1; dy <= 1; dy++)
                         {
                             for (int dx = -1; dx <= 1; dx++)
@@ -273,7 +270,6 @@ namespace ProjectVagabond.Scenes
                 path.Add(current);
 
                 // Find the neighbor to move to
-                // Start checking from the backtrack direction, moving clockwise
                 int checkIndex = -1;
 
                 // Find index of backtrack relative to current
@@ -296,8 +292,6 @@ namespace ProjectVagabond.Scenes
 
                     if (neighbor.X >= 0 && neighbor.X < gridW && neighbor.Y >= 0 && neighbor.Y < gridH && grid[neighbor.X, neighbor.Y])
                     {
-                        // Backtrack is the previous empty pixel in the scan.
-                        // Simplified: Just set backtrack to the pixel *before* the one we found in the clockwise sweep.
                         int prevIdx = (idx + 7) % 8;
                         backtrack = new Point(current.X + offsets[prevIdx].X, current.Y + offsets[prevIdx].Y);
 
@@ -313,8 +307,6 @@ namespace ProjectVagabond.Scenes
             } while (current != start && steps < maxSteps);
 
             // 3. Convert Grid Coordinates back to Texture Relative Coordinates
-            // Grid (2,2) corresponds to Texture (0,0).
-            // We want coordinates relative to the texture's top-left (0,0).
             for (int i = 0; i < path.Count; i++)
             {
                 path[i] = new Point(path[i].X - offsetX, path[i].Y - offsetY);
@@ -327,67 +319,77 @@ namespace ProjectVagabond.Scenes
         {
             IsActive = false;
             _cards.Clear();
-            _isCollectingAll = false;
+            _selectionMade = false;
             _tooltipAnimator.Reset();
         }
 
         public void Reset()
         {
             Close();
-            _collectAllButton.ResetAnimationState();
             _skipButton.ResetAnimationState();
-        }
-
-        private void StartCollectAllSequence()
-        {
-            if (_cards.Count == 0)
-            {
-                Close();
-                return;
-            }
-
-            _isCollectingAll = true;
-            _collectTimer = 0f; // Immediate start
         }
 
         private void SkipAll()
         {
+            if (_selectionMade) return;
+            _selectionMade = true;
+
             // Trigger exit animation for all cards
             foreach (var card in _cards)
             {
-                if (!card.IsCollected)
-                {
-                    // Bake current offset to prevent snapping
-                    Vector2 currentOffset = card.Animator.GetCurrentOffset();
-                    card.VisualPosition += currentOffset;
-                    card.Animator.ForceOffset(Vector2.Zero);
+                // Bake current offset to prevent snapping
+                Vector2 currentOffset = card.Animator.GetCurrentOffset();
+                card.VisualPosition += currentOffset;
+                card.Animator.ForceOffset(Vector2.Zero);
 
-                    // Skip style: Slide Down
-                    card.Animator.Hide(delay: 0f, overrideStyle: EntryExitStyle.SlideDown);
-                    card.IsCollected = true; // Mark as collected so we don't interact with them
-                }
+                // Skip style: Slide Down
+                card.Animator.Hide(delay: 0f, overrideStyle: EntryExitStyle.SlideDown);
+                card.IsDiscarded = true;
             }
+
+            _autoCloseTimer = AUTO_CLOSE_DELAY;
         }
 
         private void CollectCard(LootCard card)
         {
-            if (card.IsCollected) return;
+            if (_selectionMade) return;
+            _selectionMade = true;
 
+            // 1. Collect the chosen card
             // Bake the current hover/animation offset into the visual position
-            // so the exit animation starts exactly where the item currently is.
             Vector2 currentOffset = card.Animator.GetCurrentOffset();
             card.VisualPosition += currentOffset;
-
-            // Reset the animator's offset so it doesn't double-apply
             card.Animator.ForceOffset(Vector2.Zero);
 
             card.IsCollected = true;
             AddItemToInventory(card.Item);
 
-            // Trigger the juicy exit animation
-            card.Animator.Hide();
+            // Trigger the juicy exit animation (Collect style)
+            // Increase duration for emphasis
+            card.Animator.DurationOut = 0.6f;
+            card.Animator.Hide(delay: 0f, overrideStyle: EntryExitStyle.JuicyCollect);
 
             _hapticsManager.TriggerCompoundShake(0.2f);
+
+            // 2. Discard the others
+            foreach (var otherCard in _cards)
+            {
+                if (otherCard != card)
+                {
+                    otherCard.IsDiscarded = true;
+                    // Bake offset
+                    Vector2 otherOffset = otherCard.Animator.GetCurrentOffset();
+                    otherCard.VisualPosition += otherOffset;
+                    otherCard.Animator.ForceOffset(Vector2.Zero);
+
+                    // Animate away (Fade Out Quickly)
+                    otherCard.Animator.DurationOut = 0.25f;
+                    otherCard.Animator.Hide(delay: 0f, overrideStyle: EntryExitStyle.Fade);
+                }
+            }
+
+            // 3. Start close timer
+            _autoCloseTimer = AUTO_CLOSE_DELAY;
         }
 
         private void AddItemToInventory(BaseItem item)
@@ -411,38 +413,30 @@ namespace ProjectVagabond.Scenes
 
             _textWaveTimer += dt;
 
-            // --- Collect All Sequence Logic ---
-            if (_isCollectingAll)
+            // --- Auto Close Logic ---
+            if (_selectionMade)
             {
-                _collectTimer -= dt;
-                if (_collectTimer <= 0f)
+                _autoCloseTimer -= dt;
+                if (_autoCloseTimer <= 0f)
                 {
-                    // Find next uncollected card
-                    var nextCard = _cards.FirstOrDefault(c => !c.IsCollected);
-                    if (nextCard != null)
-                    {
-                        CollectCard(nextCard);
-                        _collectTimer = COLLECT_DELAY;
-                    }
+                    Close();
+                    return;
                 }
-                // Block other input while collecting
-                _prevMouse = mouse;
             }
             else
             {
-                _collectAllButton.Update(mouse);
                 _skipButton.Update(mouse);
             }
 
-            // Recalculate layout targets based on remaining cards
+            // Recalculate layout targets (static for 3 items)
             UpdateCardLayout();
 
             // 1. Update Animators & Positions for ALL cards
             foreach (var card in _cards)
             {
                 // Tween position
-                // Only tween if not collected (collected cards stay put and animate out)
-                if (!card.IsCollected)
+                // Only tween if not collected/discarded
+                if (!card.IsCollected && !card.IsDiscarded)
                 {
                     card.VisualPosition = Vector2.Lerp(card.VisualPosition, card.TargetPosition, dt * CARD_MOVE_SPEED);
 
@@ -470,31 +464,28 @@ namespace ProjectVagabond.Scenes
                 card.Animator.Update(dt);
             }
 
-            // 2. Handle Input (Exclusive Hover - Topmost/Rightmost wins)
+            // 2. Handle Input (Exclusive Hover)
             _hoveredItemData = null; // Reset hover data
 
-            if (!_isCollectingAll)
+            if (!_selectionMade)
             {
                 LootCard topHoveredCard = null;
 
                 // Iterate backwards to find the top-most card under the mouse
-                // The list is ordered Left->Right (Bottom->Top), so last index is top.
                 for (int i = _cards.Count - 1; i >= 0; i--)
                 {
                     var card = _cards[i];
-                    // Only consider cards that are not collected and are interactive
-                    if (!card.IsCollected && card.Animator.IsInteractive && card.CurrentBounds.Contains(mousePos))
+                    if (card.Animator.IsInteractive && card.CurrentBounds.Contains(mousePos))
                     {
                         topHoveredCard = card;
-                        break; // Stop at the first (highest) card found
+                        break;
                     }
                 }
 
                 // Apply hover state to all cards
                 foreach (var card in _cards)
                 {
-                    // Only update interactive cards
-                    if (!card.IsCollected && card.Animator.IsInteractive)
+                    if (card.Animator.IsInteractive)
                     {
                         bool isTarget = (card == topHoveredCard);
 
@@ -511,14 +502,12 @@ namespace ProjectVagabond.Scenes
                             if (clicked)
                             {
                                 CollectCard(card);
-                                // Consume click so it doesn't trigger anything else this frame
                                 clicked = false;
                             }
                         }
                     }
                     else
                     {
-                        // Ensure non-interactive cards don't get stuck in hover state
                         card.IsMouseHovering = false;
                         card.Animator.SetHover(false);
                     }
@@ -533,7 +522,7 @@ namespace ProjectVagabond.Scenes
                 _tooltipAnimator.Reset(); // Instant hide on switch
             }
 
-            if (_hoveredItemData != null)
+            if (_hoveredItemData != null && !_selectionMade)
             {
                 _tooltipTimer += dt;
                 if (_tooltipTimer >= TOOLTIP_DELAY && !_tooltipAnimator.IsVisible)
@@ -548,39 +537,23 @@ namespace ProjectVagabond.Scenes
             }
             _tooltipAnimator.Update(dt);
 
-            // Cleanup: Remove cards that have finished animating out
-            _cards.RemoveAll(c => c.IsCollected && !c.Animator.IsVisible);
-
-            // If all cards are gone, close
-            if (_cards.Count == 0)
-            {
-                Close();
-            }
-
             _prevMouse = mouse;
         }
 
         private void UpdateCardLayout()
         {
-            // Filter to only active (uncollected) cards for layout purposes
-            var activeCards = _cards.Where(c => !c.IsCollected).ToList();
-            int count = activeCards.Count;
+            // Static layout for 3 items
+            int count = _cards.Count;
             if (count == 0) return;
 
             int cardY = _lootArea.Center.Y - (CARD_SIZE / 2);
-
-            // Divide the total area width into equal segments
             float segmentWidth = (float)_lootArea.Width / count;
 
             for (int i = 0; i < count; i++)
             {
-                // Calculate the center X of the segment
                 float segmentCenterX = _lootArea.X + (segmentWidth * i) + (segmentWidth / 2f);
-
-                // Center the card within that segment
                 float targetX = segmentCenterX - (CARD_SIZE / 2f);
-
-                activeCards[i].TargetPosition = new Vector2(targetX, cardY);
+                _cards[i].TargetPosition = new Vector2(targetX, cardY);
             }
         }
 
@@ -597,23 +570,15 @@ namespace ProjectVagabond.Scenes
                 var state = card.Animator.GetVisualState();
                 if (!state.IsVisible) continue;
 
-                // Apply Animator Transform to the VisualPosition
-                // VisualPosition is the top-left of the card's current layout slot
                 Vector2 basePos = card.VisualPosition;
                 Vector2 center = basePos + new Vector2(CARD_SIZE / 2f, CARD_SIZE / 2f);
-
-                // The animator offset is relative to the center
                 Vector2 drawPos = center + state.Offset;
 
                 // --- SHADOW LOGIC ---
-                // Draw shadow at the BASE position (the "floor"), not the animated position.
-                // Scale shadow down as the item lifts up to simulate height.
-                // Max lift is roughly -10px.
-                float liftRatio = Math.Abs(state.Offset.Y) / 10f; // 0 to 1
-                float shadowScale = MathHelper.Lerp(1.0f, 0.6f, liftRatio) * state.Scale.X; // Shrink shadow
-                float shadowAlpha = MathHelper.Lerp(0.5f, 0.2f, liftRatio) * state.Opacity; // Fade shadow
+                float liftRatio = Math.Abs(state.Offset.Y) / 10f;
+                float shadowScale = MathHelper.Lerp(1.0f, 0.6f, liftRatio) * state.Scale.X;
+                float shadowAlpha = MathHelper.Lerp(0.5f, 0.2f, liftRatio) * state.Opacity;
 
-                // Draw Item Sprite Shadow (Silhouette)
                 Texture2D icon = _spriteManager.GetItemSprite(card.Item.SpritePath);
                 Texture2D silhouette = _spriteManager.GetItemSpriteSilhouette(card.Item.SpritePath);
 
@@ -621,43 +586,38 @@ namespace ProjectVagabond.Scenes
                 {
                     Vector2 origin = new Vector2(icon.Width / 2f, icon.Height / 2f);
 
-                    // 1. Draw Floor Shadow: Flattened Y, Tinted Black
+                    // 1. Draw Floor Shadow
                     spriteBatch.Draw(icon, center + new Vector2(state.Offset.X, 8), null, Color.Black * shadowAlpha, state.Rotation, origin, new Vector2(state.Scale.X, state.Scale.Y * 0.3f), SpriteEffects.None, 0f);
 
-                    // 2. Draw Outline (If Silhouette exists)
+                    // 2. Draw Outline
                     if (silhouette != null)
                     {
-                        // Determine colors based on explicit mouse hover state (Instant feedback)
-                        bool isHovered = card.IsMouseHovering;
-
+                        bool isHovered = card.IsMouseHovering && !_selectionMade;
                         Color mainOutlineColor = isHovered ? _global.ItemOutlineColor_Hover : _global.Palette_DarkGray;
                         Color cornerOutlineColor = isHovered ? _global.ItemOutlineColor_Hover_Corner : _global.Palette_DarkerGray;
 
-                        // Draw Diagonals (Corners)
-                        spriteBatch.Draw(silhouette, drawPos + new Vector2(-1, -1), null, cornerOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
-                        spriteBatch.Draw(silhouette, drawPos + new Vector2(1, -1), null, cornerOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
-                        spriteBatch.Draw(silhouette, drawPos + new Vector2(-1, 1), null, cornerOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
-                        spriteBatch.Draw(silhouette, drawPos + new Vector2(1, 1), null, cornerOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
+                        // Corners
+                        spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(-1, -1), null, cornerOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
+                        spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(1, -1), null, cornerOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
+                        spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(-1, 1), null, cornerOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
+                        spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(1, 1), null, cornerOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
 
-                        // Draw Cardinals (Main)
-                        spriteBatch.Draw(silhouette, drawPos + new Vector2(-1, 0), null, mainOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
-                        spriteBatch.Draw(silhouette, drawPos + new Vector2(1, 0), null, mainOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
-                        spriteBatch.Draw(silhouette, drawPos + new Vector2(0, -1), null, mainOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
-                        spriteBatch.Draw(silhouette, drawPos + new Vector2(0, 1), null, mainOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
+                        // Cardinals
+                        spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(-1, 0), null, mainOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
+                        spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(1, 0), null, mainOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
+                        spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(0, -1), null, mainOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
+                        spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(0, 1), null, mainOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
                     }
 
                     // --- 2.5. Draw Rarity Tracer & Pulse ---
-                    // Only draw if not collected, visible, AND NOT HOVERED
-                    if (!card.IsCollected && !card.IsMouseHovering && state.Opacity > 0.5f && card.TracerPath != null && card.TracerPath.Count > 0)
+                    if (!card.IsCollected && !card.IsDiscarded && !card.IsMouseHovering && state.Opacity > 0.5f && card.TracerPath != null && card.TracerPath.Count > 0)
                     {
                         Color rarityColor = _global.RarityColors.GetValueOrDefault(card.Item.Rarity, Color.White);
                         int pathLength = card.TracerPath.Count;
 
-                        // --- A. Draw Pulsing Outline ---
+                        // A. Pulse
                         float pulseTime = (float)gameTime.TotalGameTime.TotalSeconds * PULSE_SPEED;
-                        float pulseSine = (MathF.Sin(pulseTime) + 1f) / 2f; // 0 to 1
-
-                        // Calculate Intensity based on rarity
+                        float pulseSine = (MathF.Sin(pulseTime) + 1f) / 2f;
                         float maxIntensity = GetPulseIntensity(card.Item.Rarity);
                         float currentAlpha = pulseSine * maxIntensity * state.Opacity;
 
@@ -667,56 +627,41 @@ namespace ProjectVagabond.Scenes
                             {
                                 Vector2 pointVec = point.ToVector2();
                                 Vector2 relativePos = (pointVec - origin) * state.Scale;
-
                                 if (state.Rotation != 0f)
                                 {
                                     float cos = MathF.Cos(state.Rotation);
                                     float sin = MathF.Sin(state.Rotation);
-                                    relativePos = new Vector2(
-                                        relativePos.X * cos - relativePos.Y * sin,
-                                        relativePos.X * sin + relativePos.Y * cos
-                                    );
+                                    relativePos = new Vector2(relativePos.X * cos - relativePos.Y * sin, relativePos.X * sin + relativePos.Y * cos);
                                 }
-
-                                Vector2 finalPos = drawPos + relativePos;
-                                spriteBatch.DrawSnapped(pixel, finalPos, null, rarityColor * currentAlpha, 0f, Vector2.Zero, 1f, SpriteEffects.None, 0f);
+                                spriteBatch.DrawSnapped(pixel, drawPos + relativePos, null, rarityColor * currentAlpha, 0f, Vector2.Zero, 1f, SpriteEffects.None, 0f);
                             }
                         }
 
-                        // --- B. Draw Moving Tracer Dots ---
+                        // B. Tracer Dots
                         var config = GetTracerConfig(card.Item.Rarity);
                         float spacing = pathLength / (float)config.DotCount;
 
                         for (int d = 0; d < config.DotCount; d++)
                         {
                             float dotHeadPos = (card.TracerProgress + (d * spacing)) % pathLength;
-
                             for (int i = 0; i < config.TrailLength; i++)
                             {
                                 float trailIndexFloat = dotHeadPos - i;
                                 if (trailIndexFloat < 0) trailIndexFloat += pathLength;
                                 int trailIndex = (int)trailIndexFloat % pathLength;
-
                                 Point point = card.TracerPath[trailIndex];
-
                                 float alphaRatio = 1.0f - ((float)i / config.TrailLength);
                                 float alpha = MathHelper.Lerp(TRAIL_END_ALPHA, TRAIL_START_ALPHA, alphaRatio) * state.Opacity * config.Opacity;
 
                                 Vector2 pointVec = point.ToVector2();
                                 Vector2 relativePos = (pointVec - origin) * state.Scale;
-
                                 if (state.Rotation != 0f)
                                 {
                                     float cos = MathF.Cos(state.Rotation);
                                     float sin = MathF.Sin(state.Rotation);
-                                    relativePos = new Vector2(
-                                        relativePos.X * cos - relativePos.Y * sin,
-                                        relativePos.X * sin + relativePos.Y * cos
-                                    );
+                                    relativePos = new Vector2(relativePos.X * cos - relativePos.Y * sin, relativePos.X * sin + relativePos.Y * cos);
                                 }
-
-                                Vector2 finalPos = drawPos + relativePos;
-                                spriteBatch.DrawSnapped(pixel, finalPos, null, rarityColor * alpha, 0f, Vector2.Zero, 1f, SpriteEffects.None, 0f);
+                                spriteBatch.DrawSnapped(pixel, drawPos + relativePos, null, rarityColor * alpha, 0f, Vector2.Zero, 1f, SpriteEffects.None, 0f);
                             }
                         }
                     }
@@ -724,48 +669,24 @@ namespace ProjectVagabond.Scenes
                     // 3. Draw Item Sprite Body
                     spriteBatch.Draw(icon, drawPos, null, Color.White * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
 
-                    // --- 3.5 Draw Rarity Symbol (Top Right) ---
+                    // --- 3.5 Draw Rarity Symbol ---
                     if (card.Item.Rarity >= 0 && _spriteManager.RarityIconsSpriteSheet != null)
                     {
                         var rarityRect = _spriteManager.GetRarityIconSourceRect(card.Item.Rarity, gameTime);
-
-                        // Calculate position relative to the SLOT CENTER (center)
-                        // This ensures the rarity icon stays fixed to the slot layout and doesn't bob with the sprite.
-                        // Sprite is 32x32 (max), so half width is 16.
-                        // Rarity icon is 8x8.
-                        // We want it at the top-right corner of the slot.
-                        // Offset X: +16 (edge) - 4 (half icon width) + nudge
-                        // Offset Y: -16 (edge) + 4 (half icon height) + nudge
-
-                        // Adjust these values to taste. 
-                        // +12, -12 puts the center of the star 4px inside the corner.
                         Vector2 rarityOffset = new Vector2(12, -12) * state.Scale;
-
-                        // Note: We do NOT rotate the rarity icon offset, as it is anchored to the static slot, not the rotating sprite.
-
                         Vector2 rarityPos = center + rarityOffset;
-                        Vector2 rarityOrigin = new Vector2(4, 4); // Center of 8x8 icon
-
+                        Vector2 rarityOrigin = new Vector2(4, 4);
                         spriteBatch.DrawSnapped(_spriteManager.RarityIconsSpriteSheet, rarityPos, rarityRect, Color.White * state.Opacity, 0f, rarityOrigin, state.Scale, SpriteEffects.None, 0f);
                     }
 
-                    // 4. Draw Instant Name on Hover (NEW)
-                    if (card.IsMouseHovering && !card.IsCollected)
+                    // 4. Draw Instant Name on Hover
+                    if (card.IsMouseHovering && !_selectionMade)
                     {
                         string name = card.Item.Name.ToUpper();
                         Vector2 nameSize = secondaryFont.MeasureString(name);
-
-                        // Position: Center X relative to the STATIC layout position (center)
-                        // Y: Fixed height above the slot
-                        Vector2 textPos = new Vector2(
-                            center.X - nameSize.X / 2f,
-                            center.Y - 24 // Fixed height above the slot center
-                        );
-
-                        // Snap to pixels
+                        Vector2 textPos = new Vector2(center.X - nameSize.X / 2f, center.Y - 24);
                         textPos = new Vector2(MathF.Round(textPos.X), MathF.Round(textPos.Y));
 
-                        // Use TextAnimator for Wave effect
                         TextAnimator.DrawTextWithEffect(
                             spriteBatch,
                             secondaryFont,
@@ -779,33 +700,27 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            _collectAllButton.Draw(spriteBatch, secondaryFont, gameTime, Matrix.Identity);
-            _skipButton.Draw(spriteBatch, secondaryFont, gameTime, Matrix.Identity);
+            if (!_selectionMade)
+            {
+                _skipButton.Draw(spriteBatch, secondaryFont, gameTime, Matrix.Identity);
+            }
 
             // Title
             string title = "VICTORY!";
             Vector2 titleSize = font.MeasureString(title);
             float titleBob = MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * 3f) * 2f;
-
-            // Decoupled position: Fixed Y near top (20px), centered horizontally
             float titleY = 20f;
             spriteBatch.DrawString(font, title, new Vector2((Global.VIRTUAL_WIDTH - titleSize.X) / 2, titleY + titleBob), _global.Palette_Yellow);
 
             // --- Draw Tooltip ---
-            if (_hoveredItemData != null && _tooltipAnimator.IsVisible)
+            if (_hoveredItemData != null && _tooltipAnimator.IsVisible && !_selectionMade)
             {
-                // Find the card that corresponds to the hovered data to get its position
                 var hoveredCard = _cards.FirstOrDefault(c => c.Item.OriginalData == _hoveredItemData);
                 if (hoveredCard != null)
                 {
-                    // Use the visual center of the card as the anchor
                     Vector2 basePos = hoveredCard.VisualPosition;
                     Vector2 center = basePos + new Vector2(CARD_SIZE / 2f, CARD_SIZE / 2f);
-
                     var state = _tooltipAnimator.GetVisualState();
-
-                    // Pass the static center as the anchor, and the animator state
-                    // Force opacity to 1.0f to prevent fade-in, but use scale for pop-in
                     _tooltipRenderer.DrawTooltip(spriteBatch, _hoveredItemData, center, gameTime, state.Scale, 1.0f);
                 }
             }
@@ -813,52 +728,38 @@ namespace ProjectVagabond.Scenes
             // --- DEBUG DRAWING (F1) ---
             if (_global.ShowSplitMapGrid)
             {
-                // Draw Area Background
                 spriteBatch.DrawSnapped(pixel, _lootArea, Color.Magenta * 0.3f);
-
-                // Draw Border
                 spriteBatch.DrawLineSnapped(new Vector2(_lootArea.Left, _lootArea.Top), new Vector2(_lootArea.Right, _lootArea.Top), Color.Magenta);
                 spriteBatch.DrawLineSnapped(new Vector2(_lootArea.Left, _lootArea.Bottom), new Vector2(_lootArea.Right, _lootArea.Bottom), Color.Magenta);
                 spriteBatch.DrawLineSnapped(new Vector2(_lootArea.Left, _lootArea.Top), new Vector2(_lootArea.Left, _lootArea.Bottom), Color.Magenta);
                 spriteBatch.DrawLineSnapped(new Vector2(_lootArea.Right, _lootArea.Top), new Vector2(_lootArea.Right, _lootArea.Bottom), Color.Magenta);
-
-                // Draw Dimensions Text
-                string debugText = $"RECT: {_lootArea.X},{_lootArea.Y} {_lootArea.Width}x{_lootArea.Height}";
-                Vector2 textPos = new Vector2(_lootArea.X, _lootArea.Bottom + 2);
-                spriteBatch.DrawStringSnapped(secondaryFont, debugText, textPos, Color.Yellow);
             }
         }
 
-        /// <summary>
-        /// Returns the tracer configuration (Speed, DotCount, TrailLength, Opacity) based on item rarity.
-        /// </summary>
         private (float Speed, int DotCount, int TrailLength, float Opacity) GetTracerConfig(int rarity)
         {
             return rarity switch
             {
-                0 => (15f, 1, 4, 0.15f),  // Common: Very faint
-                1 => (20f, 1, 6, 0.20f),  // Uncommon: Faint
-                2 => (30f, 1, 8, 0.25f),  // Rare: Subtle
-                3 => (40f, 2, 10, 0.30f), // Epic: Visible
-                4 => (50f, 3, 12, 0.35f), // Mythic: Clear
-                5 => (60f, 4, 15, 0.40f), // Legendary: Distinct
-                _ => (30f, 1, 8, 0.25f)   // Default
+                0 => (15f, 1, 4, 0.15f),
+                1 => (20f, 1, 6, 0.20f),
+                2 => (30f, 1, 8, 0.25f),
+                3 => (40f, 2, 10, 0.30f),
+                4 => (50f, 3, 12, 0.35f),
+                5 => (60f, 4, 15, 0.40f),
+                _ => (30f, 1, 8, 0.25f)
             };
         }
 
-        /// <summary>
-        /// Returns the maximum opacity for the pulsing outline based on rarity.
-        /// </summary>
         private float GetPulseIntensity(int rarity)
         {
             return rarity switch
             {
-                0 => 0.10f, // Common: Barely visible
-                1 => 0.15f, // Uncommon
-                2 => 0.20f, // Rare
-                3 => 0.25f, // Epic
-                4 => 0.30f, // Mythic
-                5 => 0.35f, // Legendary
+                0 => 0.10f,
+                1 => 0.15f,
+                2 => 0.20f,
+                3 => 0.25f,
+                4 => 0.30f,
+                5 => 0.35f,
                 _ => 0.20f
             };
         }

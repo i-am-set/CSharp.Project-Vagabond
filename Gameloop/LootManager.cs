@@ -9,9 +9,6 @@ namespace ProjectVagabond.Systems
 {
     public class LootManager
     {
-        // Tunable: How many items drop by default
-        public static int BaseCombatDropCount = 3;
-
         // Master list of all items categorized by Rarity (0-5)
         private Dictionary<int, List<BaseItem>> _lootTable;
         private Random _rng;
@@ -49,59 +46,80 @@ namespace ProjectVagabond.Systems
                 _lootTable[r.Rarity].Add(BaseItem.FromRelic(r));
         }
 
+        /// <summary>
+        /// Generates exactly 3 items: 1 Weapon, 1 Armor, 1 Relic.
+        /// </summary>
         public List<BaseItem> GenerateCombatLoot()
-        {
-            return GenerateLoot(BaseCombatDropCount);
-        }
-
-        public List<BaseItem> GenerateLoot(int count)
         {
             List<BaseItem> loot = new List<BaseItem>();
             HashSet<string> pickedIds = new HashSet<string>();
 
-            for (int i = 0; i < count; i++)
+            // 1. Generate Weapon
+            var weapon = GetRandomItemByType(ItemType.Weapon, pickedIds);
+            if (weapon != null)
             {
-                // 1. Roll for a target rarity
-                int rarity = RollRarity();
+                loot.Add(weapon);
+                pickedIds.Add(weapon.ID);
+            }
 
-                // 2. Try to find a unique item of that rarity
-                BaseItem selectedItem = GetRandomUniqueItem(rarity, pickedIds);
+            // 2. Generate Armor
+            var armor = GetRandomItemByType(ItemType.Armor, pickedIds);
+            if (armor != null)
+            {
+                loot.Add(armor);
+                pickedIds.Add(armor.ID);
+            }
 
-                // 3. Fallback: If that rarity pool is exhausted (or empty), try to find ANY unique item
-                // We iterate through all rarities to find something valid.
-                if (selectedItem == null)
-                {
-                    // Try Common -> Legendary order to fill the slot
-                    for (int r = 0; r <= 5; r++)
-                    {
-                        selectedItem = GetRandomUniqueItem(r, pickedIds);
-                        if (selectedItem != null) break;
-                    }
-                }
-
-                // 4. Add to loot if we found something
-                if (selectedItem != null)
-                {
-                    loot.Add(selectedItem);
-                    pickedIds.Add(selectedItem.ID);
-                }
+            // 3. Generate Relic
+            var relic = GetRandomItemByType(ItemType.Relic, pickedIds);
+            if (relic != null)
+            {
+                loot.Add(relic);
+                pickedIds.Add(relic.ID);
             }
 
             return loot;
         }
 
-        private BaseItem GetRandomUniqueItem(int rarity, HashSet<string> excludeIds)
+        private BaseItem GetRandomItemByType(ItemType type, HashSet<string> excludeIds)
+        {
+            // 1. Roll for target rarity
+            int targetRarity = RollRarity();
+
+            // 2. Try to find an item of that type and rarity
+            // If not found, step down in rarity until we find one (or hit Common)
+            // If still not found, step up from target rarity.
+
+            // Simplified Fallback: Check Target -> 0, then Target+1 -> 5
+
+            // Downward search
+            for (int r = targetRarity; r >= 0; r--)
+            {
+                var item = GetItemFromPool(r, type, excludeIds);
+                if (item != null) return item;
+            }
+
+            // Upward search (if nothing found in lower tiers)
+            for (int r = targetRarity + 1; r <= 5; r++)
+            {
+                var item = GetItemFromPool(r, type, excludeIds);
+                if (item != null) return item;
+            }
+
+            return null;
+        }
+
+        private BaseItem GetItemFromPool(int rarity, ItemType type, HashSet<string> excludeIds)
         {
             if (!_lootTable.ContainsKey(rarity)) return null;
 
-            var pool = _lootTable[rarity];
+            var pool = _lootTable[rarity]
+                .Where(i => i.Type == type && !excludeIds.Contains(i.ID))
+                .ToList();
 
-            // Filter the pool to only items we haven't picked yet
-            var validCandidates = pool.Where(item => !excludeIds.Contains(item.ID)).ToList();
+            if (pool.Count == 0) return null;
 
-            if (validCandidates.Count == 0) return null;
-
-            return validCandidates[_rng.Next(validCandidates.Count)];
+            return pool[_rng.Next(pool.Count)];
         }
 
         private int RollRarity()

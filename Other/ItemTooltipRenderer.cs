@@ -377,7 +377,7 @@ namespace ProjectVagabond.UI
                 );
                 namePos = new Vector2(MathF.Round(namePos.X), MathF.Round(namePos.Y));
 
-                TextAnimator.DrawTextWithEffectOutlined(spriteBatch, font, line, namePos, _global.Palette_BlueWhite * opacity, _global.Palette_Black * opacity, TextEffectType.DriftWave, (float)gameTime.TotalGameTime.TotalSeconds);
+                TextAnimator.DrawTextWithEffectOutlined(spriteBatch, font, line, namePos, _global.Palette_BlueWhite * opacity, _global.Palette_Black * opacity, TextEffectType.Drift, (float)gameTime.TotalGameTime.TotalSeconds);
             }
         }
 
