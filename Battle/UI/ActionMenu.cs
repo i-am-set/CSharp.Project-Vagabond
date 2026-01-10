@@ -1419,9 +1419,20 @@ namespace ProjectVagabond.Battle.UI
                 {
                     float availableWidth = bounds.Width - (horizontalPadding * 2);
                     var wrappedLines = ParseAndWrapRichText(secondaryFont, move.Description.ToUpper(), availableWidth, _global.Palette_White);
+
+                    float totalTextHeight = wrappedLines.Count * secondaryFont.LineHeight;
+                    float availableHeight = (bounds.Bottom - verticalPadding) - currentY;
+
+                    // Center vertically
+                    float startY = currentY + (availableHeight - totalTextHeight) / 2f;
+                    // Clamp to top if it overflows
+                    if (startY < currentY) startY = currentY;
+
+                    float drawY = startY;
+
                     foreach (var line in wrappedLines)
                     {
-                        if (currentY + secondaryFont.LineHeight > bounds.Bottom - verticalPadding) break;
+                        if (drawY + secondaryFont.LineHeight > bounds.Bottom - verticalPadding) break;
 
                         float lineWidth = 0;
                         foreach (var segment in line)
@@ -1432,7 +1443,8 @@ namespace ProjectVagabond.Battle.UI
                                 lineWidth += secondaryFont.MeasureString(segment.Text).Width;
                         }
 
-                        float lineX = bounds.X + horizontalPadding;
+                        // Center horizontally
+                        float lineX = bounds.Center.X - (lineWidth / 2f);
                         float lineCurrentX = lineX;
 
                         foreach (var segment in line)
@@ -1445,11 +1457,11 @@ namespace ProjectVagabond.Battle.UI
                             else
                             {
                                 segWidth = secondaryFont.MeasureString(segment.Text).Width;
-                                spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(lineCurrentX, currentY), segment.Color);
+                                spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(lineCurrentX, drawY), segment.Color);
                             }
                             lineCurrentX += segWidth;
                         }
-                        currentY += secondaryFont.LineHeight;
+                        drawY += secondaryFont.LineHeight;
                     }
                 }
             }
@@ -1702,7 +1714,7 @@ namespace ProjectVagabond.Battle.UI
                         if (int.TryParse(numberPart, out int percent))
                         {
                             float amount = Math.Clamp(percent / 100f, 0f, 1f);
-                            finalColor = Color.Lerp(_global.Palette_DarkGray, currentColor, amount);
+                            finalColor = Color.Lerp(_global.ColorPercentageMin, _global.ColorPercentageMax, amount);
                         }
                     }
 

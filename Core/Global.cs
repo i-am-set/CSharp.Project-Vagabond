@@ -68,6 +68,10 @@ namespace ProjectVagabond
             ColorImmune = Palette_DarkBlue;
             ColorConditionToMeet = Palette_LightYellow;
 
+            // Initialize Percentage Gradient Colors
+            ColorPercentageMin = Palette_Gray;
+            ColorPercentageMax = Palette_LightGreen;
+
             // Initialize Item Outline Colors
             ItemOutlineColor_Idle = Palette_Gray;
             ItemOutlineColor_Hover = Palette_BlueWhite;
@@ -342,6 +346,10 @@ namespace ProjectVagabond
         public Color ColorCrit { get; private set; }
         public Color ColorImmune { get; private set; }
         public Color ColorConditionToMeet { get; private set; }
+
+        // Percentage Gradient Colors
+        public Color ColorPercentageMin { get; private set; }
+        public Color ColorPercentageMax { get; private set; }
 
         // Item Outline Colors
         public Color ItemOutlineColor_Idle { get; private set; }

@@ -1224,7 +1224,7 @@ namespace ProjectVagabond.UI
             {
                 string contactText = "[MAKES CONTACT]";
                 Vector2 contactSize = tertiaryFont.MeasureString(contactText);
-                Vector2 contactPos = new Vector2(infoPanelArea.X + (infoPanelArea.Width - contactSize.X) / 2f, currentY + (secondaryFont.LineHeight - tertiaryFont.LineHeight) / 2f);
+                Vector2 contactPos = new Vector2(infoPanelArea.X + (infoPanelArea.Width - contactSize.X) / 2f, currentY);
                 spriteBatch.DrawStringSnapped(tertiaryFont, contactText, contactPos, _overlay.Global.Palette_Red);
             }
 
