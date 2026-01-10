@@ -68,7 +68,7 @@ namespace ProjectVagabond.Scenes
         private object? _hoveredItemData;
         private object? _lastHoveredItemData;
         private float _tooltipTimer = 0f;
-        private const float TOOLTIP_DELAY = 0.4f; // Tunable delay
+        private const float TOOLTIP_DELAY = 0.35f;
 
         public LootScreen()
         {
@@ -482,12 +482,13 @@ namespace ProjectVagabond.Scenes
                 if (hoveredCard != null)
                 {
                     // Use the visual center of the card as the anchor
-                    var state = hoveredCard.Animator.GetVisualState();
+                    // CHANGED: Use static center (VisualPosition) instead of animated position (drawPos)
+                    // to prevent the tooltip from bobbing with the item.
                     Vector2 basePos = hoveredCard.VisualPosition;
                     Vector2 center = basePos + new Vector2(CARD_SIZE / 2f, CARD_SIZE / 2f);
-                    Vector2 anchor = center + state.Offset;
 
-                    _tooltipRenderer.DrawTooltip(spriteBatch, _hoveredItemData, anchor, gameTime);
+                    // Pass the static center as the anchor
+                    _tooltipRenderer.DrawTooltip(spriteBatch, _hoveredItemData, center, gameTime);
                 }
             }
 
