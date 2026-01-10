@@ -48,7 +48,7 @@ namespace ProjectVagabond.Scenes
         // Layout Constants
         private Rectangle _lootArea;
         private const int CARD_SIZE = 32;
-        private const int AREA_WIDTH = 90;
+        private const int AREA_WIDTH = 90; // Reduced from 140 to bring items closer
         private const int AREA_HEIGHT = 60;
         private const float CARD_MOVE_SPEED = 10f; // Speed of re-centering tween
 
@@ -112,7 +112,8 @@ namespace ProjectVagabond.Scenes
             _lootArea = new Rectangle(x, y, AREA_WIDTH, AREA_HEIGHT);
 
             // Initialize Control Buttons
-            int btnY = _lootArea.Bottom + 30;
+            // Moved down 16 pixels (30 -> 46)
+            int btnY = _lootArea.Bottom + 46;
 
             _skipButton = new Button(new Rectangle((Global.VIRTUAL_WIDTH - 60) / 2, btnY, 60, 15), "SKIP", font: ServiceLocator.Get<Core>().SecondaryFont);
             _skipButton.OnClick += SkipAll;
@@ -706,7 +707,7 @@ namespace ProjectVagabond.Scenes
             }
 
             // Title
-            string title = "VICTORY!";
+            string title = "PICK ONE!";
             Vector2 titleSize = font.MeasureString(title);
             float titleBob = MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * 3f) * 2f;
             float titleY = 20f;
