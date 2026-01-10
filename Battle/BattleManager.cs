@@ -6,8 +6,11 @@ using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Dice;
 using ProjectVagabond.Particles;
+using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.Systems;
 using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
@@ -90,7 +93,12 @@ namespace ProjectVagabond.Battle
         public IEnumerable<BattleCombatant> AllCombatants => _allCombatants;
         public bool CanAdvance { get; set; } = true;
 
-        public BattleManager(List<BattleCombatant> playerParty, List<BattleCombatant> enemyParty)
+        // Dependencies
+        private readonly BattleAnimationManager _animationManager;
+        private readonly Global _global;
+
+        // UPDATED CONSTRUCTOR: Now accepts BattleAnimationManager directly
+        public BattleManager(List<BattleCombatant> playerParty, List<BattleCombatant> enemyParty, BattleAnimationManager animationManager)
         {
             _playerParty = playerParty;
             _enemyParty = enemyParty;
@@ -108,6 +116,10 @@ namespace ProjectVagabond.Battle
             // Start in Intro phase. BattleScene will manually advance this when animations are done.
             _currentPhase = BattlePhase.BattleStartIntro;
             _endOfTurnEffectsProcessed = false;
+
+            // Assign dependencies
+            _animationManager = animationManager;
+            _global = ServiceLocator.Get<Global>();
 
             EventBus.Subscribe<GameEvents.SecondaryEffectComplete>(OnSecondaryEffectComplete);
             EventBus.Subscribe<GameEvents.MoveAnimationCompleted>(OnMoveAnimationCompleted);
@@ -861,6 +873,16 @@ namespace ProjectVagabond.Battle
                 Targets = targets,
                 DamageResults = results
             });
+
+            // --- TRIGGER IMPACT FLASH ---
+            // Determine flash color based on actor type
+            Color flashColor = action.Actor.IsPlayerControlled ? Color.White : _global.Palette_Red;
+
+            // Collect target IDs for masking
+            var targetIds = targets.Select(t => t.CombatantID).ToList();
+
+            // Trigger the flash
+            _animationManager.TriggerImpactFlash(flashColor, 0.15f, targetIds);
 
             _currentActionForEffects = action;
             _currentActionDamageResults = results;

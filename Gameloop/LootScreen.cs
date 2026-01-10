@@ -151,7 +151,7 @@ namespace ProjectVagabond.Scenes
                         // --- JUICY HOVER CONFIGURATION ---
                         HoverStyle = HoverAnimationType.Juicy,
                         HoverScale = 1.0f,      // Locked to 1.0x to prevent mangling
-                        HoverLift = -3f,       // Lift up 3 pixels
+                        HoverLift = -2f,       // Lift up 2 pixels
                         InteractionSpeed = 55f, // Very snappy response
 
                         // Apply Tunable Speeds & Distance

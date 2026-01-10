@@ -12,8 +12,8 @@ using ProjectVagabond.Scenes;
 using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
-using ProjectVagabond.Systems; // Added for LootManager
-using ProjectVagabond.Items; // Added for BaseItem
+using ProjectVagabond.Systems;
+using ProjectVagabond.Items;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -27,12 +27,12 @@ namespace ProjectVagabond.Scenes
     public class BattleScene : GameScene
     {
         private const float MULTI_HIT_DELAY = 0.25f;
-        private const float ACTION_EXECUTION_DELAY = 0.5f; // Tunable delay before attack execution
+        private const float ACTION_EXECUTION_DELAY = 0.5f;
         private const float FIXED_COIN_GROUND_Y = 115f;
         private const int ENEMY_SLOT_Y_OFFSET = 12;
 
         // --- TUNING: Battle Entry ---
-        private const float BATTLE_ENTRY_INITIAL_DELAY = 0.0f; // Delay before enemies start dropping
+        private const float BATTLE_ENTRY_INITIAL_DELAY = 0.0f;
 
         private BattleManager _battleManager;
         private BattleUIManager _uiManager;
@@ -53,6 +53,7 @@ namespace ProjectVagabond.Scenes
         private ParticleSystemManager _particleSystemManager;
         private readonly TransitionManager _transitionManager;
         private readonly ProgressionManager _progressionManager;
+        private readonly DiceRollingSystem _diceRollingSystem;
 
         private List<int> _enemyEntityIds = new List<int>();
         private BattleManager.BattlePhase _previousBattlePhase;
@@ -97,7 +98,7 @@ namespace ProjectVagabond.Scenes
         // UI Slide State
         private float _uiSlideTimer = 0f;
         private const float UI_SLIDE_DURATION = 0.5f;
-        private const float UI_SLIDE_DISTANCE = 100f; // Distance to slide up from bottom
+        private const float UI_SLIDE_DISTANCE = 100f;
 
         // --- SETTINGS BUTTON ANIMATION STATE ---
         private enum SettingsButtonState { Hidden, AnimatingIn, Visible }
@@ -116,7 +117,7 @@ namespace ProjectVagabond.Scenes
         private const float ROUND_ANIM_HANG_DURATION = 0.25f;
         private const float ROUND_ANIM_SETTLE_DURATION = 0.25f;
         private const float ROUND_MAX_SCALE = 1.5f;
-        private const float ROUND_SHAKE_MAGNITUDE = 0.25f; // Radians
+        private const float ROUND_SHAKE_MAGNITUDE = 0.25f;
         private const float ROUND_SHAKE_FREQUENCY = 20f;
 
         // --- VICTORY SEQUENCE STATE ---
@@ -125,7 +126,7 @@ namespace ProjectVagabond.Scenes
         // --- LOOT SCREEN STATE ---
         private LootScreen _lootScreen;
         private bool _lootScreenHasShown = false;
-        private bool _floorTransitionTriggered = false; // NEW: Track if we started the floor swap
+        private bool _floorTransitionTriggered = false;
 
         // --- REGEX FOR RANDOM WORD PARSING ---
         private static readonly Regex _randomWordRegex = new Regex(@"\b[\w\-\']+(?:\$[\w\-\']+)+\b", RegexOptions.Compiled);
@@ -145,6 +146,7 @@ namespace ProjectVagabond.Scenes
             _particleSystemManager = ServiceLocator.Get<ParticleSystemManager>();
             _transitionManager = ServiceLocator.Get<TransitionManager>();
             _progressionManager = ServiceLocator.Get<ProgressionManager>();
+            _diceRollingSystem = ServiceLocator.Get<DiceRollingSystem>();
         }
 
         public override Rectangle GetAnimatedBounds()
@@ -161,7 +163,7 @@ namespace ProjectVagabond.Scenes
             _moveAnimationManager = new MoveAnimationManager();
             _inputHandler = new BattleInputHandler();
             _alertManager = new AlertManager();
-            _lootScreen = new LootScreen(); // Initialize Loot Screen
+            _lootScreen = new LootScreen();
         }
 
         public override void Enter()
@@ -189,17 +191,17 @@ namespace ProjectVagabond.Scenes
             _watchdogTimer = 0f;
             _switchSequenceState = SwitchSequenceState.None;
             _victorySequenceTriggered = false;
-            _lootScreenHasShown = false; // Reset loot flag
-            _floorTransitionTriggered = false; // Reset floor transition flag
-            _lootScreen.Reset(); // Ensure loot screen is clean on entry
+            _lootScreenHasShown = false;
+            _floorTransitionTriggered = false;
+            _lootScreen.Reset();
+
             SubscribeToEvents();
+
             InitializeSettingsButton();
 
-            // Reset Settings Button Animation
             _settingsButtonState = SettingsButtonState.Hidden;
             _settingsButtonAnimTimer = 0f;
 
-            // Reset Round Number Animation
             _roundAnimState = RoundAnimState.Hidden;
             _roundAnimTimer = 0f;
             _lastRoundNumber = 1;
@@ -214,26 +216,14 @@ namespace ProjectVagabond.Scenes
 
             if (_battleManager != null)
             {
-                // --- INTRO SEQUENCE SETUP ---
                 _currentIntroPhase = IntroPhase.EnemyDrop;
                 _introSequenceQueue.Clear();
-
-                // Initialize timer with the requested delay
                 _introTimer = BATTLE_ENTRY_INITIAL_DELAY;
-
                 _uiSlideTimer = 0f;
 
-                // 1. Hide Players and UI initially
-                var players = _battleManager.AllCombatants
-                    .Where(c => c.IsPlayerControlled && c.IsActiveOnField)
-                    .ToList();
+                var players = _battleManager.AllCombatants.Where(c => c.IsPlayerControlled && c.IsActiveOnField).ToList();
+                foreach (var p in players) p.VisualAlpha = 0f;
 
-                foreach (var p in players)
-                {
-                    p.VisualAlpha = 0f; // Hidden
-                }
-
-                // Set UI Border Offset (Push down off-screen)
                 _uiManager.IntroOffset = new Vector2(0, UI_SLIDE_DISTANCE);
 
                 var leader = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && c.BattleSlot == 0);
@@ -242,39 +232,23 @@ namespace ProjectVagabond.Scenes
                     _uiManager.ShowActionMenu(leader, _battleManager.AllCombatants.ToList());
                 }
 
-                // 2. Queue Enemies (Slot 0 then Slot 1) for animation
-                var enemies = _battleManager.AllCombatants
-                    .Where(c => !c.IsPlayerControlled && c.IsActiveOnField)
-                    .OrderBy(c => c.BattleSlot)
-                    .ToList();
-
+                var enemies = _battleManager.AllCombatants.Where(c => !c.IsPlayerControlled && c.IsActiveOnField).OrderBy(c => c.BattleSlot).ToList();
                 foreach (var e in enemies)
                 {
                     _introSequenceQueue.Enqueue(e);
-                    e.VisualAlpha = 0f; // Hidden initially
+                    e.VisualAlpha = 0f;
                 }
 
-                // --- TRIGGER FLOOR ANIMATIONS ---
-                // Check enemy count to decide which floor intro to play
-                if (enemies.Count == 1)
-                {
-                    // Single enemy: Use centered floor
-                    _animationManager.StartFloorIntroAnimation("floor_center");
-                }
+                if (enemies.Count == 1) _animationManager.StartFloorIntroAnimation("floor_center");
                 else
                 {
-                    // Multiple enemies: Use standard slots
                     _animationManager.StartFloorIntroAnimation("floor_0");
                     _animationManager.StartFloorIntroAnimation("floor_1");
                 }
 
-                // Sync stats for players
                 foreach (var combatant in _battleManager.AllCombatants)
                 {
-                    if (combatant.IsPlayerControlled)
-                    {
-                        combatant.VisualHP = combatant.Stats.CurrentHP; // Sync visual HP
-                    }
+                    if (combatant.IsPlayerControlled) combatant.VisualHP = combatant.Stats.CurrentHP;
                 }
             }
         }
@@ -286,7 +260,7 @@ namespace ProjectVagabond.Scenes
             {
                 _progressionManager.ClearCurrentSplitMap();
             }
-            _lootScreen.Reset(); // Ensure loot screen is closed on exit (e.g. F5 reset)
+            _lootScreen.Reset();
             UnsubscribeFromEvents();
             CleanupEntities();
             CleanupPlayerState();
@@ -325,6 +299,8 @@ namespace ProjectVagabond.Scenes
             _inputHandler.OnItemTargetSelected += OnPlayerItemSelected;
             _inputHandler.OnBackRequested += () => _uiManager.GoBack();
             if (_settingsButton != null) _settingsButton.OnClick -= OpenSettings;
+
+            _diceRollingSystem.OnRollCompleted += OnDiceRollCompleted;
         }
 
         private void UnsubscribeFromEvents()
@@ -359,29 +335,40 @@ namespace ProjectVagabond.Scenes
             _inputHandler.OnItemTargetSelected -= OnPlayerItemSelected;
             _inputHandler.OnBackRequested -= () => _uiManager.GoBack();
             if (_settingsButton != null) _settingsButton.OnClick -= OpenSettings;
+
+            _diceRollingSystem.OnRollCompleted -= OnDiceRollCompleted;
+        }
+
+        private void OnDiceRollCompleted(DiceRollResult result)
+        {
+            // This method is required by the event subscription but might not be used in standard battle flow
+            // if dice rolls are handled by SplitMapScene or other systems.
+            // We keep it empty or add logic if battle-specific dice rolls are needed.
         }
 
         private void InitializeSettingsButton()
         {
             int buttonSize = 16;
-            int offScreenX = Global.VIRTUAL_WIDTH + 20; // Safe off-screen position
+            int offScreenX = Global.VIRTUAL_WIDTH + 20;
 
             if (_settingsButton == null)
             {
                 var settingsIcon = _spriteManager.SettingsIconSprite;
                 if (settingsIcon != null) buttonSize = Math.Max(settingsIcon.Width, settingsIcon.Height);
 
-                // Initialize off-screen
                 _settingsButton = new ImageButton(new Rectangle(offScreenX, 2, buttonSize, buttonSize), settingsIcon, enableHoverSway: true)
                 {
                     UseScreenCoordinates = false
                 };
             }
 
-            // Always reset position to off-screen on initialization/re-entry
             _settingsButton.Bounds = new Rectangle(offScreenX, 2, buttonSize, buttonSize);
-
-            _settingsButton.OnClick += OpenSettings;
+            _settingsButton.OnClick = null;
+            _settingsButton.OnClick += () =>
+            {
+                _hapticsManager.TriggerCompoundShake(0.25f);
+                OpenSettings();
+            };
             _settingsButton.ResetAnimationState();
         }
 
@@ -420,23 +407,10 @@ namespace ProjectVagabond.Scenes
                     if (enemyCombatant != null)
                     {
                         enemyCombatant.IsPlayerControlled = false;
-
                         enemyCombatant.BattleSlot = enemyParty.Count;
                         enemyParty.Add(enemyCombatant);
-
-                        if (newEnemyId != gameState.PlayerEntityId)
-                        {
-                            _enemyEntityIds.Add(newEnemyId);
-                        }
+                        if (newEnemyId != gameState.PlayerEntityId) _enemyEntityIds.Add(newEnemyId);
                     }
-                    else
-                    {
-                        Debug.WriteLine($"[BattleScene] [WARNING] Failed to create combatant for enemy archetype '{archetypeId}'. Skipping.");
-                    }
-                }
-                else
-                {
-                    Debug.WriteLine($"[BattleScene] [WARNING] Failed to spawn enemy entity for archetype '{archetypeId}'. Skipping.");
                 }
             }
             BattleSetup.EnemyArchetypes = null;
@@ -448,7 +422,7 @@ namespace ProjectVagabond.Scenes
                 return;
             }
 
-            _battleManager = new BattleManager(playerParty, enemyParty);
+            _battleManager = new BattleManager(playerParty, enemyParty, _animationManager);
             ServiceLocator.Register<BattleManager>(_battleManager);
             _previousBattlePhase = _battleManager.CurrentPhase;
         }
@@ -500,7 +474,6 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            // --- Populate Narration Data from PartyMemberData ---
             var data = BattleDataCache.PartyMembers.Values.FirstOrDefault(p => p.Name == member.Name);
             if (data != null)
             {
@@ -521,12 +494,7 @@ namespace ProjectVagabond.Scenes
 
                 foreach (var id in _enemyEntityIds)
                 {
-                    if (id == playerId)
-                    {
-                        Debug.WriteLine($"[BattleScene] [WARNING] Attempted to cleanup Player Entity ID {id}. Skipping.");
-                        continue;
-                    }
-
+                    if (id == playerId) continue;
                     _componentStore.EntityDestroyed(id);
                     entityManager.DestroyEntity(id);
                 }
@@ -560,20 +528,12 @@ namespace ProjectVagabond.Scenes
 
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            // --- LOOT SCREEN UPDATE ---
             if (_lootScreen != null && _lootScreen.IsActive)
             {
                 _lootScreen.Update(gameTime);
-
-                // Update animations so floors can slide out while loot screen is active
                 _animationManager.Update(gameTime, _battleManager.AllCombatants);
-
-                if (!_lootScreen.IsActive)
-                {
-                    // Loot screen closed, proceed to victory
-                    FinalizeVictory();
-                }
-                return; // Block other updates
+                if (!_lootScreen.IsActive) FinalizeVictory();
+                return;
             }
 
             if (_isFadingOutOnDeath)
@@ -589,10 +549,8 @@ namespace ProjectVagabond.Scenes
             var currentKeyboardState = Keyboard.GetState();
             var currentMouseState = Mouse.GetState();
 
-            // --- INTRO SEQUENCE LOGIC ---
             if (_battleManager.CurrentPhase == BattleManager.BattlePhase.BattleStartIntro)
             {
-                // Wait for transition to clear
                 if (_transitionManager.IsTransitioning) return;
 
                 if (_currentIntroPhase == IntroPhase.EnemyDrop)
@@ -603,28 +561,18 @@ namespace ProjectVagabond.Scenes
                         if (_introSequenceQueue.Count > 0)
                         {
                             var nextCombatant = _introSequenceQueue.Dequeue();
-
-                            // Drop from top (negative Y offset relative to final position)
-                            Vector2 startOffset = new Vector2(0, -INTRO_SLIDE_DISTANCE);
-
-                            // Pass isEnemy = true for the new multi-phase animation
-                            _animationManager.StartIntroSlideAnimation(nextCombatant.CombatantID, startOffset, true);
+                            _animationManager.StartIntroSlideAnimation(nextCombatant.CombatantID, new Vector2(0, -INTRO_SLIDE_DISTANCE), true);
                             _introTimer = INTRO_STAGGER_DELAY;
                         }
-                        else
+                        else if (_introTimer <= -0.5f)
                         {
-                            // Queue empty. Wait for animations to finish.
-                            if (_introTimer <= -0.5f) // Wait 0.5s after last spawn
-                            {
-                                _currentIntroPhase = IntroPhase.PlayerRise;
-                                StartPlayerIntro();
-                            }
+                            _currentIntroPhase = IntroPhase.PlayerRise;
+                            StartPlayerIntro();
                         }
                     }
                 }
                 else if (_currentIntroPhase == IntroPhase.PlayerRise)
                 {
-                    // Animate UI
                     _uiSlideTimer += dt;
                     float progress = Math.Clamp(_uiSlideTimer / UI_SLIDE_DURATION, 0f, 1f);
                     float eased = Easing.EaseOutCubic(progress);
@@ -632,51 +580,34 @@ namespace ProjectVagabond.Scenes
 
                     if (progress >= 1.0f)
                     {
-                        _battleManager.ForceAdvance(); // Move to StartOfTurn
-                        _settingsButtonState = SettingsButtonState.AnimatingIn; // Trigger settings button animation
-                        _roundAnimState = RoundAnimState.Pop; // Trigger round number animation
+                        _battleManager.ForceAdvance();
+                        _settingsButtonState = SettingsButtonState.AnimatingIn;
+                        _roundAnimState = RoundAnimState.Pop;
                         _roundAnimTimer = 0f;
                     }
                 }
 
-                // Update animations during intro
                 _animationManager.Update(gameTime, _battleManager.AllCombatants);
                 _renderer.Update(gameTime, _battleManager.AllCombatants, _animationManager, null);
-
                 _uiManager.Update(gameTime, currentMouseState, currentKeyboardState, null);
-
-                return; // Skip normal update loop
+                return;
             }
 
-            // --- SWITCH SEQUENCE DIRECTOR ---
             if (_switchSequenceState != SwitchSequenceState.None)
             {
                 _switchSequenceTimer -= dt;
-
                 if (_switchSequenceState == SwitchSequenceState.AnimatingOut)
                 {
                     if (_switchSequenceTimer <= 0)
                     {
-                        // Phase 1 Complete: Perform Logic Swap
                         _battleManager.PerformLogicalSwitch(_switchOutgoing, _switchIncoming);
-
-                        // Start Phase 2: Animate In
                         _switchSequenceState = SwitchSequenceState.AnimatingIn;
-
                         bool isEnemy = !_switchIncoming.IsPlayerControlled;
-
-                        // Calculate duration based on animation type
                         float duration = BattleAnimationManager.IntroSlideAnimationState.SLIDE_DURATION;
-                        if (isEnemy)
-                        {
-                            duration += BattleAnimationManager.IntroSlideAnimationState.WAIT_DURATION +
-                                        BattleAnimationManager.IntroSlideAnimationState.REVEAL_DURATION;
-                        }
+                        if (isEnemy) duration += BattleAnimationManager.IntroSlideAnimationState.WAIT_DURATION + BattleAnimationManager.IntroSlideAnimationState.REVEAL_DURATION;
                         _switchSequenceTimer = duration;
-
                         Vector2 offset = isEnemy ? new Vector2(0, -INTRO_SLIDE_DISTANCE) : new Vector2(0, INTRO_SLIDE_DISTANCE);
                         _animationManager.StartIntroSlideAnimation(_switchIncoming.CombatantID, offset, isEnemy);
-
                         EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{_switchIncoming.Name} steps in!" });
                     }
                 }
@@ -684,15 +615,9 @@ namespace ProjectVagabond.Scenes
                 {
                     if (_switchSequenceTimer <= 0)
                     {
-                        // Phase 2 Complete: Resume Battle
                         _switchSequenceState = SwitchSequenceState.None;
                         _battleManager.ResumeAfterSwitch();
-
-                        if (_switchIncoming != null)
-                        {
-                            _switchIncoming.VisualAlpha = 1.0f;
-                        }
-
+                        if (_switchIncoming != null) _switchIncoming.VisualAlpha = 1.0f;
                         _switchOutgoing = null;
                         _switchIncoming = null;
                     }
@@ -710,7 +635,6 @@ namespace ProjectVagabond.Scenes
             _alertManager.Update(gameTime);
             _tooltipManager.Update(gameTime);
 
-            // Update Settings Button Animation & Logic
             if (_settingsButton != null)
             {
                 if (_settingsButtonState == SettingsButtonState.AnimatingIn)
@@ -718,81 +642,46 @@ namespace ProjectVagabond.Scenes
                     _settingsButtonAnimTimer += dt;
                     float progress = Math.Clamp(_settingsButtonAnimTimer / SETTINGS_BUTTON_ANIM_DURATION, 0f, 1f);
                     float eased = Easing.EaseOutBack(progress);
-
                     float startX = Global.VIRTUAL_WIDTH + 20;
-                    float targetX = Global.VIRTUAL_WIDTH - 16 - 2; // 16 size, 2 padding
-
+                    float targetX = Global.VIRTUAL_WIDTH - 16 - 2;
                     float currentX = MathHelper.Lerp(startX, targetX, eased);
                     _settingsButton.Bounds = new Rectangle((int)currentX, 2, 16, 16);
-
                     if (progress >= 1.0f) _settingsButtonState = SettingsButtonState.Visible;
                 }
                 else if (_settingsButtonState == SettingsButtonState.Visible)
                 {
-                    int buttonSize = 16;
-                    int padding = 2;
-                    int buttonX = Global.VIRTUAL_WIDTH - buttonSize - padding;
-                    int buttonY = padding;
-                    _settingsButton.Bounds = new Rectangle(buttonX, buttonY, buttonSize, buttonSize);
+                    _settingsButton.Bounds = new Rectangle(Global.VIRTUAL_WIDTH - 16 - 2, 2, 16, 16);
                 }
-
-                // Only update input if visible
-                if (_settingsButtonState != SettingsButtonState.Hidden)
-                {
-                    _settingsButton.Update(currentMouseState);
-                }
+                if (_settingsButtonState != SettingsButtonState.Hidden) _settingsButton.Update(currentMouseState);
             }
 
-            // Update Round Number Animation
             if (_roundAnimState == RoundAnimState.Entering)
             {
                 _roundAnimTimer += dt;
-                if (_roundAnimTimer >= ROUND_ANIM_ENTER_DURATION)
-                {
-                    _roundAnimState = RoundAnimState.Idle;
-                    _roundAnimTimer = 0f;
-                }
+                if (_roundAnimTimer >= ROUND_ANIM_ENTER_DURATION) { _roundAnimState = RoundAnimState.Idle; _roundAnimTimer = 0f; }
             }
             else if (_roundAnimState == RoundAnimState.Idle)
             {
-                if (_battleManager.RoundNumber > _lastRoundNumber)
-                {
-                    _lastRoundNumber = _battleManager.RoundNumber;
-                    _roundAnimState = RoundAnimState.Pop;
-                    _roundAnimTimer = 0f;
-                }
+                if (_battleManager.RoundNumber > _lastRoundNumber) { _lastRoundNumber = _battleManager.RoundNumber; _roundAnimState = RoundAnimState.Pop; _roundAnimTimer = 0f; }
             }
             else if (_roundAnimState == RoundAnimState.Pop)
             {
                 _roundAnimTimer += dt;
-                if (_roundAnimTimer >= ROUND_ANIM_POP_DURATION)
-                {
-                    _roundAnimState = RoundAnimState.Hang;
-                    _roundAnimTimer = 0f;
-                }
+                if (_roundAnimTimer >= ROUND_ANIM_POP_DURATION) { _roundAnimState = RoundAnimState.Hang; _roundAnimTimer = 0f; }
             }
             else if (_roundAnimState == RoundAnimState.Hang)
             {
                 _roundAnimTimer += dt;
-                if (_roundAnimTimer >= ROUND_ANIM_HANG_DURATION)
-                {
-                    _roundAnimState = RoundAnimState.Settle;
-                    _roundAnimTimer = 0f;
-                }
+                if (_roundAnimTimer >= ROUND_ANIM_HANG_DURATION) { _roundAnimState = RoundAnimState.Settle; _roundAnimTimer = 0f; }
             }
             else if (_roundAnimState == RoundAnimState.Settle)
             {
                 _roundAnimTimer += dt;
-                if (_roundAnimTimer >= ROUND_ANIM_SETTLE_DURATION)
-                {
-                    _roundAnimState = RoundAnimState.Idle;
-                    _roundAnimTimer = 0f;
-                }
+                if (_roundAnimTimer >= ROUND_ANIM_SETTLE_DURATION) { _roundAnimState = RoundAnimState.Idle; _roundAnimTimer = 0f; }
             }
 
             if (_isBattleOver)
             {
-                // Wait for UI, structural animations, AND coins/cosmetics before finishing
                 if (!_uiManager.IsBusy && !_animationManager.IsVisuallyBusy)
                 {
                     var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
@@ -805,44 +694,29 @@ namespace ProjectVagabond.Scenes
                             TriggerVictoryRestoration();
                             _victorySequenceTriggered = true;
                         }
-                        // Check IsAnimating again because TriggerVictoryRestoration might have started animations
                         else if (!_animationManager.IsAnimating)
                         {
-                            // --- LOOT SCREEN INTEGRATION ---
                             if (!_lootScreenHasShown)
                             {
                                 if (!_floorTransitionTriggered)
                                 {
-                                    // 1. Trigger the transition
                                     _uiManager.ForceClearNarration();
-
-                                    // Animate floors
                                     if (!SplitMapScene.WasMajorBattle)
                                     {
                                         _animationManager.StartFloorOutroAnimation("floor_0");
                                         _animationManager.StartFloorOutroAnimation("floor_1");
                                         _animationManager.StartFloorIntroAnimation("floor_center");
                                     }
-
                                     _animationManager.StartFloorOutroAnimation("player_floor_0");
                                     _animationManager.StartFloorOutroAnimation("player_floor_1");
-
-                                    // Force the renderer to draw the center floor even if it thinks it shouldn't
                                     _renderer.ForceDrawCenterFloor = true;
-
                                     _floorTransitionTriggered = true;
                                 }
                                 else
                                 {
-                                    // 2. Wait for the transition to finish
-                                    // We check if any floor animations are still active.
-                                    bool floorsBusy = _animationManager.IsFloorAnimatingOut("floor_0") ||
-                                                      _animationManager.IsFloorAnimatingOut("floor_1") ||
-                                                      _animationManager.GetFloorIntroAnimationState("floor_center") != null;
-
+                                    bool floorsBusy = _animationManager.IsFloorAnimatingOut("floor_0") || _animationManager.IsFloorAnimatingOut("floor_1") || _animationManager.GetFloorIntroAnimationState("floor_center") != null;
                                     if (!floorsBusy)
                                     {
-                                        // 3. Show Loot Screen
                                         var lootManager = ServiceLocator.Get<LootManager>();
                                         var loot = lootManager.GenerateCombatLoot();
                                         _lootScreen.Show(loot);
@@ -864,7 +738,6 @@ namespace ProjectVagabond.Scenes
                             if (_currentActor != null && !_currentActor.IsPlayerControlled) killer = _currentActor.Name;
                             else if (_currentActor != null && _currentActor.IsPlayerControlled) killer = "Recoil";
                             else killer = "Status Effects";
-
                             _gameState.LastRunKiller = killer;
                             _isFadingOutOnDeath = true;
                             _deathFadeTimer = 0f;
@@ -876,50 +749,16 @@ namespace ProjectVagabond.Scenes
             }
 
             bool isAnimating = _animationManager.IsAnimating || _moveAnimationManager.IsAnimating;
-            bool clickDetected = UIInputManager.CanProcessMouseClick() &&
-                                 currentMouseState.LeftButton == ButtonState.Released &&
-                                 previousMouseState.LeftButton == ButtonState.Pressed;
+            bool clickDetected = UIInputManager.CanProcessMouseClick() && currentMouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed;
 
-            // --- AGGRESSIVE CLICK-TO-SKIP LOGIC ---
             if (clickDetected)
             {
                 bool skippedSomething = false;
-
-                // 1. Skip Action Start Delay
-                if (_isWaitingForActionExecution)
-                {
-                    _actionExecutionTimer = ACTION_EXECUTION_DELAY; // Force trigger next frame
-                    skippedSomething = true;
-                }
-
-                // 2. Skip Multi-Hit Delay
-                if (_isWaitingForMultiHitDelay)
-                {
-                    _multiHitDelayTimer = 0f; // Force trigger next frame
-                    skippedSomething = true;
-                }
-
-                // 3. Snap Visuals (Health Bars, etc.)
-                if (isAnimating)
-                {
-                    _animationManager.CompleteBlockingAnimations(_battleManager.AllCombatants);
-                    _moveAnimationManager.CompleteCurrentAnimation();
-                    skippedSomething = true;
-                }
-
-                // 4. Push Logic if stuck in a wait state
-                if (_battleManager.CurrentPhase == BattleManager.BattlePhase.CheckForDefeat ||
-                    _battleManager.CurrentPhase == BattleManager.BattlePhase.EndOfTurn ||
-                    _battleManager.CurrentPhase == BattleManager.BattlePhase.Reinforcement)
-                {
-                    _battleManager.ForceAdvance();
-                    skippedSomething = true;
-                }
-
-                if (skippedSomething)
-                {
-                    UIInputManager.ConsumeMouseClick();
-                }
+                if (_isWaitingForActionExecution) { _actionExecutionTimer = ACTION_EXECUTION_DELAY; skippedSomething = true; }
+                if (_isWaitingForMultiHitDelay) { _multiHitDelayTimer = 0f; skippedSomething = true; }
+                if (isAnimating) { _animationManager.CompleteBlockingAnimations(_battleManager.AllCombatants); _moveAnimationManager.CompleteCurrentAnimation(); skippedSomething = true; }
+                if (_battleManager.CurrentPhase == BattleManager.BattlePhase.CheckForDefeat || _battleManager.CurrentPhase == BattleManager.BattlePhase.EndOfTurn || _battleManager.CurrentPhase == BattleManager.BattlePhase.Reinforcement) { _battleManager.ForceAdvance(); skippedSomething = true; }
+                if (skippedSomething) UIInputManager.ConsumeMouseClick();
             }
 
             if (!_uiManager.IsBusy && !_animationManager.IsAnimating && _pendingAnimations.Any())
@@ -934,39 +773,17 @@ namespace ProjectVagabond.Scenes
             bool pendingBusy = _pendingAnimations.Any();
             bool isMultiHitActive = _battleManager.IsProcessingMultiHit;
             bool isSwitching = _switchSequenceState != SwitchSequenceState.None;
-
-            bool canAdvance;
-
-            if (isMultiHitActive)
-            {
-                canAdvance = !pendingBusy;
-            }
-            else
-            {
-                canAdvance = !uiBusy && !animBusy && !moveAnimBusy && !pendingBusy && !isSwitching;
-            }
+            bool canAdvance = isMultiHitActive ? !pendingBusy : (!uiBusy && !animBusy && !moveAnimBusy && !pendingBusy && !isSwitching);
 
             if (_isWaitingForMultiHitDelay && canAdvance)
             {
                 if (_multiHitDelayTimer <= 0) _multiHitDelayTimer = MULTI_HIT_DELAY;
                 _multiHitDelayTimer -= dt;
-
-                if (_multiHitDelayTimer > 0) canAdvance = false;
-                else _multiHitDelayTimer = 0f;
+                if (_multiHitDelayTimer > 0) canAdvance = false; else _multiHitDelayTimer = 0f;
             }
 
-            bool stateChanged = _battleManager.CurrentPhase != _lastFramePhase ||
-                                uiBusy != _wasUiBusyLastFrame ||
-                                animBusy != _wasAnimatingLastFrame;
-
-            if (!stateChanged && !canAdvance && !_isBattleOver && !_uiManager.IsWaitingForInput)
-            {
-                _watchdogTimer += dt;
-            }
-            else
-            {
-                _watchdogTimer = 0f;
-            }
+            bool stateChanged = _battleManager.CurrentPhase != _lastFramePhase || uiBusy != _wasUiBusyLastFrame || animBusy != _wasAnimatingLastFrame;
+            if (!stateChanged && !canAdvance && !_isBattleOver && !_uiManager.IsWaitingForInput) _watchdogTimer += dt; else _watchdogTimer = 0f;
 
             if (_watchdogTimer > WATCHDOG_TIMEOUT)
             {
@@ -976,7 +793,7 @@ namespace ProjectVagabond.Scenes
                 _moveAnimationManager.SkipAll();
                 _pendingAnimations.Clear();
                 _isWaitingForMultiHitDelay = false;
-                _switchSequenceState = SwitchSequenceState.None; // Reset switch state
+                _switchSequenceState = SwitchSequenceState.None;
                 _battleManager.ForceAdvance();
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[warning]Combat stalled. Watchdog forced advance." });
                 _watchdogTimer = 0f;
@@ -986,9 +803,8 @@ namespace ProjectVagabond.Scenes
             _lastFramePhase = _battleManager.CurrentPhase;
             _wasUiBusyLastFrame = uiBusy;
             _wasAnimatingLastFrame = animBusy;
-
             _battleManager.CanAdvance = canAdvance;
-            _battleManager.Update(dt); // Pass delta time
+            _battleManager.Update(dt);
 
             if (_isWaitingForActionExecution)
             {
@@ -1014,15 +830,8 @@ namespace ProjectVagabond.Scenes
                 _uiManager.HideAllMenus();
                 var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
                 bool playerWon = player != null && !player.IsDefeated;
-
-                if (playerWon)
-                {
-                    _uiManager.ShowNarration("[rainbowwave]Player Wins![/]");
-                }
-                else
-                {
-                    _uiManager.ShowNarration("[driftwave][cDefeat]Player Loses![/][/]");
-                }
+                if (playerWon) _uiManager.ShowNarration("[rainbowwave]Player Wins![/]");
+                else _uiManager.ShowNarration("[driftwave][cDefeat]Player Loses![/][/]");
             }
 
             if (_battleManager.CurrentPhase == BattleManager.BattlePhase.AnimatingMove && !_moveAnimationManager.IsAnimating)
@@ -1036,12 +845,7 @@ namespace ProjectVagabond.Scenes
         private void StartPlayerIntro()
         {
             var players = _battleManager.AllCombatants.Where(c => c.IsPlayerControlled && c.IsActiveOnField).ToList();
-            foreach (var p in players)
-            {
-                // Slide up from bottom
-                // Pass isEnemy = false for simple slide
-                _animationManager.StartIntroSlideAnimation(p.CombatantID, new Vector2(0, INTRO_SLIDE_DISTANCE), false);
-            }
+            foreach (var p in players) _animationManager.StartIntroSlideAnimation(p.CombatantID, new Vector2(0, INTRO_SLIDE_DISTANCE), false);
             _uiSlideTimer = 0f;
         }
 
@@ -1058,20 +862,11 @@ namespace ProjectVagabond.Scenes
                         {
                             float oldMana = combatant.Stats.CurrentMana;
                             combatant.Stats.CurrentMana = combatant.Stats.MaxMana;
-
-                            // Trigger the ghost fill animation
                             _animationManager.StartManaRecoveryAnimation(combatant.CombatantID, oldMana, combatant.Stats.MaxMana);
-
-                            // Force the bar to stay visible
                             combatant.ManaBarVisibleTimer = 2.0f;
                             anyRestored = true;
                         }
                     }
-                }
-
-                if (anyRestored)
-                {
-                    // Optional: Add a small delay or sound here if needed, but the animation duration acts as a delay.
                 }
             }
         }
@@ -1080,8 +875,6 @@ namespace ProjectVagabond.Scenes
         {
             SplitMapScene.PlayerWonLastBattle = true;
             DecrementTemporaryBuffs();
-
-            // Use random transition
             var transition = _transitionManager.GetRandomTransition();
             _sceneManager.ChangeScene(BattleSetup.ReturnSceneState, transition, transition);
         }
@@ -1091,41 +884,23 @@ namespace ProjectVagabond.Scenes
             var gameState = ServiceLocator.Get<GameState>();
             var buffsComp = _componentStore.GetComponent<TemporaryBuffsComponent>(gameState.PlayerEntityId);
             if (buffsComp == null) return;
-
             for (int i = buffsComp.Buffs.Count - 1; i >= 0; i--)
             {
                 buffsComp.Buffs[i].RemainingBattles--;
-                if (buffsComp.Buffs[i].RemainingBattles <= 0)
-                {
-                    buffsComp.Buffs.RemoveAt(i);
-                }
+                if (buffsComp.Buffs[i].RemainingBattles <= 0) buffsComp.Buffs.RemoveAt(i);
             }
         }
 
         private void HandlePhaseChange(BattleManager.BattlePhase newPhase)
         {
-            if (newPhase == BattleManager.BattlePhase.EndOfTurn || newPhase == BattleManager.BattlePhase.BattleOver)
-            {
-                _currentActor = null;
-            }
-
+            if (newPhase == BattleManager.BattlePhase.EndOfTurn || newPhase == BattleManager.BattlePhase.BattleOver) _currentActor = null;
             if (newPhase == BattleManager.BattlePhase.ActionSelection_Slot1 || newPhase == BattleManager.BattlePhase.ActionSelection_Slot2)
             {
                 var actingCombatant = _battleManager.CurrentActingCombatant;
-                if (actingCombatant != null)
-                {
-                    _uiManager.ShowActionMenu(actingCombatant, _battleManager.AllCombatants.ToList());
-                }
+                if (actingCombatant != null) _uiManager.ShowActionMenu(actingCombatant, _battleManager.AllCombatants.ToList());
             }
-            else if (newPhase == BattleManager.BattlePhase.StartOfTurn)
-            {
-                // Do nothing. Keep previous state (Visible) until ActionSelection triggers or something else happens.
-                // This prevents the 1-frame flicker if BattleManager is blocked.
-            }
-            else
-            {
-                _uiManager.HideAllMenus();
-            }
+            else if (newPhase == BattleManager.BattlePhase.StartOfTurn) { }
+            else _uiManager.HideAllMenus();
         }
 
         public override void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
@@ -1140,22 +915,10 @@ namespace ProjectVagabond.Scenes
             _animationManager.DrawAbilityIndicators(spriteBatch, font);
             _alertManager.Draw(spriteBatch);
 
-            // Only draw settings button if visible
-            if (_settingsButtonState != SettingsButtonState.Visible && _settingsButtonState != SettingsButtonState.Hidden)
-            {
-                // If animating, draw with current bounds
-                _settingsButton?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
-            }
-            else if (_settingsButtonState == SettingsButtonState.Visible)
-            {
-                _settingsButton?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
-            }
+            if (_settingsButtonState != SettingsButtonState.Visible && _settingsButtonState != SettingsButtonState.Hidden) _settingsButton?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
+            else if (_settingsButtonState == SettingsButtonState.Visible) _settingsButton?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
 
-            // --- DRAW LOOT SCREEN ---
-            if (_lootScreen != null && _lootScreen.IsActive)
-            {
-                _lootScreen.Draw(spriteBatch, font, gameTime); // Pass GameTime here
-            }
+            if (_lootScreen != null && _lootScreen.IsActive) _lootScreen.Draw(spriteBatch, font, gameTime);
 
             spriteBatch.End();
         }
@@ -1172,15 +935,13 @@ namespace ProjectVagabond.Scenes
 
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
 
-            // --- DRAW ROUND NUMBER ---
             if (_roundAnimState != RoundAnimState.Hidden)
             {
                 string roundText = _battleManager.RoundNumber.ToString();
                 Vector2 roundTextSize = font.MeasureString(roundText);
                 Vector2 roundTextPosition = new Vector2(5, 5);
                 Vector2 origin = roundTextSize / 2f;
-                Vector2 drawPos = roundTextPosition + origin; // Adjust for origin centering
-
+                Vector2 drawPos = roundTextPosition + origin;
                 float scale = 1.0f;
                 float rotation = 0f;
                 Color color = ServiceLocator.Get<Global>().Palette_DarkGray;
@@ -1200,8 +961,6 @@ namespace ProjectVagabond.Scenes
                 {
                     scale = ROUND_MAX_SCALE;
                     color = Color.White;
-
-                    // Violent Rotation with Decay
                     float progress = Math.Clamp(_roundAnimTimer / ROUND_ANIM_HANG_DURATION, 0f, 1f);
                     float decay = 1.0f - Easing.EaseOutQuad(progress);
                     rotation = MathF.Sin(_roundAnimTimer * ROUND_SHAKE_FREQUENCY) * ROUND_SHAKE_MAGNITUDE * decay;
@@ -1212,19 +971,16 @@ namespace ProjectVagabond.Scenes
                     scale = MathHelper.Lerp(ROUND_MAX_SCALE, 1.0f, Easing.EaseInCubic(progress));
                     color = Color.Lerp(Color.White, ServiceLocator.Get<Global>().Palette_DarkGray, progress);
                 }
-
                 spriteBatch.DrawStringSnapped(font, roundText, drawPos, color, rotation, origin, scale, SpriteEffects.None, 0f);
             }
 
             BattleCombatant renderContextActor = _currentActor;
-            if (_battleManager != null &&
-               (_battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection_Slot1 ||
-                _battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection_Slot2))
+            if (_battleManager != null && (_battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection_Slot1 || _battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection_Slot2))
             {
                 renderContextActor = _battleManager.CurrentActingCombatant;
             }
 
-            _renderer.Update(gameTime, _battleManager.AllCombatants, _animationManager, renderContextActor); // Update renderer state before drawing
+            _renderer.Update(gameTime, _battleManager.AllCombatants, _animationManager, renderContextActor);
             _renderer.Draw(spriteBatch, font, gameTime, _battleManager.AllCombatants, renderContextActor, _uiManager, _inputHandler, _animationManager, _uiManager.SharedPulseTimer, transform);
             _moveAnimationManager.Draw(spriteBatch);
             _uiManager.Draw(spriteBatch, font, gameTime, transform);
@@ -1256,11 +1012,8 @@ namespace ProjectVagabond.Scenes
         private void TriggerDeathAnimation(BattleCombatant target)
         {
             if (_processedDeathAnimations.Contains(target.CombatantID)) return;
-
             _processedDeathAnimations.Add(target.CombatantID);
-
             Vector2 centerPos = _renderer.GetCombatantVisualCenterPosition(target, _battleManager.AllCombatants);
-
             if (centerPos == Vector2.Zero)
             {
                 const int enemyAreaPadding = 40;
@@ -1268,24 +1021,18 @@ namespace ProjectVagabond.Scenes
                 int slotWidth = availableWidth / 2;
                 int slotIndex = target.BattleSlot;
                 float slotCenterX = enemyAreaPadding + (slotIndex * slotWidth) + (slotWidth / 2);
-
                 bool isMajor = _spriteManager.IsMajorEnemySprite(target.ArchetypeId);
                 int spriteSize = isMajor ? 96 : 64;
                 float spriteCenterY = ENEMY_SLOT_Y_OFFSET + (spriteSize / 2f);
-
                 centerPos = new Vector2(slotCenterX, spriteCenterY);
             }
-
             Vector2 visualOffset = _spriteManager.GetVisualCenterOffset(target.ArchetypeId);
             centerPos += visualOffset;
-
             float groundY = FIXED_COIN_GROUND_Y;
-
             _animationManager.StartDeathAnimation(target.CombatantID, centerPos, groundY);
             target.VisualAlpha = 1.0f;
         }
 
-        #region Event Handlers
         private void OnPlayerMoveSelected(MoveData move, MoveEntry entry, BattleCombatant target)
         {
             var player = _battleManager.CurrentActingCombatant;
@@ -1304,32 +1051,23 @@ namespace ProjectVagabond.Scenes
 
         private void OnTargetSelectedFromUI(BattleCombatant target)
         {
-            if (_uiManager.UIState == BattleUIState.Targeting)
-            {
-                OnPlayerMoveSelected(_uiManager.MoveForTargeting, _uiManager.SpellForTargeting, target);
-            }
-            else if (_uiManager.UIState == BattleUIState.ItemTargeting)
-            {
-                OnPlayerItemSelected(_uiManager.ItemForTargeting, target);
-            }
+            if (_uiManager.UIState == BattleUIState.Targeting) OnPlayerMoveSelected(_uiManager.MoveForTargeting, _uiManager.SpellForTargeting, target);
+            else if (_uiManager.UIState == BattleUIState.ItemTargeting) OnPlayerItemSelected(_uiManager.ItemForTargeting, target);
         }
 
         private void OnPlayerItemSelected(ConsumableItemData item, BattleCombatant target)
         {
             var player = _battleManager.CurrentActingCombatant;
             if (player == null) return;
-
             if (target == null)
             {
                 var enemies = _battleManager.AllCombatants.Where(c => !c.IsPlayerControlled && !c.IsDefeated && c.IsActiveOnField).ToList();
                 switch (item.Target)
                 {
-                    case TargetType.Self:
-                    case TargetType.SingleTeam: target = player; break;
+                    case TargetType.Self: case TargetType.SingleTeam: target = player; break;
                     case TargetType.Single: if (enemies.Any()) target = enemies.First(); break;
                 }
             }
-
             var action = new QueuedAction { Actor = player, ChosenItem = item, Target = target, Priority = item.Priority, ActorAgility = player.Stats.Agility, Type = QueuedActionType.Item };
             _battleManager.SubmitAction(action);
             _uiManager.HideAllMenus();
@@ -1339,22 +1077,13 @@ namespace ProjectVagabond.Scenes
         {
             var player = _battleManager.CurrentActingCombatant;
             if (player == null) return;
-
-            var action = new QueuedAction
-            {
-                Actor = player,
-                Target = targetMember,
-                Priority = 6,
-                ActorAgility = player.Stats.Agility,
-                Type = QueuedActionType.Switch
-            };
+            var action = new QueuedAction { Actor = player, Target = targetMember, Priority = 6, ActorAgility = player.Stats.Agility, Type = QueuedActionType.Switch };
             _battleManager.SubmitAction(action);
             _uiManager.HideAllMenus();
         }
 
         private void OnForcedSwitchSelected(BattleCombatant targetMember)
         {
-            // This is called when the player selects a replacement from the forced switch dialog
             _battleManager.SubmitInteractionResult(targetMember);
             _uiManager.HideAllMenus();
         }
@@ -1364,51 +1093,29 @@ namespace ProjectVagabond.Scenes
             _isWaitingForActionExecution = true;
             _actionExecutionTimer = 0f;
             _currentActor = e.Actor;
-
-            if (e.Type == QueuedActionType.Switch)
-            {
-                _uiManager.ShowNarration($"{e.Actor.Name} switches to {e.Target?.Name}!");
-            }
+            if (e.Type == QueuedActionType.Switch) _uiManager.ShowNarration($"{e.Actor.Name} switches to {e.Target?.Name}!");
             else
             {
                 string actionName = e.Item != null ? e.Item.ItemName : (e.Move != null ? e.Move.MoveName : "Unknown Action");
                 string typeTag = "";
-                if (e.Move != null)
-                {
-                    typeTag = e.Move.MoveType == MoveType.Spell ? "cSpell" : "cAction";
-                }
-                else if (e.Item != null)
-                {
-                    typeTag = "cItem";
-                }
-
-                // --- CUSTOM NARRATION LOGIC ---
+                if (e.Move != null) typeTag = e.Move.MoveType == MoveType.Spell ? "cSpell" : "cAction";
+                else if (e.Item != null) typeTag = "cItem";
                 string message = "";
                 string actionPhrase = e.Item != null ? null : e.Move?.ActionPhrase;
-
-                if (!string.IsNullOrEmpty(actionPhrase))
-                {
-                    // Use custom phrase
-                    message = ParseActionPhrase(actionPhrase, e.Actor, e.Target, e.Move?.SourceItemName ?? e.Item?.ItemName);
-                }
+                if (!string.IsNullOrEmpty(actionPhrase)) message = ParseActionPhrase(actionPhrase, e.Actor, e.Target, e.Move?.SourceItemName ?? e.Item?.ItemName);
                 else
                 {
-                    // Fallback to default
                     message = $"{e.Actor.Name} USED\n[{typeTag}]{actionName}[/]!";
-
                     if (e.Move != null && e.Actor.IsPlayerControlled && e.Move.MoveID == e.Actor.DefaultStrikeMoveID)
                     {
                         var partyMember = _gameState.PlayerState.Party.FirstOrDefault(p => p.Name == e.Actor.Name);
                         if (partyMember != null && !string.IsNullOrEmpty(partyMember.EquippedWeaponId))
                         {
                             if (BattleDataCache.Weapons.TryGetValue(partyMember.EquippedWeaponId, out var weaponData))
-                            {
                                 message = $"{e.Actor.Name} USED\n[{typeTag}]{actionName}[/] WITH {weaponData.WeaponName.ToUpper()}!";
-                            }
                         }
                     }
                 }
-
                 _uiManager.ShowNarration(message);
             }
         }
@@ -1416,18 +1123,11 @@ namespace ProjectVagabond.Scenes
         private string GetSmartName(BattleCombatant combatant)
         {
             string name = combatant.Name.ToUpper();
-
-            // Only apply numbering to enemies
             if (!combatant.IsPlayerControlled && _battleManager != null)
             {
-                var activeEnemies = _battleManager.AllCombatants
-                    .Where(c => !c.IsPlayerControlled && c.IsActiveOnField && !c.IsDefeated)
-                    .ToList();
-
-                // Check if there are multiple enemies with the exact same name
+                var activeEnemies = _battleManager.AllCombatants.Where(c => !c.IsPlayerControlled && c.IsActiveOnField && !c.IsDefeated).ToList();
                 if (activeEnemies.Count(c => c.Name == combatant.Name) > 1)
                 {
-                    // Append the number suffix wrapped in [small] tag
                     if (combatant.BattleSlot == 0) name = name + " [small][cPrefix]#1[/][/]";
                     else if (combatant.BattleSlot == 1) name = name + " [small][cPrefix]#2[/][/]";
                 }
@@ -1437,80 +1137,42 @@ namespace ProjectVagabond.Scenes
 
         private string ParseActionPhrase(string phrase, BattleCombatant user, BattleCombatant? target, string? itemName)
         {
-            // 1. Handle Random Variations FIRST
             string processedPhrase = _randomWordRegex.Replace(phrase, (match) =>
             {
                 var options = match.Value.Split('$');
                 return options[_random.Next(options.Length)].Replace('_', ' ');
             });
-
             var sb = new StringBuilder(processedPhrase);
-
-            // User Name & Proper Noun
             string userProperNounPrefix = user.IsProperNoun ? "" : "THE ";
             sb.Replace("{IsUserProperNoun}", userProperNounPrefix);
-
-            // Use Smart Name for User
             sb.Replace("{user}", GetSmartName(user));
-
-            // --- CONTEXTUAL SLOT COLOR REPLACEMENT ---
-            // 1. Replace [cSlot] for User
             string userColor = user.IsPlayerControlled ? "[cDefault]" : "[cEnemy]";
             sb.Replace("[cSlot]{user}", $"{userColor}{{user}}");
-
-            // 2. Replace [cSlot] for Target
             if (target != null)
             {
                 string targetColor = target.IsPlayerControlled ? "[cDefault]" : "[cEnemy]";
                 sb.Replace("[cSlot]{target}", $"{targetColor}{{target}}");
             }
-            else
-            {
-                // Cleanup if no target
-                sb.Replace("[cSlot]{target}", "{target}");
-            }
-
-            // 3. Now proceed with Name replacements
+            else sb.Replace("[cSlot]{target}", "{target}");
             sb.Replace("{IsUserProperNoun}", userProperNounPrefix);
             sb.Replace("{user}", GetSmartName(user));
-
-            // User Pronouns
             string userPronoun = "THEIR";
             string userReflexive = "THEMSELVES";
-
             switch (user.Gender)
             {
-                case Gender.Male:
-                    userPronoun = "HIS";
-                    userReflexive = "HIMSELF";
-                    break;
-                case Gender.Female:
-                    userPronoun = "HER";
-                    userReflexive = "HERSELF";
-                    break;
-                case Gender.Thing:
-                    userPronoun = "ITS";
-                    userReflexive = "ITSELF";
-                    break;
+                case Gender.Male: userPronoun = "HIS"; userReflexive = "HIMSELF"; break;
+                case Gender.Female: userPronoun = "HER"; userReflexive = "HERSELF"; break;
+                case Gender.Thing: userPronoun = "ITS"; userReflexive = "ITSELF"; break;
             }
             sb.Replace("{user_pronoun}", userPronoun);
             sb.Replace("{user_reflexive}", userReflexive);
-
-            // Item Name
             sb.Replace("{item_name}", itemName != null ? itemName.ToUpper() : "HANDS");
-
-            // Target Name & Pronouns
-            string targetPronoun = "THEIR"; // Default
-
+            string targetPronoun = "THEIR";
             if (target != null)
             {
-                // Use Smart Name for Target as well for consistency
                 sb.Replace("{target}", GetSmartName(target));
-
                 string properNounPrefix = target.IsProperNoun ? "" : "THE ";
                 sb.Replace("{IsTargetProperNoun}", properNounPrefix);
-
-                // Determine Target Pronoun
                 switch (target.Gender)
                 {
                     case Gender.Male: targetPronoun = "HIS"; break;
@@ -1520,14 +1182,11 @@ namespace ProjectVagabond.Scenes
             }
             else
             {
-                // Fallback for non-targeted moves
                 sb.Replace("{target}", "THE AIR");
                 sb.Replace("{IsTargetProperNoun}", "");
-                targetPronoun = "ITS"; // "The Air's" -> Its
+                targetPronoun = "ITS";
             }
-
             sb.Replace("{target_pronoun}", targetPronoun);
-
             return sb.ToString();
         }
 
@@ -1540,7 +1199,6 @@ namespace ProjectVagabond.Scenes
         {
             string timeStr = e.HitCount == 1 ? "TIME" : "TIMES";
             _uiManager.ShowNarration($"HIT {e.HitCount} {timeStr}!");
-
             if (e.CriticalHitCount > 0)
             {
                 if (e.CriticalHitCount == 1) _uiManager.ShowNarration("Landed a\n[DriftWave][cCrit]CRITICAL HIT[/][/]!");
@@ -1554,149 +1212,79 @@ namespace ProjectVagabond.Scenes
         {
             _currentActor = e.Actor;
             _renderer.TriggerAttackAnimation(e.Actor.CombatantID);
-
             bool isMultiHit = e.ChosenMove != null && e.ChosenMove.Effects.ContainsKey("MultiHit");
             if (isMultiHit) _isWaitingForMultiHitDelay = true;
-
-            // --- GRAZE NARRATION LOGIC ---
             var grazedTargets = new List<BattleCombatant>();
             for (int i = 0; i < e.Targets.Count; i++)
             {
-                if (e.DamageResults[i].WasGraze)
-                {
-                    grazedTargets.Add(e.Targets[i]);
-                }
+                if (e.DamageResults[i].WasGraze) grazedTargets.Add(e.Targets[i]);
             }
-
             if (grazedTargets.Any())
             {
-                // Sort: Players first, then Enemies. Within group, Slot 0 then Slot 1.
-                var sortedGrazes = grazedTargets
-                    .OrderByDescending(c => c.IsPlayerControlled)
-                    .ThenBy(c => c.BattleSlot)
-                    .ToList();
-
+                var sortedGrazes = grazedTargets.OrderByDescending(c => c.IsPlayerControlled).ThenBy(c => c.BattleSlot).ToList();
                 foreach (var target in sortedGrazes)
                 {
                     string targetName = GetSmartName(target);
                     _uiManager.ShowNarration($"{targetName} WAS [DriftWave][cgraze]GRAZED[/][/].");
                 }
             }
-
             for (int i = 0; i < e.Targets.Count; i++)
             {
                 var target = e.Targets[i];
                 var result = e.DamageResults[i];
                 Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(target, _battleManager.AllCombatants);
-
-                if (result.AttackerAbilitiesTriggered != null)
-                    foreach (var ability in result.AttackerAbilitiesTriggered) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = e.Actor, Ability = ability });
-
-                if (result.DefenderAbilitiesTriggered != null)
-                    foreach (var ability in result.DefenderAbilitiesTriggered) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = target, Ability = ability });
-
+                if (result.AttackerAbilitiesTriggered != null) foreach (var ability in result.AttackerAbilitiesTriggered) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = e.Actor, Ability = ability });
+                if (result.DefenderAbilitiesTriggered != null) foreach (var ability in result.DefenderAbilitiesTriggered) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = target, Ability = ability });
                 if (result.DamageAmount > 0)
                 {
-                    // Set visibility timer for health bar
                     target.HealthBarVisibleTimer = 6.0f;
-
-                    // --- DYNAMIC JUICE CALCULATION ---
                     float damageRatio = Math.Clamp((float)result.DamageAmount / target.Stats.MaxHP, 0f, 1f);
-
-                    // Base scalar: 3.0 means 100% damage = 3x juice. 10% damage = 1.3x juice.
                     const float BASE_JUICE_SCALAR = 3.0f;
                     float juiceIntensity = 1.0f + (damageRatio * BASE_JUICE_SCALAR);
-
                     if (result.WasCritical) juiceIntensity *= 1.5f;
-
-                    // Cap to prevent game-breaking values on massive overkill
                     juiceIntensity = Math.Min(juiceIntensity, 5.0f);
-
-                    // Apply Juice
                     if (!result.WasGraze)
                     {
                         float baseFreeze = result.WasCritical ? _global.HitstopDuration_Crit : _global.HitstopDuration_Normal;
                         _hitstopManager.Trigger(baseFreeze * juiceIntensity);
-
-                        // Trigger Visual Pop (Flash/Scale)
                         _animationManager.StartHitstopVisuals(target.CombatantID, result.WasCritical);
-
-                        // Screen Flash for EVERY hit (White for enemies, Red for players)
                         if (target.IsPlayerControlled)
                         {
                             _core.TriggerFullscreenFlash(Color.White, 0.15f * juiceIntensity);
                             _core.TriggerScreenFlashSequence(_global.Palette_Red);
                         }
-                        else
-                        {
-                            // Use CRT shader flash for enemies too
-                            _core.TriggerFullscreenFlash(Color.White, 0.15f * juiceIntensity);
-                        }
-
+                        else _core.TriggerFullscreenFlash(Color.White, 0.15f * juiceIntensity);
                         _hapticsManager.TriggerCompoundShake(0.25f * juiceIntensity);
                     }
-
-                    // Directional Shake & Recoil
-                    // Calculate direction from attacker to target
                     Vector2 attackerPos = _renderer.GetCombatantVisualCenterPosition(e.Actor, _battleManager.AllCombatants);
                     Vector2 targetPos = _renderer.GetCombatantVisualCenterPosition(target, _battleManager.AllCombatants);
                     Vector2 direction = targetPos - attackerPos;
-                    if (direction != Vector2.Zero) direction.Normalize();
-                    else direction = new Vector2(1, 0); // Fallback
-
+                    if (direction != Vector2.Zero) direction.Normalize(); else direction = new Vector2(1, 0);
                     float shakeMag = 10f * juiceIntensity;
                     float recoilMag = 20f * juiceIntensity;
-
                     _hapticsManager.TriggerDirectionalShake(direction, shakeMag, 0.2f * juiceIntensity);
                     _renderer.TriggerRecoil(target.CombatantID, direction, recoilMag);
-
-                    // Particles
                     var sparks = _particleSystemManager.CreateEmitter(ParticleEffects.CreateHitSparks(juiceIntensity));
                     sparks.Position = targetPos;
                     sparks.EmitBurst(sparks.Settings.BurstCount);
-
                     var ring = _particleSystemManager.CreateEmitter(ParticleEffects.CreateImpactRing(juiceIntensity));
                     ring.Position = targetPos;
                     ring.EmitBurst(1);
-
                     _animationManager.StartHealthLossAnimation(target.CombatantID, target.VisualHP, target.Stats.CurrentHP);
                     _animationManager.StartHealthAnimation(target.CombatantID, (int)target.VisualHP, target.Stats.CurrentHP);
-
-                    // Trigger Burn Icon Hop if target is burned and takes damage
-                    if (target.HasStatusEffect(StatusEffectType.Burn))
-                    {
-                        _renderer.TriggerStatusIconHop(target.CombatantID, StatusEffectType.Burn);
-                    }
-
-                    if (target.Stats.CurrentHP <= 0)
-                    {
-                        TriggerDeathAnimation(target);
-                    }
-                    else
-                    {
-                        // Removed StartHitFlashAnimation as we now use screen flash + recoil
-                    }
-
+                    if (target.HasStatusEffect(StatusEffectType.Burn)) _renderer.TriggerStatusIconHop(target.CombatantID, StatusEffectType.Burn);
+                    if (target.Stats.CurrentHP <= 0) TriggerDeathAnimation(target);
                     int baselineDamage = DamageCalculator.CalculateBaselineDamage(e.Actor, target, e.ChosenMove);
-                    if (result.WasCritical || (result.DamageAmount >= baselineDamage * 1.5f && baselineDamage > 0))
-                        _animationManager.StartEmphasizedDamageNumberIndicator(target.CombatantID, result.DamageAmount, hudPosition);
-                    else
-                        _animationManager.StartDamageNumberIndicator(target.CombatantID, result.DamageAmount, hudPosition);
+                    if (result.WasCritical || (result.DamageAmount >= baselineDamage * 1.5f && baselineDamage > 0)) _animationManager.StartEmphasizedDamageNumberIndicator(target.CombatantID, result.DamageAmount, hudPosition);
+                    else _animationManager.StartDamageNumberIndicator(target.CombatantID, result.DamageAmount, hudPosition);
                 }
-
                 if (result.WasGraze) _animationManager.StartDamageIndicator(target.CombatantID, "GRAZE", hudPosition, ServiceLocator.Get<Global>().GrazeIndicatorColor);
-
                 if (result.WasCritical)
                 {
                     _animationManager.StartDamageIndicator(target.CombatantID, "CRITICAL HIT", hudPosition, ServiceLocator.Get<Global>().CritcalHitIndicatorColor);
                     if (!isMultiHit) _uiManager.ShowNarration($"A [DriftWave][cCrit]CRITICAL HIT[/][/] on {target.Name}!");
                 }
-
-                if (result.WasProtected)
-                {
-                    _animationManager.StartProtectedIndicator(target.CombatantID, hudPosition);
-                }
-
+                if (result.WasProtected) _animationManager.StartProtectedIndicator(target.CombatantID, hudPosition);
                 var font = ServiceLocator.Get<Core>().SecondaryFont;
                 Vector2 effectivenessPosition = hudPosition + new Vector2(0, font.LineHeight / 2f + 10);
                 switch (result.Effectiveness)
@@ -1710,72 +1298,49 @@ namespace ProjectVagabond.Scenes
 
         private void OnCombatantHealed(GameEvents.CombatantHealed e)
         {
-            // Set visibility timer for health bar
             e.Target.HealthBarVisibleTimer = 6.0f;
-
-            // Define the visual effects as an Action to be executed when the narration appears
             Action playVisuals = () =>
             {
-                // 1. Trigger Particles
                 Vector2 targetPos = _renderer.GetCombatantVisualCenterPosition(e.Target, _battleManager.AllCombatants);
                 var healParticles = _particleSystemManager.CreateEmitter(ParticleEffects.CreateHealBurst());
                 healParticles.Position = targetPos;
                 healParticles.EmitBurst(healParticles.Settings.BurstCount);
-
-                // 2. Trigger Sprite Bounce & Flash
                 _animationManager.StartHealBounceAnimation(e.Target.CombatantID);
                 _animationManager.StartHealFlashAnimation(e.Target.CombatantID);
-
-                // 3. Trigger Health Bar "Ghost Fill" Animation
                 _animationManager.StartHealthRecoveryAnimation(e.Target.CombatantID, e.VisualHPBefore, e.Target.Stats.CurrentHP);
-
-                // 4. Standard Health Lerp
                 _animationManager.StartHealthAnimation(e.Target.CombatantID, e.VisualHPBefore, e.Target.Stats.CurrentHP);
-
-                // 5. Number Indicator
                 Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(e.Target, _battleManager.AllCombatants);
                 _animationManager.StartHealNumberIndicator(e.Target.CombatantID, e.HealAmount, hudPosition);
             };
-
-            // Pass the action to the UI manager to be executed alongside the text
             _uiManager.ShowNarration($"{e.Target.Name} recovered\n{e.HealAmount} HP!", playVisuals);
         }
 
         private void OnCombatantManaRestored(GameEvents.CombatantManaRestored e)
         {
-            // Set visibility timer for mana bar
             e.Target.ManaBarVisibleTimer = 6.0f;
-
             _uiManager.ShowNarration($"{e.Target.Name} restored\n{e.AmountRestored} Mana!");
             _animationManager.StartManaRecoveryAnimation(e.Target.CombatantID, e.ManaBefore, e.ManaAfter);
         }
 
         private void OnCombatantManaConsumed(GameEvents.CombatantManaConsumed e)
         {
-            // Set visibility timer for mana bar
             e.Actor.ManaBarVisibleTimer = 6.0f;
-
             _animationManager.StartManaLossAnimation(e.Actor.CombatantID, e.ManaBefore, e.ManaAfter);
         }
 
         private void OnCombatantRecoiled(GameEvents.CombatantRecoiled e)
         {
-            // Set visibility timer for health bar
             e.Actor.HealthBarVisibleTimer = 6.0f;
-
             if (e.Actor.IsPlayerControlled)
             {
                 _core.TriggerScreenFlashSequence(_global.Palette_Red);
                 _hapticsManager.TriggerWobble(intensity: 10.0f, duration: 0.75f, frequency: 120f);
             }
-
             if (e.SourceAbility != null) _uiManager.ShowNarration($"{e.Actor.Name} was hurt by\n{e.SourceAbility.AbilityName}!");
             else _uiManager.ShowNarration($"{e.Actor.Name} is damaged by recoil!");
-
             _animationManager.StartHealthLossAnimation(e.Actor.CombatantID, e.Actor.VisualHP, e.Actor.Stats.CurrentHP);
             _animationManager.StartHealthAnimation(e.Actor.CombatantID, (int)e.Actor.VisualHP, e.Actor.Stats.CurrentHP);
             if (!e.Actor.IsPlayerControlled) _animationManager.StartHitFlashAnimation(e.Actor.CombatantID);
-
             Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(e.Actor, _battleManager.AllCombatants);
             _animationManager.StartDamageNumberIndicator(e.Actor.CombatantID, e.RecoilDamage, hudPosition);
         }
@@ -1798,50 +1363,31 @@ namespace ProjectVagabond.Scenes
             _currentActor = e.Actor;
             if (e.Reason.StartsWith("charging")) _uiManager.ShowNarration($"{e.Actor.Name} is {e.Reason}!");
             else _uiManager.ShowNarration($"{e.Actor.Name} is {e.Reason} and cannot move!");
-
-            // Trigger Status Icon Hop for Stun/Silence
-            if (e.Reason == "stunned")
-            {
-                _renderer.TriggerStatusIconHop(e.Actor.CombatantID, StatusEffectType.Stun);
-            }
-            else if (e.Reason == "silenced")
-            {
-                _renderer.TriggerStatusIconHop(e.Actor.CombatantID, StatusEffectType.Silence);
-            }
+            if (e.Reason == "stunned") _renderer.TriggerStatusIconHop(e.Actor.CombatantID, StatusEffectType.Stun);
+            else if (e.Reason == "silenced") _renderer.TriggerStatusIconHop(e.Actor.CombatantID, StatusEffectType.Silence);
         }
 
         private void OnStatusEffectTriggered(GameEvents.StatusEffectTriggered e)
         {
             if (e.Damage > 0)
             {
-                // Set visibility timer for health bar
                 e.Combatant.HealthBarVisibleTimer = 6.0f;
-
                 if (e.Combatant.IsPlayerControlled)
                 {
                     _core.TriggerScreenFlashSequence(_global.Palette_Red);
                     _hapticsManager.TriggerWobble(intensity: 10.0f, duration: 0.75f, frequency: 120f);
                 }
-
                 string effectName = e.EffectType == StatusEffectType.Burn ? "the burn" : e.EffectType.ToString();
                 _uiManager.ShowNarration($"{e.Combatant.Name} takes {e.Damage} damage from [cStatus]{effectName}[/]!");
-
                 _animationManager.StartHealthLossAnimation(e.Combatant.CombatantID, e.Combatant.VisualHP, e.Combatant.Stats.CurrentHP);
                 _animationManager.StartHealthAnimation(e.Combatant.CombatantID, (int)e.Combatant.VisualHP, e.Combatant.Stats.CurrentHP);
-
-                // Trigger Status Icon Hop for Poison/Burn
                 _renderer.TriggerStatusIconHop(e.Combatant.CombatantID, e.EffectType);
-
-                if (e.Combatant.Stats.CurrentHP <= 0)
-                {
-                    TriggerDeathAnimation(e.Combatant);
-                }
+                if (e.Combatant.Stats.CurrentHP <= 0) TriggerDeathAnimation(e.Combatant);
                 else
                 {
                     if (e.EffectType == StatusEffectType.Poison) _animationManager.StartPoisonEffectAnimation(e.Combatant.CombatantID);
                     else if (e.EffectType == StatusEffectType.Burn && !e.Combatant.IsPlayerControlled) _animationManager.StartHitFlashAnimation(e.Combatant.CombatantID);
                 }
-
                 Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(e.Combatant, _battleManager.AllCombatants);
                 _animationManager.StartDamageNumberIndicator(e.Combatant.CombatantID, e.Damage, hudPosition);
             }
@@ -1866,7 +1412,6 @@ namespace ProjectVagabond.Scenes
             int absAmount = Math.Abs(e.Amount);
             string prefixText = absAmount > 1 ? $"{absAmount}x " : "";
             string suffixText = $" {verb}";
-
             Color changeColor = e.Amount > 0 ? _global.Palette_LightBlue : _global.Palette_Red;
             Color statColor = e.Stat switch
             {
@@ -1876,7 +1421,6 @@ namespace ProjectVagabond.Scenes
                 OffensiveStatType.Agility => _global.StatColor_Agility,
                 _ => _global.Palette_White
             };
-
             Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(e.Target, _battleManager.AllCombatants);
             _animationManager.StartStatStageIndicator(e.Target.CombatantID, prefixText, statText, suffixText, changeColor, statColor, changeColor, hudPosition);
         }
@@ -1888,9 +1432,7 @@ namespace ProjectVagabond.Scenes
 
         private void OnCombatantSpawned(GameEvents.CombatantSpawned e)
         {
-            // If we are in the middle of a switch sequence, we handle the animation manually in Update
             if (_switchSequenceState != SwitchSequenceState.None) return;
-
             bool isEnemy = !e.Combatant.IsPlayerControlled;
             Vector2 offset = isEnemy ? new Vector2(0, -INTRO_SLIDE_DISTANCE) : new Vector2(0, INTRO_SLIDE_DISTANCE);
             _animationManager.StartIntroSlideAnimation(e.Combatant.CombatantID, offset, isEnemy);
@@ -1910,26 +1452,12 @@ namespace ProjectVagabond.Scenes
 
         private void OnSwitchSequenceInitiated(GameEvents.SwitchSequenceInitiated e)
         {
-            // Start the visual sequence
             _switchOutgoing = e.OutgoingCombatant;
             _switchIncoming = e.IncomingCombatant;
             _switchSequenceState = SwitchSequenceState.AnimatingOut;
-
-            // Determine duration based on who is switching
             bool isEnemy = !_switchOutgoing.IsPlayerControlled;
-            if (isEnemy)
-            {
-                // Enemy: Silhouette + Lift
-                _switchSequenceTimer = BattleAnimationManager.SwitchOutAnimationState.SILHOUETTE_DURATION +
-                                       BattleAnimationManager.SwitchOutAnimationState.LIFT_DURATION;
-            }
-            else
-            {
-                // Player: Simple Lift
-                _switchSequenceTimer = BattleAnimationManager.SwitchOutAnimationState.DURATION;
-            }
-
-            // Trigger the "Out" animation
+            if (isEnemy) _switchSequenceTimer = BattleAnimationManager.SwitchOutAnimationState.SILHOUETTE_DURATION + BattleAnimationManager.SwitchOutAnimationState.LIFT_DURATION;
+            else _switchSequenceTimer = BattleAnimationManager.SwitchOutAnimationState.DURATION;
             EventBus.Publish(new GameEvents.CombatantSwitchingOut { Combatant = _switchOutgoing });
         }
 
@@ -1945,6 +1473,5 @@ namespace ProjectVagabond.Scenes
         {
             _sceneManager.ShowModal(GameSceneState.Settings);
         }
-        #endregion
     }
 }

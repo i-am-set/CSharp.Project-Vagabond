@@ -112,17 +112,17 @@ namespace ProjectVagabond.UI
 
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
 
-            // 7. Draw Background
+            // 7. Draw Background (Rounded Bevel)
             var pixel = ServiceLocator.Get<Texture2D>();
-            spriteBatch.DrawSnapped(pixel, infoPanelArea, _global.Palette_Black * opacity);
+            DrawBeveledBackground(spriteBatch, pixel, infoPanelArea, _global.Palette_Black * opacity);
 
-            // Black Outline
-            DrawRectangleBorder(spriteBatch, pixel, infoPanelArea, 1, _global.Palette_BlueWhite * opacity);
+            // 8. Draw Border (Rounded Bevel)
+            DrawBeveledBorder(spriteBatch, pixel, infoPanelArea, _global.Palette_BlueWhite * opacity);
 
-            // 8. Draw Content
+            // 9. Draw Content
             DrawInfoPanelContent(spriteBatch, itemData, infoPanelArea, font, secondaryFont, gameTime, opacity);
 
-            // 9. Restore Batch
+            // 10. Restore Batch
             spriteBatch.End();
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
         }
@@ -537,13 +537,7 @@ namespace ProjectVagabond.UI
             // NEW: Draw Inventory Slot Background behind the item (Static Position)
             DrawInventorySlotBackground(spriteBatch, staticDrawPos, gameTime, opacity);
 
-            // Draw Item (Static Position for Spells as they don't usually bob in tooltips, or if they do, apply offset here)
-            // Spells in tooltips usually don't bob in this codebase, but if we want consistency:
-            // Vector2 animOffset = GetJuicyOffset(gameTime);
-            // Vector2 animatedDrawPos = staticDrawPos + animOffset;
-            // DrawIconWithSilhouette(spriteBatch, iconTexture, iconSilhouette, animatedDrawPos, iconOrigin, 1.0f, sourceRect, iconTint, opacity);
-
-            // For now, keeping spells static as per original logic, but ensuring background is drawn.
+            // Draw Item (Static Position for Spells)
             DrawIconWithSilhouette(spriteBatch, iconTexture, iconSilhouette, staticDrawPos, iconOrigin, 1.0f, sourceRect, iconTint, opacity);
 
             // Draw Name (Wrapped & Bottom Aligned)
@@ -897,16 +891,11 @@ namespace ProjectVagabond.UI
                         if (int.TryParse(numberPart, out int percent))
                         {
                             float amount = Math.Clamp(percent / 100f, 0f, 1f);
-                            finalColor = Color.Lerp(_global.Palette_Gray, currentColor, amount);
+                            finalColor = Color.Lerp(_global.ColorPercentageMin, _global.ColorPercentageMax, amount);
                         }
                     }
 
-                    TextEffectType effect = TextEffectType.None;
-                    if (Regex.IsMatch(part, @"\d+%"))
-                    {
-                        effect = TextEffectType.Drift;
-                    }
-                    currentLine.Add(new ColoredText(part, finalColor, effect));
+                    currentLine.Add(new ColoredText(part, finalColor));
                     currentLineWidth += partWidth;
                 }
             }
@@ -957,12 +946,41 @@ namespace ProjectVagabond.UI
             return (positives, negatives);
         }
 
-        private void DrawRectangleBorder(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, int thickness, Color color)
+        private void DrawBeveledBackground(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, Color color)
         {
-            spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Top, rect.Width, thickness), color);
-            spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Bottom - thickness, rect.Width, thickness), color);
-            spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Top, thickness, rect.Height), color);
-            spriteBatch.Draw(pixel, new Rectangle(rect.Right - thickness, rect.Top, thickness, rect.Height), color);
+            // 1. Top Row (Y+1): X+2 to W-4
+            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 2, rect.Y + 1, rect.Width - 4, 1), color);
+
+            // 2. Bottom Row (Bottom-2): X+2 to W-4
+            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 2, rect.Bottom - 2, rect.Width - 4, 1), color);
+
+            // 3. Middle Block (Y+2 to Bottom-3): X+1 to W-2
+            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 1, rect.Y + 2, rect.Width - 2, rect.Height - 4), color);
+        }
+
+        private void DrawBeveledBorder(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, Color color)
+        {
+            // Top Line: X+2 to W-4
+            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 2, rect.Y, rect.Width - 4, 1), color);
+
+            // Bottom Line: X+2 to W-4
+            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 2, rect.Bottom - 1, rect.Width - 4, 1), color);
+
+            // Left Line: Y+2 to H-4
+            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X, rect.Y + 2, 1, rect.Height - 4), color);
+
+            // Right Line: Y+2 to H-4
+            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.Right - 1, rect.Y + 2, 1, rect.Height - 4), color);
+
+            // Corners (1x1 pixels)
+            // Top-Left
+            spriteBatch.DrawSnapped(pixel, new Vector2(rect.X + 1, rect.Y + 1), color);
+            // Top-Right
+            spriteBatch.DrawSnapped(pixel, new Vector2(rect.Right - 2, rect.Y + 1), color);
+            // Bottom-Left
+            spriteBatch.DrawSnapped(pixel, new Vector2(rect.X + 1, rect.Bottom - 2), color);
+            // Bottom-Right
+            spriteBatch.DrawSnapped(pixel, new Vector2(rect.Right - 2, rect.Bottom - 2), color);
         }
     }
 }

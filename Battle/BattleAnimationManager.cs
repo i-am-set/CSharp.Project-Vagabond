@@ -303,6 +303,16 @@ namespace ProjectVagabond.Battle.UI
         }
         private readonly List<HitstopVisualState> _activeHitstopVisuals = new List<HitstopVisualState>();
 
+        // --- IMPACT FLASH STATE ---
+        public class ImpactFlashState
+        {
+            public float Timer;
+            public float Duration;
+            public Color Color;
+            public List<string> TargetCombatantIDs = new List<string>();
+        }
+        private ImpactFlashState? _impactFlashState;
+
         private readonly List<HealthAnimationState> _activeHealthAnimations = new List<HealthAnimationState>();
         private readonly List<AlphaAnimationState> _activeAlphaAnimations = new List<AlphaAnimationState>();
         private readonly List<DeathAnimationState> _activeDeathAnimations = new List<DeathAnimationState>();
@@ -388,6 +398,7 @@ namespace ProjectVagabond.Battle.UI
             _activeIntroSlideAnimations.Clear();
             _activeFloorIntroAnimations.Clear();
             _activeFloorOutroAnimations.Clear();
+            _impactFlashState = null;
             _indicatorCooldownTimer = 0f;
         }
 
@@ -477,6 +488,22 @@ namespace ProjectVagabond.Battle.UI
         public void ClearHitstopVisuals()
         {
             _activeHitstopVisuals.Clear();
+        }
+
+        public void TriggerImpactFlash(Color color, float duration, List<string> targetIds)
+        {
+            _impactFlashState = new ImpactFlashState
+            {
+                Color = color,
+                Duration = duration,
+                Timer = duration,
+                TargetCombatantIDs = targetIds
+            };
+        }
+
+        public ImpactFlashState? GetImpactFlashState()
+        {
+            return _impactFlashState;
         }
 
         public void StartHealthAnimation(string combatantId, int hpBefore, int hpAfter)
@@ -985,6 +1012,19 @@ namespace ProjectVagabond.Battle.UI
             UpdateBarAnimations(gameTime);
             UpdateCoins(gameTime, combatants);
             UpdateCoinCatchAnimations(gameTime);
+            UpdateImpactFlash(gameTime);
+        }
+
+        private void UpdateImpactFlash(GameTime gameTime)
+        {
+            if (_impactFlashState != null)
+            {
+                _impactFlashState.Timer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
+                if (_impactFlashState.Timer <= 0)
+                {
+                    _impactFlashState = null;
+                }
+            }
         }
 
         private void UpdateIndicatorQueue(GameTime gameTime)

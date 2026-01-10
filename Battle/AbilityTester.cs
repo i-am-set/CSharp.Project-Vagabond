@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Battle.UI; // Added for BattleAnimationManager
 using System;
 using System.Collections.Generic;
 
@@ -26,7 +27,12 @@ namespace ProjectVagabond.Utils
             mockEnemy.IsPlayerControlled = false;
 
             // Register a temporary BattleManager
-            var mockBattleManager = new BattleManager(new List<BattleCombatant> { mockPlayer }, new List<BattleCombatant> { mockEnemy });
+            // FIX: Added new BattleAnimationManager() to constructor
+            var mockBattleManager = new BattleManager(
+                new List<BattleCombatant> { mockPlayer },
+                new List<BattleCombatant> { mockEnemy },
+                new BattleAnimationManager()
+            );
             ServiceLocator.Register(mockBattleManager);
 
             try

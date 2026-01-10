@@ -887,7 +887,16 @@ namespace ProjectVagabond
                 if (_screenFlashState != null && _screenFlashState.IsCurrentlyWhite)
                 {
                     flashIntensity = 1.0f;
-                    flashColor = _screenFlashState.FlashColor;
+                    // --- FLASH SEQUENCE LOGIC ---
+                    // First flash (Max Flashes) is White. Subsequent flashes are the target color.
+                    if (_screenFlashState.FlashesRemaining == ScreenFlashState.TOTAL_FLASHES)
+                    {
+                        flashColor = Color.White;
+                    }
+                    else
+                    {
+                        flashColor = _screenFlashState.FlashColor;
+                    }
                 }
                 else if (_flashTimer > 0 && _flashDuration > 0)
                 {
