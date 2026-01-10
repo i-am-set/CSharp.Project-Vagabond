@@ -125,7 +125,7 @@ namespace ProjectVagabond.Scenes
                         HoverStyle = HoverAnimationType.Juicy,
                         HoverScale = 1.0f,      // Locked to 1.0x to prevent mangling
                         HoverLift = -3f,       // Lift up 3 pixels
-                        InteractionSpeed = 15f, // Very snappy response
+                        InteractionSpeed = 55f, // Very snappy response
 
                         // Apply Tunable Speeds & Distance
                         HoverSwaySpeed = LOOT_HOVER_FLOAT_SPEED,
@@ -433,7 +433,6 @@ namespace ProjectVagabond.Scenes
                     Vector2 origin = new Vector2(icon.Width / 2f, icon.Height / 2f);
 
                     // 1. Draw Floor Shadow: Flattened Y, Tinted Black
-                    // FIX: Added state.Offset.X to position so shadow follows horizontal sway
                     spriteBatch.Draw(icon, center + new Vector2(state.Offset.X, 8), null, Color.Black * shadowAlpha, state.Rotation, origin, new Vector2(state.Scale.X, state.Scale.Y * 0.3f), SpriteEffects.None, 0f);
 
                     // 2. Draw Outline (If Silhouette exists)

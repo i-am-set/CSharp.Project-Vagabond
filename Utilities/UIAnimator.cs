@@ -64,7 +64,7 @@ namespace ProjectVagabond.UI
         public float PressScale { get; set; } = 0.95f;
         public float InteractionSpeed { get; set; } = 15f; // Lerp speed for hover/press
 
-        // --- NEW: Tunable Speeds for Juicy Hover ---
+        // --- Tunable Speeds for Juicy Hover ---
         public float HoverSwaySpeed { get; set; } = 1.0f;
         public float HoverRotationSpeed { get; set; } = 1.0f;
         public float HoverSwayDistance { get; set; } = 3.0f; // Default distance
