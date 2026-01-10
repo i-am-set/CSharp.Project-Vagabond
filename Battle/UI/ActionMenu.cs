@@ -1301,40 +1301,37 @@ namespace ProjectVagabond.Battle.UI
                 var nameSize = font.MeasureString(moveName);
                 var namePos = new Vector2(bounds.X + horizontalPadding, currentY);
 
-                var statsSegments = new List<(string Text, Color Color)>();
+                var statsSegments = new List<(string Text, Color Color, BitmapFont Font)>();
                 string moveTypeText = move.MoveType.ToString().ToUpper();
                 Color moveTypeColor = move.MoveType switch
                 {
-                    MoveType.Spell => _global.Palette_LightBlue,
-                    MoveType.Action => _global.Palette_Orange,
+                    MoveType.Spell => _global.ColorNarration_Spell,
+                    MoveType.Action => _global.ColorNarration_Action,
                     _ => _global.Palette_White
                 };
-                statsSegments.Add((moveTypeText, moveTypeColor));
+                statsSegments.Add((moveTypeText, moveTypeColor, secondaryFont));
 
                 if (move.ImpactType != ImpactType.Status)
                 {
                     string separator = " / ";
-                    string accuracyText = move.Accuracy >= 0 ? $"ACC: {move.Accuracy}%" : "ACC: ---";
-                    string powerText = move.Power > 0 ? $"POW: {move.Power}" : (move.Effects.ContainsKey("ManaDamage") ? "POW: ???" : "POW: ---");
+                    string accuracyText = move.Accuracy >= 0 ? $"{move.Accuracy}%" : "---";
+                    string powerText = move.Power > 0 ? $"{move.Power}" : (move.Effects.ContainsKey("ManaDamage") ? "???" : "---");
 
                     // --- MANA DUMP LOGIC ---
                     var manaDump = move.Abilities.OfType<ManaDumpAbility>().FirstOrDefault();
                     if (manaDump != null && _player != null)
                     {
-                        powerText = $"POW: {(int)(_player.Stats.CurrentMana * manaDump.Multiplier)}";
+                        powerText = $"{(int)(_player.Stats.CurrentMana * manaDump.Multiplier)}";
                     }
 
-                    Color accColor = _global.Palette_BlueWhite;
-                    if (move.Accuracy >= 0)
-                    {
-                        float t = Math.Clamp((100f - move.Accuracy) / 50f, 0f, 1f);
-                        accColor = Color.Lerp(_global.Palette_BlueWhite, _global.Palette_Red, t);
-                    }
-
-                    statsSegments.Insert(0, (separator, _global.Palette_DarkGray));
-                    statsSegments.Insert(0, (accuracyText, accColor));
-                    statsSegments.Insert(0, (separator, _global.Palette_DarkGray));
-                    statsSegments.Insert(0, (powerText, _global.Palette_BlueWhite));
+                    // Insert in reverse order to prepend
+                    statsSegments.Insert(0, (accuracyText, _global.Palette_BlueWhite, secondaryFont)); // Value BlueWhite
+                    statsSegments.Insert(0, ("  ", Color.Transparent, secondaryFont)); // Spacer
+                    statsSegments.Insert(0, ("ACC", _global.Palette_DarkGray, tertiaryFont)); // Label DarkGray
+                    statsSegments.Insert(0, (separator, _global.Palette_DarkGray, secondaryFont));
+                    statsSegments.Insert(0, (powerText, _global.Palette_BlueWhite, secondaryFont)); // Value BlueWhite
+                    statsSegments.Insert(0, ("  ", Color.Transparent, secondaryFont)); // Spacer
+                    statsSegments.Insert(0, ("POW", _global.Palette_DarkGray, tertiaryFont)); // Label DarkGray
                 }
 
                 // --- NEW: Contact Text for Tooltip ---
@@ -1346,13 +1343,15 @@ namespace ProjectVagabond.Battle.UI
                     contactWidth = textW + 4; // Text + Gap
 
                     // Insert "CONTACT" at the beginning of the segments list
-                    statsSegments.Insert(0, (contactText, _global.Palette_Red));
-                    statsSegments.Insert(1, (" ", Color.Transparent)); // Spacer
+                    statsSegments.Insert(0, (contactText, _global.Palette_Red, tertiaryFont));
+                    statsSegments.Insert(1, (" ", Color.Transparent, secondaryFont)); // Spacer
                 }
 
-                float totalStatsWidth = statsSegments.Sum(s =>
-                    s.Text == "[ CONTACT ]" ? tertiaryFont.MeasureString(s.Text).Width : secondaryFont.MeasureString(s.Text).Width
-                );
+                float totalStatsWidth = 0f;
+                foreach (var segment in statsSegments)
+                {
+                    totalStatsWidth += segment.Font.MeasureString(segment.Text).Width;
+                }
 
                 float statsY = currentY + (nameSize.Height - secondaryFont.LineHeight) / 2;
                 float statsStartX = bounds.Right - horizontalPadding - totalStatsWidth;
@@ -1360,18 +1359,13 @@ namespace ProjectVagabond.Battle.UI
                 float currentX = statsStartX;
                 foreach (var segment in statsSegments)
                 {
-                    if (segment.Text == "[ CONTACT ]")
-                    {
-                        // Center vertically relative to statsY (secondary font baseline)
-                        float contactY = statsY + (secondaryFont.LineHeight - tertiaryFont.LineHeight) / 2f;
-                        spriteBatch.DrawStringSnapped(tertiaryFont, segment.Text, new Vector2(currentX, contactY), segment.Color);
-                        currentX += tertiaryFont.MeasureString(segment.Text).Width;
-                    }
-                    else
-                    {
-                        spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(currentX, statsY), segment.Color);
-                        currentX += secondaryFont.MeasureString(segment.Text).Width;
-                    }
+                    // Center vertically relative to the secondary font line height
+                    float yOffset = (secondaryFont.LineHeight - segment.Font.LineHeight) / 2f;
+                    // Round to nearest pixel
+                    yOffset = MathF.Round(yOffset);
+
+                    spriteBatch.DrawStringSnapped(segment.Font, segment.Text, new Vector2(currentX, statsY + yOffset), segment.Color);
+                    currentX += segment.Font.MeasureString(segment.Text).Width;
                 }
 
                 float textAvailableWidth = statsStartX - namePos.X - 4;
@@ -1471,9 +1465,9 @@ namespace ProjectVagabond.Battle.UI
                 Color valueColor = _global.Palette_BlueWhite;
                 Color labelColor = _global.Palette_DarkGray;
 
-                string powerLabel = "POWE:";
-                string accLabel = "ACCU:";
-                string manaLabel = "MANA:";
+                string powerLabel = "POW";
+                string accLabel = "ACC";
+                string manaLabel = "MANA";
 
                 string powerValue, accValue, manaValue, impactValue, moveTypeValue;
 
@@ -1499,15 +1493,19 @@ namespace ProjectVagabond.Battle.UI
                     valueColor = labelColor;
                 }
 
-                spriteBatch.DrawStringSnapped(secondaryFont, powerLabel, new Vector2(bounds.X + horizontalPadding, statsY), labelColor);
+                // Calculate Y offset to center Tertiary font against Secondary font
+                float yOffset = (secondaryFont.LineHeight - tertiaryFont.LineHeight) / 2f;
+                yOffset = MathF.Round(yOffset);
+
+                spriteBatch.DrawStringSnapped(tertiaryFont, powerLabel, new Vector2(bounds.X + horizontalPadding + 12, statsY + yOffset), labelColor);
                 var powerValueSize = secondaryFont.MeasureString(powerValue);
                 var powerValuePos = new Vector2(bounds.Center.X - 9 - powerValueSize.Width, statsY);
                 spriteBatch.DrawStringSnapped(secondaryFont, powerValue, powerValuePos, valueColor);
 
-                var manaLabelPos = new Vector2(bounds.Center.X + 2, statsY);
-                spriteBatch.DrawStringSnapped(secondaryFont, manaLabel, manaLabelPos, labelColor);
+                var manaLabelPos = new Vector2(bounds.Center.X + 2, statsY + yOffset);
+                spriteBatch.DrawStringSnapped(tertiaryFont, manaLabel, manaLabelPos, labelColor);
                 var manaValueSize = secondaryFont.MeasureString(manaValue);
-                var manaValuePos = new Vector2(bounds.Right - horizontalPadding - manaValueSize.Width, statsY);
+                var manaValuePos = new Vector2(bounds.Right - horizontalPadding - manaValueSize.Width - 12, statsY);
                 if (!manaValue.Contains("%"))
                 {
                     manaValuePos.X -= 5;
@@ -1516,8 +1514,8 @@ namespace ProjectVagabond.Battle.UI
 
                 currentY += secondaryFont.LineHeight + 2;
 
-                var accLabelPos = new Vector2(bounds.X + horizontalPadding, currentY);
-                spriteBatch.DrawStringSnapped(secondaryFont, accLabel, accLabelPos, labelColor);
+                var accLabelPos = new Vector2(bounds.X + horizontalPadding + 12, currentY + yOffset);
+                spriteBatch.DrawStringSnapped(tertiaryFont, accLabel, accLabelPos, labelColor);
                 var accValueSize = secondaryFont.MeasureString(accValue);
                 var accValuePos = new Vector2(bounds.Center.X - 9 - accValueSize.Width, currentY);
                 if (!accValue.Contains("%"))
@@ -1555,9 +1553,9 @@ namespace ProjectVagabond.Battle.UI
 
                 if (move != null && move.ImpactType != ImpactType.Status)
                 {
-                    spriteBatch.DrawStringSnapped(secondaryFont, "USE", new Vector2(bounds.Center.X + 2, currentY), labelColor);
+                    spriteBatch.DrawStringSnapped(tertiaryFont, "USE", new Vector2(bounds.Center.X + 2, currentY + yOffset), labelColor);
                     var offStatSize = secondaryFont.MeasureString(offStatVal);
-                    var offStatPos = new Vector2(bounds.Right - horizontalPadding - offStatSize.Width, currentY);
+                    var offStatPos = new Vector2(bounds.Right - horizontalPadding - offStatSize.Width - 12, currentY);
                     offStatPos.X -= 6;
                     spriteBatch.DrawStringSnapped(secondaryFont, offStatVal, offStatPos, offColor);
                 }
@@ -1615,19 +1613,19 @@ namespace ProjectVagabond.Battle.UI
                     switch (move.ImpactType)
                     {
                         case ImpactType.Physical:
-                            impactColor = _global.Palette_Orange;
+                            impactColor = _global.ColorNarration_Action;
                             break;
                         case ImpactType.Magical:
-                            impactColor = _global.Palette_LightBlue;
+                            impactColor = _global.ColorNarration_Spell;
                             break;
                     }
                     switch (move.MoveType)
                     {
                         case MoveType.Spell:
-                            moveTypeColor = _global.Palette_LightBlue;
+                            moveTypeColor = _global.ColorNarration_Spell;
                             break;
                         case MoveType.Action:
-                            moveTypeColor = _global.Palette_Orange;
+                            moveTypeColor = _global.ColorNarration_Action;
                             break;
                     }
                 }
