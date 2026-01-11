@@ -250,7 +250,7 @@
   },
   {
     "MoveID": "10",
-    "MoveName": "Renew Self",
+    "MoveName": "Renew",
     "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]RENEWS[/] {user_pronoun} [cStatus]VITALITY[/].",
     "Description": "Gain [cregen]Regeneration[/] for [cpositive]3[/] turns.",
     "Flavor": "Focus on natural healing.",
@@ -277,7 +277,7 @@
   },
   {
     "MoveID": "11",
-    "MoveName": "Scorch Front",
+    "MoveName": "Scorch",
     "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]SCORCHES[/] THE SURROUNDING AIR.",
     "Description": "[cpositive]10%[/] chance to [cburn]Burn[/].",
     "Flavor": "A wave of super heated air that hits both enemies.",
@@ -358,7 +358,7 @@
   },
   {
     "MoveID": "14",
-    "MoveName": "Flame Lash",
+    "MoveName": "FlameLash",
     "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]LASHES[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH [cFire]FIRE[/].",
     "Description": "[cpositive]30%[/] chance to [cburn]Burn[/].",
     "Flavor": "Strikes with a whip of fire.",
@@ -388,10 +388,10 @@
     "MoveName": "Fiery Crash",
     "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]CRASHES INTO[/] {IsTargetProperNoun}[cSlot]{target}[/] IN A [cFire]BLAZE[/].",
     "Description": "User takes [cnegative]30%[/] recoil damage.\n[cpositive]10%[/] chance to [cburn]Burn[/].",
-    "Flavor": "A reckless, flaming tackle.",
+    "Flavor": "The user engulfs themselves in flames and recklessly tackles the target.",
     "Power": 130,
     "ManaCost": 0,
-    "MoveType": "Action",
+    "MoveType": "Spell",
     "ImpactType": "Physical",
     "OffensiveStat": "Strength",
     "MakesContact": true,
@@ -468,7 +468,7 @@
   },
   {
     "MoveID": "18",
-    "MoveName": "Fleeing Curse",
+    "MoveName": "Fleeting Curse",
     "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]CURSES[/] {IsTargetProperNoun}[cSlot]{target}[/] AND FLEES.",
     "Description": "Lowers target's [cstr]Strength[/] and [cint]Intelligence[/], then switches the user out.",
     "Flavor": "A parting gift of bad luck.",
@@ -496,7 +496,7 @@
   },
   {
     "MoveID": "19",
-    "MoveName": "Shadow Step",
+    "MoveName": "ShadowStep",
     "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]STEPS THROUGH THE SHADOWS TO STRIKE[/] {IsTargetProperNoun}[cSlot]{target}[/].",
     "Description": "Hits the target for physical damage, then switches the user out.",
     "Flavor": "Strike from the shadows and retreat.",
@@ -577,7 +577,7 @@
   },
   {
     "MoveID": "22",
-    "MoveName": "Goaded Strike",
+    "MoveName": "Goaded Pummel",
     "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]STRIKES[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH [cAction]ABANDON[/].",
     "Description": "Massive damage but lowers user's [cten]Tenacity[/].",
     "Flavor": "An all-out attack abandoning defense.",
@@ -632,10 +632,10 @@
   },
   {
     "MoveID": "24",
-    "MoveName": "Summon Tremors",
+    "MoveName": "Tremors",
     "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]SUMMONS TREMORS[/].",
     "Description": "Earthquake that hits [cnegative]all[/] other combatants.",
-    "Flavor": "Shakes the very ground.",
+    "Flavor": "Summons quakes in the ground.",
     "Power": 150,
     "ManaCost": 40,
     "MoveType": "Action",
@@ -765,10 +765,10 @@
   },
   {
     "MoveID": "29",
-    "MoveName": "Cull the Weak",
+    "MoveName": "Cull",
     "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]CULLS THE WEAK[/].",
     "Description": "Deals [cpositive]3.0x[/] damage if target is [cctm]below 50% HP[/].",
-    "Flavor": "A merciless strike against the injured.",
+    "Flavor": "A merciless strike against the weak.",
     "Power": 40,
     "ManaCost": 0,
     "MoveType": "Spell",
@@ -927,7 +927,7 @@
   },
   {
     "MoveID": "35",
-    "MoveName": "Flux Eruption",
+    "MoveName": "Fluxplosion",
     "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]DETONATES[/] {user_pronoun} STORED [cArcane]ARCANE ENERGY[/].",
     "Description": "Consumes all remaining [cMana]Mana[/] to deal [cpositive]2x[/] consumed Mana damage.",
     "Flavor": "Unleashes all stored energy in a violent burst.",
@@ -954,7 +954,7 @@
   },
   {
     "MoveID": "36",
-    "MoveName": "Leech Root",
+    "MoveName": "LeechRoot",
     "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]DRAINS[/] {IsTargetProperNoun}[cSlot]{target}[/]'S LIFE FORCE WITH ROOTS.",
     "Description": "Heals user for [cpositive]50%[/] of damage dealt.",
     "Flavor": "Drains life from the target.",
@@ -1172,7 +1172,7 @@
     "MoveID": "44",
     "MoveName": "Gnaw",
     "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]GNAWS ON[/] {IsTargetProperNoun}[cSlot]{target}[/].",
-    "Description": "Hits [cpositive]2-5[/] times.",
+    "Description": "Hits [cpositive]2-7[/] times.",
     "Flavor": "Savagely gnaws on the target.",
     "Power": 15,
     "ManaCost": 0,
@@ -1187,7 +1187,7 @@
     "LevelRequirement": 2,
     "OffensiveElementIDs": [ 1 ],
     "Effects": {
-      "MultiHit": "2,5"
+      "MultiHit": "2,7"
     },
     "Tags": [ "MultiHit", "Contact" ],
     "AnimationSpriteSheet": "basic_bite",

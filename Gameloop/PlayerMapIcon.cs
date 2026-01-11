@@ -12,7 +12,8 @@ namespace ProjectVagabond.UI
         private bool _isMoving = false;
 
         // --- Tuning ---
-        private const float FRAME_DURATION = 1f; // Time each frame is displayed
+        private const float IDLE_FRAME_DURATION = 1.0f;   // Slow bob when standing still
+        private const float MOVING_FRAME_DURATION = 0.5f; // Fast bob when walking (2x speed)
 
         // Animation State
         private float _frameTimer;
@@ -53,11 +54,13 @@ namespace ProjectVagabond.UI
         {
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            // Animate constantly, regardless of movement state.
+            // Determine target duration based on state
+            float currentDuration = _isMoving ? MOVING_FRAME_DURATION : IDLE_FRAME_DURATION;
+
             _frameTimer += deltaTime;
-            if (_frameTimer >= FRAME_DURATION)
+            if (_frameTimer >= currentDuration)
             {
-                _frameTimer -= FRAME_DURATION;
+                _frameTimer -= currentDuration;
                 _frameIndex = (_frameIndex + 1) % 2; // Cycle between frame 0 and 1
             }
         }

@@ -496,6 +496,10 @@ namespace ProjectVagabond
             try { HealParticleSprite = _core.Content.Load<Texture2D>("Sprites/Particles/heal_plus"); }
             catch { HealParticleSprite = _textureFactory.CreatePlusParticleTexture(); }
 
+            // --- FIX: Load Spell Slot Button Sprite ---
+            try { InventorySpellSlotButtonSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_spell_slot_button"); }
+            catch { InventorySpellSlotButtonSpriteSheet = _textureFactory.CreateColoredTexture(192, 8, Color.Magenta); }
+
             LoadAndCacheCursorSprite("cursor_default");
             LoadAndCacheCursorSprite("cursor_hover_clickable");
             LoadAndCacheCursorSprite("cursor_dragging_draggable");
