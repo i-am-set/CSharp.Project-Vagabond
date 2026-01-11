@@ -800,6 +800,8 @@ namespace ProjectVagabond.Battle
             var targets = _pendingImpact.Targets;
             var results = _pendingImpact.Results;
 
+            var significantTargetIds = new List<string>();
+
             for (int i = 0; i < targets.Count; i++)
             {
                 var target = targets[i];
@@ -845,6 +847,12 @@ namespace ProjectVagabond.Battle
 
                 target.ApplyDamage(result.DamageAmount);
 
+                // Check for significant damage (> 15% Max HP)
+                if (result.DamageAmount > 0 && result.DamageAmount > (target.Stats.MaxHP * 0.15f))
+                {
+                    significantTargetIds.Add(target.CombatantID);
+                }
+
                 var ctx = new CombatContext
                 {
                     Actor = action.Actor,
@@ -875,14 +883,14 @@ namespace ProjectVagabond.Battle
             });
 
             // --- TRIGGER IMPACT FLASH ---
-            // Determine flash color based on actor type
-            Color flashColor = action.Actor.IsPlayerControlled ? Color.White : _global.Palette_Red;
+            if (significantTargetIds.Any())
+            {
+                // Determine flash color based on actor type
+                Color flashColor = action.Actor.IsPlayerControlled ? Color.White : _global.Palette_Red;
 
-            // Collect target IDs for masking
-            var targetIds = targets.Select(t => t.CombatantID).ToList();
-
-            // Trigger the flash
-            _animationManager.TriggerImpactFlash(flashColor, 0.15f, targetIds);
+                // Trigger the flash only for significant targets
+                _animationManager.TriggerImpactFlash(flashColor, 0.15f, significantTargetIds);
+            }
 
             _currentActionForEffects = action;
             _currentActionDamageResults = results;
