@@ -36,7 +36,9 @@ namespace ProjectVagabond.UI
         FlickerWave, // Opacity Pulse + Vertical Wave
         SmallWave, // Single pass "hump" wave (Center Aligned Expansion)
         LeftAlignedSmallWave, // Single pass "hump" wave (Left-to-Right)
-        RightAlignedSmallWave // Single pass "hump" wave (Right-to-Left)
+        RightAlignedSmallWave, // Single pass "hump" wave (Right-to-Left)
+        TypewriterPop, // Sequential elastic pop-in
+        TypewriterVanish // Sequential shrink-out
     }
     /// <summary>
     /// Parameter object to simplify Draw calls.
@@ -134,6 +136,11 @@ namespace ProjectVagabond.UI
         public static float FlickerSpeed = 10f;
         public static float FlickerMinAlpha = 0.3f;
         public static float FlickerMaxAlpha = 1.0f;
+
+        // Typewriter
+        public static float TypewriterDelay = 0.12f;
+        public static float TypewriterDuration = 0.3f;
+        public static float TypewriterVanishDelay = 0.03f;
     }
 
     /// <summary>
@@ -152,14 +159,16 @@ namespace ProjectVagabond.UI
         }
 
         /// <summary>
-        /// Determines if an effect is a "one-shot" animation that requires a timer reset loop (like SmallWave),
+        /// Determines if an effect is "one-shot" animation that requires a timer reset loop (like SmallWave),
         /// or a continuous animation that runs on infinite time (like Drift, Wave, Shake).
         /// </summary>
         public static bool IsOneShotEffect(TextEffectType effect)
         {
             return effect == TextEffectType.SmallWave ||
                    effect == TextEffectType.LeftAlignedSmallWave ||
-                   effect == TextEffectType.RightAlignedSmallWave;
+                   effect == TextEffectType.RightAlignedSmallWave ||
+                   effect == TextEffectType.TypewriterPop ||
+                   effect == TextEffectType.TypewriterVanish;
         }
 
         /// <summary>
@@ -210,6 +219,57 @@ namespace ProjectVagabond.UI
                         if (fallbackArg > 0 && fallbackArg < MathHelper.Pi)
                         {
                             offset.Y = -MathF.Sin(fallbackArg) * TextAnimationSettings.SmallWaveAmplitude;
+                        }
+                    }
+                    break;
+
+                case TextEffectType.TypewriterPop:
+                    {
+                        // Calculate start time for this specific character
+                        float charStartTime = charIndex * TextAnimationSettings.TypewriterDelay;
+                        float localTime = time - charStartTime;
+
+                        if (localTime < 0)
+                        {
+                            // Hasn't started yet
+                            scale = Vector2.Zero;
+                            color = Color.Transparent;
+                        }
+                        else
+                        {
+                            // Animation progress (0 to 1)
+                            float progress = Math.Clamp(localTime / TextAnimationSettings.TypewriterDuration, 0f, 1f);
+
+                            // Juicy Pop: Overshoot scale
+                            float s = Easing.EaseOutBack(progress);
+                            scale = new Vector2(s);
+
+                            // Full opacity immediately (no fade in)
+                            color = baseColor;
+                        }
+                    }
+                    break;
+
+                case TextEffectType.TypewriterVanish:
+                    {
+                        float charStartTime = charIndex * TextAnimationSettings.TypewriterVanishDelay;
+                        float localTime = time - charStartTime;
+
+                        if (localTime < 0)
+                        {
+                            // Hasn't started vanishing yet
+                            scale = Vector2.One;
+                        }
+                        else
+                        {
+                            float progress = Math.Clamp(localTime / TextAnimationSettings.TypewriterDuration, 0f, 1f);
+
+                            // Juicy Vanish: Anticipate (scale up slightly) then shrink to 0
+                            float s = 1.0f - Easing.EaseInBack(progress);
+                            scale = new Vector2(Math.Max(0, s));
+
+                            // Fade out
+                            color = baseColor * (1.0f - progress);
                         }
                     }
                     break;
@@ -307,7 +367,7 @@ namespace ProjectVagabond.UI
             }
 
             // --- Apply Intensity Ramp (Ease-In) ---
-            // Only apply easing to continuous effects. One-shot effects (SmallWave) handle their own timing/shape.
+            // Only apply easing to continuous effects. One-shot effects (SmallWave, Typewriter) handle their own timing/shape.
             float duration = easeInDuration ?? TextAnimationSettings.DefaultEaseInDuration;
             if (!IsOneShotEffect(effect) && duration > 0f)
             {

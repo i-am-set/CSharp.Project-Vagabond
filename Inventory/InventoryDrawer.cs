@@ -23,8 +23,7 @@ namespace ProjectVagabond.UI
         private readonly SplitMapInventoryOverlay _overlay;
         private readonly InventoryDataProcessor _dataProcessor;
         private readonly InventoryEquipSystem _equipSystem;
-        private readonly ItemTooltipRenderer _tooltipRenderer; // New dependency
-
+        private readonly ItemTooltipRenderer _tooltipRenderer;
         // Fields for portrait background animation
         private int _portraitBgFrameIndex = 0;
         private float _portraitBgTimer;
@@ -36,7 +35,7 @@ namespace ProjectVagabond.UI
             _overlay = overlay;
             _dataProcessor = dataProcessor;
             _equipSystem = equipSystem;
-            _tooltipRenderer = ServiceLocator.Get<ItemTooltipRenderer>(); // Get renderer
+            _tooltipRenderer = ServiceLocator.Get<ItemTooltipRenderer>();
         }
 
         public void DrawWorld(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
@@ -54,11 +53,6 @@ namespace ProjectVagabond.UI
                 int statsPanelY = _overlay.InventorySlotArea.Y - 1;
                 var infoPanelArea = new Rectangle(statsPanelX, statsPanelY, statsPanelWidth, statsPanelHeight);
 
-                // Use the new renderer for background drawing?
-                // Actually, the background idle slot logic is specific to the inventory layout style.
-                // The ItemTooltipRenderer is designed for pop-up tooltips.
-                // We should keep the background drawing logic here or move it to a shared utility if needed.
-                // For now, let's keep the background drawing logic here as it's purely decorative for the inventory screen.
                 DrawInfoPanelBackground(spriteBatch, gameTime, infoPanelArea);
             }
             else if (_overlay.SelectedInventoryCategory == InventoryCategory.Equip && _overlay.HoveredItemData != null)
@@ -158,11 +152,6 @@ namespace ProjectVagabond.UI
                 if (activeSlot != null && activeSlot.HasItem && !string.IsNullOrEmpty(activeSlot.ItemId))
                 {
                     object? itemData = _overlay.HoveredItemData;
-
-                    // If hovered data is null (mouse not over slot), check selected slot
-                    if (itemData == null && _overlay.SelectedSlotIndex != -1)
-                    {
-                    }
 
                     if (itemData != null)
                     {
@@ -399,7 +388,7 @@ namespace ProjectVagabond.UI
                     }
 
                     // Calculate height for layout spacing regardless of whether we draw text
-                    float textHeight = secondaryFont.MeasureString("0/0").Height; // Fixed .Y to .Height
+                    float textHeight = secondaryFont.MeasureString("0/0").Height;
 
                     if (isOccupied)
                     {

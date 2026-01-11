@@ -44,7 +44,7 @@ namespace ProjectVagabond.Scenes
 
         // Tuning
         private const float BUTTON_STAGGER_DELAY = 0.15f; // Time between each button starting
-        private const float BUTTON_ANIM_DURATION = 0.5f; // How long the pop-in takes
+        // BUTTON_ANIM_DURATION is no longer constant, it's calculated dynamically
 
         public MainMenuScene()
         {
@@ -107,7 +107,9 @@ namespace ProjectVagabond.Scenes
             {
                 TextRenderOffset = new Vector2(0, -1),
                 HoverAnimation = HoverAnimationType.SlideAndHold,
-                WaveEffectType = TextEffectType.Wave
+                EnableTextWave = true,
+                AlwaysAnimateText = true, // Start animating immediately
+                WaveEffectType = TextEffectType.TypewriterPop // Start with Typewriter effect
             };
             playButton.OnClick += () =>
             {
@@ -158,7 +160,9 @@ namespace ProjectVagabond.Scenes
             {
                 TextRenderOffset = new Vector2(0, -1),
                 HoverAnimation = HoverAnimationType.SlideAndHold,
-                WaveEffectType = TextEffectType.Wave
+                EnableTextWave = true,
+                AlwaysAnimateText = true,
+                WaveEffectType = TextEffectType.TypewriterPop
             };
             settingsButton.OnClick += () =>
             {
@@ -178,7 +182,9 @@ namespace ProjectVagabond.Scenes
             {
                 TextRenderOffset = new Vector2(0, -1),
                 HoverAnimation = HoverAnimationType.SlideAndHold,
-                WaveEffectType = TextEffectType.Wave
+                EnableTextWave = true,
+                AlwaysAnimateText = true,
+                WaveEffectType = TextEffectType.TypewriterPop
             };
             exitButton.OnClick += ConfirmExit;
             _buttons.Add(exitButton);
@@ -213,13 +219,30 @@ namespace ProjectVagabond.Scenes
             {
                 _buttons[i].ResetAnimationState();
 
+                // Reset to Typewriter mode for entrance
+                _buttons[i].WaveEffectType = TextEffectType.TypewriterPop;
+                _buttons[i].AlwaysAnimateText = true;
+
+                // Calculate dynamic duration based on text length to ensure the animation completes
+                // before switching state.
+                // Formula: (Length * Delay) + PopDuration + Buffer
+                float textDuration = (_buttons[i].Text.Length * TextAnimationSettings.TypewriterDelay) + TextAnimationSettings.TypewriterDuration + 0.1f;
+
                 var animator = new UIAnimator
                 {
-                    EntryStyle = EntryExitStyle.PopJiggle,
+                    EntryStyle = EntryExitStyle.SwoopLeft,
                     ExitStyle = EntryExitStyle.Pop,
-                    DurationIn = BUTTON_ANIM_DURATION,
-                    DurationOut = BUTTON_ANIM_DURATION
+                    DurationIn = textDuration, // Set duration to match text length
+                    DurationOut = 0.5f
                 };
+
+                // Hook up completion event to switch to standard Wave effect
+                int index = i; // Capture index for closure
+                animator.OnInComplete += () => {
+                    _buttons[index].AlwaysAnimateText = false; // Stop animating when idle
+                    _buttons[index].WaveEffectType = TextEffectType.Wave; // Switch to Wave for hover
+                };
+
                 // Stagger the start of each button
                 animator.Show(delay: i * BUTTON_STAGGER_DELAY);
                 _buttonAnimators.Add(animator);

@@ -16,7 +16,8 @@ namespace ProjectVagabond.Utils
         PopJiggle, // Scale 0->1 with overshoot AND a damped rotation wiggle
         SwoopLeft, // Slides in from left
         SwoopRight, // Slides in from right
-        JuicyCollect // Scale Up (Anticipation) -> Scale Down (Vanish)
+        JuicyCollect, // Scale Up (Anticipation) -> Scale Down (Vanish)
+        SequentialExpand // Expands items 1 by 1 from left to right (Requires normalized seed)
     }
     /// <summary>
     /// Defines the pattern for Idle animations.
@@ -24,12 +25,11 @@ namespace ProjectVagabond.Utils
     public enum IdleAnimationType
     {
         None,
-        Bob,        // Up and down movement
-        Breathe,    // Subtle scaling
-        Pulse,      // Opacity pulse
-        Shake       // Subtle jitter
+        Bob, // Up and down movement
+        Breathe, // Subtle scaling
+        Pulse, // Opacity pulse
+        Shake // Subtle jitter
     }
-
     /// <summary>
     /// Defines the pattern for Hover animations.
     /// </summary>
@@ -60,7 +60,7 @@ namespace ProjectVagabond.Utils
         /// <param name="progress">0.0 (Start) to 1.0 (End).</param>
         /// <param name="isEntering">True if appearing, False if disappearing.</param>
         /// <param name="magnitude">The distance to slide for slide effects.</param>
-        /// <param name="seed">A random seed value (0-1 or similar) to randomize shakes/wiggles.</param>
+        /// <param name="seed">A random seed value (0-1 or similar) to randomize shakes/wiggles. For SequentialExpand, this must be the normalized index (0.0-1.0).</param>
         /// <returns>A tuple containing Scale, Opacity, Position Offset, and Rotation.</returns>
         public static (Vector2 Scale, float Opacity, Vector2 Offset, float Rotation) CalculateEntryExitTransform(
             EntryExitStyle style,
@@ -78,9 +78,11 @@ namespace ProjectVagabond.Utils
             switch (style)
             {
                 case EntryExitStyle.Pop:
-                    float s = isEntering ? Easing.EaseOutBack(t) : 1.0f - Easing.EaseInBack(t);
-                    scale = new Vector2(s);
-                    opacity = isEntering ? t : 1.0f - t;
+                    {
+                        float s = isEntering ? Easing.EaseOutBack(t) : 1.0f - Easing.EaseInBack(t);
+                        scale = new Vector2(s);
+                        opacity = isEntering ? t : 1.0f - t;
+                    }
                     break;
 
                 case EntryExitStyle.PopJiggle:
@@ -105,9 +107,11 @@ namespace ProjectVagabond.Utils
                     break;
 
                 case EntryExitStyle.Zoom:
-                    float zoomS = isEntering ? Easing.EaseOutCubic(t) : (1.0f - Easing.EaseInCubic(t));
-                    scale = new Vector2(zoomS);
-                    opacity = isEntering ? t : (1.0f - t);
+                    {
+                        float zoomS = isEntering ? Easing.EaseOutCubic(t) : (1.0f - Easing.EaseInCubic(t));
+                        scale = new Vector2(zoomS);
+                        opacity = isEntering ? t : (1.0f - t);
+                    }
                     break;
 
                 case EntryExitStyle.SlideUp:
@@ -165,6 +169,39 @@ namespace ProjectVagabond.Utils
                         // Use seed to randomize X vs Y phase
                         offset.X = MathF.Sin(t * shakeFrequency + seed) * shakeIntensity * shakeDecay;
                         offset.Y = MathF.Cos(t * shakeFrequency * 0.9f + seed) * shakeIntensity * shakeDecay;
+                    }
+                    break;
+
+                case EntryExitStyle.SequentialExpand:
+                    {
+                        // Expects 'seed' to be a normalized index (0.0 to 1.0) representing the character's position.
+                        // This creates a "wave" of popping characters.
+
+                        // How long an individual character takes to pop in (relative to total duration)
+                        float popDuration = 0.2f;
+
+                        // Calculate start time for this specific character based on its normalized position (seed)
+                        // We distribute the start times so the last character finishes exactly at t=1.0
+                        float startTime = seed * (1.0f - popDuration);
+
+                        // Calculate local progress for this character
+                        float localProgress = (t - startTime) / popDuration;
+                        localProgress = Math.Clamp(localProgress, 0f, 1f);
+
+                        if (isEntering)
+                        {
+                            // Pop In: Scale 0 -> 1 with overshoot
+                            float seqS = Easing.EaseOutBack(localProgress);
+                            scale = new Vector2(seqS);
+                            opacity = localProgress;
+                        }
+                        else
+                        {
+                            // Pop Out: Scale 1 -> 0 with anticipation
+                            float seqS = Easing.EaseInBack(1.0f - localProgress);
+                            scale = new Vector2(seqS);
+                            opacity = 1.0f - localProgress;
+                        }
                     }
                     break;
             }

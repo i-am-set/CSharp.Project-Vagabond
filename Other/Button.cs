@@ -61,6 +61,12 @@ namespace ProjectVagabond.UI
         public bool EnableTextWave { get; set; } = true;
 
         /// <summary>
+        /// If true, the text animation (Wave, Typewriter, etc.) will run even if the button is not hovered.
+        /// Useful for entrance animations.
+        /// </summary>
+        public bool AlwaysAnimateText { get; set; } = false;
+
+        /// <summary>
         /// The type of wave effect to apply when EnableTextWave is true.
         /// Defaults to SmallWave (Center Aligned).
         /// </summary>
@@ -379,14 +385,22 @@ namespace ProjectVagabond.UI
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
             // Update Wave State
-            if (EnableTextWave && isActivated)
+            // Allow animation if activated OR if forced by AlwaysAnimateText
+            if (EnableTextWave && (isActivated || AlwaysAnimateText))
             {
                 _waveTimer += deltaTime;
 
-                if (WaveEffectType == TextEffectType.SmallWave || WaveEffectType == TextEffectType.LeftAlignedSmallWave)
+                if (TextAnimator.IsOneShotEffect(WaveEffectType))
                 {
-                    float duration = TextAnimator.GetSmallWaveDuration(Text.Length);
-                    if (_waveTimer > duration + 0.1f) _waveTimer = 0f;
+                    // For one-shot effects like SmallWave or TypewriterPop, we might want to let them run
+                    // or reset them based on logic. Here we just let them run.
+                    // The reset logic for SmallWave loop is handled here if needed, but TypewriterPop usually runs once.
+                    // If it's TypewriterPop, we don't reset _waveTimer automatically.
+                    if (WaveEffectType == TextEffectType.SmallWave || WaveEffectType == TextEffectType.LeftAlignedSmallWave)
+                    {
+                        float duration = TextAnimator.GetSmallWaveDuration(Text.Length);
+                        if (_waveTimer > duration + 0.1f) _waveTimer = 0f;
+                    }
                 }
             }
             else
@@ -443,9 +457,9 @@ namespace ProjectVagabond.UI
             Vector2 drawPos = textPosition + origin;
 
             // --- Wave Animation Logic ---
-            if (EnableTextWave && isActivated)
+            if (EnableTextWave && (isActivated || AlwaysAnimateText))
             {
-                // Use the configured WaveEffectType (SmallWave or LeftAlignedSmallWave)
+                // Use the configured WaveEffectType (SmallWave, TypewriterPop, etc.)
                 // Use TextAnimator instead of TextUtils
                 // Note: TextAnimator handles its own origin/centering logic, so we pass the top-left textPosition.
                 TextAnimator.DrawTextWithEffect(spriteBatch, font, Text, textPosition, textColor, WaveEffectType, _waveTimer, new Vector2(_currentScale));
@@ -458,4 +472,3 @@ namespace ProjectVagabond.UI
         }
     }
 }
-﻿

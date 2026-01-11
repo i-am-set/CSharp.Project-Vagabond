@@ -1,33 +1,7 @@
-﻿using BepuPhysics;
-using BepuPhysics.Collidables;
-using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Content;
-using Microsoft.Xna.Framework.Graphics;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
-using MonoGame.Extended;
-using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond;
 using ProjectVagabond.Battle;
-using ProjectVagabond.Battle.Abilities;
-using ProjectVagabond.Battle.UI;
-using ProjectVagabond.Dice;
-using ProjectVagabond.Particles;
-using ProjectVagabond.Progression;
-using ProjectVagabond.Scenes;
-using ProjectVagabond.Transitions;
-using ProjectVagabond.UI;
-using ProjectVagabond.Utils;
-using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Numerics;
-using System.Runtime.InteropServices;
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading;
 
 namespace ProjectVagabond
 {
@@ -82,8 +56,8 @@ namespace ProjectVagabond
             ItemOutlineColor_Selected_Corner = Palette_BlueWhite;
 
             // Initialize Narration Colors
-            ColorNarration_Default = Palette_LightGray;
-            ColorNarration_Prefix = Palette_DarkGray;
+            ColorNarration_Default = Palette_BlueWhite;
+            ColorNarration_Prefix = Palette_LightGray;
             ColorNarration_Action = Palette_Orange;
             ColorNarration_Spell = Palette_DarkBlue;
             ColorNarration_Item = Palette_PaleGreen;
@@ -168,16 +142,8 @@ namespace ProjectVagabond
         public const int VIRTUAL_HEIGHT = 180;
 
         // Map settings Global
-        public const int TERMINAL_AREA_HEIGHT = 75;
-        public const int FONT_SIZE = 12;
         public const int TERMINAL_LINE_SPACING = 12;
-        public const int PROMPT_LINE_SPACING = 16;
-        public const float NOISE_SCALE = 0.2f;
-        public const int DEFAULT_TERMINAL_WIDTH = 270;
-        public const int DEFAULT_TERMINAL_HEIGHT = 169;
-        public const int COMBAT_TERMINAL_BUFFER = 65;
         public const int SPLIT_MAP_GRID_SIZE = 16;
-
         // Player stats Global
         public const int MAX_MAX_HEALTH_ENERGY = 48;
         public const int MIN_MAX_HEALTH_ENERGY = 1;
@@ -198,11 +164,6 @@ namespace ProjectVagabond
         public const int APPLY_OPTION_DIFFERENCE_TEXT_LINE_SPACING = 5;
         public const float TOOLTIP_AVERAGE_POPUP_TIME = 0.5f;
         public const int TERMINAL_Y = 25;
-
-        // Combat settings Global
-        public const int COMBAT_TURN_DURATION_SECONDS = 5;
-        public const float COMBAT_ACTION_DELAY_SECONDS = 0.5f;
-        public const float VISUAL_SPEED_MULTIPLIER = 0.8f;
 
         // Transition Settings
         public const float UniversalSlowFadeDuration = 3.0f;
