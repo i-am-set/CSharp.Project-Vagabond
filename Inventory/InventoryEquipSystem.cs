@@ -59,6 +59,9 @@ namespace ProjectVagabond.UI
             _overlay.CurrentPartyMemberIndex = memberIndex;
             EquipMenuScrollIndex = 0;
             RefreshEquipSubmenuButtons();
+
+            // Clear any lingering hover data from the previous menu state to hide old info panels
+            _overlay.HoveredItemData = null;
         }
 
         public void RefreshEquipSubmenuButtons()

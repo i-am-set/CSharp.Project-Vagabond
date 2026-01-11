@@ -138,7 +138,7 @@ namespace ProjectVagabond.UI
         public static float FlickerMaxAlpha = 1.0f;
 
         // Typewriter
-        public static float TypewriterDelay = 0.12f;
+        public static float TypewriterDelay = 0.08f;
         public static float TypewriterDuration = 0.3f;
         public static float TypewriterVanishDelay = 0.03f;
     }

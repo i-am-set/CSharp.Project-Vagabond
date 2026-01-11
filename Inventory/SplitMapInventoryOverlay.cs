@@ -16,7 +16,6 @@ namespace ProjectVagabond.UI
 {
     public enum InventoryCategory { Weapons, Armor, Relics, Consumables, Misc, Equip }
     public enum EquipSlotType { None, Weapon, Armor, Relic, Spell1, Spell2, Spell3, Spell4 }
-
     // Formal State Machine
     internal enum InventoryState
     {
@@ -56,6 +55,11 @@ namespace ProjectVagabond.UI
         internal List<Button> PartyEquipButtons { get; } = new();
         internal List<SpellEquipButton> PartySpellButtons { get; } = new();
 
+        // --- Party Slot Animation State ---
+        internal UIAnimator[] PartySlotAnimators { get; } = new UIAnimator[4];
+        internal float[] PartySlotTextTimers { get; } = new float[4];
+        internal TextEffectType[] PartySlotTextEffects { get; } = new TextEffectType[4];
+
         // Navigation Buttons
         internal ImageButton? DebugButton1 { get; set; }
         internal ImageButton? DebugButton2 { get; set; }
@@ -75,13 +79,13 @@ namespace ProjectVagabond.UI
         internal int SelectedSlotIndex { get; set; } = -1;
 
         internal List<InventoryCategory> CategoryOrder { get; } = new()
-        {
-            InventoryCategory.Weapons,
-            InventoryCategory.Armor,
-            InventoryCategory.Relics,
-            InventoryCategory.Consumables,
-            InventoryCategory.Misc
-        };
+    {
+        InventoryCategory.Weapons,
+        InventoryCategory.Armor,
+        InventoryCategory.Relics,
+        InventoryCategory.Consumables,
+        InventoryCategory.Misc
+    };
 
         // Animation State
         internal float InventoryArrowAnimTimer { get; set; }
@@ -107,6 +111,7 @@ namespace ProjectVagabond.UI
         internal readonly InventoryEquipSystem EquipSystem;
         private readonly InventoryDrawer _drawer;
         private readonly InventoryInputHandler _inputHandler;
+        private static readonly Random _rng = new Random();
 
         public SplitMapInventoryOverlay()
         {
@@ -115,6 +120,18 @@ namespace ProjectVagabond.UI
             Global = ServiceLocator.Get<Global>();
             HapticsManager = ServiceLocator.Get<HapticsManager>();
             ComponentStore = ServiceLocator.Get<ComponentStore>();
+
+            // Initialize Party Slot Animators
+            for (int i = 0; i < 4; i++)
+            {
+                PartySlotAnimators[i] = new UIAnimator
+                {
+                    EntryStyle = EntryExitStyle.SwoopRight,
+                    DurationIn = 0.1f,
+                    Magnitude = 20f
+                };
+                // Removed the OnInComplete callback that was prematurely resetting the text effect
+            }
 
             // Instantiate Helpers
             DataProcessor = new InventoryDataProcessor(this);
@@ -147,7 +164,7 @@ namespace ProjectVagabond.UI
         {
             IsOpen = true;
             InventoryButton?.SetSprites(SpriteManager.SplitMapCloseInventoryButton, SpriteManager.SplitMapCloseInventoryButtonSourceRects[0], SpriteManager.SplitMapCloseInventoryButtonSourceRects[1]);
-            _inputHandler.SwitchToCategory(InventoryCategory.Equip);
+            SwitchToCategory(InventoryCategory.Equip);
         }
 
         public void Hide()
@@ -171,6 +188,18 @@ namespace ProjectVagabond.UI
 
         public void Update(GameTime gameTime, MouseState currentMouseState, KeyboardState currentKeyboardState, bool allowAccess, Matrix cameraTransform)
         {
+            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            // Update Party Slot Animators
+            if (SelectedInventoryCategory == InventoryCategory.Equip)
+            {
+                for (int i = 0; i < 4; i++)
+                {
+                    PartySlotAnimators[i].Update(dt);
+                    PartySlotTextTimers[i] += dt;
+                }
+            }
+
             _inputHandler.Update(gameTime, currentMouseState, currentKeyboardState, allowAccess, cameraTransform);
         }
 
@@ -182,6 +211,83 @@ namespace ProjectVagabond.UI
         public void DrawScreen(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             _drawer.DrawScreen(spriteBatch, font, gameTime, transform);
+        }
+
+        public void SwitchToCategory(InventoryCategory category)
+        {
+            EquipSystem.CancelEquipSelection();
+            SelectedInventoryCategory = category;
+            CurrentPage = 0;
+            SelectedSlotIndex = -1;
+            SelectedHeaderBobTimer = 0f;
+            CurrentState = category == InventoryCategory.Equip ? InventoryState.EquipTargetSelection : InventoryState.Browse;
+            DataProcessor.RefreshInventorySlots();
+
+            if (category != InventoryCategory.Equip)
+            {
+                TriggerSlotAnimations();
+            }
+            else
+            {
+                TriggerEquipMenuAnimations();
+            }
+        }
+
+        private void TriggerSlotAnimations()
+        {
+            float delay = 0f;
+            const float stagger = 0.015f;
+            foreach (var slot in InventorySlots)
+            {
+                if (slot.HasItem)
+                {
+                    slot.TriggerPopInAnimation(delay);
+                    delay += stagger;
+                }
+            }
+        }
+
+        internal void TriggerEquipMenuAnimations()
+        {
+            // 1. Create a list of unique delays
+            var delays = new List<float> { 0.0f, 0.05f, 0.1f, 0.15f };
+
+            // 2. Shuffle the delays (Fisher-Yates)
+            int n = delays.Count;
+            while (n > 1)
+            {
+                n--;
+                int k = _rng.Next(n + 1);
+                (delays[k], delays[n]) = (delays[n], delays[k]);
+            }
+
+            // 3. Apply to slots
+            for (int i = 0; i < 4; i++)
+            {
+                bool isOccupied = i < GameState.PlayerState.Party.Count;
+                PartySlotAnimators[i].Reset();
+
+                if (isOccupied)
+                {
+                    // Occupied slots animate in with delay
+                    PartySlotAnimators[i].DurationIn = 0.2f;
+                    PartySlotAnimators[i].Show(delay: delays[i]);
+
+                    // Reset text effect to TypewriterPop
+                    PartySlotTextEffects[i] = TextEffectType.TypewriterPop;
+
+                    // Set the text timer to negative delay so it starts counting up to 0 exactly when the animation starts
+                    PartySlotTextTimers[i] = -delays[i];
+                }
+                else
+                {
+                    // Empty slots appear instantly (static)
+                    PartySlotAnimators[i].DurationIn = 0f;
+                    PartySlotAnimators[i].Show(0f);
+                    PartySlotTextEffects[i] = TextEffectType.None;
+                    PartySlotTextTimers[i] = 0f;
+                }
+            }
         }
     }
 }

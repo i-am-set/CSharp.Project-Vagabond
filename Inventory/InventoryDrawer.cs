@@ -29,7 +29,6 @@ namespace ProjectVagabond.UI
         private float _portraitBgTimer;
         private float _portraitBgDuration;
         private static readonly Random _rng = new Random();
-
         public InventoryDrawer(SplitMapInventoryOverlay overlay, InventoryDataProcessor dataProcessor, InventoryEquipSystem equipSystem)
         {
             _overlay = overlay;
@@ -341,7 +340,18 @@ namespace ProjectVagabond.UI
                 Color nameColor = isOccupied ? _overlay.Global.Palette_BlueWhite : _overlay.Global.Palette_DarkGray;
 
                 Vector2 nameSize = font.MeasureString(name);
-                Vector2 namePos = new Vector2(centerX - nameSize.X / 2, currentY);
+
+                // --- ANIMATION LOGIC ---
+                // Get the animator state for this slot
+                var animator = _overlay.PartySlotAnimators[i];
+                var visualState = animator.GetVisualState();
+
+                // Apply offset to name position
+                Vector2 namePos = new Vector2(centerX - nameSize.X / 2, currentY) + visualState.Offset;
+
+                // Apply opacity to name color
+                nameColor = nameColor * visualState.Opacity;
+
                 currentY += (int)nameSize.Y - 2;
 
                 if (_overlay.SpriteManager.InventorySlotLargeSourceRects != null && _overlay.SpriteManager.InventorySlotLargeSourceRects.Length > 0)
@@ -365,7 +375,26 @@ namespace ProjectVagabond.UI
                     spriteBatch.DrawSnapped(textureToDraw, destRect, sourceRect, Color.White);
                 }
 
-                spriteBatch.DrawStringSnapped(font, name, namePos, nameColor);
+                // --- DRAW ANIMATED TEXT ---
+                if (isOccupied)
+                {
+                    // Use TextAnimator with the current effect and timer
+                    // Pass the raw timer value (which can be negative for delay)
+                    TextAnimator.DrawTextWithEffect(
+                        spriteBatch,
+                        font,
+                        name,
+                        namePos,
+                        nameColor,
+                        _overlay.PartySlotTextEffects[i],
+                        _overlay.PartySlotTextTimers[i] // Removed Math.Max(0, ...) to allow negative delay
+                    );
+                }
+                else
+                {
+                    // Static draw for empty slots
+                    spriteBatch.DrawStringSnapped(font, name, namePos, nameColor);
+                }
 
                 currentY += 32 + 2 - 6;
 
