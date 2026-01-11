@@ -1,8 +1,11 @@
 ﻿using Microsoft.Xna.Framework;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace ProjectVagabond.Battle.Abilities
@@ -486,13 +489,8 @@ namespace ProjectVagabond.Battle.Abilities
         {
             if (ctx.Move != null && ctx.Move.MakesContact && damageDealt > 0)
             {
-                int heal = (int)(damageDealt * (_healPercent / 100f));
-                if (heal > 0)
-                {
-                    int hpBefore = (int)ctx.Actor.VisualHP;
-                    ctx.Actor.ApplyHealing(heal);
-                    EventBus.Publish(new GameEvents.CombatantHealed { Actor = ctx.Actor, Target = ctx.Actor, HealAmount = heal, VisualHPBefore = hpBefore });
-                }
+                // Accumulate lifesteal percentage instead of healing immediately
+                ctx.AccumulatedLifestealPercent += _healPercent;
             }
         }
     }

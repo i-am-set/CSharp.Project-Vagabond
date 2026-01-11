@@ -833,24 +833,56 @@ namespace ProjectVagabond.Battle
                     IsGraze = result.WasGraze
                 };
 
-                // FIX: Trigger Actor's OnHit effects (Relics, etc.)
+                // 1. Trigger Actor's OnHit effects (Relics, etc.)
                 foreach (var effect in action.Actor.OnHitEffects)
                 {
                     effect.OnHit(ctx, result.DamageAmount);
                 }
 
-                // FIX: Trigger Target's OnDamaged effects (Relics, etc.)
+                // 2. Trigger Target's OnDamaged effects (Relics, etc.)
                 foreach (var effect in target.OnDamagedEffects)
                 {
                     effect.OnDamaged(ctx, result.DamageAmount);
                 }
 
-                // Trigger Move's OnHit effects
+                // 3. Trigger Move's OnHit effects
                 foreach (var ability in action.ChosenMove.Abilities)
                 {
                     if (ability is IOnHitEffect onHit)
                     {
                         onHit.OnHit(ctx, result.DamageAmount);
+                    }
+                }
+
+                // 4. Process Accumulated Lifesteal
+                if (ctx.AccumulatedLifestealPercent > 0 && result.DamageAmount > 0)
+                {
+                    int totalHeal = (int)(result.DamageAmount * (ctx.AccumulatedLifestealPercent / 100f));
+                    if (totalHeal > 0)
+                    {
+                        // Check for Lifesteal Reactions (e.g. Caustic Blood) on the target
+                        bool preventHealing = false;
+                        foreach (var reaction in target.LifestealReactions)
+                        {
+                            if (reaction.OnLifestealReceived(action.Actor, totalHeal, target))
+                            {
+                                preventHealing = true;
+                                break; // Stop checking if one reaction blocks it
+                            }
+                        }
+
+                        if (!preventHealing)
+                        {
+                            int hpBefore = (int)action.Actor.VisualHP;
+                            action.Actor.ApplyHealing(totalHeal);
+                            EventBus.Publish(new GameEvents.CombatantHealed
+                            {
+                                Actor = action.Actor,
+                                Target = action.Actor,
+                                HealAmount = totalHeal,
+                                VisualHPBefore = hpBefore
+                            });
+                        }
                     }
                 }
 

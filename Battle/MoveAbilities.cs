@@ -10,6 +10,7 @@ using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 
@@ -597,26 +598,8 @@ namespace ProjectVagabond.Battle.Abilities
         {
             if (damageDealt > 0)
             {
-                int healAmount = (int)(damageDealt * (_percent / 100f));
-                if (healAmount > 0)
-                {
-                    // Check for Lifesteal Reactions (e.g. Caustic Blood)
-                    foreach (var reaction in ctx.Target.LifestealReactions)
-                    {
-                        bool preventHealing = reaction.OnLifestealReceived(ctx.Actor, healAmount, ctx.Target);
-                        if (preventHealing) return; // Stop healing
-                    }
-
-                    int hpBefore = (int)ctx.Actor.VisualHP;
-                    ctx.Actor.ApplyHealing(healAmount);
-                    EventBus.Publish(new GameEvents.CombatantHealed
-                    {
-                        Actor = ctx.Actor,
-                        Target = ctx.Actor,
-                        HealAmount = healAmount,
-                        VisualHPBefore = hpBefore
-                    });
-                }
+                // Accumulate lifesteal percentage instead of healing immediately
+                ctx.AccumulatedLifestealPercent += _percent;
             }
         }
     }
