@@ -57,7 +57,7 @@ namespace ProjectVagabond
 
             // Initialize Narration Colors
             ColorNarration_Default = Palette_BlueWhite;
-            ColorNarration_Prefix = Palette_LightGray;
+            ColorNarration_Prefix = Palette_White;
             ColorNarration_Action = Palette_Orange;
             ColorNarration_Spell = Palette_DarkBlue;
             ColorNarration_Item = Palette_PaleGreen;

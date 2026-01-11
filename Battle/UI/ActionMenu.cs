@@ -1039,14 +1039,10 @@ namespace ProjectVagabond.Battle.UI
             var tooltipBounds = new Rectangle(boxX, boxY + (int)offset.Y, boxWidth, boxHeight);
             _tooltipBounds = tooltipBounds; // Store for debug
 
-            // Draw opaque black background
-            spriteBatch.DrawSnapped(pixel, tooltipBounds, _global.Palette_Black);
-
-            var borderColor = _global.Palette_White;
-            spriteBatch.DrawSnapped(pixel, new Rectangle(tooltipBounds.Left, tooltipBounds.Top, tooltipBounds.Width, 1), borderColor);
-            spriteBatch.DrawSnapped(pixel, new Rectangle(tooltipBounds.Left, tooltipBounds.Bottom - 1, tooltipBounds.Width, 1), borderColor);
-            spriteBatch.DrawSnapped(pixel, new Rectangle(tooltipBounds.Left, tooltipBounds.Top, 1, tooltipBounds.Height), borderColor);
-            spriteBatch.DrawSnapped(pixel, new Rectangle(tooltipBounds.Right - 1, tooltipBounds.Top, 1, tooltipBounds.Height), borderColor);
+            // Draw beveled background
+            DrawBeveledBackground(spriteBatch, pixel, tooltipBounds, _global.Palette_Black);
+            // Draw beveled border
+            DrawBeveledBorder(spriteBatch, pixel, tooltipBounds, _global.Palette_White);
 
             if (_tooltipMove != null)
             {
@@ -1129,14 +1125,19 @@ namespace ProjectVagabond.Battle.UI
             var tooltipBgRect = new Rectangle(gridStartX, gridStartY + (int)offset.Y, totalGridWidth, gridHeight);
             _tooltipBounds = tooltipBgRect; // Store for debug
 
-            // Draw opaque black background
-            spriteBatch.DrawSnapped(pixel, tooltipBgRect, _global.Palette_Black);
+            // Draw beveled background
+            DrawBeveledBackground(spriteBatch, pixel, tooltipBgRect, _global.Palette_Black);
 
+            // Mask corners of the sprite to ensure bevel shape
             spriteBatch.DrawSnapped(tooltipBg, tooltipBgRect, Color.White);
+            MaskCorners(spriteBatch, pixel, tooltipBgRect, _global.Palette_Black);
+
+            // Draw beveled border on top
+            DrawBeveledBorder(spriteBatch, pixel, tooltipBgRect, _global.Palette_White);
 
             if (_tooltipMove != null)
             {
-                DrawMoveInfoPanelContent(spriteBatch, _tooltipMove, tooltipBgRect, font, secondaryFont, transform, true);
+                DrawMoveInfoPanelContent(spriteBatch, _tooltipMove, tooltipBgRect, font, secondaryFont, transform, true, gameTime);
             }
 
             const int backButtonTopMargin = 0;
@@ -1187,7 +1188,7 @@ namespace ProjectVagabond.Battle.UI
 
             // Removed manual border drawing here as it's now handled by the background sprite
 
-            DrawMoveInfoPanelContent(spriteBatch, HoveredMove, borderRect, font, secondaryFont, transform, false);
+            DrawMoveInfoPanelContent(spriteBatch, HoveredMove, borderRect, font, secondaryFont, transform, false, gameTime);
 
 
             for (int i = 0; i < _moveButtons.Length; i++)
@@ -1280,13 +1281,67 @@ namespace ProjectVagabond.Battle.UI
 
         private void DrawBeveledBackground(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, Color color)
         {
-            // Draw vertical center strip (full height, width - 2)
-            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 1, rect.Y, rect.Width - 2, rect.Height), color);
-            // Draw horizontal center strip (full width, height - 2)
-            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X, rect.Y + 1, rect.Width, rect.Height - 2), color);
+            // Top strip (Y)
+            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 2, rect.Y, rect.Width - 4, 1), color);
+            // Second strip (Y+1)
+            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 1, rect.Y + 1, rect.Width - 2, 1), color);
+            // Main body (Y+2 to Bottom-2)
+            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X, rect.Y + 2, rect.Width, rect.Height - 4), color);
+            // Second to last strip (Bottom-2)
+            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 1, rect.Bottom - 2, rect.Width - 2, 1), color);
+            // Bottom strip (Bottom-1)
+            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 2, rect.Bottom - 1, rect.Width - 4, 1), color);
         }
 
-        private void DrawMoveInfoPanelContent(SpriteBatch spriteBatch, MoveData? move, Rectangle bounds, BitmapFont font, BitmapFont secondaryFont, Matrix transform, bool isForTooltip)
+        private void DrawBeveledBorder(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, Color color)
+        {
+            // Top Line: X+2 to W-4
+            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 2, rect.Y, rect.Width - 4, 1), color);
+
+            // Bottom Line: X+2 to W-4
+            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 2, rect.Bottom - 1, rect.Width - 4, 1), color);
+
+            // Left Line: Y+2 to H-4
+            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X, rect.Y + 2, 1, rect.Height - 4), color);
+
+            // Right Line: Y+2 to H-4
+            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.Right - 1, rect.Y + 2, 1, rect.Height - 4), color);
+
+            // Corners (1x1 pixels)
+            // Top-Left
+            spriteBatch.DrawSnapped(pixel, new Vector2(rect.X + 1, rect.Y + 1), color);
+            // Top-Right
+            spriteBatch.DrawSnapped(pixel, new Vector2(rect.Right - 2, rect.Y + 1), color);
+            // Bottom-Left
+            spriteBatch.DrawSnapped(pixel, new Vector2(rect.X + 1, rect.Bottom - 2), color);
+            // Bottom-Right
+            spriteBatch.DrawSnapped(pixel, new Vector2(rect.Right - 2, rect.Bottom - 2), color);
+        }
+
+        private void MaskCorners(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, Color color)
+        {
+            // Top-Left
+            spriteBatch.DrawSnapped(pixel, new Vector2(rect.X, rect.Y), color);
+            spriteBatch.DrawSnapped(pixel, new Vector2(rect.X + 1, rect.Y), color);
+            spriteBatch.DrawSnapped(pixel, new Vector2(rect.X, rect.Y + 1), color);
+
+            // Top-Right
+            spriteBatch.DrawSnapped(pixel, new Vector2(rect.Right - 1, rect.Y), color);
+            spriteBatch.DrawSnapped(pixel, new Vector2(rect.Right - 2, rect.Y), color);
+            spriteBatch.DrawSnapped(pixel, new Vector2(rect.Right - 1, rect.Y + 1), color);
+
+            // Bottom-Left
+            spriteBatch.DrawSnapped(pixel, new Vector2(rect.X, rect.Bottom - 1), color);
+            spriteBatch.DrawSnapped(pixel, new Vector2(rect.X + 1, rect.Bottom - 1), color);
+            spriteBatch.DrawSnapped(pixel, new Vector2(rect.X, rect.Bottom - 2), color);
+
+            // Bottom-Right
+            spriteBatch.DrawSnapped(pixel, new Vector2(rect.Right - 1, rect.Bottom - 1), color);
+            spriteBatch.DrawSnapped(pixel, new Vector2(rect.Right - 2, rect.Bottom - 1), color);
+            spriteBatch.DrawSnapped(pixel, new Vector2(rect.Right - 1, rect.Bottom - 2), color);
+        }
+
+        private void DrawMoveInfoPanelContent(SpriteBatch spriteBatch, MoveData? move, Rectangle bounds, BitmapFont font, BitmapFont secondaryFont, Matrix transform, bool isForTooltip, GameTime gameTime, float opacity = 1.0f)
         {
             var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont; // Get Tertiary Font
             const int horizontalPadding = 4;
@@ -1483,8 +1538,11 @@ namespace ProjectVagabond.Battle.UI
                             }
                             else
                             {
-                                segWidth = secondaryFont.MeasureString(segment.Text).Width;
-                                spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(lineCurrentX, drawY), segment.Color);
+                                segWidth = secondaryFont.MeasureString(segment.Text).Width; // Use secondaryFont for measurement
+                                if (segment.Effect != TextEffectType.None)
+                                    TextAnimator.DrawTextWithEffect(spriteBatch, secondaryFont, segment.Text, new Vector2(lineCurrentX, drawY), segment.Color * opacity, segment.Effect, (float)gameTime.TotalGameTime.TotalSeconds);
+                                else
+                                    spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(lineCurrentX, drawY), segment.Color * opacity);
                             }
                             lineCurrentX += segWidth;
                         }
@@ -1695,7 +1753,7 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private List<List<ColoredText>> ParseAndWrapRichText(BitmapFont font, string text, float maxWidth, Color defaultColor)
+        private List<List<ColoredText>> ParseAndWrapRichText(BitmapFont font, string text, float maxWidth, Color defaultColor, int spaceWidth = 5)
         {
             var lines = new List<List<ColoredText>>();
             if (string.IsNullOrEmpty(text)) return lines;
@@ -1731,7 +1789,7 @@ namespace ProjectVagabond.Battle.UI
                 else
                 {
                     bool isWhitespace = string.IsNullOrWhiteSpace(part);
-                    float partWidth = isWhitespace ? (part.Length * SPACE_WIDTH) : font.MeasureString(part).Width;
+                    float partWidth = isWhitespace ? (part.Length * spaceWidth) : font.MeasureString(part).Width;
 
                     if (!isWhitespace && currentLineWidth + partWidth > maxWidth && currentLineWidth > 0)
                     {
@@ -1825,6 +1883,39 @@ namespace ProjectVagabond.Battle.UI
                 case "darkgray": return _global.Palette_DarkGray;
                 default: return _global.Palette_White;
             }
+        }
+
+        private (List<string> Positives, List<string> Negatives) GetStatModifierLines(Dictionary<string, int> mods)
+        {
+            var positives = new List<string>();
+            var negatives = new List<string>();
+            if (mods == null || mods.Count == 0) return (positives, negatives);
+
+            foreach (var kvp in mods)
+            {
+                if (kvp.Value == 0) continue;
+                string colorTag = kvp.Value > 0 ? "[cpositive]" : "[cnegative]";
+                string sign = kvp.Value > 0 ? "+" : "";
+
+                string statName = kvp.Key.ToLowerInvariant() switch
+                {
+                    "strength" => "STR",
+                    "intelligence" => "INT",
+                    "tenacity" => "TEN",
+                    "agility" => "AGI",
+                    "maxhp" => "HP",
+                    "maxmana" => "MP",
+                    _ => kvp.Key.ToUpper().Substring(0, Math.Min(3, kvp.Key.Length))
+                };
+
+                if (statName.Length < 3) statName += " ";
+
+                string line = $"{statName} {colorTag}{sign}{kvp.Value}[/]";
+
+                if (kvp.Value > 0) positives.Add(line);
+                else negatives.Add(line);
+            }
+            return (positives, negatives);
         }
     }
 }

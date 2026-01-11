@@ -29,7 +29,6 @@ namespace ProjectVagabond.UI
         private float _portraitBgTimer;
         private float _portraitBgDuration;
         private static readonly Random _rng = new Random();
-
         public InventoryDrawer(SplitMapInventoryOverlay overlay, InventoryDataProcessor dataProcessor, InventoryEquipSystem equipSystem)
         {
             _overlay = overlay;
@@ -341,17 +340,22 @@ namespace ProjectVagabond.UI
                 Color nameColor = isOccupied ? _overlay.Global.Palette_BlueWhite : _overlay.Global.Palette_DarkGray;
 
                 Vector2 nameSize = font.MeasureString(name);
+                Vector2 namePos = new Vector2(centerX - nameSize.X / 2, currentY);
 
                 // --- ANIMATION LOGIC ---
-                // Get the animator state for this slot
-                var animator = _overlay.PartySlotAnimators[i];
-                var visualState = animator.GetVisualState();
+                // Only apply animation if the slot is occupied.
+                // Empty slots should be static.
+                if (isOccupied)
+                {
+                    var animator = _overlay.PartySlotAnimators[i];
+                    var visualState = animator.GetVisualState();
 
-                // Apply offset to name position
-                Vector2 namePos = new Vector2(centerX - nameSize.X / 2, currentY) + visualState.Offset;
+                    // Apply offset to name position
+                    namePos += visualState.Offset;
 
-                // Apply opacity to name color
-                nameColor = nameColor * visualState.Opacity;
+                    // Apply opacity to name color
+                    nameColor = nameColor * visualState.Opacity;
+                }
 
                 currentY += (int)nameSize.Y - 2;
 
