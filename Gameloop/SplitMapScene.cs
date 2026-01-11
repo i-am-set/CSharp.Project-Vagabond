@@ -365,11 +365,11 @@ namespace ProjectVagabond.Scenes
 
             if (_settingsButton == null)
             {
-                var settingsIcon = _spriteManager.SettingsIconSprite;
-                if (settingsIcon != null) buttonSize = Math.Max(settingsIcon.Width, settingsIcon.Height);
+                var sheet = _spriteManager.SplitMapSettingsButton;
+                var rects = _spriteManager.SplitMapSettingsButtonSourceRects;
 
                 // Initialize off-screen
-                _settingsButton = new ImageButton(new Rectangle(offScreenX, 2, buttonSize, buttonSize), settingsIcon, enableHoverSway: true)
+                _settingsButton = new ImageButton(new Rectangle(offScreenX, 2, buttonSize, buttonSize), sheet, rects[0], rects[1], enableHoverSway: true)
                 {
                     UseScreenCoordinates = false
                 };

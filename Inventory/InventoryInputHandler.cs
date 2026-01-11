@@ -701,6 +701,8 @@ namespace ProjectVagabond.UI
                 _overlay.InfoPanelNameWaveTimer += deltaTime;
                 float duration = TextAnimator.GetSmallWaveDuration(nameLength);
                 if (_overlay.InfoPanelNameWaveTimer > duration + 0.1f) _overlay.InfoPanelNameWaveTimer = 0f;
+
+                ServiceLocator.Get<CursorManager>().SetState(CursorState.HoverClickableHint);
             }
             else
             {

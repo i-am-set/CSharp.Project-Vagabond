@@ -2,9 +2,15 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Items;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace ProjectVagabond.UI
 {
@@ -30,6 +36,7 @@ namespace ProjectVagabond.UI
             {
                 { CursorState.Default, ("cursor_default", 1f / 12f) },
                 { CursorState.HoverClickable, ("cursor_hover_clickable", 1f / 12f) },
+                { CursorState.HoverClickableHint, ("cursor_hover_clickable_hint", 1f / 12f) },
                 { CursorState.HoverDraggable, ("cursor_hover_draggable", 1f / 12f) },
                 { CursorState.Dragging, ("cursor_dragging_draggable", 1f / 12f) },
                 // Future cursor states like Click can be mapped to their assets here.
@@ -44,7 +51,7 @@ namespace ProjectVagabond.UI
         public void SetState(CursorState state)
         {
             // The highest priority state set this frame wins.
-            // Dragging > Click > HoverClickable > HoverDraggable > Hover > Default
+            // Dragging > Click > HoverClickableHint > HoverClickable > HoverDraggable > Hover > Default
             if (state > _requestedState)
             {
                 _requestedState = state;

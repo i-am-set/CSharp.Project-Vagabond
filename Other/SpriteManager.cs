@@ -8,6 +8,7 @@ using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Dice;
+using ProjectVagabond.Items;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
@@ -393,13 +394,11 @@ namespace ProjectVagabond
             try { MapNodePlayerSprite = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_Player"); }
             catch { MapNodePlayerSprite = _textureFactory.CreateColoredTexture(64, 32, Color.Cyan); }
 
-            try { SplitMapInventoryButton = _core.Content.Load<Texture2D>("Sprites/UI/SplitMap/SplitMap_Inventory_Button"); }
+            try { SplitMapInventoryButton = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/SplitMap_Inventory_Button"); }
             catch { SplitMapInventoryButton = _textureFactory.CreateColoredTexture(32, 16, Color.Magenta); }
-            try { SplitMapHeaderBorder = _core.Content.Load<Texture2D>("Sprites/UI/SplitMap/SplitMap_Header_Border"); }
-            catch { SplitMapHeaderBorder = _textureFactory.CreateColoredTexture(320, 28, Color.Magenta); }
-            try { SplitMapCloseInventoryButton = _core.Content.Load<Texture2D>("Sprites/UI/SplitMap/SplitMap_Close_Inventory_Button"); }
+            try { SplitMapCloseInventoryButton = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/SplitMap_Close_Inventory_Button"); }
             catch { SplitMapCloseInventoryButton = _textureFactory.CreateColoredTexture(32, 16, Color.Magenta); }
-            try { SplitMapSettingsButton = _core.Content.Load<Texture2D>("Sprites/UI/SplitMap/SplitMap_Settings_Button"); }
+            try { SplitMapSettingsButton = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/SplitMap_Settings_Button"); }
             catch { SplitMapSettingsButton = _textureFactory.CreateColoredTexture(32, 16, Color.Magenta); }
             try { InventoryBorderArmor = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_border_armor"); }
             catch { InventoryBorderArmor = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
@@ -502,6 +501,7 @@ namespace ProjectVagabond
 
             LoadAndCacheCursorSprite("cursor_default");
             LoadAndCacheCursorSprite("cursor_hover_clickable");
+            LoadAndCacheCursorSprite("cursor_hover_clickable_hint"); // Added new cursor
             LoadAndCacheCursorSprite("cursor_dragging_draggable");
 
             InitializeArrowSourceRects();

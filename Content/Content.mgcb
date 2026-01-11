@@ -2009,6 +2009,42 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/BasicIcons/rarity_icons_8x8_spritesheet.png;Sprites/UI/BasicIcons/rarity_icons_8x8_spritesheet
 
+#begin Sprites/UI/BasicIcons/SplitMap_Close_Inventory_Button.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/BasicIcons/SplitMap_Close_Inventory_Button.png;Sprites/UI/BasicIcons/SplitMap_Close_Inventory_Button
+
+#begin Sprites/UI/BasicIcons/SplitMap_Inventory_Button.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/BasicIcons/SplitMap_Inventory_Button.png;Sprites/UI/BasicIcons/SplitMap_Inventory_Button
+
+#begin Sprites/UI/BasicIcons/SplitMap_Settings_Button.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/BasicIcons/SplitMap_Settings_Button.png;Sprites/UI/BasicIcons/SplitMap_Settings_Button
+
 #begin Sprites/UI/BasicIcons/stat_change_icons_spritesheet.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -2560,6 +2596,18 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/Cursor/cursor_dragging_draggable.png;Sprites/UI/Cursor/cursor_dragging_draggable
+
+#begin Sprites/UI/Cursor/cursor_hover_clickable_hint.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/Cursor/cursor_hover_clickable_hint.png;Sprites/UI/Cursor/cursor_hover_clickable_hint
 
 #begin Sprites/UI/Cursor/cursor_hover_clickable.png
 /importer:TextureImporter
@@ -3232,54 +3280,6 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/Shop/shop_border_main.png;Sprites/UI/Shop/shop_border_main
-
-#begin Sprites/UI/SplitMap/SplitMap_Close_Inventory_Button.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/UI/SplitMap/SplitMap_Close_Inventory_Button.png;Sprites/UI/SplitMap/SplitMap_Close_Inventory_Button
-
-#begin Sprites/UI/SplitMap/SplitMap_Header_Border.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/UI/SplitMap/SplitMap_Header_Border.png;Sprites/UI/SplitMap/SplitMap_Header_Border
-
-#begin Sprites/UI/SplitMap/SplitMap_Inventory_Button.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/UI/SplitMap/SplitMap_Inventory_Button.png;Sprites/UI/SplitMap/SplitMap_Inventory_Button
-
-#begin Sprites/UI/SplitMap/SplitMap_Settings_Button.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/UI/SplitMap/SplitMap_Settings_Button.png;Sprites/UI/SplitMap/SplitMap_Settings_Button
 
 #begin Textures/die_d4_texture.png
 /importer:TextureImporter

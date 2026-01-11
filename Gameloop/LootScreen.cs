@@ -8,6 +8,7 @@ using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -499,6 +500,7 @@ namespace ProjectVagabond.Scenes
                         if (isTarget)
                         {
                             _hoveredItemData = card.Item.OriginalData; // Set tooltip data
+                            ServiceLocator.Get<CursorManager>().SetState(CursorState.HoverClickableHint); // Set cursor to hint
 
                             if (clicked)
                             {

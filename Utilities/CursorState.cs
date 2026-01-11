@@ -6,6 +6,7 @@
         Hover,
         HoverDraggable,
         HoverClickable,
+        HoverClickableHint,
         Click,
         Dragging
     }
