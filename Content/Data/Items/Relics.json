@@ -150,7 +150,7 @@
   },
   {
     "RelicID": "13",
-    "RelicName": "Viper's Kiss",
+    "RelicName": "Serpant Fang",
     "AbilityName": "Venomous",
     "Description": "[cpositive]50%[/] chance to inflict [cpoison]poison[/] with [cctm]contact[/]",
     "Flavor": "",
@@ -176,7 +176,7 @@
   },
   {
     "RelicID": "15",
-    "RelicName": "Eagle-Eye Scope",
+    "RelicName": "Spyglass",
     "AbilityName": "Sniper",
     "Description": "Increases [ccrit]crit[/] chance by [cpositive]10%[/]",
     "Flavor": "",
