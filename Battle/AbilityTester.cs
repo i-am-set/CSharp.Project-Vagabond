@@ -27,7 +27,6 @@ namespace ProjectVagabond.Utils
             mockEnemy.IsPlayerControlled = false;
 
             // Register a temporary BattleManager
-            // FIX: Added new BattleAnimationManager() to constructor
             var mockBattleManager = new BattleManager(
                 new List<BattleCombatant> { mockPlayer },
                 new List<BattleCombatant> { mockEnemy },
@@ -39,36 +38,6 @@ namespace ProjectVagabond.Utils
             {
                 LogHeader("Testing Stat Modifiers...");
                 TestStatModifiers(mockPlayer, mockEnemy);
-
-                // Commented out tests that rely on stripped logic
-                /*
-                LogHeader("Testing Damage Modifiers (Basic)...");
-                TestDamageModifiers();
-
-                LogHeader("Testing Damage Modifiers (Complex)...");
-                TestComplexDamageModifiers();
-
-                LogHeader("Testing Crit Modifiers...");
-                TestCritModifiers();
-
-                LogHeader("Testing Accuracy Modifiers...");
-                TestAccuracyModifiers();
-
-                LogHeader("Testing Action Modifiers...");
-                TestActionModifiers();
-
-                LogHeader("Testing Incoming Damage Modifiers...");
-                TestIncomingDamageModifiers();
-
-                LogHeader("Testing Trigger & Lifecycle Abilities...");
-                TestTriggerAbilities();
-
-                LogHeader("Testing Status Abilities...");
-                TestStatusAbilities();
-
-                LogHeader("Testing Battle Manager Dependent Abilities...");
-                TestBattleDependentAbilities(mockPlayer, mockEnemy);
-                */
             }
             catch (Exception ex)
             {
@@ -104,14 +73,16 @@ namespace ProjectVagabond.Utils
             Assert(result == 20, "FlatStatBonus (Strength +10)");
 
             // 2. CorneredAnimalAbility (HP Threshold)
-            var ca = new CorneredAnimalAbility(33f, 99, 50f); // 33% HP, Impossible Enemy Count, +50% Agi
+            // Updated Signature: Threshold (33%), Stat (Agility), Amount (1 stage = +50%)
+            var ca = new CorneredAnimalAbility(33f, OffensiveStatType.Agility, 1);
 
-            player.Stats.CurrentHP = 10; player.Stats.MaxHP = 100; // Low HP
+            player.Stats.CurrentHP = 10; player.Stats.MaxHP = 100; // Low HP (10%)
             int lowResult = ca.ModifyStat(OffensiveStatType.Agility, 10, player);
 
-            player.Stats.CurrentHP = 100; // High HP
+            player.Stats.CurrentHP = 100; // High HP (100%)
             int highResult = ca.ModifyStat(OffensiveStatType.Agility, 10, player);
 
+            // Expected: 10 * (1.0 + 0.5 * 1) = 15
             Assert(lowResult == 15, "CorneredAnimal (Low HP Trigger)");
             Assert(highResult == 10, "CorneredAnimal (High HP Ignore)");
         }

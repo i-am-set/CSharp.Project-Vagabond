@@ -21,18 +21,30 @@ namespace ProjectVagabond.Battle.Abilities
     public class CorneredAnimalAbility : IStatModifier
     {
         public string Name => "Cornered Animal";
-        public string Description => "Boosts Agility when low HP or outnumbered.";
+        public string Description => "Boosts stat when low HP.";
         private readonly float _hpThreshold;
-        private readonly int _enemyCountThreshold;
-        private readonly float _bonusPercent;
-        public CorneredAnimalAbility(float hpThreshold, int enemyCount, float bonusPercent) { _hpThreshold = hpThreshold; _enemyCountThreshold = enemyCount; _bonusPercent = bonusPercent; }
+        private readonly OffensiveStatType _statToRaise;
+        private readonly int _amount;
+
+        public CorneredAnimalAbility(float hpThreshold, OffensiveStatType stat, int amount)
+        {
+            _hpThreshold = hpThreshold;
+            _statToRaise = stat;
+            _amount = amount;
+        }
+
         public int ModifyStat(OffensiveStatType statType, int currentValue, BattleCombatant owner)
         {
-            if (statType != OffensiveStatType.Agility) return currentValue;
-            bool hpCondition = (float)owner.Stats.CurrentHP / owner.Stats.MaxHP * 100f < _hpThreshold;
-            var battleManager = ServiceLocator.Get<BattleManager>();
-            int enemyCount = battleManager.AllCombatants.Count(c => c.IsPlayerControlled != owner.IsPlayerControlled && !c.IsDefeated && c.IsActiveOnField);
-            if (hpCondition || enemyCount >= _enemyCountThreshold) return (int)(currentValue * (1.0f + (_bonusPercent / 100f)));
+            if (statType != _statToRaise) return currentValue;
+
+            float hpPercent = (float)owner.Stats.CurrentHP / owner.Stats.MaxHP * 100f;
+
+            if (hpPercent < _hpThreshold)
+            {
+                // Simulate stat stages: 1 stage = +50% base. 
+                float multiplier = 1.0f + (0.5f * _amount);
+                return (int)(currentValue * multiplier);
+            }
             return currentValue;
         }
         public int ModifyMaxStat(string statName, int currentValue) => currentValue;
@@ -49,22 +61,33 @@ namespace ProjectVagabond.Battle.Abilities
         public float ModifyCritDamage(float currentMultiplier, CombatContext ctx) => currentMultiplier;
     }
 
-    public class CritDamageReductionAbility : ICritModifier
+    public class CritImmunityAbility : ICritModifier
     {
         public string Name => "Bulwark";
-        public string Description => "Reduces incoming crit damage.";
-        private readonly float _reductionPercent;
-        public CritDamageReductionAbility(float reductionPercent) { _reductionPercent = reductionPercent; }
-        public float ModifyCritChance(float currentChance, CombatContext ctx) => currentChance;
-        public float ModifyCritDamage(float currentMultiplier, CombatContext ctx) => currentMultiplier * (1.0f - (_reductionPercent / 100f));
+        public string Description => "Immune to critical hits.";
+        public CritImmunityAbility() { }
+        public float ModifyCritChance(float currentChance, CombatContext ctx) => 0f;
+        public float ModifyCritDamage(float currentMultiplier, CombatContext ctx) => currentMultiplier;
     }
 
     public class IgnoreEvasionAbility : IAccuracyModifier
     {
         public string Name => "Keen Eye";
-        public string Description => "Ignores dodging.";
-        public int ModifyAccuracy(int currentAccuracy, CombatContext ctx) => currentAccuracy;
-        public bool ShouldIgnoreEvasion(CombatContext ctx) => true;
+        public string Description => "Attacks ignore dodging and never miss.";
+
+        public int ModifyAccuracy(int currentAccuracy, CombatContext ctx)
+        {
+            if (ctx.Move != null && ctx.Move.Power > 0)
+            {
+                return 999;
+            }
+            return currentAccuracy;
+        }
+
+        public bool ShouldIgnoreEvasion(CombatContext ctx)
+        {
+            return ctx.Move != null && ctx.Move.Power > 0;
+        }
     }
 
     public class RecklessAbandonAbility : IOutgoingDamageModifier, IAccuracyModifier
@@ -72,10 +95,24 @@ namespace ProjectVagabond.Battle.Abilities
         public string Name => "Reckless Abandon";
         public string Description => "Contact moves deal more damage but less accuracy.";
         private readonly float _damageMultiplier;
-        private readonly int _accuracyPenalty;
-        public RecklessAbandonAbility(float damageBonus, int accuracyPenalty) { _damageMultiplier = 1.0f + (damageBonus / 100f); _accuracyPenalty = accuracyPenalty; }
-        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx) => (ctx.Move != null && ctx.Move.MakesContact) ? currentDamage * _damageMultiplier : currentDamage;
-        public int ModifyAccuracy(int currentAccuracy, CombatContext ctx) => (ctx.Move != null && ctx.Move.MakesContact) ? currentAccuracy + _accuracyPenalty : currentAccuracy;
+        private readonly float _accuracyMultiplier;
+
+        public RecklessAbandonAbility(float damageMult, float accuracyMult)
+        {
+            _damageMultiplier = damageMult;
+            _accuracyMultiplier = accuracyMult;
+        }
+
+        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
+        {
+            return (ctx.Move != null && ctx.Move.MakesContact) ? currentDamage * _damageMultiplier : currentDamage;
+        }
+
+        public int ModifyAccuracy(int currentAccuracy, CombatContext ctx)
+        {
+            return (ctx.Move != null && ctx.Move.MakesContact) ? (int)(currentAccuracy * _accuracyMultiplier) : currentAccuracy;
+        }
+
         public bool ShouldIgnoreEvasion(CombatContext ctx) => false;
     }
 
@@ -86,8 +123,18 @@ namespace ProjectVagabond.Battle.Abilities
         public string Description => "Deal more damage when HP is low.";
         private readonly float _hpThresholdPercent;
         private readonly float _damageMultiplier;
-        public LowHPDamageBonusAbility(float threshold, float bonusPercent) { _hpThresholdPercent = threshold; _damageMultiplier = 1.0f + (bonusPercent / 100f); }
-        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx) => ((float)ctx.Actor.Stats.CurrentHP / ctx.Actor.Stats.MaxHP * 100f < _hpThresholdPercent) ? currentDamage * _damageMultiplier : currentDamage;
+
+        public LowHPDamageBonusAbility(float threshold, float multiplier)
+        {
+            _hpThresholdPercent = threshold;
+            _damageMultiplier = multiplier;
+        }
+
+        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
+        {
+            float hpPercent = (float)ctx.Actor.Stats.CurrentHP / ctx.Actor.Stats.MaxHP * 100f;
+            return (hpPercent < _hpThresholdPercent) ? currentDamage * _damageMultiplier : currentDamage;
+        }
     }
 
     public class FullHPDamageAbility : IOutgoingDamageModifier
@@ -95,8 +142,16 @@ namespace ProjectVagabond.Battle.Abilities
         public string Name => "Full Power";
         public string Description => "Deal more damage at full HP.";
         private readonly float _damageMultiplier;
-        public FullHPDamageAbility(float bonusPercent) { _damageMultiplier = 1.0f + (bonusPercent / 100f); }
-        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx) => (ctx.Actor.Stats.CurrentHP >= ctx.Actor.Stats.MaxHP) ? currentDamage * _damageMultiplier : currentDamage;
+
+        public FullHPDamageAbility(float multiplier)
+        {
+            _damageMultiplier = multiplier;
+        }
+
+        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
+        {
+            return (ctx.Actor.Stats.CurrentHP >= ctx.Actor.Stats.MaxHP) ? currentDamage * _damageMultiplier : currentDamage;
+        }
     }
 
     public class ElementalDamageBonusAbility : IOutgoingDamageModifier
@@ -105,8 +160,18 @@ namespace ProjectVagabond.Battle.Abilities
         public string Description => "Increases damage of specific elements.";
         private readonly int _elementId;
         private readonly float _multiplier;
-        public ElementalDamageBonusAbility(int elementId, float bonusPercent) { _elementId = elementId; _multiplier = 1.0f + (bonusPercent / 100f); }
-        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx) => ctx.MoveHasElement(_elementId) ? currentDamage * _multiplier : currentDamage;
+
+        public ElementalDamageBonusAbility(int elementId, float multiplier)
+        {
+            _elementId = elementId;
+            if (multiplier > 5.0f) _multiplier = 1.0f + (multiplier / 100f);
+            else _multiplier = multiplier;
+        }
+
+        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
+        {
+            return ctx.MoveHasElement(_elementId) ? currentDamage * _multiplier : currentDamage;
+        }
     }
 
     public class FirstAttackDamageAbility : IOutgoingDamageModifier
@@ -114,8 +179,16 @@ namespace ProjectVagabond.Battle.Abilities
         public string Name => "First Blood";
         public string Description => "First attack deals bonus damage.";
         private readonly float _multiplier;
-        public FirstAttackDamageAbility(float bonusPercent) { _multiplier = 1.0f + (bonusPercent / 100f); }
-        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx) => !ctx.Actor.HasUsedFirstAttack ? currentDamage * _multiplier : currentDamage;
+
+        public FirstAttackDamageAbility(float multiplier)
+        {
+            _multiplier = multiplier;
+        }
+
+        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
+        {
+            return !ctx.Actor.HasUsedFirstAttack ? currentDamage * _multiplier : currentDamage;
+        }
     }
 
     public class StatusedTargetDamageAbility : IOutgoingDamageModifier
@@ -123,12 +196,16 @@ namespace ProjectVagabond.Battle.Abilities
         public string Name => "Opportunist";
         public string Description => "Deal more damage to statused targets.";
         private readonly float _multiplier;
-        public StatusedTargetDamageAbility(float bonusPercent) { _multiplier = 1.0f + (bonusPercent / 100f); }
+
+        public StatusedTargetDamageAbility(float multiplier)
+        {
+            if (multiplier > 10.0f) _multiplier = 1.0f + (multiplier / 100f);
+            else _multiplier = multiplier;
+        }
+
         public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
         {
-            // Safety check: Target can be null during UI calculations (e.g. GetEffectiveMovePower)
             if (ctx.Target == null) return currentDamage;
-
             return (ctx.Target.ActiveStatusEffects.Any()) ? currentDamage * _multiplier : currentDamage;
         }
     }
@@ -138,8 +215,17 @@ namespace ProjectVagabond.Battle.Abilities
         public string Name => "Last Stand";
         public string Description => "Deal more damage if acting last.";
         private readonly float _multiplier;
-        public LastStandAbility(float bonusPercent) { _multiplier = 1.0f + (bonusPercent / 100f); }
-        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx) => ctx.IsLastAction ? currentDamage * _multiplier : currentDamage;
+
+        public LastStandAbility(float multiplier)
+        {
+            if (multiplier > 10.0f) _multiplier = 1.0f + (multiplier / 100f);
+            else _multiplier = multiplier;
+        }
+
+        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
+        {
+            return ctx.IsLastAction ? currentDamage * _multiplier : currentDamage;
+        }
     }
 
     public class GlassCannonAbility : IOutgoingDamageModifier, IIncomingDamageModifier
@@ -148,27 +234,69 @@ namespace ProjectVagabond.Battle.Abilities
         public string Description => "Deal more, take more.";
         private readonly float _outgoingMult;
         private readonly float _incomingMult;
-        public GlassCannonAbility(float outgoingBonus, float incomingMalus) { _outgoingMult = 1.0f + (outgoingBonus / 100f); _incomingMult = 1.0f + (incomingMalus / 100f); }
+
+        public GlassCannonAbility(float outgoing, float incoming)
+        {
+            _outgoingMult = outgoing > 5.0f ? 1.0f + (outgoing / 100f) : outgoing;
+            _incomingMult = incoming > 5.0f ? 1.0f + (incoming / 100f) : incoming;
+        }
+
         public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx) => currentDamage * _outgoingMult;
         public float ModifyIncomingDamage(float currentDamage, CombatContext ctx) => currentDamage * _incomingMult;
     }
 
-    public class BloodletterAbility : IOutgoingDamageModifier
+    public class BloodletterAbility : IOutgoingDamageModifier, IOnActionComplete
     {
         public string Name => "Bloodletter";
-        public string Description => "Void spells deal more damage.";
+        public string Description => "Spells deal more damage but cost HP.";
         private readonly float _multiplier;
-        public BloodletterAbility(float bonusPercent) { _multiplier = 1.0f + (bonusPercent / 100f); }
-        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx) => ctx.MoveHasElement(9) ? currentDamage * _multiplier : currentDamage;
+
+        public BloodletterAbility(float multiplier)
+        {
+            _multiplier = multiplier;
+        }
+
+        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
+        {
+            if (ctx.Move != null && ctx.Move.MoveType == MoveType.Spell)
+            {
+                return currentDamage * _multiplier;
+            }
+            return currentDamage;
+        }
+
+        public void OnActionComplete(QueuedAction action, BattleCombatant owner)
+        {
+            if (action.ChosenMove != null && action.ChosenMove.MoveType == MoveType.Spell)
+            {
+                int cost = Math.Max(1, (int)(owner.Stats.MaxHP * 0.05f));
+                owner.ApplyDamage(cost);
+                EventBus.Publish(new GameEvents.CombatantRecoiled { Actor = owner, RecoilDamage = cost });
+            }
+        }
     }
 
-    public class ChainReactionAbility : IOutgoingDamageModifier
+    public class ChainReactionAbility : IOutgoingDamageModifier, IOnHitEffect, IActionModifier, IOnActionComplete
     {
         public string Name => "Chain Reaction";
-        public string Description => "Multi-hit moves deal more damage.";
+        public string Description => "Consecutive hits boost damage.";
         private readonly float _multiplier;
-        public ChainReactionAbility(float bonusPercent) { _multiplier = 1.0f + (bonusPercent / 100f); }
-        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx) => (ctx.Move != null && ctx.Move.Effects.ContainsKey("MultiHit")) ? currentDamage * _multiplier : currentDamage;
+        private int _stacks = 0;
+        private string _lastMoveID = "";
+        private bool _hitThisTurn = false;
+
+        public ChainReactionAbility(float multiplier) { _multiplier = multiplier; }
+
+        public void ModifyAction(QueuedAction action, BattleCombatant owner)
+        {
+            _hitThisTurn = false;
+            if (action.ChosenMove != null && action.ChosenMove.MoveID != _lastMoveID) _stacks = 0;
+            if (action.ChosenMove != null) _lastMoveID = action.ChosenMove.MoveID;
+        }
+
+        public void OnHit(CombatContext ctx, int damageDealt) { _stacks++; _hitThisTurn = true; }
+        public void OnActionComplete(QueuedAction action, BattleCombatant owner) { if (action.ChosenMove != null && action.ChosenMove.Power > 0 && !_hitThisTurn) _stacks = 0; }
+        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx) => currentDamage * (1.0f + (_stacks * (_multiplier - 1.0f)));
     }
 
     public class DefensePenetrationAbility : IDefensePenetrationModifier
@@ -192,11 +320,17 @@ namespace ProjectVagabond.Battle.Abilities
     public class VigorAbility : IIncomingDamageModifier
     {
         public string Name => "Vigor";
-        public string Description => "Reduces damage when HP is high.";
-        private readonly float _hpThreshold;
-        private readonly float _multiplier;
-        public VigorAbility(float hpThreshold, float reductionPercent) { _hpThreshold = hpThreshold; _multiplier = 1.0f - (reductionPercent / 100f); }
-        public float ModifyIncomingDamage(float currentDamage, CombatContext ctx) => ((float)ctx.Actor.Stats.CurrentHP / ctx.Actor.Stats.MaxHP * 100f > _hpThreshold) ? currentDamage * _multiplier : currentDamage;
+        public string Description => "Reduces damage when at full HP.";
+        public VigorAbility() { }
+        public float ModifyIncomingDamage(float currentDamage, CombatContext ctx)
+        {
+            if (ctx.Target.Stats.CurrentHP >= ctx.Target.Stats.MaxHP)
+            {
+                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name}'s Vigor reduced the damage!" });
+                return currentDamage * 0.5f;
+            }
+            return currentDamage;
+        }
     }
 
     public class SunBlessedLeafAbility : IIncomingDamageModifier
@@ -230,42 +364,14 @@ namespace ProjectVagabond.Battle.Abilities
         public float ModifyIncomingDamage(float currentDamage, CombatContext ctx) => ctx.MoveHasElement(_elementId) ? 0f : currentDamage;
     }
 
-    public class GhostlySlippersAbility : IIncomingDamageModifier
-    {
-        public string Name => "Nimble Feet";
-        public string Description => "Chance to avoid damage while dodging.";
-        private readonly int _chance;
-        public GhostlySlippersAbility(int chance) { _chance = chance; }
-        public float ModifyIncomingDamage(float currentDamage, CombatContext ctx)
-        {
-            if (ctx.Target.HasStatusEffect(StatusEffectType.Dodging))
-            {
-                var random = new Random();
-                if (random.Next(1, 101) <= _chance) return 0f;
-            }
-            return currentDamage;
-        }
-    }
-
     // --- ELEMENTAL MODIFIERS ---
     public class AddResistanceAbility : IElementalAffinityModifier
     {
         public string Name => "Elemental Resistance";
         public string Description => "Adds a resistance.";
         private readonly int _elementId;
-
-        public AddResistanceAbility(int elementId)
-        {
-            _elementId = elementId;
-        }
-
-        public void ModifyElementalAffinities(List<int> weaknesses, List<int> resistances, BattleCombatant owner)
-        {
-            if (!resistances.Contains(_elementId))
-            {
-                resistances.Add(_elementId);
-            }
-        }
+        public AddResistanceAbility(int elementId) { _elementId = elementId; }
+        public void ModifyElementalAffinities(List<int> weaknesses, List<int> resistances, BattleCombatant owner) { if (!resistances.Contains(_elementId)) resistances.Add(_elementId); }
     }
 
     // --- STATUS MODIFIERS ---
@@ -278,79 +384,67 @@ namespace ProjectVagabond.Battle.Abilities
         public bool ShouldBlockStatus(StatusEffectType type, BattleCombatant owner) => _immuneTypes.Contains(type);
     }
 
-    public class StatusDurationAbility : IOutgoingStatusModifier
-    {
-        public string Name => "Lingering Curse";
-        public string Description => "Increases duration of inflicted status effects.";
-        private readonly int _bonusDuration;
-        public StatusDurationAbility(int bonus) { _bonusDuration = bonus; }
-        public int ModifyStatusDuration(StatusEffectType type, int duration, BattleCombatant owner)
-        {
-            // Only boost negative effects
-            if (type != StatusEffectType.Regen && type != StatusEffectType.Dodging) return duration + _bonusDuration;
-            return duration;
-        }
-    }
-
     // --- ACTION MODIFIERS & STATEFUL ABILITIES ---
-    public class AmbushPredatorAbility : IActionModifier
+    public class AmbushPredatorAbility : IActionModifier, IOutgoingDamageModifier
     {
         public string Name => "Ambush Predator";
         public string Description => "First attack is faster but weaker.";
         private readonly int _priorityBonus;
-        private readonly float _powerMultiplier;
-        public AmbushPredatorAbility(int priorityBonus, float powerPenaltyPercent) { _priorityBonus = priorityBonus; _powerMultiplier = 1.0f + (powerPenaltyPercent / 100f); }
-        public void ModifyAction(QueuedAction action, BattleCombatant owner)
-        {
-            if (!owner.HasUsedFirstAttack && action.ChosenMove != null)
-            {
-                action.Priority += _priorityBonus;
-                action.ChosenMove.Power = (int)(action.ChosenMove.Power * _powerMultiplier);
-            }
-        }
+        private readonly float _damageMultiplier;
+        public AmbushPredatorAbility(int priorityBonus, float damageMult) { _priorityBonus = priorityBonus; _damageMultiplier = damageMult; }
+        public void ModifyAction(QueuedAction action, BattleCombatant owner) { if (!owner.HasUsedFirstAttack && action.ChosenMove != null) action.Priority += _priorityBonus; }
+        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx) => !ctx.Actor.HasUsedFirstAttack ? currentDamage * _damageMultiplier : currentDamage;
     }
 
     public class SpellweaverAbility : IOnActionComplete, IOutgoingDamageModifier
     {
         public string Name => "Spellweaver";
-        public string Description => "Actions boost next Spell.";
-        private readonly float _bonusMultiplier;
-        private bool _isActive = false;
-        public SpellweaverAbility(float bonusPercent) { _bonusMultiplier = 1.0f + (bonusPercent / 100f); }
+        public string Description => "Alternating spells deals more damage.";
+        private readonly float _multiplier;
+        private string _lastMoveID = "";
+        private bool _lastWasSpell = false;
+
+        public SpellweaverAbility(float multiplier) { _multiplier = multiplier; }
         public void OnActionComplete(QueuedAction action, BattleCombatant owner)
         {
             if (action.ChosenMove != null)
             {
-                if (action.ChosenMove.MoveType == MoveType.Action) { _isActive = true; EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{owner.Name}'s {Name} is ready!" }); }
-                else if (action.ChosenMove.MoveType == MoveType.Spell) _isActive = false;
+                _lastMoveID = action.ChosenMove.MoveID;
+                _lastWasSpell = action.ChosenMove.MoveType == MoveType.Spell;
             }
         }
-        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx) => (_isActive && ctx.Move != null && ctx.Move.MoveType == MoveType.Spell) ? currentDamage * _bonusMultiplier : currentDamage;
+        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
+        {
+            if (ctx.Move != null && ctx.Move.MoveType == MoveType.Spell && _lastWasSpell && ctx.Move.MoveID != _lastMoveID)
+                return currentDamage * _multiplier;
+            return currentDamage;
+        }
     }
 
     public class MomentumAbility : IOnActionComplete, IOnKill, IOutgoingDamageModifier
     {
         public string Name => "Momentum";
         public string Description => "Kills boost next attack.";
-        private readonly float _bonusMultiplier;
+        private readonly float _multiplier;
         private bool _isActive = false;
-        public MomentumAbility(float bonusPercent) { _bonusMultiplier = 1.0f + (bonusPercent / 100f); }
+        public MomentumAbility(float multiplier) { _multiplier = multiplier; }
         public void OnActionComplete(QueuedAction action, BattleCombatant owner) { if (action.ChosenMove != null && action.ChosenMove.Power > 0) _isActive = false; }
         public void OnKill(CombatContext ctx) { _isActive = true; EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Actor.Name}'s {Name} is building!" }); }
-        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx) => (_isActive && ctx.Move != null && ctx.Move.Power > 0) ? currentDamage * _bonusMultiplier : currentDamage;
+        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx) => (_isActive && ctx.Move != null && ctx.Move.Power > 0) ? currentDamage * _multiplier : currentDamage;
     }
 
     public class EscalationAbility : ITurnLifecycle, IOutgoingDamageModifier
     {
         public string Name => "Escalation";
         public string Description => "Damage increases every turn.";
-        private readonly float _bonusPerStack;
-        private readonly float _maxBonus;
-        private int _stacks = 0;
-        public EscalationAbility(float bonusPerTurn, float maxBonus) { _bonusPerStack = bonusPerTurn; _maxBonus = maxBonus; }
-        public void OnTurnStart(BattleCombatant owner) { }
-        public void OnTurnEnd(BattleCombatant owner) { _stacks++; }
-        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx) { float totalBonus = Math.Min(_stacks * _bonusPerStack, _maxBonus); return currentDamage * (1.0f + (totalBonus / 100f)); }
+        private readonly float _multPerRound;
+        private readonly float _maxMult;
+        private float _currentMult = 1.0f;
+
+        public EscalationAbility(float multPerRound, float maxMult) { _multPerRound = multPerRound; _maxMult = maxMult; }
+        public void OnTurnStart(BattleCombatant owner) { _currentMult += (_multPerRound - 1.0f); if (_currentMult > _maxMult) _currentMult = _maxMult; }
+        public void OnTurnEnd(BattleCombatant owner) { }
+        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx) => currentDamage * _currentMult;
     }
 
     // --- TRIGGERS ---
@@ -361,52 +455,11 @@ namespace ProjectVagabond.Battle.Abilities
         public void OnCritReceived(CombatContext ctx)
         {
             var target = ctx.Target;
-            var (successStr, _) = target.ModifyStatStage(OffensiveStatType.Strength, 2);
-            if (successStr) EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = target, Stat = OffensiveStatType.Strength, Amount = 2 });
-            var (successInt, _) = target.ModifyStatStage(OffensiveStatType.Intelligence, 2);
-            if (successInt) EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = target, Stat = OffensiveStatType.Intelligence, Amount = 2 });
+            var (successStr, _) = target.ModifyStatStage(OffensiveStatType.Strength, 1);
+            if (successStr) EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = target, Stat = OffensiveStatType.Strength, Amount = 1 });
+            var (successInt, _) = target.ModifyStatStage(OffensiveStatType.Intelligence, 1);
+            if (successInt) EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = target, Stat = OffensiveStatType.Intelligence, Amount = 1 });
             if (successStr || successInt) EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{target.Name}'s {Name} turned pain into power!" });
-        }
-    }
-
-    public class ContagionAbility : IOnStatusApplied
-    {
-        public string Name => "Contagion";
-        public string Description => "Spreads negative status.";
-        private readonly int _chance;
-        private readonly int _durationBonus;
-        public ContagionAbility(int chance, int durationBonus) { _chance = chance; _durationBonus = durationBonus; }
-        public void OnStatusApplied(CombatContext ctx, StatusEffectInstance status)
-        {
-            if (status.EffectType == StatusEffectType.Regen || status.EffectType == StatusEffectType.Dodging) return;
-            var random = new Random();
-            if (random.Next(1, 101) <= _chance)
-            {
-                var battleManager = ServiceLocator.Get<BattleManager>();
-                var potentialTargets = battleManager.AllCombatants.Where(c => c.IsPlayerControlled != ctx.Actor.IsPlayerControlled && c != ctx.Target && !c.IsDefeated && !c.HasStatusEffect(status.EffectType)).ToList();
-                if (potentialTargets.Any())
-                {
-                    var contagionTarget = potentialTargets[random.Next(potentialTargets.Count)];
-                    contagionTarget.AddStatusEffect(new StatusEffectInstance(status.EffectType, status.DurationInTurns + _durationBonus));
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Actor.Name}'s {Name} spread {status.GetDisplayName()} to {contagionTarget.Name}!" });
-                }
-            }
-        }
-    }
-
-    public class SadistAbility : IOnStatusApplied
-    {
-        public string Name => "Sadist";
-        public string Description => "Applying status raises Strength.";
-        public void OnStatusApplied(CombatContext ctx, StatusEffectInstance status)
-        {
-            if (status.EffectType == StatusEffectType.Regen || status.EffectType == StatusEffectType.Dodging) return;
-            var (success, _) = ctx.Actor.ModifyStatStage(OffensiveStatType.Strength, 1);
-            if (success)
-            {
-                EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = ctx.Actor, Stat = OffensiveStatType.Strength, Amount = 1 });
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Actor.Name}'s {Name} raised their Strength!" });
-            }
         }
     }
 
@@ -525,24 +578,36 @@ namespace ProjectVagabond.Battle.Abilities
     public class ToxicAuraAbility : ITurnLifecycle
     {
         public string Name => "Toxic Aura";
-        public string Description => "Poison random enemy at end of turn.";
+        public string Description => "Poison random combatant at end of turn.";
         private readonly int _chance;
         private readonly int _duration;
-        public ToxicAuraAbility(int chance, int duration) { _chance = chance; _duration = duration; }
+        private readonly bool _canHitAllies;
+        private static readonly Random _random = new Random();
+
+        public ToxicAuraAbility(int chance, int duration, bool canHitAllies)
+        {
+            _chance = chance;
+            _duration = duration;
+            _canHitAllies = canHitAllies;
+        }
+
         public void OnTurnStart(BattleCombatant owner) { }
         public void OnTurnEnd(BattleCombatant owner)
         {
-            var random = new Random();
-            if (random.Next(1, 101) <= _chance)
+            if (_random.Next(1, 101) > _chance) return;
+
+            var battleManager = ServiceLocator.Get<BattleManager>();
+            var allCombatants = battleManager.AllCombatants.Where(c => !c.IsDefeated && c.IsActiveOnField && c != owner).ToList();
+
+            var validTargets = new List<BattleCombatant>();
+            validTargets.AddRange(allCombatants.Where(c => c.IsPlayerControlled != owner.IsPlayerControlled));
+            if (_canHitAllies) validTargets.AddRange(allCombatants.Where(c => c.IsPlayerControlled == owner.IsPlayerControlled));
+
+            if (validTargets.Any())
             {
-                var battleManager = ServiceLocator.Get<BattleManager>();
-                var enemies = battleManager.AllCombatants.Where(c => c.IsPlayerControlled != owner.IsPlayerControlled && !c.IsDefeated && c.IsActiveOnField).ToList();
-                if (enemies.Any())
-                {
-                    var target = enemies[random.Next(enemies.Count)];
-                    target.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Poison, _duration));
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{owner.Name}'s {Name} poisoned {target.Name}!" });
-                }
+                var target = validTargets[_random.Next(validTargets.Count)];
+                target.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Poison, _duration));
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{owner.Name}'s {Name} poisoned {target.Name}!" });
             }
         }
     }

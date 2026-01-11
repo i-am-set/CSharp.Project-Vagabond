@@ -1,25 +1,22 @@
 [
   {
     "RelicID": "0",
-    "RelicName": "Verdant Talisman",
-    "AbilityName": "Green Thumb",
-    "Description": "[cnature]Nature[/] spells deal[cpositive] 1.2x[/] damage and holder has element '[cnature]Nature[/]'",
-    "Flavor": "",
+    "RelicName": "Lodestone",
+    "AbilityName": "Stabilizer",
+    "Description": "[cneutral]Neutral[/] spells deal[cpositive] 1.1x[/] damage",
+    "Flavor": "A heavy stone that hums with a low frequency.",
     "Rarity": 1,
     "Effects": {
-      "AddResistance": "3",
-      "ElementalDamageBonus": "3,20"
+      "ElementalDamageBonus": "0,10"
     },
-    "StatModifiers": {
-    },
-    "Tags": [ "Nature", "Defense" ]
+    "Tags": [ "Neutral" ]
   },
   {
     "RelicID": "1",
     "RelicName": "Warm Ring",
     "AbilityName": "Pyromancer",
     "Description": "[cfire]Fire[/] spells deal[cpositive] 1.2x[/] damage",
-    "Flavor": "",
+    "Flavor": "Always hot to the touch.",
     "Rarity": 1,
     "Effects": {
       "ElementalDamageBonus": "1,20"
@@ -31,7 +28,7 @@
     "RelicName": "Tidal Stone",
     "AbilityName": "Hydromancer",
     "Description": "[cwater]Water[/] spells deal[cpositive] 1.2x[/] damage",
-    "Flavor": "",
+    "Flavor": "Smells of salt and brine.",
     "Rarity": 1,
     "Effects": {
       "ElementalDamageBonus": "2,20"
@@ -40,108 +37,10 @@
   },
   {
     "RelicID": "3",
-    "RelicName": "Arcanist's Ring",
-    "AbilityName": "Thaumomancer",
-    "Description": "[carcane]Arcane[/] spells deal[cpositive] 1.2x[/] damage",
-    "Flavor": "",
-    "Rarity": 1,
-    "Effects": {
-      "ElementalDamageBonus": "4,20"
-    },
-    "Tags": [ "Arcane" ]
-  },
-  {
-    "RelicID": "4",
-    "RelicName": "NULL",
-    "AbilityName": "NULL",
-    "Description": "NULL",
-    "Flavor": "NULL",
-    "Rarity": 0,
-    "Effects": {},
-    "Tags": []
-  },
-  {
-    "RelicID": "5",
-    "RelicName": "Lodestone",
-    "AbilityName": "Stabilizer",
-    "Description": "[cneutral]Neutral[/] spells deal[cpositive] 1.1x[/] damage",
-    "Flavor": "",
-    "Rarity": 1,
-    "Effects": {
-      "ElementalDamageBonus": "0,10"
-    },
-    "Tags": [ "Neutral" ]
-  },
-  {
-    "RelicID": "6",
-    "RelicName": "NULL",
-    "AbilityName": "NULL",
-    "Description": "NULL",
-    "Flavor": "NULL",
-    "Rarity": 0,
-    "Effects": {},
-    "Tags": []
-  },
-  {
-    "RelicID": "7",
-    "RelicName": "NULL",
-    "AbilityName": "NULL",
-    "Description": "NULL",
-    "Flavor": "NULL",
-    "Rarity": 0,
-    "Effects": {},
-    "Tags": []
-  },
-  {
-    "RelicID": "8",
-    "RelicName": "Voidheart Shard",
-    "AbilityName": "Occultist",
-    "Description": "[cblight]Blight[/] spells deal[cpositive] 1.2x[/] damage",
-    "Flavor": "",
-    "Rarity": 1,
-    "Effects": {
-      "ElementalDamageBonus": "6,20"
-    },
-    "Tags": [ "Blight" ]
-  },
-  {
-    "RelicID": "9",
-    "RelicName": "Sunstone",
-    "AbilityName": "Diviner",
-    "Description": "[cdivine]Divine[/] spells deal[cpositive] 1.2x[/] damage",
-    "Flavor": "",
-    "Rarity": 1,
-    "Effects": {
-      "ElementalDamageBonus": "5,20"
-    },
-    "Tags": [ "Divine" ]
-  },
-  {
-    "RelicID": "10",
-    "RelicName": "NULL",
-    "AbilityName": "NULL",
-    "Description": "NULL",
-    "Flavor": "NULL",
-    "Rarity": 0,
-    "Effects": {},
-    "Tags": []
-  },
-  {
-    "RelicID": "11",
-    "RelicName": "NULL",
-    "AbilityName": "NULL",
-    "Description": "NULL",
-    "Flavor": "NULL",
-    "Rarity": 0,
-    "Effects": {},
-    "Tags": []
-  },
-  {
-    "RelicID": "12",
     "RelicName": "Everblossom Seed",
     "AbilityName": "Floramancer",
     "Description": "[cnature]Nature[/] spells deal[cpositive] 1.2x[/] damage",
-    "Flavor": "",
+    "Flavor": "It pulses with life.",
     "Rarity": 1,
     "Effects": {
       "ElementalDamageBonus": "3,20"
@@ -149,11 +48,47 @@
     "Tags": [ "Nature" ]
   },
   {
-    "RelicID": "13",
-    "RelicName": "Serpant Fang",
+    "RelicID": "4",
+    "RelicName": "Arcanist's Ring",
+    "AbilityName": "Thaumomancer",
+    "Description": "[carcane]Arcane[/] spells deal[cpositive] 1.2x[/] damage",
+    "Flavor": "Vibrates with unstable energy.",
+    "Rarity": 1,
+    "Effects": {
+      "ElementalDamageBonus": "4,20"
+    },
+    "Tags": [ "Arcane" ]
+  },
+  {
+    "RelicID": "5",
+    "RelicName": "Sunstone",
+    "AbilityName": "Diviner",
+    "Description": "[cdivine]Divine[/] spells deal[cpositive] 1.2x[/] damage",
+    "Flavor": "Bright enough to read by.",
+    "Rarity": 1,
+    "Effects": {
+      "ElementalDamageBonus": "5,20"
+    },
+    "Tags": [ "Divine" ]
+  },
+  {
+    "RelicID": "6",
+    "RelicName": "Voidheart Shard",
+    "AbilityName": "Occultist",
+    "Description": "[cblight]Blight[/] spells deal[cpositive] 1.2x[/] damage",
+    "Flavor": "It seems to absorb the light around it.",
+    "Rarity": 1,
+    "Effects": {
+      "ElementalDamageBonus": "6,20"
+    },
+    "Tags": [ "Blight" ]
+  },
+  {
+    "RelicID": "7",
+    "RelicName": "Serpent Fang",
     "AbilityName": "Venomous",
     "Description": "[cpositive]50%[/] chance to inflict [cpoison]poison[/] with [cctm]contact[/]",
-    "Flavor": "",
+    "Flavor": "Still dripping with venom.",
     "Rarity": 1,
     "Effects": {
       "ApplyStatusOnHit": "Poison,50,4,true"
@@ -161,11 +96,11 @@
     "Tags": [ "Blight", "StatusEffect" ]
   },
   {
-    "RelicID": "14",
+    "RelicID": "8",
     "RelicName": "Trollhide Bracers",
     "AbilityName": "Thick Skin",
     "Description": "Receive [cpositive]0.8x[/] physical damage",
-    "Flavor": "",
+    "Flavor": "Rough, tough, and smells terrible.",
     "Rarity": 0,
     "Effects": {
       "PhysicalDamageReduction": "20"
@@ -175,11 +110,11 @@
     "Tags": [ "Defense" ]
   },
   {
-    "RelicID": "15",
+    "RelicID": "9",
     "RelicName": "Spyglass",
     "AbilityName": "Sniper",
     "Description": "Increases [ccrit]crit[/] chance by [cpositive]10%[/]",
-    "Flavor": "",
+    "Flavor": "Helps you find the weak spots.",
     "Rarity": 2,
     "Effects": {
       "FlatCritBonus": "10"
@@ -187,11 +122,11 @@
     "Tags": [ "Critical" ]
   },
   {
-    "RelicID": "16",
+    "RelicID": "10",
     "RelicName": "Phoenix Ash",
     "AbilityName": "Regeneration",
     "Description": "Restore [cpositive]5%[/] HP [cctm]at end of turn[/]",
-    "Flavor": "",
+    "Flavor": "Warm ash that never cools.",
     "Rarity": 2,
     "Effects": {
       "Regen": "5"
@@ -199,11 +134,11 @@
     "Tags": [ "Healing", "Defense" ]
   },
   {
-    "RelicID": "17",
+    "RelicID": "11",
     "RelicName": "Vulture's Pendant",
     "AbilityName": "Opportunist",
     "Description": "Targets with [cctm]status effects[/] take [cpositive]2.0x[/] damage",
-    "Flavor": "",
+    "Flavor": "Wait for them to weaken, then strike.",
     "Rarity": 2,
     "Effects": {
       "StatusedTargetDamage": "100"
@@ -211,11 +146,11 @@
     "Tags": [ "StatusEffect" ]
   },
   {
-    "RelicID": "18",
+    "RelicID": "12",
     "RelicName": "Voltaic Mantle",
     "AbilityName": "Static Charge",
     "Description": "[cpositive]30%[/] chance to stun attackers that [cctm]make contact[/]",
-    "Flavor": "",
+    "Flavor": "Crackles with static electricity.",
     "Rarity": 1,
     "Effects": {
       "ReactiveStatus": "Stun,30,1,true"
@@ -223,11 +158,11 @@
     "Tags": [ "Divine", "StatusEffect", "Defense" ]
   },
   {
-    "RelicID": "19",
+    "RelicID": "13",
     "RelicName": "Berserker's Heart",
     "AbilityName": "Adrenaline Rush",
-    "Description": "Deal [cpositive]2.0x[] damage [cctm]below 33% HP[/]",
-    "Flavor": "",
+    "Description": "Deal [cpositive]2.0x[/] damage [cctm]below 33% HP[/]",
+    "Flavor": "Beats faster the closer you are to death.",
     "Rarity": 2,
     "Effects": {
       "LowHPDamageBonus": "33,100"
@@ -237,11 +172,11 @@
     "Tags": [ "LowHP" ]
   },
   {
-    "RelicID": "20",
+    "RelicID": "14",
     "RelicName": "Sun-Blessed Leaf",
     "AbilityName": "Photosynthesis",
     "Description": "[cimmune]Immune[/] to [cdivine]Divine[/] based moves; heal [cpositive]25%[/] HP instead",
-    "Flavor": "",
+    "Flavor": "Absorbs light and converts it to life.",
     "Rarity": 2,
     "Effects": {
       "SunBlessedLeaf": "5,25"
@@ -249,11 +184,11 @@
     "Tags": [ "Divine", "Healing", "Defense" ]
   },
   {
-    "RelicID": "21",
+    "RelicID": "15",
     "RelicName": "Anchor Charm",
     "AbilityName": "Last Stand",
     "Description": "[cpositive]2.0x[/] power of holder's attacks [cctm]when acting last in the turn[/]",
-    "Flavor": "",
+    "Flavor": "Holds you steady until the end.",
     "Rarity": 1,
     "Effects": {
       "LastStand": "30"
@@ -263,47 +198,23 @@
     "Tags": []
   },
   {
-    "RelicID": "22",
-    "RelicName": "Cursed Hourglass",
-    "AbilityName": "Lingering Curse",
-    "Description": "Status effects inflicted by holder last [cpositive]+1 extra turn[/]",
-    "Flavor": "",
-    "Rarity": 2,
-    "Effects": {
-      "StatusDuration": "1"
-    },
-    "Tags": [ "StatusEffect" ]
-  },
-  {
-    "RelicID": "23",
-    "RelicName": "Rubber Soles",
-    "AbilityName": "Grounding",
-    "Description": "[cimmune]Immune[/] to [cdivine]Divine[/] based moves",
-    "Flavor": "",
-    "Rarity": 1,
-    "Effects": {
-      "ElementalImmunity": "5"
-    },
-    "Tags": [ "Divine", "Defense" ]
-  },
-  {
-    "RelicID": "24",
+    "RelicID": "16",
     "RelicName": "Idol of Disease",
     "AbilityName": "Toxic Aura",
-    "Description": "[cpositive]50%[/] chance to [cpoison]poison[/] a random enemy [cctm]at end of turn[/]",
-    "Flavor": "",
+    "Description": "[cpositive]50%[/] chance to [cpoison]poison[/] a random combatant [cctm]at end of turn[/]",
+    "Flavor": "A grotesque statue that oozes slime.",
     "Rarity": 2,
     "Effects": {
-      "ToxicAura": "50,2"
+      "ToxicAura": "50,2,true"
     },
     "Tags": [ "Blight", "StatusEffect" ]
   },
   {
-    "RelicID": "25",
+    "RelicID": "17",
     "RelicName": "Sealed Envelope",
     "AbilityName": "Unwavering",
-    "Description": "[cimmune]Immune[/] to [cstun]Stun[/]",
-    "Flavor": "",
+    "Description": "[cimmune]Immune[/] to [cstun]Stun[/] and [cstun]Daze[/]",
+    "Flavor": "The seal cannot be broken.",
     "Rarity": 1,
     "Effects": {
       "StatusImmunity": "Stun"
@@ -311,39 +222,39 @@
     "Tags": [ "Defense", "StatusEffect" ]
   },
   {
-    "RelicID": "26",
+    "RelicID": "18",
     "RelicName": "Bulwark Shield",
     "AbilityName": "Bulwark",
-    "Description": "Receive [cpositive]0.6x[/] [ccrit]crit[/] damage",
-    "Flavor": "",
+    "Description": "[cimmune]Immune[/] to [ccrit]Critical Hits[/]",
+    "Flavor": "A heavy shield that deflects the deadliest blows.",
     "Rarity": 1,
     "Effects": {
-      "CritDamageReduction": "40"
+      "CritImmunity": ""
     },
     "StatModifiers": {
     },
     "Tags": [ "Defense", "Critical" ]
   },
   {
-    "RelicID": "27",
+    "RelicID": "19",
     "RelicName": "Assassin's Mark",
     "AbilityName": "First Blood",
     "Description": "Holder's [cctm]first[/] attack deals [cpositive]1.5x[/] damage",
-    "Flavor": "",
+    "Flavor": "Strike first, strike hard.",
     "Rarity": 2,
     "Effects": {
-      "FirstAttackDamage": "50"
+      "FirstAttackDamage": "1.5"
     },
     "StatModifiers": {
     },
     "Tags": []
   },
   {
-    "RelicID": "28",
+    "RelicID": "20",
     "RelicName": "Gorgon's Gaze",
     "AbilityName": "Intimidate",
     "Description": "Lower all enemy [cstr]Strength[/] stat by [cpositive]-1[/] [cctm]on entering battle[/]",
-    "Flavor": "",
+    "Flavor": "Enemies freeze in fear.",
     "Rarity": 2,
     "Effects": {
       "Intimidate": "Strength,-1"
@@ -351,11 +262,11 @@
     "Tags": [ "StatusEffect" ]
   },
   {
-    "RelicID": "29",
+    "RelicID": "21",
     "RelicName": "Spiked Carapace",
     "AbilityName": "Iron Barbs",
     "Description": "Attackers lose [cpositive]12.5%[/] max HP [cctm]on contact[/]",
-    "Flavor": "",
+    "Flavor": "Don't touch.",
     "Rarity": 2,
     "Effects": {
       "Thorns": "12.5"
@@ -363,23 +274,23 @@
     "Tags": [ "Defense" ]
   },
   {
-    "RelicID": "30",
+    "RelicID": "22",
     "RelicName": "Pristine Gem",
     "AbilityName": "Full Power",
     "Description": "Deal [cpositive]1.5x[/] damage [cctm]at full HP[/]",
-    "Flavor": "",
+    "Flavor": "Flawless and powerful.",
     "Rarity": 1,
     "Effects": {
-      "FullHPDamage": "50"
+      "FullHPDamage": "1.5"
     },
     "Tags": []
   },
   {
-    "RelicID": "31",
+    "RelicID": "23",
     "RelicName": "All-Seeing Eye",
     "AbilityName": "Keen Eye",
-    "Description": "Holder's moves [cpositive]ignore[/] [cdodging]dodging[/] status effect",
-    "Flavor": "",
+    "Description": "Attacks [cpositive]ignore[/] [cdodging]dodging[/] and cannot miss",
+    "Flavor": "Nothing can hide.",
     "Rarity": 1,
     "Effects": {
       "IgnoreEvasion": ""
@@ -389,25 +300,11 @@
     "Tags": []
   },
   {
-    "RelicID": "32",
-    "RelicName": "Ghostly Slippers",
-    "AbilityName": "Nimble Feet",
-    "Description": "WIP 50% chance attacks miss while dodging WIP",
-    "Flavor": "",
-    "Rarity": 2,
-    "Effects": {
-      "GhostlySlippers": "50"
-    },
-    "StatModifiers": {
-    },
-    "Tags": [ "Defense" ]
-  },
-  {
-    "RelicID": "33",
+    "RelicID": "24",
     "RelicName": "Shattered Amulet",
     "AbilityName": "Glass Cannon",
     "Description": "Deal [cpositive]1.3x[/] damage but Receive [cnegative]1.15x[/] damage",
-    "Flavor": "",
+    "Flavor": "Power at a price.",
     "Rarity": 2,
     "Effects": {
       "GlassCannon": "30,15"
@@ -417,37 +314,37 @@
     "Tags": []
   },
   {
-    "RelicID": "34",
+    "RelicID": "25",
     "RelicName": "Domino Stone",
     "AbilityName": "Chain Reaction",
-    "Description": "Multi-hit moves gain [cpositive]5%[] damage per hit",
-    "Flavor": "",
+    "Description": "Consecutive hits with same attack boost damage by [cpositive]1.1x[/]",
+    "Flavor": "One falls, they all fall.",
     "Rarity": 2,
     "Effects": {
-      "ChainReaction": "5"
+      "ChainReaction": "1.1"
     },
     "Tags": [ "MultiHit" ]
   },
   {
-    "RelicID": "35",
+    "RelicID": "26",
     "RelicName": "Cracked Gauntlet",
     "AbilityName": "Reckless Abandon",
-    "Description": "Contact moves deal [cpositive]1.5x[/] damage but [cnegative]-10%[/] accuracy",
-    "Flavor": "",
+    "Description": "Contact moves deal [cpositive]1.5x[/] damage but [cnegative]0.9x[/] accuracy",
+    "Flavor": "Hit hard, pray it lands.",
     "Rarity": 1,
     "Effects": {
-      "RecklessAbandon": "50,-10"
+      "RecklessAbandon": "1.5,0.9"
     },
     "StatModifiers": {
     },
     "Tags": []
   },
   {
-    "RelicID": "36",
+    "RelicID": "27",
     "RelicName": "Scorpion Stinger",
     "AbilityName": "Armor Piercer",
     "Description": "Ignore [cpositive]25%[/] of target's [cten]Tenacity[/]",
-    "Flavor": "",
+    "Flavor": "Pierces the toughest hide.",
     "Rarity": 2,
     "Effects": {
       "DefensePenetration": "25"
@@ -455,11 +352,11 @@
     "Tags": []
   },
   {
-    "RelicID": "37",
+    "RelicID": "28",
     "RelicName": "Leech-Tooth Necklace",
     "AbilityName": "Sanguine Thirst",
     "Description": "Heal [cpositive]25%[/] of damage dealt [cctm]with contact moves[/]",
-    "Flavor": "",
+    "Flavor": "Feeds on the life of others.",
     "Rarity": 2,
     "Effects": {
       "SanguineThirst": "25"
@@ -467,127 +364,103 @@
     "Tags": [ "Lifesteal", "Healing" ]
   },
   {
-    "RelicID": "38",
+    "RelicID": "29",
     "RelicName": "Oaken Heart",
     "AbilityName": "Vigor",
-    "Description": "Receive [cpositive]0.5x[/] damage [cctm]above 75% HP[/]",
-    "Flavor": "",
+    "Description": "Receive [cpositive]0.5x[/] damage [cctm]at full HP[/]",
+    "Flavor": "Strong as an oak.",
     "Rarity": 0,
     "Effects": {
-      "Vigor": "75,50"
+      "Vigor": ""
     },
     "StatModifiers": {
     },
     "Tags": [ "Defense" ]
   },
   {
-    "RelicID": "39",
+    "RelicID": "30",
     "RelicName": "Priest's Pendant",
     "AbilityName": "Cornered Animal",
-    "Description": "[cpositive]1.5x[/] [cagi]Agility[/] [cctm]when below 33% HP[/] [cetc](or 4+ enemies)[/]",
-    "Flavor": "",
+    "Description": "Raises [cagi]Agility[/] by [cpositive]2[/] stages [cctm]when below 33% HP[/]",
+    "Flavor": "Desperation breeds speed.",
     "Rarity": 1,
     "Effects": {
-      "CorneredAnimal": "33,4,50"
+      "CorneredAnimal": "33,Agility,2"
     },
     "Tags": [ "LowHP" ]
   },
   {
-    "RelicID": "40",
-    "RelicName": "Miasma Vial",
-    "AbilityName": "Contagion",
-    "Description": "Status effects [cpositive]spread[/] to another enemy for [cpositive]+1[/] turn",
-    "Flavor": "",
-    "Rarity": 3,
-    "Effects": {
-      "Contagion": "100,1"
-    },
-    "Tags": [ "StatusEffect" ]
-  },
-  {
-    "RelicID": "41",
+    "RelicID": "31",
     "RelicName": "Shadow Cloak",
     "AbilityName": "Ambush Predator",
     "Description": "First attack gains [cpositive]+1[/] priority but [cnegative]0.8x[/] damage",
-    "Flavor": "",
+    "Flavor": "Strike from the shadows.",
     "Rarity": 1,
     "Effects": {
-      "AmbushPredator": "1,-20"
+      "AmbushPredator": "1,0.8"
     },
     "StatModifiers": {
     },
     "Tags": [ "Priority" ]
   },
   {
-    "RelicID": "42",
-    "RelicName": "Iron Maiden Fragment",
-    "AbilityName": "Sadist",
-    "Description": "[cctm]Applying status effects[/] raises [cstr]Strength[/] by [cpositive]+1[/]",
-    "Flavor": "",
-    "Rarity": 2,
-    "Effects": {
-      "Sadist": ""
-    },
-    "Tags": [ "StatusEffect", "Buff" ]
-  },
-  {
-    "RelicID": "43",
+    "RelicID": "32",
     "RelicName": "Sacrificial Dagger",
     "AbilityName": "Bloodletter",
-    "Description": "[cblight]Blight[/] spells cost [cnegative]5%[/] HP but deal [cpositive]1.5x[/] damage",
-    "Flavor": "",
+    "Description": "Spells cost [cnegative]5%[/] HP but deal [cpositive]1.5x[/] damage",
+    "Flavor": "Power demands sacrifice.",
     "Rarity": 3,
     "Effects": {
-      "Bloodletter": "50"
+      "Bloodletter": "1.5"
     },
     "Tags": [ "Blight", "HPCost" ]
   },
   {
-    "RelicID": "44",
+    "RelicID": "33",
     "RelicName": "Runic Weave",
     "AbilityName": "Spellweaver",
-    "Description": "[cctm]After an Action[/], holder's next Spell deals [cpositive]1.5x[/] damage",
-    "Flavor": "",
+    "Description": "Alternating spells deals [cpositive]1.5x[/] damage",
+    "Flavor": "Weave the magic together.",
     "Rarity": 2,
     "Effects": {
-      "Spellweaver": "50"
+      "Spellweaver": "1.5"
     },
     "StatModifiers": {
     },
     "Tags": []
   },
   {
-    "RelicID": "45",
+    "RelicID": "34",
     "RelicName": "Lead Helmet",
     "AbilityName": "Momentum",
-    "Description": "[cctm]After defeating a target[/], next attack deals [cpositive]2.0x[/] damage",
-    "Flavor": "",
+    "Description": "[cctm]After defeating a target[/], next attack deals [cpositive]1.5x[/] damage",
+    "Flavor": "Keep moving forward.",
     "Rarity": 3,
     "Effects": {
-      "Momentum": "50"
+      "Momentum": "1.5"
     },
     "StatModifiers": {
     },
     "Tags": []
   },
   {
-    "RelicID": "46",
+    "RelicID": "35",
     "RelicName": "Whetstone",
     "AbilityName": "Escalation",
     "Description": "Gain [cpositive]1.1x[/] damage each round, up to [cpositive]2.0x[/]",
-    "Flavor": "",
+    "Flavor": "Sharper every turn.",
     "Rarity": 3,
     "Effects": {
-      "Escalation": "10,100"
+      "Escalation": "1.1,2.0"
     },
     "Tags": []
   },
   {
-    "RelicID": "47",
+    "RelicID": "36",
     "RelicName": "Masochist's Mail",
     "AbilityName": "Pain Fuel",
     "Description": "Taking [ccrit]crit[/] damage raises [cstr]Strength[/] and [cint]Intelligence[/] by [cpositive]+1[/]",
-    "Flavor": "",
+    "Flavor": "Pain is power.",
     "Rarity": 2,
     "Effects": {
       "PainFuel": ""
@@ -597,11 +470,11 @@
     "Tags": [ "Critical", "Buff", "Defense" ]
   },
   {
-    "RelicID": "48",
+    "RelicID": "37",
     "RelicName": "Ichorous Heart",
     "AbilityName": "Caustic Blood",
     "Description": "Lifesteal against holder [cpositive]damages[/] the attacker instead of healing",
-    "Flavor": "",
+    "Flavor": "Your blood burns.",
     "Rarity": 2,
     "Effects": {
       "CausticBlood": ""
@@ -609,11 +482,11 @@
     "Tags": [ "Lifesteal", "Defense" ]
   },
   {
-    "RelicID": "49",
+    "RelicID": "38",
     "RelicName": "Seer's Lens",
     "AbilityName": "Insight",
     "Description": "Reveals the exact stats of enemies in combat",
-    "Flavor": "",
+    "Flavor": "See the truth.",
     "Rarity": 1,
     "Effects": {
       "Insight": ""

@@ -600,6 +600,13 @@ namespace ProjectVagabond.Battle.Abilities
                 int healAmount = (int)(damageDealt * (_percent / 100f));
                 if (healAmount > 0)
                 {
+                    // Check for Lifesteal Reactions (e.g. Caustic Blood)
+                    foreach (var reaction in ctx.Target.LifestealReactions)
+                    {
+                        bool preventHealing = reaction.OnLifestealReceived(ctx.Actor, healAmount, ctx.Target);
+                        if (preventHealing) return; // Stop healing
+                    }
+
                     int hpBefore = (int)ctx.Actor.VisualHP;
                     ctx.Actor.ApplyHealing(healAmount);
                     EventBus.Publish(new GameEvents.CombatantHealed
@@ -609,12 +616,6 @@ namespace ProjectVagabond.Battle.Abilities
                         HealAmount = healAmount,
                         VisualHPBefore = hpBefore
                     });
-
-                    // Check for Lifesteal Reactions (e.g. Caustic Blood)
-                    foreach (var reaction in ctx.Target.LifestealReactions)
-                    {
-                        reaction.OnLifestealReceived(ctx.Actor, healAmount, ctx.Target);
-                    }
                 }
             }
         }
@@ -866,7 +867,7 @@ namespace ProjectVagabond.Battle.Abilities
             {
                 if (entry != null && BattleDataCache.Moves.TryGetValue(entry.MoveID, out var move))
                 {
-                    if (move.OffensiveElementIDs.Contains(2)) // 2 is Water (Updated from 3)
+                    if (move.OffensiveElementIDs.Contains(2)) // 2 is Water
                     {
                         waterSpellCount++;
                     }
@@ -875,10 +876,6 @@ namespace ProjectVagabond.Battle.Abilities
 
             if (waterSpellCount > 0)
             {
-                // Base 1.0 + (Count * (Multiplier - 1.0))
-                // e.g. 1.25x per spell. 2 spells = 1.5x total? Or multiplicative?
-                // Prompt says "1.25x more damage for every water spell".
-                // Usually implies additive stacking of the bonus: 1 + (0.25 * count).
                 float bonus = (_multiplierPerSpell - 1.0f) * waterSpellCount;
                 return currentDamage * (1.0f + bonus);
             }
@@ -899,7 +896,7 @@ namespace ProjectVagabond.Battle.Abilities
 
         public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
         {
-            if (ctx.MoveHasElement(6) || ctx.MoveHasElement(4)) // 6=Blight, 4=Arcane (Updated from 7)
+            if (ctx.MoveHasElement(6) || ctx.MoveHasElement(4)) // 6=Blight, 4=Arcane
             {
                 return currentDamage * _multiplier;
             }
