@@ -29,6 +29,7 @@ namespace ProjectVagabond.UI
         private float _portraitBgTimer;
         private float _portraitBgDuration;
         private static readonly Random _rng = new Random();
+
         public InventoryDrawer(SplitMapInventoryOverlay overlay, InventoryDataProcessor dataProcessor, InventoryEquipSystem equipSystem)
         {
             _overlay = overlay;
@@ -490,9 +491,12 @@ namespace ProjectVagabond.UI
                 for (int s = 0; s < 4; s++)
                 {
                     int rawTotal = 0;
+                    int baseStat = 0;
+                    int totalEquipBonus = 0;
+
                     if (isOccupied)
                     {
-                        int baseStat = _overlay.GameState.PlayerState.GetBaseStat(member!, statKeys[s]);
+                        baseStat = _overlay.GameState.PlayerState.GetBaseStat(member!, statKeys[s]);
                         int weaponBonus = 0;
                         if (!string.IsNullOrEmpty(member!.EquippedWeaponId) && BattleDataCache.Weapons.TryGetValue(member.EquippedWeaponId, out var w))
                             w.StatModifiers.TryGetValue(statKeys[s], out weaponBonus);
@@ -505,7 +509,8 @@ namespace ProjectVagabond.UI
                         if (!string.IsNullOrEmpty(member.EquippedRelicId) && BattleDataCache.Relics.TryGetValue(member.EquippedRelicId, out var r))
                             r.StatModifiers.TryGetValue(statKeys[s], out relicBonus);
 
-                        rawTotal = baseStat + weaponBonus + armorBonus + relicBonus;
+                        totalEquipBonus = weaponBonus + armorBonus + relicBonus;
+                        rawTotal = baseStat + totalEquipBonus;
                     }
 
                     int currentEffective = Math.Max(1, rawTotal);
@@ -540,25 +545,55 @@ namespace ProjectVagabond.UI
                             int coloredBarPoints;
                             Color coloredBarColor;
 
-                            if (itemBonus > 0)
+                            if (hoveredItemStats != null)
                             {
-                                whiteBarPoints = Math.Clamp(effectiveWithoutItem, 1, 20);
-                                int totalPoints = Math.Clamp(currentEffective, 1, 20);
-                                coloredBarPoints = totalPoints - whiteBarPoints;
-                                coloredBarColor = _overlay.Global.StatColor_Increase;
-                            }
-                            else if (itemBonus < 0)
-                            {
-                                whiteBarPoints = Math.Clamp(currentEffective, 1, 20);
-                                int totalPoints = Math.Clamp(effectiveWithoutItem, 1, 20);
-                                coloredBarPoints = totalPoints - whiteBarPoints;
-                                coloredBarColor = _overlay.Global.StatColor_Decrease;
+                                // --- HOVER MODE: Show specific item impact ---
+                                if (itemBonus > 0)
+                                {
+                                    whiteBarPoints = Math.Clamp(effectiveWithoutItem, 1, 20);
+                                    int totalPoints = Math.Clamp(currentEffective, 1, 20);
+                                    coloredBarPoints = totalPoints - whiteBarPoints;
+                                    coloredBarColor = _overlay.Global.StatColor_Increase;
+                                }
+                                else if (itemBonus < 0)
+                                {
+                                    whiteBarPoints = Math.Clamp(currentEffective, 1, 20);
+                                    int totalPoints = Math.Clamp(effectiveWithoutItem, 1, 20);
+                                    coloredBarPoints = totalPoints - whiteBarPoints;
+                                    coloredBarColor = _overlay.Global.StatColor_Decrease;
+                                }
+                                else
+                                {
+                                    whiteBarPoints = Math.Clamp(currentEffective, 1, 20);
+                                    coloredBarPoints = 0;
+                                    coloredBarColor = Color.White;
+                                }
                             }
                             else
                             {
-                                whiteBarPoints = Math.Clamp(currentEffective, 1, 20);
-                                coloredBarPoints = 0;
-                                coloredBarColor = Color.White;
+                                // --- PASSIVE MODE: Show total equipment impact (Half Intensity) ---
+                                if (totalEquipBonus > 0)
+                                {
+                                    // Base is white, Bonus is Dim Green
+                                    whiteBarPoints = Math.Clamp(baseStat, 1, 20);
+                                    int totalPoints = Math.Clamp(rawTotal, 1, 20);
+                                    coloredBarPoints = totalPoints - whiteBarPoints;
+                                    coloredBarColor = _overlay.Global.StatColor_Increase * 0.5f; // Dim Green
+                                }
+                                else if (totalEquipBonus < 0)
+                                {
+                                    // Total is white, Penalty (up to Base) is Dim Red
+                                    whiteBarPoints = Math.Clamp(rawTotal, 1, 20);
+                                    int basePoints = Math.Clamp(baseStat, 1, 20);
+                                    coloredBarPoints = basePoints - whiteBarPoints;
+                                    coloredBarColor = _overlay.Global.StatColor_Decrease * 0.5f; // Dim Red
+                                }
+                                else
+                                {
+                                    whiteBarPoints = Math.Clamp(rawTotal, 1, 20);
+                                    coloredBarPoints = 0;
+                                    coloredBarColor = Color.White;
+                                }
                             }
 
                             int whiteWidth = whiteBarPoints * 2;
@@ -576,27 +611,40 @@ namespace ProjectVagabond.UI
                                 spriteBatch.DrawSnapped(_overlay.SpriteManager.InventoryStatBarFull, new Vector2(barX + whiteWidth, barY), srcColor, coloredBarColor);
                             }
 
+                            // --- EXCESS TEXT LOGIC ---
+                            // Only show excess text if hovering an item, or if the total is > 20
                             if (currentEffective > 20 || effectiveWithoutItem > 20)
                             {
                                 int excessValue;
                                 Color textColor;
 
-                                if (itemBonus > 0)
+                                if (hoveredItemStats != null)
                                 {
-                                    excessValue = currentEffective - 20;
-                                    if (effectiveWithoutItem < currentEffective) textColor = _overlay.Global.StatColor_Increase;
-                                    else textColor = _overlay.Global.Palette_BlueWhite;
-                                }
-                                else if (itemBonus < 0)
-                                {
-                                    excessValue = effectiveWithoutItem - 20;
-                                    if (effectiveWithoutItem > currentEffective) textColor = _overlay.Global.StatColor_Decrease;
-                                    else textColor = _overlay.Global.Palette_BlueWhite;
+                                    if (itemBonus > 0)
+                                    {
+                                        excessValue = currentEffective - 20;
+                                        if (effectiveWithoutItem < currentEffective) textColor = _overlay.Global.StatColor_Increase;
+                                        else textColor = _overlay.Global.Palette_BlueWhite;
+                                    }
+                                    else if (itemBonus < 0)
+                                    {
+                                        excessValue = effectiveWithoutItem - 20;
+                                        if (effectiveWithoutItem > currentEffective) textColor = _overlay.Global.StatColor_Decrease;
+                                        else textColor = _overlay.Global.Palette_BlueWhite;
+                                    }
+                                    else
+                                    {
+                                        excessValue = currentEffective - 20;
+                                        textColor = _overlay.Global.Palette_BlueWhite;
+                                    }
                                 }
                                 else
                                 {
+                                    // Passive Mode Excess
                                     excessValue = currentEffective - 20;
-                                    textColor = _overlay.Global.Palette_BlueWhite;
+                                    if (totalEquipBonus > 0) textColor = _overlay.Global.StatColor_Increase * 0.5f;
+                                    else if (totalEquipBonus < 0) textColor = _overlay.Global.StatColor_Decrease * 0.5f;
+                                    else textColor = _overlay.Global.Palette_BlueWhite;
                                 }
 
                                 if (excessValue > 0)

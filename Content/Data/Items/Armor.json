@@ -7,7 +7,7 @@
     "Flavor": "A simple tunic made of cured hide.",
     "Rarity": 0,
     "StatModifiers": {
-      "Tenacity": 3,
+      "Tenacity": 1,
       "Agility": 1
     },
     "Tags": [ "Leather", "Light" ]
@@ -23,7 +23,7 @@
       "PhysicalDamageReduction": "5"
     },
     "StatModifiers": {
-      "Tenacity": 8,
+      "Tenacity": 5,
       "Agility": -2
     },
     "Tags": [ "Metal", "Heavy" ]
@@ -40,7 +40,6 @@
     },
     "StatModifiers": {
       "Intelligence": 4,
-      "MaxMana": 20
     },
     "Tags": [ "Cloth", "Magic" ]
   },
@@ -55,9 +54,9 @@
       "LowHPDamageBonus": "50,20"
     },
     "StatModifiers": {
-      "Strength": 5,
-      "Tenacity": 3,
-      "Intelligence": -5
+      "Strength": 2,
+      "Tenacity": 2,
+      "Intelligence": -3
     },
     "Tags": [ "Leather", "Offensive" ]
   }
