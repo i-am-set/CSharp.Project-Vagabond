@@ -16,14 +16,14 @@
     "Target": "Single",
     "Accuracy": 90,
     "Priority": 0,
-    "OffensiveElementIDs": [ 6 ],
+    "OffensiveElementIDs": [ 0 ],
     "AnimationSpriteSheet": "basic_slash",
     "AnimationSpeed": 2.0,
     "DamageFrameIndex": 0,
     "IsAnimationCentralized": false,
     "StatModifiers": {
     },
-    "Tags": [ "Metal", "Sword" ]
+    "Tags": [ "Neutral", "Sword" ]
   },
   {
     "WeaponID": "1",
@@ -42,7 +42,7 @@
     "Target": "Single",
     "Accuracy": 85,
     "Priority": 0,
-    "OffensiveElementIDs": [ 6 ],
+    "OffensiveElementIDs": [ 0 ],
     "AnimationSpriteSheet": "basic_impact",
     "AnimationSpeed": 1.0,
     "DamageFrameIndex": 0,
@@ -51,7 +51,7 @@
       "Strength": 2,
       "Agility": -1
     },
-    "Tags": [ "Metal", "Blunt" ]
+    "Tags": [ "Neutral", "Blunt" ]
   },
   {
     "WeaponID": "2",
@@ -70,7 +70,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
-    "OffensiveElementIDs": [ 6 ],
+    "OffensiveElementIDs": [ 0 ],
     "AnimationSpriteSheet": "basic_swipe",
     "AnimationSpeed": 1.5,
     "DamageFrameIndex": 2,
@@ -81,7 +81,7 @@
     },
     "StatModifiers": {
     },
-    "Tags": [ "Toxic", "Dagger" ]
+    "Tags": [ "Blight", "Dagger" ]
   },
   {
     "WeaponID": "3",
@@ -100,7 +100,7 @@
     "Target": "Single",
     "Accuracy": 90,
     "Priority": 0,
-    "OffensiveElementIDs": [ 6 ],
+    "OffensiveElementIDs": [ 0 ],
     "AnimationSpriteSheet": "basic_swipe",
     "AnimationSpeed": 1.5,
     "DamageFrameIndex": 2,
@@ -113,7 +113,7 @@
       "Agility": 1,
       "Strength": -1
     },
-    "Tags": [ "Metal", "Dagger", "Junk" ]
+    "Tags": [ "Neutral", "Dagger", "Junk" ]
   },
   {
     "WeaponID": "4",
@@ -132,7 +132,7 @@
     "Target": "Single",
     "Accuracy": 85,
     "Priority": 0,
-    "OffensiveElementIDs": [ 5 ],
+    "OffensiveElementIDs": [ 3 ],
     "AnimationSpriteSheet": "basic_impact",
     "AnimationSpeed": 1.0,
     "DamageFrameIndex": 0,
@@ -141,7 +141,7 @@
       "Strength": 1,
       "Agility": -1
     },
-    "Tags": [ "Stone", "Blunt", "Junk" ]
+    "Tags": [ "Nature", "Blunt", "Junk" ]
   },
   {
     "WeaponID": "5",
@@ -160,7 +160,7 @@
     "Target": "Single",
     "Accuracy": 90,
     "Priority": 0,
-    "OffensiveElementIDs": [ 1 ],
+    "OffensiveElementIDs": [ 0 ],
     "AnimationSpriteSheet": "basic_slash",
     "AnimationSpeed": 2.0,
     "DamageFrameIndex": 0,
@@ -174,7 +174,7 @@
       "Agility": 1,
       "Tenacity": -1
     },
-    "Tags": [ "Glass", "Sword", "Junk" ]
+    "Tags": [ "Neutral", "Sword", "Junk" ]
   },
   {
     "WeaponID": "6",
@@ -193,7 +193,7 @@
     "Target": "Single",
     "Accuracy": 95,
     "Priority": 0,
-    "OffensiveElementIDs": [ 13 ],
+    "OffensiveElementIDs": [ 3 ],
     "AnimationSpriteSheet": "basic_impact",
     "AnimationSpeed": 1.0,
     "DamageFrameIndex": 0,
@@ -201,7 +201,7 @@
     "StatModifiers": {
       "Strength": 1
     },
-    "Tags": [ "Wood", "Blunt", "Junk" ]
+    "Tags": [ "Nature", "Blunt", "Junk" ]
   },
   {
     "WeaponID": "7",
@@ -220,14 +220,14 @@
     "Target": "Single",
     "Accuracy": 95,
     "Priority": 0,
-    "OffensiveElementIDs": [ 6 ],
+    "OffensiveElementIDs": [ 0 ],
     "AnimationSpriteSheet": "basic_slash",
     "AnimationSpeed": 2.0,
     "DamageFrameIndex": 0,
     "IsAnimationCentralized": false,
     "StatModifiers": {
     },
-    "Tags": [ "Metal", "Axe", "Kitchen" ]
+    "Tags": [ "Neutral", "Axe", "Kitchen" ]
   },
   {
     "WeaponID": "8",
@@ -246,14 +246,14 @@
     "Target": "Single",
     "Accuracy": 80,
     "Priority": 0,
-    "OffensiveElementIDs": [ 6 ],
+    "OffensiveElementIDs": [ 0 ],
     "AnimationSpriteSheet": "basic_impact",
     "AnimationSpeed": 1.0,
     "DamageFrameIndex": 0,
     "IsAnimationCentralized": false,
     "StatModifiers": {
     },
-    "Tags": [ "Metal", "Blunt", "Tool" ]
+    "Tags": [ "Neutral", "Blunt", "Tool" ]
   },
   {
     "WeaponID": "9",
@@ -272,7 +272,7 @@
     "Target": "Single",
     "Accuracy": 95,
     "Priority": 0,
-    "OffensiveElementIDs": [ 6 ],
+    "OffensiveElementIDs": [ 0 ],
     "AnimationSpriteSheet": "basic_impact",
     "AnimationSpeed": 1.0,
     "DamageFrameIndex": 0,
@@ -280,7 +280,7 @@
     "StatModifiers": {
       "Tenacity": 1
     },
-    "Tags": [ "Metal", "Blunt", "Kitchen" ]
+    "Tags": [ "Neutral", "Blunt", "Kitchen" ]
   },
   {
     "WeaponID": "10",
@@ -299,7 +299,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
-    "OffensiveElementIDs": [ 13 ],
+    "OffensiveElementIDs": [ 3 ],
     "AnimationSpriteSheet": "basic_impact",
     "AnimationSpeed": 1.0,
     "DamageFrameIndex": 0,
@@ -307,7 +307,7 @@
     "StatModifiers": {
       "Tenacity": 1
     },
-    "Tags": [ "Wood", "Tool" ]
+    "Tags": [ "Nature", "Tool" ]
   },
   {
     "WeaponID": "11",
@@ -326,7 +326,7 @@
     "Target": "Single",
     "Accuracy": 95,
     "Priority": 0,
-    "OffensiveElementIDs": [ 13 ],
+    "OffensiveElementIDs": [ 3 ],
     "AnimationSpriteSheet": "basic_swipe",
     "AnimationSpeed": 1.5,
     "DamageFrameIndex": 2,
@@ -337,7 +337,7 @@
     "StatModifiers": {
       "Agility": 1
     },
-    "Tags": [ "Wood", "Spear", "Tool" ]
+    "Tags": [ "Nature", "Spear", "Tool" ]
   },
   {
     "WeaponID": "12",
@@ -356,7 +356,7 @@
     "Target": "Single",
     "Accuracy": 70,
     "Priority": 0,
-    "OffensiveElementIDs": [ 6 ],
+    "OffensiveElementIDs": [ 0 ],
     "AnimationSpriteSheet": "basic_impact",
     "AnimationSpeed": 1.0,
     "DamageFrameIndex": 0,
@@ -365,7 +365,7 @@
       "Strength": 1,
       "Tenacity": 1
     },
-    "Tags": [ "Metal", "Blunt", "Tool" ]
+    "Tags": [ "Neutral", "Blunt", "Tool" ]
   },
   {
     "WeaponID": "13",
@@ -384,14 +384,14 @@
     "Target": "Single",
     "Accuracy": 95,
     "Priority": 0,
-    "OffensiveElementIDs": [ 6 ],
+    "OffensiveElementIDs": [ 0 ],
     "AnimationSpriteSheet": "basic_slash",
     "AnimationSpeed": 2.0,
     "DamageFrameIndex": 0,
     "IsAnimationCentralized": false,
     "StatModifiers": {
     },
-    "Tags": [ "Metal", "Sword", "Military" ]
+    "Tags": [ "Neutral", "Sword", "Military" ]
   },
   {
     "WeaponID": "14",
@@ -410,7 +410,7 @@
     "Target": "Single",
     "Accuracy": 80,
     "Priority": 0,
-    "OffensiveElementIDs": [ 6 ],
+    "OffensiveElementIDs": [ 0 ],
     "AnimationSpriteSheet": "basic_swipe",
     "AnimationSpeed": 1.5,
     "DamageFrameIndex": 2,
@@ -421,7 +421,7 @@
     "StatModifiers": {
       "Strength": 1
     },
-    "Tags": [ "Metal", "Spear", "Military" ]
+    "Tags": [ "Neutral", "Spear", "Military" ]
   },
   {
     "WeaponID": "15",
@@ -440,7 +440,7 @@
     "Target": "Both",
     "Accuracy": 90,
     "Priority": 0,
-    "OffensiveElementIDs": [ 6 ],
+    "OffensiveElementIDs": [ 0 ],
     "AnimationSpriteSheet": "basic_slash",
     "AnimationSpeed": 2.0,
     "DamageFrameIndex": 0,
@@ -449,7 +449,7 @@
       "Strength": 2,
       "Agility": -1
     },
-    "Tags": [ "Metal", "Sword", "Heavy" ]
+    "Tags": [ "Neutral", "Sword", "Heavy" ]
   },
   {
     "WeaponID": "16",
@@ -468,7 +468,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
-    "OffensiveElementIDs": [ 6 ],
+    "OffensiveElementIDs": [ 0 ],
     "AnimationSpriteSheet": "basic_swipe",
     "AnimationSpeed": 1.5,
     "DamageFrameIndex": 2,
@@ -480,7 +480,7 @@
       "Agility": 1,
       "Strength": -2
     },
-    "Tags": [ "Metal", "Sword", "Light" ]
+    "Tags": [ "Neutral", "Sword", "Light" ]
   },
   {
     "WeaponID": "17",
@@ -499,7 +499,7 @@
     "Target": "Single",
     "Accuracy": 90,
     "Priority": 0,
-    "OffensiveElementIDs": [ 6 ],
+    "OffensiveElementIDs": [ 0 ],
     "AnimationSpriteSheet": "basic_impact",
     "AnimationSpeed": 1.0,
     "DamageFrameIndex": 0,
@@ -507,7 +507,7 @@
     "StatModifiers": {
       "Strength": 2
     },
-    "Tags": [ "Metal", "Blunt", "Military" ]
+    "Tags": [ "Neutral", "Blunt", "Military" ]
   },
   {
     "WeaponID": "18",
@@ -526,7 +526,7 @@
     "Target": "Single",
     "Accuracy": 80,
     "Priority": 0,
-    "OffensiveElementIDs": [ 6 ],
+    "OffensiveElementIDs": [ 0 ],
     "AnimationSpriteSheet": "basic_impact",
     "AnimationSpeed": 1.0,
     "DamageFrameIndex": 0,
@@ -535,7 +535,7 @@
       "Strength": 2,
       "Agility": -2
     },
-    "Tags": [ "Metal", "Blunt", "Heavy" ]
+    "Tags": [ "Neutral", "Blunt", "Heavy" ]
   },
   {
     "WeaponID": "19",
@@ -554,7 +554,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
-    "OffensiveElementIDs": [ 6 ],
+    "OffensiveElementIDs": [ 0 ],
     "AnimationSpriteSheet": "basic_swipe",
     "AnimationSpeed": 1.5,
     "DamageFrameIndex": 2,
@@ -565,7 +565,7 @@
     "StatModifiers": {
       "Tenacity": 1
     },
-    "Tags": [ "Metal", "Dagger", "Defensive" ]
+    "Tags": [ "Neutral", "Dagger", "Defensive" ]
   },
   {
     "WeaponID": "20",
@@ -584,7 +584,7 @@
     "Target": "Single",
     "Accuracy": 80,
     "Priority": 0,
-    "OffensiveElementIDs": [ 6 ],
+    "OffensiveElementIDs": [ 0 ],
     "AnimationSpriteSheet": "basic_slash",
     "AnimationSpeed": 2.0,
     "DamageFrameIndex": 0,
@@ -596,7 +596,7 @@
       "Strength": 3,
       "Agility": -2
     },
-    "Tags": [ "Metal", "Sword", "Heavy" ]
+    "Tags": [ "Neutral", "Sword", "Heavy" ]
   },
   {
     "WeaponID": "21",
@@ -615,7 +615,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
-    "OffensiveElementIDs": [ 6 ],
+    "OffensiveElementIDs": [ 0 ],
     "AnimationSpriteSheet": "basic_slash",
     "AnimationSpeed": 2.0,
     "DamageFrameIndex": 0,
@@ -624,7 +624,7 @@
       "Agility": 1,
       "Strength": 1
     },
-    "Tags": [ "Metal", "Sword", "Light" ]
+    "Tags": [ "Neutral", "Sword", "Light" ]
   },
   {
     "WeaponID": "22",
@@ -643,7 +643,7 @@
     "Target": "Single",
     "Accuracy": 90,
     "Priority": 0,
-    "OffensiveElementIDs": [ 13 ],
+    "OffensiveElementIDs": [ 3 ],
     "AnimationSpriteSheet": "basic_impact",
     "AnimationSpeed": 1.0,
     "DamageFrameIndex": 0,
@@ -652,7 +652,7 @@
       "Tenacity": 4,
       "Agility": -3
     },
-    "Tags": [ "Wood", "Shield", "Defensive" ]
+    "Tags": [ "Nature", "Shield", "Defensive" ]
   },
   {
     "WeaponID": "23",
@@ -671,7 +671,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
-    "OffensiveElementIDs": [ 6 ],
+    "OffensiveElementIDs": [ 0 ],
     "AnimationSpriteSheet": "basic_swipe",
     "AnimationSpeed": 1.5,
     "DamageFrameIndex": 2,
@@ -683,7 +683,7 @@
       "Agility": 2,
       "Strength": -1
     },
-    "Tags": [ "Metal", "Dagger", "Stealth" ]
+    "Tags": [ "Neutral", "Dagger", "Stealth" ]
   },
   {
     "WeaponID": "24",
@@ -702,7 +702,7 @@
     "Target": "Single",
     "Accuracy": 95,
     "Priority": 0,
-    "OffensiveElementIDs": [ 1 ],
+    "OffensiveElementIDs": [ 0 ],
     "AnimationSpriteSheet": "basic_impact",
     "AnimationSpeed": 1.0,
     "DamageFrameIndex": 0,
@@ -712,7 +712,7 @@
     },
     "StatModifiers": {
     },
-    "Tags": [ "Leather", "Blunt", "Stealth" ]
+    "Tags": [ "Neutral", "Blunt", "Stealth" ]
   },
   {
     "WeaponID": "25",
@@ -731,7 +731,7 @@
     "Target": "Single",
     "Accuracy": 95,
     "Priority": 0,
-    "OffensiveElementIDs": [ 6 ],
+    "OffensiveElementIDs": [ 0 ],
     "AnimationSpriteSheet": "basic_impact",
     "AnimationSpeed": 1.0,
     "DamageFrameIndex": 0,
@@ -739,7 +739,7 @@
     "StatModifiers": {
       "Agility": 1
     },
-    "Tags": [ "Metal", "Blunt", "Brawl" ]
+    "Tags": [ "Neutral", "Blunt", "Brawl" ]
   },
   {
     "WeaponID": "26",
@@ -758,7 +758,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
-    "OffensiveElementIDs": [ 6 ],
+    "OffensiveElementIDs": [ 0 ],
     "AnimationSpriteSheet": "basic_slash",
     "AnimationSpeed": 2.0,
     "DamageFrameIndex": 0,
@@ -769,7 +769,7 @@
     "StatModifiers": {
       "Agility": 2
     },
-    "Tags": [ "Metal", "Whip", "Stealth" ]
+    "Tags": [ "Neutral", "Whip", "Stealth" ]
   },
   {
     "WeaponID": "27",
@@ -788,7 +788,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
-    "OffensiveElementIDs": [ 6 ],
+    "OffensiveElementIDs": [ 0 ],
     "AnimationSpriteSheet": "basic_swipe",
     "AnimationSpeed": 1.5,
     "DamageFrameIndex": 2,
@@ -800,7 +800,7 @@
     "StatModifiers": {
       "Agility": 1
     },
-    "Tags": [ "Metal", "Dagger", "Cruel" ]
+    "Tags": [ "Neutral", "Dagger", "Cruel" ]
   },
   {
     "WeaponID": "28",
@@ -819,7 +819,7 @@
     "Target": "Single",
     "Accuracy": 95,
     "Priority": 0,
-    "OffensiveElementIDs": [ 6 ],
+    "OffensiveElementIDs": [ 0 ],
     "AnimationSpriteSheet": "basic_swipe",
     "AnimationSpeed": 1.5,
     "DamageFrameIndex": 2,
@@ -830,7 +830,7 @@
     "StatModifiers": {
       "Agility": 2
     },
-    "Tags": [ "Metal", "Dagger", "Brawl" ]
+    "Tags": [ "Neutral", "Dagger", "Brawl" ]
   },
   {
     "WeaponID": "29",
@@ -849,7 +849,7 @@
     "Target": "Single",
     "Accuracy": 95,
     "Priority": 0,
-    "OffensiveElementIDs": [ 6 ],
+    "OffensiveElementIDs": [ 0 ],
     "AnimationSpriteSheet": "basic_slash",
     "AnimationSpeed": 2.0,
     "DamageFrameIndex": 0,
@@ -860,7 +860,7 @@
     "StatModifiers": {
       "Tenacity": 1
     },
-    "Tags": [ "Metal", "Hook", "Pirate" ]
+    "Tags": [ "Neutral", "Hook", "Pirate" ]
   },
   {
     "WeaponID": "30",
@@ -879,7 +879,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
-    "OffensiveElementIDs": [ 5 ],
+    "OffensiveElementIDs": [ 3 ],
     "AnimationSpriteSheet": "basic_swipe",
     "AnimationSpeed": 1.5,
     "DamageFrameIndex": 2,
@@ -891,7 +891,7 @@
     "StatModifiers": {
       "Intelligence": 2
     },
-    "Tags": [ "Stone", "Dagger", "Magic" ]
+    "Tags": [ "Nature", "Dagger", "Magic" ]
   },
   {
     "WeaponID": "31",
@@ -910,7 +910,7 @@
     "Target": "Single",
     "Accuracy": 95,
     "Priority": 0,
-    "OffensiveElementIDs": [ 13 ],
+    "OffensiveElementIDs": [ 3 ],
     "AnimationSpriteSheet": "basic_impact",
     "AnimationSpeed": 1.0,
     "DamageFrameIndex": 0,
@@ -919,7 +919,7 @@
       "Intelligence": 1,
       "Strength": 1
     },
-    "Tags": [ "Wood", "Staff", "Magic" ]
+    "Tags": [ "Nature", "Staff", "Magic" ]
   },
   {
     "WeaponID": "32",
@@ -938,7 +938,7 @@
     "Target": "Both",
     "Accuracy": 90,
     "Priority": 0,
-    "OffensiveElementIDs": [ 6 ],
+    "OffensiveElementIDs": [ 0 ],
     "AnimationSpriteSheet": "basic_impact",
     "AnimationSpeed": 1.0,
     "DamageFrameIndex": 0,
@@ -947,7 +947,7 @@
       "Intelligence": 2,
       "Tenacity": 1
     },
-    "Tags": [ "Metal", "Flail", "Holy" ]
+    "Tags": [ "Neutral", "Flail", "Holy" ]
   },
   {
     "WeaponID": "33",
@@ -966,7 +966,7 @@
     "Target": "Single",
     "Accuracy": 90,
     "Priority": 0,
-    "OffensiveElementIDs": [ 1 ],
+    "OffensiveElementIDs": [ 0 ],
     "AnimationSpriteSheet": "basic_impact",
     "AnimationSpeed": 1.0,
     "DamageFrameIndex": 0,
@@ -975,7 +975,7 @@
       "Intelligence": 3,
       "Agility": -1
     },
-    "Tags": [ "Paper", "Book", "Magic" ]
+    "Tags": [ "Neutral", "Book", "Magic" ]
   },
   {
     "WeaponID": "34",
@@ -994,7 +994,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
-    "OffensiveElementIDs": [ 1 ],
+    "OffensiveElementIDs": [ 0 ],
     "AnimationSpriteSheet": "basic_swipe",
     "AnimationSpeed": 1.5,
     "DamageFrameIndex": 2,
@@ -1007,7 +1007,7 @@
       "Intelligence": 2,
       "Agility": 1
     },
-    "Tags": [ "Bone", "Dagger", "Necro" ]
+    "Tags": [ "Neutral", "Dagger", "Necro" ]
   },
   {
     "WeaponID": "35",
@@ -1026,7 +1026,7 @@
     "Target": "Single",
     "Accuracy": 95,
     "Priority": 0,
-    "OffensiveElementIDs": [ 5 ],
+    "OffensiveElementIDs": [ 3 ],
     "AnimationSpriteSheet": "basic_impact",
     "AnimationSpeed": 1.0,
     "DamageFrameIndex": 0,
@@ -1038,13 +1038,13 @@
       "Intelligence": 4,
       "Tenacity": -2
     },
-    "Tags": [ "Crystal", "Wand", "Magic" ]
+    "Tags": [ "Nature", "Wand", "Magic" ]
   },
   {
     "WeaponID": "36",
     "WeaponName": "Cultist's Kris",
     "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]SLICES$STABS$CUTS[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH {user_pronoun} [cItem]{item_name}[/].",
-    "Description": "[cpositive]1.5x[/] [cvoid]Void[/] and [carcane]Arcane[/] damage.",
+    "Description": "[cpositive]1.5x[/] [cblight]Blight[/] and [carcane]Arcane[/] damage.",
     "Flavor": "A wavy blade wielded by cultists.",
     "Rarity": 2,
     "MoveName": "Slash",
@@ -1057,19 +1057,19 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
-    "OffensiveElementIDs": [ 6 ],
+    "OffensiveElementIDs": [ 0 ],
     "AnimationSpriteSheet": "basic_slash",
     "AnimationSpeed": 2.0,
     "DamageFrameIndex": 0,
     "IsAnimationCentralized": false,
     "Effects": {
-      "VoidArcaneMastery": "1.5"
+      "BlightArcaneMastery": "1.5"
     },
     "StatModifiers": {
       "Intelligence": 1,
       "Agility": 1
     },
-    "Tags": [ "Metal", "Dagger", "Magic" ]
+    "Tags": [ "Neutral", "Dagger", "Magic" ]
   },
   {
     "WeaponID": "37",
@@ -1088,7 +1088,7 @@
     "Target": "Single",
     "Accuracy": -1,
     "Priority": 0,
-    "OffensiveElementIDs": [ 5 ],
+    "OffensiveElementIDs": [ 3 ],
     "AnimationSpriteSheet": "basic_impact",
     "AnimationSpeed": 1.0,
     "DamageFrameIndex": 0,
@@ -1096,7 +1096,7 @@
     "StatModifiers": {
       "Intelligence": 2
     },
-    "Tags": [ "Stone", "Orb", "Magic" ]
+    "Tags": [ "Nature", "Orb", "Magic" ]
   },
   {
     "WeaponID": "38",
@@ -1115,7 +1115,7 @@
     "Target": "Single",
     "Accuracy": 90,
     "Priority": 0,
-    "OffensiveElementIDs": [ 1 ],
+    "OffensiveElementIDs": [ 0 ],
     "AnimationSpriteSheet": "basic_impact",
     "AnimationSpeed": 1.0,
     "DamageFrameIndex": 0,
@@ -1124,7 +1124,7 @@
       "Strength": 1,
       "Intelligence": -2
     },
-    "Tags": [ "Bone", "Club", "Primal" ]
+    "Tags": [ "Neutral", "Club", "Primal" ]
   },
   {
     "WeaponID": "39",
@@ -1143,7 +1143,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
-    "OffensiveElementIDs": [ 1 ],
+    "OffensiveElementIDs": [ 0 ],
     "AnimationSpriteSheet": "basic_impact",
     "AnimationSpeed": 1.0,
     "DamageFrameIndex": 0,
@@ -1170,7 +1170,7 @@
     "Target": "Both",
     "Accuracy": 85,
     "Priority": 0,
-    "OffensiveElementIDs": [ 6 ],
+    "OffensiveElementIDs": [ 0 ],
     "AnimationSpriteSheet": "basic_impact",
     "AnimationSpeed": 1.0,
     "DamageFrameIndex": 0,
@@ -1178,7 +1178,7 @@
     "StatModifiers": {
       "Agility": -1
     },
-    "Tags": [ "Metal", "Whip", "Primal" ]
+    "Tags": [ "Neutral", "Whip", "Primal" ]
   },
   {
     "WeaponID": "41",
@@ -1197,7 +1197,7 @@
     "Target": "Single",
     "Accuracy": 95,
     "Priority": 0,
-    "OffensiveElementIDs": [ 1 ],
+    "OffensiveElementIDs": [ 0 ],
     "AnimationSpriteSheet": "basic_slash",
     "AnimationSpeed": 2.0,
     "DamageFrameIndex": 0,
@@ -1205,7 +1205,7 @@
     "StatModifiers": {
       "Strength": 1
     },
-    "Tags": [ "Bone", "Axe", "Primal" ]
+    "Tags": [ "Neutral", "Axe", "Primal" ]
   },
   {
     "WeaponID": "42",
@@ -1224,7 +1224,7 @@
     "Target": "Single",
     "Accuracy": 85,
     "Priority": 0,
-    "OffensiveElementIDs": [ 5 ],
+    "OffensiveElementIDs": [ 3 ],
     "AnimationSpriteSheet": "basic_swipe",
     "AnimationSpeed": 1.5,
     "DamageFrameIndex": 2,
@@ -1234,7 +1234,7 @@
     },
     "StatModifiers": {
     },
-    "Tags": [ "Stone", "Spear", "Primal" ]
+    "Tags": [ "Nature", "Spear", "Primal" ]
   },
   {
     "WeaponID": "43",
@@ -1253,7 +1253,7 @@
     "Target": "Single",
     "Accuracy": 70,
     "Priority": 0,
-    "OffensiveElementIDs": [ 6 ],
+    "OffensiveElementIDs": [ 0 ],
     "AnimationSpriteSheet": "basic_slash",
     "AnimationSpeed": 2.0,
     "DamageFrameIndex": 0,
@@ -1262,7 +1262,7 @@
       "Strength": 3,
       "Agility": -2
     },
-    "Tags": [ "Metal", "Axe", "Unique" ]
+    "Tags": [ "Neutral", "Axe", "Unique" ]
   },
   {
     "WeaponID": "44",
@@ -1281,7 +1281,7 @@
     "Target": "Single",
     "Accuracy": 95,
     "Priority": 0,
-    "OffensiveElementIDs": [ 13 ],
+    "OffensiveElementIDs": [ 3 ],
     "AnimationSpriteSheet": "basic_impact",
     "AnimationSpeed": 1.0,
     "DamageFrameIndex": 0,
@@ -1293,7 +1293,7 @@
       "Intelligence": 1,
       "Agility": 1
     },
-    "Tags": [ "Wood", "Instrument", "Unique" ]
+    "Tags": [ "Nature", "Instrument", "Unique" ]
   },
   {
     "WeaponID": "45",
@@ -1312,7 +1312,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
-    "OffensiveElementIDs": [ 6 ],
+    "OffensiveElementIDs": [ 0 ],
     "AnimationSpriteSheet": "basic_swipe",
     "AnimationSpeed": 1.5,
     "DamageFrameIndex": 2,
@@ -1324,7 +1324,7 @@
     "StatModifiers": {
       "Intelligence": -1
     },
-    "Tags": [ "Metal", "Dagger", "AntiMagic" ]
+    "Tags": [ "Neutral", "Dagger", "AntiMagic" ]
   },
   {
     "WeaponID": "46",
@@ -1343,7 +1343,7 @@
     "Target": "Single",
     "Accuracy": 95,
     "Priority": 0,
-    "OffensiveElementIDs": [ 6 ],
+    "OffensiveElementIDs": [ 0 ],
     "AnimationSpriteSheet": "basic_swipe",
     "AnimationSpeed": 1.5,
     "DamageFrameIndex": 2,
@@ -1354,7 +1354,7 @@
     },
     "StatModifiers": {
     },
-    "Tags": [ "Metal", "Spear", "Arena" ]
+    "Tags": [ "Neutral", "Spear", "Arena" ]
   },
   {
     "WeaponID": "47",
@@ -1373,7 +1373,7 @@
     "Target": "Both",
     "Accuracy": 95,
     "Priority": 0,
-    "OffensiveElementIDs": [ 1 ],
+    "OffensiveElementIDs": [ 0 ],
     "AnimationSpriteSheet": "basic_slash",
     "AnimationSpeed": 2.0,
     "DamageFrameIndex": 0,
@@ -1381,7 +1381,7 @@
     "StatModifiers": {
       "Agility": 1
     },
-    "Tags": [ "Leather", "Whip", "Unique" ]
+    "Tags": [ "Neutral", "Whip", "Unique" ]
   },
   {
     "WeaponID": "48",
@@ -1400,7 +1400,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
-    "OffensiveElementIDs": [ 6 ],
+    "OffensiveElementIDs": [ 0 ],
     "AnimationSpriteSheet": "basic_swipe",
     "AnimationSpeed": 1.5,
     "DamageFrameIndex": 2,
@@ -1412,7 +1412,7 @@
     "StatModifiers": {
       "Agility": 3
     },
-    "Tags": [ "Metal", "Sword", "Fencing" ]
+    "Tags": [ "Neutral", "Sword", "Fencing" ]
   },
   {
     "WeaponID": "49",
@@ -1431,7 +1431,7 @@
     "Target": "Single",
     "Accuracy": 75,
     "Priority": 0,
-    "OffensiveElementIDs": [ 6 ],
+    "OffensiveElementIDs": [ 0 ],
     "AnimationSpriteSheet": "basic_impact",
     "AnimationSpeed": 1.0,
     "DamageFrameIndex": 0,
@@ -1439,7 +1439,7 @@
     "StatModifiers": {
       "Agility": -3
     },
-    "Tags": [ "Metal", "Flail", "Heavy" ]
+    "Tags": [ "Neutral", "Flail", "Heavy" ]
   },
   {
     "WeaponID": "50",
@@ -1458,7 +1458,7 @@
     "Target": "Single",
     "Accuracy": 90,
     "Priority": 0,
-    "OffensiveElementIDs": [ 6 ],
+    "OffensiveElementIDs": [ 0 ],
     "AnimationSpriteSheet": "basic_swipe",
     "AnimationSpeed": 1.5,
     "DamageFrameIndex": 2,
@@ -1469,7 +1469,7 @@
     "StatModifiers": {
       "Tenacity": -1
     },
-    "Tags": [ "Metal", "Pick", "Tool" ]
+    "Tags": [ "Neutral", "Pick", "Tool" ]
   },
   {
     "WeaponID": "51",
@@ -1488,7 +1488,7 @@
     "Target": "Single",
     "Accuracy": 85,
     "Priority": 0,
-    "OffensiveElementIDs": [ 5 ],
+    "OffensiveElementIDs": [ 3 ],
     "AnimationSpriteSheet": "basic_impact",
     "AnimationSpeed": 1.0,
     "DamageFrameIndex": 0,
@@ -1497,7 +1497,7 @@
       "Strength": 3,
       "Intelligence": 3
     },
-    "Tags": [ "Stone", "Ancient", "Rare" ]
+    "Tags": [ "Nature", "Ancient", "Rare" ]
   },
   {
     "WeaponID": "52",
@@ -1516,7 +1516,7 @@
     "Target": "Single",
     "Accuracy": 95,
     "Priority": 0,
-    "OffensiveElementIDs": [ 6 ],
+    "OffensiveElementIDs": [ 0 ],
     "AnimationSpriteSheet": "basic_impact",
     "AnimationSpeed": 1.0,
     "DamageFrameIndex": 0,
@@ -1525,6 +1525,6 @@
       "Strength": 2,
       "Tenacity": 2
     },
-    "Tags": [ "Metal", "Tool", "Ancient" ]
+    "Tags": [ "Neutral", "Tool", "Ancient" ]
   }
 ]

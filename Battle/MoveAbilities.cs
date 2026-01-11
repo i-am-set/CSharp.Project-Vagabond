@@ -866,7 +866,7 @@ namespace ProjectVagabond.Battle.Abilities
             {
                 if (entry != null && BattleDataCache.Moves.TryGetValue(entry.MoveID, out var move))
                 {
-                    if (move.OffensiveElementIDs.Contains(3)) // 3 is Water
+                    if (move.OffensiveElementIDs.Contains(2)) // 2 is Water (Updated from 3)
                     {
                         waterSpellCount++;
                     }
@@ -886,20 +886,20 @@ namespace ProjectVagabond.Battle.Abilities
         }
     }
 
-    public class VoidArcaneMasteryAbility : IOutgoingDamageModifier
+    public class BlightArcaneMasteryAbility : IOutgoingDamageModifier
     {
         public string Name => "Cultist Mastery";
-        public string Description => "Boosts Void and Arcane damage.";
+        public string Description => "Boosts Blight and Arcane damage.";
         private readonly float _multiplier;
 
-        public VoidArcaneMasteryAbility(float multiplier)
+        public BlightArcaneMasteryAbility(float multiplier)
         {
             _multiplier = multiplier;
         }
 
         public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
         {
-            if (ctx.MoveHasElement(9) || ctx.MoveHasElement(4)) // 9=Void, 4=Arcane
+            if (ctx.MoveHasElement(6) || ctx.MoveHasElement(4)) // 6=Blight, 4=Arcane (Updated from 7)
             {
                 return currentDamage * _multiplier;
             }

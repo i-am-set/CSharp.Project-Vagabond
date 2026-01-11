@@ -92,8 +92,8 @@
           "MaxTenacity": 12,
           "MinAgility": 5,
           "MaxAgility": 7,
-          "WeaknessElementIDs": [ 2 ],
-          "ResistanceElementIDs": [ 9 ],
+          "WeaknessElementIDs": [ 1 ],
+          "ResistanceElementIDs": [ 6 ],
           "MoveLearnset": [ "1" ],
           "MinNumberOfMoves": 1,
           "MaxNumberOfMoves": 1

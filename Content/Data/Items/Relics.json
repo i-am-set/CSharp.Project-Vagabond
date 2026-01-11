@@ -7,8 +7,8 @@
     "Flavor": "",
     "Rarity": 1,
     "Effects": {
-      "AddResistance": "13",
-      "ElementalDamageBonus": "13,20"
+      "AddResistance": "3",
+      "ElementalDamageBonus": "3,20"
     },
     "StatModifiers": {
     },
@@ -22,7 +22,7 @@
     "Flavor": "",
     "Rarity": 1,
     "Effects": {
-      "ElementalDamageBonus": "2,20"
+      "ElementalDamageBonus": "1,20"
     },
     "Tags": [ "Fire" ]
   },
@@ -34,7 +34,7 @@
     "Flavor": "",
     "Rarity": 1,
     "Effects": {
-      "ElementalDamageBonus": "3,20"
+      "ElementalDamageBonus": "2,20"
     },
     "Tags": [ "Water" ]
   },
@@ -52,99 +52,89 @@
   },
   {
     "RelicID": "4",
-    "RelicName": "Earthen Core",
-    "AbilityName": "Geomancer",
-    "Description": "[cearth]Earth[/] spells deal[cpositive] 1.2x[/] damage",
-    "Flavor": "",
-    "Rarity": 1,
-    "Effects": {
-      "ElementalDamageBonus": "5,20"
-    },
-    "Tags": [ "Earth" ]
+    "RelicName": "NULL",
+    "AbilityName": "NULL",
+    "Description": "NULL",
+    "Flavor": "NULL",
+    "Rarity": 0,
+    "Effects": {},
+    "Tags": []
   },
   {
     "RelicID": "5",
     "RelicName": "Lodestone",
-    "AbilityName": "Ferromancer",
-    "Description": "[cmetal]Metal[/] spells deal[cpositive] 1.2x[/] damage",
+    "AbilityName": "Stabilizer",
+    "Description": "[cneutral]Neutral[/] spells deal[cpositive] 1.1x[/] damage",
+    "Flavor": "",
+    "Rarity": 1,
+    "Effects": {
+      "ElementalDamageBonus": "0,10"
+    },
+    "Tags": [ "Neutral" ]
+  },
+  {
+    "RelicID": "6",
+    "RelicName": "NULL",
+    "AbilityName": "NULL",
+    "Description": "NULL",
+    "Flavor": "NULL",
+    "Rarity": 0,
+    "Effects": {},
+    "Tags": []
+  },
+  {
+    "RelicID": "7",
+    "RelicName": "NULL",
+    "AbilityName": "NULL",
+    "Description": "NULL",
+    "Flavor": "NULL",
+    "Rarity": 0,
+    "Effects": {},
+    "Tags": []
+  },
+  {
+    "RelicID": "8",
+    "RelicName": "Voidheart Shard",
+    "AbilityName": "Occultist",
+    "Description": "[cblight]Blight[/] spells deal[cpositive] 1.2x[/] damage",
     "Flavor": "",
     "Rarity": 1,
     "Effects": {
       "ElementalDamageBonus": "6,20"
     },
-    "Tags": [ "Metal" ]
-  },
-  {
-    "RelicID": "6",
-    "RelicName": "Serpent's Fang",
-    "AbilityName": "Venommancer",
-    "Description": "[ctoxic]Toxic[/] spells deal[cpositive] 1.2x[/] damage",
-    "Flavor": "",
-    "Rarity": 1,
-    "Effects": {
-      "ElementalDamageBonus": "7,20"
-    },
-    "Tags": [ "Toxic" ]
-  },
-  {
-    "RelicID": "7",
-    "RelicName": "Zephyr Charm",
-    "AbilityName": "Aeromancer",
-    "Description": "[cwind]Wind[/] spells deal[cpositive] 1.2x[/] damage",
-    "Flavor": "",
-    "Rarity": 1,
-    "Effects": {
-      "ElementalDamageBonus": "8,20"
-    },
-    "Tags": [ "Wind" ]
-  },
-  {
-    "RelicID": "8",
-    "RelicName": "Voidheart Shard",
-    "AbilityName": "Umbramancer",
-    "Description": "[cvoid]Void[/] spells deal[cpositive] 1.2x[/] damage",
-    "Flavor": "",
-    "Rarity": 1,
-    "Effects": {
-      "ElementalDamageBonus": "9,20"
-    },
-    "Tags": [ "Void" ]
+    "Tags": [ "Blight" ]
   },
   {
     "RelicID": "9",
     "RelicName": "Sunstone",
-    "AbilityName": "Photomancer",
-    "Description": "[clight]Light[/] spells deal[cpositive] 1.2x[/] damage",
+    "AbilityName": "Diviner",
+    "Description": "[cdivine]Divine[/] spells deal[cpositive] 1.2x[/] damage",
     "Flavor": "",
     "Rarity": 1,
     "Effects": {
-      "ElementalDamageBonus": "10,20"
+      "ElementalDamageBonus": "5,20"
     },
-    "Tags": [ "Light" ]
+    "Tags": [ "Divine" ]
   },
   {
     "RelicID": "10",
-    "RelicName": "Stormcaller Orb",
-    "AbilityName": "Electromancer",
-    "Description": "[celectric]Electric[/] spells deal[cpositive] 1.2x[/] damage",
-    "Flavor": "",
-    "Rarity": 1,
-    "Effects": {
-      "ElementalDamageBonus": "11,20"
-    },
-    "Tags": [ "Electric" ]
+    "RelicName": "NULL",
+    "AbilityName": "NULL",
+    "Description": "NULL",
+    "Flavor": "NULL",
+    "Rarity": 0,
+    "Effects": {},
+    "Tags": []
   },
   {
     "RelicID": "11",
-    "RelicName": "Hoarfrost Crystal",
-    "AbilityName": "Cryomancer",
-    "Description": "[cice]Ice[/] spells deal[cpositive] 1.2x[/] damage",
-    "Flavor": "",
-    "Rarity": 1,
-    "Effects": {
-      "ElementalDamageBonus": "12,20"
-    },
-    "Tags": [ "Ice" ]
+    "RelicName": "NULL",
+    "AbilityName": "NULL",
+    "Description": "NULL",
+    "Flavor": "NULL",
+    "Rarity": 0,
+    "Effects": {},
+    "Tags": []
   },
   {
     "RelicID": "12",
@@ -154,7 +144,7 @@
     "Flavor": "",
     "Rarity": 1,
     "Effects": {
-      "ElementalDamageBonus": "13,20"
+      "ElementalDamageBonus": "3,20"
     },
     "Tags": [ "Nature" ]
   },
@@ -168,7 +158,7 @@
     "Effects": {
       "ApplyStatusOnHit": "Poison,50,4,true"
     },
-    "Tags": [ "Toxic", "StatusEffect" ]
+    "Tags": [ "Blight", "StatusEffect" ]
   },
   {
     "RelicID": "14",
@@ -230,7 +220,7 @@
     "Effects": {
       "ReactiveStatus": "Stun,30,1,true"
     },
-    "Tags": [ "Electric", "StatusEffect", "Defense" ]
+    "Tags": [ "Divine", "StatusEffect", "Defense" ]
   },
   {
     "RelicID": "19",
@@ -250,13 +240,13 @@
     "RelicID": "20",
     "RelicName": "Sun-Blessed Leaf",
     "AbilityName": "Photosynthesis",
-    "Description": "[cimmune]Immune[/] to [clight]Light[/] based moves; heal [cpositive]25%[/] HP instead",
+    "Description": "[cimmune]Immune[/] to [cdivine]Divine[/] based moves; heal [cpositive]25%[/] HP instead",
     "Flavor": "",
     "Rarity": 2,
     "Effects": {
-      "SunBlessedLeaf": "10,25"
+      "SunBlessedLeaf": "5,25"
     },
-    "Tags": [ "Light", "Healing", "Defense" ]
+    "Tags": [ "Divine", "Healing", "Defense" ]
   },
   {
     "RelicID": "21",
@@ -288,13 +278,13 @@
     "RelicID": "23",
     "RelicName": "Rubber Soles",
     "AbilityName": "Grounding",
-    "Description": "[cimmune]Immune[/] to [celectric]Electric[/] based moves",
+    "Description": "[cimmune]Immune[/] to [cdivine]Divine[/] based moves",
     "Flavor": "",
     "Rarity": 1,
     "Effects": {
-      "ElementalImmunity": "11"
+      "ElementalImmunity": "5"
     },
-    "Tags": [ "Electric", "Defense" ]
+    "Tags": [ "Divine", "Defense" ]
   },
   {
     "RelicID": "24",
@@ -306,7 +296,7 @@
     "Effects": {
       "ToxicAura": "50,2"
     },
-    "Tags": [ "Toxic", "StatusEffect" ]
+    "Tags": [ "Blight", "StatusEffect" ]
   },
   {
     "RelicID": "25",
@@ -544,13 +534,13 @@
     "RelicID": "43",
     "RelicName": "Sacrificial Dagger",
     "AbilityName": "Bloodletter",
-    "Description": "[cvoid]Void[/] spells cost [cnegative]5%[/] HP but deal [cpositive]1.5x[/] damage",
+    "Description": "[cblight]Blight[/] spells cost [cnegative]5%[/] HP but deal [cpositive]1.5x[/] damage",
     "Flavor": "",
     "Rarity": 3,
     "Effects": {
       "Bloodletter": "50"
     },
-    "Tags": [ "Void", "HPCost" ]
+    "Tags": [ "Blight", "HPCost" ]
   },
   {
     "RelicID": "44",

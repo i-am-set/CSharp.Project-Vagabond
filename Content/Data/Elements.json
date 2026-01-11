@@ -1,54 +1,30 @@
 [
   {
+    "ElementID": 0,
+    "ElementName": "Neutral"
+  },
+  {
     "ElementID": 1,
-    "ElementName": "---", // Neutral / No Element. Stuff like clubs and fists that don't have a specific element, not even metal.
+    "ElementName": "Fire"
   },
   {
     "ElementID": 2,
-    "ElementName": "Fire", // Fire, Lava, Heat, etc
+    "ElementName": "Water"
   },
   {
     "ElementID": 3,
-    "ElementName": "Water", // Just water/steam effects; will have magic attacks, but mostly used for buffs/debuffs like cleanse or types of healing, etc.
+    "ElementName": "Nature"
   },
   {
     "ElementID": 4,
-    "ElementName": "Arcane", // Raw magic, Mana, etc.
+    "ElementName": "Arcane"
   },
   {
     "ElementID": 5,
-    "ElementName": "Earth", // Rock, Sand, Mud, etc. Mostly a magic element, but can be used for physical attacks too like literal boulders used by big creatures, etc.
+    "ElementName": "Divine"
   },
   {
     "ElementID": 6,
-    "ElementName": "Metal", // Iron, Steel, Silver, etc
-  },
-  {
-    "ElementID": 7,
-    "ElementName": "Toxic", // Poison, Acid, Venom, etc.
-  },
-  {
-    "ElementID": 8,
-    "ElementName": "Wind", // Just wind/air effects; will have magic attacks, but mostly used for buffs/debuffs like haste, slow, etc.
-  },
-  {
-    "ElementID": 9,
-    "ElementName": "Void", // Rot, Corruption, Vampire effect, Broad void stuff, etc.
-  },
-  {
-    "ElementID": 10,
-    "ElementName": "Light", // Healing, Holy, Literal light, etc.
-  },
-  {
-    "ElementID": 11,
-    "ElementName": "Electric", // Lightning, Thunder, etc.
-  },
-  {
-    "ElementID": 12,
-    "ElementName": "Ice", // Cold, Frost, Snow, etc.
-  },
-  {
-    "ElementID": 13,
-    "ElementName": "Nature", // Plants, Trees, Fungi, etc. Mostly used by plant based magic, but can be used by physical attacks like thorn whips, etc.
+    "ElementName": "Blight"
   }
 ]

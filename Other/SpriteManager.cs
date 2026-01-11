@@ -732,10 +732,10 @@ namespace ProjectVagabond
         {
             const int iconSize = 9;
             const int columns = 5;
-            // There are 13 offensive elements, from ID 1 to 13.
-            for (int i = 0; i < 13; i++)
+            // New Elements: 0 to 6 (7 total)
+            for (int i = 0; i < 7; i++)
             {
-                int elementId = i + 1;
+                int elementId = i;
                 int col = i % columns;
                 int row = i / columns;
                 ElementIconSourceRects[elementId] = new Rectangle(col * iconSize, row * iconSize, iconSize, iconSize);

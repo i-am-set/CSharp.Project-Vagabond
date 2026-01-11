@@ -81,19 +81,13 @@ namespace ProjectVagabond
             // Initialize Color Mappings
             ElementColors = new Dictionary<int, Color>
             {
-                { 1, Palette_White },       // Neutral
-                { 2, Palette_Red },         // Fire
-                { 3, Palette_Blue },        // Water
+                { 0, Palette_White },       // Neutral
+                { 1, Palette_Red },         // Fire
+                { 2, Palette_Blue },        // Water
+                { 3, Palette_Green },       // Nature
                 { 4, Palette_Pink },        // Arcane
-                { 5, Palette_Orange },      // Earth
-                { 6, Palette_Gray },        // Metal
-                { 7, Palette_Purple },      // Toxic
-                { 8, Palette_BlueWhite },   // Wind
-                { 9, Palette_DarkPurple },  // Void
-                { 10, Palette_LightYellow },// Light
-                { 11, Palette_Yellow},      // Electric
-                { 12, Palette_LightBlue },  // Ice
-                { 13, Palette_Green }       // Nature
+                { 5, Palette_LightYellow }, // Divine
+                { 6, Palette_Purple }       // Blight
             };
 
             RarityColors = new Dictionary<int, Color>
@@ -458,18 +452,23 @@ namespace ProjectVagabond
                 if (lowerTag == "cetc") return Palette_DarkGray;
 
                 // Elements
-                if (lowerTag == "cfire") return ElementColors.GetValueOrDefault(2, Color.White);
-                if (lowerTag == "cwater") return ElementColors.GetValueOrDefault(3, Color.White);
+                if (lowerTag == "cneutral") return ElementColors.GetValueOrDefault(0, Color.White);
+                if (lowerTag == "cfire") return ElementColors.GetValueOrDefault(1, Color.White);
+                if (lowerTag == "cwater") return ElementColors.GetValueOrDefault(2, Color.White);
+                if (lowerTag == "cnature") return ElementColors.GetValueOrDefault(3, Color.White);
                 if (lowerTag == "carcane") return ElementColors.GetValueOrDefault(4, Color.White);
-                if (lowerTag == "cearth") return ElementColors.GetValueOrDefault(5, Color.White);
-                if (lowerTag == "cmetal") return ElementColors.GetValueOrDefault(6, Color.White);
-                if (lowerTag == "ctoxic") return ElementColors.GetValueOrDefault(7, Color.White);
-                if (lowerTag == "cwind") return ElementColors.GetValueOrDefault(8, Color.White);
-                if (lowerTag == "cvoid") return ElementColors.GetValueOrDefault(9, Color.White);
-                if (lowerTag == "clight") return ElementColors.GetValueOrDefault(10, Color.White);
-                if (lowerTag == "celectric") return ElementColors.GetValueOrDefault(11, Color.White);
-                if (lowerTag == "cice") return ElementColors.GetValueOrDefault(12, Color.White);
-                if (lowerTag == "cnature") return ElementColors.GetValueOrDefault(13, Color.White);
+                if (lowerTag == "cdivine") return ElementColors.GetValueOrDefault(5, Color.White);
+                if (lowerTag == "cblight") return ElementColors.GetValueOrDefault(6, Color.White);
+
+                // Legacy Mappings for backward compatibility
+                if (lowerTag == "cmetal") return ElementColors.GetValueOrDefault(0, Color.White); // -> Neutral
+                if (lowerTag == "cice") return ElementColors.GetValueOrDefault(2, Color.White); // -> Water
+                if (lowerTag == "cearth") return ElementColors.GetValueOrDefault(3, Color.White); // -> Nature
+                if (lowerTag == "cwind") return ElementColors.GetValueOrDefault(5, Color.White); // -> Divine
+                if (lowerTag == "clight") return ElementColors.GetValueOrDefault(5, Color.White); // -> Divine
+                if (lowerTag == "celectric") return ElementColors.GetValueOrDefault(5, Color.White); // -> Divine
+                if (lowerTag == "ctoxic") return ElementColors.GetValueOrDefault(6, Color.White); // -> Blight
+                if (lowerTag == "cvoid") return ElementColors.GetValueOrDefault(6, Color.White); // -> Blight
 
                 // Status Effects
                 string effectName = lowerTag.Substring(1);

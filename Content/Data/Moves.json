@@ -16,7 +16,7 @@
     "Priority": 0,
     "Rarity": -1,
     "LevelRequirement": 0,
-    "OffensiveElementIDs": [ 1 ],
+    "OffensiveElementIDs": [ 0 ],
     "Tags": [],
     "AnimationSpriteSheet": "basic_impact",
     "AnimationSpeed": 2.0,
@@ -40,7 +40,7 @@
     "Priority": 0,
     "Rarity": -1,
     "LevelRequirement": 0,
-    "OffensiveElementIDs": [ 1 ],
+    "OffensiveElementIDs": [ 0 ],
     "Tags": [],
     "AnimationSpriteSheet": "basic_impact",
     "AnimationSpeed": 1.0,
@@ -64,7 +64,7 @@
     "Priority": 0,
     "Rarity": -1,
     "LevelRequirement": 0,
-    "OffensiveElementIDs": [ 1 ],
+    "OffensiveElementIDs": [ 0 ],
     "Tags": [],
     "AnimationSpriteSheet": "basic_impact",
     "AnimationSpeed": 1.5,
@@ -88,7 +88,7 @@
     "Priority": 0,
     "Rarity": -1,
     "LevelRequirement": 0,
-    "OffensiveElementIDs": [ 1 ],
+    "OffensiveElementIDs": [ 0 ],
     "Tags": [],
     "AnimationSpriteSheet": "basic_bite",
     "AnimationSpeed": 2.0,
@@ -112,7 +112,7 @@
     "Priority": 0,
     "Rarity": -1,
     "LevelRequirement": 0,
-    "OffensiveElementIDs": [ 1 ],
+    "OffensiveElementIDs": [ 0 ],
     "Tags": [],
     "AnimationSpriteSheet": "basic_claw",
     "AnimationSpeed": 1.6,
@@ -136,7 +136,7 @@
     "Priority": 1,
     "Rarity": -1,
     "LevelRequirement": 0,
-    "OffensiveElementIDs": [ 1 ],
+    "OffensiveElementIDs": [ 0 ],
     "Tags": [ "Priority" ],
     "AnimationSpriteSheet": "basic_swipe",
     "AnimationSpeed": 2.0,
@@ -160,7 +160,7 @@
     "Priority": 0,
     "Rarity": -1,
     "LevelRequirement": 0,
-    "OffensiveElementIDs": [ 1 ],
+    "OffensiveElementIDs": [ 0 ],
     "Tags": [],
     "AnimationSpriteSheet": "stall",
     "AnimationSpeed": 0.2,
@@ -211,7 +211,7 @@
     "Priority": 0,
     "Rarity": 1,
     "LevelRequirement": 2,
-    "OffensiveElementIDs": [ 1 ],
+    "OffensiveElementIDs": [ 0 ],
     "Effects": {
       "Recoil": "25"
     },
@@ -292,7 +292,7 @@
     "Priority": 0,
     "Rarity": 2,
     "LevelRequirement": 3,
-    "OffensiveElementIDs": [ 2 ],
+    "OffensiveElementIDs": [ 1 ],
     "Effects": {
       "InflictStatusBurn": "10"
     },
@@ -319,7 +319,7 @@
     "Priority": 0,
     "Rarity": 1,
     "LevelRequirement": 2,
-    "OffensiveElementIDs": [ 2 ],
+    "OffensiveElementIDs": [ 1 ],
     "Effects": {
       "InflictStatusBurn": "100"
     },
@@ -346,7 +346,7 @@
     "Priority": 0,
     "Rarity": 2,
     "LevelRequirement": 4,
-    "OffensiveElementIDs": [ 2 ],
+    "OffensiveElementIDs": [ 1 ],
     "Effects": {
       "InflictStatusBurn": "10"
     },
@@ -373,7 +373,7 @@
     "Priority": 0,
     "Rarity": 2,
     "LevelRequirement": 3,
-    "OffensiveElementIDs": [ 2 ],
+    "OffensiveElementIDs": [ 1 ],
     "Effects": {
       "InflictStatusBurn": "30"
     },
@@ -400,7 +400,7 @@
     "Priority": 0,
     "Rarity": 3,
     "LevelRequirement": 5,
-    "OffensiveElementIDs": [ 2 ],
+    "OffensiveElementIDs": [ 1 ],
     "Effects": {
       "InflictStatusBurn": "10",
       "DamageRecoil": "30"
@@ -428,12 +428,12 @@
     "Priority": 0,
     "Rarity": 2,
     "LevelRequirement": 3,
-    "OffensiveElementIDs": [ 12 ],
+    "OffensiveElementIDs": [ 2 ],
     "Effects": {
       "InflictStatusBurn": "30",
       "InflictStatusFrostbite": "30"
     },
-    "Tags": [ "Ice", "Status" ],
+    "Tags": [ "Water", "Status" ],
     "AnimationSpriteSheet": "basic_orb_pulse_2",
     "AnimationSpeed": 1.0,
     "DamageFrameIndex": 2,
@@ -456,7 +456,7 @@
     "Priority": 4,
     "Rarity": 1,
     "LevelRequirement": 2,
-    "OffensiveElementIDs": [ 1 ],
+    "OffensiveElementIDs": [ 0 ],
     "Effects": {
       "Protect": ""
     },
@@ -483,12 +483,12 @@
     "Priority": 0,
     "Rarity": 2,
     "LevelRequirement": 3,
-    "OffensiveElementIDs": [ 1 ],
+    "OffensiveElementIDs": [ 0 ],
     "Effects": {
       "InflictStatChange": "Strength,-1,Intelligence,-1",
       "Disengage": ""
     },
-    "Tags": [ "Void", "Utility" ],
+    "Tags": [ "Blight", "Utility" ],
     "AnimationSpriteSheet": "basic_orb_pulse_2",
     "AnimationSpeed": 1.0,
     "DamageFrameIndex": 2,
@@ -511,7 +511,7 @@
     "Priority": 0,
     "Rarity": 2,
     "LevelRequirement": 3,
-    "OffensiveElementIDs": [ 9 ],
+    "OffensiveElementIDs": [ 6 ],
     "Effects": {
       "Disengage": ""
     },
@@ -524,7 +524,7 @@
   {
     "MoveID": "20",
     "MoveName": "Sonicboom",
-    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]HITS[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH A [cWind]SONIC BOOM[/].",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]HITS[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH A [cDivine]SONIC BOOM[/].",
     "Description": "Hits the target for magical damage, then switches the user out.",
     "Flavor": "A deafening blast that covers a retreat.",
     "Power": 30,
@@ -538,11 +538,11 @@
     "Priority": 0,
     "Rarity": 2,
     "LevelRequirement": 3,
-    "OffensiveElementIDs": [ 8 ],
+    "OffensiveElementIDs": [ 5 ],
     "Effects": {
       "Disengage": ""
     },
-    "Tags": [ "Electric", "Utility" ],
+    "Tags": [ "Divine", "Utility" ],
     "AnimationSpriteSheet": "basic_orb_pulse_2",
     "AnimationSpeed": 1.5,
     "DamageFrameIndex": 2,
@@ -565,11 +565,11 @@
     "Priority": 0,
     "Rarity": 2,
     "LevelRequirement": 3,
-    "OffensiveElementIDs": [ 8 ],
+    "OffensiveElementIDs": [ 5 ],
     "Effects": {
       "InflictStatChange": "Agility,-1"
     },
-    "Tags": [ "Wind", "AoE", "Debuff" ],
+    "Tags": [ "Divine", "AoE", "Debuff" ],
     "AnimationSpriteSheet": "basic_orb_pulse_2",
     "AnimationSpeed": 1.5,
     "DamageFrameIndex": 2,
@@ -592,7 +592,7 @@
     "Priority": 0,
     "Rarity": 3,
     "LevelRequirement": 5,
-    "OffensiveElementIDs": [ 1 ],
+    "OffensiveElementIDs": [ 0 ],
     "Effects": {
       "StatChange": "Tenacity,-1"
     },
@@ -647,8 +647,8 @@
     "Priority": 0,
     "Rarity": 4,
     "LevelRequirement": 6,
-    "OffensiveElementIDs": [ 5 ],
-    "Tags": [ "Earth", "AoE" ],
+    "OffensiveElementIDs": [ 3 ],
+    "Tags": [ "Nature", "AoE" ],
     "AnimationSpriteSheet": "basic_impact",
     "AnimationSpeed": 0.8,
     "DamageFrameIndex": 2,
@@ -657,7 +657,7 @@
   {
     "MoveID": "25",
     "MoveName": "Beseech",
-    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]BESEECHES[/] {IsTargetProperNoun}[cSlot]{target}[/] FOR [cVoid]POWER[/].",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]BESEECHES[/] {IsTargetProperNoun}[cSlot]{target}[/] FOR [cBlight]POWER[/].",
     "Description": "Lowers ally's random stat by [cnegative]2[/].\nRaises user's two random stats by [cpositive]2[/].",
     "Flavor": "Siphon your ally's power to amplify your own.",
     "Power": 0,
@@ -676,7 +676,7 @@
       "InflictRandomStatChange": "-2",
       "RandomStatChange": "2,2"
     },
-    "Tags": [ "Buff", "Debuff", "Void" ],
+    "Tags": [ "Buff", "Debuff", "Blight" ],
     "AnimationSpriteSheet": "basic_orb_pulse_2",
     "AnimationSpeed": 1.0,
     "DamageFrameIndex": 2,
@@ -699,7 +699,7 @@
     "Priority": 3,
     "Rarity": 1,
     "LevelRequirement": 1,
-    "OffensiveElementIDs": [ 10 ],
+    "OffensiveElementIDs": [ 5 ],
     "Effects": {
       "Counter": ""
     },
@@ -726,11 +726,11 @@
     "Priority": 0,
     "Rarity": 1,
     "LevelRequirement": 2,
-    "OffensiveElementIDs": [ 6 ],
+    "OffensiveElementIDs": [ 0 ],
     "Effects": {
       "ShieldBreaker": "0.5,false"
     },
-    "Tags": [ "Metal", "Breaker" ],
+    "Tags": [ "Neutral", "Breaker" ],
     "AnimationSpriteSheet": "basic_impact",
     "AnimationSpeed": 1.0,
     "DamageFrameIndex": 2,
@@ -753,11 +753,11 @@
     "Priority": 2,
     "Rarity": 2,
     "LevelRequirement": 3,
-    "OffensiveElementIDs": [ 6 ],
+    "OffensiveElementIDs": [ 0 ],
     "Effects": {
       "ShieldBreaker": "1.0,true"
     },
-    "Tags": [ "Metal", "Breaker", "Priority" ],
+    "Tags": [ "Neutral", "Breaker", "Priority" ],
     "AnimationSpriteSheet": "basic_explosion",
     "AnimationSpeed": 1.5,
     "DamageFrameIndex": 2,
@@ -780,11 +780,11 @@
     "Priority": 0,
     "Rarity": 1,
     "LevelRequirement": 2,
-    "OffensiveElementIDs": [ 9 ],
+    "OffensiveElementIDs": [ 6 ],
     "Effects": {
       "Execute": "50,3.0"
     },
-    "Tags": [ "Void", "Execution" ],
+    "Tags": [ "Blight", "Execution" ],
     "AnimationSpriteSheet": "void_slash",
     "AnimationSpeed": 1.5,
     "DamageFrameIndex": 2,
@@ -807,11 +807,11 @@
     "Priority": 0,
     "Rarity": 2,
     "LevelRequirement": 3,
-    "OffensiveElementIDs": [ 6 ],
+    "OffensiveElementIDs": [ 0 ],
     "Effects": {
       "Execute": "50,-99"
     },
-    "Tags": [ "Metal", "Execution" ],
+    "Tags": [ "Neutral", "Execution" ],
     "AnimationSpriteSheet": "basic_slash",
     "AnimationSpeed": 1.5,
     "DamageFrameIndex": 2,
@@ -861,11 +861,11 @@
     "Priority": 4,
     "Rarity": 2,
     "LevelRequirement": 3,
-    "OffensiveElementIDs": [ 10 ],
+    "OffensiveElementIDs": [ 5 ],
     "Effects": {
       "ApplyStatus": "Empowered,100,1"
     },
-    "Tags": [ "Light", "Buff", "Priority" ],
+    "Tags": [ "Divine", "Buff", "Priority" ],
     "AnimationSpriteSheet": "basic_orb_pulse_2",
     "AnimationSpeed": 1.5,
     "DamageFrameIndex": 2,
@@ -888,7 +888,7 @@
     "Priority": 0,
     "Rarity": 1,
     "LevelRequirement": 2,
-    "OffensiveElementIDs": [ 3 ],
+    "OffensiveElementIDs": [ 2 ],
     "Effects": {
       "CleanseStatus": ""
     },
@@ -969,7 +969,7 @@
     "Priority": 0,
     "Rarity": 2,
     "LevelRequirement": 3,
-    "OffensiveElementIDs": [ 13 ],
+    "OffensiveElementIDs": [ 3 ],
     "Effects": {
       "Lifesteal": "50"
     },
@@ -982,7 +982,7 @@
   {
     "MoveID": "37",
     "MoveName": "Vampiric Bite",
-    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]BITES[/] {IsTargetProperNoun}[cSlot]{target}[/] AND [cVoid]ABSORBS[/] {target_pronoun} LIFE FORCE.",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]BITES[/] {IsTargetProperNoun}[cSlot]{target}[/] AND [cBlight]ABSORBS[/] {target_pronoun} LIFE FORCE.",
     "Description": "Heals user for [cpositive]75%[/] of damage dealt.",
     "Flavor": "A draining bite.",
     "Power": 60,
@@ -996,11 +996,11 @@
     "Priority": 0,
     "Rarity": 2,
     "LevelRequirement": 4,
-    "OffensiveElementIDs": [ 9 ],
+    "OffensiveElementIDs": [ 6 ],
     "Effects": {
       "Lifesteal": "75"
     },
-    "Tags": [ "Void", "Lifesteal", "Healing", "Contact" ],
+    "Tags": [ "Blight", "Lifesteal", "Healing", "Contact" ],
     "AnimationSpriteSheet": "basic_bite",
     "AnimationSpeed": 2.0,
     "DamageFrameIndex": 4,
@@ -1050,11 +1050,11 @@
     "Priority": 0,
     "Rarity": 1,
     "LevelRequirement": 2,
-    "OffensiveElementIDs": [ 5 ],
+    "OffensiveElementIDs": [ 3 ],
     "Effects": {
       "InflictStatChange": "Agility,-1"
     },
-    "Tags": [ "Earth", "Debuff", "AoE" ],
+    "Tags": [ "Nature", "Debuff", "AoE" ],
     "AnimationSpriteSheet": "basic_orb_pulse_2",
     "AnimationSpeed": 1.0,
     "DamageFrameIndex": 2,
@@ -1131,7 +1131,7 @@
     "Priority": 1,
     "Rarity": 2,
     "LevelRequirement": 3,
-    "OffensiveElementIDs": [ 1 ],
+    "OffensiveElementIDs": [ 0 ],
     "Effects": {
       "ConditionalCounter": ""
     },
@@ -1144,7 +1144,7 @@
   {
     "MoveID": "43",
     "MoveName": "Gravity Crush",
-    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]CRUSHES[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH [cEarth]INTENSE GRAVITY[/].",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]CRUSHES[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH [cNature]INTENSE GRAVITY[/].",
     "Description": "Deals damage equal to [cpositive]50%[/] of target's current HP.",
     "Flavor": "Crushes the target with gravity.",
     "Power": 0,
@@ -1158,11 +1158,11 @@
     "Priority": 0,
     "Rarity": 3,
     "LevelRequirement": 4,
-    "OffensiveElementIDs": [ 5 ],
+    "OffensiveElementIDs": [ 3 ],
     "Effects": {
       "PercentageDamage": "50"
     },
-    "Tags": [ "Earth", "Gravity", "FixedDamage" ],
+    "Tags": [ "Nature", "Gravity", "FixedDamage" ],
     "AnimationSpriteSheet": "basic_impact",
     "AnimationSpeed": 0.8,
     "DamageFrameIndex": 2,
@@ -1185,7 +1185,7 @@
     "Priority": 0,
     "Rarity": 1,
     "LevelRequirement": 2,
-    "OffensiveElementIDs": [ 1 ],
+    "OffensiveElementIDs": [ 0 ],
     "Effects": {
       "MultiHit": "2,7"
     },
