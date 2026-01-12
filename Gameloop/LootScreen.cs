@@ -22,6 +22,8 @@ namespace ProjectVagabond.Scenes
         private GameState _gameState;
         private HapticsManager _hapticsManager;
         private ItemTooltipRenderer _tooltipRenderer;
+        private Core _core;
+
         // State
         public bool IsActive { get; private set; }
 
@@ -96,6 +98,7 @@ namespace ProjectVagabond.Scenes
             _gameState = ServiceLocator.Get<GameState>();
             _hapticsManager = ServiceLocator.Get<HapticsManager>();
             _tooltipRenderer = ServiceLocator.Get<ItemTooltipRenderer>();
+            _core = ServiceLocator.Get<Core>();
             _cards = new List<LootCard>();
 
             // Initialize Tooltip Animator
@@ -191,9 +194,6 @@ namespace ProjectVagabond.Scenes
             }
         }
 
-        /// <summary>
-        /// Generates an ordered list of points representing the outer perimeter of the sprite's outline.
-        /// </summary>
         private List<Point> GenerateTracerPath(Texture2D texture)
         {
             if (texture == null) return new List<Point>();
@@ -203,12 +203,9 @@ namespace ProjectVagabond.Scenes
             Color[] data = new Color[w * h];
             texture.GetData(data);
 
-            // 1. Create a boolean grid representing the "Dilated" shape (Sprite + 1px Outline)
-            int gridW = w + 4; // +2 for dilation, +2 for safety padding
+            int gridW = w + 4;
             int gridH = h + 4;
             bool[,] grid = new bool[gridW, gridH];
-
-            // Offset to center the original sprite in the grid
             int offsetX = 2;
             int offsetY = 2;
 
@@ -218,7 +215,6 @@ namespace ProjectVagabond.Scenes
                 {
                     if (data[y * w + x].A > 0)
                     {
-                        // Mark this pixel and all 8 neighbors as solid
                         for (int dy = -1; dy <= 1; dy++)
                         {
                             for (int dx = -1; dx <= 1; dx++)
@@ -230,12 +226,10 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            // 2. Moore-Neighbor Tracing to find the perimeter
             List<Point> path = new List<Point>();
             Point start = Point.Zero;
             bool foundStart = false;
 
-            // Find start point (Top-Left most pixel)
             for (int y = 0; y < gridH; y++)
             {
                 for (int x = 0; x < gridW; x++)
@@ -250,30 +244,22 @@ namespace ProjectVagabond.Scenes
                 if (foundStart) break;
             }
 
-            if (!foundStart) return path; // Empty sprite
+            if (!foundStart) return path;
 
-            // Tracing
             Point current = start;
-            Point backtrack = new Point(start.X - 1, start.Y); // Enter from left
-
-            // Safety limit
+            Point backtrack = new Point(start.X - 1, start.Y);
             int maxSteps = gridW * gridH * 2;
             int steps = 0;
 
-            // Moore-Neighbor offsets (Clockwise)
             Point[] offsets = {
-            new Point(0, -1), new Point(1, -1), new Point(1, 0), new Point(1, 1),
-            new Point(0, 1), new Point(-1, 1), new Point(-1, 0), new Point(-1, -1)
-        };
+                new Point(0, -1), new Point(1, -1), new Point(1, 0), new Point(1, 1),
+                new Point(0, 1), new Point(-1, 1), new Point(-1, 0), new Point(-1, -1)
+            };
 
             do
             {
                 path.Add(current);
-
-                // Find the neighbor to move to
                 int checkIndex = -1;
-
-                // Find index of backtrack relative to current
                 Point relBack = new Point(backtrack.X - current.X, backtrack.Y - current.Y);
                 for (int i = 0; i < 8; i++)
                 {
@@ -284,9 +270,8 @@ namespace ProjectVagabond.Scenes
                     }
                 }
 
-                // Start checking clockwise from backtrack
                 bool foundNext = false;
-                for (int i = 1; i <= 8; i++) // Check all 8 neighbors
+                for (int i = 1; i <= 8; i++)
                 {
                     int idx = (checkIndex + i) % 8;
                     Point neighbor = new Point(current.X + offsets[idx].X, current.Y + offsets[idx].Y);
@@ -295,19 +280,16 @@ namespace ProjectVagabond.Scenes
                     {
                         int prevIdx = (idx + 7) % 8;
                         backtrack = new Point(current.X + offsets[prevIdx].X, current.Y + offsets[prevIdx].Y);
-
                         current = neighbor;
                         foundNext = true;
                         break;
                     }
                 }
 
-                if (!foundNext) break; // Isolated pixel
-
+                if (!foundNext) break;
                 steps++;
             } while (current != start && steps < maxSteps);
 
-            // 3. Convert Grid Coordinates back to Texture Relative Coordinates
             for (int i = 0; i < path.Count; i++)
             {
                 path[i] = new Point(path[i].X - offsetX, path[i].Y - offsetY);
@@ -334,20 +316,14 @@ namespace ProjectVagabond.Scenes
         {
             if (_selectionMade) return;
             _selectionMade = true;
-
-            // Trigger exit animation for all cards
             foreach (var card in _cards)
             {
-                // Bake current offset to prevent snapping
                 Vector2 currentOffset = card.Animator.GetCurrentOffset();
                 card.VisualPosition += currentOffset;
                 card.Animator.ForceOffset(Vector2.Zero);
-
-                // Skip style: Slide Down
                 card.Animator.Hide(delay: 0f, overrideStyle: EntryExitStyle.SlideDown);
                 card.IsDiscarded = true;
             }
-
             _autoCloseTimer = AUTO_CLOSE_DELAY;
         }
 
@@ -356,8 +332,6 @@ namespace ProjectVagabond.Scenes
             if (_selectionMade) return;
             _selectionMade = true;
 
-            // 1. Collect the chosen card
-            // Bake the current hover/animation offset into the visual position
             Vector2 currentOffset = card.Animator.GetCurrentOffset();
             card.VisualPosition += currentOffset;
             card.Animator.ForceOffset(Vector2.Zero);
@@ -365,31 +339,23 @@ namespace ProjectVagabond.Scenes
             card.IsCollected = true;
             AddItemToInventory(card.Item);
 
-            // Trigger the juicy exit animation (Collect style)
-            // Increase duration for emphasis
             card.Animator.DurationOut = 0.6f;
             card.Animator.Hide(delay: 0f, overrideStyle: EntryExitStyle.JuicyCollect);
 
             _hapticsManager.TriggerCompoundShake(0.2f);
 
-            // 2. Discard the others
             foreach (var otherCard in _cards)
             {
                 if (otherCard != card)
                 {
                     otherCard.IsDiscarded = true;
-                    // Bake offset
                     Vector2 otherOffset = otherCard.Animator.GetCurrentOffset();
                     otherCard.VisualPosition += otherOffset;
                     otherCard.Animator.ForceOffset(Vector2.Zero);
-
-                    // Animate away (Fade Out Quickly)
                     otherCard.Animator.DurationOut = 0.25f;
                     otherCard.Animator.Hide(delay: 0f, overrideStyle: EntryExitStyle.Fade);
                 }
             }
-
-            // 3. Start close timer
             _autoCloseTimer = AUTO_CLOSE_DELAY;
         }
 
@@ -414,7 +380,6 @@ namespace ProjectVagabond.Scenes
 
             _textWaveTimer += dt;
 
-            // --- Auto Close Logic ---
             if (_selectionMade)
             {
                 _autoCloseTimer -= dt;
@@ -429,30 +394,17 @@ namespace ProjectVagabond.Scenes
                 _skipButton.Update(mouse);
             }
 
-            // Recalculate layout targets (static for 3 items)
             UpdateCardLayout();
 
-            // 1. Update Animators & Positions for ALL cards
             foreach (var card in _cards)
             {
-                // Tween position
-                // Only tween if not collected/discarded
                 if (!card.IsCollected && !card.IsDiscarded)
                 {
                     card.VisualPosition = Vector2.Lerp(card.VisualPosition, card.TargetPosition, dt * CARD_MOVE_SPEED);
+                    card.CurrentBounds = new Rectangle((int)card.VisualPosition.X, (int)card.VisualPosition.Y, CARD_SIZE, CARD_SIZE);
 
-                    // Update bounds for hit detection
-                    card.CurrentBounds = new Rectangle(
-                        (int)card.VisualPosition.X,
-                        (int)card.VisualPosition.Y,
-                        CARD_SIZE,
-                        CARD_SIZE
-                    );
-
-                    // Update Tracer
                     if (card.TracerPath != null && card.TracerPath.Count > 0)
                     {
-                        // Get rarity-specific speed
                         var config = GetTracerConfig(card.Item.Rarity);
                         card.TracerProgress += dt * config.Speed;
                         if (card.TracerProgress >= card.TracerPath.Count)
@@ -461,18 +413,14 @@ namespace ProjectVagabond.Scenes
                         }
                     }
                 }
-
                 card.Animator.Update(dt);
             }
 
-            // 2. Handle Input (Exclusive Hover)
-            _hoveredItemData = null; // Reset hover data
+            _hoveredItemData = null;
 
             if (!_selectionMade)
             {
                 LootCard topHoveredCard = null;
-
-                // Iterate backwards to find the top-most card under the mouse
                 for (int i = _cards.Count - 1; i >= 0; i--)
                 {
                     var card = _cards[i];
@@ -483,24 +431,18 @@ namespace ProjectVagabond.Scenes
                     }
                 }
 
-                // Apply hover state to all cards
                 foreach (var card in _cards)
                 {
                     if (card.Animator.IsInteractive)
                     {
                         bool isTarget = (card == topHoveredCard);
-
-                        // Update visual hover state
                         card.IsMouseHovering = isTarget;
-
-                        // Update animator state
                         card.Animator.SetHover(isTarget);
 
                         if (isTarget)
                         {
-                            _hoveredItemData = card.Item.OriginalData; // Set tooltip data
-                            ServiceLocator.Get<CursorManager>().SetState(CursorState.HoverClickableHint); // Set cursor to hint
-
+                            _hoveredItemData = card.Item.OriginalData;
+                            ServiceLocator.Get<CursorManager>().SetState(CursorState.HoverClickableHint);
                             if (clicked)
                             {
                                 CollectCard(card);
@@ -516,12 +458,11 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            // --- TOOLTIP TIMER & ANIMATION LOGIC ---
             if (_hoveredItemData != _lastHoveredItemData)
             {
                 _tooltipTimer = 0f;
                 _lastHoveredItemData = _hoveredItemData;
-                _tooltipAnimator.Reset(); // Instant hide on switch
+                _tooltipAnimator.Reset();
             }
 
             if (_hoveredItemData != null && !_selectionMade)
@@ -544,7 +485,6 @@ namespace ProjectVagabond.Scenes
 
         private void UpdateCardLayout()
         {
-            // Static layout for 3 items
             int count = _cards.Count;
             if (count == 0) return;
 
@@ -559,14 +499,100 @@ namespace ProjectVagabond.Scenes
             }
         }
 
-        public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
+        public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             if (!IsActive) return;
 
+            // Request the overlay, but delegate the logic to a cleaner method
+            _core.RequestFullscreenOverlay((sb, uiMatrix) =>
+            {
+                DrawOverlayContent(sb, uiMatrix, font, gameTime, transform);
+            });
+        }
+
+        private void DrawOverlayContent(SpriteBatch sb, Matrix uiMatrix, BitmapFont font, GameTime gameTime, Matrix virtualTransform)
+        {
+            // --- PASS 1: DIMMER ---
+            DrawDimmerPass(sb);
+
+            // --- PASS 2: CONTENT ---
+            DrawContentPass(sb, uiMatrix, font, gameTime);
+
+            // --- PASS 3: TOOLTIP ---
+            DrawTooltipPass(sb, uiMatrix, gameTime);
+        }
+
+        private void DrawDimmerPass(SpriteBatch sb)
+        {
+            var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
+            int screenW = graphicsDevice.PresentationParameters.BackBufferWidth;
+            int screenH = graphicsDevice.PresentationParameters.BackBufferHeight;
+            var pixel = ServiceLocator.Get<Texture2D>();
+
+            sb.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, Matrix.Identity);
+            try
+            {
+                // Calculate dimmer alpha based on tooltip visibility
+                var tooltipState = _tooltipAnimator.GetVisualState();
+                float dimmerAlpha = 0f;
+                if (_hoveredItemData != null && tooltipState.IsVisible && !_selectionMade)
+                {
+                    dimmerAlpha = tooltipState.Opacity * 0.85f;
+                }
+
+                if (dimmerAlpha > 0.01f)
+                {
+                    sb.Draw(pixel, new Rectangle(0, 0, screenW, screenH), Color.Black * dimmerAlpha);
+                }
+            }
+            finally
+            {
+                sb.End();
+            }
+        }
+
+        private void DrawContentPass(SpriteBatch sb, Matrix uiMatrix, BitmapFont font, GameTime gameTime)
+        {
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
             var pixel = ServiceLocator.Get<Texture2D>();
 
-            // Draw Cards
+            sb.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, uiMatrix);
+            try
+            {
+                DrawLootCards(sb, font, gameTime);
+
+                if (!_selectionMade)
+                {
+                    _skipButton.Draw(sb, secondaryFont, gameTime, Matrix.Identity);
+                }
+
+                // Title
+                string title = "PICK ONE!";
+                Vector2 titleSize = font.MeasureString(title);
+                float titleBob = MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * 3f) * 2f;
+                float titleY = 20f;
+                sb.DrawString(font, title, new Vector2((Global.VIRTUAL_WIDTH - titleSize.X) / 2, titleY + titleBob), _global.Palette_Yellow);
+
+                // Debug
+                if (_global.ShowSplitMapGrid)
+                {
+                    sb.DrawSnapped(pixel, _lootArea, Color.Magenta * 0.3f);
+                    sb.DrawLineSnapped(new Vector2(_lootArea.Left, _lootArea.Top), new Vector2(_lootArea.Right, _lootArea.Top), Color.Magenta);
+                    sb.DrawLineSnapped(new Vector2(_lootArea.Left, _lootArea.Bottom), new Vector2(_lootArea.Right, _lootArea.Bottom), Color.Magenta);
+                    sb.DrawLineSnapped(new Vector2(_lootArea.Left, _lootArea.Top), new Vector2(_lootArea.Left, _lootArea.Bottom), Color.Magenta);
+                    sb.DrawLineSnapped(new Vector2(_lootArea.Right, _lootArea.Top), new Vector2(_lootArea.Right, _lootArea.Bottom), Color.Magenta);
+                }
+            }
+            finally
+            {
+                sb.End();
+            }
+        }
+
+        private void DrawLootCards(SpriteBatch sb, BitmapFont font, GameTime gameTime)
+        {
+            var pixel = ServiceLocator.Get<Texture2D>();
+
             foreach (var card in _cards)
             {
                 var state = card.Animator.GetVisualState();
@@ -589,7 +615,7 @@ namespace ProjectVagabond.Scenes
                     Vector2 origin = new Vector2(icon.Width / 2f, icon.Height / 2f);
 
                     // 1. Draw Floor Shadow
-                    spriteBatch.Draw(icon, center + new Vector2(state.Offset.X, 8), null, Color.Black * shadowAlpha, state.Rotation, origin, new Vector2(state.Scale.X, state.Scale.Y * 0.3f), SpriteEffects.None, 0f);
+                    sb.Draw(icon, center + new Vector2(state.Offset.X, 8), null, Color.Black * shadowAlpha, state.Rotation, origin, new Vector2(state.Scale.X, state.Scale.Y * 0.3f), SpriteEffects.None, 0f);
 
                     // 2. Draw Outline
                     if (silhouette != null)
@@ -599,16 +625,16 @@ namespace ProjectVagabond.Scenes
                         Color cornerOutlineColor = isHovered ? _global.ItemOutlineColor_Hover_Corner : _global.Palette_DarkerGray;
 
                         // Corners
-                        spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(-1, -1), null, cornerOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
-                        spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(1, -1), null, cornerOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
-                        spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(-1, 1), null, cornerOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
-                        spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(1, 1), null, cornerOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
+                        sb.DrawSnapped(silhouette, drawPos + new Vector2(-1, -1), null, cornerOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
+                        sb.DrawSnapped(silhouette, drawPos + new Vector2(1, -1), null, cornerOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
+                        sb.DrawSnapped(silhouette, drawPos + new Vector2(-1, 1), null, cornerOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
+                        sb.DrawSnapped(silhouette, drawPos + new Vector2(1, 1), null, cornerOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
 
                         // Cardinals
-                        spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(-1, 0), null, mainOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
-                        spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(1, 0), null, mainOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
-                        spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(0, -1), null, mainOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
-                        spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(0, 1), null, mainOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
+                        sb.DrawSnapped(silhouette, drawPos + new Vector2(-1, 0), null, mainOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
+                        sb.DrawSnapped(silhouette, drawPos + new Vector2(1, 0), null, mainOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
+                        sb.DrawSnapped(silhouette, drawPos + new Vector2(0, -1), null, mainOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
+                        sb.DrawSnapped(silhouette, drawPos + new Vector2(0, 1), null, mainOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
                     }
 
                     // --- 2.5. Draw Rarity Tracer & Pulse ---
@@ -635,7 +661,7 @@ namespace ProjectVagabond.Scenes
                                     float sin = MathF.Sin(state.Rotation);
                                     relativePos = new Vector2(relativePos.X * cos - relativePos.Y * sin, relativePos.X * sin + relativePos.Y * cos);
                                 }
-                                spriteBatch.DrawSnapped(pixel, drawPos + relativePos, null, rarityColor * currentAlpha, 0f, Vector2.Zero, 1f, SpriteEffects.None, 0f);
+                                sb.DrawSnapped(pixel, drawPos + relativePos, null, rarityColor * currentAlpha, 0f, Vector2.Zero, 1f, SpriteEffects.None, 0f);
                             }
                         }
 
@@ -663,13 +689,14 @@ namespace ProjectVagabond.Scenes
                                     float sin = MathF.Sin(state.Rotation);
                                     relativePos = new Vector2(relativePos.X * cos - relativePos.Y * sin, relativePos.X * sin + relativePos.Y * cos);
                                 }
-                                spriteBatch.DrawSnapped(pixel, drawPos + relativePos, null, rarityColor * alpha, 0f, Vector2.Zero, 1f, SpriteEffects.None, 0f);
+                                sb.DrawSnapped(pixel, drawPos + relativePos, null, rarityColor * alpha, 0f, Vector2.Zero, 1f, SpriteEffects.None, 0f);
                             }
                         }
                     }
 
                     // 3. Draw Item Sprite Body
-                    spriteBatch.Draw(icon, drawPos, null, Color.White * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
+                    // FIX: Use DrawSnapped to ensure body aligns with outline
+                    sb.DrawSnapped(icon, drawPos, null, Color.White * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
 
                     // --- 3.5 Draw Rarity Symbol ---
                     if (card.Item.Rarity >= 0 && _spriteManager.RarityIconsSpriteSheet != null)
@@ -678,47 +705,27 @@ namespace ProjectVagabond.Scenes
                         Vector2 rarityOffset = new Vector2(12, -12) * state.Scale;
                         Vector2 rarityPos = center + rarityOffset;
                         Vector2 rarityOrigin = new Vector2(4, 4);
-                        spriteBatch.DrawSnapped(_spriteManager.RarityIconsSpriteSheet, rarityPos, rarityRect, Color.White * state.Opacity, 0f, rarityOrigin, state.Scale, SpriteEffects.None, 0f);
+                        sb.DrawSnapped(_spriteManager.RarityIconsSpriteSheet, rarityPos, rarityRect, Color.White * state.Opacity, 0f, rarityOrigin, state.Scale, SpriteEffects.None, 0f);
                     }
                 }
             }
+        }
 
-            if (!_selectionMade)
-            {
-                _skipButton.Draw(spriteBatch, secondaryFont, gameTime, Matrix.Identity);
-            }
-
-            // Title
-            string title = "PICK ONE!";
-            Vector2 titleSize = font.MeasureString(title);
-            float titleBob = MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * 3f) * 2f;
-            float titleY = 20f;
-            spriteBatch.DrawString(font, title, new Vector2((Global.VIRTUAL_WIDTH - titleSize.X) / 2, titleY + titleBob), _global.Palette_Yellow);
-
-            // --- Draw Tooltip ---
-            if (_hoveredItemData != null && _tooltipAnimator.IsVisible && !_selectionMade)
+        private void DrawTooltipPass(SpriteBatch sb, Matrix uiMatrix, GameTime gameTime)
+        {
+            if (_hoveredItemData != null && _tooltipAnimator.GetVisualState().IsVisible && !_selectionMade)
             {
                 var hoveredCard = _cards.FirstOrDefault(c => c.Item.OriginalData == _hoveredItemData);
                 if (hoveredCard != null)
                 {
-                    Vector2 basePos = hoveredCard.VisualPosition;
-                    Vector2 center = basePos + new Vector2(CARD_SIZE / 2f, CARD_SIZE / 2f);
+                    Vector2 center = hoveredCard.VisualPosition + new Vector2(CARD_SIZE / 2f, CARD_SIZE / 2f);
                     var state = _tooltipAnimator.GetVisualState();
 
-                    // Use the new renderer logic: Pass the center of the card as the anchor.
-                    // The renderer will align the tooltip's internal sprite center to this anchor.
-                    _tooltipRenderer.DrawTooltip(spriteBatch, _hoveredItemData, center, gameTime, state.Scale, 1.0f);
+                    // Use the new immediate renderer logic.
+                    // Pass drawDimmer: false because we already handled the dimmer in Pass 1.
+                    // Pass transform: This is the UI Matrix (Virtual -> Screen).
+                    _tooltipRenderer.DrawTooltipImmediate(sb, uiMatrix, _hoveredItemData, center, gameTime, state.Scale, 1.0f, drawDimmer: false);
                 }
-            }
-
-            // --- DEBUG DRAWING (F1) ---
-            if (_global.ShowSplitMapGrid)
-            {
-                spriteBatch.DrawSnapped(pixel, _lootArea, Color.Magenta * 0.3f);
-                spriteBatch.DrawLineSnapped(new Vector2(_lootArea.Left, _lootArea.Top), new Vector2(_lootArea.Right, _lootArea.Top), Color.Magenta);
-                spriteBatch.DrawLineSnapped(new Vector2(_lootArea.Left, _lootArea.Bottom), new Vector2(_lootArea.Right, _lootArea.Bottom), Color.Magenta);
-                spriteBatch.DrawLineSnapped(new Vector2(_lootArea.Left, _lootArea.Top), new Vector2(_lootArea.Left, _lootArea.Bottom), Color.Magenta);
-                spriteBatch.DrawLineSnapped(new Vector2(_lootArea.Right, _lootArea.Top), new Vector2(_lootArea.Right, _lootArea.Bottom), Color.Magenta);
             }
         }
 

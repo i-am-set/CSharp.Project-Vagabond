@@ -428,7 +428,7 @@
     "WeaponName": "Claymore",
     "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]HEAVES$SWINGS$CLEAVES[/] {user_pronoun} [cItem]{item_name}[/] THROUGH {user_pronoun} [cEnemy]ENEMIES[/].",
     "Description": "",
-    "Flavor": "A sword as tall as an adult kitty. Requires wide swings.",
+    "Flavor": "Huge sword. Requires wide swings.",
     "Rarity": 1,
     "MoveName": "Slash",
     "Power": 60,

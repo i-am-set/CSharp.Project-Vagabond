@@ -61,35 +61,38 @@ namespace ProjectVagabond.UI
         }
 
         /// <summary>
-        /// Draws a tooltip for the given item data.
-        /// The tooltip attempts to align its internal sprite center with the anchorPosition.
-        /// However, it is clamped to the screen bounds to ensure visibility.
+        /// Queues a tooltip to be drawn in the fullscreen overlay pass.
         /// </summary>
-        /// <param name="anchorPosition">The screen-space position to align the tooltip's icon center to.</param>
         public void DrawTooltip(SpriteBatch spriteBatch, object itemData, Vector2 anchorPosition, GameTime gameTime, Vector2? scale = null, float opacity = 1.0f)
+        {
+            // Queue the draw call to the Core's overlay system
+            _core.RequestFullscreenOverlay((sb, uiMatrix) =>
+            {
+                DrawTooltipImmediate(sb, uiMatrix, itemData, anchorPosition, gameTime, scale, opacity, drawDimmer: true);
+            });
+        }
+
+        /// <summary>
+        /// Draws the tooltip immediately using the provided SpriteBatch and Matrix.
+        /// Use this when you are already inside an overlay pass (e.g. LootScreen) to avoid nested queue issues.
+        /// </summary>
+        public void DrawTooltipImmediate(SpriteBatch sb, Matrix uiMatrix, object itemData, Vector2 anchorPosition, GameTime gameTime, Vector2? scale = null, float opacity = 1.0f, bool drawDimmer = true)
         {
             if (itemData == null || opacity <= 0.01f) return;
 
             Vector2 drawScale = scale ?? Vector2.One;
-
             var font = ServiceLocator.Get<BitmapFont>();
             var secondaryFont = _core.SecondaryFont;
 
-            // 1. Calculate Dynamic Width
+            // 1. Calculate Layout
             int panelWidth = CalculateDynamicWidth(itemData, font);
-
-            // 2. Calculate Required Height
             float contentHeight = MeasureContentHeight(font, secondaryFont, itemData, panelWidth);
             int panelHeight = (int)Math.Ceiling(contentHeight) + 8 + 2;
-
-            // 3. Determine the Y offset of the sprite center relative to the panel top.
             float spriteCenterOffsetY = GetSpriteCenterOffsetY(itemData);
 
-            // 4. Calculate Ideal Panel Position (Perfect Alignment)
             float panelY = anchorPosition.Y - spriteCenterOffsetY;
             float panelX = anchorPosition.X - (panelWidth / 2f);
 
-            // 5. Create Rectangle
             var infoPanelArea = new Rectangle(
                 (int)MathF.Round(panelX),
                 (int)MathF.Round(panelY),
@@ -97,7 +100,7 @@ namespace ProjectVagabond.UI
                 panelHeight
             );
 
-            // 6. CLAMP TO SCREEN BOUNDS
+            // 2. Clamp to Screen
             int screenTop = SCREEN_EDGE_MARGIN;
             int screenBottom = Global.VIRTUAL_HEIGHT - SCREEN_EDGE_MARGIN;
             int screenLeft = SCREEN_EDGE_MARGIN;
@@ -108,40 +111,35 @@ namespace ProjectVagabond.UI
             if (infoPanelArea.Y < screenTop) infoPanelArea.Y = screenTop;
             if (infoPanelArea.Bottom > screenBottom) infoPanelArea.Y = screenBottom - infoPanelArea.Height;
 
-            // --- 7. DRAW FULL SCREEN DIMMER ---
-            // We need to break the current batch to draw a full-screen quad in screen space (no transform).
-            spriteBatch.End();
+            // 3. Draw Dimmer (Optional)
+            if (drawDimmer)
+            {
+                var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
+                int screenW = graphicsDevice.PresentationParameters.BackBufferWidth;
+                int screenH = graphicsDevice.PresentationParameters.BackBufferHeight;
+                var pixel = ServiceLocator.Get<Texture2D>();
 
-            var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
-            int screenW = graphicsDevice.PresentationParameters.BackBufferWidth;
-            int screenH = graphicsDevice.PresentationParameters.BackBufferHeight;
-            var pixel = ServiceLocator.Get<Texture2D>();
+                sb.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, Matrix.Identity);
+                sb.Draw(pixel, new Rectangle(0, 0, screenW, screenH), DimmerColor * DimmerOpacity * opacity);
+                sb.End();
+            }
 
-            spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.PointClamp);
-            spriteBatch.Draw(pixel, new Rectangle(0, 0, screenW, screenH), DimmerColor * DimmerOpacity * opacity);
-            spriteBatch.End();
-
-            // 8. Prepare Animation Matrix for Tooltip
+            // 4. Draw Tooltip Content
             Vector2 pivotPoint = anchorPosition;
+            Matrix animTransform = Matrix.CreateTranslation(-pivotPoint.X, -pivotPoint.Y, 0) *
+                                   Matrix.CreateScale(drawScale.X, drawScale.Y, 1.0f) *
+                                   Matrix.CreateTranslation(pivotPoint.X, pivotPoint.Y, 0);
 
-            Matrix transform = Matrix.CreateTranslation(-pivotPoint.X, -pivotPoint.Y, 0) *
-                               Matrix.CreateScale(drawScale.X, drawScale.Y, 1.0f) *
-                               Matrix.CreateTranslation(pivotPoint.X, pivotPoint.Y, 0);
+            Matrix finalTransform = animTransform * uiMatrix;
 
-            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
+            sb.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, finalTransform);
 
-            // 9. Draw Background (Rounded Bevel)
-            DrawBeveledBackground(spriteBatch, pixel, infoPanelArea, _global.Palette_Black * opacity);
+            var pixelTex = ServiceLocator.Get<Texture2D>();
+            DrawBeveledBackground(sb, pixelTex, infoPanelArea, _global.Palette_Black * opacity);
+            DrawBeveledBorder(sb, pixelTex, infoPanelArea, _global.Palette_BlueWhite * opacity);
+            DrawInfoPanelContent(sb, itemData, infoPanelArea, font, secondaryFont, gameTime, opacity);
 
-            // 10. Draw Border (Rounded Bevel)
-            DrawBeveledBorder(spriteBatch, pixel, infoPanelArea, _global.Palette_BlueWhite * opacity);
-
-            // 11. Draw Content
-            DrawInfoPanelContent(spriteBatch, itemData, infoPanelArea, font, secondaryFont, gameTime, opacity);
-
-            // 12. Restore Batch
-            spriteBatch.End();
-            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
+            sb.End();
         }
 
         private float GetSpriteCenterOffsetY(object itemData)

@@ -8,6 +8,7 @@ using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
 using ProjectVagabond.Systems;
 using ProjectVagabond.Transitions;
 using ProjectVagabond.UI; // Added for TextAnimator
@@ -35,6 +36,8 @@ namespace ProjectVagabond.Battle.UI
         private readonly BattleVfxRenderer _vfxRenderer;
         private readonly TooltipManager _tooltipManager;
         private readonly HitstopManager _hitstopManager;
+        private readonly Core _core; // Added Core dependency for overlays
+
         // --- State Management ---
         private readonly List<TargetInfo> _currentTargets = new List<TargetInfo>();
         private readonly List<StatusIconInfo> _playerStatusIcons = new List<StatusIconInfo>();
@@ -116,6 +119,7 @@ namespace ProjectVagabond.Battle.UI
             _spriteManager = ServiceLocator.Get<SpriteManager>();
             _tooltipManager = ServiceLocator.Get<TooltipManager>();
             _hitstopManager = ServiceLocator.Get<HitstopManager>();
+            _core = ServiceLocator.Get<Core>();
 
             // Initialize Helpers
             _entityRenderer = new BattleEntityRenderer();
@@ -308,20 +312,37 @@ namespace ProjectVagabond.Battle.UI
                 DrawEnemies(spriteBatch, nonTargetEnemies, allCombatants, currentActor, shouldGrayOut, selectableTargets, animationManager, silhouetteColors, transform, gameTime, uiManager, hoveredCombatant, drawFloor: false, drawShadow: false, drawSprite: true, includeDying: true);
                 DrawPlayers(spriteBatch, font, nonTargetPlayers, currentActor, shouldGrayOut, selectableTargets, animationManager, silhouetteColors, gameTime, uiManager, hoveredCombatant, drawFloor: false, drawShadow: false, drawSprite: true);
 
-                // 3. Draw Flash Rect
-                var pixel = ServiceLocator.Get<Texture2D>();
-                float alpha = Math.Clamp(flashState.Timer / flashState.Duration, 0f, 1f);
-                alpha = Easing.EaseOutQuad(alpha);
-                spriteBatch.DrawSnapped(pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), flashState.Color * alpha);
+                // --- 3. REQUEST FULLSCREEN OVERLAY FOR FLASH & TARGETS ---
+                // This ensures the flash covers the letterbox bars, and the targets pop out on top of it.
+                _core.RequestFullscreenOverlay((overlayBatch, uiMatrix) =>
+                {
+                    var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
+                    int screenW = graphicsDevice.PresentationParameters.BackBufferWidth;
+                    int screenH = graphicsDevice.PresentationParameters.BackBufferHeight;
+                    var pixel = ServiceLocator.Get<Texture2D>();
 
-                // 4. Draw Target Sprites (Top Layer - Visible)
-                // No shadows here, already drawn (under flash).
-                var targetEnemies = enemies.Where(e => flashState.TargetCombatantIDs.Contains(e.CombatantID)).ToList();
-                var targetPlayers = players.Where(p => flashState.TargetCombatantIDs.Contains(p.CombatantID)).ToList();
+                    // A. Draw Flash Rect (Screen Space - Identity Matrix)
+                    float alpha = Math.Clamp(flashState.Timer / flashState.Duration, 0f, 1f);
+                    alpha = Easing.EaseOutQuad(alpha);
 
-                // Draw sprites for targets (includeDying=false because targets shouldn't be dying yet, or if they are, we don't want to double draw them if they were in the non-target list)
-                DrawEnemies(spriteBatch, targetEnemies, allCombatants, currentActor, shouldGrayOut, selectableTargets, animationManager, silhouetteColors, transform, gameTime, uiManager, hoveredCombatant, drawFloor: false, drawShadow: false, drawSprite: true, includeDying: false);
-                DrawPlayers(spriteBatch, font, targetPlayers, currentActor, shouldGrayOut, selectableTargets, animationManager, silhouetteColors, gameTime, uiManager, hoveredCombatant, drawFloor: false, drawShadow: false, drawSprite: true);
+                    overlayBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, Matrix.Identity);
+                    overlayBatch.Draw(pixel, new Rectangle(0, 0, screenW, screenH), flashState.Color * alpha);
+                    overlayBatch.End();
+
+                    // B. Draw Target Sprites (Virtual Space - UI Matrix)
+                    // We use the uiMatrix (Virtual->Screen) so the targets are drawn in the correct screen position.
+                    var targetEnemies = enemies.Where(e => flashState.TargetCombatantIDs.Contains(e.CombatantID)).ToList();
+                    var targetPlayers = players.Where(p => flashState.TargetCombatantIDs.Contains(p.CombatantID)).ToList();
+
+                    overlayBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, uiMatrix);
+
+                    // Draw sprites for targets (includeDying=false because targets shouldn't be dying yet)
+                    // IMPORTANT: Pass uiMatrix as the transform so BattleEntityRenderer restarts the batch correctly!
+                    DrawEnemies(overlayBatch, targetEnemies, allCombatants, currentActor, shouldGrayOut, selectableTargets, animationManager, silhouetteColors, uiMatrix, gameTime, uiManager, hoveredCombatant, drawFloor: false, drawShadow: false, drawSprite: true, includeDying: false);
+                    DrawPlayers(overlayBatch, font, targetPlayers, currentActor, shouldGrayOut, selectableTargets, animationManager, silhouetteColors, gameTime, uiManager, hoveredCombatant, drawFloor: false, drawShadow: false, drawSprite: true);
+
+                    overlayBatch.End();
+                });
             }
             else
             {

@@ -919,26 +919,6 @@ namespace ProjectVagabond.Scenes
             else _uiManager.HideAllMenus();
         }
 
-        public override void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
-        {
-            spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
-            DrawSceneContent(spriteBatch, font, gameTime, transform);
-            spriteBatch.End();
-
-            spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
-            _renderer.DrawOverlay(spriteBatch, font);
-            _tooltipManager.Draw(spriteBatch, ServiceLocator.Get<Core>().SecondaryFont);
-            _animationManager.DrawAbilityIndicators(spriteBatch, font);
-            _alertManager.Draw(spriteBatch);
-
-            if (_settingsButtonState != SettingsButtonState.Visible && _settingsButtonState != SettingsButtonState.Hidden) _settingsButton?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
-            else if (_settingsButtonState == SettingsButtonState.Visible) _settingsButton?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
-
-            if (_lootScreen != null && _lootScreen.IsActive) _lootScreen.Draw(spriteBatch, font, gameTime);
-
-            spriteBatch.End();
-        }
-
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             if (_battleManager == null)
@@ -996,11 +976,33 @@ namespace ProjectVagabond.Scenes
                 renderContextActor = _battleManager.CurrentActingCombatant;
             }
 
-            _renderer.Update(gameTime, _battleManager.AllCombatants, _animationManager, renderContextActor);
+            // 1. Draw Background & Entities (Immediate)
+            // This might queue the Flash Overlay.
             _renderer.Draw(spriteBatch, font, gameTime, _battleManager.AllCombatants, renderContextActor, _uiManager, _inputHandler, _animationManager, _uiManager.SharedPulseTimer, transform);
-            _moveAnimationManager.Draw(spriteBatch);
-            _uiManager.Draw(spriteBatch, font, gameTime, transform);
-            _animationManager.DrawDamageIndicators(spriteBatch, secondaryFont);
+
+            bool isFlashing = _animationManager.GetImpactFlashState() != null;
+
+            if (isFlashing)
+            {
+                // Queue everything else as overlays to appear ON TOP of the flash
+                var core = ServiceLocator.Get<Core>();
+
+                core.RequestFullscreenOverlay((sb, uiMatrix) =>
+                {
+                    sb.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, uiMatrix);
+                    _moveAnimationManager.Draw(sb);
+                    _uiManager.Draw(sb, font, gameTime, Matrix.Identity);
+                    _animationManager.DrawDamageIndicators(sb, ServiceLocator.Get<Core>().SecondaryFont);
+                    sb.End();
+                });
+            }
+            else
+            {
+                // Draw normally
+                _moveAnimationManager.Draw(spriteBatch);
+                _uiManager.Draw(spriteBatch, font, gameTime, transform);
+                _animationManager.DrawDamageIndicators(spriteBatch, ServiceLocator.Get<Core>().SecondaryFont);
+            }
         }
 
         public override void DrawOverlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
@@ -1018,6 +1020,14 @@ namespace ProjectVagabond.Scenes
         public override void DrawFullscreenUI(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             _uiManager.DrawFullscreenDialogs(spriteBatch, font, gameTime, transform);
+
+            // --- MOVED LOOT SCREEN DRAW HERE ---
+            // This ensures the Loot Screen is drawn in the fullscreen overlay pass,
+            // allowing its dimmer to cover the entire window (including letterbox bars).
+            if (_lootScreen != null && _lootScreen.IsActive)
+            {
+                _lootScreen.Draw(spriteBatch, font, gameTime, transform);
+            }
         }
 
         public void TriggerFlee()
@@ -1249,9 +1259,6 @@ namespace ProjectVagabond.Scenes
                 var target = e.Targets[i];
                 var result = e.DamageResults[i];
                 Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(target, _battleManager.AllCombatants);
-
-                // Removed incorrect RelicData casting logic here.
-                // AbilityActivated events are now fired by BattleManager.
 
                 if (result.DamageAmount > 0)
                 {

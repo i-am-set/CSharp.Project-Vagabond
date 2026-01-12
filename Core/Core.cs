@@ -6,6 +6,7 @@ using MonoGame.Extended.BitmapFonts;
 using MonoGame.Extended.Graphics;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Particles;
@@ -76,6 +77,10 @@ namespace ProjectVagabond
             public const float TOTAL_FLASH_CYCLE_DURATION = FLASH_ON_DURATION + FLASH_OFF_DURATION;
         }
         private ScreenFlashState _screenFlashState;
+
+        // --- FULLSCREEN OVERLAY SYSTEM ---
+        // Allows renderers to queue draw calls that happen in screen space, covering letterbox bars.
+        private readonly List<Action<SpriteBatch, Matrix>> _fullscreenOverlays = new List<Action<SpriteBatch, Matrix>>();
 
         /// <summary>
         /// The matrix used to transform mouse coordinates from screen space to virtual game space.
@@ -538,6 +543,16 @@ namespace ProjectVagabond
         public void TriggerFullscreenGlitch(float duration) { _glitchDuration = duration; _glitchTimer = duration; }
 
         /// <summary>
+        /// Queues a draw action to be executed in the Fullscreen Overlay pass.
+        /// This allows rendering content directly to the screen, bypassing the virtual resolution letterboxing.
+        /// </summary>
+        /// <param name="drawAction">The action to execute. Receives the SpriteBatch and the UI Matrix (Virtual->Screen).</param>
+        public void RequestFullscreenOverlay(Action<SpriteBatch, Matrix> drawAction)
+        {
+            _fullscreenOverlays.Add(drawAction);
+        }
+
+        /// <summary>
         /// Resets the game state completely, clearing all entities, components, and progression.
         /// Used for returning to the Main Menu or restarting a run.
         /// </summary>
@@ -567,6 +582,9 @@ namespace ProjectVagabond
 
         protected override void Update(GameTime gameTime)
         {
+            // Clear overlays at the start of the frame
+            _fullscreenOverlays.Clear();
+
             // --- MANUAL FRAME LIMITER ---
             // This replaces MonoGame's IsFixedTimeStep to prevent windowed mode stutter.
             // We calculate the target time per frame and sleep the thread manually.
@@ -853,6 +871,17 @@ namespace ProjectVagabond
                 // We might need to pass the matrix to it, or wrap it.
                 // Current implementation of DrawFullscreenUI in GameScene takes a transform.
                 _sceneManager.CurrentActiveScene?.DrawFullscreenUI(_spriteBatch, _defaultFont, gameTime, uiMatrix);
+
+                // --- EXECUTE FULLSCREEN OVERLAYS ---
+                if (_fullscreenOverlays.Count > 0)
+                {
+                    // Execute queued overlay draw calls (Dimmers, Flashes, etc.)
+                    // These are drawn in screen space, covering everything including letterbox bars.
+                    foreach (var action in _fullscreenOverlays)
+                    {
+                        action(_spriteBatch, uiMatrix);
+                    }
+                }
             }
 
             // 6. Draw Custom Cursor (With Shake)
