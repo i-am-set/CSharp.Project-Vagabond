@@ -127,6 +127,9 @@ namespace ProjectVagabond.Scenes
         private bool _lootScreenHasShown = false;
         private bool _floorTransitionTriggered = false;
 
+        // --- FLEE STATE ---
+        private bool _didFlee = false;
+
         // --- REGEX FOR RANDOM WORD PARSING ---
         private static readonly Regex _randomWordRegex = new Regex(@"\b[\w\-\']+(?:\$[\w\-\']+)+\b", RegexOptions.Compiled);
 
@@ -192,6 +195,7 @@ namespace ProjectVagabond.Scenes
             _victorySequenceTriggered = false;
             _lootScreenHasShown = false;
             _floorTransitionTriggered = false;
+            _didFlee = false;
             _lootScreen.Reset();
 
             SubscribeToEvents();
@@ -683,6 +687,19 @@ namespace ProjectVagabond.Scenes
             {
                 if (!_uiManager.IsBusy && !_animationManager.IsVisuallyBusy)
                 {
+                    // --- FLEE LOGIC ---
+                    if (_didFlee)
+                    {
+                        if (!_victorySequenceTriggered) // Reusing this flag to mean "Exit Triggered"
+                        {
+                            _victorySequenceTriggered = true;
+                            var transition = _transitionManager.GetRandomTransition();
+                            _sceneManager.ChangeScene(BattleSetup.ReturnSceneState, transition, transition);
+                        }
+                        base.Update(gameTime);
+                        return;
+                    }
+
                     var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
                     bool playerWon = player != null && !player.IsDefeated;
 
@@ -1464,6 +1481,7 @@ namespace ProjectVagabond.Scenes
 
         private void FleeBattle()
         {
+            _didFlee = true;
             _isBattleOver = true;
             _uiManager.HideAllMenus();
             var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
