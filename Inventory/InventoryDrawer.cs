@@ -24,11 +24,13 @@ namespace ProjectVagabond.UI
         private readonly InventoryDataProcessor _dataProcessor;
         private readonly InventoryEquipSystem _equipSystem;
         private readonly ItemTooltipRenderer _tooltipRenderer;
+
         // Fields for portrait background animation
         private int _portraitBgFrameIndex = 0;
         private float _portraitBgTimer;
         private float _portraitBgDuration;
         private static readonly Random _rng = new Random();
+
         public InventoryDrawer(SplitMapInventoryOverlay overlay, InventoryDataProcessor dataProcessor, InventoryEquipSystem equipSystem)
         {
             _overlay = overlay;
@@ -343,17 +345,11 @@ namespace ProjectVagabond.UI
                 Vector2 namePos = new Vector2(centerX - nameSize.X / 2, currentY);
 
                 // --- ANIMATION LOGIC ---
-                // Only apply animation if the slot is occupied.
-                // Empty slots should be static.
                 if (isOccupied)
                 {
                     var animator = _overlay.PartySlotAnimators[i];
                     var visualState = animator.GetVisualState();
-
-                    // Apply offset to name position
                     namePos += visualState.Offset;
-
-                    // Apply opacity to name color
                     nameColor = nameColor * visualState.Opacity;
                 }
 
@@ -383,8 +379,6 @@ namespace ProjectVagabond.UI
                 // --- DRAW ANIMATED TEXT ---
                 if (isOccupied)
                 {
-                    // Use TextAnimator with the current effect and timer
-                    // Pass the raw timer value (which can be negative for delay)
                     TextAnimator.DrawTextWithEffect(
                         spriteBatch,
                         font,
@@ -392,12 +386,11 @@ namespace ProjectVagabond.UI
                         namePos,
                         nameColor,
                         _overlay.PartySlotTextEffects[i],
-                        _overlay.PartySlotTextTimers[i] // Removed Math.Max(0, ...) to allow negative delay
+                        _overlay.PartySlotTextTimers[i]
                     );
                 }
                 else
                 {
-                    // Static draw for empty slots
                     spriteBatch.DrawStringSnapped(font, name, namePos, nameColor);
                 }
 
@@ -421,7 +414,6 @@ namespace ProjectVagabond.UI
                         spriteBatch.DrawSnapped(_overlay.SpriteManager.InventoryPlayerHealthBarFull, new Vector2(barX + 1, currentY), srcRect, Color.White);
                     }
 
-                    // Calculate height for layout spacing regardless of whether we draw text
                     float textHeight = secondaryFont.MeasureString("0/0").Height;
 
                     if (isOccupied)
@@ -484,17 +476,17 @@ namespace ProjectVagabond.UI
                 string[] statLabels = { "STR", "INT", "TEN", "AGI" };
                 string[] statKeys = { "Strength", "Intelligence", "Tenacity", "Agility" };
 
-                Dictionary<string, int>? hoveredItemStats = null;
-                if (isOccupied && _overlay.HoveredMemberIndex == i && _overlay.HoveredItemData != null)
-                {
-                    if (_overlay.HoveredItemData is WeaponData w) hoveredItemStats = w.StatModifiers;
-                    else if (_overlay.HoveredItemData is ArmorData a) hoveredItemStats = a.StatModifiers;
-                    else if (_overlay.HoveredItemData is RelicData r) hoveredItemStats = r.StatModifiers;
-                }
+                // --- DETERMINE HOVER CONTEXT ---
+                bool isHoveringThisMember = isOccupied && _overlay.HoveredMemberIndex == i;
+                bool isHoveringItem = isHoveringThisMember && _overlay.HoveredItemData != null;
+
+                // Identify the type of item being hovered
+                bool isHoveringWeapon = isHoveringItem && _overlay.HoveredItemData is WeaponData;
+                bool isHoveringArmor = isHoveringItem && _overlay.HoveredItemData is ArmorData;
+                bool isHoveringRelic = isHoveringItem && _overlay.HoveredItemData is RelicData;
 
                 for (int s = 0; s < 4; s++)
                 {
-                    int rawTotal = 0;
                     int baseStat = 0;
                     int totalEquipBonus = 0;
 
@@ -514,23 +506,45 @@ namespace ProjectVagabond.UI
                             r.StatModifiers.TryGetValue(statKeys[s], out relicBonus);
 
                         totalEquipBonus = weaponBonus + armorBonus + relicBonus;
-                        rawTotal = baseStat + totalEquipBonus;
                     }
 
-                    int currentEffective = Math.Max(1, rawTotal);
-                    Color labelColor = isOccupied ? _overlay.Global.Palette_LightGray : _overlay.Global.Palette_DarkGray;
-
-                    int itemBonus = 0;
-                    if (hoveredItemStats != null && hoveredItemStats.TryGetValue(statKeys[s], out int bonus))
+                    // --- CALCULATE LAYERS ---
+                    // 1. Passive Bonus: Sum of equipped items EXCLUDING the slot being hovered/replaced.
+                    int passiveBonus = 0;
+                    if (isOccupied)
                     {
-                        itemBonus = bonus;
+                        // Add Weapon if NOT hovering a weapon
+                        if (!isHoveringWeapon && !string.IsNullOrEmpty(member!.EquippedWeaponId) && BattleDataCache.Weapons.TryGetValue(member.EquippedWeaponId, out var w))
+                            if (w.StatModifiers.TryGetValue(statKeys[s], out int val)) passiveBonus += val;
+
+                        // Add Armor if NOT hovering armor
+                        if (!isHoveringArmor && !string.IsNullOrEmpty(member.EquippedArmorId) && BattleDataCache.Armors.TryGetValue(member.EquippedArmorId, out var a))
+                            if (a.StatModifiers.TryGetValue(statKeys[s], out int val)) passiveBonus += val;
+
+                        // Add Relic if NOT hovering relic
+                        if (!isHoveringRelic && !string.IsNullOrEmpty(member.EquippedRelicId) && BattleDataCache.Relics.TryGetValue(member.EquippedRelicId, out var r))
+                            if (r.StatModifiers.TryGetValue(statKeys[s], out int val)) passiveBonus += val;
                     }
 
-                    int rawWithoutItem = rawTotal - itemBonus;
-                    int effectiveWithoutItem = Math.Max(1, rawWithoutItem);
+                    // 2. Active Bonus: Stats from the hovered item
+                    int activeBonus = 0;
+                    if (isHoveringItem)
+                    {
+                        if (isHoveringWeapon) ((WeaponData)_overlay.HoveredItemData).StatModifiers.TryGetValue(statKeys[s], out activeBonus);
+                        else if (isHoveringArmor) ((ArmorData)_overlay.HoveredItemData).StatModifiers.TryGetValue(statKeys[s], out activeBonus);
+                        else if (isHoveringRelic) ((RelicData)_overlay.HoveredItemData).StatModifiers.TryGetValue(statKeys[s], out activeBonus);
+                    }
 
+                    // Calculate Points for Drawing
+                    int basePoints = Math.Clamp(baseStat, 1, 20);
+                    int passiveTotal = Math.Clamp(baseStat + passiveBonus, 1, 20);
+                    int finalTotal = Math.Clamp(baseStat + passiveBonus + activeBonus, 1, 20);
+
+                    // Draw Label
+                    Color labelColor = isOccupied ? _overlay.Global.Palette_LightGray : _overlay.Global.Palette_DarkGray;
                     spriteBatch.DrawStringSnapped(secondaryFont, statLabels[s], new Vector2(equipStartX - 3, currentY), labelColor);
 
+                    // Draw Bar Background
                     Texture2D statBarBg = isOccupied ? _overlay.SpriteManager.InventoryStatBarEmpty : _overlay.SpriteManager.InventoryStatBarDisabled;
                     if (statBarBg != null)
                     {
@@ -538,130 +552,76 @@ namespace ProjectVagabond.UI
                         float barX = equipStartX - 3 + labelWidth + 3;
                         float barYOffset = 0f;
                         if (s == 1 || s == 3) barYOffset = 0.5f;
-
                         float barY = currentY + (secondaryFont.LineHeight - 3) / 2f + barYOffset;
 
                         spriteBatch.DrawSnapped(statBarBg, new Vector2(barX, barY), Color.White);
 
                         if (isOccupied && _overlay.SpriteManager.InventoryStatBarFull != null)
                         {
-                            int whiteBarPoints;
-                            int coloredBarPoints;
-                            Color coloredBarColor;
+                            int pxPerPoint = 2;
+                            int basePx = basePoints * pxPerPoint;
+                            int passivePx = passiveTotal * pxPerPoint;
+                            int finalPx = finalTotal * pxPerPoint;
 
-                            if (hoveredItemStats != null)
+                            // Layer 1: Base (White)
+                            if (basePx > 0)
                             {
-                                // --- HOVER MODE: Show specific item impact ---
-                                if (itemBonus > 0)
-                                {
-                                    whiteBarPoints = Math.Clamp(effectiveWithoutItem, 1, 20);
-                                    int totalPoints = Math.Clamp(currentEffective, 1, 20);
-                                    coloredBarPoints = totalPoints - whiteBarPoints;
-                                    coloredBarColor = _overlay.Global.StatColor_Increase;
-                                }
-                                else if (itemBonus < 0)
-                                {
-                                    whiteBarPoints = Math.Clamp(currentEffective, 1, 20);
-                                    int totalPoints = Math.Clamp(effectiveWithoutItem, 1, 20);
-                                    coloredBarPoints = totalPoints - whiteBarPoints;
-                                    coloredBarColor = _overlay.Global.StatColor_Decrease;
-                                }
-                                else
-                                {
-                                    whiteBarPoints = Math.Clamp(currentEffective, 1, 20);
-                                    coloredBarPoints = 0;
-                                    coloredBarColor = Color.White;
-                                }
-                            }
-                            else
-                            {
-                                // --- PASSIVE MODE: Show total equipment impact (Half Intensity) ---
-                                if (totalEquipBonus > 0)
-                                {
-                                    // Base is white, Bonus is Dim Green
-                                    whiteBarPoints = Math.Clamp(baseStat, 1, 20);
-                                    int totalPoints = Math.Clamp(rawTotal, 1, 20);
-                                    coloredBarPoints = totalPoints - whiteBarPoints;
-                                    coloredBarColor = _overlay.Global.StatColor_Increase * 0.5f; // Dim Green
-                                }
-                                else if (totalEquipBonus < 0)
-                                {
-                                    // Total is white, Penalty (up to Base) is Dim Red
-                                    whiteBarPoints = Math.Clamp(rawTotal, 1, 20);
-                                    int basePoints = Math.Clamp(baseStat, 1, 20);
-                                    coloredBarPoints = basePoints - whiteBarPoints;
-                                    coloredBarColor = _overlay.Global.StatColor_Decrease * 0.5f; // Dim Red
-                                }
-                                else
-                                {
-                                    whiteBarPoints = Math.Clamp(rawTotal, 1, 20);
-                                    coloredBarPoints = 0;
-                                    coloredBarColor = Color.White;
-                                }
-                            }
-
-                            int whiteWidth = whiteBarPoints * 2;
-                            int coloredWidth = coloredBarPoints * 2;
-
-                            if (whiteWidth > 0)
-                            {
-                                var srcBase = new Rectangle(0, 0, whiteWidth, 3);
+                                var srcBase = new Rectangle(0, 0, basePx, 3);
                                 spriteBatch.DrawSnapped(_overlay.SpriteManager.InventoryStatBarFull, new Vector2(barX, barY), srcBase, Color.White);
                             }
 
-                            if (coloredWidth > 0)
+                            // Layer 2: Passive Impact (Dim Colors)
+                            if (passiveTotal > basePoints)
                             {
-                                var srcColor = new Rectangle(0, 0, coloredWidth, 3);
-                                spriteBatch.DrawSnapped(_overlay.SpriteManager.InventoryStatBarFull, new Vector2(barX + whiteWidth, barY), srcColor, coloredBarColor);
+                                // Bonus: Draw Dim Green from base to passive
+                                int width = passivePx - basePx;
+                                var src = new Rectangle(0, 0, width, 3);
+                                spriteBatch.DrawSnapped(_overlay.SpriteManager.InventoryStatBarFull, new Vector2(barX + basePx, barY), src, _overlay.Global.StatColor_Increase_Half);
+                            }
+                            else if (passiveTotal < basePoints)
+                            {
+                                // Penalty: Draw Dim Red from passive to base (overwriting white)
+                                int width = basePx - passivePx;
+                                var src = new Rectangle(0, 0, width, 3);
+                                spriteBatch.DrawSnapped(_overlay.SpriteManager.InventoryStatBarFull, new Vector2(barX + passivePx, barY), src, _overlay.Global.StatColor_Decrease_Half);
+                            }
+
+                            // Layer 3: Active Impact (Bright Colors)
+                            if (finalTotal > passiveTotal)
+                            {
+                                // Bonus: Draw Bright Green from passive to final
+                                int width = finalPx - passivePx;
+                                var src = new Rectangle(0, 0, width, 3);
+                                spriteBatch.DrawSnapped(_overlay.SpriteManager.InventoryStatBarFull, new Vector2(barX + passivePx, barY), src, _overlay.Global.StatColor_Increase);
+                            }
+                            else if (finalTotal < passiveTotal)
+                            {
+                                // Penalty: Draw Bright Red from final to passive (overwriting previous layers)
+                                int width = passivePx - finalPx;
+                                var src = new Rectangle(0, 0, width, 3);
+                                spriteBatch.DrawSnapped(_overlay.SpriteManager.InventoryStatBarFull, new Vector2(barX + finalPx, barY), src, _overlay.Global.StatColor_Decrease);
                             }
 
                             // --- EXCESS TEXT LOGIC ---
-                            // Only show excess text if hovering an item, or if the total is > 20
-                            if (currentEffective > 20 || effectiveWithoutItem > 20)
+                            int rawFinalTotal = baseStat + passiveBonus + activeBonus;
+                            if (rawFinalTotal > 20)
                             {
-                                int excessValue;
+                                int excessValue = rawFinalTotal - 20;
                                 Color textColor;
 
-                                if (hoveredItemStats != null)
-                                {
-                                    if (itemBonus > 0)
-                                    {
-                                        excessValue = currentEffective - 20;
-                                        if (effectiveWithoutItem < currentEffective) textColor = _overlay.Global.StatColor_Increase;
-                                        else textColor = _overlay.Global.Palette_BlueWhite;
-                                    }
-                                    else if (itemBonus < 0)
-                                    {
-                                        excessValue = effectiveWithoutItem - 20;
-                                        if (effectiveWithoutItem > currentEffective) textColor = _overlay.Global.StatColor_Decrease;
-                                        else textColor = _overlay.Global.Palette_BlueWhite;
-                                    }
-                                    else
-                                    {
-                                        excessValue = currentEffective - 20;
-                                        textColor = _overlay.Global.Palette_BlueWhite;
-                                    }
-                                }
-                                else
-                                {
-                                    // Passive Mode Excess
-                                    excessValue = currentEffective - 20;
-                                    if (totalEquipBonus > 0) textColor = _overlay.Global.StatColor_Increase * 0.5f;
-                                    else if (totalEquipBonus < 0) textColor = _overlay.Global.StatColor_Decrease * 0.5f;
-                                    else textColor = _overlay.Global.Palette_BlueWhite;
-                                }
+                                if (activeBonus > 0) textColor = _overlay.Global.StatColor_Increase;
+                                else if (activeBonus < 0) textColor = _overlay.Global.StatColor_Decrease;
+                                else if (passiveBonus > 0) textColor = _overlay.Global.StatColor_Increase * 0.5f;
+                                else if (passiveBonus < 0) textColor = _overlay.Global.StatColor_Decrease * 0.5f;
+                                else textColor = _overlay.Global.Palette_BlueWhite;
 
-                                if (excessValue > 0)
-                                {
-                                    string excessText = $"+{excessValue}";
-                                    Vector2 textSize = secondaryFont.MeasureString(excessText);
-                                    float textX = (barX + 40) - textSize.X;
-                                    Vector2 textPos = new Vector2(textX, currentY);
-                                    // Removed duplicate pixel declaration
-                                    var bgRect = new Rectangle((int)textPos.X - 1, (int)textPos.Y, (int)textSize.X + 2, (int)textSize.Y);
-                                    spriteBatch.DrawSnapped(pixel, bgRect, _overlay.Global.Palette_Black);
-                                    spriteBatch.DrawStringOutlinedSnapped(secondaryFont, excessText, textPos, textColor, _overlay.Global.Palette_Black);
-                                }
+                                string excessText = $"+{excessValue}";
+                                Vector2 textSize = secondaryFont.MeasureString(excessText);
+                                float textX = (barX + 40) - textSize.X;
+                                Vector2 textPos = new Vector2(textX, currentY);
+                                // Removed duplicate pixel declaration
+                                spriteBatch.DrawSnapped(pixel, new Rectangle((int)textPos.X - 1, (int)textPos.Y, (int)textSize.X + 2, (int)textSize.Y), _overlay.Global.Palette_Black);
+                                spriteBatch.DrawStringOutlinedSnapped(secondaryFont, excessText, textPos, textColor, _overlay.Global.Palette_Black);
                             }
                         }
                     }
@@ -703,6 +663,27 @@ namespace ProjectVagabond.UI
             }
         }
 
+        private int GetStatBonus(PartyMember member, string statName)
+        {
+            int bonus = 0;
+            if (!string.IsNullOrEmpty(member.EquippedWeaponId) && BattleDataCache.Weapons.TryGetValue(member.EquippedWeaponId, out var w))
+            {
+                if (w.StatModifiers.TryGetValue(statName, out int val)) bonus += val;
+            }
+
+            if (!string.IsNullOrEmpty(member.EquippedArmorId) && BattleDataCache.Armors.TryGetValue(member.EquippedArmorId, out var a))
+            {
+                if (a.StatModifiers.TryGetValue(statName, out int val)) bonus += val;
+            }
+
+            if (!string.IsNullOrEmpty(member.EquippedRelicId) && BattleDataCache.Relics.TryGetValue(member.EquippedRelicId, out var r))
+            {
+                if (r.StatModifiers.TryGetValue(statName, out int val)) bonus += val;
+            }
+
+            return bonus;
+        }
+
         private void DrawEquipSlotBackground(SpriteBatch spriteBatch, int x, int y, Rectangle bgFrame)
         {
             if (bgFrame == Rectangle.Empty) return;
@@ -721,6 +702,11 @@ namespace ProjectVagabond.UI
             if (bgFrame != Rectangle.Empty)
             {
                 spriteBatch.DrawSnapped(_overlay.SpriteManager.InventorySlotIdleSpriteSheet, centerPos, bgFrame, Color.White, 0f, origin, 1.0f, SpriteEffects.None, 0f);
+            }
+
+            if (isHovered)
+            {
+                DrawRectangleBorder(spriteBatch, pixel, destRect, 1, Color.White);
             }
 
             bool isSelected = _overlay.CurrentState == InventoryState.EquipItemSelection && _overlay.CurrentPartyMemberIndex == memberIndex && _overlay.EquipSystem.ActiveEquipSlotType == type;
@@ -747,31 +733,7 @@ namespace ProjectVagabond.UI
                 if (!string.IsNullOrEmpty(path))
                 {
                     var icon = _overlay.SpriteManager.GetSmallRelicSprite(path);
-                    var silhouette = _overlay.SpriteManager.GetSmallRelicSpriteSilhouette(path);
-
-                    if (icon != null)
-                    {
-                        if (silhouette != null)
-                        {
-                            bool active = isSelected || isHovered;
-                            Color mainColor = active ? _overlay.Global.Palette_BlueWhite : _overlay.Global.ItemOutlineColor_Idle;
-                            Color cornerColor = active ? _overlay.Global.Palette_LightGray : _overlay.Global.ItemOutlineColor_Idle_Corner;
-
-                            // Corners
-                            spriteBatch.DrawSnapped(silhouette, new Rectangle(destRect.X - 1, destRect.Y - 1, destRect.Width, destRect.Height), cornerColor);
-                            spriteBatch.DrawSnapped(silhouette, new Rectangle(destRect.X + 1, destRect.Y - 1, destRect.Width, destRect.Height), cornerColor);
-                            spriteBatch.DrawSnapped(silhouette, new Rectangle(destRect.X - 1, destRect.Y + 1, destRect.Width, destRect.Height), cornerColor);
-                            spriteBatch.DrawSnapped(silhouette, new Rectangle(destRect.X + 1, destRect.Y + 1, destRect.Width, destRect.Height), cornerColor);
-
-                            // Cardinals
-                            spriteBatch.DrawSnapped(silhouette, new Rectangle(destRect.X - 1, destRect.Y, destRect.Width, destRect.Height), mainColor);
-                            spriteBatch.DrawSnapped(silhouette, new Rectangle(destRect.X + 1, destRect.Y, destRect.Width, destRect.Height), mainColor);
-                            spriteBatch.DrawSnapped(silhouette, new Rectangle(destRect.X, destRect.Y - 1, destRect.Width, destRect.Height), mainColor);
-                            spriteBatch.DrawSnapped(silhouette, new Rectangle(destRect.X, destRect.Y + 1, destRect.Width, destRect.Height), mainColor);
-                        }
-
-                        spriteBatch.DrawSnapped(icon, destRect, Color.White);
-                    }
+                    if (icon != null) spriteBatch.DrawSnapped(icon, destRect, Color.White);
                 }
             }
             else if (_overlay.SpriteManager.InventoryEmptySlotSprite != null)
