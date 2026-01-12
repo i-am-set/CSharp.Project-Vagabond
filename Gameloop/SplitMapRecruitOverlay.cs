@@ -394,6 +394,8 @@ namespace ProjectVagabond.UI
             if (_hoveredItemData != null)
             {
                 _tooltipTimer += dt;
+                // Use Hint cursor for non-clickable info elements
+                ServiceLocator.Get<CursorManager>().SetState(CursorState.Hint);
             }
             else
             {

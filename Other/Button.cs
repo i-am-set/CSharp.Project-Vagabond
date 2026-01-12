@@ -246,7 +246,11 @@ namespace ProjectVagabond.UI
             var cursorManager = ServiceLocator.Get<CursorManager>();
             if (IsHovered)
             {
-                cursorManager.SetState(_isPressed ? CursorState.Click : CursorState.HoverClickable);
+                // FIX: Only show clickable cursor if there is an action bound
+                if (HasLeftClickAction || HasRightClickAction || HasMiddleClickAction)
+                {
+                    cursorManager.SetState(_isPressed ? CursorState.Click : CursorState.HoverClickable);
+                }
             }
 
             _previousMouseState = currentMouseState;

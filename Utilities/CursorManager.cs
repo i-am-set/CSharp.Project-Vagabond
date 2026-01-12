@@ -36,6 +36,7 @@ namespace ProjectVagabond.UI
             {
                 { CursorState.Default, ("cursor_default", 1f / 12f) },
                 { CursorState.HoverClickable, ("cursor_hover_clickable", 1f / 12f) },
+                { CursorState.Hint, ("cursor_hover_hint", 1f / 12f) }, // New Hint Cursor
                 { CursorState.HoverClickableHint, ("cursor_hover_clickable_hint", 1f / 12f) },
                 { CursorState.HoverDraggable, ("cursor_hover_draggable", 1f / 12f) },
                 { CursorState.Dragging, ("cursor_dragging_draggable", 1f / 12f) },
@@ -51,7 +52,7 @@ namespace ProjectVagabond.UI
         public void SetState(CursorState state)
         {
             // The highest priority state set this frame wins.
-            // Dragging > Click > HoverClickableHint > HoverClickable > HoverDraggable > Hover > Default
+            // Dragging > Click > HoverClickableHint > Hint > HoverClickable > HoverDraggable > Hover > Default
             if (state > _requestedState)
             {
                 _requestedState = state;

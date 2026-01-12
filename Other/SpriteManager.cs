@@ -502,6 +502,7 @@ namespace ProjectVagabond
             LoadAndCacheCursorSprite("cursor_default");
             LoadAndCacheCursorSprite("cursor_hover_clickable");
             LoadAndCacheCursorSprite("cursor_hover_clickable_hint"); // Added new cursor
+            LoadAndCacheCursorSprite("cursor_hover_hint"); // Added new cursor
             LoadAndCacheCursorSprite("cursor_dragging_draggable");
 
             InitializeArrowSourceRects();

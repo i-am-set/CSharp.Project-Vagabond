@@ -322,6 +322,8 @@ namespace ProjectVagabond.UI
                                 if (spellEntry != null && BattleDataCache.Moves.TryGetValue(spellEntry.MoveID, out var moveData))
                                 {
                                     _overlay.HoveredItemData = moveData;
+                                    // Use Hint cursor for spell slots (info only)
+                                    ServiceLocator.Get<CursorManager>().SetState(CursorState.Hint);
                                 }
                             }
                         }
@@ -701,8 +703,6 @@ namespace ProjectVagabond.UI
                 _overlay.InfoPanelNameWaveTimer += deltaTime;
                 float duration = TextAnimator.GetSmallWaveDuration(nameLength);
                 if (_overlay.InfoPanelNameWaveTimer > duration + 0.1f) _overlay.InfoPanelNameWaveTimer = 0f;
-
-                ServiceLocator.Get<CursorManager>().SetState(CursorState.HoverClickableHint);
             }
             else
             {
@@ -722,6 +722,7 @@ namespace ProjectVagabond.UI
             _overlay.SelectedHeaderBobTimer = 0f;
             _overlay.CurrentState = category == InventoryCategory.Equip ? InventoryState.EquipTargetSelection : InventoryState.Browse;
             _dataProcessor.RefreshInventorySlots();
+
             if (category != InventoryCategory.Equip)
             {
                 TriggerSlotAnimations();

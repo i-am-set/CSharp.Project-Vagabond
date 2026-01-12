@@ -2633,6 +2633,18 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/Cursor/cursor_hover_draggable.png;Sprites/UI/Cursor/cursor_hover_draggable
 
+#begin Sprites/UI/Cursor/cursor_hover_hint.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/Cursor/cursor_hover_hint.png;Sprites/UI/Cursor/cursor_hover_hint
+
 #begin Sprites/UI/Inventory/inventory_16x16_empty_slot_sprite.png
 /importer:TextureImporter
 /processor:TextureProcessor
