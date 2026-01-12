@@ -45,7 +45,7 @@ namespace ProjectVagabond.UI
         // Tooltip State
         private float _tooltipTimer = 0f;
         private object? _lastHoveredItemData = null;
-        private const float TOOLTIP_DELAY = 0.4f; // Tunable delay
+        private const float TOOLTIP_DELAY = 0.0f; // Tunable delay
 
         // Layout Constants
         private const float WORLD_Y_OFFSET = 600f;
@@ -643,11 +643,16 @@ namespace ProjectVagabond.UI
 
             // 6. Stats
             string[] statLabels = { "STR", "INT", "TEN", "AGI" };
-            int[] statValues = { member.Strength, member.Intelligence, member.Tenacity, member.Agility };
+            string[] statKeys = { "Strength", "Intelligence", "Tenacity", "Agility" };
             int statBarStartX = centerX - ((16 * 3 + 8) / 2);
 
             for (int s = 0; s < 4; s++)
             {
+                // Calculate Base + Bonus
+                int baseStat = member.GetType().GetProperty(statKeys[s])?.GetValue(member) as int? ?? 0;
+                int bonus = GetStatBonus(member, statKeys[s]);
+                int rawTotal = baseStat + bonus;
+
                 spriteBatch.DrawStringSnapped(secondaryFont, statLabels[s], new Vector2(statBarStartX - 3, currentY), _global.Palette_LightGray);
 
                 float labelWidth = secondaryFont.MeasureString(statLabels[s]).Width;
@@ -658,12 +663,73 @@ namespace ProjectVagabond.UI
                 if (_spriteManager.InventoryStatBarEmpty != null)
                 {
                     spriteBatch.DrawSnapped(_spriteManager.InventoryStatBarEmpty, new Vector2(barX, barY), Color.White);
-                    int points = Math.Clamp(statValues[s], 1, 20);
-                    int width = points * 2;
-                    if (_spriteManager.InventoryStatBarFull != null && width > 0)
+
+                    int whiteBarPoints;
+                    int coloredBarPoints;
+                    Color coloredBarColor;
+
+                    if (bonus > 0)
                     {
-                        var src = new Rectangle(0, 0, width, 3);
-                        spriteBatch.DrawSnapped(_spriteManager.InventoryStatBarFull, new Vector2(barX, barY), src, Color.White);
+                        // Base is white, Bonus is Dim Green
+                        whiteBarPoints = Math.Clamp(baseStat, 1, 20);
+                        int totalPoints = Math.Clamp(rawTotal, 1, 20);
+                        coloredBarPoints = totalPoints - whiteBarPoints;
+                        coloredBarColor = _global.StatColor_Increase * 0.5f; // Dim Green
+                    }
+                    else if (bonus < 0)
+                    {
+                        // Total is white, Penalty (up to Base) is Dim Red
+                        whiteBarPoints = Math.Clamp(rawTotal, 1, 20);
+                        int basePoints = Math.Clamp(baseStat, 1, 20);
+                        coloredBarPoints = basePoints - whiteBarPoints;
+                        coloredBarColor = _global.StatColor_Decrease * 0.5f; // Dim Red
+                    }
+                    else
+                    {
+                        whiteBarPoints = Math.Clamp(rawTotal, 1, 20);
+                        coloredBarPoints = 0;
+                        coloredBarColor = Color.White;
+                    }
+
+                    int whiteWidth = whiteBarPoints * 2;
+                    int coloredWidth = coloredBarPoints * 2;
+
+                    if (_spriteManager.InventoryStatBarFull != null)
+                    {
+                        if (whiteWidth > 0)
+                        {
+                            var srcBase = new Rectangle(0, 0, whiteWidth, 3);
+                            spriteBatch.DrawSnapped(_spriteManager.InventoryStatBarFull, new Vector2(barX, barY), srcBase, Color.White);
+                        }
+
+                        if (coloredWidth > 0)
+                        {
+                            var srcColor = new Rectangle(0, 0, coloredWidth, 3);
+                            spriteBatch.DrawSnapped(_spriteManager.InventoryStatBarFull, new Vector2(barX + whiteWidth, barY), srcColor, coloredBarColor);
+                        }
+                    }
+
+                    // --- EXCESS TEXT LOGIC ---
+                    if (rawTotal > 20)
+                    {
+                        int excessValue = rawTotal - 20;
+                        Color textColor;
+
+                        if (bonus > 0) textColor = _global.StatColor_Increase * 0.5f;
+                        else if (bonus < 0) textColor = _global.StatColor_Decrease * 0.5f;
+                        else textColor = _global.Palette_BlueWhite;
+
+                        if (excessValue > 0)
+                        {
+                            string excessText = $"+{excessValue}";
+                            Vector2 textSize = secondaryFont.MeasureString(excessText);
+                            float textX = (barX + 40) - textSize.X;
+                            Vector2 textPos = new Vector2(textX, currentY);
+                            var pixel = ServiceLocator.Get<Texture2D>();
+                            var bgRect = new Rectangle((int)textPos.X - 1, (int)textPos.Y, (int)textSize.X + 2, (int)textSize.Y);
+                            spriteBatch.DrawSnapped(pixel, bgRect, _global.Palette_Black);
+                            spriteBatch.DrawStringOutlinedSnapped(secondaryFont, excessText, textPos, textColor, _global.Palette_Black);
+                        }
                     }
                 }
                 currentY += (int)secondaryFont.LineHeight + 1;
@@ -720,6 +786,27 @@ namespace ProjectVagabond.UI
                 }
                 currentY += spellButtonHeight;
             }
+        }
+
+        private int GetStatBonus(PartyMember member, string statName)
+        {
+            int bonus = 0;
+            if (!string.IsNullOrEmpty(member.EquippedWeaponId) && BattleDataCache.Weapons.TryGetValue(member.EquippedWeaponId, out var w))
+            {
+                if (w.StatModifiers.TryGetValue(statName, out int val)) bonus += val;
+            }
+
+            if (!string.IsNullOrEmpty(member.EquippedArmorId) && BattleDataCache.Armors.TryGetValue(member.EquippedArmorId, out var a))
+            {
+                if (a.StatModifiers.TryGetValue(statName, out int val)) bonus += val;
+            }
+
+            if (!string.IsNullOrEmpty(member.EquippedRelicId) && BattleDataCache.Relics.TryGetValue(member.EquippedRelicId, out var r))
+            {
+                if (r.StatModifiers.TryGetValue(statName, out int val)) bonus += val;
+            }
+
+            return bonus;
         }
 
         private void DrawEquipSlot(SpriteBatch spriteBatch, int x, int y, string? itemId, string type, Rectangle bgFrame, bool isHovered)

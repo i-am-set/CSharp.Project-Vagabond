@@ -82,7 +82,7 @@ namespace ProjectVagabond.Scenes
         private object? _hoveredItemData;
         private object? _lastHoveredItemData;
         private float _tooltipTimer = 0f;
-        private const float TOOLTIP_DELAY = 0.6f;
+        private const float TOOLTIP_DELAY = 0.0f;
 
         // Tooltip Animation
         private UIAnimator _tooltipAnimator;
