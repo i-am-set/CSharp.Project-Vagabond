@@ -9,6 +9,7 @@ using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -44,6 +45,8 @@ namespace ProjectVagabond.Battle.Abilities
                         : $"{ctx.Target.Name} gained [pop][cStatus]{_type}[/][/]!";
 
                     EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = msg });
+                    // Fire event on success
+                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
                 }
             }
         }
@@ -74,6 +77,7 @@ namespace ProjectVagabond.Battle.Abilities
             {
                 ctx.Target.IsDazed = true;
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} was [shake][cStatus]DAZED[/][/]!" });
+                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
             }
         }
     }
@@ -93,6 +97,7 @@ namespace ProjectVagabond.Battle.Abilities
             if (target.Stats.CurrentMana > before)
             {
                 EventBus.Publish(new GameEvents.CombatantManaRestored { Target = target, AmountRestored = (int)(target.Stats.CurrentMana - before), ManaBefore = before, ManaAfter = target.Stats.CurrentMana });
+                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
             }
         }
     }
@@ -109,6 +114,8 @@ namespace ProjectVagabond.Battle.Abilities
             if (recoilDamage < 1) recoilDamage = 1;
             owner.ApplyDamage(recoilDamage);
             EventBus.Publish(new GameEvents.CombatantRecoiled { Actor = owner, RecoilDamage = recoilDamage, SourceAbility = null });
+            // Recoil is usually self-evident, but we can fire an event if desired.
+            // EventBus.Publish(new GameEvents.AbilityActivated { Combatant = owner, Ability = this });
         }
     }
 
@@ -144,6 +151,7 @@ namespace ProjectVagabond.Battle.Abilities
                     bool applied = owner.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Regen, _turns));
                     if (applied) EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{owner.Name} gained [pop][cStatus]Regeneration[/][/]!" });
                 }
+                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = owner, Ability = this });
             }
         }
     }
@@ -163,6 +171,7 @@ namespace ProjectVagabond.Battle.Abilities
                 EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = owner, Stat = _stat, Amount = _amount });
                 string animatedMsg = msg.Replace("rose", "[wave]rose[/]").Replace("fell", "[shake]fell[/]");
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = animatedMsg });
+                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = owner, Ability = this });
             }
             else
             {
@@ -184,6 +193,7 @@ namespace ProjectVagabond.Battle.Abilities
             {
                 ctx.Actor.ApplyDamage(recoil);
                 EventBus.Publish(new GameEvents.CombatantRecoiled { Actor = ctx.Actor, RecoilDamage = recoil, SourceAbility = null });
+                // EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
             }
         }
     }
@@ -201,7 +211,11 @@ namespace ProjectVagabond.Battle.Abilities
             if (_random.Next(1, 101) <= _chance)
             {
                 bool applied = ctx.Target.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Burn, 99));
-                if (applied) EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} was [pop][cStatus]burned[/][/]!" });
+                if (applied)
+                {
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} was [pop][cStatus]burned[/][/]!" });
+                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                }
             }
         }
     }
@@ -219,7 +233,11 @@ namespace ProjectVagabond.Battle.Abilities
             if (_random.Next(1, 101) <= _chance)
             {
                 bool applied = ctx.Target.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Poison, 99));
-                if (applied) EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} was [pop][cStatus]poisoned[/][/]!" });
+                if (applied)
+                {
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} was [pop][cStatus]poisoned[/][/]!" });
+                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                }
             }
         }
     }
@@ -237,7 +255,11 @@ namespace ProjectVagabond.Battle.Abilities
             if (_random.Next(1, 101) <= _chance)
             {
                 bool applied = ctx.Target.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Bleeding, 99));
-                if (applied) EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} is [pop][cStatus]bleeding[/][/]!" });
+                if (applied)
+                {
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} is [pop][cStatus]bleeding[/][/]!" });
+                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                }
             }
         }
     }
@@ -255,7 +277,11 @@ namespace ProjectVagabond.Battle.Abilities
             if (_random.Next(1, 101) <= _chance)
             {
                 bool applied = ctx.Target.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Frostbite, 99));
-                if (applied) EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} was [pop][cStatus]frostbitten[/][/]!" });
+                if (applied)
+                {
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} was [pop][cStatus]frostbitten[/][/]!" });
+                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                }
             }
         }
     }
@@ -278,11 +304,16 @@ namespace ProjectVagabond.Battle.Abilities
                 {
                     existing.DurationInTurns += _duration;
                     EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name}'s [cStatus]Stun[/] extended by {_duration} turns!" });
+                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
                 }
                 else
                 {
                     bool applied = ctx.Target.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Stun, _duration));
-                    if (applied) EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} was [shake][cStatus]stunned[/][/]!" });
+                    if (applied)
+                    {
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} was [shake][cStatus]stunned[/][/]!" });
+                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                    }
                 }
             }
         }
@@ -306,11 +337,16 @@ namespace ProjectVagabond.Battle.Abilities
                 {
                     existing.DurationInTurns += _duration;
                     EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name}'s [cStatus]Silence[/] extended by {_duration} turns!" });
+                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
                 }
                 else
                 {
                     bool applied = ctx.Target.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Silence, _duration));
-                    if (applied) EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} was [DriftWave][cStatus]silenced[/][/]!" });
+                    if (applied)
+                    {
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} was [DriftWave][cStatus]silenced[/][/]!" });
+                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                    }
                 }
             }
         }
@@ -335,6 +371,7 @@ namespace ProjectVagabond.Battle.Abilities
             {
                 ctx.Target.IsDazed = true;
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} was [shake]DAZED[/] by the blow!" });
+                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
             }
         }
     }
@@ -353,6 +390,7 @@ namespace ProjectVagabond.Battle.Abilities
                 owner.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Protected, 1));
                 owner.ConsecutiveProtectUses++;
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{owner.Name} [popwave][cStatus]protected[/][/] itself!" });
+                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = owner, Ability = this });
             }
             else
             {
@@ -376,12 +414,21 @@ namespace ProjectVagabond.Battle.Abilities
         public void OnHit(CombatContext ctx, int damageDealt)
         {
             if (ctx.IsGraze) return;
+            bool anySuccess = false;
             foreach (var change in _changes)
             {
                 var (success, msg) = ctx.Target.ModifyStatStage(change.Stat, change.Amount);
-                if (success) EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = ctx.Target, Stat = change.Stat, Amount = change.Amount });
+                if (success)
+                {
+                    anySuccess = true;
+                    EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = ctx.Target, Stat = change.Stat, Amount = change.Amount });
+                }
                 string animatedMsg = msg.Replace("rose", "[wave]rose[/]").Replace("fell", "[shake]fell[/]");
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = animatedMsg });
+            }
+            if (anySuccess)
+            {
+                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
             }
         }
     }
@@ -393,6 +440,7 @@ namespace ProjectVagabond.Battle.Abilities
         public void OnActionComplete(QueuedAction action, BattleCombatant owner)
         {
             EventBus.Publish(new GameEvents.DisengageTriggered { Actor = owner });
+            // No ability activation event needed, the switch is the feedback
         }
     }
 
@@ -409,12 +457,21 @@ namespace ProjectVagabond.Battle.Abilities
             int n = stats.Count;
             while (n > 1) { n--; int k = _random.Next(n + 1); (stats[k], stats[n]) = (stats[n], stats[k]); }
             int count = Math.Min(_amounts.Length, stats.Count);
+            bool anySuccess = false;
             for (int i = 0; i < count; i++)
             {
                 var (success, msg) = owner.ModifyStatStage(stats[i], _amounts[i]);
-                if (success) EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = owner, Stat = stats[i], Amount = _amounts[i] });
+                if (success)
+                {
+                    anySuccess = true;
+                    EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = owner, Stat = stats[i], Amount = _amounts[i] });
+                }
                 string animatedMsg = msg.Replace("rose", "[wave]rose[/]").Replace("fell", "[shake]fell[/]");
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = animatedMsg });
+            }
+            if (anySuccess)
+            {
+                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = owner, Ability = this });
             }
         }
     }
@@ -433,12 +490,21 @@ namespace ProjectVagabond.Battle.Abilities
             int n = stats.Count;
             while (n > 1) { n--; int k = _random.Next(n + 1); (stats[k], stats[n]) = (stats[n], stats[k]); }
             int count = Math.Min(_amounts.Length, stats.Count);
+            bool anySuccess = false;
             for (int i = 0; i < count; i++)
             {
                 var (success, msg) = ctx.Target.ModifyStatStage(stats[i], _amounts[i]);
-                if (success) EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = ctx.Target, Stat = stats[i], Amount = _amounts[i] });
+                if (success)
+                {
+                    anySuccess = true;
+                    EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = ctx.Target, Stat = stats[i], Amount = _amounts[i] });
+                }
                 string animatedMsg = msg.Replace("rose", "[wave]rose[/]").Replace("fell", "[shake]fell[/]");
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = animatedMsg });
+            }
+            if (anySuccess)
+            {
+                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
             }
         }
     }
@@ -482,6 +548,7 @@ namespace ProjectVagabond.Battle.Abilities
                     EventBus.Publish(new GameEvents.StatusEffectRemoved { Combatant = target, EffectType = effect.EffectType });
                 }
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{target.Name} was [pop][cStatus]cleansed[/][/]!" });
+                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
             }
             else
             {
@@ -600,6 +667,7 @@ namespace ProjectVagabond.Battle.Abilities
             {
                 // Accumulate lifesteal percentage instead of healing immediately
                 ctx.AccumulatedLifestealPercent += _percent;
+                // Do NOT fire AbilityActivated here, as requested.
             }
         }
     }
@@ -712,6 +780,7 @@ namespace ProjectVagabond.Battle.Abilities
 
                         EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_red]{owner.Name}'s {weaponData.WeaponName} shattered![/]" });
                         _hapticsManager.TriggerCompoundShake(0.5f);
+                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = owner, Ability = this });
                     }
                 }
             }
@@ -759,6 +828,7 @@ namespace ProjectVagabond.Battle.Abilities
                     ManaAfter = ctx.Actor.Stats.CurrentMana
                 });
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Actor.Name} absorbed the soul!" });
+                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
             }
         }
     }
@@ -789,14 +859,20 @@ namespace ProjectVagabond.Battle.Abilities
             if (allies.Any())
             {
                 var target = allies[_random.Next(allies.Count)];
+                bool anySuccess = false;
                 foreach (var stat in _stats)
                 {
                     var (success, msg) = target.ModifyStatStage(stat, _amount);
                     if (success)
                     {
+                        anySuccess = true;
                         EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = target, Stat = stat, Amount = _amount });
                         EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Actor.Name}'s song inspired {target.Name}!" });
                     }
+                }
+                if (anySuccess)
+                {
+                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
                 }
             }
         }
@@ -828,6 +904,7 @@ namespace ProjectVagabond.Battle.Abilities
                     ManaAfter = ctx.Target.Stats.CurrentMana
                 });
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} lost {burnAmount} Mana!" });
+                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
             }
         }
     }
@@ -887,3 +964,4 @@ namespace ProjectVagabond.Battle.Abilities
         }
     }
 }
+﻿

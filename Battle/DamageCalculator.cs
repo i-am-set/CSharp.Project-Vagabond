@@ -15,7 +15,6 @@ namespace ProjectVagabond.Battle
         private const float GLOBAL_DAMAGE_SCALAR = 0.25f;
         private const int FLAT_DAMAGE_BONUS = 2;
         public enum ElementalEffectiveness { Neutral, Effective, Resisted, Immune }
-
         public struct DamageResult
         {
             public int DamageAmount;

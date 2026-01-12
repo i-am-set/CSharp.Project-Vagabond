@@ -124,6 +124,7 @@ namespace ProjectVagabond.Battle
                 {
                     ability.OnBattleStart(combatant);
                     ability.OnCombatantEnter(combatant);
+                    // Note: Lifecycle effects usually fire their own notifications if needed
                 }
             }
         }
@@ -428,6 +429,7 @@ namespace ProjectVagabond.Battle
                 foreach (var ability in combatant.TurnLifecycleEffects)
                 {
                     ability.OnTurnStart(combatant);
+                    // Removed automatic event firing. Abilities must fire their own events if they do something.
                 }
 
                 if (combatant.ChargingAction != null)
@@ -837,12 +839,14 @@ namespace ProjectVagabond.Battle
                 foreach (var effect in action.Actor.OnHitEffects)
                 {
                     effect.OnHit(ctx, result.DamageAmount);
+                    // Removed automatic event firing. The ability must fire it if successful.
                 }
 
                 // 2. Trigger Target's OnDamaged effects (Relics, etc.)
                 foreach (var effect in target.OnDamagedEffects)
                 {
                     effect.OnDamaged(ctx, result.DamageAmount);
+                    // Removed automatic event firing.
                 }
 
                 // 3. Trigger Move's OnHit effects
@@ -851,6 +855,7 @@ namespace ProjectVagabond.Battle
                     if (ability is IOnHitEffect onHit)
                     {
                         onHit.OnHit(ctx, result.DamageAmount);
+                        // Removed automatic event firing.
                     }
                 }
 
@@ -867,6 +872,7 @@ namespace ProjectVagabond.Battle
                             if (reaction.OnLifestealReceived(action.Actor, totalHeal, target))
                             {
                                 preventHealing = true;
+                                // Reaction abilities should fire their own events
                                 break; // Stop checking if one reaction blocks it
                             }
                         }
@@ -942,6 +948,7 @@ namespace ProjectVagabond.Battle
                 foreach (var effect in action.Actor.OnKillEffects)
                 {
                     effect.OnKill(ctx);
+                    // Removed automatic event firing.
                 }
             }
 
@@ -951,6 +958,7 @@ namespace ProjectVagabond.Battle
             foreach (var effect in actor.OnActionCompleteEffects)
             {
                 effect.OnActionComplete(action, actor);
+                // Removed automatic event firing.
             }
 
             foreach (var ability in action.ChosenMove.Abilities)
@@ -958,6 +966,7 @@ namespace ProjectVagabond.Battle
                 if (ability is IOnActionComplete onComplete)
                 {
                     onComplete.OnActionComplete(action, actor);
+                    // Removed automatic event firing.
                 }
             }
 
@@ -1141,6 +1150,7 @@ namespace ProjectVagabond.Battle
                 foreach (var ability in combatant.TurnLifecycleEffects)
                 {
                     ability.OnTurnEnd(combatant);
+                    // Removed automatic event firing.
                 }
 
                 if (!combatant.UsedProtectThisTurn)
@@ -1259,6 +1269,7 @@ namespace ProjectVagabond.Battle
                 foreach (var ability in combatant.BattleLifecycleEffects)
                 {
                     ability.OnCombatantEnter(combatant);
+                    // Removed automatic event firing.
                 }
             }
         }
@@ -1307,3 +1318,4 @@ namespace ProjectVagabond.Battle
         }
     }
 }
+﻿

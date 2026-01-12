@@ -275,6 +275,7 @@ namespace ProjectVagabond.Battle.Abilities
                 int cost = Math.Max(1, (int)(owner.Stats.MaxHP * 0.05f));
                 owner.ApplyDamage(cost);
                 EventBus.Publish(new GameEvents.CombatantRecoiled { Actor = owner, RecoilDamage = cost });
+                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = owner, Ability = this });
             }
         }
     }
@@ -329,7 +330,11 @@ namespace ProjectVagabond.Battle.Abilities
         {
             if (ctx.Target.Stats.CurrentHP >= ctx.Target.Stats.MaxHP)
             {
-                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name}'s Vigor reduced the damage!" });
+                if (!ctx.IsSimulation)
+                {
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name}'s Vigor reduced the damage!" });
+                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Target, Ability = this });
+                }
                 return currentDamage * 0.5f;
             }
             return currentDamage;
@@ -352,6 +357,7 @@ namespace ProjectVagabond.Battle.Abilities
                 ctx.Actor.ApplyHealing(healAmount);
                 EventBus.Publish(new GameEvents.CombatantHealed { Actor = ctx.Actor, Target = ctx.Actor, HealAmount = healAmount, VisualHPBefore = hpBefore });
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Actor.Name}'s {Name} absorbed the attack!" });
+                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
                 return 0f;
             }
             return currentDamage;
@@ -384,7 +390,15 @@ namespace ProjectVagabond.Battle.Abilities
         public string Description => "Immune to specific status effects.";
         private readonly HashSet<StatusEffectType> _immuneTypes;
         public StatusImmunityAbility(IEnumerable<StatusEffectType> types) { _immuneTypes = new HashSet<StatusEffectType>(types); }
-        public bool ShouldBlockStatus(StatusEffectType type, BattleCombatant owner) => _immuneTypes.Contains(type);
+        public bool ShouldBlockStatus(StatusEffectType type, BattleCombatant owner)
+        {
+            if (_immuneTypes.Contains(type))
+            {
+                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = owner, Ability = this });
+                return true;
+            }
+            return false;
+        }
     }
 
     // --- ACTION MODIFIERS & STATEFUL ABILITIES ---
@@ -432,7 +446,12 @@ namespace ProjectVagabond.Battle.Abilities
         private bool _isActive = false;
         public MomentumAbility(float multiplier) { _multiplier = multiplier; }
         public void OnActionComplete(QueuedAction action, BattleCombatant owner) { if (action.ChosenMove != null && action.ChosenMove.Power > 0) _isActive = false; }
-        public void OnKill(CombatContext ctx) { _isActive = true; EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Actor.Name}'s {Name} is building!" }); }
+        public void OnKill(CombatContext ctx)
+        {
+            _isActive = true;
+            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Actor.Name}'s {Name} is building!" });
+            EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+        }
         public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx) => (_isActive && ctx.Move != null && ctx.Move.Power > 0) ? currentDamage * _multiplier : currentDamage;
     }
 
@@ -462,7 +481,11 @@ namespace ProjectVagabond.Battle.Abilities
             if (successStr) EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = target, Stat = OffensiveStatType.Strength, Amount = 1 });
             var (successInt, _) = target.ModifyStatStage(OffensiveStatType.Intelligence, 1);
             if (successInt) EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = target, Stat = OffensiveStatType.Intelligence, Amount = 1 });
-            if (successStr || successInt) EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{target.Name}'s {Name} turned pain into power!" });
+            if (successStr || successInt)
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{target.Name}'s {Name} turned pain into power!" });
+                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = target, Ability = this });
+            }
         }
     }
 
@@ -475,6 +498,7 @@ namespace ProjectVagabond.Battle.Abilities
             source.ApplyDamage(amount);
             EventBus.Publish(new GameEvents.CombatantRecoiled { Actor = source, RecoilDamage = amount });
             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{owner.Name}'s {Name} burns {source.Name}!" });
+            EventBus.Publish(new GameEvents.AbilityActivated { Combatant = owner, Ability = this });
             return true;
         }
     }
@@ -491,6 +515,8 @@ namespace ProjectVagabond.Battle.Abilities
             {
                 // Accumulate lifesteal percentage instead of healing immediately
                 ctx.AccumulatedLifestealPercent += _healPercent;
+                // Fire event because this is a conditional passive trigger
+                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
             }
         }
     }
@@ -511,7 +537,11 @@ namespace ProjectVagabond.Battle.Abilities
             if (random.Next(1, 101) <= _chance)
             {
                 bool applied = ctx.Target.AddStatusEffect(new StatusEffectInstance(_type, _duration));
-                if (applied) EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Actor.Name}'s ability applied {_type} to {ctx.Target.Name}!" });
+                if (applied)
+                {
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Actor.Name}'s ability applied {_type} to {ctx.Target.Name}!" });
+                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                }
             }
         }
     }
@@ -532,7 +562,11 @@ namespace ProjectVagabond.Battle.Abilities
             if (random.Next(1, 101) <= _chance)
             {
                 bool applied = ctx.Target.AddStatusEffect(new StatusEffectInstance(_type, _duration));
-                if (applied) EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Actor.Name}'s ability applied {_type} to {ctx.Target.Name}!" });
+                if (applied)
+                {
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Actor.Name}'s ability applied {_type} to {ctx.Target.Name}!" });
+                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                }
             }
         }
     }
@@ -550,6 +584,7 @@ namespace ProjectVagabond.Battle.Abilities
                 int recoil = Math.Max(1, (int)(ctx.Target.Stats.MaxHP * (_damagePercent / 100f)));
                 ctx.Target.ApplyDamage(recoil);
                 EventBus.Publish(new GameEvents.CombatantRecoiled { Actor = ctx.Target, RecoilDamage = recoil });
+                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Target, Ability = this });
             }
         }
     }
@@ -569,6 +604,7 @@ namespace ProjectVagabond.Battle.Abilities
                 int hpBefore = (int)owner.VisualHP;
                 owner.ApplyHealing(heal);
                 EventBus.Publish(new GameEvents.CombatantHealed { Actor = owner, Target = owner, HealAmount = heal, VisualHPBefore = hpBefore });
+                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = owner, Ability = this });
             }
         }
     }
@@ -606,6 +642,7 @@ namespace ProjectVagabond.Battle.Abilities
                 var target = validTargets[_random.Next(validTargets.Count)];
                 target.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Poison, _duration));
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{owner.Name}'s {Name} poisoned {target.Name}!" });
+                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = owner, Ability = this });
             }
         }
     }
@@ -632,7 +669,11 @@ namespace ProjectVagabond.Battle.Abilities
                     EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = enemy, Stat = _stat, Amount = _amount });
                 }
             }
-            if (anyAffected) EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{owner.Name}'s {Name} lowered opponents' {_stat}!" });
+            if (anyAffected)
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{owner.Name}'s {Name} lowered opponents' {_stat}!" });
+                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = owner, Ability = this });
+            }
         }
     }
 

@@ -1,7 +1,24 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Dice;
+using ProjectVagabond.Particles;
+using ProjectVagabond.Progression;
+using ProjectVagabond.Systems;
+using ProjectVagabond.Transitions;
+using ProjectVagabond.UI;
+using ProjectVagabond.Utils;
+using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace ProjectVagabond
 {
@@ -155,10 +172,14 @@ namespace ProjectVagabond
             public RelicData? SourceAbility { get; set; }
         }
 
+        /// <summary>
+        /// Published when a passive ability (Relic or Intrinsic) triggers.
+        /// Used for visual feedback.
+        /// </summary>
         public struct AbilityActivated
         {
             public BattleCombatant Combatant { get; set; }
-            public RelicData Ability { get; set; }
+            public IAbility Ability { get; set; }
             public string? NarrationText { get; set; }
         }
 
@@ -218,3 +239,4 @@ namespace ProjectVagabond
         }
     }
 }
+﻿

@@ -30,7 +30,6 @@ namespace ProjectVagabond.Scenes
         private const float ACTION_EXECUTION_DELAY = 0.5f;
         private const float FIXED_COIN_GROUND_Y = 115f;
         private const int ENEMY_SLOT_Y_OFFSET = 12;
-
         // --- TUNING: Battle Entry ---
         private const float BATTLE_ENTRY_INITIAL_DELAY = 0.0f;
 
@@ -1233,8 +1232,10 @@ namespace ProjectVagabond.Scenes
                 var target = e.Targets[i];
                 var result = e.DamageResults[i];
                 Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(target, _battleManager.AllCombatants);
-                if (result.AttackerAbilitiesTriggered != null) foreach (var ability in result.AttackerAbilitiesTriggered) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = e.Actor, Ability = ability });
-                if (result.DefenderAbilitiesTriggered != null) foreach (var ability in result.DefenderAbilitiesTriggered) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = target, Ability = ability });
+
+                // Removed incorrect RelicData casting logic here.
+                // AbilityActivated events are now fired by BattleManager.
+
                 if (result.DamageAmount > 0)
                 {
                     target.HealthBarVisibleTimer = 6.0f;
@@ -1395,8 +1396,8 @@ namespace ProjectVagabond.Scenes
 
         private void OnAbilityActivated(GameEvents.AbilityActivated e)
         {
-            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[debug]Ability Activated: {e.Ability.AbilityName} ({e.Combatant.Name})" });
-            _animationManager.StartAbilityIndicator(e.Ability.AbilityName);
+            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[debug]Ability Activated: {e.Ability.Name} ({e.Combatant.Name})" });
+            _animationManager.StartAbilityIndicator(e.Ability.Name);
             if (!string.IsNullOrEmpty(e.NarrationText)) _uiManager.ShowNarration(e.NarrationText);
         }
 
