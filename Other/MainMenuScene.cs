@@ -334,15 +334,20 @@ namespace ProjectVagabond.Scenes
 
             for (int i = 0; i < _buttons.Count; i++)
             {
-                // Only allow interaction if the button is mostly visible (Scale > 0.8)
-                var visualState = _buttonAnimators[i].GetVisualState();
-                if (visualState.IsVisible && visualState.Scale.X > 0.8f)
+                // Only allow interaction if the button is fully interactive (Idle/Hovered/Pressed)
+                // This prevents interaction during the entrance animation.
+                if (_buttonAnimators[i].IsInteractive)
                 {
                     _buttons[i].Update(currentMouseState);
                     if (_buttons[i].IsHovered)
                     {
                         _selectedButtonIndex = i;
                     }
+                }
+                else
+                {
+                    // Force hover off if not interactive to prevent visual glitches
+                    _buttons[i].IsHovered = false;
                 }
             }
 
@@ -383,9 +388,8 @@ namespace ProjectVagabond.Scenes
                     _sceneManager.LastInputDevice = InputDevice.Keyboard;
                     var selectedButton = _buttons[_selectedButtonIndex];
 
-                    // Only trigger if animation is mostly done
-                    var visualState = _buttonAnimators[_selectedButtonIndex].GetVisualState();
-                    if (visualState.IsVisible && visualState.Scale.X > 0.8f)
+                    // Only trigger if animation is fully complete (Interactive)
+                    if (_buttonAnimators[_selectedButtonIndex].IsInteractive)
                     {
                         if (selectedButton.IsHovered)
                         {
