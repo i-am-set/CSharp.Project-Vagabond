@@ -88,6 +88,13 @@ namespace ProjectVagabond.Scenes
         // Tooltip Animation
         private UIAnimator _tooltipAnimator;
 
+        // --- NEW: Dimmer State with Coyote Time ---
+        private float _dimmerCoyoteTimer = 0f;
+        private const float DIMMER_COYOTE_TIME = 0.1f;
+        private bool _isDimmerActive = false;
+        private float _dimmerAlpha = 0f;
+        private const float DIMMER_FADE_SPEED = 8f;
+
         // Text Wave Timer
         private float _textWaveTimer = 0f;
 
@@ -458,27 +465,64 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            if (_hoveredItemData != _lastHoveredItemData)
-            {
-                _tooltipTimer = 0f;
-                _lastHoveredItemData = _hoveredItemData;
-                _tooltipAnimator.Reset();
-            }
-
+            // --- REVISED TOOLTIP LOGIC ---
             if (_hoveredItemData != null && !_selectionMade)
             {
-                _tooltipTimer += dt;
-                if (_tooltipTimer >= TOOLTIP_DELAY && !_tooltipAnimator.IsVisible)
+                if (_hoveredItemData != _lastHoveredItemData)
                 {
-                    _tooltipAnimator.Show();
+                    _tooltipTimer = 0f;
                 }
+
+                _tooltipTimer += dt;
+
+                if (_tooltipTimer >= TOOLTIP_DELAY)
+                {
+                    if (_hoveredItemData != _lastHoveredItemData)
+                    {
+                        _tooltipAnimator.Reset();
+                        _tooltipAnimator.Show();
+                    }
+                    else if (!_tooltipAnimator.IsVisible)
+                    {
+                        _tooltipAnimator.Show();
+                    }
+                }
+            }
+            else // Not hovering anything
+            {
+                if (_lastHoveredItemData != null && _tooltipAnimator.IsVisible)
+                {
+                    _tooltipAnimator.Hide();
+                }
+                _tooltipTimer = 0f;
+            }
+
+            _lastHoveredItemData = _hoveredItemData;
+            _tooltipAnimator.Update(dt);
+
+            // --- NEW DIMMER LOGIC WITH COYOTE TIME ---
+            bool shouldDimmerBeActive = _tooltipAnimator.IsVisible && _tooltipAnimator.GetVisualState().Opacity > 0.01f;
+
+            if (shouldDimmerBeActive)
+            {
+                _isDimmerActive = true;
+                _dimmerCoyoteTimer = DIMMER_COYOTE_TIME; // Keep resetting the coyote timer while a tooltip is active
             }
             else
             {
-                _tooltipTimer = 0f;
-                _tooltipAnimator.Reset();
+                if (_isDimmerActive)
+                {
+                    _dimmerCoyoteTimer -= dt;
+                    if (_dimmerCoyoteTimer <= 0)
+                    {
+                        _isDimmerActive = false; // Coyote time expired, dimmer can now fade out
+                    }
+                }
             }
-            _tooltipAnimator.Update(dt);
+
+            // Animate dimmer alpha
+            float targetAlpha = _isDimmerActive ? 0.85f : 0f;
+            _dimmerAlpha = MathHelper.Lerp(_dimmerAlpha, targetAlpha, DIMMER_FADE_SPEED * dt);
 
             _prevMouse = mouse;
         }
@@ -532,17 +576,9 @@ namespace ProjectVagabond.Scenes
             sb.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, Matrix.Identity);
             try
             {
-                // Calculate dimmer alpha based on tooltip visibility
-                var tooltipState = _tooltipAnimator.GetVisualState();
-                float dimmerAlpha = 0f;
-                if (_hoveredItemData != null && tooltipState.IsVisible && !_selectionMade)
+                if (_dimmerAlpha > 0.01f)
                 {
-                    dimmerAlpha = tooltipState.Opacity * 0.85f;
-                }
-
-                if (dimmerAlpha > 0.01f)
-                {
-                    sb.Draw(pixel, new Rectangle(0, 0, screenW, screenH), Color.Black * dimmerAlpha);
+                    sb.Draw(pixel, new Rectangle(0, 0, screenW, screenH), Color.Black * _dimmerAlpha);
                 }
             }
             finally

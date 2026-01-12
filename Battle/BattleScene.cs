@@ -723,8 +723,6 @@ namespace ProjectVagabond.Scenes
                                         _animationManager.StartFloorOutroAnimation("floor_1");
                                         _animationManager.StartFloorIntroAnimation("floor_center");
                                     }
-                                    _animationManager.StartFloorOutroAnimation("player_floor_0");
-                                    _animationManager.StartFloorOutroAnimation("player_floor_1");
                                     _renderer.ForceDrawCenterFloor = true;
                                     _floorTransitionTriggered = true;
                                 }
