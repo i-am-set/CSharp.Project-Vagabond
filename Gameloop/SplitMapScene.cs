@@ -4,11 +4,12 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Dice;
+using ProjectVagabond.Items;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
-using ProjectVagabond.Transitions;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -1368,7 +1369,9 @@ namespace ProjectVagabond.Scenes
             _inventoryOverlay.DrawWorld(spriteBatch, font, gameTime);
             _shopOverlay.Draw(spriteBatch, font, gameTime);
             _restOverlay.Draw(spriteBatch, font, gameTime);
-            _recruitOverlay.Draw(spriteBatch, font, gameTime);
+
+            // FIX: Pass finalTransform to RecruitOverlay so it can calculate screen-space tooltips correctly
+            _recruitOverlay.Draw(spriteBatch, font, gameTime, finalTransform);
 
             spriteBatch.End();
 

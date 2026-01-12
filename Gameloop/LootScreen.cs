@@ -724,6 +724,9 @@ namespace ProjectVagabond.Scenes
                     Vector2 basePos = hoveredCard.VisualPosition;
                     Vector2 center = basePos + new Vector2(CARD_SIZE / 2f, CARD_SIZE / 2f);
                     var state = _tooltipAnimator.GetVisualState();
+
+                    // Use the new renderer logic: Pass the center of the card as the anchor.
+                    // The renderer will align the tooltip's internal sprite center to this anchor.
                     _tooltipRenderer.DrawTooltip(spriteBatch, _hoveredItemData, center, gameTime, state.Scale, 1.0f);
                 }
             }

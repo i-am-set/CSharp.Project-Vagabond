@@ -31,15 +31,16 @@ namespace ProjectVagabond.UI
 
         // --- TUNING ---
         private const int MIN_TOOLTIP_WIDTH = 120;
-        private const int SCREEN_EDGE_MARGIN = 10;
         private const int SPACE_WIDTH = 5;
 
         // Tunable buffer padding for width calculation
         private const int SIDE_PADDING = 6;
 
         // Tunable distance from the panel center to the center of each stat column
-        // Higher = further apart, Lower = closer together
         private const float COLUMN_CENTER_OFFSET = 24f;
+
+        // Margin to keep from the screen edge
+        private const int SCREEN_EDGE_MARGIN = 10;
 
         // --- UNIFIED LAYOUT CONSTANTS ---
         private const int LAYOUT_SPRITE_Y = 6;
@@ -56,6 +57,12 @@ namespace ProjectVagabond.UI
             _core = ServiceLocator.Get<Core>();
         }
 
+        /// <summary>
+        /// Draws a tooltip for the given item data.
+        /// The tooltip attempts to align its internal sprite center with the anchorPosition.
+        /// However, it is clamped to the screen bounds to ensure visibility.
+        /// </summary>
+        /// <param name="anchorPosition">The screen-space position to align the tooltip's icon center to.</param>
         public void DrawTooltip(SpriteBatch spriteBatch, object itemData, Vector2 anchorPosition, GameTime gameTime, Vector2? scale = null, float opacity = 1.0f)
         {
             if (itemData == null || opacity <= 0.01f) return;
@@ -72,59 +79,68 @@ namespace ProjectVagabond.UI
             float contentHeight = MeasureContentHeight(font, secondaryFont, itemData, panelWidth);
             int panelHeight = (int)Math.Ceiling(contentHeight) + 8 + 2;
 
-            // 3. Determine Y Position (Align Sprite Slot to Anchor)
-            int spriteSlotCenterOffsetY = 16;
-            if (itemData is MoveData)
-            {
-                spriteSlotCenterOffsetY = 19;
-            }
+            // 3. Determine the Y offset of the sprite center relative to the panel top.
+            float spriteCenterOffsetY = GetSpriteCenterOffsetY(itemData);
 
-            float panelY = anchorPosition.Y - spriteSlotCenterOffsetY;
-            float panelX = anchorPosition.X - (panelWidth / 2);
+            // 4. Calculate Ideal Panel Position (Perfect Alignment)
+            float panelY = anchorPosition.Y - spriteCenterOffsetY;
+            float panelX = anchorPosition.X - (panelWidth / 2f);
 
-            // 4. Create Rectangle
+            // 5. Create Rectangle
             var infoPanelArea = new Rectangle(
-                (int)panelX,
-                (int)panelY,
+                (int)MathF.Round(panelX),
+                (int)MathF.Round(panelY),
                 panelWidth,
                 panelHeight
             );
 
-            // 5. Clamp to Screen
+            // 6. CLAMP TO SCREEN BOUNDS
             int screenTop = SCREEN_EDGE_MARGIN;
             int screenBottom = Global.VIRTUAL_HEIGHT - SCREEN_EDGE_MARGIN;
             int screenLeft = SCREEN_EDGE_MARGIN;
             int screenRight = Global.VIRTUAL_WIDTH - SCREEN_EDGE_MARGIN;
 
-            if (infoPanelArea.Top < screenTop) infoPanelArea.Y = screenTop;
-            if (infoPanelArea.Bottom > screenBottom) infoPanelArea.Y = screenBottom - infoPanelArea.Height;
-            if (infoPanelArea.Left < screenLeft) infoPanelArea.X = screenLeft;
+            if (infoPanelArea.X < screenLeft) infoPanelArea.X = screenLeft;
             if (infoPanelArea.Right > screenRight) infoPanelArea.X = screenRight - infoPanelArea.Width;
+            if (infoPanelArea.Y < screenTop) infoPanelArea.Y = screenTop;
+            if (infoPanelArea.Bottom > screenBottom) infoPanelArea.Y = screenBottom - infoPanelArea.Height;
 
-            // 6. Prepare Animation Matrix
+            // 7. Prepare Animation Matrix
             spriteBatch.End();
 
-            Vector2 spriteSlotCenter = new Vector2(infoPanelArea.X + (panelWidth / 2), infoPanelArea.Y + spriteSlotCenterOffsetY);
+            Vector2 pivotPoint = anchorPosition;
 
-            Matrix transform = Matrix.CreateTranslation(-spriteSlotCenter.X, -spriteSlotCenter.Y, 0) *
+            Matrix transform = Matrix.CreateTranslation(-pivotPoint.X, -pivotPoint.Y, 0) *
                                Matrix.CreateScale(drawScale.X, drawScale.Y, 1.0f) *
-                               Matrix.CreateTranslation(spriteSlotCenter.X, spriteSlotCenter.Y, 0);
+                               Matrix.CreateTranslation(pivotPoint.X, pivotPoint.Y, 0);
 
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
 
-            // 7. Draw Background (Rounded Bevel)
+            // 8. Draw Background (Rounded Bevel)
             var pixel = ServiceLocator.Get<Texture2D>();
             DrawBeveledBackground(spriteBatch, pixel, infoPanelArea, _global.Palette_Black * opacity);
 
-            // 8. Draw Border (Rounded Bevel)
+            // 9. Draw Border (Rounded Bevel)
             DrawBeveledBorder(spriteBatch, pixel, infoPanelArea, _global.Palette_BlueWhite * opacity);
 
-            // 9. Draw Content
+            // 10. Draw Content
             DrawInfoPanelContent(spriteBatch, itemData, infoPanelArea, font, secondaryFont, gameTime, opacity);
 
-            // 10. Restore Batch
+            // 11. Restore Batch
             spriteBatch.End();
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
+        }
+
+        private float GetSpriteCenterOffsetY(object itemData)
+        {
+            if (itemData is MoveData)
+            {
+                return (LAYOUT_SPRITE_Y - 3) + 16; // 19
+            }
+            else
+            {
+                return (LAYOUT_SPRITE_Y + 2) + 8; // 16
+            }
         }
 
         private List<string> WrapName(string name)
@@ -313,13 +329,31 @@ namespace ProjectVagabond.UI
             {
                 description = a.Description;
                 flavor = a.Flavor;
-                baseHeight = LAYOUT_VARS_START_Y + (2 * LAYOUT_VAR_ROW_HEIGHT) + 2;
+                // Check if stats exist
+                bool hasStats = a.StatModifiers != null && a.StatModifiers.Values.Any(v => v != 0);
+                if (hasStats)
+                {
+                    baseHeight = LAYOUT_VARS_START_Y + (2 * LAYOUT_VAR_ROW_HEIGHT) + 2;
+                }
+                else
+                {
+                    baseHeight = LAYOUT_VARS_START_Y;
+                }
             }
             else if (data is RelicData r)
             {
                 description = r.Description;
                 flavor = r.Flavor;
-                baseHeight = LAYOUT_VARS_START_Y + (2 * LAYOUT_VAR_ROW_HEIGHT) + 2;
+                // Check if stats exist
+                bool hasStats = r.StatModifiers != null && r.StatModifiers.Values.Any(v => v != 0);
+                if (hasStats)
+                {
+                    baseHeight = LAYOUT_VARS_START_Y + (2 * LAYOUT_VAR_ROW_HEIGHT) + 2;
+                }
+                else
+                {
+                    baseHeight = LAYOUT_VARS_START_Y;
+                }
             }
             else if (data is ConsumableItemData c)
             {
@@ -392,7 +426,6 @@ namespace ProjectVagabond.UI
 
             var tertiaryFont = _core.TertiaryFont;
             const int spriteSize = 16;
-            const int padding = 4;
 
             // 1. Draw Icon
             int spriteX = infoPanelArea.X + (infoPanelArea.Width - spriteSize) / 2;
@@ -501,25 +534,37 @@ namespace ProjectVagabond.UI
 
             currentY = infoPanelArea.Y + LAYOUT_VARS_START_Y;
 
-            float centerX = infoPanelArea.Center.X;
-            float leftCenter = centerX - COLUMN_CENTER_OFFSET;
-            float rightCenter = centerX + COLUMN_CENTER_OFFSET;
-            float labelOffset = 18f;
-            float valueOffset = 2f;
+            // Check if we have any stats to display
+            bool hasStats = stats != null && stats.Values.Any(v => v != 0);
 
-            float leftLabelX = leftCenter - labelOffset;
-            float leftValueX = leftCenter + valueOffset;
-            float rightLabelX = rightCenter - labelOffset;
-            float rightValueX = rightCenter + valueOffset;
+            if (hasStats)
+            {
+                float centerX = infoPanelArea.Center.X;
+                float leftCenter = centerX - COLUMN_CENTER_OFFSET;
+                float rightCenter = centerX + COLUMN_CENTER_OFFSET;
+                float labelOffset = 18f;
+                float valueOffset = 2f;
 
-            DrawStat(spriteBatch, secondaryFont, tertiaryFont, "STR", "Strength", stats, leftLabelX, leftValueX, currentY, opacity);
-            DrawStat(spriteBatch, secondaryFont, tertiaryFont, "INT", "Intelligence", stats, rightLabelX, rightValueX, currentY, opacity);
-            currentY += LAYOUT_VAR_ROW_HEIGHT;
-            DrawStat(spriteBatch, secondaryFont, tertiaryFont, "TEN", "Tenacity", stats, leftLabelX, leftValueX, currentY, opacity);
-            DrawStat(spriteBatch, secondaryFont, tertiaryFont, "AGI", "Agility", stats, rightLabelX, rightValueX, currentY, opacity);
+                float leftLabelX = leftCenter - labelOffset;
+                float leftValueX = leftCenter + valueOffset;
+                float rightLabelX = rightCenter - labelOffset;
+                float rightValueX = rightCenter + valueOffset;
+
+                DrawStat(spriteBatch, secondaryFont, tertiaryFont, "STR", "Strength", stats, leftLabelX, leftValueX, currentY, opacity);
+                DrawStat(spriteBatch, secondaryFont, tertiaryFont, "INT", "Intelligence", stats, rightLabelX, rightValueX, currentY, opacity);
+                currentY += LAYOUT_VAR_ROW_HEIGHT;
+                DrawStat(spriteBatch, secondaryFont, tertiaryFont, "TEN", "Tenacity", stats, leftLabelX, leftValueX, currentY, opacity);
+                DrawStat(spriteBatch, secondaryFont, tertiaryFont, "AGI", "Agility", stats, rightLabelX, rightValueX, currentY, opacity);
+
+                // Advance Y past the stat block
+                currentY += LAYOUT_VAR_ROW_HEIGHT;
+            }
 
             float flavorHeight = DrawFlavorText(spriteBatch, infoPanelArea, flavor, opacity);
-            float descStartY = currentY + LAYOUT_VAR_ROW_HEIGHT + 2;
+
+            // Calculate description start Y based on whether stats were shown
+            float descStartY = currentY + 2; // Add small padding
+
             DrawDescription(spriteBatch, secondaryFont, description, infoPanelArea, descStartY, flavorHeight, gameTime, opacity);
         }
 
@@ -911,39 +956,6 @@ namespace ProjectVagabond.UI
         private Color ParseColor(string colorName)
         {
             return _global.GetNarrationColor(colorName);
-        }
-
-        private (List<string> Positives, List<string> Negatives) GetStatModifierLines(Dictionary<string, int> mods)
-        {
-            var positives = new List<string>();
-            var negatives = new List<string>();
-            if (mods == null || mods.Count == 0) return (positives, negatives);
-
-            foreach (var kvp in mods)
-            {
-                if (kvp.Value == 0) continue;
-                string colorTag = kvp.Value > 0 ? "[cpositive]" : "[cnegative]";
-                string sign = kvp.Value > 0 ? "+" : "";
-
-                string statName = kvp.Key.ToLowerInvariant() switch
-                {
-                    "strength" => "STR",
-                    "intelligence" => "INT",
-                    "tenacity" => "TEN",
-                    "agility" => "AGI",
-                    "maxhp" => "HP",
-                    "maxmana" => "MP",
-                    _ => kvp.Key.ToUpper().Substring(0, Math.Min(3, kvp.Key.Length))
-                };
-
-                if (statName.Length < 3) statName += " ";
-
-                string line = $"{statName} {colorTag}{sign}{kvp.Value}[/]";
-
-                if (kvp.Value > 0) positives.Add(line);
-                else negatives.Add(line);
-            }
-            return (positives, negatives);
         }
 
         private void DrawBeveledBackground(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, Color color)

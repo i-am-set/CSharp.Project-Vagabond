@@ -414,7 +414,7 @@ namespace ProjectVagabond.UI
             _skipButton.Update(worldMouseState);
         }
 
-        public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
+        public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             if (!IsOpen) return;
 
@@ -462,12 +462,15 @@ namespace ProjectVagabond.UI
             // --- Draw Info Panel if Hovered AND Timer Met ---
             if (_hoveredItemData != null && _tooltipTimer >= TOOLTIP_DELAY)
             {
-                // 1. Calculate Center of Hovered Slot
-                Vector2 slotCenter = GetHoveredSlotCenter();
+                // 1. Calculate Center of Hovered Slot in World Space
+                Vector2 worldSlotCenter = GetHoveredSlotCenter();
 
-                // 2. Draw Tooltip using the new renderer
+                // 2. Transform to Screen Space
+                Vector2 screenSlotCenter = Vector2.Transform(worldSlotCenter, transform);
+
+                // 3. Draw Tooltip using the new renderer
                 // Pass default scale and opacity
-                _tooltipRenderer.DrawTooltip(spriteBatch, _hoveredItemData, slotCenter, gameTime, Vector2.One, 1.0f);
+                _tooltipRenderer.DrawTooltip(spriteBatch, _hoveredItemData, screenSlotCenter, gameTime, Vector2.One, 1.0f);
             }
         }
 
