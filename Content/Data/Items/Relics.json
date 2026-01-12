@@ -367,8 +367,8 @@
     "RelicID": "29",
     "RelicName": "Cracked Gauntlet",
     "AbilityName": "Vigor",
-    "Description": "Receive [cpositive]0.5x[/] damage [cctm]at full HP[/].",
-    "Flavor": "Looks close to falling to pieces, but can really absorb a hit.",
+    "Description": "Receive [cpositive]half[/] damage [cctm]at full HP[/].",
+    "Flavor": "Looks fragile but heavy.",
     "Rarity": 0,
     "Effects": {
       "Vigor": ""

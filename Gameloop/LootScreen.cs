@@ -22,7 +22,6 @@ namespace ProjectVagabond.Scenes
         private GameState _gameState;
         private HapticsManager _hapticsManager;
         private ItemTooltipRenderer _tooltipRenderer;
-
         // State
         public bool IsActive { get; private set; }
 
@@ -263,9 +262,9 @@ namespace ProjectVagabond.Scenes
 
             // Moore-Neighbor offsets (Clockwise)
             Point[] offsets = {
-                new Point(0, -1), new Point(1, -1), new Point(1, 0), new Point(1, 1),
-                new Point(0, 1), new Point(-1, 1), new Point(-1, 0), new Point(-1, -1)
-            };
+            new Point(0, -1), new Point(1, -1), new Point(1, 0), new Point(1, 1),
+            new Point(0, 1), new Point(-1, 1), new Point(-1, 0), new Point(-1, -1)
+        };
 
             do
             {
@@ -680,25 +679,6 @@ namespace ProjectVagabond.Scenes
                         Vector2 rarityPos = center + rarityOffset;
                         Vector2 rarityOrigin = new Vector2(4, 4);
                         spriteBatch.DrawSnapped(_spriteManager.RarityIconsSpriteSheet, rarityPos, rarityRect, Color.White * state.Opacity, 0f, rarityOrigin, state.Scale, SpriteEffects.None, 0f);
-                    }
-
-                    // 4. Draw Instant Name on Hover
-                    if (card.IsMouseHovering && !_selectionMade)
-                    {
-                        string name = card.Item.Name.ToUpper();
-                        Vector2 nameSize = secondaryFont.MeasureString(name);
-                        Vector2 textPos = new Vector2(center.X - nameSize.X / 2f, center.Y - 24);
-                        textPos = new Vector2(MathF.Round(textPos.X), MathF.Round(textPos.Y));
-
-                        TextAnimator.DrawTextWithEffect(
-                            spriteBatch,
-                            secondaryFont,
-                            name,
-                            textPos,
-                            _global.Palette_BlueWhite * state.Opacity,
-                            TextEffectType.Wave,
-                            _textWaveTimer
-                        );
                     }
                 }
             }

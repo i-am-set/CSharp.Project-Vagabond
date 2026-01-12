@@ -28,7 +28,6 @@ namespace ProjectVagabond.UI
         private readonly Global _global;
         private readonly SpriteManager _spriteManager;
         private readonly Core _core;
-
         // --- TUNING ---
         private const int MIN_TOOLTIP_WIDTH = 120;
         private const int SPACE_WIDTH = 5;
@@ -49,6 +48,10 @@ namespace ProjectVagabond.UI
         private const int LAYOUT_VAR_ROW_HEIGHT = 9; // 7px font + 2px gap
         private const int LAYOUT_CONTACT_Y = LAYOUT_VARS_START_Y + (3 * LAYOUT_VAR_ROW_HEIGHT); // Row 4
         private const int LAYOUT_DESC_START_Y = LAYOUT_CONTACT_Y + LAYOUT_VAR_ROW_HEIGHT - 3;
+
+        // --- DIMMER SETTINGS ---
+        public Color DimmerColor { get; set; } = Color.Black;
+        public float DimmerOpacity { get; set; } = 0.7f;
 
         public ItemTooltipRenderer()
         {
@@ -105,9 +108,20 @@ namespace ProjectVagabond.UI
             if (infoPanelArea.Y < screenTop) infoPanelArea.Y = screenTop;
             if (infoPanelArea.Bottom > screenBottom) infoPanelArea.Y = screenBottom - infoPanelArea.Height;
 
-            // 7. Prepare Animation Matrix
+            // --- 7. DRAW FULL SCREEN DIMMER ---
+            // We need to break the current batch to draw a full-screen quad in screen space (no transform).
             spriteBatch.End();
 
+            var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
+            int screenW = graphicsDevice.PresentationParameters.BackBufferWidth;
+            int screenH = graphicsDevice.PresentationParameters.BackBufferHeight;
+            var pixel = ServiceLocator.Get<Texture2D>();
+
+            spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.PointClamp);
+            spriteBatch.Draw(pixel, new Rectangle(0, 0, screenW, screenH), DimmerColor * DimmerOpacity * opacity);
+            spriteBatch.End();
+
+            // 8. Prepare Animation Matrix for Tooltip
             Vector2 pivotPoint = anchorPosition;
 
             Matrix transform = Matrix.CreateTranslation(-pivotPoint.X, -pivotPoint.Y, 0) *
@@ -116,17 +130,16 @@ namespace ProjectVagabond.UI
 
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
 
-            // 8. Draw Background (Rounded Bevel)
-            var pixel = ServiceLocator.Get<Texture2D>();
+            // 9. Draw Background (Rounded Bevel)
             DrawBeveledBackground(spriteBatch, pixel, infoPanelArea, _global.Palette_Black * opacity);
 
-            // 9. Draw Border (Rounded Bevel)
+            // 10. Draw Border (Rounded Bevel)
             DrawBeveledBorder(spriteBatch, pixel, infoPanelArea, _global.Palette_BlueWhite * opacity);
 
-            // 10. Draw Content
+            // 11. Draw Content
             DrawInfoPanelContent(spriteBatch, itemData, infoPanelArea, font, secondaryFont, gameTime, opacity);
 
-            // 11. Restore Batch
+            // 12. Restore Batch
             spriteBatch.End();
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
         }
