@@ -27,7 +27,7 @@ namespace ProjectVagabond
     {
         private readonly Random _random = new();
 
-        // Legacy/Specific effects
+        // Legacy/Specific effects (Kept for specific animations like UI bounces)
         private readonly HapticEffect _shake = new(HapticType.Shake);
         private readonly HapticEffect _hop = new(HapticType.Hop);
         private readonly HapticEffect _pulse = new(HapticType.Pulse);
@@ -37,32 +37,176 @@ namespace ProjectVagabond
         private readonly HapticEffect _zoomPulse = new(HapticType.ZoomPulse);
         private readonly HapticEffect _directionalShake = new(HapticType.DirectionalShake);
 
-        // --- Compound Shake State (Trauma System) ---
-        private readonly SeededPerlin _perlin;
-        private float _trauma = 0f;
+        // --- NEW STEP-BASED COMPOUND SHAKE SYSTEM ---
+
+        // Current "Energy" of the shake. 
+        // 0.0 = Still. 
+        // 1.0 = 1 Step of shaking.
+        // 10.0 = Max shaking.
+        private float _currentSteps = 0f;
+
+        // Timer for oscillation math
         private float _time = 0f;
 
-        // --- Compound Shake Configuration ---
+        // --- HYPER TUNABLES ---
 
-        // 1. The maximum limits of the shake at 100% Trauma
-        public float MaxTranslation { get; set; } = 1.0f; // Pixels (Increased for juice)
-        public float MaxRotation { get; set; } = 0.025f;  // Radians (~3 degrees)
+        /// <summary>
+        /// The hard ceiling for how intense the shake can get.
+        /// </summary>
+        public int MaxShakeSteps { get; set; } = 5;
 
-        // 2. The "Feel" of the shake
-        public float TraumaExponent { get; set; } = 2.0f; // 2.0 = Quadratic (Smooth), 3.0 = Cubic (Snappy)
-        public float Frequency { get; set; } = 25f;       // How fast it vibrates
-        public float RecoverySpeed { get; set; } = 2.0f;  // How fast trauma decays per second
-        public float NoiseFloor { get; set; } = 0.5f;
+        /// <summary>
+        /// How many pixels the screen moves X/Y per step.
+        /// Keep this low (0.5 to 1.0) so early steps are subtle.
+        /// </summary>
+        public float TranslationPerStep { get; set; } = 0.1f;
 
-        // 3. Global Multiplier
-        public float MasterIntensity { get; set; } = 0.75f;
+        /// <summary>
+        /// How much the screen rotates (in radians) per step.
+        /// 0.002 is roughly 0.1 degrees per step.
+        /// </summary>
+        public float RotationPerStep { get; set; } = 0.003f;
+
+        /// <summary>
+        /// How many steps are removed per second.
+        /// 5.0 means it takes 0.2 seconds to lose 1 step of intensity.
+        /// </summary>
+        public float StepDecayRate { get; set; } = 12.0f;
+
+        /// <summary>
+        /// How fast the screen vibrates (Oscillation speed).
+        /// </summary>
+        public float VibrationSpeed { get; set; } = 45.0f;
 
         private Global _global;
 
         public HapticsManager()
         {
-            _perlin = new SeededPerlin(18020808);
             StopAll();
+        }
+
+        // --- New Compound Shake Trigger ---
+
+        /// <summary>
+        /// Adds a fixed number of "Steps" to the current shake intensity.
+        /// </summary>
+        /// <param name="steps">
+        /// 1 = Standard UI Click / Light Impact.
+        /// 3 = Heavy Hit.
+        /// 5 = Explosion.
+        /// </param>
+        public void TriggerCompoundShake(int steps)
+        {
+            // Add steps to current, clamp to max.
+            // This ensures linear, predictable growth.
+            _currentSteps = Math.Clamp(_currentSteps + steps, 0f, (float)MaxShakeSteps);
+        }
+
+        // Overload for float inputs (0.0 - 1.0) mapped to steps for compatibility
+        public void TriggerCompoundShake(float intensity01)
+        {
+            // Map 0.0-1.0 to 1-5 steps roughly
+            int steps = Math.Max(1, (int)(intensity01 * 5));
+            TriggerCompoundShake(steps);
+        }
+
+        public void StopAll()
+        {
+            _shake.Reset();
+            _hop.Reset();
+            _pulse.Reset();
+            _wobble.Reset();
+            _drift.Reset();
+            _bounce.Reset();
+            _zoomPulse.Reset();
+            _directionalShake.Reset();
+            _currentSteps = 0f;
+        }
+
+        public void Update(GameTime gameTime)
+        {
+            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            _time += dt;
+
+            // Linear Decay of Steps
+            if (_currentSteps > 0)
+            {
+                _currentSteps -= StepDecayRate * dt;
+                if (_currentSteps < 0) _currentSteps = 0;
+            }
+
+            // Update legacy effects
+            _shake.Update(gameTime, _random);
+            _hop.Update(gameTime, _random);
+            _pulse.Update(gameTime, _random);
+            _wobble.Update(gameTime, _random);
+            _drift.Update(gameTime, _random);
+            _bounce.Update(gameTime, _random);
+            _zoomPulse.Update(gameTime, _random);
+            _directionalShake.Update(gameTime, _random);
+        }
+
+        /// <summary>
+        /// Returns the raw aggregated values for Offset, Rotation, and Scale.
+        /// </summary>
+        public (Vector2 Offset, float Rotation, float Scale) GetTotalShakeParams()
+        {
+            // 1. Sum up legacy effects
+            Vector2 totalOffset = _shake.Offset + _hop.Offset + _pulse.Offset + _wobble.Offset + _drift.Offset + _bounce.Offset + _zoomPulse.Offset + _directionalShake.Offset;
+            float totalRotation = _shake.Rotation + _hop.Rotation + _pulse.Rotation + _wobble.Rotation + _drift.Rotation + _bounce.Rotation + _zoomPulse.Rotation + _directionalShake.Rotation;
+            float totalScale = GetCurrentScale();
+
+            // 2. Calculate Step-Based Compound Shake
+            if (_currentSteps > 0)
+            {
+                // Calculate Magnitude based on current steps
+                float transMag = _currentSteps * TranslationPerStep;
+                float rotMag = _currentSteps * RotationPerStep;
+
+                // Use high-speed Sine waves to create vibration.
+                // We use different prime number multipliers for X, Y, and Rot to prevent them from syncing up into a diagonal line.
+
+                // X Oscillation
+                float x = MathF.Sin(_time * VibrationSpeed) * transMag;
+
+                // Y Oscillation (Offset phase)
+                float y = MathF.Cos(_time * (VibrationSpeed * 0.9f)) * transMag;
+
+                // Rotation Oscillation (Slower phase)
+                float rot = MathF.Sin(_time * (VibrationSpeed * 0.85f)) * rotMag;
+
+                totalOffset.X += x;
+                totalOffset.Y += y;
+                totalRotation += rot;
+            }
+
+            return (totalOffset, totalRotation, totalScale);
+        }
+
+        public Matrix GetHapticsMatrix()
+        {
+            _global ??= ServiceLocator.Get<Global>();
+
+            var (totalOffset, totalRotation, totalScale) = GetTotalShakeParams();
+
+            var screenCenter = new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f);
+
+            // Round the offset to ensure pixel-perfect rendering
+            totalOffset.X = MathF.Round(totalOffset.X);
+            totalOffset.Y = MathF.Round(totalOffset.Y);
+
+            Matrix offsetMatrix = Matrix.CreateTranslation(totalOffset.X, totalOffset.Y, 0);
+
+            Matrix rotationMatrix = Matrix.CreateTranslation(-screenCenter.X, -screenCenter.Y, 0) *
+                                     Matrix.CreateRotationZ(totalRotation) *
+                                     Matrix.CreateTranslation(screenCenter.X, screenCenter.Y, 0);
+
+            Matrix scaleMatrix = Matrix.CreateTranslation(-screenCenter.X, -screenCenter.Y, 0) *
+                                  Matrix.CreateScale(totalScale, totalScale, 1.0f) *
+                                  Matrix.CreateTranslation(screenCenter.X, screenCenter.Y, 0);
+
+            // Apply effects in order: Scale, then Rotate, then Translate.
+            return scaleMatrix * rotationMatrix * offsetMatrix;
         }
 
         // --- Legacy Triggers (Specific Animations) ---
@@ -118,140 +262,9 @@ namespace ProjectVagabond
             TriggerHop(randomIntensity, duration);
         }
 
-        // --- New Compound Shake Trigger ---
-
-        /// <summary>
-        /// Adds trauma to the system.
-        /// </summary>
-        /// <param name="stress">Amount of stress to add (0.0 to 1.0). 
-        /// 0.2 = Subtle bump. 
-        /// 0.5 = Heavy hit. 
-        /// 1.0 = Catastrophic damage.</param>
-        public void TriggerCompoundShake(float stress)
-        {
-            // Apply multiplier
-            float amount = stress * MasterIntensity;
-
-            // Add to current trauma and clamp to 1.0
-            _trauma = Math.Clamp(_trauma + amount, 0f, 1.0f);
-        }
-
-        public void StopAll()
-        {
-            _shake.Reset();
-            _hop.Reset();
-            _pulse.Reset();
-            _wobble.Reset();
-            _drift.Reset();
-            _bounce.Reset();
-            _zoomPulse.Reset();
-            _directionalShake.Reset();
-            _trauma = 0f;
-        }
-
-        public void Update(GameTime gameTime)
-        {
-            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
-            _time += dt;
-
-            // Constant Linear Decay for Trauma
-            if (_trauma > 0)
-            {
-                _trauma -= RecoverySpeed * dt;
-                if (_trauma < 0) _trauma = 0;
-            }
-
-            // Update legacy effects
-            _shake.Update(gameTime, _random);
-            _hop.Update(gameTime, _random);
-            _pulse.Update(gameTime, _random);
-            _wobble.Update(gameTime, _random);
-            _drift.Update(gameTime, _random);
-            _bounce.Update(gameTime, _random);
-            _zoomPulse.Update(gameTime, _random);
-            _directionalShake.Update(gameTime, _random);
-        }
-
-        /// <summary>
-        /// Returns the raw aggregated values for Offset, Rotation, and Scale.
-        /// </summary>
-        public (Vector2 Offset, float Rotation, float Scale) GetTotalShakeParams()
-        {
-            // Sum up legacy effects
-            Vector2 totalOffset = _shake.Offset + _hop.Offset + _pulse.Offset + _wobble.Offset + _drift.Offset + _bounce.Offset + _zoomPulse.Offset + _directionalShake.Offset;
-            float totalRotation = _shake.Rotation + _hop.Rotation + _pulse.Rotation + _wobble.Rotation + _drift.Rotation + _bounce.Rotation + _zoomPulse.Rotation + _directionalShake.Rotation;
-            float totalScale = GetCurrentScale();
-
-            // Add Compound Shake (Trauma-based)
-            if (_trauma > 0)
-            {
-                // Calculate shake magnitude: Trauma ^ Exponent
-                // This makes low trauma values result in very small shakes, while high trauma ramps up quickly.
-                float shake = MathF.Pow(_trauma, TraumaExponent);
-
-                // Use Perlin noise for smooth random movement
-                // We use distinct seeds (offsets) for X, Y, and Rotation so they don't sync up.
-                float noiseX = _perlin.Noise(_time * Frequency, 0);
-                float noiseY = _perlin.Noise(0, _time * Frequency + 100);
-                float noiseRot = _perlin.Noise(_time * Frequency + 200, _time * Frequency + 200);
-
-                // Apply Noise Floor to ensure shake is always perceptible if trauma is high
-                noiseX = ApplyNoiseFloor(noiseX);
-                noiseY = ApplyNoiseFloor(noiseY);
-                noiseRot = ApplyNoiseFloor(noiseRot);
-
-                totalOffset.X += MaxTranslation * shake * noiseX;
-                totalOffset.Y += MaxTranslation * shake * noiseY;
-                totalRotation += MaxRotation * shake * noiseRot;
-            }
-
-            return (totalOffset, totalRotation, totalScale);
-        }
-
-        /// <summary>
-        /// Ensures the noise value is never closer to 0 than the NoiseFloor.
-        /// This prevents "dead zones" in the shake where the Perlin noise crosses zero.
-        /// </summary>
-        private float ApplyNoiseFloor(float noise)
-        {
-            if (Math.Abs(noise) < NoiseFloor)
-            {
-                // Push to the floor value in the direction of the noise (or positive if 0)
-                float sign = noise >= 0 ? 1f : -1f;
-                return sign * NoiseFloor;
-            }
-            return noise;
-        }
-
-        public Matrix GetHapticsMatrix()
-        {
-            _global ??= ServiceLocator.Get<Global>();
-
-            var (totalOffset, totalRotation, totalScale) = GetTotalShakeParams();
-
-            var screenCenter = new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f);
-
-            // Round the offset to ensure pixel-perfect rendering
-            totalOffset.X = MathF.Round(totalOffset.X);
-            totalOffset.Y = MathF.Round(totalOffset.Y);
-
-            Matrix offsetMatrix = Matrix.CreateTranslation(totalOffset.X, totalOffset.Y, 0);
-
-            Matrix rotationMatrix = Matrix.CreateTranslation(-screenCenter.X, -screenCenter.Y, 0) *
-                                     Matrix.CreateRotationZ(totalRotation) *
-                                     Matrix.CreateTranslation(screenCenter.X, screenCenter.Y, 0);
-
-            Matrix scaleMatrix = Matrix.CreateTranslation(-screenCenter.X, -screenCenter.Y, 0) *
-                                  Matrix.CreateScale(totalScale, totalScale, 1.0f) *
-                                  Matrix.CreateTranslation(screenCenter.X, screenCenter.Y, 0);
-
-            // Apply effects in order: Scale, then Rotate, then Translate.
-            return scaleMatrix * rotationMatrix * offsetMatrix;
-        }
-
         public bool IsAnyHapticActive()
         {
-            return _shake.Active || _hop.Active || _pulse.Active || _wobble.Active || _drift.Active || _bounce.Active || _zoomPulse.Active || _directionalShake.Active || _trauma > 0;
+            return _shake.Active || _hop.Active || _pulse.Active || _wobble.Active || _drift.Active || _bounce.Active || _zoomPulse.Active || _directionalShake.Active || _currentSteps > 0;
         }
 
         public Vector2 GetCurrentOffset()
