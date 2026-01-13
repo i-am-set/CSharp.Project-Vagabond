@@ -39,7 +39,6 @@ namespace ProjectVagabond
         private BitmapFont _secondaryFont;
         private BitmapFont _tertiaryFont;
         private Texture2D _pixel;
-
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         // RENDERING STATE & POST-PROCESSING
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
@@ -513,8 +512,10 @@ namespace ProjectVagabond
             var (shakeOffset, shakeRotation, shakeScale) = _hapticsManager.GetTotalShakeParams();
             Vector2 screenCenter = _finalRenderRectangle.Center.ToVector2();
 
-            // Base Scale Matrix (Virtual -> Screen)
-            Matrix scaleMatrix = Matrix.CreateScale(_finalScale, _finalScale, 1.0f);
+            // Base Transform (Virtual -> Screen)
+            // Scale, then translate to the centered position
+            Matrix baseTransform = Matrix.CreateScale(_finalScale, _finalScale, 1.0f) *
+                                   Matrix.CreateTranslation(_finalRenderRectangle.X, _finalRenderRectangle.Y, 0);
 
             // Shake Matrix (Applied in Screen Space)
             Matrix shakeMatrix =
@@ -524,8 +525,8 @@ namespace ProjectVagabond
                 Matrix.CreateTranslation(screenCenter.X, screenCenter.Y, 0) *
                 Matrix.CreateTranslation(shakeOffset.X * _finalScale, shakeOffset.Y * _finalScale, 0);
 
-            // Combined Matrix: Scale first, then Shake
-            Matrix finalSceneTransform = scaleMatrix * shakeMatrix;
+            // Combined Matrix: Base Transform first, then Shake
+            Matrix finalSceneTransform = baseTransform * shakeMatrix;
 
             // Round translation to prevent sub-pixel shimmering of the *entire screen*
             finalSceneTransform.M41 = MathF.Round(finalSceneTransform.M41);

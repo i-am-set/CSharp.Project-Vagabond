@@ -640,7 +640,8 @@ namespace ProjectVagabond.Scenes
 
         public override void DrawUnderlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            var screenBounds = new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
+            var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
+            var screenBounds = new Rectangle(0, 0, graphicsDevice.Viewport.Width, graphicsDevice.Viewport.Height);
             spriteBatch.Begin(samplerState: SamplerState.PointClamp);
             spriteBatch.Draw(ServiceLocator.Get<Texture2D>(), screenBounds, _global.GameBg);
             spriteBatch.End();

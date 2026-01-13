@@ -22,7 +22,6 @@ namespace ProjectVagabond.Scenes
     {
         private enum SplitMapView { Map, Inventory, Shop, Rest, Recruit } // Removed Settings
         private SplitMapView _currentView = SplitMapView.Map;
-
         private SplitMapView _viewToReturnTo = SplitMapView.Map;
 
         private struct DrawableMapObject
@@ -64,7 +63,7 @@ namespace ProjectVagabond.Scenes
 
         private Vector2 _cameraOffset;
         private Vector2 _targetCameraOffset;
-        private Vector2 RoundedCameraOffset => new Vector2(MathF.Round(_cameraOffset.X), MathF.Round(_cameraOffset.Y));
+        // Removed RoundedCameraOffset to allow smooth sub-pixel panning
 
         private float _playerMoveTimer;
         private float _playerMoveDuration;
@@ -136,6 +135,9 @@ namespace ProjectVagabond.Scenes
 
         // Haptics Manager
         private readonly HapticsManager _hapticsManager;
+
+        // Rasterizer state for clipping
+        private static readonly RasterizerState _scissorRasterizerState = new RasterizerState { ScissorTestEnable = true };
 
         public SplitMapScene()
         {
@@ -566,7 +568,8 @@ namespace ProjectVagabond.Scenes
                 return;
             }
 
-            var cameraTransform = Matrix.CreateTranslation(RoundedCameraOffset.X, RoundedCameraOffset.Y, 0);
+            // Use _cameraOffset directly for smooth panning
+            var cameraTransform = Matrix.CreateTranslation(_cameraOffset.X, _cameraOffset.Y, 0);
 
             bool isRestNarrating = _restOverlay.IsNarrating;
             bool allowInventoryInteraction = !isRestNarrating && (_mapState == SplitMapState.Idle || _currentView == SplitMapView.Shop || _currentView == SplitMapView.Rest || _currentView == SplitMapView.Recruit);
@@ -637,15 +640,37 @@ namespace ProjectVagabond.Scenes
                         float frictionDamping = 1.0f - MathF.Exp(-PAN_FRICTION * deltaTime);
                         _cameraVelocity = Vector2.Lerp(_cameraVelocity, Vector2.Zero, frictionDamping);
                         ClampCameraOffset();
+
+                        // Sync target so the main lerp doesn't pull us back
                         _targetCameraOffset.X = _cameraOffset.X;
+
                         _snapBackDelayTimer = SNAP_BACK_DELAY;
                     }
                     else
                     {
                         _cameraVelocity = Vector2.Zero;
+
+                        // Settle Logic (Only if waiting to snap back)
                         if (_snapBackDelayTimer > 0)
                         {
                             _snapBackDelayTimer -= deltaTime;
+
+                            // Settle to nearest pixel
+                            float currentX = _cameraOffset.X;
+                            float targetPixelX = MathF.Round(currentX);
+
+                            // Use a fast damping to snap
+                            float snapDamping = 1.0f - MathF.Exp(-15f * deltaTime);
+                            _cameraOffset.X = MathHelper.Lerp(currentX, targetPixelX, snapDamping);
+
+                            // Snap if very close
+                            if (Math.Abs(_cameraOffset.X - targetPixelX) < 0.01f)
+                            {
+                                _cameraOffset.X = targetPixelX;
+                            }
+
+                            _targetCameraOffset.X = _cameraOffset.X;
+
                             if (_snapBackDelayTimer <= 0)
                             {
                                 var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
@@ -731,7 +756,9 @@ namespace ProjectVagabond.Scenes
             var cursorManager = ServiceLocator.Get<CursorManager>();
             var currentMouseState = Mouse.GetState();
             var virtualMousePos = Core.TransformMouse(currentMouseState.Position);
-            var cameraTransform = Matrix.CreateTranslation(RoundedCameraOffset.X, RoundedCameraOffset.Y, 0);
+
+            // Use _cameraOffset directly for smooth panning
+            var cameraTransform = Matrix.CreateTranslation(_cameraOffset.X, _cameraOffset.Y, 0);
             Matrix.Invert(ref cameraTransform, out var inverseCameraTransform);
             var mouseInMapSpace = Vector2.Transform(virtualMousePos, inverseCameraTransform);
 
@@ -837,9 +864,10 @@ namespace ProjectVagabond.Scenes
 
                 _snapBackDelayTimer = SNAP_BACK_DELAY;
 
-                Vector2 virtualCurrentPos = Core.TransformMouse(currentMouseState.Position);
-                Vector2 virtualLastPos = Core.TransformMouse(_lastPanMousePosition);
-                Vector2 virtualDelta = virtualCurrentPos - virtualLastPos;
+                // Use raw screen delta scaled down for smooth panning
+                float scale = ServiceLocator.Get<Core>().FinalScale;
+                Vector2 screenDelta = (currentMouseState.Position - _lastPanMousePosition).ToVector2();
+                Vector2 virtualDelta = screenDelta / scale;
 
                 _cameraVelocity.X = virtualDelta.X * PAN_SENSITIVITY;
                 _cameraVelocity.Y = 0;
@@ -850,7 +878,8 @@ namespace ProjectVagabond.Scenes
                 _targetCameraOffset.X = _cameraOffset.X;
                 _lastPanMousePosition = currentMouseState.Position;
 
-                Mouse.SetPosition(currentMouseState.Position.X, _panStartMousePosition.Y);
+                // We don't reset mouse position here to allow natural dragging feel
+                // Mouse.SetPosition(currentMouseState.Position.X, _panStartMousePosition.Y);
             }
         }
 
@@ -976,7 +1005,8 @@ namespace ProjectVagabond.Scenes
                 targetX = (screenWidth - mapContentWidth) / 2;
             }
 
-            _targetCameraOffset = new Vector2(targetX, 0);
+            // Round target for pixel-perfect final position
+            _targetCameraOffset = new Vector2(MathF.Round(targetX), 0);
 
             if (snap)
             {
@@ -1083,14 +1113,16 @@ namespace ProjectVagabond.Scenes
                     break;
 
                 case SplitNodeType.Recruit:
-                    _transitionManager.StartTransition(TransitionType.Diamonds, TransitionType.Diamonds, () => {
+                    _transitionManager.StartTransition(TransitionType.Diamonds, TransitionType.Diamonds, () =>
+                    {
                         _recruitOverlay.GenerateNewCandidates();
                         SetView(SplitMapView.Recruit, snap: true);
                     });
                     break;
 
                 case SplitNodeType.Rest:
-                    _transitionManager.StartTransition(TransitionType.Diamonds, TransitionType.Diamonds, () => {
+                    _transitionManager.StartTransition(TransitionType.Diamonds, TransitionType.Diamonds, () =>
+                    {
                         SetView(SplitMapView.Rest, snap: true);
                     });
                     break;
@@ -1175,19 +1207,19 @@ namespace ProjectVagabond.Scenes
                 var dieType = numSides == 4 ? DieType.D4 : DieType.D6;
 
                 _diceRollingSystem.Roll(new List<DiceGroup>
+    {
+        new DiceGroup
         {
-            new DiceGroup
-            {
-                GroupId = "narrative_check",
-                NumberOfDice = numDice,
-                DieType = dieType,
-                ResultProcessing = DiceResultProcessing.Sum,
-                Modifier = modifier,
-                Tint = Color.White,
-                AnimateSum = false,
-                ShowResultText = false
-            }
-        });
+            GroupId = "narrative_check",
+            NumberOfDice = numDice,
+            DieType = dieType,
+            ResultProcessing = DiceResultProcessing.Sum,
+            Modifier = modifier,
+            Tint = Color.White,
+            AnimateSum = false,
+            ShowResultText = false
+        }
+    });
             }
         }
 
@@ -1310,11 +1342,37 @@ namespace ProjectVagabond.Scenes
         {
             if (_currentMap == null) return;
 
-            var cameraTransform = Matrix.CreateTranslation(RoundedCameraOffset.X, RoundedCameraOffset.Y, 0);
+            // Use _cameraOffset directly for smooth panning
+            var cameraTransform = Matrix.CreateTranslation(_cameraOffset.X, _cameraOffset.Y, 0);
             var finalTransform = cameraTransform * transform;
 
+            // Calculate Scissor Rect for clipping map content to the virtual screen area
+            var topLeft = Vector2.Transform(Vector2.Zero, transform);
+            var bottomRight = Vector2.Transform(new Vector2(Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), transform);
+
+            // Calculate AABB of the transformed corners to handle potential rotation from shake
+            var tl = Vector2.Transform(Vector2.Zero, transform);
+            var tr = Vector2.Transform(new Vector2(Global.VIRTUAL_WIDTH, 0), transform);
+            var bl = Vector2.Transform(new Vector2(0, Global.VIRTUAL_HEIGHT), transform);
+            var br = Vector2.Transform(new Vector2(Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), transform);
+
+            var minX = Math.Min(Math.Min(tl.X, tr.X), Math.Min(bl.X, br.X));
+            var maxX = Math.Max(Math.Max(tl.X, tr.X), Math.Max(bl.X, br.X));
+            var minY = Math.Min(Math.Min(tl.Y, tr.Y), Math.Min(bl.Y, br.Y));
+            var maxY = Math.Max(Math.Max(tl.Y, tr.Y), Math.Max(bl.Y, br.Y));
+
+            var scissorRect = new Rectangle((int)minX, (int)minY, (int)(maxX - minX), (int)(maxY - minY));
+
+            // Clamp to viewport to prevent crashes if shake moves it off-screen
+            var viewport = spriteBatch.GraphicsDevice.Viewport.Bounds;
+            scissorRect = Rectangle.Intersect(scissorRect, viewport);
+
+            // Apply Scissor
+            spriteBatch.GraphicsDevice.ScissorRectangle = scissorRect;
+
             spriteBatch.End();
-            spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: finalTransform);
+            // Use _scissorRasterizerState to enable clipping
+            spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: finalTransform, rasterizerState: _scissorRasterizerState);
 
             var pixel = ServiceLocator.Get<Texture2D>();
 
@@ -1324,13 +1382,13 @@ namespace ProjectVagabond.Scenes
                 const int gridSize = Global.SPLIT_MAP_GRID_SIZE;
 
                 Matrix.Invert(ref cameraTransform, out var inverseCameraTransform);
-                var topLeft = Vector2.Transform(Vector2.Zero, inverseCameraTransform);
-                var bottomRight = Vector2.Transform(new Vector2(Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), inverseCameraTransform);
+                var topLeftGrid = Vector2.Transform(Vector2.Zero, inverseCameraTransform);
+                var bottomRightGrid = Vector2.Transform(new Vector2(Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), inverseCameraTransform);
 
-                int startX = (int)Math.Floor(topLeft.X / gridSize) * gridSize;
-                int endX = (int)Math.Ceiling(bottomRight.X / gridSize) * gridSize;
-                int startY = (int)Math.Floor(topLeft.Y / gridSize) * gridSize;
-                int endY = (int)Math.Ceiling(bottomRight.Y / gridSize) * gridSize;
+                int startX = (int)Math.Floor(topLeftGrid.X / gridSize) * gridSize;
+                int endX = (int)Math.Ceiling(bottomRightGrid.X / gridSize) * gridSize;
+                int startY = (int)Math.Floor(topLeftGrid.Y / gridSize) * gridSize;
+                int endY = (int)Math.Ceiling(bottomRightGrid.Y / gridSize) * gridSize;
 
                 for (int x = startX; x <= endX; x += gridSize)
                 {

@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using static ProjectVagabond.UI.UIAnimator;
 
 namespace ProjectVagabond.Battle.UI
 {
@@ -26,7 +27,6 @@ namespace ProjectVagabond.Battle.UI
         public bool IsAnimating => _animState == AnimationState.Appearing;
         public Texture2D IconTexture { get; set; }
         public Rectangle? IconSourceRect { get; set; }
-
         private enum AnimationState { Hidden, Idle, Appearing }
         private AnimationState _animState = AnimationState.Idle;
         private float _appearTimer = 0f;
@@ -187,8 +187,8 @@ namespace ProjectVagabond.Battle.UI
             float shiftDamping = 1.0f - MathF.Exp(-SHIFT_SPEED * dt);
             _currentContentShiftX = MathHelper.Lerp(_currentContentShiftX, targetShift, shiftDamping);
 
-            // Round to integer for pixel-perfect movement
-            int pixelShiftX = (int)MathF.Round(_currentContentShiftX);
+            // Use float for smooth movement
+            float pixelShiftX = _currentContentShiftX;
 
             int animatedWidth = (int)(Bounds.Width * finalScaleX);
             int animatedHeight = (int)(Bounds.Height * finalScaleY);
@@ -232,19 +232,18 @@ namespace ProjectVagabond.Battle.UI
                 const int iconPadding = 4;
 
                 // Apply content shift to icon
-                var iconRect = new Rectangle(
-                    animatedBounds.X + iconPadding + 1 + pixelShiftX,
-                    animatedBounds.Y + (animatedBounds.Height - iconSize) / 2,
-                    iconSize,
-                    iconSize
-                );
+                float iconX = animatedBounds.X + iconPadding + 1 + pixelShiftX;
+                float iconY = animatedBounds.Y + (animatedBounds.Height - iconSize) / 2f;
+                var iconPos = new Vector2(iconX, iconY);
 
                 if (IconTexture != null && IconSourceRect.HasValue)
                 {
-                    spriteBatch.DrawSnapped(IconTexture, iconRect, IconSourceRect.Value, Color.White * contentAlpha);
+                    spriteBatch.DrawSnapped(IconTexture, iconPos, IconSourceRect.Value, Color.White * contentAlpha);
                 }
                 else
                 {
+                    // Fallback placeholder
+                    var iconRect = new Rectangle((int)iconX, (int)iconY, iconSize, iconSize);
                     spriteBatch.DrawSnapped(pixel, iconRect, _global.Palette_Pink * contentAlpha);
                 }
 
@@ -255,13 +254,11 @@ namespace ProjectVagabond.Battle.UI
                 }
 
                 // Apply content shift to text start position
-                // Note: iconRect already includes the shift, so textStartX is relative to the shifted icon
-                float textStartX = iconRect.Right + iconPadding;
+                // Note: iconPos already includes the shift, so textStartX is relative to the shifted icon
+                float textStartX = iconPos.X + iconSize + iconPadding;
                 const int textRightMargin = 4;
 
                 // Calculate available width based on the *original* bounds to prevent jitter in scrolling calculation
-                // But visually clip based on the shifted position?
-                // Actually, if we shift everything left, the right margin effectively increases by 1.
                 float textAvailableWidth = animatedBounds.Right - textStartX - textRightMargin;
 
                 var moveNameTextSize = _moveFont.MeasureString(this.Text);
@@ -289,7 +286,7 @@ namespace ProjectVagabond.Battle.UI
                     var clipRect = new Rectangle((int)textStartX, animatedBounds.Y, (int)textAvailableWidth, animatedBounds.Height);
                     spriteBatch.GraphicsDevice.ScissorRectangle = clipRect;
 
-                    var scrollingTextPosition = new Vector2(textStartX - _scrollPosition, animatedBounds.Y + (animatedBounds.Height - _moveFont.LineHeight) / 2);
+                    var scrollingTextPosition = new Vector2(textStartX - _scrollPosition, animatedBounds.Y + (animatedBounds.Height - _moveFont.LineHeight) / 2f);
 
                     // Scrolling text doesn't wave to avoid visual chaos
                     spriteBatch.DrawStringSnapped(_moveFont, this.Text, scrollingTextPosition, textColor * contentAlpha);
@@ -302,7 +299,7 @@ namespace ProjectVagabond.Battle.UI
                 else
                 {
                     _isScrollingInitialized = false;
-                    var textPosition = new Vector2(textStartX, animatedBounds.Y + (animatedBounds.Height - _moveFont.LineHeight) / 2);
+                    var textPosition = new Vector2(textStartX, animatedBounds.Y + (animatedBounds.Height - _moveFont.LineHeight) / 2f);
 
                     // --- Wave Animation Logic ---
                     if (EnableTextWave && isActivated)
@@ -350,4 +347,3 @@ namespace ProjectVagabond.Battle.UI
         }
     }
 }
-﻿
