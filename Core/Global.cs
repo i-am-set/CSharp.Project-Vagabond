@@ -191,7 +191,7 @@ namespace ProjectVagabond
         public float HitstopDuration_Crit { get; set; } = 0.2f;
 
         // --- BACKGROUND NOISE TUNING ---
-        public Color BackgroundNoiseColor { get; set; } = new Color(23, 22, 28);
+        public Color BackgroundNoiseColor { get; set; } = new Color(24, 23, 30);
         public float BackgroundNoiseOpacity { get; set; } = 1.0f;
         public float BackgroundNoiseScale { get; set; } = 0.05f;
         public float BackgroundScrollSpeedX { get; set; } = 0.01f;
@@ -268,7 +268,7 @@ namespace ProjectVagabond
         public Color Palette_DarkGray { get; set; } = new Color(42, 40, 57);
         public Color Palette_DarkerGray { get; set; } = new Color(36, 35, 46);
         public Color Palette_DarkestGray { get; set; } = new Color(26, 25, 33);
-        public Color Palette_Black { get; set; } = new Color(12, 11, 14);
+        public Color Palette_Black { get; set; } = new Color(23, 22, 28);
 
         // Colors
         public Color PlayerColor { get; private set; } = new Color(181, 65, 49); // Palette_Red

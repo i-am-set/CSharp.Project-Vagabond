@@ -24,7 +24,9 @@ namespace ProjectVagabond.Battle.UI
         private readonly Core _core;
         // Render Target for flattening sprites to apply outlines/transparency correctly
         private readonly RenderTarget2D _flattenTarget;
-        private const int FLATTEN_TARGET_SIZE = 256;
+
+        // INCREASED: Size to accommodate high-res scaling (e.g. 5x scale of 96px sprite = 480px)
+        private const int FLATTEN_TARGET_SIZE = 1024;
         private const int FLATTEN_MARGIN = 16;
 
         public BattleEntityRenderer()
@@ -224,6 +226,8 @@ namespace ProjectVagabond.Battle.UI
             {
                 var sourceRect = new Rectangle(i * partSize, 0, partSize, partSize);
                 var partOffset = offsets != null && i < offsets.Length ? offsets[i] : Vector2.Zero;
+
+                // REMOVED: Rounding. Use float position directly for smooth movement.
                 var drawPosition = new Vector2(spriteRect.X + partOffset.X, spriteRect.Y + partOffset.Y) + shakeOffset;
 
                 Vector2 origin = new Vector2(partSize / 2f, partSize / 2f);

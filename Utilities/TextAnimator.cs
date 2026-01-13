@@ -293,7 +293,6 @@ namespace ProjectVagabond.UI
                     break;
 
                 case TextEffectType.Shake:
-                    // FIX: Removed MathF.Floor to prevent aliasing at low FPS.
                     // Use continuous sine waves with non-integer frequencies to simulate randomness.
                     float r1 = MathF.Sin(time * TextAnimationSettings.ShakeSpeed + charIndex * 78.233f);
                     float r2 = MathF.Sin(time * TextAnimationSettings.ShakeSpeed * 1.3f + charIndex * 12.9898f);
@@ -301,7 +300,6 @@ namespace ProjectVagabond.UI
                     break;
 
                 case TextEffectType.Nervous:
-                    // FIX: Removed MathF.Floor.
                     float n1 = MathF.Sin(time * TextAnimationSettings.NervousSpeed + charIndex * 78.233f);
                     float n2 = MathF.Sin(time * TextAnimationSettings.NervousSpeed * 1.1f + charIndex * 12.9898f);
                     offset = new Vector2(n1, n2) * TextAnimationSettings.NervousAmplitude;
@@ -325,14 +323,12 @@ namespace ProjectVagabond.UI
                     break;
 
                 case TextEffectType.Glitch:
-                    // FIX: Removed MathF.Floor. Use high frequency sine for chaotic movement.
                     float g1 = MathF.Sin(time * TextAnimationSettings.GlitchSpeed + charIndex);
                     offset = new Vector2(g1, -g1) * TextAnimationSettings.GlitchAmplitude;
                     rotation = g1 * TextAnimationSettings.GlitchRotation;
                     break;
 
                 case TextEffectType.Flicker:
-                    // FIX: Removed MathF.Floor. Use continuous sine for alpha.
                     float f1 = MathF.Sin(time * TextAnimationSettings.FlickerSpeed + charIndex);
                     // Map sine (-1 to 1) to (0 to 1)
                     float alphaNorm = (f1 + 1f) * 0.5f;
@@ -350,7 +346,6 @@ namespace ProjectVagabond.UI
                     break;
 
                 case TextEffectType.FlickerBounce:
-                    // FIX: Updated Flicker logic here too
                     float fb1 = MathF.Sin(time * TextAnimationSettings.FlickerSpeed + charIndex);
                     float fbAlpha = (fb1 + 1f) * 0.5f;
                     color = baseColor * MathHelper.Lerp(TextAnimationSettings.FlickerMinAlpha, TextAnimationSettings.FlickerMaxAlpha, fbAlpha);
@@ -358,7 +353,6 @@ namespace ProjectVagabond.UI
                     break;
 
                 case TextEffectType.FlickerWave:
-                    // FIX: Updated Flicker logic here too
                     float fw1 = MathF.Sin(time * TextAnimationSettings.FlickerSpeed + charIndex);
                     float fwAlpha = (fw1 + 1f) * 0.5f;
                     color = baseColor * MathHelper.Lerp(TextAnimationSettings.FlickerMinAlpha, TextAnimationSettings.FlickerMaxAlpha, fwAlpha);
@@ -443,8 +437,8 @@ namespace ProjectVagabond.UI
         {
             if (string.IsNullOrEmpty(text)) return;
 
-            // Round the base position to prevent sub-pixel jitter
-            options.Position = new Vector2(MathF.Round(options.Position.X), MathF.Round(options.Position.Y));
+            // REMOVED: Rounding of base position
+            // options.Position = new Vector2(MathF.Round(options.Position.X), MathF.Round(options.Position.Y));
 
             Vector2 layoutScale = options.Scale;
             var shadowColor = new Color(options.Color.R / 4, options.Color.G / 4, options.Color.B / 4, options.Color.A);
@@ -455,7 +449,8 @@ namespace ProjectVagabond.UI
             {
                 Vector2 totalSize = font.MeasureString(text);
                 centeringOffset = (totalSize * (Vector2.One - layoutScale)) / 2f;
-                centeringOffset = new Vector2(MathF.Round(centeringOffset.X), MathF.Round(centeringOffset.Y));
+                // REMOVED: Rounding of centering offset
+                // centeringOffset = new Vector2(MathF.Round(centeringOffset.X), MathF.Round(centeringOffset.Y));
             }
 
             var glyphs = font.GetGlyphs(text, options.Position);
@@ -476,13 +471,13 @@ namespace ProjectVagabond.UI
                 // Calculate relative position from the start of the string
                 Vector2 relativePos = glyph.Position - options.Position;
 
-                // Round relative position to lock character spacing to the pixel grid
-                relativePos = new Vector2(MathF.Round(relativePos.X), MathF.Round(relativePos.Y));
+                // REMOVED: Rounding of relative position
+                // relativePos = new Vector2(MathF.Round(relativePos.X), MathF.Round(relativePos.Y));
 
                 // Apply layout scaling and centering
                 Vector2 scaledPos = options.Position + (relativePos * layoutScale) + centeringOffset;
 
-                // Get animation transform, passing text length and easeInDuration
+                // Get animation transform
                 var (animOffset, effectScale, rotation, finalColor) = GetTextEffectTransform(
                     options.Effect,
                     options.Time,
@@ -492,22 +487,21 @@ namespace ProjectVagabond.UI
                     options.EaseInDuration
                 );
 
-                // Get the texture region for the glyph
                 var character = glyph.Character;
                 if (character != null)
                 {
                     var region = character.TextureRegion;
                     if (region != null)
                     {
-                        // Calculate origin as the center of the glyph texture
                         Vector2 origin = new Vector2(region.Width / 2f, region.Height / 2f);
-
-                        // Calculate the draw position (Center of the glyph)
                         Vector2 targetCenter = scaledPos + origin + animOffset;
 
-                        // Snap the center position to integer coordinates to prevent jitter
-                        Vector2 snappedTopLeft = new Vector2(MathF.Round(targetCenter.X - origin.X), MathF.Round(targetCenter.Y - origin.Y));
-                        Vector2 finalDrawPos = snappedTopLeft + origin;
+                        // REMOVED: Snapping to integer coordinates
+                        // Vector2 snappedTopLeft = new Vector2(MathF.Round(targetCenter.X - origin.X), MathF.Round(targetCenter.Y - origin.Y));
+                        // Vector2 finalDrawPos = snappedTopLeft + origin;
+
+                        // Use smooth position
+                        Vector2 finalDrawPos = targetCenter;
 
                         Vector2 finalScale = layoutScale * effectScale;
 

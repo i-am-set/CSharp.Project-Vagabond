@@ -196,10 +196,12 @@ namespace ProjectVagabond.Battle.UI
             var hitFlashState = animationManager.GetHitFlashState(combatant.CombatantID);
             Vector2 shakeOffset = hitFlashState?.ShakeOffset ?? Vector2.Zero;
 
-            // Calculate top-left position (same as Draw, including selection offset)
+            // REMOVED: Rounding of top-left position
+            // We still need integer bounds for the Rectangle return type, but we round at the very end
+            // or just cast, since hitboxes are logical.
             var topLeftPosition = new Point(
-                (int)MathF.Round(_position.X - _origin.X + shakeOffset.X),
-                (int)MathF.Round(_position.Y - _origin.Y + shakeOffset.Y + _selectionOffsetY)
+                (int)(_position.X - _origin.X + shakeOffset.X),
+                (int)(_position.Y - _origin.Y + shakeOffset.Y + _selectionOffsetY)
             );
 
             if (_archetypeId == "player")
@@ -253,10 +255,10 @@ namespace ProjectVagabond.Battle.UI
             var hitFlashState = animationManager.GetHitFlashState(combatant.CombatantID);
             Vector2 shakeOffset = hitFlashState?.ShakeOffset ?? Vector2.Zero;
 
-            // Calculate top-left position (Static bounds do NOT include selection offset)
+            // REMOVED: Rounding
             var topLeftPosition = new Point(
-                (int)MathF.Round(_position.X - _origin.X + shakeOffset.X),
-                (int)MathF.Round(_position.Y - _origin.Y + shakeOffset.Y)
+                (int)(_position.X - _origin.X + shakeOffset.X),
+                (int)(_position.Y - _origin.Y + shakeOffset.Y)
             );
 
             if (_archetypeId == "player")
@@ -339,10 +341,10 @@ namespace ProjectVagabond.Battle.UI
             Vector2 shakeOffset = hitFlashState?.ShakeOffset ?? Vector2.Zero;
             bool isFlashingWhite = hitFlashState != null && hitFlashState.IsCurrentlyWhite;
 
-            // Calculate top-left position based on center position + selection offset
-            var topLeftPosition = new Point(
-                (int)MathF.Round(_position.X - _origin.X + shakeOffset.X),
-                (int)MathF.Round(_position.Y - _origin.Y + shakeOffset.Y + _selectionOffsetY)
+            // REMOVED: Rounding of top-left position. Use float vector.
+            Vector2 topLeftPosition = new Vector2(
+                _position.X - _origin.X + shakeOffset.X,
+                _position.Y - _origin.Y + shakeOffset.Y + _selectionOffsetY
             );
 
             Color mainColor = tintColorOverride ?? Color.White;
@@ -411,7 +413,7 @@ namespace ProjectVagabond.Battle.UI
                         Vector2 spriteCenter = new Vector2(topLeftPosition.X + _frameWidth / 2f, topLeftPosition.Y + _frameHeight / 2f);
 
                         // Apply visual center offset
-                        // X is geometric center, Y is visual center (center of mass)
+                        // X is 0 (Geometric Center), Y is Visual Center (center of mass)
                         Vector2 targetCenter = new Vector2(spriteCenter.X, spriteCenter.Y + visualCenterOffset.Y);
 
                         // Apply Animation Math (Perlin Noise)
@@ -433,7 +435,7 @@ namespace ProjectVagabond.Battle.UI
                         Vector2 animatedPos = targetCenter + new Vector2(swayX, swayY) + shakeOffset;
                         Vector2 indOrigin = new Vector2(indicator.Width / 2f, indicator.Height / 2f);
 
-                        spriteBatch.DrawSnapped(indicator, animatedPos, null, Color.White, indRotation, indOrigin, indicatorScale, SpriteEffects.None, 0f);
+                        spriteBatch.DrawSnapped(indicator, animatedPos, null, Color.White, 0f, indOrigin, 1.0f, SpriteEffects.None, 0f);
                     }
                 }
             }
