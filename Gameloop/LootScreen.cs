@@ -88,12 +88,12 @@ namespace ProjectVagabond.Scenes
         // Tooltip Animation
         private UIAnimator _tooltipAnimator;
 
-        // --- NEW: Dimmer State with Coyote Time ---
-        private float _dimmerCoyoteTimer = 0f;
-        private const float DIMMER_COYOTE_TIME = 0.1f;
-        private bool _isDimmerActive = false;
-        private float _dimmerAlpha = 0f;
-        private const float DIMMER_FADE_SPEED = 8f;
+        // --- Smooth Dimmer State ---
+        // We use a normalized value (0.0 to 1.0) to track progress, then map it to opacity.
+        private float _dimmerProgress = 0f;
+        private float _dimmerAlpha = 0f; // The actual alpha used for drawing
+        private const float DIMMER_TARGET_OPACITY = 0.85f;
+        private const float DIMMER_FADE_SPEED = 5.0f; // 1.0 / 5.0 = 0.2 seconds to fade
 
         // Text Wave Timer
         private float _textWaveTimer = 0f;
@@ -142,6 +142,10 @@ namespace ProjectVagabond.Scenes
             _textWaveTimer = 0f;
             _tooltipAnimator.Reset();
             _skipButton.ResetAnimationState();
+
+            // Reset dimmer state
+            _dimmerProgress = 0f;
+            _dimmerAlpha = 0f;
 
             if (loot != null)
             {
@@ -500,29 +504,26 @@ namespace ProjectVagabond.Scenes
             _lastHoveredItemData = _hoveredItemData;
             _tooltipAnimator.Update(dt);
 
-            // --- NEW DIMMER LOGIC WITH COYOTE TIME ---
-            bool shouldDimmerBeActive = _tooltipAnimator.IsVisible && _tooltipAnimator.GetVisualState().Opacity > 0.01f;
+            // --- NEW: SMOOTH DIMMER LOGIC ---
+            // Decoupled from UIAnimator state to ensure smoothness.
+            // We simply check if we *want* to show the tooltip based on hover state.
+            bool shouldShowDimmer = (_hoveredItemData != null && !_selectionMade && _tooltipTimer >= TOOLTIP_DELAY);
 
-            if (shouldDimmerBeActive)
+            // Linear move towards target (0 or 1)
+            float targetValue = shouldShowDimmer ? 1.0f : 0.0f;
+            float moveSpeed = DIMMER_FADE_SPEED * dt;
+
+            if (_dimmerProgress < targetValue)
             {
-                _isDimmerActive = true;
-                _dimmerCoyoteTimer = DIMMER_COYOTE_TIME; // Keep resetting the coyote timer while a tooltip is active
+                _dimmerProgress = Math.Min(_dimmerProgress + moveSpeed, targetValue);
             }
-            else
+            else if (_dimmerProgress > targetValue)
             {
-                if (_isDimmerActive)
-                {
-                    _dimmerCoyoteTimer -= dt;
-                    if (_dimmerCoyoteTimer <= 0)
-                    {
-                        _isDimmerActive = false; // Coyote time expired, dimmer can now fade out
-                    }
-                }
+                _dimmerProgress = Math.Max(_dimmerProgress - moveSpeed, targetValue);
             }
 
-            // Animate dimmer alpha
-            float targetAlpha = _isDimmerActive ? 0.85f : 0f;
-            _dimmerAlpha = MathHelper.Lerp(_dimmerAlpha, targetAlpha, DIMMER_FADE_SPEED * dt);
+            // Map 0..1 to 0..MaxOpacity using SmoothStep for a nice curve
+            _dimmerAlpha = MathHelper.SmoothStep(0f, DIMMER_TARGET_OPACITY, _dimmerProgress);
 
             _prevMouse = mouse;
         }
@@ -576,7 +577,8 @@ namespace ProjectVagabond.Scenes
             sb.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, Matrix.Identity);
             try
             {
-                if (_dimmerAlpha > 0.01f)
+                // Only draw if there's any opacity to show
+                if (_dimmerAlpha > 0.001f)
                 {
                     sb.Draw(pixel, new Rectangle(0, 0, screenW, screenH), Color.Black * _dimmerAlpha);
                 }
