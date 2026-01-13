@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.UI;
+using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -28,12 +29,6 @@ namespace ProjectVagabond.UI
         public WeaponData? GetWeaponData(string weaponId)
         {
             if (BattleDataCache.Weapons.TryGetValue(weaponId, out var data)) return data;
-            return null;
-        }
-
-        public ArmorData? GetArmorData(string armorId)
-        {
-            if (BattleDataCache.Armors.TryGetValue(armorId, out var data)) return data;
             return null;
         }
 
@@ -79,20 +74,6 @@ namespace ProjectVagabond.UI
                         else
                         {
                             currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Weapons/{kvp.Key}", null, 0, null, false, null, isEquipped));
-                        }
-                    }
-                    break;
-                case InventoryCategory.Armor:
-                    foreach (var kvp in playerState.Armors)
-                    {
-                        bool isEquipped = playerState.Party.Any(m => m.EquippedArmorId == kvp.Key);
-                        if (BattleDataCache.Armors.TryGetValue(kvp.Key, out var armorData))
-                        {
-                            currentItems.Add((armorData.ArmorName, kvp.Value, $"Sprites/Items/Armor/{kvp.Key}", null, armorData.Rarity, null, false, null, isEquipped));
-                        }
-                        else
-                        {
-                            currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Armor/{kvp.Key}", null, 0, null, false, null, isEquipped));
                         }
                     }
                     break;

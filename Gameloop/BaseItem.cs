@@ -4,7 +4,7 @@ using ProjectVagabond.Battle; // Assuming this is where WeaponData etc are
 
 namespace ProjectVagabond.Items
 {
-    public enum ItemType { Weapon, Armor, Relic, Consumable }
+    public enum ItemType { Weapon, Relic, Consumable }
 
     /// <summary>
     /// A polymorphic wrapper for any item in the game.
@@ -21,7 +21,7 @@ namespace ProjectVagabond.Items
         // Visuals
         public string SpritePath { get; set; }
 
-        // The actual data object (WeaponData, ArmorData, etc.)
+        // The actual data object (WeaponData, RelicData, etc.)
         public object OriginalData { get; set; }
 
         // Factory methods to convert raw data to BaseItem
@@ -36,21 +36,6 @@ namespace ProjectVagabond.Items
                 Rarity = data.Rarity,
                 Type = ItemType.Weapon,
                 SpritePath = $"Sprites/Items/Weapons/{data.WeaponID}",
-                OriginalData = data
-            };
-        }
-
-        public static BaseItem FromArmor(ArmorData data)
-        {
-            return new BaseItem
-            {
-                ID = data.ArmorID,
-                Name = data.ArmorName,
-                Description = data.Description,
-                Flavor = data.Flavor,
-                Rarity = data.Rarity,
-                Type = ItemType.Armor,
-                SpritePath = $"Sprites/Items/Armor/{data.ArmorID}",
                 OriginalData = data
             };
         }

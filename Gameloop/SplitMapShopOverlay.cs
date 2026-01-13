@@ -2,11 +2,14 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace ProjectVagabond.UI
@@ -153,7 +156,6 @@ namespace ProjectVagabond.UI
             // Resolve Sprite
             string iconPath = "";
             if (item.Type == "Weapon") iconPath = $"Sprites/Items/Weapons/{item.ItemId}";
-            else if (item.Type == "Armor") iconPath = $"Sprites/Items/Armor/{item.ItemId}";
             else if (item.Type == "Relic") iconPath = $"Sprites/Items/Relics/{item.ItemId}";
             else if (item.Type == "Consumable") iconPath = $"Sprites/Items/Consumables/{item.ItemId}";
 
@@ -184,7 +186,6 @@ namespace ProjectVagabond.UI
 
                 // Add to Inventory
                 if (item.Type == "Weapon") _gameState.PlayerState.AddWeapon(item.ItemId);
-                else if (item.Type == "Armor") _gameState.PlayerState.AddArmor(item.ItemId);
                 else if (item.Type == "Relic") _gameState.PlayerState.AddRelic(item.ItemId);
                 else if (item.Type == "Consumable") _gameState.PlayerState.AddConsumable(item.ItemId);
 

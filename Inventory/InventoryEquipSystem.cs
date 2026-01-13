@@ -73,10 +73,6 @@ namespace ProjectVagabond.UI
             {
                 availableItems = _overlay.GameState.PlayerState.Weapons.Keys.ToList();
             }
-            else if (ActiveEquipSlotType == EquipSlotType.Armor)
-            {
-                availableItems = _overlay.GameState.PlayerState.Armors.Keys.ToList();
-            }
             else if (ActiveEquipSlotType == EquipSlotType.Relic)
             {
                 var allRelics = _overlay.GameState.PlayerState.Relics.Keys.ToList();
@@ -152,27 +148,6 @@ namespace ProjectVagabond.UI
                             btn.OnClick = () => SelectEquipItem(itemId);
                         }
                     }
-                    else if (ActiveEquipSlotType == EquipSlotType.Armor)
-                    {
-                        var armorData = _dataProcessor.GetArmorData(itemId);
-                        if (armorData != null)
-                        {
-                            btn.MainText = armorData.ArmorName.ToUpper();
-                            string path = $"Sprites/Items/Armor/{armorData.ArmorID}";
-                            btn.IconTexture = _overlay.SpriteManager.GetSmallRelicSprite(path);
-                            btn.IconSilhouette = _overlay.SpriteManager.GetSmallRelicSpriteSilhouette(path);
-                            btn.IconSourceRect = null;
-                            btn.Rarity = armorData.Rarity;
-                            btn.IsEnabled = true;
-                            btn.OnClick = () => SelectEquipItem(itemId);
-                        }
-                        else
-                        {
-                            btn.MainText = itemId.ToUpper();
-                            btn.IsEnabled = true;
-                            btn.OnClick = () => SelectEquipItem(itemId);
-                        }
-                    }
                     else if (ActiveEquipSlotType == EquipSlotType.Relic)
                     {
                         var relicData = _dataProcessor.GetRelicData(itemId);
@@ -219,10 +194,6 @@ namespace ProjectVagabond.UI
             if (ActiveEquipSlotType == EquipSlotType.Weapon)
             {
                 member.EquippedWeaponId = itemId;
-            }
-            else if (ActiveEquipSlotType == EquipSlotType.Armor)
-            {
-                member.EquippedArmorId = itemId;
             }
             else if (ActiveEquipSlotType == EquipSlotType.Relic)
             {

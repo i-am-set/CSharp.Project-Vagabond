@@ -2,25 +2,26 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Dice;
+using ProjectVagabond.Items;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.Systems;
 using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
-using ProjectVagabond.Systems;
-using ProjectVagabond.Items;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.Scenes
 {
@@ -455,7 +456,6 @@ namespace ProjectVagabond.Scenes
                 Spells = member.Spells,
                 PortraitIndex = member.PortraitIndex,
                 EquippedWeaponId = member.EquippedWeaponId,
-                EquippedArmorId = member.EquippedArmorId,
                 EquippedRelicId = member.EquippedRelicId
             };
 

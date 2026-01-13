@@ -1,6 +1,9 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -31,16 +34,7 @@ namespace ProjectVagabond.Utils
                 w => w.Effects
             );
 
-            // 2. Test Armor
-            if (BattleDataCache.Armors.Count == 0) LogFail("WARNING: Armor Cache is empty!");
-            TestCollection(
-                "ARMOR",
-                BattleDataCache.Armors.Values,
-                a => a.ArmorName,
-                a => a.Effects
-            );
-
-            // 3. Test Relics
+            // 2. Test Relics
             if (BattleDataCache.Relics.Count == 0) LogFail("WARNING: Relic Cache is empty!");
             TestCollection(
                 "RELICS",

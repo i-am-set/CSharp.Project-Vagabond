@@ -14,8 +14,8 @@ using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.UI
 {
-    public enum InventoryCategory { Weapons, Armor, Relics, Consumables, Misc, Equip }
-    public enum EquipSlotType { None, Weapon, Armor, Relic, Spell1, Spell2, Spell3, Spell4 }
+    public enum InventoryCategory { Weapons, Relics, Consumables, Misc, Equip }
+    public enum EquipSlotType { None, Weapon, Relic, Spell1, Spell2, Spell3, Spell4 }
     // Formal State Machine
     internal enum InventoryState
     {
@@ -81,7 +81,6 @@ namespace ProjectVagabond.UI
         internal List<InventoryCategory> CategoryOrder { get; } = new()
     {
         InventoryCategory.Weapons,
-        InventoryCategory.Armor,
         InventoryCategory.Relics,
         InventoryCategory.Consumables,
         InventoryCategory.Misc
@@ -130,7 +129,6 @@ namespace ProjectVagabond.UI
                     DurationIn = 0.1f,
                     Magnitude = 20f
                 };
-                // Removed the OnInComplete callback that was prematurely resetting the text effect
             }
 
             // Instantiate Helpers
@@ -288,6 +286,76 @@ namespace ProjectVagabond.UI
                     PartySlotTextTimers[i] = 0f;
                 }
             }
+        }
+
+        internal void ChangePage(int direction)
+        {
+            if (TotalPages <= 1) return;
+
+            int totalItems = DataProcessor.GetCurrentCategoryItems().Count;
+            int maxPage = Math.Max(0, (int)Math.Ceiling((double)totalItems / ITEMS_PER_PAGE) - 1);
+
+            CurrentPage += direction;
+
+            if (CurrentPage > maxPage) CurrentPage = 0;
+            else if (CurrentPage < 0) CurrentPage = maxPage;
+
+            if (direction < 0) LeftPageArrowBobTimer = PAGE_ARROW_BOB_DURATION;
+            else if (direction > 0) RightPageArrowBobTimer = PAGE_ARROW_BOB_DURATION;
+
+            SelectedSlotIndex = -1;
+            DataProcessor.RefreshInventorySlots();
+            TriggerSlotAnimations();
+        }
+
+        internal void CycleCategory(int direction)
+        {
+            if (SelectedInventoryCategory == InventoryCategory.Equip)
+            {
+                if (direction > 0)
+                {
+                    int target = FindNextNonEmptyCategory(-1, 1);
+                    if (target != -1)
+                    {
+                        SwitchToCategory(CategoryOrder[target]);
+                    }
+                }
+                return;
+            }
+
+            int currentIndex = CategoryOrder.IndexOf(SelectedInventoryCategory);
+            int targetIndex = FindNextNonEmptyCategory(currentIndex, direction);
+
+            if (targetIndex != -1)
+            {
+                SwitchToCategory(CategoryOrder[targetIndex]);
+            }
+        }
+
+        private int FindNextNonEmptyCategory(int startIndex, int direction)
+        {
+            int checkIndex = startIndex + direction;
+            while (checkIndex >= 0 && checkIndex < CategoryOrder.Count)
+            {
+                if (HasItems(CategoryOrder[checkIndex]))
+                {
+                    return checkIndex;
+                }
+                checkIndex += direction;
+            }
+            return -1;
+        }
+
+        private bool HasItems(InventoryCategory category)
+        {
+            return category switch
+            {
+                InventoryCategory.Weapons => GameState.PlayerState.Weapons.Any(),
+                InventoryCategory.Relics => GameState.PlayerState.Relics.Any(),
+                InventoryCategory.Consumables => GameState.PlayerState.Consumables.Any(),
+                InventoryCategory.Misc => GameState.PlayerState.MiscItems.Any(),
+                _ => false
+            };
         }
     }
 }

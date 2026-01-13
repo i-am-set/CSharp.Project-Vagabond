@@ -39,7 +39,6 @@ namespace ProjectVagabond.Battle
 
         // Split equipment to avoid ID collisions (since Weapon "0" and Armor "0" are different items)
         public Dictionary<string, int> StartingWeapons { get; set; } = new Dictionary<string, int>();
-        public Dictionary<string, int> StartingArmor { get; set; } = new Dictionary<string, int>();
         public Dictionary<string, int> StartingRelics { get; set; } = new Dictionary<string, int>();
     }
 }

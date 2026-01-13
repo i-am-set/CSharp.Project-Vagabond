@@ -1165,7 +1165,6 @@ namespace ProjectVagabond.Scenes
             var allPremium = new List<ShopItem>();
 
             foreach (var w in BattleDataCache.Weapons.Values) allPremium.Add(new ShopItem { ItemId = w.WeaponID, DisplayName = w.WeaponName, Type = "Weapon", Price = PriceCalculator.CalculatePrice(w, 1.0f), DataObject = w });
-            foreach (var a in BattleDataCache.Armors.Values) allPremium.Add(new ShopItem { ItemId = a.ArmorID, DisplayName = a.ArmorName, Type = "Armor", Price = PriceCalculator.CalculatePrice(a, 1.0f), DataObject = a });
             foreach (var r in BattleDataCache.Relics.Values) allPremium.Add(new ShopItem { ItemId = r.RelicID, DisplayName = r.RelicName, Type = "Relic", Price = PriceCalculator.CalculatePrice(r, 1.0f), DataObject = r });
 
             for (int i = 0; i < premiumCount; i++)

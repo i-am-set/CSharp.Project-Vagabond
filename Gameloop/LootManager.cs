@@ -39,15 +39,12 @@ namespace ProjectVagabond.Systems
             foreach (var w in BattleDataCache.Weapons.Values)
                 _lootTable[w.Rarity].Add(BaseItem.FromWeapon(w));
 
-            foreach (var a in BattleDataCache.Armors.Values)
-                _lootTable[a.Rarity].Add(BaseItem.FromArmor(a));
-
             foreach (var r in BattleDataCache.Relics.Values)
                 _lootTable[r.Rarity].Add(BaseItem.FromRelic(r));
         }
 
         /// <summary>
-        /// Generates exactly 3 items: 1 Weapon, 1 Armor, 1 Relic.
+        /// Generates exactly 2 items: 1 Weapon, 1 Relic.
         /// </summary>
         public List<BaseItem> GenerateCombatLoot()
         {
@@ -62,15 +59,7 @@ namespace ProjectVagabond.Systems
                 pickedIds.Add(weapon.ID);
             }
 
-            // 2. Generate Armor
-            var armor = GetRandomItemByType(ItemType.Armor, pickedIds);
-            if (armor != null)
-            {
-                loot.Add(armor);
-                pickedIds.Add(armor.ID);
-            }
-
-            // 3. Generate Relic
+            // 2. Generate Relic
             var relic = GetRandomItemByType(ItemType.Relic, pickedIds);
             if (relic != null)
             {

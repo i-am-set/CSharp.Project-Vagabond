@@ -82,7 +82,6 @@ namespace ProjectVagabond.Battle
                     combatant.Spells = partyMember.Spells;
                     combatant.PortraitIndex = partyMember.PortraitIndex;
                     combatant.EquippedWeaponId = partyMember.EquippedWeaponId;
-                    combatant.EquippedArmorId = partyMember.EquippedArmorId;
                     combatant.EquippedRelicId = partyMember.EquippedRelicId;
                     combatant.DefaultStrikeMoveID = partyMember.DefaultStrikeMoveID;
 
@@ -95,29 +94,7 @@ namespace ProjectVagabond.Battle
                     }
                 }
 
-                // 1. Apply Armor Passives
-                if (!string.IsNullOrEmpty(combatant.EquippedArmorId) &&
-                    BattleDataCache.Armors.TryGetValue(combatant.EquippedArmorId, out var armorData))
-                {
-                    // Register Armor Abilities
-                    var armorAbilities = AbilityFactory.CreateAbilitiesFromData(armorData.Effects, armorData.StatModifiers);
-                    combatant.RegisterAbilities(armorAbilities);
-
-                    if (armorData.Effects != null && armorData.Effects.Count > 0)
-                    {
-                        var armorAsRelic = new RelicData
-                        {
-                            RelicID = armorData.ArmorID,
-                            RelicName = armorData.ArmorName,
-                            AbilityName = armorData.AbilityName ?? "Armor Ability",
-                            Effects = armorData.Effects,
-                            StatModifiers = armorData.StatModifiers
-                        };
-                        combatant.ActiveRelics.Add(armorAsRelic);
-                    }
-                }
-
-                // 2. Apply Weapon Passives (Stats only, effects are on the move)
+                // 1. Apply Weapon Passives (Stats only, effects are on the move)
                 if (!string.IsNullOrEmpty(combatant.EquippedWeaponId) &&
                     BattleDataCache.Weapons.TryGetValue(combatant.EquippedWeaponId, out var weaponData))
                 {
@@ -151,7 +128,7 @@ namespace ProjectVagabond.Battle
                 combatant.Stats.CurrentMana = statSource.CurrentMana;
                 combatant.VisualHP = combatant.Stats.CurrentHP;
 
-                // 3. Load Relic Abilities (Single Slot)
+                // 2. Load Relic Abilities (Single Slot)
                 if (!string.IsNullOrEmpty(combatant.EquippedRelicId))
                 {
                     if (BattleDataCache.Relics.TryGetValue(combatant.EquippedRelicId, out var relicData))

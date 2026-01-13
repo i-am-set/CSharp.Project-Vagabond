@@ -82,7 +82,6 @@ namespace ProjectVagabond.UI
                 selectedBorderSprite = _overlay.SelectedInventoryCategory switch
                 {
                     InventoryCategory.Weapons => _overlay.SpriteManager.InventoryBorderWeapons,
-                    InventoryCategory.Armor => _overlay.SpriteManager.InventoryBorderArmor,
                     InventoryCategory.Relics => _overlay.SpriteManager.InventoryBorderRelics,
                     InventoryCategory.Consumables => _overlay.SpriteManager.InventoryBorderConsumables,
                     InventoryCategory.Misc => _overlay.SpriteManager.InventoryBorderMisc,
@@ -178,7 +177,6 @@ namespace ProjectVagabond.UI
                         int totalItems = 1;
                         var member = _overlay.GameState.PlayerState.Party[_overlay.CurrentPartyMemberIndex];
                         if (_equipSystem.ActiveEquipSlotType == EquipSlotType.Weapon) totalItems += _overlay.GameState.PlayerState.Weapons.Count;
-                        else if (_equipSystem.ActiveEquipSlotType == EquipSlotType.Armor) totalItems += _overlay.GameState.PlayerState.Armors.Count;
                         else if (_equipSystem.ActiveEquipSlotType == EquipSlotType.Relic) totalItems += _overlay.GameState.PlayerState.Relics.Count;
 
                         int maxScroll = Math.Max(0, totalItems - 7);
@@ -439,36 +437,32 @@ namespace ProjectVagabond.UI
 
                 int slotSize = 16;
                 int gap = 4;
-                int totalEquipWidth = (slotSize * 3) + (gap * 2);
+                // 2 slots: Weapon, Relic
+                int totalEquipWidth = (slotSize * 2) + (gap * 1);
                 int equipStartX = centerX - (totalEquipWidth / 2);
 
                 Rectangle weaponFrame = Rectangle.Empty;
-                Rectangle armorFrame = Rectangle.Empty;
                 Rectangle relicFrame = Rectangle.Empty;
 
                 if (slotFrames != null && slotFrames.Length > 0)
                 {
                     weaponFrame = slotFrames[(baseFrameIndex + 1) % slotFrames.Length];
-                    armorFrame = slotFrames[(baseFrameIndex + 2) % slotFrames.Length];
-                    relicFrame = slotFrames[(baseFrameIndex + 3) % slotFrames.Length];
+                    relicFrame = slotFrames[(baseFrameIndex + 2) % slotFrames.Length];
                 }
 
                 if (isOccupied)
                 {
-                    int baseBtnIndex = i * 3;
+                    int baseBtnIndex = i * 2; // 2 buttons per member
                     bool weaponHover = _overlay.PartyEquipButtons[baseBtnIndex].IsHovered;
-                    bool armorHover = _overlay.PartyEquipButtons[baseBtnIndex + 1].IsHovered;
-                    bool relicHover = _overlay.PartyEquipButtons[baseBtnIndex + 2].IsHovered;
+                    bool relicHover = _overlay.PartyEquipButtons[baseBtnIndex + 1].IsHovered;
 
                     DrawEquipSlotIcon(spriteBatch, equipStartX, currentY, member!.EquippedWeaponId, EquipSlotType.Weapon, weaponHover, weaponFrame, i);
-                    DrawEquipSlotIcon(spriteBatch, equipStartX + slotSize + gap, currentY, member.EquippedArmorId, EquipSlotType.Armor, armorHover, armorFrame, i);
-                    DrawEquipSlotIcon(spriteBatch, equipStartX + (slotSize + gap) * 2, currentY, member.EquippedRelicId, EquipSlotType.Relic, relicHover, relicFrame, i);
+                    DrawEquipSlotIcon(spriteBatch, equipStartX + slotSize + gap, currentY, member.EquippedRelicId, EquipSlotType.Relic, relicHover, relicFrame, i);
                 }
                 else
                 {
                     DrawEquipSlotBackground(spriteBatch, equipStartX, currentY, weaponFrame);
-                    DrawEquipSlotBackground(spriteBatch, equipStartX + slotSize + gap, currentY, armorFrame);
-                    DrawEquipSlotBackground(spriteBatch, equipStartX + (slotSize + gap) * 2, currentY, relicFrame);
+                    DrawEquipSlotBackground(spriteBatch, equipStartX + slotSize + gap, currentY, relicFrame);
                 }
 
                 currentY += slotSize + 6 - 5;
@@ -476,14 +470,10 @@ namespace ProjectVagabond.UI
                 string[] statLabels = { "STR", "INT", "TEN", "AGI" };
                 string[] statKeys = { "Strength", "Intelligence", "Tenacity", "Agility" };
 
-                // --- DETERMINE HOVER CONTEXT ---
-                bool isHoveringThisMember = isOccupied && _overlay.HoveredMemberIndex == i;
-                bool isHoveringItem = isHoveringThisMember && _overlay.HoveredItemData != null;
-
-                // Identify the type of item being hovered
-                bool isHoveringWeapon = isHoveringItem && _overlay.HoveredItemData is WeaponData;
-                bool isHoveringArmor = isHoveringItem && _overlay.HoveredItemData is ArmorData;
-                bool isHoveringRelic = isHoveringItem && _overlay.HoveredItemData is RelicData;
+                // --- CENTERED STAT BLOCK LOGIC ---
+                // Label (~17px) + Gap (3px) + Bar (40px) = ~60px total width.
+                // CenterX - 30 puts the start 30px left of center.
+                int statBlockStartX = centerX - 30;
 
                 for (int s = 0; s < 4; s++)
                 {
@@ -497,16 +487,20 @@ namespace ProjectVagabond.UI
                         if (!string.IsNullOrEmpty(member!.EquippedWeaponId) && BattleDataCache.Weapons.TryGetValue(member.EquippedWeaponId, out var w))
                             w.StatModifiers.TryGetValue(statKeys[s], out weaponBonus);
 
-                        int armorBonus = 0;
-                        if (!string.IsNullOrEmpty(member.EquippedArmorId) && BattleDataCache.Armors.TryGetValue(member.EquippedArmorId, out var a))
-                            a.StatModifiers.TryGetValue(statKeys[s], out armorBonus);
-
                         int relicBonus = 0;
                         if (!string.IsNullOrEmpty(member.EquippedRelicId) && BattleDataCache.Relics.TryGetValue(member.EquippedRelicId, out var r))
                             r.StatModifiers.TryGetValue(statKeys[s], out relicBonus);
 
-                        totalEquipBonus = weaponBonus + armorBonus + relicBonus;
+                        totalEquipBonus = weaponBonus + relicBonus;
                     }
+
+                    // --- DETERMINE HOVER CONTEXT ---
+                    bool isHoveringThisMember = isOccupied && _overlay.HoveredMemberIndex == i;
+                    bool isHoveringItem = isHoveringThisMember && _overlay.HoveredItemData != null;
+
+                    // Identify the type of item being hovered
+                    bool isHoveringWeapon = isHoveringItem && _overlay.HoveredItemData is WeaponData;
+                    bool isHoveringRelic = isHoveringItem && _overlay.HoveredItemData is RelicData;
 
                     // --- CALCULATE LAYERS ---
                     // 1. Passive Bonus: Sum of equipped items EXCLUDING the slot being hovered/replaced.
@@ -516,10 +510,6 @@ namespace ProjectVagabond.UI
                         // Add Weapon if NOT hovering a weapon
                         if (!isHoveringWeapon && !string.IsNullOrEmpty(member!.EquippedWeaponId) && BattleDataCache.Weapons.TryGetValue(member.EquippedWeaponId, out var w))
                             if (w.StatModifiers.TryGetValue(statKeys[s], out int val)) passiveBonus += val;
-
-                        // Add Armor if NOT hovering armor
-                        if (!isHoveringArmor && !string.IsNullOrEmpty(member.EquippedArmorId) && BattleDataCache.Armors.TryGetValue(member.EquippedArmorId, out var a))
-                            if (a.StatModifiers.TryGetValue(statKeys[s], out int val)) passiveBonus += val;
 
                         // Add Relic if NOT hovering relic
                         if (!isHoveringRelic && !string.IsNullOrEmpty(member.EquippedRelicId) && BattleDataCache.Relics.TryGetValue(member.EquippedRelicId, out var r))
@@ -531,7 +521,6 @@ namespace ProjectVagabond.UI
                     if (isHoveringItem)
                     {
                         if (isHoveringWeapon) ((WeaponData)_overlay.HoveredItemData).StatModifiers.TryGetValue(statKeys[s], out activeBonus);
-                        else if (isHoveringArmor) ((ArmorData)_overlay.HoveredItemData).StatModifiers.TryGetValue(statKeys[s], out activeBonus);
                         else if (isHoveringRelic) ((RelicData)_overlay.HoveredItemData).StatModifiers.TryGetValue(statKeys[s], out activeBonus);
                     }
 
@@ -542,14 +531,14 @@ namespace ProjectVagabond.UI
 
                     // Draw Label
                     Color labelColor = isOccupied ? _overlay.Global.Palette_LightGray : _overlay.Global.Palette_DarkGray;
-                    spriteBatch.DrawStringSnapped(secondaryFont, statLabels[s], new Vector2(equipStartX - 3, currentY), labelColor);
+                    spriteBatch.DrawStringSnapped(secondaryFont, statLabels[s], new Vector2(statBlockStartX, currentY), labelColor);
 
                     // Draw Bar Background
                     Texture2D statBarBg = isOccupied ? _overlay.SpriteManager.InventoryStatBarEmpty : _overlay.SpriteManager.InventoryStatBarDisabled;
                     if (statBarBg != null)
                     {
-                        float labelWidth = secondaryFont.MeasureString(statLabels[s]).Width;
-                        float barX = equipStartX - 3 + labelWidth + 3;
+                        // Fixed offset for bar to ensure vertical alignment
+                        float barX = statBlockStartX + 19;
                         float barYOffset = 0f;
                         if (s == 1 || s == 3) barYOffset = 0.5f;
                         float barY = currentY + (secondaryFont.LineHeight - 3) / 2f + barYOffset;
@@ -671,11 +660,6 @@ namespace ProjectVagabond.UI
                 if (w.StatModifiers.TryGetValue(statName, out int val)) bonus += val;
             }
 
-            if (!string.IsNullOrEmpty(member.EquippedArmorId) && BattleDataCache.Armors.TryGetValue(member.EquippedArmorId, out var a))
-            {
-                if (a.StatModifiers.TryGetValue(statName, out int val)) bonus += val;
-            }
-
             if (!string.IsNullOrEmpty(member.EquippedRelicId) && BattleDataCache.Relics.TryGetValue(member.EquippedRelicId, out var r))
             {
                 if (r.StatModifiers.TryGetValue(statName, out int val)) bonus += val;
@@ -718,11 +702,6 @@ namespace ProjectVagabond.UI
                 {
                     var data = _dataProcessor.GetWeaponData(itemId);
                     if (data != null) path = $"Sprites/Items/Weapons/{data.WeaponID}";
-                }
-                else if (type == EquipSlotType.Armor)
-                {
-                    var data = _dataProcessor.GetArmorData(itemId);
-                    if (data != null) path = $"Sprites/Items/Armor/{data.ArmorID}";
                 }
                 else if (type == EquipSlotType.Relic)
                 {

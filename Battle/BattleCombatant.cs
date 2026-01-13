@@ -124,7 +124,6 @@ namespace ProjectVagabond.Battle
 
         // Equipment
         public string? EquippedWeaponId { get; set; }
-        public string? EquippedArmorId { get; set; }
         public string? EquippedRelicId { get; set; }
 
         public List<StatusEffectInstance> ActiveStatusEffects { get; set; } = new List<StatusEffectInstance>();

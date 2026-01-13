@@ -102,16 +102,6 @@ namespace ProjectVagabond.Battle
                 }
             }
 
-            // Auto-Equip Armor
-            if (data.StartingArmor.Any())
-            {
-                string armorId = data.StartingArmor.First().Key;
-                if (BattleDataCache.Armors.ContainsKey(armorId))
-                {
-                    member.EquippedArmorId = armorId;
-                }
-            }
-
             // Auto-Equip Relic (Only 1 now)
             if (data.StartingRelics.Any())
             {

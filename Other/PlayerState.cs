@@ -41,7 +41,6 @@ namespace ProjectVagabond
 
         // --- SHARED INVENTORY (Team Shared) ---
         public Dictionary<string, int> Weapons { get; set; } = new Dictionary<string, int>();
-        public Dictionary<string, int> Armors { get; set; } = new Dictionary<string, int>();
         public Dictionary<string, int> Relics { get; set; } = new Dictionary<string, int>();
         public Dictionary<string, int> Consumables { get; set; } = new Dictionary<string, int>();
         public Dictionary<string, int> MiscItems { get; set; } = new Dictionary<string, int>();
@@ -63,7 +62,6 @@ namespace ProjectVagabond
         public int PortraitIndex { get => Leader?.PortraitIndex ?? 0; set { if (Leader != null) Leader.PortraitIndex = value; } }
 
         public string? EquippedWeaponId { get => Leader?.EquippedWeaponId; set { if (Leader != null) Leader.EquippedWeaponId = value; } }
-        public string? EquippedArmorId { get => Leader?.EquippedArmorId; set { if (Leader != null) Leader.EquippedArmorId = value; } }
         public string? EquippedRelicId { get => Leader?.EquippedRelicId; set { if (Leader != null) Leader.EquippedRelicId = value; } }
 
         public MoveEntry?[] Spells { get => Leader?.Spells ?? new MoveEntry?[4]; set { if (Leader != null) Leader.Spells = value; } }
@@ -143,11 +141,6 @@ namespace ProjectVagabond
                 if (weapon.StatModifiers.TryGetValue(statName, out int mod)) bonus += mod;
             }
 
-            if (!string.IsNullOrEmpty(member.EquippedArmorId) && BattleDataCache.Armors.TryGetValue(member.EquippedArmorId, out var armor))
-            {
-                if (armor.StatModifiers.TryGetValue(statName, out int mod)) bonus += mod;
-            }
-
             return Math.Max(1, baseValue + bonus);
         }
 
@@ -169,27 +162,6 @@ namespace ProjectVagabond
                 {
                     if (member.EquippedWeaponId == weaponId && Weapons.GetValueOrDefault(weaponId) == 0)
                         member.EquippedWeaponId = null;
-                }
-            }
-        }
-
-        public void AddArmor(string armorId, int quantity = 1)
-        {
-            if (Armors.ContainsKey(armorId)) Armors[armorId] += quantity;
-            else Armors[armorId] = quantity;
-        }
-
-        public void RemoveArmor(string armorId, int quantity = 1)
-        {
-            if (Armors.TryGetValue(armorId, out int current))
-            {
-                Armors[armorId] = Math.Max(0, current - quantity);
-                if (Armors[armorId] == 0) Armors.Remove(armorId);
-
-                foreach (var member in Party)
-                {
-                    if (member.EquippedArmorId == armorId && Armors.GetValueOrDefault(armorId) == 0)
-                        member.EquippedArmorId = null;
                 }
             }
         }

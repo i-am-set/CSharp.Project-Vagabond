@@ -19,7 +19,6 @@ namespace ProjectVagabond.Battle
         public static Dictionary<string, ConsumableItemData> Consumables { get; private set; }
         public static Dictionary<string, RelicData> Relics { get; private set; }
         public static Dictionary<string, WeaponData> Weapons { get; private set; }
-        public static Dictionary<string, ArmorData> Armors { get; private set; }
         public static Dictionary<string, MiscItemData> MiscItems { get; private set; }
         public static Dictionary<string, PartyMemberData> PartyMembers { get; private set; }
         public static void LoadData(ContentManager content)
@@ -85,16 +84,6 @@ namespace ProjectVagabond.Battle
                 Weapons = weaponList.ToDictionary(w => w.WeaponID, w => w, StringComparer.OrdinalIgnoreCase);
             }
             else Weapons = new Dictionary<string, WeaponData>();
-
-            // --- ARMOR ---
-            string armorPath = Path.Combine(content.RootDirectory, "Data", "Items", "Armor.json");
-            if (File.Exists(armorPath))
-            {
-                string armorJson = File.ReadAllText(armorPath);
-                var armorList = JsonSerializer.Deserialize<List<ArmorData>>(armorJson, jsonOptions);
-                Armors = armorList.ToDictionary(a => a.ArmorID, a => a, StringComparer.OrdinalIgnoreCase);
-            }
-            else Armors = new Dictionary<string, ArmorData>();
 
             // --- MISC ITEMS ---
             string miscPath = Path.Combine(content.RootDirectory, "Data", "Items", "Misc.json");

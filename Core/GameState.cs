@@ -1,10 +1,20 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Dice;
+using ProjectVagabond.Items;
 using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.Transitions;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace ProjectVagabond
@@ -56,10 +66,6 @@ namespace ProjectVagabond
                 foreach (var kvp in oakleyData.StartingWeapons)
                 {
                     if (BattleDataCache.Weapons.ContainsKey(kvp.Key)) PlayerState.AddWeapon(kvp.Key, kvp.Value);
-                }
-                foreach (var kvp in oakleyData.StartingArmor)
-                {
-                    if (BattleDataCache.Armors.ContainsKey(kvp.Key)) PlayerState.AddArmor(kvp.Key, kvp.Value);
                 }
                 foreach (var kvp in oakleyData.StartingRelics)
                 {
@@ -122,7 +128,6 @@ namespace ProjectVagabond
                     case "RemoveItem":
                         bool removed = false;
                         if (PlayerState.RemoveConsumable(outcome.Value)) removed = true;
-                        else if (PlayerState.Armors.ContainsKey(outcome.Value)) { PlayerState.RemoveArmor(outcome.Value); removed = true; }
                         else if (PlayerState.Weapons.ContainsKey(outcome.Value)) { PlayerState.RemoveWeapon(outcome.Value); removed = true; }
 
                         if (removed)

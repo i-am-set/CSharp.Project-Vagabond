@@ -45,7 +45,6 @@ namespace ProjectVagabond
         public Texture2D StatChangeIconsSpriteSheetSilhouette { get; private set; }
 
         // Item Sprite Sheets
-        public Texture2D ItemArmorSpriteSheet { get; private set; }
         public Texture2D ItemConsumablesSpriteSheet { get; private set; }
         public Texture2D ItemRelicsSpriteSheet { get; private set; }
         public Texture2D ItemWeaponsSpriteSheet { get; private set; }
@@ -160,7 +159,6 @@ namespace ProjectVagabond
         public Texture2D SplitMapHeaderBorder { get; private set; }
         public Texture2D SplitMapCloseInventoryButton { get; private set; }
         public Texture2D SplitMapSettingsButton { get; private set; }
-        public Texture2D InventoryBorderArmor { get; private set; }
         public Texture2D InventoryBorderHeader { get; private set; }
         public Texture2D InventoryBorderRelics { get; private set; }
         public Texture2D InventoryBorderWeapons { get; private set; }
@@ -171,7 +169,6 @@ namespace ProjectVagabond
         public Texture2D InventoryBorderEquipInfoPanelLeft { get; private set; }
         public Texture2D InventoryBorderEquipInfoPanelRight { get; private set; }
         public Texture2D InventoryHeaderButtonWeapons { get; private set; }
-        public Texture2D InventoryHeaderButtonArmor { get; private set; }
         public Texture2D InventoryHeaderButtonRelics { get; private set; }
         public Texture2D InventoryHeaderButtonConsumables { get; private set; }
         public Texture2D InventoryHeaderButtonMisc { get; private set; }
@@ -316,9 +313,6 @@ namespace ProjectVagabond
             }
 
             // Load Item Sprite Sheets
-            try { ItemArmorSpriteSheet = _core.Content.Load<Texture2D>("Sprites/Items/item_armor_spritesheet"); }
-            catch { ItemArmorSpriteSheet = _textureFactory.CreateColoredTexture(128, 256, Color.Magenta); }
-
             try { ItemConsumablesSpriteSheet = _core.Content.Load<Texture2D>("Sprites/Items/item_consumables_spritesheet"); }
             catch { ItemConsumablesSpriteSheet = _textureFactory.CreateColoredTexture(128, 256, Color.Magenta); }
 
@@ -400,8 +394,6 @@ namespace ProjectVagabond
             catch { SplitMapCloseInventoryButton = _textureFactory.CreateColoredTexture(32, 16, Color.Magenta); }
             try { SplitMapSettingsButton = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/SplitMap_Settings_Button"); }
             catch { SplitMapSettingsButton = _textureFactory.CreateColoredTexture(32, 16, Color.Magenta); }
-            try { InventoryBorderArmor = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_border_armor"); }
-            catch { InventoryBorderArmor = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
             try { InventoryBorderHeader = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_border_header"); }
             catch { InventoryBorderHeader = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
             try { InventoryBorderRelics = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_border_relics"); }
@@ -425,8 +417,6 @@ namespace ProjectVagabond
 
             try { InventoryHeaderButtonWeapons = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_header_button_weapons"); }
             catch { InventoryHeaderButtonWeapons = _textureFactory.CreateColoredTexture(96, 32, Color.Magenta); }
-            try { InventoryHeaderButtonArmor = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_header_button_armor"); }
-            catch { InventoryHeaderButtonArmor = _textureFactory.CreateColoredTexture(96, 32, Color.Magenta); }
             try { InventoryHeaderButtonRelics = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_header_button_relics"); }
             catch { InventoryHeaderButtonRelics = _textureFactory.CreateColoredTexture(96, 32, Color.Magenta); }
             try { InventoryHeaderButtonConsumables = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_header_button_consumables"); }
@@ -908,13 +898,6 @@ namespace ProjectVagabond
                     if (int.TryParse(imagePath.Substring("Sprites/Items/Weapons/".Length), out int id))
                     {
                         return ExtractSpriteFromSheet(ItemWeaponsSpriteSheet, id, cacheKey);
-                    }
-                }
-                else if (imagePath.StartsWith("Sprites/Items/Armor/"))
-                {
-                    if (int.TryParse(imagePath.Substring("Sprites/Items/Armor/".Length), out int id))
-                    {
-                        return ExtractSpriteFromSheet(ItemArmorSpriteSheet, id, cacheKey);
                     }
                 }
                 else if (imagePath.StartsWith("Sprites/Items/Relics/"))

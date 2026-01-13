@@ -15,7 +15,6 @@ namespace ProjectVagabond.Utils
             int rarity = 0;
 
             if (itemData is WeaponData w) { rarity = w.Rarity; }
-            else if (itemData is ArmorData a) { rarity = a.Rarity; }
             else if (itemData is RelicData r) { rarity = r.Rarity; }
             else if (itemData is ConsumableItemData c)
             {

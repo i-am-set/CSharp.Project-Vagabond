@@ -3,13 +3,17 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Dice;
 using ProjectVagabond.Items;
+using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace ProjectVagabond.Scenes
@@ -375,7 +379,6 @@ namespace ProjectVagabond.Scenes
             switch (item.Type)
             {
                 case ItemType.Weapon: _gameState.PlayerState.AddWeapon(item.ID); break;
-                case ItemType.Armor: _gameState.PlayerState.AddArmor(item.ID); break;
                 case ItemType.Relic: _gameState.PlayerState.AddRelic(item.ID); break;
             }
         }

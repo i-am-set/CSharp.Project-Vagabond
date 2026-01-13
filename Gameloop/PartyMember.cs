@@ -40,7 +40,6 @@ namespace ProjectVagabond
 
         // Equipment
         public string? EquippedWeaponId { get; set; }
-        public string? EquippedArmorId { get; set; }
         public string? EquippedRelicId { get; set; }
 
         // Fixed Spell Slots (Max 4)
