@@ -55,11 +55,14 @@ namespace ProjectVagabond.Scenes
 
         private const float PLAYER_MOVE_SPEED = 30f;
         private const float CAMERA_LERP_SPEED = 5f;
-        private const float NODE_LIFT_DURATION = 0.2f;
-        private const float PULSE_DURATION = 0.15f;
-        private const float NODE_LOWERING_DURATION = 0.2f;
         private const float POST_EVENT_DELAY = 0.25f;
         private const float PATH_ANIMATION_DURATION = 0.75f;
+
+        // --- NEW ANIMATION TUNING ---
+        private const float NODE_LIFT_DURATION = 0.25f;     // Slightly longer for anticipation
+        private const float PULSE_DURATION = 0.4f;          // Longer for the elastic wobble
+        private const float NODE_LOWERING_DURATION = 0.5f;  // Longer for the bounce
+        private const float NODE_LIFT_AMOUNT = 12f;         // Height of the jump
 
         private Vector2 _cameraOffset;
         private Vector2 _targetCameraOffset;
@@ -101,7 +104,6 @@ namespace ProjectVagabond.Scenes
 
         private const float NODE_FRAME_DURATION = 0.5f;
         private float _nodeLiftTimer = 0f;
-        private const float NODE_LIFT_AMOUNT = 15f;
 
         private bool _isPanning = false;
         private Point _panStartMousePosition;
@@ -141,8 +143,25 @@ namespace ProjectVagabond.Scenes
 
         // --- NODE HOVER ANIMATION STATE ---
         private readonly Dictionary<int, float> _nodeHoverTimers = new Dictionary<int, float>();
-        private const float NODE_HOVER_POP_SCALE_TARGET = 1.1f;
+        private const float NODE_HOVER_POP_SCALE_TARGET = 1.5f;
         private const float NODE_HOVER_POP_SPEED = 12.0f;
+
+        // --- NEW: Node Hover Float/Rotate Tuning ---
+        private const float NODE_HOVER_FLOAT_SPEED = 3.0f;
+        private const float NODE_HOVER_FLOAT_AMP = 2.0f;
+        private const float NODE_HOVER_ROT_SPEED = 2.0f;
+        private const float NODE_HOVER_ROT_AMT = 0.1f;
+
+        // --- NEW: Node Arrival Animation State ---
+        private Vector2 _nodeArrivalScale = Vector2.One;
+        private Vector2 _nodeArrivalShake = Vector2.Zero;
+
+        // --- NEW: Node Selection Animation State ---
+        private int _selectedNodeId = -1;
+        private float _nodeSelectionAnimTimer = 0f;
+        private const float NODE_SELECTION_POP_DURATION = 0.4f;
+        private const float NODE_SELECTION_SCALE_EXTRA = 0.5f; // Adds to the 1.5 hover scale -> 2.0 total
+        private const float NODE_SELECTION_SHAKE_MAGNITUDE = 10.0f;
 
         public SplitMapScene()
         {
@@ -278,6 +297,9 @@ namespace ProjectVagabond.Scenes
             _viewToReturnTo = SplitMapView.Map;
             _nodeTextWaveTimer = 0f; // Reset wave timer
             _nodeHoverTimers.Clear(); // Reset hover timers
+            _nodeArrivalScale = Vector2.One;
+            _nodeArrivalShake = Vector2.Zero;
+            _selectedNodeId = -1; // Reset selection
 
             _inventoryOverlay.Initialize();
 
@@ -731,6 +753,12 @@ namespace ProjectVagabond.Scenes
             // --- UPDATE NODE HOVER TIMERS ---
             UpdateNodeHoverTimers(deltaTime);
 
+            // --- UPDATE SELECTION ANIMATION ---
+            if (_selectedNodeId != -1)
+            {
+                _nodeSelectionAnimTimer += deltaTime;
+            }
+
             switch (_mapState)
             {
                 case SplitMapState.PlayerMoving:
@@ -768,7 +796,8 @@ namespace ProjectVagabond.Scenes
                 {
                     if (!_nodeHoverTimers.ContainsKey(node.Id)) _nodeHoverTimers[node.Id] = 0f;
 
-                    bool isHovered = (node.Id == _hoveredNodeId);
+                    // Treat as hovered if it is the actual hovered node OR if it is the selected node
+                    bool isHovered = (node.Id == _hoveredNodeId) || (node.Id == _selectedNodeId);
                     float change = dt * NODE_HOVER_POP_SPEED;
 
                     if (isHovered)
@@ -836,6 +865,11 @@ namespace ProjectVagabond.Scenes
                     }
                     _snapBackDelayTimer = 0f;
                     _cameraVelocity = Vector2.Zero;
+
+                    // --- SELECTION LOGIC ---
+                    _selectedNodeId = _hoveredNodeId;
+                    _nodeSelectionAnimTimer = 0f;
+                    _hapticsManager.TriggerCompoundShake(0.2f); // Small haptic feedback
 
                     StartPlayerMove(_hoveredNodeId);
                     _hoveredNodeId = -1;
@@ -952,6 +986,9 @@ namespace ProjectVagabond.Scenes
                 _playerCurrentNodeId = _playerMoveTargetNodeId;
                 _visitedNodeIds.Add(_playerCurrentNodeId);
 
+                // --- RESET SELECTION ON ARRIVAL ---
+                _selectedNodeId = -1;
+
                 var toNode = _currentMap?.Nodes[_playerCurrentNodeId];
                 if (toNode != null)
                 {
@@ -970,22 +1007,48 @@ namespace ProjectVagabond.Scenes
             if (currentNode != null)
             {
                 float progress = Math.Clamp(_nodeLiftTimer / NODE_LIFT_DURATION, 0f, 1f);
-                currentNode.VisualOffset = new Vector2(0, MathHelper.Lerp(0, -NODE_LIFT_AMOUNT, Easing.EaseOutCubic(progress)));
+                float eased = Easing.EaseOutBack(progress); // Use EaseOutBack for jump feel
+
+                // Lift
+                currentNode.VisualOffset = new Vector2(0, MathHelper.Lerp(0, -NODE_LIFT_AMOUNT, eased));
+
+                // Stretch (Taller, Thinner)
+                // Scale X: 1.0 -> 0.8 -> 1.0
+                // Scale Y: 1.0 -> 1.2 -> 1.0
+                float stretch = MathF.Sin(progress * MathHelper.Pi); // 0 -> 1 -> 0
+                _nodeArrivalScale = new Vector2(1.0f - (stretch * 0.2f), 1.0f + (stretch * 0.2f));
             }
 
             if (_nodeLiftTimer >= NODE_LIFT_DURATION)
             {
                 _mapState = SplitMapState.PulsingNode;
                 _pulseTimer = 0f;
+                _nodeArrivalScale = Vector2.One; // Reset scale for next phase
             }
         }
 
         private void UpdatePulsingNode(float deltaTime)
         {
             _pulseTimer += deltaTime;
+            float progress = Math.Clamp(_pulseTimer / PULSE_DURATION, 0f, 1f);
+
+            // Elastic Pop (Big -> Normal)
+            float elastic = Easing.EaseOutElastic(progress);
+            // Map 0..1 to 1.4..1.0
+            float scale = 1.0f + (0.4f * (1.0f - elastic));
+            _nodeArrivalScale = new Vector2(scale);
+
+            // Violent Shake
+            float shakeDecay = 1.0f - progress;
+            float shakeX = (float)(_random.NextDouble() * 2 - 1) * 3f * shakeDecay;
+            float shakeY = (float)(_random.NextDouble() * 2 - 1) * 3f * shakeDecay;
+            _nodeArrivalShake = new Vector2(shakeX, shakeY);
+
             if (_pulseTimer >= PULSE_DURATION)
             {
                 _mapState = SplitMapState.EventInProgress;
+                _nodeArrivalScale = Vector2.One;
+                _nodeArrivalShake = Vector2.Zero;
                 TriggerNodeEvent(_playerCurrentNodeId);
             }
         }
@@ -997,7 +1060,22 @@ namespace ProjectVagabond.Scenes
             if (currentNode != null)
             {
                 float progress = Math.Clamp(_nodeLiftTimer / NODE_LOWERING_DURATION, 0f, 1f);
-                currentNode.VisualOffset = new Vector2(0, MathHelper.Lerp(-NODE_LIFT_AMOUNT, 0, Easing.EaseOutCubic(progress)));
+                float eased = Easing.EaseOutBounce(progress); // Bounce on landing
+
+                // Lower
+                currentNode.VisualOffset = new Vector2(0, MathHelper.Lerp(-NODE_LIFT_AMOUNT, 0, eased));
+
+                // Squash on impact (only at the very end of the bounce)
+                if (progress > 0.8f)
+                {
+                    float squashProgress = (progress - 0.8f) / 0.2f;
+                    float squash = MathF.Sin(squashProgress * MathHelper.Pi); // 0 -> 1 -> 0
+                    _nodeArrivalScale = new Vector2(1.0f + (squash * 0.3f), 1.0f - (squash * 0.3f));
+                }
+                else
+                {
+                    _nodeArrivalScale = Vector2.One;
+                }
             }
 
             if (_nodeLiftTimer >= NODE_LOWERING_DURATION)
@@ -1007,6 +1085,7 @@ namespace ProjectVagabond.Scenes
                     currentNode.VisualOffset = Vector2.Zero;
                     UpdateCameraTarget(currentNode.Position, false);
                 }
+                _nodeArrivalScale = Vector2.One;
                 _mapState = SplitMapState.PostEventDelay;
                 _postEventDelayTimer = POST_EVENT_DELAY;
             }
@@ -1646,7 +1725,10 @@ namespace ProjectVagabond.Scenes
                 color = _global.Palette_Gray;
             }
 
-            if (node.IsReachable && node.Id == _hoveredNodeId)
+            bool isSelected = (node.Id == _selectedNodeId);
+            bool isHovered = (node.Id == _hoveredNodeId);
+
+            if (node.IsReachable && (isHovered || isSelected))
             {
                 color = _global.ButtonHoverColor;
             }
@@ -1660,11 +1742,71 @@ namespace ProjectVagabond.Scenes
 
             // --- HOVER POP ANIMATION ---
             float hoverT = _nodeHoverTimers.ContainsKey(node.Id) ? _nodeHoverTimers[node.Id] : 0f;
-            float popScale = 1.0f + (NODE_HOVER_POP_SCALE_TARGET - 1.0f) * Easing.EaseOutBack(hoverT);
-            scale *= popScale; // Combine with existing pulse scale
 
-            var position = bounds.Center.ToVector2() + node.VisualOffset;
-            spriteBatch.DrawSnapped(texture, position, sourceRect, color, 0f, origin, scale, SpriteEffects.None, 0.4f);
+            // If selected, force the hover timer to max (1.0) so it stays popped up
+            if (isSelected) hoverT = 1.0f;
+
+            float popScale = 1.0f + (NODE_HOVER_POP_SCALE_TARGET - 1.0f) * Easing.EaseOutBack(hoverT);
+            scale *= popScale;
+
+            // --- HOVER FLOAT & ROTATE ---
+            float floatOffset = 0f;
+            float rotation = 0f;
+
+            if (hoverT > 0)
+            {
+                float time = (float)gameTime.TotalGameTime.TotalSeconds;
+                float phase = node.Id * 0.5f; // Randomize phase by ID
+
+                // Blend the effect in based on hover timer so it doesn't snap
+                float blend = Easing.EaseOutQuad(hoverT);
+
+                floatOffset = MathF.Sin(time * NODE_HOVER_FLOAT_SPEED + phase) * NODE_HOVER_FLOAT_AMP * blend;
+                rotation = MathF.Sin(time * NODE_HOVER_ROT_SPEED + phase) * NODE_HOVER_ROT_AMT * blend;
+            }
+
+            Vector2 arrivalScale = Vector2.One;
+            Vector2 arrivalShake = Vector2.Zero;
+
+            // Only apply arrival animation effects to the current node
+            if (node.Id == _playerCurrentNodeId)
+            {
+                arrivalScale = _nodeArrivalScale;
+                arrivalShake = _nodeArrivalShake;
+            }
+
+            // --- SELECTION JUICE ---
+            float selectionScale = 0f;
+            Vector2 selectionShake = Vector2.Zero;
+
+            if (isSelected)
+            {
+                // Spring: Sin(t * Pi) * (1-t) for a decaying bump
+                // Map timer 0..DURATION to 0..1
+                float t = Math.Clamp(_nodeSelectionAnimTimer / NODE_SELECTION_POP_DURATION, 0f, 1f);
+
+                // Use a punch curve: fast up, slow down
+                float punch = MathF.Sin(t * MathHelper.Pi) * (1.0f - t);
+                selectionScale = punch * NODE_SELECTION_SCALE_EXTRA;
+
+                // Shake: Random noise decaying over time
+                float shakeDecay = 1.0f - t;
+                float shakeX = (float)(_random.NextDouble() * 2 - 1) * NODE_SELECTION_SHAKE_MAGNITUDE * shakeDecay;
+                float shakeY = (float)(_random.NextDouble() * 2 - 1) * NODE_SELECTION_SHAKE_MAGNITUDE * shakeDecay;
+                selectionShake = new Vector2(shakeX, shakeY);
+            }
+
+            // Combine scales
+            // Base Scale (1.0) * Hover Pop (1.5) * Arrival Scale (Squash/Stretch) + Selection Juice
+            // Note: Selection Juice is additive to the popped scale
+            Vector2 finalScale = new Vector2(
+                (scale + selectionScale) * arrivalScale.X,
+                (scale + selectionScale) * arrivalScale.Y
+            );
+
+            var position = bounds.Center.ToVector2() + node.VisualOffset + new Vector2(0, floatOffset) + arrivalShake + selectionShake;
+
+            spriteBatch.DrawSnapped(texture, position, sourceRect, color, rotation, origin, finalScale, SpriteEffects.None, 0.4f);
         }
 
         private (Texture2D texture, Rectangle? sourceRect, Vector2 origin) GetNodeDrawData(SplitMapNode node, GameTime gameTime)
