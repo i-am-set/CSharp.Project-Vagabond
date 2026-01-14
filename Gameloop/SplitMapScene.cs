@@ -139,6 +139,11 @@ namespace ProjectVagabond.Scenes
         // Rasterizer state for clipping
         private static readonly RasterizerState _scissorRasterizerState = new RasterizerState { ScissorTestEnable = true };
 
+        // --- NODE HOVER ANIMATION STATE ---
+        private readonly Dictionary<int, float> _nodeHoverTimers = new Dictionary<int, float>();
+        private const float NODE_HOVER_POP_SCALE_TARGET = 1.1f;
+        private const float NODE_HOVER_POP_SPEED = 12.0f;
+
         public SplitMapScene()
         {
             _progressionManager = ServiceLocator.Get<ProgressionManager>();
@@ -272,6 +277,7 @@ namespace ProjectVagabond.Scenes
             _pendingCombatArchetypes = null;
             _viewToReturnTo = SplitMapView.Map;
             _nodeTextWaveTimer = 0f; // Reset wave timer
+            _nodeHoverTimers.Clear(); // Reset hover timers
 
             _inventoryOverlay.Initialize();
 
@@ -722,6 +728,9 @@ namespace ProjectVagabond.Scenes
                 _hoveredNodeId = -1;
             }
 
+            // --- UPDATE NODE HOVER TIMERS ---
+            UpdateNodeHoverTimers(deltaTime);
+
             switch (_mapState)
             {
                 case SplitMapState.PlayerMoving:
@@ -749,6 +758,25 @@ namespace ProjectVagabond.Scenes
 
             _playerIcon.Update(gameTime);
             base.Update(gameTime);
+        }
+
+        private void UpdateNodeHoverTimers(float dt)
+        {
+            if (_currentMap != null)
+            {
+                foreach (var node in _currentMap.Nodes.Values)
+                {
+                    if (!_nodeHoverTimers.ContainsKey(node.Id)) _nodeHoverTimers[node.Id] = 0f;
+
+                    bool isHovered = (node.Id == _hoveredNodeId);
+                    float change = dt * NODE_HOVER_POP_SPEED;
+
+                    if (isHovered)
+                        _nodeHoverTimers[node.Id] = Math.Min(_nodeHoverTimers[node.Id] + change, 1f);
+                    else
+                        _nodeHoverTimers[node.Id] = Math.Max(_nodeHoverTimers[node.Id] - change, 0f);
+                }
+            }
         }
 
         private void HandleMapInput(GameTime gameTime)
@@ -1629,6 +1657,11 @@ namespace ProjectVagabond.Scenes
                 float pulseWave = MathF.Sin(pulseProgress * MathF.PI);
                 scale += pulseWave * PULSE_AMOUNT;
             }
+
+            // --- HOVER POP ANIMATION ---
+            float hoverT = _nodeHoverTimers.ContainsKey(node.Id) ? _nodeHoverTimers[node.Id] : 0f;
+            float popScale = 1.0f + (NODE_HOVER_POP_SCALE_TARGET - 1.0f) * Easing.EaseOutBack(hoverT);
+            scale *= popScale; // Combine with existing pulse scale
 
             var position = bounds.Center.ToVector2() + node.VisualOffset;
             spriteBatch.DrawSnapped(texture, position, sourceRect, color, 0f, origin, scale, SpriteEffects.None, 0.4f);

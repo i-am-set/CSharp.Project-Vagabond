@@ -7,11 +7,13 @@ using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Progression;
+using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -30,6 +32,19 @@ namespace ProjectVagabond.UI
         private float _portraitBgTimer;
         private float _portraitBgDuration;
         private static readonly Random _rng = new Random();
+
+        // --- ANIMATION TUNING (Character Panel Slots) ---
+        private const float EQUIP_SLOT_FLOAT_SPEED = 2.5f;
+        private const float EQUIP_SLOT_FLOAT_AMPLITUDE = 0.5f;
+        private const float EQUIP_SLOT_ROTATION_SPEED = 2.0f;
+        private const float EQUIP_SLOT_ROTATION_AMOUNT = 0.05f;
+
+        // --- HOVER POP TUNING ---
+        private const float HOVER_POP_SCALE_TARGET = 1.4f; // Scale up to 140%
+        private const float HOVER_POP_SPEED = 12.0f;       // Fast spring speed
+
+        // Track hover timers for each slot (Key: "{MemberIndex}_{SlotType}")
+        private readonly Dictionary<string, float> _equipSlotHoverTimers = new Dictionary<string, float>();
 
         public InventoryDrawer(SplitMapInventoryOverlay overlay, InventoryDataProcessor dataProcessor, InventoryEquipSystem equipSystem)
         {
@@ -377,14 +392,15 @@ namespace ProjectVagabond.UI
                 // --- DRAW ANIMATED TEXT ---
                 if (isOccupied)
                 {
+                    // Use Drift effect for occupied slots as requested
                     TextAnimator.DrawTextWithEffect(
                         spriteBatch,
                         font,
                         name,
                         namePos,
                         nameColor,
-                        _overlay.PartySlotTextEffects[i],
-                        _overlay.PartySlotTextTimers[i]
+                        TextEffectType.Drift, // Forced Drift
+                        _overlay.PartySlotTextTimers[i] // Timer is fine
                     );
                 }
                 else
@@ -456,8 +472,8 @@ namespace ProjectVagabond.UI
                     bool weaponHover = _overlay.PartyEquipButtons[baseBtnIndex].IsHovered;
                     bool relicHover = _overlay.PartyEquipButtons[baseBtnIndex + 1].IsHovered;
 
-                    DrawEquipSlotIcon(spriteBatch, equipStartX, currentY, member!.EquippedWeaponId, EquipSlotType.Weapon, weaponHover, weaponFrame, i);
-                    DrawEquipSlotIcon(spriteBatch, equipStartX + slotSize + gap, currentY, member.EquippedRelicId, EquipSlotType.Relic, relicHover, relicFrame, i);
+                    DrawEquipSlotIcon(spriteBatch, equipStartX, currentY, member!.EquippedWeaponId, EquipSlotType.Weapon, weaponHover, weaponFrame, i, gameTime);
+                    DrawEquipSlotIcon(spriteBatch, equipStartX + slotSize + gap, currentY, member.EquippedRelicId, EquipSlotType.Relic, relicHover, relicFrame, i, gameTime);
                 }
                 else
                 {
@@ -676,7 +692,7 @@ namespace ProjectVagabond.UI
             spriteBatch.DrawSnapped(_overlay.SpriteManager.InventorySlotIdleSpriteSheet, centerPos, bgFrame, Color.White, 0f, origin, 1.0f, SpriteEffects.None, 0f);
         }
 
-        private void DrawEquipSlotIcon(SpriteBatch spriteBatch, int x, int y, string? itemId, EquipSlotType type, bool isHovered, Rectangle bgFrame, int memberIndex)
+        private void DrawEquipSlotIcon(SpriteBatch spriteBatch, int x, int y, string? itemId, EquipSlotType type, bool isHovered, Rectangle bgFrame, int memberIndex, GameTime gameTime)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
             var destRect = new Rectangle(x, y, 16, 16);
@@ -686,11 +702,6 @@ namespace ProjectVagabond.UI
             if (bgFrame != Rectangle.Empty)
             {
                 spriteBatch.DrawSnapped(_overlay.SpriteManager.InventorySlotIdleSpriteSheet, centerPos, bgFrame, Color.White, 0f, origin, 1.0f, SpriteEffects.None, 0f);
-            }
-
-            if (isHovered)
-            {
-                DrawRectangleBorder(spriteBatch, pixel, destRect, 1, Color.White);
             }
 
             bool isSelected = _overlay.CurrentState == InventoryState.EquipItemSelection && _overlay.CurrentPartyMemberIndex == memberIndex && _overlay.EquipSystem.ActiveEquipSlotType == type;
@@ -712,7 +723,80 @@ namespace ProjectVagabond.UI
                 if (!string.IsNullOrEmpty(path))
                 {
                     var icon = _overlay.SpriteManager.GetSmallRelicSprite(path);
-                    if (icon != null) spriteBatch.DrawSnapped(icon, destRect, Color.White);
+                    var silhouette = _overlay.SpriteManager.GetSmallRelicSpriteSilhouette(path);
+
+                    if (icon != null)
+                    {
+                        // --- JUICY FLOAT ANIMATION ---
+                        // Calculate a smooth sine wave bob.
+                        // Use x position as phase offset so slots don't bob in unison.
+                        float time = (float)gameTime.TotalGameTime.TotalSeconds;
+                        float phase = x * 0.1f;
+
+                        // --- HOVER POP LOGIC ---
+                        // Generate a unique key for this slot to track its hover state
+                        string key = $"{memberIndex}_{type}";
+                        if (!_equipSlotHoverTimers.ContainsKey(key)) _equipSlotHoverTimers[key] = 0f;
+
+                        float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+                        if (isHovered)
+                            _equipSlotHoverTimers[key] = Math.Min(_equipSlotHoverTimers[key] + dt * HOVER_POP_SPEED, 1f);
+                        else
+                            _equipSlotHoverTimers[key] = Math.Max(_equipSlotHoverTimers[key] - dt * HOVER_POP_SPEED, 0f);
+
+                        float t = _equipSlotHoverTimers[key];
+                        // Use EaseOutBack for that "spring" pop
+                        float popScale = 1.0f + (HOVER_POP_SCALE_TARGET - 1.0f) * Easing.EaseOutBack(t);
+
+                        float floatOffset = MathF.Sin(time * EQUIP_SLOT_FLOAT_SPEED + phase) * EQUIP_SLOT_FLOAT_AMPLITUDE;
+                        float rotation = MathF.Sin(time * EQUIP_SLOT_ROTATION_SPEED + phase) * EQUIP_SLOT_ROTATION_AMOUNT;
+
+                        // Apply offset to Y
+                        Vector2 drawPos = new Vector2(destRect.X, destRect.Y + floatOffset);
+
+                        // Use DrawSnapped with rotation and origin for smooth movement
+                        // Origin is center of 16x16 sprite (8,8)
+                        Vector2 iconOrigin = new Vector2(8, 8);
+                        Vector2 iconCenter = drawPos + iconOrigin;
+
+                        // --- DOUBLE LAYERED OUTLINE ---
+                        if (silhouette != null)
+                        {
+                            // Determine colors based on state
+                            Color mainOutlineColor, cornerOutlineColor;
+                            var global = _overlay.Global;
+
+                            if (isSelected)
+                            {
+                                mainOutlineColor = global.ItemOutlineColor_Selected;
+                                cornerOutlineColor = global.ItemOutlineColor_Selected_Corner;
+                            }
+                            else if (isHovered)
+                            {
+                                mainOutlineColor = global.ItemOutlineColor_Hover;
+                                cornerOutlineColor = global.ItemOutlineColor_Hover_Corner;
+                            }
+                            else
+                            {
+                                mainOutlineColor = global.ItemOutlineColor_Idle;
+                                cornerOutlineColor = global.ItemOutlineColor_Idle_Corner;
+                            }
+
+                            // 1. Draw Diagonals (Corners) FIRST (Behind)
+                            spriteBatch.DrawSnapped(silhouette, iconCenter + new Vector2(-1, -1), null, cornerOutlineColor, rotation, iconOrigin, popScale, SpriteEffects.None, 0f);
+                            spriteBatch.DrawSnapped(silhouette, iconCenter + new Vector2(1, -1), null, cornerOutlineColor, rotation, iconOrigin, popScale, SpriteEffects.None, 0f);
+                            spriteBatch.DrawSnapped(silhouette, iconCenter + new Vector2(-1, 1), null, cornerOutlineColor, rotation, iconOrigin, popScale, SpriteEffects.None, 0f);
+                            spriteBatch.DrawSnapped(silhouette, iconCenter + new Vector2(1, 1), null, cornerOutlineColor, rotation, iconOrigin, popScale, SpriteEffects.None, 0f);
+
+                            // 2. Draw Cardinals (Main) SECOND (On Top)
+                            spriteBatch.DrawSnapped(silhouette, iconCenter + new Vector2(-1, 0), null, mainOutlineColor, rotation, iconOrigin, popScale, SpriteEffects.None, 0f);
+                            spriteBatch.DrawSnapped(silhouette, iconCenter + new Vector2(1, 0), null, mainOutlineColor, rotation, iconOrigin, popScale, SpriteEffects.None, 0f);
+                            spriteBatch.DrawSnapped(silhouette, iconCenter + new Vector2(0, -1), null, mainOutlineColor, rotation, iconOrigin, popScale, SpriteEffects.None, 0f);
+                            spriteBatch.DrawSnapped(silhouette, iconCenter + new Vector2(0, 1), null, mainOutlineColor, rotation, iconOrigin, popScale, SpriteEffects.None, 0f);
+                        }
+
+                        spriteBatch.DrawSnapped(icon, iconCenter, null, Color.White, rotation, iconOrigin, popScale, SpriteEffects.None, 0f);
+                    }
                 }
             }
             else if (_overlay.SpriteManager.InventoryEmptySlotSprite != null)

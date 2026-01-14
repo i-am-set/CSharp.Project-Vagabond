@@ -41,6 +41,12 @@ namespace ProjectVagabond.UI
         private const int ICON_X = TITLE_X + TITLE_WIDTH + GAP;
         private const int MAIN_X = ICON_X + ICON_WIDTH + GAP + 5;
 
+        // --- ANIMATION TUNING ---
+        private const float FLOAT_SPEED = 2.5f;
+        private const float FLOAT_AMPLITUDE = 0.5f;
+        private const float FLOAT_ROTATION_SPEED = 2.0f;
+        private const float FLOAT_ROTATION_AMOUNT = 0.05f;
+
         public EquipButton(Rectangle bounds, string mainText, string? hoverMainText = null)
             : base(bounds, "") // Pass empty string to base, we handle text rendering manually
         {
@@ -141,12 +147,25 @@ namespace ProjectVagabond.UI
                 // Calculate Lift Offset (1px up when hovered)
                 float spriteLiftY = isActivated ? -1f : 0f;
 
-                Rectangle destRect = new Rectangle(
-                    (int)(totalX + ICON_X),
-                    (int)(totalY + spriteLiftY),
-                    ICON_WIDTH,
-                    HEIGHT
+                // --- JUICY FLOAT ANIMATION ---
+                // Calculate a smooth sine wave bob.
+                // We use Bounds.Y as a phase offset so items in a list don't bob in perfect unison.
+                float time = (float)gameTime.TotalGameTime.TotalSeconds;
+                float phase = Bounds.Y * 0.05f;
+                float floatOffset = MathF.Sin(time * FLOAT_SPEED + phase) * FLOAT_AMPLITUDE;
+                float rotation = MathF.Sin(time * FLOAT_ROTATION_SPEED + phase) * FLOAT_ROTATION_AMOUNT;
+
+                // Combine offsets
+                float finalIconY = totalY + spriteLiftY + floatOffset;
+
+                // Center of the icon area
+                Vector2 iconCenter = new Vector2(
+                    totalX + ICON_X + ICON_WIDTH / 2f,
+                    finalIconY + HEIGHT / 2f
                 );
+
+                // Origin for rotation (Center of 16x16 sprite)
+                Vector2 iconOrigin = new Vector2(8, 8);
 
                 Rectangle src = IconSourceRect ?? IconTexture.Bounds;
 
@@ -158,20 +177,20 @@ namespace ProjectVagabond.UI
                     Color cornerOutlineColor = isActivated ? _global.ItemOutlineColor_Hover_Corner : _global.ItemOutlineColor_Idle_Corner;
 
                     // 1. Draw Diagonals (Corners) FIRST (Behind)
-                    // Use Rectangle overload to ensure the silhouette is scaled to match the icon size (16x16)
-                    spriteBatch.DrawSnapped(IconSilhouette, new Rectangle(destRect.X - 1, destRect.Y - 1, destRect.Width, destRect.Height), src, cornerOutlineColor);
-                    spriteBatch.DrawSnapped(IconSilhouette, new Rectangle(destRect.X + 1, destRect.Y - 1, destRect.Width, destRect.Height), src, cornerOutlineColor);
-                    spriteBatch.DrawSnapped(IconSilhouette, new Rectangle(destRect.X - 1, destRect.Y + 1, destRect.Width, destRect.Height), src, cornerOutlineColor);
-                    spriteBatch.DrawSnapped(IconSilhouette, new Rectangle(destRect.X + 1, destRect.Y + 1, destRect.Width, destRect.Height), src, cornerOutlineColor);
+                    // Use Vector2 position + Rotation overload to ensure outline rotates with the sprite
+                    spriteBatch.DrawSnapped(IconSilhouette, iconCenter + new Vector2(-1, -1), src, cornerOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
+                    spriteBatch.DrawSnapped(IconSilhouette, iconCenter + new Vector2(1, -1), src, cornerOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
+                    spriteBatch.DrawSnapped(IconSilhouette, iconCenter + new Vector2(-1, 1), src, cornerOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
+                    spriteBatch.DrawSnapped(IconSilhouette, iconCenter + new Vector2(1, 1), src, cornerOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
 
                     // 2. Draw Cardinals (Main) SECOND (On Top)
-                    spriteBatch.DrawSnapped(IconSilhouette, new Rectangle(destRect.X - 1, destRect.Y, destRect.Width, destRect.Height), src, mainOutlineColor);
-                    spriteBatch.DrawSnapped(IconSilhouette, new Rectangle(destRect.X + 1, destRect.Y, destRect.Width, destRect.Height), src, mainOutlineColor);
-                    spriteBatch.DrawSnapped(IconSilhouette, new Rectangle(destRect.X, destRect.Y - 1, destRect.Width, destRect.Height), src, mainOutlineColor);
-                    spriteBatch.DrawSnapped(IconSilhouette, new Rectangle(destRect.X, destRect.Y + 1, destRect.Width, destRect.Height), src, mainOutlineColor);
+                    spriteBatch.DrawSnapped(IconSilhouette, iconCenter + new Vector2(-1, 0), src, mainOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
+                    spriteBatch.DrawSnapped(IconSilhouette, iconCenter + new Vector2(1, 0), src, mainOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
+                    spriteBatch.DrawSnapped(IconSilhouette, iconCenter + new Vector2(0, -1), src, mainOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
+                    spriteBatch.DrawSnapped(IconSilhouette, iconCenter + new Vector2(0, 1), src, mainOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
                 }
 
-                spriteBatch.DrawSnapped(IconTexture, destRect, src, Color.White);
+                spriteBatch.DrawSnapped(IconTexture, iconCenter, src, Color.White, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
 
                 // Draw Rarity Icon
                 if (Rarity >= 0 && spriteManager.RarityIconsSpriteSheet != null)
@@ -179,17 +198,19 @@ namespace ProjectVagabond.UI
                     var rarityRect = spriteManager.GetRarityIconSourceRect(Rarity, gameTime);
 
                     // Position at top-right of the icon area.
-                    // destRect is 16x16.
-                    // Rarity icon is 8x8.
                     // We want the rarity icon's top-right to align with the icon area's top-right.
-                    // IMPORTANT: Use base coordinates (totalX, totalY) so it doesn't move with the sprite lift.
+                    // IMPORTANT: Use the animated Y position (finalIconY) so the star floats with the item.
 
                     float baseRight = totalX + ICON_X + ICON_WIDTH;
-                    float baseTop = totalY;
+                    float baseTop = finalIconY; // Use animated Y
 
                     // Rarity Pos = (Right - 8, Top).
                     // ADJUSTMENT: Moved Up 2px (-2) and Right 3px (+3)
                     Vector2 rarityPos = new Vector2(baseRight - 8 + 3, baseTop - 2);
+
+                    // Round to pixel
+                    rarityPos = new Vector2(MathF.Round(rarityPos.X), MathF.Round(rarityPos.Y));
+
                     spriteBatch.DrawSnapped(spriteManager.RarityIconsSpriteSheet, rarityPos, rarityRect, Color.White);
                 }
             }
