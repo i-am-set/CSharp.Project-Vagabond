@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Items;
 using ProjectVagabond.Progression;
@@ -74,6 +75,7 @@ namespace ProjectVagabond.Scenes
         private SplitMapPath? _playerMovePath;
 
         private int _hoveredNodeId = -1;
+        private int _lastHoveredNodeId = -1; // Track previous hover to trigger haptics once
         private readonly HashSet<int> _visitedNodeIds = new HashSet<int>();
         private readonly HashSet<int> _traversedPathIds = new HashSet<int>();
         private int _nodeForPathReveal = -1;
@@ -303,6 +305,7 @@ namespace ProjectVagabond.Scenes
             _nodeArrivalScale = Vector2.One;
             _nodeArrivalShake = Vector2.Zero;
             _selectedNodeId = -1; // Reset selection
+            _lastHoveredNodeId = -1; // Reset hover tracking
 
             _inventoryOverlay.Initialize();
 
@@ -834,6 +837,13 @@ namespace ProjectVagabond.Scenes
                     }
                 }
             }
+
+            // --- HAPTIC FEEDBACK ON HOVER ---
+            if (_hoveredNodeId != -1 && _hoveredNodeId != _lastHoveredNodeId)
+            {
+                _hapticsManager.TriggerCompoundShake(0.2f);
+            }
+            _lastHoveredNodeId = _hoveredNodeId;
 
             if (_hoveredNodeId != -1)
             {

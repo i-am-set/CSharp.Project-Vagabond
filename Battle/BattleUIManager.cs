@@ -417,6 +417,8 @@ namespace ProjectVagabond.Battle.UI
                 if (btn.IsHovered && btn.IsEnabled && combatant != null)
                 {
                     HoveredCombatantFromUI = combatant;
+                    // --- CURSOR LOGIC ---
+                    ServiceLocator.Get<CursorManager>().SetState(CursorState.HoverClickable);
                 }
             }
         }

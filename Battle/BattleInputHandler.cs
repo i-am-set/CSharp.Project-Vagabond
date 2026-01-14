@@ -88,6 +88,13 @@ namespace ProjectVagabond.Battle.UI
             if (_hoveredTargetIndex != -1)
             {
                 uiManager.CombatantHoveredViaSprite = currentTargets[_hoveredTargetIndex].Combatant;
+
+                // --- CURSOR LOGIC ---
+                // If we are in a targeting mode, show the clickable cursor when hovering a sprite
+                if (uiManager.UIState == BattleUIState.Targeting || uiManager.UIState == BattleUIState.ItemTargeting)
+                {
+                    ServiceLocator.Get<CursorManager>().SetState(CursorState.HoverClickable);
+                }
             }
             else
             {
