@@ -146,22 +146,25 @@ namespace ProjectVagabond.Scenes
         private const float NODE_HOVER_POP_SCALE_TARGET = 1.5f;
         private const float NODE_HOVER_POP_SPEED = 12.0f;
 
-        // --- NEW: Node Hover Float/Rotate Tuning ---
+        // --- Node Hover Float/Rotate/Pulse Tuning ---
         private const float NODE_HOVER_FLOAT_SPEED = 3.0f;
         private const float NODE_HOVER_FLOAT_AMP = 2.0f;
         private const float NODE_HOVER_ROT_SPEED = 2.0f;
-        private const float NODE_HOVER_ROT_AMT = 0.1f;
+        private const float NODE_HOVER_ROT_AMT = 0.05f;
+        private const float NODE_HOVER_PULSE_SPEED = 2.0f;
+        private const float NODE_HOVER_PULSE_AMOUNT = 0.05f;
 
-        // --- NEW: Node Arrival Animation State ---
+        // --- Node Arrival Animation State ---
         private Vector2 _nodeArrivalScale = Vector2.One;
         private Vector2 _nodeArrivalShake = Vector2.Zero;
 
-        // --- NEW: Node Selection Animation State ---
+        // --- Node Selection Animation State ---
         private int _selectedNodeId = -1;
         private float _nodeSelectionAnimTimer = 0f;
         private const float NODE_SELECTION_POP_DURATION = 0.4f;
         private const float NODE_SELECTION_SCALE_EXTRA = 0.5f; // Adds to the 1.5 hover scale -> 2.0 total
-        private const float NODE_SELECTION_SHAKE_MAGNITUDE = 10.0f;
+        private const float NODE_SELECTION_SHAKE_MAGNITUDE = 1.0f;
+        private const float NODE_SELECTION_SHAKE_FREQUENCY = 50.0f;
 
         public SplitMapScene()
         {
@@ -1763,6 +1766,10 @@ namespace ProjectVagabond.Scenes
 
                 floatOffset = MathF.Sin(time * NODE_HOVER_FLOAT_SPEED + phase) * NODE_HOVER_FLOAT_AMP * blend;
                 rotation = MathF.Sin(time * NODE_HOVER_ROT_SPEED + phase) * NODE_HOVER_ROT_AMT * blend;
+
+                // New Pulse Logic
+                float pulse = MathF.Sin(time * NODE_HOVER_PULSE_SPEED + phase) * NODE_HOVER_PULSE_AMOUNT * blend;
+                scale += pulse;
             }
 
             Vector2 arrivalScale = Vector2.One;
@@ -1789,10 +1796,10 @@ namespace ProjectVagabond.Scenes
                 float punch = MathF.Sin(t * MathHelper.Pi) * (1.0f - t);
                 selectionScale = punch * NODE_SELECTION_SCALE_EXTRA;
 
-                // Shake: Random noise decaying over time
+                // Shake: Sine wave decaying over time
                 float shakeDecay = 1.0f - t;
-                float shakeX = (float)(_random.NextDouble() * 2 - 1) * NODE_SELECTION_SHAKE_MAGNITUDE * shakeDecay;
-                float shakeY = (float)(_random.NextDouble() * 2 - 1) * NODE_SELECTION_SHAKE_MAGNITUDE * shakeDecay;
+                float shakeX = MathF.Sin(_nodeSelectionAnimTimer * NODE_SELECTION_SHAKE_FREQUENCY) * NODE_SELECTION_SHAKE_MAGNITUDE * shakeDecay;
+                float shakeY = MathF.Cos(_nodeSelectionAnimTimer * NODE_SELECTION_SHAKE_FREQUENCY * 0.85f) * NODE_SELECTION_SHAKE_MAGNITUDE * shakeDecay;
                 selectionShake = new Vector2(shakeX, shakeY);
             }
 
