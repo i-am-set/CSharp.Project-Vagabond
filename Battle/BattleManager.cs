@@ -820,7 +820,7 @@ namespace ProjectVagabond.Battle
 
                 target.ApplyDamage(result.DamageAmount);
 
-                if (result.DamageAmount > 0 && result.DamageAmount > (target.Stats.MaxHP * 0.15f))
+                if (result.DamageAmount > 0 && result.DamageAmount >= (target.Stats.MaxHP * 0.50f))
                 {
                     significantTargetIds.Add(target.CombatantID);
                 }
@@ -1318,4 +1318,3 @@ namespace ProjectVagabond.Battle
         }
     }
 }
-﻿

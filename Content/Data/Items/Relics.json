@@ -4,7 +4,7 @@
     "RelicName": "Lodestone",
     "AbilityName": "Stabilizer",
     "Description": "[cneutral]Neutral[/] spells deal[cpositive] 1.1x[/] damage.",
-    "Flavor": "A heavy stone that hums with a low frequency.",
+    "Flavor": "A heavy stone that hums with a low frequency. Pretty boring",
     "Rarity": 1,
     "Effects": {
       "ElementalDamageBonus": "0,10"
@@ -37,10 +37,10 @@
   },
   {
     "RelicID": "3",
-    "RelicName": "Magic Bean",
+    "RelicName": "A Leaf",
     "AbilityName": "Floramancer",
     "Description": "[cnature]Nature[/] spells deal[cpositive] 1.2x[/] damage.",
-    "Flavor": "They say it grows pretty big.",
+    "Flavor": "Pristine product of nature.",
     "Rarity": 1,
     "Effects": {
       "ElementalDamageBonus": "3,20"
@@ -49,7 +49,7 @@
   },
   {
     "RelicID": "4",
-    "RelicName": "Arcanist Ring",
+    "RelicName": "Arcane Eye",
     "AbilityName": "Thaumomancer",
     "Description": "[carcane]Arcane[/] spells deal[cpositive] 1.2x[/] damage.",
     "Flavor": "Vibrates with arcane energy.",
@@ -61,7 +61,7 @@
   },
   {
     "RelicID": "5",
-    "RelicName": "Sunstone",
+    "RelicName": "Sunmask",
     "AbilityName": "Divine Connection",
     "Description": "[cdivine]Divine[/] spells deal[cpositive] 1.2x[/] damage.",
     "Flavor": "Glows faintly.",
@@ -73,7 +73,7 @@
   },
   {
     "RelicID": "6",
-    "RelicName": "Voidshard",
+    "RelicName": "Offering",
     "AbilityName": "Occultist",
     "Description": "[cblight]Blight[/] spells deal[cpositive] 1.2x[/] damage.",
     "Flavor": "It seems to absorb the light around it.",
@@ -85,7 +85,7 @@
   },
   {
     "RelicID": "7",
-    "RelicName": "Serpent Fang",
+    "RelicName": "Venom Fang",
     "AbilityName": "Venomous",
     "Description": "[cpositive]50%[/] chance to inflict [cpoison]poison[/] with [cctm]contact[/].",
     "Flavor": "Careful!",
@@ -135,7 +135,7 @@
   },
   {
     "RelicID": "11",
-    "RelicName": "Vulture Beak",
+    "RelicName": "Hunter Charm",
     "AbilityName": "Opportunist",
     "Description": "Targets with [cctm]status effects[/] take [cpositive]2.0x[/] damage.",
     "Flavor": "Was this washed?",
@@ -147,7 +147,7 @@
   },
   {
     "RelicID": "12",
-    "RelicName": "Gizmo",
+    "RelicName": "Zap Ring",
     "AbilityName": "Static Charge",
     "Description": "[cpositive]30%[/] chance to stun attackers that [cctm]make contact[/].",
     "Flavor": "Crackles with static.",
@@ -173,10 +173,10 @@
   },
   {
     "RelicID": "14",
-    "RelicName": "Cool Leaf",
+    "RelicName": "Ornate Feather",
     "AbilityName": "Photosynthesis",
     "Description": "[cimmune]Immune[/] to [cdivine]Divine[/] based moves; heal [cpositive]25%[/] HP instead.",
-    "Flavor": "Have you ever seen a bigger leaf?",
+    "Flavor": "It shimmers in the sunlight.",
     "Rarity": 2,
     "Effects": {
       "SunBlessedLeaf": "5,25"
@@ -223,7 +223,7 @@
   },
   {
     "RelicID": "18",
-    "RelicName": "Turtle Charm",
+    "RelicName": "Bulwark Shield",
     "AbilityName": "Bulwark",
     "Description": "[cimmune]Immune[/] to [ccrit]Critical Hits[/].",
     "Flavor": "A little wooden turtle tied with twine.",
@@ -237,10 +237,10 @@
   },
   {
     "RelicID": "19",
-    "RelicName": "Brick",
+    "RelicName": "Blank Scroll",
     "AbilityName": "First Blood",
     "Description": "Holder's [cctm]first[/] attack deals [cpositive]2.0x[/] damage.",
-    "Flavor": "Hard to pick up again.",
+    "Flavor": "You write your own story.",
     "Rarity": 2,
     "Effects": {
       "FirstAttackDamage": "2.0"
@@ -344,7 +344,7 @@
     "RelicName": "Big Bug Stinger",
     "AbilityName": "Armor Piercer",
     "Description": "Ignore [cpositive]25%[/] of target's [cten]Tenacity[/].",
-    "Flavor": "Gross!",
+    "Flavor": "Still dripping.",
     "Rarity": 2,
     "Effects": {
       "DefensePenetration": "25"
@@ -420,7 +420,7 @@
     "RelicName": "Runic Weave",
     "AbilityName": "Spellweaver",
     "Description": "Alternating spells deals [cpositive]1.5x[/] damage.",
-    "Flavor": "Weave the magic together.",
+    "Flavor": "Looks like a bean to meg.",
     "Rarity": 2,
     "Effects": {
       "Spellweaver": "1.5"
@@ -445,10 +445,10 @@
   },
   {
     "RelicID": "35",
-    "RelicName": "Whetstone",
+    "RelicName": "Beartrap",
     "AbilityName": "Escalation",
     "Description": "Gain [cpositive]1.1x[/] damage each round, up to [cpositive]2.0x[/].",
-    "Flavor": "Sharper every turn.",
+    "Flavor": "Hurts more and more.",
     "Rarity": 3,
     "Effects": {
       "Escalation": "1.1,2.0"
@@ -459,7 +459,7 @@
     "RelicID": "36",
     "RelicName": "Pain Mail",
     "AbilityName": "Pain Fuel",
-    "Description": "Taking [ccrit]crit[/] damage raises [cstr]Strength[/] and [cint]Intelligence[/] by [cpositive]+1[/].",
+    "Description": "Taking [ccrit]crit[/] damage raises [cstr]Strength[/] by [cpositive]+1[/] and [cint]Intelligence[/] by [cpositive]+1[/].",
     "Flavor": "You're a freak.",
     "Rarity": 2,
     "Effects": {
@@ -471,10 +471,10 @@
   },
   {
     "RelicID": "37",
-    "RelicName": "Ichor Heart",
+    "RelicName": "Ichor Shot",
     "AbilityName": "Caustic Blood",
     "Description": "Lifesteal against holder [cpositive]damages[/] the attacker instead of healing.",
-    "Flavor": "Your blood feels thicker.",
+    "Flavor": "Burns on the way down.",
     "Rarity": 2,
     "Effects": {
       "CausticBlood": ""

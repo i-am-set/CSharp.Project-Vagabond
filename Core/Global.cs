@@ -165,7 +165,7 @@ namespace ProjectVagabond
         public const float UniversalSlowFadeDuration = 3.0f;
 
         // --- HAPTICS TUNING ---
-        public float HoverHapticStrength { get; set; } = 1.0f;
+        public float HoverHapticStrength { get; set; } = 0.75f;
         public float ButtonHapticStrength { get; set; } = 1.0f;
 
         // --- ECONOMY SETTINGS ---
