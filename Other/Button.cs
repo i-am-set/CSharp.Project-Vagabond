@@ -81,6 +81,12 @@ namespace ProjectVagabond.UI
         /// </summary>
         public bool UseInputDebounce { get; set; } = true;
 
+        /// <summary>
+        /// If true, the button will trigger a global haptic shake when the mouse first hovers over it.
+        /// The intensity is controlled by Global.HoverHapticStrength.
+        /// </summary>
+        public bool TriggerHapticOnHover { get; set; } = false;
+
         // Changed from event to property to allow reassignment (fixing CS0070)
         public Action? OnClick { get; set; }
         public Action? OnRightClick { get; set; }
@@ -186,7 +192,17 @@ namespace ProjectVagabond.UI
                 virtualMousePos = Vector2.Transform(virtualMousePos, inverseTransform);
             }
 
+            // Track previous hover state to detect entry
+            bool wasHovered = IsHovered;
+
             UpdateHoverState(virtualMousePos);
+
+            // Trigger Haptic on Hover Entry
+            if (!wasHovered && IsHovered && TriggerHapticOnHover)
+            {
+                // Use the new UI Compound Shake
+                ServiceLocator.Get<HapticsManager>().TriggerUICompoundShake(_global.HoverHapticStrength);
+            }
 
             bool mousePressedThisFrame = currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released;
             bool mouseIsDown = currentMouseState.LeftButton == ButtonState.Pressed;

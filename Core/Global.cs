@@ -164,6 +164,10 @@ namespace ProjectVagabond
         // Transition Settings
         public const float UniversalSlowFadeDuration = 3.0f;
 
+        // --- HAPTICS TUNING ---
+        public float HoverHapticStrength { get; set; } = 1.0f; // Increased for UI feel
+        public float ButtonHapticStrength { get; set; } = 0.75f;
+
         // --- ECONOMY SETTINGS ---
         public int BasePrice_Common { get; set; } = 50;
         public int BasePrice_Uncommon { get; set; } = 120;

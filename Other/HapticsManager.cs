@@ -3,10 +3,17 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond;
+using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Dice;
+using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.Transitions;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace ProjectVagabond
@@ -37,46 +44,28 @@ namespace ProjectVagabond
         private readonly HapticEffect _zoomPulse = new(HapticType.ZoomPulse);
         private readonly HapticEffect _directionalShake = new(HapticType.DirectionalShake);
 
-        // --- NEW STEP-BASED COMPOUND SHAKE SYSTEM ---
-
-        // Current "Energy" of the shake. 
-        // 0.0 = Still. 
-        // 1.0 = 1 Step of shaking.
-        // 10.0 = Max shaking.
+        // --- COMBAT COMPOUND SHAKE SYSTEM ---
         private float _currentSteps = 0f;
+
+        // --- UI COMPOUND SHAKE SYSTEM ---
+        private float _uiCurrentSteps = 0f;
 
         // Timer for oscillation math
         private float _time = 0f;
 
-        // --- HYPER TUNABLES ---
-
-        /// <summary>
-        /// The hard ceiling for how intense the shake can get.
-        /// </summary>
+        // --- COMBAT TUNABLES ---
         public int MaxShakeSteps { get; set; } = 5;
-
-        /// <summary>
-        /// How many pixels the screen moves X/Y per step.
-        /// Keep this low (0.5 to 1.0) so early steps are subtle.
-        /// </summary>
         public float TranslationPerStep { get; set; } = 0.1f;
-
-        /// <summary>
-        /// How much the screen rotates (in radians) per step.
-        /// 0.002 is roughly 0.1 degrees per step.
-        /// </summary>
         public float RotationPerStep { get; set; } = 0.003f;
-
-        /// <summary>
-        /// How many steps are removed per second.
-        /// 5.0 means it takes 0.2 seconds to lose 1 step of intensity.
-        /// </summary>
         public float StepDecayRate { get; set; } = 12.0f;
-
-        /// <summary>
-        /// How fast the screen vibrates (Oscillation speed).
-        /// </summary>
         public float VibrationSpeed { get; set; } = 45.0f;
+
+        // --- UI TUNABLES ---
+        public int UiMaxShakeSteps { get; set; } = 3;
+        public float UiTranslationPerStep { get; set; } = 0.1f;
+        public float UiRotationPerStep { get; set; } = 0.003f;
+        public float UiStepDecayRate { get; set; } = 12.0f;
+        public float UiVibrationSpeed { get; set; } = 45.0f;
 
         private Global _global;
 
@@ -85,29 +74,29 @@ namespace ProjectVagabond
             StopAll();
         }
 
-        // --- New Compound Shake Trigger ---
-
-        /// <summary>
-        /// Adds a fixed number of "Steps" to the current shake intensity.
-        /// </summary>
-        /// <param name="steps">
-        /// 1 = Standard UI Click / Light Impact.
-        /// 3 = Heavy Hit.
-        /// 5 = Explosion.
-        /// </param>
+        // --- Combat Shake Trigger ---
         public void TriggerCompoundShake(int steps)
         {
-            // Add steps to current, clamp to max.
-            // This ensures linear, predictable growth.
             _currentSteps = Math.Clamp(_currentSteps + steps, 0f, (float)MaxShakeSteps);
         }
 
-        // Overload for float inputs (0.0 - 1.0) mapped to steps for compatibility
         public void TriggerCompoundShake(float intensity01)
         {
-            // Map 0.0-1.0 to 1-5 steps roughly
             int steps = Math.Max(1, (int)(intensity01 * 5));
             TriggerCompoundShake(steps);
+        }
+
+        // --- UI Shake Trigger ---
+        public void TriggerUICompoundShake(int steps)
+        {
+            _uiCurrentSteps = Math.Clamp(_uiCurrentSteps + steps, 0f, (float)UiMaxShakeSteps);
+        }
+
+        public void TriggerUICompoundShake(float intensity01)
+        {
+            // Map 0.0-1.0 to 1-3 steps roughly
+            int steps = Math.Max(1, (int)(intensity01 * 3));
+            TriggerUICompoundShake(steps);
         }
 
         public void StopAll()
@@ -121,6 +110,7 @@ namespace ProjectVagabond
             _zoomPulse.Reset();
             _directionalShake.Reset();
             _currentSteps = 0f;
+            _uiCurrentSteps = 0f;
         }
 
         public void Update(GameTime gameTime)
@@ -128,11 +118,18 @@ namespace ProjectVagabond
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
             _time += dt;
 
-            // Linear Decay of Steps
+            // Linear Decay of Combat Steps
             if (_currentSteps > 0)
             {
                 _currentSteps -= StepDecayRate * dt;
                 if (_currentSteps < 0) _currentSteps = 0;
+            }
+
+            // Linear Decay of UI Steps
+            if (_uiCurrentSteps > 0)
+            {
+                _uiCurrentSteps -= UiStepDecayRate * dt;
+                if (_uiCurrentSteps < 0) _uiCurrentSteps = 0;
             }
 
             // Update legacy effects
@@ -156,24 +153,31 @@ namespace ProjectVagabond
             float totalRotation = _shake.Rotation + _hop.Rotation + _pulse.Rotation + _wobble.Rotation + _drift.Rotation + _bounce.Rotation + _zoomPulse.Rotation + _directionalShake.Rotation;
             float totalScale = GetCurrentScale();
 
-            // 2. Calculate Step-Based Compound Shake
+            // 2. Calculate Combat Compound Shake
             if (_currentSteps > 0)
             {
-                // Calculate Magnitude based on current steps
                 float transMag = _currentSteps * TranslationPerStep;
                 float rotMag = _currentSteps * RotationPerStep;
 
-                // Use high-speed Sine waves to create vibration.
-                // We use different prime number multipliers for X, Y, and Rot to prevent them from syncing up into a diagonal line.
-
-                // X Oscillation
                 float x = MathF.Sin(_time * VibrationSpeed) * transMag;
-
-                // Y Oscillation (Offset phase)
                 float y = MathF.Cos(_time * (VibrationSpeed * 0.9f)) * transMag;
-
-                // Rotation Oscillation (Slower phase)
                 float rot = MathF.Sin(_time * (VibrationSpeed * 0.85f)) * rotMag;
+
+                totalOffset.X += x;
+                totalOffset.Y += y;
+                totalRotation += rot;
+            }
+
+            // 3. Calculate UI Compound Shake (Additive)
+            if (_uiCurrentSteps > 0)
+            {
+                float transMag = _uiCurrentSteps * UiTranslationPerStep;
+                float rotMag = _uiCurrentSteps * UiRotationPerStep;
+
+                // Use slightly offset frequencies to prevent constructive interference patterns
+                float x = MathF.Sin(_time * (UiVibrationSpeed * 1.1f)) * transMag;
+                float y = MathF.Cos(_time * (UiVibrationSpeed * 0.95f)) * transMag;
+                float rot = MathF.Sin(_time * (UiVibrationSpeed * 0.9f)) * rotMag;
 
                 totalOffset.X += x;
                 totalOffset.Y += y;
@@ -264,7 +268,7 @@ namespace ProjectVagabond
 
         public bool IsAnyHapticActive()
         {
-            return _shake.Active || _hop.Active || _pulse.Active || _wobble.Active || _drift.Active || _bounce.Active || _zoomPulse.Active || _directionalShake.Active || _currentSteps > 0;
+            return _shake.Active || _hop.Active || _pulse.Active || _wobble.Active || _drift.Active || _bounce.Active || _zoomPulse.Active || _directionalShake.Active || _currentSteps > 0 || _uiCurrentSteps > 0;
         }
 
         public Vector2 GetCurrentOffset()

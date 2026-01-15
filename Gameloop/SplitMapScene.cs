@@ -3,7 +3,6 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
-using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Items;
 using ProjectVagabond.Progression;
@@ -408,7 +407,8 @@ namespace ProjectVagabond.Scenes
                 // Initialize off-screen
                 _settingsButton = new ImageButton(new Rectangle(offScreenX, 2, buttonSize, buttonSize), sheet, rects[0], rects[1], enableHoverSway: true)
                 {
-                    UseScreenCoordinates = false
+                    UseScreenCoordinates = false,
+                    TriggerHapticOnHover = true // Enable UI Shake
                 };
             }
 
@@ -418,7 +418,7 @@ namespace ProjectVagabond.Scenes
             _settingsButton.OnClick = null;
             _settingsButton.OnClick += () =>
             {
-                _hapticsManager.TriggerCompoundShake(0.25f);
+                _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
                 OpenSettings();
             };
             _settingsButton.ResetAnimationState();
@@ -841,7 +841,8 @@ namespace ProjectVagabond.Scenes
             // --- HAPTIC FEEDBACK ON HOVER ---
             if (_hoveredNodeId != -1 && _hoveredNodeId != _lastHoveredNodeId)
             {
-                _hapticsManager.TriggerCompoundShake(0.2f);
+                // Use the new UI Compound Shake
+                _hapticsManager.TriggerUICompoundShake(_global.HoverHapticStrength);
             }
             _lastHoveredNodeId = _hoveredNodeId;
 
@@ -882,7 +883,7 @@ namespace ProjectVagabond.Scenes
                     // --- SELECTION LOGIC ---
                     _selectedNodeId = _hoveredNodeId;
                     _nodeSelectionAnimTimer = 0f;
-                    _hapticsManager.TriggerCompoundShake(0.2f); // Small haptic feedback
+                    _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength); // Small haptic feedback
 
                     StartPlayerMove(_hoveredNodeId);
                     _hoveredNodeId = -1;

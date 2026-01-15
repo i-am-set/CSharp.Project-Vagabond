@@ -357,7 +357,7 @@ namespace ProjectVagabond.Scenes
             card.Animator.DurationOut = 0.6f;
             card.Animator.Hide(delay: 0f, overrideStyle: EntryExitStyle.JuicyCollect);
 
-            _hapticsManager.TriggerCompoundShake(0.2f);
+            _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
 
             foreach (var otherCard in _cards)
             {

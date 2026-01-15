@@ -82,12 +82,12 @@ namespace ProjectVagabond.UI
             if (!IsEnabled) return;
             if (key == Keys.Left)
             {
-                _hapticsManager.TriggerCompoundShake(0.5f);
+                _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
                 SetValue(_currentValue - _step);
             }
             else if (key == Keys.Right)
             {
-                _hapticsManager.TriggerCompoundShake(0.5f);
+                _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
                 SetValue(_currentValue + _step);
             }
         }
@@ -118,7 +118,7 @@ namespace ProjectVagabond.UI
             {
                 if (_barAreaRect.Contains(virtualMousePos))
                 {
-                    _hapticsManager.TriggerCompoundShake(0.5f);
+                    _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
                     _isDragging = true;
                     UpdateValueFromMousePosition(virtualMousePos); // Update on initial click
                     UIInputManager.ConsumeMouseClick();

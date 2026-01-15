@@ -19,6 +19,7 @@ namespace ProjectVagabond.UI
     /// </summary>
     public class InventoryEquipSystem
     {
+        private readonly Global _global;
         private readonly SplitMapInventoryOverlay _overlay;
         private readonly InventoryDataProcessor _dataProcessor;
 
@@ -204,7 +205,7 @@ namespace ProjectVagabond.UI
             ActiveEquipSlotType = EquipSlotType.None;
             _overlay.HoveredItemData = null;
 
-            _overlay.HapticsManager.TriggerCompoundShake(0.5f);
+            _overlay.HapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
         }
     }
 }

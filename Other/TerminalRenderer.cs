@@ -303,7 +303,7 @@ namespace ProjectVagabond
                         }
                         else
                         {
-                            if (tagContent == "error") _hapticsManager.TriggerCompoundShake(0.1f);
+                            if (tagContent == "error") _hapticsManager.TriggerCompoundShake(0.5f);
                             colorStack.Push(ParseColor(tagContent));
                         }
                     }

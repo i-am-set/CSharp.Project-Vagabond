@@ -370,7 +370,7 @@ namespace ProjectVagabond.Scenes
             _settingsButton.OnClick = null;
             _settingsButton.OnClick += () =>
             {
-                _hapticsManager.TriggerCompoundShake(0.25f);
+                _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
                 OpenSettings();
             };
             _settingsButton.ResetAnimationState();

@@ -15,6 +15,7 @@ namespace ProjectVagabond.UI
 {
     public class InventoryInputHandler
     {
+        private readonly Global _global;
         private readonly SplitMapInventoryOverlay _overlay;
         private readonly InventoryDataProcessor _dataProcessor;
         private readonly InventoryEquipSystem _equipSystem;
@@ -366,7 +367,7 @@ namespace ProjectVagabond.UI
                 }
                 else
                 {
-                    _overlay.HapticsManager.TriggerCompoundShake(0.5f);
+                    _overlay.HapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
                 }
 
                 if (slotFrames != null)
