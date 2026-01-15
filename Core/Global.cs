@@ -166,7 +166,7 @@ namespace ProjectVagabond
 
         // --- HAPTICS TUNING ---
         public float HoverHapticStrength { get; set; } = 1.0f; // Increased for UI feel
-        public float ButtonHapticStrength { get; set; } = 0.75f;
+        public float ButtonHapticStrength { get; set; } = 1.0f;
 
         // --- ECONOMY SETTINGS ---
         public int BasePrice_Common { get; set; } = 50;

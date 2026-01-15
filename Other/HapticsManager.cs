@@ -6,6 +6,7 @@ using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Dice;
+using ProjectVagabond.Particles;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.Transitions;
@@ -54,16 +55,16 @@ namespace ProjectVagabond
         private float _time = 0f;
 
         // --- COMBAT TUNABLES ---
-        public int MaxShakeSteps { get; set; } = 5;
+        public float MaxShakeSteps { get; set; } = 5f;
         public float TranslationPerStep { get; set; } = 0.1f;
         public float RotationPerStep { get; set; } = 0.003f;
         public float StepDecayRate { get; set; } = 12.0f;
         public float VibrationSpeed { get; set; } = 45.0f;
 
         // --- UI TUNABLES ---
-        public int UiMaxShakeSteps { get; set; } = 3;
-        public float UiTranslationPerStep { get; set; } = 0.1f;
-        public float UiRotationPerStep { get; set; } = 0.003f;
+        public float UiMaxShakeSteps { get; set; } = 2f;
+        public float UiTranslationPerStep { get; set; } = 0.3f;
+        public float UiRotationPerStep { get; set; } = 0.006f;
         public float UiStepDecayRate { get; set; } = 12.0f;
         public float UiVibrationSpeed { get; set; } = 45.0f;
 
@@ -75,29 +76,20 @@ namespace ProjectVagabond
         }
 
         // --- Combat Shake Trigger ---
-        public void TriggerCompoundShake(int steps)
+        public void TriggerCompoundShake(float steps)
         {
-            _currentSteps = Math.Clamp(_currentSteps + steps, 0f, (float)MaxShakeSteps);
+            _currentSteps = Math.Clamp(_currentSteps + steps, 0f, MaxShakeSteps);
         }
 
-        public void TriggerCompoundShake(float intensity01)
-        {
-            int steps = Math.Max(1, (int)(intensity01 * 5));
-            TriggerCompoundShake(steps);
-        }
+        // Removed the TriggerCompoundShake(float intensity01) overload for combat.
 
         // --- UI Shake Trigger ---
-        public void TriggerUICompoundShake(int steps)
+        public void TriggerUICompoundShake(float steps)
         {
-            _uiCurrentSteps = Math.Clamp(_uiCurrentSteps + steps, 0f, (float)UiMaxShakeSteps);
+            _uiCurrentSteps = Math.Clamp(_uiCurrentSteps + steps, 0f, UiMaxShakeSteps);
         }
 
-        public void TriggerUICompoundShake(float intensity01)
-        {
-            // Map 0.0-1.0 to 1-3 steps roughly
-            int steps = Math.Max(1, (int)(intensity01 * 3));
-            TriggerUICompoundShake(steps);
-        }
+        // Removed the TriggerUICompoundShake(float intensity01) overload for UI.
 
         public void StopAll()
         {
