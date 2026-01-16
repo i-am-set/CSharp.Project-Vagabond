@@ -5,7 +5,6 @@
     "AbilityName": null,
     "Description": "",
     "Flavor": "A simple tunic made of cured hide.",
-    "Rarity": 0,
     "StatModifiers": {
       "Tenacity": 1,
       "Agility": 1
@@ -18,7 +17,6 @@
     "AbilityName": "Heavy Plating",
     "Description": "",
     "Flavor": "Iron sheets riveted together.",
-    "Rarity": 1,
     "Effects": {
       "PhysicalDamageReduction": "5"
     },
@@ -34,12 +32,11 @@
     "AbilityName": "Mana Well",
     "Description": "",
     "Flavor": "Silk robes enchanted to channel mage.",
-    "Rarity": 2,
     "Effects": {
       "Regen": "2"
     },
     "StatModifiers": {
-      "Intelligence": 4,
+      "Intelligence": 4
     },
     "Tags": [ "Cloth", "Magic" ]
   },
@@ -49,7 +46,6 @@
     "AbilityName": "Savage Fury",
     "Description": "",
     "Flavor": "A cloak made from the hide of a great beast.",
-    "Rarity": 2,
     "Effects": {
       "LowHPDamageBonus": "50,20"
     },

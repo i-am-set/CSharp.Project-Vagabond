@@ -38,6 +38,10 @@ namespace ProjectVagabond
 
         public string LastRunKiller { get; set; } = "Unknown";
 
+        // --- Deck of Cards System ---
+        // Tracks every item ID generated in this run to prevent duplicates.
+        public HashSet<string> SeenItemIds { get; private set; } = new HashSet<string>();
+
         public GameState(NoiseMapManager noiseManager, ComponentStore componentStore, Global global, SpriteManager spriteManager)
         {
             _noiseManager = noiseManager;
@@ -51,6 +55,7 @@ namespace ProjectVagabond
             // 1. Create PlayerState container
             PlayerState = new PlayerState();
             PlayerState.Party.Clear();
+            SeenItemIds.Clear(); // Reset seen items for new run
 
             // 2. Create "Oakley" (The Main Character) using ID "0"
             var oakley = PartyMemberFactory.CreateMember("0");
@@ -65,11 +70,19 @@ namespace ProjectVagabond
             {
                 foreach (var kvp in oakleyData.StartingWeapons)
                 {
-                    if (BattleDataCache.Weapons.ContainsKey(kvp.Key)) PlayerState.AddWeapon(kvp.Key, kvp.Value);
+                    if (BattleDataCache.Weapons.ContainsKey(kvp.Key))
+                    {
+                        PlayerState.AddWeapon(kvp.Key, kvp.Value);
+                        SeenItemIds.Add(kvp.Key); // Mark starting gear as seen
+                    }
                 }
                 foreach (var kvp in oakleyData.StartingRelics)
                 {
-                    if (BattleDataCache.Relics.ContainsKey(kvp.Key)) PlayerState.AddRelic(kvp.Key, kvp.Value);
+                    if (BattleDataCache.Relics.ContainsKey(kvp.Key))
+                    {
+                        PlayerState.AddRelic(kvp.Key, kvp.Value);
+                        SeenItemIds.Add(kvp.Key); // Mark starting gear as seen
+                    }
                 }
             }
 
@@ -102,6 +115,7 @@ namespace ProjectVagabond
         {
             PlayerEntityId = 0;
             PlayerState = null;
+            SeenItemIds.Clear();
             _isPaused = false;
             IsPausedByConsole = false;
             LastRunKiller = "Unknown";

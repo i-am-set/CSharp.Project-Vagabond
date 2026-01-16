@@ -28,8 +28,6 @@ namespace ProjectVagabond.Battle
         /// </summary>
         public string Flavor { get; set; }
 
-        public int Rarity { get; set; } = 0;
-
         /// <summary>
         /// Passive effects granted while equipped (e.g., "DamageReductionPhysical: 10").
         /// </summary>

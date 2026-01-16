@@ -24,7 +24,6 @@ namespace ProjectVagabond.Battle
         /// </summary>
         public string Flavor { get; set; }
 
-        public int Rarity { get; set; } = 0;
         public Dictionary<string, string> Effects { get; set; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>

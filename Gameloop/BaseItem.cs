@@ -14,8 +14,7 @@ namespace ProjectVagabond.Items
         public string ID { get; set; }
         public string Name { get; set; }
         public string Description { get; set; }
-        public string Flavor { get; set; } // Added Flavor
-        public int Rarity { get; set; } // 0: Common, 1: Uncommon, 2: Rare, etc.
+        public string Flavor { get; set; }
         public ItemType Type { get; set; }
 
         // Visuals
@@ -33,7 +32,6 @@ namespace ProjectVagabond.Items
                 Name = data.WeaponName,
                 Description = data.Description,
                 Flavor = data.Flavor,
-                Rarity = data.Rarity,
                 Type = ItemType.Weapon,
                 SpritePath = $"Sprites/Items/Weapons/{data.WeaponID}",
                 OriginalData = data
@@ -48,7 +46,6 @@ namespace ProjectVagabond.Items
                 Name = data.RelicName,
                 Description = data.Description,
                 Flavor = data.Flavor,
-                Rarity = data.Rarity,
                 Type = ItemType.Relic,
                 SpritePath = $"Sprites/Items/Relics/{data.RelicID}",
                 OriginalData = data

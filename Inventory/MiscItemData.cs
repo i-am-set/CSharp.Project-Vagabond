@@ -19,7 +19,6 @@ namespace ProjectVagabond.Battle
         /// </summary>
         public string Flavor { get; set; }
 
-        public int Rarity { get; set; } = 0;
         public string ImagePath { get; set; } // e.g. "Sprites/Items/Misc/gold_coin"
         public List<string> Tags { get; set; } = new List<string>();
     }

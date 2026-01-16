@@ -93,17 +93,6 @@ namespace ProjectVagabond
                 { 6, Palette_Purple }       // Blight
             };
 
-            RarityColors = new Dictionary<int, Color>
-            {
-                { -1, Palette_Gray },      // Basic/Action
-                { 0, Color.White },        // Common
-                { 1, Color.Lime },         // Uncommon
-                { 2, Color.DeepSkyBlue },  // Rare
-                { 3, Color.DarkOrchid },   // Epic
-                { 4, Color.Crimson },          // Mythic
-                { 5, Color.Yellow }        // Legendary
-            };
-
             StatusEffectColors = new Dictionary<StatusEffectType, Color>
             {
                 { StatusEffectType.Poison, Palette_Purple },
@@ -170,12 +159,6 @@ namespace ProjectVagabond
         public float ButtonHapticStrength { get; set; } = 1.0f;
 
         // --- ECONOMY SETTINGS ---
-        public int BasePrice_Common { get; set; } = 50;
-        public int BasePrice_Uncommon { get; set; } = 120;
-        public int BasePrice_Rare { get; set; } = 300;
-        public int BasePrice_Epic { get; set; } = 750;
-        public int BasePrice_Mythic { get; set; } = 1500;
-        public int BasePrice_Legendary { get; set; } = 3000;
         public float PriceMultiplier_Consumable { get; set; } = 0.4f; // Consumables are 40% of gear price
 
         // --- DYNAMIC DROP TUNING ---
@@ -364,7 +347,6 @@ namespace ProjectVagabond
 
         // Data-driven Colors
         public Dictionary<int, Color> ElementColors { get; private set; }
-        public Dictionary<int, Color> RarityColors { get; private set; }
         public Dictionary<StatusEffectType, Color> StatusEffectColors { get; private set; }
 
 

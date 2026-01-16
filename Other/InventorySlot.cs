@@ -2,12 +2,16 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Items;
+using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 
@@ -20,7 +24,6 @@ namespace ProjectVagabond.UI
         public string? IconPath { get; private set; }
         public string? FallbackIconPath { get; private set; }
         public Color? IconTint { get; private set; }
-        public int Rarity { get; private set; } = -1; // -1 means no rarity icon
         public bool IsSelected { get; set; }
         public bool HasItem => !string.IsNullOrEmpty(ItemId);
         public bool IsAnimated { get; private set; } = false;
@@ -49,13 +52,12 @@ namespace ProjectVagabond.UI
             RandomizeFrame();
         }
 
-        public void AssignItem(string itemId, int quantity, string? iconPath, int rarity, Color? iconTint = null, bool isAnimated = false, string? fallbackIconPath = null, bool isEquipped = false)
+        public void AssignItem(string itemId, int quantity, string? iconPath, Color? iconTint = null, bool isAnimated = false, string? fallbackIconPath = null, bool isEquipped = false)
         {
             ItemId = itemId;
             Quantity = quantity;
             IconPath = iconPath;
             FallbackIconPath = fallbackIconPath;
-            Rarity = rarity;
             IconTint = iconTint;
             IsAnimated = isAnimated;
             IsEquipped = isEquipped;
@@ -67,7 +69,6 @@ namespace ProjectVagabond.UI
             Quantity = 0;
             IconPath = null;
             FallbackIconPath = null;
-            Rarity = -1;
             IconTint = null;
             IsSelected = false;
             IsAnimated = false;
@@ -211,27 +212,6 @@ namespace ProjectVagabond.UI
                             float equipScale = 1.0f * _visualScale; // Full size + animation scale
 
                             spriteBatch.DrawSnapped(spriteManager.InventorySlotEquipIconSprite, center, equipRect, Color.White, 0f, equipOrigin, equipScale, SpriteEffects.None, 0f);
-                        }
-
-                        // Draw Rarity Icon
-                        if (Rarity >= 0 && spriteManager.RarityIconsSpriteSheet != null)
-                        {
-                            var rarityRect = spriteManager.GetRarityIconSourceRect(Rarity, gameTime);
-                            // Position at top-right of the item sprite.
-                            // Item sprite is centered. Top-right relative to center is (Width/2, -Height/2).
-                            // We want the rarity icon's center to be slightly inside the corner.
-                            // Rarity icon is 8x8. Origin is (4,4).
-                            // Item Top-Right is (W/2, -H/2).
-                            // Rarity Pos = Center + (W/2 - 4, -H/2 + 4) * Scale.
-                            // ADJUSTMENT: Moved Up 2px (-2) and Right 3px (+3)
-                            float width = IsAnimated ? sourceRect.Value.Width : icon.Width;
-                            float height = IsAnimated ? sourceRect.Value.Height : icon.Height;
-
-                            Vector2 rarityOffset = new Vector2(width / 2f - 4 + 3, -height / 2f + 4 - 2) * _visualScale;
-                            Vector2 rarityPos = center + rarityOffset;
-                            Vector2 rarityOrigin = new Vector2(4, 4);
-
-                            spriteBatch.DrawSnapped(spriteManager.RarityIconsSpriteSheet, rarityPos, rarityRect, Color.White, 0f, rarityOrigin, _visualScale, SpriteEffects.None, 0f);
                         }
                     }
                 }

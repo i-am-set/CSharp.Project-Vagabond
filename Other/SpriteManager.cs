@@ -40,7 +40,6 @@ namespace ProjectVagabond
         public Texture2D ElementIconsSpriteSheet { get; private set; }
         public Texture2D ActionIconsSpriteSheet { get; private set; }
         public Texture2D ActionButtonUsesSpriteSheet { get; private set; }
-        public Texture2D RarityIconsSpriteSheet { get; private set; }
         public Texture2D StatChangeIconsSpriteSheet { get; private set; }
         public Texture2D StatChangeIconsSpriteSheetSilhouette { get; private set; }
 
@@ -86,7 +85,6 @@ namespace ProjectVagabond
         public Rectangle[] ActionButtonSourceRects { get; private set; }
         public Dictionary<int, Rectangle> ElementIconSourceRects { get; private set; } = new Dictionary<int, Rectangle>();
         public Rectangle[] ActionIconSourceRects { get; private set; }
-        public Dictionary<int, Rectangle> RarityBackgroundSourceRects { get; private set; } = new Dictionary<int, Rectangle>();
         public Dictionary<int, Rectangle> SpellUsesSourceRects { get; private set; } = new Dictionary<int, Rectangle>();
         public Rectangle[] SplitMapInventoryButtonSourceRects { get; private set; }
         public Rectangle[] SplitMapCloseInventoryButtonSourceRects { get; private set; }
@@ -298,9 +296,6 @@ namespace ProjectVagabond
             try { ActionButtonUsesSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/ui_action_button_uses_spritesheet"); }
             catch { ActionButtonUsesSpriteSheet = _textureFactory.CreateColoredTexture(471, 17, Color.Magenta); }
 
-            try { RarityIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/rarity_icons_8x8_spritesheet"); }
-            catch { RarityIconsSpriteSheet = _textureFactory.CreateColoredTexture(16, 48, Color.Magenta); }
-
             try
             {
                 StatChangeIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/stat_change_icons_spritesheet");
@@ -499,7 +494,6 @@ namespace ProjectVagabond
             InitializeActionButtonsSourceRects();
             InitializeElementIconsSourceRects();
             InitializeActionIconsSourceRects();
-            InitializeRarityBackgrounds();
             InitializeSpellUsesRects();
             InitializeSplitMapInventoryButtonRects();
             InitializeSplitMapCloseInventoryButtonRects();
@@ -641,21 +635,6 @@ namespace ProjectVagabond
             SplitMapSettingsButtonSourceRects[0] = new Rectangle(0, 0, frameWidth, frameHeight);
             // Frame 1: Hover
             SplitMapSettingsButtonSourceRects[1] = new Rectangle(frameWidth, 0, frameWidth, frameHeight);
-        }
-
-        private void InitializeRarityBackgrounds()
-        {
-            if (ActionButtonTemplateSpriteSheet == null) return;
-
-            int spriteWidth = 157;
-            int spriteHeight = 17;
-            int[] rarityMap = { 0, 1, 2, 3, 4, 5, -1 }; // The rarity values corresponding to each frame
-
-            for (int i = 0; i < rarityMap.Length; i++)
-            {
-                int rarityValue = rarityMap[i];
-                RarityBackgroundSourceRects[rarityValue] = new Rectangle(i * spriteWidth, 0, spriteWidth, spriteHeight);
-            }
         }
 
         private void InitializeSpellUsesRects()
@@ -1385,18 +1364,6 @@ namespace ProjectVagabond
         {
             LoadEssentialContent();
             LoadGameContent();
-        }
-
-        public Rectangle GetRarityIconSourceRect(int rarity, GameTime gameTime)
-        {
-            // Clamp rarity to valid rows (0 to 5)
-            rarity = Math.Clamp(rarity, 0, 5);
-
-            // Animation settings
-            const float frameDuration = 0.5f; // Adjust speed here
-            int frameIndex = (int)(gameTime.TotalGameTime.TotalSeconds / frameDuration) % 2;
-
-            return new Rectangle(frameIndex * 8, rarity * 8, 8, 8);
         }
 
         public Rectangle GetAnimatedIconSourceRect(Texture2D texture, GameTime gameTime)

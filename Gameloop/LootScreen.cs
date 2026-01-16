@@ -44,10 +44,6 @@ namespace ProjectVagabond.Scenes
             // Layout Animation
             public Vector2 VisualPosition; // Current X,Y for drawing
             public Vector2 TargetPosition; // Where it wants to go
-
-            // Tracer State
-            public List<Point> TracerPath; // The ordered list of pixels around the perimeter
-            public float TracerProgress;   // Current index (float) along the path
         }
         private List<LootCard> _cards;
 
@@ -62,15 +58,6 @@ namespace ProjectVagabond.Scenes
         private const float LOOT_HOVER_FLOAT_SPEED = 3.0f;    // Multiplier for the figure-8 sway speed
         private const float LOOT_HOVER_ROTATION_SPEED = 1.0f; // Multiplier for the tilt speed
         private const float LOOT_HOVER_FLOAT_DISTANCE = 1.0f; // Max distance to sway (pixels)
-
-        // --- TUNING: Rarity Tracer ---
-        private const float TRACER_SPEED = 30f; // Pixels per second
-        private const int TRAIL_LENGTH = 8;     // Number of pixels in the tail
-        private const float TRAIL_START_ALPHA = 1.0f;
-        private const float TRAIL_END_ALPHA = 0.0f;
-
-        // --- TUNING: Rarity Pulse ---
-        private const float PULSE_SPEED = 4.0f; // Speed of the sine wave
 
         // Buttons
         private Button _skipButton;
@@ -188,10 +175,6 @@ namespace ProjectVagabond.Scenes
                     float targetX = centerX - (CARD_SIZE / 2f);
                     Vector2 pos = new Vector2(targetX, cardY);
 
-                    // Generate Tracer Path
-                    var icon = _spriteManager.GetItemSprite(loot[i].SpritePath);
-                    var path = GenerateTracerPath(icon);
-
                     _cards.Add(new LootCard
                     {
                         Item = loot[i],
@@ -201,116 +184,10 @@ namespace ProjectVagabond.Scenes
                         IsMouseHovering = false,
                         VisualPosition = pos,
                         TargetPosition = pos,
-                        CurrentBounds = new Rectangle((int)pos.X, (int)pos.Y, CARD_SIZE, CARD_SIZE),
-                        TracerPath = path,
-                        TracerProgress = 0f
+                        CurrentBounds = new Rectangle((int)pos.X, (int)pos.Y, CARD_SIZE, CARD_SIZE)
                     });
                 }
             }
-        }
-
-        private List<Point> GenerateTracerPath(Texture2D texture)
-        {
-            if (texture == null) return new List<Point>();
-
-            int w = texture.Width;
-            int h = texture.Height;
-            Color[] data = new Color[w * h];
-            texture.GetData(data);
-
-            int gridW = w + 4;
-            int gridH = h + 4;
-            bool[,] grid = new bool[gridW, gridH];
-            int offsetX = 2;
-            int offsetY = 2;
-
-            for (int y = 0; y < h; y++)
-            {
-                for (int x = 0; x < w; x++)
-                {
-                    if (data[y * w + x].A > 0)
-                    {
-                        for (int dy = -1; dy <= 1; dy++)
-                        {
-                            for (int dx = -1; dx <= 1; dx++)
-                            {
-                                grid[x + offsetX + dx, y + offsetY + dy] = true;
-                            }
-                        }
-                    }
-                }
-            }
-
-            List<Point> path = new List<Point>();
-            Point start = Point.Zero;
-            bool foundStart = false;
-
-            for (int y = 0; y < gridH; y++)
-            {
-                for (int x = 0; x < gridW; x++)
-                {
-                    if (grid[x, y])
-                    {
-                        start = new Point(x, y);
-                        foundStart = true;
-                        break;
-                    }
-                }
-                if (foundStart) break;
-            }
-
-            if (!foundStart) return path;
-
-            Point current = start;
-            Point backtrack = new Point(start.X - 1, start.Y);
-            int maxSteps = gridW * gridH * 2;
-            int steps = 0;
-
-            Point[] offsets = {
-                new Point(0, -1), new Point(1, -1), new Point(1, 0), new Point(1, 1),
-                new Point(0, 1), new Point(-1, 1), new Point(-1, 0), new Point(-1, -1)
-            };
-
-            do
-            {
-                path.Add(current);
-                int checkIndex = -1;
-                Point relBack = new Point(backtrack.X - current.X, backtrack.Y - current.Y);
-                for (int i = 0; i < 8; i++)
-                {
-                    if (offsets[i] == relBack)
-                    {
-                        checkIndex = i;
-                        break;
-                    }
-                }
-
-                bool foundNext = false;
-                for (int i = 1; i <= 8; i++)
-                {
-                    int idx = (checkIndex + i) % 8;
-                    Point neighbor = new Point(current.X + offsets[idx].X, current.Y + offsets[idx].Y);
-
-                    if (neighbor.X >= 0 && neighbor.X < gridW && neighbor.Y >= 0 && neighbor.Y < gridH && grid[neighbor.X, neighbor.Y])
-                    {
-                        int prevIdx = (idx + 7) % 8;
-                        backtrack = new Point(current.X + offsets[prevIdx].X, current.Y + offsets[prevIdx].Y);
-                        current = neighbor;
-                        foundNext = true;
-                        break;
-                    }
-                }
-
-                if (!foundNext) break;
-                steps++;
-            } while (current != start && steps < maxSteps);
-
-            for (int i = 0; i < path.Count; i++)
-            {
-                path[i] = new Point(path[i].X - offsetX, path[i].Y - offsetY);
-            }
-
-            return path;
         }
 
         public void Close()
@@ -416,16 +293,6 @@ namespace ProjectVagabond.Scenes
                 {
                     card.VisualPosition = Vector2.Lerp(card.VisualPosition, card.TargetPosition, dt * CARD_MOVE_SPEED);
                     card.CurrentBounds = new Rectangle((int)card.VisualPosition.X, (int)card.VisualPosition.Y, CARD_SIZE, CARD_SIZE);
-
-                    if (card.TracerPath != null && card.TracerPath.Count > 0)
-                    {
-                        var config = GetTracerConfig(card.Item.Rarity);
-                        card.TracerProgress += dt * config.Speed;
-                        if (card.TracerProgress >= card.TracerPath.Count)
-                        {
-                            card.TracerProgress -= card.TracerPath.Count;
-                        }
-                    }
                 }
                 card.Animator.Update(dt);
             }
@@ -678,76 +545,9 @@ namespace ProjectVagabond.Scenes
                         sb.DrawSnapped(silhouette, drawPos + new Vector2(0, 1), null, mainOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
                     }
 
-                    // --- 2.5. Draw Rarity Tracer & Pulse ---
-                    if (!card.IsCollected && !card.IsDiscarded && !card.IsMouseHovering && state.Opacity > 0.5f && card.TracerPath != null && card.TracerPath.Count > 0)
-                    {
-                        Color rarityColor = _global.RarityColors.GetValueOrDefault(card.Item.Rarity, Color.White);
-                        int pathLength = card.TracerPath.Count;
-
-                        // A. Pulse
-                        float pulseTime = (float)gameTime.TotalGameTime.TotalSeconds * PULSE_SPEED;
-                        float pulseSine = (MathF.Sin(pulseTime) + 1f) / 2f;
-                        float maxIntensity = GetPulseIntensity(card.Item.Rarity);
-                        float currentAlpha = pulseSine * maxIntensity * state.Opacity;
-
-                        if (currentAlpha > 0.01f)
-                        {
-                            foreach (var point in card.TracerPath)
-                            {
-                                Vector2 pointVec = point.ToVector2();
-                                Vector2 relativePos = (pointVec - origin) * state.Scale;
-                                if (state.Rotation != 0f)
-                                {
-                                    float cos = MathF.Cos(state.Rotation);
-                                    float sin = MathF.Sin(state.Rotation);
-                                    relativePos = new Vector2(relativePos.X * cos - relativePos.Y * sin, relativePos.X * sin + relativePos.Y * cos);
-                                }
-                                sb.DrawSnapped(pixel, drawPos + relativePos, null, rarityColor * currentAlpha, 0f, Vector2.Zero, 1f, SpriteEffects.None, 0f);
-                            }
-                        }
-
-                        // B. Tracer Dots
-                        var config = GetTracerConfig(card.Item.Rarity);
-                        float spacing = pathLength / (float)config.DotCount;
-
-                        for (int d = 0; d < config.DotCount; d++)
-                        {
-                            float dotHeadPos = (card.TracerProgress + (d * spacing)) % pathLength;
-                            for (int i = 0; i < config.TrailLength; i++)
-                            {
-                                float trailIndexFloat = dotHeadPos - i;
-                                if (trailIndexFloat < 0) trailIndexFloat += pathLength;
-                                int trailIndex = (int)trailIndexFloat % pathLength;
-                                Point point = card.TracerPath[trailIndex];
-                                float alphaRatio = 1.0f - ((float)i / config.TrailLength);
-                                float alpha = MathHelper.Lerp(TRAIL_END_ALPHA, TRAIL_START_ALPHA, alphaRatio) * state.Opacity * config.Opacity;
-
-                                Vector2 pointVec = point.ToVector2();
-                                Vector2 relativePos = (pointVec - origin) * state.Scale;
-                                if (state.Rotation != 0f)
-                                {
-                                    float cos = MathF.Cos(state.Rotation);
-                                    float sin = MathF.Sin(state.Rotation);
-                                    relativePos = new Vector2(relativePos.X * cos - relativePos.Y * sin, relativePos.X * sin + relativePos.Y * cos);
-                                }
-                                sb.DrawSnapped(pixel, drawPos + relativePos, null, rarityColor * alpha, 0f, Vector2.Zero, 1f, SpriteEffects.None, 0f);
-                            }
-                        }
-                    }
-
                     // 3. Draw Item Sprite Body
                     // FIX: Use DrawSnapped to ensure body aligns with outline
                     sb.DrawSnapped(icon, drawPos, null, Color.White * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
-
-                    // --- 3.5 Draw Rarity Symbol ---
-                    if (card.Item.Rarity >= 0 && _spriteManager.RarityIconsSpriteSheet != null)
-                    {
-                        var rarityRect = _spriteManager.GetRarityIconSourceRect(card.Item.Rarity, gameTime);
-                        Vector2 rarityOffset = new Vector2(12, -12) * state.Scale;
-                        Vector2 rarityPos = center + rarityOffset;
-                        Vector2 rarityOrigin = new Vector2(4, 4);
-                        sb.DrawSnapped(_spriteManager.RarityIconsSpriteSheet, rarityPos, rarityRect, Color.White * state.Opacity, 0f, rarityOrigin, state.Scale, SpriteEffects.None, 0f);
-                    }
                 }
             }
         }
@@ -768,34 +568,6 @@ namespace ProjectVagabond.Scenes
                     _tooltipRenderer.DrawTooltipImmediate(sb, uiMatrix, _hoveredItemData, center, gameTime, state.Scale, 1.0f, drawDimmer: false);
                 }
             }
-        }
-
-        private (float Speed, int DotCount, int TrailLength, float Opacity) GetTracerConfig(int rarity)
-        {
-            return rarity switch
-            {
-                0 => (15f, 1, 4, 0.15f),
-                1 => (20f, 1, 6, 0.20f),
-                2 => (30f, 1, 8, 0.25f),
-                3 => (40f, 2, 10, 0.30f),
-                4 => (50f, 3, 12, 0.35f),
-                5 => (60f, 4, 15, 0.40f),
-                _ => (30f, 1, 8, 0.25f)
-            };
-        }
-
-        private float GetPulseIntensity(int rarity)
-        {
-            return rarity switch
-            {
-                0 => 0.10f,
-                1 => 0.15f,
-                2 => 0.20f,
-                3 => 0.25f,
-                4 => 0.30f,
-                5 => 0.35f,
-                _ => 0.20f
-            };
         }
     }
 }

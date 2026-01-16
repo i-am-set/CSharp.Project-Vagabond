@@ -95,11 +95,6 @@ namespace ProjectVagabond.Battle
         public int Priority { get; set; }
 
         /// <summary>
-        /// The rarity level of the move. -1 for basic actions, 0 (Common) to 5 (Legendary) for spells/techniques.
-        /// </summary>
-        public int Rarity { get; set; } = -1;
-
-        /// <summary>
         /// A list of element IDs associated with this move's attack type.
         /// </summary>
         public List<int> OffensiveElementIDs { get; set; } = new List<int>();

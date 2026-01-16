@@ -3,11 +3,15 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Items;
+using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.UI
@@ -20,7 +24,6 @@ namespace ProjectVagabond.UI
         public Texture2D? IconTexture { get; set; }
         public Texture2D? IconSilhouette { get; set; }
         public Rectangle? IconSourceRect { get; set; }
-        public int Rarity { get; set; } = -1; // -1 means no rarity icon
 
         /// <summary>
         /// Optional custom color for the Title text. If null, falls back to Gray (idle) -> White (hover).
@@ -191,28 +194,6 @@ namespace ProjectVagabond.UI
                 }
 
                 spriteBatch.DrawSnapped(IconTexture, iconCenter, src, Color.White, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
-
-                // Draw Rarity Icon
-                if (Rarity >= 0 && spriteManager.RarityIconsSpriteSheet != null)
-                {
-                    var rarityRect = spriteManager.GetRarityIconSourceRect(Rarity, gameTime);
-
-                    // Position at top-right of the icon area.
-                    // We want the rarity icon's top-right to align with the icon area's top-right.
-                    // IMPORTANT: Use the animated Y position (finalIconY) so the star floats with the item.
-
-                    float baseRight = totalX + ICON_X + ICON_WIDTH;
-                    float baseTop = finalIconY; // Use animated Y
-
-                    // Rarity Pos = (Right - 8, Top).
-                    // ADJUSTMENT: Moved Up 2px (-2) and Right 3px (+3)
-                    Vector2 rarityPos = new Vector2(baseRight - 8 + 3, baseTop - 2);
-
-                    // Round to pixel
-                    rarityPos = new Vector2(MathF.Round(rarityPos.X), MathF.Round(rarityPos.Y));
-
-                    spriteBatch.DrawSnapped(spriteManager.RarityIconsSpriteSheet, rarityPos, rarityRect, Color.White);
-                }
             }
 
             // --- Main Text (Left Aligned in 109x16) ---

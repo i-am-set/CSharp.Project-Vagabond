@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Items;
@@ -34,8 +35,6 @@ namespace ProjectVagabond.Battle
         /// Lore or visual description of the item.
         /// </summary>
         public string Flavor { get; set; }
-
-        public int Rarity { get; set; } = 0;
 
         // --- Embedded Move Data ---
         public string MoveName { get; set; }

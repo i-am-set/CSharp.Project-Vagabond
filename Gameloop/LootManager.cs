@@ -3,125 +3,98 @@ using System.Collections.Generic;
 using System.Linq;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Items;
-using ProjectVagabond.Utils; // For ServiceLocator
+using ProjectVagabond.Utils;
 
 namespace ProjectVagabond.Systems
 {
     public class LootManager
     {
-        // Master list of all items categorized by Rarity (0-5)
-        private Dictionary<int, List<BaseItem>> _lootTable;
+        // Master list of all items available in the game
+        private List<BaseItem> _masterItemPool;
         private Random _rng;
-
-        // Rarity Weights (Sum should be 100)
-        private readonly Dictionary<int, int> _rarityWeights = new Dictionary<int, int>
-        {
-            { 0, 50 }, // Common
-            { 1, 30 }, // Uncommon
-            { 2, 15 }, // Rare
-            { 3, 4 },  // Epic
-            { 4, 1 }   // Legendary
-        };
 
         public LootManager()
         {
             _rng = new Random();
-            _lootTable = new Dictionary<int, List<BaseItem>>();
-            for (int i = 0; i <= 5; i++) _lootTable[i] = new List<BaseItem>();
+            _masterItemPool = new List<BaseItem>();
         }
 
         /// <summary>
         /// Call this after BattleDataCache has loaded JSONs.
+        /// Flattens all items into a single unweighted pool.
         /// </summary>
         public void BuildLootTables()
         {
-            // Flatten all specific dictionaries into the master loot table
+            _masterItemPool.Clear();
+
             foreach (var w in BattleDataCache.Weapons.Values)
-                _lootTable[w.Rarity].Add(BaseItem.FromWeapon(w));
+                _masterItemPool.Add(BaseItem.FromWeapon(w));
 
             foreach (var r in BattleDataCache.Relics.Values)
-                _lootTable[r.Rarity].Add(BaseItem.FromRelic(r));
+                _masterItemPool.Add(BaseItem.FromRelic(r));
         }
 
         /// <summary>
         /// Generates exactly 2 items: 1 Weapon, 1 Relic.
+        /// Uses a "Deck of Cards" system: Items seen in this run are removed from the pool.
         /// </summary>
         public List<BaseItem> GenerateCombatLoot()
         {
             List<BaseItem> loot = new List<BaseItem>();
-            HashSet<string> pickedIds = new HashSet<string>();
+
+            // We track picked IDs locally for this specific drop to ensure we don't pick the same item twice 
+            // in one batch (though the global SeenItemIds handles cross-run uniqueness).
+            HashSet<string> currentBatchIds = new HashSet<string>();
 
             // 1. Generate Weapon
-            var weapon = GetRandomItemByType(ItemType.Weapon, pickedIds);
+            var weapon = GetRandomItemByType(ItemType.Weapon, currentBatchIds);
             if (weapon != null)
             {
                 loot.Add(weapon);
-                pickedIds.Add(weapon.ID);
+                currentBatchIds.Add(weapon.ID);
             }
 
             // 2. Generate Relic
-            var relic = GetRandomItemByType(ItemType.Relic, pickedIds);
+            var relic = GetRandomItemByType(ItemType.Relic, currentBatchIds);
             if (relic != null)
             {
                 loot.Add(relic);
-                pickedIds.Add(relic.ID);
+                currentBatchIds.Add(relic.ID);
             }
 
             return loot;
         }
 
-        private BaseItem GetRandomItemByType(ItemType type, HashSet<string> excludeIds)
+        private BaseItem GetRandomItemByType(ItemType type, HashSet<string> currentBatchIds)
         {
-            // 1. Roll for target rarity
-            int targetRarity = RollRarity();
+            var gameState = ServiceLocator.Get<GameState>();
 
-            // 2. Try to find an item of that type and rarity
-            // If not found, step down in rarity until we find one (or hit Common)
-            // If still not found, step up from target rarity.
-
-            // Simplified Fallback: Check Target -> 0, then Target+1 -> 5
-
-            // Downward search
-            for (int r = targetRarity; r >= 0; r--)
-            {
-                var item = GetItemFromPool(r, type, excludeIds);
-                if (item != null) return item;
-            }
-
-            // Upward search (if nothing found in lower tiers)
-            for (int r = targetRarity + 1; r <= 5; r++)
-            {
-                var item = GetItemFromPool(r, type, excludeIds);
-                if (item != null) return item;
-            }
-
-            return null;
-        }
-
-        private BaseItem GetItemFromPool(int rarity, ItemType type, HashSet<string> excludeIds)
-        {
-            if (!_lootTable.ContainsKey(rarity)) return null;
-
-            var pool = _lootTable[rarity]
-                .Where(i => i.Type == type && !excludeIds.Contains(i.ID))
+            // Filter the master pool:
+            // 1. Must match requested type
+            // 2. Must NOT have been seen in this run (GameState.SeenItemIds)
+            // 3. Must NOT have been picked in this specific batch (currentBatchIds)
+            var candidates = _masterItemPool
+                .Where(i => i.Type == type &&
+                            !gameState.SeenItemIds.Contains(i.ID) &&
+                            !currentBatchIds.Contains(i.ID))
                 .ToList();
 
-            if (pool.Count == 0) return null;
-
-            return pool[_rng.Next(pool.Count)];
-        }
-
-        private int RollRarity()
-        {
-            int roll = _rng.Next(1, 101);
-            int cumulative = 0;
-
-            foreach (var kvp in _rarityWeights)
+            if (candidates.Count == 0)
             {
-                cumulative += kvp.Value;
-                if (roll <= cumulative) return kvp.Key;
+                // Fallback: If we've seen literally every item of this type, 
+                // we might return null (no drop) or allow duplicates.
+                // For a "sprint" roguelike, running out of items is unlikely unless the pool is tiny.
+                // We return null to indicate "pool exhausted".
+                return null;
             }
-            return 0; // Default to common
+
+            // Pick a random item from the remaining candidates (Unweighted)
+            var selectedItem = candidates[_rng.Next(candidates.Count)];
+
+            // Mark as seen globally so it doesn't appear again this run
+            gameState.SeenItemIds.Add(selectedItem.ID);
+
+            return selectedItem;
         }
     }
 }

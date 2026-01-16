@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Dice;
@@ -204,48 +205,36 @@ namespace ProjectVagabond.UI
 
         public void DrawInfoPanelContent(SpriteBatch spriteBatch, object itemData, Rectangle bounds, BitmapFont font, BitmapFont secondaryFont, GameTime gameTime, float opacity)
         {
-            // --- Draw Type and Rarity Headers ---
+            // --- Draw Type Header (Rarity Removed) ---
             var tertiaryFont = _core.TertiaryFont;
             string typeText = "ITEM";
-            int rarity = 0;
 
             if (itemData is MoveData moveHeader)
             {
                 typeText = moveHeader.MoveType == MoveType.Spell ? "SPELL" : "ACTION";
-                rarity = moveHeader.Rarity;
             }
-            else if (itemData is WeaponData weaponHeader)
+            else if (itemData is WeaponData)
             {
                 typeText = "WEAPON";
-                rarity = weaponHeader.Rarity;
             }
-            else if (itemData is ArmorData armorHeader)
+            else if (itemData is ArmorData)
             {
                 typeText = "ARMOR";
-                rarity = armorHeader.Rarity;
             }
-            else if (itemData is RelicData relicHeader)
+            else if (itemData is RelicData)
             {
                 typeText = "RELIC";
-                rarity = relicHeader.Rarity;
             }
             else if (itemData is ConsumableItemData)
             {
                 typeText = "CONSUMABLE";
-                rarity = 0;
             }
-            else if (itemData is MiscItemData miscHeader)
+            else if (itemData is MiscItemData)
             {
                 typeText = "ITEM";
-                rarity = miscHeader.Rarity;
             }
 
-            string rarityText = GetRarityName(rarity);
-            Color rarityColor = _global.RarityColors.ContainsKey(rarity) ? _global.RarityColors[rarity] : Color.White;
-
             spriteBatch.DrawStringSnapped(tertiaryFont, typeText, new Vector2(bounds.X + 4, bounds.Y + 2), _global.Palette_DarkGray * opacity);
-            Vector2 raritySize = tertiaryFont.MeasureString(rarityText);
-            spriteBatch.DrawStringSnapped(tertiaryFont, rarityText, new Vector2(bounds.Right - 4 - raritySize.X, bounds.Y + 2), rarityColor * opacity);
 
             // --- Continue with specific drawing ---
 
@@ -295,21 +284,6 @@ namespace ProjectVagabond.UI
 
                 DrawGenericItemInfoPanel(spriteBatch, font, secondaryFont, name, description, flavor, iconTexture, iconSilhouette, stats, bounds, gameTime, opacity);
             }
-        }
-
-        private string GetRarityName(int rarity)
-        {
-            return rarity switch
-            {
-                -1 => "BASIC",
-                0 => "COMMON",
-                1 => "UNCOMMON",
-                2 => "RARE",
-                3 => "EPIC",
-                4 => "MYTHIC",
-                5 => "LEGENDARY",
-                _ => "UNKNOWN"
-            };
         }
 
         private float MeasureContentHeight(BitmapFont font, BitmapFont secondaryFont, object? data, int panelWidth)

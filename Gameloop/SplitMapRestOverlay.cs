@@ -2,13 +2,20 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Dice;
+using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 
 namespace ProjectVagabond.UI
@@ -526,8 +533,8 @@ namespace ProjectVagabond.UI
                                 {
                                     string relicId = allRelics[_rng.Next(allRelics.Count)];
                                     var relic = BattleDataCache.Relics[relicId];
-                                    string rarityTag = GetRarityTag(relic.Rarity);
-                                    msg += $"Found [pop]{rarityTag}{relic.RelicName}[/][/]!";
+                                    // REMOVED: Rarity tag logic
+                                    msg += $"Found [pop][cItem]{relic.RelicName}[/][/]!";
 
                                     effectAction = () =>
                                     {
@@ -618,21 +625,6 @@ namespace ProjectVagabond.UI
                 "Tenacity" => "[StatColor_Tenacity]",
                 "Agility" => "[StatColor_Agility]",
                 _ => "[Palette_Sun]"
-            };
-        }
-
-        private string GetRarityTag(int rarity)
-        {
-            // Use standard MonoGame color names supported by StoryNarrator reflection
-            return rarity switch
-            {
-                0 => "[White]", // Common
-                1 => "[Lime]", // Uncommon
-                2 => "[DeepSkyBlue]", // Rare
-                3 => "[DarkOrchid]", // Epic
-                4 => "[Red]", // Mythic
-                5 => "[Yellow]", // Legendary
-                _ => "[White]"
             };
         }
 

@@ -2,12 +2,16 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Items;
+using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 
@@ -99,7 +103,6 @@ namespace ProjectVagabond.UI
                 btn.IconTexture = null;
                 btn.IconSilhouette = null;
                 btn.OnClick = null;
-                btn.Rarity = -1;
 
                 if (i % 2 == 0)
                 {
@@ -138,7 +141,6 @@ namespace ProjectVagabond.UI
                             btn.IconTexture = _overlay.SpriteManager.GetSmallRelicSprite(path);
                             btn.IconSilhouette = _overlay.SpriteManager.GetSmallRelicSpriteSilhouette(path);
                             btn.IconSourceRect = null;
-                            btn.Rarity = weaponData.Rarity;
                             btn.IsEnabled = true;
                             btn.OnClick = () => SelectEquipItem(itemId);
                         }
@@ -159,7 +161,6 @@ namespace ProjectVagabond.UI
                             btn.IconTexture = _overlay.SpriteManager.GetSmallRelicSprite(path);
                             btn.IconSilhouette = _overlay.SpriteManager.GetSmallRelicSpriteSilhouette(path);
                             btn.IconSourceRect = null;
-                            btn.Rarity = relicData.Rarity;
                             btn.IsEnabled = true;
                             btn.OnClick = () => SelectEquipItem(itemId);
                         }

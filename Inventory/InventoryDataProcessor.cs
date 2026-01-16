@@ -47,7 +47,7 @@ namespace ProjectVagabond.UI
             for (int i = 0; i < itemsToDisplay; i++)
             {
                 var item = items[startIndex + i];
-                _overlay.InventorySlots[i].AssignItem(item.Name, item.Quantity, item.IconPath, item.Rarity, item.IconTint, item.IsAnimated, item.FallbackIconPath, item.IsEquipped);
+                _overlay.InventorySlots[i].AssignItem(item.Name, item.Quantity, item.IconPath, item.IconTint, item.IsAnimated, item.FallbackIconPath, item.IsEquipped);
 
                 if (_overlay.SelectedSlotIndex == i)
                 {
@@ -56,9 +56,9 @@ namespace ProjectVagabond.UI
             }
         }
 
-        public List<(string Name, int Quantity, string? IconPath, int? Uses, int Rarity, Color? IconTint, bool IsAnimated, string? FallbackIconPath, bool IsEquipped)> GetCurrentCategoryItems()
+        public List<(string Name, int Quantity, string? IconPath, int? Uses, Color? IconTint, bool IsAnimated, string? FallbackIconPath, bool IsEquipped)> GetCurrentCategoryItems()
         {
-            var currentItems = new List<(string Name, int Quantity, string? IconPath, int? Uses, int Rarity, Color? IconTint, bool IsAnimated, string? FallbackIconPath, bool IsEquipped)>();
+            var currentItems = new List<(string Name, int Quantity, string? IconPath, int? Uses, Color? IconTint, bool IsAnimated, string? FallbackIconPath, bool IsEquipped)>();
             var playerState = _overlay.GameState.PlayerState;
 
             switch (_overlay.SelectedInventoryCategory)
@@ -69,11 +69,11 @@ namespace ProjectVagabond.UI
                         bool isEquipped = playerState.Party.Any(m => m.EquippedWeaponId == kvp.Key);
                         if (BattleDataCache.Weapons.TryGetValue(kvp.Key, out var weaponData))
                         {
-                            currentItems.Add((weaponData.WeaponName, kvp.Value, $"Sprites/Items/Weapons/{kvp.Key}", null, weaponData.Rarity, null, false, null, isEquipped));
+                            currentItems.Add((weaponData.WeaponName, kvp.Value, $"Sprites/Items/Weapons/{kvp.Key}", null, null, false, null, isEquipped));
                         }
                         else
                         {
-                            currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Weapons/{kvp.Key}", null, 0, null, false, null, isEquipped));
+                            currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Weapons/{kvp.Key}", null, null, false, null, isEquipped));
                         }
                     }
                     break;
@@ -82,27 +82,27 @@ namespace ProjectVagabond.UI
                     {
                         bool isEquipped = playerState.Party.Any(m => m.EquippedRelicId == kvp.Key);
                         if (BattleDataCache.Relics.TryGetValue(kvp.Key, out var data))
-                            currentItems.Add((data.RelicName, kvp.Value, $"Sprites/Items/Relics/{data.RelicID}", null, data.Rarity, null, false, null, isEquipped));
+                            currentItems.Add((data.RelicName, kvp.Value, $"Sprites/Items/Relics/{data.RelicID}", null, null, false, null, isEquipped));
                         else
-                            currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Relics/{kvp.Key}", null, 0, null, false, null, isEquipped));
+                            currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Relics/{kvp.Key}", null, null, false, null, isEquipped));
                     }
                     break;
                 case InventoryCategory.Consumables:
                     foreach (var kvp in playerState.Consumables)
                     {
                         if (BattleDataCache.Consumables.TryGetValue(kvp.Key, out var data))
-                            currentItems.Add((data.ItemName, kvp.Value, $"Sprites/Items/Consumables/{data.ItemID}", null, 0, null, false, null, false));
+                            currentItems.Add((data.ItemName, kvp.Value, $"Sprites/Items/Consumables/{data.ItemID}", null, null, false, null, false));
                         else
-                            currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Consumables/{kvp.Key}", null, 0, null, false, null, false));
+                            currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Consumables/{kvp.Key}", null, null, false, null, false));
                     }
                     break;
                 case InventoryCategory.Misc:
                     foreach (var kvp in playerState.MiscItems)
                     {
                         if (BattleDataCache.MiscItems.TryGetValue(kvp.Key, out var data))
-                            currentItems.Add((data.ItemName, kvp.Value, data.ImagePath, null, data.Rarity, null, false, null, false));
+                            currentItems.Add((data.ItemName, kvp.Value, data.ImagePath, null, null, false, null, false));
                         else
-                            currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Misc/{kvp.Key}", null, 0, null, false, null, false));
+                            currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Misc/{kvp.Key}", null, null, false, null, false));
                     }
                     break;
             }
