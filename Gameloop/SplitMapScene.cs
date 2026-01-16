@@ -87,14 +87,9 @@ namespace ProjectVagabond.Scenes
 
         private readonly Dictionary<int, float> _pathAnimationProgress = new();
         private readonly Dictionary<int, float> _pathAnimationDurations = new();
-        private const string PATH_DRAW_PATTERN = "1111110111010111111001110111110011111111110101100";
         private static readonly Random _random = new Random();
 
-        private const float PATH_COLOR_VARIATION_MIN = 0.1f;
-        private const float PATH_COLOR_VARIATION_MAX = 1.0f;
-        private const float PATH_COLOR_NOISE_SCALE = 0.3f;
         private const float PATH_EXCLUSION_RADIUS = 10f;
-        private const float PATH_FADE_DISTANCE = 12f;
 
         private float _pulseTimer = 0f;
         private const float PULSE_AMOUNT = 0.3f;
@@ -1719,7 +1714,8 @@ namespace ProjectVagabond.Scenes
 
                 if (isPathTraversed || isAnimating)
                 {
-                    DrawPath(spriteBatch, pixel, path, _global.GameTextColor, isAnimating);
+                    // Use the new global color for traversed/active paths
+                    DrawPath(spriteBatch, pixel, path, _global.SplitMapPathColor, isAnimating);
                 }
             }
 
@@ -1754,38 +1750,28 @@ namespace ProjectVagabond.Scenes
 
             if (numPixelsToDraw <= 0) return;
 
+            // New Pattern Logic
             for (int i = 0; i < numPixelsToDraw; i++)
             {
                 var point = path.PixelPoints[i];
-                int patternIndex = Math.Abs(point.X * 7 + point.Y * 13) % PATH_DRAW_PATTERN.Length;
-                if (PATH_DRAW_PATTERN[patternIndex] == '1')
+                var pointVec = point.ToVector2();
+
+                // Check distance to nodes for hard cropping
+                float distFrom = Vector2.Distance(pointVec, fromNode.Position);
+                float distTo = Vector2.Distance(pointVec, toNode.Position);
+
+                // Hard crop
+                if (distFrom <= PATH_EXCLUSION_RADIUS || distTo <= PATH_EXCLUSION_RADIUS)
                 {
-                    var pointVec = point.ToVector2();
-                    float distFrom = Vector2.Distance(pointVec, fromNode.Position);
-                    float distTo = Vector2.Distance(pointVec, toNode.Position);
+                    continue; // Skip drawing this pixel
+                }
 
-                    float alpha = 1.0f;
-                    float fadeStartDistance = PATH_EXCLUSION_RADIUS + PATH_FADE_DISTANCE;
-
-                    if (distFrom < fadeStartDistance)
-                    {
-                        if (distFrom <= PATH_EXCLUSION_RADIUS) alpha = 0f;
-                        else alpha = Math.Min(alpha, (distFrom - PATH_EXCLUSION_RADIUS) / PATH_FADE_DISTANCE);
-                    }
-
-                    if (distTo < fadeStartDistance)
-                    {
-                        if (distTo <= PATH_EXCLUSION_RADIUS) alpha = 0f;
-                        else alpha = Math.Min(alpha, (distTo - PATH_EXCLUSION_RADIUS) / PATH_FADE_DISTANCE);
-                    }
-
-                    if (alpha > 0.01f)
-                    {
-                        float noise = _gameState.NoiseManager.GetNoiseValue(NoiseMapType.Resources, point.X * PATH_COLOR_NOISE_SCALE, point.Y * PATH_COLOR_NOISE_SCALE);
-                        float multiplier = MathHelper.Lerp(PATH_COLOR_VARIATION_MIN, PATH_COLOR_VARIATION_MAX, noise);
-                        Color pixelColor = new Color(pathColor.ToVector3() * multiplier);
-                        spriteBatch.Draw(pixel, point.ToVector2(), pixelColor * alpha);
-                    }
+                // 2 pixels on, 2 pixels off
+                // i % 4 returns 0, 1, 2, 3.
+                // We want to draw on 0 and 1.
+                if (i % 4 < 2)
+                {
+                    spriteBatch.Draw(pixel, pointVec, pathColor);
                 }
             }
         }

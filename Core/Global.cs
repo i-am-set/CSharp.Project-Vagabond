@@ -1,7 +1,18 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Dice;
+using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.Transitions;
+using ProjectVagabond.UI;
+using ProjectVagabond.Utils;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 
 namespace ProjectVagabond
 {
@@ -18,6 +29,7 @@ namespace ProjectVagabond
             ButtonHoverColor = Palette_Rust;
             ButtonDisableColor = Palette_DarkShadow;
             SplitMapNodeColor = Palette_Sun;
+            SplitMapPathColor = Palette_Fruit;
             OutputTextColor = Palette_LightGray;
             InputTextColor = Palette_Gray;
             ToolTipBGColor = Palette_Black;
@@ -280,6 +292,7 @@ namespace ProjectVagabond
         public Color ButtonHoverColor { get; private set; }
         public Color ButtonDisableColor { get; private set; }
         public Color SplitMapNodeColor { get; private set; }
+        public Color SplitMapPathColor { get; private set; }
         public Color OutputTextColor { get; private set; }
         public Color InputTextColor { get; private set; }
         public Color ToolTipBGColor { get; private set; }
