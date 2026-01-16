@@ -65,7 +65,7 @@ namespace ProjectVagabond.UI
             if (HasSpell)
             {
                 string textToDraw = SpellName.ToUpper();
-                Color textColor = _global.Palette_BlueWhite;
+                Color textColor = _global.Palette_Sun;
 
                 if (!IsEnabled) textColor = _global.Palette_DarkGray;
                 else if (isActivated) textColor = _global.ButtonHoverColor;

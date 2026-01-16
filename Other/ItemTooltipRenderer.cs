@@ -136,7 +136,7 @@ namespace ProjectVagabond.UI
 
             var pixelTex = ServiceLocator.Get<Texture2D>();
             DrawBeveledBackground(sb, pixelTex, infoPanelArea, _global.Palette_Black * opacity);
-            DrawBeveledBorder(sb, pixelTex, infoPanelArea, _global.Palette_BlueWhite * opacity);
+            DrawBeveledBorder(sb, pixelTex, infoPanelArea, _global.Palette_Sun * opacity);
             DrawInfoPanelContent(sb, itemData, infoPanelArea, font, secondaryFont, gameTime, opacity);
 
             sb.End();
@@ -422,7 +422,7 @@ namespace ProjectVagabond.UI
                 );
                 namePos = new Vector2(MathF.Round(namePos.X), MathF.Round(namePos.Y));
 
-                TextAnimator.DrawTextWithEffectOutlined(spriteBatch, font, line, namePos, _global.Palette_BlueWhite * opacity, _global.Palette_Black * opacity, TextEffectType.Drift, (float)gameTime.TotalGameTime.TotalSeconds);
+                TextAnimator.DrawTextWithEffectOutlined(spriteBatch, font, line, namePos, _global.Palette_Sun * opacity, _global.Palette_Black * opacity, TextEffectType.Drift, (float)gameTime.TotalGameTime.TotalSeconds);
             }
         }
 
@@ -496,7 +496,7 @@ namespace ProjectVagabond.UI
             string offStatVal = GetStatString(weapon.OffensiveStat);
             Color offColor = GetStatColor(weapon.OffensiveStat);
             string impactVal = weapon.ImpactType.ToString().ToUpper().Substring(0, Math.Min(4, weapon.ImpactType.ToString().Length));
-            Color impactColor = weapon.ImpactType == ImpactType.Magical ? _global.Palette_LightBlue : (weapon.ImpactType == ImpactType.Physical ? _global.Palette_Orange : _global.Palette_Gray);
+            Color impactColor = weapon.ImpactType == ImpactType.Magical ? _global.Palette_Blue : (weapon.ImpactType == ImpactType.Physical ? _global.Palette_Orange : _global.Palette_Gray);
 
             DrawStatPair("USE", offStatVal, leftLabelX, leftValueX, currentY, offColor);
             DrawStatPair("TYP", impactVal, rightLabelX, rightValueX, currentY, impactColor);
@@ -637,7 +637,7 @@ namespace ProjectVagabond.UI
             string offStatVal = GetStatString(move.OffensiveStat);
             Color offColor = GetStatColor(move.OffensiveStat);
             string impactVal = move.ImpactType.ToString().ToUpper().Substring(0, Math.Min(4, move.ImpactType.ToString().Length));
-            Color impactColor = move.ImpactType == ImpactType.Magical ? _global.Palette_LightBlue : (move.ImpactType == ImpactType.Physical ? _global.Palette_Orange : _global.Palette_Gray);
+            Color impactColor = move.ImpactType == ImpactType.Magical ? _global.Palette_Blue : (move.ImpactType == ImpactType.Physical ? _global.Palette_Orange : _global.Palette_Gray);
 
             DrawStatPair("USE", offStatVal, leftLabelX, leftValueX, currentY, offColor);
             DrawStatPair("TYP", impactVal, rightLabelX, rightValueX, currentY, impactColor);
@@ -741,7 +741,7 @@ namespace ProjectVagabond.UI
             else
             {
                 text = (val > 0 ? "+" : "") + val;
-                c = val > 0 ? _global.Palette_LightGreen : _global.Palette_Red;
+                c = val > 0 ? _global.Palette_Green : _global.Palette_Red;
             }
             spriteBatch.DrawStringSnapped(secondaryFont, text, new Vector2(valueX, y), c * opacity);
         }

@@ -892,7 +892,7 @@ namespace ProjectVagabond.Scenes
             // Explicitly check !_isPanning to be safe
             if (!_isPanning && _hoveredNodeId != -1 && _hoveredNodeId != _lastHoveredNodeId)
             {
-                _hapticsManager.TriggerUICompoundShake(_global.HoverHapticStrength);
+                // _hapticsManager.TriggerUICompoundShake(_global.HoverHapticStrength); // disabled for now; I dont like how it looks
             }
             _lastHoveredNodeId = _hoveredNodeId;
 
@@ -1696,7 +1696,7 @@ namespace ProjectVagabond.Scenes
 
             foreach (var path in _currentMap.Paths.Values)
             {
-                DrawPath(spriteBatch, pixel, path, _global.Palette_Gray, false);
+                DrawPath(spriteBatch, pixel, path, _global.Palette_DarkShadow, false);
             }
 
             SplitMapPath? highlightedPath = null;
@@ -1719,13 +1719,13 @@ namespace ProjectVagabond.Scenes
 
                 if (isPathTraversed || isAnimating)
                 {
-                    DrawPath(spriteBatch, pixel, path, _global.Palette_White, isAnimating);
+                    DrawPath(spriteBatch, pixel, path, _global.GameTextColor, isAnimating);
                 }
             }
 
             if (highlightedPath != null)
             {
-                DrawPath(spriteBatch, pixel, highlightedPath, _global.Palette_Red, false);
+                DrawPath(spriteBatch, pixel, highlightedPath, _global.ButtonHoverColor, false);
             }
         }
 
@@ -1794,16 +1794,16 @@ namespace ProjectVagabond.Scenes
         {
             var (texture, sourceRect, origin) = GetNodeDrawData(node, gameTime);
             var bounds = node.GetBounds();
-            var color = Color.White;
+            var color = _global.SplitMapNodeColor;
             float scale = 1.0f;
 
             if (node.IsCompleted)
             {
-                color = _global.Palette_Gray;
+                color = _global.Palette_DarkShadow;
             }
             else if (node.NodeType != SplitNodeType.Origin && node.Id != _playerCurrentNodeId && !node.IsReachable)
             {
-                color = _global.Palette_Gray;
+                color = _global.Palette_DarkShadow;
             }
 
             bool isSelected = (node.Id == _selectedNodeId);

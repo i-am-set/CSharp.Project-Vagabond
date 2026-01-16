@@ -36,7 +36,7 @@ namespace ProjectVagabond.Battle.UI
             float hpPercent = combatant.Stats.MaxHP > 0 ? Math.Clamp(combatant.VisualHP / combatant.Stats.MaxHP, 0f, 1f) : 0f;
             var hpAnim = animationManager.GetResourceBarAnimation(combatant.CombatantID, BattleAnimationManager.ResourceBarAnimationState.BarResourceType.HP);
 
-            DrawBar(spriteBatch, barRect, hpPercent, _global.Palette_DarkGray, _global.Palette_LightGreen, _global.Palette_Black, hpAlpha, hpAnim, combatant.Stats.MaxHP);
+            DrawBar(spriteBatch, barRect, hpPercent, _global.Palette_DarkShadow, _global.Palette_Green, _global.Palette_Black, hpAlpha, hpAnim, combatant.Stats.MaxHP);
 
             // --- MANA BAR ---
             float manaBarY = barY + barHeight + 1;
@@ -44,7 +44,7 @@ namespace ProjectVagabond.Battle.UI
             float manaPercent = combatant.Stats.MaxMana > 0 ? Math.Clamp((float)combatant.Stats.CurrentMana / combatant.Stats.MaxMana, 0f, 1f) : 0f;
             var manaAnim = animationManager.GetResourceBarAnimation(combatant.CombatantID, BattleAnimationManager.ResourceBarAnimationState.BarResourceType.Mana);
 
-            DrawBar(spriteBatch, manaRect, manaPercent, _global.Palette_DarkGray, _global.Palette_LightBlue, _global.Palette_Black, manaAlpha, manaAnim, combatant.Stats.MaxMana);
+            DrawBar(spriteBatch, manaRect, manaPercent, _global.Palette_DarkShadow, _global.Palette_Blue, _global.Palette_Black, manaAlpha, manaAnim, combatant.Stats.MaxMana);
         }
 
         private void DrawBar(SpriteBatch spriteBatch, Rectangle fullBarRect, float fillPercent, Color bgColor, Color fgColor, Color borderColor, float alpha, BattleAnimationManager.ResourceBarAnimationState? anim, float maxResource)
@@ -133,7 +133,7 @@ namespace ProjectVagabond.Battle.UI
 
                         // Pulse Color
                         float pulse = (MathF.Sin(uiManager.SharedPulseTimer * 4f) + 1f) / 2f;
-                        previewColor = Color.Lerp(_global.Palette_Yellow, _global.Palette_BlueWhite, pulse);
+                        previewColor = Color.Lerp(_global.Palette_Yellow, _global.Palette_Sun, pulse);
                     }
                     else
                     {

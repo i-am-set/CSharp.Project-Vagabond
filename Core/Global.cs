@@ -14,14 +14,15 @@ namespace ProjectVagabond
             GameBg = Palette_Black;
             TerminalBg = Palette_Black;
             MapBg = Palette_Black;
-            GameTextColor = Palette_LightGray;
-            ButtonHoverColor = Palette_Red;
-            ButtonDisableColor = Palette_DarkGray;
+            GameTextColor = Palette_Sun;
+            ButtonHoverColor = Palette_Rust;
+            ButtonDisableColor = Palette_DarkShadow;
+            SplitMapNodeColor = Palette_Sun;
             OutputTextColor = Palette_LightGray;
             InputTextColor = Palette_Gray;
             ToolTipBGColor = Palette_Black;
-            ToolTipTextColor = Palette_BlueWhite;
-            ToolTipBorderColor = Palette_BlueWhite;
+            ToolTipTextColor = Palette_Sun;
+            ToolTipBorderColor = Palette_Sun;
             TerminalDarkGray = Palette_DarkGray;
             InputCaratColor = Palette_Yellow;
             AlertColor = Color.Red;
@@ -39,41 +40,41 @@ namespace ProjectVagabond
 
             // Initialize Generic Feedback Colors
             ColorPositive = Palette_Green;
-            ColorNegative = Palette_LightRed;
+            ColorNegative = Palette_Red;
             ColorCrit = Palette_Yellow;
-            ColorImmune = Palette_DarkBlue;
-            ColorConditionToMeet = Palette_LightYellow;
+            ColorImmune = Palette_Blue;
+            ColorConditionToMeet = Palette_Yellow;
 
             // Initialize Percentage Gradient Colors
-            ColorPercentageMin = Palette_Gray;
-            ColorPercentageMax = Palette_LightGreen;
+            ColorPercentageMin = Palette_DarkShadow;
+            ColorPercentageMax = Palette_Green;
 
             // Initialize Item Outline Colors
-            ItemOutlineColor_Idle = Palette_Gray;
-            ItemOutlineColor_Hover = Palette_BlueWhite;
-            ItemOutlineColor_Selected = Color.White;
+            ItemOutlineColor_Idle = Palette_DarkShadow;
+            ItemOutlineColor_Hover = Palette_DarkShadow;
+            ItemOutlineColor_Selected = Palette_DarkShadow;
 
-            ItemOutlineColor_Idle_Corner = Palette_DarkGray;
-            ItemOutlineColor_Hover_Corner = Palette_White;
-            ItemOutlineColor_Selected_Corner = Palette_BlueWhite;
+            ItemOutlineColor_Idle_Corner = Palette_DarkShadow;
+            ItemOutlineColor_Hover_Corner = Palette_DarkShadow;
+            ItemOutlineColor_Selected_Corner = Palette_DarkShadow;
 
             // Initialize Narration Colors
-            ColorNarration_Default = Palette_BlueWhite;
-            ColorNarration_Prefix = Palette_White;
+            ColorNarration_Default = Palette_Sun;
+            ColorNarration_Prefix = Palette_DarkSun;
             ColorNarration_Action = Palette_Orange;
-            ColorNarration_Spell = Palette_DarkBlue;
-            ColorNarration_Item = Palette_PaleGreen;
+            ColorNarration_Spell = Palette_Blue;
+            ColorNarration_Item = Palette_Green;
             ColorNarration_Critical = Palette_Yellow;
-            ColorNarration_Defeated = Palette_DarkRed;
-            ColorNarration_Escaped = Palette_LightBlue;
+            ColorNarration_Defeated = Palette_Red;
+            ColorNarration_Escaped = Palette_Blue;
             ColorNarration_Enemy = Palette_Red;
-            ColorNarration_Status = Palette_LightPurple;
+            ColorNarration_Status = Palette_Purple;
 
             // Initialize Combat Indicator Colors
             DamageIndicatorColor = Color.Crimson;
             HealIndicatorColor = Color.Lime;
             CritcalHitIndicatorColor = Color.Yellow;
-            GrazeIndicatorColor = Color.LightGray;
+            GrazeIndicatorColor = Palette_DarkShadow;
             EffectiveIndicatorColor = Color.Cyan;
             ResistedIndicatorColor = Color.Orange;
             ImmuneIndicatorColor = Palette_White;
@@ -88,7 +89,7 @@ namespace ProjectVagabond
                 { 2, Palette_Blue },        // Water
                 { 3, Palette_Green },       // Nature
                 { 4, Palette_Pink },        // Arcane
-                { 5, Palette_LightYellow }, // Divine
+                { 5, Palette_Yellow }, // Divine
                 { 6, Palette_Purple }       // Blight
             };
 
@@ -107,16 +108,16 @@ namespace ProjectVagabond
             {
                 { StatusEffectType.Poison, Palette_Purple },
                 { StatusEffectType.Stun, Palette_Yellow },
-                { StatusEffectType.Regen, Palette_LightGreen },
+                { StatusEffectType.Regen, Palette_Green },
                 { StatusEffectType.Dodging, Palette_Blue },
                 { StatusEffectType.Burn, Palette_Red },
-                { StatusEffectType.Frostbite, Palette_DarkBlue },
+                { StatusEffectType.Frostbite, Palette_Blue },
                 { StatusEffectType.Silence, Palette_LightGray },
-                { StatusEffectType.Protected, Palette_BlueWhite },
+                { StatusEffectType.Protected, Palette_Sun },
                 { StatusEffectType.Empowered, Palette_Orange },
                 { StatusEffectType.TargetMe, Palette_Red },
                 { StatusEffectType.Provoked, Palette_Orange },
-                { StatusEffectType.Bleeding, Palette_DarkRed }
+                { StatusEffectType.Bleeding, Palette_Red }
             };
         }
 
@@ -195,7 +196,7 @@ namespace ProjectVagabond
         public float HitstopDuration_Crit { get; set; } = 0.2f;
 
         // --- BACKGROUND NOISE TUNING ---
-        public Color BackgroundNoiseColor { get; set; } = new Color(24, 23, 30);
+        public Color BackgroundNoiseColor { get; set; } = new Color(32, 26, 35);
         public float BackgroundNoiseOpacity { get; set; } = 1.0f;
         public float BackgroundNoiseScale { get; set; } = 0.05f;
         public float BackgroundScrollSpeedX { get; set; } = 0.01f;
@@ -245,34 +246,47 @@ namespace ProjectVagabond
         public int previousScrollValue = Mouse.GetState().ScrollWheelValue;
 
         // Static Color Palette
-        public Color Palette_LightPink { get; set; } = new Color(222, 172, 230);
-        public Color Palette_Pink { get; set; } = new Color(213, 87, 168);
-        public Color Palette_LightPurple { get; set; } = new Color(189, 76, 180);
-        public Color Palette_Purple { get; set; } = new Color(154, 64, 131);
-        public Color Palette_DarkPurple { get; set; } = new Color(123, 54, 89);
-        public Color Palette_DarkRed { get; set; } = new Color(154, 50, 50);
-        public Color Palette_Red { get; set; } = new Color(181, 65, 49);
-        public Color Palette_LightRed { get; set; } = new Color(193, 77, 47);
-        public Color Palette_Orange { get; set; } = new Color(196, 101, 28);
-        public Color Palette_LightOrange { get; set; } = new Color(212, 130, 37);
-        public Color Palette_Yellow { get; set; } = new Color(231, 201, 55);
-        public Color Palette_LightYellow { get; set; } = new Color(231, 232, 91);
-        public Color Palette_YellowGreen { get; set; } = new Color(198, 222, 120);
-        public Color Palette_PaleGreen { get; set; } = new Color(144, 191, 92);
-        public Color Palette_LightGreen { get; set; } = new Color(86, 190, 68);
-        public Color Palette_Green { get; set; } = new Color(68, 173, 80);
-        public Color Palette_DarkGreen { get; set; } = new Color(55, 161, 87);
-        public Color Palette_DarkBlue { get; set; } = new Color(48, 180, 156);
-        public Color Palette_Blue { get; set; } = new Color(106, 200, 195);
-        public Color Palette_LightBlue { get; set; } = new Color(151, 216, 225);
-        public Color Palette_BlueWhite { get; set; } = new Color(193, 229, 234);
-        public Color Palette_White { get; set; } = new Color(113, 132, 154);
+        public Color Palette_ElementFire { get; set; } = new Color(255, 85, 0);
+        public Color Palette_ElementWater { get; set; } = new Color(0, 170, 255);
+        public Color Palette_ElementNature { get; set; } = new Color(0, 255, 85);
+        public Color Palette_ElementArcane { get; set; } = new Color(170, 0, 255);
+        public Color Palette_ElementDivine { get; set; } = new Color(255, 255, 85);
+        public Color Palette_ElementBlight { get; set; } = new Color(170, 85, 255);
+
+        public Color Palette_LightChalk { get; set; } = new Color(169, 178, 162);
+        public Color Palette_Chalk { get; set; } = new Color(120, 138, 135);
+        public Color Palette_DarkChalk { get; set; } = new Color(87, 96, 105);
+
+        public Color Palette_DarkestPale { get; set; } = new Color(68, 56, 70);
+        public Color Palette_DarkPale { get; set; } = new Color(102, 89, 100);
+        public Color Palette_Pale { get; set; } = new Color(153, 127, 115);
+        public Color Palette_LightPale { get; set; } = new Color(176, 169, 135);
+
+        public Color Palette_Sun { get; set; } = new Color(242, 236, 139);
+        public Color Palette_DarkSun { get; set; } = new Color(251, 185, 84);
+        public Color Palette_Fruit { get; set; } = new Color(205, 104, 61);
+        public Color Palette_Rust { get; set; } = new Color(153, 61, 65);
+        public Color Palette_DarkRust { get; set; } = new Color(122, 48, 69);
+
+        public Color Palette_Shadow { get; set; } = new Color(69, 41, 63);
+        public Color Palette_DarkShadow { get; set; } = new Color(46, 34, 47);
+
         public Color Palette_LightGray { get; set; } = new Color(85, 96, 125);
         public Color Palette_Gray { get; set; } = new Color(62, 65, 95);
         public Color Palette_DarkGray { get; set; } = new Color(42, 40, 57);
         public Color Palette_DarkerGray { get; set; } = new Color(36, 35, 46);
         public Color Palette_DarkestGray { get; set; } = new Color(26, 25, 33);
-        public Color Palette_Black { get; set; } = new Color(23, 22, 28);
+        public Color Palette_Black { get; set; } = new Color(25, 22, 28);
+
+        public Color Palette_Pink { get; set; } = Color.Pink;
+        public Color Palette_Purple { get; set; } = Color.Purple;
+        public Color Palette_Red { get; set; } = Color.Red;
+        public Color Palette_Orange { get; set; } = Color.Orange;
+        public Color Palette_Yellow { get; set; } = Color.Yellow;
+        public Color Palette_Green { get; set; } = Color.Green;
+        public Color Palette_Blue { get; set; } = Color.CornflowerBlue;
+        public Color Palette_White { get; set; } = Color.White;
+
 
         // Colors
         public Color PlayerColor { get; private set; } = new Color(181, 65, 49); // Palette_Red
@@ -282,6 +296,7 @@ namespace ProjectVagabond
         public Color GameTextColor { get; private set; }
         public Color ButtonHoverColor { get; private set; }
         public Color ButtonDisableColor { get; private set; }
+        public Color SplitMapNodeColor { get; private set; }
         public Color OutputTextColor { get; private set; }
         public Color InputTextColor { get; private set; }
         public Color ToolTipBGColor { get; private set; }
@@ -468,16 +483,6 @@ namespace ProjectVagabond
                 if (lowerTag == "cdivine") return ElementColors.GetValueOrDefault(5, Color.White);
                 if (lowerTag == "cblight") return ElementColors.GetValueOrDefault(6, Color.White);
 
-                // Legacy Mappings for backward compatibility
-                if (lowerTag == "cmetal") return ElementColors.GetValueOrDefault(0, Color.White); // -> Neutral
-                if (lowerTag == "cice") return ElementColors.GetValueOrDefault(2, Color.White); // -> Water
-                if (lowerTag == "cearth") return ElementColors.GetValueOrDefault(3, Color.White); // -> Nature
-                if (lowerTag == "cwind") return ElementColors.GetValueOrDefault(5, Color.White); // -> Divine
-                if (lowerTag == "clight") return ElementColors.GetValueOrDefault(5, Color.White); // -> Divine
-                if (lowerTag == "celectric") return ElementColors.GetValueOrDefault(5, Color.White); // -> Divine
-                if (lowerTag == "ctoxic") return ElementColors.GetValueOrDefault(6, Color.White); // -> Blight
-                if (lowerTag == "cvoid") return ElementColors.GetValueOrDefault(6, Color.White); // -> Blight
-
                 // Status Effects
                 string effectName = lowerTag.Substring(1);
                 foreach (var kvp in StatusEffectColors)
@@ -497,7 +502,6 @@ namespace ProjectVagabond
                 if (lowerTag == "cstatus") return ColorNarration_Status;
                 if (lowerTag == "cslot") return ColorNarration_Default;
                 if (lowerTag == "cgraze") return GrazeIndicatorColor;
-                if (lowerTag == "cbluewhite") return Palette_BlueWhite;
 
                 if (lowerTag == "cred") return Palette_Red;
                 if (lowerTag == "cyellow") return Palette_Yellow;
@@ -521,25 +525,8 @@ namespace ProjectVagabond
                 case "pink": return Palette_Pink;
                 case "gray": return Palette_Gray;
                 case "white": return Palette_White;
-                case "bluewhite": return Palette_BlueWhite;
-                case "darkgray": return Palette_DarkGray;
-                case "lightpink": return Palette_LightPink;
-                case "lightpurple": return Palette_LightPurple;
-                case "darkpurple": return Palette_DarkPurple;
-                case "darkred": return Palette_DarkRed;
-                case "lightred": return Palette_LightRed;
-                case "lightorange": return Palette_LightOrange;
-                case "yellowgreen": return Palette_YellowGreen;
-                case "palegreen": return Palette_PaleGreen;
-                case "lightgreen": return Palette_LightGreen;
-                case "darkgreen": return Palette_DarkGreen;
-                case "darkblue": return Palette_DarkBlue;
-                case "lightblue": return Palette_LightBlue;
-                case "lightgray": return Palette_LightGray;
-                case "darkergray": return Palette_DarkerGray;
-                case "darkestgray": return Palette_DarkestGray;
                 case "black": return Palette_Black;
-                default: return Palette_BlueWhite;
+                default: return Palette_Sun;
             }
         }
     }

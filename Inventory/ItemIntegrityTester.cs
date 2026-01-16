@@ -43,11 +43,11 @@ namespace ProjectVagabond.Utils
                 r => r.Effects
             );
 
-            string resultColor = _failed == 0 ? "[palette_lightgreen]" : "[palette_red]";
+            string resultColor = _failed == 0 ? "[Palette_Green]" : "[palette_red]";
             string msg = $"=== CHECK COMPLETE: {resultColor}{_passed} PASSED[/], [palette_red]{_failed} FAILED[/], [palette_yellow]{_skipped} SKIPPED[/] ===";
 
             // Log final summary to both
-            Debug.WriteLine($"[ItemIntegrityTester] {msg.Replace("[palette_lightgreen]", "").Replace("[palette_red]", "").Replace("[palette_yellow]", "").Replace("[/]", "")}");
+            Debug.WriteLine($"[ItemIntegrityTester] {msg.Replace("[Palette_Green]", "").Replace("[palette_red]", "").Replace("[palette_yellow]", "").Replace("[/]", "")}");
             EventBus.Publish(new GameEvents.TerminalMessagePublished
             {
                 Message = msg,
@@ -128,7 +128,7 @@ namespace ProjectVagabond.Utils
 
         private static void LogSuccess(string message)
         {
-            string tagged = $"[palette_lightgreen]{message}[/]";
+            string tagged = $"[Palette_Green]{message}[/]";
             Debug.WriteLine(tagged);
             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = tagged });
         }

@@ -170,7 +170,7 @@ namespace ProjectVagabond.UI
                 _dialogBounds.Center.X - titleSize.Width / 2,
                 _dialogBounds.Y + PADDING
             );
-            spriteBatch.DrawStringSnapped(secondaryFont, title, titlePos, _global.Palette_LightBlue);
+            spriteBatch.DrawStringSnapped(secondaryFont, title, titlePos, _global.Palette_Blue);
 
             // Draw Buttons
             foreach (var button in _memberButtons)

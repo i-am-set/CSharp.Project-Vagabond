@@ -119,7 +119,7 @@ namespace ProjectVagabond.Battle.UI
         public ActionMenu()
         {
             _global = ServiceLocator.Get<Global>();
-            _backButton = new Button(Rectangle.Empty, "BACK", enableHoverSway: false) { CustomDefaultTextColor = _global.Palette_Gray };
+            _backButton = new Button(Rectangle.Empty, "BACK", enableHoverSway: false) { CustomDefaultTextColor = _global.Palette_DarkShadow };
             _backButton.OnClick += () => {
                 if (_currentState == MenuState.Targeting || _currentState == MenuState.Tooltip)
                 {
@@ -242,7 +242,7 @@ namespace ProjectVagabond.Battle.UI
             _backButton.Font = secondaryFont;
 
             // Initialize Slot 2 Back Button
-            _slot2BackButton = new Button(Rectangle.Empty, "BACK", enableHoverSway: false) { CustomDefaultTextColor = _global.Palette_Gray };
+            _slot2BackButton = new Button(Rectangle.Empty, "BACK", enableHoverSway: false) { CustomDefaultTextColor = _global.Palette_DarkShadow };
             _slot2BackButton.OnClick += () => OnSlot2BackRequested?.Invoke();
             _slot2BackButton.Font = secondaryFont;
 
@@ -891,7 +891,7 @@ namespace ProjectVagabond.Battle.UI
 
                             if (button.IsHovered && button.IsEnabled)
                             {
-                                DrawBeveledBackground(spriteBatch, pixel, hoverRect, _global.Palette_DarkGray);
+                                DrawBeveledBackground(spriteBatch, pixel, hoverRect, _global.Palette_DarkShadow);
                             }
 
                             // Pass offset to button draw
@@ -1052,7 +1052,7 @@ namespace ProjectVagabond.Battle.UI
                     tooltipBounds.Center.X - nameSize.Width / 2,
                     tooltipBounds.Y + 8
                 );
-                spriteBatch.DrawStringSnapped(font, moveName, namePos, _global.Palette_BlueWhite);
+                spriteBatch.DrawStringSnapped(font, moveName, namePos, _global.Palette_Sun);
 
                 if (!string.IsNullOrEmpty(_tooltipMove.Description))
                 {
@@ -1210,7 +1210,7 @@ namespace ProjectVagabond.Battle.UI
                     // Apply offset to placeholder
                     var offsetBounds = new Rectangle(visualBounds.X, visualBounds.Y + (int)offset.Y, visualBounds.Width, visualBounds.Height);
                     spriteBatch.DrawSnapped(pixel, offsetBounds, placeholderFillColor);
-                    var placeholderBorderColor = _global.Palette_DarkerGray;
+                    var placeholderBorderColor = _global.Palette_DarkShadow;
 
                     const int dashLength = 1;
                     const int gapLength = 3;
@@ -1233,7 +1233,7 @@ namespace ProjectVagabond.Battle.UI
                     if (button == _hoveredMoveButton && button.IsEnabled)
                     {
                         var hoverRect = new Rectangle(offsetBounds.X, offsetBounds.Y - 1, offsetBounds.Width, offsetBounds.Height + 1);
-                        DrawBeveledBackground(spriteBatch, pixel, hoverRect, _global.Palette_DarkGray);
+                        DrawBeveledBackground(spriteBatch, pixel, hoverRect, _global.Palette_DarkShadow);
                     }
 
                     var originalBounds = button.Bounds;
@@ -1247,7 +1247,7 @@ namespace ProjectVagabond.Battle.UI
             if (_shouldAttuneButtonPulse)
             {
                 float pulse = (MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * 8f) + 1f) / 2f;
-                attunePulseColor = Color.Lerp(Color.White, _global.Palette_LightBlue, pulse);
+                attunePulseColor = Color.Lerp(Color.White, _global.Palette_Blue, pulse);
             }
 
             for (int i = 0; i < _secondaryActionButtons.Count; i++)
@@ -1259,7 +1259,7 @@ namespace ProjectVagabond.Battle.UI
                 if (button.IsHovered && button.IsEnabled)
                 {
                     var hoverRect = new Rectangle(buttonRect.X, buttonRect.Y, buttonRect.Width, buttonRect.Height);
-                    DrawBeveledBackground(spriteBatch, pixel, hoverRect, _global.Palette_DarkGray);
+                    DrawBeveledBackground(spriteBatch, pixel, hoverRect, _global.Palette_DarkShadow);
                 }
 
                 button.Draw(spriteBatch, font, gameTime, transform, false, null, offset.Y, button.Text == "ATTUNE" ? attunePulseColor : null);
@@ -1362,7 +1362,7 @@ namespace ProjectVagabond.Battle.UI
                 {
                     MoveType.Spell => _global.ColorNarration_Spell,
                     MoveType.Action => _global.ColorNarration_Action,
-                    _ => _global.Palette_White
+                    _ => _global.Palette_DarkShadow
                 };
 
                 string impactTypeText = move.ImpactType.ToString().ToUpper();
@@ -1370,7 +1370,7 @@ namespace ProjectVagabond.Battle.UI
                 {
                     ImpactType.Physical => _global.ColorNarration_Action,
                     ImpactType.Magical => _global.ColorNarration_Spell,
-                    _ => _global.Palette_Gray
+                    _ => _global.Palette_DarkShadow
                 };
 
                 // --- 2. Build Stats List ---
@@ -1380,7 +1380,7 @@ namespace ProjectVagabond.Battle.UI
 
                 if (move.ImpactType != ImpactType.Status)
                 {
-                    string separator = " / ";
+                    string separator = " ";
                     string accuracyText = move.Accuracy >= 0 ? $"{move.Accuracy}%" : "---";
                     string powerText = move.Power > 0 ? $"{move.Power}" : (move.Effects.ContainsKey("ManaDamage") ? "???" : "---");
 
@@ -1394,15 +1394,15 @@ namespace ProjectVagabond.Battle.UI
                     // Insert in reverse order (Right to Left)
 
                     // Separator between Stats and Stack
-                    statsSegments.Insert(0, (separator, _global.Palette_DarkGray, secondaryFont));
+                    statsSegments.Insert(0, (separator, _global.Palette_DarkShadow, secondaryFont));
 
-                    statsSegments.Insert(0, (accuracyText, _global.Palette_BlueWhite, secondaryFont)); // Value BlueWhite
+                    statsSegments.Insert(0, (accuracyText, _global.Palette_Sun, secondaryFont));
                     statsSegments.Insert(0, ("  ", Color.Transparent, secondaryFont)); // Spacer
-                    statsSegments.Insert(0, ("ACC", _global.Palette_DarkGray, tertiaryFont)); // Label DarkGray
-                    statsSegments.Insert(0, (separator, _global.Palette_DarkGray, secondaryFont));
-                    statsSegments.Insert(0, (powerText, _global.Palette_BlueWhite, secondaryFont)); // Value BlueWhite
+                    statsSegments.Insert(0, ("ACC", _global.Palette_DarkShadow, tertiaryFont)); 
+                    statsSegments.Insert(0, (separator, _global.Palette_DarkShadow, secondaryFont));
+                    statsSegments.Insert(0, (powerText, _global.Palette_Sun, secondaryFont));
                     statsSegments.Insert(0, ("  ", Color.Transparent, secondaryFont)); // Spacer
-                    statsSegments.Insert(0, ("POW", _global.Palette_DarkGray, tertiaryFont)); // Label DarkGray
+                    statsSegments.Insert(0, ("POW", _global.Palette_DarkShadow, tertiaryFont));
                 }
 
                 // --- Contact Text ---
@@ -1479,7 +1479,7 @@ namespace ProjectVagabond.Battle.UI
                     spriteBatch.GraphicsDevice.ScissorRectangle = clipRect;
 
                     var scrollingTextPosition = new Vector2(namePos.X - _tooltipScrollPosition, namePos.Y);
-                    spriteBatch.DrawStringSnapped(font, move.MoveName.ToUpper(), scrollingTextPosition, _global.Palette_BlueWhite);
+                    spriteBatch.DrawStringSnapped(font, move.MoveName.ToUpper(), scrollingTextPosition, _global.Palette_Sun);
 
                     spriteBatch.End();
                     spriteBatch.GraphicsDevice.ScissorRectangle = originalScissorRect;
@@ -1488,13 +1488,13 @@ namespace ProjectVagabond.Battle.UI
                 else
                 {
                     _isTooltipScrollingInitialized = false;
-                    spriteBatch.DrawStringSnapped(font, moveName, namePos, _global.Palette_BlueWhite);
+                    spriteBatch.DrawStringSnapped(font, moveName, namePos, _global.Palette_Sun);
                 }
                 currentY += nameSize.Height + 1;
 
                 var underlineStart = new Vector2(bounds.X + horizontalPadding, currentY);
                 var underlineEnd = new Vector2(bounds.Right - horizontalPadding, currentY);
-                spriteBatch.DrawLineSnapped(underlineStart, underlineEnd, _global.Palette_DarkGray);
+                spriteBatch.DrawLineSnapped(underlineStart, underlineEnd, _global.Palette_DarkShadow);
                 currentY += 3;
 
                 if (!string.IsNullOrEmpty(move.Description))
@@ -1556,11 +1556,10 @@ namespace ProjectVagabond.Battle.UI
                 currentY -= 4;
                 float statsY = currentY;
 
-                Color valueColor = _global.Palette_BlueWhite;
+                Color valueColor = _global.Palette_Sun;
 
                 // Action 2: Darker labels when empty
-                // If move is null, use DarkerGray. If move exists, use DarkGray.
-                Color labelColor = (move != null) ? _global.Palette_DarkGray : _global.Palette_DarkestGray;
+                Color labelColor = (move != null) ? _global.Palette_DarkShadow : _global.Palette_DarkShadow;
 
                 string powerLabel = "POW";
                 string accLabel = "ACC";
@@ -1645,7 +1644,7 @@ namespace ProjectVagabond.Battle.UI
                     OffensiveStatType.Intelligence => _global.StatColor_Intelligence,
                     OffensiveStatType.Tenacity => _global.StatColor_Tenacity,
                     OffensiveStatType.Agility => _global.StatColor_Agility,
-                    _ => _global.Palette_BlueWhite
+                    _ => _global.Palette_Sun
                 };
 
                 if (move != null && move.ImpactType != ImpactType.Status)
@@ -1696,7 +1695,7 @@ namespace ProjectVagabond.Battle.UI
                         bounds.X + (bounds.Width - targetValueSize.Width) / 2f,
                         yAfterRow2 + (availableSpace - targetValueSize.Height) / 2f
                     );
-                    spriteBatch.DrawStringSnapped(secondaryFont, targetValue, targetValuePos, _global.Palette_DarkGray);
+                    spriteBatch.DrawStringSnapped(secondaryFont, targetValue, targetValuePos, _global.Palette_DarkShadow);
                 }
 
                 float impactX = gapCenter - (typeGap / 2f) - impactSize.Width;
@@ -1841,19 +1840,14 @@ namespace ProjectVagabond.Battle.UI
             if (tag == "ccrit") return _global.ColorCrit;
             if (tag == "cimmune") return _global.ColorImmune;
             if (tag == "cctm") return _global.ColorConditionToMeet;
-            if (tag == "cetc") return _global.Palette_DarkGray;
+            if (tag == "cetc") return _global.Palette_DarkShadow;
 
             if (tag == "cfire") return _global.ElementColors.GetValueOrDefault(2, Color.White);
             if (tag == "cwater") return _global.ElementColors.GetValueOrDefault(3, Color.White);
             if (tag == "carcane") return _global.ElementColors.GetValueOrDefault(4, Color.White);
-            if (tag == "cearth") return _global.ElementColors.GetValueOrDefault(5, Color.White);
-            if (tag == "cmetal") return _global.ElementColors.GetValueOrDefault(6, Color.White);
-            if (tag == "ctoxic") return _global.ElementColors.GetValueOrDefault(7, Color.White);
-            if (tag == "cwind") return _global.ElementColors.GetValueOrDefault(8, Color.White);
-            if (tag == "cvoid") return _global.ElementColors.GetValueOrDefault(9, Color.White);
-            if (tag == "clight") return _global.ElementColors.GetValueOrDefault(10, Color.White);
-            if (tag == "celectric") return _global.ElementColors.GetValueOrDefault(11, Color.White);
-            if (tag == "cice") return _global.ElementColors.GetValueOrDefault(12, Color.White);
+            if (tag == "cnature") return _global.ElementColors.GetValueOrDefault(5, Color.White);
+            if (tag == "cblight") return _global.ElementColors.GetValueOrDefault(9, Color.White);
+            if (tag == "cdivine") return _global.ElementColors.GetValueOrDefault(10, Color.White);
             if (tag == "cnature") return _global.ElementColors.GetValueOrDefault(13, Color.White);
 
             if (tag.StartsWith("c"))
@@ -1870,18 +1864,7 @@ namespace ProjectVagabond.Battle.UI
 
             switch (tag)
             {
-                case "red": return _global.Palette_Red;
-                case "blue": return _global.Palette_LightBlue;
-                case "green": return _global.Palette_LightGreen;
-                case "yellow": return _global.Palette_Yellow;
-                case "orange": return _global.Palette_Orange;
-                case "purple": return _global.Palette_LightPurple;
-                case "pink": return _global.Palette_Pink;
-                case "gray": return _global.Palette_Gray;
-                case "white": return _global.Palette_White;
-                case "BlueWhite": return _global.Palette_BlueWhite;
-                case "darkgray": return _global.Palette_DarkGray;
-                default: return _global.Palette_White;
+                default: return Color.Magenta;
             }
         }
 

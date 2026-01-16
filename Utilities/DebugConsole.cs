@@ -565,7 +565,7 @@ namespace ProjectVagabond.Utils
             var colorStack = new Stack<Color>();
             var effectStack = new Stack<TextEffectType>();
 
-            colorStack.Push(baseColor ?? _global.Palette_BlueWhite);
+            colorStack.Push(baseColor ?? _global.Palette_Sun);
             effectStack.Push(TextEffectType.None);
 
             var currentText = "";
@@ -644,7 +644,7 @@ namespace ProjectVagabond.Utils
                 case "warning": return Color.Gold;
                 case "debug": return Color.Chartreuse;
                 case "gray": return Color.Gray;
-                case "/": return _global.Palette_BlueWhite; // Reset
+                case "/": return _global.Palette_Sun; // Reset
             }
 
             // 2. Try Global Palette Properties (e.g. "Palette_Red", "StatColor_Strength")
@@ -661,7 +661,7 @@ namespace ProjectVagabond.Utils
                 return (Color)colorProp.GetValue(null);
             }
 
-            return _global.Palette_BlueWhite;
+            return _global.Palette_Sun;
         }
 
         private bool KeyPressed(Keys key, KeyboardState current, KeyboardState previous) => current.IsKeyDown(key) && !previous.IsKeyDown(key);

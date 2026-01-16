@@ -36,7 +36,7 @@ namespace ProjectVagabond.Battle.UI
 
             if (isActivated)
             {
-                spriteBatch.DrawSnapped(pixel, animatedBounds, _global.Palette_DarkGray * 0.5f);
+                spriteBatch.DrawSnapped(pixel, animatedBounds, _global.Palette_DarkShadow * 0.5f);
             }
 
             const int iconSize = 5;
@@ -76,7 +76,7 @@ namespace ProjectVagabond.Battle.UI
             }
 
             // --- Item Name Drawing ---
-            var nameColor = isActivated ? _global.ButtonHoverColor : _global.Palette_BlueWhite;
+            var nameColor = isActivated ? _global.ButtonHoverColor : _global.Palette_Sun;
             if (!IsEnabled)
             {
                 nameColor = _global.ButtonDisableColor;
@@ -91,7 +91,7 @@ namespace ProjectVagabond.Battle.UI
             spriteBatch.DrawStringSnapped(_itemFont, this.Text, namePosition, nameColor);
 
             // --- Quantity Drawing ---
-            var quantityColor = IsEnabled ? _global.Palette_Gray : _global.ButtonDisableColor;
+            var quantityColor = IsEnabled ? _global.Palette_Shadow : _global.ButtonDisableColor;
 
             string quantityText = $"x{Quantity}";
             var quantitySize = _itemFont.MeasureString(quantityText);

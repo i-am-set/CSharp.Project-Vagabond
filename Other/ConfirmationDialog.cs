@@ -212,7 +212,7 @@ namespace ProjectVagabond.UI
             foreach (var line in wrappedPrompt)
             {
                 var promptSize = secondaryFont.MeasureString(line);
-                spriteBatch.DrawString(secondaryFont, line, new Vector2(_dialogBounds.Center.X - promptSize.Width / 2, currentY), _global.Palette_BlueWhite);
+                spriteBatch.DrawString(secondaryFont, line, new Vector2(_dialogBounds.Center.X - promptSize.Width / 2, currentY), _global.Palette_Sun);
                 currentY += secondaryFont.LineHeight;
             }
 
@@ -272,7 +272,7 @@ namespace ProjectVagabond.UI
                 switch (colorName)
                 {
                     case "red": color = _global.Palette_Red; break;
-                    case "green": color = _global.Palette_LightGreen; break;
+                    case "green": color = _global.Palette_Green; break;
                     case "yellow": color = _global.Palette_Yellow; break;
                     case "gray": color = _global.Palette_LightGray; break;
                     case "grey": color = _global.Palette_LightGray; break;

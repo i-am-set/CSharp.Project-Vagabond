@@ -50,7 +50,7 @@ namespace ProjectVagabond.Utils
                 ServiceLocator.Unregister<BattleManager>();
             }
 
-            string resultColor = _failed == 0 ? "[palette_lightgreen]" : "[palette_red]";
+            string resultColor = _failed == 0 ? "[Palette_Green]" : "[palette_red]";
             string msg = $"--- TESTS COMPLETE: {resultColor}{_passed} PASSED[/], [palette_red]{_failed} FAILED[/], [palette_yellow]{_skipped} SKIPPED[/] ---";
 
             // Log to GameLogger directly to ensure tags are parsed by DebugConsole
@@ -107,7 +107,7 @@ namespace ProjectVagabond.Utils
             if (condition)
             {
                 _passed++;
-                string msg = $"  [palette_lightgreen]PASS:[/] {testName}";
+                string msg = $"  [Palette_Green]PASS:[/] {testName}";
                 GameLogger.Log(LogSeverity.Info, msg);
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = msg });
             }

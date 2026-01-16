@@ -191,7 +191,7 @@ namespace ProjectVagabond
                         if (healComp != null)
                         {
                             healComp.CurrentHP = healComp.MaxHP;
-                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_lightgreen]Fully Healed!" });
+                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[Palette_Green]Fully Healed!" });
                         }
                         break;
 

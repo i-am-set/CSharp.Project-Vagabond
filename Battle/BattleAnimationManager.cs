@@ -1883,7 +1883,7 @@ namespace ProjectVagabond.Battle.UI
                 {
                     const float flashInterval = 0.1f;
                     bool useLightGreen = (int)(indicator.Timer / flashInterval) % 2 == 0;
-                    drawColor = useLightGreen ? _global.HealIndicatorColor : _global.Palette_DarkGreen;
+                    drawColor = useLightGreen ? _global.HealIndicatorColor : _global.Palette_Green;
                 }
                 else if (indicator.Type == DamageIndicatorState.IndicatorType.Effectiveness)
                 {
@@ -1898,7 +1898,7 @@ namespace ProjectVagabond.Battle.UI
                             drawColor = useAltColor ? _global.ResistedIndicatorColor : _global.Palette_White;
                             break;
                         case "IMMUNE":
-                            drawColor = useAltColor ? _global.ImmuneIndicatorColor : _global.Palette_LightGray;
+                            drawColor = useAltColor ? _global.ImmuneIndicatorColor : _global.Palette_Shadow;
                             break;
                         default:
                             drawColor = Color.White;
@@ -1924,7 +1924,7 @@ namespace ProjectVagabond.Battle.UI
                     {
                         const float flashInterval = 0.2f;
                         bool useYellow = (int)(indicator.Timer / flashInterval) % 2 == 0;
-                        drawColor = useYellow ? _global.Palette_Yellow : _global.Palette_LightBlue;
+                        drawColor = useYellow ? _global.Palette_Yellow : _global.Palette_Blue;
                     }
                 }
 
@@ -2030,7 +2030,7 @@ namespace ProjectVagabond.Battle.UI
                 }
                 else // Count is 1
                 {
-                    pulseTargetColor = _global.Palette_Gray;
+                    pulseTargetColor = _global.Palette_Shadow;
                 }
 
                 Color bgColor = Color.Lerp(_global.TerminalBg, pulseTargetColor, pulse);

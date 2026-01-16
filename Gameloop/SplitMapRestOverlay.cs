@@ -166,16 +166,16 @@ namespace ProjectVagabond.UI
             }
 
             // Initialize Tunable Colors
-            COLOR_DESC_REST_NORMAL = _global.Palette_LightGreen;
+            COLOR_DESC_REST_NORMAL = _global.Palette_Green;
             COLOR_DESC_REST_GUARDED = Color.Lime;
-            COLOR_DESC_TRAIN_NORMAL = _global.Palette_LightPurple;
+            COLOR_DESC_TRAIN_NORMAL = _global.Palette_Purple;
             COLOR_DESC_TRAIN_GUARDED = Color.Magenta;
-            COLOR_DESC_SEARCH_NORMAL = _global.Palette_LightBlue;
+            COLOR_DESC_SEARCH_NORMAL = _global.Palette_Blue;
             COLOR_DESC_SEARCH_GUARDED = Color.Aqua;
             COLOR_DESC_GUARD = _global.Palette_DarkGray;
 
             // Initialize Sleep Particle Colors
-            SLEEP_PARTICLE_COLOR = _global.Palette_BlueWhite;
+            SLEEP_PARTICLE_COLOR = _global.Palette_Sun;
             SLEEP_PARTICLE_OUTLINE_COLOR = _global.Palette_Black;
 
             _confirmationDialog = new ConfirmationDialog(parentScene);
@@ -189,7 +189,7 @@ namespace ProjectVagabond.UI
 
             _confirmButton = new Button(Rectangle.Empty, "CONFIRM", font: _core.SecondaryFont)
             {
-                CustomDefaultTextColor = _global.Palette_BlueWhite,
+                CustomDefaultTextColor = _global.Palette_Sun,
                 CustomHoverTextColor = _global.Palette_Red,
                 UseScreenCoordinates = true
             };
@@ -449,7 +449,7 @@ namespace ProjectVagabond.UI
                             string msg;
                             if (guardActive) msg = $"THANKS TO {guardName}, {member.Name} RECOVERED WELL!\n";
                             else msg = $"{member.Name} RESTED.\n";
-                            msg += $"[palette_lightgreen]+{percentDisplay}% HP[/]";
+                            msg += $"[Palette_Green]+{percentDisplay}% HP[/]";
 
                             _sequenceQueue.Enqueue(new RestSequenceStep
                             {
@@ -617,7 +617,7 @@ namespace ProjectVagabond.UI
                 "Intelligence" => "[StatColor_Intelligence]",
                 "Tenacity" => "[StatColor_Tenacity]",
                 "Agility" => "[StatColor_Agility]",
-                _ => "[Palette_BlueWhite]"
+                _ => "[Palette_Sun]"
             };
         }
 
@@ -867,7 +867,7 @@ namespace ProjectVagabond.UI
             string title = "REST";
             Vector2 titleSize = font.MeasureString(title);
             Vector2 titlePos = new Vector2((Global.VIRTUAL_WIDTH - titleSize.X) / 2, WORLD_Y_OFFSET + 10);
-            spriteBatch.DrawStringSnapped(font, title, titlePos, _global.Palette_BlueWhite);
+            spriteBatch.DrawStringSnapped(font, title, titlePos, _global.Palette_Sun);
 
             // Check if anyone is guarding to calculate potential heal multiplier
             bool guardActive = _selectedActions.Values.Any(a => a == RestAction.Guard);
@@ -897,7 +897,7 @@ namespace ProjectVagabond.UI
 
                 // 1. Name (Calculated here, drawn later to be on top)
                 string name = isOccupied ? member!.Name.ToUpper() : "EMPTY";
-                Color nameColor = isOccupied ? _global.Palette_BlueWhite : _global.Palette_DarkGray;
+                Color nameColor = isOccupied ? _global.Palette_Sun : _global.Palette_DarkGray;
 
                 var nameSize = defaultFont.MeasureString(name);
                 Vector2 namePos = new Vector2(centerX - nameSize.Width / 2, currentY);
@@ -1014,7 +1014,7 @@ namespace ProjectVagabond.UI
                     float hpTextX = centerX - ((valSize.Width + suffixSize.Width) / 2f);
                     float hpTextY = currentY + 7;
 
-                    Color hpValColor = isOccupied ? _global.Palette_BlueWhite : _global.Palette_DarkGray;
+                    Color hpValColor = isOccupied ? _global.Palette_Sun : _global.Palette_DarkGray;
                     spriteBatch.DrawStringSnapped(secondaryFont, hpValText, new Vector2(hpTextX, hpTextY), hpValColor);
                     spriteBatch.DrawStringSnapped(secondaryFont, hpSuffix, new Vector2(hpTextX + valSize.Width, hpTextY), _global.Palette_Gray);
 

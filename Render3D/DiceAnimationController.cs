@@ -435,7 +435,7 @@ namespace ProjectVagabond.Dice
                     if (_currentlyEnumeratingDieValue >= 5) // Good
                     {
                         mainAnimDuration = GOOD_ROLL_ANIM_DURATION;
-                        flashColor = _global.Palette_LightGreen;
+                        flashColor = _global.Palette_Green;
                     }
                     else if (_currentlyEnumeratingDieValue <= 2) // Bad
                     {

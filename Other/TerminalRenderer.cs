@@ -343,18 +343,15 @@ namespace ProjectVagabond
                 case "palette_gray": return _global.Palette_Gray;
                 case "palette_lightgray": return _global.Palette_LightGray;
                 case "palette_white": return _global.Palette_White;
-                case "palette_lightblue": return _global.Palette_LightBlue;
-                case "palette_darkblue": return _global.Palette_DarkBlue;
-                case "palette_darkgreen": return _global.Palette_DarkGreen;
-                case "palette_lightgreen": return _global.Palette_LightGreen;
-                case "palette_lightyellow": return _global.Palette_LightYellow;
+                case "Palette_Blue": return _global.Palette_Blue;
+                case "Palette_Green": return _global.Palette_Green;
+                case "Palette_Yellow": return _global.Palette_Yellow;
                 case "palette_yellow": return _global.Palette_Yellow;
                 case "palette_orange": return _global.Palette_Orange;
                 case "palette_red": return _global.Palette_Red;
-                case "palette_darkpurple": return _global.Palette_DarkPurple;
-                case "palette_lightpurple": return _global.Palette_LightPurple;
+                case "Palette_Purple": return _global.Palette_Purple;
                 case "palette_pink": return _global.Palette_Pink;
-                case "palette_BlueWhite": return _global.Palette_BlueWhite;
+                case "Palette_Sun": return _global.Palette_Sun;
 
                 case "khaki": return Color.Khaki;
                 case "red": return Color.Red;

@@ -178,7 +178,7 @@ namespace ProjectVagabond.Scenes
             resolutionControl.GetValueColor = (pointValue) =>
             {
                 bool isStandard = SettingsManager.GetResolutions().Any(r => r.Value == pointValue);
-                return isStandard ? (Color?)null : _global.Palette_LightYellow;
+                return isStandard ? (Color?)null : _global.Palette_Yellow;
             };
             resolutionControl.ExtraInfoTextGetter = () =>
             {
@@ -233,7 +233,7 @@ namespace ProjectVagabond.Scenes
 
             var resetButton = new Button(new Rectangle(0, 0, 125, 12), "RESTORE DEFAULTS")
             {
-                CustomDefaultTextColor = _global.Palette_LightYellow,
+                CustomDefaultTextColor = _global.Palette_Yellow,
                 TextRenderOffset = new Vector2(0, 1)
             };
             resetButton.OnClick += () => { _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength); ConfirmResetSettings(); };
@@ -584,11 +584,11 @@ namespace ProjectVagabond.Scenes
             Vector2 titlePosition = new Vector2(screenWidth / 2 - titleSize.X / 2, titleBaseY + yOffset);
 
             // Use DrawStringSnapped for pixel perfection
-            spriteBatch.DrawStringSnapped(font, title, titlePosition, _global.Palette_BlueWhite);
+            spriteBatch.DrawStringSnapped(font, title, titlePosition, _global.GameTextColor);
 
             // Draw divider line
             int dividerY = (int)(titleBaseY + titleSize.Y + 5);
-            spriteBatch.Draw(pixel, new Rectangle(screenWidth / 2 - 90, dividerY, 180, 1), _global.Palette_Gray);
+            spriteBatch.Draw(pixel, new Rectangle(screenWidth / 2 - 90, dividerY, 180, 1), _global.Palette_DarkShadow);
 
 
             if (_confirmationTimer > 0)

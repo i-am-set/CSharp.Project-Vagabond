@@ -662,8 +662,8 @@ namespace ProjectVagabond.Scenes
                     if (silhouette != null)
                     {
                         bool isHovered = card.IsMouseHovering && !_selectionMade;
-                        Color mainOutlineColor = isHovered ? _global.ItemOutlineColor_Hover : _global.Palette_DarkGray;
-                        Color cornerOutlineColor = isHovered ? _global.ItemOutlineColor_Hover_Corner : _global.Palette_DarkerGray;
+                        Color mainOutlineColor = isHovered ? _global.ItemOutlineColor_Hover : _global.Palette_Black;
+                        Color cornerOutlineColor = isHovered ? _global.ItemOutlineColor_Hover_Corner : _global.Palette_Black;
 
                         // Corners
                         sb.DrawSnapped(silhouette, drawPos + new Vector2(-1, -1), null, cornerOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);

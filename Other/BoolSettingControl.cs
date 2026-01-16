@@ -148,7 +148,7 @@ namespace ProjectVagabond.UI
             // Apply offset to X, keep Y static
             Vector2 animatedPosition = new Vector2(position.X + xOffset, position.Y);
 
-            Color labelColor = isSelected && IsEnabled ? _global.ButtonHoverColor : (IsEnabled ? _global.Palette_BlueWhite : _global.ButtonDisableColor);
+            Color labelColor = isSelected && IsEnabled ? _global.ButtonHoverColor : (IsEnabled ? _global.GameTextColor : _global.ButtonDisableColor);
 
             // --- Label Drawing (Using labelFont) ---
             if (isSelected && IsEnabled)
@@ -178,7 +178,7 @@ namespace ProjectVagabond.UI
             string valueText = _currentValue ? "ON" : "OFF";
             string rightArrowText = ">";
 
-            Color baseValueColor = IsEnabled ? (IsDirty ? _global.ConfirmSettingsColor : _global.Palette_BlueWhite) : _global.ButtonDisableColor;
+            Color baseValueColor = IsEnabled ? (IsDirty ? _global.ConfirmSettingsColor : _global.GameTextColor) : _global.ButtonDisableColor;
             Color leftArrowColor = IsEnabled ? (_isLeftArrowHovered ? _global.ButtonHoverColor : baseValueColor) : _global.ButtonDisableColor;
             Color rightArrowColor = IsEnabled ? (_isRightArrowHovered ? _global.ButtonHoverColor : baseValueColor) : _global.ButtonDisableColor;
 

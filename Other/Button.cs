@@ -399,7 +399,7 @@ namespace ProjectVagabond.UI
             else
             {
                 if (!IsEnabled) textColor = CustomDisabledTextColor ?? _global.ButtonDisableColor;
-                else textColor = isActivated ? (CustomHoverTextColor ?? _global.ButtonHoverColor) : (CustomDefaultTextColor ?? _global.Palette_BlueWhite);
+                else textColor = isActivated ? (CustomHoverTextColor ?? _global.ButtonHoverColor) : (CustomDefaultTextColor ?? _global.GameTextColor);
             }
 
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;

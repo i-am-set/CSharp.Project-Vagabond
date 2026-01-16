@@ -82,12 +82,12 @@ namespace ProjectVagabond.UI
         // Wave
         public static float WaveSpeed = 5f;
         public static float WaveFrequency = 0.5f;
-        public static float WaveAmplitude = 1.0f;
+        public static float WaveAmplitude = 0.5f;
 
         // Small Wave
         public static float SmallWaveSpeed = 10f;
         public static float SmallWaveFrequency = 0.5f;
-        public static float SmallWaveAmplitude = 2.0f;
+        public static float SmallWaveAmplitude = 1.0f;
 
         // Pop
         public static float PopSpeed = 6f;

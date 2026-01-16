@@ -105,7 +105,7 @@ namespace ProjectVagabond.Battle.UI
             _combatSwitchDialog = new CombatSwitchDialog(null);
             _combatSwitchDialog.OnMemberSelected += (member) => OnForcedSwitchSelected?.Invoke(member);
 
-            _itemTargetingBackButton = new Button(Rectangle.Empty, "BACK", enableHoverSway: false) { CustomDefaultTextColor = _global.Palette_Gray };
+            _itemTargetingBackButton = new Button(Rectangle.Empty, "BACK", enableHoverSway: false) { CustomDefaultTextColor = _global.Palette_DarkShadow };
             _itemTargetingBackButton.OnClick += () =>
             {
                 UIState = BattleUIState.Default;
@@ -389,7 +389,7 @@ namespace ProjectVagabond.Battle.UI
                     bool isValid = validTargets.Contains(combatant);
 
                     btn.IsEnabled = isValid;
-                    btn.CustomDisabledTextColor = _global.Palette_DarkGray;
+                    btn.CustomDisabledTextColor = _global.Palette_DarkShadow;
 
                     // Clear standard OnClick to prevent double firing or release-based firing
                     btn.OnClick = null;
@@ -408,7 +408,7 @@ namespace ProjectVagabond.Battle.UI
                 {
                     btn.Text = "EMPTY";
                     btn.IsEnabled = false;
-                    btn.CustomDisabledTextColor = _global.Palette_DarkGray;
+                    btn.CustomDisabledTextColor = _global.Palette_DarkShadow;
                     btn.OnClick = null;
                 }
 
@@ -558,7 +558,7 @@ namespace ProjectVagabond.Battle.UI
 
                     if (btn.Text == "EMPTY")
                     {
-                        textColor = _global.Palette_DarkGray;
+                        textColor = _global.Palette_DarkShadow;
                     }
                     else if (shouldHighlight)
                     {
@@ -567,11 +567,11 @@ namespace ProjectVagabond.Battle.UI
                     else if (buttonCombatant == currentActor)
                     {
                         // Override for current actor
-                        textColor = _global.Palette_DarkGray;
+                        textColor = _global.Palette_DarkShadow;
                     }
                     else if (!btn.IsEnabled)
                     {
-                        textColor = btn.CustomDisabledTextColor ?? _global.Palette_DarkGray;
+                        textColor = btn.CustomDisabledTextColor ?? _global.Palette_DarkShadow;
                     }
                     else
                     {

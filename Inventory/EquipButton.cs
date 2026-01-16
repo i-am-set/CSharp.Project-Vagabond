@@ -128,7 +128,7 @@ namespace ProjectVagabond.UI
                 Color titleColor;
                 if (isActivated)
                 {
-                    titleColor = _global.Palette_BlueWhite;
+                    titleColor = _global.Palette_Sun;
                     // Use TextAnimator for wave effect when hovered
                     // Use TextEffectType.Wave for continuous looping
                     TextAnimator.DrawTextWithEffect(spriteBatch, defaultFont, TitleText, titlePos, titleColor, TextEffectType.Wave, _waveTimer);
@@ -232,7 +232,7 @@ namespace ProjectVagabond.UI
                 mainPos = new Vector2(MathF.Round(mainPos.X), MathF.Round(mainPos.Y));
 
                 // Use CustomDefaultTextColor if set, otherwise BlueWhite
-                Color defaultColor = CustomDefaultTextColor ?? _global.Palette_BlueWhite;
+                Color defaultColor = CustomDefaultTextColor ?? _global.Palette_Sun;
 
                 // Change: Use Color.White when hovered instead of ButtonHoverColor (Red)
                 Color mainColor = isActivated ? Color.White : defaultColor;

@@ -220,7 +220,7 @@ namespace ProjectVagabond.Battle.UI
 
         private void DrawDirectEnemy(SpriteBatch spriteBatch, Texture2D sprite, Texture2D silhouette, Rectangle spriteRect, Vector2[] offsets, Vector2 shakeOffset, Color tintColor, float silhouetteFactor, Color silhouetteColor, bool isHighlighted, Color? highlightColor, bool isFlashingWhite, Vector2 scale, int numParts, int partSize, Color? outlineColorOverride, Color? lowHealthOverlay)
         {
-            Color outlineColor = (outlineColorOverride ?? _global.Palette_DarkGray) * (tintColor.A / 255f);
+            Color outlineColor = (outlineColorOverride ?? _global.Palette_DarkShadow) * (tintColor.A / 255f);
 
             for (int i = 0; i < numParts; i++)
             {

@@ -209,7 +209,7 @@ namespace ProjectVagabond.Battle.UI
                 finalTintColor = Color.White;
                 if (!IsEnabled) finalTintColor = _global.ButtonDisableColor * 0.5f;
                 else if (!canAfford) finalTintColor = _global.ButtonDisableColor * 0.5f;
-                else if (_isPressed) finalTintColor = Color.Gray;
+                else if (_isPressed) finalTintColor = _global.Palette_Shadow;
                 else if (isActivated) finalTintColor = _global.ButtonHoverColor;
             }
 
@@ -247,7 +247,7 @@ namespace ProjectVagabond.Battle.UI
                     spriteBatch.DrawSnapped(pixel, iconRect, _global.Palette_Pink * contentAlpha);
                 }
 
-                var textColor = isActivated && canAfford && IsEnabled ? _global.ButtonHoverColor : _global.Palette_BlueWhite;
+                var textColor = isActivated && canAfford && IsEnabled ? _global.ButtonHoverColor : _global.Palette_Sun;
                 if (!canAfford || !IsEnabled)
                 {
                     textColor = _global.ButtonDisableColor;

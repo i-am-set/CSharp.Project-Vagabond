@@ -85,7 +85,7 @@ namespace ProjectVagabond.UI
             // Select Button (Primary)
             _selectButton = new Button(Rectangle.Empty, "SELECT", font: _core.SecondaryFont)
             {
-                CustomDefaultTextColor = _global.Palette_BlueWhite,
+                CustomDefaultTextColor = _global.Palette_Sun,
                 CustomHoverTextColor = _global.Palette_Yellow,
                 UseScreenCoordinates = true
             };
@@ -428,7 +428,7 @@ namespace ProjectVagabond.UI
             string title = "RECRUIT";
             Vector2 titleSize = font.MeasureString(title);
             Vector2 titlePos = new Vector2((Global.VIRTUAL_WIDTH - titleSize.X) / 2, WORLD_Y_OFFSET + 10);
-            spriteBatch.DrawStringSnapped(font, title, titlePos, _global.Palette_BlueWhite);
+            spriteBatch.DrawStringSnapped(font, title, titlePos, _global.Palette_Sun);
 
             if (_candidates.Count == 0)
             {
@@ -577,7 +577,7 @@ namespace ProjectVagabond.UI
             }
 
             // Draw Name on top
-            Color nameColor = isSelected ? _global.Palette_Yellow : _global.Palette_BlueWhite;
+            Color nameColor = isSelected ? _global.Palette_Yellow : _global.Palette_Sun;
             spriteBatch.DrawStringSnapped(font, name, namePos, nameColor);
 
             currentY += 32 + 2 - 6;
@@ -601,7 +601,7 @@ namespace ProjectVagabond.UI
                 float hpTextX = centerX - (totalHpWidth / 2f);
                 float hpTextY = currentY + 7;
 
-                spriteBatch.DrawStringSnapped(secondaryFont, hpValText, new Vector2(hpTextX, hpTextY), _global.Palette_BlueWhite);
+                spriteBatch.DrawStringSnapped(secondaryFont, hpValText, new Vector2(hpTextX, hpTextY), _global.Palette_Sun);
                 spriteBatch.DrawStringSnapped(secondaryFont, hpSuffix, new Vector2(hpTextX + valSize.X, hpTextY), _global.Palette_Gray);
 
                 currentY += 8 + (int)valSize.Y + 4 - 3;
@@ -717,7 +717,7 @@ namespace ProjectVagabond.UI
 
                             if (bonus > 0) textColor = _global.StatColor_Increase * 0.5f;
                             else if (bonus < 0) textColor = _global.StatColor_Decrease * 0.5f;
-                            else textColor = _global.Palette_BlueWhite;
+                            else textColor = _global.Palette_Sun;
 
                             if (excessValue > 0)
                             {
@@ -779,7 +779,7 @@ namespace ProjectVagabond.UI
                         );
                         textPos = new Vector2(MathF.Round(textPos.X), MathF.Round(textPos.Y));
 
-                        Color textColor = isSpellHovered ? _global.ButtonHoverColor : _global.Palette_BlueWhite;
+                        Color textColor = isSpellHovered ? _global.ButtonHoverColor : _global.Palette_Sun;
 
                         // Use Square Outline
                         spriteBatch.DrawStringSquareOutlinedSnapped(tertiaryFont, spellName, textPos, textColor, _global.Palette_Black);

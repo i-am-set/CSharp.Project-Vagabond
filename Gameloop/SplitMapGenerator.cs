@@ -959,9 +959,9 @@ namespace ProjectVagabond.Progression
             // Y-sort trees before drawing to the texture
             foreach (var treePos in treePositions.OrderBy(p => p.Y))
             {
-                spriteBatch.DrawSnapped(pixel, treePos + new Vector2(0, -1), global.Palette_DarkerGray); // Top
-                spriteBatch.DrawSnapped(pixel, treePos, global.Palette_DarkestGray);      // Middle
-                spriteBatch.DrawSnapped(pixel, treePos + new Vector2(0, 1), global.Palette_DarkestGray); // Bottom
+                spriteBatch.DrawSnapped(pixel, treePos + new Vector2(0, -1), global.Palette_DarkShadow); // Top
+                spriteBatch.DrawSnapped(pixel, treePos, global.Palette_Black);      // Middle
+                spriteBatch.DrawSnapped(pixel, treePos + new Vector2(0, 1), global.Palette_Black); // Bottom
             }
 
             spriteBatch.End();

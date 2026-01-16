@@ -148,7 +148,7 @@ namespace ProjectVagabond.UI
                     );
                     spriteBatch.DrawSnapped(pixel, bgRect, _overlay.Global.Palette_Black);
 
-                    spriteBatch.DrawStringSnapped(secondaryFont, pageText, textPos, _overlay.Global.Palette_BlueWhite);
+                    spriteBatch.DrawStringSnapped(secondaryFont, pageText, textPos, _overlay.Global.Palette_Sun);
 
                     _overlay.PageLeftButton?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
                     _overlay.PageRightButton?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
@@ -352,7 +352,7 @@ namespace ProjectVagabond.UI
                 int currentY = bounds.Y + 4;
 
                 string name = isOccupied ? member!.Name.ToUpper() : "EMPTY";
-                Color nameColor = isOccupied ? _overlay.Global.Palette_BlueWhite : _overlay.Global.Palette_DarkGray;
+                Color nameColor = isOccupied ? _overlay.Global.Palette_Sun : _overlay.Global.Palette_DarkShadow;
 
                 Vector2 nameSize = font.MeasureString(name);
                 Vector2 namePos = new Vector2(centerX - nameSize.X / 2, currentY);
@@ -433,7 +433,7 @@ namespace ProjectVagabond.UI
                     if (isOccupied)
                     {
                         string hpValText = $"{member!.CurrentHP}/{member.MaxHP}";
-                        Color hpValColor = _overlay.Global.Palette_BlueWhite;
+                        Color hpValColor = _overlay.Global.Palette_DarkSun;
                         string hpSuffix = " HP";
 
                         Vector2 valSize = secondaryFont.MeasureString(hpValText);
@@ -445,7 +445,7 @@ namespace ProjectVagabond.UI
                         float hpTextY = currentY + 7;
 
                         spriteBatch.DrawStringSnapped(secondaryFont, hpValText, new Vector2(hpTextX, hpTextY), hpValColor);
-                        spriteBatch.DrawStringSnapped(secondaryFont, hpSuffix, new Vector2(hpTextX + valSize.X, hpTextY), _overlay.Global.Palette_Gray);
+                        spriteBatch.DrawStringSnapped(secondaryFont, hpSuffix, new Vector2(hpTextX + valSize.X, hpTextY), _overlay.Global.Palette_DarkSun);
                     }
 
                     currentY += 8 + (int)textHeight + 4 - 3;
@@ -546,8 +546,12 @@ namespace ProjectVagabond.UI
                     int finalTotal = Math.Clamp(baseStat + passiveBonus + activeBonus, 1, 20);
 
                     // Draw Label
-                    Color labelColor = isOccupied ? _overlay.Global.Palette_LightGray : _overlay.Global.Palette_DarkGray;
-                    spriteBatch.DrawStringSnapped(secondaryFont, statLabels[s], new Vector2(statBlockStartX, currentY), labelColor);
+                    Color labelColor = isOccupied ? _overlay.Global.Palette_DarkSun : _overlay.Global.Palette_DarkShadow;
+                    if (isOccupied)
+                    {
+                        spriteBatch.DrawStringSnapped(secondaryFont, statLabels[s], new Vector2(statBlockStartX, currentY), labelColor);
+                    }
+                    
 
                     // Draw Bar Background
                     Texture2D statBarBg = isOccupied ? _overlay.SpriteManager.InventoryStatBarEmpty : _overlay.SpriteManager.InventoryStatBarDisabled;
@@ -618,7 +622,7 @@ namespace ProjectVagabond.UI
                                 else if (activeBonus < 0) textColor = _overlay.Global.StatColor_Decrease;
                                 else if (passiveBonus > 0) textColor = _overlay.Global.StatColor_Increase * 0.5f;
                                 else if (passiveBonus < 0) textColor = _overlay.Global.StatColor_Decrease * 0.5f;
-                                else textColor = _overlay.Global.Palette_BlueWhite;
+                                else textColor = _overlay.Global.Palette_Sun;
 
                                 string excessText = $"+{excessValue}";
                                 Vector2 textSize = secondaryFont.MeasureString(excessText);

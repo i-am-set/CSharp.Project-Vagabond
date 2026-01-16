@@ -349,7 +349,7 @@ namespace ProjectVagabond.Battle.UI
 
             Color mainColor = tintColorOverride ?? Color.White;
             float alpha = mainColor.A / 255f;
-            Color outlineColor = (outlineColorOverride ?? global.Palette_DarkGray) * alpha;
+            Color outlineColor = (outlineColorOverride ?? global.Palette_DarkShadow) * alpha;
 
             // Flip horizontally if it's NOT the player (assuming allies face right like enemies)
             SpriteEffects spriteEffects = SpriteEffects.None;

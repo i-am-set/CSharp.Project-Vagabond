@@ -58,7 +58,7 @@ namespace ProjectVagabond.Battle.UI
         {
             _global = ServiceLocator.Get<Global>();
 
-            _backButton = new Button(Rectangle.Empty, "BACK", function: "Back", enableHoverSway: false) { CustomDefaultTextColor = _global.Palette_Gray };
+            _backButton = new Button(Rectangle.Empty, "BACK", function: "Back", enableHoverSway: false) { CustomDefaultTextColor = _global.Palette_DarkShadow };
             _backButton.OnClick += HandleBack;
 
             _sortButton = new Button(Rectangle.Empty, "SORT", function: "Sort", enableHoverSway: false);
@@ -394,7 +394,7 @@ namespace ProjectVagabond.Battle.UI
                 {
                     int scrollbarX = _itemListBounds.Right + 2;
                     var scrollbarBgRect = new Rectangle(scrollbarX, _itemListBounds.Y, 1, _itemListBounds.Height);
-                    spriteBatch.DrawSnapped(pixel, scrollbarBgRect, _global.Palette_DarkGray);
+                    spriteBatch.DrawSnapped(pixel, scrollbarBgRect, _global.Palette_DarkShadow);
 
                     float handleHeight = Math.Max(5, (float)_maxVisibleRows / _totalRows * _itemListBounds.Height);
                     float handleY = _itemListBounds.Y;
@@ -459,20 +459,20 @@ namespace ProjectVagabond.Battle.UI
                 // Name
                 var itemName = item.ItemName.ToUpper();
                 var namePos = new Vector2(tooltipBgRect.X + horizontalPadding, currentY);
-                spriteBatch.DrawStringSnapped(font, itemName, namePos, _global.Palette_BlueWhite);
+                spriteBatch.DrawStringSnapped(font, itemName, namePos, _global.Palette_Sun);
 
                 // Type (Right aligned)
                 string typeText = "CONSUMABLE";
                 var typeSize = secondaryFont.MeasureString(typeText);
                 var typePos = new Vector2(tooltipBgRect.Right - horizontalPadding - typeSize.Width, currentY + (font.LineHeight - secondaryFont.LineHeight) / 2);
-                spriteBatch.DrawStringSnapped(secondaryFont, typeText, typePos, _global.Palette_LightBlue);
+                spriteBatch.DrawStringSnapped(secondaryFont, typeText, typePos, _global.Palette_Blue);
 
                 currentY += font.LineHeight + 1;
 
                 // Underline
                 var underlineStart = new Vector2(tooltipBgRect.X + horizontalPadding, currentY);
                 var underlineEnd = new Vector2(tooltipBgRect.Right - horizontalPadding, currentY);
-                spriteBatch.DrawLineSnapped(underlineStart, underlineEnd, _global.Palette_DarkGray);
+                spriteBatch.DrawLineSnapped(underlineStart, underlineEnd, _global.Palette_DarkShadow);
                 currentY += 3;
 
                 // Description

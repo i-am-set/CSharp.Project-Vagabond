@@ -938,7 +938,7 @@ namespace ProjectVagabond.Scenes
                 Vector2 drawPos = roundTextPosition + origin;
                 float scale = 1.0f;
                 float rotation = 0f;
-                Color color = ServiceLocator.Get<Global>().Palette_DarkGray;
+                Color color = ServiceLocator.Get<Global>().Palette_DarkShadow;
 
                 if (_roundAnimState == RoundAnimState.Entering)
                 {
@@ -949,7 +949,7 @@ namespace ProjectVagabond.Scenes
                 {
                     float progress = Math.Clamp(_roundAnimTimer / ROUND_ANIM_POP_DURATION, 0f, 1f);
                     scale = MathHelper.Lerp(1.0f, ROUND_MAX_SCALE, Easing.EaseOutCubic(progress));
-                    color = Color.Lerp(ServiceLocator.Get<Global>().Palette_DarkGray, Color.White, progress);
+                    color = Color.Lerp(ServiceLocator.Get<Global>().Palette_DarkShadow, Color.White, progress);
                 }
                 else if (_roundAnimState == RoundAnimState.Hang)
                 {
@@ -963,7 +963,7 @@ namespace ProjectVagabond.Scenes
                 {
                     float progress = Math.Clamp(_roundAnimTimer / ROUND_ANIM_SETTLE_DURATION, 0f, 1f);
                     scale = MathHelper.Lerp(ROUND_MAX_SCALE, 1.0f, Easing.EaseInCubic(progress));
-                    color = Color.Lerp(Color.White, ServiceLocator.Get<Global>().Palette_DarkGray, progress);
+                    color = Color.Lerp(Color.White, ServiceLocator.Get<Global>().Palette_DarkShadow, progress);
                 }
                 spriteBatch.DrawStringSnapped(font, roundText, drawPos, color, rotation, origin, scale, SpriteEffects.None, 0f);
             }
@@ -1435,7 +1435,7 @@ namespace ProjectVagabond.Scenes
             int absAmount = Math.Abs(e.Amount);
             string prefixText = absAmount > 1 ? $"{absAmount}x " : "";
             string suffixText = $" {verb}";
-            Color changeColor = e.Amount > 0 ? _global.Palette_LightBlue : _global.Palette_Red;
+            Color changeColor = e.Amount > 0 ? _global.Palette_Blue : _global.Palette_Red;
             Color statColor = e.Stat switch
             {
                 OffensiveStatType.Strength => _global.StatColor_Strength,

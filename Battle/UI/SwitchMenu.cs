@@ -40,7 +40,7 @@ namespace ProjectVagabond.Battle.UI
         public SwitchMenu()
         {
             _global = ServiceLocator.Get<Global>();
-            _backButton = new Button(Rectangle.Empty, "BACK", enableHoverSway: false) { CustomDefaultTextColor = _global.Palette_Gray };
+            _backButton = new Button(Rectangle.Empty, "BACK", enableHoverSway: false) { CustomDefaultTextColor = _global.Palette_DarkShadow };
             _backButton.OnClick += () =>
             {
                 if (!IsForced) OnBack?.Invoke();
@@ -142,7 +142,7 @@ namespace ProjectVagabond.Battle.UI
             string title = IsForced ? "CHOOSE REPLACEMENT" : "SWITCH MEMBER";
             var titleSize = secondaryFont.MeasureString(title);
             var titlePos = new Vector2((Global.VIRTUAL_WIDTH - titleSize.Width) / 2, dividerY + 4);
-            spriteBatch.DrawStringSnapped(secondaryFont, title, titlePos, _global.Palette_LightBlue);
+            spriteBatch.DrawStringSnapped(secondaryFont, title, titlePos, _global.Palette_Blue);
 
             // Draw Buttons
             foreach (var button in _memberButtons)

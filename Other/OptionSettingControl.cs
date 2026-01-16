@@ -193,7 +193,7 @@ namespace ProjectVagabond.UI
             string labelText = Label;
             string extraInfoText = ExtraInfoTextGetter?.Invoke();
             Vector2 labelSize = labelFont.MeasureString(labelText);
-            Color labelColor = isSelected && IsEnabled ? _global.ButtonHoverColor : (IsEnabled ? _global.Palette_BlueWhite : _global.ButtonDisableColor);
+            Color labelColor = isSelected && IsEnabled ? _global.ButtonHoverColor : (IsEnabled ? _global.GameTextColor : _global.ButtonDisableColor);
 
             if (isSelected && IsEnabled)
             {
@@ -216,7 +216,7 @@ namespace ProjectVagabond.UI
 
             if (!string.IsNullOrEmpty(extraInfoText))
             {
-                spriteBatch.DrawStringSnapped(labelFont, extraInfoText, animatedPosition + new Vector2(labelSize.X + 2, 0), _global.Palette_DarkGray);
+                spriteBatch.DrawStringSnapped(labelFont, extraInfoText, animatedPosition + new Vector2(labelSize.X + 2, 0), _global.Palette_DarkShadow);
             }
 
             // --- Value and Arrows (Using valueFont) ---
@@ -246,7 +246,7 @@ namespace ProjectVagabond.UI
                 else
                 {
                     var customColor = GetValueColor?.Invoke(_currentValue);
-                    baseValueColor = customColor ?? _global.Palette_BlueWhite;
+                    baseValueColor = customColor ?? _global.GameTextColor;
                 }
             }
 

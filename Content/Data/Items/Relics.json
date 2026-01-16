@@ -97,10 +97,10 @@
   },
   {
     "RelicID": "8",
-    "RelicName": "Bracers",
+    "RelicName": "Buckler",
     "AbilityName": "Thick Skin",
     "Description": "Receive [cpositive]0.8x[/] physical damage.",
-    "Flavor": "Just some standard leather bracers. Boring.",
+    "Flavor": "A little shield!",
     "Rarity": 0,
     "Effects": {
       "PhysicalDamageReduction": "20"
@@ -327,10 +327,10 @@
   },
   {
     "RelicID": "26",
-    "RelicName": "Smalling Salts",
+    "RelicName": "Spices",
     "AbilityName": "Reckless Abandon",
     "Description": "Contact moves deal [cpositive]1.5x[/] damage but [cnegative]0.9x[/] accuracy.",
-    "Flavor": "WOWOWOWOW",
+    "Flavor": "ACHOO!",
     "Rarity": 1,
     "Effects": {
       "RecklessAbandon": "1.5,0.9"

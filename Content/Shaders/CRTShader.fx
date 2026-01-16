@@ -29,7 +29,7 @@ uniform float Vibrance;
 // --- Tuning ---
 
 // Curvature (Lens Distortion)
-static const float CURVATURE = 0.05; // 0.0 = Flat, 0.15 = Standard CRT, 0.4 = Fish eye
+static const float CURVATURE = 0.1; // 0.0 = Flat, 0.15 = Standard CRT, 0.4 = Fish eye
 
 // Scanlines
 static const float SCANLINE_OPACITY_MIN = 0.85f; // The darkness of the gap (1.0 = invisible, 0.0 = black)

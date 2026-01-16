@@ -100,13 +100,13 @@ namespace ProjectVagabond.UI
             if (!IsActive) return;
 
             var pixel = ServiceLocator.Get<Texture2D>();
-            spriteBatch.DrawSnapped(pixel, _dialogBounds, _global.Palette_DarkGray);
-            DrawRectangleBorder(spriteBatch, pixel, _dialogBounds, 1, _global.Palette_LightGray);
+            spriteBatch.DrawSnapped(pixel, _dialogBounds, _global.Palette_DarkShadow);
+            DrawRectangleBorder(spriteBatch, pixel, _dialogBounds, 1, _global.Palette_Shadow);
 
             // Draw Prompt
             Vector2 promptSize = font.MeasureString(_prompt);
             Vector2 promptPosition = new Vector2(_dialogBounds.Center.X - promptSize.X / 2, _dialogBounds.Y + 10);
-            spriteBatch.DrawStringSnapped(font, _prompt, promptPosition, _global.Palette_BlueWhite);
+            spriteBatch.DrawStringSnapped(font, _prompt, promptPosition, _global.Palette_Sun);
 
             // Draw Countdown Timer
             _stringBuilder.Clear();

@@ -103,7 +103,7 @@ namespace ProjectVagabond.UI
 
                 if (i % 2 == 0)
                 {
-                    btn.CustomDefaultTextColor = _overlay.Global.Palette_BlueWhite;
+                    btn.CustomDefaultTextColor = _overlay.Global.Palette_Sun;
                     btn.CustomTitleTextColor = _overlay.Global.Palette_DarkGray;
                 }
                 else
