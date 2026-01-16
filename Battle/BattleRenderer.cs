@@ -838,8 +838,8 @@ namespace ProjectVagabond.Battle.UI
                     if (enemy.CombatantID == _statTooltipCombatantID && _statTooltipAlpha > 0) isSilhouetted = true;
 
                     Color silhouetteColor = isSilhouetted ? _global.Palette_DarkShadow : _global.Palette_DarkShadow;
-                    Color outlineColor = (enemy == currentActor) ? _global.Palette_Sun : _global.Palette_DarkShadow;
-                    if (isSilhouetted) outlineColor = outlineColor * 0.5f;
+
+                    Color outlineColor = (enemy == currentActor) ? _global.Palette_Sun : Color.Transparent;
 
                     outlineColor = outlineColor * enemy.VisualAlpha;
 
@@ -1123,7 +1123,9 @@ namespace ProjectVagabond.Battle.UI
                 if (player.CombatantID == _statTooltipCombatantID && _statTooltipAlpha > 0) isSilhouetted = true;
 
                 Color silhouetteColor = isSilhouetted ? _global.Palette_DarkerGray : _global.Palette_DarkerGray;
-                Color outlineColor = (player == currentActor) ? _global.Palette_Sun : _global.Palette_DarkGray;
+
+                Color outlineColor = (player == currentActor) ? _global.Palette_Sun : Color.Transparent;
+
                 outlineColor = outlineColor * player.VisualAlpha;
 
                 var spawnAnim = animManager.GetSpawnAnimationState(player.CombatantID);
