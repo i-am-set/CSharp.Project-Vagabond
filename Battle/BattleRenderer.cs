@@ -839,6 +839,8 @@ namespace ProjectVagabond.Battle.UI
 
                     Color silhouetteColor = isSilhouetted ? _global.Palette_DarkShadow : _global.Palette_DarkShadow;
 
+                    // --- MODIFIED: Outline Color Logic ---
+                    // Only the active actor gets the Sun outline. Everyone else gets Transparent (no outer outline).
                     Color outlineColor = (enemy == currentActor) ? _global.Palette_Sun : Color.Transparent;
 
                     outlineColor = outlineColor * enemy.VisualAlpha;
@@ -870,18 +872,18 @@ namespace ProjectVagabond.Battle.UI
                             if (introSlide.CurrentPhase == BattleAnimationManager.IntroSlideAnimationState.Phase.Sliding)
                             {
                                 silhouetteAmt = 1.0f;
-                                silhouetteColor = _global.Palette_Black;
+                                silhouetteColor = _global.Palette_DarkShadow;
                             }
                             else if (introSlide.CurrentPhase == BattleAnimationManager.IntroSlideAnimationState.Phase.Waiting)
                             {
                                 silhouetteAmt = 1.0f;
-                                silhouetteColor = _global.Palette_Black;
+                                silhouetteColor = _global.Palette_DarkShadow;
                             }
                             else if (introSlide.CurrentPhase == BattleAnimationManager.IntroSlideAnimationState.Phase.Revealing)
                             {
                                 float revealProgress = Math.Clamp(introSlide.RevealTimer / BattleAnimationManager.IntroSlideAnimationState.REVEAL_DURATION, 0f, 1f);
                                 silhouetteAmt = 1.0f - Easing.EaseInQuad(revealProgress);
-                                silhouetteColor = _global.Palette_Black;
+                                silhouetteColor = _global.Palette_DarkShadow;
                             }
                         }
                     }
@@ -909,7 +911,7 @@ namespace ProjectVagabond.Battle.UI
                             {
                                 float p = Math.Clamp(switchOut.SilhouetteTimer / BattleAnimationManager.SwitchOutAnimationState.SILHOUETTE_DURATION, 0f, 1f);
                                 silhouetteAmt = Easing.EaseOutQuad(p);
-                                silhouetteColor = _global.Palette_Black;
+                                silhouetteColor = _global.Palette_DarkShadow;
                             }
                             else if (switchOut.CurrentPhase == BattleAnimationManager.SwitchOutAnimationState.Phase.Lifting)
                             {
@@ -918,7 +920,7 @@ namespace ProjectVagabond.Battle.UI
                                 spawnY = MathHelper.Lerp(0f, -BattleAnimationManager.SwitchOutAnimationState.LIFT_HEIGHT, eased);
                                 alpha = 1.0f - eased;
                                 silhouetteAmt = 1.0f;
-                                silhouetteColor = _global.Palette_Black;
+                                silhouetteColor = _global.Palette_DarkShadow; 
                             }
                         }
                         else
@@ -1122,8 +1124,10 @@ namespace ProjectVagabond.Battle.UI
                 bool isSilhouetted = shouldGrayOut && !isSelectable;
                 if (player.CombatantID == _statTooltipCombatantID && _statTooltipAlpha > 0) isSilhouetted = true;
 
-                Color silhouetteColor = isSilhouetted ? _global.Palette_DarkerGray : _global.Palette_DarkerGray;
+                Color silhouetteColor = isSilhouetted ? _global.Palette_DarkShadow : _global.Palette_DarkShadow;
 
+                // --- MODIFIED: Outline Color Logic ---
+                // Only the active actor gets the Sun outline. Everyone else gets Transparent (no outer outline).
                 Color outlineColor = (player == currentActor) ? _global.Palette_Sun : Color.Transparent;
 
                 outlineColor = outlineColor * player.VisualAlpha;
