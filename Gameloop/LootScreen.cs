@@ -59,6 +59,14 @@ namespace ProjectVagabond.Scenes
         private const float LOOT_HOVER_ROTATION_SPEED = 1.0f; // Multiplier for the tilt speed
         private const float LOOT_HOVER_FLOAT_DISTANCE = 1.0f; // Max distance to sway (pixels)
 
+        // --- TUNING: Tooltip & Dimmer ---
+        private const float TOOLTIP_ANIM_DURATION_IN = 0.1f;
+        private const float TOOLTIP_ANIM_DURATION_OUT = 0.1f;
+
+        private const float DIMMER_TARGET_OPACITY = 0.45f;     // Less dark (was 0.85f)
+        private const bool DIMMER_IS_INSTANT = true;           // No fade, instant snap
+        private const float DIMMER_FADE_SPEED = 5.0f;          // Fallback speed if instant is false
+
         // Buttons
         private Button _skipButton;
 
@@ -83,8 +91,6 @@ namespace ProjectVagabond.Scenes
         // We use a normalized value (0.0 to 1.0) to track progress, then map it to opacity.
         private float _dimmerProgress = 0f;
         private float _dimmerAlpha = 0f; // The actual alpha used for drawing
-        private const float DIMMER_TARGET_OPACITY = 0.85f;
-        private const float DIMMER_FADE_SPEED = 5.0f; // 1.0 / 5.0 = 0.2 seconds to fade
 
         // Text Wave Timer
         private float _textWaveTimer = 0f;
@@ -99,12 +105,12 @@ namespace ProjectVagabond.Scenes
             _core = ServiceLocator.Get<Core>();
             _cards = new List<LootCard>();
 
-            // Initialize Tooltip Animator
+            // Initialize Tooltip Animator with new tuning
             _tooltipAnimator = new UIAnimator
             {
                 EntryStyle = EntryExitStyle.Pop,
-                DurationIn = 0.2f,
-                DurationOut = 0.1f
+                DurationIn = TOOLTIP_ANIM_DURATION_IN,
+                DurationOut = TOOLTIP_ANIM_DURATION_OUT
             };
 
             // Center the loot area
@@ -379,21 +385,30 @@ namespace ProjectVagabond.Scenes
             // We simply check if we *want* to show the tooltip based on hover state.
             bool shouldShowDimmer = (_hoveredItemData != null && !_selectionMade && _tooltipTimer >= TOOLTIP_DELAY);
 
-            // Linear move towards target (0 or 1)
-            float targetValue = shouldShowDimmer ? 1.0f : 0.0f;
-            float moveSpeed = DIMMER_FADE_SPEED * dt;
-
-            if (_dimmerProgress < targetValue)
+            if (DIMMER_IS_INSTANT)
             {
-                _dimmerProgress = Math.Min(_dimmerProgress + moveSpeed, targetValue);
+                // Instant Snap
+                _dimmerAlpha = shouldShowDimmer ? DIMMER_TARGET_OPACITY : 0f;
+                _dimmerProgress = shouldShowDimmer ? 1.0f : 0.0f; // Keep progress synced
             }
-            else if (_dimmerProgress > targetValue)
+            else
             {
-                _dimmerProgress = Math.Max(_dimmerProgress - moveSpeed, targetValue);
-            }
+                // Linear move towards target (0 or 1)
+                float targetValue = shouldShowDimmer ? 1.0f : 0.0f;
+                float moveSpeed = DIMMER_FADE_SPEED * dt;
 
-            // Map 0..1 to 0..MaxOpacity using SmoothStep for a nice curve
-            _dimmerAlpha = MathHelper.SmoothStep(0f, DIMMER_TARGET_OPACITY, _dimmerProgress);
+                if (_dimmerProgress < targetValue)
+                {
+                    _dimmerProgress = Math.Min(_dimmerProgress + moveSpeed, targetValue);
+                }
+                else if (_dimmerProgress > targetValue)
+                {
+                    _dimmerProgress = Math.Max(_dimmerProgress - moveSpeed, targetValue);
+                }
+
+                // Map 0..1 to 0..MaxOpacity using SmoothStep for a nice curve
+                _dimmerAlpha = MathHelper.SmoothStep(0f, DIMMER_TARGET_OPACITY, _dimmerProgress);
+            }
 
             _prevMouse = mouse;
         }
@@ -546,7 +561,6 @@ namespace ProjectVagabond.Scenes
                     }
 
                     // 3. Draw Item Sprite Body
-                    // FIX: Use DrawSnapped to ensure body aligns with outline
                     sb.DrawSnapped(icon, drawPos, null, Color.White * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
                 }
             }

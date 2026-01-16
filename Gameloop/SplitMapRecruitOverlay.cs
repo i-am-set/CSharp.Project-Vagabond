@@ -24,7 +24,7 @@ namespace ProjectVagabond.UI
         private readonly Core _core;
         private readonly GameState _gameState;
         private readonly HapticsManager _hapticsManager;
-        private readonly ItemTooltipRenderer _tooltipRenderer; // New dependency
+        private readonly ItemTooltipRenderer _tooltipRenderer;
 
         private Button _selectButton;
         private Button _skipButton;
@@ -46,6 +46,11 @@ namespace ProjectVagabond.UI
         private float _tooltipTimer = 0f;
         private object? _lastHoveredItemData = null;
         private const float TOOLTIP_DELAY = 0.0f; // Tunable delay
+
+        // Tooltip Animation
+        private UIAnimator _tooltipAnimator;
+        private const float TOOLTIP_ANIM_DURATION_IN = 0.05f; // Match LootScreen
+        private const float TOOLTIP_ANIM_DURATION_OUT = 0.1f;
 
         // Layout Constants
         private const float WORLD_Y_OFFSET = 600f;
@@ -76,6 +81,14 @@ namespace ProjectVagabond.UI
             _gameState = ServiceLocator.Get<GameState>();
             _hapticsManager = ServiceLocator.Get<HapticsManager>();
             _tooltipRenderer = ServiceLocator.Get<ItemTooltipRenderer>();
+
+            // Initialize Tooltip Animator
+            _tooltipAnimator = new UIAnimator
+            {
+                EntryStyle = EntryExitStyle.Pop,
+                DurationIn = TOOLTIP_ANIM_DURATION_IN,
+                DurationOut = TOOLTIP_ANIM_DURATION_OUT
+            };
 
             // Initialize Tunable Colors
             TOOLTIP_BG_COLOR = _global.Palette_DarkestGray;
@@ -115,8 +128,8 @@ namespace ProjectVagabond.UI
                 !_gameState.PlayerState.Party.Any(m => m.Name == BattleDataCache.PartyMembers[id].Name)
             ).ToList();
 
-            // 3. Randomly select 1 to 3
-            int count = _rng.Next(1, 4); // 1, 2, or 3
+            // 3. Always try to select 3
+            int count = 3;
             count = Math.Min(count, validIds.Count); // Cap at available
 
             if (count > 0)
@@ -146,6 +159,7 @@ namespace ProjectVagabond.UI
             IsOpen = true;
             _tooltipTimer = 0f;
             _lastHoveredItemData = null;
+            _tooltipAnimator.Reset();
             RebuildLayout();
         }
 
@@ -153,6 +167,7 @@ namespace ProjectVagabond.UI
         {
             IsOpen = false;
             _confirmationDialog.Hide();
+            _tooltipAnimator.Reset();
         }
 
         private void RebuildLayout()
@@ -205,18 +220,20 @@ namespace ProjectVagabond.UI
                 int index = i; // Capture for lambda
                 btn.OnClick += () => SelectCandidate(index);
 
-                // Disable if party is full
-                if (_gameState.PlayerState.Party.Count >= 4)
-                {
-                    btn.IsEnabled = false;
-                }
-
                 _candidateButtons.Add(btn);
             }
         }
 
         private void SelectCandidate(int index)
         {
+            // Prevent selection if party is full
+            if (_gameState.PlayerState.Party.Count >= 4)
+            {
+                EventBus.Publish(new GameEvents.AlertPublished { Message = "PARTY FULL" });
+                _hapticsManager.TriggerShake(5f, 0.1f);
+                return;
+            }
+
             if (_selectedCandidateIndex == index)
             {
                 // Deselect if clicking same
@@ -336,18 +353,24 @@ namespace ProjectVagabond.UI
                     Rectangle weaponRect = new Rectangle(equipStartX, currentY, slotSize, slotSize);
                     if (weaponRect.Contains(mouseInWorldSpace))
                     {
-                        _hoveredEquipSlotIndex = 0;
+                        // Only allow hover if item exists
                         if (!string.IsNullOrEmpty(candidate.EquippedWeaponId))
+                        {
+                            _hoveredEquipSlotIndex = 0;
                             _hoveredItemData = BattleDataCache.Weapons.GetValueOrDefault(candidate.EquippedWeaponId);
+                        }
                     }
 
                     // Check Relic Slot
                     Rectangle relicRect = new Rectangle(equipStartX + slotSize + gap, currentY, slotSize, slotSize);
                     if (relicRect.Contains(mouseInWorldSpace))
                     {
-                        _hoveredEquipSlotIndex = 1;
+                        // Only allow hover if item exists
                         if (!string.IsNullOrEmpty(candidate.EquippedRelicId))
+                        {
+                            _hoveredEquipSlotIndex = 1;
                             _hoveredItemData = BattleDataCache.Relics.GetValueOrDefault(candidate.EquippedRelicId);
+                        }
                     }
 
                     currentY += slotSize + 6 - 5;
@@ -376,11 +399,10 @@ namespace ProjectVagabond.UI
                 }
             }
 
-            // --- TOOLTIP TIMER LOGIC ---
+            // --- TOOLTIP ANIMATION LOGIC ---
             if (_hoveredItemData != _lastHoveredItemData)
             {
                 _tooltipTimer = 0f;
-                _lastHoveredItemData = _hoveredItemData;
             }
 
             if (_hoveredItemData != null)
@@ -388,11 +410,31 @@ namespace ProjectVagabond.UI
                 _tooltipTimer += dt;
                 // Use Hint cursor for non-clickable info elements
                 ServiceLocator.Get<CursorManager>().SetState(CursorState.Hint);
+
+                if (_tooltipTimer >= TOOLTIP_DELAY)
+                {
+                    if (_hoveredItemData != _lastHoveredItemData)
+                    {
+                        _tooltipAnimator.Reset();
+                        _tooltipAnimator.Show();
+                    }
+                    else if (!_tooltipAnimator.IsVisible)
+                    {
+                        _tooltipAnimator.Show();
+                    }
+                }
             }
             else
             {
                 _tooltipTimer = 0f;
+                if (_lastHoveredItemData != null && _tooltipAnimator.IsVisible)
+                {
+                    _tooltipAnimator.Hide();
+                }
             }
+
+            _lastHoveredItemData = _hoveredItemData;
+            _tooltipAnimator.Update(dt);
 
             // Update Buttons
             for (int i = 0; i < _candidateButtons.Count; i++)
@@ -452,7 +494,7 @@ namespace ProjectVagabond.UI
             _skipButton.Draw(spriteBatch, tertiaryFont, gameTime, Matrix.Identity);
 
             // --- Draw Info Panel if Hovered AND Timer Met ---
-            if (_hoveredItemData != null && _tooltipTimer >= TOOLTIP_DELAY)
+            if (_hoveredItemData != null && _tooltipAnimator.GetVisualState().IsVisible)
             {
                 // 1. Calculate Center of Hovered Slot in World Space
                 Vector2 worldSlotCenter = GetHoveredSlotCenter();
@@ -460,9 +502,12 @@ namespace ProjectVagabond.UI
                 // 2. Transform to Screen Space
                 Vector2 screenSlotCenter = Vector2.Transform(worldSlotCenter, transform);
 
-                // 3. Draw Tooltip using the new renderer
-                // Pass default scale and opacity
-                _tooltipRenderer.DrawTooltip(spriteBatch, _hoveredItemData, screenSlotCenter, gameTime, Vector2.One, 1.0f);
+                // 3. Get Animation State
+                var state = _tooltipAnimator.GetVisualState();
+
+                // 4. Draw Tooltip using the new renderer
+                // Pass animated scale
+                _tooltipRenderer.DrawTooltip(spriteBatch, _hoveredItemData, screenSlotCenter, gameTime, state.Scale, 1.0f);
             }
         }
 
@@ -602,7 +647,8 @@ namespace ProjectVagabond.UI
                 float hpTextY = currentY + 7;
 
                 spriteBatch.DrawStringSnapped(secondaryFont, hpValText, new Vector2(hpTextX, hpTextY), _global.Palette_Sun);
-                spriteBatch.DrawStringSnapped(secondaryFont, hpSuffix, new Vector2(hpTextX + valSize.X, hpTextY), _global.Palette_Gray);
+                // CHANGED: Use DarkSun for HP suffix
+                spriteBatch.DrawStringSnapped(secondaryFont, hpSuffix, new Vector2(hpTextX + valSize.X, hpTextY), _global.Palette_DarkSun);
 
                 currentY += 8 + (int)valSize.Y + 4 - 3;
             }
@@ -651,7 +697,8 @@ namespace ProjectVagabond.UI
                 int rawTotal = baseStat + bonus;
 
                 // Draw Label
-                Color labelColor = _global.Palette_LightGray;
+                // CHANGED: Use DarkSun for stat labels
+                Color labelColor = _global.Palette_DarkSun;
                 spriteBatch.DrawStringSnapped(secondaryFont, statLabels[s], new Vector2(statBlockStartX, currentY), labelColor);
 
                 // Draw Bar Background

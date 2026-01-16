@@ -1615,8 +1615,8 @@ namespace ProjectVagabond.Scenes
             _shopOverlay.Draw(spriteBatch, font, gameTime);
             _restOverlay.Draw(spriteBatch, font, gameTime);
 
-            // FIX: Pass finalTransform to RecruitOverlay so it can calculate screen-space tooltips correctly
-            _recruitOverlay.Draw(spriteBatch, font, gameTime, finalTransform);
+            // FIX: Pass cameraTransform to RecruitOverlay so it can calculate Virtual Screen Coords for tooltips
+            _recruitOverlay.Draw(spriteBatch, font, gameTime, cameraTransform);
 
             spriteBatch.End();
 
