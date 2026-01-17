@@ -60,12 +60,12 @@ namespace ProjectVagabond.Scenes
         private const float LOOT_HOVER_FLOAT_DISTANCE = 1.0f; // Max distance to sway (pixels)
 
         // --- TUNING: Tooltip & Dimmer ---
-        private const float TOOLTIP_ANIM_DURATION_IN = 0.1f;
-        private const float TOOLTIP_ANIM_DURATION_OUT = 0.1f;
+        private const float TOOLTIP_ANIM_DURATION_IN = 0.25f; // Slower, smoother entry
+        private const float TOOLTIP_ANIM_DURATION_OUT = 0.0f; // Instant exit (No animation)
 
         private const float DIMMER_TARGET_OPACITY = 0.45f;     // Less dark (was 0.85f)
-        private const bool DIMMER_IS_INSTANT = true;           // No fade, instant snap
-        private const float DIMMER_FADE_SPEED = 5.0f;          // Fallback speed if instant is false
+        private const bool DIMMER_IS_INSTANT = false;          // Enable smooth fading
+        private const float DIMMER_FADE_SPEED = 3.0f;          // Speed of the fade (3.0 = ~0.33 seconds)
 
         // Buttons
         private Button _skipButton;
@@ -107,7 +107,7 @@ namespace ProjectVagabond.Scenes
             // Initialize Tooltip Animator with new tuning
             _tooltipAnimator = new UIAnimator
             {
-                EntryStyle = EntryExitStyle.Pop,
+                EntryStyle = EntryExitStyle.Zoom, // Use Zoom for a smooth scale up without overshoot
                 DurationIn = TOOLTIP_ANIM_DURATION_IN,
                 DurationOut = TOOLTIP_ANIM_DURATION_OUT
             };
@@ -350,18 +350,15 @@ namespace ProjectVagabond.Scenes
                 if (_hoveredItemData != _lastHoveredItemData)
                 {
                     _tooltipTimer = 0f;
+                    // Force reset the animator to ensure we don't see the previous item's fade-out
+                    _tooltipAnimator.Reset();
                 }
 
                 _tooltipTimer += dt;
 
                 if (_tooltipTimer >= ItemTooltipRenderer.TOOLTIP_DELAY)
                 {
-                    if (_hoveredItemData != _lastHoveredItemData)
-                    {
-                        _tooltipAnimator.Reset();
-                        _tooltipAnimator.Show();
-                    }
-                    else if (!_tooltipAnimator.IsVisible)
+                    if (!_tooltipAnimator.IsVisible)
                     {
                         _tooltipAnimator.Show();
                     }

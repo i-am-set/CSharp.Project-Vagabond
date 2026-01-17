@@ -49,8 +49,8 @@ namespace ProjectVagabond.UI
 
         // Tooltip Animation
         private UIAnimator _tooltipAnimator;
-        private const float TOOLTIP_ANIM_DURATION_IN = 0.05f; // Match LootScreen
-        private const float TOOLTIP_ANIM_DURATION_OUT = 0.1f;
+        private const float TOOLTIP_ANIM_DURATION_IN = 0.25f; // Slower, smoother entry
+        private const float TOOLTIP_ANIM_DURATION_OUT = 0.0f; // Instant exit (No animation)
 
         // Layout Constants
         private const float WORLD_Y_OFFSET = 600f;
@@ -91,7 +91,7 @@ namespace ProjectVagabond.UI
             // Initialize Tooltip Animator
             _tooltipAnimator = new UIAnimator
             {
-                EntryStyle = EntryExitStyle.Pop,
+                EntryStyle = EntryExitStyle.Zoom, // Use Zoom for smooth scaling
                 DurationIn = TOOLTIP_ANIM_DURATION_IN,
                 DurationOut = TOOLTIP_ANIM_DURATION_OUT
             };
@@ -400,6 +400,8 @@ namespace ProjectVagabond.UI
             if (_hoveredItemData != _lastHoveredItemData)
             {
                 _tooltipTimer = 0f;
+                // Force reset the animator to ensure we don't see the previous item's fade-out
+                _tooltipAnimator.Reset();
             }
 
             if (_hoveredItemData != null)
@@ -410,12 +412,7 @@ namespace ProjectVagabond.UI
 
                 if (_tooltipTimer >= ItemTooltipRenderer.TOOLTIP_DELAY)
                 {
-                    if (_hoveredItemData != _lastHoveredItemData)
-                    {
-                        _tooltipAnimator.Reset();
-                        _tooltipAnimator.Show();
-                    }
-                    else if (!_tooltipAnimator.IsVisible)
+                    if (!_tooltipAnimator.IsVisible)
                     {
                         _tooltipAnimator.Show();
                     }
@@ -503,8 +500,8 @@ namespace ProjectVagabond.UI
                 var state = _tooltipAnimator.GetVisualState();
 
                 // 4. Draw Tooltip using the new renderer
-                // Pass animated scale
-                _tooltipRenderer.DrawTooltip(spriteBatch, _hoveredItemData, screenSlotCenter, gameTime, state.Scale, 1.0f);
+                // Pass animated scale and opacity
+                _tooltipRenderer.DrawTooltip(spriteBatch, _hoveredItemData, screenSlotCenter, gameTime, state.Scale, state.Opacity);
             }
         }
 
@@ -784,14 +781,55 @@ namespace ProjectVagabond.UI
 
             for (int s = 0; s < 4; s++)
             {
-                Rectangle spellRect = new Rectangle(spellButtonX, currentY, spellButtonWidth, spellButtonHeight);
-                if (spellRect.Contains(Core.TransformMouse(Mouse.GetState().Position)))
+                // Determine state
+                var spellEntry = member.Spells[s];
+                bool isFilled = spellEntry != null;
+                bool isHovered = (_hoveredInternalCandidateIndex == index) && (_hoveredSpellSlotIndex == s);
+
+                int frameIndex = 0; // Empty
+                if (isHovered) frameIndex = 2; // Hover
+                else if (isFilled) frameIndex = 1; // Filled
+
+                var sourceRect = _spriteManager.InventorySpellSlotButtonSourceRects[frameIndex];
+                var texture = _spriteManager.InventorySpellSlotButtonSpriteSheet;
+
+                // Draw Sprite
+                if (texture != null)
                 {
-                    _hoveredSpellSlotIndex = s;
-                    var spell = member.Spells[s];
-                    if (spell != null)
-                        _hoveredItemData = BattleDataCache.Moves.GetValueOrDefault(spell.MoveID);
+                    spriteBatch.DrawSnapped(texture, new Vector2(spellButtonX, currentY), sourceRect, Color.White);
                 }
+
+                // Draw Text
+                if (isFilled)
+                {
+                    if (BattleDataCache.Moves.TryGetValue(spellEntry.MoveID, out var moveData))
+                    {
+                        string spellName = moveData.MoveName.ToUpper();
+                        var tertiaryFont = _core.TertiaryFont;
+
+                        Color textColor = _global.Palette_Sun;
+                        if (isHovered) textColor = _global.ButtonHoverColor;
+
+                        Vector2 textSize = tertiaryFont.MeasureString(spellName);
+                        Vector2 textPos = new Vector2(
+                            spellButtonX + (spellButtonWidth - textSize.X) / 2f,
+                            currentY + (spellButtonHeight - textSize.Y) / 2f
+                        );
+
+                        // Round to pixel
+                        textPos = new Vector2(MathF.Round(textPos.X), MathF.Round(textPos.Y));
+
+                        if (isHovered)
+                        {
+                            spriteBatch.DrawStringSnapped(tertiaryFont, spellName, textPos, textColor);
+                        }
+                        else
+                        {
+                            spriteBatch.DrawStringSquareOutlinedSnapped(tertiaryFont, spellName, textPos, textColor, _global.Palette_DarkShadow);
+                        }
+                    }
+                }
+
                 currentY += spellButtonHeight;
             }
         }
