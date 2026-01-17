@@ -30,7 +30,10 @@ namespace ProjectVagabond.UI
         private readonly Global _global;
         private readonly SpriteManager _spriteManager;
         private readonly Core _core;
+
         // --- TUNING ---
+        public const float TOOLTIP_DELAY = 0.5f; // Centralized delay for all item tooltips
+
         private const int MIN_TOOLTIP_WIDTH = 120;
         private const int SPACE_WIDTH = 5;
 

@@ -1,5 +1,4 @@
-﻿
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -47,7 +46,6 @@ namespace ProjectVagabond.UI
         // Tooltip State
         private float _tooltipTimer = 0f;
         private object? _lastHoveredItemData = null;
-        private const float TOOLTIP_DELAY = 0.0f; // Tunable delay
 
         // Tooltip Animation
         private UIAnimator _tooltipAnimator;
@@ -62,6 +60,10 @@ namespace ProjectVagabond.UI
         private const int SPACE_WIDTH = 5;
         private const int TOOLTIP_WIDTH = 120; // Fixed width for the tooltip
         private const int SCREEN_EDGE_MARGIN = 6; // Minimum distance from screen edges
+
+        // --- ANIMATION TUNING ---
+        private const float EQUIP_FLOAT_SPEED = 2.5f;
+        private const float EQUIP_FLOAT_AMPLITUDE = 0.5f;
 
         // Tuning
         private Color TOOLTIP_BG_COLOR;
@@ -399,7 +401,7 @@ namespace ProjectVagabond.UI
                 // Use Hint cursor for non-clickable info elements
                 ServiceLocator.Get<CursorManager>().SetState(CursorState.Hint);
 
-                if (_tooltipTimer >= TOOLTIP_DELAY)
+                if (_tooltipTimer >= ItemTooltipRenderer.TOOLTIP_DELAY)
                 {
                     if (_hoveredItemData != _lastHoveredItemData)
                     {
@@ -555,17 +557,18 @@ namespace ProjectVagabond.UI
             if (isSelected)
             {
                 var pixel = ServiceLocator.Get<Texture2D>();
-                // Darker background for selection
-                spriteBatch.DrawSnapped(pixel, bounds, _global.Palette_Shadow);
-                // Selection Border (Yellow)
-                DrawRectangleBorder(spriteBatch, pixel, bounds, 1, _global.Palette_Yellow);
+                // Darker background for selection (Beveled)
+                DrawBeveledBackground(spriteBatch, pixel, bounds, _global.Palette_Shadow);
+                // Selection Border (Yellow) - Beveled
+                DrawBeveledBorder(spriteBatch, pixel, bounds, _global.Palette_Yellow);
             }
             else if (button.IsHovered && button.IsEnabled)
             {
                 var pixel = ServiceLocator.Get<Texture2D>();
-                spriteBatch.DrawSnapped(pixel, bounds, _global.Palette_DarkShadow);
-                // Hover Border (White)
-                DrawRectangleBorder(spriteBatch, pixel, bounds, 1, Color.White);
+                // Hover background (Beveled)
+                DrawBeveledBackground(spriteBatch, pixel, bounds, _global.Palette_DarkShadow);
+                // Hover Border (Rust) - Beveled
+                DrawBeveledBorder(spriteBatch, pixel, bounds, _global.ButtonHoverColor);
             }
 
             // 1. Name
@@ -590,14 +593,15 @@ namespace ProjectVagabond.UI
                     hopOffset += bob;
                 }
 
-                var destRect = new Rectangle(centerX - 16, (int)(currentY + hopOffset), 32, 32);
+                // Use Vector2 for smooth sub-pixel rendering
+                Vector2 portraitPos = new Vector2(centerX - 16, currentY + hopOffset);
 
                 // Determine Texture: Use Alt if Selected or Hovered
                 Texture2D portraitTexture = (isSelected || (button.IsHovered && button.IsEnabled))
                     ? _spriteManager.PlayerPortraitsAltSpriteSheet
                     : _spriteManager.PlayerPortraitsSpriteSheet;
 
-                spriteBatch.DrawSnapped(portraitTexture, destRect, sourceRect, Color.White);
+                spriteBatch.DrawSnapped(portraitTexture, portraitPos, sourceRect, Color.White);
             }
 
             // Draw Name on top
@@ -644,8 +648,8 @@ namespace ProjectVagabond.UI
             bool hoverWeapon = hoveringThisCandidate && _hoveredEquipSlotIndex == 0;
             bool hoverRelic = hoveringThisCandidate && _hoveredEquipSlotIndex == 1;
 
-            DrawEquipSlot(spriteBatch, equipStartX, currentY, member.EquippedWeaponId, "Weapon", hoverWeapon);
-            DrawEquipSlot(spriteBatch, equipStartX + slotSize + gap, currentY, member.EquippedRelicId, "Relic", hoverRelic);
+            DrawEquipSlot(spriteBatch, equipStartX, currentY, member.EquippedWeaponId, "Weapon", hoverWeapon, gameTime);
+            DrawEquipSlot(spriteBatch, equipStartX + slotSize + gap, currentY, member.EquippedRelicId, "Relic", hoverRelic, gameTime);
 
             currentY += slotSize + 6 - 5;
 
@@ -754,52 +758,19 @@ namespace ProjectVagabond.UI
 
             // 6. Spells
             currentY += 2;
-            var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
             int spellButtonWidth = 64;
             int spellButtonHeight = 8;
             int spellButtonX = centerX - (spellButtonWidth / 2);
 
             for (int s = 0; s < 4; s++)
             {
-                var spellEntry = member.Spells[s];
-                bool hasSpell = spellEntry != null && !string.IsNullOrEmpty(spellEntry.MoveID);
-                string spellName = "EMPTY";
-                int frameIndex = 0;
-                if (hasSpell)
+                Rectangle spellRect = new Rectangle(spellButtonX, currentY, spellButtonWidth, spellButtonHeight);
+                if (spellRect.Contains(Core.TransformMouse(Mouse.GetState().Position)))
                 {
-                    frameIndex = 1;
-                    if (BattleDataCache.Moves.TryGetValue(spellEntry.MoveID, out var moveData))
-                    {
-                        spellName = moveData.MoveName.ToUpper();
-                    }
-                }
-
-                bool isSpellHovered = hoveringThisCandidate && _hoveredSpellSlotIndex == s;
-
-                // Draw Sprite
-                if (_spriteManager.InventorySpellSlotButtonSpriteSheet != null && _spriteManager.InventorySpellSlotButtonSourceRects != null)
-                {
-                    // Frame 2 is Hover state in sprite sheet
-                    int drawFrame = isSpellHovered ? 2 : frameIndex;
-                    var sourceRect = _spriteManager.InventorySpellSlotButtonSourceRects[drawFrame];
-
-                    var destRect = new Rectangle(spellButtonX, (int)currentY, spellButtonWidth, spellButtonHeight);
-                    spriteBatch.DrawSnapped(_spriteManager.InventorySpellSlotButtonSpriteSheet, destRect, sourceRect, Color.White);
-
-                    if (hasSpell || isSpellHovered)
-                    {
-                        Vector2 textSize = tertiaryFont.MeasureString(spellName);
-                        Vector2 textPos = new Vector2(
-                            destRect.X + (destRect.Width - textSize.X) / 2f,
-                            destRect.Y + (destRect.Height - textSize.Y) / 2f
-                        );
-                        textPos = new Vector2(MathF.Round(textPos.X), MathF.Round(textPos.Y));
-
-                        Color textColor = isSpellHovered ? _global.ButtonHoverColor : _global.Palette_Sun;
-
-                        // Use Square Outline
-                        spriteBatch.DrawStringSquareOutlinedSnapped(tertiaryFont, spellName, textPos, textColor, _global.Palette_Black);
-                    }
+                    _hoveredSpellSlotIndex = s;
+                    var spell = member.Spells[s];
+                    if (spell != null)
+                        _hoveredItemData = BattleDataCache.Moves.GetValueOrDefault(spell.MoveID);
                 }
                 currentY += spellButtonHeight;
             }
@@ -821,17 +792,11 @@ namespace ProjectVagabond.UI
             return bonus;
         }
 
-        private void DrawEquipSlot(SpriteBatch spriteBatch, int x, int y, string? itemId, string type, bool isHovered)
+        private void DrawEquipSlot(SpriteBatch spriteBatch, int x, int y, string? itemId, string type, bool isHovered, GameTime gameTime)
         {
             var destRect = new Rectangle(x, y, 16, 16);
             Vector2 centerPos = new Vector2(x + 8, y + 8);
             Vector2 origin = new Vector2(12, 12);
-
-            if (isHovered)
-            {
-                var pixel = ServiceLocator.Get<Texture2D>();
-                DrawRectangleBorder(spriteBatch, pixel, destRect, 1, Color.White);
-            }
 
             if (!string.IsNullOrEmpty(itemId))
             {
@@ -842,7 +807,42 @@ namespace ProjectVagabond.UI
                 if (!string.IsNullOrEmpty(path))
                 {
                     var icon = _spriteManager.GetSmallRelicSprite(path);
-                    if (icon != null) spriteBatch.DrawSnapped(icon, destRect, Color.White);
+                    var silhouette = _spriteManager.GetSmallRelicSpriteSilhouette(path);
+
+                    if (icon != null)
+                    {
+                        // --- JUICY FLOAT ANIMATION ---
+                        // Calculate a smooth sine wave bob.
+                        // Use x position as phase offset so slots don't bob in unison.
+                        float time = (float)gameTime.TotalGameTime.TotalSeconds;
+                        float phase = x * 0.1f;
+
+                        float floatOffset = MathF.Sin(time * EQUIP_FLOAT_SPEED + phase) * EQUIP_FLOAT_AMPLITUDE;
+
+                        // Apply offset to Y
+                        Vector2 drawPos = new Vector2(destRect.X, destRect.Y + floatOffset);
+
+                        // --- DOUBLE LAYERED OUTLINE (Always Visible) ---
+                        if (silhouette != null)
+                        {
+                            Color mainOutlineColor = isHovered ? _global.ItemOutlineColor_Hover : _global.ItemOutlineColor_Idle;
+                            Color cornerOutlineColor = isHovered ? _global.ItemOutlineColor_Hover_Corner : _global.ItemOutlineColor_Idle_Corner;
+
+                            // 1. Draw Diagonals (Corners) FIRST (Behind)
+                            spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(-1, -1), null, cornerOutlineColor);
+                            spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(1, -1), null, cornerOutlineColor);
+                            spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(-1, 1), null, cornerOutlineColor);
+                            spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(1, 1), null, cornerOutlineColor);
+
+                            // 2. Draw Cardinals (Main) SECOND (On Top)
+                            spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(-1, 0), null, mainOutlineColor);
+                            spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(1, 0), null, mainOutlineColor);
+                            spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(0, -1), null, mainOutlineColor);
+                            spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(0, 1), null, mainOutlineColor);
+                        }
+
+                        spriteBatch.DrawSnapped(icon, drawPos, Color.White);
+                    }
                 }
             }
             else if (_spriteManager.InventoryEmptySlotSprite != null)
@@ -863,16 +863,49 @@ namespace ProjectVagabond.UI
         {
             if (_confirmationDialog.IsActive)
             {
+                // Draw in screen space (Matrix.Identity)
                 _confirmationDialog.DrawContent(spriteBatch, font, gameTime, Matrix.Identity);
             }
+
+            // Draw Narrator if active
+            // (Recruit overlay doesn't use narrator currently, but kept for consistency)
         }
 
-        private void DrawRectangleBorder(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, int thickness, Color color)
+        private void DrawBeveledBorder(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, Color color)
         {
-            spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Top, rect.Width, thickness), color);
-            spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Bottom - thickness, rect.Width, thickness), color);
-            spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Top, thickness, rect.Height), color);
-            spriteBatch.Draw(pixel, new Rectangle(rect.Right - thickness, rect.Top, thickness, rect.Height), color);
+            // Top Line: X+2 to W-4
+            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 2, rect.Y, rect.Width - 4, 1), color);
+
+            // Bottom Line: X+2 to W-4
+            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 2, rect.Bottom - 1, rect.Width - 4, 1), color);
+
+            // Left Line: Y+2 to H-4
+            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X, rect.Y + 2, 1, rect.Height - 4), color);
+
+            // Right Line: Y+2 to H-4
+            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.Right - 1, rect.Y + 2, 1, rect.Height - 4), color);
+
+            // Corners (1x1 pixels)
+            // Top-Left
+            spriteBatch.DrawSnapped(pixel, new Vector2(rect.X + 1, rect.Y + 1), color);
+            // Top-Right
+            spriteBatch.DrawSnapped(pixel, new Vector2(rect.Right - 2, rect.Y + 1), color);
+            // Bottom-Left
+            spriteBatch.DrawSnapped(pixel, new Vector2(rect.X + 1, rect.Bottom - 2), color);
+            // Bottom-Right
+            spriteBatch.DrawSnapped(pixel, new Vector2(rect.Right - 2, rect.Bottom - 2), color);
+        }
+
+        private void DrawBeveledBackground(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, Color color)
+        {
+            // 1. Top Row (Y+1): X+2 to W-4
+            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 2, rect.Y + 1, rect.Width - 4, 1), color);
+
+            // 2. Bottom Row (Bottom-2): X+2 to W-4
+            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 2, rect.Bottom - 2, rect.Width - 4, 1), color);
+
+            // 3. Middle Block (Y+2 to Bottom-3): X+1 to W-2
+            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 1, rect.Y + 2, rect.Width - 2, rect.Height - 4), color);
         }
     }
 }

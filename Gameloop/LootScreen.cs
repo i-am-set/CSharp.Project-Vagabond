@@ -82,7 +82,6 @@ namespace ProjectVagabond.Scenes
         private object? _hoveredItemData;
         private object? _lastHoveredItemData;
         private float _tooltipTimer = 0f;
-        private const float TOOLTIP_DELAY = 0.0f;
 
         // Tooltip Animation
         private UIAnimator _tooltipAnimator;
@@ -355,7 +354,7 @@ namespace ProjectVagabond.Scenes
 
                 _tooltipTimer += dt;
 
-                if (_tooltipTimer >= TOOLTIP_DELAY)
+                if (_tooltipTimer >= ItemTooltipRenderer.TOOLTIP_DELAY)
                 {
                     if (_hoveredItemData != _lastHoveredItemData)
                     {
@@ -383,7 +382,7 @@ namespace ProjectVagabond.Scenes
             // --- NEW: SMOOTH DIMMER LOGIC ---
             // Decoupled from UIAnimator state to ensure smoothness.
             // We simply check if we *want* to show the tooltip based on hover state.
-            bool shouldShowDimmer = (_hoveredItemData != null && !_selectionMade && _tooltipTimer >= TOOLTIP_DELAY);
+            bool shouldShowDimmer = (_hoveredItemData != null && !_selectionMade && _tooltipTimer >= ItemTooltipRenderer.TOOLTIP_DELAY);
 
             if (DIMMER_IS_INSTANT)
             {

@@ -98,11 +98,12 @@ namespace ProjectVagabond.UI
             var mouseState = Mouse.GetState();
             var drawPosition = screenPosition;
 
-            // Add a 1-pixel vertical offset if either mouse button is pressed.
-            // This offset needs to be scaled to match the final render scale.
+            // Add a fixed 2-pixel vertical offset if either mouse button is pressed.
+            // This is applied directly to screen coordinates (not multiplied by scale)
+            // to ensure a subtle, consistent movement regardless of window size.
             if (mouseState.LeftButton == ButtonState.Pressed || mouseState.RightButton == ButtonState.Pressed)
             {
-                drawPosition.Y += 1 * scale;
+                drawPosition.Y += 2;
             }
 
             var sourceRect = _currentSpriteAnimation.Frames[_currentFrameIndex];
