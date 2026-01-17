@@ -569,8 +569,8 @@ namespace ProjectVagabond.UI
             else if (button.IsHovered && button.IsEnabled)
             {
                 var pixel = ServiceLocator.Get<Texture2D>();
-                // Hover background (Beveled)
-                DrawBeveledBackground(spriteBatch, pixel, bounds, _global.Palette_DarkShadow);
+                // Hover background (Beveled) -> Changed to Palette_Black
+                DrawBeveledBackground(spriteBatch, pixel, bounds, _global.Palette_Black);
                 // Hover Border (Rust) - Beveled
                 DrawBeveledBorder(spriteBatch, pixel, bounds, _global.ButtonHoverColor);
             }
