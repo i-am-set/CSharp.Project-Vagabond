@@ -2321,18 +2321,6 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/BasicIcons/ui_element_icons_9x9_spritesheet.png;Sprites/UI/BasicIcons/ui_element_icons_9x9_spritesheet
 
-#begin Sprites/UI/BasicIcons/ui_settings_icon.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/UI/BasicIcons/ui_settings_icon.png;Sprites/UI/BasicIcons/ui_settings_icon
-
 #begin Sprites/UI/BasicIcons/ui_turn_indicator.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -2476,90 +2464,6 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/BattleUI/party_member_enemy_floor.png;Sprites/UI/BattleUI/party_member_enemy_floor
-
-#begin Sprites/UI/BattleUI/ui_action_button_template_secondary.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/UI/BattleUI/ui_action_button_template_secondary.png;Sprites/UI/BattleUI/ui_action_button_template_secondary
-
-#begin Sprites/UI/BattleUI/ui_action_button_template_spritesheet.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/UI/BattleUI/ui_action_button_template_spritesheet.png;Sprites/UI/BattleUI/ui_action_button_template_spritesheet
-
-#begin Sprites/UI/BattleUI/ui_action_button_template.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/UI/BattleUI/ui_action_button_template.png;Sprites/UI/BattleUI/ui_action_button_template
-
-#begin Sprites/UI/BattleUI/ui_action_button_uses_spritesheet.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/UI/BattleUI/ui_action_button_uses_spritesheet.png;Sprites/UI/BattleUI/ui_action_button_uses_spritesheet
-
-#begin Sprites/UI/BattleUI/ui_action_buttons_icon_spritesheet.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/UI/BattleUI/ui_action_buttons_icon_spritesheet.png;Sprites/UI/BattleUI/ui_action_buttons_icon_spritesheet
-
-#begin Sprites/UI/BattleUI/ui_action_moves_button_area_background.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/UI/BattleUI/ui_action_moves_button_area_background.png;Sprites/UI/BattleUI/ui_action_moves_button_area_background
-
-#begin Sprites/UI/BattleUI/ui_action_tooltip_background.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/UI/BattleUI/ui_action_tooltip_background.png;Sprites/UI/BattleUI/ui_action_tooltip_background
 
 #begin Sprites/UI/BattleUI/ui_choose_a_target_button_spritesheet.png
 /importer:TextureImporter
@@ -2789,18 +2693,6 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/Inventory/inventory_border_weapons.png;Sprites/UI/Inventory/inventory_border_weapons
 
-#begin Sprites/UI/Inventory/inventory_divider.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/UI/Inventory/inventory_divider.png;Sprites/UI/Inventory/inventory_divider
-
 #begin Sprites/UI/Inventory/inventory_equip_hover.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -2825,54 +2717,6 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/Inventory/inventory_equip_selected.png;Sprites/UI/Inventory/inventory_equip_selected
 
-#begin Sprites/UI/Inventory/inventory_header_button_armor.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/UI/Inventory/inventory_header_button_armor.png;Sprites/UI/Inventory/inventory_header_button_armor
-
-#begin Sprites/UI/Inventory/inventory_header_button_consumables.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/UI/Inventory/inventory_header_button_consumables.png;Sprites/UI/Inventory/inventory_header_button_consumables
-
-#begin Sprites/UI/Inventory/inventory_header_button_equip.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/UI/Inventory/inventory_header_button_equip.png;Sprites/UI/Inventory/inventory_header_button_equip
-
-#begin Sprites/UI/Inventory/inventory_header_button_misc.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/UI/Inventory/inventory_header_button_misc.png;Sprites/UI/Inventory/inventory_header_button_misc
-
 #begin Sprites/UI/Inventory/inventory_header_button_relics.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -2884,18 +2728,6 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/Inventory/inventory_header_button_relics.png;Sprites/UI/Inventory/inventory_header_button_relics
-
-#begin Sprites/UI/Inventory/inventory_header_button_spells.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/UI/Inventory/inventory_header_button_spells.png;Sprites/UI/Inventory/inventory_header_button_spells
 
 #begin Sprites/UI/Inventory/inventory_header_button_weapons.png
 /importer:TextureImporter
@@ -3016,30 +2848,6 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/Inventory/inventory_slot_hover.png;Sprites/UI/Inventory/inventory_slot_hover
-
-#begin Sprites/UI/Inventory/inventory_slot_idle_48x48.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/UI/Inventory/inventory_slot_idle_48x48.png;Sprites/UI/Inventory/inventory_slot_idle_48x48
-
-#begin Sprites/UI/Inventory/inventory_slot_idle.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/UI/Inventory/inventory_slot_idle.png;Sprites/UI/Inventory/inventory_slot_idle
 
 #begin Sprites/UI/Inventory/inventory_slot_selected.png
 /importer:TextureImporter
