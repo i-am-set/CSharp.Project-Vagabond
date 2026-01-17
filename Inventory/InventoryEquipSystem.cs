@@ -36,6 +36,7 @@ namespace ProjectVagabond.UI
         {
             _overlay = overlay;
             _dataProcessor = dataProcessor;
+            _global = ServiceLocator.Get<Global>();
         }
 
         public void Initialize()
