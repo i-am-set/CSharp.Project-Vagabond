@@ -64,6 +64,12 @@ namespace ProjectVagabond.UI
         // --- ANIMATION TUNING ---
         private const float EQUIP_FLOAT_SPEED = 2.5f;
         private const float EQUIP_FLOAT_AMPLITUDE = 0.5f;
+        private const float EQUIP_ROTATION_SPEED = 2.0f;
+        private const float EQUIP_ROTATION_AMOUNT = 0.05f;
+        private const float HOVER_POP_SPEED = 12.0f;
+
+        // Track hover timers for each slot (Key: "{CandidateIndex}_{SlotType}")
+        private readonly Dictionary<string, float> _equipSlotHoverTimers = new Dictionary<string, float>();
 
         // Tuning
         private Color TOOLTIP_BG_COLOR;
@@ -118,6 +124,7 @@ namespace ProjectVagabond.UI
         {
             _selectedCandidateIndex = -1;
             _candidates.Clear();
+            _equipSlotHoverTimers.Clear(); // Reset animation timers
 
             // 1. Get all potential members
             var allMemberIds = BattleDataCache.PartyMembers.Keys.ToList();
@@ -586,12 +593,25 @@ namespace ProjectVagabond.UI
                 // Apply Hop
                 float hopOffset = hopController.GetOffset(true); // Up
 
-                // Add continuous bob if selected
+                // --- NEW BOBBING LOGIC ---
+                float bobSpeed = 2.5f; // Default Idle Speed
+                float bobAmp = 0.5f;   // Default Idle Amplitude
+
                 if (isSelected)
                 {
-                    float bob = MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * 5f) * 1.5f;
-                    hopOffset += bob;
+                    bobSpeed = 5.0f;
+                    bobAmp = 1.0f;
                 }
+                else if (button.IsHovered && button.IsEnabled)
+                {
+                    bobSpeed = 5.0f;
+                    bobAmp = 0.5f;
+                }
+
+                // Stagger the bob based on index to prevent unison movement
+                float phase = index * 0.7f;
+                float bob = MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * bobSpeed + phase) * bobAmp;
+                hopOffset += bob;
 
                 // Use Vector2 for smooth sub-pixel rendering
                 Vector2 portraitPos = new Vector2(centerX - 16, currentY + hopOffset);
@@ -648,8 +668,8 @@ namespace ProjectVagabond.UI
             bool hoverWeapon = hoveringThisCandidate && _hoveredEquipSlotIndex == 0;
             bool hoverRelic = hoveringThisCandidate && _hoveredEquipSlotIndex == 1;
 
-            DrawEquipSlot(spriteBatch, equipStartX, currentY, member.EquippedWeaponId, "Weapon", hoverWeapon, gameTime);
-            DrawEquipSlot(spriteBatch, equipStartX + slotSize + gap, currentY, member.EquippedRelicId, "Relic", hoverRelic, gameTime);
+            DrawEquipSlot(spriteBatch, equipStartX, currentY, member.EquippedWeaponId, "Weapon", hoverWeapon, index, gameTime);
+            DrawEquipSlot(spriteBatch, equipStartX + slotSize + gap, currentY, member.EquippedRelicId, "Relic", hoverRelic, index, gameTime);
 
             currentY += slotSize + 6 - 5;
 
@@ -792,7 +812,7 @@ namespace ProjectVagabond.UI
             return bonus;
         }
 
-        private void DrawEquipSlot(SpriteBatch spriteBatch, int x, int y, string? itemId, string type, bool isHovered, GameTime gameTime)
+        private void DrawEquipSlot(SpriteBatch spriteBatch, int x, int y, string? itemId, string type, bool isHovered, int candidateIndex, GameTime gameTime)
         {
             var destRect = new Rectangle(x, y, 16, 16);
             Vector2 centerPos = new Vector2(x + 8, y + 8);
@@ -818,9 +838,30 @@ namespace ProjectVagabond.UI
                         float phase = x * 0.1f;
 
                         float floatOffset = MathF.Sin(time * EQUIP_FLOAT_SPEED + phase) * EQUIP_FLOAT_AMPLITUDE;
+                        float rotation = MathF.Sin(time * EQUIP_ROTATION_SPEED + phase) * EQUIP_ROTATION_AMOUNT;
+
+                        // --- HOVER POP LOGIC (Tweening) ---
+                        // Generate a unique key for this slot to track its hover state
+                        string key = $"{candidateIndex}_{type}";
+                        if (!_equipSlotHoverTimers.ContainsKey(key)) _equipSlotHoverTimers[key] = 0f;
+
+                        float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+                        if (isHovered)
+                            _equipSlotHoverTimers[key] = Math.Min(_equipSlotHoverTimers[key] + dt * HOVER_POP_SPEED, 1f);
+                        else
+                            _equipSlotHoverTimers[key] = Math.Max(_equipSlotHoverTimers[key] - dt * HOVER_POP_SPEED, 0f);
+
+                        float t = _equipSlotHoverTimers[key];
+                        // Use EaseOutBack for that "spring" pop
+                        float popScale = 1.0f + (Global.ItemHoverScale - 1.0f) * Easing.EaseOutBack(t);
 
                         // Apply offset to Y
                         Vector2 drawPos = new Vector2(destRect.X, destRect.Y + floatOffset);
+
+                        // Use DrawSnapped with rotation and origin for smooth movement
+                        // Origin is center of 16x16 sprite (8,8)
+                        Vector2 iconOrigin = new Vector2(8, 8);
+                        Vector2 iconCenter = drawPos + iconOrigin;
 
                         // --- DOUBLE LAYERED OUTLINE (Always Visible) ---
                         if (silhouette != null)
@@ -829,19 +870,19 @@ namespace ProjectVagabond.UI
                             Color cornerOutlineColor = isHovered ? _global.ItemOutlineColor_Hover_Corner : _global.ItemOutlineColor_Idle_Corner;
 
                             // 1. Draw Diagonals (Corners) FIRST (Behind)
-                            spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(-1, -1), null, cornerOutlineColor);
-                            spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(1, -1), null, cornerOutlineColor);
-                            spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(-1, 1), null, cornerOutlineColor);
-                            spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(1, 1), null, cornerOutlineColor);
+                            spriteBatch.DrawSnapped(silhouette, iconCenter + new Vector2(-1, -1), null, cornerOutlineColor, rotation, iconOrigin, popScale, SpriteEffects.None, 0f);
+                            spriteBatch.DrawSnapped(silhouette, iconCenter + new Vector2(1, -1), null, cornerOutlineColor, rotation, iconOrigin, popScale, SpriteEffects.None, 0f);
+                            spriteBatch.DrawSnapped(silhouette, iconCenter + new Vector2(-1, 1), null, cornerOutlineColor, rotation, iconOrigin, popScale, SpriteEffects.None, 0f);
+                            spriteBatch.DrawSnapped(silhouette, iconCenter + new Vector2(1, 1), null, cornerOutlineColor, rotation, iconOrigin, popScale, SpriteEffects.None, 0f);
 
                             // 2. Draw Cardinals (Main) SECOND (On Top)
-                            spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(-1, 0), null, mainOutlineColor);
-                            spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(1, 0), null, mainOutlineColor);
-                            spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(0, -1), null, mainOutlineColor);
-                            spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(0, 1), null, mainOutlineColor);
+                            spriteBatch.DrawSnapped(silhouette, iconCenter + new Vector2(-1, 0), null, mainOutlineColor, rotation, iconOrigin, popScale, SpriteEffects.None, 0f);
+                            spriteBatch.DrawSnapped(silhouette, iconCenter + new Vector2(1, 0), null, mainOutlineColor, rotation, iconOrigin, popScale, SpriteEffects.None, 0f);
+                            spriteBatch.DrawSnapped(silhouette, iconCenter + new Vector2(0, -1), null, mainOutlineColor, rotation, iconOrigin, popScale, SpriteEffects.None, 0f);
+                            spriteBatch.DrawSnapped(silhouette, iconCenter + new Vector2(0, 1), null, mainOutlineColor, rotation, iconOrigin, popScale, SpriteEffects.None, 0f);
                         }
 
-                        spriteBatch.DrawSnapped(icon, drawPos, Color.White);
+                        spriteBatch.DrawSnapped(icon, iconCenter, null, Color.White, rotation, iconOrigin, popScale, SpriteEffects.None, 0f);
                     }
                 }
             }

@@ -6,6 +6,7 @@ using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Dice;
+using ProjectVagabond.Items;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.Transitions;
@@ -36,7 +37,7 @@ namespace ProjectVagabond.UI
         private const float EQUIP_SLOT_ROTATION_AMOUNT = 0.05f;
 
         // --- HOVER POP TUNING ---
-        private const float HOVER_POP_SCALE_TARGET = 1.4f; // Scale up to 140%
+        // Replaced local constant with Global.ItemHoverScale
         private const float HOVER_POP_SPEED = 12.0f;       // Fast spring speed
 
         // Track hover timers for each slot (Key: "{MemberIndex}_{SlotType}")
@@ -651,7 +652,7 @@ namespace ProjectVagabond.UI
 
                         float t = _equipSlotHoverTimers[key];
                         // Use EaseOutBack for that "spring" pop
-                        float popScale = 1.0f + (HOVER_POP_SCALE_TARGET - 1.0f) * Easing.EaseOutBack(t);
+                        float popScale = 1.0f + (Global.ItemHoverScale - 1.0f) * Easing.EaseOutBack(t);
 
                         float floatOffset = MathF.Sin(time * EQUIP_SLOT_FLOAT_SPEED + phase) * EQUIP_SLOT_FLOAT_AMPLITUDE;
                         float rotation = MathF.Sin(time * EQUIP_SLOT_ROTATION_SPEED + phase) * EQUIP_SLOT_ROTATION_AMOUNT;

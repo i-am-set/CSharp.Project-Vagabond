@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Dice;
+using ProjectVagabond.Items;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.Transitions;
@@ -76,6 +77,7 @@ namespace ProjectVagabond
             // Initialize Narration Colors
             ColorNarration_Default = GameTextColor;
             ColorNarration_Highlight = HighlightTextColor;
+            ColorNarration_Dull = DullTextColor;
             ColorNarration_Prefix = DullTextColor;
             ColorNarration_Action = Palette_Orange;
             ColorNarration_Spell = Palette_Blue;
@@ -229,6 +231,7 @@ namespace ProjectVagabond
 
         // --- ANIMATION TUNING ---
         public float SquashRecoverySpeed { get; set; } = 4f;
+        public const float ItemHoverScale = 1.2f; // Global scale for hovered items in UI
 
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
