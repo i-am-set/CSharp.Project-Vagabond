@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Items;
@@ -16,6 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using static ProjectVagabond.Battle.Abilities.InflictStatusStunAbility;
 
 namespace ProjectVagabond
 {
@@ -135,14 +137,23 @@ namespace ProjectVagabond
                 switch (outcome.OutcomeType)
                 {
                     case "GiveItem":
-                        PlayerState.AddConsumable(outcome.Value);
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_blue]Obtained {outcome.Value}!" });
+                        // Only support Weapons/Relics now
+                        if (BattleDataCache.Weapons.ContainsKey(outcome.Value))
+                        {
+                            PlayerState.AddWeapon(outcome.Value);
+                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_blue]Obtained {outcome.Value}!" });
+                        }
+                        else if (BattleDataCache.Relics.ContainsKey(outcome.Value))
+                        {
+                            PlayerState.AddRelic(outcome.Value);
+                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_blue]Obtained {outcome.Value}!" });
+                        }
                         break;
 
                     case "RemoveItem":
                         bool removed = false;
-                        if (PlayerState.RemoveConsumable(outcome.Value)) removed = true;
-                        else if (PlayerState.Weapons.ContainsKey(outcome.Value)) { PlayerState.RemoveWeapon(outcome.Value); removed = true; }
+                        if (PlayerState.Weapons.ContainsKey(outcome.Value)) { PlayerState.RemoveWeapon(outcome.Value); removed = true; }
+                        else if (PlayerState.Relics.ContainsKey(outcome.Value)) { PlayerState.RemoveRelic(outcome.Value); removed = true; }
 
                         if (removed)
                             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_orange]Lost {outcome.Value}." });

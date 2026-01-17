@@ -10,7 +10,6 @@ namespace ProjectVagabond.Utils
         // Flat pricing model for the unweighted system
         private const int PRICE_WEAPON = 150;
         private const int PRICE_RELIC = 200;
-        private const int PRICE_CONSUMABLE = 75;
 
         public static int CalculatePrice(object itemData, float shopMultiplier)
         {
@@ -23,10 +22,6 @@ namespace ProjectVagabond.Utils
             else if (itemData is RelicData)
             {
                 basePrice = PRICE_RELIC;
-            }
-            else if (itemData is ConsumableItemData)
-            {
-                basePrice = PRICE_CONSUMABLE;
             }
             else
             {

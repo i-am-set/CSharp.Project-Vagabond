@@ -1342,7 +1342,6 @@ namespace ProjectVagabond.Scenes
         private void OpenRandomShop()
         {
             var premiumStock = new List<ShopItem>();
-            var consumableStock = new List<ShopItem>();
 
             int premiumCount = _random.Next(3, 5);
             var allPremium = new List<ShopItem>();
@@ -1360,18 +1359,7 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            int consumableCount = _random.Next(2, 4);
-            var allConsumables = BattleDataCache.Consumables.Values.ToList();
-            for (int i = 0; i < consumableCount; i++)
-            {
-                if (allConsumables.Any())
-                {
-                    var c = allConsumables[_random.Next(allConsumables.Count)];
-                    consumableStock.Add(new ShopItem { ItemId = c.ItemID, DisplayName = c.ItemName, Type = "Consumable", Price = PriceCalculator.CalculatePrice(c, 1.0f), DataObject = c });
-                }
-            }
-
-            _shopOverlay.Show(premiumStock, consumableStock);
+            _shopOverlay.Show(premiumStock);
             SetView(SplitMapView.Shop, snap: true);
         }
 

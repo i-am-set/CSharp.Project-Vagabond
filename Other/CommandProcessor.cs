@@ -17,6 +17,8 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
+using static ProjectVagabond.Battle.Abilities.InflictStatusStunAbility;
 
 namespace ProjectVagabond
 {
@@ -71,7 +73,6 @@ namespace ProjectVagabond
                 sb.AppendLine("    equipweapon <id>                   - Equips a weapon.");
                 sb.AppendLine("    unequipweapon                      - Unequips current weapon.");
                 sb.AppendLine("    giverelic <id> {n}                 - Adds relic(s).");
-                sb.AppendLine("    giveconsumable <id> {n}            - Adds consumable(s).");
                 sb.AppendLine("    givespell <id>                     - Adds a spell.");
 
                 foreach (var line in sb.ToString().Split(new[] { Environment.NewLine }, StringSplitOptions.None))
@@ -337,8 +338,6 @@ namespace ProjectVagabond
 
             _commands["giverelic"] = new Command("giverelic", (args) => HandleGiveItem(args, "Relic"), "giverelic <id> [n]",
                 (args) => args.Length == 0 ? BattleDataCache.Relics.Keys.ToList() : new List<string>());
-            _commands["giveconsumable"] = new Command("giveconsumable", (args) => HandleGiveItem(args, "Consumable"), "giveconsumable <id> [n]",
-                (args) => args.Length == 0 ? BattleDataCache.Consumables.Keys.ToList() : new List<string>());
 
             _commands["giveall"] = new Command("giveall", (args) =>
             {
@@ -348,15 +347,12 @@ namespace ProjectVagabond
                 int count = 0;
                 foreach (var id in BattleDataCache.Weapons.Keys) { _gameState.PlayerState.AddWeapon(id, 1); count++; }
                 foreach (var id in BattleDataCache.Relics.Keys) { _gameState.PlayerState.AddRelic(id, 1); count++; }
-                foreach (var id in BattleDataCache.Consumables.Keys) { _gameState.PlayerState.AddConsumable(id, 1); count++; }
-                foreach (var id in BattleDataCache.MiscItems.Keys) { _gameState.PlayerState.AddMiscItem(id, 1); count++; }
 
                 Log($"[palette_blue]Added {count} items (1 of every defined item) to inventory.");
             }, "giveall - Adds 1 of every item to inventory.");
 
             _commands["removeweapon"] = new Command("removeweapon", (args) => HandleRemoveItem(args, "Weapon"), "removeweapon <id> [n]");
             _commands["removerelic"] = new Command("removerelic", (args) => HandleRemoveItem(args, "Relic"), "removerelic <id> [n]");
-            _commands["removeconsumable"] = new Command("removeconsumable", (args) => HandleRemoveItem(args, "Consumable"), "removeconsumable <id> [n]");
 
             // --- MOVE COMMANDS ---
             _commands["givespell"] = new Command("givespell", (args) =>
@@ -579,7 +575,6 @@ namespace ProjectVagabond
             {
                 case "Weapon": _gameState.PlayerState.AddWeapon(id, qty); break;
                 case "Relic": _gameState.PlayerState.AddRelic(id, qty); break;
-                case "Consumable": _gameState.PlayerState.AddConsumable(id, qty); break;
             }
             Log($"Added {qty}x {id} to {type} inventory.");
         }
@@ -598,7 +593,6 @@ namespace ProjectVagabond
             {
                 case "Weapon": _gameState.PlayerState.RemoveWeapon(id, qty); break;
                 case "Relic": _gameState.PlayerState.RemoveRelic(id, qty); break;
-                case "Consumable": _gameState.PlayerState.RemoveConsumable(id, qty); break;
             }
             Log($"Removed {qty}x {id} from {type} inventory.");
         }
@@ -618,7 +612,6 @@ namespace ProjectVagabond
 
             PrintDict(ps.Weapons, "Weapons");
             PrintDict(ps.Relics, "Relics");
-            PrintDict(ps.Consumables, "Consumables");
 
             Log("[palette_blue]Spells:[/]");
             if (ps.Spells.Any(s => s != null))

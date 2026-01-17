@@ -19,9 +19,9 @@ namespace ProjectVagabond.UI
     {
         public string ItemId { get; set; }
         public string DisplayName { get; set; }
-        public string Type { get; set; } // "Weapon", "Armor", "Relic", "Consumable"
+        public string Type { get; set; } // "Weapon", "Relic"
         public int Price { get; set; }
         public bool IsSold { get; set; }
-        public object DataObject { get; set; } // WeaponData, ArmorData, etc.
+        public object DataObject { get; set; } // WeaponData, RelicData
     }
 }

@@ -294,13 +294,11 @@ namespace ProjectVagabond.Scenes
             EventBus.Subscribe<GameEvents.SwitchSequenceInitiated>(OnSwitchSequenceInitiated);
 
             _uiManager.OnMoveSelected += OnPlayerMoveSelected;
-            _uiManager.OnItemSelected += OnPlayerItemSelected;
             _uiManager.OnSwitchActionSelected += OnPlayerSwitchSelected;
             _uiManager.OnForcedSwitchSelected += OnForcedSwitchSelected;
             _uiManager.OnFleeRequested += FleeBattle;
             _uiManager.OnTargetSelectedFromUI += OnTargetSelectedFromUI;
             _inputHandler.OnMoveTargetSelected += OnPlayerMoveTargetSelected;
-            _inputHandler.OnItemTargetSelected += OnPlayerItemSelected;
             _inputHandler.OnBackRequested += () => _uiManager.GoBack();
             if (_settingsButton != null) _settingsButton.OnClick -= OpenSettings;
 
@@ -330,13 +328,11 @@ namespace ProjectVagabond.Scenes
             EventBus.Unsubscribe<GameEvents.SwitchSequenceInitiated>(OnSwitchSequenceInitiated);
 
             _uiManager.OnMoveSelected -= OnPlayerMoveSelected;
-            _uiManager.OnItemSelected -= OnPlayerItemSelected;
             _uiManager.OnSwitchActionSelected -= OnPlayerSwitchSelected;
             _uiManager.OnForcedSwitchSelected -= OnForcedSwitchSelected;
             _uiManager.OnFleeRequested -= FleeBattle;
             _uiManager.OnTargetSelectedFromUI -= OnTargetSelectedFromUI;
             _inputHandler.OnMoveTargetSelected -= OnPlayerMoveTargetSelected;
-            _inputHandler.OnItemTargetSelected -= OnPlayerItemSelected;
             _inputHandler.OnBackRequested -= () => _uiManager.GoBack();
             if (_settingsButton != null) _settingsButton.OnClick -= OpenSettings;
 
@@ -1076,25 +1072,6 @@ namespace ProjectVagabond.Scenes
         private void OnTargetSelectedFromUI(BattleCombatant target)
         {
             if (_uiManager.UIState == BattleUIState.Targeting) OnPlayerMoveSelected(_uiManager.MoveForTargeting, _uiManager.SpellForTargeting, target);
-            else if (_uiManager.UIState == BattleUIState.ItemTargeting) OnPlayerItemSelected(_uiManager.ItemForTargeting, target);
-        }
-
-        private void OnPlayerItemSelected(ConsumableItemData item, BattleCombatant target)
-        {
-            var player = _battleManager.CurrentActingCombatant;
-            if (player == null) return;
-            if (target == null)
-            {
-                var enemies = _battleManager.AllCombatants.Where(c => !c.IsPlayerControlled && !c.IsDefeated && c.IsActiveOnField).ToList();
-                switch (item.Target)
-                {
-                    case TargetType.Self: case TargetType.SingleTeam: target = player; break;
-                    case TargetType.Single: if (enemies.Any()) target = enemies.First(); break;
-                }
-            }
-            var action = new QueuedAction { Actor = player, ChosenItem = item, Target = target, Priority = item.Priority, ActorAgility = player.Stats.Agility, Type = QueuedActionType.Item };
-            _battleManager.SubmitAction(action);
-            _uiManager.HideAllMenus();
         }
 
         private void OnPlayerSwitchSelected(BattleCombatant targetMember)
@@ -1120,13 +1097,12 @@ namespace ProjectVagabond.Scenes
             if (e.Type == QueuedActionType.Switch) _uiManager.ShowNarration($"{e.Actor.Name} switches to {e.Target?.Name}!");
             else
             {
-                string actionName = e.Item != null ? e.Item.ItemName : (e.Move != null ? e.Move.MoveName : "Unknown Action");
+                string actionName = e.Move != null ? e.Move.MoveName : "Unknown Action";
                 string typeTag = "";
                 if (e.Move != null) typeTag = e.Move.MoveType == MoveType.Spell ? "cSpell" : "cAction";
-                else if (e.Item != null) typeTag = "cItem";
                 string message = "";
-                string actionPhrase = e.Item != null ? null : e.Move?.ActionPhrase;
-                if (!string.IsNullOrEmpty(actionPhrase)) message = ParseActionPhrase(actionPhrase, e.Actor, e.Target, e.Move?.SourceItemName ?? e.Item?.ItemName);
+                string actionPhrase = e.Move?.ActionPhrase;
+                if (!string.IsNullOrEmpty(actionPhrase)) message = ParseActionPhrase(actionPhrase, e.Actor, e.Target, e.Move?.SourceItemName);
                 else
                 {
                     message = $"{e.Actor.Name} USED\n[{typeTag}]{actionName}[/]!";

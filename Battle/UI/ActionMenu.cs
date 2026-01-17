@@ -16,13 +16,13 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using static ProjectVagabond.Battle.Abilities.InflictStatusStunAbility;
 
 namespace ProjectVagabond.Battle.UI
 {
     public class ActionMenu
     {
         public event Action<MoveData, MoveEntry, BattleCombatant>? OnMoveSelected;
-        public event Action? OnItemMenuRequested;
         public event Action? OnSwitchMenuRequested;
         public event Action? OnMovesMenuOpened;
         public event Action? OnMainMenuOpened;
@@ -156,14 +156,6 @@ namespace ProjectVagabond.Battle.UI
                 WaveEffectType = TextEffectType.DriftWave
             };
 
-            var itemButton = new Button(Rectangle.Empty, "ITEM", function: "Item", font: defaultFont, enableHoverSway: false)
-            {
-                CustomHoverTextColor = _global.Palette_Red,
-                TextRenderOffset = new Vector2(0, 1),
-                EnableTextWave = true,
-                WaveEffectType = TextEffectType.DriftWave
-            };
-
             var switchButton = new Button(Rectangle.Empty, "SWITCH", function: "Switch", font: defaultFont, enableHoverSway: false)
             {
                 CustomHoverTextColor = _global.Palette_Red,
@@ -176,10 +168,6 @@ namespace ProjectVagabond.Battle.UI
                 if (_isSpamming) { actButton.TriggerShake(); EventBus.Publish(new GameEvents.AlertPublished { Message = "Spam Prevention" }); return; }
                 SetState(MenuState.Moves);
             };
-            itemButton.OnClick += () => {
-                if (_isSpamming) { itemButton.TriggerShake(); EventBus.Publish(new GameEvents.AlertPublished { Message = "Spam Prevention" }); return; }
-                OnItemMenuRequested?.Invoke();
-            };
 
             // Switch Logic
             switchButton.OnClick += () => {
@@ -188,7 +176,6 @@ namespace ProjectVagabond.Battle.UI
             };
 
             _actionButtons.Add(actButton);
-            _actionButtons.Add(itemButton);
             _actionButtons.Add(switchButton);
 
             // Secondary Action Buttons (Strike, Attune, Stall) - Keep Secondary Font
@@ -603,12 +590,12 @@ namespace ProjectVagabond.Battle.UI
         private void UpdateSwitchButtonState()
         {
             // Update Switch Button Enable State
-            if (_allCombatants != null && _actionButtons.Count > 2)
+            if (_allCombatants != null && _actionButtons.Count > 1)
             {
                 // Check if there are any player-controlled combatants on the bench (Slot >= 2)
                 bool hasBench = _allCombatants.Any(c => c.IsPlayerControlled && !c.IsDefeated && c.BattleSlot >= 2);
-                // The Switch button is the 3rd button (index 2)
-                _actionButtons[2].IsEnabled = hasBench;
+                // The Switch button is the 2nd button (index 1)
+                _actionButtons[1].IsEnabled = hasBench;
             }
         }
 
@@ -1398,7 +1385,7 @@ namespace ProjectVagabond.Battle.UI
 
                     statsSegments.Insert(0, (accuracyText, _global.Palette_Sun, secondaryFont));
                     statsSegments.Insert(0, ("  ", Color.Transparent, secondaryFont)); // Spacer
-                    statsSegments.Insert(0, ("ACC", _global.Palette_DarkShadow, tertiaryFont)); 
+                    statsSegments.Insert(0, ("ACC", _global.Palette_DarkShadow, tertiaryFont));
                     statsSegments.Insert(0, (separator, _global.Palette_DarkShadow, secondaryFont));
                     statsSegments.Insert(0, (powerText, _global.Palette_Sun, secondaryFont));
                     statsSegments.Insert(0, ("  ", Color.Transparent, secondaryFont)); // Spacer

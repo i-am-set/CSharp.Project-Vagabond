@@ -20,6 +20,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using static ProjectVagabond.Battle.Abilities.InflictStatusStunAbility;
 
 namespace ProjectVagabond.Battle.UI
 {
@@ -292,7 +293,7 @@ namespace ProjectVagabond.Battle.UI
             // --- Targeting Logic ---
             var (selectableTargets, activeTargetType) = ResolveSelectableTargets(allCombatants, currentActor, uiManager);
             var silhouetteColors = ResolveSilhouetteColors(allCombatants, currentActor, selectableTargets, activeTargetType, uiManager, hoveredCombatant);
-            bool shouldGrayOut = uiManager.UIState == BattleUIState.Targeting || uiManager.UIState == BattleUIState.ItemTargeting || (uiManager.HoveredMove != null && uiManager.HoveredMove.Target != TargetType.None);
+            bool shouldGrayOut = uiManager.UIState == BattleUIState.Targeting || (uiManager.HoveredMove != null && uiManager.HoveredMove.Target != TargetType.None);
 
             // --- IMPACT FLASH LOGIC ---
             var flashState = animationManager.GetImpactFlashState();
@@ -404,7 +405,7 @@ namespace ProjectVagabond.Battle.UI
             if (targets == null || !targets.Any()) return;
 
             IEnumerable<BattleCombatant> targetsToDraw = targets;
-            bool isTargetingMode = uiManager.UIState == BattleUIState.Targeting || uiManager.UIState == BattleUIState.ItemTargeting;
+            bool isTargetingMode = uiManager.UIState == BattleUIState.Targeting;
 
             if (isTargetingMode && focusedCombatant != null)
             {
@@ -503,7 +504,7 @@ namespace ProjectVagabond.Battle.UI
             var set = new HashSet<BattleCombatant>();
             TargetType? type = null;
 
-            if (uiManager.UIState == BattleUIState.Targeting || uiManager.UIState == BattleUIState.ItemTargeting)
+            if (uiManager.UIState == BattleUIState.Targeting)
             {
                 type = uiManager.TargetTypeForSelection;
                 if (type.HasValue && currentActor != null)
@@ -524,7 +525,7 @@ namespace ProjectVagabond.Battle.UI
         private Dictionary<string, Color> ResolveSilhouetteColors(IEnumerable<BattleCombatant> allCombatants, BattleCombatant currentActor, HashSet<BattleCombatant> selectable, TargetType? targetType, BattleUIManager uiManager, BattleCombatant hoveredCombatant)
         {
             var colors = new Dictionary<string, Color>();
-            bool isTargeting = uiManager.UIState == BattleUIState.Targeting || uiManager.UIState == BattleUIState.ItemTargeting;
+            bool isTargeting = uiManager.UIState == BattleUIState.Targeting;
 
             BattleCombatant effectiveHover = hoveredCombatant ?? uiManager.HoveredCombatantFromUI;
 
@@ -920,7 +921,7 @@ namespace ProjectVagabond.Battle.UI
                                 spawnY = MathHelper.Lerp(0f, -BattleAnimationManager.SwitchOutAnimationState.LIFT_HEIGHT, eased);
                                 alpha = 1.0f - eased;
                                 silhouetteAmt = 1.0f;
-                                silhouetteColor = _global.Palette_DarkShadow; 
+                                silhouetteColor = _global.Palette_DarkShadow;
                             }
                         }
                         else

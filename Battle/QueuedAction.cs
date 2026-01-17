@@ -5,21 +5,23 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.Battle
 {
     public enum QueuedActionType
     {
         Move,
-        Item,
         Charging,
         Switch
     }
@@ -35,10 +37,8 @@ namespace ProjectVagabond.Battle
         /// </summary>
         public MoveEntry? SpellbookEntry { get; set; }
 
-        public ConsumableItemData? ChosenItem { get; set; }
-
         /// <summary>
-        /// For Moves/Items: The target of the action.
+        /// For Moves: The target of the action.
         /// For Switch: The benched combatant to swap in.
         /// </summary>
         public BattleCombatant? Target { get; set; }

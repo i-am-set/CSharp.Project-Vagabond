@@ -17,6 +17,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using static ProjectVagabond.Battle.Abilities.InflictStatusStunAbility;
 
 namespace ProjectVagabond.UI
 {
@@ -98,8 +99,6 @@ namespace ProjectVagabond.UI
                 {
                     InventoryCategory.Weapons => _overlay.SpriteManager.InventoryBorderWeapons,
                     InventoryCategory.Relics => _overlay.SpriteManager.InventoryBorderRelics,
-                    InventoryCategory.Consumables => _overlay.SpriteManager.InventoryBorderConsumables,
-                    InventoryCategory.Misc => _overlay.SpriteManager.InventoryBorderMisc,
                     InventoryCategory.Equip => _overlay.SpriteManager.InventoryBorderEquip,
                     _ => _overlay.SpriteManager.InventoryBorderWeapons,
                 };
@@ -551,7 +550,7 @@ namespace ProjectVagabond.UI
                     {
                         spriteBatch.DrawStringSnapped(secondaryFont, statLabels[s], new Vector2(statBlockStartX, currentY), labelColor);
                     }
-                    
+
 
                     // Draw Bar Background
                     Texture2D statBarBg = isOccupied ? _overlay.SpriteManager.InventoryStatBarEmpty : _overlay.SpriteManager.InventoryStatBarDisabled;

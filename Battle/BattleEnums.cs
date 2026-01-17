@@ -72,17 +72,6 @@ namespace ProjectVagabond.Battle
     }
 
     /// <summary>
-    /// Defines the primary function of a consumable item.
-    /// </summary>
-    public enum ConsumableType
-    {
-        Heal,
-        Buff,
-        Cleanse,
-        Attack
-    }
-
-    /// <summary>
     /// Defines the combat stat used for a move's damage calculation.
     /// </summary>
     public enum OffensiveStatType

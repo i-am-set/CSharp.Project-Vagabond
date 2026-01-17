@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using static ProjectVagabond.Battle.Abilities.InflictStatusStunAbility;
 using static ProjectVagabond.UI.UIAnimator;
 
 namespace ProjectVagabond.Battle.UI

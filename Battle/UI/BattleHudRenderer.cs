@@ -5,11 +5,13 @@ using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using static ProjectVagabond.Battle.Abilities.InflictStatusStunAbility;
 
 namespace ProjectVagabond.Battle.UI
 {
@@ -97,10 +99,10 @@ namespace ProjectVagabond.Battle.UI
                 if (player.ManaBarDisappearTimer > 0 || player.ManaBarDelayTimer > 0) return;
 
                 var move = uiManager.HoveredMove;
-                bool isManaDump = move.Abilities.Any(a => a is ManaDumpAbility);
+                var manaDump = move.Abilities.OfType<ManaDumpAbility>().FirstOrDefault();
                 int cost = move.ManaCost;
 
-                if (isManaDump)
+                if (manaDump != null)
                 {
                     cost = player.Stats.CurrentMana;
                 }

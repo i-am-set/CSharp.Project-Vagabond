@@ -1,10 +1,10 @@
 ﻿using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
-using ProjectVagabond.Battle; // Assuming this is where WeaponData etc are
+using ProjectVagabond.Battle;
 
 namespace ProjectVagabond.Items
 {
-    public enum ItemType { Weapon, Relic, Consumable }
+    public enum ItemType { Weapon, Relic }
 
     /// <summary>
     /// A polymorphic wrapper for any item in the game.
@@ -20,7 +20,7 @@ namespace ProjectVagabond.Items
         // Visuals
         public string SpritePath { get; set; }
 
-        // The actual data object (WeaponData, RelicData, etc.)
+        // The actual data object (WeaponData, RelicData)
         public object OriginalData { get; set; }
 
         // Factory methods to convert raw data to BaseItem

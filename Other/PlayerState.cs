@@ -42,8 +42,6 @@ namespace ProjectVagabond
         // --- SHARED INVENTORY (Team Shared) ---
         public Dictionary<string, int> Weapons { get; set; } = new Dictionary<string, int>();
         public Dictionary<string, int> Relics { get; set; } = new Dictionary<string, int>();
-        public Dictionary<string, int> Consumables { get; set; } = new Dictionary<string, int>();
-        public Dictionary<string, int> MiscItems { get; set; } = new Dictionary<string, int>();
 
         // --- LEGACY ACCESSORS (Redirect to Leader for backward compatibility) ---
         public int MaxHP { get => Leader?.MaxHP ?? 100; set { if (Leader != null) Leader.MaxHP = value; } }
@@ -185,40 +183,6 @@ namespace ProjectVagabond
                         member.EquippedRelicId = null;
                 }
             }
-        }
-
-        public void AddConsumable(string itemId, int quantity = 1)
-        {
-            if (Consumables.ContainsKey(itemId)) Consumables[itemId] += quantity;
-            else Consumables[itemId] = quantity;
-        }
-
-        public bool RemoveConsumable(string itemId, int quantity = 1)
-        {
-            if (Consumables.TryGetValue(itemId, out int current) && current >= quantity)
-            {
-                Consumables[itemId] -= quantity;
-                if (Consumables[itemId] <= 0) Consumables.Remove(itemId);
-                return true;
-            }
-            return false;
-        }
-
-        public void AddMiscItem(string itemId, int quantity = 1)
-        {
-            if (MiscItems.ContainsKey(itemId)) MiscItems[itemId] += quantity;
-            else MiscItems[itemId] = quantity;
-        }
-
-        public bool RemoveMiscItem(string itemId, int quantity = 1)
-        {
-            if (MiscItems.TryGetValue(itemId, out int current) && current >= quantity)
-            {
-                MiscItems[itemId] -= quantity;
-                if (MiscItems[itemId] <= 0) MiscItems.Remove(itemId);
-                return true;
-            }
-            return false;
         }
 
         // --- MOVE MANAGEMENT (Target specific member) ---

@@ -20,38 +20,32 @@ using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.Battle.UI
 {
-    public enum BattleUIState { Default, Targeting, ItemTargeting, Switch }
-    public enum BattleSubMenuState { None, ActionRoot, ActionMoves, Item, Switch }
+    public enum BattleUIState { Default, Targeting, Switch }
+    public enum BattleSubMenuState { None, ActionRoot, ActionMoves, Switch }
     public class HoverHighlightState { public MoveData? CurrentMove; public List<BattleCombatant> Targets = new List<BattleCombatant>(); public float Timer = 0f; public const float SingleTargetFlashOnDuration = 0.4f; public const float SingleTargetFlashOffDuration = 0.2f; public const float MultiTargetFlashOnDuration = 0.4f; public const float MultiTargetFlashOffDuration = 0.4f; }
     public class BattleUIManager
     {
         public event Action<MoveData, MoveEntry, BattleCombatant>? OnMoveSelected;
-        public event Action<ConsumableItemData, BattleCombatant>? OnItemSelected;
         public event Action<BattleCombatant>? OnSwitchActionSelected;
         public event Action<BattleCombatant>? OnForcedSwitchSelected;
         public event Action? OnFleeRequested;
         public event Action<BattleCombatant>? OnTargetSelectedFromUI;
         private readonly BattleNarrator _battleNarrator;
         private readonly ActionMenu _actionMenu;
-        private readonly ItemMenu _itemMenu;
         private readonly SwitchMenu _switchMenu;
         private readonly CombatSwitchDialog _combatSwitchDialog;
-        private readonly Button _itemTargetingBackButton;
         private readonly Global _global;
 
         public BattleUIState UIState { get; private set; } = BattleUIState.Default;
         public BattleSubMenuState SubMenuState { get; private set; } = BattleSubMenuState.None;
         public MoveData? MoveForTargeting { get; private set; }
         public MoveEntry? SpellForTargeting => _actionMenu.SelectedSpellbookEntry;
-        public ConsumableItemData? ItemForTargeting { get; private set; }
         public TargetType? TargetTypeForSelection =>
             UIState == BattleUIState.Targeting ? MoveForTargeting?.Target :
-            UIState == BattleUIState.ItemTargeting ? ItemForTargeting?.Target :
             null;
         public MoveData? HoveredMove => _actionMenu.HoveredMove;
 
 
-        private float _itemTargetingTextAnimTimer = 0f;
         private float _targetingTextAnimTimer = 0f;
         private readonly Queue<Action> _narrationQueue = new Queue<Action>();
         public readonly HoverHighlightState HoverHighlightState = new HoverHighlightState();
@@ -97,7 +91,6 @@ namespace ProjectVagabond.Battle.UI
 
             _battleNarrator = new BattleNarrator(_narratorBounds);
             _actionMenu = new ActionMenu();
-            _itemMenu = new ItemMenu();
             _switchMenu = new SwitchMenu();
 
             // Initialize the new dialog
@@ -105,15 +98,7 @@ namespace ProjectVagabond.Battle.UI
             _combatSwitchDialog = new CombatSwitchDialog(null);
             _combatSwitchDialog.OnMemberSelected += (member) => OnForcedSwitchSelected?.Invoke(member);
 
-            _itemTargetingBackButton = new Button(Rectangle.Empty, "BACK", enableHoverSway: false) { CustomDefaultTextColor = _global.Palette_DarkShadow };
-            _itemTargetingBackButton.OnClick += () =>
-            {
-                UIState = BattleUIState.Default;
-                OnItemMenuRequested();
-            };
-
             _actionMenu.OnMoveSelected += HandlePlayerMoveSelected;
-            _actionMenu.OnItemMenuRequested += OnItemMenuRequested;
             _actionMenu.OnSwitchMenuRequested += OnSwitchMenuRequested;
             _actionMenu.OnMovesMenuOpened += () => SubMenuState = BattleSubMenuState.ActionMoves;
             _actionMenu.OnMainMenuOpened += () => SubMenuState = BattleSubMenuState.ActionRoot;
@@ -135,10 +120,6 @@ namespace ProjectVagabond.Battle.UI
                     }
                 }
             };
-
-            _itemMenu.OnBack += OnItemMenuBack;
-            _itemMenu.OnItemConfirmed += HandlePlayerItemSelected;
-            _itemMenu.OnItemTargetingRequested += OnItemTargetingRequested;
 
             _switchMenu.OnMemberSelected += (target) => OnSwitchActionSelected?.Invoke(target);
             _switchMenu.OnBack += () =>
@@ -188,17 +169,14 @@ namespace ProjectVagabond.Battle.UI
         {
             EnsureTargetingButtonsInitialized();
             _actionMenu.Reset();
-            _itemMenu.Hide();
             _switchMenu.Hide();
             _combatSwitchDialog.Hide(); // Ensure dialog is closed
-            _itemTargetingBackButton.ResetAnimationState();
             UIState = BattleUIState.Default;
             SubMenuState = BattleSubMenuState.None;
             _narrationQueue.Clear();
             foreach (var btn in _targetingButtons) btn.ResetAnimationState();
 
             MoveForTargeting = null;
-            ItemForTargeting = null;
             CombatantHoveredViaSprite = null;
             HoveredCombatantFromUI = null; // Ensure this is cleared on reset
             IntroOffset = Vector2.Zero; // Reset offset
@@ -215,7 +193,6 @@ namespace ProjectVagabond.Battle.UI
             ForceClearNarration();
             SubMenuState = BattleSubMenuState.ActionRoot;
             _actionMenu.Show(player, allCombatants);
-            _itemMenu.Hide();
             _switchMenu.Hide();
         }
 
@@ -225,7 +202,6 @@ namespace ProjectVagabond.Battle.UI
             SubMenuState = BattleSubMenuState.None;
             _actionMenu.Hide();
             _actionMenu.SetState(ActionMenu.MenuState.Main);
-            _itemMenu.Hide();
             _switchMenu.Hide();
         }
 
@@ -241,16 +217,7 @@ namespace ProjectVagabond.Battle.UI
 
         public void GoBack()
         {
-            if (UIState == BattleUIState.ItemTargeting)
-            {
-                UIState = BattleUIState.Default;
-                OnItemMenuRequested();
-            }
-            else if (SubMenuState == BattleSubMenuState.Item)
-            {
-                OnItemMenuBack();
-            }
-            else if (SubMenuState == BattleSubMenuState.Switch)
+            if (SubMenuState == BattleSubMenuState.Switch)
             {
                 SubMenuState = BattleSubMenuState.ActionRoot;
                 _switchMenu.Hide();
@@ -287,7 +254,7 @@ namespace ProjectVagabond.Battle.UI
             // --- REORDERED UPDATE LOGIC FOR OVERLAP FIX ---
 
             // 1. Update Targeting Buttons First (if active)
-            bool checkTargeting = (UIState == BattleUIState.Targeting || UIState == BattleUIState.ItemTargeting);
+            bool checkTargeting = (UIState == BattleUIState.Targeting);
             bool targetingHovered = false;
 
             if (checkTargeting)
@@ -304,30 +271,14 @@ namespace ProjectVagabond.Battle.UI
             bool isPhaseBlocked = currentActor == null;
             _actionMenu.Update(currentMouseState, gameTime, isInputBlocked: targetingHovered || isPhaseBlocked);
 
-            if (SubMenuState == BattleSubMenuState.Item)
-            {
-                _itemMenu.Update(currentMouseState, gameTime);
-            }
-            else if (SubMenuState == BattleSubMenuState.Switch)
+            if (SubMenuState == BattleSubMenuState.Switch)
             {
                 _switchMenu.Update(currentMouseState);
             }
 
-            if (UIState == BattleUIState.ItemTargeting || UIState == BattleUIState.Targeting)
+            if (UIState == BattleUIState.Targeting)
             {
                 _targetingTextAnimTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-                if (UIState == BattleUIState.ItemTargeting)
-                {
-                    // Only update back button if no target is hovered
-                    if (targetingHovered)
-                    {
-                        _itemTargetingBackButton.ResetAnimationState();
-                    }
-                    else
-                    {
-                        _itemTargetingBackButton.Update(currentMouseState);
-                    }
-                }
             }
 
             if (_actionMenu.CurrentMenuState == ActionMenu.MenuState.Targeting)
@@ -335,7 +286,7 @@ namespace ProjectVagabond.Battle.UI
                 UIState = BattleUIState.Targeting;
                 MoveForTargeting = _actionMenu.SelectedMove;
             }
-            else if (UIState != BattleUIState.ItemTargeting)
+            else
             {
                 UIState = BattleUIState.Default;
             }
@@ -425,11 +376,7 @@ namespace ProjectVagabond.Battle.UI
 
         public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
-            if (SubMenuState == BattleSubMenuState.Item)
-            {
-                _itemMenu.Draw(spriteBatch, font, gameTime, transform);
-            }
-            else if (SubMenuState == BattleSubMenuState.Switch)
+            if (SubMenuState == BattleSubMenuState.Switch)
             {
                 _switchMenu.Draw(spriteBatch, font, gameTime);
             }
@@ -437,11 +384,6 @@ namespace ProjectVagabond.Battle.UI
             {
                 // Pass IntroOffset to ActionMenu.Draw
                 _actionMenu.Draw(spriteBatch, font, gameTime, transform, IntroOffset);
-            }
-
-            if (UIState == BattleUIState.ItemTargeting)
-            {
-                DrawItemTargetingOverlay(spriteBatch, font, gameTime, transform);
             }
 
             if (UIState == BattleUIState.Targeting)
@@ -660,13 +602,9 @@ namespace ProjectVagabond.Battle.UI
             {
                 currentHoveredButton = _actionMenu.HoveredButton;
             }
-            else if (SubMenuState == BattleSubMenuState.Item)
-            {
-                currentHoveredButton = _itemMenu.HoveredButton;
-            }
 
             // Check targeting buttons
-            if (UIState == BattleUIState.Targeting || UIState == BattleUIState.ItemTargeting)
+            if (UIState == BattleUIState.Targeting)
             {
                 foreach (var btn in _targetingButtons)
                 {
@@ -764,61 +702,9 @@ namespace ProjectVagabond.Battle.UI
             spriteBatch.DrawSnapped(textureToDraw, position, Color.White);
         }
 
-        private void DrawItemTargetingOverlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
-        {
-            var pixel = ServiceLocator.Get<Texture2D>();
-            var spriteManager = ServiceLocator.Get<SpriteManager>();
-            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-
-            // Draw Background
-            const int dividerY = 123;
-            var bgRect = new Rectangle(0, dividerY, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT - dividerY);
-            spriteBatch.DrawSnapped(pixel, bgRect, _global.Palette_Black);
-
-            // Draw Border
-            // Apply IntroOffset to the border
-            spriteBatch.DrawSnapped(spriteManager.BattleBorderTarget, IntroOffset, Color.White);
-
-            // Draw Targeting Buttons (Moved here so text is on top)
-            DrawTargetingButtons(spriteBatch, font, gameTime, transform);
-
-            // Draw Text (Using shared helper)
-            DrawTargetingText(spriteBatch, font, gameTime);
-
-            // Ensure button size matches ItemMenu
-            const int backButtonHeight = 15;
-            var backSize = (_itemTargetingBackButton.Font ?? secondaryFont).MeasureString(_itemTargetingBackButton.Text);
-            int backWidth = (int)backSize.Width + 16;
-
-            // Position: Y=165, Centered + 1px
-            _itemTargetingBackButton.Bounds = new Rectangle(
-                (Global.VIRTUAL_WIDTH - backWidth) / 2 + 1,
-                165,
-                backWidth,
-                backButtonHeight
-            );
-
-            // Ensure font is set if not already
-            if (_itemTargetingBackButton.Font == null) _itemTargetingBackButton.Font = secondaryFont;
-
-            _itemTargetingBackButton.Draw(spriteBatch, font, gameTime, transform);
-        }
-
         private void HandlePlayerMoveSelected(MoveData move, MoveEntry entry, BattleCombatant target)
         {
             OnMoveSelected?.Invoke(move, entry, target);
-        }
-
-        private void HandlePlayerItemSelected(ConsumableItemData item)
-        {
-            OnItemSelected?.Invoke(item, null);
-        }
-
-        private void OnItemMenuRequested()
-        {
-            SubMenuState = BattleSubMenuState.Item;
-            _actionMenu.Hide();
-            _itemMenu.Show(ServiceLocator.Get<BattleManager>().AllCombatants.ToList());
         }
 
         private void OnSwitchMenuRequested()
@@ -828,28 +714,6 @@ namespace ProjectVagabond.Battle.UI
             var battleManager = ServiceLocator.Get<BattleManager>();
             var reserved = battleManager.GetReservedBenchMembers();
             _switchMenu.Show(battleManager.AllCombatants.ToList(), reserved);
-        }
-
-        private void OnItemTargetingRequested(ConsumableItemData item)
-        {
-            UIState = BattleUIState.ItemTargeting;
-            ItemForTargeting = item;
-            _itemMenu.Hide();
-            _targetingTextAnimTimer = 0f;
-        }
-
-        private void OnItemMenuBack()
-        {
-            SubMenuState = BattleSubMenuState.ActionRoot;
-            _itemMenu.Hide();
-
-            var battleManager = ServiceLocator.Get<BattleManager>();
-            var player = battleManager.CurrentActingCombatant ?? battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && !c.IsDefeated);
-
-            if (player != null)
-            {
-                _actionMenu.Show(player, battleManager.AllCombatants.ToList());
-            }
         }
 
         private void UpdateHoverHighlights(GameTime gameTime, BattleCombatant currentActor)

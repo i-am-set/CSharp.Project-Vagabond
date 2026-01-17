@@ -17,7 +17,6 @@ namespace ProjectVagabond.Battle.UI
     public class BattleInputHandler
     {
         public event Action<MoveData, MoveEntry, BattleCombatant> OnMoveTargetSelected;
-        public event Action<ConsumableItemData, BattleCombatant> OnItemTargetSelected;
         public event Action OnBackRequested;
         private int _hoveredTargetIndex = -1;
         public int HoveredTargetIndex => _hoveredTargetIndex;
@@ -91,7 +90,7 @@ namespace ProjectVagabond.Battle.UI
 
                 // --- CURSOR LOGIC ---
                 // If we are in a targeting mode, show the clickable cursor when hovering a sprite
-                if (uiManager.UIState == BattleUIState.Targeting || uiManager.UIState == BattleUIState.ItemTargeting)
+                if (uiManager.UIState == BattleUIState.Targeting)
                 {
                     ServiceLocator.Get<CursorManager>().SetState(CursorState.HoverClickable);
                 }
@@ -102,7 +101,7 @@ namespace ProjectVagabond.Battle.UI
             }
 
             // --- CLICK HANDLING (State Dependent) ---
-            if (uiManager.UIState == BattleUIState.Targeting || uiManager.UIState == BattleUIState.ItemTargeting)
+            if (uiManager.UIState == BattleUIState.Targeting)
             {
                 // Right Click to Go Back
                 if (currentMouseState.RightButton == ButtonState.Pressed && _previousMouseState.RightButton == ButtonState.Released)
@@ -129,19 +128,6 @@ namespace ProjectVagabond.Battle.UI
                                 if (validTargets.Contains(selectedTarget))
                                 {
                                     OnMoveTargetSelected?.Invoke(move, uiManager.SpellForTargeting, selectedTarget);
-                                    UIInputManager.ConsumeMouseClick();
-                                }
-                            }
-                        }
-                        else if (uiManager.UIState == BattleUIState.ItemTargeting)
-                        {
-                            var item = uiManager.ItemForTargeting;
-                            if (item != null && actor != null)
-                            {
-                                var validTargets = TargetingHelper.GetValidTargets(actor, item.Target, battleManager.AllCombatants);
-                                if (validTargets.Contains(selectedTarget))
-                                {
-                                    OnItemTargetSelected?.Invoke(item, selectedTarget);
                                     UIInputManager.ConsumeMouseClick();
                                 }
                             }

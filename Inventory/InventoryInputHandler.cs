@@ -25,6 +25,7 @@ namespace ProjectVagabond.UI
             _overlay = overlay;
             _dataProcessor = dataProcessor;
             _equipSystem = equipSystem;
+            _global = ServiceLocator.Get<Global>();
         }
 
         public void InitializeInventoryUI()
@@ -60,8 +61,6 @@ namespace ProjectVagabond.UI
                 {
                     InventoryCategory.Weapons => _overlay.SpriteManager.InventoryHeaderButtonWeapons,
                     InventoryCategory.Relics => _overlay.SpriteManager.InventoryHeaderButtonRelics,
-                    InventoryCategory.Consumables => _overlay.SpriteManager.InventoryHeaderButtonConsumables,
-                    InventoryCategory.Misc => _overlay.SpriteManager.InventoryHeaderButtonMisc,
                     _ => _overlay.SpriteManager.InventoryHeaderButtonWeapons,
                 };
 
@@ -610,10 +609,6 @@ namespace ProjectVagabond.UI
                         _overlay.HoveredItemData = BattleDataCache.Weapons.Values.FirstOrDefault(w => w.WeaponName.Equals(activeSlot.ItemId, StringComparison.OrdinalIgnoreCase));
                     else if (_overlay.SelectedInventoryCategory == InventoryCategory.Relics)
                         _overlay.HoveredItemData = BattleDataCache.Relics.Values.FirstOrDefault(r => r.RelicName.Equals(activeSlot.ItemId, StringComparison.OrdinalIgnoreCase));
-                    else if (_overlay.SelectedInventoryCategory == InventoryCategory.Consumables)
-                        _overlay.HoveredItemData = BattleDataCache.Consumables.Values.FirstOrDefault(c => c.ItemName.Equals(activeSlot.ItemId, StringComparison.OrdinalIgnoreCase));
-                    else if (_overlay.SelectedInventoryCategory == InventoryCategory.Misc)
-                        _overlay.HoveredItemData = BattleDataCache.MiscItems.Values.FirstOrDefault(m => m.ItemName.Equals(activeSlot.ItemId, StringComparison.OrdinalIgnoreCase));
                 }
 
                 if (_overlay.TotalPages > 1)
@@ -681,8 +676,6 @@ namespace ProjectVagabond.UI
             if (_overlay.HoveredItemData is MoveData md) nameLength = md.MoveName.Length;
             else if (_overlay.HoveredItemData is WeaponData wd) nameLength = wd.WeaponName.Length;
             else if (_overlay.HoveredItemData is RelicData rd) nameLength = rd.RelicName.Length;
-            else if (_overlay.HoveredItemData is ConsumableItemData cd) nameLength = cd.ItemName.Length;
-            else if (_overlay.HoveredItemData is MiscItemData mid) nameLength = mid.ItemName.Length;
 
             if (_overlay.HoveredItemData != null)
             {
@@ -719,8 +712,6 @@ namespace ProjectVagabond.UI
             {
                 InventoryCategory.Weapons => _overlay.GameState.PlayerState.Weapons.Any(),
                 InventoryCategory.Relics => _overlay.GameState.PlayerState.Relics.Any(),
-                InventoryCategory.Consumables => _overlay.GameState.PlayerState.Consumables.Any(),
-                InventoryCategory.Misc => _overlay.GameState.PlayerState.MiscItems.Any(),
                 _ => false
             };
         }

@@ -21,6 +21,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
+using static ProjectVagabond.Battle.Abilities.InflictStatusStunAbility;
 
 namespace ProjectVagabond.UI
 {
@@ -185,10 +186,7 @@ namespace ProjectVagabond.UI
             string name = "";
             if (itemData is MoveData m) name = m.MoveName;
             else if (itemData is WeaponData w) name = w.WeaponName;
-            else if (itemData is ArmorData a) name = a.ArmorName;
             else if (itemData is RelicData r) name = r.RelicName;
-            else if (itemData is ConsumableItemData c) name = c.ItemName;
-            else if (itemData is MiscItemData misc) name = misc.ItemName;
 
             var lines = WrapName(name.ToUpper());
 
@@ -217,21 +215,9 @@ namespace ProjectVagabond.UI
             {
                 typeText = "WEAPON";
             }
-            else if (itemData is ArmorData)
-            {
-                typeText = "ARMOR";
-            }
             else if (itemData is RelicData)
             {
                 typeText = "RELIC";
-            }
-            else if (itemData is ConsumableItemData)
-            {
-                typeText = "CONSUMABLE";
-            }
-            else if (itemData is MiscItemData)
-            {
-                typeText = "ITEM";
             }
 
             spriteBatch.DrawStringSnapped(tertiaryFont, typeText, new Vector2(bounds.X + 4, bounds.Y + 2), _global.Palette_DarkGray * opacity);
@@ -260,29 +246,9 @@ namespace ProjectVagabond.UI
             {
                 DrawWeaponInfoPanel(spriteBatch, font, secondaryFont, weaponData, null, null, bounds, gameTime, opacity);
             }
-            else if (itemData is ArmorData armorData)
-            {
-                DrawArmorRelicInfoPanel(spriteBatch, font, secondaryFont, armorData.ArmorName, armorData.Description, armorData.Flavor, null, null, armorData.StatModifiers, bounds, gameTime, opacity, $"Sprites/Items/Armor/{armorData.ArmorID}");
-            }
             else if (itemData is RelicData relicData)
             {
                 DrawArmorRelicInfoPanel(spriteBatch, font, secondaryFont, relicData.RelicName, relicData.Description, relicData.Flavor, null, null, relicData.StatModifiers, bounds, gameTime, opacity, $"Sprites/Items/Relics/{relicData.RelicID}");
-            }
-            else
-            {
-                string name = "";
-                string description = "";
-                string flavor = "";
-                string iconPath = "";
-                Dictionary<string, int> stats = new Dictionary<string, int>();
-
-                if (itemData is ConsumableItemData consItem) { name = consItem.ItemName; description = consItem.Description; flavor = consItem.Flavor; iconPath = consItem.ImagePath; }
-                else if (itemData is MiscItemData miscItem) { name = miscItem.ItemName; description = miscItem.Description; flavor = miscItem.Flavor; iconPath = miscItem.ImagePath; }
-
-                var iconTexture = _spriteManager.GetItemSprite(iconPath);
-                var iconSilhouette = _spriteManager.GetItemSpriteSilhouette(iconPath);
-
-                DrawGenericItemInfoPanel(spriteBatch, font, secondaryFont, name, description, flavor, iconTexture, iconSilhouette, stats, bounds, gameTime, opacity);
             }
         }
 
@@ -310,21 +276,6 @@ namespace ProjectVagabond.UI
                 description = w.Description;
                 flavor = w.Flavor;
             }
-            else if (data is ArmorData a)
-            {
-                description = a.Description;
-                flavor = a.Flavor;
-                // Check if stats exist
-                bool hasStats = a.StatModifiers != null && a.StatModifiers.Values.Any(v => v != 0);
-                if (hasStats)
-                {
-                    baseHeight = LAYOUT_VARS_START_Y + (2 * LAYOUT_VAR_ROW_HEIGHT) + 2;
-                }
-                else
-                {
-                    baseHeight = LAYOUT_VARS_START_Y;
-                }
-            }
             else if (data is RelicData r)
             {
                 description = r.Description;
@@ -339,18 +290,6 @@ namespace ProjectVagabond.UI
                 {
                     baseHeight = LAYOUT_VARS_START_Y;
                 }
-            }
-            else if (data is ConsumableItemData c)
-            {
-                description = c.Description;
-                flavor = c.Flavor;
-                baseHeight = LAYOUT_TITLE_Y + font.LineHeight + 4;
-            }
-            else if (data is MiscItemData m)
-            {
-                description = m.Description;
-                flavor = m.Flavor;
-                baseHeight = LAYOUT_TITLE_Y + font.LineHeight + 4;
             }
 
             float descHeight = 0f;
@@ -628,29 +567,6 @@ namespace ProjectVagabond.UI
             float flavorHeight = DrawFlavorText(spriteBatch, infoPanelArea, move.Flavor, opacity);
             currentY = infoPanelArea.Y + LAYOUT_DESC_START_Y;
             DrawDescription(spriteBatch, secondaryFont, move.Description, infoPanelArea, currentY, flavorHeight, gameTime, opacity);
-        }
-
-        private void DrawGenericItemInfoPanel(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, string name, string description, string flavor, Texture2D? iconTexture, Texture2D? iconSilhouette, Dictionary<string, int> stats, Rectangle infoPanelArea, GameTime gameTime, float opacity)
-        {
-            const int spriteSize = 16;
-            int spriteX = infoPanelArea.X + (infoPanelArea.Width - spriteSize) / 2;
-            float currentY = infoPanelArea.Y + LAYOUT_SPRITE_Y + 2;
-            Vector2 staticDrawPos = new Vector2(spriteX + 8, currentY + 8);
-            Vector2 iconOrigin = new Vector2(8, 8);
-            Vector2 animOffset = GetJuicyOffset(gameTime);
-            Vector2 animatedDrawPos = staticDrawPos + animOffset;
-
-            // NEW: Draw Inventory Slot Background behind the item (Static Position)
-            DrawInventorySlotBackground(spriteBatch, staticDrawPos, gameTime, opacity);
-
-            DrawIconWithSilhouette(spriteBatch, iconTexture, iconSilhouette, animatedDrawPos, iconOrigin, 1.0f, opacity: opacity);
-
-            // Draw Name (Wrapped & Bottom Aligned)
-            DrawItemName(spriteBatch, font, name, infoPanelArea, opacity, gameTime);
-
-            float flavorHeight = DrawFlavorText(spriteBatch, infoPanelArea, flavor, opacity);
-            currentY = infoPanelArea.Y + LAYOUT_TITLE_Y + font.LineHeight + 4;
-            DrawDescription(spriteBatch, secondaryFont, description, infoPanelArea, currentY, flavorHeight, gameTime, opacity);
         }
 
         // --- Helpers ---

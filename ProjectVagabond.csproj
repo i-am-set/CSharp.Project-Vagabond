@@ -45,9 +45,6 @@
 		</Content>
 	</ItemGroup>
 	<ItemGroup>
-	  <Content Remove="Content\Data\Items\Consumables.json" />
-	</ItemGroup>
-	<ItemGroup>
 	  <Content Include="Content\Fonts\5x5_pixel.fnt">
 	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </Content>
@@ -60,11 +57,6 @@
 	  <Content Include="Content\Fonts\Px437_IBM_BIOS_0.png">
 	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </Content>
-	</ItemGroup>
-	<ItemGroup>
-	  <None Update="Content\Data\Items\Consumables.json">
-	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	  </None>
 	</ItemGroup>
 
 	<Target Name="RestoreDotnetTools" BeforeTargets="CollectPackageReferences">

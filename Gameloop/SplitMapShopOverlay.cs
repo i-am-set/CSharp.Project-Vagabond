@@ -25,7 +25,6 @@ namespace ProjectVagabond.UI
         private readonly Core _core;
 
         private List<ShopItem> _premiumItems = new List<ShopItem>();
-        private List<ShopItem> _consumableItems = new List<ShopItem>();
 
         private List<Button> _itemButtons = new List<Button>();
         private Button _leaveButton;
@@ -60,17 +59,16 @@ namespace ProjectVagabond.UI
             _bgDuration = (float)(_rng.NextDouble() * (8.0 - 2.0) + 2.0);
         }
 
-        public void Show(List<ShopItem> premiumStock, List<ShopItem> consumableStock)
+        public void Show(List<ShopItem> premiumStock)
         {
             IsOpen = true;
             _premiumItems = premiumStock;
-            _consumableItems = consumableStock;
             RebuildButtons();
         }
 
         public void Resume()
         {
-            if (_premiumItems.Any() || _consumableItems.Any())
+            if (_premiumItems.Any())
             {
                 IsOpen = true;
                 // Safety check: If buttons are missing but items exist, rebuild.
@@ -96,10 +94,9 @@ namespace ProjectVagabond.UI
             int centerX = Global.VIRTUAL_WIDTH / 2;
             int startY = (int)WORLD_Y_OFFSET + 45; // Push down to make room for headers
 
-            // --- GEAR GRID (Left Side) ---
+            // --- GEAR GRID (Centered) ---
             // 2x2 Grid
-            // Center of Left Section is roughly centerX - 80
-            int gearCenterX = centerX - 80;
+            int gearCenterX = centerX;
             int gearSpacingX = 50; // Horizontal gap between columns
             int gearSpacingY = 35; // Vertical gap between rows (accommodates text)
 
@@ -124,24 +121,6 @@ namespace ProjectVagabond.UI
                 _itemButtons.Add(btn);
             }
 
-            // --- CONSUMABLES (Right Side) ---
-            // Vertical Stack
-            int consumableCenterX = centerX + 80;
-            int consumableSpacingY = 35;
-
-            for (int i = 0; i < _consumableItems.Count; i++)
-            {
-                var item = _consumableItems[i];
-                // Center 32px button
-                int x = consumableCenterX - 16;
-                // Adjust Y to keep sprite visual position consistent
-                int y = startY + (i * consumableSpacingY) - 8;
-
-                // Pass secondaryFont for price, tertiaryFont for currency symbol and name
-                var btn = CreateShopItemButton(item, x, y, secondaryFont, tertiaryFont);
-                _itemButtons.Add(btn);
-            }
-
             // --- LEAVE BUTTON ---
             // Position at absolute bottom of the screen (relative to the offset)
             int screenBottom = (int)WORLD_Y_OFFSET + Global.VIRTUAL_HEIGHT;
@@ -157,7 +136,6 @@ namespace ProjectVagabond.UI
             string iconPath = "";
             if (item.Type == "Weapon") iconPath = $"Sprites/Items/Weapons/{item.ItemId}";
             else if (item.Type == "Relic") iconPath = $"Sprites/Items/Relics/{item.ItemId}";
-            else if (item.Type == "Consumable") iconPath = $"Sprites/Items/Consumables/{item.ItemId}";
 
             var icon = _spriteManager.GetItemSprite(iconPath);
             var silhouette = _spriteManager.GetItemSpriteSilhouette(iconPath);
@@ -187,7 +165,6 @@ namespace ProjectVagabond.UI
                 // Add to Inventory
                 if (item.Type == "Weapon") _gameState.PlayerState.AddWeapon(item.ItemId);
                 else if (item.Type == "Relic") _gameState.PlayerState.AddRelic(item.ItemId);
-                else if (item.Type == "Consumable") _gameState.PlayerState.AddConsumable(item.ItemId);
 
                 _hapticsManager.TriggerShake(10f, 0.1f);
 

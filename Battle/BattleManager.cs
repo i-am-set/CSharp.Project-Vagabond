@@ -21,6 +21,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using static ProjectVagabond.Battle.Abilities.InflictStatusStunAbility;
 
 namespace ProjectVagabond.Battle
 {
@@ -124,7 +125,6 @@ namespace ProjectVagabond.Battle
                 {
                     ability.OnBattleStart(combatant);
                     ability.OnCombatantEnter(combatant);
-                    // Note: Lifecycle effects usually fire their own notifications if needed
                 }
             }
         }
@@ -379,7 +379,7 @@ namespace ProjectVagabond.Battle
             }
 
             _actionQueue = _actionQueue.OrderByDescending(a => a.Priority).ThenByDescending(a => a.ActorAgility).ToList();
-            var lastAction = _actionQueue.LastOrDefault(a => a.Type == QueuedActionType.Move || a.Type == QueuedActionType.Item);
+            var lastAction = _actionQueue.LastOrDefault(a => a.Type == QueuedActionType.Move);
             if (lastAction != null) lastAction.IsLastActionInRound = true;
 
             _currentPhase = BattlePhase.ActionResolution;
@@ -429,7 +429,6 @@ namespace ProjectVagabond.Battle
                 foreach (var ability in combatant.TurnLifecycleEffects)
                 {
                     ability.OnTurnStart(combatant);
-                    // Removed automatic event firing. Abilities must fire their own events if they do something.
                 }
 
                 if (combatant.ChargingAction != null)
@@ -574,7 +573,6 @@ namespace ProjectVagabond.Battle
             {
                 Actor = _actionToExecute.Actor,
                 Move = _actionToExecute.ChosenMove,
-                Item = _actionToExecute.ChosenItem,
                 Target = _actionToExecute.Target,
                 Type = _actionToExecute.Type
             });
@@ -597,12 +595,6 @@ namespace ProjectVagabond.Battle
             if (action.Type == QueuedActionType.Switch)
             {
                 ProcessSwitchAction(action);
-            }
-            else if (action.ChosenItem != null)
-            {
-                ProcessItemAction(action);
-                _currentPhase = BattlePhase.SecondaryEffectResolution;
-                CanAdvance = false;
             }
             else if (action.ChosenMove != null)
             {
@@ -839,14 +831,12 @@ namespace ProjectVagabond.Battle
                 foreach (var effect in action.Actor.OnHitEffects)
                 {
                     effect.OnHit(ctx, result.DamageAmount);
-                    // Removed automatic event firing. The ability must fire it if successful.
                 }
 
                 // 2. Trigger Target's OnDamaged effects (Relics, etc.)
                 foreach (var effect in target.OnDamagedEffects)
                 {
                     effect.OnDamaged(ctx, result.DamageAmount);
-                    // Removed automatic event firing.
                 }
 
                 // 3. Trigger Move's OnHit effects
@@ -855,7 +845,6 @@ namespace ProjectVagabond.Battle
                     if (ability is IOnHitEffect onHit)
                     {
                         onHit.OnHit(ctx, result.DamageAmount);
-                        // Removed automatic event firing.
                     }
                 }
 
@@ -872,7 +861,6 @@ namespace ProjectVagabond.Battle
                             if (reaction.OnLifestealReceived(action.Actor, totalHeal, target))
                             {
                                 preventHealing = true;
-                                // Reaction abilities should fire their own events
                                 break; // Stop checking if one reaction blocks it
                             }
                         }
@@ -948,7 +936,6 @@ namespace ProjectVagabond.Battle
                 foreach (var effect in action.Actor.OnKillEffects)
                 {
                     effect.OnKill(ctx);
-                    // Removed automatic event firing.
                 }
             }
 
@@ -958,7 +945,6 @@ namespace ProjectVagabond.Battle
             foreach (var effect in actor.OnActionCompleteEffects)
             {
                 effect.OnActionComplete(action, actor);
-                // Removed automatic event firing.
             }
 
             foreach (var ability in action.ChosenMove.Abilities)
@@ -966,7 +952,6 @@ namespace ProjectVagabond.Battle
                 if (ability is IOnActionComplete onComplete)
                 {
                     onComplete.OnActionComplete(action, actor);
-                    // Removed automatic event firing.
                 }
             }
 
@@ -988,47 +973,9 @@ namespace ProjectVagabond.Battle
             }
         }
 
-        private void ProcessItemAction(QueuedAction action)
-        {
-            var gameState = ServiceLocator.Get<GameState>();
-            if (!gameState.PlayerState.RemoveConsumable(action.ChosenItem.ItemID)) return;
-
-            var targets = ResolveTargets(action);
-            var damageResults = new List<DamageCalculator.DamageResult>();
-
-            switch (action.ChosenItem.Type)
-            {
-                case ConsumableType.Heal:
-                    foreach (var target in targets)
-                    {
-                        int hpBefore = (int)target.VisualHP;
-                        target.ApplyHealing(action.ChosenItem.PrimaryValue);
-                        EventBus.Publish(new GameEvents.CombatantHealed { Actor = action.Actor, Target = target, HealAmount = action.ChosenItem.PrimaryValue, VisualHPBefore = hpBefore });
-                    }
-                    break;
-                case ConsumableType.Attack:
-                    if (!string.IsNullOrEmpty(action.ChosenItem.MoveID) && BattleDataCache.Moves.TryGetValue(action.ChosenItem.MoveID, out var moveData))
-                    {
-                        float multiTargetModifier = (targets.Count > 1) ? BattleConstants.MULTI_TARGET_MODIFIER : 1.0f;
-                        foreach (var target in targets)
-                        {
-                            var moveInstance = HandlePreDamageEffects(moveData, target);
-                            var result = DamageCalculator.CalculateDamage(action, target, moveInstance, multiTargetModifier);
-                            target.ApplyDamage(result.DamageAmount);
-                            damageResults.Add(result);
-                        }
-                        EventBus.Publish(new GameEvents.BattleActionExecuted { Actor = action.Actor, ChosenMove = moveData, UsedItem = action.ChosenItem, Targets = targets, DamageResults = damageResults });
-                    }
-                    break;
-            }
-            _currentActionForEffects = action;
-            _currentActionDamageResults = damageResults;
-            _currentActionFinalTargets = targets;
-        }
-
         private List<BattleCombatant> ResolveTargets(QueuedAction action)
         {
-            var targetType = action.ChosenMove?.Target ?? action.ChosenItem?.Target ?? TargetType.None;
+            var targetType = action.ChosenMove?.Target ?? TargetType.None;
             var actor = action.Actor;
             var specifiedTarget = action.Target;
 
@@ -1150,7 +1097,6 @@ namespace ProjectVagabond.Battle
                 foreach (var ability in combatant.TurnLifecycleEffects)
                 {
                     ability.OnTurnEnd(combatant);
-                    // Removed automatic event firing.
                 }
 
                 if (!combatant.UsedProtectThisTurn)
@@ -1269,7 +1215,6 @@ namespace ProjectVagabond.Battle
                 foreach (var ability in combatant.BattleLifecycleEffects)
                 {
                     ability.OnCombatantEnter(combatant);
-                    // Removed automatic event firing.
                 }
             }
         }

@@ -14,7 +14,6 @@ namespace ProjectVagabond.Battle.Abilities
         public BattleCombatant Actor { get; set; }
         public BattleCombatant Target { get; set; }
         public MoveData Move { get; set; }
-        public ConsumableItemData Item { get; set; }
 
         // Context Data
         public float BaseDamage { get; set; }

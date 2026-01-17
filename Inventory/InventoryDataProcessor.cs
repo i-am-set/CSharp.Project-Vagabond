@@ -87,24 +87,6 @@ namespace ProjectVagabond.UI
                             currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Relics/{kvp.Key}", null, null, false, null, isEquipped));
                     }
                     break;
-                case InventoryCategory.Consumables:
-                    foreach (var kvp in playerState.Consumables)
-                    {
-                        if (BattleDataCache.Consumables.TryGetValue(kvp.Key, out var data))
-                            currentItems.Add((data.ItemName, kvp.Value, $"Sprites/Items/Consumables/{data.ItemID}", null, null, false, null, false));
-                        else
-                            currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Consumables/{kvp.Key}", null, null, false, null, false));
-                    }
-                    break;
-                case InventoryCategory.Misc:
-                    foreach (var kvp in playerState.MiscItems)
-                    {
-                        if (BattleDataCache.MiscItems.TryGetValue(kvp.Key, out var data))
-                            currentItems.Add((data.ItemName, kvp.Value, data.ImagePath, null, null, false, null, false));
-                        else
-                            currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Misc/{kvp.Key}", null, null, false, null, false));
-                    }
-                    break;
             }
             return currentItems;
         }

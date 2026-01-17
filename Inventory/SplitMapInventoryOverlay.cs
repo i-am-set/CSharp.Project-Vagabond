@@ -15,7 +15,7 @@ using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.UI
 {
-    public enum InventoryCategory { Weapons, Relics, Consumables, Misc, Equip }
+    public enum InventoryCategory { Weapons, Relics, Equip }
     public enum EquipSlotType { None, Weapon, Relic, Spell1, Spell2, Spell3, Spell4 }
     // Formal State Machine
     internal enum InventoryState
@@ -80,12 +80,10 @@ namespace ProjectVagabond.UI
         internal int SelectedSlotIndex { get; set; } = -1;
 
         internal List<InventoryCategory> CategoryOrder { get; } = new()
-    {
-        InventoryCategory.Weapons,
-        InventoryCategory.Relics,
-        InventoryCategory.Consumables,
-        InventoryCategory.Misc
-    };
+        {
+            InventoryCategory.Weapons,
+            InventoryCategory.Relics
+        };
 
         // Animation State
         internal float InventoryArrowAnimTimer { get; set; }
@@ -353,8 +351,6 @@ namespace ProjectVagabond.UI
             {
                 InventoryCategory.Weapons => GameState.PlayerState.Weapons.Any(),
                 InventoryCategory.Relics => GameState.PlayerState.Relics.Any(),
-                InventoryCategory.Consumables => GameState.PlayerState.Consumables.Any(),
-                InventoryCategory.Misc => GameState.PlayerState.MiscItems.Any(),
                 _ => false
             };
         }

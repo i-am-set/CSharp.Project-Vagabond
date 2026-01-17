@@ -16,11 +16,10 @@ namespace ProjectVagabond.Battle
     {
         public static Dictionary<int, ElementDefinition> Elements { get; private set; }
         public static Dictionary<string, MoveData> Moves { get; private set; }
-        public static Dictionary<string, ConsumableItemData> Consumables { get; private set; }
         public static Dictionary<string, RelicData> Relics { get; private set; }
         public static Dictionary<string, WeaponData> Weapons { get; private set; }
-        public static Dictionary<string, MiscItemData> MiscItems { get; private set; }
         public static Dictionary<string, PartyMemberData> PartyMembers { get; private set; }
+
         public static void LoadData(ContentManager content)
         {
             var jsonOptions = new JsonSerializerOptions
@@ -55,16 +54,6 @@ namespace ProjectVagabond.Battle
                 }
             }
 
-            // --- CONSUMABLES ---
-            string consumablesPath = Path.Combine(content.RootDirectory, "Data", "Items", "Consumables.json");
-            if (File.Exists(consumablesPath))
-            {
-                string consumablesJson = File.ReadAllText(consumablesPath);
-                var consumableList = JsonSerializer.Deserialize<List<ConsumableItemData>>(consumablesJson, jsonOptions);
-                Consumables = consumableList.ToDictionary(c => c.ItemID, c => c, StringComparer.OrdinalIgnoreCase);
-            }
-            else Consumables = new Dictionary<string, ConsumableItemData>();
-
             // --- RELICS ---
             string relicsPath = Path.Combine(content.RootDirectory, "Data", "Items", "Relics.json");
             if (File.Exists(relicsPath))
@@ -84,16 +73,6 @@ namespace ProjectVagabond.Battle
                 Weapons = weaponList.ToDictionary(w => w.WeaponID, w => w, StringComparer.OrdinalIgnoreCase);
             }
             else Weapons = new Dictionary<string, WeaponData>();
-
-            // --- MISC ITEMS ---
-            string miscPath = Path.Combine(content.RootDirectory, "Data", "Items", "Misc.json");
-            if (File.Exists(miscPath))
-            {
-                string miscJson = File.ReadAllText(miscPath);
-                var miscList = JsonSerializer.Deserialize<List<MiscItemData>>(miscJson, jsonOptions);
-                MiscItems = miscList.ToDictionary(m => m.ItemID, m => m, StringComparer.OrdinalIgnoreCase);
-            }
-            else MiscItems = new Dictionary<string, MiscItemData>();
 
             // --- PARTY MEMBERS ---
             string partyPath = Path.Combine(content.RootDirectory, "Data", "PartyMembers.json");

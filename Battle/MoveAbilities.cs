@@ -14,6 +14,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
+using static ProjectVagabond.Battle.Abilities.InflictStatusStunAbility;
 
 namespace ProjectVagabond.Battle.Abilities
 {
@@ -317,217 +318,216 @@ namespace ProjectVagabond.Battle.Abilities
                 }
             }
         }
-    }
 
-    public class InflictStatusSilenceAbility : IOnHitEffect
-    {
-        public string Name => "Inflict Silence";
-        public string Description => "Chance to inflict Silence on hit.";
-        private readonly int _chance;
-        private readonly int _duration;
-        private static readonly Random _random = new Random();
-        public InflictStatusSilenceAbility(int chance, int duration) { _chance = chance; _duration = duration; }
-        public void OnHit(CombatContext ctx, int damageDealt)
+        public class InflictStatusSilenceAbility : IOnHitEffect
         {
-            if (ctx.IsGraze) return;
-            if (_random.Next(1, 101) <= _chance)
+            public string Name => "Inflict Silence";
+            public string Description => "Chance to inflict Silence on hit.";
+            private readonly int _chance;
+            private readonly int _duration;
+            private static readonly Random _random = new Random();
+            public InflictStatusSilenceAbility(int chance, int duration) { _chance = chance; _duration = duration; }
+            public void OnHit(CombatContext ctx, int damageDealt)
             {
-                var existing = ctx.Target.ActiveStatusEffects.FirstOrDefault(e => e.EffectType == StatusEffectType.Silence);
-                if (existing != null)
+                if (ctx.IsGraze) return;
+                if (_random.Next(1, 101) <= _chance)
                 {
-                    existing.DurationInTurns += _duration;
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name}'s [cStatus]Silence[/] extended by {_duration} turns!" });
-                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
-                }
-                else
-                {
-                    bool applied = ctx.Target.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Silence, _duration));
-                    if (applied)
+                    var existing = ctx.Target.ActiveStatusEffects.FirstOrDefault(e => e.EffectType == StatusEffectType.Silence);
+                    if (existing != null)
                     {
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} was [DriftWave][cStatus]silenced[/][/]!" });
+                        existing.DurationInTurns += _duration;
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name}'s [cStatus]Silence[/] extended by {_duration} turns!" });
                         EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                    }
+                    else
+                    {
+                        bool applied = ctx.Target.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Silence, _duration));
+                        if (applied)
+                        {
+                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} was [DriftWave][cStatus]silenced[/][/]!" });
+                            EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                        }
                     }
                 }
             }
         }
-    }
 
-    public class DazzlingAbility : IOnHitEffect
-    {
-        public string Name => "Dazzling";
-        public string Description => "Chance to daze the target.";
-        private readonly int _chance;
-        private static readonly Random _random = new Random();
-
-        public DazzlingAbility(int chance)
+        public class DazzlingAbility : IOnHitEffect
         {
-            _chance = chance;
-        }
+            public string Name => "Dazzling";
+            public string Description => "Chance to daze the target.";
+            private readonly int _chance;
+            private static readonly Random _random = new Random();
 
-        public void OnHit(CombatContext ctx, int damageDealt)
-        {
-            if (ctx.IsGraze) return;
-            if (_random.Next(1, 101) <= _chance)
+            public DazzlingAbility(int chance)
             {
-                ctx.Target.IsDazed = true;
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} was [shake]DAZED[/] by the blow!" });
-                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                _chance = chance;
             }
-        }
-    }
 
-    public class ProtectAbility : IOnActionComplete
-    {
-        public string Name => "Protect";
-        public string Description => "Protects the user from all effects of moves that target it during the turn.";
-        private static readonly Random _random = new Random();
-        public void OnActionComplete(QueuedAction action, BattleCombatant owner)
-        {
-            owner.UsedProtectThisTurn = true;
-            double chance = 1.0 / Math.Pow(2, owner.ConsecutiveProtectUses);
-            if (_random.NextDouble() < chance)
+            public void OnHit(CombatContext ctx, int damageDealt)
             {
-                owner.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Protected, 1));
-                owner.ConsecutiveProtectUses++;
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{owner.Name} [popwave][cStatus]protected[/][/] itself!" });
-                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = owner, Ability = this });
-            }
-            else
-            {
-                owner.ConsecutiveProtectUses = 0;
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{owner.Name}'s protection [shake]failed[/]!" });
-                EventBus.Publish(new GameEvents.MoveFailed { Actor = owner });
-            }
-        }
-    }
-
-    public class InflictStatChangeAbility : IOnHitEffect
-    {
-        public string Name => "Inflict Stat Change";
-        public string Description => "Lowers the target's stats.";
-        private readonly List<(OffensiveStatType Stat, int Amount)> _changes = new List<(OffensiveStatType, int)>();
-        public InflictStatChangeAbility(string stat1, int amt1, string stat2 = null, int amt2 = 0)
-        {
-            if (Enum.TryParse<OffensiveStatType>(stat1, true, out var s1)) _changes.Add((s1, amt1));
-            if (!string.IsNullOrEmpty(stat2) && Enum.TryParse<OffensiveStatType>(stat2, true, out var s2)) _changes.Add((s2, amt2));
-        }
-        public void OnHit(CombatContext ctx, int damageDealt)
-        {
-            if (ctx.IsGraze) return;
-            bool anySuccess = false;
-            foreach (var change in _changes)
-            {
-                var (success, msg) = ctx.Target.ModifyStatStage(change.Stat, change.Amount);
-                if (success)
+                if (ctx.IsGraze) return;
+                if (_random.Next(1, 101) <= _chance)
                 {
-                    anySuccess = true;
-                    EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = ctx.Target, Stat = change.Stat, Amount = change.Amount });
+                    ctx.Target.IsDazed = true;
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} was [shake]DAZED[/] by the blow!" });
+                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
                 }
-                string animatedMsg = msg.Replace("rose", "[wave]rose[/]").Replace("fell", "[shake]fell[/]");
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = animatedMsg });
-            }
-            if (anySuccess)
-            {
-                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
             }
         }
-    }
 
-    public class DisengageAbility : IOnActionComplete
-    {
-        public string Name => "Disengage";
-        public string Description => "Switches the user out after attacking.";
-        public void OnActionComplete(QueuedAction action, BattleCombatant owner)
+        public class ProtectAbility : IOnActionComplete
         {
-            EventBus.Publish(new GameEvents.DisengageTriggered { Actor = owner });
-            // No ability activation event needed, the switch is the feedback
-        }
-    }
-
-    public class RandomStatChangeAbility : IOnActionComplete
-    {
-        public string Name => "Random Stat Change";
-        public string Description => "Modifies random stats of the user.";
-        private readonly int[] _amounts;
-        private static readonly Random _random = new Random();
-        public RandomStatChangeAbility(int[] amounts) { _amounts = amounts; }
-        public void OnActionComplete(QueuedAction action, BattleCombatant owner)
-        {
-            var stats = new List<OffensiveStatType> { OffensiveStatType.Strength, OffensiveStatType.Intelligence, OffensiveStatType.Tenacity, OffensiveStatType.Agility };
-            int n = stats.Count;
-            while (n > 1) { n--; int k = _random.Next(n + 1); (stats[k], stats[n]) = (stats[n], stats[k]); }
-            int count = Math.Min(_amounts.Length, stats.Count);
-            bool anySuccess = false;
-            for (int i = 0; i < count; i++)
+            public string Name => "Protect";
+            public string Description => "Protects the user from all effects of moves that target it during the turn.";
+            private static readonly Random _random = new Random();
+            public void OnActionComplete(QueuedAction action, BattleCombatant owner)
             {
-                var (success, msg) = owner.ModifyStatStage(stats[i], _amounts[i]);
-                if (success)
+                owner.UsedProtectThisTurn = true;
+                double chance = 1.0 / Math.Pow(2, owner.ConsecutiveProtectUses);
+                if (_random.NextDouble() < chance)
                 {
-                    anySuccess = true;
-                    EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = owner, Stat = stats[i], Amount = _amounts[i] });
+                    owner.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Protected, 1));
+                    owner.ConsecutiveProtectUses++;
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{owner.Name} [popwave][cStatus]protected[/][/] itself!" });
+                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = owner, Ability = this });
                 }
-                string animatedMsg = msg.Replace("rose", "[wave]rose[/]").Replace("fell", "[shake]fell[/]");
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = animatedMsg });
-            }
-            if (anySuccess)
-            {
-                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = owner, Ability = this });
-            }
-        }
-    }
-
-    public class InflictRandomStatChangeAbility : IOnHitEffect
-    {
-        public string Name => "Inflict Random Stat Change";
-        public string Description => "Modifies random stats of the target.";
-        private readonly int[] _amounts;
-        private static readonly Random _random = new Random();
-        public InflictRandomStatChangeAbility(int[] amounts) { _amounts = amounts; }
-        public void OnHit(CombatContext ctx, int damageDealt)
-        {
-            if (ctx.IsGraze) return;
-            var stats = new List<OffensiveStatType> { OffensiveStatType.Strength, OffensiveStatType.Intelligence, OffensiveStatType.Tenacity, OffensiveStatType.Agility };
-            int n = stats.Count;
-            while (n > 1) { n--; int k = _random.Next(n + 1); (stats[k], stats[n]) = (stats[n], stats[k]); }
-            int count = Math.Min(_amounts.Length, stats.Count);
-            bool anySuccess = false;
-            for (int i = 0; i < count; i++)
-            {
-                var (success, msg) = ctx.Target.ModifyStatStage(stats[i], _amounts[i]);
-                if (success)
+                else
                 {
-                    anySuccess = true;
-                    EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = ctx.Target, Stat = stats[i], Amount = _amounts[i] });
+                    owner.ConsecutiveProtectUses = 0;
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{owner.Name}'s protection [shake]failed[/]!" });
+                    EventBus.Publish(new GameEvents.MoveFailed { Actor = owner });
                 }
-                string animatedMsg = msg.Replace("rose", "[wave]rose[/]").Replace("fell", "[shake]fell[/]");
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = animatedMsg });
-            }
-            if (anySuccess)
-            {
-                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
             }
         }
-    }
 
-    public class ShieldBreakerAbility : IShieldBreaker
-    {
-        public string Name => "Shield Breaker";
-        public string Description => "Breaks through protection.";
-        public float BreakDamageMultiplier { get; }
-        public bool FailsIfNoProtect { get; }
-        public ShieldBreakerAbility(float damageMultiplier, bool failsIfNoProtect) { BreakDamageMultiplier = damageMultiplier; FailsIfNoProtect = failsIfNoProtect; }
-    }
-
-    public class CleanseStatusAbility : IOnHitEffect
-    {
-        public string Name => "Cleanse";
-        public string Description => "Removes negative status effects.";
-
-        public void OnHit(CombatContext ctx, int damageDealt)
+        public class InflictStatChangeAbility : IOnHitEffect
         {
-            var target = ctx.Target;
-            var negativeTypes = new[]
+            public string Name => "Inflict Stat Change";
+            public string Description => "Lowers the target's stats.";
+            private readonly List<(OffensiveStatType Stat, int Amount)> _changes = new List<(OffensiveStatType, int)>();
+            public InflictStatChangeAbility(string stat1, int amt1, string stat2 = null, int amt2 = 0)
             {
+                if (Enum.TryParse<OffensiveStatType>(stat1, true, out var s1)) _changes.Add((s1, amt1));
+                if (!string.IsNullOrEmpty(stat2) && Enum.TryParse<OffensiveStatType>(stat2, true, out var s2)) _changes.Add((s2, amt2));
+            }
+            public void OnHit(CombatContext ctx, int damageDealt)
+            {
+                if (ctx.IsGraze) return;
+                bool anySuccess = false;
+                foreach (var change in _changes)
+                {
+                    var (success, msg) = ctx.Target.ModifyStatStage(change.Stat, change.Amount);
+                    if (success)
+                    {
+                        anySuccess = true;
+                        EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = ctx.Target, Stat = change.Stat, Amount = change.Amount });
+                    }
+                    string animatedMsg = msg.Replace("rose", "[wave]rose[/]").Replace("fell", "[shake]fell[/]");
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = animatedMsg });
+                }
+                if (anySuccess)
+                {
+                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                }
+            }
+        }
+
+        public class DisengageAbility : IOnActionComplete
+        {
+            public string Name => "Disengage";
+            public string Description => "Switches the user out after attacking.";
+            public void OnActionComplete(QueuedAction action, BattleCombatant owner)
+            {
+                EventBus.Publish(new GameEvents.DisengageTriggered { Actor = owner });
+                // No ability activation event needed, the switch is the feedback
+            }
+        }
+
+        public class RandomStatChangeAbility : IOnActionComplete
+        {
+            public string Name => "Random Stat Change";
+            public string Description => "Modifies random stats of the user.";
+            private readonly int[] _amounts;
+            private static readonly Random _random = new Random();
+            public RandomStatChangeAbility(int[] amounts) { _amounts = amounts; }
+            public void OnActionComplete(QueuedAction action, BattleCombatant owner)
+            {
+                var stats = new List<OffensiveStatType> { OffensiveStatType.Strength, OffensiveStatType.Intelligence, OffensiveStatType.Tenacity, OffensiveStatType.Agility };
+                int n = stats.Count;
+                while (n > 1) { n--; int k = _random.Next(n + 1); (stats[k], stats[n]) = (stats[n], stats[k]); }
+                int count = Math.Min(_amounts.Length, stats.Count);
+                bool anySuccess = false;
+                for (int i = 0; i < count; i++)
+                {
+                    var (success, msg) = owner.ModifyStatStage(stats[i], _amounts[i]);
+                    if (success)
+                    {
+                        anySuccess = true;
+                        EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = owner, Stat = stats[i], Amount = _amounts[i] });
+                    }
+                    string animatedMsg = msg.Replace("rose", "[wave]rose[/]").Replace("fell", "[shake]fell[/]");
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = animatedMsg });
+                }
+                if (anySuccess)
+                {
+                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = owner, Ability = this });
+                }
+            }
+        }
+
+        public class InflictRandomStatChangeAbility : IOnHitEffect
+        {
+            public string Name => "Inflict Random Stat Change";
+            public string Description => "Modifies random stats of the target.";
+            private readonly int[] _amounts;
+            private static readonly Random _random = new Random();
+            public InflictRandomStatChangeAbility(int[] amounts) { _amounts = amounts; }
+            public void OnHit(CombatContext ctx, int damageDealt)
+            {
+                if (ctx.IsGraze) return;
+                var stats = new List<OffensiveStatType> { OffensiveStatType.Strength, OffensiveStatType.Intelligence, OffensiveStatType.Tenacity, OffensiveStatType.Agility };
+                int n = stats.Count;
+                while (n > 1) { n--; int k = _random.Next(n + 1); (stats[k], stats[n]) = (stats[n], stats[k]); }
+                int count = Math.Min(_amounts.Length, stats.Count);
+                bool anySuccess = false;
+                for (int i = 0; i < count; i++)
+                {
+                    var (success, msg) = ctx.Target.ModifyStatStage(stats[i], _amounts[i]);
+                    if (success)
+                    {
+                        anySuccess = true;
+                        EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = ctx.Target, Stat = stats[i], Amount = _amounts[i] });
+                    }
+                    string animatedMsg = msg.Replace("rose", "[wave]rose[/]").Replace("fell", "[shake]fell[/]");
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = animatedMsg });
+                }
+                if (anySuccess)
+                {
+                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                }
+            }
+        }
+
+        public class ShieldBreakerAbility : IShieldBreaker
+        {
+            public string Name => "Shield Breaker";
+            public string Description => "Breaks through protection.";
+            public float BreakDamageMultiplier { get; }
+            public bool FailsIfNoProtect { get; }
+            public ShieldBreakerAbility(float damageMultiplier, bool failsIfNoProtect) { BreakDamageMultiplier = damageMultiplier; FailsIfNoProtect = failsIfNoProtect; }
+        }
+
+        public class CleanseStatusAbility : IOnHitEffect
+        {
+            public string Name => "Cleanse";
+            public string Description => "Removes negative status effects.";
+
+            public void OnHit(CombatContext ctx, int damageDealt)
+            {
+                var target = ctx.Target;
+                var negativeTypes = new[]
+                {
                 StatusEffectType.Poison,
                 StatusEffectType.Burn,
                 StatusEffectType.Frostbite,
@@ -536,364 +536,63 @@ namespace ProjectVagabond.Battle.Abilities
                 StatusEffectType.Bleeding
             };
 
-            var toRemove = target.ActiveStatusEffects
-                .Where(e => negativeTypes.Contains(e.EffectType))
-                .ToList();
+                var toRemove = target.ActiveStatusEffects
+                    .Where(e => negativeTypes.Contains(e.EffectType))
+                    .ToList();
 
-            if (toRemove.Any())
-            {
-                foreach (var effect in toRemove)
+                if (toRemove.Any())
                 {
-                    target.ActiveStatusEffects.Remove(effect);
-                    EventBus.Publish(new GameEvents.StatusEffectRemoved { Combatant = target, EffectType = effect.EffectType });
-                }
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{target.Name} was [pop][cStatus]cleansed[/][/]!" });
-                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
-            }
-            else
-            {
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "Nothing to cleanse." });
-            }
-        }
-    }
-
-    public class ManaDamageAbility : ICalculationModifier
-    {
-        public string Name => "Mana Burn";
-        public string Description => "Destroys target's mana to fuel damage.";
-        private readonly int _maxBurnAmount;
-
-        public ManaDamageAbility(int amount)
-        {
-            _maxBurnAmount = amount;
-        }
-
-        public float ModifyBasePower(float basePower, CombatContext ctx)
-        {
-            if (ctx.Target == null)
-            {
-                return _maxBurnAmount;
-            }
-
-            int currentMana = ctx.Target.Stats.CurrentMana;
-            int burnAmount = Math.Min(currentMana, _maxBurnAmount);
-
-            if (burnAmount <= 0)
-            {
-                if (!ctx.IsSimulation)
-                {
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[DriftWave]But it failed![/]" });
-                    EventBus.Publish(new GameEvents.MoveFailed { Actor = ctx.Actor });
-                }
-                return 0;
-            }
-
-            if (ctx.IsSimulation)
-            {
-                return burnAmount;
-            }
-
-            float before = ctx.Target.Stats.CurrentMana;
-            ctx.Target.Stats.CurrentMana -= burnAmount;
-
-            EventBus.Publish(new GameEvents.CombatantManaConsumed
-            {
-                Actor = ctx.Target,
-                ManaBefore = before,
-                ManaAfter = ctx.Target.Stats.CurrentMana
-            });
-
-            EventBus.Publish(new GameEvents.TerminalMessagePublished
-            {
-                Message = $"{ctx.Target.Name} lost {burnAmount} Mana!"
-            });
-
-            return burnAmount;
-        }
-    }
-
-    public class ManaDumpAbility : ICalculationModifier, IOnActionComplete
-    {
-        public string Name => "Flux Discharge";
-        public string Description => "Consumes all mana to deal damage.";
-        public float Multiplier { get; }
-
-        public ManaDumpAbility(float multiplier)
-        {
-            Multiplier = multiplier;
-        }
-
-        public float ModifyBasePower(float basePower, CombatContext ctx)
-        {
-            // Calculate power based on current mana
-            return ctx.Actor.Stats.CurrentMana * Multiplier;
-        }
-
-        public void OnActionComplete(QueuedAction action, BattleCombatant owner)
-        {
-            // Drain mana after the move is executed
-            float before = owner.Stats.CurrentMana;
-            if (before > 0)
-            {
-                owner.Stats.CurrentMana = 0;
-                EventBus.Publish(new GameEvents.CombatantManaConsumed
-                {
-                    Actor = owner,
-                    ManaBefore = before,
-                    ManaAfter = 0
-                });
-                EventBus.Publish(new GameEvents.TerminalMessagePublished
-                {
-                    Message = $"{owner.Name} discharged all mana!"
-                });
-            }
-        }
-    }
-
-    public class LifestealAbility : IOnHitEffect
-    {
-        public string Name => "Lifesteal";
-        public string Description => "Heals user for a percentage of damage dealt.";
-        private readonly float _percent;
-
-        public LifestealAbility(float percent)
-        {
-            _percent = percent;
-        }
-
-        public void OnHit(CombatContext ctx, int damageDealt)
-        {
-            if (damageDealt > 0)
-            {
-                // Accumulate lifesteal percentage instead of healing immediately
-                ctx.AccumulatedLifestealPercent += _percent;
-                // Do NOT fire AbilityActivated here, as requested.
-            }
-        }
-    }
-
-    public class ConditionalCounterAbility : IOutgoingDamageModifier
-    {
-        public string Name => "Predator's Instinct";
-        public string Description => "Fails if target is not attacking.";
-
-        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
-        {
-            // In simulation (UI/AI), assume it works to show potential damage
-            if (ctx.IsSimulation) return currentDamage;
-
-            var bm = ServiceLocator.Get<BattleManager>();
-
-            // Check the action queue for the target's action
-            var targetAction = bm.ActionQueue.FirstOrDefault(a => a.Actor == ctx.Target);
-
-            bool isAttacking = false;
-
-            if (targetAction != null)
-            {
-                if (targetAction.Type == QueuedActionType.Move && targetAction.ChosenMove != null && targetAction.ChosenMove.Power > 0)
-                {
-                    isAttacking = true;
-                }
-                else if (targetAction.Type == QueuedActionType.Item && targetAction.ChosenItem != null && targetAction.ChosenItem.Type == ConsumableType.Attack)
-                {
-                    isAttacking = true;
-                }
-            }
-
-            if (!isAttacking)
-            {
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[DriftWave]But it failed![/]" });
-                EventBus.Publish(new GameEvents.MoveFailed { Actor = ctx.Actor });
-                return 0f;
-            }
-
-            return currentDamage;
-        }
-    }
-
-    public class PercentageDamageAbility : IFixedDamageModifier
-    {
-        public string Name => "Gravity Crush";
-        public string Description => "Deals fixed percentage of current HP.";
-        private readonly float _percent;
-
-        public PercentageDamageAbility(float percent)
-        {
-            _percent = percent;
-        }
-
-        public int GetFixedDamage(CombatContext ctx)
-        {
-            if (ctx.Target == null) return 0;
-            int damage = (int)(ctx.Target.Stats.CurrentHP * (_percent / 100f));
-            return Math.Max(1, damage); // Always deal at least 1 damage
-        }
-    }
-
-    public class MultiHitAbility : IAbility
-    {
-        public string Name => "Multi-Hit";
-        public string Description => "Hits multiple times.";
-        public int MinHits { get; }
-        public int MaxHits { get; }
-
-        public MultiHitAbility(int min, int max)
-        {
-            MinHits = min;
-            MaxHits = max;
-        }
-    }
-
-    public class BreakOnUseAbility : IOnActionComplete
-    {
-        public string Name => "Fragile";
-        public string Description => "Chance to break on use.";
-        private readonly int _chance;
-
-        public BreakOnUseAbility(int chance)
-        {
-            _chance = chance;
-        }
-
-        public void OnActionComplete(QueuedAction action, BattleCombatant owner)
-        {
-            if (!owner.IsPlayerControlled) return;
-
-            var random = new Random();
-            if (random.Next(1, 101) <= _chance)
-            {
-                var gameState = ServiceLocator.Get<GameState>();
-                if (!string.IsNullOrEmpty(owner.EquippedWeaponId))
-                {
-                    string weaponId = owner.EquippedWeaponId;
-                    if (BattleDataCache.Weapons.TryGetValue(weaponId, out var weaponData))
+                    foreach (var effect in toRemove)
                     {
-                        // Remove from inventory
-                        gameState.PlayerState.RemoveWeapon(weaponId);
-
-                        // If count reached 0, unequip
-                        if (!gameState.PlayerState.Weapons.ContainsKey(weaponId))
-                        {
-                            owner.EquippedWeaponId = null;
-                        }
-
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_red]{owner.Name}'s {weaponData.WeaponName} shattered![/]" });
-                        _hapticsManager.TriggerCompoundShake(0.5f);
-                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = owner, Ability = this });
+                        target.ActiveStatusEffects.Remove(effect);
+                        EventBus.Publish(new GameEvents.StatusEffectRemoved { Combatant = target, EffectType = effect.EffectType });
                     }
-                }
-            }
-        }
-        private readonly HapticsManager _hapticsManager = ServiceLocator.Get<HapticsManager>();
-    }
-
-    public class AlwaysCritAbility : ICritModifier
-    {
-        public string Name => "Precision";
-        public string Description => "Always lands a critical hit.";
-
-        public float ModifyCritChance(float currentChance, CombatContext ctx)
-        {
-            return 1.0f; // 100% chance
-        }
-
-        public float ModifyCritDamage(float currentMultiplier, CombatContext ctx) => currentMultiplier;
-    }
-
-    public class RestoreManaOnKillAbility : IOnKill
-    {
-        public string Name => "Soul Siphon";
-        public string Description => "Restores Mana on kill.";
-        private readonly float _percent;
-
-        public RestoreManaOnKillAbility(float percent)
-        {
-            _percent = percent;
-        }
-
-        public void OnKill(CombatContext ctx)
-        {
-            int amount = (int)(ctx.Actor.Stats.MaxMana * (_percent / 100f));
-            float before = ctx.Actor.Stats.CurrentMana;
-            ctx.Actor.Stats.CurrentMana = Math.Min(ctx.Actor.Stats.MaxMana, ctx.Actor.Stats.CurrentMana + amount);
-
-            if (ctx.Actor.Stats.CurrentMana > before)
-            {
-                EventBus.Publish(new GameEvents.CombatantManaRestored
-                {
-                    Target = ctx.Actor,
-                    AmountRestored = (int)(ctx.Actor.Stats.CurrentMana - before),
-                    ManaBefore = before,
-                    ManaAfter = ctx.Actor.Stats.CurrentMana
-                });
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Actor.Name} absorbed the soul!" });
-                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
-            }
-        }
-    }
-
-    public class InspireOnHitAbility : IOnHitEffect
-    {
-        public string Name => "Inspire";
-        public string Description => "Buffs a random ally on hit.";
-        private readonly List<OffensiveStatType> _stats;
-        private readonly int _amount;
-        private static readonly Random _random = new Random();
-
-        public InspireOnHitAbility(string stat1, string stat2, int amount)
-        {
-            _stats = new List<OffensiveStatType>();
-            if (Enum.TryParse<OffensiveStatType>(stat1, true, out var s1)) _stats.Add(s1);
-            if (Enum.TryParse<OffensiveStatType>(stat2, true, out var s2)) _stats.Add(s2);
-            _amount = amount;
-        }
-
-        public void OnHit(CombatContext ctx, int damageDealt)
-        {
-            var battleManager = ServiceLocator.Get<BattleManager>();
-            var allies = battleManager.AllCombatants
-                .Where(c => c.IsPlayerControlled == ctx.Actor.IsPlayerControlled && !c.IsDefeated && c.IsActiveOnField)
-                .ToList();
-
-            if (allies.Any())
-            {
-                var target = allies[_random.Next(allies.Count)];
-                bool anySuccess = false;
-                foreach (var stat in _stats)
-                {
-                    var (success, msg) = target.ModifyStatStage(stat, _amount);
-                    if (success)
-                    {
-                        anySuccess = true;
-                        EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = target, Stat = stat, Amount = _amount });
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Actor.Name}'s song inspired {target.Name}!" });
-                    }
-                }
-                if (anySuccess)
-                {
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{target.Name} was [pop][cStatus]cleansed[/][/]!" });
                     EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
                 }
+                else
+                {
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "Nothing to cleanse." });
+                }
             }
         }
-    }
 
-    public class ManaBurnOnHitAbility : IOnHitEffect
-    {
-        public string Name => "Mana Sever";
-        public string Description => "Destroys target's mana on hit.";
-        private readonly float _percent;
-
-        public ManaBurnOnHitAbility(float percent)
+        public class ManaDamageAbility : ICalculationModifier
         {
-            _percent = percent;
-        }
+            public string Name => "Mana Burn";
+            public string Description => "Destroys target's mana to fuel damage.";
+            private readonly int _maxBurnAmount;
 
-        public void OnHit(CombatContext ctx, int damageDealt)
-        {
-            int burnAmount = (int)(ctx.Target.Stats.CurrentMana * (_percent / 100f));
-            if (burnAmount > 0)
+            public ManaDamageAbility(int amount)
             {
+                _maxBurnAmount = amount;
+            }
+
+            public float ModifyBasePower(float basePower, CombatContext ctx)
+            {
+                if (ctx.Target == null)
+                {
+                    return _maxBurnAmount;
+                }
+
+                int currentMana = ctx.Target.Stats.CurrentMana;
+                int burnAmount = Math.Min(currentMana, _maxBurnAmount);
+
+                if (burnAmount <= 0)
+                {
+                    if (!ctx.IsSimulation)
+                    {
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[DriftWave]But it failed![/]" });
+                        EventBus.Publish(new GameEvents.MoveFailed { Actor = ctx.Actor });
+                    }
+                    return 0;
+                }
+
+                if (ctx.IsSimulation)
+                {
+                    return burnAmount;
+                }
+
                 float before = ctx.Target.Stats.CurrentMana;
                 ctx.Target.Stats.CurrentMana -= burnAmount;
 
@@ -903,65 +602,362 @@ namespace ProjectVagabond.Battle.Abilities
                     ManaBefore = before,
                     ManaAfter = ctx.Target.Stats.CurrentMana
                 });
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} lost {burnAmount} Mana!" });
-                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+
+                EventBus.Publish(new GameEvents.TerminalMessagePublished
+                {
+                    Message = $"{ctx.Target.Name} lost {burnAmount} Mana!"
+                });
+
+                return burnAmount;
             }
         }
-    }
 
-    public class HydroScalingAbility : IOutgoingDamageModifier
-    {
-        public string Name => "Hydro Scaling";
-        public string Description => "Damage scales with Water spells.";
-        private readonly float _multiplierPerSpell;
-
-        public HydroScalingAbility(float multiplier)
+        public class ManaDumpAbility : ICalculationModifier, IOnActionComplete
         {
-            _multiplierPerSpell = multiplier;
+            public string Name => "Flux Discharge";
+            public string Description => "Consumes all mana to deal damage.";
+            public float Multiplier { get; }
+
+            public ManaDumpAbility(float multiplier)
+            {
+                Multiplier = multiplier;
+            }
+
+            public float ModifyBasePower(float basePower, CombatContext ctx)
+            {
+                // Calculate power based on current mana
+                return ctx.Actor.Stats.CurrentMana * Multiplier;
+            }
+
+            public void OnActionComplete(QueuedAction action, BattleCombatant owner)
+            {
+                // Drain mana after the move is executed
+                float before = owner.Stats.CurrentMana;
+                if (before > 0)
+                {
+                    owner.Stats.CurrentMana = 0;
+                    EventBus.Publish(new GameEvents.CombatantManaConsumed
+                    {
+                        Actor = owner,
+                        ManaBefore = before,
+                        ManaAfter = 0
+                    });
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished
+                    {
+                        Message = $"{owner.Name} discharged all mana!"
+                    });
+                }
+            }
         }
 
-        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
+        public class LifestealAbility : IOnHitEffect
         {
-            int waterSpellCount = 0;
-            foreach (var entry in ctx.Actor.Spells)
+            public string Name => "Lifesteal";
+            public string Description => "Heals user for a percentage of damage dealt.";
+            private readonly float _percent;
+
+            public LifestealAbility(float percent)
             {
-                if (entry != null && BattleDataCache.Moves.TryGetValue(entry.MoveID, out var move))
+                _percent = percent;
+            }
+
+            public void OnHit(CombatContext ctx, int damageDealt)
+            {
+                if (damageDealt > 0)
                 {
-                    if (move.OffensiveElementIDs.Contains(2)) // 2 is Water
+                    // Accumulate lifesteal percentage instead of healing immediately
+                    ctx.AccumulatedLifestealPercent += _percent;
+                    // Do NOT fire AbilityActivated here, as requested.
+                }
+            }
+        }
+
+        public class ConditionalCounterAbility : IOutgoingDamageModifier
+        {
+            public string Name => "Predator's Instinct";
+            public string Description => "Fails if target is not attacking.";
+
+            public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
+            {
+                // In simulation (UI/AI), assume it works to show potential damage
+                if (ctx.IsSimulation) return currentDamage;
+
+                var bm = ServiceLocator.Get<BattleManager>();
+
+                // Check the action queue for the target's action
+                var targetAction = bm.ActionQueue.FirstOrDefault(a => a.Actor == ctx.Target);
+
+                bool isAttacking = false;
+
+                if (targetAction != null)
+                {
+                    if (targetAction.Type == QueuedActionType.Move && targetAction.ChosenMove != null && targetAction.ChosenMove.Power > 0)
                     {
-                        waterSpellCount++;
+                        isAttacking = true;
+                    }
+                }
+
+                if (!isAttacking)
+                {
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[DriftWave]But it failed![/]" });
+                    EventBus.Publish(new GameEvents.MoveFailed { Actor = ctx.Actor });
+                    return 0f;
+                }
+
+                return currentDamage;
+            }
+        }
+
+        public class PercentageDamageAbility : IFixedDamageModifier
+        {
+            public string Name => "Gravity Crush";
+            public string Description => "Deals fixed percentage of current HP.";
+            private readonly float _percent;
+
+            public PercentageDamageAbility(float percent)
+            {
+                _percent = percent;
+            }
+
+            public int GetFixedDamage(CombatContext ctx)
+            {
+                if (ctx.Target == null) return 0;
+                int damage = (int)(ctx.Target.Stats.CurrentHP * (_percent / 100f));
+                return Math.Max(1, damage); // Always deal at least 1 damage
+            }
+        }
+
+        public class MultiHitAbility : IAbility
+        {
+            public string Name => "Multi-Hit";
+            public string Description => "Hits multiple times.";
+            public int MinHits { get; }
+            public int MaxHits { get; }
+
+            public MultiHitAbility(int min, int max)
+            {
+                MinHits = min;
+                MaxHits = max;
+            }
+        }
+
+        public class BreakOnUseAbility : IOnActionComplete
+        {
+            public string Name => "Fragile";
+            public string Description => "Chance to break on use.";
+            private readonly int _chance;
+
+            public BreakOnUseAbility(int chance)
+            {
+                _chance = chance;
+            }
+
+            public void OnActionComplete(QueuedAction action, BattleCombatant owner)
+            {
+                if (!owner.IsPlayerControlled) return;
+
+                var random = new Random();
+                if (random.Next(1, 101) <= _chance)
+                {
+                    var gameState = ServiceLocator.Get<GameState>();
+                    if (!string.IsNullOrEmpty(owner.EquippedWeaponId))
+                    {
+                        string weaponId = owner.EquippedWeaponId;
+                        if (BattleDataCache.Weapons.TryGetValue(weaponId, out var weaponData))
+                        {
+                            // Remove from inventory
+                            gameState.PlayerState.RemoveWeapon(weaponId);
+
+                            // If count reached 0, unequip
+                            if (!gameState.PlayerState.Weapons.ContainsKey(weaponId))
+                            {
+                                owner.EquippedWeaponId = null;
+                            }
+
+                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_red]{owner.Name}'s {weaponData.WeaponName} shattered![/]" });
+                            _hapticsManager.TriggerCompoundShake(0.5f);
+                            EventBus.Publish(new GameEvents.AbilityActivated { Combatant = owner, Ability = this });
+                        }
                     }
                 }
             }
-
-            if (waterSpellCount > 0)
-            {
-                float bonus = (_multiplierPerSpell - 1.0f) * waterSpellCount;
-                return currentDamage * (1.0f + bonus);
-            }
-            return currentDamage;
-        }
-    }
-
-    public class BlightArcaneMasteryAbility : IOutgoingDamageModifier
-    {
-        public string Name => "Cultist Mastery";
-        public string Description => "Boosts Blight and Arcane damage.";
-        private readonly float _multiplier;
-
-        public BlightArcaneMasteryAbility(float multiplier)
-        {
-            _multiplier = multiplier;
+            private readonly HapticsManager _hapticsManager = ServiceLocator.Get<HapticsManager>();
         }
 
-        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
+        public class AlwaysCritAbility : ICritModifier
         {
-            if (ctx.MoveHasElement(6) || ctx.MoveHasElement(4)) // 6=Blight, 4=Arcane
+            public string Name => "Precision";
+            public string Description => "Always lands a critical hit.";
+
+            public float ModifyCritChance(float currentChance, CombatContext ctx)
             {
-                return currentDamage * _multiplier;
+                return 1.0f; // 100% chance
             }
-            return currentDamage;
+
+            public float ModifyCritDamage(float currentMultiplier, CombatContext ctx) => currentMultiplier;
+        }
+
+        public class RestoreManaOnKillAbility : IOnKill
+        {
+            public string Name => "Soul Siphon";
+            public string Description => "Restores Mana on kill.";
+            private readonly float _percent;
+
+            public RestoreManaOnKillAbility(float percent)
+            {
+                _percent = percent;
+            }
+
+            public void OnKill(CombatContext ctx)
+            {
+                int amount = (int)(ctx.Actor.Stats.MaxMana * (_percent / 100f));
+                float before = ctx.Actor.Stats.CurrentMana;
+                ctx.Actor.Stats.CurrentMana = Math.Min(ctx.Actor.Stats.MaxMana, ctx.Actor.Stats.CurrentMana + amount);
+
+                if (ctx.Actor.Stats.CurrentMana > before)
+                {
+                    EventBus.Publish(new GameEvents.CombatantManaRestored
+                    {
+                        Target = ctx.Actor,
+                        AmountRestored = (int)(ctx.Actor.Stats.CurrentMana - before),
+                        ManaBefore = before,
+                        ManaAfter = ctx.Actor.Stats.CurrentMana
+                    });
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Actor.Name} absorbed the soul!" });
+                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                }
+            }
+        }
+
+        public class InspireOnHitAbility : IOnHitEffect
+        {
+            public string Name => "Inspire";
+            public string Description => "Buffs a random ally on hit.";
+            private readonly List<OffensiveStatType> _stats;
+            private readonly int _amount;
+            private static readonly Random _random = new Random();
+
+            public InspireOnHitAbility(string stat1, string stat2, int amount)
+            {
+                _stats = new List<OffensiveStatType>();
+                if (Enum.TryParse<OffensiveStatType>(stat1, true, out var s1)) _stats.Add(s1);
+                if (Enum.TryParse<OffensiveStatType>(stat2, true, out var s2)) _stats.Add(s2);
+                _amount = amount;
+            }
+
+            public void OnHit(CombatContext ctx, int damageDealt)
+            {
+                var battleManager = ServiceLocator.Get<BattleManager>();
+                var allies = battleManager.AllCombatants
+                    .Where(c => c.IsPlayerControlled == ctx.Actor.IsPlayerControlled && !c.IsDefeated && c.IsActiveOnField)
+                    .ToList();
+
+                if (allies.Any())
+                {
+                    var target = allies[_random.Next(allies.Count)];
+                    bool anySuccess = false;
+                    foreach (var stat in _stats)
+                    {
+                        var (success, msg) = target.ModifyStatStage(stat, _amount);
+                        if (success)
+                        {
+                            anySuccess = true;
+                            EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = target, Stat = stat, Amount = _amount });
+                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Actor.Name}'s song inspired {target.Name}!" });
+                        }
+                    }
+                    if (anySuccess)
+                    {
+                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                    }
+                }
+            }
+        }
+
+        public class ManaBurnOnHitAbility : IOnHitEffect
+        {
+            public string Name => "Mana Sever";
+            public string Description => "Destroys target's mana on hit.";
+            private readonly float _percent;
+
+            public ManaBurnOnHitAbility(float percent)
+            {
+                _percent = percent;
+            }
+
+            public void OnHit(CombatContext ctx, int damageDealt)
+            {
+                int burnAmount = (int)(ctx.Target.Stats.CurrentMana * (_percent / 100f));
+                if (burnAmount > 0)
+                {
+                    float before = ctx.Target.Stats.CurrentMana;
+                    ctx.Target.Stats.CurrentMana -= burnAmount;
+
+                    EventBus.Publish(new GameEvents.CombatantManaConsumed
+                    {
+                        Actor = ctx.Target,
+                        ManaBefore = before,
+                        ManaAfter = ctx.Target.Stats.CurrentMana
+                    });
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} lost {burnAmount} Mana!" });
+                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                }
+            }
+        }
+
+        public class HydroScalingAbility : IOutgoingDamageModifier
+        {
+            public string Name => "Hydro Scaling";
+            public string Description => "Damage scales with Water spells.";
+            private readonly float _multiplierPerSpell;
+
+            public HydroScalingAbility(float multiplier)
+            {
+                _multiplierPerSpell = multiplier;
+            }
+
+            public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
+            {
+                int waterSpellCount = 0;
+                foreach (var entry in ctx.Actor.Spells)
+                {
+                    if (entry != null && BattleDataCache.Moves.TryGetValue(entry.MoveID, out var move))
+                    {
+                        if (move.OffensiveElementIDs.Contains(2)) // 2 is Water
+                        {
+                            waterSpellCount++;
+                        }
+                    }
+                }
+
+                if (waterSpellCount > 0)
+                {
+                    float bonus = (_multiplierPerSpell - 1.0f) * waterSpellCount;
+                    return currentDamage * (1.0f + bonus);
+                }
+                return currentDamage;
+            }
+        }
+
+        public class BlightArcaneMasteryAbility : IOutgoingDamageModifier
+        {
+            public string Name => "Cultist Mastery";
+            public string Description => "Boosts Blight and Arcane damage.";
+            private readonly float _multiplier;
+
+            public BlightArcaneMasteryAbility(float multiplier)
+            {
+                _multiplier = multiplier;
+            }
+
+            public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
+            {
+                if (ctx.MoveHasElement(6) || ctx.MoveHasElement(4)) // 6=Blight, 4=Arcane
+                {
+                    return currentDamage * _multiplier;
+                }
+                return currentDamage;
+            }
         }
     }
 }
-﻿

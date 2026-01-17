@@ -17,6 +17,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -67,7 +68,6 @@ namespace ProjectVagabond
         {
             public BattleCombatant Actor { get; set; }
             public MoveData? Move { get; set; }
-            public ConsumableItemData? Item { get; set; }
             public BattleCombatant? Target { get; set; }
             public QueuedActionType Type { get; set; }
         }
@@ -79,7 +79,6 @@ namespace ProjectVagabond
         {
             public BattleCombatant Actor { get; set; }
             public MoveData ChosenMove { get; set; }
-            public ConsumableItemData UsedItem { get; set; }
             public List<BattleCombatant> Targets { get; set; }
             public List<DamageCalculator.DamageResult> DamageResults { get; set; }
         }
@@ -239,4 +238,3 @@ namespace ProjectVagabond
         }
     }
 }
-﻿
