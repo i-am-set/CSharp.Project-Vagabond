@@ -1,15 +1,26 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Dice;
+using ProjectVagabond.Progression;
+using ProjectVagabond.Transitions;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace ProjectVagabond.UI
 {
     public class PlayerMapIcon
     {
         private Texture2D? _texture;
+        private Texture2D? _silhouette;
         private Vector2 _origin;
         private bool _isMoving = false;
+        private readonly Global _global;
 
         // --- Tuning ---
         private const float IDLE_FRAME_DURATION = 1.0f;   // Slow bob when standing still
@@ -23,7 +34,7 @@ namespace ProjectVagabond.UI
 
         public PlayerMapIcon()
         {
-            // Constructor is now empty to avoid accessing assets before they are loaded.
+            _global = ServiceLocator.Get<Global>();
         }
 
         private void InitializeTexture()
@@ -31,7 +42,10 @@ namespace ProjectVagabond.UI
             // Lazy initialization: Get the texture only when it's first needed for drawing.
             if (_texture == null)
             {
-                _texture = ServiceLocator.Get<SpriteManager>().MapNodePlayerSprite;
+                var spriteManager = ServiceLocator.Get<SpriteManager>();
+                _texture = spriteManager.MapNodePlayerSprite;
+                _silhouette = spriteManager.MapNodePlayerSpriteSilhouette; // Get the silhouette
+
                 if (_texture != null)
                 {
                     // The origin is the center of a single 32x32 frame.
@@ -72,7 +86,18 @@ namespace ProjectVagabond.UI
 
             // Calculate the source rectangle for the current animation frame.
             var sourceRectangle = new Rectangle(_frameIndex * 32, 0, 32, 32);
+            Color outlineColor = _global.Palette_Black;
 
+            // Draw Outline (4 directions) using the SILHOUETTE
+            if (_silhouette != null)
+            {
+                spriteBatch.DrawSnapped(_silhouette, Position + new Vector2(-1, 0), sourceRectangle, outlineColor, 0f, _origin, 1f, SpriteEffects.None, 0.5f);
+                spriteBatch.DrawSnapped(_silhouette, Position + new Vector2(1, 0), sourceRectangle, outlineColor, 0f, _origin, 1f, SpriteEffects.None, 0.5f);
+                spriteBatch.DrawSnapped(_silhouette, Position + new Vector2(0, -1), sourceRectangle, outlineColor, 0f, _origin, 1f, SpriteEffects.None, 0.5f);
+                spriteBatch.DrawSnapped(_silhouette, Position + new Vector2(0, 1), sourceRectangle, outlineColor, 0f, _origin, 1f, SpriteEffects.None, 0.5f);
+            }
+
+            // Draw Main Sprite
             spriteBatch.DrawSnapped(_texture, Position, sourceRectangle, Color.White, 0f, _origin, 1f, SpriteEffects.None, 0.5f);
         }
     }

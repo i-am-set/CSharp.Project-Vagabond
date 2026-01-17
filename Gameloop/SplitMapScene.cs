@@ -1766,7 +1766,9 @@ namespace ProjectVagabond.Scenes
 
         private void DrawNode(SpriteBatch spriteBatch, SplitMapNode node, GameTime gameTime)
         {
-            var (texture, sourceRect, origin) = GetNodeDrawData(node, gameTime);
+            // --- UPDATED: Get silhouette ---
+            var (texture, silhouette, sourceRect, origin) = GetNodeDrawData(node, gameTime);
+
             var bounds = node.GetBounds();
             var color = _global.SplitMapNodeColor;
             float scale = 1.0f;
@@ -1886,38 +1888,59 @@ namespace ProjectVagabond.Scenes
 
             var position = bounds.Center.ToVector2() + node.VisualOffset + new Vector2(0, floatOffset) + arrivalShake + selectionShake;
 
+            Color outlineColor = _global.Palette_Black;
+
+            // --- NEW: Draw Outline using Silhouette ---
+            if (silhouette != null)
+            {
+                spriteBatch.DrawSnapped(silhouette, position + new Vector2(-1, 0), sourceRect, outlineColor, rotation, origin, finalScale, SpriteEffects.None, 0.4f);
+                spriteBatch.DrawSnapped(silhouette, position + new Vector2(1, 0), sourceRect, outlineColor, rotation, origin, finalScale, SpriteEffects.None, 0.4f);
+                spriteBatch.DrawSnapped(silhouette, position + new Vector2(0, -1), sourceRect, outlineColor, rotation, origin, finalScale, SpriteEffects.None, 0.4f);
+                spriteBatch.DrawSnapped(silhouette, position + new Vector2(0, 1), sourceRect, outlineColor, rotation, origin, finalScale, SpriteEffects.None, 0.4f);
+            }
+
             spriteBatch.DrawSnapped(texture, position, sourceRect, color, rotation, origin, finalScale, SpriteEffects.None, 0.4f);
         }
 
-        private (Texture2D texture, Rectangle? sourceRect, Vector2 origin) GetNodeDrawData(SplitMapNode node, GameTime gameTime)
+        private (Texture2D texture, Texture2D? silhouette, Rectangle? sourceRect, Vector2 origin) GetNodeDrawData(SplitMapNode node, GameTime gameTime)
         {
             Texture2D texture;
+            Texture2D? silhouette;
 
             switch (node.NodeType)
             {
                 case SplitNodeType.Origin:
                     texture = _spriteManager.SplitNodeStart;
+                    silhouette = _spriteManager.SplitNodeStartSilhouette;
                     break;
                 case SplitNodeType.Battle:
                     texture = _spriteManager.SplitNodeCombat;
+                    silhouette = _spriteManager.SplitNodeCombatSilhouette;
                     break;
                 case SplitNodeType.Narrative:
                     texture = _spriteManager.SplitNodeNarrative;
+                    silhouette = _spriteManager.SplitNodeNarrativeSilhouette;
                     break;
                 case SplitNodeType.MajorBattle:
-                    texture = _spriteManager.SplitNodeCombat;
+                    texture = _spriteManager.SplitNodeCombat; 
+                    
+                    silhouette = _spriteManager.SplitNodeCombatSilhouette;
                     break;
                 case SplitNodeType.Recruit:
                     texture = _spriteManager.SplitNodeRecruit;
+                    silhouette = _spriteManager.SplitNodeRecruitSilhouette;
                     break;
                 case SplitNodeType.Rest:
                     texture = _spriteManager.SplitNodeRest;
+                    silhouette = _spriteManager.SplitNodeRestSilhouette;
                     break;
                 case SplitNodeType.Shop:
                     texture = _spriteManager.SplitNodeShop;
+                    silhouette = _spriteManager.SplitNodeShopSilhouette;
                     break;
                 default:
                     texture = _spriteManager.SplitNodeCombat;
+                    silhouette = _spriteManager.SplitNodeCombatSilhouette;
                     break;
             }
 
@@ -1930,7 +1953,7 @@ namespace ProjectVagabond.Scenes
 
             var sourceRect = new Rectangle(frameIndex * 32, 0, 32, 32);
             var origin = new Vector2(16, 16);
-            return (texture, sourceRect, origin);
+            return (texture, silhouette, sourceRect, origin);
         }
 
         private void OpenSettings()

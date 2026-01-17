@@ -143,14 +143,21 @@ namespace ProjectVagabond
         public Texture2D BattlePlayerFloorSprite { get; private set; }
         public Texture2D HealParticleSprite { get; private set; }
 
-        // Split Map Node Sprites
+        // Split Map Node Sprites & Silhouettes
         public Texture2D SplitNodeStart { get; private set; }
+        public Texture2D SplitNodeStartSilhouette { get; private set; }
         public Texture2D SplitNodeNarrative { get; private set; }
+        public Texture2D SplitNodeNarrativeSilhouette { get; private set; }
         public Texture2D SplitNodeCombat { get; private set; }
+        public Texture2D SplitNodeCombatSilhouette { get; private set; }
         public Texture2D SplitNodeRecruit { get; private set; }
+        public Texture2D SplitNodeRecruitSilhouette { get; private set; }
         public Texture2D SplitNodeRest { get; private set; }
+        public Texture2D SplitNodeRestSilhouette { get; private set; }
         public Texture2D SplitNodeShop { get; private set; }
+        public Texture2D SplitNodeShopSilhouette { get; private set; }
         public Texture2D MapNodePlayerSprite { get; private set; }
+        public Texture2D MapNodePlayerSpriteSilhouette { get; private set; }
 
         public Texture2D SplitMapInventoryButton { get; private set; }
         public Texture2D SplitMapHeaderBorder { get; private set; }
@@ -357,21 +364,34 @@ namespace ProjectVagabond
             try { SpellbookClosedSprite = _core.Content.Load<Texture2D>("Sprites/SpellBook/spellbook_closed"); }
             catch { SpellbookClosedSprite = _textureFactory.CreateColoredTexture(64, 64, Color.Magenta); }
 
-            // Load Split Map Node Sprites
+            // Load Split Map Node Sprites & Generate Silhouettes
             try { SplitNodeStart = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_Start"); }
             catch { SplitNodeStart = _textureFactory.CreateColoredTexture(64, 32, Color.Green); }
+            SplitNodeStartSilhouette = CreateSilhouette(SplitNodeStart);
+
             try { SplitNodeNarrative = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_Event"); }
             catch { SplitNodeNarrative = _textureFactory.CreateColoredTexture(64, 32, Color.Blue); }
+            SplitNodeNarrativeSilhouette = CreateSilhouette(SplitNodeNarrative);
+
             try { SplitNodeCombat = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_Combat"); }
             catch { SplitNodeCombat = _textureFactory.CreateColoredTexture(64, 32, Color.Red); }
+            SplitNodeCombatSilhouette = CreateSilhouette(SplitNodeCombat);
+
             try { SplitNodeRecruit = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_Recuit"); }
             catch { SplitNodeRecruit = _textureFactory.CreateColoredTexture(64, 32, Color.Cyan); }
+            SplitNodeRecruitSilhouette = CreateSilhouette(SplitNodeRecruit);
+
             try { SplitNodeRest = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_Rest"); }
             catch { SplitNodeRest = _textureFactory.CreateColoredTexture(64, 32, Color.Green); }
+            SplitNodeRestSilhouette = CreateSilhouette(SplitNodeRest);
+
             try { SplitNodeShop = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_Shop"); }
             catch { SplitNodeShop = _textureFactory.CreateColoredTexture(64, 32, Color.Gold); }
+            SplitNodeShopSilhouette = CreateSilhouette(SplitNodeShop);
+
             try { MapNodePlayerSprite = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_Player"); }
             catch { MapNodePlayerSprite = _textureFactory.CreateColoredTexture(64, 32, Color.Cyan); }
+            MapNodePlayerSpriteSilhouette = CreateSilhouette(MapNodePlayerSprite);
 
             try { SplitMapInventoryButton = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/SplitMap_Inventory_Button"); }
             catch { SplitMapInventoryButton = _textureFactory.CreateColoredTexture(32, 16, Color.Magenta); }
