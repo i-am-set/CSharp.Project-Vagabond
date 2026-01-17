@@ -220,7 +220,7 @@ namespace ProjectVagabond.UI
                 typeText = "RELIC";
             }
 
-            spriteBatch.DrawStringSnapped(tertiaryFont, typeText, new Vector2(bounds.X + 4, bounds.Y + 2), _global.Palette_DarkGray * opacity);
+            spriteBatch.DrawStringSnapped(tertiaryFont, typeText, new Vector2(bounds.X + 4, bounds.Y + 2), _global.Palette_DarkShadow * opacity);
 
             // --- Continue with specific drawing ---
 
@@ -302,7 +302,7 @@ namespace ProjectVagabond.UI
             float flavorHeight = 0f;
             if (!string.IsNullOrEmpty(flavor))
             {
-                var lines = ParseAndWrapRichText(tertiaryFont, flavor.ToUpper(), width, _global.Palette_DarkGray, 3);
+                var lines = ParseAndWrapRichText(tertiaryFont, flavor.ToUpper(), width, _global.Palette_DarkShadow, 3);
                 flavorHeight = (lines.Count * tertiaryFont.LineHeight) + ((lines.Count - 1) * lineSpacing);
                 flavorHeight += 2;
             }
@@ -362,9 +362,6 @@ namespace ProjectVagabond.UI
             Vector2 animOffset = GetJuicyOffset(gameTime);
             Vector2 animatedDrawPos = staticDrawPos + animOffset;
 
-            // Draw Inventory Slot Background behind the item (Static Position)
-            DrawInventorySlotBackground(spriteBatch, staticDrawPos, gameTime, opacity);
-
             // Draw Item (Animated Position)
             DrawIconWithSilhouette(spriteBatch, iconTexture, iconSilhouette, animatedDrawPos, iconOrigin, displayScale, opacity: opacity);
 
@@ -390,7 +387,7 @@ namespace ProjectVagabond.UI
             {
                 float yOffset = (secondaryFont.LineHeight - tertiaryFont.LineHeight) / 2f;
                 yOffset = MathF.Round(yOffset);
-                spriteBatch.DrawStringSnapped(tertiaryFont, label, new Vector2(labelX, y + yOffset), _global.Palette_Gray * opacity);
+                spriteBatch.DrawStringSnapped(tertiaryFont, label, new Vector2(labelX, y + yOffset), _global.Palette_DarkShadow * opacity);
                 spriteBatch.DrawStringSnapped(secondaryFont, value, new Vector2(valueX, y), valColor * opacity);
             }
 
@@ -409,7 +406,7 @@ namespace ProjectVagabond.UI
             string offStatVal = GetStatString(weapon.OffensiveStat);
             Color offColor = GetStatColor(weapon.OffensiveStat);
             string impactVal = weapon.ImpactType.ToString().ToUpper().Substring(0, Math.Min(4, weapon.ImpactType.ToString().Length));
-            Color impactColor = weapon.ImpactType == ImpactType.Magical ? _global.Palette_Blue : (weapon.ImpactType == ImpactType.Physical ? _global.Palette_Orange : _global.Palette_Gray);
+            Color impactColor = weapon.ImpactType == ImpactType.Magical ? _global.Palette_Blue : (weapon.ImpactType == ImpactType.Physical ? _global.Palette_Orange : _global.Palette_DarkShadow);
 
             DrawStatPair("USE", offStatVal, leftLabelX, leftValueX, currentY, offColor);
             DrawStatPair("TYP", impactVal, rightLabelX, rightValueX, currentY, impactColor);
@@ -446,9 +443,6 @@ namespace ProjectVagabond.UI
             Vector2 iconOrigin = new Vector2(8, 8);
             Vector2 animOffset = GetJuicyOffset(gameTime);
             Vector2 animatedDrawPos = staticDrawPos + animOffset;
-
-            // NEW: Draw Inventory Slot Background behind the item (Static Position)
-            DrawInventorySlotBackground(spriteBatch, staticDrawPos, gameTime, opacity);
 
             // Draw Item (Animated Position)
             DrawIconWithSilhouette(spriteBatch, iconTexture, iconSilhouette, animatedDrawPos, iconOrigin, 1.0f, opacity: opacity);
@@ -503,9 +497,6 @@ namespace ProjectVagabond.UI
             Vector2 iconOrigin = new Vector2(16, 16);
             Vector2 staticDrawPos = new Vector2(spriteX + 16, spriteY + 16);
 
-            // NEW: Draw Inventory Slot Background behind the item (Static Position)
-            DrawInventorySlotBackground(spriteBatch, staticDrawPos, gameTime, opacity);
-
             // Draw Item (Static Position for Spells)
             DrawIconWithSilhouette(spriteBatch, iconTexture, iconSilhouette, staticDrawPos, iconOrigin, 1.0f, sourceRect, iconTint, opacity);
 
@@ -529,7 +520,7 @@ namespace ProjectVagabond.UI
             {
                 float yOffset = (secondaryFont.LineHeight - tertiaryFont.LineHeight) / 2f;
                 yOffset = MathF.Round(yOffset);
-                spriteBatch.DrawStringSnapped(tertiaryFont, label, new Vector2(labelX, y + yOffset), _global.Palette_Gray * opacity);
+                spriteBatch.DrawStringSnapped(tertiaryFont, label, new Vector2(labelX, y + yOffset), _global.Palette_DarkShadow * opacity);
                 spriteBatch.DrawStringSnapped(secondaryFont, value, new Vector2(valueX, y), valColor * opacity);
             }
 
@@ -550,7 +541,7 @@ namespace ProjectVagabond.UI
             string offStatVal = GetStatString(move.OffensiveStat);
             Color offColor = GetStatColor(move.OffensiveStat);
             string impactVal = move.ImpactType.ToString().ToUpper().Substring(0, Math.Min(4, move.ImpactType.ToString().Length));
-            Color impactColor = move.ImpactType == ImpactType.Magical ? _global.Palette_Blue : (move.ImpactType == ImpactType.Physical ? _global.Palette_Orange : _global.Palette_Gray);
+            Color impactColor = move.ImpactType == ImpactType.Magical ? _global.Palette_Blue : (move.ImpactType == ImpactType.Physical ? _global.Palette_Orange : _global.Palette_DarkShadow);
 
             DrawStatPair("USE", offStatVal, leftLabelX, leftValueX, currentY, offColor);
             DrawStatPair("TYP", impactVal, rightLabelX, rightValueX, currentY, impactColor);
@@ -570,23 +561,6 @@ namespace ProjectVagabond.UI
         }
 
         // --- Helpers ---
-
-        private void DrawInventorySlotBackground(SpriteBatch spriteBatch, Vector2 centerPos, GameTime gameTime, float opacity)
-        {
-            var sheet = _spriteManager.InventorySlotIdleSpriteSheet;
-            var frames = _spriteManager.InventorySlotSourceRects;
-
-            if (sheet != null && frames != null && frames.Length > 0)
-            {
-                // Simulate random idle behavior using time
-                // Change frame every 2 seconds
-                int frameIndex = (int)(gameTime.TotalGameTime.TotalSeconds / 2.0) % frames.Length;
-                var sourceRect = frames[frameIndex];
-                var origin = new Vector2(sourceRect.Width / 2f, sourceRect.Height / 2f);
-
-                spriteBatch.DrawSnapped(sheet, centerPos, sourceRect, Color.White * opacity, 0f, origin, 1.0f, SpriteEffects.None, 0f);
-            }
-        }
 
         private void DrawIconWithSilhouette(SpriteBatch spriteBatch, Texture2D? texture, Texture2D? silhouette, Vector2 pos, Vector2 origin, float scale, Rectangle? sourceRect = null, Color? tint = null, float opacity = 1.0f)
         {
@@ -616,7 +590,7 @@ namespace ProjectVagabond.UI
         {
             float yOffset = (secondaryFont.LineHeight - tertiaryFont.LineHeight) / 2f;
             yOffset = MathF.Round(yOffset);
-            spriteBatch.DrawStringSnapped(tertiaryFont, label, new Vector2(labelX, y + yOffset), _global.Palette_Gray * opacity);
+            spriteBatch.DrawStringSnapped(tertiaryFont, label, new Vector2(labelX, y + yOffset), _global.Palette_DarkShadow * opacity);
 
             int val = 0;
             if (stats.TryGetValue(key, out int v)) val = v;
@@ -626,7 +600,7 @@ namespace ProjectVagabond.UI
             if (val == 0)
             {
                 text = "+0";
-                c = _global.Palette_Gray;
+                c = _global.Palette_DarkShadow;
             }
             else
             {
@@ -646,7 +620,7 @@ namespace ProjectVagabond.UI
             const int lineSpacing = 1;
 
             float width = infoPanelArea.Width - (padding * 2);
-            var lines = ParseAndWrapRichText(tertiaryFont, flavorText.ToUpper(), width, _global.Palette_DarkGray, spaceWidth);
+            var lines = ParseAndWrapRichText(tertiaryFont, flavorText.ToUpper(), width, _global.Palette_DarkShadow, spaceWidth);
 
             if (lines.Count == 0) return 0f;
 

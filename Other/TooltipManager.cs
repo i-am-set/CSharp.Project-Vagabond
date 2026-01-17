@@ -146,7 +146,7 @@ namespace ProjectVagabond
             if (!string.IsNullOrEmpty(_description))
             {
                 Vector2 descPosition = new Vector2(tooltipBg.X + (paddingX / 2), textPosition.Y + textSize.Y + lineGap);
-                spriteBatch.DrawStringSnapped(tertiaryFont, _description, descPosition, _global.Palette_Gray);
+                spriteBatch.DrawStringSnapped(tertiaryFont, _description, descPosition, _global.Palette_DarkShadow);
             }
         }
     }

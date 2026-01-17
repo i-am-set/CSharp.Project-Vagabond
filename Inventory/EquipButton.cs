@@ -139,7 +139,7 @@ namespace ProjectVagabond.UI
                 else
                 {
                     // Use custom color if set (e.g. for submenu striping), otherwise default to Gray
-                    titleColor = CustomTitleTextColor ?? _global.Palette_Gray;
+                    titleColor = CustomTitleTextColor ?? _global.Palette_DarkShadow;
                     spriteBatch.DrawStringSnapped(defaultFont, TitleText, titlePos, titleColor);
                 }
             }

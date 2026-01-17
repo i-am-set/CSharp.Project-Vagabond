@@ -233,7 +233,7 @@ namespace ProjectVagabond.Scenes
 
             var resetButton = new Button(new Rectangle(0, 0, 125, 12), "RESTORE DEFAULTS")
             {
-                CustomDefaultTextColor = _global.Palette_Yellow,
+                CustomDefaultTextColor = _global.HighlightTextColor,
                 TextRenderOffset = new Vector2(0, 1)
             };
             resetButton.OnClick += () => { _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength); ConfirmResetSettings(); };
@@ -371,7 +371,7 @@ namespace ProjectVagabond.Scenes
 
         private void ConfirmResetSettings()
         {
-            _confirmationDialog.Show("Reset all settings to default?\n\nThis cannot be undone.", new List<Tuple<string, Action>> { Tuple.Create("YES", new Action(() => { _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength); ; ExecuteResetSettings(); _confirmationDialog.Hide(); })), Tuple.Create("[gray]NO", new Action(() => { _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength); _confirmationDialog.Hide(); })) });
+            _confirmationDialog.Show("Reset all settings to default?\n\nThis cannot be undone.", new List<Tuple<string, Action>> { Tuple.Create("YES", new Action(() => { _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength); ; ExecuteResetSettings(); _confirmationDialog.Hide(); })), Tuple.Create("[chighlight]NO", new Action(() => { _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength); _confirmationDialog.Hide(); })) });
         }
 
         private void ExecuteResetSettings()
@@ -408,7 +408,7 @@ namespace ProjectVagabond.Scenes
                     new List<Tuple<string, Action>> {
                         Tuple.Create("APPLY", new Action(() => { _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength); ApplySettings(); _sceneManager.HideModal(); })),
                         Tuple.Create("DISCARD", new Action(() => { _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength); RevertChanges(); _sceneManager.HideModal(); })),
-                        Tuple.Create("[gray]CANCEL", new Action(() => { _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength); _confirmationDialog.Hide(); }))
+                        Tuple.Create("[chighlight]CANCEL", new Action(() => { _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength); _confirmationDialog.Hide(); }))
                     }
                 );
             }

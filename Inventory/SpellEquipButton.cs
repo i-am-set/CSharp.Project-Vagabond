@@ -67,7 +67,7 @@ namespace ProjectVagabond.UI
                 string textToDraw = SpellName.ToUpper();
                 Color textColor = _global.Palette_Sun;
 
-                if (!IsEnabled) textColor = _global.Palette_DarkGray;
+                if (!IsEnabled) textColor = _global.Palette_DarkShadow;
                 else if (isActivated) textColor = _global.ButtonHoverColor;
 
                 // Apply flash tint to text color if active
@@ -94,7 +94,7 @@ namespace ProjectVagabond.UI
                 else
                 {
                     // Outline when normal
-                    spriteBatch.DrawStringSquareOutlinedSnapped(tertiaryFont, textToDraw, textPos, textColor, _global.Palette_DarkerGray);
+                    spriteBatch.DrawStringSquareOutlinedSnapped(tertiaryFont, textToDraw, textPos, textColor, _global.Palette_DarkShadow);
                 }
             }
         }

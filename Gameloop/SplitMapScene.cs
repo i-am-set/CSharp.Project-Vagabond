@@ -1548,7 +1548,7 @@ namespace ProjectVagabond.Scenes
 
             if (_global.ShowSplitMapGrid)
             {
-                Color gridColor = _global.Palette_DarkGray * 0.5f;
+                Color gridColor = _global.Palette_DarkShadow * 0.5f;
                 const int gridSize = Global.SPLIT_MAP_GRID_SIZE;
 
                 Matrix.Invert(ref cameraTransform, out var inverseCameraTransform);

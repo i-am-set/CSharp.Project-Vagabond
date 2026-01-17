@@ -107,12 +107,12 @@ namespace ProjectVagabond.UI
                 if (i % 2 == 0)
                 {
                     btn.CustomDefaultTextColor = _overlay.Global.Palette_Sun;
-                    btn.CustomTitleTextColor = _overlay.Global.Palette_DarkGray;
+                    btn.CustomTitleTextColor = _overlay.Global.Palette_DarkShadow;
                 }
                 else
                 {
                     btn.CustomDefaultTextColor = _overlay.Global.Palette_White;
-                    btn.CustomTitleTextColor = _overlay.Global.Palette_DarkerGray;
+                    btn.CustomTitleTextColor = _overlay.Global.Palette_DarkShadow;
                 }
 
                 if (virtualIndex == 0)

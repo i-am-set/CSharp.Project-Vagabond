@@ -7,6 +7,7 @@ using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
 using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
@@ -27,12 +28,6 @@ namespace ProjectVagabond.UI
         private readonly InventoryDataProcessor _dataProcessor;
         private readonly InventoryEquipSystem _equipSystem;
         private readonly ItemTooltipRenderer _tooltipRenderer;
-
-        // Fields for portrait background animation
-        private int _portraitBgFrameIndex = 0;
-        private float _portraitBgTimer;
-        private float _portraitBgDuration;
-        private static readonly Random _rng = new Random();
 
         // --- ANIMATION TUNING (Character Panel Slots) ---
         private const float EQUIP_SLOT_FLOAT_SPEED = 2.5f;
@@ -60,31 +55,6 @@ namespace ProjectVagabond.UI
             if (!_overlay.IsOpen) return;
             var inventoryPosition = new Vector2(0, 200);
             var headerPosition = inventoryPosition + _overlay.InventoryPositionOffset;
-
-            // --- PASS 1: Draw Info Panel Background (Idle Slot) BEFORE Borders ---
-            if (_overlay.SelectedInventoryCategory != InventoryCategory.Equip)
-            {
-                const int statsPanelWidth = 116;
-                const int statsPanelHeight = 132;
-                int statsPanelX = _overlay.InventorySlotArea.Right + 4;
-                int statsPanelY = _overlay.InventorySlotArea.Y - 1;
-                var infoPanelArea = new Rectangle(statsPanelX, statsPanelY, statsPanelWidth, statsPanelHeight);
-
-                DrawInfoPanelBackground(spriteBatch, gameTime, infoPanelArea);
-            }
-            else if (_overlay.SelectedInventoryCategory == InventoryCategory.Equip && _overlay.HoveredItemData != null)
-            {
-                const int statsPanelWidth = 116;
-                const int statsPanelHeight = 132;
-                int statsPanelY = _overlay.InventorySlotArea.Y - 1;
-                int statsPanelX = _overlay.InventorySlotArea.Right + 4;
-
-                if (_overlay.HoveredMemberIndex == 0 || _overlay.HoveredMemberIndex == 1) statsPanelX = 194 - 24;
-                else if (_overlay.HoveredMemberIndex == 2 || _overlay.HoveredMemberIndex == 3) statsPanelX = 10 + 24;
-
-                var infoPanelArea = new Rectangle(statsPanelX, statsPanelY, statsPanelWidth, statsPanelHeight);
-                DrawInfoPanelBackground(spriteBatch, gameTime, infoPanelArea);
-            }
 
             spriteBatch.DrawSnapped(_overlay.SpriteManager.InventoryBorderHeader, headerPosition, Color.White);
 
@@ -121,7 +91,7 @@ namespace ProjectVagabond.UI
                     infoPanelArea.X + (infoPanelArea.Width - titleSize.X) / 2f,
                     infoPanelArea.Y + 5 + _overlay.InventoryPositionOffset.Y
                 );
-                spriteBatch.DrawStringSnapped(font, categoryTitle, titlePos, _overlay.Global.Palette_DarkGray);
+                spriteBatch.DrawStringSnapped(font, categoryTitle, titlePos, _overlay.Global.Palette_DarkShadow);
             }
 
             if (_overlay.SelectedInventoryCategory != InventoryCategory.Equip)
@@ -298,28 +268,6 @@ namespace ProjectVagabond.UI
             _overlay.InventoryEquipButton?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
         }
 
-        private void DrawInfoPanelBackground(SpriteBatch spriteBatch, GameTime gameTime, Rectangle infoPanelArea)
-        {
-            var slotFrames = _overlay.SpriteManager.InventorySlotSourceRects;
-            Rectangle idleFrame = Rectangle.Empty;
-            Vector2 idleOrigin = Vector2.Zero;
-            if (slotFrames != null && slotFrames.Length > 0)
-            {
-                int frameIndex = (int)(gameTime.TotalGameTime.TotalSeconds / 2.0) % slotFrames.Length;
-                idleFrame = slotFrames[frameIndex];
-                idleOrigin = new Vector2(idleFrame.Width / 2f, idleFrame.Height / 2f);
-            }
-
-            if (idleFrame != Rectangle.Empty)
-            {
-                float spriteYOffset = 6f;
-                int idleSpriteX = infoPanelArea.X + (infoPanelArea.Width - 24) / 2;
-                float spriteY = infoPanelArea.Y + spriteYOffset;
-                Vector2 itemCenter = new Vector2(idleSpriteX + 12, spriteY + 12);
-                spriteBatch.DrawSnapped(_overlay.SpriteManager.InventorySlotIdleSpriteSheet, itemCenter, idleFrame, Color.White, 0f, idleOrigin, 1.0f, SpriteEffects.None, 0f);
-            }
-        }
-
         public void DrawScreen(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             _overlay.InventoryButton?.Draw(spriteBatch, font, gameTime, transform);
@@ -329,17 +277,6 @@ namespace ProjectVagabond.UI
         {
             var pixel = ServiceLocator.Get<Texture2D>();
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
-            _portraitBgTimer += dt;
-            if (_portraitBgTimer >= _portraitBgDuration)
-            {
-                _portraitBgTimer = 0f;
-                _portraitBgDuration = (float)(_rng.NextDouble() * (8.0 - 2.0) + 2.0);
-                var frames = _overlay.SpriteManager.InventorySlotLargeSourceRects;
-                if (frames != null && frames.Length > 0) _portraitBgFrameIndex = _rng.Next(frames.Length);
-            }
-
-            int baseFrameIndex = _portraitBgFrameIndex;
-            var slotFrames = _overlay.SpriteManager.InventorySlotSourceRects;
 
             for (int i = 0; i < 4; i++)
             {
@@ -366,14 +303,6 @@ namespace ProjectVagabond.UI
                 }
 
                 currentY += (int)nameSize.Y - 2;
-
-                if (_overlay.SpriteManager.InventorySlotLargeSourceRects != null && _overlay.SpriteManager.InventorySlotLargeSourceRects.Length > 0)
-                {
-                    var largeFrame = _overlay.SpriteManager.InventorySlotLargeSourceRects[_portraitBgFrameIndex];
-                    Vector2 bgPos = new Vector2(centerX, currentY + 16);
-                    Vector2 origin = new Vector2(largeFrame.Width / 2f, largeFrame.Height / 2f);
-                    spriteBatch.DrawSnapped(_overlay.SpriteManager.InventorySlotIdleLargeSpriteSheet, bgPos, largeFrame, Color.White, 0f, origin, 1.0f, SpriteEffects.None, 0f);
-                }
 
                 if (isOccupied && _overlay.SpriteManager.PlayerPortraitsSpriteSheet != null && _overlay.SpriteManager.PlayerPortraitSourceRects.Count > 0)
                 {
@@ -456,28 +385,14 @@ namespace ProjectVagabond.UI
                 int totalEquipWidth = (slotSize * 2) + (gap * 1);
                 int equipStartX = centerX - (totalEquipWidth / 2);
 
-                Rectangle weaponFrame = Rectangle.Empty;
-                Rectangle relicFrame = Rectangle.Empty;
-
-                if (slotFrames != null && slotFrames.Length > 0)
-                {
-                    weaponFrame = slotFrames[(baseFrameIndex + 1) % slotFrames.Length];
-                    relicFrame = slotFrames[(baseFrameIndex + 2) % slotFrames.Length];
-                }
-
                 if (isOccupied)
                 {
                     int baseBtnIndex = i * 2; // 2 buttons per member
                     bool weaponHover = _overlay.PartyEquipButtons[baseBtnIndex].IsHovered;
                     bool relicHover = _overlay.PartyEquipButtons[baseBtnIndex + 1].IsHovered;
 
-                    DrawEquipSlotIcon(spriteBatch, equipStartX, currentY, member!.EquippedWeaponId, EquipSlotType.Weapon, weaponHover, weaponFrame, i, gameTime);
-                    DrawEquipSlotIcon(spriteBatch, equipStartX + slotSize + gap, currentY, member.EquippedRelicId, EquipSlotType.Relic, relicHover, relicFrame, i, gameTime);
-                }
-                else
-                {
-                    DrawEquipSlotBackground(spriteBatch, equipStartX, currentY, weaponFrame);
-                    DrawEquipSlotBackground(spriteBatch, equipStartX + slotSize + gap, currentY, relicFrame);
+                    DrawEquipSlotIcon(spriteBatch, equipStartX, currentY, member!.EquippedWeaponId, EquipSlotType.Weapon, weaponHover, i, gameTime);
+                    DrawEquipSlotIcon(spriteBatch, equipStartX + slotSize + gap, currentY, member.EquippedRelicId, EquipSlotType.Relic, relicHover, i, gameTime);
                 }
 
                 currentY += slotSize + 6 - 5;
@@ -687,25 +602,12 @@ namespace ProjectVagabond.UI
             return bonus;
         }
 
-        private void DrawEquipSlotBackground(SpriteBatch spriteBatch, int x, int y, Rectangle bgFrame)
-        {
-            if (bgFrame == Rectangle.Empty) return;
-            Vector2 centerPos = new Vector2(x + 8, y + 8);
-            Vector2 origin = new Vector2(12, 12);
-            spriteBatch.DrawSnapped(_overlay.SpriteManager.InventorySlotIdleSpriteSheet, centerPos, bgFrame, Color.White, 0f, origin, 1.0f, SpriteEffects.None, 0f);
-        }
-
-        private void DrawEquipSlotIcon(SpriteBatch spriteBatch, int x, int y, string? itemId, EquipSlotType type, bool isHovered, Rectangle bgFrame, int memberIndex, GameTime gameTime)
+        private void DrawEquipSlotIcon(SpriteBatch spriteBatch, int x, int y, string? itemId, EquipSlotType type, bool isHovered, int memberIndex, GameTime gameTime)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
             var destRect = new Rectangle(x, y, 16, 16);
             Vector2 centerPos = new Vector2(x + 8, y + 8);
             Vector2 origin = new Vector2(12, 12);
-
-            if (bgFrame != Rectangle.Empty)
-            {
-                spriteBatch.DrawSnapped(_overlay.SpriteManager.InventorySlotIdleSpriteSheet, centerPos, bgFrame, Color.White, 0f, origin, 1.0f, SpriteEffects.None, 0f);
-            }
 
             bool isSelected = _overlay.CurrentState == InventoryState.EquipItemSelection && _overlay.CurrentPartyMemberIndex == memberIndex && _overlay.EquipSystem.ActiveEquipSlotType == type;
 
@@ -804,7 +706,7 @@ namespace ProjectVagabond.UI
             }
             else if (_overlay.SpriteManager.InventoryEmptySlotSprite != null)
             {
-                Color emptyColor = (isSelected || isHovered) ? _overlay.Global.Palette_LightGray : _overlay.Global.Palette_DarkGray;
+                Color emptyColor = (isSelected || isHovered) ? _overlay.Global.Palette_Shadow : _overlay.Global.Palette_DarkShadow;
                 spriteBatch.DrawSnapped(_overlay.SpriteManager.InventoryEmptySlotSprite, destRect, emptyColor);
             }
         }

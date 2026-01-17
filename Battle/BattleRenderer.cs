@@ -1275,7 +1275,7 @@ namespace ProjectVagabond.Battle.UI
 
                         // --- NAME DIMMING LOGIC ---
                         bool isHovered = (hoveredCombatant == player) || (uiManager.HoveredCombatantFromUI == player);
-                        if (isHovered) nameColor = _global.Palette_DarkGray;
+                        if (isHovered) nameColor = _global.Palette_DarkShadow;
 
                         spriteBatch.DrawStringSnapped(font, player.Name, namePos, nameColor);
                     }
@@ -1309,8 +1309,7 @@ namespace ProjectVagabond.Battle.UI
                 var size = font.MeasureString(title);
                 var pos = new Vector2((Global.VIRTUAL_WIDTH - size.Width) / 2, BattleLayout.DIVIDER_Y + 3);
 
-                // Use Bounce effect
-                TextAnimator.DrawTextWithEffect(spriteBatch, font, title, pos, _global.Palette_LightGray, TextEffectType.Bounce, (float)gameTime.TotalGameTime.TotalSeconds);
+                TextAnimator.DrawTextWithEffect(spriteBatch, font, title, pos, _global.Palette_Shadow, TextEffectType.Bounce, (float)gameTime.TotalGameTime.TotalSeconds);
             }
         }
 

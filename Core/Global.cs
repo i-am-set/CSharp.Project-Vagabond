@@ -13,6 +13,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 
 namespace ProjectVagabond
 {
@@ -26,6 +27,8 @@ namespace ProjectVagabond
             TerminalBg = Palette_Black;
             MapBg = Palette_Black;
             GameTextColor = Palette_Sun;
+            HighlightTextColor = Palette_Fruit;
+            DullTextColor = Palette_Shadow;
             ButtonHoverColor = Palette_Rust;
             ButtonDisableColor = Palette_DarkShadow;
             SplitMapNodeColor = Palette_Sun;
@@ -71,8 +74,9 @@ namespace ProjectVagabond
             ItemOutlineColor_Selected_Corner = Palette_DarkShadow;
 
             // Initialize Narration Colors
-            ColorNarration_Default = Palette_Sun;
-            ColorNarration_Prefix = Palette_DarkSun;
+            ColorNarration_Default = GameTextColor;
+            ColorNarration_Highlight = HighlightTextColor;
+            ColorNarration_Prefix = DullTextColor;
             ColorNarration_Action = Palette_Orange;
             ColorNarration_Spell = Palette_Blue;
             ColorNarration_Item = Palette_Green;
@@ -81,6 +85,8 @@ namespace ProjectVagabond
             ColorNarration_Escaped = Palette_Blue;
             ColorNarration_Enemy = Palette_Red;
             ColorNarration_Status = Palette_Purple;
+            ColorNarration_Health = Color.Lime;
+            ColorNarration_RestModifier = Color.Magenta;
 
             // Initialize Combat Indicator Colors
             DamageIndicatorColor = Color.Crimson;
@@ -289,6 +295,8 @@ namespace ProjectVagabond
         public Color TerminalBg { get; private set; }
         public Color MapBg { get; private set; }
         public Color GameTextColor { get; private set; }
+        public Color HighlightTextColor { get; private set; }
+        public Color DullTextColor { get; private set; }
         public Color ButtonHoverColor { get; private set; }
         public Color ButtonDisableColor { get; private set; }
         public Color SplitMapNodeColor { get; private set; }
@@ -337,6 +345,8 @@ namespace ProjectVagabond
 
         // Narration Colors
         public Color ColorNarration_Default { get; private set; }
+        public Color ColorNarration_Highlight { get; private set; }
+        public Color ColorNarration_Dull { get; private set; }
         public Color ColorNarration_Prefix { get; private set; }
         public Color ColorNarration_Action { get; private set; }
         public Color ColorNarration_Spell { get; private set; }
@@ -346,6 +356,8 @@ namespace ProjectVagabond
         public Color ColorNarration_Escaped { get; private set; }
         public Color ColorNarration_Enemy { get; private set; }
         public Color ColorNarration_Status { get; private set; }
+        public Color ColorNarration_Health { get; private set; }
+        public Color ColorNarration_RestModifier { get; private set; }
 
         // Combat Indicator Colors
         public Color DamageIndicatorColor { get; set; }
@@ -487,6 +499,8 @@ namespace ProjectVagabond
 
                 // Narration Specific
                 if (lowerTag == "cdefault") return ColorNarration_Default;
+                if (lowerTag == "chighlight") return ColorNarration_Highlight;
+                if (lowerTag == "cdull") return ColorNarration_Dull;
                 if (lowerTag == "cprefix") return ColorNarration_Prefix;
                 if (lowerTag == "caction") return ColorNarration_Action;
                 if (lowerTag == "cspell") return ColorNarration_Spell;
@@ -497,6 +511,8 @@ namespace ProjectVagabond
                 if (lowerTag == "cstatus") return ColorNarration_Status;
                 if (lowerTag == "cslot") return ColorNarration_Default;
                 if (lowerTag == "cgraze") return GrazeIndicatorColor;
+                if (lowerTag == "chealth") return ColorNarration_Health;
+                if (lowerTag == "cmodifier") return ColorNarration_RestModifier;
 
                 if (lowerTag == "cred") return Palette_Red;
                 if (lowerTag == "cyellow") return Palette_Yellow;

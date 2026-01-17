@@ -29,12 +29,6 @@ namespace ProjectVagabond.UI
         public bool IsAnimated { get; private set; } = false;
         public bool IsEquipped { get; private set; }
 
-        private Rectangle _currentIdleFrame;
-        private readonly Rectangle[] _idleFrames;
-        private float _frameChangeTimer;
-        private float _nextFrameChangeTime;
-        private static readonly Random _random = new Random();
-
         // Animation State
         private bool _isPoppingIn;
         private float _popDelay;
@@ -42,14 +36,8 @@ namespace ProjectVagabond.UI
         private const float POP_DURATION = 0.2f; // Snappier duration
         private float _visualScale = 1f;
 
-        // Tuning
-        private const float MIN_FRAME_CHANGE_SECONDS = 2.0f;
-        private const float MAX_FRAME_CHANGE_SECONDS = 8.0f;
-
-        public InventorySlot(Rectangle bounds, Rectangle[] idleFrames) : base(bounds, "")
+        public InventorySlot(Rectangle bounds) : base(bounds, "")
         {
-            _idleFrames = idleFrames;
-            RandomizeFrame();
         }
 
         public void AssignItem(string itemId, int quantity, string? iconPath, Color? iconTint = null, bool isAnimated = false, string? fallbackIconPath = null, bool isEquipped = false)
@@ -91,13 +79,6 @@ namespace ProjectVagabond.UI
             // Pass the transform to the base Button.Update so hit detection works in camera space
             base.Update(mouseState, transform);
 
-            // Idle animation logic
-            _frameChangeTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-            if (_frameChangeTimer >= _nextFrameChangeTime)
-            {
-                RandomizeFrame();
-            }
-
             // Pop-in animation logic
             if (_isPoppingIn)
             {
@@ -123,12 +104,7 @@ namespace ProjectVagabond.UI
 
         public void RandomizeFrame()
         {
-            if (_idleFrames != null && _idleFrames.Length > 0)
-            {
-                _currentIdleFrame = _idleFrames[_random.Next(_idleFrames.Length)];
-            }
-            _frameChangeTimer = 0f;
-            _nextFrameChangeTime = (float)(_random.NextDouble() * (MAX_FRAME_CHANGE_SECONDS - MIN_FRAME_CHANGE_SECONDS) + MIN_FRAME_CHANGE_SECONDS);
+            // No-op
         }
 
         public override void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform, bool forceHover = false, float? horizontalOffset = null, float? verticalOffset = null, Color? tintColorOverride = null)
@@ -141,10 +117,7 @@ namespace ProjectVagabond.UI
             Vector2 center = new Vector2(Bounds.Center.X, Bounds.Center.Y);
             Vector2 origin = new Vector2(Bounds.Width / 2f, Bounds.Height / 2f);
 
-            // 1. Always draw the idle animation frame as the base (Static scale 1f)
-            spriteBatch.DrawSnapped(spriteManager.InventorySlotIdleSpriteSheet, center, _currentIdleFrame, Color.White, 0f, origin, 1f, SpriteEffects.None, 0f);
-
-            // 2. Draw overlay if selected or hovered (Static scale 1f)
+            // 1. Draw overlay if selected or hovered (Static scale 1f)
             if (IsSelected || IsPressed)
             {
                 spriteBatch.DrawSnapped(spriteManager.InventorySlotSelectedSprite, center, null, Color.White, 0f, origin, 1f, SpriteEffects.None, 0f);

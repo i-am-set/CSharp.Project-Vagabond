@@ -653,7 +653,7 @@ namespace ProjectVagabond
                 {
                     string versionText = $"v{Global.GAME_VERSION}";
                     var screenHeight = GraphicsDevice.PresentationParameters.BackBufferHeight;
-                    _spriteBatch.DrawStringSnapped(_defaultFont, versionText, new Vector2(5f, screenHeight - _defaultFont.LineHeight - 5f), _global.Palette_DarkGray);
+                    _spriteBatch.DrawStringSnapped(_defaultFont, versionText, new Vector2(5f, screenHeight - _defaultFont.LineHeight - 5f), _global.Palette_DarkShadow);
                 }
                 _spriteBatch.End();
             }

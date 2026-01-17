@@ -204,7 +204,7 @@ namespace ProjectVagabond.UI
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
 
             spriteBatch.Draw(pixel, _dialogBounds, _global.GameBg);
-            DrawRectangleBorder(spriteBatch, pixel, _dialogBounds, 1, _global.Palette_LightGray);
+            DrawRectangleBorder(spriteBatch, pixel, _dialogBounds, 1, _global.Palette_DarkShadow);
 
             float currentY = _dialogBounds.Y + 20;
 
@@ -220,7 +220,7 @@ namespace ProjectVagabond.UI
             {
                 currentY += 10;
                 var dividerRect = new Rectangle(_dialogBounds.X + 20, (int)currentY, _dialogBounds.Width - 40, 1);
-                spriteBatch.Draw(pixel, dividerRect, _global.Palette_Gray);
+                spriteBatch.Draw(pixel, dividerRect, _global.Palette_DarkShadow);
                 currentY += 10;
 
                 foreach (var detail in _details)
@@ -274,8 +274,8 @@ namespace ProjectVagabond.UI
                     case "red": color = _global.Palette_Red; break;
                     case "green": color = _global.Palette_Green; break;
                     case "yellow": color = _global.Palette_Yellow; break;
-                    case "gray": color = _global.Palette_LightGray; break;
-                    case "grey": color = _global.Palette_LightGray; break;
+                    case "chighlight": color = _global.ColorNarration_Highlight; break;
+                    case "cdull": color = _global.ColorNarration_Dull; break;
                     default: return (taggedText, null);
                 }
                 return (text, color);

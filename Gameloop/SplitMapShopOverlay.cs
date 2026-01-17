@@ -11,6 +11,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text.RegularExpressions;
+using static ProjectVagabond.Battle.Abilities.InflictStatusStunAbility;
 
 namespace ProjectVagabond.UI
 {
@@ -33,12 +35,6 @@ namespace ProjectVagabond.UI
         private const float WORLD_Y_OFFSET = 600f; // Below Settings
         private const int BUTTON_HEIGHT = 15;
 
-        // Background Animation State
-        private float _bgTimer;
-        private float _bgDuration;
-        private int _bgFrameIndex;
-        private static readonly Random _rng = new Random();
-
         public SplitMapShopOverlay()
         {
             _core = ServiceLocator.Get<Core>();
@@ -54,9 +50,6 @@ namespace ProjectVagabond.UI
                 UseScreenCoordinates = true
             };
             _leaveButton.OnClick += () => OnLeaveRequested?.Invoke();
-
-            // Initialize random background timer
-            _bgDuration = (float)(_rng.NextDouble() * (8.0 - 2.0) + 2.0);
         }
 
         public void Show(List<ShopItem> premiumStock)
@@ -190,17 +183,6 @@ namespace ProjectVagabond.UI
         {
             if (!IsOpen) return;
 
-            // Update Background Animation
-            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
-            _bgTimer += dt;
-            if (_bgTimer >= _bgDuration)
-            {
-                _bgTimer = 0f;
-                _bgDuration = (float)(_rng.NextDouble() * (8.0 - 2.0) + 2.0);
-                var frames = _spriteManager.InventorySlotSourceRects;
-                if (frames != null && frames.Length > 0) _bgFrameIndex = _rng.Next(frames.Length);
-            }
-
             // Transform mouse to world space
             var virtualMousePos = Core.TransformMouse(mouseState.Position);
             var mouseInWorldSpace = Vector2.Transform(virtualMousePos, Matrix.Invert(cameraTransform));
@@ -241,22 +223,6 @@ namespace ProjectVagabond.UI
             float coinX = (Global.VIRTUAL_WIDTH - coinSize.X) / 2f;
             float coinY = _leaveButton.Bounds.Top - coinSize.Y - 4;
             spriteBatch.DrawStringSnapped(secondaryFont, coinText, new Vector2(coinX, coinY), _global.Palette_Yellow);
-
-            // --- Draw Background Slots (Shadows) ---
-            var slotFrames = _spriteManager.InventorySlotSourceRects;
-            if (slotFrames != null && slotFrames.Length > 0)
-            {
-                var currentFrame = slotFrames[_bgFrameIndex];
-                Vector2 origin = new Vector2(currentFrame.Width / 2f, currentFrame.Height / 2f);
-
-                foreach (var btn in _itemButtons)
-                {
-                    // Button is 32x32. Background is 24x24.
-                    // Center the background on the button center.
-                    Vector2 center = new Vector2(btn.Bounds.Center.X, btn.Bounds.Center.Y);
-                    spriteBatch.DrawSnapped(_spriteManager.InventorySlotIdleSpriteSheet, center, currentFrame, Color.White, 0f, origin, 1.0f, SpriteEffects.None, 0f);
-                }
-            }
 
             // Buttons
             foreach (var btn in _itemButtons) btn.Draw(spriteBatch, secondaryFont, gameTime, Matrix.Identity);

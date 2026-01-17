@@ -199,8 +199,8 @@ namespace ProjectVagabond.Scenes
                 "Are you sure you want to exit?",
                 new List<Tuple<string, Action>>
                 {
-                    Tuple.Create("[gray]YES", new Action(() => { _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength); ServiceLocator.Get<Core>().ExitApplication(); })),
-                    Tuple.Create("NO", new Action(() => { _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength); _confirmationDialog.Hide(); }))
+                    Tuple.Create("YES", new Action(() => { _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength); ServiceLocator.Get<Core>().ExitApplication(); })),
+                    Tuple.Create("[chighlight]NO", new Action(() => { _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength); _confirmationDialog.Hide(); }))
                 }
             );
         }

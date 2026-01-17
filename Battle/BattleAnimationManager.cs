@@ -1186,7 +1186,7 @@ namespace ProjectVagabond.Battle.UI
                         }
                         break;
                     case DeathAnimationState.Phase.FlashGray:
-                        combatant.VisualSilhouetteColorOverride = ServiceLocator.Get<Global>().Palette_DarkGray;
+                        combatant.VisualSilhouetteColorOverride = ServiceLocator.Get<Global>().Palette_DarkShadow;
                         if (anim.Timer >= DeathAnimationState.FLASH_DURATION)
                         {
                             anim.Timer = 0f;

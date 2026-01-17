@@ -179,31 +179,27 @@ namespace ProjectVagabond.UI
             float spaceBetweenX = (slotColumns > 1) ? (availableWidth - slotSize) / (slotColumns - 1) : 0;
             float spaceBetweenY = (slotRows > 1) ? (availableHeight - slotSize) / (slotRows - 1) : 0;
 
-            var slotFrames = _overlay.SpriteManager.InventorySlotSourceRects;
-            if (slotFrames != null && slotFrames.Length > 0)
+            for (int row = 0; row < slotRows; row++)
             {
-                for (int row = 0; row < slotRows; row++)
+                for (int col = 0; col < slotColumns; col++)
                 {
-                    for (int col = 0; col < slotColumns; col++)
+                    float nodeX = _overlay.InventorySlotArea.X + gridPaddingX + (slotSize / 2f) + (col * spaceBetweenX);
+                    float nodeY = _overlay.InventorySlotArea.Y + gridPaddingY + (slotSize / 2f) + (row * spaceBetweenY);
+
+                    var position = new Vector2(MathF.Round(nodeX), MathF.Round(nodeY));
+                    var bounds = new Rectangle((int)(position.X - slotSize / 2f), (int)(position.Y - slotSize / 2f), slotSize, slotSize);
+
+                    var slot = new InventorySlot(bounds);
+                    slot.OnClick += () =>
                     {
-                        float nodeX = _overlay.InventorySlotArea.X + gridPaddingX + (slotSize / 2f) + (col * spaceBetweenX);
-                        float nodeY = _overlay.InventorySlotArea.Y + gridPaddingY + (slotSize / 2f) + (row * spaceBetweenY);
-
-                        var position = new Vector2(MathF.Round(nodeX), MathF.Round(nodeY));
-                        var bounds = new Rectangle((int)(position.X - slotSize / 2f), (int)(position.Y - slotSize / 2f), slotSize, slotSize);
-
-                        var slot = new InventorySlot(bounds, slotFrames);
-                        slot.OnClick += () =>
+                        if (slot.HasItem)
                         {
-                            if (slot.HasItem)
-                            {
-                                foreach (var s in _overlay.InventorySlots) s.IsSelected = false;
-                                slot.IsSelected = true;
-                                _overlay.SelectedSlotIndex = _overlay.InventorySlots.IndexOf(slot);
-                            }
-                        };
-                        _overlay.InventorySlots.Add(slot);
-                    }
+                            foreach (var s in _overlay.InventorySlots) s.IsSelected = false;
+                            slot.IsSelected = true;
+                            _overlay.SelectedSlotIndex = _overlay.InventorySlots.IndexOf(slot);
+                        }
+                    };
+                    _overlay.InventorySlots.Add(slot);
                 }
             }
 
@@ -355,7 +351,6 @@ namespace ProjectVagabond.UI
                 }
             }
 
-            var slotFrames = _overlay.SpriteManager.InventorySlotSourceRects;
             if (_overlay.SelectedInventoryCategory != _overlay.PreviousInventoryCategory)
             {
                 _overlay.InventoryArrowAnimTimer = 0f;
@@ -369,10 +364,7 @@ namespace ProjectVagabond.UI
                     _overlay.HapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
                 }
 
-                if (slotFrames != null)
-                {
-                    foreach (var slot in _overlay.InventorySlots) slot.RandomizeFrame();
-                }
+                foreach (var slot in _overlay.InventorySlots) slot.RandomizeFrame();
             }
             _overlay.PreviousInventoryCategory = _overlay.SelectedInventoryCategory;
 

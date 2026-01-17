@@ -17,6 +17,8 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
+using static ProjectVagabond.Battle.Abilities.InflictStatusStunAbility;
 
 namespace ProjectVagabond.UI
 {
@@ -116,10 +118,6 @@ namespace ProjectVagabond.UI
         private readonly Color SLEEP_PARTICLE_COLOR;
         private readonly Color SLEEP_PARTICLE_OUTLINE_COLOR;
 
-        // Animation
-        private int _portraitBgFrameIndex = 0;
-        private float _portraitBgTimer;
-        private float _portraitBgDuration;
         private static readonly Random _rng = new Random();
 
         // Animation State for Health Bars
@@ -179,7 +177,7 @@ namespace ProjectVagabond.UI
             COLOR_DESC_TRAIN_GUARDED = Color.Magenta;
             COLOR_DESC_SEARCH_NORMAL = _global.Palette_Blue;
             COLOR_DESC_SEARCH_GUARDED = Color.Aqua;
-            COLOR_DESC_GUARD = _global.Palette_DarkGray;
+            COLOR_DESC_GUARD = _global.Palette_Shadow;
 
             // Initialize Sleep Particle Colors
             SLEEP_PARTICLE_COLOR = _global.Palette_Sun;
@@ -206,8 +204,8 @@ namespace ProjectVagabond.UI
             // Skip button uses Tertiary font
             _skipButton = new Button(Rectangle.Empty, "SKIP", font: _core.TertiaryFont)
             {
-                CustomDefaultTextColor = _global.Palette_LightGray,
-                CustomHoverTextColor = _global.Palette_Red,
+                CustomDefaultTextColor = _global.Palette_DarkShadow,
+                CustomHoverTextColor = _global.ButtonHoverColor,
                 UseScreenCoordinates = true
             };
             // Skip still requires confirmation
@@ -319,7 +317,7 @@ namespace ProjectVagabond.UI
                     text,
                     font: _core.SecondaryFont,
                     customToggledTextColor: _global.Palette_Yellow,
-                    customDefaultTextColor: _global.Palette_Gray
+                    customDefaultTextColor: _global.Palette_Shadow
                 )
                 {
                     UseScreenCoordinates = true,
@@ -421,7 +419,7 @@ namespace ProjectVagabond.UI
                     _sequenceQueue.Enqueue(new RestSequenceStep
                     {
                         MemberIndex = idx,
-                        Message = $"{member.Name} stood guard while the party rested.\n[palette_gray]+MODIFIER[/]",
+                        Message = $"{member.Name} stood guard while the party rested.\n[cmodifier]+MODIFIER[/]",
                         Effect = () => { _targetHP[idx] = member.CurrentHP; } // No HP change
                     });
                 }
@@ -456,7 +454,7 @@ namespace ProjectVagabond.UI
                             string msg;
                             if (guardActive) msg = $"THANKS TO {guardName}, {member.Name} RECOVERED WELL!\n";
                             else msg = $"{member.Name} RESTED.\n";
-                            msg += $"[Palette_Green]+{percentDisplay}% HP[/]";
+                            msg += $"[chealth]+{percentDisplay}% HP[/]";
 
                             _sequenceQueue.Enqueue(new RestSequenceStep
                             {
@@ -544,13 +542,13 @@ namespace ProjectVagabond.UI
                                 }
                                 else
                                 {
-                                    msg += "[gray]Found nothing (Empty DB).[/]";
+                                    msg += "[cdull]Found nothing (Empty DB).[/]";
                                     effectAction = () => { _targetHP[idx] = member.CurrentHP; };
                                 }
                             }
                             else
                             {
-                                msg += "[gray]Found nothing.[/]";
+                                msg += "[cdull]Found nothing.[/]";
                                 effectAction = () => { _targetHP[idx] = member.CurrentHP; };
                             }
 
@@ -711,15 +709,6 @@ namespace ProjectVagabond.UI
             {
                 _narrator.Update(gameTime);
                 return;
-            }
-
-            _portraitBgTimer += dt;
-            if (_portraitBgTimer >= _portraitBgDuration)
-            {
-                _portraitBgTimer = 0f;
-                _portraitBgDuration = (float)(_rng.NextDouble() * (8.0 - 2.0) + 2.0);
-                var frames = _spriteManager.InventorySlotLargeSourceRects;
-                if (frames != null && frames.Length > 0) _portraitBgFrameIndex = _rng.Next(frames.Length);
             }
 
             // Transform mouse to world space
@@ -889,7 +878,7 @@ namespace ProjectVagabond.UI
 
                 // 1. Name (Calculated here, drawn later to be on top)
                 string name = isOccupied ? member!.Name.ToUpper() : "EMPTY";
-                Color nameColor = isOccupied ? _global.Palette_Sun : _global.Palette_DarkGray;
+                Color nameColor = isOccupied ? _global.Palette_Sun : _global.Palette_DarkShadow;
 
                 var nameSize = defaultFont.MeasureString(name);
                 Vector2 namePos = new Vector2(centerX - nameSize.Width / 2, currentY);
@@ -897,16 +886,7 @@ namespace ProjectVagabond.UI
                 // Advance Y for background drawing
                 currentY += (int)nameSize.Height - 2;
 
-                // 2. Portrait Background
-                if (_spriteManager.InventorySlotLargeSourceRects != null && _spriteManager.InventorySlotLargeSourceRects.Length > 0)
-                {
-                    var largeFrame = _spriteManager.InventorySlotLargeSourceRects[_portraitBgFrameIndex];
-                    Vector2 bgPos = new Vector2(centerX, currentY + 16);
-                    Vector2 origin = new Vector2(largeFrame.Width / 2f, largeFrame.Height / 2f);
-                    spriteBatch.DrawSnapped(_spriteManager.InventorySlotIdleLargeSpriteSheet, bgPos, largeFrame, Color.White, 0f, origin, 1.0f, SpriteEffects.None, 0f);
-                }
-
-                // 3. Portrait
+                // 2. Portrait
                 if (isOccupied && _spriteManager.PlayerPortraitsSpriteSheet != null && _spriteManager.PlayerPortraitSourceRects.Count > 0)
                 {
                     int portraitIndex = Math.Clamp(member!.PortraitIndex, 0, _spriteManager.PlayerPortraitSourceRects.Count - 1);
@@ -941,7 +921,7 @@ namespace ProjectVagabond.UI
 
                 currentY += 32 + 2 - 6;
 
-                // 4. Health Bar
+                // 3. Health Bar
                 if (_spriteManager.InventoryPlayerHealthBarEmpty != null)
                 {
                     int barX = centerX - (_spriteManager.InventoryPlayerHealthBarEmpty.Width / 2);
@@ -1006,9 +986,9 @@ namespace ProjectVagabond.UI
                     float hpTextX = centerX - ((valSize.Width + suffixSize.Width) / 2f);
                     float hpTextY = currentY + 7;
 
-                    Color hpValColor = isOccupied ? _global.Palette_Sun : _global.Palette_DarkGray;
+                    Color hpValColor = isOccupied ? _global.Palette_Sun : _global.Palette_DarkShadow;
                     spriteBatch.DrawStringSnapped(secondaryFont, hpValText, new Vector2(hpTextX, hpTextY), hpValColor);
-                    spriteBatch.DrawStringSnapped(secondaryFont, hpSuffix, new Vector2(hpTextX + valSize.Width, hpTextY), _global.Palette_Gray);
+                    spriteBatch.DrawStringSnapped(secondaryFont, hpSuffix, new Vector2(hpTextX + valSize.Width, hpTextY), _global.Palette_Shadow);
 
                     // --- NEW: Draw Action Description ---
                     if (isOccupied && _selectedActions.TryGetValue(i, out var descAction))

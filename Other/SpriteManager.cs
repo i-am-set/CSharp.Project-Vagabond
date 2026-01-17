@@ -91,8 +91,6 @@ namespace ProjectVagabond
         public Rectangle[] SplitMapCloseInventoryButtonSourceRects { get; private set; }
         public Rectangle[] SplitMapSettingsButtonSourceRects { get; private set; }
         public Rectangle[] InventoryHeaderButtonSourceRects { get; private set; }
-        public Rectangle[] InventorySlotSourceRects { get; private set; }
-        public Rectangle[] InventorySlotLargeSourceRects { get; private set; }
         public Rectangle[] InventoryLeftArrowButtonSourceRects { get; private set; }
         public Rectangle[] InventoryRightArrowButtonSourceRects { get; private set; }
         public Rectangle[] InventoryScrollArrowRects { get; private set; }
@@ -142,7 +140,7 @@ namespace ProjectVagabond
         public Texture2D PlayerHeartSpriteSheetSilhouette { get; private set; }
         public Texture2D ShadowBlobSprite { get; private set; }
         public Texture2D BattleEnemyFloorSprite { get; private set; }
-        public Texture2D BattlePlayerFloorSprite { get; private set; } // NEW
+        public Texture2D BattlePlayerFloorSprite { get; private set; }
         public Texture2D HealParticleSprite { get; private set; }
 
         // Split Map Node Sprites
@@ -152,7 +150,7 @@ namespace ProjectVagabond
         public Texture2D SplitNodeRecruit { get; private set; }
         public Texture2D SplitNodeRest { get; private set; }
         public Texture2D SplitNodeShop { get; private set; }
-        public Texture2D MapNodePlayerSprite { get; private set; } // Renamed from CombatNodePlayerSprite
+        public Texture2D MapNodePlayerSprite { get; private set; }
 
         public Texture2D SplitMapInventoryButton { get; private set; }
         public Texture2D SplitMapHeaderBorder { get; private set; }
@@ -168,8 +166,6 @@ namespace ProjectVagabond
         public Texture2D InventoryHeaderButtonWeapons { get; private set; }
         public Texture2D InventoryHeaderButtonRelics { get; private set; }
         public Texture2D InventoryHeaderButtonEquip { get; private set; }
-        public Texture2D InventorySlotIdleSpriteSheet { get; private set; }
-        public Texture2D InventorySlotIdleLargeSpriteSheet { get; private set; }
         public Texture2D InventorySlotHoverSprite { get; private set; }
         public Texture2D InventorySlotSelectedSprite { get; private set; }
         public Texture2D InventoryLeftArrowButton { get; private set; }
@@ -406,10 +402,6 @@ namespace ProjectVagabond
             catch { InventoryHeaderButtonRelics = _textureFactory.CreateColoredTexture(96, 32, Color.Magenta); }
             try { InventoryHeaderButtonEquip = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_header_button_equip"); }
             catch { InventoryHeaderButtonEquip = _textureFactory.CreateColoredTexture(96, 32, Color.Magenta); }
-            try { InventorySlotIdleSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_slot_idle"); }
-            catch { InventorySlotIdleSpriteSheet = _textureFactory.CreateColoredTexture(48, 48, Color.Magenta); }
-            try { InventorySlotIdleLargeSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_slot_idle_48x48"); }
-            catch { InventorySlotIdleLargeSpriteSheet = _textureFactory.CreateColoredTexture(96, 96, Color.Magenta); }
             try { InventorySlotHoverSprite = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_slot_hover"); }
             catch { InventorySlotHoverSprite = _textureFactory.CreateColoredTexture(48, 48, Color.Magenta); }
             try { InventorySlotSelectedSprite = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_slot_selected"); }
@@ -485,8 +477,6 @@ namespace ProjectVagabond
             InitializeSplitMapCloseInventoryButtonRects();
             InitializeSplitMapSettingsButtonRects();
             InitializeInventoryHeaderButtonRects();
-            InitializeInventorySlotRects();
-            InitializeInventorySlotLargeRects(); // Initialize Large Rects
             InitializeInventoryArrowButtonRects();
             InitializeInventoryScrollArrowRects();
             InitializeInventorySpellSlotButtonRects();
@@ -551,30 +541,6 @@ namespace ProjectVagabond
             InventoryRightArrowButtonSourceRects = new Rectangle[2];
             InventoryRightArrowButtonSourceRects[0] = new Rectangle(0, 0, frameWidth, frameHeight); // Idle
             InventoryRightArrowButtonSourceRects[1] = new Rectangle(frameWidth, 0, frameWidth, frameHeight); // Hover
-        }
-
-        private void InitializeInventorySlotRects()
-        {
-            if (InventorySlotIdleSpriteSheet == null) return;
-            const int frameSize = 24; // Updated to 24x24
-            int frameCount = InventorySlotIdleSpriteSheet.Width / frameSize;
-            InventorySlotSourceRects = new Rectangle[frameCount];
-            for (int i = 0; i < frameCount; i++)
-            {
-                InventorySlotSourceRects[i] = new Rectangle(i * frameSize, 0, frameSize, frameSize);
-            }
-        }
-
-        private void InitializeInventorySlotLargeRects()
-        {
-            if (InventorySlotIdleLargeSpriteSheet == null) return;
-            const int frameSize = 48;
-            int frameCount = InventorySlotIdleLargeSpriteSheet.Width / frameSize;
-            InventorySlotLargeSourceRects = new Rectangle[frameCount];
-            for (int i = 0; i < frameCount; i++)
-            {
-                InventorySlotLargeSourceRects[i] = new Rectangle(i * frameSize, 0, frameSize, frameSize);
-            }
         }
 
         private void InitializeInventoryHeaderButtonRects()
