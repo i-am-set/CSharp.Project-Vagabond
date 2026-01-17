@@ -382,8 +382,8 @@ namespace ProjectVagabond.UI
                 "Skip resting entirely?",
                 new List<Tuple<string, Action>>
                 {
-                    Tuple.Create("[red]SKIP", new Action(() => { OnLeaveRequested?.Invoke(); _confirmationDialog.Hide(); })),
-                    Tuple.Create("CANCEL", new Action(() => _confirmationDialog.Hide()))
+                    Tuple.Create("SKIP", new Action(() => { OnLeaveRequested?.Invoke(); _confirmationDialog.Hide(); })),
+                    Tuple.Create("[chighlight]CANCEL", new Action(() => _confirmationDialog.Hide()))
                 }
             );
         }

@@ -272,8 +272,8 @@ namespace ProjectVagabond.UI
                 "Skip recruitment?",
                 new List<Tuple<string, Action>>
                 {
-                    Tuple.Create("[red]SKIP", new Action(() => { OnRecruitComplete?.Invoke(); _confirmationDialog.Hide(); })),
-                    Tuple.Create("CANCEL", new Action(() => _confirmationDialog.Hide()))
+                    Tuple.Create("[SKIP", new Action(() => { OnRecruitComplete?.Invoke(); _confirmationDialog.Hide(); })),
+                    Tuple.Create("[chighlight]CANCEL", new Action(() => _confirmationDialog.Hide()))
                 }
             );
         }
