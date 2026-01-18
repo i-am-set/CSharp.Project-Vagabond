@@ -1116,10 +1116,6 @@ namespace ProjectVagabond.Battle.UI
             // Draw beveled background
             DrawBeveledBackground(spriteBatch, pixel, tooltipBgRect, _global.Palette_Black);
 
-            // Mask corners of the sprite to ensure bevel shape
-            spriteBatch.DrawSnapped(tooltipBg, tooltipBgRect, Color.White);
-            MaskCorners(spriteBatch, pixel, tooltipBgRect, _global.Palette_Black);
-
             // Draw beveled border on top
             DrawBeveledBorder(spriteBatch, pixel, tooltipBgRect, _global.Palette_White);
 
