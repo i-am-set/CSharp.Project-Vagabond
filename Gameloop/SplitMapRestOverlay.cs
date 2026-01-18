@@ -887,18 +887,16 @@ namespace ProjectVagabond.UI
                 currentY += (int)nameSize.Height - 2;
 
                 // 2. Portrait
-                if (isOccupied && _spriteManager.PlayerPortraitsSpriteSheet != null && _spriteManager.PlayerPortraitSourceRects.Count > 0)
+                if (isOccupied && _spriteManager.PlayerMasterSpriteSheet != null)
                 {
-                    int portraitIndex = Math.Clamp(member!.PortraitIndex, 0, _spriteManager.PlayerPortraitSourceRects.Count - 1);
-                    var sourceRect = _spriteManager.PlayerPortraitSourceRects[portraitIndex];
-
-                    Texture2D textureToDraw;
+                    int portraitIndex = member!.PortraitIndex;
+                    PlayerSpriteType type;
 
                     // Check if resting
                     if (_selectedActions.TryGetValue(i, out var action) && action == RestAction.Rest)
                     {
                         // Sleeping: Use sleep sprite, no animation
-                        textureToDraw = _spriteManager.PlayerPortraitsSleepSpriteSheet ?? _spriteManager.PlayerPortraitsSpriteSheet;
+                        type = PlayerSpriteType.Sleep;
                     }
                     else
                     {
@@ -906,14 +904,27 @@ namespace ProjectVagabond.UI
                         float animSpeed = 1f;
                         // Use local timer for independent animation
                         int frame = (int)(_portraitAnimTimers[i] * animSpeed) % 2;
-                        textureToDraw = frame == 0 ? _spriteManager.PlayerPortraitsSpriteSheet : _spriteManager.PlayerPortraitsAltSpriteSheet;
+                        type = frame == 0 ? PlayerSpriteType.Normal : PlayerSpriteType.Alt;
                     }
+
+                    var sourceRect = _spriteManager.GetPlayerSourceRect(portraitIndex, type);
 
                     // Apply Hop Offset
                     float hopOffset = _hopControllers[i].GetOffset(true); // True = Invert (Up)
 
-                    var destRect = new Rectangle(centerX - 16, (int)(currentY + hopOffset), 32, 32);
-                    spriteBatch.DrawSnapped(textureToDraw, destRect, sourceRect, Color.White);
+                    // --- NEW BOBBING LOGIC ---
+                    float bobSpeed = 2.5f; // Default Idle Speed
+                    float bobAmp = 0.5f;   // Default Idle Amplitude
+
+                    // Stagger the bob based on index to prevent unison movement
+                    float phase = i * 0.7f; // FIXED: Use 'i' instead of 'index'
+                    float bob = MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * bobSpeed + phase) * bobAmp;
+                    hopOffset += bob;
+
+                    // Use Vector2 for smooth sub-pixel rendering
+                    Vector2 portraitPos = new Vector2(centerX - 16, currentY + hopOffset);
+
+                    spriteBatch.DrawSnapped(_spriteManager.PlayerMasterSpriteSheet, portraitPos, sourceRect, Color.White);
                 }
 
                 // Draw Name NOW (On top of background/shadow)

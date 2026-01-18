@@ -58,7 +58,6 @@ namespace ProjectVagabond.Battle.UI
         private MoveEntry? _hoveredSpellbookEntry;
         public Button? HoveredButton { get; private set; }
 
-        private float _targetingTextAnimTimer = 0f;
         private bool _buttonsInitialized = false;
         private MouseState _previousMouseState;
 
@@ -323,7 +322,7 @@ namespace ProjectVagabond.Battle.UI
             }
             else if (newState == MenuState.Targeting)
             {
-                _targetingTextAnimTimer = 0f;
+                // Timer reset removed as it's no longer used here
             }
             else if (newState == MenuState.Tooltip)
             {
@@ -790,7 +789,6 @@ namespace ProjectVagabond.Battle.UI
                     if (_backButton.IsHovered) HoveredButton = _backButton;
                     break;
                 case MenuState.Targeting:
-                    _targetingTextAnimTimer += dt;
                     _backButton.Update(effectiveMouseState);
                     if (_backButton.IsHovered) HoveredButton = _backButton;
                     break;
@@ -913,6 +911,8 @@ namespace ProjectVagabond.Battle.UI
                     }
                 case MenuState.Targeting:
                     {
+                        // Removed DrawTargetingText call to prevent duplication
+
                         const int backButtonPadding = 8;
                         const int backButtonHeight = 15; // Increased from 7 to match ItemMenu
                         const int backButtonTopMargin = 1;
@@ -1116,7 +1116,6 @@ namespace ProjectVagabond.Battle.UI
             // Draw beveled background
             DrawBeveledBackground(spriteBatch, pixel, tooltipBgRect, _global.Palette_Black);
 
-            // Draw beveled border on top
             DrawBeveledBorder(spriteBatch, pixel, tooltipBgRect, _global.Palette_White);
 
             if (_tooltipMove != null)

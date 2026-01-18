@@ -2,14 +2,9 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond.Battle.UI;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text.RegularExpressions;
-using static ProjectVagabond.Battle.Abilities.InflictStatusStunAbility;
 
 namespace ProjectVagabond.UI
 {
@@ -135,8 +130,9 @@ namespace ProjectVagabond.UI
 
         private float _hoverRotationTimer = 0f;
         // TUNING: Slower speed (4.0) makes it a visible "wobble" instead of a blur.
-        private const float HOVER_ROTATION_DURATION = 0.25f;
-        private const float HOVER_ROTATION_MAGNITUDE = 0.04f;
+        private const float HOVER_ROTATION_DURATION = 0.5f;
+        private const float BASE_ROTATION_MAGNITUDE = 0.08f; // Base radians for a 32px button (~4.5 degrees)
+        private const float ROTATION_REFERENCE_WIDTH = 32f;  // The width at which the base magnitude applies
         private const float HOVER_ROTATION_SPEED = 4.0f; // 4 cycles over the duration
 
         // Text-based constructor
@@ -358,8 +354,16 @@ namespace ProjectVagabond.UI
                 // Decay term: (1.0 - progress)^2 ensures it stops smoothly at 0
                 float decay = (1.0f - progress) * (1.0f - progress);
 
+                // --- Calculate Width-Adjusted Magnitude ---
+                // Inversely proportional to width. Wider buttons rotate less to maintain consistent edge movement.
+                // Clamp minimum width to reference width to prevent excessive spinning on tiny buttons.
+                float currentWidth = Bounds.Width > 0 ? Bounds.Width : ROTATION_REFERENCE_WIDTH;
+                float widthScale = ROTATION_REFERENCE_WIDTH / Math.Max(ROTATION_REFERENCE_WIDTH, currentWidth);
+
+                float effectiveMagnitude = BASE_ROTATION_MAGNITUDE * widthScale;
+
                 // Sin wave: progress * TwoPi * Speed. 
-                _currentHoverRotation = MathF.Sin(progress * MathHelper.TwoPi * HOVER_ROTATION_SPEED) * HOVER_ROTATION_MAGNITUDE * decay;
+                _currentHoverRotation = MathF.Sin(progress * MathHelper.TwoPi * HOVER_ROTATION_SPEED) * effectiveMagnitude * decay;
 
                 if (_hoverRotationTimer <= 0) _currentHoverRotation = 0f;
             }

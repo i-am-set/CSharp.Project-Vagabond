@@ -582,10 +582,16 @@ namespace ProjectVagabond.UI
             currentY += (int)nameSize.Y - 2;
 
             // 2. Portrait
-            if (_spriteManager.PlayerPortraitsSpriteSheet != null && _spriteManager.PlayerPortraitSourceRects.Count > 0)
+            if (_spriteManager.PlayerMasterSpriteSheet != null)
             {
-                int portraitIndex = Math.Clamp(member.PortraitIndex, 0, _spriteManager.PlayerPortraitSourceRects.Count - 1);
-                var sourceRect = _spriteManager.PlayerPortraitSourceRects[portraitIndex];
+                int portraitIndex = member.PortraitIndex;
+
+                // Determine type based on state
+                PlayerSpriteType type = (isSelected || (button.IsHovered && button.IsEnabled))
+                    ? PlayerSpriteType.Alt
+                    : PlayerSpriteType.Normal;
+
+                var sourceRect = _spriteManager.GetPlayerSourceRect(portraitIndex, type);
 
                 // Apply Hop
                 float hopOffset = hopController.GetOffset(true); // Up
@@ -613,12 +619,7 @@ namespace ProjectVagabond.UI
                 // Use Vector2 for smooth sub-pixel rendering
                 Vector2 portraitPos = new Vector2(centerX - 16, currentY + hopOffset);
 
-                // Determine Texture: Use Alt if Selected or Hovered
-                Texture2D portraitTexture = (isSelected || (button.IsHovered && button.IsEnabled))
-                    ? _spriteManager.PlayerPortraitsAltSpriteSheet
-                    : _spriteManager.PlayerPortraitsSpriteSheet;
-
-                spriteBatch.DrawSnapped(portraitTexture, portraitPos, sourceRect, Color.White);
+                spriteBatch.DrawSnapped(_spriteManager.PlayerMasterSpriteSheet, portraitPos, sourceRect, Color.White);
             }
 
             // Draw Name on top

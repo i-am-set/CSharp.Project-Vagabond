@@ -30,6 +30,15 @@ using static ProjectVagabond.Battle.Abilities.InflictStatusStunAbility;
 
 namespace ProjectVagabond
 {
+    public enum PlayerSpriteType
+    {
+        Portrait5x5 = 0,
+        Portrait8x8 = 1,
+        Normal = 2,
+        Alt = 3,
+        Sleep = 4
+    }
+
     public class SpriteManager
     {
         private readonly Core _core;
@@ -58,18 +67,9 @@ namespace ProjectVagabond
         public Texture2D BattleBorderTarget { get; private set; }
         public Texture2D BattleBorderSwitch { get; private set; }
 
-        // Player Portraits
-        public Texture2D PlayerPortraitsSpriteSheet { get; private set; }
-        public Texture2D PlayerPortraitsAltSpriteSheet { get; private set; }
-        public Texture2D PlayerPortraitsSleepSpriteSheet { get; private set; }
-        public Texture2D PlayerPortraitsSpriteSheetSilhouette { get; private set; }
-        public Texture2D PlayerPortraitsAltSpriteSheetSilhouette { get; private set; }
-        public Texture2D PlayerPortraitsSleepSpriteSheetSilhouette { get; private set; }
-        public List<Rectangle> PlayerPortraitSourceRects { get; private set; } = new List<Rectangle>();
-
-        // Small Player Portraits (8x8)
-        public Texture2D PlayerPortraitsSmallSpriteSheet { get; private set; }
-        public List<Rectangle> PlayerPortraitSmallSourceRects { get; private set; } = new List<Rectangle>();
+        // --- PLAYER PORTRAITS (Consolidated) ---
+        public Texture2D PlayerMasterSpriteSheet { get; private set; }
+        public Texture2D PlayerMasterSpriteSheetSilhouette { get; private set; }
 
         // Inventory UI
         public Texture2D InventoryPlayerHealthBarEmpty { get; private set; }
@@ -1225,91 +1225,43 @@ namespace ProjectVagabond
         {
             try
             {
-                PlayerPortraitsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/Player/cat_portraits_32x32");
-                PlayerPortraitsAltSpriteSheet = _core.Content.Load<Texture2D>("Sprites/Player/cat_portraits_32x32_altsprites");
-
-                // Generate Silhouettes
-                PlayerPortraitsSpriteSheetSilhouette = CreateSilhouette(PlayerPortraitsSpriteSheet);
-                PlayerPortraitsAltSpriteSheetSilhouette = CreateSilhouette(PlayerPortraitsAltSpriteSheet);
-
-                // Parse the sprite sheet to find valid frames
-                Color[] data = new Color[PlayerPortraitsSpriteSheet.Width * PlayerPortraitsSpriteSheet.Height];
-                PlayerPortraitsSpriteSheet.GetData(data);
-
-                int cols = PlayerPortraitsSpriteSheet.Width / 32;
-                int rows = PlayerPortraitsSpriteSheet.Height / 32;
-
-                PlayerPortraitSourceRects.Clear();
-
-                for (int y = 0; y < rows; y++)
-                {
-                    for (int x = 0; x < cols; x++)
-                    {
-                        if (IsFrameNotEmpty(data, PlayerPortraitsSpriteSheet.Width, x * 32, y * 32, 32, 32))
-                        {
-                            PlayerPortraitSourceRects.Add(new Rectangle(x * 32, y * 32, 32, 32));
-                        }
-                    }
-                }
-            }
-            catch
-            {
-                // Fallback if texture fails to load
-                PlayerPortraitsSpriteSheet = _textureFactory.CreateColoredTexture(32, 32, Color.Magenta);
-                PlayerPortraitsAltSpriteSheet = _textureFactory.CreateColoredTexture(32, 32, Color.Magenta);
-
-                // Fallback Silhouettes
-                PlayerPortraitsSpriteSheetSilhouette = CreateSilhouette(PlayerPortraitsSpriteSheet);
-                PlayerPortraitsAltSpriteSheetSilhouette = CreateSilhouette(PlayerPortraitsAltSpriteSheet);
-
-                PlayerPortraitSourceRects.Clear();
-                PlayerPortraitSourceRects.Add(new Rectangle(0, 0, 32, 32));
-            }
-
-            // Load Sleep Sprites
-            try
-            {
-                PlayerPortraitsSleepSpriteSheet = _core.Content.Load<Texture2D>("Sprites/Player/cat_portraits_32x32_sleepsprites");
-                PlayerPortraitsSleepSpriteSheetSilhouette = CreateSilhouette(PlayerPortraitsSleepSpriteSheet);
+                // Load the single master sheet
+                PlayerMasterSpriteSheet = _core.Content.Load<Texture2D>("Sprites/Player/cat_portraits_32x32_spritesheet");
+                PlayerMasterSpriteSheetSilhouette = CreateSilhouette(PlayerMasterSpriteSheet);
             }
             catch
             {
                 // Fallback
-                PlayerPortraitsSleepSpriteSheet = _textureFactory.CreateColoredTexture(32, 32, Color.Blue);
-                PlayerPortraitsSleepSpriteSheetSilhouette = CreateSilhouette(PlayerPortraitsSleepSpriteSheet);
+                PlayerMasterSpriteSheet = _textureFactory.CreateColoredTexture(32, 32, Color.Magenta);
+                PlayerMasterSpriteSheetSilhouette = _textureFactory.CreateColoredTexture(32, 32, Color.White);
             }
+        }
 
-            // Load 8x8 Portraits
-            try
+        /// <summary>
+        /// Calculates the source rectangle for a specific player sprite type and member index.
+        /// </summary>
+        /// <param name="memberIndex">The column index (0-based) representing the party member.</param>
+        /// <param name="type">The row type (Normal, Alt, Sleep, etc.).</param>
+        /// <returns>The 32x32 source rectangle.</returns>
+        public Rectangle GetPlayerSourceRect(int memberIndex, PlayerSpriteType type)
+        {
+            if (PlayerMasterSpriteSheet == null) return Rectangle.Empty;
+
+            const int spriteSize = 32;
+            int row = (int)type;
+            int col = memberIndex;
+
+            // Safety check for bounds
+            int maxCols = PlayerMasterSpriteSheet.Width / spriteSize;
+            int maxRows = PlayerMasterSpriteSheet.Height / spriteSize;
+
+            if (col >= maxCols || row >= maxRows)
             {
-                PlayerPortraitsSmallSpriteSheet = _core.Content.Load<Texture2D>("Sprites/Player/cat_portraits_8x8");
-
-                // Parse 8x8
-                Color[] smallData = new Color[PlayerPortraitsSmallSpriteSheet.Width * PlayerPortraitsSmallSpriteSheet.Height];
-                PlayerPortraitsSmallSpriteSheet.GetData(smallData);
-
-                int smallCols = PlayerPortraitsSmallSpriteSheet.Width / 8;
-                int smallRows = PlayerPortraitsSmallSpriteSheet.Height / 8;
-
-                PlayerPortraitSmallSourceRects.Clear();
-                for (int y = 0; y < smallRows; y++)
-                {
-                    for (int x = 0; x < smallCols; x++)
-                    {
-                        if (IsFrameNotEmpty(smallData, PlayerPortraitsSmallSpriteSheet.Width, x * 8, y * 8, 8, 8))
-                        {
-                            PlayerPortraitSmallSourceRects.Add(new Rectangle(x * 8, y * 8, 8, 8));
-                        }
-                    }
-                }
+                // Return empty or default if out of bounds
+                return new Rectangle(0, 0, spriteSize, spriteSize);
             }
-            catch
-            {
-                // Fallback
-                PlayerPortraitsSmallSpriteSheet = _textureFactory.CreateColoredTexture(8, 8, Color.Magenta);
-                PlayerPortraitSmallSourceRects.Clear();
-                PlayerPortraitSmallSourceRects.Add(new Rectangle(0, 0, 8, 8));
-            }
+
+            return new Rectangle(col * spriteSize, row * spriteSize, spriteSize, spriteSize);
         }
 
         private bool IsFrameNotEmpty(Color[] data, int texWidth, int x, int y, int w, int h)

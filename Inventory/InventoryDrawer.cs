@@ -305,17 +305,17 @@ namespace ProjectVagabond.UI
 
                 currentY += (int)nameSize.Y - 2;
 
-                if (isOccupied && _overlay.SpriteManager.PlayerPortraitsSpriteSheet != null && _overlay.SpriteManager.PlayerPortraitSourceRects.Count > 0)
+                if (isOccupied && _overlay.SpriteManager.PlayerMasterSpriteSheet != null)
                 {
-                    int portraitIndex = Math.Clamp(member!.PortraitIndex, 0, _overlay.SpriteManager.PlayerPortraitSourceRects.Count - 1);
-                    var sourceRect = _overlay.SpriteManager.PlayerPortraitSourceRects[portraitIndex];
-
+                    int portraitIndex = member!.PortraitIndex;
                     float animSpeed = 1f;
                     int frame = (int)(gameTime.TotalGameTime.TotalSeconds * animSpeed) % 2;
-                    Texture2D textureToDraw = frame == 0 ? _overlay.SpriteManager.PlayerPortraitsSpriteSheet : _overlay.SpriteManager.PlayerPortraitsAltSpriteSheet;
+                    PlayerSpriteType type = frame == 0 ? PlayerSpriteType.Normal : PlayerSpriteType.Alt;
+
+                    var sourceRect = _overlay.SpriteManager.GetPlayerSourceRect(portraitIndex, type);
 
                     var destRect = new Rectangle(centerX - 16, currentY, 32, 32);
-                    spriteBatch.DrawSnapped(textureToDraw, destRect, sourceRect, Color.White);
+                    spriteBatch.DrawSnapped(_overlay.SpriteManager.PlayerMasterSpriteSheet, destRect, sourceRect, Color.White);
                 }
 
                 // --- DRAW ANIMATED TEXT ---
@@ -665,7 +665,7 @@ namespace ProjectVagabond.UI
                         Vector2 iconOrigin = new Vector2(8, 8);
                         Vector2 iconCenter = drawPos + iconOrigin;
 
-                        // --- DOUBLE LAYERED OUTLINE ---
+                        // --- DOUBLE LAYERED OUTLINE (Always Visible) ---
                         if (silhouette != null)
                         {
                             // Determine colors based on state

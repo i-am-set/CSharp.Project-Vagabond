@@ -27,8 +27,6 @@ namespace ProjectVagabond.Battle.UI
     {
         private Texture2D? _texture;
         private Texture2D? _silhouette;
-        private Texture2D? _altTexture;
-        private Texture2D? _altSilhouette;
         private Vector2 _position;
         private Vector2 _origin;
         private string _archetypeId;
@@ -72,11 +70,9 @@ namespace ProjectVagabond.Battle.UI
 
                 if (_archetypeId == "player")
                 {
-                    // Use Portrait Sheets
-                    _texture = spriteManager.PlayerPortraitsSpriteSheet;
-                    _silhouette = spriteManager.PlayerPortraitsSpriteSheetSilhouette;
-                    _altTexture = spriteManager.PlayerPortraitsAltSpriteSheet;
-                    _altSilhouette = spriteManager.PlayerPortraitsAltSpriteSheetSilhouette;
+                    // Use Master Sheet
+                    _texture = spriteManager.PlayerMasterSpriteSheet;
+                    _silhouette = spriteManager.PlayerMasterSpriteSheetSilhouette;
                     _frameWidth = 32;
                     _frameHeight = 32;
                     _frameCount = 1; // Not used for strip animation logic
@@ -196,9 +192,6 @@ namespace ProjectVagabond.Battle.UI
             var hitFlashState = animationManager.GetHitFlashState(combatant.CombatantID);
             Vector2 shakeOffset = hitFlashState?.ShakeOffset ?? Vector2.Zero;
 
-            // REMOVED: Rounding of top-left position
-            // We still need integer bounds for the Rectangle return type, but we round at the very end
-            // or just cast, since hitboxes are logical.
             var topLeftPosition = new Point(
                 (int)(_position.X - _origin.X + shakeOffset.X),
                 (int)(_position.Y - _origin.Y + shakeOffset.Y + _selectionOffsetY)
@@ -255,7 +248,6 @@ namespace ProjectVagabond.Battle.UI
             var hitFlashState = animationManager.GetHitFlashState(combatant.CombatantID);
             Vector2 shakeOffset = hitFlashState?.ShakeOffset ?? Vector2.Zero;
 
-            // REMOVED: Rounding
             var topLeftPosition = new Point(
                 (int)(_position.X - _origin.X + shakeOffset.X),
                 (int)(_position.Y - _origin.Y + shakeOffset.Y)
@@ -306,6 +298,7 @@ namespace ProjectVagabond.Battle.UI
             if (_texture == null || combatant == null) return;
 
             var global = ServiceLocator.Get<Global>();
+            var spriteManager = ServiceLocator.Get<SpriteManager>();
 
             // Determine Texture and Source Rect
             Texture2D textureToDraw = _texture;
@@ -314,22 +307,9 @@ namespace ProjectVagabond.Battle.UI
 
             if (_archetypeId == "player")
             {
-                var spriteManager = ServiceLocator.Get<SpriteManager>();
-                if (spriteManager.PlayerPortraitSourceRects.Count > 0)
-                {
-                    int index = Math.Clamp(combatant.PortraitIndex, 0, spriteManager.PlayerPortraitSourceRects.Count - 1);
-                    sourceRectangle = spriteManager.PlayerPortraitSourceRects[index];
-                }
-                else
-                {
-                    sourceRectangle = new Rectangle(0, 0, 32, 32);
-                }
-
-                if (_useAltFrame && _altTexture != null)
-                {
-                    textureToDraw = _altTexture;
-                    silhouetteToDraw = _altSilhouette;
-                }
+                // Use the new helper to get the correct rect from the master sheet
+                PlayerSpriteType type = _useAltFrame ? PlayerSpriteType.Alt : PlayerSpriteType.Normal;
+                sourceRectangle = spriteManager.GetPlayerSourceRect(combatant.PortraitIndex, type);
             }
             else
             {
@@ -341,7 +321,6 @@ namespace ProjectVagabond.Battle.UI
             Vector2 shakeOffset = hitFlashState?.ShakeOffset ?? Vector2.Zero;
             bool isFlashingWhite = hitFlashState != null && hitFlashState.IsCurrentlyWhite;
 
-            // REMOVED: Rounding of top-left position. Use float vector.
             Vector2 topLeftPosition = new Vector2(
                 _position.X - _origin.X + shakeOffset.X,
                 _position.Y - _origin.Y + shakeOffset.Y + _selectionOffsetY

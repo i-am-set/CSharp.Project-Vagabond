@@ -573,17 +573,22 @@ namespace ProjectVagabond.Battle.UI
             string text = "CHOOSE A TARGET";
             Vector2 textSize = font.MeasureString(text);
 
-            float animX = MathF.Sin(_targetingTextAnimTimer * 4f) * 1f;
-            float animY = MathF.Sin(_targetingTextAnimTimer * 8f) * 1f;
-            Vector2 animOffset = new Vector2(animX, animY);
-
             Vector2 textPos = new Vector2(
                 horizontalPadding + (availableWidth - textSize.X) / 2,
                 gridStartY + (gridAreaHeight - textSize.Y) / 2
-            ) + animOffset;
+            );
 
-            // Use Outlined Text with Black Outline
-            spriteBatch.DrawStringSquareOutlinedSnapped(font, text, textPos, Color.Red, _global.Palette_Black);
+            // Use DriftWave effect via TextAnimator
+            TextAnimator.DrawTextWithEffectSquareOutlined(
+                spriteBatch,
+                font,
+                text,
+                textPos,
+                _global.Palette_Red,
+                _global.Palette_Black,
+                TextEffectType.DriftWave,
+                _targetingTextAnimTimer
+            );
         }
 
         private void UpdateControlPrompt(GameTime gameTime)
