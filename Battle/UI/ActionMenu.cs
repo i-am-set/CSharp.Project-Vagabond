@@ -7,7 +7,7 @@ using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Transitions;
-using ProjectVagabond.UI;
+using ProjectVagabond.UI; // Added for TextAnimator and TextEffectType
 using ProjectVagabond.Utils;
 using System;
 using System.Collections;
@@ -878,7 +878,8 @@ namespace ProjectVagabond.Battle.UI
 
                             if (button.IsHovered && button.IsEnabled)
                             {
-                                DrawBeveledBackground(spriteBatch, pixel, hoverRect, _global.Palette_DarkShadow);
+                                // Pass rotation from button for background
+                                DrawBeveledBackground(spriteBatch, pixel, hoverRect, _global.Palette_DarkShadow, button.CurrentHoverRotation);
                             }
 
                             // Pass offset to button draw
@@ -1220,7 +1221,8 @@ namespace ProjectVagabond.Battle.UI
                     if (button == _hoveredMoveButton && button.IsEnabled)
                     {
                         var hoverRect = new Rectangle(offsetBounds.X, offsetBounds.Y - 1, offsetBounds.Width, offsetBounds.Height + 1);
-                        DrawBeveledBackground(spriteBatch, pixel, hoverRect, _global.Palette_DarkShadow);
+                        // Pass button rotation to background
+                        DrawBeveledBackground(spriteBatch, pixel, hoverRect, _global.Palette_DarkShadow, button.CurrentHoverRotation);
                     }
 
                     var originalBounds = button.Bounds;
@@ -1246,7 +1248,10 @@ namespace ProjectVagabond.Battle.UI
                 if (button.IsHovered && button.IsEnabled)
                 {
                     var hoverRect = new Rectangle(buttonRect.X, buttonRect.Y, buttonRect.Width, buttonRect.Height);
-                    DrawBeveledBackground(spriteBatch, pixel, hoverRect, _global.Palette_DarkShadow);
+                    // Pass rotation to background
+                    // Check if it's a TextOverImageButton or just Button to get rotation
+                    float rotation = (button is Button btn) ? btn.CurrentHoverRotation : 0f;
+                    DrawBeveledBackground(spriteBatch, pixel, hoverRect, _global.Palette_DarkShadow, rotation);
                 }
 
                 button.Draw(spriteBatch, font, gameTime, transform, false, null, offset.Y, button.Text == "ATTUNE" ? attunePulseColor : null);
@@ -1266,18 +1271,56 @@ namespace ProjectVagabond.Battle.UI
             _backButton.Draw(spriteBatch, font, gameTime, transform, false, null, offset.Y);
         }
 
-        private void DrawBeveledBackground(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, Color color)
+        private void DrawBeveledBackground(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, Color color, float rotation = 0f)
         {
-            // Top strip (Y)
-            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 2, rect.Y, rect.Width - 4, 1), color);
-            // Second strip (Y+1)
-            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 1, rect.Y + 1, rect.Width - 2, 1), color);
-            // Main body (Y+2 to Bottom-2)
-            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X, rect.Y + 2, rect.Width, rect.Height - 4), color);
-            // Second to last strip (Bottom-2)
-            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 1, rect.Bottom - 2, rect.Width - 2, 1), color);
-            // Bottom strip (Bottom-1)
-            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 2, rect.Bottom - 1, rect.Width - 4, 1), color);
+            // Center of the button/background group
+            Vector2 center = rect.Center.ToVector2();
+            float cos = MathF.Cos(rotation);
+            float sin = MathF.Sin(rotation);
+
+            // Helper to draw a strip rotated around the center
+            void DrawRotatedStrip(int relX, int relY, int w, int h)
+            {
+                // Calculate center of this strip relative to group center
+                float stripCenterX = relX + w / 2f;
+                float stripCenterY = relY + h / 2f;
+
+                // Rotate offset
+                float rotX = stripCenterX * cos - stripCenterY * sin;
+                float rotY = stripCenterX * sin + stripCenterY * cos;
+
+                Vector2 drawPos = center + new Vector2(rotX, rotY);
+                Vector2 origin = new Vector2(0.5f, 0.5f); // Pixel center
+
+                // Use Scale to size the 1x1 pixel
+                spriteBatch.DrawSnapped(pixel, drawPos, null, color, rotation, origin, new Vector2(w, h), SpriteEffects.None, 0f);
+            }
+
+            // Coordinates are relative to Top-Left of rect.
+            // We need coordinates relative to Center for rotation math.
+            // relX = absoluteX - center.X
+
+            // 1. Top Row (Y): X+2 to W-4. Height 1.
+            // Rel Y = rect.Y - center.Y
+            float topY = rect.Y - center.Y;
+            float leftX = rect.X - center.X;
+            float w = rect.Width;
+            float h = rect.Height;
+
+            // Strip 1: Top
+            DrawRotatedStrip((int)(leftX + 2), (int)(topY), (int)(w - 4), 1);
+
+            // Strip 2: Second Row (Y+1)
+            DrawRotatedStrip((int)(leftX + 1), (int)(topY + 1), (int)(w - 2), 1);
+
+            // Strip 3: Main Body (Y+2 to Bottom-2)
+            DrawRotatedStrip((int)(leftX), (int)(topY + 2), (int)(w), (int)(h - 4));
+
+            // Strip 4: Second to Last (Bottom-2)
+            DrawRotatedStrip((int)(leftX + 1), (int)(topY + h - 2), (int)(w - 2), 1);
+
+            // Strip 5: Bottom (Bottom-1)
+            DrawRotatedStrip((int)(leftX + 2), (int)(topY + h - 1), (int)(w - 4), 1);
         }
 
         private void DrawBeveledBorder(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, Color color)

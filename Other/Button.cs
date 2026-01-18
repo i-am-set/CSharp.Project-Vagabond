@@ -2,9 +2,14 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle.UI;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
+using static ProjectVagabond.Battle.Abilities.InflictStatusStunAbility;
 
 namespace ProjectVagabond.UI
 {
@@ -126,10 +131,12 @@ namespace ProjectVagabond.UI
 
         // --- HOVER ROTATION SHAKE (Juice) ---
         protected float _currentHoverRotation = 0f;
+        public float CurrentHoverRotation => _currentHoverRotation; // Public accessor for external renderers
+
         private float _hoverRotationTimer = 0f;
         // TUNING: Slower speed (4.0) makes it a visible "wobble" instead of a blur.
-        private const float HOVER_ROTATION_DURATION = 0.5f;
-        private const float HOVER_ROTATION_MAGNITUDE = 0.08f; // ~4.5 degrees
+        private const float HOVER_ROTATION_DURATION = 0.25f;
+        private const float HOVER_ROTATION_MAGNITUDE = 0.04f;
         private const float HOVER_ROTATION_SPEED = 4.0f; // 4 cycles over the duration
 
         // Text-based constructor
