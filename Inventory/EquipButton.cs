@@ -87,10 +87,24 @@ namespace ProjectVagabond.UI
                 yOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
             }
 
-            var (shakeOffset, flashTint) = UpdateFeedbackAnimations(gameTime);
+            var (shakeOffset, flashTint) = UpdateFeedbackAnimations(gameTime); // Updates _currentHoverRotation
 
             float totalX = Bounds.X + (horizontalOffset ?? 0f) + shakeOffset.X;
             float totalY = Bounds.Y + (verticalOffset ?? 0f) + shakeOffset.Y + yOffset;
+
+            // Calculate Center for Rotation
+            Vector2 centerPos = new Vector2(totalX + WIDTH / 2f, totalY + HEIGHT / 2f);
+
+            // ROTATION HELPER
+            Vector2 RotateOffset(Vector2 local)
+            {
+                float cos = MathF.Cos(_currentHoverRotation);
+                float sin = MathF.Sin(_currentHoverRotation);
+                return new Vector2(
+                    local.X * cos - local.Y * sin,
+                    local.X * sin + local.Y * cos
+                );
+            }
 
             // 3. Draw Background
             Texture2D? bgTexture = null;
@@ -104,43 +118,56 @@ namespace ProjectVagabond.UI
             if (bgTexture != null)
             {
                 // Expand by 1 pixel in all directions when hovered
-                var bgRect = new Rectangle(
-                    (int)totalX - 1,
-                    (int)totalY - 1,
-                    WIDTH + 2,
-                    HEIGHT + 2
-                );
-                spriteBatch.DrawSnapped(bgTexture, bgRect, Color.White);
+                // Source is full texture
+                Rectangle source = new Rectangle(0, 0, bgTexture.Width, bgTexture.Height);
+                Vector2 origin = new Vector2(bgTexture.Width / 2f, bgTexture.Height / 2f);
+
+                // Need to scale if texture size != bounds size + expansion
+                // Texture is 180x16. Bounds are 180x16. Expansion makes it 182x18.
+                Vector2 scale = new Vector2((float)(WIDTH + 2) / bgTexture.Width, (float)(HEIGHT + 2) / bgTexture.Height);
+
+                spriteBatch.DrawSnapped(bgTexture, centerPos, source, Color.White, _currentHoverRotation, origin, scale, SpriteEffects.None, 0f);
             }
 
             // 4. Draw Content
+
+            // Offsets relative to Top-Left
+            float relativeTitleX = TITLE_X + (TITLE_WIDTH / 2f); // Center of title area
+            float relativeIconX = ICON_X + (ICON_WIDTH / 2f); // Center of icon area
+            float relativeMainX = MAIN_X; // Left edge of main text area
 
             // --- Title Text (Centered in 53x16) ---
             if (!string.IsNullOrEmpty(TitleText))
             {
                 // Use defaultFont for Title
                 Vector2 titleSize = defaultFont.MeasureString(TitleText);
-                Vector2 titlePos = new Vector2(
-                    totalX + TITLE_X + (TITLE_WIDTH - titleSize.X) / 2f,
-                    totalY + (HEIGHT - titleSize.Y) / 2f
-                );
 
-                // Round to pixel
-                titlePos = new Vector2(MathF.Round(titlePos.X), MathF.Round(titlePos.Y));
+                // Calculate local offset from center
+                float localX = relativeTitleX - (WIDTH / 2f);
+                float localY = 0; // Centered Y
+
+                // Adjust for text centering
+                // DrawString draws from Top-Left. We want to rotate around text center.
+                // Or rotate the anchor position?
+
+                // Let's use the TextAnimator logic: Pass Top-Left relative to anchor, and rotation.
+                // TextAnimator: drawPos - origin.
+
+                // Position of Title Center
+                Vector2 titleCenterPos = centerPos + RotateOffset(new Vector2(localX, localY));
+                Vector2 titleOrigin = titleSize / 2f;
 
                 Color titleColor;
                 if (isActivated)
                 {
                     titleColor = _global.Palette_Sun;
-                    // Use TextAnimator for wave effect when hovered
-                    // Use TextEffectType.Wave for continuous looping
-                    TextAnimator.DrawTextWithEffect(spriteBatch, defaultFont, TitleText, titlePos, titleColor, TextEffectType.Wave, _waveTimer);
+                    TextAnimator.DrawTextWithEffect(spriteBatch, defaultFont, TitleText, titleCenterPos - titleOrigin, titleColor, TextEffectType.Wave, _waveTimer, Vector2.One, null, _currentHoverRotation);
                 }
                 else
                 {
                     // Use custom color if set (e.g. for submenu striping), otherwise default to Gray
                     titleColor = CustomTitleTextColor ?? _global.Palette_DarkShadow;
-                    spriteBatch.DrawStringSnapped(defaultFont, TitleText, titlePos, titleColor);
+                    spriteBatch.DrawStringSnapped(defaultFont, TitleText, titleCenterPos, titleColor, _currentHoverRotation, titleOrigin, 1.0f, SpriteEffects.None, 0f);
                 }
             }
 
@@ -151,23 +178,19 @@ namespace ProjectVagabond.UI
                 float spriteLiftY = isActivated ? -1f : 0f;
 
                 // --- JUICY FLOAT ANIMATION ---
-                // Calculate a smooth sine wave bob.
-                // We use Bounds.Y as a phase offset so items in a list don't bob in perfect unison.
                 float time = (float)gameTime.TotalGameTime.TotalSeconds;
                 float phase = Bounds.Y * 0.05f;
                 float floatOffset = MathF.Sin(time * FLOAT_SPEED + phase) * FLOAT_AMPLITUDE;
                 float rotation = MathF.Sin(time * FLOAT_ROTATION_SPEED + phase) * FLOAT_ROTATION_AMOUNT;
 
-                // Combine offsets
-                float finalIconY = totalY + spriteLiftY + floatOffset;
+                // Apply Base Hover Rotation
+                rotation += _currentHoverRotation;
 
-                // Center of the icon area
-                Vector2 iconCenter = new Vector2(
-                    totalX + ICON_X + ICON_WIDTH / 2f,
-                    finalIconY + HEIGHT / 2f
-                );
+                // Local Offset from Center
+                float localX = relativeIconX - (WIDTH / 2f);
+                float localY = spriteLiftY + floatOffset;
 
-                // Origin for rotation (Center of 16x16 sprite)
+                Vector2 iconPos = centerPos + RotateOffset(new Vector2(localX, localY));
                 Vector2 iconOrigin = new Vector2(8, 8);
 
                 Rectangle src = IconSourceRect ?? IconTexture.Bounds;
@@ -180,20 +203,19 @@ namespace ProjectVagabond.UI
                     Color cornerOutlineColor = isActivated ? _global.ItemOutlineColor_Hover_Corner : _global.ItemOutlineColor_Idle_Corner;
 
                     // 1. Draw Diagonals (Corners) FIRST (Behind)
-                    // Use Vector2 position + Rotation overload to ensure outline rotates with the sprite
-                    spriteBatch.DrawSnapped(IconSilhouette, iconCenter + new Vector2(-1, -1), src, cornerOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
-                    spriteBatch.DrawSnapped(IconSilhouette, iconCenter + new Vector2(1, -1), src, cornerOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
-                    spriteBatch.DrawSnapped(IconSilhouette, iconCenter + new Vector2(-1, 1), src, cornerOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
-                    spriteBatch.DrawSnapped(IconSilhouette, iconCenter + new Vector2(1, 1), src, cornerOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
+                    spriteBatch.DrawSnapped(IconSilhouette, iconPos + new Vector2(-1, -1), src, cornerOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
+                    spriteBatch.DrawSnapped(IconSilhouette, iconPos + new Vector2(1, -1), src, cornerOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
+                    spriteBatch.DrawSnapped(IconSilhouette, iconPos + new Vector2(-1, 1), src, cornerOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
+                    spriteBatch.DrawSnapped(IconSilhouette, iconPos + new Vector2(1, 1), src, cornerOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
 
                     // 2. Draw Cardinals (Main) SECOND (On Top)
-                    spriteBatch.DrawSnapped(IconSilhouette, iconCenter + new Vector2(-1, 0), src, mainOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
-                    spriteBatch.DrawSnapped(IconSilhouette, iconCenter + new Vector2(1, 0), src, mainOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
-                    spriteBatch.DrawSnapped(IconSilhouette, iconCenter + new Vector2(0, -1), src, mainOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
-                    spriteBatch.DrawSnapped(IconSilhouette, iconCenter + new Vector2(0, 1), src, mainOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
+                    spriteBatch.DrawSnapped(IconSilhouette, iconPos + new Vector2(-1, 0), src, mainOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
+                    spriteBatch.DrawSnapped(IconSilhouette, iconPos + new Vector2(1, 0), src, mainOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
+                    spriteBatch.DrawSnapped(IconSilhouette, iconPos + new Vector2(0, -1), src, mainOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
+                    spriteBatch.DrawSnapped(IconSilhouette, iconPos + new Vector2(0, 1), src, mainOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
                 }
 
-                spriteBatch.DrawSnapped(IconTexture, iconCenter, src, Color.White, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
+                spriteBatch.DrawSnapped(IconTexture, iconPos, src, Color.White, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
             }
 
             // --- Main Text (Left Aligned in 109x16) ---
@@ -203,24 +225,19 @@ namespace ProjectVagabond.UI
             {
                 Vector2 mainSize = font.MeasureString(textToDraw);
 
-                // Left aligned within the 109px area, but vertically centered
-                Vector2 mainPos = new Vector2(
-                    totalX + MAIN_X,
-                    totalY + (HEIGHT - mainSize.Y) / 2f
-                );
+                // Local Offset from Center (Left Aligned)
+                float localX = relativeMainX - (WIDTH / 2f) + (mainSize.X / 2f); // Center of text block
+                float localY = 0;
 
-                // Round to pixel
-                mainPos = new Vector2(MathF.Round(mainPos.X), MathF.Round(mainPos.Y));
+                Vector2 mainPos = centerPos + RotateOffset(new Vector2(localX, localY));
+                Vector2 mainOrigin = mainSize / 2f;
 
                 // Use CustomDefaultTextColor if set, otherwise BlueWhite
                 Color defaultColor = CustomDefaultTextColor ?? _global.Palette_Sun;
-
-                // Change: Use Color.White when hovered instead of ButtonHoverColor (Red)
                 Color mainColor = isActivated ? Color.White : defaultColor;
-
                 if (!IsEnabled) mainColor = _global.ButtonDisableColor;
 
-                spriteBatch.DrawStringSnapped(font, textToDraw, mainPos, mainColor);
+                spriteBatch.DrawStringSnapped(font, textToDraw, mainPos, mainColor, _currentHoverRotation, mainOrigin, 1.0f, SpriteEffects.None, 0f);
             }
 
             // 5. Debug Overlay (F1)

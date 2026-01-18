@@ -107,6 +107,9 @@ namespace ProjectVagabond.UI
             bool isActivated = IsEnabled && (IsHovered || forceHover);
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
+            // --- Update Base Animations (Hover Rotation) ---
+            UpdateFeedbackAnimations(gameTime);
+
             // --- Hover Animation ---
             float hoverYOffset = 0f;
             if (EnableHoverSway)
@@ -151,14 +154,10 @@ namespace ProjectVagabond.UI
 
             if (scale < 0.01f) return;
 
-            // --- Calculate Animated Bounds ---
-            int animatedWidth = (int)(Bounds.Width * scale);
-            int animatedHeight = (int)(Bounds.Height * scale);
-            var animatedBounds = new Rectangle(
-                Bounds.Center.X - animatedWidth / 2 + (int)MathF.Round(totalHorizontalOffset),
-                Bounds.Center.Y - animatedHeight / 2 + (int)(verticalOffset ?? 0f) + (int)hoverYOffset,
-                animatedWidth,
-                animatedHeight
+            // --- Calculate Draw Position (Center) ---
+            Vector2 drawPosition = new Vector2(
+                Bounds.Center.X + totalHorizontalOffset,
+                Bounds.Center.Y + (verticalOffset ?? 0f) + hoverYOffset
             );
 
             // --- Select Source Rectangle ---
@@ -190,7 +189,11 @@ namespace ProjectVagabond.UI
             // --- Draw ---
             if (_spriteSheet != null && sourceRectToDraw.HasValue)
             {
-                spriteBatch.DrawSnapped(_spriteSheet, animatedBounds, sourceRectToDraw, drawColor);
+                // Use Vector2 position + Origin + Scale + Rotation for proper center-based drawing
+                Vector2 origin = new Vector2(sourceRectToDraw.Value.Width / 2f, sourceRectToDraw.Value.Height / 2f);
+
+                // Use base class rotation
+                spriteBatch.DrawSnapped(_spriteSheet, drawPosition, sourceRectToDraw, drawColor, _currentHoverRotation, origin, scale, SpriteEffects.None, 0f);
             }
             else if (DebugColor.HasValue)
             {

@@ -2,22 +2,9 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond.Battle;
-using ProjectVagabond.Battle.Abilities;
-using ProjectVagabond.Dice;
-using ProjectVagabond.Particles;
-using ProjectVagabond.Progression;
-using ProjectVagabond.Scenes;
-using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.UI
 {
@@ -137,6 +124,14 @@ namespace ProjectVagabond.UI
         protected float _flashDuration = 0f;
         protected Color _flashColor;
 
+        // --- HOVER ROTATION SHAKE (Juice) ---
+        protected float _currentHoverRotation = 0f;
+        private float _hoverRotationTimer = 0f;
+        // TUNING: Slower speed (4.0) makes it a visible "wobble" instead of a blur.
+        private const float HOVER_ROTATION_DURATION = 0.5f;
+        private const float HOVER_ROTATION_MAGNITUDE = 0.08f; // ~4.5 degrees
+        private const float HOVER_ROTATION_SPEED = 4.0f; // 4 cycles over the duration
+
         // Text-based constructor
         public Button(Rectangle bounds, string text, string? function = null, Color? customDefaultTextColor = null, Color? customHoverTextColor = null, Color? customDisabledTextColor = null, bool alignLeft = false, float overflowScrollSpeed = 0.0f, bool enableHoverSway = true, BitmapFont? font = null)
         {
@@ -197,11 +192,17 @@ namespace ProjectVagabond.UI
 
             UpdateHoverState(virtualMousePos);
 
-            // Trigger Haptic on Hover Entry
-            if (!wasHovered && IsHovered && TriggerHapticOnHover)
+            // Trigger Effects on Hover Entry
+            if (!wasHovered && IsHovered)
             {
-                // Use the new UI Compound Shake
-                ServiceLocator.Get<HapticsManager>().TriggerUICompoundShake(_global.HoverHapticStrength);
+                // 1. Haptics
+                if (TriggerHapticOnHover)
+                {
+                    ServiceLocator.Get<HapticsManager>().TriggerUICompoundShake(_global.HoverHapticStrength);
+                }
+
+                // 2. Rotation Shake (Juice)
+                _hoverRotationTimer = HOVER_ROTATION_DURATION;
             }
 
             bool mousePressedThisFrame = currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released;
@@ -311,6 +312,8 @@ namespace ProjectVagabond.UI
             _slideOffset = 0f;
             _shakeTimer = 0f;
             _flashTimer = 0f;
+            _hoverRotationTimer = 0f;
+            _currentHoverRotation = 0f;
             _currentScale = 1.0f;
             _targetScale = 1.0f;
         }
@@ -337,8 +340,28 @@ namespace ProjectVagabond.UI
                 flashTint = new Color(_flashColor, alpha);
             }
 
+            // Update Hover Rotation (Springy shake on enter)
+            if (_hoverRotationTimer > 0)
+            {
+                _hoverRotationTimer -= dt;
+                // Progress goes 0 -> 1 over the duration
+                float progress = 1.0f - (_hoverRotationTimer / HOVER_ROTATION_DURATION);
+
+                // Damped Sine Wave
+                // Decay term: (1.0 - progress)^2 ensures it stops smoothly at 0
+                float decay = (1.0f - progress) * (1.0f - progress);
+
+                // Sin wave: progress * TwoPi * Speed. 
+                _currentHoverRotation = MathF.Sin(progress * MathHelper.TwoPi * HOVER_ROTATION_SPEED) * HOVER_ROTATION_MAGNITUDE * decay;
+
+                if (_hoverRotationTimer <= 0) _currentHoverRotation = 0f;
+            }
+            else
+            {
+                _currentHoverRotation = 0f;
+            }
+
             // Update Scale using Time-Corrected Damping
-            // 1 - Exp(-speed * dt) ensures we never overshoot 1.0, preventing explosion at low FPS.
             float scaleDamping = 1.0f - MathF.Exp(-SCALE_SPEED * dt);
             _currentScale = MathHelper.Lerp(_currentScale, _targetScale, scaleDamping);
 
@@ -366,7 +389,7 @@ namespace ProjectVagabond.UI
             else if (_isPressed && _clickedSourceRect.HasValue) sourceRectToDraw = _clickedSourceRect;
             else if (isActivated && _hoverSourceRect.HasValue) sourceRectToDraw = _hoverSourceRect;
 
-            // Update animations to get scale
+            // Update animations to get scale and rotation
             UpdateFeedbackAnimations(gameTime);
 
             Vector2 scale = new Vector2(_currentScale);
@@ -377,7 +400,8 @@ namespace ProjectVagabond.UI
                 // Round origin to prevent sub-pixel rendering artifacts
                 var origin = new Vector2(MathF.Round(sourceRectToDraw.Value.Width / 2f), MathF.Round(sourceRectToDraw.Value.Height / 2f));
 
-                spriteBatch.DrawSnapped(_spriteSheet, position, sourceRectToDraw, tintColorOverride ?? Color.White, 0f, origin, scale, SpriteEffects.None, 0f);
+                // Apply _currentHoverRotation here
+                spriteBatch.DrawSnapped(_spriteSheet, position, sourceRectToDraw, tintColorOverride ?? Color.White, _currentHoverRotation, origin, scale, SpriteEffects.None, 0f);
             }
             else if (DebugColor.HasValue)
             {
@@ -428,7 +452,7 @@ namespace ProjectVagabond.UI
                 _waveTimer = 0f;
             }
 
-            UpdateFeedbackAnimations(gameTime); // Updates _currentScale
+            UpdateFeedbackAnimations(gameTime); // Updates _currentScale and _currentHoverRotation
 
             float xHoverOffset = 0f;
             float yHoverOffset = 0f;
@@ -482,12 +506,12 @@ namespace ProjectVagabond.UI
                 // Use the configured WaveEffectType (SmallWave, TypewriterPop, etc.)
                 // Use TextAnimator instead of TextUtils
                 // Note: TextAnimator handles its own origin/centering logic, so we pass the top-left textPosition.
-                TextAnimator.DrawTextWithEffect(spriteBatch, font, Text, textPosition, textColor, WaveEffectType, _waveTimer, new Vector2(_currentScale));
+                TextAnimator.DrawTextWithEffect(spriteBatch, font, Text, textPosition, textColor, WaveEffectType, _waveTimer, new Vector2(_currentScale), null, _currentHoverRotation);
             }
             else
             {
-                // Standard Draw with Scale
-                spriteBatch.DrawStringSnapped(font, Text, drawPos, textColor, 0f, origin, _currentScale, SpriteEffects.None, 0f);
+                // Standard Draw with Scale and Rotation
+                spriteBatch.DrawStringSnapped(font, Text, drawPos, textColor, _currentHoverRotation, origin, _currentScale, SpriteEffects.None, 0f);
             }
         }
     }

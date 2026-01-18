@@ -51,9 +51,10 @@ namespace ProjectVagabond.UI
         public TextEffectType Effect;
         public float Time;
         public Vector2 Scale;
+        public float Rotation; // Added Rotation
         public bool UseOutline;
         public bool UseSquareOutline;
-        public float EaseInDuration; // New: Duration to ramp up intensity
+        public float EaseInDuration;
         public static TextDrawOptions Default(Vector2 position, Color color)
         {
             return new TextDrawOptions
@@ -61,6 +62,7 @@ namespace ProjectVagabond.UI
                 Position = position,
                 Color = color,
                 Scale = Vector2.One,
+                Rotation = 0f,
                 Effect = TextEffectType.None,
                 Time = 0f,
                 UseOutline = false,
@@ -158,10 +160,6 @@ namespace ProjectVagabond.UI
             return (textLength * TextAnimationSettings.SmallWaveFrequency + MathHelper.Pi) / TextAnimationSettings.SmallWaveSpeed;
         }
 
-        /// <summary>
-        /// Determines if an effect is "one-shot" animation that requires a timer reset loop (like SmallWave),
-        /// or a continuous animation that runs on infinite time (like Drift, Wave, Shake).
-        /// </summary>
         public static bool IsOneShotEffect(TextEffectType effect)
         {
             return effect == TextEffectType.SmallWave ||
@@ -171,9 +169,6 @@ namespace ProjectVagabond.UI
                    effect == TextEffectType.TypewriterVanish;
         }
 
-        /// <summary>
-        /// Calculates the transform for a single character based on the active text effect.
-        /// </summary>
         public static (Vector2 Offset, Vector2 Scale, float Rotation, Color Color) GetTextEffectTransform(
             TextEffectType effect,
             float time,
@@ -225,26 +220,19 @@ namespace ProjectVagabond.UI
 
                 case TextEffectType.TypewriterPop:
                     {
-                        // Calculate start time for this specific character
                         float charStartTime = charIndex * TextAnimationSettings.TypewriterDelay;
                         float localTime = time - charStartTime;
 
                         if (localTime < 0)
                         {
-                            // Hasn't started yet
                             scale = Vector2.Zero;
                             color = Color.Transparent;
                         }
                         else
                         {
-                            // Animation progress (0 to 1)
                             float progress = Math.Clamp(localTime / TextAnimationSettings.TypewriterDuration, 0f, 1f);
-
-                            // Juicy Pop: Overshoot scale
                             float s = Easing.EaseOutBack(progress);
                             scale = new Vector2(s);
-
-                            // Full opacity immediately (no fade in)
                             color = baseColor;
                         }
                     }
@@ -257,18 +245,13 @@ namespace ProjectVagabond.UI
 
                         if (localTime < 0)
                         {
-                            // Hasn't started vanishing yet
                             scale = Vector2.One;
                         }
                         else
                         {
                             float progress = Math.Clamp(localTime / TextAnimationSettings.TypewriterDuration, 0f, 1f);
-
-                            // Juicy Vanish: Anticipate (scale up slightly) then shrink to 0
                             float s = 1.0f - Easing.EaseInBack(progress);
                             scale = new Vector2(Math.Max(0, s));
-
-                            // Fade out
                             color = baseColor * (1.0f - progress);
                         }
                     }
@@ -293,7 +276,6 @@ namespace ProjectVagabond.UI
                     break;
 
                 case TextEffectType.Shake:
-                    // Use continuous sine waves with non-integer frequencies to simulate randomness.
                     float r1 = MathF.Sin(time * TextAnimationSettings.ShakeSpeed + charIndex * 78.233f);
                     float r2 = MathF.Sin(time * TextAnimationSettings.ShakeSpeed * 1.3f + charIndex * 12.9898f);
                     offset = new Vector2(r1, r2) * TextAnimationSettings.ShakeAmplitude;
@@ -330,7 +312,6 @@ namespace ProjectVagabond.UI
 
                 case TextEffectType.Flicker:
                     float f1 = MathF.Sin(time * TextAnimationSettings.FlickerSpeed + charIndex);
-                    // Map sine (-1 to 1) to (0 to 1)
                     float alphaNorm = (f1 + 1f) * 0.5f;
                     color = baseColor * MathHelper.Lerp(TextAnimationSettings.FlickerMinAlpha, TextAnimationSettings.FlickerMaxAlpha, alphaNorm);
                     break;
@@ -360,13 +341,11 @@ namespace ProjectVagabond.UI
                     break;
             }
 
-            // --- Apply Intensity Ramp (Ease-In) ---
-            // Only apply easing to continuous effects. One-shot effects (SmallWave, Typewriter) handle their own timing/shape.
             float duration = easeInDuration ?? TextAnimationSettings.DefaultEaseInDuration;
             if (!IsOneShotEffect(effect) && duration > 0f)
             {
                 float intensity = Math.Clamp(time / duration, 0f, 1f);
-                intensity = Easing.EaseOutCubic(intensity); // Smooth ramp up
+                intensity = Easing.EaseOutCubic(intensity);
 
                 offset *= intensity;
                 rotation *= intensity;
@@ -397,22 +376,24 @@ namespace ProjectVagabond.UI
 
         // --- Public Draw Methods ---
 
-        public static void DrawTextWithEffect(SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color color, TextEffectType effect, float time, Vector2? baseScale = null, float? easeInDuration = null)
+        public static void DrawTextWithEffect(SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color color, TextEffectType effect, float time, Vector2? baseScale = null, float? easeInDuration = null, float rotation = 0f)
         {
             var opts = TextDrawOptions.Default(position, color);
             opts.Effect = effect;
             opts.Time = time;
             opts.Scale = baseScale ?? Vector2.One;
+            opts.Rotation = rotation;
             if (easeInDuration.HasValue) opts.EaseInDuration = easeInDuration.Value;
             DrawTextCore(spriteBatch, font, text, opts);
         }
 
-        public static void DrawTextWithEffectOutlined(SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color color, Color outlineColor, TextEffectType effect, float time, Vector2? baseScale = null, float? easeInDuration = null)
+        public static void DrawTextWithEffectOutlined(SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color color, Color outlineColor, TextEffectType effect, float time, Vector2? baseScale = null, float? easeInDuration = null, float rotation = 0f)
         {
             var opts = TextDrawOptions.Default(position, color);
             opts.Effect = effect;
             opts.Time = time;
             opts.Scale = baseScale ?? Vector2.One;
+            opts.Rotation = rotation;
             opts.UseOutline = true;
             opts.OutlineColor = outlineColor;
             opts.UseSquareOutline = false;
@@ -420,12 +401,13 @@ namespace ProjectVagabond.UI
             DrawTextCore(spriteBatch, font, text, opts);
         }
 
-        public static void DrawTextWithEffectSquareOutlined(SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color color, Color outlineColor, TextEffectType effect, float time, Vector2? baseScale = null, float? easeInDuration = null)
+        public static void DrawTextWithEffectSquareOutlined(SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color color, Color outlineColor, TextEffectType effect, float time, Vector2? baseScale = null, float? easeInDuration = null, float rotation = 0f)
         {
             var opts = TextDrawOptions.Default(position, color);
             opts.Effect = effect;
             opts.Time = time;
             opts.Scale = baseScale ?? Vector2.One;
+            opts.Rotation = rotation;
             opts.UseOutline = true;
             opts.OutlineColor = outlineColor;
             opts.UseSquareOutline = true;
@@ -437,24 +419,26 @@ namespace ProjectVagabond.UI
         {
             if (string.IsNullOrEmpty(text)) return;
 
-            // REMOVED: Rounding of base position
-            // options.Position = new Vector2(MathF.Round(options.Position.X), MathF.Round(options.Position.Y));
-
             Vector2 layoutScale = options.Scale;
             var shadowColor = new Color(options.Color.R / 4, options.Color.G / 4, options.Color.B / 4, options.Color.A);
 
+            // Calculate center of the text block for rotation pivot
+            Vector2 totalSize = font.MeasureString(text);
+            Vector2 textCenterOffset = totalSize / 2f;
+            Vector2 pivotPoint = options.Position + textCenterOffset;
+
+            // Centering offset for layout scaling (to keep text centered as it scales)
             Vector2 centeringOffset = Vector2.Zero;
-            // Don't center offset for aligned waves to keep anchor point stable
             if (options.Effect != TextEffectType.LeftAlignedSmallWave && options.Effect != TextEffectType.RightAlignedSmallWave)
             {
-                Vector2 totalSize = font.MeasureString(text);
                 centeringOffset = (totalSize * (Vector2.One - layoutScale)) / 2f;
-                // REMOVED: Rounding of centering offset
-                // centeringOffset = new Vector2(MathF.Round(centeringOffset.X), MathF.Round(centeringOffset.Y));
             }
 
             var glyphs = font.GetGlyphs(text, options.Position);
             int charIndex = 0;
+
+            float cos = MathF.Cos(options.Rotation);
+            float sin = MathF.Sin(options.Rotation);
 
             foreach (var glyph in glyphs)
             {
@@ -471,14 +455,20 @@ namespace ProjectVagabond.UI
                 // Calculate relative position from the start of the string
                 Vector2 relativePos = glyph.Position - options.Position;
 
-                // REMOVED: Rounding of relative position
-                // relativePos = new Vector2(MathF.Round(relativePos.X), MathF.Round(relativePos.Y));
+                // Apply layout scaling and centering (unrotated)
+                Vector2 unrotatedPos = options.Position + (relativePos * layoutScale) + centeringOffset;
 
-                // Apply layout scaling and centering
-                Vector2 scaledPos = options.Position + (relativePos * layoutScale) + centeringOffset;
+                // --- Apply Base Rotation ---
+                // Rotate the position around the text block's center
+                Vector2 vecFromCenter = unrotatedPos - pivotPoint;
+                Vector2 rotatedVec = new Vector2(
+                    vecFromCenter.X * cos - vecFromCenter.Y * sin,
+                    vecFromCenter.X * sin + vecFromCenter.Y * cos
+                );
+                Vector2 rotatedPos = pivotPoint + rotatedVec;
 
                 // Get animation transform
-                var (animOffset, effectScale, rotation, finalColor) = GetTextEffectTransform(
+                var (animOffset, effectScale, animRotation, finalColor) = GetTextEffectTransform(
                     options.Effect,
                     options.Time,
                     charIndex,
@@ -494,37 +484,36 @@ namespace ProjectVagabond.UI
                     if (region != null)
                     {
                         Vector2 origin = new Vector2(region.Width / 2f, region.Height / 2f);
-                        Vector2 targetCenter = scaledPos + origin + animOffset;
 
-                        // REMOVED: Snapping to integer coordinates
-                        // Vector2 snappedTopLeft = new Vector2(MathF.Round(targetCenter.X - origin.X), MathF.Round(targetCenter.Y - origin.Y));
-                        // Vector2 finalDrawPos = snappedTopLeft + origin;
+                        // Apply animation offset (in rotated space if we wanted to be super precise, but screen space is usually fine for effects)
+                        // Actually, wave effects look better if they "wave" relative to the button's orientation?
+                        // For small rotations, screen space offset is fine and simpler.
 
-                        // Use smooth position
-                        Vector2 finalDrawPos = targetCenter;
+                        Vector2 finalDrawPos = rotatedPos + origin + animOffset;
 
                         Vector2 finalScale = layoutScale * effectScale;
+                        float finalRotation = options.Rotation + animRotation;
 
                         if (options.UseOutline)
                         {
                             if (options.UseSquareOutline)
                             {
-                                DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(1, 1), options.OutlineColor, rotation, origin, finalScale);
-                                DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(1, -1), options.OutlineColor, rotation, origin, finalScale);
-                                DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(-1, 1), options.OutlineColor, rotation, origin, finalScale);
-                                DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(-1, -1), options.OutlineColor, rotation, origin, finalScale);
+                                DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(1, 1), options.OutlineColor, finalRotation, origin, finalScale);
+                                DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(1, -1), options.OutlineColor, finalRotation, origin, finalScale);
+                                DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(-1, 1), options.OutlineColor, finalRotation, origin, finalScale);
+                                DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(-1, -1), options.OutlineColor, finalRotation, origin, finalScale);
                             }
-                            DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(1, 0), options.OutlineColor, rotation, origin, finalScale);
-                            DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(-1, 0), options.OutlineColor, rotation, origin, finalScale);
-                            DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(0, 1), options.OutlineColor, rotation, origin, finalScale);
-                            DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(0, -1), options.OutlineColor, rotation, origin, finalScale);
+                            DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(1, 0), options.OutlineColor, finalRotation, origin, finalScale);
+                            DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(-1, 0), options.OutlineColor, finalRotation, origin, finalScale);
+                            DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(0, 1), options.OutlineColor, finalRotation, origin, finalScale);
+                            DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(0, -1), options.OutlineColor, finalRotation, origin, finalScale);
                         }
 
                         // Shadow
-                        DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(1, 0), shadowColor, rotation, origin, finalScale);
+                        DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(1, 0), shadowColor, finalRotation, origin, finalScale);
 
                         // Main Character
-                        DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos, finalColor, rotation, origin, finalScale);
+                        DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos, finalColor, finalRotation, origin, finalScale);
                     }
                 }
 

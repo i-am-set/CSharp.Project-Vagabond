@@ -4,17 +4,11 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
-using ProjectVagabond.Battle.UI;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
 using static ProjectVagabond.Battle.Abilities.InflictStatusStunAbility;
-using static ProjectVagabond.UI.UIAnimator;
 
 namespace ProjectVagabond.Battle.UI
 {
@@ -200,6 +194,9 @@ namespace ProjectVagabond.Battle.UI
                 animatedHeight
             );
 
+            // Update base class animations (Rotation, Flash)
+            var (shakeOffset, flashTint) = UpdateFeedbackAnimations(gameTime); // Updates _currentHoverRotation
+
             Color finalTintColor;
             if (tintColorOverride.HasValue)
             {
@@ -218,7 +215,7 @@ namespace ProjectVagabond.Battle.UI
             {
                 float contentAlpha = finalTintColor.A / 255f;
 
-                // Draw background (No Shift)
+                // Draw background (No Shift, Rotated)
                 if (_backgroundSpriteSheet != null)
                 {
                     // Round origin to prevent sub-pixel rendering artifacts
@@ -226,26 +223,47 @@ namespace ProjectVagabond.Battle.UI
                     // Use the center of the animated bounds as the position
                     var drawPos = new Vector2(animatedBounds.Center.X, animatedBounds.Center.Y);
 
-                    spriteBatch.DrawSnapped(_backgroundSpriteSheet, drawPos, null, finalTintColor, 0f, origin, new Vector2(finalScaleX, finalScaleY), SpriteEffects.None, 0f);
+                    // Apply Rotation
+                    spriteBatch.DrawSnapped(_backgroundSpriteSheet, drawPos, null, finalTintColor, _currentHoverRotation, origin, new Vector2(finalScaleX, finalScaleY), SpriteEffects.None, 0f);
                 }
 
                 const int iconSize = 9;
                 const int iconPadding = 4;
 
+                // ROTATION HELPER
+                Vector2 RotateOffset(Vector2 local)
+                {
+                    float cos = MathF.Cos(_currentHoverRotation);
+                    float sin = MathF.Sin(_currentHoverRotation);
+                    return new Vector2(
+                        local.X * cos - local.Y * sin,
+                        local.X * sin + local.Y * cos
+                    );
+                }
+
                 // Apply content shift to icon
-                float iconX = animatedBounds.X + iconPadding + 1 + pixelShiftX;
-                float iconY = animatedBounds.Y + (animatedBounds.Height - iconSize) / 2f;
-                var iconPos = new Vector2(iconX, iconY);
+                // Calculate local offset from center
+                float iconLocalX = -Bounds.Width / 2f + iconPadding + 1 + pixelShiftX;
+                float iconLocalY = 0; // Centered Y
+
+                Vector2 iconOffset = new Vector2(iconLocalX, iconLocalY);
+                Vector2 rotatedIconPos = new Vector2(animatedBounds.Center.X, animatedBounds.Center.Y) + RotateOffset(iconOffset);
+
+                // Origin is center of icon
+                Vector2 iconOrigin = new Vector2(iconSize / 2f, iconSize / 2f);
+                // Adjust position to account for origin
+                rotatedIconPos += iconOrigin; // Wait, DrawSnapped takes origin. Position is anchor.
+                // If we want to draw centered at rotatedIconPos, we pass iconOrigin.
 
                 if (IconTexture != null && IconSourceRect.HasValue)
                 {
-                    spriteBatch.DrawSnapped(IconTexture, iconPos, IconSourceRect.Value, Color.White * contentAlpha);
+                    spriteBatch.DrawSnapped(IconTexture, rotatedIconPos, IconSourceRect.Value, Color.White * contentAlpha, _currentHoverRotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
                 }
                 else
                 {
                     // Fallback placeholder
-                    var iconRect = new Rectangle((int)iconX, (int)iconY, iconSize, iconSize);
-                    spriteBatch.DrawSnapped(pixel, iconRect, _global.Palette_Pink * contentAlpha);
+                    // We can't rotate a rect directly with DrawSnapped(pixel, rect), need scale/origin.
+                    spriteBatch.DrawSnapped(pixel, rotatedIconPos, null, _global.Palette_Pink * contentAlpha, _currentHoverRotation, iconOrigin, new Vector2(iconSize, iconSize), SpriteEffects.None, 0f);
                 }
 
                 var textColor = isActivated && canAfford && IsEnabled ? _global.ButtonHoverColor : _global.Palette_Sun;
@@ -256,17 +274,27 @@ namespace ProjectVagabond.Battle.UI
 
                 // Apply content shift to text start position
                 // Note: iconPos already includes the shift, so textStartX is relative to the shifted icon
-                float textStartX = iconPos.X + iconSize + iconPadding;
+                // Text Start Local X
+                float textLocalX = iconLocalX + iconSize + iconPadding; // relative to center
+                float textLocalY = 0;
+
                 const int textRightMargin = 4;
 
                 // Calculate available width based on the *original* bounds to prevent jitter in scrolling calculation
-                float textAvailableWidth = animatedBounds.Right - textStartX - textRightMargin;
+                // Bounds.Right relative to center is Width/2
+                float rightEdgeLocalX = Bounds.Width / 2f;
+                float textAvailableWidth = rightEdgeLocalX - textLocalX - textRightMargin;
 
                 var moveNameTextSize = _moveFont.MeasureString(this.Text);
                 bool needsScrolling = moveNameTextSize.Width > textAvailableWidth;
 
                 if (needsScrolling)
                 {
+                    // SCROLLING LOGIC (NO ROTATION SUPPORT)
+                    // Clipping rectangles don't support rotation.
+                    // If we need scrolling + rotation, it requires a RenderTarget or Stencil.
+                    // For now, we skip rotation if scrolling.
+
                     if (!_isScrollingInitialized)
                     {
                         _isScrollingInitialized = true;
@@ -278,6 +306,13 @@ namespace ProjectVagabond.Battle.UI
                     }
 
                     UpdateScrolling(gameTime);
+
+                    // Re-calculate absolute coords for scissor
+                    // Assume flat because scissor rect is axis aligned.
+                    // If rotating, scrolling text might look weird clipped by a box.
+                    // Just draw flat for now if scrolling.
+
+                    float textStartX = animatedBounds.X + (animatedBounds.Width / 2f) + textLocalX;
 
                     var originalRasterizerState = spriteBatch.GraphicsDevice.RasterizerState;
                     var originalScissorRect = spriteBatch.GraphicsDevice.ScissorRectangle;
@@ -300,7 +335,14 @@ namespace ProjectVagabond.Battle.UI
                 else
                 {
                     _isScrollingInitialized = false;
-                    var textPosition = new Vector2(textStartX, animatedBounds.Y + (animatedBounds.Height - _moveFont.LineHeight) / 2f);
+
+                    Vector2 textOffset = new Vector2(textLocalX, textLocalY); // From Center
+                    Vector2 rotatedTextPos = new Vector2(animatedBounds.Center.X, animatedBounds.Center.Y) + RotateOffset(textOffset);
+
+                    // Origin for text is Left-Center (since textLocalX is the left edge)
+                    // Wait, textLocalX is the left edge relative to center.
+                    // So we want to draw at rotatedTextPos with origin (0, Height/2)
+                    Vector2 textOrigin = new Vector2(0, _moveFont.LineHeight / 2f);
 
                     // --- Wave Animation Logic ---
                     if (EnableTextWave && isActivated)
@@ -316,22 +358,30 @@ namespace ProjectVagabond.Battle.UI
                         // Else: Continuous effects just keep growing _waveTimer
 
                         // Use TextAnimator for the wave effect, passing the combined scale
-                        TextAnimator.DrawTextWithEffect(spriteBatch, _moveFont, this.Text, textPosition, textColor * contentAlpha, WaveEffectType, _waveTimer, new Vector2(finalScaleX, finalScaleY));
+                        // We calculate the top-left of the text block relative to the anchor
+                        // TextAnimator.DrawTextWithEffect expects the anchor position.
+
+                        TextAnimator.DrawTextWithEffect(spriteBatch, _moveFont, this.Text, rotatedTextPos - textOrigin, textColor * contentAlpha, WaveEffectType, _waveTimer, new Vector2(finalScaleX, finalScaleY), null, _currentHoverRotation);
                     }
                     else
                     {
                         _waveTimer = 0f;
-                        spriteBatch.DrawStringSnapped(_moveFont, this.Text, textPosition, textColor * contentAlpha);
+                        spriteBatch.DrawStringSnapped(_moveFont, this.Text, rotatedTextPos, textColor * contentAlpha, _currentHoverRotation, textOrigin, 1.0f, SpriteEffects.None, 0f);
                     }
                 }
 
                 // --- Strikethrough Logic for Disabled State ---
                 if (!IsEnabled)
                 {
-                    float lineY = animatedBounds.Center.Y + 1;
-                    float startX = textStartX - 2;
-                    float endX = textStartX + Math.Min(moveNameTextSize.Width, textAvailableWidth) + 2;
-                    spriteBatch.DrawLineSnapped(new Vector2(startX, lineY), new Vector2(endX, lineY), _global.ButtonDisableColor);
+                    // Rotate
+                    Vector2 lineStartLocal = new Vector2(textLocalX - 2, 0);
+                    Vector2 lineEndLocal = new Vector2(textLocalX + Math.Min(moveNameTextSize.Width, textAvailableWidth) + 2, 0);
+
+                    Vector2 center = new Vector2(animatedBounds.Center.X, animatedBounds.Center.Y);
+                    Vector2 p1 = center + RotateOffset(lineStartLocal);
+                    Vector2 p2 = center + RotateOffset(lineEndLocal);
+
+                    spriteBatch.DrawLineSnapped(p1, p2, _global.ButtonDisableColor);
                 }
 
                 if (!canAfford && isActivated && IsEnabled)
@@ -342,6 +392,7 @@ namespace ProjectVagabond.Battle.UI
                         animatedBounds.Center.X - noManaSize.X / 2f,
                         animatedBounds.Center.Y - noManaSize.Y / 2f
                     );
+                    // This text overlays everything, no rotation needed for readability
                     TextAnimator.DrawTextWithEffectSquareOutlined(spriteBatch, _moveFont, noManaText, noManaPos, _global.Palette_Red * contentAlpha, Color.Black * contentAlpha, TextEffectType.None, 0f);
                 }
             }

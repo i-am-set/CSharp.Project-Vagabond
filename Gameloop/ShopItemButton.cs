@@ -157,7 +157,7 @@ namespace ProjectVagabond.UI
             }
 
             // C. Shake (from base class - usually unused here, but kept for compatibility)
-            var (baseShakeOffset, flashTint) = UpdateFeedbackAnimations(gameTime);
+            var (baseShakeOffset, flashTint) = UpdateFeedbackAnimations(gameTime); // Updates _currentHoverRotation
 
             // D. Rejection Shake (The violent X shake on click)
             float rejectionOffsetX = 0f;
@@ -196,6 +196,7 @@ namespace ProjectVagabond.UI
                     animatedSpriteY - nameSize.Y - 2
                 );
 
+                // Text doesn't rotate, only the icon does
                 spriteBatch.DrawStringSnapped(_nameFont, nameText, namePos, _global.Palette_Sun);
             }
 
@@ -217,7 +218,11 @@ namespace ProjectVagabond.UI
                 if (_iconTexture != null)
                 {
                     // Sprite uses animatedY (Bob + Lift)
+                    // Anchor to the top-left of the sprite
                     Vector2 drawPos = new Vector2(spriteAnchorX, animatedSpriteY);
+                    // Center for rotation
+                    Vector2 iconOrigin = new Vector2(8, 8);
+                    Vector2 iconCenter = drawPos + iconOrigin;
 
                     // 1. Draw Two-Tone Silhouette Outline (Always)
                     if (_iconSilhouette != null)
@@ -257,21 +262,24 @@ namespace ProjectVagabond.UI
                             cornerOutlineColor = _global.ItemOutlineColor_Idle_Corner;
                         }
 
+                        // Apply Rotation from Base Class
+                        float rotation = _currentHoverRotation;
+
                         // Draw Diagonals (Corners) FIRST (Behind)
-                        spriteBatch.DrawSnapped(_iconSilhouette, drawPos + new Vector2(-1, -1), null, cornerOutlineColor);
-                        spriteBatch.DrawSnapped(_iconSilhouette, drawPos + new Vector2(1, -1), null, cornerOutlineColor);
-                        spriteBatch.DrawSnapped(_iconSilhouette, drawPos + new Vector2(-1, 1), null, cornerOutlineColor);
-                        spriteBatch.DrawSnapped(_iconSilhouette, drawPos + new Vector2(1, 1), null, cornerOutlineColor);
+                        spriteBatch.DrawSnapped(_iconSilhouette, iconCenter + new Vector2(-1, -1), null, cornerOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
+                        spriteBatch.DrawSnapped(_iconSilhouette, iconCenter + new Vector2(1, -1), null, cornerOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
+                        spriteBatch.DrawSnapped(_iconSilhouette, iconCenter + new Vector2(-1, 1), null, cornerOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
+                        spriteBatch.DrawSnapped(_iconSilhouette, iconCenter + new Vector2(1, 1), null, cornerOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
 
                         // Draw Cardinals (Main) SECOND (On Top)
-                        spriteBatch.DrawSnapped(_iconSilhouette, drawPos + new Vector2(-1, 0), null, mainOutlineColor);
-                        spriteBatch.DrawSnapped(_iconSilhouette, drawPos + new Vector2(1, 0), null, mainOutlineColor);
-                        spriteBatch.DrawSnapped(_iconSilhouette, drawPos + new Vector2(0, -1), null, mainOutlineColor);
-                        spriteBatch.DrawSnapped(_iconSilhouette, drawPos + new Vector2(0, 1), null, mainOutlineColor);
+                        spriteBatch.DrawSnapped(_iconSilhouette, iconCenter + new Vector2(-1, 0), null, mainOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
+                        spriteBatch.DrawSnapped(_iconSilhouette, iconCenter + new Vector2(1, 0), null, mainOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
+                        spriteBatch.DrawSnapped(_iconSilhouette, iconCenter + new Vector2(0, -1), null, mainOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
+                        spriteBatch.DrawSnapped(_iconSilhouette, iconCenter + new Vector2(0, 1), null, mainOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
                     }
 
                     // 2. Draw Body (Always Texture)
-                    spriteBatch.DrawSnapped(_iconTexture, drawPos, Color.White);
+                    spriteBatch.DrawSnapped(_iconTexture, iconCenter, null, Color.White, _currentHoverRotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
 
                     // 3. Draw X Overlay (Too Expensive)
                     // Condition: Hovering AND Too Expensive, OR Animation is playing
@@ -279,22 +287,14 @@ namespace ProjectVagabond.UI
                     {
                         if (spriteManager.ShopXIcon != null)
                         {
-                            // Calculate X Position:
-                            // Base: Center of sprite (drawPos + 8)
-                            // Offset: -16 (to center the 32x32 X icon)
-                            // Modifiers: + rejectionOffsetX (violent shake) + _jitterOffset.X (hover wander)
+                            // Calculate Center for X Icon
+                            // X icon is 32x32. We want to center it over the 16x16 icon.
+                            // drawPos is TL of 16x16.
 
-                            // Calculate Y Position:
-                            // Base: Center of sprite (drawPos + 8)
-                            // Offset: -16
-                            // Modifiers: + _jitterOffset.Y (hover wander)
+                            Vector2 xCenter = drawPos + iconOrigin + new Vector2(rejectionOffsetX + _jitterOffset.X, _jitterOffset.Y);
+                            Vector2 xOrigin = new Vector2(16, 16); // Center of 32x32 X icon
 
-                            Vector2 xPos = new Vector2(
-                                drawPos.X + 8 - 16 + rejectionOffsetX + _jitterOffset.X,
-                                drawPos.Y + 8 - 16 + _jitterOffset.Y
-                            );
-
-                            spriteBatch.DrawSnapped(spriteManager.ShopXIcon, xPos, Color.White);
+                            spriteBatch.DrawSnapped(spriteManager.ShopXIcon, xCenter, null, Color.White, 0f, xOrigin, 1.0f, SpriteEffects.None, 0f);
                         }
                     }
                 }

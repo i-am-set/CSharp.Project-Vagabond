@@ -3,15 +3,9 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond.Battle.UI;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.UI
 {
@@ -104,13 +98,18 @@ namespace ProjectVagabond.UI
                 _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
             }
 
-            int animatedHeight = (int)(Bounds.Height * verticalScale);
-            var animatedBounds = new Rectangle(
-                Bounds.X + (int)MathF.Round(horizontalOffset ?? 0f) + (int)MathF.Round(shakeOffset.X),
-                Bounds.Center.Y - animatedHeight / 2 + (int)yOffset + (int)(verticalOffset ?? 0f) + (int)MathF.Round(shakeOffset.Y),
-                Bounds.Width,
-                animatedHeight
-            );
+            // Calculate Center Position for Rotation
+            float totalX = Bounds.Center.X + (horizontalOffset ?? 0f) + shakeOffset.X;
+            float totalY = Bounds.Center.Y + (verticalOffset ?? 0f) + shakeOffset.Y + yOffset;
+            Vector2 centerPos = new Vector2(totalX, totalY);
+
+            // Calculate Bounds Size (scaled vertically by appear anim)
+            int width = Bounds.Width;
+            int height = (int)(Bounds.Height * verticalScale);
+            Vector2 origin = new Vector2(width / 2f, Bounds.Height / 2f); // Origin based on FULL height to scale properly
+
+            // Scale vector for the draw call (Vertical scale only affects height)
+            Vector2 drawScale = new Vector2(1.0f, verticalScale);
 
             // 2. Determine colors based on state
             Color backgroundTintColor;
@@ -162,25 +161,38 @@ namespace ProjectVagabond.UI
             }
 
             // 4. Draw background with animation offset (if texture exists)
+            // Use DrawSnapped with rotation
             if (_backgroundTexture != null)
             {
-                spriteBatch.DrawSnapped(_backgroundTexture, animatedBounds, backgroundTintColor);
+                // We use the full texture bounds as source
+                Rectangle source = new Rectangle(0, 0, _backgroundTexture.Width, _backgroundTexture.Height);
+                // Adjust origin to texture center
+                Vector2 texOrigin = new Vector2(_backgroundTexture.Width / 2f, _backgroundTexture.Height / 2f);
+
+                // If the texture is meant to fill the bounds:
+                Vector2 texScale = new Vector2(
+                    (float)width / _backgroundTexture.Width,
+                    (float)height / _backgroundTexture.Height // Use 'height' which already has verticalScale applied
+                );
+
+                spriteBatch.DrawSnapped(_backgroundTexture, centerPos, source, backgroundTintColor, _currentHoverRotation, texOrigin, texScale, SpriteEffects.None, 0f);
             }
 
             // 4b. Draw Border if enabled and activated
-            // Drawn AFTER background to ensure it's visible on top
             if (isActivated && DrawBorderOnHover)
             {
+                // Skipped rotation on 1px border lines to avoid aliasing artifacts
                 Color borderColor = HoverBorderColor ?? _global.Palette_Red;
+                var animatedBounds = new Rectangle(
+                    (int)(centerPos.X - width / 2f),
+                    (int)(centerPos.Y - height / 2f),
+                    width,
+                    height
+                );
 
-                // Draw strictly within the bounds (0 to Width-1)
-                // Top
                 spriteBatch.DrawSnapped(pixel, new Rectangle(animatedBounds.Left, animatedBounds.Top, animatedBounds.Width, 1), borderColor);
-                // Bottom
                 spriteBatch.DrawSnapped(pixel, new Rectangle(animatedBounds.Left, animatedBounds.Bottom - 1, animatedBounds.Width, 1), borderColor);
-                // Left
                 spriteBatch.DrawSnapped(pixel, new Rectangle(animatedBounds.Left, animatedBounds.Top, 1, animatedBounds.Height), borderColor);
-                // Right
                 spriteBatch.DrawSnapped(pixel, new Rectangle(animatedBounds.Right - 1, animatedBounds.Top, 1, animatedBounds.Height), borderColor);
             }
 
@@ -188,77 +200,98 @@ namespace ProjectVagabond.UI
             if (verticalScale > 0.8f)
             {
                 // --- NEW LAYOUT LOGIC ---
+                // We need to calculate positions relative to center to apply rotation.
                 const int iconPaddingLeft = 5;
                 const int iconTextGap = 2;
 
-                // 5. Draw Icon (if it exists)
-                Rectangle iconRect = Rectangle.Empty;
-                if (IconTexture != null && IconSourceRect.HasValue)
+                // Relative offsets from Center
+                float leftEdgeX = -width / 2f;
+                float rightEdgeX = width / 2f;
+
+                Vector2 iconOffset = Vector2.Zero;
+                bool hasIcon = IconTexture != null && IconSourceRect.HasValue;
+
+                if (hasIcon)
                 {
-                    iconRect = new Rectangle(
-                        animatedBounds.X + iconPaddingLeft,
-                        animatedBounds.Y + (animatedBounds.Height - IconSourceRect.Value.Height) / 2,
-                        IconSourceRect.Value.Width,
-                        IconSourceRect.Value.Height
-                    );
-                    spriteBatch.DrawSnapped(IconTexture, iconRect, IconSourceRect.Value, iconColor);
+                    // Icon is left aligned
+                    float iconX = leftEdgeX + iconPaddingLeft + (IconSourceRect!.Value.Width / 2f);
+                    iconOffset = new Vector2(iconX, 0); // Centered vertically relative to button
                 }
 
-                // 6. Draw Text
+                // Text Position Calculation
                 Vector2 textSize = font.MeasureString(Text);
-                float textStartX;
+                float textCenterX;
 
-                if (iconRect != Rectangle.Empty)
+                if (hasIcon)
                 {
-                    // Calculate the space available for the text (to the right of the icon)
-                    float textSpaceStartX = iconRect.Right + iconTextGap;
-                    float textSpaceEndX = animatedBounds.Right - iconPaddingLeft; // Mirror the left padding for symmetry
+                    float iconRight = leftEdgeX + iconPaddingLeft + IconSourceRect!.Value.Width;
+                    float textSpaceStartX = iconRight + iconTextGap;
+                    float textSpaceEndX = rightEdgeX - iconPaddingLeft;
                     float textSpaceWidth = textSpaceEndX - textSpaceStartX;
-
-                    // Center the text within that available space
-                    textStartX = textSpaceStartX + (textSpaceWidth - textSize.X) / 2f;
+                    textCenterX = textSpaceStartX + (textSpaceWidth / 2f);
                 }
                 else
                 {
-                    // If there's no icon, center the text within the entire button
-                    textStartX = animatedBounds.X + (animatedBounds.Width - textSize.X) / 2f;
+                    textCenterX = 0; // Absolute center
                 }
 
-                Vector2 textPosition = new Vector2(textStartX, animatedBounds.Center.Y - (textSize.Y / 2f)) + TextRenderOffset;
+                // Apply TextRenderOffset
+                Vector2 textOffset = new Vector2(textCenterX, TextRenderOffset.Y);
+
+                // --- ROTATION TRANSFORM HELPER ---
+                // Rotates a local offset by _currentHoverRotation
+                Vector2 RotateOffset(Vector2 local)
+                {
+                    float cos = MathF.Cos(_currentHoverRotation);
+                    float sin = MathF.Sin(_currentHoverRotation);
+                    return new Vector2(
+                        local.X * cos - local.Y * sin,
+                        local.X * sin + local.Y * cos
+                    );
+                }
+
+                // 5. Draw Icon
+                if (hasIcon)
+                {
+                    Vector2 iconDrawPos = centerPos + RotateOffset(iconOffset);
+                    Vector2 iconOrigin = new Vector2(IconSourceRect!.Value.Width / 2f, IconSourceRect.Value.Height / 2f);
+
+                    spriteBatch.DrawSnapped(IconTexture, iconDrawPos, IconSourceRect.Value, iconColor, _currentHoverRotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
+                }
+
+                // 6. Draw Text
+                Vector2 textDrawPos = centerPos + RotateOffset(textOffset);
+                Vector2 textOrigin = textSize / 2f;
 
                 // --- Wave Animation Logic ---
                 if (EnableTextWave && isActivated)
                 {
                     _waveTimer += deltaTime;
-
-                    // Only reset timer if it's a one-shot effect like SmallWave
                     if (TextAnimator.IsOneShotEffect(WaveEffectType))
                     {
                         float duration = TextAnimator.GetSmallWaveDuration(Text.Length);
                         if (_waveTimer > duration + 0.1f) _waveTimer = 0f;
                     }
-                    // Else: Continuous effects just keep growing _waveTimer
 
-                    // Use the new SmallWave effect via TextUtils, passing Vector2.One as TextOverImageButton doesn't scale text on hover
-                    TextAnimator.DrawTextWithEffect(spriteBatch, font, Text, textPosition, textColor, WaveEffectType, _waveTimer, Vector2.One);
+                    TextAnimator.DrawTextWithEffect(spriteBatch, font, Text, textDrawPos - textOrigin, textColor, WaveEffectType, _waveTimer, Vector2.One, null, _currentHoverRotation);
                 }
                 else
                 {
                     _waveTimer = 0f;
-                    spriteBatch.DrawStringSnapped(font, Text, textPosition, textColor);
+                    spriteBatch.DrawStringSnapped(font, Text, textDrawPos, textColor, _currentHoverRotation, textOrigin, 1.0f, SpriteEffects.None, 0f);
                 }
 
-                // --- Strikethrough Logic for Disabled State ---
+                // --- Strikethrough Logic ---
                 if (!IsEnabled)
                 {
-                    // Calculate line position based on the text position
-                    // Center Y of text (textPosition.Y is top, so add half height)
-                    float lineY = textPosition.Y + (textSize.Y / 2f);
-                    float startX = textPosition.X - 2;
-                    float endX = textPosition.X + textSize.X + 2;
+                    // Rotate start/end points
+                    Vector2 lineStartLocal = textOffset + new Vector2(-textSize.X / 2f - 2, 0);
+                    Vector2 lineEndLocal = textOffset + new Vector2(textSize.X / 2f + 2, 0);
 
-                    // Use fully opaque color for the strikethrough
-                    spriteBatch.DrawLineSnapped(new Vector2(startX, lineY), new Vector2(endX, lineY), _global.ButtonDisableColor);
+                    Vector2 p1 = centerPos + RotateOffset(lineStartLocal);
+                    Vector2 p2 = centerPos + RotateOffset(lineEndLocal);
+
+                    spriteBatch.DrawLineSnapped(p1, p2, _global.ButtonDisableColor);
                 }
             }
         }
