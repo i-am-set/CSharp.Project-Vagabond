@@ -95,6 +95,14 @@ namespace ProjectVagabond.Battle
                         combatant.Gender = data.Gender;
                         combatant.IsProperNoun = data.IsProperNoun;
                     }
+
+                    // --- 0. Apply Intrinsic Passive Abilities ---
+                    if (partyMember.IntrinsicAbilities != null && partyMember.IntrinsicAbilities.Count > 0)
+                    {
+                        // Create abilities from the dictionary. Pass empty stat modifiers as intrinsics are currently effect-based.
+                        var intrinsicAbilities = AbilityFactory.CreateAbilitiesFromData(partyMember.IntrinsicAbilities, new Dictionary<string, int>());
+                        combatant.RegisterAbilities(intrinsicAbilities);
+                    }
                 }
 
                 // 1. Apply Weapon Passives (Stats only, effects are on the move)

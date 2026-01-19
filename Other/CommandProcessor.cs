@@ -62,6 +62,7 @@ namespace ProjectVagabond
                 sb.AppendLine("    debug_consolefont <0|1|2>          - Sets the debug console font.");
                 sb.AppendLine("    debug_damageparty <slot> <%>             - Damages member.");
                 sb.AppendLine("    test_party_gen                     - Tests random move generation.");
+                sb.AppendLine("    debug_passives                     - Lists party passive abilities.");
                 sb.AppendLine();
                 sb.AppendLine("  [palette_blue]Party & Inventory[/]");
                 sb.AppendLine("    addmember <id>                     - Adds a party member.");
@@ -287,6 +288,42 @@ namespace ProjectVagabond
 
             }, "damageparty <slot> <percent> - Damages a party member by % of Max HP.",
             (args) => args.Length == 0 ? new List<string> { "1", "2", "3", "4" } : new List<string>());
+
+            _commands["debug_passives"] = new Command("debug_passives", (args) =>
+            {
+                _gameState ??= ServiceLocator.Get<GameState>();
+                if (_gameState.PlayerState == null) { Log("[error]No active game state."); return; }
+
+                Log("[palette_blue]--- Party Passive Abilities ---[/]");
+                int slot = 1;
+                foreach (var member in _gameState.PlayerState.Party)
+                {
+                    Log($"[palette_yellow]Slot {slot}: {member.Name}[/]");
+
+                    // Intrinsic
+                    bool hasIntrinsic = false;
+                    if (member.IntrinsicAbilities != null && member.IntrinsicAbilities.Count > 0)
+                    {
+                        foreach (var kvp in member.IntrinsicAbilities)
+                        {
+                            Log($"  [cGreen]Intrinsic:[/] {kvp.Key} ({kvp.Value})");
+                            hasIntrinsic = true;
+                        }
+                    }
+                    if (!hasIntrinsic) Log("  [cGreen]Intrinsic:[/] None");
+
+                    // Relic
+                    if (!string.IsNullOrEmpty(member.EquippedRelicId) && BattleDataCache.Relics.TryGetValue(member.EquippedRelicId, out var relic))
+                    {
+                        Log($"  [cBlue]Relic:[/] {relic.RelicName} - {relic.AbilityName}");
+                    }
+                    else
+                    {
+                        Log("  [cBlue]Relic:[/] None");
+                    }
+                    slot++;
+                }
+            }, "debug_passives - Lists intrinsic and relic abilities for the party.");
 
             // --- INVENTORY COMMANDS ---
             _commands["inventory"] = new Command("inventory", (args) => HandleShowInventory(), "inventory - Shows all inventories.");

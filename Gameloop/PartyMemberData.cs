@@ -34,6 +34,11 @@ namespace ProjectVagabond.Battle
         public List<string> Slot3MovePool { get; set; } = new List<string>();
         public List<string> Slot4MovePool { get; set; } = new List<string>();
 
+        // Intrinsic Passive Pool
+        // A list of dictionaries. At generation, ONE dictionary (set of effects) is chosen 
+        // and baked into the PartyMember permanently.
+        public List<Dictionary<string, string>> PassiveAbilityPool { get; set; } = new List<Dictionary<string, string>>();
+
         // Split equipment to avoid ID collisions (since Weapon "0" and Armor "0" are different items)
         public Dictionary<string, int> StartingWeapons { get; set; } = new Dictionary<string, int>();
         public Dictionary<string, int> StartingRelics { get; set; } = new Dictionary<string, int>();

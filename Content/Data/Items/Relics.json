@@ -6,7 +6,7 @@
     "Description": "[cneutral]Neutral[/] spells deal[cpositive] 1.1x[/] damage.",
     "Flavor": "A heavy stone that hums with a low frequency. Pretty boring",
     "Effects": {
-      "ElementalDamageBonus": "0,10"
+      "ElementalDamageBonus": "0,1.1"
     },
     "Tags": [ "Neutral" ]
   },
@@ -17,7 +17,7 @@
     "Description": "[cfire]Fire[/] spells deal[cpositive] 1.2x[/] damage.",
     "Flavor": "Not pleasant to wear.",
     "Effects": {
-      "ElementalDamageBonus": "1,20"
+      "ElementalDamageBonus": "1,1.2"
     },
     "Tags": [ "Fire" ]
   },
@@ -28,7 +28,7 @@
     "Description": "[cwater]Water[/] spells deal[cpositive] 1.2x[/] damage.",
     "Flavor": "Smells like a fish market.",
     "Effects": {
-      "ElementalDamageBonus": "2,20"
+      "ElementalDamageBonus": "2,1.2"
     },
     "Tags": [ "Water" ]
   },
@@ -39,7 +39,7 @@
     "Description": "[cnature]Nature[/] spells deal[cpositive] 1.2x[/] damage.",
     "Flavor": "Pristine product of nature.",
     "Effects": {
-      "ElementalDamageBonus": "3,20"
+      "ElementalDamageBonus": "3,1.2"
     },
     "Tags": [ "Nature" ]
   },
@@ -50,7 +50,7 @@
     "Description": "[carcane]Arcane[/] spells deal[cpositive] 1.2x[/] damage.",
     "Flavor": "Vibrates with arcane energy.",
     "Effects": {
-      "ElementalDamageBonus": "4,20"
+      "ElementalDamageBonus": "4,1.2"
     },
     "Tags": [ "Arcane" ]
   },
@@ -61,7 +61,7 @@
     "Description": "[cdivine]Divine[/] spells deal[cpositive] 1.2x[/] damage.",
     "Flavor": "Glows faintly.",
     "Effects": {
-      "ElementalDamageBonus": "5,20"
+      "ElementalDamageBonus": "5,1.2"
     },
     "Tags": [ "Divine" ]
   },
@@ -72,7 +72,7 @@
     "Description": "[cblight]Blight[/] spells deal[cpositive] 1.2x[/] damage.",
     "Flavor": "It seems to absorb the light around it.",
     "Effects": {
-      "ElementalDamageBonus": "6,20"
+      "ElementalDamageBonus": "6,1.2"
     },
     "Tags": [ "Blight" ]
   },

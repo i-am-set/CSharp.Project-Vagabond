@@ -48,6 +48,18 @@ namespace ProjectVagabond.Battle
                 PortraitIndex = int.TryParse(data.MemberID, out int pid) ? pid : 0
             };
 
+            // --- Select Intrinsic Passive ---
+            if (data.PassiveAbilityPool != null && data.PassiveAbilityPool.Any())
+            {
+                // Pick one dictionary of effects from the pool
+                var selectedPassive = data.PassiveAbilityPool[_rng.Next(data.PassiveAbilityPool.Count)];
+
+                // Bake it into the member
+                member.IntrinsicAbilities = new Dictionary<string, string>(selectedPassive);
+
+                Debug.WriteLine($"[PartyMemberFactory] {member.Name} generated with passive: {string.Join(", ", member.IntrinsicAbilities.Keys)}");
+            }
+
             // --- Populate Combat Slots (Fixed Slots) ---
             // We no longer shuffle and sort. We pick one move from each slot's specific pool.
             // This allows for specific "builds" (e.g. Slot 1 is always an attack, Slot 2 is always a buff).

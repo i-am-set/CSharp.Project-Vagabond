@@ -167,8 +167,7 @@ namespace ProjectVagabond.Battle.Abilities
         public ElementalDamageBonusAbility(int elementId, float multiplier)
         {
             _elementId = elementId;
-            if (multiplier > 5.0f) _multiplier = 1.0f + (multiplier / 100f);
-            else _multiplier = multiplier;
+            _multiplier = multiplier;
         }
 
         public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)

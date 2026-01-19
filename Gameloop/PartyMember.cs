@@ -42,6 +42,10 @@ namespace ProjectVagabond
         public string? EquippedWeaponId { get; set; }
         public string? EquippedRelicId { get; set; }
 
+        // Intrinsic Passive Abilities (Baked in at generation)
+        // Key: Effect Name, Value: Parameters
+        public Dictionary<string, string> IntrinsicAbilities { get; set; } = new Dictionary<string, string>();
+
         // Fixed Spell Slots (Max 4)
         // Replaces the old inventory/equip system.
         public MoveEntry?[] Spells { get; set; } = new MoveEntry?[4];
@@ -56,6 +60,9 @@ namespace ProjectVagabond
             var clone = (PartyMember)this.MemberwiseClone();
             clone.WeaknessElementIDs = new List<int>(this.WeaknessElementIDs);
             clone.ResistanceElementIDs = new List<int>(this.ResistanceElementIDs);
+
+            // Deep copy intrinsic abilities
+            clone.IntrinsicAbilities = new Dictionary<string, string>(this.IntrinsicAbilities);
 
             // Deep copy the spell slots
             clone.Spells = new MoveEntry?[4];
