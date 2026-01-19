@@ -17,9 +17,6 @@
     "NumberOfStartingMoves": 4,
     "StartingWeapons": {
       "0": 1
-    },
-    "StartingArmor": {
-      "0": 1
     }
   },
   {
@@ -40,9 +37,6 @@
     "NumberOfStartingMoves": 2,
     "StartingWeapons": {
       "2": 1
-    },
-    "StartingArmor": {
-      "0": 1
     }
   },
   {
@@ -60,10 +54,7 @@
     "ResistanceElementIDs": [],
     "DefaultStrikeMoveID": "4",
     "StartingMoves": [],
-    "NumberOfStartingMoves": 1,
-    "StartingArmor": {
-      "2": 1
-    }
+    "NumberOfStartingMoves": 1
   },
   {
     "MemberID": "3",
@@ -83,9 +74,6 @@
     "NumberOfStartingMoves": 1,
     "StartingWeapons": {
       "1": 1
-    },
-    "StartingArmor": {
-      "1": 1
     }
   },
   {
@@ -104,9 +92,6 @@
     "DefaultStrikeMoveID": "4",
     "StartingMoves": [ "42", "43", "44" ],
     "NumberOfStartingMoves": 4,
-    "StartingArmor": {
-      "2": 1
-    },
     "StartingRelics": {
       "20": 1
     }
@@ -129,9 +114,6 @@
     "NumberOfStartingMoves": 4,
     "StartingWeapons": {
       "0": 1
-    },
-    "StartingArmor": {
-      "3": 1
     }
   },
   {
@@ -152,9 +134,6 @@
     "NumberOfStartingMoves": 1,
     "StartingWeapons": {
       "0": 1
-    },
-    "StartingArmor": {
-      "3": 1
     }
   },
   {
@@ -175,9 +154,6 @@
     "NumberOfStartingMoves": 1,
     "StartingWeapons": {
       "0": 1
-    },
-    "StartingArmor": {
-      "3": 1
     }
   },
   {
@@ -198,9 +174,6 @@
     "NumberOfStartingMoves": 1,
     "StartingWeapons": {
       "0": 1
-    },
-    "StartingArmor": {
-      "3": 1
     }
   },
   {
@@ -221,9 +194,6 @@
     "NumberOfStartingMoves": 1,
     "StartingWeapons": {
       "0": 1
-    },
-    "StartingArmor": {
-      "3": 1
     }
   },
   {
@@ -244,9 +214,6 @@
     "NumberOfStartingMoves": 1,
     "StartingWeapons": {
       "0": 1
-    },
-    "StartingArmor": {
-      "3": 1
     }
   },
   {
@@ -267,9 +234,6 @@
     "NumberOfStartingMoves": 1,
     "StartingWeapons": {
       "0": 1
-    },
-    "StartingArmor": {
-      "3": 1
     }
   },
   {
@@ -290,9 +254,6 @@
     "NumberOfStartingMoves": 1,
     "StartingWeapons": {
       "0": 1
-    },
-    "StartingArmor": {
-      "3": 1
     }
   },
   {
@@ -313,9 +274,6 @@
     "NumberOfStartingMoves": 1,
     "StartingWeapons": {
       "0": 1
-    },
-    "StartingArmor": {
-      "3": 1
     }
   },
   {
@@ -336,9 +294,6 @@
     "NumberOfStartingMoves": 1,
     "StartingWeapons": {
       "0": 1
-    },
-    "StartingArmor": {
-      "3": 1
     }
   }
 ]
