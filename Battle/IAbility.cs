@@ -15,6 +15,14 @@ namespace ProjectVagabond.Battle.Abilities
         int ModifyMaxStat(string statName, int currentValue);
     }
 
+    public interface IStatChangeModifier : IAbility
+    {
+        /// <summary>
+        /// Returns true if the stat change should be prevented.
+        /// </summary>
+        bool ShouldBlockStatChange(OffensiveStatType stat, int amount, BattleCombatant owner);
+    }
+
     public interface ICritModifier : IAbility
     {
         float ModifyCritChance(float currentChance, CombatContext ctx);
@@ -77,6 +85,11 @@ namespace ProjectVagabond.Battle.Abilities
     public interface IOutgoingStatusModifier : IAbility
     {
         int ModifyStatusDuration(StatusEffectType type, int duration, BattleCombatant owner);
+    }
+
+    public interface IDazeImmunity : IAbility
+    {
+        bool ShouldBlockDaze(BattleCombatant owner);
     }
 
     // --- ACTION FLOW ---
