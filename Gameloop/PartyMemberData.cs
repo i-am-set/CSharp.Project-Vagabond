@@ -26,16 +26,13 @@ namespace ProjectVagabond.Battle
 
         public string DefaultStrikeMoveID { get; set; }
 
-        // Starting Loadout
-        /// <summary>
-        /// A pool of possible moves (Spells OR Actions) this character can start with.
-        /// </summary>
-        public List<string> StartingMoves { get; set; } = new List<string>();
-
-        /// <summary>
-        /// How many moves from the StartingMoves pool to randomly assign to the 4 combat slots. Max 4.
-        /// </summary>
-        public int NumberOfStartingMoves { get; set; } = 4;
+        // Starting Loadout - Refactored for Slot Variance
+        // Each list represents the pool of possible moves for that specific combat slot.
+        // During generation, one move is picked from the pool. If empty, the slot is empty.
+        public List<string> Slot1MovePool { get; set; } = new List<string>();
+        public List<string> Slot2MovePool { get; set; } = new List<string>();
+        public List<string> Slot3MovePool { get; set; } = new List<string>();
+        public List<string> Slot4MovePool { get; set; } = new List<string>();
 
         // Split equipment to avoid ID collisions (since Weapon "0" and Armor "0" are different items)
         public Dictionary<string, int> StartingWeapons { get; set; } = new Dictionary<string, int>();

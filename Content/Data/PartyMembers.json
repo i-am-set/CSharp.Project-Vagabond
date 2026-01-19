@@ -13,8 +13,10 @@
     "WeaknessElementIDs": [],
     "ResistanceElementIDs": [],
     "DefaultStrikeMoveID": "4",
-    "StartingMoves": [ "11", "35", "36", "37" ],
-    "NumberOfStartingMoves": 4,
+    "Slot1MovePool": [ "11", "12", "13" ],
+    "Slot2MovePool": [ "35" ],
+    "Slot3MovePool": [ "36" ],
+    "Slot4MovePool": [ "37" ],
     "StartingWeapons": {
       "0": 1
     }
@@ -33,8 +35,10 @@
     "WeaknessElementIDs": [],
     "ResistanceElementIDs": [],
     "DefaultStrikeMoveID": "4",
-    "StartingMoves": [ "2", "18" ],
-    "NumberOfStartingMoves": 2,
+    "Slot1MovePool": [ "2" ],
+    "Slot2MovePool": [ "18" ],
+    "Slot3MovePool": [],
+    "Slot4MovePool": [],
     "StartingWeapons": {
       "2": 1
     }
@@ -53,8 +57,10 @@
     "WeaknessElementIDs": [],
     "ResistanceElementIDs": [],
     "DefaultStrikeMoveID": "4",
-    "StartingMoves": [],
-    "NumberOfStartingMoves": 1
+    "Slot1MovePool": [],
+    "Slot2MovePool": [],
+    "Slot3MovePool": [],
+    "Slot4MovePool": []
   },
   {
     "MemberID": "3",
@@ -70,8 +76,10 @@
     "WeaknessElementIDs": [ 2 ],
     "ResistanceElementIDs": [ 0, 0 ],
     "DefaultStrikeMoveID": "4",
-    "StartingMoves": [],
-    "NumberOfStartingMoves": 1,
+    "Slot1MovePool": [],
+    "Slot2MovePool": [],
+    "Slot3MovePool": [],
+    "Slot4MovePool": [],
     "StartingWeapons": {
       "1": 1
     }
@@ -90,8 +98,10 @@
     "WeaknessElementIDs": [ 6 ],
     "ResistanceElementIDs": [ 1, 5 ],
     "DefaultStrikeMoveID": "4",
-    "StartingMoves": [ "42", "43", "44" ],
-    "NumberOfStartingMoves": 4,
+    "Slot1MovePool": [ "42" ],
+    "Slot2MovePool": [ "43" ],
+    "Slot3MovePool": [ "44" ],
+    "Slot4MovePool": [],
     "StartingRelics": {
       "20": 1
     }
@@ -110,8 +120,10 @@
     "WeaknessElementIDs": [ 2, 3 ],
     "ResistanceElementIDs": [ 1 ],
     "DefaultStrikeMoveID": "4",
-    "StartingMoves": [ "38", "39", "40", "41" ],
-    "NumberOfStartingMoves": 4,
+    "Slot1MovePool": [ "38" ],
+    "Slot2MovePool": [ "39" ],
+    "Slot3MovePool": [ "40" ],
+    "Slot4MovePool": [ "41" ],
     "StartingWeapons": {
       "0": 1
     }
@@ -130,8 +142,10 @@
     "WeaknessElementIDs": [ 2, 3 ],
     "ResistanceElementIDs": [ 1 ],
     "DefaultStrikeMoveID": "4",
-    "StartingMoves": [],
-    "NumberOfStartingMoves": 1,
+    "Slot1MovePool": [],
+    "Slot2MovePool": [],
+    "Slot3MovePool": [],
+    "Slot4MovePool": [],
     "StartingWeapons": {
       "0": 1
     }
@@ -150,8 +164,10 @@
     "WeaknessElementIDs": [],
     "ResistanceElementIDs": [],
     "DefaultStrikeMoveID": "4",
-    "StartingMoves": [],
-    "NumberOfStartingMoves": 1,
+    "Slot1MovePool": [],
+    "Slot2MovePool": [],
+    "Slot3MovePool": [],
+    "Slot4MovePool": [],
     "StartingWeapons": {
       "0": 1
     }
@@ -170,8 +186,10 @@
     "WeaknessElementIDs": [],
     "ResistanceElementIDs": [],
     "DefaultStrikeMoveID": "4",
-    "StartingMoves": [],
-    "NumberOfStartingMoves": 1,
+    "Slot1MovePool": [],
+    "Slot2MovePool": [],
+    "Slot3MovePool": [],
+    "Slot4MovePool": [],
     "StartingWeapons": {
       "0": 1
     }
@@ -190,8 +208,10 @@
     "WeaknessElementIDs": [],
     "ResistanceElementIDs": [],
     "DefaultStrikeMoveID": "4",
-    "StartingMoves": [],
-    "NumberOfStartingMoves": 1,
+    "Slot1MovePool": [],
+    "Slot2MovePool": [],
+    "Slot3MovePool": [],
+    "Slot4MovePool": [],
     "StartingWeapons": {
       "0": 1
     }
@@ -210,8 +230,10 @@
     "WeaknessElementIDs": [],
     "ResistanceElementIDs": [],
     "DefaultStrikeMoveID": "4",
-    "StartingMoves": [],
-    "NumberOfStartingMoves": 1,
+    "Slot1MovePool": [],
+    "Slot2MovePool": [],
+    "Slot3MovePool": [],
+    "Slot4MovePool": [],
     "StartingWeapons": {
       "0": 1
     }
@@ -230,8 +252,10 @@
     "WeaknessElementIDs": [],
     "ResistanceElementIDs": [],
     "DefaultStrikeMoveID": "4",
-    "StartingMoves": [],
-    "NumberOfStartingMoves": 1,
+    "Slot1MovePool": [],
+    "Slot2MovePool": [],
+    "Slot3MovePool": [],
+    "Slot4MovePool": [],
     "StartingWeapons": {
       "0": 1
     }
@@ -250,8 +274,10 @@
     "WeaknessElementIDs": [],
     "ResistanceElementIDs": [],
     "DefaultStrikeMoveID": "4",
-    "StartingMoves": [],
-    "NumberOfStartingMoves": 1,
+    "Slot1MovePool": [],
+    "Slot2MovePool": [],
+    "Slot3MovePool": [],
+    "Slot4MovePool": [],
     "StartingWeapons": {
       "0": 1
     }
@@ -270,8 +296,10 @@
     "WeaknessElementIDs": [],
     "ResistanceElementIDs": [],
     "DefaultStrikeMoveID": "5",
-    "StartingMoves": [],
-    "NumberOfStartingMoves": 1,
+    "Slot1MovePool": [],
+    "Slot2MovePool": [],
+    "Slot3MovePool": [],
+    "Slot4MovePool": [],
     "StartingWeapons": {
       "0": 1
     }
@@ -290,8 +318,10 @@
     "WeaknessElementIDs": [],
     "ResistanceElementIDs": [],
     "DefaultStrikeMoveID": "4",
-    "StartingMoves": [],
-    "NumberOfStartingMoves": 1,
+    "Slot1MovePool": [],
+    "Slot2MovePool": [],
+    "Slot3MovePool": [],
+    "Slot4MovePool": [],
     "StartingWeapons": {
       "0": 1
     }

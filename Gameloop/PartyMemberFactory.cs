@@ -48,49 +48,14 @@ namespace ProjectVagabond.Battle
                 PortraitIndex = int.TryParse(data.MemberID, out int pid) ? pid : 0
             };
 
-            // --- Populate Combat Slots (Spells array) ---
-            // 1. Get the pool of moves
-            var movePool = new List<string>(data.StartingMoves);
+            // --- Populate Combat Slots (Fixed Slots) ---
+            // We no longer shuffle and sort. We pick one move from each slot's specific pool.
+            // This allows for specific "builds" (e.g. Slot 1 is always an attack, Slot 2 is always a buff).
 
-            // 2. Shuffle the pool to ensure random selection
-            int n = movePool.Count;
-            while (n > 1)
-            {
-                n--;
-                int k = _rng.Next(n + 1);
-                (movePool[k], movePool[n]) = (movePool[n], movePool[k]);
-            }
-
-            // 3. Determine how many to assign (Max 4, or limited by pool size)
-            int countToAssign = Math.Clamp(data.NumberOfStartingMoves, 0, 4);
-            countToAssign = Math.Min(countToAssign, movePool.Count);
-
-            // 4. Assign to slots
-            for (int i = 0; i < countToAssign; i++)
-            {
-                string moveId = movePool[i];
-                if (BattleDataCache.Moves.ContainsKey(moveId))
-                {
-                    member.Spells[i] = new MoveEntry(moveId, 0);
-                }
-            }
-
-            // --- SORT SPELLS ---
-            // Sort by Impact Type: Magical -> Physical -> Status
-            var activeSpells = member.Spells.Where(s => s != null).ToList();
-            activeSpells.Sort((a, b) =>
-            {
-                int scoreA = GetSortScore(a!.MoveID);
-                int scoreB = GetSortScore(b!.MoveID);
-                return scoreA.CompareTo(scoreB);
-            });
-
-            // Re-populate the array
-            for (int i = 0; i < 4; i++)
-            {
-                if (i < activeSpells.Count) member.Spells[i] = activeSpells[i];
-                else member.Spells[i] = null;
-            }
+            AssignMoveToSlot(member, 0, data.Slot1MovePool);
+            AssignMoveToSlot(member, 1, data.Slot2MovePool);
+            AssignMoveToSlot(member, 2, data.Slot3MovePool);
+            AssignMoveToSlot(member, 3, data.Slot4MovePool);
 
             // Auto-Equip Weapons
             if (data.StartingWeapons.Any())
@@ -115,16 +80,27 @@ namespace ProjectVagabond.Battle
             return member;
         }
 
-        private static int GetSortScore(string moveId)
+        private static void AssignMoveToSlot(PartyMember member, int slotIndex, List<string> pool)
         {
-            if (BattleDataCache.Moves.TryGetValue(moveId, out var move))
+            if (pool != null && pool.Any())
             {
-                // Order: Magical (0), Physical (1), Status (2)
-                if (move.ImpactType == ImpactType.Magical) return 0;
-                if (move.ImpactType == ImpactType.Physical) return 1;
-                return 2; // Status
+                // Pick a random move from the pool for this slot
+                string moveId = pool[_rng.Next(pool.Count)];
+
+                if (BattleDataCache.Moves.ContainsKey(moveId))
+                {
+                    member.Spells[slotIndex] = new MoveEntry(moveId, 0);
+                }
+                else
+                {
+                    Debug.WriteLine($"[PartyMemberFactory] Warning: Move ID '{moveId}' defined in pool for {member.Name} not found in Moves cache.");
+                }
             }
-            return 3; // Unknown/Fallback
+            else
+            {
+                // Explicitly null the slot if the pool is empty
+                member.Spells[slotIndex] = null;
+            }
         }
     }
 }

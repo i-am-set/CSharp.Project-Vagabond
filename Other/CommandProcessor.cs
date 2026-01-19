@@ -61,6 +61,7 @@ namespace ProjectVagabond
                 sb.AppendLine("    debug_givestatus <slot> <type> {dur} - Apply status.");
                 sb.AppendLine("    debug_consolefont <0|1|2>          - Sets the debug console font.");
                 sb.AppendLine("    debug_damageparty <slot> <%>             - Damages member.");
+                sb.AppendLine("    test_party_gen                     - Tests random move generation.");
                 sb.AppendLine();
                 sb.AppendLine("  [palette_blue]Party & Inventory[/]");
                 sb.AppendLine("    addmember <id>                     - Adds a party member.");
@@ -196,6 +197,22 @@ namespace ProjectVagabond
             {
                 ItemIntegrityTester.RunIntegrityCheck();
             }, "test_items - Checks if all defined items can instantiate their abilities.");
+
+            _commands["test_party_gen"] = new Command("test_party_gen", (args) =>
+            {
+                Log("[palette_yellow]Testing Oakley Generation (10 iterations):[/]");
+                for (int i = 0; i < 10; i++)
+                {
+                    var member = PartyMemberFactory.CreateMember("0"); // Oakley
+                    if (member != null)
+                    {
+                        string move1 = member.Spells[0]?.MoveID ?? "Empty";
+                        string moveName = "Unknown";
+                        if (BattleDataCache.Moves.TryGetValue(move1, out var m)) moveName = m.MoveName;
+                        Log($"  Iter {i + 1}: Slot 1 = {move1} ({moveName})");
+                    }
+                }
+            }, "test_party_gen - Generates Oakley 10 times to verify random move slots.");
 
             // --- PARTY COMMANDS ---
             _commands["addmember"] = new Command("addmember", (args) =>
