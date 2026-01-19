@@ -134,12 +134,14 @@ namespace ProjectVagabond.Battle
 
         // Cached Interface Lists
         public List<IStatModifier> StatModifiers { get; private set; } = new List<IStatModifier>();
+        public List<IStatChangeModifier> StatChangeModifiers { get; private set; } = new List<IStatChangeModifier>();
         public List<IOutgoingDamageModifier> OutgoingDamageModifiers { get; private set; } = new List<IOutgoingDamageModifier>();
         public List<IIncomingDamageModifier> IncomingDamageModifiers { get; private set; } = new List<IIncomingDamageModifier>();
         public List<IDefensePenetrationModifier> DefensePenetrationModifiers { get; private set; } = new List<IDefensePenetrationModifier>();
         public List<IElementalAffinityModifier> ElementalAffinityModifiers { get; private set; } = new List<IElementalAffinityModifier>();
         public List<IIncomingStatusModifier> IncomingStatusModifiers { get; private set; } = new List<IIncomingStatusModifier>();
         public List<IOutgoingStatusModifier> OutgoingStatusModifiers { get; private set; } = new List<IOutgoingStatusModifier>();
+        public List<IDazeImmunity> DazeImmunityModifiers { get; private set; } = new List<IDazeImmunity>();
         public List<IOnHitEffect> OnHitEffects { get; private set; } = new List<IOnHitEffect>();
         public List<IOnDamagedEffect> OnDamagedEffects { get; private set; } = new List<IOnDamagedEffect>();
         public List<ICritModifier> CritModifiers { get; private set; } = new List<ICritModifier>();
@@ -174,7 +176,23 @@ namespace ProjectVagabond.Battle
         public bool PendingDisengage { get; set; } = false;
 
         // --- DAZED MECHANIC STATE ---
-        public bool IsDazed { get; set; } = false;
+        private bool _isDazed;
+        public bool IsDazed
+        {
+            get => _isDazed;
+            set
+            {
+                if (value == true)
+                {
+                    // Check for immunity
+                    foreach (var mod in DazeImmunityModifiers)
+                    {
+                        if (mod.ShouldBlockDaze(this)) return;
+                    }
+                }
+                _isDazed = value;
+            }
+        }
 
         // --- UI VISIBILITY STATE ---
         public float HealthBarVisibleTimer { get; set; } = 0f;
@@ -217,12 +235,14 @@ namespace ProjectVagabond.Battle
             Abilities.Add(ability);
 
             if (ability is IStatModifier sm) StatModifiers.Add(sm);
+            if (ability is IStatChangeModifier scm) StatChangeModifiers.Add(scm);
             if (ability is IOutgoingDamageModifier odm) OutgoingDamageModifiers.Add(odm);
             if (ability is IIncomingDamageModifier idm) IncomingDamageModifiers.Add(idm);
             if (ability is IDefensePenetrationModifier dpm) DefensePenetrationModifiers.Add(dpm);
             if (ability is IElementalAffinityModifier eam) ElementalAffinityModifiers.Add(eam);
             if (ability is IIncomingStatusModifier ism) IncomingStatusModifiers.Add(ism);
             if (ability is IOutgoingStatusModifier osm) OutgoingStatusModifiers.Add(osm);
+            if (ability is IDazeImmunity dim) DazeImmunityModifiers.Add(dim);
             if (ability is IOnHitEffect ohe) OnHitEffects.Add(ohe);
             if (ability is IOnDamagedEffect ode) OnDamagedEffects.Add(ode);
             if (ability is ICritModifier cm) CritModifiers.Add(cm);
@@ -274,6 +294,15 @@ namespace ProjectVagabond.Battle
 
         public (bool success, string message) ModifyStatStage(OffensiveStatType stat, int amount)
         {
+            // Check for immunity to stat changes
+            foreach (var mod in StatChangeModifiers)
+            {
+                if (mod.ShouldBlockStatChange(stat, amount, this))
+                {
+                    return (false, $"{Name}'s {mod.Name} prevented the stat change!");
+                }
+            }
+
             int currentStage = StatStages[stat];
             if (amount > 0 && currentStage >= 6) return (false, $"{Name}'s {stat} won't go any higher!");
             if (amount < 0 && currentStage <= -6) return (false, $"{Name}'s {stat} won't go any lower!");

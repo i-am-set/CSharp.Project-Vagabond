@@ -681,4 +681,152 @@ namespace ProjectVagabond.Battle.Abilities
         public string Name => "Insight";
         public string Description => "Reveals detailed enemy stats.";
     }
+
+    // --- CUSTOM PARTY MEMBER PASSIVES ---
+
+    public class PMPyromancerAbility : IOutgoingDamageModifier, IElementalAffinityModifier
+    {
+        public string Name => "Pyromancer";
+        public string Description => "Deal 1.5x Fire damage and resist Fire.";
+
+        // Hardcoded Fire Element ID (1) based on Elements.json
+        private const int FIRE_ELEMENT_ID = 1;
+        private const float DAMAGE_MULTIPLIER = 1.5f;
+
+        public PMPyromancerAbility() { } // No args constructor
+
+        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
+        {
+            if (ctx.MoveHasElement(FIRE_ELEMENT_ID))
+            {
+                return currentDamage * DAMAGE_MULTIPLIER;
+            }
+            return currentDamage;
+        }
+
+        public void ModifyElementalAffinities(List<int> weaknesses, List<int> resistances, BattleCombatant owner)
+        {
+            if (!resistances.Contains(FIRE_ELEMENT_ID))
+            {
+                resistances.Add(FIRE_ELEMENT_ID);
+            }
+        }
+    }
+
+    public class PMAnnoyingAbility : IActionModifier
+    {
+        public string Name => "Annoying";
+        public string Description => "Status moves have +1 priority.";
+        public void ModifyAction(QueuedAction action, BattleCombatant owner)
+        {
+            if (action.ChosenMove != null && action.ChosenMove.ImpactType == ImpactType.Status)
+            {
+                action.Priority += 1;
+            }
+        }
+    }
+
+    public class PMScrappyAbility : IStatChangeModifier, IIncomingStatusModifier, IDazeImmunity
+    {
+        public string Name => "Scrappy";
+        public string Description => "Immune to Strength drops, Stun, and Daze.";
+
+        public bool ShouldBlockStatChange(OffensiveStatType stat, int amount, BattleCombatant owner)
+        {
+            if (stat == OffensiveStatType.Strength && amount < 0)
+            {
+                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = owner, Ability = this });
+                return true;
+            }
+            return false;
+        }
+
+        public bool ShouldBlockStatus(StatusEffectType type, BattleCombatant owner)
+        {
+            if (type == StatusEffectType.Stun)
+            {
+                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = owner, Ability = this });
+                return true;
+            }
+            return false;
+        }
+
+        public bool ShouldBlockDaze(BattleCombatant owner)
+        {
+            EventBus.Publish(new GameEvents.AbilityActivated { Combatant = owner, Ability = this });
+            return true;
+        }
+    }
+
+    public class PMShortTemperAbility : IOnCritReceived
+    {
+        public string Name => "Short Temper";
+        public string Description => "Maxes Strength when hit by a critical hit.";
+
+        public void OnCritReceived(CombatContext ctx)
+        {
+            // Max out strength (add 12 to ensure -6 goes to +6)
+            var (success, msg) = ctx.Target.ModifyStatStage(OffensiveStatType.Strength, 12);
+
+            if (success)
+            {
+                // Fire events for UI feedback
+                EventBus.Publish(new GameEvents.CombatantStatStageChanged
+                {
+                    Target = ctx.Target,
+                    Stat = OffensiveStatType.Strength,
+                    Amount = 12 // Visual indicator might show +12 or just "UP"
+                });
+
+                EventBus.Publish(new GameEvents.TerminalMessagePublished
+                {
+                    Message = $"{ctx.Target.Name}'s {Name} maxed their [cstr]Strength[/]!"
+                });
+
+                EventBus.Publish(new GameEvents.AbilityActivated
+                {
+                    Combatant = ctx.Target,
+                    Ability = this
+                });
+            }
+        }
+    }
+
+    public class PMMajesticAbility : IBattleLifecycle
+    {
+        public string Name => "Majestic";
+        public string Description => "Lowers enemy Strength on entry.";
+
+        // Hardcoded Tuning
+        private const OffensiveStatType STAT_TO_LOWER = OffensiveStatType.Strength;
+        private const int AMOUNT = -1;
+
+        public void OnBattleStart(BattleCombatant owner) { }
+
+        public void OnCombatantEnter(BattleCombatant owner)
+        {
+            var battleManager = ServiceLocator.Get<BattleManager>();
+            // Find all active enemies
+            var enemies = battleManager.AllCombatants
+                .Where(c => c.IsPlayerControlled != owner.IsPlayerControlled && !c.IsDefeated && c.IsActiveOnField)
+                .ToList();
+
+            bool anyAffected = false;
+            foreach (var enemy in enemies)
+            {
+                var (success, _) = enemy.ModifyStatStage(STAT_TO_LOWER, AMOUNT);
+                if (success)
+                {
+                    anyAffected = true;
+                    EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = enemy, Stat = STAT_TO_LOWER, Amount = AMOUNT });
+                }
+            }
+
+            if (anyAffected)
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{owner.Name}'s {Name} lowered opponents' {STAT_TO_LOWER}!" });
+                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = owner, Ability = this });
+            }
+        }
+    }
 }
