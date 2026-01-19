@@ -1,0 +1,15 @@
+Oakley - Pyromancer: 1.5x fire move spell; resist fire spells
+Luna - Annoying: prankster
+Pretzel - Scrappy: Strength can't be lowered; can't be stunned
+Snips - Short temper: max out strength stat when hit with a crit
+Petey - Majestic: intimidate
+Abu - Sweetpea: Friend guard
+Bento - Skeptic: resist all spell damage
+Scott - 9 Lives: Sturdy
+Monet - :Technician
+Peaches - Short Memory: Changed every populated spell slot with a different spell at the start of every round
+Jessie - Gentle Soul: On switch-in, restores 1/4 of its ally's max hp, rounded down. (switch in doesn't count of combat start, you have to switch to them)
+Midnight - Well-fed: Multiscale
+Rusty - Stubborn: Gorilla Tactics
+Nicholas - Declawed: triage
+Mora - Spoiled: Simple

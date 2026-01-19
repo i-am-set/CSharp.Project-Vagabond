@@ -156,5 +156,189 @@
     "StartingArmor": {
       "3": 1
     }
+  },
+  {
+    "MemberID": "7",
+    "Name": "Scott",
+    "Description": "",
+    "Gender": "Male",
+    "MaxHP": 85,
+    "MaxMana": 100,
+    "Strength": 12,
+    "Intelligence": 9,
+    "Tenacity": 7,
+    "Agility": 8,
+    "WeaknessElementIDs": [],
+    "ResistanceElementIDs": [],
+    "DefaultStrikeMoveID": "4",
+    "StartingMoves": [],
+    "NumberOfStartingMoves": 1,
+    "StartingWeapons": {
+      "0": 1
+    },
+    "StartingArmor": {
+      "3": 1
+    }
+  },
+  {
+    "MemberID": "8",
+    "Name": "Monet",
+    "Description": "",
+    "Gender": "Female",
+    "MaxHP": 70,
+    "MaxMana": 100,
+    "Strength": 4,
+    "Intelligence": 12,
+    "Tenacity": 6,
+    "Agility": 1,
+    "WeaknessElementIDs": [],
+    "ResistanceElementIDs": [],
+    "DefaultStrikeMoveID": "4",
+    "StartingMoves": [],
+    "NumberOfStartingMoves": 1,
+    "StartingWeapons": {
+      "0": 1
+    },
+    "StartingArmor": {
+      "3": 1
+    }
+  },
+  {
+    "MemberID": "9",
+    "Name": "Peaches",
+    "Description": "",
+    "Gender": "Female",
+    "MaxHP": 80,
+    "MaxMana": 100,
+    "Strength": 9,
+    "Intelligence": 9,
+    "Tenacity": 8,
+    "Agility": 11,
+    "WeaknessElementIDs": [],
+    "ResistanceElementIDs": [],
+    "DefaultStrikeMoveID": "4",
+    "StartingMoves": [],
+    "NumberOfStartingMoves": 1,
+    "StartingWeapons": {
+      "0": 1
+    },
+    "StartingArmor": {
+      "3": 1
+    }
+  },
+  {
+    "MemberID": "10",
+    "Name": "Jessie",
+    "Description": "",
+    "Gender": "Female",
+    "MaxHP": 75,
+    "MaxMana": 100,
+    "Strength": 4,
+    "Intelligence": 9,
+    "Tenacity": 8,
+    "Agility": 7,
+    "WeaknessElementIDs": [],
+    "ResistanceElementIDs": [],
+    "DefaultStrikeMoveID": "4",
+    "StartingMoves": [],
+    "NumberOfStartingMoves": 1,
+    "StartingWeapons": {
+      "0": 1
+    },
+    "StartingArmor": {
+      "3": 1
+    }
+  },
+  {
+    "MemberID": "11",
+    "Name": "Midnight",
+    "Description": "",
+    "Gender": "Male",
+    "MaxHP": 120,
+    "MaxMana": 100,
+    "Strength": 7,
+    "Intelligence": 6,
+    "Tenacity": 13,
+    "Agility": 4,
+    "WeaknessElementIDs": [],
+    "ResistanceElementIDs": [],
+    "DefaultStrikeMoveID": "4",
+    "StartingMoves": [],
+    "NumberOfStartingMoves": 1,
+    "StartingWeapons": {
+      "0": 1
+    },
+    "StartingArmor": {
+      "3": 1
+    }
+  },
+  {
+    "MemberID": "12",
+    "Name": "Rusty",
+    "Description": "",
+    "Gender": "Male",
+    "MaxHP": 85,
+    "MaxMana": 100,
+    "Strength": 14,
+    "Intelligence": 7,
+    "Tenacity": 8,
+    "Agility": 9,
+    "WeaknessElementIDs": [],
+    "ResistanceElementIDs": [],
+    "DefaultStrikeMoveID": "4",
+    "StartingMoves": [],
+    "NumberOfStartingMoves": 1,
+    "StartingWeapons": {
+      "0": 1
+    },
+    "StartingArmor": {
+      "3": 1
+    }
+  },
+  {
+    "MemberID": "13",
+    "Name": "Nicholas",
+    "Description": "",
+    "Gender": "Male",
+    "MaxHP": 70,
+    "MaxMana": 100,
+    "Strength": 3,
+    "Intelligence": 3,
+    "Tenacity": 14,
+    "Agility": 3,
+    "WeaknessElementIDs": [],
+    "ResistanceElementIDs": [],
+    "DefaultStrikeMoveID": "5",
+    "StartingMoves": [],
+    "NumberOfStartingMoves": 1,
+    "StartingWeapons": {
+      "0": 1
+    },
+    "StartingArmor": {
+      "3": 1
+    }
+  },
+  {
+    "MemberID": "14",
+    "Name": "Mira",
+    "Description": "",
+    "Gender": "Female",
+    "MaxHP": 70,
+    "MaxMana": 100,
+    "Strength": 6,
+    "Intelligence": 12,
+    "Tenacity": 7,
+    "Agility": 11,
+    "WeaknessElementIDs": [],
+    "ResistanceElementIDs": [],
+    "DefaultStrikeMoveID": "4",
+    "StartingMoves": [],
+    "NumberOfStartingMoves": 1,
+    "StartingWeapons": {
+      "0": 1
+    },
+    "StartingArmor": {
+      "3": 1
+    }
   }
 ]
