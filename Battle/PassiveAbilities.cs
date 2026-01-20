@@ -1,18 +1,15 @@
 ﻿using Microsoft.Xna.Framework;
 using ProjectVagabond.Battle;
-using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using static ProjectVagabond.Battle.Abilities.InflictStatusStunAbility;
 
 namespace ProjectVagabond.Battle.Abilities
 {
     // --- STAT MODIFIERS ---
-    // Note: IStatModifier is polled every frame for UI. We cannot emit events here without spamming.
     public class FlatStatBonusAbility : IStatModifier
     {
         public string Name => "Stat Bonus";
@@ -68,12 +65,7 @@ namespace ProjectVagabond.Battle.Abilities
         public string Name => "Bulwark";
         public string Description => "Immune to critical hits.";
         public CritImmunityAbility() { }
-        public float ModifyCritChance(float currentChance, CombatContext ctx)
-        {
-            // We don't fire an event here because checking crit chance happens before the hit is confirmed.
-            // Firing here might show "Bulwark" even if the attack misses.
-            return 0f;
-        }
+        public float ModifyCritChance(float currentChance, CombatContext ctx) => 0f;
         public float ModifyCritDamage(float currentMultiplier, CombatContext ctx) => currentMultiplier;
     }
 
@@ -1079,6 +1071,49 @@ namespace ProjectVagabond.Battle.Abilities
             }
             return currentDamage;
         }
+    }
+
+    public class PMStubbornAbility : IStatModifier, IOnActionComplete, IBattleLifecycle, IMoveLockAbility
+    {
+        public string Name => "Stubborn";
+        public string Description => "Boosts Strength by 1.5x, but locks user into one move.";
+        private string _lockedMoveID = null;
+
+        public int ModifyStat(OffensiveStatType statType, int currentValue, BattleCombatant owner)
+        {
+            if (statType == OffensiveStatType.Strength)
+            {
+                // Gorilla Tactics / Choice Band logic: 1.5x Strength
+                return (int)(currentValue * 1.5f);
+            }
+            return currentValue;
+        }
+
+        public int ModifyMaxStat(string statName, int currentValue) => currentValue;
+
+        public void OnActionComplete(QueuedAction action, BattleCombatant owner)
+        {
+            // Lock into the move if not already locked
+            if (_lockedMoveID == null && action.ChosenMove != null)
+            {
+                _lockedMoveID = action.ChosenMove.MoveID;
+
+                // Visual Feedback
+                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = owner, Ability = this });
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{owner.Name} is [cStatus]Stubborn[/]! Locked into {action.ChosenMove.MoveName}!" });
+            }
+        }
+
+        public void OnBattleStart(BattleCombatant owner) { _lockedMoveID = null; }
+
+        public void OnCombatantEnter(BattleCombatant owner)
+        {
+            // Reset lock when switching in
+            _lockedMoveID = null;
+        }
+
+        public string GetLockedMoveID() => _lockedMoveID;
+        public void ResetLock() => _lockedMoveID = null;
     }
 
     public class HydroScalingAbility : IOutgoingDamageModifier

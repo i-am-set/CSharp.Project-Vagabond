@@ -7,7 +7,7 @@ using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Transitions;
-using ProjectVagabond.UI; // Added for TextAnimator and TextEffectType
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections;
@@ -29,7 +29,6 @@ namespace ProjectVagabond.Battle.UI
         public event Action? OnFleeRequested;
         public event Action? OnSlot2BackRequested;
 
-        // --- NEW EVENT FOR STRIKE ---
         public event Action<BattleCombatant>? OnStrikeRequested;
 
         private bool _isVisible;
@@ -61,7 +60,6 @@ namespace ProjectVagabond.Battle.UI
         private bool _buttonsInitialized = false;
         private MouseState _previousMouseState;
 
-        // Tooltip Title Scrolling State
         private bool _isTooltipScrollingInitialized = false;
         private float _tooltipScrollPosition = 0f;
         private float _tooltipScrollWaitTimer = 0f;
@@ -69,7 +67,6 @@ namespace ProjectVagabond.Battle.UI
         private enum TooltipScrollState { PausedAtStart, ScrollingToEnd, PausedAtEnd }
         private TooltipScrollState _tooltipScrollState = TooltipScrollState.PausedAtStart;
 
-        // Hover Info Title Scrolling State
         private bool _isHoverInfoScrollingInitialized = false;
         private float _hoverInfoScrollPosition = 0f;
         private float _hoverInfoScrollWaitTimer = 0f;
@@ -78,14 +75,11 @@ namespace ProjectVagabond.Battle.UI
         private HoverInfoScrollState _hoverInfoScrollState = HoverInfoScrollState.PausedAtStart;
         private MoveData? _lastHoveredMoveForScrolling;
 
-
-        // Scrolling Tuning
         private const float SCROLL_SPEED = 25f;
         private const float SCROLL_PAUSE_DURATION = 1.5f;
         private const int EXTRA_SCROLL_SPACES = 1;
         private static readonly RasterizerState _clipRasterizerState = new RasterizerState { ScissorTestEnable = true };
 
-        // Spam Click Prevention State
         private readonly Queue<float> _clickTimestamps = new Queue<float>();
         private bool _isSpamming = false;
         private float _spamCooldownTimer = 0f;
@@ -93,26 +87,21 @@ namespace ProjectVagabond.Battle.UI
         private const float SPAM_WINDOW_SECONDS = 1f;
         private const float SPAM_COOLDOWN_SECONDS = 0.25f;
 
-        // Shared animation timer for main action buttons
         public float SharedSwayTimer { get; private set; } = 0f;
         private bool _wasAnyActionHoveredLastFrame = false;
 
-        // Hover Box Animation
         private MoveButton? _hoveredMoveButton;
         private bool _shouldAttuneButtonPulse = false;
 
-        // --- Moves Menu Layout Constants ---
         private const int MOVE_BUTTON_WIDTH = 116;
         private const int MOVE_BUTTON_HEIGHT = 9;
         private const int MOVE_ROW_SPACING = 1;
         private const int MOVE_ROWS = 4;
         private const int MOVE_BLOCK_HEIGHT = MOVE_ROWS * (MOVE_BUTTON_HEIGHT + MOVE_ROW_SPACING) - MOVE_ROW_SPACING;
 
-        // Debug Bounds
         private Rectangle _tooltipBounds;
         private Rectangle _moveInfoPanelBounds;
 
-        // Text Formatting Tuning
         private const int SPACE_WIDTH = 5;
 
         public ActionMenu()
@@ -138,15 +127,10 @@ namespace ProjectVagabond.Battle.UI
 
             var spriteManager = ServiceLocator.Get<SpriteManager>();
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-            var defaultFont = ServiceLocator.Get<BitmapFont>(); // Use Default Font for Main Buttons
+            var defaultFont = ServiceLocator.Get<BitmapFont>();
             var actionIconsSheet = spriteManager.ActionIconsSpriteSheet;
             var actionIconRects = spriteManager.ActionIconSourceRects;
 
-            // Main Menu Buttons - Converted to standard Buttons for 128x12 layout
-            // Disabled hover sway.
-            // TextRenderOffset set to (0, 1) to move text down 1 pixel.
-            // Font set to defaultFont.
-            // CHANGED: Added EnableTextWave and WaveEffectType.DriftWave
             var actButton = new Button(Rectangle.Empty, "ACT", function: "Act", font: defaultFont, enableHoverSway: false)
             {
                 CustomHoverTextColor = _global.Palette_Red,
@@ -168,7 +152,6 @@ namespace ProjectVagabond.Battle.UI
                 SetState(MenuState.Moves);
             };
 
-            // Switch Logic
             switchButton.OnClick += () => {
                 if (_isSpamming) { switchButton.TriggerShake(); EventBus.Publish(new GameEvents.AlertPublished { Message = "Spam Prevention" }); return; }
                 OnSwitchMenuRequested?.Invoke();
@@ -177,18 +160,15 @@ namespace ProjectVagabond.Battle.UI
             _actionButtons.Add(actButton);
             _actionButtons.Add(switchButton);
 
-            // Secondary Action Buttons (Strike, Attune, Stall) - Keep Secondary Font
-            // CHANGED: customHoverTextColor set to Palette_Red
             var strikeButton = new TextOverImageButton(Rectangle.Empty, "STRIKE", null, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[0], enableHoverSway: false, customHoverTextColor: _global.Palette_Red)
             {
                 HasRightClickHint = false,
-                HasMiddleClickHint = true, // Updated to Middle Click
+                HasMiddleClickHint = true,
                 TintBackgroundOnHover = false,
                 DrawBorderOnHover = false,
                 HoverBorderColor = _global.Palette_Red
             };
             strikeButton.OnClick += () => {
-                // Delegate to BattleUIManager to handle the logic
                 OnStrikeRequested?.Invoke(_player);
             };
             _secondaryActionButtons.Add(strikeButton);
@@ -196,7 +176,7 @@ namespace ProjectVagabond.Battle.UI
             var attuneButton = new TextOverImageButton(Rectangle.Empty, "ATTUNE", null, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[3], enableHoverSway: false, customHoverTextColor: _global.Palette_Red)
             {
                 HasRightClickHint = false,
-                HasMiddleClickHint = true, // Updated to Middle Click
+                HasMiddleClickHint = true,
                 TintBackgroundOnHover = false,
                 DrawBorderOnHover = false,
                 HoverBorderColor = _global.Palette_Red
@@ -212,7 +192,7 @@ namespace ProjectVagabond.Battle.UI
             var stallButton = new TextOverImageButton(Rectangle.Empty, "STALL", null, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[2], enableHoverSway: false, customHoverTextColor: _global.Palette_Red)
             {
                 HasRightClickHint = false,
-                HasMiddleClickHint = true, // Updated to Middle Click
+                HasMiddleClickHint = true,
                 TintBackgroundOnHover = false,
                 DrawBorderOnHover = false,
                 HoverBorderColor = _global.Palette_Red
@@ -227,7 +207,6 @@ namespace ProjectVagabond.Battle.UI
 
             _backButton.Font = secondaryFont;
 
-            // Initialize Slot 2 Back Button
             _slot2BackButton = new Button(Rectangle.Empty, "BACK", enableHoverSway: false) { CustomDefaultTextColor = _global.Palette_DarkShadow };
             _slot2BackButton.OnClick += () => OnSlot2BackRequested?.Invoke();
             _slot2BackButton.Font = secondaryFont;
@@ -281,8 +260,6 @@ namespace ProjectVagabond.Battle.UI
             _allCombatants = allCombatants;
             _allTargets = allCombatants.Where(c => !c.IsPlayerControlled && !c.IsDefeated).ToList();
 
-            // Ensure buttons are initialized and update their state immediately based on the new combatant list.
-            // This prevents the UI from animating in with stale state from a previous battle.
             InitializeButtons();
             UpdateSwitchButtonState();
 
@@ -322,7 +299,6 @@ namespace ProjectVagabond.Battle.UI
             }
             else if (newState == MenuState.Targeting)
             {
-                // Timer reset removed as it's no longer used here
             }
             else if (newState == MenuState.Tooltip)
             {
@@ -351,7 +327,6 @@ namespace ProjectVagabond.Battle.UI
                 }
 
                 int effectivePower = DamageCalculator.GetEffectiveMovePower(_player, move);
-                // Pass null for background to make it transparent
                 var moveButton = CreateMoveButton(move, entry, effectivePower, secondaryFont, null, true);
                 _moveButtons[i] = moveButton;
                 moveButton.ShowInstantly();
@@ -379,7 +354,6 @@ namespace ProjectVagabond.Battle.UI
 
         private void HandleMoveButtonClick(MoveData move, MoveEntry? entry, MoveButton button)
         {
-            // --- MANA DUMP LOGIC ---
             var manaDump = move.Abilities.OfType<ManaDumpAbility>().FirstOrDefault();
             bool canAfford;
             if (manaDump != null)
@@ -406,7 +380,6 @@ namespace ProjectVagabond.Battle.UI
             SelectMove(move, entry);
         }
 
-        // Made public so BattleUIManager can call it for Strike
         public void SelectMoveExternal(MoveData move, MoveEntry? entry)
         {
             SelectMove(move, entry);
@@ -417,7 +390,6 @@ namespace ProjectVagabond.Battle.UI
             _selectedMove = move;
             _selectedSpellbookEntry = entry;
 
-            // Force targeting menu for everything except None
             if (move.Target == TargetType.None)
             {
                 OnMoveSelected?.Invoke(move, entry, null);
@@ -549,13 +521,9 @@ namespace ProjectVagabond.Battle.UI
                     const int infoPanelWidth = 120;
                     const int gap = 0;
 
-                    // Calculate total width of the three columns
                     int totalWidth = secButtonWidth + gap + MOVE_BUTTON_WIDTH + gap + infoPanelWidth;
-
-                    // Center the entire block on screen
                     int startX = (Global.VIRTUAL_WIDTH - totalWidth) / 2;
 
-                    // Column 1: Secondary Actions (Left)
                     int secGridStartX = startX;
                     int moveGridStartY = 128;
                     int secGridStartY = moveGridStartY + (MOVE_BLOCK_HEIGHT / 2) - (secBlockHeight / 2);
@@ -567,7 +535,6 @@ namespace ProjectVagabond.Battle.UI
                         button.Bounds = new Rectangle(secGridStartX, yPos, secButtonWidth, secButtonHeight);
                     }
 
-                    // Column 2: Move Buttons (Center)
                     int moveGridStartX = secGridStartX + secButtonWidth + gap;
                     for (int i = 0; i < _moveButtons.Length; i++)
                     {
@@ -588,12 +555,9 @@ namespace ProjectVagabond.Battle.UI
 
         private void UpdateSwitchButtonState()
         {
-            // Update Switch Button Enable State
             if (_allCombatants != null && _actionButtons.Count > 1)
             {
-                // Check if there are any player-controlled combatants on the bench (Slot >= 2)
                 bool hasBench = _allCombatants.Any(c => c.IsPlayerControlled && !c.IsDefeated && c.BattleSlot >= 2);
-                // The Switch button is the 2nd button (index 1)
                 _actionButtons[1].IsEnabled = hasBench;
             }
         }
@@ -609,8 +573,6 @@ namespace ProjectVagabond.Battle.UI
                 return;
             }
 
-            // If input is blocked, use a dummy mouse state to prevent hover/click logic
-            // but still allow internal state updates (like timers)
             MouseState effectiveMouseState = isInputBlocked
                 ? new MouseState(-10000, -10000, currentMouseState.ScrollWheelValue, ButtonState.Released, ButtonState.Released, ButtonState.Released, ButtonState.Released, ButtonState.Released)
                 : currentMouseState;
@@ -619,6 +581,20 @@ namespace ProjectVagabond.Battle.UI
             UpdateSpamDetection(gameTime, effectiveMouseState);
 
             HoveredButton = null;
+
+            // --- CHECK FOR MOVE LOCK ---
+            string lockedMoveID = null;
+            if (_player != null)
+            {
+                foreach (var ability in _player.Abilities)
+                {
+                    if (ability is IMoveLockAbility lockAbility)
+                    {
+                        lockedMoveID = lockAbility.GetLockedMoveID();
+                        if (lockedMoveID != null) break;
+                    }
+                }
+            }
 
             switch (_currentState)
             {
@@ -637,7 +613,6 @@ namespace ProjectVagabond.Battle.UI
                         }
                     }
 
-                    // Update Slot 2 Back Button
                     if (_player != null && _player.BattleSlot == 1)
                     {
                         _slot2BackButton.Update(effectiveMouseState);
@@ -669,16 +644,19 @@ namespace ProjectVagabond.Battle.UI
                     MoveData? moveForTooltip = null;
                     bool simpleTooltip = false;
 
-                    // Check for Silence Status
                     bool isSilenced = _player != null && _player.HasStatusEffect(StatusEffectType.Silence);
 
                     foreach (var button in _moveButtons)
                     {
                         if (button == null) continue;
 
+                        // --- LOCK LOGIC ---
+                        if (lockedMoveID != null && button.Move.MoveID != lockedMoveID)
+                        {
+                            button.IsEnabled = false;
+                        }
                         // --- SILENCE LOGIC ---
-                        // If player is silenced and this move is a Spell, disable the button.
-                        if (isSilenced && button.Move.MoveType == MoveType.Spell)
+                        else if (isSilenced && button.Move.MoveType == MoveType.Spell)
                         {
                             button.IsEnabled = false;
                         }
@@ -711,17 +689,14 @@ namespace ProjectVagabond.Battle.UI
 
                     foreach (var button in _secondaryActionButtons)
                     {
-                        // --- SILENCE LOGIC FOR SECONDARY BUTTONS ---
-                        // Check if the underlying move is a spell (e.g. Attune)
                         string? moveId = button.Text switch
                         {
-                            "STRIKE" => _player?.DefaultStrikeMoveID, // This is just an ID, but StrikeMove logic handles the object
+                            "STRIKE" => _player?.DefaultStrikeMoveID,
                             "ATTUNE" => "7",
                             "STALL" => "6",
                             _ => null
                         };
 
-                        // For Strike, we need to check the actual move object
                         MoveData? moveData = null;
                         if (button.Text == "STRIKE" && _player != null)
                         {
@@ -734,7 +709,13 @@ namespace ProjectVagabond.Battle.UI
 
                         if (moveData != null)
                         {
-                            if (isSilenced && moveData.MoveType == MoveType.Spell)
+                            // --- LOCK LOGIC ---
+                            if (lockedMoveID != null && moveData.MoveID != lockedMoveID)
+                            {
+                                button.IsEnabled = false;
+                            }
+                            // --- SILENCE LOGIC ---
+                            else if (isSilenced && moveData.MoveType == MoveType.Spell)
                             {
                                 button.IsEnabled = false;
                             }
@@ -771,7 +752,6 @@ namespace ProjectVagabond.Battle.UI
                         SetState(MenuState.Tooltip);
                     }
 
-                    // --- Right Click to Back Logic ---
                     if (effectiveMouseState.RightButton == ButtonState.Pressed && _previousMouseState.RightButton == ButtonState.Released)
                     {
                         GoBack();
@@ -806,30 +786,26 @@ namespace ProjectVagabond.Battle.UI
             _previousMouseState = currentMouseState;
         }
 
+        // ... (Draw methods remain unchanged) ...
         public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform, Vector2 offset)
         {
             InitializeButtons();
 
             var spriteManager = ServiceLocator.Get<SpriteManager>();
             var pixel = ServiceLocator.Get<Texture2D>();
-            var bgColor = _global.Palette_Black; // Changed to fully opaque black
+            var bgColor = _global.Palette_Black;
             const int dividerY = 123;
             var bgRect = new Rectangle(0, dividerY + (int)offset.Y, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT - dividerY);
             spriteBatch.DrawSnapped(pixel, bgRect, bgColor);
 
             if (!_isVisible)
             {
-                // Draw the combat border when the menu is hidden (e.g. during narration/animations)
-                // Apply offset to the border position
                 spriteBatch.DrawSnapped(spriteManager.BattleBorderCombat, offset, Color.White);
                 return;
             }
 
-            // Draw the specific border based on state
             if (_currentState == MenuState.Main)
             {
-                // --- DYNAMIC BORDER SELECTION ---
-                // If the acting player is in Slot 1 (the second slot), use the alternate border.
                 var border = (_player != null && _player.BattleSlot == 1) ? spriteManager.BattleBorderMain2 : spriteManager.BattleBorderMain;
                 spriteBatch.DrawSnapped(border, offset, Color.White);
             }
@@ -848,17 +824,13 @@ namespace ProjectVagabond.Battle.UI
                     {
                         const int buttonWidth = 128;
                         const int buttonHeight = 14;
-                        const int buttonSpacing = 0; // No gap
+                        const int buttonSpacing = 0;
 
                         int totalHeight = (buttonHeight * _actionButtons.Count) + (buttonSpacing * (_actionButtons.Count - 1));
                         int availableHeight = Global.VIRTUAL_HEIGHT - dividerY;
 
-                        // Moved up 3 pixels (-3)
                         int startY = dividerY + (availableHeight - totalHeight) / 2 - 3;
 
-                        // --- DYNAMIC BUTTON POSITIONING ---
-                        // Default (Slot 0): Left side (-80 offset)
-                        // Slot 1: Right side (+80 offset)
                         int xOffset = -80;
                         if (_player != null && _player.BattleSlot == 1)
                         {
@@ -876,11 +848,9 @@ namespace ProjectVagabond.Battle.UI
 
                             if (button.IsHovered && button.IsEnabled)
                             {
-                                // Pass rotation from button for background
                                 DrawBeveledBackground(spriteBatch, pixel, hoverRect, _global.Palette_DarkShadow, button.CurrentHoverRotation);
                             }
 
-                            // Pass offset to button draw
                             button.Draw(spriteBatch, font, gameTime, transform, false, null, offset.Y);
                             currentY += buttonHeight + buttonSpacing;
                         }
@@ -888,16 +858,14 @@ namespace ProjectVagabond.Battle.UI
                         if (_player != null && _player.BattleSlot == 1)
                         {
                             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-                            // Ensure font is set
                             if (_slot2BackButton.Font == null) _slot2BackButton.Font = secondaryFont;
 
-                            int backButtonHeight = 9; // Reduced from 15
-                            int backButtonY = 168;    // Moved down from 165
+                            int backButtonHeight = 9;
+                            int backButtonY = 168;
 
                             var backSize = secondaryFont.MeasureString(_slot2BackButton.Text);
                             int backWidth = (int)backSize.Width + 16;
-                            // Center relative to the button column
-                            int backX = startX + (buttonWidth - backWidth) / 2 + 2; // Added +2 pixels
+                            int backX = startX + (buttonWidth - backWidth) / 2 + 2;
 
                             _slot2BackButton.Bounds = new Rectangle(backX, backButtonY, backWidth, backButtonHeight);
                             _slot2BackButton.Draw(spriteBatch, font, gameTime, transform, false, null, offset.Y);
@@ -911,10 +879,8 @@ namespace ProjectVagabond.Battle.UI
                     }
                 case MenuState.Targeting:
                     {
-                        // Removed DrawTargetingText call to prevent duplication
-
                         const int backButtonPadding = 8;
-                        const int backButtonHeight = 15; // Increased from 7 to match ItemMenu
+                        const int backButtonHeight = 15;
                         const int backButtonTopMargin = 1;
                         const int horizontalPadding = 10;
                         const int verticalPadding = 2;
@@ -924,7 +890,7 @@ namespace ProjectVagabond.Battle.UI
 
                         int backButtonWidth = (int)(_backButton.Font ?? font).MeasureString(_backButton.Text).Width + backButtonPadding * 2;
                         _backButton.Bounds = new Rectangle(
-                            horizontalPadding + (availableWidth - backButtonWidth) / 2 + 1, // Added +1 to X
+                            horizontalPadding + (availableWidth - backButtonWidth) / 2 + 1,
                             165,
                             backButtonWidth,
                             backButtonHeight
@@ -946,10 +912,8 @@ namespace ProjectVagabond.Battle.UI
                     }
             }
 
-            // --- DEBUG DRAWING (F1) ---
             if (_global.ShowSplitMapGrid)
             {
-                // Main Menu Buttons
                 if (_currentState == MenuState.Main)
                 {
                     foreach (var button in _actionButtons)
@@ -966,7 +930,6 @@ namespace ProjectVagabond.Battle.UI
                     }
                 }
 
-                // Moves Menu
                 if (_currentState == MenuState.Moves)
                 {
                     foreach (var button in _moveButtons)
@@ -993,7 +956,6 @@ namespace ProjectVagabond.Battle.UI
                     spriteBatch.DrawSnapped(pixel, infoDebugRect, Color.Magenta * 0.5f);
                 }
 
-                // Tooltip
                 if (_currentState == MenuState.Tooltip)
                 {
                     var debugRect = _tooltipBounds;
@@ -1005,7 +967,6 @@ namespace ProjectVagabond.Battle.UI
                     spriteBatch.DrawSnapped(pixel, backDebugRect, Color.Red * 0.5f);
                 }
 
-                // Targeting
                 if (_currentState == MenuState.Targeting)
                 {
                     var backDebugRect = _backButton.Bounds;
@@ -1022,14 +983,12 @@ namespace ProjectVagabond.Battle.UI
 
             const int boxWidth = 294;
             const int boxHeight = 47;
-            const int boxY = 113; // Moved up from 117 to fit larger back button
+            const int boxY = 113;
             int boxX = (Global.VIRTUAL_WIDTH - boxWidth) / 2;
             var tooltipBounds = new Rectangle(boxX, boxY + (int)offset.Y, boxWidth, boxHeight);
-            _tooltipBounds = tooltipBounds; // Store for debug
+            _tooltipBounds = tooltipBounds;
 
-            // Draw beveled background
             DrawBeveledBackground(spriteBatch, pixel, tooltipBounds, _global.Palette_Black);
-            // Draw beveled border
             DrawBeveledBorder(spriteBatch, pixel, tooltipBounds, _global.Palette_White);
 
             if (_tooltipMove != null)
@@ -1081,14 +1040,14 @@ namespace ProjectVagabond.Battle.UI
                 }
             }
 
-            int backButtonY = 113 + boxHeight + 5; // Use base Y + height + padding
+            int backButtonY = 113 + boxHeight + 5;
             var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
             int backWidth = (int)backSize.Width + 16;
             _backButton.Bounds = new Rectangle(
-                (Global.VIRTUAL_WIDTH - backWidth) / 2 + 1, // Added +1 to X
+                (Global.VIRTUAL_WIDTH - backWidth) / 2 + 1,
                 backButtonY,
                 backWidth,
-                15 // Increased from 7 to match ItemMenu
+                15
             );
             _backButton.Draw(spriteBatch, font, gameTime, transform, false, null, offset.Y);
         }
@@ -1096,9 +1055,8 @@ namespace ProjectVagabond.Battle.UI
         private void DrawComplexTooltip(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform, Vector2 offset)
         {
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-            var pixel = ServiceLocator.Get<Texture2D>(); // Added pixel retrieval
+            var pixel = ServiceLocator.Get<Texture2D>();
 
-            const int dividerY = 114;
             const int moveButtonWidth = 157;
             const int columns = 2;
             const int columnSpacing = 0;
@@ -1106,16 +1064,14 @@ namespace ProjectVagabond.Battle.UI
             int totalGridWidth = (moveButtonWidth * columns) + columnSpacing;
             const int gridHeight = 40;
             int gridStartX = (Global.VIRTUAL_WIDTH - totalGridWidth) / 2;
-            int gridStartY = 123; // Adjusted from 128 to fit larger back button
+            int gridStartY = 123;
 
             var spriteManager = ServiceLocator.Get<SpriteManager>();
             var tooltipBg = spriteManager.ActionTooltipBackgroundSprite;
             var tooltipBgRect = new Rectangle(gridStartX, gridStartY + (int)offset.Y, totalGridWidth, gridHeight);
-            _tooltipBounds = tooltipBgRect; // Store for debug
+            _tooltipBounds = tooltipBgRect;
 
-            // Draw beveled background
             DrawBeveledBackground(spriteBatch, pixel, tooltipBgRect, _global.Palette_Black);
-
             DrawBeveledBorder(spriteBatch, pixel, tooltipBgRect, _global.Palette_White);
 
             if (_tooltipMove != null)
@@ -1124,14 +1080,14 @@ namespace ProjectVagabond.Battle.UI
             }
 
             const int backButtonTopMargin = 0;
-            int backButtonY = 123 + gridHeight + backButtonTopMargin + 2; // Use base Y
+            int backButtonY = 123 + gridHeight + backButtonTopMargin + 2;
             var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
             int backWidth = (int)backSize.Width + 16;
             _backButton.Bounds = new Rectangle(
-                (Global.VIRTUAL_WIDTH - backWidth) / 2 + 1, // Added +1 to X
+                (Global.VIRTUAL_WIDTH - backWidth) / 2 + 1,
                 backButtonY,
                 backWidth,
-                15 // Increased from 7 to match ItemMenu
+                15
             );
             _backButton.Draw(spriteBatch, font, gameTime, transform, false, null, offset.Y);
         }
@@ -1142,37 +1098,23 @@ namespace ProjectVagabond.Battle.UI
             var pixel = ServiceLocator.Get<Texture2D>();
 
             const int secButtonWidth = 60;
-
             const int borderWidth = 120;
             const int borderHeight = 37;
-            const int layoutGap = 5; // Increased gap for spacing
+            const int layoutGap = 5;
 
-            // CHANGED: Shift down 1 pixel as requested
             int moveGridStartY = 129;
-
-            // Calculate total width of the three columns
             int totalWidth = secButtonWidth + layoutGap + MOVE_BUTTON_WIDTH + layoutGap + borderWidth;
-
-            // Center the entire block on screen
             int startX = (Global.VIRTUAL_WIDTH - totalWidth) / 2;
 
-            // Column 1: Secondary Actions (Left)
             int secGridStartX = startX;
-
-            // Column 2: Move Buttons (Center)
             int moveGridStartX = secGridStartX + secButtonWidth + layoutGap;
-
-            // Column 3: Info Panel (Right)
             int borderX = moveGridStartX + MOVE_BUTTON_WIDTH + layoutGap;
             int borderY = moveGridStartY + (MOVE_BLOCK_HEIGHT / 2) - (borderHeight / 2);
 
             var borderRect = new Rectangle(borderX, borderY + (int)offset.Y, borderWidth, borderHeight);
-            _moveInfoPanelBounds = borderRect; // Store for debug
-
-            // Removed manual border drawing here as it's now handled by the background sprite
+            _moveInfoPanelBounds = borderRect;
 
             DrawMoveInfoPanelContent(spriteBatch, HoveredMove, borderRect, font, secondaryFont, transform, false, gameTime);
-
 
             for (int i = 0; i < _moveButtons.Length; i++)
             {
@@ -1189,8 +1131,7 @@ namespace ProjectVagabond.Battle.UI
 
                 if (button == null)
                 {
-                    var placeholderFillColor = Color.Transparent; // Changed from Black to Transparent
-                    // Apply offset to placeholder
+                    var placeholderFillColor = Color.Transparent;
                     var offsetBounds = new Rectangle(visualBounds.X, visualBounds.Y + (int)offset.Y, visualBounds.Width, visualBounds.Height);
                     spriteBatch.DrawSnapped(pixel, offsetBounds, placeholderFillColor);
                     var placeholderBorderColor = _global.Palette_DarkShadow;
@@ -1216,7 +1157,6 @@ namespace ProjectVagabond.Battle.UI
                     if (button == _hoveredMoveButton && button.IsEnabled)
                     {
                         var hoverRect = new Rectangle(offsetBounds.X, offsetBounds.Y - 1, offsetBounds.Width, offsetBounds.Height + 1);
-                        // Pass button rotation to background
                         DrawBeveledBackground(spriteBatch, pixel, hoverRect, _global.Palette_DarkShadow, button.CurrentHoverRotation);
                     }
 
@@ -1237,21 +1177,17 @@ namespace ProjectVagabond.Battle.UI
             for (int i = 0; i < _secondaryActionButtons.Count; i++)
             {
                 var button = _secondaryActionButtons[i];
-
                 var buttonRect = new Rectangle(button.Bounds.X, button.Bounds.Y + (int)offset.Y, button.Bounds.Width, button.Bounds.Height);
 
                 if (button.IsHovered && button.IsEnabled)
                 {
                     var hoverRect = new Rectangle(buttonRect.X, buttonRect.Y, buttonRect.Width, buttonRect.Height);
-                    // Pass rotation to background
-                    // Check if it's a TextOverImageButton or just Button to get rotation
                     float rotation = (button is Button btn) ? btn.CurrentHoverRotation : 0f;
                     DrawBeveledBackground(spriteBatch, pixel, hoverRect, _global.Palette_DarkShadow, rotation);
                 }
 
                 button.Draw(spriteBatch, font, gameTime, transform, false, null, offset.Y, button.Text == "ATTUNE" ? attunePulseColor : null);
             }
-
 
             int layoutBottomY = Math.Max(borderRect.Bottom - (int)offset.Y, moveGridStartY + MOVE_BLOCK_HEIGHT);
             int backButtonY = layoutBottomY - 2;
@@ -1268,107 +1204,48 @@ namespace ProjectVagabond.Battle.UI
 
         private void DrawBeveledBackground(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, Color color, float rotation = 0f)
         {
-            // Center of the button/background group
             Vector2 center = rect.Center.ToVector2();
             float cos = MathF.Cos(rotation);
             float sin = MathF.Sin(rotation);
 
-            // Helper to draw a strip rotated around the center
             void DrawRotatedStrip(int relX, int relY, int w, int h)
             {
-                // Calculate center of this strip relative to group center
                 float stripCenterX = relX + w / 2f;
                 float stripCenterY = relY + h / 2f;
-
-                // Rotate offset
                 float rotX = stripCenterX * cos - stripCenterY * sin;
                 float rotY = stripCenterX * sin + stripCenterY * cos;
-
                 Vector2 drawPos = center + new Vector2(rotX, rotY);
-                Vector2 origin = new Vector2(0.5f, 0.5f); // Pixel center
-
-                // Use Scale to size the 1x1 pixel
+                Vector2 origin = new Vector2(0.5f, 0.5f);
                 spriteBatch.DrawSnapped(pixel, drawPos, null, color, rotation, origin, new Vector2(w, h), SpriteEffects.None, 0f);
             }
 
-            // Coordinates are relative to Top-Left of rect.
-            // We need coordinates relative to Center for rotation math.
-            // relX = absoluteX - center.X
-
-            // 1. Top Row (Y): X+2 to W-4. Height 1.
-            // Rel Y = rect.Y - center.Y
             float topY = rect.Y - center.Y;
             float leftX = rect.X - center.X;
             float w = rect.Width;
             float h = rect.Height;
 
-            // Strip 1: Top
             DrawRotatedStrip((int)(leftX + 2), (int)(topY), (int)(w - 4), 1);
-
-            // Strip 2: Second Row (Y+1)
             DrawRotatedStrip((int)(leftX + 1), (int)(topY + 1), (int)(w - 2), 1);
-
-            // Strip 3: Main Body (Y+2 to Bottom-2)
             DrawRotatedStrip((int)(leftX), (int)(topY + 2), (int)(w), (int)(h - 4));
-
-            // Strip 4: Second to Last (Bottom-2)
             DrawRotatedStrip((int)(leftX + 1), (int)(topY + h - 2), (int)(w - 2), 1);
-
-            // Strip 5: Bottom (Bottom-1)
             DrawRotatedStrip((int)(leftX + 2), (int)(topY + h - 1), (int)(w - 4), 1);
         }
 
         private void DrawBeveledBorder(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, Color color)
         {
-            // Top Line: X+2 to W-4
             spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 2, rect.Y, rect.Width - 4, 1), color);
-
-            // Bottom Line: X+2 to W-4
             spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 2, rect.Bottom - 1, rect.Width - 4, 1), color);
-
-            // Left Line: Y+2 to H-4
             spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X, rect.Y + 2, 1, rect.Height - 4), color);
-
-            // Right Line: Y+2 to H-4
             spriteBatch.DrawSnapped(pixel, new Rectangle(rect.Right - 1, rect.Y + 2, 1, rect.Height - 4), color);
-
-            // Corners (1x1 pixels)
-            // Top-Left
             spriteBatch.DrawSnapped(pixel, new Vector2(rect.X + 1, rect.Y + 1), color);
-            // Top-Right
             spriteBatch.DrawSnapped(pixel, new Vector2(rect.Right - 2, rect.Y + 1), color);
-            // Bottom-Left
             spriteBatch.DrawSnapped(pixel, new Vector2(rect.X + 1, rect.Bottom - 2), color);
-            // Bottom-Right
             spriteBatch.DrawSnapped(pixel, new Vector2(rect.Right - 2, rect.Bottom - 2), color);
-        }
-
-        private void MaskCorners(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, Color color)
-        {
-            // Top-Left
-            spriteBatch.DrawSnapped(pixel, new Vector2(rect.X, rect.Y), color);
-            spriteBatch.DrawSnapped(pixel, new Vector2(rect.X + 1, rect.Y), color);
-            spriteBatch.DrawSnapped(pixel, new Vector2(rect.X, rect.Y + 1), color);
-
-            // Top-Right
-            spriteBatch.DrawSnapped(pixel, new Vector2(rect.Right - 1, rect.Y), color);
-            spriteBatch.DrawSnapped(pixel, new Vector2(rect.Right - 2, rect.Y), color);
-            spriteBatch.DrawSnapped(pixel, new Vector2(rect.Right - 1, rect.Y + 1), color);
-
-            // Bottom-Left
-            spriteBatch.DrawSnapped(pixel, new Vector2(rect.X, rect.Bottom - 1), color);
-            spriteBatch.DrawSnapped(pixel, new Vector2(rect.X + 1, rect.Bottom - 1), color);
-            spriteBatch.DrawSnapped(pixel, new Vector2(rect.X, rect.Bottom - 2), color);
-
-            // Bottom-Right
-            spriteBatch.DrawSnapped(pixel, new Vector2(rect.Right - 1, rect.Bottom - 1), color);
-            spriteBatch.DrawSnapped(pixel, new Vector2(rect.Right - 2, rect.Bottom - 1), color);
-            spriteBatch.DrawSnapped(pixel, new Vector2(rect.Right - 1, rect.Bottom - 2), color);
         }
 
         private void DrawMoveInfoPanelContent(SpriteBatch spriteBatch, MoveData? move, Rectangle bounds, BitmapFont font, BitmapFont secondaryFont, Matrix transform, bool isForTooltip, GameTime gameTime, float opacity = 1.0f)
         {
-            var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont; // Get Tertiary Font
+            var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
             const int horizontalPadding = 4;
             const int verticalPadding = 3;
             float currentY = bounds.Y + verticalPadding;
@@ -1381,7 +1258,6 @@ namespace ProjectVagabond.Battle.UI
                 var nameSize = font.MeasureString(moveName);
                 var namePos = new Vector2(bounds.X + horizontalPadding, currentY);
 
-                // --- 1. Prepare Stack Data (Move Type & Impact Type) ---
                 string moveTypeText = move.MoveType.ToString().ToUpper();
                 Color moveTypeColor = move.MoveType switch
                 {
@@ -1398,10 +1274,7 @@ namespace ProjectVagabond.Battle.UI
                     _ => _global.Palette_DarkShadow
                 };
 
-                // --- 2. Build Stats List ---
                 var statsSegments = new List<(string Text, Color Color, BitmapFont Font)>();
-
-                // Note: Move Type is no longer added to this list. It is drawn manually as part of the stack.
 
                 if (move.ImpactType != ImpactType.Status)
                 {
@@ -1409,44 +1282,35 @@ namespace ProjectVagabond.Battle.UI
                     string accuracyText = move.Accuracy >= 0 ? $"{move.Accuracy}%" : "---";
                     string powerText = move.Power > 0 ? $"{move.Power}" : (move.Effects.ContainsKey("ManaDamage") ? "???" : "---");
 
-                    // --- MANA DUMP LOGIC ---
                     var manaDump = move.Abilities.OfType<ManaDumpAbility>().FirstOrDefault();
                     if (manaDump != null && _player != null)
                     {
                         powerText = $"{(int)(_player.Stats.CurrentMana * manaDump.Multiplier)}";
                     }
 
-                    // Insert in reverse order (Right to Left)
-
-                    // Separator between Stats and Stack
                     statsSegments.Insert(0, (separator, _global.Palette_DarkShadow, secondaryFont));
-
                     statsSegments.Insert(0, (accuracyText, _global.Palette_Sun, secondaryFont));
-                    statsSegments.Insert(0, ("  ", Color.Transparent, secondaryFont)); // Spacer
+                    statsSegments.Insert(0, ("  ", Color.Transparent, secondaryFont));
                     statsSegments.Insert(0, ("ACC", _global.Palette_DarkShadow, tertiaryFont));
                     statsSegments.Insert(0, (separator, _global.Palette_DarkShadow, secondaryFont));
                     statsSegments.Insert(0, (powerText, _global.Palette_Sun, secondaryFont));
-                    statsSegments.Insert(0, ("  ", Color.Transparent, secondaryFont)); // Spacer
+                    statsSegments.Insert(0, ("  ", Color.Transparent, secondaryFont));
                     statsSegments.Insert(0, ("POW", _global.Palette_DarkShadow, tertiaryFont));
                 }
 
-                // --- Contact Text ---
                 if (move.MakesContact)
                 {
                     string contactText = "[ CONTACT ]";
-                    // Insert "CONTACT" at the beginning
                     statsSegments.Insert(0, (contactText, _global.Palette_Red, tertiaryFont));
-                    statsSegments.Insert(1, (" ", Color.Transparent, secondaryFont)); // Spacer
+                    statsSegments.Insert(1, (" ", Color.Transparent, secondaryFont));
                 }
 
-                // --- 3. Calculate Widths ---
                 float totalStatsWidth = 0f;
                 foreach (var segment in statsSegments)
                 {
                     totalStatsWidth += segment.Font.MeasureString(segment.Text).Width;
                 }
 
-                // Calculate Stack Width (Max of MoveType and ImpactType)
                 float moveTypeWidth = tertiaryFont.MeasureString(moveTypeText).Width;
                 float impactTypeWidth = tertiaryFont.MeasureString(impactTypeText).Width;
                 float stackWidth = Math.Max(moveTypeWidth, impactTypeWidth);
@@ -1456,11 +1320,9 @@ namespace ProjectVagabond.Battle.UI
                 float statsY = (currentY + (nameSize.Height - secondaryFont.LineHeight) / 2) - 1;
                 float startX = bounds.Right - horizontalPadding - totalContentWidth;
 
-                // --- 4. Draw Stats ---
                 float currentX = startX;
                 foreach (var segment in statsSegments)
                 {
-                    // Center vertically relative to the secondary font line height
                     float yOffset = (secondaryFont.LineHeight - segment.Font.LineHeight) / 2f;
                     yOffset = MathF.Round(yOffset);
 
@@ -1468,19 +1330,13 @@ namespace ProjectVagabond.Battle.UI
                     currentX += segment.Font.MeasureString(segment.Text).Width;
                 }
 
-                // --- 5. Draw Stack (Move Type & Impact Type) ---
-                // Center vertically relative to secondary font
                 float tertiaryYOffset = (secondaryFont.LineHeight - tertiaryFont.LineHeight) / 2f;
                 tertiaryYOffset = MathF.Round(tertiaryYOffset);
                 float stackBaseY = statsY + tertiaryYOffset;
 
-                // Draw Move Type (Bottom)
                 spriteBatch.DrawStringSnapped(tertiaryFont, moveTypeText, new Vector2(currentX, stackBaseY + 3), moveTypeColor);
-
-                // Draw Impact Type (Top - 4 pixels up)
                 spriteBatch.DrawStringSnapped(tertiaryFont, impactTypeText, new Vector2(currentX, stackBaseY - 2), impactTypeColor);
 
-                // --- 6. Scrolling Title Logic ---
                 float textAvailableWidth = startX - namePos.X - 4;
                 bool needsScrolling = nameSize.Width > textAvailableWidth;
                 if (needsScrolling)
@@ -1530,9 +1386,7 @@ namespace ProjectVagabond.Battle.UI
                     float totalTextHeight = wrappedLines.Count * secondaryFont.LineHeight;
                     float availableHeight = (bounds.Bottom - verticalPadding) - currentY;
 
-                    // Center vertically
                     float startY = currentY + (availableHeight - totalTextHeight) / 2f;
-                    // Clamp to top if it overflows
                     if (startY < currentY) startY = currentY;
 
                     float drawY = startY;
@@ -1550,7 +1404,6 @@ namespace ProjectVagabond.Battle.UI
                                 lineWidth += secondaryFont.MeasureString(segment.Text).Width;
                         }
 
-                        // Center horizontally
                         float lineX = bounds.Center.X - (lineWidth / 2f);
                         float lineCurrentX = lineX;
 
@@ -1563,7 +1416,7 @@ namespace ProjectVagabond.Battle.UI
                             }
                             else
                             {
-                                segWidth = secondaryFont.MeasureString(segment.Text).Width; // Use secondaryFont for measurement
+                                segWidth = secondaryFont.MeasureString(segment.Text).Width;
                                 if (segment.Effect != TextEffectType.None)
                                     TextAnimator.DrawTextWithEffect(spriteBatch, secondaryFont, segment.Text, new Vector2(lineCurrentX, drawY), segment.Color * opacity, segment.Effect, (float)gameTime.TotalGameTime.TotalSeconds);
                                 else
@@ -1577,13 +1430,10 @@ namespace ProjectVagabond.Battle.UI
             }
             else
             {
-                // Action 1: Move everything up 4 pixels
                 currentY -= 4;
                 float statsY = currentY;
 
                 Color valueColor = _global.Palette_Sun;
-
-                // Action 2: Darker labels when empty
                 Color labelColor = (move != null) ? _global.Palette_DarkShadow : _global.Palette_DarkShadow;
 
                 string powerLabel = "POW";
@@ -1600,12 +1450,11 @@ namespace ProjectVagabond.Battle.UI
                     impactValue = move.ImpactType.ToString().ToUpper();
                     moveTypeValue = move.MoveType.ToString().ToUpper();
 
-                    // --- MANA DUMP LOGIC ---
                     var manaDump = move.Abilities.OfType<ManaDumpAbility>().FirstOrDefault();
                     if (manaDump != null && _player != null)
                     {
                         powerValue = ((int)(_player.Stats.CurrentMana * manaDump.Multiplier)).ToString();
-                        manaValue = _player.Stats.CurrentMana.ToString() + "%"; // Added %
+                        manaValue = _player.Stats.CurrentMana.ToString() + "%";
                     }
                 }
                 else
@@ -1614,7 +1463,6 @@ namespace ProjectVagabond.Battle.UI
                     valueColor = labelColor;
                 }
 
-                // Calculate Y offset to center Tertiary font against Secondary font
                 float yOffset = (secondaryFont.LineHeight - tertiaryFont.LineHeight) / 2f;
                 yOffset = MathF.Round(yOffset);
 
@@ -1707,7 +1555,6 @@ namespace ProjectVagabond.Battle.UI
                 var moveTypeSize = secondaryFont.MeasureString(moveTypeValue);
                 const int typeGap = 5;
 
-                // Action 1: Move bottom text up 4 pixels as well
                 float typeY = bounds.Bottom - verticalPadding - secondaryFont.LineHeight - 2;
                 float gapCenter = bounds.Center.X + 5;
 
@@ -1756,22 +1603,15 @@ namespace ProjectVagabond.Battle.UI
                 spriteBatch.DrawStringSnapped(secondaryFont, impactValue, impactPos, impactColor);
                 spriteBatch.DrawStringSnapped(secondaryFont, moveTypeValue, moveTypePos, moveTypeColor);
 
-                // --- NEW: Draw "CON" if Contact (Side Panel) ---
                 if (move != null && move.MakesContact)
                 {
                     string conText = "[ CONTACT ]";
                     var conSize = tertiaryFont.MeasureString(conText);
-
-                    // Position below the last row (USE/TYP)
-                    // typeY is the Y of the last row.
                     float conY = typeY + secondaryFont.LineHeight + 2;
-
-                    // Center horizontally in the panel
                     var conPos = new Vector2(
                         bounds.Center.X - conSize.Width / 2f,
                         conY
                     );
-
                     spriteBatch.DrawStringSnapped(tertiaryFont, conText, conPos, _global.Palette_Red);
                 }
             }
@@ -1891,39 +1731,6 @@ namespace ProjectVagabond.Battle.UI
             {
                 default: return Color.Magenta;
             }
-        }
-
-        private (List<string> Positives, List<string> Negatives) GetStatModifierLines(Dictionary<string, int> mods)
-        {
-            var positives = new List<string>();
-            var negatives = new List<string>();
-            if (mods == null || mods.Count == 0) return (positives, negatives);
-
-            foreach (var kvp in mods)
-            {
-                if (kvp.Value == 0) continue;
-                string colorTag = kvp.Value > 0 ? "[cpositive]" : "[cnegative]";
-                string sign = kvp.Value > 0 ? "+" : "";
-
-                string statName = kvp.Key.ToLowerInvariant() switch
-                {
-                    "strength" => "STR",
-                    "intelligence" => "INT",
-                    "tenacity" => "TEN",
-                    "agility" => "AGI",
-                    "maxhp" => "HP",
-                    "maxmana" => "MP",
-                    _ => kvp.Key.ToUpper().Substring(0, Math.Min(3, kvp.Key.Length))
-                };
-
-                if (statName.Length < 3) statName += " ";
-
-                string line = $"{statName} {colorTag}{sign}{kvp.Value}[/]";
-
-                if (kvp.Value > 0) positives.Add(line);
-                else negatives.Add(line);
-            }
-            return (positives, negatives);
         }
     }
 }

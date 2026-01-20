@@ -1,4 +1,16 @@
-﻿using ProjectVagabond.Battle;
+﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Battle.UI;
+using ProjectVagabond.UI;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
+using static ProjectVagabond.Battle.Abilities.InflictStatusStunAbility;
 
 namespace ProjectVagabond.Battle.Abilities
 {
@@ -109,6 +121,19 @@ namespace ProjectVagabond.Battle.Abilities
     public interface IOnActionComplete : IAbility
     {
         void OnActionComplete(QueuedAction action, BattleCombatant owner);
+    }
+
+    /// <summary>
+    /// Allows an ability to restrict which moves the combatant can select in the UI.
+    /// Used for effects like "Stubborn" (Choice Band behavior).
+    /// </summary>
+    public interface IMoveLockAbility : IAbility
+    {
+        /// <summary>
+        /// Returns the ID of the move the user is locked into, or null if no lock is active.
+        /// </summary>
+        string GetLockedMoveID();
+        void ResetLock();
     }
 
     // --- TRIGGERS ---
