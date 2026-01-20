@@ -20,7 +20,7 @@ namespace ProjectVagabond.UI
 {
     /// <summary>
     /// A modal dialog that forces the player to select a bench member to switch in.
-    /// Used for moves like "Shadow Step" (Disengage).
+    /// Used for moves like "Shadow Step" (Disengage) and forced reinforcements.
     /// </summary>
     public class CombatSwitchDialog : Dialog
     {
@@ -35,6 +35,12 @@ namespace ProjectVagabond.UI
         private const int BUTTON_HEIGHT = 15;
         private const int BUTTON_SPACING = 2;
         private const int PADDING = 10;
+
+        /// <summary>
+        /// If true, the player cannot close this dialog without making a selection.
+        /// Used for death replacements.
+        /// </summary>
+        public bool IsMandatory { get; set; } = false;
 
         public CombatSwitchDialog(GameScene scene) : base(scene)
         {
@@ -138,6 +144,12 @@ namespace ProjectVagabond.UI
                 }
             }
 
+            // Only allow closing if NOT mandatory
+            if (!IsMandatory && KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState))
+            {
+                Hide();
+            }
+
             _previousMouseState = currentMouseState;
             _previousKeyboardState = currentKeyboardState;
         }
@@ -164,7 +176,7 @@ namespace ProjectVagabond.UI
             DrawRectangleBorder(spriteBatch, pixel, _dialogBounds, 1, _global.Palette_White);
 
             // Draw Title
-            string title = "CHOOSE REPLACEMENT";
+            string title = IsMandatory ? "REINFORCEMENT NEEDED" : "CHOOSE REPLACEMENT";
             var titleSize = secondaryFont.MeasureString(title);
             var titlePos = new Vector2(
                 _dialogBounds.Center.X - titleSize.Width / 2,

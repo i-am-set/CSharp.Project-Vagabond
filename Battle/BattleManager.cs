@@ -71,6 +71,9 @@ namespace ProjectVagabond.Battle
         private int _reinforcementSlotIndex = 0;
         private bool _reinforcementAnnounced = false;
 
+        // --- NEW: State to track forced selection ---
+        private bool _waitingForReinforcementSelection = false;
+
         // Tracks the name of the last person to die in a specific slot (Key: "Player_0", "Enemy_1")
         private readonly Dictionary<string, string> _lastDefeatedNames = new Dictionary<string, string>();
 
@@ -275,9 +278,45 @@ namespace ProjectVagabond.Battle
 
         public void SubmitInteractionResult(object result)
         {
+            // Case 1: Active Interaction (e.g. Disengage)
             if (_activeInteraction != null)
             {
                 _activeInteraction.Resolve(result);
+                return;
+            }
+
+            // Case 2: Forced Reinforcement Selection
+            if (_waitingForReinforcementSelection)
+            {
+                if (result is BattleCombatant reinforcement)
+                {
+                    // Determine which slot we are filling based on the current index
+                    bool isPlayerSlot = _reinforcementSlotIndex >= 2;
+                    int slot = _reinforcementSlotIndex % 2;
+
+                    // Perform the spawn logic
+                    reinforcement.BattleSlot = slot;
+                    RefreshCombatantCaches();
+
+                    string key = $"{(isPlayerSlot ? "Player" : "Enemy")}_{slot}";
+                    string msg = $"{reinforcement.Name} enters the battle!";
+                    if (_lastDefeatedNames.TryGetValue(key, out string deadName))
+                    {
+                        msg = $"{reinforcement.Name} takes {deadName}'s place!";
+                        _lastDefeatedNames.Remove(key);
+                    }
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = msg });
+                    EventBus.Publish(new GameEvents.CombatantSpawned { Combatant = reinforcement });
+
+                    HandleOnEnterAbilities(reinforcement);
+
+                    // Reset state and resume loop
+                    _waitingForReinforcementSelection = false;
+                    _reinforcementAnnounced = false;
+                    _reinforcementSlotIndex++;
+                    _currentPhase = BattlePhase.Reinforcement;
+                    CanAdvance = true;
+                }
             }
         }
 
@@ -514,9 +553,6 @@ namespace ProjectVagabond.Battle
             }
 
             if (changesMade) RefreshCombatantCaches();
-
-            // Note: Reinforcements are now primarily handled in the Reinforcement phase.
-            // This method acts as a failsafe or for initial setup.
         }
 
         private void HandleActionResolution()
@@ -1189,23 +1225,32 @@ namespace ProjectVagabond.Battle
                     }
                     else
                     {
-                        // Spawn
+                        // --- NEW: Player Reinforcement Logic ---
+                        if (isPlayerSlot)
+                        {
+                            // Pause and ask player to choose
+                            EventBus.Publish(new GameEvents.ForcedSwitchRequested { Actor = null }); // Actor null implies system request
+                            _currentPhase = BattlePhase.ProcessingInteraction;
+                            _waitingForReinforcementSelection = true;
+                            CanAdvance = false;
+                            return;
+                        }
+
+                        // --- Enemy Logic (Auto) ---
                         reinforcement.BattleSlot = slot;
                         RefreshCombatantCaches();
 
-                        // --- NEW: Context-Aware Narration ---
                         string key = $"{(isPlayerSlot ? "Player" : "Enemy")}_{slot}";
                         string msg = $"{reinforcement.Name} enters the battle!";
                         if (_lastDefeatedNames.TryGetValue(key, out string deadName))
                         {
                             msg = $"{reinforcement.Name} takes {deadName}'s place!";
-                            _lastDefeatedNames.Remove(key); // Consume the message
+                            _lastDefeatedNames.Remove(key);
                         }
                         EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = msg });
 
                         EventBus.Publish(new GameEvents.CombatantSpawned { Combatant = reinforcement });
 
-                        // Trigger Passives (Gentle Soul)
                         HandleOnEnterAbilities(reinforcement);
 
                         _reinforcementAnnounced = false;

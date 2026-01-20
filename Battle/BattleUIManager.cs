@@ -145,6 +145,13 @@ namespace ProjectVagabond.Battle.UI
         {
             // Open the dedicated forced switch dialog
             var battleManager = ServiceLocator.Get<BattleManager>();
+
+            // If Actor is null, it implies a system request (like death replacement), so it's mandatory.
+            // If Actor is set, it's likely a move effect (Disengage), which is usually optional/cancellable via menu logic,
+            // but here we treat the dialog itself as the selection mechanism.
+            // For death replacement, we MUST force a selection.
+
+            _combatSwitchDialog.IsMandatory = (e.Actor == null);
             _combatSwitchDialog.Show(battleManager.AllCombatants.ToList());
         }
 
