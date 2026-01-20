@@ -73,7 +73,10 @@ namespace ProjectVagabond.Battle
             if (combatant.IsPlayerControlled)
             {
                 // Find the party member corresponding to this combatant
+                // Priority 1: Match by Name (if unique)
                 var partyMember = gameState.PlayerState.Party.FirstOrDefault(m => m.Name == combatant.Name);
+
+                // Priority 2: If this is the Player Entity (ID 0), it MUST be the Leader
                 if (partyMember == null && entityId == gameState.PlayerEntityId)
                 {
                     partyMember = gameState.PlayerState.Leader;
@@ -102,7 +105,12 @@ namespace ProjectVagabond.Battle
                         // Create abilities from the dictionary. Pass empty stat modifiers as intrinsics are currently effect-based.
                         var intrinsicAbilities = AbilityFactory.CreateAbilitiesFromData(partyMember.IntrinsicAbilities, new Dictionary<string, int>());
                         combatant.RegisterAbilities(intrinsicAbilities);
+                        Debug.WriteLine($"[BattleCombatantFactory] Registered intrinsics for {combatant.Name}: {string.Join(", ", partyMember.IntrinsicAbilities.Keys)}");
                     }
+                }
+                else
+                {
+                    Debug.WriteLine($"[BattleCombatantFactory] [WARNING] Could not find PartyMember for player entity {entityId} ({combatant.Name}). Intrinsics skipped.");
                 }
 
                 // 1. Apply Weapon Passives (Stats only, effects are on the move)

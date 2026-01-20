@@ -31,7 +31,6 @@ namespace ProjectVagabond.Scenes
         private const float ACTION_EXECUTION_DELAY = 0.5f;
         private const float FIXED_COIN_GROUND_Y = 115f;
         private const int ENEMY_SLOT_Y_OFFSET = 12;
-        // --- TUNING: Battle Entry ---
         private const float BATTLE_ENTRY_INITIAL_DELAY = 0.0f;
 
         private BattleManager _battleManager;
@@ -67,7 +66,6 @@ namespace ProjectVagabond.Scenes
         private bool _rewardScreenShown = false;
         private readonly Random _random = new Random();
 
-        // Action Execution Delay State
         private bool _isWaitingForActionExecution = false;
         private float _actionExecutionTimer = 0f;
 
@@ -80,14 +78,12 @@ namespace ProjectVagabond.Scenes
         private float _deathFadeTimer = 0f;
         private readonly HashSet<string> _processedDeathAnimations = new HashSet<string>();
 
-        // --- SWITCH SEQUENCE DIRECTOR STATE ---
         private enum SwitchSequenceState { None, AnimatingOut, Swapping, AnimatingIn }
         private SwitchSequenceState _switchSequenceState = SwitchSequenceState.None;
         private float _switchSequenceTimer = 0f;
         private BattleCombatant _switchOutgoing;
         private BattleCombatant _switchIncoming;
 
-        // --- INTRO SEQUENCE STATE ---
         private enum IntroPhase { EnemyDrop, PlayerRise }
         private IntroPhase _currentIntroPhase;
         private Queue<BattleCombatant> _introSequenceQueue = new Queue<BattleCombatant>();
@@ -95,18 +91,15 @@ namespace ProjectVagabond.Scenes
         private const float INTRO_STAGGER_DELAY = 0.3f;
         private const float INTRO_SLIDE_DISTANCE = 150f;
 
-        // UI Slide State
         private float _uiSlideTimer = 0f;
         private const float UI_SLIDE_DURATION = 0.5f;
         private const float UI_SLIDE_DISTANCE = 100f;
 
-        // --- SETTINGS BUTTON ANIMATION STATE ---
         private enum SettingsButtonState { Hidden, AnimatingIn, Visible }
         private SettingsButtonState _settingsButtonState = SettingsButtonState.Hidden;
         private float _settingsButtonAnimTimer = 0f;
         private const float SETTINGS_BUTTON_ANIM_DURATION = 0.6f;
 
-        // --- ROUND NUMBER ANIMATION STATE ---
         private enum RoundAnimState { Hidden, Entering, Idle, Pop, Hang, Settle }
         private RoundAnimState _roundAnimState = RoundAnimState.Hidden;
         private float _roundAnimTimer = 0f;
@@ -120,18 +113,12 @@ namespace ProjectVagabond.Scenes
         private const float ROUND_SHAKE_MAGNITUDE = 0.25f;
         private const float ROUND_SHAKE_FREQUENCY = 20f;
 
-        // --- VICTORY SEQUENCE STATE ---
         private bool _victorySequenceTriggered = false;
-
-        // --- LOOT SCREEN STATE ---
         private LootScreen _lootScreen;
         private bool _lootScreenHasShown = false;
         private bool _floorTransitionTriggered = false;
-
-        // --- FLEE STATE ---
         private bool _didFlee = false;
 
-        // --- REGEX FOR RANDOM WORD PARSING ---
         private static readonly Regex _randomWordRegex = new Regex(@"\b[\w\-\']+(?:\$[\w\-\']+)+\b", RegexOptions.Compiled);
 
         public BattleAnimationManager AnimationManager => _animationManager;
@@ -200,7 +187,6 @@ namespace ProjectVagabond.Scenes
             _lootScreen.Reset();
 
             SubscribeToEvents();
-
             InitializeSettingsButton();
 
             _settingsButtonState = SettingsButtonState.Hidden;
@@ -271,6 +257,7 @@ namespace ProjectVagabond.Scenes
             ServiceLocator.Unregister<BattleManager>();
         }
 
+        // ... (SubscribeToEvents, UnsubscribeFromEvents, OnDiceRollCompleted, InitializeSettingsButton omitted for brevity, unchanged) ...
         private void SubscribeToEvents()
         {
             EventBus.Subscribe<GameEvents.ActionDeclared>(OnActionDeclared);
@@ -339,12 +326,7 @@ namespace ProjectVagabond.Scenes
             _diceRollingSystem.OnRollCompleted -= OnDiceRollCompleted;
         }
 
-        private void OnDiceRollCompleted(DiceRollResult result)
-        {
-            // This method is required by the event subscription but might not be used in standard battle flow
-            // if dice rolls are handled by SplitMapScene or other systems.
-            // We keep it empty or add logic if battle-specific dice rolls are needed.
-        }
+        private void OnDiceRollCompleted(DiceRollResult result) { }
 
         private void InitializeSettingsButton()
         {
@@ -465,10 +447,42 @@ namespace ProjectVagabond.Scenes
             combatant.Stats.CurrentMana = member.CurrentMana;
             combatant.VisualHP = combatant.Stats.CurrentHP;
 
+            // --- 0. Apply Intrinsic Passive Abilities ---
+            if (member.IntrinsicAbilities != null && member.IntrinsicAbilities.Count > 0)
+            {
+                var intrinsicAbilities = AbilityFactory.CreateAbilitiesFromData(member.IntrinsicAbilities, new Dictionary<string, int>());
+                combatant.RegisterAbilities(intrinsicAbilities);
+                Debug.WriteLine($"[BattleScene] Registered intrinsics for ally {member.Name}: {string.Join(", ", member.IntrinsicAbilities.Keys)}");
+            }
+
+            // 1. Apply Weapon Passives
+            if (!string.IsNullOrEmpty(member.EquippedWeaponId) &&
+                BattleDataCache.Weapons.TryGetValue(member.EquippedWeaponId, out var weaponData))
+            {
+                if (weaponData.StatModifiers != null && weaponData.StatModifiers.Count > 0)
+                {
+                    var weaponStatAbilities = AbilityFactory.CreateAbilitiesFromData(null, weaponData.StatModifiers);
+                    combatant.RegisterAbilities(weaponStatAbilities);
+                }
+
+                var weaponAsRelic = new RelicData
+                {
+                    RelicID = weaponData.WeaponID,
+                    RelicName = weaponData.WeaponName,
+                    AbilityName = "Weapon Ability",
+                    Effects = weaponData.Effects,
+                    StatModifiers = weaponData.StatModifiers
+                };
+                combatant.ActiveRelics.Add(weaponAsRelic);
+            }
+
+            // 2. Load Relic Abilities
             if (!string.IsNullOrEmpty(member.EquippedRelicId))
             {
                 if (BattleDataCache.Relics.TryGetValue(member.EquippedRelicId, out var relicData))
                 {
+                    var relicAbilities = AbilityFactory.CreateAbilitiesFromData(relicData.Effects, relicData.StatModifiers);
+                    combatant.RegisterAbilities(relicAbilities);
                     combatant.ActiveRelics.Add(relicData);
                 }
             }
@@ -483,6 +497,7 @@ namespace ProjectVagabond.Scenes
             return combatant;
         }
 
+        // ... (Rest of the file remains unchanged) ...
         private void CleanupEntities()
         {
             if (_enemyEntityIds.Any())
@@ -683,10 +698,9 @@ namespace ProjectVagabond.Scenes
             {
                 if (!_uiManager.IsBusy && !_animationManager.IsVisuallyBusy)
                 {
-                    // --- FLEE LOGIC ---
                     if (_didFlee)
                     {
-                        if (!_victorySequenceTriggered) // Reusing this flag to mean "Exit Triggered"
+                        if (!_victorySequenceTriggered)
                         {
                             _victorySequenceTriggered = true;
                             var transition = _transitionManager.GetRandomTransition();
@@ -970,17 +984,13 @@ namespace ProjectVagabond.Scenes
                 renderContextActor = _battleManager.CurrentActingCombatant;
             }
 
-            // 1. Draw Background & Entities (Immediate)
-            // This might queue the Flash Overlay.
             _renderer.Draw(spriteBatch, font, gameTime, _battleManager.AllCombatants, renderContextActor, _uiManager, _inputHandler, _animationManager, _uiManager.SharedPulseTimer, transform);
 
             bool isFlashing = _animationManager.GetImpactFlashState() != null;
 
             if (isFlashing)
             {
-                // Queue everything else as overlays to appear ON TOP of the flash
                 var core = ServiceLocator.Get<Core>();
-
                 core.RequestFullscreenOverlay((sb, uiMatrix) =>
                 {
                     sb.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, uiMatrix);
@@ -992,7 +1002,6 @@ namespace ProjectVagabond.Scenes
             }
             else
             {
-                // Draw normally
                 _moveAnimationManager.Draw(spriteBatch);
                 _uiManager.Draw(spriteBatch, font, gameTime, transform);
                 _animationManager.DrawDamageIndicators(spriteBatch, ServiceLocator.Get<Core>().SecondaryFont);
@@ -1015,9 +1024,6 @@ namespace ProjectVagabond.Scenes
         {
             _uiManager.DrawFullscreenDialogs(spriteBatch, font, gameTime, transform);
 
-            // --- MOVED LOOT SCREEN DRAW HERE ---
-            // This ensures the Loot Screen is drawn in the fullscreen overlay pass,
-            // allowing its dimmer to cover the entire window (including letterbox bars).
             if (_lootScreen != null && _lootScreen.IsActive)
             {
                 _lootScreen.Draw(spriteBatch, font, gameTime, transform);

@@ -119,6 +119,8 @@ namespace ProjectVagabond.Battle
             EventBus.Subscribe<GameEvents.MoveImpactOccurred>(OnMoveImpactOccurred);
             EventBus.Subscribe<GameEvents.DisengageTriggered>(OnDisengageTriggered);
 
+            EventBus.Subscribe<GameEvents.AbilityActivated>(OnAbilityActivated);
+
             foreach (var combatant in _cachedAllActive)
             {
                 foreach (var ability in combatant.BattleLifecycleEffects)
@@ -127,6 +129,12 @@ namespace ProjectVagabond.Battle
                     ability.OnCombatantEnter(combatant);
                 }
             }
+        }
+
+        private void OnAbilityActivated(GameEvents.AbilityActivated e)
+        {
+            // Log to console for transparency
+            GameLogger.Log(LogSeverity.Info, $"[ABILITY] {e.Combatant.Name}'s {e.Ability.Name} triggered.");
         }
 
         private void InitializeSlots(List<BattleCombatant> party)

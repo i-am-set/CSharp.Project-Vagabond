@@ -7,10 +7,12 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using static ProjectVagabond.Battle.Abilities.InflictStatusStunAbility;
 
 namespace ProjectVagabond.Battle.Abilities
 {
     // --- STAT MODIFIERS ---
+    // Note: IStatModifier is polled every frame for UI. We cannot emit events here without spamming.
     public class FlatStatBonusAbility : IStatModifier
     {
         public string Name => "Stat Bonus";
@@ -39,12 +41,9 @@ namespace ProjectVagabond.Battle.Abilities
         public int ModifyStat(OffensiveStatType statType, int currentValue, BattleCombatant owner)
         {
             if (statType != _statToRaise) return currentValue;
-
             float hpPercent = (float)owner.Stats.CurrentHP / owner.Stats.MaxHP * 100f;
-
             if (hpPercent < _hpThreshold)
             {
-                // Simulate stat stages: 1 stage = +50% base. 
                 float multiplier = 1.0f + (0.5f * _amount);
                 return (int)(currentValue * multiplier);
             }
@@ -69,7 +68,12 @@ namespace ProjectVagabond.Battle.Abilities
         public string Name => "Bulwark";
         public string Description => "Immune to critical hits.";
         public CritImmunityAbility() { }
-        public float ModifyCritChance(float currentChance, CombatContext ctx) => 0f;
+        public float ModifyCritChance(float currentChance, CombatContext ctx)
+        {
+            // We don't fire an event here because checking crit chance happens before the hit is confirmed.
+            // Firing here might show "Bulwark" even if the attack misses.
+            return 0f;
+        }
         public float ModifyCritDamage(float currentMultiplier, CombatContext ctx) => currentMultiplier;
     }
 
@@ -80,16 +84,18 @@ namespace ProjectVagabond.Battle.Abilities
 
         public int ModifyAccuracy(int currentAccuracy, CombatContext ctx)
         {
-            if (ctx.Move != null && ctx.Move.Power > 0)
-            {
-                return 999;
-            }
+            if (ctx.Move != null && ctx.Move.Power > 0) return 999;
             return currentAccuracy;
         }
 
         public bool ShouldIgnoreEvasion(CombatContext ctx)
         {
-            return ctx.Move != null && ctx.Move.Power > 0;
+            if (ctx.Move != null && ctx.Move.Power > 0)
+            {
+                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                return true;
+            }
+            return false;
         }
     }
 
@@ -108,7 +114,12 @@ namespace ProjectVagabond.Battle.Abilities
 
         public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
         {
-            return (ctx.Move != null && ctx.Move.MakesContact) ? currentDamage * _damageMultiplier : currentDamage;
+            if (ctx.Move != null && ctx.Move.MakesContact)
+            {
+                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                return currentDamage * _damageMultiplier;
+            }
+            return currentDamage;
         }
 
         public int ModifyAccuracy(int currentAccuracy, CombatContext ctx)
@@ -136,7 +147,12 @@ namespace ProjectVagabond.Battle.Abilities
         public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
         {
             float hpPercent = (float)ctx.Actor.Stats.CurrentHP / ctx.Actor.Stats.MaxHP * 100f;
-            return (hpPercent < _hpThresholdPercent) ? currentDamage * _damageMultiplier : currentDamage;
+            if (hpPercent < _hpThresholdPercent)
+            {
+                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                return currentDamage * _damageMultiplier;
+            }
+            return currentDamage;
         }
     }
 
@@ -153,7 +169,12 @@ namespace ProjectVagabond.Battle.Abilities
 
         public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
         {
-            return (ctx.Actor.Stats.CurrentHP >= ctx.Actor.Stats.MaxHP) ? currentDamage * _damageMultiplier : currentDamage;
+            if (ctx.Actor.Stats.CurrentHP >= ctx.Actor.Stats.MaxHP)
+            {
+                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                return currentDamage * _damageMultiplier;
+            }
+            return currentDamage;
         }
     }
 
@@ -172,7 +193,12 @@ namespace ProjectVagabond.Battle.Abilities
 
         public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
         {
-            return ctx.MoveHasElement(_elementId) ? currentDamage * _multiplier : currentDamage;
+            if (ctx.MoveHasElement(_elementId))
+            {
+                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                return currentDamage * _multiplier;
+            }
+            return currentDamage;
         }
     }
 
@@ -189,7 +215,12 @@ namespace ProjectVagabond.Battle.Abilities
 
         public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
         {
-            return !ctx.Actor.HasUsedFirstAttack ? currentDamage * _multiplier : currentDamage;
+            if (!ctx.Actor.HasUsedFirstAttack)
+            {
+                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                return currentDamage * _multiplier;
+            }
+            return currentDamage;
         }
     }
 
@@ -208,7 +239,12 @@ namespace ProjectVagabond.Battle.Abilities
         public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
         {
             if (ctx.Target == null) return currentDamage;
-            return (ctx.Target.ActiveStatusEffects.Any()) ? currentDamage * _multiplier : currentDamage;
+            if (ctx.Target.ActiveStatusEffects.Any())
+            {
+                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                return currentDamage * _multiplier;
+            }
+            return currentDamage;
         }
     }
 
@@ -226,7 +262,12 @@ namespace ProjectVagabond.Battle.Abilities
 
         public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
         {
-            return ctx.IsLastAction ? currentDamage * _multiplier : currentDamage;
+            if (ctx.IsLastAction)
+            {
+                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                return currentDamage * _multiplier;
+            }
+            return currentDamage;
         }
     }
 
@@ -243,8 +284,17 @@ namespace ProjectVagabond.Battle.Abilities
             _incomingMult = incoming > 5.0f ? 1.0f + (incoming / 100f) : incoming;
         }
 
-        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx) => currentDamage * _outgoingMult;
-        public float ModifyIncomingDamage(float currentDamage, CombatContext ctx) => currentDamage * _incomingMult;
+        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
+        {
+            if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+            return currentDamage * _outgoingMult;
+        }
+
+        public float ModifyIncomingDamage(float currentDamage, CombatContext ctx)
+        {
+            if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Target, Ability = this });
+            return currentDamage * _incomingMult;
+        }
     }
 
     public class BloodletterAbility : IOutgoingDamageModifier, IOnActionComplete
@@ -262,6 +312,7 @@ namespace ProjectVagabond.Battle.Abilities
         {
             if (ctx.Move != null && ctx.Move.MoveType == MoveType.Spell)
             {
+                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
                 return currentDamage * _multiplier;
             }
             return currentDamage;
@@ -274,7 +325,6 @@ namespace ProjectVagabond.Battle.Abilities
                 int cost = Math.Max(1, (int)(owner.Stats.MaxHP * 0.05f));
                 owner.ApplyDamage(cost);
                 EventBus.Publish(new GameEvents.CombatantRecoiled { Actor = owner, RecoilDamage = cost });
-                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = owner, Ability = this });
             }
         }
     }
@@ -299,7 +349,16 @@ namespace ProjectVagabond.Battle.Abilities
 
         public void OnHit(CombatContext ctx, int damageDealt) { _stacks++; _hitThisTurn = true; }
         public void OnActionComplete(QueuedAction action, BattleCombatant owner) { if (action.ChosenMove != null && action.ChosenMove.Power > 0 && !_hitThisTurn) _stacks = 0; }
-        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx) => currentDamage * (1.0f + (_stacks * (_multiplier - 1.0f)));
+
+        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
+        {
+            if (_stacks > 0)
+            {
+                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                return currentDamage * (1.0f + (_stacks * (_multiplier - 1.0f)));
+            }
+            return currentDamage;
+        }
     }
 
     public class DefensePenetrationAbility : IDefensePenetrationModifier
@@ -308,7 +367,11 @@ namespace ProjectVagabond.Battle.Abilities
         public string Description => "Ignores a percentage of target defense.";
         private readonly float _penetrationPercent;
         public DefensePenetrationAbility(float percent) { _penetrationPercent = percent; }
-        public float GetDefensePenetration(CombatContext ctx) => _penetrationPercent / 100f;
+        public float GetDefensePenetration(CombatContext ctx)
+        {
+            if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+            return _penetrationPercent / 100f;
+        }
     }
 
     public class PhysicalDamageReductionAbility : IIncomingDamageModifier
@@ -317,7 +380,15 @@ namespace ProjectVagabond.Battle.Abilities
         public string Description => "Reduces physical damage.";
         private readonly float _multiplier;
         public PhysicalDamageReductionAbility(float reductionPercent) { _multiplier = 1.0f - (reductionPercent / 100f); }
-        public float ModifyIncomingDamage(float currentDamage, CombatContext ctx) => (ctx.Move != null && ctx.Move.ImpactType == ImpactType.Physical) ? currentDamage * _multiplier : currentDamage;
+        public float ModifyIncomingDamage(float currentDamage, CombatContext ctx)
+        {
+            if (ctx.Move != null && ctx.Move.ImpactType == ImpactType.Physical)
+            {
+                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Target, Ability = this });
+                return currentDamage * _multiplier;
+            }
+            return currentDamage;
+        }
     }
 
     public class VigorAbility : IIncomingDamageModifier
@@ -351,12 +422,15 @@ namespace ProjectVagabond.Battle.Abilities
         {
             if (ctx.MoveHasElement(_elementId))
             {
-                int healAmount = (int)(ctx.Actor.Stats.MaxHP * (_healPercent / 100f));
-                int hpBefore = (int)ctx.Actor.VisualHP;
-                ctx.Actor.ApplyHealing(healAmount);
-                EventBus.Publish(new GameEvents.CombatantHealed { Actor = ctx.Actor, Target = ctx.Actor, HealAmount = healAmount, VisualHPBefore = hpBefore });
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Actor.Name}'s {Name} absorbed the attack!" });
-                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                if (!ctx.IsSimulation)
+                {
+                    int healAmount = (int)(ctx.Actor.Stats.MaxHP * (_healPercent / 100f));
+                    int hpBefore = (int)ctx.Actor.VisualHP;
+                    ctx.Actor.ApplyHealing(healAmount);
+                    EventBus.Publish(new GameEvents.CombatantHealed { Actor = ctx.Actor, Target = ctx.Actor, HealAmount = healAmount, VisualHPBefore = hpBefore });
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Actor.Name}'s {Name} absorbed the attack!" });
+                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                }
                 return 0f;
             }
             return currentDamage;
@@ -369,7 +443,15 @@ namespace ProjectVagabond.Battle.Abilities
         public string Description => "Immune to specific element.";
         private readonly int _elementId;
         public ElementalImmunityAbility(int elementId) { _elementId = elementId; }
-        public float ModifyIncomingDamage(float currentDamage, CombatContext ctx) => ctx.MoveHasElement(_elementId) ? 0f : currentDamage;
+        public float ModifyIncomingDamage(float currentDamage, CombatContext ctx)
+        {
+            if (ctx.MoveHasElement(_elementId))
+            {
+                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Target, Ability = this });
+                return 0f;
+            }
+            return currentDamage;
+        }
     }
 
     // --- ELEMENTAL MODIFIERS ---
@@ -408,8 +490,23 @@ namespace ProjectVagabond.Battle.Abilities
         private readonly int _priorityBonus;
         private readonly float _damageMultiplier;
         public AmbushPredatorAbility(int priorityBonus, float damageMult) { _priorityBonus = priorityBonus; _damageMultiplier = damageMult; }
-        public void ModifyAction(QueuedAction action, BattleCombatant owner) { if (!owner.HasUsedFirstAttack && action.ChosenMove != null) action.Priority += _priorityBonus; }
-        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx) => !ctx.Actor.HasUsedFirstAttack ? currentDamage * _damageMultiplier : currentDamage;
+        public void ModifyAction(QueuedAction action, BattleCombatant owner)
+        {
+            if (!owner.HasUsedFirstAttack && action.ChosenMove != null)
+            {
+                action.Priority += _priorityBonus;
+                // We don't fire event here because priority is silent until turn order resolves
+            }
+        }
+        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
+        {
+            if (!ctx.Actor.HasUsedFirstAttack)
+            {
+                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                return currentDamage * _damageMultiplier;
+            }
+            return currentDamage;
+        }
     }
 
     public class SpellweaverAbility : IOnActionComplete, IOutgoingDamageModifier
@@ -432,7 +529,10 @@ namespace ProjectVagabond.Battle.Abilities
         public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
         {
             if (ctx.Move != null && ctx.Move.MoveType == MoveType.Spell && _lastWasSpell && ctx.Move.MoveID != _lastMoveID)
+            {
+                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
                 return currentDamage * _multiplier;
+            }
             return currentDamage;
         }
     }
@@ -451,7 +551,15 @@ namespace ProjectVagabond.Battle.Abilities
             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Actor.Name}'s {Name} is building!" });
             EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
         }
-        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx) => (_isActive && ctx.Move != null && ctx.Move.Power > 0) ? currentDamage * _multiplier : currentDamage;
+        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
+        {
+            if (_isActive && ctx.Move != null && ctx.Move.Power > 0)
+            {
+                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                return currentDamage * _multiplier;
+            }
+            return currentDamage;
+        }
     }
 
     public class EscalationAbility : ITurnLifecycle, IOutgoingDamageModifier
@@ -465,7 +573,15 @@ namespace ProjectVagabond.Battle.Abilities
         public EscalationAbility(float multPerRound, float maxMult) { _multPerRound = multPerRound; _maxMult = maxMult; }
         public void OnTurnStart(BattleCombatant owner) { _currentMult += (_multPerRound - 1.0f); if (_currentMult > _maxMult) _currentMult = _maxMult; }
         public void OnTurnEnd(BattleCombatant owner) { }
-        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx) => currentDamage * _currentMult;
+        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
+        {
+            if (_currentMult > 1.0f)
+            {
+                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                return currentDamage * _currentMult;
+            }
+            return currentDamage;
+        }
     }
 
     // --- TRIGGERS ---
@@ -512,10 +628,8 @@ namespace ProjectVagabond.Battle.Abilities
         {
             if (ctx.Move != null && ctx.Move.MakesContact && damageDealt > 0)
             {
-                // Accumulate lifesteal percentage instead of healing immediately
                 ctx.AccumulatedLifestealPercent += _healPercent;
-                // Fire event because this is a conditional passive trigger
-                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
             }
         }
     }
@@ -693,12 +807,13 @@ namespace ProjectVagabond.Battle.Abilities
         private const int FIRE_ELEMENT_ID = 1;
         private const float DAMAGE_MULTIPLIER = 1.5f;
 
-        public PMPyromancerAbility() { } // No args constructor
+        public PMPyromancerAbility() { }
 
         public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
         {
             if (ctx.MoveHasElement(FIRE_ELEMENT_ID))
             {
+                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
                 return currentDamage * DAMAGE_MULTIPLIER;
             }
             return currentDamage;
@@ -722,6 +837,7 @@ namespace ProjectVagabond.Battle.Abilities
             if (action.ChosenMove != null && action.ChosenMove.ImpactType == ImpactType.Status)
             {
                 action.Priority += 1;
+                // Priority is silent until turn order resolves
             }
         }
     }
@@ -765,17 +881,15 @@ namespace ProjectVagabond.Battle.Abilities
 
         public void OnCritReceived(CombatContext ctx)
         {
-            // Max out strength (add 12 to ensure -6 goes to +6)
             var (success, msg) = ctx.Target.ModifyStatStage(OffensiveStatType.Strength, 12);
 
             if (success)
             {
-                // Fire events for UI feedback
                 EventBus.Publish(new GameEvents.CombatantStatStageChanged
                 {
                     Target = ctx.Target,
                     Stat = OffensiveStatType.Strength,
-                    Amount = 12 // Visual indicator might show +12 or just "UP"
+                    Amount = 12
                 });
 
                 EventBus.Publish(new GameEvents.TerminalMessagePublished
@@ -797,7 +911,6 @@ namespace ProjectVagabond.Battle.Abilities
         public string Name => "Majestic";
         public string Description => "Lowers enemy Strength on entry.";
 
-        // Hardcoded Tuning
         private const OffensiveStatType STAT_TO_LOWER = OffensiveStatType.Strength;
         private const int AMOUNT = -1;
 
@@ -806,7 +919,6 @@ namespace ProjectVagabond.Battle.Abilities
         public void OnCombatantEnter(BattleCombatant owner)
         {
             var battleManager = ServiceLocator.Get<BattleManager>();
-            // Find all active enemies
             var enemies = battleManager.AllCombatants
                 .Where(c => c.IsPlayerControlled != owner.IsPlayerControlled && !c.IsDefeated && c.IsActiveOnField)
                 .ToList();
@@ -836,10 +948,7 @@ namespace ProjectVagabond.Battle.Abilities
         public string Description => "Reduces damage taken by allies.";
         public float ModifyAllyIncomingDamage(float currentDamage, CombatContext ctx)
         {
-            // ctx.Target is the one taking damage.
-            // The owner of this ability is the one providing the buff.
-            // The interface logic in DamageCalculator will handle the "Is Ally" check.
-            // We just return the multiplier.
+            if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Target, Ability = this }); // Target is the ally being protected
             return currentDamage * 0.75f;
         }
     }
@@ -855,8 +964,7 @@ namespace ProjectVagabond.Battle.Abilities
             {
                 if (!ctx.IsSimulation)
                 {
-                    // Optional: Visual feedback
-                    // EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Target, Ability = this });
+                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Target, Ability = this });
                 }
                 return currentDamage * 0.5f;
             }
@@ -872,11 +980,8 @@ namespace ProjectVagabond.Battle.Abilities
         public float ModifyIncomingDamage(float currentDamage, CombatContext ctx)
         {
             var target = ctx.Target;
-
-            // Check if at full HP
             if (target.Stats.CurrentHP == target.Stats.MaxHP)
             {
-                // Check if damage is lethal
                 if (currentDamage >= target.Stats.CurrentHP)
                 {
                     if (!ctx.IsSimulation)
@@ -884,7 +989,6 @@ namespace ProjectVagabond.Battle.Abilities
                         EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{target.Name} endured the hit!" });
                         EventBus.Publish(new GameEvents.AbilityActivated { Combatant = target, Ability = this });
                     }
-                    // Return damage such that remaining HP is 1
                     return Math.Max(0, target.Stats.CurrentHP - 1);
                 }
             }
@@ -901,6 +1005,7 @@ namespace ProjectVagabond.Battle.Abilities
         {
             if (ctx.Move != null && ctx.Move.Power > 0 && ctx.Move.Power <= 60)
             {
+                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
                 return currentDamage * 1.5f;
             }
             return currentDamage;
@@ -917,10 +1022,8 @@ namespace ProjectVagabond.Battle.Abilities
         public void OnCombatantEnter(BattleCombatant owner)
         {
             var bm = ServiceLocator.Get<BattleManager>();
-            // Ignore initial battle start
             if (bm.CurrentPhase == BattleManager.BattlePhase.BattleStartIntro) return;
 
-            // Find ally
             var ally = bm.AllCombatants.FirstOrDefault(c =>
                 c.IsPlayerControlled == owner.IsPlayerControlled &&
                 c != owner &&
@@ -973,6 +1076,63 @@ namespace ProjectVagabond.Battle.Abilities
                     EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Target, Ability = this });
                 }
                 return currentDamage * 0.5f;
+            }
+            return currentDamage;
+        }
+    }
+
+    public class HydroScalingAbility : IOutgoingDamageModifier
+    {
+        public string Name => "Hydro Scaling";
+        public string Description => "Damage scales with Water spells.";
+        private readonly float _multiplierPerSpell;
+
+        public HydroScalingAbility(float multiplier)
+        {
+            _multiplierPerSpell = multiplier;
+        }
+
+        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
+        {
+            int waterSpellCount = 0;
+            foreach (var entry in ctx.Actor.Spells)
+            {
+                if (entry != null && BattleDataCache.Moves.TryGetValue(entry.MoveID, out var move))
+                {
+                    if (move.OffensiveElementIDs.Contains(2)) // 2 is Water
+                    {
+                        waterSpellCount++;
+                    }
+                }
+            }
+
+            if (waterSpellCount > 0)
+            {
+                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                float bonus = (_multiplierPerSpell - 1.0f) * waterSpellCount;
+                return currentDamage * (1.0f + bonus);
+            }
+            return currentDamage;
+        }
+    }
+
+    public class BlightArcaneMasteryAbility : IOutgoingDamageModifier
+    {
+        public string Name => "Cultist Mastery";
+        public string Description => "Boosts Blight and Arcane damage.";
+        private readonly float _multiplier;
+
+        public BlightArcaneMasteryAbility(float multiplier)
+        {
+            _multiplier = multiplier;
+        }
+
+        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
+        {
+            if (ctx.MoveHasElement(6) || ctx.MoveHasElement(4)) // 6=Blight, 4=Arcane
+            {
+                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                return currentDamage * _multiplier;
             }
             return currentDamage;
         }

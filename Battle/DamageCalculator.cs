@@ -103,9 +103,6 @@ namespace ProjectVagabond.Battle
                 else if (elemMult > 0f && elemMult < 1.0f) result.Effectiveness = ElementalEffectiveness.Resisted;
                 else if (elemMult == 0f) result.Effectiveness = ElementalEffectiveness.Immune;
 
-                // Fixed damage usually ignores resistance (0.5x) but respects immunity (0x).
-                // However, standard RPG logic often makes fixed damage "True Damage" except for immunity.
-                // Let's make it respect immunity (0x) but ignore resistance/weakness (1x).
                 if (elemMult == 0f) fixedDamage = 0;
 
                 result.DamageAmount = (int)fixedDamage;
