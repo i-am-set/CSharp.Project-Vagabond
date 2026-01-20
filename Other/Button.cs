@@ -129,11 +129,10 @@ namespace ProjectVagabond.UI
         public float CurrentHoverRotation => _currentHoverRotation; // Public accessor for external renderers
 
         private float _hoverRotationTimer = 0f;
-        // TUNING: Slower speed (4.0) makes it a visible "wobble" instead of a blur.
-        private const float HOVER_ROTATION_DURATION = 0.5f;
-        private const float BASE_ROTATION_MAGNITUDE = 0.08f; // Base radians for a 32px button (~4.5 degrees)
-        private const float ROTATION_REFERENCE_WIDTH = 32f;  // The width at which the base magnitude applies
-        private const float HOVER_ROTATION_SPEED = 4.0f; // 4 cycles over the duration
+        private const float HOVER_ROTATION_DURATION = 0.25f;
+        private const float BASE_ROTATION_MAGNITUDE = 0.04f;
+        private const float ROTATION_REFERENCE_WIDTH = 32f; 
+        private const float HOVER_ROTATION_SPEED = 4.0f;
 
         // Text-based constructor
         public Button(Rectangle bounds, string text, string? function = null, Color? customDefaultTextColor = null, Color? customHoverTextColor = null, Color? customDisabledTextColor = null, bool alignLeft = false, float overflowScrollSpeed = 0.0f, bool enableHoverSway = true, BitmapFont? font = null)
