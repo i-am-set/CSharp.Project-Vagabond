@@ -718,7 +718,7 @@ namespace ProjectVagabond.Scenes
                             TriggerVictoryRestoration();
                             _victorySequenceTriggered = true;
                         }
-                        else if (!_animationManager.IsAnimating)
+                        else if (!_animationManager.IsBlockingAnimation)
                         {
                             if (!_lootScreenHasShown)
                             {
@@ -770,42 +770,76 @@ namespace ProjectVagabond.Scenes
                 return;
             }
 
-            bool isAnimating = _animationManager.IsAnimating || _moveAnimationManager.IsAnimating;
+            // --- SMART CLICK LOGIC ---
             bool clickDetected = UIInputManager.CanProcessMouseClick() && currentMouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed;
 
             if (clickDetected)
             {
-                bool skippedSomething = false;
-                if (_isWaitingForActionExecution) { _actionExecutionTimer = ACTION_EXECUTION_DELAY; skippedSomething = true; }
-                if (_isWaitingForMultiHitDelay) { _multiHitDelayTimer = 0f; skippedSomething = true; }
-                if (isAnimating) { _animationManager.CompleteBlockingAnimations(_battleManager.AllCombatants); _moveAnimationManager.CompleteCurrentAnimation(); skippedSomething = true; }
-                if (_battleManager.CurrentPhase == BattleManager.BattlePhase.CheckForDefeat || _battleManager.CurrentPhase == BattleManager.BattlePhase.EndOfTurn || _battleManager.CurrentPhase == BattleManager.BattlePhase.Reinforcement) { _battleManager.ForceAdvance(); skippedSomething = true; }
-                if (skippedSomething) UIInputManager.ConsumeMouseClick();
+                // 1. If Narrator is busy (typing), finish text instantly.
+                if (_uiManager.IsBusy && !_uiManager.IsWaitingForInput)
+                {
+                    // The BattleNarrator handles this internally in its Update, 
+                    // but we consume the click here to prevent it from triggering other things.
+                    // UIInputManager.ConsumeMouseClick() is called inside BattleNarrator.Update if it detects a click.
+                    // So we don't need to do anything here, just let the UI update run.
+                }
+                // 2. If Narrator is waiting for input, advance.
+                else if (_uiManager.IsWaitingForInput)
+                {
+                    // Again, handled by BattleNarrator.Update.
+                }
+                // 3. If Blocking Animations are playing, speed them up.
+                else if (_animationManager.IsBlockingAnimation || _moveAnimationManager.IsAnimating)
+                {
+                    // Fast-forward animations
+                    _animationManager.CompleteBlockingAnimations(_battleManager.AllCombatants);
+                    _moveAnimationManager.CompleteCurrentAnimation();
+                    UIInputManager.ConsumeMouseClick();
+                }
+                // 4. If Idle, advance logic.
+                else
+                {
+                    // Only advance if we are in a phase that waits (like CheckForDefeat or EndOfTurn)
+                    if (_battleManager.CurrentPhase == BattleManager.BattlePhase.CheckForDefeat ||
+                        _battleManager.CurrentPhase == BattleManager.BattlePhase.EndOfTurn ||
+                        _battleManager.CurrentPhase == BattleManager.BattlePhase.Reinforcement)
+                    {
+                        _battleManager.RequestNextPhase();
+                        UIInputManager.ConsumeMouseClick();
+                    }
+                }
             }
 
-            if (!_uiManager.IsBusy && !_animationManager.IsAnimating && _pendingAnimations.Any())
+            // --- AUTOMATIC ADVANCE LOGIC ---
+            // If not busy, not animating, and not waiting for input, try to advance logic automatically after a delay?
+            // Or just let the BattleManager handle it?
+            // The BattleManager now waits for RequestNextPhase.
+            // We should auto-advance if there's nothing to see.
+
+            bool isUiBusy = _uiManager.IsBusy;
+            bool isAnimBusy = _animationManager.IsBlockingAnimation;
+            bool isMoveAnimBusy = _moveAnimationManager.IsAnimating;
+            bool isPendingBusy = _pendingAnimations.Any();
+            bool isSwitching = _switchSequenceState != SwitchSequenceState.None;
+
+            // If everything is quiet, we can advance.
+            if (!isUiBusy && !isAnimBusy && !isMoveAnimBusy && !isPendingBusy && !isSwitching)
+            {
+                // We can add a small delay here if we want "breathing room" between turns.
+                // For now, let's just advance.
+                _battleManager.RequestNextPhase();
+            }
+
+            // Process pending animations (like "Show Damage" callbacks)
+            if (!_uiManager.IsBusy && !_animationManager.IsBlockingAnimation && _pendingAnimations.Any())
             {
                 var nextAnimation = _pendingAnimations.Dequeue();
                 nextAnimation.Invoke();
             }
 
-            bool uiBusy = _uiManager.IsBusy;
-            bool animBusy = _animationManager.IsAnimating;
-            bool moveAnimBusy = _moveAnimationManager.IsAnimating;
-            bool pendingBusy = _pendingAnimations.Any();
-            bool isMultiHitActive = _battleManager.IsProcessingMultiHit;
-            bool isSwitching = _switchSequenceState != SwitchSequenceState.None;
-            bool canAdvance = isMultiHitActive ? !pendingBusy : (!uiBusy && !animBusy && !moveAnimBusy && !pendingBusy && !isSwitching);
-
-            if (_isWaitingForMultiHitDelay && canAdvance)
-            {
-                if (_multiHitDelayTimer <= 0) _multiHitDelayTimer = MULTI_HIT_DELAY;
-                _multiHitDelayTimer -= dt;
-                if (_multiHitDelayTimer > 0) canAdvance = false; else _multiHitDelayTimer = 0f;
-            }
-
-            bool stateChanged = _battleManager.CurrentPhase != _lastFramePhase || uiBusy != _wasUiBusyLastFrame || animBusy != _wasAnimatingLastFrame;
-            if (!stateChanged && !canAdvance && !_isBattleOver && !_uiManager.IsWaitingForInput) _watchdogTimer += dt; else _watchdogTimer = 0f;
+            // Watchdog for softlocks
+            bool stateChanged = _battleManager.CurrentPhase != _lastFramePhase || isUiBusy != _wasUiBusyLastFrame || isAnimBusy != _wasAnimatingLastFrame;
+            if (!stateChanged && !_isBattleOver && !_uiManager.IsWaitingForInput) _watchdogTimer += dt; else _watchdogTimer = 0f;
 
             if (_watchdogTimer > WATCHDOG_TIMEOUT)
             {
@@ -816,16 +850,17 @@ namespace ProjectVagabond.Scenes
                 _pendingAnimations.Clear();
                 _isWaitingForMultiHitDelay = false;
                 _switchSequenceState = SwitchSequenceState.None;
-                _battleManager.ForceAdvance();
+                _battleManager.ForceAdvance(); // Use ForceAdvance as a last resort
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[warning]Combat stalled. Watchdog forced advance." });
                 _watchdogTimer = 0f;
-                canAdvance = true;
             }
 
             _lastFramePhase = _battleManager.CurrentPhase;
-            _wasUiBusyLastFrame = uiBusy;
-            _wasAnimatingLastFrame = animBusy;
-            _battleManager.CanAdvance = canAdvance;
+            _wasUiBusyLastFrame = isUiBusy;
+            _wasAnimatingLastFrame = isAnimBusy;
+
+            // Update BattleManager (Logic)
+            // We don't need to pass CanAdvance anymore, as we call RequestNextPhase explicitly.
             _battleManager.Update(dt);
 
             if (_isWaitingForActionExecution)

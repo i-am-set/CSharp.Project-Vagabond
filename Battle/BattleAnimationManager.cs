@@ -34,7 +34,7 @@ namespace ProjectVagabond.Battle.UI
     {
         // --- Tuning ---
         private const float HEALTH_ANIMATION_DURATION = 0.25f; // Duration of the health bar drain animation in seconds.
-        private const float INDICATOR_COOLDOWN = 1.0f; // Minimum time each text indicator is displayed before the next one can start.
+        private const float INDICATOR_COOLDOWN = 0.2f; // Reduced for snappier feel
 
         // Internal animation state structs
         public class HealthAnimationState { public string CombatantID; public float StartHP; public float TargetHP; public float Timer; }
@@ -378,7 +378,7 @@ namespace ProjectVagabond.Battle.UI
         /// This excludes cosmetic effects like coins, damage numbers, and hit flashes,
         /// allowing the game logic to proceed while these play in the background.
         /// </summary>
-        public bool IsAnimating =>
+        public bool IsBlockingAnimation =>
             _activeHealthAnimations.Any() ||
             _activeAlphaAnimations.Any() ||
             _activeDeathAnimations.Any() ||
@@ -391,11 +391,16 @@ namespace ProjectVagabond.Battle.UI
             _activeFloorOutroAnimations.Any();
 
         /// <summary>
+        /// Alias for IsBlockingAnimation to maintain backward compatibility.
+        /// </summary>
+        public bool IsAnimating => IsBlockingAnimation;
+
+        /// <summary>
         /// Returns true if ANY visual effect is active, including non-blocking ones like coins and damage numbers.
         /// Used to delay the end of battle until the screen is clean.
         /// </summary>
         public bool IsVisuallyBusy =>
-            IsAnimating ||
+            IsBlockingAnimation ||
             _activeCoins.Any() ||
             _activeCoinCatchAnimations.Any() ||
             _activeDamageIndicators.Any() ||

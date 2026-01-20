@@ -174,6 +174,42 @@ namespace ProjectVagabond.Battle
             }
         }
 
+        /// <summary>
+        /// Called by the BattleScene when visuals are complete and it's safe to proceed.
+        /// </summary>
+        public void RequestNextPhase()
+        {
+            // If we are in a state that requires waiting, proceed.
+            if (_currentPhase == BattlePhase.SecondaryEffectResolution)
+            {
+                // This phase is usually instant, but if we paused here, move on.
+                _currentPhase = BattlePhase.CheckForDefeat;
+            }
+            else if (_currentPhase == BattlePhase.CheckForDefeat)
+            {
+                // If we were waiting here (e.g. after a death animation), check logic again.
+                HandleCheckForDefeat();
+            }
+            else if (_currentPhase == BattlePhase.EndOfTurn)
+            {
+                // End of turn logic finished, start next round.
+                RoundNumber++;
+                _currentPhase = BattlePhase.StartOfTurn;
+            }
+            else if (_currentPhase == BattlePhase.Reinforcement)
+            {
+                // Reinforcement logic finished (or waiting for next slot), proceed.
+                HandleReinforcements();
+            }
+            else if (_currentPhase == BattlePhase.ActionResolution)
+            {
+                // If we were waiting here (e.g. after "Action Failed" text), try next action.
+                HandleActionResolution();
+            }
+
+            CanAdvance = true;
+        }
+
         public void ForceAdvance()
         {
             if (_currentPhase == BattlePhase.AnimatingMove && _pendingImpact != null)
@@ -220,10 +256,7 @@ namespace ProjectVagabond.Battle
 
         private void OnSecondaryEffectComplete(GameEvents.SecondaryEffectComplete e)
         {
-            if (_currentPhase == BattlePhase.SecondaryEffectResolution)
-            {
-                _currentPhase = BattlePhase.CheckForDefeat;
-            }
+            // Do nothing. Wait for RequestNextPhase.
         }
 
         private void OnMoveAnimationCompleted(GameEvents.MoveAnimationCompleted e)
@@ -644,6 +677,9 @@ namespace ProjectVagabond.Battle
             _currentActionForEffects = null;
             _currentActionDamageResults = null;
             _currentActionFinalTargets = null;
+
+            // Do NOT automatically advance. Wait for RequestNextPhase.
+            CanAdvance = false;
         }
 
         private void ProcessMoveAction(QueuedAction action)
