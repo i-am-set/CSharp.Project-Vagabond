@@ -71,6 +71,9 @@ namespace ProjectVagabond.Battle
         private int _reinforcementSlotIndex = 0;
         private bool _reinforcementAnnounced = false;
 
+        // Tracks the name of the last person to die in a specific slot (Key: "Player_0", "Enemy_1")
+        private readonly Dictionary<string, string> _lastDefeatedNames = new Dictionary<string, string>();
+
         private class PendingImpactData
         {
             public QueuedAction Action;
@@ -118,7 +121,6 @@ namespace ProjectVagabond.Battle
             EventBus.Subscribe<GameEvents.MoveAnimationCompleted>(OnMoveAnimationCompleted);
             EventBus.Subscribe<GameEvents.MoveImpactOccurred>(OnMoveImpactOccurred);
             EventBus.Subscribe<GameEvents.DisengageTriggered>(OnDisengageTriggered);
-
             EventBus.Subscribe<GameEvents.AbilityActivated>(OnAbilityActivated);
 
             foreach (var combatant in _cachedAllActive)
@@ -133,7 +135,6 @@ namespace ProjectVagabond.Battle
 
         private void OnAbilityActivated(GameEvents.AbilityActivated e)
         {
-            // Log to console for transparency
             GameLogger.Log(LogSeverity.Info, $"[ABILITY] {e.Combatant.Name}'s {e.Ability.Name} triggered.");
         }
 
@@ -486,6 +487,15 @@ namespace ProjectVagabond.Battle
             }
         }
 
+        private void RecordDefeatedName(BattleCombatant combatant)
+        {
+            if (combatant.BattleSlot != -1)
+            {
+                string key = $"{(combatant.IsPlayerControlled ? "Player" : "Enemy")}_{combatant.BattleSlot}";
+                _lastDefeatedNames[key] = combatant.Name;
+            }
+        }
+
         private void SanitizeBattlefield()
         {
             bool changesMade = false;
@@ -494,6 +504,7 @@ namespace ProjectVagabond.Battle
             {
                 if (combatant.IsActiveOnField && (combatant.IsDefeated || combatant.Stats.CurrentHP <= 0))
                 {
+                    RecordDefeatedName(combatant); // Capture name before clearing slot
                     combatant.BattleSlot = -1;
                     combatant.IsDying = false;
                     combatant.IsRemovalProcessed = true;
@@ -504,37 +515,8 @@ namespace ProjectVagabond.Battle
 
             if (changesMade) RefreshCombatantCaches();
 
-            for (int slot = 0; slot < 2; slot++)
-            {
-                if (!_cachedActiveEnemies.Any(c => c.BattleSlot == slot))
-                {
-                    var reinforcement = _enemyParty.FirstOrDefault(c => c.BattleSlot >= 2 && !c.IsDefeated);
-                    if (reinforcement != null)
-                    {
-                        reinforcement.BattleSlot = slot;
-                        changesMade = true;
-                        EventBus.Publish(new GameEvents.CombatantSpawned { Combatant = reinforcement });
-                        HandleOnEnterAbilities(reinforcement);
-                    }
-                }
-            }
-
-            for (int slot = 0; slot < 2; slot++)
-            {
-                if (!_cachedActivePlayers.Any(c => c.BattleSlot == slot))
-                {
-                    var reinforcement = _playerParty.FirstOrDefault(c => c.BattleSlot >= 2 && !c.IsDefeated);
-                    if (reinforcement != null)
-                    {
-                        reinforcement.BattleSlot = slot;
-                        changesMade = true;
-                        EventBus.Publish(new GameEvents.CombatantSpawned { Combatant = reinforcement });
-                        HandleOnEnterAbilities(reinforcement);
-                    }
-                }
-            }
-
-            if (changesMade) RefreshCombatantCaches();
+            // Note: Reinforcements are now primarily handled in the Reinforcement phase.
+            // This method acts as a failsafe or for initial setup.
         }
 
         private void HandleActionResolution()
@@ -1047,6 +1029,7 @@ namespace ProjectVagabond.Battle
             var finishedDying = _allCombatants.Where(c => c.IsDying).ToList();
             foreach (var combatant in finishedDying)
             {
+                RecordDefeatedName(combatant); // Capture name before clearing slot
                 combatant.IsDying = false;
                 combatant.IsRemovalProcessed = true;
                 combatant.BattleSlot = -1;
@@ -1171,38 +1154,63 @@ namespace ProjectVagabond.Battle
 
         private void HandleReinforcements()
         {
-            if (_reinforcementSlotIndex > 1)
+            // 0, 1: Enemies
+            // 2, 3: Players
+            if (_reinforcementSlotIndex > 3)
             {
                 RoundNumber++;
                 _currentPhase = BattlePhase.StartOfTurn;
                 return;
             }
 
-            bool isSlotOccupied = _cachedActiveEnemies.Any(c => c.BattleSlot == _reinforcementSlotIndex);
+            bool isPlayerSlot = _reinforcementSlotIndex >= 2;
+            int slot = _reinforcementSlotIndex % 2;
+
+            var activeList = isPlayerSlot ? _cachedActivePlayers : _cachedActiveEnemies;
+            var partyList = isPlayerSlot ? _playerParty : _enemyParty;
+
+            bool isSlotOccupied = activeList.Any(c => c.BattleSlot == slot);
 
             if (!isSlotOccupied)
             {
-                var benchedEnemy = _enemyParty.FirstOrDefault(c => c.BattleSlot >= 2 && !c.IsDefeated);
+                var reinforcement = partyList.FirstOrDefault(c => c.BattleSlot >= 2 && !c.IsDefeated);
 
-                if (benchedEnemy != null)
+                if (reinforcement != null)
                 {
                     if (!_reinforcementAnnounced)
                     {
-                        EventBus.Publish(new GameEvents.NextEnemyApproaches());
+                        // Announce approach
+                        if (!isPlayerSlot) EventBus.Publish(new GameEvents.NextEnemyApproaches());
+                        else EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "An ally approaches!" });
+
                         _reinforcementAnnounced = true;
+                        CanAdvance = false; // Wait for input/animation
                         return;
                     }
                     else
                     {
-                        benchedEnemy.BattleSlot = _reinforcementSlotIndex;
+                        // Spawn
+                        reinforcement.BattleSlot = slot;
                         RefreshCombatantCaches();
 
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{benchedEnemy.Name} enters the battle!" });
-                        EventBus.Publish(new GameEvents.CombatantSpawned { Combatant = benchedEnemy });
-                        HandleOnEnterAbilities(benchedEnemy);
+                        // --- NEW: Context-Aware Narration ---
+                        string key = $"{(isPlayerSlot ? "Player" : "Enemy")}_{slot}";
+                        string msg = $"{reinforcement.Name} enters the battle!";
+                        if (_lastDefeatedNames.TryGetValue(key, out string deadName))
+                        {
+                            msg = $"{reinforcement.Name} takes {deadName}'s place!";
+                            _lastDefeatedNames.Remove(key); // Consume the message
+                        }
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = msg });
+
+                        EventBus.Publish(new GameEvents.CombatantSpawned { Combatant = reinforcement });
+
+                        // Trigger Passives (Gentle Soul)
+                        HandleOnEnterAbilities(reinforcement);
 
                         _reinforcementAnnounced = false;
                         _reinforcementSlotIndex++;
+                        CanAdvance = false; // Wait for input/animation of spawn/abilities
                         return;
                     }
                 }

@@ -1014,8 +1014,14 @@ namespace ProjectVagabond.Battle.Abilities
         public void OnCombatantEnter(BattleCombatant owner)
         {
             var bm = ServiceLocator.Get<BattleManager>();
+
+            // Debug logging to trace execution
+            Debug.WriteLine($"[PMGentleSoulAbility] OnCombatantEnter called for {owner.Name}. Phase: {bm.CurrentPhase}");
+
+            // Ignore initial battle start
             if (bm.CurrentPhase == BattleManager.BattlePhase.BattleStartIntro) return;
 
+            // Find ally
             var ally = bm.AllCombatants.FirstOrDefault(c =>
                 c.IsPlayerControlled == owner.IsPlayerControlled &&
                 c != owner &&
@@ -1024,6 +1030,7 @@ namespace ProjectVagabond.Battle.Abilities
 
             if (ally != null)
             {
+                Debug.WriteLine($"[PMGentleSoulAbility] Ally found: {ally.Name}. Healing...");
                 int healAmount = (int)(ally.Stats.MaxHP * 0.25f);
                 if (healAmount > 0)
                 {
@@ -1049,6 +1056,10 @@ namespace ProjectVagabond.Battle.Abilities
                         Ability = this
                     });
                 }
+            }
+            else
+            {
+                Debug.WriteLine($"[PMGentleSoulAbility] No valid ally found to heal.");
             }
         }
     }
