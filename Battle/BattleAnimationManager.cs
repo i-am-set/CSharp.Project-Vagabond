@@ -194,27 +194,38 @@ namespace ProjectVagabond.Battle.UI
             public const float FLASH_WHITE_DURATION = 0.05f;
             public const float SHRINK_DURATION = 0.6f;
         }
+
+        // --- NEW: Ability Indicator State ---
+        // Dedicated structure for ability notifications to keep them distinct from damage numbers
         public class AbilityIndicatorState
         {
             public enum AnimationPhase { EasingIn, Flashing, Holding, EasingOut }
             public AnimationPhase Phase;
+            public string CombatantID; // Added to track owner
             public string OriginalText;
             public string Text;
-            public int Count;
-            public Vector2 InitialPosition; // Off-screen bottom
-            public Vector2 TargetPosition;  // On-screen "hang" position
+            public int Count; // For stacking multiple procs of same ability
+            public Vector2 InitialPosition;
+            public Vector2 TargetPosition;
             public Vector2 CurrentPosition;
             public float Timer;
             public float ShakeTimer;
+
+            // Tuning
             public const float SHAKE_DURATION = 0.5f;
             public const float SHAKE_MAGNITUDE = 4.0f;
             public const float SHAKE_FREQUENCY = 15f;
+
             public const float EASE_IN_DURATION = 0.1f;
             public const float FLASH_DURATION = 0.15f;
-            public const float HOLD_DURATION = 1.0f;
+
+            // CHANGED: Doubled hold duration
+            public const float HOLD_DURATION = 2.0f;
+
             public const float EASE_OUT_DURATION = 0.4f;
             public const float TOTAL_DURATION = EASE_IN_DURATION + FLASH_DURATION + HOLD_DURATION + EASE_OUT_DURATION;
         }
+
         public class DamageIndicatorState
         {
             public enum IndicatorType { Text, Number, HealNumber, EmphasizedNumber, Effectiveness, StatChange, Protected, Failed } // Added Failed
@@ -325,8 +336,10 @@ namespace ProjectVagabond.Battle.UI
         private readonly List<HealFlashAnimationState> _activeHealFlashAnimations = new List<HealFlashAnimationState>();
         private readonly List<PoisonEffectAnimationState> _activePoisonEffectAnimations = new List<PoisonEffectAnimationState>();
         private readonly List<DamageIndicatorState> _activeDamageIndicators = new List<DamageIndicatorState>();
-        private readonly List<AbilityIndicatorState> _activeAbilityIndicators = new List<AbilityIndicatorState>();
         private readonly List<ResourceBarAnimationState> _activeBarAnimations = new List<ResourceBarAnimationState>();
+
+        // --- NEW: Ability Indicators List ---
+        private readonly List<AbilityIndicatorState> _activeAbilityIndicators = new List<AbilityIndicatorState>();
 
         // Text Indicator Queue
         private readonly Queue<Action> _pendingTextIndicators = new Queue<Action>();
@@ -365,7 +378,7 @@ namespace ProjectVagabond.Battle.UI
             _activeCoins.Any() ||
             _activeCoinCatchAnimations.Any() ||
             _activeDamageIndicators.Any() ||
-            _activeAbilityIndicators.Any();
+            _activeAbilityIndicators.Any(); // Include ability indicators in busy check
 
         public BattleAnimationManager()
         {
@@ -390,7 +403,7 @@ namespace ProjectVagabond.Battle.UI
             _activeHealFlashAnimations.Clear();
             _activePoisonEffectAnimations.Clear();
             _activeDamageIndicators.Clear();
-            _activeAbilityIndicators.Clear();
+            _activeAbilityIndicators.Clear(); // Clear ability indicators
             _activeBarAnimations.Clear();
             _activeCoins.Clear();
             _pendingTextIndicators.Clear();
@@ -474,9 +487,10 @@ namespace ProjectVagabond.Battle.UI
             // Clearing them looks jarring; letting them fade out naturally while the next turn starts looks better.
         }
 
+        // ... (Existing methods for Hitstop, Flash, Health, etc. remain unchanged) ...
+
         public void StartHitstopVisuals(string combatantId, bool isCrit)
         {
-            // Clear any existing hitstop visual for this combatant
             _activeHitstopVisuals.RemoveAll(v => v.CombatantID == combatantId);
             _activeHitstopVisuals.Add(new HitstopVisualState { CombatantID = combatantId, IsCrit = isCrit });
         }
@@ -509,10 +523,7 @@ namespace ProjectVagabond.Battle.UI
 
         public void StartHealthAnimation(string combatantId, int hpBefore, int hpAfter)
         {
-            // Remove any existing health animation for this combatant to ensure the new one takes precedence.
-            // This is crucial for multi-hit moves, where each hit should restart the animation.
             _activeHealthAnimations.RemoveAll(a => a.CombatantID == combatantId);
-
             _activeHealthAnimations.Add(new HealthAnimationState
             {
                 CombatantID = combatantId,
@@ -749,12 +760,10 @@ namespace ProjectVagabond.Battle.UI
 
         public void StartCoinCatchAnimation(string combatantId)
         {
-            // Reset timer if already exists to keep it popping
             var existing = _activeCoinCatchAnimations.FirstOrDefault(a => a.CombatantID == combatantId);
             if (existing != null)
             {
                 existing.Timer = 0f;
-                // Add a new random rotation kick to the existing one
                 float kick = (float)(_random.NextDouble() * (COIN_CATCH_ROTATION_STRENGTH * 2) - COIN_CATCH_ROTATION_STRENGTH);
                 existing.CurrentRotation += kick;
             }
@@ -775,38 +784,47 @@ namespace ProjectVagabond.Battle.UI
             return _activeCoinCatchAnimations.FirstOrDefault(a => a.CombatantID == combatantId);
         }
 
-        public void StartAbilityIndicator(string abilityName)
+        // --- NEW: Start Ability Indicator ---
+        public void StartAbilityIndicator(string combatantId, string abilityName, Vector2 startPosition)
         {
             var font = ServiceLocator.Get<Core>().SecondaryFont;
             string text = abilityName.ToUpper();
 
-            // Check if an indicator for this ability already exists.
-            var existingIndicator = _activeAbilityIndicators.FirstOrDefault(ind => ind.OriginalText == text);
+            // Check if an indicator for this ability already exists on this combatant
+            var existingIndicator = _activeAbilityIndicators.FirstOrDefault(ind => ind.CombatantID == combatantId && ind.OriginalText == text);
+
             if (existingIndicator != null)
             {
                 existingIndicator.Count++;
                 existingIndicator.Text = $"{existingIndicator.OriginalText} x{existingIndicator.Count}";
-                existingIndicator.Timer = 0f; // Reset timer to restart animation/duration
+
+                // Reset animation state to look like a fresh pop
+                existingIndicator.Timer = 0f;
                 existingIndicator.Phase = AbilityIndicatorState.AnimationPhase.EasingIn;
                 existingIndicator.ShakeTimer = AbilityIndicatorState.SHAKE_DURATION;
+
+                // Reset position to start so it pops up from the source again
+                existingIndicator.CurrentPosition = startPosition;
+                existingIndicator.InitialPosition = startPosition;
+
+                // Target position will be recalculated in Update based on stack index
                 return;
             }
 
-            Vector2 textSize = font.MeasureString(text);
-            const int paddingY = 1;
-            int boxHeight = (int)textSize.Y + paddingY * 2;
-
             var indicator = new AbilityIndicatorState
             {
+                CombatantID = combatantId,
                 OriginalText = text,
                 Text = text,
                 Count = 1,
                 Timer = 0f,
                 Phase = AbilityIndicatorState.AnimationPhase.EasingIn,
-                ShakeTimer = AbilityIndicatorState.SHAKE_DURATION
+                ShakeTimer = AbilityIndicatorState.SHAKE_DURATION,
+                InitialPosition = startPosition,
+                CurrentPosition = startPosition,
+                // TargetPosition will be recalculated in Update based on stack index
+                TargetPosition = startPosition
             };
-            indicator.InitialPosition = new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT + boxHeight);
-            indicator.CurrentPosition = indicator.InitialPosition;
 
             _activeAbilityIndicators.Add(indicator);
         }
@@ -1009,7 +1027,7 @@ namespace ProjectVagabond.Battle.UI
             UpdateHealAnimations(gameTime);
             UpdatePoisonEffectAnimations(gameTime);
             UpdateDamageIndicators(gameTime);
-            UpdateAbilityIndicators(gameTime);
+            UpdateAbilityIndicators(gameTime); // Update new indicators
             UpdateBarAnimations(gameTime);
             UpdateCoins(gameTime, combatants);
             UpdateCoinCatchAnimations(gameTime);
@@ -1782,20 +1800,46 @@ namespace ProjectVagabond.Battle.UI
         private void UpdateAbilityIndicators(GameTime gameTime)
         {
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
-            var font = ServiceLocator.Get<Core>().SecondaryFont;
-            const int paddingY = 1;
-            const int gap = 2;
 
-            // Recalculate all target positions every frame for smooth stacking
-            float yStackOffset = Global.VIRTUAL_HEIGHT;
-            for (int i = 0; i < _activeAbilityIndicators.Count; i++)
+            // --- STACKING LOGIC ---
+            // Group indicators by CombatantID to calculate stack positions
+            var stackCounts = new Dictionary<string, int>();
+
+            // Iterate backwards to remove finished items, but we need forward iteration for stacking order?
+            // Actually, if we iterate backwards, the last item (newest) is processed first.
+            // Let's iterate forwards to determine stack index, then backwards to update/remove.
+            // Or just iterate backwards and use a separate lookup.
+
+            // Let's build a list of active indicators per combatant first
+            var indicatorsByCombatant = _activeAbilityIndicators
+                .GroupBy(i => i.CombatantID)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            const float BASE_FLOAT_HEIGHT = 25f; // Reduced from 40
+            const float STACK_SPACING = 12f;
+
+            foreach (var kvp in indicatorsByCombatant)
             {
-                var indicator = _activeAbilityIndicators[i];
-                Vector2 textSize = font.MeasureString(indicator.Text);
-                int boxHeight = (int)textSize.Y + paddingY * 2;
-                yStackOffset -= boxHeight;
-                indicator.TargetPosition = new Vector2(Global.VIRTUAL_WIDTH / 2f, yStackOffset);
-                yStackOffset -= gap;
+                var list = kvp.Value;
+                // List is ordered by insertion (oldest first).
+                // We want oldest at top (highest Y), newest at bottom (lowest Y).
+                // Index 0 (Oldest): Base - (0 * Spacing) -> Highest? No.
+                // If we want them to stack UNDER one another:
+                // Top (Oldest): Y = Base
+                // Next: Y = Base + Spacing
+                // But "Float Up" implies Y decreases.
+                // So:
+                // Top (Oldest): Y = -50
+                // Next: Y = -38
+                // Next: Y = -26
+                // So TargetY = (InitialY - BASE_FLOAT_HEIGHT) + (Index * STACK_SPACING)
+
+                for (int i = 0; i < list.Count; i++)
+                {
+                    var indicator = list[i];
+                    float targetYOffset = -BASE_FLOAT_HEIGHT + (i * STACK_SPACING);
+                    indicator.TargetPosition = new Vector2(indicator.InitialPosition.X, indicator.InitialPosition.Y + targetYOffset);
+                }
             }
 
             for (int i = _activeAbilityIndicators.Count - 1; i >= 0; i--)
@@ -1813,8 +1857,8 @@ namespace ProjectVagabond.Battle.UI
                     continue;
                 }
 
-                // Smoothly move towards the (potentially changing) target position
-                indicator.CurrentPosition = Vector2.Lerp(indicator.CurrentPosition, indicator.TargetPosition, 10f * deltaTime);
+                // Smoothly move towards target
+                indicator.CurrentPosition = Vector2.Lerp(indicator.CurrentPosition, indicator.TargetPosition, 5f * deltaTime);
 
                 // Update animation phase based on timer
                 if (indicator.Phase == AbilityIndicatorState.AnimationPhase.EasingIn && indicator.Timer >= AbilityIndicatorState.EASE_IN_DURATION)
@@ -1989,7 +2033,7 @@ namespace ProjectVagabond.Battle.UI
         public void DrawAbilityIndicators(SpriteBatch spriteBatch, BitmapFont font)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
-            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+            var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont; // Change 1: Use Tertiary Font
 
             foreach (var indicator in _activeAbilityIndicators)
             {
@@ -2010,32 +2054,11 @@ namespace ProjectVagabond.Battle.UI
                 const float PULSE_SPEED = 15f;
                 float pulse = (MathF.Sin(indicator.Timer * PULSE_SPEED) + 1f) / 2f; // Oscillates between 0.0 and 1.0
 
-                // --- Color Determination ---
-                Color pulseTargetColor;
-                if (indicator.Count >= 5)
-                {
-                    pulseTargetColor = _global.Palette_Pink;
-                }
-                else if (indicator.Count == 4)
-                {
-                    pulseTargetColor = _global.Palette_Red;
-                }
-                else if (indicator.Count == 3)
-                {
-                    pulseTargetColor = _global.Palette_Orange;
-                }
-                else if (indicator.Count == 2)
-                {
-                    pulseTargetColor = _global.Palette_Yellow;
-                }
-                else // Count is 1
-                {
-                    pulseTargetColor = _global.Palette_Shadow;
-                }
+                // --- Change 2: Flash Yellow <-> White ---
+                Color textColor = Color.Lerp(_global.Palette_Yellow, _global.Palette_White, pulse);
 
-                Color bgColor = Color.Lerp(_global.TerminalBg, pulseTargetColor, pulse);
-                Color outlineColor = Color.Black;
-                Color textColor = Color.White;
+                // --- Change 3: Black Outline ---
+                Color outlineColor = _global.Palette_Black;
 
                 // --- Final Transparency ---
                 float finalDrawAlpha = alpha;
@@ -2050,37 +2073,18 @@ namespace ProjectVagabond.Battle.UI
                 }
 
                 // --- Layout Calculation ---
-                Vector2 textSize = secondaryFont.MeasureString(indicator.Text);
-                const int paddingX = 8;
-                const int paddingY = 1;
+                Vector2 textSize = tertiaryFont.MeasureString(indicator.Text);
 
-                const int maxChars = 20;
-                float maxWidth = secondaryFont.MeasureString(new string('W', maxChars)).Width;
-                int boxWidth = (int)maxWidth + paddingX * 2;
-                int boxHeight = (int)textSize.Y + paddingY * 2;
-
-                var boxRect = new Rectangle(
-                    (int)(indicator.CurrentPosition.X - boxWidth / 2f + shakeOffset.X),
-                    (int)(indicator.CurrentPosition.Y - boxHeight + shakeOffset.Y),
-                    boxWidth,
-                    boxHeight
-                );
-
+                // Center text on the current position
                 var textPosition = new Vector2(
-                    boxRect.X + (boxWidth - textSize.X) / 2f,
-                    boxRect.Y + paddingY - 1
+                    (int)(indicator.CurrentPosition.X - textSize.X / 2f + shakeOffset.X),
+                    (int)(indicator.CurrentPosition.Y - textSize.Y / 2f + shakeOffset.Y)
                 );
 
                 // --- Drawing ---
-                spriteBatch.DrawSnapped(pixel, boxRect, bgColor * 0.8f * finalDrawAlpha);
-                spriteBatch.DrawLineSnapped(new Vector2(boxRect.Left, boxRect.Top), new Vector2(boxRect.Right, boxRect.Top), _global.Palette_White * finalDrawAlpha);
-                spriteBatch.DrawLineSnapped(new Vector2(boxRect.Left, boxRect.Bottom), new Vector2(boxRect.Right, boxRect.Bottom), _global.Palette_White * finalDrawAlpha);
-                spriteBatch.DrawLineSnapped(new Vector2(boxRect.Left, boxRect.Top), new Vector2(boxRect.Left, boxRect.Bottom), _global.Palette_White * finalDrawAlpha);
-                spriteBatch.DrawLineSnapped(new Vector2(boxRect.Right, boxRect.Top), new Vector2(boxRect.Right, boxRect.Bottom), _global.Palette_White * finalDrawAlpha);
-
-                spriteBatch.DrawStringOutlinedSnapped(secondaryFont, indicator.Text, textPosition, textColor * finalDrawAlpha, outlineColor * finalDrawAlpha);
+                // Draw ONLY text with outline (No background box)
+                spriteBatch.DrawStringOutlinedSnapped(tertiaryFont, indicator.Text, textPosition, textColor * finalDrawAlpha, outlineColor * finalDrawAlpha);
             }
         }
     }
 }
-﻿

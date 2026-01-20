@@ -257,7 +257,6 @@ namespace ProjectVagabond.Scenes
             ServiceLocator.Unregister<BattleManager>();
         }
 
-        // ... (SubscribeToEvents, UnsubscribeFromEvents, OnDiceRollCompleted, InitializeSettingsButton omitted for brevity, unchanged) ...
         private void SubscribeToEvents()
         {
             EventBus.Subscribe<GameEvents.ActionDeclared>(OnActionDeclared);
@@ -497,7 +496,6 @@ namespace ProjectVagabond.Scenes
             return combatant;
         }
 
-        // ... (Rest of the file remains unchanged) ...
         private void CleanupEntities()
         {
             if (_enemyEntityIds.Any())
@@ -997,6 +995,11 @@ namespace ProjectVagabond.Scenes
                     _moveAnimationManager.Draw(sb);
                     _uiManager.Draw(sb, font, gameTime, Matrix.Identity);
                     _animationManager.DrawDamageIndicators(sb, ServiceLocator.Get<Core>().SecondaryFont);
+
+                    // --- NEW: Draw Ability Indicators in Overlay ---
+                    // This ensures they are visible even during an impact flash
+                    _animationManager.DrawAbilityIndicators(sb, ServiceLocator.Get<Core>().SecondaryFont);
+
                     sb.End();
                 });
             }
@@ -1005,6 +1008,10 @@ namespace ProjectVagabond.Scenes
                 _moveAnimationManager.Draw(spriteBatch);
                 _uiManager.Draw(spriteBatch, font, gameTime, transform);
                 _animationManager.DrawDamageIndicators(spriteBatch, ServiceLocator.Get<Core>().SecondaryFont);
+
+                // --- NEW: Draw Ability Indicators ---
+                // Drawn last to appear on top of UI
+                _animationManager.DrawAbilityIndicators(spriteBatch, ServiceLocator.Get<Core>().SecondaryFont);
             }
         }
 
@@ -1401,7 +1408,13 @@ namespace ProjectVagabond.Scenes
         private void OnAbilityActivated(GameEvents.AbilityActivated e)
         {
             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[debug]Ability Activated: {e.Ability.Name} ({e.Combatant.Name})" });
-            _animationManager.StartAbilityIndicator(e.Ability.Name);
+
+            // Calculate position
+            Vector2 hudPos = _renderer.GetCombatantHudCenterPosition(e.Combatant, _battleManager.AllCombatants);
+
+            // Trigger visual indicator
+            _animationManager.StartAbilityIndicator(e.Combatant.CombatantID, e.Ability.Name, hudPos);
+
             if (!string.IsNullOrEmpty(e.NarrationText)) _uiManager.ShowNarration(e.NarrationText);
         }
 

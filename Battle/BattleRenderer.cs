@@ -395,6 +395,9 @@ namespace ProjectVagabond.Battle.UI
                     _vfxRenderer.DrawStatChangeTooltip(spriteBatch, target, _statTooltipAlpha, hasInsight, center, barBottomY, gameTime);
                 }
             }
+
+            // NOTE: Ability Indicators are no longer drawn here.
+            // They are drawn in BattleScene.cs to ensure they appear on top of the UI.
         }
 
         private void DrawTargetingHighlights(SpriteBatch spriteBatch, BattleUIManager uiManager, GameTime gameTime, Dictionary<string, Color> silhouetteColors, BattleCombatant focusedCombatant)
