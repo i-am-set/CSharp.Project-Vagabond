@@ -139,7 +139,9 @@
     "Slot2MovePool": [ "39" ],
     "Slot3MovePool": [ "40" ],
     "Slot4MovePool": [ "41" ],
-    "PassiveAbilityPool": [],
+    "PassiveAbilityPool": [
+      { "PMSweetpea": "" }
+    ],
     "StartingWeapons": {
       "0": 1
     }
@@ -162,7 +164,9 @@
     "Slot2MovePool": [],
     "Slot3MovePool": [],
     "Slot4MovePool": [],
-    "PassiveAbilityPool": [],
+    "PassiveAbilityPool": [
+      { "PMSkeptic": "" }
+    ],
     "StartingWeapons": {
       "0": 1
     }
@@ -185,7 +189,9 @@
     "Slot2MovePool": [],
     "Slot3MovePool": [],
     "Slot4MovePool": [],
-    "PassiveAbilityPool": [],
+    "PassiveAbilityPool": [
+      { "PM9Lives": "" }
+    ],
     "StartingWeapons": {
       "0": 1
     }
@@ -208,7 +214,9 @@
     "Slot2MovePool": [],
     "Slot3MovePool": [],
     "Slot4MovePool": [],
-    "PassiveAbilityPool": [],
+    "PassiveAbilityPool": [
+      { "PMMinutiae": "" }
+    ],
     "StartingWeapons": {
       "0": 1
     }
@@ -254,7 +262,9 @@
     "Slot2MovePool": [],
     "Slot3MovePool": [],
     "Slot4MovePool": [],
-    "PassiveAbilityPool": [],
+    "PassiveAbilityPool": [
+      { "PMGentleSoul": "" }
+    ],
     "StartingWeapons": {
       "0": 1
     }
@@ -277,7 +287,9 @@
     "Slot2MovePool": [],
     "Slot3MovePool": [],
     "Slot4MovePool": [],
-    "PassiveAbilityPool": [],
+    "PassiveAbilityPool": [
+      { "PMWellfed": "" }
+    ],
     "StartingWeapons": {
       "0": 1
     }

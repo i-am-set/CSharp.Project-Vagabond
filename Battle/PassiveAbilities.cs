@@ -829,4 +829,152 @@ namespace ProjectVagabond.Battle.Abilities
             }
         }
     }
+
+    public class PMSweetpeaAbility : IAllyDamageModifier
+    {
+        public string Name => "Sweetpea";
+        public string Description => "Reduces damage taken by allies.";
+        public float ModifyAllyIncomingDamage(float currentDamage, CombatContext ctx)
+        {
+            // ctx.Target is the one taking damage.
+            // The owner of this ability is the one providing the buff.
+            // The interface logic in DamageCalculator will handle the "Is Ally" check.
+            // We just return the multiplier.
+            return currentDamage * 0.75f;
+        }
+    }
+
+    public class PMSkepticAbility : IIncomingDamageModifier
+    {
+        public string Name => "Skeptic";
+        public string Description => "Takes half damage from Spells.";
+
+        public float ModifyIncomingDamage(float currentDamage, CombatContext ctx)
+        {
+            if (ctx.Move != null && ctx.Move.MoveType == MoveType.Spell)
+            {
+                if (!ctx.IsSimulation)
+                {
+                    // Optional: Visual feedback
+                    // EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Target, Ability = this });
+                }
+                return currentDamage * 0.5f;
+            }
+            return currentDamage;
+        }
+    }
+
+    public class PM9LivesAbility : IIncomingDamageModifier
+    {
+        public string Name => "9 Lives";
+        public string Description => "Survive lethal damage if at full HP.";
+
+        public float ModifyIncomingDamage(float currentDamage, CombatContext ctx)
+        {
+            var target = ctx.Target;
+
+            // Check if at full HP
+            if (target.Stats.CurrentHP == target.Stats.MaxHP)
+            {
+                // Check if damage is lethal
+                if (currentDamage >= target.Stats.CurrentHP)
+                {
+                    if (!ctx.IsSimulation)
+                    {
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{target.Name} endured the hit!" });
+                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = target, Ability = this });
+                    }
+                    // Return damage such that remaining HP is 1
+                    return Math.Max(0, target.Stats.CurrentHP - 1);
+                }
+            }
+            return currentDamage;
+        }
+    }
+
+    public class PMMinutiaeAbility : IOutgoingDamageModifier
+    {
+        public string Name => "Minutiae";
+        public string Description => "Boosts moves with 60 or less Power by 1.5x.";
+
+        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
+        {
+            if (ctx.Move != null && ctx.Move.Power > 0 && ctx.Move.Power <= 60)
+            {
+                return currentDamage * 1.5f;
+            }
+            return currentDamage;
+        }
+    }
+
+    public class PMGentleSoulAbility : IBattleLifecycle
+    {
+        public string Name => "Gentle Soul";
+        public string Description => "Restores ally HP on switch-in.";
+
+        public void OnBattleStart(BattleCombatant owner) { }
+
+        public void OnCombatantEnter(BattleCombatant owner)
+        {
+            var bm = ServiceLocator.Get<BattleManager>();
+            // Ignore initial battle start
+            if (bm.CurrentPhase == BattleManager.BattlePhase.BattleStartIntro) return;
+
+            // Find ally
+            var ally = bm.AllCombatants.FirstOrDefault(c =>
+                c.IsPlayerControlled == owner.IsPlayerControlled &&
+                c != owner &&
+                c.IsActiveOnField &&
+                !c.IsDefeated);
+
+            if (ally != null)
+            {
+                int healAmount = (int)(ally.Stats.MaxHP * 0.25f);
+                if (healAmount > 0)
+                {
+                    int oldHP = (int)ally.VisualHP;
+                    ally.ApplyHealing(healAmount);
+
+                    EventBus.Publish(new GameEvents.CombatantHealed
+                    {
+                        Actor = owner,
+                        Target = ally,
+                        HealAmount = healAmount,
+                        VisualHPBefore = oldHP
+                    });
+
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished
+                    {
+                        Message = $"{owner.Name}'s {Name} healed {ally.Name}!"
+                    });
+
+                    EventBus.Publish(new GameEvents.AbilityActivated
+                    {
+                        Combatant = owner,
+                        Ability = this
+                    });
+                }
+            }
+        }
+    }
+
+    public class PMWellfedAbility : IIncomingDamageModifier
+    {
+        public string Name => "Well-Fed";
+        public string Description => "Halves damage taken when at full HP.";
+
+        public float ModifyIncomingDamage(float currentDamage, CombatContext ctx)
+        {
+            if (ctx.Target.Stats.CurrentHP >= ctx.Target.Stats.MaxHP)
+            {
+                if (!ctx.IsSimulation)
+                {
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name}'s {Name} reduced the damage!" });
+                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Target, Ability = this });
+                }
+                return currentDamage * 0.5f;
+            }
+            return currentDamage;
+        }
+    }
 }

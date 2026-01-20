@@ -137,6 +137,7 @@ namespace ProjectVagabond.Battle
         public List<IStatChangeModifier> StatChangeModifiers { get; private set; } = new List<IStatChangeModifier>();
         public List<IOutgoingDamageModifier> OutgoingDamageModifiers { get; private set; } = new List<IOutgoingDamageModifier>();
         public List<IIncomingDamageModifier> IncomingDamageModifiers { get; private set; } = new List<IIncomingDamageModifier>();
+        public List<IAllyDamageModifier> AllyDamageModifiers { get; private set; } = new List<IAllyDamageModifier>();
         public List<IDefensePenetrationModifier> DefensePenetrationModifiers { get; private set; } = new List<IDefensePenetrationModifier>();
         public List<IElementalAffinityModifier> ElementalAffinityModifiers { get; private set; } = new List<IElementalAffinityModifier>();
         public List<IIncomingStatusModifier> IncomingStatusModifiers { get; private set; } = new List<IIncomingStatusModifier>();
@@ -238,6 +239,7 @@ namespace ProjectVagabond.Battle
             if (ability is IStatChangeModifier scm) StatChangeModifiers.Add(scm);
             if (ability is IOutgoingDamageModifier odm) OutgoingDamageModifiers.Add(odm);
             if (ability is IIncomingDamageModifier idm) IncomingDamageModifiers.Add(idm);
+            if (ability is IAllyDamageModifier adm) AllyDamageModifiers.Add(adm);
             if (ability is IDefensePenetrationModifier dpm) DefensePenetrationModifiers.Add(dpm);
             if (ability is IElementalAffinityModifier eam) ElementalAffinityModifiers.Add(eam);
             if (ability is IIncomingStatusModifier ism) IncomingStatusModifiers.Add(ism);

@@ -65,6 +65,14 @@ namespace ProjectVagabond.Battle.Abilities
         float ModifyIncomingDamage(float currentDamage, CombatContext ctx);
     }
 
+    /// <summary>
+    /// Modifies damage taken by allies (not self). Used for Aura effects like Friend Guard.
+    /// </summary>
+    public interface IAllyDamageModifier : IAbility
+    {
+        float ModifyAllyIncomingDamage(float currentDamage, CombatContext ctx);
+    }
+
     public interface IDefensePenetrationModifier : IAbility
     {
         float GetDefensePenetration(CombatContext ctx);

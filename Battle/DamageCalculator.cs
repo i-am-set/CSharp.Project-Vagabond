@@ -200,6 +200,23 @@ namespace ProjectVagabond.Battle
                 currentDamage = modifier.ModifyIncomingDamage(currentDamage, ctx);
             }
 
+            // --- 8b. Apply Ally Modifiers (Auras) ---
+            var battleManager = ServiceLocator.Get<BattleManager>();
+            var allies = battleManager.AllCombatants.Where(c =>
+                c != target &&
+                c.IsPlayerControlled == target.IsPlayerControlled &&
+                !c.IsDefeated &&
+                c.IsActiveOnField
+            );
+
+            foreach (var ally in allies)
+            {
+                foreach (var mod in ally.AllyDamageModifiers)
+                {
+                    currentDamage = mod.ModifyAllyIncomingDamage(currentDamage, ctx);
+                }
+            }
+
             // Burn Status Logic: Multiplies incoming damage
             if (target.HasStatusEffect(StatusEffectType.Burn))
             {
@@ -261,6 +278,23 @@ namespace ProjectVagabond.Battle
             }
 
             foreach (var modifier in target.IncomingDamageModifiers) currentDamage = modifier.ModifyIncomingDamage(currentDamage, ctx);
+
+            // --- Apply Ally Modifiers (Auras) ---
+            var battleManager = ServiceLocator.Get<BattleManager>();
+            var allies = battleManager.AllCombatants.Where(c =>
+                c != target &&
+                c.IsPlayerControlled == target.IsPlayerControlled &&
+                !c.IsDefeated &&
+                c.IsActiveOnField
+            );
+
+            foreach (var ally in allies)
+            {
+                foreach (var mod in ally.AllyDamageModifiers)
+                {
+                    currentDamage = mod.ModifyAllyIncomingDamage(currentDamage, ctx);
+                }
+            }
 
             if (target.HasStatusEffect(StatusEffectType.Burn))
             {
