@@ -114,13 +114,25 @@ namespace ProjectVagabond.Battle.UI
         // --- Cache for Bar Bottom Positions ---
         private Dictionary<string, float> _combatantBarBottomYs = new Dictionary<string, float>();
 
-        // --- TARGETING RETICLE STATE ---
-        // Stores X, Y, Width, Height as floats for smooth interpolation
-        private Vector4 _reticleCurrentBounds;
-        private bool _reticleActive = false;
+        // --- TARGETING RETICLE CONTROLLER ---
+        private class ReticleController
+        {
+            public Rectangle CurrentRect;
+            public bool IsActive;
 
-        // TUNING: Significantly reduced speed for smoother, less jittery movement
-        private const float RETICLE_MOVE_SPEED = 12.0f;
+            public void Update(Rectangle targetRect)
+            {
+                // Instant snap logic - no tweening
+                CurrentRect = targetRect;
+                IsActive = true;
+            }
+
+            public void Reset()
+            {
+                IsActive = false;
+            }
+        }
+        private readonly ReticleController _reticleController = new ReticleController();
 
         public BattleRenderer()
         {
@@ -165,7 +177,7 @@ namespace ProjectVagabond.Battle.UI
             _hasInitializedPositions = false;
             _enemySquashScales.Clear();
             ForceDrawCenterFloor = false; // Reset forced state
-            _reticleActive = false; // Reset reticle
+            _reticleController.Reset(); // Reset reticle
         }
 
         public List<TargetInfo> GetCurrentTargets() => _currentTargets;
@@ -413,14 +425,14 @@ namespace ProjectVagabond.Battle.UI
         {
             if (uiManager.HoveredMove == null)
             {
-                _reticleActive = false;
+                _reticleController.Reset();
                 return;
             }
 
             var targets = uiManager.HoverHighlightState.Targets;
             if (targets == null || !targets.Any())
             {
-                _reticleActive = false;
+                _reticleController.Reset();
                 return;
             }
 
@@ -457,8 +469,6 @@ namespace ProjectVagabond.Battle.UI
                 if (!isMulti)
                 {
                     // Single Target Preview: Cycle through targets
-                    // The logic for WHICH target is active is handled in BattleUIManager.UpdateHoverHighlights
-                    // We just need to find the one that has a silhouette color assigned (which indicates it's the active one in the cycle)
                     var activeTarget = targets.FirstOrDefault(t => silhouetteColors.ContainsKey(t.CombatantID));
                     if (activeTarget != null)
                     {
@@ -480,7 +490,7 @@ namespace ProjectVagabond.Battle.UI
             if (isMulti)
             {
                 // Multi-target: Draw all instantly (no sliding reticle)
-                _reticleActive = false; // Reset reticle state
+                _reticleController.Reset();
 
                 foreach (var target in targetsToDraw)
                 {
@@ -495,7 +505,7 @@ namespace ProjectVagabond.Battle.UI
             }
             else
             {
-                // Single-target: Use sliding reticle
+                // Single-target: Use sliding reticle via Controller
                 var target = targetsToDraw.FirstOrDefault();
 
                 if (target != null)
@@ -503,37 +513,16 @@ namespace ProjectVagabond.Battle.UI
                     var targetInfo = _currentTargets.FirstOrDefault(t => t.Combatant == target);
                     if (targetInfo.Combatant != null)
                     {
-                        Rectangle targetRect = targetInfo.Bounds;
-                        Vector4 targetVec = new Vector4(targetRect.X, targetRect.Y, targetRect.Width, targetRect.Height);
+                        // Update Controller
+                        _reticleController.Update(targetInfo.Bounds);
 
-                        if (!_reticleActive)
-                        {
-                            // Snap immediately if first time showing
-                            _reticleCurrentBounds = targetVec;
-                            _reticleActive = true;
-                        }
-                        else
-                        {
-                            // Smoothly interpolate
-                            // Use Time-Corrected Damping for framerate independence
-                            float damping = 1.0f - MathF.Exp(-RETICLE_MOVE_SPEED * dt);
-                            _reticleCurrentBounds = Vector4.Lerp(_reticleCurrentBounds, targetVec, damping);
-                        }
-
-                        // Convert back to Rectangle for drawing
-                        Rectangle drawRect = new Rectangle(
-                            (int)_reticleCurrentBounds.X,
-                            (int)_reticleCurrentBounds.Y,
-                            (int)_reticleCurrentBounds.Z,
-                            (int)_reticleCurrentBounds.W
-                        );
-
-                        DrawDottedBox(spriteBatch, pixel, drawRect, _global.Palette_Sun, offset, dashLength, gapLength);
+                        // Draw using bounds
+                        DrawDottedBox(spriteBatch, pixel, _reticleController.CurrentRect, _global.Palette_Sun, offset, dashLength, gapLength);
                     }
                 }
                 else
                 {
-                    _reticleActive = false;
+                    _reticleController.Reset();
                 }
             }
         }
