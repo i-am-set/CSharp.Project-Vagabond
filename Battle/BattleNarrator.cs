@@ -53,6 +53,7 @@ namespace ProjectVagabond.Battle.UI
         private float _timeoutTimer;
         private bool _isWaitingForInput;
         private bool _isFinishedTyping;
+        private bool _isFastForwarding; // New state for speed-up
 
         // Layout
         private float _wrapWidth;
@@ -64,7 +65,9 @@ namespace ProjectVagabond.Battle.UI
         private KeyboardState _previousKeyboardState;
 
         // --- Tuning ---
-        private const float TYPEWRITER_SPEED = 0.015f;
+        private const float TYPEWRITER_SPEED = 0.015f; // Base speed (seconds per char)
+        public const float TYPEWRITER_FAST_MULTIPLIER = 3.0f; // Speed multiplier when clicking to skip
+
         private const float AUTO_ADVANCE_SECONDS = 5.0f;
         private const int LINE_SPACING = 3;
         private const int SPACE_WIDTH = 5;
@@ -88,6 +91,7 @@ namespace ProjectVagabond.Battle.UI
             _displayLines.Clear();
             _isWaitingForInput = false;
             _isFinishedTyping = true;
+            _isFastForwarding = false;
         }
 
         public void Show(string message, BitmapFont font)
@@ -129,6 +133,7 @@ namespace ProjectVagabond.Battle.UI
                 _timeoutTimer = AUTO_ADVANCE_SECONDS;
                 _isWaitingForInput = false;
                 _isFinishedTyping = false;
+                _isFastForwarding = false; // Reset speed
 
                 // Prepare first line
                 _displayLines.Clear();
@@ -139,6 +144,7 @@ namespace ProjectVagabond.Battle.UI
                 _allTokens.Clear();
                 _isWaitingForInput = false;
                 _isFinishedTyping = true;
+                _isFastForwarding = false;
             }
         }
 
@@ -244,24 +250,6 @@ namespace ProjectVagabond.Battle.UI
             sb.Clear();
         }
 
-        private void FinishCurrentSegmentInstantly()
-        {
-            // Re-calculate all lines instantly
-            _displayLines.Clear();
-            var currentLine = new List<NarratorToken>();
-            _displayLines.Add(currentLine);
-            float currentLineWidth = 0f;
-
-            foreach (var token in _allTokens)
-            {
-                ProcessTokenLayout(token, ref currentLine, ref currentLineWidth);
-            }
-
-            _isFinishedTyping = true;
-            _isWaitingForInput = true;
-            _timeoutTimer = AUTO_ADVANCE_SECONDS;
-        }
-
         private void ProcessTokenLayout(NarratorToken token, ref List<NarratorToken> currentLine, ref float currentLineWidth)
         {
             if (token.Type == TokenType.Newline)
@@ -331,19 +319,25 @@ namespace ProjectVagabond.Battle.UI
             {
                 if (advance)
                 {
-                    FinishCurrentSegmentInstantly();
+                    // Instead of finishing instantly, enable Fast Forward
+                    _isFastForwarding = true;
                     if (mouseJustReleased) UIInputManager.ConsumeMouseClick();
                 }
-                else
-                {
-                    _typewriterTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-                    // Process as many characters as needed based on elapsed time
-                    while (_typewriterTimer >= TYPEWRITER_SPEED && !_isFinishedTyping)
-                    {
-                        _typewriterTimer -= TYPEWRITER_SPEED;
-                        AdvanceTypewriter();
-                    }
+                // Calculate current speed based on Fast Forward state
+                float currentSpeed = TYPEWRITER_SPEED;
+                if (_isFastForwarding)
+                {
+                    currentSpeed /= TYPEWRITER_FAST_MULTIPLIER;
+                }
+
+                _typewriterTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+                // Process as many characters as needed based on elapsed time and current speed
+                while (_typewriterTimer >= currentSpeed && !_isFinishedTyping)
+                {
+                    _typewriterTimer -= currentSpeed;
+                    AdvanceTypewriter();
                 }
             }
 

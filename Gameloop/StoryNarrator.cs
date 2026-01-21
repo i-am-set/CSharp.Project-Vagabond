@@ -50,6 +50,7 @@ namespace ProjectVagabond.UI
         private float _typewriterTimer;
         private bool _isWaitingForInput;
         private bool _isFinishedTyping;
+        private bool _isFastForwarding; // New state
 
         private float _wrapWidth;
         private int _maxVisibleLines;
@@ -60,6 +61,8 @@ namespace ProjectVagabond.UI
         private KeyboardState _previousKeyboardState;
 
         private const float TYPEWRITER_SPEED = 0.01f;
+        public const float TYPEWRITER_FAST_MULTIPLIER = 3.0f; // Speed multiplier
+
         private const int SPACE_WIDTH = 5; // Fixed width for spaces
         private const int LINE_SPACING = 4; // Increased line spacing
 
@@ -88,6 +91,7 @@ namespace ProjectVagabond.UI
             _currentCharIndex = 0;
             _typewriterTimer = 0f;
             _isFinishedTyping = false;
+            _isFastForwarding = false;
         }
 
         public void Show(string message)
@@ -284,15 +288,24 @@ namespace ProjectVagabond.UI
                 }
                 else
                 {
-                    FinishCurrentMessageInstantly();
+                    // Enable Fast Forward instead of instant finish
+                    _isFastForwarding = true;
                 }
             }
             else if (!_isWaitingForInput && !_isFinishedTyping)
             {
                 _typewriterTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-                while (_typewriterTimer >= TYPEWRITER_SPEED && !_isFinishedTyping)
+
+                // Calculate current speed based on Fast Forward state
+                float currentSpeed = TYPEWRITER_SPEED;
+                if (_isFastForwarding)
                 {
-                    _typewriterTimer -= TYPEWRITER_SPEED;
+                    currentSpeed /= TYPEWRITER_FAST_MULTIPLIER;
+                }
+
+                while (_typewriterTimer >= currentSpeed && !_isFinishedTyping)
+                {
+                    _typewriterTimer -= currentSpeed;
                     AdvanceTypewriter();
                 }
             }
@@ -334,23 +347,6 @@ namespace ProjectVagabond.UI
                         _currentTokenIndex = _displayLines.Last().Count - 1;
                         _currentCharIndex = _displayLines.Last().Last().Text.Length;
                     }
-                }
-            }
-        }
-
-        private void FinishCurrentMessageInstantly()
-        {
-            _isFinishedTyping = true;
-            _isWaitingForInput = true;
-            // Set indices to the very end
-            _currentLineIndex = _displayLines.Count - 1;
-            if (_currentLineIndex >= 0)
-            {
-                var lastLine = _displayLines[_currentLineIndex];
-                _currentTokenIndex = lastLine.Count - 1;
-                if (_currentTokenIndex >= 0)
-                {
-                    _currentCharIndex = lastLine[_currentTokenIndex].Text.Length;
                 }
             }
         }
