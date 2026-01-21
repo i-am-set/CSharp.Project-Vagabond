@@ -24,6 +24,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using static ProjectVagabond.Battle.Abilities.InflictStatusStunAbility;
 
 namespace ProjectVagabond.Battle.UI
 {
@@ -1256,7 +1257,6 @@ namespace ProjectVagabond.Battle.UI
                                 // Pass the list of active players to SpawnCoins
                                 var players = combatants.Where(c => c.IsPlayerControlled && !c.IsDefeated && c.IsActiveOnField).ToList();
                                 SpawnCoins(anim.CenterPosition, 50, anim.GroundY, players);
-                                anim.CoinsSpawned = true;
                             }
                         }
                         break;
@@ -2066,7 +2066,7 @@ namespace ProjectVagabond.Battle.UI
                     }
                     else
                     {
-                        spriteBatch.DrawStringOutlinedSnapped(activeFont, indicator.PrimaryText, textPosition, drawColor * alpha, _global.Palette_Black * alpha);
+                        spriteBatch.DrawStringSquareOutlinedSnapped(activeFont, indicator.PrimaryText, textPosition, drawColor * alpha, _global.Palette_Black * alpha);
                     }
                 }
             }
@@ -2130,7 +2130,7 @@ namespace ProjectVagabond.Battle.UI
                 // Re-calculate position to be centered on the point for rotation
                 Vector2 drawPos = indicator.CurrentPosition + shakeOffset;
 
-                spriteBatch.DrawStringOutlinedSnapped(tertiaryFont, indicator.Text, drawPos, textColor * finalDrawAlpha, outlineColor * finalDrawAlpha, indicator.Rotation, origin, 1.0f, SpriteEffects.None, 0f);
+                TextAnimator.DrawTextWithEffectSquareOutlined(spriteBatch, tertiaryFont, indicator.Text, drawPos - origin, textColor * finalDrawAlpha, outlineColor * finalDrawAlpha, TextEffectType.DriftWave, indicator.Timer, null, indicator.Rotation);
             }
         }
     }

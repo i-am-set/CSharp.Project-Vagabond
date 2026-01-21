@@ -446,11 +446,21 @@ namespace ProjectVagabond.Battle.UI
 
                     var rect = targetInfo.Bounds;
 
-                    spriteBatch.DrawAnimatedDottedRectangle(pixel, new Rectangle(rect.X - 1, rect.Y, rect.Width, rect.Height), _global.Palette_Black, 1f, dashLength, gapLength, offset);
-                    spriteBatch.DrawAnimatedDottedRectangle(pixel, new Rectangle(rect.X + 1, rect.Y, rect.Width, rect.Height), _global.Palette_Black, 1f, dashLength, gapLength, offset);
-                    spriteBatch.DrawAnimatedDottedRectangle(pixel, new Rectangle(rect.X, rect.Y - 1, rect.Width, rect.Height), _global.Palette_Black, 1f, dashLength, gapLength, offset);
-                    spriteBatch.DrawAnimatedDottedRectangle(pixel, new Rectangle(rect.X, rect.Y + 1, rect.Width, rect.Height), _global.Palette_Black, 1f, dashLength, gapLength, offset);
+                    // --- SQUARED OUTLINE LOGIC ---
+                    // Draw the exact same dotted rectangle shifted 1 pixel in all 8 directions (cardinals + diagonals)
+                    // This ensures the "marching ants" pattern is perfectly synchronized between the outline and the fill.
+                    for (int x = -1; x <= 1; x++)
+                    {
+                        for (int y = -1; y <= 1; y++)
+                        {
+                            if (x == 0 && y == 0) continue;
 
+                            var outlineRect = new Rectangle(rect.X + x, rect.Y + y, rect.Width, rect.Height);
+                            spriteBatch.DrawAnimatedDottedRectangle(pixel, outlineRect, _global.Palette_Black, 1f, dashLength, gapLength, offset);
+                        }
+                    }
+
+                    // Draw Main Colored Rectangle
                     spriteBatch.DrawAnimatedDottedRectangle(pixel, rect, rectColor, 1f, dashLength, gapLength, offset);
                 }
             }

@@ -58,7 +58,7 @@ namespace ProjectVagabond.Scenes
         private const float POST_EVENT_DELAY = 0.25f;
         private const float PATH_ANIMATION_DURATION = 0.75f;
 
-        // --- NEW ANIMATION TUNING ---
+        // --- ANIMATION TUNING ---
         private const float NODE_LIFT_DURATION = 0.25f;     // Slightly longer for anticipation
         private const float PULSE_DURATION = 0.4f;          // Longer for the elastic wobble
         private const float NODE_LOWERING_DURATION = 0.5f;  // Longer for the bounce
@@ -207,12 +207,12 @@ namespace ProjectVagabond.Scenes
             {
                 if (_currentView == SplitMapView.Inventory)
                 {
-                    _hapticsManager.TriggerZoomPulse(0.99f, 0.1f);
+                    _hapticsManager.TriggerZoomPulse(0.995f, 0.1f);
                     SetView(_viewToReturnTo, snap: true);
                 }
                 else
                 {
-                    _hapticsManager.TriggerZoomPulse(1.01f, 0.1f);
+                    _hapticsManager.TriggerZoomPulse(1.005f, 0.1f);
                     _viewToReturnTo = _currentView;
                     SetView(SplitMapView.Inventory, snap: true);
                 }
