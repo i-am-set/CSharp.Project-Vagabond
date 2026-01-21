@@ -5,16 +5,11 @@ using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
-using ProjectVagabond.Particles;
-using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
 using static ProjectVagabond.Battle.Abilities.InflictStatusStunAbility;
 
@@ -786,7 +781,6 @@ namespace ProjectVagabond.Battle.UI
             _previousMouseState = currentMouseState;
         }
 
-        // ... (Draw methods remain unchanged) ...
         public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform, Vector2 offset)
         {
             InitializeButtons();
@@ -1250,6 +1244,29 @@ namespace ProjectVagabond.Battle.UI
             const int verticalPadding = 3;
             float currentY = bounds.Y + verticalPadding;
 
+            // Shared Target Value Logic
+            string targetValue = "";
+            if (move != null)
+            {
+                targetValue = move.Target switch
+                {
+                    TargetType.Single => "SINGLE",
+                    TargetType.Both => "BOTH",
+                    TargetType.Every => "MULTI",
+                    TargetType.All => "ALL",
+                    TargetType.Self => "SELF",
+                    TargetType.Team => "TEAM",
+                    TargetType.Ally => "ALLY",
+                    TargetType.SingleTeam => "S-TEAM",
+                    TargetType.RandomBoth => "R-BOTH",
+                    TargetType.RandomEvery => "R-EVRY",
+                    TargetType.RandomAll => "R-ALL",
+                    TargetType.SingleAll => "ANY",
+                    TargetType.None => "NONE",
+                    _ => ""
+                };
+            }
+
             if (isForTooltip)
             {
                 if (move == null) return;
@@ -1278,7 +1295,6 @@ namespace ProjectVagabond.Battle.UI
 
                 if (move.ImpactType != ImpactType.Status)
                 {
-                    string separator = " ";
                     string accuracyText = move.Accuracy >= 0 ? $"{move.Accuracy}%" : "---";
                     string powerText = move.Power > 0 ? $"{move.Power}" : (move.Effects.ContainsKey("ManaDamage") ? "???" : "---");
 
@@ -1288,21 +1304,46 @@ namespace ProjectVagabond.Battle.UI
                         powerText = $"{(int)(_player.Stats.CurrentMana * manaDump.Multiplier)}";
                     }
 
-                    statsSegments.Insert(0, (separator, _global.Palette_DarkShadow, secondaryFont));
-                    statsSegments.Insert(0, (accuracyText, _global.Palette_Sun, secondaryFont));
-                    statsSegments.Insert(0, ("  ", Color.Transparent, secondaryFont));
-                    statsSegments.Insert(0, ("ACC", _global.Palette_DarkShadow, tertiaryFont));
-                    statsSegments.Insert(0, (separator, _global.Palette_DarkShadow, secondaryFont));
-                    statsSegments.Insert(0, (powerText, _global.Palette_Sun, secondaryFont));
-                    statsSegments.Insert(0, ("  ", Color.Transparent, secondaryFont));
-                    statsSegments.Insert(0, ("POW", _global.Palette_DarkShadow, tertiaryFont));
-                }
+                    // POW Couple
+                    statsSegments.Add(("POW ", _global.Palette_DarkShadow, tertiaryFont));
+                    statsSegments.Add((powerText, _global.Palette_Sun, secondaryFont));
 
-                if (move.MakesContact)
-                {
-                    string contactText = "[ CONTACT ]";
-                    statsSegments.Insert(0, (contactText, _global.Palette_Red, tertiaryFont));
-                    statsSegments.Insert(1, (" ", Color.Transparent, secondaryFont));
+                    // Gap
+                    statsSegments.Add(("  ", Color.Transparent, secondaryFont));
+
+                    // ACC Couple
+                    statsSegments.Add(("ACC ", _global.Palette_DarkShadow, tertiaryFont));
+                    statsSegments.Add((accuracyText, _global.Palette_Sun, secondaryFont));
+
+                    // MANA
+                    string manaText = move.ManaCost > 0 ? $"{move.ManaCost}%" : "---";
+                    statsSegments.Add(("  ", Color.Transparent, secondaryFont));
+                    statsSegments.Add(("MANA ", _global.Palette_DarkShadow, tertiaryFont));
+                    statsSegments.Add((manaText, _global.Palette_Sun, secondaryFont));
+
+                    // USE (Already inside !Status check)
+                    string offStatVal = move.OffensiveStat switch
+                    {
+                        OffensiveStatType.Strength => "STR",
+                        OffensiveStatType.Intelligence => "INT",
+                        OffensiveStatType.Tenacity => "TEN",
+                        OffensiveStatType.Agility => "AGI",
+                        _ => "---"
+                    };
+
+                    Color offColor = move.OffensiveStat switch
+                    {
+                        OffensiveStatType.Strength => _global.StatColor_Strength,
+                        OffensiveStatType.Intelligence => _global.StatColor_Intelligence,
+                        OffensiveStatType.Tenacity => _global.StatColor_Tenacity,
+                        OffensiveStatType.Agility => _global.StatColor_Agility,
+                        _ => _global.Palette_Sun
+                    };
+
+                    statsSegments.Add(("  ", Color.Transparent, secondaryFont));
+                    statsSegments.Add(("USE ", _global.Palette_DarkShadow, tertiaryFont));
+                    statsSegments.Add((offStatVal, offColor, secondaryFont));
+                    statsSegments.Add((" ", Color.Transparent, secondaryFont)); // The requested space
                 }
 
                 float totalStatsWidth = 0f;
@@ -1378,13 +1419,31 @@ namespace ProjectVagabond.Battle.UI
                 spriteBatch.DrawLineSnapped(underlineStart, underlineEnd, _global.Palette_DarkShadow);
                 currentY += 3;
 
+                // --- BOTTOM LEFT INFO (Target & Contact) ---
+                float bottomTextY = bounds.Bottom - verticalPadding - tertiaryFont.LineHeight + 1;
+                float leftTextX = bounds.X + horizontalPadding;
+
+                if (!string.IsNullOrEmpty(targetValue))
+                {
+                    spriteBatch.DrawStringSnapped(tertiaryFont, targetValue, new Vector2(leftTextX, bottomTextY), _global.Palette_DarkShadow);
+                }
+
+                if (move.MakesContact)
+                {
+                    string contactText = "[CONTACT]";
+                    float contactWidth = tertiaryFont.MeasureString(contactText).Width;
+                    float rightTextX = bounds.Right - horizontalPadding - contactWidth;
+                    spriteBatch.DrawStringSnapped(tertiaryFont, contactText, new Vector2(rightTextX, bottomTextY), _global.Palette_Red);
+                }
+
                 if (!string.IsNullOrEmpty(move.Description))
                 {
                     float availableWidth = bounds.Width - (horizontalPadding * 2);
                     var wrappedLines = ParseAndWrapRichText(secondaryFont, move.Description.ToUpper(), availableWidth, _global.Palette_White);
 
                     float totalTextHeight = wrappedLines.Count * secondaryFont.LineHeight;
-                    float availableHeight = (bounds.Bottom - verticalPadding) - currentY;
+                    // Adjust available height to avoid overlapping bottom text
+                    float availableHeight = (bounds.Bottom - verticalPadding - (tertiaryFont.LineHeight + 2)) - currentY;
 
                     float startY = currentY + (availableHeight - totalTextHeight) / 2f;
                     if (startY < currentY) startY = currentY;
@@ -1527,28 +1586,6 @@ namespace ProjectVagabond.Battle.UI
                     var offStatPos = new Vector2(bounds.Right - horizontalPadding - offStatSize.Width - 12, currentY);
                     offStatPos.X -= 6;
                     spriteBatch.DrawStringSnapped(secondaryFont, offStatVal, offStatPos, offColor);
-                }
-
-                string targetValue = "";
-                if (move != null)
-                {
-                    targetValue = move.Target switch
-                    {
-                        TargetType.Single => "SINGLE",
-                        TargetType.Both => "BOTH",
-                        TargetType.Every => "MULTI",
-                        TargetType.All => "ALL",
-                        TargetType.Self => "SELF",
-                        TargetType.Team => "TEAM",
-                        TargetType.Ally => "ALLY",
-                        TargetType.SingleTeam => "S-TEAM",
-                        TargetType.RandomBoth => "R-BOTH",
-                        TargetType.RandomEvery => "R-EVRY",
-                        TargetType.RandomAll => "R-ALL",
-                        TargetType.SingleAll => "ANY",
-                        TargetType.None => "NONE",
-                        _ => ""
-                    };
                 }
 
                 var impactSize = secondaryFont.MeasureString(impactValue);
