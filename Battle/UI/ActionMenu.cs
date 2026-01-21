@@ -842,7 +842,8 @@ namespace ProjectVagabond.Battle.UI
                             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
                             if (_slot2BackButton.Font == null) _slot2BackButton.Font = secondaryFont;
 
-                            int backButtonY = 173; // +4 pixels
+                            int backButtonHeight = 9;
+                            int backButtonY = 169; // +1 pixel
 
                             var backSize = secondaryFont.MeasureString(_slot2BackButton.Text);
                             int backWidth = (int)backSize.Width; // Exact width
@@ -861,7 +862,6 @@ namespace ProjectVagabond.Battle.UI
                     }
                 case MenuState.Targeting:
                     {
-                        const int backButtonPadding = 4; // Reduced padding
                         const int backButtonHeight = 15;
                         const int backButtonTopMargin = 1;
                         const int horizontalPadding = 10;
@@ -870,12 +870,15 @@ namespace ProjectVagabond.Battle.UI
                         int availableHeight = Global.VIRTUAL_HEIGHT - dividerY - (verticalPadding * 2);
                         int gridAreaHeight = availableHeight - backButtonHeight - backButtonTopMargin;
 
-                        int backButtonWidth = (int)(_backButton.Font ?? font).MeasureString(_backButton.Text).Width + backButtonPadding * 2;
+                        var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
+                        int backButtonWidth = (int)backSize.Width; // Exact width
+                        int backButtonH = (int)backSize.Height; // Exact height
+
                         _backButton.Bounds = new Rectangle(
-                            horizontalPadding + (availableWidth - backButtonWidth) / 2 + 1,
-                            170, // +4 pixels
+                            (Global.VIRTUAL_WIDTH - backButtonWidth) / 2, // Exact center
+                            166, // +1 pixel
                             backButtonWidth,
-                            backButtonHeight
+                            backButtonH
                         );
                         _backButton.Draw(spriteBatch, font, gameTime, transform, false, null, offset.Y);
                         break;
@@ -1018,14 +1021,15 @@ namespace ProjectVagabond.Battle.UI
                 }
             }
 
-            int backButtonY = 113 + boxHeight + 10; // +4 pixels
+            int backButtonY = 113 + boxHeight + 6; // +1 pixel
             var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
-            int backWidth = (int)backSize.Width + 10; // +10 padding
+            int backWidth = (int)backSize.Width; // Exact width
+            int backHeight = (int)backSize.Height; // Exact height
             _backButton.Bounds = new Rectangle(
-                (Global.VIRTUAL_WIDTH - backWidth) / 2 + 1,
+                (Global.VIRTUAL_WIDTH - backWidth) / 2, // Exact center
                 backButtonY,
                 backWidth,
-                15
+                backHeight
             );
             _backButton.Draw(spriteBatch, font, gameTime, transform, false, null, offset.Y);
         }
@@ -1058,14 +1062,15 @@ namespace ProjectVagabond.Battle.UI
             }
 
             const int backButtonTopMargin = 0;
-            int backButtonY = 123 + gridHeight + backButtonTopMargin + 7; // +4 pixels
+            int backButtonY = 123 + gridHeight + backButtonTopMargin + 3; // +1 pixel
             var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
-            int backWidth = (int)backSize.Width + 10; // +10 padding
+            int backWidth = (int)backSize.Width; // Exact width
+            int backHeight = (int)backSize.Height; // Exact height
             _backButton.Bounds = new Rectangle(
-                (Global.VIRTUAL_WIDTH - backWidth) / 2 + 1,
+                (Global.VIRTUAL_WIDTH - backWidth) / 2, // Exact center
                 backButtonY,
                 backWidth,
-                15
+                backHeight
             );
             _backButton.Draw(spriteBatch, font, gameTime, transform, false, null, offset.Y);
         }
@@ -1151,14 +1156,15 @@ namespace ProjectVagabond.Battle.UI
             }
 
             // --- FIXED BACK BUTTON POSITION ---
-            int backButtonY = 170; // +4 pixels
+            int backButtonY = 166; // +1 pixel
             var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
-            int backWidth = (int)backSize.Width + 10; // +10 padding
+            int backWidth = (int)backSize.Width; // Exact width
+            int backHeight = (int)backSize.Height; // Exact height
             _backButton.Bounds = new Rectangle(
-                (Global.VIRTUAL_WIDTH - backWidth) / 2 + 1,
+                (Global.VIRTUAL_WIDTH - backWidth) / 2, // Exact center
                 backButtonY,
                 backWidth,
-                15
+                backHeight
             );
             _backButton.Draw(spriteBatch, font, gameTime, transform, false, null, offset.Y);
         }
