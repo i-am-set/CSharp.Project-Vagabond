@@ -7,6 +7,7 @@ using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using static ProjectVagabond.Battle.Abilities.InflictStatusStunAbility;
 
@@ -226,9 +227,13 @@ namespace ProjectVagabond.Battle.UI
                 const int iconSize = 9;
                 const int iconPadding = 4;
 
+                // --- CENTERED LAYOUT CALCULATION ---
+                var moveNameTextSize = _moveFont.MeasureString(this.Text);
+                float totalContentWidth = iconSize + iconPadding + moveNameTextSize.Width;
+                float startX = -totalContentWidth / 2f;
+
                 // Icon Positioning Relative to Center
-                float leftEdgeX = -Bounds.Width / 2f; // Relative to center
-                float iconLocalX = leftEdgeX + iconPadding + 1; // Removed pixelShiftX
+                float iconLocalX = startX + (iconSize / 2f); // Center of icon
                 float iconLocalY = 0; // Centered
 
                 Vector2 iconOffset = new Vector2(iconLocalX, iconLocalY);
@@ -254,14 +259,12 @@ namespace ProjectVagabond.Battle.UI
                 }
 
                 // Text Position
-                float textLocalX = iconLocalX + iconSize + iconPadding; // Offset from icon
+                float textLocalX = startX + iconSize + iconPadding; // Left edge of text
                 float textLocalY = 0; // Centered Y
 
-                const int textRightMargin = 4;
-                float rightEdgeLocalX = Bounds.Width / 2f;
-                float textAvailableWidth = rightEdgeLocalX - textLocalX - textRightMargin;
-
-                var moveNameTextSize = _moveFont.MeasureString(this.Text);
+                // Check for scrolling (if text is wider than button minus icon)
+                // Button Width - Icon - Padding - Margins
+                float textAvailableWidth = Bounds.Width - iconSize - iconPadding - 8;
                 bool needsScrolling = moveNameTextSize.Width > textAvailableWidth;
 
                 if (needsScrolling)
@@ -282,7 +285,10 @@ namespace ProjectVagabond.Battle.UI
 
                     UpdateScrolling(gameTime);
 
-                    float textStartX = animatedBounds.X + (animatedBounds.Width / 2f) + textLocalX;
+                    // For scrolling, we anchor the text start position relative to the icon's visual position
+                    // But since we can't rotate the clip rect easily, we just draw it flat.
+                    // We'll use the calculated textLocalX relative to the unrotated center.
+                    float textStartX = animatedBounds.Center.X + textLocalX;
 
                     var originalRasterizerState = spriteBatch.GraphicsDevice.RasterizerState;
                     var originalScissorRect = spriteBatch.GraphicsDevice.ScissorRectangle;

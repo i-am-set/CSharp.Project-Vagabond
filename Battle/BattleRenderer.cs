@@ -1079,7 +1079,8 @@ namespace ProjectVagabond.Battle.UI
 
                     if (drawShadow && silhouetteAmt < 1.0f)
                     {
-                        float groundY = center.Y + spriteSize;
+                        // --- UPDATED: Shift shadow up by 4 pixels ---
+                        float groundY = center.Y + spriteSize - 4;
                         float heightFactor = 1.0f - Math.Clamp(Math.Abs(spawnY) / 50f, 0f, 1f);
                         Vector2 shadowAnim = _shadowOffsets.TryGetValue(enemy.CombatantID, out var s) ? s : Vector2.Zero;
                         _vfxRenderer.DrawShadow(spriteBatch, new Vector2(spriteRect.Center.X, groundY), heightFactor * alpha, shadowAnim);

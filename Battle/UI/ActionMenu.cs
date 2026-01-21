@@ -89,13 +89,15 @@ namespace ProjectVagabond.Battle.UI
         private bool _shouldAttuneButtonPulse = false;
 
         private const int MOVE_BUTTON_WIDTH = 116;
-        private const int MOVE_BUTTON_HEIGHT = 9;
-        private const int MOVE_ROW_SPACING = 1;
-        private const int MOVE_ROWS = 4;
+        private const int MOVE_BUTTON_HEIGHT = 13;
+
+        private const int MOVE_ROW_SPACING = 0;
+        private const int MOVE_COL_SPACING = 0;
+
+        private const int MOVE_ROWS = 2;
         private const int MOVE_BLOCK_HEIGHT = MOVE_ROWS * (MOVE_BUTTON_HEIGHT + MOVE_ROW_SPACING) - MOVE_ROW_SPACING;
 
         private Rectangle _tooltipBounds;
-        private Rectangle _moveInfoPanelBounds;
 
         private const int SPACE_WIDTH = 5;
 
@@ -167,22 +169,6 @@ namespace ProjectVagabond.Battle.UI
                 OnStrikeRequested?.Invoke(_player);
             };
             _secondaryActionButtons.Add(strikeButton);
-
-            var attuneButton = new TextOverImageButton(Rectangle.Empty, "ATTUNE", null, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[3], enableHoverSway: false, customHoverTextColor: _global.Palette_Red)
-            {
-                HasRightClickHint = false,
-                HasMiddleClickHint = true,
-                TintBackgroundOnHover = false,
-                DrawBorderOnHover = false,
-                HoverBorderColor = _global.Palette_Red
-            };
-            attuneButton.OnClick += () => {
-                if (BattleDataCache.Moves.TryGetValue("7", out var attuneMove))
-                {
-                    SelectMove(attuneMove, null);
-                }
-            };
-            _secondaryActionButtons.Add(attuneButton);
 
             var stallButton = new TextOverImageButton(Rectangle.Empty, "STALL", null, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[2], enableHoverSway: false, customHoverTextColor: _global.Palette_Red)
             {
@@ -363,12 +349,6 @@ namespace ProjectVagabond.Battle.UI
             if (!canAfford)
             {
                 EventBus.Publish(new GameEvents.AlertPublished { Message = "NOT ENOUGH MANA" });
-                var attuneButton = _secondaryActionButtons.FirstOrDefault(b => b.Text == "ATTUNE");
-                if (attuneButton != null)
-                {
-                    attuneButton.TriggerShake();
-                    attuneButton.TriggerFlash(_global.Palette_Red, 0.4f);
-                }
                 return;
             }
 
@@ -511,16 +491,18 @@ namespace ProjectVagabond.Battle.UI
                     const int secButtonWidth = 60;
                     const int secButtonHeight = 13;
                     const int secRowSpacing = 0;
-                    const int secRows = 3;
+                    const int secRows = 2;
                     const int secBlockHeight = secRows * (secButtonHeight + secRowSpacing) - secRowSpacing;
-                    const int infoPanelWidth = 120;
-                    const int gap = 0;
 
-                    int totalWidth = secButtonWidth + gap + MOVE_BUTTON_WIDTH + gap + infoPanelWidth;
+                    // --- CHANGED: Gap set to 3 ---
+                    const int gap = 3;
+
+                    // Total width = Secondary Buttons + Gap + (Move Button * 2) + Gap
+                    int totalWidth = secButtonWidth + gap + (MOVE_BUTTON_WIDTH * 2) + MOVE_COL_SPACING;
                     int startX = (Global.VIRTUAL_WIDTH - totalWidth) / 2;
 
                     int secGridStartX = startX;
-                    int moveGridStartY = 128;
+                    int moveGridStartY = 144;
                     int secGridStartY = moveGridStartY + (MOVE_BLOCK_HEIGHT / 2) - (secBlockHeight / 2);
 
                     for (int i = 0; i < _secondaryActionButtons.Count; i++)
@@ -531,18 +513,24 @@ namespace ProjectVagabond.Battle.UI
                     }
 
                     int moveGridStartX = secGridStartX + secButtonWidth + gap;
+
+                    // 2x2 Grid Layout for Moves
                     for (int i = 0; i < _moveButtons.Length; i++)
                     {
                         var button = _moveButtons[i];
                         if (button == null) continue;
 
-                        int rowStep = MOVE_BUTTON_HEIGHT + MOVE_ROW_SPACING;
-                        button.Bounds = new Rectangle(
-                            moveGridStartX,
-                            moveGridStartY + i * rowStep,
-                            MOVE_BUTTON_WIDTH,
-                            rowStep
-                        );
+                        // i=0 -> Col 0, Row 0
+                        // i=1 -> Col 1, Row 0
+                        // i=2 -> Col 0, Row 1
+                        // i=3 -> Col 1, Row 1
+                        int col = i % 2;
+                        int row = i / 2;
+
+                        int xPos = moveGridStartX + (col * (MOVE_BUTTON_WIDTH + MOVE_COL_SPACING));
+                        int yPos = moveGridStartY + (row * (MOVE_BUTTON_HEIGHT + MOVE_ROW_SPACING));
+
+                        button.Bounds = new Rectangle(xPos, yPos, MOVE_BUTTON_WIDTH, MOVE_BUTTON_HEIGHT);
                     }
                     break;
             }
@@ -854,14 +842,14 @@ namespace ProjectVagabond.Battle.UI
                             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
                             if (_slot2BackButton.Font == null) _slot2BackButton.Font = secondaryFont;
 
-                            int backButtonHeight = 9;
-                            int backButtonY = 168;
+                            int backButtonY = 173; // +4 pixels
 
                             var backSize = secondaryFont.MeasureString(_slot2BackButton.Text);
-                            int backWidth = (int)backSize.Width + 16;
-                            int backX = startX + (buttonWidth - backWidth) / 2 + 2;
+                            int backWidth = (int)backSize.Width; // Exact width
+                            int backHeight = (int)backSize.Height; // Exact height
+                            int backX = startX + (buttonWidth - backWidth) / 2; // Centered
 
-                            _slot2BackButton.Bounds = new Rectangle(backX, backButtonY, backWidth, backButtonHeight);
+                            _slot2BackButton.Bounds = new Rectangle(backX, backButtonY, backWidth, backHeight);
                             _slot2BackButton.Draw(spriteBatch, font, gameTime, transform, false, null, offset.Y);
                         }
                         break;
@@ -873,7 +861,7 @@ namespace ProjectVagabond.Battle.UI
                     }
                 case MenuState.Targeting:
                     {
-                        const int backButtonPadding = 8;
+                        const int backButtonPadding = 4; // Reduced padding
                         const int backButtonHeight = 15;
                         const int backButtonTopMargin = 1;
                         const int horizontalPadding = 10;
@@ -885,7 +873,7 @@ namespace ProjectVagabond.Battle.UI
                         int backButtonWidth = (int)(_backButton.Font ?? font).MeasureString(_backButton.Text).Width + backButtonPadding * 2;
                         _backButton.Bounds = new Rectangle(
                             horizontalPadding + (availableWidth - backButtonWidth) / 2 + 1,
-                            165,
+                            170, // +4 pixels
                             backButtonWidth,
                             backButtonHeight
                         );
@@ -944,10 +932,6 @@ namespace ProjectVagabond.Battle.UI
                     var backDebugRect = _backButton.Bounds;
                     backDebugRect.Y += (int)offset.Y;
                     spriteBatch.DrawSnapped(pixel, backDebugRect, Color.Red * 0.5f);
-
-                    var infoDebugRect = _moveInfoPanelBounds;
-                    infoDebugRect.Y += (int)offset.Y;
-                    spriteBatch.DrawSnapped(pixel, infoDebugRect, Color.Magenta * 0.5f);
                 }
 
                 if (_currentState == MenuState.Tooltip)
@@ -1034,9 +1018,9 @@ namespace ProjectVagabond.Battle.UI
                 }
             }
 
-            int backButtonY = 113 + boxHeight + 5;
+            int backButtonY = 113 + boxHeight + 10; // +4 pixels
             var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
-            int backWidth = (int)backSize.Width + 16;
+            int backWidth = (int)backSize.Width + 10; // +10 padding
             _backButton.Bounds = new Rectangle(
                 (Global.VIRTUAL_WIDTH - backWidth) / 2 + 1,
                 backButtonY,
@@ -1074,9 +1058,9 @@ namespace ProjectVagabond.Battle.UI
             }
 
             const int backButtonTopMargin = 0;
-            int backButtonY = 123 + gridHeight + backButtonTopMargin + 2;
+            int backButtonY = 123 + gridHeight + backButtonTopMargin + 7; // +4 pixels
             var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
-            int backWidth = (int)backSize.Width + 16;
+            int backWidth = (int)backSize.Width + 10; // +10 padding
             _backButton.Bounds = new Rectangle(
                 (Global.VIRTUAL_WIDTH - backWidth) / 2 + 1,
                 backButtonY,
@@ -1092,67 +1076,72 @@ namespace ProjectVagabond.Battle.UI
             var pixel = ServiceLocator.Get<Texture2D>();
 
             const int secButtonWidth = 60;
-            const int borderWidth = 120;
-            const int borderHeight = 37;
-            const int layoutGap = 5;
+            const int layoutGap = 3; // --- CHANGED: Gap set to 3 ---
 
-            int moveGridStartY = 129;
-            int totalWidth = secButtonWidth + layoutGap + MOVE_BUTTON_WIDTH + layoutGap + borderWidth;
+            // --- MOVED UP 5 PIXELS (149 -> 144) ---
+            int moveGridStartY = 144; // Was 149
+            // Total width = SecButton + Gap + (Move Button * 2) + Gap
+            int totalWidth = secButtonWidth + layoutGap + (MOVE_BUTTON_WIDTH * 2) + MOVE_COL_SPACING;
             int startX = (Global.VIRTUAL_WIDTH - totalWidth) / 2;
 
             int secGridStartX = startX;
             int moveGridStartX = secGridStartX + secButtonWidth + layoutGap;
-            int borderX = moveGridStartX + MOVE_BUTTON_WIDTH + layoutGap;
-            int borderY = moveGridStartY + (MOVE_BLOCK_HEIGHT / 2) - (borderHeight / 2);
 
-            var borderRect = new Rectangle(borderX, borderY + (int)offset.Y, borderWidth, borderHeight);
-            _moveInfoPanelBounds = borderRect;
+            // Draw Secondary Buttons (Strike, Stall)
+            for (int i = 0; i < _secondaryActionButtons.Count; i++)
+            {
+                var button = _secondaryActionButtons[i];
+                var buttonRect = new Rectangle(button.Bounds.X, button.Bounds.Y + (int)offset.Y, button.Bounds.Width, button.Bounds.Height);
 
-            DrawMoveInfoPanelContent(spriteBatch, HoveredMove, borderRect, font, secondaryFont, transform, false, gameTime);
+                // --- CHANGE START ---
+                // Shift background IN by 2 pixels on sides, 1 pixel on top/bottom
+                var hoverRect = new Rectangle(buttonRect.X + 2, buttonRect.Y + 1, buttonRect.Width - 4, buttonRect.Height - 2);
+                // --- CHANGE END ---
 
+                float rotation = (button is Button btn && button.IsHovered && button.IsEnabled) ? btn.CurrentHoverRotation : 0f;
+
+                // Always draw background (DarkShadow)
+                DrawBeveledBackground(spriteBatch, pixel, hoverRect, _global.Palette_DarkShadow, rotation);
+
+                button.Draw(spriteBatch, font, gameTime, transform, false, null, offset.Y, button.Text == "ATTUNE" ? (Color?)null : null);
+            }
+
+            // Draw Move Buttons (2x2 Grid)
             for (int i = 0; i < _moveButtons.Length; i++)
             {
                 var button = _moveButtons[i];
-                int row = i;
-                int rowStep = MOVE_BUTTON_HEIGHT + MOVE_ROW_SPACING;
 
-                var visualBounds = new Rectangle(
-                    moveGridStartX,
-                    moveGridStartY + row * rowStep,
-                    MOVE_BUTTON_WIDTH,
-                    MOVE_BUTTON_HEIGHT
-                );
+                // Calculate grid position again to be safe (though UpdateLayout handles it)
+                int col = i % 2;
+                int row = i / 2;
+                int xPos = moveGridStartX + (col * (MOVE_BUTTON_WIDTH + MOVE_COL_SPACING));
+                int yPos = moveGridStartY + (row * (MOVE_BUTTON_HEIGHT + MOVE_ROW_SPACING));
+
+                var visualBounds = new Rectangle(xPos, yPos, MOVE_BUTTON_WIDTH, MOVE_BUTTON_HEIGHT);
 
                 if (button == null)
                 {
-                    var placeholderFillColor = Color.Transparent;
+                    // --- CHANGED: Placeholder background is now DarkShadow ---
+                    var placeholderFillColor = _global.Palette_DarkShadow; // Was Transparent
                     var offsetBounds = new Rectangle(visualBounds.X, visualBounds.Y + (int)offset.Y, visualBounds.Width, visualBounds.Height);
-                    spriteBatch.DrawSnapped(pixel, offsetBounds, placeholderFillColor);
-                    var placeholderBorderColor = _global.Palette_DarkShadow;
 
-                    const int dashLength = 1;
-                    const int gapLength = 3;
-                    const int patternLength = dashLength + gapLength;
-
-                    int lineY = offsetBounds.Center.Y;
-                    int lineStartX = offsetBounds.Left + 3;
-                    int lineEndX = offsetBounds.Right - 1;
-
-                    for (int x = lineStartX; x < lineEndX; x += patternLength)
-                    {
-                        int width = Math.Min(dashLength, lineEndX - x);
-                        spriteBatch.DrawSnapped(pixel, new Rectangle(x, lineY, width, 1), placeholderBorderColor);
-                    }
+                    // --- CHANGE START ---
+                    // Shift placeholder background IN by 1 pixel on all sides
+                    var bgRect = new Rectangle(offsetBounds.X + 1, offsetBounds.Y + 1, offsetBounds.Width - 2, offsetBounds.Height - 2);
+                    DrawBeveledBackground(spriteBatch, pixel, bgRect, placeholderFillColor, 0f);
+                    // --- CHANGE END ---
                 }
                 else
                 {
                     var offsetBounds = new Rectangle(visualBounds.X, visualBounds.Y + (int)offset.Y, visualBounds.Width, visualBounds.Height);
 
-                    if (button == _hoveredMoveButton && button.IsEnabled)
-                    {
-                        var hoverRect = new Rectangle(offsetBounds.X, offsetBounds.Y - 1, offsetBounds.Width, offsetBounds.Height + 1);
-                        DrawBeveledBackground(spriteBatch, pixel, hoverRect, _global.Palette_DarkShadow, button.CurrentHoverRotation);
-                    }
+                    // --- CHANGE START ---
+                    // Always draw the background plate
+                    // Shift background IN by 1 pixel on all sides
+                    var bgRect = new Rectangle(offsetBounds.X + 1, offsetBounds.Y + 1, offsetBounds.Width - 2, offsetBounds.Height - 2);
+                    float rotation = (button.IsHovered && button.IsEnabled) ? button.CurrentHoverRotation : 0f;
+                    DrawBeveledBackground(spriteBatch, pixel, bgRect, _global.Palette_DarkShadow, rotation);
+                    // --- CHANGE END ---
 
                     var originalBounds = button.Bounds;
                     button.Bounds = visualBounds;
@@ -1161,32 +1150,10 @@ namespace ProjectVagabond.Battle.UI
                 }
             }
 
-            Color? attunePulseColor = null;
-            if (_shouldAttuneButtonPulse)
-            {
-                float pulse = (MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * 8f) + 1f) / 2f;
-                attunePulseColor = Color.Lerp(Color.White, _global.Palette_Blue, pulse);
-            }
-
-            for (int i = 0; i < _secondaryActionButtons.Count; i++)
-            {
-                var button = _secondaryActionButtons[i];
-                var buttonRect = new Rectangle(button.Bounds.X, button.Bounds.Y + (int)offset.Y, button.Bounds.Width, button.Bounds.Height);
-
-                if (button.IsHovered && button.IsEnabled)
-                {
-                    var hoverRect = new Rectangle(buttonRect.X, buttonRect.Y, buttonRect.Width, buttonRect.Height);
-                    float rotation = (button is Button btn) ? btn.CurrentHoverRotation : 0f;
-                    DrawBeveledBackground(spriteBatch, pixel, hoverRect, _global.Palette_DarkShadow, rotation);
-                }
-
-                button.Draw(spriteBatch, font, gameTime, transform, false, null, offset.Y, button.Text == "ATTUNE" ? attunePulseColor : null);
-            }
-
-            int layoutBottomY = Math.Max(borderRect.Bottom - (int)offset.Y, moveGridStartY + MOVE_BLOCK_HEIGHT);
-            int backButtonY = layoutBottomY - 2;
+            // --- FIXED BACK BUTTON POSITION ---
+            int backButtonY = 170; // +4 pixels
             var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
-            int backWidth = (int)backSize.Width + 16;
+            int backWidth = (int)backSize.Width + 10; // +10 padding
             _backButton.Bounds = new Rectangle(
                 (Global.VIRTUAL_WIDTH - backWidth) / 2 + 1,
                 backButtonY,
@@ -1489,168 +1456,8 @@ namespace ProjectVagabond.Battle.UI
             }
             else
             {
-                currentY -= 4;
-                float statsY = currentY;
-
-                Color valueColor = _global.Palette_Sun;
-                Color labelColor = (move != null) ? _global.Palette_DarkShadow : _global.Palette_DarkShadow;
-
-                string powerLabel = "POW";
-                string accLabel = "ACC";
-                string manaLabel = "MANA";
-
-                string powerValue, accValue, manaValue, impactValue, moveTypeValue;
-
-                if (move != null)
-                {
-                    powerValue = move.Power > 0 ? move.Power.ToString() : (move.Effects.ContainsKey("ManaDamage") ? "???" : "---");
-                    accValue = move.Accuracy >= 0 ? $"{move.Accuracy}%" : "---";
-                    manaValue = move.ManaCost > 0 ? $"{move.ManaCost}%" : "---";
-                    impactValue = move.ImpactType.ToString().ToUpper();
-                    moveTypeValue = move.MoveType.ToString().ToUpper();
-
-                    var manaDump = move.Abilities.OfType<ManaDumpAbility>().FirstOrDefault();
-                    if (manaDump != null && _player != null)
-                    {
-                        powerValue = ((int)(_player.Stats.CurrentMana * manaDump.Multiplier)).ToString();
-                        manaValue = _player.Stats.CurrentMana.ToString() + "%";
-                    }
-                }
-                else
-                {
-                    powerValue = accValue = manaValue = impactValue = moveTypeValue = "";
-                    valueColor = labelColor;
-                }
-
-                float yOffset = (secondaryFont.LineHeight - tertiaryFont.LineHeight) / 2f;
-                yOffset = MathF.Round(yOffset);
-
-                spriteBatch.DrawStringSnapped(tertiaryFont, powerLabel, new Vector2(bounds.X + horizontalPadding + 12, statsY + yOffset), labelColor);
-                var powerValueSize = secondaryFont.MeasureString(powerValue);
-                var powerValuePos = new Vector2(bounds.Center.X - 9 - powerValueSize.Width, statsY);
-                spriteBatch.DrawStringSnapped(secondaryFont, powerValue, powerValuePos, valueColor);
-
-                var manaLabelPos = new Vector2(bounds.Center.X + 2, statsY + yOffset);
-                spriteBatch.DrawStringSnapped(tertiaryFont, manaLabel, manaLabelPos, labelColor);
-                var manaValueSize = secondaryFont.MeasureString(manaValue);
-                var manaValuePos = new Vector2(bounds.Right - horizontalPadding - manaValueSize.Width - 12, statsY);
-                if (!manaValue.Contains("%"))
-                {
-                    manaValuePos.X -= 5;
-                }
-                spriteBatch.DrawStringSnapped(secondaryFont, manaValue, manaValuePos, valueColor);
-
-                currentY += secondaryFont.LineHeight + 2;
-
-                var accLabelPos = new Vector2(bounds.X + horizontalPadding + 12, currentY + yOffset);
-                spriteBatch.DrawStringSnapped(tertiaryFont, accLabel, accLabelPos, labelColor);
-                var accValueSize = secondaryFont.MeasureString(accValue);
-                var accValuePos = new Vector2(bounds.Center.X - 9 - accValueSize.Width, currentY);
-                if (!accValue.Contains("%"))
-                {
-                    accValuePos.X -= 6;
-                }
-                accValuePos.X += 6;
-
-                Color accColor = valueColor;
-                if (move != null && move.Accuracy >= 0)
-                {
-                    float t = Math.Clamp((100f - move.Accuracy) / 50f, 0f, 1f);
-                    accColor = Color.Lerp(valueColor, _global.Palette_Red, t);
-                }
-
-                spriteBatch.DrawStringSnapped(secondaryFont, accValue, accValuePos, accColor);
-
-                string offStatVal = move?.OffensiveStat switch
-                {
-                    OffensiveStatType.Strength => "STR",
-                    OffensiveStatType.Intelligence => "INT",
-                    OffensiveStatType.Tenacity => "TEN",
-                    OffensiveStatType.Agility => "AGI",
-                    _ => "---"
-                };
-
-                Color offColor = move?.OffensiveStat switch
-                {
-                    OffensiveStatType.Strength => _global.StatColor_Strength,
-                    OffensiveStatType.Intelligence => _global.StatColor_Intelligence,
-                    OffensiveStatType.Tenacity => _global.StatColor_Tenacity,
-                    OffensiveStatType.Agility => _global.StatColor_Agility,
-                    _ => _global.Palette_Sun
-                };
-
-                if (move != null && move.ImpactType != ImpactType.Status)
-                {
-                    spriteBatch.DrawStringSnapped(tertiaryFont, "USE", new Vector2(bounds.Center.X + 2, currentY + yOffset), labelColor);
-                    var offStatSize = secondaryFont.MeasureString(offStatVal);
-                    var offStatPos = new Vector2(bounds.Right - horizontalPadding - offStatSize.Width - 12, currentY);
-                    offStatPos.X -= 6;
-                    spriteBatch.DrawStringSnapped(secondaryFont, offStatVal, offStatPos, offColor);
-                }
-
-                var impactSize = secondaryFont.MeasureString(impactValue);
-                var moveTypeSize = secondaryFont.MeasureString(moveTypeValue);
-                const int typeGap = 5;
-
-                float typeY = bounds.Bottom - verticalPadding - secondaryFont.LineHeight - 2;
-                float gapCenter = bounds.Center.X + 5;
-
-                if (!string.IsNullOrEmpty(targetValue))
-                {
-                    var targetValueSize = secondaryFont.MeasureString(targetValue);
-                    float yAfterRow2 = currentY + secondaryFont.LineHeight;
-                    float availableSpace = typeY - yAfterRow2;
-                    var targetValuePos = new Vector2(
-                        bounds.X + (bounds.Width - targetValueSize.Width) / 2f,
-                        yAfterRow2 + (availableSpace - targetValueSize.Height) / 2f
-                    );
-                    spriteBatch.DrawStringSnapped(secondaryFont, targetValue, targetValuePos, _global.Palette_DarkShadow);
-                }
-
-                float impactX = gapCenter - (typeGap / 2f) - impactSize.Width;
-                var impactPos = new Vector2(impactX, typeY);
-
-                float moveTypeX = gapCenter + (typeGap / 2f);
-                var moveTypePos = new Vector2(moveTypeX, typeY);
-
-                Color impactColor = valueColor;
-                Color moveTypeColor = valueColor;
-                if (move != null)
-                {
-                    switch (move.ImpactType)
-                    {
-                        case ImpactType.Physical:
-                            impactColor = _global.ColorNarration_Action;
-                            break;
-                        case ImpactType.Magical:
-                            impactColor = _global.ColorNarration_Spell;
-                            break;
-                    }
-                    switch (move.MoveType)
-                    {
-                        case MoveType.Spell:
-                            moveTypeColor = _global.ColorNarration_Spell;
-                            break;
-                        case MoveType.Action:
-                            moveTypeColor = _global.ColorNarration_Action;
-                            break;
-                    }
-                }
-
-                spriteBatch.DrawStringSnapped(secondaryFont, impactValue, impactPos, impactColor);
-                spriteBatch.DrawStringSnapped(secondaryFont, moveTypeValue, moveTypePos, moveTypeColor);
-
-                if (move != null && move.MakesContact)
-                {
-                    string conText = "[ CONTACT ]";
-                    var conSize = tertiaryFont.MeasureString(conText);
-                    float conY = typeY + secondaryFont.LineHeight + 2;
-                    var conPos = new Vector2(
-                        bounds.Center.X - conSize.Width / 2f,
-                        conY
-                    );
-                    spriteBatch.DrawStringSnapped(tertiaryFont, conText, conPos, _global.Palette_Red);
-                }
+                // This block was for the old side panel, which is now removed.
+                // Keeping it empty or removing it entirely is fine.
             }
         }
 
