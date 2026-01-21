@@ -437,12 +437,15 @@ namespace ProjectVagabond.Battle.UI
 
             foreach (var target in targetsToDraw)
             {
+                // Only draw the rectangle if the target is actively highlighted (has a silhouette color assigned)
+                if (!silhouetteColors.ContainsKey(target.CombatantID)) continue;
+
                 var targetInfo = _currentTargets.FirstOrDefault(t => t.Combatant == target);
 
                 if (targetInfo.Combatant != null)
                 {
-                    Color highlightColor = silhouetteColors.ContainsKey(target.CombatantID) ? silhouetteColors[target.CombatantID] : _global.Palette_Red;
-                    Color rectColor = (highlightColor == Color.Yellow) ? _global.Palette_Red : Color.Yellow;
+                    // Use Palette_Sun for the rectangle to match the silhouette
+                    Color rectColor = _global.Palette_Sun;
 
                     var rect = targetInfo.Bounds;
 
@@ -544,23 +547,27 @@ namespace ProjectVagabond.Battle.UI
 
             if (isTargeting)
             {
-                foreach (var c in selectable) colors[c.CombatantID] = _global.Palette_Red;
+                // Only assign colors to actively highlighted targets.
+                // Selectable but non-highlighted targets get NO entry in the dictionary (so they draw normally).
 
                 if (effectiveHover != null && selectable.Contains(effectiveHover))
                 {
                     bool isMulti = targetType == TargetType.Every || targetType == TargetType.Both || targetType == TargetType.All || targetType == TargetType.Team;
                     if (isMulti)
                     {
-                        foreach (var c in selectable) colors[c.CombatantID] = Color.Yellow;
+                        // Multi-target: Highlight everyone in the selection set
+                        foreach (var c in selectable) colors[c.CombatantID] = _global.Palette_Sun;
                     }
                     else
                     {
-                        colors[effectiveHover.CombatantID] = Color.Yellow;
+                        // Single-target: Highlight only the hovered one
+                        colors[effectiveHover.CombatantID] = _global.Palette_Sun;
                     }
                 }
             }
             else if (selectable.Any() && targetType.HasValue)
             {
+                // Hovering a move button (Preview Mode)
                 float timer = uiManager.HoverHighlightState.Timer;
                 var sorted = allCombatants.Where(c => selectable.Contains(c))
                     .OrderBy(c => c.IsPlayerControlled ? 1 : 0)
@@ -571,17 +578,29 @@ namespace ProjectVagabond.Battle.UI
 
                 if (isMulti)
                 {
+                    // Multi-target preview: Flash everyone Yellow/Red?
+                    // Request says "highlighted combatants should be palette_sun".
+                    // Let's make them all Sun for consistency with the new style.
                     bool flash = (timer % _global.TargetingMultiBlinkSpeed) < (_global.TargetingMultiBlinkSpeed / 2f);
-                    Color c = flash ? Color.Yellow : _global.Palette_Red;
-                    foreach (var t in sorted) colors[t.CombatantID] = c;
+                    // If flashing, show Sun. If not, show nothing (normal sprite)?
+                    // Or maybe flash between Sun and Normal?
+                    // The previous logic flashed Yellow/Red.
+                    // Let's flash Sun / Normal (by removing from dict).
+                    if (flash)
+                    {
+                        foreach (var t in sorted) colors[t.CombatantID] = _global.Palette_Sun;
+                    }
                 }
                 else if (sorted.Count > 0)
                 {
+                    // Single-target cycling preview
                     float cycle = sorted.Count * _global.TargetingSingleCycleSpeed;
                     int idx = (int)((timer % cycle) / _global.TargetingSingleCycleSpeed);
                     idx = Math.Clamp(idx, 0, sorted.Count - 1);
-                    for (int i = 0; i < sorted.Count; i++)
-                        colors[sorted[i].CombatantID] = (i == idx) ? Color.Yellow : _global.Palette_Red;
+
+                    // Only the currently cycled target gets the Sun highlight.
+                    // Others get nothing (normal sprite).
+                    colors[sorted[idx].CombatantID] = _global.Palette_Sun;
                 }
             }
             return colors;
@@ -1002,7 +1021,9 @@ namespace ProjectVagabond.Battle.UI
                     if (drawSprite)
                     {
                         Vector2[] offsets = _enemySpritePartOffsets.TryGetValue(enemy.CombatantID, out var o) ? o : null;
-                        bool isHighlighted = isSelectable && shouldGrayOut;
+
+                        // --- FIX: Only highlight if explicitly set in the dictionary ---
+                        bool isHighlighted = highlight.HasValue;
 
                         Color? lowHealthOverlay = null;
                         if (enemy.LowHealthFlashTimer > 0f && !enemy.IsDefeated)
@@ -1252,8 +1273,11 @@ namespace ProjectVagabond.Battle.UI
                             lowHealthOverlay = _global.LowHealthFlashColor * flashAlpha;
                     }
 
+                    // --- FIX: Only highlight if explicitly set in the dictionary ---
+                    bool isHighlightedSprite = highlight.HasValue;
+
                     // Pass rotation to sprite draw
-                    sprite.Draw(spriteBatch, animManager, player, tint, isHighlighted, pulse, isSilhouetted, silhouetteColor, gameTime, highlight, outlineColor, scale, lowHealthOverlay, rotation);
+                    sprite.Draw(spriteBatch, animManager, player, tint, isHighlightedSprite, pulse, isSilhouetted, silhouetteColor, gameTime, highlight, outlineColor, scale, lowHealthOverlay, rotation);
 
                     // Use 'center' (animated) instead of 'baseCenter' (static) for bounds calculation
                     Rectangle bounds = new Rectangle((int)(center.X - 16), (int)(center.Y - 16), 32, 32);
