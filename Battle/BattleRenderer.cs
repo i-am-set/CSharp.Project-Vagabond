@@ -114,6 +114,14 @@ namespace ProjectVagabond.Battle.UI
         // --- Cache for Bar Bottom Positions ---
         private Dictionary<string, float> _combatantBarBottomYs = new Dictionary<string, float>();
 
+        // --- TARGETING RETICLE STATE ---
+        // Stores X, Y, Width, Height as floats for smooth interpolation
+        private Vector4 _reticleCurrentBounds;
+        private bool _reticleActive = false;
+
+        // TUNING: Significantly reduced speed for smoother, less jittery movement
+        private const float RETICLE_MOVE_SPEED = 12.0f;
+
         public BattleRenderer()
         {
             _global = ServiceLocator.Get<Global>();
@@ -157,6 +165,7 @@ namespace ProjectVagabond.Battle.UI
             _hasInitializedPositions = false;
             _enemySquashScales.Clear();
             ForceDrawCenterFloor = false; // Reset forced state
+            _reticleActive = false; // Reset reticle
         }
 
         public List<TargetInfo> GetCurrentTargets() => _currentTargets;
@@ -402,25 +411,58 @@ namespace ProjectVagabond.Battle.UI
 
         private void DrawTargetingHighlights(SpriteBatch spriteBatch, BattleUIManager uiManager, GameTime gameTime, Dictionary<string, Color> silhouetteColors, BattleCombatant focusedCombatant)
         {
-            if (uiManager.HoveredMove == null) return;
+            if (uiManager.HoveredMove == null)
+            {
+                _reticleActive = false;
+                return;
+            }
 
             var targets = uiManager.HoverHighlightState.Targets;
-            if (targets == null || !targets.Any()) return;
+            if (targets == null || !targets.Any())
+            {
+                _reticleActive = false;
+                return;
+            }
 
             IEnumerable<BattleCombatant> targetsToDraw = targets;
             bool isTargetingMode = uiManager.UIState == BattleUIState.Targeting;
+            bool isMulti = false;
 
-            if (isTargetingMode && focusedCombatant != null)
+            if (isTargetingMode)
             {
                 var type = uiManager.TargetTypeForSelection ?? TargetType.None;
-                bool isMulti = type == TargetType.All || type == TargetType.Both || type == TargetType.Every ||
-                               type == TargetType.Team || type == TargetType.RandomAll || type == TargetType.RandomBoth || type == TargetType.RandomEvery;
+                isMulti = type == TargetType.All || type == TargetType.Both || type == TargetType.Every ||
+                          type == TargetType.Team || type == TargetType.RandomAll || type == TargetType.RandomBoth || type == TargetType.RandomEvery;
 
                 if (!isMulti)
                 {
-                    if (targets.Contains(focusedCombatant))
+                    // Single Target Mode: Only draw if we have a focused combatant
+                    if (focusedCombatant != null && targets.Contains(focusedCombatant))
                     {
                         targetsToDraw = new List<BattleCombatant> { focusedCombatant };
+                    }
+                    else
+                    {
+                        targetsToDraw = Enumerable.Empty<BattleCombatant>();
+                    }
+                }
+            }
+            else
+            {
+                // Preview Mode (Hovering Move Button)
+                var type = uiManager.HoveredMove.Target;
+                isMulti = type == TargetType.All || type == TargetType.Both || type == TargetType.Every ||
+                          type == TargetType.Team || type == TargetType.RandomAll || type == TargetType.RandomBoth || type == TargetType.RandomEvery;
+
+                if (!isMulti)
+                {
+                    // Single Target Preview: Cycle through targets
+                    // The logic for WHICH target is active is handled in BattleUIManager.UpdateHoverHighlights
+                    // We just need to find the one that has a silhouette color assigned (which indicates it's the active one in the cycle)
+                    var activeTarget = targets.FirstOrDefault(t => silhouetteColors.ContainsKey(t.CombatantID));
+                    if (activeTarget != null)
+                    {
+                        targetsToDraw = new List<BattleCombatant> { activeTarget };
                     }
                     else
                     {
@@ -431,42 +473,88 @@ namespace ProjectVagabond.Battle.UI
 
             var pixel = ServiceLocator.Get<Texture2D>();
             float offset = (float)gameTime.TotalGameTime.TotalSeconds * 20f;
-
             const float dashLength = 4f;
             const float gapLength = 4f;
+            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            foreach (var target in targetsToDraw)
+            if (isMulti)
             {
-                // Only draw the rectangle if the target is actively highlighted (has a silhouette color assigned)
-                if (!silhouetteColors.ContainsKey(target.CombatantID)) continue;
+                // Multi-target: Draw all instantly (no sliding reticle)
+                _reticleActive = false; // Reset reticle state
 
-                var targetInfo = _currentTargets.FirstOrDefault(t => t.Combatant == target);
-
-                if (targetInfo.Combatant != null)
+                foreach (var target in targetsToDraw)
                 {
-                    // Use Palette_Sun for the rectangle to match the silhouette
-                    Color rectColor = _global.Palette_Sun;
+                    if (!silhouetteColors.ContainsKey(target.CombatantID)) continue;
 
-                    var rect = targetInfo.Bounds;
-
-                    // --- SQUARED OUTLINE LOGIC ---
-                    // Draw the exact same dotted rectangle shifted 1 pixel in all 8 directions (cardinals + diagonals)
-                    // This ensures the "marching ants" pattern is perfectly synchronized between the outline and the fill.
-                    for (int x = -1; x <= 1; x++)
+                    var targetInfo = _currentTargets.FirstOrDefault(t => t.Combatant == target);
+                    if (targetInfo.Combatant != null)
                     {
-                        for (int y = -1; y <= 1; y++)
-                        {
-                            if (x == 0 && y == 0) continue;
-
-                            var outlineRect = new Rectangle(rect.X + x, rect.Y + y, rect.Width, rect.Height);
-                            spriteBatch.DrawAnimatedDottedRectangle(pixel, outlineRect, _global.Palette_Black, 1f, dashLength, gapLength, offset);
-                        }
+                        DrawDottedBox(spriteBatch, pixel, targetInfo.Bounds, _global.Palette_Sun, offset, dashLength, gapLength);
                     }
-
-                    // Draw Main Colored Rectangle
-                    spriteBatch.DrawAnimatedDottedRectangle(pixel, rect, rectColor, 1f, dashLength, gapLength, offset);
                 }
             }
+            else
+            {
+                // Single-target: Use sliding reticle
+                var target = targetsToDraw.FirstOrDefault();
+
+                if (target != null)
+                {
+                    var targetInfo = _currentTargets.FirstOrDefault(t => t.Combatant == target);
+                    if (targetInfo.Combatant != null)
+                    {
+                        Rectangle targetRect = targetInfo.Bounds;
+                        Vector4 targetVec = new Vector4(targetRect.X, targetRect.Y, targetRect.Width, targetRect.Height);
+
+                        if (!_reticleActive)
+                        {
+                            // Snap immediately if first time showing
+                            _reticleCurrentBounds = targetVec;
+                            _reticleActive = true;
+                        }
+                        else
+                        {
+                            // Smoothly interpolate
+                            // Use Time-Corrected Damping for framerate independence
+                            float damping = 1.0f - MathF.Exp(-RETICLE_MOVE_SPEED * dt);
+                            _reticleCurrentBounds = Vector4.Lerp(_reticleCurrentBounds, targetVec, damping);
+                        }
+
+                        // Convert back to Rectangle for drawing
+                        Rectangle drawRect = new Rectangle(
+                            (int)_reticleCurrentBounds.X,
+                            (int)_reticleCurrentBounds.Y,
+                            (int)_reticleCurrentBounds.Z,
+                            (int)_reticleCurrentBounds.W
+                        );
+
+                        DrawDottedBox(spriteBatch, pixel, drawRect, _global.Palette_Sun, offset, dashLength, gapLength);
+                    }
+                }
+                else
+                {
+                    _reticleActive = false;
+                }
+            }
+        }
+
+        private void DrawDottedBox(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, Color color, float offset, float dashLength, float gapLength)
+        {
+            // --- SQUARED OUTLINE LOGIC ---
+            // Draw the exact same dotted rectangle shifted 1 pixel in all 8 directions (cardinals + diagonals)
+            for (int x = -1; x <= 1; x++)
+            {
+                for (int y = -1; y <= 1; y++)
+                {
+                    if (x == 0 && y == 0) continue;
+
+                    var outlineRect = new Rectangle(rect.X + x, rect.Y + y, rect.Width, rect.Height);
+                    spriteBatch.DrawAnimatedDottedRectangle(pixel, outlineRect, _global.Palette_Black, 1f, dashLength, gapLength, offset);
+                }
+            }
+
+            // Draw Main Colored Rectangle
+            spriteBatch.DrawAnimatedDottedRectangle(pixel, rect, color, 1f, dashLength, gapLength, offset);
         }
 
         private Rectangle GetPatternAlignedRect(Rectangle baseRect)
@@ -578,18 +666,8 @@ namespace ProjectVagabond.Battle.UI
 
                 if (isMulti)
                 {
-                    // Multi-target preview: Flash everyone Yellow/Red?
-                    // Request says "highlighted combatants should be palette_sun".
-                    // Let's make them all Sun for consistency with the new style.
-                    bool flash = (timer % _global.TargetingMultiBlinkSpeed) < (_global.TargetingMultiBlinkSpeed / 2f);
-                    // If flashing, show Sun. If not, show nothing (normal sprite)?
-                    // Or maybe flash between Sun and Normal?
-                    // The previous logic flashed Yellow/Red.
-                    // Let's flash Sun / Normal (by removing from dict).
-                    if (flash)
-                    {
-                        foreach (var t in sorted) colors[t.CombatantID] = _global.Palette_Sun;
-                    }
+                    // Multi-target preview: Constant highlight
+                    foreach (var t in sorted) colors[t.CombatantID] = _global.Palette_Sun;
                 }
                 else if (sorted.Count > 0)
                 {

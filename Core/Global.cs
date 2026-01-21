@@ -233,6 +233,9 @@ namespace ProjectVagabond
         public float SquashRecoverySpeed { get; set; } = 4f;
         public const float ItemHoverScale = 1.2f; // Global scale for hovered items in UI
 
+        // --- TARGETING ANIMATION SETTINGS ---
+        public float TargetingSingleCycleSpeed { get; set; } = 1.0f; // Increased from 1.0f for slower cycling
+
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         // INSTANCE VARIABLES
@@ -458,10 +461,6 @@ namespace ProjectVagabond
         public float TargetIndicatorRotationRange { get; set; } = 0f;
         public float TargetIndicatorScaleMin { get; set; } = 1.0f;
         public float TargetIndicatorScaleMax { get; set; } = 1.0f;
-
-        // --- Targeting Animation Settings ---
-        public float TargetingSingleCycleSpeed { get; set; } = 1.0f;
-        public float TargetingMultiBlinkSpeed { get; set; } = 1.5f;
 
         public Color GetNarrationColor(string tag)
         {
