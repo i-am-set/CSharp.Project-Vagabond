@@ -335,11 +335,18 @@ namespace ProjectVagabond
             try { _tertiaryFont = Content.Load<BitmapFont>("Fonts/3x4_SimpleOddHeight"); }
             catch { _tertiaryFont = _secondaryFont; }
 
+            // --- PRE-WARM CONTENT ---
+            // Load everything upfront so the "Loading Screen" is just a visual transition, not a disk I/O blocker.
             _spriteManager.LoadEssentialContent();
+            _spriteManager.LoadGameContent(); // Force load all game sprites now
             _backgroundNoiseRenderer.LoadContent();
             BattleDataCache.LoadData(Content);
             _progressionManager.LoadSplits();
             _diceRollingSystem.Initialize(GraphicsDevice, Content);
+
+            // Pre-load Archetypes
+            var archetypeManager = ServiceLocator.Get<ArchetypeManager>();
+            archetypeManager.LoadArchetypes("Content/Data/Archetypes.json");
 
             _lootManager = new LootManager();
             _lootManager.BuildLootTables();

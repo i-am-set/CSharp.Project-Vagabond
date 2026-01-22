@@ -21,33 +21,43 @@ uniform float Vibrance;
 // --- Toggles ---
 #define ENABLE_CURVATURE
 #define ENABLE_SCANLINES
-#define ENABLE_WOBBLE
+#define ENABLE_JITTER       
+#define ENABLE_HUM_BAR      
 #define ENABLE_VIGNETTE
 #define ENABLE_CHROMATIC_ABERRATION
 #define ENABLE_NOISE
 
 // --- Tuning ---
 
-// Curvature (Lens Distortion)
-static const float CURVATURE = 0.45; // 0.0 = Flat, 0.15 = Standard CRT, 0.4 = Fish eye
+// Distortion
+static const float CURVATURE = 0.15;        // 0.0 = Flat, 0.15 = Standard CRT, 0.4 = Fish-eye
+static const float ZOOM = 1.03;             // 1.0 = No Zoom, 1.03 = Crop Bezels, 0.9 = Shrink Image
+
+// Color & Contrast
+static const float BLACK_LEVEL = 0.03;      // 0.0 = Pure Black, 0.03 = Phosphor Glow, 0.1 = Washed Out
 
 // Scanlines
-static const float SCANLINE_OPACITY_MIN = 0.65f; // The darkness of the gap (1.0 = invisible, 0.0 = black)
-static const float SCANLINE_OPACITY_MAX = 1.0f;  // The brightness of the beam center
+static const float SCANLINE_OPACITY_MIN = 0.60f; // 0.0 = Black Lines, 0.5 = Soft Lines, 1.0 = Invisible
+static const float SCANLINE_OPACITY_MAX = 1.0f;  // 1.0 = Full Brightness (Standard)
+static const float SCANLINE_CRAWL_SPEED = 0.0f;  // 0.0 = Static (Authentic), 1.0 = Slow Roll, 5.0 = Fast Roll
 
-// Wobble (Distortion)
-static const float WOBBLE_FREQUENCY = 1.0;
-static const float WOBBLE_AMPLITUDE = 1.0; // In physical pixels (keep small for crispness)
+// Horizontal Sync Jitter (Shaking)
+static const float HORIZONTAL_JITTER = 0.0001;   // 0.0 = Perfect, 0.0001 = Micro-Jitter, 0.005 = Broken TV
+static const float JITTER_FREQUENCY = 60.0;      // Speed of the shake
 
-// Chromatic Aberration
-static const float CHROMATIC_OFFSET = 1.2; // In physical pixels
+// AC Hum Bar (Rolling Shadow)
+static const float HUM_BAR_SPEED = 2.0;          // Speed of the rolling bar
+static const float HUM_BAR_OPACITY = 0.15;       // 0.0 = Invisible, 0.05 = Subtle, 0.2 = Bad Interference
 
-// Vignette
-static const float VIGNETTE_INTENSITY = 0.3;
-static const float VIGNETTE_ROUNDNESS = 0.25;
+// Chromatic Aberration (Color Bleed)
+static const float CHROMATIC_OFFSET = 1.0;       // 0.0 = Sharp, 1.0 = Consumer TV, 3.0 = Broken Convergence
 
-// Noise
-static const float NOISE_INTENSITY = 0.005;
+// Vignette (Corner Darkening)
+static const float VIGNETTE_INTENSITY = 0.25;    // 0.0 = Off, 0.25 = Subtle, 0.8 = Heavy Spotlight
+static const float VIGNETTE_ROUNDNESS = 0.35;    // 0.0 = Oval, 1.0 = Circle
+
+// Noise (Static/Snow)
+static const float NOISE_INTENSITY = 0.004;      // 0.0 = Clean, 0.004 = RF Fuzz, 0.1 = Heavy Snow
 
 // --- Globals ---
 Texture2D SpriteTexture;
@@ -68,42 +78,42 @@ float4 MainPS(PixelShaderInput input) : COLOR
 {
     float2 uv = input.TexCoord;
 
-    // --- 0. CURVATURE (Lens Distortion) ---
-    // This must happen first so all other effects (scanlines, wobble) follow the curve.
+    // --- 0. CURVATURE & ZOOM ---
 #ifdef ENABLE_CURVATURE
-    // Transform UV to -0.5 to 0.5 range (center of screen is 0,0)
     float2 centeredUV = uv - 0.5;
-    float r2 = dot(centeredUV, centeredUV); // Distance squared from center
+    float r2 = dot(centeredUV, centeredUV);
     
-    // Apply barrel distortion: uv = uv * (1 + k * r^2)
-    // We adjust the formula slightly to keep the center 1:1 scale
+    // Apply Barrel Distortion
     float2 distortedUV = centeredUV * (1.0 + CURVATURE * r2);
     
-    // Transform back to 0.0 to 1.0 range
+    // Apply Zoom
+    distortedUV *= (1.0 / ZOOM);
+
     uv = distortedUV + 0.5;
 
-    // Bezel Mask: If the distorted UV is outside the texture, draw black
+    // Bezel Mask
     if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0)
     {
         return float4(0.0, 0.0, 0.0, 1.0);
     }
 #endif
     
-    // --- 1. WOBBLE (Distortion) ---
-    // We calculate the offset based on ScreenResolution so the wave stays tight and crisp
-    // regardless of how big the window is.
-#ifdef ENABLE_WOBBLE
-    float wobble = sin(uv.y * ScreenResolution.y * 0.02 + Time * WOBBLE_FREQUENCY) * WOBBLE_AMPLITUDE;
-    // Apply glitch intensity if active
+    // --- 1. HORIZONTAL SYNC JITTER ---
+#ifdef ENABLE_JITTER
+    float jitterTime = Time * JITTER_FREQUENCY;
+    float jitterOffset = (rand(float2(uv.y, jitterTime)) - 0.5) * 2.0; 
+    float currentJitter = HORIZONTAL_JITTER;
+
     if (ImpactGlitchIntensity > 0.0) {
-        float block = floor(uv.y * 20.0); // Large blocks for glitch
-        wobble += (rand(float2(Time, block)) - 0.5) * 20.0 * ImpactGlitchIntensity;
+        float block = floor(uv.y * 10.0); 
+        float glitchNoise = (rand(float2(Time, block)) - 0.5);
+        currentJitter += glitchNoise * ImpactGlitchIntensity * 0.05;
     }
-    uv.x += wobble / ScreenResolution.x;
+
+    uv.x += jitterOffset * currentJitter;
 #endif
 
     // --- 2. CHROMATIC ABERRATION ---
-    // Sample colors with slight offsets (in physical pixels)
     float3 color;
 #ifdef ENABLE_CHROMATIC_ABERRATION
     float2 rOffset = float2(CHROMATIC_OFFSET / ScreenResolution.x, 0.0);
@@ -116,61 +126,52 @@ float4 MainPS(PixelShaderInput input) : COLOR
     color = tex2D(s0, uv).rgb;
 #endif
 
+    // --- 2.5. BLACK LEVEL LIFT ---
+    color = max(color, BLACK_LEVEL);
+
     // --- 3. SCANLINES ---
-    // We use VirtualResolution.y to align scanlines with the game's fat pixels.
-    // We use a Sine wave to create a smooth "beam" profile instead of harsh black bars.
 #ifdef ENABLE_SCANLINES
-    // Calculate position in the virtual grid (0.0 to 1.0 within a single game pixel row)
-    float scanlinePos = uv.y * VirtualResolution.y * 3.14159 * 2.0;
-    
-    // Create a sine wave that oscillates between -1 and 1
-    float scanlineWave = sin(scanlinePos);
-    
-    // Map the wave to our opacity range (e.g., 0.7 to 1.0)
-    // This creates the "glow" in the center of the pixel and the "dim" at the edge.
+    float scanlinePos = (uv.y * VirtualResolution.y) + (Time * SCANLINE_CRAWL_SPEED);
+    float scanlineWave = sin(scanlinePos * 3.14159 * 2.0);
     float scanlineFactor = lerp(SCANLINE_OPACITY_MIN, SCANLINE_OPACITY_MAX, (scanlineWave * 0.5 + 0.5));
-    
     color *= scanlineFactor;
 #endif
 
+    // --- 3.5 HUM BAR ---
+#ifdef ENABLE_HUM_BAR
+    float humWave = sin((uv.y * 2.0) + (Time * HUM_BAR_SPEED));
+    float humFactor = 1.0 - (((humWave + 1.0) / 2.0) * HUM_BAR_OPACITY);
+    color *= humFactor;
+#endif
+
     // --- 4. SATURATION & VIBRANCE ---
-    // Luminance coefficient
     float3 lumaCoef = float3(0.299, 0.587, 0.114);
     float luma = dot(color, lumaCoef);
 
-    // Standard Saturation
     color = lerp(float3(luma, luma, luma), color, Saturation);
 
-    // Vibrance (Smart Saturation)
-    // Calculate current saturation level roughly
     float max_color = max(color.r, max(color.g, color.b));
     float min_color = min(color.r, min(color.g, color.b));
     float color_sat = max_color - min_color;
-
-    // Increase saturation based on how low the current saturation is
-    // If Vibrance is positive, we boost muted colors more.
     color = lerp(float3(luma, luma, luma), color, 1.0 + (Vibrance * (1.0 - color_sat)));
 
     // --- 5. VIGNETTE ---
 #ifdef ENABLE_VIGNETTE
-    float2 vUV = uv * (1.0 - uv.yx); // Classic vignette equation
+    float2 vUV = uv * (1.0 - uv.yx);
     float vig = vUV.x * vUV.y * 15.0;
     vig = pow(vig, VIGNETTE_ROUNDNESS);
-    color *= float3(vig, vig, vig); // Multiply instead of mix for better color retention
+    color *= float3(vig, vig, vig); 
 #endif
 
-    // --- 6. NOISE (Dithering) ---
+    // --- 6. NOISE ---
 #ifdef ENABLE_NOISE
     float noise = (rand(uv * Time) - 0.5) * NOISE_INTENSITY;
     color += noise;
 #endif
 
     // --- 7. GAMMA & FLASH ---
-    // Apply Gamma Correction
     color = max(color, 0.0);
     color = pow(color, 1.0 / Gamma);
-
-    // Apply Screen Flash
     color = lerp(color, FlashColor, FlashIntensity);
 
     return float4(color, 1.0);
@@ -182,4 +183,4 @@ technique CRT
 	{
 		PixelShader = compile PS_SHADERMODEL MainPS();
 	}
-};
+}

@@ -4,14 +4,14 @@ namespace ProjectVagabond.Scenes
 {
     /// <summary>
     /// A loading task that simply waits for a specified duration.
-    /// It shows the progress bar but no descriptive text.
+    /// Useful for pacing the loading screen so it doesn't flash by too quickly.
     /// </summary>
     public class DelayTask : LoadingTask
     {
         private readonly float _duration;
         private float _timer;
 
-        public DelayTask(float durationInSeconds) : base("") // Empty description
+        public DelayTask(float durationInSeconds, string description = "") : base(description)
         {
             _duration = durationInSeconds;
         }

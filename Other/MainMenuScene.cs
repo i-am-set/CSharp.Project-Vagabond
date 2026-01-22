@@ -120,14 +120,15 @@ namespace ProjectVagabond.Scenes
                 var gameState = ServiceLocator.Get<GameState>();
                 var loadingScreen = ServiceLocator.Get<LoadingScreen>();
 
+                // --- UPDATED LOADING TASKS ---
+                // Removed heavy lifting tasks (LoadGameContent, LoadArchetypes) as they are now pre-warmed in Core.cs.
+                // The loading screen is now purely a visual transition.
+                // Removed DelayTask because LoadingScreen now handles the pacing internally.
                 var loadingTasks = new List<LoadingTask>
                 {
-                    new GenericTask("Loading game assets...", () => spriteManager.LoadGameContent()),
-                    new GenericTask("Loading archetypes...", () => archetypeManager.LoadArchetypes("Content/Data/Archetypes.json")),
                     new GenericTask("Initializing world...", () =>
                     {
                         gameState.InitializeWorld();
-                        // Removed InitializeRenderableEntities as it's no longer needed
                     }),
                     new DiceWarmupTask()
                 };
