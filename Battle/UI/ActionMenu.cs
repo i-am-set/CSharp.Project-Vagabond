@@ -827,19 +827,26 @@ namespace ProjectVagabond.Battle.UI
                         int startX = (Global.VIRTUAL_WIDTH - buttonWidth) / 2 + xOffset;
 
                         int currentY = startY;
+                        int index = 0; // Track index for specific offsets
                         foreach (var button in _actionButtons)
                         {
-                            var buttonBounds = new Rectangle(startX, currentY, buttonWidth, buttonHeight);
+                            int specificYOffset = 0;
+                            if (index == 0) specificYOffset = 9; // ACT
+                            else if (index == 1) specificYOffset = 7; // SWITCH
+
+                            var buttonBounds = new Rectangle(startX, currentY + specificYOffset, buttonWidth, buttonHeight);
                             button.Bounds = buttonBounds;
                             var hoverRect = new Rectangle(buttonBounds.X, buttonBounds.Y + 1, buttonBounds.Width, buttonBounds.Height - 1);
 
-                            if (button.IsHovered && button.IsEnabled)
+                            if (button.IsEnabled)
                             {
-                                DrawBeveledBackground(spriteBatch, pixel, hoverRect, _global.Palette_DarkShadow, button.CurrentHoverRotation);
+                                float rotation = button.IsHovered ? button.CurrentHoverRotation : 0f;
+                                DrawBeveledBackground(spriteBatch, pixel, hoverRect, _global.Palette_DarkShadow, rotation);
                             }
 
                             button.Draw(spriteBatch, font, gameTime, transform, false, null, offset.Y);
                             currentY += buttonHeight + buttonSpacing;
+                            index++;
                         }
 
                         if (_player != null && _player.BattleSlot == 1)

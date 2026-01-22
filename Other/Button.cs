@@ -109,7 +109,7 @@ namespace ProjectVagabond.UI
         // Scale Animation State
         private float _currentScale = 1.0f;
         private float _targetScale = 1.0f;
-        private const float SCALE_SPEED = 15f;
+        private const float SCALE_SPEED = 75f;
         private const float HOVER_SCALE = 1.1f;
         // FIX: Set PRESS_SCALE to match HOVER_SCALE to prevent shrinking/shifting on click
         private const float PRESS_SCALE = 1.1f;
