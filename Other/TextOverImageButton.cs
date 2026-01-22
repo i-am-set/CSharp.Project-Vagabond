@@ -2,10 +2,16 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
+using static ProjectVagabond.Battle.Abilities.InflictStatusStunAbility;
 
 namespace ProjectVagabond.UI
 {
@@ -18,6 +24,10 @@ namespace ProjectVagabond.UI
         public bool TintBackgroundOnHover { get; set; } = true;
         public bool DrawBorderOnHover { get; set; } = false;
         public Color? HoverBorderColor { get; set; }
+
+        // New properties for customization
+        public bool TintIconOnHover { get; set; } = true;
+        public float ContentXOffset { get; set; } = 0f;
 
         // Animation State
         private enum AnimationState { Hidden, Idle, Appearing }
@@ -128,13 +138,13 @@ namespace ProjectVagabond.UI
                 {
                     backgroundTintColor = Color.Gray;
                     textColor = CustomHoverTextColor ?? _global.ButtonHoverColor;
-                    iconColor = CustomHoverTextColor ?? _global.ButtonHoverColor;
+                    iconColor = TintIconOnHover ? (CustomHoverTextColor ?? _global.ButtonHoverColor) : Color.White;
                 }
                 else if (isActivated)
                 {
                     backgroundTintColor = TintBackgroundOnHover ? _global.ButtonHoverColor : Color.White;
                     textColor = CustomHoverTextColor ?? _global.ButtonHoverColor;
-                    iconColor = CustomHoverTextColor ?? _global.ButtonHoverColor;
+                    iconColor = TintIconOnHover ? (CustomHoverTextColor ?? _global.ButtonHoverColor) : Color.White;
                 }
                 else
                 {
@@ -211,13 +221,13 @@ namespace ProjectVagabond.UI
                 float startX = 0f;
                 if (AlignLeft)
                 {
-                    // Start from left edge + padding
-                    startX = (-width / 2f) + iconPaddingLeft;
+                    // Start from left edge + padding + custom offset
+                    startX = (-width / 2f) + iconPaddingLeft + ContentXOffset;
                 }
                 else
                 {
-                    // Center the entire content block
-                    startX = -contentWidth / 2f;
+                    // Center the entire content block + custom offset
+                    startX = (-contentWidth / 2f) + ContentXOffset;
                 }
 
                 Vector2 iconOffset = Vector2.Zero;

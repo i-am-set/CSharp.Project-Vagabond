@@ -1709,7 +1709,7 @@ namespace ProjectVagabond.Scenes
 
             if (highlightedPath != null)
             {
-                DrawPath(spriteBatch, pixel, highlightedPath, _global.ButtonHoverColor, false);
+                DrawPath(spriteBatch, pixel, highlightedPath, _global.SplitMapNodeColor, false);
             }
         }
 

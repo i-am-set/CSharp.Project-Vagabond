@@ -361,12 +361,12 @@ namespace ProjectVagabond.Scenes
             // 2. Draw the background and filled portion of the loading bar
             var barBgRect = new Rectangle(barX, barY, BAR_WIDTH, BAR_HEIGHT);
             var barFillRect = new Rectangle(barX, barY, filledWidth, BAR_HEIGHT);
-            spriteBatch.DrawSnapped(pixel, barBgRect, _global.Palette_DarkShadow);
-            spriteBatch.DrawSnapped(pixel, barFillRect, _global.Palette_Sun);
+            spriteBatch.DrawSnapped(pixel, barBgRect, Color.Black);
+            spriteBatch.DrawSnapped(pixel, barFillRect, _global.Palette_Black);
 
             // 3. Determine Text to Display
             string currentLineText = "";
-            Color currentColor = _global.Palette_Sun;
+            Color currentColor = _global.Palette_Black;
 
             if (_isHolding)
             {
@@ -409,7 +409,7 @@ namespace ProjectVagabond.Scenes
             // 5. Draw History Log (Stacked above current line)
             // Iterate backwards to draw newest closest to the current line
             float logY = currentTextY;
-            Color logColor = _global.Palette_Sun; // All text is Sun color
+            Color logColor = _global.Palette_Black; // All text is Sun color
 
             for (int i = _messageLog.Count - 1; i >= 0; i--)
             {

@@ -503,19 +503,17 @@ namespace ProjectVagabond.UI
                         {
                             if (options.UseSquareOutline)
                             {
-                                DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(1, 1), options.OutlineColor, finalRotation, origin, finalScale);
-                                DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(1, -1), options.OutlineColor, finalRotation, origin, finalScale);
+                                // Right side removed
                                 DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(-1, 1), options.OutlineColor, finalRotation, origin, finalScale);
                                 DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(-1, -1), options.OutlineColor, finalRotation, origin, finalScale);
                             }
-                            DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(1, 0), options.OutlineColor, finalRotation, origin, finalScale);
+                            // Right side removed
                             DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(-1, 0), options.OutlineColor, finalRotation, origin, finalScale);
                             DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(0, 1), options.OutlineColor, finalRotation, origin, finalScale);
                             DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(0, -1), options.OutlineColor, finalRotation, origin, finalScale);
                         }
 
-                        // Shadow
-                        DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(1, 0), shadowColor, finalRotation, origin, finalScale);
+                        // Shadow removed
 
                         // Main Character
                         DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos, finalColor, finalRotation, origin, finalScale);

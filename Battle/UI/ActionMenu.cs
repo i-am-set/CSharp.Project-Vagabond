@@ -130,7 +130,7 @@ namespace ProjectVagabond.Battle.UI
 
             var actButton = new Button(Rectangle.Empty, "ACT", function: "Act", font: defaultFont, enableHoverSway: false)
             {
-                CustomHoverTextColor = _global.Palette_Red,
+                CustomHoverTextColor = _global.ButtonHoverColor,
                 TextRenderOffset = new Vector2(0, 1),
                 EnableTextWave = true,
                 WaveEffectType = TextEffectType.DriftWave
@@ -138,7 +138,7 @@ namespace ProjectVagabond.Battle.UI
 
             var switchButton = new Button(Rectangle.Empty, "SWITCH", function: "Switch", font: defaultFont, enableHoverSway: false)
             {
-                CustomHoverTextColor = _global.Palette_Red,
+                CustomHoverTextColor = _global.ButtonHoverColor,
                 TextRenderOffset = new Vector2(0, 1),
                 EnableTextWave = true,
                 WaveEffectType = TextEffectType.DriftWave
@@ -157,30 +157,36 @@ namespace ProjectVagabond.Battle.UI
             _actionButtons.Add(actButton);
             _actionButtons.Add(switchButton);
 
-            var strikeButton = new TextOverImageButton(Rectangle.Empty, "STRIKE", null, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[0], enableHoverSway: false, customHoverTextColor: _global.Palette_Red, alignLeft: true)
+            var strikeButton = new TextOverImageButton(Rectangle.Empty, "STRIKE", null, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[0], enableHoverSway: false, customHoverTextColor: _global.GameTextColor, alignLeft: true)
             {
                 HasRightClickHint = false,
                 HasMiddleClickHint = true,
                 TintBackgroundOnHover = false,
                 DrawBorderOnHover = false,
-                HoverBorderColor = _global.Palette_Red,
+                HoverBorderColor = _global.ButtonHoverColor,
                 EnableTextWave = true,
-                WaveEffectType = TextEffectType.LeftAlignedSmallWave
+                WaveEffectType = TextEffectType.LeftAlignedSmallWave,
+                TintIconOnHover = false,
+                ContentXOffset = 1f,
+                CustomDefaultTextColor = _global.GameTextColor
             };
             strikeButton.OnClick += () => {
                 OnStrikeRequested?.Invoke(_player);
             };
             _secondaryActionButtons.Add(strikeButton);
 
-            var stallButton = new TextOverImageButton(Rectangle.Empty, "STALL", null, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[2], enableHoverSway: false, customHoverTextColor: _global.Palette_Red, alignLeft: true)
+            var stallButton = new TextOverImageButton(Rectangle.Empty, "STALL", null, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[2], enableHoverSway: false, customHoverTextColor: _global.GameTextColor, alignLeft: true)
             {
                 HasRightClickHint = false,
                 HasMiddleClickHint = true,
                 TintBackgroundOnHover = false,
                 DrawBorderOnHover = false,
-                HoverBorderColor = _global.Palette_Red,
+                HoverBorderColor = _global.ButtonHoverColor,
                 EnableTextWave = true,
-                WaveEffectType = TextEffectType.LeftAlignedSmallWave
+                WaveEffectType = TextEffectType.LeftAlignedSmallWave,
+                TintIconOnHover = false,
+                ContentXOffset = 1f,
+                CustomDefaultTextColor = _global.GameTextColor
             };
             stallButton.OnClick += () => {
                 if (BattleDataCache.Moves.TryGetValue("6", out var stallMove))
@@ -1432,7 +1438,7 @@ namespace ProjectVagabond.Battle.UI
                     string contactText = "[CONTACT]";
                     float contactWidth = tertiaryFont.MeasureString(contactText).Width;
                     float rightTextX = bounds.Right - horizontalPadding - contactWidth;
-                    spriteBatch.DrawStringSnapped(tertiaryFont, contactText, new Vector2(rightTextX, bottomTextY), _global.Palette_Red);
+                    spriteBatch.DrawStringSnapped(tertiaryFont, contactText, new Vector2(rightTextX, bottomTextY), _global.Palette_Rust);
                 }
 
                 if (!string.IsNullOrEmpty(move.Description))

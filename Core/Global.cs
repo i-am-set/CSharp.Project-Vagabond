@@ -27,13 +27,13 @@ namespace ProjectVagabond
             GameBg = Palette_Black;
             TerminalBg = Palette_Black;
             MapBg = Palette_Black;
-            GameTextColor = Palette_Sun;
+            GameTextColor = Palette_DarkSun;
             HighlightTextColor = Palette_Fruit;
             DullTextColor = Palette_Shadow;
-            ButtonHoverColor = Palette_Rust;
+            ButtonHoverColor = Palette_Sun;
             ButtonDisableColor = Palette_DarkShadow;
-            SplitMapNodeColor = Palette_Sun;
-            SplitMapPathColor = Palette_Fruit;
+            SplitMapNodeColor = Palette_DarkSun;
+            SplitMapPathColor = Palette_DarkRust;
             OutputTextColor = Palette_LightGray;
             InputTextColor = Palette_Gray;
             ToolTipBGColor = Palette_Black;

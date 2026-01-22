@@ -253,10 +253,19 @@ namespace ProjectVagabond.Battle.UI
                     spriteBatch.DrawSnapped(pixel, rotatedIconPos, null, _global.Palette_Pink * contentAlpha, _currentHoverRotation, iconOrigin, new Vector2(iconSize, iconSize), SpriteEffects.None, 0f);
                 }
 
-                var textColor = isActivated && canAfford && IsEnabled ? _global.ButtonHoverColor : _global.Palette_Sun;
-                if (!canAfford || !IsEnabled)
+                // --- TEXT COLOR LOGIC ---
+                Color textColor;
+                if (!IsEnabled || !canAfford)
                 {
                     textColor = _global.ButtonDisableColor;
+                }
+                else if (isActivated)
+                {
+                    textColor = _global.ButtonHoverColor;
+                }
+                else
+                {
+                    textColor = _global.GameTextColor;
                 }
 
                 // Text Position
