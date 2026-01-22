@@ -86,7 +86,6 @@ namespace ProjectVagabond.UI
             // 1. Calculate animation offsets
             var (shakeOffset, flashTint) = UpdateFeedbackAnimations(gameTime);
 
-            // FIX: Respect EnableHoverSway property
             float yOffset = 0f;
             if (EnableHoverSway)
             {
@@ -94,7 +93,6 @@ namespace ProjectVagabond.UI
             }
             else
             {
-                // Update the animator state without using the offset, so it doesn't get stuck
                 _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
             }
 
@@ -106,10 +104,6 @@ namespace ProjectVagabond.UI
             // Calculate Bounds Size (scaled vertically by appear anim)
             int width = Bounds.Width;
             int height = (int)(Bounds.Height * verticalScale);
-            Vector2 origin = new Vector2(width / 2f, Bounds.Height / 2f); // Origin based on FULL height to scale properly
-
-            // Scale vector for the draw call (Vertical scale only affects height)
-            Vector2 drawScale = new Vector2(1.0f, verticalScale);
 
             // 2. Determine colors based on state
             Color backgroundTintColor;
@@ -138,7 +132,6 @@ namespace ProjectVagabond.UI
                 }
                 else if (isActivated)
                 {
-                    // Only tint background if allowed
                     backgroundTintColor = TintBackgroundOnHover ? _global.ButtonHoverColor : Color.White;
                     textColor = CustomHoverTextColor ?? _global.ButtonHoverColor;
                     iconColor = CustomHoverTextColor ?? _global.ButtonHoverColor;
@@ -161,18 +154,13 @@ namespace ProjectVagabond.UI
             }
 
             // 4. Draw background with animation offset (if texture exists)
-            // Use DrawSnapped with rotation
             if (_backgroundTexture != null)
             {
-                // We use the full texture bounds as source
                 Rectangle source = new Rectangle(0, 0, _backgroundTexture.Width, _backgroundTexture.Height);
-                // Adjust origin to texture center
                 Vector2 texOrigin = new Vector2(_backgroundTexture.Width / 2f, _backgroundTexture.Height / 2f);
-
-                // If the texture is meant to fill the bounds:
                 Vector2 texScale = new Vector2(
                     (float)width / _backgroundTexture.Width,
-                    (float)height / _backgroundTexture.Height // Use 'height' which already has verticalScale applied
+                    (float)height / _backgroundTexture.Height
                 );
 
                 spriteBatch.DrawSnapped(_backgroundTexture, centerPos, source, backgroundTintColor, _currentHoverRotation, texOrigin, texScale, SpriteEffects.None, 0f);
@@ -181,7 +169,6 @@ namespace ProjectVagabond.UI
             // 4b. Draw Border if enabled and activated
             if (isActivated && DrawBorderOnHover)
             {
-                // Skipped rotation on 1px border lines to avoid aliasing artifacts
                 Color borderColor = HoverBorderColor ?? _global.Palette_Red;
                 var animatedBounds = new Rectangle(
                     (int)(centerPos.X - width / 2f),
@@ -199,47 +186,60 @@ namespace ProjectVagabond.UI
             // Only draw contents if mostly visible
             if (verticalScale > 0.8f)
             {
-                // --- NEW LAYOUT LOGIC ---
-                // We need to calculate positions relative to center to apply rotation.
-                const int iconPaddingLeft = 5;
+                // --- UPDATED LAYOUT LOGIC: CENTERED GROUP ---
+                const int iconPaddingLeft = 5; // Used only for AlignLeft mode
                 const int iconTextGap = 2;
 
-                // Relative offsets from Center
-                float leftEdgeX = -width / 2f;
-                float rightEdgeX = width / 2f;
-
-                Vector2 iconOffset = Vector2.Zero;
                 bool hasIcon = IconTexture != null && IconSourceRect.HasValue;
-
-                if (hasIcon)
-                {
-                    // Icon is left aligned
-                    float iconX = leftEdgeX + iconPaddingLeft + (IconSourceRect!.Value.Width / 2f);
-                    iconOffset = new Vector2(iconX, 0); // Centered vertically relative to button
-                }
-
-                // Text Position Calculation
                 Vector2 textSize = font.MeasureString(Text);
-                float textCenterX;
+
+                float contentWidth = 0f;
+                float iconWidth = 0f;
+                float textWidth = textSize.X;
 
                 if (hasIcon)
                 {
-                    float iconRight = leftEdgeX + iconPaddingLeft + IconSourceRect!.Value.Width;
-                    float textSpaceStartX = iconRight + iconTextGap;
-                    float textSpaceEndX = rightEdgeX - iconPaddingLeft;
-                    float textSpaceWidth = textSpaceEndX - textSpaceStartX;
-                    textCenterX = textSpaceStartX + (textSpaceWidth / 2f);
+                    iconWidth = IconSourceRect!.Value.Width;
+                    contentWidth = iconWidth + iconTextGap + textWidth;
                 }
                 else
                 {
-                    textCenterX = 0; // Absolute center
+                    contentWidth = textWidth;
                 }
 
-                // Apply TextRenderOffset
-                Vector2 textOffset = new Vector2(textCenterX, TextRenderOffset.Y);
+                // Calculate Start X relative to Center (0,0)
+                float startX = 0f;
+                if (AlignLeft)
+                {
+                    // Start from left edge + padding
+                    startX = (-width / 2f) + iconPaddingLeft;
+                }
+                else
+                {
+                    // Center the entire content block
+                    startX = -contentWidth / 2f;
+                }
+
+                Vector2 iconOffset = Vector2.Zero;
+                Vector2 textOffset = Vector2.Zero;
+
+                if (hasIcon)
+                {
+                    // Icon center relative to button center
+                    float iconCenterX = startX + (iconWidth / 2f);
+                    iconOffset = new Vector2(iconCenterX, 0);
+
+                    // Text center relative to button center
+                    float textCenterX = startX + iconWidth + iconTextGap + (textWidth / 2f);
+                    textOffset = new Vector2(textCenterX, TextRenderOffset.Y);
+                }
+                else
+                {
+                    float textCenterX = startX + (textWidth / 2f);
+                    textOffset = new Vector2(textCenterX, TextRenderOffset.Y);
+                }
 
                 // --- ROTATION TRANSFORM HELPER ---
-                // Rotates a local offset by _currentHoverRotation
                 Vector2 RotateOffset(Vector2 local)
                 {
                     float cos = MathF.Cos(_currentHoverRotation);
@@ -284,7 +284,7 @@ namespace ProjectVagabond.UI
                 // --- Strikethrough Logic ---
                 if (!IsEnabled)
                 {
-                    // Rotate start/end points
+                    // Rotate start/end points relative to text center
                     Vector2 lineStartLocal = textOffset + new Vector2(-textSize.X / 2f - 2, 0);
                     Vector2 lineEndLocal = textOffset + new Vector2(textSize.X / 2f + 2, 0);
 

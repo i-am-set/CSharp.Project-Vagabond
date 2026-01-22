@@ -509,7 +509,12 @@ namespace ProjectVagabond.Battle.UI
                     {
                         var button = _secondaryActionButtons[i];
                         int yPos = secGridStartY + i * (secButtonHeight + secRowSpacing);
-                        button.Bounds = new Rectangle(secGridStartX, yPos, secButtonWidth, secButtonHeight);
+
+                        // --- CHANGE START ---
+                        // Expand hitbox by 3 pixels on left and right (Total width +6)
+                        // Shift X position left by 3 to center the expansion
+                        button.Bounds = new Rectangle(secGridStartX - 3, yPos, secButtonWidth + 6, secButtonHeight);
+                        // --- CHANGE END ---
                     }
 
                     int moveGridStartX = secGridStartX + secButtonWidth + gap;
@@ -846,11 +851,10 @@ namespace ProjectVagabond.Battle.UI
                             int backButtonY = 169; // +1 pixel
 
                             var backSize = secondaryFont.MeasureString(_slot2BackButton.Text);
-                            int backWidth = (int)backSize.Width; // Exact width
-                            int backHeight = (int)backSize.Height; // Exact height
-                            int backX = startX + (buttonWidth - backWidth) / 2; // Centered
+                            int backWidth = (int)backSize.Width + 10; // +10 padding
+                            int backX = startX + (buttonWidth - backWidth) / 2 + 2;
 
-                            _slot2BackButton.Bounds = new Rectangle(backX, backButtonY, backWidth, backHeight);
+                            _slot2BackButton.Bounds = new Rectangle(backX, backButtonY, backWidth, backButtonHeight);
                             _slot2BackButton.Draw(spriteBatch, font, gameTime, transform, false, null, offset.Y);
                         }
                         break;
@@ -862,6 +866,7 @@ namespace ProjectVagabond.Battle.UI
                     }
                 case MenuState.Targeting:
                     {
+                        const int backButtonPadding = 4; // Reduced padding
                         const int backButtonHeight = 15;
                         const int backButtonTopMargin = 1;
                         const int horizontalPadding = 10;
@@ -870,15 +875,12 @@ namespace ProjectVagabond.Battle.UI
                         int availableHeight = Global.VIRTUAL_HEIGHT - dividerY - (verticalPadding * 2);
                         int gridAreaHeight = availableHeight - backButtonHeight - backButtonTopMargin;
 
-                        var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
-                        int backButtonWidth = (int)backSize.Width; // Exact width
-                        int backButtonH = (int)backSize.Height; // Exact height
-
+                        int backButtonWidth = (int)(_backButton.Font ?? font).MeasureString(_backButton.Text).Width + backButtonPadding * 2;
                         _backButton.Bounds = new Rectangle(
-                            (Global.VIRTUAL_WIDTH - backButtonWidth) / 2, // Exact center
-                            166, // +1 pixel
+                            horizontalPadding + (availableWidth - backButtonWidth) / 2 + 1,
+                            170, // +4 pixels
                             backButtonWidth,
-                            backButtonH
+                            backButtonHeight
                         );
                         _backButton.Draw(spriteBatch, font, gameTime, transform, false, null, offset.Y);
                         break;
@@ -1021,7 +1023,7 @@ namespace ProjectVagabond.Battle.UI
                 }
             }
 
-            int backButtonY = 113 + boxHeight + 6; // +1 pixel
+            int backButtonY = 113 + boxHeight + 10; // +4 pixels
             var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
             int backWidth = (int)backSize.Width; // Exact width
             int backHeight = (int)backSize.Height; // Exact height
@@ -1062,7 +1064,7 @@ namespace ProjectVagabond.Battle.UI
             }
 
             const int backButtonTopMargin = 0;
-            int backButtonY = 123 + gridHeight + backButtonTopMargin + 3; // +1 pixel
+            int backButtonY = 123 + gridHeight + backButtonTopMargin + 7; // +4 pixels
             var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
             int backWidth = (int)backSize.Width; // Exact width
             int backHeight = (int)backSize.Height; // Exact height
@@ -1099,8 +1101,13 @@ namespace ProjectVagabond.Battle.UI
                 var buttonRect = new Rectangle(button.Bounds.X, button.Bounds.Y + (int)offset.Y, button.Bounds.Width, button.Bounds.Height);
 
                 // --- CHANGE START ---
-                // Shift background IN by 2 pixels on sides, 1 pixel on top/bottom
-                var hoverRect = new Rectangle(buttonRect.X + 2, buttonRect.Y + 1, buttonRect.Width - 4, buttonRect.Height - 2);
+                // Calculate visual bounds by shrinking the expanded hitbox back to original size
+                // Hitbox was expanded by 3 on left and 3 on right.
+                // So visual X is hitbox X + 3. Visual Width is hitbox Width - 6.
+                var visualRect = new Rectangle(buttonRect.X + 3, buttonRect.Y, buttonRect.Width - 6, buttonRect.Height);
+
+                // Shift background IN by 2 pixels on sides, 1 pixel on top/bottom relative to VISUAL rect
+                var hoverRect = new Rectangle(visualRect.X + 2, visualRect.Y + 1, visualRect.Width - 4, visualRect.Height - 2);
                 // --- CHANGE END ---
 
                 float rotation = (button is Button btn && button.IsHovered && button.IsEnabled) ? btn.CurrentHoverRotation : 0f;
@@ -1156,7 +1163,7 @@ namespace ProjectVagabond.Battle.UI
             }
 
             // --- FIXED BACK BUTTON POSITION ---
-            int backButtonY = 166; // +1 pixel
+            int backButtonY = 170; // +4 pixels
             var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
             int backWidth = (int)backSize.Width; // Exact width
             int backHeight = (int)backSize.Height; // Exact height

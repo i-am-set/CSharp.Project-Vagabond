@@ -130,7 +130,7 @@ namespace ProjectVagabond.UI
 
         private float _hoverRotationTimer = 0f;
         private const float HOVER_ROTATION_DURATION = 0.25f;
-        private const float BASE_ROTATION_MAGNITUDE = 0.04f;
+        private const float BASE_ROTATION_MAGNITUDE = 0.06f;
         private const float ROTATION_REFERENCE_WIDTH = 32f; 
         private const float HOVER_ROTATION_SPEED = 4.0f;
 
