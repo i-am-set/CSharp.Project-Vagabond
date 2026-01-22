@@ -4,11 +4,13 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Battle.UI;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using static ProjectVagabond.Battle.Abilities.InflictStatusStunAbility;
 
 namespace ProjectVagabond.Battle.UI
@@ -224,6 +226,21 @@ namespace ProjectVagabond.Battle.UI
                     spriteBatch.DrawSnapped(_backgroundSpriteSheet, centerPos, null, finalTintColor, _currentHoverRotation, origin, new Vector2(finalScaleX, finalScaleY), SpriteEffects.None, 0f);
                 }
 
+                // --- TEXT COLOR LOGIC (Moved up to apply to Icon) ---
+                Color textColor;
+                if (!IsEnabled || !canAfford)
+                {
+                    textColor = _global.ButtonDisableColor;
+                }
+                else if (isActivated)
+                {
+                    textColor = _global.ButtonHoverColor;
+                }
+                else
+                {
+                    textColor = _global.GameTextColor;
+                }
+
                 const int iconSize = 9;
                 const int iconPadding = 4;
 
@@ -245,27 +262,13 @@ namespace ProjectVagabond.Battle.UI
 
                 if (IconTexture != null && IconSourceRect.HasValue)
                 {
-                    spriteBatch.DrawSnapped(IconTexture, rotatedIconPos, IconSourceRect.Value, Color.White * contentAlpha, _currentHoverRotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
+                    // Use textColor for the icon tint
+                    spriteBatch.DrawSnapped(IconTexture, rotatedIconPos, IconSourceRect.Value, textColor * contentAlpha, _currentHoverRotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
                 }
                 else
                 {
                     // Fallback placeholder
                     spriteBatch.DrawSnapped(pixel, rotatedIconPos, null, _global.Palette_Pink * contentAlpha, _currentHoverRotation, iconOrigin, new Vector2(iconSize, iconSize), SpriteEffects.None, 0f);
-                }
-
-                // --- TEXT COLOR LOGIC ---
-                Color textColor;
-                if (!IsEnabled || !canAfford)
-                {
-                    textColor = _global.ButtonDisableColor;
-                }
-                else if (isActivated)
-                {
-                    textColor = _global.ButtonHoverColor;
-                }
-                else
-                {
-                    textColor = _global.GameTextColor;
                 }
 
                 // Text Position

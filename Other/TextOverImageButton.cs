@@ -27,6 +27,7 @@ namespace ProjectVagabond.UI
 
         // New properties for customization
         public bool TintIconOnHover { get; set; } = true;
+        public bool IconColorMatchesText { get; set; } = false; // New property to force icon color to match text
         public float ContentXOffset { get; set; } = 0f;
 
         // Animation State
@@ -152,6 +153,12 @@ namespace ProjectVagabond.UI
                     textColor = CustomDefaultTextColor ?? _global.Palette_Sun;
                     iconColor = Color.White;
                 }
+            }
+
+            // Override icon color if requested to match text
+            if (IconColorMatchesText)
+            {
+                iconColor = textColor;
             }
 
             // 3. Apply flash tint if active

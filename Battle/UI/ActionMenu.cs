@@ -104,7 +104,7 @@ namespace ProjectVagabond.Battle.UI
         public ActionMenu()
         {
             _global = ServiceLocator.Get<Global>();
-            _backButton = new Button(Rectangle.Empty, "BACK", enableHoverSway: false) { CustomDefaultTextColor = _global.Palette_DarkShadow };
+            _backButton = new Button(Rectangle.Empty, "BACK", enableHoverSway: false) { CustomDefaultTextColor = _global.DullTextColor };
             _backButton.OnClick += () => {
                 if (_currentState == MenuState.Targeting || _currentState == MenuState.Tooltip)
                 {
@@ -167,7 +167,8 @@ namespace ProjectVagabond.Battle.UI
                 EnableTextWave = true,
                 WaveEffectType = TextEffectType.LeftAlignedSmallWave,
                 TintIconOnHover = false,
-                ContentXOffset = 1f,
+                IconColorMatchesText = true, // Force icon to match text color
+                ContentXOffset = 3f,
                 CustomDefaultTextColor = _global.GameTextColor
             };
             strikeButton.OnClick += () => {
@@ -185,7 +186,8 @@ namespace ProjectVagabond.Battle.UI
                 EnableTextWave = true,
                 WaveEffectType = TextEffectType.LeftAlignedSmallWave,
                 TintIconOnHover = false,
-                ContentXOffset = 1f,
+                IconColorMatchesText = true, // Force icon to match text color
+                ContentXOffset = 3f,
                 CustomDefaultTextColor = _global.GameTextColor
             };
             stallButton.OnClick += () => {
@@ -198,7 +200,7 @@ namespace ProjectVagabond.Battle.UI
 
             _backButton.Font = secondaryFont;
 
-            _slot2BackButton = new Button(Rectangle.Empty, "BACK", enableHoverSway: false) { CustomDefaultTextColor = _global.Palette_DarkShadow };
+            _slot2BackButton = new Button(Rectangle.Empty, "BACK", enableHoverSway: false) { CustomDefaultTextColor = _global.DullTextColor };
             _slot2BackButton.OnClick += () => OnSlot2BackRequested?.Invoke();
             _slot2BackButton.Font = secondaryFont;
 
@@ -847,13 +849,11 @@ namespace ProjectVagabond.Battle.UI
                             var buttonBounds = new Rectangle(startX, currentY + specificYOffset, buttonWidth, buttonHeight);
                             button.Bounds = buttonBounds;
 
-                            // FIX: Apply offset.Y to the background rect so it animates with the text
                             var hoverRect = new Rectangle(buttonBounds.X, buttonBounds.Y + 1 + (int)offset.Y, buttonBounds.Width, buttonBounds.Height - 1);
 
                             if (button.IsEnabled)
                             {
                                 float rotation = button.IsHovered ? button.CurrentHoverRotation : 0f;
-                                // CHANGE HERE: Use Palette_DarkestPale when hovered
                                 Color buttonBgColor = button.IsHovered ? _global.Palette_DarkestPale : _global.Palette_DarkShadow;
                                 DrawBeveledBackground(spriteBatch, pixel, hoverRect, buttonBgColor, rotation);
                             }
@@ -1003,7 +1003,7 @@ namespace ProjectVagabond.Battle.UI
                     tooltipBounds.Center.X - nameSize.Width / 2,
                     tooltipBounds.Y + 8
                 );
-                spriteBatch.DrawStringSnapped(font, moveName, namePos, _global.Palette_Sun);
+                spriteBatch.DrawStringSnapped(font, moveName, namePos, _global.GameTextColor);
 
                 if (!string.IsNullOrEmpty(_tooltipMove.Description))
                 {
@@ -1310,21 +1310,21 @@ namespace ProjectVagabond.Battle.UI
                     }
 
                     // POW Couple
-                    statsSegments.Add(("POW ", _global.Palette_DarkShadow, tertiaryFont));
-                    statsSegments.Add((powerText, _global.Palette_Sun, secondaryFont));
+                    statsSegments.Add(("POW ", _global.DullTextColor, tertiaryFont));
+                    statsSegments.Add((powerText, _global.GameTextColor, secondaryFont));
 
                     // Gap
                     statsSegments.Add(("  ", Color.Transparent, secondaryFont));
 
                     // ACC Couple
-                    statsSegments.Add(("ACC ", _global.Palette_DarkShadow, tertiaryFont));
-                    statsSegments.Add((accuracyText, _global.Palette_Sun, secondaryFont));
+                    statsSegments.Add(("ACC ", _global.DullTextColor, tertiaryFont));
+                    statsSegments.Add((accuracyText, _global.GameTextColor, secondaryFont));
 
                     // MANA
                     string manaText = move.ManaCost > 0 ? $"{move.ManaCost}%" : "---";
                     statsSegments.Add(("  ", Color.Transparent, secondaryFont));
-                    statsSegments.Add(("MANA ", _global.Palette_DarkShadow, tertiaryFont));
-                    statsSegments.Add((manaText, _global.Palette_Sun, secondaryFont));
+                    statsSegments.Add(("MANA ", _global.DullTextColor, tertiaryFont));
+                    statsSegments.Add((manaText, _global.GameTextColor, secondaryFont));
 
                     // USE (Already inside !Status check)
                     string offStatVal = move.OffensiveStat switch
@@ -1342,11 +1342,11 @@ namespace ProjectVagabond.Battle.UI
                         OffensiveStatType.Intelligence => _global.StatColor_Intelligence,
                         OffensiveStatType.Tenacity => _global.StatColor_Tenacity,
                         OffensiveStatType.Agility => _global.StatColor_Agility,
-                        _ => _global.Palette_Sun
+                        _ => _global.GameTextColor
                     };
 
                     statsSegments.Add(("  ", Color.Transparent, secondaryFont));
-                    statsSegments.Add(("USE ", _global.Palette_DarkShadow, tertiaryFont));
+                    statsSegments.Add(("USE ", _global.DullTextColor, tertiaryFont));
                     statsSegments.Add((offStatVal, offColor, secondaryFont));
                     statsSegments.Add((" ", Color.Transparent, secondaryFont)); // The requested space
                 }
@@ -1406,7 +1406,7 @@ namespace ProjectVagabond.Battle.UI
                     spriteBatch.GraphicsDevice.ScissorRectangle = clipRect;
 
                     var scrollingTextPosition = new Vector2(namePos.X - _tooltipScrollPosition, namePos.Y);
-                    spriteBatch.DrawStringSnapped(font, move.MoveName.ToUpper(), scrollingTextPosition, _global.Palette_Sun);
+                    spriteBatch.DrawStringSnapped(font, move.MoveName.ToUpper(), scrollingTextPosition, _global.GameTextColor);
 
                     spriteBatch.End();
                     spriteBatch.GraphicsDevice.ScissorRectangle = originalScissorRect;
@@ -1415,13 +1415,13 @@ namespace ProjectVagabond.Battle.UI
                 else
                 {
                     _isTooltipScrollingInitialized = false;
-                    spriteBatch.DrawStringSnapped(font, moveName, namePos, _global.Palette_Sun);
+                    spriteBatch.DrawStringSnapped(font, moveName, namePos, _global.GameTextColor);
                 }
                 currentY += nameSize.Height + 1;
 
                 var underlineStart = new Vector2(bounds.X + horizontalPadding, currentY);
                 var underlineEnd = new Vector2(bounds.Right - horizontalPadding, currentY);
-                spriteBatch.DrawLineSnapped(underlineStart, underlineEnd, _global.Palette_DarkShadow);
+                spriteBatch.DrawLineSnapped(underlineStart, underlineEnd, _global.DullTextColor);
                 currentY += 3;
 
                 // --- BOTTOM LEFT INFO (Target & Contact) ---
@@ -1430,7 +1430,7 @@ namespace ProjectVagabond.Battle.UI
 
                 if (!string.IsNullOrEmpty(targetValue))
                 {
-                    spriteBatch.DrawStringSnapped(tertiaryFont, targetValue, new Vector2(leftTextX, bottomTextY), _global.Palette_DarkShadow);
+                    spriteBatch.DrawStringSnapped(tertiaryFont, targetValue, new Vector2(leftTextX, bottomTextY), _global.DullTextColor);
                 }
 
                 if (move.MakesContact)
