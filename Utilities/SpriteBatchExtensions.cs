@@ -10,29 +10,42 @@ namespace ProjectVagabond.Utils
 {
     /// <summary>
     /// Provides drawing extension methods.
-    /// UPDATED: Removed pixel-snapping rounding to allow for smooth sub-pixel animation.
+    /// UPDATED: Improved text shadow color calculation to prevent "muddy" look.
     /// </summary>
     public static class SpriteBatchExtensions
     {
+        // A dark, neutral gray base for text shadows. 
+        // Slightly cool-toned (Blue-ish) to match the UI palette.
+        private static readonly Color _shadowBaseColor = new Color(20, 20, 25);
+
+        private static Color GetCleanerShadowColor(Color textColor)
+        {
+            // Mix the dark base with 20% of the text color.
+            // This creates a shadow that is dark and readable, but slightly tinted by the text.
+            var shadow = Color.Lerp(_shadowBaseColor, textColor, 0.2f);
+            shadow.A = textColor.A; // Preserve alpha transparency
+            return shadow;
+        }
+
         // --- DrawStringSnapped (Now Smooth) ---
 
         public static void DrawStringSnapped(this SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color color)
         {
-            var shadowColor = new Color(color.R / 4, color.G / 4, color.B / 4, color.A);
+            var shadowColor = GetCleanerShadowColor(color);
             spriteBatch.DrawString(font, text, position + new Vector2(1, 0), shadowColor);
             spriteBatch.DrawString(font, text, position, color);
         }
 
         public static void DrawStringSnapped(this SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color color, float rotation, Vector2 origin, float scale, SpriteEffects effects, float layerDepth)
         {
-            var shadowColor = new Color(color.R / 4, color.G / 4, color.B / 4, color.A);
+            var shadowColor = GetCleanerShadowColor(color);
             spriteBatch.DrawString(font, text, position + new Vector2(1, 0), shadowColor, rotation, origin, scale, effects, layerDepth);
             spriteBatch.DrawString(font, text, position, color, rotation, origin, scale, effects, layerDepth);
         }
 
         public static void DrawStringSnapped(this SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color color, float rotation, Vector2 origin, Vector2 scale, SpriteEffects effects, float layerDepth)
         {
-            var shadowColor = new Color(color.R / 4, color.G / 4, color.B / 4, color.A);
+            var shadowColor = GetCleanerShadowColor(color);
             spriteBatch.DrawString(font, text, position + new Vector2(1, 0), shadowColor, rotation, origin, scale, effects, layerDepth);
             spriteBatch.DrawString(font, text, position, color, rotation, origin, scale, effects, layerDepth);
         }
@@ -48,7 +61,7 @@ namespace ProjectVagabond.Utils
             spriteBatch.DrawString(font, text, position + new Vector2(0, -1), outlineColor);
 
             // 2. Draw Depth Shadow
-            var shadowColor = new Color(textColor.R / 4, textColor.G / 4, textColor.B / 4, textColor.A);
+            var shadowColor = GetCleanerShadowColor(textColor);
             spriteBatch.DrawString(font, text, position + new Vector2(1, 0), shadowColor);
 
             // 3. Draw main text
@@ -64,7 +77,7 @@ namespace ProjectVagabond.Utils
             spriteBatch.DrawString(font, text, position + new Vector2(0, -1), outlineColor, rotation, origin, scale, effects, layerDepth);
 
             // 2. Draw Depth Shadow
-            var shadowColor = new Color(textColor.R / 4, textColor.G / 4, textColor.B / 4, textColor.A);
+            var shadowColor = GetCleanerShadowColor(textColor);
             spriteBatch.DrawString(font, text, position + new Vector2(1, 0), shadowColor, rotation, origin, scale, effects, layerDepth);
 
             // 3. Draw main text
@@ -80,7 +93,7 @@ namespace ProjectVagabond.Utils
             spriteBatch.DrawString(font, text, position + new Vector2(0, -1), outlineColor, rotation, origin, scale, effects, layerDepth);
 
             // 2. Draw Depth Shadow
-            var shadowColor = new Color(textColor.R / 4, textColor.G / 4, textColor.B / 4, textColor.A);
+            var shadowColor = GetCleanerShadowColor(textColor);
             spriteBatch.DrawString(font, text, position + new Vector2(1, 0), shadowColor, rotation, origin, scale, effects, layerDepth);
 
             // 3. Draw main text
@@ -104,7 +117,7 @@ namespace ProjectVagabond.Utils
             spriteBatch.DrawString(font, text, position + new Vector2(0, -1), outlineColor);
 
             // Depth Shadow
-            var shadowColor = new Color(textColor.R / 4, textColor.G / 4, textColor.B / 4, textColor.A);
+            var shadowColor = GetCleanerShadowColor(textColor);
             spriteBatch.DrawString(font, text, position + new Vector2(1, 0), shadowColor);
 
             // Main text
@@ -126,7 +139,7 @@ namespace ProjectVagabond.Utils
             spriteBatch.DrawString(font, text, position + new Vector2(0, -1), outlineColor, rotation, origin, scale, effects, layerDepth);
 
             // Depth Shadow
-            var shadowColor = new Color(textColor.R / 4, textColor.G / 4, textColor.B / 4, textColor.A);
+            var shadowColor = GetCleanerShadowColor(textColor);
             spriteBatch.DrawString(font, text, position + new Vector2(1, 0), shadowColor, rotation, origin, scale, effects, layerDepth);
 
             // Main text

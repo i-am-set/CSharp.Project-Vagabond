@@ -184,20 +184,20 @@ namespace ProjectVagabond.Scenes
             var pixel = ServiceLocator.Get<Texture2D>();
 
             // --- Bar Style Parameters ---
-            const int BAR_WIDTH = 100;
+            const int BAR_WIDTH = 150;
             const int BAR_HEIGHT = 1;
             const int TEXT_PADDING_ABOVE_BAR = 5;
 
             // 1. Calculate positions in virtual space
             int barX = (Global.VIRTUAL_WIDTH - BAR_WIDTH) / 2;
-            int barY = (Global.VIRTUAL_HEIGHT - BAR_HEIGHT) / 2;
+            int barY = (Global.VIRTUAL_HEIGHT - BAR_HEIGHT - 16);
             int filledWidth = (int)(BAR_WIDTH * _visualProgress);
 
             // 2. Draw the background and filled portion of the loading bar
             var barBgRect = new Rectangle(barX, barY, BAR_WIDTH, BAR_HEIGHT);
             var barFillRect = new Rectangle(barX, barY, filledWidth, BAR_HEIGHT);
-            spriteBatch.DrawSnapped(pixel, barBgRect, _global.Palette_Black);
-            spriteBatch.DrawSnapped(pixel, barFillRect, _global.Palette_DarkShadow);
+            spriteBatch.DrawSnapped(pixel, barBgRect, _global.ButtonDisableColor);
+            spriteBatch.DrawSnapped(pixel, barFillRect, _global.GameTextColor);
 
             // 3. Get the current loading text
             string loadingText;
@@ -233,7 +233,7 @@ namespace ProjectVagabond.Scenes
                     (Global.VIRTUAL_WIDTH - textSize.X) / 2,
                     barY - textSize.Y - TEXT_PADDING_ABOVE_BAR
                 );
-                spriteBatch.DrawStringSnapped(font, loadingText, textPosition, _global.Palette_DarkShadow);
+                spriteBatch.DrawStringSnapped(font, loadingText, textPosition, _global.GameTextColor);
             }
         }
 

@@ -64,8 +64,8 @@ namespace ProjectVagabond.Battle.UI
 
             // Configure Text Animation
             EnableTextWave = true;
-            // Use RightAlignedSmallWave to match the leftward expansion of text
-            WaveEffectType = TextEffectType.SmallWave;
+            // Use LeftAlignedSmallWave to match the left alignment
+            WaveEffectType = TextEffectType.LeftAlignedSmallWave;
         }
 
         public void TriggerAppearAnimation()
@@ -227,10 +227,11 @@ namespace ProjectVagabond.Battle.UI
                 const int iconSize = 9;
                 const int iconPadding = 4;
 
-                // --- CENTERED LAYOUT CALCULATION ---
+                // --- LEFT ALIGNED LAYOUT CALCULATION ---
                 var moveNameTextSize = _moveFont.MeasureString(this.Text);
-                float totalContentWidth = iconSize + iconPadding + moveNameTextSize.Width;
-                float startX = -totalContentWidth / 2f;
+                // Fixed left padding from the button's left edge
+                const int contentLeftPadding = 6;
+                float startX = -Bounds.Width / 2f + contentLeftPadding;
 
                 // Icon Positioning Relative to Center
                 float iconLocalX = startX + (iconSize / 2f); // Center of icon

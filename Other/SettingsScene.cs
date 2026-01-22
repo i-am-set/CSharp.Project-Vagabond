@@ -255,6 +255,8 @@ namespace ProjectVagabond.Scenes
             int startButtonY = Global.VIRTUAL_HEIGHT - bottomMargin - (3 * BUTTON_VERTICAL_SPACING);
             Vector2 currentButtonPos = new Vector2(SETTINGS_PANEL_X, startButtonY);
 
+            var font = ServiceLocator.Get<BitmapFont>();
+
             foreach (var item in _uiElements)
             {
                 if (item is ISettingControl)
@@ -266,12 +268,17 @@ namespace ProjectVagabond.Scenes
                 {
                     _uiElementPositions.Add(currentButtonPos);
 
-                    // Update button bounds immediately to reflect the new anchored position
-                    // Height is 12, no Y offset
+                    // Measure text to determine width
+                    var textSize = font.MeasureString(button.Text);
+                    int width = (int)textSize.Width + 20;
+
+                    // Center the button horizontally on the screen
+                    int centeredX = (Global.VIRTUAL_WIDTH - width) / 2;
+
                     button.Bounds = new Rectangle(
-                        (int)currentButtonPos.X - 5,
+                        centeredX,
                         (int)currentButtonPos.Y,
-                        SETTINGS_PANEL_WIDTH + 10,
+                        width,
                         BUTTON_VERTICAL_SPACING
                     );
 
@@ -361,8 +368,8 @@ namespace ProjectVagabond.Scenes
             _tempSettings.IsFrameLimiterEnabled = _settings.IsFrameLimiterEnabled;
             _tempSettings.TargetFramerate = _settings.TargetFramerate;
             _tempSettings.SmallerUi = _settings.SmallerUi;
-            _tempSettings.UseImperialUnits = _settings.UseImperialUnits;
-            _tempSettings.Use24HourClock = _settings.Use24HourClock;
+            _tempSettings.UseImperialUnits = _tempSettings.UseImperialUnits;
+            _tempSettings.Use24HourClock = _tempSettings.Use24HourClock;
             _tempSettings.DisplayIndex = _settings.DisplayIndex;
             _tempSettings.Gamma = _settings.Gamma;
             foreach (var item in _uiElements.OfType<ISettingControl>()) item.RefreshValue();
@@ -606,12 +613,22 @@ namespace ProjectVagabond.Scenes
 
                 if (isSelected)
                 {
-                    bool isHovered = (item is ISettingControl s && new Rectangle((int)currentPos.X - 5, (int)currentPos.Y, SETTINGS_PANEL_WIDTH + 10, ITEM_VERTICAL_SPACING).Contains(virtualMousePos)) || (item is Button b && b.IsHovered);
-                    if (isHovered || keyboardNavigatedLastFrame)
+                    if (item is ISettingControl)
                     {
-                        float itemHeight = (item is ISettingControl) ? ITEM_VERTICAL_SPACING : (item is Button) ? BUTTON_VERTICAL_SPACING : 0;
-                        // Draw highlight box expanded by 1px up and down to make it 14px tall
-                        if (itemHeight > 0) DrawRectangleBorder(spriteBatch, pixel, new Rectangle((int)currentPos.X - 5, (int)currentPos.Y - 1, SETTINGS_PANEL_WIDTH + 10, (int)itemHeight + 2), 1, _global.ButtonHoverColor);
+                        var hoverRect = new Rectangle((int)currentPos.X - 5, (int)currentPos.Y, SETTINGS_PANEL_WIDTH + 10, ITEM_VERTICAL_SPACING);
+                        if (hoverRect.Contains(virtualMousePos) || keyboardNavigatedLastFrame)
+                        {
+                            // Draw highlight box expanded by 1px up and down to make it 14px tall
+                            DrawRectangleBorder(spriteBatch, pixel, new Rectangle(hoverRect.X, hoverRect.Y - 1, hoverRect.Width, hoverRect.Height + 2), 1, _global.ButtonHoverColor);
+                        }
+                    }
+                    else if (item is Button button)
+                    {
+                        if (button.IsHovered || keyboardNavigatedLastFrame)
+                        {
+                            // Draw highlight box for button
+                            DrawRectangleBorder(spriteBatch, pixel, new Rectangle(button.Bounds.X, button.Bounds.Y - 1, button.Bounds.Width, button.Bounds.Height + 2), 1, _global.ButtonHoverColor);
+                        }
                     }
                 }
 

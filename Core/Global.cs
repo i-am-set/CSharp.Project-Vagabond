@@ -86,7 +86,7 @@ namespace ProjectVagabond
             ColorNarration_Defeated = Palette_Red;
             ColorNarration_Escaped = Palette_Blue;
             ColorNarration_Enemy = Palette_Red;
-            ColorNarration_Status = Palette_Purple;
+            ColorNarration_Status = Palette_Shadow;
             ColorNarration_Health = Color.Lime;
             ColorNarration_RestModifier = Color.Magenta;
 

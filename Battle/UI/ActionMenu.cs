@@ -157,26 +157,30 @@ namespace ProjectVagabond.Battle.UI
             _actionButtons.Add(actButton);
             _actionButtons.Add(switchButton);
 
-            var strikeButton = new TextOverImageButton(Rectangle.Empty, "STRIKE", null, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[0], enableHoverSway: false, customHoverTextColor: _global.Palette_Red)
+            var strikeButton = new TextOverImageButton(Rectangle.Empty, "STRIKE", null, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[0], enableHoverSway: false, customHoverTextColor: _global.Palette_Red, alignLeft: true)
             {
                 HasRightClickHint = false,
                 HasMiddleClickHint = true,
                 TintBackgroundOnHover = false,
                 DrawBorderOnHover = false,
-                HoverBorderColor = _global.Palette_Red
+                HoverBorderColor = _global.Palette_Red,
+                EnableTextWave = true,
+                WaveEffectType = TextEffectType.LeftAlignedSmallWave
             };
             strikeButton.OnClick += () => {
                 OnStrikeRequested?.Invoke(_player);
             };
             _secondaryActionButtons.Add(strikeButton);
 
-            var stallButton = new TextOverImageButton(Rectangle.Empty, "STALL", null, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[2], enableHoverSway: false, customHoverTextColor: _global.Palette_Red)
+            var stallButton = new TextOverImageButton(Rectangle.Empty, "STALL", null, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[2], enableHoverSway: false, customHoverTextColor: _global.Palette_Red, alignLeft: true)
             {
                 HasRightClickHint = false,
                 HasMiddleClickHint = true,
                 TintBackgroundOnHover = false,
                 DrawBorderOnHover = false,
-                HoverBorderColor = _global.Palette_Red
+                HoverBorderColor = _global.Palette_Red,
+                EnableTextWave = true,
+                WaveEffectType = TextEffectType.LeftAlignedSmallWave
             };
             stallButton.OnClick += () => {
                 if (BattleDataCache.Moves.TryGetValue("6", out var stallMove))
@@ -836,12 +840,16 @@ namespace ProjectVagabond.Battle.UI
 
                             var buttonBounds = new Rectangle(startX, currentY + specificYOffset, buttonWidth, buttonHeight);
                             button.Bounds = buttonBounds;
-                            var hoverRect = new Rectangle(buttonBounds.X, buttonBounds.Y + 1, buttonBounds.Width, buttonBounds.Height - 1);
+
+                            // FIX: Apply offset.Y to the background rect so it animates with the text
+                            var hoverRect = new Rectangle(buttonBounds.X, buttonBounds.Y + 1 + (int)offset.Y, buttonBounds.Width, buttonBounds.Height - 1);
 
                             if (button.IsEnabled)
                             {
                                 float rotation = button.IsHovered ? button.CurrentHoverRotation : 0f;
-                                DrawBeveledBackground(spriteBatch, pixel, hoverRect, _global.Palette_DarkShadow, rotation);
+                                // CHANGE HERE: Use Palette_DarkestPale when hovered
+                                Color buttonBgColor = button.IsHovered ? _global.Palette_DarkestPale : _global.Palette_DarkShadow;
+                                DrawBeveledBackground(spriteBatch, pixel, hoverRect, buttonBgColor, rotation);
                             }
 
                             button.Draw(spriteBatch, font, gameTime, transform, false, null, offset.Y);
@@ -1117,10 +1125,12 @@ namespace ProjectVagabond.Battle.UI
                 var hoverRect = new Rectangle(visualRect.X + 2, visualRect.Y + 1, visualRect.Width - 4, visualRect.Height - 2);
                 // --- CHANGE END ---
 
-                float rotation = (button is Button btn && button.IsHovered && button.IsEnabled) ? btn.CurrentHoverRotation : 0f;
+                bool isHovered = (button is Button btn && btn.IsHovered && btn.IsEnabled);
+                Color secBgColor = isHovered ? _global.Palette_DarkestPale : _global.Palette_DarkShadow;
+                float rotation = isHovered ? ((Button)button).CurrentHoverRotation : 0f;
 
                 // Always draw background (DarkShadow)
-                DrawBeveledBackground(spriteBatch, pixel, hoverRect, _global.Palette_DarkShadow, rotation);
+                DrawBeveledBackground(spriteBatch, pixel, hoverRect, secBgColor, rotation);
 
                 button.Draw(spriteBatch, font, gameTime, transform, false, null, offset.Y, button.Text == "ATTUNE" ? (Color?)null : null);
             }
@@ -1158,8 +1168,10 @@ namespace ProjectVagabond.Battle.UI
                     // Always draw the background plate
                     // Shift background IN by 1 pixel on all sides
                     var bgRect = new Rectangle(offsetBounds.X + 1, offsetBounds.Y + 1, offsetBounds.Width - 2, offsetBounds.Height - 2);
-                    float rotation = (button.IsHovered && button.IsEnabled) ? button.CurrentHoverRotation : 0f;
-                    DrawBeveledBackground(spriteBatch, pixel, bgRect, _global.Palette_DarkShadow, rotation);
+                    bool isHovered = (button.IsHovered && button.IsEnabled);
+                    Color moveBgColor = isHovered ? _global.Palette_DarkestPale : _global.Palette_DarkShadow;
+                    float rotation = isHovered ? button.CurrentHoverRotation : 0f;
+                    DrawBeveledBackground(spriteBatch, pixel, bgRect, moveBgColor, rotation);
                     // --- CHANGE END ---
 
                     var originalBounds = button.Bounds;
@@ -1267,7 +1279,7 @@ namespace ProjectVagabond.Battle.UI
                 {
                     MoveType.Spell => _global.ColorNarration_Spell,
                     MoveType.Action => _global.ColorNarration_Action,
-                    _ => _global.Palette_DarkShadow
+                    _ => _global.ColorNarration_Status
                 };
 
                 string impactTypeText = move.ImpactType.ToString().ToUpper();
@@ -1275,7 +1287,7 @@ namespace ProjectVagabond.Battle.UI
                 {
                     ImpactType.Physical => _global.ColorNarration_Action,
                     ImpactType.Magical => _global.ColorNarration_Spell,
-                    _ => _global.Palette_DarkShadow
+                    _ => _global.ColorNarration_Status
                 };
 
                 var statsSegments = new List<(string Text, Color Color, BitmapFont Font)>();

@@ -150,6 +150,9 @@ namespace ProjectVagabond.UI
     /// </summary>
     public static class TextAnimator
     {
+        // A dark, neutral gray base for text shadows. 
+        private static readonly Color _shadowBaseColor = new Color(20, 20, 25);
+
         public static void ClearFontCache()
         {
             // No-op, caches removed
@@ -420,7 +423,9 @@ namespace ProjectVagabond.UI
             if (string.IsNullOrEmpty(text)) return;
 
             Vector2 layoutScale = options.Scale;
-            var shadowColor = new Color(options.Color.R / 4, options.Color.G / 4, options.Color.B / 4, options.Color.A);
+
+            var shadowColor = Color.Lerp(_shadowBaseColor, options.Color, 0.2f);
+            shadowColor.A = options.Color.A;
 
             // Calculate center of the text block for rotation pivot
             Vector2 totalSize = font.MeasureString(text);
