@@ -59,7 +59,7 @@ namespace ProjectVagabond.UI
             {
                 // If selected, force BOTH default and hover colors to the toggled color (Yellow).
                 // This prevents the base Button.Draw from switching to Red when hovered.
-                Color selectedColor = CustomToggledTextColor ?? _global.Palette_Yellow;
+                Color selectedColor = CustomToggledTextColor ?? _global.Palette_DarkSun;
                 this.CustomDefaultTextColor = selectedColor;
                 this.CustomHoverTextColor = selectedColor;
 

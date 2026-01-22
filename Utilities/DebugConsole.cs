@@ -167,8 +167,8 @@ namespace ProjectVagabond.Utils
                 Color baseColor = _global.Palette_LightGray;
                 switch (log.Severity)
                 {
-                    case LogSeverity.Warning: baseColor = _global.Palette_Yellow; break;
-                    case LogSeverity.Error: baseColor = _global.Palette_Red; break;
+                    case LogSeverity.Warning: baseColor = _global.Palette_DarkSun; break;
+                    case LogSeverity.Error: baseColor = _global.Palette_Rust; break;
                     case LogSeverity.Critical: baseColor = Color.Magenta; break;
                     case LogSeverity.Info: baseColor = _global.Palette_LightGray; break;
                 }
@@ -503,7 +503,7 @@ namespace ProjectVagabond.Utils
 
                 _stringBuilder.Clear();
                 _stringBuilder.Append("> ").Append(_currentInput).Append(carat);
-                spriteBatch.DrawString(activeFont, _stringBuilder.ToString(), new Vector2(5, inputLineY), _global.Palette_Yellow);
+                spriteBatch.DrawString(activeFont, _stringBuilder.ToString(), new Vector2(5, inputLineY), _global.Palette_DarkSun);
 
                 DrawAutoComplete(spriteBatch, activeFont, inputLineY);
 
@@ -550,7 +550,7 @@ namespace ProjectVagabond.Utils
             for (int i = 0; i < visibleSuggestions; i++)
             {
                 bool isSelected = i == _autoCompleteManager.SelectedAutoCompleteSuggestionIndex;
-                Color color = isSelected ? _global.Palette_Yellow : _global.Palette_LightGray;
+                Color color = isSelected ? _global.Palette_DarkSun : _global.Palette_LightGray;
                 string suggestion = _autoCompleteManager.AutoCompleteSuggestions[i];
                 float suggestionY = boxBounds.Bottom - (i + 1) * Global.TERMINAL_LINE_SPACING - 2;
 
@@ -647,7 +647,7 @@ namespace ProjectVagabond.Utils
                 case "/": return _global.Palette_Sun; // Reset
             }
 
-            // 2. Try Global Palette Properties (e.g. "Palette_Red", "StatColor_Strength")
+            // 2. Try Global Palette Properties (e.g. "Palette_Rust", "StatColor_Strength")
             var globalProp = typeof(Global).GetProperty(colorName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.IgnoreCase);
             if (globalProp != null && globalProp.PropertyType == typeof(Color))
             {

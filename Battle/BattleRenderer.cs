@@ -1041,7 +1041,7 @@ namespace ProjectVagabond.Battle.UI
                     if (healFlash != null)
                     {
                         float p = healFlash.Timer / BattleAnimationManager.HealFlashAnimationState.Duration;
-                        tint = Color.Lerp(Color.White, _global.Palette_Green, (1f - Easing.EaseOutQuad(p)) * 0.8f);
+                        tint = Color.Lerp(Color.White, _global.Palette_Leaf, (1f - Easing.EaseOutQuad(p)) * 0.8f);
                     }
 
                     var hitstop = animManager.GetHitstopVisualState(enemy.CombatantID);
@@ -1271,7 +1271,7 @@ namespace ProjectVagabond.Battle.UI
                 if (healFlash != null)
                 {
                     float p = healFlash.Timer / BattleAnimationManager.HealFlashAnimationState.Duration;
-                    tint = Color.Lerp(tint, _global.Palette_Green * alpha, (1f - Easing.EaseOutQuad(p)) * 0.8f);
+                    tint = Color.Lerp(tint, _global.Palette_Leaf * alpha, (1f - Easing.EaseOutQuad(p)) * 0.8f);
                 }
 
                 float bob = CalculateAttackBobOffset(player.CombatantID, true);
@@ -1376,7 +1376,7 @@ namespace ProjectVagabond.Battle.UI
                     {
                         Vector2 nameSize = font.MeasureString(player.Name);
                         Vector2 namePos = new Vector2(center.X - nameSize.X / 2f, BattleLayout.PLAYER_NAME_TOP_Y);
-                        Color nameColor = (highlight == Color.Yellow) ? _global.Palette_Yellow : _global.Palette_Sun;
+                        Color nameColor = (highlight == Color.Yellow) ? _global.Palette_DarkSun : _global.Palette_Sun;
 
                         // --- NAME DIMMING LOGIC ---
                         bool isHovered = (hoveredCombatant == player) || (uiManager.HoveredCombatantFromUI == player);

@@ -316,7 +316,7 @@ namespace ProjectVagabond.Scenes
                     (Global.VIRTUAL_HEIGHT / 3) + bobOffset
                 ) + titleState.Offset;
 
-                Color drawColor = _global.Palette_Red * titleState.Opacity;
+                Color drawColor = _global.Palette_Rust * titleState.Opacity;
 
                 spriteBatch.DrawStringSnapped(font, title, titlePos, drawColor, 0f, origin, titleState.Scale, SpriteEffects.None, 0f);
             }

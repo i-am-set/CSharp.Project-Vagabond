@@ -1646,7 +1646,7 @@ namespace ProjectVagabond.Scenes
                         _nodeTextWaveTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
                         // Use Wave effect
-                        TextAnimator.DrawTextWithEffect(spriteBatch, secondaryFont, nodeText, textPosition, _global.Palette_Yellow, TextEffectType.Wave, _nodeTextWaveTimer);
+                        TextAnimator.DrawTextWithEffect(spriteBatch, secondaryFont, nodeText, textPosition, _global.Palette_DarkSun, TextEffectType.Wave, _nodeTextWaveTimer);
                     }
                 }
             }

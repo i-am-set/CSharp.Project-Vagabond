@@ -774,7 +774,7 @@ namespace ProjectVagabond.Battle.Abilities
                                 owner.EquippedWeaponId = null;
                             }
 
-                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_red]{owner.Name}'s {weaponData.WeaponName} shattered![/]" });
+                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[Palette_Rust]{owner.Name}'s {weaponData.WeaponName} shattered![/]" });
                             _hapticsManager.TriggerCompoundShake(0.5f);
                             EventBus.Publish(new GameEvents.AbilityActivated { Combatant = owner, Ability = this });
                         }

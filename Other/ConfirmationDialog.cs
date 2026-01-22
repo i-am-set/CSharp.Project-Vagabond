@@ -228,7 +228,7 @@ namespace ProjectVagabond.UI
                     var wrappedDetail = WrapText(font, detail, _dialogBounds.Width - 60);
                     foreach (var line in wrappedDetail)
                     {
-                        spriteBatch.DrawString(font, line, new Vector2(_dialogBounds.X + 30, currentY), _global.Palette_White);
+                        spriteBatch.DrawString(font, line, new Vector2(_dialogBounds.X + 30, currentY), _global.Palette_Sun);
                         currentY += font.LineHeight + Global.APPLY_OPTION_DIFFERENCE_TEXT_LINE_SPACING;
                     }
                 }
@@ -271,9 +271,9 @@ namespace ProjectVagabond.UI
                 Color color;
                 switch (colorName)
                 {
-                    case "red": color = _global.Palette_Red; break;
-                    case "green": color = _global.Palette_Green; break;
-                    case "yellow": color = _global.Palette_Yellow; break;
+                    case "red": color = _global.Palette_Rust; break;
+                    case "green": color = _global.Palette_Leaf; break;
+                    case "yellow": color = _global.Palette_DarkSun; break;
                     case "chighlight": color = _global.ColorNarration_Highlight; break;
                     case "cdull": color = _global.ColorNarration_Dull; break;
                     default: return (taggedText, null);

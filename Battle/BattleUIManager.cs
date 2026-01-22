@@ -524,7 +524,7 @@ namespace ProjectVagabond.Battle.UI
                     }
                     else
                     {
-                        textColor = _global.Palette_Red;
+                        textColor = _global.Palette_Rust;
                     }
 
                     if (shouldHighlight)
@@ -591,7 +591,7 @@ namespace ProjectVagabond.Battle.UI
                 font,
                 text,
                 textPos,
-                _global.Palette_Red,
+                _global.Palette_Rust,
                 _global.Palette_Black,
                 TextEffectType.DriftWave,
                 _targetingTextAnimTimer

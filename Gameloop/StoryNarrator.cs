@@ -364,10 +364,10 @@ namespace ProjectVagabond.UI
 
             // Draw Background - Fully Opaque
             spriteBatch.DrawSnapped(pixel, panelBounds, _global.TerminalBg);
-            spriteBatch.DrawLineSnapped(new Vector2(panelBounds.Left, panelBounds.Top), new Vector2(panelBounds.Right, panelBounds.Top), _global.Palette_White);
-            spriteBatch.DrawLineSnapped(new Vector2(panelBounds.Left, panelBounds.Bottom), new Vector2(panelBounds.Right, panelBounds.Bottom), _global.Palette_White);
-            spriteBatch.DrawLineSnapped(new Vector2(panelBounds.Left, panelBounds.Top), new Vector2(panelBounds.Left, panelBounds.Bottom), _global.Palette_White);
-            spriteBatch.DrawLineSnapped(new Vector2(panelBounds.Right, panelBounds.Top), new Vector2(panelBounds.Right, panelBounds.Bottom), _global.Palette_White);
+            spriteBatch.DrawLineSnapped(new Vector2(panelBounds.Left, panelBounds.Top), new Vector2(panelBounds.Right, panelBounds.Top), _global.Palette_Sun);
+            spriteBatch.DrawLineSnapped(new Vector2(panelBounds.Left, panelBounds.Bottom), new Vector2(panelBounds.Right, panelBounds.Bottom), _global.Palette_Sun);
+            spriteBatch.DrawLineSnapped(new Vector2(panelBounds.Left, panelBounds.Top), new Vector2(panelBounds.Left, panelBounds.Bottom), _global.Palette_Sun);
+            spriteBatch.DrawLineSnapped(new Vector2(panelBounds.Right, panelBounds.Top), new Vector2(panelBounds.Right, panelBounds.Bottom), _global.Palette_Sun);
 
             // Draw Text
             int globalCharIndex = 0; // For animation continuity
@@ -450,7 +450,7 @@ namespace ProjectVagabond.UI
                 var arrowSize = font.MeasureString(arrow);
                 float yOffset = ((float)gameTime.TotalGameTime.TotalSeconds * 4 % 1.0f > 0.5f) ? -1f : 0f;
                 var indicatorPosition = new Vector2(panelBounds.Right - padding - arrowSize.Width, panelBounds.Bottom - padding - arrowSize.Height + yOffset);
-                spriteBatch.DrawStringSnapped(font, arrow, indicatorPosition, _global.Palette_Yellow);
+                spriteBatch.DrawStringSnapped(font, arrow, indicatorPosition, _global.Palette_DarkSun);
             }
         }
     }

@@ -47,8 +47,8 @@ namespace ProjectVagabond
             _commands["help"] = new Command("help", (args) =>
             {
                 var sb = new StringBuilder();
-                sb.AppendLine("[palette_yellow]Available Commands:[/]");
-                sb.AppendLine("  [palette_blue]System & Debug[/]");
+                sb.AppendLine("[Palette_DarkSun]Available Commands:[/]");
+                sb.AppendLine("  [Palette_Sky]System & Debug[/]");
                 sb.AppendLine("    debug_text_anims                   - Shows all text animations.");
                 sb.AppendLine("    debug_colors                       - Lists all colors.");
                 sb.AppendLine("    clear                              - Clears console.");
@@ -64,7 +64,7 @@ namespace ProjectVagabond
                 sb.AppendLine("    test_party_gen                     - Tests random move generation.");
                 sb.AppendLine("    debug_passives                     - Lists party passive abilities.");
                 sb.AppendLine();
-                sb.AppendLine("  [palette_blue]Party & Inventory[/]");
+                sb.AppendLine("  [Palette_Sky]Party & Inventory[/]");
                 sb.AppendLine("    addmember <id>                     - Adds a party member.");
                 sb.AppendLine("    inventory                          - Shows all inventories.");
                 sb.AppendLine("    giveall                            - Gives 1 of every item.");
@@ -201,7 +201,7 @@ namespace ProjectVagabond
 
             _commands["test_party_gen"] = new Command("test_party_gen", (args) =>
             {
-                Log("[palette_yellow]Testing Oakley Generation (10 iterations):[/]");
+                Log("[Palette_DarkSun]Testing Oakley Generation (10 iterations):[/]");
                 for (int i = 0; i < 10; i++)
                 {
                     var member = PartyMemberFactory.CreateMember("0"); // Oakley
@@ -229,7 +229,7 @@ namespace ProjectVagabond
                 {
                     if (_gameState.PlayerState.AddPartyMember(newMember))
                     {
-                        Log($"[palette_blue]Added {newMember.Name} to the party!");
+                        Log($"[Palette_Sky]Added {newMember.Name} to the party!");
                         if (BattleDataCache.PartyMembers.TryGetValue(memberId, out var data))
                         {
                             foreach (var kvp in data.StartingWeapons) _gameState.PlayerState.AddWeapon(kvp.Key, kvp.Value);
@@ -284,7 +284,7 @@ namespace ProjectVagabond
                 int oldHP = member.CurrentHP;
                 member.CurrentHP = Math.Max(0, member.CurrentHP - damage);
 
-                Log($"[palette_red]Damaged {member.Name} for {damage} HP ({oldHP} -> {member.CurrentHP}).");
+                Log($"[Palette_Rust]Damaged {member.Name} for {damage} HP ({oldHP} -> {member.CurrentHP}).");
 
             }, "damageparty <slot> <percent> - Damages a party member by % of Max HP.",
             (args) => args.Length == 0 ? new List<string> { "1", "2", "3", "4" } : new List<string>());
@@ -294,11 +294,11 @@ namespace ProjectVagabond
                 _gameState ??= ServiceLocator.Get<GameState>();
                 if (_gameState.PlayerState == null) { Log("[error]No active game state."); return; }
 
-                Log("[palette_blue]--- Party Passive Abilities ---[/]");
+                Log("[Palette_Sky]--- Party Passive Abilities ---[/]");
                 int slot = 1;
                 foreach (var member in _gameState.PlayerState.Party)
                 {
-                    Log($"[palette_yellow]Slot {slot}: {member.Name}[/]");
+                    Log($"[Palette_DarkSun]Slot {slot}: {member.Name}[/]");
 
                     // Intrinsic
                     bool hasIntrinsic = false;
@@ -334,7 +334,7 @@ namespace ProjectVagabond
                 if (_gameState.PlayerState == null) return;
                 if (args.Length < 2 || !int.TryParse(args[1], out int amount)) { Log("[error]Usage: givecoin <amount>"); return; }
                 _gameState.PlayerState.Coin += amount;
-                Log($"[palette_blue]Added {amount} coin. Total: {_gameState.PlayerState.Coin}");
+                Log($"[Palette_Sky]Added {amount} coin. Total: {_gameState.PlayerState.Coin}");
             }, "givecoin <amount> - Adds coin.");
 
             _commands["setcoin"] = new Command("setcoin", (args) =>
@@ -343,7 +343,7 @@ namespace ProjectVagabond
                 if (_gameState.PlayerState == null) return;
                 if (args.Length < 2 || !int.TryParse(args[1], out int amount) || amount < 0) { Log("[error]Usage: setcoin <amount >= 0>"); return; }
                 _gameState.PlayerState.Coin = amount;
-                Log($"[palette_blue]Set coin to {amount}.");
+                Log($"[Palette_Sky]Set coin to {amount}.");
             }, "setcoin <amount> - Sets coin amount.");
 
             _commands["removecoin"] = new Command("removecoin", (args) =>
@@ -352,7 +352,7 @@ namespace ProjectVagabond
                 if (_gameState.PlayerState == null) return;
                 if (args.Length < 2 || !int.TryParse(args[1], out int amount)) { Log("[error]Usage: removecoin <amount>"); return; }
                 _gameState.PlayerState.Coin -= amount;
-                Log($"[palette_blue]Removed {amount} coin. Total: {_gameState.PlayerState.Coin}");
+                Log($"[Palette_Sky]Removed {amount} coin. Total: {_gameState.PlayerState.Coin}");
             }, "removecoin <amount> - Removes coin.");
 
             _commands["giveweapon"] = new Command("giveweapon", (args) => HandleGiveItem(args, "Weapon"), "giveweapon <id> [n]");
@@ -377,7 +377,7 @@ namespace ProjectVagabond
                 }
 
                 _gameState.PlayerState.EquippedWeaponId = weaponId;
-                Log($"[palette_blue]Equipped {weaponId}.");
+                Log($"[Palette_Sky]Equipped {weaponId}.");
 
             }, "equipweapon <id> - Equips a weapon from inventory.",
             (args) => _gameState?.PlayerState?.Weapons.Keys.ToList() ?? new List<string>());
@@ -402,7 +402,7 @@ namespace ProjectVagabond
                 foreach (var id in BattleDataCache.Weapons.Keys) { _gameState.PlayerState.AddWeapon(id, 1); count++; }
                 foreach (var id in BattleDataCache.Relics.Keys) { _gameState.PlayerState.AddRelic(id, 1); count++; }
 
-                Log($"[palette_blue]Added {count} items (1 of every defined item) to inventory.");
+                Log($"[Palette_Sky]Added {count} items (1 of every defined item) to inventory.");
             }, "giveall - Adds 1 of every item to inventory.");
 
             _commands["removeweapon"] = new Command("removeweapon", (args) => HandleRemoveItem(args, "Weapon"), "removeweapon <id> [n]");
@@ -445,7 +445,7 @@ namespace ProjectVagabond
                     if (encounter != null && encounter.Any())
                     {
                         splitScene.InitiateCombat(encounter);
-                        Log("[palette_green]Starting debug combat (Forest)...");
+                        Log("[Palette_Leaf]Starting debug combat (Forest)...");
                     }
                     else
                     {
@@ -465,7 +465,7 @@ namespace ProjectVagabond
                 if (sceneManager.CurrentActiveScene is SplitMapScene splitScene)
                 {
                     splitScene.DebugTriggerShop();
-                    Log("[palette_blue]Opening debug shop...");
+                    Log("[Palette_Sky]Opening debug shop...");
                 }
                 else
                 {
@@ -480,7 +480,7 @@ namespace ProjectVagabond
                 if (sceneManager.CurrentActiveScene is SplitMapScene splitScene)
                 {
                     splitScene.DebugTriggerRest();
-                    Log("[palette_blue]Opening debug rest site...");
+                    Log("[Palette_Sky]Opening debug rest site...");
                 }
                 else
                 {
@@ -495,7 +495,7 @@ namespace ProjectVagabond
                 if (sceneManager.CurrentActiveScene is SplitMapScene splitScene)
                 {
                     splitScene.DebugTriggerRecruit();
-                    Log("[palette_blue]Opening debug recruit menu...");
+                    Log("[Palette_Sky]Opening debug recruit menu...");
                 }
                 else
                 {
@@ -588,7 +588,7 @@ namespace ProjectVagabond
                 // 4. Apply
                 combatant.AddStatusEffect(new StatusEffectInstance(statusType, duration));
                 string durText = isPerm ? "Permanent" : $"{duration} turns";
-                Log($"[palette_blue]Applied {statusType} to {combatant.Name} ({durText}).");
+                Log($"[Palette_Sky]Applied {statusType} to {combatant.Name} ({durText}).");
 
             }, "debug_givestatus <slot> <type> [dur] - Apply status to party member in combat.",
             (args) =>
@@ -607,7 +607,7 @@ namespace ProjectVagabond
                     return;
                 }
                 ServiceLocator.Get<DebugConsole>().SetFontIndex(index);
-                Log($"[palette_blue]Debug Console Font set to index {index}.");
+                Log($"[Palette_Sky]Debug Console Font set to index {index}.");
             }, "debug_consolefont <0|1|2> - Sets the debug console font.");
 
             _commands["exit"] = new Command("exit", (args) => ServiceLocator.Get<Core>().ExitApplication(), "exit");
@@ -659,15 +659,15 @@ namespace ProjectVagabond
 
             if (!string.IsNullOrEmpty(ps.EquippedWeaponId))
             {
-                Log($"[palette_blue]Equipped Weapon:[/] {ps.EquippedWeaponId}");
+                Log($"[Palette_Sky]Equipped Weapon:[/] {ps.EquippedWeaponId}");
             }
 
-            Log($"[palette_blue]Coin:[/] {ps.Coin}");
+            Log($"[Palette_Sky]Coin:[/] {ps.Coin}");
 
             PrintDict(ps.Weapons, "Weapons");
             PrintDict(ps.Relics, "Relics");
 
-            Log("[palette_blue]Spells:[/]");
+            Log("[Palette_Sky]Spells:[/]");
             if (ps.Spells.Any(s => s != null))
             {
                 for (int i = 0; i < ps.Spells.Length; i++)
@@ -685,7 +685,7 @@ namespace ProjectVagabond
             }
             else Log("  (Empty)");
 
-            Log("[palette_blue]Actions:[/]");
+            Log("[Palette_Sky]Actions:[/]");
             if (ps.Actions.Any())
             {
                 foreach (var action in ps.Actions)
@@ -698,7 +698,7 @@ namespace ProjectVagabond
 
         private void PrintDict(Dictionary<string, int> dict, string title)
         {
-            Log($"[palette_blue]{title}:[/]");
+            Log($"[Palette_Sky]{title}:[/]");
             if (!dict.Any()) Log("  (Empty)");
             else foreach (var kvp in dict) Log($"  {kvp.Key}: {kvp.Value}");
         }

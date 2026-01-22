@@ -435,17 +435,17 @@ namespace ProjectVagabond.Dice
                     if (_currentlyEnumeratingDieValue >= 5) // Good
                     {
                         mainAnimDuration = GOOD_ROLL_ANIM_DURATION;
-                        flashColor = _global.Palette_Green;
+                        flashColor = _global.Palette_Leaf;
                     }
                     else if (_currentlyEnumeratingDieValue <= 2) // Bad
                     {
                         mainAnimDuration = BAD_ROLL_ANIM_DURATION;
-                        flashColor = _global.Palette_Red;
+                        flashColor = _global.Palette_Rust;
                     }
                     else // Neutral
                     {
                         mainAnimDuration = NORMAL_ROLL_ANIM_DURATION;
-                        flashColor = _global.Palette_Yellow;
+                        flashColor = _global.Palette_DarkSun;
                     }
                 }
                 else // Not a narrative roll
@@ -693,7 +693,7 @@ namespace ProjectVagabond.Dice
                 var groupWithMultiplier = _currentRollGroups.FirstOrDefault(g => (g.DisplayGroupId ?? g.GroupId) == sum.GroupId && g.Multiplier != 1.0f);
                 if (groupWithMultiplier != null)
                 {
-                    _activeModifiers.Add(new FloatingResultText { Text = $"x{groupWithMultiplier.Multiplier:0.0#}", Type = FloatingResultText.TextType.Multiplier, GroupId = sum.GroupId, Scale = 0f, TintColor = _global.Palette_Red, IsVisible = true, StartPosition = sum.CurrentPosition + new Vector2(0, -60), TargetPosition = sum.CurrentPosition, CurrentPosition = sum.CurrentPosition + new Vector2(0, -60), IsAnimating = true, AnimationProgress = 0f });
+                    _activeModifiers.Add(new FloatingResultText { Text = $"x{groupWithMultiplier.Multiplier:0.0#}", Type = FloatingResultText.TextType.Multiplier, GroupId = sum.GroupId, Scale = 0f, TintColor = _global.Palette_Rust, IsVisible = true, StartPosition = sum.CurrentPosition + new Vector2(0, -60), TargetPosition = sum.CurrentPosition, CurrentPosition = sum.CurrentPosition + new Vector2(0, -60), IsAnimating = true, AnimationProgress = 0f });
                     sum.IsAwaitingCollision = true;
                 }
             }

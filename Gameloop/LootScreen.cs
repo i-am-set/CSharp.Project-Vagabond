@@ -490,7 +490,7 @@ namespace ProjectVagabond.Scenes
                 Vector2 titleSize = font.MeasureString(title);
                 float titleBob = MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * 3f) * 2f;
                 float titleY = 20f;
-                sb.DrawString(font, title, new Vector2((Global.VIRTUAL_WIDTH - titleSize.X) / 2, titleY + titleBob), _global.Palette_Yellow);
+                sb.DrawString(font, title, new Vector2((Global.VIRTUAL_WIDTH - titleSize.X) / 2, titleY + titleBob), _global.Palette_DarkSun);
 
                 // Debug
                 if (_global.ShowSplitMapGrid)

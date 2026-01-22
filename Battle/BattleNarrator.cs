@@ -525,12 +525,12 @@ namespace ProjectVagabond.Battle.UI
                     Vector2 currentEllipsisSize = font.MeasureString(ellipsisToShow);
                     float ellipsisX = startX + (widestEllipsisSize.X - currentEllipsisSize.X);
                     var ellipsisPosition = new Vector2(ellipsisX, yPos);
-                    spriteBatch.DrawStringSnapped(font, ellipsisToShow, ellipsisPosition, _global.Palette_Yellow);
+                    spriteBatch.DrawStringSnapped(font, ellipsisToShow, ellipsisPosition, _global.Palette_DarkSun);
                 }
 
                 float yOffset = ((float)gameTime.TotalGameTime.TotalSeconds * 4 % 1.0f > 0.5f) ? -1f : 0f;
                 var indicatorPosition = new Vector2(startX + widestEllipsisSize.X + gapSize.X, yPos + yOffset);
-                spriteBatch.DrawStringSnapped(font, arrow, indicatorPosition, _global.Palette_Yellow);
+                spriteBatch.DrawStringSnapped(font, arrow, indicatorPosition, _global.Palette_DarkSun);
             }
         }
     }

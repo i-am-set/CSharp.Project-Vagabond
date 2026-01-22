@@ -142,7 +142,7 @@ namespace ProjectVagabond.Battle.UI
             string title = IsForced ? "CHOOSE REPLACEMENT" : "SWITCH MEMBER";
             var titleSize = secondaryFont.MeasureString(title);
             var titlePos = new Vector2((Global.VIRTUAL_WIDTH - titleSize.Width) / 2, dividerY + 4);
-            spriteBatch.DrawStringSnapped(secondaryFont, title, titlePos, _global.Palette_Blue);
+            spriteBatch.DrawStringSnapped(secondaryFont, title, titlePos, _global.Palette_Sky);
 
             // Draw Buttons
             foreach (var button in _memberButtons)

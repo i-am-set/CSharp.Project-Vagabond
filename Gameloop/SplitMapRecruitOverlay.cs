@@ -266,7 +266,7 @@ namespace ProjectVagabond.UI
             if (_gameState.PlayerState.AddPartyMember(candidate))
             {
                 _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_blue]Recruited {candidate.Name}!" });
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[Palette_Sky]Recruited {candidate.Name}!" });
                 OnRecruitComplete?.Invoke();
             }
             else
@@ -564,7 +564,7 @@ namespace ProjectVagabond.UI
                 // Darker background for selection (Beveled)
                 DrawBeveledBackground(spriteBatch, pixel, bounds, _global.Palette_Shadow);
                 // Selection Border (Yellow) - Beveled
-                DrawBeveledBorder(spriteBatch, pixel, bounds, _global.Palette_Yellow);
+                DrawBeveledBorder(spriteBatch, pixel, bounds, _global.Palette_DarkSun);
             }
             else if (button.IsHovered && button.IsEnabled)
             {
@@ -623,7 +623,7 @@ namespace ProjectVagabond.UI
             }
 
             // Draw Name on top
-            Color nameColor = isSelected ? _global.Palette_Yellow : _global.Palette_Sun;
+            Color nameColor = isSelected ? _global.Palette_DarkSun : _global.Palette_Sun;
             spriteBatch.DrawStringSnapped(font, name, namePos, nameColor);
 
             currentY += 32 + 2 - 6;

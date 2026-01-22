@@ -397,19 +397,19 @@ namespace ProjectVagabond.UI
             string powVal = weapon.Power > 0 ? weapon.Power.ToString() : "---";
             string accVal = weapon.Accuracy >= 0 ? $"{weapon.Accuracy}%" : "---";
 
-            DrawStatPair("POW", powVal, leftLabelX, leftValueX, currentY, _global.Palette_White);
-            DrawStatPair("ACC", accVal, rightLabelX, rightValueX, currentY, _global.Palette_White);
+            DrawStatPair("POW", powVal, leftLabelX, leftValueX, currentY, _global.Palette_Sun);
+            DrawStatPair("ACC", accVal, rightLabelX, rightValueX, currentY, _global.Palette_Sun);
 
             currentY += LAYOUT_VAR_ROW_HEIGHT;
 
             string targetVal = GetTargetString(weapon.Target);
-            DrawStatPair("TGT", targetVal, rightLabelX, rightValueX, currentY, _global.Palette_White);
+            DrawStatPair("TGT", targetVal, rightLabelX, rightValueX, currentY, _global.Palette_Sun);
             currentY += LAYOUT_VAR_ROW_HEIGHT;
 
             string offStatVal = GetStatString(weapon.OffensiveStat);
             Color offColor = GetStatColor(weapon.OffensiveStat);
             string impactVal = weapon.ImpactType.ToString().ToUpper().Substring(0, Math.Min(4, weapon.ImpactType.ToString().Length));
-            Color impactColor = weapon.ImpactType == ImpactType.Magical ? _global.Palette_Blue : (weapon.ImpactType == ImpactType.Physical ? _global.Palette_Orange : _global.Palette_DarkShadow);
+            Color impactColor = weapon.ImpactType == ImpactType.Magical ? _global.Palette_Sky : (weapon.ImpactType == ImpactType.Physical ? _global.Palette_Fruit : _global.Palette_DarkShadow);
 
             DrawStatPair("USE", offStatVal, leftLabelX, leftValueX, currentY, offColor);
             DrawStatPair("TYP", impactVal, rightLabelX, rightValueX, currentY, impactColor);
@@ -420,7 +420,7 @@ namespace ProjectVagabond.UI
                 string contactText = "[MAKES CONTACT]";
                 Vector2 contactSize = tertiaryFont.MeasureString(contactText);
                 Vector2 contactPos = new Vector2(infoPanelArea.X + (infoPanelArea.Width - contactSize.X) / 2f, currentY);
-                spriteBatch.DrawStringSnapped(tertiaryFont, contactText, contactPos, _global.Palette_Red * opacity);
+                spriteBatch.DrawStringSnapped(tertiaryFont, contactText, contactPos, _global.Palette_Rust * opacity);
             }
 
             float flavorHeight = DrawFlavorText(spriteBatch, infoPanelArea, weapon.Flavor, opacity);
@@ -533,18 +533,18 @@ namespace ProjectVagabond.UI
             var manaDump = move.Abilities.OfType<ManaDumpAbility>().FirstOrDefault();
             if (manaDump != null) powVal = "???";
 
-            DrawStatPair("POW", powVal, leftLabelX, leftValueX, currentY, _global.Palette_White);
-            DrawStatPair("ACC", accVal, rightLabelX, rightValueX, currentY, _global.Palette_White);
+            DrawStatPair("POW", powVal, leftLabelX, leftValueX, currentY, _global.Palette_Sun);
+            DrawStatPair("ACC", accVal, rightLabelX, rightValueX, currentY, _global.Palette_Sun);
             currentY += LAYOUT_VAR_ROW_HEIGHT;
 
-            DrawStatPair("MANA", mpVal, leftLabelX, leftValueX, currentY, _global.Palette_White);
-            DrawStatPair("TGT", GetTargetString(move.Target), rightLabelX, rightValueX, currentY, _global.Palette_White);
+            DrawStatPair("MANA", mpVal, leftLabelX, leftValueX, currentY, _global.Palette_Sun);
+            DrawStatPair("TGT", GetTargetString(move.Target), rightLabelX, rightValueX, currentY, _global.Palette_Sun);
             currentY += LAYOUT_VAR_ROW_HEIGHT;
 
             string offStatVal = GetStatString(move.OffensiveStat);
             Color offColor = GetStatColor(move.OffensiveStat);
             string impactVal = move.ImpactType.ToString().ToUpper().Substring(0, Math.Min(4, move.ImpactType.ToString().Length));
-            Color impactColor = move.ImpactType == ImpactType.Magical ? _global.Palette_Blue : (move.ImpactType == ImpactType.Physical ? _global.Palette_Orange : _global.Palette_DarkShadow);
+            Color impactColor = move.ImpactType == ImpactType.Magical ? _global.Palette_Sky : (move.ImpactType == ImpactType.Physical ? _global.Palette_Fruit : _global.Palette_DarkShadow);
 
             DrawStatPair("USE", offStatVal, leftLabelX, leftValueX, currentY, offColor);
             DrawStatPair("TYP", impactVal, rightLabelX, rightValueX, currentY, impactColor);
@@ -555,7 +555,7 @@ namespace ProjectVagabond.UI
                 string contactText = "[ CONTACT ]";
                 Vector2 contactSize = tertiaryFont.MeasureString(contactText);
                 Vector2 contactPos = new Vector2(infoPanelArea.X + (infoPanelArea.Width - contactSize.X) / 2f, currentY + (secondaryFont.LineHeight - tertiaryFont.LineHeight) / 2f);
-                spriteBatch.DrawStringSnapped(tertiaryFont, contactText, contactPos, _global.Palette_Red * opacity);
+                spriteBatch.DrawStringSnapped(tertiaryFont, contactText, contactPos, _global.Palette_Rust * opacity);
             }
 
             float flavorHeight = DrawFlavorText(spriteBatch, infoPanelArea, move.Flavor, opacity);
@@ -608,7 +608,7 @@ namespace ProjectVagabond.UI
             else
             {
                 text = (val > 0 ? "+" : "") + val;
-                c = val > 0 ? _global.Palette_Green : _global.Palette_Red;
+                c = val > 0 ? _global.Palette_Leaf : _global.Palette_Rust;
             }
             spriteBatch.DrawStringSnapped(secondaryFont, text, new Vector2(valueX, y), c * opacity);
         }
@@ -668,7 +668,8 @@ namespace ProjectVagabond.UI
 
             const int padding = 4;
             float descWidth = infoPanelArea.Width - (padding * 2);
-            var descLines = ParseAndWrapRichText(font, description.ToUpper(), descWidth, _global.Palette_White);
+            // FIX: Use GameTextColor as default instead of White
+            var descLines = ParseAndWrapRichText(font, description.ToUpper(), descWidth, _global.GameTextColor);
 
             float lineY = startY;
             foreach (var line in descLines)
@@ -753,7 +754,7 @@ namespace ProjectVagabond.UI
                 OffensiveStatType.Intelligence => _global.StatColor_Intelligence,
                 OffensiveStatType.Tenacity => _global.StatColor_Tenacity,
                 OffensiveStatType.Agility => _global.StatColor_Agility,
-                _ => _global.Palette_White
+                _ => _global.Palette_Sun
             };
         }
 

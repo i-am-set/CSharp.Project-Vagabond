@@ -268,7 +268,7 @@ namespace ProjectVagabond.Battle.UI
                 else
                 {
                     // Fallback placeholder
-                    spriteBatch.DrawSnapped(pixel, rotatedIconPos, null, _global.Palette_Pink * contentAlpha, _currentHoverRotation, iconOrigin, new Vector2(iconSize, iconSize), SpriteEffects.None, 0f);
+                    spriteBatch.DrawSnapped(pixel, rotatedIconPos, null, _global.Palette_Shadow * contentAlpha, _currentHoverRotation, iconOrigin, new Vector2(iconSize, iconSize), SpriteEffects.None, 0f);
                 }
 
                 // Text Position
@@ -374,7 +374,7 @@ namespace ProjectVagabond.Battle.UI
                         animatedBounds.Center.X - noManaSize.X / 2f,
                         animatedBounds.Center.Y - noManaSize.Y / 2f
                     );
-                    TextAnimator.DrawTextWithEffectSquareOutlined(spriteBatch, _moveFont, noManaText, noManaPos, _global.Palette_Red * contentAlpha, Color.Black * contentAlpha, TextEffectType.None, 0f);
+                    TextAnimator.DrawTextWithEffectSquareOutlined(spriteBatch, _moveFont, noManaText, noManaPos, _global.Palette_Rust * contentAlpha, Color.Black * contentAlpha, TextEffectType.None, 0f);
                 }
             }
         }

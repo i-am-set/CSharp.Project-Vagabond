@@ -114,7 +114,7 @@ namespace ProjectVagabond.UI
             string timerString = _stringBuilder.ToString();
             Vector2 timerSize = font.MeasureString(timerString);
             Vector2 timerPosition = new Vector2(_dialogBounds.Center.X - timerSize.X / 2, promptPosition.Y + promptSize.Y + 8);
-            spriteBatch.DrawStringSnapped(font, timerString, timerPosition, _global.Palette_Yellow);
+            spriteBatch.DrawStringSnapped(font, timerString, timerPosition, _global.Palette_DarkSun);
 
             // Draw Buttons
             _confirmButton.Draw(spriteBatch, font, gameTime, transform);

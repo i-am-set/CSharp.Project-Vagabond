@@ -1298,7 +1298,7 @@ namespace ProjectVagabond.Scenes
                         if (target.IsPlayerControlled)
                         {
                             _core.TriggerFullscreenFlash(Color.White, 0.15f * juiceIntensity);
-                            _core.TriggerScreenFlashSequence(_global.Palette_Red);
+                            _core.TriggerScreenFlashSequence(_global.Palette_Rust);
                         }
                         else _core.TriggerFullscreenFlash(Color.White, 0.15f * juiceIntensity);
                         _hapticsManager.TriggerCompoundShake(0.25f * juiceIntensity);
@@ -1380,7 +1380,7 @@ namespace ProjectVagabond.Scenes
             e.Actor.HealthBarVisibleTimer = 6.0f;
             if (e.Actor.IsPlayerControlled)
             {
-                _core.TriggerScreenFlashSequence(_global.Palette_Red);
+                _core.TriggerScreenFlashSequence(_global.Palette_Rust);
                 _hapticsManager.TriggerWobble(intensity: 10.0f, duration: 0.75f, frequency: 120f);
             }
             if (e.SourceAbility != null) _uiManager.ShowNarration($"{e.Actor.Name} was hurt by\n{e.SourceAbility.AbilityName}!");
@@ -1421,7 +1421,7 @@ namespace ProjectVagabond.Scenes
                 e.Combatant.HealthBarVisibleTimer = 6.0f;
                 if (e.Combatant.IsPlayerControlled)
                 {
-                    _core.TriggerScreenFlashSequence(_global.Palette_Red);
+                    _core.TriggerScreenFlashSequence(_global.Palette_Rust);
                     _hapticsManager.TriggerWobble(intensity: 10.0f, duration: 0.75f, frequency: 120f);
                 }
                 string effectName = e.EffectType == StatusEffectType.Burn ? "the burn" : e.EffectType.ToString();
@@ -1465,14 +1465,14 @@ namespace ProjectVagabond.Scenes
             int absAmount = Math.Abs(e.Amount);
             string prefixText = absAmount > 1 ? $"{absAmount}x " : "";
             string suffixText = $" {verb}";
-            Color changeColor = e.Amount > 0 ? _global.Palette_Blue : _global.Palette_Red;
+            Color changeColor = e.Amount > 0 ? _global.Palette_Sky : _global.Palette_Rust;
             Color statColor = e.Stat switch
             {
                 OffensiveStatType.Strength => _global.StatColor_Strength,
                 OffensiveStatType.Intelligence => _global.StatColor_Intelligence,
                 OffensiveStatType.Tenacity => _global.StatColor_Tenacity,
                 OffensiveStatType.Agility => _global.StatColor_Agility,
-                _ => _global.Palette_White
+                _ => _global.Palette_Sun
             };
             Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(e.Target, _battleManager.AllCombatants);
             _animationManager.StartStatStageIndicator(e.Target.CombatantID, prefixText, statText, suffixText, changeColor, statColor, changeColor, hudPosition);

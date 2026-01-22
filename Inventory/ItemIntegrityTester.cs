@@ -43,11 +43,11 @@ namespace ProjectVagabond.Utils
                 r => r.Effects
             );
 
-            string resultColor = _failed == 0 ? "[Palette_Green]" : "[palette_red]";
-            string msg = $"=== CHECK COMPLETE: {resultColor}{_passed} PASSED[/], [palette_red]{_failed} FAILED[/], [palette_yellow]{_skipped} SKIPPED[/] ===";
+            string resultColor = _failed == 0 ? "[Palette_Leaf]" : "[Palette_Rust]";
+            string msg = $"=== CHECK COMPLETE: {resultColor}{_passed} PASSED[/], [Palette_Rust]{_failed} FAILED[/], [Palette_DarkSun]{_skipped} SKIPPED[/] ===";
 
             // Log final summary to both
-            Debug.WriteLine($"[ItemIntegrityTester] {msg.Replace("[Palette_Green]", "").Replace("[palette_red]", "").Replace("[palette_yellow]", "").Replace("[/]", "")}");
+            Debug.WriteLine($"[ItemIntegrityTester] {msg.Replace("[Palette_Leaf]", "").Replace("[Palette_Rust]", "").Replace("[Palette_DarkSun]", "").Replace("[/]", "")}");
             EventBus.Publish(new GameEvents.TerminalMessagePublished
             {
                 Message = msg,
@@ -121,28 +121,28 @@ namespace ProjectVagabond.Utils
 
         private static void LogHeader(string message)
         {
-            string tagged = $"[palette_blue]{message}[/]";
+            string tagged = $"[Palette_Sky]{message}[/]";
             Debug.WriteLine(tagged);
             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = tagged });
         }
 
         private static void LogSuccess(string message)
         {
-            string tagged = $"[Palette_Green]{message}[/]";
+            string tagged = $"[Palette_Leaf]{message}[/]";
             Debug.WriteLine(tagged);
             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = tagged });
         }
 
         private static void LogFail(string message)
         {
-            string tagged = $"[palette_red]{message}[/]";
+            string tagged = $"[Palette_Rust]{message}[/]";
             Debug.WriteLine(tagged);
             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = tagged });
         }
 
         private static void LogSkip(string message)
         {
-            string tagged = $"[palette_yellow]{message}[/]";
+            string tagged = $"[Palette_DarkSun]{message}[/]";
             Debug.WriteLine(tagged);
             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = tagged });
         }

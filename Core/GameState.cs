@@ -141,12 +141,12 @@ namespace ProjectVagabond
                         if (BattleDataCache.Weapons.ContainsKey(outcome.Value))
                         {
                             PlayerState.AddWeapon(outcome.Value);
-                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_blue]Obtained {outcome.Value}!" });
+                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[Palette_Sky]Obtained {outcome.Value}!" });
                         }
                         else if (BattleDataCache.Relics.ContainsKey(outcome.Value))
                         {
                             PlayerState.AddRelic(outcome.Value);
-                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_blue]Obtained {outcome.Value}!" });
+                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[Palette_Sky]Obtained {outcome.Value}!" });
                         }
                         break;
 
@@ -156,7 +156,7 @@ namespace ProjectVagabond
                         else if (PlayerState.Relics.ContainsKey(outcome.Value)) { PlayerState.RemoveRelic(outcome.Value); removed = true; }
 
                         if (removed)
-                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_orange]Lost {outcome.Value}." });
+                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[Palette_Fruit]Lost {outcome.Value}." });
                         break;
 
                     case "AddBuff":
@@ -170,7 +170,7 @@ namespace ProjectVagabond
                             }
                             // Use Amount for duration
                             buffsComp.Buffs.Add(new TemporaryBuff { EffectType = effectType, RemainingBattles = outcome.Amount });
-                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_blue]Gained {outcome.Value} ({outcome.Amount} battles)!" });
+                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[Palette_Sky]Gained {outcome.Value} ({outcome.Amount} battles)!" });
                         }
                         break;
 
@@ -188,7 +188,7 @@ namespace ProjectVagabond
                             else if (stat == "maxmana") { statsComp.MaxMana += amt; statsComp.CurrentMana += amt; }
 
                             string sign = amt > 0 ? "+" : "";
-                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_blue]{outcome.Value} {sign}{amt}" });
+                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[Palette_Sky]{outcome.Value} {sign}{amt}" });
                         }
                         break;
 
@@ -197,7 +197,7 @@ namespace ProjectVagabond
                         if (dmgComp != null)
                         {
                             dmgComp.CurrentHP = Math.Max(0, dmgComp.CurrentHP - outcome.Amount);
-                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_red]Took {outcome.Amount} damage!" });
+                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[Palette_Rust]Took {outcome.Amount} damage!" });
                         }
                         break;
 
@@ -207,7 +207,7 @@ namespace ProjectVagabond
                         {
                             int dmg = (int)(dmgPerComp.MaxHP * (outcome.Amount / 100f));
                             dmgPerComp.CurrentHP = Math.Max(0, dmgPerComp.CurrentHP - dmg);
-                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_red]Took {dmg} damage!" });
+                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[Palette_Rust]Took {dmg} damage!" });
                         }
                         break;
 
@@ -216,14 +216,14 @@ namespace ProjectVagabond
                         if (healComp != null)
                         {
                             healComp.CurrentHP = healComp.MaxHP;
-                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[Palette_Green]Fully Healed!" });
+                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[Palette_Leaf]Fully Healed!" });
                         }
                         break;
 
                     case "Gold":
                         PlayerState.Coin += outcome.Amount;
                         string gSign = outcome.Amount > 0 ? "+" : "";
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_yellow]{gSign}{outcome.Amount} Gold" });
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[Palette_DarkSun]{gSign}{outcome.Amount} Gold" });
                         break;
 
                     case "StartCombat":

@@ -993,7 +993,7 @@ namespace ProjectVagabond.Battle.UI
             _tooltipBounds = tooltipBounds;
 
             DrawBeveledBackground(spriteBatch, pixel, tooltipBounds, _global.Palette_Black);
-            DrawBeveledBorder(spriteBatch, pixel, tooltipBounds, _global.Palette_White);
+            DrawBeveledBorder(spriteBatch, pixel, tooltipBounds, _global.Palette_Sun);
 
             if (_tooltipMove != null)
             {
@@ -1008,7 +1008,7 @@ namespace ProjectVagabond.Battle.UI
                 if (!string.IsNullOrEmpty(_tooltipMove.Description))
                 {
                     float availableWidth = tooltipBounds.Width - 20;
-                    var wrappedLines = ParseAndWrapRichText(secondaryFont, _tooltipMove.Description.ToUpper(), availableWidth, _global.Palette_White);
+                    var wrappedLines = ParseAndWrapRichText(secondaryFont, _tooltipMove.Description.ToUpper(), availableWidth, _global.GameTextColor);
                     float currentY = namePos.Y + nameSize.Height + 6;
 
                     foreach (var line in wrappedLines)
@@ -1077,7 +1077,7 @@ namespace ProjectVagabond.Battle.UI
             _tooltipBounds = tooltipBgRect;
 
             DrawBeveledBackground(spriteBatch, pixel, tooltipBgRect, _global.Palette_Black);
-            DrawBeveledBorder(spriteBatch, pixel, tooltipBgRect, _global.Palette_White);
+            DrawBeveledBorder(spriteBatch, pixel, tooltipBgRect, _global.Palette_Sun);
 
             if (_tooltipMove != null)
             {
@@ -1444,7 +1444,7 @@ namespace ProjectVagabond.Battle.UI
                 if (!string.IsNullOrEmpty(move.Description))
                 {
                     float availableWidth = bounds.Width - (horizontalPadding * 2);
-                    var wrappedLines = ParseAndWrapRichText(secondaryFont, move.Description.ToUpper(), availableWidth, _global.Palette_White);
+                    var wrappedLines = ParseAndWrapRichText(secondaryFont, move.Description.ToUpper(), availableWidth, _global.GameTextColor);
 
                     float totalTextHeight = wrappedLines.Count * secondaryFont.LineHeight;
                     // Adjust available height to avoid overlapping bottom text

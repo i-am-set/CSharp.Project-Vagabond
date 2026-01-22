@@ -237,7 +237,7 @@ namespace ProjectVagabond.UI
                 bool isNotRecommended = IsOptionNotRecommended?.Invoke(_currentValue) ?? false;
                 if (isSelected && isNotRecommended)
                 {
-                    baseValueColor = _global.Palette_Orange;
+                    baseValueColor = _global.Palette_Fruit;
                 }
                 else if (IsDirty)
                 {

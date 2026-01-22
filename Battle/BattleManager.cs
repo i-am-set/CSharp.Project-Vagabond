@@ -955,7 +955,7 @@ namespace ProjectVagabond.Battle
 
             if (significantTargetIds.Any())
             {
-                Color flashColor = action.Actor.IsPlayerControlled ? Color.White : _global.Palette_Red;
+                Color flashColor = action.Actor.IsPlayerControlled ? Color.White : _global.Palette_Rust;
                 _animationManager.TriggerImpactFlash(flashColor, 0.15f, significantTargetIds);
             }
 

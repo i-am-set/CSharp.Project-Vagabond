@@ -171,11 +171,11 @@ namespace ProjectVagabond.UI
             }
 
             // Initialize Tunable Colors
-            COLOR_DESC_REST_NORMAL = _global.Palette_Green;
+            COLOR_DESC_REST_NORMAL = _global.Palette_Leaf;
             COLOR_DESC_REST_GUARDED = Color.Lime;
-            COLOR_DESC_TRAIN_NORMAL = _global.Palette_Purple;
+            COLOR_DESC_TRAIN_NORMAL = _global.Palette_Shadow;
             COLOR_DESC_TRAIN_GUARDED = Color.Magenta;
-            COLOR_DESC_SEARCH_NORMAL = _global.Palette_Blue;
+            COLOR_DESC_SEARCH_NORMAL = _global.Palette_Sky;
             COLOR_DESC_SEARCH_GUARDED = Color.Aqua;
             COLOR_DESC_GUARD = _global.Palette_Shadow;
 
@@ -195,7 +195,7 @@ namespace ProjectVagabond.UI
             _confirmButton = new Button(Rectangle.Empty, "CONFIRM", font: _core.SecondaryFont)
             {
                 CustomDefaultTextColor = _global.Palette_Sun,
-                CustomHoverTextColor = _global.Palette_Red,
+                CustomHoverTextColor = _global.Palette_Rust,
                 UseScreenCoordinates = true
             };
             // Direct execution for Confirm, no dialog
@@ -316,7 +316,7 @@ namespace ProjectVagabond.UI
                     new Rectangle(centerX - buttonWidth / 2, startY, buttonWidth, buttonHeight),
                     text,
                     font: _core.SecondaryFont,
-                    customToggledTextColor: _global.Palette_Yellow,
+                    customToggledTextColor: _global.Palette_DarkSun,
                     customDefaultTextColor: _global.Palette_Shadow
                 )
                 {
@@ -1005,7 +1005,7 @@ namespace ProjectVagabond.UI
                     if (isOccupied && _selectedActions.TryGetValue(i, out var descAction))
                     {
                         string descText = "";
-                        Color descColor = _global.Palette_White;
+                        Color descColor = _global.Palette_Sun;
 
                         // Determine multiplier (Guard doesn't buff itself)
                         float multiplier = (guardActive && descAction != RestAction.Guard) ? GUARD_HEAL_MULTIPLIER : 1.0f;

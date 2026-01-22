@@ -47,7 +47,7 @@ namespace ProjectVagabond.Particles
             settings.Gravity = new Vector2(0, 200f * intensity); // Heavier sparks fall faster
             settings.Drag = 3.0f;
             settings.StartColor = global.Palette_Sun;
-            settings.EndColor = global.Palette_Yellow;
+            settings.EndColor = global.Palette_DarkSun;
             settings.StartAlpha = 1.0f;
             settings.EndAlpha = 0.0f;
 
@@ -87,8 +87,8 @@ namespace ProjectVagabond.Particles
             settings.InterpolateSize = true;
 
             // Over Lifetime
-            settings.StartColor = global.Palette_White;
-            settings.EndColor = global.Palette_White;
+            settings.StartColor = global.Palette_Sun;
+            settings.EndColor = global.Palette_Sun;
             settings.StartAlpha = 0.8f;
             settings.EndAlpha = 0.0f;
 
@@ -119,7 +119,7 @@ namespace ProjectVagabond.Particles
             settings.InitialRotationSpeed = new FloatRange(-2f, 2f);
             settings.Gravity = new Vector2(0, 10f);
             settings.Drag = 1.5f;
-            settings.StartColor = global.Palette_Red;
+            settings.StartColor = global.Palette_Rust;
             settings.EndColor = new Color(100, 30, 25);
             settings.StartAlpha = 0.9f;
             settings.EndAlpha = 0.0f;
@@ -148,7 +148,7 @@ namespace ProjectVagabond.Particles
             settings.Gravity = new Vector2(0, 50f);
             settings.Drag = 2.5f;
             settings.StartColor = Color.White;
-            settings.EndColor = global.Palette_Yellow;
+            settings.EndColor = global.Palette_DarkSun;
             settings.StartAlpha = 1.0f;
             settings.EndAlpha = 0.5f;
             settings.AlphaFadeInAndOut = false;
@@ -210,8 +210,8 @@ namespace ProjectVagabond.Particles
             settings.InitialRotationSpeed = new FloatRange(0f);
             settings.Gravity = new Vector2(0, 10f);
             settings.Drag = 1.0f;
-            settings.StartColor = global.Palette_Orange;
-            settings.EndColor = global.Palette_Orange;
+            settings.StartColor = global.Palette_Fruit;
+            settings.EndColor = global.Palette_Fruit;
             settings.StartAlpha = 0.8f;
             settings.EndAlpha = 0.0f;
             settings.Texture = ServiceLocator.Get<Texture2D>();
@@ -239,7 +239,7 @@ namespace ProjectVagabond.Particles
             settings.Gravity = Vector2.Zero;
             settings.Drag = 4f;
             settings.StartColor = global.Palette_Sun;
-            settings.EndColor = global.Palette_Blue;
+            settings.EndColor = global.Palette_Sky;
             settings.StartAlpha = 1.0f;
             settings.EndAlpha = 0.0f;
             settings.Texture = ServiceLocator.Get<Texture2D>();
@@ -351,8 +351,8 @@ namespace ProjectVagabond.Particles
             settings.InterpolateSize = true;
             settings.Gravity = Vector2.Zero;
             settings.Drag = 0.5f;
-            settings.StartColor = global.Palette_Purple;
-            settings.EndColor = global.Palette_Blue;
+            settings.StartColor = global.Palette_Shadow;
+            settings.EndColor = global.Palette_Sky;
             settings.StartAlpha = 1.0f;
             settings.EndAlpha = 0.0f;
             settings.VectorFieldInfluence = 1.0f;
@@ -380,8 +380,8 @@ namespace ProjectVagabond.Particles
             settings.InterpolateSize = true;
             settings.Gravity = new Vector2(0, 155f);
             settings.Drag = 2.5f;
-            settings.StartColor = global.Palette_Red;
-            settings.EndColor = global.Palette_Yellow;
+            settings.StartColor = global.Palette_Rust;
+            settings.EndColor = global.Palette_DarkSun;
             settings.StartAlpha = 1.0f;
             settings.EndAlpha = 0.0f;
             settings.Texture = ServiceLocator.Get<Texture2D>();
@@ -408,7 +408,7 @@ namespace ProjectVagabond.Particles
             settings.InterpolateSize = true;
             settings.Gravity = Vector2.Zero;
             settings.Drag = 2f;
-            settings.StartColor = global.Palette_White;
+            settings.StartColor = global.Palette_Sun;
             settings.EndColor = global.Palette_Shadow;
             settings.StartAlpha = 0.7f;
             settings.EndAlpha = 0.0f;
@@ -435,7 +435,7 @@ namespace ProjectVagabond.Particles
             settings.InterpolateSize = true;
             settings.Gravity = new Vector2(0, 20f);
             settings.Drag = 1f;
-            settings.StartColor = global.Palette_Green;
+            settings.StartColor = global.Palette_Leaf;
             settings.EndColor = global.Palette_DarkShadow;
             settings.StartAlpha = 0.6f;
             settings.EndAlpha = 0.0f;
@@ -476,8 +476,8 @@ namespace ProjectVagabond.Particles
             // Over Lifetime
             settings.Gravity = new Vector2(0, -5f); // Tiny upward drift
             settings.Drag = 0.3f; // Low drag to let them drift
-            settings.StartColor = global.Palette_Green;
-            settings.EndColor = global.Palette_White;
+            settings.StartColor = global.Palette_Leaf;
+            settings.EndColor = global.Palette_Sun;
             settings.StartAlpha = 1.0f;
             settings.EndAlpha = 0.0f;
 

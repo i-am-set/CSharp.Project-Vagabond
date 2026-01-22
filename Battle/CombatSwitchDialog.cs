@@ -173,7 +173,7 @@ namespace ProjectVagabond.UI
 
             // Draw Background
             spriteBatch.DrawSnapped(pixel, _dialogBounds, _global.Palette_Black);
-            DrawRectangleBorder(spriteBatch, pixel, _dialogBounds, 1, _global.Palette_White);
+            DrawRectangleBorder(spriteBatch, pixel, _dialogBounds, 1, _global.Palette_Sun);
 
             // Draw Title
             string title = IsMandatory ? "REINFORCEMENT NEEDED" : "CHOOSE REPLACEMENT";
@@ -182,7 +182,7 @@ namespace ProjectVagabond.UI
                 _dialogBounds.Center.X - titleSize.Width / 2,
                 _dialogBounds.Y + PADDING
             );
-            spriteBatch.DrawStringSnapped(secondaryFont, title, titlePos, _global.Palette_Blue);
+            spriteBatch.DrawStringSnapped(secondaryFont, title, titlePos, _global.Palette_Sky);
 
             // Draw Buttons
             foreach (var button in _memberButtons)

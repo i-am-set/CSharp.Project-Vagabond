@@ -112,7 +112,7 @@ namespace ProjectVagabond.UI
                 }
                 else
                 {
-                    btn.CustomDefaultTextColor = _overlay.Global.Palette_White;
+                    btn.CustomDefaultTextColor = _overlay.Global.Palette_Sun;
                     btn.CustomTitleTextColor = _overlay.Global.Palette_DarkShadow;
                 }
 
@@ -120,7 +120,7 @@ namespace ProjectVagabond.UI
                 {
                     btn.MainText = "REMOVE";
                     btn.TitleText = "SELECT";
-                    btn.CustomDefaultTextColor = _overlay.Global.Palette_Red;
+                    btn.CustomDefaultTextColor = _overlay.Global.Palette_Rust;
                     btn.IconTexture = _overlay.SpriteManager.InventoryEmptySlotSprite;
                     btn.IconSilhouette = null;
                     btn.IsEnabled = true;

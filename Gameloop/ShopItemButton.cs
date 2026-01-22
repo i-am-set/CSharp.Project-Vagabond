@@ -210,7 +210,7 @@ namespace ProjectVagabond.UI
                 // Center within the 32x32 bounds
                 Vector2 soldPos = new Vector2(centerX - soldSize.X / 2f, staticY + (Bounds.Height - soldSize.Y) / 2f);
 
-                spriteBatch.DrawStringSnapped(_nameFont, soldText, soldPos, _global.Palette_Red);
+                spriteBatch.DrawStringSnapped(_nameFont, soldText, soldPos, _global.Palette_Rust);
             }
             else
             {
@@ -237,7 +237,7 @@ namespace ProjectVagabond.UI
                             int cycle = (int)(_rejectionShakeTimer / flashInterval);
                             bool isRed = cycle % 2 != 0;
 
-                            mainOutlineColor = isRed ? _global.Palette_Red : Color.White;
+                            mainOutlineColor = isRed ? _global.Palette_Rust : Color.White;
                             cornerOutlineColor = mainOutlineColor;
                         }
                         else if (isActivated)
@@ -319,13 +319,13 @@ namespace ProjectVagabond.UI
                 float drawY = (staticY + SPRITE_OFFSET) + SPRITE_SIZE + 2;
 
                 // Determine Color
-                Color priceColor = _global.Palette_Yellow;
+                Color priceColor = _global.Palette_DarkSun;
 
                 if (isActivated)
                 {
                     if (!canAfford)
                     {
-                        priceColor = _global.Palette_Red;
+                        priceColor = _global.Palette_Rust;
                     }
                     else
                     {

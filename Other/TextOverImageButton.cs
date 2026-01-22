@@ -186,7 +186,7 @@ namespace ProjectVagabond.UI
             // 4b. Draw Border if enabled and activated
             if (isActivated && DrawBorderOnHover)
             {
-                Color borderColor = HoverBorderColor ?? _global.Palette_Red;
+                Color borderColor = HoverBorderColor ?? _global.Palette_Rust;
                 var animatedBounds = new Rectangle(
                     (int)(centerPos.X - width / 2f),
                     (int)(centerPos.Y - height / 2f),

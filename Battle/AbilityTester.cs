@@ -50,8 +50,8 @@ namespace ProjectVagabond.Utils
                 ServiceLocator.Unregister<BattleManager>();
             }
 
-            string resultColor = _failed == 0 ? "[Palette_Green]" : "[palette_red]";
-            string msg = $"--- TESTS COMPLETE: {resultColor}{_passed} PASSED[/], [palette_red]{_failed} FAILED[/], [palette_yellow]{_skipped} SKIPPED[/] ---";
+            string resultColor = _failed == 0 ? "[Palette_Leaf]" : "[Palette_Rust]";
+            string msg = $"--- TESTS COMPLETE: {resultColor}{_passed} PASSED[/], [Palette_Rust]{_failed} FAILED[/], [Palette_DarkSun]{_skipped} SKIPPED[/] ---";
 
             // Log to GameLogger directly to ensure tags are parsed by DebugConsole
             GameLogger.Log(LogSeverity.Info, msg);
@@ -107,14 +107,14 @@ namespace ProjectVagabond.Utils
             if (condition)
             {
                 _passed++;
-                string msg = $"  [Palette_Green]PASS:[/] {testName}";
+                string msg = $"  [Palette_Leaf]PASS:[/] {testName}";
                 GameLogger.Log(LogSeverity.Info, msg);
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = msg });
             }
             else
             {
                 _failed++;
-                string msg = $"  [palette_red]FAIL:[/] {testName}";
+                string msg = $"  [Palette_Rust]FAIL:[/] {testName}";
                 GameLogger.Log(LogSeverity.Error, msg);
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = msg });
             }
@@ -122,21 +122,21 @@ namespace ProjectVagabond.Utils
 
         private static void LogInfo(string message)
         {
-            string tagged = $"[palette_blue]{message}[/]";
+            string tagged = $"[Palette_Sky]{message}[/]";
             GameLogger.Log(LogSeverity.Info, tagged);
             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = tagged });
         }
 
         private static void LogHeader(string message)
         {
-            string tagged = $"[palette_blue]{message}[/]";
+            string tagged = $"[Palette_Sky]{message}[/]";
             GameLogger.Log(LogSeverity.Info, tagged);
             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = tagged });
         }
 
         private static void LogFail(string message)
         {
-            string tagged = $"[palette_red]{message}[/]";
+            string tagged = $"[Palette_Rust]{message}[/]";
             GameLogger.Log(LogSeverity.Error, tagged);
             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = tagged });
         }
@@ -144,7 +144,7 @@ namespace ProjectVagabond.Utils
         private static void LogSkipped(string message)
         {
             _skipped++;
-            string tagged = $"  [palette_yellow]SKIPPED:[/] {message}";
+            string tagged = $"  [Palette_DarkSun]SKIPPED:[/] {message}";
             GameLogger.Log(LogSeverity.Warning, tagged);
             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = tagged });
         }

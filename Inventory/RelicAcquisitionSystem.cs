@@ -28,14 +28,14 @@ namespace ProjectVagabond
                     _gameState.PlayerState.AddRelic(e.RelicID);
 
                     if (BattleDataCache.Relics.TryGetValue(e.RelicID, out var relic))
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_blue]Obtained {relic.RelicName}!" });
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[Palette_Sky]Obtained {relic.RelicName}!" });
                     else
                         EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[error]Relic ID '{e.RelicID}' not found." });
 
                     break;
                 case GameEvents.AcquisitionType.Remove:
                     _gameState.PlayerState.RemoveRelic(e.RelicID);
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_orange]Removed relic {e.RelicID}." });
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[Palette_Fruit]Removed relic {e.RelicID}." });
                     break;
             }
         }

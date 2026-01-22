@@ -27,13 +27,13 @@ namespace ProjectVagabond
                 case GameEvents.AcquisitionType.Add:
                     _gameState.PlayerState.AddMove(e.MoveID);
                     if (BattleDataCache.Moves.TryGetValue(e.MoveID, out var move))
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_blue]Obtained {move.MoveName}!" });
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[Palette_Sky]Obtained {move.MoveName}!" });
                     else
                         EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[error]Move ID '{e.MoveID}' not found." });
                     break;
                 case GameEvents.AcquisitionType.Remove:
                     _gameState.PlayerState.RemoveMove(e.MoveID);
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_orange]Removed move {e.MoveID}." });
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[Palette_Fruit]Removed move {e.MoveID}." });
                     break;
             }
         }

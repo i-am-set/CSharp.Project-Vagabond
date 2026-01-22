@@ -1479,7 +1479,7 @@ namespace ProjectVagabond.Battle.UI
                 // Calculate Shimmer Color
                 // Sin wave from -1 to 1. Map to 0 to 1.
                 float shimmer = (MathF.Sin(coin.FlipTimer) + 1f) / 2f;
-                Color coinColor = Color.Lerp(_global.Palette_Yellow, _global.Palette_Orange, shimmer);
+                Color coinColor = Color.Lerp(_global.Palette_DarkSun, _global.Palette_Fruit, shimmer);
 
                 // Calculate Flip Scale (X-axis)
                 // Cos wave from -1 to 1. Abs to get 0 to 1 (flipping appearance).
@@ -1963,13 +1963,13 @@ namespace ProjectVagabond.Battle.UI
                 {
                     const float flashInterval = 0.1f;
                     bool useRed = (int)(indicator.Timer / flashInterval) % 2 == 0;
-                    drawColor = useRed ? _global.DamageIndicatorColor : _global.Palette_Red;
+                    drawColor = useRed ? _global.DamageIndicatorColor : _global.Palette_Rust;
                 }
                 else if (indicator.Type == DamageIndicatorState.IndicatorType.HealNumber)
                 {
                     const float flashInterval = 0.1f;
                     bool useLightGreen = (int)(indicator.Timer / flashInterval) % 2 == 0;
-                    drawColor = useLightGreen ? _global.HealIndicatorColor : _global.Palette_Green;
+                    drawColor = useLightGreen ? _global.HealIndicatorColor : _global.Palette_Leaf;
                 }
                 else if (indicator.Type == DamageIndicatorState.IndicatorType.Effectiveness)
                 {
@@ -1978,10 +1978,10 @@ namespace ProjectVagabond.Battle.UI
                     switch (indicator.PrimaryText)
                     {
                         case "EFFECTIVE":
-                            drawColor = useAltColor ? _global.EffectiveIndicatorColor : _global.Palette_Yellow;
+                            drawColor = useAltColor ? _global.EffectiveIndicatorColor : _global.Palette_DarkSun;
                             break;
                         case "RESISTED":
-                            drawColor = useAltColor ? _global.ResistedIndicatorColor : _global.Palette_White;
+                            drawColor = useAltColor ? _global.ResistedIndicatorColor : _global.Palette_Sun;
                             break;
                         case "IMMUNE":
                             drawColor = useAltColor ? _global.ImmuneIndicatorColor : _global.Palette_Shadow;
@@ -2001,7 +2001,7 @@ namespace ProjectVagabond.Battle.UI
                 {
                     const float flashInterval = 0.1f; // Fast flash
                     bool useRed = (int)(indicator.Timer / flashInterval) % 2 == 0;
-                    drawColor = useRed ? _global.FailedIndicatorColor : _global.Palette_Red;
+                    drawColor = useRed ? _global.FailedIndicatorColor : _global.Palette_Rust;
                 }
                 else // Text indicator (Graze, StatChange)
                 {
@@ -2010,7 +2010,7 @@ namespace ProjectVagabond.Battle.UI
                     {
                         const float flashInterval = 0.2f;
                         bool useYellow = (int)(indicator.Timer / flashInterval) % 2 == 0;
-                        drawColor = useYellow ? _global.Palette_Yellow : _global.Palette_Blue;
+                        drawColor = useYellow ? _global.Palette_DarkSun : _global.Palette_Sky;
                     }
                 }
 
@@ -2019,9 +2019,9 @@ namespace ProjectVagabond.Battle.UI
                     const float flashInterval = 0.2f;
                     bool useAltColor = (int)(indicator.Timer / flashInterval) % 2 == 0;
 
-                    Color prefixColor = useAltColor ? _global.Palette_Yellow : indicator.PrimaryColor;
-                    Color statColor = useAltColor ? _global.Palette_Yellow : indicator.SecondaryColor.Value;
-                    Color suffixColor = useAltColor ? _global.Palette_Yellow : indicator.TertiaryColor.Value;
+                    Color prefixColor = useAltColor ? _global.Palette_DarkSun : indicator.PrimaryColor;
+                    Color statColor = useAltColor ? _global.Palette_DarkSun : indicator.SecondaryColor.Value;
+                    Color suffixColor = useAltColor ? _global.Palette_DarkSun : indicator.TertiaryColor.Value;
 
                     string prefixText = indicator.PrimaryText ?? "";
                     string statText = indicator.SecondaryText ?? "";
@@ -2097,7 +2097,7 @@ namespace ProjectVagabond.Battle.UI
                 float pulse = (MathF.Sin(indicator.Timer * PULSE_SPEED) + 1f) / 2f; // Oscillates between 0.0 and 1.0
 
                 // --- Change 2: Flash Yellow <-> White ---
-                Color textColor = Color.Lerp(_global.Palette_Yellow, _global.Palette_White, pulse);
+                Color textColor = Color.Lerp(_global.Palette_DarkSun, _global.Palette_Sun, pulse);
 
                 // --- Change 3: Black Outline ---
                 Color outlineColor = _global.Palette_Black;

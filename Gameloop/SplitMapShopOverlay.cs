@@ -46,7 +46,7 @@ namespace ProjectVagabond.UI
             _leaveButton = new Button(Rectangle.Empty, "LEAVE", font: _core.SecondaryFont)
             {
                 CustomDefaultTextColor = _global.Palette_Sun,
-                CustomHoverTextColor = _global.Palette_Red,
+                CustomHoverTextColor = _global.Palette_Rust,
                 UseScreenCoordinates = true
             };
             _leaveButton.OnClick += () => OnLeaveRequested?.Invoke();
@@ -162,7 +162,7 @@ namespace ProjectVagabond.UI
                 _hapticsManager.TriggerShake(10f, 0.1f);
 
                 // Trigger Smooth Screen Flash (White, 0.75s fade)
-                _core.TriggerFullscreenFlash(_global.Palette_Green, 0.20f);
+                _core.TriggerFullscreenFlash(_global.Palette_Leaf, 0.20f);
 
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Bought {item.DisplayName}!" });
             }
@@ -222,7 +222,7 @@ namespace ProjectVagabond.UI
             Vector2 coinSize = secondaryFont.MeasureString(coinText);
             float coinX = (Global.VIRTUAL_WIDTH - coinSize.X) / 2f;
             float coinY = _leaveButton.Bounds.Top - coinSize.Y - 4;
-            spriteBatch.DrawStringSnapped(secondaryFont, coinText, new Vector2(coinX, coinY), _global.Palette_Yellow);
+            spriteBatch.DrawStringSnapped(secondaryFont, coinText, new Vector2(coinX, coinY), _global.Palette_DarkSun);
 
             // Buttons
             foreach (var btn in _itemButtons) btn.Draw(spriteBatch, secondaryFont, gameTime, Matrix.Identity);

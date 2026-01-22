@@ -167,10 +167,10 @@ namespace ProjectVagabond
 
             // Draw Frame
             spriteBatch.DrawSnapped(pixel, new Rectangle(bounds.X - 5, bounds.Y - 5, bounds.Width + 10, bounds.Height + 10), _global.TerminalBg);
-            spriteBatch.DrawSnapped(pixel, new Rectangle(bounds.X - 5, bounds.Y - 5, bounds.Width + 10, 2), _global.Palette_White); // Top
-            spriteBatch.DrawSnapped(pixel, new Rectangle(bounds.X - 5, bounds.Y + bounds.Height + 3, bounds.Width + 10, 2), _global.Palette_White); // Bottom
-            spriteBatch.DrawSnapped(pixel, new Rectangle(bounds.X - 5, bounds.Y - 5, 2, bounds.Height + 10), _global.Palette_White); // Left
-            spriteBatch.DrawSnapped(pixel, new Rectangle(bounds.X + bounds.Width + 3, bounds.Y - 5, 2, bounds.Height + 10), _global.Palette_White); // Right
+            spriteBatch.DrawSnapped(pixel, new Rectangle(bounds.X - 5, bounds.Y - 5, bounds.Width + 10, 2), _global.Palette_Sun); // Top
+            spriteBatch.DrawSnapped(pixel, new Rectangle(bounds.X - 5, bounds.Y + bounds.Height + 3, bounds.Width + 10, 2), _global.Palette_Sun); // Bottom
+            spriteBatch.DrawSnapped(pixel, new Rectangle(bounds.X - 5, bounds.Y - 5, 2, bounds.Height + 10), _global.Palette_Sun); // Left
+            spriteBatch.DrawSnapped(pixel, new Rectangle(bounds.X + bounds.Width + 3, bounds.Y - 5, 2, bounds.Height + 10), _global.Palette_Sun); // Right
 
             // Draw Scroll Indicator
             if (activeScrollOffset > 0)
@@ -342,15 +342,14 @@ namespace ProjectVagabond
                 case "palette_darkgray": return _global.Palette_DarkGray;
                 case "palette_gray": return _global.Palette_Gray;
                 case "palette_lightgray": return _global.Palette_LightGray;
-                case "palette_white": return _global.Palette_White;
-                case "Palette_Blue": return _global.Palette_Blue;
-                case "Palette_Green": return _global.Palette_Green;
-                case "Palette_Yellow": return _global.Palette_Yellow;
-                case "palette_yellow": return _global.Palette_Yellow;
-                case "palette_orange": return _global.Palette_Orange;
-                case "palette_red": return _global.Palette_Red;
-                case "Palette_Purple": return _global.Palette_Purple;
-                case "palette_pink": return _global.Palette_Pink;
+                case "palette_white": return _global.Palette_Sun;
+                case "palette_blue": return _global.Palette_Sky;
+                case "palette_green": return _global.Palette_Leaf;
+                case "palette_yellow": return _global.Palette_DarkSun;
+                case "palette_orange": return _global.Palette_Fruit;
+                case "palette_red": return _global.Palette_Rust;
+                case "palette_purple": return _global.Palette_Shadow;
+                case "palette_pink": return _global.Palette_Shadow;
                 case "Palette_Sun": return _global.Palette_Sun;
 
                 case "khaki": return Color.Khaki;

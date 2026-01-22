@@ -124,7 +124,7 @@ namespace ProjectVagabond.Battle.UI
                 float bobSpeed = 2f;
                 float bobOffset = (MathF.Sin(time * bobSpeed + (i * 0.8f)) > 0) ? -1f : 0f;
 
-                spriteBatch.DrawStringSquareOutlinedSnapped(tertiaryFont, valueText, new Vector2(valueX, rowY + 1 + bobOffset), _global.Palette_White * alpha, _global.Palette_Black * alpha);
+                spriteBatch.DrawStringSquareOutlinedSnapped(tertiaryFont, valueText, new Vector2(valueX, rowY + 1 + bobOffset), _global.Palette_Sun * alpha, _global.Palette_Black * alpha);
                 spriteBatch.DrawStringSquareOutlinedSnapped(tertiaryFont, statLabels[i], new Vector2(bounds.X + 16, rowY + 1), statColors[i] * alpha, _global.Palette_Black * alpha);
 
                 int stage = combatant.StatStages[statTypes[i]];

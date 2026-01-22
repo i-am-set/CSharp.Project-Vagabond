@@ -178,7 +178,7 @@ namespace ProjectVagabond.Scenes
             resolutionControl.GetValueColor = (pointValue) =>
             {
                 bool isStandard = SettingsManager.GetResolutions().Any(r => r.Value == pointValue);
-                return isStandard ? (Color?)null : _global.Palette_Yellow;
+                return isStandard ? (Color?)null : _global.Palette_DarkSun;
             };
             resolutionControl.ExtraInfoTextGetter = () =>
             {
