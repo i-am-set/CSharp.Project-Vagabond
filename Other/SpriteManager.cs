@@ -520,7 +520,7 @@ namespace ProjectVagabond
         {
             TargetingButtonSourceRects = new Rectangle[3];
             const int frameWidth = 150;
-            const int frameHeight = 22;
+            const int frameHeight = 13; // Changed from 22 to 13
             // Frame 0: Idle
             TargetingButtonSourceRects[0] = new Rectangle(0, 0, frameWidth, frameHeight);
             // Frame 1: Hover

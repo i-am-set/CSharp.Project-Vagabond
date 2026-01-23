@@ -857,7 +857,7 @@ namespace ProjectVagabond.Battle.UI
                             if (button.IsEnabled)
                             {
                                 float rotation = button.IsHovered ? button.CurrentHoverRotation : 0f;
-                                Color buttonBgColor = button.IsHovered ? _global.Palette_DarkestPale : _global.Palette_DarkShadow;
+                                Color buttonBgColor = button.IsHovered ? _global.Palette_Rust : _global.Palette_DarkShadow;
                                 DrawBeveledBackground(spriteBatch, pixel, hoverRect, buttonBgColor, rotation);
                             }
 
@@ -1133,7 +1133,7 @@ namespace ProjectVagabond.Battle.UI
                 // --- CHANGE END ---
 
                 bool isHovered = (button is Button btn && btn.IsHovered && btn.IsEnabled);
-                Color secBgColor = isHovered ? _global.Palette_DarkestPale : _global.Palette_DarkShadow;
+                Color secBgColor = isHovered ? _global.Palette_Rust : _global.Palette_DarkShadow;
                 float rotation = isHovered ? ((Button)button).CurrentHoverRotation : 0f;
 
                 // Always draw background (DarkShadow)
@@ -1176,7 +1176,7 @@ namespace ProjectVagabond.Battle.UI
                     // Shift background IN by 1 pixel on all sides
                     var bgRect = new Rectangle(offsetBounds.X + 1, offsetBounds.Y + 1, offsetBounds.Width - 2, offsetBounds.Height - 2);
                     bool isHovered = (button.IsHovered && button.IsEnabled);
-                    Color moveBgColor = isHovered ? _global.Palette_DarkestPale : _global.Palette_DarkShadow;
+                    Color moveBgColor = isHovered ? _global.Palette_Rust : _global.Palette_DarkShadow;
                     float rotation = isHovered ? button.CurrentHoverRotation : 0f;
                     DrawBeveledBackground(spriteBatch, pixel, bgRect, moveBgColor, rotation);
                     // --- CHANGE END ---

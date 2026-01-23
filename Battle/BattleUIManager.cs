@@ -66,7 +66,8 @@ namespace ProjectVagabond.Battle.UI
         private Rectangle _controlPromptBounds;
 
         // Targeting Buttons
-        private readonly List<ImageButton> _targetingButtons = new List<ImageButton>();
+        // Changed from ImageButton to Button to allow manual background drawing
+        private readonly List<Button> _targetingButtons = new List<Button>();
         public BattleCombatant? HoveredCombatantFromUI { get; private set; }
         public BattleCombatant? CombatantHoveredViaSprite { get; set; }
 
@@ -159,15 +160,12 @@ namespace ProjectVagabond.Battle.UI
         {
             if (_targetingButtons.Count > 0) return;
 
-            var spriteManager = ServiceLocator.Get<SpriteManager>();
-            var sheet = spriteManager.TargetingButtonSpriteSheet;
-            var rects = spriteManager.TargetingButtonSourceRects;
-
             // 2x2 Grid
             // TL, TR, BL, BR
             for (int i = 0; i < 4; i++)
             {
-                var btn = new ImageButton(Rectangle.Empty, sheet, rects[0], rects[1], disabledSourceRect: rects[2], enableHoverSway: false);
+                // Use standard Button, we will draw the background manually
+                var btn = new Button(Rectangle.Empty, "", enableHoverSway: false);
                 _targetingButtons.Add(btn);
             }
         }
@@ -319,9 +317,9 @@ namespace ProjectVagabond.Battle.UI
 
             // Layout Constants
             const int btnWidth = 150;
-            const int btnHeight = 13;
+            const int btnHeight = 13; // Matched to ACT button height
             const int gridX = 10; // (320 - 300) / 2
-            const int gridY = 144;
+            const int gridY = 144; // Aligned with ActionMenu start
 
             // 0: TL (Enemy 0), 1: TR (Enemy 1), 2: BL (Player 0), 3: BR (Player 1)
             for (int i = 0; i < 4; i++)
@@ -440,6 +438,7 @@ namespace ProjectVagabond.Battle.UI
         {
             EnsureTargetingButtonsInitialized();
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+            var pixel = ServiceLocator.Get<Texture2D>();
 
             var battleManager = ServiceLocator.Get<BattleManager>();
             var currentActor = battleManager.CurrentActingCombatant;
@@ -490,10 +489,24 @@ namespace ProjectVagabond.Battle.UI
                     }
                 }
 
-                // Draw the button sprite with forceHover
-                btn.Draw(spriteBatch, secondaryFont, gameTime, transform, forceHover: shouldHighlight);
+                // --- DRAW BACKGROUND ---
+                // Calculate visual rect: 1 pixel shorter on top and bottom, 1 pixel skinnier on left and right
+                var hoverRect = new Rectangle(
+                    btn.Bounds.X + 1,
+                    btn.Bounds.Y + 1,
+                    btn.Bounds.Width - 2,
+                    btn.Bounds.Height - 2
+                );
 
-                // Draw the text
+                Color bgColor = _global.Palette_DarkShadow;
+                if (shouldHighlight) bgColor = _global.Palette_Rust;
+                else if (!btn.IsEnabled) bgColor = _global.Palette_Black; // Disabled = Black
+
+                float rotation = shouldHighlight ? btn.CurrentHoverRotation : 0f;
+
+                DrawBeveledBackground(spriteBatch, pixel, hoverRect, bgColor, rotation);
+
+                // Draw the button text
                 if (!string.IsNullOrEmpty(btn.Text))
                 {
                     Vector2 textSize = secondaryFont.MeasureString(btn.Text);
@@ -508,24 +521,19 @@ namespace ProjectVagabond.Battle.UI
 
                     if (btn.Text == "EMPTY")
                     {
-                        textColor = _global.Palette_DarkShadow;
+                        textColor = _global.ButtonDisableColor;
                     }
                     else if (shouldHighlight)
                     {
-                        textColor = Color.Yellow;
-                    }
-                    else if (buttonCombatant == currentActor)
-                    {
-                        // Override for current actor
-                        textColor = _global.Palette_DarkShadow;
+                        textColor = _global.ButtonHoverColor;
                     }
                     else if (!btn.IsEnabled)
                     {
-                        textColor = btn.CustomDisabledTextColor ?? _global.Palette_DarkShadow;
+                        textColor = btn.CustomDisabledTextColor ?? _global.ButtonDisableColor;
                     }
                     else
                     {
-                        textColor = _global.Palette_Rust;
+                        textColor = _global.GameTextColor;
                     }
 
                     if (shouldHighlight)
@@ -568,7 +576,7 @@ namespace ProjectVagabond.Battle.UI
         private void DrawTargetingText(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
             // Layout Constants matching DrawItemTargetingOverlay
-            const int dividerY = 140;
+            const int dividerY = 140; // Changed from 123 to match new menu height
             const int backButtonHeight = 15;
             const int backButtonTopMargin = 1;
             const int horizontalPadding = 10;
@@ -818,6 +826,35 @@ namespace ProjectVagabond.Battle.UI
                     }
                 }
             }
+        }
+
+        private void DrawBeveledBackground(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, Color color, float rotation = 0f)
+        {
+            Vector2 center = rect.Center.ToVector2();
+            float cos = MathF.Cos(rotation);
+            float sin = MathF.Sin(rotation);
+
+            void DrawRotatedStrip(int relX, int relY, int w, int h)
+            {
+                float stripCenterX = relX + w / 2f;
+                float stripCenterY = relY + h / 2f;
+                float rotX = stripCenterX * cos - stripCenterY * sin;
+                float rotY = stripCenterX * sin + stripCenterY * cos;
+                Vector2 drawPos = center + new Vector2(rotX, rotY);
+                Vector2 origin = new Vector2(0.5f, 0.5f);
+                spriteBatch.DrawSnapped(pixel, drawPos, null, color, rotation, origin, new Vector2(w, h), SpriteEffects.None, 0f);
+            }
+
+            float topY = rect.Y - center.Y;
+            float leftX = rect.X - center.X;
+            float w = rect.Width;
+            float h = rect.Height;
+
+            DrawRotatedStrip((int)(leftX + 2), (int)(topY), (int)(w - 4), 1);
+            DrawRotatedStrip((int)(leftX + 1), (int)(topY + 1), (int)(w - 2), 1);
+            DrawRotatedStrip((int)(leftX), (int)(topY + 2), (int)(w), (int)(h - 4));
+            DrawRotatedStrip((int)(leftX + 1), (int)(topY + h - 2), (int)(w - 2), 1);
+            DrawRotatedStrip((int)(leftX + 2), (int)(topY + h - 1), (int)(w - 4), 1);
         }
     }
 }
