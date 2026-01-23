@@ -319,9 +319,9 @@ namespace ProjectVagabond.Battle.UI
 
             // Layout Constants
             const int btnWidth = 150;
-            const int btnHeight = 22;
+            const int btnHeight = 13;
             const int gridX = 10; // (320 - 300) / 2
-            const int gridY = 126; // Moved up 2 pixels from 128
+            const int gridY = 144;
 
             // 0: TL (Enemy 0), 1: TR (Enemy 1), 2: BL (Player 0), 3: BR (Player 1)
             for (int i = 0; i < 4; i++)
@@ -330,6 +330,7 @@ namespace ProjectVagabond.Battle.UI
                 int col = i % 2;
                 int row = i / 2;
 
+                // Butt up next to each other (0 spacing)
                 btn.Bounds = new Rectangle(gridX + col * btnWidth, gridY + row * btnHeight, btnWidth, btnHeight);
 
                 // Find Combatant
@@ -567,7 +568,7 @@ namespace ProjectVagabond.Battle.UI
         private void DrawTargetingText(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
             // Layout Constants matching DrawItemTargetingOverlay
-            const int dividerY = 123;
+            const int dividerY = 140;
             const int backButtonHeight = 15;
             const int backButtonTopMargin = 1;
             const int horizontalPadding = 10;
