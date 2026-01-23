@@ -84,9 +84,9 @@ namespace ProjectVagabond.Battle.UI
             _global = ServiceLocator.Get<Global>();
 
             const int narratorWidth = 307;
-            const int narratorHeight = 51;
+            const int narratorHeight = 34;
             int narratorX = 7;
-            const int narratorY = 123;
+            const int narratorY = 140;
             _narratorBounds = new Rectangle(narratorX, narratorY, narratorWidth, narratorHeight);
 
             _battleNarrator = new BattleNarrator(_narratorBounds);

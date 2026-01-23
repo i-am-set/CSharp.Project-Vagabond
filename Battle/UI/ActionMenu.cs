@@ -813,7 +813,9 @@ namespace ProjectVagabond.Battle.UI
             var spriteManager = ServiceLocator.Get<SpriteManager>();
             var pixel = ServiceLocator.Get<Texture2D>();
             var bgColor = _global.Palette_Black;
-            const int dividerY = 123;
+
+            const int dividerY = 140;
+
             var bgRect = new Rectangle(0, dividerY + (int)offset.Y, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT - dividerY);
             spriteBatch.DrawSnapped(pixel, bgRect, bgColor);
 
