@@ -51,6 +51,7 @@ namespace ProjectVagabond.Battle.UI
         private const float SELECTION_JUMP_HEIGHT = 4f;
 
         private const float SELECTION_BOB_CYCLE_DURATION = 1.0f;
+        private const float SELECTION_BOB_AMPLITUDE = 0.5f;
 
         // Squash and Stretch State
         private Vector2 _scale = Vector2.One;
@@ -155,17 +156,24 @@ namespace ProjectVagabond.Battle.UI
                 {
                     _selectionTimer += dt;
                     float t = _selectionTimer % SELECTION_BOB_CYCLE_DURATION;
+                    float progress = t / SELECTION_BOB_CYCLE_DURATION;
 
-                    // First half: Alt Sprite (No vertical bob)
-                    if (t < SELECTION_BOB_CYCLE_DURATION / 2f)
+                    // Bobbing Logic: Sine wave (Up is negative Y)
+                    // 0.0 -> 0
+                    // 0.25 -> -1 (Top)
+                    // 0.5 -> 0
+                    // 0.75 -> 1 (Bottom)
+                    // 1.0 -> 0
+                    _selectionOffsetY = -MathF.Sin(progress * MathHelper.TwoPi) * SELECTION_BOB_AMPLITUDE;
+
+                    // Frame Logic: Alt frame during the upper half of the cycle (0.0 to 0.5)
+                    // This aligns the "Apex" (0.25) with the Alt sprite.
+                    if (progress < 0.5f)
                     {
-                        _selectionOffsetY = 0f;
                         _useAltFrame = true;
                     }
-                    // Second half: Main Sprite
                     else
                     {
-                        _selectionOffsetY = 0f;
                         _useAltFrame = false;
                     }
                 }

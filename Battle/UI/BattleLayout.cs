@@ -20,9 +20,10 @@ namespace ProjectVagabond.Battle.UI
         public const int ENEMY_SPRITE_SIZE_MAJOR = 96;
 
         // --- Player Layout ---
-        public const float PLAYER_HEART_CENTER_Y = 99f;
-        public const float PLAYER_BARS_TOP_Y = 78f;
-        public const float PLAYER_NAME_TOP_Y = 111f;
+        // MOVED DOWN 16 PIXELS
+        public const float PLAYER_HEART_CENTER_Y = 115f; // Was 99f
+        public const float PLAYER_BARS_TOP_Y = 94f;      // Was 78f
+        public const float PLAYER_NAME_TOP_Y = 127f;     // Was 111f
 
         // FIX: Reduced width to 40 to match enemies
         public const int PLAYER_BAR_WIDTH = 40;

@@ -184,6 +184,17 @@ namespace ProjectVagabond.Battle.UI
             _reticleController.Reset(); // Reset reticle
         }
 
+        /// <summary>
+        /// Manually sets the centering state. Used by BattleScene to prevent 1-frame glitches
+        /// where the renderer defaults to 2-slot layout before detecting a single enemy.
+        /// </summary>
+        public void SetCenteringState(bool isCentered)
+        {
+            _centeringSequenceStarted = isCentered;
+            // If we are forcing centered, we assume positions are initialized to avoid re-triggering logic
+            if (isCentered) _hasInitializedPositions = true;
+        }
+
         public List<TargetInfo> GetCurrentTargets() => _currentTargets;
 
         public Vector2 GetCombatantVisualCenterPosition(BattleCombatant combatant, IEnumerable<BattleCombatant> allCombatants)

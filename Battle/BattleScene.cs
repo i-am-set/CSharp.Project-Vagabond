@@ -229,6 +229,8 @@ namespace ProjectVagabond.Scenes
                     e.VisualAlpha = 0f;
                 }
 
+                _renderer.SetCenteringState(enemies.Count == 1);
+
                 if (enemies.Count == 1) _animationManager.StartFloorIntroAnimation("floor_center");
                 else
                 {
