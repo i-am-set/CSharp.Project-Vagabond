@@ -200,10 +200,16 @@ namespace ProjectVagabond.Battle.UI
             _secondaryActionButtons.Add(stallButton);
 
             _backButton.Font = secondaryFont;
+            // --- CHANGED: Enable Drift Wave for Back Button ---
+            _backButton.EnableTextWave = true;
+            _backButton.WaveEffectType = TextEffectType.Drift;
 
             _slot2BackButton = new Button(Rectangle.Empty, "BACK", enableHoverSway: false) { CustomDefaultTextColor = _global.DullTextColor };
             _slot2BackButton.OnClick += () => OnSlot2BackRequested?.Invoke();
             _slot2BackButton.Font = secondaryFont;
+            // --- CHANGED: Enable Drift Wave for Slot 2 Back Button ---
+            _slot2BackButton.EnableTextWave = true;
+            _slot2BackButton.WaveEffectType = TextEffectType.Drift;
 
             _buttonsInitialized = true;
         }
@@ -258,6 +264,7 @@ namespace ProjectVagabond.Battle.UI
             UpdateSwitchButtonState();
 
             SetState(MenuState.Main);
+            UpdateLayout(); // Force layout update immediately to prevent 0,0 glitch
         }
 
         public void Hide()
@@ -888,21 +895,17 @@ namespace ProjectVagabond.Battle.UI
                     }
                 case MenuState.Targeting:
                     {
-                        const int backButtonPadding = 4; // Reduced padding
-                        const int backButtonHeight = 15;
-                        const int backButtonTopMargin = 1;
-                        const int horizontalPadding = 10;
-                        const int verticalPadding = 2;
-                        int availableWidth = Global.VIRTUAL_WIDTH - (horizontalPadding * 2);
-                        int availableHeight = Global.VIRTUAL_HEIGHT - dividerY - (verticalPadding * 2);
-                        int gridAreaHeight = availableHeight - backButtonHeight - backButtonTopMargin;
+                        // Match dimensions and position to Action Menu (Text size, Y=170)
+                        int backButtonY = 170;
+                        var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
+                        int backWidth = (int)backSize.Width;
+                        int backHeight = (int)backSize.Height;
 
-                        int backButtonWidth = (int)(_backButton.Font ?? font).MeasureString(_backButton.Text).Width + backButtonPadding * 2;
                         _backButton.Bounds = new Rectangle(
-                            horizontalPadding + (availableWidth - backButtonWidth) / 2 + 1,
-                            170, // +4 pixels
-                            backButtonWidth,
-                            backButtonHeight
+                            (Global.VIRTUAL_WIDTH - backWidth) / 2,
+                            backButtonY,
+                            backWidth,
+                            backHeight
                         );
                         _backButton.Draw(spriteBatch, font, gameTime, transform, false, null, offset.Y);
                         break;

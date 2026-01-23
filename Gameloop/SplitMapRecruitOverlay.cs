@@ -757,17 +757,13 @@ namespace ProjectVagabond.UI
                             else if (bonus < 0) textColor = _global.StatColor_Decrease * 0.5f;
                             else textColor = _global.Palette_Sun;
 
-                            if (excessValue > 0)
-                            {
-                                string excessText = $"+{excessValue}";
-                                Vector2 textSize = secondaryFont.MeasureString(excessText);
-                                float textX = (barX + 40) - textSize.X;
-                                Vector2 textPos = new Vector2(textX, currentY);
-                                var pixel = ServiceLocator.Get<Texture2D>();
-                                var bgRect = new Rectangle((int)textPos.X - 1, (int)textPos.Y, (int)textSize.X + 2, (int)textSize.Y);
-                                spriteBatch.DrawSnapped(pixel, bgRect, _global.Palette_Black);
-                                spriteBatch.DrawStringOutlinedSnapped(secondaryFont, excessText, textPos, textColor, _global.Palette_Black);
-                            }
+                            string excessText = $"+{excessValue}";
+                            Vector2 textSize = secondaryFont.MeasureString(excessText);
+                            float textX = (barX + 40) - textSize.X;
+                            Vector2 textPos = new Vector2(textX, currentY);
+                            // Removed duplicate pixel declaration
+                            spriteBatch.DrawSnapped(ServiceLocator.Get<Texture2D>(), new Rectangle((int)textPos.X - 1, (int)textPos.Y, (int)textSize.X + 2, (int)textSize.Y), _global.Palette_Black);
+                            spriteBatch.DrawStringOutlinedSnapped(secondaryFont, excessText, textPos, textColor, _global.Palette_Black);
                         }
                     }
                 }
@@ -782,55 +778,14 @@ namespace ProjectVagabond.UI
 
             for (int s = 0; s < 4; s++)
             {
-                // Determine state
-                var spellEntry = member.Spells[s];
-                bool isFilled = spellEntry != null;
-                bool isHovered = (_hoveredInternalCandidateIndex == index) && (_hoveredSpellSlotIndex == s);
-
-                int frameIndex = 0; // Empty
-                if (isHovered) frameIndex = 2; // Hover
-                else if (isFilled) frameIndex = 1; // Filled
-
-                var sourceRect = _spriteManager.InventorySpellSlotButtonSourceRects[frameIndex];
-                var texture = _spriteManager.InventorySpellSlotButtonSpriteSheet;
-
-                // Draw Sprite
-                if (texture != null)
+                Rectangle spellRect = new Rectangle(spellButtonX, currentY, spellButtonWidth, spellButtonHeight);
+                if (spellRect.Contains(Core.TransformMouse(Mouse.GetState().Position)))
                 {
-                    spriteBatch.DrawSnapped(texture, new Vector2(spellButtonX, currentY), sourceRect, Color.White);
+                    _hoveredSpellSlotIndex = s;
+                    var spell = member.Spells[s];
+                    if (spell != null)
+                        _hoveredItemData = BattleDataCache.Moves.GetValueOrDefault(spell.MoveID);
                 }
-
-                // Draw Text
-                if (isFilled)
-                {
-                    if (BattleDataCache.Moves.TryGetValue(spellEntry.MoveID, out var moveData))
-                    {
-                        string spellName = moveData.MoveName.ToUpper();
-                        var tertiaryFont = _core.TertiaryFont;
-
-                        Color textColor = _global.Palette_Sun;
-                        if (isHovered) textColor = _global.ButtonHoverColor;
-
-                        Vector2 textSize = tertiaryFont.MeasureString(spellName);
-                        Vector2 textPos = new Vector2(
-                            spellButtonX + (spellButtonWidth - textSize.X) / 2f,
-                            currentY + (spellButtonHeight - textSize.Y) / 2f
-                        );
-
-                        // Round to pixel
-                        textPos = new Vector2(MathF.Round(textPos.X), MathF.Round(textPos.Y));
-
-                        if (isHovered)
-                        {
-                            spriteBatch.DrawStringSnapped(tertiaryFont, spellName, textPos, textColor);
-                        }
-                        else
-                        {
-                            spriteBatch.DrawStringSquareOutlinedSnapped(tertiaryFont, spellName, textPos, textColor, _global.Palette_DarkShadow);
-                        }
-                    }
-                }
-
                 currentY += spellButtonHeight;
             }
         }
@@ -866,7 +821,6 @@ namespace ProjectVagabond.UI
                 if (!string.IsNullOrEmpty(path))
                 {
                     var icon = _spriteManager.GetSmallRelicSprite(path);
-                    var silhouette = _spriteManager.GetSmallRelicSpriteSilhouette(path);
 
                     if (icon != null)
                     {
@@ -902,25 +856,6 @@ namespace ProjectVagabond.UI
                         Vector2 iconOrigin = new Vector2(8, 8);
                         Vector2 iconCenter = drawPos + iconOrigin;
 
-                        // --- DOUBLE LAYERED OUTLINE (Always Visible) ---
-                        if (silhouette != null)
-                        {
-                            Color mainOutlineColor = isHovered ? _global.ItemOutlineColor_Hover : _global.ItemOutlineColor_Idle;
-                            Color cornerOutlineColor = isHovered ? _global.ItemOutlineColor_Hover_Corner : _global.ItemOutlineColor_Idle_Corner;
-
-                            // 1. Draw Diagonals (Corners) FIRST (Behind)
-                            spriteBatch.DrawSnapped(silhouette, iconCenter + new Vector2(-1, -1), null, cornerOutlineColor, rotation, iconOrigin, popScale, SpriteEffects.None, 0f);
-                            spriteBatch.DrawSnapped(silhouette, iconCenter + new Vector2(1, -1), null, cornerOutlineColor, rotation, iconOrigin, popScale, SpriteEffects.None, 0f);
-                            spriteBatch.DrawSnapped(silhouette, iconCenter + new Vector2(-1, 1), null, cornerOutlineColor, rotation, iconOrigin, popScale, SpriteEffects.None, 0f);
-                            spriteBatch.DrawSnapped(silhouette, iconCenter + new Vector2(1, 1), null, cornerOutlineColor, rotation, iconOrigin, popScale, SpriteEffects.None, 0f);
-
-                            // 2. Draw Cardinals (Main) SECOND (On Top)
-                            spriteBatch.DrawSnapped(silhouette, iconCenter + new Vector2(-1, 0), null, mainOutlineColor, rotation, iconOrigin, popScale, SpriteEffects.None, 0f);
-                            spriteBatch.DrawSnapped(silhouette, iconCenter + new Vector2(1, 0), null, mainOutlineColor, rotation, iconOrigin, popScale, SpriteEffects.None, 0f);
-                            spriteBatch.DrawSnapped(silhouette, iconCenter + new Vector2(0, -1), null, mainOutlineColor, rotation, iconOrigin, popScale, SpriteEffects.None, 0f);
-                            spriteBatch.DrawSnapped(silhouette, iconCenter + new Vector2(0, 1), null, mainOutlineColor, rotation, iconOrigin, popScale, SpriteEffects.None, 0f);
-                        }
-
                         spriteBatch.DrawSnapped(icon, iconCenter, null, Color.White, rotation, iconOrigin, popScale, SpriteEffects.None, 0f);
                     }
                 }
@@ -953,17 +888,10 @@ namespace ProjectVagabond.UI
 
         private void DrawBeveledBorder(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, Color color)
         {
-            // Top Line: X+2 to W-4
-            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 2, rect.Y, rect.Width - 4, 1), color);
-
-            // Bottom Line: X+2 to W-4
-            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 2, rect.Bottom - 1, rect.Width - 4, 1), color);
-
-            // Left Line: Y+2 to H-4
-            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X, rect.Y + 2, 1, rect.Height - 4), color);
-
-            // Right Line: Y+2 to H-4
-            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.Right - 1, rect.Y + 2, 1, rect.Height - 4), color);
+            spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Top, rect.Width, 1), color);
+            spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Bottom - 1, rect.Width, 1), color);
+            spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Top, 1, rect.Height), color);
+            spriteBatch.Draw(pixel, new Rectangle(rect.Right - 1, rect.Top, 1, rect.Height), color);
 
             // Corners (1x1 pixels)
             // Top-Left

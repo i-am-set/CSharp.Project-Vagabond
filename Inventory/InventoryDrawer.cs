@@ -629,7 +629,6 @@ namespace ProjectVagabond.UI
                 if (!string.IsNullOrEmpty(path))
                 {
                     var icon = _overlay.SpriteManager.GetSmallRelicSprite(path);
-                    var silhouette = _overlay.SpriteManager.GetSmallRelicSpriteSilhouette(path);
 
                     if (icon != null)
                     {
@@ -664,42 +663,6 @@ namespace ProjectVagabond.UI
                         // Origin is center of 16x16 sprite (8,8)
                         Vector2 iconOrigin = new Vector2(8, 8);
                         Vector2 iconCenter = drawPos + iconOrigin;
-
-                        // --- DOUBLE LAYERED OUTLINE (Always Visible) ---
-                        if (silhouette != null)
-                        {
-                            // Determine colors based on state
-                            Color mainOutlineColor, cornerOutlineColor;
-                            var global = _overlay.Global;
-
-                            if (isSelected)
-                            {
-                                mainOutlineColor = global.ItemOutlineColor_Selected;
-                                cornerOutlineColor = global.ItemOutlineColor_Selected_Corner;
-                            }
-                            else if (isHovered)
-                            {
-                                mainOutlineColor = global.ItemOutlineColor_Hover;
-                                cornerOutlineColor = global.ItemOutlineColor_Hover_Corner;
-                            }
-                            else
-                            {
-                                mainOutlineColor = global.ItemOutlineColor_Idle;
-                                cornerOutlineColor = global.ItemOutlineColor_Idle_Corner;
-                            }
-
-                            // 1. Draw Diagonals (Corners) FIRST (Behind)
-                            spriteBatch.DrawSnapped(silhouette, iconCenter + new Vector2(-1, -1), null, cornerOutlineColor, rotation, iconOrigin, popScale, SpriteEffects.None, 0f);
-                            spriteBatch.DrawSnapped(silhouette, iconCenter + new Vector2(1, -1), null, cornerOutlineColor, rotation, iconOrigin, popScale, SpriteEffects.None, 0f);
-                            spriteBatch.DrawSnapped(silhouette, iconCenter + new Vector2(-1, 1), null, cornerOutlineColor, rotation, iconOrigin, popScale, SpriteEffects.None, 0f);
-                            spriteBatch.DrawSnapped(silhouette, iconCenter + new Vector2(1, 1), null, cornerOutlineColor, rotation, iconOrigin, popScale, SpriteEffects.None, 0f);
-
-                            // 2. Draw Cardinals (Main) SECOND (On Top)
-                            spriteBatch.DrawSnapped(silhouette, iconCenter + new Vector2(-1, 0), null, mainOutlineColor, rotation, iconOrigin, popScale, SpriteEffects.None, 0f);
-                            spriteBatch.DrawSnapped(silhouette, iconCenter + new Vector2(1, 0), null, mainOutlineColor, rotation, iconOrigin, popScale, SpriteEffects.None, 0f);
-                            spriteBatch.DrawSnapped(silhouette, iconCenter + new Vector2(0, -1), null, mainOutlineColor, rotation, iconOrigin, popScale, SpriteEffects.None, 0f);
-                            spriteBatch.DrawSnapped(silhouette, iconCenter + new Vector2(0, 1), null, mainOutlineColor, rotation, iconOrigin, popScale, SpriteEffects.None, 0f);
-                        }
 
                         spriteBatch.DrawSnapped(icon, iconCenter, null, Color.White, rotation, iconOrigin, popScale, SpriteEffects.None, 0f);
                     }

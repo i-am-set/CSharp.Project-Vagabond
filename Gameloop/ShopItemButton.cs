@@ -12,6 +12,7 @@ using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 
 namespace ProjectVagabond.UI
 {
@@ -19,7 +20,6 @@ namespace ProjectVagabond.UI
     {
         public ShopItem Item { get; }
         private readonly Texture2D _iconTexture;
-        private readonly Texture2D _iconSilhouette;
         private readonly BitmapFont _priceFont; // Secondary (5x5)
         private readonly BitmapFont _currencyFont; // Tertiary (3x4)
         private readonly BitmapFont _nameFont;
@@ -59,7 +59,6 @@ namespace ProjectVagabond.UI
         {
             Item = item;
             _iconTexture = icon;
-            _iconSilhouette = silhouette;
             _priceFont = priceFont;
             _currencyFont = currencyFont;
             _nameFont = nameFont;
@@ -223,60 +222,6 @@ namespace ProjectVagabond.UI
                     // Center for rotation
                     Vector2 iconOrigin = new Vector2(8, 8);
                     Vector2 iconCenter = drawPos + iconOrigin;
-
-                    // 1. Draw Two-Tone Silhouette Outline (Always)
-                    if (_iconSilhouette != null)
-                    {
-                        Color mainOutlineColor;
-                        Color cornerOutlineColor;
-
-                        if (_rejectionShakeTimer > 0)
-                        {
-                            // Rejection Animation: Flash Red -> White -> Red -> White
-                            float flashInterval = REJECTION_SHAKE_DURATION / 4f;
-                            int cycle = (int)(_rejectionShakeTimer / flashInterval);
-                            bool isRed = cycle % 2 != 0;
-
-                            mainOutlineColor = isRed ? _global.Palette_Rust : Color.White;
-                            cornerOutlineColor = mainOutlineColor;
-                        }
-                        else if (isActivated)
-                        {
-                            if (!canAfford)
-                            {
-                                // Expensive Hover: White Outline
-                                mainOutlineColor = Color.White;
-                                cornerOutlineColor = Color.White;
-                            }
-                            else
-                            {
-                                // Normal Hover: Bright Outline
-                                mainOutlineColor = _global.ItemOutlineColor_Hover;
-                                cornerOutlineColor = _global.ItemOutlineColor_Hover_Corner;
-                            }
-                        }
-                        else
-                        {
-                            // Idle: Gray Outline
-                            mainOutlineColor = _global.ItemOutlineColor_Idle;
-                            cornerOutlineColor = _global.ItemOutlineColor_Idle_Corner;
-                        }
-
-                        // Apply Rotation from Base Class
-                        float rotation = _currentHoverRotation;
-
-                        // Draw Diagonals (Corners) FIRST (Behind)
-                        spriteBatch.DrawSnapped(_iconSilhouette, iconCenter + new Vector2(-1, -1), null, cornerOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
-                        spriteBatch.DrawSnapped(_iconSilhouette, iconCenter + new Vector2(1, -1), null, cornerOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
-                        spriteBatch.DrawSnapped(_iconSilhouette, iconCenter + new Vector2(-1, 1), null, cornerOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
-                        spriteBatch.DrawSnapped(_iconSilhouette, iconCenter + new Vector2(1, 1), null, cornerOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
-
-                        // Draw Cardinals (Main) SECOND (On Top)
-                        spriteBatch.DrawSnapped(_iconSilhouette, iconCenter + new Vector2(-1, 0), null, mainOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
-                        spriteBatch.DrawSnapped(_iconSilhouette, iconCenter + new Vector2(1, 0), null, mainOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
-                        spriteBatch.DrawSnapped(_iconSilhouette, iconCenter + new Vector2(0, -1), null, mainOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
-                        spriteBatch.DrawSnapped(_iconSilhouette, iconCenter + new Vector2(0, 1), null, mainOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
-                    }
 
                     // 2. Draw Body (Always Texture)
                     spriteBatch.DrawSnapped(_iconTexture, iconCenter, null, Color.White, _currentHoverRotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);

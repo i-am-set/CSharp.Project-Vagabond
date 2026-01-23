@@ -12,6 +12,7 @@ using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.UI
@@ -194,26 +195,6 @@ namespace ProjectVagabond.UI
                 Vector2 iconOrigin = new Vector2(8, 8);
 
                 Rectangle src = IconSourceRect ?? IconTexture.Bounds;
-
-                // Draw Silhouette Outline if available
-                if (IconSilhouette != null)
-                {
-                    // Use global outline colors
-                    Color mainOutlineColor = isActivated ? _global.ItemOutlineColor_Hover : _global.ItemOutlineColor_Idle;
-                    Color cornerOutlineColor = isActivated ? _global.ItemOutlineColor_Hover_Corner : _global.ItemOutlineColor_Idle_Corner;
-
-                    // 1. Draw Diagonals (Corners) FIRST (Behind)
-                    spriteBatch.DrawSnapped(IconSilhouette, iconPos + new Vector2(-1, -1), src, cornerOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
-                    spriteBatch.DrawSnapped(IconSilhouette, iconPos + new Vector2(1, -1), src, cornerOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
-                    spriteBatch.DrawSnapped(IconSilhouette, iconPos + new Vector2(-1, 1), src, cornerOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
-                    spriteBatch.DrawSnapped(IconSilhouette, iconPos + new Vector2(1, 1), src, cornerOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
-
-                    // 2. Draw Cardinals (Main) SECOND (On Top)
-                    spriteBatch.DrawSnapped(IconSilhouette, iconPos + new Vector2(-1, 0), src, mainOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
-                    spriteBatch.DrawSnapped(IconSilhouette, iconPos + new Vector2(1, 0), src, mainOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
-                    spriteBatch.DrawSnapped(IconSilhouette, iconPos + new Vector2(0, -1), src, mainOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
-                    spriteBatch.DrawSnapped(IconSilhouette, iconPos + new Vector2(0, 1), src, mainOutlineColor, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
-                }
 
                 spriteBatch.DrawSnapped(IconTexture, iconPos, src, Color.White, rotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
             }

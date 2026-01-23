@@ -568,22 +568,7 @@ namespace ProjectVagabond.UI
 
         private void DrawIconWithSilhouette(SpriteBatch spriteBatch, Texture2D? texture, Texture2D? silhouette, Vector2 pos, Vector2 origin, float scale, Rectangle? sourceRect = null, Color? tint = null, float opacity = 1.0f)
         {
-            if (silhouette != null)
-            {
-                Color mainOutlineColor = _global.ItemOutlineColor_Idle * opacity;
-                Color cornerOutlineColor = _global.ItemOutlineColor_Idle_Corner * opacity;
-
-                spriteBatch.DrawSnapped(silhouette, pos + new Vector2(-1, -1) * scale, sourceRect, cornerOutlineColor, 0f, origin, scale, SpriteEffects.None, 0f);
-                spriteBatch.DrawSnapped(silhouette, pos + new Vector2(1, -1) * scale, sourceRect, cornerOutlineColor, 0f, origin, scale, SpriteEffects.None, 0f);
-                spriteBatch.DrawSnapped(silhouette, pos + new Vector2(-1, 1) * scale, sourceRect, cornerOutlineColor, 0f, origin, scale, SpriteEffects.None, 0f);
-                spriteBatch.DrawSnapped(silhouette, pos + new Vector2(1, 1) * scale, sourceRect, cornerOutlineColor, 0f, origin, scale, SpriteEffects.None, 0f);
-
-                spriteBatch.DrawSnapped(silhouette, pos + new Vector2(-1, 0) * scale, sourceRect, mainOutlineColor, 0f, origin, scale, SpriteEffects.None, 0f);
-                spriteBatch.DrawSnapped(silhouette, pos + new Vector2(1, 0) * scale, sourceRect, mainOutlineColor, 0f, origin, scale, SpriteEffects.None, 0f);
-                spriteBatch.DrawSnapped(silhouette, pos + new Vector2(0, -1) * scale, sourceRect, mainOutlineColor, 0f, origin, scale, SpriteEffects.None, 0f);
-                spriteBatch.DrawSnapped(silhouette, pos + new Vector2(0, 1) * scale, sourceRect, mainOutlineColor, 0f, origin, scale, SpriteEffects.None, 0f);
-            }
-
+            // Removed silhouette drawing logic as requested.
             if (texture != null)
             {
                 spriteBatch.DrawSnapped(texture, pos, sourceRect, (tint ?? Color.White) * opacity, 0f, origin, scale, SpriteEffects.None, 0f);

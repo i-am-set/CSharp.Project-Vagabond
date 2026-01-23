@@ -64,15 +64,6 @@ namespace ProjectVagabond
             ColorPercentageMin = Palette_DarkShadow;
             ColorPercentageMax = Palette_Leaf;
 
-            // Initialize Item Outline Colors
-            ItemOutlineColor_Idle = Palette_DarkShadow;
-            ItemOutlineColor_Hover = Palette_DarkShadow;
-            ItemOutlineColor_Selected = Palette_DarkShadow;
-
-            ItemOutlineColor_Idle_Corner = Palette_DarkShadow;
-            ItemOutlineColor_Hover_Corner = Palette_DarkShadow;
-            ItemOutlineColor_Selected_Corner = Palette_DarkShadow;
-
             // Initialize Narration Colors
             ColorNarration_Default = GameTextColor;
             ColorNarration_Highlight = HighlightTextColor;
@@ -332,16 +323,6 @@ namespace ProjectVagabond
         // Percentage Gradient Colors
         public Color ColorPercentageMin { get; private set; }
         public Color ColorPercentageMax { get; private set; }
-
-        // Item Outline Colors
-        public Color ItemOutlineColor_Idle { get; private set; }
-        public Color ItemOutlineColor_Hover { get; private set; }
-        public Color ItemOutlineColor_Selected { get; private set; }
-
-        // Item Outline Corner Colors
-        public Color ItemOutlineColor_Idle_Corner { get; private set; }
-        public Color ItemOutlineColor_Hover_Corner { get; private set; }
-        public Color ItemOutlineColor_Selected_Corner { get; private set; }
 
         // Narration Colors
         public Color ColorNarration_Default { get; private set; }

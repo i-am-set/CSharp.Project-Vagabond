@@ -17,6 +17,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using static ProjectVagabond.Battle.Abilities.InflictStatusStunAbility;
 
 namespace ProjectVagabond.Battle.UI
 {
@@ -544,13 +545,13 @@ namespace ProjectVagabond.Battle.UI
 
                         // Use the new Square Outlined Wave Text with SmallWave effect
                         // FIX: Use TextAnimator instead of AnimationUtils/TextUtils
-                        TextAnimator.DrawTextWithEffectSquareOutlined(
+                        // REMOVED OUTLINE: Use DrawTextWithEffect instead of DrawTextWithEffectSquareOutlined
+                        TextAnimator.DrawTextWithEffect(
                             spriteBatch,
                             secondaryFont,
                             btn.Text,
                             textPos,
                             textColor,
-                            _global.Palette_Black,
                             TextEffectType.SmallWave,
                             waveTimer
                         );
@@ -558,7 +559,8 @@ namespace ProjectVagabond.Battle.UI
                     else
                     {
                         // Use standard Square Outlined Text
-                        spriteBatch.DrawStringSquareOutlinedSnapped(secondaryFont, btn.Text, textPos, textColor, _global.Palette_Black);
+                        // REMOVED OUTLINE: Use DrawStringSnapped instead of DrawStringSquareOutlinedSnapped
+                        spriteBatch.DrawStringSnapped(secondaryFont, btn.Text, textPos, textColor);
                     }
 
                     // Strikethrough for unselectable targets (INCLUDING EMPTY if disabled)

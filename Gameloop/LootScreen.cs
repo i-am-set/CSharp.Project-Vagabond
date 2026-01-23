@@ -527,7 +527,6 @@ namespace ProjectVagabond.Scenes
                 float shadowAlpha = MathHelper.Lerp(0.5f, 0.2f, liftRatio) * state.Opacity;
 
                 Texture2D icon = _spriteManager.GetItemSprite(card.Item.SpritePath);
-                Texture2D silhouette = _spriteManager.GetItemSpriteSilhouette(card.Item.SpritePath);
 
                 if (icon != null)
                 {
@@ -536,27 +535,7 @@ namespace ProjectVagabond.Scenes
                     // 1. Draw Floor Shadow
                     sb.Draw(icon, center + new Vector2(state.Offset.X, 8), null, Color.Black * shadowAlpha, state.Rotation, origin, new Vector2(state.Scale.X, state.Scale.Y * 0.3f), SpriteEffects.None, 0f);
 
-                    // 2. Draw Outline
-                    if (silhouette != null)
-                    {
-                        bool isHovered = card.IsMouseHovering && !_selectionMade;
-                        Color mainOutlineColor = isHovered ? _global.ItemOutlineColor_Hover : _global.Palette_Black;
-                        Color cornerOutlineColor = isHovered ? _global.ItemOutlineColor_Hover_Corner : _global.Palette_Black;
-
-                        // Corners
-                        sb.DrawSnapped(silhouette, drawPos + new Vector2(-1, -1), null, cornerOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
-                        sb.DrawSnapped(silhouette, drawPos + new Vector2(1, -1), null, cornerOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
-                        sb.DrawSnapped(silhouette, drawPos + new Vector2(-1, 1), null, cornerOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
-                        sb.DrawSnapped(silhouette, drawPos + new Vector2(1, 1), null, cornerOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
-
-                        // Cardinals
-                        sb.DrawSnapped(silhouette, drawPos + new Vector2(-1, 0), null, mainOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
-                        sb.DrawSnapped(silhouette, drawPos + new Vector2(1, 0), null, mainOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
-                        sb.DrawSnapped(silhouette, drawPos + new Vector2(0, -1), null, mainOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
-                        sb.DrawSnapped(silhouette, drawPos + new Vector2(0, 1), null, mainOutlineColor * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
-                    }
-
-                    // 3. Draw Item Sprite Body
+                    // 2. Draw Item Sprite Body
                     sb.DrawSnapped(icon, drawPos, null, Color.White * state.Opacity, state.Rotation, origin, state.Scale, SpriteEffects.None, 0f);
                 }
             }
