@@ -114,6 +114,9 @@ namespace ProjectVagabond.Battle.UI
         // --- Cache for Bar Bottom Positions ---
         private Dictionary<string, float> _combatantBarBottomYs = new Dictionary<string, float>();
 
+        // --- Cache for Bar Top-Left Positions (For HUD Layering) ---
+        private readonly Dictionary<string, Vector2> _combatantBarPositions = new Dictionary<string, Vector2>();
+
         // --- TARGETING RETICLE CONTROLLER ---
         private class ReticleController
         {
@@ -168,6 +171,7 @@ namespace ProjectVagabond.Battle.UI
             _combatantVisualCenters.Clear();
             _combatantStaticCenters.Clear();
             _combatantBarBottomYs.Clear();
+            _combatantBarPositions.Clear();
             _statTooltipAlpha = 0f;
             _statTooltipCombatantID = null;
             _centeringSequenceStarted = false;
@@ -304,6 +308,8 @@ namespace ProjectVagabond.Battle.UI
 
             _currentTargets.Clear();
             _playerStatusIcons.Clear();
+            _combatantBarPositions.Clear(); // Clear cached bar positions
+            foreach (var list in _enemyStatusIcons.Values) list.Clear(); // Clear enemy icon trackers
 
             var enemies = allCombatants.Where(c => !c.IsPlayerControlled && c.IsActiveOnField).ToList();
             var players = allCombatants.Where(c => c.IsPlayerControlled && c.IsActiveOnField).ToList();
@@ -321,21 +327,17 @@ namespace ProjectVagabond.Battle.UI
             if (flashState != null)
             {
                 // 1. Draw Floors AND Shadows for EVERYONE (Bottom Layer)
-                // This ensures shadows are under the flash.
                 DrawEnemies(spriteBatch, enemies, allCombatants, currentActor, shouldGrayOut, selectableTargets, animationManager, silhouetteColors, transform, gameTime, uiManager, hoveredCombatant, drawFloor: true, drawShadow: true, drawSprite: false);
                 DrawPlayers(spriteBatch, font, players, currentActor, shouldGrayOut, selectableTargets, animationManager, silhouetteColors, gameTime, uiManager, hoveredCombatant, drawFloor: true, drawShadow: true, drawSprite: false);
 
                 // 2. Draw Non-Target Sprites (Middle Layer - Obscured)
-                // No shadows here, already drawn.
                 var nonTargetEnemies = enemies.Where(e => !flashState.TargetCombatantIDs.Contains(e.CombatantID)).ToList();
                 var nonTargetPlayers = players.Where(p => !flashState.TargetCombatantIDs.Contains(p.CombatantID)).ToList();
 
-                // Draw sprites for non-targets (includeDying=true because dying enemies are usually not targets of the current hit)
                 DrawEnemies(spriteBatch, nonTargetEnemies, allCombatants, currentActor, shouldGrayOut, selectableTargets, animationManager, silhouetteColors, transform, gameTime, uiManager, hoveredCombatant, drawFloor: false, drawShadow: false, drawSprite: true, includeDying: true);
                 DrawPlayers(spriteBatch, font, nonTargetPlayers, currentActor, shouldGrayOut, selectableTargets, animationManager, silhouetteColors, gameTime, uiManager, hoveredCombatant, drawFloor: false, drawShadow: false, drawSprite: true);
 
                 // --- 3. REQUEST FULLSCREEN OVERLAY FOR FLASH & TARGETS ---
-                // This ensures the flash covers the letterbox bars, and the targets pop out on top of it.
                 _core.RequestFullscreenOverlay((overlayBatch, uiMatrix) =>
                 {
                     var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
@@ -343,7 +345,7 @@ namespace ProjectVagabond.Battle.UI
                     int screenH = graphicsDevice.PresentationParameters.BackBufferHeight;
                     var pixel = ServiceLocator.Get<Texture2D>();
 
-                    // A. Draw Flash Rect (Screen Space - Identity Matrix)
+                    // A. Draw Flash Rect
                     float alpha = Math.Clamp(flashState.Timer / flashState.Duration, 0f, 1f);
                     alpha = Easing.EaseOutQuad(alpha);
 
@@ -351,24 +353,19 @@ namespace ProjectVagabond.Battle.UI
                     overlayBatch.Draw(pixel, new Rectangle(0, 0, screenW, screenH), flashState.Color * alpha);
                     overlayBatch.End();
 
-                    // B. Draw Target Sprites (Virtual Space - UI Matrix)
-                    // We use the uiMatrix (Virtual->Screen) so the targets are drawn in the correct screen position.
+                    // B. Draw Target Sprites
                     var targetEnemies = enemies.Where(e => flashState.TargetCombatantIDs.Contains(e.CombatantID)).ToList();
                     var targetPlayers = players.Where(p => flashState.TargetCombatantIDs.Contains(p.CombatantID)).ToList();
 
                     overlayBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, uiMatrix);
-
-                    // Draw sprites for targets (includeDying=false because targets shouldn't be dying yet)
-                    // IMPORTANT: Pass uiMatrix as the transform so BattleEntityRenderer restarts the batch correctly!
                     DrawEnemies(overlayBatch, targetEnemies, allCombatants, currentActor, shouldGrayOut, selectableTargets, animationManager, silhouetteColors, uiMatrix, gameTime, uiManager, hoveredCombatant, drawFloor: false, drawShadow: false, drawSprite: true, includeDying: false);
                     DrawPlayers(overlayBatch, font, targetPlayers, currentActor, shouldGrayOut, selectableTargets, animationManager, silhouetteColors, gameTime, uiManager, hoveredCombatant, drawFloor: false, drawShadow: false, drawSprite: true);
-
                     overlayBatch.End();
                 });
             }
             else
             {
-                // Standard Draw (Floors, Shadows, and Sprites together)
+                // Standard Draw
                 DrawEnemies(spriteBatch, enemies, allCombatants, currentActor, shouldGrayOut, selectableTargets, animationManager, silhouetteColors, transform, gameTime, uiManager, hoveredCombatant);
                 DrawPlayers(spriteBatch, font, players, currentActor, shouldGrayOut, selectableTargets, animationManager, silhouetteColors, gameTime, uiManager, hoveredCombatant);
             }
@@ -379,6 +376,9 @@ namespace ProjectVagabond.Battle.UI
             // --- Draw Targeting Highlights (Dotted Rectangles) ---
             var effectiveFocus = hoveredCombatant ?? uiManager.HoveredCombatantFromUI;
             DrawTargetingHighlights(spriteBatch, uiManager, gameTime, silhouetteColors, effectiveFocus);
+
+            // --- Draw HUD (Bars & Icons) - TOP LAYER ---
+            DrawHUD(spriteBatch, animationManager, gameTime, uiManager, currentActor);
 
             // --- Draw UI Title ---
             DrawUITitle(spriteBatch, gameTime, uiManager.SubMenuState);
@@ -943,6 +943,12 @@ namespace ProjectVagabond.Battle.UI
                     // Only the active actor gets the Sun outline. Everyone else gets Transparent (no outer outline).
                     Color outlineColor = (enemy == currentActor) ? _global.Palette_Sun : Color.Transparent;
 
+                    // Hide outline if showing stat tooltip to improve readability
+                    if (enemy.CombatantID == _statTooltipCombatantID && _statTooltipAlpha > 0)
+                    {
+                        outlineColor = Color.Transparent;
+                    }
+
                     outlineColor = outlineColor * enemy.VisualAlpha;
 
                     var spawnAnim = animManager.GetSpawnAnimationState(enemy.CombatantID);
@@ -1177,8 +1183,25 @@ namespace ProjectVagabond.Battle.UI
                             _combatantVisualCenters[enemy.CombatantID] = hitBox.Center.ToVector2();
                             _combatantStaticCenters[enemy.CombatantID] = new Vector2(center.X, center.Y + spriteSize / 2f);
 
-                            bool showBars = (hoveredCombatant == enemy) || (uiManager.HoveredCombatantFromUI == enemy) || selectable.Contains(enemy);
-                            UpdateBarAlpha(enemy, (float)gameTime.ElapsedGameTime.TotalSeconds, showBars);
+                            // --- NEW: Smart Bar Visibility Logic ---
+                            bool showHP = false;
+                            bool showMana = false;
+
+                            // 1. Check if hovering a move
+                            if (uiManager.HoveredMove != null)
+                            {
+                                AnalyzeMoveImpact(uiManager.HoveredMove, currentActor, enemy, out bool affectsHP, out bool affectsMana);
+                                showHP = affectsHP;
+                                showMana = affectsMana;
+                            }
+                            // 2. Fallback: Check if hovering/selecting the unit itself
+                            else if ((hoveredCombatant == enemy) || (uiManager.HoveredCombatantFromUI == enemy) || selectable.Contains(enemy))
+                            {
+                                showHP = true;
+                                showMana = true;
+                            }
+
+                            UpdateBarAlpha(enemy, (float)gameTime.ElapsedGameTime.TotalSeconds, showHP, showMana);
 
                             float visualCenterY = center.Y + spriteSize / 2f;
                             float tooltipTopY = visualCenterY - 3;
@@ -1232,6 +1255,12 @@ namespace ProjectVagabond.Battle.UI
                 // --- MODIFIED: Outline Color Logic ---
                 // Only the active actor gets the Sun outline. Everyone else gets Transparent (no outer outline).
                 Color outlineColor = (player == currentActor) ? _global.Palette_Sun : Color.Transparent;
+
+                // Hide outline if showing stat tooltip to improve readability
+                if (player.CombatantID == _statTooltipCombatantID && _statTooltipAlpha > 0)
+                {
+                    outlineColor = Color.Transparent;
+                }
 
                 outlineColor = outlineColor * player.VisualAlpha;
 
@@ -1355,22 +1384,25 @@ namespace ProjectVagabond.Battle.UI
                     _combatantVisualCenters[player.CombatantID] = hitBox.Center.ToVector2();
                     _combatantStaticCenters[player.CombatantID] = center; // Use center here too
 
-                    bool isActingAndHoveringManaMove = false;
-                    if (player == currentActor && uiManager.HoveredMove != null)
+                    // --- NEW: Smart Bar Visibility Logic ---
+                    bool showHP = false;
+                    bool showMana = false;
+
+                    // 1. Check if hovering a move
+                    if (uiManager.HoveredMove != null)
                     {
-                        bool usesMana = uiManager.HoveredMove.ManaCost > 0 || uiManager.HoveredMove.Abilities.Any(a => a is ManaDumpAbility);
-                        if (usesMana)
-                        {
-                            isActingAndHoveringManaMove = true;
-                        }
+                        AnalyzeMoveImpact(uiManager.HoveredMove, currentActor, player, out bool affectsHP, out bool affectsMana);
+                        showHP = affectsHP;
+                        showMana = affectsMana;
+                    }
+                    // 2. Fallback: Check if hovering/selecting the unit itself
+                    else if ((hoveredCombatant == player) || (uiManager.HoveredCombatantFromUI == player) || selectable.Contains(player))
+                    {
+                        showHP = true;
+                        showMana = true;
                     }
 
-                    bool showBars = (hoveredCombatant == player) ||
-                                    (uiManager.HoveredCombatantFromUI == player) ||
-                                    selectable.Contains(player) ||
-                                    isActingAndHoveringManaMove;
-
-                    UpdateBarAlpha(player, (float)gameTime.ElapsedGameTime.TotalSeconds, showBars);
+                    UpdateBarAlpha(player, (float)gameTime.ElapsedGameTime.TotalSeconds, showHP, showMana);
 
                     if (player == currentActor && (!isSilhouetted || player.CombatantID == _statTooltipCombatantID))
                     {
@@ -1395,10 +1427,152 @@ namespace ProjectVagabond.Battle.UI
                     float barBottomY = barY + 4;
                     _combatantBarBottomYs[player.CombatantID] = barBottomY;
 
-                    if (player.VisualHealthBarAlpha > 0.01f || player.VisualManaBarAlpha > 0.01f)
+                    // --- HUD LAYERING FIX ---
+                    // Store position for later drawing in DrawHUDPass
+                    _combatantBarPositions[player.CombatantID] = new Vector2(barX, barY);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Analyzes a move to determine if it affects the HP or Mana of a specific combatant.
+        /// </summary>
+        private void AnalyzeMoveImpact(MoveData move, BattleCombatant actor, BattleCombatant candidate, out bool affectsHP, out bool affectsMana)
+        {
+            affectsHP = false;
+            affectsMana = false;
+
+            if (move == null || actor == null || candidate == null) return;
+
+            bool isActor = actor == candidate;
+
+            // Check if candidate is a valid target for this move
+            // We use TargetingHelper to get the list, then check containment.
+            // This handles complex logic like "Random" or "Team" correctly.
+            var validTargets = TargetingHelper.GetValidTargets(actor, move.Target, ServiceLocator.Get<BattleManager>().AllCombatants);
+            bool isTarget = validTargets.Contains(candidate);
+
+            // --- ACTOR ANALYSIS (Self-Cost / Self-Harm) ---
+            if (isActor)
+            {
+                // Mana Cost
+                if (move.ManaCost > 0) affectsMana = true;
+                if (move.Abilities.Any(a => a is ManaDumpAbility)) affectsMana = true;
+
+                // HP Cost (Recoil / Bloodletter)
+                if (move.Abilities.Any(a => a is RecoilAbility || a is BloodletterAbility)) affectsHP = true;
+            }
+
+            // --- TARGET ANALYSIS (Damage / Healing / Drain) ---
+            if (isTarget)
+            {
+                // HP Impact
+                if (move.Power > 0) affectsHP = true;
+                if (move.Effects.ContainsKey("Heal")) affectsHP = true;
+                if (move.Abilities.Any(a => a is PercentageDamageAbility)) affectsHP = true;
+                if (move.Abilities.Any(a => a is IFixedDamageModifier)) affectsHP = true;
+                if (move.Abilities.Any(a => a is ManaDumpAbility)) affectsHP = true; // FIX: ManaDump implies damage
+
+                // Mana Impact
+                if (move.Abilities.Any(a => a is ManaBurnOnHitAbility || a is ManaDamageAbility)) affectsMana = true;
+                if (move.Abilities.Any(a => a is RestoreManaAbility)) affectsMana = true;
+            }
+        }
+
+        private void UpdateBarAlpha(BattleCombatant c, float dt, bool showHP, bool showMana)
+        {
+            var battleManager = ServiceLocator.Get<BattleManager>();
+            // Check if we are in a phase where bars should persist (Combat execution)
+            bool inCombatPhase = battleManager.CurrentPhase != BattleManager.BattlePhase.ActionSelection_Slot1 &&
+                                 battleManager.CurrentPhase != BattleManager.BattlePhase.ActionSelection_Slot2 &&
+                                 battleManager.CurrentPhase != BattleManager.BattlePhase.StartOfTurn &&
+                                 battleManager.CurrentPhase != BattleManager.BattlePhase.BattleStartIntro;
+
+            // --- HP BAR LOGIC ---
+            // Force visibility if animating damage/healing
+            bool isHealthVisuallyActive = c.VisualHealthBarAlpha > 0f || c.HealthBarVisibleTimer > 0f || c.HealthBarDelayTimer > 0f || c.HealthBarDisappearTimer > 0f;
+            bool hpForceVisible = inCombatPhase && isHealthVisuallyActive;
+
+            // Determine desired visibility
+            bool hpVisible = showHP || c.HealthBarVisibleTimer > 0 || hpForceVisible;
+
+            if (hpVisible)
+            {
+                c.VisualHealthBarAlpha = 1.0f;
+                c.HealthBarDelayTimer = 0f;
+                c.HealthBarDisappearTimer = 0f;
+                c.CurrentBarVariance = (float)(_random.NextDouble() * BattleCombatant.BAR_VARIANCE_MAX);
+            }
+            else
+            {
+                // If we are in menu mode (not combat), hide immediately for snappiness
+                if (!inCombatPhase)
+                {
+                    c.VisualHealthBarAlpha = 0f;
+                    c.HealthBarDelayTimer = 0f;
+                    c.HealthBarDisappearTimer = 0f;
+                }
+                else if (c.VisualHealthBarAlpha > 0f)
+                {
+                    // Standard fade logic for combat events
+                    if (c.HealthBarDelayTimer < BattleCombatant.BAR_DELAY_DURATION + c.CurrentBarVariance)
                     {
-                        _hudRenderer.DrawStatusIcons(spriteBatch, player, barX, barY, BattleLayout.PLAYER_BAR_WIDTH, true, _playerStatusIcons, GetStatusIconOffset, IsStatusIconAnimating);
-                        _hudRenderer.DrawPlayerBars(spriteBatch, player, barX, barY, BattleLayout.PLAYER_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, player.VisualHealthBarAlpha, player.VisualManaBarAlpha, gameTime, uiManager, player == currentActor);
+                        c.HealthBarDelayTimer += dt;
+                    }
+                    else
+                    {
+                        c.HealthBarDisappearTimer += dt;
+                        float progress = c.HealthBarDisappearTimer / BattleCombatant.BAR_DISAPPEAR_DURATION;
+                        c.VisualHealthBarAlpha = 1.0f - Math.Clamp(progress, 0f, 1f);
+
+                        if (c.HealthBarDisappearTimer >= BattleCombatant.BAR_DISAPPEAR_DURATION)
+                        {
+                            c.VisualHealthBarAlpha = 0f;
+                            c.HealthBarDelayTimer = 0f;
+                            c.HealthBarDisappearTimer = 0f;
+                        }
+                    }
+                }
+            }
+
+            // --- MANA BAR LOGIC ---
+            bool isManaVisuallyActive = c.VisualManaBarAlpha > 0f || c.ManaBarVisibleTimer > 0f || c.ManaBarDelayTimer > 0f || c.ManaBarDisappearTimer > 0f;
+            bool manaForceVisible = inCombatPhase && isManaVisuallyActive;
+            bool manaVisible = showMana || c.ManaBarVisibleTimer > 0 || manaForceVisible;
+
+            if (manaVisible)
+            {
+                c.VisualManaBarAlpha = 1.0f;
+                c.ManaBarDelayTimer = 0f;
+                c.ManaBarDisappearTimer = 0f;
+            }
+            else
+            {
+                // If we are in menu mode (not combat), hide immediately
+                if (!inCombatPhase)
+                {
+                    c.VisualManaBarAlpha = 0f;
+                    c.ManaBarDelayTimer = 0f;
+                    c.ManaBarDisappearTimer = 0f;
+                }
+                else if (c.VisualManaBarAlpha > 0f)
+                {
+                    if (c.ManaBarDelayTimer < BattleCombatant.BAR_DELAY_DURATION + c.CurrentBarVariance)
+                    {
+                        c.ManaBarDelayTimer += dt;
+                    }
+                    else
+                    {
+                        c.ManaBarDisappearTimer += dt;
+                        float progress = c.ManaBarDisappearTimer / BattleCombatant.BAR_DISAPPEAR_DURATION;
+                        c.VisualManaBarAlpha = 1.0f - Math.Clamp(progress, 0f, 1f);
+
+                        if (c.ManaBarDisappearTimer >= BattleCombatant.BAR_DISAPPEAR_DURATION)
+                        {
+                            c.VisualManaBarAlpha = 0f;
+                            c.ManaBarDelayTimer = 0f;
+                            c.ManaBarDisappearTimer = 0f;
+                        }
                     }
                 }
             }
@@ -1581,85 +1755,6 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private void UpdateBarAlpha(BattleCombatant c, float dt, bool shouldBeVisible)
-        {
-            var battleManager = ServiceLocator.Get<BattleManager>();
-            bool inCombatPhase = battleManager.CurrentPhase != BattleManager.BattlePhase.ActionSelection_Slot1 &&
-                                 battleManager.CurrentPhase != BattleManager.BattlePhase.ActionSelection_Slot2 &&
-                                 battleManager.CurrentPhase != BattleManager.BattlePhase.StartOfTurn &&
-                                 battleManager.CurrentPhase != BattleManager.BattlePhase.BattleStartIntro;
-
-            bool isHealthVisuallyActive = c.VisualHealthBarAlpha > 0f || c.HealthBarVisibleTimer > 0f || c.HealthBarDelayTimer > 0f || c.HealthBarDisappearTimer > 0f;
-
-            bool hpForceVisible = inCombatPhase && isHealthVisuallyActive;
-            bool hpVisible = shouldBeVisible || c.HealthBarVisibleTimer > 0 || hpForceVisible;
-
-            if (hpVisible)
-            {
-                c.VisualHealthBarAlpha = 1.0f;
-                c.HealthBarDelayTimer = 0f;
-                c.HealthBarDisappearTimer = 0f;
-                c.CurrentBarVariance = (float)(_random.NextDouble() * BattleCombatant.BAR_VARIANCE_MAX);
-            }
-            else
-            {
-                if (c.VisualHealthBarAlpha > 0f)
-                {
-                    if (c.HealthBarDelayTimer < BattleCombatant.BAR_DELAY_DURATION + c.CurrentBarVariance)
-                    {
-                        c.HealthBarDelayTimer += dt;
-                    }
-                    else
-                    {
-                        c.HealthBarDisappearTimer += dt;
-                        float progress = c.HealthBarDisappearTimer / BattleCombatant.BAR_DISAPPEAR_DURATION;
-                        c.VisualHealthBarAlpha = 1.0f - Math.Clamp(progress, 0f, 1f);
-
-                        if (c.HealthBarDisappearTimer >= BattleCombatant.BAR_DISAPPEAR_DURATION)
-                        {
-                            c.VisualHealthBarAlpha = 0f;
-                            c.HealthBarDelayTimer = 0f;
-                            c.HealthBarDisappearTimer = 0f;
-                        }
-                    }
-                }
-            }
-
-            bool isManaVisuallyActive = c.VisualManaBarAlpha > 0f || c.ManaBarVisibleTimer > 0f || c.ManaBarDelayTimer > 0f || c.ManaBarDisappearTimer > 0f;
-            bool manaForceVisible = inCombatPhase && isManaVisuallyActive;
-            bool manaVisible = shouldBeVisible || c.ManaBarVisibleTimer > 0 || manaForceVisible;
-
-            if (manaVisible)
-            {
-                c.VisualManaBarAlpha = 1.0f;
-                c.ManaBarDelayTimer = 0f;
-                c.ManaBarDisappearTimer = 0f;
-            }
-            else
-            {
-                if (c.VisualManaBarAlpha > 0f)
-                {
-                    if (c.ManaBarDelayTimer < BattleCombatant.BAR_DELAY_DURATION + c.CurrentBarVariance)
-                    {
-                        c.ManaBarDelayTimer += dt;
-                    }
-                    else
-                    {
-                        c.ManaBarDisappearTimer += dt;
-                        float progress = c.ManaBarDisappearTimer / BattleCombatant.BAR_DISAPPEAR_DURATION;
-                        c.VisualManaBarAlpha = 1.0f - Math.Clamp(progress, 0f, 1f);
-
-                        if (c.ManaBarDisappearTimer >= BattleCombatant.BAR_DISAPPEAR_DURATION)
-                        {
-                            c.VisualManaBarAlpha = 0f;
-                            c.ManaBarDelayTimer = 0f;
-                            c.ManaBarDisappearTimer = 0f;
-                        }
-                    }
-                }
-            }
-        }
-
         private float CalculateAttackBobOffset(string id, bool isPlayer)
         {
             if (_attackAnimControllers.TryGetValue(id, out var c)) return c.GetOffset(isPlayer);
@@ -1718,6 +1813,36 @@ namespace ProjectVagabond.Battle.UI
             float barY = tooltipTopY - 6;
 
             return new Vector2(center.X, barY);
+        }
+
+        public void DrawHUD(SpriteBatch spriteBatch, BattleAnimationManager animManager, GameTime gameTime, BattleUIManager uiManager, BattleCombatant currentActor)
+        {
+            var battleManager = ServiceLocator.Get<BattleManager>();
+
+            foreach (var combatant in battleManager.AllCombatants)
+            {
+                if (!_combatantBarPositions.TryGetValue(combatant.CombatantID, out var pos)) continue;
+
+                float barX = pos.X;
+                float barY = pos.Y;
+
+                if (combatant.VisualHealthBarAlpha <= 0.01f && combatant.VisualManaBarAlpha <= 0.01f) continue;
+
+                if (combatant.IsPlayerControlled)
+                {
+                    _hudRenderer.DrawStatusIcons(spriteBatch, combatant, barX, barY, BattleLayout.PLAYER_BAR_WIDTH, true, _playerStatusIcons, GetStatusIconOffset, IsStatusIconAnimating);
+                    _hudRenderer.DrawPlayerBars(spriteBatch, combatant, barX, barY, BattleLayout.PLAYER_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha, combatant.VisualManaBarAlpha, gameTime, uiManager, combatant == currentActor);
+                }
+                else
+                {
+                    // Ensure list exists
+                    if (!_enemyStatusIcons.ContainsKey(combatant.CombatantID))
+                        _enemyStatusIcons[combatant.CombatantID] = new List<StatusIconInfo>();
+
+                    _hudRenderer.DrawStatusIcons(spriteBatch, combatant, barX, barY, BattleLayout.ENEMY_BAR_WIDTH, false, _enemyStatusIcons[combatant.CombatantID], GetStatusIconOffset, IsStatusIconAnimating);
+                    _hudRenderer.DrawEnemyBars(spriteBatch, combatant, barX, barY, BattleLayout.ENEMY_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha, combatant.VisualManaBarAlpha, gameTime);
+                }
+            }
         }
     }
 }
