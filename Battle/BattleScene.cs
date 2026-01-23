@@ -246,6 +246,7 @@ namespace ProjectVagabond.Scenes
         public override void Exit()
         {
             base.Exit();
+            _diceRollingSystem.OnRollCompleted -= OnDiceRollCompleted;
             if (BattleSetup.ReturnSceneState != GameSceneState.Split)
             {
                 _progressionManager.ClearCurrentSplitMap();
@@ -1466,14 +1467,7 @@ namespace ProjectVagabond.Scenes
             string prefixText = absAmount > 1 ? $"{absAmount}x " : "";
             string suffixText = $" {verb}";
             Color changeColor = e.Amount > 0 ? _global.Palette_Sky : _global.Palette_Rust;
-            Color statColor = e.Stat switch
-            {
-                OffensiveStatType.Strength => _global.StatColor_Strength,
-                OffensiveStatType.Intelligence => _global.StatColor_Intelligence,
-                OffensiveStatType.Tenacity => _global.StatColor_Tenacity,
-                OffensiveStatType.Agility => _global.StatColor_Agility,
-                _ => _global.Palette_Sun
-            };
+            Color statColor = _global.Palette_Sun; // Unified color
             Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(e.Target, _battleManager.AllCombatants);
             _animationManager.StartStatStageIndicator(e.Target.CombatantID, prefixText, statText, suffixText, changeColor, statColor, changeColor, hudPosition);
         }

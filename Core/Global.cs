@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Items;
 using ProjectVagabond.Progression;
@@ -15,6 +16,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
+using static ProjectVagabond.Battle.Abilities.InflictStatusStunAbility;
 
 namespace ProjectVagabond
 {
@@ -45,10 +48,6 @@ namespace ProjectVagabond
             ConfirmSettingsColor = Palette_Leaf;
 
             // Initialize Stat Colors
-            StatColor_Strength = Color.Crimson;
-            StatColor_Intelligence = Color.MediumSpringGreen;
-            StatColor_Tenacity = Color.Lime;
-            StatColor_Agility = Color.Yellow;
             StatColor_Increase = Color.Lime;
             StatColor_Decrease = Color.Red;
             StatColor_Increase_Half = Color.DarkGreen;
@@ -318,11 +317,6 @@ namespace ProjectVagabond
         public Color ConfirmSettingsColor { get; private set; }
 
         // Stat-specific Colors
-        public Color StatColor_Strength { get; private set; }
-        public Color StatColor_Intelligence { get; private set; }
-        public Color StatColor_Tenacity { get; private set; }
-        public Color StatColor_Agility { get; private set; }
-
         public Color StatColor_Increase { get; private set; }
         public Color StatColor_Decrease { get; private set; }
         public Color StatColor_Increase_Half { get; private set; }
@@ -469,11 +463,11 @@ namespace ProjectVagabond
             // 1. Handle "c" prefixed tags (Semantic)
             if (lowerTag.StartsWith("c"))
             {
-                // Stats
-                if (lowerTag == "cstr") return StatColor_Strength;
-                if (lowerTag == "cint") return StatColor_Intelligence;
-                if (lowerTag == "cten") return StatColor_Tenacity;
-                if (lowerTag == "cagi") return StatColor_Agility;
+                // Stats - Now mapped to Palette_Sun
+                if (lowerTag == "cstr") return Palette_Sun;
+                if (lowerTag == "cint") return Palette_Sun;
+                if (lowerTag == "cten") return Palette_Sun;
+                if (lowerTag == "cagi") return Palette_Sun;
 
                 // Feedback
                 if (lowerTag == "cpositive") return ColorPositive;

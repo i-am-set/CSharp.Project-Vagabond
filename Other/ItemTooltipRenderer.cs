@@ -5,6 +5,7 @@ using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Items;
 using ProjectVagabond.Particles;
@@ -407,7 +408,7 @@ namespace ProjectVagabond.UI
             currentY += LAYOUT_VAR_ROW_HEIGHT;
 
             string offStatVal = GetStatString(weapon.OffensiveStat);
-            Color offColor = GetStatColor(weapon.OffensiveStat);
+            Color offColor = _global.Palette_Sun; // Unified color
             string impactVal = weapon.ImpactType.ToString().ToUpper().Substring(0, Math.Min(4, weapon.ImpactType.ToString().Length));
             Color impactColor = weapon.ImpactType == ImpactType.Magical ? _global.Palette_Sky : (weapon.ImpactType == ImpactType.Physical ? _global.Palette_Fruit : _global.Palette_DarkShadow);
 
@@ -542,7 +543,7 @@ namespace ProjectVagabond.UI
             currentY += LAYOUT_VAR_ROW_HEIGHT;
 
             string offStatVal = GetStatString(move.OffensiveStat);
-            Color offColor = GetStatColor(move.OffensiveStat);
+            Color offColor = _global.Palette_Sun; // Unified color
             string impactVal = move.ImpactType.ToString().ToUpper().Substring(0, Math.Min(4, move.ImpactType.ToString().Length));
             Color impactColor = move.ImpactType == ImpactType.Magical ? _global.Palette_Sky : (move.ImpactType == ImpactType.Physical ? _global.Palette_Fruit : _global.Palette_DarkShadow);
 
@@ -746,18 +747,6 @@ namespace ProjectVagabond.UI
             };
         }
 
-        private Color GetStatColor(OffensiveStatType stat)
-        {
-            return stat switch
-            {
-                OffensiveStatType.Strength => _global.StatColor_Strength,
-                OffensiveStatType.Intelligence => _global.StatColor_Intelligence,
-                OffensiveStatType.Tenacity => _global.StatColor_Tenacity,
-                OffensiveStatType.Agility => _global.StatColor_Agility,
-                _ => _global.Palette_Sun
-            };
-        }
-
         private List<List<ColoredText>> ParseAndWrapRichText(BitmapFont font, string text, float maxWidth, Color defaultColor, int spaceWidth = 5)
         {
             var lines = new List<List<ColoredText>>();
@@ -809,15 +798,8 @@ namespace ProjectVagabond.UI
                     }
 
                     Color finalColor = currentColor;
-                    if (currentColor != defaultColor && !isWhitespace && part.EndsWith("%"))
-                    {
-                        string numberPart = part.Substring(0, part.Length - 1);
-                        if (int.TryParse(numberPart, out int percent))
-                        {
-                            float amount = Math.Clamp(percent / 100f, 0f, 1f);
-                            finalColor = Color.Lerp(_global.ColorPercentageMin, _global.ColorPercentageMax, amount);
-                        }
-                    }
+                    // Removed percentage color lerping logic here.
+                    // Just use the current color (which defaults to defaultColor or the last tag).
 
                     currentLine.Add(new ColoredText(part, finalColor));
                     currentLineWidth += partWidth;

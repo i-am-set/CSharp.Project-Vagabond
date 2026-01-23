@@ -90,7 +90,9 @@ namespace ProjectVagabond.Battle.UI
 
             string[] statLabels = { "STR", "INT", "TEN", "AGI" };
             OffensiveStatType[] statTypes = { OffensiveStatType.Strength, OffensiveStatType.Intelligence, OffensiveStatType.Tenacity, OffensiveStatType.Agility };
-            Color[] statColors = { _global.StatColor_Strength, _global.StatColor_Intelligence, _global.StatColor_Tenacity, _global.StatColor_Agility };
+
+            // Use Palette_Sun for all labels to match the value text
+            Color labelColor = _global.Palette_Sun;
 
             float time = (float)gameTime.TotalGameTime.TotalSeconds;
 
@@ -125,7 +127,7 @@ namespace ProjectVagabond.Battle.UI
                 float bobOffset = (MathF.Sin(time * bobSpeed + (i * 0.8f)) > 0) ? -1f : 0f;
 
                 spriteBatch.DrawStringSquareOutlinedSnapped(tertiaryFont, valueText, new Vector2(valueX, rowY + 1 + bobOffset), _global.Palette_Sun * alpha, _global.Palette_Black * alpha);
-                spriteBatch.DrawStringSquareOutlinedSnapped(tertiaryFont, statLabels[i], new Vector2(bounds.X + 16, rowY + 1), statColors[i] * alpha, _global.Palette_Black * alpha);
+                spriteBatch.DrawStringSquareOutlinedSnapped(tertiaryFont, statLabels[i], new Vector2(bounds.X + 16, rowY + 1), labelColor * alpha, _global.Palette_Black * alpha);
 
                 int stage = combatant.StatStages[statTypes[i]];
                 int absStage = Math.Abs(stage);

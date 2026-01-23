@@ -503,17 +503,18 @@ namespace ProjectVagabond.UI
                         {
                             if (options.UseSquareOutline)
                             {
-                                // Right side removed
+                                // Diagonals
                                 DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(-1, 1), options.OutlineColor, finalRotation, origin, finalScale);
                                 DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(-1, -1), options.OutlineColor, finalRotation, origin, finalScale);
+                                DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(1, 1), options.OutlineColor, finalRotation, origin, finalScale);
+                                DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(1, -1), options.OutlineColor, finalRotation, origin, finalScale);
                             }
-                            // Right side removed
+                            // Cardinals
                             DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(-1, 0), options.OutlineColor, finalRotation, origin, finalScale);
+                            DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(1, 0), options.OutlineColor, finalRotation, origin, finalScale);
                             DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(0, 1), options.OutlineColor, finalRotation, origin, finalScale);
                             DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(0, -1), options.OutlineColor, finalRotation, origin, finalScale);
                         }
-
-                        // Shadow removed
 
                         // Main Character
                         DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos, finalColor, finalRotation, origin, finalScale);

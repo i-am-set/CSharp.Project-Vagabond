@@ -5,11 +5,19 @@ using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Dice;
+using ProjectVagabond.Particles;
+using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.Systems;
+using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using static ProjectVagabond.Battle.Abilities.InflictStatusStunAbility;
 
@@ -1336,14 +1344,7 @@ namespace ProjectVagabond.Battle.UI
                         _ => "---"
                     };
 
-                    Color offColor = move.OffensiveStat switch
-                    {
-                        OffensiveStatType.Strength => _global.StatColor_Strength,
-                        OffensiveStatType.Intelligence => _global.StatColor_Intelligence,
-                        OffensiveStatType.Tenacity => _global.StatColor_Tenacity,
-                        OffensiveStatType.Agility => _global.StatColor_Agility,
-                        _ => _global.GameTextColor
-                    };
+                    Color offColor = _global.GameTextColor; // Unified color
 
                     statsSegments.Add(("  ", Color.Transparent, secondaryFont));
                     statsSegments.Add(("USE ", _global.DullTextColor, tertiaryFont));
@@ -1550,15 +1551,8 @@ namespace ProjectVagabond.Battle.UI
                     }
 
                     Color finalColor = currentColor;
-                    if (currentColor != defaultColor && !isWhitespace && part.EndsWith("%"))
-                    {
-                        string numberPart = part.Substring(0, part.Length - 1);
-                        if (int.TryParse(numberPart, out int percent))
-                        {
-                            float amount = Math.Clamp(percent / 100f, 0f, 1f);
-                            finalColor = Color.Lerp(_global.ColorPercentageMin, _global.ColorPercentageMax, amount);
-                        }
-                    }
+                    // Removed percentage color lerping logic here.
+                    // Just use the current color (which defaults to defaultColor or the last tag).
 
                     currentLine.Add(new ColoredText(part, finalColor));
                     currentLineWidth += partWidth;
@@ -1577,10 +1571,10 @@ namespace ProjectVagabond.Battle.UI
         {
             string tag = colorName.ToLowerInvariant();
 
-            if (tag == "cstr") return _global.StatColor_Strength;
-            if (tag == "cint") return _global.StatColor_Intelligence;
-            if (tag == "cten") return _global.StatColor_Tenacity;
-            if (tag == "cagi") return _global.StatColor_Agility;
+            if (tag == "cstr") return _global.GameTextColor;
+            if (tag == "cint") return _global.GameTextColor;
+            if (tag == "cten") return _global.GameTextColor;
+            if (tag == "cagi") return _global.GameTextColor;
 
             if (tag == "cpositive") return _global.ColorPositive;
             if (tag == "cnegative") return _global.ColorNegative;
