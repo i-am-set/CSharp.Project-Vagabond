@@ -5,19 +5,12 @@ using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
-using ProjectVagabond.Dice;
-using ProjectVagabond.Particles;
-using ProjectVagabond.Progression;
-using ProjectVagabond.Scenes;
-using ProjectVagabond.Systems;
-using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
 using static ProjectVagabond.Battle.Abilities.InflictStatusStunAbility;
 
@@ -507,6 +500,36 @@ namespace ProjectVagabond.Battle.UI
         {
             switch (_currentState)
             {
+                case MenuState.Main:
+                    {
+                        const int buttonWidth = 128;
+                        const int buttonHeight = 13;
+                        const int buttonSpacing = 0; // --- CHANGED: Set to 0 for stacking ---
+
+                        int totalHeight = (buttonHeight * _actionButtons.Count) + (buttonSpacing * (_actionButtons.Count - 1));
+                        int availableHeight = Global.VIRTUAL_HEIGHT - 123; // DIVIDER_Y
+
+                        int startY = 123 + (availableHeight - totalHeight) / 2 - 3;
+
+                        int xOffset = -80;
+                        if (_player != null && _player.BattleSlot == 1)
+                        {
+                            xOffset = 80;
+                        }
+
+                        int startX = (Global.VIRTUAL_WIDTH - buttonWidth) / 2 + xOffset;
+
+                        int currentY = startY;
+                        foreach (var button in _actionButtons)
+                        {
+                            // Unified offset to 9 to ensure alignment and prevent overlap
+                            int specificYOffset = 9;
+
+                            button.Bounds = new Rectangle(startX, currentY + specificYOffset, buttonWidth, buttonHeight);
+                            currentY += buttonHeight + buttonSpacing;
+                        }
+                    }
+                    break;
                 case MenuState.Moves:
                     const int secButtonWidth = 60;
                     const int secButtonHeight = 13;
@@ -514,14 +537,12 @@ namespace ProjectVagabond.Battle.UI
                     const int secRows = 2;
                     const int secBlockHeight = secRows * (secButtonHeight + secRowSpacing) - secRowSpacing;
 
-                    // --- CHANGED: Gap set to 3 ---
                     const int gap = 3;
 
-                    // Total width = Secondary Buttons + Gap + (Move Button * 2) + Gap
                     int totalWidth = secButtonWidth + gap + (MOVE_BUTTON_WIDTH * 2) + MOVE_COL_SPACING;
-                    int startX = (Global.VIRTUAL_WIDTH - totalWidth) / 2;
+                    int startXMoves = (Global.VIRTUAL_WIDTH - totalWidth) / 2;
 
-                    int secGridStartX = startX;
+                    int secGridStartX = startXMoves;
                     int moveGridStartY = 144;
                     int secGridStartY = moveGridStartY + (MOVE_BLOCK_HEIGHT / 2) - (secBlockHeight / 2);
 
@@ -530,25 +551,16 @@ namespace ProjectVagabond.Battle.UI
                         var button = _secondaryActionButtons[i];
                         int yPos = secGridStartY + i * (secButtonHeight + secRowSpacing);
 
-                        // --- CHANGE START ---
-                        // Expand hitbox by 3 pixels on left and right (Total width +6)
-                        // Shift X position left by 3 to center the expansion
                         button.Bounds = new Rectangle(secGridStartX - 3, yPos, secButtonWidth + 6, secButtonHeight);
-                        // --- CHANGE END ---
                     }
 
                     int moveGridStartX = secGridStartX + secButtonWidth + gap;
 
-                    // 2x2 Grid Layout for Moves
                     for (int i = 0; i < _moveButtons.Length; i++)
                     {
                         var button = _moveButtons[i];
                         if (button == null) continue;
 
-                        // i=0 -> Col 0, Row 0
-                        // i=1 -> Col 1, Row 0
-                        // i=2 -> Col 0, Row 1
-                        // i=3 -> Col 1, Row 1
                         int col = i % 2;
                         int row = i / 2;
 
@@ -829,35 +841,16 @@ namespace ProjectVagabond.Battle.UI
             {
                 case MenuState.Main:
                     {
-                        const int buttonWidth = 128;
-                        const int buttonHeight = 14;
-                        const int buttonSpacing = 0;
-
-                        int totalHeight = (buttonHeight * _actionButtons.Count) + (buttonSpacing * (_actionButtons.Count - 1));
-                        int availableHeight = Global.VIRTUAL_HEIGHT - dividerY;
-
-                        int startY = dividerY + (availableHeight - totalHeight) / 2 - 3;
-
-                        int xOffset = -80;
-                        if (_player != null && _player.BattleSlot == 1)
-                        {
-                            xOffset = 80;
-                        }
-
-                        int startX = (Global.VIRTUAL_WIDTH - buttonWidth) / 2 + xOffset;
-
-                        int currentY = startY;
-                        int index = 0; // Track index for specific offsets
                         foreach (var button in _actionButtons)
                         {
-                            int specificYOffset = 0;
-                            if (index == 0) specificYOffset = 9; // ACT
-                            else if (index == 1) specificYOffset = 7; // SWITCH
-
-                            var buttonBounds = new Rectangle(startX, currentY + specificYOffset, buttonWidth, buttonHeight);
-                            button.Bounds = buttonBounds;
-
-                            var hoverRect = new Rectangle(buttonBounds.X, buttonBounds.Y + 1 + (int)offset.Y, buttonBounds.Width, buttonBounds.Height - 1);
+                            // --- CHANGED: Use exact bounds for hover rect ---
+                            // Shrunk by 1 pixel on top and bottom as requested
+                            var hoverRect = new Rectangle(
+                                button.Bounds.X,
+                                button.Bounds.Y + 1 + (int)offset.Y,
+                                button.Bounds.Width,
+                                button.Bounds.Height - 2
+                            );
 
                             if (button.IsEnabled)
                             {
@@ -867,8 +860,6 @@ namespace ProjectVagabond.Battle.UI
                             }
 
                             button.Draw(spriteBatch, font, gameTime, transform, false, null, offset.Y);
-                            currentY += buttonHeight + buttonSpacing;
-                            index++;
                         }
 
                         if (_player != null && _player.BattleSlot == 1)
@@ -881,7 +872,7 @@ namespace ProjectVagabond.Battle.UI
 
                             var backSize = secondaryFont.MeasureString(_slot2BackButton.Text);
                             int backWidth = (int)backSize.Width + 10; // +10 padding
-                            int backX = startX + (buttonWidth - backWidth) / 2 + 2;
+                            int backX = _actionButtons[0].Bounds.X + (_actionButtons[0].Bounds.Width - backWidth) / 2 + 2;
 
                             _slot2BackButton.Bounds = new Rectangle(backX, backButtonY, backWidth, backButtonHeight);
                             _slot2BackButton.Draw(spriteBatch, font, gameTime, transform, false, null, offset.Y);
