@@ -31,7 +31,6 @@ namespace ProjectVagabond.Battle.UI
         public event Action<BattleCombatant>? OnForcedSwitchSelected;
         public event Action? OnFleeRequested;
         public event Action<BattleCombatant>? OnTargetSelectedFromUI;
-        private readonly BattleNarrator _battleNarrator;
         private readonly ActionMenu _actionMenu;
         private readonly SwitchMenu _switchMenu;
         private readonly CombatSwitchDialog _combatSwitchDialog;
@@ -51,8 +50,8 @@ namespace ProjectVagabond.Battle.UI
         public readonly HoverHighlightState HoverHighlightState = new HoverHighlightState();
         public float SharedPulseTimer { get; private set; } = 0f;
 
-        public bool IsBusy => _battleNarrator.IsBusy;
-        public bool IsWaitingForInput => _battleNarrator.IsWaitingForInput;
+        public bool IsBusy => false; // Narrator removed, UI is never "busy" typing
+        public bool IsWaitingForInput => false; // Narrator removed
 
         private bool _isPromptVisible;
         private readonly List<(Texture2D Texture, Texture2D Silhouette)> _promptTextures = new List<(Texture2D, Texture2D)>();
@@ -62,7 +61,6 @@ namespace ProjectVagabond.Battle.UI
         private Button? _lastHoveredButton;
 
         // Debug Bounds
-        private Rectangle _narratorBounds;
         private Rectangle _controlPromptBounds;
 
         // Targeting Buttons
@@ -84,13 +82,6 @@ namespace ProjectVagabond.Battle.UI
         {
             _global = ServiceLocator.Get<Global>();
 
-            const int narratorWidth = 307;
-            const int narratorHeight = 34;
-            int narratorX = 7;
-            const int narratorY = 140;
-            _narratorBounds = new Rectangle(narratorX, narratorY, narratorWidth, narratorHeight);
-
-            _battleNarrator = new BattleNarrator(_narratorBounds);
             _actionMenu = new ActionMenu();
             _switchMenu = new SwitchMenu();
 
@@ -145,8 +136,7 @@ namespace ProjectVagabond.Battle.UI
 
         private void OnRoundLogUpdate(GameEvents.RoundLogUpdate e)
         {
-            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-            _battleNarrator.UpdateLog(e.LogText, secondaryFont);
+            // No-op: Narrator removed
         }
 
         private void OnForcedSwitchRequested(GameEvents.ForcedSwitchRequested e)
@@ -195,7 +185,7 @@ namespace ProjectVagabond.Battle.UI
 
         public void ForceClearNarration()
         {
-            _battleNarrator.ForceClear();
+            // No-op: Narrator removed
         }
 
         public void ShowActionMenu(BattleCombatant player, List<BattleCombatant> allCombatants)
@@ -213,17 +203,6 @@ namespace ProjectVagabond.Battle.UI
             _actionMenu.Hide();
             _actionMenu.SetState(ActionMenu.MenuState.Main);
             _switchMenu.Hide();
-        }
-
-        public void ShowNarration(string message, Action? onShow = null)
-        {
-            // Legacy support: If something calls this directly, append it to the log via the event system
-            // to keep everything unified.
-            // However, since BattleManager now handles the log, this is mostly for non-combat messages.
-            // We can just update the narrator directly.
-            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-            _battleNarrator.UpdateLog(message, secondaryFont);
-            onShow?.Invoke();
         }
 
         public void GoBack()
@@ -250,7 +229,6 @@ namespace ProjectVagabond.Battle.UI
         public void Update(GameTime gameTime, MouseState currentMouseState, KeyboardState currentKeyboardState, BattleCombatant currentActor)
         {
             SharedPulseTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-            _battleNarrator.Update(gameTime);
             UpdateHoverHighlights(gameTime, currentActor);
             UpdateControlPrompt(gameTime);
 
@@ -399,18 +377,12 @@ namespace ProjectVagabond.Battle.UI
                 DrawTargetingText(spriteBatch, font, gameTime);
             }
 
-            // Pass IntroOffset to Narrator Draw
-            _battleNarrator.Draw(spriteBatch, ServiceLocator.Get<Core>().SecondaryFont, gameTime, IntroOffset);
-
             DrawControlPrompt(spriteBatch);
 
             // --- DEBUG DRAWING (F1) ---
             if (_global.ShowSplitMapGrid)
             {
                 var pixel = ServiceLocator.Get<Texture2D>();
-
-                // Narrator
-                spriteBatch.DrawSnapped(pixel, _narratorBounds, Color.Purple * 0.5f);
 
                 // Control Prompt
                 if (_isPromptVisible && _promptTextures.Any())
@@ -449,7 +421,11 @@ namespace ProjectVagabond.Battle.UI
 
             // Determine if the current targeting mode is multi-target
             var targetType = TargetTypeForSelection ?? TargetType.None;
-            bool isMultiTarget = targetType == TargetType.Every || targetType == TargetType.Both || targetType == TargetType.All || targetType == TargetType.Team || targetType == TargetType.RandomAll || targetType == TargetType.RandomBoth || targetType == TargetType.RandomEvery;
+            bool isMulti = false;
+            if (targetType == TargetType.Every || targetType == TargetType.Both || targetType == TargetType.All || targetType == TargetType.Team || targetType == TargetType.RandomAll || targetType == TargetType.RandomBoth || targetType == TargetType.RandomEvery)
+            {
+                isMulti = true;
+            }
 
             // Get valid targets for the current actor and move
             var validTargets = TargetingHelper.GetValidTargets(currentActor, targetType, allCombatants);
@@ -470,7 +446,7 @@ namespace ProjectVagabond.Battle.UI
                 // Highlight logic
                 if (btn.IsEnabled && focusCombatant != null && buttonCombatant != null)
                 {
-                    if (isMultiTarget)
+                    if (isMulti)
                     {
                         // If multi-target, highlight if BOTH the focused combatant AND this button's combatant are valid targets.
                         // This means hovering ANY valid target highlights ALL valid targets.

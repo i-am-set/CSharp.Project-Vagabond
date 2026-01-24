@@ -41,6 +41,9 @@ namespace ProjectVagabond.Battle.UI
             EventBus.Unsubscribe<GameEvents.ActionFailed>(OnActionFailed);
             EventBus.Unsubscribe<GameEvents.CombatantHealed>(OnCombatantHealed);
             EventBus.Unsubscribe<GameEvents.StatusEffectTriggered>(OnStatusEffectTriggered);
+            EventBus.Unsubscribe<GameEvents.CombatantManaRestored>(OnCombatantManaRestored);
+            EventBus.Unsubscribe<GameEvents.CombatantRecoiled>(OnCombatantRecoiled);
+            EventBus.Unsubscribe<GameEvents.NextEnemyApproaches>(OnNextEnemyApproaches);
         }
 
         private void Subscribe()
@@ -51,6 +54,9 @@ namespace ProjectVagabond.Battle.UI
             EventBus.Subscribe<GameEvents.ActionFailed>(OnActionFailed);
             EventBus.Subscribe<GameEvents.CombatantHealed>(OnCombatantHealed);
             EventBus.Subscribe<GameEvents.StatusEffectTriggered>(OnStatusEffectTriggered);
+            EventBus.Subscribe<GameEvents.CombatantManaRestored>(OnCombatantManaRestored);
+            EventBus.Subscribe<GameEvents.CombatantRecoiled>(OnCombatantRecoiled);
+            EventBus.Subscribe<GameEvents.NextEnemyApproaches>(OnNextEnemyApproaches);
         }
 
         private void AddLog(string text)
@@ -146,6 +152,21 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
+        private void OnCombatantManaRestored(GameEvents.CombatantManaRestored e)
+        {
+            AddLog($"{e.Target.Name} RESTORED {e.AmountRestored} MANA");
+        }
+
+        private void OnCombatantRecoiled(GameEvents.CombatantRecoiled e)
+        {
+            AddLog($"{e.Actor.Name} TOOK {e.RecoilDamage} RECOIL DAMAGE");
+        }
+
+        private void OnNextEnemyApproaches(GameEvents.NextEnemyApproaches e)
+        {
+            AddLog("ANOTHER ENEMY APPROACHES!");
+        }
+
         public void Draw(SpriteBatch spriteBatch)
         {
             if (_logs.Count == 0) return;
@@ -173,7 +194,7 @@ namespace ProjectVagabond.Battle.UI
 
                 // Draw with Palette_DarkShadow as requested
                 // Using outline for readability over the map
-                spriteBatch.DrawStringOutlinedSnapped(font, log.Text, pos, _global.Palette_DarkShadow * alpha, _global.Palette_Black * alpha);
+                spriteBatch.DrawStringOutlinedSnapped(font, log.Text, pos, _global.Palette_Shadow * alpha, _global.Palette_Black * alpha);
             }
         }
     }

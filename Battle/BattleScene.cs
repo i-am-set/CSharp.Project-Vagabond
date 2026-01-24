@@ -22,7 +22,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using static ProjectVagabond.Battle.Abilities.InflictStatusStunAbility;
 
 namespace ProjectVagabond.Scenes
 {
@@ -895,8 +894,7 @@ namespace ProjectVagabond.Scenes
                 _uiManager.HideAllMenus();
                 var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
                 bool playerWon = player != null && !player.IsDefeated;
-                if (playerWon) _uiManager.ShowNarration("[rainbowwave]Player Wins![/]");
-                else _uiManager.ShowNarration("[driftwave][cDefeat]Player Loses![/][/]");
+                // Removed narration calls
             }
 
             if (_battleManager.CurrentPhase == BattleManager.BattlePhase.AnimatingMove && !_moveAnimationManager.IsAnimating)
@@ -1153,30 +1151,7 @@ namespace ProjectVagabond.Scenes
             _isWaitingForActionExecution = true;
             _actionExecutionTimer = 0f;
             _currentActor = e.Actor;
-            if (e.Type == QueuedActionType.Switch) _uiManager.ShowNarration($"{e.Actor.Name} switches to {e.Target?.Name}!");
-            else
-            {
-                string actionName = e.Move != null ? e.Move.MoveName : "Unknown Action";
-                string typeTag = "";
-                if (e.Move != null) typeTag = e.Move.MoveType == MoveType.Spell ? "cSpell" : "cAction";
-                string message = "";
-                string actionPhrase = e.Move?.ActionPhrase;
-                if (!string.IsNullOrEmpty(actionPhrase)) message = ParseActionPhrase(actionPhrase, e.Actor, e.Target, e.Move?.SourceItemName);
-                else
-                {
-                    message = $"{e.Actor.Name} USED\n[{typeTag}]{actionName}[/]!";
-                    if (e.Move != null && e.Actor.IsPlayerControlled && e.Move.MoveID == e.Actor.DefaultStrikeMoveID)
-                    {
-                        var partyMember = _gameState.PlayerState.Party.FirstOrDefault(p => p.Name == e.Actor.Name);
-                        if (partyMember != null && !string.IsNullOrEmpty(partyMember.EquippedWeaponId))
-                        {
-                            if (BattleDataCache.Weapons.TryGetValue(partyMember.EquippedWeaponId, out var weaponData))
-                                message = $"{e.Actor.Name} USED\n[{typeTag}]{actionName}[/] WITH {weaponData.WeaponName.ToUpper()}!";
-                        }
-                    }
-                }
-                _uiManager.ShowNarration(message);
-            }
+            // Removed narration calls
         }
 
         private string GetSmartName(BattleCombatant combatant)
@@ -1256,13 +1231,7 @@ namespace ProjectVagabond.Scenes
 
         private void OnMultiHitActionCompleted(GameEvents.MultiHitActionCompleted e)
         {
-            string timeStr = e.HitCount == 1 ? "TIME" : "TIMES";
-            _uiManager.ShowNarration($"HIT {e.HitCount} {timeStr}!");
-            if (e.CriticalHitCount > 0)
-            {
-                if (e.CriticalHitCount == 1) _uiManager.ShowNarration("Landed a\n[DriftWave][cCrit]CRITICAL HIT[/][/]!");
-                else _uiManager.ShowNarration($"Landed {e.CriticalHitCount}\n[DriftWave][cCrit]CRITICAL HITS[/][/]!");
-            }
+            // Removed narration calls
             _isWaitingForMultiHitDelay = false;
             _multiHitDelayTimer = 0f;
         }
@@ -1278,15 +1247,7 @@ namespace ProjectVagabond.Scenes
             {
                 if (e.DamageResults[i].WasGraze) grazedTargets.Add(e.Targets[i]);
             }
-            if (grazedTargets.Any())
-            {
-                var sortedGrazes = grazedTargets.OrderByDescending(c => c.IsPlayerControlled).ThenBy(c => c.BattleSlot).ToList();
-                foreach (var target in sortedGrazes)
-                {
-                    string targetName = GetSmartName(target);
-                    _uiManager.ShowNarration($"{targetName} WAS [DriftWave][cgraze]GRAZED[/][/].");
-                }
-            }
+            // Removed narration calls for graze
             for (int i = 0; i < e.Targets.Count; i++)
             {
                 var target = e.Targets[i];
@@ -1340,7 +1301,7 @@ namespace ProjectVagabond.Scenes
                 if (result.WasCritical)
                 {
                     _animationManager.StartDamageIndicator(target.CombatantID, "CRITICAL HIT", hudPosition, ServiceLocator.Get<Global>().CritcalHitIndicatorColor);
-                    if (!isMultiHit) _uiManager.ShowNarration($"A [DriftWave][cCrit]CRITICAL HIT[/][/] on {target.Name}!");
+                    // Removed narration calls
                 }
                 if (result.WasProtected) _animationManager.StartProtectedIndicator(target.CombatantID, hudPosition);
                 var font = ServiceLocator.Get<Core>().SecondaryFont;
@@ -1370,13 +1331,14 @@ namespace ProjectVagabond.Scenes
                 Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(e.Target, _battleManager.AllCombatants);
                 _animationManager.StartHealNumberIndicator(e.Target.CombatantID, e.HealAmount, hudPosition);
             };
-            _uiManager.ShowNarration($"{e.Target.Name} recovered\n{e.HealAmount} HP!", playVisuals);
+            // Removed narration calls, execute visuals immediately
+            playVisuals();
         }
 
         private void OnCombatantManaRestored(GameEvents.CombatantManaRestored e)
         {
             e.Target.ManaBarVisibleTimer = 6.0f;
-            _uiManager.ShowNarration($"{e.Target.Name} restored\n{e.AmountRestored} Mana!");
+            // Removed narration calls
             _animationManager.StartManaRecoveryAnimation(e.Target.CombatantID, e.ManaBefore, e.ManaAfter);
         }
 
@@ -1394,8 +1356,7 @@ namespace ProjectVagabond.Scenes
                 _core.TriggerScreenFlashSequence(_global.Palette_Rust);
                 _hapticsManager.TriggerWobble(intensity: 10.0f, duration: 0.75f, frequency: 120f);
             }
-            if (e.SourceAbility != null) _uiManager.ShowNarration($"{e.Actor.Name} was hurt by\n{e.SourceAbility.AbilityName}!");
-            else _uiManager.ShowNarration($"{e.Actor.Name} is damaged by recoil!");
+            // Removed narration calls
             _animationManager.StartHealthLossAnimation(e.Actor.CombatantID, e.Actor.VisualHP, e.Actor.Stats.CurrentHP);
             _animationManager.StartHealthAnimation(e.Actor.CombatantID, (int)e.Actor.VisualHP, e.Actor.Stats.CurrentHP);
             if (!e.Actor.IsPlayerControlled) _animationManager.StartHitFlashAnimation(e.Actor.CombatantID);
@@ -1405,22 +1366,20 @@ namespace ProjectVagabond.Scenes
 
         private void OnCombatantDefeated(GameEvents.CombatantDefeated e)
         {
-            string name = (e.DefeatedCombatant.IsProperNoun ? "" : "THE ") + e.DefeatedCombatant.Name;
-            _uiManager.ShowNarration($"{name} was [FlickerWave][cDefeat]DEFEATED[/][/]!");
+            // Removed narration calls
             TriggerDeathAnimation(e.DefeatedCombatant);
             if (!e.DefeatedCombatant.IsPlayerControlled)
             {
                 int coinAmount = e.DefeatedCombatant.CoinReward;
                 _gameState.PlayerState.Coin += coinAmount;
-                _uiManager.ShowNarration($"Gained {coinAmount} Coins!");
+                // Removed narration calls
             }
         }
 
         private void OnActionFailed(GameEvents.ActionFailed e)
         {
             _currentActor = e.Actor;
-            if (e.Reason.StartsWith("charging")) _uiManager.ShowNarration($"{e.Actor.Name} is {e.Reason}!");
-            else _uiManager.ShowNarration($"{e.Actor.Name} is {e.Reason} and cannot move!");
+            // Removed narration calls
             if (e.Reason == "stunned") _renderer.TriggerStatusIconHop(e.Actor.CombatantID, StatusEffectType.Stun);
             else if (e.Reason == "silenced") _renderer.TriggerStatusIconHop(e.Actor.CombatantID, StatusEffectType.Silence);
         }
@@ -1435,8 +1394,7 @@ namespace ProjectVagabond.Scenes
                     _core.TriggerScreenFlashSequence(_global.Palette_Rust);
                     _hapticsManager.TriggerWobble(intensity: 10.0f, duration: 0.75f, frequency: 120f);
                 }
-                string effectName = e.EffectType == StatusEffectType.Burn ? "the burn" : e.EffectType.ToString();
-                _uiManager.ShowNarration($"{e.Combatant.Name} takes {e.Damage} damage from [cStatus]{effectName}[/]!");
+                // Removed narration calls
                 _animationManager.StartHealthLossAnimation(e.Combatant.CombatantID, e.Combatant.VisualHP, e.Combatant.Stats.CurrentHP);
                 _animationManager.StartHealthAnimation(e.Combatant.CombatantID, (int)e.Combatant.VisualHP, e.Combatant.Stats.CurrentHP);
                 _renderer.TriggerStatusIconHop(e.Combatant.CombatantID, e.EffectType);
@@ -1461,7 +1419,7 @@ namespace ProjectVagabond.Scenes
             // Trigger visual indicator
             _animationManager.StartAbilityIndicator(e.Combatant.CombatantID, e.Ability.Name, hudPos);
 
-            if (!string.IsNullOrEmpty(e.NarrationText)) _uiManager.ShowNarration(e.NarrationText);
+            // Removed narration calls
         }
 
         private void OnAlertPublished(GameEvents.AlertPublished e)
@@ -1484,7 +1442,7 @@ namespace ProjectVagabond.Scenes
 
         private void OnNextEnemyApproaches(GameEvents.NextEnemyApproaches e)
         {
-            _uiManager.ShowNarration("[Drift]Another [DriftBounce][cEnemy]ENEMY[/][/][Drift] approaches...[/]");
+            // Removed narration calls
         }
 
         private void OnCombatantSpawned(GameEvents.CombatantSpawned e)
@@ -1524,7 +1482,7 @@ namespace ProjectVagabond.Scenes
             _isBattleOver = true;
             _uiManager.HideAllMenus();
             var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
-            _uiManager.ShowNarration(player != null ? $"{player.Name} [drift][cEscape]ESCAPED[/][/]." : "[drift]Got away safely![/]");
+            // Removed narration calls
         }
 
         private void OpenSettings()
