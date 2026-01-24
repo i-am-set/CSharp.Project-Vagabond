@@ -823,9 +823,6 @@ namespace ProjectVagabond.Battle.UI
 
             const int dividerY = 140;
 
-            var bgRect = new Rectangle(0, dividerY + (int)offset.Y, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT - dividerY);
-            spriteBatch.DrawSnapped(pixel, bgRect, bgColor);
-
             if (!_isVisible)
             {
                 spriteBatch.DrawSnapped(spriteManager.BattleBorderCombat, offset, Color.White);

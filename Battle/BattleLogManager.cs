@@ -14,6 +14,7 @@ namespace ProjectVagabond.Battle.UI
         private struct LogEntry
         {
             public string Text;
+            public Color Color;
         }
 
         private readonly List<LogEntry> _logs = new List<LogEntry>();
@@ -25,7 +26,8 @@ namespace ProjectVagabond.Battle.UI
         {
             _global = ServiceLocator.Get<Global>();
             _core = ServiceLocator.Get<Core>();
-            Subscribe();
+            // Constructor no longer auto-subscribes to prevent double-subscription issues
+            // BattleScene.Enter will handle subscription.
         }
 
         public void Reset()
@@ -46,8 +48,11 @@ namespace ProjectVagabond.Battle.UI
             EventBus.Unsubscribe<GameEvents.NextEnemyApproaches>(OnNextEnemyApproaches);
         }
 
-        private void Subscribe()
+        public void Subscribe()
         {
+            // Ensure we don't double subscribe by unsubscribing first
+            Unsubscribe();
+
             EventBus.Subscribe<GameEvents.ActionDeclared>(OnActionDeclared);
             EventBus.Subscribe<GameEvents.BattleActionExecuted>(OnActionExecuted);
             EventBus.Subscribe<GameEvents.CombatantDefeated>(OnCombatantDefeated);
@@ -59,10 +64,10 @@ namespace ProjectVagabond.Battle.UI
             EventBus.Subscribe<GameEvents.NextEnemyApproaches>(OnNextEnemyApproaches);
         }
 
-        private void AddLog(string text)
+        private void AddLog(string text, Color color)
         {
             // Newest on top
-            _logs.Insert(0, new LogEntry { Text = text.ToUpper() });
+            _logs.Insert(0, new LogEntry { Text = text.ToUpper(), Color = color });
 
             if (_logs.Count > MAX_LOGS)
             {
@@ -72,99 +77,93 @@ namespace ProjectVagabond.Battle.UI
 
         private void OnActionDeclared(GameEvents.ActionDeclared e)
         {
-            if (e.Type == QueuedActionType.Move && e.Move != null)
-            {
-                string moveName = e.Move.MoveName;
-                AddLog($"{e.Actor.Name} USED {moveName}");
-            }
-            else if (e.Type == QueuedActionType.Switch)
-            {
-                AddLog($"{e.Actor.Name} IS SWITCHING");
-            }
+            // No log for declaration, only execution
         }
 
         private void OnActionExecuted(GameEvents.BattleActionExecuted e)
         {
-            // Iterate through results and bake details into single lines
+            string moveName = e.ChosenMove.MoveName.ToUpper();
+            string actorName = e.Actor.Name.ToUpper();
+
+            Color logColor = _global.Palette_DarkestPale;
+
             for (int i = 0; i < e.Targets.Count; i++)
             {
                 var target = e.Targets[i];
                 var result = e.DamageResults[i];
-                var sb = new StringBuilder();
+                string targetName = target.Name.ToUpper();
 
-                // Base Action
+                string verb = "HIT";
+
                 if (result.WasGraze)
                 {
-                    sb.Append($"{target.Name} WAS GRAZED");
+                    verb = "GRAZED";
+                }
+                else if (result.WasCritical)
+                {
+                    verb = "CRITICALLY HIT";
                 }
                 else if (result.WasProtected)
                 {
-                    sb.Append($"{target.Name} PROTECTED ITSELF");
-                }
-                else
-                {
-                    sb.Append($"{target.Name} WAS HIT");
+                    verb = "WAS BLOCKED BY";
                 }
 
-                // Baked Details
-                if (result.WasCritical)
-                {
-                    sb.Append(". CRITICAL HIT!");
-                }
-
-                if (result.Effectiveness == DamageCalculator.ElementalEffectiveness.Effective)
-                {
-                    sb.Append(". SUPER EFFECTIVE!");
-                }
-                else if (result.Effectiveness == DamageCalculator.ElementalEffectiveness.Resisted)
-                {
-                    sb.Append(". NOT VERY EFFECTIVE.");
-                }
-                else if (result.Effectiveness == DamageCalculator.ElementalEffectiveness.Immune)
-                {
-                    sb.Append(". IT HAD NO EFFECT.");
-                }
-
-                AddLog(sb.ToString());
+                string logLine = $"{actorName} {verb} {targetName} WITH {moveName}";
+                AddLog(logLine, logColor);
             }
         }
 
         private void OnCombatantDefeated(GameEvents.CombatantDefeated e)
         {
-            AddLog($"{e.DefeatedCombatant.Name} WAS DEFEATED!");
+            // Color: Palette_DarkRust
+            Color logColor = _global.Palette_DarkRust;
+            AddLog($"{e.DefeatedCombatant.Name} WAS DEFEATED!", logColor);
         }
 
         private void OnActionFailed(GameEvents.ActionFailed e)
         {
-            AddLog($"{e.Actor.Name} FAILED: {e.Reason.ToUpper()}");
+            // Color: Palette_DarkShadow
+            Color logColor = _global.Palette_DarkShadow;
+            string moveName = !string.IsNullOrEmpty(e.MoveName) ? e.MoveName.ToUpper() : "ACTION";
+            AddLog($"{e.Actor.Name.ToUpper()} FAILED {moveName}", logColor);
         }
 
         private void OnCombatantHealed(GameEvents.CombatantHealed e)
         {
-            AddLog($"{e.Target.Name} RECOVERED {e.HealAmount} HP");
+            // Color: Palette_DarkShadow (Consistent with other status updates)
+            Color logColor = _global.Palette_DarkShadow;
+            AddLog($"{e.Target.Name} RECOVERED {e.HealAmount} HP", logColor);
         }
 
         private void OnStatusEffectTriggered(GameEvents.StatusEffectTriggered e)
         {
             if (e.Damage > 0)
             {
-                AddLog($"{e.Combatant.Name} TOOK {e.Damage} {e.EffectType.ToString().ToUpper()} DMG");
+                // Color: Palette_DarkShadow
+                Color logColor = _global.Palette_DarkShadow;
+                AddLog($"{e.Combatant.Name} TOOK {e.Damage} {e.EffectType.ToString().ToUpper()} DMG", logColor);
             }
         }
 
         private void OnCombatantManaRestored(GameEvents.CombatantManaRestored e)
         {
-            AddLog($"{e.Target.Name} RESTORED {e.AmountRestored} MANA");
+            // Color: Palette_DarkShadow
+            Color logColor = _global.Palette_DarkShadow;
+            AddLog($"{e.Target.Name} RESTORED {e.AmountRestored} MANA", logColor);
         }
 
         private void OnCombatantRecoiled(GameEvents.CombatantRecoiled e)
         {
-            AddLog($"{e.Actor.Name} TOOK {e.RecoilDamage} RECOIL DAMAGE");
+            // Color: Palette_DarkShadow
+            Color logColor = _global.Palette_DarkShadow;
+            AddLog($"{e.Actor.Name} TOOK {e.RecoilDamage} RECOIL DAMAGE", logColor);
         }
 
         private void OnNextEnemyApproaches(GameEvents.NextEnemyApproaches e)
         {
-            AddLog("ANOTHER ENEMY APPROACHES!");
+            // Color: Palette_DarkestPale
+            Color logColor = _global.Palette_DarkestPale;
+            AddLog("ANOTHER ENEMY APPROACHES!", logColor);
         }
 
         public void Draw(SpriteBatch spriteBatch)
@@ -176,6 +175,7 @@ namespace ProjectVagabond.Battle.UI
             int spacing = 1; // 1 pixel gap
             int startY = 2; // Top padding
             int rightMargin = 2; // Right padding
+            float iterationFadeAmount = 0.2f;
 
             for (int i = 0; i < _logs.Count; i++)
             {
@@ -187,14 +187,23 @@ namespace ProjectVagabond.Battle.UI
                 float y = startY + (i * (lineHeight + spacing));
                 Vector2 pos = new Vector2(x, y);
 
-                // Fade out older logs
-                float alpha = 1.0f - ((float)i / MAX_LOGS);
-                // Ensure the top log is always fully visible, bottom ones fade
-                alpha = MathHelper.Clamp(alpha + 0.2f, 0f, 1f);
+                // --- FADE LOGIC ---
+                // Newest (i=0) is 1.0.
+                // Each subsequent line fades by iterationFadeAmount
+                // i=0 -> 1.0
+                // i=1 -> 1.0 - (1 * iterationFadeAmount)
+                // i=2 -> 1.0 - (2 * iterationFadeAmount)
+                // ...
+                // i=8 -> 1.0 - (8 * iterationFadeAmount)
+                // i=9 -> 1.0 - (9 * iterationFadeAmount)
+                float alpha = MathHelper.Clamp(1.0f - (i * iterationFadeAmount), 0f, 1f);
 
-                // Draw with Palette_DarkShadow as requested
+                // Optimization: Stop drawing if invisible
+                if (alpha <= 0f) break;
+
+                // Draw with specific log color
                 // Using outline for readability over the map
-                spriteBatch.DrawStringOutlinedSnapped(font, log.Text, pos, _global.Palette_Shadow * alpha, _global.Palette_Black * alpha);
+                spriteBatch.DrawStringOutlinedSnapped(font, log.Text, pos, log.Color * alpha, _global.Palette_Black * alpha);
             }
         }
     }

@@ -166,7 +166,11 @@ namespace ProjectVagabond.Scenes
             _animationManager.Reset();
             _moveAnimationManager.SkipAll();
             _alertManager.Reset();
-            _battleLogManager.Reset(); // Reset Log
+
+            // --- FIX: Reset and Subscribe Log Manager ---
+            _battleLogManager.Reset();
+            _battleLogManager.Subscribe();
+
             _inputHandler.Reset();
             _enemyEntityIds.Clear();
             _currentActor = null;
@@ -264,6 +268,7 @@ namespace ProjectVagabond.Scenes
             ServiceLocator.Unregister<BattleManager>();
         }
 
+        // ... (Rest of the file remains unchanged)
         private void SubscribeToEvents()
         {
             EventBus.Subscribe<GameEvents.ActionDeclared>(OnActionDeclared);

@@ -1298,12 +1298,9 @@ namespace ProjectVagabond.Battle.UI
                     // Calculate visual center for the target player
                     // Hardcoded logic based on BattleRenderer layout to avoid dependency cycle
                     // Slot 0: Left, Slot 1: Right
-                    float spriteCenterX = (targetPlayer.BattleSlot == 1)
-                        ? (Global.VIRTUAL_WIDTH * 0.75f)
-                        : (Global.VIRTUAL_WIDTH * 0.25f);
+                    float spriteCenterX = BattleLayout.GetPlayerSpriteCenter(targetPlayer.BattleSlot).X;
 
-                    // Use fixed Y for player heart center
-                    float heartCenterY = 96f;
+                    float heartCenterY = BattleLayout.PLAYER_HEART_CENTER_Y;
 
                     targetPos = new Vector2(spriteCenterX, heartCenterY);
                 }

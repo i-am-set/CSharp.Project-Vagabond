@@ -144,6 +144,7 @@ namespace ProjectVagabond
         {
             public BattleCombatant Actor { get; set; }
             public string Reason { get; set; }
+            public string MoveName { get; set; }
         }
 
         public struct CombatantChargingAction
