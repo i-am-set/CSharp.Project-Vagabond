@@ -22,6 +22,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using static ProjectVagabond.Battle.Abilities.InflictStatusStunAbility;
 
 namespace ProjectVagabond.Scenes
 {
@@ -40,6 +41,7 @@ namespace ProjectVagabond.Scenes
         private MoveAnimationManager _moveAnimationManager;
         private BattleInputHandler _inputHandler;
         private AlertManager _alertManager;
+        private BattleLogManager _battleLogManager; // NEW
         private ImageButton _settingsButton;
         private ComponentStore _componentStore;
         private SceneManager _sceneManager;
@@ -153,6 +155,7 @@ namespace ProjectVagabond.Scenes
             _moveAnimationManager = new MoveAnimationManager();
             _inputHandler = new BattleInputHandler();
             _alertManager = new AlertManager();
+            _battleLogManager = new BattleLogManager(); // Initialize Log Manager
             _lootScreen = new LootScreen();
         }
 
@@ -164,6 +167,7 @@ namespace ProjectVagabond.Scenes
             _animationManager.Reset();
             _moveAnimationManager.SkipAll();
             _alertManager.Reset();
+            _battleLogManager.Reset(); // Reset Log
             _inputHandler.Reset();
             _enemyEntityIds.Clear();
             _currentActor = null;
@@ -255,6 +259,7 @@ namespace ProjectVagabond.Scenes
             }
             _lootScreen.Reset();
             UnsubscribeFromEvents();
+            _battleLogManager.Unsubscribe(); // Unsubscribe Log Manager
             CleanupEntities();
             CleanupPlayerState();
             ServiceLocator.Unregister<BattleManager>();
@@ -974,6 +979,9 @@ namespace ProjectVagabond.Scenes
             }
 
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+
+            // --- DRAW BATTLE LOG (Underneath everything) ---
+            _battleLogManager.Draw(spriteBatch);
 
             if (_roundAnimState != RoundAnimState.Hidden)
             {

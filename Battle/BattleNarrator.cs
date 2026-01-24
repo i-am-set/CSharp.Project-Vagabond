@@ -24,7 +24,7 @@ namespace ProjectVagabond.Battle.UI
             public Color Color;
             public TokenType Type;
             public float Width;
-            public TextEffectType Effect; // Added Effect
+            public TextEffectType Effect;
             public int Length => Text.Length;
 
             public NarratorToken(string text, Color color, TokenType type, float width, TextEffectType effect = TextEffectType.None)
@@ -40,20 +40,16 @@ namespace ProjectVagabond.Battle.UI
         // --- Dependencies & State ---
         private readonly Global _global;
         private readonly Rectangle _bounds;
-        private readonly Queue<string> _messageQueue = new Queue<string>();
 
         // Parsing & Display Data
         private List<NarratorToken> _allTokens = new List<NarratorToken>();
         private readonly List<List<NarratorToken>> _displayLines = new List<List<NarratorToken>>();
 
         // Typewriter State
-        private int _currentTokenIndex;
-        private int _currentCharIndex;
+        private int _visibleCharCount = 0;
+        private int _totalCharCount = 0;
         private float _typewriterTimer;
-        private float _timeoutTimer;
-        private bool _isWaitingForInput;
-        private bool _isFinishedTyping;
-        private bool _isFastForwarding; // New state for speed-up
+        private bool _isFastForwarding;
 
         // Layout
         private float _wrapWidth;
@@ -65,16 +61,14 @@ namespace ProjectVagabond.Battle.UI
         private KeyboardState _previousKeyboardState;
 
         // --- Tuning ---
-        private const float TYPEWRITER_SPEED = 0.015f; // Base speed (seconds per char)
-        public const float TYPEWRITER_FAST_MULTIPLIER = 3.0f; // Speed multiplier when clicking to skip
+        private const float TYPEWRITER_SPEED = 0.01f; // Very fast for combat log
+        public const float TYPEWRITER_FAST_MULTIPLIER = 4.0f;
 
-        private const float AUTO_ADVANCE_SECONDS = 5.0f;
         private const int LINE_SPACING = 3;
         private const int SPACE_WIDTH = 5;
 
-        public bool IsAutoProgressEnabled { get; set; } = false;
-        public bool IsBusy => _messageQueue.Count > 0 || _allTokens.Count > 0;
-        public bool IsWaitingForInput => _isWaitingForInput;
+        public bool IsBusy => _visibleCharCount < _totalCharCount;
+        public bool IsWaitingForInput => !IsBusy && _totalCharCount > 0; // Waiting for user to dismiss/advance
 
         public BattleNarrator(Rectangle bounds)
         {
@@ -86,71 +80,53 @@ namespace ProjectVagabond.Battle.UI
 
         public void ForceClear()
         {
-            _messageQueue.Clear();
             _allTokens.Clear();
             _displayLines.Clear();
-            _isWaitingForInput = false;
-            _isFinishedTyping = true;
+            _visibleCharCount = 0;
+            _totalCharCount = 0;
             _isFastForwarding = false;
         }
 
-        public void Show(string message, BitmapFont font)
+        public void UpdateLog(string fullLogText, BitmapFont font)
         {
-            if (string.IsNullOrWhiteSpace(message)) return;
-
             _font = font;
             const int padding = 5;
             _wrapWidth = _bounds.Width - (padding * 4);
             _maxVisibleLines = Math.Min(7, (_bounds.Height - (padding * 2)) / (_font.LineHeight + LINE_SPACING));
 
-            // Split by pipe for multiple segments, but don't parse yet
-            var segments = message.Split('|');
-            foreach (var segment in segments)
+            // If the log was cleared or reset, reset our counters
+            if (string.IsNullOrEmpty(fullLogText))
             {
-                if (!string.IsNullOrWhiteSpace(segment))
+                ForceClear();
+                return;
+            }
+
+            // Re-parse the entire log. 
+            // Optimization: In a very large log, we might want to only parse the new suffix, 
+            // but for a combat round log (usually < 10 lines), re-parsing is negligible and safer.
+            ParseMessage(fullLogText);
+            LayoutTokens();
+
+            // Calculate total characters in the new layout
+            int newTotalChars = 0;
+            foreach (var line in _displayLines)
+            {
+                foreach (var token in line)
                 {
-                    _messageQueue.Enqueue(segment.Trim());
+                    newTotalChars += token.Length;
                 }
             }
 
-            if (_messageQueue.Count > 0 && _allTokens.Count == 0)
+            // If text shrank (new round), reset visible count
+            if (newTotalChars < _totalCharCount)
             {
-                ProcessNextSegment();
+                _visibleCharCount = 0;
             }
+
+            _totalCharCount = newTotalChars;
+            _isFastForwarding = false; // Reset speed on new text
         }
 
-        private void ProcessNextSegment()
-        {
-            if (_messageQueue.Count > 0)
-            {
-                string rawMessage = _messageQueue.Dequeue();
-                ParseMessage(rawMessage);
-
-                // Reset Typewriter
-                _currentTokenIndex = 0;
-                _currentCharIndex = 0;
-                _typewriterTimer = 0f;
-                _timeoutTimer = AUTO_ADVANCE_SECONDS;
-                _isWaitingForInput = false;
-                _isFinishedTyping = false;
-                _isFastForwarding = false; // Reset speed
-
-                // Prepare first line
-                _displayLines.Clear();
-                _displayLines.Add(new List<NarratorToken>());
-            }
-            else
-            {
-                _allTokens.Clear();
-                _isWaitingForInput = false;
-                _isFinishedTyping = true;
-                _isFastForwarding = false;
-            }
-        }
-
-        /// <summary>
-        /// High-performance, single-pass parser with Color and Effect Stack support.
-        /// </summary>
         private void ParseMessage(string message)
         {
             _allTokens.Clear();
@@ -168,13 +144,8 @@ namespace ProjectVagabond.Battle.UI
 
                 if (c == '[')
                 {
-                    // 1. Flush existing word
-                    if (currentWord.Length > 0)
-                    {
-                        FlushWord(currentWord, colorStack.Peek(), effectStack.Peek());
-                    }
+                    if (currentWord.Length > 0) FlushWord(currentWord, colorStack.Peek(), effectStack.Peek());
 
-                    // 2. Parse Tag
                     int closingBracketIndex = message.IndexOf(']', i);
                     if (closingBracketIndex != -1)
                     {
@@ -182,9 +153,7 @@ namespace ProjectVagabond.Battle.UI
 
                         if (tagContent == "/")
                         {
-                            // Pop color, but never pop the base default color
                             if (colorStack.Count > 1) colorStack.Pop();
-                            // Pop effect, but never pop base
                             if (effectStack.Count > 1) effectStack.Pop();
                         }
                         else if (Enum.TryParse<TextEffectType>(tagContent, true, out var effect))
@@ -193,103 +162,76 @@ namespace ProjectVagabond.Battle.UI
                         }
                         else
                         {
-                            // Push new color
                             colorStack.Push(_global.GetNarrationColor(tagContent));
                         }
-
-                        i = closingBracketIndex; // Advance index
+                        i = closingBracketIndex;
                         continue;
                     }
                     else
                     {
-                        // Malformed tag, treat as literal
                         currentWord.Append(c);
                     }
                 }
                 else if (c == ' ')
                 {
-                    // 1. Flush existing word
-                    if (currentWord.Length > 0)
-                    {
-                        FlushWord(currentWord, colorStack.Peek(), effectStack.Peek());
-                    }
-
-                    // 2. Add Space Token
+                    if (currentWord.Length > 0) FlushWord(currentWord, colorStack.Peek(), effectStack.Peek());
                     _allTokens.Add(new NarratorToken(" ", Color.Transparent, TokenType.Space, SPACE_WIDTH));
                 }
                 else if (c == '\n')
                 {
-                    // 1. Flush existing word
-                    if (currentWord.Length > 0)
-                    {
-                        FlushWord(currentWord, colorStack.Peek(), effectStack.Peek());
-                    }
-
-                    // 2. Add Newline Token
+                    if (currentWord.Length > 0) FlushWord(currentWord, colorStack.Peek(), effectStack.Peek());
                     _allTokens.Add(new NarratorToken("\n", Color.Transparent, TokenType.Newline, 0));
                 }
                 else
                 {
-                    // Accumulate character
                     currentWord.Append(c);
                 }
             }
 
-            // Flush remaining word
-            if (currentWord.Length > 0)
-            {
-                FlushWord(currentWord, colorStack.Peek(), effectStack.Peek());
-            }
+            if (currentWord.Length > 0) FlushWord(currentWord, colorStack.Peek(), effectStack.Peek());
         }
 
         private void FlushWord(StringBuilder sb, Color color, TextEffectType effect)
         {
-            string text = sb.ToString().ToUpper(); // Enforce uppercase style
+            string text = sb.ToString().ToUpper();
             float width = _font!.MeasureString(text).Width;
             _allTokens.Add(new NarratorToken(text, color, TokenType.Word, width, effect));
             sb.Clear();
         }
 
-        private void ProcessTokenLayout(NarratorToken token, ref List<NarratorToken> currentLine, ref float currentLineWidth)
+        private void LayoutTokens()
         {
-            if (token.Type == TokenType.Newline)
+            _displayLines.Clear();
+            var currentLine = new List<NarratorToken>();
+            float currentLineWidth = 0f;
+
+            foreach (var token in _allTokens)
             {
-                currentLine = new List<NarratorToken>();
-                _displayLines.Add(currentLine);
-                currentLineWidth = 0f;
-                CheckMaxLines();
-                return;
+                if (token.Type == TokenType.Newline)
+                {
+                    _displayLines.Add(currentLine);
+                    currentLine = new List<NarratorToken>();
+                    currentLineWidth = 0f;
+                    continue;
+                }
+
+                if (currentLineWidth + token.Width > _wrapWidth && currentLine.Count > 0)
+                {
+                    if (token.Type == TokenType.Space) continue; // Eat trailing space
+                    _displayLines.Add(currentLine);
+                    currentLine = new List<NarratorToken>();
+                    currentLineWidth = 0f;
+                }
+
+                currentLine.Add(token);
+                currentLineWidth += token.Width;
             }
 
-            // Check wrapping
-            if (currentLineWidth + token.Width > _wrapWidth && currentLine.Count > 0)
-            {
-                // If the token causing the wrap is a Space, just ignore it (eat trailing space)
-                if (token.Type == TokenType.Space) return;
-
-                currentLine = new List<NarratorToken>();
-                _displayLines.Add(currentLine);
-                currentLineWidth = 0f;
-                CheckMaxLines();
-            }
-
-            // Add token
-            currentLine.Add(token);
-            currentLineWidth += token.Width;
-        }
-
-        private void CheckMaxLines()
-        {
-            if (_displayLines.Count > _maxVisibleLines)
-            {
-                _displayLines.RemoveAt(0);
-            }
+            if (currentLine.Count > 0) _displayLines.Add(currentLine);
         }
 
         public void Update(GameTime gameTime)
         {
-            if (!IsBusy) return;
-
             var mouseState = Mouse.GetState();
             var keyboardState = Keyboard.GetState();
 
@@ -302,122 +244,34 @@ namespace ProjectVagabond.Battle.UI
 
             bool advance = mouseJustReleased || keyJustPressed;
 
-            if (_isWaitingForInput)
+            if (IsBusy)
             {
-                if (IsAutoProgressEnabled)
-                {
-                    _timeoutTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
-                }
-
-                if (advance || (IsAutoProgressEnabled && _timeoutTimer <= 0))
-                {
-                    if (mouseJustReleased) UIInputManager.ConsumeMouseClick();
-                    ProcessNextSegment();
-                }
-            }
-            else // Typing
-            {
+                // If user clicks while typing, speed up
                 if (advance)
                 {
-                    // Instead of finishing instantly, enable Fast Forward
                     _isFastForwarding = true;
                     if (mouseJustReleased) UIInputManager.ConsumeMouseClick();
                 }
 
-                // Calculate current speed based on Fast Forward state
                 float currentSpeed = TYPEWRITER_SPEED;
-                if (_isFastForwarding)
-                {
-                    currentSpeed /= TYPEWRITER_FAST_MULTIPLIER;
-                }
+                if (_isFastForwarding) currentSpeed /= TYPEWRITER_FAST_MULTIPLIER;
 
                 _typewriterTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-                // Process as many characters as needed based on elapsed time and current speed
-                while (_typewriterTimer >= currentSpeed && !_isFinishedTyping)
+                while (_typewriterTimer >= currentSpeed && _visibleCharCount < _totalCharCount)
                 {
                     _typewriterTimer -= currentSpeed;
-                    AdvanceTypewriter();
+                    _visibleCharCount++;
                 }
+            }
+            else
+            {
+                // If finished typing, user input is handled by BattleUIManager to advance the turn
+                _isFastForwarding = false;
             }
 
             _previousMouseState = mouseState;
             _previousKeyboardState = keyboardState;
-        }
-
-        private void AdvanceTypewriter()
-        {
-            if (_currentTokenIndex >= _allTokens.Count)
-            {
-                _isFinishedTyping = true;
-                _isWaitingForInput = true;
-                _timeoutTimer = AUTO_ADVANCE_SECONDS;
-                return;
-            }
-
-            var token = _allTokens[_currentTokenIndex];
-
-            // If we are starting a new token, we need to add it to the layout
-            if (_currentCharIndex == 0)
-            {
-                // Get the current line and width state
-                var currentLine = _displayLines.Last();
-                float currentLineWidth = 0f;
-                foreach (var t in currentLine) currentLineWidth += t.Width;
-
-                // Determine if this token needs to wrap
-                if (token.Type == TokenType.Newline)
-                {
-                    _displayLines.Add(new List<NarratorToken>());
-                    CheckMaxLines();
-                    _currentTokenIndex++;
-                    return; // Done with this token
-                }
-
-                if (currentLineWidth + token.Width > _wrapWidth && currentLine.Count > 0)
-                {
-                    if (token.Type != TokenType.Space)
-                    {
-                        _displayLines.Add(new List<NarratorToken>());
-                        CheckMaxLines();
-                    }
-                    else
-                    {
-                        // Skip space at end of line
-                        _currentTokenIndex++;
-                        return;
-                    }
-                }
-
-                // Add a placeholder token to the display list that we will "fill up"
-                if (token.Type == TokenType.Space)
-                {
-                    _displayLines.Last().Add(token);
-                    _currentTokenIndex++;
-                    return;
-                }
-                else
-                {
-                    // Add an empty clone of the token to the display line
-                    _displayLines.Last().Add(new NarratorToken("", token.Color, token.Type, 0f, token.Effect));
-                }
-            }
-
-            // Append next character to the last token in the display list
-            var displayLine = _displayLines.Last();
-            var displayToken = displayLine.Last();
-
-            displayToken.Text += token.Text[_currentCharIndex];
-            // Update width for correct layout calculations next frame
-            displayToken.Width = _font!.MeasureString(displayToken.Text).Width;
-
-            _currentCharIndex++;
-
-            if (_currentCharIndex >= token.Length)
-            {
-                _currentTokenIndex++;
-                _currentCharIndex = 0;
-            }
         }
 
         public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Vector2 offset)
@@ -432,104 +286,79 @@ namespace ProjectVagabond.Battle.UI
                 _bounds.Height - padding * 2
             );
 
-            // --- DYNAMIC CENTERING LOGIC ---
+            // --- SCROLLING LOGIC ---
+            // If we have more lines than fit, show the bottom-most lines
+            int startLineIndex = 0;
+            if (_displayLines.Count > _maxVisibleLines)
+            {
+                startLineIndex = _displayLines.Count - _maxVisibleLines;
+            }
 
-            // 1. Calculate Total Height of currently visible text
             float lineHeight = font.LineHeight + LINE_SPACING;
-            float totalHeight = _displayLines.Count * lineHeight - LINE_SPACING; // Subtract last gap
+            float startY = panelBounds.Y; // Top align for log
 
-            // 2. Calculate Starting Y to center vertically
-            float startY = panelBounds.Center.Y - (totalHeight / 2f);
-            // Adjust for font baseline visual preference
-            startY -= 2;
+            int charsProcessed = 0;
 
-            int globalCharIndex = 0; // For animation continuity
-
-            for (int i = 0; i < _displayLines.Count; i++)
+            for (int i = startLineIndex; i < _displayLines.Count; i++)
             {
                 var line = _displayLines[i];
-
-                // 3. Calculate Width of this specific line
-                float lineWidth = 0f;
-                foreach (var t in line) lineWidth += t.Width;
-
-                // 4. Calculate Starting X to center horizontally
-                float currentX = panelBounds.Center.X - (lineWidth / 2f);
-                float currentY = startY + (i * lineHeight);
+                float currentX = panelBounds.X;
+                float currentY = startY + ((i - startLineIndex) * lineHeight);
 
                 foreach (var token in line)
                 {
-                    if (token.Type == TokenType.Word)
+                    // Check visibility based on typewriter
+                    int charsInToken = token.Length;
+                    int charsToDraw = Math.Min(charsInToken, _visibleCharCount - charsProcessed);
+
+                    if (charsToDraw > 0)
                     {
-                        if (token.Effect == TextEffectType.None)
+                        string textToDraw = token.Text.Substring(0, charsToDraw);
+
+                        if (token.Type == TokenType.Word)
                         {
-                            spriteBatch.DrawStringSnapped(font, token.Text, new Vector2(currentX, currentY), token.Color);
-                            globalCharIndex += token.Text.Length;
-                        }
-                        else
-                        {
-                            // Render character by character for effects
-                            for (int c = 0; c < token.Text.Length; c++)
+                            if (token.Effect == TextEffectType.None)
                             {
-                                char charToDraw = token.Text[c];
-                                string charStr = charToDraw.ToString();
-
-                                // Sentinel trick for correct spacing
-                                string sub = token.Text.Substring(0, c);
-                                float charOffsetX = font.MeasureString(sub + "|").Width - font.MeasureString("|").Width;
-
-                                // FIX: Use TextAnimator instead of AnimationUtils/TextUtils
-                                var (animOffset, scale, rotation, color) = TextAnimator.GetTextEffectTransform(
-                                    token.Effect,
-                                    (float)gameTime.TotalGameTime.TotalSeconds,
-                                    globalCharIndex + c,
-                                    token.Color
-                                );
-
-                                Vector2 pos = new Vector2(currentX + charOffsetX, currentY) + animOffset;
-                                Vector2 origin = font.MeasureString(charStr) / 2f;
-
-                                // Draw centered on the character position to support rotation/scale
-                                spriteBatch.DrawString(font, charStr, pos + origin, color, rotation, origin, scale, SpriteEffects.None, 0f);
+                                spriteBatch.DrawStringSnapped(font, textToDraw, new Vector2(currentX, currentY), token.Color);
                             }
-                            globalCharIndex += token.Text.Length;
+                            else
+                            {
+                                // Render character by character for effects
+                                for (int c = 0; c < textToDraw.Length; c++)
+                                {
+                                    char charToDraw = textToDraw[c];
+                                    string charStr = charToDraw.ToString();
+                                    string sub = textToDraw.Substring(0, c);
+                                    float charOffsetX = font.MeasureString(sub + "|").Width - font.MeasureString("|").Width;
+
+                                    var (animOffset, scale, rotation, color) = TextAnimator.GetTextEffectTransform(
+                                        token.Effect,
+                                        (float)gameTime.TotalGameTime.TotalSeconds,
+                                        charsProcessed + c,
+                                        token.Color
+                                    );
+
+                                    Vector2 pos = new Vector2(currentX + charOffsetX, currentY) + animOffset;
+                                    Vector2 origin = font.MeasureString(charStr) / 2f;
+
+                                    spriteBatch.DrawString(font, charStr, pos + origin, color, rotation, origin, scale, SpriteEffects.None, 0f);
+                                }
+                            }
                         }
                     }
-                    // Spaces just advance X, they don't draw
+
                     currentX += token.Width;
+                    charsProcessed += charsInToken;
                 }
             }
 
-            // Draw "Next" Indicator
-            if (_isWaitingForInput)
+            // Draw "Next" Indicator if waiting
+            if (IsWaitingForInput)
             {
                 const string arrow = "v";
-                const string gap = " ";
-                const string widestEllipsis = "...";
-
-                Vector2 widestEllipsisSize = font.MeasureString(widestEllipsis);
-                Vector2 arrowSize = font.MeasureString(arrow);
-                Vector2 gapSize = font.MeasureString(gap);
-                float totalIndicatorWidth = widestEllipsisSize.X + gapSize.X + arrowSize.X;
-
-                float startX = panelBounds.Right - 3 - totalIndicatorWidth;
-                float yPos = panelBounds.Bottom - 10;
-
-                if (IsAutoProgressEnabled)
-                {
-                    string ellipsisToShow;
-                    if (_timeoutTimer > (AUTO_ADVANCE_SECONDS * 2 / 3f)) ellipsisToShow = "...";
-                    else if (_timeoutTimer > (AUTO_ADVANCE_SECONDS / 3f)) ellipsisToShow = "..";
-                    else ellipsisToShow = ".";
-
-                    Vector2 currentEllipsisSize = font.MeasureString(ellipsisToShow);
-                    float ellipsisX = startX + (widestEllipsisSize.X - currentEllipsisSize.X);
-                    var ellipsisPosition = new Vector2(ellipsisX, yPos);
-                    spriteBatch.DrawStringSnapped(font, ellipsisToShow, ellipsisPosition, _global.Palette_DarkSun);
-                }
-
+                var arrowSize = font.MeasureString(arrow);
                 float yOffset = ((float)gameTime.TotalGameTime.TotalSeconds * 4 % 1.0f > 0.5f) ? -1f : 0f;
-                var indicatorPosition = new Vector2(startX + widestEllipsisSize.X + gapSize.X, yPos + yOffset);
+                var indicatorPosition = new Vector2(panelBounds.Right - arrowSize.Width, panelBounds.Bottom - arrowSize.Height + yOffset);
                 spriteBatch.DrawStringSnapped(font, arrow, indicatorPosition, _global.Palette_DarkSun);
             }
         }

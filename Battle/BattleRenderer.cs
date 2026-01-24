@@ -1228,11 +1228,9 @@ namespace ProjectVagabond.Battle.UI
                             float barBottomY = barY + 4;
                             _combatantBarBottomYs[enemy.CombatantID] = barBottomY;
 
-                            if (enemy.VisualHealthBarAlpha > 0.01f || enemy.VisualManaBarAlpha > 0.01f)
-                            {
-                                _hudRenderer.DrawStatusIcons(spriteBatch, enemy, barX, barY, BattleLayout.ENEMY_BAR_WIDTH, false, _enemyStatusIcons.ContainsKey(enemy.CombatantID) ? _enemyStatusIcons[enemy.CombatantID] : null, GetStatusIconOffset, IsStatusIconAnimating);
-                                _hudRenderer.DrawEnemyBars(spriteBatch, enemy, barX, barY, BattleLayout.ENEMY_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, enemy.VisualHealthBarAlpha, enemy.VisualManaBarAlpha, gameTime);
-                            }
+                            // --- HUD LAYERING FIX ---
+                            // Store position for later drawing in DrawHUD
+                            _combatantBarPositions[enemy.CombatantID] = new Vector2(barX, barY);
                         }
                     }
                 }
@@ -1439,7 +1437,7 @@ namespace ProjectVagabond.Battle.UI
                     _combatantBarBottomYs[player.CombatantID] = barBottomY;
 
                     // --- HUD LAYERING FIX ---
-                    // Store position for later drawing in DrawHUDPass
+                    // Store position for later drawing in DrawHUD
                     _combatantBarPositions[player.CombatantID] = new Vector2(barX, barY);
                 }
             }

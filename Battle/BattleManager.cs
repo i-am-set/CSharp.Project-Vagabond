@@ -99,6 +99,9 @@ namespace ProjectVagabond.Battle
         private readonly BattleAnimationManager _animationManager;
         private readonly Global _global;
 
+        // --- ROUND LOG ---
+        private readonly StringBuilder _roundLog = new StringBuilder();
+
         public BattleManager(List<BattleCombatant> playerParty, List<BattleCombatant> enemyParty, BattleAnimationManager animationManager)
         {
             _playerParty = playerParty;
@@ -138,7 +141,8 @@ namespace ProjectVagabond.Battle
 
         private void OnAbilityActivated(GameEvents.AbilityActivated e)
         {
-            GameLogger.Log(LogSeverity.Info, $"[ABILITY] {e.Combatant.Name}'s {e.Ability.Name} triggered.");
+            // Optional: Log ability activations to the round log if desired
+            // For now, we keep it clean to avoid spam
         }
 
         private void InitializeSlots(List<BattleCombatant> party)
@@ -502,6 +506,10 @@ namespace ProjectVagabond.Battle
         {
             SanitizeBattlefield();
 
+            // --- CLEAR ROUND LOG ---
+            _roundLog.Clear();
+            EventBus.Publish(new GameEvents.RoundLogUpdate { LogText = "" });
+
             _endOfTurnEffectsProcessed = false;
             var startOfTurnActions = new List<QueuedAction>();
 
@@ -603,31 +611,42 @@ namespace ProjectVagabond.Battle
 
             if (nextAction.Actor.IsDefeated || !nextAction.Actor.IsActiveOnField || nextAction.Actor.Stats.CurrentHP <= 0)
             {
+                // Skip dead actors immediately
+                HandleActionResolution();
                 return;
             }
 
             if (nextAction.Type == QueuedActionType.Charging)
             {
-                EventBus.Publish(new GameEvents.ActionFailed { Actor = nextAction.Actor, Reason = $"charging [cAction]{nextAction.ChosenMove.MoveName}[/]" });
-                CanAdvance = false;
+                AppendToLog($"{nextAction.Actor.Name} IS CHARGING [cAction]{nextAction.ChosenMove.MoveName}[/].");
+                // Don't stop, just go to next
+                HandleActionResolution();
                 return;
             }
 
             if (nextAction.Actor.HasStatusEffect(StatusEffectType.Stun))
             {
-                EventBus.Publish(new GameEvents.ActionFailed { Actor = nextAction.Actor, Reason = "stunned" });
-                CanAdvance = false;
+                AppendToLog($"{nextAction.Actor.Name} IS STUNNED!");
+                // Don't stop, just go to next
+                HandleActionResolution();
                 return;
             }
 
             if (nextAction.Actor.IsDazed)
             {
-                EventBus.Publish(new GameEvents.ActionFailed { Actor = nextAction.Actor, Reason = "dazed" });
-                CanAdvance = false;
+                AppendToLog($"{nextAction.Actor.Name} IS DAZED!");
+                // Don't stop, just go to next
+                HandleActionResolution();
                 return;
             }
 
             _actionToExecute = nextAction;
+
+            // --- LOG ACTION START ---
+            string moveName = nextAction.ChosenMove?.MoveName ?? "ACTION";
+            string typeColor = nextAction.ChosenMove?.MoveType == MoveType.Spell ? "[cSpell]" : "[cAction]";
+            AppendToLog($"{nextAction.Actor.Name} USED {typeColor}{moveName}[/].");
+
             EventBus.Publish(new GameEvents.ActionDeclared
             {
                 Actor = _actionToExecute.Actor,
@@ -636,6 +655,19 @@ namespace ProjectVagabond.Battle
                 Type = _actionToExecute.Type
             });
             CanAdvance = false;
+        }
+
+        private void AppendToLog(string text)
+        {
+            if (_roundLog.Length > 0) _roundLog.Append("\n");
+            _roundLog.Append(text);
+            EventBus.Publish(new GameEvents.RoundLogUpdate { LogText = _roundLog.ToString() });
+        }
+
+        private void AppendToCurrentLine(string text)
+        {
+            _roundLog.Append(text);
+            EventBus.Publish(new GameEvents.RoundLogUpdate { LogText = _roundLog.ToString() });
         }
 
         public void ExecuteDeclaredAction()
@@ -686,6 +718,7 @@ namespace ProjectVagabond.Battle
         {
             if (action.ChosenMove.MoveType == MoveType.Spell && action.Actor.HasStatusEffect(StatusEffectType.Silence))
             {
+                AppendToCurrentLine(" SILENCED!");
                 EventBus.Publish(new GameEvents.ActionFailed { Actor = action.Actor, Reason = "silenced" });
                 CanAdvance = false;
                 _currentPhase = BattlePhase.CheckForDefeat;
@@ -694,6 +727,7 @@ namespace ProjectVagabond.Battle
 
             if (action.Actor.Stats.CurrentMana < action.ChosenMove.ManaCost)
             {
+                AppendToCurrentLine(" NO MANA!");
                 EventBus.Publish(new GameEvents.ActionFailed { Actor = action.Actor, Reason = "not enough mana" });
                 CanAdvance = false;
                 _currentPhase = BattlePhase.CheckForDefeat;
@@ -811,9 +845,8 @@ namespace ProjectVagabond.Battle
             }
             else
             {
+                AppendToCurrentLine(" FAILED!");
                 EventBus.Publish(new GameEvents.MoveFailed { Actor = action.Actor });
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{action.Actor.Name}'s attack failed!" });
-
                 _currentPhase = BattlePhase.CheckForDefeat;
                 CanAdvance = false;
             }
@@ -843,7 +876,7 @@ namespace ProjectVagabond.Battle
                     {
                         target.ActiveStatusEffects.RemoveAll(e => e.EffectType == StatusEffectType.Protected);
                         EventBus.Publish(new GameEvents.StatusEffectRemoved { Combatant = target, EffectType = StatusEffectType.Protected });
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{action.Actor.Name} shattered the guard!" });
+                        AppendToCurrentLine(" GUARD BROKEN!");
 
                         result.DamageAmount = (int)(result.DamageAmount * shieldBreaker.BreakDamageMultiplier);
                         results[i] = result;
@@ -852,7 +885,7 @@ namespace ProjectVagabond.Battle
                     else if (shieldBreaker.FailsIfNoProtect)
                     {
                         result.DamageAmount = 0;
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "But it failed!" });
+                        AppendToCurrentLine(" FAILED!");
                         EventBus.Publish(new GameEvents.MoveFailed { Actor = action.Actor });
                         results[i] = result;
                         continue;
@@ -861,11 +894,7 @@ namespace ProjectVagabond.Battle
 
                 if (isProtecting)
                 {
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished
-                    {
-                        Message = $"{target.Name} [cStatus]protected[/] against the attack!"
-                    });
-
+                    AppendToCurrentLine(" PROTECTED!");
                     result.WasProtected = true;
                     result.DamageAmount = 0;
                     results[i] = result;
@@ -878,6 +907,12 @@ namespace ProjectVagabond.Battle
                 {
                     significantTargetIds.Add(target.CombatantID);
                 }
+
+                // --- LOG RESULTS ---
+                if (result.WasCritical) AppendToCurrentLine(" [cCrit]CRITICAL HIT![/]");
+                if (result.Effectiveness == DamageCalculator.ElementalEffectiveness.Effective) AppendToCurrentLine(" [cPositive]EFFECTIVE![/]");
+                if (result.Effectiveness == DamageCalculator.ElementalEffectiveness.Resisted) AppendToCurrentLine(" [cNegative]RESISTED.[/]");
+                if (result.Effectiveness == DamageCalculator.ElementalEffectiveness.Immune) AppendToCurrentLine(" [cImmune]IMMUNE![/]");
 
                 var ctx = new CombatContext
                 {
@@ -999,6 +1034,7 @@ namespace ProjectVagabond.Battle
                 {
                     effect.OnKill(ctx);
                 }
+                AppendToCurrentLine(" [cDefeat]DEFEATED![/]");
             }
 
             var actor = action.Actor;

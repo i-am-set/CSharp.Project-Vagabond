@@ -48,11 +48,10 @@ namespace ProjectVagabond.Battle.UI
 
 
         private float _targetingTextAnimTimer = 0f;
-        private readonly Queue<Action> _narrationQueue = new Queue<Action>();
         public readonly HoverHighlightState HoverHighlightState = new HoverHighlightState();
         public float SharedPulseTimer { get; private set; } = 0f;
 
-        public bool IsBusy => _battleNarrator.IsBusy || _narrationQueue.Any();
+        public bool IsBusy => _battleNarrator.IsBusy;
         public bool IsWaitingForInput => _battleNarrator.IsWaitingForInput;
 
         private bool _isPromptVisible;
@@ -139,8 +138,15 @@ namespace ProjectVagabond.Battle.UI
             };
 
             EventBus.Subscribe<GameEvents.ForcedSwitchRequested>(OnForcedSwitchRequested);
+            EventBus.Subscribe<GameEvents.RoundLogUpdate>(OnRoundLogUpdate);
 
             _previousMouseState = Mouse.GetState();
+        }
+
+        private void OnRoundLogUpdate(GameEvents.RoundLogUpdate e)
+        {
+            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+            _battleNarrator.UpdateLog(e.LogText, secondaryFont);
         }
 
         private void OnForcedSwitchRequested(GameEvents.ForcedSwitchRequested e)
@@ -179,7 +185,6 @@ namespace ProjectVagabond.Battle.UI
             _combatSwitchDialog.Hide(); // Ensure dialog is closed
             UIState = BattleUIState.Default;
             SubMenuState = BattleSubMenuState.None;
-            _narrationQueue.Clear();
             foreach (var btn in _targetingButtons) btn.ResetAnimationState();
 
             MoveForTargeting = null;
@@ -190,7 +195,6 @@ namespace ProjectVagabond.Battle.UI
 
         public void ForceClearNarration()
         {
-            _narrationQueue.Clear();
             _battleNarrator.ForceClear();
         }
 
@@ -213,12 +217,13 @@ namespace ProjectVagabond.Battle.UI
 
         public void ShowNarration(string message, Action? onShow = null)
         {
+            // Legacy support: If something calls this directly, append it to the log via the event system
+            // to keep everything unified.
+            // However, since BattleManager now handles the log, this is mostly for non-combat messages.
+            // We can just update the narrator directly.
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-            _narrationQueue.Enqueue(() =>
-            {
-                onShow?.Invoke();
-                _battleNarrator.Show(message, secondaryFont);
-            });
+            _battleNarrator.UpdateLog(message, secondaryFont);
+            onShow?.Invoke();
         }
 
         public void GoBack()
@@ -298,12 +303,6 @@ namespace ProjectVagabond.Battle.UI
             }
 
             // Note: UpdateTargetingButtons was already called at step 1.
-
-            if (!_battleNarrator.IsBusy && _narrationQueue.Any())
-            {
-                var nextStep = _narrationQueue.Dequeue();
-                nextStep.Invoke();
-            }
 
             _previousMouseState = currentMouseState;
         }

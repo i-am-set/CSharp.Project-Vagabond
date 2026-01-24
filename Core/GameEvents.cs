@@ -2,12 +2,14 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
 using ProjectVagabond.Systems;
 using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
@@ -20,6 +22,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
+using static ProjectVagabond.Battle.Abilities.InflictStatusStunAbility;
 
 namespace ProjectVagabond
 {
@@ -28,6 +31,14 @@ namespace ProjectVagabond
     /// </summary>
     public static class GameEvents
     {
+        /// <summary>
+        /// Published when the accumulated round log changes.
+        /// </summary>
+        public struct RoundLogUpdate
+        {
+            public string LogText { get; set; }
+        }
+
         /// <summary>
         /// Published when a message should be added to the main terminal output.
         /// </summary>
