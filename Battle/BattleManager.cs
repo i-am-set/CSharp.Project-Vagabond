@@ -509,6 +509,27 @@ namespace ProjectVagabond.Battle
         {
             SanitizeBattlefield();
 
+            // --- FAILSAFE: Check for Premature Empty Field ---
+            // If there are no active enemies, but the enemy party is not fully defeated,
+            // it means we are in a softlock state (likely due to failed reinforcement).
+            // We force a transition to Reinforcement phase to try and spawn them again.
+            if (!_cachedActiveEnemies.Any())
+            {
+                if (_enemyParty.All(c => c.IsDefeated))
+                {
+                    _currentPhase = BattlePhase.BattleOver;
+                    return;
+                }
+                else
+                {
+                    Debug.WriteLine("[BattleManager] Failsafe triggered: No active enemies, but party not defeated. Forcing Reinforcement.");
+                    _currentPhase = BattlePhase.Reinforcement;
+                    _reinforcementSlotIndex = 0;
+                    _reinforcementAnnounced = false;
+                    return;
+                }
+            }
+
             // --- CLEAR ROUND LOG ---
             _roundLog.Clear();
             EventBus.Publish(new GameEvents.RoundLogUpdate { LogText = "" });
@@ -1260,7 +1281,7 @@ namespace ProjectVagabond.Battle
             {
                 foreach (var ability in combatant.TurnLifecycleEffects)
                 {
-                    ability.OnTurnEnd(combatant);
+                    ability.OnTurnStart(combatant);
                 }
 
                 if (!combatant.UsedProtectThisTurn)
