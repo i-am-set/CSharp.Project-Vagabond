@@ -19,10 +19,7 @@
     "Slot4MovePool": [ "37" ],
     "PassiveAbilityPool": [
       { "PMPyromancer": "" }
-    ],
-    "StartingWeapons": {
-      "0": 1
-    }
+    ]
   },
   {
     "MemberID": "1",
@@ -44,10 +41,7 @@
     "Slot4MovePool": [],
     "PassiveAbilityPool": [
       { "PMAnnoying": "" }
-    ],
-    "StartingWeapons": {
-      "2": 1
-    }
+    ]
   },
   {
     "MemberID": "2",
@@ -91,10 +85,7 @@
     "Slot4MovePool": [],
     "PassiveAbilityPool": [
       { "PMShortTemper": "" }
-    ],
-    "StartingWeapons": {
-      "1": 1
-    }
+    ]
   },
   {
     "MemberID": "4",
@@ -141,10 +132,7 @@
     "Slot4MovePool": [ "41" ],
     "PassiveAbilityPool": [
       { "PMSweetpea": "" }
-    ],
-    "StartingWeapons": {
-      "0": 1
-    }
+    ]
   },
   {
     "MemberID": "6",
@@ -166,10 +154,7 @@
     "Slot4MovePool": [],
     "PassiveAbilityPool": [
       { "PMSkeptic": "" }
-    ],
-    "StartingWeapons": {
-      "0": 1
-    }
+    ]
   },
   {
     "MemberID": "7",
@@ -191,10 +176,7 @@
     "Slot4MovePool": [],
     "PassiveAbilityPool": [
       { "PM9Lives": "" }
-    ],
-    "StartingWeapons": {
-      "0": 1
-    }
+    ]
   },
   {
     "MemberID": "8",
@@ -216,10 +198,7 @@
     "Slot4MovePool": [],
     "PassiveAbilityPool": [
       { "PMMinutiae": "" }
-    ],
-    "StartingWeapons": {
-      "0": 1
-    }
+    ]
   },
   {
     "MemberID": "9",
@@ -239,10 +218,7 @@
     "Slot2MovePool": [],
     "Slot3MovePool": [],
     "Slot4MovePool": [],
-    "PassiveAbilityPool": [],
-    "StartingWeapons": {
-      "0": 1
-    }
+    "PassiveAbilityPool": []
   },
   {
     "MemberID": "10",
@@ -264,10 +240,7 @@
     "Slot4MovePool": [],
     "PassiveAbilityPool": [
       { "PMGentleSoul": "" }
-    ],
-    "StartingWeapons": {
-      "0": 1
-    }
+    ]
   },
   {
     "MemberID": "11",
@@ -289,10 +262,7 @@
     "Slot4MovePool": [],
     "PassiveAbilityPool": [
       { "PMWellfed": "" }
-    ],
-    "StartingWeapons": {
-      "0": 1
-    }
+    ]
   },
   {
     "MemberID": "12",
@@ -314,10 +284,7 @@
     "Slot4MovePool": [],
     "PassiveAbilityPool": [
       { "PMStubborn": "" }
-    ],
-    "StartingWeapons": {
-      "0": 1
-    }
+    ]
   },
   {
     "MemberID": "13",
@@ -337,10 +304,7 @@
     "Slot2MovePool": [],
     "Slot3MovePool": [],
     "Slot4MovePool": [],
-    "PassiveAbilityPool": [],
-    "StartingWeapons": {
-      "0": 1
-    }
+    "PassiveAbilityPool": []
   },
   {
     "MemberID": "14",
@@ -360,9 +324,6 @@
     "Slot2MovePool": [],
     "Slot3MovePool": [],
     "Slot4MovePool": [],
-    "PassiveAbilityPool": [],
-    "StartingWeapons": {
-      "0": 1
-    }
+    "PassiveAbilityPool": []
   }
 ]
