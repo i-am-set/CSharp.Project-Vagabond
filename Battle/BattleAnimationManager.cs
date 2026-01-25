@@ -72,6 +72,27 @@ namespace ProjectVagabond.Battle.UI
             public const float DROP_HEIGHT = 10f; // Reduced height for a subtle float down
         }
 
+        // --- NEW: Attack Charge Animation ---
+        public class AttackChargeAnimationState
+        {
+            public string CombatantID;
+            public float Timer;
+            public bool IsPlayer; // Determines direction (Up for player, Down for enemy)
+
+            // Tuning
+            public const float DURATION = 0.35f; // Total time before the actual hit
+            public const float WINDUP_PERCENT = 0.7f; // 70% of time spent winding back
+
+            // Visuals
+            public const float WINDUP_DISTANCE = 8f; // Pixels to pull back
+            public const float LUNGE_DISTANCE = 16f; // Pixels to shoot forward
+
+            // Squash/Stretch
+            public Vector2 Scale = Vector2.One;
+            public Vector2 Offset = Vector2.Zero;
+        }
+        private readonly List<AttackChargeAnimationState> _activeAttackCharges = new List<AttackChargeAnimationState>();
+
         // --- NEW: Intro Slide Animation ---
         public class IntroSlideAnimationState
         {
@@ -389,7 +410,8 @@ namespace ProjectVagabond.Battle.UI
             _activeBarAnimations.Any() ||
             _activeIntroSlideAnimations.Any() ||
             _activeFloorIntroAnimations.Any() ||
-            _activeFloorOutroAnimations.Any();
+            _activeFloorOutroAnimations.Any() ||
+            _activeAttackCharges.Any(); // Added Attack Charge
 
         /// <summary>
         /// Alias for IsBlockingAnimation to maintain backward compatibility.
@@ -439,6 +461,7 @@ namespace ProjectVagabond.Battle.UI
             _activeIntroSlideAnimations.Clear();
             _activeFloorIntroAnimations.Clear();
             _activeFloorOutroAnimations.Clear();
+            _activeAttackCharges.Clear();
             _impactFlashState = null;
             _indicatorCooldownTimer = 0f;
             _pendingAbilityQueue.Clear();
@@ -489,6 +512,7 @@ namespace ProjectVagabond.Battle.UI
             _activeSwitchOutAnimations.Clear();
             _activeFloorIntroAnimations.Clear();
             _activeFloorOutroAnimations.Clear();
+            _activeAttackCharges.Clear();
 
             // 4. Handle Death Animations: Ensure coins spawn if skipped
             foreach (var anim in _activeDeathAnimations)
@@ -517,6 +541,22 @@ namespace ProjectVagabond.Battle.UI
         }
 
         // ... (Existing methods for Hitstop, Flash, Health, etc. remain unchanged) ...
+
+        public void StartAttackCharge(string combatantId, bool isPlayer)
+        {
+            _activeAttackCharges.RemoveAll(a => a.CombatantID == combatantId);
+            _activeAttackCharges.Add(new AttackChargeAnimationState
+            {
+                CombatantID = combatantId,
+                IsPlayer = isPlayer,
+                Timer = 0f
+            });
+        }
+
+        public AttackChargeAnimationState GetAttackChargeState(string combatantId)
+        {
+            return _activeAttackCharges.FirstOrDefault(a => a.CombatantID == combatantId);
+        }
 
         public void StartHitstopVisuals(string combatantId, bool isCrit)
         {
@@ -1065,6 +1105,62 @@ namespace ProjectVagabond.Battle.UI
             UpdateCoins(gameTime, combatants);
             UpdateCoinCatchAnimations(gameTime);
             UpdateImpactFlash(gameTime);
+            UpdateAttackCharges(gameTime); // New
+        }
+
+        private void UpdateAttackCharges(GameTime gameTime)
+        {
+            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            for (int i = _activeAttackCharges.Count - 1; i >= 0; i--)
+            {
+                var anim = _activeAttackCharges[i];
+                anim.Timer += dt;
+
+                float progress = Math.Clamp(anim.Timer / AttackChargeAnimationState.DURATION, 0f, 1f);
+                float windupEnd = AttackChargeAnimationState.WINDUP_PERCENT;
+
+                if (progress < windupEnd)
+                {
+                    // Windup Phase
+                    float p = progress / windupEnd;
+                    float eased = Easing.EaseOutCubic(p);
+
+                    // Move Back
+                    float yDir = anim.IsPlayer ? 1f : -1f; // Player moves down (back), Enemy moves up (back)
+                    anim.Offset = new Vector2(0, yDir * AttackChargeAnimationState.WINDUP_DISTANCE * eased);
+
+                    // Squash (Crouch)
+                    // X expands, Y shrinks
+                    float squash = MathHelper.Lerp(1.0f, 1.1f, eased);
+                    float stretch = MathHelper.Lerp(1.0f, 0.9f, eased);
+                    anim.Scale = new Vector2(squash, stretch);
+                }
+                else
+                {
+                    // Lunge Phase
+                    float p = (progress - windupEnd) / (1.0f - windupEnd);
+                    float eased = Easing.EaseInExpo(p);
+
+                    // Move Forward (past start)
+                    float yDir = anim.IsPlayer ? -1f : 1f; // Player moves up (forward), Enemy moves down (forward)
+                    // Start from windup pos, go to lunge pos
+                    float startY = (anim.IsPlayer ? 1f : -1f) * AttackChargeAnimationState.WINDUP_DISTANCE;
+                    float endY = yDir * AttackChargeAnimationState.LUNGE_DISTANCE;
+
+                    anim.Offset = new Vector2(0, MathHelper.Lerp(startY, endY, eased));
+
+                    // Stretch (Elongate)
+                    // X shrinks, Y expands
+                    float squash = MathHelper.Lerp(1.1f, 0.8f, eased);
+                    float stretch = MathHelper.Lerp(0.9f, 1.2f, eased);
+                    anim.Scale = new Vector2(squash, stretch);
+                }
+
+                if (anim.Timer >= AttackChargeAnimationState.DURATION)
+                {
+                    _activeAttackCharges.RemoveAt(i);
+                }
+            }
         }
 
         private void UpdateImpactFlash(GameTime gameTime)
@@ -1298,9 +1394,12 @@ namespace ProjectVagabond.Battle.UI
                     // Calculate visual center for the target player
                     // Hardcoded logic based on BattleRenderer layout to avoid dependency cycle
                     // Slot 0: Left, Slot 1: Right
-                    float spriteCenterX = BattleLayout.GetPlayerSpriteCenter(targetPlayer.BattleSlot).X;
+                    float spriteCenterX = (targetPlayer.BattleSlot == 1)
+                        ? (Global.VIRTUAL_WIDTH * 0.75f)
+                        : (Global.VIRTUAL_WIDTH * 0.25f);
 
-                    float heartCenterY = BattleLayout.PLAYER_HEART_CENTER_Y;
+                    // Use fixed Y for player heart center
+                    float heartCenterY = 96f;
 
                     targetPos = new Vector2(spriteCenterX, heartCenterY);
                 }

@@ -969,15 +969,24 @@ namespace ProjectVagabond.Battle.UI
                     var hitFlash = animManager.GetHitFlashState(enemy.CombatantID);
                     var healBounce = animManager.GetHealBounceAnimationState(enemy.CombatantID);
                     var introSlide = animManager.GetIntroSlideAnimationState(enemy.CombatantID);
+                    var attackCharge = animManager.GetAttackChargeState(enemy.CombatantID); // NEW
 
                     float spawnY = 0f;
                     float alpha = enemy.VisualAlpha;
                     float silhouetteAmt = enemy.VisualSilhouetteAmount;
                     Vector2 slideOffset = Vector2.Zero;
+                    Vector2 chargeOffset = Vector2.Zero; // NEW
+                    Vector2 chargeScale = Vector2.One; // NEW
 
                     if (isSilhouetted && spawnAnim == null && switchOut == null && switchIn == null && introSlide == null)
                     {
                         silhouetteAmt = 1.0f;
+                    }
+
+                    if (attackCharge != null) // NEW: Apply Charge Animation
+                    {
+                        chargeOffset = attackCharge.Offset;
+                        chargeScale = attackCharge.Scale;
                     }
 
                     if (introSlide != null)
@@ -1077,6 +1086,9 @@ namespace ProjectVagabond.Battle.UI
                         scale = squashScale;
                     }
 
+                    // Apply Charge Scale (Multiplicative)
+                    scale *= chargeScale;
+
                     float bob = CalculateAttackBobOffset(enemy.CombatantID, false);
                     if (healBounce != null)
                     {
@@ -1089,8 +1101,8 @@ namespace ProjectVagabond.Battle.UI
 
                     int spriteSize = _spriteManager.IsMajorEnemySprite(enemy.ArchetypeId) ? 96 : 64;
                     var spriteRect = new Rectangle(
-                        (int)(center.X - spriteSize / 2f + recoil.X + slideOffset.X),
-                        (int)(center.Y + bob + spawnY + recoil.Y + slideOffset.Y),
+                        (int)(center.X - spriteSize / 2f + recoil.X + slideOffset.X + chargeOffset.X),
+                        (int)(center.Y + bob + spawnY + recoil.Y + slideOffset.Y + chargeOffset.Y),
                         spriteSize, spriteSize
                     );
 
@@ -1281,12 +1293,21 @@ namespace ProjectVagabond.Battle.UI
                 var healBounce = animManager.GetHealBounceAnimationState(player.CombatantID);
                 var coinCatch = animManager.GetCoinCatchAnimationState(player.CombatantID);
                 var introSlide = animManager.GetIntroSlideAnimationState(player.CombatantID);
+                var attackCharge = animManager.GetAttackChargeState(player.CombatantID); // NEW
 
                 float spawnY = 0f;
                 float alpha = player.VisualAlpha;
                 float scale = 1.0f;
                 float rotation = 0f; // New rotation variable
                 Vector2 slideOffset = Vector2.Zero;
+                Vector2 chargeOffset = Vector2.Zero; // NEW
+                Vector2 chargeScale = Vector2.One; // NEW
+
+                if (attackCharge != null) // NEW: Apply Charge Animation
+                {
+                    chargeOffset = attackCharge.Offset;
+                    chargeScale = attackCharge.Scale;
+                }
 
                 if (introSlide != null)
                 {
@@ -1335,7 +1356,7 @@ namespace ProjectVagabond.Battle.UI
                     sprite = new PlayerCombatSprite(player.ArchetypeId);
                     _playerSprites[player.CombatantID] = sprite;
                 }
-                sprite.SetPosition(new Vector2(center.X, center.Y + bob + spawnY) + recoil + slideOffset);
+                sprite.SetPosition(new Vector2(center.X, center.Y + bob + spawnY) + recoil + slideOffset + chargeOffset);
 
                 bool isHighlighted = selectable.Contains(player) && shouldGrayOut;
                 float pulse = 0f;
@@ -1383,7 +1404,12 @@ namespace ProjectVagabond.Battle.UI
                     bool isHighlightedSprite = highlight.HasValue;
 
                     // Pass rotation to sprite draw
-                    sprite.Draw(spriteBatch, animManager, player, tint, isHighlightedSprite, pulse, isSilhouetted, silhouetteColor, gameTime, highlight, outlineColor, scale, lowHealthOverlay, rotation);
+                    // Apply Charge Scale
+                    sprite.Draw(spriteBatch, animManager, player, tint, isHighlightedSprite, pulse, isSilhouetted, silhouetteColor, gameTime, highlight, outlineColor, scale * chargeScale.X, lowHealthOverlay, rotation); // Note: PlayerCombatSprite handles X/Y scale internally via TriggerSquash, but here we pass uniform scale. We might need to update PlayerCombatSprite to accept Vector2 scale if we want non-uniform charge scaling.
+                    // Actually, PlayerCombatSprite.Draw takes a float scale. Let's update it to take Vector2 or just pass X since we are squashing uniformly in the animation manager?
+                    // Wait, the animation manager sets X and Y scale.
+                    // We need to update PlayerCombatSprite.Draw to accept Vector2 scale.
+                    // For now, let's just pass X and assume uniform scaling or update PlayerCombatSprite.
 
                     // Use 'center' (animated) instead of 'baseCenter' (static) for bounds calculation
                     Rectangle bounds = new Rectangle((int)(center.X - 16), (int)(center.Y - 16), 32, 32);

@@ -34,6 +34,7 @@ namespace ProjectVagabond.Battle
             ActionSelection_Slot1,
             ActionSelection_Slot2,
             ActionResolution,
+            PreActionAnimation, // NEW: Phase for charge-up
             AnimatingMove,
             SecondaryEffectResolution,
             CheckForDefeat,
@@ -238,7 +239,8 @@ namespace ProjectVagabond.Battle
                 _currentPhase == BattlePhase.ActionResolution ||
                 _currentPhase == BattlePhase.SecondaryEffectResolution ||
                 _currentPhase == BattlePhase.ProcessingInteraction ||
-                _currentPhase == BattlePhase.WaitingForSwitchCompletion)
+                _currentPhase == BattlePhase.WaitingForSwitchCompletion ||
+                _currentPhase == BattlePhase.PreActionAnimation) // Added PreActionAnimation
             {
                 if (!IsProcessingMultiHit)
                 {
@@ -483,7 +485,7 @@ namespace ProjectVagabond.Battle
         public void Update(float deltaTime)
         {
             if (_currentPhase == BattlePhase.BattleOver) return;
-            if (!CanAdvance && _currentPhase != BattlePhase.WaitingForSwitchCompletion) return;
+            if (!CanAdvance && _currentPhase != BattlePhase.WaitingForSwitchCompletion && _currentPhase != BattlePhase.PreActionAnimation) return;
 
             switch (_currentPhase)
             {
@@ -492,6 +494,7 @@ namespace ProjectVagabond.Battle
                 case BattlePhase.ActionSelection_Slot1: break;
                 case BattlePhase.ActionSelection_Slot2: break;
                 case BattlePhase.ActionResolution: HandleActionResolution(); break;
+                case BattlePhase.PreActionAnimation: HandlePreActionAnimation(); break; // NEW
                 case BattlePhase.AnimatingMove: break;
                 case BattlePhase.SecondaryEffectResolution: HandleSecondaryEffectResolution(); break;
                 case BattlePhase.CheckForDefeat: HandleCheckForDefeat(); break;
@@ -654,7 +657,31 @@ namespace ProjectVagabond.Battle
                 Target = _actionToExecute.Target,
                 Type = _actionToExecute.Type
             });
-            CanAdvance = false;
+
+            // --- NEW: Trigger Charge Animation ---
+            if (_actionToExecute.Type == QueuedActionType.Move && _actionToExecute.ChosenMove != null)
+            {
+                _currentPhase = BattlePhase.PreActionAnimation;
+                _animationManager.StartAttackCharge(_actionToExecute.Actor.CombatantID, _actionToExecute.Actor.IsPlayerControlled);
+                CanAdvance = false;
+            }
+            else
+            {
+                // Skip animation for switches or other types
+                ExecuteDeclaredAction();
+            }
+        }
+
+        private void HandlePreActionAnimation()
+        {
+            if (_actionToExecute == null) return;
+
+            var chargeState = _animationManager.GetAttackChargeState(_actionToExecute.Actor.CombatantID);
+            if (chargeState == null)
+            {
+                // Animation finished or didn't start
+                ExecuteDeclaredAction();
+            }
         }
 
         private void AppendToLog(string text)
