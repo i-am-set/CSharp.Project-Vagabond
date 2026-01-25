@@ -1,5 +1,14 @@
-﻿using ProjectVagabond.Battle;
+﻿using ProjectVagabond;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Utils;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Reflection;
+using System.Text;
 
 namespace ProjectVagabond.Battle
 {
@@ -9,11 +18,9 @@ namespace ProjectVagabond.Battle
         public string Name { get; set; }
         public string Description { get; set; }
 
-        // Narration Data
         public Gender Gender { get; set; } = Gender.Neutral;
-        public bool IsProperNoun { get; set; } = true; // Default to true for named characters
+        public bool IsProperNoun { get; set; } = true;
 
-        // Base Stats
         public int MaxHP { get; set; }
         public int MaxMana { get; set; }
         public int Strength { get; set; }
@@ -21,25 +28,15 @@ namespace ProjectVagabond.Battle
         public int Tenacity { get; set; }
         public int Agility { get; set; }
 
-        public List<int> WeaknessElementIDs { get; set; } = new List<int>();
-        public List<int> ResistanceElementIDs { get; set; } = new List<int>();
-
         public string DefaultStrikeMoveID { get; set; }
 
-        // Starting Loadout - Refactored for Slot Variance
-        // Each list represents the pool of possible moves for that specific combat slot.
-        // During generation, one move is picked from the pool. If empty, the slot is empty.
         public List<string> Slot1MovePool { get; set; } = new List<string>();
         public List<string> Slot2MovePool { get; set; } = new List<string>();
         public List<string> Slot3MovePool { get; set; } = new List<string>();
         public List<string> Slot4MovePool { get; set; } = new List<string>();
 
-        // Intrinsic Passive Pool
-        // A list of dictionaries. At generation, ONE dictionary (set of effects) is chosen 
-        // and baked into the PartyMember permanently.
         public List<Dictionary<string, string>> PassiveAbilityPool { get; set; } = new List<Dictionary<string, string>>();
 
-        // Split equipment to avoid ID collisions (since Weapon "0" and Armor "0" are different items)
         public Dictionary<string, int> StartingWeapons { get; set; } = new Dictionary<string, int>();
         public Dictionary<string, int> StartingRelics { get; set; } = new Dictionary<string, int>();
     }

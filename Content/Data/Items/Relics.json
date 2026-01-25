@@ -3,78 +3,78 @@
     "RelicID": "0",
     "RelicName": "Lodestone",
     "AbilityName": "Stabilizer",
-    "Description": "[cneutral]Neutral[/] spells deal [cpositive]1.1x[/] damage.",
+    "Description": "[cAction]Physical[/] moves deal [cpositive]1.1x[/] damage.",
     "Flavor": "A heavy stone that hums with a low frequency. Pretty boring",
     "Effects": {
-      "ElementalDamageBonus": "0,1.1"
+      "ImpactDamageBonus": "Physical,1.1"
     },
-    "Tags": [ "Neutral" ]
+    "Tags": [ "Physical" ]
   },
   {
     "RelicID": "1",
     "RelicName": "Hot Ring",
     "AbilityName": "Pyromancer",
-    "Description": "[cfire]Fire[/] spells deal [cpositive]1.2x[/] damage.",
+    "Description": "[cpositive]30%[/] chance to inflict [cpositive]Burn[/] on hit.",
     "Flavor": "Not pleasant to wear.",
     "Effects": {
-      "ElementalDamageBonus": "1,1.2"
+      "ApplyStatusOnHit": "Burn,30,3,false"
     },
-    "Tags": [ "Fire" ]
+    "Tags": [ "StatusEffect" ]
   },
   {
     "RelicID": "2",
     "RelicName": "Tidal Stone",
     "AbilityName": "Hydromancer",
-    "Description": "[cwater]Water[/] spells deal [cpositive]1.2x[/] damage.",
+    "Description": "[cSpell]Magical[/] moves deal [cpositive]1.2x[/] damage.",
     "Flavor": "Smells like a fish market.",
     "Effects": {
-      "ElementalDamageBonus": "2,1.2"
+      "ImpactDamageBonus": "Magical,1.2"
     },
-    "Tags": [ "Water" ]
+    "Tags": [ "Magical" ]
   },
   {
     "RelicID": "3",
     "RelicName": "A Leaf",
     "AbilityName": "Floramancer",
-    "Description": "[cnature]Nature[/] spells deal [cpositive]1.2x[/] damage.",
+    "Description": "Restore [cpositive]5%[/] HP at end of turn.",
     "Flavor": "Pristine product of nature.",
     "Effects": {
-      "ElementalDamageBonus": "3,1.2"
+      "Regen": "5"
     },
-    "Tags": [ "Nature" ]
+    "Tags": [ "Healing" ]
   },
   {
     "RelicID": "4",
     "RelicName": "Arcane Eye",
     "AbilityName": "Thaumomancer",
-    "Description": "[carcane]Arcane[/] spells deal [cpositive]1.2x[/] damage.",
+    "Description": "Attacks ignore dodging and [cpositive]cannot miss[/].",
     "Flavor": "Vibrates with arcane energy.",
     "Effects": {
-      "ElementalDamageBonus": "4,1.2"
+      "IgnoreEvasion": ""
     },
-    "Tags": [ "Arcane" ]
+    "Tags": [ "Utility" ]
   },
   {
     "RelicID": "5",
     "RelicName": "Sunmask",
     "AbilityName": "Divine Connection",
-    "Description": "[cdivine]Divine[/] spells deal [cpositive]1.2x[/] damage.",
+    "Description": "[cpositive]Immune[/] to [cpositive]Stun[/] and [cpositive]Daze[/].",
     "Flavor": "Glows faintly.",
     "Effects": {
-      "ElementalDamageBonus": "5,1.2"
+      "StatusImmunity": "Stun"
     },
-    "Tags": [ "Divine" ]
+    "Tags": [ "Defense" ]
   },
   {
     "RelicID": "6",
     "RelicName": "Offering",
     "AbilityName": "Occultist",
-    "Description": "[cblight]Blight[/] spells deal [cpositive]1.2x[/] damage.",
+    "Description": "Heal [cpositive]10%[/] of damage dealt.",
     "Flavor": "It seems to absorb the light around it.",
     "Effects": {
-      "ElementalDamageBonus": "6,1.2"
+      "Lifesteal": "10"
     },
-    "Tags": [ "Blight" ]
+    "Tags": [ "Lifesteal" ]
   },
   {
     "RelicID": "7",
@@ -85,7 +85,7 @@
     "Effects": {
       "ApplyStatusOnHit": "Poison,50,4,true"
     },
-    "Tags": [ "Blight", "StatusEffect" ]
+    "Tags": [ "StatusEffect" ]
   },
   {
     "RelicID": "8",
@@ -142,7 +142,7 @@
     "Effects": {
       "ReactiveStatus": "Stun,30,1,true"
     },
-    "Tags": [ "Divine", "StatusEffect", "Defense" ]
+    "Tags": [ "StatusEffect", "Defense" ]
   },
   {
     "RelicID": "13",
@@ -161,12 +161,12 @@
     "RelicID": "14",
     "RelicName": "Ornate Feather",
     "AbilityName": "Photosynthesis",
-    "Description": "[cpositive]Immune[/] to [cdivine]Divine[/] based moves; heal [cpositive]25%[/] HP instead.",
+    "Description": "Restore [cpositive]10%[/] HP at end of turn.",
     "Flavor": "It shimmers in the sunlight.",
     "Effects": {
-      "SunBlessedLeaf": "5,25"
+      "Regen": "10"
     },
-    "Tags": [ "Divine", "Healing", "Defense" ]
+    "Tags": [ "Healing", "Defense" ]
   },
   {
     "RelicID": "15",
@@ -190,7 +190,7 @@
     "Effects": {
       "ToxicAura": "50,2,true"
     },
-    "Tags": [ "Blight", "StatusEffect" ]
+    "Tags": [ "StatusEffect" ]
   },
   {
     "RelicID": "17",
@@ -380,7 +380,7 @@
     "Effects": {
       "Bloodletter": "1.5"
     },
-    "Tags": [ "Blight", "HPCost" ]
+    "Tags": [ "HPCost" ]
   },
   {
     "RelicID": "33",

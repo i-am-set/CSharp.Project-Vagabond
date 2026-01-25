@@ -1,10 +1,16 @@
 ﻿using Microsoft.Xna.Framework;
 using MonoGame.Extended.ECS.Systems;
+using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
+using System.Text;
 
 namespace ProjectVagabond.Battle
 {
@@ -70,11 +76,7 @@ namespace ProjectVagabond.Battle
         public List<StatusEffectInstance> ActiveStatusEffects { get; set; } = new List<StatusEffectInstance>();
         public List<RelicData> ActiveRelics { get; set; } = new List<RelicData>();
 
-        // --- THE NEW GENERIC LIST ---
         public List<IAbility> Abilities { get; private set; } = new List<IAbility>();
-
-        public List<int> WeaknessElementIDs { get; set; } = new List<int>();
-        public List<int> ResistanceElementIDs { get; set; } = new List<int>();
 
         public bool IsPlayerControlled { get; set; }
         public bool IsDefeated => Stats.CurrentHP <= 0;
@@ -192,18 +194,6 @@ namespace ProjectVagabond.Battle
 
             string changeText = amount > 0 ? (amount > 1 ? "sharply rose" : "rose") : (amount < -1 ? "harshly fell" : "fell");
             return (true, $"{Name}'s {stat} {changeText}!");
-        }
-
-        public (List<int> Weaknesses, List<int> Resistances) GetEffectiveElementalAffinities()
-        {
-            var ctx = new CombatTriggerContext
-            {
-                Actor = this,
-                Weaknesses = new List<int>(this.WeaknessElementIDs),
-                Resistances = new List<int>(this.ResistanceElementIDs)
-            };
-            NotifyAbilities(CombatEventType.ModifyElementalAffinity, ctx);
-            return (ctx.Weaknesses, ctx.Resistances);
         }
 
         public int GetEffectiveStrength()

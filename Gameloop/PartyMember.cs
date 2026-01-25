@@ -1,5 +1,14 @@
-﻿using System.Collections.Generic;
+﻿using ProjectVagabond;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Utils;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Reflection;
+using System.Text;
 
 namespace ProjectVagabond
 {
@@ -15,13 +24,9 @@ namespace ProjectVagabond
         public int Tenacity { get; set; }
         public int Agility { get; set; }
 
-        public List<int> WeaknessElementIDs { get; set; } = new List<int>();
-        public List<int> ResistanceElementIDs { get; set; } = new List<int>();
-
         public string DefaultStrikeMoveID { get; set; }
         public int PortraitIndex { get; set; } = 0;
 
-        // Intrinsic Passive Abilities
         public Dictionary<string, string> IntrinsicAbilities { get; set; } = new Dictionary<string, string>();
 
         public MoveEntry?[] Spells { get; set; } = new MoveEntry?[4];
@@ -32,8 +37,6 @@ namespace ProjectVagabond
         public PartyMember Clone()
         {
             var clone = (PartyMember)this.MemberwiseClone();
-            clone.WeaknessElementIDs = new List<int>(this.WeaknessElementIDs);
-            clone.ResistanceElementIDs = new List<int>(this.ResistanceElementIDs);
             clone.IntrinsicAbilities = new Dictionary<string, string>(this.IntrinsicAbilities);
             clone.Spells = new MoveEntry?[4];
             for (int i = 0; i < 4; i++)

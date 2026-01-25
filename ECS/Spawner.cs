@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,19 +9,10 @@ using System.Reflection;
 
 namespace ProjectVagabond
 {
-    /// <summary>
-    /// A static helper class responsible for creating entities from archetypes.
-    /// </summary>
     public static class Spawner
     {
         private static readonly Random _random = new Random();
 
-        /// <summary>
-        /// Spawns a new entity based on a specified archetype.
-        /// </summary>
-        /// <param name="archetypeId">The ID of the archetype to spawn.</param>
-        /// <param name="worldPosition">Legacy parameter, ignored.</param>
-        /// <returns>The entity ID of the newly spawned entity, or -1 if spawning fails.</returns>
         public static int Spawn(string archetypeId, Vector2 worldPosition)
         {
             var archetypeManager = ServiceLocator.Get<ArchetypeManager>();
@@ -42,7 +34,6 @@ namespace ProjectVagabond
             {
                 try
                 {
-                    // Clone the component from the pre-baked template
                     IComponent clonedComponent = ((ICloneableComponent)templateComponent).Clone();
                     Type componentType = clonedComponent.GetType();
 
@@ -55,7 +46,6 @@ namespace ProjectVagabond
                 }
             }
 
-            // After all template components are added, check for special profile components to generate live stats.
             if (componentStore.GetComponent<EnemyStatProfileComponent>(entityId) is EnemyStatProfileComponent profile)
             {
                 var liveStats = GenerateStatsFromProfile(profile);
@@ -65,9 +55,6 @@ namespace ProjectVagabond
             return entityId;
         }
 
-        /// <summary>
-        /// Generates a live CombatantStatsComponent from an enemy's stat profile.
-        /// </summary>
         private static CombatantStatsComponent GenerateStatsFromProfile(EnemyStatProfileComponent profile)
         {
             var liveStats = new CombatantStatsComponent();
@@ -80,10 +67,7 @@ namespace ProjectVagabond
             liveStats.Intelligence = _random.Next(profile.MinIntelligence, profile.MaxIntelligence + 1);
             liveStats.Tenacity = _random.Next(profile.MinTenacity, profile.MaxTenacity + 1);
             liveStats.Agility = _random.Next(profile.MinAgility, profile.MaxAgility + 1);
-            liveStats.WeaknessElementIDs = new List<int>(profile.WeaknessElementIDs);
-            liveStats.ResistanceElementIDs = new List<int>(profile.ResistanceElementIDs);
 
-            // Randomly select moves from the learnset
             if (profile.MoveLearnset.Any() && profile.MaxNumberOfMoves > 0)
             {
                 int numMoves = _random.Next(profile.MinNumberOfMoves, profile.MaxNumberOfMoves + 1);

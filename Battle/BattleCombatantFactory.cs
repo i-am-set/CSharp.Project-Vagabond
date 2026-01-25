@@ -42,8 +42,6 @@ namespace ProjectVagabond.Battle
                     Tenacity = statsComponent.Tenacity,
                     Agility = statsComponent.Agility
                 },
-                WeaknessElementIDs = new List<int>(statsComponent.WeaknessElementIDs),
-                ResistanceElementIDs = new List<int>(statsComponent.ResistanceElementIDs),
                 IsPlayerControlled = componentStore.HasComponent<PlayerTagComponent>(entityId)
             };
 
@@ -68,7 +66,6 @@ namespace ProjectVagabond.Battle
                         combatant.IsProperNoun = data.IsProperNoun;
                     }
 
-                    // 1. Apply Intrinsic Passive Abilities
                     if (partyMember.IntrinsicAbilities != null && partyMember.IntrinsicAbilities.Count > 0)
                     {
                         var intrinsicAbilities = AbilityFactory.CreateAbilitiesFromData(partyMember.IntrinsicAbilities, new Dictionary<string, int>());
@@ -76,7 +73,6 @@ namespace ProjectVagabond.Battle
                     }
                 }
 
-                // 2. Apply Global Relics (Isaac Style)
                 foreach (var relicId in gameState.PlayerState.GlobalRelics)
                 {
                     if (BattleDataCache.Relics.TryGetValue(relicId, out var relicData))
@@ -87,7 +83,6 @@ namespace ProjectVagabond.Battle
                     }
                 }
 
-                // Apply Effective Stats
                 var statSource = partyMember ?? gameState.PlayerState.Leader;
                 combatant.Stats.MaxHP = gameState.PlayerState.GetEffectiveStat(statSource, "MaxHP");
                 combatant.Stats.MaxMana = gameState.PlayerState.GetEffectiveStat(statSource, "MaxMana");
@@ -110,7 +105,6 @@ namespace ProjectVagabond.Battle
             }
             else
             {
-                // Enemy Logic
                 var profile = archetype.TemplateComponents.OfType<EnemyStatProfileComponent>().FirstOrDefault();
                 if (profile != null)
                 {

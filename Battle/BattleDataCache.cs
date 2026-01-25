@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework.Content;
+using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using System;
 using System.Collections.Generic;
@@ -12,12 +13,9 @@ namespace ProjectVagabond.Battle
 {
     public static class BattleDataCache
     {
-        public static Dictionary<int, ElementDefinition> Elements { get; private set; }
         public static Dictionary<string, MoveData> Moves { get; private set; }
         public static Dictionary<string, RelicData> Relics { get; private set; }
         public static Dictionary<string, PartyMemberData> PartyMembers { get; private set; }
-
-        // Weapons dictionary removed.
 
         public static void LoadData(ContentManager content)
         {
@@ -28,12 +26,6 @@ namespace ProjectVagabond.Battle
                 AllowTrailingCommas = true,
                 Converters = { new JsonStringEnumConverter() }
             };
-
-            // --- ELEMENTS ---
-            string elementsPath = Path.Combine(content.RootDirectory, "Data", "Elements.json");
-            string elementsJson = File.ReadAllText(elementsPath);
-            var elementList = JsonSerializer.Deserialize<List<ElementDefinition>>(elementsJson, jsonOptions);
-            Elements = elementList.ToDictionary(e => e.ElementID, e => e);
 
             // --- MOVES ---
             string movesPath = Path.Combine(content.RootDirectory, "Data", "Moves.json");

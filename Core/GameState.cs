@@ -39,8 +39,6 @@ namespace ProjectVagabond
 
         public string LastRunKiller { get; set; } = "Unknown";
 
-        // --- Deck of Cards System ---
-        // Tracks every item ID generated in this run to prevent duplicates.
         public HashSet<string> SeenItemIds { get; private set; } = new HashSet<string>();
 
         public GameState(NoiseMapManager noiseManager, ComponentStore componentStore, Global global, SpriteManager spriteManager)
@@ -53,36 +51,29 @@ namespace ProjectVagabond
 
         public void InitializeWorld()
         {
-            // 1. Create PlayerState container
             PlayerState = new PlayerState();
             PlayerState.Party.Clear();
             SeenItemIds.Clear();
 
-            // 2. Create "Oakley" (The Main Character) using ID "0"
             var oakley = PartyMemberFactory.CreateMember("0");
             if (oakley == null) throw new Exception("CRITICAL: Could not load 'Oakley' (ID: 0)");
 
             PlayerState.Party.Add(oakley);
 
-            // 3. Add Starting Relics (Global)
             if (BattleDataCache.PartyMembers.TryGetValue("0", out var oakleyData))
             {
-                // Weapons loop removed entirely.
-
                 foreach (var kvp in oakleyData.StartingRelics)
                 {
                     if (BattleDataCache.Relics.ContainsKey(kvp.Key))
                     {
-                        PlayerState.AddRelic(kvp.Key); // No quantity argument
+                        PlayerState.AddRelic(kvp.Key);
                         SeenItemIds.Add(kvp.Key);
                     }
                 }
             }
 
-            // 4. Spawn the Entity
             PlayerEntityId = Spawner.Spawn("player", Vector2.Zero);
 
-            // 5. Sync Entity Components
             var liveStats = new CombatantStatsComponent
             {
                 MaxHP = oakley.MaxHP,
@@ -93,8 +84,6 @@ namespace ProjectVagabond
                 Intelligence = oakley.Intelligence,
                 Tenacity = oakley.Tenacity,
                 Agility = oakley.Agility,
-                WeaknessElementIDs = new List<int>(oakley.WeaknessElementIDs),
-                ResistanceElementIDs = new List<int>(oakley.ResistanceElementIDs),
                 AvailableMoveIDs = oakley.Spells
                     .Where(m => m != null)
                     .Select(m => m!.MoveID)
@@ -128,7 +117,6 @@ namespace ProjectVagabond
                 switch (outcome.OutcomeType)
                 {
                     case "GiveItem":
-                        // Only support Relics now
                         if (BattleDataCache.Relics.ContainsKey(outcome.Value))
                         {
                             PlayerState.AddRelic(outcome.Value);
@@ -137,7 +125,6 @@ namespace ProjectVagabond
                         break;
 
                     case "RemoveItem":
-                        // Only check Global Relics
                         if (PlayerState.GlobalRelics.Contains(outcome.Value))
                         {
                             PlayerState.RemoveRelic(outcome.Value);
@@ -145,7 +132,6 @@ namespace ProjectVagabond
                         }
                         break;
 
-                    // ... (Keep existing cases for AddBuff, ModifyStat, Damage, etc.) ...
                     case "AddBuff":
                         if (Enum.TryParse<StatusEffectType>(outcome.Value, true, out var effectType))
                         {

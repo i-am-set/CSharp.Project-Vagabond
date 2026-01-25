@@ -34,8 +34,6 @@
           "MaxTenacity": 17,
           "MinAgility": 1,
           "MaxAgility": 1,
-          "WeaknessElementIDs": [],
-          "ResistanceElementIDs": [],
           "MoveLearnset": [ "1" ],
           "MinNumberOfMoves": 1,
           "MaxNumberOfMoves": 1
@@ -63,8 +61,6 @@
           "MaxTenacity": 4,
           "MinAgility": 1,
           "MaxAgility": 2,
-          "WeaknessElementIDs": [],
-          "ResistanceElementIDs": [],
           "MoveLearnset": [ "5" ],
           "MinNumberOfMoves": 1,
           "MaxNumberOfMoves": 1
@@ -92,8 +88,6 @@
           "MaxTenacity": 6,
           "MinAgility": 2,
           "MaxAgility": 3,
-          "WeaknessElementIDs": [ 1 ],
-          "ResistanceElementIDs": [ 6 ],
           "MoveLearnset": [ "1" ],
           "MinNumberOfMoves": 1,
           "MaxNumberOfMoves": 1
@@ -121,8 +115,6 @@
           "MaxTenacity": 6,
           "MinAgility": 1,
           "MaxAgility": 3,
-          "WeaknessElementIDs": [],
-          "ResistanceElementIDs": [],
           "MoveLearnset": [ "1" ],
           "MinNumberOfMoves": 1,
           "MaxNumberOfMoves": 1
@@ -150,8 +142,6 @@
           "MaxTenacity": 3,
           "MinAgility": 6,
           "MaxAgility": 7,
-          "WeaknessElementIDs": [],
-          "ResistanceElementIDs": [],
           "MoveLearnset": [ "3" ],
           "MinNumberOfMoves": 1,
           "MaxNumberOfMoves": 1
@@ -179,8 +169,6 @@
           "MaxTenacity": 4,
           "MinAgility": 5,
           "MaxAgility": 6,
-          "WeaknessElementIDs": [],
-          "ResistanceElementIDs": [],
           "MoveLearnset": [ "3" ],
           "MinNumberOfMoves": 1,
           "MaxNumberOfMoves": 2
@@ -208,8 +196,6 @@
           "MaxTenacity": 3,
           "MinAgility": 6,
           "MaxAgility": 7,
-          "WeaknessElementIDs": [],
-          "ResistanceElementIDs": [],
           "MoveLearnset": [ "3" ],
           "MinNumberOfMoves": 1,
           "MaxNumberOfMoves": 1

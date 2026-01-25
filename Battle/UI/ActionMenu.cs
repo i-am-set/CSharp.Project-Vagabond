@@ -334,18 +334,19 @@ namespace ProjectVagabond.Battle.UI
         private MoveButton CreateMoveButton(MoveData move, MoveEntry entry, int displayPower, BitmapFont font, Texture2D? background, bool startVisible)
         {
             var spriteManager = ServiceLocator.Get<SpriteManager>();
-            int elementId = move.OffensiveElementIDs.FirstOrDefault();
-            if (elementId == 0)
-            {
-                elementId = 1;
-            }
+
+            // Use Action Icons based on ImpactType instead of Element Icons
+            int iconIndex = 0; // Default to Physical
+            if (move.ImpactType == ImpactType.Magical) iconIndex = 1;
+            else if (move.ImpactType == ImpactType.Status) iconIndex = 2;
+
             Rectangle? sourceRect = null;
-            if (spriteManager.ElementIconSourceRects.TryGetValue(elementId, out var rect))
+            if (spriteManager.ActionIconSourceRects != null && iconIndex < spriteManager.ActionIconSourceRects.Length)
             {
-                sourceRect = rect;
+                sourceRect = spriteManager.ActionIconSourceRects[iconIndex];
             }
 
-            var moveButton = new MoveButton(move, entry, displayPower, font, background, spriteManager.ElementIconsSpriteSheet, sourceRect, startVisible);
+            var moveButton = new MoveButton(move, entry, displayPower, font, background, spriteManager.ActionIconsSpriteSheet, sourceRect, startVisible);
             moveButton.OnClick += () => HandleMoveButtonClick(move, entry, moveButton);
             return moveButton;
         }
@@ -1518,14 +1519,6 @@ namespace ProjectVagabond.Battle.UI
             if (tag == "cimmune") return _global.ColorImmune;
             if (tag == "cctm") return _global.ColorConditionToMeet;
             if (tag == "cetc") return _global.Palette_DarkShadow;
-
-            if (tag == "cfire") return _global.ElementColors.GetValueOrDefault(2, Color.White);
-            if (tag == "cwater") return _global.ElementColors.GetValueOrDefault(3, Color.White);
-            if (tag == "carcane") return _global.ElementColors.GetValueOrDefault(4, Color.White);
-            if (tag == "cnature") return _global.ElementColors.GetValueOrDefault(5, Color.White);
-            if (tag == "cblight") return _global.ElementColors.GetValueOrDefault(9, Color.White);
-            if (tag == "cdivine") return _global.ElementColors.GetValueOrDefault(10, Color.White);
-            if (tag == "cnature") return _global.ElementColors.GetValueOrDefault(13, Color.White);
 
             if (tag.StartsWith("c"))
             {

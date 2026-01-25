@@ -2214,30 +2214,6 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/BasicIcons/ui_action_icons_spritesheet_9x9.png;Sprites/UI/BasicIcons/ui_action_icons_spritesheet_9x9
 
-#begin Sprites/UI/BasicIcons/ui_element_icons_5x5_spritesheet.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/UI/BasicIcons/ui_element_icons_5x5_spritesheet.png;Sprites/UI/BasicIcons/ui_element_icons_5x5_spritesheet
-
-#begin Sprites/UI/BasicIcons/ui_element_icons_9x9_spritesheet.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/UI/BasicIcons/ui_element_icons_9x9_spritesheet.png;Sprites/UI/BasicIcons/ui_element_icons_9x9_spritesheet
-
 #begin Sprites/UI/BasicIcons/ui_turn_indicator.png
 /importer:TextureImporter
 /processor:TextureProcessor

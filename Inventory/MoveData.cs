@@ -95,11 +95,6 @@ namespace ProjectVagabond.Battle
         public int Priority { get; set; }
 
         /// <summary>
-        /// A list of element IDs associated with this move's attack type.
-        /// </summary>
-        public List<int> OffensiveElementIDs { get; set; } = new List<int>();
-
-        /// <summary>
         /// A dictionary of special effects for this move. The key is the effect name (e.g., "Lifesteal")
         /// and the value is a string of its parameters (e.g., "50").
         /// </summary>

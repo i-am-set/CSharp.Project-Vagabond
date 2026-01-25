@@ -1,12 +1,17 @@
-﻿using ProjectVagabond.Battle;
+﻿using ProjectVagabond;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Utils;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
+using System.Text;
 
 namespace ProjectVagabond.Battle
 {
-    /// <summary>
-    /// An ECS component that stores the base stats and combat-related data for an entity.
-    /// </summary>
     public class CombatantStatsComponent : IComponent, ICloneableComponent
     {
         public int MaxHP { get; set; }
@@ -18,16 +23,11 @@ namespace ProjectVagabond.Battle
         public int Tenacity { get; set; }
         public int Agility { get; set; }
 
-        public List<int> WeaknessElementIDs { get; set; } = new List<int>();
-        public List<int> ResistanceElementIDs { get; set; } = new List<int>();
-
         public List<string> AvailableMoveIDs { get; set; } = new List<string>();
 
         public IComponent Clone()
         {
             var clone = (CombatantStatsComponent)this.MemberwiseClone();
-            clone.WeaknessElementIDs = new List<int>(this.WeaknessElementIDs);
-            clone.ResistanceElementIDs = new List<int>(this.ResistanceElementIDs);
             clone.AvailableMoveIDs = new List<string>(this.AvailableMoveIDs);
             return clone;
         }

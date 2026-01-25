@@ -225,14 +225,11 @@ namespace ProjectVagabond.UI
             if (itemData is MoveData moveData)
             {
                 string iconPath = $"Sprites/Spells/{moveData.MoveID}";
-                int elementId = moveData.OffensiveElementIDs.FirstOrDefault();
                 string? fallbackPath = null;
-                if (BattleDataCache.Elements.TryGetValue(elementId, out var elementDef))
-                {
-                    string elName = elementDef.ElementName.ToLowerInvariant();
-                    if (elName == "---") elName = "neutral";
-                    fallbackPath = $"Sprites/Spells/default_{elName}";
-                }
+
+                // Use ImpactType for fallback icon
+                string impactName = moveData.ImpactType.ToString().ToLowerInvariant();
+                fallbackPath = $"Sprites/Spells/default_{impactName}";
 
                 var iconTexture = _spriteManager.GetItemSprite(iconPath, fallbackPath);
                 var iconSilhouette = _spriteManager.GetItemSpriteSilhouette(iconPath, fallbackPath);

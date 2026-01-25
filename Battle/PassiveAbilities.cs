@@ -101,7 +101,7 @@ namespace ProjectVagabond.Battle.Abilities
                 if (ctx.Move != null && ctx.Move.Power > 0)
                 {
                     if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
-                    ctx.IsCancelled = true; // Using IsCancelled to signal "Ignore Evasion"
+                    ctx.IsCancelled = true;
                 }
             }
         }
@@ -171,27 +171,6 @@ namespace ProjectVagabond.Battle.Abilities
                 {
                     if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
                     ctx.DamageMultiplier *= _damageMultiplier;
-                }
-            }
-        }
-    }
-
-    public class ElementalDamageBonusAbility : IAbility
-    {
-        public string Name => "Elemental Mastery";
-        public string Description => "Increases damage of specific elements.";
-        private readonly int _elementId;
-        private readonly float _multiplier;
-        public ElementalDamageBonusAbility(int elementId, float multiplier) { _elementId = elementId; _multiplier = multiplier; }
-
-        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
-        {
-            if (type == CombatEventType.CalculateOutgoingDamage)
-            {
-                if (ctx.Move != null && ctx.Move.OffensiveElementIDs.Contains(_elementId))
-                {
-                    if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
-                    ctx.DamageMultiplier *= _multiplier;
                 }
             }
         }
@@ -406,71 +385,6 @@ namespace ProjectVagabond.Battle.Abilities
                     }
                     ctx.DamageMultiplier *= 0.5f;
                 }
-            }
-        }
-    }
-
-    public class SunBlessedLeafAbility : IAbility
-    {
-        public string Name => "Photosynthesis";
-        public string Description => "Absorbs Light damage.";
-        private readonly int _elementId;
-        private readonly float _healPercent;
-        public SunBlessedLeafAbility(int elementId, float healPercent) { _elementId = elementId; _healPercent = healPercent; }
-
-        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
-        {
-            if (type == CombatEventType.CalculateIncomingDamage)
-            {
-                if (ctx.Move != null && ctx.Move.OffensiveElementIDs.Contains(_elementId))
-                {
-                    if (!ctx.IsSimulation)
-                    {
-                        int healAmount = (int)(ctx.Actor.Stats.MaxHP * (_healPercent / 100f));
-                        int hpBefore = (int)ctx.Actor.VisualHP;
-                        ctx.Actor.ApplyHealing(healAmount);
-                        EventBus.Publish(new GameEvents.CombatantHealed { Actor = ctx.Actor, Target = ctx.Actor, HealAmount = healAmount, VisualHPBefore = hpBefore });
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Actor.Name}'s {Name} absorbed the attack!" });
-                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
-                    }
-                    ctx.DamageMultiplier = 0f;
-                }
-            }
-        }
-    }
-
-    public class ElementalImmunityAbility : IAbility
-    {
-        public string Name => "Elemental Immunity";
-        public string Description => "Immune to specific element.";
-        private readonly int _elementId;
-        public ElementalImmunityAbility(int elementId) { _elementId = elementId; }
-
-        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
-        {
-            if (type == CombatEventType.CalculateIncomingDamage)
-            {
-                if (ctx.Move != null && ctx.Move.OffensiveElementIDs.Contains(_elementId))
-                {
-                    if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Target, Ability = this });
-                    ctx.DamageMultiplier = 0f;
-                }
-            }
-        }
-    }
-
-    public class AddResistanceAbility : IAbility
-    {
-        public string Name => "Elemental Resistance";
-        public string Description => "Adds a resistance.";
-        private readonly int _elementId;
-        public AddResistanceAbility(int elementId) { _elementId = elementId; }
-
-        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
-        {
-            if (type == CombatEventType.ModifyElementalAffinity)
-            {
-                if (!ctx.Resistances.Contains(_elementId)) ctx.Resistances.Add(_elementId);
             }
         }
     }
@@ -847,28 +761,23 @@ namespace ProjectVagabond.Battle.Abilities
         public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx) { }
     }
 
-    // --- PARTY MEMBER PASSIVES ---
+    // --- REFACTORED PARTY MEMBER PASSIVES ---
 
     public class PMPyromancerAbility : IAbility
     {
         public string Name => "Pyromancer";
-        public string Description => "Deal 1.5x Fire damage and resist Fire.";
-        private const int FIRE_ELEMENT_ID = 1;
-        private const float DAMAGE_MULTIPLIER = 1.5f;
+        public string Description => "Deal 1.2x Magic damage.";
+        private const float DAMAGE_MULTIPLIER = 1.2f;
 
         public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
             if (type == CombatEventType.CalculateOutgoingDamage)
             {
-                if (ctx.Move != null && ctx.Move.OffensiveElementIDs.Contains(FIRE_ELEMENT_ID))
+                if (ctx.Move != null && ctx.Move.MoveType == MoveType.Spell)
                 {
                     if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
                     ctx.DamageMultiplier *= DAMAGE_MULTIPLIER;
                 }
-            }
-            else if (type == CombatEventType.ModifyElementalAffinity)
-            {
-                if (!ctx.Resistances.Contains(FIRE_ELEMENT_ID)) ctx.Resistances.Add(FIRE_ELEMENT_ID);
             }
         }
     }
@@ -982,7 +891,7 @@ namespace ProjectVagabond.Battle.Abilities
         {
             if (type == CombatEventType.CalculateAllyDamage)
             {
-                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this }); // Actor is the protector
+                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
                 ctx.DamageMultiplier *= 0.75f;
             }
         }
@@ -1136,56 +1045,6 @@ namespace ProjectVagabond.Battle.Abilities
             else if (type == CombatEventType.QueryMoveLock)
             {
                 ctx.LockedMoveID = _lockedMoveID;
-            }
-        }
-    }
-
-    public class HydroScalingAbility : IAbility
-    {
-        public string Name => "Hydro Scaling";
-        public string Description => "Damage scales with Water spells.";
-        private readonly float _multiplierPerSpell;
-        public HydroScalingAbility(float multiplier) { _multiplierPerSpell = multiplier; }
-
-        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
-        {
-            if (type == CombatEventType.CalculateOutgoingDamage)
-            {
-                int waterSpellCount = 0;
-                foreach (var entry in ctx.Actor.Spells)
-                {
-                    if (entry != null && BattleDataCache.Moves.TryGetValue(entry.MoveID, out var move))
-                    {
-                        if (move.OffensiveElementIDs.Contains(2)) waterSpellCount++;
-                    }
-                }
-
-                if (waterSpellCount > 0)
-                {
-                    if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
-                    float bonus = (_multiplierPerSpell - 1.0f) * waterSpellCount;
-                    ctx.DamageMultiplier *= (1.0f + bonus);
-                }
-            }
-        }
-    }
-
-    public class BlightArcaneMasteryAbility : IAbility
-    {
-        public string Name => "Cultist Mastery";
-        public string Description => "Boosts Blight and Arcane damage.";
-        private readonly float _multiplier;
-        public BlightArcaneMasteryAbility(float multiplier) { _multiplier = multiplier; }
-
-        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
-        {
-            if (type == CombatEventType.CalculateOutgoingDamage)
-            {
-                if (ctx.Move != null && (ctx.Move.OffensiveElementIDs.Contains(6) || ctx.Move.OffensiveElementIDs.Contains(4)))
-                {
-                    if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
-                    ctx.DamageMultiplier *= _multiplier;
-                }
             }
         }
     }

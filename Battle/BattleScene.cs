@@ -428,8 +428,6 @@ namespace ProjectVagabond.Scenes
                     Tenacity = member.Tenacity,
                     Agility = member.Agility
                 },
-                WeaknessElementIDs = new List<int>(member.WeaknessElementIDs),
-                ResistanceElementIDs = new List<int>(member.ResistanceElementIDs),
                 DefaultStrikeMoveID = member.DefaultStrikeMoveID,
                 Spells = member.Spells,
                 PortraitIndex = member.PortraitIndex
@@ -1166,14 +1164,6 @@ namespace ProjectVagabond.Scenes
                     _animationManager.StartDamageIndicator(target.CombatantID, "CRITICAL HIT", hudPosition, ServiceLocator.Get<Global>().CritcalHitIndicatorColor);
                 }
                 if (result.WasProtected) _animationManager.StartProtectedIndicator(target.CombatantID, hudPosition);
-                var font = ServiceLocator.Get<Core>().SecondaryFont;
-                Vector2 effectivenessPosition = hudPosition + new Vector2(0, font.LineHeight / 2f + 10);
-                switch (result.Effectiveness)
-                {
-                    case DamageCalculator.ElementalEffectiveness.Effective: _animationManager.StartEffectivenessIndicator(target.CombatantID, "EFFECTIVE", effectivenessPosition); break;
-                    case DamageCalculator.ElementalEffectiveness.Resisted: _animationManager.StartEffectivenessIndicator(target.CombatantID, "RESISTED", effectivenessPosition); break;
-                    case DamageCalculator.ElementalEffectiveness.Immune: _animationManager.StartEffectivenessIndicator(target.CombatantID, "IMMUNE", effectivenessPosition); break;
-                }
             }
         }
 

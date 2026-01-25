@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Items;
 using ProjectVagabond.Progression;
@@ -83,17 +84,6 @@ namespace ProjectVagabond
             ImmuneIndicatorColor = Palette_Sun;
             ProtectedIndicatorColor = Color.Cyan;
             FailedIndicatorColor = Color.Red;
-
-            ElementColors = new Dictionary<int, Color>
-            {
-                { 0, Palette_Sun },
-                { 1, Palette_Rust },
-                { 2, Palette_Sky },
-                { 3, Palette_Leaf },
-                { 4, Palette_Shadow },
-                { 5, Palette_DarkSun },
-                { 6, Palette_Shadow }
-            };
 
             StatusEffectColors = new Dictionary<StatusEffectType, Color>
             {
@@ -199,13 +189,6 @@ namespace ProjectVagabond
 
         public int previousScrollValue = Mouse.GetState().ScrollWheelValue;
 
-        public Color Palette_ElementFire { get; set; } = new Color(255, 85, 0);
-        public Color Palette_ElementWater { get; set; } = new Color(0, 170, 255);
-        public Color Palette_ElementNature { get; set; } = new Color(0, 255, 85);
-        public Color Palette_ElementArcane { get; set; } = new Color(170, 0, 255);
-        public Color Palette_ElementDivine { get; set; } = new Color(255, 255, 85);
-        public Color Palette_ElementBlight { get; set; } = new Color(170, 85, 255);
-
         public Color Palette_Leaf { get; set; } = new Color(145, 183, 115);
         public Color Palette_Sky { get; set; } = new Color(88, 148, 138);
         public Color Palette_Sea { get; set; } = new Color(63, 86, 109);
@@ -300,7 +283,6 @@ namespace ProjectVagabond
         public Color ProtectedIndicatorColor { get; set; }
         public Color FailedIndicatorColor { get; set; }
 
-        public Dictionary<int, Color> ElementColors { get; private set; }
         public Dictionary<StatusEffectType, Color> StatusEffectColors { get; private set; }
 
         public Color GetNarrationColor(string tag)
@@ -319,15 +301,7 @@ namespace ProjectVagabond
                 if (lowerTag == "ccrit") return ColorCrit;
                 if (lowerTag == "cimmune") return ColorImmune;
                 if (lowerTag == "cctm") return ColorConditionToMeet;
-                if (lowerTag == "cetc") return Palette_DarkGray;
-
-                if (lowerTag == "cneutral") return ElementColors.GetValueOrDefault(0, Color.White);
-                if (lowerTag == "cfire") return ElementColors.GetValueOrDefault(1, Color.White);
-                if (lowerTag == "cwater") return ElementColors.GetValueOrDefault(2, Color.White);
-                if (lowerTag == "cnature") return ElementColors.GetValueOrDefault(3, Color.White);
-                if (lowerTag == "carcane") return ElementColors.GetValueOrDefault(4, Color.White);
-                if (lowerTag == "cdivine") return ElementColors.GetValueOrDefault(5, Color.White);
-                if (lowerTag == "cblight") return ElementColors.GetValueOrDefault(6, Color.White);
+                if (lowerTag == "cetc") return Palette_DarkShadow;
 
                 string effectName = lowerTag.Substring(1);
                 foreach (var kvp in StatusEffectColors)

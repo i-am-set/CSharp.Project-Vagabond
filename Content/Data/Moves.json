@@ -14,8 +14,6 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
-    "LevelRequirement": 0,
-    "OffensiveElementIDs": [ 0 ],
     "Tags": [],
     "AnimationSpriteSheet": "basic_impact",
     "AnimationSpeed": 2.0,
@@ -37,8 +35,6 @@
     "Target": "Single",
     "Accuracy": 90,
     "Priority": 0,
-    "LevelRequirement": 0,
-    "OffensiveElementIDs": [ 0 ],
     "Tags": [],
     "AnimationSpriteSheet": "basic_impact",
     "AnimationSpeed": 1.0,
@@ -60,8 +56,6 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
-    "LevelRequirement": 0,
-    "OffensiveElementIDs": [ 0 ],
     "Tags": [],
     "AnimationSpriteSheet": "basic_impact",
     "AnimationSpeed": 1.5,
@@ -83,8 +77,6 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
-    "LevelRequirement": 0,
-    "OffensiveElementIDs": [ 0 ],
     "Tags": [],
     "AnimationSpriteSheet": "basic_bite",
     "AnimationSpeed": 2.0,
@@ -106,8 +98,6 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
-    "LevelRequirement": 0,
-    "OffensiveElementIDs": [ 0 ],
     "Tags": [],
     "AnimationSpriteSheet": "basic_claw",
     "AnimationSpeed": 1.6,
@@ -129,8 +119,6 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 1,
-    "LevelRequirement": 0,
-    "OffensiveElementIDs": [ 0 ],
     "Tags": [ "Priority" ],
     "AnimationSpriteSheet": "basic_swipe",
     "AnimationSpeed": 2.0,
@@ -152,8 +140,6 @@
     "Target": "Self",
     "Accuracy": -1,
     "Priority": 0,
-    "LevelRequirement": 0,
-    "OffensiveElementIDs": [ 0 ],
     "Tags": [],
     "AnimationSpriteSheet": "stall",
     "AnimationSpeed": 0.2,
@@ -175,8 +161,6 @@
     "Target": "Self",
     "Accuracy": -1,
     "Priority": 0,
-    "LevelRequirement": 0,
-    "OffensiveElementIDs": [],
     "Effects": {
       "RestoreMana": "100"
     },
@@ -201,8 +185,6 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
-    "LevelRequirement": 2,
-    "OffensiveElementIDs": [ 0 ],
     "Effects": {
       "Recoil": "25"
     },
@@ -227,8 +209,6 @@
     "Target": "Self",
     "Accuracy": -1,
     "Priority": 0,
-    "LevelRequirement": 1,
-    "OffensiveElementIDs": [],
     "Effects": {
       "StatChange": "Tenacity,2"
     },
@@ -253,8 +233,6 @@
     "Target": "Self",
     "Accuracy": -1,
     "Priority": 0,
-    "LevelRequirement": 2,
-    "OffensiveElementIDs": [],
     "Effects": {
       "SelfRegen": "3,100"
     },
@@ -279,8 +257,6 @@
     "Target": "Both",
     "Accuracy": 90,
     "Priority": 0,
-    "LevelRequirement": 3,
-    "OffensiveElementIDs": [ 1 ],
     "Effects": {
       "InflictStatusBurn": "10"
     },
@@ -305,8 +281,6 @@
     "Target": "SingleAll",
     "Accuracy": 70,
     "Priority": 0,
-    "LevelRequirement": 2,
-    "OffensiveElementIDs": [ 1 ],
     "Effects": {
       "InflictStatusBurn": "100"
     },
@@ -331,8 +305,6 @@
     "Target": "Single",
     "Accuracy": 90,
     "Priority": 0,
-    "LevelRequirement": 4,
-    "OffensiveElementIDs": [ 1 ],
     "Effects": {
       "InflictStatusBurn": "10"
     },
@@ -357,8 +329,6 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
-    "LevelRequirement": 3,
-    "OffensiveElementIDs": [ 1 ],
     "Effects": {
       "InflictStatusBurn": "30"
     },
@@ -383,8 +353,6 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
-    "LevelRequirement": 5,
-    "OffensiveElementIDs": [ 1 ],
     "Effects": {
       "InflictStatusBurn": "10",
       "DamageRecoil": "30"
@@ -410,8 +378,6 @@
     "Target": "Both",
     "Accuracy": 100,
     "Priority": 0,
-    "LevelRequirement": 3,
-    "OffensiveElementIDs": [ 2 ],
     "Effects": {
       "InflictStatusBurn": "30",
       "InflictStatusFrostbite": "30"
@@ -437,8 +403,6 @@
     "Target": "Self",
     "Accuracy": -1,
     "Priority": 4,
-    "LevelRequirement": 2,
-    "OffensiveElementIDs": [ 0 ],
     "Effects": {
       "Protect": ""
     },
@@ -463,8 +427,6 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
-    "LevelRequirement": 3,
-    "OffensiveElementIDs": [ 0 ],
     "Effects": {
       "InflictStatChange": "Strength,-1,Intelligence,-1",
       "Disengage": ""
@@ -490,8 +452,6 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
-    "LevelRequirement": 3,
-    "OffensiveElementIDs": [ 6 ],
     "Effects": {
       "Disengage": ""
     },
@@ -516,8 +476,6 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
-    "LevelRequirement": 3,
-    "OffensiveElementIDs": [ 5 ],
     "Effects": {
       "Disengage": ""
     },
@@ -542,8 +500,6 @@
     "Target": "Both",
     "Accuracy": 95,
     "Priority": 0,
-    "LevelRequirement": 3,
-    "OffensiveElementIDs": [ 5 ],
     "Effects": {
       "InflictStatChange": "Agility,-1"
     },
@@ -568,8 +524,6 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
-    "LevelRequirement": 5,
-    "OffensiveElementIDs": [ 0 ],
     "Effects": {
       "StatChange": "Tenacity,-1"
     },
@@ -594,8 +548,6 @@
     "Target": "Self",
     "Accuracy": -1,
     "Priority": 0,
-    "LevelRequirement": 2,
-    "OffensiveElementIDs": [],
     "Effects": {
       "StatChange": "Intelligence,2",
       "RestoreMana": "10"
@@ -621,8 +573,6 @@
     "Target": "All",
     "Accuracy": 100,
     "Priority": 0,
-    "LevelRequirement": 6,
-    "OffensiveElementIDs": [ 3 ],
     "Tags": [ "Nature", "AoE" ],
     "AnimationSpriteSheet": "basic_impact",
     "AnimationSpeed": 0.8,
@@ -644,8 +594,6 @@
     "Target": "Ally",
     "Accuracy": -1,
     "Priority": 0,
-    "LevelRequirement": 4,
-    "OffensiveElementIDs": [ 4 ],
     "Effects": {
       "InflictRandomStatChange": "-2",
       "RandomStatChange": "2,2"
@@ -671,8 +619,6 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 3,
-    "LevelRequirement": 1,
-    "OffensiveElementIDs": [ 5 ],
     "Effects": {
       "Counter": ""
     },
@@ -697,8 +643,6 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
-    "LevelRequirement": 2,
-    "OffensiveElementIDs": [ 0 ],
     "Effects": {
       "ShieldBreaker": "0.5,false"
     },
@@ -723,8 +667,6 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 2,
-    "LevelRequirement": 3,
-    "OffensiveElementIDs": [ 0 ],
     "Effects": {
       "ShieldBreaker": "1.0,true"
     },
@@ -749,8 +691,6 @@
     "Target": "Both",
     "Accuracy": 100,
     "Priority": 0,
-    "LevelRequirement": 2,
-    "OffensiveElementIDs": [ 6 ],
     "Effects": {
       "Execute": "50,3.0"
     },
@@ -775,8 +715,6 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
-    "LevelRequirement": 3,
-    "OffensiveElementIDs": [ 0 ],
     "Effects": {
       "Execute": "50,-99"
     },
@@ -801,8 +739,6 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
-    "LevelRequirement": 2,
-    "OffensiveElementIDs": [ 4 ],
     "Effects": {
       "StatusedTargetDamage": "100"
     },
@@ -827,8 +763,6 @@
     "Target": "Ally",
     "Accuracy": -1,
     "Priority": 4,
-    "LevelRequirement": 3,
-    "OffensiveElementIDs": [ 5 ],
     "Effects": {
       "ApplyStatus": "Empowered,100,1"
     },
@@ -853,8 +787,6 @@
     "Target": "Team",
     "Accuracy": -1,
     "Priority": 0,
-    "LevelRequirement": 2,
-    "OffensiveElementIDs": [ 2 ],
     "Effects": {
       "CleanseStatus": ""
     },
@@ -879,8 +811,6 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
-    "LevelRequirement": 4,
-    "OffensiveElementIDs": [ 4 ],
     "Effects": {
       "ManaDamage": "50"
     },
@@ -905,8 +835,6 @@
     "Target": "Both",
     "Accuracy": 100,
     "Priority": 0,
-    "LevelRequirement": 5,
-    "OffensiveElementIDs": [ 4 ],
     "Effects": {
       "ManaDump": "2.0"
     },
@@ -931,8 +859,6 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
-    "LevelRequirement": 3,
-    "OffensiveElementIDs": [ 3 ],
     "Effects": {
       "Lifesteal": "50"
     },
@@ -957,8 +883,6 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
-    "LevelRequirement": 4,
-    "OffensiveElementIDs": [ 6 ],
     "Effects": {
       "Lifesteal": "75"
     },
@@ -983,8 +907,6 @@
     "Target": "Self",
     "Accuracy": -1,
     "Priority": 2,
-    "LevelRequirement": 2,
-    "OffensiveElementIDs": [],
     "Effects": {
       "ApplyStatus": "TargetMe,100,1"
     },
@@ -1009,8 +931,6 @@
     "Target": "Both",
     "Accuracy": 100,
     "Priority": 0,
-    "LevelRequirement": 2,
-    "OffensiveElementIDs": [ 3 ],
     "Effects": {
       "InflictStatChange": "Agility,-1"
     },
@@ -1035,8 +955,6 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
-    "LevelRequirement": 2,
-    "OffensiveElementIDs": [ 4 ],
     "Effects": {
       "ApplyStatus": "Silence,100,3"
     },
@@ -1061,8 +979,6 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
-    "LevelRequirement": 2,
-    "OffensiveElementIDs": [],
     "Effects": {
       "ApplyStatus": "Provoked,100,3"
     },
@@ -1087,8 +1003,6 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 1,
-    "LevelRequirement": 3,
-    "OffensiveElementIDs": [ 0 ],
     "Effects": {
       "ConditionalCounter": ""
     },
@@ -1113,8 +1027,6 @@
     "Target": "Single",
     "Accuracy": 90,
     "Priority": 0,
-    "LevelRequirement": 4,
-    "OffensiveElementIDs": [ 3 ],
     "Effects": {
       "PercentageDamage": "50"
     },
@@ -1139,8 +1051,6 @@
     "Target": "Single",
     "Accuracy": 90,
     "Priority": 0,
-    "LevelRequirement": 2,
-    "OffensiveElementIDs": [ 0 ],
     "Effects": {
       "MultiHit": "2,7"
     },

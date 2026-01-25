@@ -1,5 +1,14 @@
-﻿using ProjectVagabond.Battle;
+﻿using ProjectVagabond;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Utils;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Reflection;
+using System.Text;
 
 namespace ProjectVagabond.Battle.Abilities
 {
@@ -16,10 +25,10 @@ namespace ProjectVagabond.Battle.Abilities
         public float FlatDamageBonus { get; set; } = 0f;
 
         public float BasePower { get; set; }
-        public float BaseDamage { get; set; } // Added: Used for logs/calculations
-        public int FinalDamage { get; set; } // Added: Used for OnHit/OnDamaged
+        public float BaseDamage { get; set; } // Used for logs/calculations
+        public int FinalDamage { get; set; } // Used for OnHit/OnDamaged
 
-        public float AccumulatedLifestealPercent { get; set; } = 0f; // Added: For Lifesteal
+        public float AccumulatedLifestealPercent { get; set; } = 0f;
 
         public OffensiveStatType StatType { get; set; }
         public float StatValue { get; set; } // Used for Stats, Accuracy, Crit Chance
@@ -29,9 +38,6 @@ namespace ProjectVagabond.Battle.Abilities
         public bool IsCancelled { get; set; } = false;
         public bool IsCritical { get; set; }
         public bool IsGraze { get; set; }
-
-        public List<int> Weaknesses { get; set; }
-        public List<int> Resistances { get; set; }
 
         public string LockedMoveID { get; set; }
 

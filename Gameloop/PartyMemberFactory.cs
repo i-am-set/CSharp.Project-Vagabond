@@ -42,13 +42,10 @@ namespace ProjectVagabond.Battle
                 Intelligence = data.Intelligence,
                 Tenacity = data.Tenacity,
                 Agility = data.Agility,
-                WeaknessElementIDs = new List<int>(data.WeaknessElementIDs),
-                ResistanceElementIDs = new List<int>(data.ResistanceElementIDs),
                 DefaultStrikeMoveID = data.DefaultStrikeMoveID,
                 PortraitIndex = int.TryParse(data.MemberID, out int pid) ? pid : 0
             };
 
-            // --- Select Intrinsic Passive ---
             if (data.PassiveAbilityPool != null && data.PassiveAbilityPool.Any())
             {
                 var selectedPassive = data.PassiveAbilityPool[_rng.Next(data.PassiveAbilityPool.Count)];
@@ -56,7 +53,6 @@ namespace ProjectVagabond.Battle
                 Debug.WriteLine($"[PartyMemberFactory] {member.Name} generated with passive: {string.Join(", ", member.IntrinsicAbilities.Keys)}");
             }
 
-            // --- Populate Combat Slots ---
             AssignMoveToSlot(member, 0, data.Slot1MovePool);
             AssignMoveToSlot(member, 1, data.Slot2MovePool);
             AssignMoveToSlot(member, 2, data.Slot3MovePool);
@@ -69,7 +65,6 @@ namespace ProjectVagabond.Battle
         {
             if (pool != null && pool.Any())
             {
-                // Pick a random move from the pool for this slot
                 string moveId = pool[_rng.Next(pool.Count)];
 
                 if (BattleDataCache.Moves.ContainsKey(moveId))
@@ -83,7 +78,6 @@ namespace ProjectVagabond.Battle
             }
             else
             {
-                // Explicitly null the slot if the pool is empty
                 member.Spells[slotIndex] = null;
             }
         }

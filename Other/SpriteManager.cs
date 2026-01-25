@@ -48,7 +48,6 @@ namespace ProjectVagabond
         public Texture2D ActionButtonTemplateSpriteSheet { get; private set; }
         public Texture2D ActionMovesBackgroundSprite { get; private set; }
         public Texture2D ActionTooltipBackgroundSprite { get; private set; }
-        public Texture2D ElementIconsSpriteSheet { get; private set; }
         public Texture2D ActionIconsSpriteSheet { get; private set; }
         public Texture2D ActionButtonUsesSpriteSheet { get; private set; }
         public Texture2D StatChangeIconsSpriteSheet { get; private set; }
@@ -84,7 +83,6 @@ namespace ProjectVagabond
 
         // Source Rectangles for UI elements
         public Rectangle[] ActionButtonSourceRects { get; private set; }
-        public Dictionary<int, Rectangle> ElementIconSourceRects { get; private set; } = new Dictionary<int, Rectangle>();
         public Rectangle[] ActionIconSourceRects { get; private set; }
         public Dictionary<int, Rectangle> SpellUsesSourceRects { get; private set; } = new Dictionary<int, Rectangle>();
         public Rectangle[] SplitMapInventoryButtonSourceRects { get; private set; }
@@ -287,9 +285,6 @@ namespace ProjectVagabond
             try { ActionTooltipBackgroundSprite = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/ui_action_tooltip_background"); }
             catch { ActionTooltipBackgroundSprite = _textureFactory.CreateColoredTexture(319, 178, Color.DarkGray); }
 
-            try { ElementIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/ui_element_icons_9x9_spritesheet"); }
-            catch { ElementIconsSpriteSheet = _textureFactory.CreateColoredTexture(45, 45, Color.Magenta); }
-
             try { ActionIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/ui_action_icons_spritesheet_9x9"); }
             catch { ActionIconsSpriteSheet = _textureFactory.CreateColoredTexture(36, 9, Color.Magenta); }
 
@@ -490,7 +485,6 @@ namespace ProjectVagabond
 
             InitializeArrowSourceRects();
             InitializeActionButtonsSourceRects();
-            InitializeElementIconsSourceRects();
             InitializeActionIconsSourceRects();
             InitializeSpellUsesRects();
             InitializeSplitMapInventoryButtonRects();
@@ -667,20 +661,6 @@ namespace ProjectVagabond
                 ActionButtonSourceRects[i * 2] = new Rectangle(0, i * spriteHeight, spriteWidth, spriteHeight);
                 // Hover state (column 1)
                 ActionButtonSourceRects[i * 2 + 1] = new Rectangle(spriteWidth, i * spriteHeight, spriteWidth, spriteHeight);
-            }
-        }
-
-        private void InitializeElementIconsSourceRects()
-        {
-            const int iconSize = 9;
-            const int columns = 5;
-            // New Elements: 0 to 6 (7 total)
-            for (int i = 0; i < 7; i++)
-            {
-                int elementId = i;
-                int col = i % columns;
-                int row = i / columns;
-                ElementIconSourceRects[elementId] = new Rectangle(col * iconSize, row * iconSize, iconSize, iconSize);
             }
         }
 

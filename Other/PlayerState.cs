@@ -1,18 +1,17 @@
-﻿using System;
+﻿using ProjectVagabond;
+using ProjectVagabond.Battle;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using ProjectVagabond.Battle;
 
 namespace ProjectVagabond
 {
     public class PlayerState
     {
-        // --- PARTY SYSTEM ---
         public List<PartyMember> Party { get; set; } = new List<PartyMember>();
         public HashSet<string> PastMemberIds { get; set; } = new HashSet<string>();
         public PartyMember Leader => Party.Count > 0 ? Party[0] : null;
 
-        // --- ECONOMY ---
         private int _coin = 100;
         public int Coin
         {
@@ -20,11 +19,8 @@ namespace ProjectVagabond
             set => _coin = Math.Max(0, value);
         }
 
-        // --- GLOBAL PASSIVES (Isaac Style) ---
-        // These apply to ALL party members automatically.
         public List<string> GlobalRelics { get; set; } = new List<string>();
 
-        // --- LEGACY ACCESSORS ---
         public int MaxHP { get => Leader?.MaxHP ?? 100; set { if (Leader != null) Leader.MaxHP = value; } }
         public int CurrentHP { get => Leader?.CurrentHP ?? 100; set { if (Leader != null) Leader.CurrentHP = value; } }
         public int MaxMana { get => Leader?.MaxMana ?? 100; set { if (Leader != null) Leader.MaxMana = value; } }
@@ -33,9 +29,6 @@ namespace ProjectVagabond
         public int Intelligence { get => Leader?.Intelligence ?? 10; set { if (Leader != null) Leader.Intelligence = value; } }
         public int Tenacity { get => Leader?.Tenacity ?? 10; set { if (Leader != null) Leader.Tenacity = value; } }
         public int Agility { get => Leader?.Agility ?? 10; set { if (Leader != null) Leader.Agility = value; } }
-
-        public List<int> WeaknessElementIDs { get => Leader?.WeaknessElementIDs ?? new List<int>(); set { if (Leader != null) Leader.WeaknessElementIDs = value; } }
-        public List<int> ResistanceElementIDs { get => Leader?.ResistanceElementIDs ?? new List<int>(); set { if (Leader != null) Leader.ResistanceElementIDs = value; } }
 
         public string DefaultStrikeMoveID { get => Leader?.DefaultStrikeMoveID ?? ""; set { if (Leader != null) Leader.DefaultStrikeMoveID = value; } }
         public int PortraitIndex { get => Leader?.PortraitIndex ?? 0; set { if (Leader != null) Leader.PortraitIndex = value; } }
@@ -58,7 +51,6 @@ namespace ProjectVagabond
             return true;
         }
 
-        // --- STAT CALCULATIONS ---
         public int GetBaseStat(PartyMember member, string statName)
         {
             if (member == null) return 0;
@@ -80,7 +72,6 @@ namespace ProjectVagabond
             int baseValue = GetBaseStat(member, statName);
             int bonus = 0;
 
-            // Iterate Global Relics for Stat Bonuses
             foreach (var relicId in GlobalRelics)
             {
                 if (BattleDataCache.Relics.TryGetValue(relicId, out var relic))
@@ -92,7 +83,6 @@ namespace ProjectVagabond
             return Math.Max(1, baseValue + bonus);
         }
 
-        // --- RELIC MANAGEMENT ---
         public void AddRelic(string relicId)
         {
             GlobalRelics.Add(relicId);
@@ -103,7 +93,6 @@ namespace ProjectVagabond
             GlobalRelics.Remove(relicId);
         }
 
-        // --- MOVE MANAGEMENT ---
         public void AddMove(string moveId, PartyMember member = null)
         {
             var target = member ?? Leader;

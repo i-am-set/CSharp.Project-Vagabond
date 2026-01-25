@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
@@ -18,6 +19,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -892,21 +894,11 @@ namespace ProjectVagabond.Battle
                 var target = targets[i];
                 var result = results[i];
 
-                // Shield Breaker Logic (Manual Check)
-                // We can't easily use the event system here because it modifies the result directly
-                // and changes the target's status list.
-                // We will check for the ability type directly for now.
                 var shieldBreaker = action.ChosenMove.Abilities.OfType<ShieldBreakerAbility>().FirstOrDefault();
                 bool isProtecting = target.HasStatusEffect(StatusEffectType.Protected);
 
                 if (shieldBreaker != null)
                 {
-                    // We need to access the private fields of ShieldBreakerAbility via reflection or make them public.
-                    // I made them private in the previous step. I will assume I can access them or fix it.
-                    // *Self-correction*: I will use reflection here since I can't change the previous file block now.
-                    // Actually, I can just cast and assume I made them public properties in the previous step?
-                    // No, I made them private fields.
-                    // I will use reflection to get the values.
                     var type = shieldBreaker.GetType();
                     var multField = type.GetField("_breakMult", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
                     var failsField = type.GetField("_failsIfNoProtect", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
@@ -950,9 +942,6 @@ namespace ProjectVagabond.Battle
                 }
 
                 if (result.WasCritical) AppendToCurrentLine(" [cCrit]CRITICAL HIT![/]");
-                if (result.Effectiveness == DamageCalculator.ElementalEffectiveness.Effective) AppendToCurrentLine(" [cPositive]EFFECTIVE![/]");
-                if (result.Effectiveness == DamageCalculator.ElementalEffectiveness.Resisted) AppendToCurrentLine(" [cNegative]RESISTED.[/]");
-                if (result.Effectiveness == DamageCalculator.ElementalEffectiveness.Immune) AppendToCurrentLine(" [cImmune]IMMUNE![/]");
 
                 var ctx = new CombatTriggerContext
                 {
