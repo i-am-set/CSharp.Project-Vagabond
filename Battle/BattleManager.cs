@@ -677,9 +677,11 @@ namespace ProjectVagabond.Battle
             if (_actionToExecute == null) return;
 
             var chargeState = _animationManager.GetAttackChargeState(_actionToExecute.Actor.CombatantID);
-            if (chargeState == null)
+
+            // --- FIX: Wait for Windup Phase to complete ---
+            if (chargeState == null || chargeState.Timer >= chargeState.WindupDuration)
             {
-                // Animation finished or didn't start
+                // Windup complete, proceed to execute action (which triggers lunge)
                 ExecuteDeclaredAction();
             }
         }
@@ -819,6 +821,19 @@ namespace ProjectVagabond.Battle
                     Targets = targetsForThisHit,
                     Results = damageResultsForThisHit
                 };
+
+                // --- FIX: Calculate Time To Impact for Charge Sync ---
+                float timeToImpact = 0.15f; // Default fallback
+                if (!string.IsNullOrEmpty(action.ChosenMove.AnimationSpriteSheet))
+                {
+                    float frameDuration = (1f / 12f) / action.ChosenMove.AnimationSpeed;
+                    timeToImpact = action.ChosenMove.DamageFrameIndex * frameDuration;
+                }
+                // Ensure minimum visual duration
+                if (timeToImpact < 0.05f) timeToImpact = 0.05f;
+
+                // Tell Animation Manager to release the charge hold and sync lunge duration
+                _animationManager.ReleaseAttackCharge(action.Actor.CombatantID, timeToImpact);
 
                 var normalTargets = new List<BattleCombatant>();
                 var protectedTargets = new List<BattleCombatant>();
@@ -1186,18 +1201,24 @@ namespace ProjectVagabond.Battle
                 return;
             }
 
+            // --- CRITICAL FIX: Check Victory/Defeat BEFORE checking action queue ---
+            // This prevents the game from trying to execute the next action if the battle is already decided.
+
             if (_playerParty.All(c => c.IsDefeated))
             {
                 _currentPhase = BattlePhase.BattleOver;
+                _actionQueue.Clear(); // Clear pending actions to prevent ghost turns
                 return;
             }
 
             if (_enemyParty.All(c => c.IsDefeated))
             {
                 _currentPhase = BattlePhase.BattleOver;
+                _actionQueue.Clear(); // Clear pending actions to prevent ghost turns
                 return;
             }
 
+            // Only proceed to next action if battle is NOT over
             if (_actionQueue.Any() || _actionToExecute != null)
             {
                 _currentPhase = BattlePhase.ActionResolution;

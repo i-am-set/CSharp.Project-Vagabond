@@ -72,16 +72,21 @@ namespace ProjectVagabond.Battle.UI
             public const float DROP_HEIGHT = 10f; // Reduced height for a subtle float down
         }
 
-        // --- NEW: Attack Charge Animation ---
+        // --- NEW: Attack Charge Animation (Synchronized) ---
         public class AttackChargeAnimationState
         {
             public string CombatantID;
             public float Timer;
             public bool IsPlayer; // Determines direction (Up for player, Down for enemy)
 
-            // Tuning
-            public const float DURATION = 0.35f; // Total time before the actual hit
-            public const float WINDUP_PERCENT = 0.7f; // 70% of time spent winding back
+            // State
+            public bool IsHoldingAtPeak = true; // If true, animation pauses at end of windup
+
+            // Timing
+            public float WindupDuration = 0.25f; // Fixed windup time
+            public float LungeDuration = 0.15f;  // Default lunge, modified by sync
+
+            public float TotalDuration => WindupDuration + LungeDuration;
 
             // Visuals
             public const float WINDUP_DISTANCE = 8f; // Pixels to pull back
@@ -549,8 +554,26 @@ namespace ProjectVagabond.Battle.UI
             {
                 CombatantID = combatantId,
                 IsPlayer = isPlayer,
-                Timer = 0f
+                Timer = 0f,
+                IsHoldingAtPeak = true // Start in hold mode
             });
+        }
+
+        /// <summary>
+        /// Signals the charge animation to proceed to the lunge phase, synchronized with the move animation.
+        /// </summary>
+        /// <param name="combatantId">The combatant ID.</param>
+        /// <param name="timeToImpact">The duration the lunge should take to hit the target frame.</param>
+        public void ReleaseAttackCharge(string combatantId, float timeToImpact)
+        {
+            var anim = _activeAttackCharges.FirstOrDefault(a => a.CombatantID == combatantId);
+            if (anim != null)
+            {
+                anim.IsHoldingAtPeak = false;
+                anim.LungeDuration = timeToImpact;
+                // Ensure timer is exactly at windup end to start lunge smoothly
+                anim.Timer = anim.WindupDuration;
+            }
         }
 
         public AttackChargeAnimationState GetAttackChargeState(string combatantId)
@@ -1116,33 +1139,43 @@ namespace ProjectVagabond.Battle.UI
                 var anim = _activeAttackCharges[i];
                 anim.Timer += dt;
 
-                float progress = Math.Clamp(anim.Timer / AttackChargeAnimationState.DURATION, 0f, 1f);
-                float windupEnd = AttackChargeAnimationState.WINDUP_PERCENT;
-
-                if (progress < windupEnd)
+                // --- NEW LOGIC: Hold at Windup ---
+                if (anim.Timer < anim.WindupDuration)
                 {
                     // Windup Phase
-                    float p = progress / windupEnd;
-                    float eased = Easing.EaseOutCubic(p);
+                    float progress = anim.Timer / anim.WindupDuration;
+                    float eased = Easing.EaseOutCubic(progress);
 
                     // Move Back
                     float yDir = anim.IsPlayer ? 1f : -1f; // Player moves down (back), Enemy moves up (back)
                     anim.Offset = new Vector2(0, yDir * AttackChargeAnimationState.WINDUP_DISTANCE * eased);
 
                     // Squash (Crouch)
-                    // X expands, Y shrinks
                     float squash = MathHelper.Lerp(1.0f, 1.1f, eased);
                     float stretch = MathHelper.Lerp(1.0f, 0.9f, eased);
                     anim.Scale = new Vector2(squash, stretch);
                 }
+                else if (anim.IsHoldingAtPeak)
+                {
+                    // Hold Phase: Clamp timer to windup end
+                    anim.Timer = anim.WindupDuration;
+
+                    // Keep Windup Pose
+                    float yDir = anim.IsPlayer ? 1f : -1f;
+                    anim.Offset = new Vector2(0, yDir * AttackChargeAnimationState.WINDUP_DISTANCE);
+                    anim.Scale = new Vector2(1.1f, 0.9f);
+                }
                 else
                 {
-                    // Lunge Phase
-                    float p = (progress - windupEnd) / (1.0f - windupEnd);
-                    float eased = Easing.EaseInExpo(p);
+                    // Lunge Phase (Released)
+                    // Calculate progress from Windup end to Total end
+                    float lungeTime = anim.Timer - anim.WindupDuration;
+                    float progress = Math.Clamp(lungeTime / anim.LungeDuration, 0f, 1f);
+                    float eased = Easing.EaseInExpo(progress);
 
                     // Move Forward (past start)
                     float yDir = anim.IsPlayer ? -1f : 1f; // Player moves up (forward), Enemy moves down (forward)
+
                     // Start from windup pos, go to lunge pos
                     float startY = (anim.IsPlayer ? 1f : -1f) * AttackChargeAnimationState.WINDUP_DISTANCE;
                     float endY = yDir * AttackChargeAnimationState.LUNGE_DISTANCE;
@@ -1150,15 +1183,14 @@ namespace ProjectVagabond.Battle.UI
                     anim.Offset = new Vector2(0, MathHelper.Lerp(startY, endY, eased));
 
                     // Stretch (Elongate)
-                    // X shrinks, Y expands
                     float squash = MathHelper.Lerp(1.1f, 0.8f, eased);
                     float stretch = MathHelper.Lerp(0.9f, 1.2f, eased);
                     anim.Scale = new Vector2(squash, stretch);
-                }
 
-                if (anim.Timer >= AttackChargeAnimationState.DURATION)
-                {
-                    _activeAttackCharges.RemoveAt(i);
+                    if (progress >= 1.0f)
+                    {
+                        _activeAttackCharges.RemoveAt(i);
+                    }
                 }
             }
         }
