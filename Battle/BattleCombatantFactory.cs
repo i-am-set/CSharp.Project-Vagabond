@@ -68,7 +68,7 @@ namespace ProjectVagabond.Battle
                         combatant.IsProperNoun = data.IsProperNoun;
                     }
 
-                    // 1. Apply Intrinsic Abilities
+                    // 1. Apply Intrinsic Passive Abilities
                     if (partyMember.IntrinsicAbilities != null && partyMember.IntrinsicAbilities.Count > 0)
                     {
                         var intrinsicAbilities = AbilityFactory.CreateAbilitiesFromData(partyMember.IntrinsicAbilities, new Dictionary<string, int>());
@@ -77,16 +77,12 @@ namespace ProjectVagabond.Battle
                 }
 
                 // 2. Apply Global Relics (Isaac Style)
-                // Iterate through the player's global collection and apply to this combatant
                 foreach (var relicId in gameState.PlayerState.GlobalRelics)
                 {
                     if (BattleDataCache.Relics.TryGetValue(relicId, out var relicData))
                     {
-                        // Apply Effects and Stat Modifiers
                         var relicAbilities = AbilityFactory.CreateAbilitiesFromData(relicData.Effects, relicData.StatModifiers);
                         combatant.RegisterAbilities(relicAbilities);
-
-                        // Add to list for tooltip display
                         combatant.ActiveRelics.Add(relicData);
                     }
                 }
@@ -133,20 +129,6 @@ namespace ProjectVagabond.Battle
                     if (BattleDataCache.Moves.TryGetValue(moveId, out var moveData)) staticMoves.Add(moveData);
                 }
                 combatant.SetStaticMoves(staticMoves);
-
-                var abilitiesComponent = componentStore.GetComponent<PassiveAbilitiesComponent>(entityId);
-                if (abilitiesComponent != null)
-                {
-                    foreach (var relicId in abilitiesComponent.RelicIDs)
-                    {
-                        if (BattleDataCache.Relics.TryGetValue(relicId, out var relicData))
-                        {
-                            var enemyAbilities = AbilityFactory.CreateAbilitiesFromData(relicData.Effects, relicData.StatModifiers);
-                            combatant.RegisterAbilities(enemyAbilities);
-                            combatant.ActiveRelics.Add(relicData);
-                        }
-                    }
-                }
             }
 
             return combatant;

@@ -20,7 +20,7 @@ namespace ProjectVagabond.Scenes
 {
     public class SplitMapScene : GameScene
     {
-        private enum SplitMapView { Map, Inventory, Shop, Rest, Recruit } // Removed Settings
+        private enum SplitMapView { Map, PartyStatus, Shop, Rest, Recruit }
         private SplitMapView _currentView = SplitMapView.Map;
         private SplitMapView _viewToReturnTo = SplitMapView.Map;
 
@@ -40,8 +40,9 @@ namespace ProjectVagabond.Scenes
         private readonly StoryNarrator _resultNarrator;
         private readonly ComponentStore _componentStore;
         private readonly VoidEdgeEffect _voidEdgeEffect;
-        private readonly SplitMapInventoryOverlay _inventoryOverlay;
-        // Removed SplitMapSettingsOverlay
+
+        private readonly PartyStatusOverlay _partyStatusOverlay;
+
         private readonly SplitMapShopOverlay _shopOverlay;
         private readonly SplitMapRestOverlay _restOverlay;
         private readonly SplitMapRecruitOverlay _recruitOverlay;
@@ -59,18 +60,17 @@ namespace ProjectVagabond.Scenes
         private const float PATH_ANIMATION_DURATION = 0.75f;
 
         // --- ANIMATION TUNING ---
-        private const float NODE_LIFT_DURATION = 0.25f;     // Slightly longer for anticipation
-        private const float PULSE_DURATION = 0.4f;          // Longer for the elastic wobble
-        private const float NODE_LOWERING_DURATION = 0.5f;  // Longer for the bounce
-        private const float NODE_LIFT_AMOUNT = 12f;         // Height of the jump
+        private const float NODE_LIFT_DURATION = 0.25f;
+        private const float PULSE_DURATION = 0.4f;
+        private const float NODE_LOWERING_DURATION = 0.5f;
+        private const float NODE_LIFT_AMOUNT = 12f;
 
         // --- ARRIVAL SHAKE TUNING ---
-        private const float NODE_ARRIVAL_SHAKE_MAGNITUDE = 1.5f; // Reduced from ~3.0
-        private const float NODE_ARRIVAL_SHAKE_FREQUENCY = 25.0f; // Controlled frequency (Sine wave)
+        private const float NODE_ARRIVAL_SHAKE_MAGNITUDE = 1.5f;
+        private const float NODE_ARRIVAL_SHAKE_FREQUENCY = 25.0f;
 
         private Vector2 _cameraOffset;
         private Vector2 _targetCameraOffset;
-        // Removed RoundedCameraOffset to allow smooth sub-pixel panning
 
         private float _playerMoveTimer;
         private float _playerMoveDuration;
@@ -78,8 +78,10 @@ namespace ProjectVagabond.Scenes
         private SplitMapPath? _playerMovePath;
 
         private int _hoveredNodeId = -1;
-        private int _lastHoveredNodeId = -1; // Track previous hover to trigger haptics once
-        private int _pressedNodeId = -1; // Track which node is currently being held down
+        private int _lastHoveredNodeId = -1;
+        private int _pressedNodeId = -1;
+        private bool _playerIconHovered = false; // Track player hover state
+        private bool _playerIconPressed = false; // Track player press state
 
         private readonly HashSet<int> _visitedNodeIds = new HashSet<int>();
         private readonly HashSet<int> _traversedPathIds = new HashSet<int>();
@@ -128,27 +130,20 @@ namespace ProjectVagabond.Scenes
 
         private ImageButton? _settingsButton;
 
-        // --- SETTINGS BUTTON ANIMATION STATE ---
         private enum SettingsButtonState { Hidden, AnimatingIn, Visible }
         private SettingsButtonState _settingsButtonState = SettingsButtonState.Hidden;
         private float _settingsButtonAnimTimer = 0f;
         private const float SETTINGS_BUTTON_ANIM_DURATION = 0.6f;
 
-        // --- REPLACED CONTROLLER WITH SIMPLE TIMER ---
         private float _nodeTextWaveTimer = 0f;
 
-        // Haptics Manager
         private readonly HapticsManager _hapticsManager;
-
-        // Rasterizer state for clipping
         private static readonly RasterizerState _scissorRasterizerState = new RasterizerState { ScissorTestEnable = true };
 
-        // --- NODE HOVER ANIMATION STATE ---
         private readonly Dictionary<int, float> _nodeHoverTimers = new Dictionary<int, float>();
         private const float NODE_HOVER_POP_SCALE_TARGET = 1.5f;
         private const float NODE_HOVER_POP_SPEED = 12.0f;
 
-        // --- Node Hover Float/Rotate/Pulse Tuning ---
         private const float NODE_HOVER_FLOAT_SPEED = 3.0f;
         private const float NODE_HOVER_FLOAT_AMP = 2.0f;
         private const float NODE_HOVER_ROT_SPEED = 2.0f;
@@ -156,21 +151,18 @@ namespace ProjectVagabond.Scenes
         private const float NODE_HOVER_PULSE_SPEED = 2.0f;
         private const float NODE_HOVER_PULSE_AMOUNT = 0.05f;
 
-        // --- Node Arrival Animation State ---
         private Vector2 _nodeArrivalScale = Vector2.One;
         private Vector2 _nodeArrivalShake = Vector2.Zero;
 
-        // --- Node Selection Animation State ---
         private int _selectedNodeId = -1;
         private float _nodeSelectionAnimTimer = 0f;
-        private const float NODE_SELECTION_POP_DURATION = 0.3f; // Increased for elastic effect
-        private const float NODE_SELECTION_SCALE_EXTRA = 0.8f; // Extra scale for the spring
+        private const float NODE_SELECTION_POP_DURATION = 0.3f;
+        private const float NODE_SELECTION_SCALE_EXTRA = 0.8f;
         private const float NODE_SELECTION_SHAKE_MAGNITUDE = 1.0f;
         private const float NODE_SELECTION_SHAKE_FREQUENCY = 50.0f;
 
-        // --- Node Press Animation State ---
-        private const float NODE_PRESS_SCALE_TARGET = 0.85f; // Scale down when held
-        private const float NODE_PRESS_SPEED = 20.0f; // Fast squash
+        private const float NODE_PRESS_SCALE_TARGET = 0.85f;
+        private const float NODE_PRESS_SPEED = 20.0f;
         private readonly Dictionary<int, float> _nodePressTimers = new Dictionary<int, float>();
 
         public SplitMapScene()
@@ -184,7 +176,9 @@ namespace ProjectVagabond.Scenes
             _playerIcon = new PlayerMapIcon();
             _narrativeDialog = new NarrativeDialog(this);
             _componentStore = ServiceLocator.Get<ComponentStore>();
-            _inventoryOverlay = new SplitMapInventoryOverlay();
+
+            _partyStatusOverlay = new PartyStatusOverlay();
+
             _shopOverlay = new SplitMapShopOverlay();
             _restOverlay = new SplitMapRestOverlay(this);
             _recruitOverlay = new SplitMapRecruitOverlay(this);
@@ -203,19 +197,11 @@ namespace ProjectVagabond.Scenes
                 noiseSpeed: 3f
             );
 
-            _inventoryOverlay.OnInventoryButtonClicked += () =>
+            // --- NEW: Handle Close Button Click ---
+            _partyStatusOverlay.OnCloseRequested += () =>
             {
-                if (_currentView == SplitMapView.Inventory)
-                {
-                    _hapticsManager.TriggerZoomPulse(0.995f, 0.1f);
-                    SetView(_viewToReturnTo, snap: true);
-                }
-                else
-                {
-                    _hapticsManager.TriggerZoomPulse(1.005f, 0.1f);
-                    _viewToReturnTo = _currentView;
-                    SetView(SplitMapView.Inventory, snap: true);
-                }
+                _hapticsManager.TriggerZoomPulse(0.995f, 0.1f);
+                SetView(_viewToReturnTo, snap: true);
             };
 
             _shopOverlay.OnLeaveRequested += () =>
@@ -309,20 +295,21 @@ namespace ProjectVagabond.Scenes
             _waitingForCombatCameraSettle = false;
             _pendingCombatArchetypes = null;
             _viewToReturnTo = SplitMapView.Map;
-            _nodeTextWaveTimer = 0f; // Reset wave timer
-            _nodeHoverTimers.Clear(); // Reset hover timers
-            _nodePressTimers.Clear(); // Reset press timers
+            _nodeTextWaveTimer = 0f;
+            _nodeHoverTimers.Clear();
+            _nodePressTimers.Clear();
             _nodeArrivalScale = Vector2.One;
             _nodeArrivalShake = Vector2.Zero;
-            _selectedNodeId = -1; // Reset selection
-            _lastHoveredNodeId = -1; // Reset hover tracking
-            _pressedNodeId = -1; // Reset press tracking
+            _selectedNodeId = -1;
+            _lastHoveredNodeId = -1;
+            _pressedNodeId = -1;
+            _playerIconHovered = false;
+            _playerIconPressed = false;
 
-            _inventoryOverlay.Initialize();
+            _partyStatusOverlay.Initialize();
 
             InitializeSettingsButton();
 
-            // Trigger the settings button animation
             _settingsButtonState = SettingsButtonState.AnimatingIn;
             _settingsButtonAnimTimer = 0f;
 
@@ -409,22 +396,20 @@ namespace ProjectVagabond.Scenes
         private void InitializeSettingsButton()
         {
             int buttonSize = 16;
-            int offScreenX = Global.VIRTUAL_WIDTH + 20; // Safe off-screen position
+            int offScreenX = Global.VIRTUAL_WIDTH + 20;
 
             if (_settingsButton == null)
             {
                 var sheet = _spriteManager.SplitMapSettingsButton;
                 var rects = _spriteManager.SplitMapSettingsButtonSourceRects;
 
-                // Initialize off-screen
                 _settingsButton = new ImageButton(new Rectangle(offScreenX, 2, buttonSize, buttonSize), sheet, rects[0], rects[1], enableHoverSway: true)
                 {
                     UseScreenCoordinates = false,
-                    TriggerHapticOnHover = true // Enable UI Shake
+                    TriggerHapticOnHover = true
                 };
             }
 
-            // Always reset position to off-screen on initialization/re-entry
             _settingsButton.Bounds = new Rectangle(offScreenX, 2, buttonSize, buttonSize);
 
             _settingsButton.OnClick = null;
@@ -455,7 +440,7 @@ namespace ProjectVagabond.Scenes
             switch (_currentView)
             {
                 case SplitMapView.Map:
-                    _inventoryOverlay.Hide();
+                    _partyStatusOverlay.Hide();
                     _shopOverlay.Hide();
                     _restOverlay.Hide();
                     _recruitOverlay.Hide();
@@ -465,8 +450,8 @@ namespace ProjectVagabond.Scenes
                         UpdateCameraTarget(currentNode.Position, snap);
                     }
                     break;
-                case SplitMapView.Inventory:
-                    _inventoryOverlay.Show();
+                case SplitMapView.PartyStatus:
+                    _partyStatusOverlay.Show();
                     _shopOverlay.Hide();
                     _restOverlay.Hide();
                     _recruitOverlay.Hide();
@@ -474,7 +459,7 @@ namespace ProjectVagabond.Scenes
                     if (snap) _cameraOffset = _targetCameraOffset;
                     break;
                 case SplitMapView.Shop:
-                    _inventoryOverlay.Hide();
+                    _partyStatusOverlay.Hide();
                     _shopOverlay.Resume();
                     _restOverlay.Hide();
                     _recruitOverlay.Hide();
@@ -482,7 +467,7 @@ namespace ProjectVagabond.Scenes
                     if (snap) _cameraOffset = _targetCameraOffset;
                     break;
                 case SplitMapView.Rest:
-                    _inventoryOverlay.Hide();
+                    _partyStatusOverlay.Hide();
                     _shopOverlay.Hide();
                     _restOverlay.Show();
                     _recruitOverlay.Hide();
@@ -490,7 +475,7 @@ namespace ProjectVagabond.Scenes
                     if (snap) _cameraOffset = _targetCameraOffset;
                     break;
                 case SplitMapView.Recruit:
-                    _inventoryOverlay.Hide();
+                    _partyStatusOverlay.Hide();
                     _shopOverlay.Hide();
                     _restOverlay.Hide();
                     _recruitOverlay.Show();
@@ -572,8 +557,6 @@ namespace ProjectVagabond.Scenes
             var currentMouseState = Mouse.GetState();
             var currentKeyboardState = Keyboard.GetState();
 
-            var viewAtStartOfFrame = _currentView;
-
             _voidEdgeEffect.Update(gameTime, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), _cameraOffset);
 
             _birdManager.Update(gameTime, _currentMap, _playerIcon.Position, _cameraOffset);
@@ -614,24 +597,21 @@ namespace ProjectVagabond.Scenes
                 return;
             }
 
-            // Use _cameraOffset directly for smooth panning
             var cameraTransform = Matrix.CreateTranslation(_cameraOffset.X, _cameraOffset.Y, 0);
 
             bool isRestNarrating = _restOverlay.IsNarrating;
             bool allowInventoryInteraction = !isRestNarrating && (_mapState == SplitMapState.Idle || _currentView == SplitMapView.Shop || _currentView == SplitMapView.Rest || _currentView == SplitMapView.Recruit);
 
-            _inventoryOverlay.Update(gameTime, currentMouseState, currentKeyboardState, allowInventoryInteraction, cameraTransform);
+            _partyStatusOverlay.Update(gameTime, currentMouseState, currentKeyboardState, allowInventoryInteraction, cameraTransform);
 
             if (!isRestNarrating)
             {
-                // Removed _settingsOverlay.Update
                 _shopOverlay.Update(gameTime, currentMouseState, cameraTransform);
                 _recruitOverlay.Update(gameTime, currentMouseState, cameraTransform);
             }
 
             _restOverlay.Update(gameTime, currentMouseState, cameraTransform);
 
-            // Update Settings Button Animation & Logic
             if (_settingsButton != null && !isRestNarrating)
             {
                 if (_settingsButtonState == SettingsButtonState.AnimatingIn)
@@ -641,7 +621,7 @@ namespace ProjectVagabond.Scenes
                     float eased = Easing.EaseOutBack(progress);
 
                     float startX = Global.VIRTUAL_WIDTH + 20;
-                    float targetX = Global.VIRTUAL_WIDTH - 16 - 2; // 16 size, 2 padding
+                    float targetX = Global.VIRTUAL_WIDTH - 16 - 2;
 
                     float currentX = MathHelper.Lerp(startX, targetX, eased);
                     _settingsButton.Bounds = new Rectangle((int)currentX, 2, 16, 16);
@@ -657,16 +637,16 @@ namespace ProjectVagabond.Scenes
                     _settingsButton.Bounds = new Rectangle(buttonX, buttonY, buttonSize, buttonSize);
                 }
 
-                // Only update input if visible
                 if (_settingsButtonState != SettingsButtonState.Hidden)
                 {
                     _settingsButton.Update(currentMouseState);
                 }
             }
 
+            // FIX: Use _previousKeyboardState instead of previousMouseState
             if (KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState) && !isRestNarrating)
             {
-                if (_currentView == SplitMapView.Inventory)
+                if (_currentView == SplitMapView.PartyStatus)
                 {
                     SetView(_viewToReturnTo, snap: true);
                 }
@@ -686,30 +666,20 @@ namespace ProjectVagabond.Scenes
                         float frictionDamping = 1.0f - MathF.Exp(-PAN_FRICTION * deltaTime);
                         _cameraVelocity = Vector2.Lerp(_cameraVelocity, Vector2.Zero, frictionDamping);
                         ClampCameraOffset();
-
-                        // Sync target so the main lerp doesn't pull us back
                         _targetCameraOffset.X = _cameraOffset.X;
-
                         _snapBackDelayTimer = SNAP_BACK_DELAY;
                     }
                     else
                     {
                         _cameraVelocity = Vector2.Zero;
-
-                        // Settle Logic (Only if waiting to snap back)
                         if (_snapBackDelayTimer > 0)
                         {
                             _snapBackDelayTimer -= deltaTime;
-
-                            // Settle to nearest pixel
                             float currentX = _cameraOffset.X;
                             float targetPixelX = MathF.Round(currentX);
-
-                            // Use a fast damping to snap
                             float snapDamping = 1.0f - MathF.Exp(-15f * deltaTime);
                             _cameraOffset.X = MathHelper.Lerp(currentX, targetPixelX, snapDamping);
 
-                            // Snap if very close
                             if (Math.Abs(_cameraOffset.X - targetPixelX) < 0.01f)
                             {
                                 _cameraOffset.X = targetPixelX;
@@ -730,7 +700,6 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            // FIX: Use Time-Corrected Damping for camera movement
             float cameraDamping = 1.0f - MathF.Exp(-CAMERA_LERP_SPEED * deltaTime);
             _cameraOffset = Vector2.Lerp(_cameraOffset, _targetCameraOffset, cameraDamping);
 
@@ -766,13 +735,13 @@ namespace ProjectVagabond.Scenes
             else
             {
                 _hoveredNodeId = -1;
-                _pressedNodeId = -1; // Reset press state if view changes
+                _pressedNodeId = -1;
+                _playerIconHovered = false;
+                _playerIconPressed = false;
             }
 
-            // --- UPDATE NODE HOVER & PRESS TIMERS ---
             UpdateNodeAnimationTimers(deltaTime);
 
-            // --- UPDATE SELECTION ANIMATION ---
             if (_selectedNodeId != -1)
             {
                 _nodeSelectionAnimTimer += deltaTime;
@@ -813,10 +782,8 @@ namespace ProjectVagabond.Scenes
             {
                 foreach (var node in _currentMap.Nodes.Values)
                 {
-                    // --- HOVER TIMER ---
                     if (!_nodeHoverTimers.ContainsKey(node.Id)) _nodeHoverTimers[node.Id] = 0f;
 
-                    // Treat as hovered if it is the actual hovered node OR if it is the selected node
                     bool isHovered = (node.Id == _hoveredNodeId) || (node.Id == _selectedNodeId);
                     float hoverChange = dt * NODE_HOVER_POP_SPEED;
 
@@ -825,7 +792,6 @@ namespace ProjectVagabond.Scenes
                     else
                         _nodeHoverTimers[node.Id] = Math.Max(_nodeHoverTimers[node.Id] - hoverChange, 0f);
 
-                    // --- PRESS TIMER ---
                     if (!_nodePressTimers.ContainsKey(node.Id)) _nodePressTimers[node.Id] = 0f;
 
                     bool isPressed = (node.Id == _pressedNodeId) && (node.Id == _hoveredNodeId);
@@ -845,20 +811,26 @@ namespace ProjectVagabond.Scenes
             var currentMouseState = Mouse.GetState();
             var virtualMousePos = Core.TransformMouse(currentMouseState.Position);
 
-            // Use _cameraOffset directly for smooth panning
             var cameraTransform = Matrix.CreateTranslation(_cameraOffset.X, _cameraOffset.Y, 0);
             Matrix.Invert(ref cameraTransform, out var inverseCameraTransform);
             var mouseInMapSpace = Vector2.Transform(virtualMousePos, inverseCameraTransform);
 
-            // 1. Determine Raw Hover (Geometry Check)
             int rawHoveredNodeId = -1;
+            bool rawPlayerHovered = false;
 
-            // FIX: Only allow hover detection if state is Idle
             if (_currentMap != null && _mapState == SplitMapState.Idle)
             {
+                // Check Player Icon Hover
+                if (_playerIcon.GetBounds().Contains(mouseInMapSpace))
+                {
+                    rawPlayerHovered = true;
+                }
+
+                // Check Node Hover
                 foreach (var node in _currentMap.Nodes.Values)
                 {
-                    if (node.IsReachable && node.GetBounds().Contains(mouseInMapSpace))
+                    // Allow hovering the player node too
+                    if ((node.IsReachable || node.Id == _playerCurrentNodeId) && node.GetBounds().Contains(mouseInMapSpace))
                     {
                         rawHoveredNodeId = node.Id;
                         break;
@@ -866,41 +838,40 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            // 2. Check UI Hover
-            bool hoveringButtons = (_inventoryOverlay.IsHovered || (_settingsButton?.IsHovered ?? false));
+            bool hoveringButtons = (_partyStatusOverlay.IsHovered || (_settingsButton?.IsHovered ?? false));
 
-            // 3. Handle Panning (Updates _isPanning)
             if (!hoveringButtons)
             {
-                // Pass rawHoveredNodeId so we don't start panning if clicking a node
                 HandleCameraPan(currentMouseState, virtualMousePos, rawHoveredNodeId);
             }
 
-            // 4. Determine Final Hover ID
-            // If panning, we suppress hover.
             if (_isPanning)
             {
                 _hoveredNodeId = -1;
+                _playerIconHovered = false;
             }
             else
             {
-                _hoveredNodeId = rawHoveredNodeId;
+                // --- PRIORITY LOGIC ---
+                if (rawPlayerHovered)
+                {
+                    _playerIconHovered = true;
+                    _hoveredNodeId = -1; // Disable node hover if player is hovered
+                }
+                else
+                {
+                    _playerIconHovered = false;
+                    _hoveredNodeId = rawHoveredNodeId;
+                }
             }
 
-            // 5. Haptics
-            // Explicitly check !_isPanning to be safe
-            if (!_isPanning && _hoveredNodeId != -1 && _hoveredNodeId != _lastHoveredNodeId)
-            {
-                // _hapticsManager.TriggerUICompoundShake(_global.HoverHapticStrength); // disabled for now; I dont like how it looks
-            }
             _lastHoveredNodeId = _hoveredNodeId;
 
-            // 6. Cursor State
             if (_isPanning)
             {
                 cursorManager.SetState(CursorState.Dragging);
             }
-            else if (_hoveredNodeId != -1)
+            else if (_playerIconHovered || _hoveredNodeId != -1)
             {
                 cursorManager.SetState(CursorState.HoverClickable);
             }
@@ -909,55 +880,67 @@ namespace ProjectVagabond.Scenes
                 cursorManager.SetState(CursorState.HoverDraggable);
             }
 
-            // 7. Click Logic (Press and Release)
             if (!_isPanning && _mapState == SplitMapState.Idle && !hoveringButtons && UIInputManager.CanProcessMouseClick() && _currentView == SplitMapView.Map)
             {
                 bool leftClickPressed = currentMouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released;
                 bool leftClickReleased = currentMouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed;
 
-                // On Press: Record the node we started clicking on
                 if (leftClickPressed)
                 {
-                    if (_hoveredNodeId != -1)
+                    if (_playerIconHovered)
+                    {
+                        _playerIconPressed = true;
+                    }
+                    else if (_hoveredNodeId != -1)
                     {
                         _pressedNodeId = _hoveredNodeId;
-                        // Do NOT consume click here, wait for release
                     }
                 }
 
-                // On Release: Check if we are still hovering the SAME node we pressed
                 if (leftClickReleased)
                 {
-                    if (_pressedNodeId != -1 && _pressedNodeId == _hoveredNodeId)
+                    // Priority: Player Icon Click
+                    if (_playerIconPressed && _playerIconHovered)
                     {
-                        // Valid Click! Trigger Selection.
-                        var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
-                        if (currentNode != null)
+                        _hapticsManager.TriggerZoomPulse(1.005f, 0.1f);
+                        _viewToReturnTo = _currentView;
+                        SetView(SplitMapView.PartyStatus, snap: true);
+                        UIInputManager.ConsumeMouseClick();
+                    }
+                    // Secondary: Node Click
+                    else if (_pressedNodeId != -1 && _pressedNodeId == _hoveredNodeId)
+                    {
+                        if (_currentMap != null && _currentMap.Nodes[_hoveredNodeId].IsReachable)
                         {
-                            UpdateCameraTarget(currentNode.Position, false);
+                            var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
+                            if (currentNode != null)
+                            {
+                                UpdateCameraTarget(currentNode.Position, false);
+                            }
+                            _snapBackDelayTimer = 0f;
+                            _cameraVelocity = Vector2.Zero;
+
+                            _selectedNodeId = _hoveredNodeId;
+                            _nodeSelectionAnimTimer = 0f;
+                            _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
+
+                            StartPlayerMove(_hoveredNodeId);
                         }
-                        _snapBackDelayTimer = 0f;
-                        _cameraVelocity = Vector2.Zero;
 
-                        // --- SELECTION LOGIC ---
-                        _selectedNodeId = _hoveredNodeId;
-                        _nodeSelectionAnimTimer = 0f;
-                        _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength); // Small haptic feedback
-
-                        StartPlayerMove(_hoveredNodeId);
                         _hoveredNodeId = -1;
                         UIInputManager.ConsumeMouseClick();
                     }
 
-                    // Always reset press state on release
                     _pressedNodeId = -1;
+                    _playerIconPressed = false;
                 }
             }
             else
             {
-                // If panning started or state changed, cancel any pending press
                 _pressedNodeId = -1;
+                _playerIconPressed = false;
             }
+            previousMouseState = currentMouseState;
         }
 
         private void HandleCameraPan(MouseState currentMouseState, Vector2 virtualMousePos, int rawHoveredNodeId)
@@ -980,8 +963,7 @@ namespace ProjectVagabond.Scenes
                 _snapBackDelayTimer = SNAP_BACK_DELAY;
             }
 
-            // Only start panning if we are NOT hovering a node
-            if (leftClickPressed && rawHoveredNodeId == -1 && _mapState == SplitMapState.Idle && UIInputManager.CanProcessMouseClick())
+            if (leftClickPressed && rawHoveredNodeId == -1 && !_playerIconHovered && _mapState == SplitMapState.Idle && UIInputManager.CanProcessMouseClick())
             {
                 _isPanning = true;
                 _panStartMousePosition = currentMouseState.Position;
@@ -1009,7 +991,6 @@ namespace ProjectVagabond.Scenes
 
                 _snapBackDelayTimer = SNAP_BACK_DELAY;
 
-                // Use raw screen delta scaled down for smooth panning
                 float scale = ServiceLocator.Get<Core>().FinalScale;
                 Vector2 screenDelta = (currentMouseState.Position - _lastPanMousePosition).ToVector2();
                 Vector2 virtualDelta = screenDelta / scale;
@@ -1066,7 +1047,6 @@ namespace ProjectVagabond.Scenes
                 _playerCurrentNodeId = _playerMoveTargetNodeId;
                 _visitedNodeIds.Add(_playerCurrentNodeId);
 
-                // --- RESET SELECTION ON ARRIVAL ---
                 _selectedNodeId = -1;
 
                 var toNode = _currentMap?.Nodes[_playerCurrentNodeId];
@@ -1087,15 +1067,11 @@ namespace ProjectVagabond.Scenes
             if (currentNode != null)
             {
                 float progress = Math.Clamp(_nodeLiftTimer / NODE_LIFT_DURATION, 0f, 1f);
-                float eased = Easing.EaseOutBack(progress); // Use EaseOutBack for jump feel
+                float eased = Easing.EaseOutBack(progress);
 
-                // Lift
                 currentNode.VisualOffset = new Vector2(0, MathHelper.Lerp(0, -NODE_LIFT_AMOUNT, eased));
 
-                // Stretch (Taller, Thinner)
-                // Scale X: 1.0 -> 0.8 -> 1.0
-                // Scale Y: 1.0 -> 1.2 -> 1.0
-                float stretch = MathF.Sin(progress * MathHelper.Pi); // 0 -> 1 -> 0
+                float stretch = MathF.Sin(progress * MathHelper.Pi);
                 _nodeArrivalScale = new Vector2(1.0f - (stretch * 0.2f), 1.0f + (stretch * 0.2f));
             }
 
@@ -1103,7 +1079,7 @@ namespace ProjectVagabond.Scenes
             {
                 _mapState = SplitMapState.PulsingNode;
                 _pulseTimer = 0f;
-                _nodeArrivalScale = Vector2.One; // Reset scale for next phase
+                _nodeArrivalScale = Vector2.One;
             }
         }
 
@@ -1112,13 +1088,10 @@ namespace ProjectVagabond.Scenes
             _pulseTimer += deltaTime;
             float progress = Math.Clamp(_pulseTimer / PULSE_DURATION, 0f, 1f);
 
-            // Elastic Pop (Big -> Normal)
             float elastic = Easing.EaseOutElastic(progress);
-            // Map 0..1 to 1.4..1.0
             float scale = 1.0f + (0.4f * (1.0f - elastic));
             _nodeArrivalScale = new Vector2(scale);
 
-            // Violent Shake
             float shakeDecay = 1.0f - progress;
             float shakeX = MathF.Sin(_pulseTimer * NODE_ARRIVAL_SHAKE_FREQUENCY) * NODE_ARRIVAL_SHAKE_MAGNITUDE * shakeDecay;
             float shakeY = MathF.Cos(_pulseTimer * NODE_ARRIVAL_SHAKE_FREQUENCY * 0.9f) * NODE_ARRIVAL_SHAKE_MAGNITUDE * shakeDecay;
@@ -1140,16 +1113,14 @@ namespace ProjectVagabond.Scenes
             if (currentNode != null)
             {
                 float progress = Math.Clamp(_nodeLiftTimer / NODE_LOWERING_DURATION, 0f, 1f);
-                float eased = Easing.EaseOutBounce(progress); // Bounce on landing
+                float eased = Easing.EaseOutBounce(progress);
 
-                // Lower
                 currentNode.VisualOffset = new Vector2(0, MathHelper.Lerp(-NODE_LIFT_AMOUNT, 0, eased));
 
-                // Squash on impact (only at the very end of the bounce)
                 if (progress > 0.8f)
                 {
                     float squashProgress = (progress - 0.8f) / 0.2f;
-                    float squash = MathF.Sin(squashProgress * MathHelper.Pi); // 0 -> 1 -> 0
+                    float squash = MathF.Sin(squashProgress * MathHelper.Pi);
                     _nodeArrivalScale = new Vector2(1.0f + (squash * 0.3f), 1.0f - (squash * 0.3f));
                 }
                 else
@@ -1192,7 +1163,6 @@ namespace ProjectVagabond.Scenes
                 targetX = (screenWidth - mapContentWidth) / 2;
             }
 
-            // Round target for pixel-perfect final position
             _targetCameraOffset = new Vector2(MathF.Round(targetX), 0);
 
             if (snap)
@@ -1240,9 +1210,7 @@ namespace ProjectVagabond.Scenes
             BattleSetup.EnemyArchetypes = _pendingCombatArchetypes;
             BattleSetup.ReturnSceneState = GameSceneState.Split;
 
-            // Use a random combat transition (Diamonds, Shutters, Blocks)
             var transitionType = _transitionManager.GetRandomCombatTransition();
-            // Use the same transition for In and Out for consistency
             _sceneManager.ChangeScene(GameSceneState.Battle, transitionType, transitionType, 0.5f);
 
             _pendingCombatArchetypes = null;
@@ -1276,13 +1244,11 @@ namespace ProjectVagabond.Scenes
                             var fallbackEvent = _progressionManager.GetRandomNarrative();
                             if (fallbackEvent != null)
                             {
-                                Debug.WriteLine($"[SplitMapScene] Recovered from missing event ID '{narrativeEventId}' by using '{fallbackEvent.EventID}'.");
                                 _narrativeDialog.Show(fallbackEvent, OnNarrativeChoiceSelected);
                                 _wasModalActiveLastFrame = true;
                             }
                             else
                             {
-                                Debug.WriteLine($"[SplitMapScene] [ERROR] Failed to recover missing event ID '{narrativeEventId}'. Skipping node.");
                                 node.IsCompleted = true;
                                 UpdateCameraTarget(node.Position, false);
                                 _mapState = SplitMapState.LoweringNode;
@@ -1349,12 +1315,13 @@ namespace ProjectVagabond.Scenes
         private void OpenRandomShop()
         {
             var premiumStock = new List<ShopItem>();
-
-            int premiumCount = _random.Next(3, 5);
             var allPremium = new List<ShopItem>();
 
-            foreach (var r in BattleDataCache.Relics.Values) allPremium.Add(new ShopItem { ItemId = r.RelicID, DisplayName = r.RelicName, Type = "Relic", Price = PriceCalculator.CalculatePrice(r, 1.0f), DataObject = r });
+            // ONLY add Relics
+            foreach (var r in BattleDataCache.Relics.Values)
+                allPremium.Add(new ShopItem { ItemId = r.RelicID, DisplayName = r.RelicName, Type = "Relic", Price = PriceCalculator.CalculatePrice(r, 1.0f), DataObject = r });
 
+            int premiumCount = _random.Next(3, 5);
             for (int i = 0; i < premiumCount; i++)
             {
                 if (allPremium.Any())
@@ -1383,19 +1350,19 @@ namespace ProjectVagabond.Scenes
                 var dieType = numSides == 4 ? DieType.D4 : DieType.D6;
 
                 _diceRollingSystem.Roll(new List<DiceGroup>
-    {
-        new DiceGroup
-        {
-            GroupId = "narrative_check",
-            NumberOfDice = numDice,
-            DieType = dieType,
-            ResultProcessing = DiceResultProcessing.Sum,
-            Modifier = modifier,
-            Tint = Color.White,
-            AnimateSum = false,
-            ShowResultText = false
-        }
-    });
+                {
+                    new DiceGroup
+                    {
+                        GroupId = "narrative_check",
+                        NumberOfDice = numDice,
+                        DieType = dieType,
+                        ResultProcessing = DiceResultProcessing.Sum,
+                        Modifier = modifier,
+                        Tint = Color.White,
+                        AnimateSum = false,
+                        ShowResultText = false
+                    }
+                });
             }
         }
 
@@ -1488,45 +1455,13 @@ namespace ProjectVagabond.Scenes
             _resultNarrator.Clear();
         }
 
-        private void FinalizeVictory()
-        {
-            SplitMapScene.PlayerWonLastBattle = true;
-            DecrementTemporaryBuffs();
-
-            // Use random transition
-            var transition = _transitionManager.GetRandomTransition();
-            _sceneManager.ChangeScene(BattleSetup.ReturnSceneState, transition, transition);
-        }
-
-        private void DecrementTemporaryBuffs()
-        {
-            var gameState = ServiceLocator.Get<GameState>();
-            var buffsComp = _componentStore.GetComponent<TemporaryBuffsComponent>(gameState.PlayerEntityId);
-            if (buffsComp == null) return;
-
-            for (int i = buffsComp.Buffs.Count - 1; i >= 0; i--)
-            {
-                buffsComp.Buffs[i].RemainingBattles--;
-                if (buffsComp.Buffs[i].RemainingBattles <= 0)
-                {
-                    buffsComp.Buffs.RemoveAt(i);
-                }
-            }
-        }
-
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             if (_currentMap == null) return;
 
-            // Use _cameraOffset directly for smooth panning
             var cameraTransform = Matrix.CreateTranslation(_cameraOffset.X, _cameraOffset.Y, 0);
             var finalTransform = cameraTransform * transform;
 
-            // Calculate Scissor Rect for clipping map content to the virtual screen area
-            var topLeft = Vector2.Transform(Vector2.Zero, transform);
-            var bottomRight = Vector2.Transform(new Vector2(Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), transform);
-
-            // Calculate AABB of the transformed corners to handle potential rotation from shake
             var tl = Vector2.Transform(Vector2.Zero, transform);
             var tr = Vector2.Transform(new Vector2(Global.VIRTUAL_WIDTH, 0), transform);
             var bl = Vector2.Transform(new Vector2(0, Global.VIRTUAL_HEIGHT), transform);
@@ -1538,16 +1473,11 @@ namespace ProjectVagabond.Scenes
             var maxY = Math.Max(Math.Max(tl.Y, tr.Y), Math.Max(bl.Y, br.Y));
 
             var scissorRect = new Rectangle((int)minX, (int)minY, (int)(maxX - minX), (int)(maxY - minY));
-
-            // Clamp to viewport to prevent crashes if shake moves it off-screen
             var viewport = spriteBatch.GraphicsDevice.Viewport.Bounds;
             scissorRect = Rectangle.Intersect(scissorRect, viewport);
-
-            // Apply Scissor
             spriteBatch.GraphicsDevice.ScissorRectangle = scissorRect;
 
             spriteBatch.End();
-            // Use _scissorRasterizerState to enable clipping
             spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: finalTransform, rasterizerState: _scissorRasterizerState);
 
             var pixel = ServiceLocator.Get<Texture2D>();
@@ -1596,15 +1526,13 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            _playerIcon.Draw(spriteBatch);
+            _playerIcon.Draw(spriteBatch, _playerIconHovered, (float)gameTime.ElapsedGameTime.TotalSeconds);
 
             _birdManager.Draw(spriteBatch, _cameraOffset);
 
-            _inventoryOverlay.DrawWorld(spriteBatch, font, gameTime);
+            _partyStatusOverlay.DrawWorld(spriteBatch, font, gameTime);
             _shopOverlay.Draw(spriteBatch, font, gameTime);
             _restOverlay.Draw(spriteBatch, font, gameTime);
-
-            // FIX: Pass cameraTransform to RecruitOverlay so it can calculate Virtual Screen Coords for tooltips
             _recruitOverlay.Draw(spriteBatch, font, gameTime, cameraTransform);
 
             spriteBatch.End();
@@ -1614,7 +1542,7 @@ namespace ProjectVagabond.Scenes
             var mapBounds = new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
             _voidEdgeEffect.Draw(spriteBatch, mapBounds);
 
-            _inventoryOverlay.DrawScreen(spriteBatch, font, gameTime, transform);
+            _partyStatusOverlay.DrawScreen(spriteBatch, font, gameTime, transform);
             _settingsButton?.Draw(spriteBatch, font, gameTime, transform);
 
             if (_hoveredNodeId != -1 && _mapState == SplitMapState.Idle && _currentView == SplitMapView.Map)
@@ -1641,24 +1569,15 @@ namespace ProjectVagabond.Scenes
                     {
                         var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
                         var nodeTextSize = secondaryFont.MeasureString(nodeText);
-
-                        // Removed bob offset calculation
                         var textPosition = new Vector2((Global.VIRTUAL_WIDTH - nodeTextSize.Width) / 2f, Global.VIRTUAL_HEIGHT - nodeTextSize.Height - 3);
 
-                        // --- NEW: Use TextWaveController for animation ---
-                        bool isHovering = true; // We are inside the hover block
-
-                        // Use the simple timer logic instead of the controller
                         _nodeTextWaveTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-
-                        // Use Wave effect
                         TextAnimator.DrawTextWithEffect(spriteBatch, secondaryFont, nodeText, textPosition, _global.Palette_DarkSun, TextEffectType.Wave, _nodeTextWaveTimer);
                     }
                 }
             }
             else
             {
-                // Reset timer when not hovering
                 _nodeTextWaveTimer = 0f;
             }
 
@@ -1708,7 +1627,6 @@ namespace ProjectVagabond.Scenes
 
                 if (isPathTraversed || isAnimating)
                 {
-                    // Use the new global color for traversed/active paths
                     DrawPath(spriteBatch, pixel, path, _global.SplitMapPathColor, isAnimating);
                 }
             }
@@ -1744,25 +1662,19 @@ namespace ProjectVagabond.Scenes
 
             if (numPixelsToDraw <= 0) return;
 
-            // New Pattern Logic
             for (int i = 0; i < numPixelsToDraw; i++)
             {
                 var point = path.PixelPoints[i];
                 var pointVec = point.ToVector2();
 
-                // Check distance to nodes for hard cropping
                 float distFrom = Vector2.Distance(pointVec, fromNode.Position);
                 float distTo = Vector2.Distance(pointVec, toNode.Position);
 
-                // Hard crop
                 if (distFrom <= PATH_EXCLUSION_RADIUS || distTo <= PATH_EXCLUSION_RADIUS)
                 {
-                    continue; // Skip drawing this pixel
+                    continue;
                 }
 
-                // 2 pixels on, 2 pixels off
-                // i % 4 returns 0, 1, 2, 3.
-                // We want to draw on 0 and 1.
                 if (i % 4 < 2)
                 {
                     spriteBatch.Draw(pixel, pointVec, pathColor);
@@ -1772,7 +1684,6 @@ namespace ProjectVagabond.Scenes
 
         private void DrawNode(SpriteBatch spriteBatch, SplitMapNode node, GameTime gameTime)
         {
-            // --- UPDATED: Get silhouette ---
             var (texture, silhouette, sourceRect, origin) = GetNodeDrawData(node, gameTime);
 
             var bounds = node.GetBounds();
@@ -1792,7 +1703,6 @@ namespace ProjectVagabond.Scenes
             bool isHovered = (node.Id == _hoveredNodeId);
             bool isPressed = (node.Id == _pressedNodeId) && isHovered;
 
-            // --- FIX: Force Red Color during Animation ---
             bool isAnimatingThisNode = (node.Id == _playerCurrentNodeId) &&
                                        (_mapState == SplitMapState.LiftingNode ||
                                         _mapState == SplitMapState.PulsingNode ||
@@ -1811,40 +1721,31 @@ namespace ProjectVagabond.Scenes
                 scale += pulseWave * PULSE_AMOUNT;
             }
 
-            // --- HOVER POP ANIMATION ---
             float hoverT = _nodeHoverTimers.ContainsKey(node.Id) ? _nodeHoverTimers[node.Id] : 0f;
-
-            // If selected, force the hover timer to max (1.0) so it stays popped up
             if (isSelected) hoverT = 1.0f;
 
             float popScale = 1.0f + (NODE_HOVER_POP_SCALE_TARGET - 1.0f) * Easing.EaseOutBack(hoverT);
             scale *= popScale;
 
-            // --- PRESS SQUASH ANIMATION ---
             float pressT = _nodePressTimers.ContainsKey(node.Id) ? _nodePressTimers[node.Id] : 0f;
             if (pressT > 0)
             {
-                // Lerp from 1.0 (Normal) to Target (Squashed)
                 float pressScaleFactor = MathHelper.Lerp(1.0f, NODE_PRESS_SCALE_TARGET, Easing.EaseOutQuad(pressT));
                 scale *= pressScaleFactor;
             }
 
-            // --- HOVER FLOAT & ROTATE ---
             float floatOffset = 0f;
             float rotation = 0f;
 
             if (hoverT > 0)
             {
                 float time = (float)gameTime.TotalGameTime.TotalSeconds;
-                float phase = node.Id * 0.5f; // Randomize phase by ID
-
-                // Blend the effect in based on hover timer so it doesn't snap
+                float phase = node.Id * 0.5f;
                 float blend = Easing.EaseOutQuad(hoverT);
 
                 floatOffset = MathF.Sin(time * NODE_HOVER_FLOAT_SPEED + phase) * NODE_HOVER_FLOAT_AMP * blend;
                 rotation = MathF.Sin(time * NODE_HOVER_ROT_SPEED + phase) * NODE_HOVER_ROT_AMT * blend;
 
-                // New Pulse Logic
                 float pulse = MathF.Sin(time * NODE_HOVER_PULSE_SPEED + phase) * NODE_HOVER_PULSE_AMOUNT * blend;
                 scale += pulse;
             }
@@ -1852,41 +1753,28 @@ namespace ProjectVagabond.Scenes
             Vector2 arrivalScale = Vector2.One;
             Vector2 arrivalShake = Vector2.Zero;
 
-            // Only apply arrival animation effects to the current node
             if (node.Id == _playerCurrentNodeId)
             {
                 arrivalScale = _nodeArrivalScale;
                 arrivalShake = _nodeArrivalShake;
             }
 
-            // --- SELECTION JUICE (Spring Release) ---
             float selectionScale = 0f;
             Vector2 selectionShake = Vector2.Zero;
             float selectionMult = 1.0f;
 
             if (isSelected)
             {
-                // Spring: Elastic Out for a bouncy release
                 float t = Math.Clamp(_nodeSelectionAnimTimer / NODE_SELECTION_POP_DURATION, 0f, 1f);
-
-                // Use EaseOutElastic for the spring back
                 float elastic = Easing.EaseOutElastic(t);
-
-                // Map 0..1 to a scale bump. 
-                // We want it to start small (from the press) and spring big.
-                // Since 'scale' already includes the base hover size (1.5), we add extra juice on top.
                 selectionMult = MathHelper.Lerp(NODE_PRESS_SCALE_TARGET, 1.0f, elastic);
 
-                // Shake: Sine wave decaying over time
                 float shakeDecay = 1.0f - t;
                 float shakeX = MathF.Sin(_nodeSelectionAnimTimer * NODE_SELECTION_SHAKE_FREQUENCY) * NODE_SELECTION_SHAKE_MAGNITUDE * shakeDecay;
                 float shakeY = MathF.Cos(_nodeSelectionAnimTimer * NODE_SELECTION_SHAKE_FREQUENCY * 0.85f) * NODE_SELECTION_SHAKE_MAGNITUDE * shakeDecay;
                 selectionShake = new Vector2(shakeX, shakeY);
             }
 
-            // Combine scales
-            // Base Scale (1.0) * Hover Pop (1.5) * Press Squash (0.85) * Arrival Scale (Squash/Stretch) + Selection Juice
-            // Note: Selection Juice is additive to the popped scale
             Vector2 finalScale = new Vector2(
                 (scale * selectionMult) * arrivalScale.X,
                 (scale * selectionMult) * arrivalScale.Y
@@ -1896,7 +1784,6 @@ namespace ProjectVagabond.Scenes
 
             Color outlineColor = _global.Palette_Black;
 
-            // --- NEW: Draw Outline using Silhouette ---
             if (silhouette != null)
             {
                 spriteBatch.DrawSnapped(silhouette, position + new Vector2(-1, 0), sourceRect, outlineColor, rotation, origin, finalScale, SpriteEffects.None, 0.4f);
@@ -1929,7 +1816,6 @@ namespace ProjectVagabond.Scenes
                     break;
                 case SplitNodeType.MajorBattle:
                     texture = _spriteManager.SplitNodeCombat;
-
                     silhouette = _spriteManager.SplitNodeCombatSilhouette;
                     break;
                 case SplitNodeType.Recruit:

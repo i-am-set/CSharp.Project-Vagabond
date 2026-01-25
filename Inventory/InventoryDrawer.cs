@@ -12,11 +12,10 @@ namespace ProjectVagabond.UI
 {
     public class InventoryDrawer
     {
-        private readonly SplitMapInventoryOverlay _overlay;
+        private readonly PartyStatusOverlay _overlay;
         private readonly ItemTooltipRenderer _tooltipRenderer;
 
-        // Updated to 1 argument
-        public InventoryDrawer(SplitMapInventoryOverlay overlay)
+        public InventoryDrawer(PartyStatusOverlay overlay)
         {
             _overlay = overlay;
             _tooltipRenderer = ServiceLocator.Get<ItemTooltipRenderer>();
@@ -83,7 +82,11 @@ namespace ProjectVagabond.UI
 
         public void DrawScreen(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
-            _overlay.InventoryButton?.Draw(spriteBatch, font, gameTime, transform);
+            // Only draw the close button if the menu is open
+            if (_overlay.IsOpen)
+            {
+                _overlay.CloseButton?.Draw(spriteBatch, font, gameTime, transform);
+            }
         }
 
         private void DrawPartyMemberSlots(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, GameTime gameTime)
@@ -167,10 +170,25 @@ namespace ProjectVagabond.UI
                     currentY += 8 + (int)secondaryFont.LineHeight + 4 - 3;
                 }
 
-                // Stats
+                // Stats - Anchored to top of Spells
                 string[] statLabels = { "STR", "INT", "TEN", "AGI" };
                 string[] statKeys = { "Strength", "Intelligence", "Tenacity", "Agility" };
                 int statBlockStartX = centerX - 30;
+
+                // Calculate Y position for Stats based on bottom anchor
+                int bottomPadding = 4;
+                int spellButtonHeight = 8;
+                int numSpells = 4;
+                int totalSpellHeight = numSpells * spellButtonHeight;
+                int spellStartY = bounds.Bottom - bottomPadding - totalSpellHeight;
+
+                int statGap = 2;
+                int statRowHeight = (int)secondaryFont.LineHeight + 1;
+                int numStats = 4;
+                int totalStatHeight = numStats * statRowHeight;
+
+                // Start drawing stats above the spells
+                int statCurrentY = spellStartY - statGap - totalStatHeight;
 
                 for (int s = 0; s < 4; s++)
                 {
@@ -191,7 +209,7 @@ namespace ProjectVagabond.UI
                     Color labelColor = isOccupied ? _overlay.Global.Palette_DarkSun : _overlay.Global.Palette_DarkShadow;
                     if (isOccupied)
                     {
-                        spriteBatch.DrawStringSnapped(secondaryFont, statLabels[s], new Vector2(statBlockStartX, currentY), labelColor);
+                        spriteBatch.DrawStringSnapped(secondaryFont, statLabels[s], new Vector2(statBlockStartX, statCurrentY), labelColor);
                     }
 
                     Texture2D statBarBg = isOccupied ? _overlay.SpriteManager.InventoryStatBarEmpty : _overlay.SpriteManager.InventoryStatBarDisabled;
@@ -199,7 +217,7 @@ namespace ProjectVagabond.UI
                     {
                         float barX = statBlockStartX + 19;
                         float barYOffset = (s == 1 || s == 3) ? 0.5f : 0f;
-                        float barY = currentY + (secondaryFont.LineHeight - 3) / 2f + barYOffset;
+                        float barY = statCurrentY + (secondaryFont.LineHeight - 3) / 2f + barYOffset;
 
                         spriteBatch.DrawSnapped(statBarBg, new Vector2(barX, barY), Color.White);
 
@@ -229,12 +247,10 @@ namespace ProjectVagabond.UI
                             }
                         }
                     }
-                    currentY += (int)secondaryFont.LineHeight + 1;
+                    statCurrentY += statRowHeight;
                 }
 
-                currentY += 2;
-
-                // Spells
+                // Spells (Buttons already positioned by InputHandler)
                 for (int s = 0; s < 4; s++)
                 {
                     int buttonIndex = (i * 4) + s;

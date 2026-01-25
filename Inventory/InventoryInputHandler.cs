@@ -12,10 +12,9 @@ namespace ProjectVagabond.UI
     public class InventoryInputHandler
     {
         private readonly Global _global;
-        private readonly SplitMapInventoryOverlay _overlay;
+        private readonly PartyStatusOverlay _overlay;
 
-        // Updated to 1 argument
-        public InventoryInputHandler(SplitMapInventoryOverlay overlay)
+        public InventoryInputHandler(PartyStatusOverlay overlay)
         {
             _overlay = overlay;
             _global = ServiceLocator.Get<Global>();
@@ -23,14 +22,16 @@ namespace ProjectVagabond.UI
 
         public void InitializeInventoryUI()
         {
-            if (_overlay.InventoryButton == null)
+            // Initialize Close Button (Top Left)
+            if (_overlay.CloseButton == null)
             {
-                var inventoryIcon = _overlay.SpriteManager.SplitMapInventoryButton;
-                var rects = _overlay.SpriteManager.SplitMapInventoryButtonSourceRects;
-                _overlay.InventoryButton = new ImageButton(new Rectangle(2, 2, 16, 16), inventoryIcon, rects[0], rects[1], enableHoverSway: true);
-                _overlay.InventoryButton.OnClick += () => _overlay.TriggerInventoryButtonClicked();
+                var closeIcon = _overlay.SpriteManager.SplitMapCloseInventoryButton;
+                var rects = _overlay.SpriteManager.SplitMapCloseInventoryButtonSourceRects;
+                // Position at 2,2 (Top Left)
+                _overlay.CloseButton = new ImageButton(new Rectangle(2, 2, 16, 16), closeIcon, rects[0], rects[1], enableHoverSway: true);
+                _overlay.CloseButton.OnClick += () => _overlay.TriggerCloseRequested();
             }
-            _overlay.InventoryButton.ResetAnimationState();
+            _overlay.CloseButton.ResetAnimationState();
 
             // --- Setup Party Panels ---
             const int statsPanelHeight = 132;
@@ -39,10 +40,7 @@ namespace ProjectVagabond.UI
             // Center the 4 panels on screen
             int totalWidth = 4 * panelWidth;
             int panelStartX = (Global.VIRTUAL_WIDTH - totalWidth) / 2;
-            int statsPanelY = 200 + 6 + 32 + 1 - 1; // Match previous Y positioning logic
-
-            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-            var defaultFont = ServiceLocator.Get<BitmapFont>();
+            int statsPanelY = 200 + 6 + 32 + 1 - 1;
 
             _overlay.PartySpellButtons.Clear();
 
@@ -56,50 +54,40 @@ namespace ProjectVagabond.UI
                 );
 
                 int centerX = _overlay.PartyMemberPanelAreas[i].Center.X;
-                int currentY = _overlay.PartyMemberPanelAreas[i].Y + 4;
 
-                // Simulate layout to find spell button Y
-                currentY += defaultFont.LineHeight - 2; // Name
-                currentY += 32 + 2 - 6; // Portrait
-                currentY += 8 + secondaryFont.LineHeight + 4 - 3; // HP
+                // --- BOTTOM ALIGNED LAYOUT ---
+                // Anchor spells to the bottom of the panel
+                int bottomPadding = 4;
+                int spellButtonHeight = 8;
+                int numSpells = 4;
+                int totalSpellHeight = numSpells * spellButtonHeight;
 
-                currentY += (int)secondaryFont.LineHeight + 1; // Str
-                currentY += (int)secondaryFont.LineHeight + 1; // Int
-                currentY += (int)secondaryFont.LineHeight + 1; // Ten
-                currentY += (int)secondaryFont.LineHeight + 1; // Agi
-
-                currentY += 2; // Gap
+                int spellStartY = _overlay.PartyMemberPanelAreas[i].Bottom - bottomPadding - totalSpellHeight;
 
                 int spellButtonWidth = 64;
-                int spellButtonHeight = 8;
                 int spellButtonX = centerX - (spellButtonWidth / 2);
-                int spellButtonY = currentY + 2 - 8;
+                int currentSpellY = spellStartY;
 
                 for (int s = 0; s < 4; s++)
                 {
-                    var spellBtn = new SpellEquipButton(new Rectangle(spellButtonX, spellButtonY, spellButtonWidth, spellButtonHeight));
+                    var spellBtn = new SpellEquipButton(new Rectangle(spellButtonX, currentSpellY, spellButtonWidth, spellButtonHeight));
                     _overlay.PartySpellButtons.Add(spellBtn);
-                    spellButtonY += spellButtonHeight;
+                    currentSpellY += spellButtonHeight;
                 }
             }
         }
 
         public void Update(GameTime gameTime, MouseState currentMouseState, KeyboardState currentKeyboardState, bool allowAccess, Matrix cameraTransform)
         {
-            float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
-
-            if (_overlay.InventoryButton != null)
+            // Only update Close Button if the menu is actually open
+            if (_overlay.IsOpen && _overlay.CloseButton != null)
             {
-                bool isVisible = _overlay.IsOpen || allowAccess;
-                if (isVisible)
-                {
-                    _overlay.InventoryButton.IsEnabled = true;
-                    _overlay.InventoryButton.Update(currentMouseState);
-                }
-                else
-                {
-                    _overlay.InventoryButton.ResetAnimationState();
-                }
+                _overlay.CloseButton.IsEnabled = true;
+                _overlay.CloseButton.Update(currentMouseState);
+            }
+            else if (_overlay.CloseButton != null)
+            {
+                _overlay.CloseButton.ResetAnimationState();
             }
 
             if (!_overlay.IsOpen) return;
@@ -140,7 +128,7 @@ namespace ProjectVagabond.UI
                 }
             }
 
-            _overlay.StatCycleTimer += deltaTime;
+            _overlay.StatCycleTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
             if (_overlay.HoveredItemData != _overlay.PreviousHoveredItemData)
             {
                 _overlay.StatCycleTimer = 0f;
@@ -154,7 +142,7 @@ namespace ProjectVagabond.UI
 
             if (_overlay.HoveredItemData != null)
             {
-                _overlay.InfoPanelNameWaveTimer += deltaTime;
+                _overlay.InfoPanelNameWaveTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
                 float duration = TextAnimator.GetSmallWaveDuration(nameLength);
                 if (_overlay.InfoPanelNameWaveTimer > duration + 0.1f) _overlay.InfoPanelNameWaveTimer = 0f;
             }

@@ -9,9 +9,9 @@ namespace ProjectVagabond.UI
     {
         // This class is now largely empty as the item grid logic was removed.
         // Kept for potential future use or tooltip data retrieval if needed.
-        private readonly SplitMapInventoryOverlay _overlay;
+        private readonly PartyStatusOverlay _overlay;
 
-        public InventoryDataProcessor(SplitMapInventoryOverlay overlay)
+        public InventoryDataProcessor(PartyStatusOverlay overlay)
         {
             _overlay = overlay;
         }

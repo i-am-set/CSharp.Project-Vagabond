@@ -14,11 +14,15 @@ namespace ProjectVagabond.UI
     // Simplified State
     internal enum InventoryState { Browse }
 
-    public class SplitMapInventoryOverlay
+    public class PartyStatusOverlay
     {
         public bool IsOpen { get; private set; } = false;
-        public bool IsHovered => InventoryButton?.IsHovered ?? false;
-        public event Action? OnInventoryButtonClicked;
+
+        // FIX: Only report hovered if the menu is actually open.
+        // This prevents the invisible close button from blocking map input.
+        public bool IsHovered => IsOpen && (CloseButton?.IsHovered ?? false);
+
+        public event Action? OnCloseRequested;
 
         internal GameState GameState { get; private set; }
         internal SpriteManager SpriteManager { get; private set; }
@@ -27,7 +31,7 @@ namespace ProjectVagabond.UI
         internal ComponentStore ComponentStore { get; private set; }
 
         // UI Elements
-        internal ImageButton? InventoryButton { get; set; }
+        internal ImageButton? CloseButton { get; set; }
 
         // Party Panels
         internal Rectangle[] PartyMemberPanelAreas { get; } = new Rectangle[4];
@@ -38,7 +42,6 @@ namespace ProjectVagabond.UI
         internal float[] PartySlotTextTimers { get; } = new float[4];
         internal TextEffectType[] PartySlotTextEffects { get; } = new TextEffectType[4];
 
-        // Added missing property
         internal Vector2 InventoryPositionOffset { get; set; } = Vector2.Zero;
 
         // Hover Data
@@ -58,7 +61,7 @@ namespace ProjectVagabond.UI
         private readonly InventoryInputHandler _inputHandler;
         private static readonly Random _rng = new Random();
 
-        public SplitMapInventoryOverlay()
+        public PartyStatusOverlay()
         {
             GameState = ServiceLocator.Get<GameState>();
             SpriteManager = ServiceLocator.Get<SpriteManager>();
@@ -78,7 +81,6 @@ namespace ProjectVagabond.UI
             }
 
             DataProcessor = new InventoryDataProcessor(this);
-            // Fixed constructor calls
             _drawer = new InventoryDrawer(this);
             _inputHandler = new InventoryInputHandler(this);
         }
@@ -96,14 +98,17 @@ namespace ProjectVagabond.UI
         public void Show()
         {
             IsOpen = true;
-            InventoryButton?.SetSprites(SpriteManager.SplitMapCloseInventoryButton, SpriteManager.SplitMapCloseInventoryButtonSourceRects[0], SpriteManager.SplitMapCloseInventoryButtonSourceRects[1]);
+            // Reset Close Button Animation so it doesn't start in a weird state
+            CloseButton?.ResetAnimationState();
             TriggerPartyAnimations();
         }
 
         public void Hide()
         {
             IsOpen = false;
-            InventoryButton?.SetSprites(SpriteManager.SplitMapInventoryButton, SpriteManager.SplitMapInventoryButtonSourceRects[0], SpriteManager.SplitMapInventoryButtonSourceRects[1]);
+            // FIX: Explicitly reset the button state when hiding.
+            // This clears the IsHovered flag, ensuring it doesn't persist.
+            CloseButton?.ResetAnimationState();
         }
 
         public void ForceClose()
@@ -111,9 +116,9 @@ namespace ProjectVagabond.UI
             if (IsOpen) Hide();
         }
 
-        public void TriggerInventoryButtonClicked()
+        public void TriggerCloseRequested()
         {
-            OnInventoryButtonClicked?.Invoke();
+            OnCloseRequested?.Invoke();
         }
 
         public void Update(GameTime gameTime, MouseState currentMouseState, KeyboardState currentKeyboardState, bool allowAccess, Matrix cameraTransform)
