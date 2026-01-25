@@ -3,13 +3,9 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
-using ProjectVagabond.Battle.Abilities;
-using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Items;
-using ProjectVagabond.Particles;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
-using ProjectVagabond.Systems;
 using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
@@ -1320,32 +1316,8 @@ namespace ProjectVagabond.Scenes
 
         private void OnNarrativeChoiceSelected(NarrativeChoice choice)
         {
-            if (string.IsNullOrEmpty(choice.Dice))
-            {
-                ResolveNarrativeChoice(choice, -1);
-            }
-            else
-            {
-                int rollResult = RollDice(choice.Dice);
-                ResolveNarrativeChoice(choice, rollResult);
-            }
-        }
-
-        private int RollDice(string diceNotation)
-        {
-            var match = Regex.Match(diceNotation, @"(\d+)d(\d+)([+-]\d+)?");
-            if (!match.Success) return 0;
-
-            int count = int.Parse(match.Groups[1].Value);
-            int sides = int.Parse(match.Groups[2].Value);
-            int modifier = match.Groups[3].Success ? int.Parse(match.Groups[3].Value) : 0;
-
-            int total = 0;
-            for (int i = 0; i < count; i++)
-            {
-                total += _random.Next(1, sides + 1);
-            }
-            return total + modifier;
+            int rollResult = _random.Next(1, 7);
+            ResolveNarrativeChoice(choice, rollResult);
         }
 
         private void ResolveNarrativeChoice(NarrativeChoice choice, int diceRoll)
