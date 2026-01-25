@@ -117,7 +117,7 @@ namespace ProjectVagabond.Battle.UI
         {
             // Color: Palette_DarkRust
             Color logColor = _global.Palette_DarkRust;
-            AddLog($"{e.DefeatedCombatant.Name} WAS DEFEATED!", logColor);
+            AddLog($"{e.DefeatedCombatant.Name} WAS DEFEATED", logColor);
         }
 
         private void OnActionFailed(GameEvents.ActionFailed e)
@@ -163,7 +163,7 @@ namespace ProjectVagabond.Battle.UI
         {
             // Color: Palette_DarkestPale
             Color logColor = _global.Palette_DarkestPale;
-            AddLog("ANOTHER ENEMY APPROACHES!", logColor);
+            AddLog("ANOTHER ENEMY APPROACHES", logColor);
         }
 
         public void Draw(SpriteBatch spriteBatch)
