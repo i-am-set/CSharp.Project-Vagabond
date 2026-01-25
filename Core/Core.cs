@@ -8,7 +8,6 @@ using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
-using ProjectVagabond.Dice;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
@@ -30,29 +29,23 @@ namespace ProjectVagabond
 {
     public class Core : Game
     {
-        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
-        // GRAPHICS & CONTENT RESOURCES
-        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
         private BitmapFont _defaultFont;
         private BitmapFont _secondaryFont;
         private BitmapFont _tertiaryFont;
         private Texture2D _pixel;
-        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
-        // RENDERING STATE & POST-PROCESSING
-        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+
         private Rectangle _finalRenderRectangle;
         private Matrix _mouseTransformMatrix;
         private Point _previousResolution;
         private float _finalScale = 1f;
 
         private RenderTarget2D _transitionRenderTarget;
-        private RenderTarget2D _finalCompositeTarget; // High Res (Window Size)
+        private RenderTarget2D _finalCompositeTarget;
         private Effect _crtEffect;
         private BlendState _cursorInvertBlendState;
 
-        // Visual FX Timers
         private float _flashTimer;
         private float _flashDuration;
         private Color _flashColor;
@@ -81,9 +74,6 @@ namespace ProjectVagabond
         public BitmapFont TertiaryFont => _tertiaryFont;
         public float FinalScale => _finalScale;
 
-        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
-        // MANAGERS & SYSTEMS
-        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         private Global _global;
         private GameSettings _settings;
         private SceneManager _sceneManager;
@@ -96,7 +86,6 @@ namespace ProjectVagabond
         private RelicAcquisitionSystem _relicAcquisitionSystem;
 
         private SpriteManager _spriteManager;
-        private DiceRollingSystem _diceRollingSystem;
         private LoadingScreen _loadingScreen;
         private DebugConsole _debugConsole;
         private ProgressionManager _progressionManager;
@@ -107,13 +96,9 @@ namespace ProjectVagabond
         private LootManager _lootManager;
         private ItemTooltipRenderer _itemTooltipRenderer;
 
-        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
-        // GAME LOOP STATE
-        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         private KeyboardState _previousKeyboardState;
         private MouseState _previousMouseState;
         private bool _drawMouseDebugDot = false;
-        private float _physicsTimeAccumulator = 0f;
         private bool _isGameLoaded = false;
         private float _customResolutionSaveTimer = 0f;
         private bool _isCustomResolutionSavePending = false;
@@ -122,9 +107,6 @@ namespace ProjectVagabond
         private Stopwatch _frameStopwatch;
         private TimeSpan _targetElapsedTimeSpan;
 
-        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
-        // NATIVE METHODS
-        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         [DllImport("winmm.dll", EntryPoint = "timeBeginPeriod")]
         private static extern uint TimeBeginPeriod(uint uMilliseconds);
 
@@ -154,10 +136,6 @@ namespace ProjectVagabond
                 try { ShowWindow(Window.Handle, SW_MAXIMIZE); } catch (Exception ex) { Debug.WriteLine($"[Core] Failed to maximize window via User32: {ex.Message}"); }
             }
         }
-
-        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
-        // INITIALIZATION
-        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
         public Core()
         {
@@ -219,11 +197,6 @@ namespace ProjectVagabond
             ServiceLocator.Register<TooltipManager>(_tooltipManager);
             _particleSystemManager = new ParticleSystemManager();
             ServiceLocator.Register<ParticleSystemManager>(_particleSystemManager);
-            ServiceLocator.Register<DicePhysicsController>(new DicePhysicsController());
-            ServiceLocator.Register<DiceSceneRenderer>(new DiceSceneRenderer());
-            ServiceLocator.Register<DiceAnimationController>(new DiceAnimationController());
-            _diceRollingSystem = new DiceRollingSystem();
-            ServiceLocator.Register<DiceRollingSystem>(_diceRollingSystem);
             _gameState = new GameState(noiseManager, componentStore, _global, _spriteManager);
             ServiceLocator.Register<GameState>(_gameState);
             _moveAcquisitionSystem = new MoveAcquisitionSystem();
@@ -335,16 +308,12 @@ namespace ProjectVagabond
             try { _tertiaryFont = Content.Load<BitmapFont>("Fonts/3x4_SimpleOddHeight"); }
             catch { _tertiaryFont = _secondaryFont; }
 
-            // --- PRE-WARM CONTENT ---
-            // Load everything upfront so the "Loading Screen" is just a visual transition, not a disk I/O blocker.
             _spriteManager.LoadEssentialContent();
-            _spriteManager.LoadGameContent(); // Force load all game sprites now
+            _spriteManager.LoadGameContent();
             _backgroundNoiseRenderer.LoadContent();
             BattleDataCache.LoadData(Content);
             _progressionManager.LoadSplits();
-            _diceRollingSystem.Initialize(GraphicsDevice, Content);
 
-            // Pre-load Archetypes
             var archetypeManager = ServiceLocator.Get<ArchetypeManager>();
             archetypeManager.LoadArchetypes("Content/Data/Archetypes.json");
 
@@ -363,7 +332,6 @@ namespace ProjectVagabond
 
         public void ResetGame()
         {
-            _diceRollingSystem.ClearRoll();
             _particleSystemManager.ClearAllEmitters();
             _hapticsManager.StopAll();
             _tooltipManager.Hide();
@@ -436,7 +404,6 @@ namespace ProjectVagabond
             _global.ShowSplitMapGrid = currentKeyboardState.IsKeyDown(Keys.F1);
             _drawMouseDebugDot = currentKeyboardState.IsKeyDown(Keys.F2);
             _global.ShowDebugOverlays = currentKeyboardState.IsKeyDown(Keys.F3);
-            _diceRollingSystem.DebugShowColliders = _global.ShowDebugOverlays;
 
             if (KeyPressed(Keys.F5, currentKeyboardState, _previousKeyboardState)) { ResetGame(); _sceneManager.ChangeScene(GameSceneState.MainMenu, TransitionType.None, TransitionType.None); }
             if (KeyPressed(Keys.F9, currentKeyboardState, _previousKeyboardState)) BattleDebugHelper.RunDamageCalculationTestSuite();
@@ -461,14 +428,6 @@ namespace ProjectVagabond
             if (elapsedSeconds > 0.1f) elapsedSeconds = 0.1f;
 
             float timeScale = _hitstopManager.Update(elapsedSeconds);
-            _physicsTimeAccumulator += (elapsedSeconds * timeScale) * _global.DiceSimulationSpeedMultiplier;
-
-            while (_physicsTimeAccumulator >= Global.FIXED_PHYSICS_TIMESTEP)
-            {
-                _diceRollingSystem.PhysicsStep(Global.FIXED_PHYSICS_TIMESTEP);
-                _particleSystemManager.Update(Global.FIXED_PHYSICS_TIMESTEP);
-                _physicsTimeAccumulator -= Global.FIXED_PHYSICS_TIMESTEP;
-            }
 
             _transitionManager.Update(gameTime);
             _backgroundNoiseRenderer.Update(gameTime);
@@ -477,7 +436,6 @@ namespace ProjectVagabond
             {
                 _loadingScreen.Update(gameTime);
                 _sceneManager.Update(gameTime);
-                if (!_isGameLoaded) _diceRollingSystem.Update(gameTime);
                 return;
             }
 
@@ -494,7 +452,6 @@ namespace ProjectVagabond
             {
                 GameTime scaledGameTime = new GameTime(gameTime.TotalGameTime, TimeSpan.FromSeconds(elapsedSeconds * timeScale));
                 _sceneManager.Update(scaledGameTime);
-                _diceRollingSystem.Update(scaledGameTime);
                 _cursorManager.Update(gameTime);
             }
 
@@ -506,28 +463,18 @@ namespace ProjectVagabond
 
         protected override void Draw(GameTime gameTime)
         {
-            RenderTarget2D diceRenderTarget = null;
-
-            // 1. Render Content to High-Res Target
             GraphicsDevice.SetRenderTarget(_finalCompositeTarget);
 
-            // --- FIX: Don't force black background if loading screen is active.
-            // The loading screen will draw its own background or overlay.
-            // We want the transition to be visible underneath if it's holding.
             bool forceBlackBg = _sceneManager.CurrentActiveScene is StartupScene;
             Color letterboxColor = forceBlackBg ? Color.Black : _global.GameBg;
             GraphicsDevice.Clear(letterboxColor);
 
-            // Calculate Shake Matrix
             var (shakeOffset, shakeRotation, shakeScale) = _hapticsManager.GetTotalShakeParams();
             Vector2 screenCenter = _finalRenderRectangle.Center.ToVector2();
 
-            // Base Transform (Virtual -> Screen)
-            // Scale, then translate to the centered position
             Matrix baseTransform = Matrix.CreateScale(_finalScale, _finalScale, 1.0f) *
                                    Matrix.CreateTranslation(_finalRenderRectangle.X, _finalRenderRectangle.Y, 0);
 
-            // Shake Matrix (Applied in Screen Space)
             Matrix shakeMatrix =
                 Matrix.CreateTranslation(-screenCenter.X, -screenCenter.Y, 0) *
                 Matrix.CreateScale(shakeScale, shakeScale, 1.0f) *
@@ -535,34 +482,16 @@ namespace ProjectVagabond
                 Matrix.CreateTranslation(screenCenter.X, screenCenter.Y, 0) *
                 Matrix.CreateTranslation(shakeOffset.X * _finalScale, shakeOffset.Y * _finalScale, 0);
 
-            // Combined Matrix: Base Transform first, then Shake
             Matrix finalSceneTransform = baseTransform * shakeMatrix;
 
-            // Round translation to prevent sub-pixel shimmering of the *entire screen*
             finalSceneTransform.M41 = MathF.Round(finalSceneTransform.M41);
             finalSceneTransform.M42 = MathF.Round(finalSceneTransform.M42);
 
-            // --- DRAW SCENE CONTENT ---
-            // Only draw scene if NOT loading (or if loading is transparent, but here we assume loading replaces scene logic)
-            // Actually, we want to draw the scene BEHIND the transition if possible, but if loading, scene might be unstable.
-            // If loading, we just draw the loading screen later.
             if (!_loadingScreen.IsActive && !_sceneManager.IsLoadingBetweenScenes && !_sceneManager.IsHoldingBlack)
             {
-                // Draw Game Scene (Virtual Coords -> Scaled to Screen)
                 _sceneManager.Draw(_spriteBatch, _defaultFont, gameTime, finalSceneTransform);
-
-                // Render Dice (returns a target, doesn't draw to current)
-                diceRenderTarget = _diceRollingSystem.Draw(_defaultFont);
-
-                if (diceRenderTarget != null)
-                {
-                    _spriteBatch.Begin(samplerState: SamplerState.PointClamp, transformMatrix: finalSceneTransform);
-                    _spriteBatch.Draw(diceRenderTarget, Vector2.Zero, Color.White);
-                    _spriteBatch.End();
-                }
             }
 
-            // --- DRAW TRANSITIONS ---
             if (_transitionManager.IsTransitioning)
             {
                 GraphicsDevice.SetRenderTarget(_transitionRenderTarget);
@@ -578,7 +507,6 @@ namespace ProjectVagabond
                 _spriteBatch.End();
             }
 
-            // --- DRAW LOADING SCREEN (ON TOP OF TRANSITION) ---
             if (_loadingScreen.IsActive)
             {
                 _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, finalSceneTransform);
@@ -586,7 +514,6 @@ namespace ProjectVagabond
                 _spriteBatch.End();
             }
 
-            // --- DRAW FULLSCREEN UI ---
             if (!_loadingScreen.IsActive)
             {
                 _sceneManager.CurrentActiveScene?.DrawFullscreenUI(_spriteBatch, _defaultFont, gameTime, finalSceneTransform);
@@ -600,18 +527,12 @@ namespace ProjectVagabond
                 }
             }
 
-            // --- DRAW CURSOR (Moved Here) ---
-            // Draw directly to the composite target using Identity matrix (Screen Space)
-            // This ensures it is part of the texture that gets the CRT shader applied.
-            // We use Matrix.Identity because Mouse.GetState() returns screen coordinates.
             _spriteBatch.Begin(blendState: _cursorInvertBlendState, samplerState: SamplerState.PointClamp, transformMatrix: Matrix.Identity);
             _cursorManager.Draw(_spriteBatch, Mouse.GetState().Position.ToVector2(), _finalScale);
             _spriteBatch.End();
 
-            // --- APPLY BACKGROUND NOISE ---
             _backgroundNoiseRenderer.Apply(GraphicsDevice, _finalCompositeTarget, gameTime, _finalScale);
 
-            // --- FINAL PASS TO BACKBUFFER (CRT) ---
             GraphicsDevice.SetRenderTarget(null);
             GraphicsDevice.Clear(letterboxColor);
 
@@ -657,7 +578,6 @@ namespace ProjectVagabond
 
             _spriteBatch.End();
 
-            // --- DEBUG OVERLAYS ---
             if (!_loadingScreen.IsActive)
             {
                 _spriteBatch.Begin(samplerState: SamplerState.PointClamp);

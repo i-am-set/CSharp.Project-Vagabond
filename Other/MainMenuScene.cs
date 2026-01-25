@@ -5,7 +5,6 @@ using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
-using ProjectVagabond.Dice;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
@@ -42,9 +41,7 @@ namespace ProjectVagabond.Scenes
         private ConfirmationDialog _confirmationDialog;
         private bool _uiInitialized = false;
 
-        // Tuning
-        private const float BUTTON_STAGGER_DELAY = 0.15f; // Time between each button starting
-        // BUTTON_ANIM_DURATION is no longer constant, it's calculated dynamically
+        private const float BUTTON_STAGGER_DELAY = 0.15f;
 
         public MainMenuScene()
         {
@@ -87,14 +84,10 @@ namespace ProjectVagabond.Scenes
             Vector2 settingsSize = secondaryFont.MeasureString(settingsText);
             Vector2 exitSize = secondaryFont.MeasureString(exitText);
 
-            // Calculate widths independently so buttons don't affect each other
             int playWidth = (int)playSize.X + horizontalPadding * 2;
             int settingsWidth = (int)settingsSize.X + horizontalPadding * 2;
             int exitWidth = (int)exitSize.X + horizontalPadding * 2;
 
-            // Use a fixed X coordinate to anchor the left side.
-            // This value (48) matches the original visual position for the default text length.
-            // Original Calc: ((320 - ~60) / 2) - 83 ~= 47/48 pixels.
             int buttonX = 48;
 
             int playHeight = (int)playSize.Y + verticalPadding * 2;
@@ -108,8 +101,8 @@ namespace ProjectVagabond.Scenes
                 TextRenderOffset = new Vector2(0, -1),
                 HoverAnimation = HoverAnimationType.SlideAndHold,
                 EnableTextWave = true,
-                AlwaysAnimateText = true, // Start animating immediately
-                WaveEffectType = TextEffectType.TypewriterPop // Start with Typewriter effect
+                AlwaysAnimateText = true,
+                WaveEffectType = TextEffectType.TypewriterPop
             };
             playButton.OnClick += () =>
             {
@@ -117,22 +110,18 @@ namespace ProjectVagabond.Scenes
                 var core = ServiceLocator.Get<Core>();
                 var gameState = ServiceLocator.Get<GameState>();
 
-                // --- UPDATED LOADING TASKS ---
                 var loadingTasks = new List<LoadingTask>
                 {
                     new GenericTask("Initializing world...", () =>
                     {
                         gameState.InitializeWorld();
-                    }),
-                    new DiceWarmupTask()
+                    })
                 };
 
                 core.SetGameLoaded(true);
 
-                // Use Random Transition
                 var transition = _transitionManager.GetRandomTransition();
 
-                // Pass tasks to ChangeScene. The SceneManager will handle the transition -> load -> swap flow.
                 _sceneManager.ChangeScene(GameSceneState.Split, transition, transition, 0f, loadingTasks);
             };
             _buttons.Add(playButton);
@@ -201,37 +190,30 @@ namespace ProjectVagabond.Scenes
             _currentInputDelay = _inputDelay;
             _previousKeyboardState = Keyboard.GetState();
 
-            // Reset Animation State
             _buttonAnimators.Clear();
             for (int i = 0; i < _buttons.Count; i++)
             {
                 _buttons[i].ResetAnimationState();
 
-                // Reset to Typewriter mode for entrance
                 _buttons[i].WaveEffectType = TextEffectType.TypewriterPop;
                 _buttons[i].AlwaysAnimateText = true;
 
-                // Calculate dynamic duration based on text length to ensure the animation completes
-                // before switching state.
-                // Formula: (Length * Delay) + PopDuration + Buffer
                 float textDuration = (_buttons[i].Text.Length * TextAnimationSettings.TypewriterDelay) + TextAnimationSettings.TypewriterDuration + 0.1f;
 
                 var animator = new UIAnimator
                 {
                     EntryStyle = EntryExitStyle.SwoopLeft,
                     ExitStyle = EntryExitStyle.Pop,
-                    DurationIn = textDuration, // Set duration to match text length
+                    DurationIn = textDuration,
                     DurationOut = 0.5f
                 };
 
-                // Hook up completion event to switch to standard Wave effect
-                int index = i; // Capture index for closure
+                int index = i;
                 animator.OnInComplete += () => {
-                    _buttons[index].AlwaysAnimateText = false; // Stop animating when idle
-                    _buttons[index].WaveEffectType = TextEffectType.Wave; // Switch to Wave for hover
+                    _buttons[index].AlwaysAnimateText = false;
+                    _buttons[index].WaveEffectType = TextEffectType.Wave;
                 };
 
-                // Stagger the start of each button
                 animator.Show(delay: i * BUTTON_STAGGER_DELAY);
                 _buttonAnimators.Add(animator);
             }
@@ -282,13 +264,11 @@ namespace ProjectVagabond.Scenes
 
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            // Block all input and logic if the transition is still active.
             if (_transitionManager.IsTransitioning)
             {
                 return;
             }
 
-            // Update Animators
             foreach (var animator in _buttonAnimators)
             {
                 animator.Update(dt);
@@ -322,8 +302,6 @@ namespace ProjectVagabond.Scenes
 
             for (int i = 0; i < _buttons.Count; i++)
             {
-                // Only allow interaction if the button is fully interactive (Idle/Hovered/Pressed)
-                // This prevents interaction during the entrance animation.
                 if (_buttonAnimators[i].IsInteractive)
                 {
                     _buttons[i].Update(currentMouseState);
@@ -334,7 +312,6 @@ namespace ProjectVagabond.Scenes
                 }
                 else
                 {
-                    // Force hover off if not interactive to prevent visual glitches
                     _buttons[i].IsHovered = false;
                 }
             }
@@ -376,7 +353,6 @@ namespace ProjectVagabond.Scenes
                     _sceneManager.LastInputDevice = InputDevice.Keyboard;
                     var selectedButton = _buttons[_selectedButtonIndex];
 
-                    // Only trigger if animation is fully complete (Interactive)
                     if (_buttonAnimators[_selectedButtonIndex].IsInteractive)
                     {
                         if (selectedButton.IsHovered)
@@ -407,7 +383,6 @@ namespace ProjectVagabond.Scenes
 
             spriteBatch.DrawSnapped(_spriteManager.LogoSprite, new Vector2(screenWidth / 2 - _spriteManager.LogoSprite.Width / 2, 25), Color.White);
 
-            // End the main batch to allow individual button transforms
             spriteBatch.End();
 
             for (int i = 0; i < _buttons.Count; i++)
@@ -415,7 +390,6 @@ namespace ProjectVagabond.Scenes
                 var state = _buttonAnimators[i].GetVisualState();
                 if (!state.IsVisible) continue;
 
-                // Create local transformation matrix for this button
                 Vector2 center = _buttons[i].Bounds.Center.ToVector2();
                 Matrix animMatrix = Matrix.CreateTranslation(-center.X, -center.Y, 0) *
                                     Matrix.CreateRotationZ(state.Rotation) *
@@ -423,10 +397,8 @@ namespace ProjectVagabond.Scenes
                                     Matrix.CreateTranslation(center.X, center.Y, 0) *
                                     Matrix.CreateTranslation(state.Offset.X, state.Offset.Y, 0);
 
-                // Combine with global transform
                 Matrix finalTransform = animMatrix * transform;
 
-                // Start a new batch for this specific button with its unique transform
                 spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: finalTransform);
 
                 bool forceHover = (i == _selectedButtonIndex) && (_sceneManager.LastInputDevice == InputDevice.Keyboard || keyboardNavigatedLastFrame);
@@ -435,12 +407,10 @@ namespace ProjectVagabond.Scenes
                 spriteBatch.End();
             }
 
-            // Restart the main batch for the rest of the UI (Arrows, Dialogs)
             spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
 
             if (_selectedButtonIndex >= 0 && _selectedButtonIndex < _buttons.Count)
             {
-                // Only draw arrow if button is fully visible
                 var state = _buttonAnimators[_selectedButtonIndex].GetVisualState();
                 if (state.IsVisible && state.Scale.X >= 0.95f)
                 {

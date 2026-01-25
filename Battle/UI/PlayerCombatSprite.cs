@@ -387,45 +387,6 @@ namespace ProjectVagabond.Battle.UI
                 // Draw Highlight Body
                 Color hColor = highlightColor ?? Color.Yellow;
                 spriteBatch.DrawSnapped(silhouetteToDraw, mainDrawPos, sourceRectangle, hColor, rotation, mainOrigin, finalScale, spriteEffects, 0.5f);
-
-                // Draw Indicator ONLY if the color is Yellow (The "Flash" state)
-                if (hColor == Color.Yellow)
-                {
-                    var indicator = ServiceLocator.Get<SpriteManager>().TargetingIndicatorSprite;
-                    if (indicator != null && gameTime != null)
-                    {
-                        // Calculate Visual Center Offset
-                        Vector2 visualCenterOffset = ServiceLocator.Get<SpriteManager>().GetVisualCenterOffset(_archetypeId);
-
-                        // Base center of the sprite rect
-                        Vector2 spriteCenter = new Vector2(topLeftPosition.X + _frameWidth / 2f, topLeftPosition.Y + _frameHeight / 2f);
-
-                        // Apply visual center offset
-                        // X is 0 (Geometric Center), Y is Visual Center (center of mass)
-                        Vector2 targetCenter = new Vector2(spriteCenter.X, spriteCenter.Y + visualCenterOffset.Y);
-
-                        // Apply Animation Math (Perlin Noise)
-                        float t = (float)gameTime.TotalGameTime.TotalSeconds * global.TargetIndicatorNoiseSpeed;
-
-                        // FIX: Scramble the seed significantly to ensure different targets have independent movement
-                        int seed = (combatant.CombatantID.GetHashCode() + 1000) * 93821;
-
-                        // Noise lookups (offsets ensure different axes don't sync)
-                        float nX = _swayNoise.Noise(t, seed);
-                        float nY = _swayNoise.Noise(t, seed + 100);
-
-                        float swayX = nX * global.TargetIndicatorOffsetX;
-                        float swayY = nY * global.TargetIndicatorOffsetY;
-
-                        float indRotation = 0f;
-                        float indicatorScale = 1.0f;
-
-                        Vector2 animatedPos = targetCenter + new Vector2(swayX, swayY) + shakeOffset;
-                        Vector2 indOrigin = new Vector2(indicator.Width / 2f, indicator.Height / 2f);
-
-                        spriteBatch.DrawSnapped(indicator, animatedPos, null, Color.White, 0f, indOrigin, 1.0f, SpriteEffects.None, 0f);
-                    }
-                }
             }
             else
             {

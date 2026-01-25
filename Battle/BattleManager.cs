@@ -6,7 +6,6 @@ using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
-using ProjectVagabond.Dice;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;

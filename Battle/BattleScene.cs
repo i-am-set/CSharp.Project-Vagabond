@@ -6,7 +6,6 @@ using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
-using ProjectVagabond.Dice;
 using ProjectVagabond.Items;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Progression;
@@ -40,7 +39,7 @@ namespace ProjectVagabond.Scenes
         private MoveAnimationManager _moveAnimationManager;
         private BattleInputHandler _inputHandler;
         private AlertManager _alertManager;
-        private BattleLogManager _battleLogManager; // NEW
+        private BattleLogManager _battleLogManager;
         private ImageButton _settingsButton;
         private ComponentStore _componentStore;
         private SceneManager _sceneManager;
@@ -53,7 +52,6 @@ namespace ProjectVagabond.Scenes
         private ParticleSystemManager _particleSystemManager;
         private readonly TransitionManager _transitionManager;
         private readonly ProgressionManager _progressionManager;
-        private readonly DiceRollingSystem _diceRollingSystem;
 
         private List<int> _enemyEntityIds = new List<int>();
         private BattleManager.BattlePhase _previousBattlePhase;
@@ -137,7 +135,6 @@ namespace ProjectVagabond.Scenes
             _particleSystemManager = ServiceLocator.Get<ParticleSystemManager>();
             _transitionManager = ServiceLocator.Get<TransitionManager>();
             _progressionManager = ServiceLocator.Get<ProgressionManager>();
-            _diceRollingSystem = ServiceLocator.Get<DiceRollingSystem>();
         }
 
         public override Rectangle GetAnimatedBounds()
@@ -154,7 +151,7 @@ namespace ProjectVagabond.Scenes
             _moveAnimationManager = new MoveAnimationManager();
             _inputHandler = new BattleInputHandler();
             _alertManager = new AlertManager();
-            _battleLogManager = new BattleLogManager(); // Initialize Log Manager
+            _battleLogManager = new BattleLogManager();
             _lootScreen = new LootScreen();
         }
 
@@ -167,7 +164,6 @@ namespace ProjectVagabond.Scenes
             _moveAnimationManager.SkipAll();
             _alertManager.Reset();
 
-            // --- FIX: Reset and Subscribe Log Manager ---
             _battleLogManager.Reset();
             _battleLogManager.Subscribe();
 
@@ -255,20 +251,18 @@ namespace ProjectVagabond.Scenes
         public override void Exit()
         {
             base.Exit();
-            _diceRollingSystem.OnRollCompleted -= OnDiceRollCompleted;
             if (BattleSetup.ReturnSceneState != GameSceneState.Split)
             {
                 _progressionManager.ClearCurrentSplitMap();
             }
             _lootScreen.Reset();
             UnsubscribeFromEvents();
-            _battleLogManager.Unsubscribe(); // Unsubscribe Log Manager
+            _battleLogManager.Unsubscribe();
             CleanupEntities();
             CleanupPlayerState();
             ServiceLocator.Unregister<BattleManager>();
         }
 
-        // ... (Rest of the file remains unchanged)
         private void SubscribeToEvents()
         {
             EventBus.Subscribe<GameEvents.ActionDeclared>(OnActionDeclared);
@@ -299,8 +293,6 @@ namespace ProjectVagabond.Scenes
             _inputHandler.OnMoveTargetSelected += OnPlayerMoveTargetSelected;
             _inputHandler.OnBackRequested += () => _uiManager.GoBack();
             if (_settingsButton != null) _settingsButton.OnClick -= OpenSettings;
-
-            _diceRollingSystem.OnRollCompleted += OnDiceRollCompleted;
         }
 
         private void UnsubscribeFromEvents()
@@ -333,11 +325,7 @@ namespace ProjectVagabond.Scenes
             _inputHandler.OnMoveTargetSelected -= OnPlayerMoveTargetSelected;
             _inputHandler.OnBackRequested -= () => _uiManager.GoBack();
             if (_settingsButton != null) _settingsButton.OnClick -= OpenSettings;
-
-            _diceRollingSystem.OnRollCompleted -= OnDiceRollCompleted;
         }
-
-        private void OnDiceRollCompleted(DiceRollResult result) { }
 
         private void InitializeSettingsButton()
         {
@@ -351,7 +339,8 @@ namespace ProjectVagabond.Scenes
 
                 _settingsButton = new ImageButton(new Rectangle(offScreenX, 2, buttonSize, buttonSize), sheet, rects[0], rects[1], enableHoverSway: true)
                 {
-                    UseScreenCoordinates = false
+                    UseScreenCoordinates = false,
+                    TriggerHapticOnHover = true
                 };
             }
 
@@ -446,7 +435,6 @@ namespace ProjectVagabond.Scenes
                 PortraitIndex = member.PortraitIndex
             };
 
-            // Apply Effective Stats (Calculated via PlayerState which now checks Global Relics)
             combatant.Stats.MaxHP = _gameState.PlayerState.GetEffectiveStat(member, "MaxHP");
             combatant.Stats.MaxMana = _gameState.PlayerState.GetEffectiveStat(member, "MaxMana");
             combatant.Stats.Strength = _gameState.PlayerState.GetEffectiveStat(member, "Strength");
@@ -454,20 +442,16 @@ namespace ProjectVagabond.Scenes
             combatant.Stats.Tenacity = _gameState.PlayerState.GetEffectiveStat(member, "Tenacity");
             combatant.Stats.Agility = _gameState.PlayerState.GetEffectiveStat(member, "Agility");
 
-            // Sync current values
             combatant.Stats.CurrentHP = member.CurrentHP;
             combatant.Stats.CurrentMana = member.CurrentMana;
             combatant.VisualHP = combatant.Stats.CurrentHP;
 
-            // 1. Apply Intrinsic Passive Abilities
             if (member.IntrinsicAbilities != null && member.IntrinsicAbilities.Count > 0)
             {
                 var intrinsicAbilities = AbilityFactory.CreateAbilitiesFromData(member.IntrinsicAbilities, new Dictionary<string, int>());
                 combatant.RegisterAbilities(intrinsicAbilities);
             }
 
-            // 2. Apply Global Relics (Isaac Style)
-            // Every party member gets the benefits of the global relic collection
             foreach (var relicId in _gameState.PlayerState.GlobalRelics)
             {
                 if (BattleDataCache.Relics.TryGetValue(relicId, out var relicData))
@@ -478,7 +462,6 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            // 3. Narration Data
             var data = BattleDataCache.PartyMembers.Values.FirstOrDefault(p => p.Name == member.Name);
             if (data != null)
             {
@@ -763,36 +746,24 @@ namespace ProjectVagabond.Scenes
                 return;
             }
 
-            // --- SMART CLICK LOGIC ---
             bool clickDetected = UIInputManager.CanProcessMouseClick() && currentMouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed;
 
             if (clickDetected)
             {
-                // 1. If Narrator is busy (typing), finish text instantly.
                 if (_uiManager.IsBusy && !_uiManager.IsWaitingForInput)
                 {
-                    // The BattleNarrator handles this internally in its Update, 
-                    // but we consume the click here to prevent it from triggering other things.
-                    // UIInputManager.ConsumeMouseClick() is called inside BattleNarrator.Update if it detects a click.
-                    // So we don't need to do anything here, just let the UI update run.
                 }
-                // 2. If Narrator is waiting for input, advance.
                 else if (_uiManager.IsWaitingForInput)
                 {
-                    // Again, handled by BattleNarrator.Update.
                 }
-                // 3. If Blocking Animations are playing, speed them up.
                 else if (_animationManager.IsBlockingAnimation || _moveAnimationManager.IsAnimating)
                 {
-                    // Fast-forward animations
                     _animationManager.CompleteBlockingAnimations(_battleManager.AllCombatants);
                     _moveAnimationManager.CompleteCurrentAnimation();
                     UIInputManager.ConsumeMouseClick();
                 }
-                // 4. If Idle, advance logic.
                 else
                 {
-                    // Only advance if we are in a phase that waits (like CheckForDefeat or EndOfTurn)
                     if (_battleManager.CurrentPhase == BattleManager.BattlePhase.CheckForDefeat ||
                         _battleManager.CurrentPhase == BattleManager.BattlePhase.EndOfTurn ||
                         _battleManager.CurrentPhase == BattleManager.BattlePhase.Reinforcement)
@@ -803,34 +774,23 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            // --- AUTOMATIC ADVANCE LOGIC ---
-            // If not busy, not animating, and not waiting for input, try to advance logic automatically after a delay?
-            // Or just let the BattleManager handle it?
-            // The BattleManager now waits for RequestNextPhase.
-            // We should auto-advance if there's nothing to see.
-
             bool isUiBusy = _uiManager.IsBusy;
             bool isAnimBusy = _animationManager.IsBlockingAnimation;
             bool isMoveAnimBusy = _moveAnimationManager.IsAnimating;
             bool isPendingBusy = _pendingAnimations.Any();
             bool isSwitching = _switchSequenceState != SwitchSequenceState.None;
 
-            // If everything is quiet, we can advance.
             if (!isUiBusy && !isAnimBusy && !isMoveAnimBusy && !isPendingBusy && !isSwitching)
             {
-                // We can add a small delay here if we want "breathing room" between turns.
-                // For now, let's just advance.
                 _battleManager.RequestNextPhase();
             }
 
-            // Process pending animations (like "Show Damage" callbacks)
             if (!_uiManager.IsBusy && !_animationManager.IsBlockingAnimation && _pendingAnimations.Any())
             {
                 var nextAnimation = _pendingAnimations.Dequeue();
                 nextAnimation.Invoke();
             }
 
-            // Watchdog for softlocks
             bool stateChanged = _battleManager.CurrentPhase != _lastFramePhase || isUiBusy != _wasUiBusyLastFrame || isAnimBusy != _wasAnimatingLastFrame;
             if (!stateChanged && !_isBattleOver && !_uiManager.IsWaitingForInput) _watchdogTimer += dt; else _watchdogTimer = 0f;
 
@@ -843,7 +803,7 @@ namespace ProjectVagabond.Scenes
                 _pendingAnimations.Clear();
                 _isWaitingForMultiHitDelay = false;
                 _switchSequenceState = SwitchSequenceState.None;
-                _battleManager.ForceAdvance(); // Use ForceAdvance as a last resort
+                _battleManager.ForceAdvance();
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[warning]Combat stalled. Watchdog forced advance." });
                 _watchdogTimer = 0f;
             }
@@ -852,8 +812,6 @@ namespace ProjectVagabond.Scenes
             _wasUiBusyLastFrame = isUiBusy;
             _wasAnimatingLastFrame = isAnimBusy;
 
-            // Update BattleManager (Logic)
-            // We don't need to pass CanAdvance anymore, as we call RequestNextPhase explicitly.
             _battleManager.Update(dt);
 
             if (_isWaitingForActionExecution)
@@ -880,7 +838,6 @@ namespace ProjectVagabond.Scenes
                 _uiManager.HideAllMenus();
                 var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
                 bool playerWon = player != null && !player.IsDefeated;
-                // Removed narration calls
             }
 
             if (_battleManager.CurrentPhase == BattleManager.BattlePhase.AnimatingMove && !_moveAnimationManager.IsAnimating)
@@ -964,7 +921,6 @@ namespace ProjectVagabond.Scenes
 
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
 
-            // --- DRAW BATTLE LOG (Underneath everything) ---
             _battleLogManager.Draw(spriteBatch);
 
             if (_roundAnimState != RoundAnimState.Hidden)
@@ -1025,11 +981,7 @@ namespace ProjectVagabond.Scenes
                     _moveAnimationManager.Draw(sb);
                     _uiManager.Draw(sb, font, gameTime, Matrix.Identity);
                     _animationManager.DrawDamageIndicators(sb, ServiceLocator.Get<Core>().SecondaryFont);
-
-                    // --- NEW: Draw Ability Indicators in Overlay ---
-                    // This ensures they are visible even during an impact flash
                     _animationManager.DrawAbilityIndicators(sb, ServiceLocator.Get<Core>().SecondaryFont);
-
                     sb.End();
                 });
             }
@@ -1038,9 +990,6 @@ namespace ProjectVagabond.Scenes
                 _moveAnimationManager.Draw(spriteBatch);
                 _uiManager.Draw(spriteBatch, font, gameTime, transform);
                 _animationManager.DrawDamageIndicators(spriteBatch, ServiceLocator.Get<Core>().SecondaryFont);
-
-                // --- NEW: Draw Ability Indicators ---
-                // Drawn last to appear on top of UI
                 _animationManager.DrawAbilityIndicators(spriteBatch, ServiceLocator.Get<Core>().SecondaryFont);
             }
         }
@@ -1137,77 +1086,6 @@ namespace ProjectVagabond.Scenes
             _isWaitingForActionExecution = true;
             _actionExecutionTimer = 0f;
             _currentActor = e.Actor;
-            // Removed narration calls
-        }
-
-        private string GetSmartName(BattleCombatant combatant)
-        {
-            string name = combatant.Name.ToUpper();
-            if (!combatant.IsPlayerControlled && _battleManager != null)
-            {
-                var activeEnemies = _battleManager.AllCombatants.Where(c => !c.IsPlayerControlled && c.IsActiveOnField && !c.IsDefeated).ToList();
-                if (activeEnemies.Count(c => c.Name == combatant.Name) > 1)
-                {
-                    if (combatant.BattleSlot == 0) name = name + " [small][cPrefix]#1[/][/]";
-                    else if (combatant.BattleSlot == 1) name = name + " [small][cPrefix]#2[/][/]";
-                }
-            }
-            return name;
-        }
-
-        private string ParseActionPhrase(string phrase, BattleCombatant user, BattleCombatant? target, string? itemName)
-        {
-            string processedPhrase = _randomWordRegex.Replace(phrase, (match) =>
-            {
-                var options = match.Value.Split('$');
-                return options[_random.Next(options.Length)].Replace('_', ' ');
-            });
-            var sb = new StringBuilder(processedPhrase);
-            string userProperNounPrefix = user.IsProperNoun ? "" : "THE ";
-            sb.Replace("{IsUserProperNoun}", userProperNounPrefix);
-            sb.Replace("{user}", GetSmartName(user));
-            string userColor = user.IsPlayerControlled ? "[cDefault]" : "[cEnemy]";
-            sb.Replace("[cSlot]{user}", $"{userColor}{{user}}");
-            if (target != null)
-            {
-                string targetColor = target.IsPlayerControlled ? "[cDefault]" : "[cEnemy]";
-                sb.Replace("[cSlot]{target}", $"{targetColor}{{target}}");
-            }
-            else sb.Replace("[cSlot]{target}", "{target}");
-            sb.Replace("{IsUserProperNoun}", userProperNounPrefix);
-            sb.Replace("{user}", GetSmartName(user));
-            string userPronoun = "THEIR";
-            string userReflexive = "THEMSELVES";
-            switch (user.Gender)
-            {
-                case Gender.Male: userPronoun = "HIS"; userReflexive = "HIMSELF"; break;
-                case Gender.Female: userPronoun = "HER"; userReflexive = "HERSELF"; break;
-                case Gender.Thing: userPronoun = "ITS"; userReflexive = "ITSELF"; break;
-            }
-            sb.Replace("{user_pronoun}", userPronoun);
-            sb.Replace("{user_reflexive}", userReflexive);
-            sb.Replace("{item_name}", itemName != null ? itemName.ToUpper() : "HANDS");
-            string targetPronoun = "THEIR";
-            if (target != null)
-            {
-                sb.Replace("{target}", GetSmartName(target));
-                string properNounPrefix = target.IsProperNoun ? "" : "THE ";
-                sb.Replace("{IsTargetProperNoun}", properNounPrefix);
-                switch (target.Gender)
-                {
-                    case Gender.Male: targetPronoun = "HIS"; break;
-                    case Gender.Female: targetPronoun = "HER"; break;
-                    case Gender.Thing: targetPronoun = "ITS"; break;
-                }
-            }
-            else
-            {
-                sb.Replace("{target}", "THE AIR");
-                sb.Replace("{IsTargetProperNoun}", "");
-                targetPronoun = "ITS";
-            }
-            sb.Replace("{target_pronoun}", targetPronoun);
-            return sb.ToString();
         }
 
         private void OnMoveAnimationTriggered(GameEvents.MoveAnimationTriggered e)
@@ -1217,7 +1095,6 @@ namespace ProjectVagabond.Scenes
 
         private void OnMultiHitActionCompleted(GameEvents.MultiHitActionCompleted e)
         {
-            // Removed narration calls
             _isWaitingForMultiHitDelay = false;
             _multiHitDelayTimer = 0f;
         }
@@ -1233,7 +1110,7 @@ namespace ProjectVagabond.Scenes
             {
                 if (e.DamageResults[i].WasGraze) grazedTargets.Add(e.Targets[i]);
             }
-            // Removed narration calls for graze
+
             for (int i = 0; i < e.Targets.Count; i++)
             {
                 var target = e.Targets[i];
@@ -1287,7 +1164,6 @@ namespace ProjectVagabond.Scenes
                 if (result.WasCritical)
                 {
                     _animationManager.StartDamageIndicator(target.CombatantID, "CRITICAL HIT", hudPosition, ServiceLocator.Get<Global>().CritcalHitIndicatorColor);
-                    // Removed narration calls
                 }
                 if (result.WasProtected) _animationManager.StartProtectedIndicator(target.CombatantID, hudPosition);
                 var font = ServiceLocator.Get<Core>().SecondaryFont;
@@ -1317,14 +1193,12 @@ namespace ProjectVagabond.Scenes
                 Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(e.Target, _battleManager.AllCombatants);
                 _animationManager.StartHealNumberIndicator(e.Target.CombatantID, e.HealAmount, hudPosition);
             };
-            // Removed narration calls, execute visuals immediately
             playVisuals();
         }
 
         private void OnCombatantManaRestored(GameEvents.CombatantManaRestored e)
         {
             e.Target.ManaBarVisibleTimer = 6.0f;
-            // Removed narration calls
             _animationManager.StartManaRecoveryAnimation(e.Target.CombatantID, e.ManaBefore, e.ManaAfter);
         }
 
@@ -1342,7 +1216,6 @@ namespace ProjectVagabond.Scenes
                 _core.TriggerScreenFlashSequence(_global.Palette_Rust);
                 _hapticsManager.TriggerWobble(intensity: 10.0f, duration: 0.75f, frequency: 120f);
             }
-            // Removed narration calls
             _animationManager.StartHealthLossAnimation(e.Actor.CombatantID, e.Actor.VisualHP, e.Actor.Stats.CurrentHP);
             _animationManager.StartHealthAnimation(e.Actor.CombatantID, (int)e.Actor.VisualHP, e.Actor.Stats.CurrentHP);
             if (!e.Actor.IsPlayerControlled) _animationManager.StartHitFlashAnimation(e.Actor.CombatantID);
@@ -1352,20 +1225,17 @@ namespace ProjectVagabond.Scenes
 
         private void OnCombatantDefeated(GameEvents.CombatantDefeated e)
         {
-            // Removed narration calls
             TriggerDeathAnimation(e.DefeatedCombatant);
             if (!e.DefeatedCombatant.IsPlayerControlled)
             {
                 int coinAmount = e.DefeatedCombatant.CoinReward;
                 _gameState.PlayerState.Coin += coinAmount;
-                // Removed narration calls
             }
         }
 
         private void OnActionFailed(GameEvents.ActionFailed e)
         {
             _currentActor = e.Actor;
-            // Removed narration calls
             if (e.Reason == "stunned") _renderer.TriggerStatusIconHop(e.Actor.CombatantID, StatusEffectType.Stun);
             else if (e.Reason == "silenced") _renderer.TriggerStatusIconHop(e.Actor.CombatantID, StatusEffectType.Silence);
         }
@@ -1380,7 +1250,6 @@ namespace ProjectVagabond.Scenes
                     _core.TriggerScreenFlashSequence(_global.Palette_Rust);
                     _hapticsManager.TriggerWobble(intensity: 10.0f, duration: 0.75f, frequency: 120f);
                 }
-                // Removed narration calls
                 _animationManager.StartHealthLossAnimation(e.Combatant.CombatantID, e.Combatant.VisualHP, e.Combatant.Stats.CurrentHP);
                 _animationManager.StartHealthAnimation(e.Combatant.CombatantID, (int)e.Combatant.VisualHP, e.Combatant.Stats.CurrentHP);
                 _renderer.TriggerStatusIconHop(e.Combatant.CombatantID, e.EffectType);
@@ -1398,14 +1267,8 @@ namespace ProjectVagabond.Scenes
         private void OnAbilityActivated(GameEvents.AbilityActivated e)
         {
             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[debug]Ability Activated: {e.Ability.Name} ({e.Combatant.Name})" });
-
-            // Calculate position
             Vector2 hudPos = _renderer.GetCombatantHudCenterPosition(e.Combatant, _battleManager.AllCombatants);
-
-            // Trigger visual indicator
             _animationManager.StartAbilityIndicator(e.Combatant.CombatantID, e.Ability.Name, hudPos);
-
-            // Removed narration calls
         }
 
         private void OnAlertPublished(GameEvents.AlertPublished e)
@@ -1421,14 +1284,13 @@ namespace ProjectVagabond.Scenes
             string prefixText = absAmount > 1 ? $"{absAmount}x " : "";
             string suffixText = $" {verb}";
             Color changeColor = e.Amount > 0 ? _global.Palette_Sky : _global.Palette_Rust;
-            Color statColor = _global.Palette_Sun; // Unified color
+            Color statColor = _global.Palette_Sun;
             Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(e.Target, _battleManager.AllCombatants);
             _animationManager.StartStatStageIndicator(e.Target.CombatantID, prefixText, statText, suffixText, changeColor, statColor, changeColor, hudPosition);
         }
 
         private void OnNextEnemyApproaches(GameEvents.NextEnemyApproaches e)
         {
-            // Removed narration calls
         }
 
         private void OnCombatantSpawned(GameEvents.CombatantSpawned e)
@@ -1468,7 +1330,6 @@ namespace ProjectVagabond.Scenes
             _isBattleOver = true;
             _uiManager.HideAllMenus();
             var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
-            // Removed narration calls
         }
 
         private void OpenSettings()

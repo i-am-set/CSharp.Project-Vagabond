@@ -3,7 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
-using ProjectVagabond.Dice;
+
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.Transitions;

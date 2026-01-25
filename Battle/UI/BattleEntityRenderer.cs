@@ -94,12 +94,6 @@ namespace ProjectVagabond.Battle.UI
                 // Pass Color.Transparent for the outline override since we drew the composite one above.
                 DrawDirectEnemy(spriteBatch, enemySprite, enemySilhouette, spriteRect, partOffsets, shakeOffset, tintColor, silhouetteFactor, silhouetteColor, isHighlighted, highlightColor, isFlashingWhite, scale, numParts, spritePartSize, Color.Transparent, lowHealthOverlay);
             }
-
-            // --- TARGETING INDICATOR ---
-            if (isHighlighted)
-            {
-                DrawTargetingIndicator(spriteBatch, enemy, spriteRect, shakeOffset, highlightColor);
-            }
         }
 
         private void DrawCompositeOutline(SpriteBatch spriteBatch, Texture2D silhouette, Rectangle spriteRect, Vector2[] offsets, Vector2 shakeOffset, float finalAlpha, Color outlineColor, int numParts, int partSize, Matrix transform, Vector2 scale)
@@ -270,26 +264,6 @@ namespace ProjectVagabond.Battle.UI
                 {
                     spriteBatch.DrawSnapped(silhouette, centerPos, sourceRect, lowHealthOverlay.Value * (tintColor.A / 255f), 0f, origin, scale, SpriteEffects.None, 0f);
                 }
-            }
-        }
-
-        private void DrawTargetingIndicator(SpriteBatch spriteBatch, BattleCombatant combatant, Rectangle spriteRect, Vector2 shakeOffset, Color? highlightColor)
-        {
-            var indicator = _spriteManager.TargetingIndicatorSprite;
-            if (indicator != null && highlightColor == Color.Yellow)
-            {
-                Vector2 visualCenterOffset = _spriteManager.GetVisualCenterOffset(combatant.ArchetypeId);
-                Vector2 spriteCenter = new Vector2(spriteRect.Center.X, spriteRect.Center.Y);
-                Vector2 targetCenter = new Vector2(spriteCenter.X, spriteCenter.Y + visualCenterOffset.Y);
-
-                float t = (float)DateTime.Now.TimeOfDay.TotalSeconds * _global.TargetIndicatorNoiseSpeed;
-                float swayX = (float)Math.Sin(t) * _global.TargetIndicatorOffsetX;
-                float swayY = (float)Math.Cos(t * 1.3f) * _global.TargetIndicatorOffsetY;
-
-                Vector2 animatedPos = targetCenter + new Vector2(swayX, swayY) + shakeOffset;
-                Vector2 origin = new Vector2(indicator.Width / 2f, indicator.Height / 2f);
-
-                spriteBatch.DrawSnapped(indicator, animatedPos, null, Color.White, 0f, origin, 1.0f, SpriteEffects.None, 0f);
             }
         }
     }

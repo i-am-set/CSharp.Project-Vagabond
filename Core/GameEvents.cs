@@ -6,7 +6,6 @@ using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
-using ProjectVagabond.Dice;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
@@ -23,58 +22,28 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 
-
 namespace ProjectVagabond
 {
-    /// <summary>
-    /// A central place to define event argument classes for the EventBus.
-    /// </summary>
     public static class GameEvents
     {
-        /// <summary>
-        /// Published when the accumulated round log changes.
-        /// </summary>
         public struct RoundLogUpdate
         {
             public string LogText { get; set; }
         }
 
-        /// <summary>
-        /// Published when a message should be added to the main terminal output.
-        /// </summary>
         public struct TerminalMessagePublished
         {
             public string Message { get; set; }
             public Microsoft.Xna.Framework.Color? BaseColor { get; set; }
         }
 
-        /// <summary>
-        /// Published when a high-priority, short-duration message should be displayed to the user.
-        /// </summary>
         public struct AlertPublished
         {
             public string Message { get; set; }
         }
 
-        /// <summary>
-        /// Published by the physics system when two dice colliders make contact.
-        /// An event is published for each dynamic body involved in the collision.
-        /// </summary>
-        public struct DiceCollisionOccurred
-        {
-            public System.Numerics.Vector3 WorldPosition;
-            public BepuPhysics.BodyHandle BodyHandle;
-            public bool IsSparking;
-        }
-
-        /// <summary>
-        /// Published when the screen resolution or UI theme changes.
-        /// </summary>
         public struct UIThemeOrResolutionChanged { }
 
-        /// <summary>
-        /// Published at the start of an action's resolution, before any effects are calculated.
-        /// </summary>
         public struct ActionDeclared
         {
             public BattleCombatant Actor { get; set; }
@@ -83,9 +52,6 @@ namespace ProjectVagabond
             public QueuedActionType Type { get; set; }
         }
 
-        /// <summary>
-        /// Published when a single action in a battle is resolved.
-        /// </summary>
         public struct BattleActionExecuted
         {
             public BattleCombatant Actor { get; set; }
@@ -94,9 +60,6 @@ namespace ProjectVagabond
             public List<DamageCalculator.DamageResult> DamageResults { get; set; }
         }
 
-        /// <summary>
-        /// Published after all hits of a multi-hit move have been resolved.
-        /// </summary>
         public struct MultiHitActionCompleted
         {
             public BattleCombatant Actor { get; set; }
@@ -183,10 +146,6 @@ namespace ProjectVagabond
             public RelicData? SourceAbility { get; set; }
         }
 
-        /// <summary>
-        /// Published when a passive ability (Relic or Intrinsic) triggers.
-        /// Used for visual feedback.
-        /// </summary>
         public struct AbilityActivated
         {
             public BattleCombatant Combatant { get; set; }

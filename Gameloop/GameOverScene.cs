@@ -5,7 +5,6 @@ using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
-using ProjectVagabond.Dice;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
@@ -35,14 +34,12 @@ namespace ProjectVagabond.Scenes
 
         private string _gameOverText = "GAME OVER";
 
-        // --- UI Animators ---
         private readonly UIAnimator _titleAnimator;
         private readonly UIAnimator _retryBtnAnimator;
         private readonly UIAnimator _menuBtnAnimator;
 
-        // Tuning
         private const float INITIAL_DELAY = 0.5f;
-        private const float STAGGER_DELAY = 0.2f; // Delay between elements
+        private const float STAGGER_DELAY = 0.2f;
         private const float POP_DURATION = 0.5f;
 
         public GameOverScene()
@@ -53,7 +50,6 @@ namespace ProjectVagabond.Scenes
             _spriteManager = ServiceLocator.Get<SpriteManager>();
             _transitionManager = ServiceLocator.Get<TransitionManager>();
 
-            // Initialize Animators
             _titleAnimator = new UIAnimator
             {
                 EntryStyle = EntryExitStyle.Pop,
@@ -146,12 +142,10 @@ namespace ProjectVagabond.Scenes
 
             _currentInputDelay = _inputDelay;
 
-            // Reset and Trigger Animations
             _titleAnimator.Reset();
             _retryBtnAnimator.Reset();
             _menuBtnAnimator.Reset();
 
-            // Staggered Show
             _titleAnimator.Show(delay: INITIAL_DELAY);
             _retryBtnAnimator.Show(delay: INITIAL_DELAY + STAGGER_DELAY);
             _menuBtnAnimator.Show(delay: INITIAL_DELAY + (STAGGER_DELAY * 2));
@@ -184,13 +178,11 @@ namespace ProjectVagabond.Scenes
                 new GenericTask("Initializing world...", () =>
                 {
                     gameState.InitializeWorld();
-                }),
-                new DiceWarmupTask()
+                })
             };
 
             var transition = _transitionManager.GetRandomTransition();
 
-            // Use the new ChangeScene overload that handles loading
             _sceneManager.ChangeScene(GameSceneState.Split, transition, transition, 0f, loadingTasks);
         }
 
@@ -208,12 +200,10 @@ namespace ProjectVagabond.Scenes
 
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            // Update Animators
             _titleAnimator.Update(dt);
             _retryBtnAnimator.Update(dt);
             _menuBtnAnimator.Update(dt);
 
-            // Block input until the last button starts appearing
             if (!_menuBtnAnimator.IsVisible) return;
 
             if (_currentInputDelay > 0)
@@ -233,7 +223,6 @@ namespace ProjectVagabond.Scenes
 
             for (int i = 0; i < _buttons.Count; i++)
             {
-                // Only update button logic if its specific animator is visible
                 var animator = (i == 0) ? _retryBtnAnimator : _menuBtnAnimator;
                 if (animator.IsVisible)
                 {
@@ -286,10 +275,8 @@ namespace ProjectVagabond.Scenes
             var pixel = ServiceLocator.Get<Texture2D>();
             var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
 
-            // Draw Background (Always visible)
             spriteBatch.Draw(pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), Color.Black);
 
-            // --- Draw Title ---
             var titleState = _titleAnimator.GetVisualState();
             if (titleState.IsVisible)
             {
@@ -310,8 +297,6 @@ namespace ProjectVagabond.Scenes
                 spriteBatch.DrawStringSnapped(font, title, titlePos, drawColor, 0f, origin, titleState.Scale, SpriteEffects.None, 0f);
             }
 
-            // --- Draw Buttons ---
-            // We need to break the batch to apply individual scaling matrices for the buttons
             spriteBatch.End();
 
             for (int i = 0; i < _buttons.Count; i++)
@@ -321,14 +306,13 @@ namespace ProjectVagabond.Scenes
 
                 if (state.IsVisible)
                 {
-                    // Create a transform matrix for this specific button to scale from its center
                     Vector2 center = _buttons[i].Bounds.Center.ToVector2();
 
                     Matrix buttonTransform = Matrix.CreateTranslation(-center.X, -center.Y, 0) *
                                              Matrix.CreateScale(state.Scale.X, state.Scale.Y, 1.0f) *
                                              Matrix.CreateTranslation(center.X, center.Y, 0) *
                                              Matrix.CreateTranslation(state.Offset.X, state.Offset.Y, 0) *
-                                             transform; // Combine with global transform
+                                             transform;
 
                     spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: buttonTransform);
 
@@ -340,18 +324,15 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            // Resume main batch for grid (if enabled)
             spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
 
             if (_global.ShowSplitMapGrid)
             {
-                // Debug drawing...
             }
         }
 
         public override void DrawOverlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            // No fade overlay needed anymore
         }
 
         protected override Rectangle? GetFirstSelectableElementBounds()

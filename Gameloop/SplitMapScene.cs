@@ -3,10 +3,13 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
-using ProjectVagabond.Dice;
+using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Items;
+using ProjectVagabond.Particles;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.Systems;
 using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
@@ -15,6 +18,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.Scenes
 {
@@ -36,7 +40,6 @@ namespace ProjectVagabond.Scenes
         private readonly GameState _gameState;
         private readonly SpriteManager _spriteManager;
         private readonly Global _global;
-        private readonly DiceRollingSystem _diceRollingSystem;
         private readonly StoryNarrator _resultNarrator;
         private readonly ComponentStore _componentStore;
         private readonly VoidEdgeEffect _voidEdgeEffect;
@@ -59,13 +62,11 @@ namespace ProjectVagabond.Scenes
         private const float POST_EVENT_DELAY = 0.25f;
         private const float PATH_ANIMATION_DURATION = 0.75f;
 
-        // --- ANIMATION TUNING ---
         private const float NODE_LIFT_DURATION = 0.25f;
         private const float PULSE_DURATION = 0.4f;
         private const float NODE_LOWERING_DURATION = 0.5f;
         private const float NODE_LIFT_AMOUNT = 12f;
 
-        // --- ARRIVAL SHAKE TUNING ---
         private const float NODE_ARRIVAL_SHAKE_MAGNITUDE = 1.5f;
         private const float NODE_ARRIVAL_SHAKE_FREQUENCY = 25.0f;
 
@@ -80,8 +81,8 @@ namespace ProjectVagabond.Scenes
         private int _hoveredNodeId = -1;
         private int _lastHoveredNodeId = -1;
         private int _pressedNodeId = -1;
-        private bool _playerIconHovered = false; // Track player hover state
-        private bool _playerIconPressed = false; // Track player press state
+        private bool _playerIconHovered = false;
+        private bool _playerIconPressed = false;
 
         private readonly HashSet<int> _visitedNodeIds = new HashSet<int>();
         private readonly HashSet<int> _traversedPathIds = new HashSet<int>();
@@ -98,9 +99,8 @@ namespace ProjectVagabond.Scenes
 
         private bool _wasModalActiveLastFrame = false;
 
-        private enum EventState { Idle, AwaitingDiceRoll, NarratingResult }
+        private enum EventState { Idle, NarratingResult }
         private EventState _eventState = EventState.Idle;
-        private NarrativeChoice? _pendingChoiceForDiceRoll;
         private float _postEventDelayTimer = 0f;
 
         private enum SplitMapState { Idle, PlayerMoving, LiftingNode, PulsingNode, EventInProgress, LoweringNode, PostEventDelay }
@@ -172,7 +172,6 @@ namespace ProjectVagabond.Scenes
             _gameState = ServiceLocator.Get<GameState>();
             _spriteManager = ServiceLocator.Get<SpriteManager>();
             _global = ServiceLocator.Get<Global>();
-            _diceRollingSystem = ServiceLocator.Get<DiceRollingSystem>();
             _playerIcon = new PlayerMapIcon();
             _narrativeDialog = new NarrativeDialog(this);
             _componentStore = ServiceLocator.Get<ComponentStore>();
@@ -197,7 +196,6 @@ namespace ProjectVagabond.Scenes
                 noiseSpeed: 3f
             );
 
-            // --- NEW: Handle Close Button Click ---
             _partyStatusOverlay.OnCloseRequested += () =>
             {
                 _hapticsManager.TriggerZoomPulse(0.995f, 0.1f);
@@ -290,7 +288,6 @@ namespace ProjectVagabond.Scenes
         {
             base.Enter();
             _playerIcon.SetIsMoving(false);
-            _diceRollingSystem.OnRollCompleted += OnDiceRollCompleted;
             _isPanning = false;
             _waitingForCombatCameraSettle = false;
             _pendingCombatArchetypes = null;
@@ -322,7 +319,6 @@ namespace ProjectVagabond.Scenes
                 _playerMoveTargetNodeId = -1;
                 _playerMovePath = null;
                 _hoveredNodeId = -1;
-                _pendingChoiceForDiceRoll = null;
                 _postEventDelayTimer = 0f;
                 _nodeLiftTimer = 0f;
                 _pulseTimer = 0f;
@@ -386,7 +382,6 @@ namespace ProjectVagabond.Scenes
         public override void Exit()
         {
             base.Exit();
-            _diceRollingSystem.OnRollCompleted -= OnDiceRollCompleted;
             if (BattleSetup.ReturnSceneState != GameSceneState.Split)
             {
                 _progressionManager.ClearCurrentSplitMap();
@@ -585,11 +580,6 @@ namespace ProjectVagabond.Scenes
                 _nodeLiftTimer = 0f;
             }
 
-            if (_eventState == EventState.AwaitingDiceRoll)
-            {
-                base.Update(gameTime);
-                return;
-            }
             if (_eventState == EventState.NarratingResult)
             {
                 _resultNarrator.Update(gameTime);
@@ -643,7 +633,6 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            // FIX: Use _previousKeyboardState instead of previousMouseState
             if (KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState) && !isRestNarrating)
             {
                 if (_currentView == SplitMapView.PartyStatus)
@@ -820,16 +809,13 @@ namespace ProjectVagabond.Scenes
 
             if (_currentMap != null && _mapState == SplitMapState.Idle)
             {
-                // Check Player Icon Hover
                 if (_playerIcon.GetBounds().Contains(mouseInMapSpace))
                 {
                     rawPlayerHovered = true;
                 }
 
-                // Check Node Hover
                 foreach (var node in _currentMap.Nodes.Values)
                 {
-                    // Allow hovering the player node too
                     if ((node.IsReachable || node.Id == _playerCurrentNodeId) && node.GetBounds().Contains(mouseInMapSpace))
                     {
                         rawHoveredNodeId = node.Id;
@@ -852,11 +838,10 @@ namespace ProjectVagabond.Scenes
             }
             else
             {
-                // --- PRIORITY LOGIC ---
                 if (rawPlayerHovered)
                 {
                     _playerIconHovered = true;
-                    _hoveredNodeId = -1; // Disable node hover if player is hovered
+                    _hoveredNodeId = -1;
                 }
                 else
                 {
@@ -899,7 +884,6 @@ namespace ProjectVagabond.Scenes
 
                 if (leftClickReleased)
                 {
-                    // Priority: Player Icon Click
                     if (_playerIconPressed && _playerIconHovered)
                     {
                         _hapticsManager.TriggerZoomPulse(1.005f, 0.1f);
@@ -907,7 +891,6 @@ namespace ProjectVagabond.Scenes
                         SetView(SplitMapView.PartyStatus, snap: true);
                         UIInputManager.ConsumeMouseClick();
                     }
-                    // Secondary: Node Click
                     else if (_pressedNodeId != -1 && _pressedNodeId == _hoveredNodeId)
                     {
                         if (_currentMap != null && _currentMap.Nodes[_hoveredNodeId].IsReachable)
@@ -1317,7 +1300,6 @@ namespace ProjectVagabond.Scenes
             var premiumStock = new List<ShopItem>();
             var allPremium = new List<ShopItem>();
 
-            // ONLY add Relics
             foreach (var r in BattleDataCache.Relics.Values)
                 allPremium.Add(new ShopItem { ItemId = r.RelicID, DisplayName = r.RelicName, Type = "Relic", Price = PriceCalculator.CalculatePrice(r, 1.0f), DataObject = r });
 
@@ -1344,39 +1326,26 @@ namespace ProjectVagabond.Scenes
             }
             else
             {
-                _eventState = EventState.AwaitingDiceRoll;
-                _pendingChoiceForDiceRoll = choice;
-                var (numDice, numSides, modifier) = DiceParser.Parse(choice.Dice);
-                var dieType = numSides == 4 ? DieType.D4 : DieType.D6;
-
-                _diceRollingSystem.Roll(new List<DiceGroup>
-                {
-                    new DiceGroup
-                    {
-                        GroupId = "narrative_check",
-                        NumberOfDice = numDice,
-                        DieType = dieType,
-                        ResultProcessing = DiceResultProcessing.Sum,
-                        Modifier = modifier,
-                        Tint = Color.White,
-                        AnimateSum = false,
-                        ShowResultText = false
-                    }
-                });
+                int rollResult = RollDice(choice.Dice);
+                ResolveNarrativeChoice(choice, rollResult);
             }
         }
 
-        private void OnDiceRollCompleted(DiceRollResult result)
+        private int RollDice(string diceNotation)
         {
-            if (_eventState != EventState.AwaitingDiceRoll || _pendingChoiceForDiceRoll == null) return;
+            var match = Regex.Match(diceNotation, @"(\d+)d(\d+)([+-]\d+)?");
+            if (!match.Success) return 0;
 
-            if (result.ResultsByGroup.TryGetValue("narrative_check", out var values) && values.Any())
+            int count = int.Parse(match.Groups[1].Value);
+            int sides = int.Parse(match.Groups[2].Value);
+            int modifier = match.Groups[3].Success ? int.Parse(match.Groups[3].Value) : 0;
+
+            int total = 0;
+            for (int i = 0; i < count; i++)
             {
-                int rollResult = values.First();
-                ResolveNarrativeChoice(_pendingChoiceForDiceRoll, rollResult);
+                total += _random.Next(1, sides + 1);
             }
-
-            _pendingChoiceForDiceRoll = null;
+            return total + modifier;
         }
 
         private void ResolveNarrativeChoice(NarrativeChoice choice, int diceRoll)
