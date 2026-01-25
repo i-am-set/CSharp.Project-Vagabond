@@ -1036,6 +1036,23 @@ namespace ProjectVagabond.Battle
                 _animationManager.TriggerImpactFlash(flashColor, 0.15f, significantTargetIds);
             }
 
+            // --- NEW: Add Impact Twist Effect ---
+            // If the target is a player, trigger the screen twist effect
+            foreach (var target in targets)
+            {
+                if (target.IsPlayerControlled)
+                {
+                    // Calculate intensity based on damage ratio
+                    float damageRatio = (float)results[targets.IndexOf(target)].DamageAmount / target.Stats.MaxHP;
+                    float intensity = 1.0f + (damageRatio * 5.0f); // Scale 1.0 to 6.0
+                    intensity = Math.Min(intensity, 5.0f); // Cap at 5.0
+
+                    var haptics = ServiceLocator.Get<HapticsManager>();
+                    haptics.TriggerImpactTwist(intensity, 0.25f);
+                    break; // Only trigger once per impact batch
+                }
+            }
+
             _currentActionForEffects = action;
             _currentActionDamageResults = results;
             _currentActionFinalTargets = targets;

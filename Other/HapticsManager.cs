@@ -28,7 +28,8 @@ namespace ProjectVagabond
         Drift,
         Bounce,
         ZoomPulse,
-        DirectionalShake
+        DirectionalShake,
+        ImpactTwist // New effect
     }
 
     public class HapticsManager
@@ -44,6 +45,7 @@ namespace ProjectVagabond
         private readonly HapticEffect _bounce = new(HapticType.Bounce);
         private readonly HapticEffect _zoomPulse = new(HapticType.ZoomPulse);
         private readonly HapticEffect _directionalShake = new(HapticType.DirectionalShake);
+        private readonly HapticEffect _impactTwist = new(HapticType.ImpactTwist); // New effect instance
 
         // --- COMBAT COMPOUND SHAKE SYSTEM ---
         private float _currentSteps = 0f;
@@ -81,15 +83,11 @@ namespace ProjectVagabond
             _currentSteps = Math.Clamp(_currentSteps + steps, 0f, MaxShakeSteps);
         }
 
-        // Removed the TriggerCompoundShake(float intensity01) overload for combat.
-
         // --- UI Shake Trigger ---
         public void TriggerUICompoundShake(float steps)
         {
             _uiCurrentSteps = Math.Clamp(_uiCurrentSteps + steps, 0f, UiMaxShakeSteps);
         }
-
-        // Removed the TriggerUICompoundShake(float intensity01) overload for UI.
 
         public void StopAll()
         {
@@ -101,6 +99,7 @@ namespace ProjectVagabond
             _bounce.Reset();
             _zoomPulse.Reset();
             _directionalShake.Reset();
+            _impactTwist.Reset();
             _currentSteps = 0f;
             _uiCurrentSteps = 0f;
         }
@@ -133,6 +132,7 @@ namespace ProjectVagabond
             _bounce.Update(gameTime, _random);
             _zoomPulse.Update(gameTime, _random);
             _directionalShake.Update(gameTime, _random);
+            _impactTwist.Update(gameTime, _random);
         }
 
         /// <summary>
@@ -141,9 +141,11 @@ namespace ProjectVagabond
         public (Vector2 Offset, float Rotation, float Scale) GetTotalShakeParams()
         {
             // 1. Sum up legacy effects
-            Vector2 totalOffset = _shake.Offset + _hop.Offset + _pulse.Offset + _wobble.Offset + _drift.Offset + _bounce.Offset + _zoomPulse.Offset + _directionalShake.Offset;
-            float totalRotation = _shake.Rotation + _hop.Rotation + _pulse.Rotation + _wobble.Rotation + _drift.Rotation + _bounce.Rotation + _zoomPulse.Rotation + _directionalShake.Rotation;
-            float totalScale = GetCurrentScale();
+            Vector2 totalOffset = _shake.Offset + _hop.Offset + _pulse.Offset + _wobble.Offset + _drift.Offset + _bounce.Offset + _zoomPulse.Offset + _directionalShake.Offset + _impactTwist.Offset;
+            float totalRotation = _shake.Rotation + _hop.Rotation + _pulse.Rotation + _wobble.Rotation + _drift.Rotation + _bounce.Rotation + _zoomPulse.Rotation + _directionalShake.Rotation + _impactTwist.Rotation;
+
+            // Combine scales (Additive deviation from 1.0)
+            float totalScale = 1.0f + (_zoomPulse.Scale - 1.0f) + (_impactTwist.Scale - 1.0f);
 
             // 2. Calculate Combat Compound Shake
             if (_currentSteps > 0)
@@ -247,6 +249,13 @@ namespace ProjectVagabond
             _zoomPulse.Trigger(intensity, duration);
         }
 
+        public void TriggerImpactTwist(float intensity, float duration)
+        {
+            // Random direction for the twist (-1 or 1)
+            float dir = _random.Next(2) == 0 ? -1f : 1f;
+            _impactTwist.Trigger(intensity, duration, direction: new Vector2(dir, 0));
+        }
+
         public void QuickZoomInPulseSmall()
         {
             TriggerZoomPulse(1.02f, 0.05f);
@@ -260,12 +269,12 @@ namespace ProjectVagabond
 
         public bool IsAnyHapticActive()
         {
-            return _shake.Active || _hop.Active || _pulse.Active || _wobble.Active || _drift.Active || _bounce.Active || _zoomPulse.Active || _directionalShake.Active || _currentSteps > 0 || _uiCurrentSteps > 0;
+            return _shake.Active || _hop.Active || _pulse.Active || _wobble.Active || _drift.Active || _bounce.Active || _zoomPulse.Active || _directionalShake.Active || _impactTwist.Active || _currentSteps > 0 || _uiCurrentSteps > 0;
         }
 
         public Vector2 GetCurrentOffset()
         {
-            return _shake.Offset + _hop.Offset + _pulse.Offset + _wobble.Offset + _drift.Offset + _bounce.Offset + _zoomPulse.Offset + _directionalShake.Offset;
+            return _shake.Offset + _hop.Offset + _pulse.Offset + _wobble.Offset + _drift.Offset + _bounce.Offset + _zoomPulse.Offset + _directionalShake.Offset + _impactTwist.Offset;
         }
 
         public float GetCurrentScale()
@@ -417,6 +426,21 @@ namespace ProjectVagabond
                         {
                             float pulseValue = (float)Math.Sin(progress * Math.PI);
                             _scale = 1.0f + (_intensity - 1.0f) * pulseValue;
+                        }
+                        break;
+                    case HapticType.ImpactTwist:
+                        if (_timer > 0)
+                        {
+                            // Decay from 1.0 to 0.0 using cubic ease out for a sharp impact
+                            float t = _timer / _duration;
+                            float decay = t * t * t;
+
+                            // Twist: Rotate based on intensity and direction
+                            // _direction.X holds the sign (-1 or 1)
+                            _rotation = (_intensity * 0.10f) * decay * _direction.X;
+
+                            // Zoom: Scale up based on intensity
+                            _scale = 1.0f + (_intensity * 0.15f) * decay;
                         }
                         break;
                 }
