@@ -23,7 +23,6 @@ namespace ProjectVagabond.Progression
     public class NarrativeChoice
     {
         public string Text { get; set; } = "";
-        public string? Dice { get; set; } // e.g. "1d6"
         public string? Requirement { get; set; } // e.g. "Gold:50" or "HP:20"
         public List<WeightedOutcome> Outcomes { get; set; } = new List<WeightedOutcome>();
     }
@@ -32,10 +31,7 @@ namespace ProjectVagabond.Progression
     {
         public int Weight { get; set; } = 1;
         public List<int>? DifficultyClass { get; set; } // e.g. [4, 5, 6] for success
-
-        // CHANGED: Now a list, allowing multiple effects per result
         public List<NarrativeOutcome> Outcomes { get; set; } = new List<NarrativeOutcome>();
-
         public string ResultText { get; set; } = "";
     }
 
@@ -43,6 +39,6 @@ namespace ProjectVagabond.Progression
     {
         public string OutcomeType { get; set; } = ""; // "GiveItem", "ModifyStat", "Damage", "Heal", "Gold"
         public string Value { get; set; } = "";
-        public int Amount { get; set; } // Simplified numeric value handling
+        public int Amount { get; set; }
     }
 }
