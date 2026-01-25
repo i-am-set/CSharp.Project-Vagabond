@@ -1137,8 +1137,7 @@ namespace ProjectVagabond.Battle.UI
                                 rawAlpha = 1.0f - (cycleT - 1.0f); // Second Flash (Fade Out)
                             // Else: Pause (0 alpha)
 
-                            // Apply max intensity (0.6)
-                            float flashAlpha = rawAlpha * 0.6f;
+                            float flashAlpha = rawAlpha;
 
                             if (flashAlpha > 0)
                                 lowHealthOverlay = _global.LowHealthFlashColor * flashAlpha;
@@ -1393,8 +1392,7 @@ namespace ProjectVagabond.Battle.UI
                             rawAlpha = 1.0f - (cycleT - 1.0f); // Second Flash (Fade Out)
                         // Else: Pause (0 alpha)
 
-                        // Apply max intensity (0.6)
-                        float flashAlpha = rawAlpha * 0.6f;
+                        float flashAlpha = rawAlpha;
 
                         if (flashAlpha > 0)
                             lowHealthOverlay = _global.LowHealthFlashColor * flashAlpha;

@@ -214,7 +214,7 @@ namespace ProjectVagabond
 
         // --- LOW HEALTH FLASH TUNING ---
         public Color LowHealthFlashColor { get; set; } = new Color(181, 65, 49); // Palette_Rust
-        public float LowHealthThreshold { get; set; } = 0.25f; // 50%
+        public float LowHealthThreshold { get; set; } = 0.50f; // Changed from 0.25f to 0.50f
         public float LowHealthFlashSpeedMin { get; set; } = 1.5f; // Reduced from 2.0
         public float LowHealthFlashSpeedMax { get; set; } = 4.0f; // Reduced from 10.0
         public float LowHealthFlashPatternLength { get; set; } = 7.0f; // Controls the cycle length (Flash-Flash-Pause)
