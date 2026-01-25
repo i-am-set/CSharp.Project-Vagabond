@@ -78,7 +78,7 @@ namespace ProjectVagabond.UI
 
         // Train Tuning
         private const int TRAIN_AMOUNT_UNGUARDED = 1;
-        private const int TRAIN_AMOUNT_GUARDED_MAJOR = 2;
+        private const int TRAIN_AMOUNT_GUARDED_MAJOR = 1;
         private const int TRAIN_AMOUNT_GUARDED_MINOR = 1;
 
         // --- TUNING: Colors ---
@@ -478,7 +478,7 @@ namespace ProjectVagabond.UI
 
                             if (guardActive)
                             {
-                                // Guarded: +2 to one, +1 to another
+                                // Guarded: +1 to one, +1 to another
                                 int idx1 = _rng.Next(4);
                                 int idx2;
                                 do { idx2 = _rng.Next(4); } while (idx2 == idx1);

@@ -223,27 +223,29 @@ namespace ProjectVagabond.UI
 
                         if (isOccupied && _overlay.SpriteManager.InventoryStatBarFull != null)
                         {
-                            int basePoints = Math.Clamp(baseStat, 1, 20);
-                            int totalPoints = Math.Clamp(baseStat + bonus, 1, 20);
+                            // UPDATED: Scale for 10-unit max
+                            int basePoints = Math.Clamp(baseStat, 1, 10);
+                            int totalPoints = Math.Clamp(baseStat + bonus, 1, 10);
                             int bonusPoints = totalPoints - basePoints;
 
+                            // Multiply width by 4 instead of 2 to fill the 40px bar with 10 units
                             if (basePoints > 0)
                             {
-                                var srcBase = new Rectangle(0, 0, basePoints * 2, 3);
+                                var srcBase = new Rectangle(0, 0, basePoints * 4, 3);
                                 spriteBatch.DrawSnapped(_overlay.SpriteManager.InventoryStatBarFull, new Vector2(barX, barY), srcBase, Color.White);
                             }
 
                             if (bonusPoints > 0)
                             {
-                                var srcBonus = new Rectangle(0, 0, bonusPoints * 2, 3);
-                                spriteBatch.DrawSnapped(_overlay.SpriteManager.InventoryStatBarFull, new Vector2(barX + basePoints * 2, barY), srcBonus, _overlay.Global.StatColor_Increase);
+                                var srcBonus = new Rectangle(0, 0, bonusPoints * 4, 3);
+                                spriteBatch.DrawSnapped(_overlay.SpriteManager.InventoryStatBarFull, new Vector2(barX + basePoints * 4, barY), srcBonus, _overlay.Global.StatColor_Increase);
                             }
                             else if (bonusPoints < 0)
                             {
                                 // Penalty overwrites base
-                                int penaltyWidth = Math.Abs(bonusPoints) * 2;
+                                int penaltyWidth = Math.Abs(bonusPoints) * 4;
                                 var srcPenalty = new Rectangle(0, 0, penaltyWidth, 3);
-                                spriteBatch.DrawSnapped(_overlay.SpriteManager.InventoryStatBarFull, new Vector2(barX + totalPoints * 2, barY), srcPenalty, _overlay.Global.StatColor_Decrease);
+                                spriteBatch.DrawSnapped(_overlay.SpriteManager.InventoryStatBarFull, new Vector2(barX + totalPoints * 4, barY), srcPenalty, _overlay.Global.StatColor_Decrease);
                             }
                         }
                     }

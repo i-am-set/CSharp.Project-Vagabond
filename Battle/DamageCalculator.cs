@@ -12,8 +12,8 @@ namespace ProjectVagabond.Battle
     public static class DamageCalculator
     {
         private static readonly Random _random = new Random();
-        private const float GLOBAL_DAMAGE_SCALAR = 0.25f;
-        private const int FLAT_DAMAGE_BONUS = 2;
+        private const float GLOBAL_DAMAGE_SCALAR = 0.125f;
+        private const int FLAT_DAMAGE_BONUS = 1;
         public enum ElementalEffectiveness { Neutral, Effective, Resisted, Immune }
         public struct DamageResult
         {

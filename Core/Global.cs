@@ -124,8 +124,6 @@ namespace ProjectVagabond
 
         public const int TERMINAL_LINE_SPACING = 12;
         public const int SPLIT_MAP_GRID_SIZE = 16;
-        public const int MAX_MAX_HEALTH_ENERGY = 48;
-        public const int MIN_MAX_HEALTH_ENERGY = 1;
 
         public const int MAX_SINGLE_MOVE_LIMIT = 20;
         public const int MAX_HISTORY_LINES = 200;

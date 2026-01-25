@@ -16,7 +16,7 @@
               {
                 "OutcomeType": "ModifyStat",
                 "Value": "Strength",
-                "Amount": 2
+                "Amount": 1
               }
             ],
             "ResultText": "You carve a rune into your flesh. The pain is sharp, but your muscles swell with unnatural [cStr]STRENGTH[/]."
@@ -101,7 +101,7 @@
             "Outcomes": [
               {
                 "OutcomeType": "Damage",
-                "Amount": 15
+                "Amount": 7
               }
             ],
             "ResultText": "He catches your hand and smacks it with a hot pair of tongs! [cRed]You take damage.[/]"
@@ -128,10 +128,10 @@
               {
                 "OutcomeType": "ModifyStat",
                 "Value": "Intelligence",
-                "Amount": 2
+                "Amount": 1
               }
             ],
-            "ResultText": "You win the staring contest with your shadow self. Your mind feels sharper. [cInt]+2 INT[/]"
+            "ResultText": "You win the staring contest with your shadow self. Your mind feels sharper. [cInt]+1 INT[/]"
           },
           {
             "DifficultyClass": [ 1, 2, 3, 4 ],
@@ -229,7 +229,7 @@
             "Outcomes": [
               {
                 "OutcomeType": "Damage",
-                "Amount": 10
+                "Amount": 5
               }
             ],
             "ResultText": "The field shocks you violently! You take damage and the scroll burns to ash."
@@ -308,10 +308,10 @@
               {
                 "OutcomeType": "ModifyStat",
                 "Value": "MaxHP",
-                "Amount": -5
+                "Amount": -2
               }
             ],
-            "ResultText": "It's acid! Your insides burn. [cRed]-5 Max HP[/]"
+            "ResultText": "It's acid! Your insides burn. [cRed]-2 Max HP[/]"
           },
           {
             "DifficultyClass": [ 3, 4 ],
@@ -329,10 +329,10 @@
               {
                 "OutcomeType": "ModifyStat",
                 "Value": "MaxMana",
-                "Amount": 10
+                "Amount": 5
               }
             ],
-            "ResultText": "Your mind expands with arcane power! [cBlue]+10 Max Mana[/]"
+            "ResultText": "Your mind expands with arcane power! [cBlue]+5 Max Mana[/]"
           }
         ]
       },
@@ -474,10 +474,10 @@
               {
                 "OutcomeType": "ModifyStat",
                 "Value": "MaxMana",
-                "Amount": 20
+                "Amount": 10
               }
             ],
-            "ResultText": "The hum of the stone resonates with your soul. [cBlue]+20 Max Mana[/]"
+            "ResultText": "The hum of the stone resonates with your soul. [cBlue]+10 Max Mana[/]"
           }
         ]
       }
@@ -510,7 +510,7 @@
             "Outcomes": [
               {
                 "OutcomeType": "Damage",
-                "Amount": 15
+                "Amount": 7
               }
             ],
             "ResultText": "The rot lashes out! You are struck by thorny vines."
@@ -528,7 +528,7 @@
               },
               {
                 "OutcomeType": "Damage",
-                "Amount": 10
+                "Amount": 5
               }
             ],
             "ResultText": "You collect the silver sap, but the tree screams, deafening you. You take damage but gain a potion."
@@ -563,14 +563,14 @@
               {
                 "OutcomeType": "ModifyStat",
                 "Value": "MaxHP",
-                "Amount": -10
+                "Amount": -5
               },
               {
                 "OutcomeType": "GiveItem",
                 "Value": "Iron Plate"
               }
             ],
-            "ResultText": "A needle extracts your blood. In return, a heavy iron plate is dispensed. [cRed]-10 Max HP[/]"
+            "ResultText": "A needle extracts your blood. In return, a heavy iron plate is dispensed. [cRed]-5 Max HP[/]"
           }
         ]
       },
@@ -582,14 +582,14 @@
               {
                 "OutcomeType": "ModifyStat",
                 "Value": "MaxMana",
-                "Amount": -20
+                "Amount": -10
               },
               {
                 "OutcomeType": "Gold",
                 "Amount": 150
               }
             ],
-            "ResultText": "You feel a part of your magic drain away, replaced by the cold weight of gold. [cBlue]-20 Max Mana[/]"
+            "ResultText": "You feel a part of your magic drain away, replaced by the cold weight of gold. [cBlue]-10 Max Mana[/]"
           }
         ]
       },
@@ -643,10 +643,10 @@
               {
                 "OutcomeType": "ModifyStat",
                 "Value": "MaxMana",
-                "Amount": 15
+                "Amount": 7
               }
             ],
-            "ResultText": "You weave a spell to close the rift. The residual energy empowers you. [cBlue]+15 Max Mana[/]"
+            "ResultText": "You weave a spell to close the rift. The residual energy empowers you. [cBlue]+7 Max Mana[/]"
           },
           {
             "DifficultyClass": [ 1, 2, 3 ],
@@ -654,10 +654,10 @@
               {
                 "OutcomeType": "ModifyStat",
                 "Value": "CurrentMana",
-                "Amount": -50
+                "Amount": -25
               }
             ],
-            "ResultText": "The rift drains your magic before closing. [cBlue]-50 Mana[/]"
+            "ResultText": "The rift drains your magic before closing. [cBlue]-25 Mana[/]"
           }
         ]
       },

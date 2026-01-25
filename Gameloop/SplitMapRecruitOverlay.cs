@@ -597,42 +597,44 @@ namespace ProjectVagabond.UI
                         int coloredBarPoints;
                         Color coloredBarColor;
 
+                        // UPDATED: Scale for 10-unit max
                         if (bonus > 0)
                         {
-                            whiteBarPoints = Math.Clamp(baseStat, 1, 20);
-                            int totalPoints = Math.Clamp(rawTotal, 1, 20);
+                            whiteBarPoints = Math.Clamp(baseStat, 1, 10);
+                            int totalPoints = Math.Clamp(rawTotal, 1, 10);
                             coloredBarPoints = totalPoints - whiteBarPoints;
                             coloredBarColor = _global.StatColor_Increase * 0.5f;
                         }
                         else if (bonus < 0)
                         {
-                            whiteBarPoints = Math.Clamp(rawTotal, 1, 20);
-                            int basePoints = Math.Clamp(baseStat, 1, 20);
+                            whiteBarPoints = Math.Clamp(rawTotal, 1, 10);
+                            int basePoints = Math.Clamp(baseStat, 1, 10);
                             coloredBarPoints = basePoints - whiteBarPoints;
                             coloredBarColor = _global.StatColor_Decrease * 0.5f;
                         }
                         else
                         {
-                            whiteBarPoints = Math.Clamp(rawTotal, 1, 20);
+                            whiteBarPoints = Math.Clamp(rawTotal, 1, 10);
                             coloredBarPoints = 0;
                             coloredBarColor = Color.White;
                         }
 
+                        // Multiply width by 4 instead of 2
                         if (whiteBarPoints > 0)
                         {
-                            var srcBase = new Rectangle(0, 0, whiteBarPoints * 2, 3);
+                            var srcBase = new Rectangle(0, 0, whiteBarPoints * 4, 3);
                             spriteBatch.DrawSnapped(_spriteManager.InventoryStatBarFull, new Vector2(barX, barY), srcBase, Color.White);
                         }
 
                         if (coloredBarPoints > 0)
                         {
-                            var srcColor = new Rectangle(0, 0, coloredBarPoints * 2, 3);
-                            spriteBatch.DrawSnapped(_spriteManager.InventoryStatBarFull, new Vector2(barX + whiteBarPoints * 2, barY), srcColor, coloredBarColor);
+                            var srcColor = new Rectangle(0, 0, coloredBarPoints * 4, 3);
+                            spriteBatch.DrawSnapped(_spriteManager.InventoryStatBarFull, new Vector2(barX + whiteBarPoints * 4, barY), srcColor, coloredBarColor);
                         }
 
-                        if (rawTotal > 20)
+                        if (rawTotal > 10) // Was 20
                         {
-                            int excessValue = rawTotal - 20;
+                            int excessValue = rawTotal - 10;
                             Color textColor = bonus > 0 ? _global.StatColor_Increase * 0.5f : (bonus < 0 ? _global.StatColor_Decrease * 0.5f : _global.Palette_Sun);
                             string excessText = $"+{excessValue}";
                             Vector2 textSize = secondaryFont.MeasureString(excessText);
