@@ -3,8 +3,11 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.UI;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace ProjectVagabond.UI
@@ -70,6 +73,8 @@ namespace ProjectVagabond.UI
 
                 for (int s = 0; s < 4; s++)
                 {
+                    // Create the button purely for visual layout and hover detection.
+                    // No OnClick events are attached here.
                     var spellBtn = new SpellEquipButton(new Rectangle(spellButtonX, currentSpellY, spellButtonWidth, spellButtonHeight));
                     _overlay.PartySpellButtons.Add(spellBtn);
                     currentSpellY += spellButtonHeight;
@@ -97,7 +102,7 @@ namespace ProjectVagabond.UI
 
             int partyCount = _overlay.GameState.PlayerState.Party.Count;
 
-            // Update Spell Buttons
+            // Update Spell Buttons (Read-Only Mode)
             for (int i = 0; i < _overlay.PartySpellButtons.Count; i++)
             {
                 int memberIndex = i / 4;
@@ -106,7 +111,9 @@ namespace ProjectVagabond.UI
                 if (memberIndex < partyCount)
                 {
                     var btn = _overlay.PartySpellButtons[i];
-                    btn.IsEnabled = true;
+                    btn.IsEnabled = true; // Enabled so we can hover for tooltips
+
+                    // We update the button to track mouse position, but we DO NOT process clicks for equipping.
                     btn.Update(currentMouseState, cameraTransform);
 
                     if (btn.IsHovered)
@@ -117,6 +124,7 @@ namespace ProjectVagabond.UI
                         if (spellEntry != null && BattleDataCache.Moves.TryGetValue(spellEntry.MoveID, out var moveData))
                         {
                             _overlay.HoveredItemData = moveData;
+                            // Hint cursor shows "Info" is available, but not "Clickable"
                             ServiceLocator.Get<CursorManager>().SetState(CursorState.Hint);
                         }
                     }

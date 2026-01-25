@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.UI;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
@@ -11,15 +12,14 @@ using System.Linq;
 
 namespace ProjectVagabond.UI
 {
-    // Simplified State
-    internal enum InventoryState { Browse }
+    // Simplified State - No more "Equip" or "Browse" distinction needed
+    internal enum InventoryState { ViewOnly }
 
     public class PartyStatusOverlay
     {
         public bool IsOpen { get; private set; } = false;
 
-        // FIX: Only report hovered if the menu is actually open.
-        // This prevents the invisible close button from blocking map input.
+        // Only report hovered if the menu is actually open.
         public bool IsHovered => IsOpen && (CloseButton?.IsHovered ?? false);
 
         public event Action? OnCloseRequested;
@@ -56,7 +56,6 @@ namespace ProjectVagabond.UI
         internal KeyboardState PreviousKeyboardState { get; set; }
 
         // Subsystems
-        internal readonly InventoryDataProcessor DataProcessor;
         private readonly InventoryDrawer _drawer;
         private readonly InventoryInputHandler _inputHandler;
         private static readonly Random _rng = new Random();
@@ -80,7 +79,7 @@ namespace ProjectVagabond.UI
                 };
             }
 
-            DataProcessor = new InventoryDataProcessor(this);
+            // Removed InventoryDataProcessor as grid logic is gone
             _drawer = new InventoryDrawer(this);
             _inputHandler = new InventoryInputHandler(this);
         }
@@ -106,8 +105,7 @@ namespace ProjectVagabond.UI
         public void Hide()
         {
             IsOpen = false;
-            // FIX: Explicitly reset the button state when hiding.
-            // This clears the IsHovered flag, ensuring it doesn't persist.
+            // Explicitly reset the button state when hiding.
             CloseButton?.ResetAnimationState();
         }
 

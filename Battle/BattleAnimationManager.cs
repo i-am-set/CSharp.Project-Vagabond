@@ -31,13 +31,13 @@ namespace ProjectVagabond.Battle.UI
     /// </summary>
     public class BattleAnimationManager
     {
-        // --- Tuning ---
-        private const float HEALTH_ANIMATION_DURATION = 0.25f; // Duration of the health bar drain animation in seconds.
-        private const float INDICATOR_COOLDOWN = 0.2f; // Reduced for snappier feel
+        // --- Tuning: SPEED UP THE JUICE ---
+        private const float HEALTH_ANIMATION_DURATION = 0.15f; // Was 0.25f
+        private const float INDICATOR_COOLDOWN = 0.1f; // Was 0.2f
 
         // Internal animation state structs
         public class HealthAnimationState { public string CombatantID; public float StartHP; public float TargetHP; public float Timer; }
-        public class AlphaAnimationState { public string CombatantID; public float StartAlpha; public float TargetAlpha; public float Timer; public const float Duration = 0.167f; }
+        public class AlphaAnimationState { public string CombatantID; public float StartAlpha; public float TargetAlpha; public float Timer; public const float Duration = 0.1f; } // Was 0.167f
 
         public class DeathAnimationState
         {
@@ -51,9 +51,9 @@ namespace ProjectVagabond.Battle.UI
             public float GroundY;
             public bool CoinsSpawned;
 
-            // Tuning
-            public const float FLASH_DURATION = 0.1f;
-            public const float FADE_DURATION = 0.25f;
+            // Tuning: Faster Death
+            public const float FLASH_DURATION = 0.05f; // Was 0.1f
+            public const float FADE_DURATION = 0.15f; // Was 0.25f
         }
 
         public class SpawnAnimationState
@@ -63,32 +63,32 @@ namespace ProjectVagabond.Battle.UI
             public enum Phase { Flash, FadeIn }
             public Phase CurrentPhase;
 
-            // Tuning
-            public const float FLASH_DURATION = 0.4f; // Total time for flashing
-            public const float FLASH_INTERVAL = 0.1f; // Time per flash toggle
-            public const float FADE_DURATION = 0.6f; // Slightly slower for a floaty feel
-            public const float DROP_HEIGHT = 10f; // Reduced height for a subtle float down
+            // Tuning: Faster Spawn
+            public const float FLASH_DURATION = 0.2f; // Was 0.4f
+            public const float FLASH_INTERVAL = 0.05f; // Was 0.1f
+            public const float FADE_DURATION = 0.3f; // Was 0.6f
+            public const float DROP_HEIGHT = 10f;
         }
 
-        // --- NEW: Attack Charge Animation (Synchronized) ---
+        // --- Attack Charge Animation (Synchronized) ---
         public class AttackChargeAnimationState
         {
             public string CombatantID;
             public float Timer;
-            public bool IsPlayer; // Determines direction (Up for player, Down for enemy)
+            public bool IsPlayer;
 
             // State
-            public bool IsHoldingAtPeak = true; // If true, animation pauses at end of windup
+            public bool IsHoldingAtPeak = true;
 
-            // Timing
-            public float WindupDuration = 0.25f; // Fixed windup time
-            public float LungeDuration = 0.15f;  // Default lunge, modified by sync
+            // Timing: Snappier
+            public float WindupDuration = 0.15f; // Was 0.25f
+            public float LungeDuration = 0.1f;  // Was 0.15f
 
             public float TotalDuration => WindupDuration + LungeDuration;
 
             // Visuals
-            public const float WINDUP_DISTANCE = 8f; // Pixels to pull back
-            public const float LUNGE_DISTANCE = 16f; // Pixels to shoot forward
+            public const float WINDUP_DISTANCE = 8f;
+            public const float LUNGE_DISTANCE = 16f;
 
             // Squash/Stretch
             public Vector2 Scale = Vector2.One;
@@ -96,11 +96,11 @@ namespace ProjectVagabond.Battle.UI
         }
         private readonly List<AttackChargeAnimationState> _activeAttackCharges = new List<AttackChargeAnimationState>();
 
-        // --- NEW: Intro Slide Animation ---
+        // --- Intro Slide Animation ---
         public class IntroSlideAnimationState
         {
             public string CombatantID;
-            public bool IsEnemy; // Flag to determine behavior
+            public bool IsEnemy;
 
             public enum Phase { Sliding, Waiting, Revealing }
             public Phase CurrentPhase;
@@ -114,28 +114,28 @@ namespace ProjectVagabond.Battle.UI
             public Vector2 StartOffset;
             public Vector2 CurrentOffset;
 
-            // Tuning
-            public const float SLIDE_DURATION = 0.5f;
-            public const float WAIT_DURATION = 0.5f; // 0.5s delay for enemies
-            public const float REVEAL_DURATION = 0.5f; // Fade out silhouette
+            // Tuning: Faster Intro
+            public const float SLIDE_DURATION = 0.3f; // Was 0.5f
+            public const float WAIT_DURATION = 0.25f; // Was 0.5f
+            public const float REVEAL_DURATION = 0.3f; // Was 0.5f
         }
         private readonly List<IntroSlideAnimationState> _activeIntroSlideAnimations = new List<IntroSlideAnimationState>();
 
-        // --- NEW: Floor Intro Animation ---
+        // --- Floor Intro Animation ---
         public class FloorIntroAnimationState
         {
-            public string ID; // "floor_0", "floor_1", "floor_center"
+            public string ID;
             public float Timer;
-            public const float DURATION = 0.5f;
+            public const float DURATION = 0.3f; // Was 0.5f
         }
         private readonly List<FloorIntroAnimationState> _activeFloorIntroAnimations = new List<FloorIntroAnimationState>();
 
-        // --- NEW: Floor Outro Animation ---
+        // --- Floor Outro Animation ---
         public class FloorOutroAnimationState
         {
-            public string ID; // "floor_0", "floor_1"
+            public string ID;
             public float Timer;
-            public const float DURATION = 0.5f;
+            public const float DURATION = 0.3f; // Was 0.5f
         }
         private readonly List<FloorOutroAnimationState> _activeFloorOutroAnimations = new List<FloorOutroAnimationState>();
 
@@ -151,9 +151,9 @@ namespace ProjectVagabond.Battle.UI
             public float SilhouetteTimer;
             public float LiftTimer;
 
-            public const float SILHOUETTE_DURATION = 0.5f;
-            public const float LIFT_DURATION = 0.5f;
-            public const float LIFT_HEIGHT = 150f; // Match INTRO_SLIDE_DISTANCE
+            public const float SILHOUETTE_DURATION = 0.25f; // Was 0.5f
+            public const float LIFT_DURATION = 0.25f; // Was 0.5f
+            public const float LIFT_HEIGHT = 150f;
 
             // For Player (Legacy/Simple)
             public const float DURATION = BattleConstants.SWITCH_ANIMATION_DURATION;
@@ -177,22 +177,22 @@ namespace ProjectVagabond.Battle.UI
             public Vector2 ShakeOffset;
             public float ShakeTimer;
 
-            // Flash Tuning
+            // Flash Tuning: Strobe Light Speed
             public const int TOTAL_FLASHES = 4;
-            public const float FLASH_ON_DURATION = 0.05f;
-            public const float FLASH_OFF_DURATION = 0.05f;
+            public const float FLASH_ON_DURATION = 0.03f; // Was 0.05f
+            public const float FLASH_OFF_DURATION = 0.03f; // Was 0.05f
             public const float TOTAL_FLASH_CYCLE_DURATION = FLASH_ON_DURATION + FLASH_OFF_DURATION;
 
             // Shake Tuning
-            public const float SHAKE_LEFT_DURATION = 0.05f;
-            public const float SHAKE_RIGHT_DURATION = 0.05f;
-            public const float SHAKE_SETTLE_DURATION = 0.05f;
+            public const float SHAKE_LEFT_DURATION = 0.03f;
+            public const float SHAKE_RIGHT_DURATION = 0.03f;
+            public const float SHAKE_SETTLE_DURATION = 0.03f;
             public const float TOTAL_SHAKE_DURATION = SHAKE_LEFT_DURATION + SHAKE_RIGHT_DURATION + SHAKE_SETTLE_DURATION;
             public const float SHAKE_MAGNITUDE = 2f;
         }
-        public class HealBounceAnimationState { public string CombatantID; public float Timer; public const float Duration = 0.3f; public const float Height = 5f; }
-        public class HealFlashAnimationState { public string CombatantID; public float Timer; public const float Duration = 0.5f; }
-        public class PoisonEffectAnimationState { public string CombatantID; public float Timer; public const float Duration = 1.5f; }
+        public class HealBounceAnimationState { public string CombatantID; public float Timer; public const float Duration = 0.2f; public const float Height = 5f; } // Was 0.3f
+        public class HealFlashAnimationState { public string CombatantID; public float Timer; public const float Duration = 0.3f; } // Was 0.5f
+        public class PoisonEffectAnimationState { public string CombatantID; public float Timer; public const float Duration = 1.0f; } // Was 1.5f
 
         // Made public so BattleRenderer can read the state
         public class ResourceBarAnimationState
@@ -200,27 +200,27 @@ namespace ProjectVagabond.Battle.UI
             public enum BarResourceType { HP, Mana }
             public enum BarAnimationType { Loss, Recovery }
             public enum LossPhase { Preview, FlashBlack, FlashWhite, Shrink }
-            public enum RecoveryPhase { Hang, Fade } // Added RecoveryPhase
+            public enum RecoveryPhase { Hang, Fade }
 
             public string CombatantID;
             public BarResourceType ResourceType;
             public BarAnimationType AnimationType;
             public LossPhase CurrentLossPhase;
-            public RecoveryPhase CurrentRecoveryPhase; // Added CurrentRecoveryPhase
+            public RecoveryPhase CurrentRecoveryPhase;
 
-            public float ValueBefore; // e.g. 100 HP
-            public float ValueAfter;  // e.g. 80 HP
+            public float ValueBefore;
+            public float ValueAfter;
 
             public float Timer;
 
-            // Loss Animation Tuning
-            public const float PREVIEW_DURATION = 0.6f;
-            public const float FLASH_BLACK_DURATION = 0.05f;
-            public const float FLASH_WHITE_DURATION = 0.05f;
-            public const float SHRINK_DURATION = 0.6f;
+            // Loss Animation Tuning: Snappier
+            public const float PREVIEW_DURATION = 0.3f; // Was 0.6f
+            public const float FLASH_BLACK_DURATION = 0.03f; // Was 0.05f
+            public const float FLASH_WHITE_DURATION = 0.03f; // Was 0.05f
+            public const float SHRINK_DURATION = 0.3f; // Was 0.6f
         }
 
-        // --- NEW: Ability Indicator State ---
+        // --- Ability Indicator State ---
         public class AbilityIndicatorState
         {
             public enum AnimationPhase { EasingIn, Flashing, Holding, EasingOut }
@@ -232,7 +232,7 @@ namespace ProjectVagabond.Battle.UI
             public Vector2 InitialPosition;
 
             public Vector2 CurrentPosition;
-            public Vector2 Velocity; // Movement vector
+            public Vector2 Velocity;
 
             // Rotation Physics
             public float Rotation;
@@ -242,14 +242,14 @@ namespace ProjectVagabond.Battle.UI
             public float ShakeTimer;
 
             // Tuning
-            public const float SHAKE_DURATION = 0.5f;
+            public const float SHAKE_DURATION = 0.3f; // Was 0.5f
             public const float SHAKE_MAGNITUDE = 4.0f;
             public const float SHAKE_FREQUENCY = 15f;
 
             public const float EASE_IN_DURATION = 0.1f;
-            public const float FLASH_DURATION = 0.15f;
-            public const float HOLD_DURATION = 2.0f;
-            public const float EASE_OUT_DURATION = 0.4f;
+            public const float FLASH_DURATION = 0.1f; // Was 0.15f
+            public const float HOLD_DURATION = 1.0f; // Was 2.0f
+            public const float EASE_OUT_DURATION = 0.2f; // Was 0.4f
             public const float TOTAL_DURATION = EASE_IN_DURATION + FLASH_DURATION + HOLD_DURATION + EASE_OUT_DURATION;
         }
 
@@ -265,29 +265,29 @@ namespace ProjectVagabond.Battle.UI
         private float _abilitySpawnTimer = 0f;
 
         // Tuning for Queue & Physics
-        private const float ABILITY_SPAWN_INTERVAL = 0.75f;
-        private const float ABILITY_FLOAT_SPEED_INITIAL = 15f; // Reduced from 15f
-        private const float ABILITY_FLOAT_DRAG = 1.5f; // Damping factor for upward movement
-        private const float ABILITY_DRIFT_RANGE = 10f; // Reduced horizontal variance
-        private const float ABILITY_ROTATION_SPEED_MAX = 0.15f; // Max initial rotation speed (radians/sec)
-        private const float ABILITY_ROTATION_DRAG = 2.0f; // Damping factor for rotation
+        private const float ABILITY_SPAWN_INTERVAL = 0.4f; // Was 0.75f
+        private const float ABILITY_FLOAT_SPEED_INITIAL = 15f;
+        private const float ABILITY_FLOAT_DRAG = 1.5f;
+        private const float ABILITY_DRIFT_RANGE = 10f;
+        private const float ABILITY_ROTATION_SPEED_MAX = 0.15f;
+        private const float ABILITY_ROTATION_DRAG = 2.0f;
 
         public class DamageIndicatorState
         {
-            public enum IndicatorType { Text, Number, HealNumber, EmphasizedNumber, Effectiveness, StatChange, Protected, Failed } // Added Failed
+            public enum IndicatorType { Text, Number, HealNumber, EmphasizedNumber, Effectiveness, StatChange, Protected, Failed }
             public IndicatorType Type;
             public string CombatantID;
             public string PrimaryText;
             public string? SecondaryText;
             public string? TertiaryText;
-            public Vector2 Position; // Current position
-            public Vector2 Velocity; // For physics-based indicators
-            public Vector2 InitialPosition; // For simple animation paths
+            public Vector2 Position;
+            public Vector2 Velocity;
+            public Vector2 InitialPosition;
             public Color PrimaryColor;
             public Color? SecondaryColor;
             public Color? TertiaryColor;
             public float Timer;
-            public const float DURATION = 1.75f;
+            public const float DURATION = 1.0f; // Was 1.75f
             public const float RISE_DISTANCE = 5f;
         }
 
@@ -296,14 +296,14 @@ namespace ProjectVagabond.Battle.UI
         {
             public Vector2 Position;
             public Vector2 Velocity;
-            public float TargetGroundY; // Specific landing height for this coin
+            public float TargetGroundY;
             public bool IsResting;
-            public float Timer; // For despawn/flicker
-            public float Delay; // Staggered start delay
+            public float Timer;
+            public float Delay;
 
             // Visuals
-            public float FlipTimer; // Controls the spin
-            public float FlipSpeed; // How fast it spins
+            public float FlipTimer;
+            public float FlipSpeed;
 
             // Magnetization State
             public bool IsMagnetizing;
@@ -313,45 +313,45 @@ namespace ProjectVagabond.Battle.UI
 
             // --- NEW: Pre-calculated Target ---
             public Vector2? PreCalculatedTarget;
-            public string TargetCombatantID; // ID of the combatant who will "catch" this coin
+            public string TargetCombatantID;
 
             // --- NEW: Failsafe Timer ---
-            public float AbsoluteTimer; // Tracks total existence time
+            public float AbsoluteTimer;
         }
         private readonly List<CoinParticle> _activeCoins = new List<CoinParticle>();
 
         // --- COIN TUNING VARIABLES ---
         private const float COIN_GRAVITY = 900f;
         private const float COIN_BOUNCE_FACTOR = 0.5f;
-        private const float COIN_LIFETIME = 0.5f; // Time to wait before magnetizing
-        private const float COIN_INDIVIDUAL_DISPENSE_DELAY = 1.75f; // Increased stagger to prevent clumping
-        private const float COIN_MAX_LIFETIME = 8.0f; // Failsafe: Auto-collect after 8 seconds
+        private const float COIN_LIFETIME = 0.3f; // Was 0.5f
+        private const float COIN_INDIVIDUAL_DISPENSE_DELAY = 1.0f; // Was 1.75f
+        private const float COIN_MAX_LIFETIME = 5.0f; // Was 8.0f
 
         // Spawning Physics
-        private const float COIN_VELOCITY_X_RANGE = 120f; // Increased from 45f to spread coins wider
-        private const float COIN_VELOCITY_Y_MIN = -200f; // Upward force min
-        private const float COIN_VELOCITY_Y_MAX = -100f; // Upward force max
+        private const float COIN_VELOCITY_X_RANGE = 120f;
+        private const float COIN_VELOCITY_Y_MIN = -200f;
+        private const float COIN_VELOCITY_Y_MAX = -100f;
 
         // Magnetization Physics
-        private const float COIN_MAGNET_ACCEL_MIN = 1500f;
-        private const float COIN_MAGNET_ACCEL_MAX = 2000f;
-        private const float COIN_MAGNET_KILL_DIST_SQ = 100f; // 10px squared
+        private const float COIN_MAGNET_ACCEL_MIN = 2000f; // Was 1500f
+        private const float COIN_MAGNET_ACCEL_MAX = 3000f; // Was 2000f
+        private const float COIN_MAGNET_KILL_DIST_SQ = 100f;
 
         // Floor Layout
-        private const float COIN_GROUND_OFFSET_Y = 42f; // Lift the baseline up 16px
-        private const float COIN_GROUND_DEPTH_HEIGHT = 14f; // The vertical spread of the floor (3D effect)
+        private const float COIN_GROUND_OFFSET_Y = 42f;
+        private const float COIN_GROUND_DEPTH_HEIGHT = 14f;
 
         // --- COIN CATCH ANIMATION ---
         public class CoinCatchAnimationState
         {
             public string CombatantID;
             public float Timer;
-            public float CurrentRotation; // Rotation in radians
-            public const float DURATION = 0.15f; // Very quick pop
-            public const float ROTATION_DECAY_SPEED = 10f; // How fast rotation returns to 0
+            public float CurrentRotation;
+            public const float DURATION = 0.1f; // Was 0.15f
+            public const float ROTATION_DECAY_SPEED = 10f;
         }
         private readonly List<CoinCatchAnimationState> _activeCoinCatchAnimations = new List<CoinCatchAnimationState>();
-        private const float COIN_CATCH_ROTATION_STRENGTH = 0.1f; // Tunable max rotation (radians)
+        private const float COIN_CATCH_ROTATION_STRENGTH = 0.1f;
 
         // --- HITSTOP VISUAL STATE ---
         public class HitstopVisualState
@@ -384,7 +384,7 @@ namespace ProjectVagabond.Battle.UI
         private readonly List<DamageIndicatorState> _activeDamageIndicators = new List<DamageIndicatorState>();
         private readonly List<ResourceBarAnimationState> _activeBarAnimations = new List<ResourceBarAnimationState>();
 
-        // --- NEW: Ability Indicators List ---
+        // --- Ability Indicators List ---
         private readonly List<AbilityIndicatorState> _activeAbilityIndicators = new List<AbilityIndicatorState>();
 
         // Text Indicator Queue
@@ -414,7 +414,7 @@ namespace ProjectVagabond.Battle.UI
             _activeIntroSlideAnimations.Any() ||
             _activeFloorIntroAnimations.Any() ||
             _activeFloorOutroAnimations.Any() ||
-            _activeAttackCharges.Any(); // Added Attack Charge
+            _activeAttackCharges.Any();
 
         /// <summary>
         /// Alias for IsBlockingAnimation to maintain backward compatibility.
@@ -430,7 +430,7 @@ namespace ProjectVagabond.Battle.UI
             _activeCoins.Any() ||
             _activeCoinCatchAnimations.Any() ||
             _activeDamageIndicators.Any() ||
-            _activeAbilityIndicators.Any(); // Include ability indicators in busy check
+            _activeAbilityIndicators.Any();
 
         public BattleAnimationManager()
         {
@@ -455,7 +455,7 @@ namespace ProjectVagabond.Battle.UI
             _activeHealFlashAnimations.Clear();
             _activePoisonEffectAnimations.Clear();
             _activeDamageIndicators.Clear();
-            _activeAbilityIndicators.Clear(); // Clear ability indicators
+            _activeAbilityIndicators.Clear();
             _activeBarAnimations.Clear();
             _activeCoins.Clear();
             _pendingTextIndicators.Clear();
@@ -525,11 +525,9 @@ namespace ProjectVagabond.Battle.UI
                 {
                     if (!anim.CoinsSpawned && !combatant.IsPlayerControlled)
                     {
-                        // Logic copied from UpdateDeathAnimations to ensure coins spawn
                         var players = combatants.Where(c => c.IsPlayerControlled && !c.IsDefeated && c.IsActiveOnField).ToList();
                         SpawnCoins(anim.CenterPosition, 50, anim.GroundY, players);
                     }
-                    // Ensure alpha is 0 (dead)
                     combatant.VisualAlpha = 0f;
                 }
             }
@@ -537,13 +535,7 @@ namespace ProjectVagabond.Battle.UI
 
             // 5. Clear other blocking states
             _activeSpawnAnimations.Clear();
-
-            // Note: We do NOT clear DamageIndicators, AbilityIndicators, Coins, or HitFlashes.
-            // These are "fire and forget" visuals that don't block game logic.
-            // Clearing them looks jarring; letting them fade out naturally while the next turn starts looks better.
         }
-
-        // ... (Existing methods for Hitstop, Flash, Health, etc. remain unchanged) ...
 
         public void StartAttackCharge(string combatantId, bool isPlayer)
         {
@@ -553,15 +545,10 @@ namespace ProjectVagabond.Battle.UI
                 CombatantID = combatantId,
                 IsPlayer = isPlayer,
                 Timer = 0f,
-                IsHoldingAtPeak = true // Start in hold mode
+                IsHoldingAtPeak = true
             });
         }
 
-        /// <summary>
-        /// Signals the charge animation to proceed to the lunge phase, synchronized with the move animation.
-        /// </summary>
-        /// <param name="combatantId">The combatant ID.</param>
-        /// <param name="timeToImpact">The duration the lunge should take to hit the target frame.</param>
         public void ReleaseAttackCharge(string combatantId, float timeToImpact)
         {
             var anim = _activeAttackCharges.FirstOrDefault(a => a.CombatantID == combatantId);
@@ -569,7 +556,6 @@ namespace ProjectVagabond.Battle.UI
             {
                 anim.IsHoldingAtPeak = false;
                 anim.LungeDuration = timeToImpact;
-                // Ensure timer is exactly at windup end to start lunge smoothly
                 anim.Timer = anim.WindupDuration;
             }
         }
@@ -874,29 +860,21 @@ namespace ProjectVagabond.Battle.UI
             return _activeCoinCatchAnimations.FirstOrDefault(a => a.CombatantID == combatantId);
         }
 
-        // --- NEW: Start Ability Indicator ---
         public void StartAbilityIndicator(string combatantId, string abilityName, Vector2 startPosition)
         {
             string text = abilityName.ToUpper();
 
-            // Check if an indicator for this ability already exists on this combatant
             var existingIndicator = _activeAbilityIndicators.FirstOrDefault(ind => ind.CombatantID == combatantId && ind.OriginalText == text);
 
             if (existingIndicator != null)
             {
                 existingIndicator.Count++;
                 existingIndicator.Text = $"{existingIndicator.OriginalText} x{existingIndicator.Count}";
-
-                // Reset animation state to look like a fresh pop
                 existingIndicator.Timer = 0f;
                 existingIndicator.Phase = AbilityIndicatorState.AnimationPhase.EasingIn;
                 existingIndicator.ShakeTimer = AbilityIndicatorState.SHAKE_DURATION;
-
-                // Reset position to start so it pops up from the source again
                 existingIndicator.CurrentPosition = startPosition;
                 existingIndicator.InitialPosition = startPosition;
-
-                // Target position will be recalculated in Update based on stack index
                 return;
             }
 
@@ -911,10 +889,9 @@ namespace ProjectVagabond.Battle.UI
                 ShakeTimer = AbilityIndicatorState.SHAKE_DURATION,
                 InitialPosition = startPosition,
                 CurrentPosition = startPosition,
-                // Velocity-based movement
                 Velocity = new Vector2(
-                    (float)(_random.NextDouble() * ABILITY_DRIFT_RANGE * 2 - ABILITY_DRIFT_RANGE), // Random X drift
-                    -ABILITY_FLOAT_SPEED_INITIAL // Initial upward burst
+                    (float)(_random.NextDouble() * ABILITY_DRIFT_RANGE * 2 - ABILITY_DRIFT_RANGE),
+                    -ABILITY_FLOAT_SPEED_INITIAL
                 ),
                 Rotation = 0f,
                 RotationSpeed = (float)(_random.NextDouble() * ABILITY_ROTATION_SPEED_MAX * 2 - ABILITY_ROTATION_SPEED_MAX)
@@ -996,7 +973,7 @@ namespace ProjectVagabond.Battle.UI
                 CombatantID = combatantId,
                 PrimaryText = damageAmount.ToString(),
                 Position = startPosition,
-                Velocity = new Vector2((float)(_random.NextDouble() * 30 - 15), (float)(_random.NextDouble() * -20 - 20)), // Slower, floatier arc
+                Velocity = new Vector2((float)(_random.NextDouble() * 30 - 15), (float)(_random.NextDouble() * -20 - 20)),
                 Timer = 0f
             });
         }
@@ -1009,7 +986,7 @@ namespace ProjectVagabond.Battle.UI
                 CombatantID = combatantId,
                 PrimaryText = damageAmount.ToString(),
                 Position = startPosition,
-                Velocity = new Vector2((float)(_random.NextDouble() * 30 - 15), (float)(_random.NextDouble() * -20 - 40)), // Higher initial upward velocity
+                Velocity = new Vector2((float)(_random.NextDouble() * 30 - 15), (float)(_random.NextDouble() * -20 - 40)),
                 Timer = 0f
             });
         }
@@ -1121,12 +1098,12 @@ namespace ProjectVagabond.Battle.UI
             UpdateHealAnimations(gameTime);
             UpdatePoisonEffectAnimations(gameTime);
             UpdateDamageIndicators(gameTime);
-            UpdateAbilityIndicators(gameTime); // Update new indicators
+            UpdateAbilityIndicators(gameTime);
             UpdateBarAnimations(gameTime);
             UpdateCoins(gameTime, combatants);
             UpdateCoinCatchAnimations(gameTime);
             UpdateImpactFlash(gameTime);
-            UpdateAttackCharges(gameTime); // New
+            UpdateAttackCharges(gameTime);
         }
 
         private void UpdateAttackCharges(GameTime gameTime)
@@ -1137,50 +1114,32 @@ namespace ProjectVagabond.Battle.UI
                 var anim = _activeAttackCharges[i];
                 anim.Timer += dt;
 
-                // --- NEW LOGIC: Hold at Windup ---
                 if (anim.Timer < anim.WindupDuration)
                 {
-                    // Windup Phase
                     float progress = anim.Timer / anim.WindupDuration;
                     float eased = Easing.EaseOutCubic(progress);
-
-                    // Move Back
-                    float yDir = anim.IsPlayer ? 1f : -1f; // Player moves down (back), Enemy moves up (back)
+                    float yDir = anim.IsPlayer ? 1f : -1f;
                     anim.Offset = new Vector2(0, yDir * AttackChargeAnimationState.WINDUP_DISTANCE * eased);
-
-                    // Squash (Crouch)
                     float squash = MathHelper.Lerp(1.0f, 1.1f, eased);
                     float stretch = MathHelper.Lerp(1.0f, 0.9f, eased);
                     anim.Scale = new Vector2(squash, stretch);
                 }
                 else if (anim.IsHoldingAtPeak)
                 {
-                    // Hold Phase: Clamp timer to windup end
                     anim.Timer = anim.WindupDuration;
-
-                    // Keep Windup Pose
                     float yDir = anim.IsPlayer ? 1f : -1f;
                     anim.Offset = new Vector2(0, yDir * AttackChargeAnimationState.WINDUP_DISTANCE);
                     anim.Scale = new Vector2(1.1f, 0.9f);
                 }
                 else
                 {
-                    // Lunge Phase (Released)
-                    // Calculate progress from Windup end to Total end
                     float lungeTime = anim.Timer - anim.WindupDuration;
                     float progress = Math.Clamp(lungeTime / anim.LungeDuration, 0f, 1f);
                     float eased = Easing.EaseInExpo(progress);
-
-                    // Move Forward (past start)
-                    float yDir = anim.IsPlayer ? -1f : 1f; // Player moves up (forward), Enemy moves down (forward)
-
-                    // Start from windup pos, go to lunge pos
+                    float yDir = anim.IsPlayer ? -1f : 1f;
                     float startY = (anim.IsPlayer ? 1f : -1f) * AttackChargeAnimationState.WINDUP_DISTANCE;
                     float endY = yDir * AttackChargeAnimationState.LUNGE_DISTANCE;
-
                     anim.Offset = new Vector2(0, MathHelper.Lerp(startY, endY, eased));
-
-                    // Stretch (Elongate)
                     float squash = MathHelper.Lerp(1.1f, 0.8f, eased);
                     float stretch = MathHelper.Lerp(0.9f, 1.2f, eased);
                     anim.Scale = new Vector2(squash, stretch);
@@ -1347,9 +1306,7 @@ namespace ProjectVagabond.Battle.UI
                     continue;
                 }
 
-                // Ensure silhouette is fully active
                 combatant.VisualSilhouetteAmount = 1.0f;
-
                 anim.Timer += deltaTime;
 
                 switch (anim.CurrentPhase)
@@ -1377,10 +1334,8 @@ namespace ProjectVagabond.Battle.UI
                             anim.Timer = 0f;
                             anim.CurrentPhase = DeathAnimationState.Phase.FadeOut;
 
-                            // Trigger Coin Spawn here
                             if (!anim.CoinsSpawned && !combatant.IsPlayerControlled)
                             {
-                                // Pass the list of active players to SpawnCoins
                                 var players = combatants.Where(c => c.IsPlayerControlled && !c.IsDefeated && c.IsActiveOnField).ToList();
                                 SpawnCoins(anim.CenterPosition, 50, anim.GroundY, players);
                             }
@@ -1405,41 +1360,29 @@ namespace ProjectVagabond.Battle.UI
         {
             for (int i = 0; i < amount; i++)
             {
-                // Calculate a random depth offset to create a 3D floor effect
                 float randomDepth = (float)(_random.NextDouble() * COIN_GROUND_DEPTH_HEIGHT) - (COIN_GROUND_DEPTH_HEIGHT / 2f);
-
-                // Apply the global offset (lift) and the random depth
                 float targetGroundY = (referenceGroundY - COIN_GROUND_OFFSET_Y) + randomDepth;
 
-                // --- ROUND ROBIN TARGET ASSIGNMENT ---
                 Vector2? targetPos = null;
                 string targetId = null;
 
                 if (players.Any())
                 {
-                    // Distribute coins evenly among players
                     var targetPlayer = players[i % players.Count];
                     targetId = targetPlayer.CombatantID;
-
-                    // Calculate visual center for the target player
-                    // Hardcoded logic based on BattleRenderer layout to avoid dependency cycle
-                    // Slot 0: Left, Slot 1: Right
                     float spriteCenterX = (targetPlayer.BattleSlot == 1)
                         ? (Global.VIRTUAL_WIDTH * 0.75f)
                         : (Global.VIRTUAL_WIDTH * 0.25f);
-
-                    // Use fixed Y for player heart center
                     float heartCenterY = 96f;
-
                     targetPos = new Vector2(spriteCenterX, heartCenterY);
                 }
 
                 var coin = new CoinParticle
                 {
-                    Position = origin + new Vector2((float)(_random.NextDouble() * 20 - 10), 0), // Add jitter to start pos
+                    Position = origin + new Vector2((float)(_random.NextDouble() * 20 - 10), 0),
                     Velocity = new Vector2(
-                        (float)(_random.NextDouble() * (COIN_VELOCITY_X_RANGE * 2) - COIN_VELOCITY_X_RANGE), // Spread X
-                        (float)(_random.NextDouble() * (COIN_VELOCITY_Y_MAX - COIN_VELOCITY_Y_MIN) + COIN_VELOCITY_Y_MIN) // Burst Up Y
+                        (float)(_random.NextDouble() * (COIN_VELOCITY_X_RANGE * 2) - COIN_VELOCITY_X_RANGE),
+                        (float)(_random.NextDouble() * (COIN_VELOCITY_Y_MAX - COIN_VELOCITY_Y_MIN) + COIN_VELOCITY_Y_MIN)
                     ),
                     TargetGroundY = targetGroundY,
                     IsResting = false,
@@ -1450,9 +1393,9 @@ namespace ProjectVagabond.Battle.UI
                     MagnetAcceleration = (float)(_random.NextDouble() * (COIN_MAGNET_ACCEL_MAX - COIN_MAGNET_ACCEL_MIN) + COIN_MAGNET_ACCEL_MIN),
                     FlipTimer = (float)(_random.NextDouble() * MathHelper.TwoPi),
                     FlipSpeed = 10f + (float)(_random.NextDouble() * 10f),
-                    PreCalculatedTarget = targetPos, // Assign the specific target
+                    PreCalculatedTarget = targetPos,
                     TargetCombatantID = targetId,
-                    AbsoluteTimer = 0f // Initialize failsafe timer
+                    AbsoluteTimer = 0f
                 };
                 _activeCoins.Add(coin);
             }
@@ -1461,10 +1404,6 @@ namespace ProjectVagabond.Battle.UI
         private void UpdateCoins(GameTime gameTime, IEnumerable<BattleCombatant> combatants)
         {
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
-
-            // --- PHYSICS SUB-STEPPING ---
-            // We use a fixed time step for physics to ensure stability at low framerates.
-            // 120 Hz (0.00833s) is a good balance for simple particle physics.
             const float PHYSICS_STEP = 0.00833f;
             float timeLeft = dt;
 
@@ -1481,12 +1420,9 @@ namespace ProjectVagabond.Battle.UI
             for (int i = _activeCoins.Count - 1; i >= 0; i--)
             {
                 var coin = _activeCoins[i];
-
-                // --- FAILSAFE: Auto-Collect after 8 seconds ---
                 coin.AbsoluteTimer += dt;
                 if (coin.AbsoluteTimer >= COIN_MAX_LIFETIME)
                 {
-                    // Force collect logic
                     if (!string.IsNullOrEmpty(coin.TargetCombatantID))
                     {
                         StartCoinCatchAnimation(coin.TargetCombatantID);
@@ -1495,32 +1431,24 @@ namespace ProjectVagabond.Battle.UI
                     continue;
                 }
 
-                // Handle Delay
                 if (coin.Delay > 0)
                 {
                     coin.Delay -= dt;
-                    continue; // Skip update until delay is over
+                    continue;
                 }
 
-                // Update Flip Animation
                 coin.FlipTimer += dt * coin.FlipSpeed;
 
                 if (coin.IsMagnetizing)
                 {
-                    // Magnetization Logic
                     Vector2 direction = coin.MagnetTarget - coin.Position;
                     float distanceSq = direction.LengthSquared();
                     float distance = MathF.Sqrt(distanceSq);
-
-                    // Calculate movement amount for this step
                     coin.MagnetSpeed += coin.MagnetAcceleration * dt;
                     float moveAmount = coin.MagnetSpeed * dt;
 
-                    // --- TUNNELING FIX ---
-                    // If the movement amount is greater than the distance to target, snap to target.
                     if (distance <= moveAmount || distanceSq < COIN_MAGNET_KILL_DIST_SQ)
                     {
-                        // Coin Collected
                         if (!string.IsNullOrEmpty(coin.TargetCombatantID))
                         {
                             StartCoinCatchAnimation(coin.TargetCombatantID);
@@ -1534,18 +1462,16 @@ namespace ProjectVagabond.Battle.UI
                 }
                 else if (!coin.IsResting)
                 {
-                    // Falling/Bouncing Logic
                     coin.Velocity.Y += COIN_GRAVITY * dt;
                     coin.Position += coin.Velocity * dt;
 
                     if (coin.Position.Y >= coin.TargetGroundY)
                     {
                         coin.Position.Y = coin.TargetGroundY;
-                        // Bounce
                         if (Math.Abs(coin.Velocity.Y) > 50f)
                         {
                             coin.Velocity.Y = -coin.Velocity.Y * COIN_BOUNCE_FACTOR;
-                            coin.Velocity.X *= 0.8f; // Friction
+                            coin.Velocity.X *= 0.8f;
                         }
                         else
                         {
@@ -1556,11 +1482,9 @@ namespace ProjectVagabond.Battle.UI
                 }
                 else
                 {
-                    // Resting Logic -> Transition to Magnetize
                     coin.Timer += dt;
                     if (coin.Timer >= COIN_LIFETIME)
                     {
-                        // Use the pre-calculated target if available
                         if (coin.PreCalculatedTarget.HasValue)
                         {
                             coin.IsMagnetizing = true;
@@ -1568,7 +1492,6 @@ namespace ProjectVagabond.Battle.UI
                         }
                         else
                         {
-                            // No target (e.g. all players dead?), just fade out
                             _activeCoins.RemoveAt(i);
                         }
                     }
@@ -1583,10 +1506,7 @@ namespace ProjectVagabond.Battle.UI
             {
                 var anim = _activeCoinCatchAnimations[i];
                 anim.Timer += dt;
-
-                // Decay rotation
                 anim.CurrentRotation = MathHelper.Lerp(anim.CurrentRotation, 0f, dt * CoinCatchAnimationState.ROTATION_DECAY_SPEED);
-
                 if (anim.Timer >= CoinCatchAnimationState.DURATION)
                 {
                     _activeCoinCatchAnimations.RemoveAt(i);
@@ -1599,33 +1519,11 @@ namespace ProjectVagabond.Battle.UI
             var pixel = ServiceLocator.Get<Texture2D>();
             foreach (var coin in _activeCoins)
             {
-                // Don't draw if still delayed
                 if (coin.Delay > 0) continue;
-
-                // Calculate Shimmer Color
-                // Sin wave from -1 to 1. Map to 0 to 1.
                 float shimmer = (MathF.Sin(coin.FlipTimer) + 1f) / 2f;
                 Color coinColor = Color.Lerp(_global.Palette_DarkSun, _global.Palette_Fruit, shimmer);
-
-                // Calculate Flip Scale (X-axis)
-                // Cos wave from -1 to 1. Abs to get 0 to 1 (flipping appearance).
-                float flipScale = MathF.Abs(MathF.Cos(coin.FlipTimer));
-
-                // Draw a small rectangle (3x3) scaled horizontally
-                // Origin at center (1.5, 1.5)
-                Vector2 origin = new Vector2(1f, 1f);
-                Vector2 scale = new Vector2(1.0f, 1.0f);
-
-                // Use a 3x3 source rect from the pixel texture (it's 1x1, so we just scale it up)
-                // Actually, DrawSnapped takes a destination rect or position + scale.
-                // Let's use position + scale.
-                // Base size 3x3.
                 Vector2 baseSize = new Vector2(1f, 1f);
-                Vector2 finalScale = baseSize * scale;
-
-                // Since DrawSnapped rounds positions, we need to be careful with small scales.
-                // Let's use the overload that takes scale.
-                // Note: DrawSnapped rounds the position. We want the visual center to be the coin position.
+                Vector2 finalScale = baseSize;
                 spriteBatch.DrawSnapped(pixel, coin.Position, null, coinColor, 0f, new Vector2(0.5f, 0.5f), finalScale, SpriteEffects.None, 0f);
             }
         }
@@ -1647,11 +1545,9 @@ namespace ProjectVagabond.Battle.UI
 
                 if (anim.CurrentPhase == SpawnAnimationState.Phase.Flash)
                 {
-                    // Flash logic: Toggle silhouette on/off
                     int flashCycle = (int)(anim.Timer / SpawnAnimationState.FLASH_INTERVAL);
                     bool isVisible = flashCycle % 2 == 0;
-
-                    combatant.VisualAlpha = 0f; // Hide normal sprite
+                    combatant.VisualAlpha = 0f;
                     combatant.VisualSilhouetteAmount = 1.0f;
                     combatant.VisualSilhouetteColorOverride = isVisible ? Color.White : Color.Transparent;
 
@@ -1663,12 +1559,10 @@ namespace ProjectVagabond.Battle.UI
                 }
                 else if (anim.CurrentPhase == SpawnAnimationState.Phase.FadeIn)
                 {
-                    // Fade Phase: Fade in, drop down
                     float progress = Math.Clamp(anim.Timer / SpawnAnimationState.FADE_DURATION, 0f, 1f);
                     float easedProgress = Easing.EaseOutQuad(progress);
-
                     combatant.VisualAlpha = easedProgress;
-                    combatant.VisualSilhouetteAmount = 0f; // Disable silhouette
+                    combatant.VisualSilhouetteAmount = 0f;
                     combatant.VisualSilhouetteColorOverride = null;
 
                     if (anim.Timer >= SpawnAnimationState.FADE_DURATION)
@@ -1695,13 +1589,11 @@ namespace ProjectVagabond.Battle.UI
 
                 if (!anim.IsEnemy)
                 {
-                    // --- PLAYER LOGIC (Simple Slide) ---
-                    anim.SlideTimer += deltaTime; // Changed from Timer
-                    float progress = Math.Clamp(anim.SlideTimer / IntroSlideAnimationState.SLIDE_DURATION, 0f, 1f); // Changed from Timer
+                    anim.SlideTimer += deltaTime;
+                    float progress = Math.Clamp(anim.SlideTimer / IntroSlideAnimationState.SLIDE_DURATION, 0f, 1f);
                     float easedProgress = Easing.EaseOutCubic(progress);
-
                     anim.CurrentOffset = Vector2.Lerp(anim.StartOffset, Vector2.Zero, easedProgress);
-                    combatant.VisualAlpha = easedProgress; // Fade in
+                    combatant.VisualAlpha = easedProgress;
 
                     if (progress >= 1.0f)
                     {
@@ -1711,25 +1603,19 @@ namespace ProjectVagabond.Battle.UI
                 }
                 else
                 {
-                    // --- ENEMY LOGIC (Slide -> Wait -> Reveal) ---
                     switch (anim.CurrentPhase)
                     {
                         case IntroSlideAnimationState.Phase.Sliding:
                             anim.SlideTimer += deltaTime;
                             float slideProgress = Math.Clamp(anim.SlideTimer / IntroSlideAnimationState.SLIDE_DURATION, 0f, 1f);
                             float easedSlide = Easing.EaseOutCubic(slideProgress);
-
                             anim.CurrentOffset = Vector2.Lerp(anim.StartOffset, Vector2.Zero, easedSlide);
-
-                            // Fade in alpha, but keep silhouette active (handled in Renderer)
                             combatant.VisualAlpha = easedSlide;
-
                             if (slideProgress >= 1.0f)
                             {
                                 anim.CurrentPhase = IntroSlideAnimationState.Phase.Waiting;
                             }
                             break;
-
                         case IntroSlideAnimationState.Phase.Waiting:
                             anim.WaitTimer += deltaTime;
                             if (anim.WaitTimer >= IntroSlideAnimationState.WAIT_DURATION)
@@ -1737,13 +1623,9 @@ namespace ProjectVagabond.Battle.UI
                                 anim.CurrentPhase = IntroSlideAnimationState.Phase.Revealing;
                             }
                             break;
-
                         case IntroSlideAnimationState.Phase.Revealing:
                             anim.RevealTimer += deltaTime;
                             float revealProgress = Math.Clamp(anim.RevealTimer / IntroSlideAnimationState.REVEAL_DURATION, 0f, 1f);
-
-                            // Renderer will use this timer to fade the silhouette overlay
-
                             if (revealProgress >= 1.0f)
                             {
                                 _activeIntroSlideAnimations.RemoveAt(i);
@@ -1785,15 +1667,11 @@ namespace ProjectVagabond.Battle.UI
         private void UpdateSwitchAnimations(GameTime gameTime, IEnumerable<BattleCombatant> combatants)
         {
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
-
-            // Switch Out
             for (int i = _activeSwitchOutAnimations.Count - 1; i >= 0; i--)
             {
                 var anim = _activeSwitchOutAnimations[i];
-
                 if (anim.IsEnemy)
                 {
-                    // --- ENEMY SWITCH OUT (Multi-Phase) ---
                     if (anim.CurrentPhase == SwitchOutAnimationState.Phase.Silhouetting)
                     {
                         anim.SilhouetteTimer += deltaTime;
@@ -1813,7 +1691,6 @@ namespace ProjectVagabond.Battle.UI
                 }
                 else
                 {
-                    // --- PLAYER SWITCH OUT (Legacy) ---
                     anim.Timer += deltaTime;
                     if (anim.Timer >= SwitchOutAnimationState.DURATION)
                     {
@@ -1821,8 +1698,6 @@ namespace ProjectVagabond.Battle.UI
                     }
                 }
             }
-
-            // Switch In
             for (int i = _activeSwitchInAnimations.Count - 1; i >= 0; i--)
             {
                 var anim = _activeSwitchInAnimations[i];
@@ -1843,7 +1718,6 @@ namespace ProjectVagabond.Battle.UI
                 anim.Timer += deltaTime;
                 anim.ShakeTimer += deltaTime;
 
-                // --- Shake Logic (one-shot at the beginning) ---
                 if (anim.ShakeTimer < HitFlashAnimationState.TOTAL_SHAKE_DURATION)
                 {
                     if (anim.ShakeTimer < HitFlashAnimationState.SHAKE_LEFT_DURATION)
@@ -1869,7 +1743,6 @@ namespace ProjectVagabond.Battle.UI
                     anim.ShakeOffset = Vector2.Zero;
                 }
 
-                // --- Flash Logic (repeating) ---
                 if (anim.Timer >= HitFlashAnimationState.TOTAL_FLASH_CYCLE_DURATION)
                 {
                     anim.Timer -= HitFlashAnimationState.TOTAL_FLASH_CYCLE_DURATION;
@@ -1933,20 +1806,19 @@ namespace ProjectVagabond.Battle.UI
                     continue;
                 }
 
-                // Apply physics or simple animation based on the indicator type
                 if (indicator.Type == DamageIndicatorState.IndicatorType.Number || indicator.Type == DamageIndicatorState.IndicatorType.HealNumber || indicator.Type == DamageIndicatorState.IndicatorType.EmphasizedNumber)
                 {
-                    const float gravity = 80f; // Reduced gravity for a floatier effect
+                    const float gravity = 80f;
                     indicator.Velocity.Y += gravity * deltaTime;
                     indicator.Position += indicator.Velocity * deltaTime;
                 }
                 else if (indicator.Type == DamageIndicatorState.IndicatorType.Effectiveness)
                 {
                     float progress = indicator.Timer / DamageIndicatorState.DURATION;
-                    float yOffset = Easing.EaseOutQuad(progress) * DamageIndicatorState.RISE_DISTANCE; // Move down
+                    float yOffset = Easing.EaseOutQuad(progress) * DamageIndicatorState.RISE_DISTANCE;
                     indicator.Position = indicator.InitialPosition + new Vector2(0, yOffset);
                 }
-                else // Text indicators like GRAZE, StatChange, Protected, Failed
+                else
                 {
                     float progress = indicator.Timer / DamageIndicatorState.DURATION;
                     float yOffset = -Easing.EaseOutQuad(progress) * DamageIndicatorState.RISE_DISTANCE;
@@ -1959,7 +1831,6 @@ namespace ProjectVagabond.Battle.UI
         {
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            // --- QUEUE PROCESSING ---
             if (_abilitySpawnTimer > 0)
             {
                 _abilitySpawnTimer -= deltaTime;
@@ -1968,8 +1839,6 @@ namespace ProjectVagabond.Battle.UI
             if (_abilitySpawnTimer <= 0 && _pendingAbilityQueue.Count > 0)
             {
                 var pending = _pendingAbilityQueue.Dequeue();
-
-                // Create active indicator
                 var indicator = new AbilityIndicatorState
                 {
                     CombatantID = pending.CombatantID,
@@ -1981,20 +1850,17 @@ namespace ProjectVagabond.Battle.UI
                     ShakeTimer = AbilityIndicatorState.SHAKE_DURATION,
                     InitialPosition = pending.StartPosition,
                     CurrentPosition = pending.StartPosition,
-                    // Velocity-based movement
                     Velocity = new Vector2(
-                        (float)(_random.NextDouble() * ABILITY_DRIFT_RANGE * 2 - ABILITY_DRIFT_RANGE), // Random X drift
-                        -ABILITY_FLOAT_SPEED_INITIAL // Initial upward burst
+                        (float)(_random.NextDouble() * ABILITY_DRIFT_RANGE * 2 - ABILITY_DRIFT_RANGE),
+                        -ABILITY_FLOAT_SPEED_INITIAL
                     ),
                     Rotation = 0f,
                     RotationSpeed = (float)(_random.NextDouble() * ABILITY_ROTATION_SPEED_MAX * 2 - ABILITY_ROTATION_SPEED_MAX)
                 };
-
                 _activeAbilityIndicators.Add(indicator);
                 _abilitySpawnTimer = ABILITY_SPAWN_INTERVAL;
             }
 
-            // --- UPDATE ACTIVE INDICATORS ---
             for (int i = _activeAbilityIndicators.Count - 1; i >= 0; i--)
             {
                 var indicator = _activeAbilityIndicators[i];
@@ -2010,25 +1876,13 @@ namespace ProjectVagabond.Battle.UI
                     continue;
                 }
 
-                // --- PHYSICS UPDATE ---
-                // 1. Apply Velocity
                 indicator.CurrentPosition += indicator.Velocity * deltaTime;
-
-                // 2. Apply Drag to Velocity (Slow down upward movement)
-                // Use Time-Corrected Damping: V_new = V_old * (1 - damping * dt)
-                // Or more accurately: V_new = V_old * Exp(-damping * dt)
                 float velocityDamping = 1.0f - MathF.Exp(-ABILITY_FLOAT_DRAG * deltaTime);
                 indicator.Velocity = Vector2.Lerp(indicator.Velocity, Vector2.Zero, velocityDamping);
-
-                // 3. Apply Rotation
                 indicator.Rotation += indicator.RotationSpeed * deltaTime;
-
-                // 4. Apply Drag to Rotation Speed
                 float rotationDamping = 1.0f - MathF.Exp(-ABILITY_ROTATION_DRAG * deltaTime);
                 indicator.RotationSpeed = MathHelper.Lerp(indicator.RotationSpeed, 0f, rotationDamping);
 
-
-                // Update animation phase based on timer
                 if (indicator.Phase == AbilityIndicatorState.AnimationPhase.EasingIn && indicator.Timer >= AbilityIndicatorState.EASE_IN_DURATION)
                 {
                     indicator.Phase = AbilityIndicatorState.AnimationPhase.Flashing;
@@ -2046,12 +1900,11 @@ namespace ProjectVagabond.Battle.UI
 
         public void DrawDamageIndicators(SpriteBatch spriteBatch, BitmapFont font)
         {
-            // Two-pass rendering: text first, then numbers on top.
             DrawIndicatorsOfType(spriteBatch, font, DamageIndicatorState.IndicatorType.Text);
             DrawIndicatorsOfType(spriteBatch, font, DamageIndicatorState.IndicatorType.Effectiveness);
             DrawIndicatorsOfType(spriteBatch, font, DamageIndicatorState.IndicatorType.StatChange);
             DrawIndicatorsOfType(spriteBatch, font, DamageIndicatorState.IndicatorType.Protected);
-            DrawIndicatorsOfType(spriteBatch, font, DamageIndicatorState.IndicatorType.Failed); // Draw Failed text
+            DrawIndicatorsOfType(spriteBatch, font, DamageIndicatorState.IndicatorType.Failed);
             DrawIndicatorsOfType(spriteBatch, font, DamageIndicatorState.IndicatorType.Number);
             DrawIndicatorsOfType(spriteBatch, font, DamageIndicatorState.IndicatorType.HealNumber);
             DrawIndicatorsOfType(spriteBatch, font, DamageIndicatorState.IndicatorType.EmphasizedNumber);
@@ -2067,7 +1920,6 @@ namespace ProjectVagabond.Battle.UI
                 if (indicator.Type != typeToDraw) continue;
 
                 float progress = indicator.Timer / DamageIndicatorState.DURATION;
-
                 float alpha = 1.0f;
                 if (progress > 0.5f)
                 {
@@ -2103,33 +1955,25 @@ namespace ProjectVagabond.Battle.UI
                     bool useAltColor = (int)(indicator.Timer / flashInterval) % 2 == 0;
                     switch (indicator.PrimaryText)
                     {
-                        case "EFFECTIVE":
-                            drawColor = useAltColor ? _global.EffectiveIndicatorColor : _global.Palette_DarkSun;
-                            break;
-                        case "RESISTED":
-                            drawColor = useAltColor ? _global.ResistedIndicatorColor : _global.Palette_Sun;
-                            break;
-                        case "IMMUNE":
-                            drawColor = useAltColor ? _global.ImmuneIndicatorColor : _global.Palette_Shadow;
-                            break;
-                        default:
-                            drawColor = Color.White;
-                            break;
+                        case "EFFECTIVE": drawColor = useAltColor ? _global.EffectiveIndicatorColor : _global.Palette_DarkSun; break;
+                        case "RESISTED": drawColor = useAltColor ? _global.ResistedIndicatorColor : _global.Palette_Sun; break;
+                        case "IMMUNE": drawColor = useAltColor ? _global.ImmuneIndicatorColor : _global.Palette_Shadow; break;
+                        default: drawColor = Color.White; break;
                     }
                 }
                 else if (indicator.Type == DamageIndicatorState.IndicatorType.Protected)
                 {
-                    const float flashInterval = 0.1f; // Fast flash
+                    const float flashInterval = 0.1f;
                     bool useCyan = (int)(indicator.Timer / flashInterval) % 2 == 0;
                     drawColor = useCyan ? _global.ProtectedIndicatorColor : Color.White;
                 }
                 else if (indicator.Type == DamageIndicatorState.IndicatorType.Failed)
                 {
-                    const float flashInterval = 0.1f; // Fast flash
+                    const float flashInterval = 0.1f;
                     bool useRed = (int)(indicator.Timer / flashInterval) % 2 == 0;
                     drawColor = useRed ? _global.FailedIndicatorColor : _global.Palette_Rust;
                 }
-                else // Text indicator (Graze, StatChange)
+                else
                 {
                     drawColor = indicator.PrimaryColor;
                     if (indicator.PrimaryText == "GRAZE")
@@ -2144,7 +1988,6 @@ namespace ProjectVagabond.Battle.UI
                 {
                     const float flashInterval = 0.2f;
                     bool useAltColor = (int)(indicator.Timer / flashInterval) % 2 == 0;
-
                     Color prefixColor = useAltColor ? _global.Palette_DarkSun : indicator.PrimaryColor;
                     Color statColor = useAltColor ? _global.Palette_DarkSun : indicator.SecondaryColor.Value;
                     Color suffixColor = useAltColor ? _global.Palette_DarkSun : indicator.TertiaryColor.Value;
@@ -2160,7 +2003,6 @@ namespace ProjectVagabond.Battle.UI
                     float totalWidth = prefixSize.X + statSize.X + suffixSize.X;
                     Vector2 basePosition = indicator.Position - new Vector2(totalWidth / 2f, statSize.Y);
 
-                    // Adjust position to stay on screen
                     float left = basePosition.X;
                     float right = basePosition.X + totalWidth;
                     if (left < screenPadding) basePosition.X += (screenPadding - left);
@@ -2178,16 +2020,13 @@ namespace ProjectVagabond.Battle.UI
                     Vector2 textSize = activeFont.MeasureString(indicator.PrimaryText);
                     Vector2 textPosition = indicator.Position - new Vector2(textSize.X / 2f, textSize.Y);
 
-                    // Adjust position to stay on screen
                     float left = textPosition.X;
                     float right = textPosition.X + textSize.X;
                     if (left < screenPadding) textPosition.X += (screenPadding - left);
                     if (right > Global.VIRTUAL_WIDTH - screenPadding) textPosition.X -= (right - (Global.VIRTUAL_WIDTH - screenPadding));
 
-                    // --- OPTIMIZATION: Use TextAnimator for Critical Hits ---
                     if (indicator.Type == DamageIndicatorState.IndicatorType.EmphasizedNumber)
                     {
-                        // Use Shake effect for critical hits
                         TextAnimator.DrawTextWithEffectOutlined(spriteBatch, activeFont, indicator.PrimaryText, textPosition, drawColor * alpha, _global.Palette_Black * alpha, TextEffectType.Shake, indicator.Timer);
                     }
                     else
@@ -2201,11 +2040,10 @@ namespace ProjectVagabond.Battle.UI
         public void DrawAbilityIndicators(SpriteBatch spriteBatch, BitmapFont font)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
-            var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont; // Change 1: Use Tertiary Font
+            var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
 
             foreach (var indicator in _activeAbilityIndicators)
             {
-                // --- Alpha Calculation ---
                 float alpha = 1.0f;
                 if (indicator.Phase == AbilityIndicatorState.AnimationPhase.EasingIn)
                 {
@@ -2218,20 +2056,12 @@ namespace ProjectVagabond.Battle.UI
                     alpha = 1.0f - Easing.EaseInQuad(fadeOutProgress);
                 }
 
-                // --- Pulsing Flash Logic ---
                 const float PULSE_SPEED = 15f;
-                float pulse = (MathF.Sin(indicator.Timer * PULSE_SPEED) + 1f) / 2f; // Oscillates between 0.0 and 1.0
-
-                // --- Change 2: Flash Yellow <-> White ---
+                float pulse = (MathF.Sin(indicator.Timer * PULSE_SPEED) + 1f) / 2f;
                 Color textColor = Color.Lerp(_global.Palette_DarkSun, _global.Palette_Sun, pulse);
-
-                // --- Change 3: Black Outline ---
                 Color outlineColor = _global.Palette_Black;
-
-                // --- Final Transparency ---
                 float finalDrawAlpha = alpha;
 
-                // --- Shake Calculation ---
                 Vector2 shakeOffset = Vector2.Zero;
                 if (indicator.ShakeTimer > 0)
                 {
@@ -2240,20 +2070,13 @@ namespace ProjectVagabond.Battle.UI
                     shakeOffset.X = MathF.Sin(indicator.Timer * AbilityIndicatorState.SHAKE_FREQUENCY) * magnitude;
                 }
 
-                // --- Layout Calculation ---
                 Vector2 textSize = tertiaryFont.MeasureString(indicator.Text);
-
-                // Center text on the current position
                 var textPosition = new Vector2(
                     (int)(indicator.CurrentPosition.X - textSize.X / 2f + shakeOffset.X),
                     (int)(indicator.CurrentPosition.Y - textSize.Y / 2f + shakeOffset.Y)
                 );
 
-                // --- Drawing ---
-                // Draw ONLY text with outline (No background box)
-                // Pass Rotation and Origin
                 Vector2 origin = textSize / 2f;
-                // Re-calculate position to be centered on the point for rotation
                 Vector2 drawPos = indicator.CurrentPosition + shakeOffset;
 
                 TextAnimator.DrawTextWithEffectSquareOutlined(spriteBatch, tertiaryFont, indicator.Text, drawPos - origin, textColor * finalDrawAlpha, outlineColor * finalDrawAlpha, TextEffectType.DriftWave, indicator.Timer, null, indicator.Rotation);
