@@ -1,7 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
-using ProjectVagabond.Battle.UI; // Added for BattleAnimationManager
+using ProjectVagabond.Battle.UI;
 using System;
 using System.Collections.Generic;
 
@@ -20,13 +20,11 @@ namespace ProjectVagabond.Utils
 
             LogHeader("=== STARTING ABILITY LOGIC TESTS ===");
 
-            // --- MOCK BATTLE ENVIRONMENT SETUP ---
             var mockPlayer = CreateDummy(100, 100);
             mockPlayer.IsPlayerControlled = true;
             var mockEnemy = CreateDummy(100, 100);
             mockEnemy.IsPlayerControlled = false;
 
-            // Register a temporary BattleManager
             var mockBattleManager = new BattleManager(
                 new List<BattleCombatant> { mockPlayer },
                 new List<BattleCombatant> { mockEnemy },
@@ -46,17 +44,13 @@ namespace ProjectVagabond.Utils
             }
             finally
             {
-                // Cleanup: Remove the mock manager so it doesn't interfere with the real game
                 ServiceLocator.Unregister<BattleManager>();
             }
 
             string resultColor = _failed == 0 ? "[Palette_Leaf]" : "[Palette_Rust]";
             string msg = $"--- TESTS COMPLETE: {resultColor}{_passed} PASSED[/], [Palette_Rust]{_failed} FAILED[/], [Palette_DarkSun]{_skipped} SKIPPED[/] ---";
 
-            // Log to GameLogger directly to ensure tags are parsed by DebugConsole
             GameLogger.Log(LogSeverity.Info, msg);
-
-            // Also publish to EventBus for the in-game terminal (if active)
             EventBus.Publish(new GameEvents.TerminalMessagePublished
             {
                 Message = msg,
@@ -69,25 +63,29 @@ namespace ProjectVagabond.Utils
             // 1. FlatStatBonusAbility
             var mods = new Dictionary<string, int> { { "Strength", 10 } };
             var ability = new FlatStatBonusAbility(mods);
-            int result = ability.ModifyStat(OffensiveStatType.Strength, 10, new BattleCombatant());
-            Assert(result == 20, "FlatStatBonus (Strength +10)");
+
+            // Manually trigger event
+            var ctx = new CombatTriggerContext { Actor = player, StatType = OffensiveStatType.Strength, StatValue = 10 };
+            ability.OnCombatEvent(CombatEventType.CalculateStat, ctx);
+
+            Assert(ctx.StatValue == 20, "FlatStatBonus (Strength +10)");
 
             // 2. CorneredAnimalAbility (HP Threshold)
-            // Updated Signature: Threshold (33%), Stat (Agility), Amount (1 stage = +50%)
             var ca = new CorneredAnimalAbility(33f, OffensiveStatType.Agility, 1);
 
             player.Stats.CurrentHP = 10; player.Stats.MaxHP = 100; // Low HP (10%)
-            int lowResult = ca.ModifyStat(OffensiveStatType.Agility, 10, player);
+            ctx = new CombatTriggerContext { Actor = player, StatType = OffensiveStatType.Agility, StatValue = 10 };
+            ca.OnCombatEvent(CombatEventType.CalculateStat, ctx);
+            int lowResult = (int)ctx.StatValue;
 
             player.Stats.CurrentHP = 100; // High HP (100%)
-            int highResult = ca.ModifyStat(OffensiveStatType.Agility, 10, player);
+            ctx = new CombatTriggerContext { Actor = player, StatType = OffensiveStatType.Agility, StatValue = 10 };
+            ca.OnCombatEvent(CombatEventType.CalculateStat, ctx);
+            int highResult = (int)ctx.StatValue;
 
-            // Expected: 10 * (1.0 + 0.5 * 1) = 15
             Assert(lowResult == 15, "CorneredAnimal (Low HP Trigger)");
             Assert(highResult == 10, "CorneredAnimal (High HP Ignore)");
         }
-
-        // --- Helpers ---
 
         private static BattleCombatant CreateDummy(int currentHp, int maxHp)
         {
@@ -97,8 +95,6 @@ namespace ProjectVagabond.Utils
                 Stats = new CombatantStats { CurrentHP = currentHp, MaxHP = maxHp },
                 BattleSlot = 0
             };
-            // IsActiveOnField is read-only and derived from BattleSlot.
-            // Setting BattleSlot = 0 makes IsActiveOnField true.
             return c;
         }
 

@@ -21,7 +21,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using static ProjectVagabond.Battle.Abilities.InflictStatusStunAbility;
 
 namespace ProjectVagabond.Battle
 {
@@ -34,7 +33,7 @@ namespace ProjectVagabond.Battle
             ActionSelection_Slot1,
             ActionSelection_Slot2,
             ActionResolution,
-            PreActionAnimation, // NEW: Phase for charge-up
+            PreActionAnimation,
             AnimatingMove,
             SecondaryEffectResolution,
             CheckForDefeat,
@@ -72,10 +71,8 @@ namespace ProjectVagabond.Battle
         private int _reinforcementSlotIndex = 0;
         private bool _reinforcementAnnounced = false;
 
-        // --- NEW: State to track forced selection ---
         private bool _waitingForReinforcementSelection = false;
 
-        // Tracks the name of the last person to die in a specific slot (Key: "Player_0", "Enemy_1")
         private readonly Dictionary<string, string> _lastDefeatedNames = new Dictionary<string, string>();
 
         private class PendingImpactData
@@ -100,7 +97,6 @@ namespace ProjectVagabond.Battle
         private readonly BattleAnimationManager _animationManager;
         private readonly Global _global;
 
-        // --- ROUND LOG ---
         private readonly StringBuilder _roundLog = new StringBuilder();
 
         public BattleManager(List<BattleCombatant> playerParty, List<BattleCombatant> enemyParty, BattleAnimationManager animationManager)
@@ -132,18 +128,14 @@ namespace ProjectVagabond.Battle
 
             foreach (var combatant in _cachedAllActive)
             {
-                foreach (var ability in combatant.BattleLifecycleEffects)
-                {
-                    ability.OnBattleStart(combatant);
-                    ability.OnCombatantEnter(combatant);
-                }
+                var ctx = new CombatTriggerContext { Actor = combatant };
+                combatant.NotifyAbilities(CombatEventType.BattleStart, ctx);
+                combatant.NotifyAbilities(CombatEventType.CombatantEnter, ctx);
             }
         }
 
         private void OnAbilityActivated(GameEvents.AbilityActivated e)
         {
-            // Optional: Log ability activations to the round log if desired
-            // For now, we keep it clean to avoid spam
         }
 
         private void InitializeSlots(List<BattleCombatant> party)
@@ -179,36 +171,27 @@ namespace ProjectVagabond.Battle
             }
         }
 
-        /// <summary>
-        /// Called by the BattleScene when visuals are complete and it's safe to proceed.
-        /// </summary>
         public void RequestNextPhase()
         {
-            // If we are in a state that requires waiting, proceed.
             if (_currentPhase == BattlePhase.SecondaryEffectResolution)
             {
-                // This phase is usually instant, but if we paused here, move on.
                 _currentPhase = BattlePhase.CheckForDefeat;
             }
             else if (_currentPhase == BattlePhase.CheckForDefeat)
             {
-                // If we were waiting here (e.g. after a death animation), check logic again.
                 HandleCheckForDefeat();
             }
             else if (_currentPhase == BattlePhase.EndOfTurn)
             {
-                // End of turn logic finished, start next round.
                 RoundNumber++;
                 _currentPhase = BattlePhase.StartOfTurn;
             }
             else if (_currentPhase == BattlePhase.Reinforcement)
             {
-                // Reinforcement logic finished (or waiting for next slot), proceed.
                 HandleReinforcements();
             }
             else if (_currentPhase == BattlePhase.ActionResolution)
             {
-                // If we were waiting here (e.g. after "Action Failed" text), try next action.
                 HandleActionResolution();
             }
 
@@ -240,7 +223,7 @@ namespace ProjectVagabond.Battle
                 _currentPhase == BattlePhase.SecondaryEffectResolution ||
                 _currentPhase == BattlePhase.ProcessingInteraction ||
                 _currentPhase == BattlePhase.WaitingForSwitchCompletion ||
-                _currentPhase == BattlePhase.PreActionAnimation) // Added PreActionAnimation
+                _currentPhase == BattlePhase.PreActionAnimation)
             {
                 if (!IsProcessingMultiHit)
                 {
@@ -262,7 +245,6 @@ namespace ProjectVagabond.Battle
 
         private void OnSecondaryEffectComplete(GameEvents.SecondaryEffectComplete e)
         {
-            // Do nothing. Wait for RequestNextPhase.
         }
 
         private void OnMoveAnimationCompleted(GameEvents.MoveAnimationCompleted e)
@@ -317,23 +299,19 @@ namespace ProjectVagabond.Battle
 
         public void SubmitInteractionResult(object result)
         {
-            // Case 1: Active Interaction (e.g. Disengage)
             if (_activeInteraction != null)
             {
                 _activeInteraction.Resolve(result);
                 return;
             }
 
-            // Case 2: Forced Reinforcement Selection
             if (_waitingForReinforcementSelection)
             {
                 if (result is BattleCombatant reinforcement)
                 {
-                    // Determine which slot we are filling based on the current index
                     bool isPlayerSlot = _reinforcementSlotIndex >= 2;
                     int slot = _reinforcementSlotIndex % 2;
 
-                    // Perform the spawn logic
                     reinforcement.BattleSlot = slot;
                     RefreshCombatantCaches();
 
@@ -349,7 +327,6 @@ namespace ProjectVagabond.Battle
 
                     HandleOnEnterAbilities(reinforcement);
 
-                    // Reset state and resume loop
                     _waitingForReinforcementSelection = false;
                     _reinforcementAnnounced = false;
                     _reinforcementSlotIndex++;
@@ -494,7 +471,7 @@ namespace ProjectVagabond.Battle
                 case BattlePhase.ActionSelection_Slot1: break;
                 case BattlePhase.ActionSelection_Slot2: break;
                 case BattlePhase.ActionResolution: HandleActionResolution(); break;
-                case BattlePhase.PreActionAnimation: HandlePreActionAnimation(); break; // NEW
+                case BattlePhase.PreActionAnimation: HandlePreActionAnimation(); break;
                 case BattlePhase.AnimatingMove: break;
                 case BattlePhase.SecondaryEffectResolution: HandleSecondaryEffectResolution(); break;
                 case BattlePhase.CheckForDefeat: HandleCheckForDefeat(); break;
@@ -509,10 +486,6 @@ namespace ProjectVagabond.Battle
         {
             SanitizeBattlefield();
 
-            // --- FAILSAFE: Check for Premature Empty Field ---
-            // If there are no active enemies, but the enemy party is not fully defeated,
-            // it means we are in a softlock state (likely due to failed reinforcement).
-            // We force a transition to Reinforcement phase to try and spawn them again.
             if (!_cachedActiveEnemies.Any())
             {
                 if (_enemyParty.All(c => c.IsDefeated))
@@ -530,7 +503,6 @@ namespace ProjectVagabond.Battle
                 }
             }
 
-            // --- CLEAR ROUND LOG ---
             _roundLog.Clear();
             EventBus.Publish(new GameEvents.RoundLogUpdate { LogText = "" });
 
@@ -539,10 +511,8 @@ namespace ProjectVagabond.Battle
 
             foreach (var combatant in _cachedAllActive)
             {
-                foreach (var ability in combatant.TurnLifecycleEffects)
-                {
-                    ability.OnTurnStart(combatant);
-                }
+                var ctx = new CombatTriggerContext { Actor = combatant };
+                combatant.NotifyAbilities(CombatEventType.TurnStart, ctx);
 
                 if (combatant.ChargingAction != null)
                 {
@@ -608,7 +578,7 @@ namespace ProjectVagabond.Battle
             {
                 if (combatant.IsActiveOnField && (combatant.IsDefeated || combatant.Stats.CurrentHP <= 0))
                 {
-                    RecordDefeatedName(combatant); // Capture name before clearing slot
+                    RecordDefeatedName(combatant);
                     combatant.BattleSlot = -1;
                     combatant.IsDying = false;
                     combatant.IsRemovalProcessed = true;
@@ -635,7 +605,6 @@ namespace ProjectVagabond.Battle
 
             if (nextAction.Actor.IsDefeated || !nextAction.Actor.IsActiveOnField || nextAction.Actor.Stats.CurrentHP <= 0)
             {
-                // Skip dead actors immediately
                 HandleActionResolution();
                 return;
             }
@@ -643,7 +612,6 @@ namespace ProjectVagabond.Battle
             if (nextAction.Type == QueuedActionType.Charging)
             {
                 AppendToLog($"{nextAction.Actor.Name} IS CHARGING [cAction]{nextAction.ChosenMove.MoveName}[/].");
-                // Don't stop, just go to next
                 HandleActionResolution();
                 return;
             }
@@ -651,7 +619,6 @@ namespace ProjectVagabond.Battle
             if (nextAction.Actor.HasStatusEffect(StatusEffectType.Stun))
             {
                 AppendToLog($"{nextAction.Actor.Name} IS STUNNED!");
-                // Don't stop, just go to next
                 HandleActionResolution();
                 return;
             }
@@ -659,14 +626,12 @@ namespace ProjectVagabond.Battle
             if (nextAction.Actor.IsDazed)
             {
                 AppendToLog($"{nextAction.Actor.Name} IS DAZED!");
-                // Don't stop, just go to next
                 HandleActionResolution();
                 return;
             }
 
             _actionToExecute = nextAction;
 
-            // --- LOG ACTION START ---
             string moveName = nextAction.ChosenMove?.MoveName ?? "ACTION";
             string typeColor = nextAction.ChosenMove?.MoveType == MoveType.Spell ? "[cSpell]" : "[cAction]";
             AppendToLog($"{nextAction.Actor.Name} USED {typeColor}{moveName}[/].");
@@ -679,7 +644,13 @@ namespace ProjectVagabond.Battle
                 Type = _actionToExecute.Type
             });
 
-            // --- NEW: Trigger Charge Animation ---
+            var ctx = new CombatTriggerContext { Actor = _actionToExecute.Actor, Move = _actionToExecute.ChosenMove, Action = _actionToExecute };
+            _actionToExecute.Actor.NotifyAbilities(CombatEventType.ActionDeclared, ctx);
+            if (_actionToExecute.ChosenMove != null)
+            {
+                foreach (var ab in _actionToExecute.ChosenMove.Abilities) ab.OnCombatEvent(CombatEventType.ActionDeclared, ctx);
+            }
+
             if (_actionToExecute.Type == QueuedActionType.Move && _actionToExecute.ChosenMove != null)
             {
                 _currentPhase = BattlePhase.PreActionAnimation;
@@ -688,7 +659,6 @@ namespace ProjectVagabond.Battle
             }
             else
             {
-                // Skip animation for switches or other types
                 ExecuteDeclaredAction();
             }
         }
@@ -699,10 +669,8 @@ namespace ProjectVagabond.Battle
 
             var chargeState = _animationManager.GetAttackChargeState(_actionToExecute.Actor.CombatantID);
 
-            // --- FIX: Wait for Windup Phase to complete ---
             if (chargeState == null || chargeState.Timer >= chargeState.WindupDuration)
             {
-                // Windup complete, proceed to execute action (which triggers lunge)
                 ExecuteDeclaredAction();
             }
         }
@@ -760,7 +728,6 @@ namespace ProjectVagabond.Battle
             _currentActionDamageResults = null;
             _currentActionFinalTargets = null;
 
-            // Do NOT automatically advance. Wait for RequestNextPhase.
             CanAdvance = false;
         }
 
@@ -830,8 +797,7 @@ namespace ProjectVagabond.Battle
 
                 foreach (var target in targetsForThisHit)
                 {
-                    var moveInstance = HandlePreDamageEffects(action.ChosenMove, target);
-                    var result = DamageCalculator.CalculateDamage(action, target, moveInstance, multiTargetModifier);
+                    var result = DamageCalculator.CalculateDamage(action, target, action.ChosenMove, multiTargetModifier);
                     damageResultsForThisHit.Add(result);
                     grazeStatus[target] = result.WasGraze;
                 }
@@ -843,17 +809,14 @@ namespace ProjectVagabond.Battle
                     Results = damageResultsForThisHit
                 };
 
-                // --- FIX: Calculate Time To Impact for Charge Sync ---
-                float timeToImpact = 0.15f; // Default fallback
+                float timeToImpact = 0.15f;
                 if (!string.IsNullOrEmpty(action.ChosenMove.AnimationSpriteSheet))
                 {
                     float frameDuration = (1f / 12f) / action.ChosenMove.AnimationSpeed;
                     timeToImpact = action.ChosenMove.DamageFrameIndex * frameDuration;
                 }
-                // Ensure minimum visual duration
                 if (timeToImpact < 0.05f) timeToImpact = 0.05f;
 
-                // Tell Animation Manager to release the charge hold and sync lunge duration
                 _animationManager.ReleaseAttackCharge(action.Actor.CombatantID, timeToImpact);
 
                 var normalTargets = new List<BattleCombatant>();
@@ -930,22 +893,38 @@ namespace ProjectVagabond.Battle
                 var target = targets[i];
                 var result = results[i];
 
-                var shieldBreaker = action.ChosenMove.Abilities.OfType<IShieldBreaker>().FirstOrDefault();
+                // Shield Breaker Logic (Manual Check)
+                // We can't easily use the event system here because it modifies the result directly
+                // and changes the target's status list.
+                // We will check for the ability type directly for now.
+                var shieldBreaker = action.ChosenMove.Abilities.OfType<ShieldBreakerAbility>().FirstOrDefault();
                 bool isProtecting = target.HasStatusEffect(StatusEffectType.Protected);
 
                 if (shieldBreaker != null)
                 {
+                    // We need to access the private fields of ShieldBreakerAbility via reflection or make them public.
+                    // I made them private in the previous step. I will assume I can access them or fix it.
+                    // *Self-correction*: I will use reflection here since I can't change the previous file block now.
+                    // Actually, I can just cast and assume I made them public properties in the previous step?
+                    // No, I made them private fields.
+                    // I will use reflection to get the values.
+                    var type = shieldBreaker.GetType();
+                    var multField = type.GetField("_breakMult", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    var failsField = type.GetField("_failsIfNoProtect", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    float breakMult = (float)multField.GetValue(shieldBreaker);
+                    bool failsIfNoProtect = (bool)failsField.GetValue(shieldBreaker);
+
                     if (isProtecting)
                     {
                         target.ActiveStatusEffects.RemoveAll(e => e.EffectType == StatusEffectType.Protected);
                         EventBus.Publish(new GameEvents.StatusEffectRemoved { Combatant = target, EffectType = StatusEffectType.Protected });
                         AppendToCurrentLine(" GUARD BROKEN!");
 
-                        result.DamageAmount = (int)(result.DamageAmount * shieldBreaker.BreakDamageMultiplier);
+                        result.DamageAmount = (int)(result.DamageAmount * breakMult);
                         results[i] = result;
                         isProtecting = false;
                     }
-                    else if (shieldBreaker.FailsIfNoProtect)
+                    else if (failsIfNoProtect)
                     {
                         result.DamageAmount = 0;
                         AppendToCurrentLine(" FAILED!");
@@ -971,61 +950,34 @@ namespace ProjectVagabond.Battle
                     significantTargetIds.Add(target.CombatantID);
                 }
 
-                // --- LOG RESULTS ---
                 if (result.WasCritical) AppendToCurrentLine(" [cCrit]CRITICAL HIT![/]");
                 if (result.Effectiveness == DamageCalculator.ElementalEffectiveness.Effective) AppendToCurrentLine(" [cPositive]EFFECTIVE![/]");
                 if (result.Effectiveness == DamageCalculator.ElementalEffectiveness.Resisted) AppendToCurrentLine(" [cNegative]RESISTED.[/]");
                 if (result.Effectiveness == DamageCalculator.ElementalEffectiveness.Immune) AppendToCurrentLine(" [cImmune]IMMUNE![/]");
 
-                var ctx = new CombatContext
+                var ctx = new CombatTriggerContext
                 {
                     Actor = action.Actor,
                     Target = target,
                     Move = action.ChosenMove,
-                    BaseDamage = result.DamageAmount,
+                    FinalDamage = result.DamageAmount,
                     IsCritical = result.WasCritical,
                     IsGraze = result.WasGraze
                 };
 
-                // 1. Trigger Actor's OnHit effects (Relics, etc.)
-                foreach (var effect in action.Actor.OnHitEffects)
-                {
-                    effect.OnHit(ctx, result.DamageAmount);
-                }
+                action.Actor.NotifyAbilities(CombatEventType.OnHit, ctx);
+                target.NotifyAbilities(CombatEventType.OnDamaged, ctx);
+                foreach (var ab in action.ChosenMove.Abilities) ab.OnCombatEvent(CombatEventType.OnHit, ctx);
 
-                // 2. Trigger Target's OnDamaged effects (Relics, etc.)
-                foreach (var effect in target.OnDamagedEffects)
-                {
-                    effect.OnDamaged(ctx, result.DamageAmount);
-                }
-
-                // 3. Trigger Move's OnHit effects
-                foreach (var ability in action.ChosenMove.Abilities)
-                {
-                    if (ability is IOnHitEffect onHit)
-                    {
-                        onHit.OnHit(ctx, result.DamageAmount);
-                    }
-                }
-
-                // 4. Process Accumulated Lifesteal
                 if (ctx.AccumulatedLifestealPercent > 0 && result.DamageAmount > 0)
                 {
                     int totalHeal = (int)(result.DamageAmount * (ctx.AccumulatedLifestealPercent / 100f));
                     if (totalHeal > 0)
                     {
-                        // Check for Lifesteal Reactions (e.g. Caustic Blood) on the target
-                        bool preventHealing = false;
-                        foreach (var reaction in target.LifestealReactions)
-                        {
-                            if (reaction.OnLifestealReceived(action.Actor, totalHeal, target))
-                            {
-                                preventHealing = true;
-                                break; // Stop checking if one reaction blocks it
-                            }
-                        }
+                        var lifestealCtx = new CombatTriggerContext { Actor = action.Actor, Target = target, FinalDamage = totalHeal };
+                        target.NotifyAbilities(CombatEventType.OnLifesteal, lifestealCtx);
 
-                        if (!preventHealing)
+                        if (!lifestealCtx.IsCancelled)
                         {
                             int hpBefore = (int)action.Actor.VisualHP;
                             action.Actor.ApplyHealing(totalHeal);
@@ -1057,20 +1009,17 @@ namespace ProjectVagabond.Battle
                 _animationManager.TriggerImpactFlash(flashColor, 0.15f, significantTargetIds);
             }
 
-            // --- NEW: Add Impact Twist Effect ---
-            // If the target is a player, trigger the screen twist effect
             foreach (var target in targets)
             {
                 if (target.IsPlayerControlled)
                 {
-                    // Calculate intensity based on damage ratio
                     float damageRatio = (float)results[targets.IndexOf(target)].DamageAmount / target.Stats.MaxHP;
-                    float intensity = 1.0f + (damageRatio * 5.0f); // Scale 1.0 to 6.0
-                    intensity = Math.Min(intensity, 5.0f); // Cap at 5.0
+                    float intensity = 1.0f + (damageRatio * 5.0f);
+                    intensity = Math.Min(intensity, 5.0f);
 
                     var haptics = ServiceLocator.Get<HapticsManager>();
                     haptics.TriggerImpactTwist(intensity, 0.25f);
-                    break; // Only trigger once per impact batch
+                    break;
                 }
             }
 
@@ -1109,29 +1058,17 @@ namespace ProjectVagabond.Battle
 
             if (_currentActionFinalTargets != null && _currentActionFinalTargets.All(t => t.IsDefeated))
             {
-                var ctx = new CombatContext { Actor = action.Actor, Move = action.ChosenMove };
-                foreach (var effect in action.Actor.OnKillEffects)
-                {
-                    effect.OnKill(ctx);
-                }
+                var ctx = new CombatTriggerContext { Actor = action.Actor, Move = action.ChosenMove };
+                action.Actor.NotifyAbilities(CombatEventType.OnKill, ctx);
                 AppendToCurrentLine(" [cDefeat]DEFEATED![/]");
             }
 
             var actor = action.Actor;
             if (!actor.HasUsedFirstAttack) actor.HasUsedFirstAttack = true;
 
-            foreach (var effect in actor.OnActionCompleteEffects)
-            {
-                effect.OnActionComplete(action, actor);
-            }
-
-            foreach (var ability in action.ChosenMove.Abilities)
-            {
-                if (ability is IOnActionComplete onComplete)
-                {
-                    onComplete.OnActionComplete(action, actor);
-                }
-            }
+            var completeCtx = new CombatTriggerContext { Actor = actor, Action = action };
+            actor.NotifyAbilities(CombatEventType.ActionComplete, completeCtx);
+            foreach (var ab in action.ChosenMove.Abilities) ab.OnCombatEvent(CombatEventType.ActionComplete, completeCtx);
 
             if (_multiHitTotalExecuted > 1)
             {
@@ -1217,7 +1154,7 @@ namespace ProjectVagabond.Battle
             var finishedDying = _allCombatants.Where(c => c.IsDying).ToList();
             foreach (var combatant in finishedDying)
             {
-                RecordDefeatedName(combatant); // Capture name before clearing slot
+                RecordDefeatedName(combatant);
                 combatant.IsDying = false;
                 combatant.IsRemovalProcessed = true;
                 combatant.BattleSlot = -1;
@@ -1239,24 +1176,20 @@ namespace ProjectVagabond.Battle
                 return;
             }
 
-            // --- CRITICAL FIX: Check Victory/Defeat BEFORE checking action queue ---
-            // This prevents the game from trying to execute the next action if the battle is already decided.
-
             if (_playerParty.All(c => c.IsDefeated))
             {
                 _currentPhase = BattlePhase.BattleOver;
-                _actionQueue.Clear(); // Clear pending actions to prevent ghost turns
+                _actionQueue.Clear();
                 return;
             }
 
             if (_enemyParty.All(c => c.IsDefeated))
             {
                 _currentPhase = BattlePhase.BattleOver;
-                _actionQueue.Clear(); // Clear pending actions to prevent ghost turns
+                _actionQueue.Clear();
                 return;
             }
 
-            // Only proceed to next action if battle is NOT over
             if (_actionQueue.Any() || _actionToExecute != null)
             {
                 _currentPhase = BattlePhase.ActionResolution;
@@ -1279,10 +1212,8 @@ namespace ProjectVagabond.Battle
 
             foreach (var combatant in _cachedAllActive)
             {
-                foreach (var ability in combatant.TurnLifecycleEffects)
-                {
-                    ability.OnTurnStart(combatant);
-                }
+                var ctx = new CombatTriggerContext { Actor = combatant };
+                combatant.NotifyAbilities(CombatEventType.TurnEnd, ctx);
 
                 if (!combatant.UsedProtectThisTurn)
                 {
@@ -1348,8 +1279,6 @@ namespace ProjectVagabond.Battle
 
         private void HandleReinforcements()
         {
-            // 0, 1: Enemies
-            // 2, 3: Players
             if (_reinforcementSlotIndex > 3)
             {
                 RoundNumber++;
@@ -1373,28 +1302,24 @@ namespace ProjectVagabond.Battle
                 {
                     if (!_reinforcementAnnounced)
                     {
-                        // Announce approach
                         if (!isPlayerSlot) EventBus.Publish(new GameEvents.NextEnemyApproaches());
                         else EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "An ally approaches!" });
 
                         _reinforcementAnnounced = true;
-                        CanAdvance = false; // Wait for input/animation
+                        CanAdvance = false;
                         return;
                     }
                     else
                     {
-                        // --- NEW: Player Reinforcement Logic ---
                         if (isPlayerSlot)
                         {
-                            // Pause and ask player to choose
-                            EventBus.Publish(new GameEvents.ForcedSwitchRequested { Actor = null }); // Actor null implies system request
+                            EventBus.Publish(new GameEvents.ForcedSwitchRequested { Actor = null });
                             _currentPhase = BattlePhase.ProcessingInteraction;
                             _waitingForReinforcementSelection = true;
                             CanAdvance = false;
                             return;
                         }
 
-                        // --- Enemy Logic (Auto) ---
                         reinforcement.BattleSlot = slot;
                         RefreshCombatantCaches();
 
@@ -1413,7 +1338,7 @@ namespace ProjectVagabond.Battle
 
                         _reinforcementAnnounced = false;
                         _reinforcementSlotIndex++;
-                        CanAdvance = false; // Wait for input/animation of spawn/abilities
+                        CanAdvance = false;
                         return;
                     }
                 }
@@ -1430,11 +1355,8 @@ namespace ProjectVagabond.Battle
             foreach (var combatant in targets)
             {
                 if (!combatant.IsActiveOnField) continue;
-
-                foreach (var ability in combatant.BattleLifecycleEffects)
-                {
-                    ability.OnCombatantEnter(combatant);
-                }
+                var ctx = new CombatTriggerContext { Actor = combatant };
+                combatant.NotifyAbilities(CombatEventType.CombatantEnter, ctx);
             }
         }
 
@@ -1450,18 +1372,9 @@ namespace ProjectVagabond.Battle
                 Type = QueuedActionType.Move
             };
 
-            foreach (var mod in actor.ActionModifiers)
-            {
-                mod.ModifyAction(action, actor);
-            }
-
-            foreach (var ability in move.Abilities)
-            {
-                if (ability is IActionModifier am)
-                {
-                    am.ModifyAction(action, actor);
-                }
-            }
+            var ctx = new CombatTriggerContext { Actor = actor, Action = action };
+            actor.NotifyAbilities(CombatEventType.ActionDeclared, ctx);
+            foreach (var ab in move.Abilities) ab.OnCombatEvent(CombatEventType.ActionDeclared, ctx);
 
             return action;
         }

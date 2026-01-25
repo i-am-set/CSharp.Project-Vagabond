@@ -26,7 +26,7 @@ using System.Runtime.Intrinsics.X86;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
-using static ProjectVagabond.Battle.Abilities.InflictStatusStunAbility;
+
 
 namespace ProjectVagabond
 {

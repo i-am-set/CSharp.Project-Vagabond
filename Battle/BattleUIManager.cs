@@ -17,7 +17,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using static ProjectVagabond.Battle.Abilities.InflictStatusStunAbility;
+
 
 namespace ProjectVagabond.Battle.UI
 {

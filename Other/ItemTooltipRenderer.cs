@@ -22,7 +22,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
-using static ProjectVagabond.Battle.Abilities.InflictStatusStunAbility;
+
 
 namespace ProjectVagabond.UI
 {

@@ -1,4 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
+using MonoGame.Extended.ECS.Systems;
+using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using System;
 using System.Collections.Generic;
@@ -51,7 +53,6 @@ namespace ProjectVagabond.Battle
         public MoveEntry?[] Spells { get; set; } = new MoveEntry?[4];
         public string DefaultStrikeMoveID { get; set; }
 
-        // Simplified Strike Logic: Always use default
         public MoveData StrikeMove
         {
             get
@@ -60,7 +61,6 @@ namespace ProjectVagabond.Battle
                 {
                     return move;
                 }
-                // Failsafe (Punch)
                 if (BattleDataCache.Moves.TryGetValue("0", out var punch)) return punch;
                 return null;
             }
@@ -68,35 +68,10 @@ namespace ProjectVagabond.Battle
 
         public int PortraitIndex { get; set; } = 0;
         public List<StatusEffectInstance> ActiveStatusEffects { get; set; } = new List<StatusEffectInstance>();
-
-        // Relics are now just tracked for tooltip purposes, logic is applied via Abilities list
         public List<RelicData> ActiveRelics { get; set; } = new List<RelicData>();
 
+        // --- THE NEW GENERIC LIST ---
         public List<IAbility> Abilities { get; private set; } = new List<IAbility>();
-
-        // Cached Interface Lists (Boilerplate)
-        public List<IStatModifier> StatModifiers { get; private set; } = new List<IStatModifier>();
-        public List<IStatChangeModifier> StatChangeModifiers { get; private set; } = new List<IStatChangeModifier>();
-        public List<IOutgoingDamageModifier> OutgoingDamageModifiers { get; private set; } = new List<IOutgoingDamageModifier>();
-        public List<IIncomingDamageModifier> IncomingDamageModifiers { get; private set; } = new List<IIncomingDamageModifier>();
-        public List<IAllyDamageModifier> AllyDamageModifiers { get; private set; } = new List<IAllyDamageModifier>();
-        public List<IDefensePenetrationModifier> DefensePenetrationModifiers { get; private set; } = new List<IDefensePenetrationModifier>();
-        public List<IElementalAffinityModifier> ElementalAffinityModifiers { get; private set; } = new List<IElementalAffinityModifier>();
-        public List<IIncomingStatusModifier> IncomingStatusModifiers { get; private set; } = new List<IIncomingStatusModifier>();
-        public List<IOutgoingStatusModifier> OutgoingStatusModifiers { get; private set; } = new List<IOutgoingStatusModifier>();
-        public List<IDazeImmunity> DazeImmunityModifiers { get; private set; } = new List<IDazeImmunity>();
-        public List<IOnHitEffect> OnHitEffects { get; private set; } = new List<IOnHitEffect>();
-        public List<IOnDamagedEffect> OnDamagedEffects { get; private set; } = new List<IOnDamagedEffect>();
-        public List<ICritModifier> CritModifiers { get; private set; } = new List<ICritModifier>();
-        public List<IAccuracyModifier> AccuracyModifiers { get; private set; } = new List<IAccuracyModifier>();
-        public List<ITurnLifecycle> TurnLifecycleEffects { get; private set; } = new List<ITurnLifecycle>();
-        public List<IBattleLifecycle> BattleLifecycleEffects { get; private set; } = new List<IBattleLifecycle>();
-        public List<IActionModifier> ActionModifiers { get; private set; } = new List<IActionModifier>();
-        public List<IOnActionComplete> OnActionCompleteEffects { get; private set; } = new List<IOnActionComplete>();
-        public List<IOnKill> OnKillEffects { get; private set; } = new List<IOnKill>();
-        public List<IOnCritReceived> OnCritReceivedEffects { get; private set; } = new List<IOnCritReceived>();
-        public List<IOnStatusApplied> OnStatusAppliedEffects { get; private set; } = new List<IOnStatusApplied>();
-        public List<ILifestealReaction> LifestealReactions { get; private set; } = new List<ILifestealReaction>();
 
         public List<int> WeaknessElementIDs { get; set; } = new List<int>();
         public List<int> ResistanceElementIDs { get; set; } = new List<int>();
@@ -123,7 +98,9 @@ namespace ProjectVagabond.Battle
             {
                 if (value == true)
                 {
-                    foreach (var mod in DazeImmunityModifiers) if (mod.ShouldBlockDaze(this)) return;
+                    var ctx = new CombatTriggerContext { Actor = this };
+                    NotifyAbilities(CombatEventType.CheckDazeImmunity, ctx);
+                    if (ctx.IsCancelled) return;
                 }
                 _isDazed = value;
             }
@@ -157,33 +134,19 @@ namespace ProjectVagabond.Battle
         public void RegisterAbility(IAbility ability)
         {
             Abilities.Add(ability);
-            if (ability is IStatModifier sm) StatModifiers.Add(sm);
-            if (ability is IStatChangeModifier scm) StatChangeModifiers.Add(scm);
-            if (ability is IOutgoingDamageModifier odm) OutgoingDamageModifiers.Add(odm);
-            if (ability is IIncomingDamageModifier idm) IncomingDamageModifiers.Add(idm);
-            if (ability is IAllyDamageModifier adm) AllyDamageModifiers.Add(adm);
-            if (ability is IDefensePenetrationModifier dpm) DefensePenetrationModifiers.Add(dpm);
-            if (ability is IElementalAffinityModifier eam) ElementalAffinityModifiers.Add(eam);
-            if (ability is IIncomingStatusModifier ism) IncomingStatusModifiers.Add(ism);
-            if (ability is IOutgoingStatusModifier osm) OutgoingStatusModifiers.Add(osm);
-            if (ability is IDazeImmunity dim) DazeImmunityModifiers.Add(dim);
-            if (ability is IOnHitEffect ohe) OnHitEffects.Add(ohe);
-            if (ability is IOnDamagedEffect ode) OnDamagedEffects.Add(ode);
-            if (ability is ICritModifier cm) CritModifiers.Add(cm);
-            if (ability is IAccuracyModifier am) AccuracyModifiers.Add(am);
-            if (ability is ITurnLifecycle tl) TurnLifecycleEffects.Add(tl);
-            if (ability is IBattleLifecycle bl) BattleLifecycleEffects.Add(bl);
-            if (ability is IActionModifier actm) ActionModifiers.Add(actm);
-            if (ability is IOnActionComplete oac) OnActionCompleteEffects.Add(oac);
-            if (ability is IOnKill ok) OnKillEffects.Add(ok);
-            if (ability is IOnCritReceived ocr) OnCritReceivedEffects.Add(ocr);
-            if (ability is IOnStatusApplied osa) OnStatusAppliedEffects.Add(osa);
-            if (ability is ILifestealReaction lsr) LifestealReactions.Add(lsr);
         }
 
         public void RegisterAbilities(IEnumerable<IAbility> abilities)
         {
             foreach (var ability in abilities) RegisterAbility(ability);
+        }
+
+        public void NotifyAbilities(CombatEventType type, CombatTriggerContext ctx)
+        {
+            foreach (var ability in Abilities)
+            {
+                ability.OnCombatEvent(type, ctx);
+            }
         }
 
         public void ApplyDamage(int damageAmount)
@@ -202,10 +165,9 @@ namespace ProjectVagabond.Battle
 
         public bool AddStatusEffect(StatusEffectInstance newEffect)
         {
-            foreach (var mod in IncomingStatusModifiers)
-            {
-                if (mod.ShouldBlockStatus(newEffect.EffectType, this)) return false;
-            }
+            var ctx = new CombatTriggerContext { Actor = this, StatusType = newEffect.EffectType };
+            NotifyAbilities(CombatEventType.CheckStatusImmunity, ctx);
+            if (ctx.IsCancelled) return false;
 
             bool hadEffectBefore = HasStatusEffect(newEffect.EffectType);
             ActiveStatusEffects.RemoveAll(e => e.EffectType == newEffect.EffectType);
@@ -217,11 +179,9 @@ namespace ProjectVagabond.Battle
 
         public (bool success, string message) ModifyStatStage(OffensiveStatType stat, int amount)
         {
-            foreach (var mod in StatChangeModifiers)
-            {
-                if (mod.ShouldBlockStatChange(stat, amount, this))
-                    return (false, $"{Name}'s {mod.Name} prevented the stat change!");
-            }
+            var ctx = new CombatTriggerContext { Actor = this, StatType = stat, StatValue = amount };
+            NotifyAbilities(CombatEventType.CheckStatChangeBlock, ctx);
+            if (ctx.IsCancelled) return (false, $"{Name}'s ability prevented the stat change!");
 
             int currentStage = StatStages[stat];
             if (amount > 0 && currentStage >= 6) return (false, $"{Name}'s {stat} won't go any higher!");
@@ -236,55 +196,54 @@ namespace ProjectVagabond.Battle
 
         public (List<int> Weaknesses, List<int> Resistances) GetEffectiveElementalAffinities()
         {
-            var effectiveWeaknesses = new List<int>(this.WeaknessElementIDs);
-            var effectiveResistances = new List<int>(this.ResistanceElementIDs);
-            foreach (var mod in ElementalAffinityModifiers) mod.ModifyElementalAffinities(effectiveWeaknesses, effectiveResistances, this);
-            return (effectiveWeaknesses, effectiveResistances);
+            var ctx = new CombatTriggerContext
+            {
+                Actor = this,
+                Weaknesses = new List<int>(this.WeaknessElementIDs),
+                Resistances = new List<int>(this.ResistanceElementIDs)
+            };
+            NotifyAbilities(CombatEventType.ModifyElementalAffinity, ctx);
+            return (ctx.Weaknesses, ctx.Resistances);
         }
 
         public int GetEffectiveStrength()
         {
-            float stat = Stats.Strength;
-            foreach (var mod in StatModifiers) stat = mod.ModifyStat(OffensiveStatType.Strength, (int)stat, this);
-            stat *= BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Strength]];
+            var ctx = new CombatTriggerContext { Actor = this, StatType = OffensiveStatType.Strength, StatValue = Stats.Strength };
+            NotifyAbilities(CombatEventType.CalculateStat, ctx);
+            float stat = ctx.StatValue * BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Strength]];
             return (int)Math.Round(stat);
         }
 
         public int GetEffectiveIntelligence()
         {
-            float stat = Stats.Intelligence;
-            foreach (var mod in StatModifiers) stat = mod.ModifyStat(OffensiveStatType.Intelligence, (int)stat, this);
-            stat *= BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Intelligence]];
+            var ctx = new CombatTriggerContext { Actor = this, StatType = OffensiveStatType.Intelligence, StatValue = Stats.Intelligence };
+            NotifyAbilities(CombatEventType.CalculateStat, ctx);
+            float stat = ctx.StatValue * BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Intelligence]];
             return (int)Math.Round(stat);
         }
 
         public int GetEffectiveTenacity()
         {
-            float stat = Stats.Tenacity;
-            foreach (var mod in StatModifiers) stat = mod.ModifyStat(OffensiveStatType.Tenacity, (int)stat, this);
-            stat *= BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Tenacity]];
+            var ctx = new CombatTriggerContext { Actor = this, StatType = OffensiveStatType.Tenacity, StatValue = Stats.Tenacity };
+            NotifyAbilities(CombatEventType.CalculateStat, ctx);
+            float stat = ctx.StatValue * BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Tenacity]];
             return (int)Math.Round(stat);
         }
 
         public int GetEffectiveAgility()
         {
-            float stat = Stats.Agility;
-            foreach (var mod in StatModifiers)
-            {
-                if (mod is CorneredAnimalAbility ca) stat = ca.ModifyStat(OffensiveStatType.Agility, (int)stat, this);
-                else stat = mod.ModifyStat(OffensiveStatType.Agility, (int)stat, this);
-            }
-            stat *= BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Agility]];
+            var ctx = new CombatTriggerContext { Actor = this, StatType = OffensiveStatType.Agility, StatValue = Stats.Agility };
+            NotifyAbilities(CombatEventType.CalculateStat, ctx);
+            float stat = ctx.StatValue * BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Agility]];
             if (HasStatusEffect(StatusEffectType.Frostbite)) stat *= Global.Instance.FrostbiteAgilityMultiplier;
             return (int)Math.Round(stat);
         }
 
         public int GetEffectiveAccuracy(int baseAccuracy)
         {
-            float accuracy = baseAccuracy;
-            var ctx = new CombatContext { Actor = this };
-            foreach (var mod in AccuracyModifiers) accuracy = mod.ModifyAccuracy((int)accuracy, ctx);
-            return (int)Math.Round(accuracy);
+            var ctx = new CombatTriggerContext { Actor = this, StatValue = baseAccuracy };
+            NotifyAbilities(CombatEventType.CheckAccuracy, ctx);
+            return (int)Math.Round(ctx.StatValue);
         }
     }
 }

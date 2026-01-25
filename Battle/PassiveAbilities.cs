@@ -1,26 +1,32 @@
 ﻿using Microsoft.Xna.Framework;
-using ProjectVagabond.Battle;
-using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 
 namespace ProjectVagabond.Battle.Abilities
 {
-    // --- STAT MODIFIERS ---
-    public class FlatStatBonusAbility : IStatModifier
+    public class FlatStatBonusAbility : IAbility
     {
         public string Name => "Stat Bonus";
         public string Description => "Increases stats.";
         private readonly Dictionary<string, int> _modifiers;
         public FlatStatBonusAbility(Dictionary<string, int> modifiers) { _modifiers = modifiers; }
-        public int ModifyStat(OffensiveStatType statType, int currentValue, BattleCombatant owner) => _modifiers.TryGetValue(statType.ToString(), out int bonus) ? currentValue + bonus : currentValue;
-        public int ModifyMaxStat(string statName, int currentValue) => _modifiers.TryGetValue(statName, out int bonus) ? currentValue + bonus : currentValue;
+
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
+        {
+            if (type == CombatEventType.CalculateStat)
+            {
+                if (_modifiers.TryGetValue(ctx.StatType.ToString(), out int bonus))
+                {
+                    ctx.StatValue += bonus;
+                }
+            }
+        }
     }
 
-    public class CorneredAnimalAbility : IStatModifier
+    public class CorneredAnimalAbility : IAbility
     {
         public string Name => "Cornered Animal";
         public string Description => "Boosts stat when low HP.";
@@ -35,293 +41,279 @@ namespace ProjectVagabond.Battle.Abilities
             _amount = amount;
         }
 
-        public int ModifyStat(OffensiveStatType statType, int currentValue, BattleCombatant owner)
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
-            if (statType != _statToRaise) return currentValue;
-            float hpPercent = (float)owner.Stats.CurrentHP / owner.Stats.MaxHP * 100f;
-            if (hpPercent < _hpThreshold)
+            if (type == CombatEventType.CalculateStat && ctx.StatType == _statToRaise)
             {
-                float multiplier = 1.0f + (0.5f * _amount);
-                return (int)(currentValue * multiplier);
+                float hpPercent = (float)ctx.Actor.Stats.CurrentHP / ctx.Actor.Stats.MaxHP * 100f;
+                if (hpPercent < _hpThreshold)
+                {
+                    float multiplier = 1.0f + (0.5f * _amount);
+                    ctx.StatValue *= multiplier;
+                }
             }
-            return currentValue;
         }
-        public int ModifyMaxStat(string statName, int currentValue) => currentValue;
     }
 
-    // --- CRIT & ACCURACY ---
-    public class FlatCritBonusAbility : ICritModifier
+    public class FlatCritBonusAbility : IAbility
     {
         public string Name => "Sniper";
         public string Description => "Increases crit chance.";
         private readonly float _bonusPercent;
         public FlatCritBonusAbility(float bonusPercent) { _bonusPercent = bonusPercent; }
-        public float ModifyCritChance(float currentChance, CombatContext ctx) => currentChance + (_bonusPercent / 100f);
-        public float ModifyCritDamage(float currentMultiplier, CombatContext ctx) => currentMultiplier;
+
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
+        {
+            if (type == CombatEventType.CheckCritChance)
+            {
+                ctx.StatValue += (_bonusPercent / 100f);
+            }
+        }
     }
 
-    public class CritImmunityAbility : ICritModifier
+    public class CritImmunityAbility : IAbility
     {
         public string Name => "Bulwark";
         public string Description => "Immune to critical hits.";
-        public CritImmunityAbility() { }
-        public float ModifyCritChance(float currentChance, CombatContext ctx) => 0f;
-        public float ModifyCritDamage(float currentMultiplier, CombatContext ctx) => currentMultiplier;
+
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
+        {
+            if (type == CombatEventType.CheckCritChance)
+            {
+                ctx.StatValue = 0f;
+            }
+        }
     }
 
-    public class IgnoreEvasionAbility : IAccuracyModifier
+    public class IgnoreEvasionAbility : IAbility
     {
         public string Name => "Keen Eye";
         public string Description => "Attacks ignore dodging and never miss.";
 
-        public int ModifyAccuracy(int currentAccuracy, CombatContext ctx)
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
-            if (ctx.Move != null && ctx.Move.Power > 0) return 999;
-            return currentAccuracy;
-        }
-
-        public bool ShouldIgnoreEvasion(CombatContext ctx)
-        {
-            if (ctx.Move != null && ctx.Move.Power > 0)
+            if (type == CombatEventType.CheckAccuracy)
             {
-                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
-                return true;
+                if (ctx.Move != null && ctx.Move.Power > 0) ctx.StatValue = 999;
             }
-            return false;
+            else if (type == CombatEventType.CheckEvasion)
+            {
+                if (ctx.Move != null && ctx.Move.Power > 0)
+                {
+                    if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                    ctx.IsCancelled = true; // Using IsCancelled to signal "Ignore Evasion"
+                }
+            }
         }
     }
 
-    public class RecklessAbandonAbility : IOutgoingDamageModifier, IAccuracyModifier
+    public class RecklessAbandonAbility : IAbility
     {
         public string Name => "Reckless Abandon";
         public string Description => "Contact moves deal more damage but less accuracy.";
         private readonly float _damageMultiplier;
         private readonly float _accuracyMultiplier;
 
-        public RecklessAbandonAbility(float damageMult, float accuracyMult)
-        {
-            _damageMultiplier = damageMult;
-            _accuracyMultiplier = accuracyMult;
-        }
+        public RecklessAbandonAbility(float damageMult, float accuracyMult) { _damageMultiplier = damageMult; _accuracyMultiplier = accuracyMult; }
 
-        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
             if (ctx.Move != null && ctx.Move.MakesContact)
             {
-                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
-                return currentDamage * _damageMultiplier;
+                if (type == CombatEventType.CalculateOutgoingDamage)
+                {
+                    if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                    ctx.DamageMultiplier *= _damageMultiplier;
+                }
+                else if (type == CombatEventType.CheckAccuracy)
+                {
+                    ctx.StatValue *= _accuracyMultiplier;
+                }
             }
-            return currentDamage;
         }
-
-        public int ModifyAccuracy(int currentAccuracy, CombatContext ctx)
-        {
-            return (ctx.Move != null && ctx.Move.MakesContact) ? (int)(currentAccuracy * _accuracyMultiplier) : currentAccuracy;
-        }
-
-        public bool ShouldIgnoreEvasion(CombatContext ctx) => false;
     }
 
-    // --- DAMAGE MODIFIERS ---
-    public class LowHPDamageBonusAbility : IOutgoingDamageModifier
+    public class LowHPDamageBonusAbility : IAbility
     {
         public string Name => "Adrenaline";
         public string Description => "Deal more damage when HP is low.";
         private readonly float _hpThresholdPercent;
         private readonly float _damageMultiplier;
 
-        public LowHPDamageBonusAbility(float threshold, float multiplier)
-        {
-            _hpThresholdPercent = threshold;
-            _damageMultiplier = multiplier;
-        }
+        public LowHPDamageBonusAbility(float threshold, float multiplier) { _hpThresholdPercent = threshold; _damageMultiplier = multiplier; }
 
-        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
-            float hpPercent = (float)ctx.Actor.Stats.CurrentHP / ctx.Actor.Stats.MaxHP * 100f;
-            if (hpPercent < _hpThresholdPercent)
+            if (type == CombatEventType.CalculateOutgoingDamage)
             {
-                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
-                return currentDamage * _damageMultiplier;
+                float hpPercent = (float)ctx.Actor.Stats.CurrentHP / ctx.Actor.Stats.MaxHP * 100f;
+                if (hpPercent < _hpThresholdPercent)
+                {
+                    if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                    ctx.DamageMultiplier *= _damageMultiplier;
+                }
             }
-            return currentDamage;
         }
     }
 
-    public class FullHPDamageAbility : IOutgoingDamageModifier
+    public class FullHPDamageAbility : IAbility
     {
         public string Name => "Full Power";
         public string Description => "Deal more damage at full HP.";
         private readonly float _damageMultiplier;
+        public FullHPDamageAbility(float multiplier) { _damageMultiplier = multiplier; }
 
-        public FullHPDamageAbility(float multiplier)
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
-            _damageMultiplier = multiplier;
-        }
-
-        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
-        {
-            if (ctx.Actor.Stats.CurrentHP >= ctx.Actor.Stats.MaxHP)
+            if (type == CombatEventType.CalculateOutgoingDamage)
             {
-                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
-                return currentDamage * _damageMultiplier;
+                if (ctx.Actor.Stats.CurrentHP >= ctx.Actor.Stats.MaxHP)
+                {
+                    if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                    ctx.DamageMultiplier *= _damageMultiplier;
+                }
             }
-            return currentDamage;
         }
     }
 
-    public class ElementalDamageBonusAbility : IOutgoingDamageModifier
+    public class ElementalDamageBonusAbility : IAbility
     {
         public string Name => "Elemental Mastery";
         public string Description => "Increases damage of specific elements.";
         private readonly int _elementId;
         private readonly float _multiplier;
+        public ElementalDamageBonusAbility(int elementId, float multiplier) { _elementId = elementId; _multiplier = multiplier; }
 
-        public ElementalDamageBonusAbility(int elementId, float multiplier)
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
-            _elementId = elementId;
-            _multiplier = multiplier;
-        }
-
-        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
-        {
-            if (ctx.MoveHasElement(_elementId))
+            if (type == CombatEventType.CalculateOutgoingDamage)
             {
-                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
-                return currentDamage * _multiplier;
+                if (ctx.Move != null && ctx.Move.OffensiveElementIDs.Contains(_elementId))
+                {
+                    if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                    ctx.DamageMultiplier *= _multiplier;
+                }
             }
-            return currentDamage;
         }
     }
 
-    public class FirstAttackDamageAbility : IOutgoingDamageModifier
+    public class FirstAttackDamageAbility : IAbility
     {
         public string Name => "First Blood";
         public string Description => "First attack deals bonus damage.";
         private readonly float _multiplier;
+        public FirstAttackDamageAbility(float multiplier) { _multiplier = multiplier; }
 
-        public FirstAttackDamageAbility(float multiplier)
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
-            _multiplier = multiplier;
-        }
-
-        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
-        {
-            if (!ctx.Actor.HasUsedFirstAttack)
+            if (type == CombatEventType.CalculateOutgoingDamage)
             {
-                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
-                return currentDamage * _multiplier;
+                if (!ctx.Actor.HasUsedFirstAttack)
+                {
+                    if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                    ctx.DamageMultiplier *= _multiplier;
+                }
             }
-            return currentDamage;
         }
     }
 
-    public class StatusedTargetDamageAbility : IOutgoingDamageModifier
+    public class StatusedTargetDamageAbility : IAbility
     {
         public string Name => "Opportunist";
         public string Description => "Deal more damage to statused targets.";
         private readonly float _multiplier;
+        public StatusedTargetDamageAbility(float multiplier) { _multiplier = multiplier > 10.0f ? 1.0f + (multiplier / 100f) : multiplier; }
 
-        public StatusedTargetDamageAbility(float multiplier)
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
-            if (multiplier > 10.0f) _multiplier = 1.0f + (multiplier / 100f);
-            else _multiplier = multiplier;
-        }
-
-        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
-        {
-            if (ctx.Target == null) return currentDamage;
-            if (ctx.Target.ActiveStatusEffects.Any())
+            if (type == CombatEventType.CalculateOutgoingDamage)
             {
-                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
-                return currentDamage * _multiplier;
+                if (ctx.Target != null && ctx.Target.ActiveStatusEffects.Any())
+                {
+                    if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                    ctx.DamageMultiplier *= _multiplier;
+                }
             }
-            return currentDamage;
         }
     }
 
-    public class LastStandAbility : IOutgoingDamageModifier
+    public class LastStandAbility : IAbility
     {
         public string Name => "Last Stand";
         public string Description => "Deal more damage if acting last.";
         private readonly float _multiplier;
+        public LastStandAbility(float multiplier) { _multiplier = multiplier > 10.0f ? 1.0f + (multiplier / 100f) : multiplier; }
 
-        public LastStandAbility(float multiplier)
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
-            if (multiplier > 10.0f) _multiplier = 1.0f + (multiplier / 100f);
-            else _multiplier = multiplier;
-        }
-
-        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
-        {
-            if (ctx.IsLastAction)
+            if (type == CombatEventType.CalculateOutgoingDamage)
             {
-                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
-                return currentDamage * _multiplier;
+                if (ctx.Action != null && ctx.Action.IsLastActionInRound)
+                {
+                    if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                    ctx.DamageMultiplier *= _multiplier;
+                }
             }
-            return currentDamage;
         }
     }
 
-    public class GlassCannonAbility : IOutgoingDamageModifier, IIncomingDamageModifier
+    public class GlassCannonAbility : IAbility
     {
         public string Name => "Glass Cannon";
         public string Description => "Deal more, take more.";
         private readonly float _outgoingMult;
         private readonly float _incomingMult;
-
         public GlassCannonAbility(float outgoing, float incoming)
         {
             _outgoingMult = outgoing > 5.0f ? 1.0f + (outgoing / 100f) : outgoing;
             _incomingMult = incoming > 5.0f ? 1.0f + (incoming / 100f) : incoming;
         }
 
-        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
-            if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
-            return currentDamage * _outgoingMult;
-        }
-
-        public float ModifyIncomingDamage(float currentDamage, CombatContext ctx)
-        {
-            if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Target, Ability = this });
-            return currentDamage * _incomingMult;
+            if (type == CombatEventType.CalculateOutgoingDamage)
+            {
+                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                ctx.DamageMultiplier *= _outgoingMult;
+            }
+            else if (type == CombatEventType.CalculateIncomingDamage)
+            {
+                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Target, Ability = this });
+                ctx.DamageMultiplier *= _incomingMult;
+            }
         }
     }
 
-    public class BloodletterAbility : IOutgoingDamageModifier, IOnActionComplete
+    public class BloodletterAbility : IAbility
     {
         public string Name => "Bloodletter";
         public string Description => "Spells deal more damage but cost HP.";
         private readonly float _multiplier;
+        public BloodletterAbility(float multiplier) { _multiplier = multiplier; }
 
-        public BloodletterAbility(float multiplier)
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
-            _multiplier = multiplier;
-        }
-
-        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
-        {
-            if (ctx.Move != null && ctx.Move.MoveType == MoveType.Spell)
+            if (type == CombatEventType.CalculateOutgoingDamage)
             {
-                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
-                return currentDamage * _multiplier;
+                if (ctx.Move != null && ctx.Move.MoveType == MoveType.Spell)
+                {
+                    if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                    ctx.DamageMultiplier *= _multiplier;
+                }
             }
-            return currentDamage;
-        }
-
-        public void OnActionComplete(QueuedAction action, BattleCombatant owner)
-        {
-            if (action.ChosenMove != null && action.ChosenMove.MoveType == MoveType.Spell)
+            else if (type == CombatEventType.ActionComplete)
             {
-                int cost = Math.Max(1, (int)(owner.Stats.MaxHP * 0.05f));
-                owner.ApplyDamage(cost);
-                EventBus.Publish(new GameEvents.CombatantRecoiled { Actor = owner, RecoilDamage = cost });
+                if (ctx.Action.ChosenMove != null && ctx.Action.ChosenMove.MoveType == MoveType.Spell)
+                {
+                    int cost = Math.Max(1, (int)(ctx.Actor.Stats.MaxHP * 0.05f));
+                    ctx.Actor.ApplyDamage(cost);
+                    if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.CombatantRecoiled { Actor = ctx.Actor, RecoilDamage = cost });
+                }
             }
         }
     }
 
-    public class ChainReactionAbility : IOutgoingDamageModifier, IOnHitEffect, IActionModifier, IOnActionComplete
+    public class ChainReactionAbility : IAbility
     {
         public string Name => "Chain Reaction";
         public string Description => "Consecutive hits boost damage.";
@@ -329,304 +321,357 @@ namespace ProjectVagabond.Battle.Abilities
         private int _stacks = 0;
         private string _lastMoveID = "";
         private bool _hitThisTurn = false;
-
         public ChainReactionAbility(float multiplier) { _multiplier = multiplier; }
 
-        public void ModifyAction(QueuedAction action, BattleCombatant owner)
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
-            _hitThisTurn = false;
-            if (action.ChosenMove != null && action.ChosenMove.MoveID != _lastMoveID) _stacks = 0;
-            if (action.ChosenMove != null) _lastMoveID = action.ChosenMove.MoveID;
-        }
-
-        public void OnHit(CombatContext ctx, int damageDealt) { _stacks++; _hitThisTurn = true; }
-        public void OnActionComplete(QueuedAction action, BattleCombatant owner) { if (action.ChosenMove != null && action.ChosenMove.Power > 0 && !_hitThisTurn) _stacks = 0; }
-
-        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
-        {
-            if (_stacks > 0)
+            if (type == CombatEventType.ActionDeclared)
             {
-                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
-                return currentDamage * (1.0f + (_stacks * (_multiplier - 1.0f)));
+                _hitThisTurn = false;
+                if (ctx.Action.ChosenMove != null && ctx.Action.ChosenMove.MoveID != _lastMoveID) _stacks = 0;
+                if (ctx.Action.ChosenMove != null) _lastMoveID = ctx.Action.ChosenMove.MoveID;
             }
-            return currentDamage;
+            else if (type == CombatEventType.OnHit)
+            {
+                _stacks++;
+                _hitThisTurn = true;
+            }
+            else if (type == CombatEventType.ActionComplete)
+            {
+                if (ctx.Action.ChosenMove != null && ctx.Action.ChosenMove.Power > 0 && !_hitThisTurn) _stacks = 0;
+            }
+            else if (type == CombatEventType.CalculateOutgoingDamage)
+            {
+                if (_stacks > 0)
+                {
+                    if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                    ctx.DamageMultiplier *= (1.0f + (_stacks * (_multiplier - 1.0f)));
+                }
+            }
         }
     }
 
-    public class DefensePenetrationAbility : IDefensePenetrationModifier
+    public class DefensePenetrationAbility : IAbility
     {
         public string Name => "Armor Piercer";
         public string Description => "Ignores a percentage of target defense.";
         private readonly float _penetrationPercent;
         public DefensePenetrationAbility(float percent) { _penetrationPercent = percent; }
-        public float GetDefensePenetration(CombatContext ctx)
+
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
-            if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
-            return _penetrationPercent / 100f;
+            if (type == CombatEventType.CalculateDefensePenetration)
+            {
+                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                ctx.StatValue += _penetrationPercent / 100f;
+            }
         }
     }
 
-    public class PhysicalDamageReductionAbility : IIncomingDamageModifier
+    public class PhysicalDamageReductionAbility : IAbility
     {
         public string Name => "Thick Skin";
         public string Description => "Reduces physical damage.";
         private readonly float _multiplier;
         public PhysicalDamageReductionAbility(float reductionPercent) { _multiplier = 1.0f - (reductionPercent / 100f); }
-        public float ModifyIncomingDamage(float currentDamage, CombatContext ctx)
+
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
-            if (ctx.Move != null && ctx.Move.ImpactType == ImpactType.Physical)
+            if (type == CombatEventType.CalculateIncomingDamage)
             {
-                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Target, Ability = this });
-                return currentDamage * _multiplier;
+                if (ctx.Move != null && ctx.Move.ImpactType == ImpactType.Physical)
+                {
+                    if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Target, Ability = this });
+                    ctx.DamageMultiplier *= _multiplier;
+                }
             }
-            return currentDamage;
         }
     }
 
-    public class VigorAbility : IIncomingDamageModifier
+    public class VigorAbility : IAbility
     {
         public string Name => "Vigor";
         public string Description => "Reduces damage when at full HP.";
-        public VigorAbility() { }
-        public float ModifyIncomingDamage(float currentDamage, CombatContext ctx)
+
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
-            if (ctx.Target.Stats.CurrentHP >= ctx.Target.Stats.MaxHP)
+            if (type == CombatEventType.CalculateIncomingDamage)
             {
-                if (!ctx.IsSimulation)
+                if (ctx.Target.Stats.CurrentHP >= ctx.Target.Stats.MaxHP)
                 {
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name}'s Vigor reduced the damage!" });
-                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Target, Ability = this });
+                    if (!ctx.IsSimulation)
+                    {
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name}'s Vigor reduced the damage!" });
+                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Target, Ability = this });
+                    }
+                    ctx.DamageMultiplier *= 0.5f;
                 }
-                return currentDamage * 0.5f;
             }
-            return currentDamage;
         }
     }
 
-    public class SunBlessedLeafAbility : IIncomingDamageModifier
+    public class SunBlessedLeafAbility : IAbility
     {
         public string Name => "Photosynthesis";
         public string Description => "Absorbs Light damage.";
         private readonly int _elementId;
         private readonly float _healPercent;
         public SunBlessedLeafAbility(int elementId, float healPercent) { _elementId = elementId; _healPercent = healPercent; }
-        public float ModifyIncomingDamage(float currentDamage, CombatContext ctx)
+
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
-            if (ctx.MoveHasElement(_elementId))
+            if (type == CombatEventType.CalculateIncomingDamage)
             {
-                if (!ctx.IsSimulation)
+                if (ctx.Move != null && ctx.Move.OffensiveElementIDs.Contains(_elementId))
                 {
-                    int healAmount = (int)(ctx.Actor.Stats.MaxHP * (_healPercent / 100f));
-                    int hpBefore = (int)ctx.Actor.VisualHP;
-                    ctx.Actor.ApplyHealing(healAmount);
-                    EventBus.Publish(new GameEvents.CombatantHealed { Actor = ctx.Actor, Target = ctx.Actor, HealAmount = healAmount, VisualHPBefore = hpBefore });
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Actor.Name}'s {Name} absorbed the attack!" });
-                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                    if (!ctx.IsSimulation)
+                    {
+                        int healAmount = (int)(ctx.Actor.Stats.MaxHP * (_healPercent / 100f));
+                        int hpBefore = (int)ctx.Actor.VisualHP;
+                        ctx.Actor.ApplyHealing(healAmount);
+                        EventBus.Publish(new GameEvents.CombatantHealed { Actor = ctx.Actor, Target = ctx.Actor, HealAmount = healAmount, VisualHPBefore = hpBefore });
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Actor.Name}'s {Name} absorbed the attack!" });
+                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                    }
+                    ctx.DamageMultiplier = 0f;
                 }
-                return 0f;
             }
-            return currentDamage;
         }
     }
 
-    public class ElementalImmunityAbility : IIncomingDamageModifier
+    public class ElementalImmunityAbility : IAbility
     {
         public string Name => "Elemental Immunity";
         public string Description => "Immune to specific element.";
         private readonly int _elementId;
         public ElementalImmunityAbility(int elementId) { _elementId = elementId; }
-        public float ModifyIncomingDamage(float currentDamage, CombatContext ctx)
+
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
-            if (ctx.MoveHasElement(_elementId))
+            if (type == CombatEventType.CalculateIncomingDamage)
             {
-                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Target, Ability = this });
-                return 0f;
+                if (ctx.Move != null && ctx.Move.OffensiveElementIDs.Contains(_elementId))
+                {
+                    if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Target, Ability = this });
+                    ctx.DamageMultiplier = 0f;
+                }
             }
-            return currentDamage;
         }
     }
 
-    // --- ELEMENTAL MODIFIERS ---
-    public class AddResistanceAbility : IElementalAffinityModifier
+    public class AddResistanceAbility : IAbility
     {
         public string Name => "Elemental Resistance";
         public string Description => "Adds a resistance.";
         private readonly int _elementId;
         public AddResistanceAbility(int elementId) { _elementId = elementId; }
-        public void ModifyElementalAffinities(List<int> weaknesses, List<int> resistances, BattleCombatant owner) { if (!resistances.Contains(_elementId)) resistances.Add(_elementId); }
+
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
+        {
+            if (type == CombatEventType.ModifyElementalAffinity)
+            {
+                if (!ctx.Resistances.Contains(_elementId)) ctx.Resistances.Add(_elementId);
+            }
+        }
     }
 
-    // --- STATUS MODIFIERS ---
-    public class StatusImmunityAbility : IIncomingStatusModifier
+    public class StatusImmunityAbility : IAbility
     {
         public string Name => "Unwavering";
         public string Description => "Immune to specific status effects.";
         private readonly HashSet<StatusEffectType> _immuneTypes;
         public StatusImmunityAbility(IEnumerable<StatusEffectType> types) { _immuneTypes = new HashSet<StatusEffectType>(types); }
-        public bool ShouldBlockStatus(StatusEffectType type, BattleCombatant owner)
+
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
-            if (_immuneTypes.Contains(type))
+            if (type == CombatEventType.CheckStatusImmunity)
             {
-                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = owner, Ability = this });
-                return true;
+                if (_immuneTypes.Contains(ctx.StatusType))
+                {
+                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                    ctx.IsCancelled = true;
+                }
             }
-            return false;
         }
     }
 
-    // --- ACTION MODIFIERS & STATEFUL ABILITIES ---
-    public class AmbushPredatorAbility : IActionModifier, IOutgoingDamageModifier
+    public class AmbushPredatorAbility : IAbility
     {
         public string Name => "Ambush Predator";
         public string Description => "First attack is faster but weaker.";
         private readonly int _priorityBonus;
         private readonly float _damageMultiplier;
         public AmbushPredatorAbility(int priorityBonus, float damageMult) { _priorityBonus = priorityBonus; _damageMultiplier = damageMult; }
-        public void ModifyAction(QueuedAction action, BattleCombatant owner)
+
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
-            if (!owner.HasUsedFirstAttack && action.ChosenMove != null)
+            if (type == CombatEventType.ActionDeclared)
             {
-                action.Priority += _priorityBonus;
-                // We don't fire event here because priority is silent until turn order resolves
+                if (!ctx.Actor.HasUsedFirstAttack && ctx.Action.ChosenMove != null)
+                {
+                    ctx.Action.Priority += _priorityBonus;
+                }
             }
-        }
-        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
-        {
-            if (!ctx.Actor.HasUsedFirstAttack)
+            else if (type == CombatEventType.CalculateOutgoingDamage)
             {
-                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
-                return currentDamage * _damageMultiplier;
+                if (!ctx.Actor.HasUsedFirstAttack)
+                {
+                    if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                    ctx.DamageMultiplier *= _damageMultiplier;
+                }
             }
-            return currentDamage;
         }
     }
 
-    public class SpellweaverAbility : IOnActionComplete, IOutgoingDamageModifier
+    public class SpellweaverAbility : IAbility
     {
         public string Name => "Spellweaver";
         public string Description => "Alternating spells deals more damage.";
         private readonly float _multiplier;
         private string _lastMoveID = "";
         private bool _lastWasSpell = false;
-
         public SpellweaverAbility(float multiplier) { _multiplier = multiplier; }
-        public void OnActionComplete(QueuedAction action, BattleCombatant owner)
+
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
-            if (action.ChosenMove != null)
+            if (type == CombatEventType.ActionComplete)
             {
-                _lastMoveID = action.ChosenMove.MoveID;
-                _lastWasSpell = action.ChosenMove.MoveType == MoveType.Spell;
+                if (ctx.Action.ChosenMove != null)
+                {
+                    _lastMoveID = ctx.Action.ChosenMove.MoveID;
+                    _lastWasSpell = ctx.Action.ChosenMove.MoveType == MoveType.Spell;
+                }
             }
-        }
-        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
-        {
-            if (ctx.Move != null && ctx.Move.MoveType == MoveType.Spell && _lastWasSpell && ctx.Move.MoveID != _lastMoveID)
+            else if (type == CombatEventType.CalculateOutgoingDamage)
             {
-                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
-                return currentDamage * _multiplier;
+                if (ctx.Move != null && ctx.Move.MoveType == MoveType.Spell && _lastWasSpell && ctx.Move.MoveID != _lastMoveID)
+                {
+                    if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                    ctx.DamageMultiplier *= _multiplier;
+                }
             }
-            return currentDamage;
         }
     }
 
-    public class MomentumAbility : IOnActionComplete, IOnKill, IOutgoingDamageModifier
+    public class MomentumAbility : IAbility
     {
         public string Name => "Momentum";
         public string Description => "Kills boost next attack.";
         private readonly float _multiplier;
         private bool _isActive = false;
         public MomentumAbility(float multiplier) { _multiplier = multiplier; }
-        public void OnActionComplete(QueuedAction action, BattleCombatant owner) { if (action.ChosenMove != null && action.ChosenMove.Power > 0) _isActive = false; }
-        public void OnKill(CombatContext ctx)
+
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
-            _isActive = true;
-            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Actor.Name}'s {Name} is building!" });
-            EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
-        }
-        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
-        {
-            if (_isActive && ctx.Move != null && ctx.Move.Power > 0)
+            if (type == CombatEventType.ActionComplete)
             {
-                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
-                return currentDamage * _multiplier;
+                if (ctx.Action.ChosenMove != null && ctx.Action.ChosenMove.Power > 0) _isActive = false;
             }
-            return currentDamage;
+            else if (type == CombatEventType.OnKill)
+            {
+                _isActive = true;
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Actor.Name}'s {Name} is building!" });
+                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+            }
+            else if (type == CombatEventType.CalculateOutgoingDamage)
+            {
+                if (_isActive && ctx.Move != null && ctx.Move.Power > 0)
+                {
+                    if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                    ctx.DamageMultiplier *= _multiplier;
+                }
+            }
         }
     }
 
-    public class EscalationAbility : ITurnLifecycle, IOutgoingDamageModifier
+    public class EscalationAbility : IAbility
     {
         public string Name => "Escalation";
         public string Description => "Damage increases every turn.";
         private readonly float _multPerRound;
         private readonly float _maxMult;
         private float _currentMult = 1.0f;
-
         public EscalationAbility(float multPerRound, float maxMult) { _multPerRound = multPerRound; _maxMult = maxMult; }
-        public void OnTurnStart(BattleCombatant owner) { _currentMult += (_multPerRound - 1.0f); if (_currentMult > _maxMult) _currentMult = _maxMult; }
-        public void OnTurnEnd(BattleCombatant owner) { }
-        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
+
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
-            if (_currentMult > 1.0f)
+            if (type == CombatEventType.TurnStart)
             {
-                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
-                return currentDamage * _currentMult;
+                _currentMult += (_multPerRound - 1.0f);
+                if (_currentMult > _maxMult) _currentMult = _maxMult;
             }
-            return currentDamage;
+            else if (type == CombatEventType.CalculateOutgoingDamage)
+            {
+                if (_currentMult > 1.0f)
+                {
+                    if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                    ctx.DamageMultiplier *= _currentMult;
+                }
+            }
         }
     }
 
-    // --- TRIGGERS ---
-    public class PainFuelAbility : IOnCritReceived
+    public class PainFuelAbility : IAbility
     {
         public string Name => "Pain Fuel";
         public string Description => "Taking crit raises stats.";
-        public void OnCritReceived(CombatContext ctx)
+
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
-            var target = ctx.Target;
-            var (successStr, _) = target.ModifyStatStage(OffensiveStatType.Strength, 1);
-            if (successStr) EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = target, Stat = OffensiveStatType.Strength, Amount = 1 });
-            var (successInt, _) = target.ModifyStatStage(OffensiveStatType.Intelligence, 1);
-            if (successInt) EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = target, Stat = OffensiveStatType.Intelligence, Amount = 1 });
-            if (successStr || successInt)
+            if (type == CombatEventType.OnCritReceived)
             {
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{target.Name}'s {Name} turned pain into power!" });
-                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = target, Ability = this });
+                var target = ctx.Target;
+                var (successStr, _) = target.ModifyStatStage(OffensiveStatType.Strength, 1);
+                if (successStr) EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = target, Stat = OffensiveStatType.Strength, Amount = 1 });
+                var (successInt, _) = target.ModifyStatStage(OffensiveStatType.Intelligence, 1);
+                if (successInt) EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = target, Stat = OffensiveStatType.Intelligence, Amount = 1 });
+                if (successStr || successInt)
+                {
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{target.Name}'s {Name} turned pain into power!" });
+                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = target, Ability = this });
+                }
             }
         }
     }
 
-    public class CausticBloodAbility : ILifestealReaction
+    public class CausticBloodAbility : IAbility
     {
         public string Name => "Caustic Blood";
         public string Description => "Lifesteal damages attacker.";
-        public bool OnLifestealReceived(BattleCombatant source, int amount, BattleCombatant owner)
+
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
-            source.ApplyDamage(amount);
-            EventBus.Publish(new GameEvents.CombatantRecoiled { Actor = source, RecoilDamage = amount });
-            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{owner.Name}'s {Name} burns {source.Name}!" });
-            EventBus.Publish(new GameEvents.AbilityActivated { Combatant = owner, Ability = this });
-            return true;
+            if (type == CombatEventType.OnLifesteal)
+            {
+                ctx.Actor.ApplyDamage(ctx.FinalDamage);
+                EventBus.Publish(new GameEvents.CombatantRecoiled { Actor = ctx.Actor, RecoilDamage = ctx.FinalDamage });
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name}'s {Name} burns {ctx.Actor.Name}!" });
+                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Target, Ability = this });
+                ctx.IsCancelled = true; // Prevent healing
+            }
         }
     }
 
-    public class SanguineThirstAbility : IOnHitEffect
+    public class SanguineThirstAbility : IAbility
     {
         public string Name => "Sanguine Thirst";
         public string Description => "Heal on contact hit.";
         private readonly float _healPercent;
         public SanguineThirstAbility(float percent) { _healPercent = percent; }
-        public void OnHit(CombatContext ctx, int damageDealt)
+
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
-            if (ctx.Move != null && ctx.Move.MakesContact && damageDealt > 0)
+            if (type == CombatEventType.OnHit)
             {
-                ctx.AccumulatedLifestealPercent += _healPercent;
-                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                if (ctx.Move != null && ctx.Move.MakesContact && ctx.FinalDamage > 0)
+                {
+                    ctx.AccumulatedLifestealPercent += _healPercent;
+                }
             }
         }
     }
 
-    public class ApplyStatusOnHitAbility : IOnHitEffect
+    public class ApplyStatusOnHitAbility : IAbility
     {
         public string Name => "Venomous";
         public string Description => "Chance to apply status on hit.";
@@ -634,24 +679,28 @@ namespace ProjectVagabond.Battle.Abilities
         private readonly int _chance;
         private readonly int _duration;
         private readonly bool _requiresContact;
+        private static readonly Random _random = new Random();
         public ApplyStatusOnHitAbility(StatusEffectType type, int chance, int duration, bool requiresContact) { _type = type; _chance = chance; _duration = duration; _requiresContact = requiresContact; }
-        public void OnHit(CombatContext ctx, int damageDealt)
+
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
-            if (_requiresContact && ctx.Move != null && !ctx.Move.MakesContact) return;
-            var random = new Random();
-            if (random.Next(1, 101) <= _chance)
+            if (type == CombatEventType.OnHit)
             {
-                bool applied = ctx.Target.AddStatusEffect(new StatusEffectInstance(_type, _duration));
-                if (applied)
+                if (_requiresContact && ctx.Move != null && !ctx.Move.MakesContact) return;
+                if (_random.Next(1, 101) <= _chance)
                 {
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Actor.Name}'s ability applied {_type} to {ctx.Target.Name}!" });
-                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                    bool applied = ctx.Target.AddStatusEffect(new StatusEffectInstance(_type, _duration));
+                    if (applied)
+                    {
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Actor.Name}'s ability applied {_type} to {ctx.Target.Name}!" });
+                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                    }
                 }
             }
         }
     }
 
-    public class ReactiveStatusAbility : IOnDamagedEffect
+    public class ReactiveStatusAbility : IAbility
     {
         public string Name => "Reactive Status";
         public string Description => "Apply status when hit.";
@@ -659,62 +708,73 @@ namespace ProjectVagabond.Battle.Abilities
         private readonly int _chance;
         private readonly int _duration;
         private readonly bool _requiresContact;
+        private static readonly Random _random = new Random();
         public ReactiveStatusAbility(StatusEffectType type, int chance, int duration, bool requiresContact) { _type = type; _chance = chance; _duration = duration; _requiresContact = requiresContact; }
-        public void OnDamaged(CombatContext ctx, int damageTaken)
+
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
-            if (_requiresContact && ctx.Move != null && !ctx.Move.MakesContact) return;
-            var random = new Random();
-            if (random.Next(1, 101) <= _chance)
+            if (type == CombatEventType.OnDamaged)
             {
-                bool applied = ctx.Target.AddStatusEffect(new StatusEffectInstance(_type, _duration));
-                if (applied)
+                if (_requiresContact && ctx.Move != null && !ctx.Move.MakesContact) return;
+                if (_random.Next(1, 101) <= _chance)
                 {
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Actor.Name}'s ability applied {_type} to {ctx.Target.Name}!" });
+                    bool applied = ctx.Actor.AddStatusEffect(new StatusEffectInstance(_type, _duration));
+                    if (applied)
+                    {
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name}'s ability applied {_type} to {ctx.Actor.Name}!" });
+                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Target, Ability = this });
+                    }
+                }
+            }
+        }
+    }
+
+    public class ThornsAbility : IAbility
+    {
+        public string Name => "Iron Barbs";
+        public string Description => "Damage attacker on contact.";
+        private readonly float _damagePercent;
+        public ThornsAbility(float percent) { _damagePercent = percent; }
+
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
+        {
+            if (type == CombatEventType.OnDamaged)
+            {
+                if (ctx.Move != null && ctx.Move.MakesContact)
+                {
+                    int recoil = Math.Max(1, (int)(ctx.Actor.Stats.MaxHP * (_damagePercent / 100f)));
+                    ctx.Actor.ApplyDamage(recoil);
+                    EventBus.Publish(new GameEvents.CombatantRecoiled { Actor = ctx.Actor, RecoilDamage = recoil });
+                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Target, Ability = this });
+                }
+            }
+        }
+    }
+
+    public class RegenAbility : IAbility
+    {
+        public string Name => "Regeneration";
+        public string Description => "Heal at end of turn.";
+        private readonly float _percent;
+        public RegenAbility(float percent) { _percent = percent; }
+
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
+        {
+            if (type == CombatEventType.TurnEnd)
+            {
+                int heal = (int)(ctx.Actor.Stats.MaxHP * (_percent / 100f));
+                if (heal > 0)
+                {
+                    int hpBefore = (int)ctx.Actor.VisualHP;
+                    ctx.Actor.ApplyHealing(heal);
+                    EventBus.Publish(new GameEvents.CombatantHealed { Actor = ctx.Actor, Target = ctx.Actor, HealAmount = heal, VisualHPBefore = hpBefore });
                     EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
                 }
             }
         }
     }
 
-    public class ThornsAbility : IOnDamagedEffect
-    {
-        public string Name => "Iron Barbs";
-        public string Description => "Damage attacker on contact.";
-        private readonly float _damagePercent;
-        public ThornsAbility(float percent) { _damagePercent = percent; }
-        public void OnDamaged(CombatContext ctx, int damageTaken)
-        {
-            if (ctx.Move != null && ctx.Move.MakesContact)
-            {
-                int recoil = Math.Max(1, (int)(ctx.Target.Stats.MaxHP * (_damagePercent / 100f)));
-                ctx.Target.ApplyDamage(recoil);
-                EventBus.Publish(new GameEvents.CombatantRecoiled { Actor = ctx.Target, RecoilDamage = recoil });
-                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Target, Ability = this });
-            }
-        }
-    }
-
-    public class RegenAbility : ITurnLifecycle
-    {
-        public string Name => "Regeneration";
-        public string Description => "Heal at end of turn.";
-        private readonly float _percent;
-        public RegenAbility(float percent) { _percent = percent; }
-        public void OnTurnStart(BattleCombatant owner) { }
-        public void OnTurnEnd(BattleCombatant owner)
-        {
-            int heal = (int)(owner.Stats.MaxHP * (_percent / 100f));
-            if (heal > 0)
-            {
-                int hpBefore = (int)owner.VisualHP;
-                owner.ApplyHealing(heal);
-                EventBus.Publish(new GameEvents.CombatantHealed { Actor = owner, Target = owner, HealAmount = heal, VisualHPBefore = hpBefore });
-                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = owner, Ability = this });
-            }
-        }
-    }
-
-    public class ToxicAuraAbility : ITurnLifecycle
+    public class ToxicAuraAbility : IAbility
     {
         public string Name => "Toxic Aura";
         public string Description => "Poison random combatant at end of turn.";
@@ -723,61 +783,59 @@ namespace ProjectVagabond.Battle.Abilities
         private readonly bool _canHitAllies;
         private static readonly Random _random = new Random();
 
-        public ToxicAuraAbility(int chance, int duration, bool canHitAllies)
+        public ToxicAuraAbility(int chance, int duration, bool canHitAllies) { _chance = chance; _duration = duration; _canHitAllies = canHitAllies; }
+
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
-            _chance = chance;
-            _duration = duration;
-            _canHitAllies = canHitAllies;
-        }
-
-        public void OnTurnStart(BattleCombatant owner) { }
-        public void OnTurnEnd(BattleCombatant owner)
-        {
-            if (_random.Next(1, 101) > _chance) return;
-
-            var battleManager = ServiceLocator.Get<BattleManager>();
-            var allCombatants = battleManager.AllCombatants.Where(c => !c.IsDefeated && c.IsActiveOnField && c != owner).ToList();
-
-            var validTargets = new List<BattleCombatant>();
-            validTargets.AddRange(allCombatants.Where(c => c.IsPlayerControlled != owner.IsPlayerControlled));
-            if (_canHitAllies) validTargets.AddRange(allCombatants.Where(c => c.IsPlayerControlled == owner.IsPlayerControlled));
-
-            if (validTargets.Any())
+            if (type == CombatEventType.TurnEnd)
             {
-                var target = validTargets[_random.Next(validTargets.Count)];
-                target.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Poison, _duration));
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{owner.Name}'s {Name} poisoned {target.Name}!" });
-                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = owner, Ability = this });
+                if (_random.Next(1, 101) > _chance) return;
+                var battleManager = ServiceLocator.Get<BattleManager>();
+                var allCombatants = battleManager.AllCombatants.Where(c => !c.IsDefeated && c.IsActiveOnField && c != ctx.Actor).ToList();
+                var validTargets = new List<BattleCombatant>();
+                validTargets.AddRange(allCombatants.Where(c => c.IsPlayerControlled != ctx.Actor.IsPlayerControlled));
+                if (_canHitAllies) validTargets.AddRange(allCombatants.Where(c => c.IsPlayerControlled == ctx.Actor.IsPlayerControlled));
+
+                if (validTargets.Any())
+                {
+                    var target = validTargets[_random.Next(validTargets.Count)];
+                    target.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Poison, _duration));
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Actor.Name}'s {Name} poisoned {target.Name}!" });
+                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                }
             }
         }
     }
 
-    public class IntimidateAbility : IBattleLifecycle
+    public class IntimidateAbility : IAbility
     {
         public string Name => "Intimidate";
         public string Description => "Lowers enemy stats on entry.";
         private readonly OffensiveStatType _stat;
         private readonly int _amount;
         public IntimidateAbility(OffensiveStatType stat, int amount) { _stat = stat; _amount = amount; }
-        public void OnBattleStart(BattleCombatant owner) { }
-        public void OnCombatantEnter(BattleCombatant owner)
+
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
-            var battleManager = ServiceLocator.Get<BattleManager>();
-            var enemies = battleManager.AllCombatants.Where(c => c.IsPlayerControlled != owner.IsPlayerControlled && !c.IsDefeated && c.IsActiveOnField).ToList();
-            bool anyAffected = false;
-            foreach (var enemy in enemies)
+            if (type == CombatEventType.CombatantEnter)
             {
-                var (success, _) = enemy.ModifyStatStage(_stat, _amount);
-                if (success)
+                var battleManager = ServiceLocator.Get<BattleManager>();
+                var enemies = battleManager.AllCombatants.Where(c => c.IsPlayerControlled != ctx.Actor.IsPlayerControlled && !c.IsDefeated && c.IsActiveOnField).ToList();
+                bool anyAffected = false;
+                foreach (var enemy in enemies)
                 {
-                    anyAffected = true;
-                    EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = enemy, Stat = _stat, Amount = _amount });
+                    var (success, _) = enemy.ModifyStatStage(_stat, _amount);
+                    if (success)
+                    {
+                        anyAffected = true;
+                        EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = enemy, Stat = _stat, Amount = _amount });
+                    }
                 }
-            }
-            if (anyAffected)
-            {
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{owner.Name}'s {Name} lowered opponents' {_stat}!" });
-                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = owner, Ability = this });
+                if (anyAffected)
+                {
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Actor.Name}'s {Name} lowered opponents' {_stat}!" });
+                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                }
             }
         }
     }
@@ -786,401 +844,349 @@ namespace ProjectVagabond.Battle.Abilities
     {
         public string Name => "Insight";
         public string Description => "Reveals detailed enemy stats.";
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx) { }
     }
 
-    // --- CUSTOM PARTY MEMBER PASSIVES ---
+    // --- PARTY MEMBER PASSIVES ---
 
-    public class PMPyromancerAbility : IOutgoingDamageModifier, IElementalAffinityModifier
+    public class PMPyromancerAbility : IAbility
     {
         public string Name => "Pyromancer";
         public string Description => "Deal 1.5x Fire damage and resist Fire.";
-
-        // Hardcoded Fire Element ID (1) based on Elements.json
         private const int FIRE_ELEMENT_ID = 1;
         private const float DAMAGE_MULTIPLIER = 1.5f;
 
-        public PMPyromancerAbility() { }
-
-        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
-            if (ctx.MoveHasElement(FIRE_ELEMENT_ID))
+            if (type == CombatEventType.CalculateOutgoingDamage)
             {
-                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
-                return currentDamage * DAMAGE_MULTIPLIER;
+                if (ctx.Move != null && ctx.Move.OffensiveElementIDs.Contains(FIRE_ELEMENT_ID))
+                {
+                    if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                    ctx.DamageMultiplier *= DAMAGE_MULTIPLIER;
+                }
             }
-            return currentDamage;
-        }
-
-        public void ModifyElementalAffinities(List<int> weaknesses, List<int> resistances, BattleCombatant owner)
-        {
-            if (!resistances.Contains(FIRE_ELEMENT_ID))
+            else if (type == CombatEventType.ModifyElementalAffinity)
             {
-                resistances.Add(FIRE_ELEMENT_ID);
+                if (!ctx.Resistances.Contains(FIRE_ELEMENT_ID)) ctx.Resistances.Add(FIRE_ELEMENT_ID);
             }
         }
     }
 
-    public class PMAnnoyingAbility : IActionModifier
+    public class PMAnnoyingAbility : IAbility
     {
         public string Name => "Annoying";
         public string Description => "Status moves have +1 priority.";
-        public void ModifyAction(QueuedAction action, BattleCombatant owner)
+
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
-            if (action.ChosenMove != null && action.ChosenMove.ImpactType == ImpactType.Status)
+            if (type == CombatEventType.ActionDeclared)
             {
-                action.Priority += 1;
-                // Priority is silent until turn order resolves
+                if (ctx.Action.ChosenMove != null && ctx.Action.ChosenMove.ImpactType == ImpactType.Status)
+                {
+                    ctx.Action.Priority += 1;
+                }
             }
         }
     }
 
-    public class PMScrappyAbility : IStatChangeModifier, IIncomingStatusModifier, IDazeImmunity
+    public class PMScrappyAbility : IAbility
     {
         public string Name => "Scrappy";
         public string Description => "Immune to Strength drops, Stun, and Daze.";
 
-        public bool ShouldBlockStatChange(OffensiveStatType stat, int amount, BattleCombatant owner)
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
-            if (stat == OffensiveStatType.Strength && amount < 0)
+            if (type == CombatEventType.CheckStatChangeBlock)
             {
-                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = owner, Ability = this });
-                return true;
+                if (ctx.StatType == OffensiveStatType.Strength && ctx.StatValue < 0)
+                {
+                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                    ctx.IsCancelled = true;
+                }
             }
-            return false;
-        }
-
-        public bool ShouldBlockStatus(StatusEffectType type, BattleCombatant owner)
-        {
-            if (type == StatusEffectType.Stun)
+            else if (type == CombatEventType.CheckStatusImmunity)
             {
-                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = owner, Ability = this });
-                return true;
+                if (ctx.StatusType == StatusEffectType.Stun)
+                {
+                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                    ctx.IsCancelled = true;
+                }
             }
-            return false;
-        }
-
-        public bool ShouldBlockDaze(BattleCombatant owner)
-        {
-            EventBus.Publish(new GameEvents.AbilityActivated { Combatant = owner, Ability = this });
-            return true;
+            else if (type == CombatEventType.CheckDazeImmunity)
+            {
+                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                ctx.IsCancelled = true;
+            }
         }
     }
 
-    public class PMShortTemperAbility : IOnCritReceived
+    public class PMShortTemperAbility : IAbility
     {
         public string Name => "Short Temper";
         public string Description => "Maxes Strength when hit by a critical hit.";
 
-        public void OnCritReceived(CombatContext ctx)
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
-            var (success, msg) = ctx.Target.ModifyStatStage(OffensiveStatType.Strength, 12);
-
-            if (success)
+            if (type == CombatEventType.OnCritReceived)
             {
-                EventBus.Publish(new GameEvents.CombatantStatStageChanged
+                var (success, msg) = ctx.Target.ModifyStatStage(OffensiveStatType.Strength, 12);
+                if (success)
                 {
-                    Target = ctx.Target,
-                    Stat = OffensiveStatType.Strength,
-                    Amount = 12
-                });
-
-                EventBus.Publish(new GameEvents.TerminalMessagePublished
-                {
-                    Message = $"{ctx.Target.Name}'s {Name} maxed their [cstr]Strength[/]!"
-                });
-
-                EventBus.Publish(new GameEvents.AbilityActivated
-                {
-                    Combatant = ctx.Target,
-                    Ability = this
-                });
+                    EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = ctx.Target, Stat = OffensiveStatType.Strength, Amount = 12 });
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name}'s {Name} maxed their [cstr]Strength[/]!" });
+                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Target, Ability = this });
+                }
             }
         }
     }
 
-    public class PMMajesticAbility : IBattleLifecycle
+    public class PMMajesticAbility : IAbility
     {
         public string Name => "Majestic";
         public string Description => "Lowers enemy Strength on entry.";
-
         private const OffensiveStatType STAT_TO_LOWER = OffensiveStatType.Strength;
         private const int AMOUNT = -1;
 
-        public void OnBattleStart(BattleCombatant owner) { }
-
-        public void OnCombatantEnter(BattleCombatant owner)
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
-            var battleManager = ServiceLocator.Get<BattleManager>();
-            var enemies = battleManager.AllCombatants
-                .Where(c => c.IsPlayerControlled != owner.IsPlayerControlled && !c.IsDefeated && c.IsActiveOnField)
-                .ToList();
-
-            bool anyAffected = false;
-            foreach (var enemy in enemies)
+            if (type == CombatEventType.CombatantEnter)
             {
-                var (success, _) = enemy.ModifyStatStage(STAT_TO_LOWER, AMOUNT);
-                if (success)
+                var battleManager = ServiceLocator.Get<BattleManager>();
+                var enemies = battleManager.AllCombatants.Where(c => c.IsPlayerControlled != ctx.Actor.IsPlayerControlled && !c.IsDefeated && c.IsActiveOnField).ToList();
+                bool anyAffected = false;
+                foreach (var enemy in enemies)
                 {
-                    anyAffected = true;
-                    EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = enemy, Stat = STAT_TO_LOWER, Amount = AMOUNT });
+                    var (success, _) = enemy.ModifyStatStage(STAT_TO_LOWER, AMOUNT);
+                    if (success)
+                    {
+                        anyAffected = true;
+                        EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = enemy, Stat = STAT_TO_LOWER, Amount = AMOUNT });
+                    }
                 }
-            }
-
-            if (anyAffected)
-            {
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{owner.Name}'s {Name} lowered opponents' {STAT_TO_LOWER}!" });
-                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = owner, Ability = this });
+                if (anyAffected)
+                {
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Actor.Name}'s {Name} lowered opponents' {STAT_TO_LOWER}!" });
+                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                }
             }
         }
     }
 
-    public class PMSweetpeaAbility : IAllyDamageModifier
+    public class PMSweetpeaAbility : IAbility
     {
         public string Name => "Sweetpea";
         public string Description => "Reduces damage taken by allies.";
-        public float ModifyAllyIncomingDamage(float currentDamage, CombatContext ctx)
+
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
-            if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Target, Ability = this }); // Target is the ally being protected
-            return currentDamage * 0.75f;
+            if (type == CombatEventType.CalculateAllyDamage)
+            {
+                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this }); // Actor is the protector
+                ctx.DamageMultiplier *= 0.75f;
+            }
         }
     }
 
-    public class PMSkepticAbility : IIncomingDamageModifier
+    public class PMSkepticAbility : IAbility
     {
         public string Name => "Skeptic";
         public string Description => "Takes half damage from Spells.";
 
-        public float ModifyIncomingDamage(float currentDamage, CombatContext ctx)
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
-            if (ctx.Move != null && ctx.Move.MoveType == MoveType.Spell)
+            if (type == CombatEventType.CalculateIncomingDamage)
             {
-                if (!ctx.IsSimulation)
+                if (ctx.Move != null && ctx.Move.MoveType == MoveType.Spell)
                 {
-                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Target, Ability = this });
+                    if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Target, Ability = this });
+                    ctx.DamageMultiplier *= 0.5f;
                 }
-                return currentDamage * 0.5f;
             }
-            return currentDamage;
         }
     }
 
-    public class PM9LivesAbility : IIncomingDamageModifier
+    public class PM9LivesAbility : IAbility
     {
         public string Name => "9 Lives";
         public string Description => "Survive lethal damage if at full HP.";
 
-        public float ModifyIncomingDamage(float currentDamage, CombatContext ctx)
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
-            var target = ctx.Target;
-            if (target.Stats.CurrentHP == target.Stats.MaxHP)
+            if (type == CombatEventType.CalculateIncomingDamage)
             {
-                if (currentDamage >= target.Stats.CurrentHP)
+                var target = ctx.Target;
+                if (target.Stats.CurrentHP == target.Stats.MaxHP)
                 {
-                    if (!ctx.IsSimulation)
+                    float currentDamage = ctx.StatValue * ctx.DamageMultiplier;
+                    if (currentDamage >= target.Stats.CurrentHP)
                     {
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{target.Name} endured the hit!" });
-                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = target, Ability = this });
+                        if (!ctx.IsSimulation)
+                        {
+                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{target.Name} endured the hit!" });
+                            EventBus.Publish(new GameEvents.AbilityActivated { Combatant = target, Ability = this });
+                        }
+                        float desiredDamage = Math.Max(0, target.Stats.CurrentHP - 1);
+                        if (ctx.StatValue > 0)
+                            ctx.DamageMultiplier = desiredDamage / ctx.StatValue;
                     }
-                    return Math.Max(0, target.Stats.CurrentHP - 1);
                 }
             }
-            return currentDamage;
         }
     }
 
-    public class PMMinutiaeAbility : IOutgoingDamageModifier
+    public class PMMinutiaeAbility : IAbility
     {
         public string Name => "Minutiae";
         public string Description => "Boosts moves with 60 or less Power by 1.5x.";
 
-        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
-            if (ctx.Move != null && ctx.Move.Power > 0 && ctx.Move.Power <= 60)
+            if (type == CombatEventType.CalculateOutgoingDamage)
             {
-                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
-                return currentDamage * 1.5f;
+                if (ctx.Move != null && ctx.Move.Power > 0 && ctx.Move.Power <= 60)
+                {
+                    if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                    ctx.DamageMultiplier *= 1.5f;
+                }
             }
-            return currentDamage;
         }
     }
 
-    public class PMGentleSoulAbility : IBattleLifecycle
+    public class PMGentleSoulAbility : IAbility
     {
         public string Name => "Gentle Soul";
         public string Description => "Restores ally HP on switch-in.";
 
-        public void OnBattleStart(BattleCombatant owner) { }
-
-        public void OnCombatantEnter(BattleCombatant owner)
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
-            var bm = ServiceLocator.Get<BattleManager>();
-
-            // Debug logging to trace execution
-            Debug.WriteLine($"[PMGentleSoulAbility] OnCombatantEnter called for {owner.Name}. Phase: {bm.CurrentPhase}");
-
-            // Ignore initial battle start
-            if (bm.CurrentPhase == BattleManager.BattlePhase.BattleStartIntro) return;
-
-            // Find ally
-            var ally = bm.AllCombatants.FirstOrDefault(c =>
-                c.IsPlayerControlled == owner.IsPlayerControlled &&
-                c != owner &&
-                c.IsActiveOnField &&
-                !c.IsDefeated);
-
-            if (ally != null)
+            if (type == CombatEventType.CombatantEnter)
             {
-                Debug.WriteLine($"[PMGentleSoulAbility] Ally found: {ally.Name}. Healing...");
-                int healAmount = (int)(ally.Stats.MaxHP * 0.25f);
-                if (healAmount > 0)
+                var bm = ServiceLocator.Get<BattleManager>();
+                if (bm.CurrentPhase == BattleManager.BattlePhase.BattleStartIntro) return;
+
+                var ally = bm.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled == ctx.Actor.IsPlayerControlled && c != ctx.Actor && c.IsActiveOnField && !c.IsDefeated);
+
+                if (ally != null)
                 {
-                    int oldHP = (int)ally.VisualHP;
-                    ally.ApplyHealing(healAmount);
-
-                    EventBus.Publish(new GameEvents.CombatantHealed
+                    int healAmount = (int)(ally.Stats.MaxHP * 0.25f);
+                    if (healAmount > 0)
                     {
-                        Actor = owner,
-                        Target = ally,
-                        HealAmount = healAmount,
-                        VisualHPBefore = oldHP
-                    });
-
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished
-                    {
-                        Message = $"{owner.Name}'s {Name} healed {ally.Name}!"
-                    });
-
-                    EventBus.Publish(new GameEvents.AbilityActivated
-                    {
-                        Combatant = owner,
-                        Ability = this
-                    });
+                        int oldHP = (int)ally.VisualHP;
+                        ally.ApplyHealing(healAmount);
+                        EventBus.Publish(new GameEvents.CombatantHealed { Actor = ctx.Actor, Target = ally, HealAmount = healAmount, VisualHPBefore = oldHP });
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Actor.Name}'s {Name} healed {ally.Name}!" });
+                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                    }
                 }
-            }
-            else
-            {
-                Debug.WriteLine($"[PMGentleSoulAbility] No valid ally found to heal.");
             }
         }
     }
 
-    public class PMWellfedAbility : IIncomingDamageModifier
+    public class PMWellfedAbility : IAbility
     {
         public string Name => "Well-Fed";
         public string Description => "Halves damage taken when at full HP.";
 
-        public float ModifyIncomingDamage(float currentDamage, CombatContext ctx)
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
-            if (ctx.Target.Stats.CurrentHP >= ctx.Target.Stats.MaxHP)
+            if (type == CombatEventType.CalculateIncomingDamage)
             {
-                if (!ctx.IsSimulation)
+                if (ctx.Target.Stats.CurrentHP >= ctx.Target.Stats.MaxHP)
                 {
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name}'s {Name} reduced the damage!" });
-                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Target, Ability = this });
+                    if (!ctx.IsSimulation)
+                    {
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name}'s {Name} reduced the damage!" });
+                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Target, Ability = this });
+                    }
+                    ctx.DamageMultiplier *= 0.5f;
                 }
-                return currentDamage * 0.5f;
             }
-            return currentDamage;
         }
     }
 
-    public class PMStubbornAbility : IStatModifier, IOnActionComplete, IBattleLifecycle, IMoveLockAbility
+    public class PMStubbornAbility : IAbility
     {
         public string Name => "Stubborn";
         public string Description => "Boosts Strength by 1.5x, but locks user into one move.";
         private string _lockedMoveID = null;
 
-        public int ModifyStat(OffensiveStatType statType, int currentValue, BattleCombatant owner)
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
-            if (statType == OffensiveStatType.Strength)
+            if (type == CombatEventType.CalculateStat)
             {
-                // Gorilla Tactics / Choice Band logic: 1.5x Strength
-                return (int)(currentValue * 1.5f);
+                if (ctx.StatType == OffensiveStatType.Strength)
+                {
+                    ctx.StatValue *= 1.5f;
+                }
             }
-            return currentValue;
-        }
-
-        public int ModifyMaxStat(string statName, int currentValue) => currentValue;
-
-        public void OnActionComplete(QueuedAction action, BattleCombatant owner)
-        {
-            // Lock into the move if not already locked
-            if (_lockedMoveID == null && action.ChosenMove != null)
+            else if (type == CombatEventType.ActionComplete)
             {
-                _lockedMoveID = action.ChosenMove.MoveID;
-
-                // Visual Feedback
-                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = owner, Ability = this });
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{owner.Name} is [cStatus]Stubborn[/]! Locked into {action.ChosenMove.MoveName}!" });
+                if (_lockedMoveID == null && ctx.Action.ChosenMove != null)
+                {
+                    _lockedMoveID = ctx.Action.ChosenMove.MoveID;
+                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Actor.Name} is [cStatus]Stubborn[/]! Locked into {ctx.Action.ChosenMove.MoveName}!" });
+                }
+            }
+            else if (type == CombatEventType.BattleStart || type == CombatEventType.CombatantEnter)
+            {
+                _lockedMoveID = null;
+            }
+            else if (type == CombatEventType.QueryMoveLock)
+            {
+                ctx.LockedMoveID = _lockedMoveID;
             }
         }
-
-        public void OnBattleStart(BattleCombatant owner) { _lockedMoveID = null; }
-
-        public void OnCombatantEnter(BattleCombatant owner)
-        {
-            // Reset lock when switching in
-            _lockedMoveID = null;
-        }
-
-        public string GetLockedMoveID() => _lockedMoveID;
-        public void ResetLock() => _lockedMoveID = null;
     }
 
-    public class HydroScalingAbility : IOutgoingDamageModifier
+    public class HydroScalingAbility : IAbility
     {
         public string Name => "Hydro Scaling";
         public string Description => "Damage scales with Water spells.";
         private readonly float _multiplierPerSpell;
+        public HydroScalingAbility(float multiplier) { _multiplierPerSpell = multiplier; }
 
-        public HydroScalingAbility(float multiplier)
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
-            _multiplierPerSpell = multiplier;
-        }
-
-        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
-        {
-            int waterSpellCount = 0;
-            foreach (var entry in ctx.Actor.Spells)
+            if (type == CombatEventType.CalculateOutgoingDamage)
             {
-                if (entry != null && BattleDataCache.Moves.TryGetValue(entry.MoveID, out var move))
+                int waterSpellCount = 0;
+                foreach (var entry in ctx.Actor.Spells)
                 {
-                    if (move.OffensiveElementIDs.Contains(2)) // 2 is Water
+                    if (entry != null && BattleDataCache.Moves.TryGetValue(entry.MoveID, out var move))
                     {
-                        waterSpellCount++;
+                        if (move.OffensiveElementIDs.Contains(2)) waterSpellCount++;
                     }
                 }
-            }
 
-            if (waterSpellCount > 0)
-            {
-                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
-                float bonus = (_multiplierPerSpell - 1.0f) * waterSpellCount;
-                return currentDamage * (1.0f + bonus);
+                if (waterSpellCount > 0)
+                {
+                    if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                    float bonus = (_multiplierPerSpell - 1.0f) * waterSpellCount;
+                    ctx.DamageMultiplier *= (1.0f + bonus);
+                }
             }
-            return currentDamage;
         }
     }
 
-    public class BlightArcaneMasteryAbility : IOutgoingDamageModifier
+    public class BlightArcaneMasteryAbility : IAbility
     {
         public string Name => "Cultist Mastery";
         public string Description => "Boosts Blight and Arcane damage.";
         private readonly float _multiplier;
+        public BlightArcaneMasteryAbility(float multiplier) { _multiplier = multiplier; }
 
-        public BlightArcaneMasteryAbility(float multiplier)
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
-            _multiplier = multiplier;
-        }
-
-        public float ModifyOutgoingDamage(float currentDamage, CombatContext ctx)
-        {
-            if (ctx.MoveHasElement(6) || ctx.MoveHasElement(4)) // 6=Blight, 4=Arcane
+            if (type == CombatEventType.CalculateOutgoingDamage)
             {
-                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
-                return currentDamage * _multiplier;
+                if (ctx.Move != null && (ctx.Move.OffensiveElementIDs.Contains(6) || ctx.Move.OffensiveElementIDs.Contains(4)))
+                {
+                    if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                    ctx.DamageMultiplier *= _multiplier;
+                }
             }
-            return currentDamage;
         }
     }
 }

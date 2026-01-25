@@ -11,7 +11,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using static ProjectVagabond.Battle.Abilities.InflictStatusStunAbility;
+
 
 namespace ProjectVagabond.UI
 {
