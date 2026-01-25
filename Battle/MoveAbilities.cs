@@ -741,49 +741,6 @@ namespace ProjectVagabond.Battle.Abilities
             }
         }
 
-        public class BreakOnUseAbility : IOnActionComplete
-        {
-            public string Name => "Fragile";
-            public string Description => "Chance to break on use.";
-            private readonly int _chance;
-
-            public BreakOnUseAbility(int chance)
-            {
-                _chance = chance;
-            }
-
-            public void OnActionComplete(QueuedAction action, BattleCombatant owner)
-            {
-                if (!owner.IsPlayerControlled) return;
-
-                var random = new Random();
-                if (random.Next(1, 101) <= _chance)
-                {
-                    var gameState = ServiceLocator.Get<GameState>();
-                    if (!string.IsNullOrEmpty(owner.EquippedWeaponId))
-                    {
-                        string weaponId = owner.EquippedWeaponId;
-                        if (BattleDataCache.Weapons.TryGetValue(weaponId, out var weaponData))
-                        {
-                            // Remove from inventory
-                            gameState.PlayerState.RemoveWeapon(weaponId);
-
-                            // If count reached 0, unequip
-                            if (!gameState.PlayerState.Weapons.ContainsKey(weaponId))
-                            {
-                                owner.EquippedWeaponId = null;
-                            }
-
-                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[Palette_Rust]{owner.Name}'s {weaponData.WeaponName} shattered![/]" });
-                            _hapticsManager.TriggerCompoundShake(0.5f);
-                            EventBus.Publish(new GameEvents.AbilityActivated { Combatant = owner, Ability = this });
-                        }
-                    }
-                }
-            }
-            private readonly HapticsManager _hapticsManager = ServiceLocator.Get<HapticsManager>();
-        }
-
         public class AlwaysCritAbility : ICritModifier
         {
             public string Name => "Precision";

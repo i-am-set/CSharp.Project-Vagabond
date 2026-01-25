@@ -443,54 +443,34 @@ namespace ProjectVagabond.Scenes
                 ResistanceElementIDs = new List<int>(member.ResistanceElementIDs),
                 DefaultStrikeMoveID = member.DefaultStrikeMoveID,
                 Spells = member.Spells,
-                PortraitIndex = member.PortraitIndex,
-                EquippedWeaponId = member.EquippedWeaponId,
-                EquippedRelicId = member.EquippedRelicId
+                PortraitIndex = member.PortraitIndex
             };
 
+            // Apply Effective Stats (Calculated via PlayerState which now checks Global Relics)
             combatant.Stats.MaxHP = _gameState.PlayerState.GetEffectiveStat(member, "MaxHP");
             combatant.Stats.MaxMana = _gameState.PlayerState.GetEffectiveStat(member, "MaxMana");
             combatant.Stats.Strength = _gameState.PlayerState.GetEffectiveStat(member, "Strength");
             combatant.Stats.Intelligence = _gameState.PlayerState.GetEffectiveStat(member, "Intelligence");
             combatant.Stats.Tenacity = _gameState.PlayerState.GetEffectiveStat(member, "Tenacity");
             combatant.Stats.Agility = _gameState.PlayerState.GetEffectiveStat(member, "Agility");
+
+            // Sync current values
             combatant.Stats.CurrentHP = member.CurrentHP;
             combatant.Stats.CurrentMana = member.CurrentMana;
             combatant.VisualHP = combatant.Stats.CurrentHP;
 
-            // --- 0. Apply Intrinsic Passive Abilities ---
+            // 1. Apply Intrinsic Passive Abilities
             if (member.IntrinsicAbilities != null && member.IntrinsicAbilities.Count > 0)
             {
                 var intrinsicAbilities = AbilityFactory.CreateAbilitiesFromData(member.IntrinsicAbilities, new Dictionary<string, int>());
                 combatant.RegisterAbilities(intrinsicAbilities);
-                Debug.WriteLine($"[BattleScene] Registered intrinsics for ally {member.Name}: {string.Join(", ", member.IntrinsicAbilities.Keys)}");
             }
 
-            // 1. Apply Weapon Passives
-            if (!string.IsNullOrEmpty(member.EquippedWeaponId) &&
-                BattleDataCache.Weapons.TryGetValue(member.EquippedWeaponId, out var weaponData))
+            // 2. Apply Global Relics (Isaac Style)
+            // Every party member gets the benefits of the global relic collection
+            foreach (var relicId in _gameState.PlayerState.GlobalRelics)
             {
-                if (weaponData.StatModifiers != null && weaponData.StatModifiers.Count > 0)
-                {
-                    var weaponStatAbilities = AbilityFactory.CreateAbilitiesFromData(null, weaponData.StatModifiers);
-                    combatant.RegisterAbilities(weaponStatAbilities);
-                }
-
-                var weaponAsRelic = new RelicData
-                {
-                    RelicID = weaponData.WeaponID,
-                    RelicName = weaponData.WeaponName,
-                    AbilityName = "Weapon Ability",
-                    Effects = weaponData.Effects,
-                    StatModifiers = weaponData.StatModifiers
-                };
-                combatant.ActiveRelics.Add(weaponAsRelic);
-            }
-
-            // 2. Load Relic Abilities
-            if (!string.IsNullOrEmpty(member.EquippedRelicId))
-            {
-                if (BattleDataCache.Relics.TryGetValue(member.EquippedRelicId, out var relicData))
+                if (BattleDataCache.Relics.TryGetValue(relicId, out var relicData))
                 {
                     var relicAbilities = AbilityFactory.CreateAbilitiesFromData(relicData.Effects, relicData.StatModifiers);
                     combatant.RegisterAbilities(relicAbilities);
@@ -498,6 +478,7 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
+            // 3. Narration Data
             var data = BattleDataCache.PartyMembers.Values.FirstOrDefault(p => p.Name == member.Name);
             if (data != null)
             {

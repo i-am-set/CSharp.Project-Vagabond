@@ -25,16 +25,7 @@ namespace ProjectVagabond.Utils
 
             LogHeader("=== STARTING ITEM INTEGRITY CHECK ===");
 
-            // 1. Test Weapons
-            if (BattleDataCache.Weapons.Count == 0) LogFail("WARNING: Weapon Cache is empty!");
-            TestCollection(
-                "WEAPONS",
-                BattleDataCache.Weapons.Values,
-                w => w.WeaponName,
-                w => w.Effects
-            );
-
-            // 2. Test Relics
+            // 1. Test Relics
             if (BattleDataCache.Relics.Count == 0) LogFail("WARNING: Relic Cache is empty!");
             TestCollection(
                 "RELICS",
@@ -46,7 +37,6 @@ namespace ProjectVagabond.Utils
             string resultColor = _failed == 0 ? "[Palette_Leaf]" : "[Palette_Rust]";
             string msg = $"=== CHECK COMPLETE: {resultColor}{_passed} PASSED[/], [Palette_Rust]{_failed} FAILED[/], [Palette_DarkSun]{_skipped} SKIPPED[/] ===";
 
-            // Log final summary to both
             Debug.WriteLine($"[ItemIntegrityTester] {msg.Replace("[Palette_Leaf]", "").Replace("[Palette_Rust]", "").Replace("[Palette_DarkSun]", "").Replace("[/]", "")}");
             EventBus.Publish(new GameEvents.TerminalMessagePublished
             {

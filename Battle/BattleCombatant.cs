@@ -1,22 +1,8 @@
 ﻿using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
-using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond;
-using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
-using ProjectVagabond.Battle.UI;
-using ProjectVagabond.Progression;
-using ProjectVagabond.Scenes;
-using ProjectVagabond.UI;
-using ProjectVagabond.Utils;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.Battle
 {
@@ -34,10 +20,8 @@ namespace ProjectVagabond.Battle
         public string ArchetypeId { get; set; }
         public string CombatantID { get; set; }
         public string Name { get; set; }
-
-        // --- NARRATION DATA ---
         public Gender Gender { get; set; } = Gender.Neutral;
-        public bool IsProperNoun { get; set; } = false; // If true, "THE" is omitted (e.g. "Oakley"). If false, "THE" is added (e.g. "The Spider").
+        public bool IsProperNoun { get; set; } = false;
 
         public CombatantStats Stats { get; set; }
         public float VisualHP { get; set; }
@@ -47,8 +31,6 @@ namespace ProjectVagabond.Battle
 
         public int BattleSlot { get; set; } = -1;
         public bool IsActiveOnField => BattleSlot == 0 || BattleSlot == 1;
-
-        // --- ECONOMY ---
         public int CoinReward { get; set; } = 0;
 
         public List<MoveData> AvailableMoves
@@ -66,73 +48,33 @@ namespace ProjectVagabond.Battle
             }
         }
         private List<MoveData> _staticMoves = new List<MoveData>();
-
         public MoveEntry?[] Spells { get; set; } = new MoveEntry?[4];
-
-        // Reverted to string ID for serialization/simplicity
         public string DefaultStrikeMoveID { get; set; }
 
-        // Cache for the generated weapon move to avoid rebuilding it every frame
-        private MoveData _cachedWeaponMove;
-        private string _cachedWeaponId;
-
-        /// <summary>
-        /// Gets the actual MoveData to use for the "Strike" command.
-        /// If a weapon is equipped, returns the weapon's custom move.
-        /// Otherwise, returns the move defined by DefaultStrikeMoveID.
-        /// </summary>
+        // Simplified Strike Logic: Always use default
         public MoveData StrikeMove
         {
             get
             {
-                // 1. Check for Equipped Weapon
-                if (!string.IsNullOrEmpty(EquippedWeaponId))
-                {
-                    // If weapon changed or cache is empty, rebuild
-                    if (_cachedWeaponId != EquippedWeaponId)
-                    {
-                        if (BattleDataCache.Weapons.TryGetValue(EquippedWeaponId, out var weapon))
-                        {
-                            _cachedWeaponMove = weapon.ToMoveData();
-                            _cachedWeaponId = EquippedWeaponId;
-                        }
-                    }
-
-                    if (_cachedWeaponMove != null)
-                    {
-                        return _cachedWeaponMove;
-                    }
-                }
-
-                // 2. Fallback to Default ID (Unarmed)
                 if (!string.IsNullOrEmpty(DefaultStrikeMoveID) && BattleDataCache.Moves.TryGetValue(DefaultStrikeMoveID, out var move))
                 {
                     return move;
                 }
-
-                // 3. Absolute Failsafe (Punch)
-                if (BattleDataCache.Moves.TryGetValue("0", out var punch))
-                {
-                    return punch;
-                }
-
+                // Failsafe (Punch)
+                if (BattleDataCache.Moves.TryGetValue("0", out var punch)) return punch;
                 return null;
             }
         }
 
         public int PortraitIndex { get; set; } = 0;
-
-        // Equipment
-        public string? EquippedWeaponId { get; set; }
-        public string? EquippedRelicId { get; set; }
-
         public List<StatusEffectInstance> ActiveStatusEffects { get; set; } = new List<StatusEffectInstance>();
 
+        // Relics are now just tracked for tooltip purposes, logic is applied via Abilities list
         public List<RelicData> ActiveRelics { get; set; } = new List<RelicData>();
 
         public List<IAbility> Abilities { get; private set; } = new List<IAbility>();
 
-        // Cached Interface Lists
+        // Cached Interface Lists (Boilerplate)
         public List<IStatModifier> StatModifiers { get; private set; } = new List<IStatModifier>();
         public List<IStatChangeModifier> StatChangeModifiers { get; private set; } = new List<IStatChangeModifier>();
         public List<IOutgoingDamageModifier> OutgoingDamageModifiers { get; private set; } = new List<IOutgoingDamageModifier>();
@@ -169,14 +111,10 @@ namespace ProjectVagabond.Battle
         public bool HasUsedFirstAttack { get; set; } = false;
         public Dictionary<OffensiveStatType, int> StatStages { get; private set; }
 
-        // --- PROTECT MECHANIC STATE ---
         public int ConsecutiveProtectUses { get; set; } = 0;
         public bool UsedProtectThisTurn { get; set; } = false;
-
-        // --- DISENGAGE MECHANIC STATE ---
         public bool PendingDisengage { get; set; } = false;
 
-        // --- DAZED MECHANIC STATE ---
         private bool _isDazed;
         public bool IsDazed
         {
@@ -185,39 +123,24 @@ namespace ProjectVagabond.Battle
             {
                 if (value == true)
                 {
-                    // Check for immunity
-                    foreach (var mod in DazeImmunityModifiers)
-                    {
-                        if (mod.ShouldBlockDaze(this)) return;
-                    }
+                    foreach (var mod in DazeImmunityModifiers) if (mod.ShouldBlockDaze(this)) return;
                 }
                 _isDazed = value;
             }
         }
 
-        // --- UI VISIBILITY STATE ---
         public float HealthBarVisibleTimer { get; set; } = 0f;
         public float ManaBarVisibleTimer { get; set; } = 0f;
-
-        // --- UI FADE STATE ---
         public float VisualHealthBarAlpha { get; set; } = 0f;
         public float VisualManaBarAlpha { get; set; } = 0f;
-
-        // --- UI DISAPPEAR ANIMATION STATE ---
         public float HealthBarDelayTimer { get; set; } = 0f;
         public float ManaBarDelayTimer { get; set; } = 0f;
         public float HealthBarDisappearTimer { get; set; } = 0f;
         public float ManaBarDisappearTimer { get; set; } = 0f;
-
-        // --- LOW HEALTH FLASH STATE ---
         public float LowHealthFlashTimer { get; set; } = 0f;
-
-        // --- TUNING: Bar Animation ---
-        public const float BAR_DISAPPEAR_DURATION = 2.0f; // Time to fade out (Slowed down from 0.5f)
-        public const float BAR_DELAY_DURATION = 1.2f;     // Time to wait before fading
-        public const float BAR_VARIANCE_MAX = 0.5f;       // Max random added delay
-
-        // Instance-specific variance to desynchronize bars
+        public const float BAR_DISAPPEAR_DURATION = 2.0f;
+        public const float BAR_DELAY_DURATION = 1.2f;
+        public const float BAR_VARIANCE_MAX = 0.5f;
         public float CurrentBarVariance { get; set; } = 0f;
 
         public BattleCombatant()
@@ -234,7 +157,6 @@ namespace ProjectVagabond.Battle
         public void RegisterAbility(IAbility ability)
         {
             Abilities.Add(ability);
-
             if (ability is IStatModifier sm) StatModifiers.Add(sm);
             if (ability is IStatChangeModifier scm) StatChangeModifiers.Add(scm);
             if (ability is IOutgoingDamageModifier odm) OutgoingDamageModifiers.Add(odm);
@@ -287,7 +209,6 @@ namespace ProjectVagabond.Battle
 
             bool hadEffectBefore = HasStatusEffect(newEffect.EffectType);
             ActiveStatusEffects.RemoveAll(e => e.EffectType == newEffect.EffectType);
-
             ActiveStatusEffects.Add(newEffect);
             return !hadEffectBefore;
         }
@@ -296,13 +217,10 @@ namespace ProjectVagabond.Battle
 
         public (bool success, string message) ModifyStatStage(OffensiveStatType stat, int amount)
         {
-            // Check for immunity to stat changes
             foreach (var mod in StatChangeModifiers)
             {
                 if (mod.ShouldBlockStatChange(stat, amount, this))
-                {
                     return (false, $"{Name}'s {mod.Name} prevented the stat change!");
-                }
             }
 
             int currentStage = StatStages[stat];
@@ -320,11 +238,7 @@ namespace ProjectVagabond.Battle
         {
             var effectiveWeaknesses = new List<int>(this.WeaknessElementIDs);
             var effectiveResistances = new List<int>(this.ResistanceElementIDs);
-
-            foreach (var mod in ElementalAffinityModifiers)
-            {
-                mod.ModifyElementalAffinities(effectiveWeaknesses, effectiveResistances, this);
-            }
+            foreach (var mod in ElementalAffinityModifiers) mod.ModifyElementalAffinities(effectiveWeaknesses, effectiveResistances, this);
             return (effectiveWeaknesses, effectiveResistances);
         }
 
@@ -361,13 +275,7 @@ namespace ProjectVagabond.Battle
                 else stat = mod.ModifyStat(OffensiveStatType.Agility, (int)stat, this);
             }
             stat *= BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Agility]];
-
-            // Frostbite cuts agility in half
-            if (HasStatusEffect(StatusEffectType.Frostbite))
-            {
-                stat *= Global.Instance.FrostbiteAgilityMultiplier;
-            }
-
+            if (HasStatusEffect(StatusEffectType.Frostbite)) stat *= Global.Instance.FrostbiteAgilityMultiplier;
             return (int)Math.Round(stat);
         }
 

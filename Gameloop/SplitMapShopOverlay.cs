@@ -153,25 +153,21 @@ namespace ProjectVagabond.UI
             {
                 _gameState.PlayerState.Coin -= item.Price;
                 item.IsSold = true;
-                btn.IsEnabled = false; // ShopItemButton handles visual state for disabled/sold
+                btn.IsEnabled = false;
 
-                // Add to Inventory
-                if (item.Type == "Weapon") _gameState.PlayerState.AddWeapon(item.ItemId);
-                else if (item.Type == "Relic") _gameState.PlayerState.AddRelic(item.ItemId);
+                if (item.Type == "Relic")
+                {
+                    _gameState.PlayerState.AddRelic(item.ItemId);
+                }
 
                 _hapticsManager.TriggerShake(10f, 0.1f);
-
-                // Trigger Smooth Screen Flash (White, 0.75s fade)
                 _core.TriggerFullscreenFlash(_global.Palette_Leaf, 0.20f);
-
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Bought {item.DisplayName}!" });
             }
             else
             {
                 _hapticsManager.TriggerShake(12f, 0.1f);
                 EventBus.Publish(new GameEvents.AlertPublished { Message = "NOT ENOUGH COIN" });
-
-                // Trigger the X overlay animation
                 if (btn is ShopItemButton shopBtn)
                 {
                     shopBtn.TriggerTooExpensiveAnimation();

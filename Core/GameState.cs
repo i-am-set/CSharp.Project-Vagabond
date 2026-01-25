@@ -57,41 +57,33 @@ namespace ProjectVagabond
             // 1. Create PlayerState container
             PlayerState = new PlayerState();
             PlayerState.Party.Clear();
-            SeenItemIds.Clear(); // Reset seen items for new run
+            SeenItemIds.Clear();
 
             // 2. Create "Oakley" (The Main Character) using ID "0"
             var oakley = PartyMemberFactory.CreateMember("0");
-            if (oakley == null)
-            {
-                throw new Exception("CRITICAL: Could not load 'Oakley' (ID: 0) from PartyMembers.json");
-            }
+            if (oakley == null) throw new Exception("CRITICAL: Could not load 'Oakley' (ID: 0)");
+
             PlayerState.Party.Add(oakley);
 
-            // 3. Add Oakley's starting gear to the shared inventory
+            // 3. Add Starting Relics (Global)
             if (BattleDataCache.PartyMembers.TryGetValue("0", out var oakleyData))
             {
-                foreach (var kvp in oakleyData.StartingWeapons)
-                {
-                    if (BattleDataCache.Weapons.ContainsKey(kvp.Key))
-                    {
-                        PlayerState.AddWeapon(kvp.Key, kvp.Value);
-                        SeenItemIds.Add(kvp.Key); // Mark starting gear as seen
-                    }
-                }
+                // Weapons loop removed entirely.
+
                 foreach (var kvp in oakleyData.StartingRelics)
                 {
                     if (BattleDataCache.Relics.ContainsKey(kvp.Key))
                     {
-                        PlayerState.AddRelic(kvp.Key, kvp.Value);
-                        SeenItemIds.Add(kvp.Key); // Mark starting gear as seen
+                        PlayerState.AddRelic(kvp.Key); // No quantity argument
+                        SeenItemIds.Add(kvp.Key);
                     }
                 }
             }
 
-            // 4. Spawn the Entity in the world (Position is ignored by Spawner now)
+            // 4. Spawn the Entity
             PlayerEntityId = Spawner.Spawn("player", Vector2.Zero);
 
-            // 5. Sync Entity Components with Oakley's Stats
+            // 5. Sync Entity Components
             var liveStats = new CombatantStatsComponent
             {
                 MaxHP = oakley.MaxHP,
@@ -137,13 +129,8 @@ namespace ProjectVagabond
                 switch (outcome.OutcomeType)
                 {
                     case "GiveItem":
-                        // Only support Weapons/Relics now
-                        if (BattleDataCache.Weapons.ContainsKey(outcome.Value))
-                        {
-                            PlayerState.AddWeapon(outcome.Value);
-                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[Palette_Sky]Obtained {outcome.Value}!" });
-                        }
-                        else if (BattleDataCache.Relics.ContainsKey(outcome.Value))
+                        // Only support Relics now
+                        if (BattleDataCache.Relics.ContainsKey(outcome.Value))
                         {
                             PlayerState.AddRelic(outcome.Value);
                             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[Palette_Sky]Obtained {outcome.Value}!" });
@@ -151,14 +138,15 @@ namespace ProjectVagabond
                         break;
 
                     case "RemoveItem":
-                        bool removed = false;
-                        if (PlayerState.Weapons.ContainsKey(outcome.Value)) { PlayerState.RemoveWeapon(outcome.Value); removed = true; }
-                        else if (PlayerState.Relics.ContainsKey(outcome.Value)) { PlayerState.RemoveRelic(outcome.Value); removed = true; }
-
-                        if (removed)
+                        // Only check Global Relics
+                        if (PlayerState.GlobalRelics.Contains(outcome.Value))
+                        {
+                            PlayerState.RemoveRelic(outcome.Value);
                             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[Palette_Fruit]Lost {outcome.Value}." });
+                        }
                         break;
 
+                    // ... (Keep existing cases for AddBuff, ModifyStat, Damage, etc.) ...
                     case "AddBuff":
                         if (Enum.TryParse<StatusEffectType>(outcome.Value, true, out var effectType))
                         {
@@ -168,7 +156,6 @@ namespace ProjectVagabond
                                 buffsComp = new TemporaryBuffsComponent();
                                 _componentStore.AddComponent(PlayerEntityId, buffsComp);
                             }
-                            // Use Amount for duration
                             buffsComp.Buffs.Add(new TemporaryBuff { EffectType = effectType, RemainingBattles = outcome.Amount });
                             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[Palette_Sky]Gained {outcome.Value} ({outcome.Amount} battles)!" });
                         }
@@ -224,10 +211,6 @@ namespace ProjectVagabond
                         PlayerState.Coin += outcome.Amount;
                         string gSign = outcome.Amount > 0 ? "+" : "";
                         EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[Palette_DarkSun]{gSign}{outcome.Amount} Gold" });
-                        break;
-
-                    case "StartCombat":
-                        // Handled by SplitMapScene
                         break;
                 }
             }

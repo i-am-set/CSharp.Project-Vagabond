@@ -1,23 +1,10 @@
 ﻿using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
-using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond;
-using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
-using ProjectVagabond.Battle.UI;
-using ProjectVagabond.Dice;
-using ProjectVagabond.Progression;
-using ProjectVagabond.Scenes;
-using ProjectVagabond.Transitions;
-using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Reflection;
-using System.Text;
 
 namespace ProjectVagabond.Battle
 {
@@ -32,19 +19,11 @@ namespace ProjectVagabond.Battle
             var global = ServiceLocator.Get<Global>();
 
             var statsComponent = componentStore.GetComponent<CombatantStatsComponent>(entityId);
-            if (statsComponent == null)
-            {
-                Debug.WriteLine($"[BattleCombatantFactory] [ERROR] Entity {entityId} cannot be a combatant: Missing CombatantStatsComponent.");
-                return null;
-            }
+            if (statsComponent == null) return null;
 
             var archetypeIdComp = componentStore.GetComponent<ArchetypeIdComponent>(entityId);
             var archetype = archetypeManager.GetArchetypeTemplate(archetypeIdComp?.ArchetypeId);
-            if (archetype == null)
-            {
-                Debug.WriteLine($"[BattleCombatantFactory] [ERROR] Could not find archetype for entity {entityId}.");
-                return null;
-            }
+            if (archetype == null) return null;
 
             var combatant = new BattleCombatant
             {
@@ -72,26 +51,16 @@ namespace ProjectVagabond.Battle
 
             if (combatant.IsPlayerControlled)
             {
-                // Find the party member corresponding to this combatant
-                // Priority 1: Match by Name (if unique)
                 var partyMember = gameState.PlayerState.Party.FirstOrDefault(m => m.Name == combatant.Name);
-
-                // Priority 2: If this is the Player Entity (ID 0), it MUST be the Leader
-                if (partyMember == null && entityId == gameState.PlayerEntityId)
-                {
-                    partyMember = gameState.PlayerState.Leader;
-                }
+                if (partyMember == null && entityId == gameState.PlayerEntityId) partyMember = gameState.PlayerState.Leader;
 
                 if (partyMember != null)
                 {
-                    combatant.Name = partyMember.Name; // Sync name
+                    combatant.Name = partyMember.Name;
                     combatant.Spells = partyMember.Spells;
                     combatant.PortraitIndex = partyMember.PortraitIndex;
-                    combatant.EquippedWeaponId = partyMember.EquippedWeaponId;
-                    combatant.EquippedRelicId = partyMember.EquippedRelicId;
                     combatant.DefaultStrikeMoveID = partyMember.DefaultStrikeMoveID;
 
-                    // --- Populate Narration Data from PartyMemberData ---
                     var data = BattleDataCache.PartyMembers.Values.FirstOrDefault(p => p.Name == partyMember.Name);
                     if (data != null)
                     {
@@ -99,44 +68,31 @@ namespace ProjectVagabond.Battle
                         combatant.IsProperNoun = data.IsProperNoun;
                     }
 
-                    // --- 0. Apply Intrinsic Passive Abilities ---
+                    // 1. Apply Intrinsic Abilities
                     if (partyMember.IntrinsicAbilities != null && partyMember.IntrinsicAbilities.Count > 0)
                     {
-                        // Create abilities from the dictionary. Pass empty stat modifiers as intrinsics are currently effect-based.
                         var intrinsicAbilities = AbilityFactory.CreateAbilitiesFromData(partyMember.IntrinsicAbilities, new Dictionary<string, int>());
                         combatant.RegisterAbilities(intrinsicAbilities);
-                        Debug.WriteLine($"[BattleCombatantFactory] Registered intrinsics for {combatant.Name}: {string.Join(", ", partyMember.IntrinsicAbilities.Keys)}");
                     }
                 }
-                else
-                {
-                    Debug.WriteLine($"[BattleCombatantFactory] [WARNING] Could not find PartyMember for player entity {entityId} ({combatant.Name}). Intrinsics skipped.");
-                }
 
-                // 1. Apply Weapon Passives (Stats only, effects are on the move)
-                if (!string.IsNullOrEmpty(combatant.EquippedWeaponId) &&
-                    BattleDataCache.Weapons.TryGetValue(combatant.EquippedWeaponId, out var weaponData))
+                // 2. Apply Global Relics (Isaac Style)
+                // Iterate through the player's global collection and apply to this combatant
+                foreach (var relicId in gameState.PlayerState.GlobalRelics)
                 {
-                    if (weaponData.StatModifiers != null && weaponData.StatModifiers.Count > 0)
+                    if (BattleDataCache.Relics.TryGetValue(relicId, out var relicData))
                     {
-                        var weaponStatAbilities = AbilityFactory.CreateAbilitiesFromData(null, weaponData.StatModifiers);
-                        combatant.RegisterAbilities(weaponStatAbilities);
+                        // Apply Effects and Stat Modifiers
+                        var relicAbilities = AbilityFactory.CreateAbilitiesFromData(relicData.Effects, relicData.StatModifiers);
+                        combatant.RegisterAbilities(relicAbilities);
+
+                        // Add to list for tooltip display
+                        combatant.ActiveRelics.Add(relicData);
                     }
-
-                    var weaponAsRelic = new RelicData
-                    {
-                        RelicID = weaponData.WeaponID,
-                        RelicName = weaponData.WeaponName,
-                        AbilityName = "Weapon Ability",
-                        Effects = weaponData.Effects,
-                        StatModifiers = weaponData.StatModifiers
-                    };
-                    combatant.ActiveRelics.Add(weaponAsRelic);
                 }
 
-                // Apply Effective Stats from PlayerState
+                // Apply Effective Stats
                 var statSource = partyMember ?? gameState.PlayerState.Leader;
-
                 combatant.Stats.MaxHP = gameState.PlayerState.GetEffectiveStat(statSource, "MaxHP");
                 combatant.Stats.MaxMana = gameState.PlayerState.GetEffectiveStat(statSource, "MaxMana");
                 combatant.Stats.Strength = gameState.PlayerState.GetEffectiveStat(statSource, "Strength");
@@ -146,18 +102,6 @@ namespace ProjectVagabond.Battle
                 combatant.Stats.CurrentHP = statSource.CurrentHP;
                 combatant.Stats.CurrentMana = statSource.CurrentMana;
                 combatant.VisualHP = combatant.Stats.CurrentHP;
-
-                // 2. Load Relic Abilities (Single Slot)
-                if (!string.IsNullOrEmpty(combatant.EquippedRelicId))
-                {
-                    if (BattleDataCache.Relics.TryGetValue(combatant.EquippedRelicId, out var relicData))
-                    {
-                        var relicAbilities = AbilityFactory.CreateAbilitiesFromData(relicData.Effects, relicData.StatModifiers);
-                        combatant.RegisterAbilities(relicAbilities);
-
-                        combatant.ActiveRelics.Add(relicData);
-                    }
-                }
 
                 var tempBuffsComp = componentStore.GetComponent<TemporaryBuffsComponent>(entityId);
                 if (tempBuffsComp != null)
@@ -170,8 +114,7 @@ namespace ProjectVagabond.Battle
             }
             else
             {
-                // --- ENEMY LOGIC ---
-
+                // Enemy Logic
                 var profile = archetype.TemplateComponents.OfType<EnemyStatProfileComponent>().FirstOrDefault();
                 if (profile != null)
                 {
@@ -179,25 +122,15 @@ namespace ProjectVagabond.Battle
                     combatant.IsProperNoun = profile.IsProperNoun;
                 }
 
-                float powerScore = (combatant.Stats.MaxHP * 0.2f) +
-                                   (combatant.Stats.Strength * 1.0f) +
-                                   (combatant.Stats.Intelligence * 1.0f) +
-                                   (combatant.Stats.Tenacity * 1.0f) +
-                                   (combatant.Stats.Agility * 1.0f);
-
+                float powerScore = (combatant.Stats.MaxHP * 0.2f) + (combatant.Stats.Strength * 1.0f) + (combatant.Stats.Intelligence * 1.0f) + (combatant.Stats.Tenacity * 1.0f) + (combatant.Stats.Agility * 1.0f);
                 float calculatedValue = global.Economy_BaseDrop + (powerScore * global.Economy_GlobalScalar);
                 float variance = (float)(_random.NextDouble() * (global.Economy_Variance * 2) - global.Economy_Variance);
-                float finalValue = calculatedValue * (1.0f + variance);
-
-                combatant.CoinReward = Math.Max(1, (int)Math.Round(finalValue));
+                combatant.CoinReward = Math.Max(1, (int)Math.Round(calculatedValue * (1.0f + variance)));
 
                 var staticMoves = new List<MoveData>();
                 foreach (var moveId in statsComponent.AvailableMoveIDs)
                 {
-                    if (BattleDataCache.Moves.TryGetValue(moveId, out var moveData))
-                    {
-                        staticMoves.Add(moveData);
-                    }
+                    if (BattleDataCache.Moves.TryGetValue(moveId, out var moveData)) staticMoves.Add(moveData);
                 }
                 combatant.SetStaticMoves(staticMoves);
 

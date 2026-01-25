@@ -260,8 +260,9 @@ namespace ProjectVagabond.Scenes
         {
             switch (item.Type)
             {
-                case ItemType.Weapon: _gameState.PlayerState.AddWeapon(item.ID); break;
-                case ItemType.Relic: _gameState.PlayerState.AddRelic(item.ID); break;
+                case ItemType.Relic:
+                    _gameState.PlayerState.AddRelic(item.ID);
+                    break;
             }
         }
 

@@ -1,18 +1,9 @@
-﻿#nullable enable
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond;
 using ProjectVagabond.Battle;
-using ProjectVagabond.Items;
-using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.UI
 {
@@ -20,6 +11,7 @@ namespace ProjectVagabond.UI
     {
         public string SpellName { get; set; } = "EMPTY";
         public bool HasSpell { get; set; } = false;
+
         // Layout Constants
         private const int WIDTH = 64;
         private const int HEIGHT = 8;
@@ -34,13 +26,13 @@ namespace ProjectVagabond.UI
         public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? horizontalOffset = null, float? verticalOffset = null, Color? tintColorOverride = null)
         {
             var spriteManager = ServiceLocator.Get<SpriteManager>();
-            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
             var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
+            var global = ServiceLocator.Get<Global>();
 
             bool isActivated = IsEnabled && (IsHovered || forceHover);
 
             // 1. Calculate Animation Offsets
-            var (shakeOffset, flashTint) = UpdateFeedbackAnimations(gameTime); // Updates _currentHoverRotation
+            var (shakeOffset, flashTint) = UpdateFeedbackAnimations(gameTime);
             float totalX = Bounds.X + (horizontalOffset ?? 0f) + shakeOffset.X;
             float totalY = Bounds.Y + (verticalOffset ?? 0f) + shakeOffset.Y;
 
@@ -72,12 +64,11 @@ namespace ProjectVagabond.UI
             if (HasSpell)
             {
                 string textToDraw = SpellName.ToUpper();
-                Color textColor = _global.Palette_Sun;
+                Color textColor = global.Palette_Sun;
 
-                if (!IsEnabled) textColor = _global.Palette_DarkShadow;
-                else if (isActivated) textColor = _global.ButtonHoverColor;
+                if (!IsEnabled) textColor = global.Palette_DarkShadow;
+                else if (isActivated) textColor = global.ButtonHoverColor;
 
-                // Apply flash tint to text color if active
                 if (flashTint.HasValue)
                 {
                     textColor = Color.Lerp(textColor, flashTint.Value, flashTint.Value.A / 255f);
@@ -88,13 +79,11 @@ namespace ProjectVagabond.UI
 
                 if (isActivated)
                 {
-                    // No outline when hovered
                     spriteBatch.DrawStringSnapped(tertiaryFont, textToDraw, centerPos, textColor, _currentHoverRotation, textOrigin, 1.0f, SpriteEffects.None, 0f);
                 }
                 else
                 {
-                    // Outline when normal
-                    spriteBatch.DrawStringSquareOutlinedSnapped(tertiaryFont, textToDraw, centerPos, textColor, _global.Palette_DarkShadow, _currentHoverRotation, textOrigin, 1.0f, SpriteEffects.None, 0f);
+                    spriteBatch.DrawStringSquareOutlinedSnapped(tertiaryFont, textToDraw, centerPos, textColor, global.Palette_DarkShadow, _currentHoverRotation, textOrigin, 1.0f, SpriteEffects.None, 0f);
                 }
             }
         }

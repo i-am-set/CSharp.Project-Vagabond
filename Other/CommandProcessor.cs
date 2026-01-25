@@ -71,10 +71,7 @@ namespace ProjectVagabond
                 sb.AppendLine("    givecoin <amount>                  - Adds coin.");
                 sb.AppendLine("    setcoin <amount>                   - Sets coin amount.");
                 sb.AppendLine("    removecoin <amount>                - Removes coin.");
-                sb.AppendLine("    giveweapon <id> {n}                - Adds weapon(s).");
-                sb.AppendLine("    equipweapon <id>                   - Equips a weapon.");
-                sb.AppendLine("    unequipweapon                      - Unequips current weapon.");
-                sb.AppendLine("    giverelic <id> {n}                 - Adds relic(s).");
+                sb.AppendLine("    giverelic <id>                     - Adds relic.");
                 sb.AppendLine("    givespell <id>                     - Adds a spell.");
 
                 foreach (var line in sb.ToString().Split(new[] { Environment.NewLine }, StringSplitOptions.None))
@@ -230,10 +227,10 @@ namespace ProjectVagabond
                     if (_gameState.PlayerState.AddPartyMember(newMember))
                     {
                         Log($"[Palette_Sky]Added {newMember.Name} to the party!");
+                        // Starting relics are now global, so we add them to the player state
                         if (BattleDataCache.PartyMembers.TryGetValue(memberId, out var data))
                         {
-                            foreach (var kvp in data.StartingWeapons) _gameState.PlayerState.AddWeapon(kvp.Key, kvp.Value);
-                            foreach (var kvp in data.StartingRelics) _gameState.PlayerState.AddRelic(kvp.Key, kvp.Value);
+                            foreach (var kvp in data.StartingRelics) _gameState.PlayerState.AddRelic(kvp.Key);
                         }
                     }
                     else
@@ -311,19 +308,26 @@ namespace ProjectVagabond
                         }
                     }
                     if (!hasIntrinsic) Log("  [cGreen]Intrinsic:[/] None");
-
-                    // Relic
-                    if (!string.IsNullOrEmpty(member.EquippedRelicId) && BattleDataCache.Relics.TryGetValue(member.EquippedRelicId, out var relic))
-                    {
-                        Log($"  [cBlue]Relic:[/] {relic.RelicName} - {relic.AbilityName}");
-                    }
-                    else
-                    {
-                        Log("  [cBlue]Relic:[/] None");
-                    }
                     slot++;
                 }
-            }, "debug_passives - Lists intrinsic and relic abilities for the party.");
+
+                Log("[Palette_Sky]--- Global Relics ---[/]");
+                if (_gameState.PlayerState.GlobalRelics.Any())
+                {
+                    foreach (var relicId in _gameState.PlayerState.GlobalRelics)
+                    {
+                        if (BattleDataCache.Relics.TryGetValue(relicId, out var relic))
+                            Log($"  [cBlue]Relic:[/] {relic.RelicName} - {relic.AbilityName}");
+                        else
+                            Log($"  [cBlue]Relic:[/] {relicId} (Unknown)");
+                    }
+                }
+                else
+                {
+                    Log("  [cBlue]Relic:[/] None");
+                }
+
+            }, "debug_passives - Lists intrinsic and relic abilities.");
 
             // --- INVENTORY COMMANDS ---
             _commands["inventory"] = new Command("inventory", (args) => HandleShowInventory(), "inventory - Shows all inventories.");
@@ -355,42 +359,9 @@ namespace ProjectVagabond
                 Log($"[Palette_Sky]Removed {amount} coin. Total: {_gameState.PlayerState.Coin}");
             }, "removecoin <amount> - Removes coin.");
 
-            _commands["giveweapon"] = new Command("giveweapon", (args) => HandleGiveItem(args, "Weapon"), "giveweapon <id> [n]");
+            // Removed giveweapon, equipweapon, unequipweapon
 
-            _commands["equipweapon"] = new Command("equipweapon", (args) =>
-            {
-                _gameState ??= ServiceLocator.Get<GameState>();
-                if (_gameState.PlayerState == null) return;
-                if (args.Length < 2) { Log("[error]Usage: equipweapon <WeaponID>"); return; }
-
-                string weaponId = args[1];
-                if (!_gameState.PlayerState.Weapons.ContainsKey(weaponId))
-                {
-                    Log($"[error]You do not have '{weaponId}' in your inventory.");
-                    return;
-                }
-
-                if (!BattleDataCache.Weapons.ContainsKey(weaponId))
-                {
-                    Log($"[error]Weapon data for '{weaponId}' not found.");
-                    return;
-                }
-
-                _gameState.PlayerState.EquippedWeaponId = weaponId;
-                Log($"[Palette_Sky]Equipped {weaponId}.");
-
-            }, "equipweapon <id> - Equips a weapon from inventory.",
-            (args) => _gameState?.PlayerState?.Weapons.Keys.ToList() ?? new List<string>());
-
-            _commands["unequipweapon"] = new Command("unequipweapon", (args) =>
-            {
-                _gameState ??= ServiceLocator.Get<GameState>();
-                if (_gameState.PlayerState == null) return;
-                _gameState.PlayerState.EquippedWeaponId = null;
-                Log("Unequipped weapon.");
-            }, "unequipweapon - Unequips current weapon.");
-
-            _commands["giverelic"] = new Command("giverelic", (args) => HandleGiveItem(args, "Relic"), "giverelic <id> [n]",
+            _commands["giverelic"] = new Command("giverelic", (args) => HandleGiveItem(args, "Relic"), "giverelic <id>",
                 (args) => args.Length == 0 ? BattleDataCache.Relics.Keys.ToList() : new List<string>());
 
             _commands["giveall"] = new Command("giveall", (args) =>
@@ -399,14 +370,13 @@ namespace ProjectVagabond
                 if (_gameState.PlayerState == null) return;
 
                 int count = 0;
-                foreach (var id in BattleDataCache.Weapons.Keys) { _gameState.PlayerState.AddWeapon(id, 1); count++; }
-                foreach (var id in BattleDataCache.Relics.Keys) { _gameState.PlayerState.AddRelic(id, 1); count++; }
+                foreach (var id in BattleDataCache.Relics.Keys) { _gameState.PlayerState.AddRelic(id); count++; }
 
-                Log($"[Palette_Sky]Added {count} items (1 of every defined item) to inventory.");
-            }, "giveall - Adds 1 of every item to inventory.");
+                Log($"[Palette_Sky]Added {count} relics to inventory.");
+            }, "giveall - Adds 1 of every relic to inventory.");
 
-            _commands["removeweapon"] = new Command("removeweapon", (args) => HandleRemoveItem(args, "Weapon"), "removeweapon <id> [n]");
-            _commands["removerelic"] = new Command("removerelic", (args) => HandleRemoveItem(args, "Relic"), "removerelic <id> [n]");
+            // Removed removeweapon
+            _commands["removerelic"] = new Command("removerelic", (args) => HandleRemoveItem(args, "Relic"), "removerelic <id>");
 
             // --- MOVE COMMANDS ---
             _commands["givespell"] = new Command("givespell", (args) =>
@@ -619,36 +589,30 @@ namespace ProjectVagabond
         {
             _gameState ??= ServiceLocator.Get<GameState>();
             if (_gameState.PlayerState == null) return;
-            if (args.Length < 2) { Log("[error]Usage: give... <id> [qty]"); return; }
+            if (args.Length < 2) { Log("[error]Usage: give... <id>"); return; }
 
             string id = args[1];
-            int qty = 1;
-            if (args.Length > 2) int.TryParse(args[2], out qty);
 
             switch (type)
             {
-                case "Weapon": _gameState.PlayerState.AddWeapon(id, qty); break;
-                case "Relic": _gameState.PlayerState.AddRelic(id, qty); break;
+                case "Relic": _gameState.PlayerState.AddRelic(id); break;
             }
-            Log($"Added {qty}x {id} to {type} inventory.");
+            Log($"Added {id} to {type} inventory.");
         }
 
         private void HandleRemoveItem(string[] args, string type)
         {
             _gameState ??= ServiceLocator.Get<GameState>();
             if (_gameState.PlayerState == null) return;
-            if (args.Length < 2) { Log("[error]Usage: remove... <id> [qty]"); return; }
+            if (args.Length < 2) { Log("[error]Usage: remove... <id>"); return; }
 
             string id = args[1];
-            int qty = 1;
-            if (args.Length > 2) int.TryParse(args[2], out qty);
 
             switch (type)
             {
-                case "Weapon": _gameState.PlayerState.RemoveWeapon(id, qty); break;
-                case "Relic": _gameState.PlayerState.RemoveRelic(id, qty); break;
+                case "Relic": _gameState.PlayerState.RemoveRelic(id); break;
             }
-            Log($"Removed {qty}x {id} from {type} inventory.");
+            Log($"Removed {id} from {type} inventory.");
         }
 
         private void HandleShowInventory()
@@ -657,15 +621,11 @@ namespace ProjectVagabond
             if (_gameState.PlayerState == null) return;
             var ps = _gameState.PlayerState;
 
-            if (!string.IsNullOrEmpty(ps.EquippedWeaponId))
-            {
-                Log($"[Palette_Sky]Equipped Weapon:[/] {ps.EquippedWeaponId}");
-            }
-
             Log($"[Palette_Sky]Coin:[/] {ps.Coin}");
 
-            PrintDict(ps.Weapons, "Weapons");
-            PrintDict(ps.Relics, "Relics");
+            Log($"[Palette_Sky]Global Relics:[/]");
+            if (!ps.GlobalRelics.Any()) Log("  (Empty)");
+            else foreach (var r in ps.GlobalRelics) Log($"  {r}");
 
             Log("[Palette_Sky]Spells:[/]");
             if (ps.Spells.Any(s => s != null))

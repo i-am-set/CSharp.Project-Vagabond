@@ -189,7 +189,6 @@ namespace ProjectVagabond.UI
         {
             string name = "";
             if (itemData is MoveData m) name = m.MoveName;
-            else if (itemData is WeaponData w) name = w.WeaponName;
             else if (itemData is RelicData r) name = r.RelicName;
 
             var lines = WrapName(name.ToUpper());
@@ -207,17 +206,13 @@ namespace ProjectVagabond.UI
 
         public void DrawInfoPanelContent(SpriteBatch spriteBatch, object itemData, Rectangle bounds, BitmapFont font, BitmapFont secondaryFont, GameTime gameTime, float opacity)
         {
-            // --- Draw Type Header (Rarity Removed) ---
+            // --- Draw Type Header ---
             var tertiaryFont = _core.TertiaryFont;
             string typeText = "ITEM";
 
             if (itemData is MoveData moveHeader)
             {
                 typeText = moveHeader.MoveType == MoveType.Spell ? "SPELL" : "ACTION";
-            }
-            else if (itemData is WeaponData)
-            {
-                typeText = "WEAPON";
             }
             else if (itemData is RelicData)
             {
@@ -226,8 +221,7 @@ namespace ProjectVagabond.UI
 
             spriteBatch.DrawStringSnapped(tertiaryFont, typeText, new Vector2(bounds.X + 4, bounds.Y + 2), _global.Palette_DarkShadow * opacity);
 
-            // --- Continue with specific drawing ---
-
+            // --- Content ---
             if (itemData is MoveData moveData)
             {
                 string iconPath = $"Sprites/Spells/{moveData.MoveID}";
@@ -245,10 +239,6 @@ namespace ProjectVagabond.UI
                 Rectangle? sourceRect = _spriteManager.GetAnimatedIconSourceRect(iconTexture, gameTime);
 
                 DrawSpellInfoPanel(spriteBatch, font, secondaryFont, moveData, iconTexture, iconSilhouette, sourceRect, null, Rectangle.Empty, Vector2.Zero, false, bounds, gameTime, opacity);
-            }
-            else if (itemData is WeaponData weaponData)
-            {
-                DrawWeaponInfoPanel(spriteBatch, font, secondaryFont, weaponData, null, null, bounds, gameTime, opacity);
             }
             else if (itemData is RelicData relicData)
             {
@@ -274,11 +264,6 @@ namespace ProjectVagabond.UI
             {
                 description = move.Description;
                 flavor = move.Flavor;
-            }
-            else if (data is WeaponData w)
-            {
-                description = w.Description;
-                flavor = w.Flavor;
             }
             else if (data is RelicData r)
             {
@@ -341,93 +326,6 @@ namespace ProjectVagabond.UI
 
                 TextAnimator.DrawTextWithEffectOutlined(spriteBatch, font, line, namePos, _global.Palette_Sun * opacity, _global.Palette_Black * opacity, TextEffectType.Drift, (float)gameTime.TotalGameTime.TotalSeconds);
             }
-        }
-
-        private void DrawWeaponInfoPanel(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, WeaponData weapon, Texture2D? iconTexture, Texture2D? iconSilhouette, Rectangle infoPanelArea, GameTime gameTime, float opacity)
-        {
-            if (iconTexture == null)
-            {
-                string path = $"Sprites/Items/Weapons/{weapon.WeaponID}";
-                iconTexture = _spriteManager.GetItemSprite(path);
-                iconSilhouette = _spriteManager.GetItemSpriteSilhouette(path);
-            }
-
-            var tertiaryFont = _core.TertiaryFont;
-            const int spriteSize = 16;
-
-            // 1. Draw Icon
-            int spriteX = infoPanelArea.X + (infoPanelArea.Width - spriteSize) / 2;
-            float currentY = infoPanelArea.Y + LAYOUT_SPRITE_Y + 2;
-
-            Vector2 staticDrawPos = new Vector2(spriteX + 8, currentY + 8);
-            Vector2 iconOrigin = new Vector2(8, 8);
-            float displayScale = 1.0f;
-
-            Vector2 animOffset = GetJuicyOffset(gameTime);
-            Vector2 animatedDrawPos = staticDrawPos + animOffset;
-
-            // Draw Item (Animated Position)
-            DrawIconWithSilhouette(spriteBatch, iconTexture, iconSilhouette, animatedDrawPos, iconOrigin, displayScale, opacity: opacity);
-
-            // 2. Draw Name (Wrapped & Bottom Aligned)
-            DrawItemName(spriteBatch, font, weapon.WeaponName, infoPanelArea, opacity, gameTime);
-
-            // 3. Draw Move Stats
-            currentY = infoPanelArea.Y + LAYOUT_VARS_START_Y;
-
-            float centerX = infoPanelArea.Center.X;
-            float leftCenter = centerX - COLUMN_CENTER_OFFSET;
-            float rightCenter = centerX + COLUMN_CENTER_OFFSET;
-
-            float labelOffset = 18f;
-            float valueOffset = 2f;
-
-            float leftLabelX = leftCenter - labelOffset;
-            float leftValueX = leftCenter + valueOffset;
-            float rightLabelX = rightCenter - labelOffset;
-            float rightValueX = rightCenter + valueOffset;
-
-            void DrawStatPair(string label, string value, float labelX, float valueX, float y, Color valColor)
-            {
-                float yOffset = (secondaryFont.LineHeight - tertiaryFont.LineHeight) / 2f;
-                yOffset = MathF.Round(yOffset);
-                spriteBatch.DrawStringSnapped(tertiaryFont, label, new Vector2(labelX, y + yOffset), _global.Palette_DarkShadow * opacity);
-                spriteBatch.DrawStringSnapped(secondaryFont, value, new Vector2(valueX, y), valColor * opacity);
-            }
-
-            string powVal = weapon.Power > 0 ? weapon.Power.ToString() : "---";
-            string accVal = weapon.Accuracy >= 0 ? $"{weapon.Accuracy}%" : "---";
-
-            DrawStatPair("POW", powVal, leftLabelX, leftValueX, currentY, _global.Palette_Sun);
-            DrawStatPair("ACC", accVal, rightLabelX, rightValueX, currentY, _global.Palette_Sun);
-
-            currentY += LAYOUT_VAR_ROW_HEIGHT;
-
-            string targetVal = GetTargetString(weapon.Target);
-            DrawStatPair("TGT", targetVal, rightLabelX, rightValueX, currentY, _global.Palette_Sun);
-            currentY += LAYOUT_VAR_ROW_HEIGHT;
-
-            string offStatVal = GetStatString(weapon.OffensiveStat);
-            Color offColor = _global.Palette_Sun; // Unified color
-            string impactVal = weapon.ImpactType.ToString().ToUpper().Substring(0, Math.Min(4, weapon.ImpactType.ToString().Length));
-            Color impactColor = weapon.ImpactType == ImpactType.Magical ? _global.Palette_Sky : (weapon.ImpactType == ImpactType.Physical ? _global.Palette_Fruit : _global.Palette_DarkShadow);
-
-            DrawStatPair("USE", offStatVal, leftLabelX, leftValueX, currentY, offColor);
-            DrawStatPair("TYP", impactVal, rightLabelX, rightValueX, currentY, impactColor);
-
-            currentY = infoPanelArea.Y + LAYOUT_CONTACT_Y;
-            if (weapon.MakesContact)
-            {
-                string contactText = "[MAKES CONTACT]";
-                Vector2 contactSize = tertiaryFont.MeasureString(contactText);
-                Vector2 contactPos = new Vector2(infoPanelArea.X + (infoPanelArea.Width - contactSize.X) / 2f, currentY);
-                spriteBatch.DrawStringSnapped(tertiaryFont, contactText, contactPos, _global.Palette_Rust * opacity);
-            }
-
-            float flavorHeight = DrawFlavorText(spriteBatch, infoPanelArea, weapon.Flavor, opacity);
-
-            currentY = infoPanelArea.Y + LAYOUT_DESC_START_Y;
-            DrawDescription(spriteBatch, secondaryFont, weapon.Description, infoPanelArea, currentY, flavorHeight, gameTime, opacity);
         }
 
         private void DrawArmorRelicInfoPanel(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, string name, string description, string flavor, Texture2D? iconTexture, Texture2D? iconSilhouette, Dictionary<string, int> stats, Rectangle infoPanelArea, GameTime gameTime, float opacity, string? iconPath = null)

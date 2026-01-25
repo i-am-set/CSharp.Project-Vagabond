@@ -299,17 +299,13 @@ namespace ProjectVagabond.UI
 
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            // Update Hops
             foreach (var controller in _hopControllers) controller.Update(gameTime);
 
-            // Transform mouse
             var virtualMousePos = Core.TransformMouse(mouseState.Position);
             var mouseInWorldSpace = Vector2.Transform(virtualMousePos, Matrix.Invert(cameraTransform));
             var worldMouseState = new MouseState((int)mouseInWorldSpace.X, (int)mouseInWorldSpace.Y, mouseState.ScrollWheelValue, mouseState.LeftButton, mouseState.MiddleButton, mouseState.RightButton, mouseState.XButton1, mouseState.XButton2);
 
-            // --- HIT TEST LOGIC FOR SUB-ELEMENTS ---
             _hoveredInternalCandidateIndex = -1;
-            _hoveredEquipSlotIndex = -1;
             _hoveredSpellSlotIndex = -1;
             _hoveredItemData = null;
 
@@ -327,56 +323,13 @@ namespace ProjectVagabond.UI
                     int centerX = bounds.Center.X;
                     int currentY = bounds.Y + 4;
 
-                    // Name
-                    string name = candidate.Name.ToUpper();
-                    Vector2 nameSize = defaultFont.MeasureString(name);
-                    currentY += (int)nameSize.Y - 2;
-
-                    // Portrait
+                    currentY += (int)defaultFont.MeasureString(candidate.Name.ToUpper()).Height - 2;
                     currentY += 32 + 2 - 6;
+                    currentY += 8 + (int)secondaryFont.MeasureString($"{candidate.MaxHP}/{candidate.MaxHP}").Height + 4 - 3;
 
-                    // Health Bar
-                    string hpValText = $"{candidate.MaxHP}/{candidate.MaxHP}";
-                    Vector2 valSize = secondaryFont.MeasureString(hpValText);
-                    currentY += 8 + (int)valSize.Y + 4 - 3;
-
-                    // Equip Slots
-                    int slotSize = 16;
-                    int gap = 4;
-                    // 2 slots: Weapon, Relic
-                    int equipStartX = centerX - ((slotSize * 2 + gap * 1) / 2);
-
-                    // Check Weapon Slot
-                    Rectangle weaponRect = new Rectangle(equipStartX, currentY, slotSize, slotSize);
-                    if (weaponRect.Contains(mouseInWorldSpace))
-                    {
-                        // Only allow hover if item exists
-                        if (!string.IsNullOrEmpty(candidate.EquippedWeaponId))
-                        {
-                            _hoveredEquipSlotIndex = 0;
-                            _hoveredItemData = BattleDataCache.Weapons.GetValueOrDefault(candidate.EquippedWeaponId);
-                        }
-                    }
-
-                    // Check Relic Slot
-                    Rectangle relicRect = new Rectangle(equipStartX + slotSize + gap, currentY, slotSize, slotSize);
-                    if (relicRect.Contains(mouseInWorldSpace))
-                    {
-                        // Only allow hover if item exists
-                        if (!string.IsNullOrEmpty(candidate.EquippedRelicId))
-                        {
-                            _hoveredEquipSlotIndex = 1;
-                            _hoveredItemData = BattleDataCache.Relics.GetValueOrDefault(candidate.EquippedRelicId);
-                        }
-                    }
-
-                    currentY += slotSize + 6 - 5;
-
-                    // Stats (4 lines)
                     currentY += ((int)secondaryFont.LineHeight + 1) * 4;
-
-                    // Spells
                     currentY += 2;
+
                     int spellButtonWidth = 64;
                     int spellButtonHeight = 8;
                     int spellButtonX = centerX - (spellButtonWidth / 2);
@@ -396,41 +349,31 @@ namespace ProjectVagabond.UI
                 }
             }
 
-            // --- TOOLTIP ANIMATION LOGIC ---
             if (_hoveredItemData != _lastHoveredItemData)
             {
                 _tooltipTimer = 0f;
-                // Force reset the animator to ensure we don't see the previous item's fade-out
                 _tooltipAnimator.Reset();
             }
 
             if (_hoveredItemData != null)
             {
                 _tooltipTimer += dt;
-                // Use Hint cursor for non-clickable info elements
                 ServiceLocator.Get<CursorManager>().SetState(CursorState.Hint);
 
                 if (_tooltipTimer >= ItemTooltipRenderer.TOOLTIP_DELAY)
                 {
-                    if (!_tooltipAnimator.IsVisible)
-                    {
-                        _tooltipAnimator.Show();
-                    }
+                    if (!_tooltipAnimator.IsVisible) _tooltipAnimator.Show();
                 }
             }
             else
             {
                 _tooltipTimer = 0f;
-                if (_lastHoveredItemData != null && _tooltipAnimator.IsVisible)
-                {
-                    _tooltipAnimator.Hide();
-                }
+                if (_lastHoveredItemData != null && _tooltipAnimator.IsVisible) _tooltipAnimator.Hide();
             }
 
             _lastHoveredItemData = _hoveredItemData;
             _tooltipAnimator.Update(dt);
 
-            // Update Buttons
             for (int i = 0; i < _candidateButtons.Count; i++)
             {
                 var btn = _candidateButtons[i];
@@ -521,17 +464,6 @@ namespace ProjectVagabond.UI
             currentY += 32 + 2 - 6; // Portrait
             currentY += 8 + secondaryFont.LineHeight + 4 - 3; // Health Bar
 
-            if (_hoveredEquipSlotIndex != -1)
-            {
-                int slotSize = 16;
-                int gap = 4;
-                // 2 slots: Weapon, Relic
-                int equipStartX = centerX - ((slotSize * 2 + gap * 1) / 2);
-                int x = equipStartX + (_hoveredEquipSlotIndex * (slotSize + gap));
-                return new Vector2(x + slotSize / 2, currentY + slotSize / 2);
-            }
-
-            currentY += 16 + 6 - 5; // Equip Slots
             currentY += (secondaryFont.LineHeight + 1) * 4; // Stats
             currentY += 2; // Gap
 
@@ -561,17 +493,13 @@ namespace ProjectVagabond.UI
             if (isSelected)
             {
                 var pixel = ServiceLocator.Get<Texture2D>();
-                // Darker background for selection (Beveled)
                 DrawBeveledBackground(spriteBatch, pixel, bounds, _global.Palette_Shadow);
-                // Selection Border (Yellow) - Beveled
                 DrawBeveledBorder(spriteBatch, pixel, bounds, _global.Palette_DarkSun);
             }
             else if (button.IsHovered && button.IsEnabled)
             {
                 var pixel = ServiceLocator.Get<Texture2D>();
-                // Hover background (Beveled) -> Changed to Palette_Black
                 DrawBeveledBackground(spriteBatch, pixel, bounds, _global.Palette_Black);
-                // Hover Border (Rust) - Beveled
                 DrawBeveledBorder(spriteBatch, pixel, bounds, _global.ButtonHoverColor);
             }
 
@@ -585,20 +513,15 @@ namespace ProjectVagabond.UI
             if (_spriteManager.PlayerMasterSpriteSheet != null)
             {
                 int portraitIndex = member.PortraitIndex;
-
-                // Determine type based on state
                 PlayerSpriteType type = (isSelected || (button.IsHovered && button.IsEnabled))
                     ? PlayerSpriteType.Alt
                     : PlayerSpriteType.Normal;
 
                 var sourceRect = _spriteManager.GetPlayerSourceRect(portraitIndex, type);
+                float hopOffset = hopController.GetOffset(true);
 
-                // Apply Hop
-                float hopOffset = hopController.GetOffset(true); // Up
-
-                // --- NEW BOBBING LOGIC ---
-                float bobSpeed = 2.5f; // Default Idle Speed
-                float bobAmp = 0.5f;   // Default Idle Amplitude
+                float bobSpeed = 2.5f;
+                float bobAmp = 0.5f;
 
                 if (isSelected)
                 {
@@ -611,24 +534,19 @@ namespace ProjectVagabond.UI
                     bobAmp = 0.5f;
                 }
 
-                // Stagger the bob based on index to prevent unison movement
                 float phase = index * 0.7f;
                 float bob = MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * bobSpeed + phase) * bobAmp;
                 hopOffset += bob;
 
-                // Use Vector2 for smooth sub-pixel rendering
                 Vector2 portraitPos = new Vector2(centerX - 16, currentY + hopOffset);
-
                 spriteBatch.DrawSnapped(_spriteManager.PlayerMasterSpriteSheet, portraitPos, sourceRect, Color.White);
             }
 
-            // Draw Name on top
-            Color nameColor = isSelected ? _global.Palette_DarkSun : _global.Palette_Sun;
-            spriteBatch.DrawStringSnapped(font, name, namePos, nameColor);
+            spriteBatch.DrawStringSnapped(font, name, namePos, isSelected ? _global.Palette_DarkSun : _global.Palette_Sun);
 
             currentY += 32 + 2 - 6;
 
-            // 3. Health Bar (Full)
+            // 3. Health Bar
             if (_spriteManager.InventoryPlayerHealthBarEmpty != null)
             {
                 int barX = centerX - (_spriteManager.InventoryPlayerHealthBarEmpty.Width / 2);
@@ -642,63 +560,33 @@ namespace ProjectVagabond.UI
                 string hpValText = $"{member.MaxHP}/{member.MaxHP}";
                 string hpSuffix = " HP";
                 Vector2 valSize = secondaryFont.MeasureString(hpValText);
-                Vector2 suffixSize = secondaryFont.MeasureString(hpSuffix);
-                float totalHpWidth = valSize.X + suffixSize.X;
+                float totalHpWidth = valSize.X + secondaryFont.MeasureString(hpSuffix).Width;
                 float hpTextX = centerX - (totalHpWidth / 2f);
                 float hpTextY = currentY + 7;
 
                 spriteBatch.DrawStringSnapped(secondaryFont, hpValText, new Vector2(hpTextX, hpTextY), _global.Palette_Sun);
-                // CHANGED: Use DarkSun for HP suffix
                 spriteBatch.DrawStringSnapped(secondaryFont, hpSuffix, new Vector2(hpTextX + valSize.X, hpTextY), _global.Palette_DarkSun);
 
                 currentY += 8 + (int)valSize.Y + 4 - 3;
             }
 
-            // 4. Equipment Slots
-            int slotSize = 16;
-            int gap = 4;
-            // 2 slots: Weapon, Relic
-            int totalEquipWidth = (slotSize * 2) + (gap * 1);
-            int equipStartX = centerX - (totalEquipWidth / 2);
-
-            // Pass hover states based on internal hover calculation
-            bool hoveringThisCandidate = _hoveredInternalCandidateIndex == index;
-            bool hoverWeapon = hoveringThisCandidate && _hoveredEquipSlotIndex == 0;
-            bool hoverRelic = hoveringThisCandidate && _hoveredEquipSlotIndex == 1;
-
-            DrawEquipSlot(spriteBatch, equipStartX, currentY, member.EquippedWeaponId, "Weapon", hoverWeapon, index, gameTime);
-            DrawEquipSlot(spriteBatch, equipStartX + slotSize + gap, currentY, member.EquippedRelicId, "Relic", hoverRelic, index, gameTime);
-
-            currentY += slotSize + 6 - 5;
-
-            // 5. Stats
+            // 4. Stats
             string[] statLabels = { "STR", "INT", "TEN", "AGI" };
             string[] statKeys = { "Strength", "Intelligence", "Tenacity", "Agility" };
-
-            // --- CENTERED STAT BLOCK LOGIC ---
-            // Label (~17px) + Gap (3px) + Bar (40px) = ~60px total width.
-            // CenterX - 30 puts the start 30px left of center.
             int statBlockStartX = centerX - 30;
 
             for (int s = 0; s < 4; s++)
             {
-                // Calculate Base + Bonus
                 int baseStat = member.GetType().GetProperty(statKeys[s])?.GetValue(member) as int? ?? 0;
                 int bonus = GetStatBonus(member, statKeys[s]);
                 int rawTotal = baseStat + bonus;
 
-                // Draw Label
-                // CHANGED: Use DarkSun for stat labels
-                Color labelColor = _global.Palette_DarkSun;
-                spriteBatch.DrawStringSnapped(secondaryFont, statLabels[s], new Vector2(statBlockStartX, currentY), labelColor);
+                spriteBatch.DrawStringSnapped(secondaryFont, statLabels[s], new Vector2(statBlockStartX, currentY), _global.Palette_DarkSun);
 
-                // Draw Bar Background
                 if (_spriteManager.InventoryStatBarEmpty != null)
                 {
-                    // Fixed offset for bar to ensure vertical alignment
                     float barX = statBlockStartX + 19;
-                    float barYOffset = 0f;
-                    if (s == 1 || s == 3) barYOffset = 0.5f;
+                    float barYOffset = (s == 1 || s == 3) ? 0.5f : 0f;
                     float barY = currentY + (secondaryFont.LineHeight - 3) / 2f + barYOffset;
 
                     spriteBatch.DrawSnapped(_spriteManager.InventoryStatBarEmpty, new Vector2(barX, barY), Color.White);
@@ -711,19 +599,17 @@ namespace ProjectVagabond.UI
 
                         if (bonus > 0)
                         {
-                            // Base is white, Bonus is Dim Green
                             whiteBarPoints = Math.Clamp(baseStat, 1, 20);
                             int totalPoints = Math.Clamp(rawTotal, 1, 20);
                             coloredBarPoints = totalPoints - whiteBarPoints;
-                            coloredBarColor = _global.StatColor_Increase * 0.5f; // Dim Green
+                            coloredBarColor = _global.StatColor_Increase * 0.5f;
                         }
                         else if (bonus < 0)
                         {
-                            // Total is white, Penalty (up to Base) is Dim Red
                             whiteBarPoints = Math.Clamp(rawTotal, 1, 20);
                             int basePoints = Math.Clamp(baseStat, 1, 20);
                             coloredBarPoints = basePoints - whiteBarPoints;
-                            coloredBarColor = _global.StatColor_Decrease * 0.5f; // Dim Red
+                            coloredBarColor = _global.StatColor_Decrease * 0.5f;
                         }
                         else
                         {
@@ -732,36 +618,26 @@ namespace ProjectVagabond.UI
                             coloredBarColor = Color.White;
                         }
 
-                        int whiteWidth = whiteBarPoints * 2;
-                        int coloredWidth = coloredBarPoints * 2;
-
-                        if (whiteWidth > 0)
+                        if (whiteBarPoints > 0)
                         {
-                            var srcBase = new Rectangle(0, 0, whiteWidth, 3);
+                            var srcBase = new Rectangle(0, 0, whiteBarPoints * 2, 3);
                             spriteBatch.DrawSnapped(_spriteManager.InventoryStatBarFull, new Vector2(barX, barY), srcBase, Color.White);
                         }
 
-                        if (coloredWidth > 0)
+                        if (coloredBarPoints > 0)
                         {
-                            var srcColor = new Rectangle(0, 0, coloredWidth, 3);
-                            spriteBatch.DrawSnapped(_spriteManager.InventoryStatBarFull, new Vector2(barX + whiteWidth, barY), srcColor, coloredBarColor);
+                            var srcColor = new Rectangle(0, 0, coloredBarPoints * 2, 3);
+                            spriteBatch.DrawSnapped(_spriteManager.InventoryStatBarFull, new Vector2(barX + whiteBarPoints * 2, barY), srcColor, coloredBarColor);
                         }
 
-                        // --- EXCESS TEXT LOGIC ---
                         if (rawTotal > 20)
                         {
                             int excessValue = rawTotal - 20;
-                            Color textColor;
-
-                            if (bonus > 0) textColor = _global.StatColor_Increase * 0.5f;
-                            else if (bonus < 0) textColor = _global.StatColor_Decrease * 0.5f;
-                            else textColor = _global.Palette_Sun;
-
+                            Color textColor = bonus > 0 ? _global.StatColor_Increase * 0.5f : (bonus < 0 ? _global.StatColor_Decrease * 0.5f : _global.Palette_Sun);
                             string excessText = $"+{excessValue}";
                             Vector2 textSize = secondaryFont.MeasureString(excessText);
                             float textX = (barX + 40) - textSize.X;
                             Vector2 textPos = new Vector2(textX, currentY);
-                            // Removed duplicate pixel declaration
                             spriteBatch.DrawSnapped(ServiceLocator.Get<Texture2D>(), new Rectangle((int)textPos.X - 1, (int)textPos.Y, (int)textSize.X + 2, (int)textSize.Y), _global.Palette_Black);
                             spriteBatch.DrawStringOutlinedSnapped(secondaryFont, excessText, textPos, textColor, _global.Palette_Black);
                         }
@@ -770,7 +646,7 @@ namespace ProjectVagabond.UI
                 currentY += (int)secondaryFont.LineHeight + 1;
             }
 
-            // 6. Spells
+            // 5. Spells
             currentY += 2;
             int spellButtonWidth = 64;
             int spellButtonHeight = 8;
@@ -792,78 +668,16 @@ namespace ProjectVagabond.UI
 
         private int GetStatBonus(PartyMember member, string statName)
         {
+            // Calculate bonus from Global Relics
             int bonus = 0;
-            if (!string.IsNullOrEmpty(member.EquippedWeaponId) && BattleDataCache.Weapons.TryGetValue(member.EquippedWeaponId, out var w))
+            foreach (var relicId in _gameState.PlayerState.GlobalRelics)
             {
-                if (w.StatModifiers.TryGetValue(statName, out int val)) bonus += val;
-            }
-
-            if (!string.IsNullOrEmpty(member.EquippedRelicId) && BattleDataCache.Relics.TryGetValue(member.EquippedRelicId, out var r))
-            {
-                if (r.StatModifiers.TryGetValue(statName, out int val)) bonus += val;
-            }
-
-            return bonus;
-        }
-
-        private void DrawEquipSlot(SpriteBatch spriteBatch, int x, int y, string? itemId, string type, bool isHovered, int candidateIndex, GameTime gameTime)
-        {
-            var destRect = new Rectangle(x, y, 16, 16);
-            Vector2 centerPos = new Vector2(x + 8, y + 8);
-            Vector2 origin = new Vector2(12, 12);
-
-            if (!string.IsNullOrEmpty(itemId))
-            {
-                string path = "";
-                if (type == "Weapon" && BattleDataCache.Weapons.TryGetValue(itemId, out var w)) path = $"Sprites/Items/Weapons/{w.WeaponID}";
-                else if (type == "Relic" && BattleDataCache.Relics.TryGetValue(itemId, out var r)) path = $"Sprites/Items/Relics/{r.RelicID}";
-
-                if (!string.IsNullOrEmpty(path))
+                if (BattleDataCache.Relics.TryGetValue(relicId, out var r))
                 {
-                    var icon = _spriteManager.GetSmallRelicSprite(path);
-
-                    if (icon != null)
-                    {
-                        // --- JUICY FLOAT ANIMATION ---
-                        // Calculate a smooth sine wave bob.
-                        // Use x position as phase offset so slots don't bob in unison.
-                        float time = (float)gameTime.TotalGameTime.TotalSeconds;
-                        float phase = x * 0.1f;
-
-                        float floatOffset = MathF.Sin(time * EQUIP_FLOAT_SPEED + phase) * EQUIP_FLOAT_AMPLITUDE;
-                        float rotation = MathF.Sin(time * EQUIP_ROTATION_SPEED + phase) * EQUIP_ROTATION_AMOUNT;
-
-                        // --- HOVER POP LOGIC (Tweening) ---
-                        // Generate a unique key for this slot to track its hover state
-                        string key = $"{candidateIndex}_{type}";
-                        if (!_equipSlotHoverTimers.ContainsKey(key)) _equipSlotHoverTimers[key] = 0f;
-
-                        float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
-                        if (isHovered)
-                            _equipSlotHoverTimers[key] = Math.Min(_equipSlotHoverTimers[key] + dt * HOVER_POP_SPEED, 1f);
-                        else
-                            _equipSlotHoverTimers[key] = Math.Max(_equipSlotHoverTimers[key] - dt * HOVER_POP_SPEED, 0f);
-
-                        float t = _equipSlotHoverTimers[key];
-                        // Use EaseOutBack for that "spring" pop
-                        float popScale = 1.0f + (Global.ItemHoverScale - 1.0f) * Easing.EaseOutBack(t);
-
-                        // Apply offset to Y
-                        Vector2 drawPos = new Vector2(destRect.X, destRect.Y + floatOffset);
-
-                        // Use DrawSnapped with rotation and origin for smooth movement
-                        // Origin is center of 16x16 sprite (8,8)
-                        Vector2 iconOrigin = new Vector2(8, 8);
-                        Vector2 iconCenter = drawPos + iconOrigin;
-
-                        spriteBatch.DrawSnapped(icon, iconCenter, null, Color.White, rotation, iconOrigin, popScale, SpriteEffects.None, 0f);
-                    }
+                    if (r.StatModifiers.TryGetValue(statName, out int val)) bonus += val;
                 }
             }
-            else if (_spriteManager.InventoryEmptySlotSprite != null)
-            {
-                spriteBatch.DrawSnapped(_spriteManager.InventoryEmptySlotSprite, destRect, Color.White);
-            }
+            return bonus;
         }
 
         public void DrawDialogOverlay(SpriteBatch spriteBatch)

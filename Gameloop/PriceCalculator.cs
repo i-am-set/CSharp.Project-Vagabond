@@ -15,11 +15,7 @@ namespace ProjectVagabond.Utils
         {
             int basePrice = 0;
 
-            if (itemData is WeaponData)
-            {
-                basePrice = PRICE_WEAPON;
-            }
-            else if (itemData is RelicData)
+            if (itemData is RelicData)
             {
                 basePrice = PRICE_RELIC;
             }
