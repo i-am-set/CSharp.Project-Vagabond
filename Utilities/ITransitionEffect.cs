@@ -22,8 +22,8 @@ namespace ProjectVagabond.Transitions
         /// Draws the transition effect.
         /// </summary>
         /// <param name="spriteBatch">The sprite batch to draw with.</param>
-        /// <param name="bounds">The full screen bounds to cover.</param>
-        /// <param name="scale">The current game scale factor, used to size retro elements correctly.</param>
-        void Draw(SpriteBatch spriteBatch, Rectangle bounds, float scale);
+        /// <param name="screenSize">The actual pixel dimensions of the window/screen.</param>
+        /// <param name="contentScale">The ratio of Screen Height to Virtual Height, used to scale transition elements (like Diamonds) to match the game's aesthetic size.</param>
+        void Draw(SpriteBatch spriteBatch, Vector2 screenSize, float contentScale);
     }
 }

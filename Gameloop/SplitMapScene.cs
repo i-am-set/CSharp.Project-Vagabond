@@ -221,7 +221,8 @@ namespace ProjectVagabond.Scenes
             _shopOverlay.OnLeaveRequested += () =>
             {
                 _hapticsManager.TriggerZoomPulse(1.01f, 0.1f);
-                _transitionManager.StartTransition(TransitionType.Diamonds, TransitionType.Diamonds, () =>
+                var transition = _transitionManager.GetRandomTransition();
+                _transitionManager.StartTransition(transition, transition, () =>
                 {
                     _viewToReturnTo = SplitMapView.Map;
                     SetView(SplitMapView.Map, snap: true);
@@ -240,7 +241,8 @@ namespace ProjectVagabond.Scenes
             _restOverlay.OnLeaveRequested += () =>
             {
                 _hapticsManager.TriggerZoomPulse(1.01f, 0.1f);
-                _transitionManager.StartTransition(TransitionType.Diamonds, TransitionType.Diamonds, () =>
+                var transition = _transitionManager.GetRandomTransition();
+                _transitionManager.StartTransition(transition, transition, () =>
                 {
                     _viewToReturnTo = SplitMapView.Map;
                     SetView(SplitMapView.Map, snap: true);
@@ -258,7 +260,8 @@ namespace ProjectVagabond.Scenes
 
             _restOverlay.OnRestCompleted += () =>
             {
-                _transitionManager.StartTransition(TransitionType.Diamonds, TransitionType.Diamonds, () =>
+                var transition = _transitionManager.GetRandomTransition();
+                _transitionManager.StartTransition(transition, transition, () =>
                 {
                     _viewToReturnTo = SplitMapView.Map;
                     SetView(SplitMapView.Map, snap: true);
@@ -277,7 +280,8 @@ namespace ProjectVagabond.Scenes
             _recruitOverlay.OnRecruitComplete += () =>
             {
                 _hapticsManager.TriggerZoomPulse(1.01f, 0.1f);
-                _transitionManager.StartTransition(TransitionType.Diamonds, TransitionType.Diamonds, () =>
+                var transition = _transitionManager.GetRandomTransition();
+                _transitionManager.StartTransition(transition, transition, () =>
                 {
                     _viewToReturnTo = SplitMapView.Map;
                     SetView(SplitMapView.Map, snap: true);
@@ -1296,7 +1300,8 @@ namespace ProjectVagabond.Scenes
                     break;
 
                 case SplitNodeType.Recruit:
-                    _transitionManager.StartTransition(TransitionType.Diamonds, TransitionType.Diamonds, () =>
+                    var transitionRecruit = _transitionManager.GetRandomTransition();
+                    _transitionManager.StartTransition(transitionRecruit, transitionRecruit, () =>
                     {
                         _recruitOverlay.GenerateNewCandidates();
                         SetView(SplitMapView.Recruit, snap: true);
@@ -1304,14 +1309,16 @@ namespace ProjectVagabond.Scenes
                     break;
 
                 case SplitNodeType.Rest:
-                    _transitionManager.StartTransition(TransitionType.Diamonds, TransitionType.Diamonds, () =>
+                    var transitionRest = _transitionManager.GetRandomTransition();
+                    _transitionManager.StartTransition(transitionRest, transitionRest, () =>
                     {
                         SetView(SplitMapView.Rest, snap: true);
                     });
                     break;
 
                 case SplitNodeType.Shop:
-                    _transitionManager.StartTransition(TransitionType.Diamonds, TransitionType.Diamonds, () => OpenRandomShop());
+                    var transitionShop = _transitionManager.GetRandomTransition();
+                    _transitionManager.StartTransition(transitionShop, transitionShop, () => OpenRandomShop());
                     break;
 
                 default:
@@ -1922,8 +1929,8 @@ namespace ProjectVagabond.Scenes
                     silhouette = _spriteManager.SplitNodeNarrativeSilhouette;
                     break;
                 case SplitNodeType.MajorBattle:
-                    texture = _spriteManager.SplitNodeCombat; 
-                    
+                    texture = _spriteManager.SplitNodeCombat;
+
                     silhouette = _spriteManager.SplitNodeCombatSilhouette;
                     break;
                 case SplitNodeType.Recruit:

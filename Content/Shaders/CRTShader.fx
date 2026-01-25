@@ -42,7 +42,7 @@ static const float SCANLINE_OPACITY_MAX = 1.0f;  // 1.0 = Full Brightness (Stand
 static const float SCANLINE_CRAWL_SPEED = 0.0f;  // 0.0 = Static (Authentic), 1.0 = Slow Roll, 5.0 = Fast Roll
 
 // Horizontal Sync Jitter (Shaking)
-static const float HORIZONTAL_JITTER = 0.0005;   // 0.0 = Perfect, 0.0001 = Micro-Jitter, 0.005 = Broken TV
+static const float HORIZONTAL_JITTER = 0.0;   // 0.0 = Perfect, 0.0001 = Micro-Jitter, 0.005 = Broken TV
 static const float JITTER_FREQUENCY = 1.0;      // Speed of the shake
 
 // AC Hum Bar (Rolling Shadow)
@@ -50,7 +50,7 @@ static const float HUM_BAR_SPEED = 2.0;          // Speed of the rolling bar
 static const float HUM_BAR_OPACITY = 0.15;       // 0.0 = Invisible, 0.05 = Subtle, 0.2 = Bad Interference
 
 // Chromatic Aberration (Color Bleed)
-static const float CHROMATIC_OFFSET = 1.0;       // 0.0 = Sharp, 1.0 = Consumer TV, 3.0 = Broken Convergence
+static const float CHROMATIC_OFFSET = 0.5;       // 0.0 = Sharp, 1.0 = Consumer TV, 3.0 = Broken Convergence
 
 // Vignette (Corner Darkening)
 static const float VIGNETTE_INTENSITY = 0.25;    // 0.0 = Off, 0.25 = Subtle, 0.8 = Heavy Spotlight

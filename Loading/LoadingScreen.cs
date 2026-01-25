@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.UI;
@@ -13,36 +12,31 @@ namespace ProjectVagabond.Scenes
 {
     public class LoadingScreen
     {
+        private struct LogEntry
+        {
+            public string Text;
+            public bool IsSuccess;
+        }
+
         private readonly Global _global;
         private readonly List<LoadingTask> _tasks = new List<LoadingTask>();
         private int _currentTaskIndex = -1;
-        private float _totalProgress = 0f;
-        private float _progressPerTask = 0f;
+
+        // Ellipsis animation
         private float _ellipsisTimer = 0f;
         private int _ellipsisCount = 0;
 
         public bool IsActive { get; private set; }
         public event Action? OnComplete;
 
-        // Progress bar animation
-        private float _visualProgress = 0f;
-        private float _progressAnimStart = 0f;
-        private float _progressAnimEnd = 0f;
-        private float _progressAnimTimer = 0f;
-        private const float PROGRESS_ANIM_DURATION = 0.2f;
-
-        // Segment-based animation state
-        private int _currentSegmentToFill = 0;
-        private float _segmentFillTimer = 0f;
-        private const float MIN_SEGMENT_FILL_DELAY = 0.01f;
-        private const int LOADING_BAR_SEGMENTS = 50;
-
-        // --- Finishing & Holding State ---
+        // --- Finishing & Clearing State ---
         private bool _allTasksComplete = false; // Logic is done
-        private bool _isFinishing = false;      // Bar is filling to 100%
-        private bool _isHolding = false;        // Bar is full, waiting for delay
-        private float _holdTimer = 0f;
-        private const float HOLD_DURATION = 1.0f; // Wait 1 second at 100%
+        private bool _isFinishing = false;      // Flavor text phase
+        private bool _isClearing = false;       // New phase: Clearing log lines
+        private float _clearTimer = 0f;
+
+        // Tuning: Speed of clearing lines
+        private const float CLEAR_LINE_DELAY = 0.05f;
 
         // --- Text State Machine ---
         private bool _isShowingOk = false; // True if the current line has finished and is showing [OK]
@@ -64,32 +58,32 @@ namespace ProjectVagabond.Scenes
         private const float FLAVOR_OK_MAX = 0.35f;
 
         // --- Message Log System ---
-        private readonly List<string> _messageLog = new List<string>();
+        private readonly List<LogEntry> _messageLog = new List<LogEntry>();
         private const int MAX_LOG_LINES = 100;
-        private const int SCREEN_MARGIN = 10;
+        private const int SCREEN_MARGIN = 20; // Increased margin
 
         // Retro/Terminal style loading messages
         private readonly string[] _masterFlavorTexts = new[]
         {
-            "ALLOCATING 64KB CONVENTIONAL MEMORY...",
-            "CHECKING VRAM INTEGRITY...",
-            "LOADING SPRITE TABLES...",
-            "INITIALIZING SOUND CHANNELS...",
-            "READING CONFIG.DAT...",
-            "ACCESSING DISK CACHE...",
-            "ZEROING BUFFERS...",
-            "VERIFYING CHECKSUM...",
-            "RANDOMIZING SEED...",
-            "INITIALIZING RANDOM TABLES...",
-            "LOADING PALETTE DATA...",
-            "MAPPING MEMORY ADDRESSES...",
-            "SYNCING V-BLANK INTERRUPTS...",
-            "UNPACKING DATA FILES...",
-            "PREPARING MEMORY MANAGER...",
-            "TESTING I/O PORTS...",
-            "LOADING FONT GLYPHS...",
-            "INITIALIZING ENTITY TABLES...",
-            "PRE-CACHING PHYSICS HULLS..."
+            "ALLOCATING 64KB CONVENTIONAL MEMORY",
+            "CHECKING VRAM INTEGRITY",
+            "LOADING SPRITE TABLES",
+            "INITIALIZING SOUND CHANNELS",
+            "READING CONFIG.DAT",
+            "ACCESSING DISK CACHE",
+            "ZEROING BUFFERS",
+            "VERIFYING CHECKSUM",
+            "RANDOMIZING SEED",
+            "INITIALIZING RANDOM TABLES",
+            "LOADING PALETTE DATA",
+            "MAPPING MEMORY ADDRESSES",
+            "SYNCING V-BLANK INTERRUPTS",
+            "UNPACKING DATA FILES",
+            "PREPARING MEMORY MANAGER",
+            "TESTING I/O PORTS",
+            "LOADING FONT GLYPHS",
+            "INITIALIZING ENTITY TABLES",
+            "PRE-CACHING PHYSICS HULLS"
         };
 
         private List<string> _availableFlavorTexts = new List<string>();
@@ -107,16 +101,12 @@ namespace ProjectVagabond.Scenes
             _tasks.Clear();
             _messageLog.Clear();
             _currentTaskIndex = -1;
-            _totalProgress = 0f;
-            _progressPerTask = 0f;
             IsActive = false;
             _allTasksComplete = false;
             _isFinishing = false;
-            _isHolding = false;
-            _holdTimer = 0f;
+            _isClearing = false;
+            _clearTimer = 0f;
             _silentMode = false;
-            _visualProgress = 0f;
-            _currentSegmentToFill = 0;
             _isShowingOk = false;
             _okTimer = 0f;
 
@@ -141,29 +131,18 @@ namespace ProjectVagabond.Scenes
 
             IsActive = true;
             _currentTaskIndex = 0;
-            _totalProgress = 0f;
-            _progressPerTask = 1.0f / _tasks.Count;
-
-            _visualProgress = 0f;
-            _progressAnimStart = 0f;
-            _progressAnimEnd = 0f;
-            _progressAnimTimer = PROGRESS_ANIM_DURATION;
-
-            _currentSegmentToFill = 0;
-            _segmentFillTimer = 0f;
 
             _allTasksComplete = false;
             _isFinishing = false;
-            _isHolding = false;
-            _holdTimer = 0f;
+            _isClearing = false;
             _isShowingOk = false;
 
             _tasks[_currentTaskIndex].Start();
         }
 
-        private void AddToLog(string message)
+        private void AddToLog(string message, bool success = true)
         {
-            _messageLog.Add(message);
+            _messageLog.Add(new LogEntry { Text = message, IsSuccess = success });
             if (_messageLog.Count > MAX_LOG_LINES)
             {
                 _messageLog.RemoveAt(0);
@@ -207,9 +186,8 @@ namespace ProjectVagabond.Scenes
                     if (_okTimer >= REAL_TASK_OK_DELAY)
                     {
                         // Delay done, log it and move on
-                        AddToLog($"{currentTask.Description} [OK]");
+                        AddToLog(currentTask.Description);
 
-                        _totalProgress = (_currentTaskIndex + 1) * _progressPerTask;
                         _currentTaskIndex++;
                         _isShowingOk = false;
 
@@ -220,19 +198,15 @@ namespace ProjectVagabond.Scenes
                         else
                         {
                             _allTasksComplete = true;
-                            _isFinishing = true; // Start the visual fill-up phase
+                            _isFinishing = true; // Start the flavor text phase
                             PickNextFlavorText();
                         }
                     }
                 }
             }
-
-            // 2. Handle "Finishing" Phase (Filling bar to 100% with flavor text)
-            if (_isFinishing)
+            // 2. Handle "Finishing" Phase (Flavor text loop)
+            else if (_isFinishing)
             {
-                // Force target to 100%
-                _totalProgress = 1.0f;
-
                 if (!_isShowingOk)
                 {
                     // Phase A: Simulating Work
@@ -249,75 +223,51 @@ namespace ProjectVagabond.Scenes
                     _okTimer += deltaTime;
                     if (_okTimer >= _currentFlavorOkDuration)
                     {
-                        // Log previous and pick next
+                        // Log previous
                         if (!string.IsNullOrEmpty(_currentFlavorText))
                         {
-                            AddToLog($"{_currentFlavorText} [OK]");
+                            AddToLog(_currentFlavorText);
                         }
-                        PickNextFlavorText();
-                    }
-                }
 
-                // Accelerate visual progress to catch up
-                _visualProgress = MathHelper.Lerp(_visualProgress, 1.0f, deltaTime * 5.0f);
+                        // Check if we should stop flavor text (e.g. ran out or arbitrary limit)
+                        // For now, let's just do a few lines then stop.
+                        // Or, since we removed the bar, we can just stop when we run out of flavor text 
+                        // or after a fixed number of lines.
+                        // Let's stop when we have enough lines to look cool (e.g. 5 flavor lines).
+                        // But for now, let's just transition to clearing immediately after one batch 
+                        // or keep it simple: Stop when _availableFlavorTexts is low or just random chance?
+                        // Let's just do 3 flavor lines for effect.
 
-                // Snap to 1.0 if very close
-                if (_visualProgress >= 0.99f)
-                {
-                    _visualProgress = 1.0f;
-                    _isFinishing = false;
-                    _isHolding = true;
-
-                    // Log the final flavor text if it's hanging there
-                    if (!string.IsNullOrEmpty(_currentFlavorText))
-                    {
-                        AddToLog($"{_currentFlavorText} [OK]");
-                    }
-                }
-            }
-            // 3. Handle "Holding" Phase (Wait 1 second at 100%)
-            else if (_isHolding)
-            {
-                _holdTimer += deltaTime;
-                if (_holdTimer >= HOLD_DURATION)
-                {
-                    IsActive = false;
-                    OnComplete?.Invoke();
-                }
-            }
-            // 4. Normal Task Progress Animation
-            else
-            {
-                // Segment-Based Animation Logic
-                if (_currentSegmentToFill < LOADING_BAR_SEGMENTS)
-                {
-                    _segmentFillTimer += deltaTime;
-
-                    if (_segmentFillTimer >= MIN_SEGMENT_FILL_DELAY)
-                    {
-                        _segmentFillTimer -= MIN_SEGMENT_FILL_DELAY;
-
-                        float requiredProgress = (_currentSegmentToFill + 1) / (float)LOADING_BAR_SEGMENTS;
-
-                        if (_totalProgress >= requiredProgress)
+                        if (_availableFlavorTexts.Count < _masterFlavorTexts.Length - 3)
                         {
-                            _currentSegmentToFill++;
-                            _progressAnimStart = _visualProgress;
-                            _progressAnimEnd = (float)_currentSegmentToFill / LOADING_BAR_SEGMENTS;
-                            _progressAnimTimer = 0f;
+                            _isFinishing = false;
+                            _isClearing = true;
+                        }
+                        else
+                        {
+                            PickNextFlavorText();
                         }
                     }
                 }
-
-                if (_progressAnimTimer < PROGRESS_ANIM_DURATION)
+            }
+            // 3. Handle "Clearing" Phase (Sequential Disappearance)
+            else if (_isClearing)
+            {
+                _clearTimer += deltaTime;
+                if (_clearTimer >= CLEAR_LINE_DELAY)
                 {
-                    _progressAnimTimer += deltaTime;
-                    float progress = MathHelper.Clamp(_progressAnimTimer / PROGRESS_ANIM_DURATION, 0f, 1f);
-                    _visualProgress = MathHelper.Lerp(_progressAnimStart, _progressAnimEnd, Easing.EaseOutQuad(progress));
-                }
-                else
-                {
-                    _visualProgress = _progressAnimEnd;
+                    _clearTimer = 0f;
+                    if (_messageLog.Count > 0)
+                    {
+                        // Remove from top (index 0)
+                        _messageLog.RemoveAt(0);
+                    }
+                    else
+                    {
+                        // Log is empty, we are done
+                        IsActive = false;
+                        OnComplete?.Invoke();
+                    }
                 }
             }
         }
@@ -346,80 +296,80 @@ namespace ProjectVagabond.Scenes
         {
             if (!IsActive || _silentMode) return;
 
-            var pixel = ServiceLocator.Get<Texture2D>();
+            // --- Layout Parameters ---
+            int bottomY = Global.VIRTUAL_HEIGHT - SCREEN_MARGIN;
+            int leftX = SCREEN_MARGIN;
 
-            // --- Bar Style Parameters ---
-            const int BAR_WIDTH = 300;
-            const int BAR_HEIGHT = 1;
-            const int TEXT_PADDING_ABOVE_BAR = 4;
+            // Calculate Right Align X for [OK]
+            // We assume [OK] width is roughly constant, or measure it.
+            string okText = "[OK]";
+            float okWidth = font.MeasureString(okText).Width;
+            float rightX = Global.VIRTUAL_WIDTH - SCREEN_MARGIN - okWidth;
 
-            // 1. Calculate positions in virtual space (Bottom Left)
-            int barX = SCREEN_MARGIN;
-            int barY = Global.VIRTUAL_HEIGHT - SCREEN_MARGIN - BAR_HEIGHT;
-            int filledWidth = (int)(BAR_WIDTH * _visualProgress);
-
-            // 2. Draw the background and filled portion of the loading bar
-            var barBgRect = new Rectangle(barX, barY, BAR_WIDTH, BAR_HEIGHT);
-            var barFillRect = new Rectangle(barX, barY, filledWidth, BAR_HEIGHT);
-            spriteBatch.DrawSnapped(pixel, barBgRect, Color.Black);
-            spriteBatch.DrawSnapped(pixel, barFillRect, _global.Palette_Black);
-
-            // 3. Determine Text to Display
+            // 1. Determine Current Active Line (if not clearing)
             string currentLineText = "";
-            Color currentColor = _global.Palette_Black;
 
-            if (_isHolding)
+            if (!_isClearing)
             {
-                currentLineText = "FINALIZING ENVIRONMENT... [OK]";
-            }
-            else if (_isFinishing)
-            {
-                currentLineText = _currentFlavorText;
-            }
-            else
-            {
-                // Normal Task Description
-                string taskDescription = "";
-                if (_currentTaskIndex >= 0 && _currentTaskIndex < _tasks.Count)
+                if (_isFinishing)
                 {
-                    taskDescription = _tasks[_currentTaskIndex].Description;
+                    currentLineText = _currentFlavorText;
                 }
-
-                if (!string.IsNullOrEmpty(taskDescription))
+                else if (!_allTasksComplete)
                 {
-                    currentLineText = taskDescription + new string('.', _ellipsisCount);
+                    string taskDescription = "";
+                    if (_currentTaskIndex >= 0 && _currentTaskIndex < _tasks.Count)
+                    {
+                        taskDescription = _tasks[_currentTaskIndex].Description;
+                    }
+
+                    if (!string.IsNullOrEmpty(taskDescription))
+                    {
+                        currentLineText = taskDescription + new string('.', _ellipsisCount);
+                    }
                 }
             }
 
-            // Append [OK] if in the showing state
-            if (_isShowingOk && !_isHolding)
-            {
-                currentLineText += " [OK]";
-            }
+            // 2. Draw Current Line (Bottom-most)
+            float currentY = bottomY - font.LineHeight;
 
-            // 4. Draw Current Line (Just above bar)
-            float currentTextY = barY - font.LineHeight - TEXT_PADDING_ABOVE_BAR;
             if (!string.IsNullOrEmpty(currentLineText))
             {
-                currentLineText = currentLineText.ToUpper();
-                Vector2 textPosition = new Vector2(barX, currentTextY);
-                spriteBatch.DrawStringSnapped(font, currentLineText, textPosition, currentColor);
+                // Draw Description (Left)
+                spriteBatch.DrawStringSnapped(font, currentLineText.ToUpper(), new Vector2(leftX, currentY), _global.Palette_Black);
+
+                // Draw [OK] (Right) if ready
+                if (_isShowingOk)
+                {
+                    spriteBatch.DrawStringSnapped(font, okText, new Vector2(rightX, currentY), _global.Palette_Black);
+                }
             }
 
-            // 5. Draw History Log (Stacked above current line)
+            // 3. Draw History Log (Stacked above current line)
             // Iterate backwards to draw newest closest to the current line
-            float logY = currentTextY;
-            Color logColor = _global.Palette_Black; // All text is Sun color
+            float logY = currentY;
+
+            // If we are clearing, the "current line" is gone, so log starts at bottomY
+            if (_isClearing)
+            {
+                logY = bottomY;
+            }
 
             for (int i = _messageLog.Count - 1; i >= 0; i--)
             {
-                logY -= (font.LineHeight + 1); // Move up one line + 1px gap
+                logY -= (font.LineHeight + 2); // Move up one line + gap
 
                 // Optimization: Stop drawing if off-screen
                 if (logY < -font.LineHeight) break;
 
-                string logText = _messageLog[i].ToUpper();
-                spriteBatch.DrawStringSnapped(font, logText, new Vector2(barX, logY), logColor);
+                var entry = _messageLog[i];
+
+                // Draw Description (Left)
+                spriteBatch.DrawStringSnapped(font, entry.Text.ToUpper(), new Vector2(leftX, logY), _global.Palette_Black);
+
+                // Draw [OK] (Right)
+                // Assuming all log entries are successes for now
+                spriteBatch.DrawStringSnapped(font, okText, new Vector2(rightX, logY), _global.Palette_Black);
             }
         }
     }

@@ -177,9 +177,7 @@ namespace ProjectVagabond.Scenes
             var core = ServiceLocator.Get<Core>();
             core.ResetGame();
 
-            var spriteManager = ServiceLocator.Get<SpriteManager>();
             var gameState = ServiceLocator.Get<GameState>();
-            var loadingScreen = ServiceLocator.Get<LoadingScreen>();
 
             var loadingTasks = new List<LoadingTask>
             {
@@ -190,19 +188,10 @@ namespace ProjectVagabond.Scenes
                 new DiceWarmupTask()
             };
 
-            loadingScreen.Clear();
-            foreach (var task in loadingTasks)
-            {
-                loadingScreen.AddTask(task);
-            }
+            var transition = _transitionManager.GetRandomTransition();
 
-            loadingScreen.OnComplete += () =>
-            {
-                var transition = _transitionManager.GetRandomTransition();
-                _sceneManager.ChangeScene(GameSceneState.Split, transition, transition);
-            };
-
-            loadingScreen.Start();
+            // Use the new ChangeScene overload that handles loading
+            _sceneManager.ChangeScene(GameSceneState.Split, transition, transition, 0f, loadingTasks);
         }
 
         private void GoToMainMenu()

@@ -34,6 +34,13 @@ namespace ProjectVagabond.Transitions
         private float _holdTimer = 0f;
         private bool _midpointExecuted = false;
 
+        // --- NEW: Manual Hold for Loading ---
+        /// <summary>
+        /// If true, the transition will stay in the 'Hold' (screen covered) state indefinitely
+        /// until set to false. Used to keep the screen black while the LoadingScreen runs.
+        /// </summary>
+        public bool ManualHold { get; set; } = false;
+
         private readonly Dictionary<TransitionType, ITransitionEffect> _effects;
         private readonly Random _random = new Random();
 
@@ -67,6 +74,7 @@ namespace ProjectVagabond.Transitions
             _holdDuration = 0f;
             _holdTimer = 0f;
             _midpointExecuted = false;
+            ManualHold = false;
         }
 
         public void StartTransition(TransitionType outType, TransitionType inType, Action onMidpoint, float holdDuration = 0f, Action onComplete = null)
@@ -77,6 +85,7 @@ namespace ProjectVagabond.Transitions
             _holdDuration = holdDuration;
             _holdTimer = 0f;
             _midpointExecuted = false;
+            ManualHold = false; // Reset manual hold, caller must set it immediately after if needed
 
             if (outType == TransitionType.None)
             {
@@ -167,10 +176,16 @@ namespace ProjectVagabond.Transitions
                     _midpointExecuted = true;
                 }
 
-                _holdTimer += dt;
-                if (_holdTimer >= _holdDuration)
+                // --- NEW: Check Manual Hold ---
+                // If ManualHold is true (e.g. Loading Screen is active), we do NOT advance the timer.
+                // We stay in Hold state until the SceneManager sets ManualHold to false.
+                if (!ManualHold)
                 {
-                    StartInTransition();
+                    _holdTimer += dt;
+                    if (_holdTimer >= _holdDuration)
+                    {
+                        StartInTransition();
+                    }
                 }
             }
             else if (_currentState == TransitionState.In)
@@ -187,18 +202,19 @@ namespace ProjectVagabond.Transitions
             }
         }
 
-        public void Draw(SpriteBatch spriteBatch, Rectangle bounds, float scale)
+        public void Draw(SpriteBatch spriteBatch, Vector2 screenSize, float contentScale)
         {
             if (_currentState == TransitionState.Idle) return;
 
             if (_currentState == TransitionState.Hold)
             {
                 var pixel = ServiceLocator.Get<Texture2D>();
-                spriteBatch.Draw(pixel, bounds, Color.Black);
+                // Draw full screen black using Vector2 scale
+                spriteBatch.Draw(pixel, Vector2.Zero, null, Color.Black, 0f, Vector2.Zero, screenSize, SpriteEffects.None, 0f);
             }
             else if (_currentEffect != null)
             {
-                _currentEffect.Draw(spriteBatch, bounds, scale);
+                _currentEffect.Draw(spriteBatch, screenSize, contentScale);
             }
         }
     }

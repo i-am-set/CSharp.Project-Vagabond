@@ -68,12 +68,13 @@ namespace ProjectVagabond
 
         /// <summary>
         /// Changes the scene using the new TransitionManager with specific Out and In effects.
+        /// Supports baked-in loading screens.
         /// </summary>
         /// <param name="state">Target scene.</param>
         /// <param name="outTransition">Effect to use when leaving current scene.</param>
         /// <param name="inTransition">Effect to use when entering new scene.</param>
         /// <param name="transitionDelay">Time in seconds to hold the black screen before revealing the new scene.</param>
-        /// <param name="loadingTasks">Optional loading tasks.</param>
+        /// <param name="loadingTasks">Optional loading tasks. If provided, the transition will hold until tasks complete.</param>
         public void ChangeScene(GameSceneState state, TransitionType outTransition, TransitionType inTransition, float transitionDelay = 0f, List<LoadingTask>? loadingTasks = null)
         {
             _transitionManager ??= ServiceLocator.Get<TransitionManager>();
@@ -81,13 +82,21 @@ namespace ProjectVagabond
             if (_transitionManager.IsTransitioning) return;
             HideModal();
 
-            // Start the transition sequence
+            // If we have loading tasks, we tell the TransitionManager to HOLD manually.
+            // It will wait for us to set ManualHold = false.
+            bool hasLoading = loadingTasks != null && loadingTasks.Any();
+
             _transitionManager.StartTransition(
                 outTransition,
                 inTransition,
-                onMidpoint: () => PerformSceneSwap(state, loadingTasks),
+                onMidpoint: () => PerformSceneSwapOrLoad(state, loadingTasks),
                 holdDuration: transitionDelay
             );
+
+            if (hasLoading)
+            {
+                _transitionManager.ManualHold = true;
+            }
         }
 
         // Overload for backward compatibility (Defaults to Fade/Fade, No Delay)
@@ -96,28 +105,48 @@ namespace ProjectVagabond
             ChangeScene(state, TransitionType.Diamonds, TransitionType.Diamonds, 0f, loadingTasks);
         }
 
-        private void PerformSceneSwap(GameSceneState state, List<LoadingTask>? loadingTasks)
+        private void PerformSceneSwapOrLoad(GameSceneState state, List<LoadingTask>? loadingTasks)
         {
             HideModal();
 
+            // If we have loading tasks, start the loading screen.
+            // The actual scene swap will happen when loading finishes.
+            if (loadingTasks != null && loadingTasks.Any())
+            {
+                var loadingScreen = ServiceLocator.Get<LoadingScreen>();
+                loadingScreen.Clear();
+                foreach (var task in loadingTasks)
+                {
+                    loadingScreen.AddTask(task);
+                }
+
+                // Hook up completion
+                loadingScreen.OnComplete += () =>
+                {
+                    // 1. Swap Scene
+                    SwapSceneInternal(state);
+
+                    // 2. Release Transition Hold
+                    _transitionManager.ManualHold = false;
+                };
+
+                loadingScreen.Start();
+            }
+            else
+            {
+                // No loading, swap immediately
+                SwapSceneInternal(state);
+            }
+        }
+
+        private void SwapSceneInternal(GameSceneState state)
+        {
             if (_scenes.TryGetValue(state, out var newScene))
             {
                 _currentScene?.Exit();
                 _currentScene = newScene;
                 _currentScene.LastInputDevice = this.LastInputDevice;
                 _currentScene.Enter();
-
-                // Handle Loading Tasks if present
-                if (loadingTasks != null && loadingTasks.Any())
-                {
-                    var loadingScreen = ServiceLocator.Get<LoadingScreen>();
-                    loadingScreen.Clear();
-                    foreach (var task in loadingTasks)
-                    {
-                        loadingScreen.AddTask(task);
-                    }
-                    loadingScreen.Start();
-                }
             }
         }
 
@@ -133,6 +162,8 @@ namespace ProjectVagabond
             }
 
             _transitionManager ??= ServiceLocator.Get<TransitionManager>();
+
+            // Only update the scene if the screen is NOT obscured by a transition/loading
             if (!_transitionManager.IsScreenObscured)
             {
                 _currentScene?.Update(gameTime);

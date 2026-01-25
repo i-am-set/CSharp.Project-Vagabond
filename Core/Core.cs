@@ -511,7 +511,10 @@ namespace ProjectVagabond
             // 1. Render Content to High-Res Target
             GraphicsDevice.SetRenderTarget(_finalCompositeTarget);
 
-            bool forceBlackBg = _loadingScreen.IsActive || _sceneManager.CurrentActiveScene is StartupScene;
+            // --- FIX: Don't force black background if loading screen is active.
+            // The loading screen will draw its own background or overlay.
+            // We want the transition to be visible underneath if it's holding.
+            bool forceBlackBg = _sceneManager.CurrentActiveScene is StartupScene;
             Color letterboxColor = forceBlackBg ? Color.Black : _global.GameBg;
             GraphicsDevice.Clear(letterboxColor);
 
@@ -540,13 +543,10 @@ namespace ProjectVagabond
             finalSceneTransform.M42 = MathF.Round(finalSceneTransform.M42);
 
             // --- DRAW SCENE CONTENT ---
-            if (_loadingScreen.IsActive)
-            {
-                _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, finalSceneTransform);
-                _loadingScreen.Draw(_spriteBatch, _tertiaryFont);
-                _spriteBatch.End();
-            }
-            else if (!_sceneManager.IsLoadingBetweenScenes && !_sceneManager.IsHoldingBlack)
+            // Only draw scene if NOT loading (or if loading is transparent, but here we assume loading replaces scene logic)
+            // Actually, we want to draw the scene BEHIND the transition if possible, but if loading, scene might be unstable.
+            // If loading, we just draw the loading screen later.
+            if (!_loadingScreen.IsActive && !_sceneManager.IsLoadingBetweenScenes && !_sceneManager.IsHoldingBlack)
             {
                 // Draw Game Scene (Virtual Coords -> Scaled to Screen)
                 _sceneManager.Draw(_spriteBatch, _defaultFont, gameTime, finalSceneTransform);
@@ -568,13 +568,21 @@ namespace ProjectVagabond
                 GraphicsDevice.SetRenderTarget(_transitionRenderTarget);
                 GraphicsDevice.Clear(Color.Transparent);
                 _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-                var transitionBounds = new Rectangle(0, 0, _transitionRenderTarget.Width, _transitionRenderTarget.Height);
-                _transitionManager.Draw(_spriteBatch, transitionBounds, 1.0f);
+                var transitionSize = new Vector2(_transitionRenderTarget.Width, _transitionRenderTarget.Height);
+                _transitionManager.Draw(_spriteBatch, transitionSize, 1.0f);
                 _spriteBatch.End();
 
                 GraphicsDevice.SetRenderTarget(_finalCompositeTarget);
                 _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
                 _spriteBatch.Draw(_transitionRenderTarget, Vector2.Zero, null, Color.White, 0f, Vector2.Zero, _finalScale, SpriteEffects.None, 0f);
+                _spriteBatch.End();
+            }
+
+            // --- DRAW LOADING SCREEN (ON TOP OF TRANSITION) ---
+            if (_loadingScreen.IsActive)
+            {
+                _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, finalSceneTransform);
+                _loadingScreen.Draw(_spriteBatch, _tertiaryFont);
                 _spriteBatch.End();
             }
 

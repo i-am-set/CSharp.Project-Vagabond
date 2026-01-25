@@ -115,15 +115,9 @@ namespace ProjectVagabond.Scenes
             {
                 _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
                 var core = ServiceLocator.Get<Core>();
-                var spriteManager = ServiceLocator.Get<SpriteManager>();
-                var archetypeManager = ServiceLocator.Get<ArchetypeManager>();
                 var gameState = ServiceLocator.Get<GameState>();
-                var loadingScreen = ServiceLocator.Get<LoadingScreen>();
 
                 // --- UPDATED LOADING TASKS ---
-                // Removed heavy lifting tasks (LoadGameContent, LoadArchetypes) as they are now pre-warmed in Core.cs.
-                // The loading screen is now purely a visual transition.
-                // Removed DelayTask because LoadingScreen now handles the pacing internally.
                 var loadingTasks = new List<LoadingTask>
                 {
                     new GenericTask("Initializing world...", () =>
@@ -133,20 +127,13 @@ namespace ProjectVagabond.Scenes
                     new DiceWarmupTask()
                 };
 
-                loadingScreen.Clear();
-                foreach (var task in loadingTasks)
-                {
-                    loadingScreen.AddTask(task);
-                }
+                core.SetGameLoaded(true);
 
-                loadingScreen.OnComplete += () =>
-                {
-                    core.SetGameLoaded(true);
-                    // Use None Out (Instant) -> Fade In (Smooth)
-                    _sceneManager.ChangeScene(GameSceneState.Split, TransitionType.None, TransitionType.Diamonds);
-                };
+                // Use Random Transition
+                var transition = _transitionManager.GetRandomTransition();
 
-                loadingScreen.Start();
+                // Pass tasks to ChangeScene. The SceneManager will handle the transition -> load -> swap flow.
+                _sceneManager.ChangeScene(GameSceneState.Split, transition, transition, 0f, loadingTasks);
             };
             _buttons.Add(playButton);
             currentY += playHeight + buttonYSpacing;
