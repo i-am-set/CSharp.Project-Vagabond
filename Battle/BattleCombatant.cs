@@ -34,7 +34,6 @@ namespace ProjectVagabond.Battle
 
     public class BattleCombatant
     {
-        public int EntityId { get; set; }
         public string ArchetypeId { get; set; }
         public string CombatantID { get; set; }
         public string Name { get; set; }

@@ -42,7 +42,6 @@ namespace ProjectVagabond.Scenes
         private AlertManager _alertManager;
         private BattleLogManager _battleLogManager;
         private ImageButton _settingsButton;
-        private ComponentStore _componentStore;
         private SceneManager _sceneManager;
         private SpriteManager _spriteManager;
         private HapticsManager _hapticsManager;
@@ -125,7 +124,6 @@ namespace ProjectVagabond.Scenes
 
         public BattleScene()
         {
-            _componentStore = ServiceLocator.Get<ComponentStore>();
             _sceneManager = ServiceLocator.Get<SceneManager>();
             _spriteManager = ServiceLocator.Get<SpriteManager>();
             _hapticsManager = ServiceLocator.Get<HapticsManager>();
@@ -200,9 +198,10 @@ namespace ProjectVagabond.Scenes
             _roundAnimTimer = 0f;
             _lastRoundNumber = 1;
 
-            if (!_componentStore.HasComponent<CombatantStatsComponent>(_gameState.PlayerEntityId))
+            // Removed component check. PlayerState is the source of truth.
+            if (_gameState.PlayerState == null || _gameState.PlayerState.Party.Count == 0)
             {
-                Debug.WriteLine($"[BattleScene] [FATAL] Player entity {_gameState.PlayerEntityId} is missing stats! Aborting battle setup.");
+                Debug.WriteLine($"[BattleScene] [FATAL] PlayerState is invalid! Aborting battle setup.");
                 return;
             }
 
@@ -260,7 +259,6 @@ namespace ProjectVagabond.Scenes
             _lootScreen.Reset();
             UnsubscribeFromEvents();
             _battleLogManager.Unsubscribe();
-            CleanupEntities();
             CleanupPlayerState();
             ServiceLocator.Unregister<BattleManager>();
         }
@@ -356,19 +354,21 @@ namespace ProjectVagabond.Scenes
         {
             var gameState = ServiceLocator.Get<GameState>();
             var playerParty = new List<BattleCombatant>();
-            int playerEntityId = gameState.PlayerEntityId;
-            var leaderCombatant = BattleCombatantFactory.CreateFromEntity(playerEntityId, "player_leader");
-            if (leaderCombatant != null)
+
+            // Create Leader
+            var leaderMember = gameState.PlayerState.Leader;
+            if (leaderMember != null)
             {
-                leaderCombatant.Name = gameState.PlayerState.Leader.Name;
+                var leaderCombatant = BattleCombatantFactory.CreatePlayer(leaderMember, "player_leader");
                 leaderCombatant.BattleSlot = 0;
                 playerParty.Add(leaderCombatant);
             }
 
+            // Create Allies
             for (int i = 1; i < gameState.PlayerState.Party.Count; i++)
             {
                 var member = gameState.PlayerState.Party[i];
-                var memberCombatant = CreateCombatantFromPartyMember(member, $"player_ally_{i}");
+                var memberCombatant = BattleCombatantFactory.CreatePlayer(member, $"player_ally_{i}");
                 memberCombatant.BattleSlot = i;
                 playerParty.Add(memberCombatant);
             }
@@ -376,21 +376,18 @@ namespace ProjectVagabond.Scenes
             var enemyParty = new List<BattleCombatant>();
             var enemyArchetypesToSpawn = BattleSetup.EnemyArchetypes ?? new List<string>();
             int enemyCount = Math.Min(enemyArchetypesToSpawn.Count, 4);
+
             for (int i = 0; i < enemyCount; i++)
             {
                 string archetypeId = enemyArchetypesToSpawn[i];
                 if (string.IsNullOrEmpty(archetypeId)) continue;
-                int newEnemyId = Spawner.Spawn(archetypeId, new Vector2(-1, -1));
-                if (newEnemyId != -1)
+
+                // Use Factory directly instead of Spawner
+                var enemyCombatant = BattleCombatantFactory.CreateEnemy(archetypeId, $"enemy_{i + 1}");
+                if (enemyCombatant != null)
                 {
-                    var enemyCombatant = BattleCombatantFactory.CreateFromEntity(newEnemyId, $"enemy_{i + 1}");
-                    if (enemyCombatant != null)
-                    {
-                        enemyCombatant.IsPlayerControlled = false;
-                        enemyCombatant.BattleSlot = enemyParty.Count;
-                        enemyParty.Add(enemyCombatant);
-                        if (newEnemyId != gameState.PlayerEntityId) _enemyEntityIds.Add(newEnemyId);
-                    }
+                    enemyCombatant.BattleSlot = enemyParty.Count;
+                    enemyParty.Add(enemyCombatant);
                 }
             }
             BattleSetup.EnemyArchetypes = null;
@@ -405,85 +402,6 @@ namespace ProjectVagabond.Scenes
             _battleManager = new BattleManager(playerParty, enemyParty, _animationManager);
             ServiceLocator.Register<BattleManager>(_battleManager);
             _previousBattlePhase = _battleManager.CurrentPhase;
-        }
-
-        private BattleCombatant CreateCombatantFromPartyMember(PartyMember member, string id)
-        {
-            var combatant = new BattleCombatant
-            {
-                CombatantID = id,
-                Name = member.Name,
-                ArchetypeId = "player",
-                IsPlayerControlled = true,
-                Stats = new CombatantStats
-                {
-                    MaxHP = member.MaxHP,
-                    CurrentHP = member.CurrentHP,
-                    MaxMana = member.MaxMana,
-                    CurrentMana = member.CurrentMana,
-                    Strength = member.Strength,
-                    Intelligence = member.Intelligence,
-                    Tenacity = member.Tenacity,
-                    Agility = member.Agility
-                },
-                DefaultStrikeMoveID = member.DefaultStrikeMoveID,
-                Spells = member.Spells,
-                PortraitIndex = member.PortraitIndex
-            };
-
-            combatant.Stats.MaxHP = _gameState.PlayerState.GetEffectiveStat(member, "MaxHP");
-            combatant.Stats.MaxMana = _gameState.PlayerState.GetEffectiveStat(member, "MaxMana");
-            combatant.Stats.Strength = _gameState.PlayerState.GetEffectiveStat(member, "Strength");
-            combatant.Stats.Intelligence = _gameState.PlayerState.GetEffectiveStat(member, "Intelligence");
-            combatant.Stats.Tenacity = _gameState.PlayerState.GetEffectiveStat(member, "Tenacity");
-            combatant.Stats.Agility = _gameState.PlayerState.GetEffectiveStat(member, "Agility");
-
-            combatant.Stats.CurrentHP = member.CurrentHP;
-            combatant.Stats.CurrentMana = member.CurrentMana;
-            combatant.VisualHP = combatant.Stats.CurrentHP;
-
-            if (member.IntrinsicAbilities != null && member.IntrinsicAbilities.Count > 0)
-            {
-                var intrinsicAbilities = AbilityFactory.CreateAbilitiesFromData(member.IntrinsicAbilities, new Dictionary<string, int>());
-                combatant.RegisterAbilities(intrinsicAbilities);
-            }
-
-            foreach (var relicId in _gameState.PlayerState.GlobalRelics)
-            {
-                if (BattleDataCache.Relics.TryGetValue(relicId, out var relicData))
-                {
-                    var relicAbilities = AbilityFactory.CreateAbilitiesFromData(relicData.Effects, relicData.StatModifiers);
-                    combatant.RegisterAbilities(relicAbilities);
-                    combatant.ActiveRelics.Add(relicData);
-                }
-            }
-
-            var data = BattleDataCache.PartyMembers.Values.FirstOrDefault(p => p.Name == member.Name);
-            if (data != null)
-            {
-                combatant.Gender = data.Gender;
-                combatant.IsProperNoun = data.IsProperNoun;
-            }
-
-            return combatant;
-        }
-
-        private void CleanupEntities()
-        {
-            if (_enemyEntityIds.Any())
-            {
-                var entityManager = ServiceLocator.Get<EntityManager>();
-                var gameState = ServiceLocator.Get<GameState>();
-                int playerId = gameState.PlayerEntityId;
-
-                foreach (var id in _enemyEntityIds)
-                {
-                    if (id == playerId) continue;
-                    _componentStore.EntityDestroyed(id);
-                    entityManager.DestroyEntity(id);
-                }
-                _enemyEntityIds.Clear();
-            }
         }
 
         private void CleanupPlayerState()
@@ -901,12 +819,13 @@ namespace ProjectVagabond.Scenes
         private void DecrementTemporaryBuffs()
         {
             var gameState = ServiceLocator.Get<GameState>();
-            var buffsComp = _componentStore.GetComponent<TemporaryBuffsComponent>(gameState.PlayerEntityId);
-            if (buffsComp == null) return;
-            for (int i = buffsComp.Buffs.Count - 1; i >= 0; i--)
+            var leader = gameState.PlayerState.Leader;
+            if (leader == null) return;
+
+            for (int i = leader.ActiveBuffs.Count - 1; i >= 0; i--)
             {
-                buffsComp.Buffs[i].RemainingBattles--;
-                if (buffsComp.Buffs[i].RemainingBattles <= 0) buffsComp.Buffs.RemoveAt(i);
+                leader.ActiveBuffs[i].RemainingBattles--;
+                if (leader.ActiveBuffs[i].RemainingBattles <= 0) leader.ActiveBuffs.RemoveAt(i);
             }
         }
 

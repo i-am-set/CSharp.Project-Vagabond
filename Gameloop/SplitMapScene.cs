@@ -37,7 +37,6 @@ namespace ProjectVagabond.Scenes
         private readonly SpriteManager _spriteManager;
         private readonly Global _global;
         private readonly StoryNarrator _resultNarrator;
-        private readonly ComponentStore _componentStore;
         private readonly VoidEdgeEffect _voidEdgeEffect;
 
         private readonly PartyStatusOverlay _partyStatusOverlay;
@@ -170,7 +169,7 @@ namespace ProjectVagabond.Scenes
             _global = ServiceLocator.Get<Global>();
             _playerIcon = new PlayerMapIcon();
             _narrativeDialog = new NarrativeDialog(this);
-            _componentStore = ServiceLocator.Get<ComponentStore>();
+            // _componentStore = ServiceLocator.Get<ComponentStore>(); // Removed
 
             _partyStatusOverlay = new PartyStatusOverlay();
 

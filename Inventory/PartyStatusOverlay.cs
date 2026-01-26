@@ -28,7 +28,6 @@ namespace ProjectVagabond.UI
         internal SpriteManager SpriteManager { get; private set; }
         internal Global Global { get; private set; }
         internal HapticsManager HapticsManager { get; private set; }
-        internal ComponentStore ComponentStore { get; private set; }
 
         // UI Elements
         internal ImageButton? CloseButton { get; set; }
@@ -66,7 +65,6 @@ namespace ProjectVagabond.UI
             SpriteManager = ServiceLocator.Get<SpriteManager>();
             Global = ServiceLocator.Get<Global>();
             HapticsManager = ServiceLocator.Get<HapticsManager>();
-            ComponentStore = ServiceLocator.Get<ComponentStore>();
 
             // Initialize Party Slot Animators
             for (int i = 0; i < 4; i++)

@@ -32,6 +32,8 @@ namespace ProjectVagabond
         public MoveEntry?[] Spells { get; set; } = new MoveEntry?[4];
         public List<MoveEntry> Actions { get; set; } = new List<MoveEntry>();
 
+        public List<TemporaryBuff> ActiveBuffs { get; set; } = new List<TemporaryBuff>();
+
         public PartyMember() { }
 
         public PartyMember Clone()
@@ -45,6 +47,13 @@ namespace ProjectVagabond
             }
             clone.Actions = new List<MoveEntry>();
             foreach (var a in this.Actions) clone.Actions.Add(a.Clone());
+
+            clone.ActiveBuffs = new List<TemporaryBuff>();
+            foreach (var buff in this.ActiveBuffs)
+            {
+                clone.ActiveBuffs.Add(new TemporaryBuff { EffectType = buff.EffectType, RemainingBattles = buff.RemainingBattles });
+            }
+
             return clone;
         }
     }

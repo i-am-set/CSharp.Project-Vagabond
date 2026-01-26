@@ -177,12 +177,11 @@ namespace ProjectVagabond
             _global = ServiceLocator.Get<Global>();
             ServiceLocator.Register<GraphicsDevice>(GraphicsDevice);
 
-            var entityManager = new EntityManager();
-            ServiceLocator.Register<EntityManager>(entityManager);
-            var componentStore = new ComponentStore();
-            ServiceLocator.Register<ComponentStore>(componentStore);
-            var archetypeManager = new ArchetypeManager();
-            ServiceLocator.Register<ArchetypeManager>(archetypeManager);
+            // Removed ECS Managers (EntityManager, ComponentStore, ArchetypeManager)
+
+            var dataManager = new DataManager();
+            ServiceLocator.Register<DataManager>(dataManager);
+
             _loadingScreen = new LoadingScreen();
             ServiceLocator.Register<LoadingScreen>(_loadingScreen);
             var noiseManager = new NoiseMapManager();
@@ -197,8 +196,11 @@ namespace ProjectVagabond
             ServiceLocator.Register<TooltipManager>(_tooltipManager);
             _particleSystemManager = new ParticleSystemManager();
             ServiceLocator.Register<ParticleSystemManager>(_particleSystemManager);
-            _gameState = new GameState(noiseManager, componentStore, _global, _spriteManager);
+
+            // Updated GameState constructor (removed ComponentStore)
+            _gameState = new GameState(noiseManager, _global, _spriteManager);
             ServiceLocator.Register<GameState>(_gameState);
+
             _moveAcquisitionSystem = new MoveAcquisitionSystem();
             _relicAcquisitionSystem = new RelicAcquisitionSystem();
             var terminalRenderer = new TerminalRenderer();
@@ -314,8 +316,8 @@ namespace ProjectVagabond
             BattleDataCache.LoadData(Content);
             _progressionManager.LoadSplits();
 
-            var archetypeManager = ServiceLocator.Get<ArchetypeManager>();
-            archetypeManager.LoadArchetypes("Content/Data/Archetypes.json");
+            var dataManager = ServiceLocator.Get<DataManager>();
+            dataManager.LoadData(Content.RootDirectory);
 
             _lootManager = new LootManager();
             _lootManager.BuildLootTables();
@@ -340,10 +342,7 @@ namespace ProjectVagabond
             _progressionManager.ClearCurrentSplitMap();
             _hitstopManager.Reset();
             _transitionManager.Reset();
-            var entityManager = ServiceLocator.Get<EntityManager>();
-            var componentStore = ServiceLocator.Get<ComponentStore>();
-            entityManager.Clear();
-            componentStore.Clear();
+
             _gameState.Reset();
         }
 

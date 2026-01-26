@@ -23,14 +23,12 @@ namespace ProjectVagabond
     public class GameState
     {
         private readonly NoiseMapManager _noiseManager;
-        private readonly ComponentStore _componentStore;
         private readonly Global _global;
         private readonly SpriteManager _spriteManager;
 
         private bool _isPaused = false;
         private readonly Random _random = new Random();
 
-        public int PlayerEntityId { get; private set; }
         public PlayerState PlayerState { get; private set; }
 
         public bool IsPausedByConsole { get; set; } = false;
@@ -41,10 +39,9 @@ namespace ProjectVagabond
 
         public HashSet<string> SeenItemIds { get; private set; } = new HashSet<string>();
 
-        public GameState(NoiseMapManager noiseManager, ComponentStore componentStore, Global global, SpriteManager spriteManager)
+        public GameState(NoiseMapManager noiseManager, Global global, SpriteManager spriteManager)
         {
             _noiseManager = noiseManager;
-            _componentStore = componentStore;
             _global = global;
             _spriteManager = spriteManager;
         }
@@ -71,31 +68,10 @@ namespace ProjectVagabond
                     }
                 }
             }
-
-            PlayerEntityId = Spawner.Spawn("player", Vector2.Zero);
-
-            var liveStats = new CombatantStatsComponent
-            {
-                MaxHP = oakley.MaxHP,
-                CurrentHP = oakley.MaxHP,
-                MaxMana = oakley.MaxMana,
-                CurrentMana = oakley.MaxMana,
-                Strength = oakley.Strength,
-                Intelligence = oakley.Intelligence,
-                Tenacity = oakley.Tenacity,
-                Agility = oakley.Agility,
-                AvailableMoveIDs = oakley.Spells
-                    .Where(m => m != null)
-                    .Select(m => m!.MoveID)
-                    .Concat(oakley.Actions.Select(m => m.MoveID))
-                    .ToList()
-            };
-            _componentStore.AddComponent(PlayerEntityId, liveStats);
         }
 
         public void Reset()
         {
-            PlayerEntityId = 0;
             PlayerState = null;
             SeenItemIds.Clear();
             _isPaused = false;
@@ -110,7 +86,10 @@ namespace ProjectVagabond
 
         public void ApplyNarrativeOutcomes(List<NarrativeOutcome> outcomes)
         {
-            if (outcomes == null) return;
+            if (outcomes == null || PlayerState == null) return;
+
+            // Apply to leader by default for single-target stats
+            var leader = PlayerState.Leader;
 
             foreach (var outcome in outcomes)
             {
@@ -135,29 +114,25 @@ namespace ProjectVagabond
                     case "AddBuff":
                         if (Enum.TryParse<StatusEffectType>(outcome.Value, true, out var effectType))
                         {
-                            var buffsComp = _componentStore.GetComponent<TemporaryBuffsComponent>(PlayerEntityId);
-                            if (buffsComp == null)
+                            if (leader != null)
                             {
-                                buffsComp = new TemporaryBuffsComponent();
-                                _componentStore.AddComponent(PlayerEntityId, buffsComp);
+                                leader.ActiveBuffs.Add(new TemporaryBuff { EffectType = effectType, RemainingBattles = outcome.Amount });
+                                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[Palette_Sky]Gained {outcome.Value} ({outcome.Amount} battles)!" });
                             }
-                            buffsComp.Buffs.Add(new TemporaryBuff { EffectType = effectType, RemainingBattles = outcome.Amount });
-                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[Palette_Sky]Gained {outcome.Value} ({outcome.Amount} battles)!" });
                         }
                         break;
 
                     case "ModifyStat":
-                        var statsComp = _componentStore.GetComponent<CombatantStatsComponent>(PlayerEntityId);
-                        if (statsComp != null)
+                        if (leader != null)
                         {
                             string stat = outcome.Value.ToLowerInvariant();
                             int amt = outcome.Amount;
-                            if (stat == "strength") statsComp.Strength += amt;
-                            else if (stat == "intelligence") statsComp.Intelligence += amt;
-                            else if (stat == "tenacity") statsComp.Tenacity += amt;
-                            else if (stat == "agility") statsComp.Agility += amt;
-                            else if (stat == "maxhp") { statsComp.MaxHP += amt; statsComp.CurrentHP += amt; }
-                            else if (stat == "maxmana") { statsComp.MaxMana += amt; statsComp.CurrentMana += amt; }
+                            if (stat == "strength") leader.Strength += amt;
+                            else if (stat == "intelligence") leader.Intelligence += amt;
+                            else if (stat == "tenacity") leader.Tenacity += amt;
+                            else if (stat == "agility") leader.Agility += amt;
+                            else if (stat == "maxhp") { leader.MaxHP += amt; leader.CurrentHP += amt; }
+                            else if (stat == "maxmana") { leader.MaxMana += amt; leader.CurrentMana += amt; }
 
                             string sign = amt > 0 ? "+" : "";
                             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[Palette_Sky]{outcome.Value} {sign}{amt}" });
@@ -165,29 +140,26 @@ namespace ProjectVagabond
                         break;
 
                     case "Damage":
-                        var dmgComp = _componentStore.GetComponent<CombatantStatsComponent>(PlayerEntityId);
-                        if (dmgComp != null)
+                        if (leader != null)
                         {
-                            dmgComp.CurrentHP = Math.Max(0, dmgComp.CurrentHP - outcome.Amount);
+                            leader.CurrentHP = Math.Max(0, leader.CurrentHP - outcome.Amount);
                             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[Palette_Rust]Took {outcome.Amount} damage!" });
                         }
                         break;
 
                     case "DamagePercent":
-                        var dmgPerComp = _componentStore.GetComponent<CombatantStatsComponent>(PlayerEntityId);
-                        if (dmgPerComp != null)
+                        if (leader != null)
                         {
-                            int dmg = (int)(dmgPerComp.MaxHP * (outcome.Amount / 100f));
-                            dmgPerComp.CurrentHP = Math.Max(0, dmgPerComp.CurrentHP - dmg);
+                            int dmg = (int)(leader.MaxHP * (outcome.Amount / 100f));
+                            leader.CurrentHP = Math.Max(0, leader.CurrentHP - dmg);
                             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[Palette_Rust]Took {dmg} damage!" });
                         }
                         break;
 
                     case "HealFull":
-                        var healComp = _componentStore.GetComponent<CombatantStatsComponent>(PlayerEntityId);
-                        if (healComp != null)
+                        if (leader != null)
                         {
-                            healComp.CurrentHP = healComp.MaxHP;
+                            leader.CurrentHP = leader.MaxHP;
                             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[Palette_Leaf]Fully Healed!" });
                         }
                         break;

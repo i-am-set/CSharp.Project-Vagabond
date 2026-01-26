@@ -1,213 +1,135 @@
 [
   {
-    "Id": "player",
-    "Name": "Player",
-    "Components": [
-      { "Type": "ProjectVagabond.PlayerTagComponent" },
-      { "Type": "ProjectVagabond.PositionComponent" },
-      { "Type": "ProjectVagabond.ActionQueueComponent" },
-      { "Type": "ProjectVagabond.HighImportanceComponent" },
-      {
-        "Type": "ProjectVagabond.RenderableComponent",
-        "Properties": { "Color": "Palette_Red" }
-      },
-      { "Type": "ProjectVagabond.TemporaryBuffsComponent" }
-    ]
-  },
-  {
     "Id": "golem",
     "Name": "Golem",
-    "Components": [
-      { "Type": "ProjectVagabond.PositionComponent" },
-      { "Type": "ProjectVagabond.RenderableComponent" },
-      {
-        "Type": "ProjectVagabond.Battle.EnemyStatProfileComponent",
-        "Properties": {
-          "Gender": "Thing",
-          "MinHP": 50,
-          "MaxHP": 60,
-          "MaxMana": 10,
-          "MinStrength": 12,
-          "MaxStrength": 15,
-          "MinIntelligence": 1,
-          "MaxIntelligence": 2,
-          "MinTenacity": 15,
-          "MaxTenacity": 17,
-          "MinAgility": 1,
-          "MaxAgility": 1,
-          "MoveLearnset": [ "1" ],
-          "MinNumberOfMoves": 1,
-          "MaxNumberOfMoves": 1
-        }
-      }
-    ]
+    "Gender": "Thing",
+    "MinHP": 50,
+    "MaxHP": 60,
+    "MaxMana": 10,
+    "MinStrength": 12,
+    "MaxStrength": 15,
+    "MinIntelligence": 1,
+    "MaxIntelligence": 2,
+    "MinTenacity": 15,
+    "MaxTenacity": 17,
+    "MinAgility": 1,
+    "MaxAgility": 1,
+    "MoveLearnset": [ "1" ],
+    "MinNumberOfMoves": 1,
+    "MaxNumberOfMoves": 1
   },
   {
     "Id": "sapling",
     "Name": "Sapling",
-    "Components": [
-      { "Type": "ProjectVagabond.PositionComponent" },
-      { "Type": "ProjectVagabond.RenderableComponent" },
-      {
-        "Type": "ProjectVagabond.Battle.EnemyStatProfileComponent",
-        "Properties": {
-          "Gender": "Thing",
-          "MinHP": 7,
-          "MaxHP": 10,
-          "MaxMana": 10,
-          "MinStrength": 2,
-          "MaxStrength": 3,
-          "MinIntelligence": 1,
-          "MaxIntelligence": 2,
-          "MinTenacity": 3,
-          "MaxTenacity": 4,
-          "MinAgility": 1,
-          "MaxAgility": 2,
-          "MoveLearnset": [ "5" ],
-          "MinNumberOfMoves": 1,
-          "MaxNumberOfMoves": 1
-        }
-      }
-    ]
+    "Gender": "Thing",
+    "MinHP": 7,
+    "MaxHP": 10,
+    "MaxMana": 10,
+    "MinStrength": 2,
+    "MaxStrength": 3,
+    "MinIntelligence": 1,
+    "MaxIntelligence": 2,
+    "MinTenacity": 3,
+    "MaxTenacity": 4,
+    "MinAgility": 1,
+    "MaxAgility": 2,
+    "MoveLearnset": [ "5" ],
+    "MinNumberOfMoves": 1,
+    "MaxNumberOfMoves": 1
   },
   {
     "Id": "boar",
     "Name": "Boar",
-    "Components": [
-      { "Type": "ProjectVagabond.PositionComponent" },
-      { "Type": "ProjectVagabond.RenderableComponent" },
-      {
-        "Type": "ProjectVagabond.Battle.EnemyStatProfileComponent",
-        "Properties": {
-          "Gender": "Thing",
-          "MinHP": 22,
-          "MaxHP": 27,
-          "MaxMana": 10,
-          "MinStrength": 4,
-          "MaxStrength": 6,
-          "MinIntelligence": 1,
-          "MaxIntelligence": 2,
-          "MinTenacity": 4,
-          "MaxTenacity": 6,
-          "MinAgility": 2,
-          "MaxAgility": 3,
-          "MoveLearnset": [ "1" ],
-          "MinNumberOfMoves": 1,
-          "MaxNumberOfMoves": 1
-        }
-      }
-    ]
+    "Gender": "Thing",
+    "MinHP": 22,
+    "MaxHP": 27,
+    "MaxMana": 10,
+    "MinStrength": 4,
+    "MaxStrength": 6,
+    "MinIntelligence": 1,
+    "MaxIntelligence": 2,
+    "MinTenacity": 4,
+    "MaxTenacity": 6,
+    "MinAgility": 2,
+    "MaxAgility": 3,
+    "MoveLearnset": [ "1" ],
+    "MinNumberOfMoves": 1,
+    "MaxNumberOfMoves": 1
   },
   {
     "Id": "toad",
     "Name": "Toad",
-    "Components": [
-      { "Type": "ProjectVagabond.PositionComponent" },
-      { "Type": "ProjectVagabond.RenderableComponent" },
-      {
-        "Type": "ProjectVagabond.Battle.EnemyStatProfileComponent",
-        "Properties": {
-          "Gender": "Thing",
-          "MinHP": 17,
-          "MaxHP": 22,
-          "MaxMana": 10,
-          "MinStrength": 3,
-          "MaxStrength": 4,
-          "MinIntelligence": 2,
-          "MaxIntelligence": 3,
-          "MinTenacity": 5,
-          "MaxTenacity": 6,
-          "MinAgility": 1,
-          "MaxAgility": 3,
-          "MoveLearnset": [ "1" ],
-          "MinNumberOfMoves": 1,
-          "MaxNumberOfMoves": 1
-        }
-      }
-    ]
+    "Gender": "Thing",
+    "MinHP": 17,
+    "MaxHP": 22,
+    "MaxMana": 10,
+    "MinStrength": 3,
+    "MaxStrength": 4,
+    "MinIntelligence": 2,
+    "MaxIntelligence": 3,
+    "MinTenacity": 5,
+    "MaxTenacity": 6,
+    "MinAgility": 1,
+    "MaxAgility": 3,
+    "MoveLearnset": [ "1" ],
+    "MinNumberOfMoves": 1,
+    "MaxNumberOfMoves": 1
   },
   {
     "Id": "snake",
     "Name": "Snake",
-    "Components": [
-      { "Type": "ProjectVagabond.PositionComponent" },
-      { "Type": "ProjectVagabond.RenderableComponent" },
-      {
-        "Type": "ProjectVagabond.Battle.EnemyStatProfileComponent",
-        "Properties": {
-          "Gender": "Thing",
-          "MinHP": 10,
-          "MaxHP": 15,
-          "MaxMana": 10,
-          "MinStrength": 3,
-          "MaxStrength": 4,
-          "MinIntelligence": 3,
-          "MaxIntelligence": 4,
-          "MinTenacity": 2,
-          "MaxTenacity": 3,
-          "MinAgility": 6,
-          "MaxAgility": 7,
-          "MoveLearnset": [ "3" ],
-          "MinNumberOfMoves": 1,
-          "MaxNumberOfMoves": 1
-        }
-      }
-    ]
+    "Gender": "Thing",
+    "MinHP": 10,
+    "MaxHP": 15,
+    "MaxMana": 10,
+    "MinStrength": 3,
+    "MaxStrength": 4,
+    "MinIntelligence": 3,
+    "MaxIntelligence": 4,
+    "MinTenacity": 2,
+    "MaxTenacity": 3,
+    "MinAgility": 6,
+    "MaxAgility": 7,
+    "MoveLearnset": [ "3" ],
+    "MinNumberOfMoves": 1,
+    "MaxNumberOfMoves": 1
   },
   {
     "Id": "wolf",
     "Name": "Wolf",
-    "Components": [
-      { "Type": "ProjectVagabond.PositionComponent" },
-      { "Type": "ProjectVagabond.RenderableComponent" },
-      {
-        "Type": "ProjectVagabond.Battle.EnemyStatProfileComponent",
-        "Properties": {
-          "Gender": "Thing",
-          "MinHP": 17,
-          "MaxHP": 22,
-          "MaxMana": 10,
-          "MinStrength": 4,
-          "MaxStrength": 6,
-          "MinIntelligence": 2,
-          "MaxIntelligence": 3,
-          "MinTenacity": 3,
-          "MaxTenacity": 4,
-          "MinAgility": 5,
-          "MaxAgility": 6,
-          "MoveLearnset": [ "3" ],
-          "MinNumberOfMoves": 1,
-          "MaxNumberOfMoves": 2
-        }
-      }
-    ]
+    "Gender": "Thing",
+    "MinHP": 17,
+    "MaxHP": 22,
+    "MaxMana": 10,
+    "MinStrength": 4,
+    "MaxStrength": 6,
+    "MinIntelligence": 2,
+    "MaxIntelligence": 3,
+    "MinTenacity": 3,
+    "MaxTenacity": 4,
+    "MinAgility": 5,
+    "MaxAgility": 6,
+    "MoveLearnset": [ "3" ],
+    "MinNumberOfMoves": 1,
+    "MaxNumberOfMoves": 2
   },
   {
     "Id": "spider",
     "Name": "Spider",
-    "Components": [
-      { "Type": "ProjectVagabond.PositionComponent" },
-      { "Type": "ProjectVagabond.RenderableComponent" },
-      {
-        "Type": "ProjectVagabond.Battle.EnemyStatProfileComponent",
-        "Properties": {
-          "Gender": "Thing",
-          "MinHP": 22,
-          "MaxHP": 27,
-          "MaxMana": 10,
-          "MinStrength": 3,
-          "MaxStrength": 4,
-          "MinIntelligence": 4,
-          "MaxIntelligence": 6,
-          "MinTenacity": 2,
-          "MaxTenacity": 3,
-          "MinAgility": 6,
-          "MaxAgility": 7,
-          "MoveLearnset": [ "3" ],
-          "MinNumberOfMoves": 1,
-          "MaxNumberOfMoves": 1
-        }
-      }
-    ]
+    "Gender": "Thing",
+    "MinHP": 22,
+    "MaxHP": 27,
+    "MaxMana": 10,
+    "MinStrength": 3,
+    "MaxStrength": 4,
+    "MinIntelligence": 4,
+    "MaxIntelligence": 6,
+    "MinTenacity": 2,
+    "MaxTenacity": 3,
+    "MinAgility": 6,
+    "MaxAgility": 7,
+    "MoveLearnset": [ "3" ],
+    "MinNumberOfMoves": 1,
+    "MaxNumberOfMoves": 1
   }
 ]
