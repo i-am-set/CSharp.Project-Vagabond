@@ -1100,7 +1100,7 @@ namespace ProjectVagabond.Battle.UI
                             float spriteTopY = GetEnemyStaticVisualTop(enemy, center.Y);
                             float anchorY = Math.Min(tooltipTopY - 2, spriteTopY);
                             float barY = anchorY - 4;
-                            float barX = (center.X - BattleLayout.ENEMY_BAR_WIDTH / 2f) - 24;
+                            float barX = (center.X - BattleLayout.ENEMY_BAR_WIDTH / 2f) - 36;
 
                             float barBottomY = barY + 4;
                             _combatantBarBottomYs[enemy.CombatantID] = barBottomY;
@@ -1295,7 +1295,7 @@ namespace ProjectVagabond.Battle.UI
                     UpdateBarAlpha(player, (float)gameTime.ElapsedGameTime.TotalSeconds, showHP, showMana);
 
                     Vector2 barPos = GetCombatantBarPosition(player);
-                    float barX = (barPos.X - BattleLayout.PLAYER_BAR_WIDTH / 2f) - 24;
+                    float barX = (barPos.X - BattleLayout.PLAYER_BAR_WIDTH / 2f) - 36;
                     float barY = barPos.Y + 4;
 
                     float barBottomY = barY + 4;

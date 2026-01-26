@@ -72,7 +72,7 @@ namespace ProjectVagabond.Battle.UI
             _actionMenu.OnFleeRequested += () => OnFleeRequested?.Invoke();
 
             _switchMenu.OnMemberSelected += HandleSwitchMemberSelected;
-            _switchMenu.OnBack += () => { _switchMenu.Hide(); };
+            _switchMenu.OnBack += HandleSwitchMenuBack;
 
             _combatSwitchDialog.OnMemberSelected += (member) => OnForcedSwitchSelected?.Invoke(member);
 
@@ -101,6 +101,7 @@ namespace ProjectVagabond.Battle.UI
         {
             _actionMenu.Show(player, allCombatants);
             _switchMenu.Hide();
+            UIState = BattleUIState.Default;
         }
 
         public void HideAllMenus()
@@ -119,7 +120,11 @@ namespace ProjectVagabond.Battle.UI
                 SpellForTargeting = null;
                 ActiveTargetingSlot = -1;
             }
-            else if (_switchMenu.IsForced == false)
+            else if (UIState == BattleUIState.Switch && !_switchMenu.IsForced)
+            {
+                HandleSwitchMenuBack();
+            }
+            else if (_switchMenu.IsForced == false && _switchMenu.IsVisible)
             {
                 _switchMenu.Hide();
             }
@@ -137,15 +142,19 @@ namespace ProjectVagabond.Battle.UI
             }
 
             bool isTargeting = UIState == BattleUIState.Targeting;
+            bool isSwitching = UIState == BattleUIState.Switch;
 
             if (isTargeting)
             {
                 _targetingTextAnimTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
             }
 
-            // Block menu input if we are targeting
+            // Block menu input if we are targeting. If switching, we pass the index to block specific slot.
             bool isMenuBlocked = isTargeting;
-            _actionMenu.Update(currentMouseState, gameTime, isMenuBlocked);
+            int? switchingSlot = isSwitching ? ActiveTargetingSlot : null;
+
+            _actionMenu.Update(currentMouseState, gameTime, isMenuBlocked, switchingSlot);
+
             _switchMenu.Update(currentMouseState);
             UpdateHoverHighlights(gameTime, currentActor);
 
@@ -248,7 +257,8 @@ namespace ProjectVagabond.Battle.UI
             ActiveTargetingSlot = slotIndex;
             var battleManager = ServiceLocator.Get<BattleManager>();
             var reserved = battleManager.GetReservedBenchMembers();
-            _switchMenu.Show(battleManager.AllCombatants.ToList(), reserved);
+            _switchMenu.Show(slotIndex, battleManager.AllCombatants.ToList(), reserved);
+            UIState = BattleUIState.Switch;
         }
 
         private void HandleSwitchMemberSelected(BattleCombatant targetMember)
@@ -270,6 +280,14 @@ namespace ProjectVagabond.Battle.UI
             }
 
             _switchMenu.Hide();
+            UIState = BattleUIState.Default;
+            ActiveTargetingSlot = -1;
+        }
+
+        private void HandleSwitchMenuBack()
+        {
+            _switchMenu.Hide();
+            UIState = BattleUIState.Default;
             ActiveTargetingSlot = -1;
         }
 
@@ -333,7 +351,8 @@ namespace ProjectVagabond.Battle.UI
             }
 
             // Pass the active targeting slot to hide that specific panel's buttons
-            int? hiddenSlot = (UIState == BattleUIState.Targeting) ? ActiveTargetingSlot : null;
+            // This applies if we are Targeting OR Switching
+            int? hiddenSlot = (UIState == BattleUIState.Targeting || UIState == BattleUIState.Switch) ? ActiveTargetingSlot : null;
             _actionMenu.Draw(spriteBatch, font, gameTime, transform, IntroOffset, hiddenSlot);
 
             if (UIState == BattleUIState.Targeting)

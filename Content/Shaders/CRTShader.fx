@@ -46,7 +46,7 @@ static const float HORIZONTAL_JITTER = 0.0;   // 0.0 = Perfect, 0.0001 = Micro-J
 static const float JITTER_FREQUENCY = 1.0;      // Speed of the shake
 
 // AC Hum Bar (Rolling Shadow)
-static const float HUM_BAR_SPEED = 2.0;          // Speed of the rolling bar
+static const float HUM_BAR_SPEED = 1.0;          // Speed of the rolling bar
 static const float HUM_BAR_OPACITY = 0.15;       // 0.0 = Invisible, 0.05 = Subtle, 0.2 = Bad Interference
 
 // Chromatic Aberration (Color Bleed)

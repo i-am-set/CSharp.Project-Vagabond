@@ -83,7 +83,7 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        public void Update(MouseState mouse, GameTime gameTime, bool isInputBlocked)
+        public void Update(MouseState mouse, GameTime gameTime, bool isInputBlocked, int? switchingSlotIndex = null)
         {
             if (!_isVisible) return;
 
@@ -94,8 +94,34 @@ namespace ProjectVagabond.Battle.UI
 
             foreach (var panel in _panels)
             {
+                // If input is globally blocked, just reset hover and continue
+                if (isInputBlocked)
+                {
+                    panel.Update(mouse, gameTime, true, false);
+                    continue;
+                }
+
+                // If a specific slot is switching
+                if (switchingSlotIndex.HasValue)
+                {
+                    // If this is the switching panel, block it completely
+                    if (panel.SlotIndex == switchingSlotIndex.Value)
+                    {
+                        panel.Update(mouse, gameTime, true, false);
+                        continue;
+                    }
+
+                    // If this is another panel, update it but disable switch button
+                    panel.SetSwitchButtonAllowed(false);
+                }
+                else
+                {
+                    // Normal state, ensure switch button is enabled (if valid logic allows)
+                    panel.SetSwitchButtonAllowed(true);
+                }
+
                 bool isLocked = battleManager.IsActionPending(panel.SlotIndex);
-                panel.Update(mouse, gameTime, isInputBlocked, isLocked);
+                panel.Update(mouse, gameTime, false, isLocked);
 
                 if (panel.HoveredMove != null)
                 {
@@ -133,6 +159,7 @@ namespace ProjectVagabond.Battle.UI
             private Button _cancelButton;
             private Vector2 _position;
             private Rectangle _panelBounds;
+            private bool _hasBench;
 
             // Layout
             private const int MOVE_BTN_HEIGHT = 9;
@@ -150,6 +177,15 @@ namespace ProjectVagabond.Battle.UI
             {
                 _position = pos;
                 LayoutButtons();
+            }
+
+            public void SetSwitchButtonAllowed(bool allowed)
+            {
+                // Button 6 is Switch
+                if (_buttons.Count > 6)
+                {
+                    _buttons[6].IsEnabled = allowed && _hasBench;
+                }
             }
 
             private void InitializeButtons(List<BattleCombatant> allCombatants)
@@ -280,8 +316,8 @@ namespace ProjectVagabond.Battle.UI
                     CustomDefaultTextColor = global.GameTextColor
                 };
                 switchBtn.OnClick += () => OnSwitchRequested?.Invoke();
-                bool hasBench = allCombatants.Any(c => c.IsPlayerControlled && !c.IsDefeated && c.BattleSlot >= 2);
-                switchBtn.IsEnabled = hasBench;
+                _hasBench = allCombatants.Any(c => c.IsPlayerControlled && !c.IsDefeated && c.BattleSlot >= 2);
+                switchBtn.IsEnabled = _hasBench;
                 _buttons.Add(switchBtn);
 
                 // 3. Cancel Button
