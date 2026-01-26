@@ -1127,7 +1127,7 @@ namespace ProjectVagabond.Battle.UI
                             float spriteTopY = GetEnemyStaticVisualTop(enemy, center.Y);
                             float anchorY = Math.Min(tooltipTopY - 2, spriteTopY);
                             float barY = anchorY - 4;
-                            float barX = (center.X - BattleLayout.ENEMY_BAR_WIDTH / 2f) - 24; // Shifted Left by 16
+                            float barX = (center.X - BattleLayout.ENEMY_BAR_WIDTH / 2f) - 24;
 
                             float barBottomY = barY + 4;
                             _combatantBarBottomYs[enemy.CombatantID] = barBottomY;
@@ -1136,10 +1136,14 @@ namespace ProjectVagabond.Battle.UI
 
                             // Draw Name above bar
                             var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
-                            _hudRenderer.DrawEnemyBars(spriteBatch, enemy, barX, barY, BattleLayout.ENEMY_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, enemy.VisualHealthBarAlpha, enemy.VisualManaBarAlpha, gameTime);
-                            if (enemy.VisualHealthBarAlpha > 0.01f)
+
+                            // --- NEW: Apply HUD Alpha ---
+                            float hudAlpha = enemy.HudVisualAlpha;
+
+                            _hudRenderer.DrawEnemyBars(spriteBatch, enemy, barX, barY, BattleLayout.ENEMY_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, enemy.VisualHealthBarAlpha * hudAlpha, enemy.VisualManaBarAlpha * hudAlpha, gameTime);
+                            if (enemy.VisualHealthBarAlpha > 0.01f && hudAlpha > 0.01f)
                             {
-                                spriteBatch.DrawStringSnapped(tertiaryFont, enemy.Name.ToUpper(), new Vector2(barX, barY - tertiaryFont.LineHeight - 1), _global.Palette_Sun * enemy.VisualHealthBarAlpha);
+                                spriteBatch.DrawStringSnapped(tertiaryFont, enemy.Name.ToUpper(), new Vector2(barX, barY - tertiaryFont.LineHeight - 1), _global.Palette_Sun * enemy.VisualHealthBarAlpha * hudAlpha);
                             }
                         }
                     }
@@ -1318,7 +1322,7 @@ namespace ProjectVagabond.Battle.UI
                     UpdateBarAlpha(player, (float)gameTime.ElapsedGameTime.TotalSeconds, showHP, showMana);
 
                     Vector2 barPos = GetCombatantBarPosition(player);
-                    float barX = (barPos.X - BattleLayout.PLAYER_BAR_WIDTH / 2f) - 24; // Shifted Left by 16
+                    float barX = (barPos.X - BattleLayout.PLAYER_BAR_WIDTH / 2f) - 24;
                     float barY = barPos.Y + 4;
 
                     float barBottomY = barY + 4;
@@ -1328,10 +1332,14 @@ namespace ProjectVagabond.Battle.UI
 
                     // Draw Name above bar
                     var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
-                    _hudRenderer.DrawPlayerBars(spriteBatch, player, barX, barY, BattleLayout.PLAYER_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, player.VisualHealthBarAlpha, player.VisualManaBarAlpha, gameTime, uiManager, player == currentActor);
-                    if (player.VisualHealthBarAlpha > 0.01f)
+
+                    // --- NEW: Apply HUD Alpha ---
+                    float hudAlpha = player.HudVisualAlpha;
+
+                    _hudRenderer.DrawPlayerBars(spriteBatch, player, barX, barY, BattleLayout.PLAYER_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, player.VisualHealthBarAlpha * hudAlpha, player.VisualManaBarAlpha * hudAlpha, gameTime, uiManager, player == currentActor);
+                    if (player.VisualHealthBarAlpha > 0.01f && hudAlpha > 0.01f)
                     {
-                        spriteBatch.DrawStringSnapped(tertiaryFont, player.Name.ToUpper(), new Vector2(barX, barY - tertiaryFont.LineHeight - 1), _global.Palette_Sun * player.VisualHealthBarAlpha);
+                        spriteBatch.DrawStringSnapped(tertiaryFont, player.Name.ToUpper(), new Vector2(barX, barY - tertiaryFont.LineHeight - 1), _global.Palette_Sun * player.VisualHealthBarAlpha * hudAlpha);
                     }
                 }
             }
@@ -1630,10 +1638,13 @@ namespace ProjectVagabond.Battle.UI
 
                 if (combatant.VisualHealthBarAlpha <= 0.01f && combatant.VisualManaBarAlpha <= 0.01f) continue;
 
+                // --- NEW: Apply HUD Alpha ---
+                float hudAlpha = combatant.HudVisualAlpha;
+
                 if (combatant.IsPlayerControlled)
                 {
                     _hudRenderer.DrawStatusIcons(spriteBatch, combatant, barX, barY, BattleLayout.PLAYER_BAR_WIDTH, true, _playerStatusIcons, GetStatusIconOffset, IsStatusIconAnimating);
-                    _hudRenderer.DrawPlayerBars(spriteBatch, combatant, barX, barY, BattleLayout.PLAYER_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha, combatant.VisualManaBarAlpha, gameTime, uiManager, combatant == currentActor);
+                    _hudRenderer.DrawPlayerBars(spriteBatch, combatant, barX, barY, BattleLayout.PLAYER_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha * hudAlpha, combatant.VisualManaBarAlpha * hudAlpha, gameTime, uiManager, combatant == currentActor);
                 }
                 else
                 {
@@ -1641,7 +1652,7 @@ namespace ProjectVagabond.Battle.UI
                         _enemyStatusIcons[combatant.CombatantID] = new List<StatusIconInfo>();
 
                     _hudRenderer.DrawStatusIcons(spriteBatch, combatant, barX, barY, BattleLayout.ENEMY_BAR_WIDTH, false, _enemyStatusIcons[combatant.CombatantID], GetStatusIconOffset, IsStatusIconAnimating);
-                    _hudRenderer.DrawEnemyBars(spriteBatch, combatant, barX, barY, BattleLayout.ENEMY_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha, combatant.VisualManaBarAlpha, gameTime);
+                    _hudRenderer.DrawEnemyBars(spriteBatch, combatant, barX, barY, BattleLayout.ENEMY_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha * hudAlpha, combatant.VisualManaBarAlpha * hudAlpha, gameTime);
                 }
             }
         }

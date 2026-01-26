@@ -39,6 +39,15 @@ namespace ProjectVagabond.Battle.UI
         public class HealthAnimationState { public string CombatantID; public float StartHP; public float TargetHP; public float Timer; }
         public class AlphaAnimationState { public string CombatantID; public float StartAlpha; public float TargetAlpha; public float Timer; public const float Duration = 0.1f; } // Was 0.167f
 
+        // --- NEW: HUD Entry Animation ---
+        public class HudEntryAnimationState
+        {
+            public string CombatantID;
+            public float Timer;
+            public const float DURATION = 0.5f;
+        }
+        private readonly List<HudEntryAnimationState> _activeHudEntryAnimations = new List<HudEntryAnimationState>();
+
         public class DeathAnimationState
         {
             public string CombatantID;
@@ -465,6 +474,7 @@ namespace ProjectVagabond.Battle.UI
             _activeFloorIntroAnimations.Clear();
             _activeFloorOutroAnimations.Clear();
             _activeAttackCharges.Clear();
+            _activeHudEntryAnimations.Clear(); // Clear HUD animations
             _impactFlashState = null;
             _indicatorCooldownTimer = 0f;
             _pendingAbilityQueue.Clear();
@@ -533,7 +543,18 @@ namespace ProjectVagabond.Battle.UI
             }
             _activeDeathAnimations.Clear();
 
-            // 5. Clear other blocking states
+            // 5. Snap HUD Entry
+            foreach (var anim in _activeHudEntryAnimations)
+            {
+                var combatant = combatants.FirstOrDefault(c => c.CombatantID == anim.CombatantID);
+                if (combatant != null)
+                {
+                    combatant.HudVisualAlpha = 1.0f;
+                }
+            }
+            _activeHudEntryAnimations.Clear();
+
+            // 6. Clear other blocking states
             _activeSpawnAnimations.Clear();
         }
 
@@ -676,6 +697,16 @@ namespace ProjectVagabond.Battle.UI
                 CombatantID = combatantId,
                 StartAlpha = alphaBefore,
                 TargetAlpha = alphaAfter,
+                Timer = 0f
+            });
+        }
+
+        public void StartHudEntryAnimation(string combatantId)
+        {
+            _activeHudEntryAnimations.RemoveAll(a => a.CombatantID == combatantId);
+            _activeHudEntryAnimations.Add(new HudEntryAnimationState
+            {
+                CombatantID = combatantId,
                 Timer = 0f
             });
         }
@@ -1104,6 +1135,31 @@ namespace ProjectVagabond.Battle.UI
             UpdateCoinCatchAnimations(gameTime);
             UpdateImpactFlash(gameTime);
             UpdateAttackCharges(gameTime);
+            UpdateHudEntryAnimations(gameTime, combatants);
+        }
+
+        private void UpdateHudEntryAnimations(GameTime gameTime, IEnumerable<BattleCombatant> combatants)
+        {
+            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            for (int i = _activeHudEntryAnimations.Count - 1; i >= 0; i--)
+            {
+                var anim = _activeHudEntryAnimations[i];
+                var combatant = combatants.FirstOrDefault(c => c.CombatantID == anim.CombatantID);
+                if (combatant == null)
+                {
+                    _activeHudEntryAnimations.RemoveAt(i);
+                    continue;
+                }
+
+                anim.Timer += dt;
+                float progress = Math.Clamp(anim.Timer / HudEntryAnimationState.DURATION, 0f, 1f);
+                combatant.HudVisualAlpha = Easing.EaseOutQuad(progress);
+
+                if (progress >= 1.0f)
+                {
+                    _activeHudEntryAnimations.RemoveAt(i);
+                }
+            }
         }
 
         private void UpdateAttackCharges(GameTime gameTime)

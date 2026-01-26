@@ -244,6 +244,9 @@ namespace ProjectVagabond.Scenes
                 foreach (var combatant in _battleManager.AllCombatants)
                 {
                     if (combatant.IsPlayerControlled) combatant.VisualHP = combatant.Stats.CurrentHP;
+
+                    // --- NEW: Reset HUD Visibility ---
+                    combatant.HudVisualAlpha = 0f;
                 }
             }
         }
@@ -570,6 +573,12 @@ namespace ProjectVagabond.Scenes
                         _settingsButtonState = SettingsButtonState.AnimatingIn;
                         _roundAnimState = RoundAnimState.Pop;
                         _roundAnimTimer = 0f;
+
+                        // --- NEW: Trigger HUD Entry Animation ---
+                        foreach (var c in _battleManager.AllCombatants)
+                        {
+                            _animationManager.StartHudEntryAnimation(c.CombatantID);
+                        }
                     }
                 }
 
@@ -639,6 +648,22 @@ namespace ProjectVagabond.Scenes
                     _settingsButton.Bounds = new Rectangle(Global.VIRTUAL_WIDTH - 16 - 2, 2, 16, 16);
                 }
                 if (_settingsButtonState != SettingsButtonState.Hidden) _settingsButton.Update(currentMouseState);
+            }
+
+            if (KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState))
+            {
+                if (_uiManager.SubMenuState == BattleSubMenuState.ActionMoves || _uiManager.SubMenuState == BattleSubMenuState.Switch)
+                {
+                    _uiManager.GoBack();
+                }
+                else if (_uiManager.UIState == BattleUIState.Targeting)
+                {
+                    _uiManager.GoBack();
+                }
+                else
+                {
+                    OpenSettings();
+                }
             }
 
             if (_roundAnimState == RoundAnimState.Entering)

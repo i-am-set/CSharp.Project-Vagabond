@@ -1,9 +1,18 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
 using MonoGame.Extended.ECS.Systems;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Particles;
+using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.Systems;
+using ProjectVagabond.Transitions;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
@@ -11,6 +20,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.Battle
 {
@@ -34,6 +44,10 @@ namespace ProjectVagabond.Battle
         public CombatantStats Stats { get; set; }
         public float VisualHP { get; set; }
         public float VisualAlpha { get; set; } = 1.0f;
+
+        // --- NEW: HUD Visibility Control ---
+        public float HudVisualAlpha { get; set; } = 0f;
+
         public float VisualSilhouetteAmount { get; set; } = 0f;
         public Color? VisualSilhouetteColorOverride { get; set; } = null;
 
