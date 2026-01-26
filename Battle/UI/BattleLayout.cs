@@ -14,16 +14,21 @@ namespace ProjectVagabond.Battle.UI
         public const int DIVIDER_Y = 123;
         public const int ENEMY_SLOT_Y_OFFSET = 12;
 
+        // --- Action Menu Layout ---
+        public const int ACTION_MENU_WIDTH = 160;
+        public const int ACTION_MENU_HEIGHT = 52;
+        public const int ACTION_MENU_Y = Global.VIRTUAL_HEIGHT - ACTION_MENU_HEIGHT;
+
         // --- Enemy Layout ---
         public const int ENEMY_AREA_PADDING = 40;
         public const int ENEMY_SPRITE_SIZE_NORMAL = 64;
         public const int ENEMY_SPRITE_SIZE_MAJOR = 96;
 
         // --- Player Layout ---
-        // MOVED DOWN 16 PIXELS
-        public const float PLAYER_HEART_CENTER_Y = 115f; // Was 99f
-        public const float PLAYER_BARS_TOP_Y = 94f;      // Was 78f
-        public const float PLAYER_NAME_TOP_Y = 127f;     // Was 111f
+        // MOVED UP 8 PIXELS (from 115, 94, 127)
+        public const float PLAYER_HEART_CENTER_Y = 107f;
+        public const float PLAYER_BARS_TOP_Y = 86f;
+        public const float PLAYER_NAME_TOP_Y = 119f;
 
         // FIX: Reduced width to 40 to match enemies
         public const int PLAYER_BAR_WIDTH = 40;
@@ -33,6 +38,15 @@ namespace ProjectVagabond.Battle.UI
         public const int STATUS_ICON_GAP = 1;
         public const int ENEMY_BAR_WIDTH = 40;
         public const int ENEMY_BAR_HEIGHT = 2;
+
+        public static Rectangle GetActionMenuArea(int slotIndex)
+        {
+            // Slot 0: Left (0 to 160)
+            // Slot 1: Right (160 to 320)
+            // If we ever have more slots, this logic might need expansion, but for 2v2 it's split down the middle.
+            int x = (slotIndex == 0) ? 0 : ACTION_MENU_WIDTH;
+            return new Rectangle(x, ACTION_MENU_Y, ACTION_MENU_WIDTH, ACTION_MENU_HEIGHT);
+        }
 
         public static Vector2 GetEnemySlotCenter(int slotIndex)
         {

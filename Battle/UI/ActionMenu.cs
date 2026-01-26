@@ -36,7 +36,6 @@ namespace ProjectVagabond.Battle.UI
 
         // Layout
         private const int PANEL_WIDTH = 80;
-        private const int PANEL_Y = 139; // Moved down 9px
 
         public ActionMenu() { }
 
@@ -73,11 +72,20 @@ namespace ProjectVagabond.Battle.UI
 
         private void UpdateLayout()
         {
-            int screenWidth = Global.VIRTUAL_WIDTH;
             foreach (var panel in _panels)
             {
-                int x = (panel.SlotIndex == 0) ? 10 : (screenWidth - PANEL_WIDTH - 10);
-                panel.SetPosition(new Vector2(x, PANEL_Y));
+                // Get the designated area for this slot (Left or Right)
+                var area = BattleLayout.GetActionMenuArea(panel.SlotIndex);
+
+                // Calculate the panel's total height to center it vertically
+                // 4 Moves * 7px (6+1) + 1 Action Row * 7px (6+1) = 35px total height
+                int panelHeight = 35;
+
+                // Center the panel within the area
+                int x = area.Center.X - (PANEL_WIDTH / 2);
+                int y = area.Center.Y - (panelHeight / 2);
+
+                panel.SetPosition(new Vector2(x, y));
             }
         }
 
@@ -134,7 +142,8 @@ namespace ProjectVagabond.Battle.UI
             // Layout
             private const int MOVE_BTN_HEIGHT = 6;
             private const int ACTION_BTN_HEIGHT = 6;
-            private const int SPACING = 0; // Removed spacing
+            // We add 1px to the hitbox height to create the seamless gap
+            private const int HITBOX_PADDING = 1;
 
             public CombatantPanel(BattleCombatant combatant, List<BattleCombatant> allCombatants)
             {
@@ -250,21 +259,25 @@ namespace ProjectVagabond.Battle.UI
                 int y = (int)_position.Y;
                 int startY = y;
 
+                // Layout Moves (Vertical Stack)
                 for (int i = 0; i < 4; i++)
                 {
-                    _buttons[i].Bounds = new Rectangle(x, y, PANEL_WIDTH, MOVE_BTN_HEIGHT);
-                    y += MOVE_BTN_HEIGHT + SPACING;
+                    // Hitbox is 1px taller than visual height to bridge the gap
+                    _buttons[i].Bounds = new Rectangle(x, y, PANEL_WIDTH, MOVE_BTN_HEIGHT + HITBOX_PADDING);
+                    y += MOVE_BTN_HEIGHT + HITBOX_PADDING;
                 }
 
+                // Layout Actions (Horizontal Row)
                 int strikeW = 30;
                 int stallW = 25;
                 int switchW = 25;
 
-                _buttons[4].Bounds = new Rectangle(x, y, strikeW, ACTION_BTN_HEIGHT);
-                _buttons[5].Bounds = new Rectangle(x + strikeW, y, stallW, ACTION_BTN_HEIGHT);
-                _buttons[6].Bounds = new Rectangle(x + strikeW + stallW, y, switchW, ACTION_BTN_HEIGHT);
+                // Hitbox is 1px taller here too for consistency
+                _buttons[4].Bounds = new Rectangle(x, y, strikeW, ACTION_BTN_HEIGHT + HITBOX_PADDING);
+                _buttons[5].Bounds = new Rectangle(x + strikeW, y, stallW, ACTION_BTN_HEIGHT + HITBOX_PADDING);
+                _buttons[6].Bounds = new Rectangle(x + strikeW + stallW, y, switchW, ACTION_BTN_HEIGHT + HITBOX_PADDING);
 
-                int totalHeight = (y + ACTION_BTN_HEIGHT) - startY;
+                int totalHeight = (y + ACTION_BTN_HEIGHT + HITBOX_PADDING) - startY;
                 _panelBounds = new Rectangle(x, startY, PANEL_WIDTH, totalHeight);
             }
 
@@ -323,18 +336,25 @@ namespace ProjectVagabond.Battle.UI
                     var rect = btn.Bounds;
                     rect.Y += (int)offset.Y;
 
+                    // VISUAL ADJUSTMENT:
+                    // The hitbox is 1px taller than the visual button.
+                    // We subtract 1 from the height to draw the background, creating the visual gap.
+                    var visualRect = new Rectangle(rect.X, rect.Y, rect.Width, rect.Height - HITBOX_PADDING);
+
                     Color bgColor = global.Palette_DarkShadow;
                     if (isLocked) bgColor = global.Palette_DarkGray;
                     if (btn.IsHovered && btn.IsEnabled) bgColor = global.Palette_Rust;
                     else if (!btn.IsEnabled) bgColor = global.Palette_Black;
 
-                    // Draw Beveled Background
-                    DrawBeveledBackground(spriteBatch, pixel, rect, bgColor);
+                    // Draw Beveled Background using the smaller visual rect
+                    DrawBeveledBackground(spriteBatch, pixel, visualRect, bgColor);
 
                     var textSize = btn.Font.MeasureString(btn.Text);
+
+                    // Center text within the VISUAL rect, not the hitbox
                     var textPos = new Vector2(
-                        rect.X + (rect.Width - textSize.Width) / 2f,
-                        rect.Y + (rect.Height - textSize.Height) / 2f
+                        visualRect.X + (visualRect.Width - textSize.Width) / 2f,
+                        visualRect.Y + (visualRect.Height - textSize.Height) / 2f
                     );
                     textPos = new Vector2(MathF.Round(textPos.X), MathF.Round(textPos.Y));
 
@@ -344,6 +364,17 @@ namespace ProjectVagabond.Battle.UI
                     if (!btn.IsEnabled) textColor = global.ButtonDisableColor;
 
                     spriteBatch.DrawStringSnapped(btn.Font, btn.Text, textPos, textColor);
+
+                    // --- DEBUG DRAWING ---
+                    if (global.ShowSplitMapGrid)
+                    {
+                        // Draw the full hitbox in yellow to verify seamlessness
+                        spriteBatch.DrawSnapped(pixel, rect, Color.Yellow * 0.2f);
+                        spriteBatch.DrawLineSnapped(new Vector2(rect.Left, rect.Top), new Vector2(rect.Right, rect.Top), Color.Yellow);
+                        spriteBatch.DrawLineSnapped(new Vector2(rect.Left, rect.Bottom), new Vector2(rect.Right, rect.Bottom), Color.Yellow);
+                        spriteBatch.DrawLineSnapped(new Vector2(rect.Left, rect.Top), new Vector2(rect.Left, rect.Bottom), Color.Yellow);
+                        spriteBatch.DrawLineSnapped(new Vector2(rect.Right, rect.Top), new Vector2(rect.Right, rect.Bottom), Color.Yellow);
+                    }
                 }
 
                 if (isLocked)

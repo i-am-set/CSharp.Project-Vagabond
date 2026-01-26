@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Battle.UI;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
@@ -194,7 +195,24 @@ namespace ProjectVagabond.Battle.UI
         {
             if (UIState == BattleUIState.Targeting)
             {
-                SubmitTarget(target);
+                // Validate that the clicked target is actually valid for the current move
+                var battleManager = ServiceLocator.Get<BattleManager>();
+                var actor = battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && c.BattleSlot == ActiveTargetingSlot);
+
+                if (actor != null && MoveForTargeting != null)
+                {
+                    var validTargets = TargetingHelper.GetValidTargets(actor, MoveForTargeting.Target, battleManager.AllCombatants);
+
+                    if (validTargets.Contains(target))
+                    {
+                        SubmitTarget(target);
+                    }
+                    else
+                    {
+                        // Invalid target clicked (e.g. clicking self for an attack)
+                        ServiceLocator.Get<HapticsManager>().TriggerShake(2f, 0.1f);
+                    }
+                }
             }
         }
 
@@ -321,6 +339,21 @@ namespace ProjectVagabond.Battle.UI
             {
                 _switchMenu.Draw(spriteBatch, font, gameTime);
             }
+
+            // --- DEBUG DRAWING ---
+            if (_global.ShowSplitMapGrid)
+            {
+                var pixel = ServiceLocator.Get<Texture2D>();
+
+                // Draw Slot 0 Area (Left) - Cyan
+                var area0 = BattleLayout.GetActionMenuArea(0);
+                spriteBatch.DrawSnapped(pixel, area0, Color.Cyan * 0.2f);
+                spriteBatch.DrawLineSnapped(new Vector2(area0.Right, area0.Top), new Vector2(area0.Right, area0.Bottom), Color.Cyan);
+
+                // Draw Slot 1 Area (Right) - Magenta
+                var area1 = BattleLayout.GetActionMenuArea(1);
+                spriteBatch.DrawSnapped(pixel, area1, Color.Magenta * 0.2f);
+            }
         }
 
         public void DrawFullscreenDialogs(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
@@ -340,29 +373,12 @@ namespace ProjectVagabond.Battle.UI
             string text = "CHOOSE A TARGET";
             Vector2 size = secondaryFont.MeasureString(text);
 
-            // Calculate position based on the active targeting slot
-            // Constants from ActionMenu: PANEL_WIDTH = 80, PANEL_Y = 139
-            // Left Slot (0): X = 10
-            // Right Slot (1): X = ScreenWidth - 80 - 10
-
-            float panelX;
-            if (ActiveTargetingSlot == 0)
-            {
-                panelX = 10;
-            }
-            else
-            {
-                panelX = Global.VIRTUAL_WIDTH - 80 - 10;
-            }
-
-            // Center text in the panel area
-            // Panel Width is 80.
-            float centerX = panelX + (80 / 2f);
-            float centerY = 139 + (40 / 2f); // Approx center of button area
+            // Use the new layout system to get the exact area for the active slot
+            var area = BattleLayout.GetActionMenuArea(ActiveTargetingSlot);
 
             Vector2 textPos = new Vector2(
-                centerX - (size.X / 2f),
-                centerY - (size.Y / 2f)
+                area.Center.X - (size.X / 2f),
+                area.Center.Y - (size.Y / 2f)
             );
 
             // Use DriftWave effect
