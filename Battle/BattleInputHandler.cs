@@ -16,7 +16,6 @@ namespace ProjectVagabond.Battle.UI
 {
     public class BattleInputHandler
     {
-        public event Action<MoveData, MoveEntry, BattleCombatant> OnMoveTargetSelected;
         public event Action OnBackRequested;
         private int _hoveredTargetIndex = -1;
         public int HoveredTargetIndex => _hoveredTargetIndex;
@@ -51,13 +50,11 @@ namespace ProjectVagabond.Battle.UI
                 OnBackRequested?.Invoke();
             }
 
-            // --- HOVER DETECTION (Always Active) ---
-            // We calculate the hovered target every frame so that tooltips (like Stat Changes)
-            // can work even in the default Action Selection menu.
+            // --- HOVER DETECTION ---
             var currentTargets = renderer.GetCurrentTargets();
             _hoveredTargetIndex = -1;
 
-            // Check UI Buttons First for HOVER mapping (e.g. Targeting Buttons)
+            // Check UI Buttons First
             var uiHoveredCombatant = uiManager.HoveredCombatantFromUI;
             if (uiHoveredCombatant != null)
             {
@@ -83,13 +80,9 @@ namespace ProjectVagabond.Battle.UI
                 }
             }
 
-            // Inform UI Manager about Sprite Hover
             if (_hoveredTargetIndex != -1)
             {
                 uiManager.CombatantHoveredViaSprite = currentTargets[_hoveredTargetIndex].Combatant;
-
-                // --- CURSOR LOGIC ---
-                // If we are in a targeting mode, show the clickable cursor when hovering a sprite
                 if (uiManager.UIState == BattleUIState.Targeting)
                 {
                     ServiceLocator.Get<CursorManager>().SetState(CursorState.HoverClickable);
@@ -100,7 +93,7 @@ namespace ProjectVagabond.Battle.UI
                 uiManager.CombatantHoveredViaSprite = null;
             }
 
-            // --- CLICK HANDLING (State Dependent) ---
+            // --- CLICK HANDLING ---
             if (uiManager.UIState == BattleUIState.Targeting)
             {
                 // Right Click to Go Back
@@ -109,29 +102,16 @@ namespace ProjectVagabond.Battle.UI
                     OnBackRequested?.Invoke();
                 }
 
-                // Handle Click on Sprites (UI Buttons handle their own clicks in BattleUIManager)
+                // Handle Click on Sprites
                 if (UIInputManager.CanProcessMouseClick() && currentMouseState.LeftButton == ButtonState.Released && _previousMouseState.LeftButton == ButtonState.Pressed)
                 {
-                    // Only process sprite clicks if we aren't hovering a UI button
                     if (_hoveredTargetIndex != -1 && uiHoveredCombatant == null)
                     {
                         var selectedTarget = currentTargets[_hoveredTargetIndex].Combatant;
-                        var battleManager = ServiceLocator.Get<BattleManager>();
-                        var actor = battleManager.CurrentActingCombatant;
 
-                        if (uiManager.UIState == BattleUIState.Targeting)
-                        {
-                            var move = uiManager.MoveForTargeting;
-                            if (move != null && actor != null)
-                            {
-                                var validTargets = TargetingHelper.GetValidTargets(actor, move.Target, battleManager.AllCombatants);
-                                if (validTargets.Contains(selectedTarget))
-                                {
-                                    OnMoveTargetSelected?.Invoke(move, uiManager.SpellForTargeting, selectedTarget);
-                                    UIInputManager.ConsumeMouseClick();
-                                }
-                            }
-                        }
+                        // Route click to UI Manager
+                        uiManager.HandleSpriteClick(selectedTarget);
+                        UIInputManager.ConsumeMouseClick();
                     }
                 }
             }

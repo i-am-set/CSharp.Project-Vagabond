@@ -336,7 +336,7 @@ namespace ProjectVagabond.Battle.UI
 
             DrawHUD(spriteBatch, animationManager, gameTime, uiManager, currentActor);
 
-            DrawUITitle(spriteBatch, gameTime, uiManager.SubMenuState);
+            DrawUITitle(spriteBatch, gameTime);
 
             if (_statTooltipAlpha > 0.01f && _statTooltipCombatantID != null)
             {
@@ -538,9 +538,16 @@ namespace ProjectVagabond.Battle.UI
             if (uiManager.UIState == BattleUIState.Targeting)
             {
                 type = uiManager.TargetTypeForSelection;
-                if (type.HasValue && currentActor != null)
+                // In parallel mode, we need the actor for the active slot.
+                // BattleUIManager handles this logic internally for input, but here we need it for rendering highlights.
+                // We can try to infer it from ActiveTargetingSlot if available.
+                var battleManager = ServiceLocator.Get<BattleManager>();
+                var activeActor = battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && c.BattleSlot == uiManager.ActiveTargetingSlot);
+                var actor = activeActor ?? currentActor;
+
+                if (type.HasValue && actor != null)
                 {
-                    var valid = TargetingHelper.GetValidTargets(currentActor, type.Value, allCombatants);
+                    var valid = TargetingHelper.GetValidTargets(actor, type.Value, allCombatants);
                     foreach (var t in valid) set.Add(t);
                 }
             }
@@ -621,7 +628,8 @@ namespace ProjectVagabond.Battle.UI
             bool eligibleForCentering = (visualEnemies.Count == 1 || isVictoryState) && !benchedEnemies.Any();
 
             var battleManager = ServiceLocator.Get<BattleManager>();
-            bool isActionSelection = battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection_Slot1;
+            // Updated to check for the new unified phase
+            bool isActionSelection = battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection;
 
             if (!eligibleForCentering)
             {
@@ -1390,17 +1398,9 @@ namespace ProjectVagabond.Battle.UI
             c.ManaBarDisappearTimer = 0f;
         }
 
-        private void DrawUITitle(SpriteBatch spriteBatch, GameTime gameTime, BattleSubMenuState subMenuState)
+        private void DrawUITitle(SpriteBatch spriteBatch, GameTime gameTime)
         {
-            string title = "";
-            if (!string.IsNullOrEmpty(title))
-            {
-                var font = ServiceLocator.Get<Core>().SecondaryFont;
-                var size = font.MeasureString(title);
-                var pos = new Vector2((Global.VIRTUAL_WIDTH - size.Width) / 2, BattleLayout.DIVIDER_Y + 3);
-
-                TextAnimator.DrawTextWithEffect(spriteBatch, font, title, pos, _global.Palette_Shadow, TextEffectType.Bounce, (float)gameTime.TotalGameTime.TotalSeconds);
-            }
+            // Title drawing removed as per new design
         }
 
         private void UpdateEnemyAnimations(float dt, IEnumerable<BattleCombatant> combatants)

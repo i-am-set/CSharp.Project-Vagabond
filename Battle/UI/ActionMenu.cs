@@ -17,1501 +17,346 @@ namespace ProjectVagabond.Battle.UI
 {
     public class ActionMenu
     {
-        public event Action<MoveData, MoveEntry, BattleCombatant>? OnMoveSelected;
-        public event Action? OnSwitchMenuRequested;
-        public event Action? OnMovesMenuOpened;
-        public event Action? OnMainMenuOpened;
+        // Events
+        public event Action<int, QueuedAction>? OnActionSelected;
+        public event Action<int>? OnSwitchMenuRequested;
+        public event Action<int>? OnCancelRequested; // New: Request to unlock a slot
         public event Action? OnFleeRequested;
-        public event Action? OnSlot2BackRequested;
 
-        public event Action<BattleCombatant>? OnStrikeRequested;
-
+        // State
         private bool _isVisible;
         public bool IsVisible => _isVisible;
 
-        private BattleCombatant? _player;
-        private List<BattleCombatant>? _allCombatants;
-        private List<BattleCombatant>? _allTargets;
-        private List<Button> _actionButtons = new List<Button>();
-        private readonly MoveButton?[] _moveButtons = new MoveButton?[4];
-        private List<Button> _secondaryActionButtons = new List<Button>();
-        private Button _backButton;
-        private Button _slot2BackButton;
-        private readonly Global _global;
+        private List<CombatantPanel> _panels = new List<CombatantPanel>();
 
-        public enum MenuState { Main, Moves, Targeting, Tooltip }
-        private MenuState _currentState;
-        public MenuState CurrentMenuState => _currentState;
-        private MoveData? _selectedMove;
-        private MoveEntry? _selectedSpellbookEntry;
-        public MoveData? SelectedMove => _selectedMove;
-        public MoveEntry? SelectedSpellbookEntry => _selectedSpellbookEntry;
-        private MoveData? _tooltipMove;
-        private bool _useSimpleTooltip;
+        // Tooltip / Hover State
         public MoveData? HoveredMove { get; private set; }
-        private MoveEntry? _hoveredSpellbookEntry;
-        public Button? HoveredButton { get; private set; }
+        public int HoveredSlotIndex { get; private set; } = -1;
+        public MoveEntry? SelectedSpellbookEntry { get; private set; }
 
-        private bool _buttonsInitialized = false;
-        private MouseState _previousMouseState;
+        // Layout
+        private const int PANEL_WIDTH = 80;
+        private const int PANEL_Y = 130;
 
-        private bool _isTooltipScrollingInitialized = false;
-        private float _tooltipScrollPosition = 0f;
-        private float _tooltipScrollWaitTimer = 0f;
-        private float _tooltipMaxScrollToShowEnd = 0f;
-        private enum TooltipScrollState { PausedAtStart, ScrollingToEnd, PausedAtEnd }
-        private TooltipScrollState _tooltipScrollState = TooltipScrollState.PausedAtStart;
-
-        private bool _isHoverInfoScrollingInitialized = false;
-        private float _hoverInfoScrollPosition = 0f;
-        private float _hoverInfoScrollWaitTimer = 0f;
-        private float _hoverInfoMaxScrollToShowEnd = 0f;
-        private enum HoverInfoScrollState { PausedAtStart, ScrollingToEnd, PausedAtEnd }
-        private HoverInfoScrollState _hoverInfoScrollState = HoverInfoScrollState.PausedAtStart;
-        private MoveData? _lastHoveredMoveForScrolling;
-
-        private const float SCROLL_SPEED = 25f;
-        private const float SCROLL_PAUSE_DURATION = 1.5f;
-        private const int EXTRA_SCROLL_SPACES = 1;
-        private static readonly RasterizerState _clipRasterizerState = new RasterizerState { ScissorTestEnable = true };
-
-        private readonly Queue<float> _clickTimestamps = new Queue<float>();
-        private bool _isSpamming = false;
-        private float _spamCooldownTimer = 0f;
-        private const int SPAM_CLICKS = 3;
-        private const float SPAM_WINDOW_SECONDS = 1f;
-        private const float SPAM_COOLDOWN_SECONDS = 0.25f;
-
-        public float SharedSwayTimer { get; private set; } = 0f;
-        private bool _wasAnyActionHoveredLastFrame = false;
-
-        private MoveButton? _hoveredMoveButton;
-        private bool _shouldAttuneButtonPulse = false;
-
-        private const int MOVE_BUTTON_WIDTH = 116;
-        private const int MOVE_BUTTON_HEIGHT = 13;
-
-        private const int MOVE_ROW_SPACING = 0;
-        private const int MOVE_COL_SPACING = 0;
-
-        private const int MOVE_ROWS = 2;
-        private const int MOVE_BLOCK_HEIGHT = MOVE_ROWS * (MOVE_BUTTON_HEIGHT + MOVE_ROW_SPACING) - MOVE_ROW_SPACING;
-
-        private Rectangle _tooltipBounds;
-
-        private const int SPACE_WIDTH = 5;
-
-        public ActionMenu()
-        {
-            _global = ServiceLocator.Get<Global>();
-            _backButton = new Button(Rectangle.Empty, "BACK", enableHoverSway: false) { CustomDefaultTextColor = _global.DullTextColor };
-            _backButton.OnClick += () =>
-            {
-                if (_currentState == MenuState.Targeting || _currentState == MenuState.Tooltip)
-                {
-                    SetState(MenuState.Moves);
-                }
-                else if (_currentState == MenuState.Moves)
-                {
-                    SetState(MenuState.Main);
-                }
-            };
-            _previousMouseState = Mouse.GetState();
-        }
-
-        private void InitializeButtons()
-        {
-            if (_buttonsInitialized) return;
-
-            var spriteManager = ServiceLocator.Get<SpriteManager>();
-            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-            var defaultFont = ServiceLocator.Get<BitmapFont>();
-            var actionIconsSheet = spriteManager.ActionIconsSpriteSheet;
-            var actionIconRects = spriteManager.ActionIconSourceRects;
-
-            var actButton = new Button(Rectangle.Empty, "ACT", function: "Act", font: defaultFont, enableHoverSway: false)
-            {
-                CustomHoverTextColor = _global.ButtonHoverColor,
-                TextRenderOffset = new Vector2(0, 1),
-                EnableTextWave = true,
-                WaveEffectType = TextEffectType.DriftWave
-            };
-
-            var switchButton = new Button(Rectangle.Empty, "SWITCH", function: "Switch", font: defaultFont, enableHoverSway: false)
-            {
-                CustomHoverTextColor = _global.ButtonHoverColor,
-                TextRenderOffset = new Vector2(0, 1),
-                EnableTextWave = true,
-                WaveEffectType = TextEffectType.DriftWave
-            };
-
-            actButton.OnClick += () =>
-            {
-                if (_isSpamming) { actButton.TriggerShake(); EventBus.Publish(new GameEvents.AlertPublished { Message = "Spam Prevention" }); return; }
-                SetState(MenuState.Moves);
-            };
-
-            switchButton.OnClick += () =>
-            {
-                if (_isSpamming) { switchButton.TriggerShake(); EventBus.Publish(new GameEvents.AlertPublished { Message = "Spam Prevention" }); return; }
-                OnSwitchMenuRequested?.Invoke();
-            };
-
-            _actionButtons.Add(actButton);
-            _actionButtons.Add(switchButton);
-
-            var strikeButton = new TextOverImageButton(Rectangle.Empty, "STRIKE", null, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[0], enableHoverSway: false, customHoverTextColor: _global.GameTextColor, alignLeft: true)
-            {
-                HasRightClickHint = false,
-                HasMiddleClickHint = true,
-                TintBackgroundOnHover = false,
-                DrawBorderOnHover = false,
-                HoverBorderColor = _global.ButtonHoverColor,
-                EnableTextWave = true,
-                WaveEffectType = TextEffectType.LeftAlignedSmallWave,
-                TintIconOnHover = false,
-                IconColorMatchesText = true,
-                ContentXOffset = 3f,
-                CustomDefaultTextColor = _global.GameTextColor
-            };
-            strikeButton.OnClick += () =>
-            {
-                OnStrikeRequested?.Invoke(_player);
-            };
-            _secondaryActionButtons.Add(strikeButton);
-
-            var stallButton = new TextOverImageButton(Rectangle.Empty, "STALL", null, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[2], enableHoverSway: false, customHoverTextColor: _global.GameTextColor, alignLeft: true)
-            {
-                HasRightClickHint = false,
-                HasMiddleClickHint = true,
-                TintBackgroundOnHover = false,
-                DrawBorderOnHover = false,
-                HoverBorderColor = _global.ButtonHoverColor,
-                EnableTextWave = true,
-                WaveEffectType = TextEffectType.LeftAlignedSmallWave,
-                TintIconOnHover = false,
-                IconColorMatchesText = true,
-                ContentXOffset = 3f,
-                CustomDefaultTextColor = _global.GameTextColor
-            };
-            stallButton.OnClick += () =>
-            {
-                if (BattleDataCache.Moves.TryGetValue("6", out var stallMove))
-                {
-                    SelectMove(stallMove, null);
-                }
-            };
-            _secondaryActionButtons.Add(stallButton);
-
-            _backButton.Font = secondaryFont;
-            _backButton.EnableTextWave = true;
-            _backButton.WaveEffectType = TextEffectType.Drift;
-
-            _slot2BackButton = new Button(Rectangle.Empty, "BACK", enableHoverSway: false) { CustomDefaultTextColor = _global.DullTextColor };
-            _slot2BackButton.OnClick += () => OnSlot2BackRequested?.Invoke();
-            _slot2BackButton.Font = secondaryFont;
-            _slot2BackButton.EnableTextWave = true;
-            _slot2BackButton.WaveEffectType = TextEffectType.Drift;
-
-            _buttonsInitialized = true;
-        }
-
-        public void GoBack()
-        {
-            if (!_isVisible) return;
-
-            if (_currentState == MenuState.Tooltip || _currentState == MenuState.Moves || _currentState == MenuState.Targeting)
-            {
-                _backButton.TriggerClick();
-            }
-        }
+        public ActionMenu() { }
 
         public void Reset()
         {
-            SetState(MenuState.Main);
-            ResetAnimationState();
-            _selectedMove = null;
-            _selectedSpellbookEntry = null;
-            _tooltipMove = null;
-            _clickTimestamps.Clear();
-            _isSpamming = false;
-        }
-
-        public void ResetAnimationState()
-        {
-            foreach (var button in _actionButtons)
-            {
-                button.ResetAnimationState();
-            }
-            foreach (var button in _moveButtons)
-            {
-                button?.ResetAnimationState();
-            }
-            foreach (var button in _secondaryActionButtons)
-            {
-                button.ResetAnimationState();
-            }
-            _backButton.ResetAnimationState();
-            _slot2BackButton?.ResetAnimationState();
-        }
-
-        public void Show(BattleCombatant player, List<BattleCombatant> allCombatants)
-        {
-            _isVisible = true;
-            _player = player;
-            _allCombatants = allCombatants;
-            _allTargets = allCombatants.Where(c => !c.IsPlayerControlled && !c.IsDefeated).ToList();
-
-            InitializeButtons();
-            UpdateSwitchButtonState();
-
-            SetState(MenuState.Main);
-            UpdateLayout();
-        }
-
-        public void Hide()
-        {
             _isVisible = false;
-        }
-
-        public void SetState(MenuState newState)
-        {
-            var oldState = _currentState;
-            _currentState = newState;
+            _panels.Clear();
             HoveredMove = null;
-
-            _previousMouseState = Mouse.GetState();
-
-            if (oldState == MenuState.Moves && newState != MenuState.Moves)
-            {
-                _isHoverInfoScrollingInitialized = false;
-            }
-
-            if (newState == MenuState.Main)
-            {
-                OnMainMenuOpened?.Invoke();
-                foreach (var button in _actionButtons)
-                {
-                    button.ResetAnimationState();
-                }
-            }
-            else if (newState == MenuState.Moves)
-            {
-                OnMovesMenuOpened?.Invoke();
-                PopulateMoveButtons();
-            }
-            else if (newState == MenuState.Targeting)
-            {
-            }
-            else if (newState == MenuState.Tooltip)
-            {
-                _isTooltipScrollingInitialized = false;
-                _tooltipScrollPosition = 0f;
-                _tooltipScrollState = TooltipScrollState.PausedAtStart;
-                _tooltipScrollWaitTimer = SCROLL_PAUSE_DURATION;
-            }
+            HoveredSlotIndex = -1;
         }
 
-        private void PopulateMoveButtons()
+        public void Show(BattleCombatant anyPlayer, List<BattleCombatant> allCombatants)
         {
-            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-            var spriteManager = ServiceLocator.Get<SpriteManager>();
+            _panels.Clear();
+            var party = allCombatants.Where(c => c.IsPlayerControlled && c.IsActiveOnField).OrderBy(c => c.BattleSlot).ToList();
 
-            var spells = _player.Spells;
-            if (spells == null) return;
-
-            for (int i = 0; i < spells.Length; i++)
+            foreach (var member in party)
             {
-                var entry = spells[i];
-                if (entry == null || !BattleDataCache.Moves.TryGetValue(entry.MoveID, out var move))
-                {
-                    _moveButtons[i] = null;
-                    continue;
-                }
-
-                int effectivePower = DamageCalculator.GetEffectiveMovePower(_player, move);
-                var moveButton = CreateMoveButton(move, entry, effectivePower, secondaryFont, null, true);
-                _moveButtons[i] = moveButton;
-                moveButton.ShowInstantly();
+                if (member.IsDefeated) continue;
+                var panel = new CombatantPanel(member, allCombatants);
+                panel.OnActionSelected += (action) => OnActionSelected?.Invoke(member.BattleSlot, action);
+                panel.OnSwitchRequested += () => OnSwitchMenuRequested?.Invoke(member.BattleSlot);
+                panel.OnCancelRequested += () => OnCancelRequested?.Invoke(member.BattleSlot);
+                _panels.Add(panel);
             }
+
+            UpdateLayout();
+            _isVisible = true;
         }
 
-        private MoveButton CreateMoveButton(MoveData move, MoveEntry entry, int displayPower, BitmapFont font, Texture2D? background, bool startVisible)
+        public void Hide() => _isVisible = false;
+
+        public void GoBack()
         {
-            var spriteManager = ServiceLocator.Get<SpriteManager>();
-
-            // Use Action Icons based on ImpactType instead of Element Icons
-            int iconIndex = 0; // Default to Physical
-            if (move.ImpactType == ImpactType.Magical) iconIndex = 1;
-            else if (move.ImpactType == ImpactType.Status) iconIndex = 2;
-
-            Rectangle? sourceRect = null;
-            if (spriteManager.ActionIconSourceRects != null && iconIndex < spriteManager.ActionIconSourceRects.Length)
-            {
-                sourceRect = spriteManager.ActionIconSourceRects[iconIndex];
-            }
-
-            var moveButton = new MoveButton(move, entry, displayPower, font, background, spriteManager.ActionIconsSpriteSheet, sourceRect, startVisible);
-            moveButton.OnClick += () => HandleMoveButtonClick(move, entry, moveButton);
-            return moveButton;
-        }
-
-        private void HandleMoveButtonClick(MoveData move, MoveEntry? entry, MoveButton button)
-        {
-            var manaDump = move.Abilities.OfType<ManaDumpAbility>().FirstOrDefault();
-            bool canAfford;
-            if (manaDump != null)
-            {
-                canAfford = _player != null && _player.Stats.CurrentMana > 0;
-            }
-            else
-            {
-                canAfford = _player != null && _player.Stats.CurrentMana >= move.ManaCost;
-            }
-
-            if (!canAfford)
-            {
-                EventBus.Publish(new GameEvents.AlertPublished { Message = "NOT ENOUGH MANA" });
-                return;
-            }
-
-            SelectMove(move, entry);
-        }
-
-        public void SelectMoveExternal(MoveData move, MoveEntry? entry)
-        {
-            SelectMove(move, entry);
-        }
-
-        private void SelectMove(MoveData move, MoveEntry? entry)
-        {
-            _selectedMove = move;
-            _selectedSpellbookEntry = entry;
-
-            if (move.Target == TargetType.None)
-            {
-                OnMoveSelected?.Invoke(move, entry, null);
-            }
-            else
-            {
-                SetState(MenuState.Targeting);
-            }
-        }
-
-        private void UpdateTooltipScrolling(GameTime gameTime)
-        {
-            if (!_isTooltipScrollingInitialized) return;
-
-            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
-
-            switch (_tooltipScrollState)
-            {
-                case TooltipScrollState.PausedAtStart:
-                    _tooltipScrollWaitTimer -= dt;
-                    if (_tooltipScrollWaitTimer <= 0)
-                    {
-                        _tooltipScrollState = TooltipScrollState.ScrollingToEnd;
-                    }
-                    break;
-
-                case TooltipScrollState.ScrollingToEnd:
-                    _tooltipScrollPosition += SCROLL_SPEED * dt;
-                    if (_tooltipScrollPosition >= _tooltipMaxScrollToShowEnd)
-                    {
-                        _tooltipScrollPosition = _tooltipMaxScrollToShowEnd;
-                        _tooltipScrollState = TooltipScrollState.PausedAtEnd;
-                        _tooltipScrollWaitTimer = SCROLL_PAUSE_DURATION;
-                    }
-                    break;
-
-                case TooltipScrollState.PausedAtEnd:
-                    _tooltipScrollWaitTimer -= dt;
-                    if (_tooltipScrollWaitTimer <= 0)
-                    {
-                        _tooltipScrollPosition = 0;
-                        _tooltipScrollState = TooltipScrollState.PausedAtStart;
-                        _tooltipScrollWaitTimer = SCROLL_PAUSE_DURATION;
-                    }
-                    break;
-            }
-        }
-
-        private void UpdateHoverInfoScrolling(GameTime gameTime)
-        {
-            if (!_isHoverInfoScrollingInitialized) return;
-
-            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
-
-            switch (_hoverInfoScrollState)
-            {
-                case HoverInfoScrollState.PausedAtStart:
-                    _hoverInfoScrollWaitTimer -= dt;
-                    if (_hoverInfoScrollWaitTimer <= 0)
-                    {
-                        _hoverInfoScrollState = HoverInfoScrollState.ScrollingToEnd;
-                    }
-                    break;
-
-                case HoverInfoScrollState.ScrollingToEnd:
-                    _hoverInfoScrollPosition += SCROLL_SPEED * dt;
-                    if (_hoverInfoScrollPosition >= _hoverInfoMaxScrollToShowEnd)
-                    {
-                        _hoverInfoScrollPosition = _hoverInfoMaxScrollToShowEnd;
-                        _hoverInfoScrollState = HoverInfoScrollState.PausedAtEnd;
-                        _hoverInfoScrollWaitTimer = SCROLL_PAUSE_DURATION;
-                    }
-                    break;
-
-                case HoverInfoScrollState.PausedAtEnd:
-                    _hoverInfoScrollWaitTimer -= dt;
-                    if (_hoverInfoScrollWaitTimer <= 0)
-                    {
-                        _hoverInfoScrollPosition = 0;
-                        _hoverInfoScrollState = HoverInfoScrollState.PausedAtStart;
-                        _hoverInfoScrollWaitTimer = SCROLL_PAUSE_DURATION;
-                    }
-                    break;
-            }
-        }
-
-        private void UpdateSpamDetection(GameTime gameTime, MouseState currentMouseState)
-        {
-            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
-            float now = (float)gameTime.TotalGameTime.TotalSeconds;
-
-            if (_spamCooldownTimer > 0)
-            {
-                _spamCooldownTimer -= dt;
-                if (_spamCooldownTimer <= 0)
-                {
-                    _isSpamming = false;
-                    _clickTimestamps.Clear();
-                }
-            }
-
-            if (_currentState == MenuState.Main && currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released)
-            {
-                _clickTimestamps.Enqueue(now);
-                _spamCooldownTimer = SPAM_COOLDOWN_SECONDS;
-
-                while (_clickTimestamps.Count > 0 && now - _clickTimestamps.Peek() > SPAM_WINDOW_SECONDS)
-                {
-                    _clickTimestamps.Dequeue();
-                }
-
-                if (_clickTimestamps.Count >= SPAM_CLICKS)
-                {
-                    _isSpamming = true;
-                }
-            }
+            // Not used in parallel mode usually
         }
 
         private void UpdateLayout()
         {
-            switch (_currentState)
+            int screenWidth = Global.VIRTUAL_WIDTH;
+            foreach (var panel in _panels)
             {
-                case MenuState.Main:
-                    {
-                        const int buttonWidth = 128;
-                        const int buttonHeight = 13;
-                        const int buttonSpacing = 0;
-
-                        int totalHeight = (buttonHeight * _actionButtons.Count) + (buttonSpacing * (_actionButtons.Count - 1));
-                        int availableHeight = Global.VIRTUAL_HEIGHT - 123;
-
-                        int startY = 123 + (availableHeight - totalHeight) / 2 - 3;
-
-                        int xOffset = -80;
-                        if (_player != null && _player.BattleSlot == 1)
-                        {
-                            xOffset = 80;
-                        }
-
-                        int startX = (Global.VIRTUAL_WIDTH - buttonWidth) / 2 + xOffset;
-
-                        int currentY = startY;
-                        foreach (var button in _actionButtons)
-                        {
-                            int specificYOffset = 9;
-
-                            button.Bounds = new Rectangle(startX, currentY + specificYOffset, buttonWidth, buttonHeight);
-                            currentY += buttonHeight + buttonSpacing;
-                        }
-                    }
-                    break;
-                case MenuState.Moves:
-                    const int secButtonWidth = 60;
-                    const int secButtonHeight = 13;
-                    const int secRowSpacing = 0;
-                    const int secRows = 2;
-                    const int secBlockHeight = secRows * (secButtonHeight + secRowSpacing) - secRowSpacing;
-
-                    const int gap = 3;
-
-                    int totalWidth = secButtonWidth + gap + (MOVE_BUTTON_WIDTH * 2) + MOVE_COL_SPACING;
-                    int startXMoves = (Global.VIRTUAL_WIDTH - totalWidth) / 2;
-
-                    int secGridStartX = startXMoves;
-                    int moveGridStartY = 144;
-                    int secGridStartY = moveGridStartY + (MOVE_BLOCK_HEIGHT / 2) - (secBlockHeight / 2);
-
-                    for (int i = 0; i < _secondaryActionButtons.Count; i++)
-                    {
-                        var button = _secondaryActionButtons[i];
-                        int yPos = secGridStartY + i * (secButtonHeight + secRowSpacing);
-
-                        button.Bounds = new Rectangle(secGridStartX - 3, yPos, secButtonWidth + 6, secButtonHeight);
-                    }
-
-                    int moveGridStartX = secGridStartX + secButtonWidth + gap;
-
-                    for (int i = 0; i < _moveButtons.Length; i++)
-                    {
-                        var button = _moveButtons[i];
-                        if (button == null) continue;
-
-                        int col = i % 2;
-                        int row = i / 2;
-
-                        int xPos = moveGridStartX + (col * (MOVE_BUTTON_WIDTH + MOVE_COL_SPACING));
-                        int yPos = moveGridStartY + (row * (MOVE_BUTTON_HEIGHT + MOVE_ROW_SPACING));
-
-                        button.Bounds = new Rectangle(xPos, yPos, MOVE_BUTTON_WIDTH, MOVE_BUTTON_HEIGHT);
-                    }
-                    break;
+                int x = (panel.SlotIndex == 0) ? 10 : (screenWidth - PANEL_WIDTH - 10);
+                panel.SetPosition(new Vector2(x, PANEL_Y));
             }
         }
 
-        private void UpdateSwitchButtonState()
+        public void Update(MouseState mouse, GameTime gameTime, bool isInputBlocked)
         {
-            if (_allCombatants != null && _actionButtons.Count > 1)
+            if (!_isVisible) return;
+
+            HoveredMove = null;
+            HoveredSlotIndex = -1;
+
+            var battleManager = ServiceLocator.Get<BattleManager>();
+
+            foreach (var panel in _panels)
             {
-                bool hasBench = _allCombatants.Any(c => c.IsPlayerControlled && !c.IsDefeated && c.BattleSlot >= 2);
-                _actionButtons[1].IsEnabled = hasBench;
+                bool isLocked = battleManager.IsActionPending(panel.SlotIndex);
+                panel.Update(mouse, gameTime, isInputBlocked, isLocked);
+
+                if (panel.HoveredMove != null)
+                {
+                    HoveredMove = panel.HoveredMove;
+                    HoveredSlotIndex = panel.SlotIndex;
+                }
             }
-        }
-
-        public void Update(MouseState currentMouseState, GameTime gameTime, bool isInputBlocked = false)
-        {
-            InitializeButtons();
-            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
-
-            if (!_isVisible)
-            {
-                _previousMouseState = currentMouseState;
-                return;
-            }
-
-            MouseState effectiveMouseState = isInputBlocked
-                ? new MouseState(-10000, -10000, currentMouseState.ScrollWheelValue, ButtonState.Released, ButtonState.Released, ButtonState.Released, ButtonState.Released, ButtonState.Released)
-                : currentMouseState;
-
-            UpdateLayout();
-            UpdateSpamDetection(gameTime, effectiveMouseState);
-
-            HoveredButton = null;
-
-            string lockedMoveID = null;
-            if (_player != null)
-            {
-                var ctx = new CombatTriggerContext { Actor = _player };
-                _player.NotifyAbilities(CombatEventType.QueryMoveLock, ctx);
-                lockedMoveID = ctx.LockedMoveID;
-            }
-
-            switch (_currentState)
-            {
-                case MenuState.Main:
-                    bool isAnyActionHovered = false;
-
-                    UpdateSwitchButtonState();
-
-                    foreach (var button in _actionButtons)
-                    {
-                        button.Update(effectiveMouseState);
-                        if (button.IsHovered)
-                        {
-                            isAnyActionHovered = true;
-                            HoveredButton = button;
-                        }
-                    }
-
-                    if (_player != null && _player.BattleSlot == 1)
-                    {
-                        _slot2BackButton.Update(effectiveMouseState);
-                        if (_slot2BackButton.IsHovered) HoveredButton = _slot2BackButton;
-
-                        if (effectiveMouseState.RightButton == ButtonState.Pressed && _previousMouseState.RightButton == ButtonState.Released)
-                        {
-                            OnSlot2BackRequested?.Invoke();
-                        }
-                    }
-
-                    if (isAnyActionHovered)
-                    {
-                        SharedSwayTimer += dt;
-                    }
-                    else if (_wasAnyActionHoveredLastFrame)
-                    {
-                        SharedSwayTimer = 0f;
-                    }
-                    _wasAnyActionHoveredLastFrame = isAnyActionHovered;
-                    break;
-                case MenuState.Moves:
-                    HoveredMove = null;
-                    _hoveredSpellbookEntry = null;
-                    _hoveredMoveButton = null;
-                    _shouldAttuneButtonPulse = false;
-
-                    bool middleClickHeldOnAButton = false;
-                    MoveData? moveForTooltip = null;
-                    bool simpleTooltip = false;
-
-                    bool isSilenced = _player != null && _player.HasStatusEffect(StatusEffectType.Silence);
-
-                    foreach (var button in _moveButtons)
-                    {
-                        if (button == null) continue;
-
-                        if (lockedMoveID != null && button.Move.MoveID != lockedMoveID)
-                        {
-                            button.IsEnabled = false;
-                        }
-                        else if (isSilenced && button.Move.MoveType == MoveType.Spell)
-                        {
-                            button.IsEnabled = false;
-                        }
-                        else
-                        {
-                            button.IsEnabled = true;
-                        }
-
-                        button.Update(effectiveMouseState);
-                        if (button.IsHovered)
-                        {
-                            HoveredMove = button.Move;
-                            _hoveredSpellbookEntry = button.Entry;
-                            HoveredButton = button;
-                            _hoveredMoveButton = button;
-
-                            if (_player != null && _player.Stats.CurrentMana < button.Move.ManaCost)
-                            {
-                                _shouldAttuneButtonPulse = true;
-                            }
-
-                            if (effectiveMouseState.MiddleButton == ButtonState.Pressed)
-                            {
-                                middleClickHeldOnAButton = true;
-                                moveForTooltip = button.Move;
-                                simpleTooltip = false;
-                            }
-                        }
-                    }
-
-                    foreach (var button in _secondaryActionButtons)
-                    {
-                        string? moveId = button.Text switch
-                        {
-                            "STRIKE" => _player?.DefaultStrikeMoveID,
-                            "ATTUNE" => "7",
-                            "STALL" => "6",
-                            _ => null
-                        };
-
-                        MoveData? moveData = null;
-                        if (button.Text == "STRIKE" && _player != null)
-                        {
-                            moveData = _player.StrikeMove;
-                        }
-                        else if (!string.IsNullOrEmpty(moveId) && BattleDataCache.Moves.TryGetValue(moveId, out var cachedMove))
-                        {
-                            moveData = cachedMove;
-                        }
-
-                        if (moveData != null)
-                        {
-                            if (lockedMoveID != null && moveData.MoveID != lockedMoveID)
-                            {
-                                button.IsEnabled = false;
-                            }
-                            else if (isSilenced && moveData.MoveType == MoveType.Spell)
-                            {
-                                button.IsEnabled = false;
-                            }
-                            else
-                            {
-                                button.IsEnabled = true;
-                            }
-                        }
-
-                        button.Update(effectiveMouseState);
-                        if (button.IsHovered)
-                        {
-                            HoveredButton = button;
-
-                            if (moveData != null)
-                            {
-                                HoveredMove = moveData;
-                                _hoveredSpellbookEntry = null;
-
-                                if (effectiveMouseState.MiddleButton == ButtonState.Pressed)
-                                {
-                                    middleClickHeldOnAButton = true;
-                                    moveForTooltip = moveData;
-                                    simpleTooltip = false;
-                                }
-                            }
-                        }
-                    }
-
-                    if (middleClickHeldOnAButton)
-                    {
-                        _tooltipMove = moveForTooltip;
-                        _useSimpleTooltip = simpleTooltip;
-                        SetState(MenuState.Tooltip);
-                    }
-
-                    if (effectiveMouseState.RightButton == ButtonState.Pressed && _previousMouseState.RightButton == ButtonState.Released)
-                    {
-                        GoBack();
-                    }
-
-                    if (HoveredMove != _lastHoveredMoveForScrolling)
-                    {
-                        _isHoverInfoScrollingInitialized = false;
-                        _lastHoveredMoveForScrolling = HoveredMove;
-                    }
-
-                    UpdateHoverInfoScrolling(gameTime);
-
-                    _backButton.Update(effectiveMouseState);
-                    if (_backButton.IsHovered) HoveredButton = _backButton;
-                    break;
-                case MenuState.Targeting:
-                    _backButton.Update(effectiveMouseState);
-                    if (_backButton.IsHovered) HoveredButton = _backButton;
-                    break;
-                case MenuState.Tooltip:
-                    if (effectiveMouseState.MiddleButton == ButtonState.Released)
-                    {
-                        SetState(MenuState.Moves);
-                    }
-                    UpdateTooltipScrolling(gameTime);
-                    _backButton.Update(effectiveMouseState);
-                    if (_backButton.IsHovered) HoveredButton = _backButton;
-                    break;
-            }
-
-            _previousMouseState = currentMouseState;
         }
 
         public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform, Vector2 offset)
         {
-            InitializeButtons();
-
-            var spriteManager = ServiceLocator.Get<SpriteManager>();
-            var pixel = ServiceLocator.Get<Texture2D>();
-            var bgColor = _global.Palette_Black;
-
-            const int dividerY = 140;
-
-            if (!_isVisible)
+            if (!_isVisible) return;
+            foreach (var panel in _panels)
             {
-                spriteBatch.DrawSnapped(spriteManager.BattleBorderCombat, offset, Color.White);
-                return;
-            }
-
-            if (_currentState == MenuState.Main)
-            {
-                var border = (_player != null && _player.BattleSlot == 1) ? spriteManager.BattleBorderMain2 : spriteManager.BattleBorderMain;
-                spriteBatch.DrawSnapped(border, offset, Color.White);
-            }
-            else if (_currentState == MenuState.Targeting)
-            {
-                spriteBatch.DrawSnapped(spriteManager.BattleBorderTarget, offset, Color.White);
-            }
-            else if (_currentState == MenuState.Moves || _currentState == MenuState.Tooltip)
-            {
-                spriteBatch.DrawSnapped(spriteManager.BattleBorderAction, offset, Color.White);
-            }
-
-            switch (_currentState)
-            {
-                case MenuState.Main:
-                    {
-                        foreach (var button in _actionButtons)
-                        {
-                            var hoverRect = new Rectangle(
-                                button.Bounds.X,
-                                button.Bounds.Y + 1 + (int)offset.Y,
-                                button.Bounds.Width,
-                                button.Bounds.Height - 2
-                            );
-
-                            if (button.IsEnabled)
-                            {
-                                float rotation = button.IsHovered ? button.CurrentHoverRotation : 0f;
-                                Color buttonBgColor = button.IsHovered ? _global.Palette_Rust : _global.Palette_DarkShadow;
-                                DrawBeveledBackground(spriteBatch, pixel, hoverRect, buttonBgColor, rotation);
-                            }
-
-                            button.Draw(spriteBatch, font, gameTime, transform, false, null, offset.Y);
-                        }
-
-                        if (_player != null && _player.BattleSlot == 1)
-                        {
-                            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-                            if (_slot2BackButton.Font == null) _slot2BackButton.Font = secondaryFont;
-
-                            int backButtonHeight = 9;
-                            int backButtonY = 169;
-
-                            var backSize = secondaryFont.MeasureString(_slot2BackButton.Text);
-                            int backWidth = (int)backSize.Width + 10;
-                            int backX = _actionButtons[0].Bounds.X + (_actionButtons[0].Bounds.Width - backWidth) / 2 + 2;
-
-                            _slot2BackButton.Bounds = new Rectangle(backX, backButtonY, backWidth, backButtonHeight);
-                            _slot2BackButton.Draw(spriteBatch, font, gameTime, transform, false, null, offset.Y);
-                        }
-                        break;
-                    }
-                case MenuState.Moves:
-                    {
-                        DrawMovesMenu(spriteBatch, font, gameTime, transform, offset);
-                        break;
-                    }
-                case MenuState.Targeting:
-                    {
-                        int backButtonY = 170;
-                        var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
-                        int backWidth = (int)backSize.Width;
-                        int backHeight = (int)backSize.Height;
-
-                        _backButton.Bounds = new Rectangle(
-                            (Global.VIRTUAL_WIDTH - backWidth) / 2,
-                            backButtonY,
-                            backWidth,
-                            backHeight
-                        );
-                        _backButton.Draw(spriteBatch, font, gameTime, transform, false, null, offset.Y);
-                        break;
-                    }
-                case MenuState.Tooltip:
-                    {
-                        if (_useSimpleTooltip)
-                        {
-                            DrawSimpleTooltip(spriteBatch, font, gameTime, transform, offset);
-                        }
-                        else
-                        {
-                            DrawComplexTooltip(spriteBatch, font, gameTime, transform, offset);
-                        }
-                        break;
-                    }
-            }
-
-            if (_global.ShowSplitMapGrid)
-            {
-                if (_currentState == MenuState.Main)
-                {
-                    foreach (var button in _actionButtons)
-                    {
-                        var debugRect = button.Bounds;
-                        debugRect.Y += (int)offset.Y;
-                        spriteBatch.DrawSnapped(pixel, debugRect, Color.Green * 0.5f);
-                    }
-                    if (_player != null && _player.BattleSlot == 1)
-                    {
-                        var debugRect = _slot2BackButton.Bounds;
-                        debugRect.Y += (int)offset.Y;
-                        spriteBatch.DrawSnapped(pixel, debugRect, Color.Red * 0.5f);
-                    }
-                }
-
-                if (_currentState == MenuState.Moves)
-                {
-                    foreach (var button in _moveButtons)
-                    {
-                        if (button != null)
-                        {
-                            var debugRect = button.Bounds;
-                            debugRect.Y += (int)offset.Y;
-                            spriteBatch.DrawSnapped(pixel, debugRect, Color.Yellow * 0.5f);
-                        }
-                    }
-                    foreach (var button in _secondaryActionButtons)
-                    {
-                        var debugRect = button.Bounds;
-                        debugRect.Y += (int)offset.Y;
-                        spriteBatch.DrawSnapped(pixel, debugRect, Color.Orange * 0.5f);
-                    }
-                    var backDebugRect = _backButton.Bounds;
-                    backDebugRect.Y += (int)offset.Y;
-                    spriteBatch.DrawSnapped(pixel, backDebugRect, Color.Red * 0.5f);
-                }
-
-                if (_currentState == MenuState.Tooltip)
-                {
-                    var debugRect = _tooltipBounds;
-                    debugRect.Y += (int)offset.Y;
-                    spriteBatch.DrawSnapped(pixel, debugRect, Color.Magenta * 0.5f);
-
-                    var backDebugRect = _backButton.Bounds;
-                    backDebugRect.Y += (int)offset.Y;
-                    spriteBatch.DrawSnapped(pixel, backDebugRect, Color.Red * 0.5f);
-                }
-
-                if (_currentState == MenuState.Targeting)
-                {
-                    var backDebugRect = _backButton.Bounds;
-                    backDebugRect.Y += (int)offset.Y;
-                    spriteBatch.DrawSnapped(pixel, backDebugRect, Color.Red * 0.5f);
-                }
+                panel.Draw(spriteBatch, font, gameTime, transform, offset);
             }
         }
 
-        private void DrawSimpleTooltip(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform, Vector2 offset)
+        // --- Nested Panel Class ---
+        private class CombatantPanel
         {
-            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-            var pixel = ServiceLocator.Get<Texture2D>();
+            public int SlotIndex { get; }
+            public BattleCombatant Combatant { get; }
+            public MoveData? HoveredMove { get; private set; }
 
-            const int boxWidth = 294;
-            const int boxHeight = 47;
-            const int boxY = 113;
-            int boxX = (Global.VIRTUAL_WIDTH - boxWidth) / 2;
-            var tooltipBounds = new Rectangle(boxX, boxY + (int)offset.Y, boxWidth, boxHeight);
-            _tooltipBounds = tooltipBounds;
+            public event Action<QueuedAction>? OnActionSelected;
+            public event Action? OnSwitchRequested;
+            public event Action? OnCancelRequested;
 
-            DrawBeveledBackground(spriteBatch, pixel, tooltipBounds, _global.Palette_Black);
-            DrawBeveledBorder(spriteBatch, pixel, tooltipBounds, _global.Palette_Sun);
+            private readonly List<Button> _buttons = new List<Button>();
+            private Vector2 _position;
+            private Rectangle _panelBounds;
 
-            if (_tooltipMove != null)
+            // Layout
+            private const int MOVE_BTN_HEIGHT = 6;
+            private const int ACTION_BTN_HEIGHT = 6;
+            private const int SPACING = 1;
+
+            public CombatantPanel(BattleCombatant combatant, List<BattleCombatant> allCombatants)
             {
-                var moveName = _tooltipMove.MoveName.ToUpper();
-                var nameSize = font.MeasureString(moveName);
-                var namePos = new Vector2(
-                    tooltipBounds.Center.X - nameSize.Width / 2,
-                    tooltipBounds.Y + 8
-                );
-                spriteBatch.DrawStringSnapped(font, moveName, namePos, _global.GameTextColor);
+                Combatant = combatant;
+                SlotIndex = combatant.BattleSlot;
+                InitializeButtons(allCombatants);
+            }
 
-                if (!string.IsNullOrEmpty(_tooltipMove.Description))
+            public void SetPosition(Vector2 pos)
+            {
+                _position = pos;
+                LayoutButtons();
+            }
+
+            private void InitializeButtons(List<BattleCombatant> allCombatants)
+            {
+                var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
+                var global = ServiceLocator.Get<Global>();
+
+                // 1. Spells
+                for (int i = 0; i < 4; i++)
                 {
-                    float availableWidth = tooltipBounds.Width - 20;
-                    var wrappedLines = ParseAndWrapRichText(secondaryFont, _tooltipMove.Description.ToUpper(), availableWidth, _global.GameTextColor);
-                    float currentY = namePos.Y + nameSize.Height + 6;
+                    var entry = Combatant.Spells[i];
+                    string label = "---";
+                    bool enabled = false;
+                    MoveData? moveData = null;
 
-                    foreach (var line in wrappedLines)
+                    if (entry != null && BattleDataCache.Moves.TryGetValue(entry.MoveID, out var move))
                     {
-                        float lineWidth = 0;
-                        foreach (var segment in line)
-                        {
-                            if (string.IsNullOrWhiteSpace(segment.Text))
-                                lineWidth += segment.Text.Length * SPACE_WIDTH;
-                            else
-                                lineWidth += secondaryFont.MeasureString(segment.Text).Width;
-                        }
-
-                        float lineX = tooltipBounds.Center.X - lineWidth / 2f;
-                        float currentX = lineX;
-
-                        foreach (var segment in line)
-                        {
-                            float segWidth;
-                            if (string.IsNullOrWhiteSpace(segment.Text))
-                            {
-                                segWidth = segment.Text.Length * SPACE_WIDTH;
-                            }
-                            else
-                            {
-                                segWidth = secondaryFont.MeasureString(segment.Text).Width;
-                                spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(currentX, currentY), segment.Color);
-                            }
-                            currentX += segWidth;
-                        }
-                        currentY += secondaryFont.LineHeight;
-                    }
-                }
-            }
-
-            int backButtonY = 113 + boxHeight + 10;
-            var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
-            int backWidth = (int)backSize.Width;
-            int backHeight = (int)backSize.Height;
-            _backButton.Bounds = new Rectangle(
-                (Global.VIRTUAL_WIDTH - backWidth) / 2,
-                backButtonY,
-                backWidth,
-                backHeight
-            );
-            _backButton.Draw(spriteBatch, font, gameTime, transform, false, null, offset.Y);
-        }
-
-        private void DrawComplexTooltip(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform, Vector2 offset)
-        {
-            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-            var pixel = ServiceLocator.Get<Texture2D>();
-
-            const int moveButtonWidth = 157;
-            const int columns = 2;
-            const int columnSpacing = 0;
-
-            int totalGridWidth = (moveButtonWidth * columns) + columnSpacing;
-            const int gridHeight = 40;
-            int gridStartX = (Global.VIRTUAL_WIDTH - totalGridWidth) / 2;
-            int gridStartY = 123;
-
-            var spriteManager = ServiceLocator.Get<SpriteManager>();
-            var tooltipBg = spriteManager.ActionTooltipBackgroundSprite;
-            var tooltipBgRect = new Rectangle(gridStartX, gridStartY + (int)offset.Y, totalGridWidth, gridHeight);
-            _tooltipBounds = tooltipBgRect;
-
-            DrawBeveledBackground(spriteBatch, pixel, tooltipBgRect, _global.Palette_Black);
-            DrawBeveledBorder(spriteBatch, pixel, tooltipBgRect, _global.Palette_Sun);
-
-            if (_tooltipMove != null)
-            {
-                DrawMoveInfoPanelContent(spriteBatch, _tooltipMove, tooltipBgRect, font, secondaryFont, transform, true, gameTime);
-            }
-
-            const int backButtonTopMargin = 0;
-            int backButtonY = 123 + gridHeight + backButtonTopMargin + 7;
-            var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
-            int backWidth = (int)backSize.Width;
-            int backHeight = (int)backSize.Height;
-            _backButton.Bounds = new Rectangle(
-                (Global.VIRTUAL_WIDTH - backWidth) / 2,
-                backButtonY,
-                backWidth,
-                backHeight
-            );
-            _backButton.Draw(spriteBatch, font, gameTime, transform, false, null, offset.Y);
-        }
-
-        private void DrawMovesMenu(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform, Vector2 offset)
-        {
-            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-            var pixel = ServiceLocator.Get<Texture2D>();
-
-            const int secButtonWidth = 60;
-            const int layoutGap = 3;
-
-            int moveGridStartY = 144;
-            int totalWidth = secButtonWidth + layoutGap + (MOVE_BUTTON_WIDTH * 2) + MOVE_COL_SPACING;
-            int startX = (Global.VIRTUAL_WIDTH - totalWidth) / 2;
-
-            int secGridStartX = startX;
-            int moveGridStartX = secGridStartX + secButtonWidth + layoutGap;
-
-            for (int i = 0; i < _secondaryActionButtons.Count; i++)
-            {
-                var button = _secondaryActionButtons[i];
-                var buttonRect = new Rectangle(button.Bounds.X, button.Bounds.Y + (int)offset.Y, button.Bounds.Width, button.Bounds.Height);
-
-                var visualRect = new Rectangle(buttonRect.X + 3, buttonRect.Y, buttonRect.Width - 6, buttonRect.Height);
-                var hoverRect = new Rectangle(visualRect.X + 2, visualRect.Y + 1, visualRect.Width - 4, visualRect.Height - 2);
-
-                bool isHovered = (button is Button btn && btn.IsHovered && btn.IsEnabled);
-                Color secBgColor = isHovered ? _global.Palette_Rust : _global.Palette_DarkShadow;
-                float rotation = isHovered ? ((Button)button).CurrentHoverRotation : 0f;
-
-                DrawBeveledBackground(spriteBatch, pixel, hoverRect, secBgColor, rotation);
-
-                button.Draw(spriteBatch, font, gameTime, transform, false, null, offset.Y, button.Text == "ATTUNE" ? (Color?)null : null);
-            }
-
-            for (int i = 0; i < _moveButtons.Length; i++)
-            {
-                var button = _moveButtons[i];
-
-                int col = i % 2;
-                int row = i / 2;
-                int xPos = moveGridStartX + (col * (MOVE_BUTTON_WIDTH + MOVE_COL_SPACING));
-                int yPos = moveGridStartY + (row * (MOVE_BUTTON_HEIGHT + MOVE_ROW_SPACING));
-
-                var visualBounds = new Rectangle(xPos, yPos, MOVE_BUTTON_WIDTH, MOVE_BUTTON_HEIGHT);
-
-                if (button == null)
-                {
-                    var placeholderFillColor = _global.Palette_DarkShadow;
-                    var offsetBounds = new Rectangle(visualBounds.X, visualBounds.Y + (int)offset.Y, visualBounds.Width, visualBounds.Height);
-
-                    var bgRect = new Rectangle(offsetBounds.X + 1, offsetBounds.Y + 1, offsetBounds.Width - 2, offsetBounds.Height - 2);
-                    DrawBeveledBackground(spriteBatch, pixel, bgRect, placeholderFillColor, 0f);
-                }
-                else
-                {
-                    var offsetBounds = new Rectangle(visualBounds.X, visualBounds.Y + (int)offset.Y, visualBounds.Width, visualBounds.Height);
-
-                    var bgRect = new Rectangle(offsetBounds.X + 1, offsetBounds.Y + 1, offsetBounds.Width - 2, offsetBounds.Height - 2);
-                    bool isHovered = (button.IsHovered && button.IsEnabled);
-                    Color moveBgColor = isHovered ? _global.Palette_Rust : _global.Palette_DarkShadow;
-                    float rotation = isHovered ? button.CurrentHoverRotation : 0f;
-                    DrawBeveledBackground(spriteBatch, pixel, bgRect, moveBgColor, rotation);
-
-                    var originalBounds = button.Bounds;
-                    button.Bounds = visualBounds;
-                    button.Draw(spriteBatch, font, gameTime, transform, false, null, offset.Y);
-                    button.Bounds = originalBounds;
-                }
-            }
-
-            int backButtonY = 170;
-            var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
-            int backWidth = (int)backSize.Width;
-            int backHeight = (int)backSize.Height;
-            _backButton.Bounds = new Rectangle(
-                (Global.VIRTUAL_WIDTH - backWidth) / 2,
-                backButtonY,
-                backWidth,
-                backHeight
-            );
-            _backButton.Draw(spriteBatch, font, gameTime, transform, false, null, offset.Y);
-        }
-
-        private void DrawBeveledBackground(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, Color color, float rotation = 0f)
-        {
-            Vector2 center = rect.Center.ToVector2();
-            float cos = MathF.Cos(rotation);
-            float sin = MathF.Sin(rotation);
-
-            void DrawRotatedStrip(int relX, int relY, int w, int h)
-            {
-                float stripCenterX = relX + w / 2f;
-                float stripCenterY = relY + h / 2f;
-                float rotX = stripCenterX * cos - stripCenterY * sin;
-                float rotY = stripCenterX * sin + stripCenterY * cos;
-                Vector2 drawPos = center + new Vector2(rotX, rotY);
-                Vector2 origin = new Vector2(0.5f, 0.5f);
-                spriteBatch.DrawSnapped(pixel, drawPos, null, color, rotation, origin, new Vector2(w, h), SpriteEffects.None, 0f);
-            }
-
-            float topY = rect.Y - center.Y;
-            float leftX = rect.X - center.X;
-            float w = rect.Width;
-            float h = rect.Height;
-
-            DrawRotatedStrip((int)(leftX + 2), (int)(topY), (int)(w - 4), 1);
-            DrawRotatedStrip((int)(leftX + 1), (int)(topY + 1), (int)(w - 2), 1);
-            DrawRotatedStrip((int)(leftX), (int)(topY + 2), (int)(w), (int)(h - 4));
-            DrawRotatedStrip((int)(leftX + 1), (int)(topY + h - 2), (int)(w - 2), 1);
-            DrawRotatedStrip((int)(leftX + 2), (int)(topY + h - 1), (int)(w - 4), 1);
-        }
-
-        private void DrawBeveledBorder(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, Color color)
-        {
-            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 2, rect.Y, rect.Width - 4, 1), color);
-            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 2, rect.Bottom - 1, rect.Width - 4, 1), color);
-            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X, rect.Y + 2, 1, rect.Height - 4), color);
-            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.Right - 1, rect.Y + 2, 1, rect.Height - 4), color);
-            spriteBatch.DrawSnapped(pixel, new Vector2(rect.X + 1, rect.Y + 1), color);
-            spriteBatch.DrawSnapped(pixel, new Vector2(rect.Right - 2, rect.Y + 1), color);
-            spriteBatch.DrawSnapped(pixel, new Vector2(rect.X + 1, rect.Bottom - 2), color);
-            spriteBatch.DrawSnapped(pixel, new Vector2(rect.Right - 2, rect.Bottom - 2), color);
-        }
-
-        private void DrawMoveInfoPanelContent(SpriteBatch spriteBatch, MoveData? move, Rectangle bounds, BitmapFont font, BitmapFont secondaryFont, Matrix transform, bool isForTooltip, GameTime gameTime, float opacity = 1.0f)
-        {
-            var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
-            const int horizontalPadding = 4;
-            const int verticalPadding = 3;
-            float currentY = bounds.Y + verticalPadding;
-
-            string targetValue = "";
-            if (move != null)
-            {
-                targetValue = move.Target switch
-                {
-                    TargetType.Single => "SINGLE",
-                    TargetType.Both => "BOTH",
-                    TargetType.Every => "MULTI",
-                    TargetType.All => "ALL",
-                    TargetType.Self => "SELF",
-                    TargetType.Team => "TEAM",
-                    TargetType.Ally => "ALLY",
-                    TargetType.SingleTeam => "S-TEAM",
-                    TargetType.RandomBoth => "R-BOTH",
-                    TargetType.RandomEvery => "R-EVRY",
-                    TargetType.RandomAll => "R-ALL",
-                    TargetType.SingleAll => "ANY",
-                    TargetType.None => "NONE",
-                    _ => ""
-                };
-            }
-
-            if (isForTooltip)
-            {
-                if (move == null) return;
-
-                var moveName = move.MoveName.ToUpper();
-                var nameSize = font.MeasureString(moveName);
-                var namePos = new Vector2(bounds.X + horizontalPadding, currentY);
-
-                string moveTypeText = move.MoveType.ToString().ToUpper();
-                Color moveTypeColor = move.MoveType switch
-                {
-                    MoveType.Spell => _global.ColorNarration_Spell,
-                    MoveType.Action => _global.ColorNarration_Action,
-                    _ => _global.ColorNarration_Status
-                };
-
-                string impactTypeText = move.ImpactType.ToString().ToUpper();
-                Color impactTypeColor = move.ImpactType switch
-                {
-                    ImpactType.Physical => _global.ColorNarration_Action,
-                    ImpactType.Magical => _global.ColorNarration_Spell,
-                    _ => _global.ColorNarration_Status
-                };
-
-                var statsSegments = new List<(string Text, Color Color, BitmapFont Font)>();
-
-                if (move.ImpactType != ImpactType.Status)
-                {
-                    string accuracyText = move.Accuracy >= 0 ? $"{move.Accuracy}%" : "---";
-                    string powerText = move.Power > 0 ? $"{move.Power}" : (move.Effects.ContainsKey("ManaDamage") ? "???" : "---");
-
-                    var manaDump = move.Abilities.OfType<ManaDumpAbility>().FirstOrDefault();
-                    if (manaDump != null && _player != null)
-                    {
-                        powerText = $"{(int)(_player.Stats.CurrentMana * manaDump.Multiplier)}";
+                        label = move.MoveName.ToUpper();
+                        enabled = true;
+                        moveData = move;
                     }
 
-                    statsSegments.Add(("POW ", _global.DullTextColor, tertiaryFont));
-                    statsSegments.Add((powerText, _global.GameTextColor, secondaryFont));
-                    statsSegments.Add(("  ", Color.Transparent, secondaryFont));
-                    statsSegments.Add(("ACC ", _global.DullTextColor, tertiaryFont));
-                    statsSegments.Add((accuracyText, _global.GameTextColor, secondaryFont));
-
-                    string manaText = move.ManaCost > 0 ? $"{move.ManaCost}" : "---"; // Removed %
-                    statsSegments.Add(("  ", Color.Transparent, secondaryFont));
-                    statsSegments.Add(("MANA ", _global.DullTextColor, tertiaryFont));
-                    statsSegments.Add((manaText, _global.GameTextColor, secondaryFont));
-
-                    string offStatVal = move.OffensiveStat switch
+                    var btn = new Button(Rectangle.Empty, label, font: tertiaryFont, enableHoverSway: false)
                     {
-                        OffensiveStatType.Strength => "STR",
-                        OffensiveStatType.Intelligence => "INT",
-                        OffensiveStatType.Tenacity => "TEN",
-                        OffensiveStatType.Agility => "AGI",
-                        _ => "---"
+                        CustomDefaultTextColor = enabled ? global.Palette_Sun : global.Palette_DarkShadow,
+                        CustomHoverTextColor = global.ButtonHoverColor,
+                        IsEnabled = enabled
                     };
 
-                    Color offColor = _global.GameTextColor;
+                    var capturedMove = moveData;
+                    var capturedEntry = entry;
 
-                    statsSegments.Add(("  ", Color.Transparent, secondaryFont));
-                    statsSegments.Add(("USE ", _global.DullTextColor, tertiaryFont));
-                    statsSegments.Add((offStatVal, offColor, secondaryFont));
-                    statsSegments.Add((" ", Color.Transparent, secondaryFont));
-                }
-
-                float totalStatsWidth = 0f;
-                foreach (var segment in statsSegments)
-                {
-                    totalStatsWidth += segment.Font.MeasureString(segment.Text).Width;
-                }
-
-                float moveTypeWidth = tertiaryFont.MeasureString(moveTypeText).Width;
-                float impactTypeWidth = tertiaryFont.MeasureString(impactTypeText).Width;
-                float stackWidth = Math.Max(moveTypeWidth, impactTypeWidth);
-
-                float totalContentWidth = totalStatsWidth + stackWidth;
-
-                float statsY = (currentY + (nameSize.Height - secondaryFont.LineHeight) / 2) - 1;
-                float startX = bounds.Right - horizontalPadding - totalContentWidth;
-
-                float currentX = startX;
-                foreach (var segment in statsSegments)
-                {
-                    float yOffset = (secondaryFont.LineHeight - segment.Font.LineHeight) / 2f;
-                    yOffset = MathF.Round(yOffset);
-
-                    spriteBatch.DrawStringSnapped(segment.Font, segment.Text, new Vector2(currentX, statsY + yOffset), segment.Color);
-                    currentX += segment.Font.MeasureString(segment.Text).Width;
-                }
-
-                float tertiaryYOffset = (secondaryFont.LineHeight - tertiaryFont.LineHeight) / 2f;
-                tertiaryYOffset = MathF.Round(tertiaryYOffset);
-                float stackBaseY = statsY + tertiaryYOffset;
-
-                spriteBatch.DrawStringSnapped(tertiaryFont, moveTypeText, new Vector2(currentX, stackBaseY + 3), moveTypeColor);
-                spriteBatch.DrawStringSnapped(tertiaryFont, impactTypeText, new Vector2(currentX, stackBaseY - 2), impactTypeColor);
-
-                float textAvailableWidth = startX - namePos.X - 4;
-                bool needsScrolling = nameSize.Width > textAvailableWidth;
-                if (needsScrolling)
-                {
-                    if (!_isTooltipScrollingInitialized)
+                    btn.OnClick += () =>
                     {
-                        _isTooltipScrollingInitialized = true;
-                        float spaceWidth = font.MeasureString(" ").Width;
-                        _tooltipMaxScrollToShowEnd = nameSize.Width - textAvailableWidth + (spaceWidth * EXTRA_SCROLL_SPACES);
-                        _tooltipScrollWaitTimer = SCROLL_PAUSE_DURATION;
-                        _tooltipScrollState = TooltipScrollState.PausedAtStart;
-                        _tooltipScrollPosition = 0;
-                    }
-
-                    var originalRasterizerState = spriteBatch.GraphicsDevice.RasterizerState;
-                    var originalScissorRect = spriteBatch.GraphicsDevice.ScissorRectangle;
-                    spriteBatch.End();
-
-                    spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, _clipRasterizerState, null, transform);
-                    var clipRect = new Rectangle((int)namePos.X, (int)namePos.Y, (int)textAvailableWidth, (int)nameSize.Height);
-                    spriteBatch.GraphicsDevice.ScissorRectangle = clipRect;
-
-                    var scrollingTextPosition = new Vector2(namePos.X - _tooltipScrollPosition, namePos.Y);
-                    spriteBatch.DrawStringSnapped(font, move.MoveName.ToUpper(), scrollingTextPosition, _global.GameTextColor);
-
-                    spriteBatch.End();
-                    spriteBatch.GraphicsDevice.ScissorRectangle = originalScissorRect;
-                    spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, originalRasterizerState, null, transform);
-                }
-                else
-                {
-                    _isTooltipScrollingInitialized = false;
-                    spriteBatch.DrawStringSnapped(font, moveName, namePos, _global.GameTextColor);
-                }
-                currentY += nameSize.Height + 1;
-
-                var underlineStart = new Vector2(bounds.X + horizontalPadding, currentY);
-                var underlineEnd = new Vector2(bounds.Right - horizontalPadding, currentY);
-                spriteBatch.DrawLineSnapped(underlineStart, underlineEnd, _global.DullTextColor);
-                currentY += 3;
-
-                float bottomTextY = bounds.Bottom - verticalPadding - tertiaryFont.LineHeight + 1;
-                float leftTextX = bounds.X + horizontalPadding;
-
-                if (!string.IsNullOrEmpty(targetValue))
-                {
-                    spriteBatch.DrawStringSnapped(tertiaryFont, targetValue, new Vector2(leftTextX, bottomTextY), _global.DullTextColor);
+                        if (capturedMove != null)
+                        {
+                            var action = new QueuedAction
+                            {
+                                Actor = Combatant,
+                                ChosenMove = capturedMove,
+                                SpellbookEntry = capturedEntry,
+                                Type = QueuedActionType.Move,
+                                Priority = capturedMove.Priority,
+                                ActorAgility = Combatant.GetEffectiveAgility()
+                            };
+                            OnActionSelected?.Invoke(action);
+                        }
+                    };
+                    _buttons.Add(btn);
                 }
 
-                if (move.MakesContact)
+                // 2. Actions
+                var strikeBtn = new Button(Rectangle.Empty, "STRIKE", font: tertiaryFont, enableHoverSway: false);
+                strikeBtn.OnClick += () =>
                 {
-                    string contactText = "[CONTACT]";
-                    float contactWidth = tertiaryFont.MeasureString(contactText).Width;
-                    float rightTextX = bounds.Right - horizontalPadding - contactWidth;
-                    spriteBatch.DrawStringSnapped(tertiaryFont, contactText, new Vector2(rightTextX, bottomTextY), _global.Palette_Rust);
-                }
-
-                if (!string.IsNullOrEmpty(move.Description))
-                {
-                    float availableWidth = bounds.Width - (horizontalPadding * 2);
-                    var wrappedLines = ParseAndWrapRichText(secondaryFont, move.Description.ToUpper(), availableWidth, _global.GameTextColor);
-
-                    float totalTextHeight = wrappedLines.Count * secondaryFont.LineHeight;
-                    float availableHeight = (bounds.Bottom - verticalPadding - (tertiaryFont.LineHeight + 2)) - currentY;
-
-                    float startY = currentY + (availableHeight - totalTextHeight) / 2f;
-                    if (startY < currentY) startY = currentY;
-
-                    float drawY = startY;
-
-                    foreach (var line in wrappedLines)
+                    var strikeMove = Combatant.StrikeMove;
+                    if (strikeMove != null)
                     {
-                        if (drawY + secondaryFont.LineHeight > bounds.Bottom - verticalPadding) break;
-
-                        float lineWidth = 0;
-                        foreach (var segment in line)
+                        var action = new QueuedAction
                         {
-                            if (string.IsNullOrWhiteSpace(segment.Text))
-                                lineWidth += segment.Text.Length * SPACE_WIDTH;
-                            else
-                                lineWidth += secondaryFont.MeasureString(segment.Text).Width;
-                        }
-
-                        float lineX = bounds.Center.X - (lineWidth / 2f);
-                        float lineCurrentX = lineX;
-
-                        foreach (var segment in line)
-                        {
-                            float segWidth;
-                            if (string.IsNullOrWhiteSpace(segment.Text))
-                            {
-                                segWidth = segment.Text.Length * SPACE_WIDTH;
-                            }
-                            else
-                            {
-                                segWidth = secondaryFont.MeasureString(segment.Text).Width;
-                                if (segment.Effect != TextEffectType.None)
-                                    TextAnimator.DrawTextWithEffect(spriteBatch, secondaryFont, segment.Text, new Vector2(lineCurrentX, drawY), segment.Color * opacity, segment.Effect, (float)gameTime.TotalGameTime.TotalSeconds);
-                                else
-                                    spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(lineCurrentX, drawY), segment.Color * opacity);
-                            }
-                            lineCurrentX += segWidth;
-                        }
-                        drawY += secondaryFont.LineHeight;
+                            Actor = Combatant,
+                            ChosenMove = strikeMove,
+                            Type = QueuedActionType.Move,
+                            Priority = strikeMove.Priority,
+                            ActorAgility = Combatant.GetEffectiveAgility()
+                        };
+                        OnActionSelected?.Invoke(action);
                     }
-                }
+                };
+                _buttons.Add(strikeBtn);
+
+                var stallBtn = new Button(Rectangle.Empty, "STALL", font: tertiaryFont, enableHoverSway: false);
+                stallBtn.OnClick += () =>
+                {
+                    if (BattleDataCache.Moves.TryGetValue("6", out var stallMove))
+                    {
+                        var action = new QueuedAction
+                        {
+                            Actor = Combatant,
+                            ChosenMove = stallMove,
+                            Target = Combatant,
+                            Type = QueuedActionType.Move,
+                            Priority = 0,
+                            ActorAgility = Combatant.GetEffectiveAgility()
+                        };
+                        OnActionSelected?.Invoke(action);
+                    }
+                };
+                _buttons.Add(stallBtn);
+
+                var switchBtn = new Button(Rectangle.Empty, "SWITCH", font: tertiaryFont, enableHoverSway: false);
+                switchBtn.OnClick += () => OnSwitchRequested?.Invoke();
+                bool hasBench = allCombatants.Any(c => c.IsPlayerControlled && !c.IsDefeated && c.BattleSlot >= 2);
+                switchBtn.IsEnabled = hasBench;
+                _buttons.Add(switchBtn);
             }
-        }
 
-        private List<List<ColoredText>> ParseAndWrapRichText(BitmapFont font, string text, float maxWidth, Color defaultColor, int spaceWidth = 5)
-        {
-            var lines = new List<List<ColoredText>>();
-            if (string.IsNullOrEmpty(text)) return lines;
-
-            var currentLine = new List<ColoredText>();
-            float currentLineWidth = 0f;
-            Color currentColor = defaultColor;
-
-            var parts = Regex.Split(text, @"(\[.*?\]|\s+)");
-
-            foreach (var part in parts)
+            private void LayoutButtons()
             {
-                if (string.IsNullOrEmpty(part)) continue;
+                int x = (int)_position.X;
+                int y = (int)_position.Y;
+                int startY = y;
 
-                if (part.StartsWith("[") && part.EndsWith("]"))
+                for (int i = 0; i < 4; i++)
                 {
-                    string tagContent = part.Substring(1, part.Length - 2).ToLowerInvariant();
-                    if (tagContent == "/" || tagContent == "default")
+                    _buttons[i].Bounds = new Rectangle(x, y, PANEL_WIDTH, MOVE_BTN_HEIGHT);
+                    y += MOVE_BTN_HEIGHT + SPACING;
+                }
+
+                int strikeW = 30;
+                int stallW = 25;
+                int switchW = 25;
+
+                _buttons[4].Bounds = new Rectangle(x, y, strikeW, ACTION_BTN_HEIGHT);
+                _buttons[5].Bounds = new Rectangle(x + strikeW, y, stallW, ACTION_BTN_HEIGHT);
+                _buttons[6].Bounds = new Rectangle(x + strikeW + stallW, y, switchW, ACTION_BTN_HEIGHT);
+
+                int totalHeight = (y + ACTION_BTN_HEIGHT) - startY;
+                _panelBounds = new Rectangle(x, startY, PANEL_WIDTH, totalHeight);
+            }
+
+            public void Update(MouseState mouse, GameTime gameTime, bool isInputBlocked, bool isLocked)
+            {
+                HoveredMove = null;
+
+                // Handle Right-Click Cancellation
+                if (isLocked && !isInputBlocked)
+                {
+                    if (mouse.RightButton == ButtonState.Pressed && _panelBounds.Contains(mouse.Position))
                     {
-                        currentColor = defaultColor;
-                    }
-                    else
-                    {
-                        currentColor = ParseColor(tagContent);
+                        // We need to detect just-pressed, but we don't have previous state here easily.
+                        // However, BattleUIManager calls this every frame.
+                        // Let's rely on the fact that if it's pressed, we request cancel.
+                        // The manager can debounce if needed, or we can just fire it.
+                        // Actually, firing every frame while held is bad.
+                        // But since cancelling unlocks it, `isLocked` becomes false immediately next frame.
+                        OnCancelRequested?.Invoke();
                     }
                 }
-                else if (part.Contains("\n"))
-                {
-                    lines.Add(currentLine);
-                    currentLine = new List<ColoredText>();
-                    currentLineWidth = 0f;
-                }
-                else
-                {
-                    bool isWhitespace = string.IsNullOrWhiteSpace(part);
-                    float partWidth = isWhitespace ? (part.Length * spaceWidth) : font.MeasureString(part).Width;
 
-                    if (!isWhitespace && currentLineWidth + partWidth > maxWidth && currentLineWidth > 0)
+                foreach (var btn in _buttons)
+                {
+                    if (isInputBlocked)
                     {
-                        lines.Add(currentLine);
-                        currentLine = new List<ColoredText>();
-                        currentLineWidth = 0f;
-                    }
-
-                    if (isWhitespace && currentLineWidth == 0)
-                    {
+                        btn.IsHovered = false;
                         continue;
                     }
 
-                    Color finalColor = currentColor;
-                    currentLine.Add(new ColoredText(part, finalColor));
-                    currentLineWidth += partWidth;
+                    btn.Update(mouse);
+
+                    if (btn.IsHovered && btn.IsEnabled)
+                    {
+                        int index = _buttons.IndexOf(btn);
+                        if (index < 4) // Spell
+                        {
+                            var entry = Combatant.Spells[index];
+                            if (entry != null && BattleDataCache.Moves.TryGetValue(entry.MoveID, out var m))
+                                HoveredMove = m;
+                        }
+                        else if (index == 4) // Strike
+                        {
+                            HoveredMove = Combatant.StrikeMove;
+                        }
+                        else if (index == 5) // Stall
+                        {
+                            if (BattleDataCache.Moves.TryGetValue("6", out var m)) HoveredMove = m;
+                        }
+                    }
                 }
             }
 
-            if (currentLine.Count > 0)
+            public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform, Vector2 offset)
             {
-                lines.Add(currentLine);
+                var pixel = ServiceLocator.Get<Texture2D>();
+                var global = ServiceLocator.Get<Global>();
+                var battleManager = ServiceLocator.Get<BattleManager>();
+                bool isLocked = battleManager.IsActionPending(SlotIndex);
+
+                foreach (var btn in _buttons)
+                {
+                    var rect = btn.Bounds;
+                    rect.Y += (int)offset.Y;
+
+                    Color bgColor = global.Palette_DarkShadow;
+                    if (isLocked) bgColor = global.Palette_DarkGray;
+                    if (btn.IsHovered && btn.IsEnabled) bgColor = global.Palette_Rust;
+                    else if (!btn.IsEnabled) bgColor = global.Palette_Black;
+
+                    spriteBatch.DrawSnapped(pixel, rect, bgColor);
+
+                    var textSize = btn.Font.MeasureString(btn.Text);
+                    var textPos = new Vector2(
+                        rect.X + (rect.Width - textSize.Width) / 2f,
+                        rect.Y + (rect.Height - textSize.Height) / 2f
+                    );
+                    textPos = new Vector2(MathF.Round(textPos.X), MathF.Round(textPos.Y));
+
+                    Color textColor = btn.CustomDefaultTextColor ?? global.Palette_Sun;
+                    if (isLocked) textColor = global.Palette_LightGray;
+                    if (btn.IsHovered && btn.IsEnabled) textColor = global.ButtonHoverColor;
+                    if (!btn.IsEnabled) textColor = global.ButtonDisableColor;
+
+                    spriteBatch.DrawStringSnapped(btn.Font, btn.Text, textPos, textColor);
+                }
+
+                if (isLocked)
+                {
+                    var checkRect = new Rectangle((int)_position.X + PANEL_WIDTH - 8, (int)_position.Y - 8, 8, 8);
+                    spriteBatch.DrawSnapped(pixel, checkRect, global.Palette_Leaf);
+                }
             }
-
-            return lines;
-        }
-
-        private Color ParseColor(string colorName)
-        {
-            return _global.GetNarrationColor(colorName);
         }
     }
 }

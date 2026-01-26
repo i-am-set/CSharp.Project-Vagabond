@@ -5,12 +5,19 @@ using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Particles;
+using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.Systems;
+using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.Battle.UI
 {
@@ -20,6 +27,8 @@ namespace ProjectVagabond.Battle.UI
         public event Action? OnBack;
 
         private bool _isVisible;
+        public bool IsVisible => _isVisible; // Added public property
+
         private List<BattleCombatant> _benchMembers = new List<BattleCombatant>();
         private List<Button> _memberButtons = new List<Button>();
         private Button _backButton;
@@ -157,4 +166,3 @@ namespace ProjectVagabond.Battle.UI
         }
     }
 }
-﻿

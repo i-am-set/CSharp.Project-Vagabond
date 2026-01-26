@@ -382,5 +382,28 @@ namespace ProjectVagabond
             texture.SetData(colorData);
             return texture;
         }
+
+        /// <summary>
+        /// Creates a 6px tall button texture for the new action menu.
+        /// </summary>
+        public Texture2D CreateMiniActionButtonTexture(int width)
+        {
+            var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
+            const int height = 6;
+            var texture = new Texture2D(graphicsDevice, width, height);
+            var colorData = new Color[width * height];
+
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    // Simple white fill, tinting handled by renderer
+                    colorData[y * width + x] = Color.White;
+                }
+            }
+
+            texture.SetData(colorData);
+            return texture;
+        }
     }
 }

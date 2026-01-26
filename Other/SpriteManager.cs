@@ -27,10 +27,9 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 
-
 namespace ProjectVagabond
 {
-    public enum PlayerSpriteType
+public enum PlayerSpriteType
     {
         Portrait5x5 = 0,
         Portrait8x8 = 1,
@@ -38,12 +37,11 @@ namespace ProjectVagabond
         Alt = 3,
         Sleep = 4
     }
-
     public class SpriteManager
     {
         private readonly Core _core;
         private readonly TextureFactory _textureFactory;
-        // UI Sprite Sheets
+
         public Texture2D ActionButtonsSpriteSheet { get; private set; }
         public Texture2D ActionButtonTemplateSpriteSheet { get; private set; }
         public Texture2D ActionMovesBackgroundSprite { get; private set; }
@@ -53,11 +51,11 @@ namespace ProjectVagabond
         public Texture2D StatChangeIconsSpriteSheet { get; private set; }
         public Texture2D StatChangeIconsSpriteSheetSilhouette { get; private set; }
 
-        // Item Sprite Sheets
+        // NEW: Mini Action Button
+        public Texture2D MiniActionButtonSprite { get; private set; }
+
         public Texture2D ItemRelicsSpriteSheet { get; private set; }
         public Texture2D ItemWeaponsSpriteSheet { get; private set; }
-
-        // Battle Borders
         public Texture2D BattleBorderMain { get; private set; }
         public Texture2D BattleBorderMain2 { get; private set; }
         public Texture2D BattleBorderCombat { get; private set; }
@@ -65,12 +63,8 @@ namespace ProjectVagabond
         public Texture2D BattleBorderItem { get; private set; }
         public Texture2D BattleBorderTarget { get; private set; }
         public Texture2D BattleBorderSwitch { get; private set; }
-
-        // --- PLAYER PORTRAITS (Consolidated) ---
         public Texture2D PlayerMasterSpriteSheet { get; private set; }
         public Texture2D PlayerMasterSpriteSheetSilhouette { get; private set; }
-
-        // Inventory UI
         public Texture2D InventoryPlayerHealthBarEmpty { get; private set; }
         public Texture2D InventoryPlayerHealthBarDisabled { get; private set; }
         public Texture2D InventoryPlayerHealthBarFull { get; private set; }
@@ -79,12 +73,9 @@ namespace ProjectVagabond
         public Texture2D InventoryStatBarDisabled { get; private set; }
         public Texture2D InventoryStatBarFull { get; private set; }
         public Texture2D InventorySpellSlotButtonSpriteSheet { get; private set; }
-        public Texture2D ManaBarPattern { get; private set; } // New Mana Bar Texture
-
-        // --- Tenacity Pip Texture ---
+        public Texture2D ManaBarPattern { get; private set; }
         public Texture2D TenacityPipTexture { get; private set; }
 
-        // Source Rectangles for UI elements
         public Rectangle[] ActionButtonSourceRects { get; private set; }
         public Rectangle[] ActionIconSourceRects { get; private set; }
         public Dictionary<int, Rectangle> SpellUsesSourceRects { get; private set; } = new Dictionary<int, Rectangle>();
@@ -99,26 +90,16 @@ namespace ProjectVagabond
         public Rectangle[] TargetingButtonSourceRects { get; private set; }
         public Rectangle[] StatChangeIconSourceRects { get; private set; }
 
-
-        // Enemy Sprite Cache
         private readonly Dictionary<string, (Texture2D Original, Texture2D Silhouette, bool IsMajor)> _enemySprites = new Dictionary<string, (Texture2D, Texture2D, bool IsMajor)>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, int[]> _enemySpriteTopPixelOffsets = new Dictionary<string, int[]>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, int[]> _enemySpriteLeftPixelOffsets = new Dictionary<string, int[]>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, int[]> _enemySpriteRightPixelOffsets = new Dictionary<string, int[]>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, int[]> _enemySpriteBottomPixelOffsets = new Dictionary<string, int[]>(StringComparer.OrdinalIgnoreCase);
-
-        // Cache for visual center offsets
         private readonly Dictionary<string, Vector2> _visualCenterOffsets = new Dictionary<string, Vector2>(StringComparer.OrdinalIgnoreCase);
-
         private readonly Dictionary<StatusEffectType, Texture2D> _statusEffectIcons = new Dictionary<StatusEffectType, Texture2D>();
-
-        // General Item/Relic Sprite Cache
         private readonly Dictionary<string, (Texture2D Original, Texture2D Silhouette)> _itemSprites = new Dictionary<string, (Texture2D, Texture2D)>(StringComparer.OrdinalIgnoreCase);
-        // Cache for 16x16 downscaled item sprites and their silhouettes
         private readonly Dictionary<string, (Texture2D Original, Texture2D Silhouette)> _smallItemSprites = new Dictionary<string, (Texture2D, Texture2D)>(StringComparer.OrdinalIgnoreCase);
-
         private readonly Dictionary<string, (Texture2D Texture, Rectangle[] Frames)> _cursorSprites = new Dictionary<string, (Texture2D, Rectangle[])>();
-
 
         private Texture2D _logoSprite;
         private Texture2D _playerSprite;
@@ -144,7 +125,6 @@ namespace ProjectVagabond
         public Texture2D BattlePlayerFloorSprite { get; private set; }
         public Texture2D HealParticleSprite { get; private set; }
 
-        // Split Map Node Sprites & Silhouettes
         public Texture2D SplitNodeStart { get; private set; }
         public Texture2D SplitNodeStartSilhouette { get; private set; }
         public Texture2D SplitNodeNarrative { get; private set; }
@@ -191,10 +171,8 @@ namespace ProjectVagabond
         public Texture2D RestActionIconsSpriteSheet { get; private set; }
         public Texture2D TargetingButtonSpriteSheet { get; private set; }
 
-        // Background Noise
         public Texture2D NoiseTexture { get; private set; }
 
-        // Mouse Prompt Sprites
         public Texture2D MousePromptBlank { get; private set; }
         public Texture2D MousePromptBlankSilhouette { get; private set; }
         public Texture2D MousePromptLeftClick { get; private set; }
@@ -483,6 +461,11 @@ namespace ProjectVagabond
             // Load Tenacity Pip Sprite Sheet
             try { TenacityPipTexture = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/tenacity_3x3_icon"); }
             catch { TenacityPipTexture = _textureFactory.CreateColoredTexture(6, 3, Color.Magenta); }
+
+            // --- NEW: Create Mini Action Button Texture ---
+            // Width 80px, Height 6px
+            try { MiniActionButtonSprite = _textureFactory.CreateMiniActionButtonTexture(80); }
+            catch { MiniActionButtonSprite = _textureFactory.CreateColoredTexture(80, 6, Color.Magenta); }
 
             LoadAndCacheCursorSprite("cursor_default");
             LoadAndCacheCursorSprite("cursor_hover_clickable");

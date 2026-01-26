@@ -245,8 +245,6 @@ namespace ProjectVagabond.Scenes
                 foreach (var combatant in _battleManager.AllCombatants)
                 {
                     if (combatant.IsPlayerControlled) combatant.VisualHP = combatant.Stats.CurrentHP;
-
-                    // --- NEW: Reset HUD Visibility ---
                     combatant.HudVisualAlpha = 0f;
                 }
             }
@@ -291,14 +289,10 @@ namespace ProjectVagabond.Scenes
             EventBus.Subscribe<GameEvents.TenacityChanged>(OnTenacityChanged);
             EventBus.Subscribe<GameEvents.TenacityBroken>(OnTenacityBroken);
 
-            _uiManager.OnMoveSelected += OnPlayerMoveSelected;
-            _uiManager.OnSwitchActionSelected += OnPlayerSwitchSelected;
             _uiManager.OnForcedSwitchSelected += OnForcedSwitchSelected;
             _uiManager.OnFleeRequested += FleeBattle;
-            _uiManager.OnTargetSelectedFromUI += OnTargetSelectedFromUI;
-            _inputHandler.OnMoveTargetSelected += OnPlayerMoveTargetSelected;
             _inputHandler.OnBackRequested += () => _uiManager.GoBack();
-            if (_settingsButton != null) _settingsButton.OnClick -= OpenSettings;
+            if (_settingsButton != null) _settingsButton.OnClick += OpenSettings;
         }
 
         private void UnsubscribeFromEvents()
@@ -325,12 +319,8 @@ namespace ProjectVagabond.Scenes
             EventBus.Unsubscribe<GameEvents.TenacityChanged>(OnTenacityChanged);
             EventBus.Unsubscribe<GameEvents.TenacityBroken>(OnTenacityBroken);
 
-            _uiManager.OnMoveSelected -= OnPlayerMoveSelected;
-            _uiManager.OnSwitchActionSelected -= OnPlayerSwitchSelected;
             _uiManager.OnForcedSwitchSelected -= OnForcedSwitchSelected;
             _uiManager.OnFleeRequested -= FleeBattle;
-            _uiManager.OnTargetSelectedFromUI -= OnTargetSelectedFromUI;
-            _inputHandler.OnMoveTargetSelected -= OnPlayerMoveTargetSelected;
             _inputHandler.OnBackRequested -= () => _uiManager.GoBack();
             if (_settingsButton != null) _settingsButton.OnClick -= OpenSettings;
         }
@@ -579,7 +569,6 @@ namespace ProjectVagabond.Scenes
                         _roundAnimState = RoundAnimState.Pop;
                         _roundAnimTimer = 0f;
 
-                        // --- NEW: Trigger HUD Entry Animation ---
                         foreach (var c in _battleManager.AllCombatants)
                         {
                             _animationManager.StartHudEntryAnimation(c.CombatantID);
@@ -657,11 +646,7 @@ namespace ProjectVagabond.Scenes
 
             if (KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState))
             {
-                if (_uiManager.SubMenuState == BattleSubMenuState.ActionMoves || _uiManager.SubMenuState == BattleSubMenuState.Switch)
-                {
-                    _uiManager.GoBack();
-                }
-                else if (_uiManager.UIState == BattleUIState.Targeting)
+                if (_uiManager.UIState == BattleUIState.Targeting)
                 {
                     _uiManager.GoBack();
                 }
@@ -928,10 +913,15 @@ namespace ProjectVagabond.Scenes
         private void HandlePhaseChange(BattleManager.BattlePhase newPhase)
         {
             if (newPhase == BattleManager.BattlePhase.EndOfTurn || newPhase == BattleManager.BattlePhase.BattleOver) _currentActor = null;
-            if (newPhase == BattleManager.BattlePhase.ActionSelection_Slot1 || newPhase == BattleManager.BattlePhase.ActionSelection_Slot2)
+            if (newPhase == BattleManager.BattlePhase.ActionSelection)
             {
-                var actingCombatant = _battleManager.CurrentActingCombatant;
-                if (actingCombatant != null) _uiManager.ShowActionMenu(actingCombatant, _battleManager.AllCombatants.ToList());
+                var leader = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && c.BattleSlot == 0);
+                if (leader == null) leader = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && !c.IsDefeated);
+
+                if (leader != null)
+                {
+                    _uiManager.ShowActionMenu(leader, _battleManager.AllCombatants.ToList());
+                }
             }
             else if (newPhase == BattleManager.BattlePhase.StartOfTurn) { }
             else _uiManager.HideAllMenus();
@@ -991,9 +981,9 @@ namespace ProjectVagabond.Scenes
             }
 
             BattleCombatant renderContextActor = _currentActor;
-            if (_battleManager != null && (_battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection_Slot1 || _battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection_Slot2))
+            if (_battleManager != null && _battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection)
             {
-                renderContextActor = _battleManager.CurrentActingCombatant;
+                renderContextActor = null;
             }
 
             _renderer.Draw(spriteBatch, font, gameTime, _battleManager.AllCombatants, renderContextActor, _uiManager, _inputHandler, _animationManager, _uiManager.SharedPulseTimer, transform);
@@ -1071,36 +1061,6 @@ namespace ProjectVagabond.Scenes
             float groundY = FIXED_COIN_GROUND_Y;
             _animationManager.StartDeathAnimation(target.CombatantID, centerPos, groundY);
             target.VisualAlpha = 1.0f;
-        }
-
-        private void OnPlayerMoveSelected(MoveData move, MoveEntry entry, BattleCombatant target)
-        {
-            var player = _battleManager.CurrentActingCombatant;
-            if (player != null)
-            {
-                var action = _battleManager.CreateActionFromMove(player, move, target);
-                action.SpellbookEntry = entry;
-                _battleManager.SubmitAction(action);
-            }
-        }
-
-        private void OnPlayerMoveTargetSelected(MoveData move, MoveEntry entry, BattleCombatant target)
-        {
-            OnPlayerMoveSelected(move, entry, target);
-        }
-
-        private void OnTargetSelectedFromUI(BattleCombatant target)
-        {
-            if (_uiManager.UIState == BattleUIState.Targeting) OnPlayerMoveSelected(_uiManager.MoveForTargeting, _uiManager.SpellForTargeting, target);
-        }
-
-        private void OnPlayerSwitchSelected(BattleCombatant targetMember)
-        {
-            var player = _battleManager.CurrentActingCombatant;
-            if (player == null) return;
-            var action = new QueuedAction { Actor = player, Target = targetMember, Priority = 6, ActorAgility = player.Stats.Agility, Type = QueuedActionType.Switch };
-            _battleManager.SubmitAction(action);
-            _uiManager.HideAllMenus();
         }
 
         private void OnForcedSwitchSelected(BattleCombatant targetMember)
@@ -1211,10 +1171,9 @@ namespace ProjectVagabond.Scenes
 
         private void OnTenacityChanged(GameEvents.TenacityChanged e)
         {
-            // Visual feedback for losing a shield pip
             Vector2 hudPos = _renderer.GetCombatantHudCenterPosition(e.Combatant, _battleManager.AllCombatants);
             Vector2 visualPos = _renderer.GetCombatantVisualCenterPosition(e.Combatant, _battleManager.AllCombatants);
-            var sparks = _particleSystemManager.CreateEmitter(ParticleEffects.CreateSparks()); // Reuse sparks for now
+            var sparks = _particleSystemManager.CreateEmitter(ParticleEffects.CreateSparks());
             sparks.Position = visualPos;
             sparks.Settings.StartColor = _global.Palette_Sky;
             sparks.Settings.EndColor = Color.White;
@@ -1223,14 +1182,10 @@ namespace ProjectVagabond.Scenes
 
         private void OnTenacityBroken(GameEvents.TenacityBroken e)
         {
-            // Visual feedback for shield break
             Vector2 hudPos = _renderer.GetCombatantHudCenterPosition(e.Combatant, _battleManager.AllCombatants);
             _animationManager.StartDamageIndicator(e.Combatant.CombatantID, "TENACITY BROKEN", hudPos + new Vector2(0, -15), _global.TenacityBrokenIndicatorColor);
-
             _hapticsManager.TriggerShake(5f, 0.2f);
             _core.TriggerFullscreenFlash(_global.TenacityBrokenIndicatorColor, 0.1f);
-
-            // Sound effect would go here
         }
 
         private void OnCombatantHealed(GameEvents.CombatantHealed e)
