@@ -30,6 +30,7 @@ namespace ProjectVagabond.Battle.UI
         private readonly SwitchMenu _switchMenu;
         private readonly CombatSwitchDialog _combatSwitchDialog;
         private readonly Global _global;
+        private readonly SpriteManager _spriteManager;
 
         public BattleUIState UIState { get; private set; } = BattleUIState.Default;
 
@@ -56,6 +57,7 @@ namespace ProjectVagabond.Battle.UI
         public BattleUIManager()
         {
             _global = ServiceLocator.Get<Global>();
+            _spriteManager = ServiceLocator.Get<SpriteManager>();
             _actionMenu = new ActionMenu();
             _switchMenu = new SwitchMenu();
             _combatSwitchDialog = new CombatSwitchDialog(null);
@@ -76,10 +78,7 @@ namespace ProjectVagabond.Battle.UI
             EnsureTargetingButtonsInitialized();
         }
 
-        public void ForceClearNarration()
-        {
-            // No-op: Narrator removed
-        }
+        public void ForceClearNarration() { }
 
         private void EnsureTargetingButtonsInitialized()
         {
@@ -376,7 +375,15 @@ namespace ProjectVagabond.Battle.UI
 
         public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
-            _actionMenu.Draw(spriteBatch, font, gameTime, transform, IntroOffset);
+            // Draw the Action Border
+            if (_spriteManager.BattleBorderAction != null)
+            {
+                spriteBatch.DrawSnapped(_spriteManager.BattleBorderAction, IntroOffset, Color.White);
+            }
+
+            // Pass the active targeting slot to hide that specific panel's buttons
+            int? hiddenSlot = (UIState == BattleUIState.Targeting) ? ActiveTargetingSlot : null;
+            _actionMenu.Draw(spriteBatch, font, gameTime, transform, IntroOffset, hiddenSlot);
 
             if (UIState == BattleUIState.Targeting)
             {
@@ -422,9 +429,42 @@ namespace ProjectVagabond.Battle.UI
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
             string text = "CHOOSE A TARGET";
             Vector2 size = secondaryFont.MeasureString(text);
-            Vector2 pos = new Vector2((Global.VIRTUAL_WIDTH - size.X) / 2, 130);
 
-            TextAnimator.DrawTextWithEffect(spriteBatch, secondaryFont, text, pos, _global.Palette_Rust, TextEffectType.DriftWave, _targetingTextAnimTimer);
+            // Calculate position based on the active targeting slot
+            // Constants from ActionMenu: PANEL_WIDTH = 80, PANEL_Y = 139
+            // Left Slot (0): X = 10
+            // Right Slot (1): X = ScreenWidth - 80 - 10
+
+            float panelX;
+            if (ActiveTargetingSlot == 0)
+            {
+                panelX = 10;
+            }
+            else
+            {
+                panelX = Global.VIRTUAL_WIDTH - 80 - 10;
+            }
+
+            // Center text in the panel area
+            // Panel Width is 80.
+            float centerX = panelX + (80 / 2f);
+            float centerY = 139 + (40 / 2f); // Approx center of button area
+
+            Vector2 textPos = new Vector2(
+                centerX - (size.X / 2f),
+                centerY - (size.Y / 2f)
+            );
+
+            // Use DriftWave effect
+            TextAnimator.DrawTextWithEffect(
+                spriteBatch,
+                secondaryFont,
+                text,
+                textPos,
+                _global.Palette_Rust,
+                TextEffectType.DriftWave,
+                _targetingTextAnimTimer
+            );
         }
     }
 }

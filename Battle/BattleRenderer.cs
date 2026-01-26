@@ -336,8 +336,6 @@ namespace ProjectVagabond.Battle.UI
 
             DrawHUD(spriteBatch, animationManager, gameTime, uiManager, currentActor);
 
-            DrawUITitle(spriteBatch, gameTime);
-
             if (_statTooltipAlpha > 0.01f && _statTooltipCombatantID != null)
             {
                 var target = allCombatants.FirstOrDefault(c => c.CombatantID == _statTooltipCombatantID);
@@ -372,13 +370,26 @@ namespace ProjectVagabond.Battle.UI
 
         private void DrawTargetingHighlights(SpriteBatch spriteBatch, BattleUIManager uiManager, GameTime gameTime, Dictionary<string, Color> silhouetteColors, BattleCombatant focusedCombatant)
         {
-            if (uiManager.HoveredMove == null)
+            if (uiManager.HoveredMove == null && uiManager.MoveForTargeting == null)
             {
                 _reticleController.Reset();
                 return;
             }
 
+            // Use the targets from HoverHighlightState, which are updated by BattleUIManager
             var targets = uiManager.HoverHighlightState.Targets;
+
+            // If we are in targeting mode, we should calculate valid targets directly to ensure we show boxes for all valid options
+            if (uiManager.UIState == BattleUIState.Targeting && uiManager.MoveForTargeting != null)
+            {
+                var battleManager = ServiceLocator.Get<BattleManager>();
+                var actor = battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && c.BattleSlot == uiManager.ActiveTargetingSlot);
+                if (actor != null)
+                {
+                    targets = TargetingHelper.GetValidTargets(actor, uiManager.MoveForTargeting.Target, battleManager.AllCombatants);
+                }
+            }
+
             if (targets == null || !targets.Any())
             {
                 _reticleController.Reset();
@@ -395,26 +406,22 @@ namespace ProjectVagabond.Battle.UI
                 isMulti = type == TargetType.All || type == TargetType.Both || type == TargetType.Every ||
                           type == TargetType.Team || type == TargetType.RandomAll || type == TargetType.RandomBoth || type == TargetType.RandomEvery;
 
-                if (!isMulti)
-                {
-                    if (focusedCombatant != null && targets.Contains(focusedCombatant))
-                    {
-                        targetsToDraw = new List<BattleCombatant> { focusedCombatant };
-                    }
-                    else
-                    {
-                        targetsToDraw = Enumerable.Empty<BattleCombatant>();
-                    }
-                }
+                // In targeting mode, we want to show boxes on ALL valid targets if it's single target selection,
+                // so the user knows what they can click.
+                // If it's multi-target, we show all of them anyway.
+                // So we just use 'targets' (which contains all valid targets).
+                targetsToDraw = targets;
             }
             else
             {
-                var type = uiManager.HoveredMove.Target;
+                // Hover mode (not locked in targeting)
+                var type = uiManager.HoveredMove?.Target ?? TargetType.None;
                 isMulti = type == TargetType.All || type == TargetType.Both || type == TargetType.Every ||
                           type == TargetType.Team || type == TargetType.RandomAll || type == TargetType.RandomBoth || type == TargetType.RandomEvery;
 
                 if (!isMulti)
                 {
+                    // For single target hover, we cycle through them or show the specific one hovered
                     var activeTarget = targets.FirstOrDefault(t => silhouetteColors.ContainsKey(t.CombatantID));
                     if (activeTarget != null)
                     {
@@ -431,39 +438,13 @@ namespace ProjectVagabond.Battle.UI
             float offset = (float)gameTime.TotalGameTime.TotalSeconds * 20f;
             const float dashLength = 4f;
             const float gapLength = 4f;
-            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            if (isMulti)
+            foreach (var target in targetsToDraw)
             {
-                _reticleController.Reset();
-
-                foreach (var target in targetsToDraw)
+                var targetInfo = _currentTargets.FirstOrDefault(t => t.Combatant == target);
+                if (targetInfo.Combatant != null)
                 {
-                    if (!silhouetteColors.ContainsKey(target.CombatantID)) continue;
-
-                    var targetInfo = _currentTargets.FirstOrDefault(t => t.Combatant == target);
-                    if (targetInfo.Combatant != null)
-                    {
-                        DrawDottedBox(spriteBatch, pixel, targetInfo.Bounds, _global.Palette_Sun, offset, dashLength, gapLength);
-                    }
-                }
-            }
-            else
-            {
-                var target = targetsToDraw.FirstOrDefault();
-
-                if (target != null)
-                {
-                    var targetInfo = _currentTargets.FirstOrDefault(t => t.Combatant == target);
-                    if (targetInfo.Combatant != null)
-                    {
-                        _reticleController.Update(targetInfo.Bounds);
-                        DrawDottedBox(spriteBatch, pixel, _reticleController.CurrentRect, _global.Palette_Sun, offset, dashLength, gapLength);
-                    }
-                }
-                else
-                {
-                    _reticleController.Reset();
+                    DrawDottedBox(spriteBatch, pixel, targetInfo.Bounds, _global.Palette_Sun, offset, dashLength, gapLength);
                 }
             }
         }
@@ -538,9 +519,6 @@ namespace ProjectVagabond.Battle.UI
             if (uiManager.UIState == BattleUIState.Targeting)
             {
                 type = uiManager.TargetTypeForSelection;
-                // In parallel mode, we need the actor for the active slot.
-                // BattleUIManager handles this logic internally for input, but here we need it for rendering highlights.
-                // We can try to infer it from ActiveTargetingSlot if available.
                 var battleManager = ServiceLocator.Get<BattleManager>();
                 var activeActor = battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && c.BattleSlot == uiManager.ActiveTargetingSlot);
                 var actor = activeActor ?? currentActor;
@@ -628,7 +606,6 @@ namespace ProjectVagabond.Battle.UI
             bool eligibleForCentering = (visualEnemies.Count == 1 || isVictoryState) && !benchedEnemies.Any();
 
             var battleManager = ServiceLocator.Get<BattleManager>();
-            // Updated to check for the new unified phase
             bool isActionSelection = battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection;
 
             if (!eligibleForCentering)
@@ -1396,11 +1373,6 @@ namespace ProjectVagabond.Battle.UI
             c.HealthBarDisappearTimer = 0f;
             c.ManaBarDelayTimer = 0f;
             c.ManaBarDisappearTimer = 0f;
-        }
-
-        private void DrawUITitle(SpriteBatch spriteBatch, GameTime gameTime)
-        {
-            // Title drawing removed as per new design
         }
 
         private void UpdateEnemyAnimations(float dt, IEnumerable<BattleCombatant> combatants)

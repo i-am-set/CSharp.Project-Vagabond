@@ -20,7 +20,7 @@ namespace ProjectVagabond.Battle.UI
         // Events
         public event Action<int, QueuedAction>? OnActionSelected;
         public event Action<int>? OnSwitchMenuRequested;
-        public event Action<int>? OnCancelRequested; // New: Request to unlock a slot
+        public event Action<int>? OnCancelRequested;
         public event Action? OnFleeRequested;
 
         // State
@@ -36,7 +36,7 @@ namespace ProjectVagabond.Battle.UI
 
         // Layout
         private const int PANEL_WIDTH = 80;
-        private const int PANEL_Y = 130;
+        private const int PANEL_Y = 139; // Moved down 9px
 
         public ActionMenu() { }
 
@@ -69,10 +69,7 @@ namespace ProjectVagabond.Battle.UI
 
         public void Hide() => _isVisible = false;
 
-        public void GoBack()
-        {
-            // Not used in parallel mode usually
-        }
+        public void GoBack() { }
 
         private void UpdateLayout()
         {
@@ -106,11 +103,15 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform, Vector2 offset)
+        public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform, Vector2 offset, int? hiddenSlotIndex = null)
         {
             if (!_isVisible) return;
             foreach (var panel in _panels)
             {
+                if (hiddenSlotIndex.HasValue && panel.SlotIndex == hiddenSlotIndex.Value)
+                {
+                    continue;
+                }
                 panel.Draw(spriteBatch, font, gameTime, transform, offset);
             }
         }
@@ -133,7 +134,7 @@ namespace ProjectVagabond.Battle.UI
             // Layout
             private const int MOVE_BTN_HEIGHT = 6;
             private const int ACTION_BTN_HEIGHT = 6;
-            private const int SPACING = 1;
+            private const int SPACING = 0; // Removed spacing
 
             public CombatantPanel(BattleCombatant combatant, List<BattleCombatant> allCombatants)
             {
@@ -271,17 +272,10 @@ namespace ProjectVagabond.Battle.UI
             {
                 HoveredMove = null;
 
-                // Handle Right-Click Cancellation
                 if (isLocked && !isInputBlocked)
                 {
                     if (mouse.RightButton == ButtonState.Pressed && _panelBounds.Contains(mouse.Position))
                     {
-                        // We need to detect just-pressed, but we don't have previous state here easily.
-                        // However, BattleUIManager calls this every frame.
-                        // Let's rely on the fact that if it's pressed, we request cancel.
-                        // The manager can debounce if needed, or we can just fire it.
-                        // Actually, firing every frame while held is bad.
-                        // But since cancelling unlocks it, `isLocked` becomes false immediately next frame.
                         OnCancelRequested?.Invoke();
                     }
                 }
@@ -334,7 +328,8 @@ namespace ProjectVagabond.Battle.UI
                     if (btn.IsHovered && btn.IsEnabled) bgColor = global.Palette_Rust;
                     else if (!btn.IsEnabled) bgColor = global.Palette_Black;
 
-                    spriteBatch.DrawSnapped(pixel, rect, bgColor);
+                    // Draw Beveled Background
+                    DrawBeveledBackground(spriteBatch, pixel, rect, bgColor);
 
                     var textSize = btn.Font.MeasureString(btn.Text);
                     var textPos = new Vector2(
@@ -356,6 +351,18 @@ namespace ProjectVagabond.Battle.UI
                     var checkRect = new Rectangle((int)_position.X + PANEL_WIDTH - 8, (int)_position.Y - 8, 8, 8);
                     spriteBatch.DrawSnapped(pixel, checkRect, global.Palette_Leaf);
                 }
+            }
+
+            private void DrawBeveledBackground(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, Color color)
+            {
+                // 1. Top Row (Y+1): X+2 to W-4
+                spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 2, rect.Y, rect.Width - 4, 1), color);
+
+                // 2. Bottom Row (Bottom-2): X+2 to W-4
+                spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 2, rect.Bottom - 1, rect.Width - 4, 1), color);
+
+                // 3. Middle Block (Y+2 to Bottom-3): X+1 to W-2
+                spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 1, rect.Y + 1, rect.Width - 2, rect.Height - 2), color);
             }
         }
     }
