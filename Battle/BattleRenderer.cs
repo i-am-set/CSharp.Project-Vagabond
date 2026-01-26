@@ -63,10 +63,6 @@ namespace ProjectVagabond.Battle.UI
         private const float ENEMY_ANIM_MIN_INTERVAL = 0.8f;
         private const float ENEMY_ANIM_MAX_INTERVAL = 1.2f;
 
-        private Dictionary<string, Vector2> _shadowOffsets = new Dictionary<string, Vector2>();
-        private Dictionary<string, float> _shadowTimers = new Dictionary<string, float>();
-        private Dictionary<string, float> _shadowIntervals = new Dictionary<string, float>();
-
         private const float SHADOW_ANIM_MIN_INTERVAL = 1.5f;
         private const float SHADOW_ANIM_MAX_INTERVAL = 2.5f;
 
@@ -136,9 +132,6 @@ namespace ProjectVagabond.Battle.UI
             _enemySpritePartOffsets.Clear();
             _enemyAnimationTimers.Clear();
             _enemyAnimationIntervals.Clear();
-            _shadowOffsets.Clear();
-            _shadowTimers.Clear();
-            _shadowIntervals.Clear();
             _recoilStates.Clear();
             _activeStatusIconAnims.Clear();
             _combatantVisualCenters.Clear();
@@ -238,7 +231,6 @@ namespace ProjectVagabond.Battle.UI
 
             UpdateEnemyPositions(dt, combatants, animationManager);
             UpdateEnemyAnimations(dt, combatants);
-            UpdateShadowAnimations(dt, combatants);
             UpdateRecoilAnimations(dt);
             UpdateStatusIconAnimations(dt);
             UpdateStatusIconTooltips(combatants);
@@ -740,7 +732,8 @@ namespace ProjectVagabond.Battle.UI
                             floorScale = Easing.EaseOutBack(progress);
                         }
 
-                        _vfxRenderer.DrawFloor(spriteBatch, center, center.Y + size + BattleLayout.ENEMY_SLOT_Y_OFFSET - 12, floorScale);
+                        // Adjusted Y offset from -12 to -4 to lower the floor by 8 pixels
+                        _vfxRenderer.DrawFloor(spriteBatch, center, center.Y + size + BattleLayout.ENEMY_SLOT_Y_OFFSET - 4, floorScale);
                     }
                     else
                     {
@@ -777,7 +770,8 @@ namespace ProjectVagabond.Battle.UI
                                 }
                             }
 
-                            _vfxRenderer.DrawFloor(spriteBatch, center, center.Y + size + BattleLayout.ENEMY_SLOT_Y_OFFSET - 12, floorScale);
+                            // Adjusted Y offset from -12 to -4
+                            _vfxRenderer.DrawFloor(spriteBatch, center, center.Y + size + BattleLayout.ENEMY_SLOT_Y_OFFSET - 4, floorScale);
                         }
                     }
                 }
@@ -806,7 +800,8 @@ namespace ProjectVagabond.Battle.UI
                             }
                         }
 
-                        _vfxRenderer.DrawFloor(spriteBatch, center, center.Y + size + BattleLayout.ENEMY_SLOT_Y_OFFSET - 12, floorScale);
+                        // Adjusted Y offset from -12 to -4
+                        _vfxRenderer.DrawFloor(spriteBatch, center, center.Y + size + BattleLayout.ENEMY_SLOT_Y_OFFSET - 4, floorScale);
                     }
 
                     var centerIntro = animManager.GetFloorIntroAnimationState("floor_center");
@@ -818,7 +813,8 @@ namespace ProjectVagabond.Battle.UI
                         float progress = Math.Clamp(centerIntro.Timer / BattleAnimationManager.FloorIntroAnimationState.DURATION, 0f, 1f);
                         float floorScale = Easing.EaseOutBack(progress);
 
-                        _vfxRenderer.DrawFloor(spriteBatch, centerPos, centerPos.Y + size + BattleLayout.ENEMY_SLOT_Y_OFFSET - 12, floorScale);
+                        // Adjusted Y offset from -12 to -4
+                        _vfxRenderer.DrawFloor(spriteBatch, centerPos, centerPos.Y + size + BattleLayout.ENEMY_SLOT_Y_OFFSET - 4, floorScale);
                     }
                 }
             }
@@ -994,14 +990,6 @@ namespace ProjectVagabond.Battle.UI
                         (int)(center.Y + bob + spawnY + recoil.Y + slideOffset.Y + chargeOffset.Y),
                         spriteSize, spriteSize
                     );
-
-                    if (drawShadow && silhouetteAmt < 1.0f)
-                    {
-                        float groundY = center.Y + spriteSize - 4;
-                        float heightFactor = 1.0f - Math.Clamp(Math.Abs(spawnY) / 50f, 0f, 1f);
-                        Vector2 shadowAnim = _shadowOffsets.TryGetValue(enemy.CombatantID, out var s) ? s : Vector2.Zero;
-                        _vfxRenderer.DrawShadow(spriteBatch, new Vector2(spriteRect.Center.X, groundY), heightFactor * alpha, shadowAnim);
-                    }
 
                     if (drawSprite)
                     {
@@ -1425,34 +1413,6 @@ namespace ProjectVagabond.Battle.UI
                             int dir = _random.Next(2);
                             offsets[i] = dir == 0 ? new Vector2(0, -1) : new Vector2(0, 1);
                         }
-                    }
-                }
-            }
-        }
-
-        private void UpdateShadowAnimations(float dt, IEnumerable<BattleCombatant> combatants)
-        {
-            foreach (var c in combatants)
-            {
-                if (c.IsPlayerControlled || c.IsDefeated) continue;
-                string id = c.CombatantID;
-                if (!_shadowTimers.ContainsKey(id))
-                {
-                    _shadowTimers[id] = (float)_random.NextDouble();
-                    _shadowIntervals[id] = (float)(_random.NextDouble() * (SHADOW_ANIM_MAX_INTERVAL - SHADOW_ANIM_MIN_INTERVAL) + SHADOW_ANIM_MIN_INTERVAL);
-                    _shadowOffsets[id] = Vector2.Zero;
-                }
-
-                _shadowTimers[id] += dt;
-                if (_shadowTimers[id] >= _shadowIntervals[id])
-                {
-                    _shadowTimers[id] = 0f;
-                    _shadowIntervals[id] = (float)(_random.NextDouble() * (SHADOW_ANIM_MAX_INTERVAL - SHADOW_ANIM_MIN_INTERVAL) + SHADOW_ANIM_MIN_INTERVAL);
-                    if (_shadowOffsets[id] != Vector2.Zero) _shadowOffsets[id] = Vector2.Zero;
-                    else
-                    {
-                        int dir = _random.Next(4);
-                        _shadowOffsets[id] = dir switch { 0 => new Vector2(0, -1), 1 => new Vector2(0, 1), 2 => new Vector2(-1, 0), _ => new Vector2(1, 0) };
                     }
                 }
             }

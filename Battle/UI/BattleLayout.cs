@@ -12,7 +12,9 @@ namespace ProjectVagabond.Battle.UI
     {
         // --- Screen Constants ---
         public const int DIVIDER_Y = 123;
-        public const int ENEMY_SLOT_Y_OFFSET = 12;
+
+        // MOVED UP 8 PIXELS (Was 12)
+        public const int ENEMY_SLOT_Y_OFFSET = 4;
 
         // --- Action Menu Layout ---
         public const int ACTION_MENU_WIDTH = 160;
@@ -25,12 +27,10 @@ namespace ProjectVagabond.Battle.UI
         public const int ENEMY_SPRITE_SIZE_MAJOR = 96;
 
         // --- Player Layout ---
-        // MOVED UP 8 PIXELS (from 115, 94, 127)
         public const float PLAYER_HEART_CENTER_Y = 107f;
         public const float PLAYER_BARS_TOP_Y = 86f;
         public const float PLAYER_NAME_TOP_Y = 119f;
 
-        // FIX: Reduced width to 40 to match enemies
         public const int PLAYER_BAR_WIDTH = 40;
 
         // --- HUD Constants ---
@@ -41,9 +41,6 @@ namespace ProjectVagabond.Battle.UI
 
         public static Rectangle GetActionMenuArea(int slotIndex)
         {
-            // Slot 0: Left (0 to 160)
-            // Slot 1: Right (160 to 320)
-            // If we ever have more slots, this logic might need expansion, but for 2v2 it's split down the middle.
             int x = (slotIndex == 0) ? 0 : ACTION_MENU_WIDTH;
             return new Rectangle(x, ACTION_MENU_Y, ACTION_MENU_WIDTH, ACTION_MENU_HEIGHT);
         }
@@ -55,9 +52,6 @@ namespace ProjectVagabond.Battle.UI
             return new Vector2(ENEMY_AREA_PADDING + (slotIndex * slotWidth) + (slotWidth / 2), ENEMY_SLOT_Y_OFFSET);
         }
 
-        /// <summary>
-        /// Gets the center position used when only one enemy remains.
-        /// </summary>
         public static Vector2 GetEnemyCenter()
         {
             return new Vector2(Global.VIRTUAL_WIDTH / 2f, ENEMY_SLOT_Y_OFFSET);

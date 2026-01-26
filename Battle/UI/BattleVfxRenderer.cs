@@ -22,7 +22,7 @@ namespace ProjectVagabond.Battle.UI
 {
     /// <summary>
     /// Handles visual effects in battle that are not strictly part of the entity or the HUD,
-    /// such as shadows, floor rendering, and tooltips.
+    /// such as floor rendering and tooltips.
     /// </summary>
     public class BattleVfxRenderer
     {
@@ -35,16 +35,6 @@ namespace ProjectVagabond.Battle.UI
             _spriteManager = ServiceLocator.Get<SpriteManager>();
             _global = ServiceLocator.Get<Global>();
             _core = ServiceLocator.Get<Core>();
-        }
-
-        public void DrawShadow(SpriteBatch spriteBatch, Vector2 position, float alpha, Vector2 offset)
-        {
-            if (_spriteManager.ShadowBlobSprite == null) return;
-
-            Vector2 shadowOrigin = new Vector2(_spriteManager.ShadowBlobSprite.Width / 2f, _spriteManager.ShadowBlobSprite.Height / 2f);
-            Vector2 drawPos = position + offset;
-
-            spriteBatch.DrawSnapped(_spriteManager.ShadowBlobSprite, drawPos, null, Color.White * alpha, 0f, shadowOrigin, 1.0f, SpriteEffects.None, 0f);
         }
 
         public void DrawFloor(SpriteBatch spriteBatch, Vector2 slotCenter, float groundY, float scale = 1.0f)

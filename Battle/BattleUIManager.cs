@@ -320,10 +320,16 @@ namespace ProjectVagabond.Battle.UI
 
         public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
-            // Draw the Action Border
-            if (_spriteManager.BattleBorderAction != null)
+            var battleManager = ServiceLocator.Get<BattleManager>();
+
+            // Determine which border to draw based on phase
+            Texture2D border = (battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection)
+                ? _spriteManager.BattleBorderAction
+                : _spriteManager.BattleBorderCombat;
+
+            if (border != null)
             {
-                spriteBatch.DrawSnapped(_spriteManager.BattleBorderAction, IntroOffset, Color.White);
+                spriteBatch.DrawSnapped(border, IntroOffset, Color.White);
             }
 
             // Pass the active targeting slot to hide that specific panel's buttons
@@ -338,21 +344,6 @@ namespace ProjectVagabond.Battle.UI
             if (_switchMenu.IsForced || _switchMenu.IsVisible)
             {
                 _switchMenu.Draw(spriteBatch, font, gameTime);
-            }
-
-            // --- DEBUG DRAWING ---
-            if (_global.ShowSplitMapGrid)
-            {
-                var pixel = ServiceLocator.Get<Texture2D>();
-
-                // Draw Slot 0 Area (Left) - Cyan
-                var area0 = BattleLayout.GetActionMenuArea(0);
-                spriteBatch.DrawSnapped(pixel, area0, Color.Cyan * 0.2f);
-                spriteBatch.DrawLineSnapped(new Vector2(area0.Right, area0.Top), new Vector2(area0.Right, area0.Bottom), Color.Cyan);
-
-                // Draw Slot 1 Area (Right) - Magenta
-                var area1 = BattleLayout.GetActionMenuArea(1);
-                spriteBatch.DrawSnapped(pixel, area1, Color.Magenta * 0.2f);
             }
         }
 

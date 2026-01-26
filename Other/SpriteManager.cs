@@ -1,31 +1,9 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
-using MonoGame.Extended.BitmapFonts;
-using MonoGame.Extended.Graphics;
-using ProjectVagabond;
 using ProjectVagabond.Battle;
-using ProjectVagabond.Battle.Abilities;
-using ProjectVagabond.Battle.UI;
-
-using ProjectVagabond.Items;
-using ProjectVagabond.Particles;
-using ProjectVagabond.Progression;
-using ProjectVagabond.Scenes;
-using ProjectVagabond.Transitions;
-using ProjectVagabond.UI;
-using ProjectVagabond.Utils;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Reflection;
-using System.Runtime.InteropServices;
-using System.Runtime.Intrinsics.X86;
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.RegularExpressions;
 
 namespace ProjectVagabond
 {
@@ -120,7 +98,6 @@ public enum PlayerSpriteType
         public Texture2D SpellbookClosedSprite { get; private set; }
         public Texture2D PlayerHeartSpriteSheet { get; private set; }
         public Texture2D PlayerHeartSpriteSheetSilhouette { get; private set; }
-        public Texture2D ShadowBlobSprite { get; private set; }
         public Texture2D BattleEnemyFloorSprite { get; private set; }
         public Texture2D BattlePlayerFloorSprite { get; private set; }
         public Texture2D HealParticleSprite { get; private set; }
@@ -231,9 +208,6 @@ public enum PlayerSpriteType
 
             try { _softParticleSprite = _textureFactory.CreateSoftCircleParticleTexture(); }
             catch { _softParticleSprite = _textureFactory.CreateColoredTexture(16, 16, Color.Red); }
-
-            try { ShadowBlobSprite = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/battle_enemy_shadow"); }
-            catch { ShadowBlobSprite = _textureFactory.CreateColoredTexture(16, 16, Color.Black); }
 
             try { BattleEnemyFloorSprite = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/battle_enemy_floor"); }
             catch { BattleEnemyFloorSprite = _textureFactory.CreateColoredTexture(128, 128, Color.DarkGray); }

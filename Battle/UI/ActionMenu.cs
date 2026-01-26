@@ -74,17 +74,10 @@ namespace ProjectVagabond.Battle.UI
         {
             foreach (var panel in _panels)
             {
-                // Get the designated area for this slot (Left or Right)
                 var area = BattleLayout.GetActionMenuArea(panel.SlotIndex);
-
-                // Calculate the panel's total height to center it vertically
-                // 4 Moves * 7px (6+1) + 1 Action Row * 7px (6+1) = 35px total height
-                int panelHeight = 35;
-
-                // Center the panel within the area
+                int panelHeight = 35; // 4 Moves * 7px + 1 Action Row * 7px
                 int x = area.Center.X - (PANEL_WIDTH / 2);
                 int y = area.Center.Y - (panelHeight / 2);
-
                 panel.SetPosition(new Vector2(x, y));
             }
         }
@@ -136,13 +129,13 @@ namespace ProjectVagabond.Battle.UI
             public event Action? OnCancelRequested;
 
             private readonly List<Button> _buttons = new List<Button>();
+            private Button _cancelButton;
             private Vector2 _position;
             private Rectangle _panelBounds;
 
             // Layout
             private const int MOVE_BTN_HEIGHT = 6;
             private const int ACTION_BTN_HEIGHT = 6;
-            // We add 1px to the hitbox height to create the seamless gap
             private const int HITBOX_PADDING = 1;
 
             public CombatantPanel(BattleCombatant combatant, List<BattleCombatant> allCombatants)
@@ -251,6 +244,14 @@ namespace ProjectVagabond.Battle.UI
                 bool hasBench = allCombatants.Any(c => c.IsPlayerControlled && !c.IsDefeated && c.BattleSlot >= 2);
                 switchBtn.IsEnabled = hasBench;
                 _buttons.Add(switchBtn);
+
+                // 3. Cancel Button
+                _cancelButton = new Button(Rectangle.Empty, "CANCEL", font: tertiaryFont, enableHoverSway: false)
+                {
+                    CustomDefaultTextColor = global.Palette_Rust,
+                    CustomHoverTextColor = global.ButtonHoverColor
+                };
+                _cancelButton.OnClick += () => OnCancelRequested?.Invoke();
             }
 
             private void LayoutButtons()
@@ -259,66 +260,74 @@ namespace ProjectVagabond.Battle.UI
                 int y = (int)_position.Y;
                 int startY = y;
 
-                // Layout Moves (Vertical Stack)
+                // Layout Moves
                 for (int i = 0; i < 4; i++)
                 {
-                    // Hitbox is 1px taller than visual height to bridge the gap
                     _buttons[i].Bounds = new Rectangle(x, y, PANEL_WIDTH, MOVE_BTN_HEIGHT + HITBOX_PADDING);
                     y += MOVE_BTN_HEIGHT + HITBOX_PADDING;
                 }
 
-                // Layout Actions (Horizontal Row)
+                // Layout Actions
                 int strikeW = 30;
                 int stallW = 25;
                 int switchW = 25;
 
-                // Hitbox is 1px taller here too for consistency
                 _buttons[4].Bounds = new Rectangle(x, y, strikeW, ACTION_BTN_HEIGHT + HITBOX_PADDING);
                 _buttons[5].Bounds = new Rectangle(x + strikeW, y, stallW, ACTION_BTN_HEIGHT + HITBOX_PADDING);
                 _buttons[6].Bounds = new Rectangle(x + strikeW + stallW, y, switchW, ACTION_BTN_HEIGHT + HITBOX_PADDING);
 
                 int totalHeight = (y + ACTION_BTN_HEIGHT + HITBOX_PADDING) - startY;
                 _panelBounds = new Rectangle(x, startY, PANEL_WIDTH, totalHeight);
+
+                // Layout Cancel Button (Centered in the slot's designated area)
+                var area = BattleLayout.GetActionMenuArea(SlotIndex);
+                int cancelW = 50;
+                int cancelH = 15;
+                _cancelButton.Bounds = new Rectangle(
+                    area.Center.X - cancelW / 2,
+                    area.Center.Y - cancelH / 2,
+                    cancelW,
+                    cancelH
+                );
             }
 
             public void Update(MouseState mouse, GameTime gameTime, bool isInputBlocked, bool isLocked)
             {
                 HoveredMove = null;
 
-                if (isLocked && !isInputBlocked)
+                if (isInputBlocked)
                 {
-                    if (mouse.RightButton == ButtonState.Pressed && _panelBounds.Contains(mouse.Position))
-                    {
-                        OnCancelRequested?.Invoke();
-                    }
+                    foreach (var btn in _buttons) btn.IsHovered = false;
+                    _cancelButton.IsHovered = false;
+                    return;
                 }
 
-                foreach (var btn in _buttons)
+                if (isLocked)
                 {
-                    if (isInputBlocked)
+                    _cancelButton.Update(mouse);
+                }
+                else
+                {
+                    foreach (var btn in _buttons)
                     {
-                        btn.IsHovered = false;
-                        continue;
-                    }
-
-                    btn.Update(mouse);
-
-                    if (btn.IsHovered && btn.IsEnabled)
-                    {
-                        int index = _buttons.IndexOf(btn);
-                        if (index < 4) // Spell
+                        btn.Update(mouse);
+                        if (btn.IsHovered && btn.IsEnabled)
                         {
-                            var entry = Combatant.Spells[index];
-                            if (entry != null && BattleDataCache.Moves.TryGetValue(entry.MoveID, out var m))
-                                HoveredMove = m;
-                        }
-                        else if (index == 4) // Strike
-                        {
-                            HoveredMove = Combatant.StrikeMove;
-                        }
-                        else if (index == 5) // Stall
-                        {
-                            if (BattleDataCache.Moves.TryGetValue("6", out var m)) HoveredMove = m;
+                            int index = _buttons.IndexOf(btn);
+                            if (index < 4) // Spell
+                            {
+                                var entry = Combatant.Spells[index];
+                                if (entry != null && BattleDataCache.Moves.TryGetValue(entry.MoveID, out var m))
+                                    HoveredMove = m;
+                            }
+                            else if (index == 4) // Strike
+                            {
+                                HoveredMove = Combatant.StrikeMove;
+                            }
+                            else if (index == 5) // Stall
+                            {
+                                if (BattleDataCache.Moves.TryGetValue("6", out var m)) HoveredMove = m;
+                            }
                         }
                     }
                 }
@@ -331,68 +340,69 @@ namespace ProjectVagabond.Battle.UI
                 var battleManager = ServiceLocator.Get<BattleManager>();
                 bool isLocked = battleManager.IsActionPending(SlotIndex);
 
-                foreach (var btn in _buttons)
+                if (isLocked)
                 {
-                    var rect = btn.Bounds;
+                    // Draw Cancel Button
+                    var rect = _cancelButton.Bounds;
                     rect.Y += (int)offset.Y;
 
-                    // VISUAL ADJUSTMENT:
-                    // The hitbox is 1px taller than the visual button.
-                    // We subtract 1 from the height to draw the background, creating the visual gap.
-                    var visualRect = new Rectangle(rect.X, rect.Y, rect.Width, rect.Height - HITBOX_PADDING);
+                    // REMOVED: DrawBeveledBackground call for Cancel Button
+                    // Color bgColor = _cancelButton.IsHovered ? global.Palette_Rust : global.Palette_DarkShadow;
+                    // DrawBeveledBackground(spriteBatch, pixel, rect, bgColor);
 
-                    Color bgColor = global.Palette_DarkShadow;
-                    if (isLocked) bgColor = global.Palette_DarkGray;
-                    if (btn.IsHovered && btn.IsEnabled) bgColor = global.Palette_Rust;
-                    else if (!btn.IsEnabled) bgColor = global.Palette_Black;
-
-                    // Draw Beveled Background using the smaller visual rect
-                    DrawBeveledBackground(spriteBatch, pixel, visualRect, bgColor);
-
-                    var textSize = btn.Font.MeasureString(btn.Text);
-
-                    // Center text within the VISUAL rect, not the hitbox
+                    var textSize = _cancelButton.Font.MeasureString(_cancelButton.Text);
                     var textPos = new Vector2(
-                        visualRect.X + (visualRect.Width - textSize.Width) / 2f,
-                        visualRect.Y + (visualRect.Height - textSize.Height) / 2f
+                        rect.X + (rect.Width - textSize.Width) / 2f,
+                        rect.Y + (rect.Height - textSize.Height) / 2f
                     );
                     textPos = new Vector2(MathF.Round(textPos.X), MathF.Round(textPos.Y));
 
-                    Color textColor = btn.CustomDefaultTextColor ?? global.Palette_Sun;
-                    if (isLocked) textColor = global.Palette_LightGray;
-                    if (btn.IsHovered && btn.IsEnabled) textColor = global.ButtonHoverColor;
-                    if (!btn.IsEnabled) textColor = global.ButtonDisableColor;
-
-                    spriteBatch.DrawStringSnapped(btn.Font, btn.Text, textPos, textColor);
-
-                    // --- DEBUG DRAWING ---
-                    if (global.ShowSplitMapGrid)
+                    Color textColor = _cancelButton.IsHovered ? global.ButtonHoverColor : global.Palette_Sun;
+                    spriteBatch.DrawStringSnapped(_cancelButton.Font, _cancelButton.Text, textPos, textColor);
+                }
+                else
+                {
+                    // Draw Normal Buttons
+                    foreach (var btn in _buttons)
                     {
-                        // Draw the full hitbox in yellow to verify seamlessness
-                        spriteBatch.DrawSnapped(pixel, rect, Color.Yellow * 0.2f);
-                        spriteBatch.DrawLineSnapped(new Vector2(rect.Left, rect.Top), new Vector2(rect.Right, rect.Top), Color.Yellow);
-                        spriteBatch.DrawLineSnapped(new Vector2(rect.Left, rect.Bottom), new Vector2(rect.Right, rect.Bottom), Color.Yellow);
-                        spriteBatch.DrawLineSnapped(new Vector2(rect.Left, rect.Top), new Vector2(rect.Left, rect.Bottom), Color.Yellow);
-                        spriteBatch.DrawLineSnapped(new Vector2(rect.Right, rect.Top), new Vector2(rect.Right, rect.Bottom), Color.Yellow);
+                        var rect = btn.Bounds;
+                        rect.Y += (int)offset.Y;
+                        var visualRect = new Rectangle(rect.X, rect.Y, rect.Width, rect.Height - HITBOX_PADDING);
+
+                        Color bgColor = global.Palette_DarkShadow;
+                        if (btn.IsHovered && btn.IsEnabled) bgColor = global.Palette_Rust;
+                        else if (!btn.IsEnabled) bgColor = global.Palette_Black;
+
+                        DrawBeveledBackground(spriteBatch, pixel, visualRect, bgColor);
+
+                        var textSize = btn.Font.MeasureString(btn.Text);
+                        var textPos = new Vector2(
+                            visualRect.X + (visualRect.Width - textSize.Width) / 2f,
+                            visualRect.Y + (visualRect.Height - textSize.Height) / 2f
+                        );
+                        textPos = new Vector2(MathF.Round(textPos.X), MathF.Round(textPos.Y));
+
+                        Color textColor = btn.CustomDefaultTextColor ?? global.Palette_Sun;
+                        if (btn.IsHovered && btn.IsEnabled) textColor = global.ButtonHoverColor;
+                        if (!btn.IsEnabled) textColor = global.ButtonDisableColor;
+
+                        spriteBatch.DrawStringSnapped(btn.Font, btn.Text, textPos, textColor);
                     }
                 }
 
-                if (isLocked)
+                // Debug Drawing
+                if (global.ShowSplitMapGrid)
                 {
-                    var checkRect = new Rectangle((int)_position.X + PANEL_WIDTH - 8, (int)_position.Y - 8, 8, 8);
-                    spriteBatch.DrawSnapped(pixel, checkRect, global.Palette_Leaf);
+                    var area = BattleLayout.GetActionMenuArea(SlotIndex);
+                    spriteBatch.DrawSnapped(pixel, area, (SlotIndex == 0 ? Color.Cyan : Color.Magenta) * 0.2f);
+                    spriteBatch.DrawLineSnapped(new Vector2(area.Right, area.Top), new Vector2(area.Right, area.Bottom), (SlotIndex == 0 ? Color.Cyan : Color.Magenta));
                 }
             }
 
             private void DrawBeveledBackground(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, Color color)
             {
-                // 1. Top Row (Y+1): X+2 to W-4
                 spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 2, rect.Y, rect.Width - 4, 1), color);
-
-                // 2. Bottom Row (Bottom-2): X+2 to W-4
                 spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 2, rect.Bottom - 1, rect.Width - 4, 1), color);
-
-                // 3. Middle Block (Y+2 to Bottom-3): X+1 to W-2
                 spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 1, rect.Y + 1, rect.Width - 2, rect.Height - 2), color);
             }
         }
