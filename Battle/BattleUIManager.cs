@@ -40,7 +40,11 @@ namespace ProjectVagabond.Battle.UI
         public TargetType? TargetTypeForSelection => UIState == BattleUIState.Targeting ? MoveForTargeting?.Target : null;
 
         public MoveData? HoveredMove => _actionMenu.HoveredMove;
-        public BattleCombatant? HoveredCombatantFromUI { get; private set; }
+
+        // Always null now, as UI buttons for targeting are removed. 
+        // Kept for compatibility with BattleRenderer/InputHandler which check this property.
+        public BattleCombatant? HoveredCombatantFromUI { get; private set; } = null;
+
         public BattleCombatant? CombatantHoveredViaSprite { get; set; }
         public readonly HoverHighlightState HoverHighlightState = new HoverHighlightState();
 
@@ -48,7 +52,6 @@ namespace ProjectVagabond.Battle.UI
         private float _targetingTextAnimTimer = 0f;
         public Vector2 IntroOffset { get; set; } = Vector2.Zero;
 
-        private readonly List<Button> _targetingButtons = new List<Button>();
         private MouseState _previousMouseState;
 
         public bool IsBusy => false;
@@ -75,20 +78,9 @@ namespace ProjectVagabond.Battle.UI
             EventBus.Subscribe<GameEvents.ForcedSwitchRequested>(OnForcedSwitchRequested);
 
             _previousMouseState = Mouse.GetState();
-            EnsureTargetingButtonsInitialized();
         }
 
         public void ForceClearNarration() { }
-
-        private void EnsureTargetingButtonsInitialized()
-        {
-            if (_targetingButtons.Count > 0) return;
-            for (int i = 0; i < 4; i++)
-            {
-                var btn = new Button(Rectangle.Empty, "", enableHoverSway: false);
-                _targetingButtons.Add(btn);
-            }
-        }
 
         public void Reset()
         {
@@ -102,8 +94,6 @@ namespace ProjectVagabond.Battle.UI
             HoveredCombatantFromUI = null;
             CombatantHoveredViaSprite = null;
             IntroOffset = Vector2.Zero;
-
-            foreach (var btn in _targetingButtons) btn.ResetAnimationState();
         }
 
         public void ShowActionMenu(BattleCombatant player, List<BattleCombatant> allCombatants)
@@ -146,22 +136,14 @@ namespace ProjectVagabond.Battle.UI
             }
 
             bool isTargeting = UIState == BattleUIState.Targeting;
-            bool targetingHovered = false;
 
             if (isTargeting)
             {
                 _targetingTextAnimTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-                var battleManager = ServiceLocator.Get<BattleManager>();
-                var activeActor = battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && c.BattleSlot == ActiveTargetingSlot);
-                UpdateTargetingButtons(currentMouseState, _previousMouseState, activeActor ?? currentActor);
-                targetingHovered = (HoveredCombatantFromUI != null);
-            }
-            else
-            {
-                HoveredCombatantFromUI = null;
             }
 
-            bool isMenuBlocked = isTargeting || targetingHovered;
+            // Block menu input if we are targeting
+            bool isMenuBlocked = isTargeting;
             _actionMenu.Update(currentMouseState, gameTime, isMenuBlocked);
             _switchMenu.Update(currentMouseState);
             UpdateHoverHighlights(gameTime, currentActor);
@@ -280,61 +262,6 @@ namespace ProjectVagabond.Battle.UI
             _combatSwitchDialog.Show(battleManager.AllCombatants.ToList());
         }
 
-        private void UpdateTargetingButtons(MouseState currentMouseState, MouseState previousMouseState, BattleCombatant currentActor)
-        {
-            EnsureTargetingButtonsInitialized();
-            HoveredCombatantFromUI = null;
-            var battleManager = ServiceLocator.Get<BattleManager>();
-            var allCombatants = battleManager.AllCombatants.ToList();
-
-            const int btnWidth = 150;
-            const int btnHeight = 13;
-            const int gridX = 10;
-            const int gridY = 144;
-
-            for (int i = 0; i < 4; i++)
-            {
-                var btn = _targetingButtons[i];
-                int col = i % 2;
-                int row = i / 2;
-                btn.Bounds = new Rectangle(gridX + col * btnWidth, gridY + row * btnHeight, btnWidth, btnHeight);
-
-                bool isPlayerSlot = row == 1;
-                int slotIndex = col;
-                var combatant = allCombatants.FirstOrDefault(c => c.IsPlayerControlled == isPlayerSlot && c.BattleSlot == slotIndex && c.IsActiveOnField);
-
-                if (combatant != null)
-                {
-                    btn.Text = combatant.Name.ToUpper();
-                    var validTargets = TargetingHelper.GetValidTargets(currentActor, TargetTypeForSelection ?? TargetType.None, allCombatants);
-                    btn.IsEnabled = validTargets.Contains(combatant);
-                    btn.CustomDisabledTextColor = _global.Palette_DarkShadow;
-                    btn.OnClick = null;
-                }
-                else
-                {
-                    btn.Text = "EMPTY";
-                    btn.IsEnabled = false;
-                    btn.CustomDisabledTextColor = _global.Palette_DarkShadow;
-                    btn.OnClick = null;
-                }
-
-                btn.Update(currentMouseState);
-
-                if (btn.IsHovered && btn.IsEnabled && combatant != null)
-                {
-                    HoveredCombatantFromUI = combatant;
-                    ServiceLocator.Get<CursorManager>().SetState(CursorState.HoverClickable);
-
-                    if (UIInputManager.CanProcessMouseClick() && currentMouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released)
-                    {
-                        SubmitTarget(combatant);
-                        UIInputManager.ConsumeMouseClick();
-                    }
-                }
-            }
-        }
-
         private void UpdateHoverHighlights(GameTime gameTime, BattleCombatant currentActor)
         {
             HoverHighlightState.Timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -387,7 +314,6 @@ namespace ProjectVagabond.Battle.UI
 
             if (UIState == BattleUIState.Targeting)
             {
-                DrawTargetingButtons(spriteBatch, font, gameTime);
                 DrawTargetingText(spriteBatch, font, gameTime);
             }
 
@@ -405,22 +331,6 @@ namespace ProjectVagabond.Battle.UI
                 spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
                 _combatSwitchDialog.DrawContent(spriteBatch, font, gameTime, Matrix.Identity);
                 spriteBatch.End();
-            }
-        }
-
-        private void DrawTargetingButtons(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
-        {
-            var pixel = ServiceLocator.Get<Texture2D>();
-            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-
-            foreach (var btn in _targetingButtons)
-            {
-                if (btn.IsEnabled)
-                {
-                    bool isHovered = btn.IsHovered || (HoveredCombatantFromUI != null && btn.Text == HoveredCombatantFromUI.Name.ToUpper());
-                    Color color = isHovered ? _global.ButtonHoverColor : _global.GameTextColor;
-                    spriteBatch.DrawStringSnapped(secondaryFont, btn.Text, btn.Bounds.Location.ToVector2() + new Vector2(10, 2), color);
-                }
             }
         }
 
