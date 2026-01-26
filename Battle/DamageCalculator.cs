@@ -19,12 +19,15 @@ namespace ProjectVagabond.Battle
         private const float GLOBAL_DAMAGE_SCALAR = 0.125f;
         private const int FLAT_DAMAGE_BONUS = 1;
 
+        private const float BASELINE_DEFENSE_DIVISOR = 5.0f;
+
         public struct DamageResult
         {
             public int DamageAmount;
             public bool WasCritical;
             public bool WasGraze;
             public bool WasProtected;
+            public bool WasVulnerable;
         }
 
         public static DamageResult CalculateDamage(QueuedAction action, BattleCombatant target, MoveData move, float multiTargetModifier = 1.0f, bool? overrideCrit = null, bool isSimulation = false)
@@ -32,7 +35,8 @@ namespace ProjectVagabond.Battle
             var attacker = action.Actor;
             var result = new DamageResult
             {
-                WasProtected = false
+                WasProtected = false,
+                WasVulnerable = false
             };
 
             var ctx = new CombatTriggerContext
@@ -80,9 +84,9 @@ namespace ProjectVagabond.Battle
 
             // 4. Base Damage
             float offensiveStat = GetOffensiveStat(attacker, move.OffensiveStat);
-            float defensiveStat = target.GetEffectiveTenacity();
+            float defensiveStat = BASELINE_DEFENSE_DIVISOR;
 
-            ctx.StatValue = 0f; // Reset for Penetration
+            ctx.StatValue = 0f;
             attacker.NotifyAbilities(CombatEventType.CalculateDefensePenetration, ctx);
             foreach (var ab in move.Abilities) ab.OnCombatEvent(CombatEventType.CalculateDefensePenetration, ctx);
             float penetration = ctx.StatValue;
@@ -131,6 +135,13 @@ namespace ProjectVagabond.Battle
 
             currentDamage = ctx.StatValue * ctx.DamageMultiplier;
 
+            // --- Tenacity Shield Break Logic ---
+            if (target.CurrentTenacity <= 0)
+            {
+                currentDamage *= 2.0f;
+                result.WasVulnerable = true; // Flag for UI
+            }
+
             if (target.HasStatusEffect(StatusEffectType.Burn)) currentDamage *= Global.Instance.BurnDamageMultiplier;
 
             currentDamage *= (float)(_random.NextDouble() * (BattleConstants.RANDOM_VARIANCE_MAX - BattleConstants.RANDOM_VARIANCE_MIN) + BattleConstants.RANDOM_VARIANCE_MIN);
@@ -153,7 +164,7 @@ namespace ProjectVagabond.Battle
             foreach (var ab in move.Abilities) ab.OnCombatEvent(CombatEventType.CalculateBasePower, ctx);
 
             float offensiveStat = GetOffensiveStat(attacker, move.OffensiveStat);
-            float defensiveStat = target.GetEffectiveTenacity();
+            float defensiveStat = BASELINE_DEFENSE_DIVISOR;
 
             ctx.StatValue = 0f;
             attacker.NotifyAbilities(CombatEventType.CalculateDefensePenetration, ctx);
@@ -176,6 +187,11 @@ namespace ProjectVagabond.Battle
             ctx.ResetMultipliers();
             target.NotifyAbilities(CombatEventType.CalculateIncomingDamage, ctx);
             currentDamage = ctx.StatValue * ctx.DamageMultiplier;
+
+            if (target.CurrentTenacity <= 0)
+            {
+                currentDamage *= 2.0f;
+            }
 
             if (target.HasStatusEffect(StatusEffectType.Burn)) currentDamage *= Global.Instance.BurnDamageMultiplier;
 

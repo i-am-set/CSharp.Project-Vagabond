@@ -42,10 +42,13 @@ namespace ProjectVagabond.Battle
         public bool IsProperNoun { get; set; } = false;
 
         public CombatantStats Stats { get; set; }
+
+        // CurrentTenacity acts as the shield points. Max is derived from Stats.Tenacity.
+        public int CurrentTenacity { get; set; }
+
         public float VisualHP { get; set; }
         public float VisualAlpha { get; set; } = 1.0f;
 
-        // --- NEW: HUD Visibility Control ---
         public float HudVisualAlpha { get; set; } = 0f;
 
         public float VisualSilhouetteAmount { get; set; } = 0f;

@@ -207,5 +207,16 @@ namespace ProjectVagabond
             public BattleCombatant OutgoingCombatant { get; set; }
             public BattleCombatant IncomingCombatant { get; set; }
         }
+
+        public struct TenacityChanged
+        {
+            public BattleCombatant Combatant { get; set; }
+            public int NewValue { get; set; }
+        }
+
+        public struct TenacityBroken
+        {
+            public BattleCombatant Combatant { get; set; }
+        }
     }
 }

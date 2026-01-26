@@ -81,6 +81,9 @@ namespace ProjectVagabond
         public Texture2D InventorySpellSlotButtonSpriteSheet { get; private set; }
         public Texture2D ManaBarPattern { get; private set; } // New Mana Bar Texture
 
+        // --- Tenacity Pip Texture ---
+        public Texture2D TenacityPipTexture { get; private set; }
+
         // Source Rectangles for UI elements
         public Rectangle[] ActionButtonSourceRects { get; private set; }
         public Rectangle[] ActionIconSourceRects { get; private set; }
@@ -473,9 +476,13 @@ namespace ProjectVagabond
             try { HealParticleSprite = _core.Content.Load<Texture2D>("Sprites/Particles/heal_plus"); }
             catch { HealParticleSprite = _textureFactory.CreatePlusParticleTexture(); }
 
-            // --- FIX: Load Spell Slot Button Sprite ---
+            // Load Spell Slot Button Sprite
             try { InventorySpellSlotButtonSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_spell_slot_button"); }
             catch { InventorySpellSlotButtonSpriteSheet = _textureFactory.CreateColoredTexture(192, 8, Color.Magenta); }
+
+            // Load Tenacity Pip Sprite Sheet
+            try { TenacityPipTexture = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/tenacity_3x3_icon"); }
+            catch { TenacityPipTexture = _textureFactory.CreateColoredTexture(6, 3, Color.Magenta); }
 
             LoadAndCacheCursorSprite("cursor_default");
             LoadAndCacheCursorSprite("cursor_hover_clickable");

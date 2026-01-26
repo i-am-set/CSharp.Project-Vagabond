@@ -39,9 +39,9 @@ namespace ProjectVagabond.Scenes
         private const float CLEAR_LINE_DELAY = 0.05f;
 
         // --- Text State Machine ---
-        private bool _isShowingOk = false; // True if the current line has finished and is showing [OK]
+        private bool _isShowingOk = false; // True if the current line has finished and is showing OK
         private float _okTimer = 0f;
-        private const float REAL_TASK_OK_DELAY = 0.1f; // How long real tasks pause with [OK] before moving on
+        private const float REAL_TASK_OK_DELAY = 0.1f; // How long real tasks pause with OK before moving on
 
         // --- Flavor Text System ---
         private string _currentFlavorText = "";
@@ -181,7 +181,7 @@ namespace ProjectVagabond.Scenes
                 }
                 else
                 {
-                    // Phase B: Showing [OK]
+                    // Phase B: Showing OK
                     _okTimer += deltaTime;
                     if (_okTimer >= REAL_TASK_OK_DELAY)
                     {
@@ -219,7 +219,7 @@ namespace ProjectVagabond.Scenes
                 }
                 else
                 {
-                    // Phase B: Showing [OK]
+                    // Phase B: Showing OK
                     _okTimer += deltaTime;
                     if (_okTimer >= _currentFlavorOkDuration)
                     {
@@ -300,9 +300,9 @@ namespace ProjectVagabond.Scenes
             int bottomY = Global.VIRTUAL_HEIGHT - SCREEN_MARGIN;
             int leftX = SCREEN_MARGIN;
 
-            // Calculate Right Align X for [OK]
-            // We assume [OK] width is roughly constant, or measure it.
-            string okText = "[OK]";
+            // Calculate Right Align X for OK
+            // We assume OK width is roughly constant, or measure it.
+            string okText = "OK";
             float okWidth = font.MeasureString(okText).Width;
             float rightX = Global.VIRTUAL_WIDTH - SCREEN_MARGIN - okWidth;
 
@@ -338,7 +338,7 @@ namespace ProjectVagabond.Scenes
                 // Draw Description (Left)
                 spriteBatch.DrawStringSnapped(font, currentLineText.ToUpper(), new Vector2(leftX, currentY), _global.Palette_Black);
 
-                // Draw [OK] (Right) if ready
+                // Draw OK (Right) if ready
                 if (_isShowingOk)
                 {
                     spriteBatch.DrawStringSnapped(font, okText, new Vector2(rightX, currentY), _global.Palette_Black);
@@ -367,7 +367,7 @@ namespace ProjectVagabond.Scenes
                 // Draw Description (Left)
                 spriteBatch.DrawStringSnapped(font, entry.Text.ToUpper(), new Vector2(leftX, logY), _global.Palette_Black);
 
-                // Draw [OK] (Right)
+                // Draw OK (Right)
                 // Assuming all log entries are successes for now
                 spriteBatch.DrawStringSnapped(font, okText, new Vector2(rightX, logY), _global.Palette_Black);
             }

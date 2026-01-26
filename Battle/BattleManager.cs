@@ -936,12 +936,30 @@ namespace ProjectVagabond.Battle
 
                 target.ApplyDamage(result.DamageAmount);
 
+                // --- Tenacity Shield Decrement & Events ---
+                if (!result.WasGraze && result.DamageAmount > 0)
+                {
+                    if (target.CurrentTenacity > 0)
+                    {
+                        target.CurrentTenacity--;
+                        EventBus.Publish(new GameEvents.TenacityChanged { Combatant = target, NewValue = target.CurrentTenacity });
+
+                        if (target.CurrentTenacity == 0)
+                        {
+                            EventBus.Publish(new GameEvents.TenacityBroken { Combatant = target });
+                        }
+                    }
+                }
+
                 if (result.DamageAmount > 0 && result.DamageAmount >= (target.Stats.MaxHP * 0.50f))
                 {
                     significantTargetIds.Add(target.CombatantID);
                 }
 
                 if (result.WasCritical) AppendToCurrentLine(" [cCrit]CRITICAL HIT![/]");
+
+                // --- Vulnerable Log ---
+                if (result.WasVulnerable) AppendToCurrentLine(" [cVulnerable]VULNERABLE![/]");
 
                 var ctx = new CombatTriggerContext
                 {

@@ -21,6 +21,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using static ProjectVagabond.GameEvents;
 
 namespace ProjectVagabond.Scenes
 {
@@ -287,6 +288,8 @@ namespace ProjectVagabond.Scenes
             EventBus.Subscribe<GameEvents.CombatantSwitchingOut>(OnCombatantSwitchingOut);
             EventBus.Subscribe<GameEvents.MoveFailed>(OnMoveFailed);
             EventBus.Subscribe<GameEvents.SwitchSequenceInitiated>(OnSwitchSequenceInitiated);
+            EventBus.Subscribe<GameEvents.TenacityChanged>(OnTenacityChanged);
+            EventBus.Subscribe<GameEvents.TenacityBroken>(OnTenacityBroken);
 
             _uiManager.OnMoveSelected += OnPlayerMoveSelected;
             _uiManager.OnSwitchActionSelected += OnPlayerSwitchSelected;
@@ -319,6 +322,8 @@ namespace ProjectVagabond.Scenes
             EventBus.Unsubscribe<GameEvents.CombatantSwitchingOut>(OnCombatantSwitchingOut);
             EventBus.Unsubscribe<GameEvents.MoveFailed>(OnMoveFailed);
             EventBus.Unsubscribe<GameEvents.SwitchSequenceInitiated>(OnSwitchSequenceInitiated);
+            EventBus.Unsubscribe<GameEvents.TenacityChanged>(OnTenacityChanged);
+            EventBus.Unsubscribe<GameEvents.TenacityBroken>(OnTenacityBroken);
 
             _uiManager.OnMoveSelected -= OnPlayerMoveSelected;
             _uiManager.OnSwitchActionSelected -= OnPlayerSwitchSelected;
@@ -1180,8 +1185,20 @@ namespace ProjectVagabond.Scenes
                     if (target.HasStatusEffect(StatusEffectType.Burn)) _renderer.TriggerStatusIconHop(target.CombatantID, StatusEffectType.Burn);
                     if (target.Stats.CurrentHP <= 0) TriggerDeathAnimation(target);
                     int baselineDamage = DamageCalculator.CalculateBaselineDamage(e.Actor, target, e.ChosenMove);
-                    if (result.WasCritical || (result.DamageAmount >= baselineDamage * 1.5f && baselineDamage > 0)) _animationManager.StartEmphasizedDamageNumberIndicator(target.CombatantID, result.DamageAmount, hudPosition);
-                    else _animationManager.StartDamageNumberIndicator(target.CombatantID, result.DamageAmount, hudPosition);
+
+                    if (result.WasVulnerable)
+                    {
+                        _animationManager.StartDamageNumberIndicator(target.CombatantID, result.DamageAmount, hudPosition);
+                        _animationManager.StartDamageIndicator(target.CombatantID, "VULNERABLE", hudPosition + new Vector2(0, -10), _global.VulnerableDamageIndicatorColor);
+                    }
+                    else if (result.WasCritical || (result.DamageAmount >= baselineDamage * 1.5f && baselineDamage > 0))
+                    {
+                        _animationManager.StartEmphasizedDamageNumberIndicator(target.CombatantID, result.DamageAmount, hudPosition);
+                    }
+                    else
+                    {
+                        _animationManager.StartDamageNumberIndicator(target.CombatantID, result.DamageAmount, hudPosition);
+                    }
                 }
                 if (result.WasGraze) _animationManager.StartDamageIndicator(target.CombatantID, "GRAZE", hudPosition, ServiceLocator.Get<Global>().GrazeIndicatorColor);
                 if (result.WasCritical)
@@ -1190,6 +1207,30 @@ namespace ProjectVagabond.Scenes
                 }
                 if (result.WasProtected) _animationManager.StartProtectedIndicator(target.CombatantID, hudPosition);
             }
+        }
+
+        private void OnTenacityChanged(GameEvents.TenacityChanged e)
+        {
+            // Visual feedback for losing a shield pip
+            Vector2 hudPos = _renderer.GetCombatantHudCenterPosition(e.Combatant, _battleManager.AllCombatants);
+            Vector2 visualPos = _renderer.GetCombatantVisualCenterPosition(e.Combatant, _battleManager.AllCombatants);
+            var sparks = _particleSystemManager.CreateEmitter(ParticleEffects.CreateSparks()); // Reuse sparks for now
+            sparks.Position = visualPos;
+            sparks.Settings.StartColor = _global.Palette_Sky;
+            sparks.Settings.EndColor = Color.White;
+            sparks.EmitBurst(5);
+        }
+
+        private void OnTenacityBroken(GameEvents.TenacityBroken e)
+        {
+            // Visual feedback for shield break
+            Vector2 hudPos = _renderer.GetCombatantHudCenterPosition(e.Combatant, _battleManager.AllCombatants);
+            _animationManager.StartDamageIndicator(e.Combatant.CombatantID, "TENACITY BROKEN", hudPos + new Vector2(0, -15), _global.TenacityBrokenIndicatorColor);
+
+            _hapticsManager.TriggerShake(5f, 0.2f);
+            _core.TriggerFullscreenFlash(_global.TenacityBrokenIndicatorColor, 0.1f);
+
+            // Sound effect would go here
         }
 
         private void OnCombatantHealed(GameEvents.CombatantHealed e)

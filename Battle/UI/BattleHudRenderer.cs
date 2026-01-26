@@ -37,8 +37,22 @@ namespace ProjectVagabond.Battle.UI
             var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
             if (hpAlpha > 0.01f)
             {
+                // Shift name down slightly to make room for Tenacity bar
+                // Old: barY - LineHeight - 1
+                // New: barY - LineHeight - 1 (Same anchor, but Tenacity goes above it)
                 spriteBatch.DrawStringSnapped(tertiaryFont, combatant.Name.ToUpper(), new Vector2(barX, barY - tertiaryFont.LineHeight - 1), _global.Palette_Sun * hpAlpha);
             }
+
+            // --- TENACITY BAR ---
+            // Position: Above Name
+            // Name Top Y = barY - LineHeight - 1
+            // Tenacity Bottom Y = Name Top Y - 2 (padding)
+            // Tenacity Height = 3
+            // Tenacity Top Y = Name Top Y - 2 - 3
+            float nameTopY = barY - tertiaryFont.LineHeight - 1;
+            float tenacityY = nameTopY - 2 - 3;
+
+            DrawTenacityBar(spriteBatch, combatant, barX, tenacityY, barWidth, hpAlpha);
 
             // --- HEALTH BAR ---
             var barRect = new Rectangle((int)barX, (int)barY, barWidth, barHeight);
@@ -135,6 +149,36 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
+        private void DrawTenacityBar(SpriteBatch spriteBatch, BattleCombatant combatant, float startX, float startY, float barWidth, float alpha)
+        {
+            if (alpha <= 0.01f) return;
+
+            int maxTenacity = combatant.Stats.Tenacity;
+            int currentTenacity = combatant.CurrentTenacity;
+
+            // Tuning: 3x3 pixel, 1 pixel gap
+            const int pipSize = 3;
+            const int gap = 1;
+
+            // Source Rectangles for the sprite sheet (6x3)
+            // Frame 0 (Full): 0,0
+            // Frame 1 (Empty): 3,0
+            var fullRect = new Rectangle(0, 0, 3, 3);
+            var emptyRect = new Rectangle(3, 0, 3, 3);
+
+            for (int i = 0; i < maxTenacity; i++)
+            {
+                // Left-aligned positioning
+                float x = startX + (i * (pipSize + gap));
+                var destRect = new Rectangle((int)x, (int)startY, pipSize, pipSize);
+
+                // Determine frame based on current shield value
+                var sourceRect = (i < currentTenacity) ? fullRect : emptyRect;
+
+                spriteBatch.DrawSnapped(_spriteManager.TenacityPipTexture, destRect, sourceRect, Color.White * alpha);
+            }
+        }
+
         public void DrawPlayerBars(SpriteBatch spriteBatch, BattleCombatant player, float barX, float barY, int barWidth, int barHeight, BattleAnimationManager animationManager, float hpAlpha, float manaAlpha, GameTime gameTime, BattleUIManager uiManager, bool isActiveActor)
         {
             // --- NAME ---
@@ -143,6 +187,11 @@ namespace ProjectVagabond.Battle.UI
             {
                 spriteBatch.DrawStringSnapped(tertiaryFont, player.Name.ToUpper(), new Vector2(barX, barY - tertiaryFont.LineHeight - 1), _global.Palette_Sun * hpAlpha);
             }
+
+            // --- TENACITY BAR ---
+            float nameTopY = barY - tertiaryFont.LineHeight - 1;
+            float tenacityY = nameTopY - 2 - 3;
+            DrawTenacityBar(spriteBatch, player, barX, tenacityY, barWidth, hpAlpha);
 
             // --- HEALTH BAR ---
             var barRect = new Rectangle((int)barX, (int)barY, barWidth, barHeight);

@@ -84,6 +84,8 @@ namespace ProjectVagabond
             ImmuneIndicatorColor = Palette_Sun;
             ProtectedIndicatorColor = Color.Cyan;
             FailedIndicatorColor = Color.Red;
+            TenacityBrokenIndicatorColor = Palette_Rust;
+            VulnerableDamageIndicatorColor = Palette_Shadow;
 
             StatusEffectColors = new Dictionary<StatusEffectType, Color>
             {
@@ -282,6 +284,8 @@ namespace ProjectVagabond
         public Color ImmuneIndicatorColor { get; set; }
         public Color ProtectedIndicatorColor { get; set; }
         public Color FailedIndicatorColor { get; set; }
+        public Color TenacityBrokenIndicatorColor { get; set; }
+        public Color VulnerableDamageIndicatorColor { get; set; }
 
         public Dictionary<StatusEffectType, Color> StatusEffectColors { get; private set; }
 
@@ -301,6 +305,7 @@ namespace ProjectVagabond
                 if (lowerTag == "ccrit") return ColorCrit;
                 if (lowerTag == "cimmune") return ColorImmune;
                 if (lowerTag == "cctm") return ColorConditionToMeet;
+                if (lowerTag == "cvulnerable") return VulnerableDamageIndicatorColor;
                 if (lowerTag == "cetc") return Palette_DarkShadow;
 
                 string effectName = lowerTag.Substring(1);

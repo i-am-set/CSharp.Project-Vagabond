@@ -45,6 +45,10 @@ namespace ProjectVagabond.Battle
                 IsPlayerControlled = componentStore.HasComponent<PlayerTagComponent>(entityId)
             };
 
+            // --- Initialize Tenacity Shield ---
+            // Tenacity starts full at the beginning of combat.
+            combatant.CurrentTenacity = combatant.Stats.Tenacity;
+
             combatant.VisualHP = combatant.Stats.CurrentHP;
 
             if (combatant.IsPlayerControlled)
@@ -93,6 +97,9 @@ namespace ProjectVagabond.Battle
                 combatant.Stats.CurrentHP = statSource.CurrentHP;
                 combatant.Stats.CurrentMana = statSource.CurrentMana;
                 combatant.VisualHP = combatant.Stats.CurrentHP;
+
+                // Re-sync Tenacity after applying relics/stats
+                combatant.CurrentTenacity = combatant.Stats.Tenacity;
 
                 var tempBuffsComp = componentStore.GetComponent<TemporaryBuffsComponent>(entityId);
                 if (tempBuffsComp != null)
