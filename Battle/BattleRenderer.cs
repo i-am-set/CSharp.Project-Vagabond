@@ -1127,12 +1127,20 @@ namespace ProjectVagabond.Battle.UI
                             float spriteTopY = GetEnemyStaticVisualTop(enemy, center.Y);
                             float anchorY = Math.Min(tooltipTopY - 2, spriteTopY);
                             float barY = anchorY - 4;
-                            float barX = center.X - BattleLayout.ENEMY_BAR_WIDTH / 2f;
+                            float barX = (center.X - BattleLayout.ENEMY_BAR_WIDTH / 2f) - 24; // Shifted Left by 16
 
                             float barBottomY = barY + 4;
                             _combatantBarBottomYs[enemy.CombatantID] = barBottomY;
 
                             _combatantBarPositions[enemy.CombatantID] = new Vector2(barX, barY);
+
+                            // Draw Name above bar
+                            var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
+                            _hudRenderer.DrawEnemyBars(spriteBatch, enemy, barX, barY, BattleLayout.ENEMY_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, enemy.VisualHealthBarAlpha, enemy.VisualManaBarAlpha, gameTime);
+                            if (enemy.VisualHealthBarAlpha > 0.01f)
+                            {
+                                spriteBatch.DrawStringSnapped(tertiaryFont, enemy.Name.ToUpper(), new Vector2(barX, barY - tertiaryFont.LineHeight - 1), _global.Palette_Sun * enemy.VisualHealthBarAlpha);
+                            }
                         }
                     }
                 }
@@ -1309,26 +1317,22 @@ namespace ProjectVagabond.Battle.UI
 
                     UpdateBarAlpha(player, (float)gameTime.ElapsedGameTime.TotalSeconds, showHP, showMana);
 
-                    if (player == currentActor && (!isSilhouetted || player.CombatantID == _statTooltipCombatantID))
-                    {
-                        Vector2 nameSize = font.MeasureString(player.Name);
-                        Vector2 namePos = new Vector2(center.X - nameSize.X / 2f, BattleLayout.PLAYER_NAME_TOP_Y);
-                        Color nameColor = (highlight == Color.Yellow) ? _global.Palette_DarkSun : _global.Palette_Sun;
-
-                        bool isHovered = (hoveredCombatant == player) || (uiManager.HoveredCombatantFromUI == player);
-                        if (isHovered) nameColor = _global.Palette_DarkShadow;
-
-                        spriteBatch.DrawStringSnapped(font, player.Name, namePos, nameColor);
-                    }
-
                     Vector2 barPos = GetCombatantBarPosition(player);
-                    float barX = barPos.X - BattleLayout.PLAYER_BAR_WIDTH / 2f;
+                    float barX = (barPos.X - BattleLayout.PLAYER_BAR_WIDTH / 2f) - 24; // Shifted Left by 16
                     float barY = barPos.Y + 4;
 
                     float barBottomY = barY + 4;
                     _combatantBarBottomYs[player.CombatantID] = barBottomY;
 
                     _combatantBarPositions[player.CombatantID] = new Vector2(barX, barY);
+
+                    // Draw Name above bar
+                    var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
+                    _hudRenderer.DrawPlayerBars(spriteBatch, player, barX, barY, BattleLayout.PLAYER_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, player.VisualHealthBarAlpha, player.VisualManaBarAlpha, gameTime, uiManager, player == currentActor);
+                    if (player.VisualHealthBarAlpha > 0.01f)
+                    {
+                        spriteBatch.DrawStringSnapped(tertiaryFont, player.Name.ToUpper(), new Vector2(barX, barY - tertiaryFont.LineHeight - 1), _global.Palette_Sun * player.VisualHealthBarAlpha);
+                    }
                 }
             }
         }
@@ -1369,93 +1373,13 @@ namespace ProjectVagabond.Battle.UI
 
         private void UpdateBarAlpha(BattleCombatant c, float dt, bool showHP, bool showMana)
         {
-            var battleManager = ServiceLocator.Get<BattleManager>();
-            bool inCombatPhase = battleManager.CurrentPhase != BattleManager.BattlePhase.ActionSelection_Slot1 &&
-                                 battleManager.CurrentPhase != BattleManager.BattlePhase.ActionSelection_Slot2 &&
-                                 battleManager.CurrentPhase != BattleManager.BattlePhase.StartOfTurn &&
-                                 battleManager.CurrentPhase != BattleManager.BattlePhase.BattleStartIntro;
-
-            bool isHealthVisuallyActive = c.VisualHealthBarAlpha > 0f || c.HealthBarVisibleTimer > 0f || c.HealthBarDelayTimer > 0f || c.HealthBarDisappearTimer > 0f;
-            bool hpForceVisible = inCombatPhase && isHealthVisuallyActive;
-
-            bool hpVisible = showHP || c.HealthBarVisibleTimer > 0 || hpForceVisible;
-
-            if (hpVisible)
-            {
-                c.VisualHealthBarAlpha = 1.0f;
-                c.HealthBarDelayTimer = 0f;
-                c.HealthBarDisappearTimer = 0f;
-                c.CurrentBarVariance = (float)(_random.NextDouble() * BattleCombatant.BAR_VARIANCE_MAX);
-            }
-            else
-            {
-                if (!inCombatPhase)
-                {
-                    c.VisualHealthBarAlpha = 0f;
-                    c.HealthBarDelayTimer = 0f;
-                    c.HealthBarDisappearTimer = 0f;
-                }
-                else if (c.VisualHealthBarAlpha > 0f)
-                {
-                    if (c.HealthBarDelayTimer < BattleCombatant.BAR_DELAY_DURATION + c.CurrentBarVariance)
-                    {
-                        c.HealthBarDelayTimer += dt;
-                    }
-                    else
-                    {
-                        c.HealthBarDisappearTimer += dt;
-                        float progress = c.HealthBarDisappearTimer / BattleCombatant.BAR_DISAPPEAR_DURATION;
-                        c.VisualHealthBarAlpha = 1.0f - Math.Clamp(progress, 0f, 1f);
-
-                        if (c.HealthBarDisappearTimer >= BattleCombatant.BAR_DISAPPEAR_DURATION)
-                        {
-                            c.VisualHealthBarAlpha = 0f;
-                            c.HealthBarDelayTimer = 0f;
-                            c.HealthBarDisappearTimer = 0f;
-                        }
-                    }
-                }
-            }
-
-            bool isManaVisuallyActive = c.VisualManaBarAlpha > 0f || c.ManaBarVisibleTimer > 0f || c.ManaBarDelayTimer > 0f || c.ManaBarDisappearTimer > 0f;
-            bool manaForceVisible = inCombatPhase && isManaVisuallyActive;
-            bool manaVisible = showMana || c.ManaBarVisibleTimer > 0 || manaForceVisible;
-
-            if (manaVisible)
-            {
-                c.VisualManaBarAlpha = 1.0f;
-                c.ManaBarDelayTimer = 0f;
-                c.ManaBarDisappearTimer = 0f;
-            }
-            else
-            {
-                if (!inCombatPhase)
-                {
-                    c.VisualManaBarAlpha = 0f;
-                    c.ManaBarDelayTimer = 0f;
-                    c.ManaBarDisappearTimer = 0f;
-                }
-                else if (c.VisualManaBarAlpha > 0f)
-                {
-                    if (c.ManaBarDelayTimer < BattleCombatant.BAR_DELAY_DURATION + c.CurrentBarVariance)
-                    {
-                        c.ManaBarDelayTimer += dt;
-                    }
-                    else
-                    {
-                        c.ManaBarDisappearTimer += dt;
-                        float progress = c.ManaBarDisappearTimer / BattleCombatant.BAR_DISAPPEAR_DURATION;
-                        c.VisualManaBarAlpha = 1.0f - Math.Clamp(progress, 0f, 1f);
-
-                        if (c.ManaBarDisappearTimer >= BattleCombatant.BAR_DISAPPEAR_DURATION)
-                        {
-                            c.VisualManaBarAlpha = 0f;
-                            c.ManaBarDelayTimer = 0f;
-                            c.ManaBarDisappearTimer = 0f;
-                        }
-                    }
-                }
-            }
+            // Force full visibility at all times
+            c.VisualHealthBarAlpha = 1.0f;
+            c.VisualManaBarAlpha = 1.0f;
+            c.HealthBarDelayTimer = 0f;
+            c.HealthBarDisappearTimer = 0f;
+            c.ManaBarDelayTimer = 0f;
+            c.ManaBarDisappearTimer = 0f;
         }
 
         private void DrawUITitle(SpriteBatch spriteBatch, GameTime gameTime, BattleSubMenuState subMenuState)

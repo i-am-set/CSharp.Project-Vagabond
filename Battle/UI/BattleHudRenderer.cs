@@ -33,6 +33,13 @@ namespace ProjectVagabond.Battle.UI
 
         public void DrawEnemyBars(SpriteBatch spriteBatch, BattleCombatant combatant, float barX, float barY, int barWidth, int barHeight, BattleAnimationManager animationManager, float hpAlpha, float manaAlpha, GameTime gameTime)
         {
+            // --- NAME ---
+            var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
+            if (hpAlpha > 0.01f)
+            {
+                spriteBatch.DrawStringSnapped(tertiaryFont, combatant.Name.ToUpper(), new Vector2(barX, barY - tertiaryFont.LineHeight - 1), _global.Palette_Sun * hpAlpha);
+            }
+
             // --- HEALTH BAR ---
             var barRect = new Rectangle((int)barX, (int)barY, barWidth, barHeight);
             float hpPercent = combatant.Stats.MaxHP > 0 ? Math.Clamp(combatant.VisualHP / combatant.Stats.MaxHP, 0f, 1f) : 0f;
@@ -40,13 +47,9 @@ namespace ProjectVagabond.Battle.UI
 
             DrawBar(spriteBatch, barRect, hpPercent, _global.Palette_DarkShadow, _global.Palette_Leaf, _global.Palette_Black, hpAlpha, hpAnim, combatant.Stats.MaxHP);
 
-            // --- MANA BAR ---
+            // --- MANA BAR (Discrete) ---
             float manaBarY = barY + barHeight + 1;
-            var manaRect = new Rectangle((int)barX, (int)manaBarY, barWidth, 1);
-            float manaPercent = combatant.Stats.MaxMana > 0 ? Math.Clamp((float)combatant.Stats.CurrentMana / combatant.Stats.MaxMana, 0f, 1f) : 0f;
-            var manaAnim = animationManager.GetResourceBarAnimation(combatant.CombatantID, BattleAnimationManager.ResourceBarAnimationState.BarResourceType.Mana);
-
-            DrawBar(spriteBatch, manaRect, manaPercent, _global.Palette_DarkShadow, _global.Palette_Sky, _global.Palette_Black, manaAlpha, manaAnim, combatant.Stats.MaxMana);
+            DrawDiscreteManaBar(spriteBatch, combatant, barX, manaBarY, manaAlpha, null);
         }
 
         private void DrawBar(SpriteBatch spriteBatch, Rectangle fullBarRect, float fillPercent, Color bgColor, Color fgColor, Color borderColor, float alpha, BattleAnimationManager.ResourceBarAnimationState? anim, float maxResource)
@@ -87,66 +90,93 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
+        private void DrawDiscreteManaBar(SpriteBatch spriteBatch, BattleCombatant combatant, float startX, float startY, float alpha, int? previewCost)
+        {
+            if (alpha <= 0.01f) return;
+
+            int maxMana = combatant.Stats.MaxMana;
+            int currentMana = combatant.Stats.CurrentMana;
+
+            // Tuning: 1x1 pixel, 1 pixel gap
+            const int pipSize = 1;
+            const int gap = 1;
+            const int pipHeight = 1;
+
+            // Colors
+            Color emptyColor = _global.Palette_DarkShadow * alpha;
+            Color filledColor = _global.Palette_Sky * alpha;
+            Color previewColor = _global.Palette_Sun * alpha; // Highlight color for cost preview
+
+            for (int i = 0; i < maxMana; i++)
+            {
+                float x = startX + (i * (pipSize + gap));
+                var rect = new Rectangle((int)x, (int)startY, pipSize, pipHeight);
+
+                Color drawColor = emptyColor;
+
+                if (i < currentMana)
+                {
+                    drawColor = filledColor;
+
+                    // Apply Preview Logic: Highlight the top-most pips that will be consumed
+                    // We want to highlight 'cost' number of pips, starting from (currentMana - 1) downwards.
+                    if (previewCost.HasValue && previewCost.Value > 0)
+                    {
+                        int cost = previewCost.Value;
+                        // Highlight range: [currentMana - cost, currentMana - 1]
+                        if (i >= (currentMana - cost))
+                        {
+                            drawColor = previewColor;
+                        }
+                    }
+                }
+
+                spriteBatch.DrawSnapped(_pixel, rect, drawColor);
+            }
+        }
+
         public void DrawPlayerBars(SpriteBatch spriteBatch, BattleCombatant player, float barX, float barY, int barWidth, int barHeight, BattleAnimationManager animationManager, float hpAlpha, float manaAlpha, GameTime gameTime, BattleUIManager uiManager, bool isActiveActor)
         {
-            // Reuse Enemy Bar logic for base drawing, then add overlays
-            DrawEnemyBars(spriteBatch, player, barX, barY, barWidth, barHeight, animationManager, hpAlpha, manaAlpha, gameTime);
+            // --- NAME ---
+            var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
+            if (hpAlpha > 0.01f)
+            {
+                spriteBatch.DrawStringSnapped(tertiaryFont, player.Name.ToUpper(), new Vector2(barX, barY - tertiaryFont.LineHeight - 1), _global.Palette_Sun * hpAlpha);
+            }
 
-            // --- MANA COST PREVIEW ---
-            if (isActiveActor && uiManager.HoveredMove != null && manaAlpha > 0.01f)
+            // --- HEALTH BAR ---
+            var barRect = new Rectangle((int)barX, (int)barY, barWidth, barHeight);
+            float hpPercent = player.Stats.MaxHP > 0 ? Math.Clamp(player.VisualHP / player.Stats.MaxHP, 0f, 1f) : 0f;
+            var hpAnim = animationManager.GetResourceBarAnimation(player.CombatantID, BattleAnimationManager.ResourceBarAnimationState.BarResourceType.HP);
+
+            DrawBar(spriteBatch, barRect, hpPercent, _global.Palette_DarkShadow, _global.Palette_Leaf, _global.Palette_Black, hpAlpha, hpAnim, player.Stats.MaxHP);
+
+            // --- MANA BAR (Discrete with Preview) ---
+            float manaBarY = barY + barHeight + 1;
+            int? previewCost = null;
+
+            if (isActiveActor && uiManager.HoveredMove != null)
             {
                 // Don't draw preview if collapsing or holding white or expanding
-                if (player.ManaBarDisappearTimer > 0 || player.ManaBarDelayTimer > 0) return;
-
-                var move = uiManager.HoveredMove;
-                var manaDump = move.Abilities.OfType<ManaDumpAbility>().FirstOrDefault();
-                int cost = move.ManaCost;
-
-                if (manaDump != null)
+                if (player.ManaBarDisappearTimer <= 0 && player.ManaBarDelayTimer <= 0)
                 {
-                    cost = player.Stats.CurrentMana;
-                }
+                    var move = uiManager.HoveredMove;
+                    var manaDump = move.Abilities.OfType<ManaDumpAbility>().FirstOrDefault();
+                    int cost = move.ManaCost;
 
-                if (cost > 0)
-                {
-                    float manaBarY = barY + barHeight + 1;
-
-                    // Calculate widths
-                    float currentPercent = player.Stats.MaxMana > 0 ? Math.Clamp((float)player.Stats.CurrentMana / player.Stats.MaxMana, 0f, 1f) : 0f;
-                    int currentWidth = (int)(barWidth * currentPercent);
-
-                    float costPercent = (float)cost / player.Stats.MaxMana;
-                    int costWidth = (int)(barWidth * costPercent);
-
-                    // Determine if affordable
-                    bool affordable = player.Stats.CurrentMana >= cost;
-
-                    Rectangle previewRect;
-                    Color previewColor;
-
-                    if (affordable)
+                    if (manaDump != null)
                     {
-                        // Draw at the end of the current bar
-                        int previewX = (int)barX + currentWidth - costWidth;
-                        // Clamp
-                        if (previewX < (int)barX) previewX = (int)barX;
-
-                        previewRect = new Rectangle(previewX, (int)manaBarY, costWidth, 1);
-
-                        // Pulse Color
-                        float pulse = (MathF.Sin(uiManager.SharedPulseTimer * 4f) + 1f) / 2f;
-                        previewColor = Color.Lerp(_global.Palette_DarkSun, _global.Palette_Sun, pulse);
-                    }
-                    else
-                    {
-                        // Draw over the whole current bar (or required amount) in red
-                        previewRect = new Rectangle((int)barX, (int)manaBarY, currentWidth, 1);
-                        previewColor = _global.Palette_Rust;
+                        cost = player.Stats.CurrentMana;
                     }
 
-                    spriteBatch.DrawSnapped(_pixel, previewRect, previewColor * manaAlpha);
+                    if (cost > 0)
+                    {
+                        previewCost = cost;
+                    }
                 }
             }
+
+            DrawDiscreteManaBar(spriteBatch, player, barX, manaBarY, manaAlpha, previewCost);
         }
 
         public void DrawStatusIcons(SpriteBatch spriteBatch, BattleCombatant combatant, float startX, float startY, int width, bool isPlayer, List<StatusIconInfo> iconTracker, Func<string, StatusEffectType, float> getOffsetFunc, Func<string, StatusEffectType, bool> isAnimatingFunc)

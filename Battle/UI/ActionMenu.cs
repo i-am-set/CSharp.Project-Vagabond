@@ -105,7 +105,8 @@ namespace ProjectVagabond.Battle.UI
         {
             _global = ServiceLocator.Get<Global>();
             _backButton = new Button(Rectangle.Empty, "BACK", enableHoverSway: false) { CustomDefaultTextColor = _global.DullTextColor };
-            _backButton.OnClick += () => {
+            _backButton.OnClick += () =>
+            {
                 if (_currentState == MenuState.Targeting || _currentState == MenuState.Tooltip)
                 {
                     SetState(MenuState.Moves);
@@ -144,12 +145,14 @@ namespace ProjectVagabond.Battle.UI
                 WaveEffectType = TextEffectType.DriftWave
             };
 
-            actButton.OnClick += () => {
+            actButton.OnClick += () =>
+            {
                 if (_isSpamming) { actButton.TriggerShake(); EventBus.Publish(new GameEvents.AlertPublished { Message = "Spam Prevention" }); return; }
                 SetState(MenuState.Moves);
             };
 
-            switchButton.OnClick += () => {
+            switchButton.OnClick += () =>
+            {
                 if (_isSpamming) { switchButton.TriggerShake(); EventBus.Publish(new GameEvents.AlertPublished { Message = "Spam Prevention" }); return; }
                 OnSwitchMenuRequested?.Invoke();
             };
@@ -171,7 +174,8 @@ namespace ProjectVagabond.Battle.UI
                 ContentXOffset = 3f,
                 CustomDefaultTextColor = _global.GameTextColor
             };
-            strikeButton.OnClick += () => {
+            strikeButton.OnClick += () =>
+            {
                 OnStrikeRequested?.Invoke(_player);
             };
             _secondaryActionButtons.Add(strikeButton);
@@ -190,7 +194,8 @@ namespace ProjectVagabond.Battle.UI
                 ContentXOffset = 3f,
                 CustomDefaultTextColor = _global.GameTextColor
             };
-            stallButton.OnClick += () => {
+            stallButton.OnClick += () =>
+            {
                 if (BattleDataCache.Moves.TryGetValue("6", out var stallMove))
                 {
                     SelectMove(stallMove, null);
@@ -1277,7 +1282,7 @@ namespace ProjectVagabond.Battle.UI
                     statsSegments.Add(("ACC ", _global.DullTextColor, tertiaryFont));
                     statsSegments.Add((accuracyText, _global.GameTextColor, secondaryFont));
 
-                    string manaText = move.ManaCost > 0 ? $"{move.ManaCost}%" : "---";
+                    string manaText = move.ManaCost > 0 ? $"{move.ManaCost}" : "---"; // Removed %
                     statsSegments.Add(("  ", Color.Transparent, secondaryFont));
                     statsSegments.Add(("MANA ", _global.DullTextColor, tertiaryFont));
                     statsSegments.Add((manaText, _global.GameTextColor, secondaryFont));
@@ -1506,36 +1511,7 @@ namespace ProjectVagabond.Battle.UI
 
         private Color ParseColor(string colorName)
         {
-            string tag = colorName.ToLowerInvariant();
-
-            if (tag == "cstr") return _global.GameTextColor;
-            if (tag == "cint") return _global.GameTextColor;
-            if (tag == "cten") return _global.GameTextColor;
-            if (tag == "cagi") return _global.GameTextColor;
-
-            if (tag == "cpositive") return _global.ColorPositive;
-            if (tag == "cnegative") return _global.ColorNegative;
-            if (tag == "ccrit") return _global.ColorCrit;
-            if (tag == "cimmune") return _global.ColorImmune;
-            if (tag == "cctm") return _global.ColorConditionToMeet;
-            if (tag == "cetc") return _global.Palette_DarkShadow;
-
-            if (tag.StartsWith("c"))
-            {
-                string effectName = tag.Substring(1);
-                if (effectName == "poison") return _global.StatusEffectColors.GetValueOrDefault(StatusEffectType.Poison, Color.White);
-                if (effectName == "stun") return _global.StatusEffectColors.GetValueOrDefault(StatusEffectType.Stun, Color.White);
-                if (effectName == "regen") return _global.StatusEffectColors.GetValueOrDefault(StatusEffectType.Regen, Color.White);
-                if (effectName == "dodging") return _global.StatusEffectColors.GetValueOrDefault(StatusEffectType.Dodging, Color.White);
-                if (effectName == "burn") return _global.StatusEffectColors.GetValueOrDefault(StatusEffectType.Burn, Color.White);
-                if (effectName == "frostbite") return _global.StatusEffectColors.GetValueOrDefault(StatusEffectType.Frostbite, Color.White);
-                if (effectName == "silence") return _global.StatusEffectColors.GetValueOrDefault(StatusEffectType.Silence, Color.White);
-            }
-
-            switch (tag)
-            {
-                default: return Color.Magenta;
-            }
+            return _global.GetNarrationColor(colorName);
         }
     }
 }

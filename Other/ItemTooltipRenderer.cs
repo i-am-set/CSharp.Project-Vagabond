@@ -425,7 +425,7 @@ namespace ProjectVagabond.UI
 
             string powVal = move.Power > 0 ? move.Power.ToString() : (move.Effects.ContainsKey("ManaDamage") ? "???" : "---");
             string accVal = move.Accuracy >= 0 ? $"{move.Accuracy}%" : "---";
-            string mpVal = (move.ManaCost > 0 ? move.ManaCost.ToString() : "0") + "%";
+            string mpVal = (move.ManaCost > 0 ? move.ManaCost.ToString() : "0"); // Removed %
             var manaDump = move.Abilities.OfType<ManaDumpAbility>().FirstOrDefault();
             if (manaDump != null) powVal = "???";
 
