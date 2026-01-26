@@ -149,13 +149,19 @@ namespace ProjectVagabond.Battle.UI
                 _targetingTextAnimTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
             }
 
-            // Block menu input if we are targeting. If switching, we pass the index to block specific slot.
+            // Block menu input if we are targeting.
+            // If switching, we don't block globally, but we pass the switching slot index to block that specific panel.
             bool isMenuBlocked = isTargeting;
             int? switchingSlot = isSwitching ? ActiveTargetingSlot : null;
 
             _actionMenu.Update(currentMouseState, gameTime, isMenuBlocked, switchingSlot);
 
-            _switchMenu.Update(currentMouseState);
+            // Only update switch menu if we are in Switch state
+            if (isSwitching)
+            {
+                _switchMenu.Update(currentMouseState);
+            }
+
             UpdateHoverHighlights(gameTime, currentActor);
 
             _previousMouseState = currentMouseState;
@@ -186,6 +192,9 @@ namespace ProjectVagabond.Battle.UI
                     SpellForTargeting = action.SpellbookEntry;
                     ActiveTargetingSlot = slotIndex;
                     UIState = BattleUIState.Targeting;
+
+                    // Ensure switch menu is closed if we start targeting
+                    _switchMenu.Hide();
                 }
             }
             else
@@ -350,17 +359,21 @@ namespace ProjectVagabond.Battle.UI
                 spriteBatch.DrawSnapped(border, IntroOffset, Color.White);
             }
 
-            // Pass the active targeting slot to hide that specific panel's buttons
-            // This applies if we are Targeting OR Switching
-            int? hiddenSlot = (UIState == BattleUIState.Targeting || UIState == BattleUIState.Switch) ? ActiveTargetingSlot : null;
-            _actionMenu.Draw(spriteBatch, font, gameTime, transform, IntroOffset, hiddenSlot);
+            // Draw ActionMenu unless we are Targeting (where we want a clean screen for selection)
+            if (UIState != BattleUIState.Targeting)
+            {
+                // If Switching, hide the active slot (it's covered by SwitchMenu)
+                // If Default, show all
+                int? hiddenSlot = (UIState == BattleUIState.Switch) ? ActiveTargetingSlot : null;
+                _actionMenu.Draw(spriteBatch, font, gameTime, transform, IntroOffset, hiddenSlot);
+            }
 
             if (UIState == BattleUIState.Targeting)
             {
                 DrawTargetingText(spriteBatch, font, gameTime);
             }
 
-            if (_switchMenu.IsForced || _switchMenu.IsVisible)
+            if (UIState == BattleUIState.Switch && (_switchMenu.IsForced || _switchMenu.IsVisible))
             {
                 _switchMenu.Draw(spriteBatch, font, gameTime);
             }
