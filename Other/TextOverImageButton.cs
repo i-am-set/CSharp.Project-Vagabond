@@ -28,6 +28,7 @@ namespace ProjectVagabond.UI
         public bool TintIconOnHover { get; set; } = true;
         public bool IconColorMatchesText { get; set; } = false; // New property to force icon color to match text
         public float ContentXOffset { get; set; } = 0f;
+        public Vector2 IconRenderOffset { get; set; } = Vector2.Zero; // New property for icon positioning
 
         // Animation State
         private enum AnimationState { Hidden, Idle, Appearing }
@@ -243,7 +244,7 @@ namespace ProjectVagabond.UI
                 {
                     // Icon center relative to button center
                     float iconCenterX = startX + (iconWidth / 2f);
-                    iconOffset = new Vector2(iconCenterX, 0);
+                    iconOffset = new Vector2(iconCenterX, 0) + IconRenderOffset;
 
                     // Text center relative to button center
                     float textCenterX = startX + iconWidth + iconTextGap + (textWidth / 2f);

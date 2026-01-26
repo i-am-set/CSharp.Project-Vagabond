@@ -35,7 +35,7 @@ namespace ProjectVagabond.Battle.UI
         public MoveEntry? SelectedSpellbookEntry { get; private set; }
 
         // Layout
-        private const int PANEL_WIDTH = 80;
+        private const int PANEL_WIDTH = 140;
 
         public ActionMenu() { }
 
@@ -75,7 +75,8 @@ namespace ProjectVagabond.Battle.UI
             foreach (var panel in _panels)
             {
                 var area = BattleLayout.GetActionMenuArea(panel.SlotIndex);
-                int panelHeight = 35; // 4 Moves * 7px + 1 Action Row * 7px
+                // 4 Moves * 10px (9+1) + 1 Action Row * 9px (8+1) = 40 + 9 = 49
+                int panelHeight = 49;
                 int x = area.Center.X - (PANEL_WIDTH / 2);
                 int y = area.Center.Y - (panelHeight / 2);
                 panel.SetPosition(new Vector2(x, y));
@@ -134,8 +135,8 @@ namespace ProjectVagabond.Battle.UI
             private Rectangle _panelBounds;
 
             // Layout
-            private const int MOVE_BTN_HEIGHT = 6;
-            private const int ACTION_BTN_HEIGHT = 6;
+            private const int MOVE_BTN_HEIGHT = 9;
+            private const int ACTION_BTN_HEIGHT = 8;
             private const int HITBOX_PADDING = 1;
 
             public CombatantPanel(BattleCombatant combatant, List<BattleCombatant> allCombatants)
@@ -153,8 +154,20 @@ namespace ProjectVagabond.Battle.UI
 
             private void InitializeButtons(List<BattleCombatant> allCombatants)
             {
+                var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
                 var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
                 var global = ServiceLocator.Get<Global>();
+                var spriteManager = ServiceLocator.Get<SpriteManager>();
+                var icons = spriteManager.ActionIconsSpriteSheet;
+                var iconRects = spriteManager.ActionIconSourceRects;
+
+                // Helper to get icon rect based on move type
+                Rectangle GetMoveIcon(MoveData m)
+                {
+                    if (m.ImpactType == ImpactType.Physical) return iconRects[2];
+                    if (m.ImpactType == ImpactType.Magical) return iconRects[3];
+                    return iconRects[4]; // Status
+                }
 
                 // 1. Spells
                 for (int i = 0; i < 4; i++)
@@ -163,19 +176,26 @@ namespace ProjectVagabond.Battle.UI
                     string label = "---";
                     bool enabled = false;
                     MoveData? moveData = null;
+                    Rectangle? iconRect = null;
 
                     if (entry != null && BattleDataCache.Moves.TryGetValue(entry.MoveID, out var move))
                     {
                         label = move.MoveName.ToUpper();
                         enabled = true;
                         moveData = move;
+                        iconRect = GetMoveIcon(move);
                     }
 
-                    var btn = new Button(Rectangle.Empty, label, font: tertiaryFont, enableHoverSway: false)
+                    var btn = new TextOverImageButton(Rectangle.Empty, label, null, font: secondaryFont, enableHoverSway: false, iconTexture: enabled ? icons : null, iconSourceRect: iconRect)
                     {
-                        CustomDefaultTextColor = enabled ? global.Palette_Sun : global.Palette_DarkShadow,
+                        CustomDefaultTextColor = enabled ? global.GameTextColor : global.Palette_DarkShadow,
                         CustomHoverTextColor = global.ButtonHoverColor,
-                        IsEnabled = enabled
+                        IsEnabled = enabled,
+                        AlignLeft = false, // Centered
+                        ContentXOffset = 0,
+                        IconColorMatchesText = true, // Icon matches text color
+                        TextRenderOffset = new Vector2(0, -1), // Move text up 1px
+                        IconRenderOffset = new Vector2(0, -1)  // Move icon up 1px
                     };
 
                     var capturedMove = moveData;
@@ -200,11 +220,18 @@ namespace ProjectVagabond.Battle.UI
                     _buttons.Add(btn);
                 }
 
-                // 2. Actions
-                var strikeBtn = new Button(Rectangle.Empty, "STRIKE", font: tertiaryFont, enableHoverSway: false);
+                // 2. Actions (Using Tertiary Font)
+                // Strike
+                var strikeMove = Combatant.StrikeMove;
+                Rectangle strikeIcon = (strikeMove != null) ? GetMoveIcon(strikeMove) : iconRects[2];
+                var strikeBtn = new TextOverImageButton(Rectangle.Empty, "STRIKE", null, font: tertiaryFont, enableHoverSway: false, iconTexture: icons, iconSourceRect: strikeIcon)
+                {
+                    AlignLeft = false, // Center aligned for bottom row
+                    IconColorMatchesText = true,
+                    CustomDefaultTextColor = global.GameTextColor
+                };
                 strikeBtn.OnClick += () =>
                 {
-                    var strikeMove = Combatant.StrikeMove;
                     if (strikeMove != null)
                     {
                         var action = new QueuedAction
@@ -220,7 +247,13 @@ namespace ProjectVagabond.Battle.UI
                 };
                 _buttons.Add(strikeBtn);
 
-                var stallBtn = new Button(Rectangle.Empty, "STALL", font: tertiaryFont, enableHoverSway: false);
+                // Stall
+                var stallBtn = new TextOverImageButton(Rectangle.Empty, "STALL", null, font: tertiaryFont, enableHoverSway: false, iconTexture: icons, iconSourceRect: iconRects[0])
+                {
+                    AlignLeft = false,
+                    IconColorMatchesText = true,
+                    CustomDefaultTextColor = global.GameTextColor
+                };
                 stallBtn.OnClick += () =>
                 {
                     if (BattleDataCache.Moves.TryGetValue("6", out var stallMove))
@@ -239,14 +272,20 @@ namespace ProjectVagabond.Battle.UI
                 };
                 _buttons.Add(stallBtn);
 
-                var switchBtn = new Button(Rectangle.Empty, "SWITCH", font: tertiaryFont, enableHoverSway: false);
+                // Switch
+                var switchBtn = new TextOverImageButton(Rectangle.Empty, "SWITCH", null, font: tertiaryFont, enableHoverSway: false, iconTexture: icons, iconSourceRect: iconRects[1])
+                {
+                    AlignLeft = false,
+                    IconColorMatchesText = true,
+                    CustomDefaultTextColor = global.GameTextColor
+                };
                 switchBtn.OnClick += () => OnSwitchRequested?.Invoke();
                 bool hasBench = allCombatants.Any(c => c.IsPlayerControlled && !c.IsDefeated && c.BattleSlot >= 2);
                 switchBtn.IsEnabled = hasBench;
                 _buttons.Add(switchBtn);
 
                 // 3. Cancel Button
-                _cancelButton = new Button(Rectangle.Empty, "CANCEL", font: tertiaryFont, enableHoverSway: false)
+                _cancelButton = new Button(Rectangle.Empty, "CANCEL", font: secondaryFont, enableHoverSway: false)
                 {
                     CustomDefaultTextColor = global.Palette_Rust,
                     CustomHoverTextColor = global.ButtonHoverColor
@@ -267,10 +306,10 @@ namespace ProjectVagabond.Battle.UI
                     y += MOVE_BTN_HEIGHT + HITBOX_PADDING;
                 }
 
-                // Layout Actions
-                int strikeW = 30;
-                int stallW = 25;
-                int switchW = 25;
+                // Layout Actions (Total Width 140)
+                int strikeW = 50;
+                int stallW = 45;
+                int switchW = 45;
 
                 _buttons[4].Bounds = new Rectangle(x, y, strikeW, ACTION_BTN_HEIGHT + HITBOX_PADDING);
                 _buttons[5].Bounds = new Rectangle(x + strikeW, y, stallW, ACTION_BTN_HEIGHT + HITBOX_PADDING);
@@ -346,10 +385,6 @@ namespace ProjectVagabond.Battle.UI
                     var rect = _cancelButton.Bounds;
                     rect.Y += (int)offset.Y;
 
-                    // REMOVED: DrawBeveledBackground call for Cancel Button
-                    // Color bgColor = _cancelButton.IsHovered ? global.Palette_Rust : global.Palette_DarkShadow;
-                    // DrawBeveledBackground(spriteBatch, pixel, rect, bgColor);
-
                     var textSize = _cancelButton.Font.MeasureString(_cancelButton.Text);
                     var textPos = new Vector2(
                         rect.X + (rect.Width - textSize.Width) / 2f,
@@ -363,30 +398,32 @@ namespace ProjectVagabond.Battle.UI
                 else
                 {
                     // Draw Normal Buttons
-                    foreach (var btn in _buttons)
+                    for (int i = 0; i < _buttons.Count; i++)
                     {
+                        var btn = _buttons[i];
                         var rect = btn.Bounds;
                         rect.Y += (int)offset.Y;
                         var visualRect = new Rectangle(rect.X, rect.Y, rect.Width, rect.Height - HITBOX_PADDING);
 
-                        Color bgColor = global.Palette_DarkShadow;
-                        if (btn.IsHovered && btn.IsEnabled) bgColor = global.Palette_Rust;
-                        else if (!btn.IsEnabled) bgColor = global.Palette_Black;
+                        Color bgColor;
+                        if (!btn.IsEnabled)
+                        {
+                            bgColor = global.Palette_Black;
+                        }
+                        else if (btn.IsHovered)
+                        {
+                            bgColor = global.Palette_Rust;
+                        }
+                        else
+                        {
+                            // Moves (0-3) use DarkestPale, Actions (4-6) use DarkShadow
+                            bgColor = (i < 4) ? global.Palette_DarkestPale : global.Palette_DarkShadow;
+                        }
 
                         DrawBeveledBackground(spriteBatch, pixel, visualRect, bgColor);
 
-                        var textSize = btn.Font.MeasureString(btn.Text);
-                        var textPos = new Vector2(
-                            visualRect.X + (visualRect.Width - textSize.Width) / 2f,
-                            visualRect.Y + (visualRect.Height - textSize.Height) / 2f
-                        );
-                        textPos = new Vector2(MathF.Round(textPos.X), MathF.Round(textPos.Y));
-
-                        Color textColor = btn.CustomDefaultTextColor ?? global.Palette_Sun;
-                        if (btn.IsHovered && btn.IsEnabled) textColor = global.ButtonHoverColor;
-                        if (!btn.IsEnabled) textColor = global.ButtonDisableColor;
-
-                        spriteBatch.DrawStringSnapped(btn.Font, btn.Text, textPos, textColor);
+                        // Use TextOverImageButton's Draw to handle icon + text
+                        btn.Draw(spriteBatch, btn.Font, gameTime, transform, false, 0f, offset.Y);
                     }
                 }
 

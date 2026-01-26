@@ -241,7 +241,7 @@ public enum PlayerSpriteType
             catch { ActionTooltipBackgroundSprite = _textureFactory.CreateColoredTexture(319, 178, Color.DarkGray); }
 
             try { ActionIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/ui_action_icons_spritesheet_9x9"); }
-            catch { ActionIconsSpriteSheet = _textureFactory.CreateColoredTexture(36, 9, Color.Magenta); }
+            catch { ActionIconsSpriteSheet = _textureFactory.CreateColoredTexture(45, 9, Color.Magenta); }
 
             try { ActionButtonUsesSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/ui_action_button_uses_spritesheet"); }
             catch { ActionButtonUsesSpriteSheet = _textureFactory.CreateColoredTexture(471, 17, Color.Magenta); }
@@ -630,9 +630,9 @@ public enum PlayerSpriteType
 
         private void InitializeActionIconsSourceRects()
         {
-            ActionIconSourceRects = new Rectangle[4];
+            ActionIconSourceRects = new Rectangle[5];
             const int iconSize = 9;
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < 5; i++)
             {
                 ActionIconSourceRects[i] = new Rectangle(i * iconSize, 0, iconSize, iconSize);
             }
