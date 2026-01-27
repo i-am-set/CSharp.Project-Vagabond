@@ -12,12 +12,12 @@ using System.Linq;
 
 namespace ProjectVagabond.UI
 {
-    public class InventoryDrawer
+    public class PartyStatusDrawer
     {
         private readonly PartyStatusOverlay _overlay;
         private readonly ItemTooltipRenderer _tooltipRenderer;
 
-        public InventoryDrawer(PartyStatusOverlay overlay)
+        public PartyStatusDrawer(PartyStatusOverlay overlay)
         {
             _overlay = overlay;
             _tooltipRenderer = ServiceLocator.Get<ItemTooltipRenderer>();

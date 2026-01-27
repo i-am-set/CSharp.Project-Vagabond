@@ -55,8 +55,8 @@ namespace ProjectVagabond.UI
         internal KeyboardState PreviousKeyboardState { get; set; }
 
         // Subsystems
-        private readonly InventoryDrawer _drawer;
-        private readonly InventoryInputHandler _inputHandler;
+        private readonly PartyStatusDrawer _drawer;
+        private readonly PartyStatusInputHandler _inputHandler;
         private static readonly Random _rng = new Random();
 
         public PartyStatusOverlay()
@@ -77,8 +77,8 @@ namespace ProjectVagabond.UI
                 };
             }
 
-            _drawer = new InventoryDrawer(this);
-            _inputHandler = new InventoryInputHandler(this);
+            _drawer = new PartyStatusDrawer(this);
+            _inputHandler = new PartyStatusInputHandler(this);
         }
 
         public void Initialize()

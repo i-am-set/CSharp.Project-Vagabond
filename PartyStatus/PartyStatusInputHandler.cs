@@ -12,12 +12,12 @@ using System.Linq;
 
 namespace ProjectVagabond.UI
 {
-    public class InventoryInputHandler
+    public class PartyStatusInputHandler
     {
         private readonly Global _global;
         private readonly PartyStatusOverlay _overlay;
 
-        public InventoryInputHandler(PartyStatusOverlay overlay)
+        public PartyStatusInputHandler(PartyStatusOverlay overlay)
         {
             _overlay = overlay;
             _global = ServiceLocator.Get<Global>();
