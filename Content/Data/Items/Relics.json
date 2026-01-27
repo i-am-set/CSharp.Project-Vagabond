@@ -24,13 +24,13 @@
   {
     "RelicID": "2",
     "RelicName": "Tidal Stone",
-    "AbilityName": "Hydromancer",
-    "Description": "[cSpell]Magical[/] moves deal [cpositive]1.2x[/] damage.",
-    "Flavor": "Smells like a fish market.",
+    "AbilityName": "Tides",
+    "Description": "Odd Turns: [cpositive]2.0x[/] Damage. Even Turns: [cnegative]0.5x[/] Damage.",
+    "Flavor": "It pushes and pulls with the moon.",
     "Effects": {
-      "ImpactDamageBonus": "Magical,1.2"
+      "TidalStone": ""
     },
-    "Tags": [ "Magical" ]
+    "Tags": [ "Damage" ]
   },
   {
     "RelicID": "3",
@@ -46,24 +46,24 @@
   {
     "RelicID": "4",
     "RelicName": "Arcane Eye",
-    "AbilityName": "Thaumomancer",
-    "Description": "Attacks ignore dodging and [cpositive]cannot miss[/].",
-    "Flavor": "Vibrates with arcane energy.",
+    "AbilityName": "Split Gaze",
+    "Description": "Single target attacks hit [cpositive]ALL[/] enemies, but deal [cnegative]half[/] damage.",
+    "Flavor": "It sees everything, but focuses on nothing.",
     "Effects": {
-      "IgnoreEvasion": ""
+      "ArcaneEye": ""
     },
-    "Tags": [ "Utility" ]
+    "Tags": [ "Utility", "AoE" ]
   },
   {
     "RelicID": "5",
     "RelicName": "Sunmask",
-    "AbilityName": "Divine Connection",
-    "Description": "[cpositive]Immune[/] to [cpositive]Stun[/] and [cpositive]Daze[/].",
-    "Flavor": "Glows faintly.",
+    "AbilityName": "Solar Power",
+    "Description": "[cSpell]Magical[/] moves deal [cpositive]1.2x[/] damage.",
+    "Flavor": "Glows faintly with stored sunlight.",
     "Effects": {
-      "StatusImmunity": "Stun"
+      "ImpactDamageBonus": "Magical,1.2"
     },
-    "Tags": [ "Defense" ]
+    "Tags": [ "Magical", "Damage" ]
   },
   {
     "RelicID": "6",

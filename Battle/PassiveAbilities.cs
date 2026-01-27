@@ -761,6 +761,86 @@ namespace ProjectVagabond.Battle.Abilities
         public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx) { }
     }
 
+    public class ImpactDamageBonusAbility : IAbility
+    {
+        public string Name => "Impact Bonus";
+        public string Description => "Boosts damage of a specific impact type.";
+        private readonly ImpactType _type;
+        private readonly float _multiplier;
+
+        public ImpactDamageBonusAbility(ImpactType type, float multiplier)
+        {
+            _type = type;
+            _multiplier = multiplier;
+        }
+
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
+        {
+            if (type == CombatEventType.CalculateOutgoingDamage)
+            {
+                if (ctx.Move != null && ctx.Move.ImpactType == _type)
+                {
+                    if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                    ctx.DamageMultiplier *= _multiplier;
+                }
+            }
+        }
+    }
+
+    public class ArcaneEyeAbility : IAbility
+    {
+        public string Name => "Arcane Eye";
+        public string Description => "Single target attacks hit both enemies for half damage.";
+
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
+        {
+            if (type == CombatEventType.ActionDeclared)
+            {
+                if (ctx.Action.ChosenMove != null && ctx.Action.ChosenMove.Target == TargetType.Single)
+                {
+                    ctx.Action.ChosenMove.Target = TargetType.Both;
+                    if (!ctx.IsSimulation)
+                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                }
+            }
+            else if (type == CombatEventType.CalculateOutgoingDamage)
+            {
+                // Check if the original move was Single target
+                if (ctx.Move != null && BattleDataCache.Moves.TryGetValue(ctx.Move.MoveID, out var originalMove))
+                {
+                    if (originalMove.Target == TargetType.Single)
+                    {
+                        ctx.DamageMultiplier *= 0.5f;
+                    }
+                }
+            }
+        }
+    }
+
+    public class TidalStoneAbility : IAbility
+    {
+        public string Name => "Tidal Stone";
+        public string Description => "Odd turns: 2x Damage. Even turns: 0.5x Damage.";
+
+        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
+        {
+            if (type == CombatEventType.CalculateOutgoingDamage)
+            {
+                var bm = ServiceLocator.Get<BattleManager>();
+                if (bm.RoundNumber % 2 != 0) // Odd
+                {
+                    ctx.DamageMultiplier *= 2.0f;
+                }
+                else // Even
+                {
+                    ctx.DamageMultiplier *= 0.5f;
+                }
+                if (!ctx.IsSimulation)
+                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+            }
+        }
+    }
+
     // --- REFACTORED PARTY MEMBER PASSIVES ---
 
     public class PMPyromancerAbility : IAbility
