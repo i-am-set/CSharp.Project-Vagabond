@@ -34,17 +34,6 @@
   },
   {
     "RelicID": "3",
-    "RelicName": "A Leaf",
-    "AbilityName": "Floramancer",
-    "Description": "Restore [cpositive]5%[/] HP at end of turn.",
-    "Flavor": "Pristine product of nature.",
-    "Effects": {
-      "Regen": "5"
-    },
-    "Tags": [ "Healing" ]
-  },
-  {
-    "RelicID": "4",
     "RelicName": "Arcane Eye",
     "AbilityName": "Split Gaze",
     "Description": "Single target attacks hit [cpositive]ALL[/] enemies, but deal [cnegative]half[/] damage.",
@@ -55,7 +44,7 @@
     "Tags": [ "Utility", "AoE" ]
   },
   {
-    "RelicID": "5",
+    "RelicID": "4",
     "RelicName": "Sunmask",
     "AbilityName": "Solar Power",
     "Description": "[cSpell]Magical[/] moves deal [cpositive]1.2x[/] damage.",
@@ -66,7 +55,7 @@
     "Tags": [ "Magical", "Damage" ]
   },
   {
-    "RelicID": "6",
+    "RelicID": "5",
     "RelicName": "Offering",
     "AbilityName": "Occultist",
     "Description": "Heal [cpositive]10%[/] of damage dealt.",
@@ -77,7 +66,7 @@
     "Tags": [ "Lifesteal" ]
   },
   {
-    "RelicID": "7",
+    "RelicID": "6",
     "RelicName": "Venom Fang",
     "AbilityName": "Venomous",
     "Description": "[cpositive]50%[/] chance to inflict [cpositive]Poison[/] on contact.",
@@ -88,20 +77,7 @@
     "Tags": [ "StatusEffect" ]
   },
   {
-    "RelicID": "8",
-    "RelicName": "Buckler",
-    "AbilityName": "Thick Skin",
-    "Description": "Receive [cpositive]0.8x[/] physical damage.",
-    "Flavor": "A little shield!",
-    "Effects": {
-      "PhysicalDamageReduction": "20"
-    },
-    "StatModifiers": {
-    },
-    "Tags": [ "Defense" ]
-  },
-  {
-    "RelicID": "9",
+    "RelicID": "7",
     "RelicName": "Spyglass",
     "AbilityName": "Sniper",
     "Description": "Increases [cpositive]Crit[/] chance by [cpositive]25%[/].",
@@ -112,88 +88,20 @@
     "Tags": [ "Critical" ]
   },
   {
-    "RelicID": "10",
-    "RelicName": "Dead Rat",
-    "AbilityName": "Regeneration",
-    "Description": "Restore [cpositive]5%[/] HP at end of turn.",
-    "Flavor": "Light Snack.",
-    "Effects": {
-      "Regen": "5"
-    },
-    "Tags": [ "Healing", "Defense" ]
-  },
-  {
-    "RelicID": "11",
-    "RelicName": "Hunter Charm",
-    "AbilityName": "Opportunist",
-    "Description": "Targets with status effects take [cpositive]2.0x[/] damage.",
-    "Flavor": "Was this washed?",
-    "Effects": {
-      "StatusedTargetDamage": "100"
-    },
-    "Tags": [ "StatusEffect" ]
-  },
-  {
-    "RelicID": "12",
-    "RelicName": "Zap Ring",
-    "AbilityName": "Static Charge",
-    "Description": "[cpositive]30%[/] chance to [cpositive]Stun[/] attackers on contact.",
-    "Flavor": "Crackles with static.",
-    "Effects": {
-      "ReactiveStatus": "Stun,30,1,true"
-    },
-    "Tags": [ "StatusEffect", "Defense" ]
-  },
-  {
-    "RelicID": "13",
+    "RelicID": "8",
     "RelicName": "Brute Heart",
     "AbilityName": "Adrenaline Rush",
     "Description": "Deal [cpositive]2.0x[/] damage below 33% HP.",
     "Flavor": "RAAAAAAH!",
     "Effects": {
-      "LowHPDamageBonus": "33,100"
+      "LowHPDamageBonus": "33,2.0"
     },
     "StatModifiers": {
     },
     "Tags": [ "LowHP" ]
   },
   {
-    "RelicID": "14",
-    "RelicName": "Ornate Feather",
-    "AbilityName": "Photosynthesis",
-    "Description": "Restore [cpositive]10%[/] HP at end of turn.",
-    "Flavor": "It shimmers in the sunlight.",
-    "Effects": {
-      "Regen": "10"
-    },
-    "Tags": [ "Healing", "Defense" ]
-  },
-  {
-    "RelicID": "15",
-    "RelicName": "Anchor Charm",
-    "AbilityName": "Last Stand",
-    "Description": "[cpositive]1.5x[/] power of holder's attacks when acting last in the turn.",
-    "Flavor": "Very heavy for its size.",
-    "Effects": {
-      "LastStand": "30"
-    },
-    "StatModifiers": {
-    },
-    "Tags": []
-  },
-  {
-    "RelicID": "16",
-    "RelicName": "Disease Idol",
-    "AbilityName": "Toxic Aura",
-    "Description": "[cpositive]50%[/] chance to [cpositive]Poison[/] a random combatant at end of turn.",
-    "Flavor": "Why are you carrying that around?",
-    "Effects": {
-      "ToxicAura": "50,2,true"
-    },
-    "Tags": [ "StatusEffect" ]
-  },
-  {
-    "RelicID": "17",
+    "RelicID": "9",
     "RelicName": "Sealed Envelope",
     "AbilityName": "Unwavering",
     "Description": "[cpositive]Immune[/] to [cpositive]Stun[/] and [cpositive]Daze[/].",
@@ -204,7 +112,7 @@
     "Tags": [ "Defense", "StatusEffect" ]
   },
   {
-    "RelicID": "18",
+    "RelicID": "10",
     "RelicName": "Bulwark Shield",
     "AbilityName": "Bulwark",
     "Description": "[cpositive]Immune[/] to [cpositive]Critical Hits[/].",
@@ -217,7 +125,7 @@
     "Tags": [ "Defense", "Critical" ]
   },
   {
-    "RelicID": "19",
+    "RelicID": "11",
     "RelicName": "Blank Scroll",
     "AbilityName": "First Blood",
     "Description": "Holder's first attack deals [cpositive]2.0x[/] damage.",
@@ -230,18 +138,7 @@
     "Tags": []
   },
   {
-    "RelicID": "20",
-    "RelicName": "War Horn",
-    "AbilityName": "Intimidate",
-    "Description": "Lowers the Strength stat of both enemies by [cpositive]-1[/] when entering battle.",
-    "Flavor": "It roars with fury.",
-    "Effects": {
-      "Intimidate": "Strength,-1"
-    },
-    "Tags": [ "StatusEffect" ]
-  },
-  {
-    "RelicID": "21",
+    "RelicID": "12",
     "RelicName": "Spiky Collar",
     "AbilityName": "Iron Barbs",
     "Description": "Attackers lose [cpositive]12.5%[/] max HP on contact.",
@@ -252,7 +149,7 @@
     "Tags": [ "Defense" ]
   },
   {
-    "RelicID": "22",
+    "RelicID": "13",
     "RelicName": "Pristine Gem",
     "AbilityName": "Full Power",
     "Description": "Deal [cpositive]1.5x[/] damage at full HP.",
@@ -263,92 +160,7 @@
     "Tags": []
   },
   {
-    "RelicID": "23",
-    "RelicName": "Seer's Left Eye",
-    "AbilityName": "Keen Eye",
-    "Description": "Attacks ignore dodging and [cpositive]cannot miss[/].",
-    "Flavor": "Sees lies.",
-    "Effects": {
-      "IgnoreEvasion": ""
-    },
-    "StatModifiers": {
-    },
-    "Tags": []
-  },
-  {
-    "RelicID": "24",
-    "RelicName": "Broken Amulet",
-    "AbilityName": "Glass Cannon",
-    "Description": "Deal [cpositive]1.5x[/] damage but Receive [cnegative]1.15x[/] damage.",
-    "Flavor": "Must be a placebo effect.",
-    "Effects": {
-      "GlassCannon": "30,15"
-    },
-    "StatModifiers": {
-    },
-    "Tags": []
-  },
-  {
-    "RelicID": "25",
-    "RelicName": "Domino",
-    "AbilityName": "Chain Reaction",
-    "Description": "Consecutive hits with same attack boost damage by [cpositive]1.1x[/].",
-    "Flavor": "One falls, they all fall.",
-    "Effects": {
-      "ChainReaction": "1.1"
-    },
-    "Tags": [ "MultiHit" ]
-  },
-  {
-    "RelicID": "26",
-    "RelicName": "Spices",
-    "AbilityName": "Reckless Abandon",
-    "Description": "Contact moves deal [cpositive]1.5x[/] damage but [cnegative]0.9x[/] accuracy.",
-    "Flavor": "ACHOO!",
-    "Effects": {
-      "RecklessAbandon": "1.5,0.9"
-    },
-    "StatModifiers": {
-    },
-    "Tags": []
-  },
-  {
-    "RelicID": "27",
-    "RelicName": "Big Bug Stinger",
-    "AbilityName": "Armor Piercer",
-    "Description": "Ignore [cpositive]25%[/] of target's Tenacity.",
-    "Flavor": "Still dripping.",
-    "Effects": {
-      "DefensePenetration": "25"
-    },
-    "Tags": []
-  },
-  {
-    "RelicID": "28",
-    "RelicName": "Leech-in-a-Jar",
-    "AbilityName": "Sanguine Thirst",
-    "Description": "Heal [cpositive]25%[/] of damage dealt with contact moves.",
-    "Flavor": "Help! He's hungry!",
-    "Effects": {
-      "SanguineThirst": "25"
-    },
-    "Tags": [ "Lifesteal", "Healing" ]
-  },
-  {
-    "RelicID": "29",
-    "RelicName": "Cracked Gauntlet",
-    "AbilityName": "Vigor",
-    "Description": "Receive [cpositive]half[/] damage at full HP.",
-    "Flavor": "Looks fragile but heavy.",
-    "Effects": {
-      "Vigor": ""
-    },
-    "StatModifiers": {
-    },
-    "Tags": [ "Defense" ]
-  },
-  {
-    "RelicID": "30",
+    "RelicID": "14",
     "RelicName": "Booties",
     "AbilityName": "Cornered",
     "Description": "Raises Agility by [cpositive]2[/] stages when below 33% HP.",
@@ -357,101 +169,5 @@
       "CorneredAnimal": "33,Agility,2"
     },
     "Tags": [ "LowHP" ]
-  },
-  {
-    "RelicID": "31",
-    "RelicName": "Sneaky Cloak",
-    "AbilityName": "Ambush Predator",
-    "Description": "First attack gains [cpositive]+1[/] priority but [cnegative]0.8x[/] damage.",
-    "Flavor": "Makes the wearer sorta invisible. Great for ambushing.",
-    "Effects": {
-      "AmbushPredator": "1,0.8"
-    },
-    "StatModifiers": {
-    },
-    "Tags": [ "Priority" ]
-  },
-  {
-    "RelicID": "32",
-    "RelicName": "Sacrifice Pact",
-    "AbilityName": "Bloodletter",
-    "Description": "Spells cost an extra [cnegative]5%[/] HP to cast but deal [cpositive]1.5x[/] damage.",
-    "Flavor": "I mean, its part of the deal.",
-    "Effects": {
-      "Bloodletter": "1.5"
-    },
-    "Tags": [ "HPCost" ]
-  },
-  {
-    "RelicID": "33",
-    "RelicName": "Runic Weave",
-    "AbilityName": "Spellweaver",
-    "Description": "Alternating spells deals [cpositive]1.5x[/] damage.",
-    "Flavor": "Looks like a bean to meg.",
-    "Effects": {
-      "Spellweaver": "1.5"
-    },
-    "StatModifiers": {
-    },
-    "Tags": []
-  },
-  {
-    "RelicID": "34",
-    "RelicName": "Lead Helmet",
-    "AbilityName": "Momentum",
-    "Description": "After defeating a target, next attack deals [cpositive]1.5x[/] damage.",
-    "Flavor": "Keep moving forward.",
-    "Effects": {
-      "Momentum": "1.5"
-    },
-    "StatModifiers": {
-    },
-    "Tags": []
-  },
-  {
-    "RelicID": "35",
-    "RelicName": "Beartrap",
-    "AbilityName": "Escalation",
-    "Description": "Gain [cpositive]1.1x[/] damage each round, up to [cpositive]2.0x[/].",
-    "Flavor": "Hurts more and more.",
-    "Effects": {
-      "Escalation": "1.1,2.0"
-    },
-    "Tags": []
-  },
-  {
-    "RelicID": "36",
-    "RelicName": "Pain Mail",
-    "AbilityName": "Pain Fuel",
-    "Description": "Taking [cpositive]Crit[/] damage raises Strength by [cpositive]+1[/] and Intelligence by [cpositive]+1[/].",
-    "Flavor": "You're a freak.",
-    "Effects": {
-      "PainFuel": ""
-    },
-    "StatModifiers": {
-    },
-    "Tags": [ "Critical", "Buff", "Defense" ]
-  },
-  {
-    "RelicID": "37",
-    "RelicName": "Ichor Shot",
-    "AbilityName": "Caustic Blood",
-    "Description": "Lifesteal against holder [cpositive]damages[/] the attacker instead of healing.",
-    "Flavor": "Burns on the way down.",
-    "Effects": {
-      "CausticBlood": ""
-    },
-    "Tags": [ "Lifesteal", "Defense" ]
-  },
-  {
-    "RelicID": "38",
-    "RelicName": "Seer's Right Eye",
-    "AbilityName": "Insight",
-    "Description": "Reveals the exact stats of enemies in combat.",
-    "Flavor": "Sees truth.",
-    "Effects": {
-      "Insight": ""
-    },
-    "Tags": [ "Utility" ]
   }
 ]

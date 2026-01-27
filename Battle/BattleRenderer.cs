@@ -63,9 +63,6 @@ namespace ProjectVagabond.Battle.UI
         private const float ENEMY_ANIM_MIN_INTERVAL = 0.8f;
         private const float ENEMY_ANIM_MAX_INTERVAL = 1.2f;
 
-        private const float SHADOW_ANIM_MIN_INTERVAL = 1.5f;
-        private const float SHADOW_ANIM_MAX_INTERVAL = 2.5f;
-
         private class RecoilState { public Vector2 Offset; public Vector2 Velocity; public const float STIFFNESS = 600f; public const float DAMPING = 15f; }
         private readonly Dictionary<string, RecoilState> _recoilStates = new Dictionary<string, RecoilState>();
 
@@ -76,17 +73,13 @@ namespace ProjectVagabond.Battle.UI
 
         private float _statTooltipAlpha = 0f;
         private string _statTooltipCombatantID = null;
-        private const float STAT_TOOLTIP_FADE_SPEED = 5.0f;
 
         private readonly Random _random = new Random();
 
         public Vector2 PlayerSpritePosition { get; private set; }
         private Dictionary<string, Vector2> _combatantVisualCenters = new Dictionary<string, Vector2>();
-
         private Dictionary<string, Vector2> _combatantStaticCenters = new Dictionary<string, Vector2>();
-
         private Dictionary<string, float> _combatantBarBottomYs = new Dictionary<string, float>();
-
         private readonly Dictionary<string, Vector2> _combatantBarPositions = new Dictionary<string, Vector2>();
 
         private class ReticleController
@@ -333,7 +326,7 @@ namespace ProjectVagabond.Battle.UI
                 var target = allCombatants.FirstOrDefault(c => c.CombatantID == _statTooltipCombatantID);
                 if (target != null)
                 {
-                    bool hasInsight = allCombatants.Any(c => c.IsPlayerControlled && !c.IsDefeated && c.Abilities.Any(a => a is InsightAbility));
+                    bool hasInsight = false;
 
                     Vector2 center = Vector2.Zero;
                     if (_combatantStaticCenters.TryGetValue(target.CombatantID, out var staticPos))
@@ -368,10 +361,8 @@ namespace ProjectVagabond.Battle.UI
                 return;
             }
 
-            // Use the targets from HoverHighlightState, which are updated by BattleUIManager
             var targets = uiManager.HoverHighlightState.Targets;
 
-            // If we are in targeting mode, we should calculate valid targets directly to ensure we show boxes for all valid options
             if (uiManager.UIState == BattleUIState.Targeting && uiManager.MoveForTargeting != null)
             {
                 var battleManager = ServiceLocator.Get<BattleManager>();
@@ -398,22 +389,16 @@ namespace ProjectVagabond.Battle.UI
                 isMulti = type == TargetType.All || type == TargetType.Both || type == TargetType.Every ||
                           type == TargetType.Team || type == TargetType.RandomAll || type == TargetType.RandomBoth || type == TargetType.RandomEvery;
 
-                // In targeting mode, we want to show boxes on ALL valid targets if it's single target selection,
-                // so the user knows what they can click.
-                // If it's multi-target, we show all of them anyway.
-                // So we just use 'targets' (which contains all valid targets).
                 targetsToDraw = targets;
             }
             else
             {
-                // Hover mode (not locked in targeting)
                 var type = uiManager.HoveredMove?.Target ?? TargetType.None;
                 isMulti = type == TargetType.All || type == TargetType.Both || type == TargetType.Every ||
                           type == TargetType.Team || type == TargetType.RandomAll || type == TargetType.RandomBoth || type == TargetType.RandomEvery;
 
                 if (!isMulti)
                 {
-                    // For single target hover, we cycle through them or show the specific one hovered
                     var activeTarget = targets.FirstOrDefault(t => silhouetteColors.ContainsKey(t.CombatantID));
                     if (activeTarget != null)
                     {
@@ -732,7 +717,6 @@ namespace ProjectVagabond.Battle.UI
                             floorScale = Easing.EaseOutBack(progress);
                         }
 
-                        // Adjusted Y offset from -12 to -4 to lower the floor by 8 pixels
                         _vfxRenderer.DrawFloor(spriteBatch, center, center.Y + size + BattleLayout.ENEMY_SLOT_Y_OFFSET - 4, floorScale);
                     }
                     else
@@ -770,7 +754,6 @@ namespace ProjectVagabond.Battle.UI
                                 }
                             }
 
-                            // Adjusted Y offset from -12 to -4
                             _vfxRenderer.DrawFloor(spriteBatch, center, center.Y + size + BattleLayout.ENEMY_SLOT_Y_OFFSET - 4, floorScale);
                         }
                     }
@@ -800,7 +783,6 @@ namespace ProjectVagabond.Battle.UI
                             }
                         }
 
-                        // Adjusted Y offset from -12 to -4
                         _vfxRenderer.DrawFloor(spriteBatch, center, center.Y + size + BattleLayout.ENEMY_SLOT_Y_OFFSET - 4, floorScale);
                     }
 
@@ -813,7 +795,6 @@ namespace ProjectVagabond.Battle.UI
                         float progress = Math.Clamp(centerIntro.Timer / BattleAnimationManager.FloorIntroAnimationState.DURATION, 0f, 1f);
                         float floorScale = Easing.EaseOutBack(progress);
 
-                        // Adjusted Y offset from -12 to -4
                         _vfxRenderer.DrawFloor(spriteBatch, centerPos, centerPos.Y + size + BattleLayout.ENEMY_SLOT_Y_OFFSET - 4, floorScale);
                     }
                 }
@@ -1107,10 +1088,7 @@ namespace ProjectVagabond.Battle.UI
 
                             _combatantBarPositions[enemy.CombatantID] = new Vector2(barX, barY);
 
-                            // Draw Name above bar
                             var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
-
-                            // --- NEW: Apply HUD Alpha ---
                             float hudAlpha = enemy.HudVisualAlpha;
 
                             _hudRenderer.DrawEnemyBars(spriteBatch, enemy, barX, barY, BattleLayout.ENEMY_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, enemy.VisualHealthBarAlpha * hudAlpha, enemy.VisualManaBarAlpha * hudAlpha, gameTime);
@@ -1303,10 +1281,7 @@ namespace ProjectVagabond.Battle.UI
 
                     _combatantBarPositions[player.CombatantID] = new Vector2(barX, barY);
 
-                    // Draw Name above bar
                     var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
-
-                    // --- NEW: Apply HUD Alpha ---
                     float hudAlpha = player.HudVisualAlpha;
 
                     _hudRenderer.DrawPlayerBars(spriteBatch, player, barX, barY, BattleLayout.PLAYER_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, player.VisualHealthBarAlpha * hudAlpha, player.VisualManaBarAlpha * hudAlpha, gameTime, uiManager, player == currentActor);
@@ -1335,15 +1310,13 @@ namespace ProjectVagabond.Battle.UI
                 if (move.ManaCost > 0) affectsMana = true;
                 if (move.Abilities.Any(a => a is ManaDumpAbility)) affectsMana = true;
 
-                if (move.Abilities.Any(a => a is RecoilAbility || a is BloodletterAbility)) affectsHP = true;
+                if (move.Abilities.Any(a => a is RecoilAbility)) affectsHP = true;
             }
 
             if (isTarget)
             {
                 if (move.Power > 0) affectsHP = true;
                 if (move.Effects.ContainsKey("Heal")) affectsHP = true;
-                if (move.Abilities.Any(a => a is PercentageDamageAbility)) affectsHP = true;
-                // Replaced IFixedDamageModifier with concrete check
                 if (move.Abilities.Any(a => a is PercentageDamageAbility)) affectsHP = true;
                 if (move.Abilities.Any(a => a is ManaDumpAbility)) affectsHP = true;
 
@@ -1354,7 +1327,6 @@ namespace ProjectVagabond.Battle.UI
 
         private void UpdateBarAlpha(BattleCombatant c, float dt, bool showHP, bool showMana)
         {
-            // Force full visibility at all times
             c.VisualHealthBarAlpha = 1.0f;
             c.VisualManaBarAlpha = 1.0f;
             c.HealthBarDelayTimer = 0f;
@@ -1570,7 +1542,6 @@ namespace ProjectVagabond.Battle.UI
 
                 if (combatant.VisualHealthBarAlpha <= 0.01f && combatant.VisualManaBarAlpha <= 0.01f) continue;
 
-                // --- NEW: Apply HUD Alpha ---
                 float hudAlpha = combatant.HudVisualAlpha;
 
                 if (combatant.IsPlayerControlled)
