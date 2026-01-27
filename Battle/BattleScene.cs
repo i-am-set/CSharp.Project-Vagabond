@@ -113,8 +113,6 @@ namespace ProjectVagabond.Scenes
         private const float ROUND_SHAKE_FREQUENCY = 20f;
 
         private bool _victorySequenceTriggered = false;
-        private LootScreen _lootScreen;
-        private bool _lootScreenHasShown = false;
         private bool _floorTransitionTriggered = false;
         private bool _didFlee = false;
 
@@ -151,7 +149,6 @@ namespace ProjectVagabond.Scenes
             _inputHandler = new BattleInputHandler();
             _alertManager = new AlertManager();
             _battleLogManager = new BattleLogManager();
-            _lootScreen = new LootScreen();
         }
 
         public override void Enter()
@@ -183,10 +180,8 @@ namespace ProjectVagabond.Scenes
             _watchdogTimer = 0f;
             _switchSequenceState = SwitchSequenceState.None;
             _victorySequenceTriggered = false;
-            _lootScreenHasShown = false;
             _floorTransitionTriggered = false;
             _didFlee = false;
-            _lootScreen.Reset();
 
             SubscribeToEvents();
             InitializeSettingsButton();
@@ -256,7 +251,6 @@ namespace ProjectVagabond.Scenes
             {
                 _progressionManager.ClearCurrentSplitMap();
             }
-            _lootScreen.Reset();
             UnsubscribeFromEvents();
             _battleLogManager.Unsubscribe();
             CleanupPlayerState();
@@ -430,14 +424,6 @@ namespace ProjectVagabond.Scenes
 
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            if (_lootScreen != null && _lootScreen.IsActive)
-            {
-                _lootScreen.Update(gameTime);
-                _animationManager.Update(gameTime, _battleManager.AllCombatants);
-                if (!_lootScreen.IsActive) FinalizeVictory();
-                return;
-            }
-
             if (_isFadingOutOnDeath)
             {
                 _deathFadeTimer += dt;
@@ -549,8 +535,10 @@ namespace ProjectVagabond.Scenes
                     _settingsButtonAnimTimer += dt;
                     float progress = Math.Clamp(_settingsButtonAnimTimer / SETTINGS_BUTTON_ANIM_DURATION, 0f, 1f);
                     float eased = Easing.EaseOutBack(progress);
+
                     float startX = Global.VIRTUAL_WIDTH + 20;
                     float targetX = Global.VIRTUAL_WIDTH - 16 - 2;
+
                     float currentX = MathHelper.Lerp(startX, targetX, eased);
                     _settingsButton.Bounds = new Rectangle((int)currentX, 2, 16, 16);
                     if (progress >= 1.0f) _settingsButtonState = SettingsButtonState.Visible;
@@ -627,35 +615,26 @@ namespace ProjectVagabond.Scenes
                         }
                         else if (!_animationManager.IsBlockingAnimation)
                         {
-                            if (!_lootScreenHasShown)
+                            if (!_floorTransitionTriggered)
                             {
-                                if (!_floorTransitionTriggered)
+                                _uiManager.ForceClearNarration();
+                                if (!SplitMapScene.WasMajorBattle)
                                 {
-                                    _uiManager.ForceClearNarration();
-                                    if (!SplitMapScene.WasMajorBattle)
-                                    {
-                                        _animationManager.StartFloorOutroAnimation("floor_0");
-                                        _animationManager.StartFloorOutroAnimation("floor_1");
-                                        _animationManager.StartFloorIntroAnimation("floor_center");
-                                    }
-                                    _renderer.ForceDrawCenterFloor = true;
-                                    _floorTransitionTriggered = true;
+                                    _animationManager.StartFloorOutroAnimation("floor_0");
+                                    _animationManager.StartFloorOutroAnimation("floor_1");
+                                    _animationManager.StartFloorIntroAnimation("floor_center");
                                 }
-                                else
-                                {
-                                    bool floorsBusy = _animationManager.IsFloorAnimatingOut("floor_0") || _animationManager.IsFloorAnimatingOut("floor_1") || _animationManager.GetFloorIntroAnimationState("floor_center") != null;
-                                    if (!floorsBusy)
-                                    {
-                                        var lootManager = ServiceLocator.Get<LootManager>();
-                                        var loot = lootManager.GenerateCombatLoot();
-                                        _lootScreen.Show(loot);
-                                        _lootScreenHasShown = true;
-                                    }
-                                }
+                                _renderer.ForceDrawCenterFloor = true;
+                                _floorTransitionTriggered = true;
                             }
-                            else if (!_lootScreen.IsActive)
+                            else
                             {
-                                FinalizeVictory();
+                                bool floorsBusy = _animationManager.IsFloorAnimatingOut("floor_0") || _animationManager.IsFloorAnimatingOut("floor_1") || _animationManager.GetFloorIntroAnimationState("floor_center") != null;
+                                if (!floorsBusy)
+                                {
+                                    // NO LOOT SCREEN. Just end.
+                                    FinalizeVictory();
+                                }
                             }
                         }
                     }
@@ -946,11 +925,6 @@ namespace ProjectVagabond.Scenes
         public override void DrawFullscreenUI(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             _uiManager.DrawFullscreenDialogs(spriteBatch, font, gameTime, transform);
-
-            if (_lootScreen != null && _lootScreen.IsActive)
-            {
-                _lootScreen.Draw(spriteBatch, font, gameTime, transform);
-            }
         }
 
         public void TriggerFlee()

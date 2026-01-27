@@ -25,45 +25,44 @@ namespace ProjectVagabond.UI
         {
             if (!_overlay.IsOpen) return;
 
-            var inventoryPosition = new Vector2(0, 200);
-
-            // Draw Header Border (Generic)
-            spriteBatch.DrawSnapped(_overlay.SpriteManager.InventoryBorderHeader, inventoryPosition + _overlay.InventoryPositionOffset, Color.White);
-
-            // Draw Main Border (Using Equip border as base since it fits the party view)
-            spriteBatch.DrawSnapped(_overlay.SpriteManager.InventoryBorderEquip, inventoryPosition, Color.White);
-
+            // Draw Party Slots Only
             DrawPartyMemberSlots(spriteBatch, font, ServiceLocator.Get<Core>().SecondaryFont, gameTime);
 
-            // Draw Tooltip if hovering something
+            // Draw Tooltip if hovering something (Spells/Stats)
             if (_overlay.HoveredItemData != null)
             {
-                Texture2D? overlayTex = null;
-                Rectangle infoPanelArea;
+                // We still use the tooltip renderer, but we don't draw the inventory grid background.
+                // We might need a background for the tooltip itself if it's not handled by the renderer.
+                // ItemTooltipRenderer handles its own background.
+
+                // Calculate position for tooltip based on hovered slot?
+                // The tooltip renderer usually takes an anchor position.
+                // In the old code, it drew an overlay texture. We can skip that.
+
+                // Just draw the tooltip content.
+                // We need a rectangle for the content.
+                // Let's use a fixed position similar to the old layout but without the texture.
 
                 const int statsPanelWidth = 116;
                 const int statsPanelHeight = 132;
-                int statsPanelY = (int)inventoryPosition.Y + 32 + 1 - 1; // Match slot area Y
+                int statsPanelY = 200 + 32 + 1 - 1; // Match slot area Y
                 int statsPanelX;
 
                 // Dynamic positioning based on which member is hovered
                 if (_overlay.HoveredMemberIndex == 0 || _overlay.HoveredMemberIndex == 1)
                 {
-                    overlayTex = _overlay.SpriteManager.InventoryBorderEquipInfoPanelRight;
                     statsPanelX = 194 - 16;
                 }
                 else
                 {
-                    overlayTex = _overlay.SpriteManager.InventoryBorderEquipInfoPanelLeft;
                     statsPanelX = 10 + 16;
                 }
 
-                infoPanelArea = new Rectangle(statsPanelX, statsPanelY, statsPanelWidth, statsPanelHeight);
+                var infoPanelArea = new Rectangle(statsPanelX, statsPanelY, statsPanelWidth, statsPanelHeight);
 
-                if (overlayTex != null)
-                {
-                    spriteBatch.DrawSnapped(overlayTex, inventoryPosition, Color.White);
-                }
+                // Draw a simple background for the tooltip since we removed the fancy border texture
+                var pixel = ServiceLocator.Get<Texture2D>();
+                spriteBatch.DrawSnapped(pixel, infoPanelArea, _overlay.Global.Palette_Black * 0.9f);
 
                 _tooltipRenderer.DrawInfoPanelContent(spriteBatch, _overlay.HoveredItemData, infoPanelArea, font, ServiceLocator.Get<Core>().SecondaryFont, gameTime, 1.0f);
             }
