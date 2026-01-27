@@ -1,5 +1,18 @@
-﻿using ProjectVagabond.Battle;
+﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.Transitions;
+using ProjectVagabond.UI;
+using ProjectVagabond.Utils;
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 
 namespace ProjectVagabond.Utils
 {
@@ -7,23 +20,9 @@ namespace ProjectVagabond.Utils
     {
         private static readonly Random _random = new Random();
 
-        // Flat pricing model for the unweighted system
-        private const int PRICE_WEAPON = 150;
-        private const int PRICE_RELIC = 200;
-
         public static int CalculatePrice(object itemData, float shopMultiplier)
         {
-            int basePrice = 0;
-
-            if (itemData is RelicData)
-            {
-                basePrice = PRICE_RELIC;
-            }
-            else
-            {
-                // Fallback
-                basePrice = 50;
-            }
+            int basePrice = 50; // Fallback base price
 
             // Apply Shop Multiplier (The "Mood" of the shop)
             float price = basePrice * shopMultiplier;

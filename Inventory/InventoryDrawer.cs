@@ -6,6 +6,8 @@ using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace ProjectVagabond.UI
@@ -31,18 +33,6 @@ namespace ProjectVagabond.UI
             // Draw Tooltip if hovering something (Spells/Stats)
             if (_overlay.HoveredItemData != null)
             {
-                // We still use the tooltip renderer, but we don't draw the inventory grid background.
-                // We might need a background for the tooltip itself if it's not handled by the renderer.
-                // ItemTooltipRenderer handles its own background.
-
-                // Calculate position for tooltip based on hovered slot?
-                // The tooltip renderer usually takes an anchor position.
-                // In the old code, it drew an overlay texture. We can skip that.
-
-                // Just draw the tooltip content.
-                // We need a rectangle for the content.
-                // Let's use a fixed position similar to the old layout but without the texture.
-
                 const int statsPanelWidth = 116;
                 const int statsPanelHeight = 132;
                 int statsPanelY = 200 + 32 + 1 - 1; // Match slot area Y
@@ -197,12 +187,7 @@ namespace ProjectVagabond.UI
                     if (isOccupied)
                     {
                         baseStat = _overlay.GameState.PlayerState.GetBaseStat(member!, statKeys[s]);
-                        // Calculate bonus from Global Relics
-                        foreach (var relicId in _overlay.GameState.PlayerState.GlobalRelics)
-                        {
-                            if (BattleDataCache.Relics.TryGetValue(relicId, out var r))
-                                if (r.StatModifiers.TryGetValue(statKeys[s], out int val)) bonus += val;
-                        }
+                        // Relic bonus calculation removed
                     }
 
                     Color labelColor = isOccupied ? _overlay.Global.Palette_DarkSun : _overlay.Global.Palette_DarkShadow;

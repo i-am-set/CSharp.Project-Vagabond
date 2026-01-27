@@ -83,7 +83,6 @@ namespace ProjectVagabond
         private GameState _gameState;
 
         private MoveAcquisitionSystem _moveAcquisitionSystem;
-        private RelicAcquisitionSystem _relicAcquisitionSystem;
 
         private SpriteManager _spriteManager;
         private LoadingScreen _loadingScreen;
@@ -202,7 +201,6 @@ namespace ProjectVagabond
             ServiceLocator.Register<GameState>(_gameState);
 
             _moveAcquisitionSystem = new MoveAcquisitionSystem();
-            _relicAcquisitionSystem = new RelicAcquisitionSystem();
             var terminalRenderer = new TerminalRenderer();
             ServiceLocator.Register<TerminalRenderer>(terminalRenderer);
             var autoCompleteManager = new AutoCompleteManager();

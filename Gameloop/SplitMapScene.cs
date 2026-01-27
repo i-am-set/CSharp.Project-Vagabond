@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Items;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
@@ -46,6 +47,7 @@ namespace ProjectVagabond.Scenes
         private readonly SplitMapRecruitOverlay _recruitOverlay;
         private readonly BirdManager _birdManager;
         private readonly TransitionManager _transitionManager;
+        private readonly HapticsManager _hapticsManager;
 
         private SplitMap? _currentMap;
         private int _playerCurrentNodeId;
@@ -132,7 +134,6 @@ namespace ProjectVagabond.Scenes
 
         private float _nodeTextWaveTimer = 0f;
 
-        private readonly HapticsManager _hapticsManager;
         private static readonly RasterizerState _scissorRasterizerState = new RasterizerState { ScissorTestEnable = true };
 
         private readonly Dictionary<int, float> _nodeHoverTimers = new Dictionary<int, float>();
@@ -169,7 +170,6 @@ namespace ProjectVagabond.Scenes
             _global = ServiceLocator.Get<Global>();
             _playerIcon = new PlayerMapIcon();
             _narrativeDialog = new NarrativeDialog(this);
-            // _componentStore = ServiceLocator.Get<ComponentStore>(); // Removed
 
             _partyStatusOverlay = new PartyStatusOverlay();
 
@@ -1292,23 +1292,8 @@ namespace ProjectVagabond.Scenes
 
         private void OpenRandomShop()
         {
+            // Relics removed, shop is empty
             var premiumStock = new List<ShopItem>();
-            var allPremium = new List<ShopItem>();
-
-            foreach (var r in BattleDataCache.Relics.Values)
-                allPremium.Add(new ShopItem { ItemId = r.RelicID, DisplayName = r.RelicName, Type = "Relic", Price = PriceCalculator.CalculatePrice(r, 1.0f), DataObject = r });
-
-            int premiumCount = _random.Next(3, 5);
-            for (int i = 0; i < premiumCount; i++)
-            {
-                if (allPremium.Any())
-                {
-                    var item = allPremium[_random.Next(allPremium.Count)];
-                    premiumStock.Add(item);
-                    allPremium.Remove(item);
-                }
-            }
-
             _shopOverlay.Show(premiumStock);
             SetView(SplitMapView.Shop, snap: true);
         }

@@ -1,9 +1,20 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Items;
+using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.Transitions;
+using ProjectVagabond.UI;
+using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 
 namespace ProjectVagabond.Utils
 {
@@ -34,8 +45,8 @@ namespace ProjectVagabond.Utils
 
             try
             {
-                LogHeader("Testing Stat Modifiers...");
-                TestStatModifiers(mockPlayer, mockEnemy);
+                // Relic abilities removed, skipping stat modifier tests for now
+                LogSkipped("Stat Modifier tests skipped (Relics removed)");
             }
             catch (Exception ex)
             {
@@ -56,35 +67,6 @@ namespace ProjectVagabond.Utils
                 Message = msg,
                 BaseColor = _failed == 0 ? Color.Lime : Color.Red
             });
-        }
-
-        private static void TestStatModifiers(BattleCombatant player, BattleCombatant enemy)
-        {
-            // 1. FlatStatBonusAbility
-            var mods = new Dictionary<string, int> { { "Strength", 10 } };
-            var ability = new FlatStatBonusAbility(mods);
-
-            // Manually trigger event
-            var ctx = new CombatTriggerContext { Actor = player, StatType = OffensiveStatType.Strength, StatValue = 10 };
-            ability.OnCombatEvent(CombatEventType.CalculateStat, ctx);
-
-            Assert(ctx.StatValue == 20, "FlatStatBonus (Strength +10)");
-
-            // 2. CorneredAnimalAbility (HP Threshold)
-            var ca = new CorneredAnimalAbility(33f, OffensiveStatType.Agility, 1);
-
-            player.Stats.CurrentHP = 10; player.Stats.MaxHP = 100; // Low HP (10%)
-            ctx = new CombatTriggerContext { Actor = player, StatType = OffensiveStatType.Agility, StatValue = 10 };
-            ca.OnCombatEvent(CombatEventType.CalculateStat, ctx);
-            int lowResult = (int)ctx.StatValue;
-
-            player.Stats.CurrentHP = 100; // High HP (100%)
-            ctx = new CombatTriggerContext { Actor = player, StatType = OffensiveStatType.Agility, StatValue = 10 };
-            ca.OnCombatEvent(CombatEventType.CalculateStat, ctx);
-            int highResult = (int)ctx.StatValue;
-
-            Assert(lowResult == 15, "CorneredAnimal (Low HP Trigger)");
-            Assert(highResult == 10, "CorneredAnimal (High HP Ignore)");
         }
 
         private static BattleCombatant CreateDummy(int currentHp, int maxHp)

@@ -90,7 +90,6 @@ namespace ProjectVagabond.Battle
 
         public int PortraitIndex { get; set; } = 0;
         public List<StatusEffectInstance> ActiveStatusEffects { get; set; } = new List<StatusEffectInstance>();
-        public List<RelicData> ActiveRelics { get; set; } = new List<RelicData>();
 
         public List<IAbility> Abilities { get; private set; } = new List<IAbility>();
 

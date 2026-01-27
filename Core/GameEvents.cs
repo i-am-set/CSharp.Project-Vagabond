@@ -6,6 +6,7 @@ using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Items;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
@@ -76,12 +77,6 @@ namespace ProjectVagabond
             public AcquisitionType Type { get; set; }
         }
 
-        public struct PlayerRelicAdded
-        {
-            public string RelicID { get; set; }
-            public AcquisitionType Type { get; set; }
-        }
-
         public struct CombatantDefeated
         {
             public BattleCombatant DefeatedCombatant { get; set; }
@@ -143,7 +138,6 @@ namespace ProjectVagabond
         {
             public BattleCombatant Actor { get; set; }
             public int RecoilDamage { get; set; }
-            public RelicData? SourceAbility { get; set; }
         }
 
         public struct AbilityActivated

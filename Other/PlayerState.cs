@@ -19,8 +19,6 @@ namespace ProjectVagabond
             set => _coin = Math.Max(0, value);
         }
 
-        public List<string> GlobalRelics { get; set; } = new List<string>();
-
         public int MaxHP { get => Leader?.MaxHP ?? 100; set { if (Leader != null) Leader.MaxHP = value; } }
         public int CurrentHP { get => Leader?.CurrentHP ?? 100; set { if (Leader != null) Leader.CurrentHP = value; } }
         public int MaxMana { get => Leader?.MaxMana ?? 100; set { if (Leader != null) Leader.MaxMana = value; } }
@@ -68,29 +66,8 @@ namespace ProjectVagabond
 
         public int GetEffectiveStat(PartyMember member, string statName)
         {
-            if (member == null) return 0;
-            int baseValue = GetBaseStat(member, statName);
-            int bonus = 0;
-
-            foreach (var relicId in GlobalRelics)
-            {
-                if (BattleDataCache.Relics.TryGetValue(relicId, out var relic))
-                {
-                    if (relic.StatModifiers.TryGetValue(statName, out int mod)) bonus += mod;
-                }
-            }
-
-            return Math.Max(1, baseValue + bonus);
-        }
-
-        public void AddRelic(string relicId)
-        {
-            GlobalRelics.Add(relicId);
-        }
-
-        public void RemoveRelic(string relicId)
-        {
-            GlobalRelics.Remove(relicId);
+            // Relics removed, effective stat is just base stat
+            return GetBaseStat(member, statName);
         }
 
         public void AddMove(string moveId, PartyMember member = null)

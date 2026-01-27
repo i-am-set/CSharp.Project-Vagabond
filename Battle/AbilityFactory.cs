@@ -1,4 +1,15 @@
-﻿using ProjectVagabond.Battle;
+﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Items;
+using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.Transitions;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections;
@@ -52,11 +63,9 @@ namespace ProjectVagabond.Battle.Abilities
         {
             var abilities = new List<IAbility>();
 
-            // 1. Handle Stat Modifiers (Special case, not a specific named class per se, but a generic wrapper)
-            if (statModifiers != null && statModifiers.Count > 0)
-            {
-                abilities.Add(new FlatStatBonusAbility(statModifiers));
-            }
+            // 1. Handle Stat Modifiers
+            // Removed FlatStatBonusAbility logic as relics are gone. 
+            // If Party Members need stat mods later, we can re-implement a specific ability for it.
 
             if (effects == null) return abilities;
 

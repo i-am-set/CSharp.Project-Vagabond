@@ -1,13 +1,21 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Items;
+using ProjectVagabond.Systems;
+using ProjectVagabond.UI;
+using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace ProjectVagabond
 {
-public enum PlayerSpriteType
+    public enum PlayerSpriteType
     {
         Portrait5x5 = 0,
         Portrait8x8 = 1,
@@ -29,10 +37,8 @@ public enum PlayerSpriteType
         public Texture2D StatChangeIconsSpriteSheet { get; private set; }
         public Texture2D StatChangeIconsSpriteSheetSilhouette { get; private set; }
 
-        // NEW: Mini Action Button
         public Texture2D MiniActionButtonSprite { get; private set; }
 
-        public Texture2D ItemRelicsSpriteSheet { get; private set; }
         public Texture2D ItemWeaponsSpriteSheet { get; private set; }
         public Texture2D BattleBorderMain { get; private set; }
         public Texture2D BattleBorderMain2 { get; private set; }
@@ -122,14 +128,12 @@ public enum PlayerSpriteType
         public Texture2D SplitMapCloseInventoryButton { get; private set; }
         public Texture2D SplitMapSettingsButton { get; private set; }
         public Texture2D InventoryBorderHeader { get; private set; }
-        public Texture2D InventoryBorderRelics { get; private set; }
         public Texture2D InventoryBorderWeapons { get; private set; }
         public Texture2D InventoryBorderEquip { get; private set; }
         public Texture2D InventoryBorderEquipSubmenu { get; private set; }
         public Texture2D InventoryBorderEquipInfoPanelLeft { get; private set; }
         public Texture2D InventoryBorderEquipInfoPanelRight { get; private set; }
         public Texture2D InventoryHeaderButtonWeapons { get; private set; }
-        public Texture2D InventoryHeaderButtonRelics { get; private set; }
         public Texture2D InventoryHeaderButtonEquip { get; private set; }
         public Texture2D InventorySlotHoverSprite { get; private set; }
         public Texture2D InventorySlotSelectedSprite { get; private set; }
@@ -257,10 +261,6 @@ public enum PlayerSpriteType
                 StatChangeIconsSpriteSheetSilhouette = _textureFactory.CreateColoredTexture(9, 3, Color.White);
             }
 
-            // Load Item Sprite Sheets
-            try { ItemRelicsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/Items/item_relics_spritesheet"); }
-            catch { ItemRelicsSpriteSheet = _textureFactory.CreateColoredTexture(128, 256, Color.Magenta); }
-
             try { ItemWeaponsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/Items/item_weapons_spritesheet"); }
             catch { ItemWeaponsSpriteSheet = _textureFactory.CreateColoredTexture(128, 256, Color.Magenta); }
 
@@ -351,8 +351,6 @@ public enum PlayerSpriteType
             catch { SplitMapSettingsButton = _textureFactory.CreateColoredTexture(32, 16, Color.Magenta); }
             try { InventoryBorderHeader = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_border_header"); }
             catch { InventoryBorderHeader = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
-            try { InventoryBorderRelics = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_border_relics"); }
-            catch { InventoryBorderRelics = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
             try { InventoryBorderWeapons = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_border_weapons"); }
             catch { InventoryBorderWeapons = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
             try { InventoryBorderEquip = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_border_equip"); }
@@ -368,8 +366,6 @@ public enum PlayerSpriteType
 
             try { InventoryHeaderButtonWeapons = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_header_button_weapons"); }
             catch { InventoryHeaderButtonWeapons = _textureFactory.CreateColoredTexture(96, 32, Color.Magenta); }
-            try { InventoryHeaderButtonRelics = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_header_button_relics"); }
-            catch { InventoryHeaderButtonRelics = _textureFactory.CreateColoredTexture(96, 32, Color.Magenta); }
             try { InventoryHeaderButtonEquip = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_header_button_equip"); }
             catch { InventoryHeaderButtonEquip = _textureFactory.CreateColoredTexture(96, 32, Color.Magenta); }
             try { InventorySlotHoverSprite = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_slot_hover"); }
@@ -736,16 +732,6 @@ public enum PlayerSpriteType
             return silhouetteTexture;
         }
 
-        public Texture2D GetRelicSprite(string imagePath)
-        {
-            return GetItemSprite(imagePath);
-        }
-
-        public Texture2D GetRelicSpriteSilhouette(string imagePath)
-        {
-            return GetItemSpriteSilhouette(imagePath);
-        }
-
         public Texture2D GetItemSpriteSilhouette(string imagePath, string? fallbackPath = null)
         {
             if (string.IsNullOrEmpty(imagePath))
@@ -793,13 +779,6 @@ public enum PlayerSpriteType
                     if (int.TryParse(imagePath.Substring("Sprites/Items/Weapons/".Length), out int id))
                     {
                         return ExtractSpriteFromSheet(ItemWeaponsSpriteSheet, id, cacheKey);
-                    }
-                }
-                else if (imagePath.StartsWith("Sprites/Items/Relics/"))
-                {
-                    if (int.TryParse(imagePath.Substring("Sprites/Items/Relics/".Length), out int id))
-                    {
-                        return ExtractSpriteFromSheet(ItemRelicsSpriteSheet, id, cacheKey);
                     }
                 }
             }
@@ -903,66 +882,6 @@ public enum PlayerSpriteType
             _itemSprites[cacheKey] = tuple;
             return tuple;
         }
-
-        public Texture2D GetSmallRelicSprite(string imagePath)
-        {
-            return LoadAndCacheSmallItem(imagePath, imagePath).Original;
-        }
-
-        public Texture2D GetSmallRelicSpriteSilhouette(string imagePath)
-        {
-            return LoadAndCacheSmallItem(imagePath, imagePath).Silhouette;
-        }
-
-        private (Texture2D Original, Texture2D Silhouette) LoadAndCacheSmallItem(string cacheKey, string? imagePath)
-        {
-            if (_smallItemSprites.TryGetValue(cacheKey, out var cachedTuple))
-            {
-                return cachedTuple;
-            }
-
-            // Get the original large texture (32x32 or 16x16)
-            Texture2D largeTexture = GetItemSprite(imagePath); // This handles loading/caching of the large one
-
-            // If the texture is already 16x16 (which it is for the new sprite sheets), just reuse it.
-            if (largeTexture.Width == 16 && largeTexture.Height == 16)
-            {
-                var silhouette = GetItemSpriteSilhouette(imagePath);
-                var tuple = (largeTexture, silhouette);
-                _smallItemSprites[cacheKey] = tuple;
-                return tuple;
-            }
-
-            // Otherwise, downscale (legacy support for old 32x32 sprites)
-            int width = 16;
-            int height = 16;
-
-            RenderTarget2D renderTarget = new RenderTarget2D(_core.GraphicsDevice, width, height);
-            _core.GraphicsDevice.SetRenderTarget(renderTarget);
-            _core.GraphicsDevice.Clear(Color.Transparent);
-
-            var spriteBatch = ServiceLocator.Get<SpriteBatch>();
-            spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-            spriteBatch.Draw(largeTexture, new Rectangle(0, 0, width, height), Color.White);
-            spriteBatch.End();
-
-            _core.GraphicsDevice.SetRenderTarget(null);
-
-            Color[] data = new Color[width * height];
-            renderTarget.GetData(data);
-
-            Texture2D smallTexture = new Texture2D(_core.GraphicsDevice, width, height);
-            smallTexture.SetData(data);
-
-            renderTarget.Dispose();
-
-            Texture2D smallSilhouette = CreateSilhouette(smallTexture);
-
-            var tuple2 = (smallTexture, smallSilhouette);
-            _smallItemSprites[cacheKey] = tuple2;
-            return tuple2;
-        }
-
 
         public int[] GetEnemySpriteTopPixelOffsets(string archetypeId)
         {

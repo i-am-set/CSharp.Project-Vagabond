@@ -37,8 +37,6 @@ namespace ProjectVagabond
 
         public string LastRunKiller { get; set; } = "Unknown";
 
-        public HashSet<string> SeenItemIds { get; private set; } = new HashSet<string>();
-
         public GameState(NoiseMapManager noiseManager, Global global, SpriteManager spriteManager)
         {
             _noiseManager = noiseManager;
@@ -50,30 +48,16 @@ namespace ProjectVagabond
         {
             PlayerState = new PlayerState();
             PlayerState.Party.Clear();
-            SeenItemIds.Clear();
 
             var oakley = PartyMemberFactory.CreateMember("0");
             if (oakley == null) throw new Exception("CRITICAL: Could not load 'Oakley' (ID: 0)");
 
             PlayerState.Party.Add(oakley);
-
-            if (BattleDataCache.PartyMembers.TryGetValue("0", out var oakleyData))
-            {
-                foreach (var kvp in oakleyData.StartingRelics)
-                {
-                    if (BattleDataCache.Relics.ContainsKey(kvp.Key))
-                    {
-                        PlayerState.AddRelic(kvp.Key);
-                        SeenItemIds.Add(kvp.Key);
-                    }
-                }
-            }
         }
 
         public void Reset()
         {
             PlayerState = null;
-            SeenItemIds.Clear();
             _isPaused = false;
             IsPausedByConsole = false;
             LastRunKiller = "Unknown";
@@ -95,22 +79,6 @@ namespace ProjectVagabond
             {
                 switch (outcome.OutcomeType)
                 {
-                    case "GiveItem":
-                        if (BattleDataCache.Relics.ContainsKey(outcome.Value))
-                        {
-                            PlayerState.AddRelic(outcome.Value);
-                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[Palette_Sky]Obtained {outcome.Value}!" });
-                        }
-                        break;
-
-                    case "RemoveItem":
-                        if (PlayerState.GlobalRelics.Contains(outcome.Value))
-                        {
-                            PlayerState.RemoveRelic(outcome.Value);
-                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[Palette_Fruit]Lost {outcome.Value}." });
-                        }
-                        break;
-
                     case "AddBuff":
                         if (Enum.TryParse<StatusEffectType>(outcome.Value, true, out var effectType))
                         {

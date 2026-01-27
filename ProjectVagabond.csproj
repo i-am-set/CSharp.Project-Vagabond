@@ -34,6 +34,7 @@
 		<PackageReference Include="MonoGame.Content.Builder.Task" Version="3.8.*" />
 	</ItemGroup>
 	<ItemGroup>
+		<Folder Include="Content\Data\Items\" />
 		<Folder Include="Content\Data\Splits\" />
 		<Folder Include="Content\Sprites\UI\KeyPrompts\" />
 		<Folder Include="Content\Sprites\UI\Backgrounds\" />

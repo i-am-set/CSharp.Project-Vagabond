@@ -58,17 +58,6 @@ namespace ProjectVagabond.Battle
                 combatant.RegisterAbilities(intrinsicAbilities);
             }
 
-            // Global Relics
-            foreach (var relicId in gameState.PlayerState.GlobalRelics)
-            {
-                if (BattleDataCache.Relics.TryGetValue(relicId, out var relicData))
-                {
-                    var relicAbilities = AbilityFactory.CreateAbilitiesFromData(relicData.Effects, relicData.StatModifiers);
-                    combatant.RegisterAbilities(relicAbilities);
-                    combatant.ActiveRelics.Add(relicData);
-                }
-            }
-
             // Temporary Buffs
             foreach (var buff in member.ActiveBuffs)
             {
@@ -129,17 +118,6 @@ namespace ProjectVagabond.Battle
                 }
             }
             combatant.SetStaticMoves(staticMoves);
-
-            // Passive Relics (Abilities)
-            foreach (var relicId in enemyData.PassiveRelicIDs)
-            {
-                if (BattleDataCache.Relics.TryGetValue(relicId, out var relicData))
-                {
-                    var abilities = AbilityFactory.CreateAbilitiesFromData(relicData.Effects, relicData.StatModifiers);
-                    combatant.RegisterAbilities(abilities);
-                    combatant.ActiveRelics.Add(relicData);
-                }
-            }
 
             // Coin Reward Calculation
             float powerScore = (combatant.Stats.MaxHP * 0.2f) + (combatant.Stats.Strength * 1.0f) + (combatant.Stats.Intelligence * 1.0f) + (combatant.Stats.Tenacity * 1.0f) + (combatant.Stats.Agility * 1.0f);

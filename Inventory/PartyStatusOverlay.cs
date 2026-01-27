@@ -77,7 +77,6 @@ namespace ProjectVagabond.UI
                 };
             }
 
-            // Removed InventoryDataProcessor as grid logic is gone
             _drawer = new InventoryDrawer(this);
             _inputHandler = new InventoryInputHandler(this);
         }

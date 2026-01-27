@@ -36,8 +36,5 @@ namespace ProjectVagabond.Battle
         public List<string> Slot4MovePool { get; set; } = new List<string>();
 
         public List<Dictionary<string, string>> PassiveAbilityPool { get; set; } = new List<Dictionary<string, string>>();
-
-        public Dictionary<string, int> StartingWeapons { get; set; } = new Dictionary<string, int>();
-        public Dictionary<string, int> StartingRelics { get; set; } = new Dictionary<string, int>();
     }
 }

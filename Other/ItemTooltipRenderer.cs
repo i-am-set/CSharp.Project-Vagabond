@@ -6,7 +6,6 @@ using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
-
 using ProjectVagabond.Items;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Progression;
@@ -32,30 +31,21 @@ namespace ProjectVagabond.UI
         private readonly SpriteManager _spriteManager;
         private readonly Core _core;
 
-        // --- TUNING ---
-        public const float TOOLTIP_DELAY = 0.5f; // Centralized delay for all item tooltips
+        public const float TOOLTIP_DELAY = 0.5f;
 
         private const int MIN_TOOLTIP_WIDTH = 120;
         private const int SPACE_WIDTH = 5;
-
-        // Tunable buffer padding for width calculation
         private const int SIDE_PADDING = 6;
-
-        // Tunable distance from the panel center to the center of each stat column
         private const float COLUMN_CENTER_OFFSET = 24f;
-
-        // Margin to keep from the screen edge
         private const int SCREEN_EDGE_MARGIN = 10;
 
-        // --- UNIFIED LAYOUT CONSTANTS ---
         private const int LAYOUT_SPRITE_Y = 6;
         private const int LAYOUT_TITLE_Y = 30;
         private const int LAYOUT_VARS_START_Y = 44;
-        private const int LAYOUT_VAR_ROW_HEIGHT = 9; // 7px font + 2px gap
-        private const int LAYOUT_CONTACT_Y = LAYOUT_VARS_START_Y + (3 * LAYOUT_VAR_ROW_HEIGHT); // Row 4
+        private const int LAYOUT_VAR_ROW_HEIGHT = 9;
+        private const int LAYOUT_CONTACT_Y = LAYOUT_VARS_START_Y + (3 * LAYOUT_VAR_ROW_HEIGHT);
         private const int LAYOUT_DESC_START_Y = LAYOUT_CONTACT_Y + LAYOUT_VAR_ROW_HEIGHT - 3;
 
-        // --- DIMMER SETTINGS ---
         public Color DimmerColor { get; set; } = Color.Black;
         public float DimmerOpacity { get; set; } = 0.7f;
 
@@ -66,22 +56,14 @@ namespace ProjectVagabond.UI
             _core = ServiceLocator.Get<Core>();
         }
 
-        /// <summary>
-        /// Queues a tooltip to be drawn in the fullscreen overlay pass.
-        /// </summary>
         public void DrawTooltip(SpriteBatch spriteBatch, object itemData, Vector2 anchorPosition, GameTime gameTime, Vector2? scale = null, float opacity = 1.0f)
         {
-            // Queue the draw call to the Core's overlay system
             _core.RequestFullscreenOverlay((sb, uiMatrix) =>
             {
                 DrawTooltipImmediate(sb, uiMatrix, itemData, anchorPosition, gameTime, scale, opacity, drawDimmer: true);
             });
         }
 
-        /// <summary>
-        /// Draws the tooltip immediately using the provided SpriteBatch and Matrix.
-        /// Use this when you are already inside an overlay pass (e.g. LootScreen) to avoid nested queue issues.
-        /// </summary>
         public void DrawTooltipImmediate(SpriteBatch sb, Matrix uiMatrix, object itemData, Vector2 anchorPosition, GameTime gameTime, Vector2? scale = null, float opacity = 1.0f, bool drawDimmer = true)
         {
             if (itemData == null || opacity <= 0.01f) return;
@@ -90,7 +72,6 @@ namespace ProjectVagabond.UI
             var font = ServiceLocator.Get<BitmapFont>();
             var secondaryFont = _core.SecondaryFont;
 
-            // 1. Calculate Layout
             int panelWidth = CalculateDynamicWidth(itemData, font);
             float contentHeight = MeasureContentHeight(font, secondaryFont, itemData, panelWidth);
             int panelHeight = (int)Math.Ceiling(contentHeight) + 8 + 2;
@@ -106,7 +87,6 @@ namespace ProjectVagabond.UI
                 panelHeight
             );
 
-            // 2. Clamp to Screen
             int screenTop = SCREEN_EDGE_MARGIN;
             int screenBottom = Global.VIRTUAL_HEIGHT - SCREEN_EDGE_MARGIN;
             int screenLeft = SCREEN_EDGE_MARGIN;
@@ -117,7 +97,6 @@ namespace ProjectVagabond.UI
             if (infoPanelArea.Y < screenTop) infoPanelArea.Y = screenTop;
             if (infoPanelArea.Bottom > screenBottom) infoPanelArea.Y = screenBottom - infoPanelArea.Height;
 
-            // 3. Draw Dimmer (Optional)
             if (drawDimmer)
             {
                 var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
@@ -130,7 +109,6 @@ namespace ProjectVagabond.UI
                 sb.End();
             }
 
-            // 4. Draw Tooltip Content
             Vector2 pivotPoint = anchorPosition;
             Matrix animTransform = Matrix.CreateTranslation(-pivotPoint.X, -pivotPoint.Y, 0) *
                                    Matrix.CreateScale(drawScale.X, drawScale.Y, 1.0f) *
@@ -152,11 +130,11 @@ namespace ProjectVagabond.UI
         {
             if (itemData is MoveData)
             {
-                return (LAYOUT_SPRITE_Y - 3) + 16; // 19
+                return (LAYOUT_SPRITE_Y - 3) + 16;
             }
             else
             {
-                return (LAYOUT_SPRITE_Y + 2) + 8; // 16
+                return (LAYOUT_SPRITE_Y + 2) + 8;
             }
         }
 
@@ -189,7 +167,6 @@ namespace ProjectVagabond.UI
         {
             string name = "";
             if (itemData is MoveData m) name = m.MoveName;
-            else if (itemData is RelicData r) name = r.RelicName;
 
             var lines = WrapName(name.ToUpper());
 
@@ -206,7 +183,6 @@ namespace ProjectVagabond.UI
 
         public void DrawInfoPanelContent(SpriteBatch spriteBatch, object itemData, Rectangle bounds, BitmapFont font, BitmapFont secondaryFont, GameTime gameTime, float opacity)
         {
-            // --- Draw Type Header ---
             var tertiaryFont = _core.TertiaryFont;
             string typeText = "ITEM";
 
@@ -214,20 +190,14 @@ namespace ProjectVagabond.UI
             {
                 typeText = moveHeader.MoveType == MoveType.Spell ? "SPELL" : "ACTION";
             }
-            else if (itemData is RelicData)
-            {
-                typeText = "RELIC";
-            }
 
             spriteBatch.DrawStringSnapped(tertiaryFont, typeText, new Vector2(bounds.X + 4, bounds.Y + 2), _global.Palette_DarkShadow * opacity);
 
-            // --- Content ---
             if (itemData is MoveData moveData)
             {
                 string iconPath = $"Sprites/Spells/{moveData.MoveID}";
                 string? fallbackPath = null;
 
-                // Use ImpactType for fallback icon
                 string impactName = moveData.ImpactType.ToString().ToLowerInvariant();
                 fallbackPath = $"Sprites/Spells/default_{impactName}";
 
@@ -236,10 +206,6 @@ namespace ProjectVagabond.UI
                 Rectangle? sourceRect = _spriteManager.GetAnimatedIconSourceRect(iconTexture, gameTime);
 
                 DrawSpellInfoPanel(spriteBatch, font, secondaryFont, moveData, iconTexture, iconSilhouette, sourceRect, null, Rectangle.Empty, Vector2.Zero, false, bounds, gameTime, opacity);
-            }
-            else if (itemData is RelicData relicData)
-            {
-                DrawArmorRelicInfoPanel(spriteBatch, font, secondaryFont, relicData.RelicName, relicData.Description, relicData.Flavor, null, null, relicData.StatModifiers, bounds, gameTime, opacity, $"Sprites/Items/Relics/{relicData.RelicID}");
             }
         }
 
@@ -262,21 +228,6 @@ namespace ProjectVagabond.UI
                 description = move.Description;
                 flavor = move.Flavor;
             }
-            else if (data is RelicData r)
-            {
-                description = r.Description;
-                flavor = r.Flavor;
-                // Check if stats exist
-                bool hasStats = r.StatModifiers != null && r.StatModifiers.Values.Any(v => v != 0);
-                if (hasStats)
-                {
-                    baseHeight = LAYOUT_VARS_START_Y + (2 * LAYOUT_VAR_ROW_HEIGHT) + 2;
-                }
-                else
-                {
-                    baseHeight = LAYOUT_VARS_START_Y;
-                }
-            }
 
             float descHeight = 0f;
             if (!string.IsNullOrEmpty(description))
@@ -296,22 +247,15 @@ namespace ProjectVagabond.UI
             return baseHeight + descHeight + flavorHeight + padding;
         }
 
-        // --- DRAWING METHODS ---
-
         private void DrawItemName(SpriteBatch spriteBatch, BitmapFont font, string name, Rectangle infoPanelArea, float opacity, GameTime gameTime)
         {
             var lines = WrapName(name.ToUpper());
-
-            // Bottom aligned to LAYOUT_TITLE_Y
             float bottomY = infoPanelArea.Y + LAYOUT_TITLE_Y;
 
-            // Iterate backwards to draw from bottom up
             for (int i = lines.Count - 1; i >= 0; i--)
             {
                 string line = lines[i];
                 Vector2 lineSize = font.MeasureString(line);
-
-                // Calculate Y offset based on line index from the bottom (0 = bottom line)
                 int linesFromBottom = (lines.Count - 1) - i;
                 float yPos = bottomY - (linesFromBottom * font.LineHeight);
 
@@ -325,69 +269,9 @@ namespace ProjectVagabond.UI
             }
         }
 
-        private void DrawArmorRelicInfoPanel(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, string name, string description, string flavor, Texture2D? iconTexture, Texture2D? iconSilhouette, Dictionary<string, int> stats, Rectangle infoPanelArea, GameTime gameTime, float opacity, string? iconPath = null)
-        {
-            if (iconTexture == null && !string.IsNullOrEmpty(iconPath))
-            {
-                iconTexture = _spriteManager.GetItemSprite(iconPath);
-                iconSilhouette = _spriteManager.GetItemSpriteSilhouette(iconPath);
-            }
-
-            var tertiaryFont = _core.TertiaryFont;
-            const int spriteSize = 16;
-
-            int spriteX = infoPanelArea.X + (infoPanelArea.Width - spriteSize) / 2;
-            float currentY = infoPanelArea.Y + LAYOUT_SPRITE_Y + 2;
-            Vector2 staticDrawPos = new Vector2(spriteX + 8, currentY + 8);
-            Vector2 iconOrigin = new Vector2(8, 8);
-            Vector2 animOffset = GetJuicyOffset(gameTime);
-            Vector2 animatedDrawPos = staticDrawPos + animOffset;
-
-            // Draw Item (Animated Position)
-            DrawIconWithSilhouette(spriteBatch, iconTexture, iconSilhouette, animatedDrawPos, iconOrigin, 1.0f, opacity: opacity);
-
-            // Draw Name (Wrapped & Bottom Aligned)
-            DrawItemName(spriteBatch, font, name, infoPanelArea, opacity, gameTime);
-
-            currentY = infoPanelArea.Y + LAYOUT_VARS_START_Y;
-
-            // Check if we have any stats to display
-            bool hasStats = stats != null && stats.Values.Any(v => v != 0);
-
-            if (hasStats)
-            {
-                float centerX = infoPanelArea.Center.X;
-                float leftCenter = centerX - COLUMN_CENTER_OFFSET;
-                float rightCenter = centerX + COLUMN_CENTER_OFFSET;
-                float labelOffset = 18f;
-                float valueOffset = 2f;
-
-                float leftLabelX = leftCenter - labelOffset;
-                float leftValueX = leftCenter + valueOffset;
-                float rightLabelX = rightCenter - labelOffset;
-                float rightValueX = rightCenter + valueOffset;
-
-                DrawStat(spriteBatch, secondaryFont, tertiaryFont, "STR", "Strength", stats, leftLabelX, leftValueX, currentY, opacity);
-                DrawStat(spriteBatch, secondaryFont, tertiaryFont, "INT", "Intelligence", stats, rightLabelX, rightValueX, currentY, opacity);
-                currentY += LAYOUT_VAR_ROW_HEIGHT;
-                DrawStat(spriteBatch, secondaryFont, tertiaryFont, "TEN", "Tenacity", stats, leftLabelX, leftValueX, currentY, opacity);
-                DrawStat(spriteBatch, secondaryFont, tertiaryFont, "AGI", "Agility", stats, rightLabelX, rightValueX, currentY, opacity);
-
-                // Advance Y past the stat block
-                currentY += LAYOUT_VAR_ROW_HEIGHT;
-            }
-
-            float flavorHeight = DrawFlavorText(spriteBatch, infoPanelArea, flavor, opacity);
-
-            // Calculate description start Y based on whether stats were shown
-            float descStartY = currentY + 2; // Add small padding
-
-            DrawDescription(spriteBatch, secondaryFont, description, infoPanelArea, descStartY, flavorHeight, gameTime, opacity);
-        }
-
         private void DrawSpellInfoPanel(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, MoveData move, Texture2D? iconTexture, Texture2D? iconSilhouette, Rectangle? sourceRect, Color? iconTint, Rectangle idleFrame, Vector2 idleOrigin, bool drawBackground, Rectangle infoPanelArea, GameTime gameTime, float opacity)
         {
-            var tertiaryFont = _core.TertiaryFont; // Get Tertiary Font
+            var tertiaryFont = _core.TertiaryFont;
             const int spriteSize = 32;
 
             int spriteX = infoPanelArea.X + (infoPanelArea.Width - spriteSize) / 2;
@@ -396,10 +280,7 @@ namespace ProjectVagabond.UI
             Vector2 iconOrigin = new Vector2(16, 16);
             Vector2 staticDrawPos = new Vector2(spriteX + 16, spriteY + 16);
 
-            // Draw Item (Static Position for Spells)
             DrawIconWithSilhouette(spriteBatch, iconTexture, iconSilhouette, staticDrawPos, iconOrigin, 1.0f, sourceRect, iconTint, opacity);
-
-            // Draw Name (Wrapped & Bottom Aligned)
             DrawItemName(spriteBatch, font, move.MoveName, infoPanelArea, opacity, gameTime);
 
             float currentY = infoPanelArea.Y + LAYOUT_VARS_START_Y;
@@ -425,7 +306,7 @@ namespace ProjectVagabond.UI
 
             string powVal = move.Power > 0 ? move.Power.ToString() : (move.Effects.ContainsKey("ManaDamage") ? "???" : "---");
             string accVal = move.Accuracy >= 0 ? $"{move.Accuracy}%" : "---";
-            string mpVal = (move.ManaCost > 0 ? move.ManaCost.ToString() : "0"); // Removed %
+            string mpVal = (move.ManaCost > 0 ? move.ManaCost.ToString() : "0");
             var manaDump = move.Abilities.OfType<ManaDumpAbility>().FirstOrDefault();
             if (manaDump != null) powVal = "???";
 
@@ -438,7 +319,7 @@ namespace ProjectVagabond.UI
             currentY += LAYOUT_VAR_ROW_HEIGHT;
 
             string offStatVal = GetStatString(move.OffensiveStat);
-            Color offColor = _global.Palette_Sun; // Unified color
+            Color offColor = _global.Palette_Sun;
             string impactVal = move.ImpactType.ToString().ToUpper().Substring(0, Math.Min(4, move.ImpactType.ToString().Length));
             Color impactColor = move.ImpactType == ImpactType.Magical ? _global.Palette_Sky : (move.ImpactType == ImpactType.Physical ? _global.Palette_Fruit : _global.Palette_DarkShadow);
 
@@ -459,39 +340,12 @@ namespace ProjectVagabond.UI
             DrawDescription(spriteBatch, secondaryFont, move.Description, infoPanelArea, currentY, flavorHeight, gameTime, opacity);
         }
 
-        // --- Helpers ---
-
         private void DrawIconWithSilhouette(SpriteBatch spriteBatch, Texture2D? texture, Texture2D? silhouette, Vector2 pos, Vector2 origin, float scale, Rectangle? sourceRect = null, Color? tint = null, float opacity = 1.0f)
         {
-            // Removed silhouette drawing logic as requested.
             if (texture != null)
             {
                 spriteBatch.DrawSnapped(texture, pos, sourceRect, (tint ?? Color.White) * opacity, 0f, origin, scale, SpriteEffects.None, 0f);
             }
-        }
-
-        private void DrawStat(SpriteBatch spriteBatch, BitmapFont secondaryFont, BitmapFont tertiaryFont, string label, string key, Dictionary<string, int> stats, float labelX, float valueX, float y, float opacity)
-        {
-            float yOffset = (secondaryFont.LineHeight - tertiaryFont.LineHeight) / 2f;
-            yOffset = MathF.Round(yOffset);
-            spriteBatch.DrawStringSnapped(tertiaryFont, label, new Vector2(labelX, y + yOffset), _global.Palette_DarkShadow * opacity);
-
-            int val = 0;
-            if (stats.TryGetValue(key, out int v)) val = v;
-
-            string text;
-            Color c;
-            if (val == 0)
-            {
-                text = "+0";
-                c = _global.Palette_DarkShadow;
-            }
-            else
-            {
-                text = (val > 0 ? "+" : "") + val;
-                c = val > 0 ? _global.Palette_Leaf : _global.Palette_Rust;
-            }
-            spriteBatch.DrawStringSnapped(secondaryFont, text, new Vector2(valueX, y), c * opacity);
         }
 
         private float DrawFlavorText(SpriteBatch spriteBatch, Rectangle infoPanelArea, string flavorText, float opacity)
@@ -549,7 +403,6 @@ namespace ProjectVagabond.UI
 
             const int padding = 4;
             float descWidth = infoPanelArea.Width - (padding * 2);
-            // FIX: Use GameTextColor as default instead of White
             var descLines = ParseAndWrapRichText(font, description.ToUpper(), descWidth, _global.GameTextColor);
 
             float lineY = startY;
@@ -583,15 +436,6 @@ namespace ProjectVagabond.UI
                 }
                 lineY += font.LineHeight;
             }
-        }
-
-        private Vector2 GetJuicyOffset(GameTime gameTime)
-        {
-            float t = (float)gameTime.TotalGameTime.TotalSeconds * 1.5f;
-            float dist = 1.0f;
-            float swayX = (MathF.Sin(t * 1.1f) * dist) + (MathF.Cos(t * 0.4f) * (dist * 0.5f));
-            float swayY = MathF.Sin(t * 1.4f) * dist;
-            return new Vector2(swayX, swayY);
         }
 
         private string GetTargetString(TargetType target)
@@ -678,9 +522,6 @@ namespace ProjectVagabond.UI
                     }
 
                     Color finalColor = currentColor;
-                    // Removed percentage color lerping logic here.
-                    // Just use the current color (which defaults to defaultColor or the last tag).
-
                     currentLine.Add(new ColoredText(part, finalColor));
                     currentLineWidth += partWidth;
                 }
@@ -701,38 +542,20 @@ namespace ProjectVagabond.UI
 
         private void DrawBeveledBackground(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, Color color)
         {
-            // 1. Top Row (Y+1): X+2 to W-4
             spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 2, rect.Y + 1, rect.Width - 4, 1), color);
-
-            // 2. Bottom Row (Bottom-2): X+2 to W-4
             spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 2, rect.Bottom - 2, rect.Width - 4, 1), color);
-
-            // 3. Middle Block (Y+2 to Bottom-3): X+1 to W-2
             spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 1, rect.Y + 2, rect.Width - 2, rect.Height - 4), color);
         }
 
         private void DrawBeveledBorder(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, Color color)
         {
-            // Top Line: X+2 to W-4
             spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 2, rect.Y, rect.Width - 4, 1), color);
-
-            // Bottom Line: X+2 to W-4
             spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 2, rect.Bottom - 1, rect.Width - 4, 1), color);
-
-            // Left Line: Y+2 to H-4
             spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X, rect.Y + 2, 1, rect.Height - 4), color);
-
-            // Right Line: Y+2 to H-4
             spriteBatch.DrawSnapped(pixel, new Rectangle(rect.Right - 1, rect.Y + 2, 1, rect.Height - 4), color);
-
-            // Corners (1x1 pixels)
-            // Top-Left
             spriteBatch.DrawSnapped(pixel, new Vector2(rect.X + 1, rect.Y + 1), color);
-            // Top-Right
             spriteBatch.DrawSnapped(pixel, new Vector2(rect.Right - 2, rect.Y + 1), color);
-            // Bottom-Left
             spriteBatch.DrawSnapped(pixel, new Vector2(rect.X + 1, rect.Bottom - 2), color);
-            // Bottom-Right
             spriteBatch.DrawSnapped(pixel, new Vector2(rect.Right - 2, rect.Bottom - 2), color);
         }
     }

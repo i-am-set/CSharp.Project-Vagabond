@@ -25,14 +25,7 @@ namespace ProjectVagabond.Utils
 
             LogHeader("=== STARTING ITEM INTEGRITY CHECK ===");
 
-            // 1. Test Relics
-            if (BattleDataCache.Relics.Count == 0) LogFail("WARNING: Relic Cache is empty!");
-            TestCollection(
-                "RELICS",
-                BattleDataCache.Relics.Values,
-                r => r.RelicName,
-                r => r.Effects
-            );
+            // Relic check removed
 
             string resultColor = _failed == 0 ? "[Palette_Leaf]" : "[Palette_Rust]";
             string msg = $"=== CHECK COMPLETE: {resultColor}{_passed} PASSED[/], [Palette_Rust]{_failed} FAILED[/], [Palette_DarkSun]{_skipped} SKIPPED[/] ===";

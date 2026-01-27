@@ -3,12 +3,16 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 
@@ -39,7 +43,6 @@ namespace ProjectVagabond.UI
 
         // Hover State for Sub-elements
         private int _hoveredInternalCandidateIndex = -1;
-        private int _hoveredEquipSlotIndex = -1; // 0=Weapon, 1=Relic
         private int _hoveredSpellSlotIndex = -1; // 0-3
         private object? _hoveredItemData; // Data for the info panel
 
@@ -670,16 +673,8 @@ namespace ProjectVagabond.UI
 
         private int GetStatBonus(PartyMember member, string statName)
         {
-            // Calculate bonus from Global Relics
-            int bonus = 0;
-            foreach (var relicId in _gameState.PlayerState.GlobalRelics)
-            {
-                if (BattleDataCache.Relics.TryGetValue(relicId, out var r))
-                {
-                    if (r.StatModifiers.TryGetValue(statName, out int val)) bonus += val;
-                }
-            }
-            return bonus;
+            // Relics removed, no bonus
+            return 0;
         }
 
         public void DrawDialogOverlay(SpriteBatch spriteBatch)

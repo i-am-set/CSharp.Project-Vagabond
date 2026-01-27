@@ -34,7 +34,5 @@ namespace ProjectVagabond.Battle
         public List<string> MoveLearnset { get; set; } = new List<string>();
         public int MinNumberOfMoves { get; set; }
         public int MaxNumberOfMoves { get; set; }
-
-        public List<string> PassiveRelicIDs { get; set; } = new List<string>();
     }
 }

@@ -146,7 +146,6 @@ namespace ProjectVagabond.UI
 
             int nameLength = 0;
             if (_overlay.HoveredItemData is MoveData md) nameLength = md.MoveName.Length;
-            else if (_overlay.HoveredItemData is RelicData rd) nameLength = rd.RelicName.Length;
 
             if (_overlay.HoveredItemData != null)
             {

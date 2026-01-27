@@ -2,7 +2,7 @@
 
 namespace ProjectVagabond.Items
 {
-    public enum ItemType { Relic } // Removed Weapon
+    public enum ItemType { None } // Relic removed
 
     public class BaseItem
     {
@@ -13,19 +13,5 @@ namespace ProjectVagabond.Items
         public ItemType Type { get; set; }
         public string SpritePath { get; set; }
         public object OriginalData { get; set; }
-
-        public static BaseItem FromRelic(RelicData data)
-        {
-            return new BaseItem
-            {
-                ID = data.RelicID,
-                Name = data.RelicName,
-                Description = data.Description,
-                Flavor = data.Flavor,
-                Type = ItemType.Relic,
-                SpritePath = $"Sprites/Items/Relics/{data.RelicID}",
-                OriginalData = data
-            };
-        }
     }
 }

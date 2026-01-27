@@ -14,7 +14,6 @@ namespace ProjectVagabond.Battle
     public static class BattleDataCache
     {
         public static Dictionary<string, MoveData> Moves { get; private set; }
-        public static Dictionary<string, RelicData> Relics { get; private set; }
         public static Dictionary<string, PartyMemberData> PartyMembers { get; private set; }
 
         public static void LoadData(ContentManager content)
@@ -40,16 +39,6 @@ namespace ProjectVagabond.Battle
                     move.Abilities = AbilityFactory.CreateAbilitiesFromData(move.Effects, new Dictionary<string, int>());
                 }
             }
-
-            // --- RELICS ---
-            string relicsPath = Path.Combine(content.RootDirectory, "Data", "Items", "Relics.json");
-            if (File.Exists(relicsPath))
-            {
-                string relicsJson = File.ReadAllText(relicsPath);
-                var relicList = JsonSerializer.Deserialize<List<RelicData>>(relicsJson, jsonOptions);
-                Relics = relicList.ToDictionary(a => a.RelicID, a => a, StringComparer.OrdinalIgnoreCase);
-            }
-            else Relics = new Dictionary<string, RelicData>();
 
             // --- PARTY MEMBERS ---
             string partyPath = Path.Combine(content.RootDirectory, "Data", "PartyMembers.json");

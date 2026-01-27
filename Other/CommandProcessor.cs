@@ -4,10 +4,12 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
 
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.Systems;
 using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
@@ -28,7 +30,6 @@ namespace ProjectVagabond
         private Dictionary<string, Command> _commands;
         public Dictionary<string, Command> Commands => _commands;
 
-        // Removed PlayerInputSystem dependency
         public CommandProcessor()
         {
             InitializeCommands();
@@ -67,11 +68,9 @@ namespace ProjectVagabond
                 sb.AppendLine("  [Palette_Sky]Party & Inventory[/]");
                 sb.AppendLine("    addmember <id>                     - Adds a party member.");
                 sb.AppendLine("    inventory                          - Shows all inventories.");
-                sb.AppendLine("    giveall                            - Gives 1 of every item.");
                 sb.AppendLine("    givecoin <amount>                  - Adds coin.");
                 sb.AppendLine("    setcoin <amount>                   - Sets coin amount.");
                 sb.AppendLine("    removecoin <amount>                - Removes coin.");
-                sb.AppendLine("    giverelic <id>                     - Adds relic.");
                 sb.AppendLine("    givespell <id>                     - Adds a spell.");
 
                 foreach (var line in sb.ToString().Split(new[] { Environment.NewLine }, StringSplitOptions.None))
@@ -227,11 +226,6 @@ namespace ProjectVagabond
                     if (_gameState.PlayerState.AddPartyMember(newMember))
                     {
                         Log($"[Palette_Sky]Added {newMember.Name} to the party!");
-                        // Starting relics are now global, so we add them to the player state
-                        if (BattleDataCache.PartyMembers.TryGetValue(memberId, out var data))
-                        {
-                            foreach (var kvp in data.StartingRelics) _gameState.PlayerState.AddRelic(kvp.Key);
-                        }
                     }
                     else
                     {
@@ -311,23 +305,7 @@ namespace ProjectVagabond
                     slot++;
                 }
 
-                Log("[Palette_Sky]--- Global Relics ---[/]");
-                if (_gameState.PlayerState.GlobalRelics.Any())
-                {
-                    foreach (var relicId in _gameState.PlayerState.GlobalRelics)
-                    {
-                        if (BattleDataCache.Relics.TryGetValue(relicId, out var relic))
-                            Log($"  [cBlue]Relic:[/] {relic.RelicName} - {relic.AbilityName}");
-                        else
-                            Log($"  [cBlue]Relic:[/] {relicId} (Unknown)");
-                    }
-                }
-                else
-                {
-                    Log("  [cBlue]Relic:[/] None");
-                }
-
-            }, "debug_passives - Lists intrinsic and relic abilities.");
+            }, "debug_passives - Lists intrinsic abilities.");
 
             // --- INVENTORY COMMANDS ---
             _commands["inventory"] = new Command("inventory", (args) => HandleShowInventory(), "inventory - Shows all inventories.");
@@ -358,25 +336,6 @@ namespace ProjectVagabond
                 _gameState.PlayerState.Coin -= amount;
                 Log($"[Palette_Sky]Removed {amount} coin. Total: {_gameState.PlayerState.Coin}");
             }, "removecoin <amount> - Removes coin.");
-
-            // Removed giveweapon, equipweapon, unequipweapon
-
-            _commands["giverelic"] = new Command("giverelic", (args) => HandleGiveItem(args, "Relic"), "giverelic <id>",
-                (args) => args.Length == 0 ? BattleDataCache.Relics.Keys.ToList() : new List<string>());
-
-            _commands["giveall"] = new Command("giveall", (args) =>
-            {
-                _gameState ??= ServiceLocator.Get<GameState>();
-                if (_gameState.PlayerState == null) return;
-
-                int count = 0;
-                foreach (var id in BattleDataCache.Relics.Keys) { _gameState.PlayerState.AddRelic(id); count++; }
-
-                Log($"[Palette_Sky]Added {count} relics to inventory.");
-            }, "giveall - Adds 1 of every relic to inventory.");
-
-            // Removed removeweapon
-            _commands["removerelic"] = new Command("removerelic", (args) => HandleRemoveItem(args, "Relic"), "removerelic <id>");
 
             // --- MOVE COMMANDS ---
             _commands["givespell"] = new Command("givespell", (args) =>
@@ -585,36 +544,6 @@ namespace ProjectVagabond
 
         // --- HANDLERS ---
 
-        private void HandleGiveItem(string[] args, string type)
-        {
-            _gameState ??= ServiceLocator.Get<GameState>();
-            if (_gameState.PlayerState == null) return;
-            if (args.Length < 2) { Log("[error]Usage: give... <id>"); return; }
-
-            string id = args[1];
-
-            switch (type)
-            {
-                case "Relic": _gameState.PlayerState.AddRelic(id); break;
-            }
-            Log($"Added {id} to {type} inventory.");
-        }
-
-        private void HandleRemoveItem(string[] args, string type)
-        {
-            _gameState ??= ServiceLocator.Get<GameState>();
-            if (_gameState.PlayerState == null) return;
-            if (args.Length < 2) { Log("[error]Usage: remove... <id>"); return; }
-
-            string id = args[1];
-
-            switch (type)
-            {
-                case "Relic": _gameState.PlayerState.RemoveRelic(id); break;
-            }
-            Log($"Removed {id} from {type} inventory.");
-        }
-
         private void HandleShowInventory()
         {
             _gameState ??= ServiceLocator.Get<GameState>();
@@ -622,10 +551,6 @@ namespace ProjectVagabond
             var ps = _gameState.PlayerState;
 
             Log($"[Palette_Sky]Coin:[/] {ps.Coin}");
-
-            Log($"[Palette_Sky]Global Relics:[/]");
-            if (!ps.GlobalRelics.Any()) Log("  (Empty)");
-            else foreach (var r in ps.GlobalRelics) Log($"  {r}");
 
             Log("[Palette_Sky]Spells:[/]");
             if (ps.Spells.Any(s => s != null))
@@ -654,13 +579,6 @@ namespace ProjectVagabond
                 }
             }
             else Log("  (Empty)");
-        }
-
-        private void PrintDict(Dictionary<string, int> dict, string title)
-        {
-            Log($"[Palette_Sky]{title}:[/]");
-            if (!dict.Any()) Log("  (Empty)");
-            else foreach (var kvp in dict) Log($"  {kvp.Key}: {kvp.Value}");
         }
 
         public void ProcessCommand(string input)
