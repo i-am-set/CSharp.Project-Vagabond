@@ -4,7 +4,6 @@ using Microsoft.Xna.Framework.Input;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
-using ProjectVagabond.Items;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;

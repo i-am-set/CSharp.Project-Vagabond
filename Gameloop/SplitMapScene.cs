@@ -3,8 +3,6 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
-using ProjectVagabond.Battle.Abilities;
-using ProjectVagabond.Items;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.Transitions;
@@ -1292,9 +1290,7 @@ namespace ProjectVagabond.Scenes
 
         private void OpenRandomShop()
         {
-            // Relics removed, shop is empty
-            var premiumStock = new List<ShopItem>();
-            _shopOverlay.Show(premiumStock);
+            _shopOverlay.Show();
             SetView(SplitMapView.Shop, snap: true);
         }
 

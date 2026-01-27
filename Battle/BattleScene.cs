@@ -6,11 +6,9 @@ using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
-using ProjectVagabond.Items;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
-using ProjectVagabond.Systems;
 using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
@@ -62,7 +60,6 @@ namespace ProjectVagabond.Scenes
         private bool _isWaitingForMultiHitDelay = false;
         private float _multiHitDelayTimer = 0f;
         private readonly Queue<Action> _pendingAnimations = new Queue<Action>();
-        private bool _rewardScreenShown = false;
         private readonly Random _random = new Random();
 
         private bool _isWaitingForActionExecution = false;
@@ -171,7 +168,6 @@ namespace ProjectVagabond.Scenes
             _isWaitingForMultiHitDelay = false;
             _multiHitDelayTimer = 0f;
             _pendingAnimations.Clear();
-            _rewardScreenShown = false;
             _isWaitingForActionExecution = false;
             _actionExecutionTimer = 0f;
             _isFadingOutOnDeath = false;
@@ -193,7 +189,6 @@ namespace ProjectVagabond.Scenes
             _roundAnimTimer = 0f;
             _lastRoundNumber = 1;
 
-            // Removed component check. PlayerState is the source of truth.
             if (_gameState.PlayerState == null || _gameState.PlayerState.Party.Count == 0)
             {
                 Debug.WriteLine($"[BattleScene] [FATAL] PlayerState is invalid! Aborting battle setup.");
@@ -349,7 +344,6 @@ namespace ProjectVagabond.Scenes
             var gameState = ServiceLocator.Get<GameState>();
             var playerParty = new List<BattleCombatant>();
 
-            // Create Leader
             var leaderMember = gameState.PlayerState.Leader;
             if (leaderMember != null)
             {
@@ -358,7 +352,6 @@ namespace ProjectVagabond.Scenes
                 playerParty.Add(leaderCombatant);
             }
 
-            // Create Allies
             for (int i = 1; i < gameState.PlayerState.Party.Count; i++)
             {
                 var member = gameState.PlayerState.Party[i];
@@ -376,7 +369,6 @@ namespace ProjectVagabond.Scenes
                 string archetypeId = enemyArchetypesToSpawn[i];
                 if (string.IsNullOrEmpty(archetypeId)) continue;
 
-                // Use Factory directly instead of Spawner
                 var enemyCombatant = BattleCombatantFactory.CreateEnemy(archetypeId, $"enemy_{i + 1}");
                 if (enemyCombatant != null)
                 {
@@ -632,7 +624,6 @@ namespace ProjectVagabond.Scenes
                                 bool floorsBusy = _animationManager.IsFloorAnimatingOut("floor_0") || _animationManager.IsFloorAnimatingOut("floor_1") || _animationManager.GetFloorIntroAnimationState("floor_center") != null;
                                 if (!floorsBusy)
                                 {
-                                    // NO LOOT SCREEN. Just end.
                                     FinalizeVictory();
                                 }
                             }

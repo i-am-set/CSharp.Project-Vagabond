@@ -11,7 +11,6 @@ using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
-using ProjectVagabond.Systems;
 using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
@@ -92,7 +91,6 @@ namespace ProjectVagabond
         private TransitionManager _transitionManager;
         private HitstopManager _hitstopManager;
         private BackgroundNoiseRenderer _backgroundNoiseRenderer;
-        private LootManager _lootManager;
         private ItemTooltipRenderer _itemTooltipRenderer;
 
         private KeyboardState _previousKeyboardState;
@@ -176,8 +174,6 @@ namespace ProjectVagabond
             _global = ServiceLocator.Get<Global>();
             ServiceLocator.Register<GraphicsDevice>(GraphicsDevice);
 
-            // Removed ECS Managers (EntityManager, ComponentStore, ArchetypeManager)
-
             var dataManager = new DataManager();
             ServiceLocator.Register<DataManager>(dataManager);
 
@@ -196,7 +192,6 @@ namespace ProjectVagabond
             _particleSystemManager = new ParticleSystemManager();
             ServiceLocator.Register<ParticleSystemManager>(_particleSystemManager);
 
-            // Updated GameState constructor (removed ComponentStore)
             _gameState = new GameState(noiseManager, _global, _spriteManager);
             ServiceLocator.Register<GameState>(_gameState);
 
@@ -316,10 +311,6 @@ namespace ProjectVagabond
 
             var dataManager = ServiceLocator.Get<DataManager>();
             dataManager.LoadData(Content.RootDirectory);
-
-            _lootManager = new LootManager();
-            _lootManager.BuildLootTables();
-            ServiceLocator.Register<LootManager>(_lootManager);
 
             _sceneManager.ChangeScene(GameSceneState.Startup, TransitionType.None, TransitionType.None);
         }

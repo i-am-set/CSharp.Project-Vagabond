@@ -4,12 +4,10 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
-using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
 
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
-using ProjectVagabond.Systems;
 using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
@@ -190,10 +188,7 @@ namespace ProjectVagabond
                 AbilityTester.RunAllTests();
             }, "test_abilities - Runs logic verification on ability classes.");
 
-            _commands["test_items"] = new Command("test_items", (args) =>
-            {
-                ItemIntegrityTester.RunIntegrityCheck();
-            }, "test_items - Checks if all defined items can instantiate their abilities.");
+            // Removed test_items command
 
             _commands["test_party_gen"] = new Command("test_party_gen", (args) =>
             {

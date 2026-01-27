@@ -5,6 +5,9 @@ using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
@@ -49,10 +52,9 @@ namespace ProjectVagabond.UI
             _leaveButton.OnClick += () => OnLeaveRequested?.Invoke();
         }
 
-        public void Show(List<ShopItem> premiumStock)
+        public void Show()
         {
             IsOpen = true;
-            // Ignore premiumStock, we are gutting the shop.
             RebuildButtons();
         }
 
