@@ -15,7 +15,7 @@ namespace ProjectVagabond.Battle
 
         /// <summary>
         /// The remaining duration of the effect in turns.
-        /// For permanent effects, this value is ignored (usually set to -1 or 999).
+        /// For permanent effects, this is set to -1 and ignored by logic.
         /// </summary>
         public int DurationInTurns { get; set; }
 
@@ -40,11 +40,20 @@ namespace ProjectVagabond.Battle
         /// Initializes a new instance of the StatusEffectInstance class.
         /// </summary>
         /// <param name="effectType">The type of the status effect.</param>
-        /// <param name="durationInTurns">The duration of the effect in turns. Ignored for Perm effects.</param>
+        /// <param name="durationInTurns">The duration of the effect in turns. Ignored/Overwritten for Perm effects.</param>
         public StatusEffectInstance(StatusEffectType effectType, int durationInTurns)
         {
             EffectType = effectType;
-            DurationInTurns = durationInTurns;
+
+            // Force duration to -1 for permanent effects to ensure no logic ever tries to count them down.
+            if (IsPermanent)
+            {
+                DurationInTurns = -1;
+            }
+            else
+            {
+                DurationInTurns = durationInTurns;
+            }
         }
 
         /// <summary>
@@ -63,13 +72,14 @@ namespace ProjectVagabond.Battle
                 StatusEffectType.Silence => "Silenced",
                 StatusEffectType.TargetMe => "Draw Fire",
                 StatusEffectType.Provoked => "Provoked",
-                StatusEffectType.Bleeding => "Bleeding", 
+                StatusEffectType.Bleeding => "Bleeding",
                 _ => EffectType.ToString(),
             };
         }
 
         /// <summary>
-        /// Gets the formatted text for the tooltip title, including name and duration.
+        /// Gets the formatted text for the tooltip title.
+        /// Permanent effects return ONLY the name. Temporary effects return Name (Turns).
         /// </summary>
         public string GetTooltipText()
         {

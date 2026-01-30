@@ -37,18 +37,10 @@ namespace ProjectVagabond.Battle.UI
             var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
             if (hpAlpha > 0.01f)
             {
-                // Shift name down slightly to make room for Tenacity bar
-                // Old: barY - LineHeight - 1
-                // New: barY - LineHeight - 1 (Same anchor, but Tenacity goes above it)
                 spriteBatch.DrawStringSnapped(tertiaryFont, combatant.Name.ToUpper(), new Vector2(barX, barY - tertiaryFont.LineHeight - 1), _global.Palette_Sun * hpAlpha);
             }
 
             // --- TENACITY BAR ---
-            // Position: Above Name
-            // Name Top Y = barY - LineHeight - 1
-            // Tenacity Bottom Y = Name Top Y - 2 (padding)
-            // Tenacity Height = 3
-            // Tenacity Top Y = Name Top Y - 2 - 3
             float nameTopY = barY - tertiaryFont.LineHeight - 1;
             float tenacityY = nameTopY - 2 - 3;
 
@@ -88,13 +80,9 @@ namespace ProjectVagabond.Battle.UI
             }
 
             // Outline
-            // Top
             spriteBatch.DrawSnapped(_pixel, new Rectangle(currentX, y - 1, w, 1), borderColor * alpha);
-            // Bottom
             spriteBatch.DrawSnapped(_pixel, new Rectangle(currentX, y + h, w, 1), borderColor * alpha);
-            // Left
             spriteBatch.DrawSnapped(_pixel, new Rectangle(currentX - 1, y - 1, 1, h + 2), borderColor * alpha);
-            // Right
             spriteBatch.DrawSnapped(_pixel, new Rectangle(currentX + w, y - 1, 1, h + 2), borderColor * alpha);
 
             // Animation Overlay
@@ -111,15 +99,13 @@ namespace ProjectVagabond.Battle.UI
             int maxMana = combatant.Stats.MaxMana;
             int currentMana = combatant.Stats.CurrentMana;
 
-            // Tuning: 1x1 pixel, 1 pixel gap
             const int pipSize = 1;
             const int gap = 1;
             const int pipHeight = 1;
 
-            // Colors
             Color emptyColor = _global.Palette_DarkShadow * alpha;
             Color filledColor = _global.Palette_Sky * alpha;
-            Color previewColor = _global.Palette_Sun * alpha; // Highlight color for cost preview
+            Color previewColor = _global.Palette_Sun * alpha;
 
             for (int i = 0; i < maxMana; i++)
             {
@@ -131,13 +117,9 @@ namespace ProjectVagabond.Battle.UI
                 if (i < currentMana)
                 {
                     drawColor = filledColor;
-
-                    // Apply Preview Logic: Highlight the top-most pips that will be consumed
-                    // We want to highlight 'cost' number of pips, starting from (currentMana - 1) downwards.
                     if (previewCost.HasValue && previewCost.Value > 0)
                     {
                         int cost = previewCost.Value;
-                        // Highlight range: [currentMana - cost, currentMana - 1]
                         if (i >= (currentMana - cost))
                         {
                             drawColor = previewColor;
@@ -156,57 +138,44 @@ namespace ProjectVagabond.Battle.UI
             int maxTenacity = combatant.Stats.Tenacity;
             int currentTenacity = combatant.CurrentTenacity;
 
-            // Tuning: 3x3 pixel, 1 pixel gap
             const int pipSize = 3;
             const int gap = 1;
 
-            // Source Rectangles for the sprite sheet (6x3)
-            // Frame 0 (Full): 0,0
-            // Frame 1 (Empty): 3,0
             var fullRect = new Rectangle(0, 0, 3, 3);
             var emptyRect = new Rectangle(3, 0, 3, 3);
 
             for (int i = 0; i < maxTenacity; i++)
             {
-                // Left-aligned positioning
                 float x = startX + (i * (pipSize + gap));
                 var destRect = new Rectangle((int)x, (int)startY, pipSize, pipSize);
-
-                // Determine frame based on current shield value
                 var sourceRect = (i < currentTenacity) ? fullRect : emptyRect;
-
                 spriteBatch.DrawSnapped(_spriteManager.TenacityPipTexture, destRect, sourceRect, Color.White * alpha);
             }
         }
 
         public void DrawPlayerBars(SpriteBatch spriteBatch, BattleCombatant player, float barX, float barY, int barWidth, int barHeight, BattleAnimationManager animationManager, float hpAlpha, float manaAlpha, GameTime gameTime, BattleUIManager uiManager, bool isActiveActor)
         {
-            // --- NAME ---
             var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
             if (hpAlpha > 0.01f)
             {
                 spriteBatch.DrawStringSnapped(tertiaryFont, player.Name.ToUpper(), new Vector2(barX, barY - tertiaryFont.LineHeight - 1), _global.Palette_Sun * hpAlpha);
             }
 
-            // --- TENACITY BAR ---
             float nameTopY = barY - tertiaryFont.LineHeight - 1;
             float tenacityY = nameTopY - 2 - 3;
             DrawTenacityBar(spriteBatch, player, barX, tenacityY, barWidth, hpAlpha);
 
-            // --- HEALTH BAR ---
             var barRect = new Rectangle((int)barX, (int)barY, barWidth, barHeight);
             float hpPercent = player.Stats.MaxHP > 0 ? Math.Clamp(player.VisualHP / player.Stats.MaxHP, 0f, 1f) : 0f;
             var hpAnim = animationManager.GetResourceBarAnimation(player.CombatantID, BattleAnimationManager.ResourceBarAnimationState.BarResourceType.HP);
 
             DrawBar(spriteBatch, barRect, hpPercent, _global.Palette_DarkShadow, _global.Palette_Leaf, _global.Palette_Black, hpAlpha, hpAnim, player.Stats.MaxHP);
 
-            // --- MANA BAR (Discrete with Preview) ---
             float manaBarY = barY + barHeight + 1;
             int? previewCost = null;
 
             if (isActiveActor && uiManager.HoveredMove != null)
             {
-                // Don't draw preview if collapsing or holding white or expanding
                 if (player.ManaBarDisappearTimer <= 0 && player.ManaBarDelayTimer <= 0)
                 {
                     var move = uiManager.HoveredMove;
@@ -236,16 +205,13 @@ namespace ProjectVagabond.Battle.UI
 
             int iconSize = BattleLayout.STATUS_ICON_SIZE;
             int gap = BattleLayout.STATUS_ICON_GAP;
-            int iconY = (int)startY - iconSize - 2;
+
+            int iconY = (int)startY + BattleLayout.ENEMY_BAR_HEIGHT + 1 + 1 + 2;
+
             int currentX = (int)startX;
             int step = iconSize + gap;
 
-            // For player slot 1 (right side), icons grow leftwards
-            if (isPlayer && combatant.BattleSlot == 1)
-            {
-                currentX = (int)(startX + width - iconSize);
-                step = -(iconSize + gap);
-            }
+            currentX = (int)startX;
 
             foreach (var effect in combatant.ActiveStatusEffects)
             {
@@ -264,7 +230,6 @@ namespace ProjectVagabond.Battle.UI
 
                 if (isAnimating)
                 {
-                    // Simple additive flash simulation by drawing again
                     spriteBatch.DrawSnapped(iconTexture, iconBounds, Color.White * 0.5f);
                 }
 
@@ -280,11 +245,9 @@ namespace ProjectVagabond.Battle.UI
             int widthBefore = (int)(bgRect.Width * percentBefore);
             int widthAfter = (int)(bgRect.Width * percentAfter);
 
-            // FIX: Ensure we respect the minimum 1-pixel width for remaining health
             if (percentAfter > 0 && widthAfter == 0) widthAfter = 1;
             if (percentBefore > 0 && widthBefore == 0) widthBefore = 1;
 
-            // Define the visible area of the bar (in screen space)
             int visibleStartX = bgRect.X;
             int visibleWidth = bgRect.Width;
             int visibleEndX = visibleStartX + visibleWidth;
@@ -318,7 +281,6 @@ namespace ProjectVagabond.Battle.UI
 
                 if (color != Color.Transparent && previewWidth > 0)
                 {
-                    // Clip against the visible area
                     int drawStartX = Math.Max(previewStartX, visibleStartX);
                     int drawEndX = Math.Min(previewStartX + previewWidth, visibleEndX);
                     int drawWidth = drawEndX - drawStartX;
@@ -343,7 +305,6 @@ namespace ProjectVagabond.Battle.UI
 
                 if (ghostWidth > 0)
                 {
-                    // Clip
                     int drawStartX = Math.Max(ghostStartX, visibleStartX);
                     int drawEndX = Math.Min(ghostStartX + ghostWidth, visibleEndX);
                     int drawWidth = drawEndX - drawStartX;

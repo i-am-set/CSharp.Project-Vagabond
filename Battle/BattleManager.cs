@@ -818,7 +818,11 @@ namespace ProjectVagabond.Battle
                 var effectsToRemove = new List<StatusEffectInstance>();
                 foreach (var effect in combatant.ActiveStatusEffects)
                 {
-                    if (!effect.IsPermanent) effect.DurationInTurns--;
+                    if (!effect.IsPermanent)
+                    {
+                        effect.DurationInTurns--;
+                    }
+
                     if (effect.EffectType == StatusEffectType.Poison)
                     {
                         int safeTurnCount = Math.Min(effect.PoisonTurnCount, 30);
@@ -844,7 +848,11 @@ namespace ProjectVagabond.Battle
                             EventBus.Publish(new GameEvents.CombatantHealed { Actor = combatant, Target = combatant, HealAmount = healAmount, VisualHPBefore = hpBefore });
                         }
                     }
-                    if (!effect.IsPermanent && effect.DurationInTurns <= 0) effectsToRemove.Add(effect);
+
+                    if (!effect.IsPermanent && effect.DurationInTurns <= 0)
+                    {
+                        effectsToRemove.Add(effect);
+                    }
                 }
                 foreach (var expiredEffect in effectsToRemove)
                 {
