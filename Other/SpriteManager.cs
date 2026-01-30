@@ -1,6 +1,8 @@
-﻿using Microsoft.Xna.Framework;
+﻿
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.Animations;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
@@ -10,6 +12,7 @@ using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 
 namespace ProjectVagabond
 {
@@ -32,8 +35,13 @@ namespace ProjectVagabond
         public Texture2D ActionTooltipBackgroundSprite { get; private set; }
         public Texture2D ActionIconsSpriteSheet { get; private set; }
         public Texture2D ActionButtonUsesSpriteSheet { get; private set; }
+
+        // Used for Stat Change Arrows (Up/Down)
         public Texture2D StatChangeIconsSpriteSheet { get; private set; }
         public Texture2D StatChangeIconsSpriteSheetSilhouette { get; private set; }
+
+        // Used for Permanent Status Effects (Poison, Burn, etc.)
+        public Texture2D PermanentStatusIconsSpriteSheet { get; private set; }
 
         public Texture2D MiniActionButtonSprite { get; private set; }
 
@@ -78,7 +86,7 @@ namespace ProjectVagabond
         private readonly Dictionary<string, int[]> _enemySpriteRightPixelOffsets = new Dictionary<string, int[]>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, int[]> _enemySpriteBottomPixelOffsets = new Dictionary<string, int[]>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, Vector2> _visualCenterOffsets = new Dictionary<string, Vector2>(StringComparer.OrdinalIgnoreCase);
-        private readonly Dictionary<StatusEffectType, Texture2D> _statusEffectIcons = new Dictionary<StatusEffectType, Texture2D>();
+
         private readonly Dictionary<string, (Texture2D Original, Texture2D Silhouette)> _itemSprites = new Dictionary<string, (Texture2D, Texture2D)>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, (Texture2D Original, Texture2D Silhouette)> _smallItemSprites = new Dictionary<string, (Texture2D, Texture2D)>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, (Texture2D Texture, Rectangle[] Frames)> _cursorSprites = new Dictionary<string, (Texture2D, Rectangle[])>();
@@ -248,15 +256,28 @@ namespace ProjectVagabond
             try { ActionButtonUsesSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/ui_action_button_uses_spritesheet"); }
             catch { ActionButtonUsesSpriteSheet = _textureFactory.CreateColoredTexture(471, 17, Color.Magenta); }
 
+            // --- STAT CHANGE ARROWS ---
+            // Since the file on disk was repurposed for status icons, we generate the arrows programmatically.
+            StatChangeIconsSpriteSheet = _textureFactory.CreateStatArrowTexture();
+            StatChangeIconsSpriteSheetSilhouette = CreateSilhouette(StatChangeIconsSpriteSheet);
+
+            // --- PERMANENT STATUS ICONS ---
+            // Load the new 20x10 sheet.
             try
             {
-                StatChangeIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/stat_change_icons_spritesheet");
-                StatChangeIconsSpriteSheetSilhouette = CreateSilhouette(StatChangeIconsSpriteSheet);
+                PermanentStatusIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/status_effect_icon_spritesheet");
+
+                // Safety Check: If the loaded texture is NOT 20x10, it means the content pipeline hasn't updated.
+                // We fallback to a placeholder to avoid the "T" artifact.
+                if (PermanentStatusIconsSpriteSheet.Width != 20 || PermanentStatusIconsSpriteSheet.Height != 10)
+                {
+                    Debug.WriteLine("[SpriteManager] WARNING: Loaded status icon sheet has incorrect dimensions. Using placeholder.");
+                    PermanentStatusIconsSpriteSheet = _textureFactory.CreateColoredTexture(20, 10, Color.Magenta);
+                }
             }
             catch
             {
-                StatChangeIconsSpriteSheet = _textureFactory.CreateColoredTexture(9, 3, Color.Magenta);
-                StatChangeIconsSpriteSheetSilhouette = _textureFactory.CreateColoredTexture(9, 3, Color.White);
+                PermanentStatusIconsSpriteSheet = _textureFactory.CreateColoredTexture(20, 10, Color.Magenta);
             }
 
             try { ItemWeaponsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/Items/item_weapons_spritesheet"); }
@@ -979,25 +1000,34 @@ namespace ProjectVagabond
 
         public Texture2D GetStatusEffectIcon(StatusEffectType effectType)
         {
-            if (_statusEffectIcons.TryGetValue(effectType, out var cachedIcon))
+            // Legacy method kept for compatibility with BattleVfxRenderer
+            // Returns a 1x1 transparent texture to prevent crashes if called
+            return _textureFactory.CreateColoredTexture(1, 1, Color.Transparent);
+        }
+
+        public Rectangle GetPermanentStatusIconSourceRect(StatusEffectType type, int frameIndex)
+        {
+            // Sheet Layout: 20x10
+            // Row 0 (Y=0): Frame 1
+            // Row 1 (Y=5): Frame 2
+            // Cols (5px wide):
+            // 0: Poison
+            // 1: Burn
+            // 2: Frostbite
+            // 3: Bleeding
+
+            int x = 0;
+            switch (type)
             {
-                return cachedIcon;
+                case StatusEffectType.Poison: x = 0; break;
+                case StatusEffectType.Burn: x = 5; break;
+                case StatusEffectType.Frostbite: x = 10; break;
+                case StatusEffectType.Bleeding: x = 15; break;
+                default: return Rectangle.Empty;
             }
 
-            try
-            {
-                string iconName = effectType.ToString().ToLowerInvariant();
-                var icon = _core.Content.Load<Texture2D>($"Sprites/UI/BasicIcons/StatusEffects/{iconName}_status_icon");
-                _statusEffectIcons[effectType] = icon;
-                return icon;
-            }
-            catch
-            {
-                Debug.WriteLine($"[SpriteManager] [WARNING] Could not load status icon for '{effectType}'. Using placeholder.");
-                var placeholder = _textureFactory.CreateColoredTexture(5, 5, Color.Magenta);
-                _statusEffectIcons[effectType] = placeholder; // Cache the placeholder to avoid repeated load attempts
-                return placeholder;
-            }
+            int y = (frameIndex == 0) ? 0 : 5;
+            return new Rectangle(x, y, 5, 5);
         }
 
         private void LoadAndCacheCursorSprite(string assetName)
@@ -1068,16 +1098,10 @@ namespace ProjectVagabond
             try { InventoryStatBarFull = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_stat_bar_full"); }
             catch { InventoryStatBarFull = _textureFactory.CreateColoredTexture(40, 3, Color.White); }
 
-            try
-            {
-                StatChangeIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/stat_change_icons_spritesheet");
-                StatChangeIconsSpriteSheetSilhouette = CreateSilhouette(StatChangeIconsSpriteSheet);
-            }
-            catch
-            {
-                StatChangeIconsSpriteSheet = _textureFactory.CreateColoredTexture(9, 3, Color.Magenta);
-                StatChangeIconsSpriteSheetSilhouette = _textureFactory.CreateColoredTexture(9, 3, Color.White);
-            }
+            // --- STAT CHANGE ARROWS ---
+            // Since the file on disk was repurposed for status icons, we generate the arrows programmatically.
+            StatChangeIconsSpriteSheet = _textureFactory.CreateStatArrowTexture();
+            StatChangeIconsSpriteSheetSilhouette = CreateSilhouette(StatChangeIconsSpriteSheet);
 
             LoadPlayerPortraits();
         }

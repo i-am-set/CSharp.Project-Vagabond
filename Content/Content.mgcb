@@ -1974,7 +1974,7 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/BasicIcons/stat_change_icons_spritesheet.png;Sprites/UI/BasicIcons/stat_change_icons_spritesheet
 
-#begin Sprites/UI/BasicIcons/stat_change_icons_spritesheet.png
+#begin Sprites/UI/BasicIcons/status_effect_icon_spritesheet.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -1984,7 +1984,7 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Sprites/UI/BasicIcons/stat_change_icons_spritesheet.png;Sprites/UI/BasicIcons/stat_change_icons_spritesheet
+/build:Sprites/UI/BasicIcons/status_effect_icon_spritesheet.png;Sprites/UI/BasicIcons/status_effect_icon_spritesheet
 
 #begin Sprites/UI/BasicIcons/targeting_indicator.png
 /importer:TextureImporter

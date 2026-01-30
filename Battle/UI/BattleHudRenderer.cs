@@ -206,15 +206,25 @@ namespace ProjectVagabond.Battle.UI
             int iconSize = BattleLayout.STATUS_ICON_SIZE;
             int gap = BattleLayout.STATUS_ICON_GAP;
 
+            // Position below mana bar
             int iconY = (int)startY + BattleLayout.ENEMY_BAR_HEIGHT + 1 + 1 + 2;
 
             int currentX = (int)startX;
             int step = iconSize + gap;
 
+            // Always draw left-to-right
             currentX = (int)startX;
+
+            // Calculate animation frame (1 second cycle)
+            // 0.0 - 0.5s = Frame 0
+            // 0.5 - 1.0s = Frame 1
+            int frameIndex = (DateTime.Now.Millisecond < 500) ? 0 : 1;
 
             foreach (var effect in combatant.ActiveStatusEffects)
             {
+                // Only draw permanent effects
+                if (!effect.IsPermanent) continue;
+
                 float hopOffset = getOffsetFunc(combatant.CombatantID, effect.EffectType);
                 bool isAnimating = isAnimatingFunc(combatant.CombatantID, effect.EffectType);
 
@@ -225,12 +235,16 @@ namespace ProjectVagabond.Battle.UI
                     iconTracker.Add(new StatusIconInfo { Effect = effect, Bounds = iconBounds });
                 }
 
-                var iconTexture = _spriteManager.GetStatusEffectIcon(effect.EffectType);
-                spriteBatch.DrawSnapped(iconTexture, iconBounds, Color.White);
+                var sourceRect = _spriteManager.GetPermanentStatusIconSourceRect(effect.EffectType, frameIndex);
 
-                if (isAnimating)
+                if (sourceRect != Rectangle.Empty)
                 {
-                    spriteBatch.DrawSnapped(iconTexture, iconBounds, Color.White * 0.5f);
+                    spriteBatch.DrawSnapped(_spriteManager.PermanentStatusIconsSpriteSheet, iconBounds, sourceRect, Color.White);
+
+                    if (isAnimating)
+                    {
+                        spriteBatch.DrawSnapped(_spriteManager.PermanentStatusIconsSpriteSheet, iconBounds, sourceRect, Color.White * 0.5f);
+                    }
                 }
 
                 currentX += step;
