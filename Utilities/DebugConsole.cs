@@ -52,6 +52,10 @@ namespace ProjectVagabond.Utils
         private bool _isSelecting = false;
         private Button _copyButton;
 
+        // Auto-Complete State
+        private string _preAutoCompleteText = "";
+        private bool _justAutoCompleted = false;
+
         // Font Selection
         private int _currentFontIndex = 0;
 
@@ -291,6 +295,8 @@ namespace ProjectVagabond.Utils
                         char? character = GetCharFromKey(key, currentKeyboardState.IsKeyDown(Keys.LeftShift) || currentKeyboardState.IsKeyDown(Keys.RightShift));
                         if (character.HasValue)
                         {
+                            // Typing a character commits the autocomplete
+                            _justAutoCompleted = false;
                             _currentInput += character.Value;
                             _autoCompleteManager.UpdateAutoCompleteSuggestions(_currentInput);
                         }
@@ -300,6 +306,13 @@ namespace ProjectVagabond.Utils
 
             if (KeyPressed(Keys.Enter, currentKeyboardState, _previousKeyboardState))
             {
+                // Check for Auto-Complete on Enter
+                if (_autoCompleteManager.ShowingAutoCompleteSuggestions && _autoCompleteManager.SelectedAutoCompleteSuggestionIndex != -1)
+                {
+                    PerformAutoComplete();
+                    return; // Don't submit command yet
+                }
+
                 if (!string.IsNullOrWhiteSpace(_currentInput))
                 {
                     GameLogger.Log(LogSeverity.Info, $"> {_currentInput}");
@@ -310,14 +323,14 @@ namespace ProjectVagabond.Utils
                     _commandHistoryIndex = -1;
                     _currentEditingCommand = "";
                     _autoCompleteManager.HideSuggestions();
+                    _justAutoCompleted = false;
                 }
             }
             else if (KeyPressed(Keys.Tab, currentKeyboardState, _previousKeyboardState))
             {
                 if (_autoCompleteManager.ShowingAutoCompleteSuggestions && _autoCompleteManager.SelectedAutoCompleteSuggestionIndex != -1)
                 {
-                    _currentInput = _autoCompleteManager.AutoCompleteSuggestions[_autoCompleteManager.SelectedAutoCompleteSuggestionIndex];
-                    _autoCompleteManager.UpdateAutoCompleteSuggestions(_currentInput);
+                    PerformAutoComplete();
                 }
             }
             else if (KeyPressed(Keys.Up, currentKeyboardState, _previousKeyboardState))
@@ -347,6 +360,21 @@ namespace ProjectVagabond.Utils
             if (currentKeyboardState.IsKeyDown(Keys.Back))
             {
                 bool ctrlDown = currentKeyboardState.IsKeyDown(Keys.LeftControl) || currentKeyboardState.IsKeyDown(Keys.RightControl);
+
+                // Check for Revert Logic first (Single press of backspace immediately after autocomplete)
+                if (KeyPressed(Keys.Back, currentKeyboardState, _previousKeyboardState) && _justAutoCompleted)
+                {
+                    _currentInput = _preAutoCompleteText;
+                    _autoCompleteManager.UpdateAutoCompleteSuggestions(_currentInput);
+                    _justAutoCompleted = false;
+                    // Add a delay so the "hold to delete" logic doesn't kick in immediately while the key is still down
+                    _backspaceTimer = 0.5f;
+                    return;
+                }
+
+                // Normal backspace breaks the revert chain
+                _justAutoCompleted = false;
+
                 if (ctrlDown && KeyPressed(Keys.Back, currentKeyboardState, _previousKeyboardState))
                 {
                     DeleteWord();
@@ -391,6 +419,7 @@ namespace ProjectVagabond.Utils
 
         private void NavigateCommandHistory(int direction)
         {
+            _justAutoCompleted = false; 
             if (_commandHistory.Count == 0) return;
             if (_commandHistoryIndex == -1) _currentEditingCommand = _currentInput;
             _commandHistoryIndex += direction;
@@ -557,6 +586,16 @@ namespace ProjectVagabond.Utils
                 if (isSelected) spriteBatch.Draw(pixel, new Rectangle(boxBounds.X + 1, (int)suggestionY, boxBounds.Width - 2, Global.TERMINAL_LINE_SPACING), _global.Palette_DarkGray);
                 spriteBatch.DrawString(font, suggestion, new Vector2(boxBounds.X + 4, suggestionY), color);
             }
+        }
+
+        private void PerformAutoComplete()
+        {
+            if (_autoCompleteManager.SelectedAutoCompleteSuggestionIndex == -1) return;
+
+            _preAutoCompleteText = _currentInput;
+            _currentInput = _autoCompleteManager.AutoCompleteSuggestions[_autoCompleteManager.SelectedAutoCompleteSuggestionIndex];
+            _autoCompleteManager.UpdateAutoCompleteSuggestions(_currentInput);
+            _justAutoCompleted = true;
         }
 
         private ColoredLine ParseRichText(string text, Color? baseColor = null)
