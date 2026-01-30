@@ -1,7 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
-using MonoGame.Extended.Animations;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
@@ -402,52 +401,6 @@ namespace ProjectVagabond
                     colorData[y * width + x] = Color.White;
                 }
             }
-
-            texture.SetData(colorData);
-            return texture;
-        }
-
-        /// <summary>
-        /// Creates a 9x3 texture containing Neutral, Up, and Down arrows (3x3 each).
-        /// Used as a fallback for StatChangeIconsSpriteSheet.
-        /// </summary>
-        public Texture2D CreateStatArrowTexture()
-        {
-            var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
-            const int iconSize = 3;
-            const int width = iconSize * 3; // 9
-            const int height = iconSize;    // 3
-            var texture = new Texture2D(graphicsDevice, width, height);
-            var colorData = new Color[width * height];
-
-            // Clear to transparent
-            for (int i = 0; i < colorData.Length; i++) colorData[i] = Color.Transparent;
-
-            // Frame 0: Neutral (Dot)
-            // . . .
-            // . X .
-            // . . .
-            colorData[1 * width + 1] = Color.White;
-
-            // Frame 1: Up Arrow
-            // . X .
-            // X X X
-            // . . .
-            int offset1 = iconSize; // X=3
-            colorData[0 * width + (offset1 + 1)] = Color.White;
-            colorData[1 * width + (offset1 + 0)] = Color.White;
-            colorData[1 * width + (offset1 + 1)] = Color.White;
-            colorData[1 * width + (offset1 + 2)] = Color.White;
-
-            // Frame 2: Down Arrow
-            // . . .
-            // X X X
-            // . X .
-            int offset2 = iconSize * 2; // X=6
-            colorData[1 * width + (offset2 + 0)] = Color.White;
-            colorData[1 * width + (offset2 + 1)] = Color.White;
-            colorData[1 * width + (offset2 + 2)] = Color.White;
-            colorData[2 * width + (offset2 + 1)] = Color.White;
 
             texture.SetData(colorData);
             return texture;

@@ -1,8 +1,6 @@
-﻿
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
-using MonoGame.Extended.Animations;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
@@ -12,7 +10,6 @@ using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 
 namespace ProjectVagabond
 {
@@ -36,11 +33,11 @@ namespace ProjectVagabond
         public Texture2D ActionIconsSpriteSheet { get; private set; }
         public Texture2D ActionButtonUsesSpriteSheet { get; private set; }
 
-        // Used for Stat Change Arrows (Up/Down)
+        // Used for Stat Change Arrows (Up/Down) - 9x3
         public Texture2D StatChangeIconsSpriteSheet { get; private set; }
         public Texture2D StatChangeIconsSpriteSheetSilhouette { get; private set; }
 
-        // Used for Permanent Status Effects (Poison, Burn, etc.)
+        // Used for Permanent Status Effects (Poison, Burn, etc.) - 20x10
         public Texture2D PermanentStatusIconsSpriteSheet { get; private set; }
 
         public Texture2D MiniActionButtonSprite { get; private set; }
@@ -256,27 +253,26 @@ namespace ProjectVagabond
             try { ActionButtonUsesSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/ui_action_button_uses_spritesheet"); }
             catch { ActionButtonUsesSpriteSheet = _textureFactory.CreateColoredTexture(471, 17, Color.Magenta); }
 
-            // --- STAT CHANGE ARROWS ---
-            // Since the file on disk was repurposed for status icons, we generate the arrows programmatically.
-            StatChangeIconsSpriteSheet = _textureFactory.CreateStatArrowTexture();
-            StatChangeIconsSpriteSheetSilhouette = CreateSilhouette(StatChangeIconsSpriteSheet);
-
-            // --- PERMANENT STATUS ICONS ---
-            // Load the new 20x10 sheet.
             try
             {
-                PermanentStatusIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/status_effect_icon_spritesheet");
-
-                // Safety Check: If the loaded texture is NOT 20x10, it means the content pipeline hasn't updated.
-                // We fallback to a placeholder to avoid the "T" artifact.
-                if (PermanentStatusIconsSpriteSheet.Width != 20 || PermanentStatusIconsSpriteSheet.Height != 10)
-                {
-                    Debug.WriteLine("[SpriteManager] WARNING: Loaded status icon sheet has incorrect dimensions. Using placeholder.");
-                    PermanentStatusIconsSpriteSheet = _textureFactory.CreateColoredTexture(20, 10, Color.Magenta);
-                }
+                // Load the 9x3 arrow sheet for stat changes
+                StatChangeIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/stat_change_icons_spritesheet");
+                StatChangeIconsSpriteSheetSilhouette = CreateSilhouette(StatChangeIconsSpriteSheet);
             }
             catch
             {
+                StatChangeIconsSpriteSheet = _textureFactory.CreateColoredTexture(9, 3, Color.Magenta);
+                StatChangeIconsSpriteSheetSilhouette = _textureFactory.CreateColoredTexture(9, 3, Color.White);
+            }
+
+            // Load the 20x10 status icon sheet from the new path
+            try
+            {
+                PermanentStatusIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/status_effect_icon_spritesheet");
+            }
+            catch
+            {
+                Debug.WriteLine("[SpriteManager] WARNING: Could not load 'permanent_status_icons'. Using placeholder.");
                 PermanentStatusIconsSpriteSheet = _textureFactory.CreateColoredTexture(20, 10, Color.Magenta);
             }
 
@@ -1100,8 +1096,24 @@ namespace ProjectVagabond
 
             // --- STAT CHANGE ARROWS ---
             // Since the file on disk was repurposed for status icons, we generate the arrows programmatically.
-            StatChangeIconsSpriteSheet = _textureFactory.CreateStatArrowTexture();
-            StatChangeIconsSpriteSheetSilhouette = CreateSilhouette(StatChangeIconsSpriteSheet);
+            // This ensures the 9x3 arrow logic in BattleVfxRenderer still works.
+            // NOTE: This is a fallback because the original file was overwritten.
+            // If you restore the original 9x3 file, you can revert this to load from disk.
+            // But for now, this guarantees no "T" artifacts on arrows.
+            // StatChangeIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/stat_change_icons_spritesheet"); // OLD
+
+            // NEW: Load the 9x3 arrow sheet from disk as requested.
+            try
+            {
+                StatChangeIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/stat_change_icons_spritesheet");
+                StatChangeIconsSpriteSheetSilhouette = CreateSilhouette(StatChangeIconsSpriteSheet);
+            }
+            catch
+            {
+                // Fallback if file missing
+                StatChangeIconsSpriteSheet = _textureFactory.CreateColoredTexture(9, 3, Color.Magenta);
+                StatChangeIconsSpriteSheetSilhouette = _textureFactory.CreateColoredTexture(9, 3, Color.White);
+            }
 
             LoadPlayerPortraits();
         }
