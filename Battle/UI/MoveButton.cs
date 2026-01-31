@@ -291,11 +291,6 @@ namespace ProjectVagabond.Battle.UI
                     // Use textColor for the icon tint
                     spriteBatch.DrawSnapped(IconTexture, rotatedIconPos, IconSourceRect.Value, textColor * contentAlpha, _currentHoverRotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
                 }
-                else
-                {
-                    // Fallback placeholder
-                    spriteBatch.DrawSnapped(pixel, rotatedIconPos, null, _global.Palette_Shadow * contentAlpha, _currentHoverRotation, iconOrigin, new Vector2(iconSize, iconSize), SpriteEffects.None, 0f);
-                }
 
                 // Text Position
                 float textLocalX = startX + iconSize + iconPadding; // Left edge of text

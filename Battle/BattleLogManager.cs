@@ -19,7 +19,7 @@ namespace ProjectVagabond.Battle.UI
         }
 
         private readonly List<LogEntry> _logs = new List<LogEntry>();
-        private const int MAX_LOGS = 30;
+        private const int MAX_LOGS = 15;
         private readonly Global _global;
         private readonly Core _core;
 

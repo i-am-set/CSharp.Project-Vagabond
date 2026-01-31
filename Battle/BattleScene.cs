@@ -39,7 +39,6 @@ namespace ProjectVagabond.Scenes
         private BattleInputHandler _inputHandler;
         private AlertManager _alertManager;
         private BattleLogManager _battleLogManager;
-        private ImageButton _settingsButton;
         private SceneManager _sceneManager;
         private SpriteManager _spriteManager;
         private HapticsManager _hapticsManager;
@@ -90,11 +89,6 @@ namespace ProjectVagabond.Scenes
         private float _uiSlideTimer = 0f;
         private const float UI_SLIDE_DURATION = 0.5f;
         private const float UI_SLIDE_DISTANCE = 100f;
-
-        private enum SettingsButtonState { Hidden, AnimatingIn, Visible }
-        private SettingsButtonState _settingsButtonState = SettingsButtonState.Hidden;
-        private float _settingsButtonAnimTimer = 0f;
-        private const float SETTINGS_BUTTON_ANIM_DURATION = 0.6f;
 
         private enum RoundAnimState { Hidden, Entering, Idle, Pop, Hang, Settle }
         private RoundAnimState _roundAnimState = RoundAnimState.Hidden;
@@ -180,10 +174,6 @@ namespace ProjectVagabond.Scenes
             _isBattleLogHovered = false;
 
             SubscribeToEvents();
-            InitializeSettingsButton();
-
-            _settingsButtonState = SettingsButtonState.Hidden;
-            _settingsButtonAnimTimer = 0f;
 
             _roundAnimState = RoundAnimState.Hidden;
             _roundAnimTimer = 0f;
@@ -279,7 +269,6 @@ namespace ProjectVagabond.Scenes
             _uiManager.OnForcedSwitchSelected += OnForcedSwitchSelected;
             _uiManager.OnFleeRequested += FleeBattle;
             _inputHandler.OnBackRequested += () => _uiManager.GoBack();
-            if (_settingsButton != null) _settingsButton.OnClick += OpenSettings;
         }
 
         private void UnsubscribeFromEvents()
@@ -309,34 +298,6 @@ namespace ProjectVagabond.Scenes
             _uiManager.OnForcedSwitchSelected -= OnForcedSwitchSelected;
             _uiManager.OnFleeRequested -= FleeBattle;
             _inputHandler.OnBackRequested -= () => _uiManager.GoBack();
-            if (_settingsButton != null) _settingsButton.OnClick -= OpenSettings;
-        }
-
-        private void InitializeSettingsButton()
-        {
-            int buttonSize = 16;
-            int offScreenX = Global.VIRTUAL_WIDTH + 20;
-
-            if (_settingsButton == null)
-            {
-                var sheet = _spriteManager.SplitMapSettingsButton;
-                var rects = _spriteManager.SplitMapSettingsButtonSourceRects;
-
-                _settingsButton = new ImageButton(new Rectangle(offScreenX, 2, buttonSize, buttonSize), sheet, rects[0], rects[1], enableHoverSway: true)
-                {
-                    UseScreenCoordinates = false,
-                    TriggerHapticOnHover = true
-                };
-            }
-
-            _settingsButton.Bounds = new Rectangle(offScreenX, 2, buttonSize, buttonSize);
-            _settingsButton.OnClick = null;
-            _settingsButton.OnClick += () =>
-            {
-                _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
-                OpenSettings();
-            };
-            _settingsButton.ResetAnimationState();
         }
 
         private void SetupBattle()
@@ -466,7 +427,6 @@ namespace ProjectVagabond.Scenes
                     if (progress >= 1.0f)
                     {
                         _battleManager.ForceAdvance();
-                        _settingsButtonState = SettingsButtonState.AnimatingIn;
                         _roundAnimState = RoundAnimState.Pop;
                         _roundAnimTimer = 0f;
 
@@ -530,28 +490,6 @@ namespace ProjectVagabond.Scenes
 
             _alertManager.Update(gameTime);
             _tooltipManager.Update(gameTime);
-
-            if (_settingsButton != null)
-            {
-                if (_settingsButtonState == SettingsButtonState.AnimatingIn)
-                {
-                    _settingsButtonAnimTimer += dt;
-                    float progress = Math.Clamp(_settingsButtonAnimTimer / SETTINGS_BUTTON_ANIM_DURATION, 0f, 1f);
-                    float eased = Easing.EaseOutBack(progress);
-
-                    float startX = Global.VIRTUAL_WIDTH + 20;
-                    float targetX = Global.VIRTUAL_WIDTH - 16 - 2;
-
-                    float currentX = MathHelper.Lerp(startX, targetX, eased);
-                    _settingsButton.Bounds = new Rectangle((int)currentX, 2, 16, 16);
-                    if (progress >= 1.0f) _settingsButtonState = SettingsButtonState.Visible;
-                }
-                else if (_settingsButtonState == SettingsButtonState.Visible)
-                {
-                    _settingsButton.Bounds = new Rectangle(Global.VIRTUAL_WIDTH - 16 - 2, 2, 16, 16);
-                }
-                if (_settingsButtonState != SettingsButtonState.Hidden) _settingsButton.Update(currentMouseState);
-            }
 
             if (KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState))
             {
