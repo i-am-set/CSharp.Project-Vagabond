@@ -12,7 +12,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 
-
 namespace ProjectVagabond.Battle.UI
 {
     public class MoveButton : Button
@@ -20,6 +19,19 @@ namespace ProjectVagabond.Battle.UI
         public MoveData Move { get; }
         public MoveEntry Entry { get; }
         public int DisplayPower { get; }
+        public BattleCombatant Owner { get; }
+
+        public bool CanAfford
+        {
+            get
+            {
+                if (Owner == null || Move == null) return false;
+                var manaDump = Move.Abilities.OfType<ManaDumpAbility>().FirstOrDefault();
+                if (manaDump != null) return Owner.Stats.CurrentMana > 0;
+                return Owner.Stats.CurrentMana >= Move.ManaCost;
+            }
+        }
+
         private readonly BitmapFont _moveFont;
         private readonly Texture2D? _backgroundSpriteSheet;
         public bool IsAnimating => _animState == AnimationState.Appearing;
@@ -47,9 +59,10 @@ namespace ProjectVagabond.Battle.UI
         private float _overlayFadeTimer;
         private const float OVERLAY_FADE_SPEED = 2.0f;
 
-        public MoveButton(MoveData move, MoveEntry entry, int displayPower, BitmapFont font, Texture2D? backgroundSpriteSheet, Texture2D iconTexture, Rectangle? iconSourceRect, bool startVisible = true)
+        public MoveButton(BattleCombatant owner, MoveData move, MoveEntry entry, int displayPower, BitmapFont font, Texture2D? backgroundSpriteSheet, Texture2D iconTexture, Rectangle? iconSourceRect, bool startVisible = true)
             : base(Rectangle.Empty, move.MoveName.ToUpper(), function: move.MoveID)
         {
+            Owner = owner;
             Move = move;
             Entry = entry;
             DisplayPower = displayPower;
@@ -129,20 +142,7 @@ namespace ProjectVagabond.Battle.UI
             if (_animState == AnimationState.Hidden) return;
 
             var pixel = ServiceLocator.Get<Texture2D>();
-            var player = ServiceLocator.Get<BattleManager>().AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
-
-            // --- MANA DUMP LOGIC ---
-            var manaDump = Move.Abilities.OfType<ManaDumpAbility>().FirstOrDefault();
-            bool canAfford;
-            if (manaDump != null)
-            {
-                canAfford = player != null && player.Stats.CurrentMana > 0;
-            }
-            else
-            {
-                canAfford = player != null && player.Stats.CurrentMana >= Move.ManaCost;
-            }
-
+            bool canAfford = CanAfford;
             bool isActivated = IsEnabled && (IsHovered || forceHover);
 
             // Update the animator state but ignore the offset result since we handle shifting manually
@@ -194,8 +194,7 @@ namespace ProjectVagabond.Battle.UI
             else
             {
                 finalTintColor = Color.White;
-                if (!IsEnabled) finalTintColor = _global.ButtonDisableColor * 0.5f;
-                else if (!canAfford) finalTintColor = _global.ButtonDisableColor * 0.5f;
+                if (!IsEnabled || !canAfford) finalTintColor = Color.White; // Keep white so alpha is 1.0
                 else if (_isPressed) finalTintColor = _global.Palette_Shadow;
                 else if (isActivated) finalTintColor = _global.ButtonHoverColor;
             }
@@ -226,11 +225,11 @@ namespace ProjectVagabond.Battle.UI
                     spriteBatch.DrawSnapped(_backgroundSpriteSheet, centerPos, null, finalTintColor, _currentHoverRotation, origin, new Vector2(finalScaleX, finalScaleY), SpriteEffects.None, 0f);
                 }
 
-                // --- TEXT COLOR LOGIC (Moved up to apply to Icon) ---
+                // --- TEXT COLOR LOGIC ---
                 Color textColor;
                 if (!IsEnabled || !canAfford)
                 {
-                    textColor = _global.ButtonDisableColor;
+                    textColor = _global.ButtonDisableColor; // Solid DarkShadow
                 }
                 else if (isActivated)
                 {
@@ -252,7 +251,7 @@ namespace ProjectVagabond.Battle.UI
 
                 // Icon Positioning Relative to Center
                 float iconLocalX = startX + (iconSize / 2f); // Center of icon
-                float iconLocalY = 0; // Centered
+                float iconLocalY = -1; // Moved up 1 pixel
 
                 Vector2 iconOffset = new Vector2(iconLocalX, iconLocalY);
                 Vector2 rotatedIconPos = centerPos + RotateOffset(iconOffset);
@@ -273,7 +272,7 @@ namespace ProjectVagabond.Battle.UI
 
                 // Text Position
                 float textLocalX = startX + iconSize + iconPadding; // Left edge of text
-                float textLocalY = 0; // Centered Y
+                float textLocalY = -1; // Moved up 1 pixel
 
                 // Check for scrolling (if text is wider than button minus icon)
                 // Button Width - Icon - Padding - Margins
@@ -311,7 +310,7 @@ namespace ProjectVagabond.Battle.UI
                     var clipRect = new Rectangle((int)textStartX, animatedBounds.Y, (int)textAvailableWidth, animatedBounds.Height);
                     spriteBatch.GraphicsDevice.ScissorRectangle = clipRect;
 
-                    var scrollingTextPosition = new Vector2(textStartX - _scrollPosition, animatedBounds.Y + (animatedBounds.Height - _moveFont.LineHeight) / 2f);
+                    var scrollingTextPosition = new Vector2(textStartX - _scrollPosition, animatedBounds.Y + (animatedBounds.Height - _moveFont.LineHeight) / 2f + textLocalY);
 
                     // Scrolling text doesn't wave to avoid visual chaos
                     spriteBatch.DrawStringSnapped(_moveFont, this.Text, scrollingTextPosition, textColor * contentAlpha);
@@ -354,11 +353,11 @@ namespace ProjectVagabond.Battle.UI
                 }
 
                 // --- Strikethrough Logic for Disabled State ---
-                if (!IsEnabled)
+                if (!IsEnabled || !canAfford)
                 {
                     // Rotate
-                    Vector2 lineStartLocal = new Vector2(textLocalX - 2, 0);
-                    Vector2 lineEndLocal = new Vector2(textLocalX + Math.Min(moveNameTextSize.Width, textAvailableWidth) + 2, 0);
+                    Vector2 lineStartLocal = new Vector2(textLocalX - 2, textLocalY);
+                    Vector2 lineEndLocal = new Vector2(textLocalX + Math.Min(moveNameTextSize.Width, textAvailableWidth) + 2, textLocalY);
 
                     Vector2 p1 = centerPos + RotateOffset(lineStartLocal);
                     Vector2 p2 = centerPos + RotateOffset(lineEndLocal);
@@ -374,7 +373,8 @@ namespace ProjectVagabond.Battle.UI
                         animatedBounds.Center.X - noManaSize.X / 2f,
                         animatedBounds.Center.Y - noManaSize.Y / 2f
                     );
-                    TextAnimator.DrawTextWithEffectSquareOutlined(spriteBatch, _moveFont, noManaText, noManaPos, _global.Palette_Rust * contentAlpha, Color.Black * contentAlpha, TextEffectType.None, 0f);
+                    // Draw with full opacity (no contentAlpha)
+                    TextAnimator.DrawTextWithEffectSquareOutlined(spriteBatch, _moveFont, noManaText, noManaPos, _global.Palette_Rust, Color.Black, TextEffectType.None, 0f);
                 }
             }
         }

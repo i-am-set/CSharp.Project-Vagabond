@@ -222,16 +222,21 @@ namespace ProjectVagabond.Battle.UI
                         iconRect = GetMoveIcon(move);
                     }
 
-                    var btn = new TextOverImageButton(Rectangle.Empty, label, null, font: secondaryFont, enableHoverSway: false, iconTexture: enabled ? icons : null, iconSourceRect: iconRect)
+                    // Use MoveButton for spells to handle mana checks and scrolling
+                    var btn = new MoveButton(
+                        Combatant, // Pass the owner
+                        moveData ?? new MoveData { MoveName = "---" }, // Dummy data if null
+                        entry ?? new MoveEntry(),
+                        moveData?.Power ?? 0,
+                        secondaryFont,
+                        null, // No background sprite (ActionMenu draws container)
+                        enabled ? icons : null,
+                        iconRect,
+                        true
+                    )
                     {
-                        CustomDefaultTextColor = enabled ? global.GameTextColor : global.Palette_DarkShadow,
-                        CustomHoverTextColor = global.ButtonHoverColor,
                         IsEnabled = enabled,
-                        AlignLeft = false, // Centered
-                        ContentXOffset = 0,
-                        IconColorMatchesText = true, // Icon matches text color
-                        TextRenderOffset = new Vector2(0, -1), // Move text up 1px
-                        IconRenderOffset = new Vector2(0, -1)  // Move icon up 1px
+                        // MoveButton handles its own text/icon rendering logic
                     };
 
                     var capturedMove = moveData;
@@ -241,16 +246,35 @@ namespace ProjectVagabond.Battle.UI
                     {
                         if (capturedMove != null)
                         {
-                            var action = new QueuedAction
+                            // Check Mana before firing
+                            bool canAfford = false;
+                            var manaDump = capturedMove.Abilities.OfType<ManaDumpAbility>().FirstOrDefault();
+                            if (manaDump != null)
                             {
-                                Actor = Combatant,
-                                ChosenMove = capturedMove,
-                                SpellbookEntry = capturedEntry,
-                                Type = QueuedActionType.Move,
-                                Priority = capturedMove.Priority,
-                                ActorAgility = Combatant.GetEffectiveAgility()
-                            };
-                            OnActionSelected?.Invoke(action);
+                                canAfford = Combatant.Stats.CurrentMana > 0;
+                            }
+                            else
+                            {
+                                canAfford = Combatant.Stats.CurrentMana >= capturedMove.ManaCost;
+                            }
+
+                            if (canAfford)
+                            {
+                                var action = new QueuedAction
+                                {
+                                    Actor = Combatant,
+                                    ChosenMove = capturedMove,
+                                    SpellbookEntry = capturedEntry,
+                                    Type = QueuedActionType.Move,
+                                    Priority = capturedMove.Priority,
+                                    ActorAgility = Combatant.GetEffectiveAgility()
+                                };
+                                OnActionSelected?.Invoke(action);
+                            }
+                            else
+                            {
+                                ServiceLocator.Get<HapticsManager>().TriggerShake(2f, 0.1f);
+                            }
                         }
                     };
                     _buttons.Add(btn);
@@ -441,8 +465,12 @@ namespace ProjectVagabond.Battle.UI
                         rect.Y += (int)offset.Y;
                         var visualRect = new Rectangle(rect.X, rect.Y, rect.Width, rect.Height - HITBOX_PADDING);
 
+                        // Check if it's a MoveButton and if it can afford the cost
+                        var moveBtn = btn as MoveButton;
+                        bool isEffectiveDisabled = !btn.IsEnabled || (moveBtn != null && !moveBtn.CanAfford);
+
                         Color bgColor;
-                        if (!btn.IsEnabled)
+                        if (isEffectiveDisabled)
                         {
                             bgColor = global.Palette_Black;
                         }

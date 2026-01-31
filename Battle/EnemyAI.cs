@@ -33,7 +33,18 @@ namespace ProjectVagabond.Battle
 
             if (!enemies.Any()) return CreateStallAction(actor);
 
-            var moves = actor.AvailableMoves.Where(m => actor.Stats.CurrentMana >= m.ManaCost).ToList();
+            // Filter moves based on Mana Cost and special conditions
+            var moves = actor.AvailableMoves.Where(m =>
+            {
+                // Basic Mana Check
+                if (actor.Stats.CurrentMana < m.ManaCost) return false;
+
+                // Mana Dump Check (Requires > 0 Mana to be useful)
+                if (m.Abilities.Any(a => a is ManaDumpAbility) && actor.Stats.CurrentMana <= 0) return false;
+
+                return true;
+            }).ToList();
+
             if (actor.HasStatusEffect(StatusEffectType.Silence))
             {
                 moves = moves.Where(m => m.MoveType != MoveType.Spell).ToList();
