@@ -6,6 +6,7 @@ using ProjectVagabond.Utils;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System;
 
 namespace ProjectVagabond.Battle.UI
 {
@@ -18,7 +19,7 @@ namespace ProjectVagabond.Battle.UI
         }
 
         private readonly List<LogEntry> _logs = new List<LogEntry>();
-        private const int MAX_LOGS = 10;
+        private const int MAX_LOGS = 30;
         private readonly Global _global;
         private readonly Core _core;
 
@@ -166,7 +167,7 @@ namespace ProjectVagabond.Battle.UI
             AddLog("ANOTHER ENEMY APPROACHES", logColor);
         }
 
-        public void Draw(SpriteBatch spriteBatch)
+        public void Draw(SpriteBatch spriteBatch, bool forceFullVisibility = false)
         {
             if (_logs.Count == 0) return;
 
@@ -190,20 +191,18 @@ namespace ProjectVagabond.Battle.UI
                 // --- FADE LOGIC ---
                 // Newest (i=0) is 1.0.
                 // Each subsequent line fades by iterationFadeAmount
-                // i=0 -> 1.0
-                // i=1 -> 1.0 - (1 * iterationFadeAmount)
-                // i=2 -> 1.0 - (2 * iterationFadeAmount)
-                // ...
-                // i=8 -> 1.0 - (8 * iterationFadeAmount)
-                // i=9 -> 1.0 - (9 * iterationFadeAmount)
-                float alpha = MathHelper.Clamp(1.0f - (i * iterationFadeAmount), 0f, 1f);
+                float alpha = 1.0f;
+                if (!forceFullVisibility)
+                {
+                    alpha = MathHelper.Clamp(1.0f - (i * iterationFadeAmount), 0f, 1f);
+                }
 
                 // Optimization: Stop drawing if invisible
                 if (alpha <= 0f) break;
 
                 // Draw with specific log color
                 // Using outline for readability over the map
-                spriteBatch.DrawStringOutlinedSnapped(font, log.Text, pos, log.Color * alpha, _global.Palette_Black * alpha);
+                spriteBatch.DrawStringSquareOutlinedSnapped(font, log.Text, pos, log.Color * alpha, _global.Palette_Black * alpha);
             }
         }
     }

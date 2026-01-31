@@ -112,8 +112,7 @@ namespace ProjectVagabond.Scenes
         private bool _victorySequenceTriggered = false;
         private bool _floorTransitionTriggered = false;
         private bool _didFlee = false;
-
-        private static readonly Regex _randomWordRegex = new Regex(@"\b[\w\-\']+(?:\$[\w\-\']+)+\b", RegexOptions.Compiled);
+        private bool _isBattleLogHovered = false;
 
         public BattleAnimationManager AnimationManager => _animationManager;
 
@@ -178,6 +177,7 @@ namespace ProjectVagabond.Scenes
             _victorySequenceTriggered = false;
             _floorTransitionTriggered = false;
             _didFlee = false;
+            _isBattleLogHovered = false;
 
             SubscribeToEvents();
             InitializeSettingsButton();
@@ -428,6 +428,11 @@ namespace ProjectVagabond.Scenes
 
             var currentKeyboardState = Keyboard.GetState();
             var currentMouseState = Mouse.GetState();
+
+            // --- Battle Log Hover Check ---
+            var mousePos = Core.TransformMouse(currentMouseState.Position);
+            var logHoverRect = new Rectangle(Global.VIRTUAL_WIDTH - 64, 0, 64, 64);
+            _isBattleLogHovered = logHoverRect.Contains(mousePos);
 
             if (_battleManager.CurrentPhase == BattleManager.BattlePhase.BattleStartIntro)
             {
@@ -840,7 +845,11 @@ namespace ProjectVagabond.Scenes
 
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
 
-            _battleLogManager.Draw(spriteBatch);
+            // Draw Battle Log (Background Layer)
+            if (!_isBattleLogHovered)
+            {
+                _battleLogManager.Draw(spriteBatch, false);
+            }
 
             if (_roundAnimState != RoundAnimState.Hidden)
             {
@@ -910,6 +919,12 @@ namespace ProjectVagabond.Scenes
                 _uiManager.Draw(spriteBatch, font, gameTime, transform);
                 _animationManager.DrawDamageIndicators(spriteBatch, ServiceLocator.Get<Core>().SecondaryFont);
                 _animationManager.DrawAbilityIndicators(spriteBatch, ServiceLocator.Get<Core>().SecondaryFont);
+            }
+
+            // Draw Battle Log (Foreground Layer - if hovered)
+            if (_isBattleLogHovered)
+            {
+                _battleLogManager.Draw(spriteBatch, true);
             }
         }
 

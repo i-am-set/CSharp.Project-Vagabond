@@ -181,31 +181,15 @@ namespace ProjectVagabond.Battle.UI
         {
             var battleManager = ServiceLocator.Get<BattleManager>();
 
-            if (action.ChosenMove != null && action.ChosenMove.Target != TargetType.None && action.ChosenMove.Target != TargetType.Self && action.ChosenMove.Target != TargetType.All && action.ChosenMove.Target != TargetType.RandomAll)
+            if (action.ChosenMove != null && action.ChosenMove.Target != TargetType.None)
             {
-                var validTargets = TargetingHelper.GetValidTargets(action.Actor, action.ChosenMove.Target, battleManager.AllCombatants);
-                bool autoSelect = action.ChosenMove.Target == TargetType.Self ||
-                                  action.ChosenMove.Target == TargetType.All ||
-                                  action.ChosenMove.Target == TargetType.RandomAll ||
-                                  action.ChosenMove.Target == TargetType.Team ||
-                                  action.ChosenMove.Target == TargetType.RandomBoth ||
-                                  action.ChosenMove.Target == TargetType.RandomEvery;
+                MoveForTargeting = action.ChosenMove;
+                SpellForTargeting = action.SpellbookEntry;
+                ActiveTargetingSlot = slotIndex;
+                UIState = BattleUIState.Targeting;
 
-                if (autoSelect)
-                {
-                    action.Target = validTargets.FirstOrDefault();
-                    battleManager.SubmitAction(slotIndex, action);
-                }
-                else
-                {
-                    MoveForTargeting = action.ChosenMove;
-                    SpellForTargeting = action.SpellbookEntry;
-                    ActiveTargetingSlot = slotIndex;
-                    UIState = BattleUIState.Targeting;
-
-                    // Ensure switch menu is closed if we start targeting
-                    _switchMenu.Hide();
-                }
+                // Ensure switch menu is closed if we start targeting
+                _switchMenu.Hide();
             }
             else
             {
