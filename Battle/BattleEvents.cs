@@ -70,6 +70,10 @@ namespace ProjectVagabond.Battle
         public float FlatBonus { get; set; } = 0f;
         public int FinalDamage { get; set; }
 
+        // Flags set by abilities
+        public bool WasProtected { get; set; }
+        public bool WasVulnerable { get; set; }
+
         public CalculateDamageEvent(BattleCombatant actor, BattleCombatant target, MoveData move, float baseDamage, bool isCritical, bool isGraze)
         {
             Actor = actor;
@@ -105,8 +109,6 @@ namespace ProjectVagabond.Battle
         public BattleCombatant Actor { get; }
         public BattleCombatant Target { get; }
         public QueuedAction TriggeringAction { get; }
-
-        // Added to allow abilities to react to the outcome (Crit/Graze/Damage)
         public DamageCalculator.DamageResult Result { get; }
 
         public ReactionEvent(BattleCombatant actor, BattleCombatant target, QueuedAction triggeringAction, DamageCalculator.DamageResult result)

@@ -81,6 +81,9 @@ namespace ProjectVagabond.Battle
         private readonly Global _global;
         private readonly StringBuilder _roundLog = new StringBuilder();
 
+        // Context for Ability System
+        private readonly BattleContext _battleContext;
+
         public BattleManager(List<BattleCombatant> playerParty, List<BattleCombatant> enemyParty, BattleAnimationManager animationManager)
         {
             _playerParty = playerParty;
@@ -102,6 +105,9 @@ namespace ProjectVagabond.Battle
             _animationManager = animationManager;
             _global = ServiceLocator.Get<Global>();
 
+            // Initialize reusable context
+            _battleContext = new BattleContext();
+
             EventBus.Subscribe<GameEvents.SecondaryEffectComplete>(OnSecondaryEffectComplete);
             EventBus.Subscribe<GameEvents.MoveAnimationCompleted>(OnMoveAnimationCompleted);
             EventBus.Subscribe<GameEvents.MoveImpactOccurred>(OnMoveImpactOccurred);
@@ -109,9 +115,14 @@ namespace ProjectVagabond.Battle
 
             // Notify Battle Start
             var battleStartEvent = new BattleStartedEvent(_allCombatants);
+
+            // Configure context for Battle Start (Global event)
+            _battleContext.ResetMultipliers();
+
             foreach (var combatant in _cachedAllActive)
             {
-                combatant.NotifyAbilities(battleStartEvent);
+                _battleContext.Actor = combatant;
+                combatant.NotifyAbilities(battleStartEvent, _battleContext);
             }
         }
 
@@ -210,7 +221,6 @@ namespace ProjectVagabond.Battle
                     if (_lastDefeatedNames.TryGetValue(key, out string deadName)) { msg = $"{reinforcement.Name} takes {deadName}'s place!"; _lastDefeatedNames.Remove(key); }
                     EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = msg });
                     EventBus.Publish(new GameEvents.CombatantSpawned { Combatant = reinforcement });
-                    // Handle OnEnter
                     _waitingForReinforcementSelection = false;
                     _reinforcementAnnounced = false;
                     _reinforcementSlotIndex++;
@@ -239,7 +249,6 @@ namespace ProjectVagabond.Battle
             incomingMember.HasUsedFirstAttack = false;
             RefreshCombatantCaches();
             foreach (var action in _actionQueue) if (action.Target == actor) action.Target = incomingMember;
-            // Handle OnEnter
         }
 
         public void ResumeAfterSwitch()
@@ -269,7 +278,7 @@ namespace ProjectVagabond.Battle
             foreach (var player in _cachedActivePlayers)
             {
                 // Check if player can act (not charging, not stunned/dazed via tags)
-                if (player.ChargingAction == null && !player.Tags.Has("State.Stunned") && !player.Tags.Has("State.Dazed"))
+                if (player.ChargingAction == null && !player.Tags.Has(GameplayTags.States.Stunned) && !player.Tags.Has(GameplayTags.States.Dazed))
                 {
                     activePlayerCount++;
                 }
@@ -289,7 +298,7 @@ namespace ProjectVagabond.Battle
 
             foreach (var enemy in _cachedActiveEnemies)
             {
-                if (enemy.ChargingAction != null || enemy.Tags.Has("State.Stunned") || enemy.Tags.Has("State.Dazed")) continue;
+                if (enemy.ChargingAction != null || enemy.Tags.Has(GameplayTags.States.Stunned) || enemy.Tags.Has(GameplayTags.States.Dazed)) continue;
                 var action = EnemyAI.DetermineBestAction(enemy, _allCombatants);
                 _actionQueue.Add(action);
             }
@@ -355,14 +364,19 @@ namespace ProjectVagabond.Battle
             var startOfTurnActions = new List<QueuedAction>();
             foreach (var combatant in _cachedAllActive)
             {
+                // Configure Context
+                _battleContext.ResetMultipliers();
+                _battleContext.Actor = combatant;
+                _battleContext.Target = null;
+                _battleContext.Move = null;
+
                 // Publish TurnStartEvent
                 var turnEvent = new TurnStartEvent(combatant);
-                combatant.NotifyAbilities(turnEvent);
+                combatant.NotifyAbilities(turnEvent, _battleContext);
 
                 // Check if turn is skipped (e.g. StunLogicAbility sets IsHandled = true)
-                if (turnEvent.IsHandled || combatant.Tags.Has("State.Stunned"))
+                if (turnEvent.IsHandled || combatant.Tags.Has(GameplayTags.States.Stunned))
                 {
-                    // Skip turn logic
                     continue;
                 }
 
@@ -383,7 +397,7 @@ namespace ProjectVagabond.Battle
             _actionQueue.InsertRange(0, startOfTurnActions);
 
             // Check if any players can act
-            bool anyPlayerCanAct = _cachedActivePlayers.Any(p => p.ChargingAction == null && !p.Tags.Has("State.Stunned") && !p.Tags.Has("State.Dazed"));
+            bool anyPlayerCanAct = _cachedActivePlayers.Any(p => p.ChargingAction == null && !p.Tags.Has(GameplayTags.States.Stunned) && !p.Tags.Has(GameplayTags.States.Dazed));
 
             if (anyPlayerCanAct) _currentPhase = BattlePhase.ActionSelection;
             else FinalizeTurnSelection();
@@ -428,9 +442,9 @@ namespace ProjectVagabond.Battle
 
             if (nextAction.Type == QueuedActionType.Charging) { AppendToLog($"{nextAction.Actor.Name} IS CHARGING [cAction]{nextAction.ChosenMove.MoveName}[/]."); HandleActionResolution(); return; }
 
-            // Check tags for Stun/Daze
-            if (nextAction.Actor.Tags.Has("State.Stunned")) { AppendToLog($"{nextAction.Actor.Name} IS STUNNED!"); HandleActionResolution(); return; }
-            if (nextAction.Actor.Tags.Has("State.Dazed")) { AppendToLog($"{nextAction.Actor.Name} IS DAZED!"); HandleActionResolution(); return; }
+            // Check tags for Stun/Daze (Redundant check, but safe)
+            if (nextAction.Actor.Tags.Has(GameplayTags.States.Stunned)) { AppendToLog($"{nextAction.Actor.Name} IS STUNNED!"); HandleActionResolution(); return; }
+            if (nextAction.Actor.Tags.Has(GameplayTags.States.Dazed)) { AppendToLog($"{nextAction.Actor.Name} IS DAZED!"); HandleActionResolution(); return; }
 
             _actionToExecute = nextAction;
             CurrentActingCombatant = nextAction.Actor;
@@ -442,8 +456,15 @@ namespace ProjectVagabond.Battle
             // Publish ActionDeclaredEvent
             if (_actionToExecute.ChosenMove != null)
             {
+                // Configure Context
+                _battleContext.ResetMultipliers();
+                _battleContext.Actor = _actionToExecute.Actor;
+                _battleContext.Target = _actionToExecute.Target;
+                _battleContext.Move = _actionToExecute.ChosenMove;
+                _battleContext.Action = _actionToExecute;
+
                 var declEvent = new ActionDeclaredEvent(_actionToExecute.Actor, _actionToExecute.ChosenMove, _actionToExecute.Target);
-                _actionToExecute.Actor.NotifyAbilities(declEvent);
+                _actionToExecute.Actor.NotifyAbilities(declEvent, _battleContext);
 
                 if (declEvent.IsHandled)
                 {
@@ -501,19 +522,9 @@ namespace ProjectVagabond.Battle
 
         private void ProcessMoveAction(QueuedAction action)
         {
-            // Re-check for Silence/Provoke via tags just in case
-            if (action.ChosenMove.MoveType == MoveType.Spell && action.Actor.Tags.Has("State.Silenced"))
-            {
-                AppendToCurrentLine(" SILENCED!");
-                EventBus.Publish(new GameEvents.ActionFailed { Actor = action.Actor, Reason = "silenced" });
-                CanAdvance = false;
-                _currentPhase = BattlePhase.CheckForDefeat;
-                return;
-            }
-
             // --- Resource Cost Logic ---
             int finalCost = action.ChosenMove.ManaCost;
-            if (action.ChosenMove.Tags.Has("Effect.ManaDump"))
+            if (action.ChosenMove.Tags.Has(GameplayTags.Effects.ManaDump))
             {
                 finalCost = action.Actor.Stats.CurrentMana;
             }
@@ -556,9 +567,17 @@ namespace ProjectVagabond.Battle
                 float multiTargetModifier = (targetsForThisHit.Count > 1) ? BattleConstants.MULTI_TARGET_MODIFIER : 1.0f;
                 var grazeStatus = new Dictionary<BattleCombatant, bool>();
 
+                // Configure Context for Damage Calculation
+                _battleContext.ResetMultipliers();
+                _battleContext.Actor = action.Actor;
+                _battleContext.Move = action.ChosenMove;
+                _battleContext.Action = action;
+
                 foreach (var target in targetsForThisHit)
                 {
-                    var result = DamageCalculator.CalculateDamage(action, target, action.ChosenMove, multiTargetModifier);
+                    _battleContext.Target = target;
+                    // Pass context to calculator
+                    var result = DamageCalculator.CalculateDamage(action, target, action.ChosenMove, multiTargetModifier, null, false, _battleContext);
                     damageResultsForThisHit.Add(result);
                     grazeStatus[target] = result.WasGraze;
                 }
@@ -579,7 +598,7 @@ namespace ProjectVagabond.Battle
                 var protectedTargets = new List<BattleCombatant>();
                 foreach (var target in targetsForThisHit)
                 {
-                    if (target.Tags.Has("State.Protected")) protectedTargets.Add(target);
+                    if (target.Tags.Has(GameplayTags.States.Protected)) protectedTargets.Add(target);
                     else normalTargets.Add(target);
                 }
 
@@ -621,10 +640,17 @@ namespace ProjectVagabond.Battle
             var results = _pendingImpact.Results;
             var significantTargetIds = new List<string>();
 
+            // Configure Context
+            _battleContext.ResetMultipliers();
+            _battleContext.Actor = action.Actor;
+            _battleContext.Move = action.ChosenMove;
+            _battleContext.Action = action;
+
             for (int i = 0; i < targets.Count; i++)
             {
                 var target = targets[i];
                 var result = results[i];
+                _battleContext.Target = target;
 
                 if (result.WasProtected)
                 {
@@ -647,11 +673,10 @@ namespace ProjectVagabond.Battle
                 if (result.WasVulnerable) AppendToCurrentLine(" [cVulnerable]VULNERABLE![/]");
 
                 // Fire ReactionEvent for OnHit/OnDamaged logic
-                // UPDATED: Passing 'result' to the event
                 var reactionEvt = new ReactionEvent(action.Actor, target, action, result);
-                action.Actor.NotifyAbilities(reactionEvt);
-                target.NotifyAbilities(reactionEvt);
-                foreach (var ab in action.ChosenMove.Abilities) ab.OnEvent(reactionEvt);
+                action.Actor.NotifyAbilities(reactionEvt, _battleContext);
+                target.NotifyAbilities(reactionEvt, _battleContext);
+                foreach (var ab in action.ChosenMove.Abilities) ab.OnEvent(reactionEvt, _battleContext);
 
                 SecondaryEffectSystem.ProcessPrimaryEffects(action, target);
             }
@@ -779,16 +804,22 @@ namespace ProjectVagabond.Battle
             _endOfTurnEffectsProcessed = true;
             foreach (var combatant in _cachedAllActive)
             {
+                // Configure Context
+                _battleContext.ResetMultipliers();
+                _battleContext.Actor = combatant;
+                _battleContext.Target = null;
+                _battleContext.Move = null;
+
                 // Publish TurnEndEvent
                 var turnEnd = new TurnEndEvent(combatant);
-                combatant.NotifyAbilities(turnEnd);
+                combatant.NotifyAbilities(turnEnd, _battleContext);
 
                 if (!combatant.UsedProtectThisTurn) combatant.ConsecutiveProtectUses = 0;
                 combatant.UsedProtectThisTurn = false;
 
                 // Clear turn-based tags
-                combatant.Tags.Remove("State.Dazed");
-                combatant.Tags.Remove("State.Stunned");
+                combatant.Tags.Remove(GameplayTags.States.Dazed);
+                combatant.Tags.Remove(GameplayTags.States.Stunned);
 
                 var effectsToRemove = new List<StatusEffectInstance>();
                 foreach (var effect in combatant.ActiveStatusEffects)
@@ -851,7 +882,6 @@ namespace ProjectVagabond.Battle
                         if (_lastDefeatedNames.TryGetValue(key, out string deadName)) { msg = $"{reinforcement.Name} takes {deadName}'s place!"; _lastDefeatedNames.Remove(key); }
                         EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = msg });
                         EventBus.Publish(new GameEvents.CombatantSpawned { Combatant = reinforcement });
-                        // Handle OnEnter
                         _reinforcementAnnounced = false;
                         _reinforcementSlotIndex++;
                         CanAdvance = false;

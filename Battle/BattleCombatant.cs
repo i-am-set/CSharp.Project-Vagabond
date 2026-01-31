@@ -109,6 +109,9 @@ namespace ProjectVagabond.Battle
         public const float BAR_VARIANCE_MAX = 0.5f;
         public float CurrentBarVariance { get; set; } = 0f;
 
+        // Cached context for stat calculations to avoid allocations
+        private readonly BattleContext _statContext = new BattleContext();
+
         public BattleCombatant()
         {
             StatStages = new Dictionary<OffensiveStatType, int>
@@ -118,6 +121,9 @@ namespace ProjectVagabond.Battle
                 { OffensiveStatType.Tenacity, 0 },
                 { OffensiveStatType.Agility, 0 }
             };
+
+            // Register Standard Rules by default
+            RegisterAbility(new StandardRulesAbility());
         }
 
         public void RegisterAbility(IAbility ability)
@@ -136,12 +142,12 @@ namespace ProjectVagabond.Battle
             Abilities.Sort((a, b) => b.Priority.CompareTo(a.Priority));
         }
 
-        public void NotifyAbilities(GameEvent e)
+        public void NotifyAbilities(GameEvent e, BattleContext context)
         {
-            // 1. Intrinsic Abilities
+            // 1. Intrinsic Abilities (including StandardRulesAbility)
             foreach (var ability in Abilities)
             {
-                ability.OnEvent(e);
+                ability.OnEvent(e, context);
                 if (e.IsHandled) return;
             }
 
@@ -149,7 +155,7 @@ namespace ProjectVagabond.Battle
             // Iterate backwards in case status effects remove themselves during processing
             for (int i = ActiveStatusEffects.Count - 1; i >= 0; i--)
             {
-                ActiveStatusEffects[i].OnEvent(e);
+                ActiveStatusEffects[i].OnEvent(e, context);
                 if (e.IsHandled) return;
             }
         }
@@ -170,16 +176,14 @@ namespace ProjectVagabond.Battle
 
         public bool AddStatusEffect(StatusEffectInstance newEffect)
         {
-            // Note: Immunity checks should now be handled by the system triggering this, 
-            // or by a "CanApplyStatusEvent" if implemented. 
-            // For now, we assume the check happens before calling this or via the StatusAppliedEvent.
-
             bool hadEffectBefore = HasStatusEffect(newEffect.EffectType);
             ActiveStatusEffects.RemoveAll(e => e.EffectType == newEffect.EffectType);
             ActiveStatusEffects.Add(newEffect);
 
             // Notify that status was applied
-            NotifyAbilities(new StatusAppliedEvent(this, newEffect));
+            // We use a temporary context here as this is often a result of an event, but can happen independently
+            var context = new BattleContext { Actor = this, Target = this };
+            NotifyAbilities(new StatusAppliedEvent(this, newEffect), context);
 
             return !hadEffectBefore;
         }
@@ -188,10 +192,6 @@ namespace ProjectVagabond.Battle
 
         public (bool success, string message) ModifyStatStage(OffensiveStatType stat, int amount)
         {
-            // Note: Blocking logic (e.g. Scrappy) should now be handled via a specific event 
-            // before calling this, or we need a "StatChangeAttemptEvent".
-            // For this refactor step, we proceed with the modification.
-
             int currentStage = StatStages[stat];
             if (amount > 0 && currentStage >= 6) return (false, $"{Name}'s {stat} won't go any higher!");
             if (amount < 0 && currentStage <= -6) return (false, $"{Name}'s {stat} won't go any lower!");
@@ -205,36 +205,42 @@ namespace ProjectVagabond.Battle
 
         public int GetEffectiveStrength()
         {
+            _statContext.ResetMultipliers();
+            _statContext.Actor = this;
             var evt = new CalculateStatEvent(this, OffensiveStatType.Strength, Stats.Strength);
-            NotifyAbilities(evt);
+            NotifyAbilities(evt, _statContext);
             float stat = evt.FinalValue * BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Strength]];
             return (int)Math.Round(stat);
         }
 
         public int GetEffectiveIntelligence()
         {
+            _statContext.ResetMultipliers();
+            _statContext.Actor = this;
             var evt = new CalculateStatEvent(this, OffensiveStatType.Intelligence, Stats.Intelligence);
-            NotifyAbilities(evt);
+            NotifyAbilities(evt, _statContext);
             float stat = evt.FinalValue * BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Intelligence]];
             return (int)Math.Round(stat);
         }
 
         public int GetEffectiveTenacity()
         {
+            _statContext.ResetMultipliers();
+            _statContext.Actor = this;
             var evt = new CalculateStatEvent(this, OffensiveStatType.Tenacity, Stats.Tenacity);
-            NotifyAbilities(evt);
+            NotifyAbilities(evt, _statContext);
             float stat = evt.FinalValue * BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Tenacity]];
             return (int)Math.Round(stat);
         }
 
         public int GetEffectiveAgility()
         {
+            _statContext.ResetMultipliers();
+            _statContext.Actor = this;
             var evt = new CalculateStatEvent(this, OffensiveStatType.Agility, Stats.Agility);
-            NotifyAbilities(evt);
+            NotifyAbilities(evt, _statContext);
             float stat = evt.FinalValue * BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Agility]];
 
-            // Frostbite logic should ideally be moved to an ability/event handler, 
-            // but keeping here for parity if not migrated yet.
             if (HasStatusEffect(StatusEffectType.Frostbite)) stat *= Global.Instance.FrostbiteAgilityMultiplier;
 
             return (int)Math.Round(stat);
@@ -242,8 +248,6 @@ namespace ProjectVagabond.Battle
 
         public int GetEffectiveAccuracy(int baseAccuracy)
         {
-            // Note: This is a simplified check. Full accuracy logic usually involves target evasion.
-            // This method might be deprecated in favor of CheckHitChanceEvent in the DamageCalculator.
             return baseAccuracy;
         }
     }

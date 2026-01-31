@@ -18,7 +18,7 @@ namespace ProjectVagabond.Battle.Abilities
             _status = status;
         }
 
-        public void OnEvent(GameEvent e)
+        public void OnEvent(GameEvent e, BattleContext context)
         {
             if (e is TurnEndEvent turnEnd && turnEnd.Actor.ActiveStatusEffects.Contains(_status))
             {
@@ -53,7 +53,7 @@ namespace ProjectVagabond.Battle.Abilities
             _status = status;
         }
 
-        public void OnEvent(GameEvent e)
+        public void OnEvent(GameEvent e, BattleContext context)
         {
             if (e is TurnEndEvent turnEnd && turnEnd.Actor.ActiveStatusEffects.Contains(_status))
             {
@@ -86,11 +86,11 @@ namespace ProjectVagabond.Battle.Abilities
         private readonly StatusEffectInstance _status;
         public StunLogicAbility(StatusEffectInstance status) { _status = status; }
 
-        public void OnEvent(GameEvent e)
+        public void OnEvent(GameEvent e, BattleContext context)
         {
             if (e is TurnStartEvent turnStart && turnStart.Actor.ActiveStatusEffects.Contains(_status))
             {
-                turnStart.Actor.Tags.Add("State.Stunned");
+                turnStart.Actor.Tags.Add(GameplayTags.States.Stunned);
                 e.IsHandled = true;
                 EventBus.Publish(new GameEvents.ActionFailed { Actor = turnStart.Actor, Reason = "stunned" });
             }
@@ -106,9 +106,8 @@ namespace ProjectVagabond.Battle.Abilities
         private readonly StatusEffectInstance _status;
         public BurnLogicAbility(StatusEffectInstance status) { _status = status; }
 
-        public void OnEvent(GameEvent e)
+        public void OnEvent(GameEvent e, BattleContext context)
         {
-            // Only apply if the TARGET has this status
             if (e is CalculateDamageEvent dmgEvent && dmgEvent.Target.ActiveStatusEffects.Contains(_status))
             {
                 var global = ServiceLocator.Get<Global>();
@@ -126,7 +125,7 @@ namespace ProjectVagabond.Battle.Abilities
         private readonly StatusEffectInstance _status;
         public ProvokeLogicAbility(StatusEffectInstance status) { _status = status; }
 
-        public void OnEvent(GameEvent e)
+        public void OnEvent(GameEvent e, BattleContext context)
         {
             if (e is ActionDeclaredEvent actionEvent && actionEvent.Actor.ActiveStatusEffects.Contains(_status))
             {
@@ -153,7 +152,7 @@ namespace ProjectVagabond.Battle.Abilities
         private readonly StatusEffectInstance _status;
         public SilenceLogicAbility(StatusEffectInstance status) { _status = status; }
 
-        public void OnEvent(GameEvent e)
+        public void OnEvent(GameEvent e, BattleContext context)
         {
             if (e is ActionDeclaredEvent actionEvent && actionEvent.Actor.ActiveStatusEffects.Contains(_status))
             {
@@ -180,7 +179,7 @@ namespace ProjectVagabond.Battle.Abilities
         private readonly StatusEffectInstance _status;
         public FrostbiteLogicAbility(StatusEffectInstance status) { _status = status; }
 
-        public void OnEvent(GameEvent e)
+        public void OnEvent(GameEvent e, BattleContext context)
         {
             if (e is CalculateStatEvent statEvent && statEvent.StatType == OffensiveStatType.Agility && statEvent.Actor.ActiveStatusEffects.Contains(_status))
             {
@@ -199,9 +198,8 @@ namespace ProjectVagabond.Battle.Abilities
         private readonly StatusEffectInstance _status;
         public DodgingLogicAbility(StatusEffectInstance status) { _status = status; }
 
-        public void OnEvent(GameEvent e)
+        public void OnEvent(GameEvent e, BattleContext context)
         {
-            // Apply if TARGET has status
             if (e is CheckHitChanceEvent hitEvent && hitEvent.Target.ActiveStatusEffects.Contains(_status))
             {
                 var global = ServiceLocator.Get<Global>();
@@ -219,9 +217,8 @@ namespace ProjectVagabond.Battle.Abilities
         private readonly StatusEffectInstance _status;
         public EmpoweredLogicAbility(StatusEffectInstance status) { _status = status; }
 
-        public void OnEvent(GameEvent e)
+        public void OnEvent(GameEvent e, BattleContext context)
         {
-            // Apply if ACTOR has status
             if (e is CalculateDamageEvent dmgEvent && dmgEvent.Actor.ActiveStatusEffects.Contains(_status))
             {
                 var global = ServiceLocator.Get<Global>();
@@ -239,14 +236,13 @@ namespace ProjectVagabond.Battle.Abilities
         private readonly StatusEffectInstance _status;
         public ProtectedLogicAbility(StatusEffectInstance status) { _status = status; }
 
-        public void OnEvent(GameEvent e)
+        public void OnEvent(GameEvent e, BattleContext context)
         {
-            // Apply if TARGET has status
             if (e is CalculateDamageEvent dmgEvent && dmgEvent.Target.ActiveStatusEffects.Contains(_status))
             {
-                // Add tag for UI/Logic
-                dmgEvent.Target.Tags.Add("State.Protected");
+                dmgEvent.Target.Tags.Add(GameplayTags.States.Protected);
                 dmgEvent.DamageMultiplier = 0f;
+                dmgEvent.WasProtected = true;
             }
         }
     }

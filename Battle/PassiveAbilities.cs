@@ -12,14 +12,13 @@ namespace ProjectVagabond.Battle.Abilities
         public int Priority => 0;
         private const float DAMAGE_MULTIPLIER = 1.2f;
 
-        public void OnEvent(GameEvent e)
+        public void OnEvent(GameEvent e, BattleContext context)
         {
             if (e is CalculateDamageEvent dmgEvent && dmgEvent.Actor.Abilities.Contains(this))
             {
                 if (dmgEvent.Move.MoveType == MoveType.Spell)
                 {
                     dmgEvent.DamageMultiplier *= DAMAGE_MULTIPLIER;
-                    // Added visual feedback
                     EventBus.Publish(new GameEvents.AbilityActivated { Combatant = dmgEvent.Actor, Ability = this });
                 }
             }
@@ -32,7 +31,7 @@ namespace ProjectVagabond.Battle.Abilities
         public string Description => "Status moves have +1 priority.";
         public int Priority => 0;
 
-        public void OnEvent(GameEvent e)
+        public void OnEvent(GameEvent e, BattleContext context)
         {
             // Placeholder: Priority modification logic would go here if ActionDeclaredEvent supported it.
         }
@@ -44,7 +43,7 @@ namespace ProjectVagabond.Battle.Abilities
         public string Description => "Immune to Strength drops, Stun, and Daze.";
         public int Priority => 0;
 
-        public void OnEvent(GameEvent e)
+        public void OnEvent(GameEvent e, BattleContext context)
         {
             if (e is StatusAppliedEvent statusEvent && statusEvent.Target.Abilities.Contains(this))
             {
@@ -63,7 +62,7 @@ namespace ProjectVagabond.Battle.Abilities
         public string Description => "Maxes Strength when hit by a critical hit.";
         public int Priority => 0;
 
-        public void OnEvent(GameEvent e)
+        public void OnEvent(GameEvent e, BattleContext context)
         {
             if (e is CalculateDamageEvent dmgEvent && dmgEvent.Target.Abilities.Contains(this))
             {
@@ -83,7 +82,7 @@ namespace ProjectVagabond.Battle.Abilities
         public string Description => "Lowers enemy Strength on entry.";
         public int Priority => 0;
 
-        public void OnEvent(GameEvent e)
+        public void OnEvent(GameEvent e, BattleContext context)
         {
             if (e is BattleStartedEvent battleEvent)
             {
@@ -109,7 +108,7 @@ namespace ProjectVagabond.Battle.Abilities
         public string Description => "Takes half damage from Spells.";
         public int Priority => 0;
 
-        public void OnEvent(GameEvent e)
+        public void OnEvent(GameEvent e, BattleContext context)
         {
             if (e is CalculateDamageEvent dmgEvent && dmgEvent.Target.Abilities.Contains(this))
             {
@@ -128,7 +127,7 @@ namespace ProjectVagabond.Battle.Abilities
         public string Description => "Survive lethal damage if at full HP.";
         public int Priority => 0;
 
-        public void OnEvent(GameEvent e)
+        public void OnEvent(GameEvent e, BattleContext context)
         {
             if (e is CalculateDamageEvent dmgEvent && dmgEvent.Target.Abilities.Contains(this))
             {
@@ -151,7 +150,7 @@ namespace ProjectVagabond.Battle.Abilities
         public string Description => "Boosts moves with 60 or less Power by 1.5x.";
         public int Priority => 0;
 
-        public void OnEvent(GameEvent e)
+        public void OnEvent(GameEvent e, BattleContext context)
         {
             if (e is CalculateDamageEvent dmgEvent && dmgEvent.Actor.Abilities.Contains(this))
             {
@@ -170,7 +169,7 @@ namespace ProjectVagabond.Battle.Abilities
         public string Description => "Halves damage taken when at full HP.";
         public int Priority => 0;
 
-        public void OnEvent(GameEvent e)
+        public void OnEvent(GameEvent e, BattleContext context)
         {
             if (e is CalculateDamageEvent dmgEvent && dmgEvent.Target.Abilities.Contains(this))
             {
@@ -189,7 +188,7 @@ namespace ProjectVagabond.Battle.Abilities
         public string Description => "Boosts Strength by 1.5x.";
         public int Priority => 0;
 
-        public void OnEvent(GameEvent e)
+        public void OnEvent(GameEvent e, BattleContext context)
         {
             if (e is CalculateStatEvent statEvent && statEvent.Actor.Abilities.Contains(this))
             {

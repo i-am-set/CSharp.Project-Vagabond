@@ -56,6 +56,9 @@ namespace ProjectVagabond.Battle
 
             if (!moves.Any()) return CreateStallAction(actor);
 
+            // Create a context for simulation
+            var context = new BattleContext();
+
             var bestDamagePerTarget = new Dictionary<string, int>();
             foreach (var enemy in enemies)
             {
@@ -63,7 +66,16 @@ namespace ProjectVagabond.Battle
                 foreach (var move in moves.Where(m => m.Power > 0))
                 {
                     var dummyAction = new QueuedAction { Actor = actor, ChosenMove = move, Target = enemy };
-                    var result = DamageCalculator.CalculateDamage(dummyAction, enemy, move, isSimulation: true);
+
+                    // Configure context for simulation
+                    context.ResetMultipliers();
+                    context.Actor = actor;
+                    context.Target = enemy;
+                    context.Move = move;
+                    context.Action = dummyAction;
+                    context.IsSimulation = true;
+
+                    var result = DamageCalculator.CalculateDamage(dummyAction, enemy, move, 1.0f, null, true, context);
                     if (result.DamageAmount > maxDmg) maxDmg = result.DamageAmount;
                 }
                 bestDamagePerTarget[enemy.CombatantID] = maxDmg;
@@ -77,13 +89,13 @@ namespace ProjectVagabond.Battle
                 {
                     foreach (var target in validTargets)
                     {
-                        int score = EvaluateAction(actor, move, new List<BattleCombatant> { target }, enemies, allies, bestDamagePerTarget);
+                        int score = EvaluateAction(actor, move, new List<BattleCombatant> { target }, enemies, allies, bestDamagePerTarget, context);
                         possibleActions.Add((CreateAction(actor, move, target), score));
                     }
                 }
                 else
                 {
-                    int score = EvaluateAction(actor, move, validTargets, enemies, allies, bestDamagePerTarget);
+                    int score = EvaluateAction(actor, move, validTargets, enemies, allies, bestDamagePerTarget, context);
                     possibleActions.Add((CreateAction(actor, move, validTargets.FirstOrDefault()), score));
                 }
             }
@@ -104,7 +116,8 @@ namespace ProjectVagabond.Battle
             List<BattleCombatant> targets,
             List<BattleCombatant> enemies,
             List<BattleCombatant> allies,
-            Dictionary<string, int> bestDamagePerTarget)
+            Dictionary<string, int> bestDamagePerTarget,
+            BattleContext context)
         {
             int totalScore = 0;
             bool isDamagingMove = move.Power > 0;
@@ -119,7 +132,16 @@ namespace ProjectVagabond.Battle
                 if (isDamagingMove)
                 {
                     var dummyAction = new QueuedAction { Actor = actor, ChosenMove = move, Target = target };
-                    var result = DamageCalculator.CalculateDamage(dummyAction, target, move, isSimulation: true);
+
+                    // Configure context for simulation
+                    context.ResetMultipliers();
+                    context.Actor = actor;
+                    context.Target = target;
+                    context.Move = move;
+                    context.Action = dummyAction;
+                    context.IsSimulation = true;
+
+                    var result = DamageCalculator.CalculateDamage(dummyAction, target, move, 1.0f, null, true, context);
                     int predictedDamage = result.DamageAmount;
 
                     if (isTargetAlly)

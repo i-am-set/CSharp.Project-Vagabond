@@ -6,8 +6,6 @@ using System.Linq;
 
 namespace ProjectVagabond.Battle.Abilities
 {
-    // --- Base Classes ---
-
     public class ApplyStatusAbility : IAbility
     {
         public string Name => "Apply Status";
@@ -26,7 +24,7 @@ namespace ProjectVagabond.Battle.Abilities
             _duration = duration;
         }
 
-        public void OnEvent(GameEvent e)
+        public void OnEvent(GameEvent e, BattleContext context)
         {
             if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
             {
@@ -64,7 +62,7 @@ namespace ProjectVagabond.Battle.Abilities
             _duration = duration;
         }
 
-        public void OnEvent(GameEvent e)
+        public void OnEvent(GameEvent e, BattleContext context)
         {
             if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
             {
@@ -81,8 +79,6 @@ namespace ProjectVagabond.Battle.Abilities
             }
         }
     }
-
-    // --- Concrete Status Infliction Classes (Restored) ---
 
     public class InflictStatusBurnAbility : InflictStatusAbility
     {
@@ -126,15 +122,13 @@ namespace ProjectVagabond.Battle.Abilities
             : base("Provoke", StatusEffectType.Provoked, chance, duration) { }
     }
 
-    // --- Other Move Abilities ---
-
     public class CounterAbility : IAbility
     {
         public string Name => "Counter";
         public string Description => "Fails if not used on first turn. Dazes target.";
         public int Priority => 0;
 
-        public void OnEvent(GameEvent e)
+        public void OnEvent(GameEvent e, BattleContext context)
         {
             if (e is CalculateDamageEvent dmgEvent && dmgEvent.Move.Abilities.Contains(this))
             {
@@ -149,7 +143,7 @@ namespace ProjectVagabond.Battle.Abilities
             {
                 if (reaction.Result.DamageAmount > 0)
                 {
-                    reaction.Target.Tags.Add("State.Dazed");
+                    reaction.Target.Tags.Add(GameplayTags.States.Dazed);
                     EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{reaction.Target.Name} was [shake][cStatus]DAZED[/][/]!" });
                 }
             }
@@ -165,7 +159,7 @@ namespace ProjectVagabond.Battle.Abilities
         private readonly float _percentage;
         public RestoreManaAbility(float percentage) { _percentage = percentage; }
 
-        public void OnEvent(GameEvent e)
+        public void OnEvent(GameEvent e, BattleContext context)
         {
             if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
             {
@@ -197,7 +191,7 @@ namespace ProjectVagabond.Battle.Abilities
         private readonly float _damagePercent;
         public RecoilAbility(float damagePercent) { _damagePercent = damagePercent; }
 
-        public void OnEvent(GameEvent e)
+        public void OnEvent(GameEvent e, BattleContext context)
         {
             if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
             {
@@ -219,7 +213,7 @@ namespace ProjectVagabond.Battle.Abilities
         private readonly float _percent;
         public ArmorPierceAbility(float percent) { _percent = percent; }
 
-        public void OnEvent(GameEvent e)
+        public void OnEvent(GameEvent e, BattleContext context)
         {
             if (e is CalculateDamageEvent dmgEvent && dmgEvent.Move.Abilities.Contains(this))
             {
@@ -237,7 +231,7 @@ namespace ProjectVagabond.Battle.Abilities
         private readonly float _percent;
         public DamageRecoilAbility(float percent) { _percent = percent; }
 
-        public void OnEvent(GameEvent e)
+        public void OnEvent(GameEvent e, BattleContext context)
         {
             if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
             {
@@ -262,7 +256,7 @@ namespace ProjectVagabond.Battle.Abilities
         public int MaxHits { get; }
         public MultiHitAbility(int min, int max) { MinHits = min; MaxHits = max; }
 
-        public void OnEvent(GameEvent e) { }
+        public void OnEvent(GameEvent e, BattleContext context) { }
     }
 
     public class PercentageDamageAbility : IAbility
@@ -274,7 +268,7 @@ namespace ProjectVagabond.Battle.Abilities
         private readonly float _percent;
         public PercentageDamageAbility(float percent) { _percent = percent; }
 
-        public void OnEvent(GameEvent e)
+        public void OnEvent(GameEvent e, BattleContext context)
         {
             if (e is CalculateDamageEvent dmgEvent && dmgEvent.Move.Abilities.Contains(this))
             {
@@ -294,7 +288,7 @@ namespace ProjectVagabond.Battle.Abilities
         private readonly int _maxBurnAmount;
         public ManaDamageAbility(int amount) { _maxBurnAmount = amount; }
 
-        public void OnEvent(GameEvent e)
+        public void OnEvent(GameEvent e, BattleContext context)
         {
             if (e is CalculateDamageEvent dmgEvent && dmgEvent.Move.Abilities.Contains(this))
             {
@@ -333,7 +327,7 @@ namespace ProjectVagabond.Battle.Abilities
         public float Multiplier { get; }
         public ManaDumpAbility(float multiplier) { Multiplier = multiplier; }
 
-        public void OnEvent(GameEvent e)
+        public void OnEvent(GameEvent e, BattleContext context)
         {
             if (e is CalculateDamageEvent dmgEvent && dmgEvent.Move.Abilities.Contains(this))
             {
@@ -356,7 +350,7 @@ namespace ProjectVagabond.Battle.Abilities
         private readonly float _percent;
         public LifestealAbility(float percent) { _percent = percent; }
 
-        public void OnEvent(GameEvent e)
+        public void OnEvent(GameEvent e, BattleContext context)
         {
             if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
             {
@@ -385,13 +379,13 @@ namespace ProjectVagabond.Battle.Abilities
         public string Description => "Breaks through protection.";
         public int Priority => 10;
 
-        public void OnEvent(GameEvent e)
+        public void OnEvent(GameEvent e, BattleContext context)
         {
             if (e is CalculateDamageEvent dmgEvent && dmgEvent.Move.Abilities.Contains(this))
             {
-                if (dmgEvent.Target.Tags.Has("State.Protected"))
+                if (dmgEvent.Target.Tags.Has(GameplayTags.States.Protected))
                 {
-                    dmgEvent.Target.Tags.Remove("State.Protected");
+                    dmgEvent.Target.Tags.Remove(GameplayTags.States.Protected);
                     dmgEvent.Target.ActiveStatusEffects.RemoveAll(s => s.EffectType == StatusEffectType.Protected);
 
                     EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "GUARD BROKEN!" });
@@ -407,7 +401,7 @@ namespace ProjectVagabond.Battle.Abilities
         public string Description => "Removes negative status effects.";
         public int Priority => 0;
 
-        public void OnEvent(GameEvent e)
+        public void OnEvent(GameEvent e, BattleContext context)
         {
             if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
             {
@@ -437,7 +431,7 @@ namespace ProjectVagabond.Battle.Abilities
         private readonly float _percent;
         public ManaBurnOnHitAbility(float percent) { _percent = percent; }
 
-        public void OnEvent(GameEvent e)
+        public void OnEvent(GameEvent e, BattleContext context)
         {
             if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
             {

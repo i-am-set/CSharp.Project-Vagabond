@@ -13,6 +13,11 @@ namespace ProjectVagabond.Battle.Abilities
         /// </summary>
         int Priority { get; }
 
-        void OnEvent(GameEvent e);
+        /// <summary>
+        /// Responds to a game event within the context of the current battle.
+        /// </summary>
+        /// <param name="e">The event data.</param>
+        /// <param name="context">The battle context (manager, RNG, combatants).</param>
+        void OnEvent(GameEvent e, BattleContext context);
     }
 }

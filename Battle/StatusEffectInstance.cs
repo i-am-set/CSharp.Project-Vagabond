@@ -69,11 +69,11 @@ namespace ProjectVagabond.Battle
         /// <summary>
         /// Propagates a game event to all abilities attached to this status effect.
         /// </summary>
-        public void OnEvent(GameEvent e)
+        public void OnEvent(GameEvent e, BattleContext context)
         {
             foreach (var ability in Abilities)
             {
-                ability.OnEvent(e);
+                ability.OnEvent(e, context);
                 if (e.IsHandled) return;
             }
         }

@@ -107,19 +107,19 @@ namespace ProjectVagabond.Battle.Abilities
                         {
                             if (ability is RecoilAbility || ability is DamageRecoilAbility)
                             {
-                                moveData.Tags.Add("Effect.Recoil");
+                                moveData.Tags.Add(GameplayTags.Effects.Recoil);
                             }
                             if (ability is ManaDumpAbility)
                             {
-                                moveData.Tags.Add("Effect.ManaDump");
+                                moveData.Tags.Add(GameplayTags.Effects.ManaDump);
                             }
                             if (ability is ManaBurnOnHitAbility || ability is ManaDamageAbility || ability is RestoreManaAbility)
                             {
-                                moveData.Tags.Add("Effect.ManaMod");
+                                moveData.Tags.Add(GameplayTags.Effects.ManaMod);
                             }
                             if (ability is PercentageDamageAbility)
                             {
-                                moveData.Tags.Add("Effect.FixedDamage");
+                                moveData.Tags.Add(GameplayTags.Effects.FixedDamage);
                             }
                         }
                     }
