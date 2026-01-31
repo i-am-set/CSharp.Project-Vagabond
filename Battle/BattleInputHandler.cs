@@ -41,6 +41,14 @@ namespace ProjectVagabond.Battle.UI
             BattleUIManager uiManager,
             BattleRenderer renderer)
         {
+            var battleManager = ServiceLocator.Get<BattleManager>();
+            if (battleManager.CurrentPhase != BattleManager.BattlePhase.ActionSelection)
+            {
+                _hoveredTargetIndex = -1;
+                uiManager.CombatantHoveredViaSprite = null;
+                return;
+            }
+
             var currentMouseState = Mouse.GetState();
             var currentKeyboardState = Keyboard.GetState();
             var virtualMousePos = Core.TransformMouse(currentMouseState.Position);
@@ -87,6 +95,10 @@ namespace ProjectVagabond.Battle.UI
                 {
                     ServiceLocator.Get<CursorManager>().SetState(CursorState.HoverClickable);
                 }
+                else if (uiManager.UIState == BattleUIState.Default)
+                {
+                    ServiceLocator.Get<CursorManager>().SetState(CursorState.HoverClickableHint);
+                }
             }
             else
             {
@@ -94,25 +106,25 @@ namespace ProjectVagabond.Battle.UI
             }
 
             // --- CLICK HANDLING ---
-            if (uiManager.UIState == BattleUIState.Targeting)
+            // Right Click to Go Back
+            if (currentMouseState.RightButton == ButtonState.Pressed && _previousMouseState.RightButton == ButtonState.Released)
             {
-                // Right Click to Go Back
-                if (currentMouseState.RightButton == ButtonState.Pressed && _previousMouseState.RightButton == ButtonState.Released)
+                if (uiManager.UIState == BattleUIState.Targeting)
                 {
                     OnBackRequested?.Invoke();
                 }
+            }
 
-                // Handle Click on Sprites
-                if (UIInputManager.CanProcessMouseClick() && currentMouseState.LeftButton == ButtonState.Released && _previousMouseState.LeftButton == ButtonState.Pressed)
+            // Handle Click on Sprites
+            if (UIInputManager.CanProcessMouseClick() && currentMouseState.LeftButton == ButtonState.Released && _previousMouseState.LeftButton == ButtonState.Pressed)
+            {
+                if (_hoveredTargetIndex != -1 && uiHoveredCombatant == null)
                 {
-                    if (_hoveredTargetIndex != -1 && uiHoveredCombatant == null)
-                    {
-                        var selectedTarget = currentTargets[_hoveredTargetIndex].Combatant;
+                    var selectedTarget = currentTargets[_hoveredTargetIndex].Combatant;
 
-                        // Route click to UI Manager
-                        uiManager.HandleSpriteClick(selectedTarget);
-                        UIInputManager.ConsumeMouseClick();
-                    }
+                    // Route click to UI Manager
+                    uiManager.HandleSpriteClick(selectedTarget);
+                    UIInputManager.ConsumeMouseClick();
                 }
             }
 

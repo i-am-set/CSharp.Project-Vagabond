@@ -34,6 +34,7 @@ namespace ProjectVagabond.Battle.UI
         private readonly SpriteManager _spriteManager;
 
         public BattleUIState UIState { get; private set; } = BattleUIState.Default;
+        public BattleCombatant? StatInfoTarget { get; private set; }
 
         public int ActiveTargetingSlot { get; private set; } = -1;
         public MoveData? MoveForTargeting { get; private set; }
@@ -95,6 +96,7 @@ namespace ProjectVagabond.Battle.UI
             HoveredCombatantFromUI = null;
             CombatantHoveredViaSprite = null;
             IntroOffset = Vector2.Zero;
+            StatInfoTarget = null;
         }
 
         public void ShowActionMenu(BattleCombatant player, List<BattleCombatant> allCombatants)
@@ -164,6 +166,14 @@ namespace ProjectVagabond.Battle.UI
 
             UpdateHoverHighlights(gameTime, currentActor);
 
+            if (StatInfoTarget != null)
+            {
+                if (CombatantHoveredViaSprite != StatInfoTarget)
+                {
+                    StatInfoTarget = null;
+                }
+            }
+
             _previousMouseState = currentMouseState;
         }
 
@@ -230,6 +240,17 @@ namespace ProjectVagabond.Battle.UI
                         // Invalid target clicked (e.g. clicking self for an attack)
                         ServiceLocator.Get<HapticsManager>().TriggerShake(2f, 0.1f);
                     }
+                }
+            }
+            else if (UIState == BattleUIState.Default)
+            {
+                if (StatInfoTarget == target)
+                {
+                    StatInfoTarget = null;
+                }
+                else
+                {
+                    StatInfoTarget = target;
                 }
             }
         }

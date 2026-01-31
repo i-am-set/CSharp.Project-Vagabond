@@ -475,9 +475,9 @@ namespace ProjectVagabond.Battle.UI
         {
             bool isDefaultUI = uiManager.UIState == BattleUIState.Default;
 
-            if (isDefaultUI && hoveredCombatant != null)
+            if (isDefaultUI && uiManager.StatInfoTarget != null)
             {
-                _statTooltipCombatantID = hoveredCombatant.CombatantID;
+                _statTooltipCombatantID = uiManager.StatInfoTarget.CombatantID;
                 _statTooltipAlpha = 1.0f;
             }
             else
@@ -814,17 +814,24 @@ namespace ProjectVagabond.Battle.UI
 
                     Color? highlight = silhouetteColors.ContainsKey(enemy.CombatantID) ? silhouetteColors[enemy.CombatantID] : null;
                     bool isSelectable = selectable.Contains(enemy);
+
+                    bool isStatTarget = (uiManager.StatInfoTarget == enemy);
+                    bool isHovered = (hoveredCombatant == enemy);
+
                     bool isSilhouetted = shouldGrayOut && !isSelectable;
-
-                    if (enemy.CombatantID == _statTooltipCombatantID && _statTooltipAlpha > 0) isSilhouetted = true;
-
-                    Color silhouetteColor = isSilhouetted ? _global.Palette_DarkShadow : _global.Palette_DarkShadow;
-
+                    Color silhouetteColor = _global.Palette_DarkShadow;
                     Color outlineColor = (enemy == currentActor) ? _global.Palette_Sun : Color.Transparent;
 
-                    if (enemy.CombatantID == _statTooltipCombatantID && _statTooltipAlpha > 0)
+                    if (isStatTarget)
                     {
+                        isSilhouetted = true;
+                        silhouetteColor = _global.Palette_DarkShadow;
                         outlineColor = Color.Transparent;
+                    }
+                    else if (isHovered && !shouldGrayOut)
+                    {
+                        isSilhouetted = false;
+                        outlineColor = _global.HoveredCombatantOutline;
                     }
 
                     outlineColor = outlineColor * enemy.VisualAlpha;
@@ -1055,7 +1062,7 @@ namespace ProjectVagabond.Battle.UI
 
                             _currentTargets.Add(new TargetInfo { Combatant = enemy, Bounds = hitBox });
                             _combatantVisualCenters[enemy.CombatantID] = hitBox.Center.ToVector2();
-                            _combatantStaticCenters[enemy.CombatantID] = new Vector2(center.X, center.Y + spriteSize / 2f);
+                            _combatantStaticCenters[enemy.CombatantID] = center;
 
                             bool showHP = false;
                             bool showMana = false;
@@ -1066,7 +1073,7 @@ namespace ProjectVagabond.Battle.UI
                                 showHP = affectsHP;
                                 showMana = affectsMana;
                             }
-                            else if ((hoveredCombatant == enemy) || (uiManager.HoveredCombatantFromUI == enemy) || selectable.Contains(enemy))
+                            else if ((hoveredCombatant == enemy) || (uiManager.HoveredCombatantFromUI == enemy) || selectable.Contains(enemy) || isStatTarget)
                             {
                                 showHP = true;
                                 showMana = true;
@@ -1119,16 +1126,24 @@ namespace ProjectVagabond.Battle.UI
 
                 Color? highlight = silhouetteColors.ContainsKey(player.CombatantID) ? silhouetteColors[player.CombatantID] : null;
                 bool isSelectable = selectable.Contains(player);
+
+                bool isStatTarget = (uiManager.StatInfoTarget == player);
+                bool isHovered = (hoveredCombatant == player);
+
                 bool isSilhouetted = shouldGrayOut && !isSelectable;
-                if (player.CombatantID == _statTooltipCombatantID && _statTooltipAlpha > 0) isSilhouetted = true;
-
-                Color silhouetteColor = isSilhouetted ? _global.Palette_DarkShadow : _global.Palette_DarkShadow;
-
+                Color silhouetteColor = _global.Palette_DarkShadow;
                 Color outlineColor = (player == currentActor) ? _global.Palette_Sun : Color.Transparent;
 
-                if (player.CombatantID == _statTooltipCombatantID && _statTooltipAlpha > 0)
+                if (isStatTarget)
                 {
+                    isSilhouetted = true;
+                    silhouetteColor = _global.Palette_DarkShadow;
                     outlineColor = Color.Transparent;
+                }
+                else if (isHovered && !shouldGrayOut)
+                {
+                    isSilhouetted = false;
+                    outlineColor = _global.HoveredCombatantOutline;
                 }
 
                 outlineColor = outlineColor * player.VisualAlpha;
@@ -1263,7 +1278,7 @@ namespace ProjectVagabond.Battle.UI
                         showHP = affectsHP;
                         showMana = affectsMana;
                     }
-                    else if ((hoveredCombatant == player) || (uiManager.HoveredCombatantFromUI == player) || selectable.Contains(player))
+                    else if ((hoveredCombatant == player) || (uiManager.HoveredCombatantFromUI == player) || selectable.Contains(player) || isStatTarget)
                     {
                         showHP = true;
                         showMana = true;
@@ -1449,8 +1464,8 @@ namespace ProjectVagabond.Battle.UI
                         return;
                     }
                 }
+                }
             }
-        }
 
         private void UpdateActiveTurnOffsets(float dt, IEnumerable<BattleCombatant> combatants, BattleCombatant currentActor)
         {
