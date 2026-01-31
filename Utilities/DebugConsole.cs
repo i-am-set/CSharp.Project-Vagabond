@@ -306,14 +306,23 @@ namespace ProjectVagabond.Utils
 
             if (KeyPressed(Keys.Enter, currentKeyboardState, _previousKeyboardState))
             {
+                bool handledAsAutoComplete = false;
+
                 // Check for Auto-Complete on Enter
                 if (_autoCompleteManager.ShowingAutoCompleteSuggestions && _autoCompleteManager.SelectedAutoCompleteSuggestionIndex != -1)
                 {
-                    PerformAutoComplete();
-                    return; // Don't submit command yet
+                    string suggestion = _autoCompleteManager.AutoCompleteSuggestions[_autoCompleteManager.SelectedAutoCompleteSuggestionIndex];
+
+                    // Only perform auto-complete if the current input doesn't already match the suggestion.
+                    // If it matches (e.g. "addmember 0" == "addmember 0"), treat Enter as a submit action.
+                    if (!_currentInput.Equals(suggestion, StringComparison.OrdinalIgnoreCase))
+                    {
+                        PerformAutoComplete();
+                        handledAsAutoComplete = true;
+                    }
                 }
 
-                if (!string.IsNullOrWhiteSpace(_currentInput))
+                if (!handledAsAutoComplete && !string.IsNullOrWhiteSpace(_currentInput))
                 {
                     GameLogger.Log(LogSeverity.Info, $"> {_currentInput}");
                     if (!_commandHistory.Any() || _commandHistory.Last() != _currentInput) _commandHistory.Add(_currentInput);
