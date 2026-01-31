@@ -515,6 +515,12 @@ namespace ProjectVagabond.Scenes
             _inputHandler.Update(gameTime, _uiManager, _renderer);
 
             var activeCombatant = _battleManager.CurrentActingCombatant ?? _currentActor;
+
+            if (_battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection)
+            {
+                activeCombatant = null;
+            }
+
             _renderer.Update(gameTime, _battleManager.AllCombatants, _animationManager, activeCombatant);
 
             _alertManager.Update(gameTime);
@@ -801,7 +807,13 @@ namespace ProjectVagabond.Scenes
 
         private void HandlePhaseChange(BattleManager.BattlePhase newPhase)
         {
-            if (newPhase == BattleManager.BattlePhase.EndOfTurn || newPhase == BattleManager.BattlePhase.BattleOver) _currentActor = null;
+            if (newPhase == BattleManager.BattlePhase.EndOfTurn ||
+                newPhase == BattleManager.BattlePhase.BattleOver ||
+                newPhase == BattleManager.BattlePhase.ActionSelection)
+            {
+                _currentActor = null;
+            }
+
             if (newPhase == BattleManager.BattlePhase.ActionSelection)
             {
                 var leader = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && c.BattleSlot == 0);

@@ -28,7 +28,7 @@ namespace ProjectVagabond.Battle.Abilities
                     if (applied && !ctx.IsSimulation)
                     {
                         EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} gained [pop][cStatus]{_type}[/][/]!" });
-                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Target, Ability = this });
                     }
                 }
             }
@@ -87,7 +87,7 @@ namespace ProjectVagabond.Battle.Abilities
                 if (target.Stats.CurrentMana > before && !ctx.IsSimulation)
                 {
                     EventBus.Publish(new GameEvents.CombatantManaRestored { Target = target, AmountRestored = (int)(target.Stats.CurrentMana - before), ManaBefore = before, ManaAfter = target.Stats.CurrentMana });
-                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Target, Ability = this });
                 }
             }
         }
@@ -178,7 +178,7 @@ namespace ProjectVagabond.Battle.Abilities
                     if (applied && !ctx.IsSimulation)
                     {
                         EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} was [pop][cStatus]{_type}[/][/]!" });
-                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Target, Ability = this });
                     }
                 }
             }
@@ -339,7 +339,7 @@ namespace ProjectVagabond.Battle.Abilities
                     if (!ctx.IsSimulation)
                     {
                         EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{target.Name} was [pop][cStatus]cleansed[/][/]!" });
-                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Target, Ability = this });
                     }
                 }
             }
@@ -372,7 +372,7 @@ namespace ProjectVagabond.Battle.Abilities
                             ManaAfter = ctx.Target.Stats.CurrentMana
                         });
                         EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name} lost {burnAmount} Mana!" });
-                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
+                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Target, Ability = this });
                     }
                 }
             }

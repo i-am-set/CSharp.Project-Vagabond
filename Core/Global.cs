@@ -35,7 +35,7 @@ namespace ProjectVagabond
             ButtonDisableColor = Palette_DarkShadow;
             SplitMapNodeColor = Palette_DarkSun;
             SplitMapPathColor = Palette_DarkRust;
-            HoveredCombatantOutline = Palette_Sea;
+            HoveredCombatantOutline = Palette_DarkShadow;
             OutputTextColor = Palette_LightGray;
             InputTextColor = Palette_Gray;
             ToolTipBGColor = Palette_Black;
