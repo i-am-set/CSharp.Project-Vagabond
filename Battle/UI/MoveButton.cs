@@ -59,6 +59,9 @@ namespace ProjectVagabond.Battle.UI
         private float _overlayFadeTimer;
         private const float OVERLAY_FADE_SPEED = 2.0f;
 
+        // New field to track internal hover state for warning display
+        private bool _showManaWarning = false;
+
         public MoveButton(BattleCombatant owner, MoveData move, MoveEntry entry, int displayPower, BitmapFont font, Texture2D? backgroundSpriteSheet, Texture2D iconTexture, Rectangle? iconSourceRect, bool startVisible = true)
             : base(Rectangle.Empty, move.MoveName.ToUpper(), function: move.MoveID)
         {
@@ -100,6 +103,26 @@ namespace ProjectVagabond.Battle.UI
         public override void Update(MouseState currentMouseState, Matrix? worldTransform = null)
         {
             base.Update(currentMouseState, worldTransform);
+
+            // If we can't afford the move, suppress the hover state so the parent menu
+            // doesn't trigger targeting previews, but keep a local flag to draw the warning.
+            if (!CanAfford)
+            {
+                if (IsHovered)
+                {
+                    _showManaWarning = true;
+                    IsHovered = false;
+                    _isPressed = false;
+                }
+                else
+                {
+                    _showManaWarning = false;
+                }
+            }
+            else
+            {
+                _showManaWarning = false;
+            }
         }
 
         private void UpdateScrolling(GameTime gameTime)
@@ -146,7 +169,8 @@ namespace ProjectVagabond.Battle.UI
             bool isActivated = IsEnabled && (IsHovered || forceHover);
 
             // Update the animator state but ignore the offset result since we handle shifting manually
-            _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
+            // Disable hover animation if cannot afford
+            _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated && canAfford);
 
             _overlayFadeTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
@@ -185,6 +209,9 @@ namespace ProjectVagabond.Battle.UI
 
             // Update base class animations (Rotation, Flash)
             var (shakeOffset, flashTint) = UpdateFeedbackAnimations(gameTime); // Updates _currentHoverRotation
+
+            // Suppress rotation if cannot afford
+            if (!canAfford) _currentHoverRotation = 0f;
 
             Color finalTintColor;
             if (tintColorOverride.HasValue)
@@ -331,7 +358,8 @@ namespace ProjectVagabond.Battle.UI
                     Vector2 textOrigin = new Vector2(0, _moveFont.LineHeight / 2f);
 
                     // --- Wave Animation Logic ---
-                    if (EnableTextWave && isActivated)
+                    // Only animate if can afford
+                    if (EnableTextWave && isActivated && canAfford)
                     {
                         _waveTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
@@ -365,13 +393,13 @@ namespace ProjectVagabond.Battle.UI
                     spriteBatch.DrawLineSnapped(p1, p2, _global.ButtonDisableColor);
                 }
 
-                if (!canAfford && isActivated && IsEnabled)
+                if (_showManaWarning && IsEnabled)
                 {
                     string noManaText = "NOT ENOUGH MANA";
                     Vector2 noManaSize = _moveFont.MeasureString(noManaText);
                     Vector2 noManaPos = new Vector2(
                         animatedBounds.Center.X - noManaSize.X / 2f,
-                        animatedBounds.Center.Y - noManaSize.Y / 2f
+                        animatedBounds.Center.Y - noManaSize.Y / 2f - 2 // Moved up 2 pixels
                     );
                     // Draw with full opacity (no contentAlpha)
                     TextAnimator.DrawTextWithEffectSquareOutlined(spriteBatch, _moveFont, noManaText, noManaPos, _global.Palette_Rust, Color.Black, TextEffectType.None, 0f);
