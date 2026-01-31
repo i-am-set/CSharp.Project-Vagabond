@@ -484,7 +484,16 @@ namespace ProjectVagabond.Battle.UI
                             bgColor = (i < 4) ? global.Palette_DarkestPale : global.Palette_DarkShadow;
                         }
 
-                        DrawBeveledBackground(spriteBatch, pixel, visualRect, bgColor);
+                        // If it's a MoveButton, let it draw its own background so it shakes
+                        if (moveBtn != null)
+                        {
+                            moveBtn.BackgroundColor = bgColor;
+                            moveBtn.DrawSystemBackground = true;
+                        }
+                        else
+                        {
+                            DrawBeveledBackground(spriteBatch, pixel, visualRect, bgColor);
+                        }
 
                         // Use TextOverImageButton's Draw to handle icon + text
                         btn.Draw(spriteBatch, btn.Font, gameTime, transform, false, 0f, offset.Y);

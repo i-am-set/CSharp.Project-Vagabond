@@ -822,6 +822,11 @@ namespace ProjectVagabond.Battle.UI
                     Color silhouetteColor = _global.Palette_DarkShadow;
                     Color outlineColor = (enemy == currentActor) ? _global.Palette_Sun : Color.Transparent;
 
+                    if (isSelectable && highlight == null)
+                    {
+                        outlineColor = _global.Palette_Sun;
+                    }
+
                     if (isStatTarget)
                     {
                         isSilhouetted = true;
@@ -1133,6 +1138,11 @@ namespace ProjectVagabond.Battle.UI
                 bool isSilhouetted = shouldGrayOut && !isSelectable;
                 Color silhouetteColor = _global.Palette_DarkShadow;
                 Color outlineColor = (player == currentActor) ? _global.Palette_Sun : Color.Transparent;
+
+                if (isSelectable && highlight == null)
+                {
+                    outlineColor = _global.Palette_Sun;
+                }
 
                 if (isStatTarget)
                 {
@@ -1464,8 +1474,8 @@ namespace ProjectVagabond.Battle.UI
                         return;
                     }
                 }
-                }
             }
+        }
 
         private void UpdateActiveTurnOffsets(float dt, IEnumerable<BattleCombatant> combatants, BattleCombatant currentActor)
         {

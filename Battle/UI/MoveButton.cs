@@ -32,6 +32,10 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
+        // --- Background Drawing Properties ---
+        public Color BackgroundColor { get; set; } = Color.Transparent;
+        public bool DrawSystemBackground { get; set; } = false;
+
         private readonly BitmapFont _moveFont;
         private readonly Texture2D? _backgroundSpriteSheet;
         public bool IsAnimating => _animState == AnimationState.Appearing;
@@ -213,6 +217,15 @@ namespace ProjectVagabond.Battle.UI
             // Suppress rotation if cannot afford
             if (!canAfford) _currentHoverRotation = 0f;
 
+            Vector2 centerPos = new Vector2(animatedBounds.Center.X, animatedBounds.Center.Y) + shakeOffset;
+
+            // --- DRAW SYSTEM BACKGROUND (With Shake & Rotation) ---
+            if (DrawSystemBackground)
+            {
+                // We draw the 3 parts of the bevel relative to the center, applying rotation and scale.
+                DrawRotatedBeveledBackground(spriteBatch, pixel, centerPos, Bounds.Width, Bounds.Height, BackgroundColor, _currentHoverRotation, new Vector2(finalScaleX, finalScaleY));
+            }
+
             Color finalTintColor;
             if (tintColorOverride.HasValue)
             {
@@ -241,9 +254,7 @@ namespace ProjectVagabond.Battle.UI
                     );
                 }
 
-                Vector2 centerPos = new Vector2(animatedBounds.Center.X, animatedBounds.Center.Y);
-
-                // Draw background (No Shift, Rotated)
+                // Draw background sprite (No Shift, Rotated) - if one exists (usually null for MoveButton)
                 if (_backgroundSpriteSheet != null)
                 {
                     // Round origin to prevent sub-pixel rendering artifacts
@@ -278,7 +289,7 @@ namespace ProjectVagabond.Battle.UI
 
                 // Icon Positioning Relative to Center
                 float iconLocalX = startX + (iconSize / 2f); // Center of icon
-                float iconLocalY = -1; // Moved up 1 pixel
+                float iconLocalY = 0; // Centered vertically (0 offset)
 
                 Vector2 iconOffset = new Vector2(iconLocalX, iconLocalY);
                 Vector2 rotatedIconPos = centerPos + RotateOffset(iconOffset);
@@ -294,7 +305,7 @@ namespace ProjectVagabond.Battle.UI
 
                 // Text Position
                 float textLocalX = startX + iconSize + iconPadding; // Left edge of text
-                float textLocalY = -1; // Moved up 1 pixel
+                float textLocalY = 0; // Centered vertically (0 offset)
 
                 // Check for scrolling (if text is wider than button minus icon)
                 // Button Width - Icon - Padding - Margins
@@ -400,6 +411,44 @@ namespace ProjectVagabond.Battle.UI
                     TextAnimator.DrawTextWithEffectSquareOutlined(spriteBatch, _moveFont, noManaText, noManaPos, _global.Palette_Rust, Color.Black, TextEffectType.None, 0f);
                 }
             }
+        }
+
+        /// <summary>
+        /// Draws the 3-part beveled background (Top, Middle, Bottom) with support for rotation and scaling.
+        /// </summary>
+        private void DrawRotatedBeveledBackground(SpriteBatch spriteBatch, Texture2D pixel, Vector2 center, int width, int height, Color color, float rotation, Vector2 scale)
+        {
+            // Apply 1px padding reduction to match ActionMenu logic (Height - 1)
+            float h = height - 1;
+            float w = width;
+
+            float cos = MathF.Cos(rotation);
+            float sin = MathF.Sin(rotation);
+
+            Vector2 Rotate(Vector2 v)
+            {
+                return new Vector2(v.X * cos - v.Y * sin, v.X * sin + v.Y * cos);
+            }
+
+            // 1. Middle Body: (x+1, y+1) size (w-2, h-2)
+            // Center relative to button center: (0, 0)
+            // Size: (w-2, h-2)
+            Vector2 midScale = new Vector2(w - 2, h - 2) * scale;
+            spriteBatch.DrawSnapped(pixel, center, null, color, rotation, new Vector2(0.5f, 0.5f), midScale, SpriteEffects.None, 0f);
+
+            // 2. Top Edge: (x+2, y) size (w-4, 1)
+            // Center relative to button center: (0, -h/2 + 0.5)
+            Vector2 topOffset = new Vector2(0, (-h / 2f + 0.5f) * scale.Y);
+            Vector2 topPos = center + Rotate(topOffset);
+            Vector2 topScale = new Vector2((w - 4) * scale.X, 1f * scale.Y);
+            spriteBatch.DrawSnapped(pixel, topPos, null, color, rotation, new Vector2(0.5f, 0.5f), topScale, SpriteEffects.None, 0f);
+
+            // 3. Bottom Edge: (x+2, y+h-1) size (w-4, 1)
+            // Center relative to button center: (0, h/2 - 0.5)
+            Vector2 botOffset = new Vector2(0, (h / 2f - 0.5f) * scale.Y);
+            Vector2 botPos = center + Rotate(botOffset);
+            Vector2 botScale = new Vector2((w - 4) * scale.X, 1f * scale.Y);
+            spriteBatch.DrawSnapped(pixel, botPos, null, color, rotation, new Vector2(0.5f, 0.5f), botScale, SpriteEffects.None, 0f);
         }
     }
 }
