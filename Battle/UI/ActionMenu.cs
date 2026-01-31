@@ -463,7 +463,12 @@ namespace ProjectVagabond.Battle.UI
                         var btn = _buttons[i];
                         var rect = btn.Bounds;
                         rect.Y += (int)offset.Y;
-                        var visualRect = new Rectangle(rect.X, rect.Y, rect.Width, rect.Height - HITBOX_PADDING);
+
+                        // Shift the visual background and content down by 1 pixel for the bottom row (Actions)
+                        // to create a gap between the last move and the actions, without moving the hitbox.
+                        int visualYOffset = (i >= 4) ? 1 : 0;
+
+                        var visualRect = new Rectangle(rect.X, rect.Y + visualYOffset, rect.Width, rect.Height - HITBOX_PADDING);
 
                         // Check if it's a MoveButton and if it can afford the cost
                         var moveBtn = btn as MoveButton;
@@ -496,7 +501,8 @@ namespace ProjectVagabond.Battle.UI
                         }
 
                         // Use TextOverImageButton's Draw to handle icon + text
-                        btn.Draw(spriteBatch, btn.Font, gameTime, transform, false, 0f, offset.Y);
+                        // Pass the extra visual offset here so text follows background
+                        btn.Draw(spriteBatch, btn.Font, gameTime, transform, false, 0f, offset.Y + visualYOffset);
                     }
                 }
 

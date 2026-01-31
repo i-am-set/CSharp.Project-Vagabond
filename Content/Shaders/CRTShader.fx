@@ -30,7 +30,7 @@ uniform float Vibrance;
 // --- Tuning ---
 
 // Distortion
-static const float CURVATURE = 0.05;        // 0.0 = Flat, 0.15 = Standard CRT, 0.4 = Fish-eye
+static const float CURVATURE = 0.075;        // 0.0 = Flat, 0.15 = Standard CRT, 0.4 = Fish-eye
 static const float ZOOM = 1.01;             // 1.0 = No Zoom, 1.03 = Crop Bezels, 0.9 = Shrink Image
 
 // Color & Contrast
