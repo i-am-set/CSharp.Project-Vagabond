@@ -443,7 +443,9 @@ namespace ProjectVagabond.Battle.UI
                 {
                     // Draw Cancel Button
                     var rect = _cancelButton.Bounds;
-                    rect.Y += (int)offset.Y;
+                    // Snap offset to int
+                    int snappedOffsetY = (int)offset.Y;
+                    rect.Y += snappedOffsetY;
 
                     var textSize = _cancelButton.Font.MeasureString(_cancelButton.Text);
                     var textPos = new Vector2(
@@ -462,7 +464,10 @@ namespace ProjectVagabond.Battle.UI
                     {
                         var btn = _buttons[i];
                         var rect = btn.Bounds;
-                        rect.Y += (int)offset.Y;
+
+                        // Snap offset to int
+                        int snappedOffsetY = (int)offset.Y;
+                        rect.Y += snappedOffsetY;
 
                         // Shift the visual background and content down by 1 pixel for the bottom row (Actions)
                         // to create a gap between the last move and the actions, without moving the hitbox.
@@ -502,7 +507,8 @@ namespace ProjectVagabond.Battle.UI
 
                         // Use TextOverImageButton's Draw to handle icon + text
                         // Pass the extra visual offset here so text follows background
-                        btn.Draw(spriteBatch, btn.Font, gameTime, transform, false, 0f, offset.Y + visualYOffset);
+                        // Pass snapped offset
+                        btn.Draw(spriteBatch, btn.Font, gameTime, transform, false, 0f, snappedOffsetY + visualYOffset);
                     }
                 }
 

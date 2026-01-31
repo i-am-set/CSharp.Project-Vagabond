@@ -214,10 +214,24 @@ namespace ProjectVagabond.Battle.UI
             // Update base class animations (Rotation, Flash)
             var (shakeOffset, flashTint) = UpdateFeedbackAnimations(gameTime); // Updates _currentHoverRotation
 
+            // Snap shake to pixels
+            shakeOffset.X = MathF.Round(shakeOffset.X);
+            shakeOffset.Y = MathF.Round(shakeOffset.Y);
+
             // Suppress rotation if cannot afford
             if (!canAfford) _currentHoverRotation = 0f;
 
             Vector2 centerPos = new Vector2(animatedBounds.Center.X, animatedBounds.Center.Y) + shakeOffset;
+
+            // --- PIXEL SNAP CENTER ---
+            // If rotation is negligible, snap the center position to ensure pixel-perfect rendering.
+            // Odd dimensions need X.5 centers, Even dimensions need X.0 centers.
+            if (Math.Abs(_currentHoverRotation) < 0.01f)
+            {
+                float targetCenterX = MathF.Floor(centerPos.X) + (Bounds.Width % 2 == 0 ? 0.0f : 0.5f);
+                float targetCenterY = MathF.Floor(centerPos.Y) + (Bounds.Height % 2 == 0 ? 0.0f : 0.5f);
+                centerPos = new Vector2(targetCenterX, targetCenterY);
+            }
 
             // --- DRAW SYSTEM BACKGROUND (With Shake & Rotation) ---
             if (DrawSystemBackground)
@@ -430,23 +444,27 @@ namespace ProjectVagabond.Battle.UI
                 return new Vector2(v.X * cos - v.Y * sin, v.X * sin + v.Y * cos);
             }
 
+            // Shift center to align the visual background (height-1) to the top of the hitbox (height)
+            // This ensures the visual background is top-aligned within the button bounds.
+            Vector2 visualCenter = center + Rotate(new Vector2(0, -0.5f * scale.Y));
+
             // 1. Middle Body: (x+1, y+1) size (w-2, h-2)
-            // Center relative to button center: (0, 0)
+            // Center relative to visual center: (0, 0)
             // Size: (w-2, h-2)
             Vector2 midScale = new Vector2(w - 2, h - 2) * scale;
-            spriteBatch.DrawSnapped(pixel, center, null, color, rotation, new Vector2(0.5f, 0.5f), midScale, SpriteEffects.None, 0f);
+            spriteBatch.DrawSnapped(pixel, visualCenter, null, color, rotation, new Vector2(0.5f, 0.5f), midScale, SpriteEffects.None, 0f);
 
             // 2. Top Edge: (x+2, y) size (w-4, 1)
-            // Center relative to button center: (0, -h/2 + 0.5)
+            // Center relative to visual center: (0, -h/2 + 0.5)
             Vector2 topOffset = new Vector2(0, (-h / 2f + 0.5f) * scale.Y);
-            Vector2 topPos = center + Rotate(topOffset);
+            Vector2 topPos = visualCenter + Rotate(topOffset);
             Vector2 topScale = new Vector2((w - 4) * scale.X, 1f * scale.Y);
             spriteBatch.DrawSnapped(pixel, topPos, null, color, rotation, new Vector2(0.5f, 0.5f), topScale, SpriteEffects.None, 0f);
 
             // 3. Bottom Edge: (x+2, y+h-1) size (w-4, 1)
-            // Center relative to button center: (0, h/2 - 0.5)
+            // Center relative to visual center: (0, h/2 - 0.5)
             Vector2 botOffset = new Vector2(0, (h / 2f - 0.5f) * scale.Y);
-            Vector2 botPos = center + Rotate(botOffset);
+            Vector2 botPos = visualCenter + Rotate(botOffset);
             Vector2 botScale = new Vector2((w - 4) * scale.X, 1f * scale.Y);
             spriteBatch.DrawSnapped(pixel, botPos, null, color, rotation, new Vector2(0.5f, 0.5f), botScale, SpriteEffects.None, 0f);
         }
