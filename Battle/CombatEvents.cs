@@ -21,6 +21,8 @@
         CheckStatusImmunity,
         CheckDazeImmunity,
         CheckStatChangeBlock,
+        CheckGuardInteraction,
+        CheckResourceCost,
         ModifyElementalAffinity,
         QueryMoveLock, // For Stubborn/Choice Band
 

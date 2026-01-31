@@ -54,7 +54,8 @@ namespace ProjectVagabond.Battle
             // Intrinsic Abilities
             if (member.IntrinsicAbilities != null && member.IntrinsicAbilities.Count > 0)
             {
-                var intrinsicAbilities = AbilityFactory.CreateAbilitiesFromData(member.IntrinsicAbilities, new Dictionary<string, int>());
+                // CHANGED: Pass null for MoveData, as these are intrinsic to the combatant
+                var intrinsicAbilities = AbilityFactory.CreateAbilitiesFromData(null, member.IntrinsicAbilities, new Dictionary<string, int>());
                 combatant.RegisterAbilities(intrinsicAbilities);
             }
 

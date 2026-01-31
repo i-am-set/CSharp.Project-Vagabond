@@ -179,12 +179,12 @@ namespace ProjectVagabond.Battle.UI
                 if (player.ManaBarDisappearTimer <= 0 && player.ManaBarDelayTimer <= 0)
                 {
                     var move = uiManager.HoveredMove;
-                    var manaDump = move.Abilities.OfType<ManaDumpAbility>().FirstOrDefault();
-                    int cost = move.ManaCost;
+                    int cost = 0;
 
-                    if (manaDump != null)
+                    if (move.AffectsUserMana)
                     {
-                        cost = player.Stats.CurrentMana;
+                        // If ManaCost is 0 but AffectsUserMana is true, assume it's a dump (all mana)
+                        cost = (move.ManaCost > 0) ? move.ManaCost : player.Stats.CurrentMana;
                     }
 
                     if (cost > 0)

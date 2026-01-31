@@ -130,6 +130,12 @@ namespace ProjectVagabond.Battle
         /// </summary>
         public List<IAbility> Abilities { get; set; } = new List<IAbility>();
 
+        // --- Metadata Flags for UI/Logic ---
+        public bool AffectsUserHP { get; set; }
+        public bool AffectsUserMana { get; set; }
+        public bool AffectsTargetMana { get; set; }
+        public bool AffectsTargetHP { get; set; }
+
         /// <summary>
         /// Creates a shallow copy of the MoveData object.
         /// Note: Abilities are shared references (flyweight pattern) unless they are stateful, 

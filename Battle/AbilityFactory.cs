@@ -58,23 +58,45 @@ namespace ProjectVagabond.Battle.Abilities
             Debug.WriteLine($"[AbilityFactory] Cached {_abilityTypeCache.Count} ability types via Reflection.");
         }
 
-        public static List<IAbility> CreateAbilitiesFromData(Dictionary<string, string> effects, Dictionary<string, int> statModifiers)
+        // CHANGED: moveData is now nullable (MoveData?)
+        public static List<IAbility> CreateAbilitiesFromData(MoveData? moveData, Dictionary<string, string> effects, Dictionary<string, int> statModifiers)
         {
             var abilities = new List<IAbility>();
 
-            // 1. Handle Stat Modifiers
-            // Removed FlatStatBonusAbility logic as relics are gone. 
-            // If Party Members need stat mods later, we can re-implement a specific ability for it.
-
             if (effects == null) return abilities;
 
-            // 2. Handle Named Effects via Reflection
+            // Handle Named Effects via Reflection
             foreach (var kvp in effects)
             {
                 try
                 {
                     IAbility ability = CreateAbility(kvp.Key, kvp.Value);
-                    if (ability != null) abilities.Add(ability);
+                    if (ability != null)
+                    {
+                        abilities.Add(ability);
+
+                        // --- Set Metadata Flags on MoveData (Only if MoveData exists) ---
+                        if (moveData != null)
+                        {
+                            if (ability is RecoilAbility || ability is DamageRecoilAbility)
+                            {
+                                moveData.AffectsUserHP = true;
+                            }
+                            if (ability is ManaDumpAbility)
+                            {
+                                moveData.AffectsUserMana = true;
+                                moveData.AffectsTargetHP = true; // Mana dump deals damage
+                            }
+                            if (ability is ManaBurnOnHitAbility || ability is ManaDamageAbility || ability is RestoreManaAbility)
+                            {
+                                moveData.AffectsTargetMana = true;
+                            }
+                            if (ability is PercentageDamageAbility)
+                            {
+                                moveData.AffectsTargetHP = true;
+                            }
+                        }
+                    }
                 }
                 catch (Exception ex)
                 {

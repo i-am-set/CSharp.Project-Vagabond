@@ -267,18 +267,9 @@ namespace ProjectVagabond.Battle.Abilities
             {
                 ctx.BasePower = ctx.Actor.Stats.CurrentMana * Multiplier;
             }
-            else if (type == CombatEventType.ActionComplete)
+            else if (type == CombatEventType.CheckResourceCost)
             {
-                float before = ctx.Actor.Stats.CurrentMana;
-                if (before > 0)
-                {
-                    ctx.Actor.Stats.CurrentMana = 0;
-                    if (!ctx.IsSimulation)
-                    {
-                        EventBus.Publish(new GameEvents.CombatantManaConsumed { Actor = ctx.Actor, ManaBefore = before, ManaAfter = 0 });
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Actor.Name} discharged all mana!" });
-                    }
-                }
+                ctx.StatValue = ctx.Actor.Stats.CurrentMana;
             }
         }
     }
@@ -306,13 +297,16 @@ namespace ProjectVagabond.Battle.Abilities
     {
         public string Name => "Shield Breaker";
         public string Description => "Breaks through protection.";
-        private readonly float _breakMult;
-        private readonly bool _failsIfNoProtect;
-        public ShieldBreakerAbility(float mult, bool fails) { _breakMult = mult; _failsIfNoProtect = fails; }
+        public int Priority => 10;
+
+        public ShieldBreakerAbility() { }
 
         public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
         {
-            // Logic handled in DamageCalculator via manual check or specific event if added later.
+            if (type == CombatEventType.CheckGuardInteraction)
+            {
+                ctx.BreakGuard = true;
+            }
         }
     }
 

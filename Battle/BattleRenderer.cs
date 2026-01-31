@@ -1325,27 +1325,20 @@ namespace ProjectVagabond.Battle.UI
             if (move == null || actor == null || candidate == null) return;
 
             bool isActor = actor == candidate;
-
             var validTargets = TargetingHelper.GetValidTargets(actor, move.Target, ServiceLocator.Get<BattleManager>().AllCombatants);
             bool isTarget = validTargets.Contains(candidate);
 
             if (isActor)
             {
-                if (move.ManaCost > 0) affectsMana = true;
-                if (move.Abilities.Any(a => a is ManaDumpAbility)) affectsMana = true;
-
-                if (move.Abilities.Any(a => a is RecoilAbility)) affectsHP = true;
+                if (move.ManaCost > 0 || move.AffectsUserMana) affectsMana = true;
+                if (move.AffectsUserHP) affectsHP = true;
             }
 
             if (isTarget)
             {
-                if (move.Power > 0) affectsHP = true;
-                if (move.Effects.ContainsKey("Heal")) affectsHP = true;
-                if (move.Abilities.Any(a => a is PercentageDamageAbility)) affectsHP = true;
-                if (move.Abilities.Any(a => a is ManaDumpAbility)) affectsHP = true;
-
-                if (move.Abilities.Any(a => a is ManaBurnOnHitAbility || a is ManaDamageAbility)) affectsMana = true;
-                if (move.Abilities.Any(a => a is RestoreManaAbility)) affectsMana = true;
+                if (move.Power > 0 || move.Effects.ContainsKey("Heal")) affectsHP = true;
+                if (move.AffectsTargetHP) affectsHP = true;
+                if (move.AffectsTargetMana) affectsMana = true;
             }
         }
 

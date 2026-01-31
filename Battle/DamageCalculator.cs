@@ -68,6 +68,30 @@ namespace ProjectVagabond.Battle
                 if (_random.Next(1, 101) > hitChance) result.WasGraze = true;
             }
 
+            // --- Guard Interaction Logic ---
+            ctx.BreakGuard = false;
+            attacker.NotifyAbilities(CombatEventType.CheckGuardInteraction, ctx);
+            foreach (var ab in move.Abilities) ab.OnCombatEvent(CombatEventType.CheckGuardInteraction, ctx);
+
+            if (target.HasStatusEffect(StatusEffectType.Protected))
+            {
+                if (!ctx.BreakGuard)
+                {
+                    result.WasProtected = true;
+                    result.DamageAmount = 0;
+                    return result;
+                }
+                else
+                {
+                    if (!isSimulation)
+                    {
+                        target.ActiveStatusEffects.RemoveAll(e => e.EffectType == StatusEffectType.Protected);
+                        EventBus.Publish(new GameEvents.StatusEffectRemoved { Combatant = target, EffectType = StatusEffectType.Protected });
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "GUARD BROKEN!" });
+                    }
+                }
+            }
+
             // 2. Fixed Damage Check
             ctx.StatValue = 0;
             foreach (var ab in move.Abilities) ab.OnCombatEvent(CombatEventType.CalculateFixedDamage, ctx);

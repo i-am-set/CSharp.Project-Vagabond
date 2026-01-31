@@ -1,6 +1,12 @@
-﻿using Microsoft.Xna.Framework.Content;
+﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Content;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -36,7 +42,8 @@ namespace ProjectVagabond.Battle
             {
                 if (move.Effects != null && move.Effects.Count > 0)
                 {
-                    move.Abilities = AbilityFactory.CreateAbilitiesFromData(move.Effects, new Dictionary<string, int>());
+                    // Pass the move object itself so the factory can set metadata flags
+                    move.Abilities = AbilityFactory.CreateAbilitiesFromData(move, move.Effects, new Dictionary<string, int>());
                 }
             }
 

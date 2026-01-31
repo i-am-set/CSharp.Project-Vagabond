@@ -43,11 +43,23 @@ namespace ProjectVagabond.Battle.Abilities
 
         public bool IsSimulation { get; set; } = false;
 
+        // --- Rule-Breaking Flags ---
+        public bool BreakGuard { get; set; }
+        public bool IgnoreEvasion { get; set; }
+        public bool IsLethal { get; set; }
+
+        // --- Generic Data ---
+        public Dictionary<string, object> Tags { get; set; } = new Dictionary<string, object>();
+
         public void ResetMultipliers()
         {
             DamageMultiplier = 1.0f;
             FlatDamageBonus = 0f;
             IsCancelled = false;
+            BreakGuard = false;
+            IgnoreEvasion = false;
+            IsLethal = false;
+            Tags.Clear();
         }
     }
 }

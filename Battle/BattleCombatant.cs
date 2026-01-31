@@ -150,15 +150,23 @@ namespace ProjectVagabond.Battle
         public void RegisterAbility(IAbility ability)
         {
             Abilities.Add(ability);
+            // Sort by Priority Descending (High to Low) so high priority abilities execute first
+            Abilities.Sort((a, b) => b.Priority.CompareTo(a.Priority));
         }
 
         public void RegisterAbilities(IEnumerable<IAbility> abilities)
         {
-            foreach (var ability in abilities) RegisterAbility(ability);
+            foreach (var ability in abilities)
+            {
+                Abilities.Add(ability);
+            }
+            // Sort once after bulk add
+            Abilities.Sort((a, b) => b.Priority.CompareTo(a.Priority));
         }
 
         public void NotifyAbilities(CombatEventType type, CombatTriggerContext ctx)
         {
+            // List is pre-sorted by priority in RegisterAbility
             foreach (var ability in Abilities)
             {
                 ability.OnCombatEvent(type, ctx);

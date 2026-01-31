@@ -507,7 +507,13 @@ namespace ProjectVagabond.Battle
                 return;
             }
 
-            if (action.Actor.Stats.CurrentMana < action.ChosenMove.ManaCost)
+            // --- Resource Cost Logic ---
+            var costCtx = new CombatTriggerContext { Actor = action.Actor, Move = action.ChosenMove, StatValue = action.ChosenMove.ManaCost };
+            action.Actor.NotifyAbilities(CombatEventType.CheckResourceCost, costCtx);
+            foreach (var ab in action.ChosenMove.Abilities) ab.OnCombatEvent(CombatEventType.CheckResourceCost, costCtx);
+            int finalCost = (int)costCtx.StatValue;
+
+            if (action.Actor.Stats.CurrentMana < finalCost)
             {
                 AppendToCurrentLine(" NO MANA!");
                 EventBus.Publish(new GameEvents.ActionFailed { Actor = action.Actor, Reason = "not enough mana" });
@@ -516,11 +522,6 @@ namespace ProjectVagabond.Battle
                 return;
             }
 
-            float manaBefore = action.Actor.Stats.CurrentMana;
-            action.Actor.Stats.CurrentMana -= action.ChosenMove.ManaCost;
-            float manaAfter = action.Actor.Stats.CurrentMana;
-            if (manaBefore != manaAfter) EventBus.Publish(new GameEvents.CombatantManaConsumed { Actor = action.Actor, ManaBefore = manaBefore, ManaAfter = manaAfter });
-
             if (action.Actor.IsPlayerControlled && action.SpellbookEntry != null) action.SpellbookEntry.TimesUsed++;
             action.Actor.PendingDisengage = false;
 
@@ -528,7 +529,17 @@ namespace ProjectVagabond.Battle
             if (multiHit != null) { int hits = _random.Next(multiHit.MinHits, multiHit.MaxHits + 1); _multiHitTotalExecuted = 0; _multiHitRemaining = hits; _multiHitCrits = 0; }
             else { _multiHitTotalExecuted = 0; _multiHitRemaining = 1; _multiHitCrits = 0; }
 
+            // Execute Hit Logic (Damage Calc uses current mana)
             PrepareHit(action);
+
+            // Pay Cost (After calculation, so ManaDump works correctly with full mana)
+            if (finalCost > 0)
+            {
+                float manaBefore = action.Actor.Stats.CurrentMana;
+                action.Actor.Stats.CurrentMana = Math.Max(0, action.Actor.Stats.CurrentMana - finalCost);
+                float manaAfter = action.Actor.Stats.CurrentMana;
+                if (manaBefore != manaAfter) EventBus.Publish(new GameEvents.CombatantManaConsumed { Actor = action.Actor, ManaBefore = manaBefore, ManaAfter = manaAfter });
+            }
         }
 
         private void PrepareHit(QueuedAction action)
