@@ -1,25 +1,9 @@
 ﻿using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
-using MonoGame.Extended.BitmapFonts;
-using MonoGame.Extended.ECS.Systems;
-using ProjectVagabond;
-using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
-using ProjectVagabond.Battle.UI;
-using ProjectVagabond.Particles;
-using ProjectVagabond.Progression;
-using ProjectVagabond.Scenes;
-using ProjectVagabond.Transitions;
-using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.Battle
 {
@@ -55,6 +39,8 @@ namespace ProjectVagabond.Battle
         public int BattleSlot { get; set; } = -1;
         public bool IsActiveOnField => BattleSlot == 0 || BattleSlot == 1;
         public int CoinReward { get; set; } = 0;
+
+        public TagContainer Tags { get; private set; } = new TagContainer();
 
         public List<MoveData> AvailableMoves
         {
@@ -92,7 +78,9 @@ namespace ProjectVagabond.Battle
 
         public List<IAbility> Abilities { get; private set; } = new List<IAbility>();
 
+        // Kept for UI/Input logic distinction, but also mirrored in Tags ("Type.Player")
         public bool IsPlayerControlled { get; set; }
+
         public bool IsDefeated => Stats.CurrentHP <= 0;
         public bool IsDying { get; set; } = false;
         public bool IsRemovalProcessed { get; set; } = false;
@@ -106,22 +94,7 @@ namespace ProjectVagabond.Battle
         public bool UsedProtectThisTurn { get; set; } = false;
         public bool PendingDisengage { get; set; } = false;
 
-        private bool _isDazed;
-        public bool IsDazed
-        {
-            get => _isDazed;
-            set
-            {
-                if (value == true)
-                {
-                    var ctx = new CombatTriggerContext { Actor = this };
-                    NotifyAbilities(CombatEventType.CheckDazeImmunity, ctx);
-                    if (ctx.IsCancelled) return;
-                }
-                _isDazed = value;
-            }
-        }
-
+        // Visual/UI Timers
         public float HealthBarVisibleTimer { get; set; } = 0f;
         public float ManaBarVisibleTimer { get; set; } = 0f;
         public float VisualHealthBarAlpha { get; set; } = 0f;
@@ -160,16 +133,24 @@ namespace ProjectVagabond.Battle
             {
                 Abilities.Add(ability);
             }
-            // Sort once after bulk add
             Abilities.Sort((a, b) => b.Priority.CompareTo(a.Priority));
         }
 
-        public void NotifyAbilities(CombatEventType type, CombatTriggerContext ctx)
+        public void NotifyAbilities(GameEvent e)
         {
-            // List is pre-sorted by priority in RegisterAbility
+            // 1. Intrinsic Abilities
             foreach (var ability in Abilities)
             {
-                ability.OnCombatEvent(type, ctx);
+                ability.OnEvent(e);
+                if (e.IsHandled) return;
+            }
+
+            // 2. Status Effects (which contain abilities)
+            // Iterate backwards in case status effects remove themselves during processing
+            for (int i = ActiveStatusEffects.Count - 1; i >= 0; i--)
+            {
+                ActiveStatusEffects[i].OnEvent(e);
+                if (e.IsHandled) return;
             }
         }
 
@@ -189,13 +170,17 @@ namespace ProjectVagabond.Battle
 
         public bool AddStatusEffect(StatusEffectInstance newEffect)
         {
-            var ctx = new CombatTriggerContext { Actor = this, StatusType = newEffect.EffectType };
-            NotifyAbilities(CombatEventType.CheckStatusImmunity, ctx);
-            if (ctx.IsCancelled) return false;
+            // Note: Immunity checks should now be handled by the system triggering this, 
+            // or by a "CanApplyStatusEvent" if implemented. 
+            // For now, we assume the check happens before calling this or via the StatusAppliedEvent.
 
             bool hadEffectBefore = HasStatusEffect(newEffect.EffectType);
             ActiveStatusEffects.RemoveAll(e => e.EffectType == newEffect.EffectType);
             ActiveStatusEffects.Add(newEffect);
+
+            // Notify that status was applied
+            NotifyAbilities(new StatusAppliedEvent(this, newEffect));
+
             return !hadEffectBefore;
         }
 
@@ -203,9 +188,9 @@ namespace ProjectVagabond.Battle
 
         public (bool success, string message) ModifyStatStage(OffensiveStatType stat, int amount)
         {
-            var ctx = new CombatTriggerContext { Actor = this, StatType = stat, StatValue = amount };
-            NotifyAbilities(CombatEventType.CheckStatChangeBlock, ctx);
-            if (ctx.IsCancelled) return (false, $"{Name}'s ability prevented the stat change!");
+            // Note: Blocking logic (e.g. Scrappy) should now be handled via a specific event 
+            // before calling this, or we need a "StatChangeAttemptEvent".
+            // For this refactor step, we proceed with the modification.
 
             int currentStage = StatStages[stat];
             if (amount > 0 && currentStage >= 6) return (false, $"{Name}'s {stat} won't go any higher!");
@@ -220,42 +205,46 @@ namespace ProjectVagabond.Battle
 
         public int GetEffectiveStrength()
         {
-            var ctx = new CombatTriggerContext { Actor = this, StatType = OffensiveStatType.Strength, StatValue = Stats.Strength };
-            NotifyAbilities(CombatEventType.CalculateStat, ctx);
-            float stat = ctx.StatValue * BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Strength]];
+            var evt = new CalculateStatEvent(this, OffensiveStatType.Strength, Stats.Strength);
+            NotifyAbilities(evt);
+            float stat = evt.FinalValue * BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Strength]];
             return (int)Math.Round(stat);
         }
 
         public int GetEffectiveIntelligence()
         {
-            var ctx = new CombatTriggerContext { Actor = this, StatType = OffensiveStatType.Intelligence, StatValue = Stats.Intelligence };
-            NotifyAbilities(CombatEventType.CalculateStat, ctx);
-            float stat = ctx.StatValue * BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Intelligence]];
+            var evt = new CalculateStatEvent(this, OffensiveStatType.Intelligence, Stats.Intelligence);
+            NotifyAbilities(evt);
+            float stat = evt.FinalValue * BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Intelligence]];
             return (int)Math.Round(stat);
         }
 
         public int GetEffectiveTenacity()
         {
-            var ctx = new CombatTriggerContext { Actor = this, StatType = OffensiveStatType.Tenacity, StatValue = Stats.Tenacity };
-            NotifyAbilities(CombatEventType.CalculateStat, ctx);
-            float stat = ctx.StatValue * BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Tenacity]];
+            var evt = new CalculateStatEvent(this, OffensiveStatType.Tenacity, Stats.Tenacity);
+            NotifyAbilities(evt);
+            float stat = evt.FinalValue * BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Tenacity]];
             return (int)Math.Round(stat);
         }
 
         public int GetEffectiveAgility()
         {
-            var ctx = new CombatTriggerContext { Actor = this, StatType = OffensiveStatType.Agility, StatValue = Stats.Agility };
-            NotifyAbilities(CombatEventType.CalculateStat, ctx);
-            float stat = ctx.StatValue * BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Agility]];
+            var evt = new CalculateStatEvent(this, OffensiveStatType.Agility, Stats.Agility);
+            NotifyAbilities(evt);
+            float stat = evt.FinalValue * BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Agility]];
+
+            // Frostbite logic should ideally be moved to an ability/event handler, 
+            // but keeping here for parity if not migrated yet.
             if (HasStatusEffect(StatusEffectType.Frostbite)) stat *= Global.Instance.FrostbiteAgilityMultiplier;
+
             return (int)Math.Round(stat);
         }
 
         public int GetEffectiveAccuracy(int baseAccuracy)
         {
-            var ctx = new CombatTriggerContext { Actor = this, StatValue = baseAccuracy };
-            NotifyAbilities(CombatEventType.CheckAccuracy, ctx);
-            return (int)Math.Round(ctx.StatValue);
+            // Note: This is a simplified check. Full accuracy logic usually involves target evasion.
+            // This method might be deprecated in favor of CheckHitChanceEvent in the DamageCalculator.
+            return baseAccuracy;
         }
     }
 }

@@ -1,4 +1,6 @@
-﻿namespace ProjectVagabond.Battle.Abilities
+﻿using ProjectVagabond.Battle;
+
+namespace ProjectVagabond.Battle.Abilities
 {
     public interface IAbility
     {
@@ -9,8 +11,8 @@
         /// Determines the execution order of abilities. Higher values execute first.
         /// Defaults to 0.
         /// </summary>
-        int Priority => 0;
+        int Priority { get; }
 
-        void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx);
+        void OnEvent(GameEvent e);
     }
 }

@@ -15,7 +15,6 @@ namespace ProjectVagabond.Battle
         public static BattleCombatant CreatePlayer(PartyMember member, string combatantId)
         {
             var gameState = ServiceLocator.Get<GameState>();
-            var global = ServiceLocator.Get<Global>();
 
             var combatant = new BattleCombatant
             {
@@ -39,6 +38,10 @@ namespace ProjectVagabond.Battle
                 DefaultStrikeMoveID = member.DefaultStrikeMoveID
             };
 
+            // Initialize Tags
+            combatant.Tags.Add("Type.Player");
+            combatant.Tags.Add("Type.Ally");
+
             // Initialize Tenacity Shield
             combatant.CurrentTenacity = combatant.Stats.Tenacity;
             combatant.VisualHP = combatant.Stats.CurrentHP;
@@ -49,12 +52,15 @@ namespace ProjectVagabond.Battle
             {
                 combatant.Gender = data.Gender;
                 combatant.IsProperNoun = data.IsProperNoun;
+
+                combatant.Tags.Add($"Gender.{data.Gender}");
+                if (data.IsProperNoun) combatant.Tags.Add("Prop.ProperNoun");
             }
 
             // Intrinsic Abilities
             if (member.IntrinsicAbilities != null && member.IntrinsicAbilities.Count > 0)
             {
-                // CHANGED: Pass null for MoveData, as these are intrinsic to the combatant
+                // Pass null for MoveData, as these are intrinsic to the combatant
                 var intrinsicAbilities = AbilityFactory.CreateAbilitiesFromData(null, member.IntrinsicAbilities, new Dictionary<string, int>());
                 combatant.RegisterAbilities(intrinsicAbilities);
             }
@@ -90,6 +96,11 @@ namespace ProjectVagabond.Battle
                 IsProperNoun = enemyData.IsProperNoun,
                 Stats = new CombatantStats()
             };
+
+            // Initialize Tags
+            combatant.Tags.Add("Type.Enemy");
+            combatant.Tags.Add($"Gender.{enemyData.Gender}");
+            if (enemyData.IsProperNoun) combatant.Tags.Add("Prop.ProperNoun");
 
             // Roll Stats
             combatant.Stats.MaxHP = _random.Next(enemyData.MinHP, enemyData.MaxHP + 1);

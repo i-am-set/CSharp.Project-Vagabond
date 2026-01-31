@@ -1,14 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
-using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
-using ProjectVagabond.Battle.UI;
-using ProjectVagabond.Progression;
-using ProjectVagabond.Scenes;
-using ProjectVagabond.Transitions;
-using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections;
@@ -22,7 +14,6 @@ namespace ProjectVagabond.Battle.Abilities
 {
     public static class AbilityFactory
     {
-        // Cache: Maps "Thorns" -> typeof(ThornsAbility)
         private static readonly Dictionary<string, Type> _abilityTypeCache;
 
         static AbilityFactory()
@@ -31,9 +22,6 @@ namespace ProjectVagabond.Battle.Abilities
             RegisterAbilityTypes();
         }
 
-        /// <summary>
-        /// Scans the assembly for classes implementing IAbility and caches them by name (stripping "Ability" suffix).
-        /// </summary>
         private static void RegisterAbilityTypes()
         {
             var abilityType = typeof(IAbility);
@@ -42,7 +30,6 @@ namespace ProjectVagabond.Battle.Abilities
 
             foreach (var type in types)
             {
-                // Map "ElementalDamageBonusAbility" -> "ElementalDamageBonus"
                 string key = type.Name;
                 if (key.EndsWith("Ability"))
                 {
@@ -58,14 +45,55 @@ namespace ProjectVagabond.Battle.Abilities
             Debug.WriteLine($"[AbilityFactory] Cached {_abilityTypeCache.Count} ability types via Reflection.");
         }
 
-        // CHANGED: moveData is now nullable (MoveData?)
+        public static List<IAbility> GetAbilitiesForStatus(StatusEffectInstance instance)
+        {
+            var list = new List<IAbility>();
+
+            switch (instance.EffectType)
+            {
+                case StatusEffectType.Poison:
+                    list.Add(new PoisonLogicAbility(instance));
+                    break;
+                case StatusEffectType.Regen:
+                    list.Add(new RegenLogicAbility(instance));
+                    break;
+                case StatusEffectType.Stun:
+                    list.Add(new StunLogicAbility(instance));
+                    break;
+                case StatusEffectType.Burn:
+                    list.Add(new BurnLogicAbility(instance));
+                    break;
+                case StatusEffectType.Provoked:
+                    list.Add(new ProvokeLogicAbility(instance));
+                    break;
+                case StatusEffectType.Silence:
+                    list.Add(new SilenceLogicAbility(instance));
+                    break;
+                case StatusEffectType.Frostbite:
+                    list.Add(new FrostbiteLogicAbility(instance));
+                    break;
+                case StatusEffectType.Dodging:
+                    list.Add(new DodgingLogicAbility(instance));
+                    break;
+                case StatusEffectType.Empowered:
+                    list.Add(new EmpoweredLogicAbility(instance));
+                    break;
+                case StatusEffectType.Protected:
+                    list.Add(new ProtectedLogicAbility(instance));
+                    break;
+                default:
+                    break;
+            }
+
+            return list;
+        }
+
         public static List<IAbility> CreateAbilitiesFromData(MoveData? moveData, Dictionary<string, string> effects, Dictionary<string, int> statModifiers)
         {
             var abilities = new List<IAbility>();
 
             if (effects == null) return abilities;
 
-            // Handle Named Effects via Reflection
             foreach (var kvp in effects)
             {
                 try
@@ -75,25 +103,23 @@ namespace ProjectVagabond.Battle.Abilities
                     {
                         abilities.Add(ability);
 
-                        // --- Set Metadata Flags on MoveData (Only if MoveData exists) ---
                         if (moveData != null)
                         {
                             if (ability is RecoilAbility || ability is DamageRecoilAbility)
                             {
-                                moveData.AffectsUserHP = true;
+                                moveData.Tags.Add("Effect.Recoil");
                             }
                             if (ability is ManaDumpAbility)
                             {
-                                moveData.AffectsUserMana = true;
-                                moveData.AffectsTargetHP = true; // Mana dump deals damage
+                                moveData.Tags.Add("Effect.ManaDump");
                             }
                             if (ability is ManaBurnOnHitAbility || ability is ManaDamageAbility || ability is RestoreManaAbility)
                             {
-                                moveData.AffectsTargetMana = true;
+                                moveData.Tags.Add("Effect.ManaMod");
                             }
                             if (ability is PercentageDamageAbility)
                             {
-                                moveData.AffectsTargetHP = true;
+                                moveData.Tags.Add("Effect.FixedDamage");
                             }
                         }
                     }
@@ -109,39 +135,31 @@ namespace ProjectVagabond.Battle.Abilities
 
         private static IAbility CreateAbility(string key, string valueString)
         {
-            // 1. Find the type
             if (!_abilityTypeCache.TryGetValue(key, out Type type))
             {
                 Debug.WriteLine($"[AbilityFactory] Warning: No ability class found for key '{key}'. Expected class '{key}Ability'.");
                 return null;
             }
 
-            // 2. Get the constructor (Assume the first public one is the target)
             var constructors = type.GetConstructors();
             if (constructors.Length == 0) return null;
             var ctor = constructors[0];
             var parameters = ctor.GetParameters();
 
-            // 3. Parse arguments
             object[] args;
 
-            // Special Case: Constructor takes a single List/IEnumerable (e.g., StatusImmunityAbility)
-            // and the input string is a comma-separated list of those items.
             if (parameters.Length == 1 && IsCollectionType(parameters[0].ParameterType))
             {
                 args = new object[] { ParseCollection(valueString, parameters[0].ParameterType) };
             }
-            // Special Case: Constructor takes 0 arguments (Flag abilities like PainFuel)
             else if (parameters.Length == 0)
             {
                 args = Array.Empty<object>();
             }
-            // Standard Case: Comma-separated values map 1-to-1 to parameters
             else
             {
                 string[] parts = valueString.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
 
-                // Validate arg count (allow optional params if we have fewer parts)
                 if (parts.Length > parameters.Length)
                 {
                     Debug.WriteLine($"[AbilityFactory] Warning: Too many arguments for '{key}'. Expected {parameters.Length}, got {parts.Length}. Truncating.");
@@ -155,12 +173,10 @@ namespace ProjectVagabond.Battle.Abilities
 
                     if (i < parts.Length)
                     {
-                        // Parse the string part to the target type
                         args[i] = ParseValue(parts[i].Trim(), paramType);
                     }
                     else if (parameters[i].HasDefaultValue)
                     {
-                        // Use default value if provided in C#
                         args[i] = parameters[i].DefaultValue;
                     }
                     else
@@ -170,7 +186,6 @@ namespace ProjectVagabond.Battle.Abilities
                 }
             }
 
-            // 4. Instantiate
             return (IAbility)Activator.CreateInstance(type, args);
         }
 
@@ -193,14 +208,12 @@ namespace ProjectVagabond.Battle.Abilities
 
         private static object ParseCollection(string input, Type collectionType)
         {
-            // Determine the element type (e.g., StatusEffectType inside IEnumerable<StatusEffectType>)
             Type elementType = collectionType.IsArray
                 ? collectionType.GetElementType()
                 : collectionType.GetGenericArguments()[0];
 
             string[] parts = input.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
 
-            // Create a generic list to hold the parsed items
             var listType = typeof(List<>).MakeGenericType(elementType);
             var list = (IList)Activator.CreateInstance(listType);
 
@@ -209,7 +222,6 @@ namespace ProjectVagabond.Battle.Abilities
                 list.Add(ParseValue(part.Trim(), elementType));
             }
 
-            // If the constructor wants an Array, convert it
             if (collectionType.IsArray)
             {
                 var array = Array.CreateInstance(elementType, list.Count);

@@ -1,5 +1,7 @@
-﻿using ProjectVagabond.Utils;
+﻿using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Utils;
 using System;
+using System.Collections.Generic;
 
 namespace ProjectVagabond.Battle
 {
@@ -24,6 +26,11 @@ namespace ProjectVagabond.Battle
         /// Used to calculate the doubling damage.
         /// </summary>
         public int PoisonTurnCount { get; set; } = 0;
+
+        /// <summary>
+        /// The list of abilities (logic) associated with this status effect.
+        /// </summary>
+        public List<IAbility> Abilities { get; private set; } = new List<IAbility>();
 
         public bool IsPermanent
         {
@@ -53,6 +60,21 @@ namespace ProjectVagabond.Battle
             else
             {
                 DurationInTurns = durationInTurns;
+            }
+
+            // Initialize logic abilities immediately
+            Abilities = AbilityFactory.GetAbilitiesForStatus(this);
+        }
+
+        /// <summary>
+        /// Propagates a game event to all abilities attached to this status effect.
+        /// </summary>
+        public void OnEvent(GameEvent e)
+        {
+            foreach (var ability in Abilities)
+            {
+                ability.OnEvent(e);
+                if (e.IsHandled) return;
             }
         }
 

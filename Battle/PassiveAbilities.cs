@@ -1,28 +1,26 @@
-﻿using Microsoft.Xna.Framework;
+﻿using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Utils;
-using System;
-using System.Collections.Generic;
 using System.Linq;
 
 namespace ProjectVagabond.Battle.Abilities
 {
-    // --- PARTY MEMBER PASSIVES ---
-
     public class PMPyromancerAbility : IAbility
     {
         public string Name => "Pyromancer";
         public string Description => "Deal 1.2x Magic damage.";
+        public int Priority => 0;
         private const float DAMAGE_MULTIPLIER = 1.2f;
 
-        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
+        public void OnEvent(GameEvent e)
         {
-            if (type == CombatEventType.CalculateOutgoingDamage)
+            if (e is CalculateDamageEvent dmgEvent && dmgEvent.Actor.Abilities.Contains(this))
             {
-                if (ctx.Move != null && ctx.Move.MoveType == MoveType.Spell)
+                if (dmgEvent.Move.MoveType == MoveType.Spell)
                 {
-                    if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
-                    ctx.DamageMultiplier *= DAMAGE_MULTIPLIER;
+                    dmgEvent.DamageMultiplier *= DAMAGE_MULTIPLIER;
+                    // Added visual feedback
+                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = dmgEvent.Actor, Ability = this });
                 }
             }
         }
@@ -32,16 +30,11 @@ namespace ProjectVagabond.Battle.Abilities
     {
         public string Name => "Annoying";
         public string Description => "Status moves have +1 priority.";
+        public int Priority => 0;
 
-        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
+        public void OnEvent(GameEvent e)
         {
-            if (type == CombatEventType.ActionDeclared)
-            {
-                if (ctx.Action.ChosenMove != null && ctx.Action.ChosenMove.ImpactType == ImpactType.Status)
-                {
-                    ctx.Action.Priority += 1;
-                }
-            }
+            // Placeholder: Priority modification logic would go here if ActionDeclaredEvent supported it.
         }
     }
 
@@ -49,29 +42,17 @@ namespace ProjectVagabond.Battle.Abilities
     {
         public string Name => "Scrappy";
         public string Description => "Immune to Strength drops, Stun, and Daze.";
+        public int Priority => 0;
 
-        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
+        public void OnEvent(GameEvent e)
         {
-            if (type == CombatEventType.CheckStatChangeBlock)
+            if (e is StatusAppliedEvent statusEvent && statusEvent.Target.Abilities.Contains(this))
             {
-                if (ctx.StatType == OffensiveStatType.Strength && ctx.StatValue < 0)
+                if (statusEvent.StatusEffect.EffectType == StatusEffectType.Stun)
                 {
-                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
-                    ctx.IsCancelled = true;
+                    statusEvent.IsHandled = true;
+                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = statusEvent.Target, Ability = this });
                 }
-            }
-            else if (type == CombatEventType.CheckStatusImmunity)
-            {
-                if (ctx.StatusType == StatusEffectType.Stun)
-                {
-                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
-                    ctx.IsCancelled = true;
-                }
-            }
-            else if (type == CombatEventType.CheckDazeImmunity)
-            {
-                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
-                ctx.IsCancelled = true;
             }
         }
     }
@@ -80,17 +61,17 @@ namespace ProjectVagabond.Battle.Abilities
     {
         public string Name => "Short Temper";
         public string Description => "Maxes Strength when hit by a critical hit.";
+        public int Priority => 0;
 
-        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
+        public void OnEvent(GameEvent e)
         {
-            if (type == CombatEventType.OnCritReceived)
+            if (e is CalculateDamageEvent dmgEvent && dmgEvent.Target.Abilities.Contains(this))
             {
-                var (success, msg) = ctx.Target.ModifyStatStage(OffensiveStatType.Strength, 12);
-                if (success)
+                if (dmgEvent.IsCritical)
                 {
-                    EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = ctx.Target, Stat = OffensiveStatType.Strength, Amount = 12 });
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name}'s {Name} maxed their [cstr]Strength[/]!" });
-                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Target, Ability = this });
+                    dmgEvent.Target.ModifyStatStage(OffensiveStatType.Strength, 12);
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{dmgEvent.Target.Name}'s {Name} maxed their [cstr]Strength[/]!" });
+                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = dmgEvent.Target, Ability = this });
                 }
             }
         }
@@ -100,45 +81,24 @@ namespace ProjectVagabond.Battle.Abilities
     {
         public string Name => "Majestic";
         public string Description => "Lowers enemy Strength on entry.";
-        private const OffensiveStatType STAT_TO_LOWER = OffensiveStatType.Strength;
-        private const int AMOUNT = -1;
+        public int Priority => 0;
 
-        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
+        public void OnEvent(GameEvent e)
         {
-            if (type == CombatEventType.CombatantEnter)
+            if (e is BattleStartedEvent battleEvent)
             {
-                var battleManager = ServiceLocator.Get<BattleManager>();
-                var enemies = battleManager.AllCombatants.Where(c => c.IsPlayerControlled != ctx.Actor.IsPlayerControlled && !c.IsDefeated && c.IsActiveOnField).ToList();
-                bool anyAffected = false;
-                foreach (var enemy in enemies)
+                foreach (var c in battleEvent.Combatants)
                 {
-                    var (success, _) = enemy.ModifyStatStage(STAT_TO_LOWER, AMOUNT);
-                    if (success)
+                    if (c.Abilities.Contains(this))
                     {
-                        anyAffected = true;
-                        EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = enemy, Stat = STAT_TO_LOWER, Amount = AMOUNT });
+                        foreach (var enemy in battleEvent.Combatants.Where(x => x.IsPlayerControlled != c.IsPlayerControlled))
+                        {
+                            enemy.ModifyStatStage(OffensiveStatType.Strength, -1);
+                        }
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{c.Name}'s {Name} lowered opponents' Strength!" });
+                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = c, Ability = this });
                     }
                 }
-                if (anyAffected)
-                {
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Actor.Name}'s {Name} lowered opponents' {STAT_TO_LOWER}!" });
-                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
-                }
-            }
-        }
-    }
-
-    public class PMSweetpeaAbility : IAbility
-    {
-        public string Name => "Sweetpea";
-        public string Description => "Reduces damage taken by allies.";
-
-        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
-        {
-            if (type == CombatEventType.CalculateAllyDamage)
-            {
-                if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
-                ctx.DamageMultiplier *= 0.75f;
             }
         }
     }
@@ -147,15 +107,16 @@ namespace ProjectVagabond.Battle.Abilities
     {
         public string Name => "Skeptic";
         public string Description => "Takes half damage from Spells.";
+        public int Priority => 0;
 
-        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
+        public void OnEvent(GameEvent e)
         {
-            if (type == CombatEventType.CalculateIncomingDamage)
+            if (e is CalculateDamageEvent dmgEvent && dmgEvent.Target.Abilities.Contains(this))
             {
-                if (ctx.Move != null && ctx.Move.MoveType == MoveType.Spell)
+                if (dmgEvent.Move.MoveType == MoveType.Spell)
                 {
-                    if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Target, Ability = this });
-                    ctx.DamageMultiplier *= 0.5f;
+                    dmgEvent.DamageMultiplier *= 0.5f;
+                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = dmgEvent.Target, Ability = this });
                 }
             }
         }
@@ -165,25 +126,19 @@ namespace ProjectVagabond.Battle.Abilities
     {
         public string Name => "9 Lives";
         public string Description => "Survive lethal damage if at full HP.";
+        public int Priority => 0;
 
-        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
+        public void OnEvent(GameEvent e)
         {
-            if (type == CombatEventType.CalculateIncomingDamage)
+            if (e is CalculateDamageEvent dmgEvent && dmgEvent.Target.Abilities.Contains(this))
             {
-                var target = ctx.Target;
-                if (target.Stats.CurrentHP == target.Stats.MaxHP)
+                if (dmgEvent.Target.Stats.CurrentHP == dmgEvent.Target.Stats.MaxHP)
                 {
-                    float currentDamage = ctx.StatValue * ctx.DamageMultiplier;
-                    if (currentDamage >= target.Stats.CurrentHP)
+                    if (dmgEvent.FinalDamage >= dmgEvent.Target.Stats.CurrentHP)
                     {
-                        if (!ctx.IsSimulation)
-                        {
-                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{target.Name} endured the hit!" });
-                            EventBus.Publish(new GameEvents.AbilityActivated { Combatant = target, Ability = this });
-                        }
-                        float desiredDamage = Math.Max(0, target.Stats.CurrentHP - 1);
-                        if (ctx.StatValue > 0)
-                            ctx.DamageMultiplier = desiredDamage / ctx.StatValue;
+                        dmgEvent.FinalDamage = dmgEvent.Target.Stats.CurrentHP - 1;
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{dmgEvent.Target.Name} endured the hit!" });
+                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = dmgEvent.Target, Ability = this });
                     }
                 }
             }
@@ -194,45 +149,16 @@ namespace ProjectVagabond.Battle.Abilities
     {
         public string Name => "Minutiae";
         public string Description => "Boosts moves with 60 or less Power by 1.5x.";
+        public int Priority => 0;
 
-        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
+        public void OnEvent(GameEvent e)
         {
-            if (type == CombatEventType.CalculateOutgoingDamage)
+            if (e is CalculateDamageEvent dmgEvent && dmgEvent.Actor.Abilities.Contains(this))
             {
-                if (ctx.Move != null && ctx.Move.Power > 0 && ctx.Move.Power <= 60)
+                if (dmgEvent.Move.Power > 0 && dmgEvent.Move.Power <= 60)
                 {
-                    if (!ctx.IsSimulation) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
-                    ctx.DamageMultiplier *= 1.5f;
-                }
-            }
-        }
-    }
-
-    public class PMGentleSoulAbility : IAbility
-    {
-        public string Name => "Gentle Soul";
-        public string Description => "Restores ally HP on switch-in.";
-
-        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
-        {
-            if (type == CombatEventType.CombatantEnter)
-            {
-                var bm = ServiceLocator.Get<BattleManager>();
-                if (bm.CurrentPhase == BattleManager.BattlePhase.BattleStartIntro) return;
-
-                var ally = bm.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled == ctx.Actor.IsPlayerControlled && c != ctx.Actor && c.IsActiveOnField && !c.IsDefeated);
-
-                if (ally != null)
-                {
-                    int healAmount = (int)(ally.Stats.MaxHP * 0.25f);
-                    if (healAmount > 0)
-                    {
-                        int oldHP = (int)ally.VisualHP;
-                        ally.ApplyHealing(healAmount);
-                        EventBus.Publish(new GameEvents.CombatantHealed { Actor = ctx.Actor, Target = ally, HealAmount = healAmount, VisualHPBefore = oldHP });
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Actor.Name}'s {Name} healed {ally.Name}!" });
-                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
-                    }
+                    dmgEvent.DamageMultiplier *= 1.5f;
+                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = dmgEvent.Actor, Ability = this });
                 }
             }
         }
@@ -242,19 +168,16 @@ namespace ProjectVagabond.Battle.Abilities
     {
         public string Name => "Well-Fed";
         public string Description => "Halves damage taken when at full HP.";
+        public int Priority => 0;
 
-        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
+        public void OnEvent(GameEvent e)
         {
-            if (type == CombatEventType.CalculateIncomingDamage)
+            if (e is CalculateDamageEvent dmgEvent && dmgEvent.Target.Abilities.Contains(this))
             {
-                if (ctx.Target.Stats.CurrentHP >= ctx.Target.Stats.MaxHP)
+                if (dmgEvent.Target.Stats.CurrentHP >= dmgEvent.Target.Stats.MaxHP)
                 {
-                    if (!ctx.IsSimulation)
-                    {
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Target.Name}'s {Name} reduced the damage!" });
-                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Target, Ability = this });
-                    }
-                    ctx.DamageMultiplier *= 0.5f;
+                    dmgEvent.DamageMultiplier *= 0.5f;
+                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = dmgEvent.Target, Ability = this });
                 }
             }
         }
@@ -263,34 +186,17 @@ namespace ProjectVagabond.Battle.Abilities
     public class PMStubbornAbility : IAbility
     {
         public string Name => "Stubborn";
-        public string Description => "Boosts Strength by 1.5x, but locks user into one move.";
-        private string _lockedMoveID = null;
+        public string Description => "Boosts Strength by 1.5x.";
+        public int Priority => 0;
 
-        public void OnCombatEvent(CombatEventType type, CombatTriggerContext ctx)
+        public void OnEvent(GameEvent e)
         {
-            if (type == CombatEventType.CalculateStat)
+            if (e is CalculateStatEvent statEvent && statEvent.Actor.Abilities.Contains(this))
             {
-                if (ctx.StatType == OffensiveStatType.Strength)
+                if (statEvent.StatType == OffensiveStatType.Strength)
                 {
-                    ctx.StatValue *= 1.5f;
+                    statEvent.FinalValue *= 1.5f;
                 }
-            }
-            else if (type == CombatEventType.ActionComplete)
-            {
-                if (_lockedMoveID == null && ctx.Action.ChosenMove != null)
-                {
-                    _lockedMoveID = ctx.Action.ChosenMove.MoveID;
-                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = ctx.Actor, Ability = this });
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{ctx.Actor.Name} is [cStatus]Stubborn[/]! Locked into {ctx.Action.ChosenMove.MoveName}!" });
-                }
-            }
-            else if (type == CombatEventType.BattleStart || type == CombatEventType.CombatantEnter)
-            {
-                _lockedMoveID = null;
-            }
-            else if (type == CombatEventType.QueryMoveLock)
-            {
-                ctx.LockedMoveID = _lockedMoveID;
             }
         }
     }

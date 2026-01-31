@@ -8,8 +8,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Reflection;
-using System.Text;
 
 namespace ProjectVagabond.Battle
 {
@@ -18,7 +16,6 @@ namespace ProjectVagabond.Battle
         private static readonly Random _random = new Random();
         private const float GLOBAL_DAMAGE_SCALAR = 0.125f;
         private const int FLAT_DAMAGE_BONUS = 1;
-
         private const float BASELINE_DEFENSE_DIVISOR = 5.0f;
 
         public struct DamageResult
@@ -39,137 +36,66 @@ namespace ProjectVagabond.Battle
                 WasVulnerable = false
             };
 
-            var ctx = new CombatTriggerContext
-            {
-                Actor = attacker,
-                Target = target,
-                Move = move,
-                Action = action,
-                IsSimulation = isSimulation
-            };
-
             // 1. Accuracy Check
             if (move.Accuracy != -1)
             {
-                ctx.IsCancelled = false;
-                attacker.NotifyAbilities(CombatEventType.CheckEvasion, ctx);
-                foreach (var ab in move.Abilities) ab.OnCombatEvent(CombatEventType.CheckEvasion, ctx);
-                bool ignoreEvasion = ctx.IsCancelled;
+                var hitEvt = new CheckHitChanceEvent(attacker, target, move, move.Accuracy);
+                attacker.NotifyAbilities(hitEvt);
+                target.NotifyAbilities(hitEvt);
+                foreach (var ab in move.Abilities) ab.OnEvent(hitEvt);
 
-                float accuracyMultiplier = 1.0f;
-                if (target.HasStatusEffect(StatusEffectType.Dodging) && !ignoreEvasion)
-                {
-                    accuracyMultiplier = Global.Instance.DodgingAccuracyMultiplier;
-                }
-
-                int effectiveAccuracy = attacker.GetEffectiveAccuracy(move.Accuracy);
-                float hitChance = effectiveAccuracy * accuracyMultiplier;
-
-                if (_random.Next(1, 101) > hitChance) result.WasGraze = true;
+                if (_random.Next(1, 101) > hitEvt.FinalAccuracy) result.WasGraze = true;
             }
 
-            // --- Guard Interaction Logic ---
-            ctx.BreakGuard = false;
-            attacker.NotifyAbilities(CombatEventType.CheckGuardInteraction, ctx);
-            foreach (var ab in move.Abilities) ab.OnCombatEvent(CombatEventType.CheckGuardInteraction, ctx);
-
-            if (target.HasStatusEffect(StatusEffectType.Protected))
-            {
-                if (!ctx.BreakGuard)
-                {
-                    result.WasProtected = true;
-                    result.DamageAmount = 0;
-                    return result;
-                }
-                else
-                {
-                    if (!isSimulation)
-                    {
-                        target.ActiveStatusEffects.RemoveAll(e => e.EffectType == StatusEffectType.Protected);
-                        EventBus.Publish(new GameEvents.StatusEffectRemoved { Combatant = target, EffectType = StatusEffectType.Protected });
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "GUARD BROKEN!" });
-                    }
-                }
-            }
-
-            // 2. Fixed Damage Check
-            ctx.StatValue = 0;
-            foreach (var ab in move.Abilities) ab.OnCombatEvent(CombatEventType.CalculateFixedDamage, ctx);
-            if (ctx.StatValue > 0)
-            {
-                result.DamageAmount = (int)ctx.StatValue;
-                return result;
-            }
-
-            // 3. Base Power
-            ctx.BasePower = move.Power;
-            foreach (var ab in move.Abilities) ab.OnCombatEvent(CombatEventType.CalculateBasePower, ctx);
-            if (ctx.BasePower == 0) return result;
-
-            // 4. Base Damage
+            // 2. Base Damage Calculation
             float offensiveStat = GetOffensiveStat(attacker, move.OffensiveStat);
             float defensiveStat = BASELINE_DEFENSE_DIVISOR;
 
-            ctx.StatValue = 0f;
-            attacker.NotifyAbilities(CombatEventType.CalculateDefensePenetration, ctx);
-            foreach (var ab in move.Abilities) ab.OnCombatEvent(CombatEventType.CalculateDefensePenetration, ctx);
-            float penetration = ctx.StatValue;
-
-            defensiveStat *= (1.0f - Math.Clamp(penetration, 0f, 1f));
-            if (defensiveStat < 1) defensiveStat = 1;
+            // Defense Penetration (Simulated via event if needed, but for now simplified)
+            // If we had a CalculateDefenseEvent, we'd use it here.
+            // Assuming standard defense for now.
 
             float statRatio = offensiveStat / defensiveStat;
-            float baseDamage = (ctx.BasePower * statRatio * GLOBAL_DAMAGE_SCALAR) + FLAT_DAMAGE_BONUS;
+            float baseDamage = (move.Power * statRatio * GLOBAL_DAMAGE_SCALAR) + FLAT_DAMAGE_BONUS;
 
-            // 5. Outgoing Modifiers
-            ctx.StatValue = baseDamage;
-            ctx.ResetMultipliers();
-
-            attacker.NotifyAbilities(CombatEventType.CalculateOutgoingDamage, ctx);
-            foreach (var ab in move.Abilities) ab.OnCombatEvent(CombatEventType.CalculateOutgoingDamage, ctx);
-
-            if (attacker.HasStatusEffect(StatusEffectType.Empowered)) ctx.DamageMultiplier *= Global.Instance.EmpoweredDamageMultiplier;
-
-            float currentDamage = ctx.StatValue * ctx.DamageMultiplier * multiTargetModifier;
-
-            // 6. Critical Hits
+            // 3. Critical Hit Check
+            bool isCrit = false;
             if (!result.WasGraze)
             {
-                bool isCrit = overrideCrit ?? CheckCritical(attacker, target, ctx);
-                if (isCrit)
-                {
-                    result.WasCritical = true;
-                    ctx.IsCritical = true;
-
-                    ctx.StatValue = BattleConstants.CRITICAL_HIT_MULTIPLIER;
-                    target.NotifyAbilities(CombatEventType.CheckCritDamage, ctx);
-                    currentDamage *= ctx.StatValue;
-                }
+                // We don't have a CheckCritEvent in Phase 1, so we use standard logic.
+                // If we added it, we'd use it here.
+                isCrit = overrideCrit ?? (_random.NextDouble() < BattleConstants.CRITICAL_HIT_CHANCE);
+                if (isCrit) result.WasCritical = true;
             }
 
-            // 7. Incoming Modifiers
-            ctx.StatValue = currentDamage;
-            ctx.ResetMultipliers();
-            target.NotifyAbilities(CombatEventType.CalculateIncomingDamage, ctx);
+            // 4. Calculate Damage Event
+            var dmgEvt = new CalculateDamageEvent(attacker, target, move, baseDamage, isCrit, result.WasGraze);
 
-            // Ally Modifiers
-            var battleManager = ServiceLocator.Get<BattleManager>();
-            var allies = battleManager.AllCombatants.Where(c => c != target && c.IsPlayerControlled == target.IsPlayerControlled && !c.IsDefeated && c.IsActiveOnField);
-            foreach (var ally in allies) ally.NotifyAbilities(CombatEventType.CalculateAllyDamage, ctx);
+            // Notify in order: Attacker -> Move -> Target
+            attacker.NotifyAbilities(dmgEvt);
+            foreach (var ab in move.Abilities) ab.OnEvent(dmgEvt);
+            target.NotifyAbilities(dmgEvt);
 
-            currentDamage = ctx.StatValue * ctx.DamageMultiplier;
+            // 5. Apply Multipliers
+            float currentDamage = (dmgEvt.FinalDamage + dmgEvt.FlatBonus) * dmgEvt.DamageMultiplier * multiTargetModifier;
 
-            // --- Tenacity Shield Break Logic ---
+            // Tenacity Vulnerability
             if (target.CurrentTenacity <= 0)
             {
                 currentDamage *= 2.0f;
-                result.WasVulnerable = true; // Flag for UI
+                result.WasVulnerable = true;
             }
 
-            if (target.HasStatusEffect(StatusEffectType.Burn)) currentDamage *= Global.Instance.BurnDamageMultiplier;
-
+            // Random Variance
             currentDamage *= (float)(_random.NextDouble() * (BattleConstants.RANDOM_VARIANCE_MAX - BattleConstants.RANDOM_VARIANCE_MIN) + BattleConstants.RANDOM_VARIANCE_MIN);
+
             if (result.WasGraze) currentDamage *= BattleConstants.GRAZE_MULTIPLIER;
+
+            // Check for Protected Tag (UI Flag)
+            if (target.Tags.Has("State.Protected") && dmgEvt.DamageMultiplier <= 0)
+            {
+                result.WasProtected = true;
+            }
 
             int finalDamageAmount = (int)Math.Floor(currentDamage);
             if (currentDamage > 0 && finalDamageAmount == 0) finalDamageAmount = 1;
@@ -181,45 +107,23 @@ namespace ProjectVagabond.Battle
 
         public static int CalculateBaselineDamage(BattleCombatant attacker, BattleCombatant target, MoveData move)
         {
+            // Simplified simulation
             if (move.Power == 0) return 0;
-            var ctx = new CombatTriggerContext { Actor = attacker, Target = target, Move = move, IsSimulation = true };
-
-            ctx.BasePower = move.Power;
-            foreach (var ab in move.Abilities) ab.OnCombatEvent(CombatEventType.CalculateBasePower, ctx);
 
             float offensiveStat = GetOffensiveStat(attacker, move.OffensiveStat);
             float defensiveStat = BASELINE_DEFENSE_DIVISOR;
+            float baseDamage = (move.Power * (offensiveStat / defensiveStat) * GLOBAL_DAMAGE_SCALAR) + FLAT_DAMAGE_BONUS;
 
-            ctx.StatValue = 0f;
-            attacker.NotifyAbilities(CombatEventType.CalculateDefensePenetration, ctx);
-            foreach (var ab in move.Abilities) ab.OnCombatEvent(CombatEventType.CalculateDefensePenetration, ctx);
+            var dmgEvt = new CalculateDamageEvent(attacker, target, move, baseDamage, false, false);
+            attacker.NotifyAbilities(dmgEvt);
+            foreach (var ab in move.Abilities) ab.OnEvent(dmgEvt);
+            target.NotifyAbilities(dmgEvt);
 
-            defensiveStat *= (1.0f - Math.Clamp(ctx.StatValue, 0f, 1f));
-            if (defensiveStat < 1) defensiveStat = 1;
+            float currentDamage = (dmgEvt.FinalDamage + dmgEvt.FlatBonus) * dmgEvt.DamageMultiplier;
 
-            float baseDamage = (ctx.BasePower * (offensiveStat / defensiveStat) * GLOBAL_DAMAGE_SCALAR) + FLAT_DAMAGE_BONUS;
-
-            ctx.StatValue = baseDamage;
-            ctx.ResetMultipliers();
-            attacker.NotifyAbilities(CombatEventType.CalculateOutgoingDamage, ctx);
-            foreach (var ab in move.Abilities) ab.OnCombatEvent(CombatEventType.CalculateOutgoingDamage, ctx);
-            if (attacker.HasStatusEffect(StatusEffectType.Empowered)) ctx.DamageMultiplier *= Global.Instance.EmpoweredDamageMultiplier;
-
-            float currentDamage = ctx.StatValue * ctx.DamageMultiplier;
-
-            ctx.StatValue = currentDamage;
-            ctx.ResetMultipliers();
-            target.NotifyAbilities(CombatEventType.CalculateIncomingDamage, ctx);
-            currentDamage = ctx.StatValue * ctx.DamageMultiplier;
-
-            if (target.CurrentTenacity <= 0)
-            {
-                currentDamage *= 2.0f;
-            }
-
-            if (target.HasStatusEffect(StatusEffectType.Burn)) currentDamage *= Global.Instance.BurnDamageMultiplier;
-
+            if (target.CurrentTenacity <= 0) currentDamage *= 2.0f;
             currentDamage *= BattleConstants.RANDOM_VARIANCE_MAX;
+
             int finalDamageAmount = (int)Math.Floor(currentDamage);
             if (currentDamage > 0 && finalDamageAmount == 0) finalDamageAmount = 1;
             return finalDamageAmount;
@@ -227,37 +131,22 @@ namespace ProjectVagabond.Battle
 
         private static float GetOffensiveStat(BattleCombatant attacker, OffensiveStatType type)
         {
-            return type switch
+            // Use CalculateStatEvent to get effective stat
+            float baseVal = type switch
             {
-                OffensiveStatType.Strength => attacker.GetEffectiveStrength(),
-                OffensiveStatType.Intelligence => attacker.GetEffectiveIntelligence(),
-                OffensiveStatType.Tenacity => attacker.GetEffectiveTenacity(),
-                OffensiveStatType.Agility => attacker.GetEffectiveAgility(),
-                _ => attacker.GetEffectiveStrength(),
+                OffensiveStatType.Strength => attacker.Stats.Strength,
+                OffensiveStatType.Intelligence => attacker.Stats.Intelligence,
+                OffensiveStatType.Tenacity => attacker.Stats.Tenacity,
+                OffensiveStatType.Agility => attacker.Stats.Agility,
+                _ => attacker.Stats.Strength
             };
-        }
 
-        private static bool CheckCritical(BattleCombatant attacker, BattleCombatant target, CombatTriggerContext ctx)
-        {
-            ctx.StatValue = BattleConstants.CRITICAL_HIT_CHANCE;
-            attacker.NotifyAbilities(CombatEventType.CheckCritChance, ctx);
-            foreach (var ab in ctx.Move.Abilities) ab.OnCombatEvent(CombatEventType.CheckCritChance, ctx);
-            return _random.NextDouble() < ctx.StatValue;
-        }
+            var evt = new CalculateStatEvent(attacker, type, baseVal);
+            attacker.NotifyAbilities(evt);
 
-        public static int GetEffectiveMovePower(BattleCombatant attacker, MoveData move)
-        {
-            var ctx = new CombatTriggerContext { Actor = attacker, Move = move, BasePower = move.Power, IsSimulation = true };
-            foreach (var ab in move.Abilities) ab.OnCombatEvent(CombatEventType.CalculateBasePower, ctx);
-
-            ctx.StatValue = ctx.BasePower;
-            ctx.ResetMultipliers();
-            attacker.NotifyAbilities(CombatEventType.CalculateOutgoingDamage, ctx);
-            foreach (var ab in move.Abilities) ab.OnCombatEvent(CombatEventType.CalculateOutgoingDamage, ctx);
-
-            if (attacker.HasStatusEffect(StatusEffectType.Empowered)) ctx.DamageMultiplier *= Global.Instance.EmpoweredDamageMultiplier;
-
-            return (int)(ctx.StatValue * ctx.DamageMultiplier);
+            // Apply Stage Multiplier
+            float multiplier = BattleConstants.StatStageMultipliers[attacker.StatStages[type]];
+            return evt.FinalValue * multiplier;
         }
     }
 }

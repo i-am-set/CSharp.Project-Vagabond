@@ -1,13 +1,7 @@
-﻿#nullable enable
-using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
-using ProjectVagabond;
-using ProjectVagabond.Battle;
-using ProjectVagabond.Battle.Abilities;
+﻿using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 
 namespace ProjectVagabond.Battle
 {
@@ -74,11 +68,6 @@ namespace ProjectVagabond.Battle
         public OffensiveStatType OffensiveStat { get; set; }
 
         /// <summary>
-        /// A boolean indicating whether the move requires the user to make physical contact with the target.
-        /// </summary>
-        public bool MakesContact { get; set; }
-
-        /// <summary>
         /// Defines the targeting behavior of the move.
         /// </summary>
         public TargetType Target { get; set; }
@@ -100,9 +89,10 @@ namespace ProjectVagabond.Battle
         public Dictionary<string, string> Effects { get; set; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
-        /// A list of tags for categorizing the move for reward generation and other systems.
+        /// A container for arbitrary tags (e.g., "Prop.Contact", "Target.Self").
+        /// Replaces boolean flags.
         /// </summary>
-        public List<string> Tags { get; set; } = new List<string>();
+        public TagContainer Tags { get; private set; } = new TagContainer();
 
         /// <summary>
         /// The filename of the animation sprite sheet in 'Content/Sprites/MoveAnimationSpriteSheets/'.
@@ -130,23 +120,24 @@ namespace ProjectVagabond.Battle
         /// </summary>
         public List<IAbility> Abilities { get; set; } = new List<IAbility>();
 
-        // --- Metadata Flags for UI/Logic ---
-        public bool AffectsUserHP { get; set; }
-        public bool AffectsUserMana { get; set; }
-        public bool AffectsTargetMana { get; set; }
-        public bool AffectsTargetHP { get; set; }
+        // Helper properties for backward compatibility or ease of use
+        public bool MakesContact => Tags.Has("Prop.Contact");
+        public bool AffectsUserHP => Tags.Has("Target.Self") && Tags.Has("Effect.Damage");
+        public bool AffectsUserMana => Tags.Has("Target.Self") && Tags.Has("Effect.Mana");
+
+        // Restored helpers for BattleRenderer compatibility
+        public bool AffectsTargetHP => Power > 0 || Tags.Has("Effect.FixedDamage");
+        public bool AffectsTargetMana => Tags.Has("Effect.ManaMod");
 
         /// <summary>
         /// Creates a shallow copy of the MoveData object.
-        /// Note: Abilities are shared references (flyweight pattern) unless they are stateful, 
-        /// in which case specific logic would be needed. For now, we assume stateless abilities.
+        /// Note: Abilities are shared references (flyweight pattern) unless they are stateful.
         /// </summary>
         public MoveData Clone()
         {
             var clone = (MoveData)this.MemberwiseClone();
-            // Shallow copy the list so we can modify the list structure if needed without affecting the original,
-            // but the Ability instances themselves remain shared.
             clone.Abilities = new List<IAbility>(this.Abilities);
+            clone.Tags = new TagContainer();
             return clone;
         }
     }
