@@ -1092,21 +1092,16 @@ namespace ProjectVagabond.Battle.UI
                             float spriteTopY = GetEnemyStaticVisualTop(enemy, center.Y);
                             float anchorY = Math.Min(tooltipTopY - 2, spriteTopY);
                             float barY = anchorY - 4;
-                            float barX = (center.X - BattleLayout.ENEMY_BAR_WIDTH / 2f) - 36;
+
+                            // Mirroring Logic for Enemies
+                            bool isRightAligned = (enemy.BattleSlot % 2 != 0);
+                            float xOffset = isRightAligned ? 36f : -36f;
+                            float barX = (center.X - BattleLayout.ENEMY_BAR_WIDTH / 2f) + xOffset;
 
                             float barBottomY = barY + 4;
                             _combatantBarBottomYs[enemy.CombatantID] = barBottomY;
 
                             _combatantBarPositions[enemy.CombatantID] = new Vector2(barX, barY);
-
-                            var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
-                            float hudAlpha = enemy.HudVisualAlpha;
-
-                            _hudRenderer.DrawEnemyBars(spriteBatch, enemy, barX, barY, BattleLayout.ENEMY_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, enemy.VisualHealthBarAlpha * hudAlpha, enemy.VisualManaBarAlpha * hudAlpha, gameTime);
-                            if (enemy.VisualHealthBarAlpha > 0.01f && hudAlpha > 0.01f)
-                            {
-                                spriteBatch.DrawStringSnapped(tertiaryFont, enemy.Name.ToUpper(), new Vector2(barX, barY - tertiaryFont.LineHeight - 1), _global.Palette_Sun * enemy.VisualHealthBarAlpha * hudAlpha);
-                            }
                         }
                     }
                 }
@@ -1117,7 +1112,9 @@ namespace ProjectVagabond.Battle.UI
         {
             foreach (var player in players)
             {
-                var center = BattleLayout.GetPlayerSpriteCenter(player.BattleSlot);
+                var baseCenter = BattleLayout.GetPlayerSpriteCenter(player.BattleSlot);
+                var spriteCenter = baseCenter;
+
                 float targetOffset = (player == currentActor) ? 0f : INACTIVE_Y_OFFSET;
                 if (!_turnActiveOffsets.ContainsKey(player.CombatantID)) _turnActiveOffsets[player.CombatantID] = INACTIVE_Y_OFFSET;
                 float current = _turnActiveOffsets[player.CombatantID];
@@ -1125,9 +1122,9 @@ namespace ProjectVagabond.Battle.UI
                 _turnActiveOffsets[player.CombatantID] = MathHelper.Lerp(current, targetOffset, damping);
 
                 float yOffset = _turnActiveOffsets[player.CombatantID];
-                center.Y += yOffset;
+                spriteCenter.Y += yOffset;
 
-                if (player.BattleSlot == 0) PlayerSpritePosition = center;
+                if (player.BattleSlot == 0) PlayerSpritePosition = spriteCenter;
 
                 Color? highlight = silhouetteColors.ContainsKey(player.CombatantID) ? silhouetteColors[player.CombatantID] : null;
                 bool isSelectable = selectable.Contains(player);
@@ -1229,7 +1226,7 @@ namespace ProjectVagabond.Battle.UI
                     sprite = new PlayerCombatSprite(player.ArchetypeId);
                     _playerSprites[player.CombatantID] = sprite;
                 }
-                sprite.SetPosition(new Vector2(center.X, center.Y + bob + spawnY) + recoil + slideOffset + chargeOffset);
+                sprite.SetPosition(new Vector2(spriteCenter.X, spriteCenter.Y + bob + spawnY) + recoil + slideOffset + chargeOffset);
 
                 bool isHighlighted = selectable.Contains(player) && shouldGrayOut;
                 float pulse = 0f;
@@ -1244,8 +1241,8 @@ namespace ProjectVagabond.Battle.UI
                         floorScale = 1.0f - Easing.EaseInBack(progress);
                     }
 
-                    var baseCenter = BattleLayout.GetPlayerSpriteCenter(player.BattleSlot);
-                    _vfxRenderer.DrawPlayerFloor(spriteBatch, baseCenter + slideOffset, player.VisualAlpha, floorScale);
+                    var floorCenter = BattleLayout.GetPlayerSpriteCenter(player.BattleSlot);
+                    _vfxRenderer.DrawPlayerFloor(spriteBatch, floorCenter + slideOffset, player.VisualAlpha, floorScale);
                 }
 
                 if (drawSprite)
@@ -1272,12 +1269,12 @@ namespace ProjectVagabond.Battle.UI
 
                     sprite.Draw(spriteBatch, animManager, player, tint, isHighlightedSprite, pulse, isSilhouetted, silhouetteColor, gameTime, highlight, outlineColor, scale * chargeScale.X, lowHealthOverlay, rotation);
 
-                    Rectangle bounds = new Rectangle((int)(center.X - 16), (int)(center.Y - 16), 32, 32);
+                    Rectangle bounds = new Rectangle((int)(spriteCenter.X - 16), (int)(spriteCenter.Y - 16), 32, 32);
                     Rectangle hitBox = GetPatternAlignedRect(bounds);
 
                     _currentTargets.Add(new TargetInfo { Combatant = player, Bounds = hitBox });
                     _combatantVisualCenters[player.CombatantID] = hitBox.Center.ToVector2();
-                    _combatantStaticCenters[player.CombatantID] = center;
+                    _combatantStaticCenters[player.CombatantID] = spriteCenter;
 
                     bool showHP = false;
                     bool showMana = false;
@@ -1296,23 +1293,20 @@ namespace ProjectVagabond.Battle.UI
 
                     UpdateBarAlpha(player, (float)gameTime.ElapsedGameTime.TotalSeconds, showHP, showMana);
 
-                    Vector2 barPos = GetCombatantBarPosition(player);
-                    float barX = (barPos.X - BattleLayout.PLAYER_BAR_WIDTH / 2f) - 36;
+                    // Use static layout position for UI stability
+                    Vector2 barPos = BattleLayout.GetPlayerBarPosition(player.BattleSlot);
+
+                    // Mirroring Logic for Players
+                    bool isRightAligned = (player.BattleSlot % 2 != 0);
+                    float xOffset = isRightAligned ? 36f : -36f;
+                    float barX = (barPos.X - BattleLayout.PLAYER_BAR_WIDTH / 2f) + xOffset;
+
                     float barY = barPos.Y + 4;
 
                     float barBottomY = barY + 4;
                     _combatantBarBottomYs[player.CombatantID] = barBottomY;
 
                     _combatantBarPositions[player.CombatantID] = new Vector2(barX, barY);
-
-                    var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
-                    float hudAlpha = player.HudVisualAlpha;
-
-                    _hudRenderer.DrawPlayerBars(spriteBatch, player, barX, barY, BattleLayout.PLAYER_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, player.VisualHealthBarAlpha * hudAlpha, player.VisualManaBarAlpha * hudAlpha, gameTime, uiManager, player == currentActor);
-                    if (player.VisualHealthBarAlpha > 0.01f && hudAlpha > 0.01f)
-                    {
-                        spriteBatch.DrawStringSnapped(tertiaryFont, player.Name.ToUpper(), new Vector2(barX, barY - tertiaryFont.LineHeight - 1), _global.Palette_Sun * player.VisualHealthBarAlpha * hudAlpha);
-                    }
                 }
             }
         }
@@ -1561,18 +1555,21 @@ namespace ProjectVagabond.Battle.UI
 
                 float hudAlpha = combatant.HudVisualAlpha;
 
+                // Determine alignment: Slot 1 and 3 (Odd) are Right Aligned
+                bool isRightAligned = (combatant.BattleSlot % 2 != 0);
+
                 if (combatant.IsPlayerControlled)
                 {
-                    _hudRenderer.DrawStatusIcons(spriteBatch, combatant, barX, barY, BattleLayout.PLAYER_BAR_WIDTH, true, _playerStatusIcons, GetStatusIconOffset, IsStatusIconAnimating);
-                    _hudRenderer.DrawPlayerBars(spriteBatch, combatant, barX, barY, BattleLayout.PLAYER_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha * hudAlpha, combatant.VisualManaBarAlpha * hudAlpha, gameTime, uiManager, combatant == currentActor);
+                    _hudRenderer.DrawStatusIcons(spriteBatch, combatant, barX, barY, BattleLayout.PLAYER_BAR_WIDTH, true, _playerStatusIcons, GetStatusIconOffset, IsStatusIconAnimating, isRightAligned);
+                    _hudRenderer.DrawPlayerBars(spriteBatch, combatant, barX, barY, BattleLayout.PLAYER_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha * hudAlpha, combatant.VisualManaBarAlpha * hudAlpha, gameTime, uiManager, combatant == currentActor, isRightAligned);
                 }
                 else
                 {
                     if (!_enemyStatusIcons.ContainsKey(combatant.CombatantID))
                         _enemyStatusIcons[combatant.CombatantID] = new List<StatusIconInfo>();
 
-                    _hudRenderer.DrawStatusIcons(spriteBatch, combatant, barX, barY, BattleLayout.ENEMY_BAR_WIDTH, false, _enemyStatusIcons[combatant.CombatantID], GetStatusIconOffset, IsStatusIconAnimating);
-                    _hudRenderer.DrawEnemyBars(spriteBatch, combatant, barX, barY, BattleLayout.ENEMY_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha * hudAlpha, combatant.VisualManaBarAlpha * hudAlpha, gameTime);
+                    _hudRenderer.DrawStatusIcons(spriteBatch, combatant, barX, barY, BattleLayout.ENEMY_BAR_WIDTH, false, _enemyStatusIcons[combatant.CombatantID], GetStatusIconOffset, IsStatusIconAnimating, isRightAligned);
+                    _hudRenderer.DrawEnemyBars(spriteBatch, combatant, barX, barY, BattleLayout.ENEMY_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha * hudAlpha, combatant.VisualManaBarAlpha * hudAlpha, gameTime, isRightAligned);
                 }
             }
         }
