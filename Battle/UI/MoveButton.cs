@@ -293,17 +293,20 @@ namespace ProjectVagabond.Battle.UI
                 }
 
                 const int iconSize = 9;
-                const int iconPadding = 4;
+                const int iconPadding = 2;
 
                 // --- LEFT ALIGNED LAYOUT CALCULATION ---
                 var moveNameTextSize = _moveFont.MeasureString(this.Text);
                 // Fixed left padding from the button's left edge
-                const int contentLeftPadding = 6;
+                const int contentLeftPadding = 5;
                 float startX = -Bounds.Width / 2f + contentLeftPadding;
+
+                // Vertical offset to match Switch button (-1)
+                float contentYOffset = -1f;
 
                 // Icon Positioning Relative to Center
                 float iconLocalX = startX + (iconSize / 2f); // Center of icon
-                float iconLocalY = 0; // Centered vertically (0 offset)
+                float iconLocalY = contentYOffset; // Centered vertically with offset
 
                 Vector2 iconOffset = new Vector2(iconLocalX, iconLocalY);
                 Vector2 rotatedIconPos = centerPos + RotateOffset(iconOffset);
@@ -313,13 +316,23 @@ namespace ProjectVagabond.Battle.UI
 
                 if (IconTexture != null && IconSourceRect.HasValue)
                 {
+                    // --- PIXEL SNAP ICON ---
+                    // Ensure the top-left of the icon lands on an integer coordinate if rotation is negligible
+                    if (Math.Abs(_currentHoverRotation) < 0.01f)
+                    {
+                        Vector2 topLeft = rotatedIconPos - iconOrigin;
+                        topLeft.X = MathF.Round(topLeft.X);
+                        topLeft.Y = MathF.Round(topLeft.Y);
+                        rotatedIconPos = topLeft + iconOrigin;
+                    }
+
                     // Use textColor for the icon tint
                     spriteBatch.DrawSnapped(IconTexture, rotatedIconPos, IconSourceRect.Value, textColor * contentAlpha, _currentHoverRotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
                 }
 
                 // Text Position
                 float textLocalX = startX + iconSize + iconPadding; // Left edge of text
-                float textLocalY = 0; // Centered vertically (0 offset)
+                float textLocalY = contentYOffset; // Centered vertically with offset
 
                 // Check for scrolling (if text is wider than button minus icon)
                 // Button Width - Icon - Padding - Margins
@@ -376,6 +389,15 @@ namespace ProjectVagabond.Battle.UI
 
                     // Origin for text: Left-Center
                     Vector2 textOrigin = new Vector2(0, _moveFont.LineHeight / 2f);
+
+                    // --- PIXEL SNAP TEXT ---
+                    if (Math.Abs(_currentHoverRotation) < 0.01f)
+                    {
+                        Vector2 topLeft = rotatedTextPos - textOrigin;
+                        topLeft.X = MathF.Round(topLeft.X);
+                        topLeft.Y = MathF.Round(topLeft.Y);
+                        rotatedTextPos = topLeft + textOrigin;
+                    }
 
                     // --- Wave Animation Logic ---
                     // Only animate if can afford
@@ -448,6 +470,13 @@ namespace ProjectVagabond.Battle.UI
             // This ensures the visual background is top-aligned within the button bounds.
             Vector2 visualCenter = center + Rotate(new Vector2(0, -0.5f * scale.Y));
 
+            // SNAP
+            if (Math.Abs(rotation) < 0.01f)
+            {
+                visualCenter.X = MathF.Round(visualCenter.X);
+                visualCenter.Y = MathF.Round(visualCenter.Y);
+            }
+
             // 1. Middle Body: (x+1, y+1) size (w-2, h-2)
             // Center relative to visual center: (0, 0)
             // Size: (w-2, h-2)
@@ -458,6 +487,8 @@ namespace ProjectVagabond.Battle.UI
             // Center relative to visual center: (0, -h/2 + 0.5)
             Vector2 topOffset = new Vector2(0, (-h / 2f + 0.5f) * scale.Y);
             Vector2 topPos = visualCenter + Rotate(topOffset);
+            if (Math.Abs(rotation) < 0.01f) { topPos.X = MathF.Round(topPos.X); topPos.Y = MathF.Round(topPos.Y); }
+
             Vector2 topScale = new Vector2((w - 4) * scale.X, 1f * scale.Y);
             spriteBatch.DrawSnapped(pixel, topPos, null, color, rotation, new Vector2(0.5f, 0.5f), topScale, SpriteEffects.None, 0f);
 
@@ -465,6 +496,8 @@ namespace ProjectVagabond.Battle.UI
             // Center relative to visual center: (0, h/2 - 0.5)
             Vector2 botOffset = new Vector2(0, (h / 2f - 0.5f) * scale.Y);
             Vector2 botPos = visualCenter + Rotate(botOffset);
+            if (Math.Abs(rotation) < 0.01f) { botPos.X = MathF.Round(botPos.X); botPos.Y = MathF.Round(botPos.Y); }
+
             Vector2 botScale = new Vector2((w - 4) * scale.X, 1f * scale.Y);
             spriteBatch.DrawSnapped(pixel, botPos, null, color, rotation, new Vector2(0.5f, 0.5f), botScale, SpriteEffects.None, 0f);
         }

@@ -175,9 +175,9 @@ namespace ProjectVagabond.Battle.UI
             private const int BUTTON_SPACING = 0;
 
             // --- Info Box Configuration ---
-            private const int INFO_BOX_WIDTH = 142;
+            private const int INFO_BOX_WIDTH = 144;
             private const int INFO_BOX_HEIGHT = 34;
-            private const int INFO_BOX_OFFSET_X = 2; // Centered in 146px panel
+            private const int INFO_BOX_OFFSET_X = 0; // Centered in 146px panel
             private const int INFO_BOX_OFFSET_Y = 12; // Below the 10px buttons
 
             public CombatantPanel(BattleCombatant combatant, List<BattleCombatant> allCombatants)
