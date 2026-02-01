@@ -172,7 +172,7 @@ namespace ProjectVagabond.Battle.UI
 
             private const int BUTTON_WIDTH = 48;
             private const int BUTTON_HEIGHT = 10;
-            private const int BUTTON_SPACING = 1;
+            private const int BUTTON_SPACING = 0;
 
             // --- Info Box Configuration ---
             private const int INFO_BOX_WIDTH = 142;
@@ -289,7 +289,7 @@ namespace ProjectVagabond.Battle.UI
             private void LayoutButtons()
             {
                 int x = (int)_position.X;
-                int y = (int)_position.Y;
+                int y = (int)_position.Y + 1;
 
                 for (int i = 0; i < 3; i++)
                 {
@@ -385,8 +385,28 @@ namespace ProjectVagabond.Battle.UI
                     );
                     DrawBeveledBackground(spriteBatch, pixel, infoBoxRect, global.Palette_DarkShadow);
 
-                    if (HoveredMove != null)
+                    if (HoveredMove == null)
                     {
+                        // Empty State: Inner box fills entire area minus 1px bezel
+                        var emptyInnerRect = new Rectangle(
+                            infoBoxRect.X + 1,
+                            infoBoxRect.Y + 1,
+                            infoBoxRect.Width - 2,
+                            infoBoxRect.Height - 2
+                        );
+                        DrawBeveledBackground(spriteBatch, pixel, emptyInnerRect, global.Palette_Black);
+                    }
+                    else
+                    {
+                        // Populated State: Inner box is just the description area
+                        var descBgRect = new Rectangle(
+                            infoBoxRect.X + 1,
+                            infoBoxRect.Bottom - 1 - 18,
+                            infoBoxRect.Width - 2,
+                            18
+                        );
+                        DrawBeveledBackground(spriteBatch, pixel, descBgRect, global.Palette_Black);
+
                         DrawInfoBoxContent(spriteBatch, infoBoxRect, HoveredMove, global);
                     }
 
@@ -437,22 +457,22 @@ namespace ProjectVagabond.Battle.UI
                 var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
 
                 int startX = bounds.X + 4;
-                int startY = bounds.Y + 3;
+                int startY = bounds.Y + 1;
 
                 // Layout Tuning
                 int rowSpacing = 8;
                 int pairSpacing = 5;
-                int labelValueGap = 1;
+                int labelValueGap = (int)tertiaryFont.MeasureString(" ").Width;
 
                 int currentX = startX;
                 int currentY = startY;
 
                 void DrawPair(string label, string val)
                 {
-                    spriteBatch.DrawStringSnapped(tertiaryFont, label, new Vector2(currentX, currentY + 1), global.Palette_DarkSun);
+                    spriteBatch.DrawStringSnapped(tertiaryFont, label, new Vector2(currentX, currentY + 1), global.Palette_Fruit);
                     currentX += (int)tertiaryFont.MeasureString(label).Width + labelValueGap;
 
-                    spriteBatch.DrawStringSnapped(secondaryFont, val, new Vector2(currentX, currentY), global.Palette_Sun);
+                    spriteBatch.DrawStringSnapped(secondaryFont, val, new Vector2(currentX, currentY), global.Palette_DarkSun);
                     currentX += (int)secondaryFont.MeasureString(val).Width + pairSpacing;
                 }
 
@@ -468,19 +488,22 @@ namespace ProjectVagabond.Battle.UI
 
                 // Name
                 currentX = startX;
-                currentY += rowSpacing;
-                // Name: DarkSun, Secondary
-                spriteBatch.DrawStringSnapped(secondaryFont, move.MoveName.ToUpper(), new Vector2(currentX, currentY), global.Palette_DarkSun);
+                currentY += (rowSpacing - 2);
+
+                spriteBatch.DrawStringSnapped(secondaryFont, move.MoveName.ToUpper(), new Vector2(currentX, currentY), global.Palette_Sun);
 
                 // Description
                 currentY += rowSpacing;
                 string desc = move.Description;
                 float maxWidth = bounds.Width - 8;
 
-                // Rich Text Drawing Logic
+                // --- Centering Logic ---
+                var lines = new List<List<(string Text, Color Color)>>();
+                var currentLine = new List<(string Text, Color Color)>();
+                float currentLineWidth = 0f;
+                lines.Add(currentLine);
+
                 var parts = Regex.Split(desc, @"(\[.*?\]|\s+)");
-                float descX = startX;
-                float descY = currentY;
                 Color currentColor = global.Palette_Sun;
 
                 foreach (var part in parts)
@@ -504,27 +527,61 @@ namespace ProjectVagabond.Battle.UI
                         {
                             if (textPart.Contains("\n"))
                             {
-                                descX = startX;
-                                descY += tertiaryFont.LineHeight;
+                                lines.Add(new List<(string, Color)>());
+                                currentLine = lines.Last();
+                                currentLineWidth = 0;
                             }
                             else
                             {
-                                descX += size.X;
+                                if (currentLineWidth + size.X > maxWidth)
+                                {
+                                    lines.Add(new List<(string, Color)>());
+                                    currentLine = lines.Last();
+                                    currentLineWidth = 0;
+                                }
+                                else
+                                {
+                                    currentLine.Add((textPart, currentColor));
+                                    currentLineWidth += size.X;
+                                }
                             }
                             continue;
                         }
 
-                        if (descX + size.X > startX + maxWidth)
+                        if (currentLineWidth + size.X > maxWidth)
                         {
-                            descX = startX;
-                            descY += tertiaryFont.LineHeight;
+                            lines.Add(new List<(string, Color)>());
+                            currentLine = lines.Last();
+                            currentLineWidth = 0;
                         }
 
-                        if (descY + tertiaryFont.LineHeight > bounds.Bottom) break;
-
-                        spriteBatch.DrawStringSnapped(tertiaryFont, textPart, new Vector2(descX, descY), currentColor);
-                        descX += size.X;
+                        currentLine.Add((textPart, currentColor));
+                        currentLineWidth += size.X;
                     }
+                }
+
+                // Calculate Vertical Center
+                int totalHeight = lines.Count * tertiaryFont.LineHeight;
+                int availableHeight = bounds.Bottom - currentY - 2;
+                int startDrawY = currentY + (availableHeight - totalHeight) / 2;
+
+                if (startDrawY < currentY) startDrawY = currentY;
+
+                foreach (var line in lines)
+                {
+                    if (startDrawY + tertiaryFont.LineHeight > bounds.Bottom) break;
+
+                    float lineWidth = 0;
+                    foreach (var item in line) lineWidth += tertiaryFont.MeasureString(item.Text).Width;
+
+                    float lineX = startX + (maxWidth - lineWidth) / 2f;
+
+                    foreach (var item in line)
+                    {
+                        spriteBatch.DrawStringSnapped(tertiaryFont, item.Text, new Vector2(lineX, startDrawY), item.Color);
+                        lineX += tertiaryFont.MeasureString(item.Text).Width;
+                    }
+                    startDrawY += tertiaryFont.LineHeight;
                 }
             }
 
