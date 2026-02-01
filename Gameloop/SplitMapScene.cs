@@ -135,7 +135,7 @@ namespace ProjectVagabond.Scenes
         private static readonly RasterizerState _scissorRasterizerState = new RasterizerState { ScissorTestEnable = true };
 
         private readonly Dictionary<int, float> _nodeHoverTimers = new Dictionary<int, float>();
-        private const float NODE_HOVER_POP_SCALE_TARGET = 1.5f;
+        private const float NODE_HOVER_POP_SCALE_TARGET = 1.2f;
         private const float NODE_HOVER_POP_SPEED = 12.0f;
 
         private const float NODE_HOVER_FLOAT_SPEED = 3.0f;
@@ -1064,14 +1064,12 @@ namespace ProjectVagabond.Scenes
             _pulseTimer += deltaTime;
             float progress = Math.Clamp(_pulseTimer / PULSE_DURATION, 0f, 1f);
 
-            float elastic = Easing.EaseOutElastic(progress);
-            float scale = 1.0f + (0.4f * (1.0f - elastic));
-            _nodeArrivalScale = new Vector2(scale);
+            // Replaced Elastic/Shake with a smooth, clean sine pulse
+            float pulse = MathF.Sin(progress * MathHelper.Pi);
+            float scaleAmount = 0.3f; // Gentle expansion
 
-            float shakeDecay = 1.0f - progress;
-            float shakeX = MathF.Sin(_pulseTimer * NODE_ARRIVAL_SHAKE_FREQUENCY) * NODE_ARRIVAL_SHAKE_MAGNITUDE * shakeDecay;
-            float shakeY = MathF.Cos(_pulseTimer * NODE_ARRIVAL_SHAKE_FREQUENCY * 0.9f) * NODE_ARRIVAL_SHAKE_MAGNITUDE * shakeDecay;
-            _nodeArrivalShake = new Vector2(shakeX, shakeY);
+            _nodeArrivalScale = new Vector2(1.0f + (pulse * scaleAmount));
+            _nodeArrivalShake = Vector2.Zero; // Removed ugly shake
 
             if (_pulseTimer >= PULSE_DURATION)
             {
@@ -1093,11 +1091,13 @@ namespace ProjectVagabond.Scenes
 
                 currentNode.VisualOffset = new Vector2(0, MathHelper.Lerp(-NODE_LIFT_AMOUNT, 0, eased));
 
+                // Softened the landing squash
                 if (progress > 0.8f)
                 {
                     float squashProgress = (progress - 0.8f) / 0.2f;
                     float squash = MathF.Sin(squashProgress * MathHelper.Pi);
-                    _nodeArrivalScale = new Vector2(1.0f + (squash * 0.3f), 1.0f - (squash * 0.3f));
+                    // Reduced squash intensity from 0.3f to 0.15f for a cleaner look
+                    _nodeArrivalScale = new Vector2(1.0f + (squash * 0.15f), 1.0f - (squash * 0.15f));
                 }
                 else
                 {

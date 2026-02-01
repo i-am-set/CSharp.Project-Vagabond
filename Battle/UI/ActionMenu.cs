@@ -402,29 +402,20 @@ namespace ProjectVagabond.Battle.UI
                         );
                         DrawBeveledBackground(spriteBatch, pixel, descBgRect, global.Palette_Black);
 
-                        DrawInfoBoxContent(spriteBatch, infoBoxRect, HoveredMove, global);
+                        DrawInfoBoxContent(spriteBatch, infoBoxRect, HoveredMove, global, false);
                     }
                     else if (IsSwitchHovered)
                     {
-                        // Switch Hover State: Full inner box with text
-                        var emptyInnerRect = new Rectangle(
+                        // Switch Hover State: Same background structure as Move
+                        var descBgRect = new Rectangle(
                             infoBoxRect.X + 1,
-                            infoBoxRect.Y + 1,
+                            infoBoxRect.Bottom - 1 - 18,
                             infoBoxRect.Width - 2,
-                            infoBoxRect.Height - 2
+                            18
                         );
-                        DrawBeveledBackground(spriteBatch, pixel, emptyInnerRect, global.Palette_Black);
+                        DrawBeveledBackground(spriteBatch, pixel, descBgRect, global.Palette_Black);
 
-                        var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-                        string text = "SWITCH PARTY MEMBER";
-                        var textSize = secondaryFont.MeasureString(text);
-                        var textPos = new Vector2(
-                            infoBoxRect.Center.X - textSize.Width / 2f,
-                            infoBoxRect.Center.Y - textSize.Height / 2f
-                        );
-                        textPos = new Vector2(MathF.Round(textPos.X), MathF.Round(textPos.Y));
-
-                        spriteBatch.DrawStringSnapped(secondaryFont, text, textPos, global.Palette_Sun);
+                        DrawInfoBoxContent(spriteBatch, infoBoxRect, null, global, true);
                     }
                     else
                     {
@@ -479,7 +470,7 @@ namespace ProjectVagabond.Battle.UI
                 }
             }
 
-            private void DrawInfoBoxContent(SpriteBatch spriteBatch, Rectangle bounds, MoveData move, Global global)
+            private void DrawInfoBoxContent(SpriteBatch spriteBatch, Rectangle bounds, MoveData? move, Global global, bool isSwitch)
             {
                 var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
                 var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
@@ -495,6 +486,25 @@ namespace ProjectVagabond.Battle.UI
                 int currentX = startX;
                 int currentY = startY;
 
+                string name, desc;
+                string powTxt = "", accTxt = "", mnaTxt = "", useTxt = "";
+
+                if (isSwitch)
+                {
+                    name = "SWITCH";
+                    desc = "SWITCH TO A BENCHED PARTY MEMBER";
+                }
+                else if (move != null)
+                {
+                    name = move.MoveName.ToUpper();
+                    desc = move.Description;
+                    powTxt = move.Power > 0 ? move.Power.ToString() : "--";
+                    accTxt = move.Accuracy > 0 ? $"{move.Accuracy}%" : "--";
+                    mnaTxt = move.ManaCost.ToString();
+                    useTxt = GetStatShortName(move.OffensiveStat);
+                }
+                else return;
+
                 void DrawPair(string label, string val)
                 {
                     spriteBatch.DrawStringSnapped(tertiaryFont, label, new Vector2(currentX, currentY + 1), global.Palette_Fruit);
@@ -504,25 +514,22 @@ namespace ProjectVagabond.Battle.UI
                     currentX += (int)secondaryFont.MeasureString(val).Width + pairSpacing;
                 }
 
-                string powTxt = move.Power > 0 ? move.Power.ToString() : "--";
-                string accTxt = move.Accuracy > 0 ? $"{move.Accuracy}%" : "--";
-                string mnaTxt = move.ManaCost.ToString();
-                string useTxt = GetStatShortName(move.OffensiveStat);
-
-                DrawPair("POW", powTxt);
-                DrawPair("ACC", accTxt);
-                DrawPair("MNA", mnaTxt);
-                DrawPair("USE", useTxt);
+                if (!isSwitch)
+                {
+                    DrawPair("POW", powTxt);
+                    DrawPair("ACC", accTxt);
+                    DrawPair("MNA", mnaTxt);
+                    DrawPair("USE", useTxt);
+                }
 
                 // Name
                 currentX = startX;
                 currentY += (rowSpacing - 2);
 
-                spriteBatch.DrawStringSnapped(secondaryFont, move.MoveName.ToUpper(), new Vector2(currentX, currentY), global.Palette_Sun);
+                spriteBatch.DrawStringSnapped(secondaryFont, name, new Vector2(currentX, currentY), global.Palette_Sun);
 
                 // Description
                 currentY += rowSpacing;
-                string desc = move.Description;
                 float maxWidth = bounds.Width - 8;
 
                 // --- Centering Logic ---
