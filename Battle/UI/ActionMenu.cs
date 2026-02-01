@@ -34,7 +34,6 @@ namespace ProjectVagabond.Battle.UI
         public MoveEntry? SelectedSpellbookEntry { get; private set; }
 
         // Layout
-        // 48 * 3 = 144 + 1px spacing * 2 = 146
         private const int PANEL_WIDTH = 146;
 
         public ActionMenu() { }
@@ -72,13 +71,30 @@ namespace ProjectVagabond.Battle.UI
 
         private void UpdateLayout()
         {
+            var battleManager = ServiceLocator.Get<BattleManager>();
+            var activePlayers = battleManager.AllCombatants.Where(c => c.IsPlayerControlled && c.IsActiveOnField).ToList();
+            bool isCentered = activePlayers.Count == 1;
+
             foreach (var panel in _panels)
             {
-                var area = BattleLayout.GetActionMenuArea(panel.SlotIndex);
-                // Center the panel horizontally within the slot area
-                // Align vertically to the top of the area
+                var area = BattleLayout.GetActionMenuArea(panel.SlotIndex, isCentered);
                 int x = area.Center.X - (PANEL_WIDTH / 2);
                 int y = area.Y;
+                panel.SetPosition(new Vector2(x, y));
+            }
+        }
+
+        public void UpdatePositions(BattleRenderer renderer)
+        {
+            var battleManager = ServiceLocator.Get<BattleManager>();
+            var activePlayers = battleManager.AllCombatants.Where(c => c.IsPlayerControlled && c.IsActiveOnField).ToList();
+            bool isCentered = activePlayers.Count == 1;
+
+            foreach (var panel in _panels)
+            {
+                float visualX = renderer.GetCombatantVisualX(panel.Combatant);
+                float x = visualX - (PANEL_WIDTH / 2f);
+                float y = BattleLayout.GetActionMenuArea(panel.SlotIndex, isCentered).Y;
                 panel.SetPosition(new Vector2(x, y));
             }
         }
@@ -138,7 +154,6 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        // --- Nested Panel Class ---
         private class CombatantPanel
         {
             public int SlotIndex { get; }
@@ -155,9 +170,8 @@ namespace ProjectVagabond.Battle.UI
             private bool _hasBench;
             private Rectangle[] _iconRects;
 
-            // Layout
             private const int BUTTON_WIDTH = 48;
-            private const int BUTTON_HEIGHT = 10; // Compact height
+            private const int BUTTON_HEIGHT = 10;
             private const int BUTTON_SPACING = 1;
 
             public CombatantPanel(BattleCombatant combatant, List<BattleCombatant> allCombatants)
@@ -179,7 +193,6 @@ namespace ProjectVagabond.Battle.UI
 
             public void SetSwitchButtonAllowed(bool allowed)
             {
-                // Button 2 is Switch
                 if (_buttons.Count > 2)
                 {
                     _buttons[2].IsEnabled = allowed && _hasBench;
@@ -193,16 +206,9 @@ namespace ProjectVagabond.Battle.UI
                 var spriteManager = ServiceLocator.Get<SpriteManager>();
                 var icons = spriteManager.ActionIconsSpriteSheet;
 
-                // 1. Attack Button (Left)
-                // Icon: Physical (Index 2)
                 AddActionButton("ATTACK", Combatant.AttackMove, icons, _iconRects[2], tertiaryFont, global);
-
-                // 2. Special Button (Middle)
-                // Icon: Magical (Index 3)
                 AddActionButton("SPECIAL", Combatant.SpecialMove, icons, _iconRects[3], tertiaryFont, global);
 
-                // 3. Switch Button (Right)
-                // Icon: Switch (Index 1)
                 var switchBtn = new TextOverImageButton(Rectangle.Empty, "SWITCH", null, font: tertiaryFont, enableHoverSway: false, iconTexture: icons, iconSourceRect: _iconRects[1])
                 {
                     AlignLeft = true,
@@ -217,7 +223,6 @@ namespace ProjectVagabond.Battle.UI
                 switchBtn.IsEnabled = _hasBench;
                 _buttons.Add(switchBtn);
 
-                // 4. Cancel Button
                 _cancelButton = new Button(Rectangle.Empty, "CANCEL", font: tertiaryFont, enableHoverSway: false)
                 {
                     CustomDefaultTextColor = global.Palette_Rust,
@@ -247,17 +252,10 @@ namespace ProjectVagabond.Battle.UI
                     var moveData = BattleDataCache.Moves[entry!.MoveID];
                     btn.OnClick += () =>
                     {
-                        // Check Affordability
                         bool canAfford = false;
                         var manaDump = moveData.Abilities.OfType<ManaDumpAbility>().FirstOrDefault();
-                        if (manaDump != null)
-                        {
-                            canAfford = Combatant.Stats.CurrentMana > 0;
-                        }
-                        else
-                        {
-                            canAfford = Combatant.Stats.CurrentMana >= moveData.ManaCost;
-                        }
+                        if (manaDump != null) canAfford = Combatant.Stats.CurrentMana > 0;
+                        else canAfford = Combatant.Stats.CurrentMana >= moveData.ManaCost;
 
                         if (canAfford)
                         {
@@ -287,20 +285,20 @@ namespace ProjectVagabond.Battle.UI
                 int x = (int)_position.X;
                 int y = (int)_position.Y;
 
-                // Horizontal Layout: Attack | Special | Switch
                 for (int i = 0; i < 3; i++)
                 {
                     _buttons[i].Bounds = new Rectangle(x, y, BUTTON_WIDTH, BUTTON_HEIGHT);
                     x += BUTTON_WIDTH + BUTTON_SPACING;
                 }
 
-                // Layout Cancel Button (Centered in the slot's designated area)
-                var area = BattleLayout.GetActionMenuArea(SlotIndex);
                 int cancelW = 50;
                 int cancelH = 15;
+                float panelCenterX = _position.X + (PANEL_WIDTH / 2f);
+                float panelCenterY = _position.Y + (BattleLayout.ACTION_MENU_HEIGHT / 2f);
+
                 _cancelButton.Bounds = new Rectangle(
-                    area.Center.X - cancelW / 2,
-                    area.Center.Y - cancelH / 2,
+                    (int)(panelCenterX - cancelW / 2),
+                    (int)(panelCenterY - cancelH / 2),
                     cancelW,
                     cancelH
                 );
@@ -329,19 +327,18 @@ namespace ProjectVagabond.Battle.UI
                         if (btn.IsHovered && btn.IsEnabled)
                         {
                             int index = _buttons.IndexOf(btn);
-                            if (index == 0) // Attack
+                            if (index == 0)
                             {
                                 var entry = Combatant.AttackMove;
                                 if (entry != null && BattleDataCache.Moves.TryGetValue(entry.MoveID, out var m))
                                     HoveredMove = m;
                             }
-                            else if (index == 1) // Special
+                            else if (index == 1)
                             {
                                 var entry = Combatant.SpecialMove;
                                 if (entry != null && BattleDataCache.Moves.TryGetValue(entry.MoveID, out var m))
                                     HoveredMove = m;
                             }
-                            // Index 2 is Switch, no move data
                         }
                     }
                 }
@@ -379,13 +376,10 @@ namespace ProjectVagabond.Battle.UI
                         int snappedOffsetY = (int)offset.Y;
                         rect.Y += snappedOffsetY;
 
-                        // Visual rect is the full button bounds minus 1px height for bevel effect
                         var visualRect = new Rectangle(rect.X, rect.Y, rect.Width, rect.Height - 1);
-
                         Color bgColor;
                         bool canAfford = true;
 
-                        // Check affordability for Attack (0) and Special (1)
                         if (i < 2)
                         {
                             MoveEntry? entry = (i == 0) ? Combatant.AttackMove : Combatant.SpecialMove;
@@ -397,22 +391,11 @@ namespace ProjectVagabond.Battle.UI
                             }
                         }
 
-                        if (!btn.IsEnabled || !canAfford)
-                        {
-                            bgColor = global.Palette_Black;
-                        }
-                        else if (btn.IsHovered)
-                        {
-                            bgColor = global.Palette_Rust;
-                        }
-                        else
-                        {
-                            bgColor = global.Palette_DarkestPale;
-                        }
+                        if (!btn.IsEnabled || !canAfford) bgColor = global.Palette_Black;
+                        else if (btn.IsHovered) bgColor = global.Palette_Rust;
+                        else bgColor = global.Palette_DarkestPale;
 
                         DrawBeveledBackground(spriteBatch, pixel, visualRect, bgColor);
-
-                        // Pass tint override if disabled/cant afford to gray out text/icon
                         Color? tint = (!btn.IsEnabled || !canAfford) ? global.Palette_DarkShadow : (Color?)null;
                         btn.Draw(spriteBatch, btn.Font, gameTime, transform, false, 0f, snappedOffsetY, tint);
                     }
@@ -420,7 +403,9 @@ namespace ProjectVagabond.Battle.UI
 
                 if (global.ShowSplitMapGrid)
                 {
-                    var area = BattleLayout.GetActionMenuArea(SlotIndex);
+                    var activePlayers = battleManager.AllCombatants.Where(c => c.IsPlayerControlled && c.IsActiveOnField).ToList();
+                    bool isCentered = activePlayers.Count == 1;
+                    var area = BattleLayout.GetActionMenuArea(SlotIndex, isCentered);
                     spriteBatch.DrawSnapped(pixel, area, (SlotIndex == 0 ? Color.Cyan : Color.Magenta) * 0.2f);
                     spriteBatch.DrawLineSnapped(new Vector2(area.Right, area.Top), new Vector2(area.Right, area.Bottom), (SlotIndex == 0 ? Color.Cyan : Color.Magenta));
                 }

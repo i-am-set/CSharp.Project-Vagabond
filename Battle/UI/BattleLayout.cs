@@ -23,7 +23,7 @@ namespace ProjectVagabond.Battle.UI
 
         // --- Player Layout ---
         public const float PLAYER_HEART_CENTER_Y = 104f;
-        public const float PLAYER_BARS_TOP_Y = 83f;
+        public const float PLAYER_BARS_TOP_Y = 88f; // Moved down 5px (was 83f)
         public const float PLAYER_NAME_TOP_Y = 116f;
 
         public const int PLAYER_BAR_WIDTH = 40;
@@ -34,9 +34,17 @@ namespace ProjectVagabond.Battle.UI
         public const int ENEMY_BAR_WIDTH = 40;
         public const int ENEMY_BAR_HEIGHT = 2;
 
-        public static Rectangle GetActionMenuArea(int slotIndex)
+        public static Rectangle GetActionMenuArea(int slotIndex, bool isCentered = false)
         {
-            int x = (slotIndex == 0) ? 0 : ACTION_MENU_WIDTH;
+            int x;
+            if (isCentered)
+            {
+                x = (Global.VIRTUAL_WIDTH - ACTION_MENU_WIDTH) / 2;
+            }
+            else
+            {
+                x = (slotIndex == 0) ? 0 : ACTION_MENU_WIDTH;
+            }
             return new Rectangle(x, ACTION_MENU_Y, ACTION_MENU_WIDTH, ACTION_MENU_HEIGHT);
         }
 

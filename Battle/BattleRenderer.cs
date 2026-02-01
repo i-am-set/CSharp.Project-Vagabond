@@ -44,6 +44,7 @@ namespace ProjectVagabond.Battle.UI
         private const float ACTIVE_TWEEN_SPEED = 5f;
 
         private readonly Dictionary<string, float> _enemyVisualXPositions = new Dictionary<string, float>();
+        private readonly Dictionary<string, float> _playerVisualXPositions = new Dictionary<string, float>();
         private const float ENEMY_POSITION_TWEEN_SPEED = 4.0f;
 
         private bool _centeringSequenceStarted = false;
@@ -121,6 +122,7 @@ namespace ProjectVagabond.Battle.UI
             _attackAnimControllers.Clear();
             _turnActiveOffsets.Clear();
             _enemyVisualXPositions.Clear();
+            _playerVisualXPositions.Clear();
             _enemySpritePartOffsets.Clear();
             _enemyAnimationTimers.Clear();
             _enemyAnimationIntervals.Clear();
@@ -159,6 +161,20 @@ namespace ProjectVagabond.Battle.UI
         public Vector2 GetCombatantHudCenterPosition(BattleCombatant combatant, IEnumerable<BattleCombatant> allCombatants)
         {
             return GetCombatantVisualCenterPosition(combatant, allCombatants);
+        }
+
+        public float GetCombatantVisualX(BattleCombatant c)
+        {
+            if (c.IsPlayerControlled)
+            {
+                if (_playerVisualXPositions.TryGetValue(c.CombatantID, out float x)) return x;
+                return BattleLayout.GetPlayerSpriteCenter(c.BattleSlot).X;
+            }
+            else
+            {
+                if (_enemyVisualXPositions.TryGetValue(c.CombatantID, out float x)) return x;
+                return BattleLayout.GetEnemySlotCenter(c.BattleSlot).X;
+            }
         }
 
         public void TriggerAttackAnimation(string combatantId)
@@ -222,6 +238,7 @@ namespace ProjectVagabond.Battle.UI
             }
 
             UpdateEnemyPositions(dt, combatants, animationManager);
+            UpdatePlayerPositions(dt, combatants, animationManager);
             UpdateEnemyAnimations(dt, combatants);
             UpdateRecoilAnimations(dt);
             UpdateStatusIconAnimations(dt);
@@ -684,6 +701,50 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
+        private void UpdatePlayerPositions(float dt, IEnumerable<BattleCombatant> combatants, BattleAnimationManager animationManager)
+        {
+            var players = combatants.Where(c => c.IsPlayerControlled).ToList();
+            var activePlayers = players.Where(c => (!c.IsDefeated || animationManager.IsDeathAnimating(c.CombatantID)) && c.IsActiveOnField).ToList();
+
+            float centerX = Global.VIRTUAL_WIDTH / 2f;
+            bool shouldCenter = activePlayers.Count == 1;
+
+            foreach (var player in activePlayers)
+            {
+                float targetX;
+                if (shouldCenter)
+                {
+                    targetX = centerX;
+                }
+                else
+                {
+                    targetX = BattleLayout.GetPlayerSpriteCenter(player.BattleSlot).X;
+                }
+
+                if (!_playerVisualXPositions.ContainsKey(player.CombatantID))
+                {
+                    _playerVisualXPositions[player.CombatantID] = targetX;
+                }
+                else
+                {
+                    float currentX = _playerVisualXPositions[player.CombatantID];
+                    if (Math.Abs(currentX - targetX) < 1.0f)
+                    {
+                        _playerVisualXPositions[player.CombatantID] = targetX;
+                    }
+                    else
+                    {
+                        float damping = 1.0f - MathF.Exp(-ENEMY_POSITION_TWEEN_SPEED * dt);
+                        _playerVisualXPositions[player.CombatantID] = MathHelper.Lerp(currentX, targetX, damping);
+                    }
+                }
+            }
+
+            var keepIds = activePlayers.Select(p => p.CombatantID).ToHashSet();
+            var keysToRemove = _playerVisualXPositions.Keys.Where(k => !keepIds.Contains(k)).ToList();
+            foreach (var k in keysToRemove) _playerVisualXPositions.Remove(k);
+        }
+
         private void DrawEnemies(SpriteBatch spriteBatch, List<BattleCombatant> activeEnemies, IEnumerable<BattleCombatant> allCombatants, BattleCombatant currentActor, bool shouldGrayOut, HashSet<BattleCombatant> selectable, BattleAnimationManager animManager, Dictionary<string, Color> silhouetteColors, Matrix transform, GameTime gameTime, BattleUIManager uiManager, BattleCombatant hoveredCombatant, bool drawFloor = true, bool drawShadow = true, bool drawSprite = true, bool includeDying = true)
         {
             var dyingEnemies = allCombatants.Where(c => !c.IsPlayerControlled && animManager.IsDeathAnimating(c.CombatantID)).ToList();
@@ -1115,8 +1176,9 @@ namespace ProjectVagabond.Battle.UI
         {
             foreach (var player in players)
             {
-                var baseCenter = BattleLayout.GetPlayerSpriteCenter(player.BattleSlot);
-                var spriteCenter = baseCenter;
+                // Use dynamic visual position if available, else fallback to static layout
+                float visualX = _playerVisualXPositions.ContainsKey(player.CombatantID) ? _playerVisualXPositions[player.CombatantID] : BattleLayout.GetPlayerSpriteCenter(player.BattleSlot).X;
+                var spriteCenter = new Vector2(visualX, BattleLayout.PLAYER_HEART_CENTER_Y);
 
                 float targetOffset = (player == currentActor) ? 0f : INACTIVE_Y_OFFSET;
                 if (!_turnActiveOffsets.ContainsKey(player.CombatantID)) _turnActiveOffsets[player.CombatantID] = INACTIVE_Y_OFFSET;
@@ -1244,7 +1306,8 @@ namespace ProjectVagabond.Battle.UI
                         floorScale = 1.0f - Easing.EaseInBack(progress);
                     }
 
-                    var floorCenter = BattleLayout.GetPlayerSpriteCenter(player.BattleSlot);
+                    // Use the dynamic center for the floor too
+                    var floorCenter = new Vector2(visualX, BattleLayout.PLAYER_HEART_CENTER_Y);
                     _vfxRenderer.DrawPlayerFloor(spriteBatch, floorCenter + slideOffset, player.VisualAlpha, floorScale);
                 }
 
@@ -1301,11 +1364,11 @@ namespace ProjectVagabond.Battle.UI
                     float barX;
                     if (isRightAligned)
                     {
-                        barX = baseCenter.X + 16f;
+                        barX = spriteCenter.X + 16f;
                     }
                     else
                     {
-                        barX = baseCenter.X - 16f - BattleLayout.PLAYER_BAR_WIDTH;
+                        barX = spriteCenter.X - 16f - BattleLayout.PLAYER_BAR_WIDTH;
                     }
 
                     float barY = BattleLayout.PLAYER_BARS_TOP_Y + 4;

@@ -43,8 +43,6 @@ namespace ProjectVagabond.Battle.UI
 
         public MoveData? HoveredMove => _actionMenu.HoveredMove;
 
-        // Always null now, as UI buttons for targeting are removed. 
-        // Kept for compatibility with BattleRenderer/InputHandler which check this property.
         public BattleCombatant? HoveredCombatantFromUI { get; private set; } = null;
 
         public BattleCombatant? CombatantHoveredViaSprite { get; set; }
@@ -55,6 +53,9 @@ namespace ProjectVagabond.Battle.UI
         public Vector2 IntroOffset { get; set; } = Vector2.Zero;
 
         private MouseState _previousMouseState;
+
+        // --- Back Button for Targeting ---
+        private Button _targetingBackButton;
 
         public bool IsBusy => false;
         public bool IsWaitingForInput => false;
@@ -80,6 +81,16 @@ namespace ProjectVagabond.Battle.UI
             EventBus.Subscribe<GameEvents.ForcedSwitchRequested>(OnForcedSwitchRequested);
 
             _previousMouseState = Mouse.GetState();
+
+            // Initialize Targeting Back Button
+            var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
+            _targetingBackButton = new Button(Rectangle.Empty, "BACK", font: tertiaryFont, enableHoverSway: false)
+            {
+                CustomDefaultTextColor = _global.GameTextColor,
+                CustomHoverTextColor = _global.ButtonHoverColor,
+                UseScreenCoordinates = false // Must be false since we draw in virtual space
+            };
+            _targetingBackButton.OnClick += GoBack;
         }
 
         public void ForceClearNarration() { }
@@ -132,7 +143,7 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        public void Update(GameTime gameTime, MouseState currentMouseState, KeyboardState currentKeyboardState, BattleCombatant currentActor)
+        public void Update(GameTime gameTime, MouseState currentMouseState, KeyboardState currentKeyboardState, BattleCombatant currentActor, BattleRenderer renderer)
         {
             SharedPulseTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
@@ -149,16 +160,22 @@ namespace ProjectVagabond.Battle.UI
             if (isTargeting)
             {
                 _targetingTextAnimTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+                // Calculate layout for the back button so hit detection works
+                var battleManager = ServiceLocator.Get<BattleManager>();
+                var activePlayers = battleManager.AllCombatants.Where(c => c.IsPlayerControlled && c.IsActiveOnField).ToList();
+                bool isCentered = activePlayers.Count == 1;
+                UpdateTargetingButtonLayout(isCentered);
+
+                _targetingBackButton.Update(currentMouseState);
             }
 
-            // Block menu input if we are targeting.
-            // If switching, we don't block globally, but we pass the switching slot index to block that specific panel.
             bool isMenuBlocked = isTargeting;
             int? switchingSlot = isSwitching ? ActiveTargetingSlot : null;
 
+            _actionMenu.UpdatePositions(renderer);
             _actionMenu.Update(currentMouseState, gameTime, isMenuBlocked, switchingSlot);
 
-            // Only update switch menu if we are in Switch state
             if (isSwitching)
             {
                 _switchMenu.Update(currentMouseState);
@@ -177,6 +194,31 @@ namespace ProjectVagabond.Battle.UI
             _previousMouseState = currentMouseState;
         }
 
+        private void UpdateTargetingButtonLayout(bool isCentered)
+        {
+            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+            string text = "CHOOSE A TARGET";
+            Vector2 size = secondaryFont.MeasureString(text);
+
+            var area = BattleLayout.GetActionMenuArea(ActiveTargetingSlot, isCentered);
+
+            Vector2 textPos = new Vector2(
+                area.Center.X - (size.X / 2f),
+                area.Center.Y - (size.Y / 2f) - 5
+            );
+
+            int btnWidth = 50;
+            int btnHeight = 10;
+
+            // Moved down 8 pixels from previous position (+4 -> +12)
+            _targetingBackButton.Bounds = new Rectangle(
+                area.Center.X - (btnWidth / 2),
+                (int)(textPos.Y + size.Y + 12),
+                btnWidth,
+                btnHeight
+            );
+        }
+
         private void HandleActionMenuSelection(int slotIndex, QueuedAction action)
         {
             var battleManager = ServiceLocator.Get<BattleManager>();
@@ -187,8 +229,6 @@ namespace ProjectVagabond.Battle.UI
                 SpellForTargeting = action.SpellbookEntry;
                 ActiveTargetingSlot = slotIndex;
                 UIState = BattleUIState.Targeting;
-
-                // Ensure switch menu is closed if we start targeting
                 _switchMenu.Hide();
             }
             else
@@ -207,7 +247,6 @@ namespace ProjectVagabond.Battle.UI
         {
             if (UIState == BattleUIState.Targeting)
             {
-                // Validate that the clicked target is actually valid for the current move
                 var battleManager = ServiceLocator.Get<BattleManager>();
                 var actor = battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && c.BattleSlot == ActiveTargetingSlot);
 
@@ -221,7 +260,6 @@ namespace ProjectVagabond.Battle.UI
                     }
                     else
                     {
-                        // Invalid target clicked (e.g. clicking self for an attack)
                         ServiceLocator.Get<HapticsManager>().TriggerShake(2f, 0.1f);
                     }
                 }
@@ -353,29 +391,28 @@ namespace ProjectVagabond.Battle.UI
         public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             var battleManager = ServiceLocator.Get<BattleManager>();
+            var activePlayers = battleManager.AllCombatants.Where(c => c.IsPlayerControlled && c.IsActiveOnField).ToList();
+            bool isCentered = activePlayers.Count == 1;
 
             // Determine which border to draw based on phase
             Texture2D border = (battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection)
                 ? _spriteManager.BattleBorderAction
                 : _spriteManager.BattleBorderCombat;
 
-            if (border != null)
+            if (border != null && !isCentered)
             {
                 spriteBatch.DrawSnapped(border, IntroOffset, Color.White);
             }
 
-            // Draw ActionMenu unless we are Targeting (where we want a clean screen for selection)
             if (UIState != BattleUIState.Targeting)
             {
-                // If Switching, hide the active slot (it's covered by SwitchMenu)
-                // If Default, show all
                 int? hiddenSlot = (UIState == BattleUIState.Switch) ? ActiveTargetingSlot : null;
                 _actionMenu.Draw(spriteBatch, font, gameTime, transform, IntroOffset, hiddenSlot);
             }
 
             if (UIState == BattleUIState.Targeting)
             {
-                DrawTargetingText(spriteBatch, font, gameTime);
+                DrawTargetingText(spriteBatch, font, gameTime, isCentered);
             }
 
             if (UIState == BattleUIState.Switch && (_switchMenu.IsForced || _switchMenu.IsVisible))
@@ -395,21 +432,20 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private void DrawTargetingText(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
+        private void DrawTargetingText(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, bool isCentered)
         {
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+            var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
             string text = "CHOOSE A TARGET";
             Vector2 size = secondaryFont.MeasureString(text);
 
-            // Use the new layout system to get the exact area for the active slot
-            var area = BattleLayout.GetActionMenuArea(ActiveTargetingSlot);
+            var area = BattleLayout.GetActionMenuArea(ActiveTargetingSlot, isCentered);
 
             Vector2 textPos = new Vector2(
                 area.Center.X - (size.X / 2f),
-                area.Center.Y - (size.Y / 2f)
+                area.Center.Y - (size.Y / 2f) - 5
             );
 
-            // Use DriftWave effect
             TextAnimator.DrawTextWithEffect(
                 spriteBatch,
                 secondaryFont,
@@ -419,6 +455,10 @@ namespace ProjectVagabond.Battle.UI
                 TextEffectType.DriftWave,
                 _targetingTextAnimTimer
             );
+
+            // Draw Back Button
+            // Bounds are updated in Update(), so we just draw
+            _targetingBackButton.Draw(spriteBatch, tertiaryFont, gameTime, Matrix.Identity);
         }
     }
 }

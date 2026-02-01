@@ -439,7 +439,7 @@ namespace ProjectVagabond.Scenes
 
                 _animationManager.Update(gameTime, _battleManager.AllCombatants);
                 _renderer.Update(gameTime, _battleManager.AllCombatants, _animationManager, null);
-                _uiManager.Update(gameTime, currentMouseState, currentKeyboardState, null);
+                _uiManager.Update(gameTime, currentMouseState, currentKeyboardState, null, _renderer);
                 return;
             }
 
@@ -476,7 +476,7 @@ namespace ProjectVagabond.Scenes
 
             _animationManager.Update(gameTime, _battleManager.AllCombatants);
             _moveAnimationManager.Update(gameTime);
-            _uiManager.Update(gameTime, currentMouseState, currentKeyboardState, _battleManager.CurrentActingCombatant);
+            _uiManager.Update(gameTime, currentMouseState, currentKeyboardState, _battleManager.CurrentActingCombatant, _renderer);
             _inputHandler.Update(gameTime, _uiManager, _renderer);
 
             var activeCombatant = _battleManager.CurrentActingCombatant ?? _currentActor;

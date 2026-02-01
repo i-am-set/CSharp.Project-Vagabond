@@ -33,15 +33,11 @@ namespace ProjectVagabond.Battle.UI
         private readonly Global _global;
         private int _activeSlotIndex = -1;
 
-        // Layout Constants (Matching ActionMenu)
         private const int PANEL_WIDTH = 140;
         private const int MOVE_BTN_HEIGHT = 9;
         private const int ACTION_BTN_HEIGHT = 8;
         private const int HITBOX_PADDING = 1;
 
-        /// <summary>
-        /// If true, the menu is in "Forced Switch" mode (e.g. Disengage), and the Back button is disabled.
-        /// </summary>
         public bool IsForced { get; set; } = false;
 
         public SwitchMenu()
@@ -70,19 +66,16 @@ namespace ProjectVagabond.Battle.UI
             var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
             var global = ServiceLocator.Get<Global>();
 
-            var area = BattleLayout.GetActionMenuArea(_activeSlotIndex);
-            // 4 Slots * 10px + 1 Action Row * 9px = 49px height
+            var battleManager = ServiceLocator.Get<BattleManager>();
+            var activePlayers = battleManager.AllCombatants.Where(c => c.IsPlayerControlled && c.IsActiveOnField).ToList();
+            bool isCentered = activePlayers.Count == 1;
+
+            var area = BattleLayout.GetActionMenuArea(_activeSlotIndex, isCentered);
             int panelHeight = 49;
             int startX = area.Center.X - (PANEL_WIDTH / 2);
             int startY = area.Center.Y - (panelHeight / 2);
 
             int currentY = startY;
-
-            // 1. Party Slots (0 to 3)
-            var party = allCombatants.Where(c => c.IsPlayerControlled).OrderBy(c => c.BattleSlot).ToList();
-            // Note: BattleSlot might be -1 for benched members if not properly tracked, 
-            // but GameState.PlayerState.Party is the source of truth for order.
-            // We should iterate 0-3 and find the member in that party index.
             var gameState = ServiceLocator.Get<GameState>();
             var partyList = gameState.PlayerState.Party;
 
@@ -95,19 +88,15 @@ namespace ProjectVagabond.Battle.UI
                 if (i < partyList.Count)
                 {
                     var partyMember = partyList[i];
-                    // Find the BattleCombatant corresponding to this party member
                     member = allCombatants.FirstOrDefault(c => c.IsPlayerControlled && c.Name == partyMember.Name);
 
                     if (member != null)
                     {
                         label = member.Name.ToUpper();
-
-                        // Determine if switchable
-                        bool isActive = member.IsActiveOnField; // Slot 0 or 1
+                        bool isActive = member.IsActiveOnField;
                         bool isDefeated = member.IsDefeated;
                         bool isReserved = reservedMembers != null && reservedMembers.Contains(member);
 
-                        // Enabled only if on bench (not active), not defeated, and not reserved
                         if (!isActive && !isDefeated && !isReserved)
                         {
                             enabled = true;
@@ -121,20 +110,20 @@ namespace ProjectVagabond.Battle.UI
                     null,
                     font: secondaryFont,
                     enableHoverSway: false,
-                    iconTexture: null // No icon
+                    iconTexture: null
                 )
                 {
                     CustomDefaultTextColor = enabled ? global.GameTextColor : global.Palette_DarkShadow,
                     CustomHoverTextColor = global.ButtonHoverColor,
                     IsEnabled = enabled,
-                    AlignLeft = false, // Centered
+                    AlignLeft = false,
                     ContentXOffset = 0,
                     TextRenderOffset = new Vector2(0, -1)
                 };
 
                 if (member != null && enabled)
                 {
-                    var targetMember = member; // Capture
+                    var targetMember = member;
                     btn.OnClick += () => OnMemberSelected?.Invoke(targetMember);
                 }
 
@@ -142,8 +131,6 @@ namespace ProjectVagabond.Battle.UI
                 currentY += MOVE_BTN_HEIGHT + HITBOX_PADDING;
             }
 
-            // 2. Back Button (Bottom Row)
-            // Single button, centered, using Tertiary font
             int backWidth = 50;
             int backX = startX + (PANEL_WIDTH - backWidth) / 2;
 
@@ -187,45 +174,26 @@ namespace ProjectVagabond.Battle.UI
             var pixel = ServiceLocator.Get<Texture2D>();
             var global = ServiceLocator.Get<Global>();
 
-            // Draw Party Slot Buttons
             for (int i = 0; i < _buttons.Count; i++)
             {
                 var btn = _buttons[i];
                 var rect = btn.Bounds;
-
-                // Visual rect logic from ActionMenu (height - padding)
-                // But here we defined bounds with height included? 
-                // ActionMenu defines bounds then subtracts padding for visual rect.
-                // Let's match ActionMenu: Visual height is Height - 1.
-                var visualRect = new Rectangle(rect.X, rect.Y, rect.Width, rect.Height); // Actually ActionMenu subtracts padding from Y advancement, but draws full height?
-                // ActionMenu: visualRect = new Rectangle(rect.X, rect.Y, rect.Width, rect.Height - HITBOX_PADDING);
-                // Let's do that.
+                var visualRect = new Rectangle(rect.X, rect.Y, rect.Width, rect.Height);
                 visualRect.Height -= HITBOX_PADDING;
 
                 Color bgColor;
-                if (!btn.IsEnabled)
-                {
-                    bgColor = global.Palette_Black;
-                }
-                else if (btn.IsHovered)
-                {
-                    bgColor = global.Palette_Rust;
-                }
-                else
-                {
-                    bgColor = global.Palette_DarkestPale;
-                }
+                if (!btn.IsEnabled) bgColor = global.Palette_Black;
+                else if (btn.IsHovered) bgColor = global.Palette_Rust;
+                else bgColor = global.Palette_DarkestPale;
 
                 DrawBeveledBackground(spriteBatch, pixel, visualRect, bgColor);
                 btn.Draw(spriteBatch, btn.Font, gameTime, Matrix.Identity);
             }
 
-            // Draw Back Button
             if (!IsForced)
             {
                 var rect = _backButton.Bounds;
-                var visualRect = new Rectangle(rect.X, rect.Y, rect.Width, rect.Height); // No padding subtraction for bottom row usually?
-                // ActionMenu subtracts padding for bottom row too.
+                var visualRect = new Rectangle(rect.X, rect.Y, rect.Width, rect.Height);
                 visualRect.Height -= HITBOX_PADDING;
 
                 Color bgColor = _backButton.IsHovered ? global.Palette_Rust : global.Palette_DarkShadow;
