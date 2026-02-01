@@ -37,6 +37,7 @@ namespace ProjectVagabond.UI
         public float OverflowScrollSpeed { get; set; } = 0f;
         public StrikethroughType Strikethrough { get; set; } = StrikethroughType.None;
         public bool EnableHoverSway { get; set; } = true;
+        public bool EnableHoverRotation { get; set; } = true;
         public BitmapFont? Font { get; set; }
         public Vector2 TextRenderOffset { get; set; } = Vector2.Zero;
         public Color? DebugColor { get; set; }
@@ -204,7 +205,10 @@ namespace ProjectVagabond.UI
                 }
 
                 // 2. Rotation Shake (Juice)
-                _hoverRotationTimer = HOVER_ROTATION_DURATION;
+                if (EnableHoverRotation)
+                {
+                    _hoverRotationTimer = HOVER_ROTATION_DURATION;
+                }
             }
 
             bool mousePressedThisFrame = currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released;
@@ -265,7 +269,6 @@ namespace ProjectVagabond.UI
             var cursorManager = ServiceLocator.Get<CursorManager>();
             if (IsHovered)
             {
-                // FIX: Only show clickable cursor if there is an action bound
                 if (HasLeftClickAction || HasRightClickAction || HasMiddleClickAction)
                 {
                     cursorManager.SetState(_isPressed ? CursorState.Click : CursorState.HoverClickable);

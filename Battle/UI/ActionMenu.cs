@@ -34,8 +34,8 @@ namespace ProjectVagabond.Battle.UI
         public MoveEntry? SelectedSpellbookEntry { get; private set; }
 
         // Layout
-        // 48 * 3 = 144 + 2px spacing * 2 = 148
-        private const int PANEL_WIDTH = 148;
+        // 48 * 3 = 144 + 1px spacing * 2 = 146
+        private const int PANEL_WIDTH = 146;
 
         public ActionMenu() { }
 
@@ -75,11 +75,10 @@ namespace ProjectVagabond.Battle.UI
             foreach (var panel in _panels)
             {
                 var area = BattleLayout.GetActionMenuArea(panel.SlotIndex);
-                // Center the panel within the slot area
-                // Panel height is determined by button height (10px)
-                int panelHeight = 10;
+                // Center the panel horizontally within the slot area
+                // Align vertically to the top of the area
                 int x = area.Center.X - (PANEL_WIDTH / 2);
-                int y = area.Center.Y - (panelHeight / 2);
+                int y = area.Y;
                 panel.SetPosition(new Vector2(x, y));
             }
         }
@@ -159,7 +158,7 @@ namespace ProjectVagabond.Battle.UI
             // Layout
             private const int BUTTON_WIDTH = 48;
             private const int BUTTON_HEIGHT = 10; // Compact height
-            private const int BUTTON_SPACING = 2;
+            private const int BUTTON_SPACING = 1;
 
             public CombatantPanel(BattleCombatant combatant, List<BattleCombatant> allCombatants)
             {
@@ -210,7 +209,8 @@ namespace ProjectVagabond.Battle.UI
                     IconColorMatchesText = true,
                     CustomDefaultTextColor = global.GameTextColor,
                     TextRenderOffset = new Vector2(0, -1),
-                    IconRenderOffset = new Vector2(0, -1)
+                    IconRenderOffset = new Vector2(0, -1),
+                    EnableHoverRotation = false
                 };
                 switchBtn.OnClick += () => OnSwitchRequested?.Invoke();
                 _hasBench = allCombatants.Any(c => c.IsPlayerControlled && !c.IsDefeated && c.BattleSlot >= 2);
@@ -238,7 +238,8 @@ namespace ProjectVagabond.Battle.UI
                     CustomHoverTextColor = global.ButtonHoverColor,
                     TextRenderOffset = new Vector2(0, -1),
                     IconRenderOffset = new Vector2(0, -1),
-                    IsEnabled = moveExists
+                    IsEnabled = moveExists,
+                    EnableHoverRotation = false
                 };
 
                 if (moveExists)
