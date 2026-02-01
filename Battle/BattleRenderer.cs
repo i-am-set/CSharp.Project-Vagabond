@@ -1095,8 +1095,11 @@ namespace ProjectVagabond.Battle.UI
 
                             // Mirroring Logic for Enemies
                             bool isRightAligned = (enemy.BattleSlot % 2 != 0);
-                            float xOffset = isRightAligned ? 36f : -36f;
-                            float barX = (center.X - BattleLayout.ENEMY_BAR_WIDTH / 2f) + xOffset;
+                            float barX;
+                            if (isRightAligned)
+                                barX = center.X + 24f;
+                            else
+                                barX = center.X - 24f - BattleLayout.ENEMY_BAR_WIDTH;
 
                             float barBottomY = barY + 4;
                             _combatantBarBottomYs[enemy.CombatantID] = barBottomY;
@@ -1293,15 +1296,19 @@ namespace ProjectVagabond.Battle.UI
 
                     UpdateBarAlpha(player, (float)gameTime.ElapsedGameTime.TotalSeconds, showHP, showMana);
 
-                    // Use static layout position for UI stability
-                    Vector2 barPos = BattleLayout.GetPlayerBarPosition(player.BattleSlot);
-
                     // Mirroring Logic for Players
                     bool isRightAligned = (player.BattleSlot % 2 != 0);
-                    float xOffset = isRightAligned ? 36f : -36f;
-                    float barX = (barPos.X - BattleLayout.PLAYER_BAR_WIDTH / 2f) + xOffset;
+                    float barX;
+                    if (isRightAligned)
+                    {
+                        barX = baseCenter.X + 16f;
+                    }
+                    else
+                    {
+                        barX = baseCenter.X - 16f - BattleLayout.PLAYER_BAR_WIDTH;
+                    }
 
-                    float barY = barPos.Y + 4;
+                    float barY = BattleLayout.PLAYER_BARS_TOP_Y + 4;
 
                     float barBottomY = barY + 4;
                     _combatantBarBottomYs[player.CombatantID] = barBottomY;
