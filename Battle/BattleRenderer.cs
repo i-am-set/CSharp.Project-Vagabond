@@ -50,6 +50,7 @@ namespace ProjectVagabond.Battle.UI
         private bool _centeringSequenceStarted = false;
         private float _centeringDelayTimer = 0f;
         private const float CENTERING_DELAY_DURATION = 0.5f;
+        private float _bobSpeed = 3f;
         private bool _floorOutroTriggered = false;
         private bool _waitingForFloorOutro = false;
         private bool _hasInitializedPositions = false;
@@ -217,6 +218,7 @@ namespace ProjectVagabond.Battle.UI
         public void Update(GameTime gameTime, IEnumerable<BattleCombatant> combatants, BattleAnimationManager animationManager, BattleCombatant currentActor)
         {
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            var battleManager = ServiceLocator.Get<BattleManager>();
 
             foreach (var c in combatants)
             {
@@ -252,7 +254,25 @@ namespace ProjectVagabond.Battle.UI
             {
                 if (c.IsPlayerControlled && _playerSprites.TryGetValue(c.CombatantID, out var sprite))
                 {
-                    sprite.Update(gameTime, currentActor == c);
+                    float? manualBob = null;
+                    bool? manualAlt = null;
+
+                    if (battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection && !battleManager.IsActionPending(c.BattleSlot))
+                    {
+                        float t = (float)gameTime.TotalGameTime.TotalSeconds;
+                        // Inverse of UI bob: UI is Sin(t*5 + phase). Sprite is -Sin(t*5 + phase).
+                        // Phase for Slot 1 is Pi.
+                        float phase = (c.BattleSlot == 1) ? MathHelper.Pi : 0f;
+                        float rawSin = MathF.Sin(t * _bobSpeed + phase);
+
+                        manualBob = -rawSin * 0.5f;
+
+                        // Animate to Alt frame when bobbing up (offset < 0)
+                        manualAlt = manualBob < 0;
+                    }
+                    // ----------------------------------------------
+
+                    sprite.Update(gameTime, currentActor == c, manualBob, manualAlt);
                 }
             }
         }
@@ -1630,8 +1650,23 @@ namespace ProjectVagabond.Battle.UI
 
                 if (combatant.IsPlayerControlled)
                 {
-                    _hudRenderer.DrawStatusIcons(spriteBatch, combatant, barX, barY, BattleLayout.PLAYER_BAR_WIDTH, true, _playerStatusIcons, GetStatusIconOffset, IsStatusIconAnimating, isRightAligned);
-                    _hudRenderer.DrawPlayerBars(spriteBatch, combatant, barX, barY, BattleLayout.PLAYER_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha * hudAlpha, combatant.VisualManaBarAlpha * hudAlpha, gameTime, uiManager, combatant == currentActor, isRightAligned);
+                    // --- NEW LOGIC: Idle Bob for Pending Action ---
+                    float yOffset = 0f;
+                    if (battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection)
+                    {
+                        // If action is NOT pending (not locked in), bob up and down
+                        if (!battleManager.IsActionPending(combatant.BattleSlot))
+                        {
+                            float t = (float)gameTime.TotalGameTime.TotalSeconds;
+                            // Invert phase for slot 1 (the second player) so they bob opposite to slot 0
+                            float phase = (combatant.BattleSlot == 1) ? MathHelper.Pi : 0f;
+                            yOffset = MathF.Sin(t * _bobSpeed + phase) * 0.5f;
+                        }
+                    }
+                    // ----------------------------------------------
+
+                    _hudRenderer.DrawStatusIcons(spriteBatch, combatant, barX, barY + yOffset, BattleLayout.PLAYER_BAR_WIDTH, true, _playerStatusIcons, GetStatusIconOffset, IsStatusIconAnimating, isRightAligned);
+                    _hudRenderer.DrawPlayerBars(spriteBatch, combatant, barX, barY + yOffset, BattleLayout.PLAYER_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha * hudAlpha, combatant.VisualManaBarAlpha * hudAlpha, gameTime, uiManager, combatant == currentActor, isRightAligned);
                 }
                 else
                 {

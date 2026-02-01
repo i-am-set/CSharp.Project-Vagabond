@@ -120,7 +120,7 @@ namespace ProjectVagabond.Battle.UI
             _scale = new Vector2(x, y);
         }
 
-        public void Update(GameTime gameTime, bool isActive)
+        public void Update(GameTime gameTime, bool isActive, float? manualBobOffset = null, bool? manualAltFrame = null)
         {
             Initialize();
             if (_texture == null) return;
@@ -130,6 +130,15 @@ namespace ProjectVagabond.Battle.UI
             // Update Squash and Stretch (Elastic Recovery)
             var global = ServiceLocator.Get<Global>();
             _scale = Vector2.Lerp(_scale, Vector2.One, dt * global.SquashRecoverySpeed);
+
+            // If manual overrides are provided (e.g. Action Selection phase), use them
+            if (manualBobOffset.HasValue)
+            {
+                _selectionOffsetY = manualBobOffset.Value;
+                _useAltFrame = manualAltFrame ?? false;
+                _selectionState = SelectionState.None; // Reset internal state
+                return;
+            }
 
             // If not active (not their turn), reset to base frame and do not animate
             if (!isActive)
@@ -159,15 +168,9 @@ namespace ProjectVagabond.Battle.UI
                     float progress = t / SELECTION_BOB_CYCLE_DURATION;
 
                     // Bobbing Logic: Sine wave (Up is negative Y)
-                    // 0.0 -> 0
-                    // 0.25 -> -1 (Top)
-                    // 0.5 -> 0
-                    // 0.75 -> 1 (Bottom)
-                    // 1.0 -> 0
                     _selectionOffsetY = -MathF.Sin(progress * MathHelper.TwoPi) * SELECTION_BOB_AMPLITUDE;
 
                     // Frame Logic: Alt frame during the upper half of the cycle (0.0 to 0.5)
-                    // This aligns the "Apex" (0.25) with the Alt sprite.
                     if (progress < 0.5f)
                     {
                         _useAltFrame = true;

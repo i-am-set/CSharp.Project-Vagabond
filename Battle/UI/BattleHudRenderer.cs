@@ -12,7 +12,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
-
 namespace ProjectVagabond.Battle.UI
 {
     /// <summary>
@@ -58,49 +57,54 @@ namespace ProjectVagabond.Battle.UI
             DrawTenacityBar(spriteBatch, combatant, barX, tenacityY, barWidth, hpAlpha, isRightAligned);
 
             // --- HEALTH BAR ---
-            var barRect = new Rectangle((int)barX, (int)barY, barWidth, barHeight);
             float hpPercent = combatant.Stats.MaxHP > 0 ? Math.Clamp(combatant.VisualHP / combatant.Stats.MaxHP, 0f, 1f) : 0f;
             var hpAnim = animationManager.GetResourceBarAnimation(combatant.CombatantID, BattleAnimationManager.ResourceBarAnimationState.BarResourceType.HP);
 
-            DrawBar(spriteBatch, barRect, hpPercent, _global.Palette_DarkShadow, _global.Palette_Leaf, _global.Palette_Black, hpAlpha, hpAnim, combatant.Stats.MaxHP, isRightAligned);
+            DrawBar(spriteBatch, new Vector2(barX, barY), barWidth, barHeight, hpPercent, _global.Palette_DarkShadow, _global.Palette_Leaf, _global.Palette_Black, hpAlpha, hpAnim, combatant.Stats.MaxHP, isRightAligned);
 
             // --- MANA BAR (Discrete) ---
             float manaBarY = barY + barHeight + 1;
             DrawDiscreteManaBar(spriteBatch, combatant, barX, manaBarY, barWidth, manaAlpha, null, isRightAligned);
         }
 
-        private void DrawBar(SpriteBatch spriteBatch, Rectangle fullBarRect, float fillPercent, Color bgColor, Color fgColor, Color borderColor, float alpha, BattleAnimationManager.ResourceBarAnimationState? anim, float maxResource, bool isRightAligned)
+        private void DrawBar(SpriteBatch spriteBatch, Vector2 position, int width, int height, float fillPercent, Color bgColor, Color fgColor, Color borderColor, float alpha, BattleAnimationManager.ResourceBarAnimationState? anim, float maxResource, bool isRightAligned)
         {
             if (alpha <= 0.01f) return;
 
-            int currentX = fullBarRect.X;
-            int y = fullBarRect.Y;
-            int w = fullBarRect.Width;
-            int h = fullBarRect.Height;
+            float x = position.X;
+            float y = position.Y;
+            float w = width;
+            float h = height;
 
             // Background
-            spriteBatch.DrawSnapped(_pixel, new Rectangle(currentX, y, w, h), bgColor * alpha);
+            spriteBatch.DrawSnapped(_pixel, new Vector2(x, y), null, bgColor * alpha, 0f, Vector2.Zero, new Vector2(w, h), SpriteEffects.None, 0f);
 
             // Foreground
-            int totalFgWidth = (int)(w * fillPercent);
-            if (fillPercent > 0 && totalFgWidth == 0) totalFgWidth = 1;
+            float totalFgWidth = w * fillPercent;
+            // Keep width integer-aligned for clean fill, but position is float
+            int pixelFgWidth = (int)totalFgWidth;
+            if (fillPercent > 0 && pixelFgWidth == 0) pixelFgWidth = 1;
 
-            if (totalFgWidth > 0)
+            if (pixelFgWidth > 0)
             {
-                int fgX = isRightAligned ? (currentX + w - totalFgWidth) : currentX;
-                spriteBatch.DrawSnapped(_pixel, new Rectangle(fgX, y, totalFgWidth, h), fgColor * alpha);
+                float fgX = isRightAligned ? (x + w - pixelFgWidth) : x;
+                spriteBatch.DrawSnapped(_pixel, new Vector2(fgX, y), null, fgColor * alpha, 0f, Vector2.Zero, new Vector2(pixelFgWidth, h), SpriteEffects.None, 0f);
             }
 
-            // Outline
-            spriteBatch.DrawSnapped(_pixel, new Rectangle(currentX, y - 1, w, 1), borderColor * alpha);
-            spriteBatch.DrawSnapped(_pixel, new Rectangle(currentX, y + h, w, 1), borderColor * alpha);
-            spriteBatch.DrawSnapped(_pixel, new Rectangle(currentX - 1, y - 1, 1, h + 2), borderColor * alpha);
-            spriteBatch.DrawSnapped(_pixel, new Rectangle(currentX + w, y - 1, 1, h + 2), borderColor * alpha);
+            // Outline (1px thickness)
+            // Top
+            spriteBatch.DrawSnapped(_pixel, new Vector2(x, y - 1), null, borderColor * alpha, 0f, Vector2.Zero, new Vector2(w, 1), SpriteEffects.None, 0f);
+            // Bottom
+            spriteBatch.DrawSnapped(_pixel, new Vector2(x, y + h), null, borderColor * alpha, 0f, Vector2.Zero, new Vector2(w, 1), SpriteEffects.None, 0f);
+            // Left
+            spriteBatch.DrawSnapped(_pixel, new Vector2(x - 1, y - 1), null, borderColor * alpha, 0f, Vector2.Zero, new Vector2(1, h + 2), SpriteEffects.None, 0f);
+            // Right
+            spriteBatch.DrawSnapped(_pixel, new Vector2(x + w, y - 1), null, borderColor * alpha, 0f, Vector2.Zero, new Vector2(1, h + 2), SpriteEffects.None, 0f);
 
             // Animation Overlay
             if (anim != null)
             {
-                DrawBarAnimationOverlay(spriteBatch, fullBarRect, maxResource, anim, alpha, isRightAligned);
+                DrawBarAnimationOverlay(spriteBatch, position, width, height, maxResource, anim, alpha, isRightAligned);
             }
         }
 
@@ -132,7 +136,9 @@ namespace ProjectVagabond.Battle.UI
                     x = startX + (i * (pipSize + gap));
                 }
 
-                var rect = new Rectangle((int)x, (int)startY, pipSize, pipHeight);
+                // Use Vector2/Scale for sub-pixel positioning
+                var pos = new Vector2(x, startY);
+                var scale = new Vector2(pipSize, pipHeight);
 
                 Color drawColor = emptyColor;
 
@@ -149,7 +155,7 @@ namespace ProjectVagabond.Battle.UI
                     }
                 }
 
-                spriteBatch.DrawSnapped(_pixel, rect, drawColor);
+                spriteBatch.DrawSnapped(_pixel, pos, null, drawColor, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
             }
         }
 
@@ -178,9 +184,12 @@ namespace ProjectVagabond.Battle.UI
                     x = startX + (i * (pipSize + gap));
                 }
 
-                var destRect = new Rectangle((int)x, (int)startY, pipSize, pipSize);
+                // Use Vector2 position
+                var pos = new Vector2(x, startY);
                 var sourceRect = (i < currentTenacity) ? fullRect : emptyRect;
-                spriteBatch.DrawSnapped(_spriteManager.TenacityPipTexture, destRect, sourceRect, Color.White * alpha);
+
+                // DrawSnapped with Vector2 position and 1.0 scale (since source rect defines size)
+                spriteBatch.DrawSnapped(_spriteManager.TenacityPipTexture, pos, sourceRect, Color.White * alpha, 0f, Vector2.Zero, 1.0f, SpriteEffects.None, 0f);
             }
         }
 
@@ -207,11 +216,10 @@ namespace ProjectVagabond.Battle.UI
             float tenacityY = nameTopY - 2 - 3;
             DrawTenacityBar(spriteBatch, player, barX, tenacityY, barWidth, hpAlpha, isRightAligned);
 
-            var barRect = new Rectangle((int)barX, (int)barY, barWidth, barHeight);
             float hpPercent = player.Stats.MaxHP > 0 ? Math.Clamp(player.VisualHP / player.Stats.MaxHP, 0f, 1f) : 0f;
             var hpAnim = animationManager.GetResourceBarAnimation(player.CombatantID, BattleAnimationManager.ResourceBarAnimationState.BarResourceType.HP);
 
-            DrawBar(spriteBatch, barRect, hpPercent, _global.Palette_DarkShadow, _global.Palette_Leaf, _global.Palette_Black, hpAlpha, hpAnim, player.Stats.MaxHP, isRightAligned);
+            DrawBar(spriteBatch, new Vector2(barX, barY), barWidth, barHeight, hpPercent, _global.Palette_DarkShadow, _global.Palette_Leaf, _global.Palette_Black, hpAlpha, hpAnim, player.Stats.MaxHP, isRightAligned);
 
             float manaBarY = barY + barHeight + 1;
             int? previewCost = null;
@@ -225,7 +233,6 @@ namespace ProjectVagabond.Battle.UI
 
                     if (move.AffectsUserMana)
                     {
-                        // If ManaCost is 0 but AffectsUserMana is true, assume it's a dump (all mana)
                         cost = (move.ManaCost > 0) ? move.ManaCost : player.Stats.CurrentMana;
                     }
 
@@ -249,7 +256,7 @@ namespace ProjectVagabond.Battle.UI
             int gap = BattleLayout.STATUS_ICON_GAP;
 
             // Position below mana bar
-            int iconY = (int)startY + BattleLayout.ENEMY_BAR_HEIGHT + 1 + 1 + 2;
+            float iconY = startY + BattleLayout.ENEMY_BAR_HEIGHT + 1 + 1 + 2;
 
             int step = iconSize + gap;
 
@@ -265,17 +272,18 @@ namespace ProjectVagabond.Battle.UI
                 float hopOffset = getOffsetFunc(combatant.CombatantID, effect.EffectType);
                 bool isAnimating = isAnimatingFunc(combatant.CombatantID, effect.EffectType);
 
-                int x;
+                float x;
                 if (isRightAligned)
                 {
-                    x = (int)(startX + width - ((i + 1) * step) + gap);
+                    x = startX + width - ((i + 1) * step) + gap;
                 }
                 else
                 {
-                    x = (int)(startX + (i * step));
+                    x = startX + (i * step);
                 }
 
-                var iconBounds = new Rectangle(x, (int)(iconY + hopOffset), iconSize, iconSize);
+                var iconPos = new Vector2(x, iconY + hopOffset);
+                var iconBounds = new Rectangle((int)x, (int)(iconY + hopOffset), iconSize, iconSize);
 
                 if (iconTracker != null)
                 {
@@ -286,54 +294,45 @@ namespace ProjectVagabond.Battle.UI
 
                 if (sourceRect != Rectangle.Empty)
                 {
-                    spriteBatch.DrawSnapped(_spriteManager.PermanentStatusIconsSpriteSheet, iconBounds, sourceRect, Color.White);
+                    spriteBatch.DrawSnapped(_spriteManager.PermanentStatusIconsSpriteSheet, iconPos, sourceRect, Color.White);
 
                     if (isAnimating)
                     {
-                        spriteBatch.DrawSnapped(_spriteManager.PermanentStatusIconsSpriteSheet, iconBounds, sourceRect, Color.White * 0.5f);
+                        spriteBatch.DrawSnapped(_spriteManager.PermanentStatusIconsSpriteSheet, iconPos, sourceRect, Color.White * 0.5f);
                     }
                 }
             }
         }
 
-        private void DrawBarAnimationOverlay(SpriteBatch spriteBatch, Rectangle bgRect, float maxResource, BattleAnimationManager.ResourceBarAnimationState anim, float alpha, bool isRightAligned)
+        private void DrawBarAnimationOverlay(SpriteBatch spriteBatch, Vector2 position, int width, int height, float maxResource, BattleAnimationManager.ResourceBarAnimationState anim, float alpha, bool isRightAligned)
         {
             float percentBefore = anim.ValueBefore / maxResource;
             float percentAfter = anim.ValueAfter / maxResource;
 
-            int widthBefore = (int)(bgRect.Width * percentBefore);
-            int widthAfter = (int)(bgRect.Width * percentAfter);
+            int widthBefore = (int)(width * percentBefore);
+            int widthAfter = (int)(width * percentAfter);
 
             if (percentAfter > 0 && widthAfter == 0) widthAfter = 1;
             if (percentBefore > 0 && widthBefore == 0) widthBefore = 1;
 
-            int visibleStartX = bgRect.X;
-            int visibleWidth = bgRect.Width;
-            int visibleEndX = visibleStartX + visibleWidth;
+            float visibleStartX = position.X;
+            float visibleWidth = width;
+            float visibleEndX = visibleStartX + visibleWidth;
 
             if (visibleWidth <= 0) return;
 
             if (anim.AnimationType == BattleAnimationManager.ResourceBarAnimationState.BarAnimationType.Loss)
             {
-                int previewStartX;
+                float previewStartX;
                 int previewWidth = widthBefore - widthAfter;
 
                 if (isRightAligned)
                 {
-                    // Loss shrinks from Left to Right (Right side anchored)
-                    // Before: [XXXXX] (5)
-                    // After:  [..XXX] (3)
-                    // Diff:   [XX...] (2) at Left
-                    // StartX = bgRect.X + bgRect.Width - widthBefore
-                    previewStartX = bgRect.X + bgRect.Width - widthBefore;
+                    previewStartX = visibleStartX + visibleWidth - widthBefore;
                 }
                 else
                 {
-                    // Loss shrinks from Right to Left (Left side anchored)
-                    // Before: [XXXXX]
-                    // After:  [XXX..]
-                    // Diff:   [...XX]
-                    previewStartX = bgRect.X + widthAfter;
+                    previewStartX = visibleStartX + widthAfter;
                 }
 
                 Color color = Color.Transparent;
@@ -366,51 +365,38 @@ namespace ProjectVagabond.Battle.UI
 
                 if (color != Color.Transparent && previewWidth > 0)
                 {
-                    int drawStartX = Math.Max(previewStartX, visibleStartX);
-                    int drawEndX = Math.Min(previewStartX + previewWidth, visibleEndX);
-                    int drawWidth = drawEndX - drawStartX;
+                    float drawStartX = Math.Max(previewStartX, visibleStartX);
+                    float drawEndX = Math.Min(previewStartX + previewWidth, visibleEndX);
+                    float drawWidth = drawEndX - drawStartX;
 
                     if (drawWidth > 0)
                     {
-                        var previewRect = new Rectangle(drawStartX, bgRect.Y, drawWidth, bgRect.Height);
-                        spriteBatch.DrawSnapped(_pixel, previewRect, color * alpha);
+                        spriteBatch.DrawSnapped(_pixel, new Vector2(drawStartX, position.Y), null, color * alpha, 0f, Vector2.Zero, new Vector2(drawWidth, height), SpriteEffects.None, 0f);
                     }
                 }
             }
             else // Recovery
             {
-                int ghostStartX;
+                float ghostStartX;
                 int ghostWidth = widthAfter - widthBefore;
 
                 if (isRightAligned)
                 {
-                    // Recovery grows Leftwards.
-                    // Before: [..XXX]
-                    // After:  [XXXXX]
-                    // Ghost:  [XX...]
-                    // Ghost is at `bgRect.X + bgRect.Width - widthAfter`.
-                    ghostStartX = bgRect.X + bgRect.Width - widthAfter;
+                    ghostStartX = visibleStartX + visibleWidth - widthAfter;
                 }
                 else
                 {
-                    // Recovery grows Rightwards.
-                    // Before: [XXX..]
-                    // After:  [XXXXX]
-                    // Ghost:  [...XX]
-                    // Ghost is at `bgRect.X + widthBefore`.
-                    ghostStartX = bgRect.X + widthBefore;
+                    ghostStartX = visibleStartX + widthBefore;
                 }
 
                 if (ghostWidth > 0)
                 {
-                    int drawStartX = Math.Max(ghostStartX, visibleStartX);
-                    int drawEndX = Math.Min(ghostStartX + ghostWidth, visibleEndX);
-                    int drawWidth = drawEndX - drawStartX;
+                    float drawStartX = Math.Max(ghostStartX, visibleStartX);
+                    float drawEndX = Math.Min(ghostStartX + ghostWidth, visibleEndX);
+                    float drawWidth = drawEndX - drawStartX;
 
                     if (drawWidth > 0)
                     {
-                        var ghostRect = new Rectangle(drawStartX, bgRect.Y, drawWidth, bgRect.Height);
-
                         Color ghostColor = (anim.ResourceType == BattleAnimationManager.ResourceBarAnimationState.BarResourceType.HP)
                             ? _global.HealOverlayColor
                             : _global.ManaOverlayColor;
@@ -422,7 +408,7 @@ namespace ProjectVagabond.Battle.UI
                             overlayAlpha *= (1.0f - progress);
                         }
 
-                        spriteBatch.DrawSnapped(_pixel, ghostRect, ghostColor * overlayAlpha);
+                        spriteBatch.DrawSnapped(_pixel, new Vector2(drawStartX, position.Y), null, ghostColor * overlayAlpha, 0f, Vector2.Zero, new Vector2(drawWidth, height), SpriteEffects.None, 0f);
                     }
                 }
             }
