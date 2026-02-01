@@ -13,7 +13,7 @@ namespace ProjectVagabond.Battle.UI
 
         // --- Action Menu Layout ---
         public const int ACTION_MENU_WIDTH = 160;
-        public const int ACTION_MENU_HEIGHT = 30; // 3 buttons * 10px
+        public const int ACTION_MENU_HEIGHT = 48;
         public const int ACTION_MENU_Y = Global.VIRTUAL_HEIGHT - ACTION_MENU_HEIGHT;
 
         // --- Enemy Layout ---
