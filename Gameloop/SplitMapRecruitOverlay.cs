@@ -16,13 +16,12 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 
-
 namespace ProjectVagabond.UI
 {
     public class SplitMapRecruitOverlay
     {
         public bool IsOpen { get; private set; } = false;
-        public event Action? OnRecruitComplete; // Fired when a choice is made or skipped
+        public event Action? OnRecruitComplete;
 
         private readonly Global _global;
         private readonly SpriteManager _spriteManager;
@@ -35,51 +34,28 @@ namespace ProjectVagabond.UI
         private Button _skipButton;
         private ConfirmationDialog _confirmationDialog;
 
-        // Candidates
         private List<PartyMember> _candidates = new List<PartyMember>();
         private List<Button> _candidateButtons = new List<Button>();
         private List<Rectangle> _candidatePanelAreas = new List<Rectangle>();
         private int _selectedCandidateIndex = -1;
 
-        // Hover State for Sub-elements
         private int _hoveredInternalCandidateIndex = -1;
-        private int _hoveredSpellSlotIndex = -1; // 0-3
-        private object? _hoveredItemData; // Data for the info panel
+        private int _hoveredSpellSlotIndex = -1; // 0 = Attack, 1 = Special
+        private object? _hoveredItemData;
 
-        // Tooltip State
         private float _tooltipTimer = 0f;
         private object? _lastHoveredItemData = null;
 
-        // Tooltip Animation
         private UIAnimator _tooltipAnimator;
-        private const float TOOLTIP_ANIM_DURATION_IN = 0.25f; // Slower, smoother entry
-        private const float TOOLTIP_ANIM_DURATION_OUT = 0.0f; // Instant exit (No animation)
+        private const float TOOLTIP_ANIM_DURATION_IN = 0.25f;
+        private const float TOOLTIP_ANIM_DURATION_OUT = 0.0f;
 
-        // Layout Constants
         private const float WORLD_Y_OFFSET = 600f;
         private const int BUTTON_HEIGHT = 15;
         private const int PANEL_WIDTH = 76;
         private const int PANEL_HEIGHT = 135;
-        private const int SPACE_WIDTH = 5;
-        private const int TOOLTIP_WIDTH = 120; // Fixed width for the tooltip
-        private const int SCREEN_EDGE_MARGIN = 6; // Minimum distance from screen edges
-
-        // --- ANIMATION TUNING ---
-        private const float EQUIP_FLOAT_SPEED = 2.5f;
-        private const float EQUIP_FLOAT_AMPLITUDE = 0.5f;
-        private const float EQUIP_ROTATION_SPEED = 2.0f;
-        private const float EQUIP_ROTATION_AMOUNT = 0.05f;
-        private const float HOVER_POP_SPEED = 12.0f;
-
-        // Track hover timers for each slot (Key: "{CandidateIndex}_{SlotType}")
-        private readonly Dictionary<string, float> _equipSlotHoverTimers = new Dictionary<string, float>();
-
-        // Tuning
-        private Color TOOLTIP_BG_COLOR;
 
         private static readonly Random _rng = new Random();
-
-        // Hop Animation Controllers (One per candidate)
         private readonly List<SpriteHopAnimationController> _hopControllers = new List<SpriteHopAnimationController>();
 
         public SplitMapRecruitOverlay(GameScene parentScene)
@@ -91,20 +67,15 @@ namespace ProjectVagabond.UI
             _hapticsManager = ServiceLocator.Get<HapticsManager>();
             _tooltipRenderer = ServiceLocator.Get<ItemTooltipRenderer>();
 
-            // Initialize Tooltip Animator
             _tooltipAnimator = new UIAnimator
             {
-                EntryStyle = EntryExitStyle.Zoom, // Use Zoom for smooth scaling
+                EntryStyle = EntryExitStyle.Zoom,
                 DurationIn = TOOLTIP_ANIM_DURATION_IN,
                 DurationOut = TOOLTIP_ANIM_DURATION_OUT
             };
 
-            // Initialize Tunable Colors
-            TOOLTIP_BG_COLOR = _global.Palette_DarkShadow;
-
             _confirmationDialog = new ConfirmationDialog(parentScene);
 
-            // Select Button (Primary)
             _selectButton = new Button(Rectangle.Empty, "SELECT", font: _core.SecondaryFont)
             {
                 CustomDefaultTextColor = _global.GameTextColor,
@@ -113,7 +84,6 @@ namespace ProjectVagabond.UI
             };
             _selectButton.OnClick += ConfirmSelection;
 
-            // Skip Button (Secondary)
             _skipButton = new Button(Rectangle.Empty, "SKIP", font: _core.TertiaryFont)
             {
                 CustomDefaultTextColor = _global.GameTextColor,
@@ -127,24 +97,17 @@ namespace ProjectVagabond.UI
         {
             _selectedCandidateIndex = -1;
             _candidates.Clear();
-            _equipSlotHoverTimers.Clear(); // Reset animation timers
 
-            // 1. Get all potential members
             var allMemberIds = BattleDataCache.PartyMembers.Keys.ToList();
-
-            // 2. Filter out current party members and past members
             var validIds = allMemberIds.Where(id =>
                 !_gameState.PlayerState.PastMemberIds.Contains(id) &&
                 !_gameState.PlayerState.Party.Any(m => m.Name == BattleDataCache.PartyMembers[id].Name)
             ).ToList();
 
-            // 3. Always try to select 3
-            int count = 3;
-            count = Math.Min(count, validIds.Count); // Cap at available
+            int count = Math.Min(3, validIds.Count);
 
             if (count > 0)
             {
-                // Shuffle
                 var shuffled = validIds.OrderBy(x => _rng.Next()).Take(count).ToList();
                 foreach (var id in shuffled)
                 {
@@ -156,7 +119,6 @@ namespace ProjectVagabond.UI
                 }
             }
 
-            // Reset animations for the new set of candidates
             _hopControllers.Clear();
             for (int i = 0; i < _candidates.Count; i++)
             {
@@ -187,32 +149,24 @@ namespace ProjectVagabond.UI
 
             int screenBottom = (int)WORLD_Y_OFFSET + Global.VIRTUAL_HEIGHT;
 
-            // Select Button - Centered
             var selectFont = _selectButton.Font ?? _core.SecondaryFont;
             var selectSize = selectFont.MeasureString("SELECT");
             int selectWidth = (int)selectSize.Width + 16;
-
             int buttonY = screenBottom - BUTTON_HEIGHT - 2;
-
             int selectX = (Global.VIRTUAL_WIDTH - selectWidth) / 2;
-
             _selectButton.Bounds = new Rectangle(selectX, buttonY, selectWidth, BUTTON_HEIGHT);
 
-            // Skip Button - Bottom Right
             var skipFont = _skipButton.Font ?? _core.TertiaryFont;
             var skipSize = skipFont.MeasureString("SKIP");
             int skipWidth = (int)skipSize.Width + 16;
             int skipX = Global.VIRTUAL_WIDTH - skipWidth - 10;
-
             _skipButton.Bounds = new Rectangle(skipX, buttonY, skipWidth, BUTTON_HEIGHT);
 
-            // Panels
             int count = _candidates.Count;
             if (count == 0) return;
 
-            int totalWidth = (count * PANEL_WIDTH); // Tightly packed
+            int totalWidth = (count * PANEL_WIDTH);
             int startX = (Global.VIRTUAL_WIDTH - totalWidth) / 2;
-
             int panelY = (int)WORLD_Y_OFFSET + 24;
 
             for (int i = 0; i < count; i++)
@@ -220,14 +174,13 @@ namespace ProjectVagabond.UI
                 var rect = new Rectangle(startX + (i * PANEL_WIDTH), panelY, PANEL_WIDTH, PANEL_HEIGHT);
                 _candidatePanelAreas.Add(rect);
 
-                // Create invisible button over the entire panel for selection
                 var btn = new Button(rect, "")
                 {
                     UseScreenCoordinates = true,
                     EnableHoverSway = false
                 };
 
-                int index = i; // Capture for lambda
+                int index = i;
                 btn.OnClick += () => SelectCandidate(index);
 
                 _candidateButtons.Add(btn);
@@ -236,7 +189,6 @@ namespace ProjectVagabond.UI
 
         private void SelectCandidate(int index)
         {
-            // Prevent selection if party is full
             if (_gameState.PlayerState.Party.Count >= 4)
             {
                 EventBus.Publish(new GameEvents.AlertPublished { Message = "PARTY FULL" });
@@ -246,13 +198,11 @@ namespace ProjectVagabond.UI
 
             if (_selectedCandidateIndex == index)
             {
-                // Deselect if clicking same
                 _selectedCandidateIndex = -1;
             }
             else
             {
                 _selectedCandidateIndex = index;
-                // Trigger hop for visual feedback ONLY on selection
                 if (index >= 0 && index < _hopControllers.Count)
                 {
                     _hopControllers[index].Trigger();
@@ -337,17 +287,23 @@ namespace ProjectVagabond.UI
                     int spellButtonHeight = 8;
                     int spellButtonX = centerX - (spellButtonWidth / 2);
 
-                    for (int s = 0; s < 4; s++)
+                    // Check Attack Move (Slot 0)
+                    Rectangle attackRect = new Rectangle(spellButtonX, currentY, spellButtonWidth, spellButtonHeight);
+                    if (attackRect.Contains(mouseInWorldSpace))
                     {
-                        Rectangle spellRect = new Rectangle(spellButtonX, currentY, spellButtonWidth, spellButtonHeight);
-                        if (spellRect.Contains(mouseInWorldSpace))
-                        {
-                            _hoveredSpellSlotIndex = s;
-                            var spell = candidate.Spells[s];
-                            if (spell != null)
-                                _hoveredItemData = BattleDataCache.Moves.GetValueOrDefault(spell.MoveID);
-                        }
-                        currentY += spellButtonHeight;
+                        _hoveredSpellSlotIndex = 0;
+                        if (candidate.AttackMove != null)
+                            _hoveredItemData = BattleDataCache.Moves.GetValueOrDefault(candidate.AttackMove.MoveID);
+                    }
+                    currentY += spellButtonHeight;
+
+                    // Check Special Move (Slot 1)
+                    Rectangle specialRect = new Rectangle(spellButtonX, currentY, spellButtonWidth, spellButtonHeight);
+                    if (specialRect.Contains(mouseInWorldSpace))
+                    {
+                        _hoveredSpellSlotIndex = 1;
+                        if (candidate.SpecialMove != null)
+                            _hoveredItemData = BattleDataCache.Moves.GetValueOrDefault(candidate.SpecialMove.MoveID);
                     }
                 }
             }
@@ -396,17 +352,14 @@ namespace ProjectVagabond.UI
             var secondaryFont = _core.SecondaryFont;
             var defaultFont = ServiceLocator.Get<BitmapFont>();
 
-            // Draw Background
             var bgRect = new Rectangle(0, (int)WORLD_Y_OFFSET, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
             spriteBatch.DrawSnapped(pixel, bgRect, _global.GameBg);
 
-            // Draw Border
             if (_spriteManager.RestBorderMain != null)
             {
                 spriteBatch.DrawSnapped(_spriteManager.RestBorderMain, new Vector2(0, WORLD_Y_OFFSET), Color.White);
             }
 
-            // Title
             string title = "RECRUIT";
             Vector2 titleSize = font.MeasureString(title);
             Vector2 titlePos = new Vector2((Global.VIRTUAL_WIDTH - titleSize.X) / 2, WORLD_Y_OFFSET + 10);
@@ -428,25 +381,14 @@ namespace ProjectVagabond.UI
             }
 
             _selectButton.Draw(spriteBatch, secondaryFont, gameTime, Matrix.Identity);
-
-            // Force Tertiary font usage here visually, even though Button handles it
             var tertiaryFont = _core.TertiaryFont;
             _skipButton.Draw(spriteBatch, tertiaryFont, gameTime, Matrix.Identity);
 
-            // --- Draw Info Panel if Hovered AND Timer Met ---
             if (_hoveredItemData != null && _tooltipAnimator.GetVisualState().IsVisible)
             {
-                // 1. Calculate Center of Hovered Slot in World Space
                 Vector2 worldSlotCenter = GetHoveredSlotCenter();
-
-                // 2. Transform to Screen Space
                 Vector2 screenSlotCenter = Vector2.Transform(worldSlotCenter, transform);
-
-                // 3. Get Animation State
                 var state = _tooltipAnimator.GetVisualState();
-
-                // 4. Draw Tooltip using the new renderer
-                // Pass animated scale and opacity
                 _tooltipRenderer.DrawTooltip(spriteBatch, _hoveredItemData, screenSlotCenter, gameTime, state.Scale, state.Opacity);
             }
         }
@@ -462,13 +404,11 @@ namespace ProjectVagabond.UI
             var defaultFont = ServiceLocator.Get<BitmapFont>();
             var secondaryFont = _core.SecondaryFont;
 
-            // Re-simulate layout to find Y
-            currentY += defaultFont.LineHeight - 2; // Name
-            currentY += 32 + 2 - 6; // Portrait
-            currentY += 8 + secondaryFont.LineHeight + 4 - 3; // Health Bar
-
-            currentY += (secondaryFont.LineHeight + 1) * 4; // Stats
-            currentY += 2; // Gap
+            currentY += defaultFont.LineHeight - 2;
+            currentY += 32 + 2 - 6;
+            currentY += 8 + secondaryFont.LineHeight + 4 - 3;
+            currentY += (secondaryFont.LineHeight + 1) * 4;
+            currentY += 2;
 
             if (_hoveredSpellSlotIndex != -1)
             {
@@ -492,7 +432,6 @@ namespace ProjectVagabond.UI
 
             bool isSelected = index == _selectedCandidateIndex;
 
-            // Highlight Background if selected or hovered
             if (isSelected)
             {
                 var pixel = ServiceLocator.Get<Texture2D>();
@@ -506,13 +445,11 @@ namespace ProjectVagabond.UI
                 DrawBeveledBorder(spriteBatch, pixel, bounds, _global.ButtonHoverColor);
             }
 
-            // 1. Name
             string name = member.Name.ToUpper();
             Vector2 nameSize = font.MeasureString(name);
             Vector2 namePos = new Vector2(centerX - nameSize.X / 2, currentY);
             currentY += (int)nameSize.Y - 2;
 
-            // 2. Portrait
             if (_spriteManager.PlayerMasterSpriteSheet != null)
             {
                 int portraitIndex = member.PortraitIndex;
@@ -549,7 +486,6 @@ namespace ProjectVagabond.UI
 
             currentY += 32 + 2 - 6;
 
-            // 3. Health Bar
             if (_spriteManager.InventoryPlayerHealthBarEmpty != null)
             {
                 int barX = centerX - (_spriteManager.InventoryPlayerHealthBarEmpty.Width / 2);
@@ -573,7 +509,6 @@ namespace ProjectVagabond.UI
                 currentY += 8 + (int)valSize.Y + 4 - 3;
             }
 
-            // 4. Stats
             string[] statLabels = { "STR", "INT", "TEN", "AGI" };
             string[] statKeys = { "Strength", "Intelligence", "Tenacity", "Agility" };
             int statBlockStartX = centerX - 30;
@@ -581,8 +516,7 @@ namespace ProjectVagabond.UI
             for (int s = 0; s < 4; s++)
             {
                 int baseStat = member.GetType().GetProperty(statKeys[s])?.GetValue(member) as int? ?? 0;
-                int bonus = GetStatBonus(member, statKeys[s]);
-                int rawTotal = baseStat + bonus;
+                int rawTotal = baseStat;
 
                 spriteBatch.DrawStringSnapped(secondaryFont, statLabels[s], new Vector2(statBlockStartX, currentY), _global.Palette_DarkSun);
 
@@ -596,85 +530,57 @@ namespace ProjectVagabond.UI
 
                     if (_spriteManager.InventoryStatBarFull != null)
                     {
-                        int whiteBarPoints;
-                        int coloredBarPoints;
-                        Color coloredBarColor;
-
-                        // UPDATED: Scale for 10-unit max
-                        if (bonus > 0)
-                        {
-                            whiteBarPoints = Math.Clamp(baseStat, 1, 10);
-                            int totalPoints = Math.Clamp(rawTotal, 1, 10);
-                            coloredBarPoints = totalPoints - whiteBarPoints;
-                            coloredBarColor = _global.StatColor_Increase * 0.5f;
-                        }
-                        else if (bonus < 0)
-                        {
-                            whiteBarPoints = Math.Clamp(rawTotal, 1, 10);
-                            int basePoints = Math.Clamp(baseStat, 1, 10);
-                            coloredBarPoints = basePoints - whiteBarPoints;
-                            coloredBarColor = _global.StatColor_Decrease * 0.5f;
-                        }
-                        else
-                        {
-                            whiteBarPoints = Math.Clamp(rawTotal, 1, 10);
-                            coloredBarPoints = 0;
-                            coloredBarColor = Color.White;
-                        }
-
-                        // Multiply width by 4 instead of 2
+                        int whiteBarPoints = Math.Clamp(rawTotal, 1, 10);
                         if (whiteBarPoints > 0)
                         {
                             var srcBase = new Rectangle(0, 0, whiteBarPoints * 4, 3);
                             spriteBatch.DrawSnapped(_spriteManager.InventoryStatBarFull, new Vector2(barX, barY), srcBase, Color.White);
                         }
 
-                        if (coloredBarPoints > 0)
-                        {
-                            var srcColor = new Rectangle(0, 0, coloredBarPoints * 4, 3);
-                            spriteBatch.DrawSnapped(_spriteManager.InventoryStatBarFull, new Vector2(barX + whiteBarPoints * 4, barY), srcColor, coloredBarColor);
-                        }
-
-                        if (rawTotal > 10) // Was 20
+                        if (rawTotal > 10)
                         {
                             int excessValue = rawTotal - 10;
-                            Color textColor = bonus > 0 ? _global.StatColor_Increase * 0.5f : (bonus < 0 ? _global.StatColor_Decrease * 0.5f : _global.Palette_Sun);
                             string excessText = $"+{excessValue}";
                             Vector2 textSize = secondaryFont.MeasureString(excessText);
                             float textX = (barX + 40) - textSize.X;
                             Vector2 textPos = new Vector2(textX, currentY);
                             spriteBatch.DrawSnapped(ServiceLocator.Get<Texture2D>(), new Rectangle((int)textPos.X - 1, (int)textPos.Y, (int)textSize.X + 2, (int)textSize.Y), _global.Palette_Black);
-                            spriteBatch.DrawStringOutlinedSnapped(secondaryFont, excessText, textPos, textColor, _global.Palette_Black);
+                            spriteBatch.DrawStringOutlinedSnapped(secondaryFont, excessText, textPos, _global.Palette_Sun, _global.Palette_Black);
                         }
                     }
                 }
                 currentY += (int)secondaryFont.LineHeight + 1;
             }
 
-            // 5. Spells
             currentY += 2;
             int spellButtonWidth = 64;
             int spellButtonHeight = 8;
             int spellButtonX = centerX - (spellButtonWidth / 2);
 
-            for (int s = 0; s < 4; s++)
-            {
-                Rectangle spellRect = new Rectangle(spellButtonX, currentY, spellButtonWidth, spellButtonHeight);
-                if (spellRect.Contains(Core.TransformMouse(Mouse.GetState().Position)))
-                {
-                    _hoveredSpellSlotIndex = s;
-                    var spell = member.Spells[s];
-                    if (spell != null)
-                        _hoveredItemData = BattleDataCache.Moves.GetValueOrDefault(spell.MoveID);
-                }
-                currentY += spellButtonHeight;
-            }
+            // Draw Attack Move
+            DrawMoveButton(spriteBatch, member.AttackMove, spellButtonX, currentY, spellButtonWidth, spellButtonHeight, _hoveredSpellSlotIndex == 0 && _hoveredInternalCandidateIndex == index);
+            currentY += spellButtonHeight;
+
+            // Draw Special Move
+            DrawMoveButton(spriteBatch, member.SpecialMove, spellButtonX, currentY, spellButtonWidth, spellButtonHeight, _hoveredSpellSlotIndex == 1 && _hoveredInternalCandidateIndex == index);
         }
 
-        private int GetStatBonus(PartyMember member, string statName)
+        private void DrawMoveButton(SpriteBatch spriteBatch, MoveEntry? entry, int x, int y, int w, int h, bool isHovered)
         {
-            // Relics removed, no bonus
-            return 0;
+            var rect = new Rectangle(x, y, w, h);
+            var btn = new SpellEquipButton(rect);
+            if (entry != null && BattleDataCache.Moves.TryGetValue(entry.MoveID, out var moveData))
+            {
+                btn.SpellName = moveData.MoveName;
+                btn.HasSpell = true;
+            }
+            else
+            {
+                btn.SpellName = "EMPTY";
+                btn.HasSpell = false;
+            }
+            btn.IsEnabled = true;
+            btn.Draw(spriteBatch, _core.SecondaryFont, new GameTime(), Matrix.Identity, isHovered);
         }
 
         public void DrawDialogOverlay(SpriteBatch spriteBatch)
@@ -689,12 +595,8 @@ namespace ProjectVagabond.UI
         {
             if (_confirmationDialog.IsActive)
             {
-                // Draw in screen space (Matrix.Identity)
                 _confirmationDialog.DrawContent(spriteBatch, font, gameTime, Matrix.Identity);
             }
-
-            // Draw Narrator if active
-            // (Recruit overlay doesn't use narrator currently, but kept for consistency)
         }
 
         private void DrawBeveledBorder(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, Color color)
@@ -704,26 +606,16 @@ namespace ProjectVagabond.UI
             spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Top, 1, rect.Height), color);
             spriteBatch.Draw(pixel, new Rectangle(rect.Right - 1, rect.Top, 1, rect.Height), color);
 
-            // Corners (1x1 pixels)
-            // Top-Left
             spriteBatch.DrawSnapped(pixel, new Vector2(rect.X + 1, rect.Y + 1), color);
-            // Top-Right
             spriteBatch.DrawSnapped(pixel, new Vector2(rect.Right - 2, rect.Y + 1), color);
-            // Bottom-Left
             spriteBatch.DrawSnapped(pixel, new Vector2(rect.X + 1, rect.Bottom - 2), color);
-            // Bottom-Right
             spriteBatch.DrawSnapped(pixel, new Vector2(rect.Right - 2, rect.Bottom - 2), color);
         }
 
         private void DrawBeveledBackground(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, Color color)
         {
-            // 1. Top Row (Y+1): X+2 to W-4
             spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 2, rect.Y + 1, rect.Width - 4, 1), color);
-
-            // 2. Bottom Row (Bottom-2): X+2 to W-4
             spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 2, rect.Bottom - 2, rect.Width - 4, 1), color);
-
-            // 3. Middle Block (Y+2 to Bottom-3): X+1 to W-2
             spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 1, rect.Y + 2, rect.Width - 2, rect.Height - 4), color);
         }
     }

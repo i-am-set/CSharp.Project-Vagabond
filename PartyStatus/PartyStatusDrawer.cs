@@ -27,18 +27,15 @@ namespace ProjectVagabond.UI
         {
             if (!_overlay.IsOpen) return;
 
-            // Draw Party Slots Only
             DrawPartyMemberSlots(spriteBatch, font, ServiceLocator.Get<Core>().SecondaryFont, gameTime);
 
-            // Draw Tooltip if hovering something (Spells/Stats)
             if (_overlay.HoveredItemData != null)
             {
                 const int statsPanelWidth = 116;
                 const int statsPanelHeight = 132;
-                int statsPanelY = 200 + 32 + 1 - 1; // Match slot area Y
+                int statsPanelY = 200 + 32 + 1 - 1;
                 int statsPanelX;
 
-                // Dynamic positioning based on which member is hovered
                 if (_overlay.HoveredMemberIndex == 0 || _overlay.HoveredMemberIndex == 1)
                 {
                     statsPanelX = 194 - 16;
@@ -49,15 +46,12 @@ namespace ProjectVagabond.UI
                 }
 
                 var infoPanelArea = new Rectangle(statsPanelX, statsPanelY, statsPanelWidth, statsPanelHeight);
-
-                // Draw a simple background for the tooltip since we removed the fancy border texture
                 var pixel = ServiceLocator.Get<Texture2D>();
                 spriteBatch.DrawSnapped(pixel, infoPanelArea, _overlay.Global.Palette_Black * 0.9f);
 
                 _tooltipRenderer.DrawInfoPanelContent(spriteBatch, _overlay.HoveredItemData, infoPanelArea, font, ServiceLocator.Get<Core>().SecondaryFont, gameTime, 1.0f);
             }
 
-            // Debug Grid
             if (_overlay.Global.ShowSplitMapGrid)
             {
                 var pixel = ServiceLocator.Get<Texture2D>();
@@ -71,7 +65,6 @@ namespace ProjectVagabond.UI
 
         public void DrawScreen(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
-            // Only draw the close button if the menu is open
             if (_overlay.IsOpen)
             {
                 _overlay.CloseButton?.Draw(spriteBatch, font, gameTime, transform);
@@ -128,7 +121,6 @@ namespace ProjectVagabond.UI
 
                 currentY += 32 + 2 - 6;
 
-                // Health Bar
                 Texture2D healthBarBg = isOccupied ? _overlay.SpriteManager.InventoryPlayerHealthBarEmpty : _overlay.SpriteManager.InventoryPlayerHealthBarDisabled;
                 if (healthBarBg != null)
                 {
@@ -159,15 +151,13 @@ namespace ProjectVagabond.UI
                     currentY += 8 + (int)secondaryFont.LineHeight + 4 - 3;
                 }
 
-                // Stats - Anchored to top of Spells
                 string[] statLabels = { "STR", "INT", "TEN", "AGI" };
                 string[] statKeys = { "Strength", "Intelligence", "Tenacity", "Agility" };
                 int statBlockStartX = centerX - 30;
 
-                // Calculate Y position for Stats based on bottom anchor
                 int bottomPadding = 4;
                 int spellButtonHeight = 8;
-                int numSpells = 4;
+                int numSpells = 2; // Attack + Special
                 int totalSpellHeight = numSpells * spellButtonHeight;
                 int spellStartY = bounds.Bottom - bottomPadding - totalSpellHeight;
 
@@ -176,18 +166,14 @@ namespace ProjectVagabond.UI
                 int numStats = 4;
                 int totalStatHeight = numStats * statRowHeight;
 
-                // Start drawing stats above the spells
                 int statCurrentY = spellStartY - statGap - totalStatHeight;
 
                 for (int s = 0; s < 4; s++)
                 {
                     int baseStat = 0;
-                    int bonus = 0;
-
                     if (isOccupied)
                     {
                         baseStat = _overlay.GameState.PlayerState.GetBaseStat(member!, statKeys[s]);
-                        // Relic bonus calculation removed
                     }
 
                     Color labelColor = isOccupied ? _overlay.Global.Palette_DarkSun : _overlay.Global.Palette_DarkShadow;
@@ -207,45 +193,27 @@ namespace ProjectVagabond.UI
 
                         if (isOccupied && _overlay.SpriteManager.InventoryStatBarFull != null)
                         {
-                            // UPDATED: Scale for 10-unit max
                             int basePoints = Math.Clamp(baseStat, 1, 10);
-                            int totalPoints = Math.Clamp(baseStat + bonus, 1, 10);
-                            int bonusPoints = totalPoints - basePoints;
-
-                            // Multiply width by 4 instead of 2 to fill the 40px bar with 10 units
                             if (basePoints > 0)
                             {
                                 var srcBase = new Rectangle(0, 0, basePoints * 4, 3);
                                 spriteBatch.DrawSnapped(_overlay.SpriteManager.InventoryStatBarFull, new Vector2(barX, barY), srcBase, Color.White);
-                            }
-
-                            if (bonusPoints > 0)
-                            {
-                                var srcBonus = new Rectangle(0, 0, bonusPoints * 4, 3);
-                                spriteBatch.DrawSnapped(_overlay.SpriteManager.InventoryStatBarFull, new Vector2(barX + basePoints * 4, barY), srcBonus, _overlay.Global.StatColor_Increase);
-                            }
-                            else if (bonusPoints < 0)
-                            {
-                                // Penalty overwrites base
-                                int penaltyWidth = Math.Abs(bonusPoints) * 4;
-                                var srcPenalty = new Rectangle(0, 0, penaltyWidth, 3);
-                                spriteBatch.DrawSnapped(_overlay.SpriteManager.InventoryStatBarFull, new Vector2(barX + totalPoints * 4, barY), srcPenalty, _overlay.Global.StatColor_Decrease);
                             }
                         }
                     }
                     statCurrentY += statRowHeight;
                 }
 
-                // Spells (Buttons already positioned by InputHandler)
-                for (int s = 0; s < 4; s++)
+                // Spells (2 slots: Attack, Special)
+                for (int s = 0; s < 2; s++)
                 {
-                    int buttonIndex = (i * 4) + s;
+                    int buttonIndex = (i * 2) + s;
                     if (buttonIndex < _overlay.PartySpellButtons.Count)
                     {
                         var btn = _overlay.PartySpellButtons[buttonIndex];
                         if (isOccupied)
                         {
-                            var spellEntry = member!.Spells[s];
+                            MoveEntry? spellEntry = (s == 0) ? member!.AttackMove : member!.SpecialMove;
                             if (spellEntry != null && BattleDataCache.Moves.TryGetValue(spellEntry.MoveID, out var moveData))
                             {
                                 btn.SpellName = moveData.MoveName;

@@ -28,11 +28,10 @@ namespace ProjectVagabond
         public int Tenacity { get => Leader?.Tenacity ?? 10; set { if (Leader != null) Leader.Tenacity = value; } }
         public int Agility { get => Leader?.Agility ?? 10; set { if (Leader != null) Leader.Agility = value; } }
 
-        public string DefaultStrikeMoveID { get => Leader?.DefaultStrikeMoveID ?? ""; set { if (Leader != null) Leader.DefaultStrikeMoveID = value; } }
         public int PortraitIndex { get => Leader?.PortraitIndex ?? 0; set { if (Leader != null) Leader.PortraitIndex = value; } }
 
-        public MoveEntry?[] Spells { get => Leader?.Spells ?? new MoveEntry?[4]; set { if (Leader != null) Leader.Spells = value; } }
-        public List<MoveEntry> Actions { get => Leader?.Actions ?? new List<MoveEntry>(); set { if (Leader != null) Leader.Actions = value; } }
+        public MoveEntry? AttackMove { get => Leader?.AttackMove; set { if (Leader != null) Leader.AttackMove = value; } }
+        public MoveEntry? SpecialMove { get => Leader?.SpecialMove; set { if (Leader != null) Leader.SpecialMove = value; } }
 
         public PlayerState() { }
 
@@ -66,7 +65,6 @@ namespace ProjectVagabond
 
         public int GetEffectiveStat(PartyMember member, string statName)
         {
-            // Relics removed, effective stat is just base stat
             return GetBaseStat(member, statName);
         }
 
@@ -75,21 +73,19 @@ namespace ProjectVagabond
             var target = member ?? Leader;
             if (target == null || !BattleDataCache.Moves.TryGetValue(moveId, out var moveData)) return;
 
-            if (moveData.MoveType == MoveType.Spell)
+            // Simple logic: Fill Attack if empty, then Special if empty.
+            // If both full, replace Special.
+            if (target.AttackMove == null)
             {
-                for (int i = 0; i < target.Spells.Length; i++) if (target.Spells[i]?.MoveID == moveId) return;
-                for (int i = 0; i < target.Spells.Length; i++)
-                {
-                    if (target.Spells[i] == null)
-                    {
-                        target.Spells[i] = new MoveEntry(moveId, 0);
-                        return;
-                    }
-                }
+                target.AttackMove = new MoveEntry(moveId, 0);
             }
-            else if (moveData.MoveType == MoveType.Action)
+            else if (target.SpecialMove == null)
             {
-                if (!target.Actions.Any(m => m.MoveID == moveId)) target.Actions.Add(new MoveEntry(moveId, 0));
+                target.SpecialMove = new MoveEntry(moveId, 0);
+            }
+            else
+            {
+                target.SpecialMove = new MoveEntry(moveId, 0);
             }
         }
 
@@ -98,16 +94,8 @@ namespace ProjectVagabond
             var target = member ?? Leader;
             if (target == null) return;
 
-            for (int i = 0; i < target.Spells.Length; i++)
-            {
-                if (target.Spells[i]?.MoveID == moveId)
-                {
-                    target.Spells[i] = null;
-                    return;
-                }
-            }
-            var actionIndex = target.Actions.FindIndex(m => m.MoveID == moveId);
-            if (actionIndex != -1) target.Actions.RemoveAt(actionIndex);
+            if (target.AttackMove?.MoveID == moveId) target.AttackMove = null;
+            if (target.SpecialMove?.MoveID == moveId) target.SpecialMove = null;
         }
     }
 }

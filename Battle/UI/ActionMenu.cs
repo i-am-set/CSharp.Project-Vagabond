@@ -9,7 +9,6 @@ using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 
@@ -75,8 +74,8 @@ namespace ProjectVagabond.Battle.UI
             foreach (var panel in _panels)
             {
                 var area = BattleLayout.GetActionMenuArea(panel.SlotIndex);
-                // 4 Moves * 10px (9+1) + 1 Action Row * 9px (8+1) = 40 + 9 = 49
-                int panelHeight = 49;
+                // 3 Buttons * 10px (9+1) = 30px
+                int panelHeight = 30;
                 int x = area.Center.X - (PANEL_WIDTH / 2);
                 int y = area.Center.Y - (panelHeight / 2);
                 panel.SetPosition(new Vector2(x, y));
@@ -160,16 +159,21 @@ namespace ProjectVagabond.Battle.UI
             private Vector2 _position;
             private Rectangle _panelBounds;
             private bool _hasBench;
+            private Rectangle[] _iconRects;
 
             // Layout
             private const int MOVE_BTN_HEIGHT = 9;
-            private const int ACTION_BTN_HEIGHT = 8;
             private const int HITBOX_PADDING = 1;
 
             public CombatantPanel(BattleCombatant combatant, List<BattleCombatant> allCombatants)
             {
                 Combatant = combatant;
                 SlotIndex = combatant.BattleSlot;
+
+                // Cache icon rects for helper method
+                var spriteManager = ServiceLocator.Get<SpriteManager>();
+                _iconRects = spriteManager.ActionIconSourceRects;
+
                 InitializeButtons(allCombatants);
             }
 
@@ -181,11 +185,18 @@ namespace ProjectVagabond.Battle.UI
 
             public void SetSwitchButtonAllowed(bool allowed)
             {
-                // Button 6 is Switch
-                if (_buttons.Count > 6)
+                // Button 2 is Switch
+                if (_buttons.Count > 2)
                 {
-                    _buttons[6].IsEnabled = allowed && _hasBench;
+                    _buttons[2].IsEnabled = allowed && _hasBench;
                 }
+            }
+
+            private Rectangle GetMoveIcon(MoveData m)
+            {
+                if (m.ImpactType == ImpactType.Physical) return _iconRects[2];
+                if (m.ImpactType == ImpactType.Magical) return _iconRects[3];
+                return _iconRects[4]; // Status
             }
 
             private void InitializeButtons(List<BattleCombatant> allCombatants)
@@ -195,156 +206,27 @@ namespace ProjectVagabond.Battle.UI
                 var global = ServiceLocator.Get<Global>();
                 var spriteManager = ServiceLocator.Get<SpriteManager>();
                 var icons = spriteManager.ActionIconsSpriteSheet;
-                var iconRects = spriteManager.ActionIconSourceRects;
 
-                // Helper to get icon rect based on move type
-                Rectangle GetMoveIcon(MoveData m)
+                // 1. Attack Move (Slot 1)
+                AddMoveButton(Combatant.AttackMove, icons, secondaryFont);
+
+                // 2. Special Move (Slot 2)
+                AddMoveButton(Combatant.SpecialMove, icons, secondaryFont);
+
+                // 3. Switch Button (Slot 3)
+                var switchBtn = new TextOverImageButton(Rectangle.Empty, "SWITCH", null, font: secondaryFont, enableHoverSway: true, iconTexture: icons, iconSourceRect: _iconRects[1])
                 {
-                    if (m.ImpactType == ImpactType.Physical) return iconRects[2];
-                    if (m.ImpactType == ImpactType.Magical) return iconRects[3];
-                    return iconRects[4]; // Status
-                }
-
-                // 1. Spells
-                for (int i = 0; i < 4; i++)
-                {
-                    var entry = Combatant.Spells[i];
-                    string label = "---";
-                    bool enabled = false;
-                    MoveData? moveData = null;
-                    Rectangle? iconRect = null;
-
-                    if (entry != null && BattleDataCache.Moves.TryGetValue(entry.MoveID, out var move))
-                    {
-                        label = move.MoveName.ToUpper();
-                        enabled = true;
-                        moveData = move;
-                        iconRect = GetMoveIcon(move);
-                    }
-
-                    // Use MoveButton for spells to handle mana checks and scrolling
-                    var btn = new MoveButton(
-                        Combatant, // Pass the owner
-                        moveData ?? new MoveData { MoveName = "---" }, // Dummy data if null
-                        entry ?? new MoveEntry(),
-                        moveData?.Power ?? 0,
-                        secondaryFont,
-                        null, // No background sprite (ActionMenu draws container)
-                        enabled ? icons : null,
-                        iconRect,
-                        true
-                    )
-                    {
-                        IsEnabled = enabled,
-                        // MoveButton handles its own text/icon rendering logic
-                    };
-
-                    var capturedMove = moveData;
-                    var capturedEntry = entry;
-
-                    btn.OnClick += () =>
-                    {
-                        if (capturedMove != null)
-                        {
-                            // Check Mana before firing
-                            bool canAfford = false;
-                            var manaDump = capturedMove.Abilities.OfType<ManaDumpAbility>().FirstOrDefault();
-                            if (manaDump != null)
-                            {
-                                canAfford = Combatant.Stats.CurrentMana > 0;
-                            }
-                            else
-                            {
-                                canAfford = Combatant.Stats.CurrentMana >= capturedMove.ManaCost;
-                            }
-
-                            if (canAfford)
-                            {
-                                var action = new QueuedAction
-                                {
-                                    Actor = Combatant,
-                                    ChosenMove = capturedMove,
-                                    SpellbookEntry = capturedEntry,
-                                    Type = QueuedActionType.Move,
-                                    Priority = capturedMove.Priority,
-                                    ActorAgility = Combatant.GetEffectiveAgility()
-                                };
-                                OnActionSelected?.Invoke(action);
-                            }
-                            else
-                            {
-                                ServiceLocator.Get<HapticsManager>().TriggerShake(2f, 0.1f);
-                            }
-                        }
-                    };
-                    _buttons.Add(btn);
-                }
-
-                // 2. Actions (Using Tertiary Font)
-                // Strike
-                var strikeMove = Combatant.StrikeMove;
-                Rectangle strikeIcon = (strikeMove != null) ? GetMoveIcon(strikeMove) : iconRects[2];
-                var strikeBtn = new TextOverImageButton(Rectangle.Empty, "STRIKE", null, font: tertiaryFont, enableHoverSway: false, iconTexture: icons, iconSourceRect: strikeIcon)
-                {
-                    AlignLeft = false, // Center aligned for bottom row
+                    AlignLeft = true,
                     IconColorMatchesText = true,
-                    CustomDefaultTextColor = global.GameTextColor
-                };
-                strikeBtn.OnClick += () =>
-                {
-                    if (strikeMove != null)
-                    {
-                        var action = new QueuedAction
-                        {
-                            Actor = Combatant,
-                            ChosenMove = strikeMove,
-                            Type = QueuedActionType.Move,
-                            Priority = strikeMove.Priority,
-                            ActorAgility = Combatant.GetEffectiveAgility()
-                        };
-                        OnActionSelected?.Invoke(action);
-                    }
-                };
-                _buttons.Add(strikeBtn);
-
-                // Stall
-                var stallBtn = new TextOverImageButton(Rectangle.Empty, "STALL", null, font: tertiaryFont, enableHoverSway: false, iconTexture: icons, iconSourceRect: iconRects[0])
-                {
-                    AlignLeft = false,
-                    IconColorMatchesText = true,
-                    CustomDefaultTextColor = global.GameTextColor
-                };
-                stallBtn.OnClick += () =>
-                {
-                    if (BattleDataCache.Moves.TryGetValue("6", out var stallMove))
-                    {
-                        var action = new QueuedAction
-                        {
-                            Actor = Combatant,
-                            ChosenMove = stallMove,
-                            Target = Combatant,
-                            Type = QueuedActionType.Move,
-                            Priority = 0,
-                            ActorAgility = Combatant.GetEffectiveAgility()
-                        };
-                        OnActionSelected?.Invoke(action);
-                    }
-                };
-                _buttons.Add(stallBtn);
-
-                // Switch
-                var switchBtn = new TextOverImageButton(Rectangle.Empty, "SWITCH", null, font: tertiaryFont, enableHoverSway: false, iconTexture: icons, iconSourceRect: iconRects[1])
-                {
-                    AlignLeft = false,
-                    IconColorMatchesText = true,
-                    CustomDefaultTextColor = global.GameTextColor
+                    CustomDefaultTextColor = global.GameTextColor,
+                    TextRenderOffset = new Vector2(0, -1)
                 };
                 switchBtn.OnClick += () => OnSwitchRequested?.Invoke();
                 _hasBench = allCombatants.Any(c => c.IsPlayerControlled && !c.IsDefeated && c.BattleSlot >= 2);
                 switchBtn.IsEnabled = _hasBench;
                 _buttons.Add(switchBtn);
 
-                // 3. Cancel Button
+                // 4. Cancel Button
                 _cancelButton = new Button(Rectangle.Empty, "CANCEL", font: secondaryFont, enableHoverSway: false)
                 {
                     CustomDefaultTextColor = global.Palette_Rust,
@@ -353,32 +235,93 @@ namespace ProjectVagabond.Battle.UI
                 _cancelButton.OnClick += () => OnCancelRequested?.Invoke();
             }
 
+            private void AddMoveButton(MoveEntry? entry, Texture2D icons, BitmapFont font)
+            {
+                string label = "---";
+                bool enabled = false;
+                MoveData? moveData = null;
+                Rectangle? iconRect = null;
+
+                if (entry != null && BattleDataCache.Moves.TryGetValue(entry.MoveID, out var move))
+                {
+                    label = move.MoveName.ToUpper();
+                    enabled = true;
+                    moveData = move;
+                    iconRect = GetMoveIcon(move);
+                }
+
+                var btn = new MoveButton(
+                    Combatant,
+                    moveData ?? new MoveData { MoveName = "---" },
+                    entry ?? new MoveEntry(),
+                    moveData?.Power ?? 0,
+                    font,
+                    null,
+                    enabled ? icons : null,
+                    iconRect,
+                    true
+                )
+                {
+                    IsEnabled = enabled
+                };
+
+                var capturedMove = moveData;
+                var capturedEntry = entry;
+
+                btn.OnClick += () =>
+                {
+                    if (capturedMove != null)
+                    {
+                        bool canAfford = false;
+                        var manaDump = capturedMove.Abilities.OfType<ManaDumpAbility>().FirstOrDefault();
+                        if (manaDump != null)
+                        {
+                            canAfford = Combatant.Stats.CurrentMana > 0;
+                        }
+                        else
+                        {
+                            canAfford = Combatant.Stats.CurrentMana >= capturedMove.ManaCost;
+                        }
+
+                        if (canAfford)
+                        {
+                            var action = new QueuedAction
+                            {
+                                Actor = Combatant,
+                                ChosenMove = capturedMove,
+                                SpellbookEntry = capturedEntry,
+                                Type = QueuedActionType.Move,
+                                Priority = capturedMove.Priority,
+                                ActorAgility = Combatant.GetEffectiveAgility()
+                            };
+                            OnActionSelected?.Invoke(action);
+                        }
+                        else
+                        {
+                            ServiceLocator.Get<HapticsManager>().TriggerShake(2f, 0.1f);
+                        }
+                    }
+                };
+                _buttons.Add(btn);
+            }
+
             private void LayoutButtons()
             {
                 int x = (int)_position.X;
                 int y = (int)_position.Y;
                 int startY = y;
 
-                // Layout Moves
-                for (int i = 0; i < 4; i++)
+                // Layout 3 Buttons Vertically
+                for (int i = 0; i < 3; i++)
                 {
                     _buttons[i].Bounds = new Rectangle(x, y, PANEL_WIDTH, MOVE_BTN_HEIGHT + HITBOX_PADDING);
                     y += MOVE_BTN_HEIGHT + HITBOX_PADDING;
                 }
 
-                // Layout Actions (Total Width 140)
-                int strikeW = 50;
-                int stallW = 45;
-                int switchW = 45;
-
-                _buttons[4].Bounds = new Rectangle(x, y, strikeW, ACTION_BTN_HEIGHT + HITBOX_PADDING);
-                _buttons[5].Bounds = new Rectangle(x + strikeW, y, stallW, ACTION_BTN_HEIGHT + HITBOX_PADDING);
-                _buttons[6].Bounds = new Rectangle(x + strikeW + stallW, y, switchW, ACTION_BTN_HEIGHT + HITBOX_PADDING);
-
-                int totalHeight = (y + ACTION_BTN_HEIGHT + HITBOX_PADDING) - startY;
+                int totalHeight = y - startY;
                 _panelBounds = new Rectangle(x, startY, PANEL_WIDTH, totalHeight);
 
-                // Layout Cancel Button (Centered in the slot's designated area)
+                // Layout Cancel Button
                 var area = BattleLayout.GetActionMenuArea(SlotIndex);
                 int cancelW = 50;
                 int cancelH = 15;
@@ -413,20 +356,19 @@ namespace ProjectVagabond.Battle.UI
                         if (btn.IsHovered && btn.IsEnabled)
                         {
                             int index = _buttons.IndexOf(btn);
-                            if (index < 4) // Spell
+                            if (index == 0) // Attack
                             {
-                                var entry = Combatant.Spells[index];
+                                var entry = Combatant.AttackMove;
                                 if (entry != null && BattleDataCache.Moves.TryGetValue(entry.MoveID, out var m))
                                     HoveredMove = m;
                             }
-                            else if (index == 4) // Strike
+                            else if (index == 1) // Special
                             {
-                                HoveredMove = Combatant.StrikeMove;
+                                var entry = Combatant.SpecialMove;
+                                if (entry != null && BattleDataCache.Moves.TryGetValue(entry.MoveID, out var m))
+                                    HoveredMove = m;
                             }
-                            else if (index == 5) // Stall
-                            {
-                                if (BattleDataCache.Moves.TryGetValue("6", out var m)) HoveredMove = m;
-                            }
+                            // Index 2 is Switch, no move data
                         }
                     }
                 }
@@ -441,9 +383,7 @@ namespace ProjectVagabond.Battle.UI
 
                 if (isLocked)
                 {
-                    // Draw Cancel Button
                     var rect = _cancelButton.Bounds;
-                    // Snap offset to int
                     int snappedOffsetY = (int)offset.Y;
                     rect.Y += snappedOffsetY;
 
@@ -459,23 +399,15 @@ namespace ProjectVagabond.Battle.UI
                 }
                 else
                 {
-                    // Draw Normal Buttons
                     for (int i = 0; i < _buttons.Count; i++)
                     {
                         var btn = _buttons[i];
                         var rect = btn.Bounds;
-
-                        // Snap offset to int
                         int snappedOffsetY = (int)offset.Y;
                         rect.Y += snappedOffsetY;
 
-                        // Shift the visual background and content down by 1 pixel for the bottom row (Actions)
-                        // to create a gap between the last move and the actions, without moving the hitbox.
-                        int visualYOffset = (i >= 4) ? 1 : 0;
+                        var visualRect = new Rectangle(rect.X, rect.Y, rect.Width, rect.Height - HITBOX_PADDING);
 
-                        var visualRect = new Rectangle(rect.X, rect.Y + visualYOffset, rect.Width, rect.Height - HITBOX_PADDING);
-
-                        // Check if it's a MoveButton and if it can afford the cost
                         var moveBtn = btn as MoveButton;
                         bool isEffectiveDisabled = !btn.IsEnabled || (moveBtn != null && !moveBtn.CanAfford);
 
@@ -490,11 +422,9 @@ namespace ProjectVagabond.Battle.UI
                         }
                         else
                         {
-                            // Moves (0-3) use DarkestPale, Actions (4-6) use DarkShadow
-                            bgColor = (i < 4) ? global.Palette_DarkestPale : global.Palette_DarkShadow;
+                            bgColor = global.Palette_DarkestPale;
                         }
 
-                        // If it's a MoveButton, let it draw its own background so it shakes
                         if (moveBtn != null)
                         {
                             moveBtn.BackgroundColor = bgColor;
@@ -505,14 +435,10 @@ namespace ProjectVagabond.Battle.UI
                             DrawBeveledBackground(spriteBatch, pixel, visualRect, bgColor);
                         }
 
-                        // Use TextOverImageButton's Draw to handle icon + text
-                        // Pass the extra visual offset here so text follows background
-                        // Pass snapped offset
-                        btn.Draw(spriteBatch, btn.Font, gameTime, transform, false, 0f, snappedOffsetY + visualYOffset);
+                        btn.Draw(spriteBatch, btn.Font, gameTime, transform, false, 0f, snappedOffsetY);
                     }
                 }
 
-                // Debug Drawing
                 if (global.ShowSplitMapGrid)
                 {
                     var area = BattleLayout.GetActionMenuArea(SlotIndex);

@@ -19,7 +19,7 @@ namespace ProjectVagabond.Battle
             var combatant = new BattleCombatant
             {
                 CombatantID = combatantId,
-                ArchetypeId = "player", // Visuals use player master sheet
+                ArchetypeId = "player",
                 Name = member.Name,
                 IsPlayerControlled = true,
                 Stats = new CombatantStats
@@ -33,20 +33,17 @@ namespace ProjectVagabond.Battle
                     Tenacity = gameState.PlayerState.GetEffectiveStat(member, "Tenacity"),
                     Agility = gameState.PlayerState.GetEffectiveStat(member, "Agility")
                 },
-                Spells = member.Spells,
-                PortraitIndex = member.PortraitIndex,
-                DefaultStrikeMoveID = member.DefaultStrikeMoveID
+                AttackMove = member.AttackMove,
+                SpecialMove = member.SpecialMove,
+                PortraitIndex = member.PortraitIndex
             };
 
-            // Initialize Tags
             combatant.Tags.Add("Type.Player");
             combatant.Tags.Add("Type.Ally");
 
-            // Initialize Tenacity Shield
             combatant.CurrentTenacity = combatant.Stats.Tenacity;
             combatant.VisualHP = combatant.Stats.CurrentHP;
 
-            // Load Metadata
             var data = BattleDataCache.PartyMembers.Values.FirstOrDefault(p => p.Name == member.Name);
             if (data != null)
             {
@@ -57,15 +54,12 @@ namespace ProjectVagabond.Battle
                 if (data.IsProperNoun) combatant.Tags.Add("Prop.ProperNoun");
             }
 
-            // Intrinsic Abilities
             if (member.IntrinsicAbilities != null && member.IntrinsicAbilities.Count > 0)
             {
-                // Pass null for MoveData, as these are intrinsic to the combatant
                 var intrinsicAbilities = AbilityFactory.CreateAbilitiesFromData(null, member.IntrinsicAbilities, new Dictionary<string, int>());
                 combatant.RegisterAbilities(intrinsicAbilities);
             }
 
-            // Temporary Buffs
             foreach (var buff in member.ActiveBuffs)
             {
                 combatant.AddStatusEffect(new StatusEffectInstance(buff.EffectType, 99));
@@ -97,12 +91,10 @@ namespace ProjectVagabond.Battle
                 Stats = new CombatantStats()
             };
 
-            // Initialize Tags
             combatant.Tags.Add("Type.Enemy");
             combatant.Tags.Add($"Gender.{enemyData.Gender}");
             if (enemyData.IsProperNoun) combatant.Tags.Add("Prop.ProperNoun");
 
-            // Roll Stats
             combatant.Stats.MaxHP = _random.Next(enemyData.MinHP, enemyData.MaxHP + 1);
             combatant.Stats.CurrentHP = combatant.Stats.MaxHP;
             combatant.Stats.MaxMana = enemyData.MaxMana;
@@ -115,23 +107,26 @@ namespace ProjectVagabond.Battle
             combatant.CurrentTenacity = combatant.Stats.Tenacity;
             combatant.VisualHP = combatant.Stats.CurrentHP;
 
-            // Moves
-            var staticMoves = new List<MoveData>();
-            if (enemyData.MoveLearnset.Any() && enemyData.MaxNumberOfMoves > 0)
+            // Assign Attack Move
+            if (enemyData.AttackMoves != null && enemyData.AttackMoves.Any())
             {
-                int numMoves = _random.Next(enemyData.MinNumberOfMoves, enemyData.MaxNumberOfMoves + 1);
-                var shuffledMoves = enemyData.MoveLearnset.OrderBy(x => _random.Next()).ToList();
-                var selectedIds = shuffledMoves.Take(numMoves).ToList();
-
-                foreach (var moveId in selectedIds)
+                string moveId = enemyData.AttackMoves[_random.Next(enemyData.AttackMoves.Count)];
+                if (BattleDataCache.Moves.ContainsKey(moveId))
                 {
-                    if (BattleDataCache.Moves.TryGetValue(moveId, out var moveData))
-                        staticMoves.Add(moveData);
+                    combatant.AttackMove = new MoveEntry(moveId, 0);
                 }
             }
-            combatant.SetStaticMoves(staticMoves);
 
-            // Coin Reward Calculation
+            // Assign Special Move
+            if (enemyData.SpecialMoves != null && enemyData.SpecialMoves.Any())
+            {
+                string moveId = enemyData.SpecialMoves[_random.Next(enemyData.SpecialMoves.Count)];
+                if (BattleDataCache.Moves.ContainsKey(moveId))
+                {
+                    combatant.SpecialMove = new MoveEntry(moveId, 0);
+                }
+            }
+
             float powerScore = (combatant.Stats.MaxHP * 0.2f) + (combatant.Stats.Strength * 1.0f) + (combatant.Stats.Intelligence * 1.0f) + (combatant.Stats.Tenacity * 1.0f) + (combatant.Stats.Agility * 1.0f);
             float calculatedValue = global.Economy_BaseDrop + (powerScore * global.Economy_GlobalScalar);
             float variance = (float)(_random.NextDouble() * (global.Economy_Variance * 2) - global.Economy_Variance);

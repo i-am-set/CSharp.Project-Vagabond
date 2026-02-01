@@ -1,22 +1,9 @@
 ﻿using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
-using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond;
 using ProjectVagabond.Battle;
-using ProjectVagabond.Battle.Abilities;
-using ProjectVagabond.Battle.UI;
-using ProjectVagabond.Progression;
-using ProjectVagabond.Scenes;
-using ProjectVagabond.UI;
-using ProjectVagabond.Utils;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.Battle
 {
@@ -42,7 +29,6 @@ namespace ProjectVagabond.Battle
                 Intelligence = data.Intelligence,
                 Tenacity = data.Tenacity,
                 Agility = data.Agility,
-                DefaultStrikeMoveID = data.DefaultStrikeMoveID,
                 PortraitIndex = int.TryParse(data.MemberID, out int pid) ? pid : 0
             };
 
@@ -53,33 +39,27 @@ namespace ProjectVagabond.Battle
                 Debug.WriteLine($"[PartyMemberFactory] {member.Name} generated with passive: {string.Join(", ", member.IntrinsicAbilities.Keys)}");
             }
 
-            AssignMoveToSlot(member, 0, data.Slot1MovePool);
-            AssignMoveToSlot(member, 1, data.Slot2MovePool);
-            AssignMoveToSlot(member, 2, data.Slot3MovePool);
-            AssignMoveToSlot(member, 3, data.Slot4MovePool);
-
-            return member;
-        }
-
-        private static void AssignMoveToSlot(PartyMember member, int slotIndex, List<string> pool)
-        {
-            if (pool != null && pool.Any())
+            // Assign Attack Move
+            if (data.AttackMovePool != null && data.AttackMovePool.Any())
             {
-                string moveId = pool[_rng.Next(pool.Count)];
-
+                string moveId = data.AttackMovePool[_rng.Next(data.AttackMovePool.Count)];
                 if (BattleDataCache.Moves.ContainsKey(moveId))
                 {
-                    member.Spells[slotIndex] = new MoveEntry(moveId, 0);
-                }
-                else
-                {
-                    Debug.WriteLine($"[PartyMemberFactory] Warning: Move ID '{moveId}' defined in pool for {member.Name} not found in Moves cache.");
+                    member.AttackMove = new MoveEntry(moveId, 0);
                 }
             }
-            else
+
+            // Assign Special Move
+            if (data.SpecialMovePool != null && data.SpecialMovePool.Any())
             {
-                member.Spells[slotIndex] = null;
+                string moveId = data.SpecialMovePool[_rng.Next(data.SpecialMovePool.Count)];
+                if (BattleDataCache.Moves.ContainsKey(moveId))
+                {
+                    member.SpecialMove = new MoveEntry(moveId, 0);
+                }
             }
+
+            return member;
         }
     }
 }

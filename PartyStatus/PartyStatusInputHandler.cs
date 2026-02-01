@@ -25,22 +25,18 @@ namespace ProjectVagabond.UI
 
         public void InitializeInventoryUI()
         {
-            // Initialize Close Button (Top Left)
             if (_overlay.CloseButton == null)
             {
                 var closeIcon = _overlay.SpriteManager.SplitMapCloseInventoryButton;
                 var rects = _overlay.SpriteManager.SplitMapCloseInventoryButtonSourceRects;
-                // Position at 2,2 (Top Left)
                 _overlay.CloseButton = new ImageButton(new Rectangle(2, 2, 16, 16), closeIcon, rects[0], rects[1], enableHoverSway: true);
                 _overlay.CloseButton.OnClick += () => _overlay.TriggerCloseRequested();
             }
             _overlay.CloseButton.ResetAnimationState();
 
-            // --- Setup Party Panels ---
             const int statsPanelHeight = 132;
             const int panelWidth = 76;
 
-            // Center the 4 panels on screen
             int totalWidth = 4 * panelWidth;
             int panelStartX = (Global.VIRTUAL_WIDTH - totalWidth) / 2;
             int statsPanelY = 200 + 6 + 32 + 1 - 1;
@@ -58,11 +54,9 @@ namespace ProjectVagabond.UI
 
                 int centerX = _overlay.PartyMemberPanelAreas[i].Center.X;
 
-                // --- BOTTOM ALIGNED LAYOUT ---
-                // Anchor spells to the bottom of the panel
                 int bottomPadding = 4;
                 int spellButtonHeight = 8;
-                int numSpells = 4;
+                int numSpells = 2; // Attack + Special
                 int totalSpellHeight = numSpells * spellButtonHeight;
 
                 int spellStartY = _overlay.PartyMemberPanelAreas[i].Bottom - bottomPadding - totalSpellHeight;
@@ -71,10 +65,8 @@ namespace ProjectVagabond.UI
                 int spellButtonX = centerX - (spellButtonWidth / 2);
                 int currentSpellY = spellStartY;
 
-                for (int s = 0; s < 4; s++)
+                for (int s = 0; s < 2; s++)
                 {
-                    // Create the button purely for visual layout and hover detection.
-                    // No OnClick events are attached here.
                     var spellBtn = new SpellEquipButton(new Rectangle(spellButtonX, currentSpellY, spellButtonWidth, spellButtonHeight));
                     _overlay.PartySpellButtons.Add(spellBtn);
                     currentSpellY += spellButtonHeight;
@@ -84,7 +76,6 @@ namespace ProjectVagabond.UI
 
         public void Update(GameTime gameTime, MouseState currentMouseState, KeyboardState currentKeyboardState, bool allowAccess, Matrix cameraTransform)
         {
-            // Only update Close Button if the menu is actually open
             if (_overlay.IsOpen && _overlay.CloseButton != null)
             {
                 _overlay.CloseButton.IsEnabled = true;
@@ -102,29 +93,26 @@ namespace ProjectVagabond.UI
 
             int partyCount = _overlay.GameState.PlayerState.Party.Count;
 
-            // Update Spell Buttons (Read-Only Mode)
             for (int i = 0; i < _overlay.PartySpellButtons.Count; i++)
             {
-                int memberIndex = i / 4;
-                int slotIndex = i % 4;
+                int memberIndex = i / 2;
+                int slotIndex = i % 2;
 
                 if (memberIndex < partyCount)
                 {
                     var btn = _overlay.PartySpellButtons[i];
-                    btn.IsEnabled = true; // Enabled so we can hover for tooltips
+                    btn.IsEnabled = true;
 
-                    // We update the button to track mouse position, but we DO NOT process clicks for equipping.
                     btn.Update(currentMouseState, cameraTransform);
 
                     if (btn.IsHovered)
                     {
                         _overlay.HoveredMemberIndex = memberIndex;
                         var member = _overlay.GameState.PlayerState.Party[memberIndex];
-                        var spellEntry = member.Spells[slotIndex];
+                        var spellEntry = (slotIndex == 0) ? member.AttackMove : member.SpecialMove;
                         if (spellEntry != null && BattleDataCache.Moves.TryGetValue(spellEntry.MoveID, out var moveData))
                         {
                             _overlay.HoveredItemData = moveData;
-                            // Hint cursor shows "Info" is available, but not "Clickable"
                             ServiceLocator.Get<CursorManager>().SetState(CursorState.Hint);
                         }
                     }

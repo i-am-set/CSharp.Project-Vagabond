@@ -188,8 +188,6 @@ namespace ProjectVagabond
                 AbilityTester.RunAllTests();
             }, "test_abilities - Runs logic verification on ability classes.");
 
-            // Removed test_items command
-
             _commands["test_party_gen"] = new Command("test_party_gen", (args) =>
             {
                 Log("[Palette_DarkSun]Testing Oakley Generation (10 iterations):[/]");
@@ -198,10 +196,16 @@ namespace ProjectVagabond
                     var member = PartyMemberFactory.CreateMember("0"); // Oakley
                     if (member != null)
                     {
-                        string move1 = member.Spells[0]?.MoveID ?? "Empty";
-                        string moveName = "Unknown";
-                        if (BattleDataCache.Moves.TryGetValue(move1, out var m)) moveName = m.MoveName;
-                        Log($"  Iter {i + 1}: Slot 1 = {move1} ({moveName})");
+                        string move1 = member.AttackMove?.MoveID ?? "Empty";
+                        string move2 = member.SpecialMove?.MoveID ?? "Empty";
+
+                        string moveName1 = "Unknown";
+                        if (BattleDataCache.Moves.TryGetValue(move1, out var m1)) moveName1 = m1.MoveName;
+
+                        string moveName2 = "Unknown";
+                        if (BattleDataCache.Moves.TryGetValue(move2, out var m2)) moveName2 = m2.MoveName;
+
+                        Log($"  Iter {i + 1}: Attack = {move1} ({moveName1}), Special = {move2} ({moveName2})");
                     }
                 }
             }, "test_party_gen - Generates Oakley 10 times to verify random move slots.");
@@ -546,34 +550,18 @@ namespace ProjectVagabond
             var ps = _gameState.PlayerState;
 
             Log($"[Palette_Sky]Coin:[/] {ps.Coin}");
+            Log("[Palette_Sky]Moves:[/]");
 
-            Log("[Palette_Sky]Spells:[/]");
-            if (ps.Spells.Any(s => s != null))
+            var leader = ps.Leader;
+            if (leader != null)
             {
-                for (int i = 0; i < ps.Spells.Length; i++)
-                {
-                    var spell = ps.Spells[i];
-                    if (spell != null)
-                    {
-                        Log($"  Slot {i + 1}: {spell.MoveID} (Used: {spell.TimesUsed})");
-                    }
-                    else
-                    {
-                        Log($"  Slot {i + 1}: (Empty)");
-                    }
-                }
+                Log($"  Attack: {leader.AttackMove?.MoveID ?? "Empty"} (Used: {leader.AttackMove?.TimesUsed ?? 0})");
+                Log($"  Special: {leader.SpecialMove?.MoveID ?? "Empty"} (Used: {leader.SpecialMove?.TimesUsed ?? 0})");
             }
-            else Log("  (Empty)");
-
-            Log("[Palette_Sky]Actions:[/]");
-            if (ps.Actions.Any())
+            else
             {
-                foreach (var action in ps.Actions)
-                {
-                    Log($"  {action.MoveID} (Used: {action.TimesUsed})");
-                }
+                Log("  (No Leader)");
             }
-            else Log("  (Empty)");
         }
 
         public void ProcessCommand(string input)

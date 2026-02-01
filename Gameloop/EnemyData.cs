@@ -1,12 +1,7 @@
-﻿using ProjectVagabond.Battle;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace ProjectVagabond.Battle
 {
-    /// <summary>
-    /// Represents the static data definition for an enemy archetype.
-    /// Loaded directly from JSON.
-    /// </summary>
     public class EnemyData
     {
         public string Id { get; set; }
@@ -31,8 +26,7 @@ namespace ProjectVagabond.Battle
         public int MinAgility { get; set; }
         public int MaxAgility { get; set; }
 
-        public List<string> MoveLearnset { get; set; } = new List<string>();
-        public int MinNumberOfMoves { get; set; }
-        public int MaxNumberOfMoves { get; set; }
+        public List<string> AttackMoves { get; set; } = new List<string>();
+        public List<string> SpecialMoves { get; set; } = new List<string>();
     }
 }

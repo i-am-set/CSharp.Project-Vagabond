@@ -1,14 +1,5 @@
-﻿using ProjectVagabond;
-using ProjectVagabond.Battle;
-using ProjectVagabond.Battle.Abilities;
-using ProjectVagabond.Battle.UI;
-using ProjectVagabond.Utils;
-using System;
+﻿using ProjectVagabond.Battle;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Reflection;
-using System.Text;
 
 namespace ProjectVagabond
 {
@@ -24,13 +15,12 @@ namespace ProjectVagabond
         public int Tenacity { get; set; }
         public int Agility { get; set; }
 
-        public string DefaultStrikeMoveID { get; set; }
         public int PortraitIndex { get; set; } = 0;
 
         public Dictionary<string, string> IntrinsicAbilities { get; set; } = new Dictionary<string, string>();
 
-        public MoveEntry?[] Spells { get; set; } = new MoveEntry?[4];
-        public List<MoveEntry> Actions { get; set; } = new List<MoveEntry>();
+        public MoveEntry? AttackMove { get; set; }
+        public MoveEntry? SpecialMove { get; set; }
 
         public List<TemporaryBuff> ActiveBuffs { get; set; } = new List<TemporaryBuff>();
 
@@ -40,13 +30,9 @@ namespace ProjectVagabond
         {
             var clone = (PartyMember)this.MemberwiseClone();
             clone.IntrinsicAbilities = new Dictionary<string, string>(this.IntrinsicAbilities);
-            clone.Spells = new MoveEntry?[4];
-            for (int i = 0; i < 4; i++)
-            {
-                if (this.Spells[i] != null) clone.Spells[i] = this.Spells[i]!.Clone();
-            }
-            clone.Actions = new List<MoveEntry>();
-            foreach (var a in this.Actions) clone.Actions.Add(a.Clone());
+
+            if (this.AttackMove != null) clone.AttackMove = this.AttackMove.Clone();
+            if (this.SpecialMove != null) clone.SpecialMove = this.SpecialMove.Clone();
 
             clone.ActiveBuffs = new List<TemporaryBuff>();
             foreach (var buff in this.ActiveBuffs)

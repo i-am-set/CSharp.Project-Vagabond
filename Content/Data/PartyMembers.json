@@ -10,11 +10,8 @@
     "Intelligence": 5,
     "Tenacity": 3,
     "Agility": 4,
-    "DefaultStrikeMoveID": "4",
-    "Slot1MovePool": [ "11", "12", "13" ],
-    "Slot2MovePool": [ "35" ],
-    "Slot3MovePool": [ "36" ],
-    "Slot4MovePool": [ "37" ],
+    "AttackMovePool": [ "11" ],
+    "SpecialMovePool": [ "12" ],
     "PassiveAbilityPool": [
       { "PMPyromancer": "" }
     ]
@@ -30,11 +27,8 @@
     "Intelligence": 4,
     "Tenacity": 3,
     "Agility": 5,
-    "DefaultStrikeMoveID": "4",
-    "Slot1MovePool": [ "2" ],
-    "Slot2MovePool": [ "18" ],
-    "Slot3MovePool": [],
-    "Slot4MovePool": [],
+    "AttackMovePool": [ "2" ],
+    "SpecialMovePool": [ "18" ],
     "PassiveAbilityPool": [
       { "PMAnnoying": "" }
     ]
@@ -50,11 +44,8 @@
     "Intelligence": 3,
     "Tenacity": 3,
     "Agility": 4,
-    "DefaultStrikeMoveID": "4",
-    "Slot1MovePool": [],
-    "Slot2MovePool": [],
-    "Slot3MovePool": [],
-    "Slot4MovePool": [],
+    "AttackMovePool": [ "4" ],
+    "SpecialMovePool": [],
     "PassiveAbilityPool": [
       { "PMScrappy": "" }
     ]
@@ -70,11 +61,8 @@
     "Intelligence": 7,
     "Tenacity": 2,
     "Agility": 7,
-    "DefaultStrikeMoveID": "4",
-    "Slot1MovePool": [],
-    "Slot2MovePool": [],
-    "Slot3MovePool": [],
-    "Slot4MovePool": [],
+    "AttackMovePool": [ "4" ],
+    "SpecialMovePool": [],
     "PassiveAbilityPool": [
       { "PMShortTemper": "" }
     ]
@@ -90,11 +78,8 @@
     "Intelligence": 3,
     "Tenacity": 5,
     "Agility": 3,
-    "DefaultStrikeMoveID": "4",
-    "Slot1MovePool": [ "42" ],
-    "Slot2MovePool": [ "43" ],
-    "Slot3MovePool": [ "44" ],
-    "Slot4MovePool": [],
+    "AttackMovePool": [ "42" ],
+    "SpecialMovePool": [ "43" ],
     "PassiveAbilityPool": [
       { "PMMajestic": "" }
     ],
@@ -113,11 +98,8 @@
     "Intelligence": 4,
     "Tenacity": 5,
     "Agility": 5,
-    "DefaultStrikeMoveID": "4",
-    "Slot1MovePool": [ "38" ],
-    "Slot2MovePool": [ "39" ],
-    "Slot3MovePool": [ "40" ],
-    "Slot4MovePool": [ "41" ],
+    "AttackMovePool": [ "38" ],
+    "SpecialMovePool": [ "39" ],
     "PassiveAbilityPool": [
       { "PMSweetpea": "" }
     ]
@@ -133,11 +115,8 @@
     "Intelligence": 4,
     "Tenacity": 3,
     "Agility": 3,
-    "DefaultStrikeMoveID": "4",
-    "Slot1MovePool": [],
-    "Slot2MovePool": [],
-    "Slot3MovePool": [],
-    "Slot4MovePool": [],
+    "AttackMovePool": [ "4" ],
+    "SpecialMovePool": [],
     "PassiveAbilityPool": [
       { "PMSkeptic": "" }
     ]
@@ -153,11 +132,8 @@
     "Intelligence": 4,
     "Tenacity": 3,
     "Agility": 4,
-    "DefaultStrikeMoveID": "4",
-    "Slot1MovePool": [],
-    "Slot2MovePool": [],
-    "Slot3MovePool": [],
-    "Slot4MovePool": [],
+    "AttackMovePool": [ "4" ],
+    "SpecialMovePool": [],
     "PassiveAbilityPool": [
       { "PM9Lives": "" }
     ]
@@ -173,11 +149,8 @@
     "Intelligence": 6,
     "Tenacity": 3,
     "Agility": 1,
-    "DefaultStrikeMoveID": "4",
-    "Slot1MovePool": [],
-    "Slot2MovePool": [],
-    "Slot3MovePool": [],
-    "Slot4MovePool": [],
+    "AttackMovePool": [ "4" ],
+    "SpecialMovePool": [],
     "PassiveAbilityPool": [
       { "PMMinutiae": "" }
     ]
@@ -193,11 +166,8 @@
     "Intelligence": 4,
     "Tenacity": 4,
     "Agility": 5,
-    "DefaultStrikeMoveID": "4",
-    "Slot1MovePool": [],
-    "Slot2MovePool": [],
-    "Slot3MovePool": [],
-    "Slot4MovePool": [],
+    "AttackMovePool": [ "4" ],
+    "SpecialMovePool": [],
     "PassiveAbilityPool": []
   },
   {
@@ -211,11 +181,8 @@
     "Intelligence": 4,
     "Tenacity": 4,
     "Agility": 3,
-    "DefaultStrikeMoveID": "4",
-    "Slot1MovePool": [],
-    "Slot2MovePool": [],
-    "Slot3MovePool": [],
-    "Slot4MovePool": [],
+    "AttackMovePool": [ "4" ],
+    "SpecialMovePool": [],
     "PassiveAbilityPool": [
       { "PMGentleSoul": "" }
     ]
@@ -231,11 +198,8 @@
     "Intelligence": 3,
     "Tenacity": 6,
     "Agility": 2,
-    "DefaultStrikeMoveID": "4",
-    "Slot1MovePool": [],
-    "Slot2MovePool": [],
-    "Slot3MovePool": [],
-    "Slot4MovePool": [],
+    "AttackMovePool": [ "4" ],
+    "SpecialMovePool": [],
     "PassiveAbilityPool": [
       { "PMWellfed": "" }
     ]
@@ -251,11 +215,8 @@
     "Intelligence": 3,
     "Tenacity": 4,
     "Agility": 4,
-    "DefaultStrikeMoveID": "4",
-    "Slot1MovePool": [],
-    "Slot2MovePool": [],
-    "Slot3MovePool": [],
-    "Slot4MovePool": [],
+    "AttackMovePool": [ "4" ],
+    "SpecialMovePool": [],
     "PassiveAbilityPool": [
       { "PMStubborn": "" }
     ]
@@ -271,11 +232,8 @@
     "Intelligence": 1,
     "Tenacity": 7,
     "Agility": 1,
-    "DefaultStrikeMoveID": "5",
-    "Slot1MovePool": [],
-    "Slot2MovePool": [],
-    "Slot3MovePool": [],
-    "Slot4MovePool": [],
+    "AttackMovePool": [ "5" ],
+    "SpecialMovePool": [],
     "PassiveAbilityPool": []
   },
   {
@@ -289,11 +247,8 @@
     "Intelligence": 6,
     "Tenacity": 3,
     "Agility": 5,
-    "DefaultStrikeMoveID": "4",
-    "Slot1MovePool": [],
-    "Slot2MovePool": [],
-    "Slot3MovePool": [],
-    "Slot4MovePool": [],
+    "AttackMovePool": [ "4" ],
+    "SpecialMovePool": [],
     "PassiveAbilityPool": []
   }
 ]

@@ -14,9 +14,8 @@
     "MaxTenacity": 17,
     "MinAgility": 1,
     "MaxAgility": 1,
-    "MoveLearnset": [ "1" ],
-    "MinNumberOfMoves": 1,
-    "MaxNumberOfMoves": 1
+    "AttackMoves": [ "1" ],
+    "SpecialMoves": []
   },
   {
     "Id": "sapling",
@@ -33,9 +32,8 @@
     "MaxTenacity": 4,
     "MinAgility": 1,
     "MaxAgility": 2,
-    "MoveLearnset": [ "5" ],
-    "MinNumberOfMoves": 1,
-    "MaxNumberOfMoves": 1
+    "AttackMoves": [ "5" ],
+    "SpecialMoves": []
   },
   {
     "Id": "boar",
@@ -52,9 +50,8 @@
     "MaxTenacity": 6,
     "MinAgility": 2,
     "MaxAgility": 3,
-    "MoveLearnset": [ "1" ],
-    "MinNumberOfMoves": 1,
-    "MaxNumberOfMoves": 1
+    "AttackMoves": [ "1" ],
+    "SpecialMoves": []
   },
   {
     "Id": "toad",
@@ -71,9 +68,8 @@
     "MaxTenacity": 6,
     "MinAgility": 1,
     "MaxAgility": 3,
-    "MoveLearnset": [ "1" ],
-    "MinNumberOfMoves": 1,
-    "MaxNumberOfMoves": 1
+    "AttackMoves": [ "1" ],
+    "SpecialMoves": []
   },
   {
     "Id": "snake",
@@ -90,9 +86,8 @@
     "MaxTenacity": 3,
     "MinAgility": 6,
     "MaxAgility": 7,
-    "MoveLearnset": [ "3" ],
-    "MinNumberOfMoves": 1,
-    "MaxNumberOfMoves": 1
+    "AttackMoves": [ "3" ],
+    "SpecialMoves": []
   },
   {
     "Id": "wolf",
@@ -109,9 +104,8 @@
     "MaxTenacity": 4,
     "MinAgility": 5,
     "MaxAgility": 6,
-    "MoveLearnset": [ "3" ],
-    "MinNumberOfMoves": 1,
-    "MaxNumberOfMoves": 2
+    "AttackMoves": [ "3" ],
+    "SpecialMoves": []
   },
   {
     "Id": "spider",
@@ -128,8 +122,7 @@
     "MaxTenacity": 3,
     "MinAgility": 6,
     "MaxAgility": 7,
-    "MoveLearnset": [ "3" ],
-    "MinNumberOfMoves": 1,
-    "MaxNumberOfMoves": 1
+    "AttackMoves": [ "3" ],
+    "SpecialMoves": []
   }
 ]

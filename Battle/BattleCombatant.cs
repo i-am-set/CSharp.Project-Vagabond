@@ -25,7 +25,6 @@ namespace ProjectVagabond.Battle
 
         public CombatantStats Stats { get; set; }
 
-        // CurrentTenacity acts as the shield points. Max is derived from Stats.Tenacity.
         public int CurrentTenacity { get; set; }
 
         public float VisualHP { get; set; }
@@ -46,39 +45,21 @@ namespace ProjectVagabond.Battle
         {
             get
             {
-                if (IsPlayerControlled)
-                {
-                    return Spells
-                        .Where(entry => entry != null && BattleDataCache.Moves.ContainsKey(entry.MoveID))
-                        .Select(entry => BattleDataCache.Moves[entry.MoveID])
-                        .ToList();
-                }
-                return _staticMoves;
+                var moves = new List<MoveData>();
+                if (AttackMove != null && BattleDataCache.Moves.TryGetValue(AttackMove.MoveID, out var atk)) moves.Add(atk);
+                if (SpecialMove != null && BattleDataCache.Moves.TryGetValue(SpecialMove.MoveID, out var spc)) moves.Add(spc);
+                return moves;
             }
         }
-        private List<MoveData> _staticMoves = new List<MoveData>();
-        public MoveEntry?[] Spells { get; set; } = new MoveEntry?[4];
-        public string DefaultStrikeMoveID { get; set; }
 
-        public MoveData StrikeMove
-        {
-            get
-            {
-                if (!string.IsNullOrEmpty(DefaultStrikeMoveID) && BattleDataCache.Moves.TryGetValue(DefaultStrikeMoveID, out var move))
-                {
-                    return move;
-                }
-                if (BattleDataCache.Moves.TryGetValue("0", out var punch)) return punch;
-                return null;
-            }
-        }
+        public MoveEntry? AttackMove { get; set; }
+        public MoveEntry? SpecialMove { get; set; }
 
         public int PortraitIndex { get; set; } = 0;
         public List<StatusEffectInstance> ActiveStatusEffects { get; set; } = new List<StatusEffectInstance>();
 
         public List<IAbility> Abilities { get; private set; } = new List<IAbility>();
 
-        // Kept for UI/Input logic distinction, but also mirrored in Tags ("Type.Player")
         public bool IsPlayerControlled { get; set; }
 
         public bool IsDefeated => Stats.CurrentHP <= 0;
@@ -94,7 +75,6 @@ namespace ProjectVagabond.Battle
         public bool UsedProtectThisTurn { get; set; } = false;
         public bool PendingDisengage { get; set; } = false;
 
-        // Visual/UI Timers
         public float HealthBarVisibleTimer { get; set; } = 0f;
         public float ManaBarVisibleTimer { get; set; } = 0f;
         public float VisualHealthBarAlpha { get; set; } = 0f;
@@ -109,7 +89,6 @@ namespace ProjectVagabond.Battle
         public const float BAR_VARIANCE_MAX = 0.5f;
         public float CurrentBarVariance { get; set; } = 0f;
 
-        // Cached context for stat calculations to avoid allocations
         private readonly BattleContext _statContext = new BattleContext();
 
         public BattleCombatant()
@@ -122,14 +101,12 @@ namespace ProjectVagabond.Battle
                 { OffensiveStatType.Agility, 0 }
             };
 
-            // Register Standard Rules by default
             RegisterAbility(new StandardRulesAbility());
         }
 
         public void RegisterAbility(IAbility ability)
         {
             Abilities.Add(ability);
-            // Sort by Priority Descending (High to Low) so high priority abilities execute first
             Abilities.Sort((a, b) => b.Priority.CompareTo(a.Priority));
         }
 
@@ -144,15 +121,12 @@ namespace ProjectVagabond.Battle
 
         public void NotifyAbilities(GameEvent e, BattleContext context)
         {
-            // 1. Intrinsic Abilities (including StandardRulesAbility)
             foreach (var ability in Abilities)
             {
                 ability.OnEvent(e, context);
                 if (e.IsHandled) return;
             }
 
-            // 2. Status Effects (which contain abilities)
-            // Iterate backwards in case status effects remove themselves during processing
             for (int i = ActiveStatusEffects.Count - 1; i >= 0; i--)
             {
                 ActiveStatusEffects[i].OnEvent(e, context);
@@ -180,15 +154,11 @@ namespace ProjectVagabond.Battle
             ActiveStatusEffects.RemoveAll(e => e.EffectType == newEffect.EffectType);
             ActiveStatusEffects.Add(newEffect);
 
-            // Notify that status was applied
-            // We use a temporary context here as this is often a result of an event, but can happen independently
             var context = new BattleContext { Actor = this, Target = this };
             NotifyAbilities(new StatusAppliedEvent(this, newEffect), context);
 
             return !hadEffectBefore;
         }
-
-        public void SetStaticMoves(List<MoveData> moves) { _staticMoves = moves; }
 
         public (bool success, string message) ModifyStatStage(OffensiveStatType stat, int amount)
         {

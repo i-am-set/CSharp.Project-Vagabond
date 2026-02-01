@@ -1,14 +1,4 @@
-﻿using ProjectVagabond;
-using ProjectVagabond.Battle;
-using ProjectVagabond.Battle.Abilities;
-using ProjectVagabond.Battle.UI;
-using ProjectVagabond.Utils;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Reflection;
-using System.Text;
+﻿using System.Collections.Generic;
 
 namespace ProjectVagabond.Battle
 {
@@ -28,12 +18,8 @@ namespace ProjectVagabond.Battle
         public int Tenacity { get; set; }
         public int Agility { get; set; }
 
-        public string DefaultStrikeMoveID { get; set; }
-
-        public List<string> Slot1MovePool { get; set; } = new List<string>();
-        public List<string> Slot2MovePool { get; set; } = new List<string>();
-        public List<string> Slot3MovePool { get; set; } = new List<string>();
-        public List<string> Slot4MovePool { get; set; } = new List<string>();
+        public List<string> AttackMovePool { get; set; } = new List<string>();
+        public List<string> SpecialMovePool { get; set; } = new List<string>();
 
         public List<Dictionary<string, string>> PassiveAbilityPool { get; set; } = new List<Dictionary<string, string>>();
     }

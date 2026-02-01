@@ -5,20 +5,15 @@ using System.Linq;
 
 namespace ProjectVagabond.Battle.UI
 {
-    /// <summary>
-    /// Centralizes all hardcoded positions, dimensions, and layout logic for the battle screen.
-    /// </summary>
     public static class BattleLayout
     {
         // --- Screen Constants ---
         public const int DIVIDER_Y = 123;
-
-        // MOVED UP 8 PIXELS (Was 12)
         public const int ENEMY_SLOT_Y_OFFSET = 4;
 
         // --- Action Menu Layout ---
         public const int ACTION_MENU_WIDTH = 160;
-        public const int ACTION_MENU_HEIGHT = 54;
+        public const int ACTION_MENU_HEIGHT = 30; // 3 buttons * 10px
         public const int ACTION_MENU_Y = Global.VIRTUAL_HEIGHT - ACTION_MENU_HEIGHT;
 
         // --- Enemy Layout ---
@@ -27,11 +22,8 @@ namespace ProjectVagabond.Battle.UI
         public const int ENEMY_SPRITE_SIZE_MAJOR = 96;
 
         // --- Player Layout ---
-        // Moved up 3 pixels (107 -> 104)
         public const float PLAYER_HEART_CENTER_Y = 104f;
-        // Moved up 3 pixels (86 -> 83)
         public const float PLAYER_BARS_TOP_Y = 83f;
-        // Moved up 3 pixels (119 -> 116)
         public const float PLAYER_NAME_TOP_Y = 116f;
 
         public const int PLAYER_BAR_WIDTH = 40;

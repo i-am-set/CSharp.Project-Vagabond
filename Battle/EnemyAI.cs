@@ -33,15 +33,10 @@ namespace ProjectVagabond.Battle
 
             if (!enemies.Any()) return CreateStallAction(actor);
 
-            // Filter moves based on Mana Cost and special conditions
             var moves = actor.AvailableMoves.Where(m =>
             {
-                // Basic Mana Check
                 if (actor.Stats.CurrentMana < m.ManaCost) return false;
-
-                // Mana Dump Check (Requires > 0 Mana to be useful)
                 if (m.Abilities.Any(a => a is ManaDumpAbility) && actor.Stats.CurrentMana <= 0) return false;
-
                 return true;
             }).ToList();
 
@@ -56,7 +51,6 @@ namespace ProjectVagabond.Battle
 
             if (!moves.Any()) return CreateStallAction(actor);
 
-            // Create a context for simulation
             var context = new BattleContext();
 
             var bestDamagePerTarget = new Dictionary<string, int>();
@@ -67,7 +61,6 @@ namespace ProjectVagabond.Battle
                 {
                     var dummyAction = new QueuedAction { Actor = actor, ChosenMove = move, Target = enemy };
 
-                    // Configure context for simulation
                     context.ResetMultipliers();
                     context.Actor = actor;
                     context.Target = enemy;
@@ -133,7 +126,6 @@ namespace ProjectVagabond.Battle
                 {
                     var dummyAction = new QueuedAction { Actor = actor, ChosenMove = move, Target = target };
 
-                    // Configure context for simulation
                     context.ResetMultipliers();
                     context.Actor = actor;
                     context.Target = target;
@@ -332,10 +324,15 @@ namespace ProjectVagabond.Battle
 
         private static QueuedAction CreateAction(BattleCombatant actor, MoveData move, BattleCombatant target)
         {
+            MoveEntry? entry = null;
+            if (actor.AttackMove != null && actor.AttackMove.MoveID == move.MoveID) entry = actor.AttackMove;
+            else if (actor.SpecialMove != null && actor.SpecialMove.MoveID == move.MoveID) entry = actor.SpecialMove;
+
             return new QueuedAction
             {
                 Actor = actor,
                 ChosenMove = move,
+                SpellbookEntry = entry,
                 Target = target,
                 Priority = move.Priority,
                 ActorAgility = actor.GetEffectiveAgility(),
