@@ -31,6 +31,15 @@ namespace ProjectVagabond.Transitions
         }
     }
 
+    public interface ITransitionEffect
+    {
+        bool IsComplete { get; }
+        void Start(bool isTransitioningOut);
+        void Update(GameTime gameTime);
+        void Draw(SpriteBatch spriteBatch, Vector2 screenSize, float contentScale);
+        float GetProgress();
+    }
+
     // --- 1. SHUTTER (Vertical Curtain) ---
     public class ShutterTransition : ITransitionEffect
     {
@@ -50,28 +59,26 @@ namespace ProjectVagabond.Transitions
             _timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
         }
 
+        public float GetProgress() => Math.Clamp(_timer / DURATION, 0f, 1f);
+
         public void Draw(SpriteBatch spriteBatch, Vector2 screenSize, float contentScale)
         {
+            var pixel = ServiceLocator.Get<Texture2D>();
+
             float width = screenSize.X;
             float height = screenSize.Y;
 
-            float progress = Math.Clamp(_timer / DURATION, 0f, 1f);
-            float eased = _isOut ? Easing.EaseInCubic(progress) : Easing.EaseInCubic(1.0f - progress);
+            float progress = GetProgress();
+            float eased = _isOut ? Easing.EaseInExpo(progress) : Easing.EaseInExpo(1.0f - progress);
 
             float halfHeight = height / 2f;
-            float currentHeight = halfHeight * eased;
-
-            // Overlap fix: Ensure it fully closes
-            if (_isOut && progress >= 0.9f) currentHeight = halfHeight + 1f;
-
-            var pixel = ServiceLocator.Get<Texture2D>();
+            float currentHeight = halfHeight * eased * 1.05f;
 
             // Top Shutter
-            // Draw(texture, position, source, color, rotation, origin, scale, effects, depth)
-            spriteBatch.Draw(pixel, Vector2.Zero, null, Color.Black, 0f, Vector2.Zero, new Vector2(width, currentHeight), SpriteEffects.None, 0f);
+            spriteBatch.Draw(pixel, new Rectangle(0, 0, (int)width, (int)currentHeight), Color.Black);
 
             // Bottom Shutter
-            spriteBatch.Draw(pixel, new Vector2(0, height - currentHeight), null, Color.Black, 0f, Vector2.Zero, new Vector2(width, currentHeight), SpriteEffects.None, 0f);
+            spriteBatch.Draw(pixel, new Rectangle(0, (int)(height - currentHeight), (int)width, (int)currentHeight), Color.Black);
         }
     }
 
@@ -94,23 +101,26 @@ namespace ProjectVagabond.Transitions
             _timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
         }
 
+        public float GetProgress() => Math.Clamp(_timer / DURATION, 0f, 1f);
+
         public void Draw(SpriteBatch spriteBatch, Vector2 screenSize, float contentScale)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
-            float progress = Math.Clamp(_timer / DURATION, 0f, 1f);
 
-            float eased = _isOut ? Easing.EaseInCubic(progress) : Easing.EaseInCubic(1.0f - progress);
+            float width = screenSize.X;
+            float height = screenSize.Y;
 
-            float halfWidth = screenSize.X / 2f;
-            float currentWidth = halfWidth * eased;
+            float progress = GetProgress();
+            float eased = _isOut ? Easing.EaseInExpo(progress) : Easing.EaseInExpo(1.0f - progress);
 
-            if (_isOut && progress >= 0.99f) currentWidth = halfWidth + 1f;
+            float halfWidth = width / 2f;
+            float currentWidth = halfWidth * eased * 1.05f;
 
             // Left Curtain
-            spriteBatch.Draw(pixel, Vector2.Zero, null, Color.Black, 0f, Vector2.Zero, new Vector2(currentWidth, screenSize.Y), SpriteEffects.None, 0f);
+            spriteBatch.Draw(pixel, new Rectangle(0, 0, (int)currentWidth, (int)height), Color.Black);
 
             // Right Curtain
-            spriteBatch.Draw(pixel, new Vector2(screenSize.X - currentWidth, 0), null, Color.Black, 0f, Vector2.Zero, new Vector2(currentWidth, screenSize.Y), SpriteEffects.None, 0f);
+            spriteBatch.Draw(pixel, new Rectangle((int)(width - currentWidth), 0, (int)currentWidth, (int)height), Color.Black);
         }
     }
 
@@ -133,34 +143,32 @@ namespace ProjectVagabond.Transitions
             _timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
         }
 
+        public float GetProgress() => Math.Clamp(_timer / DURATION, 0f, 1f);
+
         public void Draw(SpriteBatch spriteBatch, Vector2 screenSize, float contentScale)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
-            float progress = Math.Clamp(_timer / DURATION, 0f, 1f);
 
-            float eased = _isOut ? Easing.EaseInCubic(progress) : Easing.EaseInCubic(1.0f - progress);
+            float width = screenSize.X;
+            float height = screenSize.Y;
 
-            float halfWidth = screenSize.X / 2f;
-            float halfHeight = screenSize.Y / 2f;
+            float progress = GetProgress();
+            float eased = _isOut ? Easing.EaseInExpo(progress) : Easing.EaseInExpo(1.0f - progress);
 
-            float curW = halfWidth * eased;
-            float curH = halfHeight * eased;
+            float halfWidth = width / 2f;
+            float halfHeight = height / 2f;
 
-            if (_isOut && progress >= 0.99f)
-            {
-                curW = halfWidth + 1f;
-                curH = halfHeight + 1f;
-            }
+            float curW = halfWidth * eased * 1.05f;
+            float curH = halfHeight * eased * 1.05f;
 
-            // Draw 4 overlapping rectangles to cover the screen
             // Top
-            spriteBatch.Draw(pixel, Vector2.Zero, null, Color.Black, 0f, Vector2.Zero, new Vector2(screenSize.X, curH), SpriteEffects.None, 0f);
+            spriteBatch.Draw(pixel, new Rectangle(0, 0, (int)width, (int)curH), Color.Black);
             // Bottom
-            spriteBatch.Draw(pixel, new Vector2(0, screenSize.Y - curH), null, Color.Black, 0f, Vector2.Zero, new Vector2(screenSize.X, curH), SpriteEffects.None, 0f);
+            spriteBatch.Draw(pixel, new Rectangle(0, (int)(height - curH), (int)width, (int)curH), Color.Black);
             // Left
-            spriteBatch.Draw(pixel, Vector2.Zero, null, Color.Black, 0f, Vector2.Zero, new Vector2(curW, screenSize.Y), SpriteEffects.None, 0f);
+            spriteBatch.Draw(pixel, new Rectangle(0, 0, (int)curW, (int)height), Color.Black);
             // Right
-            spriteBatch.Draw(pixel, new Vector2(screenSize.X - curW, 0), null, Color.Black, 0f, Vector2.Zero, new Vector2(curW, screenSize.Y), SpriteEffects.None, 0f);
+            spriteBatch.Draw(pixel, new Rectangle((int)(width - curW), 0, (int)curW, (int)height), Color.Black);
         }
     }
 
@@ -183,14 +191,15 @@ namespace ProjectVagabond.Transitions
             _timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
         }
 
+        public float GetProgress() => Math.Clamp(_timer / DURATION, 0f, 1f);
+
         public void Draw(SpriteBatch spriteBatch, Vector2 screenSize, float contentScale)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
-            float progress = Math.Clamp(_timer / DURATION, 0f, 1f);
+            float progress = GetProgress();
 
             float eased = _isOut ? Easing.EaseInCubic(progress) : Easing.EaseInCubic(1.0f - progress);
 
-            // Calculate max size needed to cover screen (diagonal length)
             float maxDimension = (float)Math.Sqrt(screenSize.X * screenSize.X + screenSize.Y * screenSize.Y);
             float currentSize = maxDimension * eased;
 
@@ -203,7 +212,7 @@ namespace ProjectVagabond.Transitions
                 center,
                 null,
                 Color.Black,
-                0f, // No rotation
+                0f,
                 origin,
                 scaleVec,
                 SpriteEffects.None,
@@ -231,31 +240,36 @@ namespace ProjectVagabond.Transitions
             _timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
         }
 
+        public float GetProgress() => Math.Clamp(_timer / DURATION, 0f, 1f);
+
         public void Draw(SpriteBatch spriteBatch, Vector2 screenSize, float contentScale)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
-            float progress = Math.Clamp(_timer / DURATION, 0f, 1f);
+            float progress = GetProgress();
 
-            float eased = _isOut ? Easing.EaseInQuint(progress) : Easing.EaseInQuint(1.0f - progress);
+            float eased = _isOut ? Easing.EaseInQuart(progress) : Easing.EaseInQuart(1.0f - progress);
 
-            // Calculate size needed to cover screen when rotated 45 degrees
-            float maxDimension = (float)Math.Sqrt(screenSize.X * screenSize.X + screenSize.Y * screenSize.Y) * 1.5f;
+            float maxDimension = (float)Math.Sqrt(screenSize.X * screenSize.X + screenSize.Y * screenSize.Y) * 1.5f * 1.2f;
             float currentSize = maxDimension * eased;
 
             Vector2 center = screenSize / 2f;
             Vector2 origin = new Vector2(0.5f, 0.5f);
+            float rotation = MathHelper.PiOver4;
 
-            spriteBatch.Draw(
-                pixel,
-                center,
-                null,
-                Color.Black,
-                MathHelper.PiOver4, // 45 degrees
-                origin,
-                new Vector2(currentSize, currentSize),
-                SpriteEffects.None,
-                0f
-            );
+            if (currentSize > 0)
+            {
+                spriteBatch.Draw(
+                    pixel,
+                    center,
+                    null,
+                    Color.Black,
+                    rotation,
+                    origin,
+                    new Vector2(currentSize, currentSize),
+                    SpriteEffects.None,
+                    0f
+                );
+            }
         }
     }
 
@@ -263,7 +277,7 @@ namespace ProjectVagabond.Transitions
     public class SpinningSquareTransition : ITransitionEffect
     {
         private float _timer;
-        private const float DURATION = 0.5f;
+        private const float DURATION = 0.6f;
         private bool _isOut;
         public bool IsComplete => _timer >= DURATION;
 
@@ -278,32 +292,37 @@ namespace ProjectVagabond.Transitions
             _timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
         }
 
+        public float GetProgress() => Math.Clamp(_timer / DURATION, 0f, 1f);
+
         public void Draw(SpriteBatch spriteBatch, Vector2 screenSize, float contentScale)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
-            float progress = Math.Clamp(_timer / DURATION, 0f, 1f);
+            float progress = GetProgress();
 
-            float eased = _isOut ? Easing.EaseInCubic(progress) : Easing.EaseInCubic(1.0f - progress);
+            float eased = _isOut ? Easing.EaseInExpo(progress) : (1.0f - Easing.EaseOutExpo(progress));
 
-            float maxDimension = (float)Math.Sqrt(screenSize.X * screenSize.X + screenSize.Y * screenSize.Y);
+            float maxDimension = (float)Math.Sqrt(screenSize.X * screenSize.X + screenSize.Y * screenSize.Y) * 1.2f;
             float currentSize = maxDimension * eased;
+
             float rotation = eased * MathHelper.Pi;
 
             Vector2 center = screenSize / 2f;
             Vector2 origin = new Vector2(0.5f, 0.5f);
-            Vector2 scaleVec = new Vector2(currentSize, currentSize);
 
-            spriteBatch.Draw(
-                pixel,
-                center,
-                null,
-                Color.Black,
-                rotation,
-                origin,
-                scaleVec,
-                SpriteEffects.None,
-                0f
-            );
+            if (currentSize > 0)
+            {
+                spriteBatch.Draw(
+                    pixel,
+                    center,
+                    null,
+                    Color.Black,
+                    rotation,
+                    origin,
+                    new Vector2(currentSize, currentSize),
+                    SpriteEffects.None,
+                    0f
+                );
+            }
         }
     }
 
@@ -311,11 +330,11 @@ namespace ProjectVagabond.Transitions
     public class DiamondWipeTransition : ITransitionEffect
     {
         private float _timer;
-        private const float DURATION = 0.5f;
+        private const float DURATION = 0.6f;
         private bool _isOut;
         public bool IsComplete => _timer >= DURATION;
 
-        private const int BASE_GRID_SIZE = 20;
+        private const int BASE_GRID_SIZE = 24;
 
         public void Start(bool isTransitioningOut)
         {
@@ -328,18 +347,20 @@ namespace ProjectVagabond.Transitions
             _timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
         }
 
+        public float GetProgress() => Math.Clamp(_timer / DURATION, 0f, 1f);
+
         public void Draw(SpriteBatch spriteBatch, Vector2 screenSize, float contentScale)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
 
-            // Scale the grid size based on the content scale so diamonds look "retro" sized but render smoothly
             float scaledGridSize = BASE_GRID_SIZE * contentScale;
-
-            int cols = (int)Math.Ceiling(screenSize.X / scaledGridSize) + 2;
-            int rows = (int)Math.Ceiling(screenSize.Y / scaledGridSize) + 2;
+            int cols = (int)Math.Ceiling(screenSize.X / scaledGridSize) + 1;
+            int rows = (int)Math.Ceiling(screenSize.Y / scaledGridSize) + 1;
 
             float maxDelay = DURATION * 0.5f;
             float growTime = DURATION * 0.5f;
+
+            Vector2 origin = new Vector2(0.5f, 0.5f);
 
             for (int y = 0; y < rows; y++)
             {
@@ -348,21 +369,30 @@ namespace ProjectVagabond.Transitions
                     float delay = ((float)(x + y) / (cols + rows)) * maxDelay;
                     float localTime = _timer - delay;
                     float progress = Math.Clamp(localTime / growTime, 0f, 1f);
-                    float sizeScale = _isOut ? progress : 1.0f - progress;
 
-                    if (sizeScale > 0)
+                    float scaleVal;
+                    if (_isOut)
+                    {
+                        scaleVal = Easing.EaseOutBack(progress);
+                    }
+                    else
+                    {
+                        scaleVal = Easing.EaseInBack(1.0f - progress);
+                    }
+
+                    if (scaleVal > 0)
                     {
                         Vector2 center = new Vector2(x * scaledGridSize, y * scaledGridSize);
-                        // 1.8f ensures overlap when fully grown
-                        float size = scaledGridSize * 1.8f * sizeScale;
+                        float size = scaledGridSize * 1.5f * scaleVal;
+                        float rotation = MathHelper.PiOver4 + (progress * 0.5f);
 
                         spriteBatch.Draw(
                             pixel,
                             center,
                             null,
                             Color.Black,
-                            MathHelper.PiOver4,
-                            new Vector2(0.5f, 0.5f),
+                            rotation,
+                            origin,
                             new Vector2(size, size),
                             SpriteEffects.None,
                             0f
@@ -371,9 +401,8 @@ namespace ProjectVagabond.Transitions
                 }
             }
 
-            if (_isOut && _timer > DURATION * 0.9f)
+            if (_isOut && _timer > DURATION * 0.95f)
             {
-                // Fill screen at end to prevent gaps
                 spriteBatch.Draw(pixel, Vector2.Zero, null, Color.Black, 0f, Vector2.Zero, screenSize, SpriteEffects.None, 0f);
             }
         }
@@ -399,6 +428,8 @@ namespace ProjectVagabond.Transitions
         {
             _timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
         }
+
+        public float GetProgress() => Math.Clamp(_timer / DURATION, 0f, 1f);
 
         public void Draw(SpriteBatch spriteBatch, Vector2 screenSize, float contentScale)
         {
@@ -452,5 +483,3 @@ namespace ProjectVagabond.Transitions
         }
     }
 }
-
-    

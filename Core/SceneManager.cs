@@ -23,10 +23,6 @@ namespace ProjectVagabond
         public GameScene? CurrentActiveScene => _currentScene;
         public bool IsModalActive => _modalScene != null;
 
-        // Legacy flags kept for compatibility, but logic is now driven by TransitionManager
-        public bool IsLoadingBetweenScenes => false;
-        public bool IsHoldingBlack => _transitionManager.IsScreenObscured;
-
         public InputDevice LastInputDevice { get; set; } = InputDevice.Mouse;
 
         public SceneManager() { }
@@ -172,10 +168,10 @@ namespace ProjectVagabond
 
         public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
-            if (_currentScene != null && _currentScene.GetType() != typeof(TransitionScene))
+            if (_currentScene != null)
             {
                 // Draw scene with standard transform
-                _currentScene?.Draw(spriteBatch, font, gameTime, transform);
+                _currentScene.Draw(spriteBatch, font, gameTime, transform);
 
                 // Draw particles
                 var particleSystemManager = ServiceLocator.Get<ParticleSystemManager>();
@@ -191,9 +187,9 @@ namespace ProjectVagabond
 
         public void DrawUnderlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            if (_currentScene != null && _currentScene.GetType() != typeof(TransitionScene))
+            if (_currentScene != null)
             {
-                _currentScene?.DrawUnderlay(spriteBatch, font, gameTime);
+                _currentScene.DrawUnderlay(spriteBatch, font, gameTime);
             }
             if (IsModalActive)
             {

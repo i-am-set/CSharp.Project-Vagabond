@@ -22,6 +22,9 @@ namespace ProjectVagabond.Transitions
     {
         public bool IsTransitioning => _currentState != TransitionState.Idle;
         public bool IsScreenObscured => _currentState == TransitionState.Hold || (_currentState == TransitionState.Out && _currentEffect != null && _currentEffect.IsComplete);
+        public bool IsTransitioningOut => _currentState == TransitionState.Out;
+        public bool IsTransitioningIn => _currentState == TransitionState.In;
+        public float CurrentTransitionProgress => _currentEffect?.GetProgress() ?? 0f;
 
         private TransitionState _currentState = TransitionState.Idle;
         private ITransitionEffect _currentEffect;
@@ -29,16 +32,10 @@ namespace ProjectVagabond.Transitions
         private Action _onMidpoint;
         private Action _onComplete;
 
-        // Delay Timer State
         private float _holdDuration = 0f;
         private float _holdTimer = 0f;
         private bool _midpointExecuted = false;
 
-        // --- NEW: Manual Hold for Loading ---
-        /// <summary>
-        /// If true, the transition will stay in the 'Hold' (screen covered) state indefinitely
-        /// until set to false. Used to keep the screen black while the LoadingScreen runs.
-        /// </summary>
         public bool ManualHold { get; set; } = false;
 
         private readonly Dictionary<TransitionType, ITransitionEffect> _effects;
@@ -47,21 +44,17 @@ namespace ProjectVagabond.Transitions
         public TransitionManager()
         {
             _effects = new Dictionary<TransitionType, ITransitionEffect>
-            {
-                { TransitionType.None, new BigBlocksEaseTransition() }, // Fallback
-                
-                // Standard Transitions
-                { TransitionType.Shutter, new ShutterTransition() },
-                { TransitionType.Curtain, new CurtainTransition() },
-                { TransitionType.Aperture, new ApertureTransition() },
-                { TransitionType.Diamonds, new DiamondWipeTransition() },
-                { TransitionType.BigBlocksEase, new BigBlocksEaseTransition() },
-                
-                // Shape Transitions
-                { TransitionType.SpinningSquare, new SpinningSquareTransition() },
-                { TransitionType.CenterSquare, new CenterSquareTransition() },
-                { TransitionType.CenterDiamond, new CenterDiamondTransition() }
-            };
+        {
+            { TransitionType.None, new BigBlocksEaseTransition() },
+            { TransitionType.Shutter, new ShutterTransition() },
+            { TransitionType.Curtain, new CurtainTransition() },
+            { TransitionType.Aperture, new ApertureTransition() },
+            { TransitionType.Diamonds, new DiamondWipeTransition() },
+            { TransitionType.BigBlocksEase, new BigBlocksEaseTransition() },
+            { TransitionType.SpinningSquare, new SpinningSquareTransition() },
+            { TransitionType.CenterSquare, new CenterSquareTransition() },
+            { TransitionType.CenterDiamond, new CenterDiamondTransition() }
+        };
         }
 
         public void Reset()
@@ -85,7 +78,7 @@ namespace ProjectVagabond.Transitions
             _holdDuration = holdDuration;
             _holdTimer = 0f;
             _midpointExecuted = false;
-            ManualHold = false; // Reset manual hold, caller must set it immediately after if needed
+            ManualHold = false;
 
             if (outType == TransitionType.None)
             {
@@ -95,7 +88,7 @@ namespace ProjectVagabond.Transitions
             {
                 if (!_effects.TryGetValue(outType, out _currentEffect))
                 {
-                    _currentEffect = _effects[TransitionType.BigBlocksEase]; // Default fallback
+                    _currentEffect = _effects[TransitionType.BigBlocksEase];
                 }
 
                 _currentState = TransitionState.Out;
@@ -124,7 +117,6 @@ namespace ProjectVagabond.Transitions
 
         public TransitionType GetRandomCombatTransition()
         {
-            // Pick from the high-quality transitions
             int roll = _random.Next(5);
             return roll switch
             {
@@ -165,6 +157,7 @@ namespace ProjectVagabond.Transitions
                         _currentState = TransitionState.Hold;
                         _holdTimer = 0f;
                         _midpointExecuted = false;
+                        ServiceLocator.Get<HapticsManager>().TriggerCompoundShake(1.5f);
                     }
                 }
             }
@@ -176,9 +169,6 @@ namespace ProjectVagabond.Transitions
                     _midpointExecuted = true;
                 }
 
-                // --- NEW: Check Manual Hold ---
-                // If ManualHold is true (e.g. Loading Screen is active), we do NOT advance the timer.
-                // We stay in Hold state until the SceneManager sets ManualHold to false.
                 if (!ManualHold)
                 {
                     _holdTimer += dt;
@@ -209,7 +199,6 @@ namespace ProjectVagabond.Transitions
             if (_currentState == TransitionState.Hold)
             {
                 var pixel = ServiceLocator.Get<Texture2D>();
-                // Draw full screen black using Vector2 scale
                 spriteBatch.Draw(pixel, Vector2.Zero, null, Color.Black, 0f, Vector2.Zero, screenSize, SpriteEffects.None, 0f);
             }
             else if (_currentEffect != null)
