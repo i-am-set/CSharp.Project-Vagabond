@@ -159,6 +159,7 @@ namespace ProjectVagabond.Battle.UI
             public int SlotIndex { get; }
             public BattleCombatant Combatant { get; }
             public MoveData? HoveredMove { get; private set; }
+            public bool IsSwitchHovered { get; private set; }
 
             public event Action<QueuedAction>? OnActionSelected;
             public event Action? OnSwitchRequested;
@@ -175,9 +176,9 @@ namespace ProjectVagabond.Battle.UI
             private const int BUTTON_SPACING = 0;
 
             // --- Info Box Configuration ---
-            private const int INFO_BOX_WIDTH = 144;
+            private const int INFO_BOX_WIDTH = 146;
             private const int INFO_BOX_HEIGHT = 34;
-            private const int INFO_BOX_OFFSET_X = 0; // Centered in 146px panel
+            private const int INFO_BOX_OFFSET_X = -2;
             private const int INFO_BOX_OFFSET_Y = 12; // Below the 10px buttons
 
             public CombatantPanel(BattleCombatant combatant, List<BattleCombatant> allCombatants)
@@ -313,6 +314,7 @@ namespace ProjectVagabond.Battle.UI
             public void Update(MouseState mouse, GameTime gameTime, bool isInputBlocked, bool isLocked)
             {
                 HoveredMove = null;
+                IsSwitchHovered = false;
 
                 if (isInputBlocked)
                 {
@@ -344,6 +346,10 @@ namespace ProjectVagabond.Battle.UI
                                 var entry = Combatant.SpecialMove;
                                 if (entry != null && BattleDataCache.Moves.TryGetValue(entry.MoveID, out var m))
                                     HoveredMove = m;
+                            }
+                            else if (index == 2)
+                            {
+                                IsSwitchHovered = true;
                             }
                         }
                     }
@@ -385,18 +391,7 @@ namespace ProjectVagabond.Battle.UI
                     );
                     DrawBeveledBackground(spriteBatch, pixel, infoBoxRect, global.Palette_DarkShadow);
 
-                    if (HoveredMove == null)
-                    {
-                        // Empty State: Inner box fills entire area minus 1px bezel
-                        var emptyInnerRect = new Rectangle(
-                            infoBoxRect.X + 1,
-                            infoBoxRect.Y + 1,
-                            infoBoxRect.Width - 2,
-                            infoBoxRect.Height - 2
-                        );
-                        DrawBeveledBackground(spriteBatch, pixel, emptyInnerRect, global.Palette_Black);
-                    }
-                    else
+                    if (HoveredMove != null)
                     {
                         // Populated State: Inner box is just the description area
                         var descBgRect = new Rectangle(
@@ -408,6 +403,39 @@ namespace ProjectVagabond.Battle.UI
                         DrawBeveledBackground(spriteBatch, pixel, descBgRect, global.Palette_Black);
 
                         DrawInfoBoxContent(spriteBatch, infoBoxRect, HoveredMove, global);
+                    }
+                    else if (IsSwitchHovered)
+                    {
+                        // Switch Hover State: Full inner box with text
+                        var emptyInnerRect = new Rectangle(
+                            infoBoxRect.X + 1,
+                            infoBoxRect.Y + 1,
+                            infoBoxRect.Width - 2,
+                            infoBoxRect.Height - 2
+                        );
+                        DrawBeveledBackground(spriteBatch, pixel, emptyInnerRect, global.Palette_Black);
+
+                        var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+                        string text = "SWITCH PARTY MEMBER";
+                        var textSize = secondaryFont.MeasureString(text);
+                        var textPos = new Vector2(
+                            infoBoxRect.Center.X - textSize.Width / 2f,
+                            infoBoxRect.Center.Y - textSize.Height / 2f
+                        );
+                        textPos = new Vector2(MathF.Round(textPos.X), MathF.Round(textPos.Y));
+
+                        spriteBatch.DrawStringSnapped(secondaryFont, text, textPos, global.Palette_Sun);
+                    }
+                    else
+                    {
+                        // Empty State: Inner box fills entire area minus 1px bezel
+                        var emptyInnerRect = new Rectangle(
+                            infoBoxRect.X + 1,
+                            infoBoxRect.Y + 1,
+                            infoBoxRect.Width - 2,
+                            infoBoxRect.Height - 2
+                        );
+                        DrawBeveledBackground(spriteBatch, pixel, emptyInnerRect, global.Palette_Black);
                     }
 
                     for (int i = 0; i < _buttons.Count; i++)

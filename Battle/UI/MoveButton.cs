@@ -320,9 +320,12 @@ namespace ProjectVagabond.Battle.UI
                     // Ensure the top-left of the icon lands on an integer coordinate if rotation is negligible
                     if (Math.Abs(_currentHoverRotation) < 0.01f)
                     {
+                        // Calculate where the top-left would be
                         Vector2 topLeft = rotatedIconPos - iconOrigin;
+                        // Snap top-left to integer
                         topLeft.X = MathF.Round(topLeft.X);
                         topLeft.Y = MathF.Round(topLeft.Y);
+                        // Recalculate center position based on snapped top-left
                         rotatedIconPos = topLeft + iconOrigin;
                     }
 
@@ -393,9 +396,12 @@ namespace ProjectVagabond.Battle.UI
                     // --- PIXEL SNAP TEXT ---
                     if (Math.Abs(_currentHoverRotation) < 0.01f)
                     {
+                        // Calculate where the top-left would be
                         Vector2 topLeft = rotatedTextPos - textOrigin;
+                        // Snap top-left to integer
                         topLeft.X = MathF.Round(topLeft.X);
                         topLeft.Y = MathF.Round(topLeft.Y);
+                        // Recalculate draw position based on snapped top-left
                         rotatedTextPos = topLeft + textOrigin;
                     }
 
@@ -470,11 +476,12 @@ namespace ProjectVagabond.Battle.UI
             // This ensures the visual background is top-aligned within the button bounds.
             Vector2 visualCenter = center + Rotate(new Vector2(0, -0.5f * scale.Y));
 
-            // SNAP
+            // SNAP BACKGROUND
             if (Math.Abs(rotation) < 0.01f)
             {
-                visualCenter.X = MathF.Round(visualCenter.X);
-                visualCenter.Y = MathF.Round(visualCenter.Y);
+                // Origin is 0.5, 0.5. So position must be X.5, Y.5 to draw at integer coordinates.
+                visualCenter.X = MathF.Floor(visualCenter.X) + 0.5f;
+                visualCenter.Y = MathF.Floor(visualCenter.Y) + 0.5f;
             }
 
             // 1. Middle Body: (x+1, y+1) size (w-2, h-2)
@@ -487,7 +494,12 @@ namespace ProjectVagabond.Battle.UI
             // Center relative to visual center: (0, -h/2 + 0.5)
             Vector2 topOffset = new Vector2(0, (-h / 2f + 0.5f) * scale.Y);
             Vector2 topPos = visualCenter + Rotate(topOffset);
-            if (Math.Abs(rotation) < 0.01f) { topPos.X = MathF.Round(topPos.X); topPos.Y = MathF.Round(topPos.Y); }
+
+            if (Math.Abs(rotation) < 0.01f)
+            {
+                topPos.X = MathF.Floor(topPos.X) + 0.5f;
+                topPos.Y = MathF.Floor(topPos.Y) + 0.5f;
+            }
 
             Vector2 topScale = new Vector2((w - 4) * scale.X, 1f * scale.Y);
             spriteBatch.DrawSnapped(pixel, topPos, null, color, rotation, new Vector2(0.5f, 0.5f), topScale, SpriteEffects.None, 0f);
@@ -496,7 +508,12 @@ namespace ProjectVagabond.Battle.UI
             // Center relative to visual center: (0, h/2 - 0.5)
             Vector2 botOffset = new Vector2(0, (h / 2f - 0.5f) * scale.Y);
             Vector2 botPos = visualCenter + Rotate(botOffset);
-            if (Math.Abs(rotation) < 0.01f) { botPos.X = MathF.Round(botPos.X); botPos.Y = MathF.Round(botPos.Y); }
+
+            if (Math.Abs(rotation) < 0.01f)
+            {
+                botPos.X = MathF.Floor(botPos.X) + 0.5f;
+                botPos.Y = MathF.Floor(botPos.Y) + 0.5f;
+            }
 
             Vector2 botScale = new Vector2((w - 4) * scale.X, 1f * scale.Y);
             spriteBatch.DrawSnapped(pixel, botPos, null, color, rotation, new Vector2(0.5f, 0.5f), botScale, SpriteEffects.None, 0f);
