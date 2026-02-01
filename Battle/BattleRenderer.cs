@@ -260,17 +260,13 @@ namespace ProjectVagabond.Battle.UI
                     if (battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection && !battleManager.IsActionPending(c.BattleSlot))
                     {
                         float t = (float)gameTime.TotalGameTime.TotalSeconds;
-                        // Inverse of UI bob: UI is Sin(t*5 + phase). Sprite is -Sin(t*5 + phase).
-                        // Phase for Slot 1 is Pi.
                         float phase = (c.BattleSlot == 1) ? MathHelper.Pi : 0f;
                         float rawSin = MathF.Sin(t * _bobSpeed + phase);
 
                         manualBob = -rawSin * 0.5f;
 
-                        // Animate to Alt frame when bobbing up (offset < 0)
                         manualAlt = manualBob < 0;
                     }
-                    // ----------------------------------------------
 
                     sprite.Update(gameTime, currentActor == c, manualBob, manualAlt);
                 }

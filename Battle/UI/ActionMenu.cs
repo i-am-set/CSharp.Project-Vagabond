@@ -174,6 +174,12 @@ namespace ProjectVagabond.Battle.UI
             private const int BUTTON_HEIGHT = 10;
             private const int BUTTON_SPACING = 1;
 
+            // --- Info Box Configuration ---
+            private const int INFO_BOX_WIDTH = 142;
+            private const int INFO_BOX_HEIGHT = 34;
+            private const int INFO_BOX_OFFSET_X = 2; // Centered in 146px panel
+            private const int INFO_BOX_OFFSET_Y = 12; // Below the 10px buttons
+
             public CombatantPanel(BattleCombatant combatant, List<BattleCombatant> allCombatants)
             {
                 Combatant = combatant;
@@ -351,10 +357,11 @@ namespace ProjectVagabond.Battle.UI
                 var battleManager = ServiceLocator.Get<BattleManager>();
                 bool isLocked = battleManager.IsActionPending(SlotIndex);
 
+                int snappedOffsetY = (int)offset.Y;
+
                 if (isLocked)
                 {
                     var rect = _cancelButton.Bounds;
-                    int snappedOffsetY = (int)offset.Y;
                     rect.Y += snappedOffsetY;
 
                     var textSize = _cancelButton.Font.MeasureString(_cancelButton.Text);
@@ -369,11 +376,24 @@ namespace ProjectVagabond.Battle.UI
                 }
                 else
                 {
+                    // Draw Info Box Background
+                    var infoBoxRect = new Rectangle(
+                        (int)_position.X + INFO_BOX_OFFSET_X,
+                        (int)_position.Y + INFO_BOX_OFFSET_Y + snappedOffsetY,
+                        INFO_BOX_WIDTH,
+                        INFO_BOX_HEIGHT
+                    );
+                    DrawBeveledBackground(spriteBatch, pixel, infoBoxRect, global.Palette_DarkShadow);
+
+                    if (HoveredMove != null)
+                    {
+                        DrawInfoBoxContent(spriteBatch, infoBoxRect, HoveredMove, global);
+                    }
+
                     for (int i = 0; i < _buttons.Count; i++)
                     {
                         var btn = _buttons[i];
                         var rect = btn.Bounds;
-                        int snappedOffsetY = (int)offset.Y;
                         rect.Y += snappedOffsetY;
 
                         var visualRect = new Rectangle(rect.X, rect.Y, rect.Width, rect.Height - 1);
@@ -409,6 +429,115 @@ namespace ProjectVagabond.Battle.UI
                     spriteBatch.DrawSnapped(pixel, area, (SlotIndex == 0 ? Color.Cyan : Color.Magenta) * 0.2f);
                     spriteBatch.DrawLineSnapped(new Vector2(area.Right, area.Top), new Vector2(area.Right, area.Bottom), (SlotIndex == 0 ? Color.Cyan : Color.Magenta));
                 }
+            }
+
+            private void DrawInfoBoxContent(SpriteBatch spriteBatch, Rectangle bounds, MoveData move, Global global)
+            {
+                var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+                var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
+
+                int startX = bounds.X + 4;
+                int startY = bounds.Y + 3;
+
+                // Layout Tuning
+                int rowSpacing = 8;
+                int pairSpacing = 5;
+                int labelValueGap = 1;
+
+                int currentX = startX;
+                int currentY = startY;
+
+                void DrawPair(string label, string val)
+                {
+                    spriteBatch.DrawStringSnapped(tertiaryFont, label, new Vector2(currentX, currentY + 1), global.Palette_DarkSun);
+                    currentX += (int)tertiaryFont.MeasureString(label).Width + labelValueGap;
+
+                    spriteBatch.DrawStringSnapped(secondaryFont, val, new Vector2(currentX, currentY), global.Palette_Sun);
+                    currentX += (int)secondaryFont.MeasureString(val).Width + pairSpacing;
+                }
+
+                string powTxt = move.Power > 0 ? move.Power.ToString() : "--";
+                string accTxt = move.Accuracy > 0 ? $"{move.Accuracy}%" : "--";
+                string mnaTxt = move.ManaCost.ToString();
+                string useTxt = GetStatShortName(move.OffensiveStat);
+
+                DrawPair("POW", powTxt);
+                DrawPair("ACC", accTxt);
+                DrawPair("MNA", mnaTxt);
+                DrawPair("USE", useTxt);
+
+                // Name
+                currentX = startX;
+                currentY += rowSpacing;
+                // Name: DarkSun, Secondary
+                spriteBatch.DrawStringSnapped(secondaryFont, move.MoveName.ToUpper(), new Vector2(currentX, currentY), global.Palette_DarkSun);
+
+                // Description
+                currentY += rowSpacing;
+                string desc = move.Description;
+                float maxWidth = bounds.Width - 8;
+
+                // Rich Text Drawing Logic
+                var parts = Regex.Split(desc, @"(\[.*?\]|\s+)");
+                float descX = startX;
+                float descY = currentY;
+                Color currentColor = global.Palette_Sun;
+
+                foreach (var part in parts)
+                {
+                    if (string.IsNullOrEmpty(part)) continue;
+
+                    if (part.StartsWith("[") && part.EndsWith("]"))
+                    {
+                        string tag = part.Substring(1, part.Length - 2);
+                        if (tag == "/" || tag.Equals("default", StringComparison.OrdinalIgnoreCase))
+                            currentColor = global.Palette_Sun;
+                        else
+                            currentColor = global.GetNarrationColor(tag);
+                    }
+                    else
+                    {
+                        string textPart = part.ToUpper();
+                        Vector2 size = tertiaryFont.MeasureString(textPart);
+
+                        if (string.IsNullOrWhiteSpace(textPart))
+                        {
+                            if (textPart.Contains("\n"))
+                            {
+                                descX = startX;
+                                descY += tertiaryFont.LineHeight;
+                            }
+                            else
+                            {
+                                descX += size.X;
+                            }
+                            continue;
+                        }
+
+                        if (descX + size.X > startX + maxWidth)
+                        {
+                            descX = startX;
+                            descY += tertiaryFont.LineHeight;
+                        }
+
+                        if (descY + tertiaryFont.LineHeight > bounds.Bottom) break;
+
+                        spriteBatch.DrawStringSnapped(tertiaryFont, textPart, new Vector2(descX, descY), currentColor);
+                        descX += size.X;
+                    }
+                }
+            }
+
+            private string GetStatShortName(OffensiveStatType stat)
+            {
+                return stat switch
+                {
+                    OffensiveStatType.Strength => "STR",
+                    OffensiveStatType.Intelligence => "INT",
+                    OffensiveStatType.Tenacity => "TEN",
+                    OffensiveStatType.Agility => "AGI",
+                    _ => "---"
+                };
             }
 
             private void DrawBeveledBackground(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, Color color)

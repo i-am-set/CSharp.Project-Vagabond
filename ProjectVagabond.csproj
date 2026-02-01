@@ -34,7 +34,6 @@
 		<PackageReference Include="MonoGame.Content.Builder.Task" Version="3.8.*" />
 	</ItemGroup>
 	<ItemGroup>
-		<Folder Include="Content\Data\Items\" />
 		<Folder Include="Content\Data\Splits\" />
 		<Folder Include="Content\Sprites\UI\KeyPrompts\" />
 		<Folder Include="Content\Sprites\UI\Backgrounds\" />
@@ -43,6 +42,12 @@
 		<Content Include="Content\**\*.json">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>
+	</ItemGroup>
+	<ItemGroup>
+	  <Compile Remove="Content\Data\Items\**" />
+	  <Content Remove="Content\Data\Items\**" />
+	  <EmbeddedResource Remove="Content\Data\Items\**" />
+	  <None Remove="Content\Data\Items\**" />
 	</ItemGroup>
 	<ItemGroup>
 	  <Content Include="Content\Fonts\5x5_pixel.fnt">
