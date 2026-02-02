@@ -133,27 +133,18 @@ namespace ProjectVagabond.Progression
             CurrentSplit = _splits.Values.ElementAt(_random.Next(_splits.Count));
             CategorizeBattles(CurrentSplit);
 
-            const int MAX_RETRIES = 3;
-            for (int attempt = 0; attempt < MAX_RETRIES; attempt++)
-            {
-                try
-                {
-                    CurrentSplitMap = SplitMapGenerator.GenerateInitial(CurrentSplit);
-                    if (CurrentSplitMap != null)
-                    {
-                        Debug.WriteLine($"[ProgressionManager] Generated initial split map: {CurrentSplit.Theme} with target {CurrentSplitMap.TargetColumnCount} columns.");
-                        return;
-                    }
-                }
-                catch (MapGenerationFailedException ex)
-                {
-                    Debug.WriteLine($"[ProgressionManager] [WARNING] Map generation attempt {attempt + 1} failed: {ex.Message}");
-                }
-            }
+            // Generate the map. The generator is now guaranteed to produce a valid map
+            // without needing retries or safe mode fallbacks.
+            CurrentSplitMap = SplitMapGenerator.GenerateInitial(CurrentSplit);
 
-            // Fallback to Safe Mode if all retries fail
-            Debug.WriteLine("[ProgressionManager] [ERROR] All map generation attempts failed. Falling back to Safe Mode.");
-            CurrentSplitMap = SplitMapGenerator.GenerateSafeMode(CurrentSplit);
+            if (CurrentSplitMap != null)
+            {
+                Debug.WriteLine($"[ProgressionManager] Generated initial split map: {CurrentSplit.Theme} with target {CurrentSplitMap.TargetColumnCount} columns.");
+            }
+            else
+            {
+                Debug.WriteLine("[ProgressionManager] [CRITICAL] Map generation returned null. This should not happen.");
+            }
         }
 
         public void ClearCurrentSplitMap()
