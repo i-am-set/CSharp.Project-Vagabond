@@ -10,6 +10,11 @@ using System.Linq;
 
 namespace ProjectVagabond.Progression
 {
+    public class MapGenerationFailedException : Exception
+    {
+        public MapGenerationFailedException(string message) : base(message) { }
+    }
+
     /// <summary>
     /// A static class responsible for procedurally generating a vertical branching map for a split.
     /// </summary>
@@ -104,98 +109,176 @@ namespace ProjectVagabond.Progression
 
         public static SplitMap? GenerateInitial(SplitData splitData)
         {
-            SplitMapNode.ResetIdCounter();
-            SplitMapPath.ResetIdCounter();
-
-            int totalColumns = _random.Next(splitData.SplitLengthMin, splitData.SplitLengthMax + 1);
-            float mapWidth = (totalColumns - 1) * COLUMN_WIDTH + HORIZONTAL_PADDING * 2;
-
-            var allNodesByColumn = new List<List<SplitMapNode>>();
-            var allPaths = new List<SplitMapPath>();
-
-            // --- Column 0: Start Node ---
-            var startNodePosition = new Vector2(HORIZONTAL_PADDING, Global.VIRTUAL_HEIGHT / 2f);
-            var startNodes = PlaceNodesForColumn(0, totalColumns, mapWidth, 0, startNodePosition);
-            startNodes.First().NodeType = SplitNodeType.Origin;
-
-            if (ENABLE_VERTICAL_CENTERING)
+            try
             {
-                CenterColumnNodes(startNodes);
-            }
+                SplitMapNode.ResetIdCounter();
+                SplitMapPath.ResetIdCounter();
 
-            allNodesByColumn.Add(startNodes);
+                int totalColumns = _random.Next(splitData.SplitLengthMin, splitData.SplitLengthMax + 1);
+                float mapWidth = (totalColumns - 1) * COLUMN_WIDTH + HORIZONTAL_PADDING * 2;
 
-            // --- Intermediate Columns ---
-            for (int i = 1; i < totalColumns - 1; i++)
-            {
-                var previousColumn = allNodesByColumn[i - 1];
-                Vector2 previousColumnAvgPos = previousColumn.Any() ? new Vector2(previousColumn.Average(n => n.Position.X), previousColumn.Average(n => n.Position.Y)) : startNodePosition;
-                var newNodes = PlaceNodesForColumn(i, totalColumns, mapWidth, previousColumn.Count, previousColumnAvgPos);
+                var allNodesByColumn = new List<List<SplitMapNode>>();
+                var allPaths = new List<SplitMapPath>();
+
+                // --- Column 0: Start Node ---
+                var startNodePosition = new Vector2(HORIZONTAL_PADDING, Global.VIRTUAL_HEIGHT / 2f);
+                var startNodes = PlaceNodesForColumn(0, totalColumns, mapWidth, 0, startNodePosition);
+                startNodes.First().NodeType = SplitNodeType.Origin;
 
                 if (ENABLE_VERTICAL_CENTERING)
                 {
-                    CenterColumnNodes(newNodes);
+                    CenterColumnNodes(startNodes);
                 }
 
-                allNodesByColumn.Add(newNodes);
-                AssignEvents(newNodes, splitData, i, totalColumns);
-            }
+                allNodesByColumn.Add(startNodes);
 
-            // --- Final Column: Boss Node ---
-            var lastRegularColumn = allNodesByColumn.Last();
-            Vector2 lastAvgPos = lastRegularColumn.Any() ? new Vector2(lastRegularColumn.Average(n => n.Position.X), lastRegularColumn.Average(n => n.Position.Y)) : startNodePosition;
-            var endNodes = PlaceNodesForColumn(totalColumns - 1, totalColumns, mapWidth, 0, lastAvgPos);
-            var endNode = endNodes.First();
-            endNode.NodeType = SplitNodeType.MajorBattle;
-            if (splitData.PossibleMajorBattles.Any())
+                // --- Intermediate Columns ---
+                for (int i = 1; i < totalColumns - 1; i++)
+                {
+                    var previousColumn = allNodesByColumn[i - 1];
+                    Vector2 previousColumnAvgPos = previousColumn.Any() ? new Vector2(previousColumn.Average(n => n.Position.X), previousColumn.Average(n => n.Position.Y)) : startNodePosition;
+                    var newNodes = PlaceNodesForColumn(i, totalColumns, mapWidth, previousColumn.Count, previousColumnAvgPos);
+
+                    if (ENABLE_VERTICAL_CENTERING)
+                    {
+                        CenterColumnNodes(newNodes);
+                    }
+
+                    allNodesByColumn.Add(newNodes);
+                    AssignEvents(newNodes, splitData, i, totalColumns);
+                }
+
+                // --- Final Column: Boss Node ---
+                var lastRegularColumn = allNodesByColumn.Last();
+                Vector2 lastAvgPos = lastRegularColumn.Any() ? new Vector2(lastRegularColumn.Average(n => n.Position.X), lastRegularColumn.Average(n => n.Position.Y)) : startNodePosition;
+                var endNodes = PlaceNodesForColumn(totalColumns - 1, totalColumns, mapWidth, 0, lastAvgPos);
+                var endNode = endNodes.First();
+                endNode.NodeType = SplitNodeType.MajorBattle;
+                if (splitData.PossibleMajorBattles.Any())
+                {
+                    endNode.EventData = splitData.PossibleMajorBattles[_random.Next(splitData.PossibleMajorBattles.Count)];
+                }
+
+                if (ENABLE_VERTICAL_CENTERING)
+                {
+                    CenterColumnNodes(endNodes);
+                }
+
+                allNodesByColumn.Add(endNodes);
+
+                // --- Connect All Columns ---
+                var allNodes = allNodesByColumn.SelectMany(c => c).ToList();
+                for (int i = 0; i < allNodesByColumn.Count - 1; i++)
+                {
+                    var newPaths = ConnectColumnPair(allNodesByColumn[i], allNodesByColumn[i + 1], allPaths, allNodes);
+                    allPaths.AddRange(newPaths);
+                }
+
+                // --- Post-Processing: Bad Luck Protection (Rule #3) ---
+                // Ensure player isn't forced into too many consecutive fights without a rest.
+                EnforceRestAfterStreak(allNodesByColumn, allPaths);
+
+                // --- Post-Processing: Enforce Minimum Node Counts (New Rule) ---
+                // Ensures we have at least X of each node type, converting Combat nodes if necessary.
+                EnforceNodeMinimums(allNodes, allPaths, splitData);
+
+                // --- Post-Processing: Anti-Clumping (Rule #2 from prompt) ---
+                // Ensure we don't have Shop->Shop or Rest->Rest.
+                SanitizeNodeRepetition(allNodes, allPaths, splitData);
+
+                // --- Post-Processing: Restricted Column Failsafe (Rule #1) ---
+                // One final pass to absolutely guarantee no Shops/Rests in columns 1 and 2.
+                SanitizeRestrictedColumns(allNodes, splitData);
+
+                // --- Post-Processing: Force-Directed Repulsion ---
+                // This pushes paths apart to prevent ugly tangents and overlaps.
+                ApplyForceDirectedLayout(allPaths, allNodes);
+
+                // --- Final Assembly ---
+                int startNodeId = allNodes.FirstOrDefault(n => n.Floor == 0)?.Id ?? -1;
+
+                if (startNodeId == -1) return null;
+
+                GeneratePathRenderPoints(allPaths, allNodes);
+                var bakedScenery = BakeTreesToTexture(allNodes, allPaths, mapWidth);
+
+                return new SplitMap(allNodes, allPaths, bakedScenery, totalColumns, startNodeId, mapWidth);
+            }
+            catch (Exception ex) when (ex is not MapGenerationFailedException)
             {
-                endNode.EventData = splitData.PossibleMajorBattles[_random.Next(splitData.PossibleMajorBattles.Count)];
+                // Wrap unexpected exceptions to trigger the retry logic
+                throw new MapGenerationFailedException($"Unexpected error during map generation: {ex.Message}");
             }
+        }
 
-            if (ENABLE_VERTICAL_CENTERING)
+        public static SplitMap GenerateSafeMode(SplitData splitData)
+        {
+            SplitMapNode.ResetIdCounter();
+            SplitMapPath.ResetIdCounter();
+
+            int totalColumns = splitData.SplitLengthMin;
+            float mapWidth = (totalColumns - 1) * COLUMN_WIDTH + HORIZONTAL_PADDING * 2;
+
+            var allNodes = new List<SplitMapNode>();
+            var allPaths = new List<SplitMapPath>();
+            var progressionManager = ServiceLocator.Get<ProgressionManager>();
+
+            // Create a straight line of nodes
+            for (int i = 0; i < totalColumns; i++)
             {
-                CenterColumnNodes(endNodes);
+                var pos = new Vector2(HORIZONTAL_PADDING + i * COLUMN_WIDTH, Global.VIRTUAL_HEIGHT / 2f);
+                var node = new SplitMapNode(i, pos);
+
+                if (i == 0)
+                {
+                    node.NodeType = SplitNodeType.Origin;
+                }
+                else if (i == totalColumns - 1)
+                {
+                    node.NodeType = SplitNodeType.MajorBattle;
+                    if (splitData.PossibleMajorBattles.Any())
+                        node.EventData = splitData.PossibleMajorBattles[_random.Next(splitData.PossibleMajorBattles.Count)];
+                }
+                else if (i == totalColumns - 2)
+                {
+                    node.NodeType = SplitNodeType.Rest;
+                }
+                else
+                {
+                    node.NodeType = SplitNodeType.Battle;
+                    node.Difficulty = BattleDifficulty.Normal;
+                    node.EventData = progressionManager.GetRandomBattle(node.Difficulty);
+                }
+
+                allNodes.Add(node);
+
+                // Connect to previous
+                if (i > 0)
+                {
+                    var prevNode = allNodes[i - 1];
+                    var path = new SplitMapPath(prevNode.Id, node.Id);
+
+                    // Simple straight line points
+                    path.RenderPoints.Add(prevNode.Position);
+                    path.RenderPoints.Add(node.Position);
+
+                    // Pixel points
+                    path.PixelPoints.AddRange(SpriteBatchExtensions.GetBresenhamLinePoints(prevNode.Position, node.Position));
+
+                    allPaths.Add(path);
+                    prevNode.OutgoingPathIds.Add(path.Id);
+                    node.IncomingPathIds.Add(path.Id);
+                }
             }
 
-            allNodesByColumn.Add(endNodes);
+            // Create a blank texture for safe mode
+            var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
+            var renderTarget = new RenderTarget2D(graphicsDevice, (int)mapWidth + HORIZONTAL_PADDING * 2, Global.VIRTUAL_HEIGHT);
+            graphicsDevice.SetRenderTarget(renderTarget);
+            graphicsDevice.Clear(Color.Transparent);
+            graphicsDevice.SetRenderTarget(null);
 
-            // --- Connect All Columns ---
-            var allNodes = allNodesByColumn.SelectMany(c => c).ToList();
-            for (int i = 0; i < allNodesByColumn.Count - 1; i++)
-            {
-                var newPaths = ConnectColumnPair(allNodesByColumn[i], allNodesByColumn[i + 1], allPaths, allNodes);
-                allPaths.AddRange(newPaths);
-            }
-
-            // --- Post-Processing: Bad Luck Protection (Rule #3) ---
-            // Ensure player isn't forced into too many consecutive fights without a rest.
-            EnforceRestAfterStreak(allNodesByColumn, allPaths);
-
-            // --- Post-Processing: Enforce Minimum Node Counts (New Rule) ---
-            // Ensures we have at least X of each node type, converting Combat nodes if necessary.
-            EnforceNodeMinimums(allNodes, allPaths, splitData);
-
-            // --- Post-Processing: Anti-Clumping (Rule #2 from prompt) ---
-            // Ensure we don't have Shop->Shop or Rest->Rest.
-            SanitizeNodeRepetition(allNodes, allPaths, splitData);
-
-            // --- Post-Processing: Restricted Column Failsafe (Rule #1) ---
-            // One final pass to absolutely guarantee no Shops/Rests in columns 1 and 2.
-            SanitizeRestrictedColumns(allNodes, splitData);
-
-            // --- Post-Processing: Force-Directed Repulsion ---
-            // This pushes paths apart to prevent ugly tangents and overlaps.
-            ApplyForceDirectedLayout(allPaths, allNodes);
-
-            // --- Final Assembly ---
-            int startNodeId = allNodes.FirstOrDefault(n => n.Floor == 0)?.Id ?? -1;
-
-            if (startNodeId == -1) return null;
-
-            GeneratePathRenderPoints(allPaths, allNodes);
-            var bakedScenery = BakeTreesToTexture(allNodes, allPaths, mapWidth);
-
-            return new SplitMap(allNodes, allPaths, bakedScenery, totalColumns, startNodeId, mapWidth);
+            return new SplitMap(allNodes, allPaths, renderTarget, totalColumns, allNodes[0].Id, mapWidth);
         }
 
         /// <summary>
@@ -335,6 +418,11 @@ namespace ProjectVagabond.Progression
                         RerollNode(toNode, splitData, progressionManager);
                         changesMade = true;
                     }
+                }
+
+                if (changesMade && iterations >= MAX_ITERATIONS)
+                {
+                    throw new MapGenerationFailedException("SanitizeNodeRepetition failed to resolve conflicts within iteration limit.");
                 }
 
             } while (changesMade && iterations < MAX_ITERATIONS);
@@ -742,6 +830,11 @@ namespace ProjectVagabond.Progression
                         }
                     }
                 }
+            }
+
+            if (changed && iterations >= 50)
+            {
+                throw new MapGenerationFailedException("ConnectColumnPair failed to untangle paths within iteration limit.");
             }
 
             // 5. Remove Duplicates (created by swapping)
