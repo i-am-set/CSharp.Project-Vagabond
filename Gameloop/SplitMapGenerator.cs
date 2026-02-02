@@ -223,9 +223,17 @@ namespace ProjectVagabond.Progression
 
                 // Count current nodes of this type
                 int currentCount = allNodes.Count(n => n.NodeType == targetType);
+                int attempts = 0;
 
                 while (currentCount < minCount)
                 {
+                    attempts++;
+                    if (attempts > 50)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[Gen] Could not enforce minimum for {targetType}");
+                        break;
+                    }
+
                     // Find candidates to convert
                     // Must be Battle nodes (we steal from combat)
                     // Must NOT be MajorBattle or Origin
