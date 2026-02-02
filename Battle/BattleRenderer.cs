@@ -31,6 +31,8 @@ namespace ProjectVagabond.Battle.UI
         private readonly TooltipManager _tooltipManager;
         private readonly HitstopManager _hitstopManager;
         private readonly Core _core;
+        private readonly GraphicsDevice _graphicsDevice;
+        private readonly Texture2D _pixel;
 
         private readonly List<TargetInfo> _currentTargets = new List<TargetInfo>();
         private readonly List<StatusIconInfo> _playerStatusIcons = new List<StatusIconInfo>();
@@ -108,6 +110,8 @@ namespace ProjectVagabond.Battle.UI
             _tooltipManager = ServiceLocator.Get<TooltipManager>();
             _hitstopManager = ServiceLocator.Get<HitstopManager>();
             _core = ServiceLocator.Get<Core>();
+            _graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
+            _pixel = ServiceLocator.Get<Texture2D>();
 
             _entityRenderer = new BattleEntityRenderer();
             _hudRenderer = new BattleHudRenderer();
@@ -319,16 +323,14 @@ namespace ProjectVagabond.Battle.UI
 
                 _core.RequestFullscreenOverlay((overlayBatch, uiMatrix) =>
                 {
-                    var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
-                    int screenW = graphicsDevice.PresentationParameters.BackBufferWidth;
-                    int screenH = graphicsDevice.PresentationParameters.BackBufferHeight;
-                    var pixel = ServiceLocator.Get<Texture2D>();
+                    int screenW = _graphicsDevice.PresentationParameters.BackBufferWidth;
+                    int screenH = _graphicsDevice.PresentationParameters.BackBufferHeight;
 
                     float alpha = Math.Clamp(flashState.Timer / flashState.Duration, 0f, 1f);
                     alpha = Easing.EaseOutQuad(alpha);
 
                     overlayBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, Matrix.Identity);
-                    overlayBatch.Draw(pixel, new Rectangle(0, 0, screenW, screenH), flashState.Color * alpha);
+                    overlayBatch.Draw(_pixel, new Rectangle(0, 0, screenW, screenH), flashState.Color * alpha);
                     overlayBatch.End();
 
                     var targetEnemies = enemies.Where(e => flashState.TargetCombatantIDs.Contains(e.CombatantID)).ToList();
@@ -443,7 +445,6 @@ namespace ProjectVagabond.Battle.UI
                 }
             }
 
-            var pixel = ServiceLocator.Get<Texture2D>();
             float offset = (float)gameTime.TotalGameTime.TotalSeconds * 20f;
             const float dashLength = 4f;
             const float gapLength = 4f;
@@ -453,7 +454,7 @@ namespace ProjectVagabond.Battle.UI
                 var targetInfo = _currentTargets.FirstOrDefault(t => t.Combatant == target);
                 if (targetInfo.Combatant != null)
                 {
-                    DrawDottedBox(spriteBatch, pixel, targetInfo.Bounds, _global.Palette_Sun, offset, dashLength, gapLength);
+                    DrawDottedBox(spriteBatch, _pixel, targetInfo.Bounds, _global.Palette_Sun, offset, dashLength, gapLength);
                 }
             }
         }
@@ -1405,7 +1406,8 @@ namespace ProjectVagabond.Battle.UI
             if (move == null || actor == null || candidate == null) return;
 
             bool isActor = actor == candidate;
-            var validTargets = TargetingHelper.GetValidTargets(actor, move.Target, ServiceLocator.Get<BattleManager>().AllCombatants);
+            var battleManager = ServiceLocator.Get<BattleManager>();
+            var validTargets = TargetingHelper.GetValidTargets(actor, move.Target, battleManager.AllCombatants);
             bool isTarget = validTargets.Contains(candidate);
 
             if (isActor)

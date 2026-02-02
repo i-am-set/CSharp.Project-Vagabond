@@ -32,6 +32,8 @@ namespace ProjectVagabond.Battle.UI
         private readonly CombatSwitchDialog _combatSwitchDialog;
         private readonly Global _global;
         private readonly SpriteManager _spriteManager;
+        private readonly Core _core;
+        private readonly HapticsManager _hapticsManager;
 
         public BattleUIState UIState { get; private set; } = BattleUIState.Default;
         public BattleCombatant? StatInfoTarget { get; private set; }
@@ -64,6 +66,9 @@ namespace ProjectVagabond.Battle.UI
         {
             _global = ServiceLocator.Get<Global>();
             _spriteManager = ServiceLocator.Get<SpriteManager>();
+            _core = ServiceLocator.Get<Core>();
+            _hapticsManager = ServiceLocator.Get<HapticsManager>();
+
             _actionMenu = new ActionMenu();
             _switchMenu = new SwitchMenu();
             _combatSwitchDialog = new CombatSwitchDialog(null);
@@ -83,7 +88,7 @@ namespace ProjectVagabond.Battle.UI
             _previousMouseState = Mouse.GetState();
 
             // Initialize Targeting Back Button
-            var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
+            var tertiaryFont = _core.TertiaryFont;
             _targetingBackButton = new Button(Rectangle.Empty, "BACK", font: tertiaryFont, enableHoverSway: false)
             {
                 CustomDefaultTextColor = _global.GameTextColor,
@@ -196,7 +201,7 @@ namespace ProjectVagabond.Battle.UI
 
         private void UpdateTargetingButtonLayout(bool isCentered)
         {
-            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+            var secondaryFont = _core.SecondaryFont;
             string text = "CHOOSE A TARGET";
             Vector2 size = secondaryFont.MeasureString(text);
 
@@ -260,7 +265,7 @@ namespace ProjectVagabond.Battle.UI
                     }
                     else
                     {
-                        ServiceLocator.Get<HapticsManager>().TriggerShake(2f, 0.1f);
+                        _hapticsManager.TriggerShake(2f, 0.1f);
                     }
                 }
             }
@@ -434,8 +439,8 @@ namespace ProjectVagabond.Battle.UI
 
         private void DrawTargetingText(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, bool isCentered)
         {
-            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-            var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
+            var secondaryFont = _core.SecondaryFont;
+            var tertiaryFont = _core.TertiaryFont;
             string text = "CHOOSE A TARGET";
             Vector2 size = secondaryFont.MeasureString(text);
 

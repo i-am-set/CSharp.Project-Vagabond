@@ -49,6 +49,9 @@ namespace ProjectVagabond.Scenes
         private ParticleSystemManager _particleSystemManager;
         private readonly TransitionManager _transitionManager;
         private readonly ProgressionManager _progressionManager;
+        private Core _core;
+        private GraphicsDevice _graphicsDevice;
+        private Texture2D _pixel;
 
         private List<int> _enemyEntityIds = new List<int>();
         private BattleManager.BattlePhase _previousBattlePhase;
@@ -132,6 +135,10 @@ namespace ProjectVagabond.Scenes
         public override void Initialize()
         {
             base.Initialize();
+            _core = ServiceLocator.Get<Core>();
+            _graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
+            _pixel = ServiceLocator.Get<Texture2D>();
+
             _uiManager = new BattleUIManager();
             _renderer = new BattleRenderer();
             _animationManager = new BattleAnimationManager();
@@ -302,7 +309,7 @@ namespace ProjectVagabond.Scenes
 
         private void SetupBattle()
         {
-            var gameState = ServiceLocator.Get<GameState>();
+            var gameState = _gameState;
             var playerParty = new List<BattleCombatant>();
 
             var leaderMember = gameState.PlayerState.Leader;
@@ -741,7 +748,7 @@ namespace ProjectVagabond.Scenes
 
         private void DecrementTemporaryBuffs()
         {
-            var gameState = ServiceLocator.Get<GameState>();
+            var gameState = _gameState;
             var leader = gameState.PlayerState.Leader;
             if (leader == null) return;
 
@@ -785,7 +792,7 @@ namespace ProjectVagabond.Scenes
                 return;
             }
 
-            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+            var secondaryFont = _core.SecondaryFont;
 
             // Draw Battle Log (Background Layer)
             if (!_isBattleLogHovered)
@@ -802,7 +809,7 @@ namespace ProjectVagabond.Scenes
                 Vector2 drawPos = roundTextPosition + origin;
                 float scale = 1.0f;
                 float rotation = 0f;
-                Color color = ServiceLocator.Get<Global>().Palette_DarkShadow;
+                Color color = _global.Palette_DarkShadow;
 
                 if (_roundAnimState == RoundAnimState.Entering)
                 {
@@ -813,7 +820,7 @@ namespace ProjectVagabond.Scenes
                 {
                     float progress = Math.Clamp(_roundAnimTimer / ROUND_ANIM_POP_DURATION, 0f, 1f);
                     scale = MathHelper.Lerp(1.0f, ROUND_MAX_SCALE, Easing.EaseOutCubic(progress));
-                    color = Color.Lerp(ServiceLocator.Get<Global>().Palette_DarkShadow, Color.White, progress);
+                    color = Color.Lerp(_global.Palette_DarkShadow, Color.White, progress);
                 }
                 else if (_roundAnimState == RoundAnimState.Hang)
                 {
@@ -827,7 +834,7 @@ namespace ProjectVagabond.Scenes
                 {
                     float progress = Math.Clamp(_roundAnimTimer / ROUND_ANIM_SETTLE_DURATION, 0f, 1f);
                     scale = MathHelper.Lerp(ROUND_MAX_SCALE, 1.0f, Easing.EaseInCubic(progress));
-                    color = Color.Lerp(Color.White, ServiceLocator.Get<Global>().Palette_DarkShadow, progress);
+                    color = Color.Lerp(Color.White, _global.Palette_DarkShadow, progress);
                 }
                 spriteBatch.DrawStringSnapped(font, roundText, drawPos, color, rotation, origin, scale, SpriteEffects.None, 0f);
             }
@@ -844,14 +851,14 @@ namespace ProjectVagabond.Scenes
 
             if (isFlashing)
             {
-                var core = ServiceLocator.Get<Core>();
+                var core = _core;
                 core.RequestFullscreenOverlay((sb, uiMatrix) =>
                 {
                     sb.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, uiMatrix);
                     _moveAnimationManager.Draw(sb);
                     _uiManager.Draw(sb, font, gameTime, Matrix.Identity);
-                    _animationManager.DrawDamageIndicators(sb, ServiceLocator.Get<Core>().SecondaryFont);
-                    _animationManager.DrawAbilityIndicators(sb, ServiceLocator.Get<Core>().SecondaryFont);
+                    _animationManager.DrawDamageIndicators(sb, _core.SecondaryFont);
+                    _animationManager.DrawAbilityIndicators(sb, _core.SecondaryFont);
                     sb.End();
                 });
             }
@@ -859,8 +866,8 @@ namespace ProjectVagabond.Scenes
             {
                 _moveAnimationManager.Draw(spriteBatch);
                 _uiManager.Draw(spriteBatch, font, gameTime, transform);
-                _animationManager.DrawDamageIndicators(spriteBatch, ServiceLocator.Get<Core>().SecondaryFont);
-                _animationManager.DrawAbilityIndicators(spriteBatch, ServiceLocator.Get<Core>().SecondaryFont);
+                _animationManager.DrawDamageIndicators(spriteBatch, _core.SecondaryFont);
+                _animationManager.DrawAbilityIndicators(spriteBatch, _core.SecondaryFont);
             }
 
             // Draw Battle Log (Foreground Layer - if hovered)
@@ -875,8 +882,8 @@ namespace ProjectVagabond.Scenes
             if (_isFadingOutOnDeath)
             {
                 float alpha = Math.Clamp(_deathFadeTimer / Global.UniversalSlowFadeDuration, 0f, 1f);
-                var pixel = ServiceLocator.Get<Texture2D>();
-                var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
+                var pixel = _pixel;
+                var graphicsDevice = _graphicsDevice;
                 var screenBounds = new Rectangle(0, 0, graphicsDevice.Viewport.Width, graphicsDevice.Viewport.Height);
                 spriteBatch.Draw(pixel, screenBounds, Color.Black * alpha);
             }
@@ -1013,10 +1020,10 @@ namespace ProjectVagabond.Scenes
                         _animationManager.StartDamageNumberIndicator(target.CombatantID, result.DamageAmount, hudPosition);
                     }
                 }
-                if (result.WasGraze) _animationManager.StartDamageIndicator(target.CombatantID, "GRAZE", hudPosition, ServiceLocator.Get<Global>().GrazeIndicatorColor);
+                if (result.WasGraze) _animationManager.StartDamageIndicator(target.CombatantID, "GRAZE", hudPosition, _global.GrazeIndicatorColor);
                 if (result.WasCritical)
                 {
-                    _animationManager.StartDamageIndicator(target.CombatantID, "CRITICAL HIT", hudPosition, ServiceLocator.Get<Global>().CritcalHitIndicatorColor);
+                    _animationManager.StartDamageIndicator(target.CombatantID, "CRITICAL HIT", hudPosition, _global.CritcalHitIndicatorColor);
                 }
                 if (result.WasProtected) _animationManager.StartProtectedIndicator(target.CombatantID, hudPosition);
             }
