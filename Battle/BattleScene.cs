@@ -969,21 +969,26 @@ namespace ProjectVagabond.Scenes
                 {
                     target.HealthBarVisibleTimer = 6.0f;
                     float damageRatio = Math.Clamp((float)result.DamageAmount / target.Stats.MaxHP, 0f, 1f);
+
+                    bool isHeavyHit = result.WasCritical || damageRatio > 0.25f || target.Stats.CurrentHP <= 0;
+
                     const float BASE_JUICE_SCALAR = 3.0f;
                     float juiceIntensity = 1.0f + (damageRatio * BASE_JUICE_SCALAR);
                     if (result.WasCritical) juiceIntensity *= 1.5f;
                     juiceIntensity = Math.Min(juiceIntensity, 5.0f);
+
                     if (!result.WasGraze)
                     {
-                        float baseFreeze = result.WasCritical ? _global.HitstopDuration_Crit : _global.HitstopDuration_Normal;
+                        float baseFreeze = isHeavyHit ? _global.HitstopDuration_Crit : 0.05f;
                         _hitstopManager.Trigger(baseFreeze * juiceIntensity);
                         _animationManager.StartHitstopVisuals(target.CombatantID, result.WasCritical);
-                        if (target.IsPlayerControlled)
+
+                        if (target.IsPlayerControlled && isHeavyHit)
                         {
                             _core.TriggerFullscreenFlash(Color.White, 0.15f * juiceIntensity);
                             _core.TriggerScreenFlashSequence(_global.Palette_Rust);
                         }
-                        else _core.TriggerFullscreenFlash(Color.White, 0.15f * juiceIntensity);
+
                         _hapticsManager.TriggerCompoundShake(0.25f * juiceIntensity);
                     }
                     Vector2 attackerPos = _renderer.GetCombatantVisualCenterPosition(e.Actor, _battleManager.AllCombatants);
