@@ -60,8 +60,11 @@ namespace ProjectVagabond.Battle.UI
         // --- Back Button for Targeting ---
         private Button _targetingBackButton;
 
-        public bool IsBusy => false;
-        public bool IsWaitingForInput => false;
+        public bool IsActionMenuVisible => _actionMenu.IsVisible;
+
+        public bool IsBusy => _combatSwitchDialog.IsActive;
+
+        public bool IsWaitingForInput => _actionMenu.IsVisible || UIState == BattleUIState.Targeting || UIState == BattleUIState.Switch || _combatSwitchDialog.IsActive;
 
         public BattleUIManager()
         {

@@ -714,12 +714,15 @@ namespace ProjectVagabond.Battle.UI
         private void UpdatePlayerPositions(float dt, IEnumerable<BattleCombatant> combatants, BattleAnimationManager animationManager)
         {
             var players = combatants.Where(c => c.IsPlayerControlled).ToList();
-            var activePlayers = players.Where(c => (!c.IsDefeated || animationManager.IsDeathAnimating(c.CombatantID)) && c.IsActiveOnField).ToList();
+
+            var activePlayers = players.Where(c => !c.IsDefeated && c.IsActiveOnField).ToList();
+            var dyingPlayers = players.Where(c => animationManager.IsDeathAnimating(c.CombatantID)).ToList();
+            var visualPlayers = activePlayers.Concat(dyingPlayers).Distinct().ToList();
 
             float centerX = Global.VIRTUAL_WIDTH / 2f;
-            bool shouldCenter = activePlayers.Count == 1;
+            bool shouldCenter = visualPlayers.Count == 1;
 
-            foreach (var player in activePlayers)
+            foreach (var player in visualPlayers)
             {
                 float targetX;
                 if (shouldCenter)
@@ -750,7 +753,7 @@ namespace ProjectVagabond.Battle.UI
                 }
             }
 
-            var keepIds = activePlayers.Select(p => p.CombatantID).ToHashSet();
+            var keepIds = visualPlayers.Select(p => p.CombatantID).ToHashSet();
             var keysToRemove = _playerVisualXPositions.Keys.Where(k => !keepIds.Contains(k)).ToList();
             foreach (var k in keysToRemove) _playerVisualXPositions.Remove(k);
         }
@@ -1627,6 +1630,9 @@ namespace ProjectVagabond.Battle.UI
 
             foreach (var combatant in battleManager.AllCombatants)
             {
+                // Instantly hide HUD if defeated to prevent visual snapping during death animation
+                if (combatant.IsDefeated) continue;
+
                 if (!_combatantBarPositions.TryGetValue(combatant.CombatantID, out var pos)) continue;
 
                 float barX = pos.X;

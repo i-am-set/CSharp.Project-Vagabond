@@ -792,7 +792,9 @@ namespace ProjectVagabond.Battle
 
         private void HandleCheckForDefeat()
         {
-            var finishedDying = _allCombatants.Where(c => c.IsDying).ToList();
+            // 1. Process finished animations (Only if animation is actually done)
+            var finishedDying = _allCombatants.Where(c => c.IsDying && !_animationManager.IsDeathAnimating(c.CombatantID)).ToList();
+
             foreach (var combatant in finishedDying)
             {
                 RecordDefeatedName(combatant);
@@ -803,6 +805,7 @@ namespace ProjectVagabond.Battle
             }
             if (finishedDying.Any()) RefreshCombatantCaches();
 
+            // 2. Check for new deaths
             var newlyDefeated = _allCombatants.FirstOrDefault(c => c.IsDefeated && !c.IsDying && !c.IsRemovalProcessed);
             if (newlyDefeated != null)
             {
@@ -812,9 +815,18 @@ namespace ProjectVagabond.Battle
                 return;
             }
 
+            // 3. Wait for current deaths to finish animating
+            if (_allCombatants.Any(c => c.IsDying))
+            {
+                CanAdvance = false;
+                return;
+            }
+
+            // 4. Check Game Over / Victory
             if (_playerParty.All(c => c.IsDefeated)) { _currentPhase = BattlePhase.BattleOver; _actionQueue.Clear(); return; }
             if (_enemyParty.All(c => c.IsDefeated)) { _currentPhase = BattlePhase.BattleOver; _actionQueue.Clear(); return; }
 
+            // 5. Proceed
             if (_actionQueue.Any() || _actionToExecute != null) _currentPhase = BattlePhase.ActionResolution;
             else if (!_endOfTurnEffectsProcessed) _currentPhase = BattlePhase.EndOfTurn;
             else { _currentPhase = BattlePhase.Reinforcement; _reinforcementSlotIndex = 0; _reinforcementAnnounced = false; }

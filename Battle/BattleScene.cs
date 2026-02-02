@@ -700,6 +700,17 @@ namespace ProjectVagabond.Scenes
                 _previousBattlePhase = currentPhase;
             }
 
+            // --- SAFETY: Ensure UI is visible in ActionSelection ---
+            if (currentPhase == BattleManager.BattlePhase.ActionSelection && !_uiManager.IsActionMenuVisible)
+            {
+                var leader = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && c.BattleSlot == 0);
+                if (leader == null) leader = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && !c.IsDefeated);
+                if (leader != null)
+                {
+                    _uiManager.ShowActionMenu(leader, _battleManager.AllCombatants.ToList());
+                }
+            }
+
             if (_battleManager.CurrentPhase == BattleManager.BattlePhase.BattleOver && !_isBattleOver)
             {
                 _isBattleOver = true;
