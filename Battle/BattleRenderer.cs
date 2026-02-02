@@ -23,16 +23,17 @@ namespace ProjectVagabond.Battle.UI
 {
     public class BattleRenderer
     {
-        private readonly Global _global;
-        private readonly SpriteManager _spriteManager;
+        private Global _global => ServiceLocator.Get<Global>();
+        private SpriteManager _spriteManager => ServiceLocator.Get<SpriteManager>();
+        private TooltipManager _tooltipManager => ServiceLocator.Get<TooltipManager>();
+        private HitstopManager _hitstopManager => ServiceLocator.Get<HitstopManager>();
+        private Core _core => ServiceLocator.Get<Core>();
+        private GraphicsDevice _graphicsDevice => ServiceLocator.Get<GraphicsDevice>();
+        private Texture2D _pixel => ServiceLocator.Get<Texture2D>();
+
         private readonly BattleEntityRenderer _entityRenderer;
         private readonly BattleHudRenderer _hudRenderer;
         private readonly BattleVfxRenderer _vfxRenderer;
-        private readonly TooltipManager _tooltipManager;
-        private readonly HitstopManager _hitstopManager;
-        private readonly Core _core;
-        private readonly GraphicsDevice _graphicsDevice;
-        private readonly Texture2D _pixel;
 
         private readonly List<TargetInfo> _currentTargets = new List<TargetInfo>();
         private readonly List<StatusIconInfo> _playerStatusIcons = new List<StatusIconInfo>();
@@ -105,14 +106,6 @@ namespace ProjectVagabond.Battle.UI
 
         public BattleRenderer()
         {
-            _global = ServiceLocator.Get<Global>();
-            _spriteManager = ServiceLocator.Get<SpriteManager>();
-            _tooltipManager = ServiceLocator.Get<TooltipManager>();
-            _hitstopManager = ServiceLocator.Get<HitstopManager>();
-            _core = ServiceLocator.Get<Core>();
-            _graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
-            _pixel = ServiceLocator.Get<Texture2D>();
-
             _entityRenderer = new BattleEntityRenderer();
             _hudRenderer = new BattleHudRenderer();
             _vfxRenderer = new BattleVfxRenderer();

@@ -653,7 +653,7 @@ namespace ProjectVagabond.Scenes
 
             if (_watchdogTimer > WATCHDOG_TIMEOUT)
             {
-                string stallReport = $"[BATTLE WATCHDOG] STALL DETECTED (>{WATCHDOG_TIMEOUT}s)\n" +
+                string stallReport = $"[BATTLE WATCHDOG] STALL DETECTED (>{WATCHDOG_TIMEOUT}s) - RECOVERING\n" +
                                      $"Phase: {_battleManager.CurrentPhase}\n" +
                                      $"UI Busy: {_uiManager.IsBusy}\n" +
                                      $"Anim Busy: {_animationManager.IsBlockingAnimation}\n" +
@@ -665,8 +665,15 @@ namespace ProjectVagabond.Scenes
 
                 Debug.WriteLine(stallReport);
 
-                // If softlocks persist, check MoveAnimationManager failsafes.
+                _battleManager.ForceAdvance();
+                _uiManager.Reset();
+                _animationManager.Reset();
+                _moveAnimationManager.SkipAll();
                 _watchdogTimer = 0f;
+                _isWaitingForMultiHitDelay = false;
+                _isWaitingForActionExecution = false;
+                _pendingAnimations.Clear();
+                _switchSequenceState = SwitchSequenceState.None;
             }
 
             _lastFramePhase = _battleManager.CurrentPhase;

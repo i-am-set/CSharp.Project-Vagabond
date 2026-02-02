@@ -30,10 +30,11 @@ namespace ProjectVagabond.Battle.UI
         private readonly ActionMenu _actionMenu;
         private readonly SwitchMenu _switchMenu;
         private readonly CombatSwitchDialog _combatSwitchDialog;
-        private readonly Global _global;
-        private readonly SpriteManager _spriteManager;
-        private readonly Core _core;
-        private readonly HapticsManager _hapticsManager;
+
+        private Global _global => ServiceLocator.Get<Global>();
+        private SpriteManager _spriteManager => ServiceLocator.Get<SpriteManager>();
+        private Core _core => ServiceLocator.Get<Core>();
+        private HapticsManager _hapticsManager => ServiceLocator.Get<HapticsManager>();
 
         public BattleUIState UIState { get; private set; } = BattleUIState.Default;
         public BattleCombatant? StatInfoTarget { get; private set; }
@@ -64,11 +65,6 @@ namespace ProjectVagabond.Battle.UI
 
         public BattleUIManager()
         {
-            _global = ServiceLocator.Get<Global>();
-            _spriteManager = ServiceLocator.Get<SpriteManager>();
-            _core = ServiceLocator.Get<Core>();
-            _hapticsManager = ServiceLocator.Get<HapticsManager>();
-
             _actionMenu = new ActionMenu();
             _switchMenu = new SwitchMenu();
             _combatSwitchDialog = new CombatSwitchDialog(null);
