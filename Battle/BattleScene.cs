@@ -646,7 +646,19 @@ namespace ProjectVagabond.Scenes
 
             if (_watchdogTimer > WATCHDOG_TIMEOUT)
             {
-                Debug.WriteLine($"[BATTLE WATCHDOG] Warning: Combat state stagnant for {WATCHDOG_TIMEOUT}s. Phase: {_battleManager.CurrentPhase}");
+                string stallReport = $"[BATTLE WATCHDOG] STALL DETECTED (>{WATCHDOG_TIMEOUT}s)\n" +
+                                     $"Phase: {_battleManager.CurrentPhase}\n" +
+                                     $"UI Busy: {_uiManager.IsBusy}\n" +
+                                     $"Anim Busy: {_animationManager.IsBlockingAnimation}\n" +
+                                     $"MoveAnim Busy: {_moveAnimationManager.IsAnimating}\n" +
+                                     $"Pending Anims: {_pendingAnimations.Count}\n" +
+                                     $"Switch State: {_switchSequenceState}\n" +
+                                     $"MultiHit Wait: {_isWaitingForMultiHitDelay}\n" +
+                                     $"Action Exec Wait: {_isWaitingForActionExecution}";
+
+                Debug.WriteLine(stallReport);
+
+                // If softlocks persist, check MoveAnimationManager failsafes.
                 _watchdogTimer = 0f;
             }
 

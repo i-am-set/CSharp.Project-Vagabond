@@ -4,6 +4,7 @@ using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
@@ -638,6 +639,7 @@ namespace ProjectVagabond.Battle
                 // We check animationTriggered to ensure we don't double-call if the animation was attempted.
                 if (!animationTriggered)
                 {
+                    Debug.WriteLine($"[BattleManager] INFO: No animation triggered for move '{action.ChosenMove.MoveName}'. Proceeding to impact immediately.");
                     ApplyPendingImpact();
                     ProcessMoveActionPostImpact(action);
                 }

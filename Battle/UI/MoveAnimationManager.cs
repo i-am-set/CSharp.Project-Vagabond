@@ -68,6 +68,7 @@ namespace ProjectVagabond.Battle.UI
             // Failsafe 1: No animation defined
             if (string.IsNullOrEmpty(move.AnimationSpriteSheet))
             {
+                Debug.WriteLine($"[MoveAnimationManager] FAILSAFE: Move '{move.MoveName}' has no AnimationSpriteSheet defined. Firing impact immediately.");
                 EventBus.Publish(new GameEvents.MoveImpactOccurred { Move = move });
                 EventBus.Publish(new GameEvents.MoveAnimationCompleted());
                 return;
@@ -78,6 +79,8 @@ namespace ProjectVagabond.Battle.UI
             // Failsafe 2: Animation load failed (and debug fallback failed)
             if (animationData == null)
             {
+                Debug.WriteLine($"[MoveAnimationManager] FAILSAFE: Could not load texture for move '{move.MoveName}' (Sheet: '{move.AnimationSpriteSheet}'). Firing impact immediately.");
+
                 animationData = GetAnimationData("debug_null_animation");
                 if (animationData == null)
                 {
@@ -90,6 +93,7 @@ namespace ProjectVagabond.Battle.UI
             // Failsafe 3: No targets and not centralized (would result in 0 instances)
             if (!move.IsAnimationCentralized && (targets == null || !targets.Any()))
             {
+                Debug.WriteLine($"[MoveAnimationManager] FAILSAFE: Move '{move.MoveName}' is not centralized but has 0 targets. Firing impact immediately.");
                 EventBus.Publish(new GameEvents.MoveImpactOccurred { Move = move });
                 EventBus.Publish(new GameEvents.MoveAnimationCompleted());
                 return;
