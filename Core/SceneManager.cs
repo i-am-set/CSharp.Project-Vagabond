@@ -148,7 +148,6 @@ namespace ProjectVagabond
 
         public void Update(GameTime gameTime)
         {
-            UIInputManager.Update(gameTime);
             UIInputManager.ResetFrameState();
 
             if (IsModalActive)

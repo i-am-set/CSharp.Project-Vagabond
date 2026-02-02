@@ -27,19 +27,20 @@ namespace ProjectVagabond.Utils
     /// </summary>
     public static class GameLogger
     {
+        // --- TUNING: Memory Safety ---
+        private const int MAX_UI_LOG_COUNT = 1000; // Max messages to keep in UI memory before dropping old ones.
+        private const int MAX_FILE_QUEUE_COUNT = 5000; // Max messages waiting to be written to disk before dropping.
+
         // Queue for the UI (DebugConsole) to consume.
         public static readonly ConcurrentQueue<LogMessage> LogQueue = new ConcurrentQueue<LogMessage>();
 
         // Queue for the background file writer.
-        private static readonly BlockingCollection<string> _fileQueue = new BlockingCollection<string>(new ConcurrentQueue<string>());
+        // FIX: Initialized with a bounded capacity to support TryAdd and prevent memory explosions.
+        private static readonly BlockingCollection<string> _fileQueue = new BlockingCollection<string>(new ConcurrentQueue<string>(), MAX_FILE_QUEUE_COUNT);
 
         private static bool _isInitialized = false;
         private static Task _fileWriterTask;
         private static CancellationTokenSource _cancellationTokenSource;
-
-        // --- TUNING: Memory Safety ---
-        private const int MAX_UI_LOG_COUNT = 1000; // Max messages to keep in UI memory before dropping old ones.
-        private const int MAX_FILE_QUEUE_COUNT = 5000; // Max messages waiting to be written to disk before dropping.
 
         public static void Initialize()
         {
@@ -100,11 +101,8 @@ namespace ProjectVagabond.Utils
             string prefix = severity == LogSeverity.Info ? "" : $"[{severity.ToString().ToUpper()}] ";
             string fileLine = $"[{entry.Timestamp:HH:mm:ss}] {prefix}{message}";
 
-            // Prevent Runaway Loop: If file queue is full (disk too slow or spam loop), drop message
-            if (_fileQueue.Count < MAX_FILE_QUEUE_COUNT)
-            {
-                _fileQueue.Add(fileLine);
-            }
+            // If the queue is full, we silently drop the log to preserve framerate.
+            _fileQueue.TryAdd(fileLine);
         }
 
         private static void WriteToFileLoop(string path, CancellationToken token)

@@ -132,8 +132,12 @@ namespace ProjectVagabond.UI
         private float _hoverRotationTimer = 0f;
         private const float HOVER_ROTATION_DURATION = 0.25f;
         private const float BASE_ROTATION_MAGNITUDE = 0.06f;
-        private const float ROTATION_REFERENCE_WIDTH = 32f; 
+        private const float ROTATION_REFERENCE_WIDTH = 32f;
         private const float HOVER_ROTATION_SPEED = 4.0f;
+
+        // --- DEBOUNCE STATE ---
+        private DateTime _lastClickTime = DateTime.MinValue;
+        private const double DEBOUNCE_DURATION = 0.1;
 
         // Text-based constructor
         public Button(Rectangle bounds, string text, string? function = null, Color? customDefaultTextColor = null, Color? customHoverTextColor = null, Color? customDisabledTextColor = null, bool alignLeft = false, float overflowScrollSpeed = 0.0f, bool enableHoverSway = true, BitmapFont? font = null)
@@ -217,13 +221,17 @@ namespace ProjectVagabond.UI
             // Click Logic
             if (IsHovered && mousePressedThisFrame)
             {
-                // If debounce is enabled, check the manager. If disabled, allow click immediately.
-                if (!UseInputDebounce || UIInputManager.CanProcessMouseClick())
+                // Check local debounce timer
+                bool isDebounceClear = (DateTime.Now - _lastClickTime).TotalSeconds > DEBOUNCE_DURATION;
+
+                // If debounce is enabled, check the manager AND local timer. If disabled, allow click immediately.
+                if (!UseInputDebounce || (isDebounceClear && UIInputManager.CanProcessMouseClick()))
                 {
+                    if (UseInputDebounce) _lastClickTime = DateTime.Now;
+
                     TriggerClick();
 
                     // Only consume the global click if debounce is enabled. 
-                    // Otherwise, we leave the manager alone so other non-debounced things can fire (or just to avoid the timer).
                     if (UseInputDebounce)
                     {
                         UIInputManager.ConsumeMouseClick();
@@ -242,8 +250,12 @@ namespace ProjectVagabond.UI
             bool rightMouseReleasedOverButton = IsHovered && currentMouseState.RightButton == ButtonState.Released && _previousMouseState.RightButton == ButtonState.Pressed;
             if (rightMouseReleasedOverButton)
             {
-                if (!UseInputDebounce || UIInputManager.CanProcessMouseClick())
+                bool isDebounceClear = (DateTime.Now - _lastClickTime).TotalSeconds > DEBOUNCE_DURATION;
+
+                if (!UseInputDebounce || (isDebounceClear && UIInputManager.CanProcessMouseClick()))
                 {
+                    if (UseInputDebounce) _lastClickTime = DateTime.Now;
+
                     OnRightClick?.Invoke();
                     if (UseInputDebounce)
                     {
@@ -255,8 +267,12 @@ namespace ProjectVagabond.UI
             bool middleMouseReleasedOverButton = IsHovered && currentMouseState.MiddleButton == ButtonState.Released && _previousMouseState.MiddleButton == ButtonState.Pressed;
             if (middleMouseReleasedOverButton)
             {
-                if (!UseInputDebounce || UIInputManager.CanProcessMouseClick())
+                bool isDebounceClear = (DateTime.Now - _lastClickTime).TotalSeconds > DEBOUNCE_DURATION;
+
+                if (!UseInputDebounce || (isDebounceClear && UIInputManager.CanProcessMouseClick()))
                 {
+                    if (UseInputDebounce) _lastClickTime = DateTime.Now;
+
                     OnMiddleClick?.Invoke();
                     if (UseInputDebounce)
                     {

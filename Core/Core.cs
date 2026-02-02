@@ -429,7 +429,6 @@ namespace ProjectVagabond
 
             if (_debugConsole.IsVisible)
             {
-                UIInputManager.Update(gameTime);
                 _debugConsole.Update(gameTime);
                 _hapticsManager.Update(gameTime);
                 base.Update(gameTime);
