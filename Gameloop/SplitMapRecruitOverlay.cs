@@ -435,7 +435,7 @@ namespace ProjectVagabond.UI
             if (isSelected)
             {
                 var pixel = ServiceLocator.Get<Texture2D>();
-                DrawBeveledBackground(spriteBatch, pixel, bounds, _global.Palette_Shadow);
+                DrawBeveledBackground(spriteBatch, pixel, bounds, _global.Palette_DarkestPale);
                 DrawBeveledBorder(spriteBatch, pixel, bounds, _global.Palette_DarkSun);
             }
             else if (button.IsHovered && button.IsEnabled)
