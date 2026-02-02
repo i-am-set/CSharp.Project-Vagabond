@@ -646,15 +646,7 @@ namespace ProjectVagabond.Scenes
 
             if (_watchdogTimer > WATCHDOG_TIMEOUT)
             {
-                Debug.WriteLine($"[BATTLE WATCHDOG] Softlock detected! Force advancing state.");
-                _uiManager.ForceClearNarration();
-                _animationManager.ForceClearAll();
-                _moveAnimationManager.SkipAll();
-                _pendingAnimations.Clear();
-                _isWaitingForMultiHitDelay = false;
-                _switchSequenceState = SwitchSequenceState.None;
-                _battleManager.ForceAdvance();
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[warning]Combat stalled. Watchdog forced advance." });
+                Debug.WriteLine($"[BATTLE WATCHDOG] Warning: Combat state stagnant for {WATCHDOG_TIMEOUT}s. Phase: {_battleManager.CurrentPhase}");
                 _watchdogTimer = 0f;
             }
 

@@ -602,12 +602,16 @@ namespace ProjectVagabond.Battle
                     else normalTargets.Add(target);
                 }
 
+                bool animationTriggered = false;
+
                 if (normalTargets.Any() && !string.IsNullOrEmpty(action.ChosenMove.AnimationSpriteSheet))
                 {
-                    EventBus.Publish(new GameEvents.MoveAnimationTriggered { Move = action.ChosenMove, Targets = normalTargets, GrazeStatus = grazeStatus });
+                    // Set state BEFORE publishing, in case the animation finishes synchronously
                     _actionPendingAnimation = action;
                     _currentPhase = BattlePhase.AnimatingMove;
                     CanAdvance = false;
+                    animationTriggered = true;
+                    EventBus.Publish(new GameEvents.MoveAnimationTriggered { Move = action.ChosenMove, Targets = normalTargets, GrazeStatus = grazeStatus });
                 }
 
                 if (protectedTargets.Any())
@@ -617,11 +621,26 @@ namespace ProjectVagabond.Battle
                     protectMove.IsAnimationCentralized = false;
                     protectMove.AnimationSpeed = _global.ProtectAnimationSpeed;
                     protectMove.DamageFrameIndex = _global.ProtectDamageFrameIndex;
+
+                    // Set state BEFORE publishing
+                    if (_actionPendingAnimation == null)
+                    {
+                        _actionPendingAnimation = action;
+                        _currentPhase = BattlePhase.AnimatingMove;
+                        CanAdvance = false;
+                    }
+                    animationTriggered = true;
                     EventBus.Publish(new GameEvents.MoveAnimationTriggered { Move = protectMove, Targets = protectedTargets, GrazeStatus = grazeStatus });
-                    if (_actionPendingAnimation == null) { _actionPendingAnimation = action; _currentPhase = BattlePhase.AnimatingMove; CanAdvance = false; }
                 }
 
-                if (_actionPendingAnimation == null) { ApplyPendingImpact(); ProcessMoveActionPostImpact(action); }
+                // Only manually process impact if no animation was triggered (or if they all finished instantly and cleared the flag)
+                // Note: If an animation finished instantly, OnMoveAnimationCompleted would have already called ProcessMoveActionPostImpact.
+                // We check animationTriggered to ensure we don't double-call if the animation was attempted.
+                if (!animationTriggered)
+                {
+                    ApplyPendingImpact();
+                    ProcessMoveActionPostImpact(action);
+                }
             }
             else
             {

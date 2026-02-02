@@ -65,24 +65,34 @@ namespace ProjectVagabond.Battle.UI
         {
             _impactSignalSentForCurrentBatch = false;
 
+            // Failsafe 1: No animation defined
             if (string.IsNullOrEmpty(move.AnimationSpriteSheet))
             {
-                // If no animation, fire impact immediately
                 EventBus.Publish(new GameEvents.MoveImpactOccurred { Move = move });
+                EventBus.Publish(new GameEvents.MoveAnimationCompleted());
                 return;
             }
 
             var animationData = GetAnimationData(move.AnimationSpriteSheet);
 
+            // Failsafe 2: Animation load failed (and debug fallback failed)
             if (animationData == null)
             {
                 animationData = GetAnimationData("debug_null_animation");
                 if (animationData == null)
                 {
-                    // Fallback if even debug animation fails
                     EventBus.Publish(new GameEvents.MoveImpactOccurred { Move = move });
+                    EventBus.Publish(new GameEvents.MoveAnimationCompleted());
                     return;
                 }
+            }
+
+            // Failsafe 3: No targets and not centralized (would result in 0 instances)
+            if (!move.IsAnimationCentralized && (targets == null || !targets.Any()))
+            {
+                EventBus.Publish(new GameEvents.MoveImpactOccurred { Move = move });
+                EventBus.Publish(new GameEvents.MoveAnimationCompleted());
+                return;
             }
 
             if (move.IsAnimationCentralized)
@@ -159,38 +169,13 @@ namespace ProjectVagabond.Battle.UI
             if (!_activeAnimations.Any()) return;
 
             // If impact hasn't fired yet, fire it now.
-            // We check the flag because multiple instances might exist for one move.
             if (!_impactSignalSentForCurrentBatch)
             {
-                // We need the MoveData to fire the event.
-                // Since MoveAnimationInstance doesn't store MoveData directly, we rely on the closure
-                // created in StartAnimation. However, we can't access that here easily.
-                // BUT, the instances have an event OnImpactFrameReached.
-                // We can just trigger that on the first active instance.
-
-                var firstInstance = _activeAnimations.First();
-                // This will invoke HandleImpactTrigger via the event subscription
-                // We simulate reaching the frame.
-                // Note: This relies on the event handler being robust (which it is, checking _impactSignalSentForCurrentBatch).
-
-                // Force update the instance to a state where it triggers? 
-                // Or just clear them and assume the BattleManager handles the state transition?
-                // Actually, BattleManager waits for MoveAnimationCompleted.
-                // If we clear the list, BattleScene fires MoveAnimationCompleted.
-                // BUT BattleManager expects MoveImpactOccurred to have happened first to apply damage.
-
-                // So we MUST trigger the impact logic.
-                // Since we can't easily invoke the private event from outside without reflection or changing the class,
-                // we will iterate and force update them with a huge delta time? No, that might overshoot.
-
-                // Better approach: Just clear the list. 
-                // Wait, if we clear the list, BattleScene fires MoveAnimationCompleted.
-                // In BattleManager.OnMoveAnimationCompleted:
-                // if (_pendingImpact != null) ApplyPendingImpact();
-
-                // So BattleManager ALREADY has a failsafe!
-                // If the animation completes (or is skipped), it checks for pending impact.
-                // So we just need to clear the animations.
+                // We rely on the fact that BattleManager has a failsafe for pending impacts
+                // if the animation completes without firing.
+                // However, to be safe, we can try to trigger it if we had a reference,
+                // but since we don't store the MoveData easily here without the closure,
+                // we rely on the BattleManager's OnMoveAnimationCompleted check for _pendingImpact.
             }
 
             _activeAnimations.Clear();
