@@ -225,11 +225,11 @@ namespace ProjectVagabond.Battle.UI
                 // 4. Switch (Index 3)
                 var switchBtn = new TextOverImageButton(Rectangle.Empty, "SWITCH", null, font: tertiaryFont, enableHoverSway: false, iconTexture: icons, iconSourceRect: _iconRects[1])
                 {
-                    AlignLeft = true,
+                    AlignLeft = false, // Centered
                     IconColorMatchesText = true,
                     CustomDefaultTextColor = global.GameTextColor,
-                    TextRenderOffset = new Vector2(0, -1),
-                    IconRenderOffset = new Vector2(0, -1),
+                    TextRenderOffset = Vector2.Zero, // No weird offsets
+                    IconRenderOffset = Vector2.Zero, // No weird offsets
                     EnableHoverRotation = false
                 };
                 switchBtn.OnClick += () => OnSwitchRequested?.Invoke();
@@ -344,7 +344,9 @@ namespace ProjectVagabond.Battle.UI
                 // Update Switch Button Icon Visibility
                 if (_buttons.Count > 3 && _buttons[3] is TextOverImageButton switchBtn)
                 {
-                    switchBtn.IconSourceRect = switchBtn.IsEnabled ? _iconRects[1] : Rectangle.Empty;
+                    // Show icon only if Enabled AND Hovered
+                    bool showIcon = switchBtn.IsEnabled && switchBtn.IsHovered;
+                    switchBtn.IconSourceRect = showIcon ? _iconRects[1] : Rectangle.Empty;
                 }
 
                 if (isInputBlocked)
@@ -509,8 +511,18 @@ namespace ProjectVagabond.Battle.UI
                 Color? tint = (!btn.IsEnabled || !canAfford) ? global.Palette_DarkShadow : (Color?)null;
                 btn.Draw(spriteBatch, btn.Font, gameTime, transform, false, 0f, snappedOffsetY, tint);
 
-                // Draw Strikethrough for Move Buttons if disabled
-                if (moveIndex != 3 && (!btn.IsEnabled || !canAfford))
+                // Draw Strikethrough for Move Buttons AND Switch Button if disabled
+                bool shouldStrike = false;
+                if (moveIndex != 3)
+                {
+                    shouldStrike = !btn.IsEnabled || !canAfford;
+                }
+                else
+                {
+                    shouldStrike = !btn.IsEnabled;
+                }
+
+                if (shouldStrike)
                 {
                     Vector2 textSize = btn.Font.MeasureString(btn.Text);
                     Vector2 center = new Vector2(rect.Center.X, rect.Center.Y);
