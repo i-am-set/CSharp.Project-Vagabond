@@ -38,6 +38,8 @@ namespace ProjectVagabond.Battle.UI
         public class HealthAnimationState { public string CombatantID; public float StartHP; public float TargetHP; public float Timer; }
         public class AlphaAnimationState { public string CombatantID; public float StartAlpha; public float TargetAlpha; public float Timer; public const float Duration = 0.1f; } // Was 0.167f
 
+        public Func<BattleCombatant, Vector2> GetCombatantPosition { get; set; }
+
         // --- NEW: HUD Entry Animation ---
         public class HudEntryAnimationState
         {
@@ -1425,11 +1427,15 @@ namespace ProjectVagabond.Battle.UI
                 {
                     var targetPlayer = players[i % players.Count];
                     targetId = targetPlayer.CombatantID;
-                    float spriteCenterX = (targetPlayer.BattleSlot == 1)
-                        ? (Global.VIRTUAL_WIDTH * 0.75f)
-                        : (Global.VIRTUAL_WIDTH * 0.25f);
-                    float heartCenterY = 96f;
-                    targetPos = new Vector2(spriteCenterX, heartCenterY);
+
+                    if (GetCombatantPosition != null)
+                    {
+                        targetPos = GetCombatantPosition(targetPlayer);
+                    }
+                    else
+                    {
+                        targetPos = BattleLayout.GetPlayerSpriteCenter(targetPlayer.BattleSlot);
+                    }
                 }
 
                 var coin = new CoinParticle

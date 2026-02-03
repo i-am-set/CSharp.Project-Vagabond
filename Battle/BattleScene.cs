@@ -154,6 +154,13 @@ namespace ProjectVagabond.Scenes
             _uiManager.Reset();
             _renderer.Reset();
             _animationManager.Reset();
+
+            _animationManager.GetCombatantPosition = (c) =>
+            {
+                if (_battleManager == null) return Vector2.Zero;
+                return _renderer.GetCombatantVisualCenterPosition(c, _battleManager.AllCombatants);
+            };
+
             _moveAnimationManager.SkipAll();
             _alertManager.Reset();
 
