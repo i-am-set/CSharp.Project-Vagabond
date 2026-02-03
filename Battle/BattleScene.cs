@@ -483,8 +483,21 @@ namespace ProjectVagabond.Scenes
 
             _animationManager.Update(gameTime, _battleManager.AllCombatants);
             _moveAnimationManager.Update(gameTime);
-            _uiManager.Update(gameTime, currentMouseState, currentKeyboardState, _battleManager.CurrentActingCombatant, _renderer);
-            _inputHandler.Update(gameTime, _uiManager, _renderer);
+
+            // --- INPUT HANDLING REFACTOR ---
+            // Update UI Manager and check if it captured input
+            bool uiCapturedInput = _uiManager.Update(gameTime, currentMouseState, currentKeyboardState, _battleManager.CurrentActingCombatant, _renderer);
+
+            // Only update World Input Handler if UI didn't capture input
+            if (!uiCapturedInput)
+            {
+                _inputHandler.Update(gameTime, _uiManager, _renderer);
+            }
+            else
+            {
+                // If UI captured input, ensure World Input Handler resets its hover state
+                _inputHandler.ResetHover(_uiManager);
+            }
 
             var activeCombatant = _battleManager.CurrentActingCombatant ?? _currentActor;
 

@@ -147,15 +147,16 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        public void Update(GameTime gameTime, MouseState currentMouseState, KeyboardState currentKeyboardState, BattleCombatant currentActor, BattleRenderer renderer)
+        public bool Update(GameTime gameTime, MouseState currentMouseState, KeyboardState currentKeyboardState, BattleCombatant currentActor, BattleRenderer renderer)
         {
+            bool inputConsumed = false;
             SharedPulseTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
             if (_combatSwitchDialog.IsActive)
             {
                 _combatSwitchDialog.Update(gameTime);
                 _previousMouseState = currentMouseState;
-                return;
+                return true; // Modal consumes all input
             }
 
             bool isTargeting = UIState == BattleUIState.Targeting;
@@ -195,7 +196,32 @@ namespace ProjectVagabond.Battle.UI
                 }
             }
 
+            // --- Input Consumption Logic ---
+            // FIX: Use static Core.TransformMouse instead of instance method
+            var mousePos = Core.TransformMouse(currentMouseState.Position);
+
+            if (UIState == BattleUIState.Targeting)
+            {
+                if (_targetingBackButton.Bounds.Contains(mousePos))
+                {
+                    inputConsumed = true;
+                }
+            }
+            else if (UIState == BattleUIState.Switch)
+            {
+                // Consume input to prevent clicking field units while in switch menu
+                inputConsumed = true;
+            }
+            else // Default
+            {
+                if (_actionMenu.HoveredSlotIndex != -1)
+                {
+                    inputConsumed = true;
+                }
+            }
+
             _previousMouseState = currentMouseState;
+            return inputConsumed;
         }
 
         private void UpdateTargetingButtonLayout(bool isCentered)

@@ -36,6 +36,12 @@ namespace ProjectVagabond.Battle.UI
             _previousKeyboardState = Keyboard.GetState();
         }
 
+        public void ResetHover(BattleUIManager uiManager)
+        {
+            _hoveredTargetIndex = -1;
+            uiManager.CombatantHoveredViaSprite = null;
+        }
+
         public void Update(
             GameTime gameTime,
             BattleUIManager uiManager,
