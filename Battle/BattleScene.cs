@@ -590,14 +590,12 @@ namespace ProjectVagabond.Scenes
                                 {
                                     _animationManager.StartFloorOutroAnimation("floor_0");
                                     _animationManager.StartFloorOutroAnimation("floor_1");
-                                    _animationManager.StartFloorIntroAnimation("floor_center");
                                 }
-                                _renderer.ForceDrawCenterFloor = true;
                                 _floorTransitionTriggered = true;
                             }
                             else
                             {
-                                bool floorsBusy = _animationManager.IsFloorAnimatingOut("floor_0") || _animationManager.IsFloorAnimatingOut("floor_1") || _animationManager.GetFloorIntroAnimationState("floor_center") != null;
+                                bool floorsBusy = _animationManager.IsFloorAnimatingOut("floor_0") || _animationManager.IsFloorAnimatingOut("floor_1");
                                 if (!floorsBusy)
                                 {
                                     FinalizeVictory();
