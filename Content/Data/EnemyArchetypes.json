@@ -14,8 +14,9 @@
     "MaxTenacity": 17,
     "MinAgility": 1,
     "MaxAgility": 1,
-    "AttackMoves": [ "1" ],
-    "SpecialMoves": []
+    "BasicMoves": [ "1" ],
+    "CoreMoves": [],
+    "AltMoves": []
   },
   {
     "Id": "sapling",
@@ -32,8 +33,9 @@
     "MaxTenacity": 4,
     "MinAgility": 1,
     "MaxAgility": 2,
-    "AttackMoves": [ "5" ],
-    "SpecialMoves": []
+    "BasicMoves": [ "5" ],
+    "CoreMoves": [],
+    "AltMoves": []
   },
   {
     "Id": "boar",
@@ -50,8 +52,9 @@
     "MaxTenacity": 6,
     "MinAgility": 2,
     "MaxAgility": 3,
-    "AttackMoves": [ "1" ],
-    "SpecialMoves": []
+    "BasicMoves": [ "1" ],
+    "CoreMoves": [],
+    "AltMoves": []
   },
   {
     "Id": "toad",
@@ -68,8 +71,9 @@
     "MaxTenacity": 6,
     "MinAgility": 1,
     "MaxAgility": 3,
-    "AttackMoves": [ "1" ],
-    "SpecialMoves": []
+    "BasicMoves": [ "1" ],
+    "CoreMoves": [],
+    "AltMoves": []
   },
   {
     "Id": "snake",
@@ -86,8 +90,9 @@
     "MaxTenacity": 3,
     "MinAgility": 6,
     "MaxAgility": 7,
-    "AttackMoves": [ "3" ],
-    "SpecialMoves": []
+    "BasicMoves": [ "3" ],
+    "CoreMoves": [],
+    "AltMoves": []
   },
   {
     "Id": "wolf",
@@ -104,8 +109,9 @@
     "MaxTenacity": 4,
     "MinAgility": 5,
     "MaxAgility": 6,
-    "AttackMoves": [ "3" ],
-    "SpecialMoves": []
+    "BasicMoves": [ "3" ],
+    "CoreMoves": [],
+    "AltMoves": []
   },
   {
     "Id": "spider",
@@ -122,7 +128,8 @@
     "MaxTenacity": 3,
     "MinAgility": 6,
     "MaxAgility": 7,
-    "AttackMoves": [ "3" ],
-    "SpecialMoves": []
+    "BasicMoves": [ "3" ],
+    "CoreMoves": [],
+    "AltMoves": []
   }
 ]

@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
+using ProjectVagabond;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Utils;
@@ -470,7 +471,7 @@ namespace ProjectVagabond.Battle
             CurrentActingCombatant = nextAction.Actor;
 
             string moveName = nextAction.ChosenMove?.MoveName ?? "ACTION";
-            string typeColor = nextAction.ChosenMove?.MoveType == MoveType.Spell ? "[cSpell]" : "[cAction]";
+            string typeColor = nextAction.ChosenMove?.MoveType == MoveType.Spell ? "[cAlt]" : "[cAction]";
             AppendToLog($"{nextAction.Actor.Name} USED {typeColor}{moveName}[/].");
 
             // Publish ActionDeclaredEvent
@@ -854,6 +855,15 @@ namespace ProjectVagabond.Battle
         private void HandleEndOfTurn()
         {
             _endOfTurnEffectsProcessed = true;
+
+            foreach (var combatant in _allCombatants)
+            {
+                if (!combatant.IsDefeated && combatant.Stats.CurrentMana < combatant.Stats.MaxMana)
+                {
+                    combatant.Stats.CurrentMana++;
+                }
+            }
+
             foreach (var combatant in _cachedAllActive)
             {
                 // Configure Context

@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
@@ -9,7 +10,10 @@ using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.Battle.UI
 {
@@ -41,7 +45,7 @@ namespace ProjectVagabond.Battle.UI
 
         public int ActiveTargetingSlot { get; private set; } = -1;
         public MoveData? MoveForTargeting { get; private set; }
-        public MoveEntry? SpellForTargeting { get; private set; }
+        public MoveEntry? EntryForTargeting { get; private set; }
         public TargetType? TargetTypeForSelection => UIState == BattleUIState.Targeting ? MoveForTargeting?.Target : null;
 
         public MoveData? HoveredMove => _actionMenu.HoveredMove;
@@ -107,7 +111,7 @@ namespace ProjectVagabond.Battle.UI
             UIState = BattleUIState.Default;
             ActiveTargetingSlot = -1;
             MoveForTargeting = null;
-            SpellForTargeting = null;
+            EntryForTargeting = null;
             HoveredCombatantFromUI = null;
             CombatantHoveredViaSprite = null;
             IntroOffset = Vector2.Zero;
@@ -134,7 +138,7 @@ namespace ProjectVagabond.Battle.UI
             {
                 UIState = BattleUIState.Default;
                 MoveForTargeting = null;
-                SpellForTargeting = null;
+                EntryForTargeting = null;
                 ActiveTargetingSlot = -1;
             }
             else if (UIState == BattleUIState.Switch && !_switchMenu.IsForced)
@@ -240,10 +244,9 @@ namespace ProjectVagabond.Battle.UI
             int btnWidth = 50;
             int btnHeight = 10;
 
-            // Moved down 8 pixels from previous position (+4 -> +12)
             _targetingBackButton.Bounds = new Rectangle(
                 area.Center.X - (btnWidth / 2),
-                (int)(textPos.Y + size.Y + 12),
+                area.Y + 35,
                 btnWidth,
                 btnHeight
             );
@@ -256,7 +259,7 @@ namespace ProjectVagabond.Battle.UI
             if (action.ChosenMove != null && action.ChosenMove.Target != TargetType.None)
             {
                 MoveForTargeting = action.ChosenMove;
-                SpellForTargeting = action.SpellbookEntry;
+                EntryForTargeting = action.SpellbookEntry;
                 ActiveTargetingSlot = slotIndex;
                 UIState = BattleUIState.Targeting;
                 _switchMenu.Hide();
@@ -318,7 +321,7 @@ namespace ProjectVagabond.Battle.UI
                 {
                     Actor = actor,
                     ChosenMove = MoveForTargeting,
-                    SpellbookEntry = SpellForTargeting,
+                    SpellbookEntry = EntryForTargeting,
                     Target = target,
                     Type = QueuedActionType.Move,
                     Priority = MoveForTargeting.Priority,
@@ -329,7 +332,7 @@ namespace ProjectVagabond.Battle.UI
 
                 UIState = BattleUIState.Default;
                 MoveForTargeting = null;
-                SpellForTargeting = null;
+                EntryForTargeting = null;
                 ActiveTargetingSlot = -1;
             }
         }

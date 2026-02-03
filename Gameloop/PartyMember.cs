@@ -19,8 +19,9 @@ namespace ProjectVagabond
 
         public Dictionary<string, string> IntrinsicAbilities { get; set; } = new Dictionary<string, string>();
 
-        public MoveEntry? AttackMove { get; set; }
-        public MoveEntry? SpecialMove { get; set; }
+        public MoveEntry? BasicMove { get; set; }
+        public MoveEntry? CoreMove { get; set; }
+        public MoveEntry? AltMove { get; set; }
 
         public List<TemporaryBuff> ActiveBuffs { get; set; } = new List<TemporaryBuff>();
 
@@ -31,8 +32,9 @@ namespace ProjectVagabond
             var clone = (PartyMember)this.MemberwiseClone();
             clone.IntrinsicAbilities = new Dictionary<string, string>(this.IntrinsicAbilities);
 
-            if (this.AttackMove != null) clone.AttackMove = this.AttackMove.Clone();
-            if (this.SpecialMove != null) clone.SpecialMove = this.SpecialMove.Clone();
+            if (this.BasicMove != null) clone.BasicMove = this.BasicMove.Clone();
+            if (this.CoreMove != null) clone.CoreMove = this.CoreMove.Clone();
+            if (this.AltMove != null) clone.AltMove = this.AltMove.Clone();
 
             clone.ActiveBuffs = new List<TemporaryBuff>();
             foreach (var buff in this.ActiveBuffs)

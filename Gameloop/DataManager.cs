@@ -19,7 +19,7 @@ namespace ProjectVagabond
 
         public void LoadData(string contentRoot)
         {
-            LoadEnemies(Path.Combine(contentRoot, "Data", "Archetypes.json"));
+            LoadEnemies(Path.Combine(contentRoot, "Data", "EnemyArchetypes.json"));
         }
 
         private void LoadEnemies(string filePath)

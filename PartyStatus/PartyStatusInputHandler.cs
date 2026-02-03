@@ -109,7 +109,7 @@ namespace ProjectVagabond.UI
                     {
                         _overlay.HoveredMemberIndex = memberIndex;
                         var member = _overlay.GameState.PlayerState.Party[memberIndex];
-                        var spellEntry = (slotIndex == 0) ? member.AttackMove : member.SpecialMove;
+                        var spellEntry = (slotIndex == 0) ? member.CoreMove : member.AltMove;
                         if (spellEntry != null && BattleDataCache.Moves.TryGetValue(spellEntry.MoveID, out var moveData))
                         {
                             _overlay.HoveredItemData = moveData;

@@ -292,8 +292,8 @@ namespace ProjectVagabond.UI
                     if (attackRect.Contains(mouseInWorldSpace))
                     {
                         _hoveredSpellSlotIndex = 0;
-                        if (candidate.AttackMove != null)
-                            _hoveredItemData = BattleDataCache.Moves.GetValueOrDefault(candidate.AttackMove.MoveID);
+                        if (candidate.CoreMove != null)
+                            _hoveredItemData = BattleDataCache.Moves.GetValueOrDefault(candidate.CoreMove.MoveID);
                     }
                     currentY += spellButtonHeight;
 
@@ -302,8 +302,8 @@ namespace ProjectVagabond.UI
                     if (specialRect.Contains(mouseInWorldSpace))
                     {
                         _hoveredSpellSlotIndex = 1;
-                        if (candidate.SpecialMove != null)
-                            _hoveredItemData = BattleDataCache.Moves.GetValueOrDefault(candidate.SpecialMove.MoveID);
+                        if (candidate.AltMove != null)
+                            _hoveredItemData = BattleDataCache.Moves.GetValueOrDefault(candidate.AltMove.MoveID);
                     }
                 }
             }
@@ -558,11 +558,11 @@ namespace ProjectVagabond.UI
             int spellButtonX = centerX - (spellButtonWidth / 2);
 
             // Draw Attack Move
-            DrawMoveButton(spriteBatch, member.AttackMove, spellButtonX, currentY, spellButtonWidth, spellButtonHeight, _hoveredSpellSlotIndex == 0 && _hoveredInternalCandidateIndex == index);
+            DrawMoveButton(spriteBatch, member.CoreMove, spellButtonX, currentY, spellButtonWidth, spellButtonHeight, _hoveredSpellSlotIndex == 0 && _hoveredInternalCandidateIndex == index);
             currentY += spellButtonHeight;
 
             // Draw Special Move
-            DrawMoveButton(spriteBatch, member.SpecialMove, spellButtonX, currentY, spellButtonWidth, spellButtonHeight, _hoveredSpellSlotIndex == 1 && _hoveredInternalCandidateIndex == index);
+            DrawMoveButton(spriteBatch, member.AltMove, spellButtonX, currentY, spellButtonWidth, spellButtonHeight, _hoveredSpellSlotIndex == 1 && _hoveredInternalCandidateIndex == index);
         }
 
         private void DrawMoveButton(SpriteBatch spriteBatch, MoveEntry? entry, int x, int y, int w, int h, bool isHovered)

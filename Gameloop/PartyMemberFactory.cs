@@ -39,24 +39,22 @@ namespace ProjectVagabond.Battle
                 Debug.WriteLine($"[PartyMemberFactory] {member.Name} generated with passive: {string.Join(", ", member.IntrinsicAbilities.Keys)}");
             }
 
-            // Assign Attack Move
-            if (data.AttackMovePool != null && data.AttackMovePool.Any())
+            // Assign Basic Move
+            if (!string.IsNullOrEmpty(data.BasicMoveId) && BattleDataCache.Moves.ContainsKey(data.BasicMoveId))
             {
-                string moveId = data.AttackMovePool[_rng.Next(data.AttackMovePool.Count)];
-                if (BattleDataCache.Moves.ContainsKey(moveId))
-                {
-                    member.AttackMove = new MoveEntry(moveId, 0);
-                }
+                member.BasicMove = new MoveEntry(data.BasicMoveId, 0);
             }
 
-            // Assign Special Move
-            if (data.SpecialMovePool != null && data.SpecialMovePool.Any())
+            // Assign Core Move
+            if (!string.IsNullOrEmpty(data.CoreMoveId) && BattleDataCache.Moves.ContainsKey(data.CoreMoveId))
             {
-                string moveId = data.SpecialMovePool[_rng.Next(data.SpecialMovePool.Count)];
-                if (BattleDataCache.Moves.ContainsKey(moveId))
-                {
-                    member.SpecialMove = new MoveEntry(moveId, 0);
-                }
+                member.CoreMove = new MoveEntry(data.CoreMoveId, 0);
+            }
+
+            // Assign Alt Move
+            if (!string.IsNullOrEmpty(data.AltMoveId) && BattleDataCache.Moves.ContainsKey(data.AltMoveId))
+            {
+                member.AltMove = new MoveEntry(data.AltMoveId, 0);
             }
 
             return member;

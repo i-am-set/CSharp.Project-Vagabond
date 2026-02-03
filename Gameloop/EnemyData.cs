@@ -26,7 +26,8 @@ namespace ProjectVagabond.Battle
         public int MinAgility { get; set; }
         public int MaxAgility { get; set; }
 
-        public List<string> AttackMoves { get; set; } = new List<string>();
-        public List<string> SpecialMoves { get; set; } = new List<string>();
+        public List<string> BasicMoves { get; set; } = new List<string>();
+        public List<string> CoreMoves { get; set; } = new List<string>();
+        public List<string> AltMoves { get; set; } = new List<string>();
     }
 }

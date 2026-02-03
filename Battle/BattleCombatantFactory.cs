@@ -33,8 +33,9 @@ namespace ProjectVagabond.Battle
                     Tenacity = gameState.PlayerState.GetEffectiveStat(member, "Tenacity"),
                     Agility = gameState.PlayerState.GetEffectiveStat(member, "Agility")
                 },
-                AttackMove = member.AttackMove,
-                SpecialMove = member.SpecialMove,
+                BasicMove = member.BasicMove,
+                CoreMove = member.CoreMove,
+                AltMove = member.AltMove,
                 PortraitIndex = member.PortraitIndex
             };
 
@@ -107,23 +108,37 @@ namespace ProjectVagabond.Battle
             combatant.CurrentTenacity = combatant.Stats.Tenacity;
             combatant.VisualHP = combatant.Stats.CurrentHP;
 
-            // Assign Attack Move
-            if (enemyData.AttackMoves != null && enemyData.AttackMoves.Any())
+            // Assign Basic Move
+            if (enemyData.BasicMoves != null && enemyData.BasicMoves.Any())
             {
-                string moveId = enemyData.AttackMoves[_random.Next(enemyData.AttackMoves.Count)];
+                string moveId = enemyData.BasicMoves[_random.Next(enemyData.BasicMoves.Count)];
                 if (BattleDataCache.Moves.ContainsKey(moveId))
                 {
-                    combatant.AttackMove = new MoveEntry(moveId, 0);
+                    combatant.BasicMove = new MoveEntry(moveId, 0);
+                }
+            }
+            else if (BattleDataCache.Moves.ContainsKey("6")) // Fallback to stall if no basic move defined
+            {
+                combatant.BasicMove = new MoveEntry("6", 0);
+            }
+
+            // Assign Core Move
+            if (enemyData.CoreMoves != null && enemyData.CoreMoves.Any())
+            {
+                string moveId = enemyData.CoreMoves[_random.Next(enemyData.CoreMoves.Count)];
+                if (BattleDataCache.Moves.ContainsKey(moveId))
+                {
+                    combatant.CoreMove = new MoveEntry(moveId, 0);
                 }
             }
 
-            // Assign Special Move
-            if (enemyData.SpecialMoves != null && enemyData.SpecialMoves.Any())
+            // Assign Alt Move
+            if (enemyData.AltMoves != null && enemyData.AltMoves.Any())
             {
-                string moveId = enemyData.SpecialMoves[_random.Next(enemyData.SpecialMoves.Count)];
+                string moveId = enemyData.AltMoves[_random.Next(enemyData.AltMoves.Count)];
                 if (BattleDataCache.Moves.ContainsKey(moveId))
                 {
-                    combatant.SpecialMove = new MoveEntry(moveId, 0);
+                    combatant.AltMove = new MoveEntry(moveId, 0);
                 }
             }
 

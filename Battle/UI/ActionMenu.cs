@@ -31,7 +31,7 @@ namespace ProjectVagabond.Battle.UI
         // Tooltip / Hover State
         public MoveData? HoveredMove { get; private set; }
         public int HoveredSlotIndex { get; private set; } = -1;
-        public MoveEntry? SelectedSpellbookEntry { get; private set; }
+        public MoveEntry? SelectedMoveEntry { get; private set; }
 
         // Layout
         private const int PANEL_WIDTH = 146;
@@ -159,7 +159,6 @@ namespace ProjectVagabond.Battle.UI
             public int SlotIndex { get; }
             public BattleCombatant Combatant { get; }
             public MoveData? HoveredMove { get; private set; }
-            public bool IsSwitchHovered { get; private set; }
 
             public event Action<QueuedAction>? OnActionSelected;
             public event Action? OnSwitchRequested;
@@ -171,15 +170,15 @@ namespace ProjectVagabond.Battle.UI
             private bool _hasBench;
             private Rectangle[] _iconRects;
 
-            private const int BUTTON_WIDTH = 48;
-            private const int BUTTON_HEIGHT = 10;
-            private const int BUTTON_SPACING = 0;
+            // --- Button Layout Configuration ---
+            private const int BUTTON_WIDTH = 45;
+            private const int BUTTON_HEIGHT = 9;
+            private const int BUTTON_SPACING = 1;
 
             // --- Info Box Configuration ---
-            private const int INFO_BOX_WIDTH = 146;
+            private const int INFO_BOX_WIDTH = 139;
             private const int INFO_BOX_HEIGHT = 34;
-            private const int INFO_BOX_OFFSET_X = -2;
-            private const int INFO_BOX_OFFSET_Y = 12; // Below the 10px buttons
+            private const int INFO_BOX_OFFSET_Y = 12; // Below the buttons
 
             public CombatantPanel(BattleCombatant combatant, List<BattleCombatant> allCombatants)
             {
@@ -200,22 +199,30 @@ namespace ProjectVagabond.Battle.UI
 
             public void SetSwitchButtonAllowed(bool allowed)
             {
-                if (_buttons.Count > 2)
+                if (_buttons.Count > 3)
                 {
-                    _buttons[2].IsEnabled = allowed && _hasBench;
+                    _buttons[3].IsEnabled = allowed && _hasBench;
                 }
             }
 
             private void InitializeButtons(List<BattleCombatant> allCombatants)
             {
+                var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
                 var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
                 var global = ServiceLocator.Get<Global>();
                 var spriteManager = ServiceLocator.Get<SpriteManager>();
                 var icons = spriteManager.ActionIconsSpriteSheet;
 
-                AddActionButton("ATTACK", Combatant.AttackMove, icons, _iconRects[2], tertiaryFont, global);
-                AddActionButton("SPECIAL", Combatant.SpecialMove, icons, _iconRects[3], tertiaryFont, global);
+                // 1. Basic (Index 0)
+                AddActionButton("BASIC", Combatant.BasicMove, secondaryFont, global);
 
+                // 2. Core (Index 1)
+                AddActionButton("CORE", Combatant.CoreMove, secondaryFont, global);
+
+                // 3. Alt (Index 2)
+                AddActionButton("ALT", Combatant.AltMove, secondaryFont, global);
+
+                // 4. Switch (Index 3)
                 var switchBtn = new TextOverImageButton(Rectangle.Empty, "SWITCH", null, font: tertiaryFont, enableHoverSway: false, iconTexture: icons, iconSourceRect: _iconRects[1])
                 {
                     AlignLeft = true,
@@ -238,20 +245,20 @@ namespace ProjectVagabond.Battle.UI
                 _cancelButton.OnClick += () => OnCancelRequested?.Invoke();
             }
 
-            private void AddActionButton(string label, MoveEntry? entry, Texture2D icons, Rectangle iconRect, BitmapFont font, Global global)
+            private void AddActionButton(string label, MoveEntry? entry, BitmapFont font, Global global)
             {
                 bool moveExists = entry != null && BattleDataCache.Moves.ContainsKey(entry.MoveID);
 
-                var btn = new TextOverImageButton(Rectangle.Empty, label, null, font: font, enableHoverSway: false, iconTexture: icons, iconSourceRect: iconRect)
+                // Standard Button (No Icon, Centered Text)
+                var btn = new Button(Rectangle.Empty, label, font: font, enableHoverSway: false)
                 {
-                    AlignLeft = true,
-                    IconColorMatchesText = true,
-                    CustomDefaultTextColor = moveExists ? global.GameTextColor : global.Palette_DarkShadow,
-                    CustomHoverTextColor = global.ButtonHoverColor,
-                    TextRenderOffset = new Vector2(0, -1),
-                    IconRenderOffset = new Vector2(0, -1),
+                    CustomDefaultTextColor = moveExists ? global.Palette_Black : global.Palette_DarkShadow,
+                    CustomHoverTextColor = global.Palette_Black, // Hover color is handled by bg change, text stays black
                     IsEnabled = moveExists,
-                    EnableHoverRotation = false
+                    // NEW SETTINGS
+                    HoverAnimation = HoverAnimationType.None, // Disable scale
+                    WaveEffectType = TextEffectType.Drift,    // Change text effect
+                    EnableTextWave = true
                 };
 
                 if (moveExists)
@@ -289,18 +296,37 @@ namespace ProjectVagabond.Battle.UI
 
             private void LayoutButtons()
             {
-                int x = (int)_position.X;
+                // Calculate total width of the 3 buttons + spacing
+                int totalButtonsWidth = (BUTTON_WIDTH * 3) + (BUTTON_SPACING * 2);
+
+                // Center the group within the panel
+                float panelCenterX = _position.X + (PANEL_WIDTH / 2f);
+                int startX = (int)(panelCenterX - (totalButtonsWidth / 2f));
                 int y = (int)_position.Y + 1;
 
+                // Layout the 3 move buttons in the top row
                 for (int i = 0; i < 3; i++)
                 {
-                    _buttons[i].Bounds = new Rectangle(x, y, BUTTON_WIDTH, BUTTON_HEIGHT);
-                    x += BUTTON_WIDTH + BUTTON_SPACING;
+                    // Hitbox is 1px wider to fill the gap
+                    _buttons[i].Bounds = new Rectangle(startX, y, BUTTON_WIDTH + 1, BUTTON_HEIGHT);
+                    startX += BUTTON_WIDTH + BUTTON_SPACING;
                 }
 
+                // Layout the Switch button below the middle button (Core)
+                int switchW = 50;
+                int switchH = 15;
+                int switchY = (int)_position.Y + INFO_BOX_OFFSET_Y + 2;
+
+                _buttons[3].Bounds = new Rectangle(
+                    (int)(panelCenterX - switchW / 2),
+                    switchY,
+                    switchW,
+                    switchH
+                );
+
+                // Layout Cancel Button
                 int cancelW = 50;
                 int cancelH = 15;
-                float panelCenterX = _position.X + (PANEL_WIDTH / 2f);
                 float panelCenterY = _position.Y + (BattleLayout.ACTION_MENU_HEIGHT / 2f);
 
                 _cancelButton.Bounds = new Rectangle(
@@ -314,7 +340,6 @@ namespace ProjectVagabond.Battle.UI
             public void Update(MouseState mouse, GameTime gameTime, bool isInputBlocked, bool isLocked)
             {
                 HoveredMove = null;
-                IsSwitchHovered = false;
 
                 if (isInputBlocked)
                 {
@@ -335,22 +360,25 @@ namespace ProjectVagabond.Battle.UI
                         if (btn.IsHovered && btn.IsEnabled)
                         {
                             int index = _buttons.IndexOf(btn);
-                            if (index == 0)
+                            if (index == 0) // Basic
                             {
-                                var entry = Combatant.AttackMove;
+                                var entry = Combatant.BasicMove;
                                 if (entry != null && BattleDataCache.Moves.TryGetValue(entry.MoveID, out var m))
                                     HoveredMove = m;
                             }
-                            else if (index == 1)
+                            else if (index == 1) // Core
                             {
-                                var entry = Combatant.SpecialMove;
+                                var entry = Combatant.CoreMove;
                                 if (entry != null && BattleDataCache.Moves.TryGetValue(entry.MoveID, out var m))
                                     HoveredMove = m;
                             }
-                            else if (index == 2)
+                            else if (index == 2) // Alt
                             {
-                                IsSwitchHovered = true;
+                                var entry = Combatant.AltMove;
+                                if (entry != null && BattleDataCache.Moves.TryGetValue(entry.MoveID, out var m))
+                                    HoveredMove = m;
                             }
+                            // Index 3 is Switch, which does not populate HoveredMove
                         }
                     }
                 }
@@ -382,18 +410,24 @@ namespace ProjectVagabond.Battle.UI
                 }
                 else
                 {
-                    // Draw Info Box Background
-                    var infoBoxRect = new Rectangle(
-                        (int)_position.X + INFO_BOX_OFFSET_X,
-                        (int)_position.Y + INFO_BOX_OFFSET_Y + snappedOffsetY,
-                        INFO_BOX_WIDTH,
-                        INFO_BOX_HEIGHT
-                    );
-                    DrawBeveledBackground(spriteBatch, pixel, infoBoxRect, global.Palette_DarkShadow);
+                    // 1. Draw Switch Button (Index 3) first so it is underneath the info panel if it appears
+                    DrawButton(spriteBatch, _buttons[3], pixel, global, snappedOffsetY, gameTime, transform);
 
+                    // 2. Draw Info Box (Only if populated)
                     if (HoveredMove != null)
                     {
-                        // Populated State: Inner box is just the description area
+                        float panelCenterX = _position.X + (PANEL_WIDTH / 2f);
+                        var infoBoxRect = new Rectangle(
+                            (int)(panelCenterX - (INFO_BOX_WIDTH / 2f)),
+                            (int)_position.Y + INFO_BOX_OFFSET_Y + snappedOffsetY,
+                            INFO_BOX_WIDTH,
+                            INFO_BOX_HEIGHT
+                        );
+
+                        // Opaque background to cover the switch button
+                        DrawBeveledBackground(spriteBatch, pixel, infoBoxRect, global.Palette_DarkShadow);
+
+                        // Inner description area background
                         var descBgRect = new Rectangle(
                             infoBoxRect.X + 1,
                             infoBoxRect.Bottom - 1 - 18,
@@ -402,61 +436,13 @@ namespace ProjectVagabond.Battle.UI
                         );
                         DrawBeveledBackground(spriteBatch, pixel, descBgRect, global.Palette_Black);
 
-                        DrawInfoBoxContent(spriteBatch, infoBoxRect, HoveredMove, global, false);
-                    }
-                    else if (IsSwitchHovered)
-                    {
-                        // Switch Hover State: Same background structure as Move
-                        var descBgRect = new Rectangle(
-                            infoBoxRect.X + 1,
-                            infoBoxRect.Bottom - 1 - 18,
-                            infoBoxRect.Width - 2,
-                            18
-                        );
-                        DrawBeveledBackground(spriteBatch, pixel, descBgRect, global.Palette_Black);
-
-                        DrawInfoBoxContent(spriteBatch, infoBoxRect, null, global, true);
-                    }
-                    else
-                    {
-                        // Empty State: Inner box fills entire area minus 1px bezel
-                        var emptyInnerRect = new Rectangle(
-                            infoBoxRect.X + 1,
-                            infoBoxRect.Y + 1,
-                            infoBoxRect.Width - 2,
-                            infoBoxRect.Height - 2
-                        );
-                        DrawBeveledBackground(spriteBatch, pixel, emptyInnerRect, global.Palette_Black);
+                        DrawInfoBoxContent(spriteBatch, infoBoxRect, HoveredMove, global);
                     }
 
-                    for (int i = 0; i < _buttons.Count; i++)
+                    // 3. Draw Move Buttons (Indices 0, 1, 2)
+                    for (int i = 0; i < 3; i++)
                     {
-                        var btn = _buttons[i];
-                        var rect = btn.Bounds;
-                        rect.Y += snappedOffsetY;
-
-                        var visualRect = new Rectangle(rect.X, rect.Y, rect.Width, rect.Height - 1);
-                        Color bgColor;
-                        bool canAfford = true;
-
-                        if (i < 2)
-                        {
-                            MoveEntry? entry = (i == 0) ? Combatant.AttackMove : Combatant.SpecialMove;
-                            if (entry != null && BattleDataCache.Moves.TryGetValue(entry.MoveID, out var moveData))
-                            {
-                                var manaDump = moveData.Abilities.OfType<ManaDumpAbility>().FirstOrDefault();
-                                if (manaDump != null) canAfford = Combatant.Stats.CurrentMana > 0;
-                                else canAfford = Combatant.Stats.CurrentMana >= moveData.ManaCost;
-                            }
-                        }
-
-                        if (!btn.IsEnabled || !canAfford) bgColor = global.Palette_Black;
-                        else if (btn.IsHovered) bgColor = global.Palette_Rust;
-                        else bgColor = global.Palette_DarkestPale;
-
-                        DrawBeveledBackground(spriteBatch, pixel, visualRect, bgColor);
-                        Color? tint = (!btn.IsEnabled || !canAfford) ? global.Palette_DarkShadow : (Color?)null;
-                        btn.Draw(spriteBatch, btn.Font, gameTime, transform, false, 0f, snappedOffsetY, tint);
+                        DrawButton(spriteBatch, _buttons[i], pixel, global, snappedOffsetY, gameTime, transform, i);
                     }
                 }
 
@@ -470,7 +456,50 @@ namespace ProjectVagabond.Battle.UI
                 }
             }
 
-            private void DrawInfoBoxContent(SpriteBatch spriteBatch, Rectangle bounds, MoveData? move, Global global, bool isSwitch)
+            private void DrawButton(SpriteBatch spriteBatch, Button btn, Texture2D pixel, Global global, int snappedOffsetY, GameTime gameTime, Matrix transform, int moveIndex = -1)
+            {
+                var rect = btn.Bounds;
+                rect.Y += snappedOffsetY;
+
+                // Visual rect uses fixed dimensions to ensure 9px height and 45px width, ignoring the 1px hitbox extension
+                var visualRect = new Rectangle(rect.X, rect.Y, BUTTON_WIDTH, BUTTON_HEIGHT);
+                Color bgColor;
+                bool canAfford = true;
+
+                if (moveIndex != -1)
+                {
+                    MoveEntry? entry = null;
+                    if (moveIndex == 0) entry = Combatant.BasicMove;
+                    else if (moveIndex == 1) entry = Combatant.CoreMove;
+                    else if (moveIndex == 2) entry = Combatant.AltMove;
+
+                    if (entry != null && BattleDataCache.Moves.TryGetValue(entry.MoveID, out var moveData))
+                    {
+                        var manaDump = moveData.Abilities.OfType<ManaDumpAbility>().FirstOrDefault();
+                        if (manaDump != null) canAfford = Combatant.Stats.CurrentMana > 0;
+                        else canAfford = Combatant.Stats.CurrentMana >= moveData.ManaCost;
+                    }
+                }
+
+                if (!btn.IsEnabled || !canAfford) bgColor = global.Palette_Black;
+                else if (btn.IsHovered) bgColor = global.Palette_Rust;
+                else
+                {
+                    switch (moveIndex)
+                    {
+                        case 0: bgColor = global.Palette_DarkestPale; break;
+                        case 1: bgColor = global.Palette_Pale; break;
+                        case 2: bgColor = global.Palette_DarkPale; break;
+                        default: bgColor = global.Palette_DarkestPale; break;
+                    }
+                }
+
+                DrawBeveledBackground(spriteBatch, pixel, visualRect, bgColor);
+                Color? tint = (!btn.IsEnabled || !canAfford) ? global.Palette_DarkShadow : (Color?)null;
+                btn.Draw(spriteBatch, btn.Font, gameTime, transform, false, 0f, snappedOffsetY, tint);
+            }
+
+            private void DrawInfoBoxContent(SpriteBatch spriteBatch, Rectangle bounds, MoveData move, Global global)
             {
                 var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
                 var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
@@ -486,24 +515,12 @@ namespace ProjectVagabond.Battle.UI
                 int currentX = startX;
                 int currentY = startY;
 
-                string name, desc;
-                string powTxt = "", accTxt = "", mnaTxt = "", useTxt = "";
-
-                if (isSwitch)
-                {
-                    name = "SWITCH";
-                    desc = "SWITCH TO A BENCHED PARTY MEMBER";
-                }
-                else if (move != null)
-                {
-                    name = move.MoveName.ToUpper();
-                    desc = move.Description;
-                    powTxt = move.Power > 0 ? move.Power.ToString() : "--";
-                    accTxt = move.Accuracy > 0 ? $"{move.Accuracy}%" : "--";
-                    mnaTxt = move.ManaCost.ToString();
-                    useTxt = GetStatShortName(move.OffensiveStat);
-                }
-                else return;
+                string name = move.MoveName.ToUpper();
+                string desc = move.Description;
+                string powTxt = move.Power > 0 ? move.Power.ToString() : "--";
+                string accTxt = move.Accuracy > 0 ? $"{move.Accuracy}%" : "--";
+                string mnaTxt = move.ManaCost.ToString();
+                string useTxt = GetStatShortName(move.OffensiveStat);
 
                 void DrawPair(string label, string val)
                 {
@@ -514,13 +531,10 @@ namespace ProjectVagabond.Battle.UI
                     currentX += (int)secondaryFont.MeasureString(val).Width + pairSpacing;
                 }
 
-                if (!isSwitch)
-                {
-                    DrawPair("POW", powTxt);
-                    DrawPair("ACC", accTxt);
-                    DrawPair("MNA", mnaTxt);
-                    DrawPair("USE", useTxt);
-                }
+                DrawPair("POW", powTxt);
+                DrawPair("ACC", accTxt);
+                DrawPair("MNA", mnaTxt);
+                DrawPair("USE", useTxt);
 
                 // Name
                 currentX = startX;
@@ -634,9 +648,12 @@ namespace ProjectVagabond.Battle.UI
 
             private void DrawBeveledBackground(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, Color color)
             {
-                spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 2, rect.Y, rect.Width - 4, 1), color);
-                spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 2, rect.Bottom - 1, rect.Width - 4, 1), color);
-                spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 1, rect.Y + 1, rect.Width - 2, rect.Height - 2), color);
+                // Top and Bottom edges (inset by 1px on each side)
+                spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 1, rect.Y, rect.Width - 2, 1), color);
+                spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 1, rect.Bottom - 1, rect.Width - 2, 1), color);
+
+                // Middle block (full height minus top/bottom edges)
+                spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X, rect.Y + 1, rect.Width, rect.Height - 2), color);
             }
         }
     }

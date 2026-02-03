@@ -213,7 +213,7 @@ namespace ProjectVagabond.UI
                         var btn = _overlay.PartySpellButtons[buttonIndex];
                         if (isOccupied)
                         {
-                            MoveEntry? spellEntry = (s == 0) ? member!.AttackMove : member!.SpecialMove;
+                            MoveEntry? spellEntry = (s == 0) ? member!.CoreMove : member!.AltMove;
                             if (spellEntry != null && BattleDataCache.Moves.TryGetValue(spellEntry.MoveID, out var moveData))
                             {
                                 btn.SpellName = moveData.MoveName;

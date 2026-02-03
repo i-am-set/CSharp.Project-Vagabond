@@ -30,8 +30,8 @@ namespace ProjectVagabond
 
         public int PortraitIndex { get => Leader?.PortraitIndex ?? 0; set { if (Leader != null) Leader.PortraitIndex = value; } }
 
-        public MoveEntry? AttackMove { get => Leader?.AttackMove; set { if (Leader != null) Leader.AttackMove = value; } }
-        public MoveEntry? SpecialMove { get => Leader?.SpecialMove; set { if (Leader != null) Leader.SpecialMove = value; } }
+        public MoveEntry? CoreMove { get => Leader?.CoreMove; set { if (Leader != null) Leader.CoreMove = value; } }
+        public MoveEntry? AltMove { get => Leader?.AltMove; set { if (Leader != null) Leader.AltMove = value; } }
 
         public PlayerState() { }
 
@@ -75,17 +75,17 @@ namespace ProjectVagabond
 
             // Simple logic: Fill Attack if empty, then Special if empty.
             // If both full, replace Special.
-            if (target.AttackMove == null)
+            if (target.CoreMove == null)
             {
-                target.AttackMove = new MoveEntry(moveId, 0);
+                target.CoreMove = new MoveEntry(moveId, 0);
             }
-            else if (target.SpecialMove == null)
+            else if (target.AltMove == null)
             {
-                target.SpecialMove = new MoveEntry(moveId, 0);
+                target.AltMove = new MoveEntry(moveId, 0);
             }
             else
             {
-                target.SpecialMove = new MoveEntry(moveId, 0);
+                target.AltMove = new MoveEntry(moveId, 0);
             }
         }
 
@@ -94,8 +94,8 @@ namespace ProjectVagabond
             var target = member ?? Leader;
             if (target == null) return;
 
-            if (target.AttackMove?.MoveID == moveId) target.AttackMove = null;
-            if (target.SpecialMove?.MoveID == moveId) target.SpecialMove = null;
+            if (target.CoreMove?.MoveID == moveId) target.CoreMove = null;
+            if (target.AltMove?.MoveID == moveId) target.AltMove = null;
         }
     }
 }

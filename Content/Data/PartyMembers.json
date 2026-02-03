@@ -10,8 +10,9 @@
     "Intelligence": 5,
     "Tenacity": 3,
     "Agility": 4,
-    "AttackMovePool": [ "11" ],
-    "SpecialMovePool": [ "12" ],
+    "BasicMoveId": "4",
+    "CoreMoveId": "11",
+    "AltMoveId": "12",
     "PassiveAbilityPool": [
       { "PMPyromancer": "" }
     ]
@@ -27,8 +28,9 @@
     "Intelligence": 4,
     "Tenacity": 3,
     "Agility": 5,
-    "AttackMovePool": [ "2" ],
-    "SpecialMovePool": [ "18" ],
+    "BasicMoveId": "4",
+    "CoreMoveId": "2",
+    "AltMoveId": "18",
     "PassiveAbilityPool": [
       { "PMAnnoying": "" }
     ]
@@ -44,8 +46,9 @@
     "Intelligence": 3,
     "Tenacity": 3,
     "Agility": 4,
-    "AttackMovePool": [ "4" ],
-    "SpecialMovePool": [],
+    "BasicMoveId": "4",
+    "CoreMoveId": "4",
+    "AltMoveId": "",
     "PassiveAbilityPool": [
       { "PMScrappy": "" }
     ]
@@ -61,8 +64,9 @@
     "Intelligence": 7,
     "Tenacity": 2,
     "Agility": 7,
-    "AttackMovePool": [ "4" ],
-    "SpecialMovePool": [],
+    "BasicMoveId": "4",
+    "CoreMoveId": "4",
+    "AltMoveId": "",
     "PassiveAbilityPool": [
       { "PMShortTemper": "" }
     ]
@@ -78,15 +82,16 @@
     "Intelligence": 3,
     "Tenacity": 5,
     "Agility": 3,
-    "AttackMovePool": [ "42" ],
-    "SpecialMovePool": [ "43" ],
+    "BasicMoveId": "4",
+    "CoreMoveId": "42",
+    "AltMoveId": "43",
     "PassiveAbilityPool": [
       { "PMMajestic": "" }
     ],
     "StartingRelics": {
-      "20": 1
+        "20": 1
     }
-  },
+},
   {
     "MemberID": "5",
     "Name": "Abu",
@@ -98,8 +103,9 @@
     "Intelligence": 4,
     "Tenacity": 5,
     "Agility": 5,
-    "AttackMovePool": [ "38" ],
-    "SpecialMovePool": [ "39" ],
+    "BasicMoveId": "4",
+    "CoreMoveId": "38",
+    "AltMoveId": "39",
     "PassiveAbilityPool": [
       { "PMSweetpea": "" }
     ]
@@ -115,8 +121,9 @@
     "Intelligence": 4,
     "Tenacity": 3,
     "Agility": 3,
-    "AttackMovePool": [ "4" ],
-    "SpecialMovePool": [],
+    "BasicMoveId": "4",
+    "CoreMoveId": "4",
+    "AltMoveId": "",
     "PassiveAbilityPool": [
       { "PMSkeptic": "" }
     ]
@@ -132,8 +139,9 @@
     "Intelligence": 4,
     "Tenacity": 3,
     "Agility": 4,
-    "AttackMovePool": [ "4" ],
-    "SpecialMovePool": [],
+    "BasicMoveId": "4",
+    "CoreMoveId": "4",
+    "AltMoveId": "",
     "PassiveAbilityPool": [
       { "PM9Lives": "" }
     ]
@@ -149,8 +157,9 @@
     "Intelligence": 6,
     "Tenacity": 3,
     "Agility": 1,
-    "AttackMovePool": [ "4" ],
-    "SpecialMovePool": [],
+    "BasicMoveId": "4",
+    "CoreMoveId": "4",
+    "AltMoveId": "",
     "PassiveAbilityPool": [
       { "PMMinutiae": "" }
     ]
@@ -166,8 +175,9 @@
     "Intelligence": 4,
     "Tenacity": 4,
     "Agility": 5,
-    "AttackMovePool": [ "4" ],
-    "SpecialMovePool": [],
+    "BasicMoveId": "4",
+    "CoreMoveId": "4",
+    "AltMoveId": "",
     "PassiveAbilityPool": []
   },
   {
@@ -181,8 +191,9 @@
     "Intelligence": 4,
     "Tenacity": 4,
     "Agility": 3,
-    "AttackMovePool": [ "4" ],
-    "SpecialMovePool": [],
+    "BasicMoveId": "4",
+    "CoreMoveId": "4",
+    "AltMoveId": "",
     "PassiveAbilityPool": [
       { "PMGentleSoul": "" }
     ]
@@ -198,8 +209,9 @@
     "Intelligence": 3,
     "Tenacity": 6,
     "Agility": 2,
-    "AttackMovePool": [ "4" ],
-    "SpecialMovePool": [],
+    "BasicMoveId": "4",
+    "CoreMoveId": "4",
+    "AltMoveId": "",
     "PassiveAbilityPool": [
       { "PMWellfed": "" }
     ]
@@ -215,8 +227,9 @@
     "Intelligence": 3,
     "Tenacity": 4,
     "Agility": 4,
-    "AttackMovePool": [ "4" ],
-    "SpecialMovePool": [],
+    "BasicMoveId": "4",
+    "CoreMoveId": "4",
+    "AltMoveId": "",
     "PassiveAbilityPool": [
       { "PMStubborn": "" }
     ]
@@ -232,8 +245,9 @@
     "Intelligence": 1,
     "Tenacity": 7,
     "Agility": 1,
-    "AttackMovePool": [ "5" ],
-    "SpecialMovePool": [],
+    "BasicMoveId": "5",
+    "CoreMoveId": "5",
+    "AltMoveId": "",
     "PassiveAbilityPool": []
   },
   {
@@ -247,8 +261,9 @@
     "Intelligence": 6,
     "Tenacity": 3,
     "Agility": 5,
-    "AttackMovePool": [ "4" ],
-    "SpecialMovePool": [],
+    "BasicMoveId": "4",
+    "CoreMoveId": "4",
+    "AltMoveId": "",
     "PassiveAbilityPool": []
   }
 ]

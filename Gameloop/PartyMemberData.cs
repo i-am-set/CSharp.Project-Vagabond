@@ -18,8 +18,9 @@ namespace ProjectVagabond.Battle
         public int Tenacity { get; set; }
         public int Agility { get; set; }
 
-        public List<string> AttackMovePool { get; set; } = new List<string>();
-        public List<string> SpecialMovePool { get; set; } = new List<string>();
+        public string BasicMoveId { get; set; }
+        public string CoreMoveId { get; set; }
+        public string AltMoveId { get; set; }
 
         public List<Dictionary<string, string>> PassiveAbilityPool { get; set; } = new List<Dictionary<string, string>>();
     }

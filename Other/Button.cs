@@ -243,8 +243,10 @@ namespace ProjectVagabond.UI
             _isPressed = IsHovered && mouseIsDown;
 
             // Update Target Scale
+            bool shouldScale = HoverAnimation == HoverAnimationType.Scale || HoverAnimation == HoverAnimationType.ScaleUp;
+
             if (_isPressed) _targetScale = PRESS_SCALE;
-            else if (IsHovered) _targetScale = HOVER_SCALE;
+            else if (IsHovered && shouldScale) _targetScale = HOVER_SCALE;
             else _targetScale = 1.0f;
 
             bool rightMouseReleasedOverButton = IsHovered && currentMouseState.RightButton == ButtonState.Released && _previousMouseState.RightButton == ButtonState.Pressed;

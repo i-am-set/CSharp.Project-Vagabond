@@ -86,8 +86,11 @@ namespace ProjectVagabond.Battle.UI
 
             // Configure Text Animation
             EnableTextWave = true;
-            // Use LeftAlignedSmallWave to match the left alignment
-            WaveEffectType = TextEffectType.LeftAlignedSmallWave;
+            // Changed to Drift as requested
+            WaveEffectType = TextEffectType.Drift;
+
+            // Disable hover scaling
+            HoverAnimation = HoverAnimationType.None;
         }
 
         public void TriggerAppearAnimation()
@@ -419,6 +422,7 @@ namespace ProjectVagabond.Battle.UI
                         }
                         // Else: Continuous effects just keep growing _waveTimer
 
+                        // Use finalScaleX/Y which are just appear scale (no hover scale)
                         TextAnimator.DrawTextWithEffect(spriteBatch, _moveFont, this.Text, rotatedTextPos - textOrigin, textColor * contentAlpha, WaveEffectType, _waveTimer, new Vector2(finalScaleX, finalScaleY), null, _currentHoverRotation);
                     }
                     else

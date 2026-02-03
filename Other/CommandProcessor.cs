@@ -196,8 +196,8 @@ namespace ProjectVagabond
                     var member = PartyMemberFactory.CreateMember("0"); // Oakley
                     if (member != null)
                     {
-                        string move1 = member.AttackMove?.MoveID ?? "Empty";
-                        string move2 = member.SpecialMove?.MoveID ?? "Empty";
+                        string move1 = member.CoreMove?.MoveID ?? "Empty";
+                        string move2 = member.AltMove?.MoveID ?? "Empty";
 
                         string moveName1 = "Unknown";
                         if (BattleDataCache.Moves.TryGetValue(move1, out var m1)) moveName1 = m1.MoveName;
@@ -555,8 +555,8 @@ namespace ProjectVagabond
             var leader = ps.Leader;
             if (leader != null)
             {
-                Log($"  Attack: {leader.AttackMove?.MoveID ?? "Empty"} (Used: {leader.AttackMove?.TimesUsed ?? 0})");
-                Log($"  Special: {leader.SpecialMove?.MoveID ?? "Empty"} (Used: {leader.SpecialMove?.TimesUsed ?? 0})");
+                Log($"  Attack: {leader.CoreMove?.MoveID ?? "Empty"} (Used: {leader.CoreMove?.TimesUsed ?? 0})");
+                Log($"  Special: {leader.AltMove?.MoveID ?? "Empty"} (Used: {leader.AltMove?.TimesUsed ?? 0})");
             }
             else
             {

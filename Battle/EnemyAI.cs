@@ -1,11 +1,20 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Battle.UI;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.Battle
 {
@@ -325,8 +334,9 @@ namespace ProjectVagabond.Battle
         private static QueuedAction CreateAction(BattleCombatant actor, MoveData move, BattleCombatant target)
         {
             MoveEntry? entry = null;
-            if (actor.AttackMove != null && actor.AttackMove.MoveID == move.MoveID) entry = actor.AttackMove;
-            else if (actor.SpecialMove != null && actor.SpecialMove.MoveID == move.MoveID) entry = actor.SpecialMove;
+            if (actor.CoreMove != null && actor.CoreMove.MoveID == move.MoveID) entry = actor.CoreMove;
+            else if (actor.AltMove != null && actor.AltMove.MoveID == move.MoveID) entry = actor.AltMove;
+            else if (actor.BasicMove != null && actor.BasicMove.MoveID == move.MoveID) entry = actor.BasicMove;
 
             return new QueuedAction
             {
