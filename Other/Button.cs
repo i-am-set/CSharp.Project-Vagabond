@@ -112,7 +112,6 @@ namespace ProjectVagabond.UI
         private float _targetScale = 1.0f;
         private const float SCALE_SPEED = 75f;
         private const float HOVER_SCALE = 1.1f;
-        // FIX: Set PRESS_SCALE to match HOVER_SCALE to prevent shrinking/shifting on click
         private const float PRESS_SCALE = 1.1f;
 
         // Feedback Animation State
@@ -215,11 +214,11 @@ namespace ProjectVagabond.UI
                 }
             }
 
-            bool mousePressedThisFrame = currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released;
+            // --- CLICK LOGIC (On Release) ---
+            bool mouseReleasedThisFrame = currentMouseState.LeftButton == ButtonState.Released && _previousMouseState.LeftButton == ButtonState.Pressed;
             bool mouseIsDown = currentMouseState.LeftButton == ButtonState.Pressed;
 
-            // Click Logic
-            if (IsHovered && mousePressedThisFrame)
+            if (IsHovered && mouseReleasedThisFrame)
             {
                 // Check local debounce timer
                 bool isDebounceClear = (DateTime.Now - _lastClickTime).TotalSeconds > DEBOUNCE_DURATION;
@@ -242,12 +241,20 @@ namespace ProjectVagabond.UI
             // Visual pressed state is active as long as mouse is down over the button.
             _isPressed = IsHovered && mouseIsDown;
 
-            // Update Target Scale
+            // --- SCALE LOGIC ---
             bool shouldScale = HoverAnimation == HoverAnimationType.Scale || HoverAnimation == HoverAnimationType.ScaleUp;
 
-            if (_isPressed) _targetScale = PRESS_SCALE;
-            else if (IsHovered && shouldScale) _targetScale = HOVER_SCALE;
-            else _targetScale = 1.0f;
+            if (shouldScale)
+            {
+                if (_isPressed) _targetScale = PRESS_SCALE;
+                else if (IsHovered) _targetScale = HOVER_SCALE;
+                else _targetScale = 1.0f;
+            }
+            else
+            {
+                // If scaling is disabled (e.g. MoveButton), force 1.0f even if pressed
+                _targetScale = 1.0f;
+            }
 
             bool rightMouseReleasedOverButton = IsHovered && currentMouseState.RightButton == ButtonState.Released && _previousMouseState.RightButton == ButtonState.Pressed;
             if (rightMouseReleasedOverButton)
