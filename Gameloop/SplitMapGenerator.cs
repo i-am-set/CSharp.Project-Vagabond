@@ -621,9 +621,16 @@ namespace ProjectVagabond.Progression
             }
             else
             {
+                int attempts = 0;
                 do
                 {
                     numNodes = _random.Next(MIN_NODES_PER_COLUMN, MAX_NODES_PER_COLUMN + 1);
+                    attempts++;
+                    if (attempts > 50)
+                    {
+                        System.Diagnostics.Debug.WriteLine("[Gen] PlaceNodesForColumn loop limit reached. Accepting current numNodes.");
+                        break;
+                    }
                 } while (numNodes == previousColumnNodeCount && numNodes != 1);
             }
 
@@ -755,6 +762,11 @@ namespace ProjectVagabond.Progression
                         }
                     }
                 }
+            }
+
+            if (iterations >= 50)
+            {
+                System.Diagnostics.Debug.WriteLine("[Gen] ConnectColumnPair untangle loop limit reached.");
             }
 
             // Note: If iterations >= 50, we simply accept the current state. 

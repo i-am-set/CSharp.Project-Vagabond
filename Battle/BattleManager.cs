@@ -85,6 +85,9 @@ namespace ProjectVagabond.Battle
         // Context for Ability System
         private readonly BattleContext _battleContext;
 
+        // Watchdog for animation softlocks
+        private float _phaseWatchdogTimer = 0f;
+
         public BattleManager(List<BattleCombatant> playerParty, List<BattleCombatant> enemyParty, BattleAnimationManager animationManager)
         {
             _playerParty = playerParty;
@@ -328,6 +331,22 @@ namespace ProjectVagabond.Battle
 
         public void Update(float deltaTime)
         {
+            // Watchdog Logic
+            if (_currentPhase == BattlePhase.AnimatingMove)
+            {
+                _phaseWatchdogTimer += deltaTime;
+                if (_phaseWatchdogTimer > 4.0f)
+                {
+                    Debug.WriteLine("[BattleManager] WATCHDOG TRIGGERED: Animation phase timed out. Forcing advance.");
+                    OnMoveAnimationCompleted(new GameEvents.MoveAnimationCompleted());
+                    _phaseWatchdogTimer = 0f;
+                }
+            }
+            else
+            {
+                _phaseWatchdogTimer = 0f;
+            }
+
             if (_currentPhase == BattlePhase.BattleOver) return;
             if (!CanAdvance && _currentPhase != BattlePhase.WaitingForSwitchCompletion && _currentPhase != BattlePhase.PreActionAnimation) return;
 
