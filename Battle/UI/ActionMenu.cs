@@ -176,7 +176,7 @@ namespace ProjectVagabond.Battle.UI
             private const int BUTTON_SPACING = 1;
 
             // --- Info Box Configuration ---
-            private const int INFO_BOX_WIDTH = 139;
+            private const int INFO_BOX_WIDTH = 140;
             private const int INFO_BOX_HEIGHT = 34;
             private const int INFO_BOX_OFFSET_Y = 12; // Below the buttons
 
@@ -341,6 +341,12 @@ namespace ProjectVagabond.Battle.UI
             {
                 HoveredMove = null;
 
+                // Update Switch Button Icon Visibility
+                if (_buttons.Count > 3 && _buttons[3] is TextOverImageButton switchBtn)
+                {
+                    switchBtn.IconSourceRect = switchBtn.IsEnabled ? _iconRects[1] : Rectangle.Empty;
+                }
+
                 if (isInputBlocked)
                 {
                     foreach (var btn in _buttons) btn.IsHovered = false;
@@ -411,7 +417,7 @@ namespace ProjectVagabond.Battle.UI
                 else
                 {
                     // 1. Draw Switch Button (Index 3) first so it is underneath the info panel if it appears
-                    DrawButton(spriteBatch, _buttons[3], pixel, global, snappedOffsetY, gameTime, transform);
+                    DrawButton(spriteBatch, _buttons[3], pixel, global, snappedOffsetY, gameTime, transform, 3);
 
                     // 2. Draw Info Box (Only if populated)
                     if (HoveredMove != null)
@@ -466,7 +472,7 @@ namespace ProjectVagabond.Battle.UI
                 Color bgColor;
                 bool canAfford = true;
 
-                if (moveIndex != -1)
+                if (moveIndex != -1 && moveIndex != 3) // Move Buttons
                 {
                     MoveEntry? entry = null;
                     if (moveIndex == 0) entry = Combatant.BasicMove;
@@ -494,9 +500,24 @@ namespace ProjectVagabond.Battle.UI
                     }
                 }
 
-                DrawBeveledBackground(spriteBatch, pixel, visualRect, bgColor);
+                // Only draw background if NOT switch button (index 3)
+                if (moveIndex != 3)
+                {
+                    DrawBeveledBackground(spriteBatch, pixel, visualRect, bgColor);
+                }
+
                 Color? tint = (!btn.IsEnabled || !canAfford) ? global.Palette_DarkShadow : (Color?)null;
                 btn.Draw(spriteBatch, btn.Font, gameTime, transform, false, 0f, snappedOffsetY, tint);
+
+                // Draw Strikethrough for Move Buttons if disabled
+                if (moveIndex != 3 && (!btn.IsEnabled || !canAfford))
+                {
+                    Vector2 textSize = btn.Font.MeasureString(btn.Text);
+                    Vector2 center = new Vector2(rect.Center.X, rect.Center.Y);
+                    Vector2 start = new Vector2(center.X - textSize.X / 2f - 1, center.Y);
+                    Vector2 end = new Vector2(center.X + textSize.X / 2f + 1, center.Y);
+                    spriteBatch.DrawLineSnapped(start, end, global.ButtonDisableColor);
+                }
             }
 
             private void DrawInfoBoxContent(SpriteBatch spriteBatch, Rectangle bounds, MoveData move, Global global)
@@ -524,10 +545,10 @@ namespace ProjectVagabond.Battle.UI
 
                 void DrawPair(string label, string val)
                 {
-                    spriteBatch.DrawStringSnapped(tertiaryFont, label, new Vector2(currentX, currentY + 1), global.Palette_Fruit);
+                    spriteBatch.DrawStringSnapped(tertiaryFont, label, new Vector2(currentX, currentY + 1), global.Palette_Black);
                     currentX += (int)tertiaryFont.MeasureString(label).Width + labelValueGap;
 
-                    spriteBatch.DrawStringSnapped(secondaryFont, val, new Vector2(currentX, currentY), global.Palette_DarkSun);
+                    spriteBatch.DrawStringSnapped(secondaryFont, val, new Vector2(currentX, currentY), global.Palette_DarkestPale);
                     currentX += (int)secondaryFont.MeasureString(val).Width + pairSpacing;
                 }
 
@@ -540,7 +561,7 @@ namespace ProjectVagabond.Battle.UI
                 currentX = startX;
                 currentY += (rowSpacing - 2);
 
-                spriteBatch.DrawStringSnapped(secondaryFont, name, new Vector2(currentX, currentY), global.Palette_Sun);
+                spriteBatch.DrawStringSnapped(secondaryFont, name, new Vector2(currentX, currentY), global.Palette_DarkPale);
 
                 // Description
                 currentY += rowSpacing;
@@ -563,7 +584,7 @@ namespace ProjectVagabond.Battle.UI
                     {
                         string tag = part.Substring(1, part.Length - 2);
                         if (tag == "/" || tag.Equals("default", StringComparison.OrdinalIgnoreCase))
-                            currentColor = global.Palette_Sun;
+                            currentColor = global.Palette_Pale;
                         else
                             currentColor = global.GetNarrationColor(tag);
                     }
@@ -609,8 +630,9 @@ namespace ProjectVagabond.Battle.UI
                     }
                 }
 
-                // Calculate Vertical Center
-                int totalHeight = lines.Count * tertiaryFont.LineHeight;
+                // Calculate Vertical Center with 1px gap
+                int lineHeight = tertiaryFont.LineHeight + 1;
+                int totalHeight = lines.Count * lineHeight;
                 int availableHeight = bounds.Bottom - currentY - 2;
                 int startDrawY = currentY + (availableHeight - totalHeight) / 2;
 
@@ -618,7 +640,7 @@ namespace ProjectVagabond.Battle.UI
 
                 foreach (var line in lines)
                 {
-                    if (startDrawY + tertiaryFont.LineHeight > bounds.Bottom) break;
+                    if (startDrawY + lineHeight > bounds.Bottom) break;
 
                     float lineWidth = 0;
                     foreach (var item in line) lineWidth += tertiaryFont.MeasureString(item.Text).Width;
@@ -630,7 +652,7 @@ namespace ProjectVagabond.Battle.UI
                         spriteBatch.DrawStringSnapped(tertiaryFont, item.Text, new Vector2(lineX, startDrawY), item.Color);
                         lineX += tertiaryFont.MeasureString(item.Text).Width;
                     }
-                    startDrawY += tertiaryFont.LineHeight;
+                    startDrawY += lineHeight;
                 }
             }
 

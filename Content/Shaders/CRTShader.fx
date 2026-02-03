@@ -37,7 +37,7 @@ static const float ZOOM = 1.01;             // 1.0 = No Zoom, 1.03 = Crop Bezels
 static const float BLACK_LEVEL = 0.03;      // 0.0 = Pure Black, 0.03 = Phosphor Glow, 0.1 = Washed Out
 
 // Scanlines
-static const float SCANLINE_OPACITY_MIN = 0.60f; // 0.0 = Black Lines, 0.5 = Soft Lines, 1.0 = Invisible
+static const float SCANLINE_OPACITY_MIN = 0.70f; // 0.0 = Black Lines, 0.5 = Soft Lines, 1.0 = Invisible
 static const float SCANLINE_OPACITY_MAX = 1.0f;  // 1.0 = Full Brightness (Standard)
 static const float SCANLINE_CRAWL_SPEED = 0.0f;  // 0.0 = Static (Authentic), 1.0 = Slow Roll, 5.0 = Fast Roll
 
