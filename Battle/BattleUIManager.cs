@@ -49,6 +49,7 @@ namespace ProjectVagabond.Battle.UI
         public TargetType? TargetTypeForSelection => UIState == BattleUIState.Targeting ? MoveForTargeting?.Target : null;
 
         public MoveData? HoveredMove => _actionMenu.HoveredMove;
+        public int HoveredSlotIndex => _actionMenu.HoveredSlotIndex;
 
         public BattleCombatant? HoveredCombatantFromUI { get; private set; } = null;
 

@@ -411,6 +411,10 @@ namespace ProjectVagabond.Battle.UI
                     {
                         actor = battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && c.BattleSlot == uiManager.ActiveTargetingSlot);
                     }
+                    else if (uiManager.HoveredMove != null && uiManager.HoveredSlotIndex != -1)
+                    {
+                        actor = battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && c.BattleSlot == uiManager.HoveredSlotIndex);
+                    }
 
                     if (move != null && actor != null)
                     {
