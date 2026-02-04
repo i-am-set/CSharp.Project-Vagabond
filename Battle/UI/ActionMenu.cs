@@ -214,13 +214,13 @@ namespace ProjectVagabond.Battle.UI
                 var icons = spriteManager.ActionIconsSpriteSheet;
 
                 // 1. Basic (Index 0) - DarkestPale
-                AddActionButton("BASIC", Combatant.BasicMove, secondaryFont, global, global.Palette_DarkestPale);
+                AddActionButton("BASIC", Combatant.BasicMove, secondaryFont, global, global.Palette_DarkShadow);
 
                 // 2. Core (Index 1) - Pale
-                AddActionButton("CORE", Combatant.CoreMove, secondaryFont, global, global.Palette_Pale);
+                AddActionButton("CORE", Combatant.CoreMove, secondaryFont, global, global.Palette_DarkestPale);
 
                 // 3. Alt (Index 2) - DarkPale
-                AddActionButton("ALT", Combatant.AltMove, secondaryFont, global, global.Palette_DarkPale);
+                AddActionButton("ALT", Combatant.AltMove, secondaryFont, global, global.Palette_DarkShadow);
 
                 // 4. Switch (Index 3)
                 var switchBtn = new TextOverImageButton(Rectangle.Empty, "SWITCH", null, font: tertiaryFont, enableHoverSway: false, iconTexture: icons, iconSourceRect: _iconRects[1])
