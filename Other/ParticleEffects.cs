@@ -489,5 +489,48 @@ namespace ProjectVagabond.Particles
 
             return settings;
         }
+
+        /// <summary>
+        /// Creates a burst of rising blue sparkles for mana restoration.
+        /// </summary>
+        public static ParticleEmitterSettings CreateManaBurst()
+        {
+            var settings = ParticleEmitterSettings.CreateDefault();
+            var global = ServiceLocator.Get<Global>();
+
+            // Emitter
+            settings.Shape = EmitterShape.Circle;
+            settings.EmitFrom = EmissionSource.Volume;
+            settings.EmitterSize = new Vector2(30f, 30f); // Wide and flat
+            settings.EmissionRate = 25;
+            settings.BurstCount = 1; // Increased count
+            settings.Duration = 0.5f; // Give the emitter plenty of time to exist while particles float
+
+            // Initial Particle
+            settings.Lifetime = new FloatRange(1.0f, 2.5f); // Live much longer
+            settings.InitialVelocityX = new FloatRange(-5f, 5f); // Reduced spread speed
+            settings.InitialVelocityY = new FloatRange(-20f, -5f); // Very slow rise
+
+            // Scale 1.0 = 3x3 pixels. Scale 2.0 = 6x6 pixels.
+            settings.InitialSize = new FloatRange(2f, 2f);
+            settings.EndSize = new FloatRange(0f);
+            settings.InterpolateSize = true;
+
+            // Over Lifetime
+            settings.Gravity = new Vector2(0, -5f); // Tiny upward drift
+            settings.Drag = 0.3f; // Low drag to let them drift
+            settings.StartColor = global.Palette_Sky;
+            settings.EndColor = global.Palette_Sea;
+            settings.StartAlpha = 1.0f;
+            settings.EndAlpha = 0.0f;
+
+            // Rendering
+            // Use the new 3x3 plus sprite
+            settings.Texture = ServiceLocator.Get<SpriteManager>().HealParticleSprite;
+            settings.BlendMode = BlendState.Additive;
+            settings.LayerDepth = 0.9f;
+
+            return settings;
+        }
     }
 }

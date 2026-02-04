@@ -150,7 +150,7 @@ namespace ProjectVagabond.Battle
         {
             if (_currentPhase == BattlePhase.SecondaryEffectResolution) _currentPhase = BattlePhase.CheckForDefeat;
             else if (_currentPhase == BattlePhase.CheckForDefeat) HandleCheckForDefeat();
-            else if (_currentPhase == BattlePhase.EndOfTurn) { RoundNumber++; _currentPhase = BattlePhase.StartOfTurn; }
+            else if (_currentPhase == BattlePhase.EndOfTurn) HandleEndOfTurn();
             else if (_currentPhase == BattlePhase.Reinforcement) HandleReinforcements();
             else if (_currentPhase == BattlePhase.ActionResolution) HandleActionResolution();
             CanAdvance = true;
@@ -860,7 +860,10 @@ namespace ProjectVagabond.Battle
             {
                 if (!combatant.IsDefeated && combatant.Stats.CurrentMana < combatant.Stats.MaxMana)
                 {
+                    float manaBefore = combatant.Stats.CurrentMana;
                     combatant.Stats.CurrentMana++;
+                    float manaAfter = combatant.Stats.CurrentMana;
+                    EventBus.Publish(new GameEvents.CombatantManaRestored { Target = combatant, AmountRestored = 1, ManaBefore = manaBefore, ManaAfter = manaAfter });
                 }
             }
 

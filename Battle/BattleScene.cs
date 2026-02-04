@@ -1111,6 +1111,12 @@ namespace ProjectVagabond.Scenes
         private void OnCombatantManaRestored(GameEvents.CombatantManaRestored e)
         {
             e.Target.ManaBarVisibleTimer = 6.0f;
+
+            Vector2 targetPos = _renderer.GetCombatantVisualCenterPosition(e.Target, _battleManager.AllCombatants);
+            var manaParticles = _particleSystemManager.CreateEmitter(ParticleEffects.CreateManaBurst());
+            manaParticles.Position = targetPos;
+            manaParticles.EmitBurst(manaParticles.Settings.BurstCount);
+
             _animationManager.StartManaRecoveryAnimation(e.Target.CombatantID, e.ManaBefore, e.ManaAfter);
         }
 

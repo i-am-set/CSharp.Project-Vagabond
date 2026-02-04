@@ -64,7 +64,7 @@ namespace ProjectVagabond.Battle.UI
 
             // --- MANA BAR (Discrete) ---
             float manaBarY = barY + barHeight + 1;
-            DrawDiscreteManaBar(spriteBatch, combatant, barX, manaBarY, barWidth, manaAlpha, null, isRightAligned);
+            DrawDiscreteManaBar(spriteBatch, combatant, barX, manaBarY, barWidth, manaAlpha, null, isRightAligned, gameTime);
         }
 
         private void DrawBar(SpriteBatch spriteBatch, Vector2 position, int width, int height, float fillPercent, Color bgColor, Color fgColor, Color borderColor, float alpha, BattleAnimationManager.ResourceBarAnimationState? anim, float maxResource, bool isRightAligned, (int Min, int Max)? projectedDamage = null, GameTime gameTime = null)
@@ -252,7 +252,7 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private void DrawDiscreteManaBar(SpriteBatch spriteBatch, BattleCombatant combatant, float startX, float startY, float barWidth, float alpha, int? previewCost, bool isRightAligned)
+        private void DrawDiscreteManaBar(SpriteBatch spriteBatch, BattleCombatant combatant, float startX, float startY, float barWidth, float alpha, int? previewCost, bool isRightAligned, GameTime gameTime)
         {
             if (alpha <= 0.01f) return;
 
@@ -265,7 +265,14 @@ namespace ProjectVagabond.Battle.UI
 
             Color emptyColor = _global.Palette_DarkShadow * alpha;
             Color filledColor = _global.Palette_Sky * alpha;
-            Color previewColor = _global.Palette_Sun * alpha;
+
+            Color previewColor = filledColor;
+            if (previewCost.HasValue && previewCost.Value > 0)
+            {
+                float t = (float)gameTime.TotalGameTime.TotalSeconds * 10f;
+                float flash = (MathF.Sin(t) + 1f) * 0.5f;
+                previewColor = Color.Lerp(_global.Palette_Black * alpha, filledColor, flash);
+            }
 
             for (int i = 0; i < maxMana; i++)
             {
@@ -387,7 +394,7 @@ namespace ProjectVagabond.Battle.UI
                 }
             }
 
-            DrawDiscreteManaBar(spriteBatch, player, barX, manaBarY, barWidth, manaAlpha, previewCost, isRightAligned);
+            DrawDiscreteManaBar(spriteBatch, player, barX, manaBarY, barWidth, manaAlpha, previewCost, isRightAligned, gameTime);
         }
 
         public void DrawStatusIcons(SpriteBatch spriteBatch, BattleCombatant combatant, float startX, float startY, int width, bool isPlayer, List<StatusIconInfo> iconTracker, Func<string, StatusEffectType, float> getOffsetFunc, Func<string, StatusEffectType, bool> isAnimatingFunc, bool isRightAligned = false)
