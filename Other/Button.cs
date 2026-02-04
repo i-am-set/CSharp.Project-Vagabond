@@ -108,7 +108,7 @@ namespace ProjectVagabond.UI
         private const float SLIDE_SPEED = 80f;
 
         // Scale Animation State
-        private float _currentScale = 1.0f;
+        protected float _currentScale = 1.0f;
         private float _targetScale = 1.0f;
         private const float SCALE_SPEED = 75f;
         private const float HOVER_SCALE = 1.1f;

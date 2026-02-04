@@ -213,14 +213,14 @@ namespace ProjectVagabond.Battle.UI
                 var spriteManager = ServiceLocator.Get<SpriteManager>();
                 var icons = spriteManager.ActionIconsSpriteSheet;
 
-                // 1. Basic (Index 0)
-                AddActionButton("BASIC", Combatant.BasicMove, secondaryFont, global);
+                // 1. Basic (Index 0) - DarkestPale
+                AddActionButton("BASIC", Combatant.BasicMove, secondaryFont, global, global.Palette_DarkestPale);
 
-                // 2. Core (Index 1)
-                AddActionButton("CORE", Combatant.CoreMove, secondaryFont, global);
+                // 2. Core (Index 1) - Pale
+                AddActionButton("CORE", Combatant.CoreMove, secondaryFont, global, global.Palette_Pale);
 
-                // 3. Alt (Index 2)
-                AddActionButton("ALT", Combatant.AltMove, secondaryFont, global);
+                // 3. Alt (Index 2) - DarkPale
+                AddActionButton("ALT", Combatant.AltMove, secondaryFont, global, global.Palette_DarkPale);
 
                 // 4. Switch (Index 3)
                 var switchBtn = new TextOverImageButton(Rectangle.Empty, "SWITCH", null, font: tertiaryFont, enableHoverSway: false, iconTexture: icons, iconSourceRect: _iconRects[1])
@@ -245,41 +245,41 @@ namespace ProjectVagabond.Battle.UI
                 _cancelButton.OnClick += () => OnCancelRequested?.Invoke();
             }
 
-            private void AddActionButton(string label, MoveEntry? entry, BitmapFont font, Global global)
+            private void AddActionButton(string label, MoveEntry? entry, BitmapFont font, Global global, Color backgroundColor)
             {
                 bool moveExists = entry != null && BattleDataCache.Moves.ContainsKey(entry.MoveID);
+                MoveData? moveData = moveExists ? BattleDataCache.Moves[entry!.MoveID] : null;
 
-                // Standard Button (No Icon, Centered Text)
-                var btn = new Button(Rectangle.Empty, label, font: font, enableHoverSway: false)
+                // Use MoveButton for unified background/text rendering
+                var btn = new MoveButton(Combatant, moveData, entry, font)
                 {
-                    CustomDefaultTextColor = moveExists ? global.Palette_Black : global.Palette_DarkShadow,
-                    CustomHoverTextColor = global.Palette_Black, // Hover color is handled by bg change, text stays black
-                    IsEnabled = moveExists,
-                    // NEW SETTINGS
-                    HoverAnimation = HoverAnimationType.None, // Disable scale
-                    WaveEffectType = TextEffectType.Drift,    // Change text effect
-                    EnableTextWave = true
+                    DrawSystemBackground = true,
+                    BackgroundColor = backgroundColor,
+                    EnableHoverSway = false,
+                    // Always use the label (BASIC/CORE/ALT) as requested, not the move name
+                    Text = label,
+                    // Enforce Black text for both default and hover states
+                    CustomDefaultTextColor = global.Palette_Black,
+                    CustomHoverTextColor = global.Palette_Black,
+                    // Override visual width to ensure 1px gap while keeping larger hitbox
+                    VisualWidthOverride = BUTTON_WIDTH
                 };
 
                 if (moveExists)
                 {
-                    var moveData = BattleDataCache.Moves[entry!.MoveID];
                     btn.OnClick += () =>
                     {
-                        bool canAfford = false;
-                        var manaDump = moveData.Abilities.OfType<ManaDumpAbility>().FirstOrDefault();
-                        if (manaDump != null) canAfford = Combatant.Stats.CurrentMana > 0;
-                        else canAfford = Combatant.Stats.CurrentMana >= moveData.ManaCost;
+                        bool canAfford = btn.CanAfford;
 
                         if (canAfford)
                         {
                             var action = new QueuedAction
                             {
                                 Actor = Combatant,
-                                ChosenMove = moveData,
-                                SpellbookEntry = entry,
+                                ChosenMove = moveData!,
+                                SpellbookEntry = entry!,
                                 Type = QueuedActionType.Move,
-                                Priority = moveData.Priority,
+                                Priority = moveData!.Priority,
                                 ActorAgility = Combatant.GetEffectiveAgility()
                             };
                             OnActionSelected?.Invoke(action);
@@ -307,7 +307,7 @@ namespace ProjectVagabond.Battle.UI
                 // Layout the 3 move buttons in the top row
                 for (int i = 0; i < 3; i++)
                 {
-                    // Hitbox is 1px wider to fill the gap
+                    // Hitbox is 1px wider to fill the gap and make clicking easier
                     _buttons[i].Bounds = new Rectangle(startX, y, BUTTON_WIDTH + 1, BUTTON_HEIGHT);
                     startX += BUTTON_WIDTH + BUTTON_SPACING;
                 }
@@ -469,60 +469,23 @@ namespace ProjectVagabond.Battle.UI
                 var rect = btn.Bounds;
                 rect.Y += snappedOffsetY;
 
-                // Visual rect uses fixed dimensions to ensure 9px height and 45px width, ignoring the 1px hitbox extension
-                var visualRect = new Rectangle(rect.X, rect.Y, BUTTON_WIDTH, BUTTON_HEIGHT);
-                Color bgColor;
-                bool canAfford = true;
+                // NOTE: Background drawing is now handled internally by MoveButton (indices 0, 1, 2).
+                // Switch button (index 3) is a TextOverImageButton and does not have a background.
 
-                if (moveIndex != -1 && moveIndex != 3) // Move Buttons
+                Color? tint = null;
+                if (btn is MoveButton moveBtn)
                 {
-                    MoveEntry? entry = null;
-                    if (moveIndex == 0) entry = Combatant.BasicMove;
-                    else if (moveIndex == 1) entry = Combatant.CoreMove;
-                    else if (moveIndex == 2) entry = Combatant.AltMove;
-
-                    if (entry != null && BattleDataCache.Moves.TryGetValue(entry.MoveID, out var moveData))
-                    {
-                        var manaDump = moveData.Abilities.OfType<ManaDumpAbility>().FirstOrDefault();
-                        if (manaDump != null) canAfford = Combatant.Stats.CurrentMana > 0;
-                        else canAfford = Combatant.Stats.CurrentMana >= moveData.ManaCost;
-                    }
+                    if (!moveBtn.IsEnabled || !moveBtn.CanAfford) tint = global.Palette_DarkShadow;
                 }
-
-                if (!btn.IsEnabled || !canAfford) bgColor = global.Palette_Black;
-                else if (btn.IsHovered) bgColor = global.Palette_Rust;
                 else
                 {
-                    switch (moveIndex)
-                    {
-                        case 0: bgColor = global.Palette_DarkestPale; break;
-                        case 1: bgColor = global.Palette_Pale; break;
-                        case 2: bgColor = global.Palette_DarkPale; break;
-                        default: bgColor = global.Palette_DarkestPale; break;
-                    }
+                    if (!btn.IsEnabled) tint = global.Palette_DarkShadow;
                 }
 
-                // Only draw background if NOT switch button (index 3)
-                if (moveIndex != 3)
-                {
-                    DrawBeveledBackground(spriteBatch, pixel, visualRect, bgColor);
-                }
-
-                Color? tint = (!btn.IsEnabled || !canAfford) ? global.Palette_DarkShadow : (Color?)null;
                 btn.Draw(spriteBatch, btn.Font, gameTime, transform, false, 0f, snappedOffsetY, tint);
 
-                // Draw Strikethrough for Move Buttons AND Switch Button if disabled
-                bool shouldStrike = false;
-                if (moveIndex != 3)
-                {
-                    shouldStrike = !btn.IsEnabled || !canAfford;
-                }
-                else
-                {
-                    shouldStrike = !btn.IsEnabled;
-                }
-
-                if (shouldStrike)
+                // Draw Strikethrough for Switch Button if disabled (MoveButton handles its own)
+                if (moveIndex == 3 && !btn.IsEnabled)
                 {
                     Vector2 textSize = btn.Font.MeasureString(btn.Text);
                     Vector2 center = new Vector2(rect.Center.X, rect.Center.Y);

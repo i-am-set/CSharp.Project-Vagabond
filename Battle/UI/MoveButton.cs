@@ -2,23 +2,18 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
-using ProjectVagabond.Battle.UI;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.Battle.UI
 {
     public class MoveButton : Button
     {
-        public MoveData Move { get; }
-        public MoveEntry Entry { get; }
-        public int DisplayPower { get; }
+        public MoveData? Move { get; }
+        public MoveEntry? Entry { get; }
         public BattleCombatant Owner { get; }
 
         public bool CanAfford
@@ -36,16 +31,15 @@ namespace ProjectVagabond.Battle.UI
         public Color BackgroundColor { get; set; } = Color.Transparent;
         public bool DrawSystemBackground { get; set; } = false;
 
-        private readonly BitmapFont _moveFont;
-        private readonly Texture2D? _backgroundSpriteSheet;
-        public bool IsAnimating => _animState == AnimationState.Appearing;
-        public Texture2D IconTexture { get; set; }
-        public Rectangle? IconSourceRect { get; set; }
-        private enum AnimationState { Hidden, Idle, Appearing }
-        private AnimationState _animState = AnimationState.Idle;
-        private float _appearTimer = 0f;
-        private const float APPEAR_DURATION = 0.25f;
+        /// <summary>
+        /// If set, the background will be drawn with this width instead of the button's bounds width.
+        /// Useful for creating gaps between visuals while maintaining larger hitboxes.
+        /// </summary>
+        public int? VisualWidthOverride { get; set; }
 
+        private bool _showManaWarning = false;
+
+        // Scrolling state
         private bool _isScrollingInitialized = false;
         private float _scrollPosition = 0f;
         private float _scrollWaitTimer = 0f;
@@ -56,55 +50,21 @@ namespace ProjectVagabond.Battle.UI
         private const float SCROLL_SPEED = 25f;
         private const float SCROLL_PAUSE_DURATION = 1.5f;
         private const int SCROLL_GAP_SPACES = 3;
-
         private static readonly RasterizerState _clipRasterizerState = new RasterizerState { ScissorTestEnable = true };
 
-        private static readonly Random _random = new Random();
-        private float _overlayFadeTimer;
-        private const float OVERLAY_FADE_SPEED = 2.0f;
-
-        // New field to track internal hover state for warning display
-        private bool _showManaWarning = false;
-
-        public MoveButton(BattleCombatant owner, MoveData move, MoveEntry entry, int displayPower, BitmapFont font, Texture2D? backgroundSpriteSheet, Texture2D iconTexture, Rectangle? iconSourceRect, bool startVisible = true)
-            : base(Rectangle.Empty, move.MoveName.ToUpper(), function: move.MoveID)
+        public MoveButton(BattleCombatant owner, MoveData? move, MoveEntry? entry, BitmapFont font)
+            : base(Rectangle.Empty, "---", font: font)
         {
             Owner = owner;
             Move = move;
             Entry = entry;
-            DisplayPower = displayPower;
-            _moveFont = font;
-            _backgroundSpriteSheet = backgroundSpriteSheet;
-            IconTexture = iconTexture;
-            IconSourceRect = iconSourceRect;
-            _animState = startVisible ? AnimationState.Idle : AnimationState.Hidden;
-            _overlayFadeTimer = (float)(_random.NextDouble() * Math.PI * 2.0);
 
-            // Updated to use Middle Click for info
-            HasMiddleClickHint = true;
-            HasRightClickHint = false;
-
-            // Configure Text Animation
-            EnableTextWave = true;
-            // Changed to Drift as requested
-            WaveEffectType = TextEffectType.Drift;
-
-            // Disable hover scaling
+            // Disable wave/drift to ensure text is "welded" to the background during rotation
+            EnableTextWave = false;
             HoverAnimation = HoverAnimationType.None;
-        }
 
-        public void TriggerAppearAnimation()
-        {
-            if (_animState == AnimationState.Hidden)
-            {
-                _animState = AnimationState.Appearing;
-                _appearTimer = 0f;
-            }
-        }
-
-        public void ShowInstantly()
-        {
-            _animState = AnimationState.Idle;
+            // Default to disabled if no move
+            if (move == null) IsEnabled = false;
         }
 
         public override void Update(MouseState currentMouseState, Matrix? worldTransform = null)
@@ -113,7 +73,7 @@ namespace ProjectVagabond.Battle.UI
 
             // If we can't afford the move, suppress the hover state so the parent menu
             // doesn't trigger targeting previews, but keep a local flag to draw the warning.
-            if (!CanAfford)
+            if (!CanAfford && IsEnabled)
             {
                 if (IsHovered)
                 {
@@ -140,10 +100,7 @@ namespace ProjectVagabond.Battle.UI
             {
                 case ScrollState.PausedAtStart:
                     _scrollWaitTimer -= dt;
-                    if (_scrollWaitTimer <= 0)
-                    {
-                        _scrollState = ScrollState.Scrolling;
-                    }
+                    if (_scrollWaitTimer <= 0) _scrollState = ScrollState.Scrolling;
                     break;
 
                 case ScrollState.Scrolling:
@@ -169,304 +126,166 @@ namespace ProjectVagabond.Battle.UI
 
         public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? horizontalOffset = null, float? verticalOffset = null, Color? tintColorOverride = null)
         {
-            if (_animState == AnimationState.Hidden) return;
-
             var pixel = ServiceLocator.Get<Texture2D>();
             bool canAfford = CanAfford;
             bool isActivated = IsEnabled && (IsHovered || forceHover);
 
-            // Update the animator state but ignore the offset result since we handle shifting manually
-            // Disable hover animation if cannot afford
+            // Update animations
             _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated && canAfford);
+            var (shakeOffset, flashTint) = UpdateFeedbackAnimations(gameTime);
 
-            _overlayFadeTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-
-            // --- Calculate Appear Animation Scale ---
-            float appearScaleX = 1.0f;
-            float appearScaleY = 1.0f;
-            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
-
-            if (_animState == AnimationState.Appearing)
-            {
-                _appearTimer += dt;
-                float progress = Math.Clamp(_appearTimer / APPEAR_DURATION, 0f, 1f);
-
-                appearScaleY = Easing.EaseOutBack(progress);
-
-                if (progress >= 1.0f)
-                {
-                    _animState = AnimationState.Idle;
-                }
-            }
-
-            // Use only appear scale, no hover scaling
-            float finalScaleX = appearScaleX;
-            float finalScaleY = appearScaleY;
-
-            if (finalScaleX < 0.01f || finalScaleY < 0.01f) return;
-
-            int animatedWidth = (int)(Bounds.Width * finalScaleX);
-            int animatedHeight = (int)(Bounds.Height * finalScaleY);
-            var animatedBounds = new Rectangle(
-                Bounds.Center.X - animatedWidth / 2 + (int)(horizontalOffset ?? 0f),
-                Bounds.Center.Y - animatedHeight / 2 + (int)(verticalOffset ?? 0f),
-                animatedWidth,
-                animatedHeight
-            );
-
-            // Update base class animations (Rotation, Flash)
-            var (shakeOffset, flashTint) = UpdateFeedbackAnimations(gameTime); // Updates _currentHoverRotation
-
-            // Snap shake to pixels
-            shakeOffset.X = MathF.Round(shakeOffset.X);
-            shakeOffset.Y = MathF.Round(shakeOffset.Y);
+            // Dampen the rotation intensity to match the "snappy" feel of larger Main Menu buttons.
+            // Small buttons rotate too aggressively with the default width-based scaling.
+            // We apply a dampening factor to normalize the visual intensity.
+            _currentHoverRotation *= 0.35f;
 
             // Suppress rotation if cannot afford
             if (!canAfford) _currentHoverRotation = 0f;
 
-            Vector2 centerPos = new Vector2(animatedBounds.Center.X, animatedBounds.Center.Y) + shakeOffset;
+            // Calculate unified transform
+            float finalScaleX = _currentScale;
+            float finalScaleY = _currentScale;
+            Vector2 scaleVec = new Vector2(finalScaleX, finalScaleY);
 
-            // --- PIXEL SNAP CENTER ---
-            // If rotation is negligible, snap the center position to ensure pixel-perfect rendering.
-            // Odd dimensions need X.5 centers, Even dimensions need X.0 centers.
+            // Calculate Center Position with Shake
+            Vector2 centerPos = new Vector2(Bounds.Center.X, Bounds.Center.Y) + shakeOffset;
+            if (horizontalOffset.HasValue) centerPos.X += horizontalOffset.Value;
+            if (verticalOffset.HasValue) centerPos.Y += verticalOffset.Value;
+
+            // Adjust for Visual Width Override to ensure pixel-perfect alignment
+            float effectiveWidth = VisualWidthOverride ?? Bounds.Width;
+
+            // Pixel Snap Center if rotation is negligible
             if (Math.Abs(_currentHoverRotation) < 0.01f)
             {
-                float targetCenterX = MathF.Floor(centerPos.X) + (Bounds.Width % 2 == 0 ? 0.0f : 0.5f);
+                // Calculate target center based on effective width to ensure integer alignment of edges
+                float halfWidth = effectiveWidth / 2f;
+                float targetLeftX = MathF.Floor(centerPos.X - halfWidth);
+                float targetCenterX = targetLeftX + halfWidth;
+
                 float targetCenterY = MathF.Floor(centerPos.Y) + (Bounds.Height % 2 == 0 ? 0.0f : 0.5f);
                 centerPos = new Vector2(targetCenterX, targetCenterY);
             }
 
-            // --- DRAW SYSTEM BACKGROUND (With Shake & Rotation) ---
+            // --- DRAW BACKGROUND ---
             if (DrawSystemBackground)
             {
-                // We draw the 3 parts of the bevel relative to the center, applying rotation and scale.
-                DrawRotatedBeveledBackground(spriteBatch, pixel, centerPos, Bounds.Width, Bounds.Height, BackgroundColor, _currentHoverRotation, new Vector2(finalScaleX, finalScaleY));
+                Color bgColor = BackgroundColor;
+                if (!IsEnabled || !canAfford) bgColor = _global.Palette_Black;
+                else if (isActivated) bgColor = _global.Palette_Rust;
+
+                DrawRotatedBeveledBackground(spriteBatch, pixel, centerPos, (int)effectiveWidth, Bounds.Height, bgColor, _currentHoverRotation, scaleVec);
             }
 
-            Color finalTintColor;
-            if (tintColorOverride.HasValue)
+            // --- DRAW TEXT ---
+            Color textColor;
+            if (!IsEnabled || !canAfford)
             {
-                finalTintColor = tintColorOverride.Value;
+                textColor = CustomDisabledTextColor ?? _global.ButtonDisableColor;
             }
             else
             {
-                finalTintColor = Color.White;
-                if (!IsEnabled || !canAfford) finalTintColor = Color.White; // Keep white so alpha is 1.0
-                else if (_isPressed) finalTintColor = _global.Palette_Shadow;
-                else if (isActivated) finalTintColor = _global.ButtonHoverColor;
+                if (isActivated)
+                    textColor = CustomHoverTextColor ?? _global.ButtonHoverColor;
+                else
+                    textColor = CustomDefaultTextColor ?? _global.GameTextColor;
             }
 
-            if (finalScaleX > 0.1f && finalScaleY > 0.1f)
+            if (tintColorOverride.HasValue) textColor = tintColorOverride.Value;
+
+            BitmapFont font = Font ?? defaultFont;
+            Vector2 textSize = font.MeasureString(Text);
+
+            // Check for scrolling
+            float textAvailableWidth = effectiveWidth - 8; // Margins based on visual width
+            bool needsScrolling = textSize.X > textAvailableWidth;
+
+            // Disable scrolling if rotating to prevent clipping artifacts
+            if (needsScrolling && Math.Abs(_currentHoverRotation) < 0.01f)
             {
-                float contentAlpha = finalTintColor.A / 255f;
-
-                // ROTATION HELPER
-                Vector2 RotateOffset(Vector2 local)
+                // Scrolling Logic (Flat, no rotation support for clipping)
+                if (!_isScrollingInitialized)
                 {
-                    float cos = MathF.Cos(_currentHoverRotation);
-                    float sin = MathF.Sin(_currentHoverRotation);
-                    return new Vector2(
-                        local.X * cos - local.Y * sin,
-                        local.X * sin + local.Y * cos
-                    );
+                    _isScrollingInitialized = true;
+                    float gapWidth = font.MeasureString(new string(' ', SCROLL_GAP_SPACES)).Width;
+                    _loopWidth = textSize.X + gapWidth;
+                    _scrollWaitTimer = SCROLL_PAUSE_DURATION;
+                    _scrollState = ScrollState.PausedAtStart;
+                    _scrollPosition = 0;
                 }
 
-                // Draw background sprite (No Shift, Rotated) - if one exists (usually null for MoveButton)
-                if (_backgroundSpriteSheet != null)
-                {
-                    // Round origin to prevent sub-pixel rendering artifacts
-                    var origin = new Vector2(MathF.Round(Bounds.Width / 2f), MathF.Round(Bounds.Height / 2f));
-                    // Apply Rotation
-                    spriteBatch.DrawSnapped(_backgroundSpriteSheet, centerPos, null, finalTintColor, _currentHoverRotation, origin, new Vector2(finalScaleX, finalScaleY), SpriteEffects.None, 0f);
-                }
+                UpdateScrolling(gameTime);
 
-                // --- TEXT COLOR LOGIC ---
-                Color textColor;
-                if (!IsEnabled || !canAfford)
-                {
-                    textColor = _global.ButtonDisableColor; // Solid DarkShadow
-                }
-                else if (isActivated)
-                {
-                    textColor = _global.ButtonHoverColor;
-                }
-                else
-                {
-                    textColor = _global.GameTextColor;
-                }
+                // Calculate flat position
+                float flatX = centerPos.X - (effectiveWidth / 2f) + 4; // Left padding
+                float flatY = centerPos.Y - (font.LineHeight / 2f);
 
-                const int iconSize = 9;
-                const int iconPadding = 2;
+                var originalRasterizerState = spriteBatch.GraphicsDevice.RasterizerState;
+                var originalScissorRect = spriteBatch.GraphicsDevice.ScissorRectangle;
+                spriteBatch.End();
 
-                // --- LEFT ALIGNED LAYOUT CALCULATION ---
-                var moveNameTextSize = _moveFont.MeasureString(this.Text);
-                // Fixed left padding from the button's left edge
-                const int contentLeftPadding = 5;
-                float startX = -Bounds.Width / 2f + contentLeftPadding;
+                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, _clipRasterizerState, null, transform);
 
-                // Vertical offset to match Switch button (-1)
-                float contentYOffset = -1f;
+                var clipRect = new Rectangle((int)flatX, (int)(centerPos.Y - Bounds.Height / 2f), (int)textAvailableWidth, Bounds.Height);
+                spriteBatch.GraphicsDevice.ScissorRectangle = clipRect;
 
-                // Icon Positioning Relative to Center
-                float iconLocalX = startX + (iconSize / 2f); // Center of icon
-                float iconLocalY = contentYOffset; // Centered vertically with offset
+                var scrollingTextPosition = new Vector2(flatX - _scrollPosition, flatY);
 
-                Vector2 iconOffset = new Vector2(iconLocalX, iconLocalY);
-                Vector2 rotatedIconPos = centerPos + RotateOffset(iconOffset);
+                spriteBatch.DrawStringSnapped(font, Text, scrollingTextPosition, textColor);
+                spriteBatch.DrawStringSnapped(font, Text, scrollingTextPosition + new Vector2(_loopWidth, 0), textColor);
 
-                // Origin is center of icon
-                Vector2 iconOrigin = new Vector2(iconSize / 2f, iconSize / 2f);
+                spriteBatch.End();
+                spriteBatch.GraphicsDevice.ScissorRectangle = originalScissorRect;
+                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, originalRasterizerState, null, transform);
+            }
+            else
+            {
+                _isScrollingInitialized = false;
 
-                if (IconTexture != null && IconSourceRect.HasValue)
-                {
-                    // --- PIXEL SNAP ICON ---
-                    // Ensure the top-left of the icon lands on an integer coordinate if rotation is negligible
-                    if (Math.Abs(_currentHoverRotation) < 0.01f)
-                    {
-                        // Calculate where the top-left would be
-                        Vector2 topLeft = rotatedIconPos - iconOrigin;
-                        // Snap top-left to integer
-                        topLeft.X = MathF.Round(topLeft.X);
-                        topLeft.Y = MathF.Round(topLeft.Y);
-                        // Recalculate center position based on snapped top-left
-                        rotatedIconPos = topLeft + iconOrigin;
-                    }
+                // Calculate Origin (Center of Text)
+                // Added +1 to Y to shift text up by 1 pixel relative to the center
+                Vector2 textOrigin = new Vector2(MathF.Round(textSize.X / 2f), MathF.Round(textSize.Y / 2f) + 1);
 
-                    // Use textColor for the icon tint
-                    spriteBatch.DrawSnapped(IconTexture, rotatedIconPos, IconSourceRect.Value, textColor * contentAlpha, _currentHoverRotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
-                }
+                // Draw Text "Welded" to the background
+                // Using the exact same centerPos, rotation, and scale ensures they move as one unit.
+                spriteBatch.DrawStringSnapped(font, Text, centerPos, textColor, _currentHoverRotation, textOrigin, finalScaleX, SpriteEffects.None, 0f);
+            }
 
-                // Text Position
-                float textLocalX = startX + iconSize + iconPadding; // Left edge of text
-                float textLocalY = contentYOffset; // Centered vertically with offset
+            // --- STRIKETHROUGH ---
+            if (!IsEnabled || !canAfford)
+            {
+                Vector2 lineStartLocal = new Vector2(-textSize.X / 2f - 2, 0);
+                Vector2 lineEndLocal = new Vector2(textSize.X / 2f + 2, 0);
 
-                // Check for scrolling (if text is wider than button minus icon)
-                // Button Width - Icon - Padding - Margins
-                float textAvailableWidth = Bounds.Width - iconSize - iconPadding - 8;
-                bool needsScrolling = moveNameTextSize.Width > textAvailableWidth;
+                // Rotate
+                float c = MathF.Cos(_currentHoverRotation);
+                float s = MathF.Sin(_currentHoverRotation);
 
-                if (needsScrolling)
-                {
-                    // SCROLLING LOGIC (NO ROTATION SUPPORT)
-                    // Clipping rectangles don't support rotation.
-                    // Just draw flat for now if scrolling.
+                Vector2 RotateLocal(Vector2 v) => new Vector2(v.X * c - v.Y * s, v.X * s + v.Y * c) * scaleVec;
 
-                    if (!_isScrollingInitialized)
-                    {
-                        _isScrollingInitialized = true;
-                        float gapWidth = _moveFont.MeasureString(new string(' ', SCROLL_GAP_SPACES)).Width;
-                        _loopWidth = moveNameTextSize.Width + gapWidth;
-                        _scrollWaitTimer = SCROLL_PAUSE_DURATION;
-                        _scrollState = ScrollState.PausedAtStart;
-                        _scrollPosition = 0;
-                    }
+                Vector2 p1 = centerPos + RotateLocal(lineStartLocal);
+                Vector2 p2 = centerPos + RotateLocal(lineEndLocal);
 
-                    UpdateScrolling(gameTime);
+                spriteBatch.DrawLineSnapped(p1, p2, _global.ButtonDisableColor);
+            }
 
-                    // For scrolling, we anchor the text start position relative to the icon's visual position
-                    // But since we can't rotate the clip rect easily, we just draw it flat.
-                    // We'll use the calculated textLocalX relative to the unrotated center.
-                    float textStartX = animatedBounds.Center.X + textLocalX;
-
-                    var originalRasterizerState = spriteBatch.GraphicsDevice.RasterizerState;
-                    var originalScissorRect = spriteBatch.GraphicsDevice.ScissorRectangle;
-                    spriteBatch.End();
-
-                    spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, _clipRasterizerState, null, transform);
-                    var clipRect = new Rectangle((int)textStartX, animatedBounds.Y, (int)textAvailableWidth, animatedBounds.Height);
-                    spriteBatch.GraphicsDevice.ScissorRectangle = clipRect;
-
-                    var scrollingTextPosition = new Vector2(textStartX - _scrollPosition, animatedBounds.Y + (animatedBounds.Height - _moveFont.LineHeight) / 2f + textLocalY);
-
-                    // Scrolling text doesn't wave to avoid visual chaos
-                    spriteBatch.DrawStringSnapped(_moveFont, this.Text, scrollingTextPosition, textColor * contentAlpha);
-                    spriteBatch.DrawStringSnapped(_moveFont, this.Text, scrollingTextPosition + new Vector2(_loopWidth, 0), textColor * contentAlpha);
-
-                    spriteBatch.End();
-                    spriteBatch.GraphicsDevice.ScissorRectangle = originalScissorRect;
-                    spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, originalRasterizerState, null, transform);
-                }
-                else
-                {
-                    _isScrollingInitialized = false;
-
-                    Vector2 textOffset = new Vector2(textLocalX, textLocalY);
-                    Vector2 rotatedTextPos = centerPos + RotateOffset(textOffset);
-
-                    // Origin for text: Left-Center
-                    Vector2 textOrigin = new Vector2(0, _moveFont.LineHeight / 2f);
-
-                    // --- PIXEL SNAP TEXT ---
-                    if (Math.Abs(_currentHoverRotation) < 0.01f)
-                    {
-                        // Calculate where the top-left would be
-                        Vector2 topLeft = rotatedTextPos - textOrigin;
-                        // Snap top-left to integer
-                        topLeft.X = MathF.Round(topLeft.X);
-                        topLeft.Y = MathF.Round(topLeft.Y);
-                        // Recalculate draw position based on snapped top-left
-                        rotatedTextPos = topLeft + textOrigin;
-                    }
-
-                    // --- Wave Animation Logic ---
-                    // Only animate if can afford
-                    if (EnableTextWave && isActivated && canAfford)
-                    {
-                        _waveTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-
-                        // Only reset timer if it's a one-shot effect like SmallWave
-                        if (TextAnimator.IsOneShotEffect(WaveEffectType))
-                        {
-                            float duration = TextAnimator.GetSmallWaveDuration(Text.Length);
-                            if (_waveTimer > duration + 0.1f) _waveTimer = 0f;
-                        }
-                        // Else: Continuous effects just keep growing _waveTimer
-
-                        // Use finalScaleX/Y which are just appear scale (no hover scale)
-                        TextAnimator.DrawTextWithEffect(spriteBatch, _moveFont, this.Text, rotatedTextPos - textOrigin, textColor * contentAlpha, WaveEffectType, _waveTimer, new Vector2(finalScaleX, finalScaleY), null, _currentHoverRotation);
-                    }
-                    else
-                    {
-                        _waveTimer = 0f;
-                        spriteBatch.DrawStringSnapped(_moveFont, this.Text, rotatedTextPos, textColor * contentAlpha, _currentHoverRotation, textOrigin, 1.0f, SpriteEffects.None, 0f);
-                    }
-                }
-
-                // --- Strikethrough Logic for Disabled State ---
-                if (!IsEnabled || !canAfford)
-                {
-                    // Rotate
-                    Vector2 lineStartLocal = new Vector2(textLocalX - 2, textLocalY);
-                    Vector2 lineEndLocal = new Vector2(textLocalX + Math.Min(moveNameTextSize.Width, textAvailableWidth) + 2, textLocalY);
-
-                    Vector2 p1 = centerPos + RotateOffset(lineStartLocal);
-                    Vector2 p2 = centerPos + RotateOffset(lineEndLocal);
-
-                    spriteBatch.DrawLineSnapped(p1, p2, _global.ButtonDisableColor);
-                }
-
-                if (_showManaWarning && IsEnabled)
-                {
-                    string noManaText = "NOT ENOUGH MANA";
-                    Vector2 noManaSize = _moveFont.MeasureString(noManaText);
-                    Vector2 noManaPos = new Vector2(
-                        animatedBounds.Center.X - noManaSize.X / 2f,
-                        animatedBounds.Center.Y - noManaSize.Y / 2f - 2 // Moved up 2 pixels
-                    );
-                    // Draw with full opacity (no contentAlpha)
-                    TextAnimator.DrawTextWithEffectSquareOutlined(spriteBatch, _moveFont, noManaText, noManaPos, _global.Palette_Rust, Color.Black, TextEffectType.None, 0f);
-                }
+            // --- MANA WARNING ---
+            if (_showManaWarning && IsEnabled)
+            {
+                string noManaText = "NOT ENOUGH MANA";
+                Vector2 noManaSize = font.MeasureString(noManaText);
+                Vector2 noManaPos = new Vector2(
+                    Bounds.Center.X - noManaSize.X / 2f,
+                    Bounds.Center.Y - noManaSize.Y / 2f - 2
+                );
+                TextAnimator.DrawTextWithEffectSquareOutlined(spriteBatch, font, noManaText, noManaPos, _global.Palette_Rust, Color.Black, TextEffectType.None, 0f);
             }
         }
 
-        /// <summary>
-        /// Draws the 3-part beveled background (Top, Middle, Bottom) with support for rotation and scaling.
-        /// </summary>
         private void DrawRotatedBeveledBackground(SpriteBatch spriteBatch, Texture2D pixel, Vector2 center, int width, int height, Color color, float rotation, Vector2 scale)
         {
-            // Apply 1px padding reduction to match ActionMenu logic (Height - 1)
-            float h = height - 1;
             float w = width;
+            float h = height;
 
             float cos = MathF.Cos(rotation);
             float sin = MathF.Sin(rotation);
@@ -476,50 +295,24 @@ namespace ProjectVagabond.Battle.UI
                 return new Vector2(v.X * cos - v.Y * sin, v.X * sin + v.Y * cos);
             }
 
-            // Shift center to align the visual background (height-1) to the top of the hitbox (height)
-            // This ensures the visual background is top-aligned within the button bounds.
-            Vector2 visualCenter = center + Rotate(new Vector2(0, -0.5f * scale.Y));
+            // 1. Middle Body: (w, h-2)
+            // Origin: (0.5, 0.5) -> Center of 1x1 pixel
+            // Scale: (w, h-2) * scale
+            Vector2 midScale = new Vector2(w, h - 2) * scale;
+            spriteBatch.DrawSnapped(pixel, center, null, color, rotation, new Vector2(0.5f, 0.5f), midScale, SpriteEffects.None, 0f);
 
-            // SNAP BACKGROUND
-            if (Math.Abs(rotation) < 0.01f)
-            {
-                // Origin is 0.5, 0.5. So position must be X.5, Y.5 to draw at integer coordinates.
-                visualCenter.X = MathF.Floor(visualCenter.X) + 0.5f;
-                visualCenter.Y = MathF.Floor(visualCenter.Y) + 0.5f;
-            }
-
-            // 1. Middle Body: (x+1, y+1) size (w-2, h-2)
-            // Center relative to visual center: (0, 0)
-            // Size: (w-2, h-2)
-            Vector2 midScale = new Vector2(w - 2, h - 2) * scale;
-            spriteBatch.DrawSnapped(pixel, visualCenter, null, color, rotation, new Vector2(0.5f, 0.5f), midScale, SpriteEffects.None, 0f);
-
-            // 2. Top Edge: (x+2, y) size (w-4, 1)
-            // Center relative to visual center: (0, -h/2 + 0.5)
-            Vector2 topOffset = new Vector2(0, (-h / 2f + 0.5f) * scale.Y);
-            Vector2 topPos = visualCenter + Rotate(topOffset);
-
-            if (Math.Abs(rotation) < 0.01f)
-            {
-                topPos.X = MathF.Floor(topPos.X) + 0.5f;
-                topPos.Y = MathF.Floor(topPos.Y) + 0.5f;
-            }
-
-            Vector2 topScale = new Vector2((w - 4) * scale.X, 1f * scale.Y);
+            // 2. Top Edge: (w-2, 1)
+            // Offset Y: -(h-1)/2
+            Vector2 topOffset = new Vector2(0, -(h - 1) / 2f) * scale.Y;
+            Vector2 topPos = center + Rotate(topOffset);
+            Vector2 topScale = new Vector2(w - 2, 1) * scale;
             spriteBatch.DrawSnapped(pixel, topPos, null, color, rotation, new Vector2(0.5f, 0.5f), topScale, SpriteEffects.None, 0f);
 
-            // 3. Bottom Edge: (x+2, y+h-1) size (w-4, 1)
-            // Center relative to visual center: (0, h/2 - 0.5)
-            Vector2 botOffset = new Vector2(0, (h / 2f - 0.5f) * scale.Y);
-            Vector2 botPos = visualCenter + Rotate(botOffset);
-
-            if (Math.Abs(rotation) < 0.01f)
-            {
-                botPos.X = MathF.Floor(botPos.X) + 0.5f;
-                botPos.Y = MathF.Floor(botPos.Y) + 0.5f;
-            }
-
-            Vector2 botScale = new Vector2((w - 4) * scale.X, 1f * scale.Y);
+            // 3. Bottom Edge: (w-2, 1)
+            // Offset Y: (h-1)/2
+            Vector2 botOffset = new Vector2(0, (h - 1) / 2f) * scale.Y;
+            Vector2 botPos = center + Rotate(botOffset);
+            Vector2 botScale = new Vector2(w - 2, 1) * scale;
             spriteBatch.DrawSnapped(pixel, botPos, null, color, rotation, new Vector2(0.5f, 0.5f), botScale, SpriteEffects.None, 0f);
         }
     }
