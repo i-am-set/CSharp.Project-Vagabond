@@ -55,8 +55,21 @@ namespace ProjectVagabond.Battle.Abilities
                 }
 
                 // Random Variance
-                float variance = (float)(_random.NextDouble() * (BattleConstants.RANDOM_VARIANCE_MAX - BattleConstants.RANDOM_VARIANCE_MIN) + BattleConstants.RANDOM_VARIANCE_MIN);
-                multiplier *= variance;
+                if (context.IsSimulation)
+                {
+                    float variance = context.SimulationVariance switch
+                    {
+                        VarianceMode.Min => BattleConstants.RANDOM_VARIANCE_MIN,
+                        VarianceMode.Max => BattleConstants.RANDOM_VARIANCE_MAX,
+                        _ => (BattleConstants.RANDOM_VARIANCE_MIN + BattleConstants.RANDOM_VARIANCE_MAX) / 2.0f
+                    };
+                    multiplier *= variance;
+                }
+                else
+                {
+                    float variance = (float)(_random.NextDouble() * (BattleConstants.RANDOM_VARIANCE_MAX - BattleConstants.RANDOM_VARIANCE_MIN) + BattleConstants.RANDOM_VARIANCE_MIN);
+                    multiplier *= variance;
+                }
 
                 // Protection Check
                 if (dmgEvent.Target.Tags.Has(GameplayTags.States.Protected))

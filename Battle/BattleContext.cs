@@ -6,6 +6,8 @@ using System.Collections.Generic;
 
 namespace ProjectVagabond.Battle.Abilities
 {
+    public enum VarianceMode { Random, Median, Min, Max }
+
     public class BattleContext
     {
         public BattleCombatant Actor { get; set; }
@@ -13,6 +15,7 @@ namespace ProjectVagabond.Battle.Abilities
         public MoveData Move { get; set; }
         public QueuedAction Action { get; set; }
         public bool IsSimulation { get; set; }
+        public VarianceMode SimulationVariance { get; set; } = VarianceMode.Random;
 
         public void ResetMultipliers()
         {
@@ -21,6 +24,7 @@ namespace ProjectVagabond.Battle.Abilities
             Move = null;
             Action = null;
             IsSimulation = false;
+            SimulationVariance = VarianceMode.Random;
         }
     }
 }

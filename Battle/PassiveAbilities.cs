@@ -19,7 +19,10 @@ namespace ProjectVagabond.Battle.Abilities
                 if (dmgEvent.Move.MoveType == MoveType.Spell)
                 {
                     dmgEvent.DamageMultiplier *= DAMAGE_MULTIPLIER;
-                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = dmgEvent.Actor, Ability = this });
+                    if (!context.IsSimulation)
+                    {
+                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = dmgEvent.Actor, Ability = this });
+                    }
                 }
             }
         }
@@ -68,9 +71,12 @@ namespace ProjectVagabond.Battle.Abilities
             {
                 if (dmgEvent.IsCritical)
                 {
-                    dmgEvent.Target.ModifyStatStage(OffensiveStatType.Strength, 12);
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{dmgEvent.Target.Name}'s {Name} maxed their [cstr]Strength[/]!" });
-                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = dmgEvent.Target, Ability = this });
+                    if (!context.IsSimulation)
+                    {
+                        dmgEvent.Target.ModifyStatStage(OffensiveStatType.Strength, 12);
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{dmgEvent.Target.Name}'s {Name} maxed their [cstr]Strength[/]!" });
+                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = dmgEvent.Target, Ability = this });
+                    }
                 }
             }
         }
@@ -115,7 +121,10 @@ namespace ProjectVagabond.Battle.Abilities
                 if (dmgEvent.Move.MoveType == MoveType.Spell)
                 {
                     dmgEvent.DamageMultiplier *= 0.5f;
-                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = dmgEvent.Target, Ability = this });
+                    if (!context.IsSimulation)
+                    {
+                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = dmgEvent.Target, Ability = this });
+                    }
                 }
             }
         }
@@ -136,8 +145,11 @@ namespace ProjectVagabond.Battle.Abilities
                     if (dmgEvent.FinalDamage >= dmgEvent.Target.Stats.CurrentHP)
                     {
                         dmgEvent.FinalDamage = dmgEvent.Target.Stats.CurrentHP - 1;
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{dmgEvent.Target.Name} endured the hit!" });
-                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = dmgEvent.Target, Ability = this });
+                        if (!context.IsSimulation)
+                        {
+                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{dmgEvent.Target.Name} endured the hit!" });
+                            EventBus.Publish(new GameEvents.AbilityActivated { Combatant = dmgEvent.Target, Ability = this });
+                        }
                     }
                 }
             }
@@ -157,7 +169,10 @@ namespace ProjectVagabond.Battle.Abilities
                 if (dmgEvent.Move.Power > 0 && dmgEvent.Move.Power <= 60)
                 {
                     dmgEvent.DamageMultiplier *= 1.5f;
-                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = dmgEvent.Actor, Ability = this });
+                    if (!context.IsSimulation)
+                    {
+                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = dmgEvent.Actor, Ability = this });
+                    }
                 }
             }
         }
@@ -176,7 +191,10 @@ namespace ProjectVagabond.Battle.Abilities
                 if (dmgEvent.Target.Stats.CurrentHP >= dmgEvent.Target.Stats.MaxHP)
                 {
                     dmgEvent.DamageMultiplier *= 0.5f;
-                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = dmgEvent.Target, Ability = this });
+                    if (!context.IsSimulation)
+                    {
+                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = dmgEvent.Target, Ability = this });
+                    }
                 }
             }
         }

@@ -30,7 +30,11 @@ namespace ProjectVagabond.Battle
 
             // 1. Accuracy Check
             bool isGraze = false;
-            if (move.Accuracy != -1)
+            if (context.IsSimulation)
+            {
+                isGraze = false;
+            }
+            else if (move.Accuracy != -1)
             {
                 var hitEvt = new CheckHitChanceEvent(attacker, target, move, move.Accuracy);
                 attacker.NotifyAbilities(hitEvt, context);
@@ -44,7 +48,14 @@ namespace ProjectVagabond.Battle
             bool isCrit = false;
             if (!isGraze)
             {
-                isCrit = overrideCrit ?? (_random.NextDouble() < BattleConstants.CRITICAL_HIT_CHANCE);
+                if (context.IsSimulation)
+                {
+                    isCrit = overrideCrit ?? false;
+                }
+                else
+                {
+                    isCrit = overrideCrit ?? (_random.NextDouble() < BattleConstants.CRITICAL_HIT_CHANCE);
+                }
             }
 
             // 3. Calculate Damage Event

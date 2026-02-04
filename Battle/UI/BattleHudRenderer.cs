@@ -30,7 +30,7 @@ namespace ProjectVagabond.Battle.UI
             _pixel = ServiceLocator.Get<Texture2D>();
         }
 
-        public void DrawEnemyBars(SpriteBatch spriteBatch, BattleCombatant combatant, float barX, float barY, int barWidth, int barHeight, BattleAnimationManager animationManager, float hpAlpha, float manaAlpha, GameTime gameTime, bool isRightAligned = false)
+        public void DrawEnemyBars(SpriteBatch spriteBatch, BattleCombatant combatant, float barX, float barY, int barWidth, int barHeight, BattleAnimationManager animationManager, float hpAlpha, float manaAlpha, GameTime gameTime, bool isRightAligned = false, (int Min, int Max)? projectedDamage = null)
         {
             // --- NAME ---
             var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
@@ -60,14 +60,14 @@ namespace ProjectVagabond.Battle.UI
             float hpPercent = combatant.Stats.MaxHP > 0 ? Math.Clamp(combatant.VisualHP / combatant.Stats.MaxHP, 0f, 1f) : 0f;
             var hpAnim = animationManager.GetResourceBarAnimation(combatant.CombatantID, BattleAnimationManager.ResourceBarAnimationState.BarResourceType.HP);
 
-            DrawBar(spriteBatch, new Vector2(barX, barY), barWidth, barHeight, hpPercent, _global.Palette_DarkShadow, _global.Palette_Leaf, _global.Palette_Black, hpAlpha, hpAnim, combatant.Stats.MaxHP, isRightAligned);
+            DrawBar(spriteBatch, new Vector2(barX, barY), barWidth, barHeight, hpPercent, _global.Palette_DarkShadow, _global.Palette_Leaf, _global.Palette_Black, hpAlpha, hpAnim, combatant.Stats.MaxHP, isRightAligned, projectedDamage, gameTime);
 
             // --- MANA BAR (Discrete) ---
             float manaBarY = barY + barHeight + 1;
             DrawDiscreteManaBar(spriteBatch, combatant, barX, manaBarY, barWidth, manaAlpha, null, isRightAligned);
         }
 
-        private void DrawBar(SpriteBatch spriteBatch, Vector2 position, int width, int height, float fillPercent, Color bgColor, Color fgColor, Color borderColor, float alpha, BattleAnimationManager.ResourceBarAnimationState? anim, float maxResource, bool isRightAligned)
+        private void DrawBar(SpriteBatch spriteBatch, Vector2 position, int width, int height, float fillPercent, Color bgColor, Color fgColor, Color borderColor, float alpha, BattleAnimationManager.ResourceBarAnimationState? anim, float maxResource, bool isRightAligned, (int Min, int Max)? projectedDamage = null, GameTime gameTime = null)
         {
             if (alpha <= 0.01f) return;
 
@@ -89,6 +89,150 @@ namespace ProjectVagabond.Battle.UI
             {
                 float fgX = isRightAligned ? (x + w - pixelFgWidth) : x;
                 spriteBatch.DrawSnapped(_pixel, new Vector2(fgX, y), null, fgColor * alpha, 0f, Vector2.Zero, new Vector2(pixelFgWidth, h), SpriteEffects.None, 0f);
+            }
+
+            // Damage Preview Overlay
+            if (projectedDamage.HasValue && projectedDamage.Value.Max > 0 && gameTime != null)
+            {
+                int minDmg = projectedDamage.Value.Min;
+                int maxDmg = projectedDamage.Value.Max;
+
+                float currentPixels = w * fillPercent;
+
+                float minDmgPercent = (float)minDmg / maxResource;
+                float maxDmgPercent = (float)maxDmg / maxResource;
+
+                float minDmgPixels = w * minDmgPercent;
+                float maxDmgPixels = w * maxDmgPercent;
+
+                // Clamp to current visual
+                if (minDmgPixels > currentPixels) minDmgPixels = currentPixels;
+                if (maxDmgPixels > currentPixels) maxDmgPixels = currentPixels;
+
+                float flashMinRollAlpha = 0.9f + 0.1f * MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * 4f);
+                float flashMaxRollAlpha = 0.4f + 0.2f * MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * 4f);
+                Color minRollColor = _global.Palette_Black * alpha * flashMinRollAlpha;
+                Color maxRollColor = _global.Palette_Black * alpha * flashMaxRollAlpha;
+
+                if (isRightAligned)
+                {
+                    // Right aligned: Bar fills Right to Left.
+                    // Current bar occupies [x + w - current, x + w]
+                    // Damage eats from the LEFT side of the filled bar.
+
+                    // Min Damage (Guaranteed)
+                    if (minDmgPixels > 0)
+                    {
+                        float minX = x + w - currentPixels;
+                        spriteBatch.DrawSnapped(_pixel, new Vector2(minX, y), null, minRollColor, 0f, Vector2.Zero, new Vector2(minDmgPixels, h), SpriteEffects.None, 0f);
+                    }
+
+                    // Max Damage Range (Potential)
+                    float rangePixels = maxDmgPixels - minDmgPixels;
+                    if (rangePixels > 0)
+                    {
+                        float rangeX = x + w - currentPixels + minDmgPixels;
+                        spriteBatch.DrawSnapped(_pixel, new Vector2(rangeX, y), null, maxRollColor, 0f, Vector2.Zero, new Vector2(rangePixels, h), SpriteEffects.None, 0f);
+                    }
+                }
+                else
+                {
+                    // Left aligned: Bar fills Left to Right.
+                    // Current bar occupies [x, x + current]
+                    // Damage eats from the RIGHT side of the filled bar.
+
+                    // Min Damage (Guaranteed)
+                    if (minDmgPixels > 0)
+                    {
+                        float minX = x + currentPixels - minDmgPixels;
+                        spriteBatch.DrawSnapped(_pixel, new Vector2(minX, y), null, minRollColor, 0f, Vector2.Zero, new Vector2(minDmgPixels, h), SpriteEffects.None, 0f);
+                    }
+
+                    // Max Damage Range (Potential)
+                    float rangePixels = maxDmgPixels - minDmgPixels;
+                    if (rangePixels > 0)
+                    {
+                        float rangeX = x + currentPixels - maxDmgPixels;
+                        spriteBatch.DrawSnapped(_pixel, new Vector2(rangeX, y), null, maxRollColor, 0f, Vector2.Zero, new Vector2(rangePixels, h), SpriteEffects.None, 0f);
+                    }
+                }
+            }
+
+            // Outline (1px thickness)
+            // Top
+            spriteBatch.DrawSnapped(_pixel, new Vector2(x, y - 1), null, borderColor * alpha, 0f, Vector2.Zero, new Vector2(w, 1), SpriteEffects.None, 0f);
+            // Bottom
+            spriteBatch.DrawSnapped(_pixel, new Vector2(x, y + h), null, borderColor * alpha, 0f, Vector2.Zero, new Vector2(w, 1), SpriteEffects.None, 0f);
+            // Left
+            spriteBatch.DrawSnapped(_pixel, new Vector2(x - 1, y - 1), null, borderColor * alpha, 0f, Vector2.Zero, new Vector2(1, h + 2), SpriteEffects.None, 0f);
+            // Right
+            spriteBatch.DrawSnapped(_pixel, new Vector2(x + w, y - 1), null, borderColor * alpha, 0f, Vector2.Zero, new Vector2(1, h + 2), SpriteEffects.None, 0f);
+
+            // Animation Overlay
+            if (anim != null)
+            {
+                DrawBarAnimationOverlay(spriteBatch, position, width, height, maxResource, anim, alpha, isRightAligned);
+            }
+        }
+
+        private void DrawBar(SpriteBatch spriteBatch, Vector2 position, int width, int height, float fillPercent, Color bgColor, Color fgColor, Color borderColor, float alpha, BattleAnimationManager.ResourceBarAnimationState? anim, float maxResource, bool isRightAligned, int? projectedDamage = null, GameTime gameTime = null)
+        {
+            if (alpha <= 0.01f) return;
+
+            float x = position.X;
+            float y = position.Y;
+            float w = width;
+            float h = height;
+
+            // Background
+            spriteBatch.DrawSnapped(_pixel, new Vector2(x, y), null, bgColor * alpha, 0f, Vector2.Zero, new Vector2(w, h), SpriteEffects.None, 0f);
+
+            // Foreground
+            float totalFgWidth = w * fillPercent;
+            // Keep width integer-aligned for clean fill, but position is float
+            int pixelFgWidth = (int)totalFgWidth;
+            if (fillPercent > 0 && pixelFgWidth == 0) pixelFgWidth = 1;
+
+            if (pixelFgWidth > 0)
+            {
+                float fgX = isRightAligned ? (x + w - pixelFgWidth) : x;
+                spriteBatch.DrawSnapped(_pixel, new Vector2(fgX, y), null, fgColor * alpha, 0f, Vector2.Zero, new Vector2(pixelFgWidth, h), SpriteEffects.None, 0f);
+            }
+
+            // Damage Preview Overlay
+            if (projectedDamage.HasValue && projectedDamage.Value > 0 && gameTime != null)
+            {
+                float currentPixels = w * fillPercent;
+                float damagePercent = (float)projectedDamage.Value / maxResource;
+                float damagePixels = w * damagePercent;
+
+                // Clamp damage visual to current visual
+                if (damagePixels > currentPixels) damagePixels = currentPixels;
+
+                if (damagePixels > 0)
+                {
+                    float flashX;
+                    if (isRightAligned)
+                    {
+                        // Right aligned: Bar fills from Right to Left.
+                        // Filled part is [x + w - current, x + w]
+                        // We lose the Left-most part of the filled bar.
+                        flashX = x + w - currentPixels;
+                    }
+                    else
+                    {
+                        // Left aligned: Bar fills from Left to Right.
+                        // Filled part is [x, x + current]
+                        // We lose the Right-most part.
+                        flashX = x + currentPixels - damagePixels;
+                    }
+
+                    // Slower flash (8f) and Rust color
+                    float flashAlpha = 0.6f + 0.4f * MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * 8f);
+                    Color flashColor = _global.Palette_Rust * alpha * flashAlpha;
+
+                    spriteBatch.DrawSnapped(_pixel, new Vector2(flashX, y), null, flashColor, 0f, Vector2.Zero, new Vector2(damagePixels, h), SpriteEffects.None, 0f);
+                }
             }
 
             // Outline (1px thickness)
@@ -193,7 +337,7 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        public void DrawPlayerBars(SpriteBatch spriteBatch, BattleCombatant player, float barX, float barY, int barWidth, int barHeight, BattleAnimationManager animationManager, float hpAlpha, float manaAlpha, GameTime gameTime, BattleUIManager uiManager, bool isActiveActor, bool isRightAligned = false)
+        public void DrawPlayerBars(SpriteBatch spriteBatch, BattleCombatant player, float barX, float barY, int barWidth, int barHeight, BattleAnimationManager animationManager, float hpAlpha, float manaAlpha, GameTime gameTime, BattleUIManager uiManager, bool isActiveActor, bool isRightAligned = false, (int Min, int Max)? projectedDamage = null)
         {
             var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
             if (hpAlpha > 0.01f)
@@ -219,7 +363,7 @@ namespace ProjectVagabond.Battle.UI
             float hpPercent = player.Stats.MaxHP > 0 ? Math.Clamp(player.VisualHP / player.Stats.MaxHP, 0f, 1f) : 0f;
             var hpAnim = animationManager.GetResourceBarAnimation(player.CombatantID, BattleAnimationManager.ResourceBarAnimationState.BarResourceType.HP);
 
-            DrawBar(spriteBatch, new Vector2(barX, barY), barWidth, barHeight, hpPercent, _global.Palette_DarkShadow, _global.Palette_Leaf, _global.Palette_Black, hpAlpha, hpAnim, player.Stats.MaxHP, isRightAligned);
+            DrawBar(spriteBatch, new Vector2(barX, barY), barWidth, barHeight, hpPercent, _global.Palette_DarkShadow, _global.Palette_Leaf, _global.Palette_Black, hpAlpha, hpAnim, player.Stats.MaxHP, isRightAligned, projectedDamage, gameTime);
 
             float manaBarY = barY + barHeight + 1;
             int? previewCost = null;

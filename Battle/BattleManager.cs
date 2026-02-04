@@ -954,5 +954,41 @@ namespace ProjectVagabond.Battle
             _reinforcementSlotIndex++;
             _reinforcementAnnounced = false;
         }
+
+        public (int Min, int Max) GetProjectedDamageRange(BattleCombatant actor, BattleCombatant target, MoveData move)
+        {
+            if (move.Power == 0) return (0, 0);
+
+            float modifier = 1.0f;
+            bool isMulti = move.Target == TargetType.All || move.Target == TargetType.Both || move.Target == TargetType.Every || move.Target == TargetType.Team;
+            if (isMulti) modifier = BattleConstants.MULTI_TARGET_MODIFIER;
+
+            var tempContext = new BattleContext
+            {
+                Actor = actor,
+                Target = target,
+                Move = move,
+                IsSimulation = true
+            };
+
+            var dummyAction = new QueuedAction
+            {
+                Actor = actor,
+                ChosenMove = move,
+                Target = target,
+                Type = QueuedActionType.Move
+            };
+            tempContext.Action = dummyAction;
+
+            // Calculate Minimum
+            tempContext.SimulationVariance = VarianceMode.Min;
+            var minResult = DamageCalculator.CalculateDamage(dummyAction, target, move, modifier, false, true, tempContext);
+
+            // Calculate Maximum
+            tempContext.SimulationVariance = VarianceMode.Max;
+            var maxResult = DamageCalculator.CalculateDamage(dummyAction, target, move, modifier, false, true, tempContext);
+
+            return (minResult.DamageAmount, maxResult.DamageAmount);
+        }
     }
 }
