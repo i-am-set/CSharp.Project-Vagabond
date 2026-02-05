@@ -82,12 +82,12 @@ namespace ProjectVagabond.Battle
         {
             if (move.Power == 0) return 0;
 
-            // Create a temporary context for baseline calculation
             var context = new BattleContext
             {
                 Actor = attacker,
                 Target = target,
-                Move = move
+                Move = move,
+                IsSimulation = true
             };
 
             var dmgEvt = new CalculateDamageEvent(attacker, target, move, 0f, false, false);
