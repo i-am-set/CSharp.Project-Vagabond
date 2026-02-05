@@ -13,8 +13,6 @@ namespace ProjectVagabond.Battle
 {
     public static class DamageCalculator
     {
-        private static readonly Random _random = new Random();
-
         public struct DamageResult
         {
             public int DamageAmount;
@@ -27,6 +25,7 @@ namespace ProjectVagabond.Battle
         public static DamageResult CalculateDamage(QueuedAction action, BattleCombatant target, MoveData move, float multiTargetModifier, bool? overrideCrit, bool isSimulation, BattleContext context)
         {
             var attacker = action.Actor;
+            var random = Random.Shared;
 
             // 1. Accuracy Check
             bool isGraze = false;
@@ -41,7 +40,7 @@ namespace ProjectVagabond.Battle
                 target.NotifyAbilities(hitEvt, context);
                 foreach (var ab in move.Abilities) ab.OnEvent(hitEvt, context);
 
-                if (_random.Next(1, 101) > hitEvt.FinalAccuracy) isGraze = true;
+                if (random.Next(1, 101) > hitEvt.FinalAccuracy) isGraze = true;
             }
 
             // 2. Critical Hit Check
@@ -54,7 +53,7 @@ namespace ProjectVagabond.Battle
                 }
                 else
                 {
-                    isCrit = overrideCrit ?? (_random.NextDouble() < BattleConstants.CRITICAL_HIT_CHANCE);
+                    isCrit = overrideCrit ?? (random.NextDouble() < BattleConstants.CRITICAL_HIT_CHANCE);
                 }
             }
 
