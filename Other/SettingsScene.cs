@@ -447,6 +447,8 @@ namespace ProjectVagabond.Scenes
         {
             _titleBobTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
+            CalculateLayoutPositions();
+
             if (IsInputBlocked)
             {
                 base.Update(gameTime);

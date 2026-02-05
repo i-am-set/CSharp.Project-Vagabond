@@ -61,7 +61,7 @@ namespace ProjectVagabond.Scenes
         protected bool keyboardNavigatedLastFrame = false;
         protected bool firstTimeOpened = true;
 
-        private const float INPUT_BLOCK_DURATION = 0.2f;
+        private const float INPUT_BLOCK_DURATION = 0f;
         protected float _inputBlockTimer = 0f;
 
         /// <summary>
