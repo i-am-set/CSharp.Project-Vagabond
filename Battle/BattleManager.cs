@@ -498,13 +498,20 @@ namespace ProjectVagabond.Battle
 
             EventBus.Publish(new GameEvents.ActionDeclared { Actor = _actionToExecute.Actor, Move = _actionToExecute.ChosenMove, Target = _actionToExecute.Target, Type = _actionToExecute.Type });
 
-            if (_actionToExecute.Type == QueuedActionType.Move && _actionToExecute.ChosenMove != null)
+            bool isOffensive = _actionToExecute.ChosenMove != null &&
+                   _actionToExecute.ChosenMove.Power > 0 &&
+                   _actionToExecute.ChosenMove.ImpactType != ImpactType.Status;
+
+            if (_actionToExecute.Type == QueuedActionType.Move && isOffensive)
             {
                 _currentPhase = BattlePhase.PreActionAnimation;
                 _animationManager.StartAttackCharge(_actionToExecute.Actor.CombatantID, _actionToExecute.Actor.IsPlayerControlled);
                 CanAdvance = false;
             }
-            else ExecuteDeclaredAction();
+            else
+            {
+                ExecuteDeclaredAction();
+            }
         }
 
         private void HandlePreActionAnimation()
@@ -732,9 +739,13 @@ namespace ProjectVagabond.Battle
             {
                 if (target.IsPlayerControlled)
                 {
-                    float damageRatio = (float)results[targets.IndexOf(target)].DamageAmount / target.Stats.MaxHP;
-                    float intensity = Math.Min(1.0f + (damageRatio * 5.0f), 5.0f);
-                    ServiceLocator.Get<HapticsManager>().TriggerImpactTwist(intensity, 0.25f);
+                    int dmg = results[targets.IndexOf(target)].DamageAmount;
+                    if (dmg > 0)
+                    {
+                        float damageRatio = (float)dmg / target.Stats.MaxHP;
+                        float intensity = Math.Min(1.0f + (damageRatio * 5.0f), 5.0f);
+                        ServiceLocator.Get<HapticsManager>().TriggerImpactTwist(intensity, 0.25f);
+                    }
                     break;
                 }
             }
