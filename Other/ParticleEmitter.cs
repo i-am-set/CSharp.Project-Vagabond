@@ -114,15 +114,6 @@ namespace ProjectVagabond.Particles
                     p.Position += p.Velocity * deltaTime;
                     p.Rotation += p.RotationSpeed * deltaTime;
 
-                    // If snapping is enabled, quantize the particle's position to the virtual pixel grid
-                    // at the end of the update step. This prevents sub-pixel movement from accumulating
-                    // across frames, which can cause shimmering.
-                    if (Settings.SnapToPixelGrid)
-                    {
-                        p.Position.X = MathF.Round(p.Position.X);
-                        p.Position.Y = MathF.Round(p.Position.Y);
-                    }
-
                     // Over-lifetime changes
                     if (Settings.UsesCustomShaderData)
                     {

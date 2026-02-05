@@ -502,12 +502,12 @@ namespace ProjectVagabond.Particles
             settings.Shape = EmitterShape.Circle;
             settings.EmitFrom = EmissionSource.Volume;
             settings.EmitterSize = new Vector2(30f, 30f); // Wide and flat
-            settings.EmissionRate = 15;
+            settings.EmissionRate = 35;
             settings.BurstCount = 1; // Increased count
-            settings.Duration = 1.0f; // Give the emitter plenty of time to exist while particles float
+            settings.Duration = 0.25f; // Give the emitter plenty of time to exist while particles float
 
             // Initial Particle
-            settings.Lifetime = new FloatRange(1.0f, 2.0f); // Live much longer
+            settings.Lifetime = new FloatRange(0.5f, 1.5f); // Live much longer
             settings.InitialVelocityX = new FloatRange(-5f, 5f); // Reduced spread speed
             settings.InitialVelocityY = new FloatRange(-20f, -5f); // Very slow rise
 
@@ -519,7 +519,7 @@ namespace ProjectVagabond.Particles
 
             // Over Lifetime
             settings.Gravity = new Vector2(0, -5f); // Tiny upward drift
-            settings.Drag = 0.3f; // Low drag to let them drift
+            settings.Drag = 1.5f; // Low drag to let them drift
             settings.StartColor = global.Palette_Sky;
             settings.EndColor = global.Palette_Sea;
             settings.StartAlpha = 1.0f;
