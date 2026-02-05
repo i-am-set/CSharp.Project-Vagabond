@@ -57,7 +57,7 @@ static const float VIGNETTE_INTENSITY = 0.25;    // 0.0 = Off, 0.25 = Subtle, 0.
 static const float VIGNETTE_ROUNDNESS = 0.25;    // 0.0 = Oval, 1.0 = Circle
 
 // Noise (Static/Snow)
-static const float NOISE_INTENSITY = 0.02;      // 0.0 = Clean, 0.004 = RF Fuzz, 0.1 = Heavy Snow
+static const float NOISE_INTENSITY = 0.01;      // 0.0 = Clean, 0.004 = RF Fuzz, 0.1 = Heavy Snow
 
 // --- Globals ---
 Texture2D SpriteTexture;
