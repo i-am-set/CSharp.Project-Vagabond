@@ -41,8 +41,6 @@ namespace ProjectVagabond.Battle.Abilities
 
         public string LockedMoveID { get; set; }
 
-        public bool IsSimulation { get; set; } = false;
-
         // --- Rule-Breaking Flags ---
         public bool BreakGuard { get; set; }
         public bool IgnoreEvasion { get; set; }
