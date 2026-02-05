@@ -641,9 +641,9 @@ namespace ProjectVagabond
 
         private void InitializeActionIconsSourceRects()
         {
-            ActionIconSourceRects = new Rectangle[5];
+            ActionIconSourceRects = new Rectangle[6];
             const int iconSize = 9;
-            for (int i = 0; i < 5; i++)
+            for (int i = 0; i < 6; i++)
             {
                 ActionIconSourceRects[i] = new Rectangle(i * iconSize, 0, iconSize, iconSize);
             }

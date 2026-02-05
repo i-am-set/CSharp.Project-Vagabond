@@ -30,10 +30,16 @@ namespace ProjectVagabond.Battle.Abilities
                 float defense = BASELINE_DEFENSE_DIVISOR;
 
                 // 2. Base Damage Formula
-                float baseDamage = (dmgEvent.Move.Power * (offense / defense) * GLOBAL_DAMAGE_SCALAR) + FLAT_DAMAGE_BONUS;
+                float baseDamage = 0f;
 
                 // 3. Apply Multipliers
                 float multiplier = dmgEvent.DamageMultiplier;
+
+                // Prevent damage from none damaging moves
+                if (dmgEvent.Move.Power > 0)
+                {
+                    baseDamage = (dmgEvent.Move.Power * (offense / defense) * GLOBAL_DAMAGE_SCALAR) + FLAT_DAMAGE_BONUS;
+                }
 
                 // Tenacity Vulnerability
                 if (dmgEvent.Target.CurrentTenacity <= 0)

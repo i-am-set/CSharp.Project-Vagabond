@@ -30,34 +30,34 @@ uniform float Vibrance;
 // --- Tuning ---
 
 // Distortion
-static const float CURVATURE = 0.05;        // 0.0 = Flat, 0.15 = Standard CRT, 0.4 = Fish-eye
-static const float ZOOM = 1.01;             // 1.0 = No Zoom, 1.03 = Crop Bezels, 0.9 = Shrink Image
+static const float CURVATURE = 0.15;        // 0.0 = Flat, 0.15 = Standard CRT, 0.4 = Fish-eye
+static const float ZOOM = 1.02;             // 1.0 = No Zoom, 1.03 = Crop Bezels, 0.9 = Shrink Image
 
 // Color & Contrast
 static const float BLACK_LEVEL = 0.03;      // 0.0 = Pure Black, 0.03 = Phosphor Glow, 0.1 = Washed Out
 
 // Scanlines
-static const float SCANLINE_OPACITY_MIN = 0.70f; // 0.0 = Black Lines, 0.5 = Soft Lines, 1.0 = Invisible
+static const float SCANLINE_OPACITY_MIN = 0.75f; // 0.0 = Black Lines, 0.5 = Soft Lines, 1.0 = Invisible
 static const float SCANLINE_OPACITY_MAX = 1.0f;  // 1.0 = Full Brightness (Standard)
 static const float SCANLINE_CRAWL_SPEED = 0.0f;  // 0.0 = Static (Authentic), 1.0 = Slow Roll, 5.0 = Fast Roll
 
 // Horizontal Sync Jitter (Shaking)
-static const float HORIZONTAL_JITTER = 0.0;   // 0.0 = Perfect, 0.0001 = Micro-Jitter, 0.005 = Broken TV
-static const float JITTER_FREQUENCY = 1.0;      // Speed of the shake
+static const float HORIZONTAL_JITTER = 0.0002;   // 0.0 = Perfect, 0.0001 = Micro-Jitter, 0.005 = Broken TV
+static const float JITTER_FREQUENCY = 0.000001;      // Speed of the shake
 
 // AC Hum Bar (Rolling Shadow)
 static const float HUM_BAR_SPEED = 1.0;          // Speed of the rolling bar
 static const float HUM_BAR_OPACITY = 0.15;       // 0.0 = Invisible, 0.05 = Subtle, 0.2 = Bad Interference
 
 // Chromatic Aberration (Color Bleed)
-static const float CHROMATIC_OFFSET = 0.5;       // 0.0 = Sharp, 1.0 = Consumer TV, 3.0 = Broken Convergence
+static const float CHROMATIC_OFFSET = 1.0;       // 0.0 = Sharp, 1.0 = Consumer TV, 3.0 = Broken Convergence
 
 // Vignette (Corner Darkening)
 static const float VIGNETTE_INTENSITY = 0.25;    // 0.0 = Off, 0.25 = Subtle, 0.8 = Heavy Spotlight
-static const float VIGNETTE_ROUNDNESS = 0.15;    // 0.0 = Oval, 1.0 = Circle
+static const float VIGNETTE_ROUNDNESS = 0.25;    // 0.0 = Oval, 1.0 = Circle
 
 // Noise (Static/Snow)
-static const float NOISE_INTENSITY = 0.002;      // 0.0 = Clean, 0.004 = RF Fuzz, 0.1 = Heavy Snow
+static const float NOISE_INTENSITY = 0.02;      // 0.0 = Clean, 0.004 = RF Fuzz, 0.1 = Heavy Snow
 
 // --- Globals ---
 Texture2D SpriteTexture;

@@ -2,11 +2,15 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
 using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Battle.UI;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.Battle.UI
 {
@@ -36,6 +40,11 @@ namespace ProjectVagabond.Battle.UI
         /// Useful for creating gaps between visuals while maintaining larger hitboxes.
         /// </summary>
         public int? VisualWidthOverride { get; set; }
+
+        // --- Icon Drawing Properties ---
+        public Rectangle? ActionIconRect { get; set; }
+        public Color ActionIconColor { get; set; } = Color.White;
+        public Color ActionIconHoverColor { get; set; } = Color.White;
 
         private bool _showManaWarning = false;
 
@@ -175,6 +184,50 @@ namespace ProjectVagabond.Battle.UI
                 else if (isActivated) bgColor = _global.Palette_Rust;
 
                 DrawRotatedBeveledBackground(spriteBatch, pixel, centerPos, (int)effectiveWidth, Bounds.Height, bgColor, _currentHoverRotation, scaleVec);
+            }
+
+            // --- DRAW ICON ---
+            if (ActionIconRect.HasValue)
+            {
+                var spriteManager = ServiceLocator.Get<SpriteManager>();
+                if (spriteManager.ActionIconsSpriteSheet != null)
+                {
+                    // Position icon on the left side of the button
+                    // effectiveWidth is the visual width. Left edge is at -effectiveWidth/2 relative to center.
+                    float iconOffsetX = (-effectiveWidth / 2f) + 5f;
+
+                    // Rotate the offset
+                    float c = MathF.Cos(_currentHoverRotation);
+                    float s = MathF.Sin(_currentHoverRotation);
+
+                    // Apply scale to the offset to match background scaling
+                    Vector2 rotatedOffset = new Vector2(
+                        iconOffsetX * c * scaleVec.X,
+                        iconOffsetX * s * scaleVec.Y
+                    );
+
+                    Vector2 iconPos = centerPos + rotatedOffset;
+                    Vector2 iconOrigin = new Vector2(4.5f, 4.5f); // Center of 9x9 icon
+
+                    // Determine Icon Color
+                    Color currentIconColor = ActionIconColor;
+                    if (isActivated && canAfford)
+                    {
+                        currentIconColor = ActionIconHoverColor;
+                    }
+
+                    spriteBatch.DrawSnapped(
+                        spriteManager.ActionIconsSpriteSheet,
+                        iconPos,
+                        ActionIconRect.Value,
+                        currentIconColor,
+                        _currentHoverRotation,
+                        iconOrigin,
+                        scaleVec,
+                        SpriteEffects.None,
+                        0f
+                    );
+                }
             }
 
             // --- DRAW TEXT ---

@@ -213,7 +213,7 @@ namespace ProjectVagabond.Battle.UI
                 var global = ServiceLocator.Get<Global>();
 
                 // 1. Basic (Index 0) - DarkestPale - Width 32 - Text "BSC"
-                AddActionButton("BASIC", Combatant.BasicMove, tertiaryFont, global, global.Palette_DarkestPale, 32);
+                AddActionButton("BAS", Combatant.BasicMove, tertiaryFont, global, global.Palette_DarkestPale, 32);
 
                 // 2. Core (Index 1) - Pale - Width 45
                 AddActionButton("CORE", Combatant.CoreMove, secondaryFont, global, global.Palette_DarkPale, 45);
@@ -257,6 +257,28 @@ namespace ProjectVagabond.Battle.UI
                 bool moveExists = entry != null && BattleDataCache.Moves.ContainsKey(entry.MoveID);
                 MoveData? moveData = moveExists ? BattleDataCache.Moves[entry!.MoveID] : null;
 
+                Rectangle? iconRect = null;
+                Color iconColor = Color.White;
+
+                if (moveData != null)
+                {
+                    int iconIndex = -1;
+                    switch (moveData.ImpactType)
+                    {
+                        case ImpactType.Physical: iconIndex = 3; break;
+                        case ImpactType.Magical: iconIndex = 4; break;
+                        case ImpactType.Status: iconIndex = 5; break;
+                    }
+
+                    if (iconIndex >= 0 && _iconRects != null && iconIndex < _iconRects.Length)
+                    {
+                        iconRect = _iconRects[iconIndex];
+                    }
+
+                    if (label == "CORE") iconColor = global.Palette_DarkestPale;
+                    else iconColor = global.Palette_DarkShadow;
+                }
+
                 var btn = new MoveButton(Combatant, moveData, entry, font)
                 {
                     DrawSystemBackground = true,
@@ -266,7 +288,10 @@ namespace ProjectVagabond.Battle.UI
                     CustomDefaultTextColor = global.Palette_Black,
                     CustomHoverTextColor = global.Palette_Sun,
                     VisualWidthOverride = width,
-                    TextRenderOffset = (label == "BASIC" || label == "ALT") ? new Vector2(0, 1) : Vector2.Zero
+                    TextRenderOffset = (label == "BAS" || label == "ALT") ? new Vector2(0, 1) : Vector2.Zero,
+                    ActionIconRect = iconRect,
+                    ActionIconColor = iconColor,
+                    ActionIconHoverColor = global.Palette_DarkSun
                 };
 
                 if (moveExists)
