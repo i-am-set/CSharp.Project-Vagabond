@@ -856,17 +856,6 @@ namespace ProjectVagabond.Battle
         {
             _endOfTurnEffectsProcessed = true;
 
-            foreach (var combatant in _allCombatants)
-            {
-                if (!combatant.IsDefeated && combatant.Stats.CurrentMana < combatant.Stats.MaxMana)
-                {
-                    float manaBefore = combatant.Stats.CurrentMana;
-                    combatant.Stats.CurrentMana++;
-                    float manaAfter = combatant.Stats.CurrentMana;
-                    EventBus.Publish(new GameEvents.CombatantManaRestored { Target = combatant, AmountRestored = 1, ManaBefore = manaBefore, ManaAfter = manaAfter });
-                }
-            }
-
             foreach (var combatant in _cachedAllActive)
             {
                 // Configure Context

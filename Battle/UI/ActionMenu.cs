@@ -199,9 +199,10 @@ namespace ProjectVagabond.Battle.UI
 
             public void SetSwitchButtonAllowed(bool allowed)
             {
-                if (_buttons.Count > 3)
+                // Switch button is now at index 4
+                if (_buttons.Count > 4)
                 {
-                    _buttons[3].IsEnabled = allowed && _hasBench;
+                    _buttons[4].IsEnabled = allowed && _hasBench;
                 }
             }
 
@@ -210,8 +211,6 @@ namespace ProjectVagabond.Battle.UI
                 var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
                 var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
                 var global = ServiceLocator.Get<Global>();
-                var spriteManager = ServiceLocator.Get<SpriteManager>();
-                var icons = spriteManager.ActionIconsSpriteSheet;
 
                 // 1. Basic (Index 0) - DarkestPale - Width 32 - Text "BSC"
                 AddActionButton("BASIC", Combatant.BasicMove, tertiaryFont, global, global.Palette_DarkestPale, 32);
@@ -222,20 +221,28 @@ namespace ProjectVagabond.Battle.UI
                 // 3. Alt (Index 2) - DarkPale - Width 32
                 AddActionButton("ALT", Combatant.AltMove, tertiaryFont, global, global.Palette_DarkestPale, 32);
 
-                // 4. Switch (Index 3)
-                var switchBtn = new TextOverImageButton(Rectangle.Empty, "SWITCH", null, font: tertiaryFont, enableHoverSway: false, iconTexture: icons, iconSourceRect: _iconRects[1])
+                // --- SECONDARY ROW ---
+
+                // 4. Attune (Index 3)
+                AddSecondaryButton("ATTUNE", "7");
+
+                // 5. Switch (Index 4)
+                var switchMove = new MoveData
                 {
-                    AlignLeft = false, // Centered
-                    IconColorMatchesText = true,
-                    CustomDefaultTextColor = global.GameTextColor,
-                    TextRenderOffset = Vector2.Zero, // No weird offsets
-                    IconRenderOffset = Vector2.Zero, // No weird offsets
-                    EnableHoverRotation = false
+                    MoveID = "SWITCH",
+                    MoveName = "SWITCH",
+                    ManaCost = 0,
+                    Description = "Switch to a reserve member.",
+                    Target = TargetType.None
                 };
-                switchBtn.OnClick += () => OnSwitchRequested?.Invoke();
+                AddSecondaryButton("SWITCH", null, switchMove, () => OnSwitchRequested?.Invoke());
+
+                // 6. Stall (Index 5)
+                AddSecondaryButton("STALL", "6");
+
+                // Check bench for Switch enablement
                 _hasBench = allCombatants.Any(c => c.IsPlayerControlled && !c.IsDefeated && c.BattleSlot >= 2);
-                switchBtn.IsEnabled = _hasBench;
-                _buttons.Add(switchBtn);
+                if (_buttons.Count > 4) _buttons[4].IsEnabled = _hasBench;
 
                 _cancelButton = new Button(Rectangle.Empty, "CANCEL", font: tertiaryFont, enableHoverSway: false)
                 {
@@ -250,20 +257,15 @@ namespace ProjectVagabond.Battle.UI
                 bool moveExists = entry != null && BattleDataCache.Moves.ContainsKey(entry.MoveID);
                 MoveData? moveData = moveExists ? BattleDataCache.Moves[entry!.MoveID] : null;
 
-                // Use MoveButton for unified background/text rendering
                 var btn = new MoveButton(Combatant, moveData, entry, font)
                 {
                     DrawSystemBackground = true,
                     BackgroundColor = backgroundColor,
                     EnableHoverSway = false,
-                    // Always use the label (BASIC/CORE/ALT) as requested, not the move name
                     Text = label,
-                    // Enforce Black text for both default and hover states
                     CustomDefaultTextColor = global.Palette_Black,
-                    CustomHoverTextColor = global.Palette_Black,
-                    // Override visual width to ensure 1px gap while keeping larger hitbox
+                    CustomHoverTextColor = global.Palette_Sun,
                     VisualWidthOverride = width,
-                    // Fix vertical alignment for Tertiary font buttons (BASIC/ALT)
                     TextRenderOffset = (label == "BASIC" || label == "ALT") ? new Vector2(0, 1) : Vector2.Zero
                 };
 
@@ -271,9 +273,7 @@ namespace ProjectVagabond.Battle.UI
                 {
                     btn.OnClick += () =>
                     {
-                        bool canAfford = btn.CanAfford;
-
-                        if (canAfford)
+                        if (btn.CanAfford)
                         {
                             var action = new QueuedAction
                             {
@@ -296,46 +296,95 @@ namespace ProjectVagabond.Battle.UI
                 _buttons.Add(btn);
             }
 
+            private void AddSecondaryButton(string label, string moveId, MoveData? manualData = null, Action? customAction = null)
+            {
+                var global = ServiceLocator.Get<Global>();
+                var font = ServiceLocator.Get<Core>().TertiaryFont;
+
+                MoveData? moveData = manualData;
+                if (moveData == null && !string.IsNullOrEmpty(moveId) && BattleDataCache.Moves.ContainsKey(moveId))
+                {
+                    moveData = BattleDataCache.Moves[moveId];
+                }
+
+                var btn = new MoveButton(Combatant, moveData, null, font)
+                {
+                    DrawSystemBackground = true,
+                    BackgroundColor = global.Palette_DarkShadow,
+                    EnableHoverSway = false,
+                    Text = label,
+                    CustomDefaultTextColor = global.Palette_Black,
+                    CustomHoverTextColor = global.Palette_Sun,
+                    VisualWidthOverride = 37,
+                    TextRenderOffset = new Vector2(0, 1)
+                };
+
+                if (customAction != null)
+                {
+                    btn.OnClick += customAction;
+                }
+                else if (moveData != null)
+                {
+                    btn.OnClick += () =>
+                    {
+                        if (btn.CanAfford)
+                        {
+                            var action = new QueuedAction
+                            {
+                                Actor = Combatant,
+                                ChosenMove = moveData,
+                                SpellbookEntry = null,
+                                Type = QueuedActionType.Move,
+                                Priority = moveData.Priority,
+                                ActorAgility = Combatant.GetEffectiveAgility()
+                            };
+                            OnActionSelected?.Invoke(action);
+                        }
+                        else
+                        {
+                            ServiceLocator.Get<HapticsManager>().TriggerShake(2f, 0.1f);
+                        }
+                    };
+                }
+
+                _buttons.Add(btn);
+            }
+
             private void LayoutButtons()
             {
-                // Widths: BSC=32, CORE=45, ALT=32
+                // --- Top Row (Indices 0, 1, 2) ---
                 int[] widths = { 32, 45, 32 };
-
-                // Calculate total width of the 3 buttons + spacing
                 int totalButtonsWidth = widths.Sum() + (BUTTON_SPACING * 2);
 
-                // Center the group within the panel
                 float panelCenterX = _position.X + (PANEL_WIDTH / 2f);
                 int startX = (int)(panelCenterX - (totalButtonsWidth / 2f));
                 int y = (int)_position.Y + 1;
 
-                // Layout the 3 move buttons in the top row
                 for (int i = 0; i < 3; i++)
                 {
-                    // Core (index 1) is 9px tall, Basic/Alt are 7px tall
                     int height = (i == 1) ? 9 : 7;
-                    // Center the smaller buttons vertically relative to the 9px Core button
                     int yOffset = (i == 1) ? 0 : 1;
                     int width = widths[i];
 
-                    // Hitbox is 1px wider to fill the gap and make clicking easier
                     _buttons[i].Bounds = new Rectangle(startX, y + yOffset, width + 1, height);
                     startX += width + BUTTON_SPACING;
                 }
 
-                // Layout the Switch button below the middle button (Core)
-                int switchW = 50;
-                int switchH = 15;
-                int switchY = (int)_position.Y + INFO_BOX_OFFSET_Y + 2;
+                // --- Secondary Row (Indices 3, 4, 5) ---
+                int[] secWidths = { 37, 37, 37 };
+                int secTotalWidth = secWidths.Sum() + (BUTTON_SPACING * 2);
+                int secStartX = (int)(panelCenterX - (secTotalWidth / 2f));
+                int secY = (int)_position.Y + 12; // Same Y as InfoBox (they overlap if InfoBox is active)
 
-                _buttons[3].Bounds = new Rectangle(
-                    (int)(panelCenterX - switchW / 2),
-                    switchY,
-                    switchW,
-                    switchH
-                );
+                for (int i = 3; i < 6; i++)
+                {
+                    if (i >= _buttons.Count) break;
+                    int width = secWidths[i - 3];
+                    _buttons[i].Bounds = new Rectangle(secStartX, secY, width + 1, 7);
+                    secStartX += width + BUTTON_SPACING;
+                }
 
-                // Layout Cancel Button
+                // --- Cancel Button ---
                 int cancelW = 50;
                 int cancelH = 15;
                 float panelCenterY = _position.Y + (BattleLayout.ACTION_MENU_HEIGHT / 2f);
@@ -351,14 +400,6 @@ namespace ProjectVagabond.Battle.UI
             public void Update(MouseState mouse, GameTime gameTime, bool isInputBlocked, bool isLocked)
             {
                 HoveredMove = null;
-
-                // Update Switch Button Icon Visibility
-                if (_buttons.Count > 3 && _buttons[3] is TextOverImageButton switchBtn)
-                {
-                    // Show icon only if Enabled AND Hovered
-                    bool showIcon = switchBtn.IsEnabled && switchBtn.IsHovered;
-                    switchBtn.IconSourceRect = showIcon ? _iconRects[1] : Rectangle.Empty;
-                }
 
                 if (isInputBlocked)
                 {
@@ -379,25 +420,29 @@ namespace ProjectVagabond.Battle.UI
                         if (btn.IsHovered && btn.IsEnabled)
                         {
                             int index = _buttons.IndexOf(btn);
-                            if (index == 0) // Basic
+                            // Only show Info Box for the top row (0, 1, 2)
+                            // Secondary row (3, 4, 5) does not trigger the large info box to avoid overlap
+                            if (index >= 0 && index <= 2)
                             {
-                                var entry = Combatant.BasicMove;
-                                if (entry != null && BattleDataCache.Moves.TryGetValue(entry.MoveID, out var m))
-                                    HoveredMove = m;
+                                if (index == 0) // Basic
+                                {
+                                    var entry = Combatant.BasicMove;
+                                    if (entry != null && BattleDataCache.Moves.TryGetValue(entry.MoveID, out var m))
+                                        HoveredMove = m;
+                                }
+                                else if (index == 1) // Core
+                                {
+                                    var entry = Combatant.CoreMove;
+                                    if (entry != null && BattleDataCache.Moves.TryGetValue(entry.MoveID, out var m))
+                                        HoveredMove = m;
+                                }
+                                else if (index == 2) // Alt
+                                {
+                                    var entry = Combatant.AltMove;
+                                    if (entry != null && BattleDataCache.Moves.TryGetValue(entry.MoveID, out var m))
+                                        HoveredMove = m;
+                                }
                             }
-                            else if (index == 1) // Core
-                            {
-                                var entry = Combatant.CoreMove;
-                                if (entry != null && BattleDataCache.Moves.TryGetValue(entry.MoveID, out var m))
-                                    HoveredMove = m;
-                            }
-                            else if (index == 2) // Alt
-                            {
-                                var entry = Combatant.AltMove;
-                                if (entry != null && BattleDataCache.Moves.TryGetValue(entry.MoveID, out var m))
-                                    HoveredMove = m;
-                            }
-                            // Index 3 is Switch, which does not populate HoveredMove
                         }
                     }
                 }
@@ -429,10 +474,14 @@ namespace ProjectVagabond.Battle.UI
                 }
                 else
                 {
-                    // 1. Draw Switch Button (Index 3) first so it is underneath the info panel if it appears
-                    DrawButton(spriteBatch, _buttons[3], pixel, global, snappedOffsetY, gameTime, transform, 3);
+                    // 1. Draw Secondary Row (Indices 3, 4, 5) first (Background Layer)
+                    for (int i = 3; i < 6; i++)
+                    {
+                        if (i < _buttons.Count)
+                            DrawButton(spriteBatch, _buttons[i], pixel, global, snappedOffsetY, gameTime, transform, i);
+                    }
 
-                    // 2. Draw Info Box (Only if populated)
+                    // 2. Draw Info Box (Only if populated, covers secondary row)
                     if (HoveredMove != null)
                     {
                         float panelCenterX = _position.X + (PANEL_WIDTH / 2f);
@@ -443,7 +492,7 @@ namespace ProjectVagabond.Battle.UI
                             INFO_BOX_HEIGHT
                         );
 
-                        // Opaque background to cover the switch button
+                        // Opaque background to cover the secondary buttons
                         DrawBeveledBackground(spriteBatch, pixel, infoBoxRect, global.Palette_DarkShadow);
 
                         // Inner description area background
@@ -458,7 +507,7 @@ namespace ProjectVagabond.Battle.UI
                         DrawInfoBoxContent(spriteBatch, infoBoxRect, HoveredMove, global);
                     }
 
-                    // 3. Draw Move Buttons (Indices 0, 1, 2)
+                    // 3. Draw Top Row (Indices 0, 1, 2) (Foreground Layer)
                     for (int i = 0; i < 3; i++)
                     {
                         DrawButton(spriteBatch, _buttons[i], pixel, global, snappedOffsetY, gameTime, transform, i);
@@ -480,9 +529,6 @@ namespace ProjectVagabond.Battle.UI
                 var rect = btn.Bounds;
                 rect.Y += snappedOffsetY;
 
-                // NOTE: Background drawing is now handled internally by MoveButton (indices 0, 1, 2).
-                // Switch button (index 3) is a TextOverImageButton and does not have a background.
-
                 Color? tint = null;
                 if (btn is MoveButton moveBtn)
                 {
@@ -495,15 +541,8 @@ namespace ProjectVagabond.Battle.UI
 
                 btn.Draw(spriteBatch, btn.Font, gameTime, transform, false, 0f, snappedOffsetY, tint);
 
-                // Draw Strikethrough for Switch Button if disabled (MoveButton handles its own)
-                if (moveIndex == 3 && !btn.IsEnabled)
-                {
-                    Vector2 textSize = btn.Font.MeasureString(btn.Text);
-                    Vector2 center = new Vector2(rect.Center.X, rect.Center.Y);
-                    Vector2 start = new Vector2(center.X - textSize.X / 2f - 1, center.Y);
-                    Vector2 end = new Vector2(center.X + textSize.X / 2f + 1, center.Y);
-                    spriteBatch.DrawLineSnapped(start, end, global.ButtonDisableColor);
-                }
+                // Draw Strikethrough for Switch Button if disabled (MoveButton handles its own, but Switch might need extra if logic differs)
+                // MoveButton handles strikethrough based on IsEnabled/CanAfford.
             }
 
             private void DrawInfoBoxContent(SpriteBatch spriteBatch, Rectangle bounds, MoveData move, Global global)
