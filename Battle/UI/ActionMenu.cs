@@ -213,14 +213,14 @@ namespace ProjectVagabond.Battle.UI
                 var spriteManager = ServiceLocator.Get<SpriteManager>();
                 var icons = spriteManager.ActionIconsSpriteSheet;
 
-                // 1. Basic (Index 0) - DarkestPale
-                AddActionButton("BASIC", Combatant.BasicMove, secondaryFont, global, global.Palette_DarkShadow);
+                // 1. Basic (Index 0) - DarkestPale - Width 32 - Text "BSC"
+                AddActionButton("BASIC", Combatant.BasicMove, tertiaryFont, global, global.Palette_DarkestPale, 32);
 
-                // 2. Core (Index 1) - Pale
-                AddActionButton("CORE", Combatant.CoreMove, secondaryFont, global, global.Palette_DarkestPale);
+                // 2. Core (Index 1) - Pale - Width 45
+                AddActionButton("CORE", Combatant.CoreMove, secondaryFont, global, global.Palette_DarkPale, 45);
 
-                // 3. Alt (Index 2) - DarkPale
-                AddActionButton("ALT", Combatant.AltMove, secondaryFont, global, global.Palette_DarkShadow);
+                // 3. Alt (Index 2) - DarkPale - Width 32
+                AddActionButton("ALT", Combatant.AltMove, tertiaryFont, global, global.Palette_DarkestPale, 32);
 
                 // 4. Switch (Index 3)
                 var switchBtn = new TextOverImageButton(Rectangle.Empty, "SWITCH", null, font: tertiaryFont, enableHoverSway: false, iconTexture: icons, iconSourceRect: _iconRects[1])
@@ -245,7 +245,7 @@ namespace ProjectVagabond.Battle.UI
                 _cancelButton.OnClick += () => OnCancelRequested?.Invoke();
             }
 
-            private void AddActionButton(string label, MoveEntry? entry, BitmapFont font, Global global, Color backgroundColor)
+            private void AddActionButton(string label, MoveEntry? entry, BitmapFont font, Global global, Color backgroundColor, int width)
             {
                 bool moveExists = entry != null && BattleDataCache.Moves.ContainsKey(entry.MoveID);
                 MoveData? moveData = moveExists ? BattleDataCache.Moves[entry!.MoveID] : null;
@@ -262,7 +262,9 @@ namespace ProjectVagabond.Battle.UI
                     CustomDefaultTextColor = global.Palette_Black,
                     CustomHoverTextColor = global.Palette_Black,
                     // Override visual width to ensure 1px gap while keeping larger hitbox
-                    VisualWidthOverride = BUTTON_WIDTH
+                    VisualWidthOverride = width,
+                    // Fix vertical alignment for Tertiary font buttons (BASIC/ALT)
+                    TextRenderOffset = (label == "BASIC" || label == "ALT") ? new Vector2(0, 1) : Vector2.Zero
                 };
 
                 if (moveExists)
@@ -296,8 +298,11 @@ namespace ProjectVagabond.Battle.UI
 
             private void LayoutButtons()
             {
+                // Widths: BSC=32, CORE=45, ALT=32
+                int[] widths = { 32, 45, 32 };
+
                 // Calculate total width of the 3 buttons + spacing
-                int totalButtonsWidth = (BUTTON_WIDTH * 3) + (BUTTON_SPACING * 2);
+                int totalButtonsWidth = widths.Sum() + (BUTTON_SPACING * 2);
 
                 // Center the group within the panel
                 float panelCenterX = _position.X + (PANEL_WIDTH / 2f);
@@ -307,9 +312,15 @@ namespace ProjectVagabond.Battle.UI
                 // Layout the 3 move buttons in the top row
                 for (int i = 0; i < 3; i++)
                 {
+                    // Core (index 1) is 9px tall, Basic/Alt are 7px tall
+                    int height = (i == 1) ? 9 : 7;
+                    // Center the smaller buttons vertically relative to the 9px Core button
+                    int yOffset = (i == 1) ? 0 : 1;
+                    int width = widths[i];
+
                     // Hitbox is 1px wider to fill the gap and make clicking easier
-                    _buttons[i].Bounds = new Rectangle(startX, y, BUTTON_WIDTH + 1, BUTTON_HEIGHT);
-                    startX += BUTTON_WIDTH + BUTTON_SPACING;
+                    _buttons[i].Bounds = new Rectangle(startX, y + yOffset, width + 1, height);
+                    startX += width + BUTTON_SPACING;
                 }
 
                 // Layout the Switch button below the middle button (Core)
@@ -533,10 +544,11 @@ namespace ProjectVagabond.Battle.UI
                 DrawPair("USE", useTxt);
 
                 // Name
-                currentX = startX;
                 currentY += (rowSpacing - 2);
 
-                spriteBatch.DrawStringSnapped(secondaryFont, name, new Vector2(currentX, currentY), global.Palette_DarkPale);
+                Vector2 nameSize = secondaryFont.MeasureString(name);
+                float centeredNameX = bounds.X + (bounds.Width - nameSize.X) / 2f;
+                spriteBatch.DrawStringSnapped(secondaryFont, name, new Vector2(centeredNameX, currentY), global.Palette_Pale);
 
                 // Description
                 currentY += rowSpacing;

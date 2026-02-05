@@ -511,8 +511,9 @@ namespace ProjectVagabond.Particles
             settings.InitialVelocityX = new FloatRange(-5f, 5f); // Reduced spread speed
             settings.InitialVelocityY = new FloatRange(-20f, -5f); // Very slow rise
 
-            // Scale 1.0 = 3x3 pixels. Scale 2.0 = 6x6 pixels.
-            settings.InitialSize = new FloatRange(2f, 2f);
+            // Scale 1.0 = 4x4 pixels (Circle). Scale 1.5 = 6x6 pixels.
+            // Adjusted scale slightly down from 2.0 since the circle sprite (4x4) is larger than the cross (3x3).
+            settings.InitialSize = new FloatRange(1.5f, 1.5f);
             settings.EndSize = new FloatRange(0f);
             settings.InterpolateSize = true;
 
@@ -525,8 +526,8 @@ namespace ProjectVagabond.Particles
             settings.EndAlpha = 0.0f;
 
             // Rendering
-            // Use the new 3x3 plus sprite
-            settings.Texture = ServiceLocator.Get<SpriteManager>().HealParticleSprite;
+            // Use the circle sprite instead of the plus sprite
+            settings.Texture = ServiceLocator.Get<SpriteManager>().CircleParticleSprite;
             settings.BlendMode = BlendState.Additive;
             settings.LayerDepth = 0.9f;
 

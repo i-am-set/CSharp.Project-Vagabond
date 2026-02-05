@@ -218,7 +218,7 @@ namespace ProjectVagabond.Battle.UI
 
                 // Calculate flat position
                 float flatX = centerPos.X - (effectiveWidth / 2f) + 4; // Left padding
-                float flatY = centerPos.Y - (font.LineHeight / 2f);
+                float flatY = centerPos.Y - (font.LineHeight / 2f) + TextRenderOffset.Y;
 
                 var originalRasterizerState = spriteBatch.GraphicsDevice.RasterizerState;
                 var originalScissorRect = spriteBatch.GraphicsDevice.ScissorRectangle;
@@ -245,6 +245,9 @@ namespace ProjectVagabond.Battle.UI
                 // Calculate Origin (Center of Text)
                 // Added +1 to Y to shift text up by 1 pixel relative to the center
                 Vector2 textOrigin = new Vector2(MathF.Round(textSize.X / 2f), MathF.Round(textSize.Y / 2f) + 1);
+
+                // Apply TextRenderOffset (Inverse because we are adjusting origin to move text)
+                textOrigin -= TextRenderOffset;
 
                 // Draw Text "Welded" to the background
                 // Using the exact same centerPos, rotation, and scale ensures they move as one unit.
