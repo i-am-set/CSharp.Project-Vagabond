@@ -18,12 +18,15 @@ namespace ProjectVagabond.Battle
     /// </summary>
     public static class BattleConstants
     {
-        public const float CRITICAL_HIT_MULTIPLIER = 1.5f;
+        public const float CRITICAL_HIT_MULTIPLIER = 2.0f; // Updated to 2x as requested
         public const float CRITICAL_HIT_CHANCE = 0.0625f;
         public const float RANDOM_VARIANCE_MIN = 0.85f;
         public const float RANDOM_VARIANCE_MAX = 1.00f;
         public const float GRAZE_MULTIPLIER = 0.25f;
         public const float MULTI_TARGET_MODIFIER = 0.75f;
+
+        // --- BREAK ECONOMY ---
+        public const float SHIELDED_DAMAGE_MULT = 0.1f;
 
         // --- SWITCH ANIMATION TUNING ---
         public const float SWITCH_ANIMATION_DURATION = 0.5f;

@@ -52,14 +52,14 @@ namespace ProjectVagabond.Scenes
         private readonly PlayerMapIcon _playerIcon;
         private NarrativeDialog _narrativeDialog;
 
-        private const float PLAYER_MOVE_SPEED = 30f;
-        private const float CAMERA_LERP_SPEED = 5f;
-        private const float POST_EVENT_DELAY = 0.25f;
-        private const float PATH_ANIMATION_DURATION = 0.75f;
+        private const float PLAYER_MOVE_SPEED = 100f;
+        private const float CAMERA_LERP_SPEED = 15f;
+        private const float POST_EVENT_DELAY = 0.0f;
+        private const float PATH_ANIMATION_DURATION = 0.25f;
 
-        private const float NODE_LIFT_DURATION = 0.25f;
-        private const float PULSE_DURATION = 0.4f;
-        private const float NODE_LOWERING_DURATION = 0.5f;
+        private const float NODE_LIFT_DURATION = 0.1f;
+        private const float PULSE_DURATION = 0.1f;
+        private const float NODE_LOWERING_DURATION = 0.1f;
         private const float NODE_LIFT_AMOUNT = 12f;
 
         private const float NODE_ARRIVAL_SHAKE_MAGNITUDE = 1.5f;
@@ -136,7 +136,7 @@ namespace ProjectVagabond.Scenes
 
         private readonly Dictionary<int, float> _nodeHoverTimers = new Dictionary<int, float>();
         private const float NODE_HOVER_POP_SCALE_TARGET = 1.2f;
-        private const float NODE_HOVER_POP_SPEED = 12.0f;
+        private const float NODE_HOVER_POP_SPEED = 20.0f;
 
         private const float NODE_HOVER_FLOAT_SPEED = 3.0f;
         private const float NODE_HOVER_FLOAT_AMP = 2.0f;
@@ -156,7 +156,7 @@ namespace ProjectVagabond.Scenes
         private const float NODE_SELECTION_SHAKE_FREQUENCY = 50.0f;
 
         private const float NODE_PRESS_SCALE_TARGET = 0.85f;
-        private const float NODE_PRESS_SPEED = 20.0f;
+        private const float NODE_PRESS_SPEED = 30.0f;
         private readonly Dictionary<int, float> _nodePressTimers = new Dictionary<int, float>();
 
         public SplitMapScene()

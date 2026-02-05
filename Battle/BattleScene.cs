@@ -20,13 +20,14 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using static ProjectVagabond.GameEvents;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace ProjectVagabond.Scenes
 {
     public class BattleScene : GameScene
     {
-        private const float MULTI_HIT_DELAY = 0.25f;
-        private const float ACTION_EXECUTION_DELAY = 0.5f;
+        private const float MULTI_HIT_DELAY = 0.05f;
+        private const float ACTION_EXECUTION_DELAY = 0.0f;
         private const float FIXED_COIN_GROUND_Y = 115f;
         private const int ENEMY_SLOT_Y_OFFSET = 12;
         private const float BATTLE_ENTRY_INITIAL_DELAY = 0.0f;
@@ -63,9 +64,6 @@ namespace ProjectVagabond.Scenes
         private float _multiHitDelayTimer = 0f;
         private readonly Queue<Action> _pendingAnimations = new Queue<Action>();
         private readonly Random _random = new Random();
-
-        private bool _isWaitingForActionExecution = false;
-        private float _actionExecutionTimer = 0f;
 
         private float _watchdogTimer = 0f;
         private const float WATCHDOG_TIMEOUT = 4.0f;
@@ -175,8 +173,6 @@ namespace ProjectVagabond.Scenes
             _isWaitingForMultiHitDelay = false;
             _multiHitDelayTimer = 0f;
             _pendingAnimations.Clear();
-            _isWaitingForActionExecution = false;
-            _actionExecutionTimer = 0f;
             _isFadingOutOnDeath = false;
             _deathFadeTimer = 0f;
             _processedDeathAnimations.Clear();
@@ -678,8 +674,7 @@ namespace ProjectVagabond.Scenes
                                      $"MoveAnim Busy: {_moveAnimationManager.IsAnimating}\n" +
                                      $"Pending Anims: {_pendingAnimations.Count}\n" +
                                      $"Switch State: {_switchSequenceState}\n" +
-                                     $"MultiHit Wait: {_isWaitingForMultiHitDelay}\n" +
-                                     $"Action Exec Wait: {_isWaitingForActionExecution}";
+                                     $"MultiHit Wait: {_isWaitingForMultiHitDelay}";
 
                 Debug.WriteLine(stallReport);
 
@@ -689,7 +684,6 @@ namespace ProjectVagabond.Scenes
                 _moveAnimationManager.SkipAll();
                 _watchdogTimer = 0f;
                 _isWaitingForMultiHitDelay = false;
-                _isWaitingForActionExecution = false;
                 _pendingAnimations.Clear();
                 _switchSequenceState = SwitchSequenceState.None;
             }
@@ -698,18 +692,13 @@ namespace ProjectVagabond.Scenes
             _wasUiBusyLastFrame = isUiBusy;
             _wasAnimatingLastFrame = isAnimBusy;
 
-            _battleManager.Update(dt);
-
-            if (_isWaitingForActionExecution)
+            if (_isWaitingForMultiHitDelay)
             {
-                _actionExecutionTimer += dt;
-                if (_actionExecutionTimer >= ACTION_EXECUTION_DELAY)
-                {
-                    _isWaitingForActionExecution = false;
-                    _actionExecutionTimer = 0f;
-                    _battleManager.ExecuteDeclaredAction();
-                }
+                _multiHitDelayTimer += dt;
+                if (_multiHitDelayTimer < MULTI_HIT_DELAY) return;
             }
+
+            _battleManager.Update(dt);
 
             var currentPhase = _battleManager.CurrentPhase;
             if (currentPhase != _previousBattlePhase)
@@ -967,8 +956,6 @@ namespace ProjectVagabond.Scenes
 
         private void OnActionDeclared(GameEvents.ActionDeclared e)
         {
-            _isWaitingForActionExecution = true;
-            _actionExecutionTimer = 0f;
             _currentActor = e.Actor;
         }
 

@@ -41,23 +41,47 @@ namespace ProjectVagabond.Battle.Abilities
                     baseDamage = (dmgEvent.Move.Power * (offense / defense) * GLOBAL_DAMAGE_SCALAR) + FLAT_DAMAGE_BONUS;
                 }
 
-                // Tenacity Vulnerability
-                if (dmgEvent.Target.CurrentTenacity <= 0)
+                // --- Tenacity, Critical, and Graze Logic ---
+                if (dmgEvent.Target.CurrentTenacity > 0)
                 {
-                    multiplier *= 2.0f;
+                    // TARGET HAS SHIELD
+                    if (dmgEvent.IsCritical)
+                    {
+                        // Critical vs Shield:
+                        // Pierce the shield (ignore SHIELDED_DAMAGE_MULT).
+                        // Do NOT apply CRITICAL_HIT_MULTIPLIER.
+                        // Result: Normal Damage (1.0x).
+                    }
+                    else
+                    {
+                        // Normal or Graze vs Shield:
+                        // Apply Shield Penalty.
+                        multiplier *= BattleConstants.SHIELDED_DAMAGE_MULT;
+
+                        // Note: If it is a Graze, we do NOT apply the Graze multiplier (0.25f).
+                        // The damage is simply capped at the Shielded rate (0.1f).
+                    }
+                }
+                else
+                {
+                    // TARGET IS BROKEN (NO SHIELD)
+                    // Base damage is Normal (1.0x).
+
+                    if (dmgEvent.IsCritical)
+                    {
+                        // Critical vs Broken:
+                        // Apply full Critical Multiplier (2.0x).
+                        multiplier *= BattleConstants.CRITICAL_HIT_MULTIPLIER;
+                    }
+
+                    if (dmgEvent.IsGraze)
+                    {
+                        // Graze vs Broken:
+                        // Apply normal Graze Multiplier (0.25x).
+                        multiplier *= BattleConstants.GRAZE_MULTIPLIER;
+                    }
+
                     dmgEvent.WasVulnerable = true;
-                }
-
-                // Critical Hit
-                if (dmgEvent.IsCritical)
-                {
-                    multiplier *= BattleConstants.CRITICAL_HIT_MULTIPLIER;
-                }
-
-                // Graze
-                if (dmgEvent.IsGraze)
-                {
-                    multiplier *= BattleConstants.GRAZE_MULTIPLIER;
                 }
 
                 // Random Variance
