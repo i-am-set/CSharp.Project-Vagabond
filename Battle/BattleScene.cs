@@ -53,6 +53,7 @@ namespace ProjectVagabond.Scenes
         private Core _core;
         private GraphicsDevice _graphicsDevice;
         private Texture2D _pixel;
+        private BattleCameraController _battleCam;
 
         private List<int> _enemyEntityIds = new List<int>();
         private BattleManager.BattlePhase _previousBattlePhase;
@@ -144,6 +145,7 @@ namespace ProjectVagabond.Scenes
             _inputHandler = new BattleInputHandler();
             _alertManager = new AlertManager();
             _battleLogManager = new BattleLogManager();
+            _battleCam = new BattleCameraController();
         }
 
         public override void Enter()
@@ -386,6 +388,8 @@ namespace ProjectVagabond.Scenes
             }
 
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            _battleCam.Update(dt);
 
             if (_isFadingOutOnDeath)
             {
@@ -791,6 +795,7 @@ namespace ProjectVagabond.Scenes
                 newPhase == BattleManager.BattlePhase.ActionSelection)
             {
                 _currentActor = null;
+                ResetCamera();
             }
 
             if (newPhase == BattleManager.BattlePhase.ActionSelection)
@@ -818,6 +823,54 @@ namespace ProjectVagabond.Scenes
             }
 
             var secondaryFont = _core.SecondaryFont;
+
+            // 1. End the batch started by GameScene
+            spriteBatch.End();
+
+            // 2. Calculate Camera Transform
+            Matrix camMatrix = _battleCam.GetTransform();
+            Matrix worldTransform = camMatrix * transform;
+
+            // 3. Begin World Batch (Zoomed)
+            spriteBatch.Begin(
+                SpriteSortMode.Deferred,
+                BlendState.AlphaBlend,
+                SamplerState.PointClamp,
+                null,
+                null,
+                null,
+                worldTransform
+            );
+
+            BattleCombatant renderContextActor = _currentActor;
+            if (_battleManager != null && _battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection)
+            {
+                renderContextActor = null;
+            }
+
+            _renderer.Draw(spriteBatch, font, gameTime, _battleManager.AllCombatants, renderContextActor, _uiManager, _inputHandler, _animationManager, _uiManager.SharedPulseTimer, worldTransform);
+
+            bool isFlashing = _animationManager.GetImpactFlashState() != null;
+
+            if (!isFlashing)
+            {
+                _moveAnimationManager.Draw(spriteBatch);
+                _animationManager.DrawDamageIndicators(spriteBatch, _core.SecondaryFont);
+                _animationManager.DrawAbilityIndicators(spriteBatch, _core.SecondaryFont);
+            }
+
+            spriteBatch.End();
+
+            // 4. Begin UI Batch (Fixed)
+            spriteBatch.Begin(
+                SpriteSortMode.Deferred,
+                BlendState.AlphaBlend,
+                SamplerState.PointClamp,
+                null,
+                null,
+                null,
+                transform
+            );
 
             // Draw Battle Log (Background Layer)
             if (!_isBattleLogHovered)
@@ -864,35 +917,9 @@ namespace ProjectVagabond.Scenes
                 spriteBatch.DrawStringSnapped(font, roundText, drawPos, color, rotation, origin, scale, SpriteEffects.None, 0f);
             }
 
-            BattleCombatant renderContextActor = _currentActor;
-            if (_battleManager != null && _battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection)
+            if (!isFlashing)
             {
-                renderContextActor = null;
-            }
-
-            _renderer.Draw(spriteBatch, font, gameTime, _battleManager.AllCombatants, renderContextActor, _uiManager, _inputHandler, _animationManager, _uiManager.SharedPulseTimer, transform);
-
-            bool isFlashing = _animationManager.GetImpactFlashState() != null;
-
-            if (isFlashing)
-            {
-                var core = _core;
-                core.RequestFullscreenOverlay((sb, uiMatrix) =>
-                {
-                    sb.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, uiMatrix);
-                    _moveAnimationManager.Draw(sb);
-                    _uiManager.Draw(sb, font, gameTime, Matrix.Identity);
-                    _animationManager.DrawDamageIndicators(sb, _core.SecondaryFont);
-                    _animationManager.DrawAbilityIndicators(sb, _core.SecondaryFont);
-                    sb.End();
-                });
-            }
-            else
-            {
-                _moveAnimationManager.Draw(spriteBatch);
                 _uiManager.Draw(spriteBatch, font, gameTime, transform);
-                _animationManager.DrawDamageIndicators(spriteBatch, _core.SecondaryFont);
-                _animationManager.DrawAbilityIndicators(spriteBatch, _core.SecondaryFont);
             }
 
             // Draw Battle Log (Foreground Layer - if hovered)
@@ -900,6 +927,42 @@ namespace ProjectVagabond.Scenes
             {
                 _battleLogManager.Draw(spriteBatch, true);
             }
+
+            spriteBatch.End();
+
+            // 5. Handle Flashing Overlay
+            if (isFlashing)
+            {
+                var core = _core;
+                core.RequestFullscreenOverlay((sb, uiMatrix) =>
+                {
+                    // uiMatrix is the screen transform passed by Core
+                    Matrix overlayWorldTransform = camMatrix * uiMatrix;
+
+                    // World Space Elements on top of flash
+                    sb.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, overlayWorldTransform);
+                    _moveAnimationManager.Draw(sb);
+                    _animationManager.DrawDamageIndicators(sb, _core.SecondaryFont);
+                    _animationManager.DrawAbilityIndicators(sb, _core.SecondaryFont);
+                    sb.End();
+
+                    // UI Space Elements on top of flash
+                    sb.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, uiMatrix);
+                    _uiManager.Draw(sb, font, gameTime, Matrix.Identity);
+                    sb.End();
+                });
+            }
+
+            // 6. Re-open a dummy batch so GameScene.Draw doesn't crash on End()
+            spriteBatch.Begin(
+                SpriteSortMode.Deferred,
+                BlendState.AlphaBlend,
+                SamplerState.PointClamp,
+                null,
+                null,
+                null,
+                transform
+            );
         }
 
         public override void DrawOverlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
@@ -961,6 +1024,19 @@ namespace ProjectVagabond.Scenes
 
         private void OnMoveAnimationTriggered(GameEvents.MoveAnimationTriggered e)
         {
+            // 1. Calculate the center of ALL targets
+            Vector2 camTarget = GetCombatantCentroid(e.Targets);
+
+            // 2. Fallback to actor if no targets (e.g. self-buff)
+            if (camTarget == Vector2.Zero)
+            {
+                camTarget = _renderer.GetCombatantVisualCenterPosition(e.Actor, _battleManager.AllCombatants);
+            }
+
+            // 3. Set Focus immediately
+            SetCameraFocus(camTarget, 1.01f);
+
+            // Existing logic...
             _moveAnimationManager.StartAnimation(e.Move, e.Targets, _renderer, e.GrazeStatus);
         }
 
@@ -973,6 +1049,16 @@ namespace ProjectVagabond.Scenes
         private void OnBattleActionExecuted(GameEvents.BattleActionExecuted e)
         {
             _currentActor = e.Actor;
+
+            Vector2 camTarget = GetCombatantCentroid(e.Targets);
+
+            if (camTarget == Vector2.Zero)
+            {
+                camTarget = _renderer.GetCombatantVisualCenterPosition(e.Actor, _battleManager.AllCombatants);
+            }
+
+            SetCameraFocus(camTarget, 1.01f);
+
             _renderer.TriggerAttackAnimation(e.Actor.CombatantID);
             bool isMultiHit = e.ChosenMove != null && e.ChosenMove.Effects.ContainsKey("MultiHit");
             if (isMultiHit) _isWaitingForMultiHitDelay = true;
@@ -1240,6 +1326,32 @@ namespace ProjectVagabond.Scenes
         private void OpenSettings()
         {
             _sceneManager.ShowModal(GameSceneState.Settings);
+        }
+
+        private void SetCameraFocus(Vector2 targetPos, float zoom)
+        {
+            if (targetPos == Vector2.Zero)
+            {
+                targetPos = new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f);
+            }
+            _battleCam.SetTarget(targetPos, zoom);
+        }
+
+        private void ResetCamera()
+        {
+            SetCameraFocus(new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f), 1.0f);
+        }
+
+        private Vector2 GetCombatantCentroid(IList<BattleCombatant> combatants)
+        {
+            if (combatants == null || combatants.Count == 0) return Vector2.Zero;
+
+            Vector2 sum = Vector2.Zero;
+            foreach (var c in combatants)
+            {
+                sum += _renderer.GetCombatantVisualCenterPosition(c, _battleManager.AllCombatants);
+            }
+            return sum / combatants.Count;
         }
     }
 }
