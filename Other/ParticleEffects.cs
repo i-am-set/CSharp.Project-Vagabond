@@ -502,18 +502,18 @@ namespace ProjectVagabond.Particles
             settings.Shape = EmitterShape.Circle;
             settings.EmitFrom = EmissionSource.Volume;
             settings.EmitterSize = new Vector2(30f, 30f); // Wide and flat
-            settings.EmissionRate = 25;
+            settings.EmissionRate = 15;
             settings.BurstCount = 1; // Increased count
-            settings.Duration = 0.5f; // Give the emitter plenty of time to exist while particles float
+            settings.Duration = 1.0f; // Give the emitter plenty of time to exist while particles float
 
             // Initial Particle
-            settings.Lifetime = new FloatRange(1.0f, 2.5f); // Live much longer
+            settings.Lifetime = new FloatRange(1.0f, 2.0f); // Live much longer
             settings.InitialVelocityX = new FloatRange(-5f, 5f); // Reduced spread speed
             settings.InitialVelocityY = new FloatRange(-20f, -5f); // Very slow rise
 
             // Scale 1.0 = 4x4 pixels (Circle). Scale 1.5 = 6x6 pixels.
             // Adjusted scale slightly down from 2.0 since the circle sprite (4x4) is larger than the cross (3x3).
-            settings.InitialSize = new FloatRange(1.5f, 1.5f);
+            settings.InitialSize = new FloatRange(1.0f, 1.0f);
             settings.EndSize = new FloatRange(0f);
             settings.InterpolateSize = true;
 
