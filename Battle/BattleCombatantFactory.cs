@@ -138,11 +138,6 @@ namespace ProjectVagabond.Battle
                 }
             }
 
-            float powerScore = (combatant.Stats.MaxHP * 0.2f) + (combatant.Stats.Strength * 1.0f) + (combatant.Stats.Intelligence * 1.0f) + (combatant.Stats.Tenacity * 1.0f) + (combatant.Stats.Agility * 1.0f);
-            float calculatedValue = global.Economy_BaseDrop + (powerScore * global.Economy_GlobalScalar);
-            float variance = (float)(_random.NextDouble() * (global.Economy_Variance * 2) - global.Economy_Variance);
-            combatant.CoinReward = Math.Max(1, (int)Math.Round(calculatedValue * (1.0f + variance)));
-
             return combatant;
         }
     }

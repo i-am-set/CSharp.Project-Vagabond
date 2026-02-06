@@ -473,7 +473,6 @@ namespace ProjectVagabond.UI
 
                                 effectAction = () =>
                                 {
-                                    _gameState.PlayerState.Coin += goldAmount;
                                     _targetHP[idx] = member.CurrentHP;
                                 };
                             }

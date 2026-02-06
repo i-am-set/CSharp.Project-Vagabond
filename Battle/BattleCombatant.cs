@@ -37,7 +37,6 @@ namespace ProjectVagabond.Battle
 
         public int BattleSlot { get; set; } = -1;
         public bool IsActiveOnField => BattleSlot == 0 || BattleSlot == 1;
-        public int CoinReward { get; set; } = 0;
 
         public TagContainer Tags { get; private set; } = new TagContainer();
 

@@ -349,8 +349,6 @@ namespace ProjectVagabond.Battle.UI
                 DrawPlayers(spriteBatch, font, players, currentActor, shouldGrayOut, selectableTargets, animationManager, silhouetteColors, gameTime, uiManager, hoveredCombatant, isTargetingMode, hoveredGroupColor);
             }
 
-            animationManager.DrawCoins(spriteBatch);
-
             var effectiveFocus = hoveredCombatant ?? uiManager.HoveredCombatantFromUI;
             DrawTargetingHighlights(spriteBatch, uiManager, gameTime, silhouetteColors, effectiveFocus);
 
@@ -1368,7 +1366,6 @@ namespace ProjectVagabond.Battle.UI
                 var healFlash = animManager.GetHealFlashAnimationState(player.CombatantID);
                 var hitFlash = animManager.GetHitFlashState(player.CombatantID);
                 var healBounce = animManager.GetHealBounceAnimationState(player.CombatantID);
-                var coinCatch = animManager.GetCoinCatchAnimationState(player.CombatantID);
                 var introSlide = animManager.GetIntroSlideAnimationState(player.CombatantID);
                 var attackCharge = animManager.GetAttackChargeState(player.CombatantID);
 
@@ -1415,14 +1412,6 @@ namespace ProjectVagabond.Battle.UI
                 {
                     float p = healBounce.Timer / BattleAnimationManager.HealBounceAnimationState.Duration;
                     bob += MathF.Sin(p * MathHelper.Pi) * -BattleAnimationManager.HealBounceAnimationState.Height;
-                }
-
-                if (coinCatch != null)
-                {
-                    float p = coinCatch.Timer / BattleAnimationManager.CoinCatchAnimationState.DURATION;
-                    float s = MathF.Sin(p * MathHelper.Pi);
-                    scale += s * 0.15f;
-                    rotation = coinCatch.CurrentRotation;
                 }
 
                 Vector2 recoil = _recoilStates.TryGetValue(player.CombatantID, out var r) ? r.Offset : Vector2.Zero;

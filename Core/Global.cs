@@ -136,12 +136,6 @@ namespace ProjectVagabond
         public float HoverHapticStrength { get; set; } = 0.75f;
         public float ButtonHapticStrength { get; set; } = 0.5f;
 
-        public float PriceMultiplier_Consumable { get; set; } = 0.4f;
-
-        public float Economy_GlobalScalar { get; set; } = 1.0f;
-        public int Economy_BaseDrop { get; set; } = 10;
-        public float Economy_Variance { get; set; } = 0.4f;
-
         public int PoisonBaseDamage { get; set; } = 2;
         public float RegenPercent { get; set; } = 0.0625f;
         public float DodgingAccuracyMultiplier { get; set; } = 0.5f;

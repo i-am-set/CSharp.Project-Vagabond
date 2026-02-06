@@ -129,12 +129,6 @@ namespace ProjectVagabond
                             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[Palette_Leaf]Fully Healed!" });
                         }
                         break;
-
-                    case "Gold":
-                        PlayerState.Coin += outcome.Amount;
-                        string gSign = outcome.Amount > 0 ? "+" : "";
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[Palette_DarkSun]{gSign}{outcome.Amount} Gold" });
-                        break;
                 }
             }
         }

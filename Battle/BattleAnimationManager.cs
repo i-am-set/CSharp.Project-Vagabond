@@ -56,11 +56,6 @@ namespace ProjectVagabond.Battle.UI
             public enum Phase { FlashWhite1, FlashGray, FlashWhite2, FadeOut }
             public Phase CurrentPhase;
 
-            // Data for Coin Spawning
-            public Vector2 CenterPosition;
-            public float GroundY;
-            public bool CoinsSpawned;
-
             // Tuning: Faster Death
             public const float FLASH_DURATION = 0.05f; // Was 0.1f
             public const float FADE_DURATION = 0.15f; // Was 0.25f
@@ -301,68 +296,6 @@ namespace ProjectVagabond.Battle.UI
             public const float RISE_DISTANCE = 5f;
         }
 
-        // --- COIN PARTICLE SYSTEM ---
-        public class CoinParticle
-        {
-            public Vector2 Position;
-            public Vector2 Velocity;
-            public float TargetGroundY;
-            public bool IsResting;
-            public float Timer;
-            public float Delay;
-
-            // Visuals
-            public float FlipTimer;
-            public float FlipSpeed;
-
-            // Magnetization State
-            public bool IsMagnetizing;
-            public Vector2 MagnetTarget;
-            public float MagnetSpeed;
-            public float MagnetAcceleration;
-
-            // --- NEW: Pre-calculated Target ---
-            public Vector2? PreCalculatedTarget;
-            public string TargetCombatantID;
-
-            // --- NEW: Failsafe Timer ---
-            public float AbsoluteTimer;
-        }
-        private readonly List<CoinParticle> _activeCoins = new List<CoinParticle>();
-
-        // --- COIN TUNING VARIABLES ---
-        private const float COIN_GRAVITY = 900f;
-        private const float COIN_BOUNCE_FACTOR = 0.5f;
-        private const float COIN_LIFETIME = 0.3f; // Was 0.5f
-        private const float COIN_INDIVIDUAL_DISPENSE_DELAY = 1.0f; // Was 1.75f
-        private const float COIN_MAX_LIFETIME = 5.0f; // Was 8.0f
-
-        // Spawning Physics
-        private const float COIN_VELOCITY_X_RANGE = 120f;
-        private const float COIN_VELOCITY_Y_MIN = -200f;
-        private const float COIN_VELOCITY_Y_MAX = -100f;
-
-        // Magnetization Physics
-        private const float COIN_MAGNET_ACCEL_MIN = 2000f; // Was 1500f
-        private const float COIN_MAGNET_ACCEL_MAX = 3000f; // Was 2000f
-        private const float COIN_MAGNET_KILL_DIST_SQ = 100f;
-
-        // Floor Layout
-        private const float COIN_GROUND_OFFSET_Y = 42f;
-        private const float COIN_GROUND_DEPTH_HEIGHT = 14f;
-
-        // --- COIN CATCH ANIMATION ---
-        public class CoinCatchAnimationState
-        {
-            public string CombatantID;
-            public float Timer;
-            public float CurrentRotation;
-            public const float DURATION = 0.1f; // Was 0.15f
-            public const float ROTATION_DECAY_SPEED = 10f;
-        }
-        private readonly List<CoinCatchAnimationState> _activeCoinCatchAnimations = new List<CoinCatchAnimationState>();
-        private const float COIN_CATCH_ROTATION_STRENGTH = 0.1f;
-
         // --- HITSTOP VISUAL STATE ---
         public class HitstopVisualState
         {
@@ -410,7 +343,7 @@ namespace ProjectVagabond.Battle.UI
 
         /// <summary>
         /// Returns true if any BLOCKING animation is currently playing.
-        /// This excludes cosmetic effects like coins, damage numbers, and hit flashes,
+        /// This excludes cosmetic effects like damage numbers  and hit flashes,
         /// allowing the game logic to proceed while these play in the background.
         /// </summary>
         public bool IsBlockingAnimation =>
@@ -432,13 +365,11 @@ namespace ProjectVagabond.Battle.UI
         public bool IsAnimating => IsBlockingAnimation;
 
         /// <summary>
-        /// Returns true if ANY visual effect is active, including non-blocking ones like coins and damage numbers.
+        /// Returns true if ANY visual effect is active, including non-blocking ones like damage numbers.
         /// Used to delay the end of battle until the screen is clean.
         /// </summary>
         public bool IsVisuallyBusy =>
             IsBlockingAnimation ||
-            _activeCoins.Any() ||
-            _activeCoinCatchAnimations.Any() ||
             _activeDamageIndicators.Any() ||
             _activeAbilityIndicators.Any();
 
@@ -467,10 +398,8 @@ namespace ProjectVagabond.Battle.UI
             _activeDamageIndicators.Clear();
             _activeAbilityIndicators.Clear();
             _activeBarAnimations.Clear();
-            _activeCoins.Clear();
             _pendingTextIndicators.Clear();
             _activeHitstopVisuals.Clear();
-            _activeCoinCatchAnimations.Clear();
             _activeIntroSlideAnimations.Clear();
             _activeFloorIntroAnimations.Clear();
             _activeFloorOutroAnimations.Clear();
@@ -528,17 +457,12 @@ namespace ProjectVagabond.Battle.UI
             _activeFloorOutroAnimations.Clear();
             _activeAttackCharges.Clear();
 
-            // 4. Handle Death Animations: Ensure coins spawn if skipped
+            // 4. Handle Death Animations
             foreach (var anim in _activeDeathAnimations)
             {
                 var combatant = combatants.FirstOrDefault(c => c.CombatantID == anim.CombatantID);
                 if (combatant != null)
                 {
-                    if (!anim.CoinsSpawned && !combatant.IsPlayerControlled)
-                    {
-                        var players = combatants.Where(c => c.IsPlayerControlled && !c.IsDefeated && c.IsActiveOnField).ToList();
-                        SpawnCoins(anim.CenterPosition, 50, anim.GroundY, players);
-                    }
                     combatant.VisualAlpha = 0f;
                 }
             }
@@ -682,7 +606,7 @@ namespace ProjectVagabond.Battle.UI
             });
         }
 
-        public void StartDeathAnimation(string combatantId, Vector2 centerPos, float groundY)
+        public void StartDeathAnimation(string combatantId)
         {
             _activeDeathAnimations.RemoveAll(a => a.CombatantID == combatantId);
             _activeDeathAnimations.Add(new DeathAnimationState
@@ -690,9 +614,6 @@ namespace ProjectVagabond.Battle.UI
                 CombatantID = combatantId,
                 Timer = 0f,
                 CurrentPhase = DeathAnimationState.Phase.FlashWhite1,
-                CenterPosition = centerPos,
-                GroundY = groundY,
-                CoinsSpawned = false
             });
         }
 
@@ -834,32 +755,6 @@ namespace ProjectVagabond.Battle.UI
                 CombatantID = combatantId,
                 Timer = 0f
             });
-        }
-
-        public void StartCoinCatchAnimation(string combatantId)
-        {
-            var existing = _activeCoinCatchAnimations.FirstOrDefault(a => a.CombatantID == combatantId);
-            if (existing != null)
-            {
-                existing.Timer = 0f;
-                float kick = (float)(_random.NextDouble() * (COIN_CATCH_ROTATION_STRENGTH * 2) - COIN_CATCH_ROTATION_STRENGTH);
-                existing.CurrentRotation += kick;
-            }
-            else
-            {
-                float initialRotation = (float)(_random.NextDouble() * (COIN_CATCH_ROTATION_STRENGTH * 2) - COIN_CATCH_ROTATION_STRENGTH);
-                _activeCoinCatchAnimations.Add(new CoinCatchAnimationState
-                {
-                    CombatantID = combatantId,
-                    Timer = 0f,
-                    CurrentRotation = initialRotation
-                });
-            }
-        }
-
-        public CoinCatchAnimationState GetCoinCatchAnimationState(string combatantId)
-        {
-            return _activeCoinCatchAnimations.FirstOrDefault(a => a.CombatantID == combatantId);
         }
 
         public void StartAbilityIndicator(string combatantId, string abilityName, Vector2 startPosition)
@@ -1102,8 +997,6 @@ namespace ProjectVagabond.Battle.UI
             UpdateDamageIndicators(gameTime);
             UpdateAbilityIndicators(gameTime);
             UpdateBarAnimations(gameTime);
-            UpdateCoins(gameTime, combatants);
-            UpdateCoinCatchAnimations(gameTime);
             UpdateImpactFlash(gameTime);
             UpdateAttackCharges(gameTime);
             UpdateHudEntryAnimations(gameTime, combatants);
@@ -1360,12 +1253,6 @@ namespace ProjectVagabond.Battle.UI
                         {
                             anim.Timer = 0f;
                             anim.CurrentPhase = DeathAnimationState.Phase.FadeOut;
-
-                            if (!anim.CoinsSpawned && !combatant.IsPlayerControlled)
-                            {
-                                var players = combatants.Where(c => c.IsPlayerControlled && !c.IsDefeated && c.IsActiveOnField).ToList();
-                                SpawnCoins(anim.CenterPosition, 50, anim.GroundY, players);
-                            }
                         }
                         break;
                     case DeathAnimationState.Phase.FadeOut:
@@ -1380,182 +1267,6 @@ namespace ProjectVagabond.Battle.UI
                         }
                         break;
                 }
-            }
-        }
-
-        private void SpawnCoins(Vector2 origin, int amount, float referenceGroundY, List<BattleCombatant> players)
-        {
-            for (int i = 0; i < amount; i++)
-            {
-                float randomDepth = (float)(_random.NextDouble() * COIN_GROUND_DEPTH_HEIGHT) - (COIN_GROUND_DEPTH_HEIGHT / 2f);
-                float targetGroundY = (referenceGroundY - COIN_GROUND_OFFSET_Y) + randomDepth;
-
-                Vector2? targetPos = null;
-                string targetId = null;
-
-                if (players.Any())
-                {
-                    var targetPlayer = players[i % players.Count];
-                    targetId = targetPlayer.CombatantID;
-
-                    if (GetCombatantPosition != null)
-                    {
-                        targetPos = GetCombatantPosition(targetPlayer);
-                    }
-                    else
-                    {
-                        targetPos = BattleLayout.GetPlayerSpriteCenter(targetPlayer.BattleSlot);
-                    }
-                }
-
-                var coin = new CoinParticle
-                {
-                    Position = origin + new Vector2((float)(_random.NextDouble() * 20 - 10), 0),
-                    Velocity = new Vector2(
-                        (float)(_random.NextDouble() * (COIN_VELOCITY_X_RANGE * 2) - COIN_VELOCITY_X_RANGE),
-                        (float)(_random.NextDouble() * (COIN_VELOCITY_Y_MAX - COIN_VELOCITY_Y_MIN) + COIN_VELOCITY_Y_MIN)
-                    ),
-                    TargetGroundY = targetGroundY,
-                    IsResting = false,
-                    Timer = 0f,
-                    Delay = (float)(_random.NextDouble() * COIN_INDIVIDUAL_DISPENSE_DELAY),
-                    IsMagnetizing = false,
-                    MagnetSpeed = 0f,
-                    MagnetAcceleration = (float)(_random.NextDouble() * (COIN_MAGNET_ACCEL_MAX - COIN_MAGNET_ACCEL_MIN) + COIN_MAGNET_ACCEL_MIN),
-                    FlipTimer = (float)(_random.NextDouble() * MathHelper.TwoPi),
-                    FlipSpeed = 10f + (float)(_random.NextDouble() * 10f),
-                    PreCalculatedTarget = targetPos,
-                    TargetCombatantID = targetId,
-                    AbsoluteTimer = 0f
-                };
-                _activeCoins.Add(coin);
-            }
-        }
-
-        private void UpdateCoins(GameTime gameTime, IEnumerable<BattleCombatant> combatants)
-        {
-            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
-            const float PHYSICS_STEP = 0.00833f;
-            float timeLeft = dt;
-
-            while (timeLeft > 0)
-            {
-                float step = Math.Min(timeLeft, PHYSICS_STEP);
-                UpdateCoinsPhysicsStep(step);
-                timeLeft -= step;
-            }
-        }
-
-        private void UpdateCoinsPhysicsStep(float dt)
-        {
-            for (int i = _activeCoins.Count - 1; i >= 0; i--)
-            {
-                var coin = _activeCoins[i];
-                coin.AbsoluteTimer += dt;
-                if (coin.AbsoluteTimer >= COIN_MAX_LIFETIME)
-                {
-                    if (!string.IsNullOrEmpty(coin.TargetCombatantID))
-                    {
-                        StartCoinCatchAnimation(coin.TargetCombatantID);
-                    }
-                    _activeCoins.RemoveAt(i);
-                    continue;
-                }
-
-                if (coin.Delay > 0)
-                {
-                    coin.Delay -= dt;
-                    continue;
-                }
-
-                coin.FlipTimer += dt * coin.FlipSpeed;
-
-                if (coin.IsMagnetizing)
-                {
-                    Vector2 direction = coin.MagnetTarget - coin.Position;
-                    float distanceSq = direction.LengthSquared();
-                    float distance = MathF.Sqrt(distanceSq);
-                    coin.MagnetSpeed += coin.MagnetAcceleration * dt;
-                    float moveAmount = coin.MagnetSpeed * dt;
-
-                    if (distance <= moveAmount || distanceSq < COIN_MAGNET_KILL_DIST_SQ)
-                    {
-                        if (!string.IsNullOrEmpty(coin.TargetCombatantID))
-                        {
-                            StartCoinCatchAnimation(coin.TargetCombatantID);
-                        }
-                        _activeCoins.RemoveAt(i);
-                        continue;
-                    }
-
-                    direction.Normalize();
-                    coin.Position += direction * moveAmount;
-                }
-                else if (!coin.IsResting)
-                {
-                    coin.Velocity.Y += COIN_GRAVITY * dt;
-                    coin.Position += coin.Velocity * dt;
-
-                    if (coin.Position.Y >= coin.TargetGroundY)
-                    {
-                        coin.Position.Y = coin.TargetGroundY;
-                        if (Math.Abs(coin.Velocity.Y) > 50f)
-                        {
-                            coin.Velocity.Y = -coin.Velocity.Y * COIN_BOUNCE_FACTOR;
-                            coin.Velocity.X *= 0.8f;
-                        }
-                        else
-                        {
-                            coin.IsResting = true;
-                            coin.Velocity = Vector2.Zero;
-                        }
-                    }
-                }
-                else
-                {
-                    coin.Timer += dt;
-                    if (coin.Timer >= COIN_LIFETIME)
-                    {
-                        if (coin.PreCalculatedTarget.HasValue)
-                        {
-                            coin.IsMagnetizing = true;
-                            coin.MagnetTarget = coin.PreCalculatedTarget.Value;
-                        }
-                        else
-                        {
-                            _activeCoins.RemoveAt(i);
-                        }
-                    }
-                }
-            }
-        }
-
-        private void UpdateCoinCatchAnimations(GameTime gameTime)
-        {
-            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
-            for (int i = _activeCoinCatchAnimations.Count - 1; i >= 0; i--)
-            {
-                var anim = _activeCoinCatchAnimations[i];
-                anim.Timer += dt;
-                anim.CurrentRotation = MathHelper.Lerp(anim.CurrentRotation, 0f, dt * CoinCatchAnimationState.ROTATION_DECAY_SPEED);
-                if (anim.Timer >= CoinCatchAnimationState.DURATION)
-                {
-                    _activeCoinCatchAnimations.RemoveAt(i);
-                }
-            }
-        }
-
-        public void DrawCoins(SpriteBatch spriteBatch)
-        {
-            var pixel = ServiceLocator.Get<Texture2D>();
-            foreach (var coin in _activeCoins)
-            {
-                if (coin.Delay > 0) continue;
-                float shimmer = (MathF.Sin(coin.FlipTimer) + 1f) / 2f;
-                Color coinColor = Color.Lerp(_global.Palette_DarkSun, _global.Palette_Fruit, shimmer);
-                Vector2 baseSize = new Vector2(1f, 1f);
-                Vector2 finalScale = baseSize;
-                spriteBatch.DrawSnapped(pixel, coin.Position, null, coinColor, 0f, new Vector2(0.5f, 0.5f), finalScale, SpriteEffects.None, 0f);
             }
         }
 

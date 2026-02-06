@@ -28,7 +28,6 @@ namespace ProjectVagabond.Scenes
     {
         private const float MULTI_HIT_DELAY = 0.05f;
         private const float ACTION_EXECUTION_DELAY = 0.0f;
-        private const float FIXED_COIN_GROUND_Y = 115f;
         private const int ENEMY_SLOT_Y_OFFSET = 12;
         private const float BATTLE_ENTRY_INITIAL_DELAY = 0.0f;
 
@@ -984,8 +983,7 @@ namespace ProjectVagabond.Scenes
             }
             Vector2 visualOffset = _spriteManager.GetVisualCenterOffset(target.ArchetypeId);
             centerPos += visualOffset;
-            float groundY = FIXED_COIN_GROUND_Y;
-            _animationManager.StartDeathAnimation(target.CombatantID, centerPos, groundY);
+            _animationManager.StartDeathAnimation(target.CombatantID);
             target.VisualAlpha = 1.0f;
         }
 
@@ -1177,11 +1175,6 @@ namespace ProjectVagabond.Scenes
         private void OnCombatantDefeated(GameEvents.CombatantDefeated e)
         {
             TriggerDeathAnimation(e.DefeatedCombatant);
-            if (!e.DefeatedCombatant.IsPlayerControlled)
-            {
-                int coinAmount = e.DefeatedCombatant.CoinReward;
-                _gameState.PlayerState.Coin += coinAmount;
-            }
         }
 
         private void OnActionFailed(GameEvents.ActionFailed e)

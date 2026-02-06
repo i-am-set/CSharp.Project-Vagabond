@@ -119,13 +119,6 @@ namespace ProjectVagabond.UI
             Vector2 titlePos = new Vector2((Global.VIRTUAL_WIDTH - titleSize.X) / 2, WORLD_Y_OFFSET + 10);
             spriteBatch.DrawStringSnapped(font, title, titlePos, _global.Palette_Sun);
 
-            // Coin Display
-            string coinText = $"COIN: {_gameState.PlayerState.Coin}";
-            Vector2 coinSize = secondaryFont.MeasureString(coinText);
-            float coinX = (Global.VIRTUAL_WIDTH - coinSize.X) / 2f;
-            float coinY = _leaveButton.Bounds.Top - coinSize.Y - 4;
-            spriteBatch.DrawStringSnapped(secondaryFont, coinText, new Vector2(coinX, coinY), _global.Palette_DarkSun);
-
             _leaveButton.Draw(spriteBatch, secondaryFont, gameTime, Matrix.Identity);
 
             // --- DEBUG DRAWING (F1) ---

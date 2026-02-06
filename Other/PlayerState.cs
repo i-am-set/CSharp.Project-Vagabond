@@ -12,13 +12,6 @@ namespace ProjectVagabond
         public HashSet<string> PastMemberIds { get; set; } = new HashSet<string>();
         public PartyMember Leader => Party.Count > 0 ? Party[0] : null;
 
-        private int _coin = 100;
-        public int Coin
-        {
-            get => _coin;
-            set => _coin = Math.Max(0, value);
-        }
-
         public int MaxHP { get => Leader?.MaxHP ?? 100; set { if (Leader != null) Leader.MaxHP = value; } }
         public int CurrentHP { get => Leader?.CurrentHP ?? 100; set { if (Leader != null) Leader.CurrentHP = value; } }
         public int Strength { get => Leader?.Strength ?? 10; set { if (Leader != null) Leader.Strength = value; } }
