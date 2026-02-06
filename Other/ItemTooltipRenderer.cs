@@ -41,7 +41,7 @@ namespace ProjectVagabond.UI
         private const int LAYOUT_TITLE_Y = 30;
         private const int LAYOUT_VARS_START_Y = 44;
         private const int LAYOUT_VAR_ROW_HEIGHT = 9;
-        private const int LAYOUT_CONTACT_Y = LAYOUT_VARS_START_Y + (3 * LAYOUT_VAR_ROW_HEIGHT);
+        private const int LAYOUT_CONTACT_Y = LAYOUT_VARS_START_Y + (2 * LAYOUT_VAR_ROW_HEIGHT); // Reduced rows
         private const int LAYOUT_DESC_START_Y = LAYOUT_CONTACT_Y + LAYOUT_VAR_ROW_HEIGHT - 3;
 
         public Color DimmerColor { get; set; } = Color.Black;
@@ -302,18 +302,11 @@ namespace ProjectVagabond.UI
                 spriteBatch.DrawStringSnapped(secondaryFont, value, new Vector2(valueX, y), valColor * opacity);
             }
 
-            string powVal = move.Power > 0 ? move.Power.ToString() : (move.Effects.ContainsKey("ManaDamage") ? "???" : "---");
+            string powVal = move.Power > 0 ? move.Power.ToString() : "---";
             string accVal = move.Accuracy >= 0 ? $"{move.Accuracy}%" : "---";
-            string mpVal = (move.ManaCost > 0 ? move.ManaCost.ToString() : "0");
-            var manaDump = move.Abilities.OfType<ManaDumpAbility>().FirstOrDefault();
-            if (manaDump != null) powVal = "???";
 
             DrawStatPair("POW", powVal, leftLabelX, leftValueX, currentY, _global.Palette_Sun);
             DrawStatPair("ACC", accVal, rightLabelX, rightValueX, currentY, _global.Palette_Sun);
-            currentY += LAYOUT_VAR_ROW_HEIGHT;
-
-            DrawStatPair("MANA", mpVal, leftLabelX, leftValueX, currentY, _global.Palette_Sun);
-            DrawStatPair("TGT", GetTargetString(move.Target), rightLabelX, rightValueX, currentY, _global.Palette_Sun);
             currentY += LAYOUT_VAR_ROW_HEIGHT;
 
             string offStatVal = GetStatString(move.OffensiveStat);

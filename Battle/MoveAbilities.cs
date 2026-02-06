@@ -150,38 +150,6 @@ namespace ProjectVagabond.Battle.Abilities
         }
     }
 
-    public class RestoreManaAbility : IAbility
-    {
-        public string Name => "Restore Mana";
-        public string Description => "Restores a percentage of Max Mana to the target.";
-        public int Priority => 0;
-
-        private readonly float _percentage;
-        public RestoreManaAbility(float percentage) { _percentage = percentage; }
-
-        public void OnEvent(GameEvent e, BattleContext context)
-        {
-            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
-            {
-                var target = reaction.Target;
-                int amount = (int)(target.Stats.MaxMana * (_percentage / 100f));
-                float before = target.Stats.CurrentMana;
-                target.Stats.CurrentMana = Math.Min(target.Stats.MaxMana, target.Stats.CurrentMana + amount);
-
-                if (target.Stats.CurrentMana > before)
-                {
-                    EventBus.Publish(new GameEvents.CombatantManaRestored
-                    {
-                        Target = target,
-                        AmountRestored = (int)(target.Stats.CurrentMana - before),
-                        ManaBefore = before,
-                        ManaAfter = target.Stats.CurrentMana
-                    });
-                }
-            }
-        }
-    }
-
     public class RecoilAbility : IAbility
     {
         public string Name => "Recoil";
@@ -279,68 +247,6 @@ namespace ProjectVagabond.Battle.Abilities
         }
     }
 
-    public class ManaDamageAbility : IAbility
-    {
-        public string Name => "Mana Burn";
-        public string Description => "Destroys target's mana to fuel damage.";
-        public int Priority => 0;
-
-        private readonly int _maxBurnAmount;
-        public ManaDamageAbility(int amount) { _maxBurnAmount = amount; }
-
-        public void OnEvent(GameEvent e, BattleContext context)
-        {
-            if (e is CalculateDamageEvent dmgEvent && dmgEvent.Move.Abilities.Contains(this))
-            {
-                int currentMana = dmgEvent.Target.Stats.CurrentMana;
-                int burnAmount = Math.Min(currentMana, _maxBurnAmount);
-
-                if (burnAmount <= 0)
-                {
-                    dmgEvent.DamageMultiplier = 0f;
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[DriftWave]But it failed![/]" });
-                }
-                else
-                {
-                    float before = dmgEvent.Target.Stats.CurrentMana;
-                    dmgEvent.Target.Stats.CurrentMana -= burnAmount;
-
-                    EventBus.Publish(new GameEvents.CombatantManaConsumed
-                    {
-                        Actor = dmgEvent.Target,
-                        ManaBefore = before,
-                        ManaAfter = dmgEvent.Target.Stats.CurrentMana
-                    });
-
-                    dmgEvent.FlatBonus += burnAmount;
-                }
-            }
-        }
-    }
-
-    public class ManaDumpAbility : IAbility
-    {
-        public string Name => "Flux Discharge";
-        public string Description => "Consumes all mana to deal damage.";
-        public int Priority => 0;
-
-        public float Multiplier { get; }
-        public ManaDumpAbility(float multiplier) { Multiplier = multiplier; }
-
-        public void OnEvent(GameEvent e, BattleContext context)
-        {
-            if (e is CalculateDamageEvent dmgEvent && dmgEvent.Move.Abilities.Contains(this))
-            {
-                float bonus = dmgEvent.Actor.Stats.CurrentMana * Multiplier;
-                dmgEvent.FlatBonus += bonus;
-            }
-            else if (e is ActionDeclaredEvent actionEvent && actionEvent.Move.Abilities.Contains(this))
-            {
-                actionEvent.Actor.Stats.CurrentMana = 0;
-            }
-        }
-    }
-
     public class LifestealAbility : IAbility
     {
         public string Name => "Lifesteal";
@@ -422,32 +328,30 @@ namespace ProjectVagabond.Battle.Abilities
         }
     }
 
-    public class ManaBurnOnHitAbility : IAbility
+    public class RestoreTenacityAbility : IAbility
     {
-        public string Name => "Mana Sever";
-        public string Description => "Destroys target's mana on hit.";
+        public string Name => "Restore Tenacity";
+        public string Description => "Restores Tenacity to the target.";
         public int Priority => 0;
 
-        private readonly float _percent;
-        public ManaBurnOnHitAbility(float percent) { _percent = percent; }
+        private readonly int _amount;
+        public RestoreTenacityAbility(int amount) { _amount = amount; }
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
             if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
             {
-                int burnAmount = (int)(reaction.Target.Stats.CurrentMana * (_percent / 100f));
-                if (burnAmount > 0)
+                var target = reaction.Target;
+                if (target.CurrentTenacity < target.Stats.Tenacity)
                 {
-                    float before = reaction.Target.Stats.CurrentMana;
-                    reaction.Target.Stats.CurrentMana -= burnAmount;
+                    int oldVal = target.CurrentTenacity;
+                    target.CurrentTenacity = Math.Min(target.Stats.Tenacity, target.CurrentTenacity + _amount);
 
-                    EventBus.Publish(new GameEvents.CombatantManaConsumed
+                    if (target.CurrentTenacity != oldVal)
                     {
-                        Actor = reaction.Target,
-                        ManaBefore = before,
-                        ManaAfter = reaction.Target.Stats.CurrentMana
-                    });
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{reaction.Target.Name} lost {burnAmount} Mana!" });
+                        EventBus.Publish(new GameEvents.TenacityChanged { Combatant = target, NewValue = target.CurrentTenacity });
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{target.Name} restored Tenacity!" });
+                    }
                 }
             }
         }

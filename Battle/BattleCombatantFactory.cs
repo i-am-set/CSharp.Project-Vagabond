@@ -26,8 +26,6 @@ namespace ProjectVagabond.Battle
                 {
                     MaxHP = gameState.PlayerState.GetEffectiveStat(member, "MaxHP"),
                     CurrentHP = member.CurrentHP,
-                    MaxMana = gameState.PlayerState.GetEffectiveStat(member, "MaxMana"),
-                    CurrentMana = member.CurrentMana,
                     Strength = gameState.PlayerState.GetEffectiveStat(member, "Strength"),
                     Intelligence = gameState.PlayerState.GetEffectiveStat(member, "Intelligence"),
                     Tenacity = gameState.PlayerState.GetEffectiveStat(member, "Tenacity"),
@@ -98,8 +96,6 @@ namespace ProjectVagabond.Battle
 
             combatant.Stats.MaxHP = _random.Next(enemyData.MinHP, enemyData.MaxHP + 1);
             combatant.Stats.CurrentHP = combatant.Stats.MaxHP;
-            combatant.Stats.MaxMana = enemyData.MaxMana;
-            combatant.Stats.CurrentMana = enemyData.MaxMana;
             combatant.Stats.Strength = _random.Next(enemyData.MinStrength, enemyData.MaxStrength + 1);
             combatant.Stats.Intelligence = _random.Next(enemyData.MinIntelligence, enemyData.MaxIntelligence + 1);
             combatant.Stats.Tenacity = _random.Next(enemyData.MinTenacity, enemyData.MaxTenacity + 1);

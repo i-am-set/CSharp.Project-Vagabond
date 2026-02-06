@@ -20,16 +20,7 @@ namespace ProjectVagabond.Battle.UI
         public MoveEntry? Entry { get; }
         public BattleCombatant Owner { get; }
 
-        public bool CanAfford
-        {
-            get
-            {
-                if (Owner == null || Move == null) return false;
-                var manaDump = Move.Abilities.OfType<ManaDumpAbility>().FirstOrDefault();
-                if (manaDump != null) return Owner.Stats.CurrentMana > 0;
-                return Owner.Stats.CurrentMana >= Move.ManaCost;
-            }
-        }
+        public bool CanAfford => true;
 
         // --- Background Drawing Properties ---
         public Color BackgroundColor { get; set; } = Color.Transparent;

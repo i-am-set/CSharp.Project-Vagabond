@@ -550,22 +550,6 @@ namespace ProjectVagabond.Battle
 
         private void ProcessMoveAction(QueuedAction action)
         {
-            // --- Resource Cost Logic ---
-            int finalCost = action.ChosenMove.ManaCost;
-            if (action.ChosenMove.Tags.Has(GameplayTags.Effects.ManaDump))
-            {
-                finalCost = action.Actor.Stats.CurrentMana;
-            }
-
-            if (action.Actor.Stats.CurrentMana < finalCost)
-            {
-                AppendToCurrentLine(" NO MANA!");
-                EventBus.Publish(new GameEvents.ActionFailed { Actor = action.Actor, Reason = "not enough mana" });
-                CanAdvance = false;
-                _currentPhase = BattlePhase.CheckForDefeat;
-                return;
-            }
-
             if (action.Actor.IsPlayerControlled && action.SpellbookEntry != null) action.SpellbookEntry.TimesUsed++;
             action.Actor.PendingDisengage = false;
 
@@ -575,15 +559,6 @@ namespace ProjectVagabond.Battle
 
             // Execute Hit Logic
             PrepareHit(action);
-
-            // Pay Cost
-            if (finalCost > 0)
-            {
-                float manaBefore = action.Actor.Stats.CurrentMana;
-                action.Actor.Stats.CurrentMana = Math.Max(0, action.Actor.Stats.CurrentMana - finalCost);
-                float manaAfter = action.Actor.Stats.CurrentMana;
-                if (manaBefore != manaAfter) EventBus.Publish(new GameEvents.CombatantManaConsumed { Actor = action.Actor, ManaBefore = manaBefore, ManaAfter = manaAfter });
-            }
         }
 
         private void PrepareHit(QueuedAction action)

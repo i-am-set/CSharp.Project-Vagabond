@@ -207,7 +207,7 @@ namespace ProjectVagabond.Battle.UI
         // Made public so BattleRenderer can read the state
         public class ResourceBarAnimationState
         {
-            public enum BarResourceType { HP, Mana }
+            public enum BarResourceType { HP } // Removed Mana
             public enum BarAnimationType { Loss, Recovery }
             public enum LossPhase { Preview, FlashBlack, FlashWhite, Shrink }
             public enum RecoveryPhase { Hang, Fade }
@@ -646,21 +646,6 @@ namespace ProjectVagabond.Battle.UI
             });
         }
 
-        public void StartManaLossAnimation(string combatantId, float manaBefore, float manaAfter)
-        {
-            _activeBarAnimations.RemoveAll(a => a.CombatantID == combatantId && a.ResourceType == ResourceBarAnimationState.BarResourceType.Mana);
-            _activeBarAnimations.Add(new ResourceBarAnimationState
-            {
-                CombatantID = combatantId,
-                ResourceType = ResourceBarAnimationState.BarResourceType.Mana,
-                AnimationType = ResourceBarAnimationState.BarAnimationType.Loss,
-                CurrentLossPhase = ResourceBarAnimationState.LossPhase.Preview,
-                ValueBefore = manaBefore,
-                ValueAfter = manaAfter,
-                Timer = 0f
-            });
-        }
-
         public void StartHealthRecoveryAnimation(string combatantId, float hpBefore, float hpAfter)
         {
             _activeBarAnimations.RemoveAll(a => a.CombatantID == combatantId && a.ResourceType == ResourceBarAnimationState.BarResourceType.HP);
@@ -672,21 +657,6 @@ namespace ProjectVagabond.Battle.UI
                 CurrentRecoveryPhase = ResourceBarAnimationState.RecoveryPhase.Hang,
                 ValueBefore = hpBefore,
                 ValueAfter = hpAfter,
-                Timer = 0f
-            });
-        }
-
-        public void StartManaRecoveryAnimation(string combatantId, float manaBefore, float manaAfter)
-        {
-            _activeBarAnimations.RemoveAll(a => a.CombatantID == combatantId && a.ResourceType == ResourceBarAnimationState.BarResourceType.Mana);
-            _activeBarAnimations.Add(new ResourceBarAnimationState
-            {
-                CombatantID = combatantId,
-                ResourceType = ResourceBarAnimationState.BarResourceType.Mana,
-                AnimationType = ResourceBarAnimationState.BarAnimationType.Recovery,
-                CurrentRecoveryPhase = ResourceBarAnimationState.RecoveryPhase.Hang,
-                ValueBefore = manaBefore,
-                ValueAfter = manaAfter,
                 Timer = 0f
             });
         }

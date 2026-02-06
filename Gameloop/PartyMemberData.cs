@@ -12,7 +12,6 @@ namespace ProjectVagabond.Battle
         public bool IsProperNoun { get; set; } = true;
 
         public int MaxHP { get; set; }
-        public int MaxMana { get; set; }
         public int Strength { get; set; }
         public int Intelligence { get; set; }
         public int Tenacity { get; set; }

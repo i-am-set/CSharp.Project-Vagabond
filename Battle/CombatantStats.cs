@@ -24,16 +24,6 @@ namespace ProjectVagabond.Battle
         public int CurrentHP { get; set; }
 
         /// <summary>
-        /// A combatant's maximum magical energy.
-        /// </summary>
-        public int MaxMana { get; set; }
-
-        /// <summary>
-        /// A combatant's current magical energy.
-        /// </summary>
-        public int CurrentMana { get; set; }
-
-        /// <summary>
         /// Governs the potency of Physical moves.
         /// </summary>
         public int Strength { get; set; }

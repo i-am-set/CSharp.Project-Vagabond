@@ -220,7 +220,6 @@ namespace ProjectVagabond.Battle.UI
             foreach (var c in combatants)
             {
                 if (c.HealthBarVisibleTimer > 0) c.HealthBarVisibleTimer = Math.Max(0, c.HealthBarVisibleTimer - dt);
-                if (c.ManaBarVisibleTimer > 0) c.ManaBarVisibleTimer = Math.Max(0, c.ManaBarVisibleTimer - dt);
 
                 float hpPercent = (float)c.Stats.CurrentHP / c.Stats.MaxHP;
                 if (hpPercent <= _global.LowHealthThreshold && c.Stats.CurrentHP > 0)
@@ -403,7 +402,7 @@ namespace ProjectVagabond.Battle.UI
                 float barX = pos.X;
                 float barY = pos.Y;
 
-                if (combatant.VisualHealthBarAlpha <= 0.01f && combatant.VisualManaBarAlpha <= 0.01f) continue;
+                if (combatant.VisualHealthBarAlpha <= 0.01f) continue;
 
                 float hudAlpha = combatant.HudVisualAlpha;
 
@@ -471,7 +470,7 @@ namespace ProjectVagabond.Battle.UI
                     // ----------------------------------------------
 
                     _hudRenderer.DrawStatusIcons(spriteBatch, combatant, barX, barY + yOffset, BattleLayout.PLAYER_BAR_WIDTH, true, _playerStatusIcons, GetStatusIconOffset, IsStatusIconAnimating, isRightAligned);
-                    _hudRenderer.DrawPlayerBars(spriteBatch, combatant, barX, barY + yOffset, BattleLayout.PLAYER_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha * hudAlpha, combatant.VisualManaBarAlpha * hudAlpha, gameTime, uiManager, combatant == currentActor, isRightAligned, projectedDamage);
+                    _hudRenderer.DrawPlayerBars(spriteBatch, combatant, barX, barY + yOffset, BattleLayout.PLAYER_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha * hudAlpha, gameTime, uiManager, combatant == currentActor, isRightAligned, projectedDamage);
                 }
                 else
                 {
@@ -479,7 +478,7 @@ namespace ProjectVagabond.Battle.UI
                         _enemyStatusIcons[combatant.CombatantID] = new List<StatusIconInfo>();
 
                     _hudRenderer.DrawStatusIcons(spriteBatch, combatant, barX, barY, BattleLayout.ENEMY_BAR_WIDTH, false, _enemyStatusIcons[combatant.CombatantID], GetStatusIconOffset, IsStatusIconAnimating, isRightAligned);
-                    _hudRenderer.DrawEnemyBars(spriteBatch, combatant, barX, barY, BattleLayout.ENEMY_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha * hudAlpha, combatant.VisualManaBarAlpha * hudAlpha, gameTime, isRightAligned, projectedDamage);
+                    _hudRenderer.DrawEnemyBars(spriteBatch, combatant, barX, barY, BattleLayout.ENEMY_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha * hudAlpha, gameTime, isRightAligned, projectedDamage);
                 }
             }
         }
@@ -498,7 +497,7 @@ namespace ProjectVagabond.Battle.UI
                 float barX = pos.X;
                 float barY = pos.Y;
 
-                if (combatant.VisualHealthBarAlpha <= 0.01f && combatant.VisualManaBarAlpha <= 0.01f) continue;
+                if (combatant.VisualHealthBarAlpha <= 0.01f) continue;
 
                 float hudAlpha = combatant.HudVisualAlpha;
 
@@ -544,7 +543,7 @@ namespace ProjectVagabond.Battle.UI
                     // ----------------------------------------------
 
                     _hudRenderer.DrawStatusIcons(spriteBatch, combatant, barX, barY + yOffset, BattleLayout.PLAYER_BAR_WIDTH, true, _playerStatusIcons, GetStatusIconOffset, IsStatusIconAnimating, isRightAligned);
-                    _hudRenderer.DrawPlayerBars(spriteBatch, combatant, barX, barY + yOffset, BattleLayout.PLAYER_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha * hudAlpha, combatant.VisualManaBarAlpha * hudAlpha, gameTime, uiManager, combatant == currentActor, isRightAligned, projectedDamage);
+                    _hudRenderer.DrawPlayerBars(spriteBatch, combatant, barX, barY + yOffset, BattleLayout.PLAYER_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha * hudAlpha, gameTime, uiManager, combatant == currentActor, isRightAligned, projectedDamage);
                 }
                 else
                 {
@@ -552,7 +551,7 @@ namespace ProjectVagabond.Battle.UI
                         _enemyStatusIcons[combatant.CombatantID] = new List<StatusIconInfo>();
 
                     _hudRenderer.DrawStatusIcons(spriteBatch, combatant, barX, barY, BattleLayout.ENEMY_BAR_WIDTH, false, _enemyStatusIcons[combatant.CombatantID], GetStatusIconOffset, IsStatusIconAnimating, isRightAligned);
-                    _hudRenderer.DrawEnemyBars(spriteBatch, combatant, barX, barY, BattleLayout.ENEMY_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha * hudAlpha, combatant.VisualManaBarAlpha * hudAlpha, gameTime, isRightAligned, projectedDamage);
+                    _hudRenderer.DrawEnemyBars(spriteBatch, combatant, barX, barY, BattleLayout.ENEMY_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha * hudAlpha, gameTime, isRightAligned, projectedDamage);
                 }
             }
         }
@@ -1256,9 +1255,8 @@ namespace ProjectVagabond.Battle.UI
 
                             if (uiManager.HoveredMove != null)
                             {
-                                AnalyzeMoveImpact(uiManager.HoveredMove, currentActor, enemy, out bool affectsHP, out bool affectsMana);
+                                AnalyzeMoveImpact(uiManager.HoveredMove, currentActor, enemy, out bool affectsHP);
                                 showHP = affectsHP;
-                                showMana = affectsMana;
                             }
                             else if ((hoveredCombatant == enemy) || (uiManager.HoveredCombatantFromUI == enemy) || selectable.Contains(enemy) || isStatTarget)
                             {
@@ -1266,7 +1264,7 @@ namespace ProjectVagabond.Battle.UI
                                 showMana = true;
                             }
 
-                            UpdateBarAlpha(enemy, (float)gameTime.ElapsedGameTime.TotalSeconds, showHP, showMana);
+                            UpdateBarAlpha(enemy, (float)gameTime.ElapsedGameTime.TotalSeconds, showHP);
 
                             float visualCenterY = center.Y + spriteSize / 2f;
                             float tooltipTopY = visualCenterY - 3;
@@ -1489,9 +1487,8 @@ namespace ProjectVagabond.Battle.UI
 
                     if (uiManager.HoveredMove != null)
                     {
-                        AnalyzeMoveImpact(uiManager.HoveredMove, currentActor, player, out bool affectsHP, out bool affectsMana);
+                        AnalyzeMoveImpact(uiManager.HoveredMove, currentActor, player, out bool affectsHP);
                         showHP = affectsHP;
-                        showMana = affectsMana;
                     }
                     else if ((hoveredCombatant == player) || (uiManager.HoveredCombatantFromUI == player) || selectable.Contains(player) || isStatTarget)
                     {
@@ -1499,7 +1496,7 @@ namespace ProjectVagabond.Battle.UI
                         showMana = true;
                     }
 
-                    UpdateBarAlpha(player, (float)gameTime.ElapsedGameTime.TotalSeconds, showHP, showMana);
+                    UpdateBarAlpha(player, (float)gameTime.ElapsedGameTime.TotalSeconds, showHP);
 
                     // Mirroring Logic for Players
                     bool isRightAligned = (player.BattleSlot % 2 != 0);
@@ -1523,10 +1520,9 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private void AnalyzeMoveImpact(MoveData move, BattleCombatant actor, BattleCombatant candidate, out bool affectsHP, out bool affectsMana)
+        private void AnalyzeMoveImpact(MoveData move, BattleCombatant actor, BattleCombatant candidate, out bool affectsHP)
         {
             affectsHP = false;
-            affectsMana = false;
 
             if (move == null || actor == null || candidate == null) return;
 
@@ -1537,7 +1533,6 @@ namespace ProjectVagabond.Battle.UI
 
             if (isActor)
             {
-                if (move.ManaCost > 0 || move.AffectsUserMana) affectsMana = true;
                 if (move.AffectsUserHP) affectsHP = true;
             }
 
@@ -1545,18 +1540,14 @@ namespace ProjectVagabond.Battle.UI
             {
                 if (move.Power > 0 || move.Effects.ContainsKey("Heal")) affectsHP = true;
                 if (move.AffectsTargetHP) affectsHP = true;
-                if (move.AffectsTargetMana) affectsMana = true;
             }
         }
 
-        private void UpdateBarAlpha(BattleCombatant c, float dt, bool showHP, bool showMana)
+        private void UpdateBarAlpha(BattleCombatant c, float dt, bool showHP)
         {
             c.VisualHealthBarAlpha = 1.0f;
-            c.VisualManaBarAlpha = 1.0f;
             c.HealthBarDelayTimer = 0f;
             c.HealthBarDisappearTimer = 0f;
-            c.ManaBarDelayTimer = 0f;
-            c.ManaBarDisappearTimer = 0f;
         }
 
         private void UpdateEnemyAnimations(float dt, IEnumerable<BattleCombatant> combatants)
@@ -1767,7 +1758,7 @@ namespace ProjectVagabond.Battle.UI
                 float barX = pos.X;
                 float barY = pos.Y;
 
-                if (combatant.VisualHealthBarAlpha <= 0.01f && combatant.VisualManaBarAlpha <= 0.01f) continue;
+                if (combatant.VisualHealthBarAlpha <= 0.01f) continue;
 
                 float hudAlpha = combatant.HudVisualAlpha;
 
@@ -1792,7 +1783,7 @@ namespace ProjectVagabond.Battle.UI
                     // ----------------------------------------------
 
                     _hudRenderer.DrawStatusIcons(spriteBatch, combatant, barX, barY + yOffset, BattleLayout.PLAYER_BAR_WIDTH, true, _playerStatusIcons, GetStatusIconOffset, IsStatusIconAnimating, isRightAligned);
-                    _hudRenderer.DrawPlayerBars(spriteBatch, combatant, barX, barY + yOffset, BattleLayout.PLAYER_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha * hudAlpha, combatant.VisualManaBarAlpha * hudAlpha, gameTime, uiManager, combatant == currentActor, isRightAligned);
+                    _hudRenderer.DrawPlayerBars(spriteBatch, combatant, barX, barY + yOffset, BattleLayout.PLAYER_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha * hudAlpha, gameTime, uiManager, combatant == currentActor, isRightAligned);
                 }
                 else
                 {
@@ -1800,7 +1791,7 @@ namespace ProjectVagabond.Battle.UI
                         _enemyStatusIcons[combatant.CombatantID] = new List<StatusIconInfo>();
 
                     _hudRenderer.DrawStatusIcons(spriteBatch, combatant, barX, barY, BattleLayout.ENEMY_BAR_WIDTH, false, _enemyStatusIcons[combatant.CombatantID], GetStatusIconOffset, IsStatusIconAnimating, isRightAligned);
-                    _hudRenderer.DrawEnemyBars(spriteBatch, combatant, barX, barY, BattleLayout.ENEMY_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha * hudAlpha, combatant.VisualManaBarAlpha * hudAlpha, gameTime, isRightAligned);
+                    _hudRenderer.DrawEnemyBars(spriteBatch, combatant, barX, barY, BattleLayout.ENEMY_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha * hudAlpha, gameTime, isRightAligned);
                 }
             }
         }

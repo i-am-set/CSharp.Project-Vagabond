@@ -42,12 +42,7 @@ namespace ProjectVagabond.Battle
 
             if (!enemies.Any()) return CreateStallAction(actor);
 
-            var moves = actor.AvailableMoves.Where(m =>
-            {
-                if (actor.Stats.CurrentMana < m.ManaCost) return false;
-                if (m.Abilities.Any(a => a is ManaDumpAbility) && actor.Stats.CurrentMana <= 0) return false;
-                return true;
-            }).ToList();
+            var moves = actor.AvailableMoves.ToList();
 
             if (actor.HasStatusEffect(StatusEffectType.Silence))
             {

@@ -78,13 +78,9 @@ namespace ProjectVagabond.Battle
         public bool PendingDisengage { get; set; } = false;
 
         public float HealthBarVisibleTimer { get; set; } = 0f;
-        public float ManaBarVisibleTimer { get; set; } = 0f;
         public float VisualHealthBarAlpha { get; set; } = 0f;
-        public float VisualManaBarAlpha { get; set; } = 0f;
         public float HealthBarDelayTimer { get; set; } = 0f;
-        public float ManaBarDelayTimer { get; set; } = 0f;
         public float HealthBarDisappearTimer { get; set; } = 0f;
-        public float ManaBarDisappearTimer { get; set; } = 0f;
         public float LowHealthFlashTimer { get; set; } = 0f;
         public const float BAR_DISAPPEAR_DURATION = 2.0f;
         public const float BAR_DELAY_DURATION = 1.2f;

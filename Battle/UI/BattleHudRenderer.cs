@@ -15,7 +15,7 @@ using System.Linq;
 namespace ProjectVagabond.Battle.UI
 {
     /// <summary>
-    /// Handles drawing UI elements attached to combatants: Health bars, Mana bars, Names, and Status Icons.
+    /// Handles drawing UI elements attached to combatants: Health bars, Names, and Status Icons.
     /// </summary>
     public class BattleHudRenderer
     {
@@ -30,7 +30,7 @@ namespace ProjectVagabond.Battle.UI
             _pixel = ServiceLocator.Get<Texture2D>();
         }
 
-        public void DrawEnemyBars(SpriteBatch spriteBatch, BattleCombatant combatant, float barX, float barY, int barWidth, int barHeight, BattleAnimationManager animationManager, float hpAlpha, float manaAlpha, GameTime gameTime, bool isRightAligned = false, (int Min, int Max)? projectedDamage = null)
+        public void DrawEnemyBars(SpriteBatch spriteBatch, BattleCombatant combatant, float barX, float barY, int barWidth, int barHeight, BattleAnimationManager animationManager, float hpAlpha, GameTime gameTime, bool isRightAligned = false, (int Min, int Max)? projectedDamage = null)
         {
             // --- NAME ---
             var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
@@ -61,10 +61,6 @@ namespace ProjectVagabond.Battle.UI
             var hpAnim = animationManager.GetResourceBarAnimation(combatant.CombatantID, BattleAnimationManager.ResourceBarAnimationState.BarResourceType.HP);
 
             DrawBar(spriteBatch, new Vector2(barX, barY), barWidth, barHeight, hpPercent, _global.Palette_DarkShadow, _global.Palette_Leaf, _global.Palette_Black, hpAlpha, hpAnim, combatant.Stats.MaxHP, isRightAligned, projectedDamage, gameTime);
-
-            // --- MANA BAR (Discrete) ---
-            float manaBarY = barY + barHeight + 1;
-            DrawDiscreteManaBar(spriteBatch, combatant, barX, manaBarY, barWidth, manaAlpha, null, isRightAligned, gameTime);
         }
 
         private void DrawBar(SpriteBatch spriteBatch, Vector2 position, int width, int height, float fillPercent, Color bgColor, Color fgColor, Color borderColor, float alpha, BattleAnimationManager.ResourceBarAnimationState? anim, float maxResource, bool isRightAligned, (int Min, int Max)? projectedDamage = null, GameTime gameTime = null)
@@ -252,64 +248,6 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private void DrawDiscreteManaBar(SpriteBatch spriteBatch, BattleCombatant combatant, float startX, float startY, float barWidth, float alpha, int? previewCost, bool isRightAligned, GameTime gameTime)
-        {
-            if (alpha <= 0.01f) return;
-
-            int maxMana = combatant.Stats.MaxMana;
-            int currentMana = combatant.Stats.CurrentMana;
-
-            const int pipSize = 1;
-            const int gap = 1;
-            const int pipHeight = 1;
-
-            Color emptyColor = _global.Palette_DarkShadow * alpha;
-            Color filledColor = _global.Palette_Sky * alpha;
-
-            Color previewColor = filledColor;
-            if (previewCost.HasValue && previewCost.Value > 0)
-            {
-                float t = (float)gameTime.TotalGameTime.TotalSeconds * 10f;
-                float flash = (MathF.Sin(t) + 1f) * 0.5f;
-                previewColor = Color.Lerp(_global.Palette_Black * alpha, filledColor, flash);
-            }
-
-            for (int i = 0; i < maxMana; i++)
-            {
-                float x;
-                if (isRightAligned)
-                {
-                    // Start from right edge, move left
-                    x = startX + barWidth - ((i + 1) * (pipSize + gap)) + gap;
-                }
-                else
-                {
-                    x = startX + (i * (pipSize + gap));
-                }
-
-                // Use Vector2/Scale for sub-pixel positioning
-                var pos = new Vector2(x, startY);
-                var scale = new Vector2(pipSize, pipHeight);
-
-                Color drawColor = emptyColor;
-
-                if (i < currentMana)
-                {
-                    drawColor = filledColor;
-                    if (previewCost.HasValue && previewCost.Value > 0)
-                    {
-                        int cost = previewCost.Value;
-                        if (i >= (currentMana - cost))
-                        {
-                            drawColor = previewColor;
-                        }
-                    }
-                }
-
-                spriteBatch.DrawSnapped(_pixel, pos, null, drawColor, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
-            }
-        }
-
         private void DrawTenacityBar(SpriteBatch spriteBatch, BattleCombatant combatant, float startX, float startY, float barWidth, float alpha, bool isRightAligned)
         {
             if (alpha <= 0.01f) return;
@@ -344,7 +282,7 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        public void DrawPlayerBars(SpriteBatch spriteBatch, BattleCombatant player, float barX, float barY, int barWidth, int barHeight, BattleAnimationManager animationManager, float hpAlpha, float manaAlpha, GameTime gameTime, BattleUIManager uiManager, bool isActiveActor, bool isRightAligned = false, (int Min, int Max)? projectedDamage = null)
+        public void DrawPlayerBars(SpriteBatch spriteBatch, BattleCombatant player, float barX, float barY, int barWidth, int barHeight, BattleAnimationManager animationManager, float hpAlpha, GameTime gameTime, BattleUIManager uiManager, bool isActiveActor, bool isRightAligned = false, (int Min, int Max)? projectedDamage = null)
         {
             var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
             if (hpAlpha > 0.01f)
@@ -371,30 +309,6 @@ namespace ProjectVagabond.Battle.UI
             var hpAnim = animationManager.GetResourceBarAnimation(player.CombatantID, BattleAnimationManager.ResourceBarAnimationState.BarResourceType.HP);
 
             DrawBar(spriteBatch, new Vector2(barX, barY), barWidth, barHeight, hpPercent, _global.Palette_DarkShadow, _global.Palette_Leaf, _global.Palette_Black, hpAlpha, hpAnim, player.Stats.MaxHP, isRightAligned, projectedDamage, gameTime);
-
-            float manaBarY = barY + barHeight + 1;
-            int? previewCost = null;
-
-            if (isActiveActor && uiManager.HoveredMove != null)
-            {
-                if (player.ManaBarDisappearTimer <= 0 && player.ManaBarDelayTimer <= 0)
-                {
-                    var move = uiManager.HoveredMove;
-                    int cost = 0;
-
-                    if (move.AffectsUserMana)
-                    {
-                        cost = (move.ManaCost > 0) ? move.ManaCost : player.Stats.CurrentMana;
-                    }
-
-                    if (cost > 0)
-                    {
-                        previewCost = cost;
-                    }
-                }
-            }
-
-            DrawDiscreteManaBar(spriteBatch, player, barX, manaBarY, barWidth, manaAlpha, previewCost, isRightAligned, gameTime);
         }
 
         public void DrawStatusIcons(SpriteBatch spriteBatch, BattleCombatant combatant, float startX, float startY, int width, bool isPlayer, List<StatusIconInfo> iconTracker, Func<string, StatusEffectType, float> getOffsetFunc, Func<string, StatusEffectType, bool> isAnimatingFunc, bool isRightAligned = false)
@@ -406,8 +320,8 @@ namespace ProjectVagabond.Battle.UI
             int iconSize = BattleLayout.STATUS_ICON_SIZE;
             int gap = BattleLayout.STATUS_ICON_GAP;
 
-            // Position below mana bar
-            float iconY = startY + BattleLayout.ENEMY_BAR_HEIGHT + 1 + 1 + 2;
+            // Position below health bar (removed mana bar gap)
+            float iconY = startY + BattleLayout.ENEMY_BAR_HEIGHT + 2;
 
             int step = iconSize + gap;
 

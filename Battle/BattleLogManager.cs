@@ -145,26 +145,28 @@ namespace ProjectVagabond.Battle.UI
             int startY = 2;
             int rightMargin = 2;
 
-            for (int i = 0; i < _logs.Count; i++)
+            // If hovering, draw all. If not, draw max 2 lines (Recent + "...")
+            int drawCount = forceFullVisibility ? _logs.Count : Math.Min(_logs.Count, 2);
+
+            for (int i = 0; i < drawCount; i++)
             {
-                var log = _logs[i];
-                Vector2 size = font.MeasureString(log.Text);
+                string text = _logs[i].Text;
+                Color color = _logs[i].Color;
+
+                // If not hovering and this is the second line, override with ellipsis
+                if (!forceFullVisibility && i == 1)
+                {
+                    text = "...";
+                    color = _global.Palette_Gray; // Use a neutral color for the indicator
+                }
+
+                Vector2 size = font.MeasureString(text);
                 float x = Global.VIRTUAL_WIDTH - rightMargin - size.X;
                 float y = startY + (i * (lineHeight + spacing));
                 Vector2 pos = new Vector2(x, y);
 
-                float alpha = 1.0f;
-                if (!forceFullVisibility)
-                {
-                    if (i == 0) alpha = 1.0f;
-                    else if (i == 1) alpha = 0.5f;
-                    else if (i == 2) alpha = 0.25f;
-                    else alpha = 0.0f;
-                }
-
-                if (alpha <= 0f) break;
-
-                spriteBatch.DrawStringSquareOutlinedSnapped(font, log.Text, pos, log.Color * alpha, _global.Palette_Black * alpha);
+                // Always draw at full opacity in this new style
+                spriteBatch.DrawStringSquareOutlinedSnapped(font, text, pos, color, _global.Palette_Black);
             }
         }
     }

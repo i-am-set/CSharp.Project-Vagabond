@@ -21,8 +21,6 @@ namespace ProjectVagabond
 
         public int MaxHP { get => Leader?.MaxHP ?? 100; set { if (Leader != null) Leader.MaxHP = value; } }
         public int CurrentHP { get => Leader?.CurrentHP ?? 100; set { if (Leader != null) Leader.CurrentHP = value; } }
-        public int MaxMana { get => Leader?.MaxMana ?? 100; set { if (Leader != null) Leader.MaxMana = value; } }
-        public int CurrentMana { get => Leader?.CurrentMana ?? 100; set { if (Leader != null) Leader.CurrentMana = value; } }
         public int Strength { get => Leader?.Strength ?? 10; set { if (Leader != null) Leader.Strength = value; } }
         public int Intelligence { get => Leader?.Intelligence ?? 10; set { if (Leader != null) Leader.Intelligence = value; } }
         public int Tenacity { get => Leader?.Tenacity ?? 10; set { if (Leader != null) Leader.Tenacity = value; } }
@@ -58,7 +56,6 @@ namespace ProjectVagabond
                 case "tenacity": return member.Tenacity;
                 case "agility": return member.Agility;
                 case "maxhp": return member.MaxHP;
-                case "maxmana": return member.MaxMana;
                 default: return 0;
             }
         }

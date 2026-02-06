@@ -231,7 +231,6 @@ namespace ProjectVagabond.Battle.UI
                 {
                     MoveID = "SWITCH",
                     MoveName = "SWITCH",
-                    ManaCost = 0,
                     Description = "Switch to a reserve member.",
                     Target = TargetType.None
                 };
@@ -590,7 +589,6 @@ namespace ProjectVagabond.Battle.UI
                 string desc = move.Description;
                 string powTxt = move.Power > 0 ? move.Power.ToString() : "--";
                 string accTxt = move.Accuracy > 0 ? $"{move.Accuracy}%" : "--";
-                string mnaTxt = move.ManaCost.ToString();
                 string useTxt = GetStatShortName(move.OffensiveStat);
 
                 void DrawPair(string label, string val)
@@ -604,7 +602,6 @@ namespace ProjectVagabond.Battle.UI
 
                 DrawPair("POW", powTxt);
                 DrawPair("ACC", accTxt);
-                DrawPair("MNA", mnaTxt);
                 DrawPair("USE", useTxt);
 
                 // Name

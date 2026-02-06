@@ -99,7 +99,6 @@ namespace ProjectVagabond
                             else if (stat == "tenacity") leader.Tenacity += amt;
                             else if (stat == "agility") leader.Agility += amt;
                             else if (stat == "maxhp") { leader.MaxHP += amt; leader.CurrentHP += amt; }
-                            else if (stat == "maxmana") { leader.MaxMana += amt; leader.CurrentMana += amt; }
 
                             string sign = amt > 0 ? "+" : "";
                             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[Palette_Sky]{outcome.Value} {sign}{amt}" });

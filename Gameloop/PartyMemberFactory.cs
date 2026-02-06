@@ -23,8 +23,6 @@ namespace ProjectVagabond.Battle
                 Name = data.Name,
                 MaxHP = data.MaxHP,
                 CurrentHP = data.MaxHP,
-                MaxMana = data.MaxMana,
-                CurrentMana = data.MaxMana,
                 Strength = data.Strength,
                 Intelligence = data.Intelligence,
                 Tenacity = data.Tenacity,

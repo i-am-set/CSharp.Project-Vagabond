@@ -262,8 +262,6 @@ namespace ProjectVagabond.Scenes
             EventBus.Subscribe<GameEvents.ActionFailed>(OnActionFailed);
             EventBus.Subscribe<GameEvents.StatusEffectTriggered>(OnStatusEffectTriggered);
             EventBus.Subscribe<GameEvents.CombatantHealed>(OnCombatantHealed);
-            EventBus.Subscribe<GameEvents.CombatantManaRestored>(OnCombatantManaRestored);
-            EventBus.Subscribe<GameEvents.CombatantManaConsumed>(OnCombatantManaConsumed);
             EventBus.Subscribe<GameEvents.MultiHitActionCompleted>(OnMultiHitActionCompleted);
             EventBus.Subscribe<GameEvents.CombatantRecoiled>(OnCombatantRecoiled);
             EventBus.Subscribe<GameEvents.AbilityActivated>(OnAbilityActivated);
@@ -291,8 +289,6 @@ namespace ProjectVagabond.Scenes
             EventBus.Unsubscribe<GameEvents.ActionFailed>(OnActionFailed);
             EventBus.Unsubscribe<GameEvents.StatusEffectTriggered>(OnStatusEffectTriggered);
             EventBus.Unsubscribe<GameEvents.CombatantHealed>(OnCombatantHealed);
-            EventBus.Unsubscribe<GameEvents.CombatantManaRestored>(OnCombatantManaRestored);
-            EventBus.Unsubscribe<GameEvents.CombatantManaConsumed>(OnCombatantManaConsumed);
             EventBus.Unsubscribe<GameEvents.MultiHitActionCompleted>(OnMultiHitActionCompleted);
             EventBus.Unsubscribe<GameEvents.CombatantRecoiled>(OnCombatantRecoiled);
             EventBus.Unsubscribe<GameEvents.AbilityActivated>(OnAbilityActivated);
@@ -373,7 +369,6 @@ namespace ProjectVagabond.Scenes
                     if (combatant != null)
                     {
                         member.CurrentHP = combatant.Stats.CurrentHP;
-                        member.CurrentMana = combatant.Stats.CurrentMana;
                     }
                 }
             }
@@ -747,24 +742,7 @@ namespace ProjectVagabond.Scenes
 
         private void TriggerVictoryRestoration()
         {
-            if (_battleManager != null)
-            {
-                bool anyRestored = false;
-                foreach (var combatant in _battleManager.AllCombatants)
-                {
-                    if (combatant.IsPlayerControlled && !combatant.IsDefeated)
-                    {
-                        if (combatant.Stats.CurrentMana < combatant.Stats.MaxMana)
-                        {
-                            float oldMana = combatant.Stats.CurrentMana;
-                            combatant.Stats.CurrentMana = combatant.Stats.MaxMana;
-                            _animationManager.StartManaRecoveryAnimation(combatant.CombatantID, oldMana, combatant.Stats.MaxMana);
-                            combatant.ManaBarVisibleTimer = 2.0f;
-                            anyRestored = true;
-                        }
-                    }
-                }
-            }
+            // Nothing to restore
         }
 
         private void FinalizeVictory()
@@ -1179,24 +1157,6 @@ namespace ProjectVagabond.Scenes
                 _animationManager.StartHealNumberIndicator(e.Target.CombatantID, e.HealAmount, hudPosition);
             };
             playVisuals();
-        }
-
-        private void OnCombatantManaRestored(GameEvents.CombatantManaRestored e)
-        {
-            e.Target.ManaBarVisibleTimer = 6.0f;
-
-            Vector2 targetPos = _renderer.GetCombatantVisualCenterPosition(e.Target, _battleManager.AllCombatants);
-            var manaParticles = _particleSystemManager.CreateEmitter(ParticleEffects.CreateManaBurst());
-            manaParticles.Position = targetPos;
-            manaParticles.EmitBurst(manaParticles.Settings.BurstCount);
-
-            _animationManager.StartManaRecoveryAnimation(e.Target.CombatantID, e.ManaBefore, e.ManaAfter);
-        }
-
-        private void OnCombatantManaConsumed(GameEvents.CombatantManaConsumed e)
-        {
-            e.Actor.ManaBarVisibleTimer = 6.0f;
-            _animationManager.StartManaLossAnimation(e.Actor.CombatantID, e.ManaBefore, e.ManaAfter);
         }
 
         private void OnCombatantRecoiled(GameEvents.CombatantRecoiled e)
