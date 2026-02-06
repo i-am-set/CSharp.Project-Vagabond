@@ -39,6 +39,7 @@ namespace ProjectVagabond.Scenes
         private readonly VoidEdgeEffect _voidEdgeEffect;
 
         private readonly PartyStatusOverlay _partyStatusOverlay;
+        private readonly PostBattleMenu _postBattleMenu;
 
         private readonly BirdManager _birdManager;
         private readonly TransitionManager _transitionManager;
@@ -48,18 +49,15 @@ namespace ProjectVagabond.Scenes
         private int _playerCurrentNodeId;
         private readonly PlayerMapIcon _playerIcon;
 
-        private const float PLAYER_MOVE_SPEED = 100f;
+        private const float PLAYER_MOVE_SPEED = 50f;
         private const float CAMERA_LERP_SPEED = 15f;
         private const float POST_EVENT_DELAY = 0.0f;
-        private const float PATH_ANIMATION_DURATION = 0.25f;
+        private const float PATH_ANIMATION_DURATION = 1.25f;
 
         private const float NODE_LIFT_DURATION = 0.1f;
         private const float PULSE_DURATION = 0.1f;
         private const float NODE_LOWERING_DURATION = 0.1f;
-        private const float NODE_LIFT_AMOUNT = 12f;
-
-        private const float NODE_ARRIVAL_SHAKE_MAGNITUDE = 1.5f;
-        private const float NODE_ARRIVAL_SHAKE_FREQUENCY = 25.0f;
+        private const float NODE_LIFT_AMOUNT = 4f;
 
         private Vector2 _cameraOffset;
         private Vector2 _targetCameraOffset;
@@ -94,7 +92,7 @@ namespace ProjectVagabond.Scenes
         private EventState _eventState = EventState.Idle;
         private float _postEventDelayTimer = 0f;
 
-        private enum SplitMapState { Idle, PlayerMoving, LiftingNode, PulsingNode, EventInProgress, LoweringNode, PostEventDelay }
+        private enum SplitMapState { Idle, PlayerMoving, LiftingNode, PulsingNode, EventInProgress, LoweringNode, Resting, PostEventDelay }
         private SplitMapState _mapState = SplitMapState.Idle;
 
         private const float NODE_FRAME_DURATION = 0.5f;
@@ -131,15 +129,15 @@ namespace ProjectVagabond.Scenes
         private static readonly RasterizerState _scissorRasterizerState = new RasterizerState { ScissorTestEnable = true };
 
         private readonly Dictionary<int, float> _nodeHoverTimers = new Dictionary<int, float>();
-        private const float NODE_HOVER_POP_SCALE_TARGET = 1.2f;
-        private const float NODE_HOVER_POP_SPEED = 20.0f;
+        private const float NODE_HOVER_POP_SCALE_TARGET = 1.1f;
+        private const float NODE_HOVER_POP_SPEED = 10.0f;
 
-        private const float NODE_HOVER_FLOAT_SPEED = 3.0f;
-        private const float NODE_HOVER_FLOAT_AMP = 2.0f;
-        private const float NODE_HOVER_ROT_SPEED = 2.0f;
+        private const float NODE_HOVER_FLOAT_SPEED = 1.0f;
+        private const float NODE_HOVER_FLOAT_AMP = 1.0f;
+        private const float NODE_HOVER_ROT_SPEED = 1.0f;
         private const float NODE_HOVER_ROT_AMT = 0.05f;
-        private const float NODE_HOVER_PULSE_SPEED = 2.0f;
-        private const float NODE_HOVER_PULSE_AMOUNT = 0.05f;
+        private const float NODE_HOVER_PULSE_SPEED = 1.0f;
+        private const float NODE_HOVER_PULSE_AMOUNT = 0.1f;
 
         private Vector2 _nodeArrivalScale = Vector2.One;
         private Vector2 _nodeArrivalShake = Vector2.Zero;
@@ -165,6 +163,14 @@ namespace ProjectVagabond.Scenes
             _playerIcon = new PlayerMapIcon();
 
             _partyStatusOverlay = new PartyStatusOverlay();
+            _postBattleMenu = new PostBattleMenu();
+            _postBattleMenu.OnComplete += () =>
+            {
+                // When menu is done, return to idle and let player choose next node
+                _mapState = SplitMapState.Idle;
+                UpdateReachableNodes();
+                StartPathRevealAnimation();
+            };
 
             _birdManager = new BirdManager();
             _transitionManager = ServiceLocator.Get<TransitionManager>();
@@ -210,6 +216,7 @@ namespace ProjectVagabond.Scenes
             _playerIconPressed = false;
 
             _partyStatusOverlay.Initialize();
+            _postBattleMenu.Hide();
 
             InitializeSettingsButton();
 
@@ -454,9 +461,14 @@ namespace ProjectVagabond.Scenes
 
             var cameraTransform = Matrix.CreateTranslation(_cameraOffset.X, _cameraOffset.Y, 0);
 
-            bool allowInventoryInteraction = (_mapState == SplitMapState.Idle);
+            bool allowInventoryInteraction = (_mapState == SplitMapState.Idle || _mapState == SplitMapState.Resting);
 
             _partyStatusOverlay.Update(gameTime, currentMouseState, currentKeyboardState, allowInventoryInteraction, cameraTransform);
+
+            if (_mapState == SplitMapState.Resting)
+            {
+                _postBattleMenu.Update(gameTime, currentMouseState);
+            }
 
             if (_settingsButton != null)
             {
@@ -976,8 +988,20 @@ namespace ProjectVagabond.Scenes
                     UpdateCameraTarget(currentNode.Position, false);
                 }
                 _nodeArrivalScale = Vector2.One;
-                _mapState = SplitMapState.PostEventDelay;
-                _postEventDelayTimer = POST_EVENT_DELAY;
+
+                // Check if we should show post-battle menu
+                bool wasBattle = currentNode != null && (currentNode.NodeType == SplitNodeType.Battle || currentNode.NodeType == SplitNodeType.MajorBattle);
+
+                if (wasBattle)
+                {
+                    _mapState = SplitMapState.Resting;
+                    _postBattleMenu.Show();
+                }
+                else
+                {
+                    _mapState = SplitMapState.PostEventDelay;
+                    _postEventDelayTimer = POST_EVENT_DELAY;
+                }
             }
         }
 
@@ -1177,6 +1201,7 @@ namespace ProjectVagabond.Scenes
 
             _partyStatusOverlay.DrawScreen(spriteBatch, font, gameTime, transform);
             _settingsButton?.Draw(spriteBatch, font, gameTime, transform);
+            _postBattleMenu.Draw(spriteBatch, gameTime);
 
             if (_hoveredNodeId != -1 && _mapState == SplitMapState.Idle && _currentView == SplitMapView.Map)
             {
