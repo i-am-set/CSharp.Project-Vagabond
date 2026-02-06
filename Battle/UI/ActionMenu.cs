@@ -223,8 +223,8 @@ namespace ProjectVagabond.Battle.UI
 
                 // --- SECONDARY ROW ---
 
-                // 4. Attune (Index 3)
-                AddSecondaryButton("ATTUNE", "7");
+                // 4. GUARD (Index 3)
+                AddSecondaryButton("GUARD", "7");
 
                 // 5. Switch (Index 4)
                 var switchMove = new MoveData
