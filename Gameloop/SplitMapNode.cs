@@ -19,7 +19,6 @@ namespace ProjectVagabond.Progression
     {
         Origin,
         Battle,
-        Narrative,
         MajorBattle,
         Recruit,
         Rest,
@@ -40,7 +39,7 @@ namespace ProjectVagabond.Progression
         public Vector2 Position { get; set; } // Changed to get; set; to allow post-generation centering
         public SplitNodeType NodeType { get; set; }
         public BattleDifficulty Difficulty { get; set; } = BattleDifficulty.Normal;
-        public object? EventData { get; set; } // List<string> for battles, NarrativeEvent for narrative
+        public object? EventData { get; set; } // List<string> for battles
         public List<int> IncomingPathIds { get; } = new List<int>();
         public List<int> OutgoingPathIds { get; } = new List<int>();
         public bool IsReachable { get; set; } = false;

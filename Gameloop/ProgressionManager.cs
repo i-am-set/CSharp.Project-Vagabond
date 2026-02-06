@@ -14,7 +14,6 @@ namespace ProjectVagabond.Progression
     public class ProgressionManager
     {
         private readonly Dictionary<string, SplitData> _splits = new Dictionary<string, SplitData>(StringComparer.OrdinalIgnoreCase);
-        private readonly Dictionary<string, NarrativeEvent> _narrativeEvents = new Dictionary<string, NarrativeEvent>();
         private static readonly Random _random = new Random();
 
         public SplitData? CurrentSplit { get; private set; }
@@ -58,63 +57,14 @@ namespace ProjectVagabond.Progression
                 }
             }
 
-            LoadNarrativeEvents();
             ValidateSplits();
-        }
-
-        private void LoadNarrativeEvents()
-        {
-            var content = ServiceLocator.Get<Core>().Content;
-            string eventsPath = Path.Combine(content.RootDirectory, "Data", "Events.json");
-
-            if (!File.Exists(eventsPath))
-            {
-                Debug.WriteLine($"[ProgressionManager] [WARNING] Events file not found at '{eventsPath}'. No narrative events will be loaded.");
-                return;
-            }
-
-            var jsonOptions = new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true,
-                ReadCommentHandling = JsonCommentHandling.Skip,
-                Converters = { new JsonStringEnumConverter() }
-            };
-
-            try
-            {
-                string json = File.ReadAllText(eventsPath);
-                var eventList = JsonSerializer.Deserialize<List<NarrativeEvent>>(json, jsonOptions);
-
-                if (eventList != null)
-                {
-                    foreach (var narrativeEvent in eventList)
-                    {
-                        if (!string.IsNullOrEmpty(narrativeEvent.EventID))
-                        {
-                            _narrativeEvents[narrativeEvent.EventID] = narrativeEvent;
-                        }
-                    }
-                    Debug.WriteLine($"[ProgressionManager] Loaded {_narrativeEvents.Count} narrative events from Events.json.");
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[ProgressionManager] [ERROR] Failed to load or parse Events.json: {ex.Message}");
-            }
         }
 
         private void ValidateSplits()
         {
             foreach (var split in _splits.Values)
             {
-                if (split.PossibleNarrativeEventIDs != null)
-                {
-                    int removedCount = split.PossibleNarrativeEventIDs.RemoveAll(id => !_narrativeEvents.ContainsKey(id));
-                    if (removedCount > 0)
-                    {
-                        Debug.WriteLine($"[ProgressionManager] [WARNING] Removed {removedCount} invalid event IDs from split '{split.Theme}'.");
-                    }
-                }
+                
             }
         }
 
@@ -237,27 +187,6 @@ namespace ProjectVagabond.Progression
         }
 
         public List<string>? GetRandomMajorBattle() => GetRandomEncounter(CurrentSplit?.PossibleMajorBattles);
-        public NarrativeEvent? GetRandomNarrative()
-        {
-            if (CurrentSplit?.PossibleNarrativeEventIDs == null || !CurrentSplit.PossibleNarrativeEventIDs.Any())
-            {
-                return null;
-            }
-
-            string randomEventId = CurrentSplit.PossibleNarrativeEventIDs[_random.Next(CurrentSplit.PossibleNarrativeEventIDs.Count)];
-            return GetNarrativeEvent(randomEventId);
-        }
-
-        public NarrativeEvent? GetNarrativeEvent(string eventId)
-        {
-            if (_narrativeEvents.TryGetValue(eventId, out var narrativeEvent))
-            {
-                return narrativeEvent;
-            }
-
-            Debug.WriteLine($"[ProgressionManager] [WARNING] Narrative event with ID '{eventId}' was requested but not found in the cache.");
-            return null;
-        }
 
         private List<string>? GetRandomEncounter(List<List<string>>? encounterList)
         {

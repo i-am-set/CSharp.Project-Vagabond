@@ -50,7 +50,6 @@ namespace ProjectVagabond.Scenes
         private SplitMap? _currentMap;
         private int _playerCurrentNodeId;
         private readonly PlayerMapIcon _playerIcon;
-        private NarrativeDialog _narrativeDialog;
 
         private const float PLAYER_MOVE_SPEED = 100f;
         private const float CAMERA_LERP_SPEED = 15f;
@@ -167,7 +166,6 @@ namespace ProjectVagabond.Scenes
             _spriteManager = ServiceLocator.Get<SpriteManager>();
             _global = ServiceLocator.Get<Global>();
             _playerIcon = new PlayerMapIcon();
-            _narrativeDialog = new NarrativeDialog(this);
 
             _partyStatusOverlay = new PartyStatusOverlay();
 
@@ -548,17 +546,6 @@ namespace ProjectVagabond.Scenes
             _voidEdgeEffect.Update(gameTime, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), _cameraOffset);
 
             _birdManager.Update(gameTime, _currentMap, _playerIcon.Position, _cameraOffset);
-
-            if (_narrativeDialog.IsActive || _sceneManager.IsModalActive)
-            {
-                if (_narrativeDialog.IsActive)
-                {
-                    _narrativeDialog.Update(gameTime);
-                }
-                _wasModalActiveLastFrame = true;
-                base.Update(gameTime);
-                return;
-            }
 
             if (_wasModalActiveLastFrame)
             {
@@ -1206,41 +1193,6 @@ namespace ProjectVagabond.Scenes
                     InitiateCombat(node.EventData as List<string> ?? new List<string>());
                     break;
 
-                case SplitNodeType.Narrative:
-                    if (node.EventData is string narrativeEventId)
-                    {
-                        var narrativeEvent = _progressionManager.GetNarrativeEvent(narrativeEventId);
-                        if (narrativeEvent != null)
-                        {
-                            _narrativeDialog.Show(narrativeEvent, OnNarrativeChoiceSelected);
-                            _wasModalActiveLastFrame = true;
-                        }
-                        else
-                        {
-                            var fallbackEvent = _progressionManager.GetRandomNarrative();
-                            if (fallbackEvent != null)
-                            {
-                                _narrativeDialog.Show(fallbackEvent, OnNarrativeChoiceSelected);
-                                _wasModalActiveLastFrame = true;
-                            }
-                            else
-                            {
-                                node.IsCompleted = true;
-                                UpdateCameraTarget(node.Position, false);
-                                _mapState = SplitMapState.LoweringNode;
-                                _nodeLiftTimer = 0f;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        node.IsCompleted = true;
-                        UpdateCameraTarget(node.Position, false);
-                        _mapState = SplitMapState.LoweringNode;
-                        _nodeLiftTimer = 0f;
-                    }
-                    break;
-
                 case SplitNodeType.Recruit:
                     var transitionRecruit = _transitionManager.GetRandomTransition();
                     _transitionManager.StartTransition(transitionRecruit, transitionRecruit, () =>
@@ -1292,75 +1244,6 @@ namespace ProjectVagabond.Scenes
         {
             _shopOverlay.Show();
             SetView(SplitMapView.Shop, snap: true);
-        }
-
-        private void OnNarrativeChoiceSelected(NarrativeChoice choice)
-        {
-            int rollResult = _random.Next(1, 7);
-            ResolveNarrativeChoice(choice, rollResult);
-        }
-
-        private void ResolveNarrativeChoice(NarrativeChoice choice, int diceRoll)
-        {
-            var possibleOutcomes = choice.Outcomes;
-
-            if (diceRoll != -1)
-            {
-                possibleOutcomes = choice.Outcomes
-                    .Where(o => o.DifficultyClass == null || o.DifficultyClass.Contains(diceRoll))
-                    .ToList();
-            }
-
-            WeightedOutcome? selectedOutcome = null;
-            if (possibleOutcomes.Any())
-            {
-                int totalWeight = possibleOutcomes.Sum(o => o.Weight);
-                if (totalWeight > 0)
-                {
-                    int roll = _random.Next(totalWeight);
-                    foreach (var outcome in possibleOutcomes)
-                    {
-                        if (roll < outcome.Weight)
-                        {
-                            selectedOutcome = outcome;
-                            break;
-                        }
-                        roll -= outcome.Weight;
-                    }
-                }
-                else
-                {
-                    selectedOutcome = possibleOutcomes.FirstOrDefault();
-                }
-            }
-
-            if (selectedOutcome != null)
-            {
-                var combatOutcome = selectedOutcome.Outcomes.FirstOrDefault(o => o.OutcomeType == "StartCombat");
-
-                _gameState.ApplyNarrativeOutcomes(selectedOutcome.Outcomes);
-
-                if (combatOutcome != null)
-                {
-                    InitiateCombat(new List<string> { combatOutcome.Value });
-                    _eventState = EventState.Idle;
-                    return;
-                }
-
-                if (!string.IsNullOrEmpty(selectedOutcome.ResultText))
-                {
-                    _eventState = EventState.NarratingResult;
-                    _resultNarrator.Show(selectedOutcome.ResultText);
-                }
-                else
-                {
-                    OnResultNarrationFinished();
-                }
-            }
-            else
-            {
-                OnResultNarrationFinished();
-            }
         }
 
         private void OnResultNarrationFinished()
@@ -1478,7 +1361,6 @@ namespace ProjectVagabond.Scenes
                             BattleDifficulty.Hard => "HARD COMBAT",
                             _ => "COMBAT",
                         },
-                        SplitNodeType.Narrative => "EVENT",
                         SplitNodeType.MajorBattle => "MAJOR BATTLE",
                         SplitNodeType.Recruit => "RECRUIT",
                         SplitNodeType.Rest => "REST",
@@ -1502,7 +1384,6 @@ namespace ProjectVagabond.Scenes
                 _nodeTextWaveTimer = 0f;
             }
 
-            if (_narrativeDialog.IsActive) _narrativeDialog.DrawContent(spriteBatch, font, gameTime, transform);
             if (_eventState == EventState.NarratingResult) _resultNarrator.Draw(spriteBatch, ServiceLocator.Get<Core>().SecondaryFont, gameTime);
 
             _restOverlay.DrawDialogContent(spriteBatch, font, gameTime);
@@ -1511,10 +1392,6 @@ namespace ProjectVagabond.Scenes
 
         public override void DrawUnderlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            if (_narrativeDialog.IsActive)
-            {
-                _narrativeDialog.DrawOverlay(spriteBatch);
-            }
             _restOverlay.DrawDialogOverlay(spriteBatch);
             _recruitOverlay.DrawDialogOverlay(spriteBatch);
         }
@@ -1730,10 +1607,6 @@ namespace ProjectVagabond.Scenes
                 case SplitNodeType.Battle:
                     texture = _spriteManager.SplitNodeCombat;
                     silhouette = _spriteManager.SplitNodeCombatSilhouette;
-                    break;
-                case SplitNodeType.Narrative:
-                    texture = _spriteManager.SplitNodeNarrative;
-                    silhouette = _spriteManager.SplitNodeNarrativeSilhouette;
                     break;
                 case SplitNodeType.MajorBattle:
                     texture = _spriteManager.SplitNodeCombat;

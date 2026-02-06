@@ -48,7 +48,6 @@ namespace ProjectVagabond.Progression
         private static readonly List<(SplitNodeType type, float weight)> _nodeTypeWeights = new()
         {
             (SplitNodeType.Battle, 45f),
-            (SplitNodeType.Narrative, 20f),
             (SplitNodeType.Shop, 10f),
             (SplitNodeType.Rest, 15f),
             (SplitNodeType.Recruit, 10f)
@@ -58,7 +57,6 @@ namespace ProjectVagabond.Progression
         private const int MIN_NODE_COUNT_SHOP = 2;
         private const int MIN_NODE_COUNT_REST = 2;
         private const int MIN_NODE_COUNT_RECRUIT = 2;
-        private const int MIN_NODE_COUNT_NARRATIVE = 2;
         private const int MIN_NODE_COUNT_BATTLE = 2;
 
         // --- Tree Generation Tuning ---
@@ -212,7 +210,6 @@ namespace ProjectVagabond.Progression
                 { SplitNodeType.Shop, MIN_NODE_COUNT_SHOP },
                 { SplitNodeType.Rest, MIN_NODE_COUNT_REST },
                 { SplitNodeType.Recruit, MIN_NODE_COUNT_RECRUIT },
-                { SplitNodeType.Narrative, MIN_NODE_COUNT_NARRATIVE },
                 { SplitNodeType.Battle, MIN_NODE_COUNT_BATTLE }
             };
 
@@ -284,12 +281,6 @@ namespace ProjectVagabond.Progression
                     // Convert the node
                     nodeToConvert.NodeType = targetType;
                     nodeToConvert.EventData = null; // Clear battle data
-
-                    // Assign specific data if needed
-                    if (targetType == SplitNodeType.Narrative)
-                    {
-                        nodeToConvert.EventData = progressionManager.GetRandomNarrative()?.EventID;
-                    }
 
                     currentCount++;
                 }
@@ -366,7 +357,7 @@ namespace ProjectVagabond.Progression
         }
 
         /// <summary>
-        /// Changes a node to a safe type (Battle, Narrative, Recruit) to resolve conflicts.
+        /// Changes a node to a safe type (Battle or Recruit) to resolve conflicts.
         /// Guaranteed to not pick Shop or Rest.
         /// </summary>
         private static void RerollNodeSafe(SplitMapNode node, SplitData splitData, ProgressionManager progressionManager)
@@ -375,9 +366,6 @@ namespace ProjectVagabond.Progression
 
             if (splitData.PossibleBattles != null && splitData.PossibleBattles.Any())
                 validTypes.Add((SplitNodeType.Battle, 50f));
-
-            if (splitData.PossibleNarrativeEventIDs != null && splitData.PossibleNarrativeEventIDs.Any())
-                validTypes.Add((SplitNodeType.Narrative, 30f));
 
             validTypes.Add((SplitNodeType.Recruit, 20f));
 
@@ -412,9 +400,6 @@ namespace ProjectVagabond.Progression
                 case SplitNodeType.Battle:
                     node.Difficulty = (BattleDifficulty)_random.Next(3);
                     node.EventData = progressionManager.GetRandomBattle(node.Difficulty);
-                    break;
-                case SplitNodeType.Narrative:
-                    node.EventData = progressionManager.GetRandomNarrative()?.EventID;
                     break;
                 case SplitNodeType.Recruit:
                     // No event data needed for now
@@ -904,11 +889,6 @@ namespace ProjectVagabond.Progression
                 availableChoices.RemoveAll(c => c.type == SplitNodeType.Rest || c.type == SplitNodeType.Shop);
             }
 
-            // Filter out types if their corresponding data is missing in the current split
-            if (splitData.PossibleNarrativeEventIDs == null || !splitData.PossibleNarrativeEventIDs.Any())
-            {
-                availableChoices.RemoveAll(c => c.type == SplitNodeType.Narrative);
-            }
             if (splitData.PossibleBattles == null || !splitData.PossibleBattles.Any())
             {
                 availableChoices.RemoveAll(c => c.type == SplitNodeType.Battle);
@@ -953,9 +933,6 @@ namespace ProjectVagabond.Progression
                     case SplitNodeType.Battle:
                         node.Difficulty = (BattleDifficulty)_random.Next(3);
                         node.EventData = progressionManager.GetRandomBattle(node.Difficulty);
-                        break;
-                    case SplitNodeType.Narrative:
-                        node.EventData = progressionManager.GetRandomNarrative()?.EventID;
                         break;
                     case SplitNodeType.Recruit:
                     case SplitNodeType.Rest:

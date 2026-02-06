@@ -113,7 +113,6 @@ namespace ProjectVagabond
 
         public Texture2D SplitNodeStart { get; private set; }
         public Texture2D SplitNodeStartSilhouette { get; private set; }
-        public Texture2D SplitNodeNarrative { get; private set; }
         public Texture2D SplitNodeNarrativeSilhouette { get; private set; }
         public Texture2D SplitNodeCombat { get; private set; }
         public Texture2D SplitNodeCombatSilhouette { get; private set; }
@@ -333,10 +332,6 @@ namespace ProjectVagabond
             try { SplitNodeStart = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_Start"); }
             catch { SplitNodeStart = _textureFactory.CreateColoredTexture(64, 32, Color.Green); }
             SplitNodeStartSilhouette = CreateSilhouette(SplitNodeStart);
-
-            try { SplitNodeNarrative = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_Event"); }
-            catch { SplitNodeNarrative = _textureFactory.CreateColoredTexture(64, 32, Color.Blue); }
-            SplitNodeNarrativeSilhouette = CreateSilhouette(SplitNodeNarrative);
 
             try { SplitNodeCombat = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_Combat"); }
             catch { SplitNodeCombat = _textureFactory.CreateColoredTexture(64, 32, Color.Red); }
