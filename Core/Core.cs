@@ -51,6 +51,10 @@ namespace ProjectVagabond
         private float _glitchTimer;
         private float _glitchDuration;
 
+        private int _frameCounter = 0;
+        private float _fpsTimer = 0f;
+        private string _fpsString = "0";
+
         private class ScreenFlashState
         {
             public float Timer;
@@ -450,6 +454,18 @@ namespace ProjectVagabond
 
         protected override void Draw(GameTime gameTime)
         {
+            if (_global.ShowFPS)
+            {
+                _frameCounter++;
+                _fpsTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                if (_fpsTimer >= 1.0f)
+                {
+                    _fpsString = $"{_frameCounter}";
+                    _frameCounter = 0;
+                    _fpsTimer -= 1.0f;
+                }
+            }
+
             GraphicsDevice.SetRenderTarget(_finalCompositeTarget);
 
             bool forceBlackBg = _sceneManager.CurrentActiveScene is StartupScene;
@@ -589,6 +605,11 @@ namespace ProjectVagabond
                     string versionText = $"v{Global.GAME_VERSION}";
                     var screenHeight = GraphicsDevice.PresentationParameters.BackBufferHeight;
                     _spriteBatch.DrawStringSnapped(_defaultFont, versionText, new Vector2(5f, screenHeight - _defaultFont.LineHeight - 5f), _global.Palette_DarkShadow);
+
+                    if (_global.ShowFPS)
+                    {
+                        _spriteBatch.DrawStringSnapped(_defaultFont, _fpsString, new Vector2(5f, 5f), _global.Palette_Sun);
+                    }
                 }
                 _spriteBatch.End();
             }

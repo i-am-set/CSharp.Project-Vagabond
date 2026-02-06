@@ -52,6 +52,7 @@ namespace ProjectVagabond
                 sb.AppendLine("    debug_colors                       - Lists all colors.");
                 sb.AppendLine("    clear                              - Clears console.");
                 sb.AppendLine("    exit                               - Exits game.");
+                sb.AppendLine("    fps                                - Toggles FPS counter.");
                 sb.AppendLine("    debug_combat                       - Starts a random forest combat.");
                 sb.AppendLine("    debug_combatrun                    - Flees from combat.");
                 sb.AppendLine("    debug_givestatus <slot> <type> {dur} - Apply status.");
@@ -459,6 +460,12 @@ namespace ProjectVagabond
                 ServiceLocator.Get<DebugConsole>().SetFontIndex(index);
                 Log($"[Palette_Sky]Debug Console Font set to index {index}.");
             }, "debug_consolefont <0|1|2> - Sets the debug console font.");
+
+            _commands["fps"] = new Command("fps", (args) =>
+            {
+                Global.Instance.ShowFPS = !Global.Instance.ShowFPS;
+                Log($"[Palette_Sky]FPS Display: {(Global.Instance.ShowFPS ? "ON" : "OFF")}[/]");
+            }, "fps - Toggles the FPS counter.");
 
             _commands["exit"] = new Command("exit", (args) => ServiceLocator.Get<Core>().ExitApplication(), "exit");
         }

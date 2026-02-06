@@ -179,6 +179,7 @@ namespace ProjectVagabond
 
         public bool ShowDebugOverlays { get; set; } = false;
         public bool ShowSplitMapGrid { get; set; } = false;
+        public bool ShowFPS { get; set; } = false;
 
         public bool UseImperialUnits { get; set; } = false;
         public bool Use24HourClock { get; set; } = false;
