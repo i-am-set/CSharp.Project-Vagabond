@@ -53,9 +53,6 @@ namespace ProjectVagabond
                 sb.AppendLine("    clear                              - Clears console.");
                 sb.AppendLine("    exit                               - Exits game.");
                 sb.AppendLine("    debug_combat                       - Starts a random forest combat.");
-                sb.AppendLine("    debug_shop                         - Opens a random shop interface.");
-                sb.AppendLine("    debug_rest                         - Opens the rest site interface.");
-                sb.AppendLine("    debug_recruit                      - Opens the recruit interface.");
                 sb.AppendLine("    debug_combatrun                    - Flees from combat.");
                 sb.AppendLine("    debug_givestatus <slot> <type> {dur} - Apply status.");
                 sb.AppendLine("    debug_consolefont <0|1|2>          - Sets the debug console font.");
@@ -355,51 +352,6 @@ namespace ProjectVagabond
                     Log("[error]Command only available in Split Map Scene.");
                 }
             }, "debugcombat - Starts a random forest encounter (SplitMap only).");
-
-            // --- DEBUG SHOP ---
-            _commands["debug_shop"] = new Command("debug_shop", (args) =>
-            {
-                var sceneManager = ServiceLocator.Get<SceneManager>();
-                if (sceneManager.CurrentActiveScene is SplitMapScene splitScene)
-                {
-                    splitScene.DebugTriggerShop();
-                    Log("[Palette_Sky]Opening debug shop...");
-                }
-                else
-                {
-                    Log("[error]Command only available in Split Map Scene.");
-                }
-            }, "debug_shop - Opens a random shop interface.");
-
-            // --- DEBUG REST ---
-            _commands["debug_rest"] = new Command("debug_rest", (args) =>
-            {
-                var sceneManager = ServiceLocator.Get<SceneManager>();
-                if (sceneManager.CurrentActiveScene is SplitMapScene splitScene)
-                {
-                    splitScene.DebugTriggerRest();
-                    Log("[Palette_Sky]Opening debug rest site...");
-                }
-                else
-                {
-                    Log("[error]Command only available in Split Map Scene.");
-                }
-            }, "debug_rest - Opens the rest site interface.");
-
-            // --- DEBUG RECRUIT ---
-            _commands["debug_recruit"] = new Command("debug_recruit", (args) =>
-            {
-                var sceneManager = ServiceLocator.Get<SceneManager>();
-                if (sceneManager.CurrentActiveScene is SplitMapScene splitScene)
-                {
-                    splitScene.DebugTriggerRecruit();
-                    Log("[Palette_Sky]Opening debug recruit menu...");
-                }
-                else
-                {
-                    Log("[error]Command only available in Split Map Scene.");
-                }
-            }, "debug_recruit - Opens the recruit interface.");
 
             _commands["debug_combatrun"] = new Command("debug_combatrun", (args) =>
             {

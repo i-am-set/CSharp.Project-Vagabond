@@ -19,7 +19,7 @@ namespace ProjectVagabond.Scenes
 {
     public class SplitMapScene : GameScene
     {
-        private enum SplitMapView { Map, PartyStatus, Shop, Rest, Recruit }
+        private enum SplitMapView { Map, PartyStatus }
         private SplitMapView _currentView = SplitMapView.Map;
         private SplitMapView _viewToReturnTo = SplitMapView.Map;
 
@@ -40,9 +40,6 @@ namespace ProjectVagabond.Scenes
 
         private readonly PartyStatusOverlay _partyStatusOverlay;
 
-        private readonly SplitMapShopOverlay _shopOverlay;
-        private readonly SplitMapRestOverlay _restOverlay;
-        private readonly SplitMapRecruitOverlay _recruitOverlay;
         private readonly BirdManager _birdManager;
         private readonly TransitionManager _transitionManager;
         private readonly HapticsManager _hapticsManager;
@@ -169,9 +166,6 @@ namespace ProjectVagabond.Scenes
 
             _partyStatusOverlay = new PartyStatusOverlay();
 
-            _shopOverlay = new SplitMapShopOverlay();
-            _restOverlay = new SplitMapRestOverlay(this);
-            _recruitOverlay = new SplitMapRecruitOverlay(this);
             _birdManager = new BirdManager();
             _transitionManager = ServiceLocator.Get<TransitionManager>();
             _hapticsManager = ServiceLocator.Get<HapticsManager>();
@@ -191,85 +185,6 @@ namespace ProjectVagabond.Scenes
             {
                 _hapticsManager.TriggerZoomPulse(0.995f, 0.1f);
                 SetView(_viewToReturnTo, snap: true);
-            };
-
-            _shopOverlay.OnLeaveRequested += () =>
-            {
-                _hapticsManager.TriggerZoomPulse(1.01f, 0.1f);
-                var transition = _transitionManager.GetRandomTransition();
-                _transitionManager.StartTransition(transition, transition, () =>
-                {
-                    _viewToReturnTo = SplitMapView.Map;
-                    SetView(SplitMapView.Map, snap: true);
-
-                    var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
-                    if (currentNode != null)
-                    {
-                        currentNode.IsCompleted = true;
-                        UpdateCameraTarget(currentNode.Position, false);
-                    }
-                    _mapState = SplitMapState.LoweringNode;
-                    _nodeLiftTimer = 0f;
-                });
-            };
-
-            _restOverlay.OnLeaveRequested += () =>
-            {
-                _hapticsManager.TriggerZoomPulse(1.01f, 0.1f);
-                var transition = _transitionManager.GetRandomTransition();
-                _transitionManager.StartTransition(transition, transition, () =>
-                {
-                    _viewToReturnTo = SplitMapView.Map;
-                    SetView(SplitMapView.Map, snap: true);
-
-                    var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
-                    if (currentNode != null)
-                    {
-                        currentNode.IsCompleted = true;
-                        UpdateCameraTarget(currentNode.Position, false);
-                    }
-                    _mapState = SplitMapState.LoweringNode;
-                    _nodeLiftTimer = 0f;
-                });
-            };
-
-            _restOverlay.OnRestCompleted += () =>
-            {
-                var transition = _transitionManager.GetRandomTransition();
-                _transitionManager.StartTransition(transition, transition, () =>
-                {
-                    _viewToReturnTo = SplitMapView.Map;
-                    SetView(SplitMapView.Map, snap: true);
-
-                    var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
-                    if (currentNode != null)
-                    {
-                        currentNode.IsCompleted = true;
-                        UpdateCameraTarget(currentNode.Position, false);
-                    }
-                    _mapState = SplitMapState.LoweringNode;
-                    _nodeLiftTimer = 0f;
-                });
-            };
-
-            _recruitOverlay.OnRecruitComplete += () =>
-            {
-                _hapticsManager.TriggerZoomPulse(1.01f, 0.1f);
-                var transition = _transitionManager.GetRandomTransition();
-                _transitionManager.StartTransition(transition, transition, () =>
-                {
-                    _viewToReturnTo = SplitMapView.Map;
-                    SetView(SplitMapView.Map, snap: true);
-
-                    var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
-                    if (currentNode != null)
-                    {
-                        currentNode.IsCompleted = true;
-                        UpdateCameraTarget(currentNode.Position, false);
-                    }
-                    _mapState = SplitMapState.LoweringNode;
-                    _nodeLiftTimer = 0f;
-                });
             };
         }
 
@@ -427,9 +342,6 @@ namespace ProjectVagabond.Scenes
             {
                 case SplitMapView.Map:
                     _partyStatusOverlay.Hide();
-                    _shopOverlay.Hide();
-                    _restOverlay.Hide();
-                    _recruitOverlay.Hide();
                     var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
                     if (currentNode != null)
                     {
@@ -438,34 +350,7 @@ namespace ProjectVagabond.Scenes
                     break;
                 case SplitMapView.PartyStatus:
                     _partyStatusOverlay.Show();
-                    _shopOverlay.Hide();
-                    _restOverlay.Hide();
-                    _recruitOverlay.Hide();
                     _targetCameraOffset = new Vector2(0, -200);
-                    if (snap) _cameraOffset = _targetCameraOffset;
-                    break;
-                case SplitMapView.Shop:
-                    _partyStatusOverlay.Hide();
-                    _shopOverlay.Resume();
-                    _restOverlay.Hide();
-                    _recruitOverlay.Hide();
-                    _targetCameraOffset = new Vector2(0, -600);
-                    if (snap) _cameraOffset = _targetCameraOffset;
-                    break;
-                case SplitMapView.Rest:
-                    _partyStatusOverlay.Hide();
-                    _shopOverlay.Hide();
-                    _restOverlay.Show();
-                    _recruitOverlay.Hide();
-                    _targetCameraOffset = new Vector2(0, -600);
-                    if (snap) _cameraOffset = _targetCameraOffset;
-                    break;
-                case SplitMapView.Recruit:
-                    _partyStatusOverlay.Hide();
-                    _shopOverlay.Hide();
-                    _restOverlay.Hide();
-                    _recruitOverlay.Show();
-                    _targetCameraOffset = new Vector2(0, -600);
                     if (snap) _cameraOffset = _targetCameraOffset;
                     break;
             }
@@ -569,20 +454,11 @@ namespace ProjectVagabond.Scenes
 
             var cameraTransform = Matrix.CreateTranslation(_cameraOffset.X, _cameraOffset.Y, 0);
 
-            bool isRestNarrating = _restOverlay.IsNarrating;
-            bool allowInventoryInteraction = !isRestNarrating && (_mapState == SplitMapState.Idle || _currentView == SplitMapView.Shop || _currentView == SplitMapView.Rest || _currentView == SplitMapView.Recruit);
+            bool allowInventoryInteraction = (_mapState == SplitMapState.Idle);
 
             _partyStatusOverlay.Update(gameTime, currentMouseState, currentKeyboardState, allowInventoryInteraction, cameraTransform);
 
-            if (!isRestNarrating)
-            {
-                _shopOverlay.Update(gameTime, currentMouseState, cameraTransform);
-                _recruitOverlay.Update(gameTime, currentMouseState, cameraTransform);
-            }
-
-            _restOverlay.Update(gameTime, currentMouseState, cameraTransform);
-
-            if (_settingsButton != null && !isRestNarrating)
+            if (_settingsButton != null)
             {
                 if (_settingsButtonState == SettingsButtonState.AnimatingIn)
                 {
@@ -613,7 +489,7 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            if (KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState) && !isRestNarrating)
+            if (KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState))
             {
                 if (_currentView == SplitMapView.PartyStatus)
                 {
@@ -1193,28 +1069,6 @@ namespace ProjectVagabond.Scenes
                     InitiateCombat(node.EventData as List<string> ?? new List<string>());
                     break;
 
-                case SplitNodeType.Recruit:
-                    var transitionRecruit = _transitionManager.GetRandomTransition();
-                    _transitionManager.StartTransition(transitionRecruit, transitionRecruit, () =>
-                    {
-                        _recruitOverlay.GenerateNewCandidates();
-                        SetView(SplitMapView.Recruit, snap: true);
-                    });
-                    break;
-
-                case SplitNodeType.Rest:
-                    var transitionRest = _transitionManager.GetRandomTransition();
-                    _transitionManager.StartTransition(transitionRest, transitionRest, () =>
-                    {
-                        SetView(SplitMapView.Rest, snap: true);
-                    });
-                    break;
-
-                case SplitNodeType.Shop:
-                    var transitionShop = _transitionManager.GetRandomTransition();
-                    _transitionManager.StartTransition(transitionShop, transitionShop, () => OpenRandomShop());
-                    break;
-
                 default:
                     node.IsCompleted = true;
                     UpdateCameraTarget(node.Position, false);
@@ -1222,28 +1076,6 @@ namespace ProjectVagabond.Scenes
                     _nodeLiftTimer = 0f;
                     break;
             }
-        }
-
-        public void DebugTriggerShop()
-        {
-            OpenRandomShop();
-        }
-
-        public void DebugTriggerRest()
-        {
-            SetView(SplitMapView.Rest, snap: true);
-        }
-
-        public void DebugTriggerRecruit()
-        {
-            _recruitOverlay.GenerateNewCandidates();
-            SetView(SplitMapView.Recruit, snap: true);
-        }
-
-        private void OpenRandomShop()
-        {
-            _shopOverlay.Show();
-            SetView(SplitMapView.Shop, snap: true);
         }
 
         private void OnResultNarrationFinished()
@@ -1335,9 +1167,6 @@ namespace ProjectVagabond.Scenes
             _birdManager.Draw(spriteBatch, _cameraOffset);
 
             _partyStatusOverlay.DrawWorld(spriteBatch, font, gameTime);
-            _shopOverlay.Draw(spriteBatch, font, gameTime);
-            _restOverlay.Draw(spriteBatch, font, gameTime);
-            _recruitOverlay.Draw(spriteBatch, font, gameTime, cameraTransform);
 
             spriteBatch.End();
 
@@ -1362,9 +1191,6 @@ namespace ProjectVagabond.Scenes
                             _ => "COMBAT",
                         },
                         SplitNodeType.MajorBattle => "MAJOR BATTLE",
-                        SplitNodeType.Recruit => "RECRUIT",
-                        SplitNodeType.Rest => "REST",
-                        SplitNodeType.Shop => "SHOP",
                         _ => ""
                     };
 
@@ -1385,15 +1211,10 @@ namespace ProjectVagabond.Scenes
             }
 
             if (_eventState == EventState.NarratingResult) _resultNarrator.Draw(spriteBatch, ServiceLocator.Get<Core>().SecondaryFont, gameTime);
-
-            _restOverlay.DrawDialogContent(spriteBatch, font, gameTime);
-            _recruitOverlay.DrawDialogContent(spriteBatch, font, gameTime);
         }
 
         public override void DrawUnderlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            _restOverlay.DrawDialogOverlay(spriteBatch);
-            _recruitOverlay.DrawDialogOverlay(spriteBatch);
         }
 
         private void DrawAllPaths(SpriteBatch spriteBatch, Texture2D pixel)
@@ -1611,18 +1432,6 @@ namespace ProjectVagabond.Scenes
                 case SplitNodeType.MajorBattle:
                     texture = _spriteManager.SplitNodeCombat;
                     silhouette = _spriteManager.SplitNodeCombatSilhouette;
-                    break;
-                case SplitNodeType.Recruit:
-                    texture = _spriteManager.SplitNodeRecruit;
-                    silhouette = _spriteManager.SplitNodeRecruitSilhouette;
-                    break;
-                case SplitNodeType.Rest:
-                    texture = _spriteManager.SplitNodeRest;
-                    silhouette = _spriteManager.SplitNodeRestSilhouette;
-                    break;
-                case SplitNodeType.Shop:
-                    texture = _spriteManager.SplitNodeShop;
-                    silhouette = _spriteManager.SplitNodeShopSilhouette;
                     break;
                 default:
                     texture = _spriteManager.SplitNodeCombat;
