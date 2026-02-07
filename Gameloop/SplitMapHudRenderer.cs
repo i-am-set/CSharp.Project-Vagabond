@@ -52,7 +52,7 @@ namespace ProjectVagabond.UI
         private void DrawCard(SpriteBatch spriteBatch, GameTime gameTime, int index, BitmapFont defaultFont, BitmapFont secondaryFont)
         {
             int x = START_X + (index * CARD_WIDTH);
-            int y = START_Y + 2; // Top padding reduced from 4 to 2
+            int y = START_Y + 6;
             int centerX = x + (CARD_WIDTH / 2);
 
             var party = _gameState.PlayerState.Party;
@@ -65,8 +65,7 @@ namespace ProjectVagabond.UI
             Vector2 nameSize = defaultFont.MeasureString(name);
             spriteBatch.DrawStringSnapped(defaultFont, name, new Vector2(centerX - nameSize.X / 2, y), nameColor);
 
-            // Move Sprite up 6 pixels total (2 from top padding, 4 from here)
-            y += (int)nameSize.Y - 2;
+            y += (int)nameSize.Y - 4;
 
             // --- 2. Portrait ---
             if (isOccupied)
@@ -87,19 +86,18 @@ namespace ProjectVagabond.UI
             if (hpBg != null)
             {
                 int barX = centerX - (hpBg.Width / 2);
-                spriteBatch.DrawSnapped(hpBg, new Vector2(barX, y), Color.White);
+                spriteBatch.DrawSnapped(hpBg, new Vector2(barX, y - 8), Color.White);
 
                 if (isOccupied && _spriteManager.InventoryPlayerHealthBarFull != null)
                 {
                     float hpPercent = (float)member.CurrentHP / Math.Max(1, member.MaxHP);
                     int visibleWidth = (int)(_spriteManager.InventoryPlayerHealthBarFull.Width * hpPercent);
                     var srcRect = new Rectangle(0, 0, visibleWidth, _spriteManager.InventoryPlayerHealthBarFull.Height);
-                    spriteBatch.DrawSnapped(_spriteManager.InventoryPlayerHealthBarFull, new Vector2(barX + 1, y), srcRect, Color.White);
+                    spriteBatch.DrawSnapped(_spriteManager.InventoryPlayerHealthBarFull, new Vector2(barX + 1, y - 8), srcRect, Color.White);
                 }
             }
 
-            // Move Stats up 4 pixels (Gap reduced from 6 to 2)
-            y += 7 + 2;
+            y += 0; // Height of bar + padding
 
             // --- 4. Stats (STR, INT, TEN, AGI) ---
             string[] labels = { "STR", "INT", "TEN", "AGI" };
