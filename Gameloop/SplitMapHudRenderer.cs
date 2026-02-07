@@ -35,7 +35,7 @@ namespace ProjectVagabond.UI
             var secondaryFont = core.SecondaryFont;
             var tertiaryFont = core.TertiaryFont;
 
-            if (defaultFont == null || secondaryFont == null) return;
+            if (defaultFont == null || secondaryFont == null || tertiaryFont == null) return;
 
             // Draw Background
             spriteBatch.DrawSnapped(_pixel, new Rectangle(0, START_Y, Global.VIRTUAL_WIDTH, HUD_HEIGHT), _global.Palette_Black);
@@ -86,6 +86,14 @@ namespace ProjectVagabond.UI
             if (hpBg != null)
             {
                 int barX = centerX - (hpBg.Width / 2);
+
+                // HP Counter Text: "Current/Max"
+                // Positioned above the bar, left-aligned with the bar
+                string hpText = $"{member.CurrentHP}/{member.MaxHP}";
+                // (y - 8) is the top of the bar. We subtract LineHeight to place it above.
+                // Added +1 to tuck it slightly closer to the bar.
+                spriteBatch.DrawStringSnapped(tertiaryFont, hpText, new Vector2(barX, (y - 9) - tertiaryFont.LineHeight + 1), _global.Palette_DarkShadow);
+
                 spriteBatch.DrawSnapped(hpBg, new Vector2(barX, y - 8), Color.White);
 
                 if (_spriteManager.InventoryPlayerHealthBarFull != null)
@@ -155,7 +163,7 @@ namespace ProjectVagabond.UI
                 if (BattleDataCache.Moves.TryGetValue(move.MoveID, out var data))
                 {
                     text = data.MoveName;
-                    color = _global.Palette_DarkPale;
+                    color = _global.Palette_LightPale;
                     isMovePresent = true;
                 }
             }
@@ -163,7 +171,7 @@ namespace ProjectVagabond.UI
             if (isMovePresent)
             {
                 // Draw Label (cor/alt)
-                sb.DrawStringSnapped(font, label, new Vector2(x, y), _global.Palette_DarkShadow);
+                sb.DrawStringSnapped(font, label, new Vector2(x, y), _global.Palette_DarkestPale);
                 // Draw Move Name (offset 12)
                 sb.DrawStringSnapped(font, text, new Vector2(x + 12, y), color);
             }
