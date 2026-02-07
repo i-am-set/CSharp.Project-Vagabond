@@ -99,17 +99,6 @@ namespace ProjectVagabond.Scenes
         private const float NODE_FRAME_DURATION = 0.5f;
         private float _nodeLiftTimer = 0f;
 
-        private bool _isPanning = false;
-        private Point _panStartMousePosition;
-        private Point _lastPanMousePosition;
-        private Vector2 _panStartCameraOffset;
-        private Vector2 _cameraVelocity = Vector2.Zero;
-        private const float PAN_SENSITIVITY = 1.0f;
-        private const float PAN_FRICTION = 10f;
-        private float _snapBackDelayTimer = 0f;
-        private const float SNAP_BACK_DELAY = 1f;
-        private const float SCROLL_PAN_SPEED = 1f;
-
         private List<string>? _pendingCombatArchetypes;
         private bool _waitingForCombatCameraSettle = false;
         private int _framesToWaitAfterSettle = 0;
@@ -202,7 +191,6 @@ namespace ProjectVagabond.Scenes
         {
             base.Enter();
             _playerIcon.SetIsMoving(false);
-            _isPanning = false;
             _waitingForCombatCameraSettle = false;
             _pendingCombatArchetypes = null;
             _viewToReturnTo = SplitMapView.Map;
@@ -334,9 +322,6 @@ namespace ProjectVagabond.Scenes
         private void SetView(SplitMapView view, bool snap = true)
         {
             _currentView = view;
-            _isPanning = false;
-            _cameraVelocity = Vector2.Zero;
-            _snapBackDelayTimer = 0f;
 
             if (_settingsButton != null)
             {
@@ -515,50 +500,6 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            if (_currentView == SplitMapView.Map)
-            {
-                if (!_isPanning)
-                {
-                    if (_cameraVelocity.LengthSquared() > 0.1f)
-                    {
-                        _cameraOffset += _cameraVelocity;
-                        float frictionDamping = 1.0f - MathF.Exp(-PAN_FRICTION * deltaTime);
-                        _cameraVelocity = Vector2.Lerp(_cameraVelocity, Vector2.Zero, frictionDamping);
-                        ClampCameraOffset();
-                        _targetCameraOffset.X = _cameraOffset.X;
-                        _snapBackDelayTimer = SNAP_BACK_DELAY;
-                    }
-                    else
-                    {
-                        _cameraVelocity = Vector2.Zero;
-                        if (_snapBackDelayTimer > 0)
-                        {
-                            _snapBackDelayTimer -= deltaTime;
-                            float currentX = _cameraOffset.X;
-                            float targetPixelX = MathF.Round(currentX);
-                            float snapDamping = 1.0f - MathF.Exp(-15f * deltaTime);
-                            _cameraOffset.X = MathHelper.Lerp(currentX, targetPixelX, snapDamping);
-
-                            if (Math.Abs(_cameraOffset.X - targetPixelX) < 0.01f)
-                            {
-                                _cameraOffset.X = targetPixelX;
-                            }
-
-                            _targetCameraOffset.X = _cameraOffset.X;
-
-                            if (_snapBackDelayTimer <= 0)
-                            {
-                                var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
-                                if (currentNode != null)
-                                {
-                                    UpdateCameraTarget(currentNode.Position, false);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
             float cameraDamping = 1.0f - MathF.Exp(-CAMERA_LERP_SPEED * deltaTime);
             _cameraOffset = Vector2.Lerp(_cameraOffset, _targetCameraOffset, cameraDamping);
 
@@ -696,46 +637,25 @@ namespace ProjectVagabond.Scenes
 
             bool hoveringButtons = (_partyStatusOverlay.IsHovered || (_settingsButton?.IsHovered ?? false));
 
-            if (!hoveringButtons)
+            if (rawPlayerHovered)
             {
-                HandleCameraPan(currentMouseState, virtualMousePos, rawHoveredNodeId);
-            }
-
-            if (_isPanning)
-            {
+                _playerIconHovered = true;
                 _hoveredNodeId = -1;
-                _playerIconHovered = false;
             }
             else
             {
-                if (rawPlayerHovered)
-                {
-                    _playerIconHovered = true;
-                    _hoveredNodeId = -1;
-                }
-                else
-                {
-                    _playerIconHovered = false;
-                    _hoveredNodeId = rawHoveredNodeId;
-                }
+                _playerIconHovered = false;
+                _hoveredNodeId = rawHoveredNodeId;
             }
 
             _lastHoveredNodeId = _hoveredNodeId;
 
-            if (_isPanning)
-            {
-                cursorManager.SetState(CursorState.Dragging);
-            }
-            else if (_playerIconHovered || _hoveredNodeId != -1)
+            if (_playerIconHovered || _hoveredNodeId != -1)
             {
                 cursorManager.SetState(CursorState.HoverClickable);
             }
-            else if (_mapState == SplitMapState.Idle)
-            {
-                cursorManager.SetState(CursorState.HoverDraggable);
-            }
 
-            if (!_isPanning && _mapState == SplitMapState.Idle && !hoveringButtons && UIInputManager.CanProcessMouseClick() && _currentView == SplitMapView.Map)
+            if (_mapState == SplitMapState.Idle && !hoveringButtons && UIInputManager.CanProcessMouseClick() && _currentView == SplitMapView.Map)
             {
                 bool leftClickPressed = currentMouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released;
                 bool leftClickReleased = currentMouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed;
@@ -770,8 +690,6 @@ namespace ProjectVagabond.Scenes
                             {
                                 UpdateCameraTarget(currentNode.Position, false);
                             }
-                            _snapBackDelayTimer = 0f;
-                            _cameraVelocity = Vector2.Zero;
 
                             _selectedNodeId = _hoveredNodeId;
                             _nodeSelectionAnimTimer = 0f;
@@ -794,69 +712,6 @@ namespace ProjectVagabond.Scenes
                 _playerIconPressed = false;
             }
             previousMouseState = currentMouseState;
-        }
-
-        private void HandleCameraPan(MouseState currentMouseState, Vector2 virtualMousePos, int rawHoveredNodeId)
-        {
-            if (_currentView != SplitMapView.Map)
-            {
-                _isPanning = false;
-                return;
-            }
-
-            bool leftClickPressed = currentMouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released;
-            bool leftClickHeld = currentMouseState.LeftButton == ButtonState.Pressed;
-            bool leftClickReleased = currentMouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed;
-
-            int scrollDelta = currentMouseState.ScrollWheelValue - previousMouseState.ScrollWheelValue;
-            if (scrollDelta != 0 && _mapState == SplitMapState.Idle)
-            {
-                _cameraVelocity.X -= Math.Sign(scrollDelta) * SCROLL_PAN_SPEED;
-                _targetCameraOffset.X = _cameraOffset.X;
-                _snapBackDelayTimer = SNAP_BACK_DELAY;
-            }
-
-            if (leftClickPressed && rawHoveredNodeId == -1 && !_playerIconHovered && _mapState == SplitMapState.Idle && UIInputManager.CanProcessMouseClick())
-            {
-                _isPanning = true;
-                _panStartMousePosition = currentMouseState.Position;
-                _lastPanMousePosition = currentMouseState.Position;
-                _panStartCameraOffset = _cameraOffset;
-                _cameraVelocity = Vector2.Zero;
-                UIInputManager.ConsumeMouseClick();
-            }
-
-            if (leftClickReleased)
-            {
-                if (_isPanning)
-                {
-                    _isPanning = false;
-                }
-            }
-
-            if (_isPanning && leftClickHeld)
-            {
-                if (_mapState != SplitMapState.Idle)
-                {
-                    _isPanning = false;
-                    return;
-                }
-
-                _snapBackDelayTimer = SNAP_BACK_DELAY;
-
-                float scale = ServiceLocator.Get<Core>().FinalScale;
-                Vector2 screenDelta = (currentMouseState.Position - _lastPanMousePosition).ToVector2();
-                Vector2 virtualDelta = screenDelta / scale;
-
-                _cameraVelocity.X = virtualDelta.X * PAN_SENSITIVITY;
-                _cameraVelocity.Y = 0;
-
-                _cameraOffset.X += _cameraVelocity.X;
-                ClampCameraOffset();
-
-                _targetCameraOffset.X = _cameraOffset.X;
-                _lastPanMousePosition = currentMouseState.Position;
-            }
         }
 
         private void ClampCameraOffset()
