@@ -178,11 +178,12 @@ namespace ProjectVagabond.UI
             // Move the entirety of moves over 6 pixels to the left
             int moveStartX = statBlockStartX - 6;
 
-            DrawMoveName(spriteBatch, member.CoreMove, "cor", moveStartX, centerX, ref y, tertiaryFont);
-            DrawMoveName(spriteBatch, member.AltMove, "alt", moveStartX, centerX, ref y, tertiaryFont);
+            DrawMoveName(spriteBatch, member.BasicMove, "bas", moveStartX, centerX, ref y, tertiaryFont, tertiaryFont);
+            DrawMoveName(spriteBatch, member.CoreMove, "cor", moveStartX, centerX, ref y, tertiaryFont, tertiaryFont);
+            DrawMoveName(spriteBatch, member.AltMove, "alt", moveStartX, centerX, ref y, tertiaryFont, tertiaryFont);
         }
 
-        private void DrawMoveName(SpriteBatch sb, MoveEntry? move, string label, int x, int centerX, ref int y, BitmapFont font)
+        private void DrawMoveName(SpriteBatch sb, MoveEntry? move, string label, int x, int centerX, ref int y, BitmapFont labelFont, BitmapFont font)
         {
             string text = "EMPTY";
             Color color = _global.Palette_DarkShadow;
@@ -193,15 +194,15 @@ namespace ProjectVagabond.UI
                 if (BattleDataCache.Moves.TryGetValue(move.MoveID, out var data))
                 {
                     text = data.MoveName;
-                    color = _global.Palette_LightPale;
+                    color = label == "bas" ? _global.Palette_DarkestPale : _global.Palette_LightPale;
                     isMovePresent = true;
                 }
             }
 
             if (isMovePresent)
             {
-                // Draw Label (cor/alt)
-                sb.DrawStringSnapped(font, label, new Vector2(x, y), _global.Palette_DarkShadow);
+                // Draw Label (bas/cor/alt)
+                sb.DrawStringSnapped(labelFont, label, new Vector2(x, y), _global.Palette_DarkShadow);
                 // Draw Move Name (offset 12)
                 sb.DrawStringSnapped(font, text, new Vector2(x + 12, y), color);
             }
