@@ -34,6 +34,7 @@ namespace ProjectVagabond.UI
             var core = ServiceLocator.Get<Core>();
             var defaultFont = core.DefaultFont;
             var secondaryFont = core.SecondaryFont;
+            var tertiaryFont = core.TertiaryFont;
 
             if (defaultFont == null || secondaryFont == null) return;
 
@@ -41,15 +42,15 @@ namespace ProjectVagabond.UI
             spriteBatch.DrawSnapped(_pixel, new Rectangle(0, START_Y, Global.VIRTUAL_WIDTH, HUD_HEIGHT), _global.Palette_Black);
 
             // Draw Top Border
-            spriteBatch.DrawSnapped(_pixel, new Rectangle(0, START_Y, Global.VIRTUAL_WIDTH, 1), _global.Palette_DarkGray);
+            spriteBatch.DrawSnapped(_pixel, new Rectangle(0, START_Y, Global.VIRTUAL_WIDTH, 1), _global.Palette_DarkestPale);
 
             for (int i = 0; i < 4; i++)
             {
-                DrawCard(spriteBatch, gameTime, i, defaultFont, secondaryFont);
+                DrawCard(spriteBatch, gameTime, i, defaultFont, secondaryFont, tertiaryFont);
             }
         }
 
-        private void DrawCard(SpriteBatch spriteBatch, GameTime gameTime, int index, BitmapFont defaultFont, BitmapFont secondaryFont)
+        private void DrawCard(SpriteBatch spriteBatch, GameTime gameTime, int index, BitmapFont defaultFont, BitmapFont secondaryFont, BitmapFont tertiaryFont)
         {
             int x = START_X + (index * CARD_WIDTH);
             int y = START_Y + 6;
@@ -61,7 +62,7 @@ namespace ProjectVagabond.UI
 
             // --- 1. Name ---
             string name = isOccupied ? member.Name.ToUpper() : "EMPTY";
-            Color nameColor = isOccupied ? _global.Palette_Sun : _global.Palette_DarkShadow;
+            Color nameColor = isOccupied ? _global.Palette_LightPale : _global.Palette_DarkShadow;
             Vector2 nameSize = defaultFont.MeasureString(name);
             spriteBatch.DrawStringSnapped(defaultFont, name, new Vector2(centerX - nameSize.X / 2, y), nameColor);
 
@@ -108,7 +109,7 @@ namespace ProjectVagabond.UI
 
             for (int s = 0; s < 4; s++)
             {
-                Color labelColor = isOccupied ? _global.Palette_DarkSun : _global.Palette_DarkShadow;
+                Color labelColor = isOccupied ? _global.Palette_DarkPale : _global.Palette_DarkShadow;
                 spriteBatch.DrawStringSnapped(secondaryFont, labels[s], new Vector2(statBlockStartX, y), labelColor);
 
                 Texture2D statBg = isOccupied ? _spriteManager.InventoryStatBarEmpty : _spriteManager.InventoryStatBarDisabled;
@@ -139,13 +140,13 @@ namespace ProjectVagabond.UI
             // --- 5. Moves ---
             if (isOccupied)
             {
-                DrawMoveName(spriteBatch, member.CoreMove, centerX, ref y, false, secondaryFont);
-                DrawMoveName(spriteBatch, member.AltMove, centerX, ref y, false, secondaryFont);
+                DrawMoveName(spriteBatch, member.CoreMove, centerX, ref y, false, tertiaryFont);
+                DrawMoveName(spriteBatch, member.AltMove, centerX, ref y, false, tertiaryFont);
             }
             else
             {
-                DrawMoveName(spriteBatch, null, centerX, ref y, true, secondaryFont);
-                DrawMoveName(spriteBatch, null, centerX, ref y, true, secondaryFont);
+                DrawMoveName(spriteBatch, null, centerX, ref y, true, tertiaryFont);
+                DrawMoveName(spriteBatch, null, centerX, ref y, true, tertiaryFont);
             }
         }
 
@@ -159,7 +160,7 @@ namespace ProjectVagabond.UI
                 if (BattleDataCache.Moves.TryGetValue(move.MoveID, out var data))
                 {
                     text = data.MoveName;
-                    color = _global.Palette_LightGray;
+                    color = _global.Palette_DarkPale;
                 }
             }
 
