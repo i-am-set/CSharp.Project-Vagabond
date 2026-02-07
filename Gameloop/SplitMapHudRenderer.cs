@@ -71,13 +71,20 @@ namespace ProjectVagabond.UI
             y += (int)nameSize.Y - 4;
 
             // --- 2. Portrait ---
-            float animSpeed = 1f;
-            int frame = (int)(gameTime.TotalGameTime.TotalSeconds * animSpeed) % 2;
-            PlayerSpriteType type = frame == 0 ? PlayerSpriteType.Normal : PlayerSpriteType.Alt;
+            float bobSpeed = 4f;
+            float time = (float)gameTime.TotalGameTime.TotalSeconds;
+
+            // Bobbing up and down smoothly 0.5 pixels
+            float sineValue = MathF.Sin(time * bobSpeed);
+            float bobOffset = sineValue * 0.5f;
+
+            // Use Alt sprite when on the "upper half" of the bob (negative offset in screen coords)
+            // Use Normal sprite when on the "lower half"
+            PlayerSpriteType type = sineValue < 0 ? PlayerSpriteType.Alt : PlayerSpriteType.Normal;
 
             var sourceRect = _spriteManager.GetPlayerSourceRect(member.PortraitIndex, type);
             // Center portrait (32x32)
-            spriteBatch.DrawSnapped(_spriteManager.PlayerMasterSpriteSheet, new Vector2(centerX - 16, y), sourceRect, Color.White);
+            spriteBatch.DrawSnapped(_spriteManager.PlayerMasterSpriteSheet, new Vector2(centerX - 16, y + bobOffset), sourceRect, Color.White);
 
             y += 32 + 4;
 
