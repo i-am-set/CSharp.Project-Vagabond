@@ -53,11 +53,11 @@ namespace ProjectVagabond.UI
             for (int i = 0; i < count; i++)
             {
                 int x = startX + (i * CARD_WIDTH);
-                DrawCard(spriteBatch, gameTime, party[i], x, defaultFont, secondaryFont, tertiaryFont);
+                DrawCard(spriteBatch, gameTime, party[i], x, i, defaultFont, secondaryFont, tertiaryFont);
             }
         }
 
-        private void DrawCard(SpriteBatch spriteBatch, GameTime gameTime, PartyMember member, int xPosition, BitmapFont defaultFont, BitmapFont secondaryFont, BitmapFont tertiaryFont)
+        private void DrawCard(SpriteBatch spriteBatch, GameTime gameTime, PartyMember member, int xPosition, int index, BitmapFont defaultFont, BitmapFont secondaryFont, BitmapFont tertiaryFont)
         {
             int y = START_Y + 6;
             int centerX = xPosition + (CARD_WIDTH / 2);
@@ -71,20 +71,43 @@ namespace ProjectVagabond.UI
             y += (int)nameSize.Y - 4;
 
             // --- 2. Portrait ---
-            float bobSpeed = 4f;
             float time = (float)gameTime.TotalGameTime.TotalSeconds;
 
-            // Bobbing up and down smoothly 0.5 pixels
-            float sineValue = MathF.Sin(time * bobSpeed);
+            // Bobbing (Animation State)
+            // Add index-based phase offset to create the wave effect
+            float bobSpeed = 3f;
+            float wavePhase = index * 1.0f;
+            float sineValue = MathF.Sin(time * bobSpeed + wavePhase);
             float bobOffset = sineValue * 0.5f;
+
+            // Floating (Spatial Movement)
+            // Use index to offset the phase so they don't all float in sync
+            float seed = index * 13.5f;
+            float floatSpeedX = 0.1f;
+            float floatSpeedY = 0.1f;
+            float floatAmp = 1.5f; // 1.5 pixels float radius
+
+            float floatX = MathF.Sin(time * floatSpeedX + seed) * floatAmp;
+            float floatY = MathF.Cos(time * floatSpeedY + seed) * floatAmp;
+
+            // Rotation
+            float rotSpeed = 0.2f;
+            float rotAmp = 0.02f; // Radians
+            float rotation = MathF.Sin(time * rotSpeed + seed) * rotAmp;
 
             // Use Alt sprite when on the "upper half" of the bob (negative offset in screen coords)
             // Use Normal sprite when on the "lower half"
             PlayerSpriteType type = sineValue < 0 ? PlayerSpriteType.Alt : PlayerSpriteType.Normal;
 
             var sourceRect = _spriteManager.GetPlayerSourceRect(member.PortraitIndex, type);
+
             // Center portrait (32x32)
-            spriteBatch.DrawSnapped(_spriteManager.PlayerMasterSpriteSheet, new Vector2(centerX - 16, y + bobOffset), sourceRect, Color.White);
+            // Origin is center of sprite (16, 16)
+            // Position is target center on screen
+            Vector2 origin = new Vector2(16, 16);
+            Vector2 pos = new Vector2(centerX, y + 16) + new Vector2(floatX, bobOffset + floatY);
+
+            spriteBatch.DrawSnapped(_spriteManager.PlayerMasterSpriteSheet, pos, sourceRect, Color.White, rotation, origin, 1.0f, SpriteEffects.None, 0f);
 
             y += 32 + 4;
 
