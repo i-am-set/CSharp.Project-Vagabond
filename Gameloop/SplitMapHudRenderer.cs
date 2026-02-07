@@ -201,7 +201,7 @@ namespace ProjectVagabond.UI
             if (isMovePresent)
             {
                 // Draw Label (cor/alt)
-                sb.DrawStringSnapped(font, label, new Vector2(x, y), _global.Palette_DarkestPale);
+                sb.DrawStringSnapped(font, label, new Vector2(x, y), _global.Palette_DarkShadow);
                 // Draw Move Name (offset 12)
                 sb.DrawStringSnapped(font, text, new Vector2(x + 12, y), color);
             }
