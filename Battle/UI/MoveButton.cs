@@ -38,6 +38,7 @@ namespace ProjectVagabond.Battle.UI
         public Color ActionIconHoverColor { get; set; } = Color.White;
 
         private bool _showManaWarning = false;
+        public int? VisualHeightOverride { get; set; }
 
         // Scrolling state
         private bool _isScrollingInitialized = false;
@@ -154,6 +155,7 @@ namespace ProjectVagabond.Battle.UI
 
             // Adjust for Visual Width Override to ensure pixel-perfect alignment
             float effectiveWidth = VisualWidthOverride ?? Bounds.Width;
+            float effectiveHeight = VisualHeightOverride ?? Bounds.Height;
 
             // Pixel Snap Center if rotation is negligible
             if (Math.Abs(_currentHoverRotation) < 0.01f)
@@ -174,7 +176,7 @@ namespace ProjectVagabond.Battle.UI
                 if (!IsEnabled || !canAfford) bgColor = _global.Palette_Black;
                 else if (isActivated) bgColor = _global.Palette_Rust;
 
-                DrawRotatedBeveledBackground(spriteBatch, pixel, centerPos, (int)effectiveWidth, Bounds.Height, bgColor, _currentHoverRotation, scaleVec);
+                DrawRotatedBeveledBackground(spriteBatch, pixel, centerPos, (int)effectiveWidth, (int)effectiveHeight, bgColor, _currentHoverRotation, scaleVec);
             }
 
             // --- DRAW ICON ---

@@ -386,11 +386,26 @@ namespace ProjectVagabond.Battle.UI
 
                 for (int i = 0; i < 3; i++)
                 {
-                    int height = (i == 1) ? 9 : 7;
-                    int yOffset = (i == 1) ? 0 : 1;
+                    int visualHeight = (i == 1) ? 9 : 7; // Core is 9, Basic/Alt are 7
+                    int hitboxHeight = 13;               // Requested hitbox size
+
+                    // Calculate padding to center the visual within the 13px hitbox
+                    // Core: (13 - 9) / 2 = 2px padding
+                    // Basic/Alt: (13 - 7) / 2 = 3px padding
+                    int paddingY = (hitboxHeight - visualHeight) / 2;
+
+                    int yOffset = (i == 1) ? 0 : 1; // Original visual offset logic
                     int width = widths[i];
 
-                    _buttons[i].Bounds = new Rectangle(startX, y + yOffset, width + 1, height);
+                    // Shift Bounds.Y up by paddingY so the visual (drawn at center) stays in the original spot
+                    _buttons[i].Bounds = new Rectangle(startX, (y + yOffset) - paddingY, width + 1, hitboxHeight);
+
+                    // Apply the visual override so it doesn't stretch
+                    if (_buttons[i] is MoveButton mb)
+                    {
+                        mb.VisualHeightOverride = visualHeight;
+                    }
+
                     startX += width + BUTTON_SPACING;
                 }
 
