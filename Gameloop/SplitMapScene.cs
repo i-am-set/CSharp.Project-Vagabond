@@ -39,6 +39,7 @@ namespace ProjectVagabond.Scenes
         private readonly VoidEdgeEffect _voidEdgeEffect;
 
         private readonly PartyStatusOverlay _partyStatusOverlay;
+        private readonly SplitMapHudRenderer _hudRenderer;
         private readonly PostBattleMenu _postBattleMenu;
 
         private readonly BirdManager _birdManager;
@@ -163,6 +164,7 @@ namespace ProjectVagabond.Scenes
             _playerIcon = new PlayerMapIcon();
 
             _partyStatusOverlay = new PartyStatusOverlay();
+            _hudRenderer = new SplitMapHudRenderer();
             _postBattleMenu = new PostBattleMenu();
             _postBattleMenu.OnComplete += () =>
             {
@@ -1026,7 +1028,7 @@ namespace ProjectVagabond.Scenes
                 targetX = (screenWidth - mapContentWidth) / 2;
             }
 
-            _targetCameraOffset = new Vector2(MathF.Round(targetX), 0);
+            _targetCameraOffset = new Vector2(MathF.Round(targetX), -50f);
 
             if (snap)
             {
@@ -1199,6 +1201,7 @@ namespace ProjectVagabond.Scenes
             var mapBounds = new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
             _voidEdgeEffect.Draw(spriteBatch, mapBounds);
 
+            _hudRenderer.Draw(spriteBatch, gameTime);
             _partyStatusOverlay.DrawScreen(spriteBatch, font, gameTime, transform);
             _settingsButton?.Draw(spriteBatch, font, gameTime, transform);
             _postBattleMenu.Draw(spriteBatch, gameTime);
