@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Progression;
 using ProjectVagabond.Utils;
 using System;
 
@@ -16,8 +17,6 @@ namespace ProjectVagabond.UI
 
         private const int HUD_HEIGHT = 98;
         private const int CARD_WIDTH = 78;
-        private const int TOTAL_WIDTH = CARD_WIDTH * 4;
-        private const int START_X = (Global.VIRTUAL_WIDTH - TOTAL_WIDTH) / 2;
         private const int START_Y = Global.VIRTUAL_HEIGHT - HUD_HEIGHT;
 
         public SplitMapHudRenderer()
@@ -30,7 +29,7 @@ namespace ProjectVagabond.UI
 
         public void Draw(SpriteBatch spriteBatch, GameTime gameTime)
         {
-            // Fetch fonts here to ensure they are loaded (Core.LoadContent runs after Scene initialization)
+            // Fetch fonts here to ensure they are loaded
             var core = ServiceLocator.Get<Core>();
             var defaultFont = core.DefaultFont;
             var secondaryFont = core.SecondaryFont;
@@ -44,52 +43,52 @@ namespace ProjectVagabond.UI
             // Draw Top Border
             spriteBatch.DrawSnapped(_pixel, new Rectangle(0, START_Y, Global.VIRTUAL_WIDTH, 1), _global.Palette_DarkestPale);
 
-            for (int i = 0; i < 4; i++)
+            var party = _gameState.PlayerState.Party;
+            int count = party.Count;
+
+            // Calculate total width of the active cards to center them
+            int totalWidth = count * CARD_WIDTH;
+            int startX = (Global.VIRTUAL_WIDTH - totalWidth) / 2;
+
+            for (int i = 0; i < count; i++)
             {
-                DrawCard(spriteBatch, gameTime, i, defaultFont, secondaryFont, tertiaryFont);
+                int x = startX + (i * CARD_WIDTH);
+                DrawCard(spriteBatch, gameTime, party[i], x, defaultFont, secondaryFont, tertiaryFont);
             }
         }
 
-        private void DrawCard(SpriteBatch spriteBatch, GameTime gameTime, int index, BitmapFont defaultFont, BitmapFont secondaryFont, BitmapFont tertiaryFont)
+        private void DrawCard(SpriteBatch spriteBatch, GameTime gameTime, PartyMember member, int xPosition, BitmapFont defaultFont, BitmapFont secondaryFont, BitmapFont tertiaryFont)
         {
-            int x = START_X + (index * CARD_WIDTH);
             int y = START_Y + 6;
-            int centerX = x + (CARD_WIDTH / 2);
-
-            var party = _gameState.PlayerState.Party;
-            bool isOccupied = index < party.Count;
-            var member = isOccupied ? party[index] : null;
+            int centerX = xPosition + (CARD_WIDTH / 2);
 
             // --- 1. Name ---
-            string name = isOccupied ? member.Name.ToUpper() : "EMPTY";
-            Color nameColor = isOccupied ? _global.Palette_LightPale : _global.Palette_DarkShadow;
+            string name = member.Name.ToUpper();
+            Color nameColor = _global.Palette_LightPale;
             Vector2 nameSize = defaultFont.MeasureString(name);
             spriteBatch.DrawStringSnapped(defaultFont, name, new Vector2(centerX - nameSize.X / 2, y), nameColor);
 
             y += (int)nameSize.Y - 4;
 
             // --- 2. Portrait ---
-            if (isOccupied)
-            {
-                float animSpeed = 1f;
-                int frame = (int)(gameTime.TotalGameTime.TotalSeconds * animSpeed) % 2;
-                PlayerSpriteType type = frame == 0 ? PlayerSpriteType.Normal : PlayerSpriteType.Alt;
+            float animSpeed = 1f;
+            int frame = (int)(gameTime.TotalGameTime.TotalSeconds * animSpeed) % 2;
+            PlayerSpriteType type = frame == 0 ? PlayerSpriteType.Normal : PlayerSpriteType.Alt;
 
-                var sourceRect = _spriteManager.GetPlayerSourceRect(member.PortraitIndex, type);
-                // Center portrait (32x32)
-                spriteBatch.DrawSnapped(_spriteManager.PlayerMasterSpriteSheet, new Vector2(centerX - 16, y), sourceRect, Color.White);
-            }
+            var sourceRect = _spriteManager.GetPlayerSourceRect(member.PortraitIndex, type);
+            // Center portrait (32x32)
+            spriteBatch.DrawSnapped(_spriteManager.PlayerMasterSpriteSheet, new Vector2(centerX - 16, y), sourceRect, Color.White);
 
             y += 32 + 4;
 
             // --- 3. HP Bar ---
-            Texture2D hpBg = isOccupied ? _spriteManager.InventoryPlayerHealthBarEmpty : _spriteManager.InventoryPlayerHealthBarDisabled;
+            Texture2D hpBg = _spriteManager.InventoryPlayerHealthBarEmpty;
             if (hpBg != null)
             {
                 int barX = centerX - (hpBg.Width / 2);
                 spriteBatch.DrawSnapped(hpBg, new Vector2(barX, y - 8), Color.White);
 
-                if (isOccupied && _spriteManager.InventoryPlayerHealthBarFull != null)
+                if (_spriteManager.InventoryPlayerHealthBarFull != null)
                 {
                     float hpPercent = (float)member.CurrentHP / Math.Max(1, member.MaxHP);
                     int visibleWidth = (int)(_spriteManager.InventoryPlayerHealthBarFull.Width * hpPercent);
@@ -109,10 +108,10 @@ namespace ProjectVagabond.UI
 
             for (int s = 0; s < 4; s++)
             {
-                Color labelColor = isOccupied ? _global.Palette_DarkPale : _global.Palette_DarkShadow;
+                Color labelColor = _global.Palette_DarkPale;
                 spriteBatch.DrawStringSnapped(secondaryFont, labels[s], new Vector2(statBlockStartX, y), labelColor);
 
-                Texture2D statBg = isOccupied ? _spriteManager.InventoryStatBarEmpty : _spriteManager.InventoryStatBarDisabled;
+                Texture2D statBg = _spriteManager.InventoryStatBarEmpty;
                 if (statBg != null)
                 {
                     int pipX = statBlockStartX + 19;
@@ -121,7 +120,7 @@ namespace ProjectVagabond.UI
 
                     spriteBatch.DrawSnapped(statBg, new Vector2(pipX, pipY), Color.White);
 
-                    if (isOccupied && _spriteManager.InventoryStatBarFull != null)
+                    if (_spriteManager.InventoryStatBarFull != null)
                     {
                         int val = _gameState.PlayerState.GetBaseStat(member, keys[s]);
                         int basePoints = Math.Clamp(val, 0, 10);
@@ -138,34 +137,43 @@ namespace ProjectVagabond.UI
             y += 4;
 
             // --- 5. Moves ---
-            if (isOccupied)
-            {
-                DrawMoveName(spriteBatch, member.CoreMove, centerX, ref y, false, tertiaryFont);
-                DrawMoveName(spriteBatch, member.AltMove, centerX, ref y, false, tertiaryFont);
-            }
-            else
-            {
-                DrawMoveName(spriteBatch, null, centerX, ref y, true, tertiaryFont);
-                DrawMoveName(spriteBatch, null, centerX, ref y, true, tertiaryFont);
-            }
+            // Move the entirety of moves over 6 pixels to the left
+            int moveStartX = statBlockStartX - 6;
+
+            DrawMoveName(spriteBatch, member.CoreMove, "cor", moveStartX, centerX, ref y, tertiaryFont);
+            DrawMoveName(spriteBatch, member.AltMove, "alt", moveStartX, centerX, ref y, tertiaryFont);
         }
 
-        private void DrawMoveName(SpriteBatch sb, MoveEntry move, int centerX, ref int y, bool forceEmpty, BitmapFont font)
+        private void DrawMoveName(SpriteBatch sb, MoveEntry? move, string label, int x, int centerX, ref int y, BitmapFont font)
         {
             string text = "EMPTY";
             Color color = _global.Palette_DarkShadow;
+            bool isMovePresent = false;
 
-            if (!forceEmpty && move != null)
+            if (move != null)
             {
                 if (BattleDataCache.Moves.TryGetValue(move.MoveID, out var data))
                 {
                     text = data.MoveName;
                     color = _global.Palette_DarkPale;
+                    isMovePresent = true;
                 }
             }
 
-            Vector2 size = font.MeasureString(text);
-            sb.DrawStringSnapped(font, text, new Vector2(centerX - size.X / 2, y), color);
+            if (isMovePresent)
+            {
+                // Draw Label (cor/alt)
+                sb.DrawStringSnapped(font, label, new Vector2(x, y), _global.Palette_DarkShadow);
+                // Draw Move Name (offset 12)
+                sb.DrawStringSnapped(font, text, new Vector2(x + 12, y), color);
+            }
+            else
+            {
+                // Center "EMPTY"
+                Vector2 size = font.MeasureString(text);
+                sb.DrawStringSnapped(font, text, new Vector2(centerX - size.X / 2, y), color);
+            }
+
             y += (int)font.LineHeight + 1;
         }
     }
