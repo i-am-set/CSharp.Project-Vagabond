@@ -5,6 +5,7 @@ using ProjectVagabond.Battle;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections.Generic;
 
 namespace ProjectVagabond.UI
 {
@@ -19,6 +20,15 @@ namespace ProjectVagabond.UI
         private const int CARD_WIDTH = 78;
         private const int START_Y = Global.VIRTUAL_HEIGHT - HUD_HEIGHT;
 
+        // --- Hover State ---
+        // Stores: Bounds, Label Text, Card Center X
+        private readonly List<(Rectangle Bounds, string Label, int CardCenterX)> _activeHitboxes = new();
+        private float _hoverTimer;
+        private (Rectangle Bounds, string Label, int CardCenterX)? _currentHoveredItem;
+        private const float HOVER_DELAY = 0.2f;
+        private Vector2 _lastMousePos;
+        private bool _isTooltipVisible;
+
         public SplitMapHudRenderer()
         {
             _global = ServiceLocator.Get<Global>();
@@ -27,8 +37,65 @@ namespace ProjectVagabond.UI
             _pixel = ServiceLocator.Get<Texture2D>();
         }
 
+        public void Update(GameTime gameTime, Vector2 virtualMousePos)
+        {
+            bool found = false;
+            var cursorManager = ServiceLocator.Get<CursorManager>();
+
+            foreach (var item in _activeHitboxes)
+            {
+                if (item.Bounds.Contains(virtualMousePos))
+                {
+                    // Set cursor to Hint when hovering a move
+                    cursorManager.SetState(CursorState.Hint);
+
+                    if (_currentHoveredItem.HasValue && _currentHoveredItem.Value.Bounds == item.Bounds)
+                    {
+                        // If already visible, keep it visible regardless of movement within the rect
+                        if (!_isTooltipVisible)
+                        {
+                            // Only increment timer if mouse is still
+                            if (virtualMousePos == _lastMousePos)
+                            {
+                                _hoverTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                                if (_hoverTimer >= HOVER_DELAY)
+                                {
+                                    _isTooltipVisible = true;
+                                }
+                            }
+                            else
+                            {
+                                // Mouse moved within the rect, reset timer
+                                _hoverTimer = 0f;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // New item hovered
+                        _currentHoveredItem = item;
+                        _hoverTimer = 0f;
+                        _isTooltipVisible = false;
+                    }
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found)
+            {
+                _currentHoveredItem = null;
+                _hoverTimer = 0f;
+                _isTooltipVisible = false;
+            }
+
+            _lastMousePos = virtualMousePos;
+        }
+
         public void Draw(SpriteBatch spriteBatch, GameTime gameTime)
         {
+            _activeHitboxes.Clear();
+
             // Fetch fonts here to ensure they are loaded
             var core = ServiceLocator.Get<Core>();
             var defaultFont = core.DefaultFont;
@@ -54,6 +121,12 @@ namespace ProjectVagabond.UI
             {
                 int x = startX + (i * CARD_WIDTH);
                 DrawCard(spriteBatch, gameTime, party[i], x, i, defaultFont, secondaryFont, tertiaryFont);
+            }
+
+            // Draw Tooltip
+            if (_currentHoveredItem.HasValue && _isTooltipVisible)
+            {
+                DrawTooltip(spriteBatch, _currentHoveredItem.Value.Bounds, _currentHoveredItem.Value.CardCenterX);
             }
         }
 
@@ -172,7 +245,7 @@ namespace ProjectVagabond.UI
                 y += (int)secondaryFont.LineHeight + 1;
             }
 
-            y += 4;
+            y += 2; // Moved up 1 pixel (was 3)
 
             // --- 5. Moves ---
             // Move the entirety of moves over 6 pixels to the left
@@ -194,17 +267,62 @@ namespace ProjectVagabond.UI
                 if (BattleDataCache.Moves.TryGetValue(move.MoveID, out var data))
                 {
                     text = data.MoveName;
-                    color = label == "bas" ? _global.Palette_DarkestPale : _global.Palette_LightPale;
+
+                    if (label == "bas")
+                        color = _global.Palette_DarkestPale;
+                    else if (label == "alt")
+                        color = _global.Palette_Pale;
+                    else
+                        color = _global.Palette_LightPale;
+
                     isMovePresent = true;
                 }
+            }
+
+            // Calculate Hitbox
+            // Width: Entire party member card (CARD_WIDTH = 78)
+            // Height: LineHeight + 4 (2px taller than previous iteration)
+            // Position: Start of card X, y - 2 (1px higher than previous)
+            int cardStartX = centerX - (CARD_WIDTH / 2);
+            int lineHeight = (int)font.LineHeight;
+            Rectangle hitRect = new Rectangle(cardStartX, y - 2, CARD_WIDTH, lineHeight + 4);
+
+            // Check Hover
+            bool isHovered = _currentHoveredItem.HasValue && _currentHoveredItem.Value.Bounds == hitRect;
+
+            // Draw Highlight (Hollow Sun Rectangle)
+            if (isHovered)
+            {
+                Color c = _global.Palette_Sun;
+                // Top
+                sb.DrawSnapped(_pixel, new Rectangle(hitRect.X, hitRect.Y, hitRect.Width, 1), c);
+                // Bottom
+                sb.DrawSnapped(_pixel, new Rectangle(hitRect.X, hitRect.Bottom - 1, hitRect.Width, 1), c);
+                // Left
+                sb.DrawSnapped(_pixel, new Rectangle(hitRect.X, hitRect.Y, 1, hitRect.Height), c);
+                // Right
+                sb.DrawSnapped(_pixel, new Rectangle(hitRect.Right - 1, hitRect.Y, 1, hitRect.Height), c);
             }
 
             if (isMovePresent)
             {
                 // Draw Label (bas/cor/alt)
                 sb.DrawStringSnapped(labelFont, label, new Vector2(x, y), _global.Palette_DarkShadow);
-                // Draw Move Name (offset 12)
-                sb.DrawStringSnapped(font, text, new Vector2(x + 12, y), color);
+
+                // Calculate Centering
+                // Center text between the end of the label and the end of the card
+                float labelWidth = labelFont.MeasureString(label).Width;
+                float labelEndX = x + labelWidth;
+                int cardEndX = cardStartX + CARD_WIDTH;
+
+                float availableWidth = cardEndX - labelEndX;
+                float textWidth = font.MeasureString(text).Width;
+
+                // Floor to snap to pixel
+                float textX = MathF.Floor(labelEndX + (availableWidth - textWidth) / 2f);
+
+                // Draw Move Name
+                sb.DrawStringSnapped(font, text, new Vector2(textX, y), color);
             }
             else
             {
@@ -213,7 +331,44 @@ namespace ProjectVagabond.UI
                 sb.DrawStringSnapped(font, text, new Vector2(centerX - size.X / 2, y), color);
             }
 
-            y += (int)font.LineHeight + 1;
+            _activeHitboxes.Add((hitRect, text, centerX));
+
+            // Increment Y: Height (no gap)
+            // Height is lineHeight + 4.
+            // Next Top = hitRect.Bottom.
+            // Next Y = Next Top + 2 (since Top is Y-2).
+            // Next Y = hitRect.Bottom + 1 = (y - 2 + lineHeight + 4) + 1 = y + lineHeight + 3.
+            // Reduced gap by 1 pixel (was +4)
+            y += lineHeight + 3;
+        }
+
+        private void DrawTooltip(SpriteBatch sb, Rectangle targetRect, int cardCenterX)
+        {
+            int width = 86;
+            int height = 64;
+
+            // Centered horizontally with cardCenterX
+            int x = cardCenterX - (width / 2);
+            // Bottom aligned with Top of targetRect
+            int y = targetRect.Top - height;
+
+            // Draw Black Background
+            sb.DrawSnapped(_pixel, new Rectangle(x, y, width, height), Color.Black);
+
+            // Draw White Border (1px)
+            sb.DrawSnapped(_pixel, new Rectangle(x, y, width, 1), Color.White); // Top
+            sb.DrawSnapped(_pixel, new Rectangle(x, y + height - 1, width, 1), Color.White); // Bottom
+            sb.DrawSnapped(_pixel, new Rectangle(x, y, 1, height), Color.White); // Left
+            sb.DrawSnapped(_pixel, new Rectangle(x + width - 1, y, 1, height), Color.White); // Right
+
+            // Draw Text "TOOLTIP"
+            var core = ServiceLocator.Get<Core>();
+            var font = core.TertiaryFont;
+            string text = "TOOLTIP";
+            Vector2 size = font.MeasureString(text);
+            Vector2 pos = new Vector2(x + (width - size.X) / 2, y + (height - size.Y) / 2);
+
+            sb.DrawStringSnapped(font, text, pos, Color.White);
         }
     }
 }

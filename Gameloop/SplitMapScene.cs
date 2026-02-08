@@ -371,6 +371,10 @@ namespace ProjectVagabond.Scenes
             var currentMouseState = Mouse.GetState();
             var currentKeyboardState = Keyboard.GetState();
 
+            // Calculate mouse position for HUD and Map interactions
+            var virtualMousePos = Core.TransformMouse(currentMouseState.Position);
+            _hudRenderer.Update(gameTime, virtualMousePos);
+
             _voidEdgeEffect.Update(gameTime, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), _cameraOffset);
 
             _birdManager.Update(gameTime, _currentMap, _playerIcon.Position, _cameraOffset);
@@ -469,8 +473,7 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            _hoveredNodeId = -1;
-            _pressedNodeId = -1;
+            HandleMapInput(gameTime);
 
             UpdateNodeAnimationTimers(deltaTime);
 
