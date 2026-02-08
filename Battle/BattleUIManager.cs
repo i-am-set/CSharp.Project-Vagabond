@@ -152,7 +152,7 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        public bool Update(GameTime gameTime, MouseState currentMouseState, KeyboardState currentKeyboardState, BattleCombatant currentActor, BattleRenderer renderer)
+        public bool Update(GameTime gameTime, MouseState currentMouseState, KeyboardState currentKeyboardState, BattleCombatant currentActor, BattleRenderer renderer, bool isInputBlocked = false)
         {
             bool inputConsumed = false;
             SharedPulseTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -180,7 +180,7 @@ namespace ProjectVagabond.Battle.UI
                 _targetingBackButton.Update(currentMouseState);
             }
 
-            bool isMenuBlocked = isTargeting;
+            bool isMenuBlocked = isTargeting || isInputBlocked;
             int? switchingSlot = isSwitching ? ActiveTargetingSlot : null;
 
             _actionMenu.UpdatePositions(renderer);

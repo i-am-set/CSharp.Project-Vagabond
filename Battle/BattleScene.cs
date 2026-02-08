@@ -447,7 +447,7 @@ namespace ProjectVagabond.Scenes
 
                 _animationManager.Update(gameTime, _battleManager.AllCombatants);
                 _renderer.Update(gameTime, _battleManager.AllCombatants, _animationManager, null);
-                _uiManager.Update(gameTime, currentMouseState, currentKeyboardState, null, _renderer);
+                _uiManager.Update(gameTime, currentMouseState, currentKeyboardState, null, _renderer, isInputBlocked: true);
                 return;
             }
 
