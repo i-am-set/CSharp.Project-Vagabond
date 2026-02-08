@@ -595,9 +595,8 @@ namespace ProjectVagabond.Battle.UI
                 // Layout Tuning
                 int rowSpacing = 8;
                 int pairSpacing = 5;
-                int labelValueGap = (int)tertiaryFont.MeasureString(" ").Width;
+                float labelValueGap = tertiaryFont.MeasureString(" ").Width;
 
-                int currentX = startX;
                 int currentY = startY;
 
                 string name = move.MoveName.ToUpper();
@@ -606,13 +605,27 @@ namespace ProjectVagabond.Battle.UI
                 string accTxt = move.Accuracy > 0 ? $"{move.Accuracy}%" : "--";
                 string useTxt = GetStatShortName(move.OffensiveStat);
 
+                // --- Measurement for Centering ---
+                float MeasurePair(string label, string val)
+                {
+                    return tertiaryFont.MeasureString(label).Width + labelValueGap + secondaryFont.MeasureString(val).Width;
+                }
+
+                float w1 = MeasurePair("POW", powTxt);
+                float w2 = MeasurePair("ACC", accTxt);
+                float w3 = MeasurePair("USE", useTxt);
+                float totalStatsWidth = w1 + pairSpacing + w2 + pairSpacing + w3;
+
+                // Center the block
+                float statsCurrentX = bounds.X + (bounds.Width - totalStatsWidth) / 2f;
+
                 void DrawPair(string label, string val)
                 {
-                    spriteBatch.DrawStringSnapped(tertiaryFont, label, new Vector2(currentX, currentY + 1), global.Palette_Black);
-                    currentX += (int)tertiaryFont.MeasureString(label).Width + labelValueGap;
+                    spriteBatch.DrawStringSnapped(tertiaryFont, label, new Vector2(statsCurrentX, currentY + 1), global.Palette_Black);
+                    statsCurrentX += tertiaryFont.MeasureString(label).Width + labelValueGap;
 
-                    spriteBatch.DrawStringSnapped(secondaryFont, val, new Vector2(currentX, currentY), global.Palette_DarkestPale);
-                    currentX += (int)secondaryFont.MeasureString(val).Width + pairSpacing;
+                    spriteBatch.DrawStringSnapped(secondaryFont, val, new Vector2(statsCurrentX, currentY), global.Palette_DarkPale);
+                    statsCurrentX += secondaryFont.MeasureString(val).Width + pairSpacing;
                 }
 
                 DrawPair("POW", powTxt);
@@ -624,7 +637,7 @@ namespace ProjectVagabond.Battle.UI
 
                 Vector2 nameSize = secondaryFont.MeasureString(name);
                 float centeredNameX = bounds.X + (bounds.Width - nameSize.X) / 2f;
-                spriteBatch.DrawStringSnapped(secondaryFont, name, new Vector2(centeredNameX, currentY), global.Palette_Pale);
+                spriteBatch.DrawStringSnapped(secondaryFont, name, new Vector2(centeredNameX, currentY), global.Palette_LightPale);
 
                 // Description
                 currentY += rowSpacing;
@@ -647,7 +660,7 @@ namespace ProjectVagabond.Battle.UI
                     {
                         string tag = part.Substring(1, part.Length - 2);
                         if (tag == "/" || tag.Equals("default", StringComparison.OrdinalIgnoreCase))
-                            currentColor = global.Palette_Pale;
+                            currentColor = global.Palette_LightPale;
                         else
                             currentColor = global.GetNarrationColor(tag);
                     }

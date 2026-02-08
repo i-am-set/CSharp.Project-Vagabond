@@ -1,22 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
-using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond;
 using ProjectVagabond.Battle;
-using ProjectVagabond.Battle.Abilities;
-using ProjectVagabond.Battle.UI;
-using ProjectVagabond.Progression;
-using ProjectVagabond.Scenes;
-using ProjectVagabond.Transitions;
-using ProjectVagabond.UI;
-using ProjectVagabond.Utils;
-using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text.RegularExpressions;
 
 namespace ProjectVagabond
 {
@@ -25,6 +10,7 @@ namespace ProjectVagabond
         private static readonly Global _instance = new Global();
         private Global()
         {
+            // Color reference initialization
             GameBg = Palette_Black;
             TerminalBg = Palette_Black;
             MapBg = Palette_Black;

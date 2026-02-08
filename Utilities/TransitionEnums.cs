@@ -6,8 +6,6 @@
         Shutter,       // Vertical Curtain (Top/Bottom)
         Curtain,       // Horizontal Curtain (Left/Right)
         Aperture,      // All sides closing in
-        Diamonds,      // Grid-based diamond wipe
-        BigBlocksEase, // Block transition
         SpinningSquare,// Rotates and expands
         CenterSquare,  // Expands without rotation
         CenterDiamond  // Expands rotated 45 degrees

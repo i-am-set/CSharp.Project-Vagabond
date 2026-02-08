@@ -120,9 +120,9 @@ namespace ProjectVagabond.Scenes
 
                 core.SetGameLoaded(true);
 
-                var transition = _transitionManager.GetRandomTransition();
-
-                _sceneManager.ChangeScene(GameSceneState.Split, transition, transition, 0f, loadingTasks);
+                var transitionOut = _transitionManager.GetRandomTransition();
+                var transitionIn = _transitionManager.GetRandomTransition();
+                _sceneManager.ChangeScene(GameSceneState.Split, transitionOut, transitionIn, 0f, loadingTasks);
             };
             _buttons.Add(playButton);
             currentY += playHeight + buttonYSpacing;

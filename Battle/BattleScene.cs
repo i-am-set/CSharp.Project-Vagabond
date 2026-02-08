@@ -558,8 +558,9 @@ namespace ProjectVagabond.Scenes
                         if (!_victorySequenceTriggered)
                         {
                             _victorySequenceTriggered = true;
-                            var transition = _transitionManager.GetRandomTransition();
-                            _sceneManager.ChangeScene(BattleSetup.ReturnSceneState, transition, transition);
+                            var transitionOut = _transitionManager.GetRandomTransition();
+                            var transitionIn = _transitionManager.GetRandomTransition();
+                            _sceneManager.ChangeScene(BattleSetup.ReturnSceneState, transitionOut, transitionIn);
                         }
                         base.Update(gameTime);
                         return;
@@ -748,8 +749,9 @@ namespace ProjectVagabond.Scenes
         {
             SplitMapScene.PlayerWonLastBattle = true;
             DecrementTemporaryBuffs();
-            var transition = _transitionManager.GetRandomTransition();
-            _sceneManager.ChangeScene(BattleSetup.ReturnSceneState, transition, transition);
+            var transitionOut = _transitionManager.GetRandomTransition();
+            var transitionIn = _transitionManager.GetRandomTransition();
+            _sceneManager.ChangeScene(BattleSetup.ReturnSceneState, transitionOut, transitionIn);
         }
 
         private void DecrementTemporaryBuffs()

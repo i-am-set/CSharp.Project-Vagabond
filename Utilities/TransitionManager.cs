@@ -45,12 +45,10 @@ namespace ProjectVagabond.Transitions
         {
             _effects = new Dictionary<TransitionType, ITransitionEffect>
         {
-            { TransitionType.None, new BigBlocksEaseTransition() },
+            { TransitionType.None, new ShutterTransition() },
             { TransitionType.Shutter, new ShutterTransition() },
             { TransitionType.Curtain, new CurtainTransition() },
             { TransitionType.Aperture, new ApertureTransition() },
-            { TransitionType.Diamonds, new DiamondWipeTransition() },
-            { TransitionType.BigBlocksEase, new BigBlocksEaseTransition() },
             { TransitionType.SpinningSquare, new SpinningSquareTransition() },
             { TransitionType.CenterSquare, new CenterSquareTransition() },
             { TransitionType.CenterDiamond, new CenterDiamondTransition() }
@@ -88,7 +86,7 @@ namespace ProjectVagabond.Transitions
             {
                 if (!_effects.TryGetValue(outType, out _currentEffect))
                 {
-                    _currentEffect = _effects[TransitionType.BigBlocksEase];
+                    _currentEffect = _effects[TransitionType.Shutter];
                 }
 
                 _currentState = TransitionState.Out;
@@ -107,27 +105,12 @@ namespace ProjectVagabond.Transitions
             {
                 if (!_effects.TryGetValue(_pendingInType, out _currentEffect))
                 {
-                    _currentEffect = _effects[TransitionType.BigBlocksEase];
+                    _currentEffect = _effects[TransitionType.Shutter];
                 }
 
                 _currentState = TransitionState.In;
                 _currentEffect.Start(false);
             }
-        }
-
-        public TransitionType GetRandomCombatTransition()
-        {
-            int roll = _random.Next(5);
-            return roll switch
-            {
-                0 => TransitionType.SpinningSquare,
-                1 => TransitionType.Curtain,
-                2 => TransitionType.Shutter,
-                3 => TransitionType.CenterDiamond,
-                4 => TransitionType.CenterSquare,
-                5 => TransitionType.Aperture,
-                _ => TransitionType.BigBlocksEase
-            };
         }
 
         public TransitionType GetRandomTransition()

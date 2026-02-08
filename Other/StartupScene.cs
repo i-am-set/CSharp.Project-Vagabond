@@ -51,8 +51,9 @@ namespace ProjectVagabond.Scenes
                 {
                     _transitionTriggered = true;
                     // Use random transition
-                    var transition = _transitionManager.GetRandomTransition();
-                    _sceneManager.ChangeScene(GameSceneState.MainMenu, transition, transition);
+                    var transitionOut = _transitionManager.GetRandomTransition();
+                    var transitionIn = _transitionManager.GetRandomTransition();
+                    _sceneManager.ChangeScene(GameSceneState.MainMenu, transitionOut, transitionIn);
                 }
             }
         }

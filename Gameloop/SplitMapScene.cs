@@ -836,8 +836,9 @@ namespace ProjectVagabond.Scenes
             BattleSetup.EnemyArchetypes = _pendingCombatArchetypes;
             BattleSetup.ReturnSceneState = GameSceneState.Split;
 
-            var transitionType = _transitionManager.GetRandomCombatTransition();
-            _sceneManager.ChangeScene(GameSceneState.Battle, transitionType, transitionType, 0.5f);
+            var transitionOut = _transitionManager.GetRandomTransition();
+            var transitionIn = _transitionManager.GetRandomTransition();
+            _sceneManager.ChangeScene(GameSceneState.Battle, transitionOut, transitionIn, 0.5f);
 
             _pendingCombatArchetypes = null;
         }
