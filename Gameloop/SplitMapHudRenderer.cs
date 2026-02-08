@@ -352,14 +352,16 @@ namespace ProjectVagabond.UI
             // Bottom aligned with Top of targetRect
             int y = targetRect.Top - height;
 
+            Color tooltipOutline = _global.Palette_DarkPale;
+
             // Draw Black Background
-            sb.DrawSnapped(_pixel, new Rectangle(x, y, width, height), Color.Black);
+            sb.DrawSnapped(_pixel, new Rectangle(x, y, width, height), _global.Palette_DarkShadow);
 
             // Draw White Border (1px)
-            sb.DrawSnapped(_pixel, new Rectangle(x, y, width, 1), Color.White); // Top
-            sb.DrawSnapped(_pixel, new Rectangle(x, y + height - 1, width, 1), Color.White); // Bottom
-            sb.DrawSnapped(_pixel, new Rectangle(x, y, 1, height), Color.White); // Left
-            sb.DrawSnapped(_pixel, new Rectangle(x + width - 1, y, 1, height), Color.White); // Right
+            sb.DrawSnapped(_pixel, new Rectangle(x, y, width, 1), tooltipOutline); // Top
+            sb.DrawSnapped(_pixel, new Rectangle(x, y + height - 1, width, 1), tooltipOutline); // Bottom
+            sb.DrawSnapped(_pixel, new Rectangle(x, y, 1, height), tooltipOutline); // Left
+            sb.DrawSnapped(_pixel, new Rectangle(x + width - 1, y, 1, height), tooltipOutline); // Right
 
             // Draw Text "TOOLTIP"
             var core = ServiceLocator.Get<Core>();
@@ -368,7 +370,7 @@ namespace ProjectVagabond.UI
             Vector2 size = font.MeasureString(text);
             Vector2 pos = new Vector2(x + (width - size.X) / 2, y + (height - size.Y) / 2);
 
-            sb.DrawStringSnapped(font, text, pos, Color.White);
+            sb.DrawStringSnapped(font, text, pos, tooltipOutline);
         }
     }
 }
