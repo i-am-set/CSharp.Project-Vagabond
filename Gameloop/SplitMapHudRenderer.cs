@@ -126,7 +126,7 @@ namespace ProjectVagabond.UI
             // Draw Tooltip
             if (_currentHoveredItem.HasValue && _isTooltipVisible)
             {
-                DrawTooltip(spriteBatch, _currentHoveredItem.Value.Bounds, _currentHoveredItem.Value.CardCenterX);
+                DrawTooltip(spriteBatch, gameTime, _currentHoveredItem.Value.Bounds, _currentHoveredItem.Value.CardCenterX);
             }
         }
 
@@ -342,35 +342,56 @@ namespace ProjectVagabond.UI
             y += lineHeight + 3;
         }
 
-        private void DrawTooltip(SpriteBatch sb, Rectangle targetRect, int cardCenterX)
+        private void DrawTooltip(SpriteBatch sb, GameTime gameTime, Rectangle targetRect, int cardCenterX)
         {
-            int width = 86;
+            int width = 64;
             int height = 64;
 
-            // Centered horizontally with cardCenterX
-            int x = cardCenterX - (width / 2);
+            // Base position (float)
+            float baseX = cardCenterX - (width / 2f);
             // Bottom aligned with Top of targetRect
-            int y = targetRect.Top - height;
+            // Moved 1 pixel higher as requested
+            float baseY = targetRect.Top - height - 1;
+
+            // Floating Animation
+            float time = (float)gameTime.TotalGameTime.TotalSeconds;
+            float floatSpeedX = 0.25f;
+            float floatSpeedY = 0.25f;
+            float floatAmp = 1.5f;
+
+            // Use cardCenterX as a seed to vary phase slightly per column
+            float seed = cardCenterX * 0.05f;
+
+            float floatX = MathF.Sin(time * floatSpeedX + seed) * floatAmp;
+            float floatY = MathF.Cos(time * floatSpeedY + seed) * floatAmp;
+
+            Vector2 pos = new Vector2(baseX + floatX, baseY + floatY);
 
             Color tooltipOutline = _global.Palette_DarkPale;
+            Color bgColor = _global.Palette_DarkShadow;
 
-            // Draw Black Background
-            sb.DrawSnapped(_pixel, new Rectangle(x, y, width, height), _global.Palette_DarkShadow);
+            // Draw Background
+            // Using Vector2 scale to stretch the 1x1 pixel to avoid integer snapping
+            sb.DrawSnapped(_pixel, pos, null, bgColor, 0f, Vector2.Zero, new Vector2(width, height), SpriteEffects.None, 0f);
 
-            // Draw White Border (1px)
-            sb.DrawSnapped(_pixel, new Rectangle(x, y, width, 1), tooltipOutline); // Top
-            sb.DrawSnapped(_pixel, new Rectangle(x, y + height - 1, width, 1), tooltipOutline); // Bottom
-            sb.DrawSnapped(_pixel, new Rectangle(x, y, 1, height), tooltipOutline); // Left
-            sb.DrawSnapped(_pixel, new Rectangle(x + width - 1, y, 1, height), tooltipOutline); // Right
+            // Draw Borders
+            // Top
+            sb.DrawSnapped(_pixel, pos, null, tooltipOutline, 0f, Vector2.Zero, new Vector2(width, 1), SpriteEffects.None, 0f);
+            // Bottom
+            sb.DrawSnapped(_pixel, pos + new Vector2(0, height - 1), null, tooltipOutline, 0f, Vector2.Zero, new Vector2(width, 1), SpriteEffects.None, 0f);
+            // Left
+            sb.DrawSnapped(_pixel, pos, null, tooltipOutline, 0f, Vector2.Zero, new Vector2(1, height), SpriteEffects.None, 0f);
+            // Right
+            sb.DrawSnapped(_pixel, pos + new Vector2(width - 1, 0), null, tooltipOutline, 0f, Vector2.Zero, new Vector2(1, height), SpriteEffects.None, 0f);
 
             // Draw Text "TOOLTIP"
             var core = ServiceLocator.Get<Core>();
             var font = core.TertiaryFont;
             string text = "TOOLTIP";
-            Vector2 size = font.MeasureString(text);
-            Vector2 pos = new Vector2(x + (width - size.X) / 2, y + (height - size.Y) / 2);
+            Vector2 textSize = font.MeasureString(text);
+            Vector2 textPos = pos + new Vector2((width - textSize.X) / 2f, (height - textSize.Y) / 2f);
 
-            sb.DrawStringSnapped(font, text, pos, tooltipOutline);
+            sb.DrawStringSnapped(font, text, textPos, tooltipOutline);
         }
     }
 }
