@@ -169,6 +169,7 @@ namespace ProjectVagabond.Battle.UI
             private Vector2 _position;
             private bool _hasBench;
             private Rectangle[] _iconRects;
+            private readonly MoveTooltipRenderer _tooltipRenderer;
 
             // --- Button Layout Configuration ---
             private const int BUTTON_WIDTH = 45;
@@ -176,8 +177,6 @@ namespace ProjectVagabond.Battle.UI
             private const int BUTTON_SPACING = 1;
 
             // --- Info Box Configuration ---
-            private const int INFO_BOX_WIDTH = 140;
-            private const int INFO_BOX_HEIGHT = 34;
             private const int INFO_BOX_OFFSET_Y = 12; // Below the buttons
 
             public CombatantPanel(BattleCombatant combatant, List<BattleCombatant> allCombatants)
@@ -187,6 +186,7 @@ namespace ProjectVagabond.Battle.UI
 
                 var spriteManager = ServiceLocator.Get<SpriteManager>();
                 _iconRects = spriteManager.ActionIconSourceRects;
+                _tooltipRenderer = new MoveTooltipRenderer();
 
                 InitializeButtons(allCombatants);
             }
@@ -524,26 +524,15 @@ namespace ProjectVagabond.Battle.UI
                     if (HoveredMove != null)
                     {
                         float panelCenterX = _position.X + (PANEL_WIDTH / 2f);
-                        var infoBoxRect = new Rectangle(
-                            (int)(panelCenterX - (INFO_BOX_WIDTH / 2f)),
-                            (int)_position.Y + INFO_BOX_OFFSET_Y + snappedOffsetY,
-                            INFO_BOX_WIDTH,
-                            INFO_BOX_HEIGHT
+
+                        // Calculate position for shared renderer
+                        Vector2 tooltipPos = new Vector2(
+                            panelCenterX - (MoveTooltipRenderer.WIDTH / 2f),
+                            _position.Y + INFO_BOX_OFFSET_Y + snappedOffsetY
                         );
 
-                        // Opaque background to cover the secondary buttons
-                        DrawBeveledBackground(spriteBatch, pixel, infoBoxRect, global.Palette_DarkShadow);
-
-                        // Inner description area background
-                        var descBgRect = new Rectangle(
-                            infoBoxRect.X + 1,
-                            infoBoxRect.Bottom - 1 - 18,
-                            infoBoxRect.Width - 2,
-                            18
-                        );
-                        DrawBeveledBackground(spriteBatch, pixel, descBgRect, global.Palette_Black);
-
-                        DrawInfoBoxContent(spriteBatch, infoBoxRect, HoveredMove, global);
+                        // Call shared renderer
+                        _tooltipRenderer.DrawFixed(spriteBatch, tooltipPos, HoveredMove);
                     }
 
                     // 3. Draw Top Row (Indices 0, 1, 2) (Foreground Layer)
@@ -579,169 +568,6 @@ namespace ProjectVagabond.Battle.UI
                 }
 
                 btn.Draw(spriteBatch, btn.Font, gameTime, transform, false, 0f, snappedOffsetY, tint);
-
-                // Draw Strikethrough for Switch Button if disabled (MoveButton handles its own, but Switch might need extra if logic differs)
-                // MoveButton handles strikethrough based on IsEnabled/CanAfford.
-            }
-
-            private void DrawInfoBoxContent(SpriteBatch spriteBatch, Rectangle bounds, MoveData move, Global global)
-            {
-                var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-                var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
-
-                int startX = bounds.X + 4;
-                int startY = bounds.Y + 1;
-
-                // Layout Tuning
-                int rowSpacing = 8;
-                int pairSpacing = 5;
-                float labelValueGap = tertiaryFont.MeasureString(" ").Width;
-
-                int currentY = startY;
-
-                string name = move.MoveName.ToUpper();
-                string desc = move.Description;
-                string powTxt = move.Power > 0 ? move.Power.ToString() : "--";
-                string accTxt = move.Accuracy > 0 ? $"{move.Accuracy}%" : "--";
-                string useTxt = GetStatShortName(move.OffensiveStat);
-
-                // --- Measurement for Centering ---
-                float MeasurePair(string label, string val)
-                {
-                    return tertiaryFont.MeasureString(label).Width + labelValueGap + secondaryFont.MeasureString(val).Width;
-                }
-
-                float w1 = MeasurePair("POW", powTxt);
-                float w2 = MeasurePair("ACC", accTxt);
-                float w3 = MeasurePair("USE", useTxt);
-                float totalStatsWidth = w1 + pairSpacing + w2 + pairSpacing + w3;
-
-                // Center the block
-                float statsCurrentX = bounds.X + (bounds.Width - totalStatsWidth) / 2f;
-
-                void DrawPair(string label, string val)
-                {
-                    spriteBatch.DrawStringSnapped(tertiaryFont, label, new Vector2(statsCurrentX, currentY + 1), global.Palette_Black);
-                    statsCurrentX += tertiaryFont.MeasureString(label).Width + labelValueGap;
-
-                    spriteBatch.DrawStringSnapped(secondaryFont, val, new Vector2(statsCurrentX, currentY), global.Palette_DarkPale);
-                    statsCurrentX += secondaryFont.MeasureString(val).Width + pairSpacing;
-                }
-
-                DrawPair("POW", powTxt);
-                DrawPair("ACC", accTxt);
-                DrawPair("USE", useTxt);
-
-                // Name
-                currentY += (rowSpacing - 2);
-
-                Vector2 nameSize = secondaryFont.MeasureString(name);
-                float centeredNameX = bounds.X + (bounds.Width - nameSize.X) / 2f;
-                spriteBatch.DrawStringSnapped(secondaryFont, name, new Vector2(centeredNameX, currentY), global.Palette_LightPale);
-
-                // Description
-                currentY += rowSpacing;
-                float maxWidth = bounds.Width - 8;
-
-                // --- Centering Logic ---
-                var lines = new List<List<(string Text, Color Color)>>();
-                var currentLine = new List<(string Text, Color Color)>();
-                float currentLineWidth = 0f;
-                lines.Add(currentLine);
-
-                var parts = Regex.Split(desc, @"(\[.*?\]|\s+)");
-                Color currentColor = global.Palette_Sun;
-
-                foreach (var part in parts)
-                {
-                    if (string.IsNullOrEmpty(part)) continue;
-
-                    if (part.StartsWith("[") && part.EndsWith("]"))
-                    {
-                        string tag = part.Substring(1, part.Length - 2);
-                        if (tag == "/" || tag.Equals("default", StringComparison.OrdinalIgnoreCase))
-                            currentColor = global.Palette_LightPale;
-                        else
-                            currentColor = global.GetNarrationColor(tag);
-                    }
-                    else
-                    {
-                        string textPart = part.ToUpper();
-                        Vector2 size = tertiaryFont.MeasureString(textPart);
-
-                        if (string.IsNullOrWhiteSpace(textPart))
-                        {
-                            if (textPart.Contains("\n"))
-                            {
-                                lines.Add(new List<(string, Color)>());
-                                currentLine = lines.Last();
-                                currentLineWidth = 0;
-                            }
-                            else
-                            {
-                                if (currentLineWidth + size.X > maxWidth)
-                                {
-                                    lines.Add(new List<(string, Color)>());
-                                    currentLine = lines.Last();
-                                    currentLineWidth = 0;
-                                }
-                                else
-                                {
-                                    currentLine.Add((textPart, currentColor));
-                                    currentLineWidth += size.X;
-                                }
-                            }
-                            continue;
-                        }
-
-                        if (currentLineWidth + size.X > maxWidth)
-                        {
-                            lines.Add(new List<(string, Color)>());
-                            currentLine = lines.Last();
-                            currentLineWidth = 0;
-                        }
-
-                        currentLine.Add((textPart, currentColor));
-                        currentLineWidth += size.X;
-                    }
-                }
-
-                // Calculate Vertical Center with 1px gap
-                int lineHeight = tertiaryFont.LineHeight + 1;
-                int totalHeight = lines.Count * lineHeight;
-                int availableHeight = bounds.Bottom - currentY - 2;
-                int startDrawY = currentY + (availableHeight - totalHeight) / 2;
-
-                if (startDrawY < currentY) startDrawY = currentY;
-
-                foreach (var line in lines)
-                {
-                    if (startDrawY + lineHeight > bounds.Bottom) break;
-
-                    float lineWidth = 0;
-                    foreach (var item in line) lineWidth += tertiaryFont.MeasureString(item.Text).Width;
-
-                    float lineX = startX + (maxWidth - lineWidth) / 2f;
-
-                    foreach (var item in line)
-                    {
-                        spriteBatch.DrawStringSnapped(tertiaryFont, item.Text, new Vector2(lineX, startDrawY), item.Color);
-                        lineX += tertiaryFont.MeasureString(item.Text).Width;
-                    }
-                    startDrawY += lineHeight;
-                }
-            }
-
-            private string GetStatShortName(OffensiveStatType stat)
-            {
-                return stat switch
-                {
-                    OffensiveStatType.Strength => "STR",
-                    OffensiveStatType.Intelligence => "INT",
-                    OffensiveStatType.Tenacity => "TEN",
-                    OffensiveStatType.Agility => "AGI",
-                    _ => "---"
-                };
             }
 
             private void DrawBeveledBackground(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, Color color)

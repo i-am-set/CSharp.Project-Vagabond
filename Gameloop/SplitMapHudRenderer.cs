@@ -6,8 +6,6 @@ using ProjectVagabond.Progression;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.UI
 {
@@ -17,6 +15,7 @@ namespace ProjectVagabond.UI
         private readonly SpriteManager _spriteManager;
         private readonly GameState _gameState;
         private readonly Texture2D _pixel;
+        private readonly MoveTooltipRenderer _tooltipRenderer;
 
         private const int HUD_HEIGHT = 98;
         private const int CARD_WIDTH = 78;
@@ -36,6 +35,7 @@ namespace ProjectVagabond.UI
             _spriteManager = ServiceLocator.Get<SpriteManager>();
             _gameState = ServiceLocator.Get<GameState>();
             _pixel = ServiceLocator.Get<Texture2D>();
+            _tooltipRenderer = new MoveTooltipRenderer();
         }
 
         public void Update(GameTime gameTime, Vector2 virtualMousePos)
@@ -47,6 +47,7 @@ namespace ProjectVagabond.UI
             {
                 if (item.Bounds.Contains(virtualMousePos))
                 {
+                    // Only show cursor hint and tooltip if there is actual move data
                     if (item.Move != null)
                     {
                         cursorManager.SetState(CursorState.Hint);
@@ -118,10 +119,16 @@ namespace ProjectVagabond.UI
                 DrawCard(spriteBatch, gameTime, party[i], x, i, defaultFont, secondaryFont, tertiaryFont);
             }
 
-            // Draw Tooltip
+            // Draw Tooltip via Shared Renderer
             if (_currentHoveredItem.HasValue && _isTooltipVisible && _currentHoveredItem.Value.Move != null)
             {
-                DrawTooltip(spriteBatch, gameTime, _currentHoveredItem.Value.Bounds, _currentHoveredItem.Value.CardCenterX, _currentHoveredItem.Value.Move);
+                _tooltipRenderer.DrawFloating(
+                    spriteBatch,
+                    gameTime,
+                    _currentHoveredItem.Value.Bounds,
+                    _currentHoveredItem.Value.CardCenterX,
+                    _currentHoveredItem.Value.Move
+                );
             }
         }
 
@@ -287,204 +294,6 @@ namespace ProjectVagabond.UI
             _activeHitboxes.Add((hitRect, moveData, centerX));
 
             y += lineHeight + 3;
-        }
-
-        private void DrawTooltip(SpriteBatch sb, GameTime gameTime, Rectangle targetRect, int cardCenterX, MoveData move)
-        {
-            const int INFO_BOX_WIDTH = 140;
-            const int INFO_BOX_HEIGHT = 34;
-
-            // --- Positioning with Clamping (Float Precision) ---
-            float x = cardCenterX - (INFO_BOX_WIDTH / 2f);
-
-            // Clamp to screen edges with 2px margin
-            float minX = 2f;
-            float maxX = Global.VIRTUAL_WIDTH - INFO_BOX_WIDTH - 2f;
-
-            if (x < minX) x = minX;
-            if (x > maxX) x = maxX;
-
-            // Floating animation logic (Float Precision)
-            float time = (float)gameTime.TotalGameTime.TotalSeconds;
-            float floatY = MathF.Cos(time * 0.25f + (cardCenterX * 0.05f)) * 1.5f;
-            float y = targetRect.Top - INFO_BOX_HEIGHT - 4 + floatY;
-
-            Vector2 boxPos = new Vector2(x, y);
-            Vector2 boxSize = new Vector2(INFO_BOX_WIDTH, INFO_BOX_HEIGHT);
-
-            // --- Draw Backgrounds ---
-            DrawBeveledBackground(sb, _pixel, boxPos, boxSize, _global.Palette_DarkShadow);
-
-            // Inner description area background
-            Vector2 descPos = new Vector2(boxPos.X + 1, boxPos.Y + boxSize.Y - 1 - 18);
-            Vector2 descSize = new Vector2(boxSize.X - 2, 18);
-            DrawBeveledBackground(sb, _pixel, descPos, descSize, _global.Palette_Black);
-
-            // --- Draw Content ---
-            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-            var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
-
-            float startX = boxPos.X + 4;
-            float startY = boxPos.Y + 1;
-
-            // Layout Tuning
-            int rowSpacing = 8;
-            int pairSpacing = 5;
-            float labelValueGap = tertiaryFont.MeasureString(" ").Width;
-
-            float currentY = startY;
-
-            string name = move.MoveName.ToUpper();
-            string desc = move.Description;
-            string powTxt = move.Power > 0 ? move.Power.ToString() : "--";
-            string accTxt = move.Accuracy > 0 ? $"{move.Accuracy}%" : "--";
-            string useTxt = GetStatShortName(move.OffensiveStat);
-
-            // --- Center Stats Logic ---
-            float MeasurePair(string label, string val)
-            {
-                return tertiaryFont.MeasureString(label).Width + labelValueGap + secondaryFont.MeasureString(val).Width;
-            }
-
-            float w1 = MeasurePair("POW", powTxt);
-            float w2 = MeasurePair("ACC", accTxt);
-            float w3 = MeasurePair("USE", useTxt);
-            float totalStatsWidth = w1 + pairSpacing + w2 + pairSpacing + w3;
-
-            // Center the block
-            float statsCurrentX = boxPos.X + (INFO_BOX_WIDTH - totalStatsWidth) / 2f;
-
-            void DrawPair(string label, string val)
-            {
-                sb.DrawStringSnapped(tertiaryFont, label, new Vector2(statsCurrentX, currentY + 1), _global.Palette_Black);
-                statsCurrentX += tertiaryFont.MeasureString(label).Width + labelValueGap;
-
-                sb.DrawStringSnapped(secondaryFont, val, new Vector2(statsCurrentX, currentY), _global.Palette_DarkPale);
-                statsCurrentX += secondaryFont.MeasureString(val).Width + pairSpacing;
-            }
-
-            DrawPair("POW", powTxt);
-            DrawPair("ACC", accTxt);
-            DrawPair("USE", useTxt);
-
-            // Name
-            currentY += (rowSpacing - 2);
-            Vector2 nameSize = secondaryFont.MeasureString(name);
-            float centeredNameX = boxPos.X + (INFO_BOX_WIDTH - nameSize.X) / 2f;
-            sb.DrawStringSnapped(secondaryFont, name, new Vector2(centeredNameX, currentY), _global.Palette_LightPale);
-
-            // Description
-            currentY += rowSpacing;
-            float maxWidth = INFO_BOX_WIDTH - 8;
-
-            // --- Rich Text Centering Logic ---
-            var lines = new List<List<(string Text, Color Color)>>();
-            var currentLine = new List<(string Text, Color Color)>();
-            float currentLineWidth = 0f;
-            lines.Add(currentLine);
-
-            var parts = Regex.Split(desc, @"(\[.*?\]|\s+)");
-            Color currentColor = _global.Palette_Sun;
-
-            foreach (var part in parts)
-            {
-                if (string.IsNullOrEmpty(part)) continue;
-
-                if (part.StartsWith("[") && part.EndsWith("]"))
-                {
-                    string tag = part.Substring(1, part.Length - 2);
-                    if (tag == "/" || tag.Equals("default", StringComparison.OrdinalIgnoreCase))
-                        currentColor = _global.Palette_LightPale;
-                    else
-                        currentColor = _global.GetNarrationColor(tag);
-                }
-                else
-                {
-                    string textPart = part.ToUpper();
-                    Vector2 size = tertiaryFont.MeasureString(textPart);
-
-                    if (string.IsNullOrWhiteSpace(textPart))
-                    {
-                        if (textPart.Contains("\n"))
-                        {
-                            lines.Add(new List<(string, Color)>());
-                            currentLine = lines.Last();
-                            currentLineWidth = 0;
-                        }
-                        else
-                        {
-                            if (currentLineWidth + size.X > maxWidth)
-                            {
-                                lines.Add(new List<(string, Color)>());
-                                currentLine = lines.Last();
-                                currentLineWidth = 0;
-                            }
-                            else
-                            {
-                                currentLine.Add((textPart, currentColor));
-                                currentLineWidth += size.X;
-                            }
-                        }
-                        continue;
-                    }
-
-                    if (currentLineWidth + size.X > maxWidth)
-                    {
-                        lines.Add(new List<(string, Color)>());
-                        currentLine = lines.Last();
-                        currentLineWidth = 0;
-                    }
-
-                    currentLine.Add((textPart, currentColor));
-                    currentLineWidth += size.X;
-                }
-            }
-
-            int descLineHeight = tertiaryFont.LineHeight + 1;
-            int totalDescHeight = lines.Count * descLineHeight;
-            float availableHeight = (boxPos.Y + boxSize.Y) - currentY - 2;
-            float startDrawY = currentY + (availableHeight - totalDescHeight) / 2;
-
-            if (startDrawY < currentY) startDrawY = currentY;
-
-            foreach (var line in lines)
-            {
-                if (startDrawY + descLineHeight > (boxPos.Y + boxSize.Y)) break;
-
-                float lineWidth = 0;
-                foreach (var item in line) lineWidth += tertiaryFont.MeasureString(item.Text).Width;
-
-                float lineX = startX + (maxWidth - lineWidth) / 2f;
-
-                foreach (var item in line)
-                {
-                    sb.DrawStringSnapped(tertiaryFont, item.Text, new Vector2(lineX, startDrawY), item.Color);
-                    lineX += tertiaryFont.MeasureString(item.Text).Width;
-                }
-                startDrawY += descLineHeight;
-            }
-        }
-
-        private void DrawBeveledBackground(SpriteBatch spriteBatch, Texture2D pixel, Vector2 pos, Vector2 size, Color color)
-        {
-            // Top
-            spriteBatch.DrawSnapped(pixel, new Vector2(pos.X + 1, pos.Y), new Rectangle(0, 0, (int)size.X - 2, 1), color);
-            // Bottom
-            spriteBatch.DrawSnapped(pixel, new Vector2(pos.X + 1, pos.Y + size.Y - 1), new Rectangle(0, 0, (int)size.X - 2, 1), color);
-            // Middle
-            spriteBatch.DrawSnapped(pixel, new Vector2(pos.X, pos.Y + 1), new Rectangle(0, 0, (int)size.X, (int)size.Y - 2), color);
-        }
-
-        private string GetStatShortName(OffensiveStatType stat)
-        {
-            return stat switch
-            {
-                OffensiveStatType.Strength => "STR",
-                OffensiveStatType.Intelligence => "INT",
-                OffensiveStatType.Tenacity => "TEN",
-                OffensiveStatType.Agility => "AGI",
-                _ => "---"
-            };
         }
     }
 }
