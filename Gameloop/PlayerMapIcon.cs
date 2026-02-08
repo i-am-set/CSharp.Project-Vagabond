@@ -25,11 +25,6 @@ namespace ProjectVagabond.UI
         private const float IDLE_FRAME_DURATION = 1.0f;
         private const float MOVING_FRAME_DURATION = 0.5f;
 
-        // Hover Animation
-        private float _hoverScale = 1.0f;
-        private const float HOVER_SCALE_TARGET = 1.2f;
-        private const float HOVER_ANIM_SPEED = 15f;
-
         // Animation State
         private float _frameTimer;
         private int _frameIndex;
@@ -85,34 +80,24 @@ namespace ProjectVagabond.UI
             }
         }
 
-        public void Draw(SpriteBatch spriteBatch, bool isHovered, float dt)
+        public void Draw(SpriteBatch spriteBatch, float dt)
         {
             InitializeTexture();
             if (_texture == null) return;
 
-            // --- Hover Animation Logic ---
-            float targetScale = isHovered ? HOVER_SCALE_TARGET : 1.0f;
-            // Time-corrected damping for smooth scaling
-            float damping = 1.0f - MathF.Exp(-HOVER_ANIM_SPEED * dt);
-            _hoverScale = MathHelper.Lerp(_hoverScale, targetScale, damping);
-
             var sourceRectangle = new Rectangle(_frameIndex * 32, 0, 32, 32);
 
-            // Highlight outline if hovered
-            Color outlineColor = isHovered ? _global.ButtonHoverColor : _global.Palette_Black;
-
-            // Apply scale
-            Vector2 scaleVec = new Vector2(_hoverScale);
+            Color outlineColor = _global.Palette_Black;
 
             if (_silhouette != null)
             {
-                spriteBatch.DrawSnapped(_silhouette, Position + new Vector2(-1, 0), sourceRectangle, outlineColor, 0f, _origin, scaleVec, SpriteEffects.None, 0.5f);
-                spriteBatch.DrawSnapped(_silhouette, Position + new Vector2(1, 0), sourceRectangle, outlineColor, 0f, _origin, scaleVec, SpriteEffects.None, 0.5f);
-                spriteBatch.DrawSnapped(_silhouette, Position + new Vector2(0, -1), sourceRectangle, outlineColor, 0f, _origin, scaleVec, SpriteEffects.None, 0.5f);
-                spriteBatch.DrawSnapped(_silhouette, Position + new Vector2(0, 1), sourceRectangle, outlineColor, 0f, _origin, scaleVec, SpriteEffects.None, 0.5f);
+                spriteBatch.DrawSnapped(_silhouette, Position + new Vector2(-1, 0), sourceRectangle, outlineColor, 0f, _origin, 1.0f, SpriteEffects.None, 0.5f);
+                spriteBatch.DrawSnapped(_silhouette, Position + new Vector2(1, 0), sourceRectangle, outlineColor, 0f, _origin, 1.0f, SpriteEffects.None, 0.5f);
+                spriteBatch.DrawSnapped(_silhouette, Position + new Vector2(0, -1), sourceRectangle, outlineColor, 0f, _origin, 1.0f, SpriteEffects.None, 0.5f);
+                spriteBatch.DrawSnapped(_silhouette, Position + new Vector2(0, 1), sourceRectangle, outlineColor, 0f, _origin, 1.0f, SpriteEffects.None, 0.5f);
             }
 
-            spriteBatch.DrawSnapped(_texture, Position, sourceRectangle, Color.White, 0f, _origin, scaleVec, SpriteEffects.None, 0.5f);
+            spriteBatch.DrawSnapped(_texture, Position, sourceRectangle, Color.White, 0f, _origin, 1.0f, SpriteEffects.None, 0.5f);
         }
     }
 }

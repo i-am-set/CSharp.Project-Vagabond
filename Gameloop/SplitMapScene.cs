@@ -19,10 +19,6 @@ namespace ProjectVagabond.Scenes
 {
     public class SplitMapScene : GameScene
     {
-        private enum SplitMapView { Map, PartyStatus }
-        private SplitMapView _currentView = SplitMapView.Map;
-        private SplitMapView _viewToReturnTo = SplitMapView.Map;
-
         private struct DrawableMapObject
         {
             public enum ObjectType { Node, Player }
@@ -38,7 +34,6 @@ namespace ProjectVagabond.Scenes
         private readonly StoryNarrator _resultNarrator;
         private readonly VoidEdgeEffect _voidEdgeEffect;
 
-        private readonly PartyStatusOverlay _partyStatusOverlay;
         private readonly SplitMapHudRenderer _hudRenderer;
         private readonly PostBattleMenu _postBattleMenu;
 
@@ -71,8 +66,6 @@ namespace ProjectVagabond.Scenes
         private int _hoveredNodeId = -1;
         private int _lastHoveredNodeId = -1;
         private int _pressedNodeId = -1;
-        private bool _playerIconHovered = false;
-        private bool _playerIconPressed = false;
 
         private readonly HashSet<int> _visitedNodeIds = new HashSet<int>();
         private readonly HashSet<int> _traversedPathIds = new HashSet<int>();
@@ -152,7 +145,6 @@ namespace ProjectVagabond.Scenes
             _global = ServiceLocator.Get<Global>();
             _playerIcon = new PlayerMapIcon();
 
-            _partyStatusOverlay = new PartyStatusOverlay();
             _hudRenderer = new SplitMapHudRenderer();
             _postBattleMenu = new PostBattleMenu();
             _postBattleMenu.OnComplete += () =>
@@ -177,12 +169,6 @@ namespace ProjectVagabond.Scenes
                 noiseScale: 0.1f,
                 noiseSpeed: 3f
             );
-
-            _partyStatusOverlay.OnCloseRequested += () =>
-            {
-                _hapticsManager.TriggerZoomPulse(0.995f, 0.1f);
-                SetView(_viewToReturnTo, snap: true);
-            };
         }
 
         public override Rectangle GetAnimatedBounds() => new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
@@ -193,7 +179,6 @@ namespace ProjectVagabond.Scenes
             _playerIcon.SetIsMoving(false);
             _waitingForCombatCameraSettle = false;
             _pendingCombatArchetypes = null;
-            _viewToReturnTo = SplitMapView.Map;
             _nodeTextWaveTimer = 0f;
             _nodeHoverTimers.Clear();
             _nodePressTimers.Clear();
@@ -202,10 +187,7 @@ namespace ProjectVagabond.Scenes
             _selectedNodeId = -1;
             _lastHoveredNodeId = -1;
             _pressedNodeId = -1;
-            _playerIconHovered = false;
-            _playerIconPressed = false;
 
-            _partyStatusOverlay.Initialize();
             _postBattleMenu.Hide();
 
             InitializeSettingsButton();
@@ -247,7 +229,6 @@ namespace ProjectVagabond.Scenes
                     if (_currentMap != null)
                         _birdManager.Initialize(_currentMap, _playerIcon.Position);
                 }
-                SetView(SplitMapView.Map, snap: true);
             }
             else
             {
@@ -275,7 +256,6 @@ namespace ProjectVagabond.Scenes
                     _mapState = SplitMapState.LoweringNode;
                     _nodeLiftTimer = 0f;
                 }
-                SetView(SplitMapView.Map, snap: true);
 
                 if (_currentMap != null)
                     _birdManager.Initialize(_currentMap, _playerIcon.Position);
@@ -317,37 +297,6 @@ namespace ProjectVagabond.Scenes
                 OpenSettings();
             };
             _settingsButton.ResetAnimationState();
-        }
-
-        private void SetView(SplitMapView view, bool snap = true)
-        {
-            _currentView = view;
-
-            if (_settingsButton != null)
-            {
-                _settingsButton.SetSprites(
-                    _spriteManager.SplitMapSettingsButton,
-                    _spriteManager.SplitMapSettingsButtonSourceRects[0],
-                    _spriteManager.SplitMapSettingsButtonSourceRects[1]
-                );
-            }
-
-            switch (_currentView)
-            {
-                case SplitMapView.Map:
-                    _partyStatusOverlay.Hide();
-                    var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
-                    if (currentNode != null)
-                    {
-                        UpdateCameraTarget(currentNode.Position, snap);
-                    }
-                    break;
-                case SplitMapView.PartyStatus:
-                    _partyStatusOverlay.Show();
-                    _targetCameraOffset = new Vector2(0, -200);
-                    if (snap) _cameraOffset = _targetCameraOffset;
-                    break;
-            }
         }
 
         private void UpdateReachableNodes()
@@ -450,7 +399,6 @@ namespace ProjectVagabond.Scenes
 
             bool allowInventoryInteraction = (_mapState == SplitMapState.Idle || _mapState == SplitMapState.Resting);
 
-            _partyStatusOverlay.Update(gameTime, currentMouseState, currentKeyboardState, allowInventoryInteraction, cameraTransform);
 
             if (_mapState == SplitMapState.Resting)
             {
@@ -490,14 +438,7 @@ namespace ProjectVagabond.Scenes
 
             if (KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState))
             {
-                if (_currentView == SplitMapView.PartyStatus)
-                {
-                    SetView(_viewToReturnTo, snap: true);
-                }
-                else
-                {
-                    OpenSettings();
-                }
+                OpenSettings();
             }
 
             float cameraDamping = 1.0f - MathF.Exp(-CAMERA_LERP_SPEED * deltaTime);
@@ -528,17 +469,8 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            if (_currentView == SplitMapView.Map)
-            {
-                HandleMapInput(gameTime);
-            }
-            else
-            {
-                _hoveredNodeId = -1;
-                _pressedNodeId = -1;
-                _playerIconHovered = false;
-                _playerIconPressed = false;
-            }
+            _hoveredNodeId = -1;
+            _pressedNodeId = -1;
 
             UpdateNodeAnimationTimers(deltaTime);
 
@@ -620,11 +552,6 @@ namespace ProjectVagabond.Scenes
 
             if (_currentMap != null && _mapState == SplitMapState.Idle)
             {
-                if (_playerIcon.GetBounds().Contains(mouseInMapSpace))
-                {
-                    rawPlayerHovered = true;
-                }
-
                 foreach (var node in _currentMap.Nodes.Values)
                 {
                     if ((node.IsReachable || node.Id == _playerCurrentNodeId) && node.GetBounds().Contains(mouseInMapSpace))
@@ -635,38 +562,32 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            bool hoveringButtons = (_partyStatusOverlay.IsHovered || (_settingsButton?.IsHovered ?? false));
+            bool hoveringButtons = (_settingsButton?.IsHovered ?? false);
 
             if (rawPlayerHovered)
             {
-                _playerIconHovered = true;
                 _hoveredNodeId = -1;
             }
             else
             {
-                _playerIconHovered = false;
                 _hoveredNodeId = rawHoveredNodeId;
             }
 
             _lastHoveredNodeId = _hoveredNodeId;
 
-            if (_playerIconHovered || _hoveredNodeId != -1)
+            if (_hoveredNodeId != -1)
             {
                 cursorManager.SetState(CursorState.HoverClickable);
             }
 
-            if (_mapState == SplitMapState.Idle && !hoveringButtons && UIInputManager.CanProcessMouseClick() && _currentView == SplitMapView.Map)
+            if (_mapState == SplitMapState.Idle && !hoveringButtons && UIInputManager.CanProcessMouseClick())
             {
                 bool leftClickPressed = currentMouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released;
                 bool leftClickReleased = currentMouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed;
 
                 if (leftClickPressed)
                 {
-                    if (_playerIconHovered)
-                    {
-                        _playerIconPressed = true;
-                    }
-                    else if (_hoveredNodeId != -1)
+                    if (_hoveredNodeId != -1)
                     {
                         _pressedNodeId = _hoveredNodeId;
                     }
@@ -674,14 +595,7 @@ namespace ProjectVagabond.Scenes
 
                 if (leftClickReleased)
                 {
-                    if (_playerIconPressed && _playerIconHovered)
-                    {
-                        _hapticsManager.TriggerZoomPulse(1.005f, 0.1f);
-                        _viewToReturnTo = _currentView;
-                        SetView(SplitMapView.PartyStatus, snap: true);
-                        UIInputManager.ConsumeMouseClick();
-                    }
-                    else if (_pressedNodeId != -1 && _pressedNodeId == _hoveredNodeId)
+                    if (_pressedNodeId != -1 && _pressedNodeId == _hoveredNodeId)
                     {
                         if (_currentMap != null && _currentMap.Nodes[_hoveredNodeId].IsReachable)
                         {
@@ -703,13 +617,11 @@ namespace ProjectVagabond.Scenes
                     }
 
                     _pressedNodeId = -1;
-                    _playerIconPressed = false;
                 }
             }
             else
             {
                 _pressedNodeId = -1;
-                _playerIconPressed = false;
             }
             previousMouseState = currentMouseState;
         }
@@ -912,16 +824,7 @@ namespace ProjectVagabond.Scenes
         {
             _pendingCombatArchetypes = enemyArchetypes;
 
-            if (_currentView != SplitMapView.Map)
-            {
-                SetView(SplitMapView.Map, snap: true);
-                _waitingForCombatCameraSettle = true;
-                _framesToWaitAfterSettle = 1;
-            }
-            else
-            {
-                ExecuteCombatTransition();
-            }
+            ExecuteCombatTransition();
         }
 
         private void ExecuteCombatTransition()
@@ -1043,11 +946,10 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            _playerIcon.Draw(spriteBatch, _playerIconHovered, (float)gameTime.ElapsedGameTime.TotalSeconds);
+            _playerIcon.Draw(spriteBatch, (float)gameTime.ElapsedGameTime.TotalSeconds);
 
             _birdManager.Draw(spriteBatch, _cameraOffset);
 
-            _partyStatusOverlay.DrawWorld(spriteBatch, font, gameTime);
 
             spriteBatch.End();
 
@@ -1057,11 +959,10 @@ namespace ProjectVagabond.Scenes
             _voidEdgeEffect.Draw(spriteBatch, mapBounds);
 
             _hudRenderer.Draw(spriteBatch, gameTime);
-            _partyStatusOverlay.DrawScreen(spriteBatch, font, gameTime, transform);
             _settingsButton?.Draw(spriteBatch, font, gameTime, transform);
             _postBattleMenu.Draw(spriteBatch, gameTime);
 
-            if (_hoveredNodeId != -1 && _mapState == SplitMapState.Idle && _currentView == SplitMapView.Map)
+            if (_hoveredNodeId != -1 && _mapState == SplitMapState.Idle)
             {
                 if (_currentMap.Nodes.TryGetValue(_hoveredNodeId, out var hoveredNode) && hoveredNode.IsReachable)
                 {
