@@ -986,7 +986,18 @@ namespace ProjectVagabond.Scenes
                     {
                         var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
                         var nodeTextSize = secondaryFont.MeasureString(nodeText);
-                        var textPosition = new Vector2((Global.VIRTUAL_WIDTH - nodeTextSize.Width) / 2f, Global.VIRTUAL_HEIGHT - nodeTextSize.Height - 3);
+
+                        // Convert world position to screen position
+                        Vector2 nodeScreenPos = hoveredNode.Position + _cameraOffset;
+
+                        // Calculate text position:
+                        // X: Centered on node
+                        // Y: Above node (Node Center Y - Sprite Half Height (16) - Text Height - Padding)
+                        float textX = nodeScreenPos.X - (nodeTextSize.Width / 2f);
+                        float textY = nodeScreenPos.Y - 16f - nodeTextSize.Height - 4f;
+
+                        var textPosition = new Vector2(textX, textY);
+                        // --------------------------------------
 
                         _nodeTextWaveTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
                         TextAnimator.DrawTextWithEffect(spriteBatch, secondaryFont, nodeText, textPosition, _global.Palette_DarkSun, TextEffectType.Wave, _nodeTextWaveTimer);
