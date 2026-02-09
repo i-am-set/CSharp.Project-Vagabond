@@ -95,7 +95,17 @@ namespace ProjectVagabond.UI
             float labelValueGap = tertiaryFont.MeasureString(" ").Width;
 
             string name = move.MoveName.ToUpper();
+
+            // Blank Description
             string desc = move.Description;
+            Color initialColor = _global.Palette_Sun;
+
+            if (string.IsNullOrWhiteSpace(desc))
+            {
+                desc = "BLANK";
+                initialColor = _global.Palette_DarkShadow;
+            }
+
             string powTxt = move.Power > 0 ? move.Power.ToString() : "--";
             string accTxt = move.Accuracy > 0 ? $"{move.Accuracy}%" : "--";
             string useTxt = GetStatShortName(move.OffensiveStat);
@@ -144,7 +154,7 @@ namespace ProjectVagabond.UI
             lines.Add(currentLine);
 
             var parts = Regex.Split(desc, @"(\[.*?\]|\s+)");
-            Color currentColor = _global.Palette_Sun;
+            Color currentColor = initialColor; // Use the conditional color
 
             foreach (var part in parts)
             {
