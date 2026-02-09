@@ -56,7 +56,7 @@ namespace ProjectVagabond.Scenes
         private readonly Global _global;
 
         // --- Tuning ---
-        private const int FIXED_POOL_SIZE = 10;
+        private const int FIXED_POOL_SIZE = 3;
 
         // Spawning Timing
         private const float SPAWN_INTERVAL_MIN = 1.5f;
