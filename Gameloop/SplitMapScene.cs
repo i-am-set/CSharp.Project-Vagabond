@@ -62,7 +62,7 @@ namespace ProjectVagabond.Scenes
         // --- Dynamic Viewport State ---
         private float _hudSlideOffset = 0f;
         // CHANGED: Updated to 22f
-        private const float HUD_SLIDE_DISTANCE = 22f;
+        private const float HUD_SLIDE_DISTANCE = 52f;
         private const float HUD_SLIDE_SPEED = 10f;
         private const float BASE_CAMERA_Y = -50f;
 
