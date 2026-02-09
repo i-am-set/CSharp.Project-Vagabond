@@ -34,6 +34,7 @@ namespace ProjectVagabond.UI
         private bool _isTooltipVisible;
 
         // --- Drag & Drop State ---
+        public bool IsDragging => _isDragging;
         private PartyMember? _draggedMember;
         private float _dragOffsetX;
         private bool _isDragging;
@@ -45,6 +46,7 @@ namespace ProjectVagabond.UI
         private const float CARD_MOVE_SPEED = 15f;
         private const float CARD_DROP_SPEED = 10f;
         private const float ENTRY_Y_OFFSET = -16f;
+        private const float DRAG_LIFT_OFFSET = -8f;
 
         public SplitMapHudRenderer()
         {
@@ -192,12 +194,17 @@ namespace ProjectVagabond.UI
                 }
 
                 if (!_verticalOffsets.ContainsKey(member))
+                {
                     _verticalOffsets[member] = ENTRY_Y_OFFSET;
+                }
                 else
                 {
                     float currentY = _verticalOffsets[member];
+                    // If this is the dragged member, target -2f, otherwise target 0f
+                    float targetY = (member == _draggedMember) ? DRAG_LIFT_OFFSET : 0f;
+
                     float dampingY = 1.0f - MathF.Exp(-CARD_DROP_SPEED * dt);
-                    _verticalOffsets[member] = MathHelper.Lerp(currentY, 0f, dampingY);
+                    _verticalOffsets[member] = MathHelper.Lerp(currentY, targetY, dampingY);
                 }
             }
 

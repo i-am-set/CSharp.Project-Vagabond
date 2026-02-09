@@ -331,7 +331,7 @@ namespace ProjectVagabond.Scenes
             float splitLineY = Global.VIRTUAL_HEIGHT - SplitMapHudRenderer.HUD_HEIGHT;
             bool mouseInMap = virtualMousePos.Y < splitLineY;
 
-            float targetHudOffset = mouseInMap ? HUD_SLIDE_DISTANCE : 0f;
+            float targetHudOffset = (mouseInMap && !_hudRenderer.IsDragging) ? HUD_SLIDE_DISTANCE : 0f;
             _hudSlideOffset = MathHelper.Lerp(_hudSlideOffset, targetHudOffset, deltaTime * HUD_SLIDE_SPEED);
 
             _hudRenderer.Update(gameTime, virtualMousePos, _hudSlideOffset);
