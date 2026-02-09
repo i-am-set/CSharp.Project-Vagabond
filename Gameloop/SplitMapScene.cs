@@ -18,7 +18,6 @@ namespace ProjectVagabond.Scenes
 {
     public class SplitMapScene : GameScene
     {
-        // ... (Previous fields unchanged) ...
         private struct DrawableMapObject
         {
             public enum ObjectType { Node, Player }
@@ -66,7 +65,6 @@ namespace ProjectVagabond.Scenes
         private const float HUD_SLIDE_SPEED = 10f;
         private const float BASE_CAMERA_Y = -50f;
 
-        // ... (Rest of the file remains unchanged) ...
         private float _playerMoveTimer;
         private float _playerMoveDuration;
         private int _playerMoveTargetNodeId;
