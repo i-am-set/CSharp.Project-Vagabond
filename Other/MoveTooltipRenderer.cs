@@ -53,7 +53,7 @@ namespace ProjectVagabond.UI
 
             // 3. Floating animation logic
             float time = (float)gameTime.TotalGameTime.TotalSeconds;
-            float floatY = MathF.Cos(time * 0.25f + (cardCenterX * 0.05f)) * 1.5f;
+            float floatY = MathF.Cos(time * 0.5f + (cardCenterX * 0.05f)) * 1.5f;
 
             // 4. Position above the target rect
             float y = targetRect.Top - HEIGHT - 4 + floatY;
