@@ -110,8 +110,8 @@ namespace ProjectVagabond.UI
                 if (!_visualPositions.ContainsKey(member)) continue;
 
                 float x = _visualPositions[member];
-                // CHANGED: Moved hitbox up 3 pixels (BaseY + 3)
-                Rectangle cardRect = new Rectangle((int)x, (int)currentHudY + 3, CARD_WIDTH, HUD_HEIGHT - 4);
+                // CHANGED: Increased height by 6px (HUD_HEIGHT - 4 instead of -10)
+                Rectangle cardRect = new Rectangle((int)x, (int)currentHudY + 6, CARD_WIDTH, HUD_HEIGHT - 5);
 
                 if (cardRect.Contains(virtualMousePos))
                 {
@@ -128,6 +128,7 @@ namespace ProjectVagabond.UI
 
             // --- Tooltip Logic ---
             bool found = false;
+            // CHANGED: Iterate in reverse so top-most elements (dragged card) are checked first
             for (int i = _activeHitboxes.Count - 1; i >= 0; i--)
             {
                 var item = _activeHitboxes[i];
@@ -157,7 +158,7 @@ namespace ProjectVagabond.UI
                         }
                         found = true;
                     }
-                    break;
+                    break; // Stop checking after finding the top-most match
                 }
             }
 
@@ -232,6 +233,7 @@ namespace ProjectVagabond.UI
             int count = party.Count;
             var mousePos = Core.TransformMouse(Mouse.GetState().Position);
 
+            // Store dragged card data to draw it last (on top)
             (PartyMember Member, float X, float YOffset, int Index)? draggedCardData = null;
 
             for (int i = 0; i < count; i++)
@@ -252,6 +254,7 @@ namespace ProjectVagabond.UI
                 float x = _visualPositions[member];
                 float yOffset = _verticalOffsets[member] + verticalOffset;
 
+                // If this is the dragged card, skip drawing it now
                 if (_isDragging && _draggedMember == member)
                 {
                     draggedCardData = (member, x, yOffset, i);
@@ -259,10 +262,10 @@ namespace ProjectVagabond.UI
                 }
 
                 // Draw Hover Rect for non-dragged cards
-                // CHANGED: Moved Rect Y up 3 pixels (BaseY + 3)
-                Vector2 cardPos = new Vector2(x, BaseY + 3 + yOffset);
+                // CHANGED: Use Vector2 for smooth rect drawing
+                Vector2 cardPos = new Vector2(x, BaseY + 6 + yOffset);
                 Vector2 cardSize = new Vector2(CARD_WIDTH, HUD_HEIGHT - 4);
-                Rectangle cardRect = new Rectangle((int)x, (int)(BaseY + 3 + yOffset), CARD_WIDTH, HUD_HEIGHT - 4);
+                Rectangle cardRect = new Rectangle((int)x, (int)(BaseY + 6 + yOffset), CARD_WIDTH, HUD_HEIGHT - 4);
 
                 if (cardRect.Contains(mousePos) && !_isDragging)
                 {
@@ -276,13 +279,16 @@ namespace ProjectVagabond.UI
             if (draggedCardData != null)
             {
                 var d = draggedCardData.Value;
-                // CHANGED: Moved Background/Rect Y up 3 pixels (BaseY + 3)
-                Vector2 bgPos = new Vector2(d.X, BaseY + 3 + d.YOffset);
+                Vector2 bgPos = new Vector2(d.X, BaseY + 6 + d.YOffset);
                 Vector2 bgSize = new Vector2(CARD_WIDTH, HUD_HEIGHT - 4);
 
+                // CHANGED: Draw Black Background behind dragged card
                 spriteBatch.Draw(_pixel, bgPos, null, _global.Palette_Black, 0f, Vector2.Zero, bgSize, SpriteEffects.None, 0f);
+
+                // Draw Drag Highlight
                 DrawHollowRectSmooth(spriteBatch, bgPos, bgSize, _global.Palette_Sun);
 
+                // Draw Content
                 DrawCard(spriteBatch, gameTime, d.Member, (int)d.X, d.YOffset, d.Index, defaultFont, secondaryFont, tertiaryFont);
             }
 
@@ -298,18 +304,22 @@ namespace ProjectVagabond.UI
             }
         }
 
+        // CHANGED: New helper for smooth sub-pixel rectangles
         private void DrawHollowRectSmooth(SpriteBatch spriteBatch, Vector2 pos, Vector2 size, Color color)
         {
+            // Top
             spriteBatch.Draw(_pixel, pos, null, color, 0f, Vector2.Zero, new Vector2(size.X, 1), SpriteEffects.None, 0f);
+            // Bottom
             spriteBatch.Draw(_pixel, new Vector2(pos.X, pos.Y + size.Y - 1), null, color, 0f, Vector2.Zero, new Vector2(size.X, 1), SpriteEffects.None, 0f);
+            // Left
             spriteBatch.Draw(_pixel, pos, null, color, 0f, Vector2.Zero, new Vector2(1, size.Y), SpriteEffects.None, 0f);
+            // Right
             spriteBatch.Draw(_pixel, new Vector2(pos.X + size.X - 1, pos.Y), null, color, 0f, Vector2.Zero, new Vector2(1, size.Y), SpriteEffects.None, 0f);
         }
 
         private void DrawCard(SpriteBatch spriteBatch, GameTime gameTime, PartyMember member, int xPosition, float yOffset, int index, BitmapFont defaultFont, BitmapFont secondaryFont, BitmapFont tertiaryFont)
         {
-            // CHANGED: Moved Visuals up 2 pixels (BaseY + 4)
-            float y = BaseY + 4 + yOffset;
+            float y = BaseY + 6 + yOffset;
             int centerX = xPosition + (CARD_WIDTH / 2);
 
             string name = member.Name.ToUpper();
