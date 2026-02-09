@@ -227,7 +227,9 @@ namespace ProjectVagabond.Scenes
                     StartPathRevealAnimation();
 
                     if (_currentMap != null)
-                        _birdManager.Initialize(_currentMap, _playerIcon.Position);
+                    {
+                        _birdManager.Initialize(_currentMap, _playerIcon.Position, _cameraOffset);
+                    }
                 }
             }
             else
@@ -258,7 +260,10 @@ namespace ProjectVagabond.Scenes
                 }
 
                 if (_currentMap != null)
-                    _birdManager.Initialize(_currentMap, _playerIcon.Position);
+                {
+                    // FIX: Added _cameraOffset as the 3rd argument
+                    _birdManager.Initialize(_currentMap, _playerIcon.Position, _cameraOffset);
+                }
             }
         }
 
