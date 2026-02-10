@@ -150,7 +150,6 @@ namespace ProjectVagabond
         public Color HealOverlayColor { get; set; } = Color.White;
         public float HealOverlayHangDuration { get; set; } = 0.5f;
         public float HealOverlayFadeDuration { get; set; } = 0.5f;
-        public Color ManaOverlayColor { get; set; } = Color.White;
 
         public Color LowHealthFlashColor { get; set; } = new Color(181, 65, 49);
         public float LowHealthThreshold { get; set; } = 0.50f;

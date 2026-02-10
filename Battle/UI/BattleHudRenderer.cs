@@ -462,10 +462,7 @@ namespace ProjectVagabond.Battle.UI
 
                     if (drawWidth > 0)
                     {
-                        Color ghostColor = (anim.ResourceType == BattleAnimationManager.ResourceBarAnimationState.BarResourceType.HP)
-                            ? _global.HealOverlayColor
-                            : _global.ManaOverlayColor;
-
+                        Color ghostColor = _global.HealOverlayColor;
                         float overlayAlpha = alpha;
                         if (anim.CurrentRecoveryPhase == BattleAnimationManager.ResourceBarAnimationState.RecoveryPhase.Fade)
                         {

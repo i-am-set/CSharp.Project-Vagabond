@@ -199,8 +199,6 @@ namespace ProjectVagabond
             ServiceLocator.Register<GameState>(_gameState);
 
             _moveAcquisitionSystem = new MoveAcquisitionSystem();
-            var terminalRenderer = new TerminalRenderer();
-            ServiceLocator.Register<TerminalRenderer>(terminalRenderer);
             var autoCompleteManager = new AutoCompleteManager();
             ServiceLocator.Register<AutoCompleteManager>(autoCompleteManager);
             var commandProcessor = new CommandProcessor();
