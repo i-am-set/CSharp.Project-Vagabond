@@ -32,7 +32,7 @@ namespace ProjectVagabond.UI
         private const float HOVER_DELAY = 0.2f;
         private Vector2 _lastMousePos;
         private bool _isTooltipVisible;
-        private PartyMember? _hoveredMember; // Track hovered card for animation
+        private PartyMember? _hoveredMember;
 
         // --- Drag & Drop State ---
         private PartyMember? _draggedMember;
@@ -74,6 +74,7 @@ namespace ProjectVagabond.UI
         // --- Animation State ---
         private readonly Dictionary<PartyMember, float> _visualPositions = new Dictionary<PartyMember, float>();
         private readonly Dictionary<PartyMember, float> _verticalOffsets = new Dictionary<PartyMember, float>();
+        private readonly Dictionary<PartyMember, float> _tagOffsets = new Dictionary<PartyMember, float>();
 
         private const float CARD_MOVE_SPEED = 15f;
         private const float CARD_DROP_SPEED = 10f;
@@ -81,8 +82,11 @@ namespace ProjectVagabond.UI
 
         // --- Lift Constants ---
         private const float DRAG_LIFT_OFFSET = -8f;
-        // CHANGED: Hover lift is now exactly half of drag lift to imply clickability without being excessive
         private const float HOVER_LIFT_OFFSET = DRAG_LIFT_OFFSET * 0.25f;
+
+        // --- Tag Constants ---
+        private const float TAG_DEFAULT_OFFSET = 4f;
+        private const float TAG_HOVER_OFFSET = 2f;
 
         public SplitMapHudRenderer()
         {
@@ -326,6 +330,7 @@ namespace ProjectVagabond.UI
                     }
                 }
 
+                // --- Vertical Offset Logic (Card Lift) ---
                 if (!_verticalOffsets.ContainsKey(member))
                 {
                     _verticalOffsets[member] = ENTRY_Y_OFFSET;
@@ -333,15 +338,26 @@ namespace ProjectVagabond.UI
                 else
                 {
                     float currentY = _verticalOffsets[member];
-
-                    // Determine target Y based on Drag or Hover state
-                    // Priority: Drag > Hover > Default
                     float targetY = 0f;
                     if (member == _draggedMember) targetY = DRAG_LIFT_OFFSET;
                     else if (member == _hoveredMember) targetY = HOVER_LIFT_OFFSET;
 
                     float dampingY = 1.0f - MathF.Exp(-CARD_DROP_SPEED * dt);
                     _verticalOffsets[member] = MathHelper.Lerp(currentY, targetY, dampingY);
+                }
+
+                // --- Tag Offset Logic (Tag Pop-up) ---
+                if (!_tagOffsets.ContainsKey(member))
+                {
+                    _tagOffsets[member] = TAG_DEFAULT_OFFSET;
+                }
+                else
+                {
+                    float currentTagY = _tagOffsets[member];
+                    float targetTagY = (member == _hoveredMember || member == _draggedMember) ? TAG_HOVER_OFFSET : TAG_DEFAULT_OFFSET;
+
+                    float dampingTag = 1.0f - MathF.Exp(-CARD_DROP_SPEED * dt); // Use same speed as card lift
+                    _tagOffsets[member] = MathHelper.Lerp(currentTagY, targetTagY, dampingTag);
                 }
             }
 
@@ -351,10 +367,9 @@ namespace ProjectVagabond.UI
             {
                 _visualPositions.Remove(key);
                 _verticalOffsets.Remove(key);
+                _tagOffsets.Remove(key);
             }
 
-            // WATCHDOG: Only suppress the cursor while we are actively dragging.
-            // If this loop stops running (scene change), the cursor reappears automatically.
             if (_isDragging)
             {
                 cursorManager.Hide();
@@ -383,8 +398,8 @@ namespace ProjectVagabond.UI
             Matrix globalTransform = Matrix.CreateScale(scale) * Matrix.CreateTranslation(tx, ty, 0f);
 
             float currentStartY = BaseY + verticalOffset;
-            float t = Math.Clamp(verticalOffset / 6f, 0f, 1f);
-            Color lineColor = Color.Lerp(_global.Palette_DarkPale, _global.Palette_DarkestPale, t);
+            float t = Math.Clamp(verticalOffset / 24f, 0f, 1f);
+            Color lineColor = Color.Lerp(_global.Palette_Black, _global.Palette_DarkestPale, t);
 
             spriteBatch.Draw(_pixel, new Vector2(0, currentStartY), null, _global.Palette_Black, 0f, Vector2.Zero, new Vector2(Global.VIRTUAL_WIDTH, HUD_HEIGHT), SpriteEffects.None, 0f);
             spriteBatch.Draw(_pixel, new Vector2(0, currentStartY), null, lineColor, 0f, Vector2.Zero, new Vector2(Global.VIRTUAL_WIDTH, 1), SpriteEffects.None, 0f);
@@ -471,6 +486,11 @@ namespace ProjectVagabond.UI
                 spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, finalTransform);
             }
 
+            // --- DRAW SLOT TAG (Behind Card) ---
+            // We draw this first so the card body covers the bottom of the tag, making it look like a tab.
+            float tagOffset = _tagOffsets.ContainsKey(member) ? _tagOffsets[member] : TAG_DEFAULT_OFFSET;
+            DrawSlotTag(spriteBatch, x, yOffset, index, tertiaryFont, tagOffset);
+
             // Draw Background
             Vector2 cardPos = new Vector2(x, BaseY + 3 + yOffset);
             Vector2 cardSize = new Vector2(CARD_WIDTH, HUD_HEIGHT - 4);
@@ -501,6 +521,29 @@ namespace ProjectVagabond.UI
                 // Restore default batch with the correct global transform
                 spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, globalTransform);
             }
+        }
+
+        private void DrawSlotTag(SpriteBatch sb, float x, float yOffset, int index, BitmapFont font, float tagOffset)
+        {
+            float tagWidth = 8f;
+            float tagHeight = 10f;
+            float visibleHeight = 10f;
+
+            float tagX = x + 7f;
+
+            float cardTopY = BaseY + 3 + yOffset;
+            float tagY = cardTopY - visibleHeight + tagOffset;
+
+            // Draw Tag Background (No Border)
+            sb.Draw(_pixel, new Vector2(tagX, tagY), null, _global.Palette_DarkShadow, 0f, Vector2.Zero, new Vector2(tagWidth, tagHeight), SpriteEffects.None, 0f);
+
+            // Draw Number
+            string num = (index + 1).ToString();
+            Vector2 size = font.MeasureString(num);
+            float textX = tagX + (tagWidth - size.X) / 2f;
+            float textY = tagY + (visibleHeight - size.Y) / 2f - 2f;
+
+            sb.DrawString(font, num, new Vector2(textX, textY), _global.Palette_DarkestPale);
         }
 
         private void DrawHollowRectSmooth(SpriteBatch spriteBatch, Vector2 pos, Vector2 size, Color color)
