@@ -49,6 +49,13 @@ namespace ProjectVagabond.UI
         // Tracks the visual lift of the cursor sprite
         private float _currentCursorLift = 0f;
 
+        // --- Physics & Rotation State (Balatro Feel) ---
+        private float _currentDragVelocity = 0f;
+        private float _currentDragRotation = 0f;
+        private const float ROTATION_TILT_FACTOR = 0.001f;
+        private const float MAX_ROTATION = 0.10f;
+        private const float ROTATION_SMOOTHING = 10f;
+
         // --- Elastic Physics Constants ---
         private const float MAX_ELASTIC_STRETCH = 45f;
         private const float ELASTIC_STIFFNESS = 60f;
@@ -115,21 +122,11 @@ namespace ProjectVagabond.UI
 
                 if (movingTowardsCenter)
                 {
-                    // INVERSE TANH LOGIC:
-                    // We want the visual card to move 1:1 with the mouse when returning.
-                    // 1. Calculate where the visual card IS (based on current physics)
                     float currentVisualOffset = MAX_ELASTIC_STRETCH * MathF.Tanh(currentDiff / ELASTIC_STIFFNESS);
-
-                    // 2. Apply the mouse delta directly to the visual offset (1:1 movement)
                     float targetVisualOffset = currentVisualOffset + virtualDeltaX;
-
-                    // 3. Clamp to avoid domain errors in Atanh (must be < Max)
                     float maxVal = MAX_ELASTIC_STRETCH * 0.9999f;
                     targetVisualOffset = Math.Clamp(targetVisualOffset, -maxVal, maxVal);
 
-                    // 4. Reverse-solve the physics to find the _virtualPullX that produces this visual position
-                    // diff = k * Atanh(visual / Max)
-                    // Atanh(x) = 0.5 * ln((1+x)/(1-x))
                     float ratio = targetVisualOffset / MAX_ELASTIC_STRETCH;
                     float newDiff = ELASTIC_STIFFNESS * 0.5f * MathF.Log((1f + ratio) / (1f - ratio));
 
@@ -137,7 +134,6 @@ namespace ProjectVagabond.UI
                 }
                 else
                 {
-                    // Standard accumulation (Resistance applies via Tanh later)
                     _virtualPullX += virtualDeltaX;
                 }
 
@@ -150,10 +146,12 @@ namespace ProjectVagabond.UI
                 float dampedDiff = MAX_ELASTIC_STRETCH * MathF.Tanh(diff / ELASTIC_STIFFNESS);
                 float targetVisualX = anchorSlotX + dampedDiff;
 
-                // 7. Interpolate Card Position
+                // 7. Interpolate Card Position & Calculate Velocity
                 float prevVisualX = _visualPositions[_draggedMember];
                 float tetherDamping = 1.0f - MathF.Exp(-DRAG_TETHER_SPEED * dt);
                 float newVisualX = MathHelper.Lerp(prevVisualX, targetVisualX, tetherDamping);
+
+                _currentDragVelocity = (newVisualX - prevVisualX) / dt;
                 _visualPositions[_draggedMember] = newVisualX;
 
                 // 8. Force Mouse to Follow Card
@@ -191,6 +189,10 @@ namespace ProjectVagabond.UI
 
                 goto ProcessTweening;
             }
+            else
+            {
+                _currentDragVelocity = 0f;
+            }
 
             // --- Card Hover & Drag Start Logic ---
             int totalW = (party.Count * CARD_WIDTH) + ((party.Count > 0 ? party.Count - 1 : 0) * CARD_SPACING);
@@ -219,6 +221,9 @@ namespace ProjectVagabond.UI
 
                         float grabOffset = _visualPositions[member] - virtualMousePos.X;
                         _virtualPullX = virtualMousePos.X + grabOffset;
+
+                        _currentDragRotation = 0f;
+                        _currentDragVelocity = 0f;
                     }
                 }
             }
@@ -272,7 +277,13 @@ namespace ProjectVagabond.UI
             float cursorDamping = 1.0f - MathF.Exp(-CARD_DROP_SPEED * dt);
             _currentCursorLift = MathHelper.Lerp(_currentCursorLift, targetCursorLift, cursorDamping);
 
-            cursorManager.VisualOffset = new Vector2(0, _currentCursorLift);
+            // --- Rotation Physics ---
+            float targetRotation = _currentDragVelocity * ROTATION_TILT_FACTOR;
+            targetRotation = Math.Clamp(targetRotation, -MAX_ROTATION, MAX_ROTATION);
+            if (!_isDragging) targetRotation = 0f;
+
+            float rotDamping = 1.0f - MathF.Exp(-ROTATION_SMOOTHING * dt);
+            _currentDragRotation = MathHelper.Lerp(_currentDragRotation, targetRotation, rotDamping);
 
             // --- Card Position Tweening ---
             int totalWidthTween = (party.Count * CARD_WIDTH) + ((party.Count > 0 ? party.Count - 1 : 0) * CARD_SPACING);
@@ -328,6 +339,16 @@ namespace ProjectVagabond.UI
 
             if (defaultFont == null || secondaryFont == null || tertiaryFont == null) return;
 
+            // --- Reconstruct Global Transform ---
+            // We need this to restore the correct scale after interrupting the batch for rotation.
+            var viewport = spriteBatch.GraphicsDevice.Viewport;
+            float scaleX = (float)viewport.Width / Global.VIRTUAL_WIDTH;
+            float scaleY = (float)viewport.Height / Global.VIRTUAL_HEIGHT;
+            float scale = Math.Min(scaleX, scaleY);
+            float tx = (viewport.Width - (Global.VIRTUAL_WIDTH * scale)) / 2f;
+            float ty = (viewport.Height - (Global.VIRTUAL_HEIGHT * scale)) / 2f;
+            Matrix globalTransform = Matrix.CreateScale(scale) * Matrix.CreateTranslation(tx, ty, 0f);
+
             float currentStartY = BaseY + verticalOffset;
             float t = Math.Clamp(verticalOffset / 6f, 0f, 1f);
             Color lineColor = Color.Lerp(_global.Palette_DarkPale, _global.Palette_DarkestPale, t);
@@ -345,14 +366,14 @@ namespace ProjectVagabond.UI
                 var member = party[i];
                 if (member == _topmostMember) continue;
 
-                DrawMemberCard(spriteBatch, gameTime, member, i, verticalOffset, mousePos, defaultFont, secondaryFont, tertiaryFont);
+                DrawMemberCard(spriteBatch, gameTime, member, i, verticalOffset, mousePos, defaultFont, secondaryFont, tertiaryFont, globalTransform);
             }
 
-            // 2. Draw the topmost card last
+            // 2. Draw the topmost card last (with rotation if dragged)
             if (_topmostMember != null && party.Contains(_topmostMember))
             {
                 int index = party.IndexOf(_topmostMember);
-                DrawMemberCard(spriteBatch, gameTime, _topmostMember, index, verticalOffset, mousePos, defaultFont, secondaryFont, tertiaryFont);
+                DrawMemberCard(spriteBatch, gameTime, _topmostMember, index, verticalOffset, mousePos, defaultFont, secondaryFont, tertiaryFont, globalTransform);
             }
 
             if (_currentHoveredItem.HasValue && _isTooltipVisible && _currentHoveredItem.Value.Move != null && !_isDragging)
@@ -367,20 +388,39 @@ namespace ProjectVagabond.UI
             }
         }
 
-        private void DrawMemberCard(SpriteBatch spriteBatch, GameTime gameTime, PartyMember member, int index, float verticalOffset, Vector2 mousePos, BitmapFont defaultFont, BitmapFont secondaryFont, BitmapFont tertiaryFont)
+        private void DrawMemberCard(SpriteBatch spriteBatch, GameTime gameTime, PartyMember member, int index, float verticalOffset, Vector2 mousePos, BitmapFont defaultFont, BitmapFont secondaryFont, BitmapFont tertiaryFont, Matrix globalTransform)
         {
             if (!_visualPositions.ContainsKey(member)) return;
             if (!_verticalOffsets.ContainsKey(member)) return;
 
             float x = _visualPositions[member];
             float yOffset = _verticalOffsets[member] + verticalOffset;
+            bool isBeingDragged = (_isDragging && _draggedMember == member);
+
+            // --- Matrix Transformation for Dragged Card ---
+            bool useRotation = isBeingDragged && Math.Abs(_currentDragRotation) > 0.001f;
+
+            if (useRotation)
+            {
+                spriteBatch.End();
+
+                // Calculate center of the card for rotation pivot
+                Vector2 cardCenter = new Vector2(x + CARD_WIDTH / 2f, BaseY + 3 + yOffset + (HUD_HEIGHT - 4) / 2f);
+
+                // Create transform: Move to origin -> Rotate -> Move back -> Apply Global Scale
+                Matrix localTransform = Matrix.CreateTranslation(new Vector3(-cardCenter, 0)) *
+                                        Matrix.CreateRotationZ(_currentDragRotation) *
+                                        Matrix.CreateTranslation(new Vector3(cardCenter, 0));
+
+                Matrix finalTransform = localTransform * globalTransform;
+
+                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, finalTransform);
+            }
 
             // Draw Background
             Vector2 cardPos = new Vector2(x, BaseY + 3 + yOffset);
             Vector2 cardSize = new Vector2(CARD_WIDTH, HUD_HEIGHT - 4);
             spriteBatch.Draw(_pixel, cardPos, null, _global.Palette_Black, 0f, Vector2.Zero, cardSize, SpriteEffects.None, 0f);
-
-            bool isBeingDragged = (_isDragging && _draggedMember == member);
 
             if (isBeingDragged)
             {
@@ -395,12 +435,18 @@ namespace ProjectVagabond.UI
                 }
                 else
                 {
-                    // NEW: Always draw a dark shadow border when idle
                     DrawHollowRectSmooth(spriteBatch, cardPos, cardSize, _global.Palette_DarkShadow);
                 }
             }
 
             DrawCardContents(spriteBatch, gameTime, member, x, yOffset, index, defaultFont, secondaryFont, tertiaryFont);
+
+            if (useRotation)
+            {
+                spriteBatch.End();
+                // Restore default batch with the correct global transform
+                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, globalTransform);
+            }
         }
 
         private void DrawHollowRectSmooth(SpriteBatch spriteBatch, Vector2 pos, Vector2 size, Color color)
@@ -527,7 +573,6 @@ namespace ProjectVagabond.UI
             if (isHovered && isMovePresent)
             {
                 Color c = _global.Palette_Sun;
-                // FIX: Use float coordinates for smooth rendering instead of snapping to hitRect integers
                 DrawHollowRectSmooth(sb, new Vector2(cardStartX, y - 2), new Vector2(CARD_WIDTH, lineHeight + 4), c);
             }
 
