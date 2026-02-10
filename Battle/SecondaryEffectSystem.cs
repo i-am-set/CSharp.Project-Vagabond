@@ -14,7 +14,6 @@ namespace ProjectVagabond.Battle
         private static readonly Random _random = new Random();
         public static void ProcessPrimaryEffects(QueuedAction action, BattleCombatant target)
         {
-            // The hardcoded RestoreMana logic has been removed.
             // It is now handled by the RestoreManaAbility attached to the MoveData.
         }
 
