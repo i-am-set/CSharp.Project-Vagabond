@@ -102,7 +102,6 @@ namespace ProjectVagabond.UI
 
         public void Draw(SpriteBatch spriteBatch, Vector2 screenPosition, float scale)
         {
-            // WATCHDOG CHECK:
             // 1. Check if we should draw
             bool shouldDraw = Visible && !_hideRequested;
 
