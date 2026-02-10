@@ -39,6 +39,10 @@ namespace ProjectVagabond.UI
         private bool _isDragging;
         private int _dragStartMouseY;
 
+        // The offset from the CENTER of the card to the mouse position when the drag started.
+        // Used to "stamp" the cursor onto the card so it rotates and moves perfectly with it.
+        private Vector2 _dragGrabOffsetFromCenter;
+
         // Tracks the "Ghost" mouse position (User Intent) in Virtual Pixels
         private float _virtualPullX;
         // Tracks the last known Screen X to calculate deltas
@@ -230,6 +234,14 @@ namespace ProjectVagabond.UI
                         float grabOffset = _visualPositions[member] - virtualMousePos.X;
                         _virtualPullX = virtualMousePos.X + grabOffset;
 
+                        // Calculate the visual offset from the CENTER of the card to the mouse.
+                        // This allows us to "stamp" the cursor onto the card during the drag.
+                        float currentCardX = _visualPositions[member];
+                        float currentCardY = BaseY + 3 + _verticalOffsets[member] + verticalOffset;
+                        Vector2 cardCenter = new Vector2(currentCardX + CARD_WIDTH / 2f, currentCardY + (HUD_HEIGHT - 4) / 2f);
+
+                        _dragGrabOffsetFromCenter = virtualMousePos - cardCenter;
+
                         _currentDragRotation = 0f;
                         _currentDragVelocity = 0f;
                     }
@@ -340,6 +352,13 @@ namespace ProjectVagabond.UI
                 _visualPositions.Remove(key);
                 _verticalOffsets.Remove(key);
             }
+
+            // WATCHDOG: Only suppress the cursor while we are actively dragging.
+            // If this loop stops running (scene change), the cursor reappears automatically.
+            if (_isDragging)
+            {
+                cursorManager.Hide();
+            }
         }
 
         public void Draw(SpriteBatch spriteBatch, GameTime gameTime, float verticalOffset = 0f)
@@ -388,6 +407,27 @@ namespace ProjectVagabond.UI
             {
                 int index = party.IndexOf(_topmostMember);
                 DrawMemberCard(spriteBatch, gameTime, _topmostMember, index, verticalOffset, mousePos, defaultFont, secondaryFont, tertiaryFont, globalTransform);
+
+                // 3. Draw the "Stamped" Cursor if dragging
+                // We draw it here to ensure it is on top of the card and moves perfectly with it.
+                if (_isDragging && _draggedMember == _topmostMember)
+                {
+                    var (cursorTex, cursorFrames) = _spriteManager.GetCursorAnimation("cursor_dragging_draggable");
+                    if (cursorTex != null && cursorFrames.Length > 0)
+                    {
+                        float x = _visualPositions[_draggedMember];
+                        float yOffset = _verticalOffsets[_draggedMember] + verticalOffset;
+                        Vector2 cardCenter = new Vector2(x + CARD_WIDTH / 2f, BaseY + 3 + yOffset + (HUD_HEIGHT - 4) / 2f);
+
+                        // Apply the same rotation to the cursor offset so it stays "stamped" to the exact grab point
+                        Vector2 rotatedOffset = Vector2.Transform(_dragGrabOffsetFromCenter, Matrix.CreateRotationZ(_currentDragRotation));
+                        Vector2 cursorPos = cardCenter + rotatedOffset;
+
+                        // We are in the default batch (restored at end of DrawMemberCard), which uses globalTransform.
+                        // So we draw at Virtual coordinates.
+                        spriteBatch.Draw(cursorTex, cursorPos, cursorFrames[0], Color.White, 0f, new Vector2(7, 7), 1.0f, SpriteEffects.None, 0f);
+                    }
+                }
             }
 
             if (_currentHoveredItem.HasValue && _isTooltipVisible && _currentHoveredItem.Value.Move != null && !_isDragging)

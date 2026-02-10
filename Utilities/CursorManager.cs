@@ -28,6 +28,15 @@ namespace ProjectVagabond.UI
         // The pixel coordinate of the cursor's "tip" within its sprite frame.
         private static readonly Vector2 CURSOR_HOTSPOT = new Vector2(7, 7);
 
+        // WATCHDOG LOGIC:
+        // _hideRequested is reset to false every time we Draw.
+        // To hide the cursor, a system must call Hide() EVERY FRAME.
+        // This prevents the "Sticky Cursor" bug if a system crashes or exits without resetting visibility.
+        private bool _hideRequested = false;
+
+        // Allows manual permanent hiding (e.g. for cutscenes)
+        public bool Visible { get; set; } = true;
+
         // Allows external systems (like HUD) to offset the sprite in VIRTUAL pixels.
         public Vector2 VisualOffset { get; set; } = Vector2.Zero;
 
@@ -57,6 +66,15 @@ namespace ProjectVagabond.UI
             }
         }
 
+        /// <summary>
+        /// Suppresses the cursor rendering for THIS FRAME only.
+        /// Must be called every update loop to keep the cursor hidden.
+        /// </summary>
+        public void Hide()
+        {
+            _hideRequested = true;
+        }
+
         public void Update(GameTime gameTime)
         {
             if (_requestedState != _currentState)
@@ -84,14 +102,22 @@ namespace ProjectVagabond.UI
 
         public void Draw(SpriteBatch spriteBatch, Vector2 screenPosition, float scale)
         {
+            // WATCHDOG CHECK:
+            // 1. Check if we should draw
+            bool shouldDraw = Visible && !_hideRequested;
+
+            // 2. Reset the request flag immediately. 
+            // If the HUD stops calling Hide(), this will remain false next frame, and the cursor will reappear.
+            _hideRequested = false;
+
+            if (!shouldDraw) return;
+
             if (_currentSpriteAnimation.Texture == null || _currentSpriteAnimation.Frames.Length == 0)
             {
                 return;
             }
 
             var mouseState = Mouse.GetState();
-
-            // CHANGED: Multiply VisualOffset by scale to convert virtual pixels to screen pixels.
             var drawPosition = screenPosition + (VisualOffset * scale);
 
             // Note: The click offset (+2) remains unscaled (raw screen pixels) 
@@ -103,7 +129,7 @@ namespace ProjectVagabond.UI
 
             var sourceRect = _currentSpriteAnimation.Frames[_currentFrameIndex];
 
-            spriteBatch.DrawSnapped(
+            spriteBatch.Draw(
                 _currentSpriteAnimation.Texture,
                 drawPosition,
                 sourceRect,
