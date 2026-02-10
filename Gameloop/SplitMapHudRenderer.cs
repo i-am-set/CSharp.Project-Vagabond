@@ -221,7 +221,7 @@ namespace ProjectVagabond.UI
                 if (!_visualPositions.ContainsKey(member)) continue;
 
                 float x = _visualPositions[member];
-                Rectangle cardRect = new Rectangle((int)x, (int)currentHudY + 3, CARD_WIDTH, HUD_HEIGHT - 4);
+                Rectangle cardRect = new Rectangle((int)x, (int)currentHudY, CARD_WIDTH, HUD_HEIGHT);
 
                 if (cardRect.Contains(virtualMousePos))
                 {
