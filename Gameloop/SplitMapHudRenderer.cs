@@ -75,9 +75,10 @@ namespace ProjectVagabond.UI
         private readonly Dictionary<PartyMember, float> _visualPositions = new Dictionary<PartyMember, float>();
         private readonly Dictionary<PartyMember, float> _verticalOffsets = new Dictionary<PartyMember, float>();
         private readonly Dictionary<PartyMember, float> _tagOffsets = new Dictionary<PartyMember, float>();
+        private readonly Dictionary<PartyMember, int> _currentTagNumbers = new Dictionary<PartyMember, int>();
 
         private const float CARD_MOVE_SPEED = 15f;
-        private const float CARD_DROP_SPEED = 10f;
+        private const float CARD_DROP_SPEED = 20f;
         private const float ENTRY_Y_OFFSET = -16f;
 
         // --- Lift Constants ---
@@ -87,6 +88,7 @@ namespace ProjectVagabond.UI
         // --- Tag Constants ---
         private const float TAG_DEFAULT_OFFSET = 4f;
         private const float TAG_HOVER_OFFSET = 2f;
+        private const float TAG_HIDDEN_OFFSET = 12f;
 
         public SplitMapHudRenderer()
         {
@@ -346,19 +348,41 @@ namespace ProjectVagabond.UI
                     _verticalOffsets[member] = MathHelper.Lerp(currentY, targetY, dampingY);
                 }
 
-                // --- Tag Offset Logic (Tag Pop-up) ---
+                // --- Tag Offset Logic (Tag Pop-up & Number Swap) ---
                 if (!_tagOffsets.ContainsKey(member))
                 {
                     _tagOffsets[member] = TAG_DEFAULT_OFFSET;
                 }
+
+                if (!_currentTagNumbers.ContainsKey(member))
+                {
+                    _currentTagNumbers[member] = i + 1;
+                }
+
+                int actualNumber = i + 1;
+                int currentNumber = _currentTagNumbers[member];
+                float currentTagY = _tagOffsets[member];
+                float targetTagY;
+
+                if (currentNumber != actualNumber)
+                {
+                    // Numbers don't match, hide the tag
+                    targetTagY = TAG_HIDDEN_OFFSET;
+
+                    // If we are effectively hidden, swap the number
+                    if (currentTagY >= TAG_HIDDEN_OFFSET - 0.5f)
+                    {
+                        _currentTagNumbers[member] = actualNumber;
+                    }
+                }
                 else
                 {
-                    float currentTagY = _tagOffsets[member];
-                    float targetTagY = (member == _hoveredMember || member == _draggedMember) ? TAG_HOVER_OFFSET : TAG_DEFAULT_OFFSET;
-
-                    float dampingTag = 1.0f - MathF.Exp(-CARD_DROP_SPEED * dt); // Use same speed as card lift
-                    _tagOffsets[member] = MathHelper.Lerp(currentTagY, targetTagY, dampingTag);
+                    // Numbers match, show the tag (with hover logic)
+                    targetTagY = (member == _hoveredMember || member == _draggedMember) ? TAG_HOVER_OFFSET : TAG_DEFAULT_OFFSET;
                 }
+
+                float dampingTag = 1.0f - MathF.Exp(-CARD_DROP_SPEED * dt);
+                _tagOffsets[member] = MathHelper.Lerp(currentTagY, targetTagY, dampingTag);
             }
 
             var activeMembers = new HashSet<PartyMember>(party);
@@ -368,6 +392,7 @@ namespace ProjectVagabond.UI
                 _visualPositions.Remove(key);
                 _verticalOffsets.Remove(key);
                 _tagOffsets.Remove(key);
+                _currentTagNumbers.Remove(key);
             }
 
             if (_isDragging)
@@ -489,7 +514,8 @@ namespace ProjectVagabond.UI
             // --- DRAW SLOT TAG (Behind Card) ---
             // We draw this first so the card body covers the bottom of the tag, making it look like a tab.
             float tagOffset = _tagOffsets.ContainsKey(member) ? _tagOffsets[member] : TAG_DEFAULT_OFFSET;
-            DrawSlotTag(spriteBatch, x, yOffset, index, tertiaryFont, tagOffset);
+            int displayedNumber = _currentTagNumbers.ContainsKey(member) ? _currentTagNumbers[member] : (index + 1);
+            DrawSlotTag(spriteBatch, x, yOffset, displayedNumber, tertiaryFont, tagOffset);
 
             // Draw Background
             Vector2 cardPos = new Vector2(x, BaseY + 3 + yOffset);
@@ -523,7 +549,7 @@ namespace ProjectVagabond.UI
             }
         }
 
-        private void DrawSlotTag(SpriteBatch sb, float x, float yOffset, int index, BitmapFont font, float tagOffset)
+        private void DrawSlotTag(SpriteBatch sb, float x, float yOffset, int displayedNumber, BitmapFont font, float tagOffset)
         {
             float tagWidth = 8f;
             float tagHeight = 10f;
@@ -534,16 +560,16 @@ namespace ProjectVagabond.UI
             float cardTopY = BaseY + 3 + yOffset;
             float tagY = cardTopY - visibleHeight + tagOffset;
 
-            // Draw Tag Background (No Border)
-            sb.Draw(_pixel, new Vector2(tagX, tagY), null, _global.Palette_DarkShadow, 0f, Vector2.Zero, new Vector2(tagWidth, tagHeight), SpriteEffects.None, 0f);
+            // Rest of the body (full width)
+            sb.Draw(_pixel, new Vector2(tagX, tagY), null, _global.Palette_Black, 0f, Vector2.Zero, new Vector2(tagWidth, tagHeight - 1), SpriteEffects.None, 0f);
 
             // Draw Number
-            string num = (index + 1).ToString();
+            string num = displayedNumber.ToString();
             Vector2 size = font.MeasureString(num);
             float textX = tagX + (tagWidth - size.X) / 2f;
             float textY = tagY + (visibleHeight - size.Y) / 2f - 2f;
 
-            sb.DrawString(font, num, new Vector2(textX, textY), _global.Palette_DarkestPale);
+            sb.DrawString(font, num, new Vector2(textX, textY), displayedNumber == 1 || displayedNumber == 2 ? _global.Palette_LightPale : _global.Palette_DarkestPale);
         }
 
         private void DrawHollowRectSmooth(SpriteBatch spriteBatch, Vector2 pos, Vector2 size, Color color)
