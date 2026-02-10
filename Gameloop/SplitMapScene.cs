@@ -25,7 +25,6 @@ namespace ProjectVagabond.Scenes
             public Vector2 Position;
             public object? Data;
         }
-
         private readonly ProgressionManager _progressionManager;
         private readonly SceneManager _sceneManager;
         private readonly GameState _gameState;
@@ -328,7 +327,8 @@ namespace ProjectVagabond.Scenes
             var virtualMousePos = Core.TransformMouse(currentMouseState.Position);
 
             // --- Dynamic Viewport Logic ---
-            float splitLineY = Global.VIRTUAL_HEIGHT - SplitMapHudRenderer.HUD_HEIGHT;
+            // FIX: Include _hudSlideOffset in the split line calculation so the trigger moves with the HUD
+            float splitLineY = (Global.VIRTUAL_HEIGHT - SplitMapHudRenderer.HUD_HEIGHT) + _hudSlideOffset;
             bool mouseInMap = virtualMousePos.Y < splitLineY;
 
             float targetHudOffset = (mouseInMap && !_hudRenderer.IsDragging) ? HUD_SLIDE_DISTANCE : 0f;

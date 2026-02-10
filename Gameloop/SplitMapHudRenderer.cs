@@ -18,9 +18,9 @@ namespace ProjectVagabond.UI
         private readonly GameState _gameState;
         private readonly Texture2D _pixel;
         private readonly MoveTooltipRenderer _tooltipRenderer;
-
         public const int HUD_HEIGHT = 98;
         private const int CARD_WIDTH = 78;
+        private const int CARD_SPACING = 1;
 
         // Base Y position (Default state)
         private int BaseY => Global.VIRTUAL_HEIGHT - HUD_HEIGHT;
@@ -103,9 +103,9 @@ namespace ProjectVagabond.UI
 
                 // 3. Calculate Anchor
                 int currentIndex = party.IndexOf(_draggedMember);
-                int totalWidth = party.Count * CARD_WIDTH;
+                int totalWidth = (party.Count * CARD_WIDTH) + ((party.Count > 0 ? party.Count - 1 : 0) * CARD_SPACING);
                 int startX = (Global.VIRTUAL_WIDTH - totalWidth) / 2;
-                float anchorSlotX = startX + (currentIndex * CARD_WIDTH);
+                float anchorSlotX = startX + (currentIndex * (CARD_WIDTH + CARD_SPACING));
 
                 // 4. Update "Ghost" Pull Position with Ratcheting Logic
                 float currentDiff = _virtualPullX - anchorSlotX;
@@ -171,7 +171,7 @@ namespace ProjectVagabond.UI
                 {
                     if (i == currentIndex) continue;
 
-                    float neighborSlotCenterX = startX + (i * CARD_WIDTH) + (CARD_WIDTH / 2);
+                    float neighborSlotCenterX = startX + (i * (CARD_WIDTH + CARD_SPACING)) + (CARD_WIDTH / 2);
                     float ghostCardCenterX = _virtualPullX + (CARD_WIDTH / 2);
 
                     if (Math.Abs(ghostCardCenterX - neighborSlotCenterX) < swapThreshold)
@@ -193,7 +193,7 @@ namespace ProjectVagabond.UI
             }
 
             // --- Card Hover & Drag Start Logic ---
-            int totalW = party.Count * CARD_WIDTH;
+            int totalW = (party.Count * CARD_WIDTH) + ((party.Count > 0 ? party.Count - 1 : 0) * CARD_SPACING);
             int sX = (Global.VIRTUAL_WIDTH - totalW) / 2;
 
             for (int i = 0; i < party.Count; i++)
@@ -275,13 +275,13 @@ namespace ProjectVagabond.UI
             cursorManager.VisualOffset = new Vector2(0, _currentCursorLift);
 
             // --- Card Position Tweening ---
-            int totalWidthTween = party.Count * CARD_WIDTH;
+            int totalWidthTween = (party.Count * CARD_WIDTH) + ((party.Count > 0 ? party.Count - 1 : 0) * CARD_SPACING);
             int startXTween = (Global.VIRTUAL_WIDTH - totalWidthTween) / 2;
 
             for (int i = 0; i < party.Count; i++)
             {
                 var member = party[i];
-                float targetX = startXTween + (i * CARD_WIDTH);
+                float targetX = startXTween + (i * (CARD_WIDTH + CARD_SPACING));
 
                 if (!_visualPositions.ContainsKey(member))
                     _visualPositions[member] = targetX;
@@ -527,7 +527,8 @@ namespace ProjectVagabond.UI
             if (isHovered && isMovePresent)
             {
                 Color c = _global.Palette_Sun;
-                DrawHollowRectSmooth(sb, new Vector2(hitRect.X, hitRect.Y), new Vector2(hitRect.Width, hitRect.Height), c);
+                // FIX: Use float coordinates for smooth rendering instead of snapping to hitRect integers
+                DrawHollowRectSmooth(sb, new Vector2(cardStartX, y - 2), new Vector2(CARD_WIDTH, lineHeight + 4), c);
             }
 
             if (isMovePresent)

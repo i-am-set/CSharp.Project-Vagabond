@@ -66,7 +66,6 @@ namespace ProjectVagabond.UI
             Vector2 size = new Vector2(WIDTH, HEIGHT);
 
             // --- Draw Outline ---
-            DrawBeveledBackground(sb, pos - new Vector2(2, 2), size + new Vector2(4, 4), _global.Palette_Black);
             DrawBeveledBackground(sb, pos - new Vector2(1, 1), size + new Vector2(2, 2), _global.Palette_DarkPale);
 
             // --- Draw Backgrounds ---
