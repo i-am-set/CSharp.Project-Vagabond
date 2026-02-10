@@ -32,6 +32,7 @@ namespace ProjectVagabond.UI
         private const float HOVER_DELAY = 0.2f;
         private Vector2 _lastMousePos;
         private bool _isTooltipVisible;
+        private PartyMember? _hoveredMember; // Track hovered card for animation
 
         // --- Drag & Drop State ---
         private PartyMember? _draggedMember;
@@ -73,7 +74,11 @@ namespace ProjectVagabond.UI
         private const float CARD_MOVE_SPEED = 15f;
         private const float CARD_DROP_SPEED = 10f;
         private const float ENTRY_Y_OFFSET = -16f;
+
+        // --- Lift Constants ---
         private const float DRAG_LIFT_OFFSET = -8f;
+        // CHANGED: Hover lift is now exactly half of drag lift to imply clickability without being excessive
+        private const float HOVER_LIFT_OFFSET = DRAG_LIFT_OFFSET * 0.25f;
 
         public SplitMapHudRenderer()
         {
@@ -92,6 +97,7 @@ namespace ProjectVagabond.UI
             var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
 
             float currentHudY = BaseY + verticalOffset;
+            _hoveredMember = null; // Reset hover state
 
             // --- Drag Logic ---
             if (_isDragging && _draggedMember != null)
@@ -187,6 +193,7 @@ namespace ProjectVagabond.UI
                     _draggedMember = null;
                 }
 
+                // Skip hover logic while dragging to ensure clean state
                 goto ProcessTweening;
             }
             else
@@ -209,6 +216,7 @@ namespace ProjectVagabond.UI
                 if (cardRect.Contains(virtualMousePos))
                 {
                     cursorManager.SetState(CursorState.HoverDraggable);
+                    _hoveredMember = member; // Mark as hovered for tweening
 
                     if (Mouse.GetState().LeftButton == ButtonState.Pressed && !_isDragging)
                     {
@@ -313,7 +321,13 @@ namespace ProjectVagabond.UI
                 else
                 {
                     float currentY = _verticalOffsets[member];
-                    float targetY = (member == _draggedMember) ? DRAG_LIFT_OFFSET : 0f;
+
+                    // Determine target Y based on Drag or Hover state
+                    // Priority: Drag > Hover > Default
+                    float targetY = 0f;
+                    if (member == _draggedMember) targetY = DRAG_LIFT_OFFSET;
+                    else if (member == _hoveredMember) targetY = HOVER_LIFT_OFFSET;
+
                     float dampingY = 1.0f - MathF.Exp(-CARD_DROP_SPEED * dt);
                     _verticalOffsets[member] = MathHelper.Lerp(currentY, targetY, dampingY);
                 }
