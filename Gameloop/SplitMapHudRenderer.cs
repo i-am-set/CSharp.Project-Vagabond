@@ -43,7 +43,7 @@ namespace ProjectVagabond.UI
         // Tracks the last known Screen X to calculate deltas
         private int _lastScreenMouseX;
 
-        // NEW: Tracks the card that should render on top (last dragged)
+        // Tracks the card that should render on top (last dragged)
         private PartyMember? _topmostMember;
 
         // Tracks the visual lift of the cursor sprite
@@ -54,9 +54,6 @@ namespace ProjectVagabond.UI
         private const float ELASTIC_STIFFNESS = 60f;
         private const float DRAG_TETHER_SPEED = 25f;
         private const float MAX_PULL_DISTANCE = 180f;
-
-        // NEW: Tunable threshold for swapping (0.5 = 50% overlap). 
-        // Lower = easier to swap (snaps sooner). Higher = harder to swap.
         private const float SWAP_THRESHOLD_FACTOR = 0.5f;
 
         // Public property for SplitMapScene to prevent HUD sliding
@@ -102,17 +99,49 @@ namespace ProjectVagabond.UI
                 // 2. Calculate Input Delta
                 var currentMouseState = Mouse.GetState();
                 int screenDeltaX = currentMouseState.X - _lastScreenMouseX;
+                float virtualDeltaX = screenDeltaX / scale;
 
-                // 3. Update "Ghost" Pull Position
-                _virtualPullX += screenDeltaX / scale;
-
-                // 4. Calculate Anchor
+                // 3. Calculate Anchor
                 int currentIndex = party.IndexOf(_draggedMember);
                 int totalWidth = party.Count * CARD_WIDTH;
                 int startX = (Global.VIRTUAL_WIDTH - totalWidth) / 2;
                 float anchorSlotX = startX + (currentIndex * CARD_WIDTH);
 
-                // 5. Clamp Input
+                // 4. Update "Ghost" Pull Position with Ratcheting Logic
+                float currentDiff = _virtualPullX - anchorSlotX;
+
+                // Check if moving towards center (relaxing tension)
+                bool movingTowardsCenter = (currentDiff > 0 && virtualDeltaX < 0) || (currentDiff < 0 && virtualDeltaX > 0);
+
+                if (movingTowardsCenter)
+                {
+                    // INVERSE TANH LOGIC:
+                    // We want the visual card to move 1:1 with the mouse when returning.
+                    // 1. Calculate where the visual card IS (based on current physics)
+                    float currentVisualOffset = MAX_ELASTIC_STRETCH * MathF.Tanh(currentDiff / ELASTIC_STIFFNESS);
+
+                    // 2. Apply the mouse delta directly to the visual offset (1:1 movement)
+                    float targetVisualOffset = currentVisualOffset + virtualDeltaX;
+
+                    // 3. Clamp to avoid domain errors in Atanh (must be < Max)
+                    float maxVal = MAX_ELASTIC_STRETCH * 0.9999f;
+                    targetVisualOffset = Math.Clamp(targetVisualOffset, -maxVal, maxVal);
+
+                    // 4. Reverse-solve the physics to find the _virtualPullX that produces this visual position
+                    // diff = k * Atanh(visual / Max)
+                    // Atanh(x) = 0.5 * ln((1+x)/(1-x))
+                    float ratio = targetVisualOffset / MAX_ELASTIC_STRETCH;
+                    float newDiff = ELASTIC_STIFFNESS * 0.5f * MathF.Log((1f + ratio) / (1f - ratio));
+
+                    _virtualPullX = anchorSlotX + newDiff;
+                }
+                else
+                {
+                    // Standard accumulation (Resistance applies via Tanh later)
+                    _virtualPullX += virtualDeltaX;
+                }
+
+                // 5. Clamp Input (Safety Wall)
                 float diff = _virtualPullX - anchorSlotX;
                 diff = Math.Clamp(diff, -MAX_PULL_DISTANCE, MAX_PULL_DISTANCE);
                 _virtualPullX = anchorSlotX + diff;
@@ -135,7 +164,7 @@ namespace ProjectVagabond.UI
                 Mouse.SetPosition(newScreenMouseX, _dragStartMouseY);
                 _lastScreenMouseX = newScreenMouseX;
 
-                // 9. Swap Logic (Using Tunable Threshold)
+                // 9. Swap Logic
                 float swapThreshold = CARD_WIDTH * SWAP_THRESHOLD_FACTOR;
 
                 for (int i = 0; i < party.Count; i++)
@@ -145,7 +174,6 @@ namespace ProjectVagabond.UI
                     float neighborSlotCenterX = startX + (i * CARD_WIDTH) + (CARD_WIDTH / 2);
                     float ghostCardCenterX = _virtualPullX + (CARD_WIDTH / 2);
 
-                    // Use the tunable threshold
                     if (Math.Abs(ghostCardCenterX - neighborSlotCenterX) < swapThreshold)
                     {
                         var temp = party[currentIndex];
@@ -184,7 +212,7 @@ namespace ProjectVagabond.UI
                     {
                         _isDragging = true;
                         _draggedMember = member;
-                        _topmostMember = member; // Set this card as the topmost for rendering
+                        _topmostMember = member;
 
                         _dragStartMouseY = Mouse.GetState().Y;
                         _lastScreenMouseX = Mouse.GetState().X;
@@ -315,12 +343,12 @@ namespace ProjectVagabond.UI
             for (int i = 0; i < count; i++)
             {
                 var member = party[i];
-                if (member == _topmostMember) continue; // Skip topmost
+                if (member == _topmostMember) continue;
 
                 DrawMemberCard(spriteBatch, gameTime, member, i, verticalOffset, mousePos, defaultFont, secondaryFont, tertiaryFont);
             }
 
-            // 2. Draw the topmost card last (so it appears on top)
+            // 2. Draw the topmost card last
             if (_topmostMember != null && party.Contains(_topmostMember))
             {
                 int index = party.IndexOf(_topmostMember);
@@ -356,16 +384,19 @@ namespace ProjectVagabond.UI
 
             if (isBeingDragged)
             {
-                // Highlight border for dragged card
                 DrawHollowRectSmooth(spriteBatch, cardPos, cardSize, _global.Palette_Sun);
             }
             else
             {
-                // Draw Hover Rect for non-dragged cards
                 Rectangle cardRect = new Rectangle((int)x, (int)(BaseY + 3 + yOffset), CARD_WIDTH, HUD_HEIGHT - 4);
                 if (cardRect.Contains(mousePos) && !_isDragging)
                 {
                     DrawHollowRectSmooth(spriteBatch, cardPos, cardSize, _global.Palette_Pale);
+                }
+                else
+                {
+                    // NEW: Always draw a dark shadow border when idle
+                    DrawHollowRectSmooth(spriteBatch, cardPos, cardSize, _global.Palette_DarkShadow);
                 }
             }
 
@@ -374,7 +405,6 @@ namespace ProjectVagabond.UI
 
         private void DrawHollowRectSmooth(SpriteBatch spriteBatch, Vector2 pos, Vector2 size, Color color)
         {
-            // Use floats for positions to avoid jitter
             spriteBatch.Draw(_pixel, pos, null, color, 0f, Vector2.Zero, new Vector2(size.X, 1), SpriteEffects.None, 0f);
             spriteBatch.Draw(_pixel, new Vector2(pos.X, pos.Y + size.Y - 1), null, color, 0f, Vector2.Zero, new Vector2(size.X, 1), SpriteEffects.None, 0f);
             spriteBatch.Draw(_pixel, pos, null, color, 0f, Vector2.Zero, new Vector2(1, size.Y), SpriteEffects.None, 0f);
@@ -384,15 +414,12 @@ namespace ProjectVagabond.UI
         private void DrawCardContents(SpriteBatch spriteBatch, GameTime gameTime, PartyMember member, float xPosition, float yOffset, int index, BitmapFont defaultFont, BitmapFont secondaryFont, BitmapFont tertiaryFont)
         {
             float y = BaseY + 5 + yOffset;
-
-            // Use float center to prevent snapping jitter
             float centerX = xPosition + (CARD_WIDTH / 2f);
 
             string name = member.Name.ToUpper();
             Color nameColor = _global.Palette_LightPale;
             Vector2 nameSize = defaultFont.MeasureString(name);
 
-            // DrawString with float position
             spriteBatch.DrawString(defaultFont, name, new Vector2(centerX - nameSize.X / 2f, y), nameColor);
 
             y += nameSize.Y - 4;
@@ -414,7 +441,6 @@ namespace ProjectVagabond.UI
             Vector2 origin = new Vector2(16, 16);
             Vector2 pos = new Vector2(centerX, y + 16) + new Vector2(floatX, bobOffset + floatY);
 
-            // Use standard Draw with float position/rotation
             spriteBatch.Draw(_spriteManager.PlayerMasterSpriteSheet, pos, sourceRect, Color.White, rotation, origin, 1.0f, SpriteEffects.None, 0f);
 
             y += 32 + 4;
@@ -495,10 +521,7 @@ namespace ProjectVagabond.UI
             float cardStartX = centerX - (CARD_WIDTH / 2f);
             int lineHeight = (int)font.LineHeight;
 
-            // Use Rectangle for hit detection, but floats for drawing
             Rectangle hitRect = new Rectangle((int)cardStartX, (int)y - 2, CARD_WIDTH, lineHeight + 4);
-
-            // Disable hover if dragging
             bool isHovered = !_isDragging && _currentHoveredItem.HasValue && _currentHoveredItem.Value.Bounds == hitRect;
 
             if (isHovered && isMovePresent)
