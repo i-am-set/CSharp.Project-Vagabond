@@ -95,7 +95,6 @@ namespace ProjectVagabond
         private TransitionManager _transitionManager;
         private HitstopManager _hitstopManager;
         private BackgroundNoiseRenderer _backgroundNoiseRenderer;
-        private ItemTooltipRenderer _itemTooltipRenderer;
 
         private KeyboardState _previousKeyboardState;
         private MouseState _previousMouseState;
@@ -221,8 +220,6 @@ namespace ProjectVagabond
             ServiceLocator.Register<HitstopManager>(_hitstopManager);
             _backgroundNoiseRenderer = new BackgroundNoiseRenderer();
             ServiceLocator.Register<BackgroundNoiseRenderer>(_backgroundNoiseRenderer);
-            _itemTooltipRenderer = new ItemTooltipRenderer();
-            ServiceLocator.Register<ItemTooltipRenderer>(_itemTooltipRenderer);
 
             GraphicsDevice.SamplerStates[0] = SamplerState.PointClamp;
             _settings.ApplyGraphicsSettings(_graphics, this);
