@@ -34,10 +34,16 @@ namespace ProjectVagabond.UI
         private bool _isTooltipVisible;
 
         // --- Drag & Drop State ---
-        public bool IsDragging => _isDragging;
         private PartyMember? _draggedMember;
         private float _dragOffsetX;
         private bool _isDragging;
+        private int _dragStartMouseY;
+
+        // NEW: Tracks the visual lift of the cursor sprite
+        private float _currentCursorLift = 0f;
+
+        // Public property for SplitMapScene to prevent HUD sliding
+        public bool IsDragging => _isDragging;
 
         // --- Animation State ---
         private readonly Dictionary<PartyMember, float> _visualPositions = new Dictionary<PartyMember, float>();
@@ -69,6 +75,13 @@ namespace ProjectVagabond.UI
             if (_isDragging && _draggedMember != null)
             {
                 cursorManager.SetState(CursorState.Dragging);
+
+                // Lock Mouse Y Position to prevent drift
+                var currentMouseState = Mouse.GetState();
+                if (currentMouseState.Y != _dragStartMouseY)
+                {
+                    Mouse.SetPosition(currentMouseState.X, _dragStartMouseY);
+                }
 
                 float newX = virtualMousePos.X + _dragOffsetX;
                 newX = Math.Clamp(newX, 0, Global.VIRTUAL_WIDTH - CARD_WIDTH);
@@ -112,7 +125,6 @@ namespace ProjectVagabond.UI
                 if (!_visualPositions.ContainsKey(member)) continue;
 
                 float x = _visualPositions[member];
-                // CHANGED: Moved hitbox up 3 pixels (BaseY + 3)
                 Rectangle cardRect = new Rectangle((int)x, (int)currentHudY + 3, CARD_WIDTH, HUD_HEIGHT - 4);
 
                 if (cardRect.Contains(virtualMousePos))
@@ -124,6 +136,7 @@ namespace ProjectVagabond.UI
                         _isDragging = true;
                         _draggedMember = member;
                         _dragOffsetX = _visualPositions[member] - virtualMousePos.X;
+                        _dragStartMouseY = Mouse.GetState().Y; // Capture Y for locking
                     }
                 }
             }
@@ -172,6 +185,16 @@ namespace ProjectVagabond.UI
             _lastMousePos = virtualMousePos;
 
         ProcessTweening:
+            // --- Cursor Lift Animation (NEW) ---
+            // Calculate target lift based on drag state
+            float targetCursorLift = _isDragging ? DRAG_LIFT_OFFSET : 0f;
+            // Use same damping speed as cards (CARD_DROP_SPEED) for sync
+            float cursorDamping = 1.0f - MathF.Exp(-CARD_DROP_SPEED * dt);
+            _currentCursorLift = MathHelper.Lerp(_currentCursorLift, targetCursorLift, cursorDamping);
+
+            // Apply to CursorManager
+            cursorManager.VisualOffset = new Vector2(0, _currentCursorLift);
+
             // --- Card Position Tweening ---
             int totalWidthTween = party.Count * CARD_WIDTH;
             int startXTween = (Global.VIRTUAL_WIDTH - totalWidthTween) / 2;
@@ -200,9 +223,8 @@ namespace ProjectVagabond.UI
                 else
                 {
                     float currentY = _verticalOffsets[member];
-                    // If this is the dragged member, target -2f, otherwise target 0f
+                    // If dragged, lift up (-8f). If dropped, settle to 0f.
                     float targetY = (member == _draggedMember) ? DRAG_LIFT_OFFSET : 0f;
-
                     float dampingY = 1.0f - MathF.Exp(-CARD_DROP_SPEED * dt);
                     _verticalOffsets[member] = MathHelper.Lerp(currentY, targetY, dampingY);
                 }
@@ -259,6 +281,11 @@ namespace ProjectVagabond.UI
                 float x = _visualPositions[member];
                 float yOffset = _verticalOffsets[member] + verticalOffset;
 
+                // Draw Background for EVERY card (Fixes transparency issue)
+                Vector2 cardPos = new Vector2(x, BaseY + 3 + yOffset);
+                Vector2 cardSize = new Vector2(CARD_WIDTH, HUD_HEIGHT - 4);
+                spriteBatch.Draw(_pixel, cardPos, null, _global.Palette_Black, 0f, Vector2.Zero, cardSize, SpriteEffects.None, 0f);
+
                 if (_isDragging && _draggedMember == member)
                 {
                     draggedCardData = (member, x, yOffset, i);
@@ -266,9 +293,6 @@ namespace ProjectVagabond.UI
                 }
 
                 // Draw Hover Rect for non-dragged cards
-                // CHANGED: Moved Rect Y up 3 pixels (BaseY + 3)
-                Vector2 cardPos = new Vector2(x, BaseY + 3 + yOffset);
-                Vector2 cardSize = new Vector2(CARD_WIDTH, HUD_HEIGHT - 4);
                 Rectangle cardRect = new Rectangle((int)x, (int)(BaseY + 3 + yOffset), CARD_WIDTH, HUD_HEIGHT - 4);
 
                 if (cardRect.Contains(mousePos) && !_isDragging)
@@ -276,21 +300,22 @@ namespace ProjectVagabond.UI
                     DrawHollowRectSmooth(spriteBatch, cardPos, cardSize, _global.Palette_Pale);
                 }
 
-                DrawCard(spriteBatch, gameTime, member, (int)x, yOffset, i, defaultFont, secondaryFont, tertiaryFont);
+                // Pass float x to prevent jitter
+                DrawCard(spriteBatch, gameTime, member, x, yOffset, i, defaultFont, secondaryFont, tertiaryFont);
             }
 
             // Draw Dragged Card Last (On Top)
             if (draggedCardData != null)
             {
                 var d = draggedCardData.Value;
-                // CHANGED: Moved Background/Rect Y up 3 pixels (BaseY + 3)
                 Vector2 bgPos = new Vector2(d.X, BaseY + 3 + d.YOffset);
                 Vector2 bgSize = new Vector2(CARD_WIDTH, HUD_HEIGHT - 4);
 
+                // Draw background again to cover neighbors if overlapping
                 spriteBatch.Draw(_pixel, bgPos, null, _global.Palette_Black, 0f, Vector2.Zero, bgSize, SpriteEffects.None, 0f);
                 DrawHollowRectSmooth(spriteBatch, bgPos, bgSize, _global.Palette_Sun);
 
-                DrawCard(spriteBatch, gameTime, d.Member, (int)d.X, d.YOffset, d.Index, defaultFont, secondaryFont, tertiaryFont);
+                DrawCard(spriteBatch, gameTime, d.Member, d.X, d.YOffset, d.Index, defaultFont, secondaryFont, tertiaryFont);
             }
 
             if (_currentHoveredItem.HasValue && _isTooltipVisible && _currentHoveredItem.Value.Move != null && !_isDragging)
@@ -313,11 +338,13 @@ namespace ProjectVagabond.UI
             spriteBatch.Draw(_pixel, new Vector2(pos.X + size.X - 1, pos.Y), null, color, 0f, Vector2.Zero, new Vector2(1, size.Y), SpriteEffects.None, 0f);
         }
 
-        private void DrawCard(SpriteBatch spriteBatch, GameTime gameTime, PartyMember member, int xPosition, float yOffset, int index, BitmapFont defaultFont, BitmapFont secondaryFont, BitmapFont tertiaryFont)
+        // Changed xPosition to float for precision
+        private void DrawCard(SpriteBatch spriteBatch, GameTime gameTime, PartyMember member, float xPosition, float yOffset, int index, BitmapFont defaultFont, BitmapFont secondaryFont, BitmapFont tertiaryFont)
         {
-            // CHANGED: Moved Visuals up 2 pixels (BaseY + 4)
             float y = BaseY + 5 + yOffset;
-            int centerX = xPosition + (CARD_WIDTH / 2);
+
+            // Rounding here matches CursorManager's DrawSnapped logic, preventing jitter
+            int centerX = (int)MathF.Round(xPosition + (CARD_WIDTH / 2));
 
             string name = member.Name.ToUpper();
             Color nameColor = _global.Palette_LightPale;

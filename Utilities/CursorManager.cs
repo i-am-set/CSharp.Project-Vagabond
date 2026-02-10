@@ -28,6 +28,9 @@ namespace ProjectVagabond.UI
         // The pixel coordinate of the cursor's "tip" within its sprite frame.
         private static readonly Vector2 CURSOR_HOTSPOT = new Vector2(7, 7);
 
+        // Allows external systems (like HUD) to offset the sprite in VIRTUAL pixels.
+        public Vector2 VisualOffset { get; set; } = Vector2.Zero;
+
         public CursorManager()
         {
             _spriteManager = ServiceLocator.Get<SpriteManager>();
@@ -35,12 +38,10 @@ namespace ProjectVagabond.UI
             {
                 { CursorState.Default, ("cursor_default", 1f / 12f) },
                 { CursorState.HoverClickable, ("cursor_hover_clickable", 1f / 12f) },
-                { CursorState.Hint, ("cursor_hover_hint", 1f / 12f) }, // New Hint Cursor
+                { CursorState.Hint, ("cursor_hover_hint", 1f / 12f) },
                 { CursorState.HoverClickableHint, ("cursor_hover_clickable_hint", 1f / 12f) },
                 { CursorState.HoverDraggable, ("cursor_hover_draggable", 1f / 12f) },
                 { CursorState.Dragging, ("cursor_dragging_draggable", 1f / 12f) },
-                // Future cursor states like Click can be mapped to their assets here.
-                // { CursorState.Click, ("cursor_click", 1f / 12f) },
             };
 
             _requestedState = CursorState.Default;
@@ -50,8 +51,6 @@ namespace ProjectVagabond.UI
 
         public void SetState(CursorState state)
         {
-            // The highest priority state set this frame wins.
-            // Dragging > Click > HoverClickableHint > Hint > HoverClickable > HoverDraggable > Hover > Default
             if (state > _requestedState)
             {
                 _requestedState = state;
@@ -60,7 +59,6 @@ namespace ProjectVagabond.UI
 
         public void Update(GameTime gameTime)
         {
-            // Process the requested state from the last frame's UI updates.
             if (_requestedState != _currentState)
             {
                 _currentState = _requestedState;
@@ -70,11 +68,8 @@ namespace ProjectVagabond.UI
                 _frameTimer = 0f;
             }
 
-            // Reset the requested state for the next frame.
-            // UI elements will set it again if they are hovered/clicked.
             _requestedState = CursorState.Default;
 
-            // Update animation of the current cursor.
             if (_currentSpriteAnimation.Frames.Length > 1)
             {
                 var (_, frameDuration) = _cursorMappings.GetValueOrDefault(_currentState, _cursorMappings[CursorState.Default]);
@@ -95,11 +90,12 @@ namespace ProjectVagabond.UI
             }
 
             var mouseState = Mouse.GetState();
-            var drawPosition = screenPosition;
 
-            // Add a fixed 2-pixel vertical offset if either mouse button is pressed.
-            // This is applied directly to screen coordinates (not multiplied by scale)
-            // to ensure a subtle, consistent movement regardless of window size.
+            // CHANGED: Multiply VisualOffset by scale to convert virtual pixels to screen pixels.
+            var drawPosition = screenPosition + (VisualOffset * scale);
+
+            // Note: The click offset (+2) remains unscaled (raw screen pixels) 
+            // to maintain the "subtle" feel described in original comments.
             if (mouseState.LeftButton == ButtonState.Pressed || mouseState.RightButton == ButtonState.Pressed)
             {
                 drawPosition.Y += 2;
@@ -107,9 +103,6 @@ namespace ProjectVagabond.UI
 
             var sourceRect = _currentSpriteAnimation.Frames[_currentFrameIndex];
 
-            // The cursor is drawn with its hotspot as the origin, aligning the tip with the mouse position.
-            // The color is set to white, as the BlendState will handle the inversion.
-            // We use DrawSnapped to ensure the final position is on an integer pixel boundary.
             spriteBatch.DrawSnapped(
                 _currentSpriteAnimation.Texture,
                 drawPosition,
@@ -117,9 +110,9 @@ namespace ProjectVagabond.UI
                 Color.White,
                 0f,
                 CURSOR_HOTSPOT,
-                scale, // Apply the global scale factor
+                scale,
                 SpriteEffects.None,
-                0f // Topmost layer
+                0f
             );
         }
     }
