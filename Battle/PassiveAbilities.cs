@@ -2,6 +2,7 @@
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Utils;
 using System.Linq;
+using static ProjectVagabond.GameEvents;
 
 namespace ProjectVagabond.Battle.Abilities
 {
@@ -36,7 +37,14 @@ namespace ProjectVagabond.Battle.Abilities
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
-            // Placeholder: Priority modification logic would go here if ActionDeclaredEvent supported it.
+            if (e is CheckActionPriorityEvent prioEvent && prioEvent.Actor.Abilities.Contains(this))
+            {
+                if (prioEvent.Move.ImpactType == ImpactType.Status)
+                {
+                    prioEvent.Priority += 1;
+                    // Optional: Visual log or debug print
+                }
+            }
         }
     }
 

@@ -3,6 +3,7 @@ using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Utils;
 using System;
 using System.Linq;
+using static ProjectVagabond.GameEvents;
 
 namespace ProjectVagabond.Battle.Abilities
 {
@@ -351,6 +352,57 @@ namespace ProjectVagabond.Battle.Abilities
                     {
                         EventBus.Publish(new GameEvents.TenacityChanged { Combatant = target, NewValue = target.CurrentTenacity });
                         EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{target.Name} restored Tenacity!" });
+                    }
+                }
+            }
+        }
+    }
+
+    public class SelfSwitchAbility : IAbility
+    {
+        public string Name => "Self Switch";
+        public string Description => "Switch out after attacking.";
+        public int Priority => 0;
+
+        public void OnEvent(GameEvent e, BattleContext context)
+        {
+            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
+            {
+                // Ensure we don't switch if the move missed/grazed (optional, but standard for pivot moves)
+                if (!reaction.Result.WasGraze)
+                {
+                    EventBus.Publish(new GameEvents.DisengageTriggered { Actor = reaction.Actor });
+                }
+            }
+        }
+    }
+
+    public class DamageTenacityAbility : IAbility
+    {
+        public string Name => "Damage Tenacity";
+        public string Description => "Reduces target's Tenacity directly.";
+        public int Priority => 0;
+
+        private readonly int _amount;
+        public DamageTenacityAbility(int amount) { _amount = amount; }
+
+        public void OnEvent(GameEvent e, BattleContext context)
+        {
+            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
+            {
+                var target = reaction.Target;
+                if (target.CurrentTenacity > 0)
+                {
+                    int oldVal = target.CurrentTenacity;
+                    target.CurrentTenacity = Math.Max(0, target.CurrentTenacity - _amount);
+
+                    if (target.CurrentTenacity != oldVal)
+                    {
+                        EventBus.Publish(new GameEvents.TenacityChanged { Combatant = target, NewValue = target.CurrentTenacity });
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{target.Name}'s shield was corroded!" });
+
+                        if (target.CurrentTenacity == 0)
+                            EventBus.Publish(new GameEvents.TenacityBroken { Combatant = target });
                     }
                 }
             }

@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using static ProjectVagabond.GameEvents;
 
 namespace ProjectVagabond.Battle
 {
@@ -301,11 +302,17 @@ namespace ProjectVagabond.Battle
             foreach (var kvp in _pendingPlayerActions) AddActionToQueue(kvp.Value);
             _pendingPlayerActions.Clear();
 
-            foreach (var enemy in _cachedActiveEnemies)
+            foreach (var action in _actionQueue)
             {
-                if (enemy.ChargingAction != null || enemy.Tags.Has(GameplayTags.States.Stunned) || enemy.Tags.Has(GameplayTags.States.Dazed)) continue;
-                var action = EnemyAI.DetermineBestAction(enemy, _allCombatants);
-                _actionQueue.Add(action);
+                if (action.ChosenMove != null)
+                {
+                    var prioEvent = new CheckActionPriorityEvent(action.Actor, action.ChosenMove, action.Priority);
+                    // Use a temporary context or the shared one
+                    _battleContext.ResetMultipliers();
+                    _battleContext.Actor = action.Actor;
+                    action.Actor.NotifyAbilities(prioEvent, _battleContext);
+                    action.Priority = prioEvent.Priority;
+                }
             }
 
             _actionQueue = _actionQueue.OrderByDescending(a => a.Priority).ThenByDescending(a => a.ActorAgility).ToList();

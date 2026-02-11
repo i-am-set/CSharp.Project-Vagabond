@@ -210,5 +210,18 @@ namespace ProjectVagabond
         {
             public BattleCombatant Combatant { get; set; }
         }
+
+        public class CheckActionPriorityEvent : GameEvent
+        {
+            public BattleCombatant Actor { get; }
+            public MoveData Move { get; }
+            public int Priority { get; set; }
+            public CheckActionPriorityEvent(BattleCombatant actor, MoveData move, int basePriority)
+            {
+                Actor = actor;
+                Move = move;
+                Priority = basePriority;
+            }
+        }
     }
 }

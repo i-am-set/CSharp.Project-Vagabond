@@ -229,5 +229,37 @@
     "Tags": [ "MultiHit", "Contact" ],
     "AnimationId": "phy_bite",
     "IsAnimationCentralized": false
+  },
+  {
+    "MoveID": "12",
+    "MoveName": "Bye-Bye",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]MOCKS[/] {IsTargetProperNoun}[cSlot]{target}[/] AND LEAVES!",
+    "Description": "Lower [cpositive]STR[/] and [cpositive]INT[/] by 1 and switch out.",
+    "Power": 0,
+    "MoveType": "Action",
+    "ImpactType": "Status",
+    "Target": "Single",
+    "Accuracy": 100,
+    "Effects": {
+      "InflictStatChange": "Strength, -1, Intelligence, -1",
+      "SelfSwitch": ""
+    },
+    "AnimationId": "sta_orange_orb"
+  },
+  {
+    "MoveID": "13",
+    "MoveName": "Irritate",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]IRRITATES[/] THE ENEMY TEAM.",
+    "Description": "Remove 2 [cpositive]Tenacity[/] but raise [cnegative]Strength[/] of the target.",
+    "Power": 0,
+    "MoveType": "Action",
+    "ImpactType": "Status",
+    "Target": "Both",
+    "Accuracy": -1,
+    "Effects": {
+      "DamageTenacity": "2",
+      "InflictStatChange": "Strength, 1"
+    },
+    "AnimationId": "sta_orange_orb"
   }
 ]
