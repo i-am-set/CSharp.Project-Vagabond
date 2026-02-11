@@ -1,137 +1,129 @@
 [
   {
-    "Id": "basic_impact",
-    "TexturePath": "Sprites/MoveAnimationSpriteSheets/basic_impact",
-    "FrameWidth": 128,
-    "FrameHeight": 128,
+    "Id": "phy_impact",
+    "TexturePath": "Sprites/MoveAnimationSpriteSheets/phy_impact",
+    "FrameWidth": 32,
+    "FrameHeight": 32,
     "FPS": 12.0,
     "ImpactFrameIndex": 2
   },
   {
-    "Id": "basic_bite",
-    "TexturePath": "Sprites/MoveAnimationSpriteSheets/basic_bite",
+    "Id": "phy_bite",
+    "TexturePath": "Sprites/MoveAnimationSpriteSheets/phy_bite",
     "FrameWidth": 32,
     "FrameHeight": 32,
     "FPS": 12.0,
     "ImpactFrameIndex": 4
   },
   {
-    "Id": "basic_claw",
-    "TexturePath": "Sprites/MoveAnimationSpriteSheets/basic_claw",
-    "FrameWidth": 128,
-    "FrameHeight": 128,
-    "FPS": 19.0,
-    "ImpactFrameIndex": 2
-  },
-  {
-    "Id": "basic_swipe",
-    "TexturePath": "Sprites/MoveAnimationSpriteSheets/basic_swipe",
-    "FrameWidth": 128,
-    "FrameHeight": 128,
-    "FPS": 24.0,
-    "ImpactFrameIndex": 2
-  },
-  {
-    "Id": "basic_orb_pulse_2",
-    "TexturePath": "Sprites/MoveAnimationSpriteSheets/basic_orb_pulse_2",
-    "FrameWidth": 128,
-    "FrameHeight": 128,
+    "Id": "phy_claw",
+    "TexturePath": "Sprites/MoveAnimationSpriteSheets/phy_claw",
+    "FrameWidth": 32,
+    "FrameHeight": 32,
     "FPS": 12.0,
     "ImpactFrameIndex": 2
   },
   {
-    "Id": "fire_flame_ground_large",
-    "TexturePath": "Sprites/MoveAnimationSpriteSheets/fire_flame_ground_large",
+    "Id": "phy_small_side_swipe",
+    "TexturePath": "Sprites/MoveAnimationSpriteSheets/phy_small_side_swipe",
+    "FrameWidth": 64,
+    "FrameHeight": 64,
+    "FPS": 12.0,
+    "ImpactFrameIndex": 2
+  },
+  {
+    "Id": "sta_orange_orb",
+    "TexturePath": "Sprites/MoveAnimationSpriteSheets/sta_orange_orb",
+    "FrameWidth": 16,
+    "FrameHeight": 16,
+    "FPS": 12.0,
+    "ImpactFrameIndex": 2
+  },
+  {
+    "Id": "mag_flame_ground",
+    "TexturePath": "Sprites/MoveAnimationSpriteSheets/mag_flame_ground",
     "FrameWidth": 64,
     "FrameHeight": 64,
     "FPS": 12.0,
     "ImpactFrameIndex": 3
   },
   {
-    "Id": "fire_impact",
-    "TexturePath": "Sprites/MoveAnimationSpriteSheets/fire_impact",
-    "FrameWidth": 128,
-    "FrameHeight": 128,
+    "Id": "mag_small_flame",
+    "TexturePath": "Sprites/MoveAnimationSpriteSheets/mag_small_flame",
+    "FrameWidth": 16,
+    "FrameHeight": 16,
     "FPS": 12.0,
-    "ImpactFrameIndex": 10
+    "ImpactFrameIndex": 4
   },
   {
-    "Id": "basic_slash",
-    "TexturePath": "Sprites/MoveAnimationSpriteSheets/basic_slash",
-    "FrameWidth": 128,
-    "FrameHeight": 128,
-    "FPS": 18.0,
+    "Id": "phy_slash",
+    "TexturePath": "Sprites/MoveAnimationSpriteSheets/phy_slash",
+    "FrameWidth": 64,
+    "FrameHeight": 64,
+    "FPS": 12.0,
     "ImpactFrameIndex": 2
   },
   {
-    "Id": "wind_tornado_2",
-    "TexturePath": "Sprites/MoveAnimationSpriteSheets/wind_tornado_2",
-    "FrameWidth": 128,
-    "FrameHeight": 128,
-    "FPS": 24.0,
+    "Id": "mag_small_tornado",
+    "TexturePath": "Sprites/MoveAnimationSpriteSheets/mag_small_tornado",
+    "FrameWidth": 32,
+    "FrameHeight": 32,
+    "FPS": 12.0,
+    "ImpactFrameIndex": 6
+  },
+  {
+    "Id": "mag_explosion",
+    "TexturePath": "Sprites/MoveAnimationSpriteSheets/mag_explosion",
+    "FrameWidth": 32,
+    "FrameHeight": 32,
+    "FPS": 12.0,
+    "ImpactFrameIndex": 2
+  },
+  {
+    "Id": "mag_bubble_pop",
+    "TexturePath": "Sprites/MoveAnimationSpriteSheets/mag_bubble_pop",
+    "FrameWidth": 16,
+    "FrameHeight": 16,
+    "FPS": 12.0,
+    "ImpactFrameIndex": 2
+  },
+  {
+    "Id": "mag_blue_flame",
+    "TexturePath": "Sprites/MoveAnimationSpriteSheets/mag_blue_flame",
+    "FrameWidth": 16,
+    "FrameHeight": 16,
+    "FPS": 12.0,
+    "ImpactFrameIndex": 6
+  },
+  {
+    "Id": "phy_large_impact",
+    "TexturePath": "Sprites/MoveAnimationSpriteSheets/phy_large_impact",
+    "FrameWidth": 80,
+    "FrameHeight": 80,
+    "FPS": 12.0,
+    "ImpactFrameIndex": 2
+  },
+  {
+    "Id": "sta_stall",
+    "TexturePath": "Sprites/MoveAnimationSpriteSheets/sta_stall",
+    "FrameWidth": 96,
+    "FrameHeight": 96,
+    "FPS": 2,
+    "ImpactFrameIndex": 2
+  },
+  {
+    "Id": "sta_protect",
+    "TexturePath": "Sprites/MoveAnimationSpriteSheets/sta_protect",
+    "FrameWidth": 32,
+    "FrameHeight": 32,
+    "FPS": 12.0,
     "ImpactFrameIndex": 0
-  },
-  {
-    "Id": "basic_explosion",
-    "TexturePath": "Sprites/MoveAnimationSpriteSheets/basic_explosion",
-    "FrameWidth": 128,
-    "FrameHeight": 128,
-    "FPS": 18.0,
-    "ImpactFrameIndex": 2
-  },
-  {
-    "Id": "void_slash",
-    "TexturePath": "Sprites/MoveAnimationSpriteSheets/void_slash",
-    "FrameWidth": 128,
-    "FrameHeight": 128,
-    "FPS": 18.0,
-    "ImpactFrameIndex": 2
-  },
-  {
-    "Id": "water_bubble_pop",
-    "TexturePath": "Sprites/MoveAnimationSpriteSheets/water_bubble_pop",
-    "FrameWidth": 128,
-    "FrameHeight": 128,
-    "FPS": 12.0,
-    "ImpactFrameIndex": 2
-  },
-  {
-    "Id": "arcane_blue_flame",
-    "TexturePath": "Sprites/MoveAnimationSpriteSheets/arcane_blue_flame",
-    "FrameWidth": 128,
-    "FrameHeight": 128,
-    "FPS": 12.0,
-    "ImpactFrameIndex": 2
-  },
-  {
-    "Id": "basic_impact_3",
-    "TexturePath": "Sprites/MoveAnimationSpriteSheets/basic_impact_3",
-    "FrameWidth": 128,
-    "FrameHeight": 128,
-    "FPS": 12.0,
-    "ImpactFrameIndex": 1
-  },
-  {
-    "Id": "stall",
-    "TexturePath": "Sprites/MoveAnimationSpriteSheets/stall",
-    "FrameWidth": 128,
-    "FrameHeight": 128,
-    "FPS": 2.4,
-    "ImpactFrameIndex": 2
-  },
-  {
-    "Id": "basic_protect",
-    "TexturePath": "Sprites/MoveAnimationSpriteSheets/basic_protect",
-    "FrameWidth": 128,
-    "FrameHeight": 128,
-    "FPS": 12.0,
-    "ImpactFrameIndex": 2
   },
   {
     "Id": "debug_null_animation",
     "TexturePath": "Sprites/MoveAnimationSpriteSheets/debug_null_animation",
-    "FrameWidth": 128,
-    "FrameHeight": 128,
+    "FrameWidth": 16,
+    "FrameHeight": 16,
     "FPS": 12.0,
     "ImpactFrameIndex": 0
   }
