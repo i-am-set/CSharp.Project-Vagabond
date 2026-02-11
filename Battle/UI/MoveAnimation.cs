@@ -16,13 +16,14 @@ namespace ProjectVagabond.Battle.UI
         public int FrameCount { get; }
         public List<Rectangle> SourceRectangles { get; } = new List<Rectangle>();
 
-        public MoveAnimation(Texture2D spriteSheet)
+        public MoveAnimation(Texture2D spriteSheet, int frameWidth, int frameHeight)
         {
             SpriteSheet = spriteSheet;
-            FrameHeight = spriteSheet.Height;
-            FrameWidth = spriteSheet.Height; // Frame width is always equal to the sprite sheet's height.
+            FrameWidth = frameWidth;
+            FrameHeight = frameHeight;
 
-            if (FrameWidth > 0)
+            // Ensure valid dimensions to prevent division by zero or invalid rects
+            if (FrameWidth > 0 && FrameHeight > 0 && spriteSheet.Width >= FrameWidth)
             {
                 FrameCount = spriteSheet.Width / FrameWidth;
                 for (int i = 0; i < FrameCount; i++)

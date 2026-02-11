@@ -14,9 +14,7 @@
     "Accuracy": 100,
     "Priority": 0,
     "Tags": [],
-    "AnimationSpriteSheet": "basic_impact",
-    "AnimationSpeed": 2.0,
-    "DamageFrameIndex": 0,
+    "AnimationId": "basic_impact",
     "IsAnimationCentralized": false
   },
   {
@@ -34,9 +32,7 @@
     "Accuracy": 90,
     "Priority": 0,
     "Tags": [],
-    "AnimationSpriteSheet": "basic_impact",
-    "AnimationSpeed": 1.0,
-    "DamageFrameIndex": 0,
+    "AnimationId": "basic_impact",
     "IsAnimationCentralized": false
   },
   {
@@ -54,9 +50,7 @@
     "Accuracy": 100,
     "Priority": 0,
     "Tags": [],
-    "AnimationSpriteSheet": "basic_impact",
-    "AnimationSpeed": 1.5,
-    "DamageFrameIndex": 2,
+    "AnimationId": "basic_impact",
     "IsAnimationCentralized": false
   },
   {
@@ -74,9 +68,7 @@
     "Accuracy": 100,
     "Priority": 0,
     "Tags": [],
-    "AnimationSpriteSheet": "basic_bite",
-    "AnimationSpeed": 2.0,
-    "DamageFrameIndex": 4,
+    "AnimationId": "basic_bite",
     "IsAnimationCentralized": false
   },
   {
@@ -94,9 +86,7 @@
     "Accuracy": 100,
     "Priority": 0,
     "Tags": [],
-    "AnimationSpriteSheet": "basic_claw",
-    "AnimationSpeed": 1.6,
-    "DamageFrameIndex": 2,
+    "AnimationId": "basic_claw",
     "IsAnimationCentralized": false
   },
   {
@@ -114,9 +104,7 @@
     "Accuracy": 100,
     "Priority": 1,
     "Tags": [ "Priority" ],
-    "AnimationSpriteSheet": "basic_swipe",
-    "AnimationSpeed": 2.0,
-    "DamageFrameIndex": 2,
+    "AnimationId": "basic_swipe",
     "IsAnimationCentralized": false
   },
   {
@@ -134,9 +122,7 @@
     "Accuracy": -1,
     "Priority": 0,
     "Tags": [],
-    "AnimationSpriteSheet": "stall",
-    "AnimationSpeed": 0.2,
-    "DamageFrameIndex": 2,
+    "AnimationId": "stall",
     "IsAnimationCentralized": false
   },
   {
@@ -157,9 +143,7 @@
       "RestoreTenacity": "1"
     },
     "Tags": [],
-    "AnimationSpriteSheet": "basic_orb_pulse_2",
-    "AnimationSpeed": 1.0,
-    "DamageFrameIndex": 2,
+    "AnimationId": "basic_orb_pulse_2",
     "IsAnimationCentralized": false
   },
   {
@@ -180,9 +164,7 @@
       "Recoil": "25"
     },
     "Tags": [],
-    "AnimationSpriteSheet": "basic_impact",
-    "AnimationSpeed": 1.0,
-    "DamageFrameIndex": 2,
+    "AnimationId": "basic_impact",
     "IsAnimationCentralized": false
   },
   {
@@ -203,9 +185,7 @@
       "StatChange": "Tenacity,2"
     },
     "Tags": [],
-    "AnimationSpriteSheet": "basic_orb_pulse_2",
-    "AnimationSpeed": 1.0,
-    "DamageFrameIndex": 2,
+    "AnimationId": "basic_orb_pulse_2",
     "IsAnimationCentralized": false
   },
   {
@@ -226,9 +206,7 @@
       "SelfRegen": "3,100"
     },
     "Tags": [],
-    "AnimationSpriteSheet": "basic_orb_pulse_2",
-    "AnimationSpeed": 1.0,
-    "DamageFrameIndex": 2,
+    "AnimationId": "basic_orb_pulse_2",
     "IsAnimationCentralized": false
   },
   {
@@ -249,9 +227,7 @@
       "InflictStatusBurn": "10"
     },
     "Tags": [ "Fire", "AoE" ],
-    "AnimationSpriteSheet": "fire_flame_ground_large",
-    "AnimationSpeed": 1.0,
-    "DamageFrameIndex": 4,
+    "AnimationId": "fire_flame_ground_large",
     "IsAnimationCentralized": false
   },
   {
@@ -272,9 +248,7 @@
       "InflictStatusBurn": "100"
     },
     "Tags": [ "Fire", "Status" ],
-    "AnimationSpriteSheet": "fire_impact",
-    "AnimationSpeed": 1.0,
-    "DamageFrameIndex": 10,
+    "AnimationId": "fire_impact",
     "IsAnimationCentralized": false
   },
   {
@@ -295,9 +269,7 @@
       "InflictStatusBurn": "10"
     },
     "Tags": [ "Fire", "Damage" ],
-    "AnimationSpriteSheet": "basic_orb_pulse_2",
-    "AnimationSpeed": 1.0,
-    "DamageFrameIndex": 2,
+    "AnimationId": "basic_orb_pulse_2",
     "IsAnimationCentralized": false
   },
   {
@@ -318,9 +290,7 @@
       "InflictStatusBurn": "30"
     },
     "Tags": [ "Fire", "Damage" ],
-    "AnimationSpriteSheet": "basic_slash",
-    "AnimationSpeed": 1.5,
-    "DamageFrameIndex": 2,
+    "AnimationId": "basic_slash",
     "IsAnimationCentralized": false
   },
   {
@@ -342,9 +312,7 @@
       "DamageRecoil": "30"
     },
     "Tags": [ "Fire", "Recoil" ],
-    "AnimationSpriteSheet": "basic_impact",
-    "AnimationSpeed": 1.0,
-    "DamageFrameIndex": 2,
+    "AnimationId": "basic_impact",
     "IsAnimationCentralized": false
   },
   {
@@ -366,9 +334,7 @@
       "InflictStatusFrostbite": "30"
     },
     "Tags": [ "Water", "Status" ],
-    "AnimationSpriteSheet": "basic_orb_pulse_2",
-    "AnimationSpeed": 1.0,
-    "DamageFrameIndex": 2,
+    "AnimationId": "basic_orb_pulse_2",
     "IsAnimationCentralized": false
   },
   {
@@ -389,9 +355,7 @@
       "Protect": ""
     },
     "Tags": [ "Defense", "Priority" ],
-    "AnimationSpriteSheet": "basic_orb_pulse_2",
-    "AnimationSpeed": 2.0,
-    "DamageFrameIndex": 2,
+    "AnimationId": "basic_orb_pulse_2",
     "IsAnimationCentralized": false
   },
   {
@@ -413,9 +377,7 @@
       "Disengage": ""
     },
     "Tags": [ "Blight", "Utility" ],
-    "AnimationSpriteSheet": "basic_orb_pulse_2",
-    "AnimationSpeed": 1.0,
-    "DamageFrameIndex": 2,
+    "AnimationId": "basic_orb_pulse_2",
     "IsAnimationCentralized": false
   },
   {
@@ -436,9 +398,7 @@
       "Disengage": ""
     },
     "Tags": [ "Utility" ],
-    "AnimationSpriteSheet": "basic_impact_3",
-    "AnimationSpeed": 1.0,
-    "DamageFrameIndex": 1,
+    "AnimationId": "basic_impact_3",
     "IsAnimationCentralized": false
   },
   {
@@ -459,9 +419,7 @@
       "Disengage": ""
     },
     "Tags": [ "Divine", "Utility" ],
-    "AnimationSpriteSheet": "basic_orb_pulse_2",
-    "AnimationSpeed": 1.5,
-    "DamageFrameIndex": 2,
+    "AnimationId": "basic_orb_pulse_2",
     "IsAnimationCentralized": false
   },
   {
@@ -482,15 +440,13 @@
       "InflictStatChange": "Agility,-1"
     },
     "Tags": [ "Divine", "AoE", "Debuff" ],
-    "AnimationSpriteSheet": "basic_orb_pulse_2",
-    "AnimationSpeed": 1.5,
-    "DamageFrameIndex": 2,
+    "AnimationId": "basic_orb_pulse_2",
     "IsAnimationCentralized": false
   },
   {
     "MoveID": "22",
     "MoveName": "Goaded Pummel",
-    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]STRIKES[/] {IsTargetProperNoun}[cSlot]{target}[/] WITH [cAction]ABANDON[/].",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]STRIKES[/] {IsTargetProperNoun}[cSlot]{target}[/].",
     "Description": "Massive damage but lowers user's Tenacity",
     "Flavor": "An all-out attack abandoning defense.",
     "Power": 120,
@@ -505,9 +461,7 @@
       "StatChange": "Tenacity,-1"
     },
     "Tags": [ "HighPower", "Debuff" ],
-    "AnimationSpriteSheet": "basic_impact",
-    "AnimationSpeed": 1.0,
-    "DamageFrameIndex": 2,
+    "AnimationId": "basic_impact",
     "IsAnimationCentralized": false
   },
   {
@@ -528,9 +482,7 @@
       "StatChange": "Intelligence,2"
     },
     "Tags": [ "Buff" ],
-    "AnimationSpriteSheet": "basic_orb_pulse_2",
-    "AnimationSpeed": 1.0,
-    "DamageFrameIndex": 2,
+    "AnimationId": "basic_orb_pulse_2",
     "IsAnimationCentralized": false
   },
   {
@@ -548,9 +500,7 @@
     "Accuracy": 100,
     "Priority": 0,
     "Tags": [ "Nature", "AoE" ],
-    "AnimationSpriteSheet": "basic_impact",
-    "AnimationSpeed": 0.8,
-    "DamageFrameIndex": 2,
+    "AnimationId": "basic_impact",
     "IsAnimationCentralized": true
   },
   {
@@ -572,9 +522,7 @@
       "RandomStatChange": "2,2"
     },
     "Tags": [ "Buff", "Debuff", "Blight" ],
-    "AnimationSpriteSheet": "basic_orb_pulse_2",
-    "AnimationSpeed": 1.0,
-    "DamageFrameIndex": 2,
+    "AnimationId": "basic_orb_pulse_2",
     "IsAnimationCentralized": false
   },
   {
@@ -595,9 +543,7 @@
       "Counter": ""
     },
     "Tags": [ "Priority", "Control" ],
-    "AnimationSpriteSheet": "wind_tornado_2",
-    "AnimationSpeed": 2.0,
-    "DamageFrameIndex": 0,
+    "AnimationId": "wind_tornado_2",
     "IsAnimationCentralized": false
   },
   {
@@ -618,9 +564,7 @@
       "ShieldBreaker": "0.5,false"
     },
     "Tags": [ "Neutral", "Breaker" ],
-    "AnimationSpriteSheet": "basic_impact",
-    "AnimationSpeed": 1.0,
-    "DamageFrameIndex": 2,
+    "AnimationId": "basic_impact",
     "IsAnimationCentralized": false
   },
   {
@@ -641,9 +585,7 @@
       "ShieldBreaker": "1.0,true"
     },
     "Tags": [ "Neutral", "Breaker", "Priority" ],
-    "AnimationSpriteSheet": "basic_explosion",
-    "AnimationSpeed": 1.5,
-    "DamageFrameIndex": 2,
+    "AnimationId": "basic_explosion",
     "IsAnimationCentralized": false
   },
   {
@@ -664,9 +606,7 @@
       "Execute": "50,3.0"
     },
     "Tags": [ "Blight", "Execution" ],
-    "AnimationSpriteSheet": "void_slash",
-    "AnimationSpeed": 1.5,
-    "DamageFrameIndex": 2,
+    "AnimationId": "void_slash",
     "IsAnimationCentralized": false
   },
   {
@@ -687,9 +627,7 @@
       "Execute": "50,-99"
     },
     "Tags": [ "Neutral", "Execution" ],
-    "AnimationSpriteSheet": "basic_slash",
-    "AnimationSpeed": 1.5,
-    "DamageFrameIndex": 2,
+    "AnimationId": "basic_slash",
     "IsAnimationCentralized": false
   },
   {
@@ -710,9 +648,7 @@
       "StatusedTargetDamage": "100"
     },
     "Tags": [ "Arcane", "Status" ],
-    "AnimationSpriteSheet": "basic_orb_pulse_2",
-    "AnimationSpeed": 1.0,
-    "DamageFrameIndex": 2,
+    "AnimationId": "basic_orb_pulse_2",
     "IsAnimationCentralized": false
   },
   {
@@ -733,9 +669,7 @@
       "ApplyStatus": "Empowered,100,1"
     },
     "Tags": [ "Divine", "Buff", "Priority" ],
-    "AnimationSpriteSheet": "basic_orb_pulse_2",
-    "AnimationSpeed": 1.5,
-    "DamageFrameIndex": 2,
+    "AnimationId": "basic_orb_pulse_2",
     "IsAnimationCentralized": false
   },
   {
@@ -756,9 +690,7 @@
       "CleanseStatus": ""
     },
     "Tags": [ "Water", "Support", "Utility" ],
-    "AnimationSpriteSheet": "water_bubble_pop",
-    "AnimationSpeed": 1.0,
-    "DamageFrameIndex": 2,
+    "AnimationId": "water_bubble_pop",
     "IsAnimationCentralized": false
   },
   {
@@ -777,9 +709,7 @@
     "Priority": 0,
     "Effects": {},
     "Tags": [ "Arcane" ],
-    "AnimationSpriteSheet": "arcane_blue_flame",
-    "AnimationSpeed": 1.0,
-    "DamageFrameIndex": 2,
+    "AnimationId": "arcane_blue_flame",
     "IsAnimationCentralized": false
   },
   {
@@ -798,9 +728,7 @@
     "Priority": 0,
     "Effects": {},
     "Tags": [ "Arcane", "AoE", "HighPower" ],
-    "AnimationSpriteSheet": "arcane_blue_flame",
-    "AnimationSpeed": 1.0,
-    "DamageFrameIndex": 2,
+    "AnimationId": "arcane_blue_flame",
     "IsAnimationCentralized": false
   },
   {
@@ -821,9 +749,7 @@
       "Lifesteal": "50"
     },
     "Tags": [ "Nature", "Lifesteal", "Healing" ],
-    "AnimationSpriteSheet": "basic_orb_pulse_2",
-    "AnimationSpeed": 1.0,
-    "DamageFrameIndex": 2,
+    "AnimationId": "basic_orb_pulse_2",
     "IsAnimationCentralized": false
   },
   {
@@ -844,9 +770,7 @@
       "Lifesteal": "75"
     },
     "Tags": [ "Blight", "Lifesteal", "Healing", "Contact" ],
-    "AnimationSpriteSheet": "basic_bite",
-    "AnimationSpeed": 2.0,
-    "DamageFrameIndex": 4,
+    "AnimationId": "basic_bite",
     "IsAnimationCentralized": false
   },
   {
@@ -867,9 +791,7 @@
       "ApplyStatus": "TargetMe,100,1"
     },
     "Tags": [ "Defense", "Support", "Priority" ],
-    "AnimationSpriteSheet": "basic_orb_pulse_2",
-    "AnimationSpeed": 1.0,
-    "DamageFrameIndex": 2,
+    "AnimationId": "basic_orb_pulse_2",
     "IsAnimationCentralized": false
   },
   {
@@ -890,9 +812,7 @@
       "InflictStatChange": "Agility,-1"
     },
     "Tags": [ "Nature", "Debuff", "AoE" ],
-    "AnimationSpriteSheet": "basic_orb_pulse_2",
-    "AnimationSpeed": 1.0,
-    "DamageFrameIndex": 2,
+    "AnimationId": "basic_orb_pulse_2",
     "IsAnimationCentralized": false
   },
   {
@@ -913,9 +833,7 @@
       "ApplyStatus": "Silence,100,3"
     },
     "Tags": [ "Control", "Debuff" ],
-    "AnimationSpriteSheet": "basic_orb_pulse_2",
-    "AnimationSpeed": 1.0,
-    "DamageFrameIndex": 2,
+    "AnimationId": "basic_orb_pulse_2",
     "IsAnimationCentralized": false
   },
   {
@@ -936,9 +854,7 @@
       "ApplyStatus": "Provoked,100,3"
     },
     "Tags": [ "Control", "Debuff" ],
-    "AnimationSpriteSheet": "basic_orb_pulse_2",
-    "AnimationSpeed": 1.0,
-    "DamageFrameIndex": 2,
+    "AnimationId": "basic_orb_pulse_2",
     "IsAnimationCentralized": false
   },
   {
@@ -959,9 +875,7 @@
       "ConditionalCounter": ""
     },
     "Tags": [ "Priority", "Counter" ],
-    "AnimationSpriteSheet": "basic_slash",
-    "AnimationSpeed": 2.0,
-    "DamageFrameIndex": 0,
+    "AnimationId": "basic_slash",
     "IsAnimationCentralized": false
   },
   {
@@ -982,9 +896,7 @@
       "PercentageDamage": "50"
     },
     "Tags": [ "Nature", "Gravity", "FixedDamage" ],
-    "AnimationSpriteSheet": "basic_impact",
-    "AnimationSpeed": 0.8,
-    "DamageFrameIndex": 2,
+    "AnimationId": "basic_impact",
     "IsAnimationCentralized": false
   },
   {
@@ -1005,9 +917,7 @@
       "MultiHit": "2,7"
     },
     "Tags": [ "MultiHit", "Contact" ],
-    "AnimationSpriteSheet": "basic_bite",
-    "AnimationSpeed": 2.5,
-    "DamageFrameIndex": 4,
+    "AnimationId": "basic_bite",
     "IsAnimationCentralized": false
   }
 ]

@@ -588,11 +588,15 @@ namespace ProjectVagabond.Battle
                 _pendingImpact = new PendingImpactData { Action = action, Targets = targetsForThisHit, Results = damageResultsForThisHit };
 
                 float timeToImpact = 0.15f;
-                if (!string.IsNullOrEmpty(action.ChosenMove.AnimationSpriteSheet))
+                AnimationDefinition animDef = null;
+
+                if (!string.IsNullOrEmpty(action.ChosenMove.AnimationId) &&
+                    BattleDataCache.Animations.TryGetValue(action.ChosenMove.AnimationId, out animDef))
                 {
-                    float frameDuration = (1f / 12f) / action.ChosenMove.AnimationSpeed;
-                    timeToImpact = action.ChosenMove.DamageFrameIndex * frameDuration;
+                    float frameDuration = 1f / Math.Max(1f, animDef.FPS);
+                    timeToImpact = animDef.ImpactFrameIndex * frameDuration;
                 }
+
                 if (timeToImpact < 0.05f) timeToImpact = 0.05f;
 
                 _animationManager.ReleaseAttackCharge(action.Actor.CombatantID, timeToImpact);
@@ -607,7 +611,7 @@ namespace ProjectVagabond.Battle
 
                 bool animationTriggered = false;
 
-                if (normalTargets.Any() && !string.IsNullOrEmpty(action.ChosenMove.AnimationSpriteSheet))
+                if (normalTargets.Any() && animDef != null)
                 {
                     // Set state BEFORE publishing, in case the animation finishes synchronously
                     _actionPendingAnimation = action;
@@ -620,10 +624,8 @@ namespace ProjectVagabond.Battle
                 if (protectedTargets.Any())
                 {
                     var protectMove = action.ChosenMove.Clone();
-                    protectMove.AnimationSpriteSheet = "basic_protect";
+                    protectMove.AnimationId = "basic_protect";
                     protectMove.IsAnimationCentralized = false;
-                    protectMove.AnimationSpeed = _global.ProtectAnimationSpeed;
-                    protectMove.DamageFrameIndex = _global.ProtectDamageFrameIndex;
 
                     // Set state BEFORE publishing
                     if (_actionPendingAnimation == null)

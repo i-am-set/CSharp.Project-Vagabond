@@ -36,24 +36,25 @@ namespace ProjectVagabond.Battle.UI
             _content = ServiceLocator.Get<Core>().Content;
         }
 
-        private MoveAnimation? GetAnimationData(string animationName)
+        private MoveAnimation? GetAnimationData(AnimationDefinition def)
         {
-            if (_animationCache.TryGetValue(animationName, out var cachedAnimation))
+            if (_animationCache.TryGetValue(def.Id, out var cachedAnimation))
             {
                 return cachedAnimation;
             }
 
             try
             {
-                var texture = _content.Load<Texture2D>($"Sprites/MoveAnimationSpriteSheets/{animationName}");
-                var animationData = new MoveAnimation(texture);
-                _animationCache[animationName] = animationData;
+                var texture = _content.Load<Texture2D>(def.TexturePath);
+                // Pass the explicit dimensions from the JSON definition
+                var animationData = new MoveAnimation(texture, def.FrameWidth, def.FrameHeight);
+                _animationCache[def.Id] = animationData;
                 return animationData;
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[MoveAnimationManager] ERROR: Could not load animation sprite sheet '{animationName}'. {ex.Message}");
-                _animationCache[animationName] = null;
+                Debug.WriteLine($"[MoveAnimationManager] ERROR: Could not load animation texture '{def.TexturePath}' for ID '{def.Id}'. {ex.Message}");
+                _animationCache[def.Id] = null;
                 return null;
             }
         }
@@ -65,29 +66,33 @@ namespace ProjectVagabond.Battle.UI
         {
             _impactSignalSentForCurrentBatch = false;
 
-            // Failsafe 1: No animation defined
-            if (string.IsNullOrEmpty(move.AnimationSpriteSheet))
+            // Failsafe 1: No animation ID defined
+            if (string.IsNullOrEmpty(move.AnimationId))
             {
-                Debug.WriteLine($"[MoveAnimationManager] FAILSAFE: Move '{move.MoveName}' has no AnimationSpriteSheet defined. Firing impact immediately.");
+                Debug.WriteLine($"[MoveAnimationManager] FAILSAFE: Move '{move.MoveName}' has no AnimationId defined. Firing impact immediately.");
                 EventBus.Publish(new GameEvents.MoveImpactOccurred { Move = move });
                 EventBus.Publish(new GameEvents.MoveAnimationCompleted());
                 return;
             }
 
-            var animationData = GetAnimationData(move.AnimationSpriteSheet);
+            // Lookup Definition
+            if (!BattleDataCache.Animations.TryGetValue(move.AnimationId, out var animDef))
+            {
+                Debug.WriteLine($"[MoveAnimationManager] FAILSAFE: AnimationId '{move.AnimationId}' not found in BattleDataCache. Firing impact immediately.");
+                EventBus.Publish(new GameEvents.MoveImpactOccurred { Move = move });
+                EventBus.Publish(new GameEvents.MoveAnimationCompleted());
+                return;
+            }
 
-            // Failsafe 2: Animation load failed (and debug fallback failed)
+            var animationData = GetAnimationData(animDef);
+
+            // Failsafe 2: Animation load failed
             if (animationData == null)
             {
-                Debug.WriteLine($"[MoveAnimationManager] FAILSAFE: Could not load texture for move '{move.MoveName}' (Sheet: '{move.AnimationSpriteSheet}'). Firing impact immediately.");
-
-                animationData = GetAnimationData("debug_null_animation");
-                if (animationData == null)
-                {
-                    EventBus.Publish(new GameEvents.MoveImpactOccurred { Move = move });
-                    EventBus.Publish(new GameEvents.MoveAnimationCompleted());
-                    return;
-                }
+                Debug.WriteLine($"[MoveAnimationManager] FAILSAFE: Could not load texture for animation '{move.AnimationId}'. Firing impact immediately.");
+                EventBus.Publish(new GameEvents.MoveImpactOccurred { Move = move });
+                EventBus.Publish(new GameEvents.MoveAnimationCompleted());
+                return;
             }
 
             // Failsafe 3: No targets and not centralized (would result in 0 instances)
@@ -99,10 +104,13 @@ namespace ProjectVagabond.Battle.UI
                 return;
             }
 
+            float secondsPerFrame = 1.0f / Math.Max(1f, animDef.FPS);
+
             if (move.IsAnimationCentralized)
             {
-                var position = new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f);
-                var instance = new MoveAnimationInstance(animationData, position, move.AnimationSpeed, move.DamageFrameIndex);
+                Func<Vector2> positionProvider = () => new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f);
+
+                var instance = new MoveAnimationInstance(animationData, positionProvider, secondsPerFrame, animDef.ImpactFrameIndex);
                 instance.OnImpactFrameReached += () => HandleImpactTrigger(move);
                 _activeAnimations.Add(instance);
             }
@@ -110,18 +118,22 @@ namespace ProjectVagabond.Battle.UI
             {
                 foreach (var target in targets)
                 {
-                    var position = renderer.GetCombatantVisualCenterPosition(target, ServiceLocator.Get<BattleManager>().AllCombatants);
-
-                    // Apply Graze Offset if applicable
+                    // Calculate Graze Offset once per instance
+                    float grazeOffsetX = 0f;
                     if (grazeStatus != null && grazeStatus.TryGetValue(target, out bool isGraze) && isGraze)
                     {
                         // Offset between 16 and 32 pixels, left or right
                         float offset = (float)_random.Next(16, 33);
                         if (_random.Next(2) == 0) offset *= -1;
-                        position.X += offset;
+                        grazeOffsetX = offset;
                     }
+                    Vector2 finalOffset = new Vector2(grazeOffsetX, 0);
 
-                    var instance = new MoveAnimationInstance(animationData, position, move.AnimationSpeed, move.DamageFrameIndex);
+                    // Create a provider that fetches the current position every frame + the static graze offset
+                    Func<Vector2> positionProvider = () =>
+                        renderer.GetCombatantVisualCenterPosition(target, ServiceLocator.Get<BattleManager>().AllCombatants) + finalOffset;
+
+                    var instance = new MoveAnimationInstance(animationData, positionProvider, secondsPerFrame, animDef.ImpactFrameIndex);
                     instance.OnImpactFrameReached += () => HandleImpactTrigger(move);
                     _activeAnimations.Add(instance);
                 }

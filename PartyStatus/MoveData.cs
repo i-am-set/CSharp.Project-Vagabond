@@ -90,20 +90,9 @@ namespace ProjectVagabond.Battle
         public TagContainer Tags { get; private set; } = new TagContainer();
 
         /// <summary>
-        /// The filename of the animation sprite sheet in 'Content/Sprites/MoveAnimationSpriteSheets/'.
+        /// The ID of the animation definition to play (references Animations.json).
         /// </summary>
-        public string? AnimationSpriteSheet { get; set; }
-
-        /// <summary>
-        /// A multiplier for the animation's playback speed. 1.0 is default (12 FPS).
-        /// </summary>
-        public float AnimationSpeed { get; set; } = 1.0f;
-
-        /// <summary>
-        /// The 0-indexed frame number at which damage and haptics should be applied.
-        /// Default is 2 (the 3rd frame).
-        /// </summary>
-        public int DamageFrameIndex { get; set; } = 2;
+        public string AnimationId { get; set; } = "";
 
         /// <summary>
         /// If true, one animation plays in the center of the screen. If false, an animation plays on each target.

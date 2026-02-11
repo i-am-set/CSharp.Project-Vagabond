@@ -1,0 +1,138 @@
+[
+  {
+    "Id": "basic_impact",
+    "TexturePath": "Sprites/MoveAnimationSpriteSheets/basic_impact",
+    "FrameWidth": 128,
+    "FrameHeight": 128,
+    "FPS": 12.0,
+    "ImpactFrameIndex": 2
+  },
+  {
+    "Id": "basic_bite",
+    "TexturePath": "Sprites/MoveAnimationSpriteSheets/basic_bite",
+    "FrameWidth": 32,
+    "FrameHeight": 32,
+    "FPS": 12.0,
+    "ImpactFrameIndex": 4
+  },
+  {
+    "Id": "basic_claw",
+    "TexturePath": "Sprites/MoveAnimationSpriteSheets/basic_claw",
+    "FrameWidth": 128,
+    "FrameHeight": 128,
+    "FPS": 19.0,
+    "ImpactFrameIndex": 2
+  },
+  {
+    "Id": "basic_swipe",
+    "TexturePath": "Sprites/MoveAnimationSpriteSheets/basic_swipe",
+    "FrameWidth": 128,
+    "FrameHeight": 128,
+    "FPS": 24.0,
+    "ImpactFrameIndex": 2
+  },
+  {
+    "Id": "basic_orb_pulse_2",
+    "TexturePath": "Sprites/MoveAnimationSpriteSheets/basic_orb_pulse_2",
+    "FrameWidth": 128,
+    "FrameHeight": 128,
+    "FPS": 12.0,
+    "ImpactFrameIndex": 2
+  },
+  {
+    "Id": "fire_flame_ground_large",
+    "TexturePath": "Sprites/MoveAnimationSpriteSheets/fire_flame_ground_large",
+    "FrameWidth": 64,
+    "FrameHeight": 64,
+    "FPS": 12.0,
+    "ImpactFrameIndex": 3
+  },
+  {
+    "Id": "fire_impact",
+    "TexturePath": "Sprites/MoveAnimationSpriteSheets/fire_impact",
+    "FrameWidth": 128,
+    "FrameHeight": 128,
+    "FPS": 12.0,
+    "ImpactFrameIndex": 10
+  },
+  {
+    "Id": "basic_slash",
+    "TexturePath": "Sprites/MoveAnimationSpriteSheets/basic_slash",
+    "FrameWidth": 128,
+    "FrameHeight": 128,
+    "FPS": 18.0,
+    "ImpactFrameIndex": 2
+  },
+  {
+    "Id": "wind_tornado_2",
+    "TexturePath": "Sprites/MoveAnimationSpriteSheets/wind_tornado_2",
+    "FrameWidth": 128,
+    "FrameHeight": 128,
+    "FPS": 24.0,
+    "ImpactFrameIndex": 0
+  },
+  {
+    "Id": "basic_explosion",
+    "TexturePath": "Sprites/MoveAnimationSpriteSheets/basic_explosion",
+    "FrameWidth": 128,
+    "FrameHeight": 128,
+    "FPS": 18.0,
+    "ImpactFrameIndex": 2
+  },
+  {
+    "Id": "void_slash",
+    "TexturePath": "Sprites/MoveAnimationSpriteSheets/void_slash",
+    "FrameWidth": 128,
+    "FrameHeight": 128,
+    "FPS": 18.0,
+    "ImpactFrameIndex": 2
+  },
+  {
+    "Id": "water_bubble_pop",
+    "TexturePath": "Sprites/MoveAnimationSpriteSheets/water_bubble_pop",
+    "FrameWidth": 128,
+    "FrameHeight": 128,
+    "FPS": 12.0,
+    "ImpactFrameIndex": 2
+  },
+  {
+    "Id": "arcane_blue_flame",
+    "TexturePath": "Sprites/MoveAnimationSpriteSheets/arcane_blue_flame",
+    "FrameWidth": 128,
+    "FrameHeight": 128,
+    "FPS": 12.0,
+    "ImpactFrameIndex": 2
+  },
+  {
+    "Id": "basic_impact_3",
+    "TexturePath": "Sprites/MoveAnimationSpriteSheets/basic_impact_3",
+    "FrameWidth": 128,
+    "FrameHeight": 128,
+    "FPS": 12.0,
+    "ImpactFrameIndex": 1
+  },
+  {
+    "Id": "stall",
+    "TexturePath": "Sprites/MoveAnimationSpriteSheets/stall",
+    "FrameWidth": 128,
+    "FrameHeight": 128,
+    "FPS": 2.4,
+    "ImpactFrameIndex": 2
+  },
+  {
+    "Id": "basic_protect",
+    "TexturePath": "Sprites/MoveAnimationSpriteSheets/basic_protect",
+    "FrameWidth": 128,
+    "FrameHeight": 128,
+    "FPS": 12.0,
+    "ImpactFrameIndex": 2
+  },
+  {
+    "Id": "debug_null_animation",
+    "TexturePath": "Sprites/MoveAnimationSpriteSheets/debug_null_animation",
+    "FrameWidth": 128,
+    "FrameHeight": 128,
+    "FPS": 12.0,
+    "ImpactFrameIndex": 0
+  }
+]

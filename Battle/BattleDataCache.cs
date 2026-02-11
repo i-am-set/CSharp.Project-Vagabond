@@ -21,6 +21,7 @@ namespace ProjectVagabond.Battle
     {
         public static Dictionary<string, MoveData> Moves { get; private set; }
         public static Dictionary<string, PartyMemberData> PartyMembers { get; private set; }
+        public static Dictionary<string, AnimationDefinition> Animations { get; private set; }
 
         public static void LoadData(ContentManager content)
         {
@@ -31,6 +32,20 @@ namespace ProjectVagabond.Battle
                 AllowTrailingCommas = true,
                 Converters = { new JsonStringEnumConverter() }
             };
+
+            // --- ANIMATIONS ---
+            string animPath = Path.Combine(content.RootDirectory, "Data", "Animations.json");
+            if (File.Exists(animPath))
+            {
+                string animJson = File.ReadAllText(animPath);
+                var animList = JsonSerializer.Deserialize<List<AnimationDefinition>>(animJson, jsonOptions);
+                Animations = animList.ToDictionary(a => a.Id, a => a, StringComparer.OrdinalIgnoreCase);
+            }
+            else
+            {
+                Animations = new Dictionary<string, AnimationDefinition>();
+                Debug.WriteLine("[BattleDataCache] WARNING: Animations.json not found.");
+            }
 
             // --- MOVES ---
             string movesPath = Path.Combine(content.RootDirectory, "Data", "Moves.json");
