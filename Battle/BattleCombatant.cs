@@ -94,7 +94,6 @@ namespace ProjectVagabond.Battle
             {
                 { OffensiveStatType.Strength, 0 },
                 { OffensiveStatType.Intelligence, 0 },
-                { OffensiveStatType.Tenacity, 0 },
                 { OffensiveStatType.Agility, 0 }
             };
 
@@ -159,12 +158,13 @@ namespace ProjectVagabond.Battle
 
         public (bool success, string message) ModifyStatStage(OffensiveStatType stat, int amount)
         {
-            int currentStage = StatStages[stat];
-            if (amount > 0 && currentStage >= 6) return (false, $"{Name}'s {stat} won't go any higher!");
-            if (amount < 0 && currentStage <= -6) return (false, $"{Name}'s {stat} won't go any lower!");
+            if (stat == OffensiveStatType.Tenacity) return (false, "Tenacity cannot be modified!");
 
-            int newStage = Math.Clamp(currentStage + amount, -6, 6);
-            StatStages[stat] = newStage;
+            int currentStage = StatStages[stat];
+            if (amount > 0 && currentStage >= 2) return (false, $"{Name}'s {stat} won't go higher!");
+            if (amount < 0 && currentStage <= -2) return (false, $"{Name}'s {stat} won't go lower!");
+
+            StatStages[stat] = Math.Clamp(currentStage + amount, -2, 2);
 
             string changeText = amount > 0 ? (amount > 1 ? "sharply rose" : "rose") : (amount < -1 ? "harshly fell" : "fell");
             return (true, $"{Name}'s {stat} {changeText}!");
@@ -196,8 +196,8 @@ namespace ProjectVagabond.Battle
             _statContext.Actor = this;
             var evt = new CalculateStatEvent(this, OffensiveStatType.Tenacity, Stats.Tenacity);
             NotifyAbilities(evt, _statContext);
-            float stat = evt.FinalValue * BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Tenacity]];
-            return (int)Math.Round(stat);
+            //float stat = evt.FinalValue * BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Tenacity]];
+            return (int)Math.Round(evt.FinalValue);
         }
 
         public int GetEffectiveAgility()

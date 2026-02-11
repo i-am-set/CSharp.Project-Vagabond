@@ -38,19 +38,11 @@ namespace ProjectVagabond.Battle
         /// </summary>
         public static readonly Dictionary<int, float> StatStageMultipliers = new Dictionary<int, float>
         {
-            { 6, 4.0f },    // 8/2
-            { 5, 3.5f },    // 7/2
-            { 4, 3.0f },    // 6/2
-            { 3, 2.5f },    // 5/2
-            { 2, 2.0f },    // 4/2
-            { 1, 1.5f },    // 3/2
-            { 0, 1.0f },    // 2/2
-            { -1, 2f/3f },  // approx 0.66f
-            { -2, 2f/4f },  // 0.5f
-            { -3, 2f/5f },  // 0.4f
-            { -4, 2f/6f },  // approx 0.33f
-            { -5, 2f/7f },  // approx 0.28f
-            { -6, 2f/8f }   // 0.25f
+            { 2, 2.0f },    // Max Boost
+            { 1, 1.5f },    // Stage 1
+            { 0, 1.0f },    // Neutral
+            { -1, 0.67f },  // ~1/1.5
+            { -2, 0.5f }    // 1/2.0
         };
     }
 }

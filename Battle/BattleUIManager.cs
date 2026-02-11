@@ -41,7 +41,6 @@ namespace ProjectVagabond.Battle.UI
         private HapticsManager _hapticsManager => ServiceLocator.Get<HapticsManager>();
 
         public BattleUIState UIState { get; private set; } = BattleUIState.Default;
-        public BattleCombatant? StatInfoTarget { get; private set; }
 
         public int ActiveTargetingSlot { get; private set; } = -1;
         public MoveData? MoveForTargeting { get; private set; }
@@ -116,7 +115,6 @@ namespace ProjectVagabond.Battle.UI
             HoveredCombatantFromUI = null;
             CombatantHoveredViaSprite = null;
             IntroOffset = Vector2.Zero;
-            StatInfoTarget = null;
         }
 
         public void ShowActionMenu(BattleCombatant player, List<BattleCombatant> allCombatants)
@@ -192,14 +190,6 @@ namespace ProjectVagabond.Battle.UI
             }
 
             UpdateHoverHighlights(gameTime, currentActor);
-
-            if (StatInfoTarget != null)
-            {
-                if (CombatantHoveredViaSprite != StatInfoTarget)
-                {
-                    StatInfoTarget = null;
-                }
-            }
 
             // --- Input Consumption Logic ---
             // FIX: Use static Core.TransformMouse instead of instance method
@@ -296,17 +286,6 @@ namespace ProjectVagabond.Battle.UI
                     {
                         _hapticsManager.TriggerShake(2f, 0.1f);
                     }
-                }
-            }
-            else if (UIState == BattleUIState.Default)
-            {
-                if (StatInfoTarget == target)
-                {
-                    StatInfoTarget = null;
-                }
-                else
-                {
-                    StatInfoTarget = target;
                 }
             }
         }

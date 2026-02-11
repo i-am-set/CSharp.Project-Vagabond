@@ -295,8 +295,6 @@ namespace ProjectVagabond.Battle.UI
             var enemies = allCombatants.Where(c => !c.IsPlayerControlled && c.IsActiveOnField).ToList();
             var players = allCombatants.Where(c => c.IsPlayerControlled && c.IsActiveOnField).ToList();
 
-            UpdateStatTooltipState(hoveredCombatant, uiManager);
-
             var (selectableTargets, activeTargetType) = ResolveSelectableTargets(allCombatants, currentActor, uiManager);
             var silhouetteColors = ResolveSilhouetteColors(allCombatants, currentActor, selectableTargets, activeTargetType, uiManager, hoveredCombatant);
             bool shouldGrayOut = uiManager.UIState == BattleUIState.Targeting || (uiManager.HoveredMove != null && uiManager.HoveredMove.Target != TargetType.None);
@@ -596,22 +594,6 @@ namespace ProjectVagabond.Battle.UI
 
         public void DrawOverlay(SpriteBatch spriteBatch, BitmapFont font)
         {
-        }
-
-        private void UpdateStatTooltipState(BattleCombatant hoveredCombatant, BattleUIManager uiManager)
-        {
-            bool isDefaultUI = uiManager.UIState == BattleUIState.Default;
-
-            if (isDefaultUI && uiManager.StatInfoTarget != null)
-            {
-                _statTooltipCombatantID = uiManager.StatInfoTarget.CombatantID;
-                _statTooltipAlpha = 1.0f;
-            }
-            else
-            {
-                _statTooltipAlpha = 0.0f;
-                _statTooltipCombatantID = null;
-            }
         }
 
         private (HashSet<BattleCombatant>, TargetType?) ResolveSelectableTargets(IEnumerable<BattleCombatant> allCombatants, BattleCombatant currentActor, BattleUIManager uiManager)
@@ -971,7 +953,6 @@ namespace ProjectVagabond.Battle.UI
                     Color? assignedColor = silhouetteColors.ContainsKey(enemy.CombatantID) ? silhouetteColors[enemy.CombatantID] : null;
                     bool isSelectable = selectable.Contains(enemy);
 
-                    bool isStatTarget = (uiManager.StatInfoTarget == enemy);
                     bool isHovered = (hoveredCombatant == enemy);
                     bool isGroupHovered = assignedColor.HasValue && hoveredGroupColor.HasValue && assignedColor.Value == hoveredGroupColor.Value;
 
@@ -1006,13 +987,7 @@ namespace ProjectVagabond.Battle.UI
                         outlineColor = _global.Palette_Sun;
                     }
 
-                    if (isStatTarget)
-                    {
-                        isSilhouetted = true;
-                        silhouetteColor = _global.Palette_DarkShadow;
-                        outlineColor = Color.Transparent;
-                    }
-                    else if (isHovered && !shouldGrayOut && !assignedColor.HasValue)
+                    if (isHovered && !shouldGrayOut && !assignedColor.HasValue)
                     {
                         isSilhouetted = false;
                         outlineColor = _global.HoveredCombatantOutline;
@@ -1256,7 +1231,7 @@ namespace ProjectVagabond.Battle.UI
                                 AnalyzeMoveImpact(uiManager.HoveredMove, currentActor, enemy, out bool affectsHP);
                                 showHP = affectsHP;
                             }
-                            else if ((hoveredCombatant == enemy) || (uiManager.HoveredCombatantFromUI == enemy) || selectable.Contains(enemy) || isStatTarget)
+                            else if ((hoveredCombatant == enemy) || (uiManager.HoveredCombatantFromUI == enemy) || selectable.Contains(enemy))
                             {
                                 showHP = true;
                                 showMana = true;
@@ -1311,7 +1286,6 @@ namespace ProjectVagabond.Battle.UI
                 Color? assignedColor = silhouetteColors.ContainsKey(player.CombatantID) ? silhouetteColors[player.CombatantID] : null;
                 bool isSelectable = selectable.Contains(player);
 
-                bool isStatTarget = (uiManager.StatInfoTarget == player);
                 bool isHovered = (hoveredCombatant == player);
                 bool isGroupHovered = assignedColor.HasValue && hoveredGroupColor.HasValue && assignedColor.Value == hoveredGroupColor.Value;
 
@@ -1346,13 +1320,7 @@ namespace ProjectVagabond.Battle.UI
                     outlineColor = _global.Palette_Sun;
                 }
 
-                if (isStatTarget)
-                {
-                    isSilhouetted = true;
-                    silhouetteColor = _global.Palette_DarkShadow;
-                    outlineColor = Color.Transparent;
-                }
-                else if (isHovered && !shouldGrayOut && !assignedColor.HasValue)
+                if (isHovered && !shouldGrayOut && !assignedColor.HasValue)
                 {
                     isSilhouetted = false;
                     outlineColor = _global.HoveredCombatantOutline;
@@ -1479,7 +1447,7 @@ namespace ProjectVagabond.Battle.UI
                         AnalyzeMoveImpact(uiManager.HoveredMove, currentActor, player, out bool affectsHP);
                         showHP = affectsHP;
                     }
-                    else if ((hoveredCombatant == player) || (uiManager.HoveredCombatantFromUI == player) || selectable.Contains(player) || isStatTarget)
+                    else if ((hoveredCombatant == player) || (uiManager.HoveredCombatantFromUI == player) || selectable.Contains(player))
                     {
                         showHP = true;
                         showMana = true;

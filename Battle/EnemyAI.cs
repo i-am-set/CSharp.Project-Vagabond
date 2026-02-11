@@ -179,7 +179,7 @@ namespace ProjectVagabond.Battle
                         {
                             if (isDebuff)
                             {
-                                if (target.StatStages[stat] <= -6) targetScore += PENALTY_REDUNDANT;
+                                if (target.StatStages[stat] <= -2) targetScore += PENALTY_REDUNDANT;
                                 else targetScore += SCORE_DEBUFF_ENEMY;
                             }
                             else targetScore += PENALTY_HARMFUL_TO_ALLY;

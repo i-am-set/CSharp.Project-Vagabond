@@ -561,7 +561,7 @@ namespace ProjectVagabond.UI
             float tagY = cardTopY - visibleHeight + tagOffset;
 
             // Rest of the body (full width)
-            sb.Draw(_pixel, new Vector2(tagX, tagY), null, _global.Palette_Black, 0f, Vector2.Zero, new Vector2(tagWidth, tagHeight - 1), SpriteEffects.None, 0f);
+            sb.Draw(_pixel, new Vector2(tagX, tagY), null, _global.Palette_DarkShadow, 0f, Vector2.Zero, new Vector2(tagWidth, tagHeight - 1), SpriteEffects.None, 0f);
 
             // Draw Number
             string num = displayedNumber.ToString();
