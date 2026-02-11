@@ -10,8 +10,8 @@
     "Tenacity": 3,
     "Agility": 4,
     "BasicMoveId": "4",
-    "CoreMoveId": "11",
-    "AltMoveId": "12",
+    "CoreMoveId": "9",
+    "AltMoveId": "10",
     "PassiveAbilityPool": [
       { "PMPyromancer": "" }
     ]
@@ -27,8 +27,8 @@
     "Tenacity": 3,
     "Agility": 5,
     "BasicMoveId": "4",
-    "CoreMoveId": "2",
-    "AltMoveId": "18",
+    "CoreMoveId": "",
+    "AltMoveId": "",
     "PassiveAbilityPool": [
       { "PMAnnoying": "" }
     ]
@@ -44,7 +44,7 @@
     "Tenacity": 3,
     "Agility": 4,
     "BasicMoveId": "4",
-    "CoreMoveId": "4",
+    "CoreMoveId": "",
     "AltMoveId": "",
     "PassiveAbilityPool": [
       { "PMScrappy": "" }
@@ -61,7 +61,7 @@
     "Tenacity": 2,
     "Agility": 7,
     "BasicMoveId": "4",
-    "CoreMoveId": "4",
+    "CoreMoveId": "",
     "AltMoveId": "",
     "PassiveAbilityPool": [
       { "PMShortTemper": "" }
@@ -78,8 +78,8 @@
     "Tenacity": 5,
     "Agility": 3,
     "BasicMoveId": "4",
-    "CoreMoveId": "42",
-    "AltMoveId": "43",
+    "CoreMoveId": "",
+    "AltMoveId": "",
     "PassiveAbilityPool": [
       { "PMMajestic": "" }
     ],
@@ -98,8 +98,8 @@
     "Tenacity": 5,
     "Agility": 5,
     "BasicMoveId": "4",
-    "CoreMoveId": "38",
-    "AltMoveId": "39",
+    "CoreMoveId": "",
+    "AltMoveId": "",
     "PassiveAbilityPool": [
       { "PMSweetpea": "" }
     ]
@@ -115,7 +115,7 @@
     "Tenacity": 3,
     "Agility": 3,
     "BasicMoveId": "4",
-    "CoreMoveId": "4",
+    "CoreMoveId": "",
     "AltMoveId": "",
     "PassiveAbilityPool": [
       { "PMSkeptic": "" }
@@ -132,7 +132,7 @@
     "Tenacity": 3,
     "Agility": 4,
     "BasicMoveId": "4",
-    "CoreMoveId": "4",
+    "CoreMoveId": "",
     "AltMoveId": "",
     "PassiveAbilityPool": [
       { "PM9Lives": "" }
@@ -149,7 +149,7 @@
     "Tenacity": 3,
     "Agility": 1,
     "BasicMoveId": "4",
-    "CoreMoveId": "4",
+    "CoreMoveId": "",
     "AltMoveId": "",
     "PassiveAbilityPool": [
       { "PMMinutiae": "" }
@@ -166,7 +166,7 @@
     "Tenacity": 4,
     "Agility": 5,
     "BasicMoveId": "4",
-    "CoreMoveId": "4",
+    "CoreMoveId": "",
     "AltMoveId": "",
     "PassiveAbilityPool": []
   },
@@ -181,7 +181,7 @@
     "Tenacity": 4,
     "Agility": 3,
     "BasicMoveId": "4",
-    "CoreMoveId": "4",
+    "CoreMoveId": "",
     "AltMoveId": "",
     "PassiveAbilityPool": [
       { "PMGentleSoul": "" }
@@ -198,7 +198,7 @@
     "Tenacity": 6,
     "Agility": 2,
     "BasicMoveId": "4",
-    "CoreMoveId": "4",
+    "CoreMoveId": "",
     "AltMoveId": "",
     "PassiveAbilityPool": [
       { "PMWellfed": "" }
@@ -215,7 +215,7 @@
     "Tenacity": 4,
     "Agility": 4,
     "BasicMoveId": "4",
-    "CoreMoveId": "4",
+    "CoreMoveId": "",
     "AltMoveId": "",
     "PassiveAbilityPool": [
       { "PMStubborn": "" }
@@ -232,7 +232,7 @@
     "Tenacity": 7,
     "Agility": 1,
     "BasicMoveId": "5",
-    "CoreMoveId": "5",
+    "CoreMoveId": "",
     "AltMoveId": "",
     "PassiveAbilityPool": []
   },
@@ -247,7 +247,7 @@
     "Tenacity": 3,
     "Agility": 5,
     "BasicMoveId": "4",
-    "CoreMoveId": "4",
+    "CoreMoveId": "",
     "AltMoveId": "",
     "PassiveAbilityPool": []
   }

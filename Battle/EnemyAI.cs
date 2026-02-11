@@ -281,32 +281,6 @@ namespace ProjectVagabond.Battle
         {
             int modifier = 0;
 
-            switch (move.MoveID)
-            {
-                case "Counter Spell":
-                    break;
-
-                case "Taze":
-                    if (!actor.HasUsedFirstAttack) modifier += 3;
-                    else modifier += -20;
-                    break;
-
-                case "Explode":
-                    float hpPercent = (float)actor.Stats.CurrentHP / actor.Stats.MaxHP;
-                    if (hpPercent < 0.1f) modifier += 4;
-                    else if (hpPercent < 0.33f) modifier += 2;
-                    if (allies.Count == 0) modifier += -1;
-                    break;
-
-                case "HypeUp:P":
-                    if (target == actor) modifier += -20;
-                    else if (allies.Contains(target))
-                    {
-                        if (target.Stats.Strength > target.Stats.Intelligence) modifier += 3;
-                    }
-                    break;
-            }
-
             return modifier;
         }
 
