@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using ProjectVagabond;
+using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Utils;
@@ -408,7 +409,9 @@ namespace ProjectVagabond.Battle
                     continue;
                 }
 
-                if (combatant.ChargingAction != null)
+                bool isCharging = combatant.ChargingAction != null;
+
+                if (isCharging)
                 {
                     combatant.ChargingAction.TurnsRemaining--;
                     if (combatant.ChargingAction.TurnsRemaining <= 0) { startOfTurnActions.Add(combatant.ChargingAction.Action); combatant.ChargingAction = null; }
@@ -420,6 +423,16 @@ namespace ProjectVagabond.Battle
                     foreach (var ready in readyActions) startOfTurnActions.Add(ready.Action);
                     var remaining = combatant.DelayedActions.Where(d => !readyActions.Contains(d)).ToList();
                     combatant.DelayedActions = new Queue<DelayedAction>(remaining);
+                }
+
+                // --- AI ACTION GENERATION ---
+                if (!combatant.IsPlayerControlled && !isCharging)
+                {
+                    var aiAction = EnemyAI.DetermineBestAction(combatant, _allCombatants);
+                    if (aiAction != null)
+                    {
+                        startOfTurnActions.Add(aiAction);
+                    }
                 }
             }
             _actionQueue.InsertRange(0, startOfTurnActions);
