@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -48,7 +47,7 @@ namespace ProjectVagabond.Progression
         public Vector2 VisualOffset { get; set; } = Vector2.Zero;
 
         private static int _nextId = 0;
-        private const int NODE_SIZE = 16;
+        private const int NODE_SIZE = 32;
         private static readonly Random _random = new Random();
 
         public SplitMapNode(int floor, Vector2 position)

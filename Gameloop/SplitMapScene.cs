@@ -3,6 +3,9 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Particles;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.Transitions;
@@ -42,9 +45,10 @@ namespace ProjectVagabond.Scenes
 
         private SplitMap? _currentMap;
         private int _playerCurrentNodeId;
+        private int _cameraFocusNodeId;
         private readonly PlayerMapIcon _playerIcon;
 
-        private const float PLAYER_MOVE_SPEED = 20f;
+        private const float PLAYER_MOVE_SPEED = 30f;
         private const float CAMERA_LERP_SPEED = 15f;
         private const float POST_EVENT_DELAY = 0.0f;
         private const float PATH_ANIMATION_DURATION = 1.25f;
@@ -213,6 +217,7 @@ namespace ProjectVagabond.Scenes
                 _progressionManager.GenerateNewSplitMap();
                 _currentMap = _progressionManager.CurrentSplitMap;
                 _playerCurrentNodeId = _currentMap?.StartNodeId ?? -1;
+                _cameraFocusNodeId = _playerCurrentNodeId;
                 _nodeForPathReveal = _playerCurrentNodeId;
                 _pathAnimationProgress.Clear();
                 _pathAnimationDurations.Clear();
@@ -233,6 +238,7 @@ namespace ProjectVagabond.Scenes
             else
             {
                 _currentMap = _progressionManager.CurrentSplitMap;
+                _cameraFocusNodeId = _playerCurrentNodeId; 
                 var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
                 if (currentNode != null)
                 {
@@ -390,7 +396,7 @@ namespace ProjectVagabond.Scenes
             // Camera Update
             float cameraDamping = 1.0f - MathF.Exp(-CAMERA_LERP_SPEED * deltaTime);
 
-            if (_currentMap != null && _currentMap.Nodes.TryGetValue(_playerCurrentNodeId, out var pNode))
+            if (_currentMap != null && _currentMap.Nodes.TryGetValue(_cameraFocusNodeId, out var pNode))
             {
                 UpdateCameraTarget(pNode.Position, false);
             }
@@ -621,6 +627,7 @@ namespace ProjectVagabond.Scenes
                 if (currentNode != null)
                 {
                     currentNode.VisualOffset = Vector2.Zero;
+                    _cameraFocusNodeId = _playerCurrentNodeId;
                     UpdateCameraTarget(currentNode.Position, false);
                 }
                 _nodeArrivalScale = Vector2.One;
