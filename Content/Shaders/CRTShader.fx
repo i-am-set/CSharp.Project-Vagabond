@@ -9,8 +9,8 @@
 
 // --- Uniforms ---
 uniform float Time;
-uniform float2 ScreenResolution;  // Physical window size (e.g., 1920x1080)
-uniform float2 VirtualResolution; // Game resolution (e.g., 320x180)
+uniform float2 ScreenResolution;  // Physical window size
+uniform float2 VirtualResolution; // Game resolution
 uniform float Gamma;
 uniform float3 FlashColor;
 uniform float FlashIntensity;
@@ -26,38 +26,38 @@ uniform float Vibrance;
 #define ENABLE_VIGNETTE
 #define ENABLE_CHROMATIC_ABERRATION
 #define ENABLE_NOISE
+#define ENABLE_HALATION
 
 // --- Tuning ---
 
 // Distortion
-static const float CURVATURE = 0.15;        // 0.0 = Flat, 0.15 = Standard CRT, 0.4 = Fish-eye
-static const float ZOOM = 1.02;             // 1.0 = No Zoom, 1.03 = Crop Bezels, 0.9 = Shrink Image
+static const float CURVATURE = 0.15;
+static const float ZOOM = 1.02;
 
 // Color & Contrast
-static const float BLACK_LEVEL = 0.03;      // 0.0 = Pure Black, 0.03 = Phosphor Glow, 0.1 = Washed Out
+static const float BLACK_LEVEL = 0.03;
 
-// Scanlines
-static const float SCANLINE_OPACITY_MIN = 0.85f; // 0.0 = Black Lines, 0.5 = Soft Lines, 1.0 = Invisible
-static const float SCANLINE_OPACITY_MAX = 1.0f;  // 1.0 = Full Brightness (Standard)
-static const float SCANLINE_CRAWL_SPEED = 0.0f;  // 0.0 = Static (Authentic), 1.0 = Slow Roll, 5.0 = Fast Roll
+// Scanlines (Structural)
+static const float SCANLINE_DENSITY = 1.0;  // Multiplier for line count
+static const float SCANLINE_HARDNESS = 0.6; // How sharp the lines are
+static const float SCANLINE_BLOOM_CUTOFF = 0.7; // Brightness level where scanlines disappear
 
-// Horizontal Sync Jitter (Shaking)
-static const float HORIZONTAL_JITTER = 0.0002;   // 0.0 = Perfect, 0.0001 = Micro-Jitter, 0.005 = Broken TV
-static const float JITTER_FREQUENCY = 0.000001;      // Speed of the shake
-
-// AC Hum Bar (Rolling Shadow)
-static const float HUM_BAR_SPEED = 1.0;          // Speed of the rolling bar
-static const float HUM_BAR_OPACITY = 0.15;       // 0.0 = Invisible, 0.05 = Subtle, 0.2 = Bad Interference
+// Halation (The Glow)
+static const float HALATION_INTENSITY = 0.75; // How much light bleeds
+static const float HALATION_RADIUS = 3.5;    // Size of the bleed in pixels
 
 // Chromatic Aberration (Color Bleed)
-static const float CHROMATIC_OFFSET = 1.0;       // 0.0 = Sharp, 1.0 = Consumer TV, 3.0 = Broken Convergence
+static const float CHROMATIC_OFFSET_CENTER = 1.5; // Bleed at center
+static const float CHROMATIC_OFFSET_EDGE = 1.5;   // Bleed at corners
 
-// Vignette (Corner Darkening)
-static const float VIGNETTE_INTENSITY = 0.25;    // 0.0 = Off, 0.25 = Subtle, 0.8 = Heavy Spotlight
-static const float VIGNETTE_ROUNDNESS = 0.25;    // 0.0 = Oval, 1.0 = Circle
-
-// Noise (Static/Snow)
-static const float NOISE_INTENSITY = 0.01;      // 0.0 = Clean, 0.004 = RF Fuzz, 0.1 = Heavy Snow
+// Jitter & Noise
+static const float HORIZONTAL_JITTER = 0.0002;
+static const float JITTER_FREQUENCY = 0.000001;
+static const float HUM_BAR_SPEED = 0.5;
+static const float HUM_BAR_OPACITY = 0.08;
+static const float NOISE_INTENSITY = 0.015;
+static const float VIGNETTE_INTENSITY = 0.95;
+static const float VIGNETTE_ROUNDNESS = 0.30;
 
 // --- Globals ---
 Texture2D SpriteTexture;
@@ -82,23 +82,15 @@ float4 MainPS(PixelShaderInput input) : COLOR
 #ifdef ENABLE_CURVATURE
     float2 centeredUV = uv - 0.5;
     float r2 = dot(centeredUV, centeredUV);
-    
-    // Apply Barrel Distortion
     float2 distortedUV = centeredUV * (1.0 + CURVATURE * r2);
-    
-    // Apply Zoom
     distortedUV *= (1.0 / ZOOM);
-
     uv = distortedUV + 0.5;
 
-    // Bezel Mask
     if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0)
-    {
         return float4(0.0, 0.0, 0.0, 1.0);
-    }
 #endif
     
-    // --- 1. HORIZONTAL SYNC JITTER ---
+    // --- 1. JITTER ---
 #ifdef ENABLE_JITTER
     float jitterTime = Time * JITTER_FREQUENCY;
     float jitterOffset = (rand(float2(uv.y, jitterTime)) - 0.5) * 2.0; 
@@ -109,15 +101,19 @@ float4 MainPS(PixelShaderInput input) : COLOR
         float glitchNoise = (rand(float2(Time, block)) - 0.5);
         currentJitter += glitchNoise * ImpactGlitchIntensity * 0.05;
     }
-
     uv.x += jitterOffset * currentJitter;
 #endif
 
-    // --- 2. CHROMATIC ABERRATION ---
+    // --- 2. CHROMATIC ABERRATION (Distance Based) ---
     float3 color;
 #ifdef ENABLE_CHROMATIC_ABERRATION
-    float2 rOffset = float2(CHROMATIC_OFFSET / ScreenResolution.x, 0.0);
-    float2 bOffset = float2(-CHROMATIC_OFFSET / ScreenResolution.x, 0.0);
+    // Calculate distance from center (0.0 to ~0.7)
+    float dist = distance(uv, float2(0.5, 0.5));
+    // Lerp offset based on distance: Small at center, large at edges
+    float spread = lerp(CHROMATIC_OFFSET_CENTER, CHROMATIC_OFFSET_EDGE, dist * 2.0);
+    
+    float2 rOffset = float2(spread / ScreenResolution.x, 0.0);
+    float2 bOffset = float2(-spread / ScreenResolution.x, 0.0);
     
     color.r = tex2D(s0, uv + rOffset).r;
     color.g = tex2D(s0, uv).g;
@@ -126,50 +122,90 @@ float4 MainPS(PixelShaderInput input) : COLOR
     color = tex2D(s0, uv).rgb;
 #endif
 
-    // --- 2.5. BLACK LEVEL LIFT ---
-    color = max(color, BLACK_LEVEL);
+// --- 3. HALATION (Phosphor Glow) ---
+#ifdef ENABLE_HALATION
+    // 8-tap blur for a smoother, rounder glow (Octagon shape)
+    float2 pixelSize = 1.0 / ScreenResolution;
+    float2 off = pixelSize * HALATION_RADIUS;
+    float2 offDiag = off * 0.707; // 1/sqrt(2) for circular distance
 
-    // --- 3. SCANLINES ---
-#ifdef ENABLE_SCANLINES
-    float scanlinePos = (uv.y * VirtualResolution.y) + (Time * SCANLINE_CRAWL_SPEED);
-    float scanlineWave = sin(scanlinePos * 3.14159 * 2.0);
-    float scanlineFactor = lerp(SCANLINE_OPACITY_MIN, SCANLINE_OPACITY_MAX, (scanlineWave * 0.5 + 0.5));
-    color *= scanlineFactor;
+    float3 glow = float3(0.0, 0.0, 0.0);
+
+    // Cardinals
+    glow += tex2D(s0, uv + float2(off.x, 0.0)).rgb;
+    glow += tex2D(s0, uv - float2(off.x, 0.0)).rgb;
+    glow += tex2D(s0, uv + float2(0.0, off.y)).rgb;
+    glow += tex2D(s0, uv - float2(0.0, off.y)).rgb;
+
+    // Diagonals
+    glow += tex2D(s0, uv + float2(offDiag.x, offDiag.y)).rgb;
+    glow += tex2D(s0, uv + float2(-offDiag.x, offDiag.y)).rgb;
+    glow += tex2D(s0, uv + float2(offDiag.x, -offDiag.y)).rgb;
+    glow += tex2D(s0, uv + float2(-offDiag.x, -offDiag.y)).rgb;
+
+    glow *= 0.125; // Average of 8 samples
+    
+    // Blend glow into original color (Screen blend for light addition)
+    color = max(color, glow * HALATION_INTENSITY);
 #endif
 
-    // --- 3.5 HUM BAR ---
+    // --- 4. SCANLINES (Structural) ---
+#ifdef ENABLE_SCANLINES
+    // Calculate Luma (Brightness)
+    float luma = dot(color, float3(0.299, 0.587, 0.114));
+    
+    // Generate Scanline Pattern (Sine wave)
+    float scanlinePos = (uv.y * VirtualResolution.y * SCANLINE_DENSITY);
+    float scanline = sin(scanlinePos * 3.14159 * 2.0);
+    
+    // Normalize sine to 0..1 range
+    scanline = (scanline * 0.5) + 0.5;
+    
+    // Calculate Visibility:
+    // If Luma is high (bright), visibility approaches 0 (lines disappear/bloom out).
+    // If Luma is low (dark), visibility approaches 1 (lines are distinct).
+    float bloomFactor = smoothstep(0.0, SCANLINE_BLOOM_CUTOFF, luma);
+    float lineVisibility = (1.0 - bloomFactor) * SCANLINE_HARDNESS;
+    
+    // Apply scanline darkening
+    float lineMultiplier = 1.0 - (scanline * lineVisibility);
+    color *= lineMultiplier;
+#endif
+
+    // --- 5. HUM BAR ---
 #ifdef ENABLE_HUM_BAR
     float humWave = sin((uv.y * 2.0) + (Time * HUM_BAR_SPEED));
     float humFactor = 1.0 - (((humWave + 1.0) / 2.0) * HUM_BAR_OPACITY);
     color *= humFactor;
 #endif
 
-    // --- 4. SATURATION & VIBRANCE ---
-    float3 lumaCoef = float3(0.299, 0.587, 0.114);
-    float luma = dot(color, lumaCoef);
+    // --- 6. COLOR GRADING ---
+    color = max(color, BLACK_LEVEL); // Lift blacks for phosphor look
 
-    color = lerp(float3(luma, luma, luma), color, Saturation);
+    // Saturation/Vibrance
+    float lumaVal = dot(color, float3(0.299, 0.587, 0.114));
+    color = lerp(float3(lumaVal, lumaVal, lumaVal), color, Saturation);
+    
+    float max_c = max(color.r, max(color.g, color.b));
+    float min_c = min(color.r, min(color.g, color.b));
+    color = lerp(float3(lumaVal, lumaVal, lumaVal), color, 1.0 + (Vibrance * (1.0 - (max_c - min_c))));
 
-    float max_color = max(color.r, max(color.g, color.b));
-    float min_color = min(color.r, min(color.g, color.b));
-    float color_sat = max_color - min_color;
-    color = lerp(float3(luma, luma, luma), color, 1.0 + (Vibrance * (1.0 - color_sat)));
-
-    // --- 5. VIGNETTE ---
+    // --- 7. VIGNETTE ---
 #ifdef ENABLE_VIGNETTE
     float2 vUV = uv * (1.0 - uv.yx);
     float vig = vUV.x * vUV.y * 15.0;
     vig = pow(vig, VIGNETTE_ROUNDNESS);
-    color *= float3(vig, vig, vig); 
+    color *= lerp(1.0, vig, VIGNETTE_INTENSITY);
 #endif
 
-    // --- 6. NOISE ---
+    // --- 8. NOISE ---
 #ifdef ENABLE_NOISE
     float noise = (rand(uv * Time) - 0.5) * NOISE_INTENSITY;
-    color += noise;
+    // Noise is more visible in dark areas
+    color += noise * (1.0 - lumaVal);
 #endif
 
-    // --- 7. GAMMA & FLASH ---
+    // --- 9. GAMMA & FLASH ---
     color = max(color, 0.0);
     color = pow(color, 1.0 / Gamma);
     color = lerp(color, FlashColor, FlashIntensity);

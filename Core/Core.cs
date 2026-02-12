@@ -42,6 +42,7 @@ namespace ProjectVagabond
 
         private RenderTarget2D _transitionRenderTarget;
         private RenderTarget2D _finalCompositeTarget;
+        private RenderTarget2D _phosphorTarget; // Accumulation buffer for ghosting
         private Effect _crtEffect;
         private BlendState _cursorInvertBlendState;
 
@@ -209,7 +210,7 @@ namespace ProjectVagabond
             ServiceLocator.Register<TransitionManager>(_transitionManager);
             _sceneManager = new SceneManager();
             ServiceLocator.Register<SceneManager>(_sceneManager);
-            // TransitionScene registration removed
+
             _debugConsole = new DebugConsole();
             ServiceLocator.Register<DebugConsole>(_debugConsole);
             _cursorManager = new CursorManager();
@@ -252,6 +253,17 @@ namespace ProjectVagabond
             OnResize(null, null);
 
             _finalCompositeTarget = new RenderTarget2D(
+                GraphicsDevice,
+                Window.ClientBounds.Width,
+                Window.ClientBounds.Height,
+                false,
+                GraphicsDevice.PresentationParameters.BackBufferFormat,
+                DepthFormat.Depth24,
+                0,
+                RenderTargetUsage.PreserveContents);
+
+            // Initialize Phosphor Target for ghosting effects
+            _phosphorTarget = new RenderTarget2D(
                 GraphicsDevice,
                 Window.ClientBounds.Width,
                 Window.ClientBounds.Height,
@@ -461,6 +473,7 @@ namespace ProjectVagabond
                 }
             }
 
+            // 1. Render the Game Scene to the Composite Target
             GraphicsDevice.SetRenderTarget(_finalCompositeTarget);
 
             bool forceBlackBg = _sceneManager.CurrentActiveScene is StartupScene;
@@ -544,6 +557,22 @@ namespace ProjectVagabond
 
             _backgroundNoiseRenderer.Apply(GraphicsDevice, _finalCompositeTarget, gameTime, _finalScale);
 
+            // 2. Phosphor Persistence Pass (Ghosting)
+            // Switch to the accumulation buffer
+            GraphicsDevice.SetRenderTarget(_phosphorTarget);
+
+            // Draw a semi-transparent black quad to fade out the previous frame's contents
+            // 0.15f alpha means the old image persists for a few frames, creating the trail.
+            _spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend);
+            _spriteBatch.Draw(_pixel, new Rectangle(0, 0, _phosphorTarget.Width, _phosphorTarget.Height), Color.Black * 0.15f);
+            _spriteBatch.End();
+
+            // Draw the current frame (Composite) on top of the fading trails
+            _spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.Opaque);
+            _spriteBatch.Draw(_finalCompositeTarget, Vector2.Zero, Color.White);
+            _spriteBatch.End();
+
+            // 3. Final CRT Pass to BackBuffer
             GraphicsDevice.SetRenderTarget(null);
             GraphicsDevice.Clear(letterboxColor);
 
@@ -580,11 +609,14 @@ namespace ProjectVagabond
                 _crtEffect.Parameters["ImpactGlitchIntensity"]?.SetValue(glitchIntensity);
 
                 _crtEffect.CurrentTechnique.Passes[0].Apply();
-            }
 
-            if (_backgroundNoiseRenderer.Texture != null)
+                // Use _phosphorTarget (which contains the trails) as the source for the CRT shader
+                _spriteBatch.Draw(_phosphorTarget, new Rectangle(0, 0, GraphicsDevice.PresentationParameters.BackBufferWidth, GraphicsDevice.PresentationParameters.BackBufferHeight), Color.White);
+            }
+            else
             {
-                _spriteBatch.Draw(_backgroundNoiseRenderer.Texture, new Rectangle(0, 0, GraphicsDevice.PresentationParameters.BackBufferWidth, GraphicsDevice.PresentationParameters.BackBufferHeight), Color.White);
+                // Fallback if shader fails
+                _spriteBatch.Draw(_phosphorTarget, new Rectangle(0, 0, GraphicsDevice.PresentationParameters.BackBufferWidth, GraphicsDevice.PresentationParameters.BackBufferHeight), Color.White);
             }
 
             _spriteBatch.End();
@@ -676,6 +708,17 @@ namespace ProjectVagabond
 
             _finalCompositeTarget?.Dispose();
             _finalCompositeTarget = new RenderTarget2D(
+                GraphicsDevice,
+                Window.ClientBounds.Width,
+                Window.ClientBounds.Height,
+                false,
+                GraphicsDevice.PresentationParameters.BackBufferFormat,
+                DepthFormat.Depth24,
+                0,
+                RenderTargetUsage.PreserveContents);
+
+            _phosphorTarget?.Dispose();
+            _phosphorTarget = new RenderTarget2D(
                 GraphicsDevice,
                 Window.ClientBounds.Width,
                 Window.ClientBounds.Height,
