@@ -424,7 +424,7 @@ namespace ProjectVagabond.UI
 
             float currentStartY = BaseY + verticalOffset;
             float t = Math.Clamp(verticalOffset / 24f, 0f, 1f);
-            Color lineColor = Color.Lerp(_global.Palette_Black, _global.Palette_DarkestPale, t);
+            Color lineColor = Color.Lerp(_global.Palette_DarkShadow, _global.Palette_DarkestPale, t);
 
             spriteBatch.Draw(_pixel, new Vector2(0, currentStartY), null, _global.Palette_Black, 0f, Vector2.Zero, new Vector2(Global.VIRTUAL_WIDTH, HUD_HEIGHT), SpriteEffects.None, 0f);
             spriteBatch.Draw(_pixel, new Vector2(0, currentStartY), null, lineColor, 0f, Vector2.Zero, new Vector2(Global.VIRTUAL_WIDTH, 1), SpriteEffects.None, 0f);
@@ -535,7 +535,7 @@ namespace ProjectVagabond.UI
                 }
                 else
                 {
-                    DrawHollowRectSmooth(spriteBatch, cardPos, cardSize, _global.Palette_DarkShadow);
+                    DrawHollowRectSmooth(spriteBatch, cardPos, cardSize, _global.Palette_DarkPale);
                 }
             }
 
@@ -664,7 +664,7 @@ namespace ProjectVagabond.UI
             y += 2;
 
             float moveStartX = statBlockStartX - 6;
-            DrawMoveName(spriteBatch, member.BasicMove, "basic", moveStartX, centerX, ref y, tertiaryFont, tertiaryFont);
+            DrawMoveName(spriteBatch, member.BasicMove, "bas", moveStartX, centerX, ref y, tertiaryFont, tertiaryFont);
             DrawMoveName(spriteBatch, member.CoreMove, "cor", moveStartX, centerX, ref y, tertiaryFont, tertiaryFont);
             DrawMoveName(spriteBatch, member.AltMove, "alt", moveStartX, centerX, ref y, tertiaryFont, tertiaryFont);
         }
@@ -682,7 +682,7 @@ namespace ProjectVagabond.UI
                 moveData = data;
                 isMovePresent = true;
 
-                if (label == "basic") color = _global.Palette_DarkestPale;
+                if (label == "bas") color = _global.Palette_DarkestPale;
                 else if (label == "alt") color = _global.Palette_Pale;
                 else color = _global.Palette_LightPale;
             }
