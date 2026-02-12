@@ -31,33 +31,34 @@ uniform float Vibrance;
 // --- Tuning ---
 
 // Distortion
-static const float CURVATURE = 0.15;
+static const float CURVATURE = 0.15; 
 static const float ZOOM = 1.02;
 
 // Color & Contrast
-static const float BLACK_LEVEL = 0.03;
+static const float BLACK_LEVEL = 0.05; 
 
 // Scanlines (Structural)
-static const float SCANLINE_DENSITY = 1.0;  // Multiplier for line count
-static const float SCANLINE_HARDNESS = 0.6; // How sharp the lines are
-static const float SCANLINE_BLOOM_CUTOFF = 0.7; // Brightness level where scanlines disappear
+static const float SCANLINE_DENSITY = 1.0;  
+static const float SCANLINE_HARDNESS = 0.6; 
+static const float SCANLINE_BLOOM_CUTOFF = 0.7; 
 
 // Halation (The Glow)
-static const float HALATION_INTENSITY = 0.75; // How much light bleeds
-static const float HALATION_RADIUS = 3.5;    // Size of the bleed in pixels
+static const float HALATION_INTENSITY = 0.85; 
+static const float HALATION_RADIUS = 4.0;     
 
 // Chromatic Aberration (Color Bleed)
-static const float CHROMATIC_OFFSET_CENTER = 1.5; // Bleed at center
-static const float CHROMATIC_OFFSET_EDGE = 1.5;   // Bleed at corners
+static const float CHROMATIC_OFFSET_CENTER = 1.0; 
+static const float CHROMATIC_OFFSET_EDGE = 2.5;   
 
-// Jitter & Noise
-static const float HORIZONTAL_JITTER = 0.0002;
-static const float JITTER_FREQUENCY = 0.000001;
-static const float HUM_BAR_SPEED = 0.5;
-static const float HUM_BAR_OPACITY = 0.08;
-static const float NOISE_INTENSITY = 0.015;
-static const float VIGNETTE_INTENSITY = 0.95;
-static const float VIGNETTE_ROUNDNESS = 0.30;
+// Jitter & Noise (Signal Instability)
+static const float JITTER_MICRO_INTENSITY = 0.0002; 
+static const float JITTER_DESYNC_INTENSITY = 0.001;
+
+static const float HUM_BAR_SPEED = 0.2;
+static const float HUM_BAR_OPACITY = 0.05;
+static const float NOISE_INTENSITY = 0.025; 
+static const float VIGNETTE_INTENSITY = 0.90;
+static const float VIGNETTE_ROUNDNESS = 0.25;
 
 // --- Globals ---
 Texture2D SpriteTexture;
@@ -90,18 +91,55 @@ float4 MainPS(PixelShaderInput input) : COLOR
         return float4(0.0, 0.0, 0.0, 1.0);
 #endif
     
-    // --- 1. JITTER ---
+    // --- 1. JITTER (Signal Instability) ---
 #ifdef ENABLE_JITTER
-    float jitterTime = Time * JITTER_FREQUENCY;
-    float jitterOffset = (rand(float2(uv.y, jitterTime)) - 0.5) * 2.0; 
-    float currentJitter = HORIZONTAL_JITTER;
+    // A. Constant Micro-Vibration (The "Hum")
+    float jitterTime = Time * 113.0;
+    float microShake = (rand(float2(uv.y, jitterTime)) - 0.5) * JITTER_MICRO_INTENSITY;
+    
+    // B. Randomized Desync (The "Tension")
+    // We use a sum of sine waves with prime frequencies to create an irregular interference pattern.
+    // This ensures glitches happen at unpredictable intervals and last for varying durations.
+    float t = Time;
+    float wave1 = sin(t * 0.5);  // Slow drift (2s period)
+    float wave2 = sin(t * 1.7);  // Medium cycle (~0.6s period)
+    float wave3 = sin(t * 2.9);  // Fast cycle (~0.3s period)
+    
+    // Combine waves. Range is roughly -3.0 to 3.0.
+    float chaos = wave1 + wave2 + wave3;
+    
+    float desyncOffset = 0.0;
+    
+    // Only trigger when the chaos aligns (peaks/troughs)
+    // Threshold 2.4 means it happens roughly 5-10% of the time, in clusters.
+    if (abs(chaos) > 2.4) {
+        // Normalize intensity (0.0 to 1.0) based on how far past threshold we are
+        float glitchIntensity = (abs(chaos) - 2.4) / 0.6;
+        
+        // VARY THE LOOK:
+        // Use the slow wave (wave1) to change the density of the tear lines over time
+        // This ensures some glitches are chunky (low density) and others are fine (high density)
+        float tearDensity = 20.0 + (wave1 * 15.0) + (wave2 * 5.0); 
+        
+        // Use the medium wave (wave2) to change the speed/direction of the tear
+        float tearSpeed = 20.0 + (wave2 * 30.0);
+        
+        // Calculate the tear pattern
+        float tear = sign(sin(uv.y * tearDensity + Time * tearSpeed));
+        
+        desyncOffset = tear * JITTER_DESYNC_INTENSITY * glitchIntensity;
+    }
 
+    // C. Impact Glitch (Game Logic)
+    float impactOffset = 0.0;
     if (ImpactGlitchIntensity > 0.0) {
         float block = floor(uv.y * 10.0); 
         float glitchNoise = (rand(float2(Time, block)) - 0.5);
-        currentJitter += glitchNoise * ImpactGlitchIntensity * 0.05;
+        impactOffset = glitchNoise * ImpactGlitchIntensity * 0.05;
     }
-    uv.x += jitterOffset * currentJitter;
+
+    // Apply all offsets to the X coordinate
+    uv.x += microShake + desyncOffset + impactOffset;
 #endif
 
     // --- 2. CHROMATIC ABERRATION (Distance Based) ---
@@ -112,6 +150,9 @@ float4 MainPS(PixelShaderInput input) : COLOR
     // Lerp offset based on distance: Small at center, large at edges
     float spread = lerp(CHROMATIC_OFFSET_CENTER, CHROMATIC_OFFSET_EDGE, dist * 2.0);
     
+    // Add a tiny bit of jitter to the aberration itself for that "unstable" look
+    spread += (rand(float2(Time, uv.y)) - 0.5) * 0.2;
+
     float2 rOffset = float2(spread / ScreenResolution.x, 0.0);
     float2 bOffset = float2(-spread / ScreenResolution.x, 0.0);
     
