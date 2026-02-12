@@ -36,7 +36,7 @@
   {
     "MemberID": "2",
     "Name": "Pretzel",
-    "Description": "A hedge mage with a quick temper.",
+    "Description": "A scrappy fighter who refuses to stay down.",
     "Gender": "Male",
     "MaxHP": 45,
     "Strength": 6,
@@ -44,8 +44,8 @@
     "Tenacity": 3,
     "Agility": 4,
     "BasicMoveId": "4",
-    "CoreMoveId": "",
-    "AltMoveId": "",
+    "CoreMoveId": "14",
+    "AltMoveId": "15",
     "PassiveAbilityPool": [
       { "PMScrappy": "" }
     ]

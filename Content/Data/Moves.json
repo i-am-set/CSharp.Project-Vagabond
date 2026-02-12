@@ -261,5 +261,40 @@
       "InflictStatChange": "Strength, 1"
     },
     "AnimationId": "sta_orange_orb"
+  },
+  {
+    "MoveID": "14",
+    "MoveName": "Gore",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]GORES[/] {IsTargetProperNoun}[cSlot]{target}[/].",
+    "Description": "User takes [cnegative]25%[/] recoil damage.",
+    "Flavor": "A reckless, violent thrust.",
+    "Power": 100,
+    "MoveType": "Action",
+    "ImpactType": "Physical",
+    "OffensiveStat": "Strength",
+    "Target": "Single",
+    "Accuracy": 100,
+    "Effects": {
+      "DamageRecoil": "25"
+    },
+    "Tags": [ "Contact", "Recoil" ],
+    "AnimationId": "phy_large_impact"
+  },
+  {
+    "MoveID": "15",
+    "MoveName": "Lick Wounds",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]LICKS THEIR WOUNDS[/].",
+    "Description": "Heals [cpositive]25%[/] of Max HP.",
+    "Flavor": "Taking a moment to recover.",
+    "Power": 0,
+    "MoveType": "Action",
+    "ImpactType": "Status",
+    "Target": "Self",
+    "Accuracy": -1,
+    "Effects": {
+      "Heal": "25"
+    },
+    "Tags": [ "Healing" ],
+    "AnimationId": "sta_orange_orb"
   }
 ]

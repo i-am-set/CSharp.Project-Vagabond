@@ -408,4 +408,35 @@ namespace ProjectVagabond.Battle.Abilities
             }
         }
     }
+
+    public class HealAbility : IAbility
+    {
+        public string Name => "Heal";
+        public string Description => "Restores a percentage of Max HP.";
+        public int Priority => 0;
+
+        private readonly int _percent;
+        public HealAbility(int percent) { _percent = percent; }
+
+        public void OnEvent(GameEvent e, BattleContext context)
+        {
+            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
+            {
+                int healAmount = (int)(reaction.Actor.Stats.MaxHP * (_percent / 100f));
+                if (healAmount < 1) healAmount = 1;
+
+                int hpBefore = (int)reaction.Actor.VisualHP;
+                reaction.Actor.ApplyHealing(healAmount);
+
+                // Publish the UI event so numbers pop up
+                EventBus.Publish(new GameEvents.CombatantHealed
+                {
+                    Actor = reaction.Actor,
+                    Target = reaction.Actor,
+                    HealAmount = healAmount,
+                    VisualHPBefore = hpBefore
+                });
+            }
+        }
+    }
 }

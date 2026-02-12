@@ -52,16 +52,38 @@ namespace ProjectVagabond.Battle.Abilities
     {
         public string Name => "Scrappy";
         public string Description => "Immune to Strength drops, Stun, and Daze.";
-        public int Priority => 0;
+        public int Priority => 100;
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
-            if (e is StatusAppliedEvent statusEvent && statusEvent.Target.Abilities.Contains(this))
+            // 1. Block Stun (Status Effect)
+            if (e is StatusAppliedEvent statusEvent && statusEvent.Target == context.Actor)
             {
                 if (statusEvent.StatusEffect.EffectType == StatusEffectType.Stun)
                 {
                     statusEvent.IsHandled = true;
-                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = statusEvent.Target, Ability = this });
+                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = context.Actor, Ability = this, NarrationText = "Scrappy prevented Stun!" });
+                }
+            }
+
+            // 2. Block Strength Drops (Stat Change)
+            if (e is StatChangeAttemptEvent statEvent && statEvent.Target == context.Actor)
+            {
+                if (statEvent.Stat == OffensiveStatType.Strength && statEvent.Amount < 0)
+                {
+                    statEvent.IsHandled = true; // Cancel the change
+                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = context.Actor, Ability = this, NarrationText = "Scrappy prevents Strength loss!" });
+                }
+            }
+
+            // 3. Block Daze (Tag)
+            // Daze is a tag, usually checked at TurnStart. We remove it immediately if found.
+            if (e is TurnStartEvent turnEvent && turnEvent.Actor == context.Actor)
+            {
+                if (turnEvent.Actor.Tags.Has(GameplayTags.States.Dazed))
+                {
+                    turnEvent.Actor.Tags.Remove(GameplayTags.States.Dazed);
+                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = context.Actor, Ability = this, NarrationText = "shook off the Daze!" });
                 }
             }
         }

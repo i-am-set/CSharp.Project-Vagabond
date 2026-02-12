@@ -143,4 +143,18 @@ namespace ProjectVagabond.Battle
             StatusEffect = statusEffect;
         }
     }
+
+    public class StatChangeAttemptEvent : GameEvent
+    {
+        public BattleCombatant Target { get; }
+        public OffensiveStatType Stat { get; }
+        public int Amount { get; set; }
+
+        public StatChangeAttemptEvent(BattleCombatant target, OffensiveStatType stat, int amount)
+        {
+            Target = target;
+            Stat = stat;
+            Amount = amount;
+        }
+    }
 }

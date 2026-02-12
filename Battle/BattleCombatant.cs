@@ -161,11 +161,22 @@ namespace ProjectVagabond.Battle
         {
             if (stat == OffensiveStatType.Tenacity) return (false, "Tenacity cannot be modified!");
 
+            // Allow abilities (like Scrappy) to intercept or modify the change
+            var attemptEvent = new StatChangeAttemptEvent(this, stat, amount);
+            var context = new BattleContext { Actor = this, Target = this };
+            NotifyAbilities(attemptEvent, context);
+
+            if (attemptEvent.IsHandled) return (false, "Stat change prevented!");
+            amount = attemptEvent.Amount;
+
             int currentStage = StatStages[stat];
             if (amount > 0 && currentStage >= 2) return (false, $"{Name}'s {stat} won't go higher!");
             if (amount < 0 && currentStage <= -2) return (false, $"{Name}'s {stat} won't go lower!");
 
             StatStages[stat] = Math.Clamp(currentStage + amount, -2, 2);
+
+            // Fire the UI event (Struct)
+            EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = this, Stat = stat, Amount = amount });
 
             string changeText = amount > 0 ? (amount > 1 ? "sharply rose" : "rose") : (amount < -1 ? "harshly fell" : "fell");
             return (true, $"{Name}'s {stat} {changeText}!");
