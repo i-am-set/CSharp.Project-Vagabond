@@ -12,7 +12,7 @@ namespace ProjectVagabond.Battle
         private float _targetZoom;
 
         private const float LERP_SPEED = 10.0f;
-        private const float FOCUS_INTENSITY = 0.1f; // Only move 20% towards the target
+        private const float FOCUS_INTENSITY = 0.2f;
 
         public Vector2 Position => _currentPosition;
         public float Zoom => _currentZoom;
