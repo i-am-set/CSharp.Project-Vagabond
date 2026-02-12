@@ -212,8 +212,8 @@ namespace ProjectVagabond.Battle.UI
                 var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
                 var global = ServiceLocator.Get<Global>();
 
-                // 1. Basic (Index 0) - DarkestPale - Width 32 - Text "BSC"
-                AddActionButton("BAS", Combatant.BasicMove, tertiaryFont, global, global.Palette_DarkestPale, 32);
+                // 1. Basic (Index 0) - DarkestPale - Width 32 - Text "BASIC"
+                AddActionButton("BASIC", Combatant.BasicMove, tertiaryFont, global, global.Palette_DarkestPale, 32);
 
                 // 2. Core (Index 1) - Pale - Width 45
                 AddActionButton("CORE", Combatant.CoreMove, secondaryFont, global, global.Palette_DarkPale, 45);
@@ -251,16 +251,25 @@ namespace ProjectVagabond.Battle.UI
                 _cancelButton.OnClick += () => OnCancelRequested?.Invoke();
             }
 
-            private void AddActionButton(string label, MoveEntry? entry, BitmapFont font, Global global, Color backgroundColor, int width)
+            private void AddActionButton(string label, MoveEntry? entry, BitmapFont font, Global global, Color defaultBackgroundColor, int width)
             {
                 bool moveExists = entry != null && BattleDataCache.Moves.ContainsKey(entry.MoveID);
                 MoveData? moveData = moveExists ? BattleDataCache.Moves[entry!.MoveID] : null;
 
+                Color backgroundColor = defaultBackgroundColor;
                 Rectangle? iconRect = null;
                 Color iconColor = Color.White;
 
                 if (moveData != null)
                 {
+                    // Determine Background Color based on ImpactType
+                    switch (moveData.ImpactType)
+                    {
+                        case ImpactType.Physical: backgroundColor = global.Palette_Rust; break;
+                        case ImpactType.Magical: backgroundColor = global.Palette_Sky; break;
+                        case ImpactType.Status: backgroundColor = global.Palette_Pale; break;
+                    }
+
                     int iconIndex = -1;
                     switch (moveData.ImpactType)
                     {
@@ -274,8 +283,8 @@ namespace ProjectVagabond.Battle.UI
                         iconRect = _iconRects[iconIndex];
                     }
 
-                    if (label == "CORE") iconColor = global.Palette_DarkestPale;
-                    else iconColor = global.Palette_DarkShadow;
+                    // Icons are always black now
+                    iconColor = global.Palette_Black;
                 }
 
                 var btn = new MoveButton(Combatant, moveData, entry, font)
@@ -285,12 +294,12 @@ namespace ProjectVagabond.Battle.UI
                     EnableHoverSway = false,
                     Text = label,
                     CustomDefaultTextColor = global.Palette_Black,
-                    CustomHoverTextColor = global.Palette_Sun,
+                    CustomHoverTextColor = global.Palette_DarkestPale,
                     VisualWidthOverride = width,
-                    TextRenderOffset = (label == "BAS" || label == "ALT") ? new Vector2(0, 1) : Vector2.Zero,
+                    TextRenderOffset = (label == "BASIC") ? new Vector2(4, 1) : (label == "ALT" ? new Vector2(0, 1) : Vector2.Zero),
                     ActionIconRect = iconRect,
                     ActionIconColor = iconColor,
-                    ActionIconHoverColor = global.Palette_DarkSun
+                    ActionIconHoverColor = global.Palette_DarkestPale
                 };
 
                 if (moveExists)
@@ -334,11 +343,11 @@ namespace ProjectVagabond.Battle.UI
                 var btn = new MoveButton(Combatant, moveData, null, font)
                 {
                     DrawSystemBackground = true,
-                    BackgroundColor = global.Palette_DarkShadow,
+                    BackgroundColor = global.Palette_DarkestPale,
                     EnableHoverSway = false,
                     Text = label,
                     CustomDefaultTextColor = global.Palette_Black,
-                    CustomHoverTextColor = global.Palette_Sun,
+                    CustomHoverTextColor = global.Palette_DarkestPale,
                     VisualWidthOverride = 37,
                     TextRenderOffset = new Vector2(0, 1)
                 };

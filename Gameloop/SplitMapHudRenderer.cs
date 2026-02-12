@@ -664,7 +664,7 @@ namespace ProjectVagabond.UI
             y += 2;
 
             float moveStartX = statBlockStartX - 6;
-            DrawMoveName(spriteBatch, member.BasicMove, "bas", moveStartX, centerX, ref y, tertiaryFont, tertiaryFont);
+            DrawMoveName(spriteBatch, member.BasicMove, "basic", moveStartX, centerX, ref y, tertiaryFont, tertiaryFont);
             DrawMoveName(spriteBatch, member.CoreMove, "cor", moveStartX, centerX, ref y, tertiaryFont, tertiaryFont);
             DrawMoveName(spriteBatch, member.AltMove, "alt", moveStartX, centerX, ref y, tertiaryFont, tertiaryFont);
         }
@@ -682,7 +682,7 @@ namespace ProjectVagabond.UI
                 moveData = data;
                 isMovePresent = true;
 
-                if (label == "bas") color = _global.Palette_DarkestPale;
+                if (label == "basic") color = _global.Palette_DarkestPale;
                 else if (label == "alt") color = _global.Palette_Pale;
                 else color = _global.Palette_LightPale;
             }

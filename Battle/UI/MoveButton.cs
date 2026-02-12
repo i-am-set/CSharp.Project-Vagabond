@@ -174,7 +174,7 @@ namespace ProjectVagabond.Battle.UI
             {
                 Color bgColor = BackgroundColor;
                 if (!IsEnabled || !canAfford) bgColor = _global.Palette_Black;
-                else if (isActivated) bgColor = _global.Palette_Rust;
+                else if (isActivated) bgColor = _global.ButtonHoverColor;
 
                 DrawRotatedBeveledBackground(spriteBatch, pixel, centerPos, (int)effectiveWidth, (int)effectiveHeight, bgColor, _currentHoverRotation, scaleVec);
             }
