@@ -5,6 +5,7 @@ using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
@@ -50,7 +51,7 @@ namespace ProjectVagabond.Battle.UI
         public void DrawEnemy(
             SpriteBatch spriteBatch,
             BattleCombatant enemy,
-            Rectangle spriteRect,
+            Vector2 position,
             Vector2[] partOffsets,
             Vector2 shakeOffset,
             float finalAlpha,
@@ -61,7 +62,7 @@ namespace ProjectVagabond.Battle.UI
             Color outlineColor,
             bool isFlashingWhite,
             Color tintColor,
-            Vector2 scale, // CHANGED: Now accepts Vector2 for non-uniform scaling
+            Vector2 scale,
             Matrix transform,
             Color? lowHealthOverlay = null)
         {
@@ -78,7 +79,7 @@ namespace ProjectVagabond.Battle.UI
             // Always draw the composite outline if a silhouette exists.
             if (enemySilhouette != null)
             {
-                DrawCompositeOutline(spriteBatch, enemySilhouette, spriteRect, partOffsets, shakeOffset, finalAlpha, outlineColor, numParts, spritePartSize, transform, scale);
+                DrawCompositeOutline(spriteBatch, enemySilhouette, position, partOffsets, shakeOffset, finalAlpha, outlineColor, numParts, spritePartSize, transform, scale);
             }
 
             // --- FLATTENING LOGIC ---
@@ -87,16 +88,16 @@ namespace ProjectVagabond.Battle.UI
 
             if (useFlattening)
             {
-                DrawFlattenedEnemy(spriteBatch, enemySprite, enemySilhouette, spriteRect, partOffsets, shakeOffset, finalAlpha, silhouetteFactor, silhouetteColor, isHighlighted, highlightColor, isFlashingWhite, numParts, spritePartSize, transform, lowHealthOverlay, scale);
+                DrawFlattenedEnemy(spriteBatch, enemySprite, enemySilhouette, position, partOffsets, shakeOffset, finalAlpha, silhouetteFactor, silhouetteColor, isHighlighted, highlightColor, isFlashingWhite, numParts, spritePartSize, transform, lowHealthOverlay, scale);
             }
             else
             {
                 // Pass Color.Transparent for the outline override since we drew the composite one above.
-                DrawDirectEnemy(spriteBatch, enemySprite, enemySilhouette, spriteRect, partOffsets, shakeOffset, tintColor, silhouetteFactor, silhouetteColor, isHighlighted, highlightColor, isFlashingWhite, scale, numParts, spritePartSize, Color.Transparent, lowHealthOverlay);
+                DrawDirectEnemy(spriteBatch, enemySprite, enemySilhouette, position, partOffsets, shakeOffset, tintColor, silhouetteFactor, silhouetteColor, isHighlighted, highlightColor, isFlashingWhite, scale, numParts, spritePartSize, Color.Transparent, lowHealthOverlay);
             }
         }
 
-        private void DrawCompositeOutline(SpriteBatch spriteBatch, Texture2D silhouette, Rectangle spriteRect, Vector2[] offsets, Vector2 shakeOffset, float finalAlpha, Color outlineColor, int numParts, int partSize, Matrix transform, Vector2 scale)
+        private void DrawCompositeOutline(SpriteBatch spriteBatch, Texture2D silhouette, Vector2 position, Vector2[] offsets, Vector2 shakeOffset, float finalAlpha, Color outlineColor, int numParts, int partSize, Matrix transform, Vector2 scale)
         {
             var currentRTs = _core.GraphicsDevice.GetRenderTargets();
             spriteBatch.End();
@@ -120,7 +121,7 @@ namespace ProjectVagabond.Battle.UI
             _core.GraphicsDevice.SetRenderTargets(currentRTs);
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
 
-            Vector2 screenDrawPos = new Vector2(spriteRect.X, spriteRect.Y) + shakeOffset - rtBasePos;
+            Vector2 screenDrawPos = position + shakeOffset - rtBasePos;
             Color cInner = _global.Palette_Black * finalAlpha;
             Color cOuter = outlineColor;
 
@@ -153,7 +154,7 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private void DrawFlattenedEnemy(SpriteBatch spriteBatch, Texture2D sprite, Texture2D silhouette, Rectangle spriteRect, Vector2[] offsets, Vector2 shakeOffset, float finalAlpha, float silhouetteFactor, Color silhouetteColor, bool isHighlighted, Color? highlightColor, bool isFlashingWhite, int numParts, int partSize, Matrix transform, Color? lowHealthOverlay, Vector2 scale)
+        private void DrawFlattenedEnemy(SpriteBatch spriteBatch, Texture2D sprite, Texture2D silhouette, Vector2 position, Vector2[] offsets, Vector2 shakeOffset, float finalAlpha, float silhouetteFactor, Color silhouetteColor, bool isHighlighted, Color? highlightColor, bool isFlashingWhite, int numParts, int partSize, Matrix transform, Color? lowHealthOverlay, Vector2 scale)
         {
             var currentRTs = _core.GraphicsDevice.GetRenderTargets();
             spriteBatch.End();
@@ -206,13 +207,13 @@ namespace ProjectVagabond.Battle.UI
             _core.GraphicsDevice.SetRenderTargets(currentRTs);
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
 
-            Vector2 drawPos = spriteRect.Location.ToVector2() - new Vector2(FLATTEN_MARGIN, FLATTEN_MARGIN);
+            Vector2 drawPos = position - new Vector2(FLATTEN_MARGIN, FLATTEN_MARGIN);
             // Note: The RT content is already scaled, so we draw the RT at 1.0 scale
             var srcRect = new Rectangle(0, 0, _flattenTarget.Width, _flattenTarget.Height);
             spriteBatch.Draw(_flattenTarget, drawPos, srcRect, Color.White * finalAlpha);
         }
 
-        private void DrawDirectEnemy(SpriteBatch spriteBatch, Texture2D sprite, Texture2D silhouette, Rectangle spriteRect, Vector2[] offsets, Vector2 shakeOffset, Color tintColor, float silhouetteFactor, Color silhouetteColor, bool isHighlighted, Color? highlightColor, bool isFlashingWhite, Vector2 scale, int numParts, int partSize, Color? outlineColorOverride, Color? lowHealthOverlay)
+        private void DrawDirectEnemy(SpriteBatch spriteBatch, Texture2D sprite, Texture2D silhouette, Vector2 position, Vector2[] offsets, Vector2 shakeOffset, Color tintColor, float silhouetteFactor, Color silhouetteColor, bool isHighlighted, Color? highlightColor, bool isFlashingWhite, Vector2 scale, int numParts, int partSize, Color? outlineColorOverride, Color? lowHealthOverlay)
         {
             Color outlineColor = (outlineColorOverride ?? _global.Palette_DarkShadow) * (tintColor.A / 255f);
 
@@ -221,8 +222,7 @@ namespace ProjectVagabond.Battle.UI
                 var sourceRect = new Rectangle(i * partSize, 0, partSize, partSize);
                 var partOffset = offsets != null && i < offsets.Length ? offsets[i] : Vector2.Zero;
 
-                // REMOVED: Rounding. Use float position directly for smooth movement.
-                var drawPosition = new Vector2(spriteRect.X + partOffset.X, spriteRect.Y + partOffset.Y) + shakeOffset;
+                var drawPosition = position + partOffset + shakeOffset;
 
                 Vector2 origin = new Vector2(partSize / 2f, partSize / 2f);
                 Vector2 centerPos = drawPosition + origin;

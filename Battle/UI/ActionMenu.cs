@@ -503,17 +503,17 @@ namespace ProjectVagabond.Battle.UI
                 var battleManager = ServiceLocator.Get<BattleManager>();
                 bool isLocked = battleManager.IsActionPending(SlotIndex);
 
-                int snappedOffsetY = (int)offset.Y;
+                float snappedOffsetY = offset.Y;
 
                 if (isLocked)
                 {
                     var rect = _cancelButton.Bounds;
-                    rect.Y += snappedOffsetY;
+                    var drawPos = new Vector2(rect.X, rect.Y + snappedOffsetY);
 
                     var textSize = _cancelButton.Font.MeasureString(_cancelButton.Text);
                     var textPos = new Vector2(
-                        rect.X + (rect.Width - textSize.Width) / 2f,
-                        rect.Y + (rect.Height - textSize.Height) / 2f
+                        drawPos.X + (rect.Width - textSize.Width) / 2f,
+                        drawPos.Y + (rect.Height - textSize.Height) / 2f
                     );
                     textPos = new Vector2(MathF.Round(textPos.X), MathF.Round(textPos.Y));
 
@@ -561,11 +561,8 @@ namespace ProjectVagabond.Battle.UI
                 }
             }
 
-            private void DrawButton(SpriteBatch spriteBatch, Button btn, Texture2D pixel, Global global, int snappedOffsetY, GameTime gameTime, Matrix transform, int moveIndex = -1)
+            private void DrawButton(SpriteBatch spriteBatch, Button btn, Texture2D pixel, Global global, float snappedOffsetY, GameTime gameTime, Matrix transform, int moveIndex = -1)
             {
-                var rect = btn.Bounds;
-                rect.Y += snappedOffsetY;
-
                 Color? tint = null;
                 if (btn is MoveButton moveBtn)
                 {

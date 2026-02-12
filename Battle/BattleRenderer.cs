@@ -299,14 +299,12 @@ namespace ProjectVagabond.Battle.UI
             var silhouetteColors = ResolveSilhouetteColors(allCombatants, currentActor, selectableTargets, activeTargetType, uiManager, hoveredCombatant);
             bool shouldGrayOut = uiManager.UIState == BattleUIState.Targeting || (uiManager.HoveredMove != null && uiManager.HoveredMove.Target != TargetType.None);
 
-            // --- NEW: Determine Targeting Mode and Hovered Group Color ---
             bool isTargetingMode = uiManager.UIState == BattleUIState.Targeting;
             Color? hoveredGroupColor = null;
             if (hoveredCombatant != null && silhouetteColors.TryGetValue(hoveredCombatant.CombatantID, out var color))
             {
                 hoveredGroupColor = color;
             }
-            // -------------------------------------------------------------
 
             var flashState = animationManager.GetImpactFlashState();
             if (flashState != null)
@@ -450,93 +448,16 @@ namespace ProjectVagabond.Battle.UI
 
                 if (combatant.IsPlayerControlled)
                 {
-                    // --- NEW LOGIC: Idle Bob for Pending Action ---
                     float yOffset = 0f;
                     if (battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection)
                     {
-                        // If action is NOT pending (not locked in), bob up and down
                         if (!battleManager.IsActionPending(combatant.BattleSlot))
                         {
                             float t = (float)gameTime.TotalGameTime.TotalSeconds;
-                            // Invert phase for slot 1 (the second player) so they bob opposite to slot 0
                             float phase = (combatant.BattleSlot == 1) ? MathHelper.Pi : 0f;
                             yOffset = MathF.Sin(t * _bobSpeed + phase) * 0.5f;
                         }
                     }
-                    // ----------------------------------------------
-
-                    _hudRenderer.DrawStatusIcons(spriteBatch, combatant, barX, barY + yOffset, BattleLayout.PLAYER_BAR_WIDTH, true, _playerStatusIcons, GetStatusIconOffset, IsStatusIconAnimating, isRightAligned);
-                    _hudRenderer.DrawPlayerBars(spriteBatch, combatant, barX, barY + yOffset, BattleLayout.PLAYER_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha * hudAlpha, gameTime, uiManager, combatant == currentActor, isRightAligned, projectedDamage);
-                }
-                else
-                {
-                    if (!_enemyStatusIcons.ContainsKey(combatant.CombatantID))
-                        _enemyStatusIcons[combatant.CombatantID] = new List<StatusIconInfo>();
-
-                    _hudRenderer.DrawStatusIcons(spriteBatch, combatant, barX, barY, BattleLayout.ENEMY_BAR_WIDTH, false, _enemyStatusIcons[combatant.CombatantID], GetStatusIconOffset, IsStatusIconAnimating, isRightAligned);
-                    _hudRenderer.DrawEnemyBars(spriteBatch, combatant, barX, barY, BattleLayout.ENEMY_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha * hudAlpha, gameTime, isRightAligned, projectedDamage);
-                }
-            }
-        }
-
-        public void DrawHUD(SpriteBatch spriteBatch, BattleAnimationManager animManager, GameTime gameTime, BattleUIManager uiManager, BattleCombatant currentActor, Dictionary<string, Color> silhouetteColors)
-        {
-            var battleManager = ServiceLocator.Get<BattleManager>();
-
-            foreach (var combatant in battleManager.AllCombatants)
-            {
-                // Instantly hide HUD if defeated to prevent visual snapping during death animation
-                if (combatant.IsDefeated) continue;
-
-                if (!_combatantBarPositions.TryGetValue(combatant.CombatantID, out var pos)) continue;
-
-                float barX = pos.X;
-                float barY = pos.Y;
-
-                if (combatant.VisualHealthBarAlpha <= 0.01f) continue;
-
-                float hudAlpha = combatant.HudVisualAlpha;
-
-                // Determine alignment: Slot 1 and 3 (Odd) are Right Aligned
-                bool isRightAligned = (combatant.BattleSlot % 2 != 0);
-
-                (int Min, int Max)? projectedDamage = null;
-                if (silhouetteColors.ContainsKey(combatant.CombatantID))
-                {
-                    var move = uiManager.HoveredMove ?? uiManager.MoveForTargeting;
-                    BattleCombatant actor = currentActor;
-
-                    if (uiManager.UIState == BattleUIState.Targeting && uiManager.ActiveTargetingSlot != -1)
-                    {
-                        actor = battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && c.BattleSlot == uiManager.ActiveTargetingSlot);
-                    }
-                    else if (uiManager.HoveredMove != null && uiManager.HoveredSlotIndex != -1)
-                    {
-                        actor = battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && c.BattleSlot == uiManager.HoveredSlotIndex);
-                    }
-
-                    if (move != null && actor != null)
-                    {
-                        projectedDamage = battleManager.GetProjectedDamageRange(actor, combatant, move);
-                    }
-                }
-
-                if (combatant.IsPlayerControlled)
-                {
-                    // --- NEW LOGIC: Idle Bob for Pending Action ---
-                    float yOffset = 0f;
-                    if (battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection)
-                    {
-                        // If action is NOT pending (not locked in), bob up and down
-                        if (!battleManager.IsActionPending(combatant.BattleSlot))
-                        {
-                            float t = (float)gameTime.TotalGameTime.TotalSeconds;
-                            // Invert phase for slot 1 (the second player) so they bob opposite to slot 0
-                            float phase = (combatant.BattleSlot == 1) ? MathHelper.Pi : 0f;
-                            yOffset = MathF.Sin(t * _bobSpeed + phase) * 0.5f;
-                        }
-                    }
-                    // ----------------------------------------------
 
                     _hudRenderer.DrawStatusIcons(spriteBatch, combatant, barX, barY + yOffset, BattleLayout.PLAYER_BAR_WIDTH, true, _playerStatusIcons, GetStatusIconOffset, IsStatusIconAnimating, isRightAligned);
                     _hudRenderer.DrawPlayerBars(spriteBatch, combatant, barX, barY + yOffset, BattleLayout.PLAYER_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha * hudAlpha, gameTime, uiManager, combatant == currentActor, isRightAligned, projectedDamage);
@@ -1131,10 +1052,11 @@ namespace ProjectVagabond.Battle.UI
                     bool flashWhite = hitFlash != null && hitFlash.IsCurrentlyWhite;
 
                     int spriteSize = _spriteManager.IsMajorEnemySprite(enemy.ArchetypeId) ? 96 : 64;
-                    var spriteRect = new Rectangle(
-                        (int)(center.X - spriteSize / 2f + recoil.X + slideOffset.X + chargeOffset.X),
-                        (int)(center.Y + bob + spawnY + recoil.Y + slideOffset.Y + chargeOffset.Y),
-                        spriteSize, spriteSize
+
+                    // CHANGED: Calculate draw position as Vector2 to avoid integer snapping
+                    var drawPos = new Vector2(
+                        center.X - spriteSize / 2f + recoil.X + slideOffset.X + chargeOffset.X,
+                        center.Y + bob + spawnY + recoil.Y + slideOffset.Y + chargeOffset.Y
                     );
 
                     if (drawSprite)
@@ -1161,7 +1083,7 @@ namespace ProjectVagabond.Battle.UI
                                 lowHealthOverlay = _global.LowHealthFlashColor * flashAlpha;
                         }
 
-                        _entityRenderer.DrawEnemy(spriteBatch, enemy, spriteRect, offsets, shake, alpha, silhouetteAmt, silhouetteColor, isHighlighted, assignedColor, outlineColor, flashWhite, tint * alpha, scale, transform, lowHealthOverlay);
+                        _entityRenderer.DrawEnemy(spriteBatch, enemy, drawPos, offsets, shake, alpha, silhouetteAmt, silhouetteColor, isHighlighted, assignedColor, outlineColor, flashWhite, tint * alpha, scale, transform, lowHealthOverlay);
 
                         if (!enemy.IsDefeated)
                         {

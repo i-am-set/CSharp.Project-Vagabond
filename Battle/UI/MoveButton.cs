@@ -157,18 +157,6 @@ namespace ProjectVagabond.Battle.UI
             float effectiveWidth = VisualWidthOverride ?? Bounds.Width;
             float effectiveHeight = VisualHeightOverride ?? Bounds.Height;
 
-            // Pixel Snap Center if rotation is negligible
-            if (Math.Abs(_currentHoverRotation) < 0.01f)
-            {
-                // Calculate target center based on effective width to ensure integer alignment of edges
-                float halfWidth = effectiveWidth / 2f;
-                float targetLeftX = MathF.Floor(centerPos.X - halfWidth);
-                float targetCenterX = targetLeftX + halfWidth;
-
-                float targetCenterY = MathF.Floor(centerPos.Y) + (Bounds.Height % 2 == 0 ? 0.0f : 0.5f);
-                centerPos = new Vector2(targetCenterX, targetCenterY);
-            }
-
             // --- DRAW BACKGROUND ---
             if (DrawSystemBackground)
             {
