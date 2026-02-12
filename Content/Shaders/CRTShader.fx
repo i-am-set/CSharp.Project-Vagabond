@@ -35,7 +35,7 @@ static const float CURVATURE = 0.15;
 static const float ZOOM = 1.02;
 
 // Color & Contrast
-static const float BLACK_LEVEL = 0.05; 
+static const float BLACK_LEVEL = 0.03; 
 
 // Scanlines (Structural)
 static const float SCANLINE_DENSITY = 1.0;  

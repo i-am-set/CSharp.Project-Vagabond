@@ -94,6 +94,7 @@ namespace ProjectVagabond.Battle
             {
                 { OffensiveStatType.Strength, 0 },
                 { OffensiveStatType.Intelligence, 0 },
+                { OffensiveStatType.Tenacity, 0 },
                 { OffensiveStatType.Agility, 0 }
             };
 

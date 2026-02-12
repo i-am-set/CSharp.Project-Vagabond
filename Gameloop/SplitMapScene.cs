@@ -44,7 +44,7 @@ namespace ProjectVagabond.Scenes
         private int _playerCurrentNodeId;
         private readonly PlayerMapIcon _playerIcon;
 
-        private const float PLAYER_MOVE_SPEED = 50f;
+        private const float PLAYER_MOVE_SPEED = 20f;
         private const float CAMERA_LERP_SPEED = 15f;
         private const float POST_EVENT_DELAY = 0.0f;
         private const float PATH_ANIMATION_DURATION = 1.25f;
