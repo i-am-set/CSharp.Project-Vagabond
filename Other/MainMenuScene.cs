@@ -75,6 +75,7 @@ namespace ProjectVagabond.Scenes
             const int verticalPadding = 2;
             const int buttonYSpacing = 0;
             float currentY = 90f;
+            int screenCenterX = Global.VIRTUAL_WIDTH / 2;
 
             string playText = "PLAY";
             string settingsText = "SETTINGS";
@@ -88,14 +89,13 @@ namespace ProjectVagabond.Scenes
             int settingsWidth = (int)settingsSize.X + horizontalPadding * 2;
             int exitWidth = (int)exitSize.X + horizontalPadding * 2;
 
-            int buttonX = 48;
-
             int playHeight = (int)playSize.Y + verticalPadding * 2;
+            int playX = screenCenterX - (playWidth / 2);
             var playButton = new Button(
-                new Rectangle(buttonX, (int)currentY, playWidth, playHeight),
+                new Rectangle(playX, (int)currentY, playWidth, playHeight),
                 playText,
                 font: secondaryFont,
-                alignLeft: true
+                alignLeft: false
             )
             {
                 TextRenderOffset = new Vector2(0, -1),
@@ -128,11 +128,12 @@ namespace ProjectVagabond.Scenes
             currentY += playHeight + buttonYSpacing;
 
             int settingsHeight = (int)settingsSize.Y + verticalPadding * 2;
+            int settingsX = screenCenterX - (settingsWidth / 2);
             var settingsButton = new Button(
-                new Rectangle(buttonX, (int)currentY, settingsWidth, settingsHeight),
+                new Rectangle(settingsX, (int)currentY, settingsWidth, settingsHeight),
                 settingsText,
                 font: secondaryFont,
-                alignLeft: true
+                alignLeft: false
             )
             {
                 TextRenderOffset = new Vector2(0, -1),
@@ -150,11 +151,12 @@ namespace ProjectVagabond.Scenes
             currentY += settingsHeight + buttonYSpacing;
 
             int exitHeight = (int)exitSize.Y + verticalPadding * 2;
+            int exitX = screenCenterX - (exitWidth / 2);
             var exitButton = new Button(
-                new Rectangle(buttonX, (int)currentY, exitWidth, exitHeight),
+                new Rectangle(exitX, (int)currentY, exitWidth, exitHeight),
                 exitText,
                 font: secondaryFont,
-                alignLeft: true
+                alignLeft: false
             )
             {
                 TextRenderOffset = new Vector2(0, -1),
