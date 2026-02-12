@@ -45,7 +45,7 @@ namespace ProjectVagabond.Battle
 
             // 2. Critical Hit Check
             bool isCrit = false;
-            if (!isGraze)
+            if (!isGraze && move.ImpactType != ImpactType.Status && move.Power > 0)
             {
                 if (context.IsSimulation)
                 {
