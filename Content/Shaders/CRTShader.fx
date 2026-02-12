@@ -242,8 +242,8 @@ float4 MainPS(PixelShaderInput input) : COLOR
     // --- 8. NOISE ---
 #ifdef ENABLE_NOISE
     float noise = (rand(uv * Time) - 0.5) * NOISE_INTENSITY;
-    // Noise is more visible in dark areas
-    color += noise * (1.0 - lumaVal);
+    // Apply noise proportional to signal strength (masks noise on black)
+    color += noise * color;
 #endif
 
     // --- 9. GAMMA & FLASH ---
