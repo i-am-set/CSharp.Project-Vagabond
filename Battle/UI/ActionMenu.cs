@@ -406,8 +406,7 @@ namespace ProjectVagabond.Battle.UI
                     int yOffset = (i == 1) ? 0 : 1; // Original visual offset logic
                     int width = widths[i];
 
-                    // Shift Bounds.Y up by paddingY so the visual (drawn at center) stays in the original spot
-                    _buttons[i].Bounds = new Rectangle(startX, (y + yOffset) - paddingY, width + 1, hitboxHeight);
+                    _buttons[i].Bounds = new Rectangle(startX, (y + yOffset) - paddingY, width, hitboxHeight);
 
                     // Apply the visual override so it doesn't stretch
                     if (_buttons[i] is MoveButton mb)
@@ -428,7 +427,7 @@ namespace ProjectVagabond.Battle.UI
                 {
                     if (i >= _buttons.Count) break;
                     int width = secWidths[i - 3];
-                    _buttons[i].Bounds = new Rectangle(secStartX, secY, width + 1, 7);
+                    _buttons[i].Bounds = new Rectangle(secStartX, secY, width, 7);
                     secStartX += width + BUTTON_SPACING;
                 }
 

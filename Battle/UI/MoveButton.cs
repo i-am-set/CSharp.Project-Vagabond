@@ -148,8 +148,8 @@ namespace ProjectVagabond.Battle.UI
             float finalScaleY = _currentScale;
             Vector2 scaleVec = new Vector2(finalScaleX, finalScaleY);
 
-            // Calculate Center Position with Shake
-            Vector2 centerPos = new Vector2(Bounds.Center.X, Bounds.Center.Y) + shakeOffset;
+            Vector2 centerPos = new Vector2(Bounds.X + Bounds.Width / 2f, Bounds.Y + Bounds.Height / 2f) + shakeOffset;
+
             if (horizontalOffset.HasValue) centerPos.X += horizontalOffset.Value;
             if (verticalOffset.HasValue) centerPos.Y += verticalOffset.Value;
 
@@ -311,9 +311,10 @@ namespace ProjectVagabond.Battle.UI
             {
                 string noManaText = "NOT ENOUGH MANA";
                 Vector2 noManaSize = font.MeasureString(noManaText);
+                // FIX: Use float center for warning text too
                 Vector2 noManaPos = new Vector2(
-                    Bounds.Center.X - noManaSize.X / 2f,
-                    Bounds.Center.Y - noManaSize.Y / 2f - 2
+                    Bounds.X + Bounds.Width / 2f - noManaSize.X / 2f,
+                    Bounds.Y + Bounds.Height / 2f - noManaSize.Y / 2f - 2
                 );
                 TextAnimator.DrawTextWithEffectSquareOutlined(spriteBatch, font, noManaText, noManaPos, _global.Palette_Rust, Color.Black, TextEffectType.None, 0f);
             }

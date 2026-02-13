@@ -301,7 +301,7 @@
     "MoveID": "16",
     "MoveName": "Vampiric Bite",
     "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]BITES[/] {IsTargetProperNoun}[cSlot]{target}[/] and drains life!",
-    "Description": "Drains [cpositive]50%[/] of damage dealt as HP.",
+    "Description": "Heals [cpositive]50%[/] of damage dealt as HP.",
     "Flavor": "A vicious, life-stealing chomp.",
     "Power": 70,
     "MoveType": "Action",

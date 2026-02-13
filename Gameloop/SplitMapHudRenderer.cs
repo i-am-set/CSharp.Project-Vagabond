@@ -341,6 +341,10 @@ namespace ProjectVagabond.UI
                 {
                     float currentY = _verticalOffsets[member];
                     float targetY = 0f;
+
+                    // Apply default offset for slots 3 and 4 (indices 2 and 3)
+                    if (i >= 2) targetY = 1f;
+
                     if (member == _draggedMember) targetY = DRAG_LIFT_OFFSET;
                     else if (member == _hoveredMember) targetY = HOVER_LIFT_OFFSET;
 
@@ -426,8 +430,19 @@ namespace ProjectVagabond.UI
             float t = Math.Clamp(verticalOffset / 24f, 0f, 1f);
             Color lineColor = Color.Lerp(_global.Palette_DarkShadow, _global.Palette_DarkestPale, t);
 
+            // Draw Background
             spriteBatch.Draw(_pixel, new Vector2(0, currentStartY), null, _global.Palette_Black, 0f, Vector2.Zero, new Vector2(Global.VIRTUAL_WIDTH, HUD_HEIGHT), SpriteEffects.None, 0f);
-            spriteBatch.Draw(_pixel, new Vector2(0, currentStartY), null, lineColor, 0f, Vector2.Zero, new Vector2(Global.VIRTUAL_WIDTH, 1), SpriteEffects.None, 0f);
+
+            // Draw Dotted Line (Smooth Movement)
+            int dotSize = 1;
+            int gapSize = 1;
+            Vector2 dotScale = new Vector2(dotSize, 1);
+
+            for (int x = 0; x < Global.VIRTUAL_WIDTH; x += (dotSize + gapSize))
+            {
+                // Use Vector2 position to maintain float precision and avoid jitter
+                spriteBatch.Draw(_pixel, new Vector2(x, currentStartY), null, lineColor, 0f, Vector2.Zero, dotScale, SpriteEffects.None, 0f);
+            }
 
             var party = _gameState.PlayerState.Party;
             int count = party.Count;
@@ -535,7 +550,9 @@ namespace ProjectVagabond.UI
                 }
                 else
                 {
-                    DrawHollowRectSmooth(spriteBatch, cardPos, cardSize, _global.Palette_DarkPale);
+                    // Slots 3 and 4 (indices 2 and 3) get DarkestPale, others get DarkPale
+                    Color borderColor = (index >= 2) ? _global.Palette_DarkestPale : _global.Palette_DarkPale;
+                    DrawHollowRectSmooth(spriteBatch, cardPos, cardSize, borderColor);
                 }
             }
 
