@@ -45,7 +45,7 @@ namespace ProjectVagabond.Scenes
         private const float PLAYER_MOVE_SPEED = 30f;
         private const float CAMERA_LERP_SPEED = 15f;
         private const float POST_EVENT_DELAY = 0.0f;
-        private const float PATH_ANIMATION_DURATION = 1.25f;
+        private const float PATH_ANIMATION_DURATION = 0.6f;
 
         private const float NODE_LIFT_DURATION = 0.1f;
         private const float PULSE_DURATION = 0.1f;

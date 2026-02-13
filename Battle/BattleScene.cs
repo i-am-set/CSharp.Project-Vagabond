@@ -1059,10 +1059,11 @@ namespace ProjectVagabond.Scenes
 
                     bool isHeavyHit = result.WasCritical || damageRatio > 0.25f || target.Stats.CurrentHP <= 0;
 
-                    const float BASE_JUICE_SCALAR = 3.0f;
+                    // Tuning: Reduced scalar from 3.0f to 1.0f and cap from 5.0f to 2.0f for snappier feel
+                    const float BASE_JUICE_SCALAR = 1.0f;
                     float juiceIntensity = 1.0f + (damageRatio * BASE_JUICE_SCALAR);
-                    if (result.WasCritical) juiceIntensity *= 1.5f;
-                    juiceIntensity = Math.Min(juiceIntensity, 5.0f);
+                    if (result.WasCritical) juiceIntensity *= 1.2f;
+                    juiceIntensity = Math.Min(juiceIntensity, 2.0f);
 
                     if (!result.WasGraze)
                     {
