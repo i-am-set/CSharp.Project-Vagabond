@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
@@ -775,10 +776,73 @@ namespace ProjectVagabond.Battle
 
             if (_multiHitTotalExecuted > 1) EventBus.Publish(new GameEvents.MultiHitActionCompleted { Actor = action.Actor, ChosenMove = action.ChosenMove, HitCount = _multiHitTotalExecuted, CriticalHitCount = _multiHitCrits });
 
+            if (_currentPhase == BattlePhase.ProcessingInteraction)
+            {
+                SecondaryEffectSystem.ProcessSecondaryEffects(action, _currentActionFinalTargets, _currentActionDamageResults);
+            }
+
             if (_currentPhase != BattlePhase.ProcessingInteraction && _currentPhase != BattlePhase.WaitingForSwitchCompletion)
             {
                 _currentPhase = BattlePhase.SecondaryEffectResolution;
                 CanAdvance = false;
+            }
+        }
+
+        public void DrawStatChanges(SpriteBatch spriteBatch, BattleCombatant combatant, float startX, float startY, bool isRightAligned)
+        {
+            // 1. Filter and Sort
+            var sortedStats = combatant.StatStages
+                .Where(kvp => kvp.Value != 0)
+                .Select(kvp => new { Stat = kvp.Key, Value = kvp.Value })
+                .OrderByDescending(x => x.Value) // +2 -> +1 -> -1 -> -2
+                .ThenBy(x => x.Stat switch {     // STR -> INT -> AGI
+                    OffensiveStatType.Strength => 0,
+                    OffensiveStatType.Intelligence => 1,
+                    OffensiveStatType.Agility => 2,
+                    _ => 99
+                });
+
+            var font = ServiceLocator.Get<Core>().TertiaryFont;
+            var texture = ServiceLocator.Get<SpriteManager>().StatModIconsTexture; // Ensure this is loaded in SpriteManager
+            var global = ServiceLocator.Get<Global>();
+
+            float currentY = startY;
+
+            foreach (var item in sortedStats)
+            {
+                string label = item.Stat switch
+                {
+                    OffensiveStatType.Strength => "STR",
+                    OffensiveStatType.Intelligence => "INT",
+                    OffensiveStatType.Agility => "AGI",
+                    _ => ""
+                };
+                if (string.IsNullOrEmpty(label)) continue;
+
+                // Map Value to Frame Index (-2=0, -1=1, +1=2, +2=3)
+                int frameIndex = item.Value switch { -2 => 0, -1 => 1, 1 => 2, 2 => 3, _ => -1 };
+                if (frameIndex == -1) continue;
+
+                Rectangle sourceRect = new Rectangle(frameIndex * 6, 0, 6, 6);
+                Vector2 textSize = font.MeasureString(label);
+
+                // Layout: [TEXT] [ICON] with 1px spacing
+                float totalWidth = textSize.X + 1 + 6;
+
+                // Align
+                float drawX = isRightAligned ? (startX + BattleLayout.ENEMY_BAR_WIDTH - totalWidth) : startX;
+
+                // Draw Text
+                spriteBatch.DrawStringSnapped(font, label, new Vector2(drawX, currentY), global.Palette_Sun);
+
+                // Draw Icon (Centered vertically relative to text)
+                // Assuming font height ~7-9px, centering 6px icon
+                float iconX = drawX + textSize.X + 1;
+                float iconY = currentY + (textSize.Y / 2f) - 3f;
+
+                spriteBatch.DrawSnapped(texture, new Vector2(iconX, iconY), sourceRect, Color.White);
+
+                currentY += textSize.Y + 1; // Move down for next line
             }
         }
 

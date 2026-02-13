@@ -62,6 +62,7 @@ namespace ProjectVagabond
         public Texture2D InventorySpellSlotButtonSpriteSheet { get; private set; }
         public Texture2D ManaBarPattern { get; private set; }
         public Texture2D TenacityPipTexture { get; private set; }
+        public Texture2D StatModIconsTexture { get; private set; }
 
         public Rectangle[] ActionButtonSourceRects { get; private set; }
         public Rectangle[] ActionIconSourceRects { get; private set; }
@@ -423,6 +424,9 @@ namespace ProjectVagabond
             // Load Tenacity Pip Sprite Sheet
             try { TenacityPipTexture = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/tenacity_3x3_icon"); }
             catch { TenacityPipTexture = _textureFactory.CreateColoredTexture(6, 3, Color.Magenta); }
+
+            try { StatModIconsTexture = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/stat_mod_icons_spritesheet"); }
+            catch { StatModIconsTexture = _textureFactory.CreateColoredTexture(24, 6, Color.Magenta); }
 
             // --- NEW: Create Mini Action Button Texture ---
             // Width 80px, Height 6px

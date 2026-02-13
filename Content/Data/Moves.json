@@ -241,7 +241,8 @@
     "Target": "Single",
     "Accuracy": 100,
     "Effects": {
-      "InflictStatChange": "Strength, -1, Intelligence, -1",
+      "ModifyStatStage_Str": "Strength,-1,100",
+      "ModifyStatStage_Int": "Intelligence,-1,100",
       "SelfSwitch": ""
     },
     "AnimationId": "sta_orange_orb"

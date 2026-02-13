@@ -439,4 +439,48 @@ namespace ProjectVagabond.Battle.Abilities
             }
         }
     }
+
+    public class ModifyStatStageAbility : IAbility
+    {
+        public string Name => "Stat Modifier";
+        public string Description => "Modifies combat stats on hit.";
+        public int Priority => 0;
+
+        private readonly OffensiveStatType _stat;
+        private readonly int _amount;
+        private readonly int _chance;
+        private readonly string _targetScope; // "Self" or "Target"
+
+        // Constructor signature matches JSON: "Stat, Amount, Chance, [Target]"
+        // Example JSON: "ModifyStatStage": "Strength,-1,100"
+        public ModifyStatStageAbility(OffensiveStatType stat, int amount, int chance, string target = "Target")
+        {
+            _stat = stat;
+            _amount = amount;
+            _chance = chance;
+            _targetScope = target;
+        }
+
+        public void OnEvent(GameEvent e, BattleContext context)
+        {
+            // Trigger when the move successfully hits (ReactionEvent)
+            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
+            {
+                // Ignore if the move grazed/missed
+                if (reaction.Result.WasGraze) return;
+
+                // Roll for chance (e.g. 100%)
+                if (Random.Shared.Next(1, 101) <= _chance)
+                {
+                    // Determine who gets the stat change
+                    BattleCombatant targetCombatant = (_targetScope.Equals("Self", StringComparison.OrdinalIgnoreCase))
+                        ? reaction.Actor
+                        : reaction.Target;
+
+                    // Apply the change
+                    targetCombatant.ModifyStatStage(_stat, _amount);
+                }
+            }
+        }
+    }
 }

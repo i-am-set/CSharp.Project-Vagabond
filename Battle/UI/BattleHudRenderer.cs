@@ -322,6 +322,7 @@ namespace ProjectVagabond.Battle.UI
 
             // Position below health bar (removed mana bar gap)
             float iconY = startY + BattleLayout.ENEMY_BAR_HEIGHT + 2;
+            float statOffsetY = BattleLayout.ENEMY_BAR_HEIGHT + 2 + BattleLayout.STATUS_ICON_SIZE + 1;
 
             int step = iconSize + gap;
 

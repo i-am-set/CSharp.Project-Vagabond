@@ -127,9 +127,22 @@ namespace ProjectVagabond.Battle.Abilities
 
         private static IAbility CreateAbility(string key, string valueString)
         {
-            if (!_abilityTypeCache.TryGetValue(key, out Type type))
+            Type type = null;
+
+            // 1. Try Exact Match
+            if (!_abilityTypeCache.TryGetValue(key, out type))
             {
-                Debug.WriteLine($"[AbilityFactory] Warning: No ability class found for key '{key}'. Expected class '{key}Ability'.");
+                // 2. Try Suffix Match (e.g. "ModifyStatStage_Str" -> "ModifyStatStage")
+                if (key.Contains('_'))
+                {
+                    string baseKey = key.Substring(0, key.IndexOf('_'));
+                    _abilityTypeCache.TryGetValue(baseKey, out type);
+                }
+            }
+
+            if (type == null)
+            {
+                Debug.WriteLine($"[AbilityFactory] Warning: No ability class found for key '{key}'.");
                 return null;
             }
 

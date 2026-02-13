@@ -446,6 +446,9 @@ namespace ProjectVagabond.Battle.UI
                     }
                 }
 
+                // Calculate Y position for stat changes (Below Status Icons)
+                float statOffsetY = (BattleLayout.ENEMY_BAR_HEIGHT + 2 + BattleLayout.STATUS_ICON_SIZE + 1) - 5;
+
                 if (combatant.IsPlayerControlled)
                 {
                     float yOffset = 0f;
@@ -461,6 +464,9 @@ namespace ProjectVagabond.Battle.UI
 
                     _hudRenderer.DrawStatusIcons(spriteBatch, combatant, barX, barY + yOffset, BattleLayout.PLAYER_BAR_WIDTH, true, _playerStatusIcons, GetStatusIconOffset, IsStatusIconAnimating, isRightAligned);
                     _hudRenderer.DrawPlayerBars(spriteBatch, combatant, barX, barY + yOffset, BattleLayout.PLAYER_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha * hudAlpha, gameTime, uiManager, combatant == currentActor, isRightAligned, projectedDamage);
+
+                    // Draw Stat Changes
+                    DrawStatChanges(spriteBatch, combatant, barX, barY + yOffset + statOffsetY, isRightAligned);
                 }
                 else
                 {
@@ -469,7 +475,70 @@ namespace ProjectVagabond.Battle.UI
 
                     _hudRenderer.DrawStatusIcons(spriteBatch, combatant, barX, barY, BattleLayout.ENEMY_BAR_WIDTH, false, _enemyStatusIcons[combatant.CombatantID], GetStatusIconOffset, IsStatusIconAnimating, isRightAligned);
                     _hudRenderer.DrawEnemyBars(spriteBatch, combatant, barX, barY, BattleLayout.ENEMY_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha * hudAlpha, gameTime, isRightAligned, projectedDamage);
+
+                    // Draw Stat Changes
+                    DrawStatChanges(spriteBatch, combatant, barX, barY + statOffsetY, isRightAligned);
                 }
+            }
+        }
+
+        private void DrawStatChanges(SpriteBatch spriteBatch, BattleCombatant combatant, float startX, float startY, bool isRightAligned)
+        {
+            // 1. Filter and Sort
+            // Sort: Highest Value First (+2 -> -2), Then by Stat Type (STR -> INT -> AGI)
+            var sortedStats = combatant.StatStages
+                .Where(kvp => kvp.Value != 0)
+                .Select(kvp => new { Stat = kvp.Key, Value = kvp.Value })
+                .OrderByDescending(x => x.Value)
+                .ThenBy(x => x.Stat switch {
+                    OffensiveStatType.Strength => 0,
+                    OffensiveStatType.Intelligence => 1,
+                    OffensiveStatType.Agility => 2,
+                    _ => 99
+                });
+
+            var font = _core.TertiaryFont;
+            // Ensure SpriteManager has this texture loaded!
+            var texture = _spriteManager.StatModIconsTexture;
+            if (texture == null) return;
+
+            float currentY = startY;
+
+            foreach (var item in sortedStats)
+            {
+                string label = item.Stat switch
+                {
+                    OffensiveStatType.Strength => "STR",
+                    OffensiveStatType.Intelligence => "INT",
+                    OffensiveStatType.Agility => "AGI",
+                    _ => ""
+                };
+                if (string.IsNullOrEmpty(label)) continue;
+
+                // Map Value to Frame Index (-2=0, -1=1, +1=2, +2=3)
+                int frameIndex = item.Value switch { -2 => 0, -1 => 1, 1 => 2, 2 => 3, _ => -1 };
+                if (frameIndex == -1) continue;
+
+                Rectangle sourceRect = new Rectangle(frameIndex * 6, 0, 6, 6);
+                Vector2 textSize = font.MeasureString(label);
+
+                // Layout: [TEXT] [ICON] with 1px spacing
+                float totalWidth = textSize.X + 1 + 6;
+
+                // Align
+                float drawX = isRightAligned ? (startX + BattleLayout.ENEMY_BAR_WIDTH - totalWidth) : startX;
+
+                // Draw Text
+                spriteBatch.DrawStringSnapped(font, label, new Vector2(drawX, currentY), _global.Palette_Sky);
+
+                // Draw Icon (Centered vertically relative to text)
+                // Assuming font height ~7-9px, centering 6px icon
+                float iconX = drawX + textSize.X + 1;
+                float iconY = currentY + (textSize.Y / 2f) - 3f;
+
+                spriteBatch.DrawSnapped(texture, new Vector2(iconX, iconY), sourceRect, Color.White);
+
+                currentY += textSize.Y + 3;
             }
         }
 
