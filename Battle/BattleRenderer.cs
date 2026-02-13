@@ -447,7 +447,7 @@ namespace ProjectVagabond.Battle.UI
                 }
 
                 // Calculate Y position for stat changes (Below Status Icons)
-                float statOffsetY = (BattleLayout.ENEMY_BAR_HEIGHT + 2 + BattleLayout.STATUS_ICON_SIZE + 1) - 5;
+                float statOffsetY = (BattleLayout.ENEMY_BAR_HEIGHT + 2 + BattleLayout.STATUS_ICON_SIZE + 1) + 1;
 
                 if (combatant.IsPlayerControlled)
                 {
