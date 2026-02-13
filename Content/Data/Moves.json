@@ -296,5 +296,40 @@
     },
     "Tags": [ "Healing" ],
     "AnimationId": "sta_orange_orb"
+  },
+  {
+    "MoveID": "16",
+    "MoveName": "Vampiric Bite",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]BITES[/] {IsTargetProperNoun}[cSlot]{target}[/] and drains life!",
+    "Description": "Drains [cpositive]50%[/] of damage dealt as HP.",
+    "Flavor": "A vicious, life-stealing chomp.",
+    "Power": 70,
+    "MoveType": "Action",
+    "ImpactType": "Physical",
+    "OffensiveStat": "Strength",
+    "Target": "Single",
+    "Accuracy": 100,
+    "Effects": {
+      "Lifesteal": "50"
+    },
+    "Tags": [ "Contact", "Healing" ],
+    "AnimationId": "phy_bite"
+  },
+  {
+    "MoveID": "17",
+    "MoveName": "Mock",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]MOCKS[/] {IsTargetProperNoun}[cSlot]{target}[/]!",
+    "Description": "Inflicts [cnegative]Provoked[/] (3 turns). Prevents Status moves.",
+    "Flavor": "Insulting the enemy to force a fight.",
+    "Power": 0,
+    "MoveType": "Action",
+    "ImpactType": "Status",
+    "Target": "Single",
+    "Accuracy": 100,
+    "Effects": {
+      "ApplyStatus": "Provoked, 100, 3"
+    },
+    "Tags": [ "Debuff" ],
+    "AnimationId": "sta_orange_orb"
   }
 ]

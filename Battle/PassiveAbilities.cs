@@ -97,15 +97,30 @@ namespace ProjectVagabond.Battle.Abilities
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
-            if (e is CalculateDamageEvent dmgEvent && dmgEvent.Target.Abilities.Contains(this))
+            // Use ReactionEvent to react AFTER the hit is confirmed
+            if (e is ReactionEvent reaction && reaction.Target.Abilities.Contains(this))
             {
-                if (dmgEvent.IsCritical)
+                if (reaction.Result.WasCritical)
                 {
-                    if (!context.IsSimulation)
+                    // Calculate distance to Max (+2)
+                    int currentStr = reaction.Target.StatStages[OffensiveStatType.Strength];
+                    int needed = 2 - currentStr;
+
+                    if (needed > 0)
                     {
-                        dmgEvent.Target.ModifyStatStage(OffensiveStatType.Strength, 12);
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{dmgEvent.Target.Name}'s {Name} maxed their [cstr]Strength[/]!" });
-                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = dmgEvent.Target, Ability = this });
+                        // Force the change to exactly +2
+                        reaction.Target.ModifyStatStage(OffensiveStatType.Strength, needed);
+
+                        if (!context.IsSimulation)
+                        {
+                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{reaction.Target.Name}'s {Name} maxed their [cstr]Strength[/]!" });
+                            EventBus.Publish(new GameEvents.AbilityActivated { Combatant = reaction.Target, Ability = this });
+                        }
+                    }
+                    else if (!context.IsSimulation)
+                    {
+                        // Optional: Flavor text if already maxed
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{reaction.Target.Name} is already furious!" });
                     }
                 }
             }
