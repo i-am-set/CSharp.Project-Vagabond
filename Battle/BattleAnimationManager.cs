@@ -356,7 +356,7 @@ namespace ProjectVagabond.Battle.UI
             _activeBarAnimations.Any() ||
             _activeIntroSlideAnimations.Any() ||
             _activeFloorIntroAnimations.Any() ||
-            _activeFloorOutroAnimations.Any() ||
+            _activeFloorOutroAnimations.Any(a => a.Timer < FloorOutroAnimationState.DURATION) ||
             _activeAttackCharges.Any();
 
         /// <summary>
@@ -686,7 +686,7 @@ namespace ProjectVagabond.Battle.UI
 
         public bool IsFloorAnimatingOut(string id)
         {
-            return _activeFloorOutroAnimations.Any(a => a.ID == id);
+            return _activeFloorOutroAnimations.Any(a => a.ID == id && a.Timer < FloorOutroAnimationState.DURATION);
         }
 
         public void StartSwitchOutAnimation(string combatantId, bool isEnemy)
@@ -1399,10 +1399,6 @@ namespace ProjectVagabond.Battle.UI
             {
                 var anim = _activeFloorOutroAnimations[i];
                 anim.Timer += deltaTime;
-                if (anim.Timer >= FloorOutroAnimationState.DURATION)
-                {
-                    _activeFloorOutroAnimations.RemoveAt(i);
-                }
             }
         }
 
