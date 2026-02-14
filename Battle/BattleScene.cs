@@ -840,6 +840,8 @@ namespace ProjectVagabond.Scenes
 
             spriteBatch.End();
 
+            _particleSystemManager.Draw(spriteBatch, worldTransform);
+
             // 4. Begin UI Batch (Fixed)
             spriteBatch.Begin(
                 SpriteSortMode.Deferred,
@@ -1051,6 +1053,18 @@ namespace ProjectVagabond.Scenes
                 var target = e.Targets[i];
                 var result = e.DamageResults[i];
                 Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(target, _battleManager.AllCombatants);
+                Vector2 targetPos = _renderer.GetCombatantVisualCenterPosition(target, _battleManager.AllCombatants);
+
+                // --- Status Move Visuals ---
+                if (e.ChosenMove.ImpactType == ImpactType.Status && !result.WasGraze && !result.WasProtected)
+                {
+                    var statusParticles = _particleSystemManager.CreateEmitter(ParticleEffects.CreateStatusImpact());
+                    statusParticles.Position = targetPos;
+                    statusParticles.EmitBurst(statusParticles.Settings.BurstCount);
+
+                    // Subtle wobble for feedback without heavy impact feel
+                    _hapticsManager.TriggerWobble(2.0f, 0.2f, 15f);
+                }
 
                 if (result.DamageAmount > 0)
                 {
@@ -1080,7 +1094,7 @@ namespace ProjectVagabond.Scenes
                         _hapticsManager.TriggerCompoundShake(0.25f * juiceIntensity);
                     }
                     Vector2 attackerPos = _renderer.GetCombatantVisualCenterPosition(e.Actor, _battleManager.AllCombatants);
-                    Vector2 targetPos = _renderer.GetCombatantVisualCenterPosition(target, _battleManager.AllCombatants);
+
                     Vector2 direction = targetPos - attackerPos;
                     if (direction != Vector2.Zero) direction.Normalize(); else direction = new Vector2(1, 0);
                     float shakeMag = 10f * juiceIntensity;

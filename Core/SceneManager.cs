@@ -1,13 +1,15 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using ProjectVagabond.Scenes;
-using System.Collections.Generic;
 using MonoGame.Extended.BitmapFonts;
-using System;
-using System.Linq;
-using ProjectVagabond.UI;
+using MonoGame.Extended.ECS;
 using ProjectVagabond.Particles;
+using ProjectVagabond.Scenes;
 using ProjectVagabond.Transitions;
+using ProjectVagabond.UI;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace ProjectVagabond
 {
@@ -171,10 +173,6 @@ namespace ProjectVagabond
             {
                 // Draw scene with standard transform
                 _currentScene.Draw(spriteBatch, font, gameTime, transform);
-
-                // Draw particles
-                var particleSystemManager = ServiceLocator.Get<ParticleSystemManager>();
-                particleSystemManager.Draw(spriteBatch, transform);
             }
 
             if (IsModalActive)

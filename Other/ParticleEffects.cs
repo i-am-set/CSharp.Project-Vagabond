@@ -1,7 +1,15 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using MonoGame.Extended.BitmapFonts;
+using MonoGame.Extended.ECS;
+using ProjectVagabond;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.Transitions;
+using ProjectVagabond.UI;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace ProjectVagabond.Particles
 {
@@ -530,6 +538,50 @@ namespace ProjectVagabond.Particles
             settings.Texture = ServiceLocator.Get<SpriteManager>().CircleParticleSprite;
             settings.BlendMode = BlendState.Additive;
             settings.LayerDepth = 0.9f;
+
+            return settings;
+        }
+
+        /// <summary>
+        /// Creates a soft, rising burst of particles for status effect applications.
+        /// </summary>
+        public static ParticleEmitterSettings CreateStatusImpact()
+        {
+            var settings = ParticleEmitterSettings.CreateDefault();
+            var global = ServiceLocator.Get<Global>();
+
+            // Emitter
+            settings.Shape = EmitterShape.Circle;
+            settings.EmitFrom = EmissionSource.Volume;
+            settings.EmitterSize = new Vector2(12f, 12f);
+            settings.EmissionRate = 0;
+            settings.BurstCount = 15;
+            settings.MaxParticles = 15;
+            settings.Duration = 0.5f;
+
+            // Initial Particle
+            settings.Lifetime = new FloatRange(1.5f, 1.8f);
+            settings.VelocityPattern = EmissionPattern.Radial;
+            settings.InitialVelocityX = new FloatRange(10f, 30f); // Gentle expansion speed
+            settings.InitialVelocityY = new FloatRange(0f); // Radial uses X as speed
+
+            settings.InitialSize = new FloatRange(2f, 4f);
+            settings.EndSize = new FloatRange(0f);
+            settings.InterpolateSize = true;
+
+            // Over Lifetime
+            settings.Gravity = new Vector2(0, -40f); // Float upwards
+            settings.Drag = 2.0f;
+            settings.StartColor = global.Palette_Pale;
+            settings.EndColor = global.Palette_Sky; // Fade to teal
+            settings.StartAlpha = 0.8f;
+            settings.EndAlpha = 0.0f;
+
+            // Rendering
+            // Use the 1x1 pixel for a sharp look
+            settings.Texture = ServiceLocator.Get<Texture2D>();
+            settings.BlendMode = BlendState.Additive;
+            settings.LayerDepth = 0.92f; // Slightly below sparks
 
             return settings;
         }

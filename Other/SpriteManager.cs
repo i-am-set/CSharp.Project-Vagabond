@@ -428,7 +428,7 @@ namespace ProjectVagabond
             try { StatModIconsTexture = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/stat_mod_icons_spritesheet"); }
             catch { StatModIconsTexture = _textureFactory.CreateColoredTexture(24, 6, Color.Magenta); }
 
-            // --- NEW: Create Mini Action Button Texture ---
+            // --- Create Mini Action Button Texture ---
             // Width 80px, Height 6px
             try { MiniActionButtonSprite = _textureFactory.CreateMiniActionButtonTexture(80); }
             catch { MiniActionButtonSprite = _textureFactory.CreateColoredTexture(80, 6, Color.Magenta); }
@@ -940,7 +940,7 @@ namespace ProjectVagabond
             _enemySpriteRightPixelOffsets[archetypeId] = rightOffsets;
             _enemySpriteBottomPixelOffsets[archetypeId] = bottomOffsets;
 
-            // --- NEW: Calculate Visual Center Offset (Union) ---
+            // ---  Calculate Visual Center Offset (Union) ---
             if (numParts > 0)
             {
                 int globalMinY = int.MaxValue;
@@ -1083,7 +1083,7 @@ namespace ProjectVagabond
             // But for now, this guarantees no "T" artifacts on arrows.
             // StatChangeIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/stat_change_icons_spritesheet"); // OLD
 
-            // NEW: Load the 9x3 arrow sheet from disk as requested.
+            //  Load the 9x3 arrow sheet from disk as requested.
             try
             {
                 StatChangeIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/stat_change_icons_spritesheet");

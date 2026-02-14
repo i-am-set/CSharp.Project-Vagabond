@@ -1715,7 +1715,7 @@ namespace ProjectVagabond.Battle.UI
 
                 if (combatant.IsPlayerControlled)
                 {
-                    // --- NEW LOGIC: Idle Bob for Pending Action ---
+                    // --- LOGIC: Idle Bob for Pending Action ---
                     float yOffset = 0f;
                     if (battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection)
                     {

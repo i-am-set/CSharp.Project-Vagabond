@@ -7,6 +7,7 @@ using ProjectVagabond.Progression;
 using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
+using ProjectVagabond.Particles;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -36,6 +37,7 @@ namespace ProjectVagabond.Scenes
         private readonly BirdManager _birdManager;
         private readonly TransitionManager _transitionManager;
         private readonly HapticsManager _hapticsManager;
+        private readonly ParticleSystemManager _particleSystemManager;
 
         private SplitMap? _currentMap;
         private int _playerCurrentNodeId;
@@ -159,6 +161,7 @@ namespace ProjectVagabond.Scenes
             _birdManager = new BirdManager();
             _transitionManager = ServiceLocator.Get<TransitionManager>();
             _hapticsManager = ServiceLocator.Get<HapticsManager>();
+            _particleSystemManager = ServiceLocator.Get<ParticleSystemManager>();
 
             var narratorBounds = new Rectangle(0, Global.VIRTUAL_HEIGHT - 50, Global.VIRTUAL_WIDTH, 50);
             _resultNarrator = new StoryNarrator(narratorBounds);
@@ -232,7 +235,7 @@ namespace ProjectVagabond.Scenes
             else
             {
                 _currentMap = _progressionManager.CurrentSplitMap;
-                _cameraFocusNodeId = _playerCurrentNodeId; 
+                _cameraFocusNodeId = _playerCurrentNodeId;
                 var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
                 if (currentNode != null)
                 {
@@ -784,6 +787,9 @@ namespace ProjectVagabond.Scenes
             _birdManager.Draw(spriteBatch, _cameraOffset);
 
             spriteBatch.End();
+
+            _particleSystemManager.Draw(spriteBatch, finalTransform);
+
             spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
 
             var mapBounds = new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);

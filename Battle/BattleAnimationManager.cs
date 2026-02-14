@@ -40,7 +40,7 @@ namespace ProjectVagabond.Battle.UI
 
         public Func<BattleCombatant, Vector2> GetCombatantPosition { get; set; }
 
-        // --- NEW: HUD Entry Animation ---
+        // HUD Entry Animation
         public class HudEntryAnimationState
         {
             public string CombatantID;
