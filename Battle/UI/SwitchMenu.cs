@@ -70,7 +70,7 @@ namespace ProjectVagabond.Battle.UI
             var activePlayers = battleManager.AllCombatants.Where(c => c.IsPlayerControlled && c.IsActiveOnField).ToList();
             bool isCentered = activePlayers.Count == 1;
 
-            var area = BattleLayout.GetActionMenuArea(_activeSlotIndex, isCentered);
+            var area = BattleLayout.GetActionMenuArea(_activeSlotIndex);
             int panelHeight = 49;
             int startX = area.Center.X - (PANEL_WIDTH / 2);
             int startY = area.Center.Y - (panelHeight / 2);

@@ -71,13 +71,9 @@ namespace ProjectVagabond.Battle.UI
 
         private void UpdateLayout()
         {
-            var battleManager = ServiceLocator.Get<BattleManager>();
-            var activePlayers = battleManager.AllCombatants.Where(c => c.IsPlayerControlled && c.IsActiveOnField).ToList();
-            bool isCentered = activePlayers.Count == 1;
-
             foreach (var panel in _panels)
             {
-                var area = BattleLayout.GetActionMenuArea(panel.SlotIndex, isCentered);
+                var area = BattleLayout.GetActionMenuArea(panel.SlotIndex);
                 int x = area.Center.X - (PANEL_WIDTH / 2);
                 int y = area.Y;
                 panel.SetPosition(new Vector2(x, y));
@@ -86,15 +82,11 @@ namespace ProjectVagabond.Battle.UI
 
         public void UpdatePositions(BattleRenderer renderer)
         {
-            var battleManager = ServiceLocator.Get<BattleManager>();
-            var activePlayers = battleManager.AllCombatants.Where(c => c.IsPlayerControlled && c.IsActiveOnField).ToList();
-            bool isCentered = activePlayers.Count == 1;
-
             foreach (var panel in _panels)
             {
                 float visualX = renderer.GetCombatantVisualX(panel.Combatant);
                 float x = visualX - (PANEL_WIDTH / 2f);
-                float y = BattleLayout.GetActionMenuArea(panel.SlotIndex, isCentered).Y;
+                float y = BattleLayout.GetActionMenuArea(panel.SlotIndex).Y;
                 panel.SetPosition(new Vector2(x, y));
             }
         }
@@ -156,7 +148,6 @@ namespace ProjectVagabond.Battle.UI
             }
 
             // Pass 2: Draw Tooltips (Overlay Layer)
-            // This ensures tooltips always render on top of ALL buttons from ALL panels
             foreach (var panel in _panels)
             {
                 if (hiddenSlotIndex.HasValue && panel.SlotIndex == hiddenSlotIndex.Value)
@@ -184,11 +175,8 @@ namespace ProjectVagabond.Battle.UI
             private Rectangle[] _iconRects;
             private readonly MoveTooltipRenderer _tooltipRenderer;
 
-            // --- Button Layout Configuration ---
             private const int HITBOX_WIDTH = 45;
             private const int VISUAL_WIDTH = 44;
-
-            // Info Box Configuration
             private const int INFO_BOX_OFFSET_Y = 23;
 
             public CombatantPanel(BattleCombatant combatant, List<BattleCombatant> allCombatants)
@@ -251,7 +239,6 @@ namespace ProjectVagabond.Battle.UI
                 // 6. Stall (Index 5)
                 AddSecondaryButton("STALL", "6");
 
-                // Check bench for Switch enablement
                 _hasBench = allCombatants.Any(c => c.IsPlayerControlled && !c.IsDefeated && c.BattleSlot >= 2);
                 if (_buttons.Count > 4) _buttons[4].IsEnabled = _hasBench;
 
@@ -404,13 +391,10 @@ namespace ProjectVagabond.Battle.UI
                 int startX = (int)(panelCenterX - (totalButtonsWidth / 2f));
                 int y = (int)_position.Y + 1;
 
-                // --- Top Row (Indices 0, 1, 2) ---
                 for (int i = 0; i < 3; i++)
                 {
                     int visualHeight = (i == 1) ? 20 : 18;
                     int hitboxHeight = 20;
-
-                    int paddingY = (hitboxHeight - visualHeight) / 2;
 
                     _buttons[i].Bounds = new Rectangle(startX, y, HITBOX_WIDTH, hitboxHeight);
 
@@ -423,7 +407,6 @@ namespace ProjectVagabond.Battle.UI
                     startX += HITBOX_WIDTH;
                 }
 
-                // --- Secondary Row (Indices 3, 4, 5) ---
                 int secStartX = (int)(panelCenterX - (totalButtonsWidth / 2f));
                 int secY = (int)_position.Y + 18;
 
@@ -445,7 +428,6 @@ namespace ProjectVagabond.Battle.UI
                     secStartX += HITBOX_WIDTH;
                 }
 
-                // --- Cancel Button ---
                 int cancelW = 50;
                 int cancelH = 15;
                 float panelCenterY = _position.Y + (BattleLayout.ACTION_MENU_HEIGHT / 2f);
@@ -507,7 +489,6 @@ namespace ProjectVagabond.Battle.UI
                 }
             }
 
-            // UPDATED: Renamed to DrawButtons to separate logic
             public void DrawButtons(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform, Vector2 offset)
             {
                 var pixel = ServiceLocator.Get<Texture2D>();
@@ -534,14 +515,12 @@ namespace ProjectVagabond.Battle.UI
                 }
                 else
                 {
-                    // 1. Draw Secondary Row (Indices 3, 4, 5) first (Background Layer)
                     for (int i = 3; i < 6; i++)
                     {
                         if (i < _buttons.Count)
                             DrawButton(spriteBatch, _buttons[i], pixel, global, snappedOffsetY, gameTime, transform, i);
                     }
 
-                    // 2. Draw Top Row (Indices 0, 1, 2) (Foreground Layer)
                     for (int i = 0; i < 3; i++)
                     {
                         DrawButton(spriteBatch, _buttons[i], pixel, global, snappedOffsetY, gameTime, transform, i);
@@ -550,46 +529,26 @@ namespace ProjectVagabond.Battle.UI
 
                 if (global.ShowSplitMapGrid)
                 {
-                    var activePlayers = battleManager.AllCombatants.Where(c => c.IsPlayerControlled && c.IsActiveOnField).ToList();
-                    bool isCentered = activePlayers.Count == 1;
-                    var area = BattleLayout.GetActionMenuArea(SlotIndex, isCentered);
+                    var area = BattleLayout.GetActionMenuArea(SlotIndex);
                     spriteBatch.DrawSnapped(pixel, area, (SlotIndex == 0 ? Color.Cyan : Color.Magenta) * 0.2f);
                     spriteBatch.DrawLineSnapped(new Vector2(area.Right, area.Top), new Vector2(area.Right, area.Bottom), (SlotIndex == 0 ? Color.Cyan : Color.Magenta));
                 }
             }
 
-            // UPDATED: New method for drawing tooltips in a separate pass
             public void DrawTooltip(SpriteBatch spriteBatch, Vector2 offset)
             {
                 if (HoveredMove == null) return;
 
-                var battleManager = ServiceLocator.Get<BattleManager>();
-                var activePlayers = battleManager.AllCombatants.Where(c => c.IsPlayerControlled && c.IsActiveOnField).ToList();
-                bool useSwapLogic = activePlayers.Count > 1;
+                // Always swap to the other slot to prevent covering the buttons.
+                // If we are Slot 0, target Slot 1. If Slot 1, target Slot 0.
+                int targetSlot = (SlotIndex == 0) ? 1 : 0;
+                var targetArea = BattleLayout.GetActionMenuArea(targetSlot);
 
                 float snappedOffsetY = offset.Y;
-                Vector2 tooltipPos;
-
-                if (useSwapLogic)
-                {
-                    int targetSlot = (SlotIndex == 0) ? 1 : 0;
-                    var targetArea = BattleLayout.GetActionMenuArea(targetSlot, false);
-
-                    // UPDATED: Moved up 3px (-20 -> -23)
-                    tooltipPos = new Vector2(
-                        targetArea.Center.X - (MoveTooltipRenderer.WIDTH / 2f),
-                        targetArea.Center.Y - (23f) + snappedOffsetY
-                    );
-                }
-                else
-                {
-                    float panelCenterX = _position.X + (PANEL_WIDTH / 2f);
-                    // UPDATED: Moved up 3px (INFO_BOX_OFFSET_Y -> INFO_BOX_OFFSET_Y - 3)
-                    tooltipPos = new Vector2(
-                        panelCenterX - (MoveTooltipRenderer.WIDTH / 2f),
-                        _position.Y + INFO_BOX_OFFSET_Y + snappedOffsetY - 3
-                    );
-                }
+                Vector2 tooltipPos = new Vector2(
+                    targetArea.Center.X - (MoveTooltipRenderer.WIDTH / 2f),
+                    targetArea.Center.Y - (23f) + snappedOffsetY
+                );
 
                 _tooltipRenderer.DrawFixed(spriteBatch, tooltipPos, HoveredMove);
             }
@@ -607,13 +566,6 @@ namespace ProjectVagabond.Battle.UI
                 }
 
                 btn.Draw(spriteBatch, btn.Font, gameTime, transform, false, 0f, snappedOffsetY, tint);
-            }
-
-            private void DrawBeveledBackground(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, Color color)
-            {
-                spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 1, rect.Y, rect.Width - 2, 1), color);
-                spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X + 1, rect.Bottom - 1, rect.Width - 2, 1), color);
-                spriteBatch.DrawSnapped(pixel, new Rectangle(rect.X, rect.Y + 1, rect.Width, rect.Height - 2), color);
             }
         }
     }

@@ -223,14 +223,9 @@ namespace ProjectVagabond.Scenes
                     e.VisualAlpha = 0f;
                 }
 
-                _renderer.SetCenteringState(enemies.Count == 1);
-
-                if (enemies.Count == 1) _animationManager.StartFloorIntroAnimation("floor_center");
-                else
-                {
-                    _animationManager.StartFloorIntroAnimation("floor_0");
-                    _animationManager.StartFloorIntroAnimation("floor_1");
-                }
+                // Always start floor 0 and 1 animations, regardless of enemy count.
+                _animationManager.StartFloorIntroAnimation("floor_0");
+                _animationManager.StartFloorIntroAnimation("floor_1");
 
                 foreach (var combatant in _battleManager.AllCombatants)
                 {

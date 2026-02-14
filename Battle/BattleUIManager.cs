@@ -225,7 +225,7 @@ namespace ProjectVagabond.Battle.UI
             string text = "CHOOSE A TARGET";
             Vector2 size = secondaryFont.MeasureString(text);
 
-            var area = BattleLayout.GetActionMenuArea(ActiveTargetingSlot, isCentered);
+            var area = BattleLayout.GetActionMenuArea(ActiveTargetingSlot);
 
             Vector2 textPos = new Vector2(
                 area.Center.X - (size.X / 2f),
@@ -452,7 +452,7 @@ namespace ProjectVagabond.Battle.UI
             string text = "CHOOSE A TARGET";
             Vector2 size = secondaryFont.MeasureString(text);
 
-            var area = BattleLayout.GetActionMenuArea(ActiveTargetingSlot, isCentered);
+            var area = BattleLayout.GetActionMenuArea(ActiveTargetingSlot);
 
             Vector2 textPos = new Vector2(
                 area.Center.X - (size.X / 2f),

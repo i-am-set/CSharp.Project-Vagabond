@@ -50,15 +50,7 @@ namespace ProjectVagabond.Battle.UI
         private readonly Dictionary<string, float> _playerVisualXPositions = new Dictionary<string, float>();
         private const float ENEMY_POSITION_TWEEN_SPEED = 4.0f;
 
-        private bool _centeringSequenceStarted = false;
-        private float _centeringDelayTimer = 0f;
-        private const float CENTERING_DELAY_DURATION = 0.5f;
         private float _bobSpeed = 3f;
-        private bool _floorOutroTriggered = false;
-        private bool _waitingForFloorOutro = false;
-        private bool _hasInitializedPositions = false;
-
-        public bool ForceDrawCenterFloor { get; set; } = false;
 
         private Dictionary<string, Vector2[]> _enemySpritePartOffsets = new Dictionary<string, Vector2[]>();
         private Dictionary<string, float[]> _enemyAnimationTimers = new Dictionary<string, float[]>();
@@ -132,20 +124,8 @@ namespace ProjectVagabond.Battle.UI
             _combatantBarPositions.Clear();
             _statTooltipAlpha = 0f;
             _statTooltipCombatantID = null;
-            _centeringSequenceStarted = false;
-            _centeringDelayTimer = 0f;
-            _floorOutroTriggered = false;
-            _waitingForFloorOutro = false;
-            _hasInitializedPositions = false;
             _enemySquashScales.Clear();
-            ForceDrawCenterFloor = false;
             _reticleController.Reset();
-        }
-
-        public void SetCenteringState(bool isCentered)
-        {
-            _centeringSequenceStarted = isCentered;
-            if (isCentered) _hasInitializedPositions = true;
         }
 
         public List<TargetInfo> GetCurrentTargets() => _currentTargets;
@@ -388,7 +368,6 @@ namespace ProjectVagabond.Battle.UI
 
             foreach (var combatant in battleManager.AllCombatants)
             {
-                // Instantly hide HUD if defeated to prevent visual snapping during death animation
                 if (combatant.IsDefeated) continue;
 
                 if (!_combatantBarPositions.TryGetValue(combatant.CombatantID, out var pos)) continue;
@@ -400,7 +379,6 @@ namespace ProjectVagabond.Battle.UI
 
                 float hudAlpha = combatant.HudVisualAlpha;
 
-                // Determine alignment: Slot 1 and 3 (Odd) are Right Aligned
                 bool isRightAligned = (combatant.BattleSlot % 2 != 0);
 
                 (int Min, int Max)? projectedDamage = null;
@@ -446,7 +424,6 @@ namespace ProjectVagabond.Battle.UI
                     }
                 }
 
-                // Calculate Y position for stat changes (Below Status Icons)
                 float statOffsetY = (BattleLayout.ENEMY_BAR_HEIGHT + 2 + BattleLayout.STATUS_ICON_SIZE + 1) + 1;
 
                 if (combatant.IsPlayerControlled)
@@ -465,7 +442,6 @@ namespace ProjectVagabond.Battle.UI
                     _hudRenderer.DrawStatusIcons(spriteBatch, combatant, barX, barY + yOffset, BattleLayout.PLAYER_BAR_WIDTH, true, _playerStatusIcons, GetStatusIconOffset, IsStatusIconAnimating, isRightAligned);
                     _hudRenderer.DrawPlayerBars(spriteBatch, combatant, barX, barY + yOffset, BattleLayout.PLAYER_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha * hudAlpha, gameTime, uiManager, combatant == currentActor, isRightAligned, projectedDamage);
 
-                    // Draw Stat Changes
                     DrawStatChanges(spriteBatch, combatant, barX, barY + yOffset + statOffsetY, isRightAligned);
                 }
                 else
@@ -476,7 +452,6 @@ namespace ProjectVagabond.Battle.UI
                     _hudRenderer.DrawStatusIcons(spriteBatch, combatant, barX, barY, BattleLayout.ENEMY_BAR_WIDTH, false, _enemyStatusIcons[combatant.CombatantID], GetStatusIconOffset, IsStatusIconAnimating, isRightAligned);
                     _hudRenderer.DrawEnemyBars(spriteBatch, combatant, barX, barY, BattleLayout.ENEMY_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha * hudAlpha, gameTime, isRightAligned, projectedDamage);
 
-                    // Draw Stat Changes
                     DrawStatChanges(spriteBatch, combatant, barX, barY + statOffsetY, isRightAligned);
                 }
             }
@@ -484,8 +459,6 @@ namespace ProjectVagabond.Battle.UI
 
         private void DrawStatChanges(SpriteBatch spriteBatch, BattleCombatant combatant, float startX, float startY, bool isRightAligned)
         {
-            // 1. Filter and Sort
-            // Sort: Highest Value First (+2 -> -2), Then by Stat Type (STR -> INT -> AGI)
             var sortedStats = combatant.StatStages
                 .Where(kvp => kvp.Value != 0)
                 .Select(kvp => new { Stat = kvp.Key, Value = kvp.Value })
@@ -498,7 +471,6 @@ namespace ProjectVagabond.Battle.UI
                 });
 
             var font = _core.TertiaryFont;
-            // Ensure SpriteManager has this texture loaded!
             var texture = _spriteManager.StatModIconsTexture;
             if (texture == null) return;
 
@@ -515,24 +487,18 @@ namespace ProjectVagabond.Battle.UI
                 };
                 if (string.IsNullOrEmpty(label)) continue;
 
-                // Map Value to Frame Index (-2=0, -1=1, +1=2, +2=3)
                 int frameIndex = item.Value switch { -2 => 0, -1 => 1, 1 => 2, 2 => 3, _ => -1 };
                 if (frameIndex == -1) continue;
 
                 Rectangle sourceRect = new Rectangle(frameIndex * 6, 0, 6, 6);
                 Vector2 textSize = font.MeasureString(label);
 
-                // Layout: [TEXT] [ICON] with 1px spacing
                 float totalWidth = textSize.X + 1 + 6;
 
-                // Align
                 float drawX = isRightAligned ? (startX + BattleLayout.ENEMY_BAR_WIDTH - totalWidth) : startX;
 
-                // Draw Text
                 spriteBatch.DrawStringSnapped(font, label, new Vector2(drawX, currentY), _global.Palette_Sky);
 
-                // Draw Icon (Centered vertically relative to text)
-                // Assuming font height ~7-9px, centering 6px icon
                 float iconX = drawX + textSize.X + 1;
                 float iconY = currentY + (textSize.Y / 2f) - 3f;
 
@@ -647,89 +613,14 @@ namespace ProjectVagabond.Battle.UI
         {
             var enemies = combatants.Where(c => !c.IsPlayerControlled).ToList();
             var activeEnemies = enemies.Where(c => !c.IsDefeated && c.IsActiveOnField).ToList();
-            var benchedEnemies = enemies.Where(c => !c.IsDefeated && c.BattleSlot >= 2).ToList();
             var dyingEnemies = enemies.Where(c => animationManager.IsDeathAnimating(c.CombatantID)).ToList();
 
             var visualEnemies = activeEnemies.Concat(dyingEnemies).Distinct().ToList();
 
-            if (!_hasInitializedPositions && visualEnemies.Count == 1)
-            {
-                _centeringSequenceStarted = true;
-                _floorOutroTriggered = true;
-                _waitingForFloorOutro = false;
-            }
-
-            bool isVictoryState = visualEnemies.Count == 0 && _centeringSequenceStarted;
-            bool eligibleForCentering = (visualEnemies.Count == 1 || isVictoryState) && !benchedEnemies.Any();
-
-            var battleManager = ServiceLocator.Get<BattleManager>();
-            bool isActionSelection = battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection;
-
-            if (!eligibleForCentering)
-            {
-                _centeringSequenceStarted = false;
-                _centeringDelayTimer = 0f;
-                _floorOutroTriggered = false;
-                _waitingForFloorOutro = false;
-            }
-            else if (isActionSelection && !_centeringSequenceStarted)
-            {
-                if (!_floorOutroTriggered)
-                {
-                    int emptySlot = -1;
-                    if (visualEnemies.Count == 1)
-                    {
-                        int occupiedSlot = visualEnemies[0].BattleSlot;
-                        emptySlot = (occupiedSlot == 0) ? 1 : 0;
-                    }
-
-                    if (emptySlot != -1)
-                    {
-                        animationManager.StartFloorOutroAnimation("floor_" + emptySlot);
-                        _waitingForFloorOutro = true;
-                        _floorOutroTriggered = true;
-                    }
-                    else
-                    {
-                        _centeringSequenceStarted = true;
-                    }
-                }
-
-                if (_waitingForFloorOutro)
-                {
-                    bool isAnimating = animationManager.IsFloorAnimatingOut("floor_0") || animationManager.IsFloorAnimatingOut("floor_1");
-                    if (!isAnimating)
-                    {
-                        _waitingForFloorOutro = false;
-                        _centeringSequenceStarted = true;
-                        _centeringDelayTimer = 0f;
-                    }
-                }
-            }
-
-            bool moveNow = false;
-            if (_centeringSequenceStarted)
-            {
-                _centeringDelayTimer += dt;
-                if (_centeringDelayTimer >= CENTERING_DELAY_DURATION)
-                {
-                    moveNow = true;
-                }
-            }
-
-            float centerX = BattleLayout.GetEnemyCenter().X;
-
             foreach (var enemy in activeEnemies)
             {
-                float targetX;
-                if (moveNow)
-                {
-                    targetX = centerX;
-                }
-                else
-                {
-                    targetX = BattleLayout.GetEnemySlotCenter(enemy.BattleSlot).X;
-                }
+                // Always target the slot center, never center screen.
+                float targetX = BattleLayout.GetEnemySlotCenter(enemy.BattleSlot).X;
 
                 if (!_enemyVisualXPositions.ContainsKey(enemy.CombatantID))
                 {
@@ -758,11 +649,6 @@ namespace ProjectVagabond.Battle.UI
             {
                 _enemyVisualXPositions.Remove(key);
             }
-
-            if (visualEnemies.Count > 0)
-            {
-                _hasInitializedPositions = true;
-            }
         }
 
         private void UpdatePlayerPositions(float dt, IEnumerable<BattleCombatant> combatants, BattleAnimationManager animationManager)
@@ -773,20 +659,10 @@ namespace ProjectVagabond.Battle.UI
             var dyingPlayers = players.Where(c => animationManager.IsDeathAnimating(c.CombatantID)).ToList();
             var visualPlayers = activePlayers.Concat(dyingPlayers).Distinct().ToList();
 
-            float centerX = Global.VIRTUAL_WIDTH / 2f;
-            bool shouldCenter = visualPlayers.Count == 1;
-
             foreach (var player in visualPlayers)
             {
-                float targetX;
-                if (shouldCenter)
-                {
-                    targetX = centerX;
-                }
-                else
-                {
-                    targetX = BattleLayout.GetPlayerSpriteCenter(player.BattleSlot).X;
-                }
+                // Always target the slot center, never center screen.
+                float targetX = BattleLayout.GetPlayerSpriteCenter(player.BattleSlot).X;
 
                 if (!_playerVisualXPositions.ContainsKey(player.CombatantID))
                 {
@@ -824,106 +700,34 @@ namespace ProjectVagabond.Battle.UI
                 }
             }
 
-            bool hideEmptyFloors = _centeringSequenceStarted || ForceDrawCenterFloor;
-
             if (drawFloor)
             {
-                if (hideEmptyFloors)
+                // Always draw floor 0 and 1 if occupied or just generally available.
+                // The original logic iterated 0..1, so we keep that structure.
+                for (int i = 0; i < 2; i++)
                 {
-                    if (floorEntities.Count == 0 || ForceDrawCenterFloor)
+                    var center = BattleLayout.GetEnemySlotCenter(i);
+                    var occupant = floorEntities.FirstOrDefault(e => e.BattleSlot == i);
+                    int size = (occupant != null && _spriteManager.IsMajorEnemySprite(occupant.ArchetypeId)) ? BattleLayout.ENEMY_SPRITE_SIZE_MAJOR : BattleLayout.ENEMY_SPRITE_SIZE_NORMAL;
+
+                    float floorScale = 1.0f;
+                    var outroAnim = animManager.GetFloorOutroAnimationState("floor_" + i);
+                    if (outroAnim != null)
                     {
-                        var center = BattleLayout.GetEnemyCenter();
-                        int size = BattleLayout.ENEMY_SPRITE_SIZE_NORMAL;
-
-                        float floorScale = 1.0f;
-
-                        var centerIntro = animManager.GetFloorIntroAnimationState("floor_center");
-                        if (centerIntro != null)
-                        {
-                            float progress = Math.Clamp(centerIntro.Timer / BattleAnimationManager.FloorIntroAnimationState.DURATION, 0f, 1f);
-                            floorScale = Easing.EaseOutBack(progress);
-                        }
-
-                        _vfxRenderer.DrawFloor(spriteBatch, center, center.Y + size + BattleLayout.ENEMY_SLOT_Y_OFFSET - 4, floorScale);
+                        float progress = Math.Clamp(outroAnim.Timer / BattleAnimationManager.FloorOutroAnimationState.DURATION, 0f, 1f);
+                        floorScale = 1.0f - Easing.EaseInBack(progress);
                     }
                     else
                     {
-                        foreach (var enemy in floorEntities)
+                        var floorAnim = animManager.GetFloorIntroAnimationState("floor_" + i);
+                        if (floorAnim != null)
                         {
-                            float visualX;
-                            if (_enemyVisualXPositions.TryGetValue(enemy.CombatantID, out float pos))
-                            {
-                                visualX = pos;
-                            }
-                            else
-                            {
-                                visualX = BattleLayout.GetEnemySlotCenter(Math.Max(0, enemy.BattleSlot)).X;
-                            }
-
-                            var center = new Vector2(visualX, BattleLayout.ENEMY_SLOT_Y_OFFSET);
-                            int size = _spriteManager.IsMajorEnemySprite(enemy.ArchetypeId) ? BattleLayout.ENEMY_SPRITE_SIZE_MAJOR : BattleLayout.ENEMY_SPRITE_SIZE_NORMAL;
-
-                            float floorScale = 1.0f;
-
-                            var outroAnim = animManager.GetFloorOutroAnimationState("floor_center");
-                            if (outroAnim != null)
-                            {
-                                float progress = Math.Clamp(outroAnim.Timer / BattleAnimationManager.FloorOutroAnimationState.DURATION, 0f, 1f);
-                                floorScale = 1.0f - Easing.EaseInBack(progress);
-                            }
-                            else
-                            {
-                                var floorAnim = animManager.GetFloorIntroAnimationState("floor_center");
-                                if (floorAnim != null)
-                                {
-                                    float progress = Math.Clamp(floorAnim.Timer / BattleAnimationManager.FloorIntroAnimationState.DURATION, 0f, 1f);
-                                    floorScale = Easing.EaseOutBack(progress);
-                                }
-                            }
-
-                            _vfxRenderer.DrawFloor(spriteBatch, center, center.Y + size + BattleLayout.ENEMY_SLOT_Y_OFFSET - 4, floorScale);
+                            float progress = Math.Clamp(floorAnim.Timer / BattleAnimationManager.FloorIntroAnimationState.DURATION, 0f, 1f);
+                            floorScale = Easing.EaseOutBack(progress);
                         }
                     }
-                }
-                else
-                {
-                    for (int i = 0; i < 2; i++)
-                    {
-                        var center = BattleLayout.GetEnemySlotCenter(i);
-                        var occupant = floorEntities.FirstOrDefault(e => e.BattleSlot == i);
-                        int size = (occupant != null && _spriteManager.IsMajorEnemySprite(occupant.ArchetypeId)) ? BattleLayout.ENEMY_SPRITE_SIZE_MAJOR : BattleLayout.ENEMY_SPRITE_SIZE_NORMAL;
 
-                        float floorScale = 1.0f;
-                        var outroAnim = animManager.GetFloorOutroAnimationState("floor_" + i);
-                        if (outroAnim != null)
-                        {
-                            float progress = Math.Clamp(outroAnim.Timer / BattleAnimationManager.FloorOutroAnimationState.DURATION, 0f, 1f);
-                            floorScale = 1.0f - Easing.EaseInBack(progress);
-                        }
-                        else
-                        {
-                            var floorAnim = animManager.GetFloorIntroAnimationState("floor_" + i);
-                            if (floorAnim != null)
-                            {
-                                float progress = Math.Clamp(floorAnim.Timer / BattleAnimationManager.FloorIntroAnimationState.DURATION, 0f, 1f);
-                                floorScale = Easing.EaseOutBack(progress);
-                            }
-                        }
-
-                        _vfxRenderer.DrawFloor(spriteBatch, center, center.Y + size + BattleLayout.ENEMY_SLOT_Y_OFFSET - 4, floorScale);
-                    }
-
-                    var centerIntro = animManager.GetFloorIntroAnimationState("floor_center");
-                    if (centerIntro != null)
-                    {
-                        var centerPos = BattleLayout.GetEnemyCenter();
-                        int size = BattleLayout.ENEMY_SPRITE_SIZE_NORMAL;
-
-                        float progress = Math.Clamp(centerIntro.Timer / BattleAnimationManager.FloorIntroAnimationState.DURATION, 0f, 1f);
-                        float floorScale = Easing.EaseOutBack(progress);
-
-                        _vfxRenderer.DrawFloor(spriteBatch, centerPos, centerPos.Y + size + BattleLayout.ENEMY_SLOT_Y_OFFSET - 4, floorScale);
-                    }
+                    _vfxRenderer.DrawFloor(spriteBatch, center, center.Y + size + BattleLayout.ENEMY_SLOT_Y_OFFSET - 4, floorScale);
                 }
             }
 
@@ -1122,7 +926,6 @@ namespace ProjectVagabond.Battle.UI
 
                     int spriteSize = _spriteManager.IsMajorEnemySprite(enemy.ArchetypeId) ? 96 : 64;
 
-                    // CHANGED: Calculate draw position as Vector2 to avoid integer snapping
                     var drawPos = new Vector2(
                         center.X - spriteSize / 2f + recoil.X + slideOffset.X + chargeOffset.X,
                         center.Y + bob + spawnY + recoil.Y + slideOffset.Y + chargeOffset.Y
@@ -1237,7 +1040,6 @@ namespace ProjectVagabond.Battle.UI
                             float anchorY = Math.Min(tooltipTopY - 2, spriteTopY);
                             float barY = anchorY - 4;
 
-                            // Mirroring Logic for Enemies
                             bool isRightAligned = (enemy.BattleSlot % 2 != 0);
                             float barX;
                             if (isRightAligned)
@@ -1257,9 +1059,34 @@ namespace ProjectVagabond.Battle.UI
 
         private void DrawPlayers(SpriteBatch spriteBatch, BitmapFont font, List<BattleCombatant> players, BattleCombatant currentActor, bool shouldGrayOut, HashSet<BattleCombatant> selectable, BattleAnimationManager animManager, Dictionary<string, Color> silhouetteColors, GameTime gameTime, BattleUIManager uiManager, BattleCombatant hoveredCombatant, bool isTargetingMode, Color? hoveredGroupColor, bool drawFloor = true, bool drawShadow = true, bool drawSprite = true)
         {
+            if (drawFloor)
+            {
+                for (int i = 0; i < 2; i++)
+                {
+                    // Calculate static center for slot i
+                    var center = BattleLayout.GetPlayerSpriteCenter(i);
+                    var occupant = players.FirstOrDefault(p => p.BattleSlot == i);
+
+                    // Use occupant's alpha if present, otherwise default to 1.0f (always visible)
+                    // If we want to sync with scene fade-in, we could check if *any* player has alpha < 1.0
+                    // But for simplicity and robustness, we'll use the occupant's alpha or 1.0.
+                    float alpha = occupant?.VisualAlpha ?? 1.0f;
+
+                    float floorScale = 1.0f;
+                    var floorOutro = animManager.GetFloorOutroAnimationState($"player_floor_{i}");
+                    if (floorOutro != null)
+                    {
+                        float progress = Math.Clamp(floorOutro.Timer / BattleAnimationManager.FloorOutroAnimationState.DURATION, 0f, 1f);
+                        floorScale = 1.0f - Easing.EaseInBack(progress);
+                    }
+
+                    // Draw floor at static position (no slide offset)
+                    _vfxRenderer.DrawPlayerFloor(spriteBatch, center, alpha, floorScale);
+                }
+            }
+
             foreach (var player in players)
             {
-                // Use dynamic visual position if available, else fallback to static layout
                 float visualX = _playerVisualXPositions.ContainsKey(player.CombatantID) ? _playerVisualXPositions[player.CombatantID] : BattleLayout.GetPlayerSpriteCenter(player.BattleSlot).X;
                 var spriteCenter = new Vector2(visualX, BattleLayout.PLAYER_HEART_CENTER_Y);
 
@@ -1386,21 +1213,6 @@ namespace ProjectVagabond.Battle.UI
                 bool isHighlightedSprite = assignedColor.HasValue && !isTargetingMode;
                 float pulse = 0f;
 
-                if (drawFloor)
-                {
-                    float floorScale = 1.0f;
-                    var floorOutro = animManager.GetFloorOutroAnimationState($"player_floor_{player.BattleSlot}");
-                    if (floorOutro != null)
-                    {
-                        float progress = Math.Clamp(floorOutro.Timer / BattleAnimationManager.FloorOutroAnimationState.DURATION, 0f, 1f);
-                        floorScale = 1.0f - Easing.EaseInBack(progress);
-                    }
-
-                    // Use the dynamic center for the floor too
-                    var floorCenter = new Vector2(visualX, BattleLayout.PLAYER_HEART_CENTER_Y);
-                    _vfxRenderer.DrawPlayerFloor(spriteBatch, floorCenter + slideOffset, player.VisualAlpha, floorScale);
-                }
-
                 if (drawSprite)
                 {
                     Color? lowHealthOverlay = null;
@@ -1446,7 +1258,6 @@ namespace ProjectVagabond.Battle.UI
 
                     UpdateBarAlpha(player, (float)gameTime.ElapsedGameTime.TotalSeconds, showHP);
 
-                    // Mirroring Logic for Players
                     bool isRightAligned = (player.BattleSlot % 2 != 0);
                     float barX;
                     if (isRightAligned)
@@ -1690,58 +1501,6 @@ namespace ProjectVagabond.Battle.UI
             float barY = tooltipTopY - 6;
 
             return new Vector2(center.X, barY);
-        }
-
-        public void DrawHUD(SpriteBatch spriteBatch, BattleAnimationManager animManager, GameTime gameTime, BattleUIManager uiManager, BattleCombatant currentActor)
-        {
-            var battleManager = ServiceLocator.Get<BattleManager>();
-
-            foreach (var combatant in battleManager.AllCombatants)
-            {
-                // Instantly hide HUD if defeated to prevent visual snapping during death animation
-                if (combatant.IsDefeated) continue;
-
-                if (!_combatantBarPositions.TryGetValue(combatant.CombatantID, out var pos)) continue;
-
-                float barX = pos.X;
-                float barY = pos.Y;
-
-                if (combatant.VisualHealthBarAlpha <= 0.01f) continue;
-
-                float hudAlpha = combatant.HudVisualAlpha;
-
-                // Determine alignment: Slot 1 and 3 (Odd) are Right Aligned
-                bool isRightAligned = (combatant.BattleSlot % 2 != 0);
-
-                if (combatant.IsPlayerControlled)
-                {
-                    // --- LOGIC: Idle Bob for Pending Action ---
-                    float yOffset = 0f;
-                    if (battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection)
-                    {
-                        // If action is NOT pending (not locked in), bob up and down
-                        if (!battleManager.IsActionPending(combatant.BattleSlot))
-                        {
-                            float t = (float)gameTime.TotalGameTime.TotalSeconds;
-                            // Invert phase for slot 1 (the second player) so they bob opposite to slot 0
-                            float phase = (combatant.BattleSlot == 1) ? MathHelper.Pi : 0f;
-                            yOffset = MathF.Sin(t * _bobSpeed + phase) * 0.5f;
-                        }
-                    }
-                    // ----------------------------------------------
-
-                    _hudRenderer.DrawStatusIcons(spriteBatch, combatant, barX, barY + yOffset, BattleLayout.PLAYER_BAR_WIDTH, true, _playerStatusIcons, GetStatusIconOffset, IsStatusIconAnimating, isRightAligned);
-                    _hudRenderer.DrawPlayerBars(spriteBatch, combatant, barX, barY + yOffset, BattleLayout.PLAYER_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha * hudAlpha, gameTime, uiManager, combatant == currentActor, isRightAligned);
-                }
-                else
-                {
-                    if (!_enemyStatusIcons.ContainsKey(combatant.CombatantID))
-                        _enemyStatusIcons[combatant.CombatantID] = new List<StatusIconInfo>();
-
-                    _hudRenderer.DrawStatusIcons(spriteBatch, combatant, barX, barY, BattleLayout.ENEMY_BAR_WIDTH, false, _enemyStatusIcons[combatant.CombatantID], GetStatusIconOffset, IsStatusIconAnimating, isRightAligned);
-                    _hudRenderer.DrawEnemyBars(spriteBatch, combatant, barX, barY, BattleLayout.ENEMY_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha * hudAlpha, gameTime, isRightAligned);
-                }
-            }
         }
     }
 }
