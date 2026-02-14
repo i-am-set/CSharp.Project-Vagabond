@@ -285,23 +285,23 @@ namespace ProjectVagabond.Battle.UI
                     return defaultFont;
                 }
 
-                // 1. Basic (Index 0) - Fat Button (44x25)
-                // Keeps "BASC" label as per previous state, using default font.
-                AddActionButton("BASC", Combatant.BasicMove, defaultFont, global, global.Palette_DarkestPale, VISUAL_WIDTH, 25, new Vector2(0, 1), Vector2.Zero);
+                // 1. Basic (Index 0) - Fat Button
+                // Height increased: 25 -> 27
+                AddActionButton("BASC", Combatant.BasicMove, defaultFont, global, global.Palette_DarkestPale, VISUAL_WIDTH, 27, new Vector2(0, 1), Vector2.Zero);
 
-                // 2. Core (Index 1) - Slim Button (88x12)
-                // Resolves Name, Conditional Font, Text Offset (0, 1)
+                // 2. Core (Index 1) - Slim Button
+                // Height increased: 12 -> 13
                 var coreData = GetMoveData(Combatant.CoreMove);
                 string coreLabel = coreData?.MoveName.ToUpper() ?? "---";
                 var coreFont = GetFontForLabel(coreLabel);
-                AddActionButton(coreLabel, Combatant.CoreMove, coreFont, global, global.Palette_DarkPale, 88, 12, Vector2.Zero, new Vector2(0, 1));
+                AddActionButton(coreLabel, Combatant.CoreMove, coreFont, global, global.Palette_DarkPale, 88, 13, Vector2.Zero, new Vector2(0, 1));
 
-                // 3. Alt (Index 2) - Slim Button (88x12)
-                // Resolves Name, Conditional Font, Text Offset (0, 1)
+                // 3. Alt (Index 2) - Slim Button
+                // Height increased: 12 -> 13
                 var altData = GetMoveData(Combatant.AltMove);
                 string altLabel = altData?.MoveName.ToUpper() ?? "---";
                 var altFont = GetFontForLabel(altLabel);
-                AddActionButton(altLabel, Combatant.AltMove, altFont, global, global.Palette_DarkestPale, 88, 12, Vector2.Zero, new Vector2(0, 1));
+                AddActionButton(altLabel, Combatant.AltMove, altFont, global, global.Palette_DarkestPale, 88, 13, Vector2.Zero, new Vector2(0, 1));
 
                 // --- SECONDARY ROW ---
 
@@ -332,6 +332,91 @@ namespace ProjectVagabond.Battle.UI
                 _cancelButton.OnClick += () => OnCancelRequested?.Invoke();
             }
 
+            private void LayoutButtons()
+            {
+                // --- PRIMARY ROW LAYOUT ---
+                // Layout: Basic (44px) | 1px Gap | Stack [Core (88px) / Alt (88px)]
+                // Total Width = 44 + 1 + 88 = 133px
+                int primaryTotalWidth = 133;
+                float panelCenterX = _position.X + (PANEL_WIDTH / 2f);
+                int startX = (int)(panelCenterX - (primaryTotalWidth / 2f));
+                int y = (int)_position.Y + 1;
+
+                // 1. Basic (Index 0)
+                // Position: Left
+                // Size: 44x27 (Increased from 25)
+                if (_buttons.Count > 0)
+                {
+                    var visualRect = new Rectangle(startX, y, 44, 27);
+                    var hitbox = visualRect;
+                    hitbox.Inflate(1, 1);
+                    _buttons[0].Bounds = hitbox;
+                }
+
+                // 2. Core (Index 1)
+                // Position: Right, Top
+                // Size: 88x13 (Increased from 12)
+                if (_buttons.Count > 1)
+                {
+                    var visualRect = new Rectangle(startX + 45, y, 88, 13);
+                    var hitbox = visualRect;
+                    hitbox.Inflate(1, 1);
+                    _buttons[1].Bounds = hitbox;
+                }
+
+                // 3. Alt (Index 2)
+                // Position: Right, Bottom (1px gap)
+                // Y Offset: y + 13 (Core) + 1 (Gap) = y + 14
+                // Size: 88x13 (Increased from 12)
+                if (_buttons.Count > 2)
+                {
+                    var visualRect = new Rectangle(startX + 45, y + 14, 88, 13);
+                    var hitbox = visualRect;
+                    hitbox.Inflate(1, 1);
+                    _buttons[2].Bounds = hitbox;
+                }
+
+                // --- SECONDARY ROW LAYOUT ---
+                // Keep original spacing logic to ensure they don't move horizontally
+                int originalTotalButtonsWidth = (HITBOX_WIDTH * 3); // 135
+                int secStartX = (int)(panelCenterX - (originalTotalButtonsWidth / 2f));
+
+                // Shifted down to accommodate taller primary row (27px)
+                // y + 27 (height) = y + 27
+                int secY = y + 27;
+
+                for (int i = 3; i < 6; i++)
+                {
+                    if (i >= _buttons.Count) break;
+
+                    int visualHeight = 12;
+                    int hitboxHeight = 16;
+
+                    var rect = new Rectangle(secStartX, secY, HITBOX_WIDTH, hitboxHeight);
+                    rect.Inflate(1, 1);
+                    _buttons[i].Bounds = rect;
+
+                    if (_buttons[i] is MoveButton mb)
+                    {
+                        mb.VisualHeightOverride = visualHeight;
+                        mb.VisualWidthOverride = VISUAL_WIDTH;
+                    }
+
+                    secStartX += HITBOX_WIDTH;
+                }
+
+                int cancelW = 50;
+                int cancelH = 15;
+                float panelCenterY = _position.Y + (BattleLayout.ACTION_MENU_HEIGHT / 2f);
+
+                _cancelButton.Bounds = new Rectangle(
+                    (int)(panelCenterX - cancelW / 2),
+                    (int)(panelCenterY - cancelH / 2),
+                    cancelW,
+                    cancelH
+                );
+            }
+
             private void AddActionButton(string label, MoveEntry? entry, BitmapFont font, Global global, Color defaultBackgroundColor, int width, int height, Vector2 iconOffset, Vector2 textOffset)
             {
                 bool moveExists = entry != null && BattleDataCache.Moves.ContainsKey(entry.MoveID);
@@ -345,9 +430,9 @@ namespace ProjectVagabond.Battle.UI
                 {
                     switch (moveData.ImpactType)
                     {
-                        case ImpactType.Physical: backgroundColor = global.Palette_Rust; break;
-                        case ImpactType.Magical: backgroundColor = global.Palette_Sky; break;
-                        case ImpactType.Status: backgroundColor = global.Palette_Pale; break;
+                        case ImpactType.Physical: backgroundColor = global.Palette_DarkRust; break;
+                        case ImpactType.Magical: backgroundColor = global.Palette_Sea; break;
+                        case ImpactType.Status: backgroundColor = global.Palette_DarkPale; break;
                     }
 
                     int iconIndex = -1;
@@ -463,92 +548,6 @@ namespace ProjectVagabond.Battle.UI
                 }
 
                 _buttons.Add(btn);
-            }
-
-            private void LayoutButtons()
-            {
-                // --- PRIMARY ROW LAYOUT ---
-                // Layout: Basic (44px) | 1px Gap | Stack [Core (88px) / Alt (88px)]
-                // Total Width = 44 + 1 + 88 = 133px
-                int primaryTotalWidth = 133;
-                float panelCenterX = _position.X + (PANEL_WIDTH / 2f);
-                int startX = (int)(panelCenterX - (primaryTotalWidth / 2f));
-                int y = (int)_position.Y + 1;
-
-                // 1. Basic (Index 0)
-                // Position: Left
-                // Visual Size: 44x25 (Matches stack height of 12+1+12)
-                if (_buttons.Count > 0)
-                {
-                    // Define visual bounds
-                    var visualRect = new Rectangle(startX, y, 44, 25);
-                    // Inflate hitbox by 1px in all directions to fill gaps (Visuals stay 44x25)
-                    var hitbox = visualRect;
-                    hitbox.Inflate(1, 1);
-                    _buttons[0].Bounds = hitbox;
-                }
-
-                // 2. Core (Index 1)
-                // Position: Right, Top
-                // Visual Size: 88x12
-                if (_buttons.Count > 1)
-                {
-                    var visualRect = new Rectangle(startX + 45, y, 88, 12);
-                    var hitbox = visualRect;
-                    hitbox.Inflate(1, 1);
-                    _buttons[1].Bounds = hitbox;
-                }
-
-                // 3. Alt (Index 2)
-                // Position: Right, Bottom (1px gap)
-                // Visual Size: 88x12
-                if (_buttons.Count > 2)
-                {
-                    var visualRect = new Rectangle(startX + 45, y + 13, 88, 12);
-                    var hitbox = visualRect;
-                    hitbox.Inflate(1, 1);
-                    _buttons[2].Bounds = hitbox;
-                }
-
-                // --- SECONDARY ROW LAYOUT ---
-                // Keep original spacing logic to ensure they don't move horizontally
-                int originalTotalButtonsWidth = (HITBOX_WIDTH * 3); // 135
-                int secStartX = (int)(panelCenterX - (originalTotalButtonsWidth / 2f));
-
-                // Shifted up 1px from previous iteration (y + 26 -> y + 25)
-                int secY = y + 25;
-
-                for (int i = 3; i < 6; i++)
-                {
-                    if (i >= _buttons.Count) break;
-
-                    int visualHeight = 12;
-                    int hitboxHeight = 16;
-
-                    // Inflate secondary buttons too for consistent "0.5px extension" feel
-                    var rect = new Rectangle(secStartX, secY, HITBOX_WIDTH, hitboxHeight);
-                    rect.Inflate(1, 1);
-                    _buttons[i].Bounds = rect;
-
-                    if (_buttons[i] is MoveButton mb)
-                    {
-                        mb.VisualHeightOverride = visualHeight;
-                        mb.VisualWidthOverride = VISUAL_WIDTH;
-                    }
-
-                    secStartX += HITBOX_WIDTH;
-                }
-
-                int cancelW = 50;
-                int cancelH = 15;
-                float panelCenterY = _position.Y + (BattleLayout.ACTION_MENU_HEIGHT / 2f);
-
-                _cancelButton.Bounds = new Rectangle(
-                    (int)(panelCenterX - cancelW / 2),
-                    (int)(panelCenterY - cancelH / 2),
-                    cancelW,
-                    cancelH
-                );
             }
 
             public void Update(MouseState mouse, GameTime gameTime, bool isInputBlocked, bool isLocked)

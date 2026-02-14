@@ -193,10 +193,10 @@
     "MoveName": "Hot Coals",
     "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]SUMMONS COALS[/] UNDER {IsTargetProperNoun}[cSlot]{target}[/]'S FEET.",
     "Description": "[cpositive]100%[/] chance to [cpositive]Burn[/]",
-    "Flavor": "Summons hot coals under the target.",
+    "Flavor": "Summons searing coals under the target.",
     "Power": 20,
     "MoveType": "Spell",
-    "ImpactType": "Physical",
+    "ImpactType": "Magical",
     "OffensiveStat": "Intelligence",
     "MakesContact": false,
     "Target": "SingleAll",
@@ -259,7 +259,7 @@
     "Accuracy": -1,
     "Effects": {
       "DamageTenacity": "2",
-      "InflictStatChange": "Strength, 1"
+      "ModifyStatStage_Str": "Strength,1,100"
     },
     "AnimationId": "sta_orange_orb"
   },
