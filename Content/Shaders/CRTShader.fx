@@ -48,7 +48,7 @@ static const float HALATION_RADIUS = 4.0;
 
 // Chromatic Aberration (Color Bleed)
 static const float CHROMATIC_OFFSET_CENTER = 1.0; 
-static const float CHROMATIC_OFFSET_EDGE = 2.5;   
+static const float CHROMATIC_OFFSET_EDGE = 1.5;   
 
 // Jitter & Noise (Signal Instability)
 static const float JITTER_MICRO_INTENSITY = 0.0002; 
