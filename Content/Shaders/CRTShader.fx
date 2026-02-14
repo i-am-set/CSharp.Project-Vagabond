@@ -44,7 +44,7 @@ static const float SCANLINE_BLOOM_CUTOFF = 0.7;
 
 // Halation (The Glow)
 static const float HALATION_INTENSITY = 0.85; 
-static const float HALATION_RADIUS = 4.0;     
+static const float HALATION_RADIUS = 3.5;     
 
 // Chromatic Aberration (Color Bleed)
 static const float CHROMATIC_OFFSET_CENTER = 1.0; 

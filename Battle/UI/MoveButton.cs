@@ -157,6 +157,10 @@ namespace ProjectVagabond.Battle.UI
             float effectiveWidth = VisualWidthOverride ?? Bounds.Width;
             float effectiveHeight = VisualHeightOverride ?? Bounds.Height;
 
+            // UPDATED: Determine if we should use stacked layout (Icon Top, Text Bottom)
+            // Heuristic: If height is > 15px, assume stacked layout is desired.
+            bool isStackedLayout = effectiveHeight > 15;
+
             // --- DRAW BACKGROUND ---
             if (DrawSystemBackground)
             {
@@ -173,19 +177,32 @@ namespace ProjectVagabond.Battle.UI
                 var spriteManager = ServiceLocator.Get<SpriteManager>();
                 if (spriteManager.ActionIconsSpriteSheet != null)
                 {
-                    // Position icon on the left side of the button
-                    // effectiveWidth is the visual width. Left edge is at -effectiveWidth/2 relative to center.
-                    float iconOffsetX = (-effectiveWidth / 2f) + 5f;
+                    Vector2 rotatedOffset;
 
-                    // Rotate the offset
-                    float c = MathF.Cos(_currentHoverRotation);
-                    float s = MathF.Sin(_currentHoverRotation);
+                    if (isStackedLayout)
+                    {
+                        // UPDATED: Stacked Layout - Center X, Shift Up Y
+                        float iconOffsetY = -5f; // Move up 5px from center
+                        float c = MathF.Cos(_currentHoverRotation);
+                        float s = MathF.Sin(_currentHoverRotation);
 
-                    // Apply scale to the offset to match background scaling
-                    Vector2 rotatedOffset = new Vector2(
-                        iconOffsetX * c * scaleVec.X,
-                        iconOffsetX * s * scaleVec.Y
-                    );
+                        rotatedOffset = new Vector2(
+                            0 * c * scaleVec.X - iconOffsetY * s * scaleVec.Y,
+                            0 * s * scaleVec.X + iconOffsetY * c * scaleVec.Y
+                        );
+                    }
+                    else
+                    {
+                        // Legacy Layout - Left Align
+                        float iconOffsetX = (-effectiveWidth / 2f) + 5f;
+                        float c = MathF.Cos(_currentHoverRotation);
+                        float s = MathF.Sin(_currentHoverRotation);
+
+                        rotatedOffset = new Vector2(
+                            iconOffsetX * c * scaleVec.X,
+                            iconOffsetX * s * scaleVec.Y
+                        );
+                    }
 
                     Vector2 iconPos = centerPos + rotatedOffset;
                     Vector2 iconOrigin = new Vector2(4.5f, 4.5f); // Center of 9x9 icon
@@ -254,6 +271,9 @@ namespace ProjectVagabond.Battle.UI
                 float flatX = centerPos.X - (effectiveWidth / 2f) + 4; // Left padding
                 float flatY = centerPos.Y - (font.LineHeight / 2f) + TextRenderOffset.Y;
 
+                // UPDATED: Adjust Y for stacked layout in scrolling mode
+                if (isStackedLayout) flatY += 5f;
+
                 var originalRasterizerState = spriteBatch.GraphicsDevice.RasterizerState;
                 var originalScissorRect = spriteBatch.GraphicsDevice.ScissorRectangle;
                 spriteBatch.End();
@@ -283,9 +303,25 @@ namespace ProjectVagabond.Battle.UI
                 // Apply TextRenderOffset (Inverse because we are adjusting origin to move text)
                 textOrigin -= TextRenderOffset;
 
+                // UPDATED: Stacked Layout - Shift Text Down
+                Vector2 textDrawPos = centerPos;
+                if (isStackedLayout)
+                {
+                    // Move down 5px from center
+                    float textOffsetY = 5f;
+                    float c = MathF.Cos(_currentHoverRotation);
+                    float s = MathF.Sin(_currentHoverRotation);
+
+                    // Rotate the offset vector (0, 5)
+                    Vector2 rotatedTextOffset = new Vector2(
+                        0 * c * scaleVec.X - textOffsetY * s * scaleVec.Y,
+                        0 * s * scaleVec.X + textOffsetY * c * scaleVec.Y
+                    );
+                    textDrawPos += rotatedTextOffset;
+                }
+
                 // Draw Text "Welded" to the background
-                // Using the exact same centerPos, rotation, and scale ensures they move as one unit.
-                spriteBatch.DrawStringSnapped(font, Text, centerPos, textColor, _currentHoverRotation, textOrigin, finalScaleX, SpriteEffects.None, 0f);
+                spriteBatch.DrawStringSnapped(font, Text, textDrawPos, textColor, _currentHoverRotation, textOrigin, finalScaleX, SpriteEffects.None, 0f);
             }
 
             // --- STRIKETHROUGH ---
@@ -293,6 +329,13 @@ namespace ProjectVagabond.Battle.UI
             {
                 Vector2 lineStartLocal = new Vector2(-textSize.X / 2f - 2, 0);
                 Vector2 lineEndLocal = new Vector2(textSize.X / 2f + 2, 0);
+
+                // UPDATED: Adjust strikethrough for stacked layout
+                if (isStackedLayout)
+                {
+                    lineStartLocal.Y += 5f;
+                    lineEndLocal.Y += 5f;
+                }
 
                 // Rotate
                 float c = MathF.Cos(_currentHoverRotation);

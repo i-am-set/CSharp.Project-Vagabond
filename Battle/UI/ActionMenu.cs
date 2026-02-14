@@ -172,12 +172,13 @@ namespace ProjectVagabond.Battle.UI
             private readonly MoveTooltipRenderer _tooltipRenderer;
 
             // --- Button Layout Configuration ---
-            private const int BUTTON_WIDTH = 45;
-            private const int BUTTON_HEIGHT = 9;
+            // UPDATED: Standardized width to 44 and height to 20
+            private const int BUTTON_WIDTH = 44;
+            private const int BUTTON_HEIGHT = 20;
             private const int BUTTON_SPACING = 1;
 
             // --- Info Box Configuration ---
-            private const int INFO_BOX_OFFSET_Y = 12; // Below the buttons
+            private const int INFO_BOX_OFFSET_Y = 23; // Pushed down to account for taller buttons
 
             public CombatantPanel(BattleCombatant combatant, List<BattleCombatant> allCombatants)
             {
@@ -208,18 +209,20 @@ namespace ProjectVagabond.Battle.UI
 
             private void InitializeButtons(List<BattleCombatant> allCombatants)
             {
+                var defaultFont = ServiceLocator.Get<Core>().DefaultFont;
                 var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
                 var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
                 var global = ServiceLocator.Get<Global>();
 
-                // 1. Basic (Index 0) - DarkestPale - Width 32 - Text "BASIC"
-                AddActionButton("BASIC", Combatant.BasicMove, tertiaryFont, global, global.Palette_DarkestPale, 32);
+                // UPDATED: All buttons use width 44
+                // 1. Basic (Index 0)
+                AddActionButton("BASC", Combatant.BasicMove, defaultFont, global, global.Palette_DarkestPale, 44);
 
-                // 2. Core (Index 1) - Pale - Width 45
-                AddActionButton("CORE", Combatant.CoreMove, secondaryFont, global, global.Palette_DarkPale, 45);
+                // 2. Core (Index 1)
+                AddActionButton("CORE", Combatant.CoreMove, defaultFont, global, global.Palette_DarkPale, 44);
 
-                // 3. Alt (Index 2) - DarkPale - Width 32
-                AddActionButton("ALT", Combatant.AltMove, tertiaryFont, global, global.Palette_DarkestPale, 32);
+                // 3. Alt (Index 2)
+                AddActionButton("ALT", Combatant.AltMove, defaultFont, global, global.Palette_DarkestPale, 44);
 
                 // --- SECONDARY ROW ---
 
@@ -296,7 +299,9 @@ namespace ProjectVagabond.Battle.UI
                     CustomDefaultTextColor = global.Palette_Black,
                     CustomHoverTextColor = global.Palette_DarkestPale,
                     VisualWidthOverride = width,
-                    TextRenderOffset = (label == "BASIC") ? new Vector2(4, 1) : (label == "ALT" ? new Vector2(0, 1) : Vector2.Zero),
+                    VisualHeightOverride = 20, // UPDATED: Explicit height
+                    // UPDATED: Removed manual offsets, MoveButton handles centering now
+                    TextRenderOffset = Vector2.Zero,
                     ActionIconRect = iconRect,
                     ActionIconColor = iconColor,
                     ActionIconHoverColor = global.Palette_DarkestPale
@@ -348,8 +353,9 @@ namespace ProjectVagabond.Battle.UI
                     Text = label,
                     CustomDefaultTextColor = global.Palette_Black,
                     CustomHoverTextColor = global.Palette_DarkestPale,
-                    VisualWidthOverride = 37,
-                    TextRenderOffset = new Vector2(0, 1)
+                    VisualWidthOverride = 44, // UPDATED: Width 44
+                    VisualHeightOverride = 20, // UPDATED: Height 20
+                    TextRenderOffset = Vector2.Zero // UPDATED: Centered
                 };
 
                 if (customAction != null)
@@ -385,8 +391,9 @@ namespace ProjectVagabond.Battle.UI
 
             private void LayoutButtons()
             {
+                // UPDATED: Uniform widths of 44
                 // --- Top Row (Indices 0, 1, 2) ---
-                int[] widths = { 32, 45, 32 };
+                int[] widths = { 44, 44, 44 };
                 int totalButtonsWidth = widths.Sum() + (BUTTON_SPACING * 2);
 
                 float panelCenterX = _position.X + (PANEL_WIDTH / 2f);
@@ -395,20 +402,16 @@ namespace ProjectVagabond.Battle.UI
 
                 for (int i = 0; i < 3; i++)
                 {
-                    int visualHeight = (i == 1) ? 9 : 7; // Core is 9, Basic/Alt are 7
-                    int hitboxHeight = 13;               // Requested hitbox size
+                    int visualHeight = 20; // UPDATED: Taller buttons
+                    int hitboxHeight = 20;
 
-                    // Calculate padding to center the visual within the 13px hitbox
-                    // Core: (13 - 9) / 2 = 2px padding
-                    // Basic/Alt: (13 - 7) / 2 = 3px padding
                     int paddingY = (hitboxHeight - visualHeight) / 2;
 
-                    int yOffset = (i == 1) ? 0 : 1; // Original visual offset logic
+                    int yOffset = 0; // No stagger needed for uniform height
                     int width = widths[i];
 
                     _buttons[i].Bounds = new Rectangle(startX, (y + yOffset) - paddingY, width, hitboxHeight);
 
-                    // Apply the visual override so it doesn't stretch
                     if (_buttons[i] is MoveButton mb)
                     {
                         mb.VisualHeightOverride = visualHeight;
@@ -417,17 +420,26 @@ namespace ProjectVagabond.Battle.UI
                     startX += width + BUTTON_SPACING;
                 }
 
+                // UPDATED: Uniform widths of 44
                 // --- Secondary Row (Indices 3, 4, 5) ---
-                int[] secWidths = { 37, 37, 37 };
+                int[] secWidths = { 44, 44, 44 };
                 int secTotalWidth = secWidths.Sum() + (BUTTON_SPACING * 2);
                 int secStartX = (int)(panelCenterX - (secTotalWidth / 2f));
-                int secY = (int)_position.Y + 12; // Same Y as InfoBox (they overlap if InfoBox is active)
+                // UPDATED: Pushed down to avoid overlap (Y + 1 + 20 + 2 gap)
+                int secY = (int)_position.Y + 23;
 
                 for (int i = 3; i < 6; i++)
                 {
                     if (i >= _buttons.Count) break;
                     int width = secWidths[i - 3];
-                    _buttons[i].Bounds = new Rectangle(secStartX, secY, width, 7);
+                    // UPDATED: Height 20
+                    _buttons[i].Bounds = new Rectangle(secStartX, secY, width, 20);
+
+                    if (_buttons[i] is MoveButton mb)
+                    {
+                        mb.VisualHeightOverride = 20;
+                    }
+
                     secStartX += width + BUTTON_SPACING;
                 }
 
