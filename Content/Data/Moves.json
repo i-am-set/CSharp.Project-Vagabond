@@ -190,7 +190,7 @@
   },
   {
     "MoveID": "10",
-    "MoveName": "Searing Coals",
+    "MoveName": "Hot Coals",
     "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]SUMMONS COALS[/] UNDER {IsTargetProperNoun}[cSlot]{target}[/]'S FEET.",
     "Description": "[cpositive]100%[/] chance to [cpositive]Burn[/]",
     "Flavor": "Summons hot coals under the target.",
