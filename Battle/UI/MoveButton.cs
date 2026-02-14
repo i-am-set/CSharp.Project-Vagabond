@@ -26,16 +26,15 @@ namespace ProjectVagabond.Battle.UI
         public Color BackgroundColor { get; set; } = Color.Transparent;
         public bool DrawSystemBackground { get; set; } = false;
 
-        /// <summary>
-        /// If set, the background will be drawn with this width instead of the button's bounds width.
-        /// Useful for creating gaps between visuals while maintaining larger hitboxes.
-        /// </summary>
         public int? VisualWidthOverride { get; set; }
 
         // --- Icon Drawing Properties ---
         public Rectangle? ActionIconRect { get; set; }
         public Color ActionIconColor { get; set; } = Color.White;
         public Color ActionIconHoverColor { get; set; } = Color.White;
+
+        // UPDATED: Added IconRenderOffset to allow manual tweaking of icon position
+        public Vector2 IconRenderOffset { get; set; } = Vector2.Zero;
 
         private bool _showManaWarning = false;
         public int? VisualHeightOverride { get; set; }
@@ -60,11 +59,9 @@ namespace ProjectVagabond.Battle.UI
             Move = move;
             Entry = entry;
 
-            // Disable wave/drift to ensure text is "welded" to the background during rotation
             EnableTextWave = false;
             HoverAnimation = HoverAnimationType.None;
 
-            // Default to disabled if no move
             if (move == null) IsEnabled = false;
         }
 
@@ -72,8 +69,6 @@ namespace ProjectVagabond.Battle.UI
         {
             base.Update(currentMouseState, worldTransform);
 
-            // If we can't afford the move, suppress the hover state so the parent menu
-            // doesn't trigger targeting previews, but keep a local flag to draw the warning.
             if (!CanAfford && IsEnabled)
             {
                 if (IsHovered)
@@ -131,19 +126,13 @@ namespace ProjectVagabond.Battle.UI
             bool canAfford = CanAfford;
             bool isActivated = IsEnabled && (IsHovered || forceHover);
 
-            // Update animations
             _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated && canAfford);
             var (shakeOffset, flashTint) = UpdateFeedbackAnimations(gameTime);
 
-            // Dampen the rotation intensity to match the "snappy" feel of larger Main Menu buttons.
-            // Small buttons rotate too aggressively with the default width-based scaling.
-            // We apply a dampening factor to normalize the visual intensity.
             _currentHoverRotation *= 0.35f;
 
-            // Suppress rotation if cannot afford
             if (!canAfford) _currentHoverRotation = 0f;
 
-            // Calculate unified transform
             float finalScaleX = _currentScale;
             float finalScaleY = _currentScale;
             Vector2 scaleVec = new Vector2(finalScaleX, finalScaleY);
@@ -153,13 +142,12 @@ namespace ProjectVagabond.Battle.UI
             if (horizontalOffset.HasValue) centerPos.X += horizontalOffset.Value;
             if (verticalOffset.HasValue) centerPos.Y += verticalOffset.Value;
 
-            // Adjust for Visual Width Override to ensure pixel-perfect alignment
             float effectiveWidth = VisualWidthOverride ?? Bounds.Width;
             float effectiveHeight = VisualHeightOverride ?? Bounds.Height;
 
-            // UPDATED: Determine if we should use stacked layout (Icon Top, Text Bottom)
-            // Heuristic: If height is > 15px, assume stacked layout is desired.
-            bool isStackedLayout = effectiveHeight > 15;
+            // UPDATED: Only use stacked layout if height is sufficient AND we have an icon to display.
+            // This ensures text-only buttons (like GUARD) center their text vertically.
+            bool isStackedLayout = effectiveHeight > 15 && ActionIconRect.HasValue;
 
             // --- DRAW BACKGROUND ---
             if (DrawSystemBackground)
@@ -181,19 +169,20 @@ namespace ProjectVagabond.Battle.UI
 
                     if (isStackedLayout)
                     {
-                        // UPDATED: Stacked Layout - Center X, Shift Up Y
-                        float iconOffsetY = -5f; // Move up 5px from center
+                        // UPDATED: Added IconRenderOffset.Y to the base offset
+                        float iconOffsetY = -5f + IconRenderOffset.Y;
+                        float iconOffsetX = IconRenderOffset.X;
+
                         float c = MathF.Cos(_currentHoverRotation);
                         float s = MathF.Sin(_currentHoverRotation);
 
                         rotatedOffset = new Vector2(
-                            0 * c * scaleVec.X - iconOffsetY * s * scaleVec.Y,
-                            0 * s * scaleVec.X + iconOffsetY * c * scaleVec.Y
+                            iconOffsetX * c * scaleVec.X - iconOffsetY * s * scaleVec.Y,
+                            iconOffsetX * s * scaleVec.X + iconOffsetY * c * scaleVec.Y
                         );
                     }
                     else
                     {
-                        // Legacy Layout - Left Align
                         float iconOffsetX = (-effectiveWidth / 2f) + 5f;
                         float c = MathF.Cos(_currentHoverRotation);
                         float s = MathF.Sin(_currentHoverRotation);
@@ -205,9 +194,8 @@ namespace ProjectVagabond.Battle.UI
                     }
 
                     Vector2 iconPos = centerPos + rotatedOffset;
-                    Vector2 iconOrigin = new Vector2(4.5f, 4.5f); // Center of 9x9 icon
+                    Vector2 iconOrigin = new Vector2(4.5f, 4.5f);
 
-                    // Determine Icon Color
                     Color currentIconColor = ActionIconColor;
                     if (isActivated && canAfford)
                     {
@@ -247,14 +235,11 @@ namespace ProjectVagabond.Battle.UI
             BitmapFont font = Font ?? defaultFont;
             Vector2 textSize = font.MeasureString(Text);
 
-            // Check for scrolling
-            float textAvailableWidth = effectiveWidth - 8; // Margins based on visual width
+            float textAvailableWidth = effectiveWidth - 8;
             bool needsScrolling = textSize.X > textAvailableWidth;
 
-            // Disable scrolling if rotating to prevent clipping artifacts
             if (needsScrolling && Math.Abs(_currentHoverRotation) < 0.01f)
             {
-                // Scrolling Logic (Flat, no rotation support for clipping)
                 if (!_isScrollingInitialized)
                 {
                     _isScrollingInitialized = true;
@@ -267,11 +252,9 @@ namespace ProjectVagabond.Battle.UI
 
                 UpdateScrolling(gameTime);
 
-                // Calculate flat position
-                float flatX = centerPos.X - (effectiveWidth / 2f) + 4; // Left padding
+                float flatX = centerPos.X - (effectiveWidth / 2f) + 4;
                 float flatY = centerPos.Y - (font.LineHeight / 2f) + TextRenderOffset.Y;
 
-                // UPDATED: Adjust Y for stacked layout in scrolling mode
                 if (isStackedLayout) flatY += 5f;
 
                 var originalRasterizerState = spriteBatch.GraphicsDevice.RasterizerState;
@@ -296,23 +279,16 @@ namespace ProjectVagabond.Battle.UI
             {
                 _isScrollingInitialized = false;
 
-                // Calculate Origin (Center of Text)
-                // Added +1 to Y to shift text up by 1 pixel relative to the center
                 Vector2 textOrigin = new Vector2(MathF.Round(textSize.X / 2f), MathF.Round(textSize.Y / 2f) + 1);
-
-                // Apply TextRenderOffset (Inverse because we are adjusting origin to move text)
                 textOrigin -= TextRenderOffset;
 
-                // UPDATED: Stacked Layout - Shift Text Down
                 Vector2 textDrawPos = centerPos;
                 if (isStackedLayout)
                 {
-                    // Move down 5px from center
                     float textOffsetY = 5f;
                     float c = MathF.Cos(_currentHoverRotation);
                     float s = MathF.Sin(_currentHoverRotation);
 
-                    // Rotate the offset vector (0, 5)
                     Vector2 rotatedTextOffset = new Vector2(
                         0 * c * scaleVec.X - textOffsetY * s * scaleVec.Y,
                         0 * s * scaleVec.X + textOffsetY * c * scaleVec.Y
@@ -320,7 +296,6 @@ namespace ProjectVagabond.Battle.UI
                     textDrawPos += rotatedTextOffset;
                 }
 
-                // Draw Text "Welded" to the background
                 spriteBatch.DrawStringSnapped(font, Text, textDrawPos, textColor, _currentHoverRotation, textOrigin, finalScaleX, SpriteEffects.None, 0f);
             }
 
@@ -330,14 +305,12 @@ namespace ProjectVagabond.Battle.UI
                 Vector2 lineStartLocal = new Vector2(-textSize.X / 2f - 2, 0);
                 Vector2 lineEndLocal = new Vector2(textSize.X / 2f + 2, 0);
 
-                // UPDATED: Adjust strikethrough for stacked layout
                 if (isStackedLayout)
                 {
                     lineStartLocal.Y += 5f;
                     lineEndLocal.Y += 5f;
                 }
 
-                // Rotate
                 float c = MathF.Cos(_currentHoverRotation);
                 float s = MathF.Sin(_currentHoverRotation);
 
@@ -349,12 +322,10 @@ namespace ProjectVagabond.Battle.UI
                 spriteBatch.DrawLineSnapped(p1, p2, _global.ButtonDisableColor);
             }
 
-            // --- MANA WARNING ---
             if (_showManaWarning && IsEnabled)
             {
                 string noManaText = "NOT ENOUGH MANA";
                 Vector2 noManaSize = font.MeasureString(noManaText);
-                // FIX: Use float center for warning text too
                 Vector2 noManaPos = new Vector2(
                     Bounds.X + Bounds.Width / 2f - noManaSize.X / 2f,
                     Bounds.Y + Bounds.Height / 2f - noManaSize.Y / 2f - 2
@@ -376,21 +347,14 @@ namespace ProjectVagabond.Battle.UI
                 return new Vector2(v.X * cos - v.Y * sin, v.X * sin + v.Y * cos);
             }
 
-            // 1. Middle Body: (w, h-2)
-            // Origin: (0.5, 0.5) -> Center of 1x1 pixel
-            // Scale: (w, h-2) * scale
             Vector2 midScale = new Vector2(w, h - 2) * scale;
             spriteBatch.DrawSnapped(pixel, center, null, color, rotation, new Vector2(0.5f, 0.5f), midScale, SpriteEffects.None, 0f);
 
-            // 2. Top Edge: (w-2, 1)
-            // Offset Y: -(h-1)/2
             Vector2 topOffset = new Vector2(0, -(h - 1) / 2f) * scale.Y;
             Vector2 topPos = center + Rotate(topOffset);
             Vector2 topScale = new Vector2(w - 2, 1) * scale;
             spriteBatch.DrawSnapped(pixel, topPos, null, color, rotation, new Vector2(0.5f, 0.5f), topScale, SpriteEffects.None, 0f);
 
-            // 3. Bottom Edge: (w-2, 1)
-            // Offset Y: (h-1)/2
             Vector2 botOffset = new Vector2(0, (h - 1) / 2f) * scale.Y;
             Vector2 botPos = center + Rotate(botOffset);
             Vector2 botScale = new Vector2(w - 2, 1) * scale;
