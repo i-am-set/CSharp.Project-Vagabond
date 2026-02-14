@@ -477,26 +477,37 @@ namespace ProjectVagabond.Battle.UI
 
                 // 1. Basic (Index 0)
                 // Position: Left
-                // Size: 44x25 (Matches stack height of 12+1+12)
+                // Visual Size: 44x25 (Matches stack height of 12+1+12)
                 if (_buttons.Count > 0)
                 {
-                    _buttons[0].Bounds = new Rectangle(startX, y, 44, 25);
+                    // Define visual bounds
+                    var visualRect = new Rectangle(startX, y, 44, 25);
+                    // Inflate hitbox by 1px in all directions to fill gaps (Visuals stay 44x25)
+                    var hitbox = visualRect;
+                    hitbox.Inflate(1, 1);
+                    _buttons[0].Bounds = hitbox;
                 }
 
                 // 2. Core (Index 1)
                 // Position: Right, Top
-                // Size: 88x12
+                // Visual Size: 88x12
                 if (_buttons.Count > 1)
                 {
-                    _buttons[1].Bounds = new Rectangle(startX + 45, y, 88, 12);
+                    var visualRect = new Rectangle(startX + 45, y, 88, 12);
+                    var hitbox = visualRect;
+                    hitbox.Inflate(1, 1);
+                    _buttons[1].Bounds = hitbox;
                 }
 
                 // 3. Alt (Index 2)
                 // Position: Right, Bottom (1px gap)
-                // Size: 88x12
+                // Visual Size: 88x12
                 if (_buttons.Count > 2)
                 {
-                    _buttons[2].Bounds = new Rectangle(startX + 45, y + 13, 88, 12);
+                    var visualRect = new Rectangle(startX + 45, y + 13, 88, 12);
+                    var hitbox = visualRect;
+                    hitbox.Inflate(1, 1);
+                    _buttons[2].Bounds = hitbox;
                 }
 
                 // --- SECONDARY ROW LAYOUT ---
@@ -514,7 +525,10 @@ namespace ProjectVagabond.Battle.UI
                     int visualHeight = 12;
                     int hitboxHeight = 16;
 
-                    _buttons[i].Bounds = new Rectangle(secStartX, secY, HITBOX_WIDTH, hitboxHeight);
+                    // Inflate secondary buttons too for consistent "0.5px extension" feel
+                    var rect = new Rectangle(secStartX, secY, HITBOX_WIDTH, hitboxHeight);
+                    rect.Inflate(1, 1);
+                    _buttons[i].Bounds = rect;
 
                     if (_buttons[i] is MoveButton mb)
                     {
