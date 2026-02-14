@@ -31,8 +31,8 @@ uniform float Vibrance;
 // --- Tuning ---
 
 // Distortion
-static const float CURVATURE = 0.15; 
-static const float ZOOM = 1.02;
+static const float CURVATURE = 0.1; 
+static const float ZOOM = 1.01;
 
 // Color & Contrast
 static const float BLACK_LEVEL = 0.03; 
