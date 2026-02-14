@@ -336,7 +336,6 @@ namespace ProjectVagabond.UI
             }
             else
             {
-                // FIX: Use Time-Corrected Damping instead of simple Lerp.
                 // Simple Lerp (dt * speed) behaves differently at different framerates.
                 // At 30 FPS, dt is larger, causing a larger jump (or overshoot if not clamped).
                 // 1 - Exp(-speed * dt) provides a consistent decay rate regardless of FPS.

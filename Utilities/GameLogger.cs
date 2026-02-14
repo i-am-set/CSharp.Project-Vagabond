@@ -35,7 +35,6 @@ namespace ProjectVagabond.Utils
         public static readonly ConcurrentQueue<LogMessage> LogQueue = new ConcurrentQueue<LogMessage>();
 
         // Queue for the background file writer.
-        // FIX: Initialized with a bounded capacity to support TryAdd and prevent memory explosions.
         private static readonly BlockingCollection<string> _fileQueue = new BlockingCollection<string>(new ConcurrentQueue<string>(), MAX_FILE_QUEUE_COUNT);
 
         private static bool _isInitialized = false;

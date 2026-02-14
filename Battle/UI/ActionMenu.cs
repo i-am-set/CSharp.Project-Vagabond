@@ -5,10 +5,14 @@ using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Particles;
+using ProjectVagabond.Progression;
+using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 
@@ -48,6 +52,12 @@ namespace ProjectVagabond.Battle.UI
 
         public void Show(BattleCombatant anyPlayer, List<BattleCombatant> allCombatants)
         {
+            // This preserves the animation state if BattleManager calls Show() again during the intro/turn transition.
+            if (_isVisible && _panels.Count > 0 && _panels[0].Combatant == anyPlayer)
+            {
+                return;
+            }
+
             _panels.Clear();
             var party = allCombatants.Where(c => c.IsPlayerControlled && c.IsActiveOnField).OrderBy(c => c.BattleSlot).ToList();
 
@@ -58,11 +68,30 @@ namespace ProjectVagabond.Battle.UI
                 panel.OnActionSelected += (action) => OnActionSelected?.Invoke(member.BattleSlot, action);
                 panel.OnSwitchRequested += () => OnSwitchMenuRequested?.Invoke(member.BattleSlot);
                 panel.OnCancelRequested += () => OnCancelRequested?.Invoke(member.BattleSlot);
+
+                // We will manually hide them in BattleScene.Enter for the intro sequence.
+
                 _panels.Add(panel);
             }
 
             UpdateLayout();
             _isVisible = true;
+        }
+
+        public void HideButtons()
+        {
+            foreach (var panel in _panels)
+            {
+                panel.HideButtons();
+            }
+        }
+
+        public void TriggerButtonEntrance()
+        {
+            foreach (var panel in _panels)
+            {
+                panel.PopButtons();
+            }
         }
 
         public void Hide() => _isVisible = false;
@@ -202,6 +231,34 @@ namespace ProjectVagabond.Battle.UI
                 if (_buttons.Count > 4)
                 {
                     _buttons[4].IsEnabled = allowed && _hasBench;
+                }
+            }
+
+            public void HideButtons()
+            {
+                foreach (var btn in _buttons) btn.SetHiddenForEntrance();
+            }
+
+            public void PopButtons()
+            {
+                var random = new Random();
+                var indices = Enumerable.Range(0, _buttons.Count).ToList();
+                // Shuffle logic
+                int n = indices.Count;
+                while (n > 1)
+                {
+                    n--;
+                    int k = random.Next(n + 1);
+                    int value = indices[k];
+                    indices[k] = indices[n];
+                    indices[n] = value;
+                }
+
+                for (int i = 0; i < indices.Count; i++)
+                {
+                    int btnIndex = indices[i];
+                    float delay = i * 0.05f; // Stagger pop-in
+                    _buttons[btnIndex].PlayEntrance(delay);
                 }
             }
 
@@ -391,6 +448,7 @@ namespace ProjectVagabond.Battle.UI
                 int startX = (int)(panelCenterX - (totalButtonsWidth / 2f));
                 int y = (int)_position.Y + 1;
 
+                // --- PRIMARY ROW ---
                 for (int i = 0; i < 3; i++)
                 {
                     int visualHeight = (i == 1) ? 20 : 18;
@@ -408,14 +466,17 @@ namespace ProjectVagabond.Battle.UI
                 }
 
                 int secStartX = (int)(panelCenterX - (totalButtonsWidth / 2f));
-                int secY = (int)_position.Y + 18;
+
+                // --- SECONDARY ROW ---
+                // Reduced height to 16 to fit within panel bounds.
+                int secY = (int)_position.Y + 21;
 
                 for (int i = 3; i < 6; i++)
                 {
                     if (i >= _buttons.Count) break;
 
                     int visualHeight = 12;
-                    int hitboxHeight = 20;
+                    int hitboxHeight = 16; // Reduced height
 
                     _buttons[i].Bounds = new Rectangle(secStartX, secY, HITBOX_WIDTH, hitboxHeight);
 
@@ -457,9 +518,31 @@ namespace ProjectVagabond.Battle.UI
                 }
                 else
                 {
+                    // --- MUTUAL EXCLUSION LOGIC ---
+                    // Find the button closest to the mouse center to prevent overlapping highlights
+                    Button? bestBtn = null;
+                    float bestDist = float.MaxValue;
+                    Vector2 mousePos = Core.TransformMouse(mouse.Position);
+
+                    foreach (var btn in _buttons)
+                    {
+                        if (btn.Bounds.Contains(mousePos))
+                        {
+                            float dist = Vector2.Distance(btn.Bounds.Center.ToVector2(), mousePos);
+                            if (dist < bestDist)
+                            {
+                                bestDist = dist;
+                                bestBtn = btn;
+                            }
+                        }
+                    }
+
+                    // Update all buttons, forcing IsHovered only on the best candidate
                     foreach (var btn in _buttons)
                     {
                         btn.Update(mouse);
+                        if (btn != bestBtn) btn.IsHovered = false;
+
                         if (btn.IsHovered && btn.IsEnabled)
                         {
                             int index = _buttons.IndexOf(btn);
@@ -539,8 +622,6 @@ namespace ProjectVagabond.Battle.UI
             {
                 if (HoveredMove == null) return;
 
-                // Always swap to the other slot to prevent covering the buttons.
-                // If we are Slot 0, target Slot 1. If Slot 1, target Slot 0.
                 int targetSlot = (SlotIndex == 0) ? 1 : 0;
                 var targetArea = BattleLayout.GetActionMenuArea(targetSlot);
 

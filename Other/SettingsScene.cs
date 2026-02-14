@@ -516,7 +516,6 @@ namespace ProjectVagabond.Scenes
 
             if (_currentInputDelay <= 0) HandleKeyboardInput(currentKeyboardState);
 
-            // FIX: Use "APPLY" (uppercase) to match button creation
             var applyButton = _uiElements.OfType<Button>().FirstOrDefault(b => b.Text == "APPLY");
             if (applyButton != null) applyButton.IsEnabled = IsDirty();
 

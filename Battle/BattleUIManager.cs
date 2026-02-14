@@ -6,6 +6,9 @@ using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Particles;
+using ProjectVagabond.Progression;
+using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
@@ -124,6 +127,16 @@ namespace ProjectVagabond.Battle.UI
             UIState = BattleUIState.Default;
         }
 
+        public void HideButtonsForEntrance()
+        {
+            _actionMenu.HideButtons();
+        }
+
+        public void TriggerButtonEntrance()
+        {
+            _actionMenu.TriggerButtonEntrance();
+        }
+
         public void HideAllMenus()
         {
             UIState = BattleUIState.Default;
@@ -192,7 +205,6 @@ namespace ProjectVagabond.Battle.UI
             UpdateHoverHighlights(gameTime, currentActor);
 
             // --- Input Consumption Logic ---
-            // FIX: Use static Core.TransformMouse instead of instance method
             var mousePos = Core.TransformMouse(currentMouseState.Position);
 
             if (UIState == BattleUIState.Targeting)
@@ -204,7 +216,6 @@ namespace ProjectVagabond.Battle.UI
             }
             else if (UIState == BattleUIState.Switch)
             {
-                // Consume input to prevent clicking field units while in switch menu
                 inputConsumed = true;
             }
             else // Default

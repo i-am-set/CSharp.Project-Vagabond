@@ -423,7 +423,6 @@ namespace ProjectVagabond.UI
                             string sub = textToDraw.Substring(0, c);
                             float charOffsetX = fontToUse.MeasureString(sub + "|").Width - fontToUse.MeasureString("|").Width;
 
-                            // FIX: Use TextAnimator instead of AnimationUtils/TextUtils
                             var (offset, scale, rotation, color) = TextAnimator.GetTextEffectTransform(
                                 token.Effect,
                                 (float)gameTime.TotalGameTime.TotalSeconds,

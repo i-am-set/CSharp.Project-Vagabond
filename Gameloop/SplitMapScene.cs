@@ -330,7 +330,6 @@ namespace ProjectVagabond.Scenes
             var virtualMousePos = Core.TransformMouse(currentMouseState.Position);
 
             // --- Dynamic Viewport Logic ---
-            // FIX: Include _hudSlideOffset in the split line calculation so the trigger moves with the HUD
             float splitLineY = (Global.VIRTUAL_HEIGHT - SplitMapHudRenderer.HUD_HEIGHT) + _hudSlideOffset;
             bool mouseInMap = virtualMousePos.Y < splitLineY;
 

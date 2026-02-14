@@ -516,7 +516,6 @@ namespace ProjectVagabond.Utils
                                 // Use a pseudo-global index to keep waves continuous across the line
                                 int globalIndex = c + (historyIndex * 10);
 
-                                // FIX: Use TextAnimator instead of AnimationUtils/TextUtils
                                 var (offset, scale, rotation, color) = TextAnimator.GetTextEffectTransform(
                                     segment.Effect,
                                     (float)gameTime.TotalGameTime.TotalSeconds,

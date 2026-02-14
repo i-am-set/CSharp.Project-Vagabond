@@ -208,12 +208,13 @@ namespace ProjectVagabond.Scenes
                 var players = _battleManager.AllCombatants.Where(c => c.IsPlayerControlled && c.IsActiveOnField).ToList();
                 foreach (var p in players) p.VisualAlpha = 0f;
 
-                _uiManager.IntroOffset = new Vector2(0, UI_SLIDE_DISTANCE);
+                _uiManager.IntroOffset = Vector2.Zero;
 
                 var leader = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && c.BattleSlot == 0);
                 if (leader != null)
                 {
                     _uiManager.ShowActionMenu(leader, _battleManager.AllCombatants.ToList());
+                    _uiManager.HideButtonsForEntrance();
                 }
 
                 var enemies = _battleManager.AllCombatants.Where(c => !c.IsPlayerControlled && c.IsActiveOnField).OrderBy(c => c.BattleSlot).ToList();
@@ -424,8 +425,8 @@ namespace ProjectVagabond.Scenes
                 {
                     _uiSlideTimer += dt;
                     float progress = Math.Clamp(_uiSlideTimer / UI_SLIDE_DURATION, 0f, 1f);
-                    float eased = Easing.EaseOutCubic(progress);
-                    _uiManager.IntroOffset = Vector2.Lerp(new Vector2(0, UI_SLIDE_DISTANCE), Vector2.Zero, eased);
+
+                    // _uiManager.IntroOffset = Vector2.Lerp(new Vector2(0, UI_SLIDE_DISTANCE), Vector2.Zero, eased);
 
                     if (progress >= 1.0f)
                     {
@@ -437,6 +438,9 @@ namespace ProjectVagabond.Scenes
                         {
                             _animationManager.StartHudEntryAnimation(c.CombatantID);
                         }
+
+                        // Trigger the button pop-in sequence
+                        _uiManager.TriggerButtonEntrance();
                     }
                 }
 

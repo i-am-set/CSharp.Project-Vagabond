@@ -1061,16 +1061,27 @@ namespace ProjectVagabond.Battle.UI
         {
             if (drawFloor)
             {
+                var battleManager = ServiceLocator.Get<BattleManager>();
+
                 for (int i = 0; i < 2; i++)
                 {
                     // Calculate static center for slot i
                     var center = BattleLayout.GetPlayerSpriteCenter(i);
                     var occupant = players.FirstOrDefault(p => p.BattleSlot == i);
 
-                    // Use occupant's alpha if present, otherwise default to 1.0f (always visible)
-                    // If we want to sync with scene fade-in, we could check if *any* player has alpha < 1.0
-                    // But for simplicity and robustness, we'll use the occupant's alpha or 1.0.
-                    float alpha = occupant?.VisualAlpha ?? 1.0f;
+                    // Use occupant's alpha if present.
+                    // If empty, check if we are in Intro phase to sync fade-in.
+                    float alpha = 1.0f;
+                    if (occupant != null)
+                    {
+                        alpha = occupant.VisualAlpha;
+                    }
+                    else if (battleManager.CurrentPhase == BattleManager.BattlePhase.BattleStartIntro)
+                    {
+                        // Sync empty slots with the first available player (Leader) during intro
+                        var leader = players.FirstOrDefault();
+                        alpha = leader?.VisualAlpha ?? 0f;
+                    }
 
                     float floorScale = 1.0f;
                     var floorOutro = animManager.GetFloorOutroAnimationState($"player_floor_{i}");
