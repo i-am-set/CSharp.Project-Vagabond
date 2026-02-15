@@ -97,7 +97,7 @@ namespace ProjectVagabond
         private Texture2D _circleTextureSprite;
         private Texture2D _ringTextureSprite;
         private Texture2D _settingsIconSprite;
-        private Texture2D _turnIndicatorSprite;
+        private Texture2D _downArrowSprite;
         private Texture2D _circleParticleSprite;
         private Texture2D _emberParticleSprite;
         private Texture2D _softParticleSprite;
@@ -170,7 +170,7 @@ namespace ProjectVagabond
         public Texture2D CircleTextureSprite => _circleTextureSprite;
         public Texture2D RingTextureSprite => _ringTextureSprite;
         public Texture2D SettingsIconSprite => _settingsIconSprite;
-        public Texture2D TurnIndicatorSprite => _turnIndicatorSprite;
+        public Texture2D DownArrowSprite => _downArrowSprite;
         public Texture2D CircleParticleSprite => _circleParticleSprite;
         public Texture2D EmberParticleSprite => _emberParticleSprite;
         public Texture2D SoftParticleSprite => _softParticleSprite;
@@ -198,8 +198,8 @@ namespace ProjectVagabond
             try { _settingsIconSprite = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/ui_settings_icon"); }
             catch { _settingsIconSprite = _textureFactory.CreateColoredTexture(8, 8, Color.Red); }
 
-            try { _turnIndicatorSprite = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/ui_turn_indicator"); }
-            catch { _turnIndicatorSprite = _textureFactory.CreateColoredTexture(8, 8, Color.Red); }
+            try { _downArrowSprite = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/down_arrow"); }
+            catch { _downArrowSprite = _textureFactory.CreateColoredTexture(9, 9, Color.Red); }
 
             try { _circleParticleSprite = _textureFactory.CreateCircleParticleTexture(); }
             catch { _circleParticleSprite = _textureFactory.CreateColoredTexture(4, 4, Color.Red); }

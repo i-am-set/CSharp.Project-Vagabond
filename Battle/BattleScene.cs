@@ -378,8 +378,9 @@ namespace ProjectVagabond.Scenes
             }
 
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
-
             _battleCam.Update(dt);
+
+            _battleLogManager.Update(gameTime);
 
             if (_isFadingOutOnDeath)
             {
@@ -393,11 +394,6 @@ namespace ProjectVagabond.Scenes
 
             var currentKeyboardState = Keyboard.GetState();
             var currentMouseState = Mouse.GetState();
-
-            // --- Battle Log Hover Check ---
-            var mousePos = Core.TransformMouse(currentMouseState.Position);
-            var logHoverRect = new Rectangle(Global.VIRTUAL_WIDTH - 64, 0, 64, 64);
-            _isBattleLogHovered = logHoverRect.Contains(mousePos);
 
             if (_battleManager.CurrentPhase == BattleManager.BattlePhase.BattleStartIntro)
             {
@@ -852,17 +848,14 @@ namespace ProjectVagabond.Scenes
                 transform
             );
 
-            // Draw Battle Log (Background Layer)
-            if (!_isBattleLogHovered)
-            {
-                _battleLogManager.Draw(spriteBatch, false);
-            }
-
             if (_roundAnimState != RoundAnimState.Hidden)
             {
                 string roundText = _battleManager.RoundNumber.ToString();
                 Vector2 roundTextSize = font.MeasureString(roundText);
-                Vector2 roundTextPosition = new Vector2(5, 5);
+
+                // Positioned at (5, 8) as requested previously
+                Vector2 roundTextPosition = new Vector2(5, 8);
+
                 Vector2 origin = roundTextSize / 2f;
                 Vector2 drawPos = roundTextPosition + origin;
                 float scale = 1.0f;
@@ -902,11 +895,7 @@ namespace ProjectVagabond.Scenes
                 _uiManager.Draw(spriteBatch, font, gameTime, transform);
             }
 
-            // Draw Battle Log (Foreground Layer - if hovered)
-            if (_isBattleLogHovered)
-            {
-                _battleLogManager.Draw(spriteBatch, true);
-            }
+            _battleLogManager.Draw(spriteBatch);
 
             spriteBatch.End();
 
