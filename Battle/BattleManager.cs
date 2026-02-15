@@ -142,8 +142,6 @@ namespace ProjectVagabond.Battle
 
         public void StartBattle()
         {
-            // We NO LONGER fire the event here.
-            // We wait for BattleScene to finish the intro animation, then call TriggerBattleStartEvents.
         }
 
         public void TriggerBattleStartEvents()
@@ -924,8 +922,6 @@ namespace ProjectVagabond.Battle
 
         public void DrawStatChanges(SpriteBatch spriteBatch, BattleCombatant combatant, float startX, float startY, bool isRightAligned)
         {
-            // Implementation logic in BattleRenderer... this method here might be legacy or unused?
-            // The drawing is handled by BattleRenderer.DrawStatChanges.
         }
 
         private List<BattleCombatant> ResolveTargets(QueuedAction action)

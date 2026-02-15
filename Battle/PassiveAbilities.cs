@@ -177,10 +177,6 @@ namespace ProjectVagabond.Battle.Abilities
                         // Explicitly trigger particle here to ensure visibility
                         if (result.success)
                         {
-                            // We rely on StatChange event for text, but fire a particle request via generic event or direct service if possible
-                            // Since we can't access Scene here easily, we rely on BattleScene listening to StatChange
-                            // But we want to ensure it's "not invisible".
-                            // The StatChange event handles text. The generic "Debuff" particle we added to BattleScene will handle the visual.
                         }
                     });
                 }
