@@ -135,36 +135,55 @@ namespace ProjectVagabond.Battle.Abilities
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
+            var bm = ServiceLocator.Get<BattleManager>();
+
             // 1. Battle Start
             if (e is BattleStartedEvent battleEvent)
             {
                 if (battleEvent.Combatants.Contains(context.Actor))
                 {
-                    ApplyMajestic(context.Actor, battleEvent.Combatants);
+                    QueueMajesticEffects(context.Actor, bm);
                 }
             }
-            // 2. Entry (Switch or Reinforcement) - Uses the new Class, not the Struct
+            // 2. Entry (Switch or Reinforcement)
             else if (e is GameEvents.CombatantEnteredEvent entryEvent && entryEvent.Combatant == context.Actor)
             {
-                ApplyMajestic(context.Actor, ServiceLocator.Get<BattleManager>().AllCombatants.ToList());
+                QueueMajesticEffects(context.Actor, bm);
             }
         }
 
-        private void ApplyMajestic(BattleCombatant user, System.Collections.Generic.List<BattleCombatant> allCombatants)
+        private void QueueMajesticEffects(BattleCombatant user, BattleManager bm)
         {
-            bool triggered = false;
-            var enemies = allCombatants.Where(c => c.IsPlayerControlled != user.IsPlayerControlled && c.IsActiveOnField && !c.IsDefeated);
+            var enemies = bm.AllCombatants
+                .Where(c => c.IsPlayerControlled != user.IsPlayerControlled && c.IsActiveOnField && !c.IsDefeated)
+                .OrderBy(c => c.BattleSlot) // Slot 1 then Slot 2
+                .ToList();
 
-            foreach (var enemy in enemies)
+            if (enemies.Any())
             {
-                var result = enemy.ModifyStatStage(OffensiveStatType.Strength, -1);
-                if (result.success) triggered = true;
-            }
+                // Initial Notification
+                bm.EnqueueStartupEvent(() =>
+                {
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{user.Name}'s {Name} activates!" });
+                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = user, Ability = this });
+                });
 
-            if (triggered)
-            {
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{user.Name}'s {Name} lowered opponents' Strength!" });
-                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = user, Ability = this });
+                // Staggered Effect per Enemy
+                foreach (var enemy in enemies)
+                {
+                    bm.EnqueueStartupEvent(() =>
+                    {
+                        var result = enemy.ModifyStatStage(OffensiveStatType.Strength, -1);
+                        // Explicitly trigger particle here to ensure visibility
+                        if (result.success)
+                        {
+                            // We rely on StatChange event for text, but fire a particle request via generic event or direct service if possible
+                            // Since we can't access Scene here easily, we rely on BattleScene listening to StatChange
+                            // But we want to ensure it's "not invisible".
+                            // The StatChange event handles text. The generic "Debuff" particle we added to BattleScene will handle the visual.
+                        }
+                    });
+                }
             }
         }
     }

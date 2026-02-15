@@ -109,6 +109,9 @@ namespace ProjectVagabond.Scenes
         private bool _didFlee = false;
         private bool _isBattleLogHovered = false;
 
+        // Dazed Timer
+        private float _dazedWaitTimer = 0f;
+
         public BattleAnimationManager AnimationManager => _animationManager;
 
         public BattleScene()
@@ -185,6 +188,7 @@ namespace ProjectVagabond.Scenes
             _floorTransitionTriggered = false;
             _didFlee = false;
             _isBattleLogHovered = false;
+            _dazedWaitTimer = 0f;
 
             SubscribeToEvents();
 
@@ -427,7 +431,7 @@ namespace ProjectVagabond.Scenes
 
                     if (progress >= 1.0f)
                     {
-                        _battleManager.ForceAdvance();
+                        _battleManager.TriggerBattleStartEvents();
                         _roundAnimState = RoundAnimState.Pop;
                         _roundAnimTimer = 0f;
 
@@ -443,6 +447,20 @@ namespace ProjectVagabond.Scenes
                 _animationManager.Update(gameTime, _battleManager.AllCombatants);
                 _renderer.Update(gameTime, _battleManager.AllCombatants, _animationManager, null);
                 _uiManager.Update(gameTime, currentMouseState, currentKeyboardState, null, _renderer, isInputBlocked: true);
+                return;
+            }
+
+            // Dazed Wait Logic
+            if (_dazedWaitTimer > 0)
+            {
+                _dazedWaitTimer -= dt;
+                if (_dazedWaitTimer <= 0)
+                {
+                    _battleManager.CanAdvance = true;
+                    _battleManager.RequestNextPhase();
+                }
+                _animationManager.Update(gameTime, _battleManager.AllCombatants);
+                _renderer.Update(gameTime, _battleManager.AllCombatants, _animationManager, _battleManager.CurrentActingCombatant);
                 return;
             }
 
@@ -676,6 +694,7 @@ namespace ProjectVagabond.Scenes
                 _isWaitingForMultiHitDelay = false;
                 _pendingAnimations.Clear();
                 _switchSequenceState = SwitchSequenceState.None;
+                _dazedWaitTimer = 0f;
             }
 
             _lastFramePhase = _battleManager.CurrentPhase;
@@ -1166,9 +1185,41 @@ namespace ProjectVagabond.Scenes
         private void OnActionFailed(GameEvents.ActionFailed e)
         {
             _currentActor = e.Actor;
-            if (e.Reason == "stunned") _renderer.TriggerStatusIconHop(e.Actor.CombatantID, StatusEffectType.Stun);
-            else if (e.Reason == "silenced") _renderer.TriggerStatusIconHop(e.Actor.CombatantID, StatusEffectType.Silence);
+            if (e.Reason == "stunned")
+            {
+                _renderer.TriggerStatusIconHop(e.Actor.CombatantID, StatusEffectType.Stun);
+            }
+            else if (e.Reason == "silenced")
+            {
+                _renderer.TriggerStatusIconHop(e.Actor.CombatantID, StatusEffectType.Silence);
+            }
+            else if (e.Reason == "dazed")
+            {
+                // DAZED POLISH
+                Vector2 pos = _renderer.GetCombatantVisualCenterPosition(e.Actor, _battleManager.AllCombatants);
+                Vector2 hudPos = _renderer.GetCombatantHudCenterPosition(e.Actor, _battleManager.AllCombatants);
+
+                // 1. Start Damage Indicator Text ("DAZED!")
+                _animationManager.StartDamageIndicator(
+                    e.Actor.CombatantID,
+                    "DAZED!",
+                    hudPos + new Vector2(0, -15), // Slightly higher than damage numbers
+                    _global.Palette_DarkSun // Use yellow/gold
+                );
+
+                // 2. Spawn Sun Particles
+                var particles = _particleSystemManager.CreateEmitter(ParticleEffects.CreateDazedParticles());
+                particles.Position = pos;
+                particles.EmitBurst(12);
+
+                // 3. Shake/Wobble
+                _hapticsManager.TriggerWobble(2.0f, 0.5f, 20f);
+
+                // 4. Force Wait (Consume turn time post-effect)
+                _dazedWaitTimer = 1.0f;
+            }
         }
+
 
         private void OnStatusEffectTriggered(GameEvents.StatusEffectTriggered e)
         {
@@ -1217,6 +1268,15 @@ namespace ProjectVagabond.Scenes
             Color statColor = _global.Palette_Sun;
             Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(e.Target, _battleManager.AllCombatants);
             _animationManager.StartStatStageIndicator(e.Target.CombatantID, prefixText, statText, suffixText, changeColor, statColor, changeColor, hudPosition);
+
+            // Added Debuff Particle Logic
+            if (e.Amount < 0)
+            {
+                Vector2 pos = _renderer.GetCombatantVisualCenterPosition(e.Target, _battleManager.AllCombatants);
+                var particles = _particleSystemManager.CreateEmitter(ParticleEffects.CreateDebuffParticles());
+                particles.Position = pos;
+                particles.EmitBurst(8);
+            }
         }
 
         private void OnNextEnemyApproaches(GameEvents.NextEnemyApproaches e)

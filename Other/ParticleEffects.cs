@@ -585,5 +585,73 @@ namespace ProjectVagabond.Particles
 
             return settings;
         }
+
+        public static ParticleEmitterSettings CreateDazedParticles()
+        {
+            var settings = ParticleEmitterSettings.CreateDefault();
+            var global = ServiceLocator.Get<Global>();
+
+            settings.Shape = EmitterShape.Circle;
+            settings.EmitFrom = EmissionSource.Volume;
+            settings.EmitterSize = new Vector2(16f, 16f); // Halo around head
+            settings.EmissionRate = 0;
+            settings.BurstCount = 12;
+            settings.MaxParticles = 12;
+            settings.Duration = 1.0f; // Lasts 1 second to match turn skip
+
+            settings.Lifetime = new FloatRange(0.5f, 0.8f);
+            settings.VelocityPattern = EmissionPattern.Radial;
+            settings.InitialVelocityX = new FloatRange(20f, 40f); // Spin outward
+            settings.InitialVelocityY = new FloatRange(0f);
+
+            settings.InitialSize = new FloatRange(2f, 4f);
+            settings.EndSize = new FloatRange(0f);
+            settings.InterpolateSize = true;
+
+            // Spinning motion
+            settings.InitialRotation = new FloatRange(0, MathHelper.TwoPi);
+            settings.InitialRotationSpeed = new FloatRange(2f, 5f);
+
+            settings.StartColor = global.Palette_Sun; // Yellow/Gold for Dazed
+            settings.EndColor = global.Palette_DarkSun;
+            settings.StartAlpha = 1.0f;
+            settings.EndAlpha = 0.0f;
+
+            settings.Texture = ServiceLocator.Get<SpriteManager>().CircleParticleSprite; // Use circle/star shape
+            settings.BlendMode = BlendState.Additive;
+            settings.LayerDepth = 0.95f;
+
+            return settings;
+        }
+
+        public static ParticleEmitterSettings CreateDebuffParticles()
+        {
+            var settings = ParticleEmitterSettings.CreateDefault();
+            var global = ServiceLocator.Get<Global>();
+
+            settings.Shape = EmitterShape.Rectangle;
+            settings.EmitFrom = EmissionSource.Volume;
+            settings.EmitterSize = new Vector2(24f, 48f); // Tall column
+            settings.EmissionRate = 0;
+            settings.BurstCount = 8;
+            settings.MaxParticles = 8;
+            settings.Duration = 0.5f;
+
+            settings.Lifetime = new FloatRange(0.4f, 0.7f);
+            settings.InitialVelocityX = new FloatRange(0f);
+            settings.InitialVelocityY = new FloatRange(10f, 30f); // Fall down
+
+            settings.InitialSize = new FloatRange(2f, 3f);
+            settings.EndSize = new FloatRange(0f);
+
+            settings.StartColor = global.Palette_Rust; // Red for debuff
+            settings.EndColor = global.Palette_DarkShadow;
+
+            settings.Texture = ServiceLocator.Get<Texture2D>(); // Pixel
+            settings.BlendMode = BlendState.AlphaBlend;
+            settings.LayerDepth = 0.9f;
+
+            return settings;
+        }
     }
 }

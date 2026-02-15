@@ -131,15 +131,25 @@ namespace ProjectVagabond.Battle.Abilities
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
-            if (e is CalculateDamageEvent dmgEvent && dmgEvent.Move.Abilities.Contains(this))
+            if (e is ActionDeclaredEvent decl && decl.Move.Abilities.Contains(this))
             {
-                if (dmgEvent.Actor.HasUsedFirstAttack)
+                if (decl.Actor.HasUsedFirstAttack)
                 {
-                    dmgEvent.DamageMultiplier = 0f;
+                    // 1. Stop the BattleManager from processing this move further
+                    decl.IsHandled = true;
+
+                    // 2. Fire the failure event once
+                    EventBus.Publish(new GameEvents.ActionFailed
+                    {
+                        Actor = decl.Actor,
+                        Reason = "failed", // Generic reason, or specific "fake_out_failed"
+                        MoveName = decl.Move.MoveName
+                    });
+
                     EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[DriftWave]But it failed![/]" });
-                    EventBus.Publish(new GameEvents.MoveFailed { Actor = dmgEvent.Actor });
                 }
             }
+            // Logic for applying Dazed if successful (OnHit)
             else if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
             {
                 if (reaction.Result.DamageAmount > 0)

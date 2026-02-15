@@ -426,6 +426,8 @@ namespace ProjectVagabond.Battle.UI
                 Rectangle? iconRect = null;
                 Color iconColor = Color.White;
 
+                bool forceDisabled = false;
+
                 if (moveData != null)
                 {
                     switch (moveData.ImpactType)
@@ -449,6 +451,12 @@ namespace ProjectVagabond.Battle.UI
                     }
 
                     iconColor = global.Palette_Black;
+
+                    bool isCounter = moveData.Abilities.OfType<CounterAbility>().Any();
+                    if (isCounter && Combatant.HasUsedFirstAttack)
+                    {
+                        forceDisabled = true;
+                    }
                 }
 
                 var btn = new MoveButton(Combatant, moveData, entry, font)
@@ -465,10 +473,11 @@ namespace ProjectVagabond.Battle.UI
                     ActionIconRect = iconRect,
                     ActionIconColor = iconColor,
                     ActionIconHoverColor = global.Palette_DarkestPale,
-                    IconRenderOffset = iconOffset
+                    IconRenderOffset = iconOffset,
+                    IsEnabled = !forceDisabled // Apply the forced disable
                 };
 
-                if (moveExists)
+                if (moveExists && !forceDisabled)
                 {
                     btn.OnClick += () =>
                     {
