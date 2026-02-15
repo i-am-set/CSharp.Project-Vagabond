@@ -135,20 +135,36 @@ namespace ProjectVagabond.Battle.Abilities
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
+            // 1. Battle Start
             if (e is BattleStartedEvent battleEvent)
             {
-                foreach (var c in battleEvent.Combatants)
+                if (battleEvent.Combatants.Contains(context.Actor))
                 {
-                    if (c.Abilities.Contains(this))
-                    {
-                        foreach (var enemy in battleEvent.Combatants.Where(x => x.IsPlayerControlled != c.IsPlayerControlled))
-                        {
-                            enemy.ModifyStatStage(OffensiveStatType.Strength, -1);
-                        }
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{c.Name}'s {Name} lowered opponents' Strength!" });
-                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = c, Ability = this });
-                    }
+                    ApplyMajestic(context.Actor, battleEvent.Combatants);
                 }
+            }
+            // 2. Entry (Switch or Reinforcement) - Uses the new Class, not the Struct
+            else if (e is GameEvents.CombatantEnteredEvent entryEvent && entryEvent.Combatant == context.Actor)
+            {
+                ApplyMajestic(context.Actor, ServiceLocator.Get<BattleManager>().AllCombatants.ToList());
+            }
+        }
+
+        private void ApplyMajestic(BattleCombatant user, System.Collections.Generic.List<BattleCombatant> allCombatants)
+        {
+            bool triggered = false;
+            var enemies = allCombatants.Where(c => c.IsPlayerControlled != user.IsPlayerControlled && c.IsActiveOnField && !c.IsDefeated);
+
+            foreach (var enemy in enemies)
+            {
+                var result = enemy.ModifyStatStage(OffensiveStatType.Strength, -1);
+                if (result.success) triggered = true;
+            }
+
+            if (triggered)
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{user.Name}'s {Name} lowered opponents' Strength!" });
+                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = user, Ability = this });
             }
         }
     }

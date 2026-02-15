@@ -223,5 +223,11 @@ namespace ProjectVagabond
                 Priority = basePriority;
             }
         }
+
+        public class CombatantEnteredEvent : GameEvent
+        {
+            public BattleCombatant Combatant { get; }
+            public CombatantEnteredEvent(BattleCombatant combatant) => Combatant = combatant;
+        }
     }
 }

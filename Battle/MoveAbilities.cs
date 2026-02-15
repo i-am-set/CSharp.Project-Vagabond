@@ -483,4 +483,37 @@ namespace ProjectVagabond.Battle.Abilities
             }
         }
     }
+
+    public class SacrificeTenacityAbility : IAbility
+    {
+        public string Name => "Sacrifice Tenacity";
+        public string Description => "Lowers user's Tenacity on hit.";
+        public int Priority => 0;
+
+        private readonly int _amount;
+        public SacrificeTenacityAbility(int amount) { _amount = amount; }
+
+        public void OnEvent(GameEvent e, BattleContext context)
+        {
+            // Trigger after the move successfully hits/executes
+            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
+            {
+                var user = reaction.Actor;
+                if (user.CurrentTenacity > 0)
+                {
+                    int oldVal = user.CurrentTenacity;
+                    user.CurrentTenacity = Math.Max(0, user.CurrentTenacity - _amount);
+
+                    if (user.CurrentTenacity != oldVal)
+                    {
+                        EventBus.Publish(new GameEvents.TenacityChanged { Combatant = user, NewValue = user.CurrentTenacity });
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{user.Name} sacrificed Tenacity!" });
+
+                        if (user.CurrentTenacity == 0)
+                            EventBus.Publish(new GameEvents.TenacityBroken { Combatant = user });
+                    }
+                }
+            }
+        }
+    }
 }

@@ -120,20 +120,23 @@ namespace ProjectVagabond.Battle
             _animationManager = animationManager;
             _global = ServiceLocator.Get<Global>();
 
-            // Initialize reusable context
             _battleContext = new BattleContext();
 
             EventBus.Subscribe<GameEvents.SecondaryEffectComplete>(OnSecondaryEffectComplete);
             EventBus.Subscribe<GameEvents.MoveAnimationCompleted>(OnMoveAnimationCompleted);
             EventBus.Subscribe<GameEvents.MoveImpactOccurred>(OnMoveImpactOccurred);
             EventBus.Subscribe<GameEvents.DisengageTriggered>(OnDisengageTriggered);
+        }
 
+        public void StartBattle()
+        {
             // Notify Battle Start
             var battleStartEvent = new BattleStartedEvent(_allCombatants);
 
             // Configure context for Battle Start (Global event)
             _battleContext.ResetMultipliers();
 
+            // We iterate over a copy or the cached list to ensure safety
             foreach (var combatant in _cachedAllActive)
             {
                 _battleContext.Actor = combatant;
@@ -236,6 +239,12 @@ namespace ProjectVagabond.Battle
                     if (_lastDefeatedNames.TryGetValue(key, out string deadName)) { msg = $"{reinforcement.Name} takes {deadName}'s place!"; _lastDefeatedNames.Remove(key); }
                     EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = msg });
                     EventBus.Publish(new GameEvents.CombatantSpawned { Combatant = reinforcement });
+
+                    var entryEvent = new GameEvents.CombatantEnteredEvent(reinforcement);
+                    _battleContext.ResetMultipliers();
+                    _battleContext.Actor = reinforcement;
+                    reinforcement.NotifyAbilities(entryEvent, _battleContext);
+
                     _waitingForReinforcementSelection = false;
                     _reinforcementAnnounced = false;
                     _reinforcementSlotIndex++;
@@ -264,6 +273,10 @@ namespace ProjectVagabond.Battle
             incomingMember.HasUsedFirstAttack = false;
             RefreshCombatantCaches();
             foreach (var action in _actionQueue) if (action.Target == actor) action.Target = incomingMember;
+            var entryEvent = new GameEvents.CombatantEnteredEvent(incomingMember);
+            _battleContext.ResetMultipliers();
+            _battleContext.Actor = incomingMember;
+            incomingMember.NotifyAbilities(entryEvent, _battleContext);
         }
 
         public void ResumeAfterSwitch()

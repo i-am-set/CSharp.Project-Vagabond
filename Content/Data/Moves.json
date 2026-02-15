@@ -332,5 +332,46 @@
     },
     "Tags": [ "Debuff" ],
     "AnimationId": "sta_orange_orb"
+  },
+  {
+    "MoveID": "18",
+    "MoveName": "Crash",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]CRASHES INTO[/] {IsTargetProperNoun}[cSlot]{target}[/]!",
+    "Description": "High power, but hurts user and lowers Tenacity.",
+    "Flavor": "A reckless full-body tackle.",
+    "Power": 120,
+    "MoveType": "Action",
+    "ImpactType": "Physical",
+    "OffensiveStat": "Strength",
+    "MakesContact": true,
+    "Target": "Single",
+    "Accuracy": 100,
+    "Priority": 0,
+    "Effects": {
+      "Recoil": "50",
+      "SacrificeTenacity": "1"
+    },
+    "Tags": [ "Contact", "Recoil" ],
+    "AnimationId": "phy_large_impact"
+  },
+  {
+    "MoveID": "19",
+    "MoveName": "Surprise Slap",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]SLAPS[/] {IsTargetProperNoun}[cSlot]{target}[/] BY SURPRISE!",
+    "Description": "Priority +1. Dazes target. Fails if not first turn.",
+    "Flavor": "A shocking slap that catches them off guard.",
+    "Power": 30,
+    "MoveType": "Action",
+    "ImpactType": "Physical",
+    "OffensiveStat": "Strength",
+    "MakesContact": true,
+    "Target": "Single",
+    "Accuracy": 100,
+    "Priority": 1,
+    "Effects": {
+      "Counter": ""
+    },
+    "Tags": [ "Contact", "Priority" ],
+    "AnimationId": "phy_small_side_swipe"
   }
 ]

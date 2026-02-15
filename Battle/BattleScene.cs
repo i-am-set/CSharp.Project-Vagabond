@@ -353,6 +353,8 @@ namespace ProjectVagabond.Scenes
             _battleManager = new BattleManager(playerParty, enemyParty, _animationManager);
             ServiceLocator.Register<BattleManager>(_battleManager);
             _previousBattlePhase = _battleManager.CurrentPhase;
+
+            _battleManager.StartBattle();
         }
 
         private void CleanupPlayerState()

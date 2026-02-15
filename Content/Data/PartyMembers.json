@@ -78,8 +78,8 @@
     "Tenacity": 5,
     "Agility": 3,
     "BasicMoveId": "4",
-    "CoreMoveId": "",
-    "AltMoveId": "",
+    "CoreMoveId": "18",
+    "AltMoveId": "19",
     "PassiveAbilityPool": [
       { "PMMajestic": "" }
     ],
