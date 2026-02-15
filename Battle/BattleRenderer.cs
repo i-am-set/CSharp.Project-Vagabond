@@ -617,9 +617,12 @@ namespace ProjectVagabond.Battle.UI
 
             var visualEnemies = activeEnemies.Concat(dyingEnemies).Distinct().ToList();
 
+            // TUNING: Pixels per second. Higher = Snappier.
+            // 800f is very fast/snappy. 400f is standard retro speed.
+            const float MOVEMENT_SPEED = 600f;
+
             foreach (var enemy in activeEnemies)
             {
-                // Always target the slot center, never center screen.
                 float targetX = BattleLayout.GetEnemySlotCenter(enemy.BattleSlot).X;
 
                 if (!_enemyVisualXPositions.ContainsKey(enemy.CombatantID))
@@ -629,39 +632,49 @@ namespace ProjectVagabond.Battle.UI
                 else
                 {
                     float currentX = _enemyVisualXPositions[enemy.CombatantID];
-                    if (Math.Abs(currentX) < 1.0f || Math.Abs(currentX - targetX) > Global.VIRTUAL_WIDTH)
+
+                    // RETRO FIX: Constant Speed Movement instead of Lerp
+                    if (Math.Abs(currentX - targetX) > 0.5f)
                     {
-                        _enemyVisualXPositions[enemy.CombatantID] = targetX;
+                        float direction = Math.Sign(targetX - currentX);
+                        float moveAmount = direction * MOVEMENT_SPEED * dt;
+
+                        // Prevent overshooting
+                        if (Math.Abs(moveAmount) > Math.Abs(targetX - currentX))
+                        {
+                            _enemyVisualXPositions[enemy.CombatantID] = targetX;
+                        }
+                        else
+                        {
+                            _enemyVisualXPositions[enemy.CombatantID] = currentX + moveAmount;
+                        }
                     }
                     else
                     {
-                        float damping = 1.0f - MathF.Exp(-ENEMY_POSITION_TWEEN_SPEED * dt);
-                        _enemyVisualXPositions[enemy.CombatantID] = MathHelper.Lerp(currentX, targetX, damping);
+                        _enemyVisualXPositions[enemy.CombatantID] = targetX;
                     }
                 }
             }
 
+            // Cleanup logic remains the same...
             var allOnFieldEnemies = enemies.Where(c => c.IsActiveOnField).ToList();
             var keepIds = allOnFieldEnemies.Select(e => e.CombatantID).ToHashSet();
-
             var keysToRemove = _enemyVisualXPositions.Keys.Where(k => !keepIds.Contains(k)).ToList();
-            foreach (var key in keysToRemove)
-            {
-                _enemyVisualXPositions.Remove(key);
-            }
+            foreach (var key in keysToRemove) _enemyVisualXPositions.Remove(key);
         }
 
         private void UpdatePlayerPositions(float dt, IEnumerable<BattleCombatant> combatants, BattleAnimationManager animationManager)
         {
             var players = combatants.Where(c => c.IsPlayerControlled).ToList();
-
             var activePlayers = players.Where(c => !c.IsDefeated && c.IsActiveOnField).ToList();
             var dyingPlayers = players.Where(c => animationManager.IsDeathAnimating(c.CombatantID)).ToList();
             var visualPlayers = activePlayers.Concat(dyingPlayers).Distinct().ToList();
 
+            // TUNING: Players can move slightly faster or same speed
+            const float MOVEMENT_SPEED = 600f;
+
             foreach (var player in visualPlayers)
             {
-                // Always target the slot center, never center screen.
                 float targetX = BattleLayout.GetPlayerSpriteCenter(player.BattleSlot).X;
 
                 if (!_playerVisualXPositions.ContainsKey(player.CombatantID))
@@ -671,14 +684,25 @@ namespace ProjectVagabond.Battle.UI
                 else
                 {
                     float currentX = _playerVisualXPositions[player.CombatantID];
-                    if (Math.Abs(currentX - targetX) < 1.0f)
+
+                    // RETRO FIX: Constant Speed Movement
+                    if (Math.Abs(currentX - targetX) > 0.5f)
                     {
-                        _playerVisualXPositions[player.CombatantID] = targetX;
+                        float direction = Math.Sign(targetX - currentX);
+                        float moveAmount = direction * MOVEMENT_SPEED * dt;
+
+                        if (Math.Abs(moveAmount) > Math.Abs(targetX - targetX))
+                        {
+                            _playerVisualXPositions[player.CombatantID] = targetX;
+                        }
+                        else
+                        {
+                            _playerVisualXPositions[player.CombatantID] = currentX + moveAmount;
+                        }
                     }
                     else
                     {
-                        float damping = 1.0f - MathF.Exp(-ENEMY_POSITION_TWEEN_SPEED * dt);
-                        _playerVisualXPositions[player.CombatantID] = MathHelper.Lerp(currentX, targetX, damping);
+                        _playerVisualXPositions[player.CombatantID] = targetX;
                     }
                 }
             }

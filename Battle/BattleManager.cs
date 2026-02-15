@@ -1,11 +1,18 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Particles;
+using ProjectVagabond.Progression;
+using ProjectVagabond.Transitions;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -618,7 +625,8 @@ namespace ProjectVagabond.Battle
                     timeToImpact = animDef.ImpactFrameIndex * frameDuration;
                 }
 
-                if (timeToImpact < 0.05f) timeToImpact = 0.05f;
+                // PACING FIX: Ensure minimum windup time for impact
+                if (timeToImpact < 0.25f) timeToImpact = 0.25f;
 
                 _animationManager.ReleaseAttackCharge(action.Actor.CombatantID, timeToImpact);
 
@@ -780,11 +788,22 @@ namespace ProjectVagabond.Battle
             {
                 SecondaryEffectSystem.ProcessSecondaryEffects(action, _currentActionFinalTargets, _currentActionDamageResults);
             }
+            else
+            {
+                // Manually trigger secondary effects here since we are skipping the phase
+                SecondaryEffectSystem.ProcessSecondaryEffects(action, _currentActionFinalTargets, _currentActionDamageResults);
+
+                // Clear variables that would have been cleared in HandleSecondaryEffectResolution
+                _currentActionForEffects = null;
+                _currentActionDamageResults = null;
+                _currentActionFinalTargets = null;
+            }
 
             if (_currentPhase != BattlePhase.ProcessingInteraction && _currentPhase != BattlePhase.WaitingForSwitchCompletion)
             {
-                _currentPhase = BattlePhase.SecondaryEffectResolution;
-                CanAdvance = false;
+                // PACING FIX: Go directly to CheckForDefeat instead of SecondaryEffectResolution
+                _currentPhase = BattlePhase.CheckForDefeat;
+                CanAdvance = true;
             }
         }
 
@@ -1056,3 +1075,4 @@ namespace ProjectVagabond.Battle
         }
     }
 }
+﻿

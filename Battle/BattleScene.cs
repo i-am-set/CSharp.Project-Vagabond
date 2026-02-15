@@ -26,7 +26,7 @@ namespace ProjectVagabond.Scenes
 {
     public class BattleScene : GameScene
     {
-        private const float MULTI_HIT_DELAY = 0.05f;
+        private const float MULTI_HIT_DELAY = 0.2f; // Was 0.05f
         private const float ACTION_EXECUTION_DELAY = 0.0f;
         private const int ENEMY_SLOT_Y_OFFSET = 12;
         private const float BATTLE_ENTRY_INITIAL_DELAY = 0.0f;

@@ -33,8 +33,7 @@ namespace ProjectVagabond.Battle.UI
         // --- Tuning: SPEED UP THE JUICE ---
         private const float HEALTH_ANIMATION_DURATION = 0.15f; // Was 0.25f
         private const float INDICATOR_COOLDOWN = 0.1f; // Was 0.2f
-
-        // Internal animation state structs
+                                                       // Internal animation state structs
         public class HealthAnimationState { public string CombatantID; public float StartHP; public float TargetHP; public float Timer; }
         public class AlphaAnimationState { public string CombatantID; public float StartAlpha; public float TargetAlpha; public float Timer; public const float Duration = 0.1f; } // Was 0.167f
 
@@ -85,9 +84,9 @@ namespace ProjectVagabond.Battle.UI
             // State
             public bool IsHoldingAtPeak = true;
 
-            // Timing: Snappier
-            public float WindupDuration = 0.15f; // Was 0.25f
-            public float LungeDuration = 0.1f;  // Was 0.15f
+            // Timing: Adjusted for readability
+            public float WindupDuration = 0.35f; // Increased from 0.15f to make windup noticeable
+            public float LungeDuration = 0.1f;  // Kept snappy
 
             public float TotalDuration => WindupDuration + LungeDuration;
 
@@ -218,11 +217,11 @@ namespace ProjectVagabond.Battle.UI
 
             public float Timer;
 
-            // Loss Animation Tuning: Snappier
-            public const float PREVIEW_DURATION = 0.3f; // Was 0.6f
-            public const float FLASH_BLACK_DURATION = 0.03f; // Was 0.05f
-            public const float FLASH_WHITE_DURATION = 0.03f; // Was 0.05f
-            public const float SHRINK_DURATION = 0.3f; // Was 0.6f
+            // Loss Animation Tuning: Adjusted for readability
+            public const float PREVIEW_DURATION = 0.6f; // Increased from 0.0f to allow damage to register
+            public const float FLASH_BLACK_DURATION = 0.05f; // Was 0.03f
+            public const float FLASH_WHITE_DURATION = 0.05f; // Was 0.03f
+            public const float SHRINK_DURATION = 0.25f; // Was 0.3f
         }
 
         // --- Ability Indicator State ---
@@ -292,7 +291,7 @@ namespace ProjectVagabond.Battle.UI
             public Color? SecondaryColor;
             public Color? TertiaryColor;
             public float Timer;
-            public const float DURATION = 1.0f; // Was 1.75f
+            public const float DURATION = 1.8f; // Increased from 1.0f for better readability
             public const float RISE_DISTANCE = 5f;
         }
 
@@ -353,7 +352,8 @@ namespace ProjectVagabond.Battle.UI
             _activeSpawnAnimations.Any() ||
             _activeSwitchOutAnimations.Any() ||
             _activeSwitchInAnimations.Any() ||
-            _activeBarAnimations.Any() ||
+            // PACING FIX: Health bars are no longer blocking. They animate in the background.
+            // _activeBarAnimations.Any() || 
             _activeIntroSlideAnimations.Any() ||
             _activeFloorIntroAnimations.Any() ||
             _activeFloorOutroAnimations.Any(a => a.Timer < FloorOutroAnimationState.DURATION) ||
@@ -870,7 +870,8 @@ namespace ProjectVagabond.Battle.UI
                 CombatantID = combatantId,
                 PrimaryText = damageAmount.ToString(),
                 Position = startPosition,
-                Velocity = new Vector2((float)(_random.NextDouble() * 30 - 15), (float)(_random.NextDouble() * -20 - 20)),
+                Velocity = new Vector2((float)(_random.NextDouble() * 60 - 30), -200f),
+                InitialPosition = startPosition, // Ensure this is set for bounce logic
                 Timer = 0f
             });
         }
@@ -883,7 +884,8 @@ namespace ProjectVagabond.Battle.UI
                 CombatantID = combatantId,
                 PrimaryText = damageAmount.ToString(),
                 Position = startPosition,
-                Velocity = new Vector2((float)(_random.NextDouble() * 30 - 15), (float)(_random.NextDouble() * -20 - 40)),
+                InitialPosition = startPosition, 
+                Velocity = new Vector2((float)(_random.NextDouble() * 80 - 40), -250f),
                 Timer = 0f
             });
         }
@@ -896,7 +898,8 @@ namespace ProjectVagabond.Battle.UI
                 CombatantID = combatantId,
                 PrimaryText = healAmount.ToString(),
                 Position = startPosition,
-                Velocity = new Vector2((float)(_random.NextDouble() * 30 - 15), (float)(_random.NextDouble() * -20 - 20)),
+                InitialPosition = startPosition, 
+                Velocity = new Vector2((float)(_random.NextDouble() * 60 - 30), -200f),
                 Timer = 0f
             });
         }
@@ -1034,35 +1037,82 @@ namespace ProjectVagabond.Battle.UI
                 var anim = _activeAttackCharges[i];
                 anim.Timer += dt;
 
+                // --- WINDUP PHASE (Anticipation) ---
                 if (anim.Timer < anim.WindupDuration)
                 {
                     float progress = anim.Timer / anim.WindupDuration;
                     float eased = Easing.EaseOutCubic(progress);
-                    float yDir = anim.IsPlayer ? 1f : -1f;
-                    anim.Offset = new Vector2(0, yDir * AttackChargeAnimationState.WINDUP_DISTANCE * eased);
-                    float squash = MathHelper.Lerp(1.0f, 1.1f, eased);
-                    float stretch = MathHelper.Lerp(1.0f, 0.9f, eased);
-                    anim.Scale = new Vector2(squash, stretch);
+
+                    if (anim.IsPlayer)
+                    {
+                        // PLAYER: Crouch Down (Coil like a spring)
+                        // Move Down (+Y)
+                        anim.Offset = new Vector2(0, AttackChargeAnimationState.WINDUP_DISTANCE * eased);
+                        // Squash: Get Wider (X > 1) and Shorter (Y < 1)
+                        float squash = MathHelper.Lerp(1.0f, 1.4f, eased);
+                        float stretch = MathHelper.Lerp(1.0f, 0.6f, eased);
+                        anim.Scale = new Vector2(squash, stretch);
+                    }
+                    else
+                    {
+                        // ENEMY: Rear Up (Loom over player)
+                        // Move Up (-Y)
+                        anim.Offset = new Vector2(0, -AttackChargeAnimationState.WINDUP_DISTANCE * eased);
+                        // Stretch: Get Narrower (X < 1) and Taller (Y > 1)
+                        float squash = MathHelper.Lerp(1.0f, 0.9f, eased);
+                        float stretch = MathHelper.Lerp(1.0f, 1.1f, eased);
+                        anim.Scale = new Vector2(squash, stretch);
+                    }
                 }
+                // --- HOLD PHASE (Tension) ---
                 else if (anim.IsHoldingAtPeak)
                 {
                     anim.Timer = anim.WindupDuration;
-                    float yDir = anim.IsPlayer ? 1f : -1f;
-                    anim.Offset = new Vector2(0, yDir * AttackChargeAnimationState.WINDUP_DISTANCE);
-                    anim.Scale = new Vector2(1.1f, 0.9f);
+
+                    if (anim.IsPlayer)
+                    {
+                        // Hold the Crouch
+                        anim.Offset = new Vector2(0, AttackChargeAnimationState.WINDUP_DISTANCE);
+                        anim.Scale = new Vector2(1.4f, 0.6f);
+                    }
+                    else
+                    {
+                        // Hold the Rear Up
+                        anim.Offset = new Vector2(0, -AttackChargeAnimationState.WINDUP_DISTANCE);
+                        anim.Scale = new Vector2(0.9f, 1.1f);
+                    }
                 }
+                // --- LUNGE PHASE (Impact) ---
                 else
                 {
                     float lungeTime = anim.Timer - anim.WindupDuration;
                     float progress = Math.Clamp(lungeTime / anim.LungeDuration, 0f, 1f);
                     float eased = Easing.EaseInExpo(progress);
-                    float yDir = anim.IsPlayer ? -1f : 1f;
-                    float startY = (anim.IsPlayer ? 1f : -1f) * AttackChargeAnimationState.WINDUP_DISTANCE;
-                    float endY = yDir * AttackChargeAnimationState.LUNGE_DISTANCE;
-                    anim.Offset = new Vector2(0, MathHelper.Lerp(startY, endY, eased));
-                    float squash = MathHelper.Lerp(1.1f, 0.8f, eased);
-                    float stretch = MathHelper.Lerp(0.9f, 1.2f, eased);
-                    anim.Scale = new Vector2(squash, stretch);
+
+                    if (anim.IsPlayer)
+                    {
+                        // PLAYER: Spring Upwards
+                        float startY = AttackChargeAnimationState.WINDUP_DISTANCE; // From Down
+                        float endY = -AttackChargeAnimationState.LUNGE_DISTANCE;   // To Up
+                        anim.Offset = new Vector2(0, MathHelper.Lerp(startY, endY, eased));
+
+                        // Transition from Squash (1.4, 0.6) to Stretch (0.8, 1.2) for the jump
+                        float squash = MathHelper.Lerp(1.4f, 0.8f, eased);
+                        float stretch = MathHelper.Lerp(0.6f, 1.2f, eased);
+                        anim.Scale = new Vector2(squash, stretch);
+                    }
+                    else
+                    {
+                        // ENEMY: Slam Downwards
+                        float startY = -AttackChargeAnimationState.WINDUP_DISTANCE; // From Up
+                        float endY = AttackChargeAnimationState.LUNGE_DISTANCE;     // To Down
+                        anim.Offset = new Vector2(0, MathHelper.Lerp(startY, endY, eased));
+
+                        // Transition from Stretch (0.9, 1.1) to Squash (1.2, 0.8) for the impact
+                        float squash = MathHelper.Lerp(0.9f, 1.2f, eased);
+                        float stretch = MathHelper.Lerp(1.1f, 0.8f, eased);
+                        anim.Scale = new Vector2(squash, stretch);
+                    }
 
                     if (progress >= 1.0f)
                     {
@@ -1208,7 +1258,7 @@ namespace ProjectVagabond.Battle.UI
                 else
                 {
                     float progress = anim.Timer / AlphaAnimationState.Duration;
-                    combatant.VisualAlpha = MathHelper.Lerp(anim.StartAlpha, anim.TargetAlpha, Easing.EaseOutQuad(progress));
+                    combatant.VisualAlpha = MathHelper.Lerp(anim.StartAlpha, anim.TargetAlpha, Easing.EaseOutQuart(progress));
                 }
             }
         }
@@ -1534,6 +1584,10 @@ namespace ProjectVagabond.Battle.UI
         private void UpdateDamageIndicators(GameTime gameTime)
         {
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            const float gravity = 500f;
+            const float floorY = 10f; // Relative to start position
+
             for (int i = _activeDamageIndicators.Count - 1; i >= 0; i--)
             {
                 var indicator = _activeDamageIndicators[i];
@@ -1544,14 +1598,36 @@ namespace ProjectVagabond.Battle.UI
                     continue;
                 }
 
-                if (indicator.Type == DamageIndicatorState.IndicatorType.Number || indicator.Type == DamageIndicatorState.IndicatorType.HealNumber || indicator.Type == DamageIndicatorState.IndicatorType.EmphasizedNumber)
+                if (indicator.Type == DamageIndicatorState.IndicatorType.Number ||
+                    indicator.Type == DamageIndicatorState.IndicatorType.HealNumber ||
+                    indicator.Type == DamageIndicatorState.IndicatorType.EmphasizedNumber)
                 {
-                    const float gravity = 80f;
+                    // Apply Gravity
                     indicator.Velocity.Y += gravity * deltaTime;
                     indicator.Position += indicator.Velocity * deltaTime;
+
+                    // Bounce Logic
+                    // Calculate relative Y from start
+                    float relativeY = indicator.Position.Y - indicator.InitialPosition.Y;
+
+                    // If we hit the "floor" (slightly below start pos)
+                    if (relativeY > floorY)
+                    {
+                        // Snap to floor
+                        indicator.Position.Y = indicator.InitialPosition.Y + floorY;
+
+                        // Reverse velocity with damping (bounce)
+                        if (indicator.Velocity.Y > 0)
+                        {
+                            indicator.Velocity.Y = -indicator.Velocity.Y * 0.5f;
+                            // Friction on X when hitting floor
+                            indicator.Velocity.X *= 0.8f;
+                        }
+                    }
                 }
                 else if (indicator.Type == DamageIndicatorState.IndicatorType.Effectiveness)
                 {
+                    // Keep existing logic for text, or make it static pop
                     float progress = indicator.Timer / DamageIndicatorState.DURATION;
                     float yOffset = Easing.EaseOutQuad(progress) * DamageIndicatorState.RISE_DISTANCE;
                     indicator.Position = indicator.InitialPosition + new Vector2(0, yOffset);

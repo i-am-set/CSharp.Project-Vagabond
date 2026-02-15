@@ -140,26 +140,31 @@ namespace ProjectVagabond
         /// </summary>
         public (Vector2 Offset, float Rotation, float Scale) GetTotalShakeParams()
         {
-            // 1. Sum up legacy effects
+            // 1. Sum up legacy effects (Keep these, they are fine for specific animations)
             Vector2 totalOffset = _shake.Offset + _hop.Offset + _pulse.Offset + _wobble.Offset + _drift.Offset + _bounce.Offset + _zoomPulse.Offset + _directionalShake.Offset + _impactTwist.Offset;
             float totalRotation = _shake.Rotation + _hop.Rotation + _pulse.Rotation + _wobble.Rotation + _drift.Rotation + _bounce.Rotation + _zoomPulse.Rotation + _directionalShake.Rotation + _impactTwist.Rotation;
 
-            // Combine scales (Additive deviation from 1.0)
+            // Combine scales
             float totalScale = 1.0f + (_zoomPulse.Scale - 1.0f) + (_impactTwist.Scale - 1.0f);
 
-            // 2. Calculate Combat Compound Shake
+            // 2. Calculate Combat Compound Shake (RETRO FIX: NOISE INSTEAD OF SINE)
             if (_currentSteps > 0)
             {
                 float transMag = _currentSteps * TranslationPerStep;
                 float rotMag = _currentSteps * RotationPerStep;
 
-                float x = MathF.Sin(_time * VibrationSpeed) * transMag;
-                float y = MathF.Cos(_time * (VibrationSpeed * 0.9f)) * transMag;
-                float rot = MathF.Sin(_time * (VibrationSpeed * 0.85f)) * rotMag;
+                // Use a pseudo-random hash based on time to create "jagged" movement
+                // We multiply time by a large prime to scramble the sine wave into noise
+                float noiseX = (float)Math.Sin(_time * VibrationSpeed * 1.1f + 123.45f);
+                float noiseY = (float)Math.Cos(_time * VibrationSpeed * 0.9f + 678.90f);
+                float noiseRot = (float)Math.Sin(_time * VibrationSpeed * 1.3f + 42.0f);
 
-                totalOffset.X += x;
-                totalOffset.Y += y;
-                totalRotation += rot;
+                // Quantize the noise to -1 or 1 for maximum crunch, or keep raw noise for high frequency vibration
+                // Here we keep raw noise but at high speed it feels random.
+
+                totalOffset.X += noiseX * transMag;
+                totalOffset.Y += noiseY * transMag;
+                totalRotation += noiseRot * rotMag;
             }
 
             // 3. Calculate UI Compound Shake (Additive)
@@ -168,14 +173,13 @@ namespace ProjectVagabond
                 float transMag = _uiCurrentSteps * UiTranslationPerStep;
                 float rotMag = _uiCurrentSteps * UiRotationPerStep;
 
-                // Use slightly offset frequencies to prevent constructive interference patterns
-                float x = MathF.Sin(_time * (UiVibrationSpeed * 1.1f)) * transMag;
-                float y = MathF.Cos(_time * (UiVibrationSpeed * 0.95f)) * transMag;
-                float rot = MathF.Sin(_time * (UiVibrationSpeed * 0.9f)) * rotMag;
+                float noiseX = (float)Math.Sin(_time * UiVibrationSpeed * 1.2f);
+                float noiseY = (float)Math.Cos(_time * UiVibrationSpeed * 0.8f);
+                float noiseRot = (float)Math.Sin(_time * UiVibrationSpeed * 1.4f);
 
-                totalOffset.X += x;
-                totalOffset.Y += y;
-                totalRotation += rot;
+                totalOffset.X += noiseX * transMag;
+                totalOffset.Y += noiseY * transMag;
+                totalRotation += noiseRot * rotMag;
             }
 
             return (totalOffset, totalRotation, totalScale);
