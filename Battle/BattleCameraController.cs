@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using ProjectVagabond;
+using System;
 
 namespace ProjectVagabond.Battle
 {
@@ -11,15 +12,19 @@ namespace ProjectVagabond.Battle
         private Vector2 _targetPosition;
         private float _targetZoom;
 
+        // Kick offsets (Impact physics)
+        private Vector2 _kickOffset;
+        private float _kickZoom;
+
         private const float LERP_SPEED = 10.0f;
         private const float FOCUS_INTENSITY = 0.2f;
+        private const float KICK_DECAY = 15.0f;
 
-        public Vector2 Position => _currentPosition;
-        public float Zoom => _currentZoom;
+        public Vector2 Position => _currentPosition + _kickOffset;
+        public float Zoom => _currentZoom + _kickZoom;
 
         public BattleCameraController()
         {
-            // Initialize centered on the screen with default zoom
             _currentPosition = new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f);
             _targetPosition = _currentPosition;
             _currentZoom = 1.0f;
@@ -28,37 +33,44 @@ namespace ProjectVagabond.Battle
 
         public void SetTarget(Vector2 focusPoint, float zoomLevel)
         {
-            // Instead of centering directly on the target, we move slightly towards it
-            // relative to the screen center. This creates a subtle focus effect.
             Vector2 screenCenter = new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f);
             _targetPosition = Vector2.Lerp(screenCenter, focusPoint, FOCUS_INTENSITY);
             _targetZoom = zoomLevel;
+        }
+
+        public void Kick(Vector2 direction, float intensity)
+        {
+            _kickOffset = direction * intensity * 4.0f;
+            _kickZoom = 0.05f * (intensity / 10f);
         }
 
         public void SnapToTarget()
         {
             _currentPosition = _targetPosition;
             _currentZoom = _targetZoom;
+            _kickOffset = Vector2.Zero;
+            _kickZoom = 0f;
         }
 
         public void Update(float dt)
         {
             _currentPosition = Vector2.Lerp(_currentPosition, _targetPosition, dt * LERP_SPEED);
             _currentZoom = MathHelper.Lerp(_currentZoom, _targetZoom, dt * LERP_SPEED);
+
+            float decay = 1.0f - MathF.Exp(-KICK_DECAY * dt);
+            _kickOffset = Vector2.Lerp(_kickOffset, Vector2.Zero, decay);
+            _kickZoom = MathHelper.Lerp(_kickZoom, 0f, decay);
         }
 
         public Matrix GetTransform()
         {
-            // 1. Translate the world so the camera position is at (0,0)
-            var translationToTarget = Matrix.CreateTranslation(-_currentPosition.X, -_currentPosition.Y, 0);
+            var pos = Position;
+            var zoom = Zoom;
 
-            // 2. Scale the world (zoom) around the new origin
-            var scale = Matrix.CreateScale(_currentZoom);
-
-            // 3. Translate the origin to the center of the screen
+            var translationToTarget = Matrix.CreateTranslation(-pos.X, -pos.Y, 0);
+            var scale = Matrix.CreateScale(zoom);
             var translationToScreenCenter = Matrix.CreateTranslation(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f, 0);
 
-            // Combine: Move to Target -> Zoom -> Move to Screen Center
             return translationToTarget * scale * translationToScreenCenter;
         }
     }

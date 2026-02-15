@@ -42,7 +42,7 @@ namespace ProjectVagabond
 
         private RenderTarget2D _transitionRenderTarget;
         private RenderTarget2D _finalCompositeTarget;
-        private RenderTarget2D _phosphorTarget; // Accumulation buffer for ghosting
+        private RenderTarget2D _phosphorTarget;
         private Effect _crtEffect;
         private BlendState _cursorInvertBlendState;
 
@@ -331,6 +331,15 @@ namespace ProjectVagabond
         public void TriggerScreenFlashSequence(Color color) { _screenFlashState = new ScreenFlashState { Timer = 0f, FlashesRemaining = ScreenFlashState.TOTAL_FLASHES, IsCurrentlyWhite = true, FlashColor = color }; }
         public void TriggerFullscreenGlitch(float duration) { _glitchDuration = duration; _glitchTimer = duration; }
         public void RequestFullscreenOverlay(Action<SpriteBatch, Matrix> drawAction) { _fullscreenOverlays.Add(drawAction); }
+
+        public BattleCameraController? GetBattleCamera()
+        {
+            if (_sceneManager.CurrentActiveScene is BattleScene battleScene)
+            {
+                return battleScene.GetCamera();
+            }
+            return null;
+        }
 
         public void ResetGame()
         {

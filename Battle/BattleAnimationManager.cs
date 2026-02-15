@@ -25,21 +25,16 @@ using System.Threading;
 
 namespace ProjectVagabond.Battle.UI
 {
-    /// <summary>
-    /// Manages all visual feedback animations during a battle, such as health bars, hit flashes, and damage indicators.
-    /// </summary>
     public class BattleAnimationManager
     {
-        // --- Tuning: SPEED UP THE JUICE ---
-        private const float HEALTH_ANIMATION_DURATION = 0.15f; // Was 0.25f
-        private const float INDICATOR_COOLDOWN = 0.1f; // Was 0.2f
-                                                       // Internal animation state structs
+        private const float HEALTH_ANIMATION_DURATION = 0.15f;
+        private const float INDICATOR_COOLDOWN = 0.1f;
+
         public class HealthAnimationState { public string CombatantID; public float StartHP; public float TargetHP; public float Timer; }
-        public class AlphaAnimationState { public string CombatantID; public float StartAlpha; public float TargetAlpha; public float Timer; public const float Duration = 0.1f; } // Was 0.167f
+        public class AlphaAnimationState { public string CombatantID; public float StartAlpha; public float TargetAlpha; public float Timer; public const float Duration = 0.1f; }
 
         public Func<BattleCombatant, Vector2> GetCombatantPosition { get; set; }
 
-        // HUD Entry Animation
         public class HudEntryAnimationState
         {
             public string CombatantID;
@@ -55,9 +50,8 @@ namespace ProjectVagabond.Battle.UI
             public enum Phase { FlashWhite1, FlashGray, FlashWhite2, FadeOut }
             public Phase CurrentPhase;
 
-            // Tuning: Faster Death
-            public const float FLASH_DURATION = 0.05f; // Was 0.1f
-            public const float FADE_DURATION = 0.15f; // Was 0.25f
+            public const float FLASH_DURATION = 0.05f;
+            public const float FADE_DURATION = 0.15f;
         }
 
         public class SpawnAnimationState
@@ -67,40 +61,33 @@ namespace ProjectVagabond.Battle.UI
             public enum Phase { Flash, FadeIn }
             public Phase CurrentPhase;
 
-            // Tuning: Faster Spawn
-            public const float FLASH_DURATION = 0.2f; // Was 0.4f
-            public const float FLASH_INTERVAL = 0.05f; // Was 0.1f
-            public const float FADE_DURATION = 0.3f; // Was 0.6f
+            public const float FLASH_DURATION = 0.2f;
+            public const float FLASH_INTERVAL = 0.05f;
+            public const float FADE_DURATION = 0.3f;
             public const float DROP_HEIGHT = 10f;
         }
 
-        // --- Attack Charge Animation (Synchronized) ---
         public class AttackChargeAnimationState
         {
             public string CombatantID;
             public float Timer;
             public bool IsPlayer;
 
-            // State
             public bool IsHoldingAtPeak = true;
 
-            // Timing: Adjusted for readability
-            public float WindupDuration = 0.35f; // Increased from 0.15f to make windup noticeable
-            public float LungeDuration = 0.1f;  // Kept snappy
+            public float WindupDuration = 0.35f;
+            public float LungeDuration = 0.1f;
 
             public float TotalDuration => WindupDuration + LungeDuration;
 
-            // Visuals
             public const float WINDUP_DISTANCE = 8f;
             public const float LUNGE_DISTANCE = 16f;
 
-            // Squash/Stretch
             public Vector2 Scale = Vector2.One;
             public Vector2 Offset = Vector2.Zero;
         }
         private readonly List<AttackChargeAnimationState> _activeAttackCharges = new List<AttackChargeAnimationState>();
 
-        // --- Intro Slide Animation ---
         public class IntroSlideAnimationState
         {
             public string CombatantID;
@@ -109,37 +96,32 @@ namespace ProjectVagabond.Battle.UI
             public enum Phase { Sliding, Waiting, Revealing }
             public Phase CurrentPhase;
 
-            // Timers
             public float SlideTimer;
             public float WaitTimer;
             public float RevealTimer;
 
-            // Offsets
             public Vector2 StartOffset;
             public Vector2 CurrentOffset;
 
-            // Tuning: Faster Intro
-            public const float SLIDE_DURATION = 0.3f; // Was 0.5f
-            public const float WAIT_DURATION = 0.25f; // Was 0.5f
-            public const float REVEAL_DURATION = 0.3f; // Was 0.5f
+            public const float SLIDE_DURATION = 0.3f;
+            public const float WAIT_DURATION = 0.25f;
+            public const float REVEAL_DURATION = 0.3f;
         }
         private readonly List<IntroSlideAnimationState> _activeIntroSlideAnimations = new List<IntroSlideAnimationState>();
 
-        // --- Floor Intro Animation ---
         public class FloorIntroAnimationState
         {
             public string ID;
             public float Timer;
-            public const float DURATION = 0.3f; // Was 0.5f
+            public const float DURATION = 0.3f;
         }
         private readonly List<FloorIntroAnimationState> _activeFloorIntroAnimations = new List<FloorIntroAnimationState>();
 
-        // --- Floor Outro Animation ---
         public class FloorOutroAnimationState
         {
             public string ID;
             public float Timer;
-            public const float DURATION = 0.3f; // Was 0.5f
+            public const float DURATION = 0.3f;
         }
         private readonly List<FloorOutroAnimationState> _activeFloorOutroAnimations = new List<FloorOutroAnimationState>();
 
@@ -149,17 +131,15 @@ namespace ProjectVagabond.Battle.UI
             public bool IsEnemy;
             public float Timer;
 
-            // For Enemy Sequence
             public enum Phase { Silhouetting, Lifting }
             public Phase CurrentPhase;
             public float SilhouetteTimer;
             public float LiftTimer;
 
-            public const float SILHOUETTE_DURATION = 0.25f; // Was 0.5f
-            public const float LIFT_DURATION = 0.25f; // Was 0.5f
+            public const float SILHOUETTE_DURATION = 0.25f;
+            public const float LIFT_DURATION = 0.25f;
             public const float LIFT_HEIGHT = 150f;
 
-            // For Player (Legacy/Simple)
             public const float DURATION = BattleConstants.SWITCH_ANIMATION_DURATION;
             public const float SIMPLE_LIFT_HEIGHT = BattleConstants.SWITCH_VERTICAL_OFFSET;
         }
@@ -181,27 +161,24 @@ namespace ProjectVagabond.Battle.UI
             public Vector2 ShakeOffset;
             public float ShakeTimer;
 
-            // Flash Tuning: Strobe Light Speed
             public const int TOTAL_FLASHES = 4;
-            public const float FLASH_ON_DURATION = 0.03f; // Was 0.05f
-            public const float FLASH_OFF_DURATION = 0.03f; // Was 0.05f
+            public const float FLASH_ON_DURATION = 0.03f;
+            public const float FLASH_OFF_DURATION = 0.03f;
             public const float TOTAL_FLASH_CYCLE_DURATION = FLASH_ON_DURATION + FLASH_OFF_DURATION;
 
-            // Shake Tuning
             public const float SHAKE_LEFT_DURATION = 0.03f;
             public const float SHAKE_RIGHT_DURATION = 0.03f;
             public const float SHAKE_SETTLE_DURATION = 0.03f;
             public const float TOTAL_SHAKE_DURATION = SHAKE_LEFT_DURATION + SHAKE_RIGHT_DURATION + SHAKE_SETTLE_DURATION;
             public const float SHAKE_MAGNITUDE = 2f;
         }
-        public class HealBounceAnimationState { public string CombatantID; public float Timer; public const float Duration = 0.2f; public const float Height = 5f; } // Was 0.3f
-        public class HealFlashAnimationState { public string CombatantID; public float Timer; public const float Duration = 0.3f; } // Was 0.5f
-        public class PoisonEffectAnimationState { public string CombatantID; public float Timer; public const float Duration = 1.0f; } // Was 1.5f
+        public class HealBounceAnimationState { public string CombatantID; public float Timer; public const float Duration = 0.2f; public const float Height = 5f; }
+        public class HealFlashAnimationState { public string CombatantID; public float Timer; public const float Duration = 0.3f; }
+        public class PoisonEffectAnimationState { public string CombatantID; public float Timer; public const float Duration = 1.0f; }
 
-        // Made public so BattleRenderer can read the state
         public class ResourceBarAnimationState
         {
-            public enum BarResourceType { HP } // Removed Mana
+            public enum BarResourceType { HP }
             public enum BarAnimationType { Loss, Recovery }
             public enum LossPhase { Preview, FlashBlack, FlashWhite, Shrink }
             public enum RecoveryPhase { Hang, Fade }
@@ -217,14 +194,12 @@ namespace ProjectVagabond.Battle.UI
 
             public float Timer;
 
-            // Loss Animation Tuning: Adjusted for readability
-            public const float PREVIEW_DURATION = 0.6f; // Increased from 0.0f to allow damage to register
-            public const float FLASH_BLACK_DURATION = 0.05f; // Was 0.03f
-            public const float FLASH_WHITE_DURATION = 0.05f; // Was 0.03f
-            public const float SHRINK_DURATION = 0.25f; // Was 0.3f
+            public const float PREVIEW_DURATION = 0.6f;
+            public const float FLASH_BLACK_DURATION = 0.05f;
+            public const float FLASH_WHITE_DURATION = 0.05f;
+            public const float SHRINK_DURATION = 0.25f;
         }
 
-        // --- Ability Indicator State ---
         public class AbilityIndicatorState
         {
             public enum AnimationPhase { EasingIn, Flashing, Holding, EasingOut }
@@ -238,26 +213,23 @@ namespace ProjectVagabond.Battle.UI
             public Vector2 CurrentPosition;
             public Vector2 Velocity;
 
-            // Rotation Physics
             public float Rotation;
             public float RotationSpeed;
 
             public float Timer;
             public float ShakeTimer;
 
-            // Tuning
-            public const float SHAKE_DURATION = 0.3f; // Was 0.5f
+            public const float SHAKE_DURATION = 0.3f;
             public const float SHAKE_MAGNITUDE = 4.0f;
             public const float SHAKE_FREQUENCY = 15f;
 
             public const float EASE_IN_DURATION = 0.1f;
-            public const float FLASH_DURATION = 0.1f; // Was 0.15f
-            public const float HOLD_DURATION = 1.0f; // Was 2.0f
-            public const float EASE_OUT_DURATION = 0.2f; // Was 0.4f
+            public const float FLASH_DURATION = 0.1f;
+            public const float HOLD_DURATION = 1.0f;
+            public const float EASE_OUT_DURATION = 0.2f;
             public const float TOTAL_DURATION = EASE_IN_DURATION + FLASH_DURATION + HOLD_DURATION + EASE_OUT_DURATION;
         }
 
-        // Queue Data Structure
         private struct PendingAbilityIndicator
         {
             public string CombatantID;
@@ -268,8 +240,7 @@ namespace ProjectVagabond.Battle.UI
         private readonly Queue<PendingAbilityIndicator> _pendingAbilityQueue = new Queue<PendingAbilityIndicator>();
         private float _abilitySpawnTimer = 0f;
 
-        // Tuning for Queue & Physics
-        private const float ABILITY_SPAWN_INTERVAL = 0.4f; // Was 0.75f
+        private const float ABILITY_SPAWN_INTERVAL = 0.4f;
         private const float ABILITY_FLOAT_SPEED_INITIAL = 15f;
         private const float ABILITY_FLOAT_DRAG = 1.5f;
         private const float ABILITY_DRIFT_RANGE = 10f;
@@ -291,11 +262,10 @@ namespace ProjectVagabond.Battle.UI
             public Color? SecondaryColor;
             public Color? TertiaryColor;
             public float Timer;
-            public const float DURATION = 1.8f; // Increased from 1.0f for better readability
+            public const float DURATION = 1.8f;
             public const float RISE_DISTANCE = 5f;
         }
 
-        // --- HITSTOP VISUAL STATE ---
         public class HitstopVisualState
         {
             public string CombatantID;
@@ -303,7 +273,6 @@ namespace ProjectVagabond.Battle.UI
         }
         private readonly List<HitstopVisualState> _activeHitstopVisuals = new List<HitstopVisualState>();
 
-        // --- IMPACT FLASH STATE ---
         public class ImpactFlashState
         {
             public float Timer;
@@ -326,10 +295,8 @@ namespace ProjectVagabond.Battle.UI
         private readonly List<DamageIndicatorState> _activeDamageIndicators = new List<DamageIndicatorState>();
         private readonly List<ResourceBarAnimationState> _activeBarAnimations = new List<ResourceBarAnimationState>();
 
-        // --- Ability Indicators List ---
         private readonly List<AbilityIndicatorState> _activeAbilityIndicators = new List<AbilityIndicatorState>();
 
-        // Text Indicator Queue
         private readonly Queue<Action> _pendingTextIndicators = new Queue<Action>();
         private float _indicatorCooldownTimer = 0f;
 
@@ -337,14 +304,8 @@ namespace ProjectVagabond.Battle.UI
         private readonly Random _random = new Random();
         private readonly Global _global;
 
-        // Layout Constants mirrored from BattleRenderer for pixel-perfect alignment
         private const int DIVIDER_Y = 123;
 
-        /// <summary>
-        /// Returns true if any BLOCKING animation is currently playing.
-        /// This excludes cosmetic effects like damage numbers  and hit flashes,
-        /// allowing the game logic to proceed while these play in the background.
-        /// </summary>
         public bool IsBlockingAnimation =>
             _activeHealthAnimations.Any() ||
             _activeAlphaAnimations.Any() ||
@@ -352,22 +313,13 @@ namespace ProjectVagabond.Battle.UI
             _activeSpawnAnimations.Any() ||
             _activeSwitchOutAnimations.Any() ||
             _activeSwitchInAnimations.Any() ||
-            // PACING FIX: Health bars are no longer blocking. They animate in the background.
-            // _activeBarAnimations.Any() || 
             _activeIntroSlideAnimations.Any() ||
             _activeFloorIntroAnimations.Any() ||
             _activeFloorOutroAnimations.Any(a => a.Timer < FloorOutroAnimationState.DURATION) ||
             _activeAttackCharges.Any();
 
-        /// <summary>
-        /// Alias for IsBlockingAnimation to maintain backward compatibility.
-        /// </summary>
         public bool IsAnimating => IsBlockingAnimation;
 
-        /// <summary>
-        /// Returns true if ANY visual effect is active, including non-blocking ones like damage numbers.
-        /// Used to delay the end of battle until the screen is clean.
-        /// </summary>
         public bool IsVisuallyBusy =>
             IsBlockingAnimation ||
             _activeDamageIndicators.Any() ||
@@ -404,21 +356,15 @@ namespace ProjectVagabond.Battle.UI
             _activeFloorIntroAnimations.Clear();
             _activeFloorOutroAnimations.Clear();
             _activeAttackCharges.Clear();
-            _activeHudEntryAnimations.Clear(); // Clear HUD animations
+            _activeHudEntryAnimations.Clear();
             _impactFlashState = null;
             _indicatorCooldownTimer = 0f;
             _pendingAbilityQueue.Clear();
             _abilitySpawnTimer = 0f;
         }
 
-        /// <summary>
-        /// Instantly completes all "blocking" animations (health bars, movement, etc.)
-        /// so the game logic can proceed immediately.
-        /// Does NOT clear non-blocking visuals like damage numbers or particles.
-        /// </summary>
         public void CompleteBlockingAnimations(IEnumerable<BattleCombatant> combatants)
         {
-            // 1. Snap Health/Mana Bars
             foreach (var anim in _activeHealthAnimations)
             {
                 var combatant = combatants.FirstOrDefault(c => c.CombatantID == anim.CombatantID);
@@ -430,7 +376,6 @@ namespace ProjectVagabond.Battle.UI
             _activeHealthAnimations.Clear();
             _activeBarAnimations.Clear();
 
-            // 2. Snap Alpha/Visibility
             foreach (var anim in _activeAlphaAnimations)
             {
                 var combatant = combatants.FirstOrDefault(c => c.CombatantID == anim.CombatantID);
@@ -441,7 +386,6 @@ namespace ProjectVagabond.Battle.UI
             }
             _activeAlphaAnimations.Clear();
 
-            // 3. Snap Intro/Switch Animations
             foreach (var anim in _activeIntroSlideAnimations)
             {
                 var combatant = combatants.FirstOrDefault(c => c.CombatantID == anim.CombatantID);
@@ -457,7 +401,6 @@ namespace ProjectVagabond.Battle.UI
             _activeFloorOutroAnimations.Clear();
             _activeAttackCharges.Clear();
 
-            // 4. Handle Death Animations
             foreach (var anim in _activeDeathAnimations)
             {
                 var combatant = combatants.FirstOrDefault(c => c.CombatantID == anim.CombatantID);
@@ -468,7 +411,6 @@ namespace ProjectVagabond.Battle.UI
             }
             _activeDeathAnimations.Clear();
 
-            // 5. Snap HUD Entry
             foreach (var anim in _activeHudEntryAnimations)
             {
                 var combatant = combatants.FirstOrDefault(c => c.CombatantID == anim.CombatantID);
@@ -479,7 +421,6 @@ namespace ProjectVagabond.Battle.UI
             }
             _activeHudEntryAnimations.Clear();
 
-            // 6. Clear other blocking states
             _activeSpawnAnimations.Clear();
         }
 
@@ -870,8 +811,8 @@ namespace ProjectVagabond.Battle.UI
                 CombatantID = combatantId,
                 PrimaryText = damageAmount.ToString(),
                 Position = startPosition,
+                InitialPosition = startPosition,
                 Velocity = new Vector2((float)(_random.NextDouble() * 60 - 30), -200f),
-                InitialPosition = startPosition, // Ensure this is set for bounce logic
                 Timer = 0f
             });
         }
@@ -884,7 +825,7 @@ namespace ProjectVagabond.Battle.UI
                 CombatantID = combatantId,
                 PrimaryText = damageAmount.ToString(),
                 Position = startPosition,
-                InitialPosition = startPosition, 
+                InitialPosition = startPosition,
                 Velocity = new Vector2((float)(_random.NextDouble() * 80 - 40), -250f),
                 Timer = 0f
             });
@@ -898,7 +839,7 @@ namespace ProjectVagabond.Battle.UI
                 CombatantID = combatantId,
                 PrimaryText = healAmount.ToString(),
                 Position = startPosition,
-                InitialPosition = startPosition, 
+                InitialPosition = startPosition,
                 Velocity = new Vector2((float)(_random.NextDouble() * 60 - 30), -200f),
                 Timer = 0f
             });
@@ -1037,7 +978,6 @@ namespace ProjectVagabond.Battle.UI
                 var anim = _activeAttackCharges[i];
                 anim.Timer += dt;
 
-                // --- WINDUP PHASE (Anticipation) ---
                 if (anim.Timer < anim.WindupDuration)
                 {
                     float progress = anim.Timer / anim.WindupDuration;
@@ -1045,44 +985,34 @@ namespace ProjectVagabond.Battle.UI
 
                     if (anim.IsPlayer)
                     {
-                        // PLAYER: Crouch Down (Coil like a spring)
-                        // Move Down (+Y)
                         anim.Offset = new Vector2(0, AttackChargeAnimationState.WINDUP_DISTANCE * eased);
-                        // Squash: Get Wider (X > 1) and Shorter (Y < 1)
                         float squash = MathHelper.Lerp(1.0f, 1.4f, eased);
                         float stretch = MathHelper.Lerp(1.0f, 0.6f, eased);
                         anim.Scale = new Vector2(squash, stretch);
                     }
                     else
                     {
-                        // ENEMY: Rear Up (Loom over player)
-                        // Move Up (-Y)
                         anim.Offset = new Vector2(0, -AttackChargeAnimationState.WINDUP_DISTANCE * eased);
-                        // Stretch: Get Narrower (X < 1) and Taller (Y > 1)
                         float squash = MathHelper.Lerp(1.0f, 0.9f, eased);
                         float stretch = MathHelper.Lerp(1.0f, 1.1f, eased);
                         anim.Scale = new Vector2(squash, stretch);
                     }
                 }
-                // --- HOLD PHASE (Tension) ---
                 else if (anim.IsHoldingAtPeak)
                 {
                     anim.Timer = anim.WindupDuration;
 
                     if (anim.IsPlayer)
                     {
-                        // Hold the Crouch
                         anim.Offset = new Vector2(0, AttackChargeAnimationState.WINDUP_DISTANCE);
                         anim.Scale = new Vector2(1.4f, 0.6f);
                     }
                     else
                     {
-                        // Hold the Rear Up
                         anim.Offset = new Vector2(0, -AttackChargeAnimationState.WINDUP_DISTANCE);
                         anim.Scale = new Vector2(0.9f, 1.1f);
                     }
                 }
-                // --- LUNGE PHASE (Impact) ---
                 else
                 {
                     float lungeTime = anim.Timer - anim.WindupDuration;
@@ -1091,24 +1021,20 @@ namespace ProjectVagabond.Battle.UI
 
                     if (anim.IsPlayer)
                     {
-                        // PLAYER: Spring Upwards
-                        float startY = AttackChargeAnimationState.WINDUP_DISTANCE; // From Down
-                        float endY = -AttackChargeAnimationState.LUNGE_DISTANCE;   // To Up
+                        float startY = AttackChargeAnimationState.WINDUP_DISTANCE;
+                        float endY = -AttackChargeAnimationState.LUNGE_DISTANCE;
                         anim.Offset = new Vector2(0, MathHelper.Lerp(startY, endY, eased));
 
-                        // Transition from Squash (1.4, 0.6) to Stretch (0.8, 1.2) for the jump
                         float squash = MathHelper.Lerp(1.4f, 0.8f, eased);
                         float stretch = MathHelper.Lerp(0.6f, 1.2f, eased);
                         anim.Scale = new Vector2(squash, stretch);
                     }
                     else
                     {
-                        // ENEMY: Slam Downwards
-                        float startY = -AttackChargeAnimationState.WINDUP_DISTANCE; // From Up
-                        float endY = AttackChargeAnimationState.LUNGE_DISTANCE;     // To Down
+                        float startY = -AttackChargeAnimationState.WINDUP_DISTANCE;
+                        float endY = AttackChargeAnimationState.LUNGE_DISTANCE;
                         anim.Offset = new Vector2(0, MathHelper.Lerp(startY, endY, eased));
 
-                        // Transition from Stretch (0.9, 1.1) to Squash (1.2, 0.8) for the impact
                         float squash = MathHelper.Lerp(0.9f, 1.2f, eased);
                         float stretch = MathHelper.Lerp(1.1f, 0.8f, eased);
                         anim.Scale = new Vector2(squash, stretch);
@@ -1584,9 +1510,8 @@ namespace ProjectVagabond.Battle.UI
         private void UpdateDamageIndicators(GameTime gameTime)
         {
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
-
             const float gravity = 500f;
-            const float floorY = 10f; // Relative to start position
+            const float floorY = 10f;
 
             for (int i = _activeDamageIndicators.Count - 1; i >= 0; i--)
             {
@@ -1602,32 +1527,24 @@ namespace ProjectVagabond.Battle.UI
                     indicator.Type == DamageIndicatorState.IndicatorType.HealNumber ||
                     indicator.Type == DamageIndicatorState.IndicatorType.EmphasizedNumber)
                 {
-                    // Apply Gravity
                     indicator.Velocity.Y += gravity * deltaTime;
                     indicator.Position += indicator.Velocity * deltaTime;
 
-                    // Bounce Logic
-                    // Calculate relative Y from start
                     float relativeY = indicator.Position.Y - indicator.InitialPosition.Y;
 
-                    // If we hit the "floor" (slightly below start pos)
                     if (relativeY > floorY)
                     {
-                        // Snap to floor
                         indicator.Position.Y = indicator.InitialPosition.Y + floorY;
 
-                        // Reverse velocity with damping (bounce)
                         if (indicator.Velocity.Y > 0)
                         {
                             indicator.Velocity.Y = -indicator.Velocity.Y * 0.5f;
-                            // Friction on X when hitting floor
                             indicator.Velocity.X *= 0.8f;
                         }
                     }
                 }
                 else if (indicator.Type == DamageIndicatorState.IndicatorType.Effectiveness)
                 {
-                    // Keep existing logic for text, or make it static pop
                     float progress = indicator.Timer / DamageIndicatorState.DURATION;
                     float yOffset = Easing.EaseOutQuad(progress) * DamageIndicatorState.RISE_DISTANCE;
                     indicator.Position = indicator.InitialPosition + new Vector2(0, yOffset);

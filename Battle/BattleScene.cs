@@ -26,7 +26,7 @@ namespace ProjectVagabond.Scenes
 {
     public class BattleScene : GameScene
     {
-        private const float MULTI_HIT_DELAY = 0.2f; // Was 0.05f
+        private const float MULTI_HIT_DELAY = 0.2f;
         private const float ACTION_EXECUTION_DELAY = 0.0f;
         private const int ENEMY_SLOT_Y_OFFSET = 12;
         private const float BATTLE_ENTRY_INITIAL_DELAY = 0.0f;
@@ -147,6 +147,8 @@ namespace ProjectVagabond.Scenes
             _battleCam = new BattleCameraController();
         }
 
+        public BattleCameraController GetCamera() => _battleCam;
+
         public override void Enter()
         {
             base.Enter();
@@ -224,7 +226,6 @@ namespace ProjectVagabond.Scenes
                     e.VisualAlpha = 0f;
                 }
 
-                // Always start floor 0 and 1 animations, regardless of enemy count.
                 _animationManager.StartFloorIntroAnimation("floor_0");
                 _animationManager.StartFloorIntroAnimation("floor_1");
 
@@ -422,8 +423,6 @@ namespace ProjectVagabond.Scenes
                     _uiSlideTimer += dt;
                     float progress = Math.Clamp(_uiSlideTimer / UI_SLIDE_DURATION, 0f, 1f);
 
-                    // _uiManager.IntroOffset = Vector2.Lerp(new Vector2(0, UI_SLIDE_DISTANCE), Vector2.Zero, eased);
-
                     if (progress >= 1.0f)
                     {
                         _battleManager.ForceAdvance();
@@ -435,7 +434,6 @@ namespace ProjectVagabond.Scenes
                             _animationManager.StartHudEntryAnimation(c.CombatantID);
                         }
 
-                        // Trigger the button pop-in sequence
                         _uiManager.TriggerButtonEntrance();
                     }
                 }
@@ -480,18 +478,14 @@ namespace ProjectVagabond.Scenes
             _animationManager.Update(gameTime, _battleManager.AllCombatants);
             _moveAnimationManager.Update(gameTime);
 
-            // --- INPUT HANDLING REFACTOR ---
-            // Update UI Manager and check if it captured input
             bool uiCapturedInput = _uiManager.Update(gameTime, currentMouseState, currentKeyboardState, _battleManager.CurrentActingCombatant, _renderer);
 
-            // Only update World Input Handler if UI didn't capture input
             if (!uiCapturedInput)
             {
                 _inputHandler.Update(gameTime, _uiManager, _renderer);
             }
             else
             {
-                // If UI captured input, ensure World Input Handler resets its hover state
                 _inputHandler.ResetHover(_uiManager);
             }
 
@@ -701,7 +695,6 @@ namespace ProjectVagabond.Scenes
                 _previousBattlePhase = currentPhase;
             }
 
-            // --- SAFETY: Ensure UI is visible in ActionSelection ---
             if (currentPhase == BattleManager.BattlePhase.ActionSelection && !_uiManager.IsActionMenuVisible)
             {
                 var leader = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && c.BattleSlot == 0);
@@ -737,7 +730,6 @@ namespace ProjectVagabond.Scenes
 
         private void TriggerVictoryRestoration()
         {
-            // Nothing to restore
         }
 
         private void FinalizeVictory()
@@ -798,14 +790,11 @@ namespace ProjectVagabond.Scenes
 
             var secondaryFont = _core.SecondaryFont;
 
-            // 1. End the batch started by GameScene
             spriteBatch.End();
 
-            // 2. Calculate Camera Transform
             Matrix camMatrix = _battleCam.GetTransform();
             Matrix worldTransform = camMatrix * transform;
 
-            // 3. Begin World Batch (Zoomed)
             spriteBatch.Begin(
                 SpriteSortMode.Deferred,
                 BlendState.AlphaBlend,
@@ -837,7 +826,6 @@ namespace ProjectVagabond.Scenes
 
             _particleSystemManager.Draw(spriteBatch, worldTransform);
 
-            // 4. Begin UI Batch (Fixed)
             spriteBatch.Begin(
                 SpriteSortMode.Deferred,
                 BlendState.AlphaBlend,
@@ -853,7 +841,6 @@ namespace ProjectVagabond.Scenes
                 string roundText = _battleManager.RoundNumber.ToString();
                 Vector2 roundTextSize = font.MeasureString(roundText);
 
-                // Positioned at (5, 8) as requested previously
                 Vector2 roundTextPosition = new Vector2(5, 8);
 
                 Vector2 origin = roundTextSize / 2f;
@@ -899,30 +886,25 @@ namespace ProjectVagabond.Scenes
 
             spriteBatch.End();
 
-            // 5. Handle Flashing Overlay
             if (isFlashing)
             {
                 var core = _core;
                 core.RequestFullscreenOverlay((sb, uiMatrix) =>
                 {
-                    // uiMatrix is the screen transform passed by Core
                     Matrix overlayWorldTransform = camMatrix * uiMatrix;
 
-                    // World Space Elements on top of flash
                     sb.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, overlayWorldTransform);
                     _moveAnimationManager.Draw(sb);
                     _animationManager.DrawDamageIndicators(sb, _core.SecondaryFont);
                     _animationManager.DrawAbilityIndicators(sb, _core.SecondaryFont);
                     sb.End();
 
-                    // UI Space Elements on top of flash
                     sb.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, uiMatrix);
                     _uiManager.Draw(sb, font, gameTime, Matrix.Identity);
                     sb.End();
                 });
             }
 
-            // 6. Re-open a dummy batch so GameScene.Draw doesn't crash on End()
             spriteBatch.Begin(
                 SpriteSortMode.Deferred,
                 BlendState.AlphaBlend,
@@ -992,19 +974,15 @@ namespace ProjectVagabond.Scenes
 
         private void OnMoveAnimationTriggered(GameEvents.MoveAnimationTriggered e)
         {
-            // 1. Calculate the center of ALL targets
             Vector2 camTarget = GetCombatantCentroid(e.Targets);
 
-            // 2. Fallback to actor if no targets (e.g. self-buff)
             if (camTarget == Vector2.Zero)
             {
                 camTarget = _renderer.GetCombatantVisualCenterPosition(e.Actor, _battleManager.AllCombatants);
             }
 
-            // 3. Set Focus immediately
             SetCameraFocus(camTarget, 1.01f);
 
-            // Existing logic...
             _moveAnimationManager.StartAnimation(e.Move, e.Targets, _renderer, e.GrazeStatus);
         }
 
@@ -1043,14 +1021,11 @@ namespace ProjectVagabond.Scenes
                 Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(target, _battleManager.AllCombatants);
                 Vector2 targetPos = _renderer.GetCombatantVisualCenterPosition(target, _battleManager.AllCombatants);
 
-                // --- Status Move Visuals ---
                 if (e.ChosenMove.ImpactType == ImpactType.Status && !result.WasGraze && !result.WasProtected)
                 {
                     var statusParticles = _particleSystemManager.CreateEmitter(ParticleEffects.CreateStatusImpact());
                     statusParticles.Position = targetPos;
                     statusParticles.EmitBurst(statusParticles.Settings.BurstCount);
-
-                    // Subtle wobble for feedback without heavy impact feel
                     _hapticsManager.TriggerWobble(2.0f, 0.2f, 15f);
                 }
 
@@ -1061,7 +1036,6 @@ namespace ProjectVagabond.Scenes
 
                     bool isHeavyHit = result.WasCritical || damageRatio > 0.25f || target.Stats.CurrentHP <= 0;
 
-                    // Tuning: Reduced scalar from 3.0f to 1.0f and cap from 5.0f to 2.0f for snappier feel
                     const float BASE_JUICE_SCALAR = 1.0f;
                     float juiceIntensity = 1.0f + (damageRatio * BASE_JUICE_SCALAR);
                     if (result.WasCritical) juiceIntensity *= 1.2f;
@@ -1072,6 +1046,8 @@ namespace ProjectVagabond.Scenes
                         float baseFreeze = isHeavyHit ? _global.HitstopDuration_Crit : 0.05f;
                         _hitstopManager.Trigger(baseFreeze * juiceIntensity);
                         _animationManager.StartHitstopVisuals(target.CombatantID, result.WasCritical);
+
+                        ServiceLocator.Get<Core>().TriggerFullscreenGlitch(0.2f);
 
                         if (target.IsPlayerControlled && isHeavyHit)
                         {
@@ -1089,6 +1065,9 @@ namespace ProjectVagabond.Scenes
                     float recoilMag = 20f * juiceIntensity;
                     _hapticsManager.TriggerDirectionalShake(direction, shakeMag, 0.2f * juiceIntensity);
                     _renderer.TriggerRecoil(target.CombatantID, direction, recoilMag);
+
+                    ServiceLocator.Get<Core>().GetBattleCamera()?.Kick(direction, juiceIntensity * 2.0f);
+
                     var sparks = _particleSystemManager.CreateEmitter(ParticleEffects.CreateHitSparks(juiceIntensity));
                     sparks.Position = targetPos;
                     sparks.EmitBurst(sparks.Settings.BurstCount);
