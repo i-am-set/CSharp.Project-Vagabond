@@ -6,6 +6,7 @@ using ProjectVagabond.Battle;
 using ProjectVagabond.Utils;
 using System.Collections.Generic;
 using System;
+using System.Linq; // Added for List manipulation
 
 namespace ProjectVagabond.Battle.UI
 {
@@ -15,6 +16,8 @@ namespace ProjectVagabond.Battle.UI
         {
             public string Text;
             public Color Color;
+            public int RoundNumber;
+            public int RoundIndex;
         }
 
         private readonly List<LogEntry> _logs = new List<LogEntry>();
@@ -23,11 +26,13 @@ namespace ProjectVagabond.Battle.UI
         private readonly Core _core;
 
         // --- UI State ---
-        private float _slideProgress = 0f; // 0.0 = Closed, 1.0 = Open
+        private float _slideProgress = 0f;
         private const float SLIDE_SPEED = 10f;
-
-        // Increased from 6 to 7 to extend 1 pixel lower
         private const int TAB_HEIGHT = 7;
+
+        // Round Tracking
+        private int _lastSeenRound = 0;
+        private int _currentRoundLogIndex = 0;
 
         // Layout
         private Rectangle _tabBounds;
@@ -36,8 +41,6 @@ namespace ProjectVagabond.Battle.UI
         {
             _global = ServiceLocator.Get<Global>();
             _core = ServiceLocator.Get<Core>();
-
-            // Full width tab anchored at (0,0)
             _tabBounds = new Rectangle(0, 0, Global.VIRTUAL_WIDTH, TAB_HEIGHT);
         }
 
@@ -45,6 +48,8 @@ namespace ProjectVagabond.Battle.UI
         {
             _logs.Clear();
             _slideProgress = 0f;
+            _lastSeenRound = 0;
+            _currentRoundLogIndex = 0;
         }
 
         public void Subscribe()
@@ -76,24 +81,78 @@ namespace ProjectVagabond.Battle.UI
 
         private void AddLog(string text, Color color)
         {
-            _logs.Insert(0, new LogEntry { Text = text.ToUpper(), Color = color });
+            var battleManager = ServiceLocator.Get<BattleManager>();
+            int currentRound = battleManager != null ? battleManager.RoundNumber : 1;
+
+            if (currentRound > _lastSeenRound)
+            {
+                _currentRoundLogIndex = 0;
+                _lastSeenRound = currentRound;
+            }
+
+            _currentRoundLogIndex++;
+
+            _logs.Insert(0, new LogEntry
+            {
+                Text = text.ToUpper(),
+                Color = color,
+                RoundNumber = currentRound,
+                RoundIndex = _currentRoundLogIndex
+            });
+
             if (_logs.Count > MAX_LOGS) _logs.RemoveAt(_logs.Count - 1);
         }
 
         // --- Event Handlers ---
         private void OnActionDeclared(GameEvents.ActionDeclared e) { }
+
         private void OnActionExecuted(GameEvents.BattleActionExecuted e)
         {
             string moveName = e.ChosenMove.MoveName.ToUpper();
             string actorName = e.Actor.Name.ToUpper();
+
+            // 1. Group targets by the specific outcome verb
+            // This ensures we don't say "HIT WOLF AND TOAD" if Wolf was HIT but Toad was CRITICALLY HIT.
+            var outcomeGroups = new Dictionary<string, List<string>>();
+
             for (int i = 0; i < e.Targets.Count; i++)
             {
                 var target = e.Targets[i];
                 var result = e.DamageResults[i];
-                string verb = result.WasGraze ? "GRAZED" : (result.WasCritical ? "CRITICALLY HIT" : (result.WasProtected ? "WAS BLOCKED BY" : "HIT"));
-                AddLog($"{actorName} {verb} {target.Name.ToUpper()} WITH {moveName}", _global.Palette_DarkestPale);
+
+                string verb = result.WasGraze ? "GRAZED" :
+                              (result.WasCritical ? "CRITICALLY HIT" :
+                              (result.WasProtected ? "WAS BLOCKED BY" : "HIT"));
+
+                if (!outcomeGroups.ContainsKey(verb))
+                {
+                    outcomeGroups[verb] = new List<string>();
+                }
+                outcomeGroups[verb].Add(target.Name.ToUpper());
+            }
+
+            // 2. Generate a log line for each group
+            foreach (var kvp in outcomeGroups)
+            {
+                string verb = kvp.Key;
+                List<string> names = kvp.Value;
+                string targetString = FormatNameList(names);
+
+                AddLog($"{actorName} {verb} {targetString} WITH {moveName}", _global.Palette_DarkestPale);
             }
         }
+
+        private string FormatNameList(List<string> names)
+        {
+            if (names.Count == 0) return "";
+            if (names.Count == 1) return names[0];
+            if (names.Count == 2) return $"{names[0]} AND {names[1]}";
+
+            // Oxford comma style for 3+: "A, B, AND C"
+            string joined = string.Join(", ", names.Take(names.Count - 1));
+            return $"{joined}, AND {names.Last()}";
+        }
+
         private void OnCombatantDefeated(GameEvents.CombatantDefeated e) => AddLog($"{e.DefeatedCombatant.Name} WAS DEFEATED", _global.Palette_DarkRust);
         private void OnActionFailed(GameEvents.ActionFailed e) => AddLog($"{e.Actor.Name.ToUpper()} FAILED {(e.MoveName ?? "ACTION").ToUpper()}", _global.Palette_DarkShadow);
         private void OnCombatantHealed(GameEvents.CombatantHealed e) => AddLog($"{e.Target.Name} RECOVERED {e.HealAmount} HP", _global.Palette_DarkShadow);
@@ -106,10 +165,7 @@ namespace ProjectVagabond.Battle.UI
         {
             var mousePos = Core.TransformMouse(Mouse.GetState().Position);
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
-
-            // Check if mouse is hovering the tab
             bool isHoveringTab = _tabBounds.Contains(mousePos);
-
             float target = isHoveringTab ? 1.0f : 0.0f;
             _slideProgress = MathHelper.Lerp(_slideProgress, target, dt * SLIDE_SPEED);
         }
@@ -120,34 +176,19 @@ namespace ProjectVagabond.Battle.UI
             var font = _core.TertiaryFont;
             var spriteManager = ServiceLocator.Get<SpriteManager>();
 
-            // Calculate dynamic height
             float maxExpansion = Global.VIRTUAL_HEIGHT - TAB_HEIGHT;
             float currentExpansion = maxExpansion * _slideProgress;
             float totalHeight = TAB_HEIGHT + currentExpansion;
-
-            // Calculate Fade Alpha
-            // We multiply by 5 so it becomes fully opaque quickly (at 20% open)
-            // This prevents it from looking like a faint ghost while sliding
             float fadeAlpha = Math.Clamp(_slideProgress * 5f, 0f, 1f);
 
-            // 1. Draw Background (Unified Rectangle)
             Rectangle bgRect = new Rectangle(0, 0, Global.VIRTUAL_WIDTH, (int)totalHeight);
 
-            // Apply fadeAlpha to the 95% opacity
             if (fadeAlpha > 0f)
             {
                 spriteBatch.DrawSnapped(pixel, bgRect, _global.Palette_Black * 0.95f * fadeAlpha);
-            }
-
-            // 2. Draw Bottom Border Line
-            // Apply fadeAlpha so it hides when closed
-            if (fadeAlpha > 0f)
-            {
                 spriteBatch.DrawSnapped(pixel, new Rectangle(0, bgRect.Bottom - 1, Global.VIRTUAL_WIDTH, 1), _global.Palette_DarkShadow * fadeAlpha);
             }
 
-            // 3. Draw Arrow Sprite (Centered in the Tab area)
-            // The arrow remains visible (opaque) so the user knows where to hover
             var arrow = spriteManager.DownArrowSprite;
             if (arrow != null)
             {
@@ -158,34 +199,57 @@ namespace ProjectVagabond.Battle.UI
                 spriteBatch.DrawSnapped(arrow, arrowPos, _global.Palette_DarkShadow);
             }
 
-            // 4. Draw Text (Only if expanded enough to see)
             if (_slideProgress > 0.01f)
             {
                 int startY = TAB_HEIGHT + 4;
                 int spacing = 3;
                 int lineHeight = font.LineHeight + spacing;
+                float currentY = startY;
+
+                float logStartX = 100f;
+                float gap = 4f;
 
                 for (int i = 0; i < _logs.Count; i++)
                 {
-                    float y = startY + (i * lineHeight);
+                    if (currentY + lineHeight > bgRect.Bottom) break;
 
-                    // Stop drawing if we hit the bottom line
-                    if (y + lineHeight > bgRect.Bottom) break;
+                    var entry = _logs[i];
+                    string text = entry.Text;
+                    Color color = entry.Color * fadeAlpha;
 
-                    string text = _logs[i].Text;
-                    // Fade text in with the menu
-                    Color color = _logs[i].Color * fadeAlpha;
-                    string number = $"{i + 1}.";
+                    string number = $"{entry.RoundIndex}.";
+
+                    string roundHeader = "";
+                    if (entry.RoundIndex == 1)
+                    {
+                        roundHeader = $"ROUND {entry.RoundNumber}";
+                    }
+
+                    Vector2 textPos = new Vector2(logStartX, currentY);
 
                     Vector2 numSize = font.MeasureString(number);
-                    Vector2 textSize = font.MeasureString(text);
-                    float gap = 4f;
-                    float totalWidth = numSize.X + gap + textSize.X;
+                    float numberX = logStartX - gap - numSize.X;
+                    Vector2 numberPos = new Vector2(numberX, currentY);
 
-                    float startX = (Global.VIRTUAL_WIDTH - totalWidth) / 2f;
+                    if (!string.IsNullOrEmpty(roundHeader))
+                    {
+                        Vector2 headerSize = font.MeasureString(roundHeader);
+                        float headerX = numberX - gap - headerSize.X;
+                        spriteBatch.DrawStringSnapped(font, roundHeader, new Vector2(headerX, currentY), _global.Palette_Sky * fadeAlpha);
+                    }
 
-                    spriteBatch.DrawStringSnapped(font, number, new Vector2(startX, y), _global.Palette_DarkShadow * fadeAlpha);
-                    spriteBatch.DrawStringSnapped(font, text, new Vector2(startX + numSize.X + gap, y), color);
+                    spriteBatch.DrawStringSnapped(font, number, numberPos, _global.Palette_DarkShadow * fadeAlpha);
+                    spriteBatch.DrawStringSnapped(font, text, textPos, color);
+
+                    currentY += lineHeight;
+
+                    if (i < _logs.Count - 1)
+                    {
+                        if (_logs[i + 1].RoundNumber != entry.RoundNumber)
+                        {
+                            currentY += 2;
+                        }
+                    }
                 }
             }
         }

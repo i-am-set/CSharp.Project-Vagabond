@@ -99,7 +99,6 @@ float4 MainPS(PixelShaderInput input) : COLOR
     
     // B. Randomized Desync (The "Tension")
     // We use a sum of sine waves with prime frequencies to create an irregular interference pattern.
-    // This ensures glitches happen at unpredictable intervals and last for varying durations.
     float t = Time;
     float wave1 = sin(t * 0.5);  // Slow drift (2s period)
     float wave2 = sin(t * 1.7);  // Medium cycle (~0.6s period)
@@ -111,39 +110,37 @@ float4 MainPS(PixelShaderInput input) : COLOR
     float desyncOffset = 0.0;
     
     // Only trigger when the chaos aligns (peaks/troughs)
-    // Threshold 2.4 means it happens roughly 5-10% of the time, in clusters.
     if (abs(chaos) > 2.4) {
-        // Normalize intensity (0.0 to 1.0) based on how far past threshold we are
         float glitchIntensity = (abs(chaos) - 2.4) / 0.6;
         
-        // VARY THE LOOK:
-        // Use the slow wave (wave1) to change the density of the tear lines over time
-        // This ensures some glitches are chunky (low density) and others are fine (high density)
         float tearDensity = 20.0 + (wave1 * 15.0) + (wave2 * 5.0); 
-        
-        // Use the medium wave (wave2) to change the speed/direction of the tear
         float tearSpeed = 20.0 + (wave2 * 30.0);
-        
-        // Calculate the tear pattern
         float tear = sign(sin(uv.y * tearDensity + Time * tearSpeed));
         
         desyncOffset = tear * JITTER_DESYNC_INTENSITY * glitchIntensity;
     }
 
-    // C. Impact Glitch (Game Logic)
-    float impactOffset = 0.0;
-    if (ImpactGlitchIntensity > 0.0) {
-        float block = floor(uv.y * 10.0); 
-        float glitchNoise = (rand(float2(Time, block)) - 0.5);
-        impactOffset = glitchNoise * ImpactGlitchIntensity * 0.05;
-    }
-
     // Apply all offsets to the X coordinate
-    uv.x += microShake + desyncOffset + impactOffset;
+    uv.x += microShake + desyncOffset;
 #endif
 
-    // --- 2. CHROMATIC ABERRATION (Distance Based) ---
+    // --- 2. CHROMATIC ABERRATION & IMPACT TEARING ---
     float3 color;
+    
+    // Calculate Glitch Tearing (High Frequency Noise)
+    float tearNoise = 0.0;
+    if (ImpactGlitchIntensity > 0.0) {
+        // Use high frequency (300.0) to simulate scanline tearing
+        float highFreq = floor(uv.y * 300.0); 
+        float noise = rand(float2(Time * 50.0, highFreq)) - 0.5;
+        
+        // Only trigger tearing on some lines to look like signal loss
+        if (abs(noise) > 0.2) {
+            // 0.05 is the max width of the tear in UV space
+            tearNoise = noise * ImpactGlitchIntensity * 0.05; 
+        }
+    }
+
 #ifdef ENABLE_CHROMATIC_ABERRATION
     // Calculate distance from center (0.0 to ~0.7)
     float dist = distance(uv, float2(0.5, 0.5));
@@ -153,14 +150,22 @@ float4 MainPS(PixelShaderInput input) : COLOR
     // Add a tiny bit of jitter to the aberration itself for that "unstable" look
     spread += (rand(float2(Time, uv.y)) - 0.5) * 0.2;
 
-    float2 rOffset = float2(spread / ScreenResolution.x, 0.0);
-    float2 bOffset = float2(-spread / ScreenResolution.x, 0.0);
+    // --- APPLY GLITCH TO CHANNELS ---
+    // R: Positive Spread + Positive Tear
+    // G: No Spread + Partial Tear (Green usually anchors the image)
+    // B: Negative Spread + Negative Tear
+    
+    float2 rOffset = float2((spread / ScreenResolution.x) + tearNoise, 0.0);
+    float2 gOffset = float2(tearNoise * 0.5, 0.0); 
+    float2 bOffset = float2((-spread / ScreenResolution.x) - tearNoise, 0.0);
     
     color.r = tex2D(s0, uv + rOffset).r;
-    color.g = tex2D(s0, uv).g;
+    color.g = tex2D(s0, uv + gOffset).g;
     color.b = tex2D(s0, uv + bOffset).b;
 #else
-    color = tex2D(s0, uv).rgb;
+    // Fallback if ChromAb disabled, but Glitch still active
+    float2 glitchOffset = float2(tearNoise, 0.0);
+    color = tex2D(s0, uv + glitchOffset).rgb;
 #endif
 
 // --- 3. HALATION (Phosphor Glow) ---
