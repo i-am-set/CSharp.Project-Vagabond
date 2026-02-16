@@ -77,7 +77,6 @@ namespace ProjectVagabond.Battle.UI
 
             // Foreground
             float totalFgWidth = w * fillPercent;
-            // Keep width integer-aligned for clean fill, but position is float
             int pixelFgWidth = (int)totalFgWidth;
             if (fillPercent > 0 && pixelFgWidth == 0) pixelFgWidth = 1;
 
@@ -107,15 +106,14 @@ namespace ProjectVagabond.Battle.UI
 
                 float flashMinRollAlpha = 0.9f + 0.1f * MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * 4f);
                 float flashMaxRollAlpha = 0.4f + 0.2f * MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * 4f);
-                Color minRollColor = _global.Palette_Black * alpha * flashMinRollAlpha;
-                Color maxRollColor = _global.Palette_Black * alpha * flashMaxRollAlpha;
+
+                // EDITED: Use Palette_DarkShadow
+                Color minRollColor = _global.Palette_DarkShadow * alpha * flashMinRollAlpha;
+                Color maxRollColor = _global.Palette_DarkShadow * alpha * flashMaxRollAlpha;
 
                 if (isRightAligned)
                 {
                     // Right aligned: Bar fills Right to Left.
-                    // Current bar occupies [x + w - current, x + w]
-                    // Damage eats from the LEFT side of the filled bar.
-
                     // Min Damage (Guaranteed)
                     if (minDmgPixels > 0)
                     {
@@ -134,9 +132,6 @@ namespace ProjectVagabond.Battle.UI
                 else
                 {
                     // Left aligned: Bar fills Left to Right.
-                    // Current bar occupies [x, x + current]
-                    // Damage eats from the RIGHT side of the filled bar.
-
                     // Min Damage (Guaranteed)
                     if (minDmgPixels > 0)
                     {
@@ -155,90 +150,9 @@ namespace ProjectVagabond.Battle.UI
             }
 
             // Outline (1px thickness)
-            // Top
             spriteBatch.DrawSnapped(_pixel, new Vector2(x, y - 1), null, borderColor * alpha, 0f, Vector2.Zero, new Vector2(w, 1), SpriteEffects.None, 0f);
-            // Bottom
             spriteBatch.DrawSnapped(_pixel, new Vector2(x, y + h), null, borderColor * alpha, 0f, Vector2.Zero, new Vector2(w, 1), SpriteEffects.None, 0f);
-            // Left
             spriteBatch.DrawSnapped(_pixel, new Vector2(x - 1, y - 1), null, borderColor * alpha, 0f, Vector2.Zero, new Vector2(1, h + 2), SpriteEffects.None, 0f);
-            // Right
-            spriteBatch.DrawSnapped(_pixel, new Vector2(x + w, y - 1), null, borderColor * alpha, 0f, Vector2.Zero, new Vector2(1, h + 2), SpriteEffects.None, 0f);
-
-            // Animation Overlay
-            if (anim != null)
-            {
-                DrawBarAnimationOverlay(spriteBatch, position, width, height, maxResource, anim, alpha, isRightAligned);
-            }
-        }
-
-        private void DrawBar(SpriteBatch spriteBatch, Vector2 position, int width, int height, float fillPercent, Color bgColor, Color fgColor, Color borderColor, float alpha, BattleAnimationManager.ResourceBarAnimationState? anim, float maxResource, bool isRightAligned, int? projectedDamage = null, GameTime gameTime = null)
-        {
-            if (alpha <= 0.01f) return;
-
-            float x = position.X;
-            float y = position.Y;
-            float w = width;
-            float h = height;
-
-            // Background
-            spriteBatch.DrawSnapped(_pixel, new Vector2(x, y), null, bgColor * alpha, 0f, Vector2.Zero, new Vector2(w, h), SpriteEffects.None, 0f);
-
-            // Foreground
-            float totalFgWidth = w * fillPercent;
-            // Keep width integer-aligned for clean fill, but position is float
-            int pixelFgWidth = (int)totalFgWidth;
-            if (fillPercent > 0 && pixelFgWidth == 0) pixelFgWidth = 1;
-
-            if (pixelFgWidth > 0)
-            {
-                float fgX = isRightAligned ? (x + w - pixelFgWidth) : x;
-                spriteBatch.DrawSnapped(_pixel, new Vector2(fgX, y), null, fgColor * alpha, 0f, Vector2.Zero, new Vector2(pixelFgWidth, h), SpriteEffects.None, 0f);
-            }
-
-            // Damage Preview Overlay
-            if (projectedDamage.HasValue && projectedDamage.Value > 0 && gameTime != null)
-            {
-                float currentPixels = w * fillPercent;
-                float damagePercent = (float)projectedDamage.Value / maxResource;
-                float damagePixels = w * damagePercent;
-
-                // Clamp damage visual to current visual
-                if (damagePixels > currentPixels) damagePixels = currentPixels;
-
-                if (damagePixels > 0)
-                {
-                    float flashX;
-                    if (isRightAligned)
-                    {
-                        // Right aligned: Bar fills from Right to Left.
-                        // Filled part is [x + w - current, x + w]
-                        // We lose the Left-most part of the filled bar.
-                        flashX = x + w - currentPixels;
-                    }
-                    else
-                    {
-                        // Left aligned: Bar fills from Left to Right.
-                        // Filled part is [x, x + current]
-                        // We lose the Right-most part.
-                        flashX = x + currentPixels - damagePixels;
-                    }
-
-                    // Slower flash (8f) and Rust color
-                    float flashAlpha = 0.6f + 0.4f * MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * 8f);
-                    Color flashColor = _global.Palette_Rust * alpha * flashAlpha;
-
-                    spriteBatch.DrawSnapped(_pixel, new Vector2(flashX, y), null, flashColor, 0f, Vector2.Zero, new Vector2(damagePixels, h), SpriteEffects.None, 0f);
-                }
-            }
-
-            // Outline (1px thickness)
-            // Top
-            spriteBatch.DrawSnapped(_pixel, new Vector2(x, y - 1), null, borderColor * alpha, 0f, Vector2.Zero, new Vector2(w, 1), SpriteEffects.None, 0f);
-            // Bottom
-            spriteBatch.DrawSnapped(_pixel, new Vector2(x, y + h), null, borderColor * alpha, 0f, Vector2.Zero, new Vector2(w, 1), SpriteEffects.None, 0f);
-            // Left
-            spriteBatch.DrawSnapped(_pixel, new Vector2(x - 1, y - 1), null, borderColor * alpha, 0f, Vector2.Zero, new Vector2(1, h + 2), SpriteEffects.None, 0f);
-            // Right
             spriteBatch.DrawSnapped(_pixel, new Vector2(x + w, y - 1), null, borderColor * alpha, 0f, Vector2.Zero, new Vector2(1, h + 2), SpriteEffects.None, 0f);
 
             // Animation Overlay

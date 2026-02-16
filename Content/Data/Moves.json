@@ -276,7 +276,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Effects": {
-      "DamageRecoil": "25"
+      "DamageRecoil": "50"
     },
     "Tags": [ "Contact", "Recoil" ],
     "AnimationId": "phy_large_impact"
@@ -348,7 +348,7 @@
     "Accuracy": 100,
     "Priority": 0,
     "Effects": {
-      "Recoil": "50",
+      "DamageRecoil": "50",
       "SacrificeTenacity": "1"
     },
     "Tags": [ "Contact", "Recoil" ],

@@ -215,7 +215,16 @@ namespace ProjectVagabond.Battle.Abilities
             if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
             {
                 int damageDealt = reaction.Result.DamageAmount;
-                int recoil = (int)(damageDealt * (_percent / 100f));
+
+                float targetMaxHP = Math.Max(1, reaction.Target.Stats.MaxHP);
+                float healthPercentageDealt = damageDealt / targetMaxHP;
+
+                // Apply that percentage to the User's Max HP, scaled by the recoil config
+                int recoil = (int)(reaction.Actor.Stats.MaxHP * healthPercentageDealt * (_percent / 100f));
+
+                // Ensure at least 1 damage if the move did damage
+                if (damageDealt > 0 && recoil < 1) recoil = 1;
+
                 if (recoil > 0)
                 {
                     reaction.Actor.ApplyDamage(recoil);

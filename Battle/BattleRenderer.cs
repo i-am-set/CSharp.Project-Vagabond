@@ -366,10 +366,23 @@ namespace ProjectVagabond.Battle.UI
         {
             var battleManager = ServiceLocator.Get<BattleManager>();
 
+            // 1. Resolve the Active Actor
+            BattleCombatant actor = currentActor;
+
+            if (uiManager.UIState == BattleUIState.Targeting && uiManager.ActiveTargetingSlot != -1)
+            {
+                actor = battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && c.BattleSlot == uiManager.ActiveTargetingSlot);
+            }
+            else if (uiManager.HoveredMove != null && uiManager.HoveredSlotIndex != -1)
+            {
+                actor = battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && c.BattleSlot == uiManager.HoveredSlotIndex);
+            }
+
+            var move = uiManager.HoveredMove ?? uiManager.MoveForTargeting;
+
             foreach (var combatant in battleManager.AllCombatants)
             {
                 if (combatant.IsDefeated) continue;
-
                 if (!_combatantBarPositions.TryGetValue(combatant.CombatantID, out var pos)) continue;
 
                 float barX = pos.X;
@@ -378,22 +391,21 @@ namespace ProjectVagabond.Battle.UI
                 if (combatant.VisualHealthBarAlpha <= 0.01f) continue;
 
                 float hudAlpha = combatant.HudVisualAlpha;
-
                 bool isRightAligned = (combatant.BattleSlot % 2 != 0);
 
                 (int Min, int Max)? projectedDamage = null;
+
+                // 2. Determine if we should show damage preview
+                bool showDamage = false;
                 if (silhouetteColors.ContainsKey(combatant.CombatantID))
                 {
-                    bool showDamage = true;
+                    showDamage = true;
                     if (uiManager.UIState == BattleUIState.Targeting)
                     {
                         showDamage = false;
                         if (hoveredCombatant != null)
                         {
-                            if (combatant == hoveredCombatant)
-                            {
-                                showDamage = true;
-                            }
+                            if (combatant == hoveredCombatant) showDamage = true;
                             else if (silhouetteColors.TryGetValue(hoveredCombatant.CombatantID, out var hCol) &&
                                      silhouetteColors.TryGetValue(combatant.CombatantID, out var cCol) &&
                                      hCol == cCol)
@@ -402,25 +414,103 @@ namespace ProjectVagabond.Battle.UI
                             }
                         }
                     }
+                }
 
-                    if (showDamage)
+                // 3. Check if this is the Actor and they have Recoil
+                if (actor != null && combatant == actor && move != null)
+                {
+                    AnalyzeMoveImpact(move, actor, combatant, out bool affectsHP);
+                    if (affectsHP) showDamage = true;
+                }
+
+                // 4. Calculate Damage
+                if (showDamage && move != null && actor != null)
+                {
+                    // EDITED: Recoil Logic for the User
+                    if (combatant == actor && (move.Effects.ContainsKey("Recoil") || move.Effects.ContainsKey("DamageRecoil")))
                     {
-                        var move = uiManager.HoveredMove ?? uiManager.MoveForTargeting;
-                        BattleCombatant actor = currentActor;
+                        float minRecoil = 0;
+                        float maxRecoil = 0;
 
-                        if (uiManager.UIState == BattleUIState.Targeting && uiManager.ActiveTargetingSlot != -1)
+                        // A. Damage Recoil (% of Target Health Dealt applied to User Health)
+                        if (move.Effects.TryGetValue("DamageRecoil", out string dmgRecoilVal) && float.TryParse(dmgRecoilVal, out float dmgPercent))
                         {
-                            actor = battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && c.BattleSlot == uiManager.ActiveTargetingSlot);
-                        }
-                        else if (uiManager.HoveredMove != null && uiManager.HoveredSlotIndex != -1)
-                        {
-                            actor = battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && c.BattleSlot == uiManager.HoveredSlotIndex);
+                            var targets = new List<BattleCombatant>();
+
+                            if (uiManager.UIState == BattleUIState.Targeting && hoveredCombatant != null)
+                            {
+                                targets.Add(hoveredCombatant);
+                            }
+                            else
+                            {
+                                targets.AddRange(uiManager.HoverHighlightState.Targets);
+                            }
+
+                            if (targets.Any())
+                            {
+                                bool isMultiTarget = move.Target == TargetType.All || move.Target == TargetType.Both || move.Target == TargetType.Every || move.Target == TargetType.Team;
+
+                                if (isMultiTarget)
+                                {
+                                    // AoE: Sum of all health ratios
+                                    float totalMinRatio = 0f;
+                                    float totalMaxRatio = 0f;
+
+                                    foreach (var target in targets)
+                                    {
+                                        var range = battleManager.GetProjectedDamageRange(actor, target, move);
+                                        float targetMaxHP = Math.Max(1, target.Stats.MaxHP);
+
+                                        totalMinRatio += (range.Min / targetMaxHP);
+                                        totalMaxRatio += (range.Max / targetMaxHP);
+                                    }
+
+                                    minRecoil += actor.Stats.MaxHP * totalMinRatio * (dmgPercent / 100f);
+                                    maxRecoil += actor.Stats.MaxHP * totalMaxRatio * (dmgPercent / 100f);
+                                }
+                                else
+                                {
+                                    // Single Target (Menu Hover): Range of ratios
+                                    float lowestMinRatio = float.MaxValue;
+                                    float highestMaxRatio = 0f;
+
+                                    foreach (var target in targets)
+                                    {
+                                        var range = battleManager.GetProjectedDamageRange(actor, target, move);
+                                        float targetMaxHP = Math.Max(1, target.Stats.MaxHP);
+
+                                        float rMin = (range.Min / targetMaxHP);
+                                        float rMax = (range.Max / targetMaxHP);
+
+                                        if (rMin < lowestMinRatio) lowestMinRatio = rMin;
+                                        if (rMax > highestMaxRatio) highestMaxRatio = rMax;
+                                    }
+
+                                    if (lowestMinRatio != float.MaxValue)
+                                    {
+                                        minRecoil += actor.Stats.MaxHP * lowestMinRatio * (dmgPercent / 100f);
+                                        maxRecoil += actor.Stats.MaxHP * highestMaxRatio * (dmgPercent / 100f);
+                                    }
+                                }
+                            }
                         }
 
-                        if (move != null && actor != null)
+                        // B. Standard Recoil (% of Max HP)
+                        if (move.Effects.TryGetValue("Recoil", out string recoilVal) && float.TryParse(recoilVal, out float hpPercent))
                         {
-                            projectedDamage = battleManager.GetProjectedDamageRange(actor, combatant, move);
+                            float amt = actor.Stats.MaxHP * (hpPercent / 100f);
+                            minRecoil += amt;
+                            maxRecoil += amt;
                         }
+
+                        if (maxRecoil > 0)
+                        {
+                            projectedDamage = ((int)Math.Ceiling(minRecoil), (int)Math.Ceiling(maxRecoil));
+                        }
+                    }
+                    else if (combatant != actor)
+                    {
+                        projectedDamage = battleManager.GetProjectedDamageRange(actor, combatant, move);
                     }
                 }
 
@@ -1328,6 +1418,7 @@ namespace ProjectVagabond.Battle.UI
             if (isActor)
             {
                 if (move.AffectsUserHP) affectsHP = true;
+                if (move.Effects.ContainsKey("Recoil") || move.Effects.ContainsKey("DamageRecoil")) affectsHP = true;
             }
 
             if (isTarget)
