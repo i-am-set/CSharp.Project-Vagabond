@@ -27,7 +27,7 @@ namespace ProjectVagabond.Battle.Abilities
             {
                 // 1. Calculate Stats
                 float offense = GetOffensiveStat(dmgEvent.Actor, dmgEvent.Move.OffensiveStat, context);
-                float defense = BASELINE_DEFENSE_DIVISOR;
+                float defense = 5.0f; // BASELINE_DEFENSE_DIVISOR
 
                 // 2. Base Damage Formula
                 float baseDamage = 0f;
@@ -35,53 +35,20 @@ namespace ProjectVagabond.Battle.Abilities
                 // 3. Apply Multipliers
                 float multiplier = dmgEvent.DamageMultiplier;
 
-                // Prevent damage from none damaging moves
+                // Prevent damage from non-damaging moves
                 if (dmgEvent.Move.Power > 0)
                 {
-                    baseDamage = (dmgEvent.Move.Power * (offense / defense) * GLOBAL_DAMAGE_SCALAR) + FLAT_DAMAGE_BONUS;
+                    baseDamage = (dmgEvent.Move.Power * (offense / defense) * 0.125f) + 1; // GLOBAL_DAMAGE_SCALAR + FLAT_BONUS
                 }
 
-                // --- Tenacity, Critical, and Graze Logic ---
-                if (dmgEvent.Target.CurrentTenacity > 0)
+                if (dmgEvent.IsCritical)
                 {
-                    // TARGET HAS SHIELD
-                    if (dmgEvent.IsCritical)
-                    {
-                        // Critical vs Shield:
-                        // Pierce the shield (ignore SHIELDED_DAMAGE_MULT).
-                        // Do NOT apply CRITICAL_HIT_MULTIPLIER.
-                        // Result: Normal Damage (1.0x).
-                    }
-                    else
-                    {
-                        // Normal or Graze vs Shield:
-                        // Apply Shield Penalty.
-                        multiplier *= BattleConstants.SHIELDED_DAMAGE_MULT;
-
-                        // Note: If it is a Graze, we do NOT apply the Graze multiplier (0.25f).
-                        // The damage is simply capped at the Shielded rate (0.1f).
-                    }
+                    multiplier *= BattleConstants.CRITICAL_HIT_MULTIPLIER;
                 }
-                else
+
+                if (dmgEvent.IsGraze)
                 {
-                    // TARGET IS BROKEN (NO SHIELD)
-                    // Base damage is Normal (1.0x).
-
-                    if (dmgEvent.IsCritical)
-                    {
-                        // Critical vs Broken:
-                        // Apply full Critical Multiplier (2.0x).
-                        multiplier *= BattleConstants.CRITICAL_HIT_MULTIPLIER;
-                    }
-
-                    if (dmgEvent.IsGraze)
-                    {
-                        // Graze vs Broken:
-                        // Apply normal Graze Multiplier (0.25x).
-                        multiplier *= BattleConstants.GRAZE_MULTIPLIER;
-                    }
-
-                    dmgEvent.WasVulnerable = true;
+                    multiplier *= BattleConstants.GRAZE_MULTIPLIER;
                 }
 
                 // Random Variance
@@ -97,7 +64,7 @@ namespace ProjectVagabond.Battle.Abilities
                 }
                 else
                 {
-                    float variance = (float)(_random.NextDouble() * (BattleConstants.RANDOM_VARIANCE_MAX - BattleConstants.RANDOM_VARIANCE_MIN) + BattleConstants.RANDOM_VARIANCE_MIN);
+                    float variance = (float)(new Random().NextDouble() * (BattleConstants.RANDOM_VARIANCE_MAX - BattleConstants.RANDOM_VARIANCE_MIN) + BattleConstants.RANDOM_VARIANCE_MIN);
                     multiplier *= variance;
                 }
 

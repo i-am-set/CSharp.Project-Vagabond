@@ -1217,6 +1217,11 @@ namespace ProjectVagabond.Scenes
 
                 // 4. Force Wait (Consume turn time post-effect)
                 _dazedWaitTimer = 1.0f;
+
+                // 5. Screen Pulse
+                _core.TriggerFullscreenFlash(_global.Palette_DarkSun * 0.7f, 0.5f);
+                _hapticsManager.TriggerZoomPulse(1.15f, 0.5f);
+                _hapticsManager.TriggerShake(1.5f, 0.25f);
             }
         }
 

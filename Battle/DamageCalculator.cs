@@ -47,7 +47,12 @@ namespace ProjectVagabond.Battle
             bool isCrit = false;
             if (!isGraze && move.ImpactType != ImpactType.Status && move.Power > 0)
             {
-                if (context.IsSimulation)
+                // CHANGE: Guaranteed Crit if Tenacity is broken (<= 0)
+                if (target.CurrentTenacity <= 0)
+                {
+                    isCrit = true;
+                }
+                else if (context.IsSimulation)
                 {
                     isCrit = overrideCrit ?? false;
                 }
@@ -58,7 +63,6 @@ namespace ProjectVagabond.Battle
             }
 
             // 3. Calculate Damage Event
-            // BaseDamage is now calculated inside StandardRulesAbility, so we pass 0 here.
             var dmgEvt = new CalculateDamageEvent(attacker, target, move, 0f, isCrit, isGraze);
             dmgEvt.DamageMultiplier = multiTargetModifier;
 

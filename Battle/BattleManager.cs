@@ -828,11 +828,20 @@ namespace ProjectVagabond.Battle
                 }
 
                 target.ApplyDamage(result.DamageAmount);
+
                 if (!result.WasGraze && result.DamageAmount > 0 && target.CurrentTenacity > 0)
                 {
                     target.CurrentTenacity--;
                     EventBus.Publish(new GameEvents.TenacityChanged { Combatant = target, NewValue = target.CurrentTenacity });
-                    if (target.CurrentTenacity == 0) EventBus.Publish(new GameEvents.TenacityBroken { Combatant = target });
+
+                    if (target.CurrentTenacity == 0)
+                    {
+                        EventBus.Publish(new GameEvents.TenacityBroken { Combatant = target });
+
+                        // Apply Dazed on Break
+                        target.Tags.Add(GameplayTags.States.Dazed);
+                        AppendToCurrentLine(" [cStatus]DAZED![/]");
+                    }
                 }
 
                 if (result.DamageAmount > 0 && result.DamageAmount >= (target.Stats.MaxHP * 0.50f)) significantTargetIds.Add(target.CombatantID);

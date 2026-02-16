@@ -29,7 +29,7 @@ namespace ProjectVagabond
         Bounce,
         ZoomPulse,
         DirectionalShake,
-        ImpactTwist // New effect
+        ImpactTwist
     }
 
     public class HapticsManager
