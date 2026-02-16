@@ -92,6 +92,12 @@ namespace ProjectVagabond.Battle.Abilities
             {
                 turnStart.Actor.Tags.Add(GameplayTags.States.Stunned);
                 e.IsHandled = true;
+
+                if (!_status.IsPermanent)
+                {
+                    _status.DurationInTurns--;
+                }
+
                 EventBus.Publish(new GameEvents.ActionFailed { Actor = turnStart.Actor, Reason = "stunned" });
             }
         }

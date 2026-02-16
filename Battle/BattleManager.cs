@@ -857,10 +857,6 @@ namespace ProjectVagabond.Battle
                     if (target.CurrentTenacity == 0)
                     {
                         EventBus.Publish(new GameEvents.TenacityBroken { Combatant = target });
-
-                        // Apply Dazed on Break
-                        target.Tags.Add(GameplayTags.States.Dazed);
-                        AppendToCurrentLine(" [cStatus]DAZED![/]");
                     }
                 }
 
@@ -1050,15 +1046,15 @@ namespace ProjectVagabond.Battle
                 if (!combatant.UsedProtectThisTurn) combatant.ConsecutiveProtectUses = 0;
                 combatant.UsedProtectThisTurn = false;
 
-                // Clear turn-based tags (Note: Dazed is cleared by being consumed or here if unused)
+                // Clear turn-based tags
                 combatant.Tags.Remove(GameplayTags.States.Dazed);
-                // Stunned is cleared here too, ensuring it only lasts one turn
                 combatant.Tags.Remove(GameplayTags.States.Stunned);
 
                 var effectsToRemove = new List<StatusEffectInstance>();
                 foreach (var effect in combatant.ActiveStatusEffects)
                 {
-                    if (!effect.IsPermanent)
+                    // This ensures Stun isn't wasted if applied after the target has already acted.
+                    if (!effect.IsPermanent && effect.EffectType != StatusEffectType.Stun)
                     {
                         effect.DurationInTurns--;
                     }

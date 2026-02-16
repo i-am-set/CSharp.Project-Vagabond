@@ -18,7 +18,7 @@ namespace ProjectVagabond.Battle
     /// </summary>
     public static class BattleConstants
     {
-        public const float CRITICAL_HIT_MULTIPLIER = 2.0f; // Updated to 2x as requested
+        public const float CRITICAL_HIT_MULTIPLIER = 1.5f;
         public const float CRITICAL_HIT_CHANCE = 0.0625f;
         public const float RANDOM_VARIANCE_MIN = 0.85f;
         public const float RANDOM_VARIANCE_MAX = 1.00f;

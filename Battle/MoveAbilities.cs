@@ -351,10 +351,11 @@ namespace ProjectVagabond.Battle.Abilities
     public class RestoreTenacityAbility : IAbility
     {
         public string Name => "Restore Tenacity";
-        public string Description => "Restores Tenacity to the target.";
+        public string Description => "Fully restores Tenacity.";
         public int Priority => 0;
 
         private readonly int _amount;
+
         public RestoreTenacityAbility(int amount) { _amount = amount; }
 
         public void OnEvent(GameEvent e, BattleContext context)
@@ -365,12 +366,13 @@ namespace ProjectVagabond.Battle.Abilities
                 if (target.CurrentTenacity < target.Stats.Tenacity)
                 {
                     int oldVal = target.CurrentTenacity;
-                    target.CurrentTenacity = Math.Min(target.Stats.Tenacity, target.CurrentTenacity + _amount);
+
+                    target.CurrentTenacity = target.Stats.Tenacity;
 
                     if (target.CurrentTenacity != oldVal)
                     {
                         EventBus.Publish(new GameEvents.TenacityChanged { Combatant = target, NewValue = target.CurrentTenacity });
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{target.Name} restored Tenacity!" });
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{target.Name} fully restored Tenacity!" });
                     }
                 }
             }
