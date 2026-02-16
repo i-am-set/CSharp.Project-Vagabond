@@ -383,19 +383,75 @@ namespace ProjectVagabond.Battle.UI
             foreach (var combatant in battleManager.AllCombatants)
             {
                 if (combatant.IsDefeated) continue;
-                if (!_combatantBarPositions.TryGetValue(combatant.CombatantID, out var pos)) continue;
-
-                float barX = pos.X;
-                float barY = pos.Y;
 
                 if (combatant.VisualHealthBarAlpha <= 0.01f) continue;
+
+                // --- CALCULATE DYNAMIC WIDTH ---
+                int barWidth = (int)(combatant.Stats.MaxHP * BattleLayout.HEALTH_PIXELS_PER_HP);
+                if (barWidth < BattleLayout.MIN_BAR_WIDTH) barWidth = BattleLayout.MIN_BAR_WIDTH;
 
                 float hudAlpha = combatant.HudVisualAlpha;
                 bool isRightAligned = (combatant.BattleSlot % 2 != 0);
 
+                // --- CALCULATE POSITION ---
+                float barX;
+                float barY;
+
+                if (combatant.IsPlayerControlled)
+                {
+                    float spriteCenterX = BattleLayout.GetPlayerSpriteCenter(combatant.BattleSlot).X;
+                    float anchorOffset = 16f;
+
+                    if (isRightAligned)
+                    {
+                        barX = spriteCenterX + anchorOffset;
+                    }
+                    else
+                    {
+                        barX = spriteCenterX - anchorOffset - barWidth;
+                    }
+
+                    barY = BattleLayout.PLAYER_BARS_TOP_Y + 4;
+                }
+                else
+                {
+                    float slotCenterX = BattleLayout.GetEnemySlotCenter(combatant.BattleSlot).X;
+                    if (_enemyVisualXPositions.TryGetValue(combatant.CombatantID, out float visualX))
+                    {
+                        slotCenterX = visualX;
+                    }
+
+                    float anchorOffset = 24f;
+                    float visualCenterY = BattleLayout.ENEMY_SLOT_Y_OFFSET + (BattleLayout.ENEMY_SPRITE_SIZE_NORMAL / 2f);
+                    if (_combatantStaticCenters.TryGetValue(combatant.CombatantID, out var staticCenter))
+                    {
+                        visualCenterY = staticCenter.Y;
+                    }
+
+                    float spriteTopY = GetEnemyStaticVisualTop(combatant, visualCenterY);
+                    if (_combatantBarBottomYs.TryGetValue(combatant.CombatantID, out float cachedBottomY))
+                    {
+                        barY = cachedBottomY - 4 - 4;
+                    }
+                    else
+                    {
+                        barY = spriteTopY - 8;
+                    }
+
+                    if (isRightAligned)
+                    {
+                        barX = slotCenterX + anchorOffset;
+                    }
+                    else
+                    {
+                        barX = slotCenterX - anchorOffset - barWidth;
+                    }
+                }
+
+                _combatantBarPositions[combatant.CombatantID] = new Vector2(barX, barY);
+
                 (int Min, int Max)? projectedDamage = null;
 
-                // 2. Determine if we should show damage preview
                 bool showDamage = false;
                 if (silhouetteColors.ContainsKey(combatant.CombatantID))
                 {
@@ -416,23 +472,19 @@ namespace ProjectVagabond.Battle.UI
                     }
                 }
 
-                // 3. Check if this is the Actor and they have Recoil
                 if (actor != null && combatant == actor && move != null)
                 {
                     AnalyzeMoveImpact(move, actor, combatant, out bool affectsHP);
                     if (affectsHP) showDamage = true;
                 }
 
-                // 4. Calculate Damage
                 if (showDamage && move != null && actor != null)
                 {
-                    // EDITED: Recoil Logic for the User
                     if (combatant == actor && (move.Effects.ContainsKey("Recoil") || move.Effects.ContainsKey("DamageRecoil")))
                     {
                         float minRecoil = 0;
                         float maxRecoil = 0;
 
-                        // A. Damage Recoil (% of Target Health Dealt applied to User Health)
                         if (move.Effects.TryGetValue("DamageRecoil", out string dmgRecoilVal) && float.TryParse(dmgRecoilVal, out float dmgPercent))
                         {
                             var targets = new List<BattleCombatant>();
@@ -452,7 +504,6 @@ namespace ProjectVagabond.Battle.UI
 
                                 if (isMultiTarget)
                                 {
-                                    // AoE: Sum of all health ratios
                                     float totalMinRatio = 0f;
                                     float totalMaxRatio = 0f;
 
@@ -470,7 +521,6 @@ namespace ProjectVagabond.Battle.UI
                                 }
                                 else
                                 {
-                                    // Single Target (Menu Hover): Range of ratios
                                     float lowestMinRatio = float.MaxValue;
                                     float highestMaxRatio = 0f;
 
@@ -495,7 +545,6 @@ namespace ProjectVagabond.Battle.UI
                             }
                         }
 
-                        // B. Standard Recoil (% of Max HP)
                         if (move.Effects.TryGetValue("Recoil", out string recoilVal) && float.TryParse(recoilVal, out float hpPercent))
                         {
                             float amt = actor.Stats.MaxHP * (hpPercent / 100f);
@@ -529,8 +578,8 @@ namespace ProjectVagabond.Battle.UI
                         }
                     }
 
-                    _hudRenderer.DrawStatusIcons(spriteBatch, combatant, barX, barY + yOffset, BattleLayout.PLAYER_BAR_WIDTH, true, _playerStatusIcons, GetStatusIconOffset, IsStatusIconAnimating, isRightAligned);
-                    _hudRenderer.DrawPlayerBars(spriteBatch, combatant, barX, barY + yOffset, BattleLayout.PLAYER_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha * hudAlpha, gameTime, uiManager, combatant == currentActor, isRightAligned, projectedDamage);
+                    _hudRenderer.DrawStatusIcons(spriteBatch, combatant, barX, barY + yOffset, barWidth, true, _playerStatusIcons, GetStatusIconOffset, IsStatusIconAnimating, isRightAligned);
+                    _hudRenderer.DrawPlayerBars(spriteBatch, combatant, barX, barY + yOffset, barWidth, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha * hudAlpha, gameTime, uiManager, combatant == currentActor, isRightAligned, projectedDamage);
 
                     DrawStatChanges(spriteBatch, combatant, barX, barY + yOffset + statOffsetY, isRightAligned);
                 }
@@ -539,8 +588,8 @@ namespace ProjectVagabond.Battle.UI
                     if (!_enemyStatusIcons.ContainsKey(combatant.CombatantID))
                         _enemyStatusIcons[combatant.CombatantID] = new List<StatusIconInfo>();
 
-                    _hudRenderer.DrawStatusIcons(spriteBatch, combatant, barX, barY, BattleLayout.ENEMY_BAR_WIDTH, false, _enemyStatusIcons[combatant.CombatantID], GetStatusIconOffset, IsStatusIconAnimating, isRightAligned);
-                    _hudRenderer.DrawEnemyBars(spriteBatch, combatant, barX, barY, BattleLayout.ENEMY_BAR_WIDTH, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha * hudAlpha, gameTime, isRightAligned, projectedDamage);
+                    _hudRenderer.DrawStatusIcons(spriteBatch, combatant, barX, barY, barWidth, false, _enemyStatusIcons[combatant.CombatantID], GetStatusIconOffset, IsStatusIconAnimating, isRightAligned);
+                    _hudRenderer.DrawEnemyBars(spriteBatch, combatant, barX, barY, barWidth, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha * hudAlpha, gameTime, isRightAligned, projectedDamage);
 
                     DrawStatChanges(spriteBatch, combatant, barX, barY + statOffsetY, isRightAligned);
                 }
@@ -566,6 +615,10 @@ namespace ProjectVagabond.Battle.UI
 
             float currentY = startY;
 
+            // Calculate dynamic width for alignment
+            int barWidth = (int)(combatant.Stats.MaxHP * BattleLayout.HEALTH_PIXELS_PER_HP);
+            if (barWidth < BattleLayout.MIN_BAR_WIDTH) barWidth = BattleLayout.MIN_BAR_WIDTH;
+
             foreach (var item in sortedStats)
             {
                 string label = item.Stat switch
@@ -585,7 +638,8 @@ namespace ProjectVagabond.Battle.UI
 
                 float totalWidth = textSize.X + 1 + 6;
 
-                float drawX = isRightAligned ? (startX + BattleLayout.ENEMY_BAR_WIDTH - totalWidth) : startX;
+                // Use dynamic barWidth for alignment
+                float drawX = isRightAligned ? (startX + barWidth - totalWidth) : startX;
 
                 spriteBatch.DrawStringSnapped(font, label, new Vector2(drawX, currentY), _global.Palette_Sky);
 
@@ -707,8 +761,6 @@ namespace ProjectVagabond.Battle.UI
 
             var visualEnemies = activeEnemies.Concat(dyingEnemies).Distinct().ToList();
 
-            // TUNING: Pixels per second. Higher = Snappier.
-            // 800f is very fast/snappy. 400f is standard retro speed.
             const float MOVEMENT_SPEED = 600f;
 
             foreach (var enemy in activeEnemies)
@@ -723,13 +775,11 @@ namespace ProjectVagabond.Battle.UI
                 {
                     float currentX = _enemyVisualXPositions[enemy.CombatantID];
 
-                    // RETRO FIX: Constant Speed Movement instead of Lerp
                     if (Math.Abs(currentX - targetX) > 0.5f)
                     {
                         float direction = Math.Sign(targetX - currentX);
                         float moveAmount = direction * MOVEMENT_SPEED * dt;
 
-                        // Prevent overshooting
                         if (Math.Abs(moveAmount) > Math.Abs(targetX - currentX))
                         {
                             _enemyVisualXPositions[enemy.CombatantID] = targetX;
@@ -746,7 +796,6 @@ namespace ProjectVagabond.Battle.UI
                 }
             }
 
-            // Cleanup logic remains the same...
             var allOnFieldEnemies = enemies.Where(c => c.IsActiveOnField).ToList();
             var keepIds = allOnFieldEnemies.Select(e => e.CombatantID).ToHashSet();
             var keysToRemove = _enemyVisualXPositions.Keys.Where(k => !keepIds.Contains(k)).ToList();
@@ -760,7 +809,6 @@ namespace ProjectVagabond.Battle.UI
             var dyingPlayers = players.Where(c => animationManager.IsDeathAnimating(c.CombatantID)).ToList();
             var visualPlayers = activePlayers.Concat(dyingPlayers).Distinct().ToList();
 
-            // TUNING: Players can move slightly faster or same speed
             const float MOVEMENT_SPEED = 600f;
 
             foreach (var player in visualPlayers)
@@ -775,7 +823,6 @@ namespace ProjectVagabond.Battle.UI
                 {
                     float currentX = _playerVisualXPositions[player.CombatantID];
 
-                    // RETRO FIX: Constant Speed Movement
                     if (Math.Abs(currentX - targetX) > 0.5f)
                     {
                         float direction = Math.Sign(targetX - currentX);
@@ -816,8 +863,6 @@ namespace ProjectVagabond.Battle.UI
 
             if (drawFloor)
             {
-                // Always draw floor 0 and 1 if occupied or just generally available.
-                // The original logic iterated 0..1, so we keep that structure.
                 for (int i = 0; i < 2; i++)
                 {
                     var center = BattleLayout.GetEnemySlotCenter(i);
@@ -1155,11 +1200,16 @@ namespace ProjectVagabond.Battle.UI
                             float barY = anchorY - 4;
 
                             bool isRightAligned = (enemy.BattleSlot % 2 != 0);
+
+                            // --- DYNAMIC WIDTH CALCULATION ---
+                            int barWidth = (int)(enemy.Stats.MaxHP * BattleLayout.HEALTH_PIXELS_PER_HP);
+                            if (barWidth < BattleLayout.MIN_BAR_WIDTH) barWidth = BattleLayout.MIN_BAR_WIDTH;
+
                             float barX;
                             if (isRightAligned)
                                 barX = center.X + 24f;
                             else
-                                barX = center.X - 24f - BattleLayout.ENEMY_BAR_WIDTH;
+                                barX = center.X - 24f - barWidth;
 
                             float barBottomY = barY + 4;
                             _combatantBarBottomYs[enemy.CombatantID] = barBottomY;
@@ -1179,12 +1229,9 @@ namespace ProjectVagabond.Battle.UI
 
                 for (int i = 0; i < 2; i++)
                 {
-                    // Calculate static center for slot i
                     var center = BattleLayout.GetPlayerSpriteCenter(i);
                     var occupant = players.FirstOrDefault(p => p.BattleSlot == i);
 
-                    // Use occupant's alpha if present.
-                    // If empty, check if we are in Intro phase to sync fade-in.
                     float alpha = 1.0f;
                     if (occupant != null)
                     {
@@ -1192,7 +1239,6 @@ namespace ProjectVagabond.Battle.UI
                     }
                     else if (battleManager.CurrentPhase == BattleManager.BattlePhase.BattleStartIntro)
                     {
-                        // Sync empty slots with the first available player (Leader) during intro
                         var leader = players.FirstOrDefault();
                         alpha = leader?.VisualAlpha ?? 0f;
                     }
@@ -1205,7 +1251,6 @@ namespace ProjectVagabond.Battle.UI
                         floorScale = 1.0f - Easing.EaseInBack(progress);
                     }
 
-                    // Draw floor at static position (no slide offset)
                     _vfxRenderer.DrawPlayerFloor(spriteBatch, center, alpha, floorScale);
                 }
             }
@@ -1384,6 +1429,11 @@ namespace ProjectVagabond.Battle.UI
                     UpdateBarAlpha(player, (float)gameTime.ElapsedGameTime.TotalSeconds, showHP);
 
                     bool isRightAligned = (player.BattleSlot % 2 != 0);
+
+                    // --- DYNAMIC WIDTH CALCULATION ---
+                    int barWidth = (int)(player.Stats.MaxHP * BattleLayout.HEALTH_PIXELS_PER_HP);
+                    if (barWidth < BattleLayout.MIN_BAR_WIDTH) barWidth = BattleLayout.MIN_BAR_WIDTH;
+
                     float barX;
                     if (isRightAligned)
                     {
@@ -1391,7 +1441,7 @@ namespace ProjectVagabond.Battle.UI
                     }
                     else
                     {
-                        barX = spriteCenter.X - 16f - BattleLayout.PLAYER_BAR_WIDTH;
+                        barX = spriteCenter.X - 16f - barWidth;
                     }
 
                     float barY = BattleLayout.PLAYER_BARS_TOP_Y + 4;

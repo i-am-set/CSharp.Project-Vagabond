@@ -26,17 +26,18 @@ namespace ProjectVagabond.Battle.UI
         public const float PLAYER_BARS_TOP_Y = 88f;
         public const float PLAYER_NAME_TOP_Y = 116f;
 
-        public const int PLAYER_BAR_WIDTH = 40;
-
         // --- HUD Constants ---
         public const int STATUS_ICON_SIZE = 5;
         public const int STATUS_ICON_GAP = 1;
-        public const int ENEMY_BAR_WIDTH = 40;
+
+        // NEW: Dynamic Health Bar Tuning
+        public const float HEALTH_PIXELS_PER_HP = 1.0f;
+        public const int MIN_BAR_WIDTH = 8;
+
         public const int ENEMY_BAR_HEIGHT = 2;
 
         public static Rectangle GetActionMenuArea(int slotIndex)
         {
-            // Always position based on slot, never center.
             int x = (slotIndex == 0) ? 0 : ACTION_MENU_WIDTH;
             return new Rectangle(x, ACTION_MENU_Y, ACTION_MENU_WIDTH, ACTION_MENU_HEIGHT);
         }
@@ -58,13 +59,6 @@ namespace ProjectVagabond.Battle.UI
             bool isRightSide = slotIndex == 1;
             float x = isRightSide ? (Global.VIRTUAL_WIDTH * 0.75f) : (Global.VIRTUAL_WIDTH * 0.25f);
             return new Vector2(x, PLAYER_HEART_CENTER_Y);
-        }
-
-        public static Vector2 GetPlayerBarPosition(int slotIndex)
-        {
-            bool isRightSide = slotIndex == 1;
-            float centerX = isRightSide ? (Global.VIRTUAL_WIDTH * 0.75f) : (Global.VIRTUAL_WIDTH * 0.25f);
-            return new Vector2(centerX - (PLAYER_BAR_WIDTH / 2f), PLAYER_BARS_TOP_Y);
         }
     }
 }
