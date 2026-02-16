@@ -66,6 +66,7 @@ namespace ProjectVagabond.Battle
         private QueuedAction? _actionPendingAnimation;
         private bool _endOfTurnEffectsProcessed;
 
+        // --- DAZED PACING STATE ---
         private QueuedAction _pendingDazedAction;
         private float _dazedWindupTimer = 0f;
         private const float DAZED_WINDUP_DURATION = 0.5f;
@@ -432,7 +433,7 @@ namespace ProjectVagabond.Battle
                 case BattlePhase.ActionSelection: break;
                 case BattlePhase.ActionResolution: HandleActionResolution(); break;
                 case BattlePhase.PreActionAnimation: HandlePreActionAnimation(); break;
-                case BattlePhase.PreDazedAnimation: HandlePreDazedAnimation(deltaTime); break;
+                case BattlePhase.PreDazedAnimation: HandlePreDazedAnimation(deltaTime); break; // NEW
                 case BattlePhase.AnimatingMove: break;
                 case BattlePhase.SecondaryEffectResolution: HandleSecondaryEffectResolution(); break;
                 case BattlePhase.CheckForDefeat: HandleCheckForDefeat(); break;
@@ -589,15 +590,16 @@ namespace ProjectVagabond.Battle
 
             var nextAction = _actionQueue[0];
 
-            // --- DAZED CHECK ---
+            // --- DAZED CHECK (Modified) ---
             if (nextAction.Actor.Tags.Has(GameplayTags.States.Dazed))
             {
                 _actionQueue.RemoveAt(0);
-                nextAction.Actor.Tags.Remove(GameplayTags.States.Dazed);
-                AppendToLog($"{nextAction.Actor.Name} was [cStatus]too dazed to move![/]");
-                EventBus.Publish(new GameEvents.ActionFailed { Actor = nextAction.Actor, Reason = "dazed" });
+
+                // Store the action and switch to the Windup phase
+                _pendingDazedAction = nextAction;
+                _dazedWindupTimer = DAZED_WINDUP_DURATION;
+                _currentPhase = BattlePhase.PreDazedAnimation;
                 CanAdvance = false;
-                _currentPhase = BattlePhase.CheckForDefeat;
                 return;
             }
 
@@ -829,6 +831,7 @@ namespace ProjectVagabond.Battle
 
                 target.ApplyDamage(result.DamageAmount);
 
+                // CHANGE: Tenacity Decrement and Break Logic
                 if (!result.WasGraze && result.DamageAmount > 0 && target.CurrentTenacity > 0)
                 {
                     target.CurrentTenacity--;

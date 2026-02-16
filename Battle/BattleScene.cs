@@ -661,7 +661,18 @@ namespace ProjectVagabond.Scenes
 
             if (!isUiBusy && !isAnimBusy && !isMoveAnimBusy && !isPendingBusy && !isSwitching)
             {
-                _battleManager.RequestNextPhase();
+                // Ensure the new phase in BattleManager gets updated
+                if (!_battleManager.CanAdvance && _battleManager.CurrentPhase != BattleManager.BattlePhase.WaitingForSwitchCompletion
+                    && _battleManager.CurrentPhase != BattleManager.BattlePhase.PreActionAnimation
+                    && _battleManager.CurrentPhase != BattleManager.BattlePhase.BattleStartEffects
+                    && _battleManager.CurrentPhase != BattleManager.BattlePhase.PreDazedAnimation)
+                {
+                    // (Standard BattleScene logic usually lets BattleManager update unless paused)
+                }
+                else
+                {
+                    _battleManager.RequestNextPhase();
+                }
             }
 
             if (!_uiManager.IsBusy && !_animationManager.IsBlockingAnimation && _pendingAnimations.Any())
