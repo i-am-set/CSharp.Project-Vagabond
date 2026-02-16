@@ -35,6 +35,7 @@ namespace ProjectVagabond.Battle
             PreDazedAnimation,
             AnimatingMove,
             SecondaryEffectResolution,
+            PostActionDelay, // NEW: Enforce pacing between actions
             CheckForDefeat,
             EndOfTurn,
             Reinforcement,
@@ -70,6 +71,10 @@ namespace ProjectVagabond.Battle
         private QueuedAction _pendingDazedAction;
         private float _dazedWindupTimer = 0f;
         private const float DAZED_WINDUP_DURATION = 0.5f;
+
+        // --- POST ACTION DELAY STATE ---
+        private float _postActionDelayTimer = 0f;
+        private const float POST_ACTION_DELAY_DURATION = 0.6f;
 
         public BattleCombatant? CurrentActingCombatant { get; private set; }
 
@@ -196,6 +201,7 @@ namespace ProjectVagabond.Battle
         public void RequestNextPhase()
         {
             if (_currentPhase == BattlePhase.SecondaryEffectResolution) _currentPhase = BattlePhase.CheckForDefeat;
+            else if (_currentPhase == BattlePhase.PostActionDelay) { _postActionDelayTimer = 0; HandlePostActionDelay(0); } // Allow skipping delay
             else if (_currentPhase == BattlePhase.CheckForDefeat) HandleCheckForDefeat();
             else if (_currentPhase == BattlePhase.EndOfTurn) HandleEndOfTurn();
             else if (_currentPhase == BattlePhase.Reinforcement) HandleReinforcements();
@@ -217,7 +223,7 @@ namespace ProjectVagabond.Battle
             _activeInteraction = null;
 
             if (_currentPhase == BattlePhase.BattleStartIntro) _currentPhase = BattlePhase.StartOfTurn;
-            else if (_currentPhase == BattlePhase.AnimatingMove || _currentPhase == BattlePhase.ActionResolution || _currentPhase == BattlePhase.SecondaryEffectResolution || _currentPhase == BattlePhase.ProcessingInteraction || _currentPhase == BattlePhase.WaitingForSwitchCompletion || _currentPhase == BattlePhase.PreActionAnimation)
+            else if (_currentPhase == BattlePhase.AnimatingMove || _currentPhase == BattlePhase.ActionResolution || _currentPhase == BattlePhase.SecondaryEffectResolution || _currentPhase == BattlePhase.ProcessingInteraction || _currentPhase == BattlePhase.WaitingForSwitchCompletion || _currentPhase == BattlePhase.PreActionAnimation || _currentPhase == BattlePhase.PostActionDelay)
             {
                 if (!IsProcessingMultiHit) _currentPhase = BattlePhase.CheckForDefeat;
             }
@@ -423,7 +429,7 @@ namespace ProjectVagabond.Battle
             }
 
             if (_currentPhase == BattlePhase.BattleOver) return;
-            if (!CanAdvance && _currentPhase != BattlePhase.WaitingForSwitchCompletion && _currentPhase != BattlePhase.PreActionAnimation && _currentPhase != BattlePhase.BattleStartEffects && _currentPhase != BattlePhase.PreDazedAnimation) return;
+            if (!CanAdvance && _currentPhase != BattlePhase.WaitingForSwitchCompletion && _currentPhase != BattlePhase.PreActionAnimation && _currentPhase != BattlePhase.BattleStartEffects && _currentPhase != BattlePhase.PreDazedAnimation && _currentPhase != BattlePhase.PostActionDelay) return;
 
             switch (_currentPhase)
             {
@@ -433,14 +439,25 @@ namespace ProjectVagabond.Battle
                 case BattlePhase.ActionSelection: break;
                 case BattlePhase.ActionResolution: HandleActionResolution(); break;
                 case BattlePhase.PreActionAnimation: HandlePreActionAnimation(); break;
-                case BattlePhase.PreDazedAnimation: HandlePreDazedAnimation(deltaTime); break; // NEW
+                case BattlePhase.PreDazedAnimation: HandlePreDazedAnimation(deltaTime); break;
                 case BattlePhase.AnimatingMove: break;
                 case BattlePhase.SecondaryEffectResolution: HandleSecondaryEffectResolution(); break;
+                case BattlePhase.PostActionDelay: HandlePostActionDelay(deltaTime); break; // NEW
                 case BattlePhase.CheckForDefeat: HandleCheckForDefeat(); break;
                 case BattlePhase.EndOfTurn: HandleEndOfTurn(); break;
                 case BattlePhase.Reinforcement: HandleReinforcements(); break;
                 case BattlePhase.ProcessingInteraction: break;
                 case BattlePhase.WaitingForSwitchCompletion: break;
+            }
+        }
+
+        private void HandlePostActionDelay(float dt)
+        {
+            _postActionDelayTimer -= dt;
+            if (_postActionDelayTimer <= 0)
+            {
+                _currentPhase = BattlePhase.CheckForDefeat;
+                CanAdvance = true;
             }
         }
 
@@ -926,9 +943,9 @@ namespace ProjectVagabond.Battle
 
             if (_currentPhase != BattlePhase.ProcessingInteraction && _currentPhase != BattlePhase.WaitingForSwitchCompletion)
             {
-                // PACING FIX: Go directly to CheckForDefeat instead of SecondaryEffectResolution
-                _currentPhase = BattlePhase.CheckForDefeat;
-                CanAdvance = true;
+                _currentPhase = BattlePhase.PostActionDelay;
+                _postActionDelayTimer = POST_ACTION_DELAY_DURATION;
+                CanAdvance = false;
             }
         }
 
