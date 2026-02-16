@@ -30,9 +30,8 @@ namespace ProjectVagabond.Battle.UI
         public const int STATUS_ICON_SIZE = 5;
         public const int STATUS_ICON_GAP = 1;
 
-        // NEW: Dynamic Health Bar Tuning
         public const float HEALTH_PIXELS_PER_HP = 1.0f;
-        public const int MIN_BAR_WIDTH = 8;
+        public const int MIN_BAR_WIDTH = 0;
 
         public const int ENEMY_BAR_HEIGHT = 2;
 

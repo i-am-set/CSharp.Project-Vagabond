@@ -4,7 +4,7 @@
     "Name": "Oakley",
     "Description": "A reckless pyromancer with a death wish.",
     "Gender": "Male",
-    "MaxHP": 40,
+    "MaxHP": 100,
     "Strength": 3,
     "Intelligence": 5,
     "Tenacity": 3,

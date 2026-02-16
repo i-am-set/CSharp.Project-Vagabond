@@ -400,15 +400,23 @@ namespace ProjectVagabond.Battle.UI
                 if (combatant.IsPlayerControlled)
                 {
                     float spriteCenterX = BattleLayout.GetPlayerSpriteCenter(combatant.BattleSlot).X;
-                    float anchorOffset = 16f;
+                    // UPDATED: Increased anchor offset to move bars 32px further from sprite (16 -> 48)
+                    float anchorOffset = 48f;
 
                     if (isRightAligned)
                     {
-                        barX = spriteCenterX + anchorOffset;
+                        // Right Slot (1): Anchor Right, Grow Left
+                        // barX is the Left edge of the rect.
+                        // RightEdge = Center + Offset.
+                        // barX = RightEdge - Width.
+                        barX = spriteCenterX + anchorOffset - barWidth;
                     }
                     else
                     {
-                        barX = spriteCenterX - anchorOffset - barWidth;
+                        // Left Slot (0): Anchor Left, Grow Right
+                        // barX is the Left edge of the rect.
+                        // LeftEdge = Center - Offset.
+                        barX = spriteCenterX - anchorOffset;
                     }
 
                     barY = BattleLayout.PLAYER_BARS_TOP_Y + 4;
@@ -421,7 +429,8 @@ namespace ProjectVagabond.Battle.UI
                         slotCenterX = visualX;
                     }
 
-                    float anchorOffset = 24f;
+                    // UPDATED: Increased anchor offset to move bars 32px further from sprite (24 -> 56)
+                    float anchorOffset = 56f;
                     float visualCenterY = BattleLayout.ENEMY_SLOT_Y_OFFSET + (BattleLayout.ENEMY_SPRITE_SIZE_NORMAL / 2f);
                     if (_combatantStaticCenters.TryGetValue(combatant.CombatantID, out var staticCenter))
                     {
@@ -440,11 +449,13 @@ namespace ProjectVagabond.Battle.UI
 
                     if (isRightAligned)
                     {
-                        barX = slotCenterX + anchorOffset;
+                        // Right Slot (1): Anchor Right, Grow Left
+                        barX = slotCenterX + anchorOffset - barWidth;
                     }
                     else
                     {
-                        barX = slotCenterX - anchorOffset - barWidth;
+                        // Left Slot (0): Anchor Left, Grow Right
+                        barX = slotCenterX - anchorOffset;
                     }
                 }
 
@@ -1206,10 +1217,20 @@ namespace ProjectVagabond.Battle.UI
                             if (barWidth < BattleLayout.MIN_BAR_WIDTH) barWidth = BattleLayout.MIN_BAR_WIDTH;
 
                             float barX;
+                            // Offset logic updated in DrawHUD, not here. This logic seems redundant or used for tooltips?
+                            // Actually, DrawHUD handles the main bars. This block sets up _combatantBarPositions for tooltips maybe.
+                            // Let's stick to modifying DrawHUD for the requested visual change.
+
                             if (isRightAligned)
-                                barX = center.X + 24f;
+                            {
+                                // Right Slot (1): Anchor Right, Grow Left
+                                barX = center.X + 24f - barWidth;
+                            }
                             else
-                                barX = center.X - 24f - barWidth;
+                            {
+                                // Left Slot (0): Anchor Left, Grow Right
+                                barX = center.X - 24f;
+                            }
 
                             float barBottomY = barY + 4;
                             _combatantBarBottomYs[enemy.CombatantID] = barBottomY;
@@ -1437,11 +1458,13 @@ namespace ProjectVagabond.Battle.UI
                     float barX;
                     if (isRightAligned)
                     {
-                        barX = spriteCenter.X + 16f;
+                        // Right Slot (1): Anchor Right, Grow Left
+                        barX = spriteCenter.X + 16f - barWidth;
                     }
                     else
                     {
-                        barX = spriteCenter.X - 16f - barWidth;
+                        // Left Slot (0): Anchor Left, Grow Right
+                        barX = spriteCenter.X - 16f;
                     }
 
                     float barY = BattleLayout.PLAYER_BARS_TOP_Y + 4;
