@@ -23,11 +23,29 @@ namespace ProjectVagabond.Battle.UI
         private readonly Global _global;
         private readonly Texture2D _pixel;
 
+        // --- TUNING NUMBERS ---
+        public const int HP_WRAP_THRESHOLD = 55; // Wrap if MaxHP is >= this
+        public const int HP_WRAP_CHUNK = 50;     // Pips per line when wrapped
+        public const int HP_WRAP_GAP = 1;        // Vertical pixels between lines
+
         public BattleHudRenderer()
         {
             _spriteManager = ServiceLocator.Get<SpriteManager>();
             _global = ServiceLocator.Get<Global>();
             _pixel = ServiceLocator.Get<Texture2D>();
+        }
+
+        /// <summary>
+        /// Calculates the extra vertical pixels needed for UI elements below the health bar
+        /// based on whether the bar is wrapped.
+        /// </summary>
+        public static float GetVerticalOffset(int maxHP, int barHeight)
+        {
+            if (maxHP >= HP_WRAP_THRESHOLD)
+            {
+                return barHeight + HP_WRAP_GAP;
+            }
+            return 0f;
         }
 
         public void DrawEnemyBars(SpriteBatch spriteBatch, BattleCombatant combatant, float barX, float barY, int barWidth, int barHeight, BattleAnimationManager animationManager, float hpAlpha, GameTime gameTime, bool isRightAligned = false, (int Min, int Max)? projectedDamage = null)
@@ -105,20 +123,14 @@ namespace ProjectVagabond.Battle.UI
             const int stride = pipWidth + pipGap;
 
             // Damage Preview Calculation
-            int dmgMinStart = -1; // Index where Guaranteed Damage starts (Removing from Top)
-            int dmgMaxStart = -1; // Index where Potential Damage starts
+            int dmgMinStart = -1;
+            int dmgMaxStart = -1;
 
             if (projectedDamage.HasValue && projectedDamage.Value.Max > 0)
             {
                 int minDmg = projectedDamage.Value.Min;
                 int maxDmg = projectedDamage.Value.Max;
-
-                // Pips that will definitely be lost (From Top down)
-                // e.g. 10 HP, 2 Min Dmg -> Indices 8 and 9 are lost.
                 dmgMinStart = currentPips - minDmg;
-
-                // Pips that might be lost (From Top-Min down to Max)
-                // e.g. 10 HP, 4 Max Dmg -> Indices 6 and 7 are potential.
                 dmgMaxStart = currentPips - maxDmg;
             }
 
@@ -131,8 +143,6 @@ namespace ProjectVagabond.Battle.UI
             {
                 if (anim.AnimationType == BattleAnimationManager.ResourceBarAnimationState.BarAnimationType.Loss)
                 {
-                    // Loss: ValueAfter is current visual. ValueBefore was higher.
-                    // We want to color the pips that were just lost.
                     animStart = (int)anim.ValueAfter;
                     animEnd = (int)anim.ValueBefore;
 
@@ -148,8 +158,6 @@ namespace ProjectVagabond.Battle.UI
                             animColor = Color.White;
                             break;
                         case BattleAnimationManager.ResourceBarAnimationState.LossPhase.Shrink:
-                            // During shrink, we might want to scale them down or fade them
-                            // For pips, we'll just fade the color
                             float progress = anim.Timer / BattleAnimationManager.ResourceBarAnimationState.SHRINK_DURATION;
                             Color baseC = (anim.ResourceType == BattleAnimationManager.ResourceBarAnimationState.BarResourceType.HP) ? _global.Palette_Rust : _global.Palette_Sun;
                             animColor = baseC * (1.0f - progress);
@@ -158,8 +166,6 @@ namespace ProjectVagabond.Battle.UI
                 }
                 else // Recovery
                 {
-                    // Recovery: ValueBefore is current visual. ValueAfter is target.
-                    // We want to color the pips that are being gained.
                     animStart = (int)anim.ValueBefore;
                     animEnd = (int)anim.ValueAfter;
 
@@ -174,7 +180,7 @@ namespace ProjectVagabond.Battle.UI
                 }
             }
 
-            // Flash Timers for Damage Preview
+            // Flash Timers
             float flashMinRollAlpha = 0f;
             float flashMaxRollAlpha = 0f;
             if (gameTime != null)
@@ -183,61 +189,56 @@ namespace ProjectVagabond.Battle.UI
                 flashMaxRollAlpha = 0.8f + 0.2f * MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * 2f);
             }
 
+            // --- WRAPPING LOGIC (TUNED) ---
+            int pipsPerLine = maxPips;
+            if (maxPips >= HP_WRAP_THRESHOLD)
+            {
+                pipsPerLine = HP_WRAP_CHUNK;
+            }
+
             // --- DRAW LOOP ---
             for (int i = 0; i < maxPips; i++)
             {
+                // Calculate Row and Column
+                int row = i / pipsPerLine;
+                int col = i % pipsPerLine;
+
+                // Calculate Y Position (with Gap)
+                float pipY = position.Y + (row * (height + HP_WRAP_GAP));
+
                 // Calculate X Position
                 float pipX;
                 if (isRightAligned)
                 {
-                    // Anchored Right, filling Left
-                    // i=0 is the "first" hp, so it should be at the far right (Zero position)
-                    // width is the total allocated width.
-                    // x = (startX + width) - ((i + 1) * stride) + gap correction
-                    pipX = (position.X + width) - ((i + 1) * stride) + pipGap;
+                    // Anchored Right: Reset X for each row using 'width' anchor
+                    float rightAnchor = position.X + width;
+                    pipX = rightAnchor - ((col + 1) * stride) + pipGap;
                 }
                 else
                 {
-                    // Anchored Left, filling Right
-                    // i=0 is the "first" hp, at the far left
-                    pipX = position.X + (i * stride);
+                    // Anchored Left: Reset X for each row
+                    pipX = position.X + (col * stride);
                 }
 
-                Color pipColor = bgColor; // Default empty
+                Color pipColor = bgColor;
 
-                // 1. Base State (Alive)
-                if (i < currentPips)
-                {
-                    pipColor = fgColor;
-                }
+                // 1. Base State
+                if (i < currentPips) pipColor = fgColor;
 
-                // 2. Animation Overlay (Loss or Gain)
+                // 2. Animation Overlay
                 if (animStart != -1 && i >= animStart && i < animEnd)
                 {
-                    if (animColor.A > 0)
-                    {
-                        pipColor = animColor;
-                    }
+                    if (animColor.A > 0) pipColor = animColor;
                 }
 
-                // 3. Damage Preview Overlay
-                // Only applies if the pip is currently alive (i < currentPips)
+                // 3. Damage Preview
                 if (i < currentPips && projectedDamage.HasValue)
                 {
-                    if (i >= dmgMinStart)
-                    {
-                        // Guaranteed Damage - High Contrast Warning (Red/Rust)
-                        pipColor = _global.Palette_Shadow * flashMinRollAlpha;
-                    }
-                    else if (i >= dmgMaxStart)
-                    {
-                        // Potential Damage - Shadow/Uncertainty
-                        pipColor = _global.Palette_Rust * flashMaxRollAlpha;
-                    }
+                    if (i >= dmgMinStart) pipColor = _global.Palette_Shadow * flashMinRollAlpha;
+                    else if (i >= dmgMaxStart) pipColor = _global.Palette_Rust * flashMaxRollAlpha;
                 }
 
-                // Draw Pip (1px width, full height)
-                spriteBatch.DrawSnapped(_pixel, new Vector2(pipX, position.Y), null, pipColor * alpha, 0f, Vector2.Zero, new Vector2(pipWidth, height), SpriteEffects.None, 0f);
+                spriteBatch.DrawSnapped(_pixel, new Vector2(pipX, pipY), null, pipColor * alpha, 0f, Vector2.Zero, new Vector2(pipWidth, height), SpriteEffects.None, 0f);
             }
         }
 
@@ -282,18 +283,16 @@ namespace ProjectVagabond.Battle.UI
             int iconSize = BattleLayout.STATUS_ICON_SIZE;
             int gap = BattleLayout.STATUS_ICON_GAP;
 
-            // Position below health bar
-            float iconY = startY + BattleLayout.ENEMY_BAR_HEIGHT + 2;
+            // --- OFFSET LOGIC FOR WRAPPED BARS ---
+            float wrapOffset = GetVerticalOffset(combatant.Stats.MaxHP, BattleLayout.ENEMY_BAR_HEIGHT);
+            float iconY = startY + BattleLayout.ENEMY_BAR_HEIGHT + 2 + wrapOffset;
 
             int step = iconSize + gap;
-
-            // Calculate animation frame (1 second cycle)
             int frameIndex = (DateTime.Now.Millisecond < 500) ? 0 : 1;
 
             for (int i = 0; i < combatant.ActiveStatusEffects.Count; i++)
             {
                 var effect = combatant.ActiveStatusEffects[i];
-                // Only draw permanent effects
                 if (!effect.IsPermanent) continue;
 
                 float hopOffset = getOffsetFunc(combatant.CombatantID, effect.EffectType);

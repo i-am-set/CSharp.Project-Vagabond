@@ -406,16 +406,11 @@ namespace ProjectVagabond.Battle.UI
                     if (isRightAligned)
                     {
                         // Right Slot (1): Anchor Right, Grow Left
-                        // barX is the Left edge of the rect.
-                        // RightEdge = Center + Offset.
-                        // barX = RightEdge - Width.
                         barX = spriteCenterX + anchorOffset - barWidth;
                     }
                     else
                     {
                         // Left Slot (0): Anchor Left, Grow Right
-                        // barX is the Left edge of the rect.
-                        // LeftEdge = Center - Offset.
                         barX = spriteCenterX - anchorOffset;
                     }
 
@@ -592,7 +587,9 @@ namespace ProjectVagabond.Battle.UI
                     _hudRenderer.DrawStatusIcons(spriteBatch, combatant, barX, barY + yOffset, barWidth, true, _playerStatusIcons, GetStatusIconOffset, IsStatusIconAnimating, isRightAligned);
                     _hudRenderer.DrawPlayerBars(spriteBatch, combatant, barX, barY + yOffset, barWidth, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha * hudAlpha, gameTime, uiManager, combatant == currentActor, isRightAligned, projectedDamage);
 
-                    DrawStatChanges(spriteBatch, combatant, barX, barY + yOffset + statOffsetY, isRightAligned);
+                    // Offset Stat Changes by Wrapped Bar Height if necessary
+                    float extraY = BattleHudRenderer.GetVerticalOffset(combatant.Stats.MaxHP, BattleLayout.ENEMY_BAR_HEIGHT);
+                    DrawStatChanges(spriteBatch, combatant, barX, barY + yOffset + statOffsetY + extraY, isRightAligned);
                 }
                 else
                 {
@@ -602,7 +599,9 @@ namespace ProjectVagabond.Battle.UI
                     _hudRenderer.DrawStatusIcons(spriteBatch, combatant, barX, barY, barWidth, false, _enemyStatusIcons[combatant.CombatantID], GetStatusIconOffset, IsStatusIconAnimating, isRightAligned);
                     _hudRenderer.DrawEnemyBars(spriteBatch, combatant, barX, barY, barWidth, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha * hudAlpha, gameTime, isRightAligned, projectedDamage);
 
-                    DrawStatChanges(spriteBatch, combatant, barX, barY + statOffsetY, isRightAligned);
+                    // Offset Stat Changes by Wrapped Bar Height if necessary
+                    float extraY = BattleHudRenderer.GetVerticalOffset(combatant.Stats.MaxHP, BattleLayout.ENEMY_BAR_HEIGHT);
+                    DrawStatChanges(spriteBatch, combatant, barX, barY + statOffsetY + extraY, isRightAligned);
                 }
             }
         }
@@ -1217,9 +1216,6 @@ namespace ProjectVagabond.Battle.UI
                             if (barWidth < BattleLayout.MIN_BAR_WIDTH) barWidth = BattleLayout.MIN_BAR_WIDTH;
 
                             float barX;
-                            // Offset logic updated in DrawHUD, not here. This logic seems redundant or used for tooltips?
-                            // Actually, DrawHUD handles the main bars. This block sets up _combatantBarPositions for tooltips maybe.
-                            // Let's stick to modifying DrawHUD for the requested visual change.
 
                             if (isRightAligned)
                             {
