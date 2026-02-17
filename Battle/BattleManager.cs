@@ -412,14 +412,19 @@ namespace ProjectVagabond.Battle
 
         public void Update(float deltaTime)
         {
-            // Watchdog Logic
-            if (_currentPhase == BattlePhase.AnimatingMove)
+            // --- 1. GLOBAL WATCHDOG (Fail-Safe) ---
+            bool isWaitingForInput = _currentPhase == BattlePhase.ProcessingInteraction ||
+                                     _currentPhase == BattlePhase.WaitingForSwitchCompletion ||
+                                     _waitingForReinforcementSelection;
+
+            // FIX: Check _currentPhase instead of missing _isBattleOver variable
+            if (!CanAdvance && !isWaitingForInput && _currentPhase != BattlePhase.BattleOver)
             {
                 _phaseWatchdogTimer += deltaTime;
-                if (_phaseWatchdogTimer > 4.0f)
+                if (_phaseWatchdogTimer > 4.0f) // 4 second timeout
                 {
-                    Debug.WriteLine("[BattleManager] WATCHDOG TRIGGERED: Animation phase timed out. Forcing advance.");
-                    OnMoveAnimationCompleted(new GameEvents.MoveAnimationCompleted());
+                    System.Diagnostics.Debug.WriteLine($"[BattleManager] WATCHDOG: Force advancing from {_currentPhase}");
+                    ForceAdvance();
                     _phaseWatchdogTimer = 0f;
                 }
             }
@@ -429,7 +434,16 @@ namespace ProjectVagabond.Battle
             }
 
             if (_currentPhase == BattlePhase.BattleOver) return;
-            if (!CanAdvance && _currentPhase != BattlePhase.WaitingForSwitchCompletion && _currentPhase != BattlePhase.PreActionAnimation && _currentPhase != BattlePhase.BattleStartEffects && _currentPhase != BattlePhase.PreDazedAnimation && _currentPhase != BattlePhase.PostActionDelay) return;
+
+            // If we are blocked, stop here. The Watchdog above handles the "stuck" case.
+            if (!CanAdvance && !isWaitingForInput &&
+                _currentPhase != BattlePhase.PreActionAnimation &&
+                _currentPhase != BattlePhase.BattleStartEffects &&
+                _currentPhase != BattlePhase.PreDazedAnimation &&
+                _currentPhase != BattlePhase.PostActionDelay)
+            {
+                return;
+            }
 
             switch (_currentPhase)
             {
@@ -442,7 +456,7 @@ namespace ProjectVagabond.Battle
                 case BattlePhase.PreDazedAnimation: HandlePreDazedAnimation(deltaTime); break;
                 case BattlePhase.AnimatingMove: break;
                 case BattlePhase.SecondaryEffectResolution: HandleSecondaryEffectResolution(); break;
-                case BattlePhase.PostActionDelay: HandlePostActionDelay(deltaTime); break; // NEW
+                case BattlePhase.PostActionDelay: HandlePostActionDelay(deltaTime); break;
                 case BattlePhase.CheckForDefeat: HandleCheckForDefeat(); break;
                 case BattlePhase.EndOfTurn: HandleEndOfTurn(); break;
                 case BattlePhase.Reinforcement: HandleReinforcements(); break;
@@ -1075,67 +1089,93 @@ namespace ProjectVagabond.Battle
 
         private void HandleReinforcements()
         {
-            if (_reinforcementSlotIndex > 3) { RoundNumber++; _currentPhase = BattlePhase.StartOfTurn; return; }
-            bool isPlayerSlot = _reinforcementSlotIndex >= 2;
-            int slot = _reinforcementSlotIndex % 2;
-            var activeList = isPlayerSlot ? _cachedActivePlayers : _cachedActiveEnemies;
-            var partyList = isPlayerSlot ? _playerParty : _enemyParty;
-            bool isSlotOccupied = activeList.Any(c => c.BattleSlot == slot);
-
-            if (!isSlotOccupied)
+            // STATELESS SCAN: Check all 4 slots (0,1 Enemy | 2,3 Player)
+            // We do not use an index variable. We simply find the first hole and fill it.
+            for (int i = 0; i < 4; i++)
             {
-                var reinforcement = partyList.FirstOrDefault(c => c.BattleSlot >= 2 && !c.IsDefeated);
-                if (reinforcement != null)
+                bool isPlayerSlot = i >= 2;
+                int slot = i % 2;
+
+                var activeList = isPlayerSlot ? _cachedActivePlayers : _cachedActiveEnemies;
+                var partyList = isPlayerSlot ? _playerParty : _enemyParty;
+
+                bool isSlotOccupied = activeList.Any(c => c.BattleSlot == slot);
+
+                if (!isSlotOccupied)
                 {
-                    if (!_reinforcementAnnounced)
+                    // Found a hole. Is there anyone on the bench?
+                    // Bench is defined as slot >= 2 in the raw party list
+                    var reinforcement = partyList.FirstOrDefault(c => c.BattleSlot >= 2 && !c.IsDefeated);
+
+                    if (reinforcement != null)
                     {
-                        if (!isPlayerSlot) EventBus.Publish(new GameEvents.NextEnemyApproaches());
-                        else EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "An ally approaches!" });
-                        _reinforcementAnnounced = true;
-                        CanAdvance = false;
-                        return;
-                    }
-                    else
-                    {
+                        // We found a hole AND a reinforcement.
+
+                        // 1. Announce (One-time gate per slot fill)
+                        if (!_reinforcementAnnounced)
+                        {
+                            if (!isPlayerSlot) EventBus.Publish(new GameEvents.NextEnemyApproaches());
+                            else EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "An ally approaches!" });
+
+                            _reinforcementAnnounced = true;
+                            CanAdvance = false; // Wait for next update to proceed
+                            return;
+                        }
+
+                        // 2. Execute Spawn
                         if (isPlayerSlot)
                         {
+                            // Player requires UI selection
                             EventBus.Publish(new GameEvents.ForcedSwitchRequested { Actor = null });
                             _currentPhase = BattlePhase.ProcessingInteraction;
                             _waitingForReinforcementSelection = true;
                             CanAdvance = false;
                             return;
                         }
-                        reinforcement.BattleSlot = slot;
-                        RefreshCombatantCaches();
-                        string key = $"{(isPlayerSlot ? "Player" : "Enemy")}_{slot}";
-                        string msg = $"{reinforcement.Name} enters the battle!";
-                        if (_lastDefeatedNames.TryGetValue(key, out string deadName)) { msg = $"{reinforcement.Name} takes {deadName}'s place!"; _lastDefeatedNames.Remove(key); }
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = msg });
-                        EventBus.Publish(new GameEvents.CombatantSpawned { Combatant = reinforcement });
-
-                        // Fire Entry Event
-                        var entryEvent = new GameEvents.CombatantEnteredEvent(reinforcement);
-                        _battleContext.ResetMultipliers();
-                        _battleContext.Actor = reinforcement;
-                        reinforcement.NotifyAbilities(entryEvent, _battleContext);
-
-                        _reinforcementAnnounced = false;
-                        _reinforcementSlotIndex++;
-
-                        // If effects queued, go to effects phase
-                        if (_startupEffectQueue.Any())
+                        else
                         {
-                            _currentPhase = BattlePhase.BattleStartEffects;
-                            _startupEffectTimer = STARTUP_EFFECT_DELAY;
-                        }
+                            // Enemy auto-spawns
+                            reinforcement.BattleSlot = slot;
+                            RefreshCombatantCaches();
 
-                        CanAdvance = false;
-                        return;
+                            string key = $"Enemy_{slot}";
+                            string msg = $"{reinforcement.Name} enters the battle!";
+                            if (_lastDefeatedNames.TryGetValue(key, out string deadName))
+                            {
+                                msg = $"{reinforcement.Name} takes {deadName}'s place!";
+                                _lastDefeatedNames.Remove(key);
+                            }
+
+                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = msg });
+                            EventBus.Publish(new GameEvents.CombatantSpawned { Combatant = reinforcement });
+
+                            // Fire Entry Abilities
+                            var entryEvent = new GameEvents.CombatantEnteredEvent(reinforcement);
+                            _battleContext.ResetMultipliers();
+                            _battleContext.Actor = reinforcement;
+                            reinforcement.NotifyAbilities(entryEvent, _battleContext);
+
+                            // Reset announcement flag for the NEXT hole (if any)
+                            _reinforcementAnnounced = false;
+
+                            // Check for entry effects (Majestic, etc)
+                            if (_startupEffectQueue.Any())
+                            {
+                                _currentPhase = BattlePhase.BattleStartEffects;
+                                _startupEffectTimer = STARTUP_EFFECT_DELAY;
+                            }
+
+                            CanAdvance = false; // Let visuals catch up
+                            return;
+                        }
                     }
                 }
             }
-            _reinforcementSlotIndex++;
+
             _reinforcementAnnounced = false;
+            RoundNumber++;
+            _currentPhase = BattlePhase.StartOfTurn;
+            CanAdvance = true;
         }
 
         public (int Min, int Max) GetProjectedDamageRange(BattleCombatant actor, BattleCombatant target, MoveData move)
