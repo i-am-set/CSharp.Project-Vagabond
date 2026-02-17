@@ -48,7 +48,7 @@ namespace ProjectVagabond.Battle.UI
             return 0f;
         }
 
-        public void DrawEnemyBars(SpriteBatch spriteBatch, BattleCombatant combatant, float barX, float barY, int barWidth, int barHeight, BattleAnimationManager animationManager, float hpAlpha, GameTime gameTime, bool isRightAligned = false, (int Min, int Max)? projectedDamage = null)
+        public void DrawEnemyBars(SpriteBatch spriteBatch, BattleCombatant combatant, float barX, float barY, int barWidth, int barHeight, BattleAnimationManager animationManager, float hpAlpha, GameTime gameTime, bool isRightAligned = false, (int Min, int Max)? projectedDamage = null, (int Min, int Max)? projectedHeal = null)
         {
             // --- NAME ---
             var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
@@ -78,10 +78,10 @@ namespace ProjectVagabond.Battle.UI
             float hpPercent = combatant.Stats.MaxHP > 0 ? Math.Clamp(combatant.VisualHP / combatant.Stats.MaxHP, 0f, 1f) : 0f;
             var hpAnim = animationManager.GetResourceBarAnimation(combatant.CombatantID, BattleAnimationManager.ResourceBarAnimationState.BarResourceType.HP);
 
-            DrawPipBar(spriteBatch, new Vector2(barX, barY), barWidth, barHeight, hpPercent, _global.Palette_DarkShadow, _global.Palette_Leaf, hpAlpha, hpAnim, combatant.Stats.MaxHP, isRightAligned, projectedDamage, gameTime);
+            DrawPipBar(spriteBatch, new Vector2(barX, barY), barWidth, barHeight, hpPercent, _global.Palette_DarkShadow, _global.Palette_Leaf, hpAlpha, hpAnim, combatant.Stats.MaxHP, isRightAligned, projectedDamage, projectedHeal, gameTime);
         }
 
-        public void DrawPlayerBars(SpriteBatch spriteBatch, BattleCombatant player, float barX, float barY, int barWidth, int barHeight, BattleAnimationManager animationManager, float hpAlpha, GameTime gameTime, BattleUIManager uiManager, bool isActiveActor, bool isRightAligned = false, (int Min, int Max)? projectedDamage = null)
+        public void DrawPlayerBars(SpriteBatch spriteBatch, BattleCombatant player, float barX, float barY, int barWidth, int barHeight, BattleAnimationManager animationManager, float hpAlpha, GameTime gameTime, BattleUIManager uiManager, bool isActiveActor, bool isRightAligned = false, (int Min, int Max)? projectedDamage = null, (int Min, int Max)? projectedHeal = null)
         {
             var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
             if (hpAlpha > 0.01f)
@@ -107,10 +107,10 @@ namespace ProjectVagabond.Battle.UI
             float hpPercent = player.Stats.MaxHP > 0 ? Math.Clamp(player.VisualHP / player.Stats.MaxHP, 0f, 1f) : 0f;
             var hpAnim = animationManager.GetResourceBarAnimation(player.CombatantID, BattleAnimationManager.ResourceBarAnimationState.BarResourceType.HP);
 
-            DrawPipBar(spriteBatch, new Vector2(barX, barY), barWidth, barHeight, hpPercent, _global.Palette_DarkShadow, _global.Palette_Leaf, hpAlpha, hpAnim, player.Stats.MaxHP, isRightAligned, projectedDamage, gameTime);
+            DrawPipBar(spriteBatch, new Vector2(barX, barY), barWidth, barHeight, hpPercent, _global.Palette_DarkShadow, _global.Palette_Leaf, hpAlpha, hpAnim, player.Stats.MaxHP, isRightAligned, projectedDamage, projectedHeal, gameTime);
         }
 
-        private void DrawPipBar(SpriteBatch spriteBatch, Vector2 position, int width, int height, float fillPercent, Color bgColor, Color fgColor, float alpha, BattleAnimationManager.ResourceBarAnimationState? anim, float maxResource, bool isRightAligned, (int Min, int Max)? projectedDamage = null, GameTime gameTime = null)
+        private void DrawPipBar(SpriteBatch spriteBatch, Vector2 position, int width, int height, float fillPercent, Color bgColor, Color fgColor, float alpha, BattleAnimationManager.ResourceBarAnimationState? anim, float maxResource, bool isRightAligned, (int Min, int Max)? projectedDamage = null, (int Min, int Max)? projectedHeal = null, GameTime gameTime = null)
         {
             if (alpha <= 0.01f) return;
 
@@ -130,8 +130,19 @@ namespace ProjectVagabond.Battle.UI
             {
                 int minDmg = projectedDamage.Value.Min;
                 int maxDmg = projectedDamage.Value.Max;
-                dmgMinStart = currentPips - minDmg;
-                dmgMaxStart = currentPips - maxDmg;
+                dmgMinStart = Math.Max(0, currentPips - minDmg);
+                dmgMaxStart = Math.Max(0, currentPips - maxDmg);
+            }
+
+            // Heal Preview Calculation
+            int healMinEnd = -1;
+            int healMaxEnd = -1;
+            if (projectedHeal.HasValue && projectedHeal.Value.Max > 0)
+            {
+                int minHeal = projectedHeal.Value.Min;
+                int maxHeal = projectedHeal.Value.Max;
+                healMinEnd = Math.Min(maxPips, currentPips + minHeal);
+                healMaxEnd = Math.Min(maxPips, currentPips + maxHeal);
             }
 
             // Animation Calculation
@@ -236,6 +247,14 @@ namespace ProjectVagabond.Battle.UI
                 {
                     if (i >= dmgMinStart) pipColor = _global.Palette_Shadow * flashMinRollAlpha;
                     else if (i >= dmgMaxStart) pipColor = _global.Palette_Rust * flashMaxRollAlpha;
+                }
+
+                // 4. Heal Preview
+                // Draws on top of empty pips (or filled pips if we wanted to show overheal, but usually fills gaps)
+                if (i >= currentPips && projectedHeal.HasValue)
+                {
+                    if (i < healMinEnd) pipColor = _global.Palette_Sea; // Guaranteed heal
+                    else if (i < healMaxEnd) pipColor = _global.Palette_Sky * 0.7f; // Potential max heal (if variable)
                 }
 
                 spriteBatch.DrawSnapped(_pixel, new Vector2(pipX, pipY), null, pipColor * alpha, 0f, Vector2.Zero, new Vector2(pipWidth, height), SpriteEffects.None, 0f);

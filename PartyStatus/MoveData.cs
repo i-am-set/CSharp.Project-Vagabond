@@ -2,6 +2,7 @@
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace ProjectVagabond.Battle
 {
@@ -83,10 +84,10 @@ namespace ProjectVagabond.Battle
         /// </summary>
         public Dictionary<string, string> Effects { get; set; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-        /// <summary>
-        /// A container for arbitrary tags (e.g., "Prop.Contact", "Target.Self").
-        /// Replaces boolean flags.
-        /// </summary>
+        [JsonPropertyName("Tags")]
+        public List<string> SerializedTags { get; set; } = new List<string>();
+
+        [JsonIgnore]
         public TagContainer Tags { get; private set; } = new TagContainer();
 
         /// <summary>
@@ -104,11 +105,8 @@ namespace ProjectVagabond.Battle
         /// </summary>
         public List<IAbility> Abilities { get; set; } = new List<IAbility>();
 
-        // Helper properties for backward compatibility or ease of use
         public bool MakesContact => Tags.Has("Prop.Contact");
         public bool AffectsUserHP => Tags.Has("Target.Self") && Tags.Has("Effect.Damage");
-
-        // Restored helpers for BattleRenderer compatibility
         public bool AffectsTargetHP => Power > 0 || Tags.Has("Effect.FixedDamage");
 
         /// <summary>
@@ -120,6 +118,9 @@ namespace ProjectVagabond.Battle
             var clone = (MoveData)this.MemberwiseClone();
             clone.Abilities = new List<IAbility>(this.Abilities);
             clone.Tags = new TagContainer();
+            clone.SerializedTags = new List<string>(this.SerializedTags);
+            foreach (var t in clone.SerializedTags) clone.Tags.Add(t);
+
             return clone;
         }
     }

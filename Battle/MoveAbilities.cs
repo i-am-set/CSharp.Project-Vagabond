@@ -443,17 +443,17 @@ namespace ProjectVagabond.Battle.Abilities
         {
             if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
             {
-                int healAmount = (int)(reaction.Actor.Stats.MaxHP * (_percent / 100f));
+                int healAmount = (int)(reaction.Target.Stats.MaxHP * (_percent / 100f));
                 if (healAmount < 1) healAmount = 1;
 
-                int hpBefore = (int)reaction.Actor.VisualHP;
-                reaction.Actor.ApplyHealing(healAmount);
+                int hpBefore = (int)reaction.Target.VisualHP;
+                reaction.Target.ApplyHealing(healAmount);
 
-                // Publish the UI event so numbers pop up
+                // Publish the UI event so numbers pop up on the correct target
                 EventBus.Publish(new GameEvents.CombatantHealed
                 {
                     Actor = reaction.Actor,
-                    Target = reaction.Actor,
+                    Target = reaction.Target,
                     HealAmount = healAmount,
                     VisualHPBefore = hpBefore
                 });

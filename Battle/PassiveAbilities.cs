@@ -293,4 +293,22 @@ namespace ProjectVagabond.Battle.Abilities
             }
         }
     }
+
+    public class PMSweetpeaAbility : IAbility
+    {
+        public string Name => "Sweet Pea";
+        public string Description => "Healing moves gain +2 Priority.";
+        public int Priority => 0;
+
+        public void OnEvent(GameEvent e, BattleContext context)
+        {
+            if (e is CheckActionPriorityEvent prioEvent && prioEvent.Actor.Abilities.Contains(this))
+            {
+                if (prioEvent.Move.Tags.Has("Heal"))
+                {
+                    prioEvent.Priority += 2;
+                }
+            }
+        }
+    }
 }

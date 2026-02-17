@@ -295,7 +295,7 @@
     "Effects": {
       "Heal": "25"
     },
-    "Tags": [ "Healing" ],
+    "Tags": [ "Heal" ],
     "AnimationId": "sta_orange_orb"
   },
   {
@@ -313,7 +313,7 @@
     "Effects": {
       "Lifesteal": "50"
     },
-    "Tags": [ "Contact", "Healing" ],
+    "Tags": [ "Contact", "Heal" ],
     "AnimationId": "phy_bite"
   },
   {
@@ -373,5 +373,37 @@
     },
     "Tags": [ "Contact", "Priority" ],
     "AnimationId": "phy_small_side_swipe"
+  },
+  {
+    "MoveID": "20",
+    "MoveName": "Siphon",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]SIPHONS HEALTH[/] from {IsTargetProperNoun}[cSlot]{target}[/].",
+    "Description": "Drains [cpositive]75%[/] of damage dealt.",
+    "Power": 40,
+    "MoveType": "Spell",
+    "ImpactType": "Magical",
+    "OffensiveStat": "Intelligence",
+    "Target": "Single",
+    "Accuracy": 100,
+    "Priority": 0,
+    "Effects": { "Lifesteal": "75" },
+    "Tags": [ "Heal" ],
+    "AnimationId": "mag_blue_flame"
+  },
+  {
+    "MoveID": "21",
+    "MoveName": "Heal Aura",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]CASTS A HEALING AURA[/].",
+    "Description": "Heals user and ally for [cpositive]25%[/] HP.",
+    "Power": 0,
+    "MoveType": "Spell",
+    "ImpactType": "Status",
+    "OffensiveStat": "Intelligence",
+    "Target": "Team",
+    "Accuracy": -1,
+    "Priority": 0,
+    "Effects": { "Heal": "25" },
+    "Tags": [ "Heal" ],
+    "AnimationId": "sta_protect"
   }
 ]

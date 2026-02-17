@@ -90,7 +90,7 @@
   {
     "MemberID": "5",
     "Name": "Abu",
-    "Description": "",
+    "Description": "A gentle healer and friend.",
     "Gender": "Male",
     "MaxHP": 30,
     "Strength": 2,
@@ -98,8 +98,8 @@
     "Tenacity": 5,
     "Agility": 5,
     "BasicMoveId": "4",
-    "CoreMoveId": "",
-    "AltMoveId": "",
+    "CoreMoveId": "20",
+    "AltMoveId": "21",
     "PassiveAbilityPool": [
       { "PMSweetpea": "" }
     ]

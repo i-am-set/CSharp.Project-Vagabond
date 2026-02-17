@@ -365,8 +365,6 @@ namespace ProjectVagabond.Battle.UI
         public void DrawHUD(SpriteBatch spriteBatch, BattleAnimationManager animManager, GameTime gameTime, BattleUIManager uiManager, BattleCombatant currentActor, Dictionary<string, Color> silhouetteColors, BattleCombatant hoveredCombatant)
         {
             var battleManager = ServiceLocator.Get<BattleManager>();
-
-            // 1. Resolve the Active Actor
             BattleCombatant actor = currentActor;
 
             if (uiManager.UIState == BattleUIState.Targeting && uiManager.ActiveTargetingSlot != -1)
@@ -382,37 +380,26 @@ namespace ProjectVagabond.Battle.UI
 
             foreach (var combatant in battleManager.AllCombatants)
             {
-                if (combatant.IsDefeated) continue;
+                if (combatant.IsDefeated || combatant.VisualHealthBarAlpha <= 0.01f) continue;
 
-                if (combatant.VisualHealthBarAlpha <= 0.01f) continue;
-
-                // --- CALCULATE DYNAMIC WIDTH ---
                 int barWidth = (int)(combatant.Stats.MaxHP * BattleLayout.HEALTH_PIXELS_PER_HP);
                 if (barWidth < BattleLayout.MIN_BAR_WIDTH) barWidth = BattleLayout.MIN_BAR_WIDTH;
 
                 float hudAlpha = combatant.HudVisualAlpha;
                 bool isRightAligned = (combatant.BattleSlot % 2 != 0);
 
-                // --- CALCULATE POSITION ---
                 float barX;
                 float barY;
 
                 if (combatant.IsPlayerControlled)
                 {
                     float spriteCenterX = BattleLayout.GetPlayerSpriteCenter(combatant.BattleSlot).X;
-                    // UPDATED: Increased anchor offset to move bars 32px further from sprite (16 -> 48)
                     float anchorOffset = 48f;
 
                     if (isRightAligned)
-                    {
-                        // Right Slot (1): Anchor Right, Grow Left
                         barX = spriteCenterX + anchorOffset - barWidth;
-                    }
                     else
-                    {
-                        // Left Slot (0): Anchor Left, Grow Right
                         barX = spriteCenterX - anchorOffset;
-                    }
 
                     barY = BattleLayout.PLAYER_BARS_TOP_Y + 4;
                 }
@@ -424,7 +411,6 @@ namespace ProjectVagabond.Battle.UI
                         slotCenterX = visualX;
                     }
 
-                    // UPDATED: Increased anchor offset to move bars 32px further from sprite (24 -> 56)
                     float anchorOffset = 56f;
                     float visualCenterY = BattleLayout.ENEMY_SLOT_Y_OFFSET + (BattleLayout.ENEMY_SPRITE_SIZE_NORMAL / 2f);
                     if (_combatantStaticCenters.TryGetValue(combatant.CombatantID, out var staticCenter))
@@ -443,20 +429,15 @@ namespace ProjectVagabond.Battle.UI
                     }
 
                     if (isRightAligned)
-                    {
-                        // Right Slot (1): Anchor Right, Grow Left
                         barX = slotCenterX + anchorOffset - barWidth;
-                    }
                     else
-                    {
-                        // Left Slot (0): Anchor Left, Grow Right
                         barX = slotCenterX - anchorOffset;
-                    }
                 }
 
                 _combatantBarPositions[combatant.CombatantID] = new Vector2(barX, barY);
 
                 (int Min, int Max)? projectedDamage = null;
+                (int Min, int Max)? projectedHeal = null;
 
                 bool showDamage = false;
                 if (silhouetteColors.ContainsKey(combatant.CombatantID))
@@ -486,6 +467,50 @@ namespace ProjectVagabond.Battle.UI
 
                 if (showDamage && move != null && actor != null)
                 {
+                    bool isHeal = move.Effects.ContainsKey("Heal");
+                    bool isLifesteal = move.Effects.ContainsKey("Lifesteal");
+
+                    if (isHeal)
+                    {
+                        // Check if this combatant is a valid target for the heal
+                        var validTargets = TargetingHelper.GetValidTargets(actor, move.Target, battleManager.AllCombatants);
+                        if (validTargets.Contains(combatant))
+                        {
+                            if (float.TryParse(move.Effects["Heal"], out float percent))
+                            {
+                                int amount = (int)(combatant.Stats.MaxHP * (percent / 100f));
+                                projectedHeal = (amount, amount);
+                            }
+                        }
+                    }
+                    else if (isLifesteal && combatant == actor)
+                    {
+                        // Lifesteal: Preview healing on the USER (Actor) based on damage to TARGETS
+                        if (float.TryParse(move.Effects["Lifesteal"], out float percent))
+                        {
+                            var targets = new List<BattleCombatant>();
+                            if (uiManager.UIState == BattleUIState.Targeting && hoveredCombatant != null) targets.Add(hoveredCombatant);
+                            else targets.AddRange(uiManager.HoverHighlightState.Targets);
+
+                            int totalMinDmg = 0;
+                            int totalMaxDmg = 0;
+
+                            foreach (var t in targets)
+                            {
+                                var range = battleManager.GetProjectedDamageRange(actor, t, move);
+                                totalMinDmg += range.Min;
+                                totalMaxDmg += range.Max;
+                            }
+
+                            if (totalMaxDmg > 0)
+                            {
+                                int minHeal = (int)(totalMinDmg * (percent / 100f));
+                                int maxHeal = (int)(totalMaxDmg * (percent / 100f));
+                                projectedHeal = (minHeal, maxHeal);
+                            }
+                        }
+                    }
+
                     if (combatant == actor && (move.Effects.ContainsKey("Recoil") || move.Effects.ContainsKey("DamageRecoil")))
                     {
                         float minRecoil = 0;
@@ -563,7 +588,7 @@ namespace ProjectVagabond.Battle.UI
                             projectedDamage = ((int)Math.Ceiling(minRecoil), (int)Math.Ceiling(maxRecoil));
                         }
                     }
-                    else if (combatant != actor)
+                    else if (combatant != actor && !isHeal && !isLifesteal)
                     {
                         projectedDamage = battleManager.GetProjectedDamageRange(actor, combatant, move);
                     }
@@ -585,9 +610,8 @@ namespace ProjectVagabond.Battle.UI
                     }
 
                     _hudRenderer.DrawStatusIcons(spriteBatch, combatant, barX, barY + yOffset, barWidth, true, _playerStatusIcons, GetStatusIconOffset, IsStatusIconAnimating, isRightAligned);
-                    _hudRenderer.DrawPlayerBars(spriteBatch, combatant, barX, barY + yOffset, barWidth, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha * hudAlpha, gameTime, uiManager, combatant == currentActor, isRightAligned, projectedDamage);
+                    _hudRenderer.DrawPlayerBars(spriteBatch, combatant, barX, barY + yOffset, barWidth, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha * hudAlpha, gameTime, uiManager, combatant == currentActor, isRightAligned, projectedDamage, projectedHeal);
 
-                    // Offset Stat Changes by Wrapped Bar Height if necessary
                     float extraY = BattleHudRenderer.GetVerticalOffset(combatant.Stats.MaxHP, BattleLayout.ENEMY_BAR_HEIGHT);
                     DrawStatChanges(spriteBatch, combatant, barX, barY + yOffset + statOffsetY + extraY, isRightAligned);
                 }
@@ -597,9 +621,8 @@ namespace ProjectVagabond.Battle.UI
                         _enemyStatusIcons[combatant.CombatantID] = new List<StatusIconInfo>();
 
                     _hudRenderer.DrawStatusIcons(spriteBatch, combatant, barX, barY, barWidth, false, _enemyStatusIcons[combatant.CombatantID], GetStatusIconOffset, IsStatusIconAnimating, isRightAligned);
-                    _hudRenderer.DrawEnemyBars(spriteBatch, combatant, barX, barY, barWidth, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha * hudAlpha, gameTime, isRightAligned, projectedDamage);
+                    _hudRenderer.DrawEnemyBars(spriteBatch, combatant, barX, barY, barWidth, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha * hudAlpha, gameTime, isRightAligned, projectedDamage, projectedHeal);
 
-                    // Offset Stat Changes by Wrapped Bar Height if necessary
                     float extraY = BattleHudRenderer.GetVerticalOffset(combatant.Stats.MaxHP, BattleLayout.ENEMY_BAR_HEIGHT);
                     DrawStatChanges(spriteBatch, combatant, barX, barY + statOffsetY + extraY, isRightAligned);
                 }
@@ -625,7 +648,6 @@ namespace ProjectVagabond.Battle.UI
 
             float currentY = startY;
 
-            // Calculate dynamic width for alignment
             int barWidth = (int)(combatant.Stats.MaxHP * BattleLayout.HEALTH_PIXELS_PER_HP);
             if (barWidth < BattleLayout.MIN_BAR_WIDTH) barWidth = BattleLayout.MIN_BAR_WIDTH;
 
@@ -648,7 +670,6 @@ namespace ProjectVagabond.Battle.UI
 
                 float totalWidth = textSize.X + 1 + 6;
 
-                // Use dynamic barWidth for alignment
                 float drawX = isRightAligned ? (startX + barWidth - totalWidth) : startX;
 
                 spriteBatch.DrawStringSnapped(font, label, new Vector2(drawX, currentY), _global.Palette_Sky);
@@ -1211,7 +1232,6 @@ namespace ProjectVagabond.Battle.UI
 
                             bool isRightAligned = (enemy.BattleSlot % 2 != 0);
 
-                            // --- DYNAMIC WIDTH CALCULATION ---
                             int barWidth = (int)(enemy.Stats.MaxHP * BattleLayout.HEALTH_PIXELS_PER_HP);
                             if (barWidth < BattleLayout.MIN_BAR_WIDTH) barWidth = BattleLayout.MIN_BAR_WIDTH;
 
@@ -1219,12 +1239,10 @@ namespace ProjectVagabond.Battle.UI
 
                             if (isRightAligned)
                             {
-                                // Right Slot (1): Anchor Right, Grow Left
                                 barX = center.X + 24f - barWidth;
                             }
                             else
                             {
-                                // Left Slot (0): Anchor Left, Grow Right
                                 barX = center.X - 24f;
                             }
 
@@ -1447,19 +1465,16 @@ namespace ProjectVagabond.Battle.UI
 
                     bool isRightAligned = (player.BattleSlot % 2 != 0);
 
-                    // --- DYNAMIC WIDTH CALCULATION ---
                     int barWidth = (int)(player.Stats.MaxHP * BattleLayout.HEALTH_PIXELS_PER_HP);
                     if (barWidth < BattleLayout.MIN_BAR_WIDTH) barWidth = BattleLayout.MIN_BAR_WIDTH;
 
                     float barX;
                     if (isRightAligned)
                     {
-                        // Right Slot (1): Anchor Right, Grow Left
                         barX = spriteCenter.X + 16f - barWidth;
                     }
                     else
                     {
-                        // Left Slot (0): Anchor Left, Grow Right
                         barX = spriteCenter.X - 16f;
                     }
 

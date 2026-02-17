@@ -55,9 +55,16 @@ namespace ProjectVagabond.Battle
 
             foreach (var move in Moves.Values)
             {
+                if (move.SerializedTags != null)
+                {
+                    foreach (var tag in move.SerializedTags)
+                    {
+                        move.Tags.Add(tag);
+                    }
+                }
+
                 if (move.Effects != null && move.Effects.Count > 0)
                 {
-                    // Pass the move object itself so the factory can set metadata flags
                     move.Abilities = AbilityFactory.CreateAbilitiesFromData(move, move.Effects, new Dictionary<string, int>());
                 }
             }
