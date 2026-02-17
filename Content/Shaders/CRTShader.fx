@@ -9,14 +9,17 @@
 
 // --- Uniforms ---
 uniform float Time;
-uniform float2 ScreenResolution;  // Physical window size
-uniform float2 VirtualResolution; // Game resolution
+uniform float2 ScreenResolution;
+uniform float2 VirtualResolution;
 uniform float Gamma;
 uniform float3 FlashColor;
 uniform float FlashIntensity;
 uniform float ImpactGlitchIntensity;
 uniform float Saturation;
 uniform float Vibrance;
+
+uniform float3 Palette[15];
+uniform int PaletteCount;
 
 // --- Toggles ---
 #define ENABLE_CURVATURE
@@ -29,31 +32,21 @@ uniform float Vibrance;
 #define ENABLE_HALATION
 
 // --- Tuning ---
-
-// Distortion
 static const float CURVATURE = 0.1; 
 static const float ZOOM = 1.01;
-
-// Color & Contrast
 static const float BLACK_LEVEL = 0.03; 
-
-// Scanlines (Structural)
 static const float SCANLINE_DENSITY = 1.0;  
 static const float SCANLINE_HARDNESS = 0.6; 
 static const float SCANLINE_BLOOM_CUTOFF = 0.7; 
 
-// Halation (The Glow)
-static const float HALATION_INTENSITY = 0.85; 
-static const float HALATION_RADIUS = 3.5;     
+// Halation Tuning
+static const float HALATION_INTENSITY = 0.35;
+static const float HALATION_RADIUS = 7.0;
 
-// Chromatic Aberration (Color Bleed)
 static const float CHROMATIC_OFFSET_CENTER = 1.0; 
 static const float CHROMATIC_OFFSET_EDGE = 1.5;   
-
-// Jitter & Noise (Signal Instability)
 static const float JITTER_MICRO_INTENSITY = 0.0002; 
 static const float JITTER_DESYNC_INTENSITY = 0.001;
-
 static const float HUM_BAR_SPEED = 0.2;
 static const float HUM_BAR_OPACITY = 0.05;
 static const float NOISE_INTENSITY = 0.025; 
@@ -66,6 +59,28 @@ sampler s0 = sampler_state { Texture = <SpriteTexture>; };
 
 float rand(float2 co) {
     return frac(sin(dot(co.xy, float2(12.9898, 78.233))) * 43758.5453);
+}
+
+// Helper: Quantizes colors to the palette (Retro Console Look)
+float4 Tex2DQuantized(sampler s, float2 uv)
+{
+    float4 rawColor = tex2D(s, uv);
+    float3 closest = rawColor.rgb;
+    float minDist = 1000.0;
+
+    for(int i = 0; i < 15; i++)
+    {
+        float3 pColor = Palette[i];
+        float3 diff = rawColor.rgb - pColor;
+        float distSq = dot(diff, diff);
+        
+        if(distSq < minDist)
+        {
+            minDist = distSq;
+            closest = pColor;
+        }
+    }
+    return float4(closest, rawColor.a);
 }
 
 struct PixelShaderInput
@@ -91,129 +106,104 @@ float4 MainPS(PixelShaderInput input) : COLOR
         return float4(0.0, 0.0, 0.0, 1.0);
 #endif
     
-    // --- 1. JITTER (Signal Instability) ---
+    // --- 1. JITTER ---
 #ifdef ENABLE_JITTER
-    // A. Constant Micro-Vibration (The "Hum")
     float jitterTime = Time * 113.0;
     float microShake = (rand(float2(uv.y, jitterTime)) - 0.5) * JITTER_MICRO_INTENSITY;
     
-    // B. Randomized Desync (The "Tension")
-    // We use a sum of sine waves with prime frequencies to create an irregular interference pattern.
     float t = Time;
-    float wave1 = sin(t * 0.5);  // Slow drift (2s period)
-    float wave2 = sin(t * 1.7);  // Medium cycle (~0.6s period)
-    float wave3 = sin(t * 2.9);  // Fast cycle (~0.3s period)
-    
-    // Combine waves. Range is roughly -3.0 to 3.0.
+    float wave1 = sin(t * 0.5);
+    float wave2 = sin(t * 1.7);
+    float wave3 = sin(t * 2.9);
     float chaos = wave1 + wave2 + wave3;
-    
     float desyncOffset = 0.0;
     
-    // Only trigger when the chaos aligns (peaks/troughs)
     if (abs(chaos) > 2.4) {
         float glitchIntensity = (abs(chaos) - 2.4) / 0.6;
-        
         float tearDensity = 20.0 + (wave1 * 15.0) + (wave2 * 5.0); 
         float tearSpeed = 20.0 + (wave2 * 30.0);
         float tear = sign(sin(uv.y * tearDensity + Time * tearSpeed));
-        
         desyncOffset = tear * JITTER_DESYNC_INTENSITY * glitchIntensity;
     }
 
-    // Apply all offsets to the X coordinate
     uv.x += microShake + desyncOffset;
 #endif
 
-    // --- 2. CHROMATIC ABERRATION & IMPACT TEARING ---
+    // --- 2. CHROMATIC ABERRATION ---
     float3 color;
-    
-    // Calculate Glitch Tearing (High Frequency Noise)
     float tearNoise = 0.0;
+    
     if (ImpactGlitchIntensity > 0.0) {
-        // Use high frequency (300.0) to simulate scanline tearing
         float highFreq = floor(uv.y * 300.0); 
         float noise = rand(float2(Time * 50.0, highFreq)) - 0.5;
-        
-        // Only trigger tearing on some lines to look like signal loss
         if (abs(noise) > 0.2) {
-            // 0.05 is the max width of the tear in UV space
             tearNoise = noise * ImpactGlitchIntensity * 0.05; 
         }
     }
 
 #ifdef ENABLE_CHROMATIC_ABERRATION
-    // Calculate distance from center (0.0 to ~0.7)
     float dist = distance(uv, float2(0.5, 0.5));
-    // Lerp offset based on distance: Small at center, large at edges
     float spread = lerp(CHROMATIC_OFFSET_CENTER, CHROMATIC_OFFSET_EDGE, dist * 2.0);
-    
-    // Add a tiny bit of jitter to the aberration itself for that "unstable" look
     spread += (rand(float2(Time, uv.y)) - 0.5) * 0.2;
 
-    // --- APPLY GLITCH TO CHANNELS ---
-    // R: Positive Spread + Positive Tear
-    // G: No Spread + Partial Tear (Green usually anchors the image)
-    // B: Negative Spread + Negative Tear
-    
     float2 rOffset = float2((spread / ScreenResolution.x) + tearNoise, 0.0);
     float2 gOffset = float2(tearNoise * 0.5, 0.0); 
     float2 bOffset = float2((-spread / ScreenResolution.x) - tearNoise, 0.0);
     
-    color.r = tex2D(s0, uv + rOffset).r;
-    color.g = tex2D(s0, uv + gOffset).g;
-    color.b = tex2D(s0, uv + bOffset).b;
+    // Keep Quantization here for the "Source" signal
+    color.r = Tex2DQuantized(s0, uv + rOffset).r;
+    color.g = Tex2DQuantized(s0, uv + gOffset).g;
+    color.b = Tex2DQuantized(s0, uv + bOffset).b;
 #else
-    // Fallback if ChromAb disabled, but Glitch still active
     float2 glitchOffset = float2(tearNoise, 0.0);
-    color = tex2D(s0, uv + glitchOffset).rgb;
+    color = Tex2DQuantized(s0, uv + glitchOffset).rgb;
 #endif
 
-// --- 3. HALATION (Phosphor Glow) ---
+// --- 3. HALATION (IMPROVED) ---
 #ifdef ENABLE_HALATION
-    // 8-tap blur for a smoother, rounder glow (Octagon shape)
+    // A. Generate Noise for Dithering
+    // We use a high frequency noise based on UV and Time to randomize the blur radius per pixel.
+    // This breaks the "8-tap ring" into a diffuse, noisy fog.
+    float dither = rand(uv * 97.0 + Time); 
+    
+    // B. Jitter the Radius
+    // Vary radius between 70% and 130% of the target size
+    float currentRadius = HALATION_RADIUS * (0.7 + 0.6 * dither);
+    
     float2 pixelSize = 1.0 / ScreenResolution;
-    float2 off = pixelSize * HALATION_RADIUS;
-    float2 offDiag = off * 0.707; // 1/sqrt(2) for circular distance
+    float2 off = pixelSize * currentRadius;
+    float2 offDiag = off * 0.707; // 1/sqrt(2)
 
     float3 glow = float3(0.0, 0.0, 0.0);
 
-    // Cardinals
+    // C. Sample Raw Texture (Optimization & Smoothness)
+    // We use 'tex2D' (raw) instead of 'Tex2DQuantized'. 
+    // This is 15x faster and allows the glow to be a smooth gradient.
     glow += tex2D(s0, uv + float2(off.x, 0.0)).rgb;
     glow += tex2D(s0, uv - float2(off.x, 0.0)).rgb;
     glow += tex2D(s0, uv + float2(0.0, off.y)).rgb;
     glow += tex2D(s0, uv - float2(0.0, off.y)).rgb;
 
-    // Diagonals
     glow += tex2D(s0, uv + float2(offDiag.x, offDiag.y)).rgb;
     glow += tex2D(s0, uv + float2(-offDiag.x, offDiag.y)).rgb;
     glow += tex2D(s0, uv + float2(offDiag.x, -offDiag.y)).rgb;
     glow += tex2D(s0, uv + float2(-offDiag.x, -offDiag.y)).rgb;
 
-    glow *= 0.125; // Average of 8 samples
+    glow *= 0.125; // Average
     
-    // Blend glow into original color (Screen blend for light addition)
-    color = max(color, glow * HALATION_INTENSITY);
+    // D. Additive Blending
+    // We add the glow to the base color. This creates a true light effect.
+    color += glow * HALATION_INTENSITY;
 #endif
 
-    // --- 4. SCANLINES (Structural) ---
+    // --- 4. SCANLINES ---
 #ifdef ENABLE_SCANLINES
-    // Calculate Luma (Brightness)
     float luma = dot(color, float3(0.299, 0.587, 0.114));
-    
-    // Generate Scanline Pattern (Sine wave)
     float scanlinePos = (uv.y * VirtualResolution.y * SCANLINE_DENSITY);
     float scanline = sin(scanlinePos * 3.14159 * 2.0);
-    
-    // Normalize sine to 0..1 range
     scanline = (scanline * 0.5) + 0.5;
-    
-    // Calculate Visibility:
-    // If Luma is high (bright), visibility approaches 0 (lines disappear/bloom out).
-    // If Luma is low (dark), visibility approaches 1 (lines are distinct).
     float bloomFactor = smoothstep(0.0, SCANLINE_BLOOM_CUTOFF, luma);
     float lineVisibility = (1.0 - bloomFactor) * SCANLINE_HARDNESS;
-    
-    // Apply scanline darkening
     float lineMultiplier = 1.0 - (scanline * lineVisibility);
     color *= lineMultiplier;
 #endif
@@ -226,9 +216,8 @@ float4 MainPS(PixelShaderInput input) : COLOR
 #endif
 
     // --- 6. COLOR GRADING ---
-    color = max(color, BLACK_LEVEL); // Lift blacks for phosphor look
+    color = max(color, BLACK_LEVEL); 
 
-    // Saturation/Vibrance
     float lumaVal = dot(color, float3(0.299, 0.587, 0.114));
     color = lerp(float3(lumaVal, lumaVal, lumaVal), color, Saturation);
     
@@ -247,7 +236,6 @@ float4 MainPS(PixelShaderInput input) : COLOR
     // --- 8. NOISE ---
 #ifdef ENABLE_NOISE
     float noise = (rand(uv * Time) - 0.5) * NOISE_INTENSITY;
-    // Apply noise proportional to signal strength (masks noise on black)
     color += noise * color;
 #endif
 

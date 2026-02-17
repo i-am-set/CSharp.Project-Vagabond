@@ -171,6 +171,34 @@ namespace ProjectVagabond
 
         public int previousScrollValue = Mouse.GetState().ScrollWheelValue;
 
+        private Vector3[] _cachedShaderPalette;
+
+        public Vector3[] GetPaletteAsVectors()
+        {
+            if (_cachedShaderPalette == null)
+            {
+                _cachedShaderPalette = new Vector3[]
+                {
+                Palette_Leaf.ToVector3(),
+                Palette_Sky.ToVector3(),
+                Palette_Sea.ToVector3(),
+                Palette_DarkestPale.ToVector3(),
+                Palette_DarkPale.ToVector3(),
+                Palette_Pale.ToVector3(),
+                Palette_LightPale.ToVector3(),
+                Palette_Sun.ToVector3(),
+                Palette_DarkSun.ToVector3(),
+                Palette_Fruit.ToVector3(),
+                Palette_Rust.ToVector3(),
+                Palette_DarkRust.ToVector3(),
+                Palette_Shadow.ToVector3(),
+                Palette_DarkShadow.ToVector3(),
+                Palette_Black.ToVector3()
+                };
+            }
+            return _cachedShaderPalette;
+        }
+
         public Color Palette_Leaf { get; set; } = new Color(145, 183, 115);
         public Color Palette_Sky { get; set; } = new Color(88, 148, 138);
         public Color Palette_Sea { get; set; } = new Color(63, 86, 109);

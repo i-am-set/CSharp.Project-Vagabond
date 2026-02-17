@@ -596,6 +596,13 @@ namespace ProjectVagabond
                 _crtEffect.Parameters["Saturation"]?.SetValue(_global.CrtSaturation);
                 _crtEffect.Parameters["Vibrance"]?.SetValue(_global.CrtVibrance);
 
+                // --- Pass Palette ---
+                // We pass the array of Vector3s. 
+                // Note: Ensure your shader defines "float3 Palette[15]" matching this count.
+                _crtEffect.Parameters["Palette"]?.SetValue(_global.GetPaletteAsVectors());
+                _crtEffect.Parameters["PaletteCount"]?.SetValue(15);
+                // -------------------------
+
                 float flashIntensity = 0f;
                 Color flashColor = Color.Transparent;
 
@@ -619,12 +626,10 @@ namespace ProjectVagabond
 
                 _crtEffect.CurrentTechnique.Passes[0].Apply();
 
-                // Use _phosphorTarget (which contains the trails) as the source for the CRT shader
                 _spriteBatch.Draw(_phosphorTarget, new Rectangle(0, 0, GraphicsDevice.PresentationParameters.BackBufferWidth, GraphicsDevice.PresentationParameters.BackBufferHeight), Color.White);
             }
             else
             {
-                // Fallback if shader fails
                 _spriteBatch.Draw(_phosphorTarget, new Rectangle(0, 0, GraphicsDevice.PresentationParameters.BackBufferWidth, GraphicsDevice.PresentationParameters.BackBufferHeight), Color.White);
             }
 
