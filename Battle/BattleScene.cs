@@ -631,18 +631,22 @@ namespace ProjectVagabond.Scenes
             {
                 if (_uiManager.IsBusy && !_uiManager.IsWaitingForInput)
                 {
+                    // UI is animating, ignore click or speed up
                 }
                 else if (_uiManager.IsWaitingForInput)
                 {
+                    // Handled by UI Manager
                 }
                 else if (_animationManager.IsBlockingAnimation || _moveAnimationManager.IsAnimating)
                 {
+                    // Skip animations
                     _animationManager.CompleteBlockingAnimations(_battleManager.AllCombatants);
                     _moveAnimationManager.CompleteCurrentAnimation();
                     UIInputManager.ConsumeMouseClick();
                 }
                 else
                 {
+                    // Manual advance fallback
                     if (_battleManager.CurrentPhase == BattleManager.BattlePhase.CheckForDefeat ||
                         _battleManager.CurrentPhase == BattleManager.BattlePhase.EndOfTurn ||
                         _battleManager.CurrentPhase == BattleManager.BattlePhase.Reinforcement)
@@ -661,17 +665,25 @@ namespace ProjectVagabond.Scenes
 
             if (!isUiBusy && !isAnimBusy && !isMoveAnimBusy && !isPendingBusy && !isSwitching)
             {
-                // Ensure the new phase in BattleManager gets updated
-                if (!_battleManager.CanAdvance && _battleManager.CurrentPhase != BattleManager.BattlePhase.WaitingForSwitchCompletion
-                    && _battleManager.CurrentPhase != BattleManager.BattlePhase.PreActionAnimation
-                    && _battleManager.CurrentPhase != BattleManager.BattlePhase.BattleStartEffects
-                    && _battleManager.CurrentPhase != BattleManager.BattlePhase.PreDazedAnimation)
-                {
-                    // (Standard BattleScene logic usually lets BattleManager update unless paused)
-                }
-                else
+                bool isLogicDrivenPhase =
+                    _battleManager.CurrentPhase == BattleManager.BattlePhase.CheckForDefeat ||
+                    _battleManager.CurrentPhase == BattleManager.BattlePhase.Reinforcement ||
+                    _battleManager.CurrentPhase == BattleManager.BattlePhase.EndOfTurn ||
+                    _battleManager.CurrentPhase == BattleManager.BattlePhase.ActionResolution ||
+                    _battleManager.CurrentPhase == BattleManager.BattlePhase.SecondaryEffectResolution;
+
+                bool isTimeDrivenPhase =
+                    _battleManager.CurrentPhase == BattleManager.BattlePhase.PostActionDelay ||
+                    _battleManager.CurrentPhase == BattleManager.BattlePhase.PreDazedAnimation ||
+                    _battleManager.CurrentPhase == BattleManager.BattlePhase.BattleStartEffects ||
+                    _battleManager.CurrentPhase == BattleManager.BattlePhase.PreActionAnimation;
+
+                if (isLogicDrivenPhase)
                 {
                     _battleManager.RequestNextPhase();
+                }
+                else if (!isTimeDrivenPhase && !_battleManager.CanAdvance)
+                {
                 }
             }
 
