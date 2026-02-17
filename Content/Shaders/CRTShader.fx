@@ -18,7 +18,7 @@ uniform float ImpactGlitchIntensity;
 uniform float Saturation;
 uniform float Vibrance;
 
-uniform float3 Palette[15];
+uniform float3 Palette[16];
 uniform int PaletteCount;
 
 // --- Toggles ---

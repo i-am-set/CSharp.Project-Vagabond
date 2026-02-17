@@ -600,7 +600,7 @@ namespace ProjectVagabond
                 // We pass the array of Vector3s. 
                 // Note: Ensure your shader defines "float3 Palette[15]" matching this count.
                 _crtEffect.Parameters["Palette"]?.SetValue(_global.GetPaletteAsVectors());
-                _crtEffect.Parameters["PaletteCount"]?.SetValue(15);
+                _crtEffect.Parameters["PaletteCount"]?.SetValue(16);
                 // -------------------------
 
                 float flashIntensity = 0f;
