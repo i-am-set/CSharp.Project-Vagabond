@@ -588,7 +588,7 @@ namespace ProjectVagabond.Battle.UI
                             projectedDamage = ((int)Math.Ceiling(minRecoil), (int)Math.Ceiling(maxRecoil));
                         }
                     }
-                    else if (combatant != actor && !isHeal && !isLifesteal)
+                    else if (combatant != actor && !isHeal)
                     {
                         projectedDamage = battleManager.GetProjectedDamageRange(actor, combatant, move);
                     }

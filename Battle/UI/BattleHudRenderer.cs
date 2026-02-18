@@ -123,8 +123,9 @@ namespace ProjectVagabond.Battle.UI
             const int stride = pipWidth + pipGap;
 
             // Damage Preview Calculation
-            int dmgMinStart = -1;
-            int dmgMaxStart = -1;
+            // FIX: Default to int.MaxValue so we don't draw damage if projectedDamage is (0,0) or skipped
+            int dmgMinStart = int.MaxValue;
+            int dmgMaxStart = int.MaxValue;
 
             if (projectedDamage.HasValue && projectedDamage.Value.Max > 0)
             {

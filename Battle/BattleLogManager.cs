@@ -61,7 +61,6 @@ namespace ProjectVagabond.Battle.UI
             EventBus.Subscribe<GameEvents.ActionFailed>(OnActionFailed);
             EventBus.Subscribe<GameEvents.CombatantHealed>(OnCombatantHealed);
             EventBus.Subscribe<GameEvents.StatusEffectTriggered>(OnStatusEffectTriggered);
-            EventBus.Subscribe<GameEvents.CombatantManaRestored>(OnCombatantManaRestored);
             EventBus.Subscribe<GameEvents.CombatantRecoiled>(OnCombatantRecoiled);
             EventBus.Subscribe<GameEvents.NextEnemyApproaches>(OnNextEnemyApproaches);
         }
@@ -74,7 +73,6 @@ namespace ProjectVagabond.Battle.UI
             EventBus.Unsubscribe<GameEvents.ActionFailed>(OnActionFailed);
             EventBus.Unsubscribe<GameEvents.CombatantHealed>(OnCombatantHealed);
             EventBus.Unsubscribe<GameEvents.StatusEffectTriggered>(OnStatusEffectTriggered);
-            EventBus.Unsubscribe<GameEvents.CombatantManaRestored>(OnCombatantManaRestored);
             EventBus.Unsubscribe<GameEvents.CombatantRecoiled>(OnCombatantRecoiled);
             EventBus.Unsubscribe<GameEvents.NextEnemyApproaches>(OnNextEnemyApproaches);
         }
@@ -138,7 +136,7 @@ namespace ProjectVagabond.Battle.UI
                 List<string> names = kvp.Value;
                 string targetString = FormatNameList(names);
 
-                AddLog($"{actorName} {verb} {targetString} WITH {moveName}", _global.Palette_DarkestPale);
+                AddLog($"{actorName} {verb} {targetString} WITH {moveName}", _global.Palette_Pale);
             }
         }
 
@@ -154,12 +152,11 @@ namespace ProjectVagabond.Battle.UI
         }
 
         private void OnCombatantDefeated(GameEvents.CombatantDefeated e) => AddLog($"{e.DefeatedCombatant.Name} WAS DEFEATED", _global.Palette_DarkRust);
-        private void OnActionFailed(GameEvents.ActionFailed e) => AddLog($"{e.Actor.Name.ToUpper()} FAILED {(e.MoveName ?? "ACTION").ToUpper()}", _global.Palette_DarkShadow);
-        private void OnCombatantHealed(GameEvents.CombatantHealed e) => AddLog($"{e.Target.Name} RECOVERED {e.HealAmount} HP", _global.Palette_DarkShadow);
-        private void OnStatusEffectTriggered(GameEvents.StatusEffectTriggered e) { if (e.Damage > 0) AddLog($"{e.Combatant.Name} TOOK {e.Damage} {e.EffectType.ToString().ToUpper()} DMG", _global.Palette_DarkShadow); }
-        private void OnCombatantManaRestored(GameEvents.CombatantManaRestored e) => AddLog($"{e.Target.Name} RESTORED {e.AmountRestored} MANA", _global.Palette_DarkShadow);
-        private void OnCombatantRecoiled(GameEvents.CombatantRecoiled e) => AddLog($"{e.Actor.Name} TOOK {e.RecoilDamage} RECOIL DAMAGE", _global.Palette_DarkShadow);
-        private void OnNextEnemyApproaches(GameEvents.NextEnemyApproaches e) => AddLog("ANOTHER ENEMY APPROACHES", _global.Palette_DarkestPale);
+        private void OnActionFailed(GameEvents.ActionFailed e) => AddLog($"{e.Actor.Name.ToUpper()} FAILED {(e.MoveName ?? "ACTION").ToUpper()}", _global.Palette_Rust);
+        private void OnCombatantHealed(GameEvents.CombatantHealed e) => AddLog($"{e.Target.Name} RECOVERED {e.HealAmount} HP", _global.Palette_Leaf);
+        private void OnStatusEffectTriggered(GameEvents.StatusEffectTriggered e) { if (e.Damage > 0) AddLog($"{e.Combatant.Name} TOOK {e.Damage} {e.EffectType.ToString().ToUpper()} DMG", _global.Palette_Shadow); }
+        private void OnCombatantRecoiled(GameEvents.CombatantRecoiled e) => AddLog($"{e.Actor.Name} TOOK {e.RecoilDamage} RECOIL DAMAGE", _global.Palette_Fruit);
+        private void OnNextEnemyApproaches(GameEvents.NextEnemyApproaches e) => AddLog("ANOTHER ENEMY APPROACHES", _global.Palette_LightPale);
 
         public void Update(GameTime gameTime)
         {
@@ -185,7 +182,7 @@ namespace ProjectVagabond.Battle.UI
 
             if (fadeAlpha > 0f)
             {
-                spriteBatch.DrawSnapped(pixel, bgRect, _global.Palette_Black * 0.95f * fadeAlpha);
+                spriteBatch.DrawSnapped(pixel, bgRect, _global.Palette_Black * 0.75f * fadeAlpha);
                 spriteBatch.DrawSnapped(pixel, new Rectangle(0, bgRect.Bottom - 1, Global.VIRTUAL_WIDTH, 1), _global.Palette_DarkShadow * fadeAlpha);
             }
 
@@ -196,7 +193,7 @@ namespace ProjectVagabond.Battle.UI
                     _tabBounds.Center.X - (arrow.Width / 2f),
                     _tabBounds.Center.Y - (arrow.Height / 2f)
                 );
-                spriteBatch.DrawSnapped(arrow, arrowPos, _global.Palette_DarkShadow);
+                spriteBatch.DrawSnapped(arrow, arrowPos, _global.Palette_DarkestPale);
             }
 
             if (_slideProgress > 0.01f)
@@ -238,7 +235,7 @@ namespace ProjectVagabond.Battle.UI
                         spriteBatch.DrawStringSnapped(font, roundHeader, new Vector2(headerX, currentY), _global.Palette_Sky * fadeAlpha);
                     }
 
-                    spriteBatch.DrawStringSnapped(font, number, numberPos, _global.Palette_DarkShadow * fadeAlpha);
+                    spriteBatch.DrawStringSnapped(font, number, numberPos, _global.Palette_DarkPale * fadeAlpha);
                     spriteBatch.DrawStringSnapped(font, text, textPos, color);
 
                     currentY += lineHeight;
