@@ -30,8 +30,12 @@ namespace ProjectVagabond.Scenes
         private const float ACTION_EXECUTION_DELAY = 0.0f;
         private const int ENEMY_SLOT_Y_OFFSET = 12;
 
-        // CHANGED: Delay before fade-in starts
-        private const float BATTLE_ENTRY_INITIAL_DELAY = 0.1f;
+        // Initial delay before the FIRST slot starts fading in
+        private const float BATTLE_ENTRY_INITIAL_DELAY = 0.2f;
+        // Delay between each subsequent slot starting its fade
+        private const float INTRO_STAGGER_DELAY = 0.2f;
+        // Safety timeout
+        private const float INTRO_WATCHDOG_TIMEOUT = 8.0f;
 
         private BattleManager _battleManager;
         private BattleUIManager _uiManager;
@@ -82,9 +86,10 @@ namespace ProjectVagabond.Scenes
         private BattleCombatant _switchOutgoing;
         private BattleCombatant _switchIncoming;
 
-        // CHANGED: Removed complex IntroPhase enum and queue
-        private float _introTimer = 0f;
-        private bool _hasTriggeredIntroFade = false;
+        // --- INTRO STATE ---
+        private float _introStaggerTimer = 0f;
+        private float _introWatchdogTimer = 0f;
+        private Queue<BattleCombatant> _introFadeQueue = new Queue<BattleCombatant>();
 
         private float _uiSlideTimer = 0f;
         private const float UI_SLIDE_DURATION = 0.5f;
@@ -95,6 +100,7 @@ namespace ProjectVagabond.Scenes
         private float _roundAnimTimer = 0f;
         private int _lastRoundNumber = 1;
 
+        // RESTORED CONSTANTS
         private const float ROUND_ANIM_ENTER_DURATION = 0.5f;
         private const float ROUND_ANIM_POP_DURATION = 0.1f;
         private const float ROUND_ANIM_HANG_DURATION = 0.25f;
@@ -205,10 +211,29 @@ namespace ProjectVagabond.Scenes
 
             if (_battleManager != null)
             {
-                // CHANGED: Simplified Intro Setup
-                _introTimer = BATTLE_ENTRY_INITIAL_DELAY;
-                _hasTriggeredIntroFade = false;
-                _uiSlideTimer = 0f;
+                // --- SETUP RANDOMIZED STAGGER ---
+                _introStaggerTimer = BATTLE_ENTRY_INITIAL_DELAY;
+                _introWatchdogTimer = 0f;
+                _introFadeQueue.Clear();
+
+                var activeCombatants = _battleManager.AllCombatants.Where(c => c.IsActiveOnField).ToList();
+
+                // Fisher-Yates Shuffle
+                int n = activeCombatants.Count;
+                while (n > 1)
+                {
+                    n--;
+                    int k = _random.Next(n + 1);
+                    var value = activeCombatants[k];
+                    activeCombatants[k] = activeCombatants[n];
+                    activeCombatants[n] = value;
+                }
+
+                foreach (var c in activeCombatants)
+                {
+                    _introFadeQueue.Enqueue(c);
+                    c.VisualAlpha = 0f; // Ensure invisible start
+                }
 
                 _uiManager.IntroOffset = Vector2.Zero;
 
@@ -219,14 +244,9 @@ namespace ProjectVagabond.Scenes
                     _uiManager.HideButtonsForEntrance();
                 }
 
-                // Set everyone to invisible initially
+                // Ensure HUD is hidden
                 foreach (var combatant in _battleManager.AllCombatants)
                 {
-                    if (combatant.IsActiveOnField)
-                    {
-                        combatant.VisualAlpha = 0f;
-                    }
-
                     if (combatant.IsPlayerControlled) combatant.VisualHP = combatant.Stats.CurrentHP;
                     combatant.HudVisualAlpha = 0f;
                 }
@@ -398,46 +418,53 @@ namespace ProjectVagabond.Scenes
             {
                 if (_transitionManager.IsTransitioning) return;
 
-                // CHANGED: Unified Fade Logic
-                if (!_hasTriggeredIntroFade)
+                // --- STAGGERED FADE LOGIC ---
+                _introWatchdogTimer += dt;
+
+                // 1. Process Queue
+                if (_introFadeQueue.Count > 0)
                 {
-                    _introTimer -= dt;
-                    if (_introTimer <= 0)
+                    _introStaggerTimer -= dt;
+                    if (_introStaggerTimer <= 0)
                     {
-                        // Trigger Fade In for everyone
-                        foreach (var c in _battleManager.AllCombatants)
+                        var nextCombatant = _introFadeQueue.Dequeue();
+
+                        // Trigger Fade
+                        _animationManager.StartIntroFadeAnimation(nextCombatant.CombatantID);
+
+                        // If Enemy, trigger their specific floor fade
+                        if (!nextCombatant.IsPlayerControlled)
                         {
-                            if (c.IsActiveOnField)
-                            {
-                                _animationManager.StartIntroFadeAnimation(c.CombatantID);
-                            }
+                            _animationManager.StartFloorIntroAnimation("floor_" + nextCombatant.BattleSlot);
                         }
+                        // Note: Player floors fade automatically with player alpha in BattleRenderer
 
-                        // Trigger Floor Fades
-                        _animationManager.StartFloorIntroAnimation("floor_0");
-                        _animationManager.StartFloorIntroAnimation("floor_1");
-
-                        _hasTriggeredIntroFade = true;
-                        _introTimer = 0.5f; // Wait for fade duration (approx)
+                        _introStaggerTimer = INTRO_STAGGER_DELAY;
                     }
                 }
-                else
+
+                // 2. Check Completion (Queue empty AND all visible)
+                bool allVisible = _battleManager.AllCombatants
+                    .Where(c => c.IsActiveOnField)
+                    .All(c => c.VisualAlpha >= 0.99f);
+
+                bool isComplete = _introFadeQueue.Count == 0 && allVisible;
+                bool isTimedOut = _introWatchdogTimer > INTRO_WATCHDOG_TIMEOUT;
+
+                if (isComplete || isTimedOut)
                 {
-                    _introTimer -= dt;
-                    if (_introTimer <= 0)
+                    if (isTimedOut) Debug.WriteLine("[BattleScene] Intro Watchdog Triggered - Forcing Start");
+
+                    _battleManager.TriggerBattleStartEvents();
+                    _roundAnimState = RoundAnimState.Pop;
+                    _roundAnimTimer = 0f;
+
+                    foreach (var c in _battleManager.AllCombatants)
                     {
-                        // Intro Complete
-                        _battleManager.TriggerBattleStartEvents();
-                        _roundAnimState = RoundAnimState.Pop;
-                        _roundAnimTimer = 0f;
-
-                        foreach (var c in _battleManager.AllCombatants)
-                        {
-                            _animationManager.StartHudEntryAnimation(c.CombatantID);
-                        }
-
-                        _uiManager.TriggerButtonEntrance();
+                        _animationManager.StartHudEntryAnimation(c.CombatantID);
                     }
+
+                    _uiManager.TriggerButtonEntrance();
                 }
 
                 _animationManager.Update(gameTime, _battleManager.AllCombatants);
@@ -470,9 +497,12 @@ namespace ProjectVagabond.Scenes
                         _battleManager.PerformLogicalSwitch(_switchOutgoing, _switchIncoming);
                         _switchSequenceState = SwitchSequenceState.AnimatingIn;
 
-                        // CHANGED: Switch uses fade logic now too
                         float duration = BattleAnimationManager.IntroFadeAnimationState.FADE_DURATION;
                         _switchSequenceTimer = duration;
+
+                        // FIX: Ensure it starts invisible so it can fade in
+                        _switchIncoming.VisualAlpha = 0f;
+
                         _animationManager.StartIntroFadeAnimation(_switchIncoming.CombatantID);
 
                         EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{_switchIncoming.Name} steps in!" });
@@ -759,6 +789,13 @@ namespace ProjectVagabond.Scenes
             }
 
             base.Update(gameTime);
+        }
+
+        private void StartPlayerIntro()
+        {
+            var players = _battleManager.AllCombatants.Where(c => c.IsPlayerControlled && c.IsActiveOnField).ToList();
+            foreach (var p in players) _animationManager.StartIntroFadeAnimation(p.CombatantID);
+            _uiSlideTimer = 0f;
         }
 
         private void TriggerVictoryRestoration()
@@ -1304,7 +1341,9 @@ namespace ProjectVagabond.Scenes
         {
             if (_switchSequenceState != SwitchSequenceState.None) return;
 
-            // CHANGED: Spawn uses fade logic
+            // FIX: Ensure it starts invisible so it can fade in
+            e.Combatant.VisualAlpha = 0f;
+
             _animationManager.StartIntroFadeAnimation(e.Combatant.CombatantID);
         }
 
