@@ -555,7 +555,7 @@ namespace ProjectVagabond.Scenes
             float linearProgress = _playerMoveDuration > 0 ? Math.Clamp(_playerMoveTimer / _playerMoveDuration, 0f, 1f) : 1f;
 
             // 2. Apply Easing (Smooth Start/Stop)
-            float easedProgress = Easing.EaseInOutCubic(linearProgress);
+            float easedProgress = Easing.EaseInOutSine(linearProgress);
 
             // 3. Interpolate along the vector path
             if (_playerMovePath != null && _playerMovePath.RenderPoints.Count > 1)
