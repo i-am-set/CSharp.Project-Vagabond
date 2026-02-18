@@ -637,7 +637,7 @@ namespace ProjectVagabond.UI
                 float barX = centerX - (hpBg.Width / 2f);
                 string hpText = $"{member.CurrentHP}/{member.MaxHP}";
 
-                spriteBatch.DrawString(tertiaryFont, hpText, new Vector2(barX, (y - 9) - tertiaryFont.LineHeight + 1), _global.Palette_DarkShadow);
+                spriteBatch.DrawString(tertiaryFont, hpText, new Vector2(barX, (y - 9) - tertiaryFont.LineHeight + 1), _global.Palette_DarkPale);
                 spriteBatch.Draw(hpBg, new Vector2(barX, y - 8), Color.White);
 
                 if (_spriteManager.InventoryPlayerHealthBarFull != null)

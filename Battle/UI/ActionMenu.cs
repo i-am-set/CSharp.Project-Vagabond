@@ -52,7 +52,6 @@ namespace ProjectVagabond.Battle.UI
 
         public void Show(BattleCombatant anyPlayer, List<BattleCombatant> allCombatants)
         {
-            // This preserves the animation state if BattleManager calls Show() again during the intro/turn transition.
             if (_isVisible && _panels.Count > 0 && _panels[0].Combatant == anyPlayer)
             {
                 return;
@@ -68,8 +67,6 @@ namespace ProjectVagabond.Battle.UI
                 panel.OnActionSelected += (action) => OnActionSelected?.Invoke(member.BattleSlot, action);
                 panel.OnSwitchRequested += () => OnSwitchMenuRequested?.Invoke(member.BattleSlot);
                 panel.OnCancelRequested += () => OnCancelRequested?.Invoke(member.BattleSlot);
-
-                // We will manually hide them in BattleScene.Enter for the intro sequence.
 
                 _panels.Add(panel);
             }
@@ -111,13 +108,11 @@ namespace ProjectVagabond.Battle.UI
 
         public void UpdatePositions(BattleRenderer renderer)
         {
-            foreach (var panel in _panels)
-            {
-                float visualX = renderer.GetCombatantVisualX(panel.Combatant);
-                float x = visualX - (PANEL_WIDTH / 2f);
-                float y = BattleLayout.GetActionMenuArea(panel.SlotIndex).Y;
-                panel.SetPosition(new Vector2(x, y));
-            }
+            // FIX: Do NOT move the menu based on the sprite position.
+            // The menu must remain static in its screen slot.
+            // We call UpdateLayout to ensure it snaps back if anything drifted, 
+            // but we ignore the renderer's sprite coordinates.
+            UpdateLayout();
         }
 
         public void Update(MouseState mouse, GameTime gameTime, bool isInputBlocked, int? switchingSlotIndex = null)
@@ -243,7 +238,6 @@ namespace ProjectVagabond.Battle.UI
             {
                 var random = new Random();
                 var indices = Enumerable.Range(0, _buttons.Count).ToList();
-                // Shuffle logic
                 int n = indices.Count;
                 while (n > 1)
                 {
@@ -257,7 +251,7 @@ namespace ProjectVagabond.Battle.UI
                 for (int i = 0; i < indices.Count; i++)
                 {
                     int btnIndex = indices[i];
-                    float delay = i * 0.05f; // Stagger pop-in
+                    float delay = i * 0.05f;
                     _buttons[btnIndex].PlayEntrance(delay);
                 }
             }
@@ -269,7 +263,6 @@ namespace ProjectVagabond.Battle.UI
                 var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
                 var global = ServiceLocator.Get<Global>();
 
-                // Helper to resolve MoveData safely
                 MoveData? GetMoveData(MoveEntry? entry)
                 {
                     if (entry != null && BattleDataCache.Moves.TryGetValue(entry.MoveID, out var m))
@@ -277,7 +270,6 @@ namespace ProjectVagabond.Battle.UI
                     return null;
                 }
 
-                // Helper to determine font based on length
                 BitmapFont GetFontForLabel(string text)
                 {
                     if (text.Length >= 12) return tertiaryFont;
@@ -285,25 +277,20 @@ namespace ProjectVagabond.Battle.UI
                     return defaultFont;
                 }
 
-                // 1. Basic (Index 0) - Fat Button
-                // Height increased: 25 -> 27
+                // 1. Basic (Index 0)
                 AddActionButton("BASC", Combatant.BasicMove, defaultFont, global, global.Palette_DarkestPale, VISUAL_WIDTH, 27, new Vector2(0, 1), Vector2.Zero);
 
-                // 2. Core (Index 1) - Slim Button
-                // Height increased: 12 -> 13
+                // 2. Core (Index 1)
                 var coreData = GetMoveData(Combatant.CoreMove);
                 string coreLabel = coreData?.MoveName.ToUpper() ?? "---";
                 var coreFont = GetFontForLabel(coreLabel);
                 AddActionButton(coreLabel, Combatant.CoreMove, coreFont, global, global.Palette_DarkPale, 88, 13, Vector2.Zero, new Vector2(0, 1));
 
-                // 3. Alt (Index 2) - Slim Button
-                // Height increased: 12 -> 13
+                // 3. Alt (Index 2)
                 var altData = GetMoveData(Combatant.AltMove);
                 string altLabel = altData?.MoveName.ToUpper() ?? "---";
                 var altFont = GetFontForLabel(altLabel);
                 AddActionButton(altLabel, Combatant.AltMove, altFont, global, global.Palette_DarkestPale, 88, 13, Vector2.Zero, new Vector2(0, 1));
-
-                // --- SECONDARY ROW ---
 
                 // 4. GUARD (Index 3)
                 AddSecondaryButton("GUARD", "7");
@@ -324,7 +311,6 @@ namespace ProjectVagabond.Battle.UI
                 _hasBench = allCombatants.Any(c => c.IsPlayerControlled && !c.IsDefeated && c.BattleSlot >= 2);
                 if (_buttons.Count > 4) _buttons[4].IsEnabled = _hasBench;
 
-                // CHANGED: Removed enableHoverSway: false to allow default Hop behavior
                 _cancelButton = new Button(Rectangle.Empty, "CANCEL", font: tertiaryFont)
                 {
                     CustomDefaultTextColor = global.Palette_Rust,
@@ -335,17 +321,11 @@ namespace ProjectVagabond.Battle.UI
 
             private void LayoutButtons()
             {
-                // --- PRIMARY ROW LAYOUT ---
-                // Layout: Basic (44px) | 1px Gap | Stack [Core (88px) / Alt (88px)]
-                // Total Width = 44 + 1 + 88 = 133px
                 int primaryTotalWidth = 133;
                 float panelCenterX = _position.X + (PANEL_WIDTH / 2f);
                 int startX = (int)(panelCenterX - (primaryTotalWidth / 2f));
                 int y = (int)_position.Y + 1;
 
-                // 1. Basic (Index 0)
-                // Position: Left
-                // Size: 44x27 (Increased from 25)
                 if (_buttons.Count > 0)
                 {
                     var visualRect = new Rectangle(startX, y, 44, 27);
@@ -354,9 +334,6 @@ namespace ProjectVagabond.Battle.UI
                     _buttons[0].Bounds = hitbox;
                 }
 
-                // 2. Core (Index 1)
-                // Position: Right, Top
-                // Size: 88x13 (Increased from 12)
                 if (_buttons.Count > 1)
                 {
                     var visualRect = new Rectangle(startX + 45, y, 88, 13);
@@ -365,10 +342,6 @@ namespace ProjectVagabond.Battle.UI
                     _buttons[1].Bounds = hitbox;
                 }
 
-                // 3. Alt (Index 2)
-                // Position: Right, Bottom (1px gap)
-                // Y Offset: y + 13 (Core) + 1 (Gap) = y + 14
-                // Size: 88x13 (Increased from 12)
                 if (_buttons.Count > 2)
                 {
                     var visualRect = new Rectangle(startX + 45, y + 14, 88, 13);
@@ -377,13 +350,8 @@ namespace ProjectVagabond.Battle.UI
                     _buttons[2].Bounds = hitbox;
                 }
 
-                // --- SECONDARY ROW LAYOUT ---
-                // Keep original spacing logic to ensure they don't move horizontally
-                int originalTotalButtonsWidth = (HITBOX_WIDTH * 3); // 135
+                int originalTotalButtonsWidth = (HITBOX_WIDTH * 3);
                 int secStartX = (int)(panelCenterX - (originalTotalButtonsWidth / 2f));
-
-                // Shifted down to accommodate taller primary row (27px)
-                // y + 27 (height) = y + 27
                 int secY = y + 27;
 
                 for (int i = 3; i < 6; i++)
@@ -475,7 +443,7 @@ namespace ProjectVagabond.Battle.UI
                     ActionIconColor = iconColor,
                     ActionIconHoverColor = global.Palette_DarkestPale,
                     IconRenderOffset = iconOffset,
-                    IsEnabled = !forceDisabled // Apply the forced disable
+                    IsEnabled = !forceDisabled
                 };
 
                 if (moveExists && !forceDisabled)
@@ -577,8 +545,6 @@ namespace ProjectVagabond.Battle.UI
                 }
                 else
                 {
-                    // --- MUTUAL EXCLUSION LOGIC ---
-                    // Find the button closest to the mouse center to prevent overlapping highlights
                     Button? bestBtn = null;
                     float bestDist = float.MaxValue;
                     Vector2 mousePos = Core.TransformMouse(mouse.Position);
@@ -596,7 +562,6 @@ namespace ProjectVagabond.Battle.UI
                         }
                     }
 
-                    // Update all buttons, forcing IsHovered only on the best candidate
                     foreach (var btn in _buttons)
                     {
                         btn.Update(mouse);
@@ -607,19 +572,19 @@ namespace ProjectVagabond.Battle.UI
                             int index = _buttons.IndexOf(btn);
                             if (index >= 0 && index <= 2)
                             {
-                                if (index == 0) // Basic
+                                if (index == 0)
                                 {
                                     var entry = Combatant.BasicMove;
                                     if (entry != null && BattleDataCache.Moves.TryGetValue(entry.MoveID, out var m))
                                         HoveredMove = m;
                                 }
-                                else if (index == 1) // Core
+                                else if (index == 1)
                                 {
                                     var entry = Combatant.CoreMove;
                                     if (entry != null && BattleDataCache.Moves.TryGetValue(entry.MoveID, out var m))
                                         HoveredMove = m;
                                 }
-                                else if (index == 2) // Alt
+                                else if (index == 2)
                                 {
                                     var entry = Combatant.AltMove;
                                     if (entry != null && BattleDataCache.Moves.TryGetValue(entry.MoveID, out var m))
@@ -642,7 +607,6 @@ namespace ProjectVagabond.Battle.UI
 
                 if (isLocked)
                 {
-                    // Draw Cancel Button with potential lift
                     _cancelButton.Draw(spriteBatch, _cancelButton.Font, gameTime, transform, false, 0f, snappedOffsetY);
                 }
                 else

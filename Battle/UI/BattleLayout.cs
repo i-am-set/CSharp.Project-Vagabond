@@ -21,11 +21,6 @@ namespace ProjectVagabond.Battle.UI
         public const int ENEMY_SPRITE_SIZE_NORMAL = 64;
         public const int ENEMY_SPRITE_SIZE_MAJOR = 96;
 
-        // --- Player Layout ---
-        public const float PLAYER_HEART_CENTER_Y = 104f;
-        public const float PLAYER_BARS_TOP_Y = 88f;
-        public const float PLAYER_NAME_TOP_Y = 116f;
-
         // --- HUD Constants ---
         public const int STATUS_ICON_SIZE = 5;
         public const int STATUS_ICON_GAP = 1;
@@ -55,9 +50,24 @@ namespace ProjectVagabond.Battle.UI
 
         public static Vector2 GetPlayerSpriteCenter(int slotIndex)
         {
-            bool isRightSide = slotIndex == 1;
-            float x = isRightSide ? (Global.VIRTUAL_WIDTH * 0.75f) : (Global.VIRTUAL_WIDTH * 0.25f);
-            return new Vector2(x, PLAYER_HEART_CENTER_Y);
+            // Y Alignment:
+            // Previous: ACTION_MENU_Y - 19.
+            // New Request: Move UP by 4 pixels.
+            // New Y: (ACTION_MENU_Y - 19) - 4 = ACTION_MENU_Y - 23.
+            float centerY = ACTION_MENU_Y - 23;
+
+            if (slotIndex == 0) // Left Slot
+            {
+                // Align Left side of sprite with Left side of "BASIC" button.
+                // Button Left X = 14. Sprite Center X = 14 + 16 = 30.
+                return new Vector2(30, centerY);
+            }
+            else // Right Slot (Slot 1)
+            {
+                // Align Right side of sprite with Right side of "CORE/ALT" buttons.
+                // Button Group Right X = 307. Sprite Center X = 307 - 16 = 291.
+                return new Vector2(291, centerY);
+            }
         }
     }
 }

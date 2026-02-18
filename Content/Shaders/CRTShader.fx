@@ -36,7 +36,7 @@ static const float CURVATURE = 0.1;
 static const float ZOOM = 1.01;
 static const float BLACK_LEVEL = 0.03; 
 static const float SCANLINE_DENSITY = 1.0;  
-static const float SCANLINE_HARDNESS = 0.6; 
+static const float SCANLINE_HARDNESS = 0.4; 
 static const float SCANLINE_BLOOM_CUTOFF = 0.7; 
 
 // Halation Tuning

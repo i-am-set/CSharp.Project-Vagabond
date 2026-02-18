@@ -49,11 +49,6 @@ namespace ProjectVagabond.Battle.UI
 
         public void DrawPlayerFloor(SpriteBatch spriteBatch, Vector2 position, float alpha, float scale = 1.0f)
         {
-            if (_spriteManager.BattlePlayerFloorSprite != null && scale > 0.01f && alpha > 0.01f)
-            {
-                Vector2 origin = new Vector2(_spriteManager.BattlePlayerFloorSprite.Width / 2f, _spriteManager.BattlePlayerFloorSprite.Height / 2f);
-                spriteBatch.DrawSnapped(_spriteManager.BattlePlayerFloorSprite, position, null, Color.White * alpha, 0f, origin, scale, SpriteEffects.None, 0f);
-            }
         }
 
         public void DrawStatChangeTooltip(SpriteBatch spriteBatch, BattleCombatant combatant, float alpha, bool hasInsight, Vector2 visualCenter, float barBottomY, GameTime gameTime)

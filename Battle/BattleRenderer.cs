@@ -393,15 +393,25 @@ namespace ProjectVagabond.Battle.UI
 
                 if (combatant.IsPlayerControlled)
                 {
-                    float spriteCenterX = BattleLayout.GetPlayerSpriteCenter(combatant.BattleSlot).X;
-                    float anchorOffset = 48f;
+                    Vector2 spriteCenter = BattleLayout.GetPlayerSpriteCenter(combatant.BattleSlot);
 
+                    // Center HUD vertically relative to sprite
+                    // Offset +10 (Static)
+                    barY = spriteCenter.Y + 10;
+
+                    // Anchor horizontally
                     if (isRightAligned)
-                        barX = spriteCenterX + anchorOffset - barWidth;
+                    {
+                        float spriteLeft = spriteCenter.X - 16;
+                        float padding = 4f;
+                        barX = spriteLeft - padding - barWidth;
+                    }
                     else
-                        barX = spriteCenterX - anchorOffset;
-
-                    barY = BattleLayout.PLAYER_BARS_TOP_Y + 4;
+                    {
+                        float spriteRight = spriteCenter.X + 16;
+                        float padding = 4f;
+                        barX = spriteRight + padding;
+                    }
                 }
                 else
                 {
@@ -472,7 +482,6 @@ namespace ProjectVagabond.Battle.UI
 
                     if (isHeal)
                     {
-                        // Check if this combatant is a valid target for the heal
                         var validTargets = TargetingHelper.GetValidTargets(actor, move.Target, battleManager.AllCombatants);
                         if (validTargets.Contains(combatant))
                         {
@@ -485,7 +494,6 @@ namespace ProjectVagabond.Battle.UI
                     }
                     else if (isLifesteal && combatant == actor)
                     {
-                        // Lifesteal: Preview healing on the USER (Actor) based on damage to TARGETS
                         if (float.TryParse(move.Effects["Lifesteal"], out float percent))
                         {
                             var targets = new List<BattleCombatant>();
@@ -598,38 +606,44 @@ namespace ProjectVagabond.Battle.UI
 
                 if (combatant.IsPlayerControlled)
                 {
-                    float yOffset = 0f;
-                    if (battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection)
-                    {
-                        if (!battleManager.IsActionPending(combatant.BattleSlot))
-                        {
-                            float t = (float)gameTime.TotalGameTime.TotalSeconds;
-                            float phase = (combatant.BattleSlot == 1) ? MathHelper.Pi : 0f;
-                            yOffset = MathF.Sin(t * _bobSpeed + phase) * 0.5f;
-                        }
-                    }
+                    // Status Icons: Moved ABOVE the Tenacity shields.
+                    // barY is the top of the health bar area.
+                    // Tenacity shields are ~14px above the bar.
+                    // We want icons just above that.
+                    // DrawStatusIcons adds ~4px offset internally.
+                    // So we pass barY - 20 to result in icons at barY - 16.
+                    float iconY = barY - 20;
 
-                    _hudRenderer.DrawStatusIcons(spriteBatch, combatant, barX, barY + yOffset, barWidth, true, _playerStatusIcons, GetStatusIconOffset, IsStatusIconAnimating, isRightAligned);
-                    _hudRenderer.DrawPlayerBars(spriteBatch, combatant, barX, barY + yOffset, barWidth, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha * hudAlpha, gameTime, uiManager, combatant == currentActor, isRightAligned, projectedDamage, projectedHeal);
+                    _hudRenderer.DrawStatusIcons(spriteBatch, combatant, barX, iconY, barWidth, true, _playerStatusIcons, GetStatusIconOffset, IsStatusIconAnimating, isRightAligned);
+                    _hudRenderer.DrawPlayerBars(spriteBatch, combatant, barX, barY, barWidth, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha * hudAlpha, gameTime, uiManager, combatant == currentActor, isRightAligned, projectedDamage, projectedHeal);
 
-                    float extraY = BattleHudRenderer.GetVerticalOffset(combatant.Stats.MaxHP, BattleLayout.ENEMY_BAR_HEIGHT);
-                    DrawStatChanges(spriteBatch, combatant, barX, barY + yOffset + statOffsetY + extraY, isRightAligned);
+                    // Stat Changes: Moved ABOVE the sprite's head and inverted.
+                    Vector2 spriteCenter = BattleLayout.GetPlayerSpriteCenter(combatant.BattleSlot);
+                    // Top of sprite is CenterY - 16.
+                    // Start drawing slightly above that (padding 2px).
+                    float statStartY = spriteCenter.Y - 16 - 2;
+
+                    DrawStatChanges(spriteBatch, combatant, barX, statStartY, isRightAligned, isBottomUp: true, isCentered: true, spriteCenterX: spriteCenter.X);
                 }
                 else
                 {
                     if (!_enemyStatusIcons.ContainsKey(combatant.CombatantID))
                         _enemyStatusIcons[combatant.CombatantID] = new List<StatusIconInfo>();
 
-                    _hudRenderer.DrawStatusIcons(spriteBatch, combatant, barX, barY, barWidth, false, _enemyStatusIcons[combatant.CombatantID], GetStatusIconOffset, IsStatusIconAnimating, isRightAligned);
+                    // Status Icons: Moved ABOVE the Tenacity shields for enemies too.
+                    // Moved down 5px from previous -25 -> -20.
+                    float iconY = barY - 20;
+
+                    _hudRenderer.DrawStatusIcons(spriteBatch, combatant, barX, iconY, barWidth, false, _enemyStatusIcons[combatant.CombatantID], GetStatusIconOffset, IsStatusIconAnimating, isRightAligned);
                     _hudRenderer.DrawEnemyBars(spriteBatch, combatant, barX, barY, barWidth, BattleLayout.ENEMY_BAR_HEIGHT, animManager, combatant.VisualHealthBarAlpha * hudAlpha, gameTime, isRightAligned, projectedDamage, projectedHeal);
 
                     float extraY = BattleHudRenderer.GetVerticalOffset(combatant.Stats.MaxHP, BattleLayout.ENEMY_BAR_HEIGHT);
-                    DrawStatChanges(spriteBatch, combatant, barX, barY + statOffsetY + extraY, isRightAligned);
+                    DrawStatChanges(spriteBatch, combatant, barX, barY + statOffsetY + extraY - 6, isRightAligned, isBottomUp: false, isCentered: false, spriteCenterX: 0f);
                 }
             }
         }
 
-        private void DrawStatChanges(SpriteBatch spriteBatch, BattleCombatant combatant, float startX, float startY, bool isRightAligned)
+        private void DrawStatChanges(SpriteBatch spriteBatch, BattleCombatant combatant, float startX, float startY, bool isRightAligned, bool isBottomUp, bool isCentered, float spriteCenterX)
         {
             var sortedStats = combatant.StatStages
                 .Where(kvp => kvp.Value != 0)
@@ -669,8 +683,27 @@ namespace ProjectVagabond.Battle.UI
                 Vector2 textSize = font.MeasureString(label);
 
                 float totalWidth = textSize.X + 1 + 6;
+                float drawX;
 
-                float drawX = isRightAligned ? (startX + barWidth - totalWidth) : startX;
+                if (isCentered)
+                {
+                    drawX = spriteCenterX - (totalWidth / 2f);
+                }
+                else if (isRightAligned)
+                {
+                    drawX = startX + barWidth - totalWidth;
+                }
+                else
+                {
+                    drawX = startX;
+                }
+
+                // Handle Bottom-Up Logic
+                if (isBottomUp)
+                {
+                    // Move cursor UP by the height of this row before drawing
+                    currentY -= (textSize.Y + 3);
+                }
 
                 spriteBatch.DrawStringSnapped(font, label, new Vector2(drawX, currentY), _global.Palette_Sky);
 
@@ -679,7 +712,11 @@ namespace ProjectVagabond.Battle.UI
 
                 spriteBatch.DrawSnapped(texture, new Vector2(iconX, iconY), sourceRect, Color.White);
 
-                currentY += textSize.Y + 3;
+                // Handle Top-Down Logic
+                if (!isBottomUp)
+                {
+                    currentY += textSize.Y + 3;
+                }
             }
         }
 
@@ -902,7 +939,6 @@ namespace ProjectVagabond.Battle.UI
 
                     float floorScale = 1.0f;
 
-                    // CHANGED: Default floor alpha logic to prevent flash
                     float floorAlpha = (ServiceLocator.Get<BattleManager>().CurrentPhase == BattleManager.BattlePhase.BattleStartIntro) ? 0f : 1.0f;
 
                     var outroAnim = animManager.GetFloorOutroAnimationState("floor_" + i);
@@ -910,7 +946,7 @@ namespace ProjectVagabond.Battle.UI
                     {
                         float progress = Math.Clamp(outroAnim.Timer / BattleAnimationManager.FloorOutroAnimationState.DURATION, 0f, 1f);
                         floorScale = 1.0f - Easing.EaseInBack(progress);
-                        floorAlpha = 1.0f; // Ensure visible during outro
+                        floorAlpha = 1.0f;
                     }
                     else
                     {
@@ -1000,7 +1036,8 @@ namespace ProjectVagabond.Battle.UI
                     Vector2 chargeOffset = Vector2.Zero;
                     Vector2 chargeScale = Vector2.One;
 
-                    if (isSilhouetted && spawnAnim == null && switchOut == null && switchIn == null && introFade == null)
+                    // FIX: Removed "&& introFade == null" to allow targeting silhouettes to override idle fade state
+                    if (isSilhouetted && spawnAnim == null && switchOut == null && switchIn == null)
                     {
                         silhouetteAmt = 1.0f;
                     }
@@ -1243,57 +1280,14 @@ namespace ProjectVagabond.Battle.UI
 
         private void DrawPlayers(SpriteBatch spriteBatch, BitmapFont font, List<BattleCombatant> players, BattleCombatant currentActor, bool shouldGrayOut, HashSet<BattleCombatant> selectable, BattleAnimationManager animManager, Dictionary<string, Color> silhouetteColors, GameTime gameTime, BattleUIManager uiManager, BattleCombatant hoveredCombatant, bool isTargetingMode, Color? hoveredGroupColor, bool drawFloor = true, bool drawShadow = true, bool drawSprite = true)
         {
-            if (drawFloor)
-            {
-                var battleManager = ServiceLocator.Get<BattleManager>();
-
-                for (int i = 0; i < 2; i++)
-                {
-                    var center = BattleLayout.GetPlayerSpriteCenter(i);
-                    var occupant = players.FirstOrDefault(p => p.BattleSlot == i);
-
-                    float alpha = 1.0f;
-                    if (occupant != null)
-                    {
-                        alpha = occupant.VisualAlpha;
-                    }
-                    else if (battleManager.CurrentPhase == BattleManager.BattlePhase.BattleStartIntro)
-                    {
-                        var leader = players.FirstOrDefault();
-                        alpha = leader?.VisualAlpha ?? 0f;
-                    }
-
-                    float floorScale = 1.0f;
-
-                    // CHANGED: Default floor alpha logic to prevent flash
-                    float floorAlpha = (battleManager.CurrentPhase == BattleManager.BattlePhase.BattleStartIntro) ? 0f : alpha;
-
-                    var floorOutro = animManager.GetFloorOutroAnimationState($"player_floor_{i}");
-                    if (floorOutro != null)
-                    {
-                        float progress = Math.Clamp(floorOutro.Timer / BattleAnimationManager.FloorOutroAnimationState.DURATION, 0f, 1f);
-                        floorScale = 1.0f - Easing.EaseInBack(progress);
-                        floorAlpha = 1.0f; // Ensure visible during outro
-                    }
-                    else
-                    {
-                        // Check for intro fade
-                        var floorIntro = animManager.GetFloorIntroAnimationState($"floor_{i}");
-                        // Note: Player floors usually just follow player alpha, but if we want explicit fade:
-                        // The BattleScene calls StartFloorIntroAnimation("floor_0") etc.
-                        // But those are usually for enemies.
-                        // However, since we are fading everyone in, let's just use the player's alpha which is fading in.
-                        // But we must respect the "invisible at start" rule.
-                    }
-
-                    _vfxRenderer.DrawPlayerFloor(spriteBatch, center, floorAlpha, floorScale);
-                }
-            }
+            // --- REMOVED FLOOR DRAWING LOOP ---
 
             foreach (var player in players)
             {
                 float visualX = _playerVisualXPositions.ContainsKey(player.CombatantID) ? _playerVisualXPositions[player.CombatantID] : BattleLayout.GetPlayerSpriteCenter(player.BattleSlot).X;
-                var spriteCenter = new Vector2(visualX, BattleLayout.PLAYER_HEART_CENTER_Y);
+
+                // Use the new BattleLayout logic for Y position
+                var spriteCenter = new Vector2(visualX, BattleLayout.GetPlayerSpriteCenter(player.BattleSlot).Y);
 
                 float targetOffset = (player == currentActor) ? 0f : INACTIVE_Y_OFFSET;
                 if (!_turnActiveOffsets.ContainsKey(player.CombatantID)) _turnActiveOffsets[player.CombatantID] = INACTIVE_Y_OFFSET;
@@ -1478,7 +1472,10 @@ namespace ProjectVagabond.Battle.UI
                         barX = spriteCenter.X - 16f;
                     }
 
-                    float barY = BattleLayout.PLAYER_BARS_TOP_Y + 4;
+                    // We now calculate barY in DrawHUD relative to sprite center, 
+                    // but we need to store something here for tooltips/indicators if needed.
+                    // Let's approximate it for now or rely on DrawHUD to overwrite it.
+                    float barY = spriteCenter.Y + 6;
 
                     float barBottomY = barY + 4;
                     _combatantBarBottomYs[player.CombatantID] = barBottomY;
