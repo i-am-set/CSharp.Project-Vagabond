@@ -336,12 +336,12 @@ namespace ProjectVagabond.Scenes
             if (!string.IsNullOrEmpty(currentLineText))
             {
                 // Draw Description (Left)
-                spriteBatch.DrawStringSnapped(font, currentLineText.ToUpper(), new Vector2(leftX, currentY), _global.Palette_Black);
+                spriteBatch.DrawStringSnapped(font, currentLineText.ToUpper(), new Vector2(leftX, currentY), _global.Palette_DarkShadow);
 
                 // Draw OK (Right) if ready
                 if (_isShowingOk)
                 {
-                    spriteBatch.DrawStringSnapped(font, okText, new Vector2(rightX, currentY), _global.Palette_Black);
+                    spriteBatch.DrawStringSnapped(font, okText, new Vector2(rightX, currentY), _global.Palette_DarkShadow);
                 }
             }
 
@@ -365,11 +365,11 @@ namespace ProjectVagabond.Scenes
                 var entry = _messageLog[i];
 
                 // Draw Description (Left)
-                spriteBatch.DrawStringSnapped(font, entry.Text.ToUpper(), new Vector2(leftX, logY), _global.Palette_Black);
+                spriteBatch.DrawStringSnapped(font, entry.Text.ToUpper(), new Vector2(leftX, logY), _global.Palette_DarkShadow);
 
                 // Draw OK (Right)
                 // Assuming all log entries are successes for now
-                spriteBatch.DrawStringSnapped(font, okText, new Vector2(rightX, logY), _global.Palette_Black);
+                spriteBatch.DrawStringSnapped(font, okText, new Vector2(rightX, logY), _global.Palette_DarkShadow);
             }
         }
     }
