@@ -324,7 +324,8 @@ namespace ProjectVagabond.Battle.UI
                 _hasBench = allCombatants.Any(c => c.IsPlayerControlled && !c.IsDefeated && c.BattleSlot >= 2);
                 if (_buttons.Count > 4) _buttons[4].IsEnabled = _hasBench;
 
-                _cancelButton = new Button(Rectangle.Empty, "CANCEL", font: tertiaryFont, enableHoverSway: false)
+                // CHANGED: Removed enableHoverSway: false to allow default Hop behavior
+                _cancelButton = new Button(Rectangle.Empty, "CANCEL", font: tertiaryFont)
                 {
                     CustomDefaultTextColor = global.Palette_Rust,
                     CustomHoverTextColor = global.ButtonHoverColor
@@ -641,18 +642,8 @@ namespace ProjectVagabond.Battle.UI
 
                 if (isLocked)
                 {
-                    var rect = _cancelButton.Bounds;
-                    var drawPos = new Vector2(rect.X, rect.Y + snappedOffsetY);
-
-                    var textSize = _cancelButton.Font.MeasureString(_cancelButton.Text);
-                    var textPos = new Vector2(
-                        drawPos.X + (rect.Width - textSize.Width) / 2f,
-                        drawPos.Y + (rect.Height - textSize.Height) / 2f
-                    );
-                    textPos = new Vector2(MathF.Round(textPos.X), MathF.Round(textPos.Y));
-
-                    Color textColor = _cancelButton.IsHovered ? global.ButtonHoverColor : global.Palette_Sun;
-                    spriteBatch.DrawStringSnapped(_cancelButton.Font, _cancelButton.Text, textPos, textColor);
+                    // Draw Cancel Button with potential lift
+                    _cancelButton.Draw(spriteBatch, _cancelButton.Font, gameTime, transform, false, 0f, snappedOffsetY);
                 }
                 else
                 {

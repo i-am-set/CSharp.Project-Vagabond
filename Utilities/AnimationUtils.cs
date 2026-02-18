@@ -40,8 +40,6 @@ namespace ProjectVagabond.Utils
         ScaleUp,        // Grows slightly (Standard UIAnimator)
         Wiggle,         // Rotates back and forth (Standard UIAnimator)
         Juicy,          // Balatro-style: Scale Up + Lift + Subtle Rotation
-
-        // --- Legacy / Button.cs Support ---
         Hop,            // A quick "hop" to the right and back.
         SlideAndHold,   // Slides to the right and holds the position until unhovered.
         Scale           // Scales up elastically (Legacy alias for ScaleUp).

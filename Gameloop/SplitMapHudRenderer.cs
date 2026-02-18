@@ -428,7 +428,7 @@ namespace ProjectVagabond.UI
 
             float currentStartY = BaseY + verticalOffset;
             float t = Math.Clamp(verticalOffset / 24f, 0f, 1f);
-            Color lineColor = Color.Lerp(_global.Palette_DarkShadow, _global.Palette_DarkestPale, t);
+            Color lineColor = Color.Lerp(_global.Palette_DarkPale, _global.Palette_DarkestPale, t);
 
             // Draw Background
             spriteBatch.Draw(_pixel, new Vector2(0, currentStartY), null, _global.Palette_Black, 0f, Vector2.Zero, new Vector2(Global.VIRTUAL_WIDTH, HUD_HEIGHT), SpriteEffects.None, 0f);

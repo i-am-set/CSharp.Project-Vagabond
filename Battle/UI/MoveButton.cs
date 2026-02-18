@@ -22,24 +22,20 @@ namespace ProjectVagabond.Battle.UI
 
         public bool CanAfford => true;
 
-        // --- Background Drawing Properties ---
         public Color BackgroundColor { get; set; } = Color.Transparent;
         public bool DrawSystemBackground { get; set; } = false;
 
         public int? VisualWidthOverride { get; set; }
 
-        // --- Icon Drawing Properties ---
         public Rectangle? ActionIconRect { get; set; }
         public Color ActionIconColor { get; set; } = Color.White;
         public Color ActionIconHoverColor { get; set; } = Color.White;
 
-        // UPDATED: Added IconRenderOffset to allow manual tweaking of icon position
         public Vector2 IconRenderOffset { get; set; } = Vector2.Zero;
 
         private bool _showManaWarning = false;
         public int? VisualHeightOverride { get; set; }
 
-        // Scrolling state
         private bool _isScrollingInitialized = false;
         private float _scrollPosition = 0f;
         private float _scrollWaitTimer = 0f;
@@ -126,7 +122,8 @@ namespace ProjectVagabond.Battle.UI
             bool canAfford = CanAfford;
             bool isActivated = IsEnabled && (IsHovered || forceHover);
 
-            _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated && canAfford);
+            // FIX: Pass inherited properties
+            _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated && canAfford, HoverLiftOffset, HoverLiftDuration);
             var (shakeOffset, flashTint) = UpdateFeedbackAnimations(gameTime);
 
             _currentHoverRotation *= 0.35f;
@@ -145,11 +142,8 @@ namespace ProjectVagabond.Battle.UI
             float effectiveWidth = VisualWidthOverride ?? Bounds.Width;
             float effectiveHeight = VisualHeightOverride ?? Bounds.Height;
 
-            // UPDATED: Only use stacked layout if height is sufficient AND we have an icon to display.
-            // This ensures text-only buttons (like GUARD) center their text vertically.
             bool isStackedLayout = effectiveHeight > 15 && ActionIconRect.HasValue;
 
-            // --- DRAW BACKGROUND ---
             if (DrawSystemBackground)
             {
                 Color bgColor = BackgroundColor;
@@ -159,7 +153,6 @@ namespace ProjectVagabond.Battle.UI
                 DrawRotatedBeveledBackground(spriteBatch, pixel, centerPos, (int)effectiveWidth, (int)effectiveHeight, bgColor, _currentHoverRotation, scaleVec);
             }
 
-            // --- DRAW ICON ---
             if (ActionIconRect.HasValue)
             {
                 var spriteManager = ServiceLocator.Get<SpriteManager>();
@@ -169,7 +162,6 @@ namespace ProjectVagabond.Battle.UI
 
                     if (isStackedLayout)
                     {
-                        // UPDATED: Added IconRenderOffset.Y to the base offset
                         float iconOffsetY = -5f + IconRenderOffset.Y;
                         float iconOffsetX = IconRenderOffset.X;
 
@@ -216,7 +208,6 @@ namespace ProjectVagabond.Battle.UI
                 }
             }
 
-            // --- DRAW TEXT ---
             Color textColor;
             if (!IsEnabled || !canAfford)
             {
@@ -299,7 +290,6 @@ namespace ProjectVagabond.Battle.UI
                 spriteBatch.DrawStringSnapped(font, Text, textDrawPos, textColor, _currentHoverRotation, textOrigin, finalScaleX, SpriteEffects.None, 0f);
             }
 
-            // --- STRIKETHROUGH ---
             if (!IsEnabled || !canAfford)
             {
                 Vector2 lineStartLocal = new Vector2(-textSize.X / 2f - 2, 0);

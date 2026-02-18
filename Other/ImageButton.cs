@@ -22,13 +22,11 @@ namespace ProjectVagabond.UI
         private bool _isHeldDown;
         public bool IsSelected { get; set; }
 
-        // Animation state
         private enum AnimationState { Hidden, Idle, Appearing }
         private AnimationState _animState = AnimationState.Idle;
         private float _appearTimer = 0f;
         private const float APPEAR_DURATION = 0.25f;
 
-        // Shake animation state
         private float _shakeTimer = 0f;
         private const float SHAKE_DURATION = 0.3f;
         private const float SHAKE_MAGNITUDE = 4f;
@@ -38,7 +36,7 @@ namespace ProjectVagabond.UI
             : base(bounds, "", function, null, null, null, false, 0.0f, enableHoverSway, font)
         {
             _spriteSheet = spriteSheet;
-            _defaultSourceRect = defaultSourceRect ?? spriteSheet?.Bounds; // If no default is given, use the whole sheet.
+            _defaultSourceRect = defaultSourceRect ?? spriteSheet?.Bounds;
             _hoverSourceRect = hoverSourceRect;
             _clickedSourceRect = clickedSourceRect;
             _disabledSourceRect = disabledSourceRect;
@@ -107,14 +105,13 @@ namespace ProjectVagabond.UI
             bool isActivated = IsEnabled && (IsHovered || forceHover);
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            // --- Update Base Animations (Hover Rotation) ---
             UpdateFeedbackAnimations(gameTime);
 
-            // --- Hover Animation ---
             float hoverYOffset = 0f;
             if (EnableHoverSway)
             {
-                hoverYOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
+                // FIX: Pass inherited properties
+                hoverYOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated, HoverLiftOffset, HoverLiftDuration);
 
                 if (UseScreenCoordinates)
                 {
@@ -123,10 +120,10 @@ namespace ProjectVagabond.UI
             }
             else
             {
-                _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
+                // FIX: Pass inherited properties
+                _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated, HoverLiftOffset, HoverLiftDuration);
             }
 
-            // --- Shake Animation ---
             float shakeOffset = 0f;
             if (_shakeTimer > 0)
             {
@@ -138,7 +135,6 @@ namespace ProjectVagabond.UI
 
             float totalHorizontalOffset = (horizontalOffset ?? 0f) + shakeOffset;
 
-            // --- Animation Scaling ---
             float scale = 1.0f;
             if (_animState == AnimationState.Appearing)
             {
@@ -153,13 +149,11 @@ namespace ProjectVagabond.UI
 
             if (scale < 0.01f) return;
 
-            // --- Calculate Draw Position (Center) ---
             Vector2 drawPosition = new Vector2(
                 Bounds.Center.X + totalHorizontalOffset,
                 Bounds.Center.Y + (verticalOffset ?? 0f) + hoverYOffset
             );
 
-            // --- Select Source Rectangle ---
             Rectangle? sourceRectToDraw = _defaultSourceRect;
             if (!IsEnabled && _disabledSourceRect.HasValue)
             {
@@ -178,25 +172,19 @@ namespace ProjectVagabond.UI
                 sourceRectToDraw = _hoverSourceRect;
             }
 
-            // --- Color Logic ---
             Color drawColor = tintColorOverride ?? Color.White;
             if (!IsEnabled && !_disabledSourceRect.HasValue)
             {
-                drawColor = _global.ButtonDisableColor; // Use global disable color
+                drawColor = _global.ButtonDisableColor;
             }
 
-            // --- Draw ---
             if (_spriteSheet != null && sourceRectToDraw.HasValue)
             {
-                // Use Vector2 position + Origin + Scale + Rotation for proper center-based drawing
                 Vector2 origin = new Vector2(sourceRectToDraw.Value.Width / 2f, sourceRectToDraw.Value.Height / 2f);
-
-                // Use base class rotation
                 spriteBatch.DrawSnapped(_spriteSheet, drawPosition, sourceRectToDraw, drawColor, _currentHoverRotation, origin, scale, SpriteEffects.None, 0f);
             }
             else if (DebugColor.HasValue)
             {
-                // Debug draw should still respect the logical bounds for hit testing visualization
                 spriteBatch.DrawSnapped(ServiceLocator.Get<Texture2D>(), Bounds, DebugColor.Value);
             }
         }

@@ -24,13 +24,11 @@ namespace ProjectVagabond.UI
         public bool DrawBorderOnHover { get; set; } = false;
         public Color? HoverBorderColor { get; set; }
 
-        // New properties for customization
         public bool TintIconOnHover { get; set; } = true;
-        public bool IconColorMatchesText { get; set; } = false; // New property to force icon color to match text
+        public bool IconColorMatchesText { get; set; } = false;
         public float ContentXOffset { get; set; } = 0f;
-        public Vector2 IconRenderOffset { get; set; } = Vector2.Zero; // New property for icon positioning
+        public Vector2 IconRenderOffset { get; set; } = Vector2.Zero;
 
-        // Animation State
         private enum AnimationState { Hidden, Idle, Appearing }
         private AnimationState _animState = AnimationState.Idle;
         private float _appearTimer = 0f;
@@ -80,7 +78,6 @@ namespace ProjectVagabond.UI
             var pixel = ServiceLocator.Get<Texture2D>();
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            // --- Animation Scaling ---
             float verticalScale = 1.0f;
             if (_animState == AnimationState.Appearing)
             {
@@ -94,29 +91,27 @@ namespace ProjectVagabond.UI
             }
             if (verticalScale < 0.01f) return;
 
-            // 1. Calculate animation offsets
             var (shakeOffset, flashTint) = UpdateFeedbackAnimations(gameTime);
 
             float yOffset = 0f;
             if (EnableHoverSway)
             {
-                yOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
+                // FIX: Pass inherited properties
+                yOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated, HoverLiftOffset, HoverLiftDuration);
             }
             else
             {
-                _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
+                // FIX: Pass inherited properties
+                _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated, HoverLiftOffset, HoverLiftDuration);
             }
 
-            // Calculate Center Position for Rotation
             float totalX = Bounds.Center.X + (horizontalOffset ?? 0f) + shakeOffset.X;
             float totalY = Bounds.Center.Y + (verticalOffset ?? 0f) + shakeOffset.Y + yOffset;
             Vector2 centerPos = new Vector2(totalX, totalY);
 
-            // Calculate Bounds Size (scaled vertically by appear anim)
             int width = Bounds.Width;
             int height = (int)(Bounds.Height * verticalScale);
 
-            // 2. Determine colors based on state
             Color backgroundTintColor;
             Color textColor;
             Color iconColor;
@@ -155,13 +150,11 @@ namespace ProjectVagabond.UI
                 }
             }
 
-            // Override icon color if requested to match text
             if (IconColorMatchesText)
             {
                 iconColor = textColor;
             }
 
-            // 3. Apply flash tint if active
             if (flashTint.HasValue)
             {
                 float flashAmount = flashTint.Value.A / 255f;
@@ -170,7 +163,6 @@ namespace ProjectVagabond.UI
                 iconColor = Color.Lerp(iconColor, flashTint.Value, flashAmount);
             }
 
-            // 4. Draw background with animation offset (if texture exists)
             if (_backgroundTexture != null)
             {
                 Rectangle source = new Rectangle(0, 0, _backgroundTexture.Width, _backgroundTexture.Height);
@@ -183,7 +175,6 @@ namespace ProjectVagabond.UI
                 spriteBatch.DrawSnapped(_backgroundTexture, centerPos, source, backgroundTintColor, _currentHoverRotation, texOrigin, texScale, SpriteEffects.None, 0f);
             }
 
-            // 4b. Draw Border if enabled and activated
             if (isActivated && DrawBorderOnHover)
             {
                 Color borderColor = HoverBorderColor ?? _global.Palette_Rust;
@@ -200,11 +191,9 @@ namespace ProjectVagabond.UI
                 spriteBatch.DrawSnapped(pixel, new Rectangle(animatedBounds.Right - 1, animatedBounds.Top, 1, animatedBounds.Height), borderColor);
             }
 
-            // Only draw contents if mostly visible
             if (verticalScale > 0.8f)
             {
-                // --- UPDATED LAYOUT LOGIC: CENTERED GROUP ---
-                const int iconPaddingLeft = 5; // Used only for AlignLeft mode
+                const int iconPaddingLeft = 5;
                 const int iconTextGap = 2;
 
                 bool hasIcon = IconTexture != null && IconSourceRect.HasValue;
@@ -224,16 +213,13 @@ namespace ProjectVagabond.UI
                     contentWidth = textWidth;
                 }
 
-                // Calculate Start X relative to Center (0,0)
                 float startX = 0f;
                 if (AlignLeft)
                 {
-                    // Start from left edge + padding + custom offset
                     startX = (-width / 2f) + iconPaddingLeft + ContentXOffset;
                 }
                 else
                 {
-                    // Center the entire content block + custom offset
                     startX = (-contentWidth / 2f) + ContentXOffset;
                 }
 
@@ -242,11 +228,9 @@ namespace ProjectVagabond.UI
 
                 if (hasIcon)
                 {
-                    // Icon center relative to button center
                     float iconCenterX = startX + (iconWidth / 2f);
                     iconOffset = new Vector2(iconCenterX, 0) + IconRenderOffset;
 
-                    // Text center relative to button center
                     float textCenterX = startX + iconWidth + iconTextGap + (textWidth / 2f);
                     textOffset = new Vector2(textCenterX, TextRenderOffset.Y);
                 }
@@ -256,7 +240,6 @@ namespace ProjectVagabond.UI
                     textOffset = new Vector2(textCenterX, TextRenderOffset.Y);
                 }
 
-                // --- ROTATION TRANSFORM HELPER ---
                 Vector2 RotateOffset(Vector2 local)
                 {
                     float cos = MathF.Cos(_currentHoverRotation);
@@ -267,7 +250,6 @@ namespace ProjectVagabond.UI
                     );
                 }
 
-                // 5. Draw Icon
                 if (hasIcon)
                 {
                     Vector2 iconDrawPos = centerPos + RotateOffset(iconOffset);
@@ -276,11 +258,9 @@ namespace ProjectVagabond.UI
                     spriteBatch.DrawSnapped(IconTexture, iconDrawPos, IconSourceRect.Value, iconColor, _currentHoverRotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
                 }
 
-                // 6. Draw Text
                 Vector2 textDrawPos = centerPos + RotateOffset(textOffset);
                 Vector2 textOrigin = textSize / 2f;
 
-                // --- Wave Animation Logic ---
                 if (EnableTextWave && isActivated)
                 {
                     _waveTimer += deltaTime;
@@ -298,10 +278,8 @@ namespace ProjectVagabond.UI
                     spriteBatch.DrawStringSnapped(font, Text, textDrawPos, textColor, _currentHoverRotation, textOrigin, 1.0f, SpriteEffects.None, 0f);
                 }
 
-                // --- Strikethrough Logic ---
                 if (!IsEnabled)
                 {
-                    // Rotate start/end points relative to text center
                     Vector2 lineStartLocal = textOffset + new Vector2(-textSize.X / 2f - 2, 0);
                     Vector2 lineEndLocal = textOffset + new Vector2(textSize.X / 2f + 2, 0);
 

@@ -95,7 +95,7 @@ namespace ProjectVagabond.Battle.UI
 
             // Initialize Targeting Back Button
             var tertiaryFont = _core.TertiaryFont;
-            _targetingBackButton = new Button(Rectangle.Empty, "BACK", font: tertiaryFont, enableHoverSway: false)
+            _targetingBackButton = new Button(Rectangle.Empty, "BACK", font: tertiaryFont)
             {
                 CustomDefaultTextColor = _global.GameTextColor,
                 CustomHoverTextColor = _global.ButtonHoverColor,

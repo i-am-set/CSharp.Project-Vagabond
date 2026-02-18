@@ -30,11 +30,9 @@ namespace ProjectVagabond.UI
         private readonly HoverAnimator _hoverAnimator = new HoverAnimator();
         public HoverAnimator HoverAnimator => _hoverAnimator;
 
-        // Animation State
         private float _waveTimer = 0f;
         private const TextEffectType ActiveEffect = TextEffectType.LeftAlignedSmallWave;
 
-        // --- Visual Tuning Constants ---
         private const float VALUE_AREA_X_OFFSET = 155f;
 
         public BoolSettingControl(string label, Func<bool> getter, Action<bool> onApply)
@@ -73,7 +71,6 @@ namespace ProjectVagabond.UI
             string leftArrowText = "<";
             string rightArrowText = ">";
 
-            // Use valueFont for measuring interactive elements
             Vector2 leftArrowSize = valueFont.MeasureString(leftArrowText);
             Vector2 rightArrowSize = valueFont.MeasureString(rightArrowText);
             int padding = 2;
@@ -142,20 +139,17 @@ namespace ProjectVagabond.UI
 
         public void Draw(SpriteBatch spriteBatch, BitmapFont labelFont, BitmapFont valueFont, Vector2 position, bool isSelected, GameTime gameTime)
         {
-            // Calculate Horizontal Offset (Left movement)
-            float xOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isSelected && IsEnabled);
+            // FIX: Pass Global tuning values
+            float xOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isSelected && IsEnabled, _global.UI_ButtonHoverLift, _global.UI_ButtonHoverDuration);
 
-            // Apply offset to X, keep Y static
             Vector2 animatedPosition = new Vector2(position.X + xOffset, position.Y);
 
             Color labelColor = isSelected && IsEnabled ? _global.ButtonHoverColor : (IsEnabled ? _global.GameTextColor : _global.ButtonDisableColor);
 
-            // --- Label Drawing (Using labelFont) ---
             if (isSelected && IsEnabled)
             {
                 _waveTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-                // Only reset timer if it's a one-shot effect like SmallWave
                 if (TextAnimator.IsOneShotEffect(ActiveEffect))
                 {
                     float duration = TextAnimator.GetSmallWaveDuration(Label.Length);
@@ -171,7 +165,6 @@ namespace ProjectVagabond.UI
             }
 
             const float valueDisplayWidth = Global.VALUE_DISPLAY_WIDTH;
-            // Value area moves with the label (using animatedPosition.X)
             Vector2 valueAreaPosition = new Vector2(animatedPosition.X + VALUE_AREA_X_OFFSET, animatedPosition.Y);
 
             string leftArrowText = "<";
@@ -182,12 +175,10 @@ namespace ProjectVagabond.UI
             Color leftArrowColor = IsEnabled ? (_isLeftArrowHovered ? _global.ButtonHoverColor : baseValueColor) : _global.ButtonDisableColor;
             Color rightArrowColor = IsEnabled ? (_isRightArrowHovered ? _global.ButtonHoverColor : baseValueColor) : _global.ButtonDisableColor;
 
-            // Use valueFont for measurements and drawing of values
             Vector2 leftArrowSize = valueFont.MeasureString(leftArrowText);
             Vector2 valueTextSize = valueFont.MeasureString(valueText);
             Vector2 rightArrowSize = valueFont.MeasureString(rightArrowText);
 
-            // Adjust Y position if fonts have different line heights to keep them baseline aligned
             float valueYOffset = (labelFont.LineHeight - valueFont.LineHeight) / 2f;
             Vector2 valueDrawPos = valueAreaPosition + new Vector2(0, valueYOffset);
 

@@ -37,7 +37,7 @@ namespace ProjectVagabond.UI
         public Vector2 TextRenderOffset { get; set; } = Vector2.Zero;
         public Color? DebugColor { get; set; }
 
-        public HoverAnimationType HoverAnimation { get; set; } = HoverAnimationType.Scale;
+        public HoverAnimationType HoverAnimation { get; set; } = HoverAnimationType.Hop;
         public bool EnableTextWave { get; set; } = true;
         public bool AlwaysAnimateText { get; set; } = false;
         public TextEffectType WaveEffectType { get; set; } = TextEffectType.SmallWave;
@@ -57,7 +57,14 @@ namespace ProjectVagabond.UI
         public bool HasMiddleClickAction => OnMiddleClick != null || HasMiddleClickHint;
 
         protected MouseState _previousMouseState;
+
         protected readonly HoverAnimator _hoverAnimator = new HoverAnimator();
+        public HoverAnimator HoverAnimator => _hoverAnimator;
+
+        // --- TUNABLE HOVER PROPERTIES ---
+        public float HoverLiftOffset { get; set; }
+        public float HoverLiftDuration { get; set; }
+
         protected bool _isPressed = false;
 
         private readonly Texture2D? _spriteSheet;
@@ -122,6 +129,9 @@ namespace ProjectVagabond.UI
             OverflowScrollSpeed = overflowScrollSpeed;
             EnableHoverSway = enableHoverSway;
             Font = font;
+
+            HoverLiftOffset = _global.UI_ButtonHoverLift;
+            HoverLiftDuration = _global.UI_ButtonHoverDuration;
         }
 
         public Button(Rectangle bounds, Texture2D? spriteSheet, Rectangle? defaultSourceRect, Rectangle? hoverSourceRect, Rectangle? clickedSourceRect, Rectangle? disabledSourceRect, string? function = null, bool enableHoverSway = true, Color? debugColor = null)
@@ -137,6 +147,9 @@ namespace ProjectVagabond.UI
             _clickedSourceRect = clickedSourceRect;
             _disabledSourceRect = disabledSourceRect;
             DebugColor = debugColor;
+
+            HoverLiftOffset = _global.UI_ButtonHoverLift;
+            HoverLiftDuration = _global.UI_ButtonHoverDuration;
         }
 
         public void PlayEntrance(float delay)
@@ -158,9 +171,6 @@ namespace ProjectVagabond.UI
 
         public virtual void Update(MouseState currentMouseState, Matrix? worldTransform = null)
         {
-            // If entering, disable interaction.
-            // The timer logic is now handled in UpdateFeedbackAnimations (called via Draw)
-            // because that is where we have access to GameTime.
             if (_isEntering)
             {
                 IsHovered = false;
@@ -278,7 +288,6 @@ namespace ProjectVagabond.UI
         {
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            // --- ENTRANCE ANIMATION LOGIC (Moved here to access GameTime) ---
             if (_isEntering)
             {
                 _entranceTimer += dt;
@@ -299,7 +308,6 @@ namespace ProjectVagabond.UI
                         _currentScale = 1.0f;
                     }
                 }
-                // Return early to prevent other animations from interfering during entrance
                 return (Vector2.Zero, null);
             }
 
@@ -415,7 +423,8 @@ namespace ProjectVagabond.UI
             {
                 if (HoverAnimation == HoverAnimationType.Hop)
                 {
-                    yHoverOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
+                    // FIX: Use correct property name HoverLiftOffset
+                    yHoverOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated, HoverLiftOffset, HoverLiftDuration);
                 }
                 else if (HoverAnimation == HoverAnimationType.SlideAndHold)
                 {

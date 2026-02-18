@@ -99,7 +99,6 @@ namespace ProjectVagabond.Scenes
             )
             {
                 TextRenderOffset = new Vector2(0, -1),
-                HoverAnimation = HoverAnimationType.SlideAndHold,
                 EnableTextWave = true,
                 AlwaysAnimateText = true,
                 WaveEffectType = TextEffectType.TypewriterPop
@@ -137,7 +136,6 @@ namespace ProjectVagabond.Scenes
             )
             {
                 TextRenderOffset = new Vector2(0, -1),
-                HoverAnimation = HoverAnimationType.SlideAndHold,
                 EnableTextWave = true,
                 AlwaysAnimateText = true,
                 WaveEffectType = TextEffectType.TypewriterPop
@@ -160,7 +158,6 @@ namespace ProjectVagabond.Scenes
             )
             {
                 TextRenderOffset = new Vector2(0, -1),
-                HoverAnimation = HoverAnimationType.SlideAndHold,
                 EnableTextWave = true,
                 AlwaysAnimateText = true,
                 WaveEffectType = TextEffectType.TypewriterPop
@@ -213,7 +210,8 @@ namespace ProjectVagabond.Scenes
                 int index = i;
                 animator.OnInComplete += () => {
                     _buttons[index].AlwaysAnimateText = false;
-                    _buttons[index].WaveEffectType = TextEffectType.Wave;
+                    // FIX: Set to SmallWave to match Game Over buttons exactly
+                    _buttons[index].WaveEffectType = TextEffectType.SmallWave;
                 };
 
                 animator.Show(delay: i * BUTTON_STAGGER_DELAY);
@@ -428,7 +426,9 @@ namespace ProjectVagabond.Scenes
 
                         float pressOffset = selectedButton.IsPressed ? 2f : 0f;
 
-                        var leftPos = new Vector2(bounds.Left - arrowSize.Width - 4 + pressOffset, bounds.Center.Y - arrowSize.Height / 2f + selectedButton.TextRenderOffset.Y);
+                        // FIX: Access the public property instead of the protected field
+                        float liftOffset = selectedButton.HoverAnimator.CurrentOffset;
+                        var leftPos = new Vector2(bounds.Left - arrowSize.Width - 4 + pressOffset, bounds.Center.Y - arrowSize.Height / 2f + selectedButton.TextRenderOffset.Y + liftOffset);
 
                         spriteBatch.DrawStringSnapped(fontToUse, leftArrow, leftPos, color);
                     }

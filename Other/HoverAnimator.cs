@@ -16,9 +16,6 @@ namespace ProjectVagabond.UI
         private float _startOffset;
         private float _targetOffset;
 
-        private const float LIFT_DISTANCE = -1f; // The maximum distance to lift up
-        private const float ANIMATION_DURATION = 0f; // How long the animation takes
-
         public float CurrentOffset { get; private set; }
 
         /// <summary>
@@ -39,14 +36,16 @@ namespace ProjectVagabond.UI
         /// </summary>
         /// <param name="gameTime">The current game time.</param>
         /// <param name="isActivated">Whether the animation should be active (e.g., the element is hovered).</param>
+        /// <param name="liftDistance">The total distance to move (usually negative for up).</param>
+        /// <param name="duration">The time in seconds to complete the move.</param>
         /// <returns>The calculated vertical offset for drawing.</returns>
-        public float UpdateAndGetOffset(GameTime gameTime, bool isActivated)
+        public float UpdateAndGetOffset(GameTime gameTime, bool isActivated, float liftDistance, float duration)
         {
             // If the duration is zero (or less), the animation is instant.
             // We can bypass all the timer and interpolation logic to "snap" to the target position.
-            if (ANIMATION_DURATION <= 0f)
+            if (duration <= 0f)
             {
-                CurrentOffset = isActivated ? LIFT_DISTANCE : 0f;
+                CurrentOffset = isActivated ? liftDistance : 0f;
                 _wasActivatedLastFrame = isActivated;
                 return CurrentOffset;
             }
@@ -59,7 +58,7 @@ namespace ProjectVagabond.UI
                 _isAnimating = true;
                 _animationTimer = 0f;
                 _startOffset = CurrentOffset;
-                _targetOffset = LIFT_DISTANCE;
+                _targetOffset = liftDistance;
             }
             else if (!isActivated && _wasActivatedLastFrame)
             {
@@ -72,7 +71,7 @@ namespace ProjectVagabond.UI
             if (_isAnimating)
             {
                 _animationTimer += deltaTime;
-                float progress = Math.Clamp(_animationTimer / ANIMATION_DURATION, 0f, 1f);
+                float progress = Math.Clamp(_animationTimer / duration, 0f, 1f);
                 float easedProgress = Easing.EaseOutCubic(progress);
 
                 CurrentOffset = MathHelper.Lerp(_startOffset, _targetOffset, easedProgress);

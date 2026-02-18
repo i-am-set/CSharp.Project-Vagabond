@@ -109,7 +109,7 @@ namespace ProjectVagabond.Battle.UI
                     label,
                     null,
                     font: secondaryFont,
-                    enableHoverSway: false,
+                    enableHoverSway: true,
                     iconTexture: null
                 )
                 {
@@ -137,8 +137,7 @@ namespace ProjectVagabond.Battle.UI
             _backButton = new Button(
                 new Rectangle(backX, currentY, backWidth, ACTION_BTN_HEIGHT),
                 "BACK",
-                font: tertiaryFont,
-                enableHoverSway: false
+                font: tertiaryFont
             )
             {
                 CustomDefaultTextColor = global.GameTextColor,
