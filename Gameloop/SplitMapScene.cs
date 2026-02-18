@@ -3,11 +3,14 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Particles;
 using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
 using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
-using ProjectVagabond.Particles;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -44,22 +47,23 @@ namespace ProjectVagabond.Scenes
         private int _cameraFocusNodeId;
         private readonly PlayerMapIcon _playerIcon;
 
-        private const float PLAYER_MOVE_SPEED = 30f;
+        // --- MOVEMENT TUNING ---
+        private const float PLAYER_MOVE_SPEED = 40f;
         private const float CAMERA_LERP_SPEED = 15f;
         private const float POST_EVENT_DELAY = 0.0f;
         private const float PATH_ANIMATION_DURATION = 0.6f;
 
-        private const float NODE_LIFT_DURATION = 0.1f;
-        private const float PULSE_DURATION = 0.1f;
-        private const float NODE_LOWERING_DURATION = 0.1f;
-        private const float NODE_LIFT_AMOUNT = 4f;
+        // --- NODE ANIMATION TUNING (UPDATED) ---
+        private const float NODE_LIFT_DURATION = 0.4f;      // Slower lift
+        private const float PULSE_DURATION = 0.3f;          // Distinct pause/pulse
+        private const float NODE_LOWERING_DURATION = 0.4f;  // Bouncy landing
+        private const float NODE_LIFT_AMOUNT = 8f;          // Higher lift for visibility
 
         private Vector2 _cameraOffset;
         private Vector2 _targetCameraOffset;
 
         // --- Dynamic Viewport State ---
         private float _hudSlideOffset = 0f;
-        // CHANGED: Updated to 22f
         private const float HUD_SLIDE_DISTANCE = 24f;
         private const float HUD_SLIDE_SPEED = 5f;
         private const float BASE_CAMERA_Y = -50f;
@@ -68,6 +72,7 @@ namespace ProjectVagabond.Scenes
         private float _playerMoveDuration;
         private int _playerMoveTargetNodeId;
         private SplitMapPath? _playerMovePath;
+        private float _playerPathTotalLength = 0f; // Cache for vector movement
 
         private int _hoveredNodeId = -1;
         private int _lastHoveredNodeId = -1;
@@ -84,7 +89,7 @@ namespace ProjectVagabond.Scenes
         private const float PATH_EXCLUSION_RADIUS = 10f;
 
         private float _pulseTimer = 0f;
-        private const float PULSE_AMOUNT = 0.3f;
+        private const float PULSE_AMOUNT = 0.2f; // Reduced from 0.3f for subtlety
 
         private bool _wasModalActiveLastFrame = false;
 
@@ -299,13 +304,17 @@ namespace ProjectVagabond.Scenes
             _playerMovePath = _currentMap.Paths.Values.FirstOrDefault(p => p.FromNodeId == _playerCurrentNodeId && p.ToNodeId == targetNodeId);
             if (_playerMovePath == null) return;
 
-            float pathLength = 0f;
-            if (_playerMovePath.PixelPoints.Count > 1)
+            // Calculate length based on Vector RenderPoints
+            _playerPathTotalLength = 0f;
+            if (_playerMovePath.RenderPoints.Count > 1)
             {
-                for (int i = 0; i < _playerMovePath.PixelPoints.Count - 1; i++)
-                    pathLength += Vector2.Distance(_playerMovePath.PixelPoints[i].ToVector2(), _playerMovePath.PixelPoints[i + 1].ToVector2());
+                for (int i = 0; i < _playerMovePath.RenderPoints.Count - 1; i++)
+                {
+                    _playerPathTotalLength += Vector2.Distance(_playerMovePath.RenderPoints[i], _playerMovePath.RenderPoints[i + 1]);
+                }
             }
-            _playerMoveDuration = (pathLength > 0) ? pathLength / PLAYER_MOVE_SPEED : 0f;
+
+            _playerMoveDuration = (_playerPathTotalLength > 0) ? _playerPathTotalLength / PLAYER_MOVE_SPEED : 0f;
             _mapState = SplitMapState.PlayerMoving;
             _playerIcon.SetIsMoving(true);
             _playerMoveTimer = 0f;
@@ -541,15 +550,46 @@ namespace ProjectVagabond.Scenes
         private void UpdatePlayerMove(float deltaTime)
         {
             _playerMoveTimer += deltaTime;
-            float progress = _playerMoveDuration > 0 ? Math.Clamp(_playerMoveTimer / _playerMoveDuration, 0f, 1f) : 1f;
 
-            if (_playerMovePath != null && _playerMovePath.PixelPoints.Any())
+            // 1. Calculate Linear Progress (0 to 1)
+            float linearProgress = _playerMoveDuration > 0 ? Math.Clamp(_playerMoveTimer / _playerMoveDuration, 0f, 1f) : 1f;
+
+            // 2. Apply Easing (Smooth Start/Stop)
+            float easedProgress = Easing.EaseInOutCubic(linearProgress);
+
+            // 3. Interpolate along the vector path
+            if (_playerMovePath != null && _playerMovePath.RenderPoints.Count > 1)
             {
-                int targetIndex = (int)Math.Clamp(progress * (_playerMovePath.PixelPoints.Count - 1), 0, _playerMovePath.PixelPoints.Count - 1);
-                _playerIcon.SetPosition(_playerMovePath.PixelPoints[targetIndex].ToVector2());
+                float targetDistance = easedProgress * _playerPathTotalLength;
+                float currentDist = 0f;
+
+                for (int i = 0; i < _playerMovePath.RenderPoints.Count - 1; i++)
+                {
+                    Vector2 p1 = _playerMovePath.RenderPoints[i];
+                    Vector2 p2 = _playerMovePath.RenderPoints[i + 1];
+                    float segmentLength = Vector2.Distance(p1, p2);
+
+                    if (currentDist + segmentLength >= targetDistance)
+                    {
+                        // We are inside this segment
+                        float remaining = targetDistance - currentDist;
+                        float t = remaining / segmentLength;
+                        Vector2 pos = Vector2.Lerp(p1, p2, t);
+                        _playerIcon.SetPosition(pos);
+                        break;
+                    }
+
+                    currentDist += segmentLength;
+
+                    // Snap to end if we overshoot slightly due to float precision
+                    if (i == _playerMovePath.RenderPoints.Count - 2)
+                    {
+                        _playerIcon.SetPosition(p2);
+                    }
+                }
             }
 
-            if (progress >= 1f)
+            if (linearProgress >= 1f)
             {
                 _playerIcon.SetIsMoving(false);
                 if (_playerMovePath != null) _traversedPathIds.Add(_playerMovePath.Id);
@@ -570,10 +610,12 @@ namespace ProjectVagabond.Scenes
             if (currentNode != null)
             {
                 float progress = Math.Clamp(_nodeLiftTimer / NODE_LIFT_DURATION, 0f, 1f);
-                float eased = Easing.EaseOutBack(progress);
+                float eased = Easing.EaseOutCubic(progress);
                 currentNode.VisualOffset = new Vector2(0, MathHelper.Lerp(0, -NODE_LIFT_AMOUNT, eased));
+
+                // Subtle stretch: sin(0..pi) -> 0..1..0
                 float stretch = MathF.Sin(progress * MathHelper.Pi);
-                _nodeArrivalScale = new Vector2(1.0f - (stretch * 0.2f), 1.0f + (stretch * 0.2f));
+                _nodeArrivalScale = new Vector2(1.0f - (stretch * 0.15f), 1.0f + (stretch * 0.15f));
             }
             if (_nodeLiftTimer >= NODE_LIFT_DURATION)
             {
@@ -587,10 +629,12 @@ namespace ProjectVagabond.Scenes
         {
             _pulseTimer += deltaTime;
             float progress = Math.Clamp(_pulseTimer / PULSE_DURATION, 0f, 1f);
+
+            // Smooth pulse up and down
             float pulse = MathF.Sin(progress * MathHelper.Pi);
-            float scaleAmount = 0.3f;
-            _nodeArrivalScale = new Vector2(1.0f + (pulse * scaleAmount));
+            _nodeArrivalScale = new Vector2(1.0f + (pulse * PULSE_AMOUNT));
             _nodeArrivalShake = Vector2.Zero;
+
             if (_pulseTimer >= PULSE_DURATION)
             {
                 _mapState = SplitMapState.EventInProgress;
@@ -609,11 +653,13 @@ namespace ProjectVagabond.Scenes
                 float progress = Math.Clamp(_nodeLiftTimer / NODE_LOWERING_DURATION, 0f, 1f);
                 float eased = Easing.EaseOutBounce(progress);
                 currentNode.VisualOffset = new Vector2(0, MathHelper.Lerp(-NODE_LIFT_AMOUNT, 0, eased));
+
+                // Slight squash on impact
                 if (progress > 0.8f)
                 {
                     float squashProgress = (progress - 0.8f) / 0.2f;
                     float squash = MathF.Sin(squashProgress * MathHelper.Pi);
-                    _nodeArrivalScale = new Vector2(1.0f + (squash * 0.15f), 1.0f - (squash * 0.15f));
+                    _nodeArrivalScale = new Vector2(1.0f + (squash * 0.1f), 1.0f - (squash * 0.1f));
                 }
                 else _nodeArrivalScale = Vector2.One;
             }
@@ -908,9 +954,8 @@ namespace ProjectVagabond.Scenes
             if (node.IsReachable && (isHovered || isSelected || isAnimatingThisNode)) color = _global.ButtonHoverColor;
             if (_mapState == SplitMapState.PulsingNode && node.Id == _playerCurrentNodeId)
             {
-                float pulseProgress = Math.Clamp(_pulseTimer / PULSE_DURATION, 0f, 1f);
-                float pulseWave = MathF.Sin(pulseProgress * MathF.PI);
-                scale += pulseWave * PULSE_AMOUNT;
+                // Use the calculated scale from UpdatePulsingNode
+                scale *= _nodeArrivalScale.X;
             }
 
             float hoverT = _nodeHoverTimers.ContainsKey(node.Id) ? _nodeHoverTimers[node.Id] : 0f;
