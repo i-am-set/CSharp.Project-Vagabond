@@ -29,7 +29,9 @@ namespace ProjectVagabond.Scenes
         private const float MULTI_HIT_DELAY = 0.2f;
         private const float ACTION_EXECUTION_DELAY = 0.0f;
         private const int ENEMY_SLOT_Y_OFFSET = 12;
-        private const float BATTLE_ENTRY_INITIAL_DELAY = 0.0f;
+
+        // CHANGED: Delay before fade-in starts
+        private const float BATTLE_ENTRY_INITIAL_DELAY = 0.1f;
 
         private BattleManager _battleManager;
         private BattleUIManager _uiManager;
@@ -80,12 +82,9 @@ namespace ProjectVagabond.Scenes
         private BattleCombatant _switchOutgoing;
         private BattleCombatant _switchIncoming;
 
-        private enum IntroPhase { EnemyDrop, PlayerRise }
-        private IntroPhase _currentIntroPhase;
-        private Queue<BattleCombatant> _introSequenceQueue = new Queue<BattleCombatant>();
+        // CHANGED: Removed complex IntroPhase enum and queue
         private float _introTimer = 0f;
-        private const float INTRO_STAGGER_DELAY = 0.3f;
-        private const float INTRO_SLIDE_DISTANCE = 150f;
+        private bool _hasTriggeredIntroFade = false;
 
         private float _uiSlideTimer = 0f;
         private const float UI_SLIDE_DURATION = 0.5f;
@@ -206,13 +205,10 @@ namespace ProjectVagabond.Scenes
 
             if (_battleManager != null)
             {
-                _currentIntroPhase = IntroPhase.EnemyDrop;
-                _introSequenceQueue.Clear();
+                // CHANGED: Simplified Intro Setup
                 _introTimer = BATTLE_ENTRY_INITIAL_DELAY;
+                _hasTriggeredIntroFade = false;
                 _uiSlideTimer = 0f;
-
-                var players = _battleManager.AllCombatants.Where(c => c.IsPlayerControlled && c.IsActiveOnField).ToList();
-                foreach (var p in players) p.VisualAlpha = 0f;
 
                 _uiManager.IntroOffset = Vector2.Zero;
 
@@ -223,18 +219,14 @@ namespace ProjectVagabond.Scenes
                     _uiManager.HideButtonsForEntrance();
                 }
 
-                var enemies = _battleManager.AllCombatants.Where(c => !c.IsPlayerControlled && c.IsActiveOnField).OrderBy(c => c.BattleSlot).ToList();
-                foreach (var e in enemies)
-                {
-                    _introSequenceQueue.Enqueue(e);
-                    e.VisualAlpha = 0f;
-                }
-
-                _animationManager.StartFloorIntroAnimation("floor_0");
-                _animationManager.StartFloorIntroAnimation("floor_1");
-
+                // Set everyone to invisible initially
                 foreach (var combatant in _battleManager.AllCombatants)
                 {
+                    if (combatant.IsActiveOnField)
+                    {
+                        combatant.VisualAlpha = 0f;
+                    }
+
                     if (combatant.IsPlayerControlled) combatant.VisualHP = combatant.Stats.CurrentHP;
                     combatant.HudVisualAlpha = 0f;
                 }
@@ -406,31 +398,35 @@ namespace ProjectVagabond.Scenes
             {
                 if (_transitionManager.IsTransitioning) return;
 
-                if (_currentIntroPhase == IntroPhase.EnemyDrop)
+                // CHANGED: Unified Fade Logic
+                if (!_hasTriggeredIntroFade)
                 {
                     _introTimer -= dt;
                     if (_introTimer <= 0)
                     {
-                        if (_introSequenceQueue.Count > 0)
+                        // Trigger Fade In for everyone
+                        foreach (var c in _battleManager.AllCombatants)
                         {
-                            var nextCombatant = _introSequenceQueue.Dequeue();
-                            _animationManager.StartIntroSlideAnimation(nextCombatant.CombatantID, new Vector2(0, -INTRO_SLIDE_DISTANCE), true);
-                            _introTimer = INTRO_STAGGER_DELAY;
+                            if (c.IsActiveOnField)
+                            {
+                                _animationManager.StartIntroFadeAnimation(c.CombatantID);
+                            }
                         }
-                        else if (_introTimer <= -0.5f)
-                        {
-                            _currentIntroPhase = IntroPhase.PlayerRise;
-                            StartPlayerIntro();
-                        }
+
+                        // Trigger Floor Fades
+                        _animationManager.StartFloorIntroAnimation("floor_0");
+                        _animationManager.StartFloorIntroAnimation("floor_1");
+
+                        _hasTriggeredIntroFade = true;
+                        _introTimer = 0.5f; // Wait for fade duration (approx)
                     }
                 }
-                else if (_currentIntroPhase == IntroPhase.PlayerRise)
+                else
                 {
-                    _uiSlideTimer += dt;
-                    float progress = Math.Clamp(_uiSlideTimer / UI_SLIDE_DURATION, 0f, 1f);
-
-                    if (progress >= 1.0f)
+                    _introTimer -= dt;
+                    if (_introTimer <= 0)
                     {
+                        // Intro Complete
                         _battleManager.TriggerBattleStartEvents();
                         _roundAnimState = RoundAnimState.Pop;
                         _roundAnimTimer = 0f;
@@ -473,12 +469,12 @@ namespace ProjectVagabond.Scenes
                     {
                         _battleManager.PerformLogicalSwitch(_switchOutgoing, _switchIncoming);
                         _switchSequenceState = SwitchSequenceState.AnimatingIn;
-                        bool isEnemy = !_switchIncoming.IsPlayerControlled;
-                        float duration = BattleAnimationManager.IntroSlideAnimationState.SLIDE_DURATION;
-                        if (isEnemy) duration += BattleAnimationManager.IntroSlideAnimationState.WAIT_DURATION + BattleAnimationManager.IntroSlideAnimationState.REVEAL_DURATION;
+
+                        // CHANGED: Switch uses fade logic now too
+                        float duration = BattleAnimationManager.IntroFadeAnimationState.FADE_DURATION;
                         _switchSequenceTimer = duration;
-                        Vector2 offset = isEnemy ? new Vector2(0, -INTRO_SLIDE_DISTANCE) : new Vector2(0, INTRO_SLIDE_DISTANCE);
-                        _animationManager.StartIntroSlideAnimation(_switchIncoming.CombatantID, offset, isEnemy);
+                        _animationManager.StartIntroFadeAnimation(_switchIncoming.CombatantID);
+
                         EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{_switchIncoming.Name} steps in!" });
                     }
                 }
@@ -763,13 +759,6 @@ namespace ProjectVagabond.Scenes
             }
 
             base.Update(gameTime);
-        }
-
-        private void StartPlayerIntro()
-        {
-            var players = _battleManager.AllCombatants.Where(c => c.IsPlayerControlled && c.IsActiveOnField).ToList();
-            foreach (var p in players) _animationManager.StartIntroSlideAnimation(p.CombatantID, new Vector2(0, INTRO_SLIDE_DISTANCE), false);
-            _uiSlideTimer = 0f;
         }
 
         private void TriggerVictoryRestoration()
@@ -1314,9 +1303,9 @@ namespace ProjectVagabond.Scenes
         private void OnCombatantSpawned(GameEvents.CombatantSpawned e)
         {
             if (_switchSequenceState != SwitchSequenceState.None) return;
-            bool isEnemy = !e.Combatant.IsPlayerControlled;
-            Vector2 offset = isEnemy ? new Vector2(0, -INTRO_SLIDE_DISTANCE) : new Vector2(0, INTRO_SLIDE_DISTANCE);
-            _animationManager.StartIntroSlideAnimation(e.Combatant.CombatantID, offset, isEnemy);
+
+            // CHANGED: Spawn uses fade logic
+            _animationManager.StartIntroFadeAnimation(e.Combatant.CombatantID);
         }
 
         private void OnCombatantSwitchingOut(GameEvents.CombatantSwitchingOut e)

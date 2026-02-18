@@ -90,32 +90,21 @@ namespace ProjectVagabond.Battle.UI
         }
         private readonly List<AttackChargeAnimationState> _activeAttackCharges = new List<AttackChargeAnimationState>();
 
-        public class IntroSlideAnimationState
+        public class IntroFadeAnimationState
         {
             public string CombatantID;
-            public bool IsEnemy;
-
-            public enum Phase { Sliding, Waiting, Revealing }
-            public Phase CurrentPhase;
-
-            public float SlideTimer;
-            public float WaitTimer;
-            public float RevealTimer;
-
-            public Vector2 StartOffset;
-            public Vector2 CurrentOffset;
-
-            public const float SLIDE_DURATION = 0.3f;
-            public const float WAIT_DURATION = 0.25f;
-            public const float REVEAL_DURATION = 0.3f;
+            public float Timer;
+            // CHANGED: Increased to 1.5s (3x longer)
+            public const float FADE_DURATION = 1.5f;
         }
-        private readonly List<IntroSlideAnimationState> _activeIntroSlideAnimations = new List<IntroSlideAnimationState>();
+        private readonly List<IntroFadeAnimationState> _activeIntroFadeAnimations = new List<IntroFadeAnimationState>();
 
         public class FloorIntroAnimationState
         {
             public string ID;
             public float Timer;
-            public const float DURATION = 0.3f;
+            // CHANGED: Increased to 1.5s
+            public const float DURATION = 1.5f;
         }
         private readonly List<FloorIntroAnimationState> _activeFloorIntroAnimations = new List<FloorIntroAnimationState>();
 
@@ -319,7 +308,7 @@ namespace ProjectVagabond.Battle.UI
             _activeSpawnAnimations.Any() ||
             _activeSwitchOutAnimations.Any() ||
             _activeSwitchInAnimations.Any() ||
-            _activeIntroSlideAnimations.Any() ||
+            _activeIntroFadeAnimations.Any() ||
             _activeFloorIntroAnimations.Any() ||
             _activeFloorOutroAnimations.Any(a => a.Timer < FloorOutroAnimationState.DURATION) ||
             _activeAttackCharges.Any();
@@ -358,7 +347,7 @@ namespace ProjectVagabond.Battle.UI
             _activeBarAnimations.Clear();
             _pendingTextIndicators.Clear();
             _activeHitstopVisuals.Clear();
-            _activeIntroSlideAnimations.Clear();
+            _activeIntroFadeAnimations.Clear();
             _activeFloorIntroAnimations.Clear();
             _activeFloorOutroAnimations.Clear();
             _activeAttackCharges.Clear();
@@ -392,7 +381,7 @@ namespace ProjectVagabond.Battle.UI
             }
             _activeAlphaAnimations.Clear();
 
-            foreach (var anim in _activeIntroSlideAnimations)
+            foreach (var anim in _activeIntroFadeAnimations)
             {
                 var combatant = combatants.FirstOrDefault(c => c.CombatantID == anim.CombatantID);
                 if (combatant != null)
@@ -400,7 +389,7 @@ namespace ProjectVagabond.Battle.UI
                     combatant.VisualAlpha = 1.0f;
                 }
             }
-            _activeIntroSlideAnimations.Clear();
+            _activeIntroFadeAnimations.Clear();
             _activeSwitchInAnimations.Clear();
             _activeSwitchOutAnimations.Clear();
             _activeFloorIntroAnimations.Clear();
@@ -580,25 +569,19 @@ namespace ProjectVagabond.Battle.UI
             });
         }
 
-        public void StartIntroSlideAnimation(string combatantId, Vector2 startOffset, bool isEnemy)
+        public void StartIntroFadeAnimation(string combatantId)
         {
-            _activeIntroSlideAnimations.RemoveAll(a => a.CombatantID == combatantId);
-            _activeIntroSlideAnimations.Add(new IntroSlideAnimationState
+            _activeIntroFadeAnimations.RemoveAll(a => a.CombatantID == combatantId);
+            _activeIntroFadeAnimations.Add(new IntroFadeAnimationState
             {
                 CombatantID = combatantId,
-                IsEnemy = isEnemy,
-                CurrentPhase = IntroSlideAnimationState.Phase.Sliding,
-                SlideTimer = 0f,
-                WaitTimer = 0f,
-                RevealTimer = 0f,
-                StartOffset = startOffset,
-                CurrentOffset = startOffset
+                Timer = 0f
             });
         }
 
-        public IntroSlideAnimationState GetIntroSlideAnimationState(string combatantId)
+        public IntroFadeAnimationState GetIntroFadeAnimationState(string combatantId)
         {
-            return _activeIntroSlideAnimations.FirstOrDefault(a => a.CombatantID == combatantId);
+            return _activeIntroFadeAnimations.FirstOrDefault(a => a.CombatantID == combatantId);
         }
 
         public void StartFloorIntroAnimation(string id)
@@ -958,7 +941,7 @@ namespace ProjectVagabond.Battle.UI
             UpdateAlphaAnimations(gameTime, combatants);
             UpdateDeathAnimations(gameTime, combatants);
             UpdateSpawnAnimations(gameTime, combatants);
-            UpdateIntroSlideAnimations(gameTime, combatants);
+            UpdateIntroFadeAnimations(gameTime, combatants);
             UpdateFloorIntroAnimations(gameTime);
             UpdateFloorOutroAnimations(gameTime);
             UpdateSwitchAnimations(gameTime, combatants);
@@ -1319,65 +1302,28 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private void UpdateIntroSlideAnimations(GameTime gameTime, IEnumerable<BattleCombatant> combatants)
+        // CHANGED: Simplified to just fade alpha, and DO NOT remove when finished to prevent snap-back
+        private void UpdateIntroFadeAnimations(GameTime gameTime, IEnumerable<BattleCombatant> combatants)
         {
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
-            for (int i = _activeIntroSlideAnimations.Count - 1; i >= 0; i--)
+            for (int i = _activeIntroFadeAnimations.Count - 1; i >= 0; i--)
             {
-                var anim = _activeIntroSlideAnimations[i];
+                var anim = _activeIntroFadeAnimations[i];
                 var combatant = combatants.FirstOrDefault(c => c.CombatantID == anim.CombatantID);
                 if (combatant == null)
                 {
-                    _activeIntroSlideAnimations.RemoveAt(i);
+                    _activeIntroFadeAnimations.RemoveAt(i);
                     continue;
                 }
 
-                if (!anim.IsEnemy)
-                {
-                    anim.SlideTimer += deltaTime;
-                    float progress = Math.Clamp(anim.SlideTimer / IntroSlideAnimationState.SLIDE_DURATION, 0f, 1f);
-                    float easedProgress = Easing.EaseOutCubic(progress);
-                    anim.CurrentOffset = Vector2.Lerp(anim.StartOffset, Vector2.Zero, easedProgress);
-                    combatant.VisualAlpha = easedProgress;
+                anim.Timer += deltaTime;
+                float progress = Math.Clamp(anim.Timer / IntroFadeAnimationState.FADE_DURATION, 0f, 1f);
+                float easedProgress = Easing.EaseOutQuad(progress);
 
-                    if (progress >= 1.0f)
-                    {
-                        combatant.VisualAlpha = 1.0f;
-                        _activeIntroSlideAnimations.RemoveAt(i);
-                    }
-                }
-                else
-                {
-                    switch (anim.CurrentPhase)
-                    {
-                        case IntroSlideAnimationState.Phase.Sliding:
-                            anim.SlideTimer += deltaTime;
-                            float slideProgress = Math.Clamp(anim.SlideTimer / IntroSlideAnimationState.SLIDE_DURATION, 0f, 1f);
-                            float easedSlide = Easing.EaseOutCubic(slideProgress);
-                            anim.CurrentOffset = Vector2.Lerp(anim.StartOffset, Vector2.Zero, easedSlide);
-                            combatant.VisualAlpha = easedSlide;
-                            if (slideProgress >= 1.0f)
-                            {
-                                anim.CurrentPhase = IntroSlideAnimationState.Phase.Waiting;
-                            }
-                            break;
-                        case IntroSlideAnimationState.Phase.Waiting:
-                            anim.WaitTimer += deltaTime;
-                            if (anim.WaitTimer >= IntroSlideAnimationState.WAIT_DURATION)
-                            {
-                                anim.CurrentPhase = IntroSlideAnimationState.Phase.Revealing;
-                            }
-                            break;
-                        case IntroSlideAnimationState.Phase.Revealing:
-                            anim.RevealTimer += deltaTime;
-                            float revealProgress = Math.Clamp(anim.RevealTimer / IntroSlideAnimationState.REVEAL_DURATION, 0f, 1f);
-                            if (revealProgress >= 1.0f)
-                            {
-                                _activeIntroSlideAnimations.RemoveAt(i);
-                            }
-                            break;
-                    }
-                }
+                combatant.VisualAlpha = easedProgress;
+
+                // NOTE: We do NOT remove the animation here. We let it persist at 1.0f 
+                // until the phase changes or Reset() is called.
             }
         }
 
@@ -1388,10 +1334,9 @@ namespace ProjectVagabond.Battle.UI
             {
                 var anim = _activeFloorIntroAnimations[i];
                 anim.Timer += deltaTime;
-                if (anim.Timer >= FloorIntroAnimationState.DURATION)
-                {
-                    _activeFloorIntroAnimations.RemoveAt(i);
-                }
+
+                // NOTE: We do NOT remove the animation here. We let it persist at 1.0f 
+                // until the phase changes or Reset() is called.
             }
         }
 

@@ -37,12 +37,13 @@ namespace ProjectVagabond.Battle.UI
             _core = ServiceLocator.Get<Core>();
         }
 
-        public void DrawFloor(SpriteBatch spriteBatch, Vector2 slotCenter, float groundY, float scale = 1.0f)
+        // CHANGED: Added alpha parameter
+        public void DrawFloor(SpriteBatch spriteBatch, Vector2 slotCenter, float groundY, float scale = 1.0f, float alpha = 1.0f)
         {
-            if (_spriteManager.BattleEnemyFloorSprite != null && scale > 0.01f)
+            if (_spriteManager.BattleEnemyFloorSprite != null && scale > 0.01f && alpha > 0.01f)
             {
                 Vector2 floorOrigin = new Vector2(_spriteManager.BattleEnemyFloorSprite.Width / 2f, _spriteManager.BattleEnemyFloorSprite.Height / 2f);
-                spriteBatch.DrawSnapped(_spriteManager.BattleEnemyFloorSprite, new Vector2(slotCenter.X, groundY), null, Color.White, 0f, floorOrigin, scale, SpriteEffects.None, 0f);
+                spriteBatch.DrawSnapped(_spriteManager.BattleEnemyFloorSprite, new Vector2(slotCenter.X, groundY), null, Color.White * alpha, 0f, floorOrigin, scale, SpriteEffects.None, 0f);
             }
         }
 

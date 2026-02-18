@@ -901,11 +901,16 @@ namespace ProjectVagabond.Battle.UI
                     int size = (occupant != null && _spriteManager.IsMajorEnemySprite(occupant.ArchetypeId)) ? BattleLayout.ENEMY_SPRITE_SIZE_MAJOR : BattleLayout.ENEMY_SPRITE_SIZE_NORMAL;
 
                     float floorScale = 1.0f;
+
+                    // CHANGED: Default floor alpha logic to prevent flash
+                    float floorAlpha = (ServiceLocator.Get<BattleManager>().CurrentPhase == BattleManager.BattlePhase.BattleStartIntro) ? 0f : 1.0f;
+
                     var outroAnim = animManager.GetFloorOutroAnimationState("floor_" + i);
                     if (outroAnim != null)
                     {
                         float progress = Math.Clamp(outroAnim.Timer / BattleAnimationManager.FloorOutroAnimationState.DURATION, 0f, 1f);
                         floorScale = 1.0f - Easing.EaseInBack(progress);
+                        floorAlpha = 1.0f; // Ensure visible during outro
                     }
                     else
                     {
@@ -913,11 +918,11 @@ namespace ProjectVagabond.Battle.UI
                         if (floorAnim != null)
                         {
                             float progress = Math.Clamp(floorAnim.Timer / BattleAnimationManager.FloorIntroAnimationState.DURATION, 0f, 1f);
-                            floorScale = Easing.EaseOutBack(progress);
+                            floorAlpha = Easing.EaseOutQuad(progress);
                         }
                     }
 
-                    _vfxRenderer.DrawFloor(spriteBatch, center, center.Y + size + BattleLayout.ENEMY_SLOT_Y_OFFSET - 4, floorScale);
+                    _vfxRenderer.DrawFloor(spriteBatch, center, center.Y + size + BattleLayout.ENEMY_SLOT_Y_OFFSET - 4, floorScale, floorAlpha);
                 }
             }
 
@@ -985,7 +990,7 @@ namespace ProjectVagabond.Battle.UI
                     var healFlash = animManager.GetHealFlashAnimationState(enemy.CombatantID);
                     var hitFlash = animManager.GetHitFlashState(enemy.CombatantID);
                     var healBounce = animManager.GetHealBounceAnimationState(enemy.CombatantID);
-                    var introSlide = animManager.GetIntroSlideAnimationState(enemy.CombatantID);
+                    var introFade = animManager.GetIntroFadeAnimationState(enemy.CombatantID);
                     var attackCharge = animManager.GetAttackChargeState(enemy.CombatantID);
 
                     float spawnY = 0f;
@@ -995,7 +1000,7 @@ namespace ProjectVagabond.Battle.UI
                     Vector2 chargeOffset = Vector2.Zero;
                     Vector2 chargeScale = Vector2.One;
 
-                    if (isSilhouetted && spawnAnim == null && switchOut == null && switchIn == null && introSlide == null)
+                    if (isSilhouetted && spawnAnim == null && switchOut == null && switchIn == null && introFade == null)
                     {
                         silhouetteAmt = 1.0f;
                     }
@@ -1006,29 +1011,9 @@ namespace ProjectVagabond.Battle.UI
                         chargeScale = attackCharge.Scale;
                     }
 
-                    if (introSlide != null)
+                    if (introFade != null)
                     {
-                        slideOffset = introSlide.CurrentOffset;
-
-                        if (introSlide.IsEnemy)
-                        {
-                            if (introSlide.CurrentPhase == BattleAnimationManager.IntroSlideAnimationState.Phase.Sliding)
-                            {
-                                silhouetteAmt = 1.0f;
-                                silhouetteColor = _global.Palette_DarkShadow;
-                            }
-                            else if (introSlide.CurrentPhase == BattleAnimationManager.IntroSlideAnimationState.Phase.Waiting)
-                            {
-                                silhouetteAmt = 1.0f;
-                                silhouetteColor = _global.Palette_DarkShadow;
-                            }
-                            else if (introSlide.CurrentPhase == BattleAnimationManager.IntroSlideAnimationState.Phase.Revealing)
-                            {
-                                float revealProgress = Math.Clamp(introSlide.RevealTimer / BattleAnimationManager.IntroSlideAnimationState.REVEAL_DURATION, 0f, 1f);
-                                silhouetteAmt = 1.0f - Easing.EaseInQuad(revealProgress);
-                                silhouetteColor = _global.Palette_DarkShadow;
-                            }
-                        }
+                        // Alpha handled by manager
                     }
                     else if (spawnAnim != null)
                     {
@@ -1279,14 +1264,29 @@ namespace ProjectVagabond.Battle.UI
                     }
 
                     float floorScale = 1.0f;
+
+                    // CHANGED: Default floor alpha logic to prevent flash
+                    float floorAlpha = (battleManager.CurrentPhase == BattleManager.BattlePhase.BattleStartIntro) ? 0f : alpha;
+
                     var floorOutro = animManager.GetFloorOutroAnimationState($"player_floor_{i}");
                     if (floorOutro != null)
                     {
                         float progress = Math.Clamp(floorOutro.Timer / BattleAnimationManager.FloorOutroAnimationState.DURATION, 0f, 1f);
                         floorScale = 1.0f - Easing.EaseInBack(progress);
+                        floorAlpha = 1.0f; // Ensure visible during outro
+                    }
+                    else
+                    {
+                        // Check for intro fade
+                        var floorIntro = animManager.GetFloorIntroAnimationState($"floor_{i}");
+                        // Note: Player floors usually just follow player alpha, but if we want explicit fade:
+                        // The BattleScene calls StartFloorIntroAnimation("floor_0") etc.
+                        // But those are usually for enemies.
+                        // However, since we are fading everyone in, let's just use the player's alpha which is fading in.
+                        // But we must respect the "invisible at start" rule.
                     }
 
-                    _vfxRenderer.DrawPlayerFloor(spriteBatch, center, alpha, floorScale);
+                    _vfxRenderer.DrawPlayerFloor(spriteBatch, center, floorAlpha, floorScale);
                 }
             }
 
@@ -1357,7 +1357,7 @@ namespace ProjectVagabond.Battle.UI
                 var healFlash = animManager.GetHealFlashAnimationState(player.CombatantID);
                 var hitFlash = animManager.GetHitFlashState(player.CombatantID);
                 var healBounce = animManager.GetHealBounceAnimationState(player.CombatantID);
-                var introSlide = animManager.GetIntroSlideAnimationState(player.CombatantID);
+                var introFade = animManager.GetIntroFadeAnimationState(player.CombatantID);
                 var attackCharge = animManager.GetAttackChargeState(player.CombatantID);
 
                 float spawnY = 0f;
@@ -1374,9 +1374,9 @@ namespace ProjectVagabond.Battle.UI
                     chargeScale = attackCharge.Scale;
                 }
 
-                if (introSlide != null)
+                if (introFade != null)
                 {
-                    slideOffset = introSlide.CurrentOffset;
+                    // Alpha handled by manager
                 }
                 else if (switchOut != null)
                 {
