@@ -1,27 +1,11 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
-using MonoGame.Extended.Particles;
-using ProjectVagabond;
-using ProjectVagabond.Battle;
-using ProjectVagabond.Battle.Abilities;
-using ProjectVagabond.Battle.UI;
-using ProjectVagabond.Particles;
-using ProjectVagabond.Progression;
-using ProjectVagabond.Scenes;
-using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading;
 
 namespace ProjectVagabond.Battle.UI
 {
@@ -434,6 +418,13 @@ namespace ProjectVagabond.Battle.UI
                 anim.Offset = new Vector2(20f * dir, 0f);
                 anim.Scale = new Vector2(1.4f, 0.6f);
             }
+        }
+
+        public void ReleaseAttackCharge(string combatantId, float timeToImpact)
+        {
+            // No-op or logic if needed for timer-based resets
+            // Since we use explicit TriggerLunge now, this can be empty or redirect
+            TriggerLunge(combatantId);
         }
 
         public void TriggerInstantAttack(string combatantId, bool isPlayer)
@@ -918,26 +909,29 @@ namespace ProjectVagabond.Battle.UI
             return _activeBarAnimations.FirstOrDefault(a => a.CombatantID == combatantId && a.ResourceType == type);
         }
 
-        public void Update(GameTime gameTime, IEnumerable<BattleCombatant> combatants)
+        public void Update(GameTime gameTime, IEnumerable<BattleCombatant> combatants, float timeScale = 1.0f)
         {
-            UpdateIndicatorQueue(gameTime);
-            UpdateHealthAnimations(gameTime, combatants);
-            UpdateAlphaAnimations(gameTime, combatants);
-            UpdateDeathAnimations(gameTime, combatants);
-            UpdateSpawnAnimations(gameTime, combatants);
-            UpdateIntroFadeAnimations(gameTime, combatants);
-            UpdateFloorIntroAnimations(gameTime);
-            UpdateFloorOutroAnimations(gameTime);
-            UpdateSwitchAnimations(gameTime, combatants);
-            UpdateHitFlashAnimations(gameTime);
-            UpdateHealAnimations(gameTime);
-            UpdatePoisonEffectAnimations(gameTime);
-            UpdateDamageIndicators(gameTime);
-            UpdateAbilityIndicators(gameTime);
-            UpdateBarAnimations(gameTime);
-            UpdateImpactFlash(gameTime);
-            UpdateAttackCharges(gameTime);
-            UpdateHudEntryAnimations(gameTime, combatants);
+            double scaledSeconds = gameTime.ElapsedGameTime.TotalSeconds * timeScale;
+            var scaledGameTime = new GameTime(gameTime.TotalGameTime, TimeSpan.FromSeconds(scaledSeconds));
+
+            UpdateIndicatorQueue(scaledGameTime);
+            UpdateHealthAnimations(scaledGameTime, combatants);
+            UpdateAlphaAnimations(scaledGameTime, combatants);
+            UpdateDeathAnimations(scaledGameTime, combatants);
+            UpdateSpawnAnimations(scaledGameTime, combatants);
+            UpdateIntroFadeAnimations(scaledGameTime, combatants);
+            UpdateFloorIntroAnimations(scaledGameTime);
+            UpdateFloorOutroAnimations(scaledGameTime);
+            UpdateSwitchAnimations(scaledGameTime, combatants);
+            UpdateHitFlashAnimations(scaledGameTime);
+            UpdateHealAnimations(scaledGameTime);
+            UpdatePoisonEffectAnimations(scaledGameTime);
+            UpdateDamageIndicators(scaledGameTime);
+            UpdateAbilityIndicators(scaledGameTime);
+            UpdateBarAnimations(scaledGameTime);
+            UpdateImpactFlash(scaledGameTime);
+            UpdateAttackCharges(scaledGameTime);
+            UpdateHudEntryAnimations(scaledGameTime, combatants);
         }
 
         private void UpdateHudEntryAnimations(GameTime gameTime, IEnumerable<BattleCombatant> combatants)

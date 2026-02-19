@@ -1,25 +1,6 @@
-﻿using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
-using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond;
-using ProjectVagabond.Battle;
+﻿using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
-using ProjectVagabond.Battle.UI;
-using ProjectVagabond.Particles;
-using ProjectVagabond.Progression;
-using ProjectVagabond.Scenes;
-using ProjectVagabond.Transitions;
-using ProjectVagabond.UI;
-using ProjectVagabond.Utils;
-using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Text.RegularExpressions;
 
 namespace ProjectVagabond
 {
@@ -217,6 +198,17 @@ namespace ProjectVagabond
         {
             public BattleCombatant Combatant { get; set; }
         }
+
+        public struct RequestImpactSync
+        {
+            public MoveData Move { get; set; }
+            public List<BattleCombatant> Targets { get; set; }
+            public float DefaultTimeToImpact { get; set; }
+            public Dictionary<BattleCombatant, bool> GrazeStatus { get; set; }
+            public BattleCombatant Actor { get; set; }
+        }
+
+        public struct TriggerImpact { }
 
         public class CheckActionPriorityEvent : GameEvent
         {

@@ -39,6 +39,18 @@ namespace ProjectVagabond.Battle
             WaitingForSwitchCompletion
         }
 
+        private struct PendingImpactData
+        {
+            public QueuedAction Action;
+            public List<BattleCombatant> Targets;
+            public List<DamageCalculator.DamageResult> Results;
+            public List<BattleCombatant> ProtectedTargets;
+            public List<BattleCombatant> NormalTargets;
+        }
+
+        private PendingImpactData? _pendingImpactData = null;
+        private bool _isWaitingForImpact = false;
+
         private readonly List<BattleCombatant> _playerParty;
         private readonly List<BattleCombatant> _enemyParty;
         private readonly List<BattleCombatant> _allCombatants;
@@ -124,6 +136,7 @@ namespace ProjectVagabond.Battle
 
             EventBus.Subscribe<GameEvents.SecondaryEffectComplete>(OnSecondaryEffectComplete);
             EventBus.Subscribe<GameEvents.DisengageTriggered>(OnDisengageTriggered);
+            EventBus.Subscribe<GameEvents.TriggerImpact>(OnTriggerImpact);
         }
 
         public void StartBattle()
@@ -211,6 +224,103 @@ namespace ProjectVagabond.Battle
                 _activeInteraction = null;
             });
             _activeInteraction.Start(this);
+        }
+
+        private void OnTriggerImpact(GameEvents.TriggerImpact e)
+        {
+            CommitImpact();
+        }
+
+        private void CommitImpact()
+        {
+            if (!_isWaitingForImpact || _pendingImpactData == null) return;
+
+            var data = _pendingImpactData.Value;
+            var action = data.Action;
+            var targets = data.Targets;
+            var results = data.Results;
+            var normalTargets = data.NormalTargets;
+            var protectedTargets = data.ProtectedTargets;
+
+            _isWaitingForImpact = false;
+            _pendingImpactData = null;
+            _phaseWatchdogTimer = 0f;
+
+            var significantTargetIds = new List<string>();
+
+            for (int i = 0; i < targets.Count; i++)
+            {
+                var target = targets[i];
+                var result = results[i];
+                _battleContext.Target = target;
+
+                if (result.WasProtected)
+                {
+                    AppendToCurrentLine(" PROTECTED!");
+                    result.DamageAmount = 0;
+                    results[i] = result;
+                    continue;
+                }
+
+                target.ApplyDamage(result.DamageAmount);
+
+                if (!result.WasGraze && result.DamageAmount > 0 && target.CurrentTenacity > 0)
+                {
+                    target.CurrentTenacity--;
+                    EventBus.Publish(new GameEvents.TenacityChanged { Combatant = target, NewValue = target.CurrentTenacity });
+
+                    if (target.CurrentTenacity == 0)
+                    {
+                        EventBus.Publish(new GameEvents.TenacityBroken { Combatant = target });
+                    }
+                }
+
+                if (result.DamageAmount > 0 && result.DamageAmount >= (target.Stats.MaxHP * 0.50f)) significantTargetIds.Add(target.CombatantID);
+                if (result.WasCritical) AppendToCurrentLine(" [cCrit]CRITICAL HIT![/]");
+                if (result.WasVulnerable) AppendToCurrentLine(" [cVulnerable]VULNERABLE![/]");
+
+                var reactionEvt = new ReactionEvent(action.Actor, target, action, result);
+                action.Actor.NotifyAbilities(reactionEvt, _battleContext);
+                target.NotifyAbilities(reactionEvt, _battleContext);
+                foreach (var ab in action.ChosenMove.Abilities) ab.OnEvent(reactionEvt, _battleContext);
+
+                SecondaryEffectSystem.ProcessPrimaryEffects(action, target);
+            }
+
+            EventBus.Publish(new GameEvents.BattleActionExecuted
+            {
+                Actor = action.Actor,
+                ChosenMove = action.ChosenMove,
+                Targets = targets,
+                DamageResults = results
+            });
+
+            if (significantTargetIds.Any())
+            {
+                Color flashColor = action.Actor.IsPlayerControlled ? Color.White : _global.Palette_Rust;
+                _animationManager.TriggerImpactFlash(flashColor, 0.5f, significantTargetIds);
+            }
+
+            foreach (var target in targets)
+            {
+                if (target.IsPlayerControlled)
+                {
+                    int dmg = results[targets.IndexOf(target)].DamageAmount;
+                    if (dmg > 0)
+                    {
+                        float damageRatio = (float)dmg / target.Stats.MaxHP;
+                        float intensity = Math.Min(1.0f + (damageRatio * 5.0f), 5.0f);
+                        ServiceLocator.Get<HapticsManager>().TriggerImpactTwist(intensity, 0.25f);
+                    }
+                    break;
+                }
+            }
+
+            _currentActionForEffects = action;
+            _currentActionDamageResults = results;
+            _currentActionFinalTargets = targets;
+
+            ProcessMoveActionPostImpact(action);
         }
 
         public void SubmitInteractionResult(object result)
@@ -351,6 +461,17 @@ namespace ProjectVagabond.Battle
 
         public void Update(float deltaTime)
         {
+            if (_isWaitingForImpact)
+            {
+                _phaseWatchdogTimer += deltaTime;
+                if (_phaseWatchdogTimer > 4.0f)
+                {
+                    // Failsafe: Force commit if sync missed
+                    CommitImpact();
+                }
+                return;
+            }
+
             bool isWaitingForInput = _currentPhase == BattlePhase.ProcessingInteraction ||
                                      _currentPhase == BattlePhase.WaitingForSwitchCompletion ||
                                      _waitingForReinforcementSelection;
@@ -663,7 +784,6 @@ namespace ProjectVagabond.Battle
                     grazeStatus[target] = result.WasGraze;
                 }
 
-                var significantTargetIds = new List<string>();
                 var normalTargets = new List<BattleCombatant>();
                 var protectedTargets = new List<BattleCombatant>();
 
@@ -671,81 +791,39 @@ namespace ProjectVagabond.Battle
                 {
                     var target = targetsForThisHit[i];
                     var result = damageResultsForThisHit[i];
-                    _battleContext.Target = target;
 
                     if (result.WasProtected)
                     {
-                        AppendToCurrentLine(" PROTECTED!");
-                        result.DamageAmount = 0;
-                        damageResultsForThisHit[i] = result;
                         protectedTargets.Add(target);
-                        continue;
                     }
                     else
                     {
                         normalTargets.Add(target);
                     }
-
-                    target.ApplyDamage(result.DamageAmount);
-
-                    if (!result.WasGraze && result.DamageAmount > 0 && target.CurrentTenacity > 0)
-                    {
-                        target.CurrentTenacity--;
-                        EventBus.Publish(new GameEvents.TenacityChanged { Combatant = target, NewValue = target.CurrentTenacity });
-
-                        if (target.CurrentTenacity == 0)
-                        {
-                            EventBus.Publish(new GameEvents.TenacityBroken { Combatant = target });
-                        }
-                    }
-
-                    if (result.DamageAmount > 0 && result.DamageAmount >= (target.Stats.MaxHP * 0.50f)) significantTargetIds.Add(target.CombatantID);
-                    if (result.WasCritical) AppendToCurrentLine(" [cCrit]CRITICAL HIT![/]");
-                    if (result.WasVulnerable) AppendToCurrentLine(" [cVulnerable]VULNERABLE![/]");
-
-                    var reactionEvt = new ReactionEvent(action.Actor, target, action, result);
-                    action.Actor.NotifyAbilities(reactionEvt, _battleContext);
-                    target.NotifyAbilities(reactionEvt, _battleContext);
-                    foreach (var ab in action.ChosenMove.Abilities) ab.OnEvent(reactionEvt, _battleContext);
-
-                    SecondaryEffectSystem.ProcessPrimaryEffects(action, target);
                 }
 
-                EventBus.Publish(new GameEvents.BattleActionExecuted { Actor = action.Actor, ChosenMove = action.ChosenMove, Targets = targetsForThisHit, DamageResults = damageResultsForThisHit });
-
-                if (significantTargetIds.Any())
+                // Store calculated data
+                _pendingImpactData = new PendingImpactData
                 {
-                    Color flashColor = action.Actor.IsPlayerControlled ? Color.White : _global.Palette_Rust;
-                    _animationManager.TriggerImpactFlash(flashColor, 0.15f, significantTargetIds);
-                }
-                foreach (var target in targetsForThisHit)
+                    Action = action,
+                    Targets = targetsForThisHit,
+                    Results = damageResultsForThisHit,
+                    NormalTargets = normalTargets,
+                    ProtectedTargets = protectedTargets
+                };
+
+                _isWaitingForImpact = true;
+                _phaseWatchdogTimer = 0f;
+
+                // Request Visual Sync
+                EventBus.Publish(new GameEvents.RequestImpactSync
                 {
-                    if (target.IsPlayerControlled)
-                    {
-                        int dmg = damageResultsForThisHit[targetsForThisHit.IndexOf(target)].DamageAmount;
-                        if (dmg > 0)
-                        {
-                            //float damageRatio = (float)dmg / target.Stats.MaxHP;
-                            //float intensity = Math.Min(1.0f + (damageRatio * 5.0f), 5.0f);
-                            //ServiceLocator.Get<HapticsManager>().TriggerImpactTwist(intensity, 0.25f);
-                        }
-                        break;
-                    }
-                }
-
-                if (protectedTargets.Any())
-                {
-                    var protectMove = action.ChosenMove.Clone();
-                    protectMove.AnimationId = "basic_protect";
-                    protectMove.IsAnimationCentralized = false;
-                    EventBus.Publish(new GameEvents.PlayMoveAnimation { Move = protectMove, Targets = protectedTargets, GrazeStatus = grazeStatus });
-                }
-
-                _currentActionForEffects = action;
-                _currentActionDamageResults = damageResultsForThisHit;
-                _currentActionFinalTargets = targetsForThisHit;
-
-                ProcessMoveActionPostImpact(action);
+                    Actor = action.Actor,
+                    Move = action.ChosenMove,
+                    Targets = targetsForThisHit,
+                    GrazeStatus = grazeStatus,
+                    DefaultTimeToImpact = 0.25f // Fallback timing
+                });
             }
             else
             {
