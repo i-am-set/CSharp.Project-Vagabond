@@ -395,6 +395,29 @@ namespace ProjectVagabond.Battle.UI
             _activeSpawnAnimations.Clear();
         }
 
+        public string GetDebugStateReport()
+        {
+            var sb = new System.Text.StringBuilder();
+            if (_activeAlphaAnimations.Any()) sb.Append($"Alpha({_activeAlphaAnimations.Count}) ");
+            if (_activeDeathAnimations.Any()) sb.Append($"Death({_activeDeathAnimations.Count}) ");
+            if (_activeSpawnAnimations.Any()) sb.Append($"Spawn({_activeSpawnAnimations.Count}) ");
+            if (_activeSwitchOutAnimations.Any()) sb.Append($"SwOut({_activeSwitchOutAnimations.Count}) ");
+            if (_activeSwitchInAnimations.Any()) sb.Append($"SwIn({_activeSwitchInAnimations.Count}) ");
+            if (_activeHitFlashAnimations.Any()) sb.Append($"HitFlash({_activeHitFlashAnimations.Count}) ");
+            if (_activeBarAnimations.Any()) sb.Append($"Bar({_activeBarAnimations.Count}) "); // <--- Likely culprit
+            if (_activeIntroFadeAnimations.Any()) sb.Append($"Intro({_activeIntroFadeAnimations.Count}) ");
+            if (_activeAttackCharges.Any()) sb.Append($"Charge({_activeAttackCharges.Count}) ");
+
+            // Check specific blocking logic
+            if (_activeBarAnimations.Any())
+            {
+                var bar = _activeBarAnimations[0];
+                sb.Append($"[BarDetail: {bar.CombatantID} {bar.AnimationType} T:{bar.Timer:F2}]");
+            }
+
+            return sb.Length > 0 ? sb.ToString() : "None";
+        }
+
         public void StartWindup(string combatantId, bool isPlayer)
         {
             _activeAttackCharges.RemoveAll(a => a.CombatantID == combatantId);
@@ -528,6 +551,8 @@ namespace ProjectVagabond.Battle.UI
             // This prevents softlocks if a unit dies mid-attack (e.g. recoil)
             _activeAttackCharges.RemoveAll(a => a.CombatantID == combatantId);
             _activeHitFlashAnimations.RemoveAll(a => a.CombatantID == combatantId);
+            _activeSwitchOutAnimations.RemoveAll(a => a.CombatantID == combatantId);
+            _activeSwitchInAnimations.RemoveAll(a => a.CombatantID == combatantId);
 
             _activeDeathAnimations.RemoveAll(a => a.CombatantID == combatantId);
             _activeDeathAnimations.Add(new DeathAnimationState
@@ -919,18 +944,29 @@ namespace ProjectVagabond.Battle.UI
 
         public void Update(GameTime gameTime, IEnumerable<BattleCombatant> combatants, float timeScale = 1.0f)
         {
+            // Calculate Scaled Time (for impact/visuals that should freeze during hitstop)
             double scaledSeconds = gameTime.ElapsedGameTime.TotalSeconds * timeScale;
             var scaledGameTime = new GameTime(gameTime.TotalGameTime, TimeSpan.FromSeconds(scaledSeconds));
 
-            UpdateIndicatorQueue(scaledGameTime);
+            // Calculate Unscaled Time (for structural/flow logic that must NEVER freeze)
+            // We use the original gameTime which represents real wall-clock time delta
+            var unscaledGameTime = gameTime;
+
+            // --- Structural / Flow Animations (Real Time) ---
+            // These control the battle flow (blocking animations). If these freeze, the game deadlocks.
+            UpdateIndicatorQueue(unscaledGameTime);
+            UpdateDeathAnimations(unscaledGameTime, combatants);
+            UpdateSpawnAnimations(unscaledGameTime, combatants);
+            UpdateIntroFadeAnimations(unscaledGameTime, combatants);
+            UpdateFloorIntroAnimations(unscaledGameTime);
+            UpdateFloorOutroAnimations(unscaledGameTime);
+            UpdateSwitchAnimations(unscaledGameTime, combatants);
+            UpdateHudEntryAnimations(unscaledGameTime, combatants);
+            UpdateAlphaAnimations(unscaledGameTime, combatants);
+
+            // --- Cosmetic / Impact Animations (Scaled Time) ---
+            // These add "juice" and weight. They should freeze during hitstop to sell the impact.
             UpdateHealthAnimations(scaledGameTime, combatants);
-            UpdateAlphaAnimations(scaledGameTime, combatants);
-            UpdateDeathAnimations(scaledGameTime, combatants);
-            UpdateSpawnAnimations(scaledGameTime, combatants);
-            UpdateIntroFadeAnimations(scaledGameTime, combatants);
-            UpdateFloorIntroAnimations(scaledGameTime);
-            UpdateFloorOutroAnimations(scaledGameTime);
-            UpdateSwitchAnimations(scaledGameTime, combatants);
             UpdateHitFlashAnimations(scaledGameTime);
             UpdateHealAnimations(scaledGameTime);
             UpdatePoisonEffectAnimations(scaledGameTime);
@@ -939,7 +975,6 @@ namespace ProjectVagabond.Battle.UI
             UpdateBarAnimations(scaledGameTime);
             UpdateImpactFlash(scaledGameTime);
             UpdateAttackCharges(scaledGameTime, combatants);
-            UpdateHudEntryAnimations(scaledGameTime, combatants);
         }
 
         private void UpdateHudEntryAnimations(GameTime gameTime, IEnumerable<BattleCombatant> combatants)
@@ -1265,6 +1300,12 @@ namespace ProjectVagabond.Battle.UI
                 float easedProgress = Easing.EaseOutQuad(progress);
 
                 combatant.VisualAlpha = easedProgress;
+
+                if (anim.Timer >= IntroFadeAnimationState.FADE_DURATION)
+                {
+                    combatant.VisualAlpha = 1.0f;
+                    _activeIntroFadeAnimations.RemoveAt(i);
+                }
             }
         }
 
@@ -1275,6 +1316,11 @@ namespace ProjectVagabond.Battle.UI
             {
                 var anim = _activeFloorIntroAnimations[i];
                 anim.Timer += deltaTime;
+
+                if (anim.Timer >= FloorIntroAnimationState.DURATION)
+                {
+                    _activeFloorIntroAnimations.RemoveAt(i);
+                }
             }
         }
 
@@ -1285,6 +1331,11 @@ namespace ProjectVagabond.Battle.UI
             {
                 var anim = _activeFloorOutroAnimations[i];
                 anim.Timer += deltaTime;
+
+                if (anim.Timer >= FloorOutroAnimationState.DURATION)
+                {
+                    _activeFloorOutroAnimations.RemoveAt(i);
+                }
             }
         }
 

@@ -208,6 +208,9 @@ namespace ProjectVagabond.Battle
             _actionToExecute = null;
             _activeInteraction = null;
 
+            _isWaitingForImpact = false;
+            _pendingImpactData = null;
+
             if (_currentPhase == BattlePhase.BattleStartIntro) _currentPhase = BattlePhase.StartOfRound;
             else if (_currentPhase == BattlePhase.ActionResolution || _currentPhase == BattlePhase.ProcessingInteraction || _currentPhase == BattlePhase.WaitingForSwitchCompletion)
             {
@@ -874,7 +877,12 @@ namespace ProjectVagabond.Battle
             var actor = action.Actor;
             if (!actor.HasUsedFirstAttack) actor.HasUsedFirstAttack = true;
 
-            if (_multiHitTotalExecuted > 1) EventBus.Publish(new GameEvents.MultiHitActionCompleted { Actor = action.Actor, ChosenMove = action.ChosenMove, HitCount = _multiHitTotalExecuted, CriticalHitCount = _multiHitCrits });
+            bool isMultiHit = action.ChosenMove.Abilities.OfType<MultiHitAbility>().Any() || action.ChosenMove.Effects.ContainsKey("MultiHit");
+
+            if (isMultiHit)
+            {
+                EventBus.Publish(new GameEvents.MultiHitActionCompleted { Actor = action.Actor, ChosenMove = action.ChosenMove, HitCount = _multiHitTotalExecuted, CriticalHitCount = _multiHitCrits });
+            }
 
             SecondaryEffectSystem.ProcessSecondaryEffects(action, _currentActionFinalTargets, _currentActionDamageResults);
             _currentActionForEffects = null;
@@ -1104,8 +1112,7 @@ namespace ProjectVagabond.Battle
                                 _startupEffectTimer = STARTUP_EFFECT_DELAY;
                             }
 
-                            CanAdvance = false;
-                            return; // Wait for spawn animation
+                            return;
                         }
                     }
                 }

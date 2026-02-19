@@ -704,14 +704,15 @@ namespace ProjectVagabond.Scenes
 
             if (_watchdogTimer > WATCHDOG_TIMEOUT)
             {
-                string stallReport = $"[BATTLE WATCHDOG] STALL DETECTED (>{WATCHDOG_TIMEOUT}s) - RECOVERING\n" +
-                                     $"Phase: {_battleManager.CurrentPhase}\n" +
-                                     $"UI Busy: {_uiManager.IsBusy}\n" +
-                                     $"Anim Busy: {_animationManager.IsBlockingAnimation}\n" +
-                                     $"MoveAnim Busy: {_moveAnimationManager.IsAnimating}\n" +
-                                     $"Pending Anims: {_pendingAnimations.Count}\n" +
-                                     $"Switch State: {_switchSequenceState}\n" +
-                                     $"MultiHit Wait: {_isWaitingForMultiHitDelay}";
+                string stallReport = $"[BATTLE WATCHDOG] STALL DETECTED (>4s) - RECOVERING\n" +
+                     $"Phase: {_battleManager.CurrentPhase}\n" +
+                     $"UI Busy: {_uiManager.IsBusy}\n" +
+                     $"Anim Busy: {_animationManager.IsBlockingAnimation}\n" +
+                     $"Detailed Anims: {_animationManager.GetDebugStateReport()}\n" +
+                     $"MoveAnim Busy: {_moveAnimationManager.IsAnimating}\n" +
+                     $"Pending Anims: {_pendingAnimations.Count}\n" +
+                     $"Switch State: {_switchSequenceState}\n" +
+                     $"MultiHit Wait: {_isWaitingForMultiHitDelay}";
 
                 Debug.WriteLine(stallReport);
 
@@ -1106,7 +1107,6 @@ namespace ProjectVagabond.Scenes
 
                     _animationManager.StartHealthLossAnimation(target.CombatantID, target.VisualHP, target.Stats.CurrentHP);
                     if (target.HasStatusEffect(StatusEffectType.Burn)) _renderer.TriggerStatusIconHop(target.CombatantID, StatusEffectType.Burn);
-                    if (target.Stats.CurrentHP <= 0) TriggerDeathAnimation(target);
 
                     int baselineDamage = DamageCalculator.CalculateBaselineDamage(e.Actor, target, e.ChosenMove);
                     if (result.WasVulnerable)
