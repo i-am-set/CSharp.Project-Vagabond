@@ -27,12 +27,9 @@ namespace ProjectVagabond.Battle.UI
 {
     public class BattleAnimationManager
     {
-        private const float HEALTH_ANIMATION_DURATION = 0.15f;
         private const float INDICATOR_COOLDOWN = 0.1f;
-
         private const float INDICATOR_MAX_ROTATION_SPEED = 0.25f;
 
-        public class HealthAnimationState { public string CombatantID; public float StartHP; public float TargetHP; public float Timer; }
         public class AlphaAnimationState { public string CombatantID; public float StartAlpha; public float TargetAlpha; public float Timer; public const float Duration = 0.1f; }
 
         public Func<BattleCombatant, Vector2> GetCombatantPosition { get; set; }
@@ -94,7 +91,6 @@ namespace ProjectVagabond.Battle.UI
         {
             public string CombatantID;
             public float Timer;
-            // CHANGED: Increased to 1.5s (3x longer)
             public const float FADE_DURATION = 1.5f;
         }
         private readonly List<IntroFadeAnimationState> _activeIntroFadeAnimations = new List<IntroFadeAnimationState>();
@@ -103,7 +99,6 @@ namespace ProjectVagabond.Battle.UI
         {
             public string ID;
             public float Timer;
-            // CHANGED: Increased to 1.5s
             public const float DURATION = 1.5f;
         }
         private readonly List<FloorIntroAnimationState> _activeFloorIntroAnimations = new List<FloorIntroAnimationState>();
@@ -277,7 +272,6 @@ namespace ProjectVagabond.Battle.UI
         }
         private ImpactFlashState? _impactFlashState;
 
-        private readonly List<HealthAnimationState> _activeHealthAnimations = new List<HealthAnimationState>();
         private readonly List<AlphaAnimationState> _activeAlphaAnimations = new List<AlphaAnimationState>();
         private readonly List<DeathAnimationState> _activeDeathAnimations = new List<DeathAnimationState>();
         private readonly List<SpawnAnimationState> _activeSpawnAnimations = new List<SpawnAnimationState>();
@@ -302,7 +296,6 @@ namespace ProjectVagabond.Battle.UI
         private const int DIVIDER_Y = 123;
 
         public bool IsBlockingAnimation =>
-            _activeHealthAnimations.Any() ||
             _activeAlphaAnimations.Any() ||
             _activeDeathAnimations.Any() ||
             _activeSpawnAnimations.Any() ||
@@ -332,7 +325,6 @@ namespace ProjectVagabond.Battle.UI
 
         public void ForceClearAll()
         {
-            _activeHealthAnimations.Clear();
             _activeAlphaAnimations.Clear();
             _activeDeathAnimations.Clear();
             _activeSpawnAnimations.Clear();
@@ -360,15 +352,10 @@ namespace ProjectVagabond.Battle.UI
 
         public void CompleteBlockingAnimations(IEnumerable<BattleCombatant> combatants)
         {
-            foreach (var anim in _activeHealthAnimations)
+            foreach (var c in combatants)
             {
-                var combatant = combatants.FirstOrDefault(c => c.CombatantID == anim.CombatantID);
-                if (combatant != null)
-                {
-                    combatant.VisualHP = anim.TargetHP;
-                }
+                c.VisualHP = c.Stats.CurrentHP;
             }
-            _activeHealthAnimations.Clear();
             _activeBarAnimations.Clear();
 
             foreach (var anim in _activeAlphaAnimations)
@@ -477,18 +464,6 @@ namespace ProjectVagabond.Battle.UI
         public ImpactFlashState? GetImpactFlashState()
         {
             return _impactFlashState;
-        }
-
-        public void StartHealthAnimation(string combatantId, int hpBefore, int hpAfter)
-        {
-            _activeHealthAnimations.RemoveAll(a => a.CombatantID == combatantId);
-            _activeHealthAnimations.Add(new HealthAnimationState
-            {
-                CombatantID = combatantId,
-                StartHP = hpBefore,
-                TargetHP = hpAfter,
-                Timer = 0f
-            });
         }
 
         public void StartHealthLossAnimation(string combatantId, float hpBefore, float hpAfter)
@@ -878,15 +853,10 @@ namespace ProjectVagabond.Battle.UI
 
         public void SkipAllHealthAnimations(IEnumerable<BattleCombatant> combatants)
         {
-            foreach (var anim in _activeHealthAnimations)
+            foreach (var c in combatants)
             {
-                var combatant = combatants.FirstOrDefault(c => c.CombatantID == anim.CombatantID);
-                if (combatant != null)
-                {
-                    combatant.VisualHP = anim.TargetHP;
-                }
+                c.VisualHP = c.Stats.CurrentHP;
             }
-            _activeHealthAnimations.Clear();
         }
 
         public void SkipAllBarAnimations()
@@ -1149,26 +1119,18 @@ namespace ProjectVagabond.Battle.UI
 
         private void UpdateHealthAnimations(GameTime gameTime, IEnumerable<BattleCombatant> combatants)
         {
-            for (int i = _activeHealthAnimations.Count - 1; i >= 0; i--)
-            {
-                var anim = _activeHealthAnimations[i];
-                var combatant = combatants.FirstOrDefault(c => c.CombatantID == anim.CombatantID);
-                if (combatant == null)
-                {
-                    _activeHealthAnimations.RemoveAt(i);
-                    continue;
-                }
+            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            const float LERP_SPEED = 10f; // Tuned for "responsive but smooth"
 
-                anim.Timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-                if (anim.Timer >= HEALTH_ANIMATION_DURATION)
+            foreach (var combatant in combatants)
+            {
+                if (Math.Abs(combatant.VisualHP - combatant.Stats.CurrentHP) > 0.01f)
                 {
-                    combatant.VisualHP = anim.TargetHP;
-                    _activeHealthAnimations.RemoveAt(i);
+                    combatant.VisualHP = MathHelper.Lerp(combatant.VisualHP, combatant.Stats.CurrentHP, 1f - MathF.Exp(-LERP_SPEED * dt));
                 }
                 else
                 {
-                    float progress = anim.Timer / HEALTH_ANIMATION_DURATION;
-                    combatant.VisualHP = MathHelper.Lerp(anim.StartHP, anim.TargetHP, Easing.EaseOutQuart(progress));
+                    combatant.VisualHP = combatant.Stats.CurrentHP;
                 }
             }
         }
@@ -1302,7 +1264,6 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        // CHANGED: Simplified to just fade alpha, and DO NOT remove when finished to prevent snap-back
         private void UpdateIntroFadeAnimations(GameTime gameTime, IEnumerable<BattleCombatant> combatants)
         {
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -1321,9 +1282,6 @@ namespace ProjectVagabond.Battle.UI
                 float easedProgress = Easing.EaseOutQuad(progress);
 
                 combatant.VisualAlpha = easedProgress;
-
-                // NOTE: We do NOT remove the animation here. We let it persist at 1.0f 
-                // until the phase changes or Reset() is called.
             }
         }
 
@@ -1334,9 +1292,6 @@ namespace ProjectVagabond.Battle.UI
             {
                 var anim = _activeFloorIntroAnimations[i];
                 anim.Timer += deltaTime;
-
-                // NOTE: We do NOT remove the animation here. We let it persist at 1.0f 
-                // until the phase changes or Reset() is called.
             }
         }
 
@@ -1805,3 +1760,4 @@ namespace ProjectVagabond.Battle.UI
         }
     }
 }
+        

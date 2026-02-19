@@ -31,12 +31,7 @@ namespace ProjectVagabond.Battle
             StartOfTurn,
             ActionSelection,
             ActionResolution,
-            PreActionAnimation,
-            PreDazedAnimation,
-            AnimatingMove,
-            SecondaryEffectResolution,
-            PostActionDelay, // NEW: Enforce pacing between actions
-            CheckForDefeat,
+            CheckForDefeat, // Kept for explicit state transitions if needed, though logic is mostly integrated now
             EndOfTurn,
             Reinforcement,
             BattleOver,
@@ -64,17 +59,11 @@ namespace ProjectVagabond.Battle
         private static readonly Random _random = new Random();
 
         private QueuedAction? _actionToExecute;
-        private QueuedAction? _actionPendingAnimation;
         private bool _endOfTurnEffectsProcessed;
 
-        // --- DAZED PACING STATE ---
-        private QueuedAction _pendingDazedAction;
-        private float _dazedWindupTimer = 0f;
-        private const float DAZED_WINDUP_DURATION = 0.5f;
-
-        // --- POST ACTION DELAY STATE ---
-        private float _postActionDelayTimer = 0f;
-        private const float POST_ACTION_DELAY_DURATION = 0.6f;
+        // --- PACING STATE ---
+        private float _turnPacingTimer = 0f;
+        private const float ACTION_DELAY = 1.0f;
 
         public BattleCombatant? CurrentActingCombatant { get; private set; }
 
@@ -84,13 +73,6 @@ namespace ProjectVagabond.Battle
 
         private readonly Dictionary<string, string> _lastDefeatedNames = new Dictionary<string, string>();
 
-        private class PendingImpactData
-        {
-            public QueuedAction Action;
-            public List<BattleCombatant> Targets;
-            public List<DamageCalculator.DamageResult> Results;
-        }
-        private PendingImpactData _pendingImpact;
         private BattleInteraction _activeInteraction;
 
         private int _multiHitRemaining = 0;
@@ -141,8 +123,6 @@ namespace ProjectVagabond.Battle
             _battleContext = new BattleContext();
 
             EventBus.Subscribe<GameEvents.SecondaryEffectComplete>(OnSecondaryEffectComplete);
-            EventBus.Subscribe<GameEvents.MoveAnimationCompleted>(OnMoveAnimationCompleted);
-            EventBus.Subscribe<GameEvents.MoveImpactOccurred>(OnMoveImpactOccurred);
             EventBus.Subscribe<GameEvents.DisengageTriggered>(OnDisengageTriggered);
         }
 
@@ -152,23 +132,20 @@ namespace ProjectVagabond.Battle
 
         public void TriggerBattleStartEvents()
         {
-            // Configure context for Battle Start (Global event)
             _battleContext.ResetMultipliers();
 
             var battleStartEvent = new BattleStartedEvent(_allCombatants);
 
-            // We iterate over a copy or the cached list to ensure safety
             foreach (var combatant in _cachedAllActive)
             {
                 _battleContext.Actor = combatant;
                 combatant.NotifyAbilities(battleStartEvent, _battleContext);
             }
 
-            // If any abilities queued effects (like Majestic), enter the effect phase.
             if (_startupEffectQueue.Any())
             {
                 _currentPhase = BattlePhase.BattleStartEffects;
-                _startupEffectTimer = 0f; // Instant start for first one? Or wait? Let's start immediately.
+                _startupEffectTimer = 0f;
                 CanAdvance = false;
             }
             else
@@ -200,30 +177,19 @@ namespace ProjectVagabond.Battle
 
         public void RequestNextPhase()
         {
-            if (_currentPhase == BattlePhase.SecondaryEffectResolution) _currentPhase = BattlePhase.CheckForDefeat;
-            else if (_currentPhase == BattlePhase.PostActionDelay) { _postActionDelayTimer = 0; HandlePostActionDelay(0); } // Allow skipping delay
-            else if (_currentPhase == BattlePhase.CheckForDefeat) HandleCheckForDefeat();
+            if (_currentPhase == BattlePhase.CheckForDefeat) HandleCheckForDefeat();
             else if (_currentPhase == BattlePhase.EndOfTurn) HandleEndOfTurn();
             else if (_currentPhase == BattlePhase.Reinforcement) HandleReinforcements();
-            else if (_currentPhase == BattlePhase.ActionResolution) HandleActionResolution();
             CanAdvance = true;
         }
 
         public void ForceAdvance()
         {
-            if (_currentPhase == BattlePhase.AnimatingMove && _pendingImpact != null)
-            {
-                ApplyPendingImpact();
-                if (_actionPendingAnimation != null) ProcessMoveActionPostImpact(_actionPendingAnimation);
-            }
-
             _actionToExecute = null;
-            _actionPendingAnimation = null;
-            _pendingImpact = null;
             _activeInteraction = null;
 
             if (_currentPhase == BattlePhase.BattleStartIntro) _currentPhase = BattlePhase.StartOfTurn;
-            else if (_currentPhase == BattlePhase.AnimatingMove || _currentPhase == BattlePhase.ActionResolution || _currentPhase == BattlePhase.SecondaryEffectResolution || _currentPhase == BattlePhase.ProcessingInteraction || _currentPhase == BattlePhase.WaitingForSwitchCompletion || _currentPhase == BattlePhase.PreActionAnimation || _currentPhase == BattlePhase.PostActionDelay)
+            else if (_currentPhase == BattlePhase.ActionResolution || _currentPhase == BattlePhase.ProcessingInteraction || _currentPhase == BattlePhase.WaitingForSwitchCompletion)
             {
                 if (!IsProcessingMultiHit) _currentPhase = BattlePhase.CheckForDefeat;
             }
@@ -233,22 +199,6 @@ namespace ProjectVagabond.Battle
         }
 
         private void OnSecondaryEffectComplete(GameEvents.SecondaryEffectComplete e) { }
-
-        private void OnMoveAnimationCompleted(GameEvents.MoveAnimationCompleted e)
-        {
-            if (_currentPhase == BattlePhase.AnimatingMove && _actionPendingAnimation != null)
-            {
-                var action = _actionPendingAnimation;
-                if (_pendingImpact != null) ApplyPendingImpact();
-                _actionPendingAnimation = null;
-                ProcessMoveActionPostImpact(action);
-            }
-        }
-
-        private void OnMoveImpactOccurred(GameEvents.MoveImpactOccurred e)
-        {
-            if (_pendingImpact != null) ApplyPendingImpact();
-        }
 
         private void OnDisengageTriggered(GameEvents.DisengageTriggered e)
         {
@@ -314,19 +264,10 @@ namespace ProjectVagabond.Battle
             RefreshCombatantCaches();
             foreach (var action in _actionQueue) if (action.Target == actor) action.Target = incomingMember;
 
-            // Fire Entry Event
             var entryEvent = new GameEvents.CombatantEnteredEvent(incomingMember);
             _battleContext.ResetMultipliers();
             _battleContext.Actor = incomingMember;
             incomingMember.NotifyAbilities(entryEvent, _battleContext);
-
-            // If logic added effects, handle them next update
-            if (_startupEffectQueue.Any())
-            {
-                // Note: We can't easily switch phases inside a switch sequence, 
-                // so for now switch abilities execute immediately or are ignored.
-                // In a fuller implementation, we'd pause the switch flow.
-            }
         }
 
         public void ResumeAfterSwitch()
@@ -355,8 +296,6 @@ namespace ProjectVagabond.Battle
             int activePlayerCount = 0;
             foreach (var player in _cachedActivePlayers)
             {
-                // Check if player can act (not charging, not stunned/dazed via tags)
-                // Note: Dazed check here is for pre-selection availability. Actual turn skip happens in Resolution.
                 if (player.ChargingAction == null && !player.Tags.Has(GameplayTags.States.Stunned))
                 {
                     activePlayerCount++;
@@ -380,7 +319,6 @@ namespace ProjectVagabond.Battle
                 if (action.ChosenMove != null)
                 {
                     var prioEvent = new CheckActionPriorityEvent(action.Actor, action.ChosenMove, action.Priority);
-                    // Use a temporary context or the shared one
                     _battleContext.ResetMultipliers();
                     _battleContext.Actor = action.Actor;
                     action.Actor.NotifyAbilities(prioEvent, _battleContext);
@@ -393,6 +331,7 @@ namespace ProjectVagabond.Battle
             if (lastAction != null) lastAction.IsLastActionInRound = true;
 
             _currentPhase = BattlePhase.ActionResolution;
+            _turnPacingTimer = 0.25f; // Small initial delay before first action
         }
 
         private void AddActionToQueue(QueuedAction action)
@@ -412,16 +351,14 @@ namespace ProjectVagabond.Battle
 
         public void Update(float deltaTime)
         {
-            // --- 1. GLOBAL WATCHDOG (Fail-Safe) ---
             bool isWaitingForInput = _currentPhase == BattlePhase.ProcessingInteraction ||
                                      _currentPhase == BattlePhase.WaitingForSwitchCompletion ||
                                      _waitingForReinforcementSelection;
 
-            // FIX: Check _currentPhase instead of missing _isBattleOver variable
             if (!CanAdvance && !isWaitingForInput && _currentPhase != BattlePhase.BattleOver)
             {
                 _phaseWatchdogTimer += deltaTime;
-                if (_phaseWatchdogTimer > 4.0f) // 4 second timeout
+                if (_phaseWatchdogTimer > 4.0f)
                 {
                     System.Diagnostics.Debug.WriteLine($"[BattleManager] WATCHDOG: Force advancing from {_currentPhase}");
                     ForceAdvance();
@@ -435,28 +372,19 @@ namespace ProjectVagabond.Battle
 
             if (_currentPhase == BattlePhase.BattleOver) return;
 
-            // If we are blocked, stop here. The Watchdog above handles the "stuck" case.
-            if (!CanAdvance && !isWaitingForInput &&
-                _currentPhase != BattlePhase.PreActionAnimation &&
-                _currentPhase != BattlePhase.BattleStartEffects &&
-                _currentPhase != BattlePhase.PreDazedAnimation &&
-                _currentPhase != BattlePhase.PostActionDelay)
-            {
-                return;
-            }
-
             switch (_currentPhase)
             {
                 case BattlePhase.BattleStartIntro: break;
                 case BattlePhase.BattleStartEffects: HandleBattleStartEffects(deltaTime); break;
                 case BattlePhase.StartOfTurn: HandleStartOfTurn(); break;
                 case BattlePhase.ActionSelection: break;
-                case BattlePhase.ActionResolution: HandleActionResolution(); break;
-                case BattlePhase.PreActionAnimation: HandlePreActionAnimation(); break;
-                case BattlePhase.PreDazedAnimation: HandlePreDazedAnimation(deltaTime); break;
-                case BattlePhase.AnimatingMove: break;
-                case BattlePhase.SecondaryEffectResolution: HandleSecondaryEffectResolution(); break;
-                case BattlePhase.PostActionDelay: HandlePostActionDelay(deltaTime); break;
+                case BattlePhase.ActionResolution:
+                    _turnPacingTimer -= deltaTime;
+                    if (_turnPacingTimer <= 0)
+                    {
+                        ProcessTurnLogic();
+                    }
+                    break;
                 case BattlePhase.CheckForDefeat: HandleCheckForDefeat(); break;
                 case BattlePhase.EndOfTurn: HandleEndOfTurn(); break;
                 case BattlePhase.Reinforcement: HandleReinforcements(); break;
@@ -465,39 +393,113 @@ namespace ProjectVagabond.Battle
             }
         }
 
-        private void HandlePostActionDelay(float dt)
+        private void ProcessTurnLogic()
         {
-            _postActionDelayTimer -= dt;
-            if (_postActionDelayTimer <= 0)
-            {
-                _currentPhase = BattlePhase.CheckForDefeat;
-                CanAdvance = true;
-            }
-        }
+            // 1. Clean up battlefield first
+            bool battleOver = HandleCheckForDefeat();
+            if (battleOver) return;
 
-        private void HandlePreDazedAnimation(float dt)
-        {
-            _dazedWindupTimer -= dt;
-            if (_dazedWindupTimer <= 0)
+            // 2. Check if queue is empty
+            if (_actionQueue.Count == 0)
             {
-                if (_pendingDazedAction != null)
+                _currentPhase = BattlePhase.EndOfTurn;
+                return;
+            }
+
+            // 3. Dequeue next action
+            var nextAction = _actionQueue[0];
+            _actionQueue.RemoveAt(0);
+
+            // 4. Validate Actor
+            if (nextAction.Actor.IsDefeated || !nextAction.Actor.IsActiveOnField || nextAction.Actor.Stats.CurrentHP <= 0)
+            {
+                // Actor is dead/gone, skip immediately
+                _turnPacingTimer = 0f;
+                return;
+            }
+
+            // 5. Handle Status States (Stun/Dazed)
+            if (nextAction.Actor.Tags.Has(GameplayTags.States.Stunned))
+            {
+                AppendToLog($"{nextAction.Actor.Name} IS STUNNED!");
+                EventBus.Publish(new GameEvents.ActionFailed { Actor = nextAction.Actor, Reason = "stunned" });
+                _turnPacingTimer = ACTION_DELAY;
+                return;
+            }
+
+            if (nextAction.Actor.Tags.Has(GameplayTags.States.Dazed))
+            {
+                nextAction.Actor.Tags.Remove(GameplayTags.States.Dazed);
+                AppendToLog($"{nextAction.Actor.Name} was [cStatus]too dazed to move![/]");
+                EventBus.Publish(new GameEvents.ActionFailed { Actor = nextAction.Actor, Reason = "dazed" });
+                _turnPacingTimer = ACTION_DELAY;
+                return;
+            }
+
+            if (nextAction.Type == QueuedActionType.Charging)
+            {
+                AppendToLog($"{nextAction.Actor.Name} IS CHARGING [cAction]{nextAction.ChosenMove.MoveName}[/].");
+                _turnPacingTimer = ACTION_DELAY * 0.5f; // Faster pacing for charge messages
+                return;
+            }
+
+            // 6. Validate Target (Retargeting Logic)
+            if (nextAction.Target != null && (nextAction.Target.IsDefeated || nextAction.Target.Stats.CurrentHP <= 0))
+            {
+                // Try to find a new target in the same group (Enemy or Player)
+                var newTarget = _allCombatants.FirstOrDefault(c =>
+                    c.IsPlayerControlled == nextAction.Target.IsPlayerControlled &&
+                    !c.IsDefeated &&
+                    c.Stats.CurrentHP > 0 &&
+                    c.IsActiveOnField);
+
+                if (newTarget != null)
                 {
-                    // Clean up the tag
-                    _pendingDazedAction.Actor.Tags.Remove(GameplayTags.States.Dazed);
-
-                    // Polish: Better Log Message
-                    AppendToLog($"{_pendingDazedAction.Actor.Name} was [cStatus]too dazed to move![/]");
-
-                    // Fire failure event (triggers particles/text in BattleScene)
-                    EventBus.Publish(new GameEvents.ActionFailed { Actor = _pendingDazedAction.Actor, Reason = "dazed" });
-
-                    _pendingDazedAction = null;
+                    nextAction.Target = newTarget;
                 }
-
-                // Wait for BattleScene to handle the post-dazed delay
-                CanAdvance = false;
-                _currentPhase = BattlePhase.CheckForDefeat;
+                else
+                {
+                    // No valid targets left
+                    AppendToLog($"{nextAction.Actor.Name}'s action failed (No Target)!");
+                    EventBus.Publish(new GameEvents.MoveFailed { Actor = nextAction.Actor });
+                    _turnPacingTimer = ACTION_DELAY * 0.5f;
+                    return;
+                }
             }
+
+            // 7. Execute Action
+            _actionToExecute = nextAction;
+            CurrentActingCombatant = nextAction.Actor;
+
+            string moveName = nextAction.ChosenMove?.MoveName ?? "ACTION";
+            string typeColor = nextAction.ChosenMove?.MoveType == MoveType.Spell ? "[cAlt]" : "[cAction]";
+            AppendToLog($"{nextAction.Actor.Name} USED {typeColor}{moveName}[/].");
+
+            if (_actionToExecute.ChosenMove != null)
+            {
+                _battleContext.ResetMultipliers();
+                _battleContext.Actor = _actionToExecute.Actor;
+                _battleContext.Target = _actionToExecute.Target;
+                _battleContext.Move = _actionToExecute.ChosenMove;
+                _battleContext.Action = _actionToExecute;
+
+                var declEvent = new ActionDeclaredEvent(_actionToExecute.Actor, _actionToExecute.ChosenMove, _actionToExecute.Target);
+                _actionToExecute.Actor.NotifyAbilities(declEvent, _battleContext);
+
+                if (declEvent.IsHandled)
+                {
+                    _actionToExecute = null;
+                    _turnPacingTimer = ACTION_DELAY;
+                    return;
+                }
+            }
+
+            EventBus.Publish(new GameEvents.ActionDeclared { Actor = _actionToExecute.Actor, Move = _actionToExecute.ChosenMove, Target = _actionToExecute.Target, Type = _actionToExecute.Type });
+
+            ExecuteDeclaredAction();
+
+            // 8. Reset Timer
+            _turnPacingTimer = ACTION_DELAY;
         }
 
         private void HandleBattleStartEffects(float dt)
@@ -536,17 +538,14 @@ namespace ProjectVagabond.Battle
             var startOfTurnActions = new List<QueuedAction>();
             foreach (var combatant in _cachedAllActive)
             {
-                // Configure Context
                 _battleContext.ResetMultipliers();
                 _battleContext.Actor = combatant;
                 _battleContext.Target = null;
                 _battleContext.Move = null;
 
-                // Publish TurnStartEvent
                 var turnEvent = new TurnStartEvent(combatant);
                 combatant.NotifyAbilities(turnEvent, _battleContext);
 
-                // Check if turn is skipped (e.g. StunLogicAbility sets IsHandled = true)
                 if (turnEvent.IsHandled || combatant.Tags.Has(GameplayTags.States.Stunned))
                 {
                     continue;
@@ -568,7 +567,6 @@ namespace ProjectVagabond.Battle
                     combatant.DelayedActions = new Queue<DelayedAction>(remaining);
                 }
 
-                // --- AI ACTION GENERATION ---
                 if (!combatant.IsPlayerControlled && !isCharging)
                 {
                     var aiAction = EnemyAI.DetermineBestAction(combatant, _allCombatants);
@@ -580,7 +578,6 @@ namespace ProjectVagabond.Battle
             }
             _actionQueue.InsertRange(0, startOfTurnActions);
 
-            // Check if any players can act (Stun prevents scheduling, Dazed does NOT prevent scheduling but fails later)
             bool anyPlayerCanAct = _cachedActivePlayers.Any(p => p.ChargingAction == null && !p.Tags.Has(GameplayTags.States.Stunned));
 
             if (anyPlayerCanAct) _currentPhase = BattlePhase.ActionSelection;
@@ -614,90 +611,6 @@ namespace ProjectVagabond.Battle
             if (changesMade) RefreshCombatantCaches();
         }
 
-        private void HandleActionResolution()
-        {
-            if (_actionToExecute != null) return;
-            if (!_actionQueue.Any()) { _currentPhase = BattlePhase.EndOfTurn; return; }
-
-            var nextAction = _actionQueue[0];
-
-            // --- DAZED CHECK (Modified) ---
-            if (nextAction.Actor.Tags.Has(GameplayTags.States.Dazed))
-            {
-                _actionQueue.RemoveAt(0);
-
-                // Store the action and switch to the Windup phase
-                _pendingDazedAction = nextAction;
-                _dazedWindupTimer = DAZED_WINDUP_DURATION;
-                _currentPhase = BattlePhase.PreDazedAnimation;
-                CanAdvance = false;
-                return;
-            }
-
-            _actionQueue.RemoveAt(0);
-
-            if (nextAction.Actor.IsDefeated || !nextAction.Actor.IsActiveOnField || nextAction.Actor.Stats.CurrentHP <= 0) { HandleActionResolution(); return; }
-
-            if (nextAction.Type == QueuedActionType.Charging) { AppendToLog($"{nextAction.Actor.Name} IS CHARGING [cAction]{nextAction.ChosenMove.MoveName}[/]."); HandleActionResolution(); return; }
-
-            if (nextAction.Actor.Tags.Has(GameplayTags.States.Stunned)) { AppendToLog($"{nextAction.Actor.Name} IS STUNNED!"); HandleActionResolution(); return; }
-
-            _actionToExecute = nextAction;
-            CurrentActingCombatant = nextAction.Actor;
-
-            string moveName = nextAction.ChosenMove?.MoveName ?? "ACTION";
-            string typeColor = nextAction.ChosenMove?.MoveType == MoveType.Spell ? "[cAlt]" : "[cAction]";
-            AppendToLog($"{nextAction.Actor.Name} USED {typeColor}{moveName}[/].");
-
-            // Publish ActionDeclaredEvent
-            if (_actionToExecute.ChosenMove != null)
-            {
-                _battleContext.ResetMultipliers();
-                _battleContext.Actor = _actionToExecute.Actor;
-                _battleContext.Target = _actionToExecute.Target;
-                _battleContext.Move = _actionToExecute.ChosenMove;
-                _battleContext.Action = _actionToExecute;
-
-                var declEvent = new ActionDeclaredEvent(_actionToExecute.Actor, _actionToExecute.ChosenMove, _actionToExecute.Target);
-                _actionToExecute.Actor.NotifyAbilities(declEvent, _battleContext);
-
-                if (declEvent.IsHandled)
-                {
-                    // Action cancelled (e.g. Counter failed, Silence, Provoke)
-                    _actionToExecute = null;
-
-                    _currentPhase = BattlePhase.CheckForDefeat;
-                    CanAdvance = true;
-                    return;
-                }
-            }
-
-            EventBus.Publish(new GameEvents.ActionDeclared { Actor = _actionToExecute.Actor, Move = _actionToExecute.ChosenMove, Target = _actionToExecute.Target, Type = _actionToExecute.Type });
-
-            // ... rest of method (isOffensive check, etc) ...
-            bool isOffensive = _actionToExecute.ChosenMove != null &&
-                   _actionToExecute.ChosenMove.Power > 0 &&
-                   _actionToExecute.ChosenMove.ImpactType != ImpactType.Status;
-
-            if (_actionToExecute.Type == QueuedActionType.Move && isOffensive)
-            {
-                _currentPhase = BattlePhase.PreActionAnimation;
-                _animationManager.StartAttackCharge(_actionToExecute.Actor.CombatantID, _actionToExecute.Actor.IsPlayerControlled);
-                CanAdvance = false;
-            }
-            else
-            {
-                ExecuteDeclaredAction();
-            }
-        }
-
-        private void HandlePreActionAnimation()
-        {
-            if (_actionToExecute == null) return;
-            var chargeState = _animationManager.GetAttackChargeState(_actionToExecute.Actor.CombatantID);
-            if (chargeState == null || chargeState.Timer >= chargeState.WindupDuration) ExecuteDeclaredAction();
-        }
-
         private void AppendToLog(string text) { if (_roundLog.Length > 0) _roundLog.Append("\n"); _roundLog.Append(text); EventBus.Publish(new GameEvents.RoundLogUpdate { LogText = _roundLog.ToString() }); }
         private void AppendToCurrentLine(string text) { _roundLog.Append(text); EventBus.Publish(new GameEvents.RoundLogUpdate { LogText = _roundLog.ToString() }); }
 
@@ -716,15 +629,6 @@ namespace ProjectVagabond.Battle
             InitiateSwitchSequence(action.Actor, action.Target);
         }
 
-        private void HandleSecondaryEffectResolution()
-        {
-            SecondaryEffectSystem.ProcessSecondaryEffects(_currentActionForEffects, _currentActionFinalTargets, _currentActionDamageResults);
-            _currentActionForEffects = null;
-            _currentActionDamageResults = null;
-            _currentActionFinalTargets = null;
-            CanAdvance = false;
-        }
-
         private void ProcessMoveAction(QueuedAction action)
         {
             if (action.Actor.IsPlayerControlled && action.SpellbookEntry != null) action.SpellbookEntry.TimesUsed++;
@@ -734,7 +638,6 @@ namespace ProjectVagabond.Battle
             if (multiHit != null) { int hits = _random.Next(multiHit.MinHits, multiHit.MaxHits + 1); _multiHitTotalExecuted = 0; _multiHitRemaining = hits; _multiHitCrits = 0; }
             else { _multiHitTotalExecuted = 0; _multiHitRemaining = 1; _multiHitCrits = 0; }
 
-            // Execute Hit Logic
             PrepareHit(action);
         }
 
@@ -747,7 +650,6 @@ namespace ProjectVagabond.Battle
                 float multiTargetModifier = (targetsForThisHit.Count > 1) ? BattleConstants.MULTI_TARGET_MODIFIER : 1.0f;
                 var grazeStatus = new Dictionary<BattleCombatant, bool>();
 
-                // Configure Context for Damage Calculation
                 _battleContext.ResetMultipliers();
                 _battleContext.Actor = action.Actor;
                 _battleContext.Move = action.ChosenMove;
@@ -756,47 +658,94 @@ namespace ProjectVagabond.Battle
                 foreach (var target in targetsForThisHit)
                 {
                     _battleContext.Target = target;
-                    // Pass context to calculator
                     var result = DamageCalculator.CalculateDamage(action, target, action.ChosenMove, multiTargetModifier, null, false, _battleContext);
                     damageResultsForThisHit.Add(result);
                     grazeStatus[target] = result.WasGraze;
                 }
 
-                _pendingImpact = new PendingImpactData { Action = action, Targets = targetsForThisHit, Results = damageResultsForThisHit };
+                var significantTargetIds = new List<string>();
+                var normalTargets = new List<BattleCombatant>();
+                var protectedTargets = new List<BattleCombatant>();
+
+                for (int i = 0; i < targetsForThisHit.Count; i++)
+                {
+                    var target = targetsForThisHit[i];
+                    var result = damageResultsForThisHit[i];
+                    _battleContext.Target = target;
+
+                    if (result.WasProtected)
+                    {
+                        AppendToCurrentLine(" PROTECTED!");
+                        result.DamageAmount = 0;
+                        damageResultsForThisHit[i] = result;
+                        protectedTargets.Add(target);
+                        continue;
+                    }
+                    else
+                    {
+                        normalTargets.Add(target);
+                    }
+
+                    target.ApplyDamage(result.DamageAmount);
+
+                    if (!result.WasGraze && result.DamageAmount > 0 && target.CurrentTenacity > 0)
+                    {
+                        target.CurrentTenacity--;
+                        EventBus.Publish(new GameEvents.TenacityChanged { Combatant = target, NewValue = target.CurrentTenacity });
+
+                        if (target.CurrentTenacity == 0)
+                        {
+                            EventBus.Publish(new GameEvents.TenacityBroken { Combatant = target });
+                        }
+                    }
+
+                    if (result.DamageAmount > 0 && result.DamageAmount >= (target.Stats.MaxHP * 0.50f)) significantTargetIds.Add(target.CombatantID);
+                    if (result.WasCritical) AppendToCurrentLine(" [cCrit]CRITICAL HIT![/]");
+                    if (result.WasVulnerable) AppendToCurrentLine(" [cVulnerable]VULNERABLE![/]");
+
+                    var reactionEvt = new ReactionEvent(action.Actor, target, action, result);
+                    action.Actor.NotifyAbilities(reactionEvt, _battleContext);
+                    target.NotifyAbilities(reactionEvt, _battleContext);
+                    foreach (var ab in action.ChosenMove.Abilities) ab.OnEvent(reactionEvt, _battleContext);
+
+                    SecondaryEffectSystem.ProcessPrimaryEffects(action, target);
+                }
+
+                EventBus.Publish(new GameEvents.BattleActionExecuted { Actor = action.Actor, ChosenMove = action.ChosenMove, Targets = targetsForThisHit, DamageResults = damageResultsForThisHit });
+
+                if (significantTargetIds.Any())
+                {
+                    Color flashColor = action.Actor.IsPlayerControlled ? Color.White : _global.Palette_Rust;
+                    _animationManager.TriggerImpactFlash(flashColor, 0.15f, significantTargetIds);
+                }
+                foreach (var target in targetsForThisHit)
+                {
+                    if (target.IsPlayerControlled)
+                    {
+                        int dmg = damageResultsForThisHit[targetsForThisHit.IndexOf(target)].DamageAmount;
+                        if (dmg > 0)
+                        {
+                            float damageRatio = (float)dmg / target.Stats.MaxHP;
+                            float intensity = Math.Min(1.0f + (damageRatio * 5.0f), 5.0f);
+                            ServiceLocator.Get<HapticsManager>().TriggerImpactTwist(intensity, 0.25f);
+                        }
+                        break;
+                    }
+                }
 
                 float timeToImpact = 0.15f;
                 AnimationDefinition animDef = null;
-
-                if (!string.IsNullOrEmpty(action.ChosenMove.AnimationId) &&
-                    BattleDataCache.Animations.TryGetValue(action.ChosenMove.AnimationId, out animDef))
+                if (!string.IsNullOrEmpty(action.ChosenMove.AnimationId) && BattleDataCache.Animations.TryGetValue(action.ChosenMove.AnimationId, out animDef))
                 {
                     float frameDuration = 1f / Math.Max(1f, animDef.FPS);
                     timeToImpact = animDef.ImpactFrameIndex * frameDuration;
                 }
-
-                // PACING FIX: Ensure minimum windup time for impact
                 if (timeToImpact < 0.25f) timeToImpact = 0.25f;
-
                 _animationManager.ReleaseAttackCharge(action.Actor.CombatantID, timeToImpact);
 
-                var normalTargets = new List<BattleCombatant>();
-                var protectedTargets = new List<BattleCombatant>();
-                foreach (var target in targetsForThisHit)
+                if (normalTargets.Any())
                 {
-                    if (target.Tags.Has(GameplayTags.States.Protected)) protectedTargets.Add(target);
-                    else normalTargets.Add(target);
-                }
-
-                bool animationTriggered = false;
-
-                if (normalTargets.Any() && animDef != null)
-                {
-                    // Set state BEFORE publishing, in case the animation finishes synchronously
-                    _actionPendingAnimation = action;
-                    _currentPhase = BattlePhase.AnimatingMove;
-                    CanAdvance = false;
-                    animationTriggered = true;
-                    EventBus.Publish(new GameEvents.MoveAnimationTriggered { Move = action.ChosenMove, Targets = normalTargets, GrazeStatus = grazeStatus });
+                    EventBus.Publish(new GameEvents.PlayMoveAnimation { Move = action.ChosenMove, Targets = normalTargets, GrazeStatus = grazeStatus });
                 }
 
                 if (protectedTargets.Any())
@@ -804,114 +753,20 @@ namespace ProjectVagabond.Battle
                     var protectMove = action.ChosenMove.Clone();
                     protectMove.AnimationId = "basic_protect";
                     protectMove.IsAnimationCentralized = false;
-
-                    // Set state BEFORE publishing
-                    if (_actionPendingAnimation == null)
-                    {
-                        _actionPendingAnimation = action;
-                        _currentPhase = BattlePhase.AnimatingMove;
-                        CanAdvance = false;
-                    }
-                    animationTriggered = true;
-                    EventBus.Publish(new GameEvents.MoveAnimationTriggered { Move = protectMove, Targets = protectedTargets, GrazeStatus = grazeStatus });
+                    EventBus.Publish(new GameEvents.PlayMoveAnimation { Move = protectMove, Targets = protectedTargets, GrazeStatus = grazeStatus });
                 }
 
-                // Only manually process impact if no animation was triggered (or if they all finished instantly and cleared the flag)
-                if (!animationTriggered)
-                {
-                    ApplyPendingImpact();
-                    ProcessMoveActionPostImpact(action);
-                }
+                _currentActionForEffects = action;
+                _currentActionDamageResults = damageResultsForThisHit;
+                _currentActionFinalTargets = targetsForThisHit;
+
+                ProcessMoveActionPostImpact(action);
             }
             else
             {
                 AppendToCurrentLine(" FAILED!");
                 EventBus.Publish(new GameEvents.MoveFailed { Actor = action.Actor });
-                _currentPhase = BattlePhase.CheckForDefeat;
-                CanAdvance = false;
             }
-        }
-
-        private void ApplyPendingImpact()
-        {
-            if (_pendingImpact == null) return;
-            var action = _pendingImpact.Action;
-            var targets = _pendingImpact.Targets;
-            var results = _pendingImpact.Results;
-            var significantTargetIds = new List<string>();
-
-            // Configure Context
-            _battleContext.ResetMultipliers();
-            _battleContext.Actor = action.Actor;
-            _battleContext.Move = action.ChosenMove;
-            _battleContext.Action = action;
-
-            for (int i = 0; i < targets.Count; i++)
-            {
-                var target = targets[i];
-                var result = results[i];
-                _battleContext.Target = target;
-
-                if (result.WasProtected)
-                {
-                    AppendToCurrentLine(" PROTECTED!");
-                    result.DamageAmount = 0;
-                    results[i] = result;
-                    continue;
-                }
-
-                target.ApplyDamage(result.DamageAmount);
-
-                // CHANGE: Tenacity Decrement and Break Logic
-                if (!result.WasGraze && result.DamageAmount > 0 && target.CurrentTenacity > 0)
-                {
-                    target.CurrentTenacity--;
-                    EventBus.Publish(new GameEvents.TenacityChanged { Combatant = target, NewValue = target.CurrentTenacity });
-
-                    if (target.CurrentTenacity == 0)
-                    {
-                        EventBus.Publish(new GameEvents.TenacityBroken { Combatant = target });
-                    }
-                }
-
-                if (result.DamageAmount > 0 && result.DamageAmount >= (target.Stats.MaxHP * 0.50f)) significantTargetIds.Add(target.CombatantID);
-                if (result.WasCritical) AppendToCurrentLine(" [cCrit]CRITICAL HIT![/]");
-                if (result.WasVulnerable) AppendToCurrentLine(" [cVulnerable]VULNERABLE![/]");
-
-                // Fire ReactionEvent for OnHit/OnDamaged logic
-                var reactionEvt = new ReactionEvent(action.Actor, target, action, result);
-                action.Actor.NotifyAbilities(reactionEvt, _battleContext);
-                target.NotifyAbilities(reactionEvt, _battleContext);
-                foreach (var ab in action.ChosenMove.Abilities) ab.OnEvent(reactionEvt, _battleContext);
-
-                SecondaryEffectSystem.ProcessPrimaryEffects(action, target);
-            }
-
-            EventBus.Publish(new GameEvents.BattleActionExecuted { Actor = action.Actor, ChosenMove = action.ChosenMove, Targets = targets, DamageResults = results });
-            if (significantTargetIds.Any())
-            {
-                Color flashColor = action.Actor.IsPlayerControlled ? Color.White : _global.Palette_Rust;
-                _animationManager.TriggerImpactFlash(flashColor, 0.15f, significantTargetIds);
-            }
-            foreach (var target in targets)
-            {
-                if (target.IsPlayerControlled)
-                {
-                    int dmg = results[targets.IndexOf(target)].DamageAmount;
-                    if (dmg > 0)
-                    {
-                        float damageRatio = (float)dmg / target.Stats.MaxHP;
-                        float intensity = Math.Min(1.0f + (damageRatio * 5.0f), 5.0f);
-                        ServiceLocator.Get<HapticsManager>().TriggerImpactTwist(intensity, 0.25f);
-                    }
-                    break;
-                }
-            }
-
-            _currentActionForEffects = action;
-            _currentActionDamageResults = results;
-            _currentActionFinalTargets = targets;
-            _pendingImpact = null;
         }
 
         private void ProcessMoveActionPostImpact(QueuedAction action)
@@ -922,11 +777,11 @@ namespace ProjectVagabond.Battle
 
             if (_multiHitRemaining > 0)
             {
-                if (_currentActionFinalTargets != null && _currentActionFinalTargets.All(t => t.IsDefeated)) _multiHitRemaining = 0;
+                if (_currentActionFinalTargets != null && _currentActionFinalTargets.All(t => t.IsDefeated || t.Stats.CurrentHP <= 0)) _multiHitRemaining = 0;
                 else { PrepareHit(action); return; }
             }
 
-            if (_currentActionFinalTargets != null && _currentActionFinalTargets.All(t => t.IsDefeated))
+            if (_currentActionFinalTargets != null && _currentActionFinalTargets.All(t => t.IsDefeated || t.Stats.CurrentHP <= 0))
             {
                 AppendToCurrentLine(" [cDefeat]DEFEATED![/]");
             }
@@ -936,27 +791,10 @@ namespace ProjectVagabond.Battle
 
             if (_multiHitTotalExecuted > 1) EventBus.Publish(new GameEvents.MultiHitActionCompleted { Actor = action.Actor, ChosenMove = action.ChosenMove, HitCount = _multiHitTotalExecuted, CriticalHitCount = _multiHitCrits });
 
-            if (_currentPhase == BattlePhase.ProcessingInteraction)
-            {
-                SecondaryEffectSystem.ProcessSecondaryEffects(action, _currentActionFinalTargets, _currentActionDamageResults);
-            }
-            else
-            {
-                // Manually trigger secondary effects here since we are skipping the phase
-                SecondaryEffectSystem.ProcessSecondaryEffects(action, _currentActionFinalTargets, _currentActionDamageResults);
-
-                // Clear variables that would have been cleared in HandleSecondaryEffectResolution
-                _currentActionForEffects = null;
-                _currentActionDamageResults = null;
-                _currentActionFinalTargets = null;
-            }
-
-            if (_currentPhase != BattlePhase.ProcessingInteraction && _currentPhase != BattlePhase.WaitingForSwitchCompletion)
-            {
-                _currentPhase = BattlePhase.PostActionDelay;
-                _postActionDelayTimer = POST_ACTION_DELAY_DURATION;
-                CanAdvance = false;
-            }
+            SecondaryEffectSystem.ProcessSecondaryEffects(action, _currentActionFinalTargets, _currentActionDamageResults);
+            _currentActionForEffects = null;
+            _currentActionDamageResults = null;
+            _currentActionFinalTargets = null;
         }
 
         public void DrawStatChanges(SpriteBatch spriteBatch, BattleCombatant combatant, float startX, float startY, bool isRightAligned)
@@ -969,6 +807,9 @@ namespace ProjectVagabond.Battle
             var actor = action.Actor;
             var specifiedTarget = action.Target;
             var validCandidates = TargetingHelper.GetValidTargets(actor, targetType, _allCombatants);
+
+            // Filter out dead candidates immediately
+            validCandidates = validCandidates.Where(c => !c.IsDefeated && c.Stats.CurrentHP > 0).ToList();
 
             if (targetType == TargetType.RandomBoth || targetType == TargetType.RandomEvery || targetType == TargetType.RandomAll)
             {
@@ -999,46 +840,29 @@ namespace ProjectVagabond.Battle
             return new List<BattleCombatant>();
         }
 
-        private void HandleCheckForDefeat()
+        private bool HandleCheckForDefeat()
         {
-            // 1. Process finished animations (Only if animation is actually done)
-            var finishedDying = _allCombatants.Where(c => c.IsDying && !_animationManager.IsDeathAnimating(c.CombatantID)).ToList();
+            // 1. Identify dead combatants
+            var deadCombatants = _allCombatants.Where(c => c.IsActiveOnField && (c.IsDefeated || c.Stats.CurrentHP <= 0) && !c.IsRemovalProcessed).ToList();
 
-            foreach (var combatant in finishedDying)
+            foreach (var combatant in deadCombatants)
             {
                 RecordDefeatedName(combatant);
-                combatant.IsDying = false;
+                combatant.Stats.CurrentHP = 0;
+                combatant.IsDying = true; // Visual flag for scene
                 combatant.IsRemovalProcessed = true;
                 combatant.BattleSlot = -1;
                 _actionQueue.RemoveAll(a => a.Actor == combatant);
-            }
-            if (finishedDying.Any()) RefreshCombatantCaches();
-
-            // 2. Check for new deaths
-            var newlyDefeated = _allCombatants.FirstOrDefault(c => c.IsDefeated && !c.IsDying && !c.IsRemovalProcessed);
-            if (newlyDefeated != null)
-            {
-                newlyDefeated.IsDying = true;
-                EventBus.Publish(new GameEvents.CombatantDefeated { DefeatedCombatant = newlyDefeated });
-                CanAdvance = false;
-                return;
+                EventBus.Publish(new GameEvents.CombatantDefeated { DefeatedCombatant = combatant });
             }
 
-            // 3. Wait for current deaths to finish animating
-            if (_allCombatants.Any(c => c.IsDying))
-            {
-                CanAdvance = false;
-                return;
-            }
+            if (deadCombatants.Any()) RefreshCombatantCaches();
 
-            // 4. Check Game Over / Victory
-            if (_playerParty.All(c => c.IsDefeated)) { _currentPhase = BattlePhase.BattleOver; _actionQueue.Clear(); return; }
-            if (_enemyParty.All(c => c.IsDefeated)) { _currentPhase = BattlePhase.BattleOver; _actionQueue.Clear(); return; }
+            // 2. Check Game Over / Victory
+            if (_playerParty.All(c => c.IsDefeated)) { _currentPhase = BattlePhase.BattleOver; _actionQueue.Clear(); return true; }
+            if (_enemyParty.All(c => c.IsDefeated)) { _currentPhase = BattlePhase.BattleOver; _actionQueue.Clear(); return true; }
 
-            // 5. Proceed
-            if (_actionQueue.Any() || _actionToExecute != null) _currentPhase = BattlePhase.ActionResolution;
-            else if (!_endOfTurnEffectsProcessed) _currentPhase = BattlePhase.EndOfTurn;
-            else { _currentPhase = BattlePhase.Reinforcement; _reinforcementSlotIndex = 0; _reinforcementAnnounced = false; }
+            return false;
         }
 
         private void HandleEndOfTurn()
@@ -1047,27 +871,23 @@ namespace ProjectVagabond.Battle
 
             foreach (var combatant in _cachedAllActive)
             {
-                // Configure Context
                 _battleContext.ResetMultipliers();
                 _battleContext.Actor = combatant;
                 _battleContext.Target = null;
                 _battleContext.Move = null;
 
-                // Publish TurnEndEvent
                 var turnEnd = new TurnEndEvent(combatant);
                 combatant.NotifyAbilities(turnEnd, _battleContext);
 
                 if (!combatant.UsedProtectThisTurn) combatant.ConsecutiveProtectUses = 0;
                 combatant.UsedProtectThisTurn = false;
 
-                // Clear turn-based tags
                 combatant.Tags.Remove(GameplayTags.States.Dazed);
                 combatant.Tags.Remove(GameplayTags.States.Stunned);
 
                 var effectsToRemove = new List<StatusEffectInstance>();
                 foreach (var effect in combatant.ActiveStatusEffects)
                 {
-                    // This ensures Stun isn't wasted if applied after the target has already acted.
                     if (!effect.IsPermanent && effect.EffectType != StatusEffectType.Stun)
                     {
                         effect.DurationInTurns--;
@@ -1084,13 +904,18 @@ namespace ProjectVagabond.Battle
                     EventBus.Publish(new GameEvents.StatusEffectRemoved { Combatant = combatant, EffectType = expiredEffect.EffectType });
                 }
             }
-            _currentPhase = BattlePhase.CheckForDefeat;
+
+            // Check for defeat again after end of turn effects
+            if (HandleCheckForDefeat()) return;
+
+            // Proceed to reinforcements
+            _currentPhase = BattlePhase.Reinforcement;
+            _reinforcementSlotIndex = 0;
+            _reinforcementAnnounced = false;
         }
 
         private void HandleReinforcements()
         {
-            // STATELESS SCAN: Check all 4 slots (0,1 Enemy | 2,3 Player)
-            // We do not use an index variable. We simply find the first hole and fill it.
             for (int i = 0; i < 4; i++)
             {
                 bool isPlayerSlot = i >= 2;
@@ -1103,29 +928,22 @@ namespace ProjectVagabond.Battle
 
                 if (!isSlotOccupied)
                 {
-                    // Found a hole. Is there anyone on the bench?
-                    // Bench is defined as slot >= 2 in the raw party list
                     var reinforcement = partyList.FirstOrDefault(c => c.BattleSlot >= 2 && !c.IsDefeated);
 
                     if (reinforcement != null)
                     {
-                        // We found a hole AND a reinforcement.
-
-                        // 1. Announce (One-time gate per slot fill)
                         if (!_reinforcementAnnounced)
                         {
                             if (!isPlayerSlot) EventBus.Publish(new GameEvents.NextEnemyApproaches());
                             else EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "An ally approaches!" });
 
                             _reinforcementAnnounced = true;
-                            CanAdvance = false; // Wait for next update to proceed
+                            CanAdvance = false;
                             return;
                         }
 
-                        // 2. Execute Spawn
                         if (isPlayerSlot)
                         {
-                            // Player requires UI selection
                             EventBus.Publish(new GameEvents.ForcedSwitchRequested { Actor = null });
                             _currentPhase = BattlePhase.ProcessingInteraction;
                             _waitingForReinforcementSelection = true;
@@ -1134,7 +952,6 @@ namespace ProjectVagabond.Battle
                         }
                         else
                         {
-                            // Enemy auto-spawns
                             reinforcement.BattleSlot = slot;
                             RefreshCombatantCaches();
 
@@ -1149,23 +966,20 @@ namespace ProjectVagabond.Battle
                             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = msg });
                             EventBus.Publish(new GameEvents.CombatantSpawned { Combatant = reinforcement });
 
-                            // Fire Entry Abilities
                             var entryEvent = new GameEvents.CombatantEnteredEvent(reinforcement);
                             _battleContext.ResetMultipliers();
                             _battleContext.Actor = reinforcement;
                             reinforcement.NotifyAbilities(entryEvent, _battleContext);
 
-                            // Reset announcement flag for the NEXT hole (if any)
                             _reinforcementAnnounced = false;
 
-                            // Check for entry effects (Majestic, etc)
                             if (_startupEffectQueue.Any())
                             {
                                 _currentPhase = BattlePhase.BattleStartEffects;
                                 _startupEffectTimer = STARTUP_EFFECT_DELAY;
                             }
 
-                            CanAdvance = false; // Let visuals catch up
+                            CanAdvance = false;
                             return;
                         }
                     }
@@ -1203,11 +1017,9 @@ namespace ProjectVagabond.Battle
             };
             tempContext.Action = dummyAction;
 
-            // Calculate Minimum
             tempContext.SimulationVariance = VarianceMode.Min;
             var minResult = DamageCalculator.CalculateDamage(dummyAction, target, move, modifier, false, true, tempContext);
 
-            // Calculate Maximum
             tempContext.SimulationVariance = VarianceMode.Max;
             var maxResult = DamageCalculator.CalculateDamage(dummyAction, target, move, modifier, false, true, tempContext);
 

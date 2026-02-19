@@ -26,14 +26,30 @@ namespace ProjectVagabond.Battle.UI
         private readonly Dictionary<string, MoveAnimation?> _animationCache = new();
         private readonly List<MoveAnimationInstance> _activeAnimations = new();
         private readonly ContentManager _content;
-        private bool _impactSignalSentForCurrentBatch = false;
         private readonly Random _random = new Random();
+        private BattleRenderer? _renderer;
 
         public bool IsAnimating => _activeAnimations.Any();
 
         public MoveAnimationManager()
         {
             _content = ServiceLocator.Get<Core>().Content;
+            EventBus.Subscribe<GameEvents.PlayMoveAnimation>(OnPlayMoveAnimation);
+        }
+
+        public void SetRenderer(BattleRenderer renderer)
+        {
+            _renderer = renderer;
+        }
+
+        private void OnPlayMoveAnimation(GameEvents.PlayMoveAnimation e)
+        {
+            if (_renderer == null)
+            {
+                Debug.WriteLine("[MoveAnimationManager] WARNING: Renderer not set. Cannot play animation.");
+                return;
+            }
+            StartAnimation(e.Move, e.Targets, _renderer, e.GrazeStatus);
         }
 
         private MoveAnimation? GetAnimationData(AnimationDefinition def)
@@ -46,7 +62,6 @@ namespace ProjectVagabond.Battle.UI
             try
             {
                 var texture = _content.Load<Texture2D>(def.TexturePath);
-                // Pass the explicit dimensions from the JSON definition
                 var animationData = new MoveAnimation(texture, def.FrameWidth, def.FrameHeight);
                 _animationCache[def.Id] = animationData;
                 return animationData;
@@ -64,45 +79,14 @@ namespace ProjectVagabond.Battle.UI
         /// </summary>
         public void StartAnimation(MoveData move, List<BattleCombatant> targets, BattleRenderer renderer, Dictionary<BattleCombatant, bool>? grazeStatus = null)
         {
-            _impactSignalSentForCurrentBatch = false;
+            if (string.IsNullOrEmpty(move.AnimationId)) return;
 
-            // Failsafe 1: No animation ID defined
-            if (string.IsNullOrEmpty(move.AnimationId))
-            {
-                Debug.WriteLine($"[MoveAnimationManager] FAILSAFE: Move '{move.MoveName}' has no AnimationId defined. Firing impact immediately.");
-                EventBus.Publish(new GameEvents.MoveImpactOccurred { Move = move });
-                EventBus.Publish(new GameEvents.MoveAnimationCompleted());
-                return;
-            }
-
-            // Lookup Definition
-            if (!BattleDataCache.Animations.TryGetValue(move.AnimationId, out var animDef))
-            {
-                Debug.WriteLine($"[MoveAnimationManager] FAILSAFE: AnimationId '{move.AnimationId}' not found in BattleDataCache. Firing impact immediately.");
-                EventBus.Publish(new GameEvents.MoveImpactOccurred { Move = move });
-                EventBus.Publish(new GameEvents.MoveAnimationCompleted());
-                return;
-            }
+            if (!BattleDataCache.Animations.TryGetValue(move.AnimationId, out var animDef)) return;
 
             var animationData = GetAnimationData(animDef);
+            if (animationData == null) return;
 
-            // Failsafe 2: Animation load failed
-            if (animationData == null)
-            {
-                Debug.WriteLine($"[MoveAnimationManager] FAILSAFE: Could not load texture for animation '{move.AnimationId}'. Firing impact immediately.");
-                EventBus.Publish(new GameEvents.MoveImpactOccurred { Move = move });
-                EventBus.Publish(new GameEvents.MoveAnimationCompleted());
-                return;
-            }
-
-            // Failsafe 3: No targets and not centralized (would result in 0 instances)
-            if (!move.IsAnimationCentralized && (targets == null || !targets.Any()))
-            {
-                Debug.WriteLine($"[MoveAnimationManager] FAILSAFE: Move '{move.MoveName}' is not centralized but has 0 targets. Firing impact immediately.");
-                EventBus.Publish(new GameEvents.MoveImpactOccurred { Move = move });
-                EventBus.Publish(new GameEvents.MoveAnimationCompleted());
-                return;
-            }
+            if (!move.IsAnimationCentralized && (targets == null || !targets.Any())) return;
 
             float secondsPerFrame = 1.0f / Math.Max(1f, animDef.FPS);
 
@@ -118,18 +102,15 @@ namespace ProjectVagabond.Battle.UI
             {
                 foreach (var target in targets)
                 {
-                    // Calculate Graze Offset once per instance
                     float grazeOffsetX = 0f;
                     if (grazeStatus != null && grazeStatus.TryGetValue(target, out bool isGraze) && isGraze)
                     {
-                        // Offset between 16 and 32 pixels, left or right
                         float offset = (float)_random.Next(16, 33);
                         if (_random.Next(2) == 0) offset *= -1;
                         grazeOffsetX = offset;
                     }
                     Vector2 finalOffset = new Vector2(grazeOffsetX, 0);
 
-                    // Create a provider that fetches the current position every frame + the static graze offset
                     Func<Vector2> positionProvider = () =>
                         renderer.GetCombatantVisualCenterPosition(target, ServiceLocator.Get<BattleManager>().AllCombatants) + finalOffset;
 
@@ -142,13 +123,8 @@ namespace ProjectVagabond.Battle.UI
 
         private void HandleImpactTrigger(MoveData move)
         {
-            // Ensure we only send the impact signal once per move execution, 
-            // even if multiple instances (e.g. multi-target) trigger it.
-            if (!_impactSignalSentForCurrentBatch)
-            {
-                EventBus.Publish(new GameEvents.MoveImpactOccurred { Move = move });
-                _impactSignalSentForCurrentBatch = true;
-            }
+            // Visual-only trigger (e.g. screen shake could go here if decoupled from BattleManager)
+            // Currently empty as BattleManager handles logic immediately.
         }
 
         public void Update(GameTime gameTime)
@@ -177,23 +153,8 @@ namespace ProjectVagabond.Battle.UI
             _activeAnimations.Clear();
         }
 
-        /// <summary>
-        /// Instantly completes all active animations, ensuring their impact logic fires.
-        /// </summary>
         public void CompleteCurrentAnimation()
         {
-            if (!_activeAnimations.Any()) return;
-
-            // If impact hasn't fired yet, fire it now.
-            if (!_impactSignalSentForCurrentBatch)
-            {
-                // We rely on the fact that BattleManager has a failsafe for pending impacts
-                // if the animation completes without firing.
-                // However, to be safe, we can try to trigger it if we had a reference,
-                // but since we don't store the MoveData easily here without the closure,
-                // we rely on the BattleManager's OnMoveAnimationCompleted check for _pendingImpact.
-            }
-
             _activeAnimations.Clear();
         }
 

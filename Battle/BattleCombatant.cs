@@ -27,6 +27,7 @@ namespace ProjectVagabond.Battle
 
         public int CurrentTenacity { get; set; }
 
+        // VisualHP is distinct from Stats.CurrentHP to allow for smooth animation
         public float VisualHP { get; set; }
         public float VisualAlpha { get; set; } = 1.0f;
 
@@ -99,6 +100,11 @@ namespace ProjectVagabond.Battle
             };
 
             RegisterAbility(new StandardRulesAbility());
+        }
+
+        public void SnapVisuals()
+        {
+            VisualHP = Stats.CurrentHP;
         }
 
         public void RegisterAbility(IAbility ability)

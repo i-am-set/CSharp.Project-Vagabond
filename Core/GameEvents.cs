@@ -152,6 +152,13 @@ namespace ProjectVagabond
             public int Amount { get; set; }
         }
 
+        public struct PlayMoveAnimation
+        {
+            public MoveData Move { get; set; }
+            public List<BattleCombatant> Targets { get; set; }
+            public Dictionary<BattleCombatant, bool> GrazeStatus { get; set; }
+        }
+
         public struct MoveAnimationTriggered
         {
             public BattleCombatant Actor { get; set; }

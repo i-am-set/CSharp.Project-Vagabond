@@ -30,7 +30,7 @@ namespace ProjectVagabond.Particles
         {
             var emitter = new ParticleEmitter(settings);
             _emitters.Add(emitter);
-            Debug.WriteLine($"[PSM] Created emitter. Total emitters: {_emitters.Count}.");
+            //Debug.WriteLine($"[PSM] Created emitter. Total emitters: {_emitters.Count}.");
             return emitter;
         }
 
@@ -62,7 +62,7 @@ namespace ProjectVagabond.Particles
             int removedCount = _emitters.RemoveAll(e => e.IsFinished);
             if (removedCount > 0)
             {
-                Debug.WriteLine($"[PSM] Cleaned up {removedCount} finished emitter(s). Total emitters remaining: {_emitters.Count}.");
+                //Debug.WriteLine($"[PSM] Cleaned up {removedCount} finished emitter(s). Total emitters remaining: {_emitters.Count}.");
             }
         }
 

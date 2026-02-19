@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using MonoGame.Extended.Collections;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
@@ -689,30 +690,6 @@ namespace ProjectVagabond.Scenes
             bool isPendingBusy = _pendingAnimations.Any();
             bool isSwitching = _switchSequenceState != SwitchSequenceState.None;
 
-            if (!isUiBusy && !isAnimBusy && !isMoveAnimBusy && !isPendingBusy && !isSwitching)
-            {
-                bool isLogicDrivenPhase =
-                    _battleManager.CurrentPhase == BattleManager.BattlePhase.CheckForDefeat ||
-                    _battleManager.CurrentPhase == BattleManager.BattlePhase.Reinforcement ||
-                    _battleManager.CurrentPhase == BattleManager.BattlePhase.EndOfTurn ||
-                    _battleManager.CurrentPhase == BattleManager.BattlePhase.ActionResolution ||
-                    _battleManager.CurrentPhase == BattleManager.BattlePhase.SecondaryEffectResolution;
-
-                bool isTimeDrivenPhase =
-                    _battleManager.CurrentPhase == BattleManager.BattlePhase.PostActionDelay ||
-                    _battleManager.CurrentPhase == BattleManager.BattlePhase.PreDazedAnimation ||
-                    _battleManager.CurrentPhase == BattleManager.BattlePhase.BattleStartEffects ||
-                    _battleManager.CurrentPhase == BattleManager.BattlePhase.PreActionAnimation;
-
-                if (isLogicDrivenPhase)
-                {
-                    _battleManager.RequestNextPhase();
-                }
-                else if (!isTimeDrivenPhase && !_battleManager.CanAdvance)
-                {
-                }
-            }
-
             if (!_uiManager.IsBusy && !_animationManager.IsBlockingAnimation && _pendingAnimations.Any())
             {
                 var nextAnimation = _pendingAnimations.Dequeue();
@@ -781,11 +758,6 @@ namespace ProjectVagabond.Scenes
                 _uiManager.HideAllMenus();
                 var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
                 bool playerWon = player != null && !player.IsDefeated;
-            }
-
-            if (_battleManager.CurrentPhase == BattleManager.BattlePhase.AnimatingMove && !_moveAnimationManager.IsAnimating)
-            {
-                EventBus.Publish(new GameEvents.MoveAnimationCompleted());
             }
 
             base.Update(gameTime);
@@ -1145,7 +1117,6 @@ namespace ProjectVagabond.Scenes
                     ring.Position = targetPos;
                     ring.EmitBurst(1);
                     _animationManager.StartHealthLossAnimation(target.CombatantID, target.VisualHP, target.Stats.CurrentHP);
-                    _animationManager.StartHealthAnimation(target.CombatantID, (int)target.VisualHP, target.Stats.CurrentHP);
                     if (target.HasStatusEffect(StatusEffectType.Burn)) _renderer.TriggerStatusIconHop(target.CombatantID, StatusEffectType.Burn);
                     if (target.Stats.CurrentHP <= 0) TriggerDeathAnimation(target);
                     int baselineDamage = DamageCalculator.CalculateBaselineDamage(e.Actor, target, e.ChosenMove);
@@ -1204,7 +1175,6 @@ namespace ProjectVagabond.Scenes
                 _animationManager.StartHealBounceAnimation(e.Target.CombatantID);
                 _animationManager.StartHealFlashAnimation(e.Target.CombatantID);
                 _animationManager.StartHealthRecoveryAnimation(e.Target.CombatantID, e.VisualHPBefore, e.Target.Stats.CurrentHP);
-                _animationManager.StartHealthAnimation(e.Target.CombatantID, e.VisualHPBefore, e.Target.Stats.CurrentHP);
                 Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(e.Target, _battleManager.AllCombatants);
                 _animationManager.StartHealNumberIndicator(e.Target.CombatantID, e.HealAmount, hudPosition);
             };
@@ -1220,7 +1190,6 @@ namespace ProjectVagabond.Scenes
                 _hapticsManager.TriggerWobble(intensity: 10.0f, duration: 0.75f, frequency: 120f);
             }
             _animationManager.StartHealthLossAnimation(e.Actor.CombatantID, e.Actor.VisualHP, e.Actor.Stats.CurrentHP);
-            _animationManager.StartHealthAnimation(e.Actor.CombatantID, (int)e.Actor.VisualHP, e.Actor.Stats.CurrentHP);
             if (!e.Actor.IsPlayerControlled) _animationManager.StartHitFlashAnimation(e.Actor.CombatantID);
             Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(e.Actor, _battleManager.AllCombatants);
             _animationManager.StartDamageNumberIndicator(e.Actor.CombatantID, e.RecoilDamage, hudPosition);
@@ -1286,7 +1255,6 @@ namespace ProjectVagabond.Scenes
                     _hapticsManager.TriggerWobble(intensity: 10.0f, duration: 0.75f, frequency: 120f);
                 }
                 _animationManager.StartHealthLossAnimation(e.Combatant.CombatantID, e.Combatant.VisualHP, e.Combatant.Stats.CurrentHP);
-                _animationManager.StartHealthAnimation(e.Combatant.CombatantID, (int)e.Combatant.VisualHP, e.Combatant.Stats.CurrentHP);
                 _renderer.TriggerStatusIconHop(e.Combatant.CombatantID, e.EffectType);
                 if (e.Combatant.Stats.CurrentHP <= 0) TriggerDeathAnimation(e.Combatant);
                 else
