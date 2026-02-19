@@ -1051,10 +1051,22 @@ namespace ProjectVagabond.Scenes
             bool isMultiHit = e.ChosenMove != null && e.ChosenMove.Effects.ContainsKey("MultiHit");
             if (isMultiHit) _isWaitingForMultiHitDelay = true;
             var grazedTargets = new List<BattleCombatant>();
+            var grazeStatus = new Dictionary<BattleCombatant, bool>();
+
             for (int i = 0; i < e.Targets.Count; i++)
             {
-                if (e.DamageResults[i].WasGraze) grazedTargets.Add(e.Targets[i]);
+                if (e.DamageResults[i].WasGraze)
+                {
+                    grazedTargets.Add(e.Targets[i]);
+                    grazeStatus[e.Targets[i]] = true;
+                }
+                else
+                {
+                    grazeStatus[e.Targets[i]] = false;
+                }
             }
+
+            _moveAnimationManager.StartAnimation(e.ChosenMove, e.Targets, _renderer, grazeStatus);
 
             for (int i = 0; i < e.Targets.Count; i++)
             {

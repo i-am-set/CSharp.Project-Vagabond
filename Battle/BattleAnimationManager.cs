@@ -316,6 +316,25 @@ namespace ProjectVagabond.Battle.UI
         public BattleAnimationManager()
         {
             _global = ServiceLocator.Get<Global>();
+            EventBus.Subscribe<GameEvents.BattleActionExecuted>(OnActionExecuted);
+        }
+
+        private void OnActionExecuted(GameEvents.BattleActionExecuted e)
+        {
+            // Actor Animation (Instant Lunge)
+            if (e.Actor != null)
+            {
+                TriggerInstantAttack(e.Actor.CombatantID, e.Actor.IsPlayerControlled);
+            }
+
+            // Target Animations (Hit Flash / Shake)
+            if (e.Targets != null)
+            {
+                foreach (var target in e.Targets)
+                {
+                    StartHitFlashAnimation(target.CombatantID);
+                }
+            }
         }
 
         public void Reset()
@@ -1757,6 +1776,20 @@ namespace ProjectVagabond.Battle.UI
 
                 TextAnimator.DrawTextWithEffectSquareOutlined(spriteBatch, tertiaryFont, indicator.Text, drawPos - origin, textColor * finalDrawAlpha, outlineColor * finalDrawAlpha, TextEffectType.DriftWave, indicator.Timer, null, indicator.Rotation);
             }
+        }
+
+        public void TriggerInstantAttack(string combatantId, bool isPlayer)
+        {
+            _activeAttackCharges.RemoveAll(a => a.CombatantID == combatantId);
+            _activeAttackCharges.Add(new AttackChargeAnimationState
+            {
+                CombatantID = combatantId,
+                IsPlayer = isPlayer,
+                Timer = 0f,
+                IsHoldingAtPeak = false, // Don't hold, just lunge and return
+                WindupDuration = 0.55f,  // Very fast windup
+                LungeDuration = 0.4f     // Fast return
+            });
         }
     }
 }

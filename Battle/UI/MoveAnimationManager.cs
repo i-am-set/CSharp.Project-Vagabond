@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -35,6 +34,7 @@ namespace ProjectVagabond.Battle.UI
         {
             _content = ServiceLocator.Get<Core>().Content;
             EventBus.Subscribe<GameEvents.PlayMoveAnimation>(OnPlayMoveAnimation);
+            EventBus.Subscribe<GameEvents.BattleActionExecuted>(OnActionExecuted);
         }
 
         public void SetRenderer(BattleRenderer renderer)
@@ -50,6 +50,25 @@ namespace ProjectVagabond.Battle.UI
                 return;
             }
             StartAnimation(e.Move, e.Targets, _renderer, e.GrazeStatus);
+        }
+
+        private void OnActionExecuted(GameEvents.BattleActionExecuted e)
+        {
+            if (_renderer == null) return;
+
+            var grazeStatus = new Dictionary<BattleCombatant, bool>();
+            if (e.Targets != null && e.DamageResults != null)
+            {
+                for (int i = 0; i < e.Targets.Count; i++)
+                {
+                    if (i < e.DamageResults.Count)
+                    {
+                        grazeStatus[e.Targets[i]] = e.DamageResults[i].WasGraze;
+                    }
+                }
+            }
+
+            StartAnimation(e.ChosenMove, e.Targets, _renderer, grazeStatus);
         }
 
         private MoveAnimation? GetAnimationData(AnimationDefinition def)
