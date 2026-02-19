@@ -679,9 +679,7 @@ namespace ProjectVagabond.Scenes
                 else
                 {
                     // Manual advance fallback
-                    if (_battleManager.CurrentPhase == BattleManager.BattlePhase.CheckForDefeat ||
-                        _battleManager.CurrentPhase == BattleManager.BattlePhase.EndOfTurn ||
-                        _battleManager.CurrentPhase == BattleManager.BattlePhase.Reinforcement)
+                    if (_battleManager.CurrentPhase == BattleManager.BattlePhase.EndOfRound)
                     {
                         _battleManager.RequestNextPhase();
                         UIInputManager.ConsumeMouseClick();
@@ -803,7 +801,7 @@ namespace ProjectVagabond.Scenes
 
         private void HandlePhaseChange(BattleManager.BattlePhase newPhase)
         {
-            if (newPhase == BattleManager.BattlePhase.EndOfTurn ||
+            if (newPhase == BattleManager.BattlePhase.EndOfRound ||
                 newPhase == BattleManager.BattlePhase.BattleOver ||
                 newPhase == BattleManager.BattlePhase.ActionSelection)
             {
@@ -821,7 +819,7 @@ namespace ProjectVagabond.Scenes
                     _uiManager.ShowActionMenu(leader, _battleManager.AllCombatants.ToList());
                 }
             }
-            else if (newPhase == BattleManager.BattlePhase.StartOfTurn) { }
+            else if (newPhase == BattleManager.BattlePhase.StartOfRound) { }
             else _uiManager.HideAllMenus();
         }
 

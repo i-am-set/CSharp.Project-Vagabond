@@ -524,6 +524,11 @@ namespace ProjectVagabond.Battle.UI
 
         public void StartDeathAnimation(string combatantId)
         {
+            // Safety: Clear any pending attack charges or hit flashes for this unit
+            // This prevents softlocks if a unit dies mid-attack (e.g. recoil)
+            _activeAttackCharges.RemoveAll(a => a.CombatantID == combatantId);
+            _activeHitFlashAnimations.RemoveAll(a => a.CombatantID == combatantId);
+
             _activeDeathAnimations.RemoveAll(a => a.CombatantID == combatantId);
             _activeDeathAnimations.Add(new DeathAnimationState
             {
@@ -601,6 +606,9 @@ namespace ProjectVagabond.Battle.UI
 
         public void StartSwitchOutAnimation(string combatantId, bool isEnemy)
         {
+            // Safety: Clear attack charges for switching unit
+            _activeAttackCharges.RemoveAll(a => a.CombatantID == combatantId);
+
             _activeSwitchOutAnimations.RemoveAll(a => a.CombatantID == combatantId);
             _activeSwitchOutAnimations.Add(new SwitchOutAnimationState
             {
@@ -930,7 +938,7 @@ namespace ProjectVagabond.Battle.UI
             UpdateAbilityIndicators(scaledGameTime);
             UpdateBarAnimations(scaledGameTime);
             UpdateImpactFlash(scaledGameTime);
-            UpdateAttackCharges(scaledGameTime);
+            UpdateAttackCharges(scaledGameTime, combatants);
             UpdateHudEntryAnimations(scaledGameTime, combatants);
         }
 
@@ -958,12 +966,21 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private void UpdateAttackCharges(GameTime gameTime)
+        private void UpdateAttackCharges(GameTime gameTime, IEnumerable<BattleCombatant> combatants)
         {
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
             for (int i = _activeAttackCharges.Count - 1; i >= 0; i--)
             {
                 var anim = _activeAttackCharges[i];
+
+                // Safety: If combatant is gone or dead, remove animation
+                var combatant = combatants.FirstOrDefault(c => c.CombatantID == anim.CombatantID);
+                if (combatant == null || combatant.IsDefeated || combatant.Stats.CurrentHP <= 0)
+                {
+                    _activeAttackCharges.RemoveAt(i);
+                    continue;
+                }
+
                 float dir = anim.IsPlayer ? 1f : -1f;
 
                 if (anim.CurrentPhase == AttackChargeAnimationState.Phase.Windup)

@@ -28,15 +28,23 @@ namespace ProjectVagabond.Battle
         {
             BattleStartIntro,
             BattleStartEffects,
-            StartOfTurn,
+            StartOfRound,
             ActionSelection,
             ActionResolution,
-            CheckForDefeat, // Kept for explicit state transitions if needed, though logic is mostly integrated now
-            EndOfTurn,
-            Reinforcement,
+            EndOfRound,
             BattleOver,
             ProcessingInteraction,
             WaitingForSwitchCompletion
+        }
+
+        private enum EndOfRoundStage
+        {
+            VisualWait,
+            ProcessEffects,
+            CheckDeaths,
+            CheckWinLoss,
+            ProcessReinforcements,
+            PrepareNextRound
         }
 
         private struct PendingImpactData
@@ -67,11 +75,12 @@ namespace ProjectVagabond.Battle
         private List<DamageCalculator.DamageResult> _currentActionDamageResults;
         private List<BattleCombatant> _currentActionFinalTargets;
         private BattlePhase _currentPhase;
+        private EndOfRoundStage _endOfRoundStage;
+
         public int RoundNumber { get; private set; }
         private static readonly Random _random = new Random();
 
         private QueuedAction? _actionToExecute;
-        private bool _endOfTurnEffectsProcessed;
 
         // --- PACING STATE ---
         private float _turnPacingTimer = 0f;
@@ -127,7 +136,7 @@ namespace ProjectVagabond.Battle
             RoundNumber = 1;
 
             _currentPhase = BattlePhase.BattleStartIntro;
-            _endOfTurnEffectsProcessed = false;
+            _endOfRoundStage = EndOfRoundStage.VisualWait;
 
             _animationManager = animationManager;
             _global = ServiceLocator.Get<Global>();
@@ -163,7 +172,7 @@ namespace ProjectVagabond.Battle
             }
             else
             {
-                _currentPhase = BattlePhase.StartOfTurn;
+                _currentPhase = BattlePhase.StartOfRound;
                 CanAdvance = true;
             }
         }
@@ -190,9 +199,7 @@ namespace ProjectVagabond.Battle
 
         public void RequestNextPhase()
         {
-            if (_currentPhase == BattlePhase.CheckForDefeat) HandleCheckForDefeat();
-            else if (_currentPhase == BattlePhase.EndOfTurn) HandleEndOfTurn();
-            else if (_currentPhase == BattlePhase.Reinforcement) HandleReinforcements();
+            if (_currentPhase == BattlePhase.EndOfRound) HandleEndOfRound();
             CanAdvance = true;
         }
 
@@ -201,13 +208,18 @@ namespace ProjectVagabond.Battle
             _actionToExecute = null;
             _activeInteraction = null;
 
-            if (_currentPhase == BattlePhase.BattleStartIntro) _currentPhase = BattlePhase.StartOfTurn;
+            if (_currentPhase == BattlePhase.BattleStartIntro) _currentPhase = BattlePhase.StartOfRound;
             else if (_currentPhase == BattlePhase.ActionResolution || _currentPhase == BattlePhase.ProcessingInteraction || _currentPhase == BattlePhase.WaitingForSwitchCompletion)
             {
-                if (!IsProcessingMultiHit) _currentPhase = BattlePhase.CheckForDefeat;
+                if (!IsProcessingMultiHit)
+                {
+                    // Force skip to end of round to prevent stuck states
+                    _actionQueue.Clear();
+                    _currentPhase = BattlePhase.EndOfRound;
+                    _endOfRoundStage = EndOfRoundStage.VisualWait;
+                }
             }
-            else if (_currentPhase == BattlePhase.CheckForDefeat || _currentPhase == BattlePhase.EndOfTurn) { RoundNumber++; _currentPhase = BattlePhase.StartOfTurn; }
-            else if (_currentPhase == BattlePhase.Reinforcement) { RoundNumber++; _currentPhase = BattlePhase.StartOfTurn; }
+            else if (_currentPhase == BattlePhase.EndOfRound) { RoundNumber++; _currentPhase = BattlePhase.StartOfRound; }
             CanAdvance = true;
         }
 
@@ -220,7 +232,12 @@ namespace ProjectVagabond.Battle
             _activeInteraction = new SwitchInteraction(e.Actor, (result) =>
             {
                 if (result is BattleCombatant target && target != e.Actor) InitiateSwitchSequence(e.Actor, target);
-                else { _currentPhase = BattlePhase.CheckForDefeat; CanAdvance = true; }
+                else
+                {
+                    // Cancelled switch, resume turn
+                    _currentPhase = BattlePhase.ActionResolution;
+                    CanAdvance = true;
+                }
                 _activeInteraction = null;
             });
             _activeInteraction.Start(this);
@@ -348,7 +365,7 @@ namespace ProjectVagabond.Battle
                     _waitingForReinforcementSelection = false;
                     _reinforcementAnnounced = false;
                     _reinforcementSlotIndex++;
-                    _currentPhase = BattlePhase.Reinforcement;
+                    // Stay in ProcessReinforcements stage, loop will continue next update
                     CanAdvance = true;
                 }
             }
@@ -382,7 +399,9 @@ namespace ProjectVagabond.Battle
 
         public void ResumeAfterSwitch()
         {
-            _currentPhase = BattlePhase.CheckForDefeat;
+            // Switch complete, resume action resolution
+            _currentPhase = BattlePhase.ActionResolution;
+            _turnPacingTimer = 0.5f;
             CanAdvance = true;
         }
 
@@ -497,7 +516,7 @@ namespace ProjectVagabond.Battle
             {
                 case BattlePhase.BattleStartIntro: break;
                 case BattlePhase.BattleStartEffects: HandleBattleStartEffects(deltaTime); break;
-                case BattlePhase.StartOfTurn: HandleStartOfTurn(); break;
+                case BattlePhase.StartOfRound: HandleStartOfRound(); break;
                 case BattlePhase.ActionSelection: break;
                 case BattlePhase.ActionResolution:
                     _turnPacingTimer -= deltaTime;
@@ -506,9 +525,7 @@ namespace ProjectVagabond.Battle
                         ProcessTurnLogic();
                     }
                     break;
-                case BattlePhase.CheckForDefeat: HandleCheckForDefeat(); break;
-                case BattlePhase.EndOfTurn: HandleEndOfTurn(); break;
-                case BattlePhase.Reinforcement: HandleReinforcements(); break;
+                case BattlePhase.EndOfRound: HandleEndOfRound(); break;
                 case BattlePhase.ProcessingInteraction: break;
                 case BattlePhase.WaitingForSwitchCompletion: break;
             }
@@ -516,30 +533,27 @@ namespace ProjectVagabond.Battle
 
         private void ProcessTurnLogic()
         {
-            // 1. Clean up battlefield first
-            bool battleOver = HandleCheckForDefeat();
-            if (battleOver) return;
-
-            // 2. Check if queue is empty
+            // 1. Check if queue is empty
             if (_actionQueue.Count == 0)
             {
-                _currentPhase = BattlePhase.EndOfTurn;
+                _currentPhase = BattlePhase.EndOfRound;
+                _endOfRoundStage = EndOfRoundStage.VisualWait;
                 return;
             }
 
-            // 3. Dequeue next action
+            // 2. Dequeue next action
             var nextAction = _actionQueue[0];
             _actionQueue.RemoveAt(0);
 
-            // 4. Validate Actor
+            // 3. Validate Actor
+            // If actor is defeated or not on field, skip turn entirely without modifying queue structure
             if (nextAction.Actor.IsDefeated || !nextAction.Actor.IsActiveOnField || nextAction.Actor.Stats.CurrentHP <= 0)
             {
-                // Actor is dead/gone, skip immediately
-                _turnPacingTimer = 0f;
+                _turnPacingTimer = 0f; // Process next immediately
                 return;
             }
 
-            // 5. Handle Status States (Stun/Dazed)
+            // 4. Handle Status States (Stun/Dazed)
             if (nextAction.Actor.Tags.Has(GameplayTags.States.Stunned))
             {
                 AppendToLog($"{nextAction.Actor.Name} IS STUNNED!");
@@ -564,7 +578,7 @@ namespace ProjectVagabond.Battle
                 return;
             }
 
-            // 6. Validate Target (Retargeting Logic)
+            // 5. Validate Target (Retargeting Logic)
             if (nextAction.Target != null && (nextAction.Target.IsDefeated || nextAction.Target.Stats.CurrentHP <= 0))
             {
                 // Try to find a new target in the same group (Enemy or Player)
@@ -588,7 +602,7 @@ namespace ProjectVagabond.Battle
                 }
             }
 
-            // 7. Execute Action
+            // 6. Execute Action
             _actionToExecute = nextAction;
             CurrentActingCombatant = nextAction.Actor;
 
@@ -619,7 +633,7 @@ namespace ProjectVagabond.Battle
 
             ExecuteDeclaredAction();
 
-            // 8. Reset Timer
+            // 7. Reset Timer
             _turnPacingTimer = ACTION_DELAY;
         }
 
@@ -636,27 +650,34 @@ namespace ProjectVagabond.Battle
                 }
                 else
                 {
-                    _currentPhase = BattlePhase.StartOfTurn;
+                    _currentPhase = BattlePhase.StartOfRound;
                     CanAdvance = true;
                 }
             }
         }
 
-        private void HandleStartOfTurn()
+        private void HandleStartOfRound()
         {
             SanitizeBattlefield();
+
             if (!_cachedActiveEnemies.Any())
             {
                 if (_enemyParty.All(c => c.IsDefeated)) { _currentPhase = BattlePhase.BattleOver; return; }
-                else { _currentPhase = BattlePhase.Reinforcement; _reinforcementSlotIndex = 0; _reinforcementAnnounced = false; return; }
+                else
+                {
+                    // Skip to EndOfRound to trigger reinforcements if enemies exist but aren't active
+                    _currentPhase = BattlePhase.EndOfRound;
+                    _endOfRoundStage = EndOfRoundStage.ProcessReinforcements;
+                    _reinforcementSlotIndex = 0;
+                    return;
+                }
             }
 
             _roundLog.Clear();
             EventBus.Publish(new GameEvents.RoundLogUpdate { LogText = "" });
-            _endOfTurnEffectsProcessed = false;
             _pendingPlayerActions.Clear();
 
-            var startOfTurnActions = new List<QueuedAction>();
+            var startOfRoundActions = new List<QueuedAction>();
             foreach (var combatant in _cachedAllActive)
             {
                 _battleContext.ResetMultipliers();
@@ -677,13 +698,13 @@ namespace ProjectVagabond.Battle
                 if (isCharging)
                 {
                     combatant.ChargingAction.TurnsRemaining--;
-                    if (combatant.ChargingAction.TurnsRemaining <= 0) { startOfTurnActions.Add(combatant.ChargingAction.Action); combatant.ChargingAction = null; }
+                    if (combatant.ChargingAction.TurnsRemaining <= 0) { startOfRoundActions.Add(combatant.ChargingAction.Action); combatant.ChargingAction = null; }
                 }
                 if (combatant.DelayedActions.Any())
                 {
                     var readyActions = new List<DelayedAction>();
                     foreach (var delayed in combatant.DelayedActions) { delayed.TurnsRemaining--; if (delayed.TurnsRemaining <= 0) readyActions.Add(delayed); }
-                    foreach (var ready in readyActions) startOfTurnActions.Add(ready.Action);
+                    foreach (var ready in readyActions) startOfRoundActions.Add(ready.Action);
                     var remaining = combatant.DelayedActions.Where(d => !readyActions.Contains(d)).ToList();
                     combatant.DelayedActions = new Queue<DelayedAction>(remaining);
                 }
@@ -693,11 +714,11 @@ namespace ProjectVagabond.Battle
                     var aiAction = EnemyAI.DetermineBestAction(combatant, _allCombatants);
                     if (aiAction != null)
                     {
-                        startOfTurnActions.Add(aiAction);
+                        startOfRoundActions.Add(aiAction);
                     }
                 }
             }
-            _actionQueue.InsertRange(0, startOfTurnActions);
+            _actionQueue.InsertRange(0, startOfRoundActions);
 
             bool anyPlayerCanAct = _cachedActivePlayers.Any(p => p.ChargingAction == null && !p.Tags.Has(GameplayTags.States.Stunned));
 
@@ -725,7 +746,8 @@ namespace ProjectVagabond.Battle
                     combatant.BattleSlot = -1;
                     combatant.IsDying = false;
                     combatant.IsRemovalProcessed = true;
-                    _actionQueue.RemoveAll(a => a.Actor == combatant);
+                    // We do NOT remove from _actionQueue here to preserve indices during resolution,
+                    // but Sanitize is called at StartOfRound where queue is fresh anyway.
                     changesMade = true;
                 }
             }
@@ -903,35 +925,48 @@ namespace ProjectVagabond.Battle
             return new List<BattleCombatant>();
         }
 
-        private bool HandleCheckForDefeat()
+        private void HandleEndOfRound()
         {
-            // 1. Identify dead combatants
-            var deadCombatants = _allCombatants.Where(c => c.IsActiveOnField && (c.IsDefeated || c.Stats.CurrentHP <= 0) && !c.IsRemovalProcessed).ToList();
+            // 1. Wait for Visuals
+            if (_animationManager.IsBlockingAnimation) return;
 
-            foreach (var combatant in deadCombatants)
+            switch (_endOfRoundStage)
             {
-                RecordDefeatedName(combatant);
-                combatant.Stats.CurrentHP = 0;
-                combatant.IsDying = true; // Visual flag for scene
-                combatant.IsRemovalProcessed = true;
-                combatant.BattleSlot = -1;
-                _actionQueue.RemoveAll(a => a.Actor == combatant);
-                EventBus.Publish(new GameEvents.CombatantDefeated { DefeatedCombatant = combatant });
+                case EndOfRoundStage.VisualWait:
+                    _endOfRoundStage = EndOfRoundStage.ProcessEffects;
+                    break;
+
+                case EndOfRoundStage.ProcessEffects:
+                    ProcessEndOfRoundEffects();
+                    _endOfRoundStage = EndOfRoundStage.CheckDeaths;
+                    break;
+
+                case EndOfRoundStage.CheckDeaths:
+                    ProcessDeaths();
+                    _endOfRoundStage = EndOfRoundStage.CheckWinLoss;
+                    break;
+
+                case EndOfRoundStage.CheckWinLoss:
+                    if (CheckWinLoss()) return; // Battle Over
+                    _endOfRoundStage = EndOfRoundStage.ProcessReinforcements;
+                    _reinforcementSlotIndex = 0;
+                    _reinforcementAnnounced = false;
+                    break;
+
+                case EndOfRoundStage.ProcessReinforcements:
+                    HandleReinforcementsLogic();
+                    break;
+
+                case EndOfRoundStage.PrepareNextRound:
+                    RoundNumber++;
+                    _currentPhase = BattlePhase.StartOfRound;
+                    _endOfRoundStage = EndOfRoundStage.VisualWait;
+                    break;
             }
-
-            if (deadCombatants.Any()) RefreshCombatantCaches();
-
-            // 2. Check Game Over / Victory
-            if (_playerParty.All(c => c.IsDefeated)) { _currentPhase = BattlePhase.BattleOver; _actionQueue.Clear(); return true; }
-            if (_enemyParty.All(c => c.IsDefeated)) { _currentPhase = BattlePhase.BattleOver; _actionQueue.Clear(); return true; }
-
-            return false;
         }
 
-        private void HandleEndOfTurn()
+        private void ProcessEndOfRoundEffects()
         {
-            _endOfTurnEffectsProcessed = true;
-
             foreach (var combatant in _cachedAllActive)
             {
                 _battleContext.ResetMultipliers();
@@ -967,20 +1002,48 @@ namespace ProjectVagabond.Battle
                     EventBus.Publish(new GameEvents.StatusEffectRemoved { Combatant = combatant, EffectType = expiredEffect.EffectType });
                 }
             }
-
-            // Check for defeat again after end of turn effects
-            if (HandleCheckForDefeat()) return;
-
-            // Proceed to reinforcements
-            _currentPhase = BattlePhase.Reinforcement;
-            _reinforcementSlotIndex = 0;
-            _reinforcementAnnounced = false;
         }
 
-        private void HandleReinforcements()
+        private void ProcessDeaths()
         {
-            for (int i = 0; i < 4; i++)
+            // Process ALL dead combatants in one pass
+            var deadCombatants = _allCombatants.Where(c =>
+                c.IsActiveOnField &&
+                (c.IsDefeated || c.Stats.CurrentHP <= 0) &&
+                !c.IsRemovalProcessed).ToList();
+
+            foreach (var deadCombatant in deadCombatants)
             {
+                RecordDefeatedName(deadCombatant);
+                deadCombatant.Stats.CurrentHP = 0;
+                deadCombatant.IsDying = true;
+                deadCombatant.IsRemovalProcessed = true;
+                deadCombatant.BattleSlot = -1;
+
+                // Remove any pending actions for this dead unit
+                _actionQueue.RemoveAll(a => a.Actor == deadCombatant);
+
+                EventBus.Publish(new GameEvents.CombatantDefeated { DefeatedCombatant = deadCombatant });
+            }
+
+            if (deadCombatants.Any())
+            {
+                RefreshCombatantCaches();
+            }
+        }
+
+        private bool CheckWinLoss()
+        {
+            if (_playerParty.All(c => c.IsDefeated)) { _currentPhase = BattlePhase.BattleOver; _actionQueue.Clear(); return true; }
+            if (_enemyParty.All(c => c.IsDefeated)) { _currentPhase = BattlePhase.BattleOver; _actionQueue.Clear(); return true; }
+            return false;
+        }
+
+        private void HandleReinforcementsLogic()
+        {
+            while (_reinforcementSlotIndex < 4)
+            {
+                int i = _reinforcementSlotIndex;
                 bool isPlayerSlot = i >= 2;
                 int slot = i % 2;
 
@@ -1002,16 +1065,15 @@ namespace ProjectVagabond.Battle
 
                             _reinforcementAnnounced = true;
                             CanAdvance = false;
-                            return;
+                            return; // Wait for animation/message
                         }
 
                         if (isPlayerSlot)
                         {
                             EventBus.Publish(new GameEvents.ForcedSwitchRequested { Actor = null });
-                            _currentPhase = BattlePhase.ProcessingInteraction;
                             _waitingForReinforcementSelection = true;
                             CanAdvance = false;
-                            return;
+                            return; // Wait for player input
                         }
                         else
                         {
@@ -1043,16 +1105,16 @@ namespace ProjectVagabond.Battle
                             }
 
                             CanAdvance = false;
-                            return;
+                            return; // Wait for spawn animation
                         }
                     }
                 }
+
+                _reinforcementSlotIndex++;
             }
 
-            _reinforcementAnnounced = false;
-            RoundNumber++;
-            _currentPhase = BattlePhase.StartOfTurn;
-            CanAdvance = true;
+            // All slots checked
+            _endOfRoundStage = EndOfRoundStage.PrepareNextRound;
         }
 
         public (int Min, int Max) GetProjectedDamageRange(BattleCombatant actor, BattleCombatant target, MoveData move)
