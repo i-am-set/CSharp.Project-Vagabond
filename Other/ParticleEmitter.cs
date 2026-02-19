@@ -157,12 +157,12 @@ namespace ProjectVagabond.Particles
 
         public void EmitBurst(int count)
         {
-            Debug.WriteLine($"[Emitter] Emitting burst of {count} particles. Active before: {_activeParticleCount}.");
+            //Debug.WriteLine($"[Emitter] Emitting burst of {count} particles. Active before: {_activeParticleCount}.");
             for (int i = 0; i < count; i++)
             {
                 EmitParticle();
             }
-            Debug.WriteLine($"[Emitter] Burst finished. Active after: {_activeParticleCount}.");
+            //Debug.WriteLine($"[Emitter] Burst finished. Active after: {_activeParticleCount}.");
         }
 
         /// <summary>
