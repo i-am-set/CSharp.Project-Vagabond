@@ -725,27 +725,12 @@ namespace ProjectVagabond.Battle
                         int dmg = damageResultsForThisHit[targetsForThisHit.IndexOf(target)].DamageAmount;
                         if (dmg > 0)
                         {
-                            float damageRatio = (float)dmg / target.Stats.MaxHP;
-                            float intensity = Math.Min(1.0f + (damageRatio * 5.0f), 5.0f);
-                            ServiceLocator.Get<HapticsManager>().TriggerImpactTwist(intensity, 0.25f);
+                            //float damageRatio = (float)dmg / target.Stats.MaxHP;
+                            //float intensity = Math.Min(1.0f + (damageRatio * 5.0f), 5.0f);
+                            //ServiceLocator.Get<HapticsManager>().TriggerImpactTwist(intensity, 0.25f);
                         }
                         break;
                     }
-                }
-
-                float timeToImpact = 0.15f;
-                AnimationDefinition animDef = null;
-                if (!string.IsNullOrEmpty(action.ChosenMove.AnimationId) && BattleDataCache.Animations.TryGetValue(action.ChosenMove.AnimationId, out animDef))
-                {
-                    float frameDuration = 1f / Math.Max(1f, animDef.FPS);
-                    timeToImpact = animDef.ImpactFrameIndex * frameDuration;
-                }
-                if (timeToImpact < 0.25f) timeToImpact = 0.25f;
-                _animationManager.ReleaseAttackCharge(action.Actor.CombatantID, timeToImpact);
-
-                if (normalTargets.Any())
-                {
-                    EventBus.Publish(new GameEvents.PlayMoveAnimation { Move = action.ChosenMove, Targets = normalTargets, GrazeStatus = grazeStatus });
                 }
 
                 if (protectedTargets.Any())

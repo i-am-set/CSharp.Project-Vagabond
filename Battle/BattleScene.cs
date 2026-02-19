@@ -1039,7 +1039,6 @@ namespace ProjectVagabond.Scenes
             _currentActor = e.Actor;
 
             Vector2 camTarget = GetCombatantCentroid(e.Targets);
-
             if (camTarget == Vector2.Zero)
             {
                 camTarget = _renderer.GetCombatantVisualCenterPosition(e.Actor, _battleManager.AllCombatants);
@@ -1047,112 +1046,121 @@ namespace ProjectVagabond.Scenes
 
             SetCameraFocus(camTarget, 1.01f);
 
-            _renderer.TriggerAttackAnimation(e.Actor.CombatantID);
-            bool isMultiHit = e.ChosenMove != null && e.ChosenMove.Effects.ContainsKey("MultiHit");
-            if (isMultiHit) _isWaitingForMultiHitDelay = true;
-            var grazedTargets = new List<BattleCombatant>();
-            var grazeStatus = new Dictionary<BattleCombatant, bool>();
+            // 1. Start Windup
+            _animationManager.StartWindup(e.Actor.CombatantID, e.Actor.IsPlayerControlled);
 
-            for (int i = 0; i < e.Targets.Count; i++)
+            // 2. Define Impact Logic
+            Action executeImpact = () =>
             {
-                if (e.DamageResults[i].WasGraze)
+                // Trigger Lunge Visual
+                _animationManager.TriggerLunge(e.Actor.CombatantID);
+
+                // Apply Particles, Numbers, Shakes, Recoil, etc.
+                bool isMultiHit = e.ChosenMove != null && e.ChosenMove.Effects.ContainsKey("MultiHit");
+                if (isMultiHit) _isWaitingForMultiHitDelay = true;
+
+                for (int i = 0; i < e.Targets.Count; i++)
                 {
-                    grazedTargets.Add(e.Targets[i]);
-                    grazeStatus[e.Targets[i]] = true;
-                }
-                else
-                {
-                    grazeStatus[e.Targets[i]] = false;
-                }
-            }
+                    var target = e.Targets[i];
+                    var result = e.DamageResults[i];
+                    Vector2 targetPos = _renderer.GetCombatantVisualCenterPosition(target, _battleManager.AllCombatants);
+                    Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(target, _battleManager.AllCombatants);
 
-            _moveAnimationManager.StartAnimation(e.ChosenMove, e.Targets, _renderer, grazeStatus);
-
-            for (int i = 0; i < e.Targets.Count; i++)
-            {
-                var target = e.Targets[i];
-                var result = e.DamageResults[i];
-                Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(target, _battleManager.AllCombatants);
-                Vector2 targetPos = _renderer.GetCombatantVisualCenterPosition(target, _battleManager.AllCombatants);
-
-                if (e.ChosenMove.ImpactType == ImpactType.Status && !result.WasGraze && !result.WasProtected)
-                {
-                    var statusParticles = _particleSystemManager.CreateEmitter(ParticleEffects.CreateStatusImpact());
-                    statusParticles.Position = targetPos;
-                    statusParticles.EmitBurst(statusParticles.Settings.BurstCount);
-                    _hapticsManager.TriggerWobble(2.0f, 0.2f, 15f);
-                }
-
-                if (result.DamageAmount > 0)
-                {
-                    target.HealthBarVisibleTimer = 6.0f;
-                    float damageRatio = Math.Clamp((float)result.DamageAmount / target.Stats.MaxHP, 0f, 1f);
-
-                    bool isHeavyHit = result.WasCritical || damageRatio > 0.25f || target.Stats.CurrentHP <= 0;
-
-                    const float BASE_JUICE_SCALAR = 1.0f;
-                    float juiceIntensity = 1.0f + (damageRatio * BASE_JUICE_SCALAR);
-                    if (result.WasCritical) juiceIntensity *= 1.2f;
-                    juiceIntensity = Math.Min(juiceIntensity, 2.0f);
-
-                    if (!result.WasGraze)
+                    if (e.ChosenMove.ImpactType == ImpactType.Status && !result.WasGraze && !result.WasProtected)
                     {
-                        float baseFreeze = isHeavyHit ? _global.HitstopDuration_Crit : 0.05f;
-                        _hitstopManager.Trigger(baseFreeze * juiceIntensity);
-                        _animationManager.StartHitstopVisuals(target.CombatantID, result.WasCritical);
+                        var statusParticles = _particleSystemManager.CreateEmitter(ParticleEffects.CreateStatusImpact());
+                        statusParticles.Position = targetPos;
+                        statusParticles.EmitBurst(statusParticles.Settings.BurstCount);
+                        _hapticsManager.TriggerWobble(2.0f, 0.2f, 15f);
+                    }
 
-                        ServiceLocator.Get<Core>().TriggerFullscreenGlitch(0.2f);
+                    if (result.DamageAmount > 0)
+                    {
+                        target.HealthBarVisibleTimer = 6.0f;
+                        float damageRatio = Math.Clamp((float)result.DamageAmount / target.Stats.MaxHP, 0f, 1f);
+                        bool isHeavyHit = result.WasCritical || damageRatio > 0.25f || target.Stats.CurrentHP <= 0;
 
-                        if (target.IsPlayerControlled && isHeavyHit)
+                        const float BASE_JUICE_SCALAR = 1.0f;
+                        float juiceIntensity = 1.0f + (damageRatio * BASE_JUICE_SCALAR);
+                        if (result.WasCritical) juiceIntensity *= 1.2f;
+                        juiceIntensity = Math.Min(juiceIntensity, 2.0f);
+
+                        if (!result.WasGraze)
                         {
-                            _core.TriggerFullscreenFlash(Color.White, 0.15f * juiceIntensity);
-                            _core.TriggerScreenFlashSequence(_global.Palette_Rust);
+                            float baseFreeze = isHeavyHit ? _global.HitstopDuration_Crit : 0.05f;
+                            _hitstopManager.Trigger(baseFreeze * juiceIntensity);
+                            _animationManager.StartHitstopVisuals(target.CombatantID, result.WasCritical);
+
+                            ServiceLocator.Get<Core>().TriggerFullscreenGlitch(0.2f);
+
+                            if (target.IsPlayerControlled && isHeavyHit)
+                            {
+                                _core.TriggerFullscreenFlash(Color.White, 0.15f * juiceIntensity);
+                                _core.TriggerScreenFlashSequence(_global.Palette_Rust);
+                            }
+
+                            _hapticsManager.TriggerCompoundShake(0.25f * juiceIntensity);
                         }
 
-                        _hapticsManager.TriggerCompoundShake(0.25f * juiceIntensity);
+                        Vector2 attackerPos = _renderer.GetCombatantVisualCenterPosition(e.Actor, _battleManager.AllCombatants);
+                        Vector2 direction = targetPos - attackerPos;
+                        if (direction != Vector2.Zero) direction.Normalize(); else direction = new Vector2(1, 0);
+
+                        float shakeMag = 10f * juiceIntensity;
+                        float recoilMag = 20f * juiceIntensity;
+                        _hapticsManager.TriggerDirectionalShake(direction, shakeMag, 0.2f * juiceIntensity);
+                        _renderer.TriggerRecoil(target.CombatantID, direction, recoilMag);
+
+                        ServiceLocator.Get<Core>().GetBattleCamera()?.Kick(direction, juiceIntensity * 2.0f);
+
+                        var sparks = _particleSystemManager.CreateEmitter(ParticleEffects.CreateHitSparks(juiceIntensity));
+                        sparks.Position = targetPos;
+                        sparks.EmitBurst(sparks.Settings.BurstCount);
+                        var ring = _particleSystemManager.CreateEmitter(ParticleEffects.CreateImpactRing(juiceIntensity));
+                        ring.Position = targetPos;
+                        ring.EmitBurst(1);
+
+                        _animationManager.StartHealthLossAnimation(target.CombatantID, target.VisualHP, target.Stats.CurrentHP);
+                        if (target.HasStatusEffect(StatusEffectType.Burn)) _renderer.TriggerStatusIconHop(target.CombatantID, StatusEffectType.Burn);
+                        if (target.Stats.CurrentHP <= 0) TriggerDeathAnimation(target);
+
+                        int baselineDamage = DamageCalculator.CalculateBaselineDamage(e.Actor, target, e.ChosenMove);
+                        if (result.WasVulnerable)
+                        {
+                            _animationManager.StartDamageNumberIndicator(target.CombatantID, result.DamageAmount, hudPosition);
+                            _animationManager.StartDamageIndicator(target.CombatantID, "VULNERABLE", hudPosition + new Vector2(0, -10), _global.VulnerableDamageIndicatorColor);
+                        }
+                        else if (result.WasCritical || (result.DamageAmount >= baselineDamage * 1.5f && baselineDamage > 0))
+                        {
+                            _animationManager.StartEmphasizedDamageNumberIndicator(target.CombatantID, result.DamageAmount, hudPosition);
+                        }
+                        else
+                        {
+                            _animationManager.StartDamageNumberIndicator(target.CombatantID, result.DamageAmount, hudPosition);
+                        }
                     }
-                    Vector2 attackerPos = _renderer.GetCombatantVisualCenterPosition(e.Actor, _battleManager.AllCombatants);
-
-                    Vector2 direction = targetPos - attackerPos;
-                    if (direction != Vector2.Zero) direction.Normalize(); else direction = new Vector2(1, 0);
-                    float shakeMag = 10f * juiceIntensity;
-                    float recoilMag = 20f * juiceIntensity;
-                    _hapticsManager.TriggerDirectionalShake(direction, shakeMag, 0.2f * juiceIntensity);
-                    _renderer.TriggerRecoil(target.CombatantID, direction, recoilMag);
-
-                    ServiceLocator.Get<Core>().GetBattleCamera()?.Kick(direction, juiceIntensity * 2.0f);
-
-                    var sparks = _particleSystemManager.CreateEmitter(ParticleEffects.CreateHitSparks(juiceIntensity));
-                    sparks.Position = targetPos;
-                    sparks.EmitBurst(sparks.Settings.BurstCount);
-                    var ring = _particleSystemManager.CreateEmitter(ParticleEffects.CreateImpactRing(juiceIntensity));
-                    ring.Position = targetPos;
-                    ring.EmitBurst(1);
-                    _animationManager.StartHealthLossAnimation(target.CombatantID, target.VisualHP, target.Stats.CurrentHP);
-                    if (target.HasStatusEffect(StatusEffectType.Burn)) _renderer.TriggerStatusIconHop(target.CombatantID, StatusEffectType.Burn);
-                    if (target.Stats.CurrentHP <= 0) TriggerDeathAnimation(target);
-                    int baselineDamage = DamageCalculator.CalculateBaselineDamage(e.Actor, target, e.ChosenMove);
-
-                    if (result.WasVulnerable)
+                    if (result.WasGraze) _animationManager.StartDamageIndicator(target.CombatantID, "GRAZE", hudPosition, _global.GrazeIndicatorColor);
+                    if (result.WasCritical)
                     {
-                        _animationManager.StartDamageNumberIndicator(target.CombatantID, result.DamageAmount, hudPosition);
-                        _animationManager.StartDamageIndicator(target.CombatantID, "VULNERABLE", hudPosition + new Vector2(0, -10), _global.VulnerableDamageIndicatorColor);
+                        _animationManager.StartDamageIndicator(target.CombatantID, "CRITICAL HIT", hudPosition, _global.CritcalHitIndicatorColor);
                     }
-                    else if (result.WasCritical || (result.DamageAmount >= baselineDamage * 1.5f && baselineDamage > 0))
-                    {
-                        _animationManager.StartEmphasizedDamageNumberIndicator(target.CombatantID, result.DamageAmount, hudPosition);
-                    }
-                    else
-                    {
-                        _animationManager.StartDamageNumberIndicator(target.CombatantID, result.DamageAmount, hudPosition);
-                    }
+                    if (result.WasProtected) _animationManager.StartProtectedIndicator(target.CombatantID, hudPosition);
                 }
-                if (result.WasGraze) _animationManager.StartDamageIndicator(target.CombatantID, "GRAZE", hudPosition, _global.GrazeIndicatorColor);
-                if (result.WasCritical)
-                {
-                    _animationManager.StartDamageIndicator(target.CombatantID, "CRITICAL HIT", hudPosition, _global.CritcalHitIndicatorColor);
-                }
-                if (result.WasProtected) _animationManager.StartProtectedIndicator(target.CombatantID, hudPosition);
+            };
+
+            // 3. Start Move Animation
+            var grazeStatus = new Dictionary<BattleCombatant, bool>();
+            for (int i = 0; i < e.Targets.Count; i++)
+            {
+                grazeStatus[e.Targets[i]] = e.DamageResults[i].WasGraze;
+            }
+
+            bool animationStarted = _moveAnimationManager.StartAnimation(e.ChosenMove, e.Targets, _renderer, grazeStatus, onImpact: executeImpact);
+
+            // 4. Fallback if no animation exists
+            if (!animationStarted)
+            {
+                executeImpact();
             }
         }
 

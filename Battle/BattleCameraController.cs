@@ -17,7 +17,7 @@ namespace ProjectVagabond.Battle
         private float _kickZoom;
 
         private const float LERP_SPEED = 10.0f;
-        private const float FOCUS_INTENSITY = 0.2f;
+        private const float FOCUS_INTENSITY = 0.05f;
         private const float KICK_DECAY = 15.0f;
 
         public Vector2 Position => _currentPosition + _kickOffset;

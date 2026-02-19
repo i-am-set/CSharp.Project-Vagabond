@@ -68,19 +68,11 @@ namespace ProjectVagabond.Battle.UI
 
         public class AttackChargeAnimationState
         {
+            public enum Phase { Windup, Lunge }
+            public Phase CurrentPhase = Phase.Windup;
+
             public string CombatantID;
-            public float Timer;
             public bool IsPlayer;
-
-            public bool IsHoldingAtPeak = true;
-
-            public float WindupDuration = 0.35f;
-            public float LungeDuration = 0.1f;
-
-            public float TotalDuration => WindupDuration + LungeDuration;
-
-            public const float WINDUP_DISTANCE = 8f;
-            public const float LUNGE_DISTANCE = 16f;
 
             public Vector2 Scale = Vector2.One;
             public Vector2 Offset = Vector2.Zero;
@@ -321,12 +313,6 @@ namespace ProjectVagabond.Battle.UI
 
         private void OnActionExecuted(GameEvents.BattleActionExecuted e)
         {
-            // Actor Animation (Instant Lunge)
-            if (e.Actor != null)
-            {
-                TriggerInstantAttack(e.Actor.CombatantID, e.Actor.IsPlayerControlled);
-            }
-
             // Target Animations (Hit Flash / Shake)
             if (e.Targets != null)
             {
@@ -425,27 +411,36 @@ namespace ProjectVagabond.Battle.UI
             _activeSpawnAnimations.Clear();
         }
 
-        public void StartAttackCharge(string combatantId, bool isPlayer)
+        public void StartWindup(string combatantId, bool isPlayer)
         {
             _activeAttackCharges.RemoveAll(a => a.CombatantID == combatantId);
             _activeAttackCharges.Add(new AttackChargeAnimationState
             {
                 CombatantID = combatantId,
                 IsPlayer = isPlayer,
-                Timer = 0f,
-                IsHoldingAtPeak = true
+                CurrentPhase = AttackChargeAnimationState.Phase.Windup
             });
         }
 
-        public void ReleaseAttackCharge(string combatantId, float timeToImpact)
+        public void TriggerLunge(string combatantId)
         {
             var anim = _activeAttackCharges.FirstOrDefault(a => a.CombatantID == combatantId);
             if (anim != null)
             {
-                anim.IsHoldingAtPeak = false;
-                anim.LungeDuration = timeToImpact;
-                anim.Timer = anim.WindupDuration;
+                anim.CurrentPhase = AttackChargeAnimationState.Phase.Lunge;
+
+                // Snap to lunge pose immediately on trigger
+                float dir = anim.IsPlayer ? 1f : -1f;
+                anim.Offset = new Vector2(20f * dir, 0f);
+                anim.Scale = new Vector2(1.4f, 0.6f);
             }
+        }
+
+        public void TriggerInstantAttack(string combatantId, bool isPlayer)
+        {
+            // Fallback for instant attacks without windup
+            StartWindup(combatantId, isPlayer);
+            TriggerLunge(combatantId);
         }
 
         public AttackChargeAnimationState GetAttackChargeState(string combatantId)
@@ -975,71 +970,29 @@ namespace ProjectVagabond.Battle.UI
             for (int i = _activeAttackCharges.Count - 1; i >= 0; i--)
             {
                 var anim = _activeAttackCharges[i];
-                anim.Timer += dt;
+                float dir = anim.IsPlayer ? 1f : -1f;
 
-                if (anim.Timer < anim.WindupDuration)
+                if (anim.CurrentPhase == AttackChargeAnimationState.Phase.Windup)
                 {
-                    float progress = anim.Timer / anim.WindupDuration;
-                    float eased = Easing.EaseOutCubic(progress);
+                    // Lerp towards windup pose: Pulled back (-10) and Squashed (0.8, 1.2)
+                    Vector2 targetOffset = new Vector2(-10f * dir, 0f);
+                    Vector2 targetScale = new Vector2(0.8f, 1.2f);
 
-                    if (anim.IsPlayer)
-                    {
-                        anim.Offset = new Vector2(0, AttackChargeAnimationState.WINDUP_DISTANCE * eased);
-                        float squash = MathHelper.Lerp(1.0f, 1.4f, eased);
-                        float stretch = MathHelper.Lerp(1.0f, 0.6f, eased);
-                        anim.Scale = new Vector2(squash, stretch);
-                    }
-                    else
-                    {
-                        anim.Offset = new Vector2(0, -AttackChargeAnimationState.WINDUP_DISTANCE * eased);
-                        float squash = MathHelper.Lerp(1.0f, 0.9f, eased);
-                        float stretch = MathHelper.Lerp(1.0f, 1.1f, eased);
-                        anim.Scale = new Vector2(squash, stretch);
-                    }
+                    float smooth = 1f - MathF.Exp(-10f * dt);
+                    anim.Offset = Vector2.Lerp(anim.Offset, targetOffset, smooth);
+                    anim.Scale = Vector2.Lerp(anim.Scale, targetScale, smooth);
                 }
-                else if (anim.IsHoldingAtPeak)
+                else // Lunge
                 {
-                    anim.Timer = anim.WindupDuration;
+                    // Decay towards neutral pose: (0, 0) and (1, 1)
+                    float recoverySpeed = 10f;
+                    float smooth = 1f - MathF.Exp(-recoverySpeed * dt);
 
-                    if (anim.IsPlayer)
-                    {
-                        anim.Offset = new Vector2(0, AttackChargeAnimationState.WINDUP_DISTANCE);
-                        anim.Scale = new Vector2(1.4f, 0.6f);
-                    }
-                    else
-                    {
-                        anim.Offset = new Vector2(0, -AttackChargeAnimationState.WINDUP_DISTANCE);
-                        anim.Scale = new Vector2(0.9f, 1.1f);
-                    }
-                }
-                else
-                {
-                    float lungeTime = anim.Timer - anim.WindupDuration;
-                    float progress = Math.Clamp(lungeTime / anim.LungeDuration, 0f, 1f);
-                    float eased = Easing.EaseInExpo(progress);
+                    anim.Offset = Vector2.Lerp(anim.Offset, Vector2.Zero, smooth);
+                    anim.Scale = Vector2.Lerp(anim.Scale, Vector2.One, smooth);
 
-                    if (anim.IsPlayer)
-                    {
-                        float startY = AttackChargeAnimationState.WINDUP_DISTANCE;
-                        float endY = -AttackChargeAnimationState.LUNGE_DISTANCE;
-                        anim.Offset = new Vector2(0, MathHelper.Lerp(startY, endY, eased));
-
-                        float squash = MathHelper.Lerp(1.4f, 0.8f, eased);
-                        float stretch = MathHelper.Lerp(0.6f, 1.2f, eased);
-                        anim.Scale = new Vector2(squash, stretch);
-                    }
-                    else
-                    {
-                        float startY = -AttackChargeAnimationState.WINDUP_DISTANCE;
-                        float endY = AttackChargeAnimationState.LUNGE_DISTANCE;
-                        anim.Offset = new Vector2(0, MathHelper.Lerp(startY, endY, eased));
-
-                        float squash = MathHelper.Lerp(0.9f, 1.2f, eased);
-                        float stretch = MathHelper.Lerp(1.1f, 0.8f, eased);
-                        anim.Scale = new Vector2(squash, stretch);
-                    }
-
-                    if (progress >= 1.0f)
+                    // Remove when close enough to neutral
+                    if (anim.Offset.LengthSquared() < 1f && Math.Abs(anim.Scale.X - 1f) < 0.01f)
                     {
                         _activeAttackCharges.RemoveAt(i);
                     }
@@ -1777,20 +1730,5 @@ namespace ProjectVagabond.Battle.UI
                 TextAnimator.DrawTextWithEffectSquareOutlined(spriteBatch, tertiaryFont, indicator.Text, drawPos - origin, textColor * finalDrawAlpha, outlineColor * finalDrawAlpha, TextEffectType.DriftWave, indicator.Timer, null, indicator.Rotation);
             }
         }
-
-        public void TriggerInstantAttack(string combatantId, bool isPlayer)
-        {
-            _activeAttackCharges.RemoveAll(a => a.CombatantID == combatantId);
-            _activeAttackCharges.Add(new AttackChargeAnimationState
-            {
-                CombatantID = combatantId,
-                IsPlayer = isPlayer,
-                Timer = 0f,
-                IsHoldingAtPeak = false, // Don't hold, just lunge and return
-                WindupDuration = 0.55f,  // Very fast windup
-                LungeDuration = 0.4f     // Fast return
-            });
-        }
     }
 }
-        

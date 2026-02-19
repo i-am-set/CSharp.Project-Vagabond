@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using ProjectVagabond.Utils;
 using System;
@@ -18,19 +17,18 @@ namespace ProjectVagabond.Battle.UI
         private readonly int _damageFrameIndex;
         private bool _hasTriggeredImpact = false;
         private readonly Func<Vector2> _positionProvider;
+        private readonly Action _onImpact;
 
         public bool IsFinished { get; private set; }
         public float LayerDepth { get; set; } = 0.1f; // Draw on top of most things
 
-        // Event fired when the animation reaches the damage frame
-        public event Action? OnImpactFrameReached;
-
-        public MoveAnimationInstance(MoveAnimation animationData, Func<Vector2> positionProvider, float secondsPerFrame, int damageFrameIndex)
+        public MoveAnimationInstance(MoveAnimation animationData, Func<Vector2> positionProvider, float secondsPerFrame, int damageFrameIndex, Action onImpact)
         {
             _animationData = animationData;
             _positionProvider = positionProvider;
             _damageFrameIndex = damageFrameIndex;
             _frameDuration = secondsPerFrame;
+            _onImpact = onImpact;
         }
 
         public void Update(GameTime gameTime)
@@ -40,7 +38,7 @@ namespace ProjectVagabond.Battle.UI
             // Check for impact trigger on the very first frame if index is 0
             if (_currentFrame == _damageFrameIndex && !_hasTriggeredImpact)
             {
-                OnImpactFrameReached?.Invoke();
+                _onImpact?.Invoke();
                 _hasTriggeredImpact = true;
             }
 
@@ -53,7 +51,7 @@ namespace ProjectVagabond.Battle.UI
                 // Check for impact trigger on subsequent frames
                 if (_currentFrame == _damageFrameIndex && !_hasTriggeredImpact)
                 {
-                    OnImpactFrameReached?.Invoke();
+                    _onImpact?.Invoke();
                     _hasTriggeredImpact = true;
                 }
 
@@ -63,7 +61,7 @@ namespace ProjectVagabond.Battle.UI
                     // Failsafe: If animation finishes without triggering impact (e.g. short animation), trigger it now.
                     if (!_hasTriggeredImpact)
                     {
-                        OnImpactFrameReached?.Invoke();
+                        _onImpact?.Invoke();
                         _hasTriggeredImpact = true;
                     }
                 }
