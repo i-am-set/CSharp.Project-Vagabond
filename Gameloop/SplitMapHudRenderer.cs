@@ -29,7 +29,7 @@ namespace ProjectVagabond.UI
         private readonly List<(Rectangle Bounds, MoveData? Move, int CardCenterX)> _activeHitboxes = new();
         private float _hoverTimer;
         private (Rectangle Bounds, MoveData? Move, int CardCenterX)? _currentHoveredItem;
-        private const float HOVER_DELAY = 0.2f;
+        private const float HOVER_DELAY = 0.1f;
         private Vector2 _lastMousePos;
         private bool _isTooltipVisible;
         private PartyMember? _hoveredMember;
@@ -83,7 +83,7 @@ namespace ProjectVagabond.UI
 
         // --- Lift Constants ---
         private const float DRAG_LIFT_OFFSET = -8f;
-        private const float HOVER_LIFT_OFFSET = DRAG_LIFT_OFFSET * 0.25f;
+        private const float HOVER_LIFT_OFFSET = -1f;
 
         // --- Tag Constants ---
         private const float TAG_DEFAULT_OFFSET = 4f;
@@ -340,10 +340,10 @@ namespace ProjectVagabond.UI
                 else
                 {
                     float currentY = _verticalOffsets[member];
-                    float targetY = 0f;
+                    float targetY = 1f;
 
                     // Apply default offset for slots 3 and 4 (indices 2 and 3)
-                    if (i >= 2) targetY = 1f;
+                    if (i >= 2) targetY = 2f;
 
                     if (member == _draggedMember) targetY = DRAG_LIFT_OFFSET;
                     else if (member == _hoveredMember) targetY = HOVER_LIFT_OFFSET;

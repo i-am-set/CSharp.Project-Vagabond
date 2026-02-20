@@ -27,7 +27,7 @@ uniform int PaletteCount;
 #define ENABLE_JITTER       
 #define ENABLE_HUM_BAR      
 #define ENABLE_VIGNETTE
-#define ENABLE_CHROMATIC_ABERRATION
+// #define ENABLE_CHROMATIC_ABERRATION
 #define ENABLE_NOISE
 #define ENABLE_HALATION
 
@@ -37,7 +37,7 @@ static const float ZOOM = 1.01;
 static const float BLACK_LEVEL = 0.03; 
 static const float LCD_GAP_SIZE = 0.04;      // Fraction of each virtual pixel used for the gap (0 = no gap, 0.2 = thick gap)
 static const float LCD_GAP_SOFTNESS = 0.2;  // Edge softness of the gap (lower = sharper grid lines)
-static const float LCD_GAP_DARKNESS = 0.25;  // How dark the gaps are (0 = black, 1 = no effect)
+static const float LCD_GAP_DARKNESS = 0.35;  // How dark the gaps are (0 = black, 1 = no effect)
 
 // Halation Tuning
 static const float HALATION_INTENSITY = 0.35;

@@ -65,7 +65,7 @@ namespace ProjectVagabond.Scenes
         // --- Dynamic Viewport State ---
         private float _hudSlideOffset = 0f;
         private const float HUD_SLIDE_DISTANCE = 24f;
-        private const float HUD_SLIDE_SPEED = 5f;
+        private const float HUD_SLIDE_SPEED = 10f;
         private const float BASE_CAMERA_Y = -50f;
 
         private float _playerMoveTimer;
@@ -120,30 +120,10 @@ namespace ProjectVagabond.Scenes
         private float _nodeTextWaveTimer = 0f;
         private static readonly RasterizerState _scissorRasterizerState = new RasterizerState { ScissorTestEnable = true };
 
-        private readonly Dictionary<int, float> _nodeHoverTimers = new Dictionary<int, float>();
-        private const float NODE_HOVER_POP_SCALE_TARGET = 1.1f;
-        private const float NODE_HOVER_POP_SPEED = 10.0f;
-
-        private const float NODE_HOVER_FLOAT_SPEED = 1.0f;
-        private const float NODE_HOVER_FLOAT_AMP = 1.0f;
-        private const float NODE_HOVER_ROT_SPEED = 1.0f;
-        private const float NODE_HOVER_ROT_AMT = 0.05f;
-        private const float NODE_HOVER_PULSE_SPEED = 1.0f;
-        private const float NODE_HOVER_PULSE_AMOUNT = 0.1f;
-
         private Vector2 _nodeArrivalScale = Vector2.One;
         private Vector2 _nodeArrivalShake = Vector2.Zero;
 
         private int _selectedNodeId = -1;
-        private float _nodeSelectionAnimTimer = 0f;
-        private const float NODE_SELECTION_POP_DURATION = 0.3f;
-        private const float NODE_SELECTION_SCALE_EXTRA = 0.8f;
-        private const float NODE_SELECTION_SHAKE_MAGNITUDE = 1.0f;
-        private const float NODE_SELECTION_SHAKE_FREQUENCY = 50.0f;
-
-        private const float NODE_PRESS_SCALE_TARGET = 0.85f;
-        private const float NODE_PRESS_SPEED = 30.0f;
-        private readonly Dictionary<int, float> _nodePressTimers = new Dictionary<int, float>();
 
         public SplitMapScene()
         {
@@ -189,8 +169,6 @@ namespace ProjectVagabond.Scenes
             _waitingForCombatCameraSettle = false;
             _pendingCombatArchetypes = null;
             _nodeTextWaveTimer = 0f;
-            _nodeHoverTimers.Clear();
-            _nodePressTimers.Clear();
             _nodeArrivalScale = Vector2.One;
             _nodeArrivalShake = Vector2.Zero;
             _selectedNodeId = -1;
@@ -425,8 +403,6 @@ namespace ProjectVagabond.Scenes
             }
 
             HandleMapInput(gameTime);
-            UpdateNodeAnimationTimers(deltaTime);
-            if (_selectedNodeId != -1) _nodeSelectionAnimTimer += deltaTime;
 
             switch (_mapState)
             {
@@ -447,27 +423,6 @@ namespace ProjectVagabond.Scenes
 
             _playerIcon.Update(gameTime);
             base.Update(gameTime);
-        }
-
-        private void UpdateNodeAnimationTimers(float dt)
-        {
-            if (_currentMap != null)
-            {
-                foreach (var node in _currentMap.Nodes.Values)
-                {
-                    if (!_nodeHoverTimers.ContainsKey(node.Id)) _nodeHoverTimers[node.Id] = 0f;
-                    bool isHovered = (node.Id == _hoveredNodeId) || (node.Id == _selectedNodeId);
-                    float hoverChange = dt * NODE_HOVER_POP_SPEED;
-                    if (isHovered) _nodeHoverTimers[node.Id] = Math.Min(_nodeHoverTimers[node.Id] + hoverChange, 1f);
-                    else _nodeHoverTimers[node.Id] = Math.Max(_nodeHoverTimers[node.Id] - hoverChange, 0f);
-
-                    if (!_nodePressTimers.ContainsKey(node.Id)) _nodePressTimers[node.Id] = 0f;
-                    bool isPressed = (node.Id == _pressedNodeId) && (node.Id == _hoveredNodeId);
-                    float pressChange = dt * NODE_PRESS_SPEED;
-                    if (isPressed) _nodePressTimers[node.Id] = Math.Min(_nodePressTimers[node.Id] + pressChange, 1f);
-                    else _nodePressTimers[node.Id] = Math.Max(_nodePressTimers[node.Id] - pressChange, 0f);
-                }
-            }
         }
 
         private void HandleMapInput(GameTime gameTime)
@@ -517,7 +472,6 @@ namespace ProjectVagabond.Scenes
                             var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
                             if (currentNode != null) UpdateCameraTarget(currentNode.Position, false);
                             _selectedNodeId = _hoveredNodeId;
-                            _nodeSelectionAnimTimer = 0f;
                             _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
                             StartPlayerMove(_hoveredNodeId);
                         }
@@ -937,14 +891,12 @@ namespace ProjectVagabond.Scenes
             var (texture, silhouette, sourceRect, origin) = GetNodeDrawData(node, gameTime);
             var bounds = node.GetBounds();
             var color = _global.SplitMapNodeColor;
-            float scale = 1.0f;
 
             if (node.IsCompleted) color = _global.Palette_DarkShadow;
             else if (node.NodeType != SplitNodeType.Origin && node.Id != _playerCurrentNodeId && !node.IsReachable) color = _global.Palette_DarkShadow;
 
             bool isSelected = (node.Id == _selectedNodeId);
             bool isHovered = (node.Id == _hoveredNodeId);
-            bool isPressed = (node.Id == _pressedNodeId) && isHovered;
             bool isAnimatingThisNode = (node.Id == _playerCurrentNodeId) &&
                                        (_mapState == SplitMapState.LiftingNode ||
                                         _mapState == SplitMapState.PulsingNode ||
@@ -952,71 +904,28 @@ namespace ProjectVagabond.Scenes
                                         _mapState == SplitMapState.LoweringNode);
 
             if (node.IsReachable && (isHovered || isSelected || isAnimatingThisNode)) color = _global.ButtonHoverColor;
-            if (_mapState == SplitMapState.PulsingNode && node.Id == _playerCurrentNodeId)
-            {
-                // Use the calculated scale from UpdatePulsingNode
-                scale *= _nodeArrivalScale.X;
-            }
 
-            float hoverT = _nodeHoverTimers.ContainsKey(node.Id) ? _nodeHoverTimers[node.Id] : 0f;
-            if (isSelected) hoverT = 1.0f;
-            float popScale = 1.0f + (NODE_HOVER_POP_SCALE_TARGET - 1.0f) * Easing.EaseOutBack(hoverT);
-            scale *= popScale;
+            Vector2 scale = Vector2.One;
+            Vector2 shake = Vector2.Zero;
 
-            float pressT = _nodePressTimers.ContainsKey(node.Id) ? _nodePressTimers[node.Id] : 0f;
-            if (pressT > 0)
-            {
-                float pressScaleFactor = MathHelper.Lerp(1.0f, NODE_PRESS_SCALE_TARGET, Easing.EaseOutQuad(pressT));
-                scale *= pressScaleFactor;
-            }
-
-            float floatOffset = 0f;
-            float rotation = 0f;
-            if (hoverT > 0)
-            {
-                float time = (float)gameTime.TotalGameTime.TotalSeconds;
-                float phase = node.Id * 0.5f;
-                float blend = Easing.EaseOutQuad(hoverT);
-                floatOffset = MathF.Sin(time * NODE_HOVER_FLOAT_SPEED + phase) * NODE_HOVER_FLOAT_AMP * blend;
-                rotation = MathF.Sin(time * NODE_HOVER_ROT_SPEED + phase) * NODE_HOVER_ROT_AMT * blend;
-                float pulse = MathF.Sin(time * NODE_HOVER_PULSE_SPEED + phase) * NODE_HOVER_PULSE_AMOUNT * blend;
-                scale += pulse;
-            }
-
-            Vector2 arrivalScale = Vector2.One;
-            Vector2 arrivalShake = Vector2.Zero;
             if (node.Id == _playerCurrentNodeId)
             {
-                arrivalScale = _nodeArrivalScale;
-                arrivalShake = _nodeArrivalShake;
+                scale = _nodeArrivalScale;
+                shake = _nodeArrivalShake;
             }
 
-            float selectionScale = 0f;
-            Vector2 selectionShake = Vector2.Zero;
-            float selectionMult = 1.0f;
-            if (isSelected)
-            {
-                float t = Math.Clamp(_nodeSelectionAnimTimer / NODE_SELECTION_POP_DURATION, 0f, 1f);
-                float elastic = Easing.EaseOutElastic(t);
-                selectionMult = MathHelper.Lerp(NODE_PRESS_SCALE_TARGET, 1.0f, elastic);
-                float shakeDecay = 1.0f - t;
-                float shakeX = MathF.Sin(_nodeSelectionAnimTimer * NODE_SELECTION_SHAKE_FREQUENCY) * NODE_SELECTION_SHAKE_MAGNITUDE * shakeDecay;
-                float shakeY = MathF.Cos(_nodeSelectionAnimTimer * NODE_SELECTION_SHAKE_FREQUENCY * 0.85f) * NODE_SELECTION_SHAKE_MAGNITUDE * shakeDecay;
-                selectionShake = new Vector2(shakeX, shakeY);
-            }
-
-            Vector2 finalScale = new Vector2((scale * selectionMult) * arrivalScale.X, (scale * selectionMult) * arrivalScale.Y);
-            var position = bounds.Center.ToVector2() + node.VisualOffset + new Vector2(0, floatOffset) + arrivalShake + selectionShake;
+            float rotation = 0f;
+            var position = bounds.Center.ToVector2() + node.VisualOffset + shake;
             Color outlineColor = _global.Palette_Black;
 
             if (silhouette != null)
             {
-                spriteBatch.DrawSnapped(silhouette, position + new Vector2(-1, 0), sourceRect, outlineColor, rotation, origin, finalScale, SpriteEffects.None, 0.4f);
-                spriteBatch.DrawSnapped(silhouette, position + new Vector2(1, 0), sourceRect, outlineColor, rotation, origin, finalScale, SpriteEffects.None, 0.4f);
-                spriteBatch.DrawSnapped(silhouette, position + new Vector2(0, -1), sourceRect, outlineColor, rotation, origin, finalScale, SpriteEffects.None, 0.4f);
-                spriteBatch.DrawSnapped(silhouette, position + new Vector2(0, 1), sourceRect, outlineColor, rotation, origin, finalScale, SpriteEffects.None, 0.4f);
+                spriteBatch.DrawSnapped(silhouette, position + new Vector2(-1, 0), sourceRect, outlineColor, rotation, origin, scale, SpriteEffects.None, 0.4f);
+                spriteBatch.DrawSnapped(silhouette, position + new Vector2(1, 0), sourceRect, outlineColor, rotation, origin, scale, SpriteEffects.None, 0.4f);
+                spriteBatch.DrawSnapped(silhouette, position + new Vector2(0, -1), sourceRect, outlineColor, rotation, origin, scale, SpriteEffects.None, 0.4f);
+                spriteBatch.DrawSnapped(silhouette, position + new Vector2(0, 1), sourceRect, outlineColor, rotation, origin, scale, SpriteEffects.None, 0.4f);
             }
-            spriteBatch.DrawSnapped(texture, position, sourceRect, color, rotation, origin, finalScale, SpriteEffects.None, 0.4f);
+            spriteBatch.DrawSnapped(texture, position, sourceRect, color, rotation, origin, scale, SpriteEffects.None, 0.4f);
         }
 
         private (Texture2D texture, Texture2D? silhouette, Rectangle? sourceRect, Vector2 origin) GetNodeDrawData(SplitMapNode node, GameTime gameTime)

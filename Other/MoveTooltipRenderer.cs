@@ -66,10 +66,10 @@ namespace ProjectVagabond.UI
             Vector2 size = new Vector2(WIDTH, HEIGHT);
 
             // --- Draw Outline ---
-            DrawBeveledBackground(sb, pos - new Vector2(1, 1), size + new Vector2(2, 2), _global.Palette_DarkPale);
+            DrawBeveledBackground(sb, pos - new Vector2(1, 1), size + new Vector2(2, 2), _global.Palette_DarkestPale);
 
             // --- Draw Backgrounds ---
-            DrawBeveledBackground(sb, pos, size, _global.Palette_DarkShadow);
+            DrawBeveledBackground(sb, pos, size, _global.Palette_Black);
 
             // Inner description area background (bottom part)
             Vector2 descPos = new Vector2(pos.X + 1, pos.Y + size.Y - 1 - 18);
@@ -102,7 +102,7 @@ namespace ProjectVagabond.UI
             if (string.IsNullOrWhiteSpace(desc))
             {
                 desc = "BLANK";
-                initialColor = _global.Palette_DarkShadow;
+                initialColor = _global.Palette_DarkestPale;
             }
 
             string powTxt = move.Power > 0 ? move.Power.ToString() : "--";
@@ -124,10 +124,10 @@ namespace ProjectVagabond.UI
 
             void DrawPair(string label, string val)
             {
-                sb.DrawStringSnapped(tertiaryFont, label, new Vector2(statsCurrentX, currentY + 1), _global.Palette_Black);
+                sb.DrawStringSnapped(tertiaryFont, label, new Vector2(statsCurrentX, currentY + 1), _global.Palette_DarkPale);
                 statsCurrentX += tertiaryFont.MeasureString(label).Width + labelValueGap;
 
-                sb.DrawStringSnapped(secondaryFont, val, new Vector2(statsCurrentX, currentY), _global.Palette_DarkPale);
+                sb.DrawStringSnapped(secondaryFont, val, new Vector2(statsCurrentX, currentY), _global.Palette_LightPale);
                 statsCurrentX += secondaryFont.MeasureString(val).Width + pairSpacing;
             }
 
@@ -139,12 +139,15 @@ namespace ProjectVagabond.UI
             currentY += (rowSpacing - 2);
             Vector2 nameSize = secondaryFont.MeasureString(name);
             float centeredNameX = boxPos.X + (WIDTH - nameSize.X) / 2f;
-            sb.DrawStringSnapped(secondaryFont, name, new Vector2(centeredNameX, currentY), _global.Palette_LightPale);
+            sb.DrawStringSnapped(secondaryFont, name, new Vector2(centeredNameX, currentY), _global.Palette_Sun);
 
             // --- 3. Description (Rich Text, Vertically Centered) ---
             currentY += rowSpacing;
             float maxWidth = WIDTH - 8;
             float startX = boxPos.X + 4;
+
+            // FIX: Enforce a hardcoded 3-pixel width for spaces to match default spacing feel
+            const float FIXED_SPACE_WIDTH = 3f;
 
             // Parse text into lines
             var lines = new List<List<(string Text, Color Color)>>();
@@ -153,7 +156,7 @@ namespace ProjectVagabond.UI
             lines.Add(currentLine);
 
             var parts = Regex.Split(desc, @"(\[.*?\]|\s+)");
-            Color currentColor = initialColor; // Use the conditional color
+            Color currentColor = initialColor;
 
             foreach (var part in parts)
             {
@@ -170,7 +173,6 @@ namespace ProjectVagabond.UI
                 else
                 {
                     string textPart = part.ToUpper();
-                    Vector2 size = tertiaryFont.MeasureString(textPart);
 
                     if (string.IsNullOrWhiteSpace(textPart))
                     {
@@ -182,21 +184,28 @@ namespace ProjectVagabond.UI
                         }
                         else
                         {
-                            if (currentLineWidth + size.X > maxWidth)
+                            // Whitespace handling:
+                            // Force it to be a single space item, but verify it fits using fixed width.
+                            if (currentLineWidth + FIXED_SPACE_WIDTH > maxWidth)
                             {
                                 lines.Add(new List<(string, Color)>());
                                 currentLine = lines.Last();
                                 currentLineWidth = 0;
+                                // Eat the space if we wrapped
                             }
                             else
                             {
-                                currentLine.Add((textPart, currentColor));
-                                currentLineWidth += size.X;
+                                currentLine.Add((" ", currentColor));
+                                currentLineWidth += FIXED_SPACE_WIDTH;
                             }
                         }
                         continue;
                     }
 
+                    // Normal Word Handling
+                    Vector2 size = tertiaryFont.MeasureString(textPart);
+
+                    // Wrap if word doesn't fit
                     if (currentLineWidth + size.X > maxWidth)
                     {
                         lines.Add(new List<(string, Color)>());
@@ -221,15 +230,30 @@ namespace ProjectVagabond.UI
             {
                 if (startDrawY + descLineHeight > (boxPos.Y + HEIGHT)) break;
 
+                // Recalculate line width using the FIXED space width for accurate centering
                 float lineWidth = 0;
-                foreach (var item in line) lineWidth += tertiaryFont.MeasureString(item.Text).Width;
+                foreach (var item in line)
+                {
+                    if (item.Text == " ")
+                        lineWidth += FIXED_SPACE_WIDTH;
+                    else
+                        lineWidth += tertiaryFont.MeasureString(item.Text).Width;
+                }
 
                 float lineX = startX + (maxWidth - lineWidth) / 2f;
 
                 foreach (var item in line)
                 {
-                    sb.DrawStringSnapped(tertiaryFont, item.Text, new Vector2(lineX, startDrawY), item.Color);
-                    lineX += tertiaryFont.MeasureString(item.Text).Width;
+                    if (item.Text == " ")
+                    {
+                        // Just advance position, don't draw the font's tiny space
+                        lineX += FIXED_SPACE_WIDTH;
+                    }
+                    else
+                    {
+                        sb.DrawStringSnapped(tertiaryFont, item.Text, new Vector2(lineX, startDrawY), item.Color);
+                        lineX += tertiaryFont.MeasureString(item.Text).Width;
+                    }
                 }
                 startDrawY += descLineHeight;
             }
