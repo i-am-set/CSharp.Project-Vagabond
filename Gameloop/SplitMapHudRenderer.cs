@@ -431,7 +431,7 @@ namespace ProjectVagabond.UI
             Color lineColor = Color.Lerp(_global.Palette_DarkPale, _global.Palette_DarkestPale, t);
 
             // Draw Background
-            spriteBatch.Draw(_pixel, new Vector2(0, currentStartY), null, _global.Palette_Black, 0f, Vector2.Zero, new Vector2(Global.VIRTUAL_WIDTH, HUD_HEIGHT), SpriteEffects.None, 0f);
+            spriteBatch.DrawSnapped(_pixel, new Vector2(0, currentStartY), null, _global.Palette_Black, 0f, Vector2.Zero, new Vector2(Global.VIRTUAL_WIDTH, HUD_HEIGHT), SpriteEffects.None, 0f);
 
             // Draw Dotted Line (Smooth Movement)
             int dotSize = 1;
@@ -441,7 +441,7 @@ namespace ProjectVagabond.UI
             for (int x = 0; x < Global.VIRTUAL_WIDTH; x += (dotSize + gapSize))
             {
                 // Use Vector2 position to maintain float precision and avoid jitter
-                spriteBatch.Draw(_pixel, new Vector2(x, currentStartY), null, lineColor, 0f, Vector2.Zero, dotScale, SpriteEffects.None, 0f);
+                spriteBatch.DrawSnapped(_pixel, new Vector2(x, currentStartY), null, lineColor, 0f, Vector2.Zero, dotScale, SpriteEffects.None, 0f);
             }
 
             var party = _gameState.PlayerState.Party;
@@ -480,7 +480,7 @@ namespace ProjectVagabond.UI
 
                         // We are in the default batch (restored at end of DrawMemberCard), which uses globalTransform.
                         // So we draw at Virtual coordinates.
-                        spriteBatch.Draw(cursorTex, cursorPos, cursorFrames[0], Color.White, 0f, new Vector2(7, 7), 1.0f, SpriteEffects.None, 0f);
+                        spriteBatch.DrawSnapped(cursorTex, cursorPos, cursorFrames[0], Color.White, 0f, new Vector2(7, 7), 1.0f, SpriteEffects.None, 0f);
                     }
                 }
             }
@@ -535,7 +535,7 @@ namespace ProjectVagabond.UI
             // Draw Background
             Vector2 cardPos = new Vector2(x, BaseY + 3 + yOffset);
             Vector2 cardSize = new Vector2(CARD_WIDTH, HUD_HEIGHT - 4);
-            spriteBatch.Draw(_pixel, cardPos, null, _global.Palette_Black, 0f, Vector2.Zero, cardSize, SpriteEffects.None, 0f);
+            spriteBatch.DrawSnapped(_pixel, cardPos, null, _global.Palette_Black, 0f, Vector2.Zero, cardSize, SpriteEffects.None, 0f);
 
             if (isBeingDragged)
             {
@@ -568,7 +568,7 @@ namespace ProjectVagabond.UI
 
         private void DrawSlotTag(SpriteBatch sb, float x, float yOffset, int displayedNumber, BitmapFont font, float tagOffset)
         {
-            float tagWidth = 8f;
+            float tagWidth = 7f;
             float tagHeight = 10f;
             float visibleHeight = 10f;
 
@@ -578,23 +578,23 @@ namespace ProjectVagabond.UI
             float tagY = cardTopY - visibleHeight + tagOffset;
 
             // Rest of the body (full width)
-            sb.Draw(_pixel, new Vector2(tagX, tagY), null, _global.Palette_DarkShadow, 0f, Vector2.Zero, new Vector2(tagWidth, tagHeight - 1), SpriteEffects.None, 0f);
+            sb.DrawSnapped(_pixel, new Vector2(tagX, tagY), null, _global.Palette_DarkestPale, 0f, Vector2.Zero, new Vector2(tagWidth, tagHeight - 1), SpriteEffects.None, 0f);
 
             // Draw Number
             string num = displayedNumber.ToString();
             Vector2 size = font.MeasureString(num);
-            float textX = tagX + (tagWidth - size.X) / 2f;
-            float textY = tagY + (visibleHeight - size.Y) / 2f - 2f;
+            float textX = tagX + MathF.Floor((tagWidth - size.X) / 2f);
+            float textY = tagY + MathF.Floor((visibleHeight - size.Y) / 2f) - 2f;
 
-            sb.DrawString(font, num, new Vector2(textX, textY), displayedNumber == 1 || displayedNumber == 2 ? _global.Palette_LightPale : _global.Palette_DarkestPale);
+            sb.DrawStringSnapped(font, num, new Vector2(textX, textY), displayedNumber == 1 || displayedNumber == 2 ? _global.Palette_LightPale : _global.Palette_DarkPale);
         }
 
         private void DrawHollowRectSmooth(SpriteBatch spriteBatch, Vector2 pos, Vector2 size, Color color)
         {
-            spriteBatch.Draw(_pixel, pos, null, color, 0f, Vector2.Zero, new Vector2(size.X, 1), SpriteEffects.None, 0f);
-            spriteBatch.Draw(_pixel, new Vector2(pos.X, pos.Y + size.Y - 1), null, color, 0f, Vector2.Zero, new Vector2(size.X, 1), SpriteEffects.None, 0f);
-            spriteBatch.Draw(_pixel, pos, null, color, 0f, Vector2.Zero, new Vector2(1, size.Y), SpriteEffects.None, 0f);
-            spriteBatch.Draw(_pixel, new Vector2(pos.X + size.X - 1, pos.Y), null, color, 0f, Vector2.Zero, new Vector2(1, size.Y), SpriteEffects.None, 0f);
+            spriteBatch.DrawSnapped(_pixel, pos, null, color, 0f, Vector2.Zero, new Vector2(size.X, 1), SpriteEffects.None, 0f);
+            spriteBatch.DrawSnapped(_pixel, new Vector2(pos.X, pos.Y + size.Y - 1), null, color, 0f, Vector2.Zero, new Vector2(size.X, 1), SpriteEffects.None, 0f);
+            spriteBatch.DrawSnapped(_pixel, pos, null, color, 0f, Vector2.Zero, new Vector2(1, size.Y), SpriteEffects.None, 0f);
+            spriteBatch.DrawSnapped(_pixel, new Vector2(pos.X + size.X - 1, pos.Y), null, color, 0f, Vector2.Zero, new Vector2(1, size.Y), SpriteEffects.None, 0f);
         }
 
         private void DrawCardContents(SpriteBatch spriteBatch, GameTime gameTime, PartyMember member, float xPosition, float yOffset, int index, BitmapFont defaultFont, BitmapFont secondaryFont, BitmapFont tertiaryFont)
@@ -606,7 +606,7 @@ namespace ProjectVagabond.UI
             Color nameColor = _global.Palette_LightPale;
             Vector2 nameSize = defaultFont.MeasureString(name);
 
-            spriteBatch.DrawString(defaultFont, name, new Vector2(centerX - nameSize.X / 2f, y), nameColor);
+            spriteBatch.DrawStringSnapped(defaultFont, name, new Vector2(centerX - MathF.Floor(nameSize.X / 2f), y), nameColor);
 
             y += nameSize.Y - 4;
 
@@ -627,25 +627,25 @@ namespace ProjectVagabond.UI
             Vector2 origin = new Vector2(16, 16);
             Vector2 pos = new Vector2(centerX, y + 16) + new Vector2(floatX, bobOffset + floatY);
 
-            spriteBatch.Draw(_spriteManager.PlayerMasterSpriteSheet, pos, sourceRect, Color.White, rotation, origin, 1.0f, SpriteEffects.None, 0f);
+            spriteBatch.DrawSnapped(_spriteManager.PlayerMasterSpriteSheet, pos, sourceRect, Color.White, rotation, origin, 1.0f, SpriteEffects.None, 0f);
 
             y += 32 + 4;
 
             Texture2D hpBg = _spriteManager.InventoryPlayerHealthBarEmpty;
             if (hpBg != null)
             {
-                float barX = centerX - (hpBg.Width / 2f);
+                float barX = centerX - MathF.Floor(hpBg.Width / 2f);
                 string hpText = $"{member.CurrentHP}/{member.MaxHP}";
 
-                spriteBatch.DrawString(tertiaryFont, hpText, new Vector2(barX, (y - 9) - tertiaryFont.LineHeight + 1), _global.Palette_DarkPale);
-                spriteBatch.Draw(hpBg, new Vector2(barX, y - 8), Color.White);
+                spriteBatch.DrawStringSnapped(tertiaryFont, hpText, new Vector2(barX, (y - 9) - tertiaryFont.LineHeight + 1), _global.Palette_DarkPale);
+                spriteBatch.DrawSnapped(hpBg, new Vector2(barX, y - 8), Color.White);
 
                 if (_spriteManager.InventoryPlayerHealthBarFull != null)
                 {
                     float hpPercent = (float)member.CurrentHP / Math.Max(1, member.MaxHP);
                     int visibleWidth = (int)(_spriteManager.InventoryPlayerHealthBarFull.Width * hpPercent);
                     var srcRect = new Rectangle(0, 0, visibleWidth, _spriteManager.InventoryPlayerHealthBarFull.Height);
-                    spriteBatch.Draw(_spriteManager.InventoryPlayerHealthBarFull, new Vector2(barX + 1, y - 8), srcRect, Color.White);
+                    spriteBatch.DrawSnapped(_spriteManager.InventoryPlayerHealthBarFull, new Vector2(barX + 1, y - 8), srcRect, Color.White);
                 }
             }
 
@@ -655,14 +655,14 @@ namespace ProjectVagabond.UI
 
             for (int s = 0; s < 4; s++)
             {
-                spriteBatch.DrawString(secondaryFont, labels[s], new Vector2(statBlockStartX, y), _global.Palette_DarkPale);
+                spriteBatch.DrawStringSnapped(secondaryFont, labels[s], new Vector2(statBlockStartX, y), _global.Palette_DarkPale);
 
                 Texture2D statBg = _spriteManager.InventoryStatBarEmpty;
                 if (statBg != null)
                 {
                     float pipX = statBlockStartX + 19;
-                    float pipY = y + (secondaryFont.LineHeight / 2f) - (statBg.Height / 2f);
-                    spriteBatch.Draw(statBg, new Vector2(pipX, pipY), Color.White);
+                    float pipY = y + MathF.Ceiling((secondaryFont.LineHeight - statBg.Height) / 2f);
+                    spriteBatch.DrawSnapped(statBg, new Vector2(pipX, pipY), Color.White);
 
                     if (_spriteManager.InventoryStatBarFull != null)
                     {
@@ -671,7 +671,7 @@ namespace ProjectVagabond.UI
                         if (basePoints > 0)
                         {
                             var srcBase = new Rectangle(0, 0, basePoints * 4, 3);
-                            spriteBatch.Draw(_spriteManager.InventoryStatBarFull, new Vector2(pipX, pipY), srcBase, Color.White);
+                            spriteBatch.DrawSnapped(_spriteManager.InventoryStatBarFull, new Vector2(pipX, pipY), srcBase, Color.White);
                         }
                     }
                 }
@@ -718,19 +718,19 @@ namespace ProjectVagabond.UI
 
             if (isMovePresent)
             {
-                sb.DrawString(labelFont, label, new Vector2(x, y), _global.Palette_DarkShadow);
+                sb.DrawStringSnapped(labelFont, label, new Vector2(x, y), _global.Palette_DarkShadow);
                 float labelWidth = labelFont.MeasureString(label).Width;
                 float labelEndX = x + labelWidth;
                 float cardEndX = cardStartX + CARD_WIDTH;
                 float availableWidth = cardEndX - labelEndX;
                 float textWidth = font.MeasureString(text).Width;
-                float textX = labelEndX + (availableWidth - textWidth) / 2f;
-                sb.DrawString(font, text, new Vector2(textX, y), color);
+                float textX = labelEndX + MathF.Floor((availableWidth - textWidth) / 2f);
+                sb.DrawStringSnapped(font, text, new Vector2(textX, y), color);
             }
             else
             {
                 Vector2 size = font.MeasureString(text);
-                sb.DrawString(font, text, new Vector2(centerX - size.X / 2f, y), color);
+                sb.DrawStringSnapped(font, text, new Vector2(centerX - MathF.Floor(size.X / 2f), y), color);
             }
 
             _activeHitboxes.Add((hitRect, moveData, (int)centerX));
