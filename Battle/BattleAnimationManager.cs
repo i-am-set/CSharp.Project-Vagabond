@@ -1353,9 +1353,9 @@ namespace ProjectVagabond.Battle.UI
                 var anim = _activeFloorIntroAnimations[i];
                 anim.Timer += deltaTime;
 
-                if (anim.Timer >= FloorIntroAnimationState.DURATION)
+                if (anim.Timer > FloorIntroAnimationState.DURATION)
                 {
-                    _activeFloorIntroAnimations.RemoveAt(i);
+                    anim.Timer = FloorIntroAnimationState.DURATION;
                 }
             }
         }
@@ -1368,9 +1368,9 @@ namespace ProjectVagabond.Battle.UI
                 var anim = _activeFloorOutroAnimations[i];
                 anim.Timer += deltaTime;
 
-                if (anim.Timer >= FloorOutroAnimationState.DURATION)
+                if (anim.Timer > FloorOutroAnimationState.DURATION)
                 {
-                    _activeFloorOutroAnimations.RemoveAt(i);
+                    anim.Timer = FloorOutroAnimationState.DURATION;
                 }
             }
         }

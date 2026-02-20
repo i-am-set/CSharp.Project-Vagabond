@@ -945,8 +945,8 @@ namespace ProjectVagabond.Battle.UI
                     if (outroAnim != null)
                     {
                         float progress = Math.Clamp(outroAnim.Timer / BattleAnimationManager.FloorOutroAnimationState.DURATION, 0f, 1f);
-                        floorScale = 1.0f - Easing.EaseInBack(progress);
-                        floorAlpha = 1.0f;
+                        floorScale = 1.0f;
+                        floorAlpha = 1.0f - progress;
                     }
                     else
                     {

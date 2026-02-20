@@ -23,11 +23,11 @@ uniform int PaletteCount;
 
 // --- Toggles ---
 #define ENABLE_CURVATURE
-#define ENABLE_SCANLINES
+#define ENABLE_LCD_GRID
 #define ENABLE_JITTER       
 #define ENABLE_HUM_BAR      
 #define ENABLE_VIGNETTE
-#define ENABLE_CHROMATIC_ABERRATION
+// #define ENABLE_CHROMATIC_ABERRATION
 #define ENABLE_NOISE
 #define ENABLE_HALATION
 
@@ -35,9 +35,9 @@ uniform int PaletteCount;
 static const float CURVATURE = 0.1; 
 static const float ZOOM = 1.01;
 static const float BLACK_LEVEL = 0.03; 
-static const float SCANLINE_DENSITY = 1.0;  
-static const float SCANLINE_HARDNESS = 0.4; 
-static const float SCANLINE_BLOOM_CUTOFF = 0.7; 
+static const float LCD_GAP_SIZE = 0.04;      // Fraction of each virtual pixel used for the gap (0 = no gap, 0.2 = thick gap)
+static const float LCD_GAP_SOFTNESS = 0.2;  // Edge softness of the gap (lower = sharper grid lines)
+static const float LCD_GAP_DARKNESS = 0.25;  // How dark the gaps are (0 = black, 1 = no effect)
 
 // Halation Tuning
 static const float HALATION_INTENSITY = 0.35;
@@ -129,6 +129,13 @@ float4 MainPS(PixelShaderInput input) : COLOR
     uv.x += microShake + desyncOffset;
 #endif
 
+    // --- 1.5. VIRTUAL PIXEL SNAP ---
+    // Snap texture reads to the center of each virtual pixel cell so that every
+    // LCD square shows one clean, unambiguous color with no subpixel bleed.
+    // uv is kept for all positional math (grid mask, vignette, dist, etc.);
+    // snappedUV is used exclusively for texture samples.
+    float2 snappedUV = (floor(uv * VirtualResolution) + 0.5) / VirtualResolution;
+
     // --- 2. CHROMATIC ABERRATION ---
     float3 color;
     float tearNoise = 0.0;
@@ -151,12 +158,12 @@ float4 MainPS(PixelShaderInput input) : COLOR
     float2 bOffset = float2((-spread / ScreenResolution.x) - tearNoise, 0.0);
     
     // Keep Quantization here for the "Source" signal
-    color.r = Tex2DQuantized(s0, uv + rOffset).r;
-    color.g = Tex2DQuantized(s0, uv + gOffset).g;
-    color.b = Tex2DQuantized(s0, uv + bOffset).b;
+    color.r = Tex2DQuantized(s0, snappedUV + rOffset).r;
+    color.g = Tex2DQuantized(s0, snappedUV + gOffset).g;
+    color.b = Tex2DQuantized(s0, snappedUV + bOffset).b;
 #else
     float2 glitchOffset = float2(tearNoise, 0.0);
-    color = Tex2DQuantized(s0, uv + glitchOffset).rgb;
+    color = Tex2DQuantized(s0, snappedUV + glitchOffset).rgb;
 #endif
 
 // --- 3. HALATION (IMPROVED) ---
@@ -179,15 +186,15 @@ float4 MainPS(PixelShaderInput input) : COLOR
     // C. Sample Raw Texture (Optimization & Smoothness)
     // We use 'tex2D' (raw) instead of 'Tex2DQuantized'. 
     // This is 15x faster and allows the glow to be a smooth gradient.
-    glow += tex2D(s0, uv + float2(off.x, 0.0)).rgb;
-    glow += tex2D(s0, uv - float2(off.x, 0.0)).rgb;
-    glow += tex2D(s0, uv + float2(0.0, off.y)).rgb;
-    glow += tex2D(s0, uv - float2(0.0, off.y)).rgb;
+    glow += tex2D(s0, snappedUV + float2(off.x, 0.0)).rgb;
+    glow += tex2D(s0, snappedUV - float2(off.x, 0.0)).rgb;
+    glow += tex2D(s0, snappedUV + float2(0.0, off.y)).rgb;
+    glow += tex2D(s0, snappedUV - float2(0.0, off.y)).rgb;
 
-    glow += tex2D(s0, uv + float2(offDiag.x, offDiag.y)).rgb;
-    glow += tex2D(s0, uv + float2(-offDiag.x, offDiag.y)).rgb;
-    glow += tex2D(s0, uv + float2(offDiag.x, -offDiag.y)).rgb;
-    glow += tex2D(s0, uv + float2(-offDiag.x, -offDiag.y)).rgb;
+    glow += tex2D(s0, snappedUV + float2(offDiag.x, offDiag.y)).rgb;
+    glow += tex2D(s0, snappedUV + float2(-offDiag.x, offDiag.y)).rgb;
+    glow += tex2D(s0, snappedUV + float2(offDiag.x, -offDiag.y)).rgb;
+    glow += tex2D(s0, snappedUV + float2(-offDiag.x, -offDiag.y)).rgb;
 
     glow *= 0.125; // Average
     
@@ -196,16 +203,23 @@ float4 MainPS(PixelShaderInput input) : COLOR
     color += glow * HALATION_INTENSITY;
 #endif
 
-    // --- 4. SCANLINES ---
-#ifdef ENABLE_SCANLINES
-    float luma = dot(color, float3(0.299, 0.587, 0.114));
-    float scanlinePos = (uv.y * VirtualResolution.y * SCANLINE_DENSITY);
-    float scanline = sin(scanlinePos * 3.14159 * 2.0);
-    scanline = (scanline * 0.5) + 0.5;
-    float bloomFactor = smoothstep(0.0, SCANLINE_BLOOM_CUTOFF, luma);
-    float lineVisibility = (1.0 - bloomFactor) * SCANLINE_HARDNESS;
-    float lineMultiplier = 1.0 - (scanline * lineVisibility);
-    color *= lineMultiplier;
+    // --- 4. LCD PIXEL GRID ---
+#ifdef ENABLE_LCD_GRID
+    // Find where we are within each virtual pixel (0..1 in both axes)
+    float2 pixelCell = frac(uv * VirtualResolution);
+
+    // Build a soft mask that is 1.0 in the pixel center and falls to 0.0 at the edges.
+    // smoothstep from 0 -> LCD_GAP_SIZE ramps up, smoothstep from 1 -> 1-LCD_GAP_SIZE ramps down.
+    float2 edgeMask;
+    edgeMask.x = smoothstep(0.0, LCD_GAP_SIZE + LCD_GAP_SOFTNESS, pixelCell.x) *
+                 smoothstep(1.0, 1.0 - (LCD_GAP_SIZE + LCD_GAP_SOFTNESS), pixelCell.x);
+    edgeMask.y = smoothstep(0.0, LCD_GAP_SIZE + LCD_GAP_SOFTNESS, pixelCell.y) *
+                 smoothstep(1.0, 1.0 - (LCD_GAP_SIZE + LCD_GAP_SOFTNESS), pixelCell.y);
+
+    // Combine axes: full brightness inside the pixel, LCD_GAP_DARKNESS in the gaps
+    float gridMask = edgeMask.x * edgeMask.y;
+    float gridMultiplier = lerp(LCD_GAP_DARKNESS, 1.0, gridMask);
+    color *= gridMultiplier;
 #endif
 
     // --- 5. HUM BAR ---
