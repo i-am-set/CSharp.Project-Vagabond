@@ -492,24 +492,12 @@ namespace ProjectVagabond
             var (shakeOffset, shakeRotation, shakeScale) = _hapticsManager.GetTotalShakeParams();
             Vector2 screenCenter = _finalRenderRectangle.Center.ToVector2();
 
-            float transitionZoom = 1.0f;
-            if (_transitionManager.IsTransitioningOut)
-            {
-                float t = _transitionManager.CurrentTransitionProgress;
-                transitionZoom = MathHelper.Lerp(1.0f, 0.98f, Easing.EaseOutCubic(t));
-            }
-            else if (_transitionManager.IsTransitioningIn)
-            {
-                float t = _transitionManager.CurrentTransitionProgress;
-                transitionZoom = MathHelper.Lerp(0.98f, 1.0f, Easing.EaseOutCubic(t));
-            }
-
             Matrix baseTransform = Matrix.CreateScale(_finalScale, _finalScale, 1.0f) *
                                    Matrix.CreateTranslation(_finalRenderRectangle.X, _finalRenderRectangle.Y, 0);
 
             Matrix shakeMatrix =
                 Matrix.CreateTranslation(-screenCenter.X, -screenCenter.Y, 0) *
-                Matrix.CreateScale(shakeScale * transitionZoom, shakeScale * transitionZoom, 1.0f) *
+                Matrix.CreateScale(shakeScale, shakeScale, 1.0f) *
                 Matrix.CreateRotationZ(shakeRotation) *
                 Matrix.CreateTranslation(screenCenter.X, screenCenter.Y, 0) *
                 Matrix.CreateTranslation(shakeOffset.X * _finalScale, shakeOffset.Y * _finalScale, 0);

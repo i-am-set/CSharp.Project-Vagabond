@@ -422,6 +422,9 @@ namespace ProjectVagabond.UI
         {
             if (string.IsNullOrEmpty(text)) return;
 
+            // Snap the base position immediately to ensure the starting point is pixel-aligned
+            options.Position = new Vector2(MathF.Round(options.Position.X), MathF.Round(options.Position.Y));
+
             Vector2 layoutScale = options.Scale;
 
             var shadowColor = Color.Lerp(_shadowBaseColor, options.Color, 0.2f);
@@ -437,6 +440,8 @@ namespace ProjectVagabond.UI
             if (options.Effect != TextEffectType.LeftAlignedSmallWave && options.Effect != TextEffectType.RightAlignedSmallWave)
             {
                 centeringOffset = (totalSize * (Vector2.One - layoutScale)) / 2f;
+                // Snap centering offset to prevent subpixel drift during scaling animations
+                centeringOffset = new Vector2(MathF.Round(centeringOffset.X), MathF.Round(centeringOffset.Y));
             }
 
             var glyphs = font.GetGlyphs(text, options.Position);
@@ -482,6 +487,9 @@ namespace ProjectVagabond.UI
                     options.EaseInDuration
                 );
 
+                // Snap animation offset to ensure movement (like waves) steps by pixels instead of sliding
+                animOffset = new Vector2(MathF.Round(animOffset.X), MathF.Round(animOffset.Y));
+
                 var character = glyph.Character;
                 if (character != null)
                 {
@@ -490,10 +498,6 @@ namespace ProjectVagabond.UI
                     {
                         // Use integer origin to prevent sub-pixel blurring on odd-width characters
                         Vector2 origin = new Vector2((int)(region.Width / 2), (int)(region.Height / 2));
-
-                        // Apply animation offset (in rotated space if we wanted to be super precise, but screen space is usually fine for effects)
-                        // Actually, wave effects look better if they "wave" relative to the button's orientation?
-                        // For small rotations, screen space offset is fine and simpler.
 
                         Vector2 finalDrawPos = rotatedPos + origin + animOffset;
 

@@ -55,7 +55,7 @@ namespace ProjectVagabond.Transitions
             float height = screenSize.Y;
 
             float progress = GetProgress();
-            float eased = _isOut ? Easing.EaseInExpo(progress) : Easing.EaseInExpo(1.0f - progress);
+            float eased = _isOut ? Easing.EaseInCubic(progress) : Easing.EaseInCubic(1.0f - progress);
 
             float halfHeight = height / 2f;
             float currentHeight = halfHeight * eased * 1.05f;
@@ -97,7 +97,7 @@ namespace ProjectVagabond.Transitions
             float height = screenSize.Y;
 
             float progress = GetProgress();
-            float eased = _isOut ? Easing.EaseInExpo(progress) : Easing.EaseInExpo(1.0f - progress);
+            float eased = _isOut ? Easing.EaseInCubic(progress) : Easing.EaseInCubic(1.0f - progress);
 
             float halfWidth = width / 2f;
             float currentWidth = halfWidth * eased * 1.05f;
@@ -139,7 +139,7 @@ namespace ProjectVagabond.Transitions
             float height = screenSize.Y;
 
             float progress = GetProgress();
-            float eased = _isOut ? Easing.EaseInExpo(progress) : Easing.EaseInExpo(1.0f - progress);
+            float eased = _isOut ? Easing.EaseInCubic(progress) : Easing.EaseInCubic(1.0f - progress);
 
             float halfWidth = width / 2f;
             float halfHeight = height / 2f;
@@ -233,7 +233,7 @@ namespace ProjectVagabond.Transitions
             var pixel = ServiceLocator.Get<Texture2D>();
             float progress = GetProgress();
 
-            float eased = _isOut ? Easing.EaseInQuart(progress) : Easing.EaseInQuart(1.0f - progress);
+            float eased = _isOut ? Easing.EaseInCubic(progress) : Easing.EaseInCubic(1.0f - progress);
 
             float maxDimension = (float)Math.Sqrt(screenSize.X * screenSize.X + screenSize.Y * screenSize.Y) * 1.5f * 1.2f;
             float currentSize = maxDimension * eased;
@@ -263,7 +263,7 @@ namespace ProjectVagabond.Transitions
     public class SpinningSquareTransition : ITransitionEffect
     {
         private float _timer;
-        private const float DURATION = 0.6f;
+        private const float DURATION = 0.5f;
         private bool _isOut;
         public bool IsComplete => _timer >= DURATION;
 
@@ -285,7 +285,7 @@ namespace ProjectVagabond.Transitions
             var pixel = ServiceLocator.Get<Texture2D>();
             float progress = GetProgress();
 
-            float eased = _isOut ? Easing.EaseInExpo(progress) : (1.0f - Easing.EaseOutExpo(progress));
+            float eased = _isOut ? Easing.EaseInCubic(progress) : (1.0f - Easing.EaseOutCubic(progress));
 
             float maxDimension = (float)Math.Sqrt(screenSize.X * screenSize.X + screenSize.Y * screenSize.Y) * 1.2f;
             float currentSize = maxDimension * eased;
