@@ -1755,6 +1755,8 @@ namespace ProjectVagabond.Battle.UI
 
                     Vector2 currentPos = drawCenter - groupOrigin;
 
+                    currentPos = new Vector2(MathF.Round(currentPos.X), MathF.Round(currentPos.Y));
+
                     spriteBatch.DrawStringOutlinedSnapped(activeFont, prefixText, currentPos, prefixColor, _global.Palette_Black, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
                     currentPos.X += prefixSize.X * scale; // Approximate spacing
                     spriteBatch.DrawStringOutlinedSnapped(activeFont, statText, currentPos, statColor, _global.Palette_Black, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
@@ -1764,13 +1766,17 @@ namespace ProjectVagabond.Battle.UI
                 else
                 {
                     Vector2 textSize = activeFont.MeasureString(indicator.PrimaryText);
-                    Vector2 origin = textSize / 2f;
+
+                    Vector2 origin = new Vector2(MathF.Floor(textSize.X / 2f), MathF.Floor(textSize.Y / 2f));
+
                     Vector2 drawPos = indicator.Position;
 
                     float left = drawPos.X - origin.X;
                     float right = drawPos.X + origin.X;
                     if (left < screenPadding) drawPos.X += (screenPadding - left);
                     if (right > Global.VIRTUAL_WIDTH - screenPadding) drawPos.X -= (right - (Global.VIRTUAL_WIDTH - screenPadding));
+
+                    drawPos = new Vector2(MathF.Round(drawPos.X), MathF.Round(drawPos.Y));
 
                     if (indicator.Type == DamageIndicatorState.IndicatorType.EmphasizedNumber)
                     {
@@ -1818,13 +1824,12 @@ namespace ProjectVagabond.Battle.UI
                 }
 
                 Vector2 textSize = tertiaryFont.MeasureString(indicator.Text);
-                var textPosition = new Vector2(
-                    (int)(indicator.CurrentPosition.X - textSize.X / 2f + shakeOffset.X),
-                    (int)(indicator.CurrentPosition.Y - textSize.Y / 2f + shakeOffset.Y)
-                );
 
-                Vector2 origin = textSize / 2f;
+                Vector2 origin = new Vector2(MathF.Floor(textSize.X / 2f), MathF.Floor(textSize.Y / 2f));
+
                 Vector2 drawPos = indicator.CurrentPosition + shakeOffset;
+
+                drawPos = new Vector2(MathF.Round(drawPos.X), MathF.Round(drawPos.Y));
 
                 TextAnimator.DrawTextWithEffectSquareOutlined(spriteBatch, tertiaryFont, indicator.Text, drawPos - origin, textColor * finalDrawAlpha, outlineColor * finalDrawAlpha, TextEffectType.DriftWave, indicator.Timer, null, indicator.Rotation);
             }
