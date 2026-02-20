@@ -43,7 +43,7 @@ namespace ProjectVagabond
         private RenderTarget2D _transitionRenderTarget;
         private RenderTarget2D _finalCompositeTarget;
         private RenderTarget2D _phosphorTarget;
-        private Effect _crtEffect;
+        private Effect _retroEffect;
         private BlendState _cursorInvertBlendState;
 
         private float _flashTimer;
@@ -302,8 +302,8 @@ namespace ProjectVagabond
             _spriteBatch = new SpriteBatch(GraphicsDevice);
             ServiceLocator.Register<SpriteBatch>(_spriteBatch);
 
-            try { _crtEffect = Content.Load<Effect>("Shaders/CRTShader"); }
-            catch (Exception ex) { Debug.WriteLine($"[FATAL ERROR] Could not load CRT Shader: {ex.Message}"); _crtEffect = null; }
+            try { _retroEffect = Content.Load<Effect>("Shaders/RetroShader"); }
+            catch (Exception ex) { Debug.WriteLine($"[FATAL ERROR] Could not load CRT Shader: {ex.Message}"); _retroEffect = null; }
 
             try { _defaultFont = Content.Load<BitmapFont>("Fonts/Px437_IBM_BIOS"); ServiceLocator.Register<BitmapFont>(_defaultFont); }
             catch { throw new Exception("Please add a BitmapFont to your 'Content/Fonts' folder"); }
@@ -593,20 +593,20 @@ namespace ProjectVagabond
 
             _spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.Opaque, SamplerState.PointClamp, null, null, null, Matrix.Identity);
 
-            if (_crtEffect != null)
+            if (_retroEffect != null)
             {
-                _crtEffect.Parameters["Time"]?.SetValue((float)gameTime.TotalGameTime.TotalSeconds);
-                _crtEffect.Parameters["ScreenResolution"]?.SetValue(new Vector2(GraphicsDevice.PresentationParameters.BackBufferWidth, GraphicsDevice.PresentationParameters.BackBufferHeight));
-                _crtEffect.Parameters["VirtualResolution"]?.SetValue(new Vector2(Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT));
-                _crtEffect.Parameters["Gamma"]?.SetValue(_settings.Gamma);
-                _crtEffect.Parameters["Saturation"]?.SetValue(_global.CrtSaturation);
-                _crtEffect.Parameters["Vibrance"]?.SetValue(_global.CrtVibrance);
+                _retroEffect.Parameters["Time"]?.SetValue((float)gameTime.TotalGameTime.TotalSeconds);
+                _retroEffect.Parameters["ScreenResolution"]?.SetValue(new Vector2(GraphicsDevice.PresentationParameters.BackBufferWidth, GraphicsDevice.PresentationParameters.BackBufferHeight));
+                _retroEffect.Parameters["VirtualResolution"]?.SetValue(new Vector2(Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT));
+                _retroEffect.Parameters["Gamma"]?.SetValue(_settings.Gamma);
+                _retroEffect.Parameters["Saturation"]?.SetValue(_global.CrtSaturation);
+                _retroEffect.Parameters["Vibrance"]?.SetValue(_global.CrtVibrance);
 
                 // --- Pass Palette ---
                 // We pass the array of Vector3s. 
                 // Note: Ensure your shader defines "float3 Palette[15]" matching this count.
-                _crtEffect.Parameters["Palette"]?.SetValue(_global.GetPaletteAsVectors());
-                _crtEffect.Parameters["PaletteCount"]?.SetValue(16);
+                _retroEffect.Parameters["Palette"]?.SetValue(_global.GetPaletteAsVectors());
+                _retroEffect.Parameters["PaletteCount"]?.SetValue(16);
                 // -------------------------
 
                 float flashIntensity = 0f;
@@ -623,14 +623,14 @@ namespace ProjectVagabond
                     flashColor = _flashColor;
                 }
 
-                _crtEffect.Parameters["FlashColor"]?.SetValue(flashColor.ToVector3());
-                _crtEffect.Parameters["FlashIntensity"]?.SetValue(flashIntensity * 0.25f);
+                _retroEffect.Parameters["FlashColor"]?.SetValue(flashColor.ToVector3());
+                _retroEffect.Parameters["FlashIntensity"]?.SetValue(flashIntensity * 0.25f);
 
                 float glitchIntensity = 0f;
                 if (_glitchTimer > 0 && _glitchDuration > 0) glitchIntensity = Easing.EaseOutCubic(_glitchTimer / _glitchDuration);
-                _crtEffect.Parameters["ImpactGlitchIntensity"]?.SetValue(glitchIntensity);
+                _retroEffect.Parameters["ImpactGlitchIntensity"]?.SetValue(glitchIntensity);
 
-                _crtEffect.CurrentTechnique.Passes[0].Apply();
+                _retroEffect.CurrentTechnique.Passes[0].Apply();
 
                 _spriteBatch.Draw(_phosphorTarget, new Rectangle(0, 0, GraphicsDevice.PresentationParameters.BackBufferWidth, GraphicsDevice.PresentationParameters.BackBufferHeight), Color.White);
             }

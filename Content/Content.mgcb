@@ -72,11 +72,11 @@
 /processorParam:DebugMode=Auto
 /build:Shaders/BackgroundNoise.fx
 
-#begin Shaders/CRTShader.fx
+#begin Shaders/RetroShader.fx
 /importer:EffectImporter
 /processor:EffectProcessor
 /processorParam:DebugMode=Auto
-/build:Shaders/CRTShader.fx
+/build:Shaders/RetroShader.fx
 
 #begin Sprites/Enemies/boar.png
 /importer:TextureImporter
