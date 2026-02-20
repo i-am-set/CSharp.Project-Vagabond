@@ -103,12 +103,12 @@ namespace ProjectVagabond.Scenes
 
         // RESTORED CONSTANTS
         private const float ROUND_ANIM_ENTER_DURATION = 0.5f;
-        private const float ROUND_ANIM_POP_DURATION = 0.1f;
-        private const float ROUND_ANIM_HANG_DURATION = 0.25f;
-        private const float ROUND_ANIM_SETTLE_DURATION = 0.25f;
+        private const float ROUND_ANIM_POP_DURATION = 0.05f;
+        private const float ROUND_ANIM_HANG_DURATION = 0.5f;
+        private const float ROUND_ANIM_SETTLE_DURATION = 0.15f;
         private const float ROUND_MAX_SCALE = 1.5f;
         private const float ROUND_SHAKE_MAGNITUDE = 0.25f;
-        private const float ROUND_SHAKE_FREQUENCY = 20f;
+        private const float ROUND_SHAKE_FREQUENCY = 50f;
 
         private bool _victorySequenceTriggered = false;
         private bool _floorTransitionTriggered = false;
@@ -901,7 +901,7 @@ namespace ProjectVagabond.Scenes
                 Vector2 drawPos = roundTextPosition + origin;
                 float scale = 1.0f;
                 float rotation = 0f;
-                Color color = _global.Palette_DarkShadow;
+                Color color = _global.Palette_LightPale;
 
                 if (_roundAnimState == RoundAnimState.Entering)
                 {
@@ -912,12 +912,12 @@ namespace ProjectVagabond.Scenes
                 {
                     float progress = Math.Clamp(_roundAnimTimer / ROUND_ANIM_POP_DURATION, 0f, 1f);
                     scale = MathHelper.Lerp(1.0f, ROUND_MAX_SCALE, Easing.EaseOutCubic(progress));
-                    color = Color.Lerp(_global.Palette_DarkShadow, Color.White, progress);
+                    color = Color.Lerp(_global.Palette_LightPale, _global.Palette_Sun, progress);
                 }
                 else if (_roundAnimState == RoundAnimState.Hang)
                 {
                     scale = ROUND_MAX_SCALE;
-                    color = Color.White;
+                    color = _global.Palette_Sun;
                     float progress = Math.Clamp(_roundAnimTimer / ROUND_ANIM_HANG_DURATION, 0f, 1f);
                     float decay = 1.0f - Easing.EaseOutQuad(progress);
                     rotation = MathF.Sin(_roundAnimTimer * ROUND_SHAKE_FREQUENCY) * ROUND_SHAKE_MAGNITUDE * decay;
@@ -926,7 +926,7 @@ namespace ProjectVagabond.Scenes
                 {
                     float progress = Math.Clamp(_roundAnimTimer / ROUND_ANIM_SETTLE_DURATION, 0f, 1f);
                     scale = MathHelper.Lerp(ROUND_MAX_SCALE, 1.0f, Easing.EaseInCubic(progress));
-                    color = Color.Lerp(Color.White, _global.Palette_DarkShadow, progress);
+                    color = Color.Lerp(_global.Palette_Sun, _global.Palette_LightPale, progress);
                 }
                 spriteBatch.DrawStringSnapped(font, roundText, drawPos, color, rotation, origin, scale, SpriteEffects.None, 0f);
             }
