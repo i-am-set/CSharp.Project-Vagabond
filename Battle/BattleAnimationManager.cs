@@ -418,11 +418,12 @@ namespace ProjectVagabond.Battle.UI
             if (_activeSwitchOutAnimations.Any()) sb.Append($"SwOut({_activeSwitchOutAnimations.Count}) ");
             if (_activeSwitchInAnimations.Any()) sb.Append($"SwIn({_activeSwitchInAnimations.Count}) ");
             if (_activeHitFlashAnimations.Any()) sb.Append($"HitFlash({_activeHitFlashAnimations.Count}) ");
-            if (_activeBarAnimations.Any()) sb.Append($"Bar({_activeBarAnimations.Count}) "); // <--- Likely culprit
+            if (_activeBarAnimations.Any()) sb.Append($"Bar({_activeBarAnimations.Count}) ");
             if (_activeIntroFadeAnimations.Any()) sb.Append($"Intro({_activeIntroFadeAnimations.Count}) ");
+            if (_activeFloorIntroAnimations.Any()) sb.Append($"FloorIntro({_activeFloorIntroAnimations.Count}) ");
+            if (_activeFloorOutroAnimations.Any()) sb.Append($"FloorOutro({_activeFloorOutroAnimations.Count}) ");
             if (_activeAttackCharges.Any()) sb.Append($"Charge({_activeAttackCharges.Count}) ");
 
-            // Check specific blocking logic
             if (_activeBarAnimations.Any())
             {
                 var bar = _activeBarAnimations[0];
@@ -1353,9 +1354,9 @@ namespace ProjectVagabond.Battle.UI
                 var anim = _activeFloorIntroAnimations[i];
                 anim.Timer += deltaTime;
 
-                if (anim.Timer > FloorIntroAnimationState.DURATION)
+                if (anim.Timer >= FloorIntroAnimationState.DURATION)
                 {
-                    anim.Timer = FloorIntroAnimationState.DURATION;
+                    _activeFloorIntroAnimations.RemoveAt(i);
                 }
             }
         }
