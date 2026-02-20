@@ -235,7 +235,7 @@ namespace ProjectVagabond.Battle.UI
                         spriteBatch.DrawStringSnapped(font, roundHeader, new Vector2(headerX, currentY), _global.Palette_Sky * fadeAlpha);
                     }
 
-                    spriteBatch.DrawStringSnapped(font, number, numberPos, _global.Palette_LightPale * fadeAlpha);
+                    spriteBatch.DrawStringSnapped(font, number, numberPos, _global.Palette_DarkPale * fadeAlpha);
                     spriteBatch.DrawStringSnapped(font, text, textPos, color);
 
                     currentY += lineHeight;
