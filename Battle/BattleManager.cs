@@ -284,6 +284,11 @@ namespace ProjectVagabond.Battle
 
                 target.ApplyDamage(result.DamageAmount);
 
+                if (target.Stats.CurrentHP <= 0 && !target.IsDying)
+                {
+                    EventBus.Publish(new GameEvents.CombatantVisualDeath { Victim = target });
+                }
+
                 if (!result.WasGraze && result.DamageAmount > 0 && target.CurrentTenacity > 0)
                 {
                     target.CurrentTenacity--;

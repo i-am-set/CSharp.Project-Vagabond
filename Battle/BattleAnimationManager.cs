@@ -52,7 +52,7 @@ namespace ProjectVagabond.Battle.UI
 
         public class AttackChargeAnimationState
         {
-            public enum Phase { Windup, Lunge }
+            public enum Phase { Windup, Lunge, Recovery }
             public Phase CurrentPhase = Phase.Windup;
 
             public string CombatantID;
@@ -435,11 +435,6 @@ namespace ProjectVagabond.Battle.UI
             if (anim != null)
             {
                 anim.CurrentPhase = AttackChargeAnimationState.Phase.Lunge;
-
-                // Snap to lunge pose immediately on trigger
-                float dir = anim.IsPlayer ? 1f : -1f;
-                anim.Offset = new Vector2(20f * dir, 0f);
-                anim.Scale = new Vector2(1.4f, 0.6f);
             }
         }
 
@@ -1020,20 +1015,37 @@ namespace ProjectVagabond.Battle.UI
 
                 if (anim.CurrentPhase == AttackChargeAnimationState.Phase.Windup)
                 {
-                    // Lerp towards windup pose: Pulled back (-10) and Squashed (0.8, 1.2)
-                    Vector2 targetOffset = new Vector2(-10f * dir, 0f);
-                    Vector2 targetScale = new Vector2(0.8f, 1.2f);
+                    // Windup: Player moves Down (+Y), Enemy moves Up (-Y)
+                    // Squash Y (1.2, 0.8) for anticipation
+                    Vector2 targetOffset = new Vector2(0f, 10f * dir);
+                    Vector2 targetScale = new Vector2(1.2f, 0.8f);
 
                     float smooth = 1f - MathF.Exp(-10f * dt);
                     anim.Offset = Vector2.Lerp(anim.Offset, targetOffset, smooth);
                     anim.Scale = Vector2.Lerp(anim.Scale, targetScale, smooth);
                 }
-                else // Lunge
+                else if (anim.CurrentPhase == AttackChargeAnimationState.Phase.Lunge)
                 {
-                    // Decay towards neutral pose: (0, 0) and (1, 1)
-                    float recoverySpeed = 10f;
-                    float smooth = 1f - MathF.Exp(-recoverySpeed * dt);
+                    // Lunge: Player moves Up (-Y), Enemy moves Down (+Y)
+                    // Stretch Y (0.8, 1.2) for the strike
+                    Vector2 targetOffset = new Vector2(0f, -20f * dir);
+                    Vector2 targetScale = new Vector2(0.8f, 1.2f);
 
+                    // Fast movement for the strike
+                    float smooth = 1f - MathF.Exp(-25f * dt);
+                    anim.Offset = Vector2.Lerp(anim.Offset, targetOffset, smooth);
+                    anim.Scale = Vector2.Lerp(anim.Scale, targetScale, smooth);
+
+                    // Transition to Recovery when close to the apex
+                    if (Vector2.DistanceSquared(anim.Offset, targetOffset) < 5f)
+                    {
+                        anim.CurrentPhase = AttackChargeAnimationState.Phase.Recovery;
+                    }
+                }
+                else // Recovery
+                {
+                    // Return to Neutral
+                    float smooth = 1f - MathF.Exp(-10f * dt);
                     anim.Offset = Vector2.Lerp(anim.Offset, Vector2.Zero, smooth);
                     anim.Scale = Vector2.Lerp(anim.Scale, Vector2.One, smooth);
 

@@ -289,6 +289,7 @@ namespace ProjectVagabond.Scenes
             EventBus.Subscribe<GameEvents.TenacityChanged>(OnTenacityChanged);
             EventBus.Subscribe<GameEvents.TenacityBroken>(OnTenacityBroken);
             EventBus.Subscribe<GameEvents.RequestImpactSync>(OnRequestImpactSync);
+            EventBus.Subscribe<GameEvents.CombatantVisualDeath>(OnCombatantVisualDeath);
 
             _uiManager.OnForcedSwitchSelected += OnForcedSwitchSelected;
             _uiManager.OnFleeRequested += FleeBattle;
@@ -317,6 +318,7 @@ namespace ProjectVagabond.Scenes
             EventBus.Unsubscribe<GameEvents.TenacityChanged>(OnTenacityChanged);
             EventBus.Unsubscribe<GameEvents.TenacityBroken>(OnTenacityBroken);
             EventBus.Unsubscribe<GameEvents.RequestImpactSync>(OnRequestImpactSync);
+            EventBus.Unsubscribe<GameEvents.CombatantVisualDeath>(OnCombatantVisualDeath);
 
             _uiManager.OnForcedSwitchSelected -= OnForcedSwitchSelected;
             _uiManager.OnFleeRequested -= FleeBattle;
@@ -1192,6 +1194,11 @@ namespace ProjectVagabond.Scenes
                 // For immediate fallback (simplest solution given constraints):
                 executeImpact();
             }
+        }
+
+        private void OnCombatantVisualDeath(GameEvents.CombatantVisualDeath e)
+        {
+            TriggerDeathAnimation(e.Victim);
         }
 
         private void OnCombatantHealed(GameEvents.CombatantHealed e)

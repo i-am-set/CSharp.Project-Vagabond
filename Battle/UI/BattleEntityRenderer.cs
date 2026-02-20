@@ -66,11 +66,6 @@ namespace ProjectVagabond.Battle.UI
             Matrix transform,
             Color? lowHealthOverlay = null)
         {
-            if (enemy.IsDying)
-            {
-                return;
-            }
-
             Texture2D enemySprite = _spriteManager.GetEnemySprite(enemy.ArchetypeId);
             Texture2D enemySilhouette = _spriteManager.GetEnemySpriteSilhouette(enemy.ArchetypeId);
 

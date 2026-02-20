@@ -61,6 +61,11 @@ namespace ProjectVagabond
             public BattleCombatant DefeatedCombatant { get; set; }
         }
 
+        public struct CombatantVisualDeath
+        {
+            public BattleCombatant Victim { get; set; }
+        }
+
         public struct SecondaryEffectComplete { }
 
         public struct StatusEffectTriggered

@@ -865,7 +865,7 @@ namespace ProjectVagabond.Battle.UI
             }
 
             var allOnFieldEnemies = enemies.Where(c => c.IsActiveOnField).ToList();
-            var keepIds = allOnFieldEnemies.Select(e => e.CombatantID).ToHashSet();
+            var keepIds = allOnFieldEnemies.Concat(dyingEnemies).Select(e => e.CombatantID).ToHashSet();
             var keysToRemove = _enemyVisualXPositions.Keys.Where(k => !keepIds.Contains(k)).ToList();
             foreach (var key in keysToRemove) _enemyVisualXPositions.Remove(key);
         }
@@ -972,7 +972,20 @@ namespace ProjectVagabond.Battle.UI
 
                 foreach (var enemy in spritesToDraw)
                 {
-                    float visualX = _enemyVisualXPositions.ContainsKey(enemy.CombatantID) ? _enemyVisualXPositions[enemy.CombatantID] : BattleLayout.GetEnemySlotCenter(enemy.BattleSlot).X;
+                    float visualX;
+                    if (_enemyVisualXPositions.TryGetValue(enemy.CombatantID, out float vx))
+                    {
+                        visualX = vx;
+                    }
+                    else if ((animManager.IsDeathAnimating(enemy.CombatantID) || enemy.BattleSlot == -1) && _combatantStaticCenters.TryGetValue(enemy.CombatantID, out var staticCenter))
+                    {
+                        visualX = staticCenter.X;
+                    }
+                    else
+                    {
+                        visualX = BattleLayout.GetEnemySlotCenter(enemy.BattleSlot).X;
+                    }
+
                     var center = new Vector2(visualX, BattleLayout.ENEMY_SLOT_Y_OFFSET);
 
                     Color? assignedColor = silhouetteColors.ContainsKey(enemy.CombatantID) ? silhouetteColors[enemy.CombatantID] : null;
@@ -1036,7 +1049,6 @@ namespace ProjectVagabond.Battle.UI
                     Vector2 chargeOffset = Vector2.Zero;
                     Vector2 chargeScale = Vector2.One;
 
-                    // FIX: Removed "&& introFade == null" to allow targeting silhouettes to override idle fade state
                     if (isSilhouetted && spawnAnim == null && switchOut == null && switchIn == null)
                     {
                         silhouetteAmt = 1.0f;
