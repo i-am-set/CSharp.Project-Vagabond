@@ -118,6 +118,9 @@ namespace ProjectVagabond.Scenes
         // Dazed Timer
         private float _dazedWaitTimer = 0f;
 
+        // Floor Alpha Control
+        private float _floorAlpha = 1f;
+
         public BattleAnimationManager AnimationManager => _animationManager;
 
         public BattleScene()
@@ -195,6 +198,7 @@ namespace ProjectVagabond.Scenes
             _didFlee = false;
             _isBattleLogHovered = false;
             _dazedWaitTimer = 0f;
+            _floorAlpha = 1f;
 
             SubscribeToEvents();
 
@@ -405,6 +409,17 @@ namespace ProjectVagabond.Scenes
             // Calculate time scale based on hitstop active state
             float timeScale = _hitstopManager.IsActive ? 0.0f : 1.0f;
 
+            // --- Floor Alpha Logic ---
+            // Only fade out at the very end of battle
+            if (_battleManager.CurrentPhase == BattleManager.BattlePhase.BattleOver)
+            {
+                _floorAlpha = MathHelper.Lerp(_floorAlpha, 0.0f, dt * 2.0f);
+            }
+            else
+            {
+                _floorAlpha = 1.0f;
+            }
+
             _battleCam.Update(dt);
 
             _battleLogManager.Update(gameTime);
@@ -439,13 +454,6 @@ namespace ProjectVagabond.Scenes
 
                         // Trigger Fade
                         _animationManager.StartIntroFadeAnimation(nextCombatant.CombatantID);
-
-                        // If Enemy, trigger their specific floor fade
-                        if (!nextCombatant.IsPlayerControlled)
-                        {
-                            _animationManager.StartFloorIntroAnimation("floor_" + nextCombatant.BattleSlot);
-                        }
-                        // Note: Player floors fade automatically with player alpha in BattleRenderer
 
                         _introStaggerTimer = INTRO_STAGGER_DELAY;
                     }
@@ -626,15 +634,14 @@ namespace ProjectVagabond.Scenes
                                 _uiManager.ForceClearNarration();
                                 if (!SplitMapScene.WasMajorBattle)
                                 {
-                                    _animationManager.StartFloorOutroAnimation("floor_0");
-                                    _animationManager.StartFloorOutroAnimation("floor_1");
+                                    // Floor fade out is now handled by _floorAlpha tweening to 0 in Update
                                 }
                                 _floorTransitionTriggered = true;
                             }
                             else
                             {
-                                bool floorsBusy = _animationManager.IsFloorAnimatingOut("floor_0") || _animationManager.IsFloorAnimatingOut("floor_1");
-                                if (!floorsBusy)
+                                // Wait for floor alpha to hit 0
+                                if (_floorAlpha <= 0.01f)
                                 {
                                     FinalizeVictory();
                                 }
@@ -865,7 +872,7 @@ namespace ProjectVagabond.Scenes
                 renderContextActor = null;
             }
 
-            _renderer.Draw(spriteBatch, font, gameTime, _battleManager.AllCombatants, renderContextActor, _uiManager, _inputHandler, _animationManager, _uiManager.SharedPulseTimer, worldTransform);
+            _renderer.Draw(spriteBatch, font, gameTime, _battleManager.AllCombatants, renderContextActor, _uiManager, _inputHandler, _animationManager, _uiManager.SharedPulseTimer, worldTransform, _floorAlpha);
 
             bool isFlashing = _animationManager.GetImpactFlashState() != null;
 
