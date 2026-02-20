@@ -19,16 +19,19 @@ namespace ProjectVagabond.Utils
 
         public static void DrawStringSnapped(this SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color color)
         {
+            position = new Vector2(MathF.Round(position.X), MathF.Round(position.Y));
             spriteBatch.DrawString(font, text, position, color);
         }
 
         public static void DrawStringSnapped(this SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color color, float rotation, Vector2 origin, float scale, SpriteEffects effects, float layerDepth)
         {
+            position = new Vector2(MathF.Round(position.X), MathF.Round(position.Y));
             spriteBatch.DrawString(font, text, position, color, rotation, origin, scale, effects, layerDepth);
         }
 
         public static void DrawStringSnapped(this SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color color, float rotation, Vector2 origin, Vector2 scale, SpriteEffects effects, float layerDepth)
         {
+            position = new Vector2(MathF.Round(position.X), MathF.Round(position.Y));
             spriteBatch.DrawString(font, text, position, color, rotation, origin, scale, effects, layerDepth);
         }
 
@@ -36,6 +39,8 @@ namespace ProjectVagabond.Utils
 
         public static void DrawStringOutlinedSnapped(this SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color textColor, Color outlineColor)
         {
+            position = new Vector2(MathF.Round(position.X), MathF.Round(position.Y));
+
             // 1. Draw outline in 4 directions
             spriteBatch.DrawString(font, text, position + new Vector2(-1, 0), outlineColor);
             spriteBatch.DrawString(font, text, position + new Vector2(1, 0), outlineColor);
@@ -48,6 +53,8 @@ namespace ProjectVagabond.Utils
 
         public static void DrawStringOutlinedSnapped(this SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color textColor, Color outlineColor, float rotation, Vector2 origin, float scale, SpriteEffects effects, float layerDepth)
         {
+            position = new Vector2(MathF.Round(position.X), MathF.Round(position.Y));
+
             // 1. Draw outline in 4 directions
             spriteBatch.DrawString(font, text, position + new Vector2(-1, 0), outlineColor, rotation, origin, scale, effects, layerDepth);
             spriteBatch.DrawString(font, text, position + new Vector2(1, 0), outlineColor, rotation, origin, scale, effects, layerDepth);
@@ -60,6 +67,8 @@ namespace ProjectVagabond.Utils
 
         public static void DrawStringOutlinedSnapped(this SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color textColor, Color outlineColor, float rotation, Vector2 origin, Vector2 scale, SpriteEffects effects, float layerDepth)
         {
+            position = new Vector2(MathF.Round(position.X), MathF.Round(position.Y));
+
             // 1. Draw outline in 4 directions
             spriteBatch.DrawString(font, text, position + new Vector2(-1, 0), outlineColor, rotation, origin, scale, effects, layerDepth);
             spriteBatch.DrawString(font, text, position + new Vector2(1, 0), outlineColor, rotation, origin, scale, effects, layerDepth);
@@ -74,6 +83,8 @@ namespace ProjectVagabond.Utils
 
         public static void DrawStringSquareOutlinedSnapped(this SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color textColor, Color outlineColor)
         {
+            position = new Vector2(MathF.Round(position.X), MathF.Round(position.Y));
+
             // Diagonals
             spriteBatch.DrawString(font, text, position + new Vector2(-1, -1), outlineColor);
             spriteBatch.DrawString(font, text, position + new Vector2(1, -1), outlineColor);
@@ -92,6 +103,8 @@ namespace ProjectVagabond.Utils
 
         public static void DrawStringSquareOutlinedSnapped(this SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color textColor, Color outlineColor, float rotation, Vector2 origin, float scale, SpriteEffects effects, float layerDepth)
         {
+            position = new Vector2(MathF.Round(position.X), MathF.Round(position.Y));
+
             // Diagonals
             spriteBatch.DrawString(font, text, position + new Vector2(-1, -1), outlineColor, rotation, origin, scale, effects, layerDepth);
             spriteBatch.DrawString(font, text, position + new Vector2(1, -1), outlineColor, rotation, origin, scale, effects, layerDepth);
@@ -113,11 +126,13 @@ namespace ProjectVagabond.Utils
 
         public static void DrawSnapped(this SpriteBatch spriteBatch, Texture2D texture, Vector2 position, Color color)
         {
+            position = new Vector2(MathF.Round(position.X), MathF.Round(position.Y));
             spriteBatch.Draw(texture, position, color);
         }
 
         public static void DrawSnapped(this SpriteBatch spriteBatch, Texture2D texture, Vector2 position, Rectangle? sourceRectangle, Color color)
         {
+            position = new Vector2(MathF.Round(position.X), MathF.Round(position.Y));
             spriteBatch.Draw(texture, position, sourceRectangle, color);
         }
 
@@ -133,17 +148,21 @@ namespace ProjectVagabond.Utils
 
         public static void DrawSnapped(this SpriteBatch spriteBatch, Texture2D texture, Vector2 position, Rectangle? sourceRectangle, Color color, float rotation, Vector2 origin, float scale, SpriteEffects effects, float layerDepth)
         {
+            position = new Vector2(MathF.Round(position.X), MathF.Round(position.Y));
             spriteBatch.Draw(texture, position, sourceRectangle, color, rotation, origin, scale, effects, layerDepth);
         }
 
         public static void DrawSnapped(this SpriteBatch spriteBatch, Texture2D texture, Vector2 position, Rectangle? sourceRectangle, Color color, float rotation, Vector2 origin, Vector2 scale, SpriteEffects effects, float layerDepth)
         {
+            position = new Vector2(MathF.Round(position.X), MathF.Round(position.Y));
             spriteBatch.Draw(texture, position, sourceRectangle, color, rotation, origin, scale, effects, layerDepth);
         }
 
         // --- DrawLineSnapped ---
         public static void DrawLineSnapped(this SpriteBatch spriteBatch, Vector2 point1, Vector2 point2, Color color, float thickness = 1f, float layerDepth = 0)
         {
+            point1 = new Vector2(MathF.Round(point1.X), MathF.Round(point1.Y));
+            point2 = new Vector2(MathF.Round(point2.X), MathF.Round(point2.Y));
             spriteBatch.DrawLine(point1, point2, color, thickness, layerDepth);
         }
 

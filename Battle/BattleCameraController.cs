@@ -17,7 +17,7 @@ namespace ProjectVagabond.Battle
         private float _kickZoom;
 
         private const float LERP_SPEED = 10.0f;
-        private const float FOCUS_INTENSITY = 0.05f;
+        private const float FOCUS_INTENSITY = 0.1f;
         private const float KICK_DECAY = 15.0f;
 
         public Vector2 Position => _currentPosition + _kickOffset;
@@ -34,7 +34,11 @@ namespace ProjectVagabond.Battle
         public void SetTarget(Vector2 focusPoint, float zoomLevel)
         {
             Vector2 screenCenter = new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f);
-            _targetPosition = Vector2.Lerp(screenCenter, focusPoint, FOCUS_INTENSITY);
+
+            // Calculate raw lerp then snap to integer immediately
+            Vector2 rawTarget = Vector2.Lerp(screenCenter, focusPoint, FOCUS_INTENSITY);
+            _targetPosition = new Vector2(MathF.Round(rawTarget.X), MathF.Round(rawTarget.Y));
+
             _targetZoom = zoomLevel;
         }
 
@@ -64,10 +68,13 @@ namespace ProjectVagabond.Battle
 
         public Matrix GetTransform()
         {
-            var pos = Position;
-            var zoom = Zoom;
+            Vector2 rawPos = Position;
+            var zoom = 1;
 
-            var translationToTarget = Matrix.CreateTranslation(-pos.X, -pos.Y, 0);
+            // Round current position to nearest pixel for rendering matrix
+            Vector2 snappedPos = new Vector2(MathF.Round(rawPos.X), MathF.Round(rawPos.Y));
+
+            var translationToTarget = Matrix.CreateTranslation(-snappedPos.X, -snappedPos.Y, 0);
             var scale = Matrix.CreateScale(zoom);
             var translationToScreenCenter = Matrix.CreateTranslation(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f, 0);
 

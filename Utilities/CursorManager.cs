@@ -106,7 +106,6 @@ namespace ProjectVagabond.UI
             bool shouldDraw = Visible && !_hideRequested;
 
             // 2. Reset the request flag immediately. 
-            // If the HUD stops calling Hide(), this will remain false next frame, and the cursor will reappear.
             _hideRequested = false;
 
             if (!shouldDraw) return;
@@ -117,20 +116,22 @@ namespace ProjectVagabond.UI
             }
 
             var mouseState = Mouse.GetState();
+
             var drawPosition = screenPosition + (VisualOffset * scale);
 
-            // Note: The click offset (+2) remains unscaled (raw screen pixels) 
-            // to maintain the "subtle" feel described in original comments.
             if (mouseState.LeftButton == ButtonState.Pressed || mouseState.RightButton == ButtonState.Pressed)
             {
-                drawPosition.Y += 2;
+                // Using 1f * scale ensures it moves exactly one 'game pixel' down.
+                // Original code was '2' raw pixels. Adjust '1f' to '2f' if you want a deeper press.
+                drawPosition.Y += (int)(1f * scale);
             }
 
             var sourceRect = _currentSpriteAnimation.Frames[_currentFrameIndex];
 
             spriteBatch.Draw(
                 _currentSpriteAnimation.Texture,
-                drawPosition,
+                // Rounding here acts as a final safety net for the GPU rasterizer
+                new Vector2(MathF.Round(drawPosition.X), MathF.Round(drawPosition.Y)),
                 sourceRect,
                 Color.White,
                 0f,

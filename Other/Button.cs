@@ -330,21 +330,7 @@ namespace ProjectVagabond.UI
                 flashTint = new Color(_flashColor, alpha);
             }
 
-            if (_hoverRotationTimer > 0)
-            {
-                _hoverRotationTimer -= dt;
-                float progress = 1.0f - (_hoverRotationTimer / HOVER_ROTATION_DURATION);
-                float decay = (1.0f - progress) * (1.0f - progress);
-                float currentWidth = Bounds.Width > 0 ? Bounds.Width : ROTATION_REFERENCE_WIDTH;
-                float widthScale = ROTATION_REFERENCE_WIDTH / Math.Max(ROTATION_REFERENCE_WIDTH, currentWidth);
-                float effectiveMagnitude = BASE_ROTATION_MAGNITUDE * widthScale;
-                _currentHoverRotation = MathF.Sin(progress * MathHelper.TwoPi * HOVER_ROTATION_SPEED) * effectiveMagnitude * decay;
-                if (_hoverRotationTimer <= 0) _currentHoverRotation = 0f;
-            }
-            else
-            {
-                _currentHoverRotation = 0f;
-            }
+            _currentHoverRotation = 0f;
 
             float scaleDamping = 1.0f - MathF.Exp(-SCALE_SPEED * dt);
             _currentScale = MathHelper.Lerp(_currentScale, _targetScale, scaleDamping);

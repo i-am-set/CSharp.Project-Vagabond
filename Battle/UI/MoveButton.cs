@@ -122,115 +122,92 @@ namespace ProjectVagabond.Battle.UI
             bool canAfford = CanAfford;
             bool isActivated = IsEnabled && (IsHovered || forceHover);
 
-            // FIX: Pass inherited properties
-            _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated && canAfford, HoverLiftOffset, HoverLiftDuration);
+            // 1. Calculate Animation Offsets
+            float hoverOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated && canAfford, HoverLiftOffset, HoverLiftDuration);
             var (shakeOffset, flashTint) = UpdateFeedbackAnimations(gameTime);
 
-            _currentHoverRotation *= 0.35f;
+            // 2. Calculate Strict Integer Position & Bounds
+            // We round everything immediately to lock it to the pixel grid
+            int x = (int)MathF.Round(Bounds.X + shakeOffset.X + (horizontalOffset ?? 0f));
+            int y = (int)MathF.Round(Bounds.Y + shakeOffset.Y + hoverOffset + (verticalOffset ?? 0f));
+            int w = VisualWidthOverride ?? Bounds.Width;
+            int h = VisualHeightOverride ?? Bounds.Height;
 
-            if (!canAfford) _currentHoverRotation = 0f;
+            Rectangle drawBounds = new Rectangle(x, y, w, h);
+            Vector2 boundsCenter = new Vector2(drawBounds.Center.X, drawBounds.Center.Y);
 
-            float finalScaleX = _currentScale;
-            float finalScaleY = _currentScale;
-            Vector2 scaleVec = new Vector2(finalScaleX, finalScaleY);
+            bool isStackedLayout = h > 15 && ActionIconRect.HasValue;
 
-            Vector2 centerPos = new Vector2(Bounds.X + Bounds.Width / 2f, Bounds.Y + Bounds.Height / 2f) + shakeOffset;
-
-            if (horizontalOffset.HasValue) centerPos.X += horizontalOffset.Value;
-            if (verticalOffset.HasValue) centerPos.Y += verticalOffset.Value;
-
-            float effectiveWidth = VisualWidthOverride ?? Bounds.Width;
-            float effectiveHeight = VisualHeightOverride ?? Bounds.Height;
-
-            bool isStackedLayout = effectiveHeight > 15 && ActionIconRect.HasValue;
-
+            // 3. Draw Background (Pixel Perfect)
             if (DrawSystemBackground)
             {
                 Color bgColor = BackgroundColor;
                 if (!IsEnabled || !canAfford) bgColor = _global.Palette_Black;
                 else if (isActivated) bgColor = _global.ButtonHoverColor;
 
-                DrawRotatedBeveledBackground(spriteBatch, pixel, centerPos, (int)effectiveWidth, (int)effectiveHeight, bgColor, _currentHoverRotation, scaleVec);
+                DrawPixelPerfectBevel(spriteBatch, pixel, drawBounds, bgColor);
             }
 
+            // 4. Draw Icon (Pixel Perfect)
             if (ActionIconRect.HasValue)
             {
                 var spriteManager = ServiceLocator.Get<SpriteManager>();
                 if (spriteManager.ActionIconsSpriteSheet != null)
                 {
-                    Vector2 rotatedOffset;
-
+                    // Calculate relative offset based on layout
+                    Vector2 iconOffset;
                     if (isStackedLayout)
                     {
-                        float iconOffsetY = -5f + IconRenderOffset.Y;
-                        float iconOffsetX = IconRenderOffset.X;
-
-                        float c = MathF.Cos(_currentHoverRotation);
-                        float s = MathF.Sin(_currentHoverRotation);
-
-                        rotatedOffset = new Vector2(
-                            iconOffsetX * c * scaleVec.X - iconOffsetY * s * scaleVec.Y,
-                            iconOffsetX * s * scaleVec.X + iconOffsetY * c * scaleVec.Y
-                        );
+                        iconOffset = new Vector2(IconRenderOffset.X, -5f + IconRenderOffset.Y);
                     }
                     else
                     {
-                        float iconOffsetX = (-effectiveWidth / 2f) + 5f;
-                        float c = MathF.Cos(_currentHoverRotation);
-                        float s = MathF.Sin(_currentHoverRotation);
-
-                        rotatedOffset = new Vector2(
-                            iconOffsetX * c * scaleVec.X,
-                            iconOffsetX * s * scaleVec.Y
-                        );
+                        iconOffset = new Vector2((-w / 2f) + 5f, 0);
                     }
 
-                    Vector2 iconPos = centerPos + rotatedOffset;
-                    Vector2 iconOrigin = new Vector2(4.5f, 4.5f);
+                    // Combine, then ROUND to snap
+                    Vector2 rawIconPos = boundsCenter + iconOffset;
+                    Vector2 snappedIconPos = new Vector2(MathF.Round(rawIconPos.X), MathF.Round(rawIconPos.Y));
 
-                    Color currentIconColor = ActionIconColor;
-                    if (isActivated && canAfford)
-                    {
-                        currentIconColor = ActionIconHoverColor;
-                    }
+                    // Use integer origin to ensure pixel-perfect alignment on the grid
+                    Vector2 iconOrigin = new Vector2(4, 4);
+                    Color currentIconColor = (isActivated && canAfford) ? ActionIconHoverColor : ActionIconColor;
+
+                    // No rotation, scale 1.0f (or derived from _currentScale if absolutely needed, but usually 1 for pixel perfect)
+                    // Assuming scale remains 1 for pixel perfection unless zooming is critical
+                    float scale = 1.0f;
 
                     spriteBatch.DrawSnapped(
                         spriteManager.ActionIconsSpriteSheet,
-                        iconPos,
+                        snappedIconPos,
                         ActionIconRect.Value,
                         currentIconColor,
-                        _currentHoverRotation,
+                        0f, // No rotation
                         iconOrigin,
-                        scaleVec,
+                        new Vector2(scale),
                         SpriteEffects.None,
                         0f
                     );
                 }
             }
 
+            // 5. Draw Text (Pixel Perfect)
             Color textColor;
-            if (!IsEnabled || !canAfford)
-            {
-                textColor = CustomDisabledTextColor ?? _global.ButtonDisableColor;
-            }
-            else
-            {
-                if (isActivated)
-                    textColor = CustomHoverTextColor ?? _global.ButtonHoverColor;
-                else
-                    textColor = CustomDefaultTextColor ?? _global.GameTextColor;
-            }
+            if (!IsEnabled || !canAfford) textColor = CustomDisabledTextColor ?? _global.ButtonDisableColor;
+            else if (isActivated) textColor = CustomHoverTextColor ?? _global.ButtonHoverColor;
+            else textColor = CustomDefaultTextColor ?? _global.GameTextColor;
 
             if (tintColorOverride.HasValue) textColor = tintColorOverride.Value;
 
             BitmapFont font = Font ?? defaultFont;
             Vector2 textSize = font.MeasureString(Text);
-
-            float textAvailableWidth = effectiveWidth - 8;
+            float textAvailableWidth = w - 8;
             bool needsScrolling = textSize.X > textAvailableWidth;
 
-            if (needsScrolling && Math.Abs(_currentHoverRotation) < 0.01f)
+            // Handle Text Positioning
+            if (needsScrolling)
             {
+                // Init scrolling state if needed
                 if (!_isScrollingInitialized)
                 {
                     _isScrollingInitialized = true;
@@ -240,27 +217,32 @@ namespace ProjectVagabond.Battle.UI
                     _scrollState = ScrollState.PausedAtStart;
                     _scrollPosition = 0;
                 }
-
                 UpdateScrolling(gameTime);
 
-                float flatX = centerPos.X - (effectiveWidth / 2f) + 4;
-                float flatY = centerPos.Y - (font.LineHeight / 2f) + TextRenderOffset.Y;
+                // Scissor Logic must align with integer bounds
+                // Calculate flat coordinates relative to the button
+                int textY = (int)MathF.Round(boundsCenter.Y - (font.LineHeight / 2f) + TextRenderOffset.Y);
+                if (isStackedLayout) textY += 5;
 
-                if (isStackedLayout) flatY += 5f;
+                // Flatten X start
+                int flatX = (int)MathF.Round(boundsCenter.X - (w / 2f) + 4);
 
                 var originalRasterizerState = spriteBatch.GraphicsDevice.RasterizerState;
                 var originalScissorRect = spriteBatch.GraphicsDevice.ScissorRectangle;
                 spriteBatch.End();
 
+                // Start Scissor Batch
                 spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, _clipRasterizerState, null, transform);
 
-                var clipRect = new Rectangle((int)flatX, (int)(centerPos.Y - Bounds.Height / 2f), (int)textAvailableWidth, Bounds.Height);
+                // Set Scissor Rect (must be integers)
+                var clipRect = new Rectangle(flatX, drawBounds.Y, (int)textAvailableWidth, drawBounds.Height);
                 spriteBatch.GraphicsDevice.ScissorRectangle = clipRect;
 
-                var scrollingTextPosition = new Vector2(flatX - _scrollPosition, flatY);
-
-                spriteBatch.DrawStringSnapped(font, Text, scrollingTextPosition, textColor);
-                spriteBatch.DrawStringSnapped(font, Text, scrollingTextPosition + new Vector2(_loopWidth, 0), textColor);
+                Vector2 scrollingPos = new Vector2(flatX - _scrollPosition, textY);
+                // Snap the scrolling position's Y, X is float for smooth scroll, but could be snapped if strictly required
+                // For "strict pixel grid", usually the base position is snapped.
+                spriteBatch.DrawStringSnapped(font, Text, scrollingPos, textColor);
+                spriteBatch.DrawStringSnapped(font, Text, scrollingPos + new Vector2(_loopWidth, 0), textColor);
 
                 spriteBatch.End();
                 spriteBatch.GraphicsDevice.ScissorRectangle = originalScissorRect;
@@ -270,46 +252,38 @@ namespace ProjectVagabond.Battle.UI
             {
                 _isScrollingInitialized = false;
 
+                // Standard centered text
                 Vector2 textOrigin = new Vector2(MathF.Round(textSize.X / 2f), MathF.Round(textSize.Y / 2f) + 1);
                 textOrigin -= TextRenderOffset;
 
-                Vector2 textDrawPos = centerPos;
-                if (isStackedLayout)
-                {
-                    float textOffsetY = 5f;
-                    float c = MathF.Cos(_currentHoverRotation);
-                    float s = MathF.Sin(_currentHoverRotation);
+                Vector2 textOffset = isStackedLayout ? new Vector2(0, 5f) : Vector2.Zero;
 
-                    Vector2 rotatedTextOffset = new Vector2(
-                        0 * c * scaleVec.X - textOffsetY * s * scaleVec.Y,
-                        0 * s * scaleVec.X + textOffsetY * c * scaleVec.Y
-                    );
-                    textDrawPos += rotatedTextOffset;
-                }
+                // Calculate raw, then SNAP
+                Vector2 rawTextPos = boundsCenter + textOffset;
+                Vector2 snappedTextPos = new Vector2(MathF.Round(rawTextPos.X), MathF.Round(rawTextPos.Y));
 
-                spriteBatch.DrawStringSnapped(font, Text, textDrawPos, textColor, _currentHoverRotation, textOrigin, finalScaleX, SpriteEffects.None, 0f);
+                spriteBatch.DrawStringSnapped(font, Text, snappedTextPos, textColor, 0f, textOrigin, 1.0f, SpriteEffects.None, 0f);
             }
 
+            // 6. Draw Disabled Strikethrough (Flat, no rotation)
             if (!IsEnabled || !canAfford)
             {
-                Vector2 lineStartLocal = new Vector2(-textSize.X / 2f - 2, 0);
-                Vector2 lineEndLocal = new Vector2(textSize.X / 2f + 2, 0);
+                // Calculate center
+                Vector2 lineCenterOffset = isStackedLayout ? new Vector2(0, 5) : Vector2.Zero;
+                Vector2 rawLineCenter = boundsCenter + lineCenterOffset;
+                Vector2 snappedLineCenter = new Vector2(MathF.Round(rawLineCenter.X), MathF.Round(rawLineCenter.Y));
 
-                if (isStackedLayout)
-                {
-                    lineStartLocal.Y += 5f;
-                    lineEndLocal.Y += 5f;
-                }
+                int halfTextW = (int)(textSize.X / 2f) + 2;
 
-                float c = MathF.Cos(_currentHoverRotation);
-                float s = MathF.Sin(_currentHoverRotation);
+                // Draw a simple 1px rectangle
+                Rectangle lineRect = new Rectangle(
+                    (int)(snappedLineCenter.X - halfTextW),
+                    (int)snappedLineCenter.Y,
+                    halfTextW * 2,
+                    1
+                );
 
-                Vector2 RotateLocal(Vector2 v) => new Vector2(v.X * c - v.Y * s, v.X * s + v.Y * c) * scaleVec;
-
-                Vector2 p1 = centerPos + RotateLocal(lineStartLocal);
-                Vector2 p2 = centerPos + RotateLocal(lineEndLocal);
-
-                spriteBatch.DrawLineSnapped(p1, p2, _global.ButtonDisableColor);
+                spriteBatch.Draw(ServiceLocator.Get<Texture2D>(), lineRect, _global.ButtonDisableColor);
             }
 
             if (_showManaWarning && IsEnabled)
@@ -317,38 +291,21 @@ namespace ProjectVagabond.Battle.UI
                 string noManaText = "NOT ENOUGH MANA";
                 Vector2 noManaSize = font.MeasureString(noManaText);
                 Vector2 noManaPos = new Vector2(
-                    Bounds.X + Bounds.Width / 2f - noManaSize.X / 2f,
-                    Bounds.Y + Bounds.Height / 2f - noManaSize.Y / 2f - 2
+                    MathF.Round(drawBounds.X + drawBounds.Width / 2f - noManaSize.X / 2f),
+                    MathF.Round(drawBounds.Y + drawBounds.Height / 2f - noManaSize.Y / 2f - 2)
                 );
                 TextAnimator.DrawTextWithEffectSquareOutlined(spriteBatch, font, noManaText, noManaPos, _global.Palette_Rust, Color.Black, TextEffectType.None, 0f);
             }
         }
 
-        private void DrawRotatedBeveledBackground(SpriteBatch spriteBatch, Texture2D pixel, Vector2 center, int width, int height, Color color, float rotation, Vector2 scale)
+        private void DrawPixelPerfectBevel(SpriteBatch spriteBatch, Texture2D pixel, Rectangle bounds, Color color)
         {
-            float w = width;
-            float h = height;
-
-            float cos = MathF.Cos(rotation);
-            float sin = MathF.Sin(rotation);
-
-            Vector2 Rotate(Vector2 v)
-            {
-                return new Vector2(v.X * cos - v.Y * sin, v.X * sin + v.Y * cos);
-            }
-
-            Vector2 midScale = new Vector2(w, h - 2) * scale;
-            spriteBatch.DrawSnapped(pixel, center, null, color, rotation, new Vector2(0.5f, 0.5f), midScale, SpriteEffects.None, 0f);
-
-            Vector2 topOffset = new Vector2(0, -(h - 1) / 2f) * scale.Y;
-            Vector2 topPos = center + Rotate(topOffset);
-            Vector2 topScale = new Vector2(w - 2, 1) * scale;
-            spriteBatch.DrawSnapped(pixel, topPos, null, color, rotation, new Vector2(0.5f, 0.5f), topScale, SpriteEffects.None, 0f);
-
-            Vector2 botOffset = new Vector2(0, (h - 1) / 2f) * scale.Y;
-            Vector2 botPos = center + Rotate(botOffset);
-            Vector2 botScale = new Vector2(w - 2, 1) * scale;
-            spriteBatch.DrawSnapped(pixel, botPos, null, color, rotation, new Vector2(0.5f, 0.5f), botScale, SpriteEffects.None, 0f);
+            // Top line (indent corners)
+            spriteBatch.Draw(pixel, new Rectangle(bounds.X + 1, bounds.Y, bounds.Width - 2, 1), color);
+            // Middle block
+            spriteBatch.Draw(pixel, new Rectangle(bounds.X, bounds.Y + 1, bounds.Width, bounds.Height - 2), color);
+            // Bottom line (indent corners)
+            spriteBatch.Draw(pixel, new Rectangle(bounds.X + 1, bounds.Bottom - 1, bounds.Width - 2, 1), color);
         }
     }
 }

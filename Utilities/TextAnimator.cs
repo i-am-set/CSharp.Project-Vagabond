@@ -488,13 +488,17 @@ namespace ProjectVagabond.UI
                     var region = character.TextureRegion;
                     if (region != null)
                     {
-                        Vector2 origin = new Vector2(region.Width / 2f, region.Height / 2f);
+                        // Use integer origin to prevent sub-pixel blurring on odd-width characters
+                        Vector2 origin = new Vector2((int)(region.Width / 2), (int)(region.Height / 2));
 
                         // Apply animation offset (in rotated space if we wanted to be super precise, but screen space is usually fine for effects)
                         // Actually, wave effects look better if they "wave" relative to the button's orientation?
                         // For small rotations, screen space offset is fine and simpler.
 
                         Vector2 finalDrawPos = rotatedPos + origin + animOffset;
+
+                        // Round final position to nearest integer for pixel-perfect rendering
+                        finalDrawPos = new Vector2(MathF.Round(finalDrawPos.X), MathF.Round(finalDrawPos.Y));
 
                         Vector2 finalScale = layoutScale * effectScale;
                         float finalRotation = options.Rotation + animRotation;

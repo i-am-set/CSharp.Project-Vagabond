@@ -27,7 +27,7 @@ uniform int PaletteCount;
 #define ENABLE_JITTER       
 #define ENABLE_HUM_BAR      
 #define ENABLE_VIGNETTE
-// #define ENABLE_CHROMATIC_ABERRATION
+#define ENABLE_CHROMATIC_ABERRATION
 #define ENABLE_NOISE
 #define ENABLE_HALATION
 
@@ -50,7 +50,7 @@ static const float JITTER_DESYNC_INTENSITY = 0.001;
 static const float HUM_BAR_SPEED = 0.2;
 static const float HUM_BAR_OPACITY = 0.05;
 static const float NOISE_INTENSITY = 0.025; 
-static const float VIGNETTE_INTENSITY = 0.90;
+static const float VIGNETTE_INTENSITY = 1.20;
 static const float VIGNETTE_ROUNDNESS = 0.25;
 
 // --- Globals ---

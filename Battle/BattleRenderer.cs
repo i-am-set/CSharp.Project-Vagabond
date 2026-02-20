@@ -1155,6 +1155,9 @@ namespace ProjectVagabond.Battle.UI
                         center.Y + bob + spawnY + recoil.Y + slideOffset.Y + chargeOffset.Y
                     );
 
+                    // --- PIXEL SNAP FIX ---
+                    drawPos = new Vector2(MathF.Round(drawPos.X), MathF.Round(drawPos.Y));
+
                     if (drawSprite)
                     {
                         Vector2[] offsets = _enemySpritePartOffsets.TryGetValue(enemy.CombatantID, out var o) ? o : null;
@@ -1419,7 +1422,12 @@ namespace ProjectVagabond.Battle.UI
                     sprite = new PlayerCombatSprite(player.ArchetypeId);
                     _playerSprites[player.CombatantID] = sprite;
                 }
-                sprite.SetPosition(new Vector2(spriteCenter.X, spriteCenter.Y + bob + spawnY) + recoil + slideOffset + chargeOffset);
+
+                // --- PIXEL SNAP FIX ---
+                Vector2 finalPos = new Vector2(spriteCenter.X, spriteCenter.Y + bob + spawnY) + recoil + slideOffset + chargeOffset;
+                finalPos = new Vector2(MathF.Round(finalPos.X), MathF.Round(finalPos.Y));
+
+                sprite.SetPosition(finalPos);
 
                 bool isHighlightedSprite = assignedColor.HasValue && !isTargetingMode;
                 float pulse = 0f;

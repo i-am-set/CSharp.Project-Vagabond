@@ -560,8 +560,14 @@ namespace ProjectVagabond
                 }
             }
 
+            var rawMousePos = Mouse.GetState().Position;
+            var virtualMousePos = TransformMouse(rawMousePos);
+            var snappedScreenX = (virtualMousePos.X * _finalScale) + _finalRenderRectangle.X;
+            var snappedScreenY = (virtualMousePos.Y * _finalScale) + _finalRenderRectangle.Y;
+            var snappedScreenPos = new Vector2(snappedScreenX, snappedScreenY);
+
             _spriteBatch.Begin(blendState: _cursorInvertBlendState, samplerState: SamplerState.PointClamp, transformMatrix: Matrix.Identity);
-            _cursorManager.Draw(_spriteBatch, Mouse.GetState().Position.ToVector2(), _finalScale);
+            _cursorManager.Draw(_spriteBatch, snappedScreenPos, _finalScale);
             _spriteBatch.End();
 
             _backgroundNoiseRenderer.Apply(GraphicsDevice, _finalCompositeTarget, gameTime, _finalScale);
@@ -658,10 +664,10 @@ namespace ProjectVagabond
             if (_drawMouseDebugDot)
             {
                 _spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: Matrix.Invert(_mouseTransformMatrix));
-                var virtualMousePos = TransformMouse(Mouse.GetState().Position);
-                _spriteBatch.Draw(_pixel, virtualMousePos, Color.Red);
+                var debugVirtualMousePos = TransformMouse(Mouse.GetState().Position);
+                _spriteBatch.Draw(_pixel, debugVirtualMousePos, Color.Red);
                 var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-                _spriteBatch.DrawStringSnapped(secondaryFont, $"({virtualMousePos.X}, {virtualMousePos.Y})", virtualMousePos + new Vector2(3, -secondaryFont.LineHeight / 2), Color.Red);
+                _spriteBatch.DrawStringSnapped(secondaryFont, $"({debugVirtualMousePos.X}, {debugVirtualMousePos.Y})", debugVirtualMousePos + new Vector2(3, -secondaryFont.LineHeight / 2), Color.Red);
                 _spriteBatch.End();
             }
 

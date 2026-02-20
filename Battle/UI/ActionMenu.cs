@@ -328,31 +328,54 @@ namespace ProjectVagabond.Battle.UI
 
                 if (_buttons.Count > 0)
                 {
-                    var visualRect = new Rectangle(startX, y, 44, 27);
+                    // Basic (Index 0): Moved 1 pixel left (startX - 1)
+                    // Height 28 (from previous request)
+                    var visualRect = new Rectangle(startX - 1, y - 1, 44, 28);
                     var hitbox = visualRect;
                     hitbox.Inflate(1, 1);
                     _buttons[0].Bounds = hitbox;
+
+                    if (_buttons[0] is MoveButton mb)
+                    {
+                        mb.VisualHeightOverride = 28;
+                        mb.VisualWidthOverride = 44;
+                    }
                 }
 
                 if (_buttons.Count > 1)
                 {
-                    var visualRect = new Rectangle(startX + 45, y, 88, 13);
+                    // Core (Index 1): 1 pixel wider to the right (Width 89)
+                    // Moved up 1 pixel (y - 1)
+                    var visualRect = new Rectangle(startX + 45, y - 1, 89, 13);
                     var hitbox = visualRect;
                     hitbox.Inflate(1, 1);
                     _buttons[1].Bounds = hitbox;
+
+                    if (_buttons[1] is MoveButton mb)
+                    {
+                        mb.VisualWidthOverride = 89;
+                    }
                 }
 
                 if (_buttons.Count > 2)
                 {
-                    var visualRect = new Rectangle(startX + 45, y + 14, 88, 13);
+                    // Alt (Index 2): 1 pixel wider to the right (Width 89)
+                    var visualRect = new Rectangle(startX + 45, y + 14, 89, 13);
                     var hitbox = visualRect;
                     hitbox.Inflate(1, 1);
                     _buttons[2].Bounds = hitbox;
+
+                    if (_buttons[2] is MoveButton mb)
+                    {
+                        mb.VisualWidthOverride = 89;
+                    }
                 }
 
                 int originalTotalButtonsWidth = (HITBOX_WIDTH * 3);
                 int secStartX = (int)(panelCenterX - (originalTotalButtonsWidth / 2f));
-                int secY = y + 27;
+
+                // Gap: 2 pixels between bottom of main (y + 27) and secondary -> y + 29
+                int secY = y + 29;
 
                 for (int i = 3; i < 6; i++)
                 {
@@ -361,14 +384,32 @@ namespace ProjectVagabond.Battle.UI
                     int visualHeight = 12;
                     int hitboxHeight = 16;
 
-                    var rect = new Rectangle(secStartX, secY, HITBOX_WIDTH, hitboxHeight);
+                    int currentX = secStartX;
+                    int currentWidth = HITBOX_WIDTH;
+                    int currentVisualWidth = VISUAL_WIDTH;
+
+                    // Switch Button (Index 4): 1 pixel less wide on the left side
+                    if (i == 4)
+                    {
+                        currentX += 1;
+                        currentWidth -= 1;
+                        currentVisualWidth -= 1;
+                    }
+
+                    // Stall Button (Index 5): Moved 1 pixel to the right
+                    if (i == 5)
+                    {
+                        currentX += 1;
+                    }
+
+                    var rect = new Rectangle(currentX, secY, currentWidth, hitboxHeight);
                     rect.Inflate(1, 1);
                     _buttons[i].Bounds = rect;
 
                     if (_buttons[i] is MoveButton mb)
                     {
                         mb.VisualHeightOverride = visualHeight;
-                        mb.VisualWidthOverride = VISUAL_WIDTH;
+                        mb.VisualWidthOverride = currentVisualWidth;
                     }
 
                     secStartX += HITBOX_WIDTH;
