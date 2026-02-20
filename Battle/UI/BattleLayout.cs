@@ -9,7 +9,7 @@ namespace ProjectVagabond.Battle.UI
     {
         // --- Screen Constants ---
         public const int DIVIDER_Y = 123;
-        public const int ENEMY_SLOT_Y_OFFSET = 4;
+        public const int ENEMY_SLOT_Y_OFFSET = 20;
 
         // --- Action Menu Layout ---
         public const int ACTION_MENU_WIDTH = 160;

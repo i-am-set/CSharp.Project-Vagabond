@@ -226,10 +226,10 @@ namespace ProjectVagabond.Battle.UI
             public Color? SecondaryColor;
             public Color? TertiaryColor;
             public float Timer;
+            public float AbsoluteFloorY;
+
             public const float DURATION = 1.8f;
             public const float RISE_DISTANCE = 3f;
-
-            // Physics
             public float Rotation;
             public float RotationVelocity;
         }
@@ -833,7 +833,7 @@ namespace ProjectVagabond.Battle.UI
             });
         }
 
-        public void StartDamageNumberIndicator(string combatantId, int damageAmount, Vector2 startPosition)
+        public void StartDamageNumberIndicator(string combatantId, int damageAmount, Vector2 startPosition, float floorY)
         {
             _activeDamageIndicators.Add(new DamageIndicatorState
             {
@@ -842,6 +842,7 @@ namespace ProjectVagabond.Battle.UI
                 PrimaryText = damageAmount.ToString(),
                 Position = startPosition,
                 InitialPosition = startPosition,
+                AbsoluteFloorY = floorY,
                 Velocity = new Vector2((float)(_random.NextDouble() * 60 - 30), -110f),
                 Timer = 0f,
                 Rotation = 0f,
@@ -849,7 +850,7 @@ namespace ProjectVagabond.Battle.UI
             });
         }
 
-        public void StartEmphasizedDamageNumberIndicator(string combatantId, int damageAmount, Vector2 startPosition)
+        public void StartEmphasizedDamageNumberIndicator(string combatantId, int damageAmount, Vector2 startPosition, float floorY)
         {
             _activeDamageIndicators.Add(new DamageIndicatorState
             {
@@ -858,6 +859,7 @@ namespace ProjectVagabond.Battle.UI
                 PrimaryText = damageAmount.ToString(),
                 Position = startPosition,
                 InitialPosition = startPosition,
+                AbsoluteFloorY = floorY,
                 Velocity = new Vector2((float)(_random.NextDouble() * 80 - 40), -150f),
                 Timer = 0f,
                 Rotation = 0f,
@@ -865,7 +867,7 @@ namespace ProjectVagabond.Battle.UI
             });
         }
 
-        public void StartHealNumberIndicator(string combatantId, int healAmount, Vector2 startPosition)
+        public void StartHealNumberIndicator(string combatantId, int healAmount, Vector2 startPosition, float floorY)
         {
             _activeDamageIndicators.Add(new DamageIndicatorState
             {
@@ -874,6 +876,7 @@ namespace ProjectVagabond.Battle.UI
                 PrimaryText = healAmount.ToString(),
                 Position = startPosition,
                 InitialPosition = startPosition,
+                AbsoluteFloorY = floorY,
                 Velocity = new Vector2((float)(_random.NextDouble() * 60 - 30), -110f),
                 Timer = 0f,
                 Rotation = 0f,
@@ -1509,16 +1512,13 @@ namespace ProjectVagabond.Battle.UI
         {
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
             const float gravity = 500f;
-            const float floorY = 10f;
 
             for (int i = _activeDamageIndicators.Count - 1; i >= 0; i--)
             {
                 var indicator = _activeDamageIndicators[i];
                 indicator.Timer += deltaTime;
 
-                // Physics Update: Rotation
                 indicator.Rotation += indicator.RotationVelocity * deltaTime;
-                // Heavy Damping on rotation
                 indicator.RotationVelocity *= MathF.Pow(0.1f, deltaTime);
 
                 if (indicator.Timer >= DamageIndicatorState.DURATION)
@@ -1534,12 +1534,9 @@ namespace ProjectVagabond.Battle.UI
                     indicator.Velocity.Y += gravity * deltaTime;
                     indicator.Position += indicator.Velocity * deltaTime;
 
-                    float relativeY = indicator.Position.Y - indicator.InitialPosition.Y;
-
-                    if (relativeY > floorY)
+                    if (indicator.Position.Y > indicator.AbsoluteFloorY)
                     {
-                        indicator.Position.Y = indicator.InitialPosition.Y + floorY;
-
+                        indicator.Position.Y = indicator.AbsoluteFloorY;
                         indicator.Rotation = 0f;
                         indicator.RotationVelocity = 0f;
 
@@ -1559,7 +1556,6 @@ namespace ProjectVagabond.Battle.UI
                 else
                 {
                     float progress = indicator.Timer / DamageIndicatorState.DURATION;
-                    // Reduced RISE_DISTANCE makes text indicators stay closer to the sprite
                     float yOffset = -Easing.EaseOutQuad(progress) * DamageIndicatorState.RISE_DISTANCE;
                     indicator.Position = indicator.InitialPosition + new Vector2(0, yOffset);
                 }

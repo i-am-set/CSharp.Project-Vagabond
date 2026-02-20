@@ -1117,18 +1117,21 @@ namespace ProjectVagabond.Scenes
                     if (target.HasStatusEffect(StatusEffectType.Burn)) _renderer.TriggerStatusIconHop(target.CombatantID, StatusEffectType.Burn);
 
                     int baselineDamage = DamageCalculator.CalculateBaselineDamage(e.Actor, target, e.ChosenMove);
+
+                    float floorY = GetCombatantFloorY(target);
+
                     if (result.WasVulnerable)
                     {
-                        _animationManager.StartDamageNumberIndicator(target.CombatantID, result.DamageAmount, hudPosition);
+                        _animationManager.StartDamageNumberIndicator(target.CombatantID, result.DamageAmount, hudPosition, floorY);
                         _animationManager.StartDamageIndicator(target.CombatantID, "VULNERABLE", hudPosition + new Vector2(0, -10), _global.VulnerableDamageIndicatorColor);
                     }
                     else if (result.WasCritical || (result.DamageAmount >= baselineDamage * 1.5f && baselineDamage > 0))
                     {
-                        _animationManager.StartEmphasizedDamageNumberIndicator(target.CombatantID, result.DamageAmount, hudPosition);
+                        _animationManager.StartEmphasizedDamageNumberIndicator(target.CombatantID, result.DamageAmount, hudPosition, floorY);
                     }
                     else
                     {
-                        _animationManager.StartDamageNumberIndicator(target.CombatantID, result.DamageAmount, hudPosition);
+                        _animationManager.StartDamageNumberIndicator(target.CombatantID, result.DamageAmount, hudPosition, floorY);
                     }
                 }
                 if (result.WasGraze) _animationManager.StartDamageIndicator(target.CombatantID, "GRAZE", hudPosition, _global.GrazeIndicatorColor);
@@ -1221,7 +1224,9 @@ namespace ProjectVagabond.Scenes
                 _animationManager.StartHealFlashAnimation(e.Target.CombatantID);
                 _animationManager.StartHealthRecoveryAnimation(e.Target.CombatantID, e.VisualHPBefore, e.Target.Stats.CurrentHP);
                 Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(e.Target, _battleManager.AllCombatants);
-                _animationManager.StartHealNumberIndicator(e.Target.CombatantID, e.HealAmount, hudPosition);
+
+                float floorY = GetCombatantFloorY(e.Target);
+                _animationManager.StartHealNumberIndicator(e.Target.CombatantID, e.HealAmount, hudPosition, floorY);
             };
             playVisuals();
         }
@@ -1237,7 +1242,9 @@ namespace ProjectVagabond.Scenes
             _animationManager.StartHealthLossAnimation(e.Actor.CombatantID, e.Actor.VisualHP, e.Actor.Stats.CurrentHP);
             if (!e.Actor.IsPlayerControlled) _animationManager.StartHitFlashAnimation(e.Actor.CombatantID);
             Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(e.Actor, _battleManager.AllCombatants);
-            _animationManager.StartDamageNumberIndicator(e.Actor.CombatantID, e.RecoilDamage, hudPosition);
+
+            float floorY = GetCombatantFloorY(e.Actor);
+            _animationManager.StartDamageNumberIndicator(e.Actor.CombatantID, e.RecoilDamage, hudPosition, floorY);
         }
 
         private void OnCombatantDefeated(GameEvents.CombatantDefeated e)
@@ -1308,7 +1315,9 @@ namespace ProjectVagabond.Scenes
                     else if (e.EffectType == StatusEffectType.Burn && !e.Combatant.IsPlayerControlled) _animationManager.StartHitFlashAnimation(e.Combatant.CombatantID);
                 }
                 Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(e.Combatant, _battleManager.AllCombatants);
-                _animationManager.StartDamageNumberIndicator(e.Combatant.CombatantID, e.Damage, hudPosition);
+
+                float floorY = GetCombatantFloorY(e.Combatant);
+                _animationManager.StartDamageNumberIndicator(e.Combatant.CombatantID, e.Damage, hudPosition, floorY);
             }
         }
 
@@ -1420,6 +1429,18 @@ namespace ProjectVagabond.Scenes
                 sum += _renderer.GetCombatantVisualCenterPosition(c, _battleManager.AllCombatants);
             }
             return sum / combatants.Count;
+        }
+
+        private float GetCombatantFloorY(BattleCombatant c)
+        {
+            if (c.IsPlayerControlled)
+            {
+                return BattleLayout.GetPlayerSpriteCenter(c.BattleSlot).Y + 16f;
+            }
+            else
+            {
+                return BattleLayout.ENEMY_SLOT_Y_OFFSET + BattleLayout.ENEMY_SPRITE_SIZE_NORMAL;
+            }
         }
     }
 }

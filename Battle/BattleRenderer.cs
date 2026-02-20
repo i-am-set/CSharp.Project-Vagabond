@@ -923,10 +923,7 @@ namespace ProjectVagabond.Battle.UI
             var floorEntities = new List<BattleCombatant>(activeEnemies);
             foreach (var dying in dyingEnemies)
             {
-                if (!floorEntities.Contains(dying))
-                {
-                    floorEntities.Add(dying);
-                }
+                if (!floorEntities.Contains(dying)) floorEntities.Add(dying);
             }
 
             if (drawFloor)
@@ -938,7 +935,6 @@ namespace ProjectVagabond.Battle.UI
                     int size = (occupant != null && _spriteManager.IsMajorEnemySprite(occupant.ArchetypeId)) ? BattleLayout.ENEMY_SPRITE_SIZE_MAJOR : BattleLayout.ENEMY_SPRITE_SIZE_NORMAL;
 
                     float floorScale = 1.0f;
-
                     float floorAlpha = (ServiceLocator.Get<BattleManager>().CurrentPhase == BattleManager.BattlePhase.BattleStartIntro) ? 0f : 1.0f;
 
                     var outroAnim = animManager.GetFloorOutroAnimationState("floor_" + i);
@@ -958,335 +954,334 @@ namespace ProjectVagabond.Battle.UI
                         }
                     }
 
-                    _vfxRenderer.DrawFloor(spriteBatch, center, center.Y + size + BattleLayout.ENEMY_SLOT_Y_OFFSET - 4, floorScale, floorAlpha);
+                    _vfxRenderer.DrawFloor(spriteBatch, center, center.Y + size, floorScale, floorAlpha);
                 }
-            }
-
-            if (drawShadow || drawSprite)
-            {
-                var spritesToDraw = new List<BattleCombatant>(activeEnemies);
-                if (includeDying)
+                if (drawShadow || drawSprite)
                 {
-                    spritesToDraw.AddRange(dyingEnemies);
-                }
-
-                foreach (var enemy in spritesToDraw)
-                {
-                    float visualX;
-                    if (_enemyVisualXPositions.TryGetValue(enemy.CombatantID, out float vx))
+                    var spritesToDraw = new List<BattleCombatant>(activeEnemies);
+                    if (includeDying)
                     {
-                        visualX = vx;
-                    }
-                    else if ((animManager.IsDeathAnimating(enemy.CombatantID) || enemy.BattleSlot == -1) && _combatantStaticCenters.TryGetValue(enemy.CombatantID, out var staticCenter))
-                    {
-                        visualX = staticCenter.X;
-                    }
-                    else
-                    {
-                        visualX = BattleLayout.GetEnemySlotCenter(enemy.BattleSlot).X;
+                        spritesToDraw.AddRange(dyingEnemies);
                     }
 
-                    var center = new Vector2(visualX, BattleLayout.ENEMY_SLOT_Y_OFFSET);
-
-                    Color? assignedColor = silhouetteColors.ContainsKey(enemy.CombatantID) ? silhouetteColors[enemy.CombatantID] : null;
-                    bool isSelectable = selectable.Contains(enemy);
-
-                    bool isHovered = (hoveredCombatant == enemy);
-                    bool isGroupHovered = assignedColor.HasValue && hoveredGroupColor.HasValue && assignedColor.Value == hoveredGroupColor.Value;
-
-                    bool isSilhouetted = shouldGrayOut && !isSelectable;
-                    Color silhouetteColor = _global.Palette_DarkShadow;
-                    Color outlineColor = (enemy == currentActor) ? _global.Palette_Sun : Color.Transparent;
-
-                    if (assignedColor.HasValue)
+                    foreach (var enemy in spritesToDraw)
                     {
-                        if (isTargetingMode)
+                        float visualX;
+                        if (_enemyVisualXPositions.TryGetValue(enemy.CombatantID, out float vx))
                         {
-                            outlineColor = assignedColor.Value;
-                            if (isGroupHovered)
+                            visualX = vx;
+                        }
+                        else if ((animManager.IsDeathAnimating(enemy.CombatantID) || enemy.BattleSlot == -1) && _combatantStaticCenters.TryGetValue(enemy.CombatantID, out var staticCenter))
+                        {
+                            visualX = staticCenter.X;
+                        }
+                        else
+                        {
+                            visualX = BattleLayout.GetEnemySlotCenter(enemy.BattleSlot).X;
+                        }
+
+                        var center = new Vector2(visualX, BattleLayout.ENEMY_SLOT_Y_OFFSET);
+
+                        Color? assignedColor = silhouetteColors.ContainsKey(enemy.CombatantID) ? silhouetteColors[enemy.CombatantID] : null;
+                        bool isSelectable = selectable.Contains(enemy);
+
+                        bool isHovered = (hoveredCombatant == enemy);
+                        bool isGroupHovered = assignedColor.HasValue && hoveredGroupColor.HasValue && assignedColor.Value == hoveredGroupColor.Value;
+
+                        bool isSilhouetted = shouldGrayOut && !isSelectable;
+                        Color silhouetteColor = _global.Palette_DarkShadow;
+                        Color outlineColor = (enemy == currentActor) ? _global.Palette_Sun : Color.Transparent;
+
+                        if (assignedColor.HasValue)
+                        {
+                            if (isTargetingMode)
                             {
-                                isSilhouetted = true;
-                                silhouetteColor = assignedColor.Value;
+                                outlineColor = assignedColor.Value;
+                                if (isGroupHovered)
+                                {
+                                    isSilhouetted = true;
+                                    silhouetteColor = assignedColor.Value;
+                                }
+                                else
+                                {
+                                    isSilhouetted = false;
+                                }
                             }
                             else
                             {
-                                isSilhouetted = false;
+                                isSilhouetted = true;
+                                silhouetteColor = assignedColor.Value;
+                                outlineColor = Color.Transparent;
                             }
                         }
-                        else
+                        else if (isSelectable)
                         {
-                            isSilhouetted = true;
-                            silhouetteColor = assignedColor.Value;
-                            outlineColor = Color.Transparent;
+                            outlineColor = _global.Palette_Sun;
                         }
-                    }
-                    else if (isSelectable)
-                    {
-                        outlineColor = _global.Palette_Sun;
-                    }
 
-                    if (isHovered && !shouldGrayOut && !assignedColor.HasValue)
-                    {
-                        isSilhouetted = false;
-                        outlineColor = _global.HoveredCombatantOutline;
-                    }
-
-                    outlineColor = outlineColor * enemy.VisualAlpha;
-
-                    var spawnAnim = animManager.GetSpawnAnimationState(enemy.CombatantID);
-                    var switchOut = animManager.GetSwitchOutAnimationState(enemy.CombatantID);
-                    var switchIn = animManager.GetSwitchInAnimationState(enemy.CombatantID);
-                    var healFlash = animManager.GetHealFlashAnimationState(enemy.CombatantID);
-                    var hitFlash = animManager.GetHitFlashState(enemy.CombatantID);
-                    var healBounce = animManager.GetHealBounceAnimationState(enemy.CombatantID);
-                    var introFade = animManager.GetIntroFadeAnimationState(enemy.CombatantID);
-                    var attackCharge = animManager.GetAttackChargeState(enemy.CombatantID);
-
-                    float spawnY = 0f;
-                    float alpha = enemy.VisualAlpha;
-                    float silhouetteAmt = enemy.VisualSilhouetteAmount;
-                    Vector2 slideOffset = Vector2.Zero;
-                    Vector2 chargeOffset = Vector2.Zero;
-                    Vector2 chargeScale = Vector2.One;
-
-                    if (isSilhouetted && spawnAnim == null && switchOut == null && switchIn == null)
-                    {
-                        silhouetteAmt = 1.0f;
-                    }
-
-                    if (attackCharge != null)
-                    {
-                        chargeOffset = attackCharge.Offset;
-                        chargeScale = attackCharge.Scale;
-                    }
-
-                    if (introFade != null)
-                    {
-                        // Alpha handled by manager
-                    }
-                    else if (spawnAnim != null)
-                    {
-                        if (spawnAnim.CurrentPhase == BattleAnimationManager.SpawnAnimationState.Phase.Flash)
+                        if (isHovered && !shouldGrayOut && !assignedColor.HasValue)
                         {
-                            bool visible = ((int)(spawnAnim.Timer / BattleAnimationManager.SpawnAnimationState.FLASH_INTERVAL) % 2) == 0;
-                            alpha = 0f; silhouetteAmt = 1f; silhouetteColor = visible ? Color.White : Color.Transparent;
-                            spawnY = -BattleAnimationManager.SpawnAnimationState.DROP_HEIGHT;
+                            isSilhouetted = false;
+                            outlineColor = _global.HoveredCombatantOutline;
                         }
-                        else
+
+                        outlineColor = outlineColor * enemy.VisualAlpha;
+
+                        var spawnAnim = animManager.GetSpawnAnimationState(enemy.CombatantID);
+                        var switchOut = animManager.GetSwitchOutAnimationState(enemy.CombatantID);
+                        var switchIn = animManager.GetSwitchInAnimationState(enemy.CombatantID);
+                        var healFlash = animManager.GetHealFlashAnimationState(enemy.CombatantID);
+                        var hitFlash = animManager.GetHitFlashState(enemy.CombatantID);
+                        var healBounce = animManager.GetHealBounceAnimationState(enemy.CombatantID);
+                        var introFade = animManager.GetIntroFadeAnimationState(enemy.CombatantID);
+                        var attackCharge = animManager.GetAttackChargeState(enemy.CombatantID);
+
+                        float spawnY = 0f;
+                        float alpha = enemy.VisualAlpha;
+                        float silhouetteAmt = enemy.VisualSilhouetteAmount;
+                        Vector2 slideOffset = Vector2.Zero;
+                        Vector2 chargeOffset = Vector2.Zero;
+                        Vector2 chargeScale = Vector2.One;
+
+                        if (isSilhouetted && spawnAnim == null && switchOut == null && switchIn == null)
                         {
-                            float p = Math.Clamp(spawnAnim.Timer / BattleAnimationManager.SpawnAnimationState.FADE_DURATION, 0f, 1f);
-                            alpha = Easing.EaseOutQuad(p);
-                            spawnY = MathHelper.Lerp(-BattleAnimationManager.SpawnAnimationState.DROP_HEIGHT, 0f, Easing.EaseOutCubic(p));
+                            silhouetteAmt = 1.0f;
+                        }
+
+                        if (attackCharge != null)
+                        {
+                            chargeOffset = attackCharge.Offset;
+                            chargeScale = attackCharge.Scale;
+                        }
+
+                        if (introFade != null)
+                        {
+                            // Alpha handled by manager
+                        }
+                        else if (spawnAnim != null)
+                        {
+                            if (spawnAnim.CurrentPhase == BattleAnimationManager.SpawnAnimationState.Phase.Flash)
+                            {
+                                bool visible = ((int)(spawnAnim.Timer / BattleAnimationManager.SpawnAnimationState.FLASH_INTERVAL) % 2) == 0;
+                                alpha = 0f; silhouetteAmt = 1f; silhouetteColor = visible ? Color.White : Color.Transparent;
+                                spawnY = -BattleAnimationManager.SpawnAnimationState.DROP_HEIGHT;
+                            }
+                            else
+                            {
+                                float p = Math.Clamp(spawnAnim.Timer / BattleAnimationManager.SpawnAnimationState.FADE_DURATION, 0f, 1f);
+                                alpha = Easing.EaseOutQuad(p);
+                                spawnY = MathHelper.Lerp(-BattleAnimationManager.SpawnAnimationState.DROP_HEIGHT, 0f, Easing.EaseOutCubic(p));
+                                silhouetteAmt = 0f;
+                            }
+                        }
+                        else if (switchOut != null)
+                        {
+                            if (switchOut.IsEnemy)
+                            {
+                                if (switchOut.CurrentPhase == BattleAnimationManager.SwitchOutAnimationState.Phase.Silhouetting)
+                                {
+                                    float p = Math.Clamp(switchOut.SilhouetteTimer / BattleAnimationManager.SwitchOutAnimationState.SILHOUETTE_DURATION, 0f, 1f);
+                                    silhouetteAmt = Easing.EaseOutQuad(p);
+                                    silhouetteColor = _global.Palette_DarkShadow;
+                                }
+                                else if (switchOut.CurrentPhase == BattleAnimationManager.SwitchOutAnimationState.Phase.Lifting)
+                                {
+                                    float p = Math.Clamp(switchOut.LiftTimer / BattleAnimationManager.SwitchOutAnimationState.LIFT_DURATION, 0f, 1f);
+                                    float eased = Easing.EaseInCubic(p);
+                                    spawnY = MathHelper.Lerp(0f, -BattleAnimationManager.SwitchOutAnimationState.LIFT_HEIGHT, eased);
+                                    alpha = 1.0f - eased;
+                                    silhouetteAmt = 1.0f;
+                                    silhouetteColor = _global.Palette_DarkShadow;
+                                }
+                            }
+                            else
+                            {
+                                float p = Math.Clamp(switchOut.Timer / BattleAnimationManager.SwitchOutAnimationState.DURATION, 0f, 1f);
+                                spawnY = MathHelper.Lerp(0f, -BattleAnimationManager.SwitchOutAnimationState.SIMPLE_LIFT_HEIGHT, Easing.EaseOutCubic(p));
+                                alpha = 1.0f - Easing.EaseOutCubic(p);
+                            }
+                        }
+                        else if (switchIn != null)
+                        {
+                            float p = Math.Clamp(switchIn.Timer / BattleAnimationManager.SwitchInAnimationState.DURATION, 0f, 1f);
+                            spawnY = MathHelper.Lerp(-BattleAnimationManager.SwitchInAnimationState.DROP_HEIGHT, 0f, Easing.EaseOutCubic(p));
+                            alpha = Easing.EaseOutCubic(p);
+                        }
+
+                        Color tint = Color.White;
+                        if (healFlash != null)
+                        {
+                            float p = healFlash.Timer / BattleAnimationManager.HealFlashAnimationState.Duration;
+                            tint = Color.Lerp(Color.White, _global.Palette_Leaf, (1f - Easing.EaseOutQuad(p)) * 0.8f);
+                        }
+
+                        var hitstop = animManager.GetHitstopVisualState(enemy.CombatantID);
+                        Vector2 scale = Vector2.One;
+                        if (_hitstopManager.IsActive && hitstop != null)
+                        {
+                            scale = Vector2.One;
+                            tint = hitstop.IsCrit ? Color.Red : Color.White;
+                            alpha = 1.0f;
                             silhouetteAmt = 0f;
                         }
-                    }
-                    else if (switchOut != null)
-                    {
-                        if (switchOut.IsEnemy)
+
+                        if (_enemySquashScales.TryGetValue(enemy.CombatantID, out var squashScale))
                         {
-                            if (switchOut.CurrentPhase == BattleAnimationManager.SwitchOutAnimationState.Phase.Silhouetting)
+                            scale = squashScale;
+                        }
+
+                        scale *= chargeScale;
+
+                        float bob = CalculateAttackBobOffset(enemy.CombatantID, false);
+                        if (healBounce != null)
+                        {
+                            float p = healBounce.Timer / BattleAnimationManager.HealBounceAnimationState.Duration;
+                            bob += MathF.Sin(p * MathHelper.Pi) * -BattleAnimationManager.HealBounceAnimationState.Height;
+                        }
+                        Vector2 recoil = _recoilStates.TryGetValue(enemy.CombatantID, out var r) ? r.Offset : Vector2.Zero;
+                        Vector2 shake = hitFlash != null ? hitFlash.ShakeOffset : Vector2.Zero;
+                        bool flashWhite = hitFlash != null && hitFlash.IsCurrentlyWhite;
+
+                        int spriteSize = _spriteManager.IsMajorEnemySprite(enemy.ArchetypeId) ? 96 : 64;
+
+                        var drawPos = new Vector2(
+                            center.X - spriteSize / 2f + recoil.X + slideOffset.X + chargeOffset.X,
+                            center.Y + bob + spawnY + recoil.Y + slideOffset.Y + chargeOffset.Y
+                        );
+
+                        // --- PIXEL SNAP FIX ---
+                        drawPos = new Vector2(MathF.Round(drawPos.X), MathF.Round(drawPos.Y));
+
+                        if (drawSprite)
+                        {
+                            Vector2[] offsets = _enemySpritePartOffsets.TryGetValue(enemy.CombatantID, out var o) ? o : null;
+
+                            bool isHighlighted = assignedColor.HasValue && !isTargetingMode;
+
+                            Color? lowHealthOverlay = null;
+                            if (enemy.LowHealthFlashTimer > 0f && !enemy.IsDefeated)
                             {
-                                float p = Math.Clamp(switchOut.SilhouetteTimer / BattleAnimationManager.SwitchOutAnimationState.SILHOUETTE_DURATION, 0f, 1f);
-                                silhouetteAmt = Easing.EaseOutQuad(p);
-                                silhouetteColor = _global.Palette_DarkShadow;
+                                float patternLen = _global.LowHealthFlashPatternLength;
+                                float cycleT = enemy.LowHealthFlashTimer % patternLen;
+                                float rawAlpha = 0f;
+
+                                if (cycleT < 1.0f)
+                                    rawAlpha = 1.0f - cycleT;
+                                else if (cycleT >= 1.0f && cycleT < 2.0f)
+                                    rawAlpha = 1.0f - (cycleT - 1.0f);
+
+                                float flashAlpha = rawAlpha;
+
+                                if (flashAlpha > 0)
+                                    lowHealthOverlay = _global.LowHealthFlashColor * flashAlpha;
                             }
-                            else if (switchOut.CurrentPhase == BattleAnimationManager.SwitchOutAnimationState.Phase.Lifting)
+
+                            _entityRenderer.DrawEnemy(spriteBatch, enemy, drawPos, offsets, shake, alpha, silhouetteAmt, silhouetteColor, isHighlighted, assignedColor, outlineColor, flashWhite, tint * alpha, scale, transform, lowHealthOverlay);
+
+                            if (!enemy.IsDefeated)
                             {
-                                float p = Math.Clamp(switchOut.LiftTimer / BattleAnimationManager.SwitchOutAnimationState.LIFT_DURATION, 0f, 1f);
-                                float eased = Easing.EaseInCubic(p);
-                                spawnY = MathHelper.Lerp(0f, -BattleAnimationManager.SwitchOutAnimationState.LIFT_HEIGHT, eased);
-                                alpha = 1.0f - eased;
-                                silhouetteAmt = 1.0f;
-                                silhouetteColor = _global.Palette_DarkShadow;
-                            }
-                        }
-                        else
-                        {
-                            float p = Math.Clamp(switchOut.Timer / BattleAnimationManager.SwitchOutAnimationState.DURATION, 0f, 1f);
-                            spawnY = MathHelper.Lerp(0f, -BattleAnimationManager.SwitchOutAnimationState.SIMPLE_LIFT_HEIGHT, Easing.EaseOutCubic(p));
-                            alpha = 1.0f - Easing.EaseOutCubic(p);
-                        }
-                    }
-                    else if (switchIn != null)
-                    {
-                        float p = Math.Clamp(switchIn.Timer / BattleAnimationManager.SwitchInAnimationState.DURATION, 0f, 1f);
-                        spawnY = MathHelper.Lerp(-BattleAnimationManager.SwitchInAnimationState.DROP_HEIGHT, 0f, Easing.EaseOutCubic(p));
-                        alpha = Easing.EaseOutCubic(p);
-                    }
+                                var topOffsets = _spriteManager.GetEnemySpriteTopPixelOffsets(enemy.ArchetypeId);
+                                var leftOffsets = _spriteManager.GetEnemySpriteLeftPixelOffsets(enemy.ArchetypeId);
+                                var rightOffsets = _spriteManager.GetEnemySpriteRightPixelOffsets(enemy.ArchetypeId);
+                                var bottomOffsets = _spriteManager.GetEnemySpriteBottomPixelOffsets(enemy.ArchetypeId);
 
-                    Color tint = Color.White;
-                    if (healFlash != null)
-                    {
-                        float p = healFlash.Timer / BattleAnimationManager.HealFlashAnimationState.Duration;
-                        tint = Color.Lerp(Color.White, _global.Palette_Leaf, (1f - Easing.EaseOutQuad(p)) * 0.8f);
-                    }
+                                Rectangle hitBox;
 
-                    var hitstop = animManager.GetHitstopVisualState(enemy.CombatantID);
-                    Vector2 scale = Vector2.One;
-                    if (_hitstopManager.IsActive && hitstop != null)
-                    {
-                        scale = Vector2.One;
-                        tint = hitstop.IsCrit ? Color.Red : Color.White;
-                        alpha = 1.0f;
-                        silhouetteAmt = 0f;
-                    }
-
-                    if (_enemySquashScales.TryGetValue(enemy.CombatantID, out var squashScale))
-                    {
-                        scale = squashScale;
-                    }
-
-                    scale *= chargeScale;
-
-                    float bob = CalculateAttackBobOffset(enemy.CombatantID, false);
-                    if (healBounce != null)
-                    {
-                        float p = healBounce.Timer / BattleAnimationManager.HealBounceAnimationState.Duration;
-                        bob += MathF.Sin(p * MathHelper.Pi) * -BattleAnimationManager.HealBounceAnimationState.Height;
-                    }
-                    Vector2 recoil = _recoilStates.TryGetValue(enemy.CombatantID, out var r) ? r.Offset : Vector2.Zero;
-                    Vector2 shake = hitFlash != null ? hitFlash.ShakeOffset : Vector2.Zero;
-                    bool flashWhite = hitFlash != null && hitFlash.IsCurrentlyWhite;
-
-                    int spriteSize = _spriteManager.IsMajorEnemySprite(enemy.ArchetypeId) ? 96 : 64;
-
-                    var drawPos = new Vector2(
-                        center.X - spriteSize / 2f + recoil.X + slideOffset.X + chargeOffset.X,
-                        center.Y + bob + spawnY + recoil.Y + slideOffset.Y + chargeOffset.Y
-                    );
-
-                    // --- PIXEL SNAP FIX ---
-                    drawPos = new Vector2(MathF.Round(drawPos.X), MathF.Round(drawPos.Y));
-
-                    if (drawSprite)
-                    {
-                        Vector2[] offsets = _enemySpritePartOffsets.TryGetValue(enemy.CombatantID, out var o) ? o : null;
-
-                        bool isHighlighted = assignedColor.HasValue && !isTargetingMode;
-
-                        Color? lowHealthOverlay = null;
-                        if (enemy.LowHealthFlashTimer > 0f && !enemy.IsDefeated)
-                        {
-                            float patternLen = _global.LowHealthFlashPatternLength;
-                            float cycleT = enemy.LowHealthFlashTimer % patternLen;
-                            float rawAlpha = 0f;
-
-                            if (cycleT < 1.0f)
-                                rawAlpha = 1.0f - cycleT;
-                            else if (cycleT >= 1.0f && cycleT < 2.0f)
-                                rawAlpha = 1.0f - (cycleT - 1.0f);
-
-                            float flashAlpha = rawAlpha;
-
-                            if (flashAlpha > 0)
-                                lowHealthOverlay = _global.LowHealthFlashColor * flashAlpha;
-                        }
-
-                        _entityRenderer.DrawEnemy(spriteBatch, enemy, drawPos, offsets, shake, alpha, silhouetteAmt, silhouetteColor, isHighlighted, assignedColor, outlineColor, flashWhite, tint * alpha, scale, transform, lowHealthOverlay);
-
-                        if (!enemy.IsDefeated)
-                        {
-                            var topOffsets = _spriteManager.GetEnemySpriteTopPixelOffsets(enemy.ArchetypeId);
-                            var leftOffsets = _spriteManager.GetEnemySpriteLeftPixelOffsets(enemy.ArchetypeId);
-                            var rightOffsets = _spriteManager.GetEnemySpriteRightPixelOffsets(enemy.ArchetypeId);
-                            var bottomOffsets = _spriteManager.GetEnemySpriteBottomPixelOffsets(enemy.ArchetypeId);
-
-                            Rectangle hitBox;
-
-                            if (topOffsets != null && topOffsets.Length > 0)
-                            {
-                                int minX = int.MaxValue;
-                                int minY = int.MaxValue;
-                                int maxX = int.MinValue;
-                                int maxY = int.MinValue;
-                                bool foundAny = false;
-
-                                for (int i = 0; i < topOffsets.Length; i++)
+                                if (topOffsets != null && topOffsets.Length > 0)
                                 {
-                                    int top = topOffsets[i];
-                                    int left = leftOffsets[i];
-                                    int right = rightOffsets[i];
-                                    int bottom = bottomOffsets[i];
+                                    int minX = int.MaxValue;
+                                    int minY = int.MaxValue;
+                                    int maxX = int.MinValue;
+                                    int maxY = int.MinValue;
+                                    bool foundAny = false;
 
-                                    if (top != int.MaxValue)
+                                    for (int i = 0; i < topOffsets.Length; i++)
                                     {
-                                        foundAny = true;
-                                        if (left < minX) minX = left;
-                                        if (top < minY) minY = top;
-                                        if (right > maxX) maxX = right;
-                                        if (bottom > maxY) maxY = bottom;
+                                        int top = topOffsets[i];
+                                        int left = leftOffsets[i];
+                                        int right = rightOffsets[i];
+                                        int bottom = bottomOffsets[i];
+
+                                        if (top != int.MaxValue)
+                                        {
+                                            foundAny = true;
+                                            if (left < minX) minX = left;
+                                            if (top < minY) minY = top;
+                                            if (right > maxX) maxX = right;
+                                            if (bottom > maxY) maxY = bottom;
+                                        }
                                     }
-                                }
 
-                                if (foundAny)
-                                {
-                                    int frameX = (int)(center.X - spriteSize / 2f);
-                                    int frameY = (int)center.Y;
+                                    if (foundAny)
+                                    {
+                                        int frameX = (int)(center.X - spriteSize / 2f);
+                                        int frameY = (int)center.Y;
 
-                                    int x = frameX + minX;
-                                    int y = frameY + minY;
-                                    int w = (maxX - minX) + 1;
-                                    int h = (maxY - minY) + 1;
+                                        int x = frameX + minX;
+                                        int y = frameY + minY;
+                                        int w = (maxX - minX) + 1;
+                                        int h = (maxY - minY) + 1;
 
-                                    hitBox = GetPatternAlignedRect(new Rectangle(x, y, w, h));
+                                        hitBox = GetPatternAlignedRect(new Rectangle(x, y, w, h));
+                                    }
+                                    else
+                                    {
+                                        hitBox = GetPatternAlignedRect(new Rectangle((int)(center.X - spriteSize / 2f), (int)(center.Y), spriteSize, spriteSize));
+                                    }
                                 }
                                 else
                                 {
                                     hitBox = GetPatternAlignedRect(new Rectangle((int)(center.X - spriteSize / 2f), (int)(center.Y), spriteSize, spriteSize));
                                 }
+
+                                _currentTargets.Add(new TargetInfo { Combatant = enemy, Bounds = hitBox });
+                                _combatantVisualCenters[enemy.CombatantID] = hitBox.Center.ToVector2();
+                                _combatantStaticCenters[enemy.CombatantID] = center;
+
+                                bool showHP = false;
+                                bool showMana = false;
+
+                                if (uiManager.HoveredMove != null)
+                                {
+                                    AnalyzeMoveImpact(uiManager.HoveredMove, currentActor, enemy, out bool affectsHP);
+                                    showHP = affectsHP;
+                                }
+                                else if ((hoveredCombatant == enemy) || (uiManager.HoveredCombatantFromUI == enemy) || selectable.Contains(enemy))
+                                {
+                                    showHP = true;
+                                    showMana = true;
+                                }
+
+                                UpdateBarAlpha(enemy, (float)gameTime.ElapsedGameTime.TotalSeconds, showHP);
+
+                                float visualCenterY = center.Y + spriteSize / 2f;
+                                float tooltipTopY = visualCenterY - 3;
+                                if (tooltipTopY < 5) tooltipTopY = 5;
+                                float spriteTopY = GetEnemyStaticVisualTop(enemy, center.Y);
+                                float anchorY = Math.Min(tooltipTopY - 2, spriteTopY);
+                                float barY = anchorY - 4;
+
+                                bool isRightAligned = (enemy.BattleSlot % 2 != 0);
+
+                                int barWidth = (int)(enemy.Stats.MaxHP * BattleLayout.HEALTH_PIXELS_PER_HP);
+                                if (barWidth < BattleLayout.MIN_BAR_WIDTH) barWidth = BattleLayout.MIN_BAR_WIDTH;
+
+                                float barX;
+
+                                if (isRightAligned)
+                                {
+                                    barX = center.X + 24f - barWidth;
+                                }
+                                else
+                                {
+                                    barX = center.X - 24f;
+                                }
+
+                                float barBottomY = barY + 4;
+                                _combatantBarBottomYs[enemy.CombatantID] = barBottomY;
+
+                                _combatantBarPositions[enemy.CombatantID] = new Vector2(barX, barY);
                             }
-                            else
-                            {
-                                hitBox = GetPatternAlignedRect(new Rectangle((int)(center.X - spriteSize / 2f), (int)(center.Y), spriteSize, spriteSize));
-                            }
-
-                            _currentTargets.Add(new TargetInfo { Combatant = enemy, Bounds = hitBox });
-                            _combatantVisualCenters[enemy.CombatantID] = hitBox.Center.ToVector2();
-                            _combatantStaticCenters[enemy.CombatantID] = center;
-
-                            bool showHP = false;
-                            bool showMana = false;
-
-                            if (uiManager.HoveredMove != null)
-                            {
-                                AnalyzeMoveImpact(uiManager.HoveredMove, currentActor, enemy, out bool affectsHP);
-                                showHP = affectsHP;
-                            }
-                            else if ((hoveredCombatant == enemy) || (uiManager.HoveredCombatantFromUI == enemy) || selectable.Contains(enemy))
-                            {
-                                showHP = true;
-                                showMana = true;
-                            }
-
-                            UpdateBarAlpha(enemy, (float)gameTime.ElapsedGameTime.TotalSeconds, showHP);
-
-                            float visualCenterY = center.Y + spriteSize / 2f;
-                            float tooltipTopY = visualCenterY - 3;
-                            if (tooltipTopY < 5) tooltipTopY = 5;
-                            float spriteTopY = GetEnemyStaticVisualTop(enemy, center.Y);
-                            float anchorY = Math.Min(tooltipTopY - 2, spriteTopY);
-                            float barY = anchorY - 4;
-
-                            bool isRightAligned = (enemy.BattleSlot % 2 != 0);
-
-                            int barWidth = (int)(enemy.Stats.MaxHP * BattleLayout.HEALTH_PIXELS_PER_HP);
-                            if (barWidth < BattleLayout.MIN_BAR_WIDTH) barWidth = BattleLayout.MIN_BAR_WIDTH;
-
-                            float barX;
-
-                            if (isRightAligned)
-                            {
-                                barX = center.X + 24f - barWidth;
-                            }
-                            else
-                            {
-                                barX = center.X - 24f;
-                            }
-
-                            float barBottomY = barY + 4;
-                            _combatantBarBottomYs[enemy.CombatantID] = barBottomY;
-
-                            _combatantBarPositions[enemy.CombatantID] = new Vector2(barX, barY);
                         }
                     }
                 }
