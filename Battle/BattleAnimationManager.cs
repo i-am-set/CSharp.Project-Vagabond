@@ -60,6 +60,8 @@ namespace ProjectVagabond.Battle.UI
 
             public Vector2 Scale = Vector2.One;
             public Vector2 Offset = Vector2.Zero;
+
+            public Action OnApex;
         }
         private readonly List<AttackChargeAnimationState> _activeAttackCharges = new List<AttackChargeAnimationState>();
 
@@ -374,6 +376,14 @@ namespace ProjectVagabond.Battle.UI
             _activeSwitchOutAnimations.Clear();
             _activeFloorIntroAnimations.Clear();
             _activeFloorOutroAnimations.Clear();
+            foreach (var anim in _activeAttackCharges)
+            {
+                if (anim.OnApex != null)
+                {
+                    anim.OnApex.Invoke();
+                    anim.OnApex = null;
+                }
+            }
             _activeAttackCharges.Clear();
 
             foreach (var anim in _activeDeathAnimations)
@@ -433,12 +443,17 @@ namespace ProjectVagabond.Battle.UI
             });
         }
 
-        public void TriggerLunge(string combatantId)
+        public void TriggerLunge(string combatantId, Action onApex = null)
         {
             var anim = _activeAttackCharges.FirstOrDefault(a => a.CombatantID == combatantId);
             if (anim != null)
             {
                 anim.CurrentPhase = AttackChargeAnimationState.Phase.Lunge;
+                anim.OnApex = onApex;
+            }
+            else
+            {
+                onApex?.Invoke();
             }
         }
 
@@ -1043,6 +1058,11 @@ namespace ProjectVagabond.Battle.UI
                     // Transition to Recovery when close to the apex
                     if (Vector2.DistanceSquared(anim.Offset, targetOffset) < 5f)
                     {
+                        if (anim.OnApex != null)
+                        {
+                            anim.OnApex.Invoke();
+                            anim.OnApex = null; // Ensure it only fires once
+                        }
                         anim.CurrentPhase = AttackChargeAnimationState.Phase.Recovery;
                     }
                 }

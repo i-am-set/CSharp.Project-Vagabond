@@ -1176,11 +1176,12 @@ namespace ProjectVagabond.Scenes
             // 2. Define Impact Trigger
             Action executeImpact = () =>
             {
-                // Trigger Lunge Visual
-                _animationManager.TriggerLunge(e.Actor.CombatantID);
-
-                // Tell BattleManager to commit damage
-                EventBus.Publish(new GameEvents.TriggerImpact());
+                // Trigger Lunge Visual with callback for damage
+                _animationManager.TriggerLunge(e.Actor.CombatantID, () =>
+                {
+                    // Tell BattleManager to commit damage exactly when the lunge hits
+                    EventBus.Publish(new GameEvents.TriggerImpact());
+                });
             };
 
             // 3. Start Move Animation
