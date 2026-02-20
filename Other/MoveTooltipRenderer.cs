@@ -146,7 +146,6 @@ namespace ProjectVagabond.UI
             float maxWidth = WIDTH - 8;
             float startX = boxPos.X + 4;
 
-            // FIX: Enforce a hardcoded 3-pixel width for spaces to match default spacing feel
             const float FIXED_SPACE_WIDTH = 3f;
 
             // Parse text into lines
@@ -184,14 +183,11 @@ namespace ProjectVagabond.UI
                         }
                         else
                         {
-                            // Whitespace handling:
-                            // Force it to be a single space item, but verify it fits using fixed width.
                             if (currentLineWidth + FIXED_SPACE_WIDTH > maxWidth)
                             {
                                 lines.Add(new List<(string, Color)>());
                                 currentLine = lines.Last();
                                 currentLineWidth = 0;
-                                // Eat the space if we wrapped
                             }
                             else
                             {
@@ -202,10 +198,8 @@ namespace ProjectVagabond.UI
                         continue;
                     }
 
-                    // Normal Word Handling
                     Vector2 size = tertiaryFont.MeasureString(textPart);
 
-                    // Wrap if word doesn't fit
                     if (currentLineWidth + size.X > maxWidth)
                     {
                         lines.Add(new List<(string, Color)>());
@@ -218,9 +212,13 @@ namespace ProjectVagabond.UI
                 }
             }
 
-            // Calculate Vertical Center
+            // Calculate Vertical Center with Gaps
             int descLineHeight = tertiaryFont.LineHeight + 1;
-            int totalDescHeight = lines.Count * descLineHeight;
+            const int DESC_ROW_GAP = 1;
+
+            // Total height = (lines * height) + (gaps between lines)
+            int totalDescHeight = (lines.Count * descLineHeight) + (Math.Max(0, lines.Count - 1) * DESC_ROW_GAP);
+
             float availableHeight = (boxPos.Y + HEIGHT) - currentY - 2;
             float startDrawY = currentY + (availableHeight - totalDescHeight) / 2;
 
@@ -230,14 +228,11 @@ namespace ProjectVagabond.UI
             {
                 if (startDrawY + descLineHeight > (boxPos.Y + HEIGHT)) break;
 
-                // Recalculate line width using the FIXED space width for accurate centering
                 float lineWidth = 0;
                 foreach (var item in line)
                 {
-                    if (item.Text == " ")
-                        lineWidth += FIXED_SPACE_WIDTH;
-                    else
-                        lineWidth += tertiaryFont.MeasureString(item.Text).Width;
+                    if (item.Text == " ") lineWidth += FIXED_SPACE_WIDTH;
+                    else lineWidth += tertiaryFont.MeasureString(item.Text).Width;
                 }
 
                 float lineX = startX + (maxWidth - lineWidth) / 2f;
@@ -246,7 +241,6 @@ namespace ProjectVagabond.UI
                 {
                     if (item.Text == " ")
                     {
-                        // Just advance position, don't draw the font's tiny space
                         lineX += FIXED_SPACE_WIDTH;
                     }
                     else
@@ -255,7 +249,9 @@ namespace ProjectVagabond.UI
                         lineX += tertiaryFont.MeasureString(item.Text).Width;
                     }
                 }
-                startDrawY += descLineHeight;
+
+                // FIX: Increment Y by line height + gap
+                startDrawY += descLineHeight + DESC_ROW_GAP;
             }
         }
 

@@ -255,46 +255,57 @@ namespace ProjectVagabond.UI
             }
 
             // --- Tooltip Logic ---
-            bool found = false;
-            for (int i = _activeHitboxes.Count - 1; i >= 0; i--)
+            if (verticalOffset <= 1.0f)
             {
-                var item = _activeHitboxes[i];
-                if (item.Bounds.Contains(virtualMousePos))
+                bool found = false;
+                for (int i = _activeHitboxes.Count - 1; i >= 0; i--)
                 {
-                    if (item.Move != null)
+                    var item = _activeHitboxes[i];
+                    if (item.Bounds.Contains(virtualMousePos))
                     {
-                        cursorManager.SetState(CursorState.Hint);
+                        if (item.Move != null)
+                        {
+                            cursorManager.SetState(CursorState.Hint);
 
-                        if (_currentHoveredItem.HasValue && _currentHoveredItem.Value.Bounds == item.Bounds)
-                        {
-                            if (!_isTooltipVisible)
+                            if (_currentHoveredItem.HasValue && _currentHoveredItem.Value.Bounds == item.Bounds)
                             {
-                                if (virtualMousePos == _lastMousePos)
+                                if (!_isTooltipVisible)
                                 {
-                                    _hoverTimer += dt;
-                                    if (_hoverTimer >= HOVER_DELAY) _isTooltipVisible = true;
+                                    if (virtualMousePos == _lastMousePos)
+                                    {
+                                        _hoverTimer += dt;
+                                        if (_hoverTimer >= HOVER_DELAY) _isTooltipVisible = true;
+                                    }
+                                    else _hoverTimer = 0f;
                                 }
-                                else _hoverTimer = 0f;
                             }
+                            else
+                            {
+                                _currentHoveredItem = item;
+                                _hoverTimer = 0f;
+                                _isTooltipVisible = false;
+                            }
+                            found = true;
                         }
-                        else
-                        {
-                            _currentHoveredItem = item;
-                            _hoverTimer = 0f;
-                            _isTooltipVisible = false;
-                        }
-                        found = true;
+                        break;
                     }
-                    break;
+                }
+
+                if (!found)
+                {
+                    _currentHoveredItem = null;
+                    _hoverTimer = 0f;
+                    _isTooltipVisible = false;
                 }
             }
-
-            if (!found)
+            else
             {
+                // If animating or hidden, force clear tooltip state
                 _currentHoveredItem = null;
                 _hoverTimer = 0f;
                 _isTooltipVisible = false;
             }
+
             _lastMousePos = virtualMousePos;
 
         ProcessTweening:
