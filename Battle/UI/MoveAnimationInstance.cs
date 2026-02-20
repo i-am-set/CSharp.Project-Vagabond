@@ -68,6 +68,16 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
+        public void ForceComplete()
+        {
+            if (!_hasTriggeredImpact)
+            {
+                _onImpact?.Invoke();
+                _hasTriggeredImpact = true;
+            }
+            IsFinished = true;
+        }
+
         public void Draw(SpriteBatch spriteBatch)
         {
             if (IsFinished || _animationData.FrameCount == 0) return;

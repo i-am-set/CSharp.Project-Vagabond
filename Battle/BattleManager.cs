@@ -84,7 +84,7 @@ namespace ProjectVagabond.Battle
 
         // --- PACING STATE ---
         private float _turnPacingTimer = 0f;
-        private const float ACTION_DELAY = 1.0f;
+        private const float ACTION_DELAY = 0.75f;
 
         public BattleCombatant? CurrentActingCombatant { get; private set; }
 
@@ -484,6 +484,11 @@ namespace ProjectVagabond.Battle
                 if (action.Type == QueuedActionType.Switch && action.Target != null) reserved.Add(action.Target);
             }
             return reserved;
+        }
+
+        public void SkipPacing()
+        {
+            _turnPacingTimer = 0f;
         }
 
         public void Update(float deltaTime)

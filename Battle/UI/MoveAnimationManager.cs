@@ -170,6 +170,10 @@ namespace ProjectVagabond.Battle.UI
 
         public void CompleteCurrentAnimation()
         {
+            foreach (var anim in _activeAnimations)
+            {
+                anim.ForceComplete();
+            }
             _activeAnimations.Clear();
         }
 

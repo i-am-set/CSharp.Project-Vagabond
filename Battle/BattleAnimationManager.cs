@@ -341,9 +341,13 @@ namespace ProjectVagabond.Battle.UI
 
         public void CompleteBlockingAnimations(IEnumerable<BattleCombatant> combatants)
         {
-            foreach (var c in combatants)
+            foreach (var anim in _activeBarAnimations)
             {
-                c.VisualHP = c.Stats.CurrentHP;
+                var combatant = combatants.FirstOrDefault(c => c.CombatantID == anim.CombatantID);
+                if (combatant != null && anim.ResourceType == ResourceBarAnimationState.BarResourceType.HP)
+                {
+                    combatant.VisualHP = anim.ValueAfter;
+                }
             }
             _activeBarAnimations.Clear();
 

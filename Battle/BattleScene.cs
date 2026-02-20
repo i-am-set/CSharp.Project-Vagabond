@@ -676,6 +676,12 @@ namespace ProjectVagabond.Scenes
                     // Skip animations
                     _animationManager.CompleteBlockingAnimations(_battleManager.AllCombatants);
                     _moveAnimationManager.CompleteCurrentAnimation();
+
+                    // Skip pacing delays
+                    _multiHitDelayTimer = 0f;
+                    _isWaitingForMultiHitDelay = false;
+                    _battleManager.SkipPacing();
+
                     UIInputManager.ConsumeMouseClick();
                 }
                 else
