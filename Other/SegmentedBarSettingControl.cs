@@ -36,7 +36,7 @@ namespace ProjectVagabond.UI
         private const TextEffectType ActiveEffect = TextEffectType.LeftAlignedSmallWave;
 
         private const int SEGMENT_WIDTH = 6;
-        private const int SEGMENT_HEIGHT = 8;
+        private const int SEGMENT_HEIGHT = 7;
         private const int SEGMENT_GAP = 2;
         private const float VALUE_AREA_X_OFFSET = 155f;
 
@@ -97,8 +97,17 @@ namespace ProjectVagabond.UI
 
             CalculateBounds(position, valueFont);
 
+            // Create 8x12 hitboxes for 6x7 visuals
+            // Width: 6 -> 8 (+1 left, +1 right)
+            // Height: 7 -> 12 (+2 top, +3 bottom)
+            Rectangle hitRect = _barAreaRect;
+            hitRect.X -= 1;
+            hitRect.Width += 2;
+            hitRect.Y -= 2;
+            hitRect.Height += 5;
+
             _hoveredSegmentIndex = -1;
-            if (_barAreaRect.Contains(virtualMousePos))
+            if (hitRect.Contains(virtualMousePos))
             {
                 UpdateHoveredSegment(virtualMousePos);
             }
@@ -109,7 +118,7 @@ namespace ProjectVagabond.UI
 
             if (UIInputManager.CanProcessMouseClick() && leftClickPressed)
             {
-                if (_barAreaRect.Contains(virtualMousePos))
+                if (hitRect.Contains(virtualMousePos))
                 {
                     _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
                     _isDragging = true;
@@ -135,7 +144,8 @@ namespace ProjectVagabond.UI
             int segmentUnitWidth = SEGMENT_WIDTH + SEGMENT_GAP;
             if (segmentUnitWidth <= 0) return;
 
-            _hoveredSegmentIndex = (int)(relativeMouseX / segmentUnitWidth);
+            // Offset by 1 to center the 8px hitbox on the 6px visual
+            _hoveredSegmentIndex = (int)((relativeMouseX + 1) / segmentUnitWidth);
             _hoveredSegmentIndex = Math.Clamp(_hoveredSegmentIndex, 0, _segmentCount - 1);
         }
 
@@ -181,7 +191,7 @@ namespace ProjectVagabond.UI
             float valueAreaWidth = Global.VALUE_DISPLAY_WIDTH;
             float barStartX = valueAreaX + (valueAreaWidth - totalBarWidth) / 2;
 
-            _barAreaRect = new Rectangle((int)barStartX, (int)position.Y, totalBarWidth, font.LineHeight);
+            _barAreaRect = new Rectangle((int)barStartX, (int)position.Y, totalBarWidth, SEGMENT_HEIGHT);
         }
 
         public void Draw(SpriteBatch spriteBatch, BitmapFont labelFont, BitmapFont valueFont, Vector2 position, bool isSelected, GameTime gameTime)
@@ -213,7 +223,10 @@ namespace ProjectVagabond.UI
                 spriteBatch.DrawStringSnapped(labelFont, Label, animatedPosition, labelColor);
             }
 
-            Vector2 barStartPosition = new Vector2(_barAreaRect.X + xOffset, position.Y + (labelFont.LineHeight - SEGMENT_HEIGHT) / 2);
+            // Shift values 1px right when NOT hovered, so they snap left to "correct" position when hovered
+            float valueVisualOffset = (isSelected && IsEnabled) ? 0f : 1f;
+
+            Vector2 barStartPosition = new Vector2(_barAreaRect.X + valueVisualOffset, position.Y + (labelFont.LineHeight - SEGMENT_HEIGHT) / 2);
 
             float progress = (_currentValue - _minValue) / (_maxValue - _minValue);
             int filledSegments = (int)Math.Round(progress * (_segmentCount - 1)) + 1;
@@ -245,14 +258,15 @@ namespace ProjectVagabond.UI
 
             string valueString = GetCurrentValueAsString();
             Vector2 valueSize = labelFont.MeasureString(valueString);
-            Vector2 valuePosition = new Vector2(_barAreaRect.Left - valueSize.X - 5 + xOffset, animatedPosition.Y);
+            // Value text also shifts with the visual offset
+            Vector2 valuePosition = new Vector2(_barAreaRect.Left - valueSize.X - 5 + valueVisualOffset, animatedPosition.Y);
 
             spriteBatch.DrawStringSnapped(labelFont, valueString, valuePosition, IsEnabled ? _global.Palette_DarkShadow : _global.ButtonDisableColor);
 
             if (!IsEnabled)
             {
                 float startX = animatedPosition.X;
-                float endX = _barAreaRect.Right + xOffset;
+                float endX = _barAreaRect.Right; // Static end point
                 float lineY = animatedPosition.Y + labelFont.LineHeight / 2f;
                 spriteBatch.DrawLineSnapped(new Vector2(startX, lineY), new Vector2(endX, lineY), _global.ButtonDisableColor);
             }

@@ -104,15 +104,16 @@ namespace ProjectVagabond.UI
             int padding = 2;
             float arrowVisualHeight = valueFont.LineHeight;
 
+            // Added +1 to Y to match the visual offset
             _leftArrowRect = new Rectangle(
                 (int)(position.X + VALUE_AREA_X_OFFSET - padding),
-                (int)(position.Y - padding),
+                (int)(position.Y - padding + 1),
                 (int)leftArrowSize.X + (padding * 2),
                 (int)arrowVisualHeight + (padding * 2));
 
             _rightArrowRect = new Rectangle(
                 (int)(position.X + VALUE_AREA_X_OFFSET + valueDisplayWidth - rightArrowSize.X - padding),
-                (int)position.Y - padding,
+                (int)position.Y - padding + 1,
                 (int)rightArrowSize.X + (padding * 2),
                 (int)arrowVisualHeight + (padding * 2));
         }
@@ -216,7 +217,10 @@ namespace ProjectVagabond.UI
             }
 
             const float valueDisplayWidth = Global.VALUE_DISPLAY_WIDTH;
-            Vector2 valueAreaPosition = new Vector2(animatedPosition.X + VALUE_AREA_X_OFFSET, animatedPosition.Y);
+
+            // Shift values 1px right when NOT hovered, so they snap left to "correct" position when hovered
+            float valueVisualOffset = (isSelected && IsEnabled) ? 0f : 1f;
+            Vector2 valueAreaPosition = new Vector2(position.X + VALUE_AREA_X_OFFSET + valueVisualOffset, position.Y);
 
             string leftArrowText = "<";
             string valueText = _options[_currentIndex].Key;
@@ -252,14 +256,18 @@ namespace ProjectVagabond.UI
             Vector2 valueTextSize = valueFont.MeasureString(valueText);
             Vector2 rightArrowSize = valueFont.MeasureString(rightArrowText);
 
-            float valueYOffset = (labelFont.LineHeight - valueFont.LineHeight) / 2f;
+            // Added +1f to move value text/arrows down
+            float valueYOffset = (labelFont.LineHeight - valueFont.LineHeight) / 2f + 1f;
             Vector2 valueDrawPos = valueAreaPosition + new Vector2(0, valueYOffset);
 
             spriteBatch.DrawStringSnapped(valueFont, leftArrowText, valueDrawPos, leftArrowColor);
             spriteBatch.DrawStringSnapped(valueFont, rightArrowText, new Vector2(valueDrawPos.X + valueDisplayWidth - rightArrowSize.X, valueDrawPos.Y), rightArrowColor);
 
             float spaceBetweenArrows = (valueDrawPos.X + valueDisplayWidth - rightArrowSize.X) - (valueDrawPos.X + leftArrowSize.X);
-            float textX = valueDrawPos.X + leftArrowSize.X + (spaceBetweenArrows - valueTextSize.X) * 0.5f;
+
+            // Explicitly round the centered text position to ensure it snaps to the pixel grid correctly
+            float textX = (int)(valueDrawPos.X + leftArrowSize.X + (spaceBetweenArrows - valueTextSize.X) * 0.5f);
+
             spriteBatch.DrawStringSnapped(valueFont, valueText, new Vector2(textX, valueDrawPos.Y), baseValueColor);
 
             if (!IsEnabled)

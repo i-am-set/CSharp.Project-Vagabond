@@ -504,7 +504,8 @@ namespace ProjectVagabond.Scenes
                     var hoverRect = new Rectangle((int)currentPos.X - 5, (int)currentPos.Y, SETTINGS_PANEL_WIDTH + 10, ITEM_VERTICAL_SPACING);
                     // Only allow selection if the setting is enabled
                     if (hoverRect.Contains(virtualMousePos) && setting.IsEnabled) { _selectedIndex = i; }
-                    if (_currentInputDelay <= 0) setting.Update(new Vector2(currentPos.X, currentPos.Y + 3), i == _selectedIndex, currentMouseState, previousMouseState, virtualMousePos, font);
+                    // Pass Y + 2 for update logic to match draw logic
+                    if (_currentInputDelay <= 0) setting.Update(new Vector2(currentPos.X, currentPos.Y + 2), i == _selectedIndex, currentMouseState, previousMouseState, virtualMousePos, font);
                 }
                 else if (item is Button button)
                 {
@@ -620,7 +621,8 @@ namespace ProjectVagabond.Scenes
                         if (hoverRect.Contains(virtualMousePos) || keyboardNavigatedLastFrame)
                         {
                             // Draw highlight box expanded by 1px up and down to make it 14px tall
-                            DrawRectangleBorder(spriteBatch, pixel, new Rectangle(hoverRect.X, hoverRect.Y - 1, hoverRect.Width, hoverRect.Height + 2), 1, _global.ButtonHoverColor);
+                            // Adjusted height to +1 to fix "too tall downward" issue
+                            DrawRectangleBorder(spriteBatch, pixel, new Rectangle(hoverRect.X, hoverRect.Y - 1, hoverRect.Width, hoverRect.Height + 1), 1, _global.ButtonHoverColor);
                         }
                     }
                     else if (item is Button button)
@@ -636,8 +638,8 @@ namespace ProjectVagabond.Scenes
                 if (item is ISettingControl setting)
                 {
                     // Pass secondaryFont for labels, font (IBM) for values
-                    // Pass Y + 3 for text centering
-                    setting.Draw(spriteBatch, secondaryFont, font, new Vector2(currentPos.X, currentPos.Y + 3), isSelected, gameTime);
+                    // Pass Y + 2 for text centering (moved up 1px)
+                    setting.Draw(spriteBatch, secondaryFont, font, new Vector2(currentPos.X, currentPos.Y + 2), isSelected, gameTime);
                 }
                 else if (item is Button button)
                 {
