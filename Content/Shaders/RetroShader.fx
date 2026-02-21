@@ -18,13 +18,15 @@ uniform float ImpactGlitchIntensity;
 uniform float Saturation;
 uniform float Vibrance;
 
+// Toggles passed from Core
+uniform float EnableJitter; // 1.0 = On, 0.0 = Off
+
 uniform float3 Palette[16];
 uniform int PaletteCount;
 
-// --- Toggles ---
+// --- Toggles (Compile Time) ---
 #define ENABLE_CURVATURE
 #define ENABLE_LCD_GRID
-#define ENABLE_JITTER       
 #define ENABLE_HUM_BAR      
 #define ENABLE_VIGNETTE
 // #define ENABLE_CHROMATIC_ABERRATION
@@ -124,7 +126,8 @@ float4 MainPS(PixelShaderInput input) : COLOR
     // Applied ONLY to snappedUV.x so it never touches the curvature mask, LCD grid,
     // vignette, or any other geometry. The shift is quantized to whole virtual pixels,
     // which is physically correct for an LCD (pixel data corruption, not a bent beam).
-#ifdef ENABLE_JITTER
+    
+    if (EnableJitter > 0.5)
     {
         float t = Time;
         float wave1 = sin(t * 0.5);
@@ -174,7 +177,6 @@ float4 MainPS(PixelShaderInput input) : COLOR
             snappedUV.x += shiftPixels / VirtualResolution.x;
         }
     }
-#endif
 
     // --- 3. CHROMATIC ABERRATION ---
     float3 color;

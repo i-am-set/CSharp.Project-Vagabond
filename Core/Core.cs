@@ -589,6 +589,7 @@ namespace ProjectVagabond
                 _retroEffect.Parameters["Gamma"]?.SetValue(_settings.Gamma);
                 _retroEffect.Parameters["Saturation"]?.SetValue(_global.CrtSaturation);
                 _retroEffect.Parameters["Vibrance"]?.SetValue(_global.CrtVibrance);
+                _retroEffect.Parameters["EnableJitter"]?.SetValue(_settings.EnableGlitchEffects ? 1.0f : 0.0f);
 
                 // --- Pass Palette ---
                 // We pass the array of Vector3s. 

@@ -18,19 +18,33 @@ namespace ProjectVagabond.Scenes
         private readonly GraphicsDeviceManager _graphics;
         private readonly Global _global;
         private readonly HapticsManager _hapticsManager;
-        private List<object> _uiElements = new();
-        private List<Vector2> _uiElementPositions = new(); // To store calculated positions
-        private int _selectedIndex = -1;
+
+        // Separate lists for scrolling items vs fixed buttons
+        private List<ISettingControl> _settingControls = new();
+        private List<Button> _footerButtons = new();
+
+        // Selection tracking
+        private int _selectedSettingIndex = -1; // -1 means focus is on buttons
+        private int _selectedButtonIndex = -1;  // -1 means focus is on settings
+
         private string _confirmationMessage = "";
         private float _confirmationTimer = 0f;
 
         // --- Layout Tuning ---
-        private const int SETTINGS_START_Y = 30; // Moved up 5px (was 35)
-        private const int ITEM_VERTICAL_SPACING = 12; // Standardized to 12px
-        private const int BUTTON_VERTICAL_SPACING = 12; // Standardized to 12px
+        private const int SETTINGS_START_Y = 30;
+        private const int ITEM_VERTICAL_SPACING = 12;
+        private const int BUTTON_VERTICAL_SPACING = 12;
         private const int SETTINGS_PANEL_WIDTH = 280;
         private const int SETTINGS_PANEL_X = (Global.VIRTUAL_WIDTH - SETTINGS_PANEL_WIDTH) / 2;
 
+        // --- Scrolling Tuning ---
+        private const int VISIBLE_ITEMS_COUNT = 8; // How many items fit in the window
+        private const int SCROLL_VIEW_HEIGHT = VISIBLE_ITEMS_COUNT * ITEM_VERTICAL_SPACING;
+        private Rectangle _listViewPort; // The clipping rectangle
+        private float _scrollOffset = 0f;
+        private float _targetScrollOffset = 0f;
+        private int _previousScrollValue;
+        private const float SCROLL_SMOOTHING = 0.2f;
 
         private float _inputDelay = 0.1f;
         private float _currentInputDelay = 0f;
@@ -60,40 +74,34 @@ namespace ProjectVagabond.Scenes
         public override void Enter()
         {
             base.Enter();
-            _isApplyingSettings = false; // Ensure the state flag is reset on scene entry.
+            _isApplyingSettings = false;
             _confirmationDialog = new ConfirmationDialog(this);
             _revertDialog = new RevertDialog(this);
 
             RefreshUIFromSettings();
 
-            // Subscribe to resolution changes to update UI dynamically
             EventBus.Subscribe<GameEvents.UIThemeOrResolutionChanged>(OnResolutionChanged);
 
-            // Reset animation states after they are built
-            foreach (var item in _uiElements)
-            {
-                if (item is ISettingControl setting)
-                {
-                    setting.ResetAnimationState();
-                }
-                else if (item is Button button)
-                {
-                    button.ResetAnimationState();
-                }
-            }
+            foreach (var item in _settingControls) item.ResetAnimationState();
+            foreach (var item in _footerButtons) item.ResetAnimationState();
 
             if (this.LastInputDevice == InputDevice.Keyboard)
             {
-                _selectedIndex = FindNextSelectable(-1, 1);
-                PositionMouseOnFirstSelectable();
+                _selectedSettingIndex = 0;
+                _selectedButtonIndex = -1;
+                EnsureSelectionVisible();
             }
             else
             {
-                _selectedIndex = -1;
+                _selectedSettingIndex = -1;
+                _selectedButtonIndex = -1;
             }
 
             _previousKeyboardState = Keyboard.GetState();
+            _previousScrollValue = Mouse.GetState().ScrollWheelValue;
             _currentInputDelay = _inputDelay;
+            _scrollOffset = 0;
+            _targetScrollOffset = 0;
         }
 
         public override void Exit()
@@ -107,13 +115,8 @@ namespace ProjectVagabond.Scenes
             RefreshUIFromSettings();
         }
 
-        /// <summary>
-        /// Refreshes the temporary settings from the master settings and rebuilds the UI.
-        /// This is called on scene entry and when the window is resized externally.
-        /// </summary>
         public void RefreshUIFromSettings()
         {
-            // Block UI refresh if we are in the middle of applying settings to prevent state corruption.
             if (_isApplyingSettings) return;
 
             _tempSettings = new GameSettings
@@ -127,7 +130,8 @@ namespace ProjectVagabond.Scenes
                 UseImperialUnits = _settings.UseImperialUnits,
                 Use24HourClock = _settings.Use24HourClock,
                 DisplayIndex = _settings.DisplayIndex,
-                Gamma = _settings.Gamma
+                Gamma = _settings.Gamma,
+                EnableGlitchEffects = _settings.EnableGlitchEffects
             };
             _titleBobTimer = 0f;
             BuildInitialUI();
@@ -135,19 +139,16 @@ namespace ProjectVagabond.Scenes
 
         protected override Rectangle? GetFirstSelectableElementBounds()
         {
-            if (_uiElements.Count > 0 && _uiElementPositions.Count > 0)
-            {
-                var firstPos = _uiElementPositions[0];
-                // Return the exact 12px high slot
-                return new Rectangle((int)firstPos.X - 5, (int)firstPos.Y, SETTINGS_PANEL_WIDTH + 10, ITEM_VERTICAL_SPACING);
-            }
-            return null;
+            // Just return the first slot in the list view
+            return new Rectangle(SETTINGS_PANEL_X - 5, SETTINGS_START_Y, SETTINGS_PANEL_WIDTH + 10, ITEM_VERTICAL_SPACING);
         }
 
         private void BuildInitialUI()
         {
-            _uiElements.Clear();
+            _settingControls.Clear();
+            _footerButtons.Clear();
 
+            // --- 1. Resolution ---
             var resolutions = SettingsManager.GetResolutions();
             var resolutionDisplayList = resolutions.Select(kvp =>
             {
@@ -163,18 +164,9 @@ namespace ProjectVagabond.Scenes
                 resolutionDisplayList.Insert(0, new KeyValuePair<string, Point>("CUSTOM", _tempSettings.Resolution));
             }
 
-            var windowModes = new List<KeyValuePair<string, WindowMode>>
-        {
-            new("Windowed", WindowMode.Windowed),
-            new("Borderless", WindowMode.Borderless),
-            new("Fullscreen", WindowMode.Fullscreen)
-        };
-
             var resolutionControl = new OptionSettingControl<Point>("Resolution", resolutionDisplayList, () => _tempSettings.Resolution, v => _tempSettings.Resolution = v);
-
             var nativeDisplayMode = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode;
             resolutionControl.IsOptionNotRecommended = (res) => res.X > nativeDisplayMode.Width || res.Y > nativeDisplayMode.Height;
-
             resolutionControl.GetValueColor = (pointValue) =>
             {
                 bool isStandard = SettingsManager.GetResolutions().Any(r => r.Value == pointValue);
@@ -184,106 +176,78 @@ namespace ProjectVagabond.Scenes
             {
                 var currentResPoint = _tempSettings.Resolution;
                 var standardEntry = SettingsManager.GetResolutions().FirstOrDefault(r => r.Value == currentResPoint);
-
-                if (standardEntry.Key != null) // It's a standard resolution
+                if (standardEntry.Key != null)
                 {
                     int aspectIndex = standardEntry.Key.IndexOf(" (");
-                    if (aspectIndex != -1)
-                    {
-                        return standardEntry.Key.Substring(aspectIndex).Trim();
-                    }
+                    if (aspectIndex != -1) return standardEntry.Key.Substring(aspectIndex).Trim();
                 }
-                // It's a custom resolution
                 return $"({currentResPoint.X}x{currentResPoint.Y})";
             };
-            _uiElements.Add(resolutionControl);
+            _settingControls.Add(resolutionControl);
 
+            // --- 2. Window Mode ---
+            var windowModes = new List<KeyValuePair<string, WindowMode>>
+            {
+                new("Windowed", WindowMode.Windowed),
+                new("Borderless", WindowMode.Borderless),
+                new("Fullscreen", WindowMode.Fullscreen)
+            };
             var windowModeControl = new OptionSettingControl<WindowMode>("Window Mode", windowModes, () => _tempSettings.Mode, v =>
             {
                 _tempSettings.Mode = v;
                 if (v == WindowMode.Borderless) SetResolutionToNative();
             });
-            _uiElements.Add(windowModeControl);
+            _settingControls.Add(windowModeControl);
 
-            _uiElements.Add(new SegmentedBarSettingControl("Gamma", 1.0f, 2.0f, 11, () => _tempSettings.Gamma, v => _tempSettings.Gamma = v));
-            _uiElements.Add(new BoolSettingControl("Smaller UI", () => _tempSettings.SmallerUi, v => _tempSettings.SmallerUi = v));
-            _uiElements.Add(new BoolSettingControl("VSync", () => _tempSettings.IsVsync, v => _tempSettings.IsVsync = v));
-            _uiElements.Add(new BoolSettingControl("Frame Limiter", () => _tempSettings.IsFrameLimiterEnabled, v => _tempSettings.IsFrameLimiterEnabled = v));
-
+            // --- 3. Other Settings ---
+            _settingControls.Add(new SegmentedBarSettingControl("Gamma", 1.0f, 2.0f, 11, () => _tempSettings.Gamma, v => _tempSettings.Gamma = v));
+            _settingControls.Add(new BoolSettingControl("Smaller UI", () => _tempSettings.SmallerUi, v => _tempSettings.SmallerUi = v));
+            _settingControls.Add(new BoolSettingControl("VSync", () => _tempSettings.IsVsync, v => _tempSettings.IsVsync = v));
+            _settingControls.Add(new BoolSettingControl("Frame Limiter", () => _tempSettings.IsFrameLimiterEnabled, v => _tempSettings.IsFrameLimiterEnabled = v));
             var framerates = new List<KeyValuePair<string, int>> { new("30 FPS", 30), new("60 FPS", 60), new("75 FPS", 75), new("120 FPS", 120), new("144 FPS", 144), new("240 FPS", 240) };
             var framerateControl = new OptionSettingControl<int>("Target Framerate", framerates, () => _tempSettings.TargetFramerate, v => _tempSettings.TargetFramerate = v);
-            // Initialize the enabled state immediately to prevent visual popping during the input block period
             framerateControl.IsEnabled = _tempSettings.IsFrameLimiterEnabled;
-            _uiElements.Add(framerateControl);
+            _settingControls.Add(framerateControl);
 
-            // Buttons now 12px high
-            var applyButton = new Button(new Rectangle(0, 0, 125, 12), "APPLY")
-            {
-                TextRenderOffset = new Vector2(0, 1)
-            };
+            // --- 4. Visual ---
+            _settingControls.Add(new BoolSettingControl("Glitch Effects", () => _tempSettings.EnableGlitchEffects, v => _tempSettings.EnableGlitchEffects = v));
+
+            // --- Footer Buttons ---
+            var applyButton = new Button(new Rectangle(0, 0, 125, 12), "APPLY") { TextRenderOffset = new Vector2(0, 1) };
             applyButton.OnClick += () => { _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength); ApplySettings(); };
-            _uiElements.Add(applyButton);
+            _footerButtons.Add(applyButton);
 
-            var backButton = new Button(new Rectangle(0, 0, 125, 12), "BACK")
-            {
-                TextRenderOffset = new Vector2(0, 1)
-            };
+            var backButton = new Button(new Rectangle(0, 0, 125, 12), "BACK") { TextRenderOffset = new Vector2(0, 1) };
             backButton.OnClick += () => { _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength); AttemptToGoBack(); };
-            _uiElements.Add(backButton);
+            _footerButtons.Add(backButton);
 
-            var resetButton = new Button(new Rectangle(0, 0, 125, 12), "RESTORE DEFAULTS")
-            {
-                CustomDefaultTextColor = _global.HighlightTextColor,
-                TextRenderOffset = new Vector2(0, 1)
-            };
+            var resetButton = new Button(new Rectangle(0, 0, 125, 12), "RESTORE DEFAULTS") { CustomDefaultTextColor = _global.HighlightTextColor, TextRenderOffset = new Vector2(0, 1) };
             resetButton.OnClick += () => { _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength); ConfirmResetSettings(); };
-            _uiElements.Add(resetButton);
+            _footerButtons.Add(resetButton);
 
-            CalculateLayoutPositions(); // Ensure positions are calculated after building the list.
+            // Define the viewport for the scrollable list
+            // Expanded vertically by 2px top and 2px bottom to prevent border clipping
+            _listViewPort = new Rectangle(SETTINGS_PANEL_X - 10, SETTINGS_START_Y - 2, SETTINGS_PANEL_WIDTH + 30, SCROLL_VIEW_HEIGHT + 4);
+
+            CalculateButtonLayout();
             applyButton.IsEnabled = IsDirty();
         }
 
-        private void CalculateLayoutPositions()
+        private void CalculateButtonLayout()
         {
-            _uiElementPositions.Clear();
-            Vector2 currentSettingPos = new Vector2(SETTINGS_PANEL_X, SETTINGS_START_Y);
-
-            // Anchor buttons to bottom of screen
-            // 3 buttons * 12px spacing = 36px height.
-            // Add some margin from bottom (e.g. 8px).
             int bottomMargin = 8;
             int startButtonY = Global.VIRTUAL_HEIGHT - bottomMargin - (3 * BUTTON_VERTICAL_SPACING);
             Vector2 currentButtonPos = new Vector2(SETTINGS_PANEL_X, startButtonY);
-
             var font = ServiceLocator.Get<BitmapFont>();
 
-            foreach (var item in _uiElements)
+            foreach (var button in _footerButtons)
             {
-                if (item is ISettingControl)
-                {
-                    _uiElementPositions.Add(currentSettingPos);
-                    currentSettingPos.Y += ITEM_VERTICAL_SPACING;
-                }
-                else if (item is Button button)
-                {
-                    _uiElementPositions.Add(currentButtonPos);
+                var textSize = font.MeasureString(button.Text);
+                int width = (int)textSize.Width + 20;
+                int centeredX = (Global.VIRTUAL_WIDTH - width) / 2;
 
-                    // Measure text to determine width
-                    var textSize = font.MeasureString(button.Text);
-                    int width = (int)textSize.Width + 20;
-
-                    // Center the button horizontally on the screen
-                    int centeredX = (Global.VIRTUAL_WIDTH - width) / 2;
-
-                    button.Bounds = new Rectangle(
-                        centeredX,
-                        (int)currentButtonPos.Y,
-                        width,
-                        BUTTON_VERTICAL_SPACING
-                    );
-
-                    currentButtonPos.Y += BUTTON_VERTICAL_SPACING;
-                }
+                button.Bounds = new Rectangle(centeredX, (int)currentButtonPos.Y, width, BUTTON_VERTICAL_SPACING);
+                currentButtonPos.Y += BUTTON_VERTICAL_SPACING;
             }
         }
 
@@ -292,7 +256,7 @@ namespace ProjectVagabond.Scenes
             var nativeResolution = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode;
             var nativePoint = new Point(nativeResolution.Width, nativeResolution.Height);
             _tempSettings.Resolution = SettingsManager.FindClosestResolution(nativePoint);
-            _uiElements.OfType<ISettingControl>().FirstOrDefault(c => c.Label == "Resolution")?.RefreshValue();
+            _settingControls.OfType<ISettingControl>().FirstOrDefault(c => c.Label == "Resolution")?.RefreshValue();
         }
 
         private void ApplySettings()
@@ -300,7 +264,7 @@ namespace ProjectVagabond.Scenes
             if (!IsDirty()) return;
 
             ResetInputBlockTimer();
-            _isApplyingSettings = true; // Set flag to prevent UI refresh during apply
+            _isApplyingSettings = true;
 
             bool graphicsChanged = _tempSettings.Resolution != _settings.Resolution || _tempSettings.Mode != _settings.Mode;
 
@@ -348,32 +312,35 @@ namespace ProjectVagabond.Scenes
             _settings.Use24HourClock = _tempSettings.Use24HourClock;
             _settings.DisplayIndex = _tempSettings.DisplayIndex;
             _settings.Gamma = _tempSettings.Gamma;
+            _settings.EnableGlitchEffects = _tempSettings.EnableGlitchEffects;
 
             _settings.ApplyGraphicsSettings(_graphics, _core);
             _settings.ApplyGameSettings();
             SettingsManager.SaveSettings(_settings);
 
-            foreach (var item in _uiElements.OfType<ISettingControl>()) item.Apply();
+            foreach (var item in _settingControls) item.Apply();
             _confirmationMessage = "Settings Applied!";
             _confirmationTimer = 5f;
-            _isApplyingSettings = false; // Unset flag
+            _isApplyingSettings = false;
         }
 
         private void RevertChanges()
         {
-            foreach (var item in _uiElements.OfType<ISettingControl>()) item.Revert();
+            foreach (var item in _settingControls) item.Revert();
             _tempSettings.Resolution = _settings.Resolution;
             _tempSettings.Mode = _settings.Mode;
             _tempSettings.IsVsync = _settings.IsVsync;
             _tempSettings.IsFrameLimiterEnabled = _settings.IsFrameLimiterEnabled;
             _tempSettings.TargetFramerate = _settings.TargetFramerate;
             _tempSettings.SmallerUi = _settings.SmallerUi;
-            _tempSettings.UseImperialUnits = _tempSettings.UseImperialUnits;
+            _tempSettings.UseImperialUnits = _settings.UseImperialUnits;
             _tempSettings.Use24HourClock = _tempSettings.Use24HourClock;
             _tempSettings.DisplayIndex = _settings.DisplayIndex;
             _tempSettings.Gamma = _settings.Gamma;
-            foreach (var item in _uiElements.OfType<ISettingControl>()) item.RefreshValue();
-            _isApplyingSettings = false; // Unset flag
+            _tempSettings.EnableGlitchEffects = _settings.EnableGlitchEffects;
+
+            foreach (var item in _settingControls) item.RefreshValue();
+            _isApplyingSettings = false;
         }
 
         private void ConfirmResetSettings()
@@ -383,25 +350,14 @@ namespace ProjectVagabond.Scenes
 
         private void ExecuteResetSettings()
         {
-            // Preserve the current display settings
             var preservedResolution = _tempSettings.Resolution;
             var preservedWindowMode = _tempSettings.Mode;
-
-            // Create a new GameSettings instance to get all other default values
             _tempSettings = new GameSettings();
-
-            // Restore the preserved display settings
             _tempSettings.Resolution = preservedResolution;
             _tempSettings.Mode = preservedWindowMode;
 
-            // Refresh the UI to show the new default values for all controls
-            foreach (var item in _uiElements.OfType<ISettingControl>())
-            {
-                item.RefreshValue();
-            }
-
-            ApplySettings(); // This will apply and save the new settings
-
+            foreach (var item in _settingControls) item.RefreshValue();
+            ApplySettings();
             _confirmationMessage = "Settings Reset to Default!";
             _confirmationTimer = 5f;
         }
@@ -426,98 +382,112 @@ namespace ProjectVagabond.Scenes
             }
         }
 
-        private bool IsDirty() => _uiElements.OfType<ISettingControl>().Any(s => s.IsDirty);
+        private bool IsDirty() => _settingControls.Any(s => s.IsDirty);
         private bool KeyPressed(Keys key, KeyboardState current, KeyboardState previous) => current.IsKeyDown(key) && !previous.IsKeyDown(key);
-
-        private void MoveMouseToSelected()
-        {
-            if (_selectedIndex < 0 || _selectedIndex >= _uiElements.Count) return;
-
-            if (_uiElementPositions.Count > _selectedIndex)
-            {
-                var item = _uiElements[_selectedIndex];
-                var itemPos = _uiElementPositions[_selectedIndex];
-                Point mousePos = (item is ISettingControl) ? new Point((int)itemPos.X + 115, (int)itemPos.Y + 5) : new Point(Global.VIRTUAL_WIDTH / 2, (int)itemPos.Y + 5);
-                Point screenPos = Core.TransformVirtualToScreen(mousePos);
-                Mouse.SetPosition(screenPos.X, screenPos.Y);
-            }
-        }
 
         public override void Update(GameTime gameTime)
         {
             _titleBobTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            CalculateLayoutPositions();
-
-            if (IsInputBlocked)
-            {
-                base.Update(gameTime);
-                return;
-            }
-
-            if (_confirmationDialog.IsActive)
-            {
-                _confirmationDialog.Update(gameTime);
-                base.Update(gameTime);
-                return;
-            }
-
-            if (_revertDialog.IsActive)
-            {
-                _revertDialog.Update(gameTime);
-                base.Update(gameTime);
-                return;
-            }
+            if (IsInputBlocked) { base.Update(gameTime); return; }
+            if (_confirmationDialog.IsActive) { _confirmationDialog.Update(gameTime); base.Update(gameTime); return; }
+            if (_revertDialog.IsActive) { _revertDialog.Update(gameTime); base.Update(gameTime); return; }
 
             var currentKeyboardState = Keyboard.GetState();
             var currentMouseState = Mouse.GetState();
             var font = ServiceLocator.Get<BitmapFont>();
 
-            if (currentMouseState.Position != previousMouseState.Position || (currentMouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released))
+            // --- Input Device Detection ---
+            if (currentMouseState.Position != previousMouseState.Position || (currentMouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released) || currentMouseState.ScrollWheelValue != _previousScrollValue)
             {
                 _sceneManager.LastInputDevice = InputDevice.Mouse;
             }
 
-            if (_sceneManager.LastInputDevice == InputDevice.Mouse) _selectedIndex = -1;
+            if (_sceneManager.LastInputDevice == InputDevice.Mouse)
+            {
+                // Clear keyboard selection visual if moving mouse, unless we are hovering something
+                // We'll let the hover logic below handle setting the index
+            }
 
             if (_currentInputDelay > 0) _currentInputDelay -= (float)gameTime.ElapsedGameTime.TotalSeconds;
             if (_confirmationTimer > 0) _confirmationTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            // Update control enabled states based on dependencies
-            var framerateControl = _uiElements.OfType<ISettingControl>().FirstOrDefault(c => c.Label == "Target Framerate");
-            if (framerateControl != null)
-            {
-                framerateControl.IsEnabled = _tempSettings.IsFrameLimiterEnabled;
-            }
+            // Dependency Update
+            var framerateControl = _settingControls.FirstOrDefault(c => c.Label == "Target Framerate");
+            if (framerateControl != null) framerateControl.IsEnabled = _tempSettings.IsFrameLimiterEnabled;
 
-            CalculateLayoutPositions(); // Recalculate positions every frame
+            // --- Scroll Logic ---
+            float maxScroll = Math.Max(0, (_settingControls.Count * ITEM_VERTICAL_SPACING) - SCROLL_VIEW_HEIGHT);
+            int scrollDelta = (currentMouseState.ScrollWheelValue - _previousScrollValue);
+            if (scrollDelta != 0)
+            {
+                _targetScrollOffset -= Math.Sign(scrollDelta) * ITEM_VERTICAL_SPACING;
+                _targetScrollOffset = Math.Clamp(_targetScrollOffset, 0, maxScroll);
+            }
+            _previousScrollValue = currentMouseState.ScrollWheelValue;
+
+            // Smooth Scroll
+            _scrollOffset = MathHelper.Lerp(_scrollOffset, _targetScrollOffset, SCROLL_SMOOTHING);
+            if (Math.Abs(_scrollOffset - _targetScrollOffset) < 0.5f) _scrollOffset = _targetScrollOffset;
 
             Vector2 virtualMousePos = Core.TransformMouse(currentMouseState.Position);
 
-            for (int i = 0; i < _uiElements.Count; i++)
+            // --- Update Settings List ---
+            bool mouseOverAnySetting = false;
+            for (int i = 0; i < _settingControls.Count; i++)
             {
-                var item = _uiElements[i];
-                var currentPos = _uiElementPositions[i];
+                var item = _settingControls[i];
+                float itemY = SETTINGS_START_Y + (i * ITEM_VERTICAL_SPACING) - _scrollOffset;
 
-                if (item is ISettingControl setting)
+                // Only update if visible in viewport
+                if (itemY >= SETTINGS_START_Y - ITEM_VERTICAL_SPACING && itemY < SETTINGS_START_Y + SCROLL_VIEW_HEIGHT)
                 {
-                    var hoverRect = new Rectangle((int)currentPos.X - 5, (int)currentPos.Y, SETTINGS_PANEL_WIDTH + 10, ITEM_VERTICAL_SPACING);
-                    // Only allow selection if the setting is enabled
-                    if (hoverRect.Contains(virtualMousePos) && setting.IsEnabled) { _selectedIndex = i; }
-                    // Pass Y + 2 for update logic to match draw logic
-                    if (_currentInputDelay <= 0) setting.Update(new Vector2(currentPos.X, currentPos.Y + 2), i == _selectedIndex, currentMouseState, previousMouseState, virtualMousePos, font);
+                    Vector2 itemPos = new Vector2(SETTINGS_PANEL_X, itemY);
+                    var hoverRect = new Rectangle((int)itemPos.X - 5, (int)itemPos.Y, SETTINGS_PANEL_WIDTH + 10, ITEM_VERTICAL_SPACING);
+
+                    bool isHovered = hoverRect.Contains(virtualMousePos) && _listViewPort.Contains(virtualMousePos); // Check clipping rect too
+
+                    if (isHovered && item.IsEnabled)
+                    {
+                        if (_sceneManager.LastInputDevice == InputDevice.Mouse)
+                        {
+                            _selectedSettingIndex = i;
+                            _selectedButtonIndex = -1;
+                        }
+                        mouseOverAnySetting = true;
+                    }
+
+                    if (_currentInputDelay <= 0)
+                    {
+                        // Pass Y+2 for text alignment
+                        item.Update(new Vector2(itemPos.X, itemPos.Y + 2), i == _selectedSettingIndex, currentMouseState, previousMouseState, virtualMousePos, font);
+                    }
                 }
-                else if (item is Button button)
+            }
+
+            // --- Update Footer Buttons ---
+            for (int i = 0; i < _footerButtons.Count; i++)
+            {
+                var button = _footerButtons[i];
+                if (button.Bounds.Contains(virtualMousePos) && button.IsEnabled)
                 {
-                    // Only allow selection if the button is enabled
-                    if (button.Bounds.Contains(virtualMousePos) && button.IsEnabled) { _selectedIndex = i; }
-                    if (_currentInputDelay <= 0) button.Update(currentMouseState);
+                    if (_sceneManager.LastInputDevice == InputDevice.Mouse)
+                    {
+                        _selectedButtonIndex = i;
+                        _selectedSettingIndex = -1;
+                    }
                 }
+                if (_currentInputDelay <= 0) button.Update(currentMouseState);
+            }
+
+            if (_sceneManager.LastInputDevice == InputDevice.Mouse && !mouseOverAnySetting && _selectedButtonIndex == -1)
+            {
+                _selectedSettingIndex = -1;
             }
 
             if (_currentInputDelay <= 0) HandleKeyboardInput(currentKeyboardState);
 
-            var applyButton = _uiElements.OfType<Button>().FirstOrDefault(b => b.Text == "APPLY");
+            var applyButton = _footerButtons.FirstOrDefault(b => b.Text == "APPLY");
             if (applyButton != null) applyButton.IsEnabled = IsDirty();
 
             if (_currentInputDelay <= 0 && KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState))
@@ -526,7 +496,6 @@ namespace ProjectVagabond.Scenes
                 AttemptToGoBack();
             }
 
-            // Right Click to Go Back
             if (currentMouseState.RightButton == ButtonState.Pressed && previousMouseState.RightButton == ButtonState.Released)
             {
                 _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
@@ -538,42 +507,104 @@ namespace ProjectVagabond.Scenes
 
         private void HandleKeyboardInput(KeyboardState currentKeyboardState)
         {
-            bool selectionChanged = false;
-            if (KeyPressed(Keys.Down, currentKeyboardState, _previousKeyboardState)) { _sceneManager.LastInputDevice = InputDevice.Keyboard; _selectedIndex = FindNextSelectable(_selectedIndex, 1); selectionChanged = true; }
-            if (KeyPressed(Keys.Up, currentKeyboardState, _previousKeyboardState)) { _sceneManager.LastInputDevice = InputDevice.Keyboard; _selectedIndex = FindNextSelectable(_selectedIndex, -1); selectionChanged = true; }
+            bool upPressed = KeyPressed(Keys.Up, currentKeyboardState, _previousKeyboardState);
+            bool downPressed = KeyPressed(Keys.Down, currentKeyboardState, _previousKeyboardState);
 
-            if (selectionChanged)
+            if (upPressed || downPressed)
             {
+                _sceneManager.LastInputDevice = InputDevice.Keyboard;
                 keyboardNavigatedLastFrame = true;
+
+                if (_selectedSettingIndex != -1)
+                {
+                    // Navigating within Settings List
+                    if (upPressed)
+                    {
+                        int next = _selectedSettingIndex - 1;
+                        if (next >= 0) _selectedSettingIndex = next;
+                        else
+                        {
+                            // Wrap around to bottom buttons? Or stay at top?
+                            // Let's stay at top for list, or maybe wrap to bottom buttons?
+                            // Standard behavior: Stay at top.
+                        }
+                    }
+                    else if (downPressed)
+                    {
+                        int next = _selectedSettingIndex + 1;
+                        if (next < _settingControls.Count) _selectedSettingIndex = next;
+                        else
+                        {
+                            // Move to Buttons
+                            _selectedSettingIndex = -1;
+                            _selectedButtonIndex = 0;
+                        }
+                    }
+                }
+                else if (_selectedButtonIndex != -1)
+                {
+                    // Navigating within Buttons
+                    if (upPressed)
+                    {
+                        int next = _selectedButtonIndex - 1;
+                        if (next >= 0) _selectedButtonIndex = next;
+                        else
+                        {
+                            // Move back to Settings List (Bottom Item)
+                            _selectedButtonIndex = -1;
+                            _selectedSettingIndex = _settingControls.Count - 1;
+                        }
+                    }
+                    else if (downPressed)
+                    {
+                        int next = _selectedButtonIndex + 1;
+                        if (next < _footerButtons.Count) _selectedButtonIndex = next;
+                    }
+                }
+                else
+                {
+                    // Nothing selected, select first item
+                    _selectedSettingIndex = 0;
+                }
+
+                EnsureSelectionVisible();
             }
 
-            if (_selectedIndex >= 0 && _selectedIndex < _uiElements.Count)
+            // Handle Interaction
+            if (_selectedSettingIndex != -1)
             {
-                var selectedItem = _uiElements[_selectedIndex];
-                if (selectedItem is ISettingControl setting)
-                {
-                    if (KeyPressed(Keys.Left, currentKeyboardState, _previousKeyboardState)) { _sceneManager.LastInputDevice = InputDevice.Keyboard; setting.HandleInput(Keys.Left); }
-                    if (KeyPressed(Keys.Right, currentKeyboardState, _previousKeyboardState)) { _sceneManager.LastInputDevice = InputDevice.Keyboard; setting.HandleInput(Keys.Right); }
-                }
-                else if (selectedItem is Button button && KeyPressed(Keys.Enter, currentKeyboardState, _previousKeyboardState))
-                {
-                    _sceneManager.LastInputDevice = InputDevice.Keyboard;
-                    button.TriggerClick();
-                }
+                var setting = _settingControls[_selectedSettingIndex];
+                if (KeyPressed(Keys.Left, currentKeyboardState, _previousKeyboardState)) setting.HandleInput(Keys.Left);
+                if (KeyPressed(Keys.Right, currentKeyboardState, _previousKeyboardState)) setting.HandleInput(Keys.Right);
+            }
+            else if (_selectedButtonIndex != -1)
+            {
+                var button = _footerButtons[_selectedButtonIndex];
+                if (KeyPressed(Keys.Enter, currentKeyboardState, _previousKeyboardState)) button.TriggerClick();
             }
         }
 
-        private int FindNextSelectable(int currentIndex, int direction)
+        private void EnsureSelectionVisible()
         {
-            int searchIndex = currentIndex;
-            for (int i = 0; i < _uiElements.Count; i++)
+            if (_selectedSettingIndex == -1) return;
+
+            float itemTop = _selectedSettingIndex * ITEM_VERTICAL_SPACING;
+            float itemBottom = itemTop + ITEM_VERTICAL_SPACING;
+
+            // If item is above view
+            if (itemTop < _targetScrollOffset)
             {
-                searchIndex = (searchIndex + direction + _uiElements.Count) % _uiElements.Count;
-                var item = _uiElements[searchIndex];
-                if (item is ISettingControl setting && setting.IsEnabled) return searchIndex;
-                if (item is Button button && button.IsEnabled) return searchIndex;
+                _targetScrollOffset = itemTop;
             }
-            return currentIndex;
+            // If item is below view
+            else if (itemBottom > _targetScrollOffset + SCROLL_VIEW_HEIGHT)
+            {
+                _targetScrollOffset = itemBottom - SCROLL_VIEW_HEIGHT;
+            }
+
+            // Clamp
+            float maxScroll = Math.Max(0, (_settingControls.Count * ITEM_VERTICAL_SPACING) - SCROLL_VIEW_HEIGHT);
+            _targetScrollOffset = Math.Clamp(_targetScrollOffset, 0, maxScroll);
         }
 
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
@@ -585,20 +616,13 @@ namespace ProjectVagabond.Scenes
 
             string title = "SETTINGS";
             Vector2 titleSize = font.MeasureString(title);
-
-            // Pixel-perfect bob: 0 or -1
             float yOffset = (MathF.Sin(_titleBobTimer * 4f) > 0) ? -1f : 0f;
-
-            float titleBaseY = 10f; // Moved up 5px (was 15f)
+            float titleBaseY = 10f;
             Vector2 titlePosition = new Vector2(screenWidth / 2 - titleSize.X / 2, titleBaseY + yOffset);
 
-            // Use DrawStringSnapped for pixel perfection
             spriteBatch.DrawStringSnapped(font, title, titlePosition, _global.GameTextColor);
-
-            // Draw divider line
             int dividerY = (int)(titleBaseY + titleSize.Y + 5);
             spriteBatch.Draw(pixel, new Rectangle(screenWidth / 2 - 90, dividerY, 180, 1), _global.Palette_DarkShadow);
-
 
             if (_confirmationTimer > 0)
             {
@@ -607,55 +631,93 @@ namespace ProjectVagabond.Scenes
                 spriteBatch.DrawStringOutlinedSnapped(font, _confirmationMessage, messagePosition, _global.ConfirmSettingsColor, _global.Palette_Black);
             }
 
-            for (int i = 0; i < _uiElements.Count; i++)
+            // --- Draw Scrollable List (With Scissor) ---
+            spriteBatch.End(); // End current batch to apply scissor
+
+            // We need to transform the virtual scissor rect to screen coordinates for the device
+            // Note: This relies on Core._finalScale and _finalRenderRectangle logic implicitly, 
+            // but since we are in a virtual resolution scene, we must rely on the RasterizerState to clip pixels.
+            // However, MonoGame ScissorRectangle is in SCREEN pixels.
+
+            var core = ServiceLocator.Get<Core>();
+            Rectangle screenScissor = ScaleRectToScreen(_listViewPort, core.FinalScale, core.GetActualScreenVirtualBounds().Location);
+
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, new RasterizerState { ScissorTestEnable = true }, null, transform);
+            _graphics.GraphicsDevice.ScissorRectangle = screenScissor;
+
+            for (int i = 0; i < _settingControls.Count; i++)
             {
-                var item = _uiElements[i];
-                var currentPos = _uiElementPositions[i];
-                bool isSelected = (i == _selectedIndex);
+                var item = _settingControls[i];
+                float itemY = SETTINGS_START_Y + (i * ITEM_VERTICAL_SPACING) - _scrollOffset;
+                Vector2 currentPos = new Vector2(SETTINGS_PANEL_X, itemY);
+                bool isSelected = (i == _selectedSettingIndex);
 
                 if (isSelected)
                 {
-                    if (item is ISettingControl)
-                    {
-                        var hoverRect = new Rectangle((int)currentPos.X - 5, (int)currentPos.Y, SETTINGS_PANEL_WIDTH + 10, ITEM_VERTICAL_SPACING);
-                        if (hoverRect.Contains(virtualMousePos) || keyboardNavigatedLastFrame)
-                        {
-                            // Draw highlight box expanded by 1px up and down to make it 14px tall
-                            // Adjusted height to +1 to fix "too tall downward" issue
-                            DrawRectangleBorder(spriteBatch, pixel, new Rectangle(hoverRect.X, hoverRect.Y - 1, hoverRect.Width, hoverRect.Height + 1), 1, _global.ButtonHoverColor);
-                        }
-                    }
-                    else if (item is Button button)
-                    {
-                        if (button.IsHovered || keyboardNavigatedLastFrame)
-                        {
-                            // Draw highlight box for button
-                            DrawRectangleBorder(spriteBatch, pixel, new Rectangle(button.Bounds.X, button.Bounds.Y - 1, button.Bounds.Width, button.Bounds.Height + 2), 1, _global.ButtonHoverColor);
-                        }
-                    }
+                    var hoverRect = new Rectangle((int)currentPos.X - 5, (int)currentPos.Y, SETTINGS_PANEL_WIDTH + 10, ITEM_VERTICAL_SPACING);
+                    DrawRectangleBorder(spriteBatch, pixel, new Rectangle(hoverRect.X, hoverRect.Y - 1, hoverRect.Width, hoverRect.Height + 1), 1, _global.ButtonHoverColor);
                 }
 
-                if (item is ISettingControl setting)
-                {
-                    // Pass secondaryFont for labels, font (IBM) for values
-                    // Pass Y + 2 for text centering (moved up 1px)
-                    setting.Draw(spriteBatch, secondaryFont, font, new Vector2(currentPos.X, currentPos.Y + 2), isSelected, gameTime);
-                }
-                else if (item is Button button)
-                {
-                    button.Draw(spriteBatch, font, gameTime, transform, isSelected);
-                }
+                item.Draw(spriteBatch, secondaryFont, font, new Vector2(currentPos.X, currentPos.Y + 2), isSelected, gameTime);
             }
 
-            if (_confirmationDialog.IsActive)
+            spriteBatch.End();
+
+            // --- Draw Scrollbar & Footer (No Scissor) ---
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
+
+            DrawScrollbar(spriteBatch, pixel);
+
+            for (int i = 0; i < _footerButtons.Count; i++)
             {
-                _confirmationDialog.DrawContent(spriteBatch, font, gameTime, transform);
+                var button = _footerButtons[i];
+                bool isSelected = (i == _selectedButtonIndex);
+                if (isSelected && (button.IsHovered || keyboardNavigatedLastFrame))
+                {
+                    DrawRectangleBorder(spriteBatch, pixel, new Rectangle(button.Bounds.X, button.Bounds.Y - 1, button.Bounds.Width, button.Bounds.Height + 2), 1, _global.ButtonHoverColor);
+                }
+                button.Draw(spriteBatch, font, gameTime, transform, isSelected);
             }
 
-            if (_revertDialog.IsActive)
-            {
-                _revertDialog.DrawContent(spriteBatch, font, gameTime, transform);
-            }
+            if (_confirmationDialog.IsActive) _confirmationDialog.DrawContent(spriteBatch, font, gameTime, transform);
+            if (_revertDialog.IsActive) _revertDialog.DrawContent(spriteBatch, font, gameTime, transform);
+        }
+
+        private void DrawScrollbar(SpriteBatch spriteBatch, Texture2D pixel)
+        {
+            float totalContentHeight = _settingControls.Count * ITEM_VERTICAL_SPACING;
+            if (totalContentHeight <= SCROLL_VIEW_HEIGHT) return;
+
+            // Position scrollbar to the right of the settings panel
+            int trackX = SETTINGS_PANEL_X + SETTINGS_PANEL_WIDTH + 6;
+            int trackY = SETTINGS_START_Y;
+            int trackHeight = SCROLL_VIEW_HEIGHT;
+            int trackWidth = 3;
+
+            // Draw Track
+            spriteBatch.Draw(pixel, new Rectangle(trackX, trackY, trackWidth, trackHeight), _global.Palette_DarkShadow);
+
+            // Calculate Thumb
+            float viewRatio = (float)SCROLL_VIEW_HEIGHT / totalContentHeight;
+            float thumbHeight = Math.Max(10, trackHeight * viewRatio);
+
+            float maxScroll = totalContentHeight - SCROLL_VIEW_HEIGHT;
+            float scrollRatio = _scrollOffset / maxScroll;
+            float thumbY = trackY + (scrollRatio * (trackHeight - thumbHeight));
+
+            // Draw Thumb
+            spriteBatch.Draw(pixel, new Rectangle(trackX, (int)thumbY, trackWidth, (int)thumbHeight), _global.Palette_Sun);
+        }
+
+        private Rectangle ScaleRectToScreen(Rectangle virtualRect, float scale, Point offset)
+        {
+            // This helper ensures the scissor rect aligns with the scaled viewport
+            return new Rectangle(
+                (int)(virtualRect.X * scale) + offset.X,
+                (int)(virtualRect.Y * scale) + offset.Y,
+                (int)(virtualRect.Width * scale),
+                (int)(virtualRect.Height * scale)
+            );
         }
 
         public override void DrawUnderlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)

@@ -24,6 +24,9 @@ namespace ProjectVagabond
         public int DisplayIndex { get; set; }
         public float Gamma { get; set; }
 
+        // Visual Style Settings
+        public bool EnableGlitchEffects { get; set; }
+
         // Game Settings
         public bool UseImperialUnits { get; set; }
         public bool Use24HourClock { get; set; }
@@ -42,6 +45,8 @@ namespace ProjectVagabond
             SmallerUi = false;
             DisplayIndex = 0;
             Gamma = 1.5f;
+
+            EnableGlitchEffects = true;
 
             // Default game settings. This class is the source of truth for defaults.
             UseImperialUnits = false;
