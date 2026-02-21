@@ -77,6 +77,7 @@ namespace ProjectVagabond
         public BitmapFont SecondaryFont => _secondaryFont;
         public BitmapFont TertiaryFont => _tertiaryFont;
         public float FinalScale => _finalScale;
+        public Rectangle FinalRenderRectangle => _finalRenderRectangle;
 
         private Global _global;
         private GameSettings _settings;
@@ -591,9 +592,16 @@ namespace ProjectVagabond
                 _retroEffect.Parameters["Vibrance"]?.SetValue(_global.CrtVibrance);
                 _retroEffect.Parameters["EnableJitter"]?.SetValue(_settings.EnableGlitchEffects ? 1.0f : 0.0f);
 
+                // Pass the actual render scale and offset to the shader
+                _retroEffect.Parameters["TargetScale"]?.SetValue(_finalScale);
+                _retroEffect.Parameters["TargetOffset"]?.SetValue(new Vector2(_finalRenderRectangle.X, _finalRenderRectangle.Y));
+
+                // Only enable LCD grid if resolution is high enough (>= 1280x720)
+                bool enableLcdGrid = GraphicsDevice.PresentationParameters.BackBufferWidth >= 1280 &&
+                                     GraphicsDevice.PresentationParameters.BackBufferHeight >= 720;
+                _retroEffect.Parameters["EnableLcdGrid"]?.SetValue(enableLcdGrid ? 1.0f : 0.0f);
+
                 // --- Pass Palette ---
-                // We pass the array of Vector3s. 
-                // Note: Ensure your shader defines "float3 Palette[15]" matching this count.
                 _retroEffect.Parameters["Palette"]?.SetValue(_global.GetPaletteAsVectors());
                 _retroEffect.Parameters["PaletteCount"]?.SetValue(16);
                 // -------------------------

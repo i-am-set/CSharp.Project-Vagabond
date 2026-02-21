@@ -640,7 +640,7 @@ namespace ProjectVagabond.Scenes
             // However, MonoGame ScissorRectangle is in SCREEN pixels.
 
             var core = ServiceLocator.Get<Core>();
-            Rectangle screenScissor = ScaleRectToScreen(_listViewPort, core.FinalScale, core.GetActualScreenVirtualBounds().Location);
+            Rectangle screenScissor = ScaleRectToScreen(_listViewPort, core.FinalScale, core.FinalRenderRectangle.Location);
 
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, new RasterizerState { ScissorTestEnable = true }, null, transform);
             _graphics.GraphicsDevice.ScissorRectangle = screenScissor;

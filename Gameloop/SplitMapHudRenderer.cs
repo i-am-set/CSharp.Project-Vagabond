@@ -428,13 +428,9 @@ namespace ProjectVagabond.UI
             if (defaultFont == null || secondaryFont == null || tertiaryFont == null) return;
 
             // --- Reconstruct Global Transform ---
-            // We need this to restore the correct scale after interrupting the batch for rotation.
-            var viewport = spriteBatch.GraphicsDevice.Viewport;
-            float scaleX = (float)viewport.Width / Global.VIRTUAL_WIDTH;
-            float scaleY = (float)viewport.Height / Global.VIRTUAL_HEIGHT;
-            float scale = Math.Min(scaleX, scaleY);
-            float tx = (viewport.Width - (Global.VIRTUAL_WIDTH * scale)) / 2f;
-            float ty = (viewport.Height - (Global.VIRTUAL_HEIGHT * scale)) / 2f;
+            float scale = core.FinalScale;
+            float tx = core.FinalRenderRectangle.X;
+            float ty = core.FinalRenderRectangle.Y;
             Matrix globalTransform = Matrix.CreateScale(scale) * Matrix.CreateTranslation(tx, ty, 0f);
 
             float currentStartY = BaseY + verticalOffset;

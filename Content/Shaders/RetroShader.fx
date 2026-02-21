@@ -20,6 +20,11 @@ uniform float Vibrance;
 
 // Toggles passed from Core
 uniform float EnableJitter; // 1.0 = On, 0.0 = Off
+uniform float EnableLcdGrid; // 1.0 = On, 0.0 = Off
+
+// Layout Uniforms (New)
+uniform float TargetScale;      // The integer scale factor of the game content
+uniform float2 TargetOffset;    // The screen-space offset (top-left) of the game content
 
 uniform float3 Palette[16];
 uniform int PaletteCount;
@@ -111,47 +116,39 @@ float4 MainPS(PixelShaderInput input) : COLOR
     distortedUV *= (1.0 / ZOOM);
     uv = distortedUV + 0.5;
 
+    // Clip pixels outside the curved screen area
     if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0)
         return float4(0.0, 0.0, 0.0, 1.0);
 #endif
     
-    // --- 1. VIRTUAL PIXEL SNAP ---
-    // Snap texture reads to the center of each virtual pixel cell so that every
-    // LCD square shows one clean, unambiguous color with no subpixel bleed.
-    // uv is kept for all positional math (grid mask, vignette, dist, etc.);
-    // snappedUV is used exclusively for texture samples.
-    float2 snappedUV = (floor(uv * VirtualResolution) + 0.5) / VirtualResolution;
+    // --- 1. COORDINATE MAPPING ---
+    // Convert Screen UV to "Virtual Pixel Coordinates" based on the game's actual scale/offset.
+    // This ensures the grid and snapping align with the game pixels, even if the window is stretched.
+    float2 screenPos = uv * ScreenResolution;
+    float2 virtualPos = (screenPos - TargetOffset) / TargetScale;
+
+    // Keep a copy of the un-jittered position for the static LCD grid
+    float2 staticVirtualPos = virtualPos;
 
     // --- 2. LCD GLITCH / DESYNC ---
-    // Applied ONLY to snappedUV.x so it never touches the curvature mask, LCD grid,
-    // vignette, or any other geometry. The shift is quantized to whole virtual pixels,
-    // which is physically correct for an LCD (pixel data corruption, not a bent beam).
-    
+    // Applied to virtualPos.x.
     if (EnableJitter > 0.5)
     {
         float t = Time;
         float wave1 = sin(t * 0.5);
         float wave2 = sin(t * 1.7);
         float wave3 = sin(t * 2.9);
-        float chaos = wave1 + wave2 + wave3; // range approx [-3, 3]
+        float chaos = wave1 + wave2 + wave3; 
 
-        // JITTER_FREQUENCY maps [0,1] -> chaos threshold [2.95, 1.2].
-        // At 0 the threshold is nearly unreachable; at 1 it fires very often.
         float chaosThreshold = lerp(2.95, 1.2, JITTER_FREQUENCY);
 
         if (abs(chaos) > chaosThreshold) {
-            // Per-event seed: quantize time coarsely so it picks a new random set of
-            // parameters each time a fresh glitch window opens, but stays stable across
-            // all pixels for the duration of that window (no per-pixel variance).
             float eventSeed = floor(t * 0.4);
-
-            // Pick each parameter independently from its min/max range.
             float r0 = rand(float2(eventSeed, 0.0));
             float r1 = rand(float2(eventSeed, 1.0));
             float r2 = rand(float2(eventSeed, 2.0));
             float r3 = rand(float2(eventSeed, 3.0));
 
-            // Band count steps in 0.5 increments between min and max.
             float bandSteps = round(r0 * (JITTER_BAND_COUNT_MAX - JITTER_BAND_COUNT_MIN) / 0.5);
             float bandCount = JITTER_BAND_COUNT_MIN + bandSteps * 0.5;
 
@@ -159,26 +156,28 @@ float4 MainPS(PixelShaderInput input) : COLOR
             float desyncPx    = lerp(JITTER_DESYNC_PIXELS_MIN,  JITTER_DESYNC_PIXELS_MAX,  r2);
             float smoothness  = lerp(JITTER_SMOOTHNESS_MIN,     JITTER_SMOOTHNESS_MAX,     r3);
 
-            // How deep past the threshold we are, normalized 0->1.
-            // smoothness controls how gradually full intensity is reached.
             float rawIntensity   = (abs(chaos) - chaosThreshold) / (3.0 - chaosThreshold);
             float glitchIntensity = pow(saturate(rawIntensity), 1.0 / max(smoothness, 0.01));
 
-            // Bands are keyed to virtual pixel rows so they never split an LCD pixel.
-            // Low band count + low speed = big calm tears instead of a screenshake.
-            float pixelRow = floor(uv.y * VirtualResolution.y);
+            // Use virtualPos.y for row calculation to match game rows
+            float pixelRow = floor(virtualPos.y);
             float band = sign(sin(
                 (pixelRow / VirtualResolution.y) * bandCount * 6.28318
                 + Time * bandSpeed
             ));
 
-            // Quantize shift to whole virtual pixels — LCD data corruption, not analog drift.
             float shiftPixels = round(band * desyncPx * glitchIntensity);
-            snappedUV.x += shiftPixels / VirtualResolution.x;
+            virtualPos.x += shiftPixels;
         }
     }
 
-    // --- 3. CHROMATIC ABERRATION ---
+    // --- 3. VIRTUAL PIXEL SNAP ---
+    // Snap to the center of the virtual pixel in "Game Space", then convert back to UV.
+    float2 snappedVirtualPos = floor(virtualPos) + 0.5;
+    float2 snappedScreenPos = snappedVirtualPos * TargetScale + TargetOffset;
+    float2 snappedUV = snappedScreenPos / ScreenResolution;
+
+    // --- 4. CHROMATIC ABERRATION ---
     float3 color;
     float tearNoise = 0.0;
     
@@ -199,7 +198,6 @@ float4 MainPS(PixelShaderInput input) : COLOR
     float2 gOffset = float2(tearNoise * 0.5, 0.0); 
     float2 bOffset = float2((-spread / ScreenResolution.x) - tearNoise, 0.0);
     
-    // Keep Quantization here for the "Source" signal
     color.r = Tex2DQuantized(s0, snappedUV + rOffset).r;
     color.g = Tex2DQuantized(s0, snappedUV + gOffset).g;
     color.b = Tex2DQuantized(s0, snappedUV + bOffset).b;
@@ -208,26 +206,18 @@ float4 MainPS(PixelShaderInput input) : COLOR
     color = Tex2DQuantized(s0, snappedUV + glitchOffset).rgb;
 #endif
 
-// --- 4. HALATION (IMPROVED) ---
+// --- 5. HALATION ---
 #ifdef ENABLE_HALATION
-    // A. Generate Noise for Dithering
-    // We use a high frequency noise based on UV and Time to randomize the blur radius per pixel.
-    // This breaks the "8-tap ring" into a diffuse, noisy fog.
     float dither = rand(uv * 97.0 + Time); 
-    
-    // B. Jitter the Radius
-    // Vary radius between 70% and 130% of the target size
     float currentRadius = HALATION_RADIUS * (0.7 + 0.6 * dither);
     
     float2 pixelSize = 1.0 / ScreenResolution;
     float2 off = pixelSize * currentRadius;
-    float2 offDiag = off * 0.707; // 1/sqrt(2)
+    float2 offDiag = off * 0.707; 
 
     float3 glow = float3(0.0, 0.0, 0.0);
 
-    // C. Sample Raw Texture (Optimization & Smoothness)
-    // We use 'tex2D' (raw) instead of 'Tex2DQuantized'. 
-    // This is 15x faster and allows the glow to be a smooth gradient.
+    // Sample raw texture for smooth glow
     glow += tex2D(s0, snappedUV + float2(off.x, 0.0)).rgb;
     glow += tex2D(s0, snappedUV - float2(off.x, 0.0)).rgb;
     glow += tex2D(s0, snappedUV + float2(0.0, off.y)).rgb;
@@ -238,40 +228,38 @@ float4 MainPS(PixelShaderInput input) : COLOR
     glow += tex2D(s0, snappedUV + float2(offDiag.x, -offDiag.y)).rgb;
     glow += tex2D(s0, snappedUV + float2(-offDiag.x, -offDiag.y)).rgb;
 
-    glow *= 0.125; // Average
-    
-    // D. Additive Blending
-    // We add the glow to the base color. This creates a true light effect.
+    glow *= 0.125; 
     color += glow * HALATION_INTENSITY;
 #endif
 
-    // --- 4. LCD PIXEL GRID ---
+    // --- 6. LCD PIXEL GRID ---
 #ifdef ENABLE_LCD_GRID
-    // Find where we are within each virtual pixel (0..1 in both axes)
-    float2 pixelCell = frac(uv * VirtualResolution);
+    if (EnableLcdGrid > 0.5)
+    {
+        // Use staticVirtualPos so the grid stays fixed to the screen/content
+        // and doesn't jitter with the glitch effect.
+        float2 pixelCell = frac(staticVirtualPos);
 
-    // Build a soft mask that is 1.0 in the pixel center and falls to 0.0 at the edges.
-    // smoothstep from 0 -> LCD_GAP_SIZE ramps up, smoothstep from 1 -> 1-LCD_GAP_SIZE ramps down.
-    float2 edgeMask;
-    edgeMask.x = smoothstep(0.0, LCD_GAP_SIZE + LCD_GAP_SOFTNESS, pixelCell.x) *
-                 smoothstep(1.0, 1.0 - (LCD_GAP_SIZE + LCD_GAP_SOFTNESS), pixelCell.x);
-    edgeMask.y = smoothstep(0.0, LCD_GAP_SIZE + LCD_GAP_SOFTNESS, pixelCell.y) *
-                 smoothstep(1.0, 1.0 - (LCD_GAP_SIZE + LCD_GAP_SOFTNESS), pixelCell.y);
+        float2 edgeMask;
+        edgeMask.x = smoothstep(0.0, LCD_GAP_SIZE + LCD_GAP_SOFTNESS, pixelCell.x) *
+                     smoothstep(1.0, 1.0 - (LCD_GAP_SIZE + LCD_GAP_SOFTNESS), pixelCell.x);
+        edgeMask.y = smoothstep(0.0, LCD_GAP_SIZE + LCD_GAP_SOFTNESS, pixelCell.y) *
+                     smoothstep(1.0, 1.0 - (LCD_GAP_SIZE + LCD_GAP_SOFTNESS), pixelCell.y);
 
-    // Combine axes: full brightness inside the pixel, LCD_GAP_DARKNESS in the gaps
-    float gridMask = edgeMask.x * edgeMask.y;
-    float gridMultiplier = lerp(LCD_GAP_DARKNESS, 1.0, gridMask);
-    color *= gridMultiplier;
+        float gridMask = edgeMask.x * edgeMask.y;
+        float gridMultiplier = lerp(LCD_GAP_DARKNESS, 1.0, gridMask);
+        color *= gridMultiplier;
+    }
 #endif
 
-    // --- 5. HUM BAR ---
+    // --- 7. HUM BAR ---
 #ifdef ENABLE_HUM_BAR
     float humWave = sin((uv.y * 2.0) + (Time * HUM_BAR_SPEED));
     float humFactor = 1.0 - (((humWave + 1.0) / 2.0) * HUM_BAR_OPACITY);
     color *= humFactor;
 #endif
 
-    // --- 6. COLOR GRADING ---
+    // --- 8. COLOR GRADING ---
     color = max(color, BLACK_LEVEL); 
 
     float lumaVal = dot(color, float3(0.299, 0.587, 0.114));
@@ -281,7 +269,7 @@ float4 MainPS(PixelShaderInput input) : COLOR
     float min_c = min(color.r, min(color.g, color.b));
     color = lerp(float3(lumaVal, lumaVal, lumaVal), color, 1.0 + (Vibrance * (1.0 - (max_c - min_c))));
 
-    // --- 7. VIGNETTE ---
+    // --- 9. VIGNETTE ---
 #ifdef ENABLE_VIGNETTE
     float2 vUV = uv * (1.0 - uv.yx);
     float vig = vUV.x * vUV.y * 15.0;
@@ -289,13 +277,13 @@ float4 MainPS(PixelShaderInput input) : COLOR
     color *= lerp(1.0, vig, VIGNETTE_INTENSITY);
 #endif
 
-    // --- 8. NOISE ---
+    // --- 10. NOISE ---
 #ifdef ENABLE_NOISE
     float noise = (rand(uv * Time) - 0.5) * NOISE_INTENSITY;
     color += noise * color;
 #endif
 
-    // --- 9. GAMMA & FLASH ---
+    // --- 11. GAMMA & FLASH ---
     color = max(color, 0.0);
     color = pow(color, 1.0 / Gamma);
     color = lerp(color, FlashColor, FlashIntensity);
