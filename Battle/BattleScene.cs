@@ -413,7 +413,7 @@ namespace ProjectVagabond.Scenes
             // Only fade out at the very end of battle
             if (_battleManager.CurrentPhase == BattleManager.BattlePhase.BattleOver)
             {
-                _floorAlpha = MathHelper.Lerp(_floorAlpha, 0.0f, dt * 2.0f);
+                _floorAlpha = MathHelper.Lerp(_floorAlpha, 0.0f, dt * 8.0f);
             }
             else
             {

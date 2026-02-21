@@ -33,6 +33,9 @@ namespace ProjectVagabond.Battle.UI
 
         public Vector2 IconRenderOffset { get; set; } = Vector2.Zero;
 
+        // Opacity for fade-in animations
+        public float Opacity { get; set; } = 1.0f;
+
         private bool _showManaWarning = false;
         public int? VisualHeightOverride { get; set; }
 
@@ -145,7 +148,7 @@ namespace ProjectVagabond.Battle.UI
                 if (!IsEnabled || !canAfford) bgColor = _global.Palette_Black;
                 else if (isActivated) bgColor = _global.ButtonHoverColor;
 
-                DrawPixelPerfectBevel(spriteBatch, pixel, drawBounds, bgColor);
+                DrawPixelPerfectBevel(spriteBatch, pixel, drawBounds, bgColor * Opacity);
             }
 
             // 4. Draw Icon (Pixel Perfect)
@@ -181,7 +184,7 @@ namespace ProjectVagabond.Battle.UI
                         spriteManager.ActionIconsSpriteSheet,
                         snappedIconPos,
                         ActionIconRect.Value,
-                        currentIconColor,
+                        currentIconColor * Opacity,
                         0f, // No rotation
                         iconOrigin,
                         new Vector2(scale),
@@ -198,6 +201,9 @@ namespace ProjectVagabond.Battle.UI
             else textColor = CustomDefaultTextColor ?? _global.GameTextColor;
 
             if (tintColorOverride.HasValue) textColor = tintColorOverride.Value;
+
+            // Apply Opacity to text
+            textColor = textColor * Opacity;
 
             BitmapFont font = Font ?? defaultFont;
             Vector2 textSize = font.MeasureString(Text);
@@ -283,7 +289,7 @@ namespace ProjectVagabond.Battle.UI
                     1
                 );
 
-                spriteBatch.Draw(ServiceLocator.Get<Texture2D>(), lineRect, _global.ButtonDisableColor);
+                spriteBatch.Draw(ServiceLocator.Get<Texture2D>(), lineRect, _global.ButtonDisableColor * Opacity);
             }
 
             if (_showManaWarning && IsEnabled)
@@ -294,7 +300,7 @@ namespace ProjectVagabond.Battle.UI
                     MathF.Round(drawBounds.X + drawBounds.Width / 2f - noManaSize.X / 2f),
                     MathF.Round(drawBounds.Y + drawBounds.Height / 2f - noManaSize.Y / 2f - 2)
                 );
-                TextAnimator.DrawTextWithEffectSquareOutlined(spriteBatch, font, noManaText, noManaPos, _global.Palette_Rust, Color.Black, TextEffectType.None, 0f);
+                TextAnimator.DrawTextWithEffectSquareOutlined(spriteBatch, font, noManaText, noManaPos, _global.Palette_Rust * Opacity, Color.Black * Opacity, TextEffectType.None, 0f);
             }
         }
 

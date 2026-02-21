@@ -236,12 +236,19 @@ namespace ProjectVagabond.Battle.UI
                     if (battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection && !battleManager.IsActionPending(c.BattleSlot))
                     {
                         float t = (float)gameTime.TotalGameTime.TotalSeconds;
-                        float phase = (c.BattleSlot == 1) ? MathHelper.Pi : 0f;
-                        float rawSin = MathF.Sin(t * _bobSpeed + phase);
+                        // 1 second cycle. 0.0-0.5 = State A, 0.5-1.0 = State B.
+                        float cycle = t % 1.0f;
+                        bool stateA = cycle < 0.5f;
 
-                        manualBob = -rawSin * 0.5f;
+                        // Slot 0 (Left): State A = Down (0), State B = Up (-1)
+                        // Slot 1 (Right): State A = Up (-1), State B = Down (0)
 
-                        manualAlt = manualBob < 0;
+                        bool isUp;
+                        if (c.BattleSlot == 0) isUp = !stateA; // Up in second half
+                        else isUp = stateA; // Up in first half
+
+                        manualBob = isUp ? -1f : 0f;
+                        manualAlt = isUp;
                     }
 
                     sprite.Update(gameTime, currentActor == c, manualBob, manualAlt);

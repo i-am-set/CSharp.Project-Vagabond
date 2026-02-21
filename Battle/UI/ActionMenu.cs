@@ -7,6 +7,7 @@ using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
 using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
@@ -693,6 +694,9 @@ namespace ProjectVagabond.Battle.UI
                 Color? tint = null;
                 if (btn is MoveButton moveBtn)
                 {
+                    // Apply the combatant's HUD alpha to the button opacity
+                    moveBtn.Opacity = Combatant.HudVisualAlpha;
+
                     if (!moveBtn.IsEnabled || !moveBtn.CanAfford) tint = global.Palette_DarkShadow;
                 }
                 else

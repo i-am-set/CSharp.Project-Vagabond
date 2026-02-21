@@ -41,7 +41,8 @@ namespace ProjectVagabond.Battle.UI
         {
             _global = ServiceLocator.Get<Global>();
             _core = ServiceLocator.Get<Core>();
-            _tabBounds = new Rectangle(0, 0, Global.VIRTUAL_WIDTH, TAB_HEIGHT);
+            // Extended hitbox upwards by 100 pixels to catch mouse movements in letterboxed/maximized windows
+            _tabBounds = new Rectangle(0, -100, Global.VIRTUAL_WIDTH, TAB_HEIGHT + 100);
         }
 
         public void Reset()
@@ -193,6 +194,11 @@ namespace ProjectVagabond.Battle.UI
                     _tabBounds.Center.X - (arrow.Width / 2f),
                     _tabBounds.Center.Y - (arrow.Height / 2f)
                 );
+                // Draw arrow at the bottom of the tab area (TAB_HEIGHT)
+                // Since _tabBounds extends upwards, Center.Y is way up.
+                // We want it visually at TAB_HEIGHT / 2 roughly.
+                arrowPos.Y = (TAB_HEIGHT / 2f) - (arrow.Height / 2f);
+
                 spriteBatch.DrawSnapped(arrow, arrowPos, _global.Palette_DarkestPale);
             }
 
