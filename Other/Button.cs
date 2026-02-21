@@ -1,4 +1,8 @@
-﻿using Microsoft.Xna.Framework;
+﻿// --- Button.cs ---
+// Updated Update() to implement sticky press logic (stays pressed even if mouse leaves, until release).
+// Updated DrawText() to apply Palette_Fruit when pressed and reset hover offset to 0.
+
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -24,6 +28,7 @@ namespace ProjectVagabond.UI
         public Color? CustomDefaultTextColor { get; set; }
         public Color? CustomHoverTextColor { get; set; }
         public Color? CustomDisabledTextColor { get; set; }
+        public Color? CustomSelectedTextColor { get; set; }
         public bool IsEnabled { get; set; } = true;
         public bool IsHovered { get; set; }
         public bool IsPressed => _isPressed;
@@ -207,21 +212,32 @@ namespace ProjectVagabond.UI
                 if (EnableHoverRotation) _hoverRotationTimer = HOVER_ROTATION_DURATION;
             }
 
-            bool mouseReleasedThisFrame = currentMouseState.LeftButton == ButtonState.Released && _previousMouseState.LeftButton == ButtonState.Pressed;
             bool mouseIsDown = currentMouseState.LeftButton == ButtonState.Pressed;
+            bool mouseWasDown = _previousMouseState.LeftButton == ButtonState.Pressed;
 
-            if (IsHovered && mouseReleasedThisFrame)
+            // Sticky Press Logic:
+            // If clicked while hovered, become pressed.
+            // Stay pressed until released, even if mouse leaves.
+            if (IsHovered && mouseIsDown && !mouseWasDown)
             {
-                bool isDebounceClear = (DateTime.Now - _lastClickTime).TotalSeconds > DEBOUNCE_DURATION;
-                if (!UseInputDebounce || (isDebounceClear && UIInputManager.CanProcessMouseClick()))
-                {
-                    if (UseInputDebounce) _lastClickTime = DateTime.Now;
-                    TriggerClick();
-                    if (UseInputDebounce) UIInputManager.ConsumeMouseClick();
-                }
+                _isPressed = true;
             }
 
-            _isPressed = IsHovered && mouseIsDown;
+            if (!mouseIsDown && _isPressed)
+            {
+                _isPressed = false;
+                // Only trigger click if released while hovering
+                if (IsHovered)
+                {
+                    bool isDebounceClear = (DateTime.Now - _lastClickTime).TotalSeconds > DEBOUNCE_DURATION;
+                    if (!UseInputDebounce || (isDebounceClear && UIInputManager.CanProcessMouseClick()))
+                    {
+                        if (UseInputDebounce) _lastClickTime = DateTime.Now;
+                        TriggerClick();
+                        if (UseInputDebounce) UIInputManager.ConsumeMouseClick();
+                    }
+                }
+            }
 
             bool shouldScale = HoverAnimation == HoverAnimationType.Scale || HoverAnimation == HoverAnimationType.ScaleUp;
             if (shouldScale)
@@ -380,6 +396,7 @@ namespace ProjectVagabond.UI
 
             if (tintColorOverride.HasValue) textColor = tintColorOverride.Value;
             else if (!IsEnabled) textColor = CustomDisabledTextColor ?? _global.ButtonDisableColor;
+            else if (_isPressed) textColor = CustomSelectedTextColor ?? _global.Palette_Fruit;
             else textColor = isActivated ? (CustomHoverTextColor ?? _global.ButtonHoverColor) : (CustomDefaultTextColor ?? _global.GameTextColor);
 
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -409,8 +426,15 @@ namespace ProjectVagabond.UI
             {
                 if (HoverAnimation == HoverAnimationType.Hop)
                 {
-                    // FIX: Use correct property name HoverLiftOffset
-                    yHoverOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated, HoverLiftOffset, HoverLiftDuration);
+                    // If pressed, force offset to 0 to show "pushed down" state
+                    if (_isPressed)
+                    {
+                        yHoverOffset = 0f;
+                    }
+                    else
+                    {
+                        yHoverOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated, HoverLiftOffset, HoverLiftDuration);
+                    }
                 }
                 else if (HoverAnimation == HoverAnimationType.SlideAndHold)
                 {

@@ -231,7 +231,7 @@ namespace ProjectVagabond.UI
             float progress = (_currentValue - _minValue) / (_maxValue - _minValue);
             int filledSegments = (int)Math.Round(progress * (_segmentCount - 1)) + 1;
 
-            Color emptyColor = IsEnabled ? _global.Palette_DarkShadow : new Color(40, 40, 40);
+            Color emptyColor = IsEnabled ? _global.DullTextColor : _global.Palette_DarkShadow;
             Color baseFillColor = IsEnabled ? (IsDirty ? _global.ConfirmSettingsColor : _global.GameTextColor) : _global.ButtonDisableColor;
             Color hoverColor = _global.ButtonHoverColor;
 
@@ -261,7 +261,7 @@ namespace ProjectVagabond.UI
             // Value text also shifts with the visual offset
             Vector2 valuePosition = new Vector2(_barAreaRect.Left - valueSize.X - 5 + valueVisualOffset, animatedPosition.Y);
 
-            spriteBatch.DrawStringSnapped(labelFont, valueString, valuePosition, IsEnabled ? _global.Palette_DarkShadow : _global.ButtonDisableColor);
+            spriteBatch.DrawStringSnapped(labelFont, valueString, valuePosition, IsEnabled ? _global.DullTextColor : _global.ButtonDisableColor);
 
             if (!IsEnabled)
             {

@@ -1,4 +1,8 @@
-﻿using Microsoft.Xna.Framework;
+﻿// --- MoveButton.cs ---
+// Updated Draw() to change background color to Palette_Fruit when pressed.
+// Updated Draw() to force text color to Black when pressed for readability.
+
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -126,7 +130,17 @@ namespace ProjectVagabond.Battle.UI
             bool isActivated = IsEnabled && (IsHovered || forceHover);
 
             // 1. Calculate Animation Offsets
-            float hoverOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated && canAfford, HoverLiftOffset, HoverLiftDuration);
+            float hoverOffset = 0f;
+            if (IsPressed)
+            {
+                // If held down, force offset to 0 to show "pushed down" state
+                hoverOffset = 0f;
+            }
+            else
+            {
+                hoverOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated && canAfford, HoverLiftOffset, HoverLiftDuration);
+            }
+
             var (shakeOffset, flashTint) = UpdateFeedbackAnimations(gameTime);
 
             // 2. Calculate Strict Integer Position & Bounds
@@ -146,6 +160,7 @@ namespace ProjectVagabond.Battle.UI
             {
                 Color bgColor = BackgroundColor;
                 if (!IsEnabled || !canAfford) bgColor = _global.Palette_Black;
+                else if (IsPressed) bgColor = _global.Palette_Fruit; // Selected/Held Color
                 else if (isActivated) bgColor = _global.ButtonHoverColor;
 
                 DrawPixelPerfectBevel(spriteBatch, pixel, drawBounds, bgColor * Opacity);
@@ -197,6 +212,7 @@ namespace ProjectVagabond.Battle.UI
             // 5. Draw Text (Pixel Perfect)
             Color textColor;
             if (!IsEnabled || !canAfford) textColor = CustomDisabledTextColor ?? _global.ButtonDisableColor;
+            else if (IsPressed) textColor = _global.Palette_Black; // Force black on fruit background
             else if (isActivated) textColor = CustomHoverTextColor ?? _global.ButtonHoverColor;
             else textColor = CustomDefaultTextColor ?? _global.GameTextColor;
 

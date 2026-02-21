@@ -16,7 +16,7 @@ namespace ProjectVagabond
             MapBg = Palette_Black;
             GameTextColor = Palette_Sun;
             HighlightTextColor = Palette_Fruit;
-            DullTextColor = Palette_Shadow;
+            DullTextColor = Palette_DarkestPale;
             ButtonHoverColor = Palette_DarkSun;
             ButtonDisableColor = Palette_DarkShadow;
             SplitMapNodeColor = Palette_Sun;

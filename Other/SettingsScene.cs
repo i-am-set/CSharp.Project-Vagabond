@@ -622,7 +622,7 @@ namespace ProjectVagabond.Scenes
 
             spriteBatch.DrawStringSnapped(font, title, titlePosition, _global.GameTextColor);
             int dividerY = (int)(titleBaseY + titleSize.Y + 5);
-            spriteBatch.Draw(pixel, new Rectangle(screenWidth / 2 - 90, dividerY, 180, 1), _global.Palette_DarkShadow);
+            spriteBatch.Draw(pixel, new Rectangle(screenWidth / 2 - 90, dividerY, 180, 1), _global.DullTextColor);
 
             if (_confirmationTimer > 0)
             {
@@ -633,11 +633,6 @@ namespace ProjectVagabond.Scenes
 
             // --- Draw Scrollable List (With Scissor) ---
             spriteBatch.End(); // End current batch to apply scissor
-
-            // We need to transform the virtual scissor rect to screen coordinates for the device
-            // Note: This relies on Core._finalScale and _finalRenderRectangle logic implicitly, 
-            // but since we are in a virtual resolution scene, we must rely on the RasterizerState to clip pixels.
-            // However, MonoGame ScissorRectangle is in SCREEN pixels.
 
             var core = ServiceLocator.Get<Core>();
             Rectangle screenScissor = ScaleRectToScreen(_listViewPort, core.FinalScale, core.FinalRenderRectangle.Location);

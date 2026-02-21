@@ -213,7 +213,7 @@ namespace ProjectVagabond.UI
 
             if (!string.IsNullOrEmpty(extraInfoText))
             {
-                spriteBatch.DrawStringSnapped(labelFont, extraInfoText, animatedPosition + new Vector2(labelSize.X + 2, 0), _global.Palette_DarkShadow);
+                spriteBatch.DrawStringSnapped(labelFont, extraInfoText, animatedPosition + new Vector2(labelSize.X + 2, 0), _global.DullTextColor);
             }
 
             const float valueDisplayWidth = Global.VALUE_DISPLAY_WIDTH;

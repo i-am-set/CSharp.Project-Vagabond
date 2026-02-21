@@ -1,4 +1,8 @@
-﻿using Microsoft.Xna.Framework;
+﻿// --- MainMenuScene.cs ---
+// Updated InitializeUI() to disable hover sway on buttons.
+// Updated DrawSceneContent() to keep arrow visible and colored when button is pressed (held).
+
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -101,7 +105,8 @@ namespace ProjectVagabond.Scenes
                 TextRenderOffset = new Vector2(0, -1),
                 EnableTextWave = true,
                 AlwaysAnimateText = true,
-                WaveEffectType = TextEffectType.TypewriterPop
+                WaveEffectType = TextEffectType.TypewriterPop,
+                EnableHoverSway = false // Disable sway for main menu
             };
             playButton.OnClick += () =>
             {
@@ -138,7 +143,8 @@ namespace ProjectVagabond.Scenes
                 TextRenderOffset = new Vector2(0, -1),
                 EnableTextWave = true,
                 AlwaysAnimateText = true,
-                WaveEffectType = TextEffectType.TypewriterPop
+                WaveEffectType = TextEffectType.TypewriterPop,
+                EnableHoverSway = false // Disable sway for main menu
             };
             settingsButton.OnClick += () =>
             {
@@ -160,7 +166,8 @@ namespace ProjectVagabond.Scenes
                 TextRenderOffset = new Vector2(0, -1),
                 EnableTextWave = true,
                 AlwaysAnimateText = true,
-                WaveEffectType = TextEffectType.TypewriterPop
+                WaveEffectType = TextEffectType.TypewriterPop,
+                EnableHoverSway = false // Disable sway for main menu
             };
             exitButton.OnClick += ConfirmExit;
             _buttons.Add(exitButton);
@@ -415,10 +422,12 @@ namespace ProjectVagabond.Scenes
                 if (state.IsVisible && state.Scale.X >= 0.95f)
                 {
                     var selectedButton = _buttons[_selectedButtonIndex];
-                    if (selectedButton.IsHovered)
+                    // Check if hovered OR pressed (held down)
+                    if (selectedButton.IsHovered || selectedButton.IsPressed)
                     {
                         var bounds = selectedButton.Bounds;
-                        var color = _global.ButtonHoverColor;
+                        // Use Palette_Fruit if pressed, otherwise ButtonHoverColor
+                        var color = selectedButton.IsPressed ? _global.Palette_Fruit : _global.ButtonHoverColor;
                         var fontToUse = selectedButton.Font ?? secondaryFont;
 
                         string leftArrow = ">";
