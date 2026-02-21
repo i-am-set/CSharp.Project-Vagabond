@@ -1,4 +1,8 @@
-﻿using Microsoft.Xna.Framework;
+﻿// --- SettingsScene.cs ---
+// Fixed bug where footer buttons (Apply, Back, Restore) would remain selected/animated even when the mouse moved off them.
+// Added logic to explicitly clear _selectedButtonIndex when the mouse is active but not hovering any button.
+
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -466,18 +470,28 @@ namespace ProjectVagabond.Scenes
             }
 
             // --- Update Footer Buttons ---
+            bool mouseOverAnyButton = false;
             for (int i = 0; i < _footerButtons.Count; i++)
             {
                 var button = _footerButtons[i];
-                if (button.Bounds.Contains(virtualMousePos) && button.IsEnabled)
+                bool isHovered = button.Bounds.Contains(virtualMousePos) && button.IsEnabled;
+
+                if (isHovered)
                 {
                     if (_sceneManager.LastInputDevice == InputDevice.Mouse)
                     {
                         _selectedButtonIndex = i;
                         _selectedSettingIndex = -1;
+                        mouseOverAnyButton = true;
                     }
                 }
                 if (_currentInputDelay <= 0) button.Update(currentMouseState);
+            }
+
+            // If mouse is moving and not over any button, clear button selection
+            if (_sceneManager.LastInputDevice == InputDevice.Mouse && !mouseOverAnyButton)
+            {
+                _selectedButtonIndex = -1;
             }
 
             if (_sceneManager.LastInputDevice == InputDevice.Mouse && !mouseOverAnySetting && _selectedButtonIndex == -1)

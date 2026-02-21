@@ -1,6 +1,6 @@
 ﻿// --- MainMenuScene.cs ---
-// Updated InitializeUI() to disable hover sway on buttons.
-// Updated DrawSceneContent() to keep arrow visible and colored when button is pressed (held).
+// Fixed bug where the selection arrow (>) would remain visible for one frame when returning from the Settings menu.
+// Added ResetAnimationState() calls to button OnClick handlers to ensure clean state before scene transitions.
 
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -111,6 +111,8 @@ namespace ProjectVagabond.Scenes
             playButton.OnClick += () =>
             {
                 _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
+                playButton.ResetAnimationState(); // Clear pressed state to prevent artifacts on return
+
                 var core = ServiceLocator.Get<Core>();
                 var gameState = ServiceLocator.Get<GameState>();
 
@@ -149,6 +151,7 @@ namespace ProjectVagabond.Scenes
             settingsButton.OnClick += () =>
             {
                 _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
+                settingsButton.ResetAnimationState(); // Clear pressed state to prevent artifacts on return
                 _sceneManager.ShowModal(GameSceneState.Settings);
             };
             _buttons.Add(settingsButton);
