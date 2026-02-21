@@ -14,7 +14,14 @@ namespace ProjectVagabond.UI
 {
     public class ConfirmationDialog : Dialog
     {
+        private class RichTextToken
+        {
+            public string Text;
+            public Color Color;
+        }
+
         private string _prompt;
+        private List<List<RichTextToken>> _wrappedPromptLines;
         private List<string> _details;
         private List<Button> _buttons;
         private int _selectedButtonIndex;
@@ -28,6 +35,7 @@ namespace ProjectVagabond.UI
         {
             _buttons = new List<Button>();
             _details = new List<string>();
+            _wrappedPromptLines = new List<List<RichTextToken>>();
         }
 
         public void Show(string prompt, List<Tuple<string, Action>> buttonActions, List<string> details = null)
@@ -51,8 +59,10 @@ namespace ProjectVagabond.UI
             float dialogWidth = 280;
             float currentHeight = 20;
 
-            var wrappedPrompt = WrapText(secondaryFont, _prompt.ToUpper(), dialogWidth - 40);
-            currentHeight += wrappedPrompt.Count * secondaryFont.LineHeight;
+            // Parse and wrap the prompt using the new rich text logic
+            _wrappedPromptLines = ParseAndWrapPrompt(_prompt.ToUpper(), dialogWidth - 40, secondaryFont);
+            
+            currentHeight += _wrappedPromptLines.Count * secondaryFont.LineHeight;
             currentHeight += 10;
 
             if (_details.Any())
@@ -204,15 +214,21 @@ namespace ProjectVagabond.UI
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
 
             spriteBatch.Draw(pixel, _dialogBounds, _global.GameBg);
-            DrawRectangleBorder(spriteBatch, pixel, _dialogBounds, 1, _global.Palette_DarkShadow);
+            DrawRectangleBorder(spriteBatch, pixel, _dialogBounds, 1, _global.DullTextColor);
 
             float currentY = _dialogBounds.Y + 20;
 
-            var wrappedPrompt = WrapText(secondaryFont, _prompt.ToUpper(), _dialogBounds.Width - 40);
-            foreach (var line in wrappedPrompt)
+            // Draw the rich text prompt
+            foreach (var line in _wrappedPromptLines)
             {
-                var promptSize = secondaryFont.MeasureString(line);
-                spriteBatch.DrawString(secondaryFont, line, new Vector2(_dialogBounds.Center.X - promptSize.Width / 2, currentY), _global.Palette_Sun);
+                float lineWidth = line.Sum(t => secondaryFont.MeasureString(t.Text).Width);
+                float x = _dialogBounds.Center.X - lineWidth / 2f;
+                
+                foreach (var token in line)
+                {
+                    spriteBatch.DrawString(secondaryFont, token.Text, new Vector2(x, currentY), token.Color);
+                    x += secondaryFont.MeasureString(token.Text).Width;
+                }
                 currentY += secondaryFont.LineHeight;
             }
 
@@ -250,12 +266,118 @@ namespace ProjectVagabond.UI
                     Rectangle highlightRect = new Rectangle(
                         (int)(selectedButton.Bounds.X + (selectedButton.Bounds.Width - textSize.X) * 0.5f - horizontalPadding),
                         (int)(selectedButton.Bounds.Y + (selectedButton.Bounds.Height - textSize.Y) * 0.5f - verticalPadding),
-                        (int)(textSize.X + horizontalPadding * 2),
-                        (int)(textSize.Y + verticalPadding * 2)
+                        (int)(textSize.X + horizontalPadding * 2) - 1,
+                        (int)(textSize.Y + verticalPadding * 2) - 3
                     );
                     DrawRectangleBorder(spriteBatch, pixel, highlightRect, 1, _global.ButtonHoverColor);
                 }
             }
+        }
+
+        private List<List<RichTextToken>> ParseAndWrapPrompt(string text, float maxWidth, BitmapFont font)
+        {
+            // 1. Parse into raw tokens (Text + Color)
+            var rawTokens = new List<RichTextToken>();
+            var currentColor = _global.Palette_Sun;
+            
+            int pos = 0;
+            while (pos < text.Length)
+            {
+                int open = text.IndexOf('[', pos);
+                if (open == -1)
+                {
+                    rawTokens.Add(new RichTextToken { Text = text.Substring(pos), Color = currentColor });
+                    break;
+                }
+                
+                if (open > pos)
+                {
+                    rawTokens.Add(new RichTextToken { Text = text.Substring(pos, open - pos), Color = currentColor });
+                }
+                
+                int close = text.IndexOf(']', open);
+                if (close == -1)
+                {
+                    rawTokens.Add(new RichTextToken { Text = text.Substring(open), Color = currentColor });
+                    break;
+                }
+                
+                string tag = text.Substring(open + 1, close - open - 1);
+                if (tag == "/")
+                {
+                    currentColor = _global.Palette_Sun;
+                }
+                else
+                {
+                    currentColor = _global.GetNarrationColor(tag);
+                }
+                
+                pos = close + 1;
+            }
+
+            // 2. Wrap tokens into lines
+            var lines = new List<List<RichTextToken>>();
+            var currentLine = new List<RichTextToken>();
+            float currentLineWidth = 0f;
+
+            foreach (var token in rawTokens)
+            {
+                // Handle explicit newlines
+                string[] paragraphs = token.Text.Split('\n');
+
+                for (int i = 0; i < paragraphs.Length; i++)
+                {
+                    if (i > 0)
+                    {
+                        lines.Add(currentLine);
+                        currentLine = new List<RichTextToken>();
+                        currentLineWidth = 0f;
+                    }
+
+                    string paragraph = paragraphs[i];
+                    if (string.IsNullOrEmpty(paragraph)) continue;
+
+                    string[] words = paragraph.Split(' ');
+
+                    for (int j = 0; j < words.Length; j++)
+                    {
+                        string word = words[j];
+                        // Determine if we need a leading space
+                        // We need a space if it's not the first word of the paragraph part, OR if we are appending to an existing line
+                        bool needsSpace = (j > 0) || (currentLine.Count > 0);
+                        
+                        string textWithSpace = needsSpace ? " " + word : word;
+                        float widthWithSpace = font.MeasureString(textWithSpace).Width;
+                        
+                        // If it fits, add it
+                        if (currentLineWidth + widthWithSpace <= maxWidth)
+                        {
+                            currentLine.Add(new RichTextToken { Text = textWithSpace, Color = token.Color });
+                            currentLineWidth += widthWithSpace;
+                        }
+                        else
+                        {
+                            // Doesn't fit, push line
+                            if (currentLine.Count > 0)
+                            {
+                                lines.Add(currentLine);
+                                currentLine = new List<RichTextToken>();
+                                currentLineWidth = 0f;
+                            }
+                            
+                            // Add word to new line (without leading space)
+                            string textNoSpace = word;
+                            float widthNoSpace = font.MeasureString(textNoSpace).Width;
+                            
+                            currentLine.Add(new RichTextToken { Text = textNoSpace, Color = token.Color });
+                            currentLineWidth += widthNoSpace;
+                        }
+                    }
+                }
+            }
+            
+            if (currentLine.Count > 0) lines.Add(currentLine);
+            return lines;
         }
 
         private (string text, Color? color) ParseButtonTextAndColor(string taggedText)
@@ -274,6 +396,7 @@ namespace ProjectVagabond.UI
                     case "red": color = _global.Palette_Rust; break;
                     case "green": color = _global.Palette_Leaf; break;
                     case "yellow": color = _global.Palette_DarkSun; break;
+                    case "cemphasis": color = _global.ColorNarration_Emphasis; break;
                     case "chighlight": color = _global.ColorNarration_Highlight; break;
                     case "cdull": color = _global.ColorNarration_Dull; break;
                     default: return (taggedText, null);
@@ -288,12 +411,10 @@ namespace ProjectVagabond.UI
             var finalLines = new List<string>();
             if (string.IsNullOrEmpty(text)) return finalLines;
 
-            // First, split the text into paragraphs based on explicit newline characters.
             var paragraphs = text.Split('\n');
 
             foreach (var paragraph in paragraphs)
             {
-                // Then, apply word wrapping to each paragraph.
                 var words = paragraph.Split(' ');
                 var currentLine = "";
                 foreach (var word in words)

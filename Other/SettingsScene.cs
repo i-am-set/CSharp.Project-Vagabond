@@ -349,7 +349,7 @@ namespace ProjectVagabond.Scenes
 
         private void ConfirmResetSettings()
         {
-            _confirmationDialog.Show("Reset all settings to default?\n\nThis cannot be undone.", new List<Tuple<string, Action>> { Tuple.Create("YES", new Action(() => { _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength); ; ExecuteResetSettings(); _confirmationDialog.Hide(); })), Tuple.Create("[chighlight]NO", new Action(() => { _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength); _confirmationDialog.Hide(); })) });
+            _confirmationDialog.Show("Reset all settings to default?\n\n[cemphasis]This cannot be undone.[/]", new List<Tuple<string, Action>> { Tuple.Create("YES", new Action(() => { _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength); ; ExecuteResetSettings(); _confirmationDialog.Hide(); })), Tuple.Create("[chighlight]NO", new Action(() => { _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength); _confirmationDialog.Hide(); })) });
         }
 
         private void ExecuteResetSettings()

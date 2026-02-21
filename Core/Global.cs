@@ -15,6 +15,7 @@ namespace ProjectVagabond
             TerminalBg = Palette_Black;
             MapBg = Palette_Black;
             GameTextColor = Palette_Sun;
+            EmphasisTextColor = Palette_DarkSun;
             HighlightTextColor = Palette_Fruit;
             DullTextColor = Palette_DarkestPale;
             ButtonHoverColor = Palette_DarkSun;
@@ -47,6 +48,7 @@ namespace ProjectVagabond
             ColorPercentageMax = Palette_Leaf;
 
             ColorNarration_Default = GameTextColor;
+            ColorNarration_Emphasis = EmphasisTextColor;
             ColorNarration_Highlight = HighlightTextColor;
             ColorNarration_Dull = DullTextColor;
             ColorNarration_Prefix = DullTextColor;
@@ -243,6 +245,7 @@ namespace ProjectVagabond
         public Color TerminalBg { get; private set; }
         public Color MapBg { get; private set; }
         public Color GameTextColor { get; private set; }
+        public Color EmphasisTextColor { get; private set; }
         public Color HighlightTextColor { get; private set; }
         public Color DullTextColor { get; private set; }
         public Color ButtonHoverColor { get; private set; }
@@ -275,6 +278,7 @@ namespace ProjectVagabond
         public Color ColorPercentageMax { get; private set; }
 
         public Color ColorNarration_Default { get; private set; }
+        public Color ColorNarration_Emphasis { get; private set; }
         public Color ColorNarration_Highlight { get; private set; }
         public Color ColorNarration_Dull { get; private set; }
         public Color ColorNarration_Prefix { get; private set; }
@@ -329,6 +333,7 @@ namespace ProjectVagabond
                 }
 
                 if (lowerTag == "cdefault") return ColorNarration_Default;
+                if (lowerTag == "cemphasis") return ColorNarration_Emphasis;
                 if (lowerTag == "chighlight") return ColorNarration_Highlight;
                 if (lowerTag == "cdull") return ColorNarration_Dull;
                 if (lowerTag == "cprefix") return ColorNarration_Prefix;
