@@ -732,7 +732,9 @@ namespace ProjectVagabond.Scenes
         {
             if (_currentMap == null) return;
 
-            var cameraTransform = Matrix.CreateTranslation(_cameraOffset.X, _cameraOffset.Y, 0);
+            // Snap camera offset to nearest pixel to prevent subpixel artifacts on pixel art
+            var snappedCameraOffset = new Vector2(MathF.Round(_cameraOffset.X), MathF.Round(_cameraOffset.Y));
+            var cameraTransform = Matrix.CreateTranslation(snappedCameraOffset.X, snappedCameraOffset.Y, 0);
             var finalTransform = cameraTransform * transform;
 
             float mapViewHeight = (Global.VIRTUAL_HEIGHT - SplitMapHudRenderer.HUD_HEIGHT) + _hudSlideOffset;
@@ -784,7 +786,7 @@ namespace ProjectVagabond.Scenes
             }
 
             _playerIcon.Draw(spriteBatch, (float)gameTime.ElapsedGameTime.TotalSeconds);
-            _birdManager.Draw(spriteBatch, _cameraOffset);
+            _birdManager.Draw(spriteBatch, snappedCameraOffset);
 
             spriteBatch.End();
 
@@ -820,7 +822,7 @@ namespace ProjectVagabond.Scenes
                     {
                         var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
                         var nodeTextSize = secondaryFont.MeasureString(nodeText);
-                        Vector2 nodeScreenPos = hoveredNode.Position + _cameraOffset;
+                        Vector2 nodeScreenPos = hoveredNode.Position + snappedCameraOffset;
                         float textX = nodeScreenPos.X - (nodeTextSize.Width / 2f);
                         float textY = nodeScreenPos.Y - 16f - nodeTextSize.Height - 4f;
                         var textPosition = new Vector2(textX, textY);
