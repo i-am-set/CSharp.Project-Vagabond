@@ -476,16 +476,8 @@ namespace ProjectVagabond.Scenes
 
                 if (_inputManager.CurrentInputDevice != InputDeviceType.Mouse)
                 {
-                    // Let the active control try to handle the input first (e.g. Slider Left/Right, Toggle Confirm)
-                    bool inputConsumed = _navigationGroup.HandleInput(_inputManager);
-
-                    // If the control didn't consume the input, perform scene-level navigation
-                    if (!inputConsumed)
-                    {
-                        if (_inputManager.NavigateUp) _navigationGroup.Navigate(NavigationDirection.Up);
-                        if (_inputManager.NavigateDown) _navigationGroup.Navigate(NavigationDirection.Down);
-                        if (_inputManager.Back) AttemptToGoBack();
-                    }
+                    _navigationGroup.UpdateInput(_inputManager);
+                    if (_inputManager.Back) AttemptToGoBack();
                 }
             }
 
@@ -501,7 +493,6 @@ namespace ProjectVagabond.Scenes
             _previousMouseState = currentMouseState;
             base.Update(gameTime);
         }
-
 
         private void OnNavigationSelectionChanged(ISelectable selection)
         {

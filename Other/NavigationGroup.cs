@@ -176,6 +176,20 @@ namespace ProjectVagabond.UI
             }
         }
 
+        public void UpdateInput(InputManager input)
+        {
+            if (input.CurrentInputDevice == InputDeviceType.Mouse) return;
+
+            if (HandleInput(input)) return;
+
+            if (input.NavigateUp) Navigate(NavigationDirection.Up);
+            if (input.NavigateDown) Navigate(NavigationDirection.Down);
+            if (input.NavigateLeft) Navigate(NavigationDirection.Left);
+            if (input.NavigateRight) Navigate(NavigationDirection.Right);
+
+            if (input.Confirm) SubmitCurrent();
+        }
+
         public void SubmitCurrent()
         {
             CurrentSelection?.OnSubmit();

@@ -185,13 +185,7 @@ namespace ProjectVagabond.UI
                     {
                         _navigationGroup.SelectFirst();
                     }
-
-                    if (_inputManager.NavigateUp) _navigationGroup.Navigate(NavigationDirection.Up);
-                    if (_inputManager.NavigateDown) _navigationGroup.Navigate(NavigationDirection.Down);
-                    if (_inputManager.NavigateLeft) _navigationGroup.Navigate(NavigationDirection.Left);
-                    if (_inputManager.NavigateRight) _navigationGroup.Navigate(NavigationDirection.Right);
-
-                    if (_inputManager.Confirm) _navigationGroup.SubmitCurrent();
+                    _navigationGroup.UpdateInput(_inputManager);
                 }
             }
 
