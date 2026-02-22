@@ -28,7 +28,7 @@ namespace ProjectVagabond
         public bool MouseMovedThisFrame { get; private set; }
 
         // Threshold for detecting ANY movement (responsiveness)
-        private const float MOUSE_MOVE_THRESHOLD = 0.5f;
+        private const float MOUSE_MOVE_THRESHOLD = 2.0f;
         // Threshold for switching FROM Gamepad/Keyboard TO Mouse (drift prevention)
         private const float MOUSE_WAKE_THRESHOLD = 10.0f;
 
@@ -42,6 +42,7 @@ namespace ProjectVagabond
         public bool Back { get; private set; }
 
         private bool _mouseClickConsumed;
+        private bool _ignoreMouseUntilMovement;
 
         public void Update()
         {
@@ -84,38 +85,18 @@ namespace ProjectVagabond
 
         private void DetectInputDevice(float mouseDistance)
         {
-            // Only switch to mouse if clicked OR moved significantly (to avoid drift waking it up)
-            // If already mouse, keep it mouse even on small movements
             bool isSignificantMovement = mouseDistance > MOUSE_WAKE_THRESHOLD;
             bool isClick = _currentMouseState.LeftButton == ButtonState.Pressed || _currentMouseState.RightButton == ButtonState.Pressed;
 
-            if (CurrentInputDevice != InputDeviceType.Mouse)
+            // Check for Keyboard activity
+            bool keyboardActive = false;
+            if (_currentKeyboardState.GetPressedKeyCount() > 0 && _currentKeyboardState != _previousKeyboardState)
             {
-                if (isSignificantMovement || isClick)
-                {
-                    CurrentInputDevice = InputDeviceType.Mouse;
-                    IsMouseActive = true;
-                }
-            }
-            else
-            {
-                // If already mouse, any input keeps it mouse (implicit)
-                if (MouseMovedThisFrame || isClick)
-                {
-                    CurrentInputDevice = InputDeviceType.Mouse;
-                    IsMouseActive = true;
-                }
+                keyboardActive = true;
             }
 
-            if (_currentKeyboardState.GetPressedKeyCount() > 0)
-            {
-                if (_currentKeyboardState != _previousKeyboardState)
-                {
-                    CurrentInputDevice = InputDeviceType.Keyboard;
-                    IsMouseActive = false;
-                }
-            }
-
+            // Check for Gamepad activity
+            bool gamepadActive = false;
             if (_currentGamePadState.IsConnected && _currentGamePadState.PacketNumber != _previousGamePadState.PacketNumber)
             {
                 bool buttonPressed = _currentGamePadState.Buttons.A == ButtonState.Pressed ||
@@ -131,8 +112,55 @@ namespace ProjectVagabond
 
                 if (buttonPressed || stickMoved)
                 {
-                    CurrentInputDevice = InputDeviceType.Gamepad;
-                    IsMouseActive = false;
+                    gamepadActive = true;
+                }
+            }
+
+            // Prioritize explicit controller/keyboard input
+            if (keyboardActive)
+            {
+                CurrentInputDevice = InputDeviceType.Keyboard;
+                IsMouseActive = false;
+                _ignoreMouseUntilMovement = true;
+            }
+            else if (gamepadActive)
+            {
+                CurrentInputDevice = InputDeviceType.Gamepad;
+                IsMouseActive = false;
+                _ignoreMouseUntilMovement = true;
+            }
+            else
+            {
+                // Only switch back to mouse if we overcome the ignore flag
+                if (_ignoreMouseUntilMovement)
+                {
+                    if (isSignificantMovement || isClick)
+                    {
+                        _ignoreMouseUntilMovement = false;
+                        CurrentInputDevice = InputDeviceType.Mouse;
+                        IsMouseActive = true;
+                    }
+                }
+                else
+                {
+                    // Normal mouse behavior
+                    if (CurrentInputDevice != InputDeviceType.Mouse)
+                    {
+                        if (isSignificantMovement || isClick)
+                        {
+                            CurrentInputDevice = InputDeviceType.Mouse;
+                            IsMouseActive = true;
+                        }
+                    }
+                    else
+                    {
+                        // If already mouse, keep it mouse on any movement
+                        if (MouseMovedThisFrame || isClick)
+                        {
+                            CurrentInputDevice = InputDeviceType.Mouse;
+                            IsMouseActive = true;
+                        }
+                    }
                 }
             }
         }
