@@ -128,59 +128,46 @@ namespace ProjectVagabond.UI
 
             var currentCenter = new Vector2(current.Bounds.Center.X, current.Bounds.Center.Y);
 
-            ISelectable bestCandidate = null;
-            float bestScore = float.MaxValue;
+            // Define direction vector
+            Vector2 dirVector = Vector2.Zero;
+            switch (direction)
+            {
+                case NavigationDirection.Up:
+                    dirVector = new Vector2(0, -1);
+                    break;
+                case NavigationDirection.Down:
+                    dirVector = new Vector2(0, 1);
+                    break;
+                case NavigationDirection.Left:
+                    dirVector = new Vector2(-1, 0);
+                    break;
+                case NavigationDirection.Right:
+                    dirVector = new Vector2(1, 0);
+                    break;
+            }
 
-            // Weight to penalize the secondary axis (prevent diagonal jumps)
-            const float secondaryAxisWeight = 3.0f;
+            ISelectable bestCandidate = null;
+            float bestDistSq = float.MaxValue;
+            const float coneThreshold = 0.707f; // Approx 45 degrees
 
             foreach (var item in _items)
             {
                 if (item == current || !item.IsEnabled) continue;
 
                 var itemCenter = new Vector2(item.Bounds.Center.X, item.Bounds.Center.Y);
-                bool isCandidate = false;
+                Vector2 toItem = itemCenter - currentCenter;
+                float distSq = toItem.LengthSquared();
 
-                // Filter candidates based on direction relative to current center
-                switch (direction)
+                if (distSq < 0.001f) continue;
+
+                Vector2 toItemNorm = Vector2.Normalize(toItem);
+                float dot = Vector2.Dot(dirVector, toItemNorm);
+
+                if (dot >= coneThreshold)
                 {
-                    case NavigationDirection.Up:
-                        isCandidate = itemCenter.Y < currentCenter.Y;
-                        break;
-                    case NavigationDirection.Down:
-                        isCandidate = itemCenter.Y > currentCenter.Y;
-                        break;
-                    case NavigationDirection.Left:
-                        isCandidate = itemCenter.X < currentCenter.X;
-                        break;
-                    case NavigationDirection.Right:
-                        isCandidate = itemCenter.X > currentCenter.X;
-                        break;
-                }
-
-                if (isCandidate)
-                {
-                    float diffX = Math.Abs(itemCenter.X - currentCenter.X);
-                    float diffY = Math.Abs(itemCenter.Y - currentCenter.Y);
-                    float score = float.MaxValue;
-
-                    switch (direction)
+                    if (distSq < bestDistSq)
                     {
-                        case NavigationDirection.Up:
-                        case NavigationDirection.Down:
-                            // Primary: Y, Secondary: X
-                            score = diffY + (diffX * secondaryAxisWeight);
-                            break;
-                        case NavigationDirection.Left:
-                        case NavigationDirection.Right:
-                            // Primary: X, Secondary: Y
-                            score = diffX + (diffY * secondaryAxisWeight);
-                            break;
-                    }
-
-                    if (score < bestScore)
-                    {
-                        bestScore = score;
+                        bestDistSq = distSq;
                         bestCandidate = item;
                     }
                 }
@@ -193,7 +180,6 @@ namespace ProjectVagabond.UI
             else if (_wrapNavigation)
             {
                 // Wrap logic: Find the item furthest in the opposite direction
-
                 bestCandidate = null;
                 float bestVal = 0;
                 bool first = true;
