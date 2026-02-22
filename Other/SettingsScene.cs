@@ -84,6 +84,7 @@ namespace ProjectVagabond.Scenes
             RefreshUIFromSettings();
 
             EventBus.Subscribe<GameEvents.UIThemeOrResolutionChanged>(OnResolutionChanged);
+            _navigationGroup.OnSelectionChanged += OnNavigationSelectionChanged;
 
             foreach (var item in _settingControls) item.ResetAnimationState();
             foreach (var item in _footerButtons) item.ResetAnimationState();
@@ -92,7 +93,6 @@ namespace ProjectVagabond.Scenes
             if (_inputManager.CurrentInputDevice != InputDeviceType.Mouse)
             {
                 _navigationGroup.SelectFirst();
-                EnsureSelectionVisible();
             }
             else
             {
@@ -470,21 +470,11 @@ namespace ProjectVagabond.Scenes
                 );
 
                 // Pass true to deselect if mouse is active but not hovering anything
-                _navigationGroup.Update(virtualMouseState, deselectIfNoHover: _inputManager.CurrentInputDevice == InputDeviceType.Mouse);
+                _navigationGroup.Update(_inputManager, virtualMouseState, deselectIfNoHover: true);
 
                 if (_inputManager.CurrentInputDevice != InputDeviceType.Mouse)
                 {
-                    if (_inputManager.NavigateUp)
-                    {
-                        _navigationGroup.Navigate(-1);
-                        EnsureSelectionVisible();
-                    }
-                    if (_inputManager.NavigateDown)
-                    {
-                        _navigationGroup.Navigate(1);
-                        EnsureSelectionVisible();
-                    }
-                    if (_inputManager.Confirm) _navigationGroup.SubmitCurrent();
+                    _navigationGroup.HandleInput(_inputManager);
                     if (_inputManager.Back) AttemptToGoBack();
 
                     if (_navigationGroup.CurrentSelection is ISettingControl settingControl)
@@ -506,6 +496,29 @@ namespace ProjectVagabond.Scenes
 
             _previousMouseState = currentMouseState;
             base.Update(gameTime);
+        }
+
+        private void OnNavigationSelectionChanged(ISelectable selection)
+        {
+            if (selection == null || !(selection is ISettingControl)) return;
+
+            int index = _settingControls.IndexOf((ISettingControl)selection);
+            if (index == -1) return;
+
+            float itemTop = index * ITEM_VERTICAL_SPACING;
+            float itemBottom = itemTop + ITEM_VERTICAL_SPACING;
+
+            if (itemTop < _targetScrollOffset)
+            {
+                _targetScrollOffset = itemTop;
+            }
+            else if (itemBottom > _targetScrollOffset + SCROLL_VIEW_HEIGHT)
+            {
+                _targetScrollOffset = itemBottom - SCROLL_VIEW_HEIGHT;
+            }
+
+            float maxScroll = Math.Max(0, (_settingControls.Count * ITEM_VERTICAL_SPACING) - SCROLL_VIEW_HEIGHT);
+            _targetScrollOffset = Math.Clamp(_targetScrollOffset, 0, maxScroll);
         }
 
         private void EnsureSelectionVisible()

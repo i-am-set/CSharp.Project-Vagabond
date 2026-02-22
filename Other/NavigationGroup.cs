@@ -1,6 +1,8 @@
 ﻿using Microsoft.Xna.Framework.Input;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using ProjectVagabond;
 
 namespace ProjectVagabond.UI
 {
@@ -10,7 +12,10 @@ namespace ProjectVagabond.UI
         private int _currentIndex = -1;
         private bool _wrapNavigation = true;
 
+        public event Action<ISelectable> OnSelectionChanged;
+
         public ISelectable CurrentSelection => (_currentIndex >= 0 && _currentIndex < _items.Count) ? _items[_currentIndex] : null;
+        public bool IsVertical { get; set; } = true;
 
         public NavigationGroup(bool wrapNavigation = true)
         {
@@ -54,6 +59,8 @@ namespace ProjectVagabond.UI
             _currentIndex = index;
             _items[_currentIndex].IsSelected = true;
             _items[_currentIndex].OnSelect();
+
+            OnSelectionChanged?.Invoke(_items[_currentIndex]);
         }
 
         public void SelectFirst()
@@ -121,12 +128,17 @@ namespace ProjectVagabond.UI
             }
         }
 
-        public void Update(MouseState mouseState, bool deselectIfNoHover = false)
+        public void Update(InputManager inputManager, MouseState? mouseState = null, bool deselectIfNoHover = false)
         {
+            if (inputManager.CurrentInputDevice != InputDeviceType.Mouse)
+                return;
+
+            MouseState currentMouseState = mouseState ?? inputManager.GetEffectiveMouseState();
             bool foundHover = false;
+
             for (int i = 0; i < _items.Count; i++)
             {
-                if (_items[i].IsEnabled && _items[i].Bounds.Contains(mouseState.Position))
+                if (_items[i].IsEnabled && _items[i].Bounds.Contains(currentMouseState.Position))
                 {
                     Select(i);
                     foundHover = true;
@@ -138,6 +150,24 @@ namespace ProjectVagabond.UI
             {
                 DeselectAll();
             }
+        }
+
+        public void HandleInput(InputManager inputManager)
+        {
+            if (inputManager.CurrentInputDevice == InputDeviceType.Mouse) return;
+
+            if (IsVertical)
+            {
+                if (inputManager.NavigateUp) Navigate(-1);
+                if (inputManager.NavigateDown) Navigate(1);
+            }
+            else
+            {
+                if (inputManager.NavigateLeft) Navigate(-1);
+                if (inputManager.NavigateRight) Navigate(1);
+            }
+
+            if (inputManager.Confirm) SubmitCurrent();
         }
 
         public void SubmitCurrent()
