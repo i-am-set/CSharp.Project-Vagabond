@@ -308,7 +308,7 @@ namespace ProjectVagabond
             ServiceLocator.Register<SpriteBatch>(_spriteBatch);
 
             try { _retroEffect = Content.Load<Effect>("Shaders/RetroShader"); }
-            catch (Exception ex) { Debug.WriteLine($"[FATAL ERROR] Could not load CRT Shader: {ex.Message}"); _retroEffect = null; }
+            catch (Exception ex) { Debug.WriteLine($"[FATAL ERROR] Could not load Retro Shader: {ex.Message}"); _retroEffect = null; }
 
             try { _defaultFont = Content.Load<BitmapFont>("Fonts/Px437_IBM_BIOS"); ServiceLocator.Register<BitmapFont>(_defaultFont); }
             catch { throw new Exception("Please add a BitmapFont to your 'Content/Fonts' folder"); }
@@ -597,8 +597,8 @@ namespace ProjectVagabond
                 _retroEffect.Parameters["ScreenResolution"]?.SetValue(new Vector2(GraphicsDevice.PresentationParameters.BackBufferWidth, GraphicsDevice.PresentationParameters.BackBufferHeight));
                 _retroEffect.Parameters["VirtualResolution"]?.SetValue(new Vector2(Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT));
                 _retroEffect.Parameters["Gamma"]?.SetValue(_settings.Gamma);
-                _retroEffect.Parameters["Saturation"]?.SetValue(_global.CrtSaturation);
-                _retroEffect.Parameters["Vibrance"]?.SetValue(_global.CrtVibrance);
+                _retroEffect.Parameters["Saturation"]?.SetValue(_global.Saturation);
+                _retroEffect.Parameters["Vibrance"]?.SetValue(_global.Vibrance);
                 _retroEffect.Parameters["EnableJitter"]?.SetValue(_settings.EnableGlitchEffects ? 1.0f : 0.0f);
 
                 // Pass the actual render scale and offset to the shader

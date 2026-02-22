@@ -146,8 +146,8 @@ namespace ProjectVagabond
         public float BackgroundDistortionSpeed { get; set; } = 0.2f;
         public float BackgroundNoiseThreshold { get; set; } = 0.01f;
 
-        public float CrtSaturation { get; set; } = 1.1f;
-        public float CrtVibrance { get; set; } = 0.15f;
+        public float Saturation { get; set; } = 1.1f;
+        public float Vibrance { get; set; } = 0.15f;
 
         public float ProtectAnimationSpeed { get; set; } = 1.0f;
         public int ProtectDamageFrameIndex { get; set; } = 0;
