@@ -1458,18 +1458,6 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/MoveAnimationSpriteSheets/sta_stall.png;Sprites/MoveAnimationSpriteSheets/sta_stall
 
-#begin Sprites/Particles/ember_particle.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/Particles/ember_particle.png
-
 #begin Sprites/Player/cat_portraits_32x32_altsprites.png
 /importer:TextureImporter
 /processor:TextureProcessor
