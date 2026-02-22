@@ -129,10 +129,7 @@ namespace ProjectVagabond.UI
 
         public void Update(InputManager inputManager, MouseState? mouseState = null, bool deselectIfNoHover = false)
         {
-            if (inputManager.CurrentInputDevice != InputDeviceType.Mouse)
-                return;
-
-            if (!inputManager.MouseMovedThisFrame)
+            if (inputManager.CurrentInputDevice != InputDeviceType.Mouse || !inputManager.MouseMovedThisFrame)
                 return;
 
             MouseState currentMouseState = mouseState ?? inputManager.GetEffectiveMouseState();
@@ -144,7 +141,7 @@ namespace ProjectVagabond.UI
                 {
                     Select(i);
                     foundHover = true;
-                    break; // Found the hovered item, stop looking
+                    break;
                 }
             }
 

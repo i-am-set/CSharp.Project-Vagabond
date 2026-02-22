@@ -27,7 +27,7 @@ namespace ProjectVagabond
         public bool IsMouseActive { get; private set; } = true;
         public bool MouseMovedThisFrame { get; private set; }
 
-        private const float MOUSE_MOVE_THRESHOLD = 2.0f;
+        private const float MOUSE_MOVE_THRESHOLD = 15.0f;
         private const float STICK_THRESHOLD = 0.5f;
 
         public bool NavigateUp { get; private set; }
