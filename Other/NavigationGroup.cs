@@ -100,7 +100,10 @@ namespace ProjectVagabond.UI
             var currentCenter = new Vector2(current.Bounds.Center.X, current.Bounds.Center.Y);
 
             ISelectable bestCandidate = null;
-            float bestDistance = float.MaxValue;
+            float bestScore = float.MaxValue;
+
+            // Weight to penalize the secondary axis (prevent diagonal jumps)
+            const float secondaryAxisWeight = 3.0f;
 
             foreach (var item in _items)
             {
@@ -128,10 +131,27 @@ namespace ProjectVagabond.UI
 
                 if (isCandidate)
                 {
-                    float distance = Vector2.Distance(currentCenter, itemCenter);
-                    if (distance < bestDistance)
+                    float diffX = Math.Abs(itemCenter.X - currentCenter.X);
+                    float diffY = Math.Abs(itemCenter.Y - currentCenter.Y);
+                    float score = float.MaxValue;
+
+                    switch (direction)
                     {
-                        bestDistance = distance;
+                        case NavigationDirection.Up:
+                        case NavigationDirection.Down:
+                            // Primary: Y, Secondary: X
+                            score = diffY + (diffX * secondaryAxisWeight);
+                            break;
+                        case NavigationDirection.Left:
+                        case NavigationDirection.Right:
+                            // Primary: X, Secondary: Y
+                            score = diffX + (diffY * secondaryAxisWeight);
+                            break;
+                    }
+
+                    if (score < bestScore)
+                    {
+                        bestScore = score;
                         bestCandidate = item;
                     }
                 }
