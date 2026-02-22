@@ -72,14 +72,16 @@ namespace ProjectVagabond.UI
         public string GetCurrentValueAsString() => _currentValue ? "ON" : "OFF";
         public string GetSavedValueAsString() => _savedValue ? "ON" : "OFF";
 
-        public void HandleInput(Keys key)
+        public bool HandleInput(InputManager input)
         {
-            if (!IsEnabled) return;
-            if (key == Keys.Left || key == Keys.Right)
+            if (!IsEnabled) return false;
+            if (input.NavigateLeft || input.NavigateRight || input.Confirm)
             {
                 _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
                 ToggleValue();
+                return true;
             }
+            return false;
         }
 
         private void CalculateBounds(Vector2 position, BitmapFont labelFont, BitmapFont valueFont)

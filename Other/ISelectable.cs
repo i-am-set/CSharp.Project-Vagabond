@@ -11,5 +11,6 @@ namespace ProjectVagabond.UI
         void OnSelect();
         void OnDeselect();
         void OnSubmit();
+        bool HandleInput(InputManager input);
     }
 }

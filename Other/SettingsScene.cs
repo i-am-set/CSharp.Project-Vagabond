@@ -474,16 +474,15 @@ namespace ProjectVagabond.Scenes
 
                 if (_inputManager.CurrentInputDevice != InputDeviceType.Mouse)
                 {
-                    if (_inputManager.NavigateUp) _navigationGroup.Navigate(-1);
-                    if (_inputManager.NavigateDown) _navigationGroup.Navigate(1);
-                    if (_inputManager.Confirm) _navigationGroup.SubmitCurrent();
+                    // Let the active control try to handle the input first (e.g. Slider Left/Right, Toggle Confirm)
+                    bool inputConsumed = _navigationGroup.HandleInput(_inputManager);
 
-                    if (_inputManager.Back) AttemptToGoBack();
-
-                    if (_navigationGroup.CurrentSelection is ISettingControl settingControl)
+                    // If the control didn't consume the input, perform scene-level navigation
+                    if (!inputConsumed)
                     {
-                        if (_inputManager.NavigateLeft) settingControl.HandleInput(Keys.Left);
-                        if (_inputManager.NavigateRight) settingControl.HandleInput(Keys.Right);
+                        if (_inputManager.NavigateUp) _navigationGroup.Navigate(-1);
+                        if (_inputManager.NavigateDown) _navigationGroup.Navigate(1);
+                        if (_inputManager.Back) AttemptToGoBack();
                     }
                 }
             }

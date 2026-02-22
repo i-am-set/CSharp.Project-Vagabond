@@ -88,19 +88,22 @@ namespace ProjectVagabond.UI
             }
         }
 
-        public void HandleInput(Keys key)
+        public bool HandleInput(InputManager input)
         {
-            if (!IsEnabled) return;
-            if (key == Keys.Left)
+            if (!IsEnabled) return false;
+            if (input.NavigateLeft)
             {
                 _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
                 SetValue(_currentValue - _step);
+                return true;
             }
-            else if (key == Keys.Right)
+            else if (input.NavigateRight)
             {
                 _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
                 SetValue(_currentValue + _step);
+                return true;
             }
+            return false;
         }
 
         private void CalculateBounds(Vector2 position, BitmapFont labelFont)

@@ -95,19 +95,22 @@ namespace ProjectVagabond.UI
         public string GetCurrentValueAsString() => GetValueAsString(_currentValue);
         public string GetSavedValueAsString() => GetValueAsString(_savedValue);
 
-        public void HandleInput(Keys key)
+        public bool HandleInput(InputManager input)
         {
-            if (!IsEnabled) return;
-            if (key == Keys.Left)
+            if (!IsEnabled) return false;
+            if (input.NavigateLeft)
             {
                 _hapticsManager.TriggerCompoundShake(0.5f);
                 Decrement();
+                return true;
             }
-            if (key == Keys.Right || key == Keys.Enter)
+            if (input.NavigateRight || input.Confirm)
             {
                 _hapticsManager.TriggerCompoundShake(0.5f);
                 Increment();
+                return true;
             }
+            return false;
         }
 
         private void CalculateBounds(Vector2 position, BitmapFont labelFont, BitmapFont valueFont)

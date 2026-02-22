@@ -171,6 +171,17 @@ namespace ProjectVagabond.UI
             TriggerClick();
         }
 
+        public virtual bool HandleInput(InputManager input)
+        {
+            if (!IsEnabled) return false;
+            if (input.Confirm)
+            {
+                TriggerClick();
+                return true;
+            }
+            return false;
+        }
+
         public void PlayEntrance(float delay)
         {
             _isEntering = true;

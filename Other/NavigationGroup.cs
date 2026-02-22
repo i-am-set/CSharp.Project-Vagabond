@@ -155,5 +155,14 @@ namespace ProjectVagabond.UI
         {
             CurrentSelection?.OnSubmit();
         }
+
+        public bool HandleInput(InputManager input)
+        {
+            if (CurrentSelection != null && CurrentSelection.IsEnabled)
+            {
+                return CurrentSelection.HandleInput(input);
+            }
+            return false;
+        }
     }
 }
