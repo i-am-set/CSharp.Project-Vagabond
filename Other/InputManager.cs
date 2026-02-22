@@ -24,6 +24,7 @@ namespace ProjectVagabond
 
         public InputDeviceType CurrentInputDevice { get; private set; } = InputDeviceType.Mouse;
         public bool IsMouseActive { get; private set; } = true;
+        public bool MouseMovedThisFrame { get; private set; }
 
         private const float MOUSE_MOVE_THRESHOLD = 2.0f;
         private const float STICK_THRESHOLD = 0.5f;
@@ -46,6 +47,9 @@ namespace ProjectVagabond
             _previousMouseState = _currentMouseState;
             _currentMouseState = Mouse.GetState();
 
+            float mouseDistance = Vector2.Distance(new Vector2(_currentMouseState.X, _currentMouseState.Y), new Vector2(_previousMouseState.X, _previousMouseState.Y));
+            MouseMovedThisFrame = mouseDistance > MOUSE_MOVE_THRESHOLD;
+
             DetectInputDevice();
             UpdateAbstractInputs();
         }
@@ -63,7 +67,7 @@ namespace ProjectVagabond
         private void DetectInputDevice()
         {
             // Check for Mouse Movement or Clicks
-            if (Vector2.Distance(new Vector2(_currentMouseState.X, _currentMouseState.Y), new Vector2(_previousMouseState.X, _previousMouseState.Y)) > MOUSE_MOVE_THRESHOLD ||
+            if (MouseMovedThisFrame ||
                 _currentMouseState.LeftButton == ButtonState.Pressed ||
                 _currentMouseState.RightButton == ButtonState.Pressed)
             {

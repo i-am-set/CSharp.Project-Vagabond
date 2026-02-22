@@ -15,7 +15,6 @@ namespace ProjectVagabond.UI
         public event Action<ISelectable> OnSelectionChanged;
 
         public ISelectable CurrentSelection => (_currentIndex >= 0 && _currentIndex < _items.Count) ? _items[_currentIndex] : null;
-        public bool IsVertical { get; set; } = true;
 
         public NavigationGroup(bool wrapNavigation = true)
         {
@@ -133,6 +132,9 @@ namespace ProjectVagabond.UI
             if (inputManager.CurrentInputDevice != InputDeviceType.Mouse)
                 return;
 
+            if (!inputManager.MouseMovedThisFrame)
+                return;
+
             MouseState currentMouseState = mouseState ?? inputManager.GetEffectiveMouseState();
             bool foundHover = false;
 
@@ -150,24 +152,6 @@ namespace ProjectVagabond.UI
             {
                 DeselectAll();
             }
-        }
-
-        public void HandleInput(InputManager inputManager)
-        {
-            if (inputManager.CurrentInputDevice == InputDeviceType.Mouse) return;
-
-            if (IsVertical)
-            {
-                if (inputManager.NavigateUp) Navigate(-1);
-                if (inputManager.NavigateDown) Navigate(1);
-            }
-            else
-            {
-                if (inputManager.NavigateLeft) Navigate(-1);
-                if (inputManager.NavigateRight) Navigate(1);
-            }
-
-            if (inputManager.Confirm) SubmitCurrent();
         }
 
         public void SubmitCurrent()
