@@ -67,7 +67,6 @@ namespace ProjectVagabond.Scenes
             _inputManager = ServiceLocator.Get<InputManager>();
             _core = ServiceLocator.Get<Core>();
             _navigationGroup = new NavigationGroup(wrapNavigation: false);
-            _navigationGroup.IsHorizontalLayout = false;
         }
 
         public override Rectangle GetAnimatedBounds()
@@ -250,6 +249,7 @@ namespace ProjectVagabond.Scenes
             _navigationGroup.Add(resetButton);
 
             _listViewPort = new Rectangle(SETTINGS_PANEL_X - 10, SETTINGS_START_Y - 2, SETTINGS_PANEL_WIDTH + 30, SCROLL_VIEW_HEIGHT + 4);
+            _navigationGroup.ClipRectangle = _listViewPort;
 
             CalculateButtonLayout();
             applyButton.IsEnabled = IsDirty();
@@ -440,14 +440,12 @@ namespace ProjectVagabond.Scenes
 
             // --- 1. Update Controls (Position & Bounds) ---
             // We update ALL controls so their bounds are correct for the navigation group.
-            // Invisible controls get an off-screen position so they can't be hovered.
             for (int i = 0; i < _settingControls.Count; i++)
             {
                 var item = _settingControls[i];
                 float itemY = SETTINGS_START_Y + (i * ITEM_VERTICAL_SPACING) - _scrollOffset;
-                bool isVisible = itemY >= SETTINGS_START_Y - ITEM_VERTICAL_SPACING && itemY < SETTINGS_START_Y + SCROLL_VIEW_HEIGHT;
 
-                Vector2 updatePos = isVisible ? new Vector2(SETTINGS_PANEL_X, itemY) : new Vector2(-9999, -9999);
+                Vector2 updatePos = new Vector2(SETTINGS_PANEL_X, itemY);
 
                 if (_currentInputDelay <= 0)
                 {

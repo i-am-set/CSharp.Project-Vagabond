@@ -77,7 +77,6 @@ namespace ProjectVagabond.UI
             }
 
             _isHorizontalLayout = buttonActions.Count == 2;
-            _navigationGroup.IsHorizontalLayout = _isHorizontalLayout;
 
             // --- Pre-calculate button geometries to determine layout height ---
             var buttonGeometries = new List<(string text, Color? color, Action action, int width, int height)>();

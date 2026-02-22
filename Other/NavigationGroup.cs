@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework.Input;
+﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,7 +21,7 @@ namespace ProjectVagabond.UI
         private int _currentIndex = -1;
         private bool _wrapNavigation = true;
 
-        public bool IsHorizontalLayout { get; set; } = false;
+        public Rectangle? ClipRectangle { get; set; }
 
         public event Action<ISelectable> OnSelectionChanged;
 
@@ -88,66 +89,119 @@ namespace ProjectVagabond.UI
         {
             if (_items.Count == 0) return;
 
-            int delta = 0;
-
-            if (IsHorizontalLayout)
+            // Fallback: If nothing is selected, select the first enabled item
+            if (_currentIndex == -1 || CurrentSelection == null)
             {
-                if (direction == NavigationDirection.Left) delta = -1;
-                if (direction == NavigationDirection.Right) delta = 1;
-            }
-            else
-            {
-                if (direction == NavigationDirection.Up) delta = -1;
-                if (direction == NavigationDirection.Down) delta = 1;
-            }
-
-            if (delta == 0) return;
-
-            if (_currentIndex == -1)
-            {
-                int wakeUpIndex = -1;
-                if (delta > 0)
-                {
-                    for (int i = 0; i < _items.Count; i++)
-                    {
-                        if (_items[i].IsEnabled) { wakeUpIndex = i; break; }
-                    }
-                }
-                else
-                {
-                    for (int i = _items.Count - 1; i >= 0; i--)
-                    {
-                        if (_items[i].IsEnabled) { wakeUpIndex = i; break; }
-                    }
-                }
-
-                if (wakeUpIndex != -1) Select(wakeUpIndex);
+                SelectFirst();
                 return;
             }
 
-            int start = _currentIndex;
-            int next = start;
-            int count = _items.Count;
+            var current = CurrentSelection;
+            var currentCenter = new Vector2(current.Bounds.Center.X, current.Bounds.Center.Y);
 
-            for (int i = 0; i < count; i++)
+            ISelectable bestCandidate = null;
+            float bestDistance = float.MaxValue;
+
+            foreach (var item in _items)
             {
-                next += delta;
+                if (item == current || !item.IsEnabled) continue;
 
-                if (_wrapNavigation)
+                var itemCenter = new Vector2(item.Bounds.Center.X, item.Bounds.Center.Y);
+                bool isCandidate = false;
+
+                // Filter candidates based on direction relative to current center
+                switch (direction)
                 {
-                    if (next >= count) next = 0;
-                    if (next < 0) next = count - 1;
-                }
-                else
-                {
-                    if (next >= count) return;
-                    if (next < 0) return;
+                    case NavigationDirection.Up:
+                        isCandidate = itemCenter.Y < currentCenter.Y;
+                        break;
+                    case NavigationDirection.Down:
+                        isCandidate = itemCenter.Y > currentCenter.Y;
+                        break;
+                    case NavigationDirection.Left:
+                        isCandidate = itemCenter.X < currentCenter.X;
+                        break;
+                    case NavigationDirection.Right:
+                        isCandidate = itemCenter.X > currentCenter.X;
+                        break;
                 }
 
-                if (_items[next].IsEnabled)
+                if (isCandidate)
                 {
-                    Select(next);
-                    return;
+                    float distance = Vector2.Distance(currentCenter, itemCenter);
+                    if (distance < bestDistance)
+                    {
+                        bestDistance = distance;
+                        bestCandidate = item;
+                    }
+                }
+            }
+
+            if (bestCandidate != null)
+            {
+                Select(_items.IndexOf(bestCandidate));
+            }
+            else if (_wrapNavigation)
+            {
+                // Wrap logic: Find the item furthest in the opposite direction
+
+                bestCandidate = null;
+                float bestVal = 0;
+                bool first = true;
+
+                foreach (var item in _items)
+                {
+                    if (!item.IsEnabled) continue;
+                    var c = new Vector2(item.Bounds.Center.X, item.Bounds.Center.Y);
+
+                    float val = 0;
+                    bool better = false;
+
+                    switch (direction)
+                    {
+                        case NavigationDirection.Up:
+                            // Wrap Up -> Go to bottom (Max Y)
+                            val = c.Y;
+                            better = first || val > bestVal;
+                            break;
+                        case NavigationDirection.Down:
+                            // Wrap Down -> Go to top (Min Y)
+                            val = c.Y;
+                            better = first || val < bestVal;
+                            break;
+                        case NavigationDirection.Left:
+                            // Wrap Left -> Go to right (Max X)
+                            val = c.X;
+                            better = first || val > bestVal;
+                            break;
+                        case NavigationDirection.Right:
+                            // Wrap Right -> Go to left (Min X)
+                            val = c.X;
+                            better = first || val < bestVal;
+                            break;
+                    }
+
+                    if (better)
+                    {
+                        bestVal = val;
+                        bestCandidate = item;
+                        first = false;
+                    }
+                    else if (Math.Abs(val - bestVal) < 1.0f)
+                    {
+                        // Tie-breaker: closest in the other axis to current
+                        float dist = Vector2.Distance(c, currentCenter);
+                        float currentBestDist = Vector2.Distance(new Vector2(bestCandidate.Bounds.Center.X, bestCandidate.Bounds.Center.Y), currentCenter);
+                        if (dist < currentBestDist)
+                        {
+                            bestCandidate = item;
+                        }
+                    }
+                }
+
+                if (bestCandidate != null && bestCandidate != current)
+                {
+                    Select(_items.IndexOf(bestCandidate));
                 }
             }
         }
@@ -158,6 +212,16 @@ namespace ProjectVagabond.UI
                 return;
 
             MouseState currentMouseState = mouseState ?? inputManager.GetEffectiveMouseState();
+
+            if (ClipRectangle.HasValue && !ClipRectangle.Value.Contains(currentMouseState.Position))
+            {
+                if (deselectIfNoHover)
+                {
+                    DeselectAll();
+                }
+                return;
+            }
+
             bool foundHover = false;
 
             for (int i = 0; i < _items.Count; i++)
