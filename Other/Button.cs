@@ -29,6 +29,10 @@ namespace ProjectVagabond.UI
         public bool IsHovered { get; set; }
         public bool IsSelected { get; set; }
         public bool IsPressed => _isPressed;
+        public ISelectable? NeighborUp { get; set; }
+        public ISelectable? NeighborDown { get; set; }
+        public ISelectable? NeighborLeft { get; set; }
+        public ISelectable? NeighborRight { get; set; }
         public bool UseScreenCoordinates { get; set; } = false;
         public bool AlignLeft { get; set; } = false;
         public float OverflowScrollSpeed { get; set; } = 0f;

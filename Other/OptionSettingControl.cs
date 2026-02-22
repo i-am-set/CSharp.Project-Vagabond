@@ -21,6 +21,11 @@ namespace ProjectVagabond.UI
         public bool IsSelected { get; set; }
         public Rectangle Bounds { get; private set; }
 
+        public ISelectable? NeighborUp { get; set; }
+        public ISelectable? NeighborDown { get; set; }
+        public ISelectable? NeighborLeft { get; set; }
+        public ISelectable? NeighborRight { get; set; }
+
         private T _currentValue;
         private T _savedValue;
         private readonly Func<T> _getter;

@@ -8,6 +8,11 @@ namespace ProjectVagabond.UI
         bool IsEnabled { get; set; }
         Rectangle Bounds { get; }
 
+        ISelectable? NeighborUp { get; set; }
+        ISelectable? NeighborDown { get; set; }
+        ISelectable? NeighborLeft { get; set; }
+        ISelectable? NeighborRight { get; set; }
+
         void OnSelect();
         void OnDeselect();
         void OnSubmit();

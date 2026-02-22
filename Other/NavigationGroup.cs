@@ -97,6 +97,35 @@ namespace ProjectVagabond.UI
             }
 
             var current = CurrentSelection;
+
+            // Check for explicit overrides
+            ISelectable? explicitNeighbor = null;
+            switch (direction)
+            {
+                case NavigationDirection.Up:
+                    explicitNeighbor = current.NeighborUp;
+                    break;
+                case NavigationDirection.Down:
+                    explicitNeighbor = current.NeighborDown;
+                    break;
+                case NavigationDirection.Left:
+                    explicitNeighbor = current.NeighborLeft;
+                    break;
+                case NavigationDirection.Right:
+                    explicitNeighbor = current.NeighborRight;
+                    break;
+            }
+
+            if (explicitNeighbor != null && explicitNeighbor.IsEnabled)
+            {
+                int index = _items.IndexOf(explicitNeighbor);
+                if (index != -1)
+                {
+                    Select(index);
+                    return;
+                }
+            }
+
             var currentCenter = new Vector2(current.Bounds.Center.X, current.Bounds.Center.Y);
 
             ISelectable bestCandidate = null;
