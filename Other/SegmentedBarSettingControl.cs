@@ -144,14 +144,15 @@ namespace ProjectVagabond.UI
             bool leftClickHeld = currentMouseState.LeftButton == ButtonState.Pressed;
             bool leftClickReleased = currentMouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed;
 
-            if (UIInputManager.CanProcessMouseClick() && leftClickPressed)
+            var inputManager = ServiceLocator.Get<InputManager>();
+            if (inputManager.IsMouseClickAvailable() && leftClickPressed)
             {
                 if (hitRect.Contains(virtualMousePos))
                 {
                     _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
                     _isDragging = true;
                     UpdateValueFromMousePosition(virtualMousePos);
-                    UIInputManager.ConsumeMouseClick();
+                    inputManager.ConsumeMouseClick();
                 }
             }
 

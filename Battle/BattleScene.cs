@@ -666,7 +666,8 @@ namespace ProjectVagabond.Scenes
                 return;
             }
 
-            bool clickDetected = UIInputManager.CanProcessMouseClick() && currentMouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed;
+            var inputManager = ServiceLocator.Get<InputManager>();
+            bool clickDetected = inputManager.IsMouseClickAvailable() && currentMouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed;
 
             if (clickDetected)
             {
@@ -689,7 +690,7 @@ namespace ProjectVagabond.Scenes
                     _isWaitingForMultiHitDelay = false;
                     _battleManager.SkipPacing();
 
-                    UIInputManager.ConsumeMouseClick();
+                    inputManager.ConsumeMouseClick();
                 }
                 else
                 {
@@ -697,7 +698,7 @@ namespace ProjectVagabond.Scenes
                     if (_battleManager.CurrentPhase == BattleManager.BattlePhase.EndOfRound)
                     {
                         _battleManager.RequestNextPhase();
-                        UIInputManager.ConsumeMouseClick();
+                        inputManager.ConsumeMouseClick();
                     }
                 }
             }

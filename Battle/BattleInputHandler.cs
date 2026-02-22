@@ -122,7 +122,8 @@ namespace ProjectVagabond.Battle.UI
             }
 
             // Handle Click on Sprites
-            if (UIInputManager.CanProcessMouseClick() && currentMouseState.LeftButton == ButtonState.Released && _previousMouseState.LeftButton == ButtonState.Pressed)
+            var inputManager = ServiceLocator.Get<InputManager>();
+            if (inputManager.IsMouseClickAvailable() && currentMouseState.LeftButton == ButtonState.Released && _previousMouseState.LeftButton == ButtonState.Pressed)
             {
                 if (_hoveredTargetIndex != -1 && uiHoveredCombatant == null)
                 {
@@ -130,7 +131,7 @@ namespace ProjectVagabond.Battle.UI
 
                     // Route click to UI Manager
                     uiManager.HandleSpriteClick(selectedTarget);
-                    UIInputManager.ConsumeMouseClick();
+                    inputManager.ConsumeMouseClick();
                 }
             }
 

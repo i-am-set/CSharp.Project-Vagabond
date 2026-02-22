@@ -274,14 +274,15 @@ namespace ProjectVagabond.UI
 
             var mouseState = Mouse.GetState();
             var keyboardState = Keyboard.GetState();
+            var inputManager = ServiceLocator.Get<InputManager>();
 
-            bool advance = (UIInputManager.CanProcessMouseClick() && mouseState.LeftButton == ButtonState.Released && _previousMouseState.LeftButton == ButtonState.Pressed) ||
+            bool advance = (inputManager.IsMouseClickAvailable() && mouseState.LeftButton == ButtonState.Released && _previousMouseState.LeftButton == ButtonState.Pressed) ||
                            (keyboardState.IsKeyDown(Keys.Enter) && _previousKeyboardState.IsKeyUp(Keys.Enter)) ||
                            (keyboardState.IsKeyDown(Keys.Space) && _previousKeyboardState.IsKeyUp(Keys.Space));
 
             if (advance)
             {
-                UIInputManager.ConsumeMouseClick();
+                inputManager.ConsumeMouseClick();
                 if (_isWaitingForInput)
                 {
                     ProcessNextMessage();

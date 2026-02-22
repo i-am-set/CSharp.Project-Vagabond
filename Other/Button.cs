@@ -244,11 +244,12 @@ namespace ProjectVagabond.UI
                 if (IsHovered)
                 {
                     bool isDebounceClear = (DateTime.Now - _lastClickTime).TotalSeconds > DEBOUNCE_DURATION;
-                    if (!UseInputDebounce || (isDebounceClear && UIInputManager.CanProcessMouseClick()))
+                    var inputManager = ServiceLocator.Get<InputManager>();
+                    if (!UseInputDebounce || (isDebounceClear && inputManager.IsMouseClickAvailable()))
                     {
                         if (UseInputDebounce) _lastClickTime = DateTime.Now;
                         TriggerClick();
-                        if (UseInputDebounce) UIInputManager.ConsumeMouseClick();
+                        if (UseInputDebounce) inputManager.ConsumeMouseClick();
                     }
                 }
             }

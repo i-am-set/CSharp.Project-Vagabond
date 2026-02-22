@@ -456,7 +456,8 @@ namespace ProjectVagabond.Scenes
 
             if (_hoveredNodeId != -1) cursorManager.SetState(CursorState.HoverClickable);
 
-            if (_mapState == SplitMapState.Idle && !hoveringButtons && UIInputManager.CanProcessMouseClick())
+            var inputManager = ServiceLocator.Get<InputManager>();
+            if (_mapState == SplitMapState.Idle && !hoveringButtons && inputManager.IsMouseClickAvailable())
             {
                 bool leftClickPressed = currentMouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released;
                 bool leftClickReleased = currentMouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed;
@@ -476,7 +477,7 @@ namespace ProjectVagabond.Scenes
                             StartPlayerMove(_hoveredNodeId);
                         }
                         _hoveredNodeId = -1;
-                        UIInputManager.ConsumeMouseClick();
+                        inputManager.ConsumeMouseClick();
                     }
                     _pressedNodeId = -1;
                 }

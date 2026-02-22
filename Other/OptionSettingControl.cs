@@ -152,7 +152,8 @@ namespace ProjectVagabond.UI
             _isLeftArrowHovered = _leftArrowRect.Contains(virtualMousePos);
             _isRightArrowHovered = _rightArrowRect.Contains(virtualMousePos);
 
-            if (UIInputManager.CanProcessMouseClick() && currentMouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released)
+            var inputManager = ServiceLocator.Get<InputManager>();
+            if (inputManager.IsMouseClickAvailable() && currentMouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released)
             {
                 bool consumed = false;
                 if (_isLeftArrowHovered)
@@ -170,7 +171,7 @@ namespace ProjectVagabond.UI
 
                 if (consumed)
                 {
-                    UIInputManager.ConsumeMouseClick();
+                    inputManager.ConsumeMouseClick();
                 }
             }
         }

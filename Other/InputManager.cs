@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
+using ProjectVagabond.UI;
 using System;
 
 namespace ProjectVagabond
@@ -36,8 +37,12 @@ namespace ProjectVagabond
         public bool Confirm { get; private set; }
         public bool Back { get; private set; }
 
+        private bool _mouseClickConsumed;
+
         public void Update()
         {
+            _mouseClickConsumed = false;
+
             _previousKeyboardState = _currentKeyboardState;
             _currentKeyboardState = Keyboard.GetState();
 
@@ -54,11 +59,20 @@ namespace ProjectVagabond
             UpdateAbstractInputs();
         }
 
+        public void ConsumeMouseClick()
+        {
+            _mouseClickConsumed = true;
+        }
+
+        public bool IsMouseClickAvailable()
+        {
+            return !_mouseClickConsumed;
+        }
+
         public MouseState GetEffectiveMouseState()
         {
             if (!IsMouseActive)
             {
-                // Return a state with the mouse far off-screen so hit tests fail
                 return new MouseState(-9999, -9999, _currentMouseState.ScrollWheelValue, ButtonState.Released, ButtonState.Released, ButtonState.Released, ButtonState.Released, ButtonState.Released);
             }
             return _currentMouseState;
@@ -66,7 +80,6 @@ namespace ProjectVagabond
 
         private void DetectInputDevice()
         {
-            // Check for Mouse Movement or Clicks
             if (MouseMovedThisFrame ||
                 _currentMouseState.LeftButton == ButtonState.Pressed ||
                 _currentMouseState.RightButton == ButtonState.Pressed)
@@ -75,11 +88,8 @@ namespace ProjectVagabond
                 IsMouseActive = true;
             }
 
-            // Check for Keyboard Input
             if (_currentKeyboardState.GetPressedKeyCount() > 0)
             {
-                // Ignore keys that might be held down from previous context if needed, 
-                // but generally any key press switches context
                 if (_currentKeyboardState != _previousKeyboardState)
                 {
                     CurrentInputDevice = InputDeviceType.Keyboard;
@@ -87,10 +97,8 @@ namespace ProjectVagabond
                 }
             }
 
-            // Check for Gamepad Input
             if (_currentGamePadState.IsConnected && _currentGamePadState.PacketNumber != _previousGamePadState.PacketNumber)
             {
-                // Simple check: if any button is pressed or sticks moved significantly
                 bool buttonPressed = _currentGamePadState.Buttons.A == ButtonState.Pressed ||
                                      _currentGamePadState.Buttons.B == ButtonState.Pressed ||
                                      _currentGamePadState.Buttons.X == ButtonState.Pressed ||
@@ -131,13 +139,11 @@ namespace ProjectVagabond
             return _currentGamePadState.IsButtonDown(button) && _previousGamePadState.IsButtonUp(button);
         }
 
-        // Helper to detect "Just Moved" for analog sticks to simulate discrete navigation
         private bool IsStickJustMoved(Vector2 direction)
         {
             Vector2 currentStick = _currentGamePadState.ThumbSticks.Left;
             Vector2 prevStick = _previousGamePadState.ThumbSticks.Left;
 
-            // Dot product to check alignment with direction
             float currentDot = Vector2.Dot(currentStick, direction);
             float prevDot = Vector2.Dot(prevStick, direction);
 
