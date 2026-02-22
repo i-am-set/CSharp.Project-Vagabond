@@ -6,11 +6,21 @@ using ProjectVagabond;
 
 namespace ProjectVagabond.UI
 {
+    public enum NavigationDirection
+    {
+        Up,
+        Down,
+        Left,
+        Right
+    }
+
     public class NavigationGroup
     {
         private readonly List<ISelectable> _items = new List<ISelectable>();
         private int _currentIndex = -1;
         private bool _wrapNavigation = true;
+
+        public bool IsHorizontalLayout { get; set; } = false;
 
         public event Action<ISelectable> OnSelectionChanged;
 
@@ -74,14 +84,29 @@ namespace ProjectVagabond.UI
             }
         }
 
-        public void Navigate(int direction)
+        public void Navigate(NavigationDirection direction)
         {
             if (_items.Count == 0) return;
+
+            int delta = 0;
+
+            if (IsHorizontalLayout)
+            {
+                if (direction == NavigationDirection.Left) delta = -1;
+                if (direction == NavigationDirection.Right) delta = 1;
+            }
+            else
+            {
+                if (direction == NavigationDirection.Up) delta = -1;
+                if (direction == NavigationDirection.Down) delta = 1;
+            }
+
+            if (delta == 0) return;
 
             if (_currentIndex == -1)
             {
                 int wakeUpIndex = -1;
-                if (direction > 0)
+                if (delta > 0)
                 {
                     for (int i = 0; i < _items.Count; i++)
                     {
@@ -106,7 +131,7 @@ namespace ProjectVagabond.UI
 
             for (int i = 0; i < count; i++)
             {
-                next += direction;
+                next += delta;
 
                 if (_wrapNavigation)
                 {

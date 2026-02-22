@@ -77,6 +77,7 @@ namespace ProjectVagabond.UI
             }
 
             _isHorizontalLayout = buttonActions.Count == 2;
+            _navigationGroup.IsHorizontalLayout = _isHorizontalLayout;
 
             // --- Pre-calculate button geometries to determine layout height ---
             var buttonGeometries = new List<(string text, Color? color, Action action, int width, int height)>();
@@ -185,16 +186,10 @@ namespace ProjectVagabond.UI
                         _navigationGroup.SelectFirst();
                     }
 
-                    if (_isHorizontalLayout)
-                    {
-                        if (_inputManager.NavigateLeft) _navigationGroup.Navigate(-1);
-                        if (_inputManager.NavigateRight) _navigationGroup.Navigate(1);
-                    }
-                    else
-                    {
-                        if (_inputManager.NavigateUp) _navigationGroup.Navigate(-1);
-                        if (_inputManager.NavigateDown) _navigationGroup.Navigate(1);
-                    }
+                    if (_inputManager.NavigateUp) _navigationGroup.Navigate(NavigationDirection.Up);
+                    if (_inputManager.NavigateDown) _navigationGroup.Navigate(NavigationDirection.Down);
+                    if (_inputManager.NavigateLeft) _navigationGroup.Navigate(NavigationDirection.Left);
+                    if (_inputManager.NavigateRight) _navigationGroup.Navigate(NavigationDirection.Right);
 
                     if (_inputManager.Confirm) _navigationGroup.SubmitCurrent();
                 }

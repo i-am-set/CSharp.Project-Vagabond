@@ -311,8 +311,8 @@ namespace ProjectVagabond.Scenes
                 }
                 else
                 {
-                    if (_inputManager.NavigateUp) _navigationGroup.Navigate(-1);
-                    if (_inputManager.NavigateDown) _navigationGroup.Navigate(1);
+                    if (_inputManager.NavigateUp) _navigationGroup.Navigate(NavigationDirection.Up);
+                    if (_inputManager.NavigateDown) _navigationGroup.Navigate(NavigationDirection.Down);
                     if (_inputManager.Confirm) _navigationGroup.SubmitCurrent();
 
                     if (_inputManager.Back) ConfirmExit();

@@ -67,6 +67,7 @@ namespace ProjectVagabond.Scenes
             _inputManager = ServiceLocator.Get<InputManager>();
             _core = ServiceLocator.Get<Core>();
             _navigationGroup = new NavigationGroup(wrapNavigation: false);
+            _navigationGroup.IsHorizontalLayout = false;
         }
 
         public override Rectangle GetAnimatedBounds()
@@ -405,6 +406,7 @@ namespace ProjectVagabond.Scenes
 
         private bool IsDirty() => _settingControls.Any(s => s.IsDirty);
 
+
         public override void Update(GameTime gameTime)
         {
             _titleBobTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -480,8 +482,8 @@ namespace ProjectVagabond.Scenes
                     // If the control didn't consume the input, perform scene-level navigation
                     if (!inputConsumed)
                     {
-                        if (_inputManager.NavigateUp) _navigationGroup.Navigate(-1);
-                        if (_inputManager.NavigateDown) _navigationGroup.Navigate(1);
+                        if (_inputManager.NavigateUp) _navigationGroup.Navigate(NavigationDirection.Up);
+                        if (_inputManager.NavigateDown) _navigationGroup.Navigate(NavigationDirection.Down);
                         if (_inputManager.Back) AttemptToGoBack();
                     }
                 }
@@ -499,6 +501,7 @@ namespace ProjectVagabond.Scenes
             _previousMouseState = currentMouseState;
             base.Update(gameTime);
         }
+
 
         private void OnNavigationSelectionChanged(ISelectable selection)
         {
