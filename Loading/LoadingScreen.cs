@@ -29,65 +29,10 @@ namespace ProjectVagabond.Scenes
         public bool IsActive { get; private set; }
         public event Action? OnComplete;
 
-        // --- Finishing & Clearing State ---
-        private bool _allTasksComplete = false; // Logic is done
-        private bool _isFinishing = false;      // Flavor text phase
-        private bool _isClearing = false;       // New phase: Clearing log lines
-        private float _clearTimer = 0f;
-
-        // Tuning: Speed of clearing lines
-        private const float CLEAR_LINE_DELAY = 0.05f;
-
-        // --- Text State Machine ---
-        private bool _isShowingOk = false; // True if the current line has finished and is showing OK
-        private float _okTimer = 0f;
-        private const float REAL_TASK_OK_DELAY = 0.1f; // How long real tasks pause with OK before moving on
-
-        // --- Flavor Text System ---
-        private string _currentFlavorText = "";
-        private float _flavorTimer = 0f;
-
-        // Variable durations for the "fake" work
-        private float _currentFlavorWorkDuration = 0.05f;
-        private float _currentFlavorOkDuration = 0.05f;
-
-        // Tuning: Speed of text cycling during the "Finishing" phase
-        private const float FLAVOR_WORK_MIN = 0.02f;
-        private const float FLAVOR_WORK_MAX = 0.35f;
-        private const float FLAVOR_OK_MIN = 0.05f;
-        private const float FLAVOR_OK_MAX = 0.35f;
-
         // --- Message Log System ---
         private readonly List<LogEntry> _messageLog = new List<LogEntry>();
         private const int MAX_LOG_LINES = 100;
-        private const int SCREEN_MARGIN = 20; // Increased margin
-
-        // Retro/Terminal style loading messages
-        private readonly string[] _masterFlavorTexts = new[]
-        {
-            "ALLOCATING 64KB CONVENTIONAL MEMORY",
-            "CHECKING VRAM INTEGRITY",
-            "LOADING SPRITE TABLES",
-            "INITIALIZING SOUND CHANNELS",
-            "READING CONFIG.DAT",
-            "ACCESSING DISK CACHE",
-            "ZEROING BUFFERS",
-            "VERIFYING CHECKSUM",
-            "RANDOMIZING SEED",
-            "INITIALIZING RANDOM TABLES",
-            "LOADING PALETTE DATA",
-            "MAPPING MEMORY ADDRESSES",
-            "SYNCING V-BLANK INTERRUPTS",
-            "UNPACKING DATA FILES",
-            "PREPARING MEMORY MANAGER",
-            "TESTING I/O PORTS",
-            "LOADING FONT GLYPHS",
-            "INITIALIZING ENTITY TABLES",
-            "PRE-CACHING PHYSICS HULLS"
-        };
-
-        private List<string> _availableFlavorTexts = new List<string>();
-        private readonly Random _rng = new Random();
+        private const int SCREEN_MARGIN = 20;
 
         private bool _silentMode = false;
 
@@ -102,16 +47,7 @@ namespace ProjectVagabond.Scenes
             _messageLog.Clear();
             _currentTaskIndex = -1;
             IsActive = false;
-            _allTasksComplete = false;
-            _isFinishing = false;
-            _isClearing = false;
-            _clearTimer = 0f;
             _silentMode = false;
-            _isShowingOk = false;
-            _okTimer = 0f;
-
-            _availableFlavorTexts.Clear();
-            _availableFlavorTexts.AddRange(_masterFlavorTexts);
         }
 
         public void AddTask(LoadingTask task)
@@ -124,6 +60,7 @@ namespace ProjectVagabond.Scenes
             if (!_tasks.Any())
             {
                 IsActive = false;
+                OnComplete?.Invoke();
                 return;
             }
 
@@ -132,11 +69,7 @@ namespace ProjectVagabond.Scenes
             IsActive = true;
             _currentTaskIndex = 0;
 
-            _allTasksComplete = false;
-            _isFinishing = false;
-            _isClearing = false;
-            _isShowingOk = false;
-
+            // Start the first task immediately
             _tasks[_currentTaskIndex].Start();
         }
 
@@ -155,6 +88,7 @@ namespace ProjectVagabond.Scenes
 
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
+            // Visual update only (does not affect load speed)
             _ellipsisTimer += deltaTime;
             if (_ellipsisTimer > 0.5f)
             {
@@ -162,134 +96,37 @@ namespace ProjectVagabond.Scenes
                 _ellipsisCount = (_ellipsisCount + 1) % 4;
             }
 
-            // 1. Process Real Logic Tasks
-            if (!_allTasksComplete && _currentTaskIndex < _tasks.Count)
+            // Process Tasks
+            if (_currentTaskIndex < _tasks.Count)
             {
                 var currentTask = _tasks[_currentTaskIndex];
+                currentTask.Update(gameTime);
 
-                if (!_isShowingOk)
+                if (currentTask.IsComplete)
                 {
-                    // Phase A: Doing Work
-                    currentTask.Update(gameTime);
+                    // 1. Log completion immediately
+                    AddToLog(currentTask.Description);
 
-                    if (currentTask.IsComplete)
-                    {
-                        // Work done, switch to showing OK
-                        _isShowingOk = true;
-                        _okTimer = 0f;
-                    }
-                }
-                else
-                {
-                    // Phase B: Showing OK
-                    _okTimer += deltaTime;
-                    if (_okTimer >= REAL_TASK_OK_DELAY)
-                    {
-                        // Delay done, log it and move on
-                        AddToLog(currentTask.Description);
+                    // 2. Move to next task immediately (No artificial delay)
+                    _currentTaskIndex++;
 
-                        _currentTaskIndex++;
-                        _isShowingOk = false;
-
-                        if (_currentTaskIndex < _tasks.Count)
-                        {
-                            _tasks[_currentTaskIndex].Start();
-                        }
-                        else
-                        {
-                            _allTasksComplete = true;
-                            _isFinishing = true; // Start the flavor text phase
-                            PickNextFlavorText();
-                        }
-                    }
-                }
-            }
-            // 2. Handle "Finishing" Phase (Flavor text loop)
-            else if (_isFinishing)
-            {
-                if (!_isShowingOk)
-                {
-                    // Phase A: Simulating Work
-                    _flavorTimer += deltaTime;
-                    if (_flavorTimer >= _currentFlavorWorkDuration)
+                    if (_currentTaskIndex < _tasks.Count)
                     {
-                        _isShowingOk = true;
-                        _okTimer = 0f;
-                    }
-                }
-                else
-                {
-                    // Phase B: Showing OK
-                    _okTimer += deltaTime;
-                    if (_okTimer >= _currentFlavorOkDuration)
-                    {
-                        // Log previous
-                        if (!string.IsNullOrEmpty(_currentFlavorText))
-                        {
-                            AddToLog(_currentFlavorText);
-                        }
-
-                        // Check if we should stop flavor text (e.g. ran out or arbitrary limit)
-                        // For now, let's just do a few lines then stop.
-                        // Or, since we removed the bar, we can just stop when we run out of flavor text 
-                        // or after a fixed number of lines.
-                        // Let's stop when we have enough lines to look cool (e.g. 5 flavor lines).
-                        // But for now, let's just transition to clearing immediately after one batch 
-                        // or keep it simple: Stop when _availableFlavorTexts is low or just random chance?
-                        // Let's just do 3 flavor lines for effect.
-
-                        if (_availableFlavorTexts.Count < _masterFlavorTexts.Length - 3)
-                        {
-                            _isFinishing = false;
-                            _isClearing = true;
-                        }
-                        else
-                        {
-                            PickNextFlavorText();
-                        }
-                    }
-                }
-            }
-            // 3. Handle "Clearing" Phase (Sequential Disappearance)
-            else if (_isClearing)
-            {
-                _clearTimer += deltaTime;
-                if (_clearTimer >= CLEAR_LINE_DELAY)
-                {
-                    _clearTimer = 0f;
-                    if (_messageLog.Count > 0)
-                    {
-                        // Remove from top (index 0)
-                        _messageLog.RemoveAt(0);
+                        _tasks[_currentTaskIndex].Start();
                     }
                     else
                     {
-                        // Log is empty, we are done
-                        IsActive = false;
-                        OnComplete?.Invoke();
+                        // 3. All tasks done. Finish immediately.
+                        FinishLoading();
                     }
                 }
             }
         }
 
-        private void PickNextFlavorText()
+        private void FinishLoading()
         {
-            _isShowingOk = false;
-            _flavorTimer = 0f;
-            _okTimer = 0f;
-
-            // Randomize durations for "glitchy/processing" feel
-            _currentFlavorWorkDuration = (float)(_rng.NextDouble() * (FLAVOR_WORK_MAX - FLAVOR_WORK_MIN) + FLAVOR_WORK_MIN);
-            _currentFlavorOkDuration = (float)(_rng.NextDouble() * (FLAVOR_OK_MAX - FLAVOR_OK_MIN) + FLAVOR_OK_MIN);
-
-            if (_availableFlavorTexts.Count == 0)
-            {
-                _availableFlavorTexts.AddRange(_masterFlavorTexts);
-            }
-
-            int index = _rng.Next(_availableFlavorTexts.Count);
-            _currentFlavorText = _availableFlavorTexts[index];
-            _availableFlavorTexts.RemoveAt(index);
+            IsActive = false;
+            OnComplete?.Invoke();
         }
 
         public void Draw(SpriteBatch spriteBatch, BitmapFont font)
@@ -300,33 +137,18 @@ namespace ProjectVagabond.Scenes
             int bottomY = Global.VIRTUAL_HEIGHT - SCREEN_MARGIN;
             int leftX = SCREEN_MARGIN;
 
-            // Calculate Right Align X for OK
-            // We assume OK width is roughly constant, or measure it.
             string okText = "OK";
             float okWidth = font.MeasureString(okText).Width;
             float rightX = Global.VIRTUAL_WIDTH - SCREEN_MARGIN - okWidth;
 
-            // 1. Determine Current Active Line (if not clearing)
+            // 1. Determine Current Active Line
             string currentLineText = "";
-
-            if (!_isClearing)
+            if (_currentTaskIndex >= 0 && _currentTaskIndex < _tasks.Count)
             {
-                if (_isFinishing)
+                string taskDescription = _tasks[_currentTaskIndex].Description;
+                if (!string.IsNullOrEmpty(taskDescription))
                 {
-                    currentLineText = _currentFlavorText;
-                }
-                else if (!_allTasksComplete)
-                {
-                    string taskDescription = "";
-                    if (_currentTaskIndex >= 0 && _currentTaskIndex < _tasks.Count)
-                    {
-                        taskDescription = _tasks[_currentTaskIndex].Description;
-                    }
-
-                    if (!string.IsNullOrEmpty(taskDescription))
-                    {
-                        currentLineText = taskDescription + new string('.', _ellipsisCount);
-                    }
+                    currentLineText = taskDescription + new string('.', _ellipsisCount);
                 }
             }
 
@@ -335,25 +157,11 @@ namespace ProjectVagabond.Scenes
 
             if (!string.IsNullOrEmpty(currentLineText))
             {
-                // Draw Description (Left)
                 spriteBatch.DrawStringSnapped(font, currentLineText.ToUpper(), new Vector2(leftX, currentY), _global.Palette_DarkShadow);
-
-                // Draw OK (Right) if ready
-                if (_isShowingOk)
-                {
-                    spriteBatch.DrawStringSnapped(font, okText, new Vector2(rightX, currentY), _global.Palette_DarkShadow);
-                }
             }
 
             // 3. Draw History Log (Stacked above current line)
-            // Iterate backwards to draw newest closest to the current line
             float logY = currentY;
-
-            // If we are clearing, the "current line" is gone, so log starts at bottomY
-            if (_isClearing)
-            {
-                logY = bottomY;
-            }
 
             for (int i = _messageLog.Count - 1; i >= 0; i--)
             {
@@ -368,7 +176,6 @@ namespace ProjectVagabond.Scenes
                 spriteBatch.DrawStringSnapped(font, entry.Text.ToUpper(), new Vector2(leftX, logY), _global.Palette_DarkShadow);
 
                 // Draw OK (Right)
-                // Assuming all log entries are successes for now
                 spriteBatch.DrawStringSnapped(font, okText, new Vector2(rightX, logY), _global.Palette_DarkShadow);
             }
         }
@@ -388,16 +195,13 @@ namespace ProjectVagabond.Scenes
 
         public override void Start()
         {
-            // The action is executed synchronously and completes immediately.
             try
             {
                 _loadAction?.Invoke();
             }
             catch (Exception ex)
             {
-                // Log the error to the debug console to help diagnose loading issues.
                 Debug.WriteLine($"[ERROR] Loading task '{Description}' failed: {ex.Message}");
-                // Re-throw the exception to crash the game, ensuring data integrity issues are not ignored.
                 throw;
             }
             finally

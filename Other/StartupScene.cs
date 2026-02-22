@@ -17,7 +17,7 @@ namespace ProjectVagabond.Scenes
         private readonly Global _global;
         private readonly TransitionManager _transitionManager;
         private float _timer;
-        private const float DURATION = 1.5f; // 1.5 seconds of splash screen
+        private const float DURATION = 0.1f;
         private bool _transitionTriggered;
 
         public StartupScene()
@@ -61,7 +61,6 @@ namespace ProjectVagabond.Scenes
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
-
             // Draw Solid Black Background
             spriteBatch.Draw(pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), Color.Black);
         }
