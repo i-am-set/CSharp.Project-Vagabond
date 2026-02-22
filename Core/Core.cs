@@ -585,7 +585,7 @@ namespace ProjectVagabond
             _spriteBatch.Draw(_finalCompositeTarget, Vector2.Zero, Color.White);
             _spriteBatch.End();
 
-            // 3. Final CRT Pass to BackBuffer
+            // 3. Final Restro Shader Pass to BackBuffer
             GraphicsDevice.SetRenderTarget(null);
             GraphicsDevice.Clear(letterboxColor);
 
