@@ -86,6 +86,7 @@ namespace ProjectVagabond
         private TooltipManager _tooltipManager;
         private ParticleSystemManager _particleSystemManager;
         private GameState _gameState;
+        private InputManager _inputManager;
 
         private MoveAcquisitionSystem _moveAcquisitionSystem;
 
@@ -220,6 +221,9 @@ namespace ProjectVagabond
             ServiceLocator.Register<HitstopManager>(_hitstopManager);
             _backgroundNoiseRenderer = new BackgroundNoiseRenderer();
             ServiceLocator.Register<BackgroundNoiseRenderer>(_backgroundNoiseRenderer);
+
+            _inputManager = new InputManager();
+            ServiceLocator.Register<InputManager>(_inputManager);
 
             GraphicsDevice.SamplerStates[0] = SamplerState.PointClamp;
             _settings.ApplyGraphicsSettings(_graphics, this);
@@ -389,6 +393,8 @@ namespace ProjectVagabond
             IsMouseVisible = _debugConsole.IsVisible;
             if (!IsActive) return;
 
+            _inputManager.Update();
+
             if (_flashTimer > 0) _flashTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
             if (_glitchTimer > 0) _glitchTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
             if (_screenFlashState != null)
@@ -555,9 +561,12 @@ namespace ProjectVagabond
             var snappedScreenY = (virtualMousePos.Y * _finalScale) + _finalRenderRectangle.Y;
             var snappedScreenPos = new Vector2(snappedScreenX, snappedScreenY);
 
-            _spriteBatch.Begin(blendState: _cursorInvertBlendState, samplerState: SamplerState.PointClamp, transformMatrix: Matrix.Identity);
-            _cursorManager.Draw(_spriteBatch, snappedScreenPos, _finalScale);
-            _spriteBatch.End();
+            if (_inputManager.IsMouseActive)
+            {
+                _spriteBatch.Begin(blendState: _cursorInvertBlendState, samplerState: SamplerState.PointClamp, transformMatrix: Matrix.Identity);
+                _cursorManager.Draw(_spriteBatch, snappedScreenPos, _finalScale);
+                _spriteBatch.End();
+            }
 
             _backgroundNoiseRenderer.Apply(GraphicsDevice, _finalCompositeTarget, gameTime, _finalScale);
 

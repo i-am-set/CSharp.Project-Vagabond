@@ -1,8 +1,4 @@
-﻿// --- Button.cs ---
-// Updated Update() to implement sticky press logic (stays pressed even if mouse leaves, until release).
-// Updated DrawText() to apply Palette_Fruit when pressed and reset hover offset to 0.
-
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -18,7 +14,7 @@ namespace ProjectVagabond.UI
         Exhausted
     }
 
-    public class Button
+    public class Button : ISelectable
     {
         protected readonly Global _global;
 
@@ -31,6 +27,7 @@ namespace ProjectVagabond.UI
         public Color? CustomSelectedTextColor { get; set; }
         public bool IsEnabled { get; set; } = true;
         public bool IsHovered { get; set; }
+        public bool IsSelected { get; set; }
         public bool IsPressed => _isPressed;
         public bool UseScreenCoordinates { get; set; } = false;
         public bool AlignLeft { get; set; } = false;
@@ -157,6 +154,23 @@ namespace ProjectVagabond.UI
             HoverLiftDuration = _global.UI_ButtonHoverDuration;
         }
 
+        public void OnSelect()
+        {
+            IsSelected = true;
+            if (TriggerHapticOnHover) ServiceLocator.Get<HapticsManager>().TriggerUICompoundShake(_global.HoverHapticStrength);
+            if (EnableHoverRotation) _hoverRotationTimer = HOVER_ROTATION_DURATION;
+        }
+
+        public void OnDeselect()
+        {
+            IsSelected = false;
+        }
+
+        public void OnSubmit()
+        {
+            TriggerClick();
+        }
+
         public void PlayEntrance(float delay)
         {
             _isEntering = true;
@@ -243,7 +257,7 @@ namespace ProjectVagabond.UI
             if (shouldScale)
             {
                 if (_isPressed) _targetScale = PRESS_SCALE;
-                else if (IsHovered) _targetScale = HOVER_SCALE;
+                else if (IsHovered || IsSelected) _targetScale = HOVER_SCALE;
                 else _targetScale = 1.0f;
             }
             else
@@ -290,6 +304,7 @@ namespace ProjectVagabond.UI
             _waveTimer = 0f;
             _isPressed = false;
             IsHovered = false;
+            IsSelected = false;
             _slideOffset = 0f;
             _shakeTimer = 0f;
             _flashTimer = 0f;
@@ -365,7 +380,7 @@ namespace ProjectVagabond.UI
         private void DrawSprite(SpriteBatch spriteBatch, GameTime gameTime, Matrix transform, bool forceHover, float? horizontalOffset, float? verticalOffset, Color? tintColorOverride)
         {
             Rectangle? sourceRectToDraw = _defaultSourceRect;
-            bool isActivated = IsEnabled && (IsHovered || forceHover);
+            bool isActivated = IsEnabled && (IsHovered || IsSelected || forceHover);
 
             if (!IsEnabled && _disabledSourceRect.HasValue) sourceRectToDraw = _disabledSourceRect;
             else if (_isPressed && _clickedSourceRect.HasValue) sourceRectToDraw = _clickedSourceRect;
@@ -392,7 +407,7 @@ namespace ProjectVagabond.UI
         {
             BitmapFont font = this.Font ?? defaultFont;
             Color textColor;
-            bool isActivated = IsEnabled && (IsHovered || forceHover);
+            bool isActivated = IsEnabled && (IsHovered || IsSelected || forceHover);
 
             if (tintColorOverride.HasValue) textColor = tintColorOverride.Value;
             else if (!IsEnabled) textColor = CustomDisabledTextColor ?? _global.ButtonDisableColor;

@@ -20,7 +20,6 @@ namespace ProjectVagabond.UI
         protected readonly Rectangle? _disabledSourceRect;
         protected readonly Rectangle? _selectedSourceRect;
         private bool _isHeldDown;
-        public bool IsSelected { get; set; }
 
         private enum AnimationState { Hidden, Idle, Appearing }
         private AnimationState _animState = AnimationState.Idle;
@@ -61,7 +60,7 @@ namespace ProjectVagabond.UI
             }
         }
 
-        public void TriggerShake()
+        public new void TriggerShake()
         {
             _shakeTimer = SHAKE_DURATION;
         }
@@ -102,7 +101,7 @@ namespace ProjectVagabond.UI
         {
             if (_animState == AnimationState.Hidden) return;
 
-            bool isActivated = IsEnabled && (IsHovered || forceHover);
+            bool isActivated = IsEnabled && (IsHovered || IsSelected || forceHover);
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
             UpdateFeedbackAnimations(gameTime);
@@ -110,7 +109,6 @@ namespace ProjectVagabond.UI
             float hoverYOffset = 0f;
             if (EnableHoverSway)
             {
-                // FIX: Pass inherited properties
                 hoverYOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated, HoverLiftOffset, HoverLiftDuration);
 
                 if (UseScreenCoordinates)
@@ -120,7 +118,6 @@ namespace ProjectVagabond.UI
             }
             else
             {
-                // FIX: Pass inherited properties
                 _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated, HoverLiftOffset, HoverLiftDuration);
             }
 

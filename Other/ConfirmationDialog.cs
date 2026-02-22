@@ -24,9 +24,9 @@ namespace ProjectVagabond.UI
         private List<List<RichTextToken>> _wrappedPromptLines;
         private List<string> _details;
         private List<Button> _buttons;
-        private int _selectedButtonIndex;
+        private readonly NavigationGroup _navigationGroup;
+        private readonly InputManager _inputManager;
 
-        private bool _keyboardNavigatedLastFrame;
         private float _inputDelay = 0.1f;
         private float _currentInputDelay = 0f;
         private bool _isHorizontalLayout;
@@ -36,6 +36,8 @@ namespace ProjectVagabond.UI
             _buttons = new List<Button>();
             _details = new List<string>();
             _wrappedPromptLines = new List<List<RichTextToken>>();
+            _navigationGroup = new NavigationGroup(wrapNavigation: true);
+            _inputManager = ServiceLocator.Get<InputManager>();
         }
 
         public void Show(string prompt, List<Tuple<string, Action>> buttonActions, List<string> details = null)
@@ -45,11 +47,10 @@ namespace ProjectVagabond.UI
             _prompt = prompt;
             _details = details ?? new List<string>();
             _buttons.Clear();
+            _navigationGroup.Clear();
             _isHorizontalLayout = false;
 
             IsActive = true;
-            _selectedButtonIndex = 0;
-            _keyboardNavigatedLastFrame = false;
             _currentInputDelay = _inputDelay;
             _previousKeyboardState = Keyboard.GetState();
             _previousMouseState = Mouse.GetState();
@@ -59,9 +60,8 @@ namespace ProjectVagabond.UI
             float dialogWidth = 280;
             float currentHeight = 20;
 
-            // Parse and wrap the prompt using the new rich text logic
             _wrappedPromptLines = ParseAndWrapPrompt(_prompt.ToUpper(), dialogWidth - 40, secondaryFont);
-            
+
             currentHeight += _wrappedPromptLines.Count * secondaryFont.LineHeight;
             currentHeight += 10;
 
@@ -78,54 +78,81 @@ namespace ProjectVagabond.UI
 
             _isHorizontalLayout = buttonActions.Count == 2;
 
-            float buttonAreaHeight = _isHorizontalLayout ? 25 : buttonActions.Count * 25;
+            // --- Pre-calculate button geometries to determine layout height ---
+            var buttonGeometries = new List<(string text, Color? color, Action action, int width, int height)>();
+            int maxButtonHeight = 0;
+            int totalHorizontalButtonWidth = 0;
+            int interButtonGap = 12;
+            int verticalButtonGap = 8;
+
+            foreach (var (taggedText, action) in buttonActions)
+            {
+                var (text, color) = ParseButtonTextAndColor(taggedText);
+                Vector2 size = defaultFont.MeasureString(text);
+
+                int bW = (int)size.X + 15;
+                int bH = (int)size.Y + 7; // Base height calculation
+
+                buttonGeometries.Add((text, color, action, bW, bH));
+
+                if (bH > maxButtonHeight) maxButtonHeight = bH;
+                totalHorizontalButtonWidth += bW;
+            }
+
+            if (_isHorizontalLayout) totalHorizontalButtonWidth += interButtonGap;
+
+            float buttonAreaHeight;
+            if (_isHorizontalLayout)
+            {
+                buttonAreaHeight = maxButtonHeight;
+            }
+            else
+            {
+                buttonAreaHeight = buttonGeometries.Sum(b => b.height) + ((buttonGeometries.Count - 1) * verticalButtonGap);
+            }
+
             currentHeight += buttonAreaHeight;
-            currentHeight += 10;
+            currentHeight += 20; // Bottom padding
 
             _dialogBounds = new Rectangle((Global.VIRTUAL_WIDTH - (int)dialogWidth) / 2, (Global.VIRTUAL_HEIGHT - (int)currentHeight) / 2, (int)dialogWidth, (int)currentHeight);
 
-            int buttonHeight = 20;
             float buttonAreaTopY = _dialogBounds.Bottom - buttonAreaHeight - 10;
 
             if (_isHorizontalLayout)
             {
-                int textHorizontalPadding = 16;
-                int interButtonGap = 12;
-                float buttonY = buttonAreaTopY + (buttonAreaHeight - buttonHeight) / 2f;
+                float startX = _dialogBounds.Center.X - totalHorizontalButtonWidth / 2f;
+                float currentX = startX;
+                float buttonY = buttonAreaTopY;
 
-                var (taggedText1, action1) = buttonActions[0];
-                var (taggedText2, action2) = buttonActions[1];
+                foreach (var b in buttonGeometries)
+                {
+                    float yOffset = (maxButtonHeight - b.height) / 2f;
 
-                var (text1, color1) = ParseButtonTextAndColor(taggedText1);
-                var (text2, color2) = ParseButtonTextAndColor(taggedText2);
+                    var button = new Button(new Rectangle((int)currentX, (int)(buttonY + yOffset) - 4, b.width, b.height + 5), b.text) { CustomDefaultTextColor = b.color };
 
-                float width1 = defaultFont.MeasureString(text1).Width + textHorizontalPadding;
-                float width2 = defaultFont.MeasureString(text2).Width + textHorizontalPadding;
-
-                float totalGroupWidth = width1 + interButtonGap + width2;
-                float startX = _dialogBounds.Center.X - totalGroupWidth / 2;
-
-                var button1 = new Button(new Rectangle((int)startX, (int)buttonY, (int)width1, buttonHeight), text1) { CustomDefaultTextColor = color1 };
-                button1.OnClick += action1;
-                _buttons.Add(button1);
-
-                var button2 = new Button(new Rectangle((int)(startX + width1 + interButtonGap), (int)buttonY, (int)width2, buttonHeight), text2) { CustomDefaultTextColor = color2 };
-                button2.OnClick += action2;
-                _buttons.Add(button2);
+                    button.OnClick += b.action;
+                    _buttons.Add(button);
+                    _navigationGroup.Add(button);
+                    currentX += b.width + interButtonGap;
+                }
             }
             else
             {
-                int buttonWidth = 90;
                 float currentButtonY = buttonAreaTopY;
-                foreach (var (taggedText, action) in buttonActions)
+                foreach (var b in buttonGeometries)
                 {
-                    var (text, color) = ParseButtonTextAndColor(taggedText);
-                    float buttonY = currentButtonY + (25 - buttonHeight) / 2f;
-                    var button = new Button(new Rectangle(_dialogBounds.Center.X - buttonWidth / 2, (int)buttonY, buttonWidth, buttonHeight), text) { CustomDefaultTextColor = color };
-                    button.OnClick += action;
+                    var button = new Button(new Rectangle(_dialogBounds.Center.X - b.width / 2, (int)currentButtonY - 4, b.width, b.height + 5), b.text) { CustomDefaultTextColor = b.color };
+
+                    button.OnClick += b.action;
                     _buttons.Add(button);
-                    currentButtonY += 25;
+                    _navigationGroup.Add(button);
+                    currentButtonY += b.height + verticalButtonGap;
                 }
+            }
+
+            if (_inputManager.CurrentInputDevice != InputDeviceType.Mouse)
+            {
+                _navigationGroup.SelectFirst();
             }
         }
 
@@ -138,72 +165,42 @@ namespace ProjectVagabond.UI
                 _currentInputDelay -= (float)gameTime.ElapsedGameTime.TotalSeconds;
             }
 
-            var currentMouseState = Mouse.GetState();
-            var currentKeyboardState = Keyboard.GetState();
-
-            if (_keyboardNavigatedLastFrame)
-            {
-                _keyboardNavigatedLastFrame = false;
-            }
-            else if (currentMouseState.Position != _previousMouseState.Position)
-            {
-                // No longer need to manage OS cursor visibility
-            }
+            var currentMouseState = _inputManager.GetEffectiveMouseState();
 
             for (int i = 0; i < _buttons.Count; i++)
             {
                 _buttons[i].Update(currentMouseState);
-                if (_buttons[i].IsHovered)
-                {
-                    _selectedButtonIndex = i;
-                }
             }
 
             if (_currentInputDelay <= 0 && _buttons.Any())
             {
-                bool upPressed = KeyPressed(Keys.Up, currentKeyboardState, _previousKeyboardState);
-                bool downPressed = KeyPressed(Keys.Down, currentKeyboardState, _previousKeyboardState);
-                bool leftPressed = KeyPressed(Keys.Left, currentKeyboardState, _previousKeyboardState);
-                bool rightPressed = KeyPressed(Keys.Right, currentKeyboardState, _previousKeyboardState);
-
-                if (upPressed || downPressed || leftPressed || rightPressed)
+                if (_inputManager.CurrentInputDevice == InputDeviceType.Mouse)
                 {
-                    _keyboardNavigatedLastFrame = true;
+                    _navigationGroup.DeselectAll();
+                }
+                else
+                {
+                    if (_navigationGroup.CurrentSelection == null)
+                    {
+                        _navigationGroup.SelectFirst();
+                    }
 
                     if (_isHorizontalLayout)
                     {
-                        if (leftPressed && _selectedButtonIndex > 0) _selectedButtonIndex--;
-                        else if (rightPressed && _selectedButtonIndex < _buttons.Count - 1) _selectedButtonIndex++;
+                        if (_inputManager.NavigateLeft) _navigationGroup.Navigate(-1);
+                        if (_inputManager.NavigateRight) _navigationGroup.Navigate(1);
                     }
                     else
                     {
-                        if (upPressed) _selectedButtonIndex = (_selectedButtonIndex - 1 + _buttons.Count) % _buttons.Count;
-                        else if (downPressed) _selectedButtonIndex = (_selectedButtonIndex + 1) % _buttons.Count;
+                        if (_inputManager.NavigateUp) _navigationGroup.Navigate(-1);
+                        if (_inputManager.NavigateDown) _navigationGroup.Navigate(1);
                     }
 
-                    Point screenPos = Core.TransformVirtualToScreen(_buttons[_selectedButtonIndex].Bounds.Center);
-                    Mouse.SetPosition(screenPos.X, screenPos.Y);
-                }
-
-                if (KeyPressed(Keys.Enter, currentKeyboardState, _previousKeyboardState))
-                {
-                    bool isButtonHighlighted = _buttons[_selectedButtonIndex].IsHovered || _keyboardNavigatedLastFrame;
-                    if (isButtonHighlighted)
-                    {
-                        _buttons[_selectedButtonIndex].TriggerClick();
-                    }
-                    else
-                    {
-                        _selectedButtonIndex = 0;
-                        Point screenPos = Core.TransformVirtualToScreen(_buttons[_selectedButtonIndex].Bounds.Center);
-                        Mouse.SetPosition(screenPos.X, screenPos.Y);
-                        _keyboardNavigatedLastFrame = true;
-                    }
+                    if (_inputManager.Confirm) _navigationGroup.SubmitCurrent();
                 }
             }
 
             _previousMouseState = currentMouseState;
-            _previousKeyboardState = currentKeyboardState;
         }
 
         public override void DrawContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
@@ -218,12 +215,11 @@ namespace ProjectVagabond.UI
 
             float currentY = _dialogBounds.Y + 20;
 
-            // Draw the rich text prompt
             foreach (var line in _wrappedPromptLines)
             {
                 float lineWidth = line.Sum(t => secondaryFont.MeasureString(t.Text).Width);
                 float x = _dialogBounds.Center.X - lineWidth / 2f;
-                
+
                 foreach (var token in line)
                 {
                     spriteBatch.DrawString(secondaryFont, token.Text, new Vector2(x, currentY), token.Color);
@@ -253,33 +249,19 @@ namespace ProjectVagabond.UI
             foreach (var button in _buttons)
             {
                 button.Draw(spriteBatch, font, gameTime, transform);
-            }
 
-            if (_buttons.Any())
-            {
-                var selectedButton = _buttons[_selectedButtonIndex];
-                if (selectedButton.IsHovered || _keyboardNavigatedLastFrame)
+                if (button.IsHovered || button.IsSelected)
                 {
-                    Vector2 textSize = font.MeasureString(selectedButton.Text);
-                    int horizontalPadding = 8;
-                    int verticalPadding = 4;
-                    Rectangle highlightRect = new Rectangle(
-                        (int)(selectedButton.Bounds.X + (selectedButton.Bounds.Width - textSize.X) * 0.5f - horizontalPadding),
-                        (int)(selectedButton.Bounds.Y + (selectedButton.Bounds.Height - textSize.Y) * 0.5f - verticalPadding),
-                        (int)(textSize.X + horizontalPadding * 2) - 1,
-                        (int)(textSize.Y + verticalPadding * 2) - 3
-                    );
-                    DrawRectangleBorder(spriteBatch, pixel, highlightRect, 1, _global.ButtonHoverColor);
+                    DrawRectangleBorder(spriteBatch, pixel, button.Bounds, 1, _global.ButtonHoverColor);
                 }
             }
         }
 
         private List<List<RichTextToken>> ParseAndWrapPrompt(string text, float maxWidth, BitmapFont font)
         {
-            // 1. Parse into raw tokens (Text + Color)
             var rawTokens = new List<RichTextToken>();
             var currentColor = _global.Palette_Sun;
-            
+
             int pos = 0;
             while (pos < text.Length)
             {
@@ -289,19 +271,19 @@ namespace ProjectVagabond.UI
                     rawTokens.Add(new RichTextToken { Text = text.Substring(pos), Color = currentColor });
                     break;
                 }
-                
+
                 if (open > pos)
                 {
                     rawTokens.Add(new RichTextToken { Text = text.Substring(pos, open - pos), Color = currentColor });
                 }
-                
+
                 int close = text.IndexOf(']', open);
                 if (close == -1)
                 {
                     rawTokens.Add(new RichTextToken { Text = text.Substring(open), Color = currentColor });
                     break;
                 }
-                
+
                 string tag = text.Substring(open + 1, close - open - 1);
                 if (tag == "/")
                 {
@@ -311,18 +293,16 @@ namespace ProjectVagabond.UI
                 {
                     currentColor = _global.GetNarrationColor(tag);
                 }
-                
+
                 pos = close + 1;
             }
 
-            // 2. Wrap tokens into lines
             var lines = new List<List<RichTextToken>>();
             var currentLine = new List<RichTextToken>();
             float currentLineWidth = 0f;
 
             foreach (var token in rawTokens)
             {
-                // Handle explicit newlines
                 string[] paragraphs = token.Text.Split('\n');
 
                 for (int i = 0; i < paragraphs.Length; i++)
@@ -342,14 +322,11 @@ namespace ProjectVagabond.UI
                     for (int j = 0; j < words.Length; j++)
                     {
                         string word = words[j];
-                        // Determine if we need a leading space
-                        // We need a space if it's not the first word of the paragraph part, OR if we are appending to an existing line
                         bool needsSpace = (j > 0) || (currentLine.Count > 0);
-                        
+
                         string textWithSpace = needsSpace ? " " + word : word;
                         float widthWithSpace = font.MeasureString(textWithSpace).Width;
-                        
-                        // If it fits, add it
+
                         if (currentLineWidth + widthWithSpace <= maxWidth)
                         {
                             currentLine.Add(new RichTextToken { Text = textWithSpace, Color = token.Color });
@@ -357,25 +334,23 @@ namespace ProjectVagabond.UI
                         }
                         else
                         {
-                            // Doesn't fit, push line
                             if (currentLine.Count > 0)
                             {
                                 lines.Add(currentLine);
                                 currentLine = new List<RichTextToken>();
                                 currentLineWidth = 0f;
                             }
-                            
-                            // Add word to new line (without leading space)
+
                             string textNoSpace = word;
                             float widthNoSpace = font.MeasureString(textNoSpace).Width;
-                            
+
                             currentLine.Add(new RichTextToken { Text = textNoSpace, Color = token.Color });
                             currentLineWidth += widthNoSpace;
                         }
                     }
                 }
             }
-            
+
             if (currentLine.Count > 0) lines.Add(currentLine);
             return lines;
         }

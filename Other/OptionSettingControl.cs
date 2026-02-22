@@ -18,6 +18,8 @@ namespace ProjectVagabond.UI
         public string Label { get; }
         public bool IsDirty => !_savedValue.Equals(_currentValue);
         public bool IsEnabled { get; set; } = true;
+        public bool IsSelected { get; set; }
+        public Rectangle Bounds { get; private set; }
 
         private T _currentValue;
         private T _savedValue;
@@ -54,6 +56,21 @@ namespace ProjectVagabond.UI
             _currentValue = _savedValue;
             _currentIndex = _options.FindIndex(o => o.Value.Equals(_currentValue));
             if (_currentIndex == -1) _currentIndex = 0;
+        }
+
+        public void OnSelect()
+        {
+            IsSelected = true;
+        }
+
+        public void OnDeselect()
+        {
+            IsSelected = false;
+        }
+
+        public void OnSubmit()
+        {
+            Increment();
         }
 
         private void Increment()
@@ -93,7 +110,7 @@ namespace ProjectVagabond.UI
             }
         }
 
-        private void CalculateBounds(Vector2 position, BitmapFont valueFont)
+        private void CalculateBounds(Vector2 position, BitmapFont labelFont, BitmapFont valueFont)
         {
             const float valueDisplayWidth = Global.VALUE_DISPLAY_WIDTH;
             string leftArrowText = "<";
@@ -104,7 +121,6 @@ namespace ProjectVagabond.UI
             int padding = 2;
             float arrowVisualHeight = valueFont.LineHeight;
 
-            // Added +1 to Y to match the visual offset
             _leftArrowRect = new Rectangle(
                 (int)(position.X + VALUE_AREA_X_OFFSET - padding),
                 (int)(position.Y - padding + 1),
@@ -116,18 +132,22 @@ namespace ProjectVagabond.UI
                 (int)position.Y - padding + 1,
                 (int)rightArrowSize.X + (padding * 2),
                 (int)arrowVisualHeight + (padding * 2));
+
+            float totalWidth = VALUE_AREA_X_OFFSET + valueDisplayWidth;
+            float height = Math.Max(labelFont.LineHeight, valueFont.LineHeight);
+            Bounds = new Rectangle((int)position.X, (int)position.Y - 2, (int)totalWidth, (int)height + 4);
         }
 
-        public void Update(Vector2 position, bool isSelected, MouseState currentMouseState, MouseState previousMouseState, Vector2 virtualMousePos, BitmapFont valueFont)
+        public void Update(Vector2 position, MouseState currentMouseState, MouseState previousMouseState, Vector2 virtualMousePos, BitmapFont labelFont, BitmapFont valueFont)
         {
+            CalculateBounds(position, labelFont, valueFont);
+
             if (!IsEnabled)
             {
                 _isLeftArrowHovered = false;
                 _isRightArrowHovered = false;
                 return;
             }
-
-            CalculateBounds(position, valueFont);
 
             _isLeftArrowHovered = _leftArrowRect.Contains(virtualMousePos);
             _isRightArrowHovered = _rightArrowRect.Contains(virtualMousePos);
@@ -180,20 +200,20 @@ namespace ProjectVagabond.UI
             _waveTimer = 0f;
             _isLeftArrowHovered = false;
             _isRightArrowHovered = false;
+            IsSelected = false;
         }
 
-        public void Draw(SpriteBatch spriteBatch, BitmapFont labelFont, BitmapFont valueFont, Vector2 position, bool isSelected, GameTime gameTime)
+        public void Draw(SpriteBatch spriteBatch, BitmapFont labelFont, BitmapFont valueFont, Vector2 position, GameTime gameTime)
         {
-            // FIX: Pass Global tuning values
-            float xOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isSelected && IsEnabled, _global.UI_ButtonHoverLift, _global.UI_ButtonHoverDuration);
+            float xOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, IsSelected && IsEnabled, _global.UI_ButtonHoverLift, _global.UI_ButtonHoverDuration);
             Vector2 animatedPosition = new Vector2(position.X + xOffset, position.Y);
 
             string labelText = Label;
             string extraInfoText = ExtraInfoTextGetter?.Invoke();
             Vector2 labelSize = labelFont.MeasureString(labelText);
-            Color labelColor = isSelected && IsEnabled ? _global.ButtonHoverColor : (IsEnabled ? _global.GameTextColor : _global.ButtonDisableColor);
+            Color labelColor = IsSelected && IsEnabled ? _global.ButtonHoverColor : (IsEnabled ? _global.GameTextColor : _global.ButtonDisableColor);
 
-            if (isSelected && IsEnabled)
+            if (IsSelected && IsEnabled)
             {
                 _waveTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
@@ -218,8 +238,7 @@ namespace ProjectVagabond.UI
 
             const float valueDisplayWidth = Global.VALUE_DISPLAY_WIDTH;
 
-            // Shift values 1px right when NOT hovered, so they snap left to "correct" position when hovered
-            float valueVisualOffset = (isSelected && IsEnabled) ? 0f : 1f;
+            float valueVisualOffset = (IsSelected && IsEnabled) ? 0f : 1f;
             Vector2 valueAreaPosition = new Vector2(position.X + VALUE_AREA_X_OFFSET + valueVisualOffset, position.Y);
 
             string leftArrowText = "<";
@@ -234,7 +253,7 @@ namespace ProjectVagabond.UI
             else
             {
                 bool isNotRecommended = IsOptionNotRecommended?.Invoke(_currentValue) ?? false;
-                if (isSelected && isNotRecommended)
+                if (IsSelected && isNotRecommended)
                 {
                     baseValueColor = _global.Palette_Fruit;
                 }
@@ -256,7 +275,6 @@ namespace ProjectVagabond.UI
             Vector2 valueTextSize = valueFont.MeasureString(valueText);
             Vector2 rightArrowSize = valueFont.MeasureString(rightArrowText);
 
-            // Added +1f to move value text/arrows down
             float valueYOffset = (labelFont.LineHeight - valueFont.LineHeight) / 2f + 1f;
             Vector2 valueDrawPos = valueAreaPosition + new Vector2(0, valueYOffset);
 
@@ -265,7 +283,6 @@ namespace ProjectVagabond.UI
 
             float spaceBetweenArrows = (valueDrawPos.X + valueDisplayWidth - rightArrowSize.X) - (valueDrawPos.X + leftArrowSize.X);
 
-            // Explicitly round the centered text position to ensure it snaps to the pixel grid correctly
             float textX = (int)(valueDrawPos.X + leftArrowSize.X + (spaceBetweenArrows - valueTextSize.X) * 0.5f);
 
             spriteBatch.DrawStringSnapped(valueFont, valueText, new Vector2(textX, valueDrawPos.Y), baseValueColor);

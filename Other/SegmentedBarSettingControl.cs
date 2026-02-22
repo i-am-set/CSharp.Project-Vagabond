@@ -25,6 +25,8 @@ namespace ProjectVagabond.UI
         public string Label { get; }
         public bool IsDirty => Math.Abs(_currentValue - _savedValue) > 0.01f;
         public bool IsEnabled { get; set; } = true;
+        public bool IsSelected { get; set; }
+        public Rectangle Bounds { get; private set; }
 
         private Rectangle _barAreaRect;
         private bool _isDragging;
@@ -54,6 +56,21 @@ namespace ProjectVagabond.UI
             _savedValue = getter();
             _currentValue = _savedValue;
             _step = (_maxValue - _minValue) / (_segmentCount - 1);
+        }
+
+        public void OnSelect()
+        {
+            IsSelected = true;
+        }
+
+        public void OnDeselect()
+        {
+            IsSelected = false;
+        }
+
+        public void OnSubmit()
+        {
+            // No default submit action for slider, maybe enter edit mode if complex
         }
 
         public string GetCurrentValueAsString() => _currentValue.ToString("F1");
@@ -86,8 +103,24 @@ namespace ProjectVagabond.UI
             }
         }
 
-        public void Update(Vector2 position, bool isSelected, MouseState currentMouseState, MouseState previousMouseState, Vector2 virtualMousePos, BitmapFont valueFont)
+        private void CalculateBounds(Vector2 position, BitmapFont labelFont)
         {
+            int totalBarWidth = (_segmentCount * SEGMENT_WIDTH) + ((_segmentCount - 1) * SEGMENT_GAP);
+
+            float valueAreaX = position.X + VALUE_AREA_X_OFFSET;
+            float valueAreaWidth = Global.VALUE_DISPLAY_WIDTH;
+            float barStartX = valueAreaX + (valueAreaWidth - totalBarWidth) / 2;
+
+            _barAreaRect = new Rectangle((int)barStartX, (int)position.Y, totalBarWidth, SEGMENT_HEIGHT);
+
+            float totalWidth = VALUE_AREA_X_OFFSET + valueAreaWidth;
+            Bounds = new Rectangle((int)position.X, (int)position.Y - 2, (int)totalWidth, labelFont.LineHeight + 4);
+        }
+
+        public void Update(Vector2 position, MouseState currentMouseState, MouseState previousMouseState, Vector2 virtualMousePos, BitmapFont labelFont, BitmapFont valueFont)
+        {
+            CalculateBounds(position, labelFont);
+
             if (!IsEnabled)
             {
                 _isDragging = false;
@@ -95,11 +128,6 @@ namespace ProjectVagabond.UI
                 return;
             }
 
-            CalculateBounds(position, valueFont);
-
-            // Create 8x12 hitboxes for 6x7 visuals
-            // Width: 6 -> 8 (+1 left, +1 right)
-            // Height: 7 -> 12 (+2 top, +3 bottom)
             Rectangle hitRect = _barAreaRect;
             hitRect.X -= 1;
             hitRect.Width += 2;
@@ -144,7 +172,6 @@ namespace ProjectVagabond.UI
             int segmentUnitWidth = SEGMENT_WIDTH + SEGMENT_GAP;
             if (segmentUnitWidth <= 0) return;
 
-            // Offset by 1 to center the 8px hitbox on the 6px visual
             _hoveredSegmentIndex = (int)((relativeMouseX + 1) / segmentUnitWidth);
             _hoveredSegmentIndex = Math.Clamp(_hoveredSegmentIndex, 0, _segmentCount - 1);
         }
@@ -181,31 +208,20 @@ namespace ProjectVagabond.UI
             _waveTimer = 0f;
             _isDragging = false;
             _hoveredSegmentIndex = -1;
+            IsSelected = false;
         }
 
-        private void CalculateBounds(Vector2 position, BitmapFont font)
-        {
-            int totalBarWidth = (_segmentCount * SEGMENT_WIDTH) + ((_segmentCount - 1) * SEGMENT_GAP);
-
-            float valueAreaX = position.X + VALUE_AREA_X_OFFSET;
-            float valueAreaWidth = Global.VALUE_DISPLAY_WIDTH;
-            float barStartX = valueAreaX + (valueAreaWidth - totalBarWidth) / 2;
-
-            _barAreaRect = new Rectangle((int)barStartX, (int)position.Y, totalBarWidth, SEGMENT_HEIGHT);
-        }
-
-        public void Draw(SpriteBatch spriteBatch, BitmapFont labelFont, BitmapFont valueFont, Vector2 position, bool isSelected, GameTime gameTime)
+        public void Draw(SpriteBatch spriteBatch, BitmapFont labelFont, BitmapFont valueFont, Vector2 position, GameTime gameTime)
         {
             CalculateBounds(position, labelFont);
 
             var pixel = ServiceLocator.Get<Texture2D>();
-            // FIX: Pass Global tuning values
-            float xOffset = HoverAnimator.UpdateAndGetOffset(gameTime, isSelected && IsEnabled, _global.UI_ButtonHoverLift, _global.UI_ButtonHoverDuration);
+            float xOffset = HoverAnimator.UpdateAndGetOffset(gameTime, IsSelected && IsEnabled, _global.UI_ButtonHoverLift, _global.UI_ButtonHoverDuration);
             Vector2 animatedPosition = new Vector2(position.X + xOffset, position.Y);
 
-            Color labelColor = isSelected && IsEnabled ? _global.ButtonHoverColor : (IsEnabled ? _global.GameTextColor : _global.ButtonDisableColor);
+            Color labelColor = IsSelected && IsEnabled ? _global.ButtonHoverColor : (IsEnabled ? _global.GameTextColor : _global.ButtonDisableColor);
 
-            if (isSelected && IsEnabled)
+            if (IsSelected && IsEnabled)
             {
                 _waveTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
@@ -223,8 +239,7 @@ namespace ProjectVagabond.UI
                 spriteBatch.DrawStringSnapped(labelFont, Label, animatedPosition, labelColor);
             }
 
-            // Shift values 1px right when NOT hovered, so they snap left to "correct" position when hovered
-            float valueVisualOffset = (isSelected && IsEnabled) ? 0f : 1f;
+            float valueVisualOffset = (IsSelected && IsEnabled) ? 0f : 1f;
 
             Vector2 barStartPosition = new Vector2(_barAreaRect.X + valueVisualOffset, position.Y + (labelFont.LineHeight - SEGMENT_HEIGHT) / 2);
 
@@ -247,7 +262,7 @@ namespace ProjectVagabond.UI
                 Color baseColor = (i < filledSegments) ? baseFillColor : emptyColor;
                 spriteBatch.Draw(pixel, segmentRect, baseColor);
 
-                if (isSelected && IsEnabled && _hoveredSegmentIndex != -1)
+                if (IsSelected && IsEnabled && _hoveredSegmentIndex != -1)
                 {
                     if (i <= _hoveredSegmentIndex)
                     {
@@ -258,7 +273,6 @@ namespace ProjectVagabond.UI
 
             string valueString = GetCurrentValueAsString();
             Vector2 valueSize = labelFont.MeasureString(valueString);
-            // Value text also shifts with the visual offset
             Vector2 valuePosition = new Vector2(_barAreaRect.Left - valueSize.X - 5 + valueVisualOffset, animatedPosition.Y);
 
             spriteBatch.DrawStringSnapped(labelFont, valueString, valuePosition, IsEnabled ? _global.DullTextColor : _global.ButtonDisableColor);
@@ -266,7 +280,7 @@ namespace ProjectVagabond.UI
             if (!IsEnabled)
             {
                 float startX = animatedPosition.X;
-                float endX = _barAreaRect.Right; // Static end point
+                float endX = _barAreaRect.Right;
                 float lineY = animatedPosition.Y + labelFont.LineHeight / 2f;
                 spriteBatch.DrawLineSnapped(new Vector2(startX, lineY), new Vector2(endX, lineY), _global.ButtonDisableColor);
             }

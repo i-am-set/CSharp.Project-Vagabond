@@ -1,8 +1,4 @@
-﻿// --- MainMenuScene.cs ---
-// Fixed bug where the selection arrow (>) would remain visible for one frame when returning from the Settings menu.
-// Added ResetAnimationState() calls to button OnClick handlers to ensure clean state before scene transitions.
-
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -34,10 +30,11 @@ namespace ProjectVagabond.Scenes
         private readonly ParticleSystemManager _particleSystemManager;
         private readonly TransitionManager _transitionManager;
         private readonly HapticsManager _hapticsManager;
+        private readonly InputManager _inputManager;
 
         private readonly List<Button> _buttons = new();
         private readonly List<UIAnimator> _buttonAnimators = new();
-        private int _selectedButtonIndex = -1;
+        private readonly NavigationGroup _navigationGroup;
 
         private float _inputDelay = 0.1f;
         private float _currentInputDelay = 0f;
@@ -55,6 +52,8 @@ namespace ProjectVagabond.Scenes
             _particleSystemManager = ServiceLocator.Get<ParticleSystemManager>();
             _transitionManager = ServiceLocator.Get<TransitionManager>();
             _hapticsManager = ServiceLocator.Get<HapticsManager>();
+            _inputManager = ServiceLocator.Get<InputManager>();
+            _navigationGroup = new NavigationGroup(wrapNavigation: true);
         }
 
         public override Rectangle GetAnimatedBounds()
@@ -72,6 +71,7 @@ namespace ProjectVagabond.Scenes
             if (_uiInitialized) return;
 
             _buttons.Clear();
+            _navigationGroup.Clear();
 
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
 
@@ -106,12 +106,12 @@ namespace ProjectVagabond.Scenes
                 EnableTextWave = true,
                 AlwaysAnimateText = true,
                 WaveEffectType = TextEffectType.TypewriterPop,
-                EnableHoverSway = false // Disable sway for main menu
+                EnableHoverSway = false
             };
             playButton.OnClick += () =>
             {
                 _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
-                playButton.ResetAnimationState(); // Clear pressed state to prevent artifacts on return
+                playButton.ResetAnimationState();
 
                 var core = ServiceLocator.Get<Core>();
                 var gameState = ServiceLocator.Get<GameState>();
@@ -131,6 +131,7 @@ namespace ProjectVagabond.Scenes
                 _sceneManager.ChangeScene(GameSceneState.Split, transitionOut, transitionIn, 0f, loadingTasks);
             };
             _buttons.Add(playButton);
+            _navigationGroup.Add(playButton);
             currentY += playHeight + buttonYSpacing;
 
             int settingsHeight = (int)settingsSize.Y + verticalPadding * 2;
@@ -146,15 +147,16 @@ namespace ProjectVagabond.Scenes
                 EnableTextWave = true,
                 AlwaysAnimateText = true,
                 WaveEffectType = TextEffectType.TypewriterPop,
-                EnableHoverSway = false // Disable sway for main menu
+                EnableHoverSway = false
             };
             settingsButton.OnClick += () =>
             {
                 _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
-                settingsButton.ResetAnimationState(); // Clear pressed state to prevent artifacts on return
+                settingsButton.ResetAnimationState();
                 _sceneManager.ShowModal(GameSceneState.Settings);
             };
             _buttons.Add(settingsButton);
+            _navigationGroup.Add(settingsButton);
             currentY += settingsHeight + buttonYSpacing;
 
             int exitHeight = (int)exitSize.Y + verticalPadding * 2;
@@ -170,10 +172,11 @@ namespace ProjectVagabond.Scenes
                 EnableTextWave = true,
                 AlwaysAnimateText = true,
                 WaveEffectType = TextEffectType.TypewriterPop,
-                EnableHoverSway = false // Disable sway for main menu
+                EnableHoverSway = false
             };
             exitButton.OnClick += ConfirmExit;
             _buttons.Add(exitButton);
+            _navigationGroup.Add(exitButton);
 
             _uiInitialized = true;
         }
@@ -220,7 +223,6 @@ namespace ProjectVagabond.Scenes
                 int index = i;
                 animator.OnInComplete += () => {
                     _buttons[index].AlwaysAnimateText = false;
-                    // FIX: Set to SmallWave to match Game Over buttons exactly
                     _buttons[index].WaveEffectType = TextEffectType.SmallWave;
                 };
 
@@ -228,27 +230,13 @@ namespace ProjectVagabond.Scenes
                 _buttonAnimators.Add(animator);
             }
 
-            if (this.LastInputDevice == InputDevice.Keyboard && !firstTimeOpened)
+            if (_inputManager.CurrentInputDevice != InputDeviceType.Mouse && !firstTimeOpened)
             {
-                _selectedButtonIndex = 0;
-                PositionMouseOnFirstSelectable();
-
-                var firstButtonBounds = GetFirstSelectableElementBounds();
-                if (firstButtonBounds.HasValue)
-                {
-                    Point screenPos = Core.TransformVirtualToScreen(firstButtonBounds.Value.Center);
-                    var fakeMouseState = new MouseState(screenPos.X, screenPos.Y, 0, ButtonState.Released, ButtonState.Released, ButtonState.Released, ButtonState.Released, ButtonState.Released);
-                    Vector2 virtualPos = Core.TransformMouse(fakeMouseState.Position);
-
-                    foreach (var button in _buttons)
-                    {
-                        button.UpdateHoverState(virtualPos);
-                    }
-                }
+                _navigationGroup.SelectFirst();
             }
             else
             {
-                _selectedButtonIndex = -1;
+                _navigationGroup.DeselectAll();
             }
 
             firstTimeOpened = false;
@@ -284,8 +272,8 @@ namespace ProjectVagabond.Scenes
                 animator.Update(dt);
             }
 
-            var currentMouseState = Mouse.GetState();
-            var virtualMousePos = Core.TransformMouse(currentMouseState.Position);
+            // Use effective mouse state to disable hovering when using keyboard
+            var currentMouseState = _inputManager.GetEffectiveMouseState();
 
             if (IsInputBlocked)
             {
@@ -298,13 +286,6 @@ namespace ProjectVagabond.Scenes
                 return;
             }
 
-            var currentKeyboardState = Keyboard.GetState();
-
-            if (currentMouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released)
-            {
-                _sceneManager.LastInputDevice = InputDevice.Mouse;
-            }
-
             if (_currentInputDelay > 0)
             {
                 _currentInputDelay -= dt;
@@ -315,10 +296,6 @@ namespace ProjectVagabond.Scenes
                 if (_buttonAnimators[i].IsInteractive)
                 {
                     _buttons[i].Update(currentMouseState);
-                    if (_buttons[i].IsHovered)
-                    {
-                        _selectedButtonIndex = i;
-                    }
                 }
                 else
                 {
@@ -328,60 +305,16 @@ namespace ProjectVagabond.Scenes
 
             if (_currentInputDelay <= 0)
             {
-                bool upPressed = KeyPressed(Keys.Up, currentKeyboardState, _previousKeyboardState);
-                bool downPressed = KeyPressed(Keys.Down, currentKeyboardState, _previousKeyboardState);
-
-                if (upPressed || downPressed)
+                if (_inputManager.CurrentInputDevice == InputDeviceType.Mouse)
                 {
-                    if (_selectedButtonIndex <= -1) { _selectedButtonIndex = 0; }
-
-                    _sceneManager.LastInputDevice = InputDevice.Keyboard;
-                    var selectedButton = _buttons[_selectedButtonIndex];
-                    if (selectedButton.IsHovered)
-                    {
-                        if (upPressed) _selectedButtonIndex = (_selectedButtonIndex - 1 + _buttons.Count) % _buttons.Count;
-                        else _selectedButtonIndex = (_selectedButtonIndex + 1) % _buttons.Count;
-
-                        Point screenPos = Core.TransformVirtualToScreen(_buttons[_selectedButtonIndex].Bounds.Center);
-                        Mouse.SetPosition(screenPos.X, screenPos.Y);
-
-                        keyboardNavigatedLastFrame = true;
-                    }
-                    else
-                    {
-                        Point screenPos = Core.TransformVirtualToScreen(selectedButton.Bounds.Center);
-                        Mouse.SetPosition(screenPos.X, screenPos.Y);
-
-                        keyboardNavigatedLastFrame = true;
-                    }
+                    _navigationGroup.DeselectAll();
                 }
-
-                if (KeyPressed(Keys.Enter, currentKeyboardState, _previousKeyboardState))
+                else
                 {
-                    if (_selectedButtonIndex <= -1) _selectedButtonIndex = 0;
-
-                    _sceneManager.LastInputDevice = InputDevice.Keyboard;
-                    var selectedButton = _buttons[_selectedButtonIndex];
-
-                    if (_buttonAnimators[_selectedButtonIndex].IsInteractive)
-                    {
-                        if (selectedButton.IsHovered)
-                        {
-                            selectedButton.TriggerClick();
-                        }
-                        else
-                        {
-                            Point screenPos = Core.TransformVirtualToScreen(selectedButton.Bounds.Center);
-                            Mouse.SetPosition(screenPos.X, screenPos.Y);
-
-                            keyboardNavigatedLastFrame = true;
-                        }
-                    }
-                }
-
-                if (KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState))
-                {
-                    ConfirmExit();
+                    if (_inputManager.NavigateUp) _navigationGroup.Navigate(-1);
+                    if (_inputManager.NavigateDown) _navigationGroup.Navigate(1);
+                    if (_inputManager.Confirm) _navigationGroup.SubmitCurrent();
+                    if (_inputManager.Back) ConfirmExit();
                 }
             }
         }
@@ -411,36 +344,31 @@ namespace ProjectVagabond.Scenes
 
                 spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: finalTransform);
 
-                bool forceHover = (i == _selectedButtonIndex) && (_sceneManager.LastInputDevice == InputDevice.Keyboard || keyboardNavigatedLastFrame);
-                _buttons[i].Draw(spriteBatch, font, gameTime, Matrix.Identity, forceHover);
+                _buttons[i].Draw(spriteBatch, font, gameTime, Matrix.Identity);
 
                 spriteBatch.End();
             }
 
             spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
 
-            if (_selectedButtonIndex >= 0 && _selectedButtonIndex < _buttons.Count)
+            for (int i = 0; i < _buttons.Count; i++)
             {
-                var state = _buttonAnimators[_selectedButtonIndex].GetVisualState();
-                if (state.IsVisible && state.Scale.X >= 0.95f)
+                var button = _buttons[i];
+                if (button.IsSelected || button.IsHovered || button.IsPressed)
                 {
-                    var selectedButton = _buttons[_selectedButtonIndex];
-                    // Check if hovered OR pressed (held down)
-                    if (selectedButton.IsHovered || selectedButton.IsPressed)
+                    var state = _buttonAnimators[i].GetVisualState();
+                    if (state.IsVisible && state.Scale.X >= 0.95f)
                     {
-                        var bounds = selectedButton.Bounds;
-                        // Use Palette_Fruit if pressed, otherwise ButtonHoverColor
-                        var color = selectedButton.IsPressed ? _global.Palette_Fruit : _global.ButtonHoverColor;
-                        var fontToUse = selectedButton.Font ?? secondaryFont;
+                        var bounds = button.Bounds;
+                        var color = button.IsPressed ? _global.Palette_Fruit : _global.ButtonHoverColor;
+                        var fontToUse = button.Font ?? secondaryFont;
 
                         string leftArrow = ">";
                         var arrowSize = fontToUse.MeasureString(leftArrow);
 
-                        float pressOffset = selectedButton.IsPressed ? 2f : 0f;
-
-                        // FIX: Access the public property instead of the protected field
-                        float liftOffset = selectedButton.HoverAnimator.CurrentOffset;
-                        var leftPos = new Vector2(bounds.Left - arrowSize.Width - 4 + pressOffset, bounds.Center.Y - arrowSize.Height / 2f + selectedButton.TextRenderOffset.Y + liftOffset);
+                        float pressOffset = button.IsPressed ? 2f : 0f;
+                        float liftOffset = button.HoverAnimator.CurrentOffset;
+                        var leftPos = new Vector2(bounds.Left - arrowSize.Width - 4 + pressOffset, bounds.Center.Y - arrowSize.Height / 2f + button.TextRenderOffset.Y + liftOffset);
 
                         spriteBatch.DrawStringSnapped(fontToUse, leftArrow, leftPos, color);
                     }

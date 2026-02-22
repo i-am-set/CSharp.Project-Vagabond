@@ -73,7 +73,7 @@ namespace ProjectVagabond.UI
         {
             if (_animState == AnimationState.Hidden) return;
 
-            bool isActivated = IsEnabled && (IsHovered || forceHover);
+            bool isActivated = IsEnabled && (IsHovered || IsSelected || forceHover);
             BitmapFont font = this.Font ?? defaultFont;
             var pixel = ServiceLocator.Get<Texture2D>();
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -96,12 +96,10 @@ namespace ProjectVagabond.UI
             float yOffset = 0f;
             if (EnableHoverSway)
             {
-                // FIX: Pass inherited properties
                 yOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated, HoverLiftOffset, HoverLiftDuration);
             }
             else
             {
-                // FIX: Pass inherited properties
                 _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated, HoverLiftOffset, HoverLiftDuration);
             }
 

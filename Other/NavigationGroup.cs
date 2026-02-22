@@ -1,0 +1,148 @@
+﻿using Microsoft.Xna.Framework.Input;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace ProjectVagabond.UI
+{
+    public class NavigationGroup
+    {
+        private readonly List<ISelectable> _items = new List<ISelectable>();
+        private int _currentIndex = -1;
+        private bool _wrapNavigation = true;
+
+        public ISelectable CurrentSelection => (_currentIndex >= 0 && _currentIndex < _items.Count) ? _items[_currentIndex] : null;
+
+        public NavigationGroup(bool wrapNavigation = true)
+        {
+            _wrapNavigation = wrapNavigation;
+        }
+
+        public void Add(ISelectable item)
+        {
+            _items.Add(item);
+        }
+
+        public void Clear()
+        {
+            DeselectAll();
+            _items.Clear();
+        }
+
+        public void DeselectAll()
+        {
+            if (_currentIndex >= 0 && _currentIndex < _items.Count)
+            {
+                _items[_currentIndex].IsSelected = false;
+                _items[_currentIndex].OnDeselect();
+            }
+            _currentIndex = -1;
+        }
+
+        public void Select(int index)
+        {
+            if (index < 0 || index >= _items.Count) return;
+            if (!_items[index].IsEnabled) return;
+
+            if (_currentIndex >= 0 && _currentIndex < _items.Count)
+            {
+                if (_currentIndex == index) return;
+
+                _items[_currentIndex].IsSelected = false;
+                _items[_currentIndex].OnDeselect();
+            }
+
+            _currentIndex = index;
+            _items[_currentIndex].IsSelected = true;
+            _items[_currentIndex].OnSelect();
+        }
+
+        public void SelectFirst()
+        {
+            for (int i = 0; i < _items.Count; i++)
+            {
+                if (_items[i].IsEnabled)
+                {
+                    Select(i);
+                    return;
+                }
+            }
+        }
+
+        public void Navigate(int direction)
+        {
+            if (_items.Count == 0) return;
+
+            if (_currentIndex == -1)
+            {
+                int wakeUpIndex = -1;
+                if (direction > 0)
+                {
+                    for (int i = 0; i < _items.Count; i++)
+                    {
+                        if (_items[i].IsEnabled) { wakeUpIndex = i; break; }
+                    }
+                }
+                else
+                {
+                    for (int i = _items.Count - 1; i >= 0; i--)
+                    {
+                        if (_items[i].IsEnabled) { wakeUpIndex = i; break; }
+                    }
+                }
+
+                if (wakeUpIndex != -1) Select(wakeUpIndex);
+                return;
+            }
+
+            int start = _currentIndex;
+            int next = start;
+            int count = _items.Count;
+
+            for (int i = 0; i < count; i++)
+            {
+                next += direction;
+
+                if (_wrapNavigation)
+                {
+                    if (next >= count) next = 0;
+                    if (next < 0) next = count - 1;
+                }
+                else
+                {
+                    if (next >= count) return;
+                    if (next < 0) return;
+                }
+
+                if (_items[next].IsEnabled)
+                {
+                    Select(next);
+                    return;
+                }
+            }
+        }
+
+        public void Update(MouseState mouseState, bool deselectIfNoHover = false)
+        {
+            bool foundHover = false;
+            for (int i = 0; i < _items.Count; i++)
+            {
+                if (_items[i].IsEnabled && _items[i].Bounds.Contains(mouseState.Position))
+                {
+                    Select(i);
+                    foundHover = true;
+                    break; // Found the hovered item, stop looking
+                }
+            }
+
+            if (deselectIfNoHover && !foundHover)
+            {
+                DeselectAll();
+            }
+        }
+
+        public void SubmitCurrent()
+        {
+            CurrentSelection?.OnSubmit();
+        }
+    }
+}

@@ -8,20 +8,17 @@ using ProjectVagabond.Utils;
 
 namespace ProjectVagabond.UI
 {
-    public interface ISettingControl
+    public interface ISettingControl : ISelectable
     {
         string Label { get; }
         bool IsDirty { get; }
-        bool IsEnabled { get; set; }
         HoverAnimator HoverAnimator { get; }
         string GetCurrentValueAsString();
         string GetSavedValueAsString();
 
-        // Updated to take two fonts
-        void Draw(SpriteBatch spriteBatch, BitmapFont labelFont, BitmapFont valueFont, Vector2 position, bool isSelected, GameTime gameTime);
+        void Draw(SpriteBatch spriteBatch, BitmapFont labelFont, BitmapFont valueFont, Vector2 position, GameTime gameTime);
 
-        // Update usually only needs the value font for measuring hitboxes of arrows/values
-        void Update(Vector2 position, bool isSelected, MouseState currentMouseState, MouseState previousMouseState, Vector2 virtualMousePos, BitmapFont valueFont);
+        void Update(Vector2 position, MouseState currentMouseState, MouseState previousMouseState, Vector2 virtualMousePos, BitmapFont labelFont, BitmapFont valueFont);
 
         void HandleInput(Keys key);
         void Apply();
