@@ -220,7 +220,7 @@ namespace ProjectVagabond
         public Color Palette_DarkerGray { get; set; } = new Color(36, 35, 46);
         public Color Palette_DarkestGray { get; set; } = new Color(26, 25, 33);
         public Color Palette_Black { get; set; } = new Color(25, 22, 28);
-        public Color Palette_Off { get; set; } = new Color(8, 7, 9);
+        public Color Palette_Off { get; set; } = new Color(10, 9, 11);
 
         public Color Palette_Pink { get; set; } = Color.Pink;
         public Color Palette_Purple { get; set; } = Color.Purple;
