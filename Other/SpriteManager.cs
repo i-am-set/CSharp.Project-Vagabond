@@ -66,6 +66,7 @@ namespace ProjectVagabond
         public Texture2D ManaBarPattern { get; private set; }
         public Texture2D TenacityPipTexture { get; private set; }
         public Texture2D StatModIconsTexture { get; private set; }
+        public Texture2D CardFlipIcon { get; private set; }
 
         public Rectangle[] ActionButtonSourceRects { get; private set; }
         public Rectangle[] ActionIconSourceRects { get; private set; }
@@ -427,6 +428,9 @@ namespace ProjectVagabond
 
             try { StatModIconsTexture = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/stat_mod_icons_spritesheet"); }
             catch { StatModIconsTexture = _textureFactory.CreateColoredTexture(24, 6, Color.Magenta); }
+
+            try { CardFlipIcon = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/rotate_icon_8x8_spritesheet"); }
+            catch { CardFlipIcon = _textureFactory.CreateColoredTexture(16, 8, Color.Yellow); }
 
             // --- Create Mini Action Button Texture ---
             // Width 80px, Height 6px

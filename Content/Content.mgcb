@@ -1764,6 +1764,18 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/BasicIcons/rarity_icons_8x8_spritesheet.png;Sprites/UI/BasicIcons/rarity_icons_8x8_spritesheet
 
+#begin Sprites/UI/BasicIcons/rotate_icon_8x8_spritesheet.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/BasicIcons/rotate_icon_8x8_spritesheet.png;Sprites/UI/BasicIcons/rotate_icon_8x8_spritesheet
+
 #begin Sprites/UI/BasicIcons/SplitMap_Close_Inventory_Button.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -2003,18 +2015,6 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/BattleUI/tenacity_3x3_icon.png;Sprites/UI/BattleUI/tenacity_3x3_icon
-
-#begin Sprites/UI/BattleUI/tenacity_break_32x32_spritesheet.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/UI/BattleUI/tenacity_break_32x32_spritesheet.png;Sprites/UI/BattleUI/tenacity_break_32x32_spritesheet
 
 #begin Sprites/UI/BattleUI/tenacity_break_32x32_spritesheet.png
 /importer:TextureImporter

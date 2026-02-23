@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Utils;
 using System;
@@ -29,7 +30,7 @@ namespace ProjectVagabond.UI
         private readonly List<(Rectangle Bounds, MoveData? Move, int CardCenterX)> _activeHitboxes = new();
         private float _hoverTimer;
         private (Rectangle Bounds, MoveData? Move, int CardCenterX)? _currentHoveredItem;
-        private const float HOVER_DELAY = 0.1f;
+        private const float HOVER_DELAY = 0.25f;
         private Vector2 _lastMousePos;
         private bool _isTooltipVisible;
         private PartyMember? _hoveredMember;
@@ -38,23 +39,14 @@ namespace ProjectVagabond.UI
         private PartyMember? _draggedMember;
         private bool _isDragging;
         private int _dragStartMouseY;
-
-        // The offset from the CENTER of the card to the mouse position when the drag started.
-        // Used to "stamp" the cursor onto the card so it rotates and moves perfectly with it.
         private Vector2 _dragGrabOffsetFromCenter;
-
-        // Tracks the "Ghost" mouse position (User Intent) in Virtual Pixels
         private float _virtualPullX;
-        // Tracks the last known Screen X to calculate deltas
         private int _lastScreenMouseX;
-
-        // Tracks the card that should render on top (last dragged)
         private PartyMember? _topmostMember;
-
-        // Tracks the visual lift of the cursor sprite
         private float _currentCursorLift = 0f;
+        private ButtonState _prevLeftButtonState = ButtonState.Released;
 
-        // --- Physics & Rotation State (Balatro Feel) ---
+        // --- Physics & Rotation State ---
         private float _currentDragVelocity = 0f;
         private float _currentDragRotation = 0f;
         private const float ROTATION_TILT_FACTOR = 0.001f;
@@ -68,7 +60,6 @@ namespace ProjectVagabond.UI
         private const float MAX_PULL_DISTANCE = 180f;
         private const float SWAP_THRESHOLD_FACTOR = 0.5f;
 
-        // Public property for SplitMapScene to prevent HUD sliding
         public bool IsDragging => _isDragging;
 
         // --- Animation State ---
@@ -77,15 +68,21 @@ namespace ProjectVagabond.UI
         private readonly Dictionary<PartyMember, float> _tagOffsets = new Dictionary<PartyMember, float>();
         private readonly Dictionary<PartyMember, int> _currentTagNumbers = new Dictionary<PartyMember, int>();
 
+        // --- Flip State ---
+        // 0.0 = Front, 1.0 = Back
+        private readonly Dictionary<PartyMember, float> _flipTargets = new Dictionary<PartyMember, float>();
+        private readonly Dictionary<PartyMember, float> _flipProgress = new Dictionary<PartyMember, float>();
+        private const float FLIP_SPEED = 3f;
+        private const int FLIP_BUTTON_SIZE = 8;
+
+        // --- Description Cache ---
+        private readonly Dictionary<string, string> _abilityDescriptionCache = new Dictionary<string, string>();
+
         private const float CARD_MOVE_SPEED = 15f;
         private const float CARD_DROP_SPEED = 20f;
         private const float ENTRY_Y_OFFSET = -16f;
-
-        // --- Lift Constants ---
         private const float DRAG_LIFT_OFFSET = -8f;
         private const float HOVER_LIFT_OFFSET = -1f;
-
-        // --- Tag Constants ---
         private const float TAG_DEFAULT_OFFSET = 4f;
         private const float TAG_HOVER_OFFSET = 2f;
         private const float TAG_HIDDEN_OFFSET = 12f;
@@ -105,35 +102,53 @@ namespace ProjectVagabond.UI
             var party = _gameState.PlayerState.Party;
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
             var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
+            var currentMouseState = Mouse.GetState();
 
             float currentHudY = BaseY + verticalOffset;
-            _hoveredMember = null; // Reset hover state
+            _hoveredMember = null;
+
+            // --- 0. Update Flip Animations ---
+            foreach (var member in party)
+            {
+                if (!_flipTargets.ContainsKey(member)) _flipTargets[member] = 0f;
+                if (!_flipProgress.ContainsKey(member)) _flipProgress[member] = 0f;
+
+                float target = _flipTargets[member];
+                float current = _flipProgress[member];
+
+                if (Math.Abs(current - target) > 0.01f)
+                {
+                    float move = FLIP_SPEED * dt;
+                    if (current < target) _flipProgress[member] = Math.Min(target, current + move);
+                    else _flipProgress[member] = Math.Max(target, current - move);
+                }
+                else
+                {
+                    _flipProgress[member] = target;
+                }
+            }
 
             // --- Drag Logic ---
             if (_isDragging && _draggedMember != null)
             {
+                // Force flip back to front immediately if dragging
+                _flipTargets[_draggedMember] = 0f;
+
                 cursorManager.SetState(CursorState.Dragging);
 
-                // 1. Calculate Scale Factor
                 float scaleX = (float)graphicsDevice.Viewport.Width / Global.VIRTUAL_WIDTH;
                 float scaleY = (float)graphicsDevice.Viewport.Height / Global.VIRTUAL_HEIGHT;
                 float scale = Math.Min(scaleX, scaleY);
 
-                // 2. Calculate Input Delta
-                var currentMouseState = Mouse.GetState();
                 int screenDeltaX = currentMouseState.X - _lastScreenMouseX;
                 float virtualDeltaX = screenDeltaX / scale;
 
-                // 3. Calculate Anchor
                 int currentIndex = party.IndexOf(_draggedMember);
                 int totalWidth = (party.Count * CARD_WIDTH) + ((party.Count > 0 ? party.Count - 1 : 0) * CARD_SPACING);
                 int startX = (Global.VIRTUAL_WIDTH - totalWidth) / 2;
                 float anchorSlotX = startX + (currentIndex * (CARD_WIDTH + CARD_SPACING));
 
-                // 4. Update "Ghost" Pull Position with Ratcheting Logic
                 float currentDiff = _virtualPullX - anchorSlotX;
-
-                // Check if moving towards center (relaxing tension)
                 bool movingTowardsCenter = (currentDiff > 0 && virtualDeltaX < 0) || (currentDiff < 0 && virtualDeltaX > 0);
 
                 if (movingTowardsCenter)
@@ -153,16 +168,13 @@ namespace ProjectVagabond.UI
                     _virtualPullX += virtualDeltaX;
                 }
 
-                // 5. Clamp Input (Safety Wall)
                 float diff = _virtualPullX - anchorSlotX;
                 diff = Math.Clamp(diff, -MAX_PULL_DISTANCE, MAX_PULL_DISTANCE);
                 _virtualPullX = anchorSlotX + diff;
 
-                // 6. Calculate Elastic Target
                 float dampedDiff = MAX_ELASTIC_STRETCH * MathF.Tanh(diff / ELASTIC_STIFFNESS);
                 float targetVisualX = anchorSlotX + dampedDiff;
 
-                // 7. Interpolate Card Position & Calculate Velocity
                 float prevVisualX = _visualPositions[_draggedMember];
                 float tetherDamping = 1.0f - MathF.Exp(-DRAG_TETHER_SPEED * dt);
                 float newVisualX = MathHelper.Lerp(prevVisualX, targetVisualX, tetherDamping);
@@ -170,7 +182,6 @@ namespace ProjectVagabond.UI
                 _currentDragVelocity = (newVisualX - prevVisualX) / dt;
                 _visualPositions[_draggedMember] = newVisualX;
 
-                // 8. Force Mouse to Follow Card
                 float virtualMoveAmt = newVisualX - prevVisualX;
                 int screenMoveAmt = (int)MathF.Round(virtualMoveAmt * scale);
                 int newScreenMouseX = _lastScreenMouseX + screenMoveAmt;
@@ -178,7 +189,6 @@ namespace ProjectVagabond.UI
                 Mouse.SetPosition(newScreenMouseX, _dragStartMouseY);
                 _lastScreenMouseX = newScreenMouseX;
 
-                // 9. Swap Logic
                 float swapThreshold = CARD_WIDTH * SWAP_THRESHOLD_FACTOR;
 
                 for (int i = 0; i < party.Count; i++)
@@ -197,13 +207,12 @@ namespace ProjectVagabond.UI
                     }
                 }
 
-                if (Mouse.GetState().LeftButton == ButtonState.Released)
+                if (currentMouseState.LeftButton == ButtonState.Released)
                 {
                     _isDragging = false;
                     _draggedMember = null;
                 }
 
-                // Skip hover logic while dragging to ensure clean state
                 goto ProcessTweening;
             }
             else
@@ -221,27 +230,59 @@ namespace ProjectVagabond.UI
                 if (!_visualPositions.ContainsKey(member)) continue;
 
                 float x = _visualPositions[member];
-                Rectangle cardRect = new Rectangle((int)x, (int)currentHudY, CARD_WIDTH, HUD_HEIGHT);
+                // Added +3 to match Draw method offset. This aligns the hitbox with the visual.
+                float y = currentHudY + 3 + (_verticalOffsets.ContainsKey(member) ? _verticalOffsets[member] : 0);
+
+                // Use MathF.Round to match DrawSnapped logic for precise hitboxes
+                int snappedX = (int)MathF.Round(x);
+                int snappedY = (int)MathF.Round(y);
+
+                Rectangle cardRect = new Rectangle(snappedX, snappedY, CARD_WIDTH, HUD_HEIGHT);
+
+                // Flip Button Hitbox (Top-Left) - Snapped relative to card
+                Rectangle flipBtnRect = new Rectangle(snappedX + 2, snappedY + 2, FLIP_BUTTON_SIZE, FLIP_BUTTON_SIZE);
 
                 if (cardRect.Contains(virtualMousePos))
                 {
-                    cursorManager.SetState(CursorState.HoverDraggable);
-                    _hoveredMember = member; // Mark as hovered for tweening
+                    // 1. Check Flip Button First (Priority)
+                    if (flipBtnRect.Contains(virtualMousePos))
+                    {
+                        cursorManager.SetState(CursorState.HoverClickable);
+                        _hoveredMember = member; // Keep card hovered so it doesn't drop down
 
-                    if (Mouse.GetState().LeftButton == ButtonState.Pressed && !_isDragging)
+                        // Only trigger on FRESH click
+                        if (currentMouseState.LeftButton == ButtonState.Pressed && _prevLeftButtonState == ButtonState.Released)
+                        {
+                            // Toggle Flip Target
+                            float currentTarget = _flipTargets[member];
+                            _flipTargets[member] = (currentTarget == 0f) ? 1f : 0f;
+
+                            ServiceLocator.Get<HapticsManager>().TriggerUICompoundShake(0.3f);
+                        }
+
+                        // CRITICAL: If we are hovering the button, we DO NOT process drag logic for this card.
+                        continue;
+                    }
+
+                    // 2. Normal Card Hover (Only if NOT hovering button)
+                    cursorManager.SetState(CursorState.HoverDraggable);
+                    _hoveredMember = member;
+
+                    if (currentMouseState.LeftButton == ButtonState.Pressed && _prevLeftButtonState == ButtonState.Released && !_isDragging)
                     {
                         _isDragging = true;
                         _draggedMember = member;
                         _topmostMember = member;
 
-                        _dragStartMouseY = Mouse.GetState().Y;
-                        _lastScreenMouseX = Mouse.GetState().X;
+                        // Force flip back to front immediately on interaction
+                        _flipTargets[member] = 0f;
+
+                        _dragStartMouseY = currentMouseState.Y;
+                        _lastScreenMouseX = currentMouseState.X;
 
                         float grabOffset = _visualPositions[member] - virtualMousePos.X;
                         _virtualPullX = virtualMousePos.X + grabOffset;
 
-                        // Calculate the visual offset from the CENTER of the card to the mouse.
-                        // This allows us to "stamp" the cursor onto the card during the drag.
                         float currentCardX = _visualPositions[member];
                         float currentCardY = BaseY + 3 + _verticalOffsets[member] + verticalOffset;
                         Vector2 cardCenter = new Vector2(currentCardX + CARD_WIDTH / 2f, currentCardY + (HUD_HEIGHT - 4) / 2f);
@@ -300,7 +341,6 @@ namespace ProjectVagabond.UI
             }
             else
             {
-                // If animating or hidden, force clear tooltip state
                 _currentHoveredItem = null;
                 _hoverTimer = 0f;
                 _isTooltipVisible = false;
@@ -309,12 +349,13 @@ namespace ProjectVagabond.UI
             _lastMousePos = virtualMousePos;
 
         ProcessTweening:
-            // --- Cursor Lift Animation ---
+            // Update Input Latch
+            _prevLeftButtonState = currentMouseState.LeftButton;
+
             float targetCursorLift = _isDragging ? DRAG_LIFT_OFFSET : 0f;
             float cursorDamping = 1.0f - MathF.Exp(-CARD_DROP_SPEED * dt);
             _currentCursorLift = MathHelper.Lerp(_currentCursorLift, targetCursorLift, cursorDamping);
 
-            // --- Rotation Physics ---
             float targetRotation = _currentDragVelocity * ROTATION_TILT_FACTOR;
             targetRotation = Math.Clamp(targetRotation, -MAX_ROTATION, MAX_ROTATION);
             if (!_isDragging) targetRotation = 0f;
@@ -322,7 +363,6 @@ namespace ProjectVagabond.UI
             float rotDamping = 1.0f - MathF.Exp(-ROTATION_SMOOTHING * dt);
             _currentDragRotation = MathHelper.Lerp(_currentDragRotation, targetRotation, rotDamping);
 
-            // --- Card Position Tweening ---
             int totalWidthTween = (party.Count * CARD_WIDTH) + ((party.Count > 0 ? party.Count - 1 : 0) * CARD_SPACING);
             int startXTween = (Global.VIRTUAL_WIDTH - totalWidthTween) / 2;
 
@@ -343,7 +383,6 @@ namespace ProjectVagabond.UI
                     }
                 }
 
-                // --- Vertical Offset Logic (Card Lift) ---
                 if (!_verticalOffsets.ContainsKey(member))
                 {
                     _verticalOffsets[member] = ENTRY_Y_OFFSET;
@@ -352,8 +391,6 @@ namespace ProjectVagabond.UI
                 {
                     float currentY = _verticalOffsets[member];
                     float targetY = 1f;
-
-                    // Apply default offset for slots 3 and 4 (indices 2 and 3)
                     if (i >= 2) targetY = 2f;
 
                     if (member == _draggedMember) targetY = DRAG_LIFT_OFFSET;
@@ -363,7 +400,6 @@ namespace ProjectVagabond.UI
                     _verticalOffsets[member] = MathHelper.Lerp(currentY, targetY, dampingY);
                 }
 
-                // --- Tag Offset Logic (Tag Pop-up & Number Swap) ---
                 if (!_tagOffsets.ContainsKey(member))
                 {
                     _tagOffsets[member] = TAG_DEFAULT_OFFSET;
@@ -381,10 +417,7 @@ namespace ProjectVagabond.UI
 
                 if (currentNumber != actualNumber)
                 {
-                    // Numbers don't match, hide the tag
                     targetTagY = TAG_HIDDEN_OFFSET;
-
-                    // If we are effectively hidden, swap the number
                     if (currentTagY >= TAG_HIDDEN_OFFSET - 0.5f)
                     {
                         _currentTagNumbers[member] = actualNumber;
@@ -392,7 +425,6 @@ namespace ProjectVagabond.UI
                 }
                 else
                 {
-                    // Numbers match, show the tag (with hover logic)
                     targetTagY = (member == _hoveredMember || member == _draggedMember) ? TAG_HOVER_OFFSET : TAG_DEFAULT_OFFSET;
                 }
 
@@ -408,6 +440,8 @@ namespace ProjectVagabond.UI
                 _verticalOffsets.Remove(key);
                 _tagOffsets.Remove(key);
                 _currentTagNumbers.Remove(key);
+                _flipTargets.Remove(key);
+                _flipProgress.Remove(key);
             }
 
             if (_isDragging)
@@ -427,7 +461,6 @@ namespace ProjectVagabond.UI
 
             if (defaultFont == null || secondaryFont == null || tertiaryFont == null) return;
 
-            // --- Reconstruct Global Transform ---
             float scale = core.FinalScale;
             float tx = core.FinalRenderRectangle.X;
             float ty = core.FinalRenderRectangle.Y;
@@ -437,17 +470,14 @@ namespace ProjectVagabond.UI
             float t = Math.Clamp(verticalOffset / 24f, 0f, 1f);
             Color lineColor = Color.Lerp(_global.Palette_DarkPale, _global.Palette_DarkestPale, t);
 
-            // Draw Background
             spriteBatch.DrawSnapped(_pixel, new Vector2(0, currentStartY), null, _global.Palette_Black, 0f, Vector2.Zero, new Vector2(Global.VIRTUAL_WIDTH, HUD_HEIGHT), SpriteEffects.None, 0f);
 
-            // Draw Dotted Line (Smooth Movement)
             int dotSize = 1;
             int gapSize = 1;
             Vector2 dotScale = new Vector2(dotSize, 1);
 
             for (int x = 0; x < Global.VIRTUAL_WIDTH; x += (dotSize + gapSize))
             {
-                // Use Vector2 position to maintain float precision and avoid jitter
                 spriteBatch.DrawSnapped(_pixel, new Vector2(x, currentStartY), null, lineColor, 0f, Vector2.Zero, dotScale, SpriteEffects.None, 0f);
             }
 
@@ -455,23 +485,18 @@ namespace ProjectVagabond.UI
             int count = party.Count;
             var mousePos = Core.TransformMouse(Mouse.GetState().Position);
 
-            // 1. Draw all cards EXCEPT the topmost one
             for (int i = 0; i < count; i++)
             {
                 var member = party[i];
                 if (member == _topmostMember) continue;
-
                 DrawMemberCard(spriteBatch, gameTime, member, i, verticalOffset, mousePos, defaultFont, secondaryFont, tertiaryFont, globalTransform);
             }
 
-            // 2. Draw the topmost card last (with rotation if dragged)
             if (_topmostMember != null && party.Contains(_topmostMember))
             {
                 int index = party.IndexOf(_topmostMember);
                 DrawMemberCard(spriteBatch, gameTime, _topmostMember, index, verticalOffset, mousePos, defaultFont, secondaryFont, tertiaryFont, globalTransform);
 
-                // 3. Draw the "Stamped" Cursor if dragging
-                // We draw it here to ensure it is on top of the card and moves perfectly with it.
                 if (_isDragging && _draggedMember == _topmostMember)
                 {
                     var (cursorTex, cursorFrames) = _spriteManager.GetCursorAnimation("cursor_dragging_draggable");
@@ -480,13 +505,8 @@ namespace ProjectVagabond.UI
                         float x = _visualPositions[_draggedMember];
                         float yOffset = _verticalOffsets[_draggedMember] + verticalOffset;
                         Vector2 cardCenter = new Vector2(x + CARD_WIDTH / 2f, BaseY + 3 + yOffset + (HUD_HEIGHT - 4) / 2f);
-
-                        // Apply the same rotation to the cursor offset so it stays "stamped" to the exact grab point
                         Vector2 rotatedOffset = Vector2.Transform(_dragGrabOffsetFromCenter, Matrix.CreateRotationZ(_currentDragRotation));
                         Vector2 cursorPos = cardCenter + rotatedOffset;
-
-                        // We are in the default batch (restored at end of DrawMemberCard), which uses globalTransform.
-                        // So we draw at Virtual coordinates.
                         spriteBatch.DrawSnapped(cursorTex, cursorPos, cursorFrames[0], Color.White, 0f, new Vector2(7, 7), 1.0f, SpriteEffects.None, 0f);
                     }
                 }
@@ -513,18 +533,25 @@ namespace ProjectVagabond.UI
             float yOffset = _verticalOffsets[member] + verticalOffset;
             bool isBeingDragged = (_isDragging && _draggedMember == member);
 
-            // --- Matrix Transformation for Dragged Card ---
-            bool useRotation = isBeingDragged && Math.Abs(_currentDragRotation) > 0.001f;
+            // --- Flip Animation Math ---
+            float flipP = _flipProgress.ContainsKey(member) ? _flipProgress[member] : 0f;
+            // Scale goes 1 -> 0 -> 1. 
+            // 0.0 to 0.5 is Front shrinking. 0.5 to 1.0 is Back expanding.
+            float scaleX = Math.Abs(1f - 2f * flipP);
+            bool showBack = flipP > 0.5f;
 
-            if (useRotation)
+            // --- Matrix Transformation ---
+            // We combine Rotation (Drag) and Scale (Flip)
+            bool useTransform = isBeingDragged || flipP > 0.01f;
+
+            if (useTransform)
             {
                 spriteBatch.End();
 
-                // Calculate center of the card for rotation pivot
                 Vector2 cardCenter = new Vector2(x + CARD_WIDTH / 2f, BaseY + 3 + yOffset + (HUD_HEIGHT - 4) / 2f);
 
-                // Create transform: Move to origin -> Rotate -> Move back -> Apply Global Scale
                 Matrix localTransform = Matrix.CreateTranslation(new Vector3(-cardCenter, 0)) *
+                                        Matrix.CreateScale(scaleX, 1f, 1f) * // Apply Flip Scale
                                         Matrix.CreateRotationZ(_currentDragRotation) *
                                         Matrix.CreateTranslation(new Vector3(cardCenter, 0));
 
@@ -534,60 +561,214 @@ namespace ProjectVagabond.UI
             }
 
             // --- DRAW SLOT TAG (Behind Card) ---
-            // We draw this first so the card body covers the bottom of the tag, making it look like a tab.
             float tagOffset = _tagOffsets.ContainsKey(member) ? _tagOffsets[member] : TAG_DEFAULT_OFFSET;
             int displayedNumber = _currentTagNumbers.ContainsKey(member) ? _currentTagNumbers[member] : (index + 1);
-            DrawSlotTag(spriteBatch, x, yOffset, displayedNumber, tertiaryFont, tagOffset);
+            DrawSlotTag(spriteBatch, x, yOffset, displayedNumber, tertiaryFont, tagOffset, showBack);
 
             // Draw Background
             Vector2 cardPos = new Vector2(x, BaseY + 3 + yOffset);
             Vector2 cardSize = new Vector2(CARD_WIDTH, HUD_HEIGHT - 4);
             spriteBatch.DrawSnapped(_pixel, cardPos, null, _global.Palette_Black, 0f, Vector2.Zero, cardSize, SpriteEffects.None, 0f);
 
-            if (isBeingDragged)
+            // Border Color
+            Color borderColor;
+            if (isBeingDragged) borderColor = _global.Palette_Sun;
+            else
             {
-                DrawHollowRectSmooth(spriteBatch, cardPos, cardSize, _global.Palette_Sun);
+                // Use snapped coordinates for hit testing to match visual rendering
+                int snappedX = (int)MathF.Round(x);
+                int snappedY = (int)MathF.Round(BaseY + 3 + yOffset);
+                Rectangle cardRect = new Rectangle(snappedX, snappedY, CARD_WIDTH, HUD_HEIGHT - 4);
+
+                if (cardRect.Contains(mousePos) && !_isDragging) borderColor = _global.Palette_Pale;
+                else borderColor = (index >= 2) ? _global.Palette_DarkestPale : _global.Palette_DarkPale;
+            }
+            DrawHollowRectSmooth(spriteBatch, cardPos, cardSize, borderColor);
+
+            // --- Draw Content (Front or Back) ---
+            if (showBack)
+            {
+                DrawCardBack(spriteBatch, member, x, yOffset, defaultFont, secondaryFont, tertiaryFont);
             }
             else
             {
-                Rectangle cardRect = new Rectangle((int)x, (int)(BaseY + 3 + yOffset), CARD_WIDTH, HUD_HEIGHT - 4);
-                if (cardRect.Contains(mousePos) && !_isDragging)
+                DrawCardContents(spriteBatch, gameTime, member, x, yOffset, index, defaultFont, secondaryFont, tertiaryFont);
+            }
+
+            // --- Draw Flip Button ---
+            // Only draw if the card is wide enough to look good
+            if (scaleX > 0.2f)
+            {
+                var flipIcon = _spriteManager.CardFlipIcon;
+                if (flipIcon != null)
                 {
-                    DrawHollowRectSmooth(spriteBatch, cardPos, cardSize, _global.Palette_Pale);
-                }
-                else
-                {
-                    // Slots 3 and 4 (indices 2 and 3) get DarkestPale, others get DarkPale
-                    Color borderColor = (index >= 2) ? _global.Palette_DarkestPale : _global.Palette_DarkPale;
-                    DrawHollowRectSmooth(spriteBatch, cardPos, cardSize, borderColor);
+                    // Determine hover state for the button sprite
+                    int snappedX = (int)MathF.Round(x);
+                    int snappedY = (int)MathF.Round(BaseY + 3 + yOffset);
+                    Rectangle btnRect = new Rectangle(snappedX + 2, snappedY + 2, FLIP_BUTTON_SIZE, FLIP_BUTTON_SIZE);
+                    bool btnHover = btnRect.Contains(mousePos) && !_isDragging;
+
+                    // Source rect: 0=Idle, 1=Hover. 8x8 sprites.
+                    Rectangle src = new Rectangle(btnHover ? 8 : 0, 0, 8, 8);
+
+                    // Use Vector2 for position to ensure it snaps exactly like the card body
+                    // Use MathF.Round to match the card body's DrawSnapped logic
+                    Vector2 btnPos = new Vector2(MathF.Round(x) + 2, MathF.Round(BaseY + 3 + yOffset) + 2);
+                    spriteBatch.DrawSnapped(flipIcon, btnPos, src, Color.White);
                 }
             }
 
-            DrawCardContents(spriteBatch, gameTime, member, x, yOffset, index, defaultFont, secondaryFont, tertiaryFont);
-
-            if (useRotation)
+            if (useTransform)
             {
                 spriteBatch.End();
-                // Restore default batch with the correct global transform
                 spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, globalTransform);
             }
         }
 
-        private void DrawSlotTag(SpriteBatch sb, float x, float yOffset, int displayedNumber, BitmapFont font, float tagOffset)
+        private void DrawCardBack(SpriteBatch spriteBatch, PartyMember member, float xPosition, float yOffset, BitmapFont defaultFont, BitmapFont secondaryFont, BitmapFont tertiaryFont)
+        {
+            float y = BaseY + 5 + yOffset;
+            float centerX = xPosition + (CARD_WIDTH / 2f);
+            float maxWidth = CARD_WIDTH - 4; // 2px padding on sides
+
+            // 1. Header: INFO
+            string title = "INFO";
+            Vector2 titleSize = defaultFont.MeasureString(title);
+            spriteBatch.DrawStringSnapped(defaultFont, title, new Vector2(centerX - titleSize.X / 2f, y), _global.Palette_DarkPale);
+            y += 12; // Spacing
+
+            // 2. Section: ABILITY
+            string abilityLabel = "ABILITY";
+            Vector2 abilityLabelSize = secondaryFont.MeasureString(abilityLabel);
+            spriteBatch.DrawStringSnapped(secondaryFont, abilityLabel, new Vector2(centerX - abilityLabelSize.X / 2f, y), _global.Palette_DarkPale);
+            y += secondaryFont.LineHeight + 3; // Increased gap
+
+            // Ability Name & Desc
+            string abilityName = "NONE";
+            string abilityDesc = "";
+
+            if (member.IntrinsicAbilities != null && member.IntrinsicAbilities.Count > 0)
+            {
+                var kvp = member.IntrinsicAbilities.First();
+                abilityName = kvp.Key;
+                abilityDesc = kvp.Value;
+
+                // FIX: If description is empty (common in JSON), look it up via Reflection
+                if (string.IsNullOrEmpty(abilityDesc))
+                {
+                    abilityDesc = GetAbilityDescription(abilityName);
+                }
+            }
+
+            // Draw Name (Tertiary, Centered, Highlighted)
+            Vector2 nameSize = tertiaryFont.MeasureString(abilityName);
+            spriteBatch.DrawStringSnapped(tertiaryFont, abilityName, new Vector2(centerX - nameSize.X / 2f, y), _global.Palette_Sun);
+            y += tertiaryFont.LineHeight + 3; // Increased gap
+
+            // Draw Description (Tertiary, Centered, Wrapped)
+            if (!string.IsNullOrEmpty(abilityDesc))
+            {
+                var words = abilityDesc.Split(' ');
+                string line = "";
+                foreach (var word in words)
+                {
+                    string testLine = string.IsNullOrEmpty(line) ? word : line + " " + word;
+                    if (tertiaryFont.MeasureString(testLine).Width > maxWidth)
+                    {
+                        // Draw current line
+                        Vector2 lineSize = tertiaryFont.MeasureString(line);
+                        spriteBatch.DrawStringSnapped(tertiaryFont, line, new Vector2(centerX - lineSize.X / 2f, y), _global.Palette_LightPale);
+                        y += tertiaryFont.LineHeight + 2; // Line spacing
+                        line = word;
+                    }
+                    else
+                    {
+                        line = testLine;
+                    }
+                }
+                // Draw last line
+                if (!string.IsNullOrEmpty(line))
+                {
+                    Vector2 lineSize = tertiaryFont.MeasureString(line);
+                    spriteBatch.DrawStringSnapped(tertiaryFont, line, new Vector2(centerX - lineSize.X / 2f, y), _global.Palette_LightPale);
+                    y += tertiaryFont.LineHeight + 2; // Line spacing
+                }
+            }
+
+            y += 4; // Gap before Status
+
+            // 3. Section: STATUS
+            string statusLabel = "STATUS";
+            Vector2 statusLabelSize = secondaryFont.MeasureString(statusLabel);
+            spriteBatch.DrawStringSnapped(secondaryFont, statusLabel, new Vector2(centerX - statusLabelSize.X / 2f, y), _global.Palette_DarkPale);
+            y += secondaryFont.LineHeight + 1;
+
+            string statusText = member.ActiveBuffs.Count > 0 ? $"{member.ActiveBuffs.Count} EFF" : "NORMAL";
+            Vector2 statusTextSize = tertiaryFont.MeasureString(statusText);
+            spriteBatch.DrawStringSnapped(tertiaryFont, statusText, new Vector2(centerX - statusTextSize.X / 2f, y), _global.Palette_LightPale);
+        }
+
+        /// <summary>
+        /// Helper to retrieve ability descriptions from the class definition if missing from instance data.
+        /// </summary>
+        private string GetAbilityDescription(string abilityName)
+        {
+            if (_abilityDescriptionCache.TryGetValue(abilityName, out var cachedDesc))
+            {
+                return cachedDesc;
+            }
+
+            try
+            {
+                // Assume naming convention "AbilityName" + "Ability"
+                var typeName = $"ProjectVagabond.Battle.Abilities.{abilityName}Ability";
+                var type = Type.GetType(typeName);
+
+                // Fallback search in all assemblies if not found directly
+                if (type == null)
+                {
+                    foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+                    {
+                        type = asm.GetType(typeName);
+                        if (type != null) break;
+                    }
+                }
+
+                if (type != null)
+                {
+                    // Attempt to create an instance. Most passive abilities are parameterless.
+                    // If it requires parameters, this might fail, but the try-catch handles it.
+                    var instance = Activator.CreateInstance(type) as IAbility;
+                    if (instance != null)
+                    {
+                        _abilityDescriptionCache[abilityName] = instance.Description;
+                        return instance.Description;
+                    }
+                }
+            }
+            catch
+            {
+                // Silently fail and cache empty string to prevent lag on subsequent frames
+            }
+
+            _abilityDescriptionCache[abilityName] = "";
+            return "";
+        }
+
+        private void DrawSlotTag(SpriteBatch sb, float x, float yOffset, int displayedNumber, BitmapFont font, float tagOffset, bool isFlipped)
         {
             float tagWidth = 7f;
             float tagHeight = 10f;
             float visibleHeight = 10f;
 
-            float tagX = x + 7f;
+            // If flipped, position on the right side
+            float tagX = isFlipped ? (x + CARD_WIDTH - 7f - tagWidth) : (x + 7f);
 
             float cardTopY = BaseY + 3 + yOffset;
             float tagY = cardTopY - visibleHeight + tagOffset;
 
-            // Rest of the body (full width)
             sb.DrawSnapped(_pixel, new Vector2(tagX, tagY), null, _global.Palette_DarkestPale, 0f, Vector2.Zero, new Vector2(tagWidth, tagHeight - 1), SpriteEffects.None, 0f);
 
-            // Draw Number
             string num = displayedNumber.ToString();
             Vector2 size = font.MeasureString(num);
             float textX = tagX + MathF.Floor((tagWidth - size.X) / 2f);
@@ -717,7 +898,8 @@ namespace ProjectVagabond.UI
             Rectangle hitRect = new Rectangle((int)cardStartX, (int)y - 2, CARD_WIDTH, lineHeight + 4);
             bool isHovered = !_isDragging && _currentHoveredItem.HasValue && _currentHoveredItem.Value.Bounds == hitRect;
 
-            if (isHovered && isMovePresent)
+            // FIX: Only draw hover rect if tooltip is visible (synced feedback)
+            if (isHovered && isMovePresent && _isTooltipVisible)
             {
                 Color c = _global.Palette_Sun;
                 DrawHollowRectSmooth(sb, new Vector2(cardStartX, y - 2), new Vector2(CARD_WIDTH, lineHeight + 4), c);
