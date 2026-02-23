@@ -72,7 +72,7 @@ namespace ProjectVagabond.UI
         // 0.0 = Front, 1.0 = Back
         private readonly Dictionary<PartyMember, float> _flipTargets = new Dictionary<PartyMember, float>();
         private readonly Dictionary<PartyMember, float> _flipProgress = new Dictionary<PartyMember, float>();
-        private const float FLIP_SPEED = 3f;
+        private const float FLIP_SPEED = 10f;
         private const int FLIP_BUTTON_SIZE = 8;
 
         // --- Description Cache ---
@@ -653,7 +653,6 @@ namespace ProjectVagabond.UI
                 abilityName = kvp.Key;
                 abilityDesc = kvp.Value;
 
-                // FIX: If description is empty (common in JSON), look it up via Reflection
                 if (string.IsNullOrEmpty(abilityDesc))
                 {
                     abilityDesc = GetAbilityDescription(abilityName);
@@ -663,7 +662,7 @@ namespace ProjectVagabond.UI
             // Draw Name (Tertiary, Centered, Highlighted)
             Vector2 nameSize = tertiaryFont.MeasureString(abilityName);
             spriteBatch.DrawStringSnapped(tertiaryFont, abilityName, new Vector2(centerX - nameSize.X / 2f, y), _global.Palette_Sun);
-            y += tertiaryFont.LineHeight + 3; // Increased gap
+            y += tertiaryFont.LineHeight + 1; // Increased gap
 
             // Draw Description (Tertiary, Centered, Wrapped)
             if (!string.IsNullOrEmpty(abilityDesc))
@@ -701,7 +700,7 @@ namespace ProjectVagabond.UI
             string statusLabel = "STATUS";
             Vector2 statusLabelSize = secondaryFont.MeasureString(statusLabel);
             spriteBatch.DrawStringSnapped(secondaryFont, statusLabel, new Vector2(centerX - statusLabelSize.X / 2f, y), _global.Palette_DarkPale);
-            y += secondaryFont.LineHeight + 1;
+            y += secondaryFont.LineHeight + 3;
 
             string statusText = member.ActiveBuffs.Count > 0 ? $"{member.ActiveBuffs.Count} EFF" : "NORMAL";
             Vector2 statusTextSize = tertiaryFont.MeasureString(statusText);
