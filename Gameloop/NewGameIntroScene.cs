@@ -43,7 +43,7 @@ namespace ProjectVagabond.Scenes
         private string _currentText = "";
         private float _textTimer = 0f;
         private int _textIndex = 0;
-        private const float TYPEWRITER_SPEED = 0.03f;
+        private const float TYPEWRITER_SPEED = 0.02f;
         private float _titleWaveTimer = 0f;
 
         // Animation State Variables
