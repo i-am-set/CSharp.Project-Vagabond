@@ -77,7 +77,7 @@ namespace ProjectVagabond.Battle.UI
         }
         private readonly List<TenacityAnim> _tenacityAnims = new List<TenacityAnim>();
         private const float TENACITY_ANIM_FPS = 12f;
-        private const int TENACITY_ANIM_FRAMES = 7;
+        private const int TENACITY_ANIM_FRAMES = 13;
         private const int TENACITY_ANIM_WIDTH = 32;
 
         private float _statTooltipAlpha = 0f;

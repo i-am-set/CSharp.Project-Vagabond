@@ -420,10 +420,10 @@ namespace ProjectVagabond
 
             // Load Tenacity Animation Sprite Sheets
             try { TenacityBreakSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/tenacity_break_32x32_spritesheet"); }
-            catch { TenacityBreakSpriteSheet = _textureFactory.CreateColoredTexture(224, 32, Color.Cyan); }
+            catch { TenacityBreakSpriteSheet = _textureFactory.CreateColoredTexture(352, 32, Color.Cyan); }
 
             try { TenacityRestoreSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/tenacity_restored_32x32_spritesheet"); }
-            catch { TenacityRestoreSpriteSheet = _textureFactory.CreateColoredTexture(224, 32, Color.Lime); }
+            catch { TenacityRestoreSpriteSheet = _textureFactory.CreateColoredTexture(352, 32, Color.Lime); }
 
             try { StatModIconsTexture = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/stat_mod_icons_spritesheet"); }
             catch { StatModIconsTexture = _textureFactory.CreateColoredTexture(24, 6, Color.Magenta); }
