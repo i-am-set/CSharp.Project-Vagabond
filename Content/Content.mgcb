@@ -66,12 +66,6 @@
 /processor:BitmapFontProcessor
 /build:Fonts/Px437_IBM_BIOS.fnt
 
-#begin Shaders/BackgroundNoise.fx
-/importer:EffectImporter
-/processor:EffectProcessor
-/processorParam:DebugMode=Auto
-/build:Shaders/BackgroundNoise.fx
-
 #begin Shaders/RetroShader.fx
 /importer:EffectImporter
 /processor:EffectProcessor

@@ -97,7 +97,6 @@ namespace ProjectVagabond
         private CursorManager _cursorManager;
         private TransitionManager _transitionManager;
         private HitstopManager _hitstopManager;
-        private BackgroundNoiseRenderer _backgroundNoiseRenderer;
 
         private KeyboardState _previousKeyboardState;
         private MouseState _previousMouseState;
@@ -219,8 +218,6 @@ namespace ProjectVagabond
             ServiceLocator.Register<CursorManager>(_cursorManager);
             _hitstopManager = new HitstopManager();
             ServiceLocator.Register<HitstopManager>(_hitstopManager);
-            _backgroundNoiseRenderer = new BackgroundNoiseRenderer();
-            ServiceLocator.Register<BackgroundNoiseRenderer>(_backgroundNoiseRenderer);
 
             _inputManager = new InputManager();
             ServiceLocator.Register<InputManager>(_inputManager);
@@ -321,7 +318,6 @@ namespace ProjectVagabond
 
             _spriteManager.LoadEssentialContent();
             _spriteManager.LoadGameContent();
-            _backgroundNoiseRenderer.LoadContent();
             BattleDataCache.LoadData(Content);
             _progressionManager.LoadSplits();
 
@@ -445,7 +441,6 @@ namespace ProjectVagabond
             float timeScale = _hitstopManager.Update(elapsedSeconds);
 
             _transitionManager.Update(gameTime);
-            _backgroundNoiseRenderer.Update(gameTime);
 
             if (_loadingScreen.IsActive)
             {
@@ -567,8 +562,6 @@ namespace ProjectVagabond
                 _cursorManager.Draw(_spriteBatch, snappedScreenPos, _finalScale);
                 _spriteBatch.End();
             }
-
-            _backgroundNoiseRenderer.Apply(GraphicsDevice, _finalCompositeTarget, gameTime, _finalScale);
 
             // 2. Phosphor Persistence Pass (Ghosting)
             // Switch to the accumulation buffer
