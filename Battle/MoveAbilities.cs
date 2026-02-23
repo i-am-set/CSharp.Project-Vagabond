@@ -537,4 +537,64 @@ namespace ProjectVagabond.Battle.Abilities
             }
         }
     }
+
+    public class DepleteTenacityAbility : IAbility
+    {
+        public string Name => "Deplete Tenacity";
+        public string Description => "Shatters target's Tenacity completely.";
+        public int Priority => 0;
+
+        public void OnEvent(GameEvent e, BattleContext context)
+        {
+            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
+            {
+                if (reaction.Result.WasGraze) return;
+
+                var target = reaction.Target;
+                if (target.CurrentTenacity > 0)
+                {
+                    target.CurrentTenacity = 0;
+
+                    EventBus.Publish(new GameEvents.TenacityChanged { Combatant = target, NewValue = 0 });
+                    EventBus.Publish(new GameEvents.TenacityBroken { Combatant = target });
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{target.Name}'s shield was shattered!" });
+                }
+            }
+        }
+    }
+
+    public class ApplySelfStatusAbility : IAbility
+    {
+        public string Name => "Apply Self Status";
+        public string Description => "Applies a status effect to the user.";
+        public int Priority => 0;
+
+        private readonly StatusEffectType _type;
+        private readonly int _chance;
+        private readonly int _duration;
+
+        public ApplySelfStatusAbility(StatusEffectType type, int chance, int duration)
+        {
+            _type = type;
+            _chance = chance;
+            _duration = duration;
+        }
+
+        public void OnEvent(GameEvent e, BattleContext context)
+        {
+            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
+            {
+                if (reaction.Result.WasGraze) return;
+
+                if (Random.Shared.Next(1, 101) <= _chance)
+                {
+                    bool applied = reaction.Actor.AddStatusEffect(new StatusEffectInstance(_type, _duration));
+                    if (applied)
+                    {
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{reaction.Actor.Name} gained [pop][cStatus]{_type}[/][/]!" });
+                    }
+                }
+            }
+        }
+    }
 }

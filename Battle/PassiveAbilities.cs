@@ -187,11 +187,12 @@ namespace ProjectVagabond.Battle.Abilities
     public class PMSkepticAbility : IAbility
     {
         public string Name => "Skeptic";
-        public string Description => "Takes half damage from Spells.";
+        public string Description => "Takes half damage from Spells. Refuses to cast Spells.";
         public int Priority => 0;
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
+            // 1. Damage Reduction Logic
             if (e is CalculateDamageEvent dmgEvent && dmgEvent.Target.Abilities.Contains(this))
             {
                 if (dmgEvent.Move.MoveType == MoveType.Spell)
@@ -200,6 +201,25 @@ namespace ProjectVagabond.Battle.Abilities
                     if (!context.IsSimulation)
                     {
                         EventBus.Publish(new GameEvents.AbilityActivated { Combatant = dmgEvent.Target, Ability = this });
+                    }
+                }
+            }
+
+            // 2. Spell Refusal Logic
+            if (e is ActionDeclaredEvent actionEvent && actionEvent.Actor.Abilities.Contains(this))
+            {
+                if (actionEvent.Move.MoveType == MoveType.Spell)
+                {
+                    actionEvent.IsHandled = true;
+                    if (!context.IsSimulation)
+                    {
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{actionEvent.Actor.Name} refuses to believe in magic!" });
+                        EventBus.Publish(new GameEvents.ActionFailed
+                        {
+                            Actor = actionEvent.Actor,
+                            Reason = "skeptic",
+                            MoveName = actionEvent.Move.MoveName
+                        });
                     }
                 }
             }

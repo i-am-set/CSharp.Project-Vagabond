@@ -405,5 +405,45 @@
     "Effects": { "Heal": "25" },
     "Tags": [ "Heal" ],
     "AnimationId": "sta_protect"
+  },
+  {
+    "MoveID": "22",
+    "MoveName": "Outsmart",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]OUTSMARTS[/] {IsTargetProperNoun}[cSlot]{target}[/]!",
+    "Description": "Uses [cpositive]Intelligence[/] to calculate physical damage.",
+    "Flavor": "A calculated strike targeting a weak point.",
+    "Power": 85,
+    "MoveType": "Action",
+    "ImpactType": "Physical",
+    "OffensiveStat": "Intelligence",
+    "MakesContact": true,
+    "Target": "Single",
+    "Accuracy": 90,
+    "Priority": 0,
+    "Tags": [ "Contact" ],
+    "AnimationId": "phy_impact",
+    "IsAnimationCentralized": false
+  },
+  {
+    "MoveID": "23",
+    "MoveName": "Grapple",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]GRAPPLES[/] {IsTargetProperNoun}[cSlot]{target}[/]!",
+    "Description": "Destroys target [cpositive]Tenacity[/], but [cnegative]Stuns[/] user.",
+    "Flavor": "A desperate hold that leaves both vulnerable.",
+    "Power": 0,
+    "MoveType": "Action",
+    "ImpactType": "Status",
+    "OffensiveStat": "Strength",
+    "MakesContact": true,
+    "Target": "Single",
+    "Accuracy": 85,
+    "Priority": 0,
+    "Effects": {
+      "DepleteTenacity": "",
+      "ApplySelfStatus": "Stun,100,1"
+    },
+    "Tags": [ "Contact" ],
+    "AnimationId": "phy_large_impact",
+    "IsAnimationCentralized": false
   }
 ]

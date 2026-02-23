@@ -58,7 +58,7 @@ static const float JITTER_BAND_COUNT_MAX     = 3.0;
 static const float JITTER_BAND_SPEED_MIN     = 0.1;   // lower = calmer, not a shake
 static const float JITTER_BAND_SPEED_MAX     = 1.5;
 static const float JITTER_DESYNC_PIXELS_MIN  = 1.0;   // virtual pixels
-static const float JITTER_DESYNC_PIXELS_MAX  = 8.0;
+static const float JITTER_DESYNC_PIXELS_MAX  = 4.0;
 static const float JITTER_SMOOTHNESS_MIN     = 20.0;  // ramp sharpness
 static const float JITTER_SMOOTHNESS_MAX     = 60.0;
 static const float HUM_BAR_SPEED = 0.2;

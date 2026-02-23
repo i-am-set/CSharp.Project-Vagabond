@@ -107,16 +107,16 @@
   {
     "MemberID": "6",
     "Name": "Bento",
-    "Description": "",
+    "Description": "A skeptical fighter who relies on wits over magic.",
     "Gender": "Male",
     "MaxHP": 42,
-    "Strength": 6,
-    "Intelligence": 4,
+    "Strength": 4,
+    "Intelligence": 7,
     "Tenacity": 3,
     "Agility": 3,
     "BasicMoveId": "4",
-    "CoreMoveId": "",
-    "AltMoveId": "",
+    "CoreMoveId": "22",
+    "AltMoveId": "23",
     "PassiveAbilityPool": [
       { "PMSkeptic": "" }
     ]
