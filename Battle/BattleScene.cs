@@ -1266,6 +1266,9 @@ namespace ProjectVagabond.Scenes
             if (e.Reason == "stunned")
             {
                 _renderer.TriggerStatusIconHop(e.Actor.CombatantID, StatusEffectType.Stun);
+
+                Vector2 hudPos = _renderer.GetCombatantHudCenterPosition(e.Actor, _battleManager.AllCombatants);
+                _animationManager.StartDamageIndicator(e.Actor.CombatantID, "STUNNED!", hudPos + new Vector2(0, -15), _global.Palette_DarkSun);
             }
             else if (e.Reason == "silenced")
             {

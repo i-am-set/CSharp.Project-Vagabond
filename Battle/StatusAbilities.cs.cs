@@ -97,8 +97,6 @@ namespace ProjectVagabond.Battle.Abilities
                 {
                     _status.DurationInTurns--;
                 }
-
-                EventBus.Publish(new GameEvents.ActionFailed { Actor = turnStart.Actor, Reason = "stunned" });
             }
         }
     }

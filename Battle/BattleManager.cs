@@ -571,7 +571,6 @@ namespace ProjectVagabond.Battle
             // 4. Handle Status States (Stun/Dazed)
             if (nextAction.Actor.Tags.Has(GameplayTags.States.Stunned))
             {
-                AppendToLog($"{nextAction.Actor.Name} IS STUNNED!");
                 EventBus.Publish(new GameEvents.ActionFailed { Actor = nextAction.Actor, Reason = "stunned" });
                 _turnPacingTimer = ACTION_DELAY;
                 return;
