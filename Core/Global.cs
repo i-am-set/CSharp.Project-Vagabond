@@ -23,7 +23,7 @@ namespace ProjectVagabond
             SplitMapNodeColor = Palette_Sun;
             SplitMapPathColor = Palette_DarkRust;
             HoveredCombatantOutline = Palette_DarkShadow;
-            OutputTextColor = Palette_LightGray;
+            OutputTextColor = Palette_LightPale;
             InputTextColor = Palette_Gray;
             ToolTipBGColor = Palette_Black;
             ToolTipTextColor = Palette_Sun;

@@ -246,6 +246,7 @@ namespace ProjectVagabond
 
             _sceneManager.AddScene(GameSceneState.Startup, new StartupScene());
             _sceneManager.AddScene(GameSceneState.MainMenu, new MainMenuScene());
+            _sceneManager.AddScene(GameSceneState.NewGameIntro, new NewGameIntroScene());
             _sceneManager.AddScene(GameSceneState.Settings, new SettingsScene());
             _sceneManager.AddScene(GameSceneState.Battle, new BattleScene());
             _sceneManager.AddScene(GameSceneState.Split, new SplitMapScene());

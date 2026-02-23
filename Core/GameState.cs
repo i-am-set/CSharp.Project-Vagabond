@@ -43,15 +43,15 @@ namespace ProjectVagabond
             _spriteManager = spriteManager;
         }
 
-        public void InitializeWorld()
+        public void InitializeWorld(string startingMemberId)
         {
             PlayerState = new PlayerState();
             PlayerState.Party.Clear();
 
-            var oakley = PartyMemberFactory.CreateMember("0");
-            if (oakley == null) throw new Exception("CRITICAL: Could not load 'Oakley' (ID: 0)");
+            var member = PartyMemberFactory.CreateMember(startingMemberId);
+            if (member == null) throw new Exception($"CRITICAL: Could not load starting member (ID: {startingMemberId})");
 
-            PlayerState.Party.Add(oakley);
+            PlayerState.Party.Add(member);
         }
 
         public void Reset()

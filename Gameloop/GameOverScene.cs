@@ -177,7 +177,8 @@ namespace ProjectVagabond.Scenes
             {
                 new GenericTask("Initializing world...", () =>
                 {
-                    gameState.InitializeWorld();
+                    // Default to Oakley (ID 0) for retry
+                    gameState.InitializeWorld("0");
                 })
             };
 

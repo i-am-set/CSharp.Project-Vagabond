@@ -81,23 +81,43 @@ namespace ProjectVagabond.Scenes
             float currentY = 90f;
             int screenCenterX = Global.VIRTUAL_WIDTH / 2;
 
-            string playText = "PLAY";
+            string continueText = "CONTINUE";
+            string newGameText = "NEW GAME";
             string settingsText = "SETTINGS";
             string exitText = "EXIT";
 
-            Vector2 playSize = secondaryFont.MeasureString(playText);
-            Vector2 settingsSize = secondaryFont.MeasureString(settingsText);
-            Vector2 exitSize = secondaryFont.MeasureString(exitText);
+            // --- CONTINUE BUTTON ---
+            Vector2 continueSize = secondaryFont.MeasureString(continueText);
+            int continueWidth = (int)continueSize.X + horizontalPadding * 2;
+            int continueHeight = (int)continueSize.Y + verticalPadding * 2;
+            int continueX = screenCenterX - (continueWidth / 2);
 
-            int playWidth = (int)playSize.X + horizontalPadding * 2;
-            int settingsWidth = (int)settingsSize.X + horizontalPadding * 2;
-            int exitWidth = (int)exitSize.X + horizontalPadding * 2;
+            var continueButton = new Button(
+                new Rectangle(continueX, (int)currentY, continueWidth, continueHeight),
+                continueText,
+                font: secondaryFont,
+                alignLeft: false
+            )
+            {
+                TextRenderOffset = new Vector2(0, -1),
+                EnableTextWave = false,
+                AlwaysAnimateText = false,
+                EnableHoverSway = false,
+                IsEnabled = false // Disabled for now
+            };
+            _buttons.Add(continueButton);
+            // Note: Not adding disabled button to navigation group
+            currentY += continueHeight + buttonYSpacing;
 
-            int playHeight = (int)playSize.Y + verticalPadding * 2;
-            int playX = screenCenterX - (playWidth / 2);
-            var playButton = new Button(
-                new Rectangle(playX, (int)currentY, playWidth, playHeight),
-                playText,
+            // --- NEW GAME BUTTON ---
+            Vector2 newGameSize = secondaryFont.MeasureString(newGameText);
+            int newGameWidth = (int)newGameSize.X + horizontalPadding * 2;
+            int newGameHeight = (int)newGameSize.Y + verticalPadding * 2;
+            int newGameX = screenCenterX - (newGameWidth / 2);
+
+            var newGameButton = new Button(
+                new Rectangle(newGameX, (int)currentY, newGameWidth, newGameHeight),
+                newGameText,
                 font: secondaryFont,
                 alignLeft: false
             )
@@ -108,34 +128,22 @@ namespace ProjectVagabond.Scenes
                 WaveEffectType = TextEffectType.TypewriterPop,
                 EnableHoverSway = false
             };
-            playButton.OnClick += () =>
+            newGameButton.OnClick += () =>
             {
                 _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
-                playButton.ResetAnimationState();
-
-                var core = ServiceLocator.Get<Core>();
-                var gameState = ServiceLocator.Get<GameState>();
-
-                var loadingTasks = new List<LoadingTask>
-                {
-                    new GenericTask("Initializing world...", () =>
-                    {
-                        gameState.InitializeWorld();
-                    })
-                };
-
-                core.SetGameLoaded(true);
-
-                var transitionOut = TransitionType.None;
-                var transitionIn = _transitionManager.GetRandomTransition();
-                _sceneManager.ChangeScene(GameSceneState.Split, transitionOut, transitionIn, 0f, loadingTasks);
+                newGameButton.ResetAnimationState();
+                _sceneManager.ChangeScene(GameSceneState.NewGameIntro, TransitionType.None, TransitionType.None);
             };
-            _buttons.Add(playButton);
-            _navigationGroup.Add(playButton);
-            currentY += playHeight + buttonYSpacing;
+            _buttons.Add(newGameButton);
+            _navigationGroup.Add(newGameButton);
+            currentY += newGameHeight + buttonYSpacing;
 
+            // --- SETTINGS BUTTON ---
+            Vector2 settingsSize = secondaryFont.MeasureString(settingsText);
+            int settingsWidth = (int)settingsSize.X + horizontalPadding * 2;
             int settingsHeight = (int)settingsSize.Y + verticalPadding * 2;
             int settingsX = screenCenterX - (settingsWidth / 2);
+
             var settingsButton = new Button(
                 new Rectangle(settingsX, (int)currentY, settingsWidth, settingsHeight),
                 settingsText,
@@ -159,8 +167,12 @@ namespace ProjectVagabond.Scenes
             _navigationGroup.Add(settingsButton);
             currentY += settingsHeight + buttonYSpacing;
 
+            // --- EXIT BUTTON ---
+            Vector2 exitSize = secondaryFont.MeasureString(exitText);
+            int exitWidth = (int)exitSize.X + horizontalPadding * 2;
             int exitHeight = (int)exitSize.Y + verticalPadding * 2;
             int exitX = screenCenterX - (exitWidth / 2);
+
             var exitButton = new Button(
                 new Rectangle(exitX, (int)currentY, exitWidth, exitHeight),
                 exitText,
@@ -249,9 +261,10 @@ namespace ProjectVagabond.Scenes
 
         protected override Rectangle? GetFirstSelectableElementBounds()
         {
-            if (_buttons.Count > 0)
+            // Return the first enabled button
+            foreach (var button in _buttons)
             {
-                return _buttons[0].Bounds;
+                if (button.IsEnabled) return button.Bounds;
             }
             return null;
         }
