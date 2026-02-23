@@ -60,6 +60,7 @@ namespace ProjectVagabond
         public Texture2D InventoryStatBarDisabled { get; private set; }
         public Texture2D InventoryStatBarFull { get; private set; }
         public Texture2D InventorySpellSlotButtonSpriteSheet { get; private set; }
+        public Texture2D StunnedIconSpriteSheet { get; private set; }
         public Texture2D ManaBarPattern { get; private set; }
         public Texture2D TenacityPipTexture { get; private set; }
         public Texture2D StatModIconsTexture { get; private set; }
@@ -406,6 +407,10 @@ namespace ProjectVagabond
             // Load Spell Slot Button Sprite
             try { InventorySpellSlotButtonSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_spell_slot_button"); }
             catch { InventorySpellSlotButtonSpriteSheet = _textureFactory.CreateColoredTexture(192, 8, Color.Magenta); }
+
+            // Load Stunned Animation Sprite Sheet
+            try { StunnedIconSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/stunned_16x16_spritesheet"); }
+            catch { StunnedIconSpriteSheet = _textureFactory.CreateColoredTexture(48, 16, Color.Magenta); }
 
             // Load Tenacity Pip Sprite Sheet
             try { TenacityPipTexture = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/tenacity_3x3_icon"); }
@@ -1174,6 +1179,16 @@ namespace ProjectVagabond
         public Rectangle GetRestActionIconRect(int actionIndex, int stateIndex)
         {
             return new Rectangle(stateIndex * 8, actionIndex * 8, 8, 8);
+        }
+
+        public Rectangle GetStunnedAnimRect(GameTime gameTime)
+        {
+            const int frameWidth = 16;
+            const int frameCount = 3;
+            const float frameDuration = 0.15f;
+
+            int frameIndex = (int)(gameTime.TotalGameTime.TotalSeconds / frameDuration) % frameCount;
+            return new Rectangle(frameIndex * frameWidth, 0, frameWidth, 16);
         }
     }
 }

@@ -1176,6 +1176,20 @@ namespace ProjectVagabond.Battle.UI
 
                         _entityRenderer.DrawEnemy(spriteBatch, enemy, drawPos, offsets, shake, alpha, silhouetteAmt, silhouetteColor, isHighlighted, assignedColor, outlineColor, flashWhite, tint * alpha, scale, transform, lowHealthOverlay);
 
+                        // STUN INDICATOR
+                        if (enemy.HasStatusEffect(StatusEffectType.Stun))
+                        {
+                            var stunTex = _spriteManager.StunnedIconSpriteSheet;
+                            var stunRect = _spriteManager.GetStunnedAnimRect(gameTime);
+
+                            // Calculate top of sprite visually
+                            float spriteTopY = GetEnemyStaticVisualTop(enemy, center.Y);
+                            // Position icon centered horizontally, and slightly above the sprite top
+                            Vector2 stunPos = new Vector2(center.X - (stunRect.Width / 2f), spriteTopY - 12f + bob + spawnY);
+
+                            spriteBatch.DrawSnapped(stunTex, stunPos, stunRect, Color.White * alpha, 0f, Vector2.Zero, 1f, SpriteEffects.None, 1.0f);
+                        }
+
                         if (!enemy.IsDefeated)
                         {
                             var topOffsets = _spriteManager.GetEnemySpriteTopPixelOffsets(enemy.ArchetypeId);
@@ -1441,6 +1455,20 @@ namespace ProjectVagabond.Battle.UI
                     }
 
                     sprite.Draw(spriteBatch, animManager, player, tint, isHighlightedSprite, pulse, isSilhouetted, silhouetteColor, gameTime, assignedColor, outlineColor, scale * chargeScale.X, lowHealthOverlay, rotation);
+
+                    // STUN INDICATOR
+                    if (player.ActiveStatusEffects.Any(s => s.EffectType == StatusEffectType.Stun))
+                    {
+                        var stunTex = _spriteManager.StunnedIconSpriteSheet;
+                        var stunRect = _spriteManager.GetStunnedAnimRect(gameTime);
+
+                        // Player sprite is 32x32 centered at spriteCenter
+                        // Top is spriteCenter.Y - 16
+                        float spriteTopY = spriteCenter.Y - 16f;
+                        Vector2 stunPos = new Vector2(spriteCenter.X - (stunRect.Width / 2f), spriteTopY - 8f + bob + spawnY);
+
+                        spriteBatch.DrawSnapped(stunTex, stunPos, stunRect, Color.White * alpha, 0f, Vector2.Zero, 1f, SpriteEffects.None, 1.0f);
+                    }
 
                     Rectangle bounds = new Rectangle((int)(spriteCenter.X - 16), (int)(spriteCenter.Y - 16), 32, 32);
                     Rectangle hitBox = GetPatternAlignedRect(bounds);

@@ -433,7 +433,9 @@ namespace ProjectVagabond.Battle
             int activePlayerCount = 0;
             foreach (var player in _cachedActivePlayers)
             {
-                if (player.ChargingAction == null && !player.Tags.Has(GameplayTags.States.Stunned))
+                // Removed !player.Tags.Has(GameplayTags.States.Stunned) check
+                // Stunned players now require manual input (which will fail later)
+                if (player.ChargingAction == null)
                 {
                     activePlayerCount++;
                 }
@@ -701,7 +703,7 @@ namespace ProjectVagabond.Battle
                 var turnEvent = new TurnStartEvent(combatant);
                 combatant.NotifyAbilities(turnEvent, _battleContext);
 
-                if (turnEvent.IsHandled || combatant.Tags.Has(GameplayTags.States.Stunned))
+                if (turnEvent.IsHandled)
                 {
                     continue;
                 }
@@ -724,6 +726,7 @@ namespace ProjectVagabond.Battle
 
                 if (!combatant.IsPlayerControlled && !isCharging)
                 {
+                    // AI still needs to generate an action even if stunned, so it can fail properly in resolution
                     var aiAction = EnemyAI.DetermineBestAction(combatant, _allCombatants);
                     if (aiAction != null)
                     {
@@ -733,7 +736,8 @@ namespace ProjectVagabond.Battle
             }
             _actionQueue.InsertRange(0, startOfRoundActions);
 
-            bool anyPlayerCanAct = _cachedActivePlayers.Any(p => p.ChargingAction == null && !p.Tags.Has(GameplayTags.States.Stunned));
+            // Removed !p.Tags.Has(GameplayTags.States.Stunned) check
+            bool anyPlayerCanAct = _cachedActivePlayers.Any(p => p.ChargingAction == null);
 
             if (anyPlayerCanAct) _currentPhase = BattlePhase.ActionSelection;
             else FinalizeTurnSelection();

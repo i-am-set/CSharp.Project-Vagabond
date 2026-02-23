@@ -1986,6 +1986,18 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/BattleUI/party_member_enemy_floor.png;Sprites/UI/BattleUI/party_member_enemy_floor
 
+#begin Sprites/UI/BattleUI/stunned_16x16_spritesheet.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/BattleUI/stunned_16x16_spritesheet.png;Sprites/UI/BattleUI/stunned_16x16_spritesheet
+
 #begin Sprites/UI/BattleUI/tenacity_3x3_icon.png
 /importer:TextureImporter
 /processor:TextureProcessor
