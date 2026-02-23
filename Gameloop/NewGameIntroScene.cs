@@ -49,6 +49,10 @@ namespace ProjectVagabond.Scenes
         // Idle Animation State
         private float _idleTimer = 0f;
 
+        // Select Button Hop State
+        private float _selectButtonHopTimer = 0f;
+        private const float SELECT_HOP_DURATION = 0.05f;
+
         private enum IntroState
         {
             TypingText,
@@ -91,6 +95,7 @@ namespace ProjectVagabond.Scenes
             _carouselSlideOffset = 0f;
             _titleWaveTimer = 0f;
             _idleTimer = 0f;
+            _selectButtonHopTimer = 0f;
 
             _navigationGroup.DeselectAll();
 
@@ -126,22 +131,10 @@ namespace ProjectVagabond.Scenes
             int arrowY = centerY;
 
             int halfWidth = Global.VIRTUAL_WIDTH / 2;
-            int buttonHeight = 16; // FIXED: 16px height
+            int buttonHeight = 16;
             int buttonY = arrowY - (buttonHeight / 2);
 
             // Calculate Text Offsets
-            // We want the text to be 10px away from the center of the screen.
-            // Left Arrow Text X: CenterX - 10 - TextWidth/2 (approx)
-            // Right Arrow Text X: CenterX + 10 + TextWidth/2 (approx)
-
-            // Button Center X (Left): VW / 4
-            // Button Center X (Right): 3 * VW / 4
-
-            // Offset = DesiredScreenX - ButtonCenterX
-
-            // Left Arrow:
-            // Desired X is CenterX - 20 (10px gap + approx 10px for half sprite width/padding)
-            // Let's just use a hard offset from the button center to the screen center minus gap.
             float leftButtonCenterX = halfWidth / 2f;
             float leftTextTargetX = centerX - 24; // 16px (half sprite) + 8px gap
             float leftOffset = leftTextTargetX - leftButtonCenterX;
@@ -153,9 +146,8 @@ namespace ProjectVagabond.Scenes
             )
             {
                 TriggerHapticOnHover = true,
-                EnableHoverSway = true, // FIXED: Enable sway for hover lift
-                HoverAnimation = HoverAnimationType.Lift, // FIXED: Use Lift animation
-                HoverLiftOffset = -1f, // FIXED: Move up 1 pixel on hover
+                EnableHoverSway = true,
+                HoverAnimation = HoverAnimationType.None, // Manual control in Draw
                 EnableTextWave = false,
                 TextRenderOffset = new Vector2(leftOffset, 0)
             };
@@ -174,9 +166,8 @@ namespace ProjectVagabond.Scenes
             )
             {
                 TriggerHapticOnHover = true,
-                EnableHoverSway = true, // FIXED: Enable sway for hover lift
-                HoverAnimation = HoverAnimationType.Lift, // FIXED: Use Lift animation
-                HoverLiftOffset = -1f, // FIXED: Move up 1 pixel on hover
+                EnableHoverSway = true,
+                HoverAnimation = HoverAnimationType.None, // Manual control in Draw
                 EnableTextWave = false,
                 TextRenderOffset = new Vector2(rightOffset, 0)
             };
@@ -190,7 +181,7 @@ namespace ProjectVagabond.Scenes
             int selectH = (int)selectSize.Y + 6;
 
             _selectButton = new Button(
-                new Rectangle(centerX - selectW / 2, centerY + 35, selectW, selectH),
+                new Rectangle(centerX - selectW / 2, centerY + 29, selectW, selectH),
                 selectText,
                 font: secondaryFont
             )
@@ -222,6 +213,7 @@ namespace ProjectVagabond.Scenes
             if (_focusedIndex >= _characterIds.Count) _focusedIndex = 0;
 
             _carouselSlideOffset = direction;
+            _selectButtonHopTimer = SELECT_HOP_DURATION;
         }
 
         private void ConfirmSelection()
@@ -262,6 +254,12 @@ namespace ProjectVagabond.Scenes
 
             _idleTimer += dt;
             _titleWaveTimer += dt;
+
+            if (_selectButtonHopTimer > 0f)
+            {
+                _selectButtonHopTimer -= dt;
+                if (_selectButtonHopTimer < 0f) _selectButtonHopTimer = 0f;
+            }
 
             if (_currentState == IntroState.TypingText)
             {
@@ -335,11 +333,15 @@ namespace ProjectVagabond.Scenes
 
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
+            // 1. Close the batch opened by GameScene.Draw to allow state changes
             spriteBatch.End();
+
+            // 2. Draw Background
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Opaque, SamplerState.PointClamp, null, null, null, transform);
             spriteBatch.Draw(_spriteManager.EmptySprite, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), _global.Palette_Off);
             spriteBatch.End();
 
+            // 3. Draw Text & Carousel (Standard Transform)
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
 
             if (!string.IsNullOrEmpty(_currentText))
@@ -352,11 +354,48 @@ namespace ProjectVagabond.Scenes
             if (_currentState == IntroState.Selection && _characterIds.Count > 0)
             {
                 DrawCarousel(spriteBatch, font);
-
-                _leftArrow.Draw(spriteBatch, font, gameTime, Matrix.Identity);
-                _rightArrow.Draw(spriteBatch, font, gameTime, Matrix.Identity);
-                _selectButton.Draw(spriteBatch, font, gameTime, Matrix.Identity);
             }
+            spriteBatch.End();
+
+            // 4. Draw Interactive Elements with Manual Transforms
+            // Note: We multiply the translation matrix BEFORE the transform matrix to ensure the shift happens in Virtual Space (1 unit = 1 virtual pixel).
+            if (_currentState == IntroState.Selection)
+            {
+                // --- Left Arrow ---
+                float leftY = 0f;
+                if (_leftArrow.IsHovered)
+                {
+                    leftY = -1f; // Hover Up
+                    if (_inputManager.GetEffectiveMouseState().LeftButton == ButtonState.Pressed)
+                        leftY = 1f; // Click Down
+                }
+
+                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, Matrix.CreateTranslation(0, leftY, 0) * transform);
+                _leftArrow.Draw(spriteBatch, font, gameTime, Matrix.Identity);
+                spriteBatch.End();
+
+                // --- Right Arrow ---
+                float rightY = 0f;
+                if (_rightArrow.IsHovered)
+                {
+                    rightY = -1f; // Hover Up
+                    if (_inputManager.GetEffectiveMouseState().LeftButton == ButtonState.Pressed)
+                        rightY = 1f; // Click Down
+                }
+
+                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, Matrix.CreateTranslation(0, rightY, 0) * transform);
+                _rightArrow.Draw(spriteBatch, font, gameTime, Matrix.Identity);
+                spriteBatch.End();
+
+                // --- Select Button ---
+                float hopY = (_selectButtonHopTimer > 0f) ? -1f : 0f;
+                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, Matrix.CreateTranslation(0, hopY, 0) * transform);
+                _selectButton.Draw(spriteBatch, font, gameTime, Matrix.Identity);
+                spriteBatch.End();
+            }
+
+            // 5. Re-open the batch to satisfy GameScene.Draw's expectation that it needs to call End()
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
         }
 
         private void DrawCarousel(SpriteBatch spriteBatch, BitmapFont font)
@@ -405,7 +444,10 @@ namespace ProjectVagabond.Scenes
                 else if (Math.Abs(offset) >= 1) spriteType = PlayerSpriteType.Portrait8x8;
                 else spriteType = PlayerSpriteType.Normal;
 
-                float yPos = centerY;
+                // Curve Logic: Exponential curve (Power 1.5) for a smoother "U" shape
+                float curveY = MathF.Pow(Math.Abs(visualOffset), 1.5f) * 2.0f;
+                float yPos = centerY - curveY;
+
                 if (isCenter)
                 {
                     float bob = MathF.Sin(_idleTimer * 4f);
@@ -439,7 +481,7 @@ namespace ProjectVagabond.Scenes
                     string name = data.Name.ToUpper();
                     Vector2 nameSize = font.MeasureString(name);
                     Vector2 namePos = new Vector2(centerX - nameSize.X / 2, centerY + 20);
-                    spriteBatch.DrawStringSnapped(font, name, namePos, _global.Palette_DarkPale);
+                    spriteBatch.DrawStringSnapped(font, name, namePos, _global.Palette_DarkestPale);
                 }
             }
         }
