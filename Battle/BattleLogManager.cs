@@ -153,7 +153,17 @@ namespace ProjectVagabond.Battle.UI
         }
 
         private void OnCombatantDefeated(GameEvents.CombatantDefeated e) => AddLog($"{e.DefeatedCombatant.Name} WAS DEFEATED", _global.Palette_DarkRust);
-        private void OnActionFailed(GameEvents.ActionFailed e) => AddLog($"{e.Actor.Name.ToUpper()} FAILED {(e.MoveName ?? "ACTION").ToUpper()}", _global.Palette_Rust);
+        private void OnActionFailed(GameEvents.ActionFailed e)
+        {
+            if (string.Equals(e.Reason, "stunned", StringComparison.OrdinalIgnoreCase))
+            {
+                AddLog($"{e.Actor.Name.ToUpper()} IS STUNNED!", _global.Palette_DarkSun);
+            }
+            else
+            {
+                AddLog($"{e.Actor.Name.ToUpper()} FAILED {(e.MoveName ?? "ACTION").ToUpper()}", _global.Palette_Rust);
+            }
+        }
         private void OnCombatantHealed(GameEvents.CombatantHealed e) => AddLog($"{e.Target.Name} RECOVERED {e.HealAmount} HP", _global.Palette_Leaf);
         private void OnStatusEffectTriggered(GameEvents.StatusEffectTriggered e) { if (e.Damage > 0) AddLog($"{e.Combatant.Name} TOOK {e.Damage} {e.EffectType.ToString().ToUpper()} DMG", _global.Palette_Shadow); }
         private void OnCombatantRecoiled(GameEvents.CombatantRecoiled e) => AddLog($"{e.Actor.Name} TOOK {e.RecoilDamage} RECOIL DAMAGE", _global.Palette_Fruit);
