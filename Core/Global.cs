@@ -137,15 +137,6 @@ namespace ProjectVagabond
         public float HitstopDuration_Normal { get; set; } = 0.1f;
         public float HitstopDuration_Crit { get; set; } = 0.2f;
 
-        public Color BackgroundNoiseColor { get; set; } = new Color(32, 26, 35);
-        public float BackgroundNoiseOpacity { get; set; } = 1.0f;
-        public float BackgroundNoiseScale { get; set; } = 0.01f;
-        public float BackgroundScrollSpeedX { get; set; } = 0.0001f;
-        public float BackgroundScrollSpeedY { get; set; } = 0.0001f;
-        public float BackgroundDistortionScale { get; set; } = 100.0f;
-        public float BackgroundDistortionSpeed { get; set; } = 0.2f;
-        public float BackgroundNoiseThreshold { get; set; } = 0.01f;
-
         public float Saturation { get; set; } = 1.1f;
         public float Vibrance { get; set; } = 0.15f;
 

@@ -479,6 +479,11 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
+            if (currentMouseState.RightButton == ButtonState.Pressed && _previousMouseState.RightButton == ButtonState.Released)
+            {
+                AttemptToGoBack();
+            }
+
             // --- 3. Update Footer Buttons ---
             for (int i = 0; i < _footerButtons.Count; i++)
             {

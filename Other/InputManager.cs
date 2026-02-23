@@ -28,7 +28,7 @@ namespace ProjectVagabond
         public bool MouseMovedThisFrame { get; private set; }
 
         // Threshold for detecting ANY movement (responsiveness)
-        private const float MOUSE_MOVE_THRESHOLD = 2.0f;
+        private const float MOUSE_MOVE_THRESHOLD = 0.5f;
         // Threshold for switching FROM Gamepad/Keyboard TO Mouse (drift prevention)
         private const float MOUSE_WAKE_THRESHOLD = 10.0f;
 
