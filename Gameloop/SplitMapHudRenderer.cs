@@ -75,8 +75,8 @@ namespace ProjectVagabond.UI
         private const float FLIP_SPEED = 10f;
         private const int FLIP_BUTTON_SIZE = 8;
 
-        // --- Description Cache ---
-        private readonly Dictionary<string, string> _abilityDescriptionCache = new Dictionary<string, string>();
+        // --- Ability Info Cache (Name, Description) ---
+        private readonly Dictionary<string, (string Name, string Description)> _abilityInfoCache = new Dictionary<string, (string, string)>();
 
         private const float CARD_MOVE_SPEED = 15f;
         private const float CARD_DROP_SPEED = 20f;
@@ -634,7 +634,7 @@ namespace ProjectVagabond.UI
             // 1. Header: INFO
             string title = "INFO";
             Vector2 titleSize = defaultFont.MeasureString(title);
-            spriteBatch.DrawStringSnapped(defaultFont, title, new Vector2(centerX - titleSize.X / 2f, y), _global.Palette_DarkPale);
+            spriteBatch.DrawStringSnapped(defaultFont, title, new Vector2(centerX - titleSize.X / 2f, y), _global.Palette_Rust);
             y += 12; // Spacing
 
             // 2. Section: ABILITY
@@ -650,19 +650,20 @@ namespace ProjectVagabond.UI
             if (member.IntrinsicAbilities != null && member.IntrinsicAbilities.Count > 0)
             {
                 var kvp = member.IntrinsicAbilities.First();
-                abilityName = kvp.Key;
-                abilityDesc = kvp.Value;
+                string abilityId = kvp.Key;
 
-                if (string.IsNullOrEmpty(abilityDesc))
-                {
-                    abilityDesc = GetAbilityDescription(abilityName);
-                }
+                // FIX: Get both Name and Description from the class instance via reflection
+                var info = GetAbilityInfo(abilityId);
+
+                abilityName = info.Name;
+                // Use instance description if the dictionary value is empty (common in JSON)
+                abilityDesc = string.IsNullOrEmpty(kvp.Value) ? info.Description : kvp.Value;
             }
 
             // Draw Name (Tertiary, Centered, Highlighted)
             Vector2 nameSize = tertiaryFont.MeasureString(abilityName);
             spriteBatch.DrawStringSnapped(tertiaryFont, abilityName, new Vector2(centerX - nameSize.X / 2f, y), _global.Palette_Sun);
-            y += tertiaryFont.LineHeight + 1; // Increased gap
+            y += tertiaryFont.LineHeight + 1;
 
             // Draw Description (Tertiary, Centered, Wrapped)
             if (!string.IsNullOrEmpty(abilityDesc))
@@ -700,7 +701,7 @@ namespace ProjectVagabond.UI
             string statusLabel = "STATUS";
             Vector2 statusLabelSize = secondaryFont.MeasureString(statusLabel);
             spriteBatch.DrawStringSnapped(secondaryFont, statusLabel, new Vector2(centerX - statusLabelSize.X / 2f, y), _global.Palette_DarkPale);
-            y += secondaryFont.LineHeight + 3;
+            y += secondaryFont.LineHeight + 1;
 
             string statusText = member.ActiveBuffs.Count > 0 ? $"{member.ActiveBuffs.Count} EFF" : "NORMAL";
             Vector2 statusTextSize = tertiaryFont.MeasureString(statusText);
@@ -708,19 +709,22 @@ namespace ProjectVagabond.UI
         }
 
         /// <summary>
-        /// Helper to retrieve ability descriptions from the class definition if missing from instance data.
+        /// Helper to retrieve ability info (Name, Description) from the class definition if missing from instance data.
         /// </summary>
-        private string GetAbilityDescription(string abilityName)
+        private (string Name, string Description) GetAbilityInfo(string abilityId)
         {
-            if (_abilityDescriptionCache.TryGetValue(abilityName, out var cachedDesc))
+            if (_abilityInfoCache.TryGetValue(abilityId, out var cachedInfo))
             {
-                return cachedDesc;
+                return cachedInfo;
             }
+
+            string friendlyName = abilityId; // Default to ID if not found
+            string description = "";
 
             try
             {
                 // Assume naming convention "AbilityName" + "Ability"
-                var typeName = $"ProjectVagabond.Battle.Abilities.{abilityName}Ability";
+                var typeName = $"ProjectVagabond.Battle.Abilities.{abilityId}Ability";
                 var type = Type.GetType(typeName);
 
                 // Fallback search in all assemblies if not found directly
@@ -740,18 +744,24 @@ namespace ProjectVagabond.UI
                     var instance = Activator.CreateInstance(type) as IAbility;
                     if (instance != null)
                     {
-                        _abilityDescriptionCache[abilityName] = instance.Description;
-                        return instance.Description;
+                        friendlyName = instance.Name;
+                        description = instance.Description;
+
+                        var info = (friendlyName, description);
+                        _abilityInfoCache[abilityId] = info;
+                        return info;
                     }
                 }
             }
             catch
             {
-                // Silently fail and cache empty string to prevent lag on subsequent frames
+                // Silently fail
             }
 
-            _abilityDescriptionCache[abilityName] = "";
-            return "";
+            // Cache failure to prevent retry
+            var fallback = (friendlyName, description);
+            _abilityInfoCache[abilityId] = fallback;
+            return fallback;
         }
 
         private void DrawSlotTag(SpriteBatch sb, float x, float yOffset, int displayedNumber, BitmapFont font, float tagOffset, bool isFlipped)
