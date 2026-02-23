@@ -22,7 +22,7 @@ uniform float Vibrance;
 uniform float EnableJitter; // 1.0 = On, 0.0 = Off
 uniform float EnableLcdGrid; // 1.0 = On, 0.0 = Off
 
-// Layout Uniforms (New)
+// Layout Uniforms
 uniform float TargetScale;      // The integer scale factor of the game content
 uniform float2 TargetOffset;    // The screen-space offset (top-left) of the game content
 
@@ -39,9 +39,9 @@ uniform int PaletteCount;
 #define ENABLE_HALATION
 
 // --- Tuning ---
-static const float CURVATURE = 0.1; 
-static const float ZOOM = 1.01;
-static const float BLACK_LEVEL = 0.03; 
+static const float CURVATURE = 0.25; 
+static const float ZOOM = 1.05;
+static const float BLACK_LEVEL = 0.02; 
 static const float LCD_GAP_SIZE = 0.04;      // Fraction of each virtual pixel used for the gap (0 = no gap, 0.2 = thick gap)
 static const float LCD_GAP_SOFTNESS = 0.2;  // Edge softness of the gap (lower = sharper grid lines)
 static const float LCD_GAP_DARKNESS = 0.35;  // How dark the gaps are (0 = black, 1 = no effect)
@@ -82,7 +82,7 @@ float4 Tex2DQuantized(sampler s, float2 uv)
     float3 closest = rawColor.rgb;
     float minDist = 1000.0;
 
-    for(int i = 0; i < 15; i++)
+    for(int i = 0; i < PaletteCount; i++)
     {
         float3 pColor = Palette[i];
         float3 diff = rawColor.rgb - pColor;
