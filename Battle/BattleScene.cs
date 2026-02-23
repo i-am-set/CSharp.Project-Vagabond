@@ -71,6 +71,7 @@ namespace ProjectVagabond.Scenes
         private float _multiHitDelayTimer = 0f;
         private readonly Queue<Action> _pendingAnimations = new Queue<Action>();
         private readonly Random _random = new Random();
+        private Dictionary<string, int> _lastKnownTenacity = new Dictionary<string, int>();
 
         private float _watchdogTimer = 0f;
         private const float WATCHDOG_TIMEOUT = 4.0f;
@@ -216,6 +217,13 @@ namespace ProjectVagabond.Scenes
 
             if (_battleManager != null)
             {
+                // Initialize Tenacity Cache
+                _lastKnownTenacity.Clear();
+                foreach (var c in _battleManager.AllCombatants)
+                {
+                    _lastKnownTenacity[c.CombatantID] = c.Stats.Tenacity;
+                }
+
                 // --- SETUP RANDOMIZED STAGGER ---
                 _introStaggerTimer = BATTLE_ENTRY_INITIAL_DELAY;
                 _introWatchdogTimer = 0f;
@@ -1160,6 +1168,14 @@ namespace ProjectVagabond.Scenes
             sparks.Settings.StartColor = _global.Palette_Sky;
             sparks.Settings.EndColor = Color.White;
             sparks.EmitBurst(5);
+
+            // Check for restore
+            int oldVal = _lastKnownTenacity.ContainsKey(e.Combatant.CombatantID) ? _lastKnownTenacity[e.Combatant.CombatantID] : 0;
+            if (e.NewValue > oldVal)
+            {
+                _renderer.TriggerTenacityAnimation(e.Combatant.CombatantID, false);
+            }
+            _lastKnownTenacity[e.Combatant.CombatantID] = e.NewValue;
         }
 
         private void OnTenacityBroken(GameEvents.TenacityBroken e)
@@ -1168,6 +1184,8 @@ namespace ProjectVagabond.Scenes
             _animationManager.StartDamageIndicator(e.Combatant.CombatantID, "TENACITY BROKEN", hudPos + new Vector2(0, -15), _global.TenacityBrokenIndicatorColor);
             _hapticsManager.TriggerShake(5f, 0.2f);
             _core.TriggerFullscreenFlash(_global.TenacityBrokenIndicatorColor, 0.1f);
+
+            _renderer.TriggerTenacityAnimation(e.Combatant.CombatantID, true);
         }
 
         private void OnRequestImpactSync(GameEvents.RequestImpactSync e)

@@ -67,6 +67,19 @@ namespace ProjectVagabond.Battle.UI
         private class StatusIconAnim { public string CombatantID; public StatusEffectType Type; public float Timer; public const float DURATION = 0.3f; public const float HEIGHT = 5f; }
         private readonly List<StatusIconAnim> _activeStatusIconAnims = new List<StatusIconAnim>();
 
+        // --- Tenacity Animation State ---
+        private class TenacityAnim
+        {
+            public string CombatantID;
+            public bool IsBreak; // true = break, false = restore
+            public float Timer;
+            public Vector2 Position;
+        }
+        private readonly List<TenacityAnim> _tenacityAnims = new List<TenacityAnim>();
+        private const float TENACITY_ANIM_FPS = 12f;
+        private const int TENACITY_ANIM_FRAMES = 7;
+        private const int TENACITY_ANIM_WIDTH = 32;
+
         private float _statTooltipAlpha = 0f;
         private string _statTooltipCombatantID = null;
 
@@ -126,6 +139,7 @@ namespace ProjectVagabond.Battle.UI
             _statTooltipCombatantID = null;
             _enemySquashScales.Clear();
             _reticleController.Reset();
+            _tenacityAnims.Clear();
         }
 
         public List<TargetInfo> GetCurrentTargets() => _currentTargets;
@@ -192,6 +206,30 @@ namespace ProjectVagabond.Battle.UI
             _activeStatusIconAnims.Add(new StatusIconAnim { CombatantID = combatantId, Type = type, Timer = 0f });
         }
 
+        public void TriggerTenacityAnimation(string combatantId, bool isBreak)
+        {
+            Vector2 pos = Vector2.Zero;
+            if (_combatantVisualCenters.TryGetValue(combatantId, out var visualPos))
+            {
+                pos = visualPos;
+            }
+            else if (_combatantStaticCenters.TryGetValue(combatantId, out var staticPos))
+            {
+                pos = staticPos;
+            }
+
+            if (pos != Vector2.Zero)
+            {
+                _tenacityAnims.Add(new TenacityAnim
+                {
+                    CombatantID = combatantId,
+                    IsBreak = isBreak,
+                    Timer = 0f,
+                    Position = pos
+                });
+            }
+        }
+
         public void Update(GameTime gameTime, IEnumerable<BattleCombatant> combatants, BattleAnimationManager animationManager, BattleCombatant currentActor)
         {
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -223,6 +261,7 @@ namespace ProjectVagabond.Battle.UI
             UpdateStatusIconTooltips(combatants);
             UpdateActiveTurnOffsets(dt, combatants, currentActor);
             UpdateEnemySquash(dt);
+            UpdateTenacityAnimations(dt);
 
             foreach (var controller in _attackAnimControllers.Values) controller.Update(gameTime);
 
@@ -252,6 +291,20 @@ namespace ProjectVagabond.Battle.UI
                     }
 
                     sprite.Update(gameTime, currentActor == c, manualBob, manualAlt);
+                }
+            }
+        }
+
+        private void UpdateTenacityAnimations(float dt)
+        {
+            float duration = TENACITY_ANIM_FRAMES / TENACITY_ANIM_FPS;
+            for (int i = _tenacityAnims.Count - 1; i >= 0; i--)
+            {
+                var anim = _tenacityAnims[i];
+                anim.Timer += dt;
+                if (anim.Timer >= duration)
+                {
+                    _tenacityAnims.RemoveAt(i);
                 }
             }
         }
@@ -337,6 +390,8 @@ namespace ProjectVagabond.Battle.UI
                 DrawPlayers(spriteBatch, font, players, currentActor, shouldGrayOut, selectableTargets, animationManager, silhouetteColors, gameTime, uiManager, hoveredCombatant, isTargetingMode, hoveredGroupColor);
             }
 
+            DrawTenacityAnimations(spriteBatch);
+
             var effectiveFocus = hoveredCombatant ?? uiManager.HoveredCombatantFromUI;
             DrawTargetingHighlights(spriteBatch, uiManager, gameTime, silhouetteColors, effectiveFocus);
 
@@ -371,6 +426,23 @@ namespace ProjectVagabond.Battle.UI
 
                     _vfxRenderer.DrawStatChangeTooltip(spriteBatch, target, _statTooltipAlpha, hasInsight, center, barBottomY, gameTime);
                 }
+            }
+        }
+
+        private void DrawTenacityAnimations(SpriteBatch spriteBatch)
+        {
+            foreach (var anim in _tenacityAnims)
+            {
+                Texture2D sheet = anim.IsBreak ? _spriteManager.TenacityBreakSpriteSheet : _spriteManager.TenacityRestoreSpriteSheet;
+                if (sheet == null) continue;
+
+                int frameIndex = (int)(anim.Timer * TENACITY_ANIM_FPS);
+                if (frameIndex >= TENACITY_ANIM_FRAMES) frameIndex = TENACITY_ANIM_FRAMES - 1;
+
+                Rectangle sourceRect = new Rectangle(frameIndex * TENACITY_ANIM_WIDTH, 0, TENACITY_ANIM_WIDTH, TENACITY_ANIM_WIDTH);
+                Vector2 origin = new Vector2(TENACITY_ANIM_WIDTH / 2f, TENACITY_ANIM_WIDTH / 2f);
+
+                spriteBatch.DrawSnapped(sheet, anim.Position, sourceRect, Color.White, 0f, origin, 1f, SpriteEffects.None, 1f);
             }
         }
 

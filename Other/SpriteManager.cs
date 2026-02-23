@@ -61,6 +61,8 @@ namespace ProjectVagabond
         public Texture2D InventoryStatBarFull { get; private set; }
         public Texture2D InventorySpellSlotButtonSpriteSheet { get; private set; }
         public Texture2D StunnedIconSpriteSheet { get; private set; }
+        public Texture2D TenacityBreakSpriteSheet { get; private set; }
+        public Texture2D TenacityRestoreSpriteSheet { get; private set; }
         public Texture2D ManaBarPattern { get; private set; }
         public Texture2D TenacityPipTexture { get; private set; }
         public Texture2D StatModIconsTexture { get; private set; }
@@ -415,6 +417,13 @@ namespace ProjectVagabond
             // Load Tenacity Pip Sprite Sheet
             try { TenacityPipTexture = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/tenacity_3x3_icon"); }
             catch { TenacityPipTexture = _textureFactory.CreateColoredTexture(6, 3, Color.Magenta); }
+
+            // Load Tenacity Animation Sprite Sheets
+            try { TenacityBreakSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/tenacity_break_32x32_spritesheet"); }
+            catch { TenacityBreakSpriteSheet = _textureFactory.CreateColoredTexture(224, 32, Color.Cyan); }
+
+            try { TenacityRestoreSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/tenacity_restored_32x32_spritesheet"); }
+            catch { TenacityRestoreSpriteSheet = _textureFactory.CreateColoredTexture(224, 32, Color.Lime); }
 
             try { StatModIconsTexture = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/stat_mod_icons_spritesheet"); }
             catch { StatModIconsTexture = _textureFactory.CreateColoredTexture(24, 6, Color.Magenta); }
