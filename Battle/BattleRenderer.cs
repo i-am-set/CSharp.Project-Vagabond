@@ -504,7 +504,8 @@ namespace ProjectVagabond.Battle.UI
 
             foreach (var combatant in battleManager.AllCombatants)
             {
-                if (combatant.IsDefeated || combatant.VisualHealthBarAlpha <= 0.01f) continue;
+                // FIX: Do not draw HUD for benched members (Slot 2+) or defeated/invisible members
+                if (combatant.IsDefeated || combatant.VisualHealthBarAlpha <= 0.01f || !combatant.IsActiveOnField) continue;
 
                 int barWidth = (int)(combatant.Stats.MaxHP * BattleLayout.HEALTH_PIXELS_PER_HP);
                 if (barWidth < BattleLayout.MIN_BAR_WIDTH) barWidth = BattleLayout.MIN_BAR_WIDTH;

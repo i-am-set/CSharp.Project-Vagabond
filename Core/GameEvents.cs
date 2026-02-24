@@ -1,6 +1,16 @@
-﻿using ProjectVagabond.Battle;
+﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.UI;
+using ProjectVagabond.Utils;
+using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace ProjectVagabond
 {
@@ -185,6 +195,7 @@ namespace ProjectVagabond
         public struct ForcedSwitchRequested
         {
             public BattleCombatant Actor { get; set; }
+            public int? SlotIndex { get; set; }
         }
 
         public struct SwitchSequenceInitiated

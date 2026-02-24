@@ -8,10 +8,12 @@ using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
 using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -371,7 +373,7 @@ namespace ProjectVagabond.Battle.UI
         {
             var battleManager = ServiceLocator.Get<BattleManager>();
             _combatSwitchDialog.IsMandatory = (e.Actor == null);
-            _combatSwitchDialog.Show(battleManager.AllCombatants.ToList());
+            _combatSwitchDialog.Show(battleManager.AllCombatants.ToList(), e.SlotIndex);
         }
 
         private void UpdateHoverHighlights(GameTime gameTime, BattleCombatant currentActor)

@@ -1091,9 +1091,12 @@ namespace ProjectVagabond.Battle
 
                         if (isPlayerSlot)
                         {
-                            EventBus.Publish(new GameEvents.ForcedSwitchRequested { Actor = null });
-                            _waitingForReinforcementSelection = true;
-                            CanAdvance = false;
+                            if (!_waitingForReinforcementSelection)
+                            {
+                                EventBus.Publish(new GameEvents.ForcedSwitchRequested { Actor = null, SlotIndex = slot });
+                                _waitingForReinforcementSelection = true;
+                                CanAdvance = false;
+                            }
                             return; // Wait for player input
                         }
                         else

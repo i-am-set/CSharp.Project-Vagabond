@@ -29,6 +29,7 @@ namespace ProjectVagabond.UI
         private List<BattleCombatant> _benchMembers = new List<BattleCombatant>();
         private List<Button> _memberButtons = new List<Button>();
         private int _selectedIndex = 0;
+        private int? _targetSlotIndex = null;
 
         // Layout Constants
         private const int DIALOG_WIDTH = 180;
@@ -46,9 +47,10 @@ namespace ProjectVagabond.UI
         {
         }
 
-        public void Show(List<BattleCombatant> allCombatants)
+        public void Show(List<BattleCombatant> allCombatants, int? slotIndex = null)
         {
             IsActive = true;
+            _targetSlotIndex = slotIndex;
             _benchMembers = allCombatants
                 .Where(c => c.IsPlayerControlled && !c.IsDefeated && c.BattleSlot >= 2)
                 .ToList();
@@ -177,6 +179,11 @@ namespace ProjectVagabond.UI
 
             // Draw Title
             string title = IsMandatory ? "REINFORCEMENT NEEDED" : "CHOOSE REPLACEMENT";
+            if (IsMandatory && _targetSlotIndex.HasValue)
+            {
+                title += $" (SLOT {_targetSlotIndex.Value + 1})";
+            }
+
             var titleSize = secondaryFont.MeasureString(title);
             var titlePos = new Vector2(
                 _dialogBounds.Center.X - titleSize.Width / 2,
