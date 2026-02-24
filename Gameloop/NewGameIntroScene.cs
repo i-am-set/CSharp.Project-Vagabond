@@ -70,6 +70,10 @@ namespace ProjectVagabond.Scenes
         // Cached Data for Display
         private (string Name, string Description)? _cachedAbilityInfo;
 
+        // HP Normalization Cache
+        private int _globalMinHP = 0;
+        private int _globalMaxHP = 0;
+
         private enum IntroState
         {
             TypingTitle,
@@ -144,6 +148,24 @@ namespace ProjectVagabond.Scenes
 
             int oakleyIndex = _characterIds.IndexOf("0");
             _focusedIndex = oakleyIndex != -1 ? oakleyIndex : 0;
+
+            // Calculate Min/Max HP for normalization
+            _globalMinHP = int.MaxValue;
+            _globalMaxHP = int.MinValue;
+
+            foreach (var id in _characterIds)
+            {
+                if (BattleDataCache.PartyMembers.TryGetValue(id, out var data))
+                {
+                    if (data.MaxHP < _globalMinHP) _globalMinHP = data.MaxHP;
+                    if (data.MaxHP > _globalMaxHP) _globalMaxHP = data.MaxHP;
+                }
+            }
+
+            // Safety if list is empty or single item
+            if (_globalMinHP == int.MaxValue) _globalMinHP = 0;
+            if (_globalMaxHP == int.MinValue) _globalMaxHP = 100;
+            if (_globalMaxHP == _globalMinHP) _globalMaxHP++; // Prevent divide by zero
         }
 
         private void InitializeUI()
@@ -634,6 +656,13 @@ namespace ProjectVagabond.Scenes
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
         }
 
+        private Color GetStatColor(int value)
+        {
+            if (value >= 8) return _global.Palette_Leaf;
+            if (value >= 4) return _global.Palette_LightPale;
+            return _global.Palette_Rust;
+        }
+
         private void DrawStatsAndAbilities(SpriteBatch spriteBatch, BitmapFont secondaryFont, BitmapFont tertiaryFont, float alpha)
         {
             if (_characterIds.Count == 0) return;
@@ -660,7 +689,7 @@ namespace ProjectVagabond.Scenes
             // Right-align HP label with other labels
             float hpLabelX = statBlockX + (standardLabelWidth - hpLabelWidth);
 
-            spriteBatch.DrawStringSnapped(secondaryFont, hpLabel, new Vector2(hpLabelX, currentY), _global.Palette_DarkShadow * alpha);
+            spriteBatch.DrawStringSnapped(secondaryFont, hpLabel, new Vector2(hpLabelX, currentY), _global.Palette_DarkestPale * alpha);
 
             // Center HP Value in the bar area
             // Bar area starts at statBlockX + 19 (from original code loop)
@@ -673,8 +702,21 @@ namespace ProjectVagabond.Scenes
             string hpValue = data.MaxHP.ToString();
             Vector2 hpValueSize = secondaryFont.MeasureString(hpValue);
 
+            // Calculate normalized HP score (1-10)
+            int hpScore = 1;
+            if (_globalMaxHP > _globalMinHP)
+            {
+                hpScore = 1 + (int)Math.Round((double)(data.MaxHP - _globalMinHP) * 9 / (_globalMaxHP - _globalMinHP));
+            }
+            else
+            {
+                hpScore = 5; // Default if all same
+            }
+            hpScore = Math.Clamp(hpScore, 1, 10);
+            Color hpColor = GetStatColor(hpScore);
+
             // Draw HP Value centered
-            spriteBatch.DrawStringSnapped(secondaryFont, hpValue, new Vector2(barCenterX - hpValueSize.X / 2f, currentY), _global.Palette_Pale * alpha);
+            spriteBatch.DrawStringSnapped(secondaryFont, hpValue, new Vector2(barCenterX - hpValueSize.X / 2f, currentY), hpColor * alpha);
 
             currentY += secondaryFont.LineHeight + 1;
 
@@ -683,7 +725,7 @@ namespace ProjectVagabond.Scenes
 
             for (int i = 0; i < labels.Length; i++)
             {
-                spriteBatch.DrawStringSnapped(secondaryFont, labels[i], new Vector2(statBlockX, currentY), _global.Palette_DarkShadow * alpha);
+                spriteBatch.DrawStringSnapped(secondaryFont, labels[i], new Vector2(statBlockX, currentY), _global.Palette_DarkestPale * alpha);
 
                 if (statBg != null)
                 {
@@ -698,7 +740,8 @@ namespace ProjectVagabond.Scenes
                         if (basePoints > 0)
                         {
                             var srcBase = new Rectangle(0, 0, basePoints * 4, 3);
-                            spriteBatch.DrawSnapped(statFull, new Vector2(pipX, pipY), srcBase, Color.White * alpha);
+                            Color pipColor = GetStatColor(basePoints);
+                            spriteBatch.DrawSnapped(statFull, new Vector2(pipX, pipY), srcBase, pipColor * alpha);
                         }
                     }
                 }
@@ -711,7 +754,7 @@ namespace ProjectVagabond.Scenes
             // "ABILITY" Label (Tertiary Font)
             string abilityLabel = "ABILITY";
             Vector2 abilityLabelSize = tertiaryFont.MeasureString(abilityLabel);
-            spriteBatch.DrawStringSnapped(tertiaryFont, abilityLabel, new Vector2(centerX - abilityLabelSize.X / 2f, currentY), _global.Palette_DarkShadow * alpha);
+            spriteBatch.DrawStringSnapped(tertiaryFont, abilityLabel, new Vector2(centerX - abilityLabelSize.X / 2f, currentY), _global.Palette_DarkestPale * alpha);
             currentY += tertiaryFont.LineHeight + 2; // 2px gap
 
             if (_cachedAbilityInfo.HasValue)
@@ -720,12 +763,11 @@ namespace ProjectVagabond.Scenes
 
                 // Name (Secondary Font, Centered)
                 Vector2 nameSize = secondaryFont.MeasureString(name);
-                spriteBatch.DrawStringSnapped(secondaryFont, name, new Vector2(centerX - nameSize.X / 2f, currentY), _global.Palette_Pale * alpha);
+                spriteBatch.DrawStringSnapped(secondaryFont, name, new Vector2(centerX - nameSize.X / 2f, currentY), _global.Palette_LightPale * alpha);
                 currentY += secondaryFont.LineHeight + 1;
 
                 // Description (Centered & Wrapped)
-                // Reserve fixed space for 3 lines
-                float descLineHeight = tertiaryFont.LineHeight + 2; // Font height + 2px gap
+                float descLineHeight = tertiaryFont.LineHeight + 2;
 
                 if (!string.IsNullOrEmpty(desc))
                 {
@@ -740,7 +782,7 @@ namespace ProjectVagabond.Scenes
                         if (tertiaryFont.MeasureString(testLine).Width > maxWidth)
                         {
                             Vector2 lineSize = tertiaryFont.MeasureString(line);
-                            spriteBatch.DrawStringSnapped(tertiaryFont, line, new Vector2(centerX - lineSize.X / 2f, localY), _global.Palette_DarkPale * alpha);
+                            spriteBatch.DrawStringSnapped(tertiaryFont, line, new Vector2(centerX - lineSize.X / 2f, localY), _global.Palette_Pale * alpha);
                             localY += descLineHeight;
                             line = word;
                         }
@@ -752,7 +794,7 @@ namespace ProjectVagabond.Scenes
                     if (!string.IsNullOrEmpty(line))
                     {
                         Vector2 lineSize = tertiaryFont.MeasureString(line);
-                        spriteBatch.DrawStringSnapped(tertiaryFont, line, new Vector2(centerX - lineSize.X / 2f, localY), _global.Palette_DarkPale * alpha);
+                        spriteBatch.DrawStringSnapped(tertiaryFont, line, new Vector2(centerX - lineSize.X / 2f, localY), _global.Palette_Pale * alpha);
                     }
                 }
             }
@@ -844,13 +886,13 @@ namespace ProjectVagabond.Scenes
                     string name = data.Name.ToUpper();
                     Vector2 nameSize = font.MeasureString(name);
                     Vector2 namePos = new Vector2(centerX - nameSize.X / 2, centerY + 20);
-                    spriteBatch.DrawStringSnapped(font, name, namePos, _global.Palette_DarkestPale * _uiAlpha);
+                    spriteBatch.DrawStringSnapped(font, name, namePos, _global.Palette_LightPale * _uiAlpha);
 
                     // Draw Number
                     string numberText = (spriteIndex + 1).ToString();
                     Vector2 numSize = tertiaryFont.MeasureString(numberText);
                     Vector2 numPos = new Vector2(centerX - numSize.X / 2, centerY + 14);
-                    spriteBatch.DrawStringSnapped(tertiaryFont, numberText, numPos, _global.Palette_DarkestPale * _uiAlpha);
+                    spriteBatch.DrawStringSnapped(tertiaryFont, numberText, numPos, _global.Palette_LightPale * _uiAlpha);
                 }
             }
         }
