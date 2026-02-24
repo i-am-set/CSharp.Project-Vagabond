@@ -44,15 +44,16 @@ namespace ProjectVagabond.Transitions
         public TransitionManager()
         {
             _effects = new Dictionary<TransitionType, ITransitionEffect>
-        {
-            { TransitionType.None, new ShutterTransition() },
-            { TransitionType.Shutter, new ShutterTransition() },
-            { TransitionType.Curtain, new CurtainTransition() },
-            { TransitionType.Aperture, new ApertureTransition() },
-            { TransitionType.SpinningSquare, new SpinningSquareTransition() },
-            { TransitionType.CenterSquare, new CenterSquareTransition() },
-            { TransitionType.CenterDiamond, new CenterDiamondTransition() }
-        };
+            {
+                { TransitionType.None, new ShutterTransition() },
+                { TransitionType.Shutter, new ShutterTransition() },
+                { TransitionType.Curtain, new CurtainTransition() },
+                { TransitionType.Aperture, new ApertureTransition() },
+                { TransitionType.SpinningSquare, new SpinningSquareTransition() },
+                { TransitionType.CenterSquare, new CenterSquareTransition() },
+                { TransitionType.CenterDiamond, new CenterDiamondTransition() },
+                { TransitionType.FadeOff, new FadeOffTransition() }
+            };
         }
 
         public void Reset()
@@ -115,13 +116,7 @@ namespace ProjectVagabond.Transitions
 
         public TransitionType GetRandomTransition()
         {
-            var values = Enum.GetValues(typeof(TransitionType));
-            var list = new List<TransitionType>();
-            foreach (TransitionType t in values)
-            {
-                if (t != TransitionType.None) list.Add(t);
-            }
-            return list[_random.Next(list.Count)];
+            return TransitionType.FadeOff;
         }
 
         public void Update(GameTime gameTime)

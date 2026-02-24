@@ -311,4 +311,37 @@ namespace ProjectVagabond.Transitions
             }
         }
     }
+
+    // --- 7. FADE OFF (Simple Fade to Palette_Off) ---
+    public class FadeOffTransition : ITransitionEffect
+    {
+        private float _timer;
+        private const float DURATION = 1.0f;
+        private bool _isOut;
+        public bool IsComplete => _timer >= DURATION;
+
+        public void Start(bool isTransitioningOut)
+        {
+            _isOut = isTransitioningOut;
+            _timer = 0f;
+        }
+
+        public void Update(GameTime gameTime)
+        {
+            _timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+        }
+
+        public float GetProgress() => Math.Clamp(_timer / DURATION, 0f, 1f);
+
+        public void Draw(SpriteBatch spriteBatch, Vector2 screenSize, float contentScale)
+        {
+            var pixel = ServiceLocator.Get<Texture2D>();
+            var global = ServiceLocator.Get<Global>();
+
+            float progress = GetProgress();
+            float alpha = _isOut ? progress : (1.0f - progress);
+
+            spriteBatch.Draw(pixel, new Rectangle(0, 0, (int)screenSize.X, (int)screenSize.Y), global.Palette_Off * alpha);
+        }
+    }
 }

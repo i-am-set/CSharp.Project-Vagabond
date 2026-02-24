@@ -8,7 +8,8 @@
         Aperture,      // All sides closing in
         SpinningSquare,// Rotates and expands
         CenterSquare,  // Expands without rotation
-        CenterDiamond  // Expands rotated 45 degrees
+        CenterDiamond, // Expands rotated 45 degrees
+        FadeOff        // Fades to Palette_Off
     }
 
     public enum TransitionState

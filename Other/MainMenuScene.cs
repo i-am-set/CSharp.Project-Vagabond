@@ -131,7 +131,7 @@ namespace ProjectVagabond.Scenes
             {
                 _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
                 newGameButton.ResetAnimationState();
-                _sceneManager.ChangeScene(GameSceneState.NewGameIntro, TransitionType.None, TransitionType.None);
+                _sceneManager.ChangeScene(GameSceneState.NewGameIntro, _transitionManager.GetRandomTransition(), _transitionManager.GetRandomTransition());
             };
             _buttons.Add(newGameButton);
             _navigationGroup.Add(newGameButton);
