@@ -230,7 +230,8 @@ namespace ProjectVagabond.Battle.Abilities
     {
         public string Name => "9 Lives";
         public string Description => "Survive lethal damage if at full HP.";
-        public int Priority => 0;
+
+        public int Priority => -10;
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
@@ -240,7 +241,9 @@ namespace ProjectVagabond.Battle.Abilities
                 {
                     if (dmgEvent.FinalDamage >= dmgEvent.Target.Stats.CurrentHP)
                     {
+                        // Clamp damage to leave 1 HP
                         dmgEvent.FinalDamage = dmgEvent.Target.Stats.CurrentHP - 1;
+
                         if (!context.IsSimulation)
                         {
                             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{dmgEvent.Target.Name} endured the hit!" });

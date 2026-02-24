@@ -213,9 +213,9 @@
     "MoveID": "11",
     "MoveName": "Gnaw",
     "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cAction]GNAWS ON[/] {IsTargetProperNoun}[cSlot]{target}[/].",
-    "Description": "Hits [cpositive]2-7[/] times",
+    "Description": "Hits [cpositive]1-3[/] times",
     "Flavor": "Savagely gnaws on the target.",
-    "Power": 15,
+    "Power": 40,
     "MoveType": "Action",
     "ImpactType": "Physical",
     "OffensiveStat": "Strength",
@@ -224,7 +224,7 @@
     "Accuracy": 90,
     "Priority": 0,
     "Effects": {
-      "MultiHit": "2,7"
+      "MultiHit": "1,3"
     },
     "Tags": [ "MultiHit", "Contact" ],
     "AnimationId": "phy_bite",

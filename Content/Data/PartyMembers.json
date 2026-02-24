@@ -132,8 +132,8 @@
     "Tenacity": 5,
     "Agility": 4,
     "BasicMoveId": "4",
-    "CoreMoveId": "",
-    "AltMoveId": "",
+    "CoreMoveId": "11",
+    "AltMoveId": "15",
     "PassiveAbilityPool": [
       { "PM9Lives": "" }
     ]
@@ -149,8 +149,8 @@
     "Tenacity": 3,
     "Agility": 4,
     "BasicMoveId": "4",
-    "CoreMoveId": "",
-    "AltMoveId": "",
+    "CoreMoveId": "20",
+    "AltMoveId": "19",
     "PassiveAbilityPool": [
       { "PMMinutiae": "" }
     ]

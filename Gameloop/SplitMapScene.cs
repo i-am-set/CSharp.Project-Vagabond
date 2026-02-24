@@ -59,7 +59,7 @@ namespace ProjectVagabond.Scenes
         private float _clickAnimTimer = 0f;
         private const float CLICK_ANIM_DURATION = 0.2f;
         private const float CLICK_ROTATION_MAGNITUDE = 0.1f;
-        private const float ICON_STEP_SPEED = 5f;
+        private const float ICON_STEP_SPEED = 20f;
 
         // --- NODE ANIMATION TUNING ---
         private const float NODE_LIFT_DURATION = 0.4f;
