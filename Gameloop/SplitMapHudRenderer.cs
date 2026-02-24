@@ -44,7 +44,10 @@ namespace ProjectVagabond.UI
         private int _lastScreenMouseX;
         private PartyMember? _topmostMember;
         private float _currentCursorLift = 0f;
+
+        // Input Latch
         private ButtonState _prevLeftButtonState = ButtonState.Released;
+        private ButtonState _prevRightButtonState = ButtonState.Released;
 
         // --- Physics & Rotation State ---
         private float _currentDragVelocity = 0f;
@@ -72,6 +75,7 @@ namespace ProjectVagabond.UI
         // 0.0 = Front, 1.0 = Back
         private readonly Dictionary<PartyMember, float> _flipTargets = new Dictionary<PartyMember, float>();
         private readonly Dictionary<PartyMember, float> _flipProgress = new Dictionary<PartyMember, float>();
+
         private const float FLIP_SPEED = 10f;
         private const int FLIP_BUTTON_SIZE = 8;
 
@@ -94,6 +98,18 @@ namespace ProjectVagabond.UI
             _gameState = ServiceLocator.Get<GameState>();
             _pixel = ServiceLocator.Get<Texture2D>();
             _tooltipRenderer = new MoveTooltipRenderer();
+        }
+
+        /// <summary>
+        /// Forces all cards to flip back to the front side (Target = 0).
+        /// Called when the HUD loses focus.
+        /// </summary>
+        public void ResetAllFlips()
+        {
+            foreach (var member in _flipTargets.Keys.ToList())
+            {
+                _flipTargets[member] = 0f;
+            }
         }
 
         public void Update(GameTime gameTime, Vector2 virtualMousePos, float verticalOffset)
@@ -244,6 +260,14 @@ namespace ProjectVagabond.UI
 
                 if (cardRect.Contains(virtualMousePos))
                 {
+                    // --- Right Click Flip (Anywhere on Card) ---
+                    if (currentMouseState.RightButton == ButtonState.Pressed && _prevRightButtonState == ButtonState.Released && !_isDragging)
+                    {
+                        float currentTarget = _flipTargets[member];
+                        _flipTargets[member] = (currentTarget == 0f) ? 1f : 0f;
+                        ServiceLocator.Get<HapticsManager>().TriggerUICompoundShake(0.3f);
+                    }
+
                     // 1. Check Flip Button First (Priority)
                     if (flipBtnRect.Contains(virtualMousePos))
                     {
@@ -351,6 +375,7 @@ namespace ProjectVagabond.UI
         ProcessTweening:
             // Update Input Latch
             _prevLeftButtonState = currentMouseState.LeftButton;
+            _prevRightButtonState = currentMouseState.RightButton;
 
             float targetCursorLift = _isDragging ? DRAG_LIFT_OFFSET : 0f;
             float cursorDamping = 1.0f - MathF.Exp(-CARD_DROP_SPEED * dt);
@@ -539,6 +564,11 @@ namespace ProjectVagabond.UI
             // 0.0 to 0.5 is Front shrinking. 0.5 to 1.0 is Back expanding.
             float scaleX = Math.Abs(1f - 2f * flipP);
             bool showBack = flipP > 0.5f;
+
+            // --- Flip Hop Effect ---
+            // FIX: Increased magnitude to -5.0f for a visible hop
+            float flipHop = MathF.Sin(flipP * MathHelper.Pi) * -5.0f;
+            yOffset += flipHop;
 
             // --- Matrix Transformation ---
             // We combine Rotation (Drag) and Scale (Flip)
