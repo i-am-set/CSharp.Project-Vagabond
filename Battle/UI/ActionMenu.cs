@@ -74,6 +74,7 @@ namespace ProjectVagabond.Battle.UI
 
             UpdateLayout();
 
+            // Trigger entrance animation when showing the menu
             TriggerButtonEntrance();
 
             _isVisible = true;
@@ -157,11 +158,11 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform, Vector2 offset, int? hiddenSlotIndex = null)
+        // Split Draw into DrawButtons and DrawTooltips to allow layering with SwitchMenu
+        public void DrawButtons(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform, Vector2 offset, int? hiddenSlotIndex = null)
         {
             if (!_isVisible) return;
 
-            // Pass 1: Draw Buttons (Base Layer)
             foreach (var panel in _panels)
             {
                 if (hiddenSlotIndex.HasValue && panel.SlotIndex == hiddenSlotIndex.Value)
@@ -170,8 +171,12 @@ namespace ProjectVagabond.Battle.UI
                 }
                 panel.DrawButtons(spriteBatch, font, gameTime, transform, offset);
             }
+        }
 
-            // Pass 2: Draw Tooltips (Overlay Layer)
+        public void DrawTooltips(SpriteBatch spriteBatch, Vector2 offset, int? hiddenSlotIndex = null)
+        {
+            if (!_isVisible) return;
+
             foreach (var panel in _panels)
             {
                 if (hiddenSlotIndex.HasValue && panel.SlotIndex == hiddenSlotIndex.Value)
@@ -328,8 +333,6 @@ namespace ProjectVagabond.Battle.UI
 
                 if (_buttons.Count > 0)
                 {
-                    // Basic (Index 0): Moved 1 pixel left (startX - 1)
-                    // Height 28 (from previous request)
                     var visualRect = new Rectangle(startX - 1, y - 1, 44, 28);
                     var hitbox = visualRect;
                     hitbox.Inflate(1, 1);
@@ -344,8 +347,6 @@ namespace ProjectVagabond.Battle.UI
 
                 if (_buttons.Count > 1)
                 {
-                    // Core (Index 1): 1 pixel wider to the right (Width 89)
-                    // Moved up 1 pixel (y - 1)
                     var visualRect = new Rectangle(startX + 45, y - 1, 89, 13);
                     var hitbox = visualRect;
                     hitbox.Inflate(1, 1);
@@ -359,7 +360,6 @@ namespace ProjectVagabond.Battle.UI
 
                 if (_buttons.Count > 2)
                 {
-                    // Alt (Index 2): 1 pixel wider to the right (Width 89)
                     var visualRect = new Rectangle(startX + 45, y + 14, 89, 13);
                     var hitbox = visualRect;
                     hitbox.Inflate(1, 1);
@@ -373,8 +373,6 @@ namespace ProjectVagabond.Battle.UI
 
                 int originalTotalButtonsWidth = (HITBOX_WIDTH * 3);
                 int secStartX = (int)(panelCenterX - (originalTotalButtonsWidth / 2f));
-
-                // Gap: 2 pixels between bottom of main (y + 27) and secondary -> y + 29
                 int secY = y + 29;
 
                 for (int i = 3; i < 6; i++)
@@ -388,7 +386,6 @@ namespace ProjectVagabond.Battle.UI
                     int currentWidth = HITBOX_WIDTH;
                     int currentVisualWidth = VISUAL_WIDTH;
 
-                    // Switch Button (Index 4): 1 pixel less wide on the left side
                     if (i == 4)
                     {
                         currentX += 1;
@@ -396,7 +393,6 @@ namespace ProjectVagabond.Battle.UI
                         currentVisualWidth -= 1;
                     }
 
-                    // Stall Button (Index 5): Moved 1 pixel to the right
                     if (i == 5)
                     {
                         currentX += 1;

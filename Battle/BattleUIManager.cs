@@ -8,12 +8,10 @@ using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Progression;
-using ProjectVagabond.Scenes;
 using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -430,10 +428,11 @@ namespace ProjectVagabond.Battle.UI
                 spriteBatch.DrawSnapped(border, IntroOffset, Color.White);
             }
 
+            // 1. Draw Action Menu Buttons (Base Layer)
             if (UIState != BattleUIState.Targeting)
             {
                 int? hiddenSlot = (UIState == BattleUIState.Switch) ? ActiveTargetingSlot : null;
-                _actionMenu.Draw(spriteBatch, font, gameTime, transform, IntroOffset, hiddenSlot);
+                _actionMenu.DrawButtons(spriteBatch, font, gameTime, transform, IntroOffset, hiddenSlot);
             }
 
             if (UIState == BattleUIState.Targeting)
@@ -441,9 +440,17 @@ namespace ProjectVagabond.Battle.UI
                 DrawTargetingText(spriteBatch, font, gameTime, isCentered);
             }
 
+            // 2. Draw Switch Menu (Middle Layer)
             if (UIState == BattleUIState.Switch && (_switchMenu.IsForced || _switchMenu.IsVisible))
             {
                 _switchMenu.Draw(spriteBatch, font, gameTime);
+            }
+
+            // 3. Draw Action Menu Tooltips (Top Layer)
+            if (UIState != BattleUIState.Targeting)
+            {
+                int? hiddenSlot = (UIState == BattleUIState.Switch) ? ActiveTargetingSlot : null;
+                _actionMenu.DrawTooltips(spriteBatch, IntroOffset, hiddenSlot);
             }
         }
 

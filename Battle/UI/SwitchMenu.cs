@@ -195,7 +195,7 @@ namespace ProjectVagabond.Battle.UI
                 var visualRect = new Rectangle(rect.X, rect.Y, rect.Width, rect.Height);
                 visualRect.Height -= HITBOX_PADDING;
 
-                Color bgColor = _backButton.IsHovered ? global.Palette_Rust : global.Palette_DarkShadow;
+                Color bgColor = _global.Palette_Black;
                 DrawBeveledBackground(spriteBatch, pixel, visualRect, bgColor);
                 _backButton.Draw(spriteBatch, _backButton.Font, gameTime, Matrix.Identity);
             }
