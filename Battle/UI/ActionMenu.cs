@@ -487,23 +487,16 @@ namespace ProjectVagabond.Battle.UI
                 {
                     btn.OnClick += () =>
                     {
-                        if (btn.CanAfford)
+                        var action = new QueuedAction
                         {
-                            var action = new QueuedAction
-                            {
-                                Actor = Combatant,
-                                ChosenMove = moveData!,
-                                SpellbookEntry = entry!,
-                                Type = QueuedActionType.Move,
-                                Priority = moveData!.Priority,
-                                ActorAgility = Combatant.GetEffectiveAgility()
-                            };
-                            OnActionSelected?.Invoke(action);
-                        }
-                        else
-                        {
-                            ServiceLocator.Get<HapticsManager>().TriggerShake(2f, 0.1f);
-                        }
+                            Actor = Combatant,
+                            ChosenMove = moveData!,
+                            SpellbookEntry = entry!,
+                            Type = QueuedActionType.Move,
+                            Priority = moveData!.Priority,
+                            ActorAgility = Combatant.GetEffectiveAgility()
+                        };
+                        OnActionSelected?.Invoke(action);
                     };
                 }
 
@@ -542,23 +535,16 @@ namespace ProjectVagabond.Battle.UI
                 {
                     btn.OnClick += () =>
                     {
-                        if (btn.CanAfford)
+                        var action = new QueuedAction
                         {
-                            var action = new QueuedAction
-                            {
-                                Actor = Combatant,
-                                ChosenMove = moveData,
-                                SpellbookEntry = null,
-                                Type = QueuedActionType.Move,
-                                Priority = moveData.Priority,
-                                ActorAgility = Combatant.GetEffectiveAgility()
-                            };
-                            OnActionSelected?.Invoke(action);
-                        }
-                        else
-                        {
-                            ServiceLocator.Get<HapticsManager>().TriggerShake(2f, 0.1f);
-                        }
+                            Actor = Combatant,
+                            ChosenMove = moveData,
+                            SpellbookEntry = null,
+                            Type = QueuedActionType.Move,
+                            Priority = moveData.Priority,
+                            ActorAgility = Combatant.GetEffectiveAgility()
+                        };
+                        OnActionSelected?.Invoke(action);
                     };
                 }
 
@@ -692,7 +678,7 @@ namespace ProjectVagabond.Battle.UI
                     // Apply the combatant's HUD alpha to the button opacity
                     moveBtn.Opacity = Combatant.HudVisualAlpha;
 
-                    if (!moveBtn.IsEnabled || !moveBtn.CanAfford) tint = global.Palette_DarkShadow;
+                    if (!moveBtn.IsEnabled) tint = global.Palette_DarkShadow;
                 }
                 else
                 {

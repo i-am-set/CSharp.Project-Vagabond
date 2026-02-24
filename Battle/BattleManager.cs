@@ -143,7 +143,6 @@ namespace ProjectVagabond.Battle
 
             _battleContext = new BattleContext();
 
-            EventBus.Subscribe<GameEvents.SecondaryEffectComplete>(OnSecondaryEffectComplete);
             EventBus.Subscribe<GameEvents.DisengageTriggered>(OnDisengageTriggered);
             EventBus.Subscribe<GameEvents.TriggerImpact>(OnTriggerImpact);
         }
@@ -226,8 +225,6 @@ namespace ProjectVagabond.Battle
             CanAdvance = true;
         }
 
-        private void OnSecondaryEffectComplete(GameEvents.SecondaryEffectComplete e) { }
-
         private void OnDisengageTriggered(GameEvents.DisengageTriggered e)
         {
             CanAdvance = false;
@@ -308,8 +305,6 @@ namespace ProjectVagabond.Battle
                 action.Actor.NotifyAbilities(reactionEvt, _battleContext);
                 target.NotifyAbilities(reactionEvt, _battleContext);
                 foreach (var ab in action.ChosenMove.Abilities) ab.OnEvent(reactionEvt, _battleContext);
-
-                SecondaryEffectSystem.ProcessPrimaryEffects(action, target);
             }
 
             EventBus.Publish(new GameEvents.BattleActionExecuted
@@ -897,14 +892,9 @@ namespace ProjectVagabond.Battle
                 EventBus.Publish(new GameEvents.MultiHitActionCompleted { Actor = action.Actor, ChosenMove = action.ChosenMove, HitCount = _multiHitTotalExecuted, CriticalHitCount = _multiHitCrits });
             }
 
-            SecondaryEffectSystem.ProcessSecondaryEffects(action, _currentActionFinalTargets, _currentActionDamageResults);
             _currentActionForEffects = null;
             _currentActionDamageResults = null;
             _currentActionFinalTargets = null;
-        }
-
-        public void DrawStatChanges(SpriteBatch spriteBatch, BattleCombatant combatant, float startX, float startY, bool isRightAligned)
-        {
         }
 
         private List<BattleCombatant> ResolveTargets(QueuedAction action)

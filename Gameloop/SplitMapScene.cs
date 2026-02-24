@@ -31,7 +31,6 @@ namespace ProjectVagabond.Scenes
         private readonly GameState _gameState;
         private readonly SpriteManager _spriteManager;
         private readonly Global _global;
-        private readonly StoryNarrator _resultNarrator;
         private readonly VoidEdgeEffect _voidEdgeEffect;
 
         private readonly SplitMapHudRenderer _hudRenderer;
@@ -93,8 +92,6 @@ namespace ProjectVagabond.Scenes
 
         private bool _wasModalActiveLastFrame = false;
 
-        private enum EventState { Idle, NarratingResult }
-        private EventState _eventState = EventState.Idle;
         private float _postEventDelayTimer = 0f;
 
         private enum SplitMapState { Idle, PlayerMoving, LiftingNode, PulsingNode, EventInProgress, LoweringNode, Resting, PostEventDelay }
@@ -148,10 +145,6 @@ namespace ProjectVagabond.Scenes
             _hapticsManager = ServiceLocator.Get<HapticsManager>();
             _particleSystemManager = ServiceLocator.Get<ParticleSystemManager>();
 
-            var narratorBounds = new Rectangle(0, Global.VIRTUAL_HEIGHT - 50, Global.VIRTUAL_WIDTH, 50);
-            _resultNarrator = new StoryNarrator(narratorBounds);
-            _resultNarrator.OnFinished += OnResultNarrationFinished;
-
             _voidEdgeEffect = new VoidEdgeEffect(
                 edgeColor: _global.Palette_Black,
                 edgeWidth: 6,
@@ -184,7 +177,6 @@ namespace ProjectVagabond.Scenes
             if (_progressionManager.CurrentSplitMap == null)
             {
                 _mapState = SplitMapState.Idle;
-                _eventState = EventState.Idle;
                 _playerMoveTimer = 0f;
                 _playerMoveDuration = 0f;
                 _playerMoveTargetNodeId = -1;
@@ -344,13 +336,6 @@ namespace ProjectVagabond.Scenes
                 }
                 _mapState = SplitMapState.LoweringNode;
                 _nodeLiftTimer = 0f;
-            }
-
-            if (_eventState == EventState.NarratingResult)
-            {
-                _resultNarrator.Update(gameTime);
-                base.Update(gameTime);
-                return;
             }
 
             if (_mapState == SplitMapState.Resting) _postBattleMenu.Update(gameTime, currentMouseState);
@@ -723,16 +708,6 @@ namespace ProjectVagabond.Scenes
             }
         }
 
-        private void OnResultNarrationFinished()
-        {
-            _eventState = EventState.Idle;
-            var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
-            if (currentNode != null) currentNode.IsCompleted = true;
-            _mapState = SplitMapState.LoweringNode;
-            _nodeLiftTimer = 0f;
-            _resultNarrator.Clear();
-        }
-
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             if (_currentMap == null) return;
@@ -837,8 +812,6 @@ namespace ProjectVagabond.Scenes
                 }
             }
             else _nodeTextWaveTimer = 0f;
-
-            if (_eventState == EventState.NarratingResult) _resultNarrator.Draw(spriteBatch, ServiceLocator.Get<Core>().SecondaryFont, gameTime);
         }
 
         public override void DrawUnderlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime) { }

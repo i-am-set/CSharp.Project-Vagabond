@@ -641,7 +641,6 @@ namespace ProjectVagabond.Scenes
                         {
                             if (!_floorTransitionTriggered)
                             {
-                                _uiManager.ForceClearNarration();
                                 if (!SplitMapScene.WasMajorBattle)
                                 {
                                     // Floor fade out is now handled by _floorAlpha tweening to 0 in Update

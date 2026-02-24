@@ -104,8 +104,6 @@ namespace ProjectVagabond.Battle.UI
             _targetingBackButton.OnClick += GoBack;
         }
 
-        public void ForceClearNarration() { }
-
         public void Reset()
         {
             _actionMenu.Reset();

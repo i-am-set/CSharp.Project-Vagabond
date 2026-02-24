@@ -63,7 +63,6 @@ namespace ProjectVagabond
         public Texture2D StunnedIconSpriteSheet { get; private set; }
         public Texture2D TenacityBreakSpriteSheet { get; private set; }
         public Texture2D TenacityRestoreSpriteSheet { get; private set; }
-        public Texture2D ManaBarPattern { get; private set; }
         public Texture2D TenacityPipTexture { get; private set; }
         public Texture2D StatModIconsTexture { get; private set; }
         public Texture2D CardFlipIcon { get; private set; }
@@ -410,10 +409,6 @@ namespace ProjectVagabond
             // Generate Noise Texture
             try { NoiseTexture = _textureFactory.CreateNoiseTexture(256, 256); }
             catch { NoiseTexture = _textureFactory.CreateColoredTexture(256, 256, Color.Gray); }
-
-            // Generate Mana Bar Pattern Texture
-            try { ManaBarPattern = _textureFactory.CreateManaPatternTexture(); }
-            catch { ManaBarPattern = _textureFactory.CreateColoredTexture(16, 16, Color.White); }
 
             // Load Heal Particle Sprite
             try { HealParticleSprite = _core.Content.Load<Texture2D>("Sprites/Particles/heal_plus"); }
@@ -991,13 +986,6 @@ namespace ProjectVagabond
             return Vector2.Zero;
         }
 
-        public Texture2D GetStatusEffectIcon(StatusEffectType effectType)
-        {
-            // Legacy method kept for compatibility with BattleVfxRenderer
-            // Returns a 1x1 transparent texture to prevent crashes if called
-            return _textureFactory.CreateColoredTexture(1, 1, Color.Transparent);
-        }
-
         public Rectangle GetPermanentStatusIconSourceRect(StatusEffectType type, int frameIndex)
         {
             // Sheet Layout: 20x10
@@ -1168,13 +1156,6 @@ namespace ProjectVagabond
                 }
             }
             return false;
-        }
-
-        [Obsolete("LoadSpriteContent is deprecated, please use LoadEssentialContent and LoadGameContent instead.")]
-        public void LoadSpriteContent()
-        {
-            LoadEssentialContent();
-            LoadGameContent();
         }
 
         public Rectangle GetAnimatedIconSourceRect(Texture2D texture, GameTime gameTime)

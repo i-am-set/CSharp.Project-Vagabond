@@ -2,9 +2,8 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond;
+using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
-using ProjectVagabond.Battle.UI;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
@@ -20,8 +19,6 @@ namespace ProjectVagabond.Battle.UI
         public MoveEntry? Entry { get; }
         public BattleCombatant Owner { get; }
 
-        public bool CanAfford => true;
-
         public Color BackgroundColor { get; set; } = Color.Transparent;
         public bool DrawSystemBackground { get; set; } = false;
 
@@ -36,7 +33,6 @@ namespace ProjectVagabond.Battle.UI
         // Opacity for fade-in animations
         public float Opacity { get; set; } = 1.0f;
 
-        private bool _showManaWarning = false;
         public int? VisualHeightOverride { get; set; }
 
         private bool _isScrollingInitialized = false;
@@ -67,24 +63,6 @@ namespace ProjectVagabond.Battle.UI
         public override void Update(MouseState currentMouseState, Matrix? worldTransform = null)
         {
             base.Update(currentMouseState, worldTransform);
-
-            if (!CanAfford && IsEnabled)
-            {
-                if (IsHovered)
-                {
-                    _showManaWarning = true;
-                    IsHovered = false;
-                    _isPressed = false;
-                }
-                else
-                {
-                    _showManaWarning = false;
-                }
-            }
-            else
-            {
-                _showManaWarning = false;
-            }
         }
 
         private void UpdateScrolling(GameTime gameTime)
@@ -122,7 +100,6 @@ namespace ProjectVagabond.Battle.UI
         public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? horizontalOffset = null, float? verticalOffset = null, Color? tintColorOverride = null)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
-            bool canAfford = CanAfford;
             bool isActivated = IsEnabled && (IsHovered || forceHover);
 
             // 1. Calculate Animation Offsets
@@ -134,7 +111,7 @@ namespace ProjectVagabond.Battle.UI
             }
             else
             {
-                hoverOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated && canAfford, HoverLiftOffset, HoverLiftDuration);
+                hoverOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated, HoverLiftOffset, HoverLiftDuration);
             }
 
             var (shakeOffset, flashTint) = UpdateFeedbackAnimations(gameTime);
@@ -173,7 +150,7 @@ namespace ProjectVagabond.Battle.UI
             if (DrawSystemBackground)
             {
                 Color bgColor = BackgroundColor;
-                if (!IsEnabled || !canAfford) bgColor = _global.Palette_Black;
+                if (!IsEnabled) bgColor = _global.Palette_Black;
                 else if (IsPressed) bgColor = _global.Palette_Fruit; // Selected/Held Color
                 else if (isActivated) bgColor = _global.ButtonHoverColor;
 
@@ -204,7 +181,7 @@ namespace ProjectVagabond.Battle.UI
 
                     // Use integer origin to ensure pixel-perfect alignment on the grid
                     Vector2 iconOrigin = new Vector2(4, 4);
-                    Color currentIconColor = (isActivated && canAfford) ? ActionIconHoverColor : ActionIconColor;
+                    Color currentIconColor = (isActivated) ? ActionIconHoverColor : ActionIconColor;
 
                     float scale = animScale;
 
@@ -224,7 +201,7 @@ namespace ProjectVagabond.Battle.UI
 
             // 5. Draw Text (Pixel Perfect)
             Color textColor;
-            if (!IsEnabled || !canAfford) textColor = CustomDisabledTextColor ?? _global.ButtonDisableColor;
+            if (!IsEnabled) textColor = CustomDisabledTextColor ?? _global.ButtonDisableColor;
             else if (IsPressed) textColor = _global.Palette_Black; // Force black on fruit background
             else if (isActivated) textColor = CustomHoverTextColor ?? _global.ButtonHoverColor;
             else textColor = CustomDefaultTextColor ?? _global.GameTextColor;
@@ -303,7 +280,7 @@ namespace ProjectVagabond.Battle.UI
             }
 
             // 6. Draw Disabled Strikethrough (Flat, no rotation)
-            if (!IsEnabled || !canAfford)
+            if (!IsEnabled)
             {
                 // Calculate center
                 Vector2 lineCenterOffset = isStackedLayout ? new Vector2(0, 5) : Vector2.Zero;
@@ -323,17 +300,6 @@ namespace ProjectVagabond.Battle.UI
                 );
 
                 spriteBatch.Draw(ServiceLocator.Get<Texture2D>(), lineRect, _global.ButtonDisableColor * effectiveOpacity);
-            }
-
-            if (_showManaWarning && IsEnabled)
-            {
-                string noManaText = "NOT ENOUGH MANA";
-                Vector2 noManaSize = font.MeasureString(noManaText);
-                Vector2 noManaPos = new Vector2(
-                    MathF.Round(drawBounds.X + drawBounds.Width / 2f - noManaSize.X / 2f),
-                    MathF.Round(drawBounds.Y + drawBounds.Height / 2f - noManaSize.Y / 2f - 2)
-                );
-                TextAnimator.DrawTextWithEffectSquareOutlined(spriteBatch, font, noManaText, noManaPos, _global.Palette_Rust * effectiveOpacity, Color.Black * effectiveOpacity, TextEffectType.None, 0f);
             }
         }
 

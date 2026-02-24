@@ -47,10 +47,6 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        public void DrawPlayerFloor(SpriteBatch spriteBatch, Vector2 position, float alpha, float scale = 1.0f)
-        {
-        }
-
         public void DrawStatChangeTooltip(SpriteBatch spriteBatch, BattleCombatant combatant, float alpha, bool hasInsight, Vector2 visualCenter, float barBottomY, GameTime gameTime)
         {
             var tertiaryFont = _core.TertiaryFont;
