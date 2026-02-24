@@ -526,9 +526,7 @@ namespace ProjectVagabond.Scenes
 
             if (!string.IsNullOrEmpty(_currentText1))
             {
-                // FIX: Use secondaryFont for the first line
                 Vector2 size1 = secondaryFont.MeasureString(INTRO_LINE_1);
-                // FIX: Move up 2 pixels (titleY - 2)
                 var pos1 = new Vector2((Global.VIRTUAL_WIDTH - size1.X) / 2, titleY - 2);
                 TextAnimator.DrawTextWithEffect(spriteBatch, secondaryFont, _currentText1, pos1, _global.Palette_DarkPale, TextEffectType.None, 0f);
             }

@@ -351,10 +351,8 @@ namespace ProjectVagabond.Scenes
                 // Pass opacity from animator to button draw
                 Color? tint = null;
 
-                // FIX: Use a threshold of 0.99f. If opacity is effectively 1, pass null so Button.Draw handles hover/press colors.
                 if (state.Opacity < 0.99f)
                 {
-                    // FIX: Use correct base colors for fade-in
                     Color baseColor = _buttons[i].IsEnabled ? _global.GameTextColor : _global.ButtonDisableColor;
                     tint = baseColor * state.Opacity;
                 }
