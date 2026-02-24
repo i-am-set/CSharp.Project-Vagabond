@@ -742,6 +742,11 @@ namespace ProjectVagabond.Scenes
 
             int[] drawOrder = { -3, 3, -2, 2, -1, 1, 0 };
 
+            // Tuning for circular curve
+            // 0.5f rads per index * 100f radius gives ~48px gap at center, diminishing outwards
+            const float SPREAD_FACTOR = 0.5f;
+            const float RADIUS = 100f;
+
             foreach (int offset in drawOrder)
             {
                 int charIndex = (_focusedIndex + offset) % count;
@@ -772,18 +777,9 @@ namespace ProjectVagabond.Scenes
 
                 float visualOffset = offset + _carouselSlideOffset;
 
-                float xPos = centerX;
-                if (visualOffset != 0)
-                {
-                    float dir = Math.Sign(visualOffset);
-                    float absOffset = Math.Abs(visualOffset);
-                    float dist = SPACING_CENTER;
-
-                    if (absOffset > 1f) dist += (absOffset - 1f) * SPACING_OUTER;
-                    else dist *= absOffset;
-
-                    xPos += dir * dist;
-                }
+                // Sinusoidal spacing for circular effect
+                float xOffset = MathF.Sin(visualOffset * SPREAD_FACTOR) * RADIUS;
+                float xPos = centerX + xOffset;
 
                 int spriteIndex = int.Parse(charId);
 
@@ -828,8 +824,6 @@ namespace ProjectVagabond.Scenes
                     // Draw Number
                     string numberText = (spriteIndex + 1).ToString();
                     Vector2 numSize = tertiaryFont.MeasureString(numberText);
-                    // Position above name (name is at centerY + 20). Tertiary font height is ~4-5px.
-                    // Let's place it at centerY + 14
                     Vector2 numPos = new Vector2(centerX - numSize.X / 2, centerY + 14);
                     spriteBatch.DrawStringSnapped(tertiaryFont, numberText, numPos, _global.Palette_DarkestPale * _uiAlpha);
                 }

@@ -269,6 +269,7 @@ namespace ProjectVagabond.UI
                     }
 
                     // 1. Check Flip Button First (Priority)
+                    // Only interactable if we are hovering the card (which we are)
                     if (flipBtnRect.Contains(virtualMousePos))
                     {
                         cursorManager.SetState(CursorState.HoverClickable);
@@ -566,7 +567,6 @@ namespace ProjectVagabond.UI
             bool showBack = flipP > 0.5f;
 
             // --- Flip Hop Effect ---
-            // FIX: Increased magnitude to -5.0f for a visible hop
             float flipHop = MathF.Sin(flipP * MathHelper.Pi) * -5.0f;
             yOffset += flipHop;
 
@@ -580,9 +580,12 @@ namespace ProjectVagabond.UI
 
                 Vector2 cardCenter = new Vector2(x + CARD_WIDTH / 2f, BaseY + 3 + yOffset + (HUD_HEIGHT - 4) / 2f);
 
+                // FIX: Only apply drag rotation if THIS card is being dragged
+                float rotation = isBeingDragged ? _currentDragRotation : 0f;
+
                 Matrix localTransform = Matrix.CreateTranslation(new Vector3(-cardCenter, 0)) *
                                         Matrix.CreateScale(scaleX, 1f, 1f) * // Apply Flip Scale
-                                        Matrix.CreateRotationZ(_currentDragRotation) *
+                                        Matrix.CreateRotationZ(rotation) *
                                         Matrix.CreateTranslation(new Vector3(cardCenter, 0));
 
                 Matrix finalTransform = localTransform * globalTransform;
@@ -626,8 +629,8 @@ namespace ProjectVagabond.UI
             }
 
             // --- Draw Flip Button ---
-            // Only draw if the card is wide enough to look good
-            if (scaleX > 0.2f)
+            // Only draw if the card is wide enough to look good AND we are hovering this specific card
+            if (scaleX > 0.2f && member == _hoveredMember && !_isDragging)
             {
                 var flipIcon = _spriteManager.CardFlipIcon;
                 if (flipIcon != null)
@@ -636,14 +639,17 @@ namespace ProjectVagabond.UI
                     int snappedX = (int)MathF.Round(x);
                     int snappedY = (int)MathF.Round(BaseY + 3 + yOffset);
                     Rectangle btnRect = new Rectangle(snappedX + 2, snappedY + 2, FLIP_BUTTON_SIZE, FLIP_BUTTON_SIZE);
-                    bool btnHover = btnRect.Contains(mousePos) && !_isDragging;
+                    bool btnHover = btnRect.Contains(mousePos);
 
                     // Source rect: 0=Idle, 1=Hover. 8x8 sprites.
                     Rectangle src = new Rectangle(btnHover ? 8 : 0, 0, 8, 8);
 
                     // Use Vector2 for position to ensure it snaps exactly like the card body
-                    // Use MathF.Round to match the card body's DrawSnapped logic
-                    Vector2 btnPos = new Vector2(MathF.Round(x) + 2, MathF.Round(BaseY + 3 + yOffset) + 2);
+                    Vector2 btnPos = new Vector2(snappedX + 2, snappedY + 2);
+
+                    // Draw a small backing to make it easier to see
+                    spriteBatch.DrawSnapped(_pixel, btnPos, null, _global.Palette_Black * 0.6f, 0f, Vector2.Zero, new Vector2(8, 8), SpriteEffects.None, 0f);
+
                     spriteBatch.DrawSnapped(flipIcon, btnPos, src, Color.White);
                 }
             }
@@ -657,6 +663,7 @@ namespace ProjectVagabond.UI
 
         private void DrawCardBack(SpriteBatch spriteBatch, PartyMember member, float xPosition, float yOffset, BitmapFont defaultFont, BitmapFont secondaryFont, BitmapFont tertiaryFont)
         {
+            // Use dynamic coordinates to ensure sync with card body
             float y = BaseY + 5 + yOffset;
             float centerX = xPosition + (CARD_WIDTH / 2f);
             float maxWidth = CARD_WIDTH - 4; // 2px padding on sides
@@ -664,13 +671,14 @@ namespace ProjectVagabond.UI
             // 1. Header: INFO
             string title = "INFO";
             Vector2 titleSize = defaultFont.MeasureString(title);
-            spriteBatch.DrawStringSnapped(defaultFont, title, new Vector2(centerX - titleSize.X / 2f, y), _global.Palette_Rust);
+            // Snap text position relative to center
+            spriteBatch.DrawStringSnapped(defaultFont, title, new Vector2(centerX - MathF.Floor(titleSize.X / 2f), y), _global.Palette_Rust);
             y += 12; // Spacing
 
             // 2. Section: ABILITY
             string abilityLabel = "ABILITY";
             Vector2 abilityLabelSize = tertiaryFont.MeasureString(abilityLabel);
-            spriteBatch.DrawStringSnapped(tertiaryFont, abilityLabel, new Vector2(centerX - abilityLabelSize.X / 2f, y), _global.Palette_DarkPale);
+            spriteBatch.DrawStringSnapped(tertiaryFont, abilityLabel, new Vector2(centerX - MathF.Floor(abilityLabelSize.X / 2f), y), _global.Palette_DarkPale);
             y += tertiaryFont.LineHeight + 1;
 
             // Ability Name & Desc
@@ -682,17 +690,15 @@ namespace ProjectVagabond.UI
                 var kvp = member.IntrinsicAbilities.First();
                 string abilityId = kvp.Key;
 
-                // FIX: Get both Name and Description from the class instance via reflection
                 var info = GetAbilityInfo(abilityId);
 
                 abilityName = info.Name;
-                // Use instance description if the dictionary value is empty (common in JSON)
                 abilityDesc = string.IsNullOrEmpty(kvp.Value) ? info.Description : kvp.Value;
             }
 
             // Draw Name (Secondary, Centered, Highlighted)
             Vector2 nameSize = secondaryFont.MeasureString(abilityName);
-            spriteBatch.DrawStringSnapped(secondaryFont, abilityName, new Vector2(centerX - nameSize.X / 2f, y), _global.Palette_LightPale);
+            spriteBatch.DrawStringSnapped(secondaryFont, abilityName, new Vector2(centerX - MathF.Floor(nameSize.X / 2f), y), _global.Palette_LightPale);
             y += secondaryFont.LineHeight + 1;
 
             // Draw Description (Tertiary, Centered, Wrapped)
@@ -707,7 +713,7 @@ namespace ProjectVagabond.UI
                     {
                         // Draw current line
                         Vector2 lineSize = tertiaryFont.MeasureString(line);
-                        spriteBatch.DrawStringSnapped(tertiaryFont, line, new Vector2(centerX - lineSize.X / 2f, y), _global.Palette_Pale);
+                        spriteBatch.DrawStringSnapped(tertiaryFont, line, new Vector2(centerX - MathF.Floor(lineSize.X / 2f), y), _global.Palette_Pale);
                         y += tertiaryFont.LineHeight + 2; // Line spacing
                         line = word;
                     }
@@ -720,7 +726,7 @@ namespace ProjectVagabond.UI
                 if (!string.IsNullOrEmpty(line))
                 {
                     Vector2 lineSize = tertiaryFont.MeasureString(line);
-                    spriteBatch.DrawStringSnapped(tertiaryFont, line, new Vector2(centerX - lineSize.X / 2f, y), _global.Palette_Pale);
+                    spriteBatch.DrawStringSnapped(tertiaryFont, line, new Vector2(centerX - MathF.Floor(lineSize.X / 2f), y), _global.Palette_Pale);
                     y += tertiaryFont.LineHeight + 2; // Line spacing
                 }
             }
@@ -730,12 +736,12 @@ namespace ProjectVagabond.UI
             // 3. Section: STATUS
             string statusLabel = "STATUS";
             Vector2 statusLabelSize = tertiaryFont.MeasureString(statusLabel);
-            spriteBatch.DrawStringSnapped(tertiaryFont, statusLabel, new Vector2(centerX - statusLabelSize.X / 2f, y), _global.Palette_DarkPale);
+            spriteBatch.DrawStringSnapped(tertiaryFont, statusLabel, new Vector2(centerX - MathF.Floor(statusLabelSize.X / 2f), y), _global.Palette_DarkPale);
             y += tertiaryFont.LineHeight + 1;
 
             string statusText = member.ActiveBuffs.Count > 0 ? $"{member.ActiveBuffs.Count} EFF" : "NORMAL";
             Vector2 statusTextSize = secondaryFont.MeasureString(statusText);
-            spriteBatch.DrawStringSnapped(secondaryFont, statusText, new Vector2(centerX - statusTextSize.X / 2f, y), _global.Palette_LightPale);
+            spriteBatch.DrawStringSnapped(secondaryFont, statusText, new Vector2(centerX - MathF.Floor(statusTextSize.X / 2f), y), _global.Palette_LightPale);
         }
 
         /// <summary>
