@@ -19,7 +19,7 @@ namespace ProjectVagabond
             HighlightTextColor = Palette_Fruit;
             DullTextColor = Palette_DarkestPale;
             ButtonHoverColor = Palette_DarkSun;
-            ButtonDisableColor = Palette_DarkShadow;
+            ButtonDisableColor = Palette_DarkestPale;
             SplitMapNodeColor = Palette_Sun;
             SplitMapPathColor = Palette_DarkRust;
             HoveredCombatantOutline = Palette_DarkShadow;
