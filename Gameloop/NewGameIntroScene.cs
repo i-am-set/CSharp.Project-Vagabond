@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
@@ -21,7 +22,6 @@ namespace ProjectVagabond.Scenes
         private readonly SceneManager _sceneManager;
         private readonly TransitionManager _transitionManager;
         private readonly HapticsManager _hapticsManager;
-
         // Carousel State
         private List<string> _characterIds = new();
         private int _focusedIndex = 0;
@@ -63,6 +63,9 @@ namespace ProjectVagabond.Scenes
         private float _rightArrowSimTimer = 0f;
         private const float ARROW_SIM_DURATION = 0.15f;
 
+        // Cached Data for Display
+        private (string Name, string Description)? _cachedAbilityInfo;
+
         private enum IntroState
         {
             TypingTitle,
@@ -73,6 +76,9 @@ namespace ProjectVagabond.Scenes
         }
 
         private IntroState _currentState = IntroState.TypingTitle;
+
+        // Layout Constants
+        private const int BASE_CENTER_Y = 56;
 
         public NewGameIntroScene()
         {
@@ -100,6 +106,7 @@ namespace ProjectVagabond.Scenes
             base.Enter();
             InitializeData();
             InitializeUI();
+            UpdateCachedAbilityInfo();
 
             _currentState = IntroState.TypingTitle;
             _currentText = "";
@@ -138,9 +145,10 @@ namespace ProjectVagabond.Scenes
         {
             _navigationGroup.Clear();
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+            var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
 
             int centerX = Global.VIRTUAL_WIDTH / 2;
-            int centerY = 80;
+            int centerY = BASE_CENTER_Y;
 
             int arrowY = centerY;
             int halfWidth = Global.VIRTUAL_WIDTH / 2;
@@ -185,13 +193,31 @@ namespace ProjectVagabond.Scenes
             _rightArrow.OnClick += () => CycleCharacter(1);
 
             // --- Select Button ---
+            int contentStartY = centerY + 48;
+
+            // Stats Height
+            int statsHeight = (int)secondaryFont.LineHeight * 2 + 2; // 2 rows + gap
+
+            // Ability Height
+            int abilityLabelHeight = (int)tertiaryFont.LineHeight + 2; // Label + gap
+            int abilityNameHeight = (int)secondaryFont.LineHeight + 1; // Name + gap
+            int abilityDescHeight = ((int)tertiaryFont.LineHeight + 2) * 3; // 3 lines + gaps
+
+            // Ability name Y is: contentStartY + statsHeight + 4 + abilityLabelHeight
+            int abilityNameY = contentStartY + statsHeight + 4 + abilityLabelHeight;
+
+            // Select button is 6px below the ability DESCRIPTION area (which is 3 lines tall)
+            // Ability description starts at abilityNameY + abilityNameHeight
+            int abilityDescStartY = abilityNameY + abilityNameHeight;
+            int selectButtonY = abilityDescStartY + abilityDescHeight + 6;
+
             string selectText = "SELECT";
             Vector2 selectSize = secondaryFont.MeasureString(selectText);
             int selectW = (int)selectSize.X + 10;
             int selectH = (int)selectSize.Y + 6;
 
             _selectButton = new Button(
-                new Rectangle(centerX - selectW / 2, centerY + 29, selectW, selectH),
+                new Rectangle(centerX - selectW / 2, selectButtonY, selectW, selectH),
                 selectText,
                 font: secondaryFont
             )
@@ -224,6 +250,65 @@ namespace ProjectVagabond.Scenes
 
             _carouselSlideOffset = direction;
             _selectButtonHopTimer = SELECT_HOP_DURATION;
+
+            UpdateCachedAbilityInfo();
+        }
+
+        private void UpdateCachedAbilityInfo()
+        {
+            if (_characterIds.Count == 0) return;
+            string charId = _characterIds[_focusedIndex];
+            if (!BattleDataCache.PartyMembers.TryGetValue(charId, out var data)) return;
+
+            if (data.PassiveAbilityPool != null && data.PassiveAbilityPool.Any())
+            {
+                // Take the first passive from the pool as a preview
+                var passiveDict = data.PassiveAbilityPool.First();
+                if (passiveDict.Count > 0)
+                {
+                    var kvp = passiveDict.First();
+                    _cachedAbilityInfo = GetAbilityInfo(kvp.Key, kvp.Value);
+                    return;
+                }
+            }
+            _cachedAbilityInfo = ("NONE", "");
+        }
+
+        private (string Name, string Description) GetAbilityInfo(string abilityId, string overrideDesc)
+        {
+            string friendlyName = abilityId;
+            string description = overrideDesc;
+
+            try
+            {
+                var typeName = $"ProjectVagabond.Battle.Abilities.{abilityId}Ability";
+                var type = Type.GetType(typeName);
+
+                if (type == null)
+                {
+                    foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+                    {
+                        type = asm.GetType(typeName);
+                        if (type != null) break;
+                    }
+                }
+
+                if (type != null)
+                {
+                    var instance = Activator.CreateInstance(type) as IAbility;
+                    if (instance != null)
+                    {
+                        friendlyName = instance.Name;
+                        if (string.IsNullOrEmpty(description))
+                        {
+                            description = instance.Description;
+                        }
+                    }
+                }
+            }
+            catch { }
+
+            return (friendlyName, description);
         }
 
         private void ConfirmSelection()
@@ -239,12 +324,12 @@ namespace ProjectVagabond.Scenes
             var gameState = ServiceLocator.Get<GameState>();
 
             var loadingTasks = new List<LoadingTask>
+        {
+            new GenericTask("Initializing world...", () =>
             {
-                new GenericTask("Initializing world...", () =>
-                {
-                    gameState.InitializeWorld(selectedId);
-                })
-            };
+                gameState.InitializeWorld(selectedId);
+            })
+        };
 
             core.SetGameLoaded(true);
 
@@ -408,7 +493,8 @@ namespace ProjectVagabond.Scenes
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             var core = ServiceLocator.Get<Core>();
-            var tertiaryFont = core.TertiaryFont; // Get tertiary font for numbering
+            var secondaryFont = core.SecondaryFont;
+            var tertiaryFont = core.TertiaryFont;
             Matrix staticTransform = Matrix.CreateScale(core.FinalScale, core.FinalScale, 1.0f) *
                                      Matrix.CreateTranslation(core.FinalRenderRectangle.X, core.FinalRenderRectangle.Y, 0);
 
@@ -513,15 +599,144 @@ namespace ProjectVagabond.Scenes
                 spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, Matrix.CreateTranslation(0, hopY, 0) * staticTransform);
                 _selectButton.Draw(spriteBatch, font, gameTime, Matrix.Identity, false, null, null, GetTint(_selectButton));
                 spriteBatch.End();
+
+                // --- Stats and Abilities ---
+                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, staticTransform);
+                DrawStatsAndAbilities(spriteBatch, secondaryFont, tertiaryFont, _uiAlpha);
+                spriteBatch.End();
             }
 
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
         }
 
+        private void DrawStatsAndAbilities(SpriteBatch spriteBatch, BitmapFont secondaryFont, BitmapFont tertiaryFont, float alpha)
+        {
+            if (_characterIds.Count == 0) return;
+            string charId = _characterIds[_focusedIndex];
+            if (!BattleDataCache.PartyMembers.TryGetValue(charId, out var data)) return;
+
+            int centerX = Global.VIRTUAL_WIDTH / 2;
+            int startY = BASE_CENTER_Y + 32;
+            int currentY = startY;
+
+            // --- Stats Block ---
+            string[] labels = { "STR", "INT", "TEN", "AGI" };
+            int[] values = { data.Strength, data.Intelligence, data.Tenacity, data.Agility };
+
+            int statBlockX = centerX - 30;
+
+            // Calculate alignment reference based on "STR" (standard 3-letter width)
+            float standardLabelWidth = secondaryFont.MeasureString("STR").Width;
+
+            // 1. HP Row
+            string hpLabel = "HP";
+            float hpLabelWidth = secondaryFont.MeasureString(hpLabel).Width;
+
+            // Right-align HP label with other labels
+            float hpLabelX = statBlockX + (standardLabelWidth - hpLabelWidth);
+
+            spriteBatch.DrawStringSnapped(secondaryFont, hpLabel, new Vector2(hpLabelX, currentY), _global.Palette_DarkShadow * alpha);
+
+            // Center HP Value in the bar area
+            // Bar area starts at statBlockX + 19 (from original code loop)
+            // Bar width comes from texture
+            Texture2D statBg = _spriteManager.InventoryStatBarEmpty;
+            float barAreaWidth = (statBg != null) ? statBg.Width : 40f;
+            float barStartX = statBlockX + 19;
+            float barCenterX = barStartX + (barAreaWidth / 2f);
+
+            string hpValue = data.MaxHP.ToString();
+            Vector2 hpValueSize = secondaryFont.MeasureString(hpValue);
+
+            // Draw HP Value centered
+            spriteBatch.DrawStringSnapped(secondaryFont, hpValue, new Vector2(barCenterX - hpValueSize.X / 2f, currentY), _global.Palette_Pale * alpha);
+
+            currentY += secondaryFont.LineHeight + 1;
+
+            // 2. Stat Rows
+            Texture2D statFull = _spriteManager.InventoryStatBarFull;
+
+            for (int i = 0; i < labels.Length; i++)
+            {
+                spriteBatch.DrawStringSnapped(secondaryFont, labels[i], new Vector2(statBlockX, currentY), _global.Palette_DarkShadow * alpha);
+
+                if (statBg != null)
+                {
+                    float pipX = statBlockX + 19;
+                    float pipY = currentY + MathF.Ceiling((secondaryFont.LineHeight - statBg.Height) / 2f);
+                    spriteBatch.DrawSnapped(statBg, new Vector2(pipX, pipY), Color.White * alpha);
+
+                    if (statFull != null)
+                    {
+                        int val = values[i];
+                        int basePoints = Math.Clamp(val, 0, 10);
+                        if (basePoints > 0)
+                        {
+                            var srcBase = new Rectangle(0, 0, basePoints * 4, 3);
+                            spriteBatch.DrawSnapped(statFull, new Vector2(pipX, pipY), srcBase, Color.White * alpha);
+                        }
+                    }
+                }
+                currentY += secondaryFont.LineHeight + 1;
+            }
+
+            currentY += 4; // Gap between Stats and Ability
+
+            // --- Passive Ability Block ---
+            // "ABILITY" Label (Tertiary Font)
+            string abilityLabel = "ABILITY";
+            Vector2 abilityLabelSize = tertiaryFont.MeasureString(abilityLabel);
+            spriteBatch.DrawStringSnapped(tertiaryFont, abilityLabel, new Vector2(centerX - abilityLabelSize.X / 2f, currentY), _global.Palette_DarkShadow * alpha);
+            currentY += tertiaryFont.LineHeight + 2; // 2px gap
+
+            if (_cachedAbilityInfo.HasValue)
+            {
+                var (name, desc) = _cachedAbilityInfo.Value;
+
+                // Name (Secondary Font, Centered)
+                Vector2 nameSize = secondaryFont.MeasureString(name);
+                spriteBatch.DrawStringSnapped(secondaryFont, name, new Vector2(centerX - nameSize.X / 2f, currentY), _global.Palette_Pale * alpha);
+                currentY += secondaryFont.LineHeight + 1;
+
+                // Description (Centered & Wrapped)
+                // Reserve fixed space for 3 lines
+                float descLineHeight = tertiaryFont.LineHeight + 2; // Font height + 2px gap
+
+                if (!string.IsNullOrEmpty(desc))
+                {
+                    float maxWidth = 120f;
+                    var words = desc.Split(' ');
+                    string line = "";
+                    float localY = currentY;
+
+                    foreach (var word in words)
+                    {
+                        string testLine = string.IsNullOrEmpty(line) ? word : line + " " + word;
+                        if (tertiaryFont.MeasureString(testLine).Width > maxWidth)
+                        {
+                            Vector2 lineSize = tertiaryFont.MeasureString(line);
+                            spriteBatch.DrawStringSnapped(tertiaryFont, line, new Vector2(centerX - lineSize.X / 2f, localY), _global.Palette_DarkPale * alpha);
+                            localY += descLineHeight;
+                            line = word;
+                        }
+                        else
+                        {
+                            line = testLine;
+                        }
+                    }
+                    if (!string.IsNullOrEmpty(line))
+                    {
+                        Vector2 lineSize = tertiaryFont.MeasureString(line);
+                        spriteBatch.DrawStringSnapped(tertiaryFont, line, new Vector2(centerX - lineSize.X / 2f, localY), _global.Palette_DarkPale * alpha);
+                    }
+                }
+            }
+        }
+
         private void DrawCarousel(SpriteBatch spriteBatch, BitmapFont font, BitmapFont tertiaryFont)
         {
             int centerX = Global.VIRTUAL_WIDTH / 2;
-            int centerY = 80;
+            int centerY = BASE_CENTER_Y;
             var sheet = _spriteManager.PlayerMasterSpriteSheet;
             int count = _characterIds.Count;
 

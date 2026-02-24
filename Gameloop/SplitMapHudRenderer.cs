@@ -692,7 +692,7 @@ namespace ProjectVagabond.UI
 
             // Draw Name (Tertiary, Centered, Highlighted)
             Vector2 nameSize = tertiaryFont.MeasureString(abilityName);
-            spriteBatch.DrawStringSnapped(tertiaryFont, abilityName, new Vector2(centerX - nameSize.X / 2f, y), _global.Palette_Sun);
+            spriteBatch.DrawStringSnapped(tertiaryFont, abilityName, new Vector2(centerX - nameSize.X / 2f, y), _global.Palette_LightPale);
             y += tertiaryFont.LineHeight + 1;
 
             // Draw Description (Tertiary, Centered, Wrapped)
@@ -707,7 +707,7 @@ namespace ProjectVagabond.UI
                     {
                         // Draw current line
                         Vector2 lineSize = tertiaryFont.MeasureString(line);
-                        spriteBatch.DrawStringSnapped(tertiaryFont, line, new Vector2(centerX - lineSize.X / 2f, y), _global.Palette_LightPale);
+                        spriteBatch.DrawStringSnapped(tertiaryFont, line, new Vector2(centerX - lineSize.X / 2f, y), _global.Palette_Pale);
                         y += tertiaryFont.LineHeight + 2; // Line spacing
                         line = word;
                     }
@@ -720,7 +720,7 @@ namespace ProjectVagabond.UI
                 if (!string.IsNullOrEmpty(line))
                 {
                     Vector2 lineSize = tertiaryFont.MeasureString(line);
-                    spriteBatch.DrawStringSnapped(tertiaryFont, line, new Vector2(centerX - lineSize.X / 2f, y), _global.Palette_LightPale);
+                    spriteBatch.DrawStringSnapped(tertiaryFont, line, new Vector2(centerX - lineSize.X / 2f, y), _global.Palette_Pale);
                     y += tertiaryFont.LineHeight + 2; // Line spacing
                 }
             }
@@ -937,7 +937,6 @@ namespace ProjectVagabond.UI
             Rectangle hitRect = new Rectangle((int)cardStartX, (int)y - 2, CARD_WIDTH, lineHeight + 4);
             bool isHovered = !_isDragging && _currentHoveredItem.HasValue && _currentHoveredItem.Value.Bounds == hitRect;
 
-            // FIX: Only draw hover rect if tooltip is visible (synced feedback)
             if (isHovered && isMovePresent && _isTooltipVisible)
             {
                 Color c = _global.Palette_Sun;
