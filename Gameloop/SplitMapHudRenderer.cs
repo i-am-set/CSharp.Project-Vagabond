@@ -415,7 +415,7 @@ namespace ProjectVagabond.UI
                 else
                 {
                     float currentY = _verticalOffsets[member];
-                    float targetY = 1f;
+                    float targetY = 0f;
                     if (i >= 2) targetY = 2f;
 
                     if (member == _draggedMember) targetY = DRAG_LIFT_OFFSET;
@@ -669,9 +669,9 @@ namespace ProjectVagabond.UI
 
             // 2. Section: ABILITY
             string abilityLabel = "ABILITY";
-            Vector2 abilityLabelSize = secondaryFont.MeasureString(abilityLabel);
-            spriteBatch.DrawStringSnapped(secondaryFont, abilityLabel, new Vector2(centerX - abilityLabelSize.X / 2f, y), _global.Palette_DarkPale);
-            y += secondaryFont.LineHeight + 3; // Increased gap
+            Vector2 abilityLabelSize = tertiaryFont.MeasureString(abilityLabel);
+            spriteBatch.DrawStringSnapped(tertiaryFont, abilityLabel, new Vector2(centerX - abilityLabelSize.X / 2f, y), _global.Palette_DarkPale);
+            y += tertiaryFont.LineHeight + 1;
 
             // Ability Name & Desc
             string abilityName = "NONE";
@@ -690,10 +690,10 @@ namespace ProjectVagabond.UI
                 abilityDesc = string.IsNullOrEmpty(kvp.Value) ? info.Description : kvp.Value;
             }
 
-            // Draw Name (Tertiary, Centered, Highlighted)
-            Vector2 nameSize = tertiaryFont.MeasureString(abilityName);
-            spriteBatch.DrawStringSnapped(tertiaryFont, abilityName, new Vector2(centerX - nameSize.X / 2f, y), _global.Palette_LightPale);
-            y += tertiaryFont.LineHeight + 1;
+            // Draw Name (Secondary, Centered, Highlighted)
+            Vector2 nameSize = secondaryFont.MeasureString(abilityName);
+            spriteBatch.DrawStringSnapped(secondaryFont, abilityName, new Vector2(centerX - nameSize.X / 2f, y), _global.Palette_LightPale);
+            y += secondaryFont.LineHeight + 1;
 
             // Draw Description (Tertiary, Centered, Wrapped)
             if (!string.IsNullOrEmpty(abilityDesc))
@@ -729,13 +729,13 @@ namespace ProjectVagabond.UI
 
             // 3. Section: STATUS
             string statusLabel = "STATUS";
-            Vector2 statusLabelSize = secondaryFont.MeasureString(statusLabel);
-            spriteBatch.DrawStringSnapped(secondaryFont, statusLabel, new Vector2(centerX - statusLabelSize.X / 2f, y), _global.Palette_DarkPale);
-            y += secondaryFont.LineHeight + 1;
+            Vector2 statusLabelSize = tertiaryFont.MeasureString(statusLabel);
+            spriteBatch.DrawStringSnapped(tertiaryFont, statusLabel, new Vector2(centerX - statusLabelSize.X / 2f, y), _global.Palette_DarkPale);
+            y += tertiaryFont.LineHeight + 1;
 
             string statusText = member.ActiveBuffs.Count > 0 ? $"{member.ActiveBuffs.Count} EFF" : "NORMAL";
-            Vector2 statusTextSize = tertiaryFont.MeasureString(statusText);
-            spriteBatch.DrawStringSnapped(tertiaryFont, statusText, new Vector2(centerX - statusTextSize.X / 2f, y), _global.Palette_LightPale);
+            Vector2 statusTextSize = secondaryFont.MeasureString(statusText);
+            spriteBatch.DrawStringSnapped(secondaryFont, statusText, new Vector2(centerX - statusTextSize.X / 2f, y), _global.Palette_LightPale);
         }
 
         /// <summary>
