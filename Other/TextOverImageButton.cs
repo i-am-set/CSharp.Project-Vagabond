@@ -284,7 +284,19 @@ namespace ProjectVagabond.UI
                     Vector2 p1 = centerPos + RotateOffset(lineStartLocal);
                     Vector2 p2 = centerPos + RotateOffset(lineEndLocal);
 
-                    spriteBatch.DrawLineSnapped(p1, p2, _global.ButtonDisableColor);
+                    if (Math.Abs(_currentHoverRotation) < 0.01f)
+                    {
+                        int x1 = (int)MathF.Round(p1.X);
+                        int x2 = (int)MathF.Round(p2.X);
+                        int y = (int)MathF.Round(p1.Y);
+                        int w = x2 - x1;
+                        // Draw 1px rectangle instead of line for perfect snapping
+                        spriteBatch.Draw(ServiceLocator.Get<Texture2D>(), new Rectangle(x1, y, w, 1), _global.ButtonDisableColor);
+                    }
+                    else
+                    {
+                        spriteBatch.DrawLineSnapped(p1, p2, _global.ButtonDisableColor);
+                    }
                 }
             }
         }

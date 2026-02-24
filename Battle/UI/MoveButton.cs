@@ -1,8 +1,4 @@
-﻿// --- MoveButton.cs ---
-// Updated Draw() to change background color to Palette_Fruit when pressed.
-// Updated Draw() to force text color to Black when pressed for readability.
-
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -143,6 +139,11 @@ namespace ProjectVagabond.Battle.UI
 
             var (shakeOffset, flashTint) = UpdateFeedbackAnimations(gameTime);
 
+            float animScale = _currentScale;
+
+            float fadeAlpha = Math.Clamp(animScale, 0f, 1f);
+            float effectiveOpacity = Opacity * fadeAlpha;
+
             // 2. Calculate Strict Integer Position & Bounds
             // We round everything immediately to lock it to the pixel grid
             int x = (int)MathF.Round(Bounds.X + shakeOffset.X + (horizontalOffset ?? 0f));
@@ -150,7 +151,20 @@ namespace ProjectVagabond.Battle.UI
             int w = VisualWidthOverride ?? Bounds.Width;
             int h = VisualHeightOverride ?? Bounds.Height;
 
-            Rectangle drawBounds = new Rectangle(x, y, w, h);
+            int scaledW = (int)(w * animScale);
+            int scaledH = (int)(h * animScale);
+
+            // Center the scaled rect
+            int centerX = x + w / 2;
+            int centerY = y + h / 2;
+
+            Rectangle drawBounds = new Rectangle(
+                centerX - scaledW / 2,
+                centerY - scaledH / 2,
+                scaledW,
+                scaledH
+            );
+
             Vector2 boundsCenter = new Vector2(drawBounds.Center.X, drawBounds.Center.Y);
 
             bool isStackedLayout = h > 15 && ActionIconRect.HasValue;
@@ -163,7 +177,7 @@ namespace ProjectVagabond.Battle.UI
                 else if (IsPressed) bgColor = _global.Palette_Fruit; // Selected/Held Color
                 else if (isActivated) bgColor = _global.ButtonHoverColor;
 
-                DrawPixelPerfectBevel(spriteBatch, pixel, drawBounds, bgColor * Opacity);
+                DrawPixelPerfectBevel(spriteBatch, pixel, drawBounds, bgColor * effectiveOpacity);
             }
 
             // 4. Draw Icon (Pixel Perfect)
@@ -180,7 +194,8 @@ namespace ProjectVagabond.Battle.UI
                     }
                     else
                     {
-                        iconOffset = new Vector2((-w / 2f) + 5f, 0);
+                        // Scale the offset too so it stays proportional
+                        iconOffset = new Vector2((-w / 2f) + 5f, 0) * animScale;
                     }
 
                     // Combine, then ROUND to snap
@@ -191,15 +206,13 @@ namespace ProjectVagabond.Battle.UI
                     Vector2 iconOrigin = new Vector2(4, 4);
                     Color currentIconColor = (isActivated && canAfford) ? ActionIconHoverColor : ActionIconColor;
 
-                    // No rotation, scale 1.0f (or derived from _currentScale if absolutely needed, but usually 1 for pixel perfect)
-                    // Assuming scale remains 1 for pixel perfection unless zooming is critical
-                    float scale = 1.0f;
+                    float scale = animScale;
 
                     spriteBatch.DrawSnapped(
                         spriteManager.ActionIconsSpriteSheet,
                         snappedIconPos,
                         ActionIconRect.Value,
-                        currentIconColor * Opacity,
+                        currentIconColor * effectiveOpacity,
                         0f, // No rotation
                         iconOrigin,
                         new Vector2(scale),
@@ -219,12 +232,12 @@ namespace ProjectVagabond.Battle.UI
             if (tintColorOverride.HasValue) textColor = tintColorOverride.Value;
 
             // Apply Opacity to text
-            textColor = textColor * Opacity;
+            textColor = textColor * effectiveOpacity;
 
             BitmapFont font = Font ?? defaultFont;
             Vector2 textSize = font.MeasureString(Text);
-            float textAvailableWidth = w - 8;
-            bool needsScrolling = textSize.X > textAvailableWidth;
+            float textAvailableWidth = scaledW - 8; // Use scaled width
+            bool needsScrolling = textSize.X > textAvailableWidth && animScale > 0.9f; // Only scroll if fully visible
 
             // Handle Text Positioning
             if (needsScrolling)
@@ -247,7 +260,7 @@ namespace ProjectVagabond.Battle.UI
                 if (isStackedLayout) textY += 5;
 
                 // Flatten X start
-                int flatX = (int)MathF.Round(boundsCenter.X - (w / 2f) + 4);
+                int flatX = (int)MathF.Round(boundsCenter.X - (scaledW / 2f) + 4);
 
                 var originalRasterizerState = spriteBatch.GraphicsDevice.RasterizerState;
                 var originalScissorRect = spriteBatch.GraphicsDevice.ScissorRectangle;
@@ -279,12 +292,14 @@ namespace ProjectVagabond.Battle.UI
                 textOrigin -= TextRenderOffset;
 
                 Vector2 textOffset = isStackedLayout ? new Vector2(0, 5f) : Vector2.Zero;
+                // Scale offset
+                textOffset *= animScale;
 
                 // Calculate raw, then SNAP
                 Vector2 rawTextPos = boundsCenter + textOffset;
                 Vector2 snappedTextPos = new Vector2(MathF.Round(rawTextPos.X), MathF.Round(rawTextPos.Y));
 
-                spriteBatch.DrawStringSnapped(font, Text, snappedTextPos, textColor, 0f, textOrigin, 1.0f, SpriteEffects.None, 0f);
+                spriteBatch.DrawStringSnapped(font, Text, snappedTextPos, textColor, 0f, textOrigin, animScale, SpriteEffects.None, 0f);
             }
 
             // 6. Draw Disabled Strikethrough (Flat, no rotation)
@@ -292,10 +307,12 @@ namespace ProjectVagabond.Battle.UI
             {
                 // Calculate center
                 Vector2 lineCenterOffset = isStackedLayout ? new Vector2(0, 5) : Vector2.Zero;
+                lineCenterOffset *= animScale;
+
                 Vector2 rawLineCenter = boundsCenter + lineCenterOffset;
                 Vector2 snappedLineCenter = new Vector2(MathF.Round(rawLineCenter.X), MathF.Round(rawLineCenter.Y));
 
-                int halfTextW = (int)(textSize.X / 2f) + 2;
+                int halfTextW = (int)((textSize.X / 2f) * animScale) + 2;
 
                 // Draw a simple 1px rectangle
                 Rectangle lineRect = new Rectangle(
@@ -305,7 +322,7 @@ namespace ProjectVagabond.Battle.UI
                     1
                 );
 
-                spriteBatch.Draw(ServiceLocator.Get<Texture2D>(), lineRect, _global.ButtonDisableColor * Opacity);
+                spriteBatch.Draw(ServiceLocator.Get<Texture2D>(), lineRect, _global.ButtonDisableColor * effectiveOpacity);
             }
 
             if (_showManaWarning && IsEnabled)
@@ -316,7 +333,7 @@ namespace ProjectVagabond.Battle.UI
                     MathF.Round(drawBounds.X + drawBounds.Width / 2f - noManaSize.X / 2f),
                     MathF.Round(drawBounds.Y + drawBounds.Height / 2f - noManaSize.Y / 2f - 2)
                 );
-                TextAnimator.DrawTextWithEffectSquareOutlined(spriteBatch, font, noManaText, noManaPos, _global.Palette_Rust * Opacity, Color.Black * Opacity, TextEffectType.None, 0f);
+                TextAnimator.DrawTextWithEffectSquareOutlined(spriteBatch, font, noManaText, noManaPos, _global.Palette_Rust * effectiveOpacity, Color.Black * effectiveOpacity, TextEffectType.None, 0f);
             }
         }
 

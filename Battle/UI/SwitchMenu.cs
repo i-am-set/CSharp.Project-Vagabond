@@ -118,7 +118,7 @@ namespace ProjectVagabond.Battle.UI
                     IsEnabled = enabled,
                     AlignLeft = false,
                     ContentXOffset = 0,
-                    TextRenderOffset = Vector2.Zero 
+                    TextRenderOffset = new Vector2(0, 0)
                 };
 
                 if (member != null && enabled)
