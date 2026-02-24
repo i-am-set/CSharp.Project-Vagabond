@@ -120,6 +120,10 @@ namespace ProjectVagabond
         public Texture2D SplitNodeNarrativeSilhouette { get; private set; }
         public Texture2D SplitNodeCombat { get; private set; }
         public Texture2D SplitNodeCombatSilhouette { get; private set; }
+        public Texture2D SplitNodeEasyCombat { get; private set; }
+        public Texture2D SplitNodeEasyCombatSilhouette { get; private set; }
+        public Texture2D SplitNodeHardCombat { get; private set; }
+        public Texture2D SplitNodeHardCombatSilhouette { get; private set; }
         public Texture2D SplitNodeRecruit { get; private set; }
         public Texture2D SplitNodeRecruitSilhouette { get; private set; }
         public Texture2D SplitNodeRest { get; private set; }
@@ -321,6 +325,14 @@ namespace ProjectVagabond
             try { SplitNodeCombat = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_Combat"); }
             catch { SplitNodeCombat = _textureFactory.CreateColoredTexture(64, 32, Color.Red); }
             SplitNodeCombatSilhouette = CreateSilhouette(SplitNodeCombat);
+
+            try { SplitNodeEasyCombat = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_EasyCombat"); }
+            catch { SplitNodeEasyCombat = _textureFactory.CreateColoredTexture(64, 32, Color.LightGreen); }
+            SplitNodeEasyCombatSilhouette = CreateSilhouette(SplitNodeEasyCombat);
+
+            try { SplitNodeHardCombat = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_HardCombat"); }
+            catch { SplitNodeHardCombat = _textureFactory.CreateColoredTexture(64, 32, Color.DarkRed); }
+            SplitNodeHardCombatSilhouette = CreateSilhouette(SplitNodeHardCombat);
 
             try { SplitNodeRecruit = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_Recuit"); }
             catch { SplitNodeRecruit = _textureFactory.CreateColoredTexture(64, 32, Color.Cyan); }

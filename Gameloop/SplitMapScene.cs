@@ -947,8 +947,21 @@ namespace ProjectVagabond.Scenes
                     silhouette = _spriteManager.SplitNodeStartSilhouette;
                     break;
                 case SplitNodeType.Battle:
-                    texture = _spriteManager.SplitNodeCombat;
-                    silhouette = _spriteManager.SplitNodeCombatSilhouette;
+                    if (node.Difficulty == BattleDifficulty.Easy)
+                    {
+                        texture = _spriteManager.SplitNodeEasyCombat;
+                        silhouette = _spriteManager.SplitNodeEasyCombatSilhouette;
+                    }
+                    else if (node.Difficulty == BattleDifficulty.Hard)
+                    {
+                        texture = _spriteManager.SplitNodeHardCombat;
+                        silhouette = _spriteManager.SplitNodeHardCombatSilhouette;
+                    }
+                    else
+                    {
+                        texture = _spriteManager.SplitNodeCombat;
+                        silhouette = _spriteManager.SplitNodeCombatSilhouette;
+                    }
                     break;
                 case SplitNodeType.MajorBattle:
                     texture = _spriteManager.SplitNodeCombat;

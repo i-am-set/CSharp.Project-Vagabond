@@ -115,6 +115,7 @@ namespace ProjectVagabond.Scenes
         private bool _floorTransitionTriggered = false;
         private bool _didFlee = false;
         private bool _isBattleLogHovered = false;
+        private bool _finalizedVictory = false;
 
         // Dazed Timer
         private float _dazedWaitTimer = 0f;
@@ -200,6 +201,7 @@ namespace ProjectVagabond.Scenes
             _isBattleLogHovered = false;
             _dazedWaitTimer = 0f;
             _floorAlpha = 1f;
+            _finalizedVictory = false;
 
             SubscribeToEvents();
 
@@ -616,6 +618,8 @@ namespace ProjectVagabond.Scenes
                         if (!_victorySequenceTriggered)
                         {
                             _victorySequenceTriggered = true;
+                            CleanupPlayerState();
+                            RemoveDeadPartyMembers();
                             var transitionOut = _transitionManager.GetRandomTransition();
                             var transitionIn = _transitionManager.GetRandomTransition();
                             _sceneManager.ChangeScene(BattleSetup.ReturnSceneState, transitionOut, transitionIn);
@@ -624,8 +628,7 @@ namespace ProjectVagabond.Scenes
                         return;
                     }
 
-                    var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
-                    bool playerWon = player != null && !player.IsDefeated;
+                    bool playerWon = _battleManager.AllCombatants.Any(c => c.IsPlayerControlled && !c.IsDefeated);
 
                     if (playerWon)
                     {
@@ -803,11 +806,43 @@ namespace ProjectVagabond.Scenes
 
         private void FinalizeVictory()
         {
+            if (_finalizedVictory) return;
+            _finalizedVictory = true;
+
+            if (_battleManager == null) return;
+
             SplitMapScene.PlayerWonLastBattle = true;
+
+            // Sync HP first to ensure any surviving members are up to date immediately
+            CleanupPlayerState();
+
+            RemoveDeadPartyMembers();
+
             DecrementTemporaryBuffs();
             var transitionOut = _transitionManager.GetRandomTransition();
             var transitionIn = _transitionManager.GetRandomTransition();
             _sceneManager.ChangeScene(BattleSetup.ReturnSceneState, transitionOut, transitionIn);
+        }
+
+        private void RemoveDeadPartyMembers()
+        {
+            if (_gameState.PlayerState != null && _battleManager != null)
+            {
+                var deadCombatants = _battleManager.AllCombatants
+                    .Where(c => c.IsPlayerControlled && (c.IsDefeated || c.Stats.CurrentHP <= 0))
+                    .ToList();
+
+                foreach (var dead in deadCombatants)
+                {
+                    var member = _gameState.PlayerState.Party.FirstOrDefault(p => p.Name == dead.Name);
+                    if (member != null)
+                    {
+                        _gameState.PlayerState.Party.Remove(member);
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[Palette_Rust]{member.Name} has fallen and is removed from the party.[/]" });
+                        Debug.WriteLine($"[BattleScene] Removed dead member: {member.Name}");
+                    }
+                }
+            }
         }
 
         private void DecrementTemporaryBuffs()

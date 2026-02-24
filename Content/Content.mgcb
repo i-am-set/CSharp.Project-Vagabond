@@ -660,6 +660,30 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/MapNodes/MapNode_Combat.png;Sprites/MapNodes/MapNode_Combat
 
+#begin Sprites/MapNodes/MapNode_EasyCombat.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/MapNodes/MapNode_EasyCombat.png;Sprites/MapNodes/MapNode_EasyCombat
+
+#begin Sprites/MapNodes/MapNode_HardCombat.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/MapNodes/MapNode_HardCombat.png;Sprites/MapNodes/MapNode_HardCombat
+
 #begin Sprites/MapNodes/MapNode_Player.png
 /importer:TextureImporter
 /processor:TextureProcessor
