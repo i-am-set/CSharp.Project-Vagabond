@@ -58,8 +58,6 @@ namespace ProjectVagabond
                 sb.AppendLine("    debug_givestatus <slot> <type> {dur} - Apply status.");
                 sb.AppendLine("    debug_consolefont <0|1|2>          - Sets the debug console font.");
                 sb.AppendLine("    debug_damageparty <slot> <%>             - Damages member.");
-                sb.AppendLine("    test_party_gen                     - Tests random move generation.");
-                sb.AppendLine("    debug_passives                     - Lists party passive abilities.");
                 sb.AppendLine();
                 sb.AppendLine("  [Palette_Sky]Party & Inventory[/]");
                 sb.AppendLine("    addmember <id>                     - Adds a party member.");
@@ -176,34 +174,6 @@ namespace ProjectVagabond
                 }
 
             }, "colors - Lists all MonoGame colors in rainbow order.");
-
-            // --- TEST COMMANDS ---
-            _commands["test_abilities"] = new Command("test_abilities", (args) =>
-            {
-                AbilityTester.RunAllTests();
-            }, "test_abilities - Runs logic verification on ability classes.");
-
-            _commands["test_party_gen"] = new Command("test_party_gen", (args) =>
-            {
-                Log("[Palette_DarkSun]Testing Oakley Generation (10 iterations):[/]");
-                for (int i = 0; i < 10; i++)
-                {
-                    var member = PartyMemberFactory.CreateMember("0"); // Oakley
-                    if (member != null)
-                    {
-                        string move1 = member.CoreMove?.MoveID ?? "Empty";
-                        string move2 = member.AltMove?.MoveID ?? "Empty";
-
-                        string moveName1 = "Unknown";
-                        if (BattleDataCache.Moves.TryGetValue(move1, out var m1)) moveName1 = m1.MoveName;
-
-                        string moveName2 = "Unknown";
-                        if (BattleDataCache.Moves.TryGetValue(move2, out var m2)) moveName2 = m2.MoveName;
-
-                        Log($"  Iter {i + 1}: Attack = {move1} ({moveName1}), Special = {move2} ({moveName2})");
-                    }
-                }
-            }, "test_party_gen - Generates Oakley 10 times to verify random move slots.");
 
             // --- PARTY COMMANDS ---
             _commands["addmember"] = new Command("addmember", (args) =>

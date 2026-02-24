@@ -418,7 +418,6 @@ namespace ProjectVagabond
             _global.ShowDebugOverlays = currentKeyboardState.IsKeyDown(Keys.F3);
 
             if (KeyPressed(Keys.F5, currentKeyboardState, _previousKeyboardState)) { ResetGame(); _sceneManager.ChangeScene(GameSceneState.MainMenu, TransitionType.None, TransitionType.None); }
-            if (KeyPressed(Keys.F9, currentKeyboardState, _previousKeyboardState)) BattleDebugHelper.RunDamageCalculationTestSuite();
             if (KeyPressed(Keys.F10, currentKeyboardState, _previousKeyboardState)) MaximizeWindow();
             if (KeyPressed(Keys.F12, currentKeyboardState, _previousKeyboardState)) _sceneManager.ChangeScene(GameSceneState.AnimationEditor);
 
