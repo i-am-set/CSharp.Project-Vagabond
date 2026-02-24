@@ -109,7 +109,7 @@ namespace ProjectVagabond.Battle.UI
                     label,
                     null,
                     font: secondaryFont,
-                    enableHoverSway: true,
+                    enableHoverSway: false, // FIX: Disabled hover sway to prevent text moving up
                     iconTexture: null
                 )
                 {
@@ -118,7 +118,7 @@ namespace ProjectVagabond.Battle.UI
                     IsEnabled = enabled,
                     AlignLeft = false,
                     ContentXOffset = 0,
-                    TextRenderOffset = new Vector2(0, -1)
+                    TextRenderOffset = Vector2.Zero // FIX: Moved down 1px (was 0, -1)
                 };
 
                 if (member != null && enabled)

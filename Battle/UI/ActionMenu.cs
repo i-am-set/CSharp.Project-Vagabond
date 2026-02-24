@@ -73,6 +73,10 @@ namespace ProjectVagabond.Battle.UI
             }
 
             UpdateLayout();
+
+            // FIX: Trigger entrance animation when showing the menu
+            TriggerButtonEntrance();
+
             _isVisible = true;
         }
 
