@@ -47,16 +47,25 @@ namespace ProjectVagabond.Scenes
         private readonly PlayerMapIcon _playerIcon;
 
         // --- MOVEMENT TUNING ---
-        private const float PLAYER_MOVE_SPEED = 40f;
         private const float CAMERA_LERP_SPEED = 15f;
         private const float POST_EVENT_DELAY = 0.0f;
         private const float PATH_ANIMATION_DURATION = 0.6f;
 
-        // --- NODE ANIMATION TUNING (UPDATED) ---
-        private const float NODE_LIFT_DURATION = 0.4f;      // Slower lift
-        private const float PULSE_DURATION = 0.3f;          // Distinct pause/pulse
-        private const float NODE_LOWERING_DURATION = 0.4f;  // Bouncy landing
-        private const float NODE_LIFT_AMOUNT = 8f;          // Higher lift for visibility
+        // --- STEP MOVEMENT STATE ---
+        private int _currentMoveStep = 0;
+        private const int TOTAL_MOVE_STEPS = 8;
+        private Vector2 _targetIconPosition;
+        private int _clickedNodeId = -1;
+        private float _clickAnimTimer = 0f;
+        private const float CLICK_ANIM_DURATION = 0.2f;
+        private const float CLICK_ROTATION_MAGNITUDE = 0.1f;
+        private const float ICON_STEP_SPEED = 5f;
+
+        // --- NODE ANIMATION TUNING ---
+        private const float NODE_LIFT_DURATION = 0.4f;
+        private const float PULSE_DURATION = 0.3f;
+        private const float NODE_LOWERING_DURATION = 0.4f;
+        private const float NODE_LIFT_AMOUNT = 8f;
 
         private Vector2 _cameraOffset;
         private Vector2 _targetCameraOffset;
@@ -67,11 +76,9 @@ namespace ProjectVagabond.Scenes
         private const float HUD_SLIDE_SPEED = 10f;
         private const float BASE_CAMERA_Y = -50f;
 
-        private float _playerMoveTimer;
-        private float _playerMoveDuration;
         private int _playerMoveTargetNodeId;
         private SplitMapPath? _playerMovePath;
-        private float _playerPathTotalLength = 0f; // Cache for vector movement
+        private float _playerPathTotalLength = 0f;
 
         private int _hoveredNodeId = -1;
         private int _lastHoveredNodeId = -1;
@@ -88,13 +95,13 @@ namespace ProjectVagabond.Scenes
         private const float PATH_EXCLUSION_RADIUS = 10f;
 
         private float _pulseTimer = 0f;
-        private const float PULSE_AMOUNT = 0.2f; // Reduced from 0.3f for subtlety
+        private const float PULSE_AMOUNT = 0.2f;
 
         private bool _wasModalActiveLastFrame = false;
 
         private float _postEventDelayTimer = 0f;
 
-        private enum SplitMapState { Idle, PlayerMoving, LiftingNode, PulsingNode, EventInProgress, LoweringNode, Resting, PostEventDelay }
+        private enum SplitMapState { Idle, LiftingNode, PulsingNode, EventInProgress, LoweringNode, Resting, PostEventDelay }
         private SplitMapState _mapState = SplitMapState.Idle;
 
         private const float NODE_FRAME_DURATION = 0.5f;
@@ -169,6 +176,12 @@ namespace ProjectVagabond.Scenes
             _pressedNodeId = -1;
             _hudSlideOffset = 0f;
 
+            _currentMoveStep = 0;
+            _clickedNodeId = -1;
+            _clickAnimTimer = 0f;
+            _playerMoveTargetNodeId = -1;
+            _playerMovePath = null;
+
             _postBattleMenu.Hide();
             InitializeSettingsButton();
             _settingsButtonState = SettingsButtonState.AnimatingIn;
@@ -177,10 +190,6 @@ namespace ProjectVagabond.Scenes
             if (_progressionManager.CurrentSplitMap == null)
             {
                 _mapState = SplitMapState.Idle;
-                _playerMoveTimer = 0f;
-                _playerMoveDuration = 0f;
-                _playerMoveTargetNodeId = -1;
-                _playerMovePath = null;
                 _hoveredNodeId = -1;
                 _postEventDelayTimer = 0f;
                 _nodeLiftTimer = 0f;
@@ -201,6 +210,7 @@ namespace ProjectVagabond.Scenes
                 if (startNode != null)
                 {
                     _playerIcon.SetPosition(startNode.Position);
+                    _targetIconPosition = startNode.Position;
                     UpdateCameraTarget(startNode.Position, true);
                     UpdateReachableNodes();
                     StartPathRevealAnimation();
@@ -215,6 +225,8 @@ namespace ProjectVagabond.Scenes
                 if (currentNode != null)
                 {
                     currentNode.IsCompleted = true;
+                    _playerIcon.SetPosition(currentNode.Position);
+                    _targetIconPosition = currentNode.Position;
                     UpdateCameraTarget(currentNode.Position, false);
                 }
                 _mapState = SplitMapState.LoweringNode;
@@ -266,36 +278,6 @@ namespace ProjectVagabond.Scenes
                 if (_currentMap.Paths.TryGetValue(pathId, out var path)) reachableNodeIds.Add(path.ToNodeId);
             }
             foreach (var (nodeId, node) in _currentMap.Nodes) node.IsReachable = reachableNodeIds.Contains(nodeId);
-        }
-
-        private void StartPlayerMove(int targetNodeId)
-        {
-            if (_currentMap == null) return;
-            _playerMovePath = _currentMap.Paths.Values.FirstOrDefault(p => p.FromNodeId == _playerCurrentNodeId && p.ToNodeId == targetNodeId);
-            if (_playerMovePath == null) return;
-
-            // Calculate length based on Vector RenderPoints
-            _playerPathTotalLength = 0f;
-            if (_playerMovePath.RenderPoints.Count > 1)
-            {
-                for (int i = 0; i < _playerMovePath.RenderPoints.Count - 1; i++)
-                {
-                    _playerPathTotalLength += Vector2.Distance(_playerMovePath.RenderPoints[i], _playerMovePath.RenderPoints[i + 1]);
-                }
-            }
-
-            _playerMoveDuration = (_playerPathTotalLength > 0) ? _playerPathTotalLength / PLAYER_MOVE_SPEED : 0f;
-            _mapState = SplitMapState.PlayerMoving;
-            _playerIcon.SetIsMoving(true);
-            _playerMoveTimer = 0f;
-            _playerMoveTargetNodeId = targetNodeId;
-
-            var currentNode = _currentMap.Nodes[_playerCurrentNodeId];
-            var reachableNodeIds = currentNode.OutgoingPathIds.Select(pathId => _currentMap.Paths[pathId].ToNodeId).ToList();
-            foreach (var nodeId in reachableNodeIds)
-            {
-                if (nodeId != targetNodeId) _currentMap.Nodes[nodeId].IsReachable = false;
-            }
         }
 
         public override void Update(GameTime gameTime)
@@ -392,11 +374,42 @@ namespace ProjectVagabond.Scenes
                 if (_pathAnimationProgress[pathId] < duration) _pathAnimationProgress[pathId] += deltaTime;
             }
 
+            // Update Click Animation
+            if (_clickAnimTimer > 0f)
+            {
+                _clickAnimTimer -= deltaTime;
+                if (_clickAnimTimer < 0f) _clickAnimTimer = 0f;
+            }
+
+            // Handle Icon Movement (Steps 1-8)
+            if (_playerMovePath != null)
+            {
+                Vector2 currentPos = _playerIcon.Position;
+                // Fast snap lerp
+                Vector2 newPos = Vector2.Lerp(currentPos, _targetIconPosition, 1.0f - MathF.Exp(-ICON_STEP_SPEED * deltaTime));
+
+                if (Vector2.Distance(newPos, _targetIconPosition) < 1f)
+                {
+                    newPos = _targetIconPosition;
+                    _playerIcon.SetIsMoving(false);
+
+                    // Check for arrival at destination (Step 8 complete)
+                    if (_currentMoveStep >= TOTAL_MOVE_STEPS && _mapState == SplitMapState.Idle)
+                    {
+                        FinalizeArrival();
+                    }
+                }
+                else
+                {
+                    _playerIcon.SetIsMoving(true);
+                }
+                _playerIcon.SetPosition(newPos);
+            }
+
             HandleMapInput(gameTime);
 
             switch (_mapState)
             {
-                case SplitMapState.PlayerMoving: UpdatePlayerMove(deltaTime); break;
                 case SplitMapState.LiftingNode: UpdateLiftingNode(deltaTime); break;
                 case SplitMapState.PulsingNode: UpdatePulsingNode(deltaTime); break;
                 case SplitMapState.LoweringNode: UpdateLoweringNode(deltaTime); break;
@@ -460,11 +473,14 @@ namespace ProjectVagabond.Scenes
                     {
                         if (_currentMap != null && _currentMap.Nodes[_hoveredNodeId].IsReachable)
                         {
-                            var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
-                            if (currentNode != null) UpdateCameraTarget(currentNode.Position, false);
-                            _selectedNodeId = _hoveredNodeId;
+                            // Visual Click Effect
+                            _clickedNodeId = _hoveredNodeId;
+                            _clickAnimTimer = CLICK_ANIM_DURATION;
+
+                            // Logic
+                            HandleNodeClick(_hoveredNodeId);
+
                             _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
-                            StartPlayerMove(_hoveredNodeId);
                         }
                         _hoveredNodeId = -1;
                         inputManager.ConsumeMouseClick();
@@ -474,6 +490,79 @@ namespace ProjectVagabond.Scenes
             }
             else _pressedNodeId = -1;
             previousMouseState = currentMouseState;
+        }
+
+        private void HandleNodeClick(int targetNodeId)
+        {
+            // If switching targets, reset
+            if (_playerMoveTargetNodeId != targetNodeId)
+            {
+                _playerMoveTargetNodeId = targetNodeId;
+                _currentMoveStep = 0;
+
+                // Find path
+                _playerMovePath = _currentMap?.Paths.Values.FirstOrDefault(p => p.FromNodeId == _playerCurrentNodeId && p.ToNodeId == targetNodeId);
+
+                // Calculate total length for interpolation
+                if (_playerMovePath != null)
+                {
+                    _playerPathTotalLength = 0f;
+                    if (_playerMovePath.RenderPoints.Count > 1)
+                    {
+                        for (int i = 0; i < _playerMovePath.RenderPoints.Count - 1; i++)
+                        {
+                            _playerPathTotalLength += Vector2.Distance(_playerMovePath.RenderPoints[i], _playerMovePath.RenderPoints[i + 1]);
+                        }
+                    }
+                }
+            }
+
+            if (_currentMoveStep < TOTAL_MOVE_STEPS)
+            {
+                _currentMoveStep++;
+                float progress = (float)_currentMoveStep / TOTAL_MOVE_STEPS;
+                _targetIconPosition = GetPointOnPath(progress);
+            }
+        }
+
+        private Vector2 GetPointOnPath(float progress)
+        {
+            if (_playerMovePath == null || _playerMovePath.RenderPoints.Count < 2) return _playerIcon.Position;
+
+            float targetDistance = progress * _playerPathTotalLength;
+            float currentDist = 0f;
+
+            for (int i = 0; i < _playerMovePath.RenderPoints.Count - 1; i++)
+            {
+                Vector2 p1 = _playerMovePath.RenderPoints[i];
+                Vector2 p2 = _playerMovePath.RenderPoints[i + 1];
+                float segmentLength = Vector2.Distance(p1, p2);
+
+                if (currentDist + segmentLength >= targetDistance)
+                {
+                    float remaining = targetDistance - currentDist;
+                    float t = remaining / segmentLength;
+                    return Vector2.Lerp(p1, p2, t);
+                }
+                currentDist += segmentLength;
+            }
+            return _playerMovePath.RenderPoints.Last();
+        }
+
+        private void FinalizeArrival()
+        {
+            if (_playerMovePath != null) _traversedPathIds.Add(_playerMovePath.Id);
+            _playerCurrentNodeId = _playerMoveTargetNodeId;
+            _visitedNodeIds.Add(_playerCurrentNodeId);
+            _selectedNodeId = -1;
+
+            // Reset move state
+            _playerMovePath = null;
+            _playerMoveTargetNodeId = -1;
+            _currentMoveStep = 0;
+
+            _mapState = SplitMapState.LiftingNode;
+            _nodeLiftTimer = 0f;
         }
 
         private void ClampCameraOffset()
@@ -489,62 +578,6 @@ namespace ProjectVagabond.Scenes
                     _cameraOffset.X = Math.Clamp(_cameraOffset.X, minOffsetX, maxOffsetX);
                 }
                 else _cameraOffset.X = (screenWidth - mapContentWidth) / 2;
-            }
-        }
-
-        private void UpdatePlayerMove(float deltaTime)
-        {
-            _playerMoveTimer += deltaTime;
-
-            // 1. Calculate Linear Progress (0 to 1)
-            float linearProgress = _playerMoveDuration > 0 ? Math.Clamp(_playerMoveTimer / _playerMoveDuration, 0f, 1f) : 1f;
-
-            // 2. Apply Easing (Smooth Start/Stop)
-            float easedProgress = Easing.EaseInOutSine(linearProgress);
-
-            // 3. Interpolate along the vector path
-            if (_playerMovePath != null && _playerMovePath.RenderPoints.Count > 1)
-            {
-                float targetDistance = easedProgress * _playerPathTotalLength;
-                float currentDist = 0f;
-
-                for (int i = 0; i < _playerMovePath.RenderPoints.Count - 1; i++)
-                {
-                    Vector2 p1 = _playerMovePath.RenderPoints[i];
-                    Vector2 p2 = _playerMovePath.RenderPoints[i + 1];
-                    float segmentLength = Vector2.Distance(p1, p2);
-
-                    if (currentDist + segmentLength >= targetDistance)
-                    {
-                        // We are inside this segment
-                        float remaining = targetDistance - currentDist;
-                        float t = remaining / segmentLength;
-                        Vector2 pos = Vector2.Lerp(p1, p2, t);
-                        _playerIcon.SetPosition(pos);
-                        break;
-                    }
-
-                    currentDist += segmentLength;
-
-                    // Snap to end if we overshoot slightly due to float precision
-                    if (i == _playerMovePath.RenderPoints.Count - 2)
-                    {
-                        _playerIcon.SetPosition(p2);
-                    }
-                }
-            }
-
-            if (linearProgress >= 1f)
-            {
-                _playerIcon.SetIsMoving(false);
-                if (_playerMovePath != null) _traversedPathIds.Add(_playerMovePath.Id);
-                _playerCurrentNodeId = _playerMoveTargetNodeId;
-                _visitedNodeIds.Add(_playerCurrentNodeId);
-                _selectedNodeId = -1;
-                var toNode = _currentMap?.Nodes[_playerCurrentNodeId];
-                if (toNode != null) _playerIcon.SetPosition(toNode.Position);
-                _mapState = SplitMapState.LiftingNode;
-                _nodeLiftTimer = 0f;
             }
         }
 
@@ -895,7 +928,18 @@ namespace ProjectVagabond.Scenes
                 shake = _nodeArrivalShake;
             }
 
+            // Apply Click Scale & Rotation Effect
             float rotation = 0f;
+            if (node.Id == _clickedNodeId && _clickAnimTimer > 0f)
+            {
+                float p = 1f - (_clickAnimTimer / CLICK_ANIM_DURATION); // 0 to 1
+                float s = 1f - (MathF.Sin(p * MathHelper.Pi) * 0.25f); // Dip to 0.75
+                scale *= s;
+
+                // Quick shake rotation
+                rotation = MathF.Sin(p * MathHelper.TwoPi) * CLICK_ROTATION_MAGNITUDE;
+            }
+
             var position = bounds.Center.ToVector2() + node.VisualOffset + shake;
             Color outlineColor = _global.Palette_Black;
 
