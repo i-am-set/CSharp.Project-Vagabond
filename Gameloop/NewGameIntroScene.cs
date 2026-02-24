@@ -67,6 +67,10 @@ namespace ProjectVagabond.Scenes
         private float _rightArrowSimTimer = 0f;
         private const float ARROW_SIM_DURATION = 0.15f;
 
+        // Scroll State
+        private int _lastScrollWheelValue;
+        private int _scrollAccumulator;
+
         // Cached Data for Display
         private (string Name, string Description)? _cachedAbilityInfo;
 
@@ -132,6 +136,9 @@ namespace ProjectVagabond.Scenes
             _selectButtonHopTimer = 0f;
             _leftArrowSimTimer = 0f;
             _rightArrowSimTimer = 0f;
+
+            _lastScrollWheelValue = _inputManager.GetEffectiveMouseState().ScrollWheelValue;
+            _scrollAccumulator = 0;
 
             _navigationGroup.DeselectAll();
         }
@@ -401,6 +408,24 @@ namespace ProjectVagabond.Scenes
             if (_currentState == IntroState.Selection)
             {
                 var currentMouseState = _inputManager.GetEffectiveMouseState();
+
+                // Scroll Logic
+                int currentScroll = currentMouseState.ScrollWheelValue;
+                int scrollDelta = currentScroll - _lastScrollWheelValue;
+                _lastScrollWheelValue = currentScroll;
+                _scrollAccumulator += scrollDelta;
+
+                const int SCROLL_THRESHOLD = 120;
+                if (_scrollAccumulator >= SCROLL_THRESHOLD)
+                {
+                    CycleCharacter(-1); // Scroll Up -> Left
+                    _scrollAccumulator = 0;
+                }
+                else if (_scrollAccumulator <= -SCROLL_THRESHOLD)
+                {
+                    CycleCharacter(1); // Scroll Down -> Right
+                    _scrollAccumulator = 0;
+                }
 
                 // Mouse Updates
                 _selectButton.Update(currentMouseState);
