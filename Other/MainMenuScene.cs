@@ -31,7 +31,6 @@ namespace ProjectVagabond.Scenes
         private readonly TransitionManager _transitionManager;
         private readonly HapticsManager _hapticsManager;
         private readonly InputManager _inputManager;
-
         private readonly List<Button> _buttons = new();
         private readonly List<UIAnimator> _buttonAnimators = new();
         private readonly NavigationGroup _navigationGroup;
@@ -200,8 +199,8 @@ namespace ProjectVagabond.Scenes
                 "Are you sure you want to exit?",
                 new List<Tuple<string, Action>>
                 {
-                    Tuple.Create("YES", new Action(() => { _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength); ServiceLocator.Get<Core>().ExitApplication(); })),
-                    Tuple.Create("[chighlight]NO", new Action(() => { _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength); _confirmationDialog.Hide(); }))
+                Tuple.Create("YES", new Action(() => { _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength); ServiceLocator.Get<Core>().ExitApplication(); })),
+                Tuple.Create("[chighlight]NO", new Action(() => { _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength); _confirmationDialog.Hide(); }))
                 }
             );
         }
@@ -219,23 +218,17 @@ namespace ProjectVagabond.Scenes
             {
                 _buttons[i].ResetAnimationState();
 
-                _buttons[i].WaveEffectType = TextEffectType.TypewriterPop;
-                _buttons[i].AlwaysAnimateText = true;
+                _buttons[i].WaveEffectType = TextEffectType.SmallWave;
+                _buttons[i].AlwaysAnimateText = false;
 
-                float textDuration = (_buttons[i].Text.Length * TextAnimationSettings.TypewriterDelay) + TextAnimationSettings.TypewriterDuration + 0.1f;
+                float fadeDuration = 0.6f;
 
                 var animator = new UIAnimator
                 {
-                    EntryStyle = EntryExitStyle.SwoopLeft,
+                    EntryStyle = EntryExitStyle.Fade,
                     ExitStyle = EntryExitStyle.Pop,
-                    DurationIn = textDuration,
+                    DurationIn = fadeDuration,
                     DurationOut = 0.5f
-                };
-
-                int index = i;
-                animator.OnInComplete += () => {
-                    _buttons[index].AlwaysAnimateText = false;
-                    _buttons[index].WaveEffectType = TextEffectType.SmallWave;
                 };
 
                 animator.Show(delay: i * BUTTON_STAGGER_DELAY);
@@ -355,7 +348,18 @@ namespace ProjectVagabond.Scenes
 
                 spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: finalTransform);
 
-                _buttons[i].Draw(spriteBatch, font, gameTime, Matrix.Identity);
+                // Pass opacity from animator to button draw
+                Color? tint = null;
+
+                // FIX: Use a threshold of 0.99f. If opacity is effectively 1, pass null so Button.Draw handles hover/press colors.
+                if (state.Opacity < 0.99f)
+                {
+                    // FIX: Use correct base colors for fade-in
+                    Color baseColor = _buttons[i].IsEnabled ? _global.GameTextColor : _global.ButtonDisableColor;
+                    tint = baseColor * state.Opacity;
+                }
+
+                _buttons[i].Draw(spriteBatch, font, gameTime, Matrix.Identity, false, null, null, tint);
 
                 spriteBatch.End();
             }

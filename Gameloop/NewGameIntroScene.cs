@@ -39,8 +39,12 @@ namespace ProjectVagabond.Scenes
         private readonly NavigationGroup _navigationGroup;
 
         // Intro Text State
-        private const string INTRO_TEXT = "CHOOSE AN ADVENTURER";
-        private string _currentText = "";
+        private const string INTRO_LINE_1 = "CHOOSE AN";
+        private const string INTRO_LINE_2 = "ADVENTURER";
+
+        private string _currentText1 = "";
+        private string _currentText2 = "";
+
         private float _textTimer = 0f;
         private int _textIndex = 0;
         private const float TYPEWRITER_SPEED = 0.02f;
@@ -109,7 +113,8 @@ namespace ProjectVagabond.Scenes
             UpdateCachedAbilityInfo();
 
             _currentState = IntroState.TypingTitle;
-            _currentText = "";
+            _currentText1 = "";
+            _currentText2 = "";
             _textIndex = 0;
             _textTimer = 0f;
 
@@ -427,8 +432,9 @@ namespace ProjectVagabond.Scenes
                 case IntroState.TypingTitle:
                     if (skipPressed)
                     {
-                        _currentText = INTRO_TEXT;
-                        _textIndex = INTRO_TEXT.Length;
+                        _currentText1 = INTRO_LINE_1;
+                        _currentText2 = INTRO_LINE_2;
+                        _textIndex = INTRO_LINE_1.Length + INTRO_LINE_2.Length;
                     }
                     else
                     {
@@ -436,15 +442,23 @@ namespace ProjectVagabond.Scenes
                         if (_textTimer >= TYPEWRITER_SPEED)
                         {
                             _textTimer = 0f;
-                            if (_textIndex < INTRO_TEXT.Length)
+                            int totalLen = INTRO_LINE_1.Length + INTRO_LINE_2.Length;
+                            if (_textIndex < totalLen)
                             {
-                                _currentText += INTRO_TEXT[_textIndex];
+                                if (_textIndex < INTRO_LINE_1.Length)
+                                {
+                                    _currentText1 += INTRO_LINE_1[_textIndex];
+                                }
+                                else
+                                {
+                                    _currentText2 += INTRO_LINE_2[_textIndex - INTRO_LINE_1.Length];
+                                }
                                 _textIndex++;
                             }
                         }
                     }
 
-                    if (_textIndex >= INTRO_TEXT.Length)
+                    if (_textIndex >= INTRO_LINE_1.Length + INTRO_LINE_2.Length)
                     {
                         _currentState = IntroState.FadeInCenter;
                     }
@@ -507,12 +521,25 @@ namespace ProjectVagabond.Scenes
 
             // Title
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, staticTransform);
-            if (!string.IsNullOrEmpty(_currentText))
+
+            float titleY = 24f;
+
+            if (!string.IsNullOrEmpty(_currentText1))
             {
-                Vector2 textSize = font.MeasureString(INTRO_TEXT);
-                var pos = new Vector2((Global.VIRTUAL_WIDTH - textSize.X) / 2, 24);
-                TextAnimator.DrawTextWithEffect(spriteBatch, font, _currentText, pos, _global.Palette_White, TextEffectType.RainbowWave, _titleWaveTimer);
+                // FIX: Use secondaryFont for the first line
+                Vector2 size1 = secondaryFont.MeasureString(INTRO_LINE_1);
+                // FIX: Move up 2 pixels (titleY - 2)
+                var pos1 = new Vector2((Global.VIRTUAL_WIDTH - size1.X) / 2, titleY - 2);
+                TextAnimator.DrawTextWithEffect(spriteBatch, secondaryFont, _currentText1, pos1, _global.Palette_DarkPale, TextEffectType.None, 0f);
             }
+
+            if (!string.IsNullOrEmpty(_currentText2))
+            {
+                Vector2 size2 = font.MeasureString(INTRO_LINE_2);
+                var pos2 = new Vector2((Global.VIRTUAL_WIDTH - size2.X) / 2, titleY + secondaryFont.LineHeight + 2);
+                TextAnimator.DrawTextWithEffect(spriteBatch, font, _currentText2, pos2, _global.Palette_White, TextEffectType.RainbowWave, _titleWaveTimer);
+            }
+
             spriteBatch.End();
 
             // Carousel
