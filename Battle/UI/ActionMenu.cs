@@ -74,7 +74,6 @@ namespace ProjectVagabond.Battle.UI
 
             UpdateLayout();
 
-            // FIX: Trigger entrance animation when showing the menu
             TriggerButtonEntrance();
 
             _isVisible = true;
@@ -113,10 +112,6 @@ namespace ProjectVagabond.Battle.UI
 
         public void UpdatePositions(BattleRenderer renderer)
         {
-            // FIX: Do NOT move the menu based on the sprite position.
-            // The menu must remain static in its screen slot.
-            // We call UpdateLayout to ensure it snaps back if anything drifted, 
-            // but we ignore the renderer's sprite coordinates.
             UpdateLayout();
         }
 

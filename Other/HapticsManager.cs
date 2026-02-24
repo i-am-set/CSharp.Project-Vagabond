@@ -147,7 +147,7 @@ namespace ProjectVagabond
             // Combine scales
             float totalScale = 1.0f + (_zoomPulse.Scale - 1.0f) + (_impactTwist.Scale - 1.0f);
 
-            // 2. Calculate Combat Compound Shake (RETRO FIX: NOISE INSTEAD OF SINE)
+            // 2. Calculate Combat Compound Shake
             if (_currentSteps > 0)
             {
                 float transMag = _currentSteps * TranslationPerStep;

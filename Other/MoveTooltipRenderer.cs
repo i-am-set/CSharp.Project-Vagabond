@@ -246,7 +246,6 @@ namespace ProjectVagabond.UI
                     }
                 }
 
-                // FIX: Increment Y by line height + gap
                 startDrawY += descLineHeight + DESC_ROW_GAP;
             }
         }
