@@ -377,7 +377,6 @@ namespace ProjectVagabond.Battle.UI
                     var targetEnemies = enemies.Where(e => flashState.TargetCombatantIDs.Contains(e.CombatantID)).ToList();
                     var targetPlayers = players.Where(p => flashState.TargetCombatantIDs.Contains(p.CombatantID)).ToList();
 
-                    // FIX: Use 'transform' (world matrix) instead of 'uiMatrix' for entities so they match camera shake/zoom
                     overlayBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
                     DrawEnemies(overlayBatch, targetEnemies, allCombatants, currentActor, shouldGrayOut, selectableTargets, animationManager, silhouetteColors, transform, gameTime, uiManager, hoveredCombatant, isTargetingMode, hoveredGroupColor, drawShadow: false, drawSprite: true, includeDying: false);
                     DrawPlayers(overlayBatch, font, targetPlayers, currentActor, shouldGrayOut, selectableTargets, animationManager, silhouetteColors, gameTime, uiManager, hoveredCombatant, isTargetingMode, hoveredGroupColor, drawShadow: false, drawSprite: true);
@@ -504,7 +503,6 @@ namespace ProjectVagabond.Battle.UI
 
             foreach (var combatant in battleManager.AllCombatants)
             {
-                // FIX: Do not draw HUD for benched members (Slot 2+) or defeated/invisible members
                 if (combatant.IsDefeated || combatant.VisualHealthBarAlpha <= 0.01f || !combatant.IsActiveOnField) continue;
 
                 int barWidth = (int)(combatant.Stats.MaxHP * BattleLayout.HEALTH_PIXELS_PER_HP);

@@ -580,7 +580,6 @@ namespace ProjectVagabond.UI
 
                 Vector2 cardCenter = new Vector2(x + CARD_WIDTH / 2f, BaseY + 3 + yOffset + (HUD_HEIGHT - 4) / 2f);
 
-                // FIX: Only apply drag rotation if THIS card is being dragged
                 float rotation = isBeingDragged ? _currentDragRotation : 0f;
 
                 Matrix localTransform = Matrix.CreateTranslation(new Vector3(-cardCenter, 0)) *

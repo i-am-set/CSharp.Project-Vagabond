@@ -320,7 +320,6 @@ namespace ProjectVagabond.Scenes
             float splitLineY = (Global.VIRTUAL_HEIGHT - SplitMapHudRenderer.HUD_HEIGHT) + _hudSlideOffset;
             bool mouseInMap = virtualMousePos.Y < splitLineY;
 
-            // FIX: Reset card flips when mouse leaves HUD area
             if (mouseInMap && !_hudRenderer.IsDragging)
             {
                 _hudRenderer.ResetAllFlips();

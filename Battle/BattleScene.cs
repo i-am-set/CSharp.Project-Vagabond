@@ -524,7 +524,6 @@ namespace ProjectVagabond.Scenes
                         float duration = BattleAnimationManager.IntroFadeAnimationState.FADE_DURATION;
                         _switchSequenceTimer = duration;
 
-                        // FIX: Ensure it starts invisible so it can fade in
                         _switchIncoming.VisualAlpha = 0f;
 
                         _animationManager.StartIntroFadeAnimation(_switchIncoming.CombatantID);
@@ -1392,7 +1391,6 @@ namespace ProjectVagabond.Scenes
         {
             if (_switchSequenceState != SwitchSequenceState.None) return;
 
-            // FIX: Ensure it starts invisible so it can fade in
             e.Combatant.VisualAlpha = 0f;
 
             _animationManager.StartIntroFadeAnimation(e.Combatant.CombatantID);
