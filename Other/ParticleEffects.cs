@@ -16,6 +16,53 @@ namespace ProjectVagabond.Particles
     public static class ParticleEffects
     {
         /// <summary>
+        /// Creates a high-density, multi-colored sparkle volume for Magic Missiles.
+        /// </summary>
+        public static ParticleEmitterSettings CreateMagicMissileBody()
+        {
+            var settings = ParticleEmitterSettings.CreateDefault();
+            var global = ServiceLocator.Get<Global>();
+
+            // Emitter
+            settings.Shape = EmitterShape.Circle;
+            settings.EmitFrom = EmissionSource.Volume;
+            // Reduced from 12f to 3f for tighter volume
+            settings.EmitterSize = new Vector2(3f, 3f);
+            // Increased rate to maintain density at smaller scale
+            settings.EmissionRate = 500f;
+            settings.BurstCount = 0;
+            settings.MaxParticles = 300;
+            settings.Duration = float.PositiveInfinity;
+
+            // Particle Physics
+            settings.VelocityPattern = EmissionPattern.Radial;
+            settings.Lifetime = new FloatRange(0.1f, 0.3f);
+
+            // Reduced velocity to keep particles close to the core
+            settings.InitialVelocityX = new FloatRange(5f, 20f);
+            settings.InitialVelocityY = new FloatRange(0f);
+
+            // Reduced size significantly (was 3f-6f)
+            settings.InitialSize = new FloatRange(0.75f, 1.5f);
+            settings.EndSize = new FloatRange(0f);
+            settings.InterpolateSize = true;
+            settings.InitialRotation = new FloatRange(0, MathHelper.TwoPi);
+
+            // Color (Will be overridden per-frame in HomingProjectile for sparkle effect)
+            settings.StartColor = global.Palette_Sky;
+            settings.EndColor = Color.Transparent;
+            settings.StartAlpha = 1.0f;
+            settings.EndAlpha = 0.0f;
+
+            // Rendering
+            settings.Texture = ServiceLocator.Get<SpriteManager>().SoftParticleSprite;
+            settings.BlendMode = BlendState.Additive;
+            settings.LayerDepth = 0.96f; // Draw above most things
+
+            return settings;
+        }
+
+        /// <summary>
         /// Creates a burst of bright sparks for combat impacts.
         /// </summary>
         /// <param name="intensity">Scalar for the size and violence of the effect (1.0 = Normal, 3.0+ = Heavy).</param>

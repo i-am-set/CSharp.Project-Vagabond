@@ -48,17 +48,15 @@ namespace ProjectVagabond.Particles
                 _durationTimer += deltaTime;
             }
 
-            if (!IsActive)
-            {
-                // Even if inactive, we need to check if it's finished to allow cleanup.
-                IsFinished = (Settings.Duration != float.PositiveInfinity && _durationTimer >= Settings.Duration && _activeParticleCount == 0);
-                return;
-            }
+            // CRITICAL FIX: Do not return early if !IsActive. 
+            // We must continue updating existing particles so trails fade out naturally.
 
             deltaTime *= Settings.TimeScale;
 
-            // Handle continuous emission
-            if (Settings.EmissionRate > 0 && (Settings.Duration == float.PositiveInfinity || _durationTimer < Settings.Duration))
+            // --- 1. Emission Logic (Only if Active) ---
+            bool canEmit = IsActive && (Settings.Duration == float.PositiveInfinity || _durationTimer < Settings.Duration);
+
+            if (canEmit && Settings.EmissionRate > 0)
             {
                 _emissionTimer += deltaTime;
                 float timePerParticle = 1.0f / (Settings.EmissionRate * EmissionStrength);
@@ -72,6 +70,7 @@ namespace ProjectVagabond.Particles
                 }
             }
 
+            // --- 2. Particle Update Logic (Always Run) ---
             // Update existing particles using a swap-and-pop technique for efficiency.
             for (int i = _activeParticleCount - 1; i >= 0; i--)
             {
@@ -152,17 +151,19 @@ namespace ProjectVagabond.Particles
             }
 
             // Check if the emitter is finished (finite duration, timer expired, all particles dead).
-            IsFinished = (Settings.Duration != float.PositiveInfinity && _durationTimer >= Settings.Duration && _activeParticleCount == 0);
+            // OR if it was manually deactivated and all particles are gone.
+            bool timeExpired = (Settings.Duration != float.PositiveInfinity && _durationTimer >= Settings.Duration);
+            bool manuallyStopped = !IsActive;
+
+            IsFinished = (timeExpired || manuallyStopped) && _activeParticleCount == 0;
         }
 
         public void EmitBurst(int count)
         {
-            //Debug.WriteLine($"[Emitter] Emitting burst of {count} particles. Active before: {_activeParticleCount}.");
             for (int i = 0; i < count; i++)
             {
                 EmitParticle();
             }
-            //Debug.WriteLine($"[Emitter] Burst finished. Active after: {_activeParticleCount}.");
         }
 
         /// <summary>
@@ -258,11 +259,6 @@ namespace ProjectVagabond.Particles
         public void Draw(SpriteBatch spriteBatch)
         {
             if (Settings.Texture == null) return;
-            //if (_activeParticleCount > 0)
-            //{
-            //    Debug.WriteLine($"[Emitter] Draw called. Drawing {_activeParticleCount} particles.");
-            //}
-
 
             for (int i = 0; i < _activeParticleCount; i++)
             {
