@@ -64,8 +64,6 @@ namespace ProjectVagabond.Scenes
         private List<int> _enemyEntityIds = new List<int>();
         private BattleManager.BattlePhase _previousBattlePhase;
         private bool _isBattleOver;
-        private float _endOfBattleTimer;
-        private const float END_OF_BATTLE_DELAY = 2.0f;
         private BattleCombatant _currentActor;
         private bool _isWaitingForMultiHitDelay = false;
         private float _multiHitDelayTimer = 0f;
@@ -81,6 +79,8 @@ namespace ProjectVagabond.Scenes
         private bool _isFadingOutOnDeath = false;
         private float _deathFadeTimer = 0f;
         private readonly HashSet<string> _processedDeathAnimations = new HashSet<string>();
+
+        private float _speed_up_multiplier = 2.0f;
 
         private enum SwitchSequenceState { None, AnimatingOut, Swapping, AnimatingIn }
         private SwitchSequenceState _switchSequenceState = SwitchSequenceState.None;
@@ -186,7 +186,6 @@ namespace ProjectVagabond.Scenes
             _enemyEntityIds.Clear();
             _currentActor = null;
             _isBattleOver = false;
-            _endOfBattleTimer = 0f;
             _isWaitingForMultiHitDelay = false;
             _multiHitDelayTimer = 0f;
             _pendingAnimations.Clear();
@@ -415,12 +414,33 @@ namespace ProjectVagabond.Scenes
                 return;
             }
 
-            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            var currentKeyboardState = Keyboard.GetState();
+            var currentMouseState = Mouse.GetState();
+
+            // --- Fast Forward Logic ---
+            // Allow speeding up during non-interactive phases (Action Resolution, End of Round, Intro, Outro)
+            bool canSpeedUp = _battleManager.CurrentPhase == BattleManager.BattlePhase.ActionResolution ||
+                              _battleManager.CurrentPhase == BattleManager.BattlePhase.EndOfRound ||
+                              _battleManager.CurrentPhase == BattleManager.BattlePhase.BattleStartIntro ||
+                              _battleManager.CurrentPhase == BattleManager.BattlePhase.BattleOver;
+
+            // Check for hold input (Spacebar or Left Mouse Button)
+            bool isSpeedInput = currentKeyboardState.IsKeyDown(Keys.Space) || currentMouseState.LeftButton == ButtonState.Pressed;
+
+            // Apply 3x speed multiplier if conditions met
+            float speedMultiplier = (canSpeedUp && isSpeedInput) ? _speed_up_multiplier : 1.0f;
+
+            float rawDt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            float dt = rawDt * speedMultiplier;
+
+            // Create effective GameTime for systems that rely on it
+            GameTime effectiveGameTime = new GameTime(gameTime.TotalGameTime, TimeSpan.FromSeconds(dt));
+
             // Calculate time scale based on hitstop active state
-            float timeScale = _hitstopManager.IsActive ? 0.0f : 1.0f;
+            // Hitstop consumes effective time, so freezes last shorter in real-time if speeding up
+            float hitstopScale = _hitstopManager.Update(dt);
 
             // --- Floor Alpha Logic ---
-            // Only fade out at the very end of battle
             if (_battleManager.CurrentPhase == BattleManager.BattlePhase.BattleOver)
             {
                 _floorAlpha = MathHelper.Lerp(_floorAlpha, 0.0f, dt * 8.0f);
@@ -431,8 +451,7 @@ namespace ProjectVagabond.Scenes
             }
 
             _battleCam.Update(dt);
-
-            _battleLogManager.Update(gameTime);
+            _battleLogManager.Update(effectiveGameTime);
 
             if (_isFadingOutOnDeath)
             {
@@ -444,32 +463,23 @@ namespace ProjectVagabond.Scenes
                 return;
             }
 
-            var currentKeyboardState = Keyboard.GetState();
-            var currentMouseState = Mouse.GetState();
-
             if (_battleManager.CurrentPhase == BattleManager.BattlePhase.BattleStartIntro)
             {
                 if (_transitionManager.IsTransitioning) return;
 
-                // --- STAGGERED FADE LOGIC ---
                 _introWatchdogTimer += dt;
 
-                // 1. Process Queue
                 if (_introFadeQueue.Count > 0)
                 {
                     _introStaggerTimer -= dt;
                     if (_introStaggerTimer <= 0)
                     {
                         var nextCombatant = _introFadeQueue.Dequeue();
-
-                        // Trigger Fade
                         _animationManager.StartIntroFadeAnimation(nextCombatant.CombatantID);
-
                         _introStaggerTimer = INTRO_STAGGER_DELAY;
                     }
                 }
 
-                // 2. Check Completion (Queue empty AND all visible)
                 bool allVisible = _battleManager.AllCombatants
                     .Where(c => c.IsActiveOnField)
                     .All(c => c.VisualAlpha >= 0.99f);
@@ -493,13 +503,12 @@ namespace ProjectVagabond.Scenes
                     _uiManager.TriggerButtonEntrance();
                 }
 
-                _animationManager.Update(gameTime, _battleManager.AllCombatants, timeScale);
-                _renderer.Update(gameTime, _battleManager.AllCombatants, _animationManager, null);
-                _uiManager.Update(gameTime, currentMouseState, currentKeyboardState, null, _renderer, isInputBlocked: true);
+                _animationManager.Update(effectiveGameTime, _battleManager.AllCombatants, hitstopScale);
+                _renderer.Update(effectiveGameTime, _battleManager.AllCombatants, _animationManager, null);
+                _uiManager.Update(effectiveGameTime, currentMouseState, currentKeyboardState, null, _renderer, isInputBlocked: true);
                 return;
             }
 
-            // Dazed Wait Logic
             if (_dazedWaitTimer > 0)
             {
                 _dazedWaitTimer -= dt;
@@ -508,8 +517,8 @@ namespace ProjectVagabond.Scenes
                     _battleManager.CanAdvance = true;
                     _battleManager.RequestNextPhase();
                 }
-                _animationManager.Update(gameTime, _battleManager.AllCombatants, timeScale);
-                _renderer.Update(gameTime, _battleManager.AllCombatants, _animationManager, _battleManager.CurrentActingCombatant);
+                _animationManager.Update(effectiveGameTime, _battleManager.AllCombatants, hitstopScale);
+                _renderer.Update(effectiveGameTime, _battleManager.AllCombatants, _animationManager, _battleManager.CurrentActingCombatant);
                 return;
             }
 
@@ -527,7 +536,6 @@ namespace ProjectVagabond.Scenes
                         _switchSequenceTimer = duration;
 
                         _switchIncoming.VisualAlpha = 0f;
-
                         _animationManager.StartIntroFadeAnimation(_switchIncoming.CombatantID);
 
                         EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{_switchIncoming.Name} steps in!" });
@@ -546,14 +554,14 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            _animationManager.Update(gameTime, _battleManager.AllCombatants, timeScale);
-            _moveAnimationManager.Update(gameTime);
+            _animationManager.Update(effectiveGameTime, _battleManager.AllCombatants, hitstopScale);
+            _moveAnimationManager.Update(effectiveGameTime);
 
-            bool uiCapturedInput = _uiManager.Update(gameTime, currentMouseState, currentKeyboardState, _battleManager.CurrentActingCombatant, _renderer);
+            bool uiCapturedInput = _uiManager.Update(effectiveGameTime, currentMouseState, currentKeyboardState, _battleManager.CurrentActingCombatant, _renderer);
 
             if (!uiCapturedInput)
             {
-                _inputHandler.Update(gameTime, _uiManager, _renderer);
+                _inputHandler.Update(effectiveGameTime, _uiManager, _renderer);
             }
             else
             {
@@ -567,10 +575,10 @@ namespace ProjectVagabond.Scenes
                 activeCombatant = null;
             }
 
-            _renderer.Update(gameTime, _battleManager.AllCombatants, _animationManager, activeCombatant);
+            _renderer.Update(effectiveGameTime, _battleManager.AllCombatants, _animationManager, activeCombatant);
 
-            _alertManager.Update(gameTime);
-            _tooltipManager.Update(gameTime);
+            _alertManager.Update(effectiveGameTime);
+            _tooltipManager.Update(effectiveGameTime);
 
             if (KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState))
             {
@@ -641,15 +649,10 @@ namespace ProjectVagabond.Scenes
                         {
                             if (!_floorTransitionTriggered)
                             {
-                                if (!SplitMapScene.WasMajorBattle)
-                                {
-                                    // Floor fade out is now handled by _floorAlpha tweening to 0 in Update
-                                }
                                 _floorTransitionTriggered = true;
                             }
                             else
                             {
-                                // Wait for floor alpha to hit 0
                                 if (_floorAlpha <= 0.01f)
                                 {
                                     FinalizeVictory();
@@ -673,43 +676,6 @@ namespace ProjectVagabond.Scenes
                 }
                 base.Update(gameTime);
                 return;
-            }
-
-            var inputManager = ServiceLocator.Get<InputManager>();
-            bool clickDetected = inputManager.IsMouseClickAvailable() && currentMouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed;
-
-            if (clickDetected)
-            {
-                if (_uiManager.IsBusy && !_uiManager.IsWaitingForInput)
-                {
-                    // UI is animating, ignore click or speed up
-                }
-                else if (_uiManager.IsWaitingForInput)
-                {
-                    // Handled by UI Manager
-                }
-                else if (_animationManager.IsBlockingAnimation || _moveAnimationManager.IsAnimating)
-                {
-                    // Skip animations
-                    _animationManager.CompleteBlockingAnimations(_battleManager.AllCombatants);
-                    _moveAnimationManager.CompleteCurrentAnimation();
-
-                    // Skip pacing delays
-                    _multiHitDelayTimer = 0f;
-                    _isWaitingForMultiHitDelay = false;
-                    _battleManager.SkipPacing();
-
-                    inputManager.ConsumeMouseClick();
-                }
-                else
-                {
-                    // Manual advance fallback
-                    if (_battleManager.CurrentPhase == BattleManager.BattlePhase.EndOfRound)
-                    {
-                        _battleManager.RequestNextPhase();
-                        inputManager.ConsumeMouseClick();
-                    }
-                }
             }
 
             bool isUiBusy = _uiManager.IsBusy;
@@ -775,6 +741,7 @@ namespace ProjectVagabond.Scenes
             {
                 var leader = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && c.BattleSlot == 0);
                 if (leader == null) leader = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && !c.IsDefeated);
+
                 if (leader != null)
                 {
                     _uiManager.ShowActionMenu(leader, _battleManager.AllCombatants.ToList());
@@ -785,8 +752,6 @@ namespace ProjectVagabond.Scenes
             {
                 _isBattleOver = true;
                 _uiManager.HideAllMenus();
-                var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
-                bool playerWon = player != null && !player.IsDefeated;
             }
 
             base.Update(gameTime);

@@ -16,7 +16,7 @@ namespace ProjectVagabond.Battle.Abilities
         // --- TUNING CONSTANTS ---
 
         // Controls global damage output. Higher = faster battles.
-        private const float GLOBAL_DAMAGE_SCALAR = 0.1f;
+        private const float GLOBAL_DAMAGE_SCALAR = 0.05f;
 
         // Ensures moves always do at least X damage (unless immune).
         private const int FLAT_DAMAGE_BONUS = 1;
@@ -109,9 +109,6 @@ namespace ProjectVagabond.Battle.Abilities
 
         private float CalculateDefense(BattleCombatant target, ImpactType impactType, BattleContext context)
         {
-            // Base tankiness comes from Tenacity.
-            float tenacity = GetEffectiveStat(target, OffensiveStatType.Tenacity, context);
-
             // Determine which stat helps resist this specific attack type.
             float resistanceStat = 0f;
 
@@ -128,8 +125,7 @@ namespace ProjectVagabond.Battle.Abilities
             }
 
             // Compound the stats.
-            // We clamp to 1.0f to ensure we never divide by zero or have negative defense.
-            return Math.Max(1.0f, tenacity + (resistanceStat * RESISTANCE_WEIGHT));
+            return Math.Max(1.0f, (resistanceStat * RESISTANCE_WEIGHT));
         }
 
         private float GetOffensiveStat(BattleCombatant attacker, OffensiveStatType type, BattleContext context)

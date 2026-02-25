@@ -84,7 +84,7 @@ namespace ProjectVagabond.Battle
 
         // --- PACING STATE ---
         private float _turnPacingTimer = 0f;
-        private const float ACTION_DELAY = 0.75f;
+        private const float ACTION_DELAY = 0.5f;
 
         public BattleCombatant? CurrentActingCombatant { get; private set; }
 
@@ -294,6 +294,10 @@ namespace ProjectVagabond.Battle
                     if (target.CurrentTenacity == 0)
                     {
                         EventBus.Publish(new GameEvents.TenacityBroken { Combatant = target });
+
+                        target.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Stun, 1));
+
+                        AppendToCurrentLine(" [cStatus]STUNNED![/]");
                     }
                 }
 
@@ -529,6 +533,8 @@ namespace ProjectVagabond.Battle
                 case BattlePhase.StartOfRound: HandleStartOfRound(); break;
                 case BattlePhase.ActionSelection: break;
                 case BattlePhase.ActionResolution:
+                    if (_animationManager.IsBlockingAnimation) break;
+
                     _turnPacingTimer -= deltaTime;
                     if (_turnPacingTimer <= 0)
                     {
