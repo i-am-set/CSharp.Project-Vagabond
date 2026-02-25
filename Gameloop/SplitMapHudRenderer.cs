@@ -903,7 +903,14 @@ namespace ProjectVagabond.UI
                         if (basePoints > 0)
                         {
                             var srcBase = new Rectangle(0, 0, basePoints * 4, 3);
-                            spriteBatch.DrawSnapped(_spriteManager.InventoryStatBarFull, new Vector2(pipX, pipY), srcBase, Color.White);
+
+                            // Color Logic
+                            Color pipColor = Color.White;
+                            if (basePoints >= 8) pipColor = _global.Palette_Leaf;
+                            else if (basePoints >= 4) pipColor = _global.Palette_LightPale;
+                            else pipColor = _global.Palette_Rust;
+
+                            spriteBatch.DrawSnapped(_spriteManager.InventoryStatBarFull, new Vector2(pipX, pipY), srcBase, pipColor);
                         }
                     }
                 }

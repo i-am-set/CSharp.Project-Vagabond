@@ -275,7 +275,7 @@
       "ModifyStatStage_Str": "Strength,1,100"
     },
     "AnimationId": "sta_orange_orb",
-    "Cooldown": 2
+    "Cooldown": 1
   },
   {
     "MoveID": "14",
