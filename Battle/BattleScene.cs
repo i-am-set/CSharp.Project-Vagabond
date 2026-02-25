@@ -218,11 +218,10 @@ namespace ProjectVagabond.Scenes
 
             if (_battleManager != null)
             {
-                // Initialize Tenacity Cache
                 _lastKnownTenacity.Clear();
                 foreach (var c in _battleManager.AllCombatants)
                 {
-                    _lastKnownTenacity[c.CombatantID] = c.Stats.Tenacity;
+                    _lastKnownTenacity[c.CombatantID] = c.CurrentGuard;
                 }
 
                 // --- SETUP RANDOMIZED STAGGER ---
@@ -299,8 +298,8 @@ namespace ProjectVagabond.Scenes
             EventBus.Subscribe<GameEvents.CombatantSwitchingOut>(OnCombatantSwitchingOut);
             EventBus.Subscribe<GameEvents.MoveFailed>(OnMoveFailed);
             EventBus.Subscribe<GameEvents.SwitchSequenceInitiated>(OnSwitchSequenceInitiated);
-            EventBus.Subscribe<GameEvents.TenacityChanged>(OnTenacityChanged);
-            EventBus.Subscribe<GameEvents.TenacityBroken>(OnTenacityBroken);
+            EventBus.Subscribe<GameEvents.GuardChanged>(OnGuardChanged);
+            EventBus.Subscribe<GameEvents.GuardBroken>(OnGuardBroken);
             EventBus.Subscribe<GameEvents.RequestImpactSync>(OnRequestImpactSync);
             EventBus.Subscribe<GameEvents.CombatantVisualDeath>(OnCombatantVisualDeath);
 
@@ -328,8 +327,8 @@ namespace ProjectVagabond.Scenes
             EventBus.Unsubscribe<GameEvents.CombatantSwitchingOut>(OnCombatantSwitchingOut);
             EventBus.Unsubscribe<GameEvents.MoveFailed>(OnMoveFailed);
             EventBus.Unsubscribe<GameEvents.SwitchSequenceInitiated>(OnSwitchSequenceInitiated);
-            EventBus.Unsubscribe<GameEvents.TenacityChanged>(OnTenacityChanged);
-            EventBus.Unsubscribe<GameEvents.TenacityBroken>(OnTenacityBroken);
+            EventBus.Unsubscribe<GameEvents.GuardChanged>(OnGuardChanged);
+            EventBus.Unsubscribe<GameEvents.GuardBroken>(OnGuardBroken);
             EventBus.Unsubscribe<GameEvents.RequestImpactSync>(OnRequestImpactSync);
             EventBus.Unsubscribe<GameEvents.CombatantVisualDeath>(OnCombatantVisualDeath);
 
@@ -1157,7 +1156,7 @@ namespace ProjectVagabond.Scenes
             }
         }
 
-        private void OnTenacityChanged(GameEvents.TenacityChanged e)
+        private void OnGuardChanged(GameEvents.GuardChanged e)
         {
             Vector2 hudPos = _renderer.GetCombatantHudCenterPosition(e.Combatant, _battleManager.AllCombatants);
             Vector2 visualPos = _renderer.GetCombatantVisualCenterPosition(e.Combatant, _battleManager.AllCombatants);
@@ -1176,10 +1175,10 @@ namespace ProjectVagabond.Scenes
             _lastKnownTenacity[e.Combatant.CombatantID] = e.NewValue;
         }
 
-        private void OnTenacityBroken(GameEvents.TenacityBroken e)
+        private void OnGuardBroken(GameEvents.GuardBroken e)
         {
             Vector2 hudPos = _renderer.GetCombatantHudCenterPosition(e.Combatant, _battleManager.AllCombatants);
-            _animationManager.StartDamageIndicator(e.Combatant.CombatantID, "TENACITY BROKEN", hudPos + new Vector2(0, -15), _global.TenacityBrokenIndicatorColor);
+            _animationManager.StartDamageIndicator(e.Combatant.CombatantID, "GUARD BROKEN", hudPos + new Vector2(0, -15), _global.TenacityBrokenIndicatorColor);
             _hapticsManager.TriggerShake(5f, 0.2f);
             _core.TriggerFullscreenFlash(_global.TenacityBrokenIndicatorColor, 0.1f);
 

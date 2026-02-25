@@ -204,13 +204,13 @@ namespace ProjectVagabond
             public BattleCombatant IncomingCombatant { get; set; }
         }
 
-        public struct TenacityChanged
+        public struct GuardChanged
         {
             public BattleCombatant Combatant { get; set; }
             public int NewValue { get; set; }
         }
 
-        public struct TenacityBroken
+        public struct GuardBroken
         {
             public BattleCombatant Combatant { get; set; }
         }

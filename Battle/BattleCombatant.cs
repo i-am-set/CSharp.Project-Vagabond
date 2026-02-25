@@ -25,7 +25,8 @@ namespace ProjectVagabond.Battle
 
         public CombatantStats Stats { get; set; }
 
-        public int CurrentTenacity { get; set; }
+        public int CurrentGuard { get; set; }
+        public int MaxGuard { get; set; }
 
         // VisualHP is distinct from Stats.CurrentHP to allow for smooth animation
         public float VisualHP { get; set; }

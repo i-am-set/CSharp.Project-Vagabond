@@ -17,6 +17,8 @@ namespace ProjectVagabond.Battle
         public int Tenacity { get; set; }
         public int Agility { get; set; }
 
+        public int? MaxGuard { get; set; }
+
         public string BasicMoveId { get; set; }
         public string CoreMoveId { get; set; }
         public string AltMoveId { get; set; }

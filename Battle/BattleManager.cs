@@ -286,18 +286,17 @@ namespace ProjectVagabond.Battle
                     EventBus.Publish(new GameEvents.CombatantVisualDeath { Victim = target });
                 }
 
-                if (!result.WasGraze && result.DamageAmount > 0 && target.CurrentTenacity > 0)
+                // --- GUARD BREAK LOGIC ---
+                if (!result.WasGraze && result.DamageAmount > 0 && target.CurrentGuard > 0)
                 {
-                    target.CurrentTenacity--;
-                    EventBus.Publish(new GameEvents.TenacityChanged { Combatant = target, NewValue = target.CurrentTenacity });
+                    target.CurrentGuard--;
+                    EventBus.Publish(new GameEvents.GuardChanged { Combatant = target, NewValue = target.CurrentGuard });
 
-                    if (target.CurrentTenacity == 0)
+                    if (target.CurrentGuard == 0)
                     {
-                        EventBus.Publish(new GameEvents.TenacityBroken { Combatant = target });
-
-                        target.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Stun, 1));
-
-                        AppendToCurrentLine(" [cStatus]STUNNED![/]");
+                        EventBus.Publish(new GameEvents.GuardBroken { Combatant = target });
+                        // REMOVED: target.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Stun, 1));
+                        AppendToCurrentLine(" [cStatus]GUARD BROKEN![/]");
                     }
                 }
 

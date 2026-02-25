@@ -265,8 +265,10 @@ namespace ProjectVagabond.Battle.UI
         {
             if (alpha <= 0.01f) return;
 
-            int maxTenacity = combatant.Stats.Tenacity;
-            int currentTenacity = combatant.CurrentTenacity;
+            // Use MaxGuard for loop limit
+            int maxGuard = combatant.MaxGuard;
+            // Use CurrentGuard for fill check
+            int currentGuard = combatant.CurrentGuard;
 
             const int pipSize = 3;
             const int gap = 1;
@@ -274,7 +276,7 @@ namespace ProjectVagabond.Battle.UI
             var fullRect = new Rectangle(0, 0, 3, 3);
             var emptyRect = new Rectangle(3, 0, 3, 3);
 
-            for (int i = 0; i < maxTenacity; i++)
+            for (int i = 0; i < maxGuard; i++)
             {
                 float x;
                 if (isRightAligned)
@@ -287,7 +289,7 @@ namespace ProjectVagabond.Battle.UI
                 }
 
                 var pos = new Vector2(x, startY);
-                var sourceRect = (i < currentTenacity) ? fullRect : emptyRect;
+                var sourceRect = (i < currentGuard) ? fullRect : emptyRect;
 
                 spriteBatch.DrawSnapped(_spriteManager.TenacityPipTexture, pos, sourceRect, Color.White * alpha, 0f, Vector2.Zero, 1.0f, SpriteEffects.None, 0f);
             }

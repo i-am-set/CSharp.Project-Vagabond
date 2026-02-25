@@ -47,8 +47,8 @@ namespace ProjectVagabond.Battle
             bool isCrit = false;
             if (!isGraze && move.ImpactType != ImpactType.Status && move.Power > 0)
             {
-                // CHANGE: Guaranteed Crit if Tenacity is broken (<= 0)
-                if (target.CurrentTenacity <= 0)
+                // CHANGE: Guaranteed Crit if Guard is broken (<= 0)
+                if (target.CurrentGuard <= 0)
                 {
                     isCrit = true;
                 }

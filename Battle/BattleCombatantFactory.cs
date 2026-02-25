@@ -40,9 +40,6 @@ namespace ProjectVagabond.Battle
             combatant.Tags.Add("Type.Player");
             combatant.Tags.Add("Type.Ally");
 
-            combatant.CurrentTenacity = combatant.Stats.Tenacity;
-            combatant.VisualHP = combatant.Stats.CurrentHP;
-
             var data = BattleDataCache.PartyMembers.Values.FirstOrDefault(p => p.Name == member.Name);
             if (data != null)
             {
@@ -51,7 +48,17 @@ namespace ProjectVagabond.Battle
 
                 combatant.Tags.Add($"Gender.{data.Gender}");
                 if (data.IsProperNoun) combatant.Tags.Add("Prop.ProperNoun");
+
+                // Initialize Guard from Data (Default 3)
+                combatant.MaxGuard = data.MaxGuard ?? 3;
             }
+            else
+            {
+                combatant.MaxGuard = 3;
+            }
+
+            combatant.CurrentGuard = combatant.MaxGuard;
+            combatant.VisualHP = combatant.Stats.CurrentHP;
 
             if (member.IntrinsicAbilities != null && member.IntrinsicAbilities.Count > 0)
             {
@@ -101,7 +108,10 @@ namespace ProjectVagabond.Battle
             combatant.Stats.Tenacity = _random.Next(enemyData.MinTenacity, enemyData.MaxTenacity + 1);
             combatant.Stats.Agility = _random.Next(enemyData.MinAgility, enemyData.MaxAgility + 1);
 
-            combatant.CurrentTenacity = combatant.Stats.Tenacity;
+            // Initialize Guard from Data (Default 3)
+            combatant.MaxGuard = enemyData.MaxGuard ?? 3;
+            combatant.CurrentGuard = combatant.MaxGuard;
+
             combatant.VisualHP = combatant.Stats.CurrentHP;
 
             // Assign Basic Move

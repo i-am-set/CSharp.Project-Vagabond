@@ -135,21 +135,16 @@ namespace ProjectVagabond.Battle.Abilities
             {
                 if (decl.Actor.HasUsedFirstAttack)
                 {
-                    // 1. Stop the BattleManager from processing this move further
                     decl.IsHandled = true;
-
-                    // 2. Fire the failure event once
                     EventBus.Publish(new GameEvents.ActionFailed
                     {
                         Actor = decl.Actor,
-                        Reason = "failed", // Generic reason, or specific "fake_out_failed"
+                        Reason = "failed",
                         MoveName = decl.Move.MoveName
                     });
-
                     EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[DriftWave]But it failed![/]" });
                 }
             }
-            // Logic for applying Dazed if successful (OnHit)
             else if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
             {
                 if (reaction.Result.DamageAmount > 0)
@@ -215,14 +210,10 @@ namespace ProjectVagabond.Battle.Abilities
             if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
             {
                 int damageDealt = reaction.Result.DamageAmount;
-
                 float targetMaxHP = Math.Max(1, reaction.Target.Stats.MaxHP);
                 float healthPercentageDealt = damageDealt / targetMaxHP;
-
-                // Apply that percentage to the User's Max HP, scaled by the recoil config
                 int recoil = (int)(reaction.Actor.Stats.MaxHP * healthPercentageDealt * (_percent / 100f));
 
-                // Ensure at least 1 damage if the move did damage
                 if (damageDealt > 0 && recoil < 1) recoil = 1;
 
                 if (recoil > 0)
@@ -348,31 +339,34 @@ namespace ProjectVagabond.Battle.Abilities
         }
     }
 
-    public class RestoreTenacityAbility : IAbility
+    // RENAMED: RestoreTenacityAbility -> RestoreGuardAbility
+    public class RestoreGuardAbility : IAbility
     {
-        public string Name => "Restore Tenacity";
-        public string Description => "Fully restores Tenacity.";
+        public string Name => "Restore Guard";
+        public string Description => "Fully restores Guard.";
         public int Priority => 0;
 
         private readonly int _amount;
 
-        public RestoreTenacityAbility(int amount) { _amount = amount; }
+        public RestoreGuardAbility(int amount) { _amount = amount; }
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
             if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
             {
                 var target = reaction.Target;
-                if (target.CurrentTenacity < target.Stats.Tenacity)
+                // Use MaxGuard instead of Stats.Tenacity
+                if (target.CurrentGuard < target.MaxGuard)
                 {
-                    int oldVal = target.CurrentTenacity;
+                    int oldVal = target.CurrentGuard;
 
-                    target.CurrentTenacity = target.Stats.Tenacity;
+                    target.CurrentGuard = target.MaxGuard;
 
-                    if (target.CurrentTenacity != oldVal)
+                    if (target.CurrentGuard != oldVal)
                     {
-                        EventBus.Publish(new GameEvents.TenacityChanged { Combatant = target, NewValue = target.CurrentTenacity });
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{target.Name} fully restored Tenacity!" });
+                        // Use GuardChanged event
+                        EventBus.Publish(new GameEvents.GuardChanged { Combatant = target, NewValue = target.CurrentGuard });
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{target.Name} fully restored Guard!" });
                     }
                 }
             }
@@ -389,7 +383,6 @@ namespace ProjectVagabond.Battle.Abilities
         {
             if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
             {
-                // Ensure we don't switch if the move missed/grazed (optional, but standard for pivot moves)
                 if (!reaction.Result.WasGraze)
                 {
                     EventBus.Publish(new GameEvents.DisengageTriggered { Actor = reaction.Actor });
@@ -398,32 +391,33 @@ namespace ProjectVagabond.Battle.Abilities
         }
     }
 
-    public class DamageTenacityAbility : IAbility
+    // RENAMED: DamageTenacityAbility -> DamageGuardAbility
+    public class DamageGuardAbility : IAbility
     {
-        public string Name => "Damage Tenacity";
-        public string Description => "Reduces target's Tenacity directly.";
+        public string Name => "Damage Guard";
+        public string Description => "Reduces target's Guard directly.";
         public int Priority => 0;
 
         private readonly int _amount;
-        public DamageTenacityAbility(int amount) { _amount = amount; }
+        public DamageGuardAbility(int amount) { _amount = amount; }
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
             if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
             {
                 var target = reaction.Target;
-                if (target.CurrentTenacity > 0)
+                if (target.CurrentGuard > 0)
                 {
-                    int oldVal = target.CurrentTenacity;
-                    target.CurrentTenacity = Math.Max(0, target.CurrentTenacity - _amount);
+                    int oldVal = target.CurrentGuard;
+                    target.CurrentGuard = Math.Max(0, target.CurrentGuard - _amount);
 
-                    if (target.CurrentTenacity != oldVal)
+                    if (target.CurrentGuard != oldVal)
                     {
-                        EventBus.Publish(new GameEvents.TenacityChanged { Combatant = target, NewValue = target.CurrentTenacity });
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{target.Name}'s shield was corroded!" });
+                        EventBus.Publish(new GameEvents.GuardChanged { Combatant = target, NewValue = target.CurrentGuard });
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{target.Name}'s guard was damaged!" });
 
-                        if (target.CurrentTenacity == 0)
-                            EventBus.Publish(new GameEvents.TenacityBroken { Combatant = target });
+                        if (target.CurrentGuard == 0)
+                            EventBus.Publish(new GameEvents.GuardBroken { Combatant = target });
                     }
                 }
             }
@@ -449,7 +443,6 @@ namespace ProjectVagabond.Battle.Abilities
                 int hpBefore = (int)reaction.Target.VisualHP;
                 reaction.Target.ApplyHealing(healAmount);
 
-                // Publish the UI event so numbers pop up on the correct target
                 EventBus.Publish(new GameEvents.CombatantHealed
                 {
                     Actor = reaction.Actor,
@@ -470,10 +463,8 @@ namespace ProjectVagabond.Battle.Abilities
         private readonly OffensiveStatType _stat;
         private readonly int _amount;
         private readonly int _chance;
-        private readonly string _targetScope; // "Self" or "Target"
+        private readonly string _targetScope;
 
-        // Constructor signature matches JSON: "Stat, Amount, Chance, [Target]"
-        // Example JSON: "ModifyStatStage": "Strength,-1,100"
         public ModifyStatStageAbility(OffensiveStatType stat, int amount, int chance, string target = "Target")
         {
             _stat = stat;
@@ -484,64 +475,60 @@ namespace ProjectVagabond.Battle.Abilities
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
-            // Trigger when the move successfully hits (ReactionEvent)
             if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
             {
-                // Ignore if the move grazed/missed
                 if (reaction.Result.WasGraze) return;
 
-                // Roll for chance (e.g. 100%)
                 if (Random.Shared.Next(1, 101) <= _chance)
                 {
-                    // Determine who gets the stat change
                     BattleCombatant targetCombatant = (_targetScope.Equals("Self", StringComparison.OrdinalIgnoreCase))
                         ? reaction.Actor
                         : reaction.Target;
 
-                    // Apply the change
                     targetCombatant.ModifyStatStage(_stat, _amount);
                 }
             }
         }
     }
 
-    public class SacrificeTenacityAbility : IAbility
+    // RENAMED: SacrificeTenacityAbility -> SacrificeGuardAbility
+    public class SacrificeGuardAbility : IAbility
     {
-        public string Name => "Sacrifice Tenacity";
-        public string Description => "Lowers user's Tenacity on hit.";
+        public string Name => "Sacrifice Guard";
+        public string Description => "Lowers user's Guard on hit.";
         public int Priority => 0;
 
         private readonly int _amount;
-        public SacrificeTenacityAbility(int amount) { _amount = amount; }
+        public SacrificeGuardAbility(int amount) { _amount = amount; }
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
-            // Trigger after the move successfully hits/executes
             if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
             {
                 var user = reaction.Actor;
-                if (user.CurrentTenacity > 0)
+                if (user.CurrentGuard > 0)
                 {
-                    int oldVal = user.CurrentTenacity;
-                    user.CurrentTenacity = Math.Max(0, user.CurrentTenacity - _amount);
+                    int oldVal = user.CurrentGuard;
+                    user.CurrentGuard = Math.Max(0, user.CurrentGuard - _amount);
 
-                    if (user.CurrentTenacity != oldVal)
+                    if (user.CurrentGuard != oldVal)
                     {
-                        EventBus.Publish(new GameEvents.TenacityChanged { Combatant = user, NewValue = user.CurrentTenacity });
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{user.Name} sacrificed Tenacity!" });
+                        EventBus.Publish(new GameEvents.GuardChanged { Combatant = user, NewValue = user.CurrentGuard });
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{user.Name} sacrificed Guard!" });
 
-                        if (user.CurrentTenacity == 0)
-                            EventBus.Publish(new GameEvents.TenacityBroken { Combatant = user });
+                        if (user.CurrentGuard == 0)
+                            EventBus.Publish(new GameEvents.GuardBroken { Combatant = user });
                     }
                 }
             }
         }
     }
 
-    public class DepleteTenacityAbility : IAbility
+    // RENAMED: DepleteTenacityAbility -> DepleteGuardAbility
+    public class DepleteGuardAbility : IAbility
     {
-        public string Name => "Deplete Tenacity";
-        public string Description => "Shatters target's Tenacity completely.";
+        public string Name => "Deplete Guard";
+        public string Description => "Shatters target's Guard completely.";
         public int Priority => 0;
 
         public void OnEvent(GameEvent e, BattleContext context)
@@ -551,13 +538,13 @@ namespace ProjectVagabond.Battle.Abilities
                 if (reaction.Result.WasGraze) return;
 
                 var target = reaction.Target;
-                if (target.CurrentTenacity > 0)
+                if (target.CurrentGuard > 0)
                 {
-                    target.CurrentTenacity = 0;
+                    target.CurrentGuard = 0;
 
-                    EventBus.Publish(new GameEvents.TenacityChanged { Combatant = target, NewValue = 0 });
-                    EventBus.Publish(new GameEvents.TenacityBroken { Combatant = target });
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{target.Name}'s shield was shattered!" });
+                    EventBus.Publish(new GameEvents.GuardChanged { Combatant = target, NewValue = 0 });
+                    EventBus.Publish(new GameEvents.GuardBroken { Combatant = target });
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{target.Name}'s guard was shattered!" });
                 }
             }
         }
