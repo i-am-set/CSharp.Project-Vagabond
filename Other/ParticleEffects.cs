@@ -26,9 +26,7 @@ namespace ProjectVagabond.Particles
             // Emitter
             settings.Shape = EmitterShape.Circle;
             settings.EmitFrom = EmissionSource.Volume;
-            // Reduced from 12f to 3f for tighter volume
             settings.EmitterSize = new Vector2(3f, 3f);
-            // Increased rate to maintain density at smaller scale
             settings.EmissionRate = 500f;
             settings.BurstCount = 0;
             settings.MaxParticles = 300;
@@ -38,26 +36,31 @@ namespace ProjectVagabond.Particles
             settings.VelocityPattern = EmissionPattern.Radial;
             settings.Lifetime = new FloatRange(0.1f, 0.3f);
 
-            // Reduced velocity to keep particles close to the core
             settings.InitialVelocityX = new FloatRange(5f, 20f);
             settings.InitialVelocityY = new FloatRange(0f);
 
-            // Reduced size significantly (was 3f-6f)
-            settings.InitialSize = new FloatRange(0.75f, 1.5f);
+            // Hard Edges & Rotation
+            // Using 1x1 pixel texture for hard edges. 
+            // Size 2f-4f = 2-4 screen pixels.
+            settings.InitialSize = new FloatRange(2f, 4f);
             settings.EndSize = new FloatRange(0f);
             settings.InterpolateSize = true;
-            settings.InitialRotation = new FloatRange(0, MathHelper.TwoPi);
 
-            // Color (Will be overridden per-frame in HomingProjectile for sparkle effect)
+            // Random Rotation & Spin
+            settings.InitialRotation = new FloatRange(0, MathHelper.TwoPi);
+            settings.InitialRotationSpeed = new FloatRange(-10f, 10f); // High variance spin
+
+            // Color (Overridden per-frame in HomingProjectile)
             settings.StartColor = global.Palette_Sky;
-            settings.EndColor = Color.Transparent;
+            settings.EndColor = global.Palette_Sea;
             settings.StartAlpha = 1.0f;
             settings.EndAlpha = 0.0f;
 
             // Rendering
-            settings.Texture = ServiceLocator.Get<SpriteManager>().SoftParticleSprite;
+            // Use the 1x1 pixel for a sharp, hard-edged look
+            settings.Texture = ServiceLocator.Get<Texture2D>();
             settings.BlendMode = BlendState.Additive;
-            settings.LayerDepth = 0.96f; // Draw above most things
+            settings.LayerDepth = 0.96f;
 
             return settings;
         }
