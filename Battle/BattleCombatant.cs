@@ -166,8 +166,6 @@ namespace ProjectVagabond.Battle
 
         public (bool success, string message) ModifyStatStage(OffensiveStatType stat, int amount)
         {
-            if (stat == OffensiveStatType.Tenacity) return (false, "Tenacity cannot be modified!");
-
             // Allow abilities (like Scrappy) to intercept or modify the change
             var attemptEvent = new StatChangeAttemptEvent(this, stat, amount);
             var context = new BattleContext { Actor = this, Target = this };
@@ -215,8 +213,8 @@ namespace ProjectVagabond.Battle
             _statContext.Actor = this;
             var evt = new CalculateStatEvent(this, OffensiveStatType.Tenacity, Stats.Tenacity);
             NotifyAbilities(evt, _statContext);
-            //float stat = evt.FinalValue * BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Tenacity]];
-            return (int)Math.Round(evt.FinalValue);
+            float stat = evt.FinalValue * BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Tenacity]];
+            return (int)Math.Round(stat);
         }
 
         public int GetEffectiveAgility()

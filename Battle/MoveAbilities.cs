@@ -339,7 +339,6 @@ namespace ProjectVagabond.Battle.Abilities
         }
     }
 
-    // RENAMED: RestoreTenacityAbility -> RestoreGuardAbility
     public class RestoreGuardAbility : IAbility
     {
         public string Name => "Restore Guard";
@@ -355,7 +354,6 @@ namespace ProjectVagabond.Battle.Abilities
             if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
             {
                 var target = reaction.Target;
-                // Use MaxGuard instead of Stats.Tenacity
                 if (target.CurrentGuard < target.MaxGuard)
                 {
                     int oldVal = target.CurrentGuard;
@@ -364,7 +362,6 @@ namespace ProjectVagabond.Battle.Abilities
 
                     if (target.CurrentGuard != oldVal)
                     {
-                        // Use GuardChanged event
                         EventBus.Publish(new GameEvents.GuardChanged { Combatant = target, NewValue = target.CurrentGuard });
                         EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{target.Name} fully restored Guard!" });
                     }
@@ -391,7 +388,6 @@ namespace ProjectVagabond.Battle.Abilities
         }
     }
 
-    // RENAMED: DamageTenacityAbility -> DamageGuardAbility
     public class DamageGuardAbility : IAbility
     {
         public string Name => "Damage Guard";
@@ -491,7 +487,6 @@ namespace ProjectVagabond.Battle.Abilities
         }
     }
 
-    // RENAMED: SacrificeTenacityAbility -> SacrificeGuardAbility
     public class SacrificeGuardAbility : IAbility
     {
         public string Name => "Sacrifice Guard";
@@ -524,7 +519,6 @@ namespace ProjectVagabond.Battle.Abilities
         }
     }
 
-    // RENAMED: DepleteTenacityAbility -> DepleteGuardAbility
     public class DepleteGuardAbility : IAbility
     {
         public string Name => "Deplete Guard";
