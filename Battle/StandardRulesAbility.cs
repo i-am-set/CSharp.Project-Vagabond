@@ -10,13 +10,12 @@ namespace ProjectVagabond.Battle.Abilities
         public string Name => "Standard Rules";
         public string Description => "Applies standard combat math.";
         public int Priority => 0; // Base logic
-
         private static readonly Random _random = new Random();
 
         // --- TUNING CONSTANTS ---
 
         // Controls global damage output. Higher = faster battles.
-        private const float GLOBAL_DAMAGE_SCALAR = 0.05f;
+        private const float GLOBAL_DAMAGE_SCALAR = 0.12f;
 
         // Ensures moves always do at least X damage (unless immune).
         private const int FLAT_DAMAGE_BONUS = 1;
@@ -124,8 +123,11 @@ namespace ProjectVagabond.Battle.Abilities
                 resistanceStat = GetEffectiveStat(target, OffensiveStatType.Strength, context);
             }
 
-            // Compound the stats.
-            return Math.Max(1.0f, (resistanceStat * RESISTANCE_WEIGHT));
+            // Get Tenacity (Base Defense)
+            float tenacity = GetEffectiveStat(target, OffensiveStatType.Tenacity, context);
+
+            // Compound the stats: Tenacity + (Resistance * Weight)
+            return Math.Max(1.0f, tenacity + (resistanceStat * RESISTANCE_WEIGHT));
         }
 
         private float GetOffensiveStat(BattleCombatant attacker, OffensiveStatType type, BattleContext context)
