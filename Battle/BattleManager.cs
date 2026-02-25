@@ -790,7 +790,11 @@ namespace ProjectVagabond.Battle
 
         private void ProcessMoveAction(QueuedAction action)
         {
-            if (action.Actor.IsPlayerControlled && action.SpellbookEntry != null) action.SpellbookEntry.TimesUsed++;
+            if (action.Actor.IsPlayerControlled && action.SpellbookEntry != null)
+            {
+                action.SpellbookEntry.TimesUsed++;
+                action.SpellbookEntry.TurnsUntilReady = action.ChosenMove.Cooldown + 1;
+            }
             action.Actor.PendingDisengage = false;
 
             var multiHit = action.ChosenMove.Abilities.OfType<MultiHitAbility>().FirstOrDefault();
@@ -985,7 +989,13 @@ namespace ProjectVagabond.Battle
         {
             foreach (var combatant in _cachedAllActive)
             {
+                // Decrement Cooldowns
+                if (combatant.BasicMove != null && combatant.BasicMove.TurnsUntilReady > 0) combatant.BasicMove.TurnsUntilReady--;
+                if (combatant.CoreMove != null && combatant.CoreMove.TurnsUntilReady > 0) combatant.CoreMove.TurnsUntilReady--;
+                if (combatant.AltMove != null && combatant.AltMove.TurnsUntilReady > 0) combatant.AltMove.TurnsUntilReady--;
+
                 _battleContext.ResetMultipliers();
+                _battleContext.Actor = combatant;
                 _battleContext.Actor = combatant;
                 _battleContext.Target = null;
                 _battleContext.Move = null;

@@ -15,7 +15,8 @@
     "Priority": 0,
     "Tags": [],
     "AnimationId": "phy_impact",
-    "IsAnimationCentralized": false
+    "IsAnimationCentralized": false,
+    "Cooldown": 0
   },
   {
     "MoveID": "1",
@@ -33,7 +34,8 @@
     "Priority": 0,
     "Tags": [],
     "AnimationId": "phy_impact",
-    "IsAnimationCentralized": false
+    "IsAnimationCentralized": false,
+    "Cooldown": 0
   },
   {
     "MoveID": "2",
@@ -51,7 +53,8 @@
     "Priority": 0,
     "Tags": [],
     "AnimationId": "phy_impact",
-    "IsAnimationCentralized": false
+    "IsAnimationCentralized": false,
+    "Cooldown": 0
   },
   {
     "MoveID": "3",
@@ -69,7 +72,8 @@
     "Priority": 0,
     "Tags": [],
     "AnimationId": "phy_bite",
-    "IsAnimationCentralized": false
+    "IsAnimationCentralized": false,
+    "Cooldown": 0
   },
   {
     "MoveID": "4",
@@ -87,7 +91,8 @@
     "Priority": 0,
     "Tags": [],
     "AnimationId": "phy_claw",
-    "IsAnimationCentralized": false
+    "IsAnimationCentralized": false,
+    "Cooldown": 0
   },
   {
     "MoveID": "5",
@@ -105,7 +110,8 @@
     "Priority": 1,
     "Tags": [ "Priority" ],
     "AnimationId": "phy_small_side_swipe",
-    "IsAnimationCentralized": false
+    "IsAnimationCentralized": false,
+    "Cooldown": 0
   },
   {
     "MoveID": "6",
@@ -123,7 +129,8 @@
     "Priority": 0,
     "Tags": [],
     "AnimationId": "sta_stall",
-    "IsAnimationCentralized": false
+    "IsAnimationCentralized": false,
+    "Cooldown": 0
   },
   {
     "MoveID": "7",
@@ -144,7 +151,8 @@
     },
     "Tags": [],
     "AnimationId": "sta_orange_orb",
-    "IsAnimationCentralized": false
+    "IsAnimationCentralized": false,
+    "Cooldown": 0
   },
   {
     "MoveID": "8",
@@ -165,7 +173,8 @@
     },
     "Tags": [ "Defense", "Priority" ],
     "AnimationId": "sta_protect",
-    "IsAnimationCentralized": false
+    "IsAnimationCentralized": false,
+    "Cooldown": 2
   },
   {
     "MoveID": "9",
@@ -186,7 +195,8 @@
     },
     "Tags": [ "Fire", "AoE" ],
     "AnimationId": "mag_flame_ground",
-    "IsAnimationCentralized": false
+    "IsAnimationCentralized": false,
+    "Cooldown": 2
   },
   {
     "MoveID": "10",
@@ -207,7 +217,8 @@
     },
     "Tags": [ "Fire", "Status" ],
     "AnimationId": "mag_fire_ember_cluster",
-    "IsAnimationCentralized": false
+    "IsAnimationCentralized": false,
+    "Cooldown": 2
   },
   {
     "MoveID": "11",
@@ -228,7 +239,8 @@
     },
     "Tags": [ "MultiHit", "Contact" ],
     "AnimationId": "phy_bite",
-    "IsAnimationCentralized": false
+    "IsAnimationCentralized": false,
+    "Cooldown": 1
   },
   {
     "MoveID": "12",
@@ -245,7 +257,8 @@
       "ModifyStatStage_Int": "Intelligence,-1,100",
       "SelfSwitch": ""
     },
-    "AnimationId": "sta_orange_orb"
+    "AnimationId": "sta_orange_orb",
+    "Cooldown": 3
   },
   {
     "MoveID": "13",
@@ -261,7 +274,8 @@
       "DamageTenacity": "2",
       "ModifyStatStage_Str": "Strength,1,100"
     },
-    "AnimationId": "sta_orange_orb"
+    "AnimationId": "sta_orange_orb",
+    "Cooldown": 2
   },
   {
     "MoveID": "14",
@@ -279,7 +293,8 @@
       "DamageRecoil": "50"
     },
     "Tags": [ "Contact", "Recoil" ],
-    "AnimationId": "phy_large_impact"
+    "AnimationId": "phy_large_impact",
+    "Cooldown": 2
   },
   {
     "MoveID": "15",
@@ -296,7 +311,8 @@
       "Heal": "25"
     },
     "Tags": [ "Heal" ],
-    "AnimationId": "sta_orange_orb"
+    "AnimationId": "sta_orange_orb",
+    "Cooldown": 3
   },
   {
     "MoveID": "16",
@@ -314,7 +330,8 @@
       "Lifesteal": "50"
     },
     "Tags": [ "Contact", "Heal" ],
-    "AnimationId": "phy_bite"
+    "AnimationId": "phy_bite",
+    "Cooldown": 2
   },
   {
     "MoveID": "17",
@@ -331,7 +348,8 @@
       "ApplyStatus": "Provoked, 100, 3"
     },
     "Tags": [ "Debuff" ],
-    "AnimationId": "sta_orange_orb"
+    "AnimationId": "sta_orange_orb",
+    "Cooldown": 3
   },
   {
     "MoveID": "18",
@@ -352,7 +370,8 @@
       "SacrificeTenacity": "1"
     },
     "Tags": [ "Contact", "Recoil" ],
-    "AnimationId": "phy_large_impact"
+    "AnimationId": "phy_large_impact",
+    "Cooldown": 3
   },
   {
     "MoveID": "19",
@@ -372,7 +391,8 @@
       "Counter": ""
     },
     "Tags": [ "Contact", "Priority" ],
-    "AnimationId": "phy_small_side_swipe"
+    "AnimationId": "phy_small_side_swipe",
+    "Cooldown": 2
   },
   {
     "MoveID": "20",
@@ -388,7 +408,8 @@
     "Priority": 0,
     "Effects": { "Lifesteal": "75" },
     "Tags": [ "Heal" ],
-    "AnimationId": "mag_blue_flame"
+    "AnimationId": "mag_blue_flame",
+    "Cooldown": 2
   },
   {
     "MoveID": "21",
@@ -404,7 +425,8 @@
     "Priority": 0,
     "Effects": { "Heal": "25" },
     "Tags": [ "Heal" ],
-    "AnimationId": "sta_protect"
+    "AnimationId": "sta_protect",
+    "Cooldown": 3
   },
   {
     "MoveID": "22",
@@ -422,7 +444,8 @@
     "Priority": 0,
     "Tags": [ "Contact" ],
     "AnimationId": "phy_impact",
-    "IsAnimationCentralized": false
+    "IsAnimationCentralized": false,
+    "Cooldown": 1
   },
   {
     "MoveID": "23",
@@ -444,6 +467,7 @@
     },
     "Tags": [ "Contact" ],
     "AnimationId": "phy_large_impact",
-    "IsAnimationCentralized": false
+    "IsAnimationCentralized": false,
+    "Cooldown": 3
   }
 ]

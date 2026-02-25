@@ -1,127 +1,33 @@
-﻿using ProjectVagabond.Battle.Abilities;
-using ProjectVagabond.Utils;
-using System;
-using System.Collections.Generic;
-using System.Text.Json.Serialization;
+﻿using System.Collections.Generic;
+using ProjectVagabond.Battle.Abilities;
 
 namespace ProjectVagabond.Battle
 {
-    /// <summary>
-    /// Represents the static data for a single combat move.
-    /// </summary>
     public class MoveData
     {
-        /// <summary>
-        /// A unique string identifier for the move (e.g., "Tackle", "Fireball").
-        /// </summary>
-        public string MoveID { get; set; } = "";
-
-        /// <summary>
-        /// The display name of the move.
-        /// </summary>
-        public string MoveName { get; set; } = "";
-
-        /// <summary>
-        /// Practical explanation of the move's effects.
-        /// </summary>
-        public string Description { get; set; } = "";
-
-        /// <summary>
-        /// Lore or visual description of the move.
-        /// </summary>
-        public string Flavor { get; set; } = "";
-
-        /// <summary>
-        /// A custom phrase to display when this move is used.
-        /// Supports tags: {user}, {target}, {user_pronoun}, {item_name}, {IsTargetProperNoun}
-        /// </summary>
-        public string? ActionPhrase { get; set; }
-
-        /// <summary>
-        /// If this move was generated from a weapon, this holds the weapon's name (e.g. "Iron Sword").
-        /// Used to populate the {item_name} tag.
-        /// </summary>
-        public string? SourceItemName { get; set; }
-
-        /// <summary>
-        /// The base power of the move, used in damage calculation.
-        /// </summary>
+        public string MoveID { get; set; }
+        public string MoveName { get; set; }
+        public string ActionPhrase { get; set; }
+        public string Description { get; set; }
+        public string Flavor { get; set; }
         public int Power { get; set; }
-
-        /// <summary>
-        /// The fundamental type of the move, distinguishing magical spells from physical actions.
-        /// </summary>
         public MoveType MoveType { get; set; }
-
-        /// <summary>
-        /// The type of damage the move inflicts upon impact.
-        /// </summary>
         public ImpactType ImpactType { get; set; }
-
-        /// <summary>
-        /// The stat used to calculate the move's offensive power.
-        /// </summary>
         public OffensiveStatType OffensiveStat { get; set; }
-
-        /// <summary>
-        /// Defines the targeting behavior of the move.
-        /// </summary>
+        public bool MakesContact { get; set; }
         public TargetType Target { get; set; }
-
-        /// <summary>
-        /// The base accuracy of the move (1-100). A value of -1 represents a "True Hit" that never misses.
-        /// </summary>
         public int Accuracy { get; set; }
-
-        /// <summary>
-        /// The move's priority for sorting the action queue. Higher values go first.
-        /// </summary>
         public int Priority { get; set; }
+        public List<string> Tags { get; set; } = new List<string>();
+        public List<string> SerializedTags { get; set; }
+        public string AnimationId { get; set; }
+        public bool IsAnimationCentralized { get; set; }
+        public Dictionary<string, string> Effects { get; set; } = new Dictionary<string, string>();
 
-        /// <summary>
-        /// A dictionary of special effects for this move. The key is the effect name (e.g., "Lifesteal")
-        /// and the value is a string of its parameters (e.g., "50").
-        /// </summary>
-        public Dictionary<string, string> Effects { get; set; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        public int Cooldown { get; set; }
 
-        [JsonPropertyName("Tags")]
-        public List<string> SerializedTags { get; set; } = new List<string>();
-
-        [JsonIgnore]
-        public TagContainer Tags { get; private set; } = new TagContainer();
-
-        /// <summary>
-        /// The ID of the animation definition to play (references Animations.json).
-        /// </summary>
-        public string AnimationId { get; set; } = "";
-
-        /// <summary>
-        /// If true, one animation plays in the center of the screen. If false, an animation plays on each target.
-        /// </summary>
-        public bool IsAnimationCentralized { get; set; } = false;
-
-        /// <summary>
-        /// The list of instantiated ability logic objects derived from the Effects dictionary.
-        /// </summary>
         public List<IAbility> Abilities { get; set; } = new List<IAbility>();
-
-        public bool MakesContact => Tags.Has("Prop.Contact");
-        public bool AffectsUserHP => Tags.Has("Target.Self") && Tags.Has("Effect.Damage");
-        public bool AffectsTargetHP => Power > 0 || Tags.Has("Effect.FixedDamage");
-
-        /// <summary>
-        /// Creates a shallow copy of the MoveData object.
-        /// Note: Abilities are shared references (flyweight pattern) unless they are stateful.
-        /// </summary>
-        public MoveData Clone()
-        {
-            var clone = (MoveData)this.MemberwiseClone();
-            clone.Abilities = new List<IAbility>(this.Abilities);
-            clone.Tags = new TagContainer();
-            clone.SerializedTags = new List<string>(this.SerializedTags);
-            foreach (var t in clone.SerializedTags) clone.Tags.Add(t);
-
-            return clone;
-        }
+        public bool AffectsUserHP { get; set; }
+        public bool AffectsTargetHP { get; set; }
     }
 }

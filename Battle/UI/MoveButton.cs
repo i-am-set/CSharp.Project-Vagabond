@@ -35,6 +35,11 @@ namespace ProjectVagabond.Battle.UI
 
         public int? VisualHeightOverride { get; set; }
 
+        // Cooldown Logic
+        public bool ShowCooldown { get; set; } = false;
+        public int CurrentCooldown { get; set; } = 0;
+        public int MaxCooldown { get; set; } = 0;
+
         private bool _isScrollingInitialized = false;
         private float _scrollPosition = 0f;
         private float _scrollWaitTimer = 0f;
@@ -101,6 +106,7 @@ namespace ProjectVagabond.Battle.UI
         {
             var pixel = ServiceLocator.Get<Texture2D>();
             bool isActivated = IsEnabled && (IsHovered || forceHover);
+            bool isOnCooldown = CurrentCooldown > 0;
 
             // 1. Calculate Animation Offsets
             float hoverOffset = 0f;
@@ -150,7 +156,8 @@ namespace ProjectVagabond.Battle.UI
             if (DrawSystemBackground)
             {
                 Color bgColor = BackgroundColor;
-                if (!IsEnabled) bgColor = _global.Palette_Black;
+                if (isOnCooldown) bgColor = _global.Palette_Black;
+                else if (!IsEnabled) bgColor = _global.Palette_Black;
                 else if (IsPressed) bgColor = _global.Palette_Fruit; // Selected/Held Color
                 else if (isActivated) bgColor = _global.ButtonHoverColor;
 
@@ -182,6 +189,7 @@ namespace ProjectVagabond.Battle.UI
                     // Use integer origin to ensure pixel-perfect alignment on the grid
                     Vector2 iconOrigin = new Vector2(4, 4);
                     Color currentIconColor = (isActivated) ? ActionIconHoverColor : ActionIconColor;
+                    if (isOnCooldown) currentIconColor = _global.Palette_DarkShadow;
 
                     float scale = animScale;
 
@@ -201,7 +209,8 @@ namespace ProjectVagabond.Battle.UI
 
             // 5. Draw Text (Pixel Perfect)
             Color textColor;
-            if (!IsEnabled) textColor = CustomDisabledTextColor ?? _global.ButtonDisableColor;
+            if (isOnCooldown) textColor = _global.Palette_DarkShadow;
+            else if (!IsEnabled) textColor = CustomDisabledTextColor ?? _global.ButtonDisableColor;
             else if (IsPressed) textColor = _global.Palette_Black; // Force black on fruit background
             else if (isActivated) textColor = CustomHoverTextColor ?? _global.ButtonHoverColor;
             else textColor = CustomDefaultTextColor ?? _global.GameTextColor;
@@ -279,8 +288,28 @@ namespace ProjectVagabond.Battle.UI
                 spriteBatch.DrawStringSnapped(font, Text, snappedTextPos, textColor, 0f, textOrigin, animScale, SpriteEffects.None, 0f);
             }
 
-            // 6. Draw Disabled Strikethrough (Flat, no rotation)
-            if (!IsEnabled)
+            // 6. Draw Cooldown Text (Mirrored to Icon)
+            if (ShowCooldown)
+            {
+                string cdText = isOnCooldown ? CurrentCooldown.ToString() : MaxCooldown.ToString();
+                Color cdColor = isOnCooldown ? _global.Palette_Rust : textColor;
+
+                // Calculate position: Right side, mirrored to icon
+                // Icon is at (-w/2 + 5). Mirror is (+w/2 - 5).
+                Vector2 cdOffset = new Vector2((w / 2f) - 5f, 0) * animScale;
+                Vector2 rawCdPos = boundsCenter + cdOffset;
+                Vector2 snappedCdPos = new Vector2(MathF.Round(rawCdPos.X), MathF.Round(rawCdPos.Y));
+
+                // Use tertiary font for small numbers if available, or default
+                var cdFont = ServiceLocator.Get<Core>().TertiaryFont ?? font;
+                Vector2 cdSize = cdFont.MeasureString(cdText);
+                Vector2 cdOrigin = new Vector2(MathF.Round(cdSize.X / 2f), MathF.Round(cdSize.Y / 2f));
+
+                spriteBatch.DrawStringSnapped(cdFont, cdText, snappedCdPos, cdColor * effectiveOpacity, 0f, cdOrigin, animScale, SpriteEffects.None, 0f);
+            }
+
+            // 7. Draw Disabled Strikethrough (Flat, no rotation)
+            if (!IsEnabled && !isOnCooldown)
             {
                 // Calculate center
                 Vector2 lineCenterOffset = isStackedLayout ? new Vector2(0, 5) : Vector2.Zero;

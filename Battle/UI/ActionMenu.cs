@@ -283,19 +283,19 @@ namespace ProjectVagabond.Battle.UI
                 }
 
                 // 1. Basic (Index 0)
-                AddActionButton("BASC", Combatant.BasicMove, defaultFont, global, global.Palette_DarkestPale, VISUAL_WIDTH, 27, new Vector2(0, 1), Vector2.Zero);
+                AddActionButton("BASC", Combatant.BasicMove, defaultFont, global, global.Palette_DarkestPale, VISUAL_WIDTH, 27, new Vector2(0, 1), Vector2.Zero, false);
 
                 // 2. Core (Index 1)
                 var coreData = GetMoveData(Combatant.CoreMove);
                 string coreLabel = coreData?.MoveName.ToUpper() ?? "---";
                 var coreFont = GetFontForLabel(coreLabel);
-                AddActionButton(coreLabel, Combatant.CoreMove, coreFont, global, global.Palette_DarkPale, 88, 13, Vector2.Zero, new Vector2(0, 1));
+                AddActionButton(coreLabel, Combatant.CoreMove, coreFont, global, global.Palette_DarkPale, 88, 13, Vector2.Zero, new Vector2(0, 1), true);
 
                 // 3. Alt (Index 2)
                 var altData = GetMoveData(Combatant.AltMove);
                 string altLabel = altData?.MoveName.ToUpper() ?? "---";
                 var altFont = GetFontForLabel(altLabel);
-                AddActionButton(altLabel, Combatant.AltMove, altFont, global, global.Palette_DarkestPale, 88, 13, Vector2.Zero, new Vector2(0, 1));
+                AddActionButton(altLabel, Combatant.AltMove, altFont, global, global.Palette_DarkestPale, 88, 13, Vector2.Zero, new Vector2(0, 1), true);
 
                 // 4. GUARD (Index 3)
                 AddSecondaryButton("GUARD", "7");
@@ -423,7 +423,7 @@ namespace ProjectVagabond.Battle.UI
                 );
             }
 
-            private void AddActionButton(string label, MoveEntry? entry, BitmapFont font, Global global, Color defaultBackgroundColor, int width, int height, Vector2 iconOffset, Vector2 textOffset)
+            private void AddActionButton(string label, MoveEntry? entry, BitmapFont font, Global global, Color defaultBackgroundColor, int width, int height, Vector2 iconOffset, Vector2 textOffset, bool showCooldown)
             {
                 bool moveExists = entry != null && BattleDataCache.Moves.ContainsKey(entry.MoveID);
                 MoveData? moveData = moveExists ? BattleDataCache.Moves[entry!.MoveID] : null;
@@ -465,6 +465,8 @@ namespace ProjectVagabond.Battle.UI
                     }
                 }
 
+                bool isOnCooldown = entry != null && entry.TurnsUntilReady > 0;
+
                 var btn = new MoveButton(Combatant, moveData, entry, font)
                 {
                     DrawSystemBackground = true,
@@ -480,10 +482,15 @@ namespace ProjectVagabond.Battle.UI
                     ActionIconColor = iconColor,
                     ActionIconHoverColor = global.Palette_DarkestPale,
                     IconRenderOffset = iconOffset,
-                    IsEnabled = !forceDisabled
+                    IsEnabled = !forceDisabled && !isOnCooldown,
+
+                    // Cooldown Props
+                    ShowCooldown = showCooldown,
+                    CurrentCooldown = entry?.TurnsUntilReady ?? 0,
+                    MaxCooldown = moveData?.Cooldown ?? 0
                 };
 
-                if (moveExists && !forceDisabled)
+                if (moveExists && !forceDisabled && !isOnCooldown)
                 {
                     btn.OnClick += () =>
                     {

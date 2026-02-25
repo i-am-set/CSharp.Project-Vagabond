@@ -327,7 +327,7 @@ namespace ProjectVagabond.Battle.Abilities
         {
             if (e is CheckActionPriorityEvent prioEvent && prioEvent.Actor.Abilities.Contains(this))
             {
-                if (prioEvent.Move.Tags.Has("Heal"))
+                if (prioEvent.Move.Tags.Contains("Heal"))
                 {
                     prioEvent.Priority += 2;
                 }
