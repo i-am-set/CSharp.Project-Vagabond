@@ -469,5 +469,27 @@
     "AnimationId": "phy_large_impact",
     "IsAnimationCentralized": false,
     "Cooldown": 3
+  },
+  {
+    "MoveID": "24",
+    "MoveName": "Magic Missile",
+    "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]CASTS MAGIC MISSILE[/]!",
+    "Description": "Hits [cpositive]3-5[/] times randomly.",
+    "Flavor": "Force bolts that strike unerringly.",
+    "Power": 25,
+    "MoveType": "Spell",
+    "ImpactType": "Magical",
+    "OffensiveStat": "Intelligence",
+    "MakesContact": false,
+    "Target": "RandomBoth",
+    "Accuracy": 100,
+    "Priority": 0,
+    "Effects": {
+      "MultiHit": "3,5"
+    },
+    "Tags": [ "MultiHit", "Projectile" ],
+    "AnimationId": "magic_missile",
+    "IsAnimationCentralized": false,
+    "Cooldown": 2
   }
 ]

@@ -264,6 +264,8 @@ namespace ProjectVagabond.Battle.UI
 
         private readonly List<AbilityIndicatorState> _activeAbilityIndicators = new List<AbilityIndicatorState>();
 
+        private readonly List<BattleProjectile> _activeProjectiles = new List<BattleProjectile>();
+
         private readonly Queue<Action> _pendingTextIndicators = new Queue<Action>();
         private float _indicatorCooldownTimer = 0f;
 
@@ -295,6 +297,22 @@ namespace ProjectVagabond.Battle.UI
         {
             _global = ServiceLocator.Get<Global>();
             EventBus.Subscribe<GameEvents.BattleActionExecuted>(OnActionExecuted);
+            EventBus.Subscribe<GameEvents.SpawnProjectile>(OnSpawnProjectile);
+        }
+
+        private void OnSpawnProjectile(GameEvents.SpawnProjectile e)
+        {
+            // We need the start position. For now, use the actor's visual center.
+            Vector2 startPos = Vector2.Zero;
+            if (GetCombatantPosition != null)
+            {
+                startPos = GetCombatantPosition(e.Actor);
+                // Offset slightly so it doesn't spawn inside the sprite
+                startPos.Y -= 20f;
+            }
+
+            var projectile = new HomingProjectile(startPos, e.Target, e.OnImpact, e.Color);
+            SpawnProjectile(projectile);
         }
 
         private void OnActionExecuted(GameEvents.BattleActionExecuted e)
@@ -339,6 +357,9 @@ namespace ProjectVagabond.Battle.UI
             _indicatorCooldownTimer = 0f;
             _pendingAbilityQueue.Clear();
             _abilitySpawnTimer = 0f;
+
+            foreach (var proj in _activeProjectiles) proj.Destroy();
+            _activeProjectiles.Clear();
         }
 
         public void CompleteBlockingAnimations(IEnumerable<BattleCombatant> combatants)
@@ -960,6 +981,11 @@ namespace ProjectVagabond.Battle.UI
             return _activeBarAnimations.FirstOrDefault(a => a.CombatantID == combatantId && a.ResourceType == type);
         }
 
+        public void SpawnProjectile(BattleProjectile projectile)
+        {
+            _activeProjectiles.Add(projectile);
+        }
+
         public void Update(GameTime gameTime, IEnumerable<BattleCombatant> combatants, float timeScale = 1.0f)
         {
             // Calculate Scaled Time (for impact/visuals that should freeze during hitstop)
@@ -993,6 +1019,30 @@ namespace ProjectVagabond.Battle.UI
             UpdateBarAnimations(scaledGameTime);
             UpdateImpactFlash(scaledGameTime);
             UpdateAttackCharges(scaledGameTime, combatants);
+
+            UpdateProjectiles(scaledGameTime);
+        }
+
+        private void UpdateProjectiles(GameTime gameTime)
+        {
+            for (int i = _activeProjectiles.Count - 1; i >= 0; i--)
+            {
+                var proj = _activeProjectiles[i];
+                proj.Update(gameTime, GetCombatantPosition);
+                if (!proj.IsActive)
+                {
+                    proj.Destroy();
+                    _activeProjectiles.RemoveAt(i);
+                }
+            }
+        }
+
+        public void DrawProjectiles(SpriteBatch spriteBatch)
+        {
+            foreach (var proj in _activeProjectiles)
+            {
+                proj.Draw(spriteBatch);
+            }
         }
 
         private void UpdateHudEntryAnimations(GameTime gameTime, IEnumerable<BattleCombatant> combatants)

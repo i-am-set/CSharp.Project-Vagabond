@@ -857,15 +857,33 @@ namespace ProjectVagabond.Battle
                 _isWaitingForImpact = true;
                 _phaseWatchdogTimer = 0f;
 
-                // Request Visual Sync
-                EventBus.Publish(new GameEvents.RequestImpactSync
+                // --- PROJECTILE LOGIC ---
+                if (action.ChosenMove.Tags.Contains("Projectile"))
                 {
-                    Actor = action.Actor,
-                    Move = action.ChosenMove,
-                    Targets = targetsForThisHit,
-                    GrazeStatus = grazeStatus,
-                    DefaultTimeToImpact = 0.25f // Fallback timing
-                });
+                    // For Magic Missile, we spawn a projectile for EACH target (usually 1 per hit iteration)
+                    foreach (var target in targetsForThisHit)
+                    {
+                        EventBus.Publish(new GameEvents.SpawnProjectile
+                        {
+                            Actor = action.Actor,
+                            Target = target,
+                            OnImpact = () => { EventBus.Publish(new GameEvents.TriggerImpact()); },
+                            Color = _global.Palette_Sky // Or any color you prefer
+                        });
+                    }
+                }
+                else
+                {
+                    // Request Visual Sync (Standard)
+                    EventBus.Publish(new GameEvents.RequestImpactSync
+                    {
+                        Actor = action.Actor,
+                        Move = action.ChosenMove,
+                        Targets = targetsForThisHit,
+                        GrazeStatus = grazeStatus,
+                        DefaultTimeToImpact = 0.25f // Fallback timing
+                    });
+                }
             }
             else
             {
@@ -882,8 +900,35 @@ namespace ProjectVagabond.Battle
 
             if (_multiHitRemaining > 0)
             {
-                if (_currentActionFinalTargets != null && _currentActionFinalTargets.All(t => t.IsDefeated || t.Stats.CurrentHP <= 0)) _multiHitRemaining = 0;
-                else { PrepareHit(action); return; }
+                bool shouldContinue = true;
+                var targetType = action.ChosenMove.Target;
+                bool isRandom = targetType == TargetType.RandomBoth || targetType == TargetType.RandomEvery || targetType == TargetType.RandomAll;
+
+                if (isRandom)
+                {
+                    var validTargets = TargetingHelper.GetValidTargets(action.Actor, targetType, _allCombatants);
+                    if (!validTargets.Any(t => !t.IsDefeated && t.Stats.CurrentHP > 0))
+                    {
+                        shouldContinue = false;
+                    }
+                }
+                else
+                {
+                    if (_currentActionFinalTargets != null && _currentActionFinalTargets.All(t => t.IsDefeated || t.Stats.CurrentHP <= 0))
+                    {
+                        shouldContinue = false;
+                    }
+                }
+
+                if (shouldContinue)
+                {
+                    PrepareHit(action);
+                    return;
+                }
+                else
+                {
+                    _multiHitRemaining = 0;
+                }
             }
 
             if (_currentActionFinalTargets != null && _currentActionFinalTargets.All(t => t.IsDefeated || t.Stats.CurrentHP <= 0))

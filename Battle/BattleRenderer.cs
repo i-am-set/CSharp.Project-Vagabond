@@ -232,6 +232,12 @@ namespace ProjectVagabond.Battle.UI
 
         public void Update(GameTime gameTime, IEnumerable<BattleCombatant> combatants, BattleAnimationManager animationManager, BattleCombatant currentActor)
         {
+            // Ensure the animation manager knows how to find combatant positions for projectiles
+            if (animationManager.GetCombatantPosition == null)
+            {
+                animationManager.GetCombatantPosition = (c) => GetCombatantVisualCenterPosition(c, combatants);
+            }
+
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
             var battleManager = ServiceLocator.Get<BattleManager>();
 
@@ -388,6 +394,8 @@ namespace ProjectVagabond.Battle.UI
                 DrawEnemies(spriteBatch, enemies, allCombatants, currentActor, shouldGrayOut, selectableTargets, animationManager, silhouetteColors, transform, gameTime, uiManager, hoveredCombatant, isTargetingMode, hoveredGroupColor);
                 DrawPlayers(spriteBatch, font, players, currentActor, shouldGrayOut, selectableTargets, animationManager, silhouetteColors, gameTime, uiManager, hoveredCombatant, isTargetingMode, hoveredGroupColor);
             }
+
+            animationManager.DrawProjectiles(spriteBatch);
 
             DrawTenacityAnimations(spriteBatch);
 

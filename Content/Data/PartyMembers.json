@@ -27,7 +27,7 @@
     "Tenacity": 3,
     "Agility": 5,
     "BasicMoveId": "4",
-    "CoreMoveId": "12",
+    "CoreMoveId": "24",
     "AltMoveId": "13",
     "PassiveAbilityPool": [
       { "PMAnnoying": "" }

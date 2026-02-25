@@ -226,6 +226,14 @@ namespace ProjectVagabond
 
         public struct TriggerImpact { }
 
+        public struct SpawnProjectile
+        {
+            public BattleCombatant Actor { get; set; }
+            public BattleCombatant Target { get; set; }
+            public Action OnImpact { get; set; }
+            public Color Color { get; set; }
+        }
+
         public class CheckActionPriorityEvent : GameEvent
         {
             public BattleCombatant Actor { get; }
