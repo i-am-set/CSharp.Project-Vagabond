@@ -28,7 +28,7 @@ uniform float EnableLcdGrid;
 uniform float TargetScale;      
 uniform float2 TargetOffset;    
 
-// Palette (Max 16 for loop unrolling)
+// Palette
 uniform float3 Palette[16];
 uniform int PaletteCount;
 
@@ -72,8 +72,8 @@ static const float VIGNETTE_INTENSITY = 1.40;
 // --- Color Tuning Defaults ---
 // These are applied ON TOP of the Uniforms.
 // Use these to set a "Base" look if Uniforms are left at default.
-static const float TUNING_SATURATION_BASE = 1.15; 
-static const float TUNING_VIBRANCE_BASE = 0.15;   
+static const float TUNING_SATURATION_BASE = 1.05; 
+static const float TUNING_VIBRANCE_BASE = 0.05;   
 
 // --- Globals ---
 Texture2D SpriteTexture;

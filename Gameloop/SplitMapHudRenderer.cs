@@ -906,9 +906,9 @@ namespace ProjectVagabond.UI
 
                             // Color Logic
                             Color pipColor = Color.White;
-                            if (basePoints >= 8) pipColor = _global.Palette_Leaf;
-                            else if (basePoints >= 4) pipColor = _global.Palette_LightPale;
-                            else pipColor = _global.Palette_Rust;
+                            if (basePoints >= 8) pipColor = _global.StatColor_High;
+                            else if (basePoints >= 4) pipColor = _global.StatColor_Average;
+                            else pipColor = _global.StatColor_Low;
 
                             spriteBatch.DrawSnapped(_spriteManager.InventoryStatBarFull, new Vector2(pipX, pipY), srcBase, pipColor);
                         }

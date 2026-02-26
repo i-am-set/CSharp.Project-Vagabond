@@ -9,6 +9,7 @@ using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -683,9 +684,9 @@ namespace ProjectVagabond.Scenes
 
         private Color GetStatColor(int value)
         {
-            if (value >= 8) return _global.Palette_Leaf;
-            if (value >= 4) return _global.Palette_LightPale;
-            return _global.Palette_Rust;
+            if (value >= 8) return _global.StatColor_High;
+            if (value >= 4) return _global.StatColor_Average;
+            return _global.StatColor_Low;
         }
 
         private void DrawStatsAndAbilities(SpriteBatch spriteBatch, BitmapFont secondaryFont, BitmapFont tertiaryFont, float alpha)

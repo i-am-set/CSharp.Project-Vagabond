@@ -38,6 +38,11 @@ namespace ProjectVagabond
             StatColor_Increase_Half = Color.DarkGreen;
             StatColor_Decrease_Half = Color.Brown;
 
+            // Globalized Stat Value Colors
+            StatColor_High = Palette_Leaf;
+            StatColor_Average = Palette_Pale;
+            StatColor_Low = Palette_Rust;
+
             ColorPositive = Palette_Leaf;
             ColorNegative = Palette_Rust;
             ColorCrit = Palette_DarkSun;
@@ -258,6 +263,10 @@ namespace ProjectVagabond
         public Color StatColor_Decrease { get; private set; }
         public Color StatColor_Increase_Half { get; private set; }
         public Color StatColor_Decrease_Half { get; private set; }
+
+        public Color StatColor_High { get; private set; }
+        public Color StatColor_Average { get; private set; }
+        public Color StatColor_Low { get; private set; }
 
         public Color ColorPositive { get; private set; }
         public Color ColorNegative { get; private set; }
