@@ -18,10 +18,7 @@ namespace ProjectVagabond.Progression
     {
         Origin,
         Battle,
-        MajorBattle,
-        Recruit,
-        Rest,
-        Shop
+        MajorBattle
     }
 
     public enum BattleDifficulty

@@ -51,21 +51,6 @@
     [ "wolf", "boar", "snake" ],
     [ "wolf", "wolf" ]
   ],
-  "PossibleNarrativeEventIDs": [
-    "shrine_of_blood",
-    "wandering_smith",
-    "cursed_mirror",
-    "starving_beast",
-    "ancient_library",
-    "gamblers_den",
-    "mysterious_fountain",
-    "training_dummy",
-    "hermits_shack",
-    "fallen_star",
-    "whispering_tree",
-    "clockwork_trader",
-    "void_rift"
-  ],
   "PossibleMajorBattles": [
     [ "golem" ]
   ]
