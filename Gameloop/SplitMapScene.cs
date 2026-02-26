@@ -56,24 +56,28 @@ namespace ProjectVagabond.Scenes
         private int _currentMoveStep = 0;
         private float _walkStepTimer = 0f;
 
-        private const int TOTAL_MOVE_STEPS = 5; 
-        private const float STEP_DURATION = 0.5f; 
+        private const int TOTAL_MOVE_STEPS = 5;
+        private const float STEP_DURATION = 0.5f;
         private const float JUMP_HEIGHT = 8f;
         private const float STEP_ROTATION = 15f;
 
         private int _clickedNodeId = -1;
         private float _clickAnimTimer = 0f;
-        private const float CLICK_ANIM_DURATION = 0.25f; // Slightly longer to allow settle
-        private const float CLICK_SCALE_MAX = 1.35f; // Snappy max scale
-        private const float CLICK_ROTATION_MAGNITUDE = 0.1f;
+
+        // FIX: Added missing field definition
+        private int _clickRotationDir = 1;
+
+        private const float CLICK_ANIM_DURATION = 0.1f;
+        private const float CLICK_SCALE_MAX = 1.35f;
+
+        private const float POP_ROTATION_DEG = 15f;
 
         // --- NODE ANIMATION TUNING ---
-        // Made these much faster for "snappy" feel
-        private const float NODE_LIFT_DURATION = 0.25f; // Fast pop up
+        private const float NODE_LIFT_DURATION = 0.15f; // Fast pop up
         private const float PULSE_DURATION = 1.0f; // Settle time
         private const float NODE_LOWERING_DURATION = 0.75f;
         private const float NODE_LIFT_AMOUNT = 8f; // Higher lift for drama
-        private const float ARRIVAL_SCALE_MAX = 2.0f; // Big pop on arrival
+        private const float ARRIVAL_SCALE_MAX = 1.5f; // Big pop on arrival
 
         private Vector2 _cameraOffset;
         private Vector2 _targetCameraOffset;
@@ -132,7 +136,12 @@ namespace ProjectVagabond.Scenes
         private static readonly RasterizerState _scissorRasterizerState = new RasterizerState { ScissorTestEnable = true };
 
         private Vector2 _nodeArrivalScale = Vector2.One;
+
+        // FIX: Added missing field definition
         private Vector2 _nodeArrivalShake = Vector2.Zero;
+
+        private float _nodeArrivalRotation = 0f;
+        private int _arrivalRotationDir = 1;
 
         private int _selectedNodeId = -1;
 
@@ -177,8 +186,11 @@ namespace ProjectVagabond.Scenes
             _waitingForCombatCameraSettle = false;
             _pendingCombatArchetypes = null;
             _nodeTextWaveTimer = 0f;
+
             _nodeArrivalScale = Vector2.One;
+            _nodeArrivalRotation = 0f;
             _nodeArrivalShake = Vector2.Zero;
+
             _selectedNodeId = -1;
             _lastHoveredNodeId = -1;
             _pressedNodeId = -1;
@@ -189,6 +201,7 @@ namespace ProjectVagabond.Scenes
             _walkStepTimer = 0f;
             _clickedNodeId = -1;
             _clickAnimTimer = 0f;
+            _clickRotationDir = 1;
             _playerMoveTargetNodeId = -1;
             _playerMovePath = null;
 
@@ -513,6 +526,9 @@ namespace ProjectVagabond.Scenes
                             _clickedNodeId = _hoveredNodeId;
                             _clickAnimTimer = CLICK_ANIM_DURATION;
 
+                            // Pick random direction for rotation (+1 or -1)
+                            _clickRotationDir = _random.Next(2) == 0 ? 1 : -1;
+
                             // Logic
                             HandleNodeClick(_hoveredNodeId);
 
@@ -621,11 +637,14 @@ namespace ProjectVagabond.Scenes
 
                 // No stretch during lift, we rely on the pulse for impact
                 _nodeArrivalScale = Vector2.One;
+                _nodeArrivalRotation = 0f;
             }
             if (_nodeLiftTimer >= NODE_LIFT_DURATION)
             {
                 _mapState = SplitMapState.PulsingNode;
                 _pulseTimer = 0f;
+                // Pick random direction for arrival rotation
+                _arrivalRotationDir = _random.Next(2) == 0 ? 1 : -1;
             }
         }
 
@@ -634,7 +653,6 @@ namespace ProjectVagabond.Scenes
             _pulseTimer += deltaTime;
 
             // "Scale instantly to its max, then ease back down"
-            // We implement this as a Quadratic Decay from MAX to 1.0.
             float progress = Math.Clamp(_pulseTimer / PULSE_DURATION, 0f, 1f); // 0 -> 1
             float countdown = 1.0f - progress; // 1 -> 0
 
@@ -643,12 +661,17 @@ namespace ProjectVagabond.Scenes
 
             float scaleBonus = (ARRIVAL_SCALE_MAX - 1.0f) * decayCurve;
             _nodeArrivalScale = new Vector2(1.0f + scaleBonus);
+
+            // Apply rotation decay: Max -> 0
+            _nodeArrivalRotation = MathHelper.ToRadians(POP_ROTATION_DEG) * decayCurve * _arrivalRotationDir;
+
             _nodeArrivalShake = Vector2.Zero;
 
             if (_pulseTimer >= PULSE_DURATION)
             {
                 _mapState = SplitMapState.EventInProgress;
                 _nodeArrivalScale = Vector2.One;
+                _nodeArrivalRotation = 0f;
                 _nodeArrivalShake = Vector2.Zero;
                 TriggerNodeEvent(_playerCurrentNodeId);
             }
@@ -672,6 +695,8 @@ namespace ProjectVagabond.Scenes
                     _nodeArrivalScale = new Vector2(1.0f + (squash * 0.1f), 1.0f - (squash * 0.1f));
                 }
                 else _nodeArrivalScale = Vector2.One;
+
+                _nodeArrivalRotation = 0f; // Ensure flat
             }
 
             if (_nodeLiftTimer >= NODE_LOWERING_DURATION)
@@ -683,6 +708,8 @@ namespace ProjectVagabond.Scenes
                     UpdateCameraTarget(currentNode.Position, false);
                 }
                 _nodeArrivalScale = Vector2.One;
+                _nodeArrivalRotation = 0f;
+
                 bool wasBattle = currentNode != null && (currentNode.NodeType == SplitNodeType.Battle || currentNode.NodeType == SplitNodeType.MajorBattle);
                 if (wasBattle)
                 {
@@ -953,27 +980,29 @@ namespace ProjectVagabond.Scenes
 
             Vector2 scale = Vector2.One;
             Vector2 shake = Vector2.Zero;
+            float rotation = 0f;
 
+            // Apply Arrival Animation Transforms
             if (node.Id == _playerCurrentNodeId)
             {
                 scale = _nodeArrivalScale;
                 shake = _nodeArrivalShake;
+                rotation = _nodeArrivalRotation;
             }
 
-            // Apply Click Scale & Rotation Effect
-            float rotation = 0f;
+            // Apply Click Animation Transforms (Overrides if active)
             if (node.Id == _clickedNodeId && _clickAnimTimer > 0f)
             {
                 // Quadratic Decay from Max Scale to 1.0
                 float t = _clickAnimTimer / CLICK_ANIM_DURATION; // 1 -> 0
-                float decay = t * t; // Sharp dropoff
+                float decay = t * t;
 
                 // Base 1.0 + Extra
                 float scaleBonus = (CLICK_SCALE_MAX - 1.0f) * decay;
                 scale = new Vector2(1.0f + scaleBonus);
 
-                // Quick shake rotation
-                rotation = MathF.Sin(t * MathHelper.TwoPi) * CLICK_ROTATION_MAGNITUDE;
+                // Quick snap rotation
+                rotation = MathHelper.ToRadians(POP_ROTATION_DEG) * decay * _clickRotationDir;
             }
 
             var position = bounds.Center.ToVector2() + node.VisualOffset + shake;
