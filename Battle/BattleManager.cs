@@ -264,6 +264,7 @@ namespace ProjectVagabond.Battle
             _phaseWatchdogTimer = 0f;
 
             var significantTargetIds = new List<string>();
+            var brokenTargets = new List<BattleCombatant>();
 
             for (int i = 0; i < targets.Count; i++)
             {
@@ -295,8 +296,13 @@ namespace ProjectVagabond.Battle
                     if (target.CurrentGuard == 0)
                     {
                         EventBus.Publish(new GameEvents.GuardBroken { Combatant = target });
-                        // REMOVED: target.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Stun, 1));
                         AppendToCurrentLine(" [cStatus]GUARD BROKEN![/]");
+
+                        // Track enemies whose guard was broken for follow-up attacks
+                        if (target.IsPlayerControlled != action.Actor.IsPlayerControlled)
+                        {
+                            brokenTargets.Add(target);
+                        }
                     }
                 }
 
@@ -336,6 +342,27 @@ namespace ProjectVagabond.Battle
                         ServiceLocator.Get<HapticsManager>().TriggerImpactTwist(intensity, 0.25f);
                     }
                     break;
+                }
+            }
+
+            // --- GUARD BREAK FOLLOW-UP ATTACKS ---
+            if (brokenTargets.Any() && action.Actor.BasicMove != null && BattleDataCache.Moves.TryGetValue(action.Actor.BasicMove.MoveID, out var basicMove))
+            {
+                // Reverse so they execute in the correct order (first broken = first hit)
+                brokenTargets.Reverse();
+                foreach (var bt in brokenTargets)
+                {
+                    var followUpTarget = (basicMove.Target == TargetType.Single || basicMove.Target == TargetType.SingleAll) ? bt : null;
+                    var followUpAction = new QueuedAction
+                    {
+                        Actor = action.Actor,
+                        ChosenMove = basicMove,
+                        SpellbookEntry = action.Actor.BasicMove,
+                        Target = followUpTarget,
+                        Type = QueuedActionType.Move,
+                        Priority = 999 // High priority to execute immediately next
+                    };
+                    _actionQueue.Insert(0, followUpAction);
                 }
             }
 
@@ -403,12 +430,43 @@ namespace ProjectVagabond.Battle
             incomingMember.NotifyAbilities(entryEvent, _battleContext);
         }
 
-        public void ResumeAfterSwitch()
+        public void ResumeAfterSwitch(BattleCombatant incomingMember)
         {
+            // --- SWITCH-IN ATTACK LOGIC ---
+            if (incomingMember != null && incomingMember.BasicMove != null && BattleDataCache.Moves.TryGetValue(incomingMember.BasicMove.MoveID, out var basicMove))
+            {
+                var target = ResolveDefaultTarget(incomingMember, basicMove);
+                var action = new QueuedAction
+                {
+                    Actor = incomingMember,
+                    ChosenMove = basicMove,
+                    SpellbookEntry = incomingMember.BasicMove,
+                    Target = target,
+                    Type = QueuedActionType.Move,
+                    Priority = 999 // High priority to execute immediately
+                };
+                _actionQueue.Insert(0, action);
+            }
+
             // Switch complete, resume action resolution
             _currentPhase = BattlePhase.ActionResolution;
             _turnPacingTimer = 0.5f;
             CanAdvance = true;
+        }
+
+        private BattleCombatant ResolveDefaultTarget(BattleCombatant actor, MoveData move)
+        {
+            var validTargets = TargetingHelper.GetValidTargets(actor, move.Target, _allCombatants);
+            validTargets = validTargets.Where(c => !c.IsDefeated && c.Stats.CurrentHP > 0).ToList();
+
+            if (move.Target == TargetType.Single || move.Target == TargetType.SingleAll || move.Target == TargetType.RandomBoth || move.Target == TargetType.RandomEvery || move.Target == TargetType.RandomAll)
+            {
+                // Prefer enemies for the random target
+                var enemies = validTargets.Where(c => c.IsPlayerControlled != actor.IsPlayerControlled).ToList();
+                if (enemies.Any()) return enemies[_random.Next(enemies.Count)];
+                if (validTargets.Any()) return validTargets[_random.Next(validTargets.Count)];
+            }
+            return null;
         }
 
         public void SubmitAction(int slotIndex, QueuedAction action)
@@ -431,8 +489,6 @@ namespace ProjectVagabond.Battle
             int activePlayerCount = 0;
             foreach (var player in _cachedActivePlayers)
             {
-                // Removed !player.Tags.Has(GameplayTags.States.Stunned) check
-                // Stunned players now require manual input (which will fail later)
                 if (player.ChargingAction == null)
                 {
                     activePlayerCount++;
@@ -561,7 +617,6 @@ namespace ProjectVagabond.Battle
             _actionQueue.RemoveAt(0);
 
             // 3. Validate Actor
-            // If actor is defeated or not on field, skip turn entirely without modifying queue structure
             if (nextAction.Actor.IsDefeated || !nextAction.Actor.IsActiveOnField || nextAction.Actor.Stats.CurrentHP <= 0)
             {
                 _turnPacingTimer = 0f; // Process next immediately
@@ -725,7 +780,6 @@ namespace ProjectVagabond.Battle
 
                 if (!combatant.IsPlayerControlled && !isCharging)
                 {
-                    // AI still needs to generate an action even if stunned, so it can fail properly in resolution
                     var aiAction = EnemyAI.DetermineBestAction(combatant, _allCombatants);
                     if (aiAction != null)
                     {
@@ -735,7 +789,6 @@ namespace ProjectVagabond.Battle
             }
             _actionQueue.InsertRange(0, startOfRoundActions);
 
-            // Removed !p.Tags.Has(GameplayTags.States.Stunned) check
             bool anyPlayerCanAct = _cachedActivePlayers.Any(p => p.ChargingAction == null);
 
             if (anyPlayerCanAct) _currentPhase = BattlePhase.ActionSelection;
@@ -762,8 +815,6 @@ namespace ProjectVagabond.Battle
                     combatant.BattleSlot = -1;
                     combatant.IsDying = false;
                     combatant.IsRemovalProcessed = true;
-                    // We do NOT remove from _actionQueue here to preserve indices during resolution,
-                    // but Sanitize is called at StartOfRound where queue is fresh anyway.
                     changesMade = true;
                 }
             }
@@ -860,7 +911,6 @@ namespace ProjectVagabond.Battle
                 // --- PROJECTILE LOGIC ---
                 if (action.ChosenMove.Tags.Contains("Projectile"))
                 {
-                    // For Magic Missile, we spawn a projectile for EACH target (usually 1 per hit iteration)
                     foreach (var target in targetsForThisHit)
                     {
                         EventBus.Publish(new GameEvents.SpawnProjectile
@@ -868,7 +918,7 @@ namespace ProjectVagabond.Battle
                             Actor = action.Actor,
                             Target = target,
                             OnImpact = () => { EventBus.Publish(new GameEvents.TriggerImpact()); },
-                            Color = _global.Palette_Sky // Or any color you prefer
+                            Color = _global.Palette_Sky
                         });
                     }
                 }
@@ -881,7 +931,7 @@ namespace ProjectVagabond.Battle
                         Move = action.ChosenMove,
                         Targets = targetsForThisHit,
                         GrazeStatus = grazeStatus,
-                        DefaultTimeToImpact = 0.25f // Fallback timing
+                        DefaultTimeToImpact = 0.25f
                     });
                 }
             }
@@ -958,7 +1008,6 @@ namespace ProjectVagabond.Battle
             var specifiedTarget = action.Target;
             var validCandidates = TargetingHelper.GetValidTargets(actor, targetType, _allCombatants);
 
-            // Filter out dead candidates immediately
             validCandidates = validCandidates.Where(c => !c.IsDefeated && c.Stats.CurrentHP > 0).ToList();
 
             if (targetType == TargetType.RandomBoth || targetType == TargetType.RandomEvery || targetType == TargetType.RandomAll)
@@ -992,7 +1041,6 @@ namespace ProjectVagabond.Battle
 
         private void HandleEndOfRound()
         {
-            // 1. Wait for Visuals
             if (_animationManager.IsBlockingAnimation) return;
 
             switch (_endOfRoundStage)
@@ -1012,7 +1060,7 @@ namespace ProjectVagabond.Battle
                     break;
 
                 case EndOfRoundStage.CheckWinLoss:
-                    if (CheckWinLoss()) return; // Battle Over
+                    if (CheckWinLoss()) return;
                     _endOfRoundStage = EndOfRoundStage.ProcessReinforcements;
                     _reinforcementSlotIndex = 0;
                     _reinforcementAnnounced = false;
@@ -1034,7 +1082,6 @@ namespace ProjectVagabond.Battle
         {
             foreach (var combatant in _cachedAllActive)
             {
-                // Decrement Cooldowns
                 if (combatant.BasicMove != null && combatant.BasicMove.TurnsUntilReady > 0) combatant.BasicMove.TurnsUntilReady--;
                 if (combatant.CoreMove != null && combatant.CoreMove.TurnsUntilReady > 0) combatant.CoreMove.TurnsUntilReady--;
                 if (combatant.AltMove != null && combatant.AltMove.TurnsUntilReady > 0) combatant.AltMove.TurnsUntilReady--;
@@ -1077,7 +1124,6 @@ namespace ProjectVagabond.Battle
 
         private void ProcessDeaths()
         {
-            // Process ALL dead combatants in one pass
             var deadCombatants = _allCombatants.Where(c =>
                 c.IsActiveOnField &&
                 (c.IsDefeated || c.Stats.CurrentHP <= 0) &&
@@ -1091,7 +1137,6 @@ namespace ProjectVagabond.Battle
                 deadCombatant.IsRemovalProcessed = true;
                 deadCombatant.BattleSlot = -1;
 
-                // Remove any pending actions for this dead unit
                 _actionQueue.RemoveAll(a => a.Actor == deadCombatant);
 
                 EventBus.Publish(new GameEvents.CombatantDefeated { DefeatedCombatant = deadCombatant });
@@ -1136,7 +1181,7 @@ namespace ProjectVagabond.Battle
 
                             _reinforcementAnnounced = true;
                             CanAdvance = false;
-                            return; // Wait for animation/message
+                            return;
                         }
 
                         if (isPlayerSlot)
@@ -1147,7 +1192,7 @@ namespace ProjectVagabond.Battle
                                 _waitingForReinforcementSelection = true;
                                 CanAdvance = false;
                             }
-                            return; // Wait for player input
+                            return;
                         }
                         else
                         {
@@ -1186,7 +1231,6 @@ namespace ProjectVagabond.Battle
                 _reinforcementSlotIndex++;
             }
 
-            // All slots checked
             _endOfRoundStage = EndOfRoundStage.PrepareNextRound;
         }
 

@@ -545,7 +545,7 @@ namespace ProjectVagabond.Scenes
                     if (_switchSequenceTimer <= 0)
                     {
                         _switchSequenceState = SwitchSequenceState.None;
-                        _battleManager.ResumeAfterSwitch();
+                        _battleManager.ResumeAfterSwitch(_switchIncoming);
                         if (_switchIncoming != null) _switchIncoming.VisualAlpha = 1.0f;
                         _switchOutgoing = null;
                         _switchIncoming = null;
