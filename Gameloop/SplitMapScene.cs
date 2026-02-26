@@ -56,21 +56,24 @@ namespace ProjectVagabond.Scenes
         private int _currentMoveStep = 0;
         private float _walkStepTimer = 0f;
 
-        private const int TOTAL_MOVE_STEPS = 5; // Reduced from 8 to 5 for punchier movement
-        private const float STEP_DURATION = 0.5f; // Fast steps
-        private const float JUMP_HEIGHT = 8f; // Height of the "big jump" arc
-        private const float STEP_ROTATION = 15f; // Degrees
+        private const int TOTAL_MOVE_STEPS = 5; 
+        private const float STEP_DURATION = 0.5f; 
+        private const float JUMP_HEIGHT = 8f;
+        private const float STEP_ROTATION = 15f;
 
         private int _clickedNodeId = -1;
         private float _clickAnimTimer = 0f;
-        private const float CLICK_ANIM_DURATION = 0.2f;
+        private const float CLICK_ANIM_DURATION = 0.25f; // Slightly longer to allow settle
+        private const float CLICK_SCALE_MAX = 1.35f; // Snappy max scale
         private const float CLICK_ROTATION_MAGNITUDE = 0.1f;
 
         // --- NODE ANIMATION TUNING ---
-        private const float NODE_LIFT_DURATION = 0.4f;
-        private const float PULSE_DURATION = 0.3f;
-        private const float NODE_LOWERING_DURATION = 0.4f;
-        private const float NODE_LIFT_AMOUNT = 8f;
+        // Made these much faster for "snappy" feel
+        private const float NODE_LIFT_DURATION = 0.25f; // Fast pop up
+        private const float PULSE_DURATION = 1.0f; // Settle time
+        private const float NODE_LOWERING_DURATION = 0.75f;
+        private const float NODE_LIFT_AMOUNT = 8f; // Higher lift for drama
+        private const float ARRIVAL_SCALE_MAX = 2.0f; // Big pop on arrival
 
         private Vector2 _cameraOffset;
         private Vector2 _targetCameraOffset;
@@ -100,7 +103,6 @@ namespace ProjectVagabond.Scenes
         private const float PATH_EXCLUSION_RADIUS = 10f;
 
         private float _pulseTimer = 0f;
-        private const float PULSE_AMOUNT = 0.2f;
 
         private bool _wasModalActiveLastFrame = false;
 
@@ -414,9 +416,6 @@ namespace ProjectVagabond.Scenes
                 float rotationDir = (_currentMoveStep % 2 == 0) ? -1f : 1f;
                 float targetRotation = MathHelper.ToRadians(STEP_ROTATION) * rotationDir;
 
-                // Lerp rotation: Start at 0, tilt at peak, return to 0?
-                // Or just tilt and snap? "Alternating left and right with each step" implies a waddle.
-                // Let's use a Sine wave for smooth waddle tilt.
                 _playerIcon.Rotation = MathF.Sin(stepProgress * MathHelper.Pi) * targetRotation;
 
                 if (_walkStepTimer >= STEP_DURATION)
@@ -620,26 +619,30 @@ namespace ProjectVagabond.Scenes
                 float eased = Easing.EaseOutCubic(progress);
                 currentNode.VisualOffset = new Vector2(0, MathHelper.Lerp(0, -NODE_LIFT_AMOUNT, eased));
 
-                // Subtle stretch: sin(0..pi) -> 0..1..0
-                float stretch = MathF.Sin(progress * MathHelper.Pi);
-                _nodeArrivalScale = new Vector2(1.0f - (stretch * 0.15f), 1.0f + (stretch * 0.15f));
+                // No stretch during lift, we rely on the pulse for impact
+                _nodeArrivalScale = Vector2.One;
             }
             if (_nodeLiftTimer >= NODE_LIFT_DURATION)
             {
                 _mapState = SplitMapState.PulsingNode;
                 _pulseTimer = 0f;
-                _nodeArrivalScale = Vector2.One;
             }
         }
 
         private void UpdatePulsingNode(float deltaTime)
         {
             _pulseTimer += deltaTime;
-            float progress = Math.Clamp(_pulseTimer / PULSE_DURATION, 0f, 1f);
 
-            // Smooth pulse up and down
-            float pulse = MathF.Sin(progress * MathHelper.Pi);
-            _nodeArrivalScale = new Vector2(1.0f + (pulse * PULSE_AMOUNT));
+            // "Scale instantly to its max, then ease back down"
+            // We implement this as a Quadratic Decay from MAX to 1.0.
+            float progress = Math.Clamp(_pulseTimer / PULSE_DURATION, 0f, 1f); // 0 -> 1
+            float countdown = 1.0f - progress; // 1 -> 0
+
+            // Squared decay creates a fast dropoff: 1.0 -> 0.25 -> 0.0
+            float decayCurve = countdown * countdown;
+
+            float scaleBonus = (ARRIVAL_SCALE_MAX - 1.0f) * decayCurve;
+            _nodeArrivalScale = new Vector2(1.0f + scaleBonus);
             _nodeArrivalShake = Vector2.Zero;
 
             if (_pulseTimer >= PULSE_DURATION)
@@ -961,12 +964,16 @@ namespace ProjectVagabond.Scenes
             float rotation = 0f;
             if (node.Id == _clickedNodeId && _clickAnimTimer > 0f)
             {
-                float p = 1f - (_clickAnimTimer / CLICK_ANIM_DURATION); // 0 to 1
-                float s = 1f - (MathF.Sin(p * MathHelper.Pi) * 0.25f); // Dip to 0.75
-                scale *= s;
+                // Quadratic Decay from Max Scale to 1.0
+                float t = _clickAnimTimer / CLICK_ANIM_DURATION; // 1 -> 0
+                float decay = t * t; // Sharp dropoff
+
+                // Base 1.0 + Extra
+                float scaleBonus = (CLICK_SCALE_MAX - 1.0f) * decay;
+                scale = new Vector2(1.0f + scaleBonus);
 
                 // Quick shake rotation
-                rotation = MathF.Sin(p * MathHelper.TwoPi) * CLICK_ROTATION_MAGNITUDE;
+                rotation = MathF.Sin(t * MathHelper.TwoPi) * CLICK_ROTATION_MAGNITUDE;
             }
 
             var position = bounds.Center.ToVector2() + node.VisualOffset + shake;
