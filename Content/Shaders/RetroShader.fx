@@ -41,10 +41,12 @@ uniform int PaletteCount;
 // --- Tuning ---
 static const float CURVATURE = 0.25; 
 static const float ZOOM = 1.05;
-static const float BLACK_LEVEL = 0.02; 
+static const float BLACK_LEVEL = 0.01; 
 static const float LCD_GAP_SIZE = 0.04;      // Fraction of each virtual pixel used for the gap (0 = no gap, 0.2 = thick gap)
 static const float LCD_GAP_SOFTNESS = 0.2;  // Edge softness of the gap (lower = sharper grid lines)
 static const float LCD_GAP_DARKNESS = 0.55;  // How dark the gaps are (0 = black, 1 = no effect)
+static const float LCD_VARIANCE_INTENSITY = 0.05;
+static const float LCD_VARIANCE_SPEED = 10;
 
 // Halation Tuning
 static const float HALATION_INTENSITY = 0.35;
@@ -64,7 +66,7 @@ static const float JITTER_SMOOTHNESS_MAX     = 60.0;
 static const float HUM_BAR_SPEED = 0.2;
 static const float HUM_BAR_OPACITY = 0.05;
 static const float NOISE_INTENSITY = 0.025; 
-static const float VIGNETTE_INTENSITY = 1.20;
+static const float VIGNETTE_INTENSITY = 1.40;
 static const float VIGNETTE_ROUNDNESS = 0.25;
 
 // --- Globals ---
@@ -232,6 +234,33 @@ float4 MainPS(PixelShaderInput input) : COLOR
     color += glow * HALATION_INTENSITY;
 #endif
 
+    // --- LCD VARIANCE (RGB) ---
+    // 1. Identify the pixel using staticVirtualPos to lock noise to the screen grid
+    float2 cellIndex = floor(staticVirtualPos);
+    
+    // 2. Generate 3 static random seeds for RGB channels
+    float3 cellSeed = float3(
+        rand(cellIndex),
+        rand(cellIndex + 17.0),
+        rand(cellIndex + 43.0)
+    );
+
+    // 3. Create smooth oscillation over time
+    float t = Time * LCD_VARIANCE_SPEED;
+    float3 phase = cellSeed * 6.283; // 2*PI
+    
+    // Combine two sine waves per channel
+    float3 wave1 = sin(t + phase);
+    float3 wave2 = sin(t * 0.7 + phase * 2.0);
+    
+    // Combine and normalize roughly to -1 to 1
+    float3 smoothNoise = (wave1 + wave2) * 0.5; 
+
+    // 4. Apply intensity to create an RGB multiplier centered at 1.0
+    float3 variance = 1.0 + (smoothNoise * LCD_VARIANCE_INTENSITY);
+    
+    color *= variance;
+
     // --- 6. LCD PIXEL GRID ---
 #ifdef ENABLE_LCD_GRID
     if (EnableLcdGrid > 0.5)
@@ -279,7 +308,10 @@ float4 MainPS(PixelShaderInput input) : COLOR
 
     // --- 10. NOISE ---
 #ifdef ENABLE_NOISE
-    float noise = (rand(uv * Time) - 0.5) * NOISE_INTENSITY;
+    // Upscaled noise: Use the static virtual grid index instead of UV
+    float2 noiseUV = floor(staticVirtualPos);
+    // Animate noise by adding Time to the seed input
+    float noise = (rand(noiseUV * (1.0 + frac(Time))) - 0.5) * NOISE_INTENSITY;
     color += noise * color;
 #endif
 
