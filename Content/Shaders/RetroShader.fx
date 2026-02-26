@@ -34,8 +34,6 @@ uniform int PaletteCount;
 #define ENABLE_LCD_GRID
 #define ENABLE_HUM_BAR      
 #define ENABLE_VIGNETTE
-// #define ENABLE_CHROMATIC_ABERRATION
-#define ENABLE_NOISE
 #define ENABLE_HALATION
 
 // --- Tuning ---
@@ -49,14 +47,12 @@ static const float LCD_VARIANCE_INTENSITY = 0.05;
 static const float LCD_VARIANCE_SPEED = 10;
 
 // Dithering Tuning
-static const float DITHER_SPREAD = 0.05;
+static const float DITHER_SPREAD = 0.05; 
 
 // Halation Tuning
 static const float HALATION_INTENSITY = 0.35;
 static const float HALATION_RADIUS = 7.0;
 
-static const float CHROMATIC_OFFSET_CENTER = 1.0; 
-static const float CHROMATIC_OFFSET_EDGE = 1.5;   
 static const float JITTER_FREQUENCY          = 0.01;  
 static const float JITTER_BAND_COUNT_MIN     = 0.5;   
 static const float JITTER_BAND_COUNT_MAX     = 3.0;
@@ -68,7 +64,6 @@ static const float JITTER_SMOOTHNESS_MIN     = 20.0;
 static const float JITTER_SMOOTHNESS_MAX     = 60.0;
 static const float HUM_BAR_SPEED = 0.2;
 static const float HUM_BAR_OPACITY = 0.05;
-static const float NOISE_INTENSITY = 0.025; 
 static const float VIGNETTE_INTENSITY = 1.40;
 static const float VIGNETTE_ROUNDNESS = 0.25;
 
@@ -89,34 +84,24 @@ float rand(float2 co) {
 }
 
 // Helper: Quantizes colors to the palette with Dithering
-// pixelPos: The coordinate in the Virtual Grid (Game Resolution)
 float4 Tex2DQuantized(sampler s, float2 uv, float2 pixelPos)
 {
     float4 rawColor = tex2D(s, uv);
     
     // --- Dithering Calculation ---
-    // Use modulo to find position in the 4x4 matrix
-    // We use abs() to handle negative coordinates if they occur (though unlikely here)
     int x = (int)abs(pixelPos.x) % 4;
     int y = (int)abs(pixelPos.y) % 4;
     
-    // Get threshold from matrix (0.0 to 1.0) and center it (-0.5 to 0.5)
-    // Access matrix as [row][col] -> [y][x]
     float threshold = Bayer4x4[y][x] - 0.5;
-    
-    // Apply dither offset to the raw color
-    // This pushes the color slightly up or down. If it's on the edge between
-    // two palette colors, this push determines which one wins based on screen position.
     float3 ditheredColor = rawColor.rgb + (threshold * DITHER_SPREAD);
 
     // --- Nearest Neighbor Search ---
-    float3 closest = rawColor.rgb; // Fallback
+    float3 closest = rawColor.rgb;
     float minDist = 1000.0;
 
     for(int i = 0; i < PaletteCount; i++)
     {
         float3 pColor = Palette[i];
-        // Compare palette color against the DITHERED source color
         float3 diff = ditheredColor - pColor;
         float distSq = dot(diff, diff);
         
@@ -149,18 +134,13 @@ float4 MainPS(PixelShaderInput input) : COLOR
     distortedUV *= (1.0 / ZOOM);
     uv = distortedUV + 0.5;
 
-    // Clip pixels outside the curved screen area
     if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0)
         return float4(0.0, 0.0, 0.0, 1.0);
 #endif
     
     // --- 1. COORDINATE MAPPING ---
-    // Convert Screen UV to "Virtual Pixel Coordinates" based on the game's actual scale/offset.
     float2 screenPos = uv * ScreenResolution;
     float2 virtualPos = (screenPos - TargetOffset) / TargetScale;
-
-    // Keep a copy of the un-jittered position for the static LCD grid AND Dithering
-    // Using static pos for dithering ensures the pattern doesn't "swim" during glitches
     float2 staticVirtualPos = virtualPos;
 
     // --- 2. LCD GLITCH / DESYNC ---
@@ -207,10 +187,11 @@ float4 MainPS(PixelShaderInput input) : COLOR
     float2 snappedScreenPos = snappedVirtualPos * TargetScale + TargetOffset;
     float2 snappedUV = snappedScreenPos / ScreenResolution;
 
-    // --- 4. CHROMATIC ABERRATION & QUANTIZATION ---
+    // --- 4. SAMPLING & QUANTIZATION ---
     float3 color;
     float tearNoise = 0.0;
     
+    // Keep the "Tearing" geometry effect for gameplay feedback, but remove color splitting
     if (ImpactGlitchIntensity > 0.0) {
         float highFreq = floor(uv.y * 300.0); 
         float noise = rand(float2(Time * 50.0, highFreq)) - 0.5;
@@ -219,24 +200,9 @@ float4 MainPS(PixelShaderInput input) : COLOR
         }
     }
 
-#ifdef ENABLE_CHROMATIC_ABERRATION
-    float dist = distance(uv, float2(0.5, 0.5));
-    float spread = lerp(CHROMATIC_OFFSET_CENTER, CHROMATIC_OFFSET_EDGE, dist * 2.0);
-    spread += (rand(float2(Time, uv.y)) - 0.5) * 0.2;
-
-    float2 rOffset = float2((spread / ScreenResolution.x) + tearNoise, 0.0);
-    float2 gOffset = float2(tearNoise * 0.5, 0.0); 
-    float2 bOffset = float2((-spread / ScreenResolution.x) - tearNoise, 0.0);
-    
-    // Pass staticVirtualPos to ensure dither pattern aligns with the grid
-    color.r = Tex2DQuantized(s0, snappedUV + rOffset, staticVirtualPos).r;
-    color.g = Tex2DQuantized(s0, snappedUV + gOffset, staticVirtualPos).g;
-    color.b = Tex2DQuantized(s0, snappedUV + bOffset, staticVirtualPos).b;
-#else
-    float2 glitchOffset = float2(tearNoise, 0.0);
-    // Pass staticVirtualPos for stable dithering
-    color = Tex2DQuantized(s0, snappedUV + glitchOffset, staticVirtualPos).rgb;
-#endif
+    // Single sample with Dithering + Tearing Offset
+    // We pass staticVirtualPos to ensure the dither pattern stays locked to the grid
+    color = Tex2DQuantized(s0, snappedUV + float2(tearNoise, 0.0), staticVirtualPos).rgb;
 
     // --- 5. HALATION ---
 #ifdef ENABLE_HALATION
@@ -249,7 +215,7 @@ float4 MainPS(PixelShaderInput input) : COLOR
 
     float3 glow = float3(0.0, 0.0, 0.0);
 
-    // Sample raw texture for smooth glow (no quantization on glow)
+    // Sample raw texture for smooth glow
     glow += tex2D(s0, snappedUV + float2(off.x, 0.0)).rgb;
     glow += tex2D(s0, snappedUV - float2(off.x, 0.0)).rgb;
     glow += tex2D(s0, snappedUV + float2(0.0, off.y)).rgb;
@@ -327,12 +293,6 @@ float4 MainPS(PixelShaderInput input) : COLOR
     color *= lerp(1.0, vig, VIGNETTE_INTENSITY);
 #endif
 
-    // --- 10. NOISE ---
-#ifdef ENABLE_NOISE
-    float2 noiseUV = floor(staticVirtualPos);
-    float noise = (rand(noiseUV * (1.0 + frac(Time))) - 0.5) * NOISE_INTENSITY;
-    color += noise * color;
-#endif
 
     // --- 11. GAMMA & FLASH ---
     color = max(color, 0.0);
