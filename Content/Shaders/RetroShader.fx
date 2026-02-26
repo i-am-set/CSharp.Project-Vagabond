@@ -42,11 +42,14 @@ uniform int PaletteCount;
 static const float CURVATURE = 0.25; 
 static const float ZOOM = 1.05;
 static const float BLACK_LEVEL = 0.01; 
-static const float LCD_GAP_SIZE = 0.04;      // Fraction of each virtual pixel used for the gap (0 = no gap, 0.2 = thick gap)
-static const float LCD_GAP_SOFTNESS = 0.2;  // Edge softness of the gap (lower = sharper grid lines)
-static const float LCD_GAP_DARKNESS = 0.55;  // How dark the gaps are (0 = black, 1 = no effect)
+static const float LCD_GAP_SIZE = 0.04;      
+static const float LCD_GAP_SOFTNESS = 0.2;  
+static const float LCD_GAP_DARKNESS = 0.55;  
 static const float LCD_VARIANCE_INTENSITY = 0.05;
 static const float LCD_VARIANCE_SPEED = 10;
+
+// Dithering Tuning
+static const float DITHER_SPREAD = 0.05; // How much the dither affects color selection
 
 // Halation Tuning
 static const float HALATION_INTENSITY = 0.35;
@@ -54,14 +57,14 @@ static const float HALATION_RADIUS = 7.0;
 
 static const float CHROMATIC_OFFSET_CENTER = 1.0; 
 static const float CHROMATIC_OFFSET_EDGE = 1.5;   
-static const float JITTER_FREQUENCY          = 0.01;  // [0.0 - 1.0]
-static const float JITTER_BAND_COUNT_MIN     = 0.5;   // bands on screen
+static const float JITTER_FREQUENCY          = 0.01;  
+static const float JITTER_BAND_COUNT_MIN     = 0.5;   
 static const float JITTER_BAND_COUNT_MAX     = 3.0;
-static const float JITTER_BAND_SPEED_MIN     = 0.1;   // lower = calmer, not a shake
+static const float JITTER_BAND_SPEED_MIN     = 0.1;   
 static const float JITTER_BAND_SPEED_MAX     = 1.5;
-static const float JITTER_DESYNC_PIXELS_MIN  = 1.0;   // virtual pixels
+static const float JITTER_DESYNC_PIXELS_MIN  = 1.0;   
 static const float JITTER_DESYNC_PIXELS_MAX  = 4.0;
-static const float JITTER_SMOOTHNESS_MIN     = 20.0;  // ramp sharpness
+static const float JITTER_SMOOTHNESS_MIN     = 20.0;  
 static const float JITTER_SMOOTHNESS_MAX     = 60.0;
 static const float HUM_BAR_SPEED = 0.2;
 static const float HUM_BAR_OPACITY = 0.05;
@@ -73,21 +76,48 @@ static const float VIGNETTE_ROUNDNESS = 0.25;
 Texture2D SpriteTexture;
 sampler s0 = sampler_state { Texture = <SpriteTexture>; };
 
+// --- Bayer Matrix 4x4 ---
+static const float4x4 Bayer4x4 = {
+    0.0/16.0,  8.0/16.0,  2.0/16.0, 10.0/16.0,
+    12.0/16.0, 4.0/16.0, 14.0/16.0,  6.0/16.0,
+    3.0/16.0, 11.0/16.0,  1.0/16.0,  9.0/16.0,
+    15.0/16.0, 7.0/16.0, 13.0/16.0,  5.0/16.0
+};
+
 float rand(float2 co) {
     return frac(sin(dot(co.xy, float2(12.9898, 78.233))) * 43758.5453);
 }
 
-// Helper: Quantizes colors to the palette (Retro Console Look)
-float4 Tex2DQuantized(sampler s, float2 uv)
+// Helper: Quantizes colors to the palette with Dithering
+// pixelPos: The coordinate in the Virtual Grid (Game Resolution)
+float4 Tex2DQuantized(sampler s, float2 uv, float2 pixelPos)
 {
     float4 rawColor = tex2D(s, uv);
-    float3 closest = rawColor.rgb;
+    
+    // --- Dithering Calculation ---
+    // Use modulo to find position in the 4x4 matrix
+    // We use abs() to handle negative coordinates if they occur (though unlikely here)
+    int x = (int)abs(pixelPos.x) % 4;
+    int y = (int)abs(pixelPos.y) % 4;
+    
+    // Get threshold from matrix (0.0 to 1.0) and center it (-0.5 to 0.5)
+    // Access matrix as [row][col] -> [y][x]
+    float threshold = Bayer4x4[y][x] - 0.5;
+    
+    // Apply dither offset to the raw color
+    // This pushes the color slightly up or down. If it's on the edge between
+    // two palette colors, this push determines which one wins based on screen position.
+    float3 ditheredColor = rawColor.rgb + (threshold * DITHER_SPREAD);
+
+    // --- Nearest Neighbor Search ---
+    float3 closest = rawColor.rgb; // Fallback
     float minDist = 1000.0;
 
     for(int i = 0; i < PaletteCount; i++)
     {
         float3 pColor = Palette[i];
-        float3 diff = rawColor.rgb - pColor;
+        // Compare palette color against the DITHERED source color
+        float3 diff = ditheredColor - pColor;
         float distSq = dot(diff, diff);
         
         if(distSq < minDist)
@@ -96,6 +126,7 @@ float4 Tex2DQuantized(sampler s, float2 uv)
             closest = pColor;
         }
     }
+    
     return float4(closest, rawColor.a);
 }
 
@@ -125,15 +156,14 @@ float4 MainPS(PixelShaderInput input) : COLOR
     
     // --- 1. COORDINATE MAPPING ---
     // Convert Screen UV to "Virtual Pixel Coordinates" based on the game's actual scale/offset.
-    // This ensures the grid and snapping align with the game pixels, even if the window is stretched.
     float2 screenPos = uv * ScreenResolution;
     float2 virtualPos = (screenPos - TargetOffset) / TargetScale;
 
-    // Keep a copy of the un-jittered position for the static LCD grid
+    // Keep a copy of the un-jittered position for the static LCD grid AND Dithering
+    // Using static pos for dithering ensures the pattern doesn't "swim" during glitches
     float2 staticVirtualPos = virtualPos;
 
     // --- 2. LCD GLITCH / DESYNC ---
-    // Applied to virtualPos.x.
     if (EnableJitter > 0.5)
     {
         float t = Time;
@@ -161,7 +191,6 @@ float4 MainPS(PixelShaderInput input) : COLOR
             float rawIntensity   = (abs(chaos) - chaosThreshold) / (3.0 - chaosThreshold);
             float glitchIntensity = pow(saturate(rawIntensity), 1.0 / max(smoothness, 0.01));
 
-            // Use virtualPos.y for row calculation to match game rows
             float pixelRow = floor(virtualPos.y);
             float band = sign(sin(
                 (pixelRow / VirtualResolution.y) * bandCount * 6.28318
@@ -174,12 +203,11 @@ float4 MainPS(PixelShaderInput input) : COLOR
     }
 
     // --- 3. VIRTUAL PIXEL SNAP ---
-    // Snap to the center of the virtual pixel in "Game Space", then convert back to UV.
     float2 snappedVirtualPos = floor(virtualPos) + 0.5;
     float2 snappedScreenPos = snappedVirtualPos * TargetScale + TargetOffset;
     float2 snappedUV = snappedScreenPos / ScreenResolution;
 
-    // --- 4. CHROMATIC ABERRATION ---
+    // --- 4. CHROMATIC ABERRATION & QUANTIZATION ---
     float3 color;
     float tearNoise = 0.0;
     
@@ -200,15 +228,17 @@ float4 MainPS(PixelShaderInput input) : COLOR
     float2 gOffset = float2(tearNoise * 0.5, 0.0); 
     float2 bOffset = float2((-spread / ScreenResolution.x) - tearNoise, 0.0);
     
-    color.r = Tex2DQuantized(s0, snappedUV + rOffset).r;
-    color.g = Tex2DQuantized(s0, snappedUV + gOffset).g;
-    color.b = Tex2DQuantized(s0, snappedUV + bOffset).b;
+    // Pass staticVirtualPos to ensure dither pattern aligns with the grid
+    color.r = Tex2DQuantized(s0, snappedUV + rOffset, staticVirtualPos).r;
+    color.g = Tex2DQuantized(s0, snappedUV + gOffset, staticVirtualPos).g;
+    color.b = Tex2DQuantized(s0, snappedUV + bOffset, staticVirtualPos).b;
 #else
     float2 glitchOffset = float2(tearNoise, 0.0);
-    color = Tex2DQuantized(s0, snappedUV + glitchOffset).rgb;
+    // Pass staticVirtualPos for stable dithering
+    color = Tex2DQuantized(s0, snappedUV + glitchOffset, staticVirtualPos).rgb;
 #endif
 
-// --- 5. HALATION ---
+    // --- 5. HALATION ---
 #ifdef ENABLE_HALATION
     float dither = rand(uv * 97.0 + Time); 
     float currentRadius = HALATION_RADIUS * (0.7 + 0.6 * dither);
@@ -219,7 +249,7 @@ float4 MainPS(PixelShaderInput input) : COLOR
 
     float3 glow = float3(0.0, 0.0, 0.0);
 
-    // Sample raw texture for smooth glow
+    // Sample raw texture for smooth glow (no quantization on glow)
     glow += tex2D(s0, snappedUV + float2(off.x, 0.0)).rgb;
     glow += tex2D(s0, snappedUV - float2(off.x, 0.0)).rgb;
     glow += tex2D(s0, snappedUV + float2(0.0, off.y)).rgb;
@@ -235,28 +265,21 @@ float4 MainPS(PixelShaderInput input) : COLOR
 #endif
 
     // --- LCD VARIANCE (RGB) ---
-    // 1. Identify the pixel using staticVirtualPos to lock noise to the screen grid
     float2 cellIndex = floor(staticVirtualPos);
     
-    // 2. Generate 3 static random seeds for RGB channels
     float3 cellSeed = float3(
         rand(cellIndex),
         rand(cellIndex + 17.0),
         rand(cellIndex + 43.0)
     );
 
-    // 3. Create smooth oscillation over time
     float t = Time * LCD_VARIANCE_SPEED;
-    float3 phase = cellSeed * 6.283; // 2*PI
+    float3 phase = cellSeed * 6.283; 
     
-    // Combine two sine waves per channel
-    float3 wave1 = sin(t + phase);
-    float3 wave2 = sin(t * 0.7 + phase * 2.0);
+    float3 wave1_lcd = sin(t + phase);
+    float3 wave2_lcd = sin(t * 0.7 + phase * 2.0);
     
-    // Combine and normalize roughly to -1 to 1
-    float3 smoothNoise = (wave1 + wave2) * 0.5; 
-
-    // 4. Apply intensity to create an RGB multiplier centered at 1.0
+    float3 smoothNoise = (wave1_lcd + wave2_lcd) * 0.5; 
     float3 variance = 1.0 + (smoothNoise * LCD_VARIANCE_INTENSITY);
     
     color *= variance;
@@ -265,8 +288,6 @@ float4 MainPS(PixelShaderInput input) : COLOR
 #ifdef ENABLE_LCD_GRID
     if (EnableLcdGrid > 0.5)
     {
-        // Use staticVirtualPos so the grid stays fixed to the screen/content
-        // and doesn't jitter with the glitch effect.
         float2 pixelCell = frac(staticVirtualPos);
 
         float2 edgeMask;
@@ -308,9 +329,7 @@ float4 MainPS(PixelShaderInput input) : COLOR
 
     // --- 10. NOISE ---
 #ifdef ENABLE_NOISE
-    // Upscaled noise: Use the static virtual grid index instead of UV
     float2 noiseUV = floor(staticVirtualPos);
-    // Animate noise by adding Time to the seed input
     float noise = (rand(noiseUV * (1.0 + frac(Time))) - 0.5) * NOISE_INTENSITY;
     color += noise * color;
 #endif
