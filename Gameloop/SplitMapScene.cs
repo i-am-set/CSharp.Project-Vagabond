@@ -51,15 +51,20 @@ namespace ProjectVagabond.Scenes
         private const float POST_EVENT_DELAY = 0.0f;
         private const float PATH_ANIMATION_DURATION = 0.6f;
 
-        // --- STEP MOVEMENT STATE ---
+        // --- AUTO WALK STATE ---
+        private bool _isWalking = false;
         private int _currentMoveStep = 0;
-        private const int TOTAL_MOVE_STEPS = 8;
-        private Vector2 _targetIconPosition;
+        private float _walkStepTimer = 0f;
+
+        private const int TOTAL_MOVE_STEPS = 5; // Reduced from 8 to 5 for punchier movement
+        private const float STEP_DURATION = 0.5f; // Fast steps
+        private const float JUMP_HEIGHT = 8f; // Height of the "big jump" arc
+        private const float STEP_ROTATION = 15f; // Degrees
+
         private int _clickedNodeId = -1;
         private float _clickAnimTimer = 0f;
         private const float CLICK_ANIM_DURATION = 0.2f;
         private const float CLICK_ROTATION_MAGNITUDE = 0.1f;
-        private const float ICON_STEP_SPEED = 20f;
 
         // --- NODE ANIMATION TUNING ---
         private const float NODE_LIFT_DURATION = 0.4f;
@@ -166,6 +171,7 @@ namespace ProjectVagabond.Scenes
         {
             base.Enter();
             _playerIcon.SetIsMoving(false);
+            _playerIcon.Rotation = 0f;
             _waitingForCombatCameraSettle = false;
             _pendingCombatArchetypes = null;
             _nodeTextWaveTimer = 0f;
@@ -176,7 +182,9 @@ namespace ProjectVagabond.Scenes
             _pressedNodeId = -1;
             _hudSlideOffset = 0f;
 
+            _isWalking = false;
             _currentMoveStep = 0;
+            _walkStepTimer = 0f;
             _clickedNodeId = -1;
             _clickAnimTimer = 0f;
             _playerMoveTargetNodeId = -1;
@@ -210,7 +218,6 @@ namespace ProjectVagabond.Scenes
                 if (startNode != null)
                 {
                     _playerIcon.SetPosition(startNode.Position);
-                    _targetIconPosition = startNode.Position;
                     UpdateCameraTarget(startNode.Position, true);
                     UpdateReachableNodes();
                     StartPathRevealAnimation();
@@ -226,7 +233,6 @@ namespace ProjectVagabond.Scenes
                 {
                     currentNode.IsCompleted = true;
                     _playerIcon.SetPosition(currentNode.Position);
-                    _targetIconPosition = currentNode.Position;
                     UpdateCameraTarget(currentNode.Position, false);
                 }
                 _mapState = SplitMapState.LoweringNode;
@@ -381,32 +387,63 @@ namespace ProjectVagabond.Scenes
                 if (_clickAnimTimer < 0f) _clickAnimTimer = 0f;
             }
 
-            // Handle Icon Movement (Steps 1-8)
-            if (_playerMovePath != null)
+            // --- AUTO WALK LOGIC ---
+            if (_isWalking && _playerMovePath != null)
             {
-                Vector2 currentPos = _playerIcon.Position;
-                // Fast snap lerp
-                Vector2 newPos = Vector2.Lerp(currentPos, _targetIconPosition, 1.0f - MathF.Exp(-ICON_STEP_SPEED * deltaTime));
+                _playerIcon.SetIsMoving(true);
+                _walkStepTimer += deltaTime;
 
-                if (Vector2.Distance(newPos, _targetIconPosition) < 1f)
+                float stepProgress = Math.Clamp(_walkStepTimer / STEP_DURATION, 0f, 1f);
+
+                // Calculate Global Progress for path interpolation
+                float startRatio = (float)_currentMoveStep / TOTAL_MOVE_STEPS;
+                float endRatio = (float)(_currentMoveStep + 1) / TOTAL_MOVE_STEPS;
+
+                // Use EaseOut for "Start fast, end slow" movement within the step
+                float moveT = Easing.EaseOutCubic(stepProgress);
+                float globalT = MathHelper.Lerp(startRatio, endRatio, moveT);
+
+                Vector2 pathPos = GetPointOnPath(globalT);
+
+                // Add Jump Arc (Sine wave)
+                float jumpY = MathF.Sin(stepProgress * MathHelper.Pi) * -JUMP_HEIGHT;
+                _playerIcon.SetPosition(pathPos + new Vector2(0, jumpY));
+
+                // Add Rotation (Waddle)
+                // Alternate direction based on step index (Even = Left, Odd = Right)
+                float rotationDir = (_currentMoveStep % 2 == 0) ? -1f : 1f;
+                float targetRotation = MathHelper.ToRadians(STEP_ROTATION) * rotationDir;
+
+                // Lerp rotation: Start at 0, tilt at peak, return to 0?
+                // Or just tilt and snap? "Alternating left and right with each step" implies a waddle.
+                // Let's use a Sine wave for smooth waddle tilt.
+                _playerIcon.Rotation = MathF.Sin(stepProgress * MathHelper.Pi) * targetRotation;
+
+                if (_walkStepTimer >= STEP_DURATION)
                 {
-                    newPos = _targetIconPosition;
-                    _playerIcon.SetIsMoving(false);
+                    // Step Complete (Landing)
+                    _walkStepTimer = 0f;
+                    _currentMoveStep++;
 
-                    // Check for arrival at destination (Step 8 complete)
-                    if (_currentMoveStep >= TOTAL_MOVE_STEPS && _mapState == SplitMapState.Idle)
+                    // Trigger Haptic on landing
+                    _hapticsManager.TriggerShake(1.5f, 0.1f);
+
+                    if (_currentMoveStep >= TOTAL_MOVE_STEPS)
                     {
+                        // Arrival
+                        _isWalking = false;
+                        _playerIcon.Rotation = 0f;
+                        _playerIcon.SetIsMoving(false);
                         FinalizeArrival();
                     }
                 }
-                else
-                {
-                    _playerIcon.SetIsMoving(true);
-                }
-                _playerIcon.SetPosition(newPos);
             }
 
-            HandleMapInput(gameTime);
+            // Only process input if NOT auto-walking
+            if (!_isWalking)
+            {
+                HandleMapInput(gameTime);
+            }
 
             switch (_mapState)
             {
@@ -494,34 +531,26 @@ namespace ProjectVagabond.Scenes
 
         private void HandleNodeClick(int targetNodeId)
         {
-            // If switching targets, reset
-            if (_playerMoveTargetNodeId != targetNodeId)
+            // Reset for new movement
+            _playerMoveTargetNodeId = targetNodeId;
+            _currentMoveStep = 0;
+            _walkStepTimer = 0f;
+            _isWalking = true;
+
+            // Find path
+            _playerMovePath = _currentMap?.Paths.Values.FirstOrDefault(p => p.FromNodeId == _playerCurrentNodeId && p.ToNodeId == targetNodeId);
+
+            // Calculate total length for interpolation
+            if (_playerMovePath != null)
             {
-                _playerMoveTargetNodeId = targetNodeId;
-                _currentMoveStep = 0;
-
-                // Find path
-                _playerMovePath = _currentMap?.Paths.Values.FirstOrDefault(p => p.FromNodeId == _playerCurrentNodeId && p.ToNodeId == targetNodeId);
-
-                // Calculate total length for interpolation
-                if (_playerMovePath != null)
+                _playerPathTotalLength = 0f;
+                if (_playerMovePath.RenderPoints.Count > 1)
                 {
-                    _playerPathTotalLength = 0f;
-                    if (_playerMovePath.RenderPoints.Count > 1)
+                    for (int i = 0; i < _playerMovePath.RenderPoints.Count - 1; i++)
                     {
-                        for (int i = 0; i < _playerMovePath.RenderPoints.Count - 1; i++)
-                        {
-                            _playerPathTotalLength += Vector2.Distance(_playerMovePath.RenderPoints[i], _playerMovePath.RenderPoints[i + 1]);
-                        }
+                        _playerPathTotalLength += Vector2.Distance(_playerMovePath.RenderPoints[i], _playerMovePath.RenderPoints[i + 1]);
                     }
                 }
-            }
-
-            if (_currentMoveStep < TOTAL_MOVE_STEPS)
-            {
-                _currentMoveStep++;
-                float progress = (float)_currentMoveStep / TOTAL_MOVE_STEPS;
-                _targetIconPosition = GetPointOnPath(progress);
             }
         }
 

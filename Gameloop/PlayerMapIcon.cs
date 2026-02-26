@@ -30,6 +30,7 @@ namespace ProjectVagabond.UI
         private int _frameIndex;
 
         public Vector2 Position { get; private set; }
+        public float Rotation { get; set; } = 0f;
 
         public PlayerMapIcon()
         {
@@ -91,13 +92,13 @@ namespace ProjectVagabond.UI
 
             if (_silhouette != null)
             {
-                spriteBatch.DrawSnapped(_silhouette, Position + new Vector2(-1, 0), sourceRectangle, outlineColor, 0f, _origin, 1.0f, SpriteEffects.None, 0.5f);
-                spriteBatch.DrawSnapped(_silhouette, Position + new Vector2(1, 0), sourceRectangle, outlineColor, 0f, _origin, 1.0f, SpriteEffects.None, 0.5f);
-                spriteBatch.DrawSnapped(_silhouette, Position + new Vector2(0, -1), sourceRectangle, outlineColor, 0f, _origin, 1.0f, SpriteEffects.None, 0.5f);
-                spriteBatch.DrawSnapped(_silhouette, Position + new Vector2(0, 1), sourceRectangle, outlineColor, 0f, _origin, 1.0f, SpriteEffects.None, 0.5f);
+                spriteBatch.DrawSnapped(_silhouette, Position + new Vector2(-1, 0), sourceRectangle, outlineColor, Rotation, _origin, 1.0f, SpriteEffects.None, 0.5f);
+                spriteBatch.DrawSnapped(_silhouette, Position + new Vector2(1, 0), sourceRectangle, outlineColor, Rotation, _origin, 1.0f, SpriteEffects.None, 0.5f);
+                spriteBatch.DrawSnapped(_silhouette, Position + new Vector2(0, -1), sourceRectangle, outlineColor, Rotation, _origin, 1.0f, SpriteEffects.None, 0.5f);
+                spriteBatch.DrawSnapped(_silhouette, Position + new Vector2(0, 1), sourceRectangle, outlineColor, Rotation, _origin, 1.0f, SpriteEffects.None, 0.5f);
             }
 
-            spriteBatch.DrawSnapped(_texture, Position, sourceRectangle, Color.White, 0f, _origin, 1.0f, SpriteEffects.None, 0.5f);
+            spriteBatch.DrawSnapped(_texture, Position, sourceRectangle, Color.White, Rotation, _origin, 1.0f, SpriteEffects.None, 0.5f);
         }
     }
 }
