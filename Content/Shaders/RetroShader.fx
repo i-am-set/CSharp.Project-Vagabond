@@ -51,6 +51,9 @@ static const float DITHER_SPREAD = 0.025;
 
 static const float HALATION_INTENSITY = 0.35;
 static const float HALATION_RADIUS = 7.0;
+// Tuning for Smooth Breathing
+static const float HALATION_BREATH_SPEED = 2.5; 
+static const float HALATION_BREATH_AMOUNT = 1.5; 
 
 static const float JITTER_FREQUENCY          = 0.01;  
 static const float JITTER_BAND_COUNT_MIN     = 0.5;   
@@ -77,6 +80,7 @@ static const float4x4 Bayer4x4 = {
     15.0/16.0, 7.0/16.0, 13.0/16.0,  5.0/16.0
 };
 
+// Optimized Random
 float rand(float2 co) {
     return frac(sin(dot(co.xy, float2(12.9898, 78.233))) * 43758.5453);
 }
@@ -89,14 +93,12 @@ float4 Tex2DQuantized(sampler s, float2 uv, float2 pixelPos)
     int x = (int)fmod(abs(pixelPos.x), 4.0);
     int y = (int)fmod(abs(pixelPos.y), 4.0);
     
-    // Access matrix as [row][col] -> [y][x]
     float threshold = Bayer4x4[y][x] - 0.5;
     float3 ditheredColor = rawColor.rgb + (threshold * DITHER_SPREAD);
 
     float3 closest = rawColor.rgb;
     float minDist = 1000.0;
 
-    // Loop unrolling hint
     [unroll]
     for(int i = 0; i < 16; i++)
     {
@@ -135,7 +137,6 @@ float4 MainPS(PixelShaderInput input) : COLOR
     distortedUV *= (1.0 / ZOOM);
     uv = distortedUV + 0.5;
 
-    // Fast clip
     if (abs(centeredUV.x) > 0.5 || abs(centeredUV.y) > 0.5)
         return float4(0.0, 0.0, 0.0, 1.0);
 #endif
@@ -199,33 +200,42 @@ float4 MainPS(PixelShaderInput input) : COLOR
 
     float3 color = Tex2DQuantized(s0, snappedUV + float2(tearNoise, 0.0), staticVirtualPos).rgb;
 
-    // --- 5. HALATION ---
+    // --- 5. HALATION (FULL COVERAGE + BREATHING) ---
 #ifdef ENABLE_HALATION
-    float dither = rand(uv * 97.0 + Time); 
-    float currentRadius = HALATION_RADIUS * (0.7 + 0.6 * dither);
+    // Smooth sine wave breathing
+    float breath = sin(Time * HALATION_BREATH_SPEED);
     
+    // Modulate Radius & Intensity
+    float currentRadius = HALATION_RADIUS + (breath * HALATION_BREATH_AMOUNT);
+    float currentIntensity = HALATION_INTENSITY + (breath * 0.05);
+
     float2 pixelSize = 1.0 / ScreenResolution;
-    float2 off = pixelSize * currentRadius;
-    float2 offDiag = off * 0.707; 
+    
+    // Calculate Axis and Diagonal offsets
+    float2 offAxis = pixelSize * currentRadius;
+    float2 offDiag = offAxis * 0.707; 
 
     float3 glow = float3(0.0, 0.0, 0.0);
 
-    // Sample raw texture for smooth glow
-    glow += tex2D(s0, snappedUV + float2(off.x, 0.0)).rgb;
-    glow += tex2D(s0, snappedUV - float2(off.x, 0.0)).rgb;
-    glow += tex2D(s0, snappedUV + float2(0.0, off.y)).rgb;
-    glow += tex2D(s0, snappedUV - float2(0.0, off.y)).rgb;
-
+    // 8-Tap Kernel for Full Coverage
+    
+    // Diagonals (X)
     glow += tex2D(s0, snappedUV + float2(offDiag.x, offDiag.y)).rgb;
     glow += tex2D(s0, snappedUV + float2(-offDiag.x, offDiag.y)).rgb;
     glow += tex2D(s0, snappedUV + float2(offDiag.x, -offDiag.y)).rgb;
     glow += tex2D(s0, snappedUV + float2(-offDiag.x, -offDiag.y)).rgb;
 
-    glow *= 0.125; 
-    color += glow * HALATION_INTENSITY;
+    // Axis (+)
+    glow += tex2D(s0, snappedUV + float2(offAxis.x, 0.0)).rgb;
+    glow += tex2D(s0, snappedUV + float2(-offAxis.x, 0.0)).rgb;
+    glow += tex2D(s0, snappedUV + float2(0.0, offAxis.y)).rgb;
+    glow += tex2D(s0, snappedUV + float2(0.0, -offAxis.y)).rgb;
+
+    glow *= 0.125; // Average of 8 samples
+    color += glow * currentIntensity;
 #endif
 
-    // --- LCD VARIANCE ---
+    // --- LCD VARIANCE (OPTIMIZED) ---
     float2 cellIndex = floor(staticVirtualPos);
     float baseSeed = rand(cellIndex);
     
@@ -271,14 +281,11 @@ float4 MainPS(PixelShaderInput input) : COLOR
     float min_c = min(color.r, min(color.g, color.b));
     color = lerp(float3(lumaVal, lumaVal, lumaVal), color, 1.0 + (Vibrance * (1.0 - (max_c - min_c))));
 
-    // --- 9. VIGNETTE ---
+    // --- 9. VIGNETTE (OPTIMIZED) ---
 #ifdef ENABLE_VIGNETTE
     float2 vUV = uv * (1.0 - uv.yx);
     float vig = vUV.x * vUV.y * 15.0;
-    
-    // sqrt(sqrt(x)) optimization
     vig = sqrt(sqrt(vig));
-    
     color *= lerp(1.0, vig, VIGNETTE_INTENSITY);
 #endif
 
