@@ -49,7 +49,7 @@ static const float LCD_VARIANCE_INTENSITY = 0.05;
 static const float LCD_VARIANCE_SPEED = 10;
 
 // Dithering Tuning
-static const float DITHER_SPREAD = 0.05; // How much the dither affects color selection
+static const float DITHER_SPREAD = 0.05;
 
 // Halation Tuning
 static const float HALATION_INTENSITY = 0.35;
