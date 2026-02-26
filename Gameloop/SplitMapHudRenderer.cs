@@ -853,12 +853,18 @@ namespace ProjectVagabond.UI
             float floatY = MathF.Cos(time * 0.1f + seed) * 1.5f;
             float rotation = MathF.Sin(time * 0.2f + seed) * 0.02f;
 
+            Vector2 origin = new Vector2(16, 16);
+
+            // Draw Body
+            PlayerSpriteType bodyType = sineValue < 0 ? PlayerSpriteType.BodyAlt : PlayerSpriteType.BodyNormal;
+            var bodySourceRect = _spriteManager.GetPlayerSourceRect(member.PortraitIndex, bodyType);
+            Vector2 bodyPos = new Vector2(centerX, y + 16) + new Vector2(floatX, floatY);
+            spriteBatch.DrawSnapped(_spriteManager.PlayerMasterSpriteSheet, bodyPos, bodySourceRect, Color.White, rotation, origin, 1.0f, SpriteEffects.None, 0f);
+
+            // Draw Head
             PlayerSpriteType type = sineValue < 0 ? PlayerSpriteType.Alt : PlayerSpriteType.Normal;
             var sourceRect = _spriteManager.GetPlayerSourceRect(member.PortraitIndex, type);
-
-            Vector2 origin = new Vector2(16, 16);
             Vector2 pos = new Vector2(centerX, y + 16) + new Vector2(floatX, bobOffset + floatY);
-
             spriteBatch.DrawSnapped(_spriteManager.PlayerMasterSpriteSheet, pos, sourceRect, Color.White, rotation, origin, 1.0f, SpriteEffects.None, 0f);
 
             y += 32 + 4;

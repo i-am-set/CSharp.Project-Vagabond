@@ -19,7 +19,9 @@ namespace ProjectVagabond
         Portrait8x8 = 1,
         Normal = 2,
         Alt = 3,
-        Sleep = 4
+        BodyNormal = 4,
+        BodyAlt = 5,
+        Sleep = 6
     }
     public class SpriteManager
     {

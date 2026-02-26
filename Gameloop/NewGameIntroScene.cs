@@ -882,19 +882,40 @@ namespace ProjectVagabond.Scenes
                 else spriteType = PlayerSpriteType.Normal;
 
                 float curveY = MathF.Pow(Math.Abs(visualOffset), 1.5f) * 2.0f;
-                float yPos = centerY - curveY;
+                float baseYPos = centerY - curveY;
+                float headYPos = baseYPos;
 
                 if (isCenter)
                 {
                     float bob = MathF.Sin(_idleTimer * 4f);
-                    yPos += (bob > 0 ? -1f : 0f);
+                    headYPos += (bob > 0 ? -1f : 0f);
                     if (bob > 0) spriteType = PlayerSpriteType.Alt;
                 }
 
-                var sourceRect = _spriteManager.GetPlayerSourceRect(spriteIndex, spriteType);
-                Vector2 position = new Vector2(MathF.Round(xPos), MathF.Round(yPos));
                 Vector2 origin = new Vector2(16, 16);
 
+                // Draw Body (if it's a normal sprite, meaning offset < 1)
+                if (Math.Abs(offset) < 1)
+                {
+                    PlayerSpriteType bodyType = (spriteType == PlayerSpriteType.Alt) ? PlayerSpriteType.BodyAlt : PlayerSpriteType.BodyNormal;
+                    var bodySourceRect = _spriteManager.GetPlayerSourceRect(spriteIndex, bodyType);
+                    Vector2 bodyPosition = new Vector2(MathF.Round(xPos), MathF.Round(baseYPos));
+                    spriteBatch.Draw(
+                        sheet,
+                        bodyPosition,
+                        bodySourceRect,
+                        Color.White * finalOpacity,
+                        0f,
+                        origin,
+                        1.0f,
+                        SpriteEffects.None,
+                        0f
+                    );
+                }
+
+                // Draw Head
+                var sourceRect = _spriteManager.GetPlayerSourceRect(spriteIndex, spriteType);
+                Vector2 position = new Vector2(MathF.Round(xPos), MathF.Round(headYPos));
                 spriteBatch.Draw(
                     sheet,
                     position,
