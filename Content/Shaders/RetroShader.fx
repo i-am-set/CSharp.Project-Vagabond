@@ -19,13 +19,14 @@ uniform float Saturation;
 uniform float Vibrance;
 
 // Toggles passed from Core
-uniform float EnableJitter; // 1.0 = On, 0.0 = Off
-uniform float EnableLcdGrid; // 1.0 = On, 0.0 = Off
+uniform float EnableJitter; 
+uniform float EnableLcdGrid; 
 
 // Layout Uniforms
-uniform float TargetScale;      // The integer scale factor of the game content
-uniform float2 TargetOffset;    // The screen-space offset (top-left) of the game content
+uniform float TargetScale;      
+uniform float2 TargetOffset;    
 
+// Palette (Max 16 for loop unrolling)
 uniform float3 Palette[16];
 uniform int PaletteCount;
 
@@ -46,10 +47,8 @@ static const float LCD_GAP_DARKNESS = 0.55;
 static const float LCD_VARIANCE_INTENSITY = 0.05;
 static const float LCD_VARIANCE_SPEED = 10;
 
-// Dithering Tuning
-static const float DITHER_SPREAD = 0.05; 
+static const float DITHER_SPREAD = 0.025; 
 
-// Halation Tuning
 static const float HALATION_INTENSITY = 0.35;
 static const float HALATION_RADIUS = 7.0;
 
@@ -65,7 +64,6 @@ static const float JITTER_SMOOTHNESS_MAX     = 60.0;
 static const float HUM_BAR_SPEED = 0.2;
 static const float HUM_BAR_OPACITY = 0.05;
 static const float VIGNETTE_INTENSITY = 1.40;
-static const float VIGNETTE_ROUNDNESS = 0.25;
 
 // --- Globals ---
 Texture2D SpriteTexture;
@@ -88,19 +86,22 @@ float4 Tex2DQuantized(sampler s, float2 uv, float2 pixelPos)
 {
     float4 rawColor = tex2D(s, uv);
     
-    // --- Dithering Calculation ---
-    int x = (int)abs(pixelPos.x) % 4;
-    int y = (int)abs(pixelPos.y) % 4;
+    int x = (int)fmod(abs(pixelPos.x), 4.0);
+    int y = (int)fmod(abs(pixelPos.y), 4.0);
     
+    // Access matrix as [row][col] -> [y][x]
     float threshold = Bayer4x4[y][x] - 0.5;
     float3 ditheredColor = rawColor.rgb + (threshold * DITHER_SPREAD);
 
-    // --- Nearest Neighbor Search ---
     float3 closest = rawColor.rgb;
     float minDist = 1000.0;
 
-    for(int i = 0; i < PaletteCount; i++)
+    // Loop unrolling hint
+    [unroll]
+    for(int i = 0; i < 16; i++)
     {
+        if (i >= PaletteCount) break;
+
         float3 pColor = Palette[i];
         float3 diff = ditheredColor - pColor;
         float distSq = dot(diff, diff);
@@ -134,7 +135,8 @@ float4 MainPS(PixelShaderInput input) : COLOR
     distortedUV *= (1.0 / ZOOM);
     uv = distortedUV + 0.5;
 
-    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0)
+    // Fast clip
+    if (abs(centeredUV.x) > 0.5 || abs(centeredUV.y) > 0.5)
         return float4(0.0, 0.0, 0.0, 1.0);
 #endif
     
@@ -147,29 +149,27 @@ float4 MainPS(PixelShaderInput input) : COLOR
     if (EnableJitter > 0.5)
     {
         float t = Time;
-        float wave1 = sin(t * 0.5);
-        float wave2 = sin(t * 1.7);
-        float wave3 = sin(t * 2.9);
-        float chaos = wave1 + wave2 + wave3; 
-
+        float chaos = sin(t * 0.5) + sin(t * 1.7) + sin(t * 2.9); 
         float chaosThreshold = lerp(2.95, 1.2, JITTER_FREQUENCY);
 
         if (abs(chaos) > chaosThreshold) {
             float eventSeed = floor(t * 0.4);
-            float r0 = rand(float2(eventSeed, 0.0));
-            float r1 = rand(float2(eventSeed, 1.0));
-            float r2 = rand(float2(eventSeed, 2.0));
-            float r3 = rand(float2(eventSeed, 3.0));
+            float3 r = float3(
+                rand(float2(eventSeed, 0.0)),
+                rand(float2(eventSeed, 1.0)),
+                rand(float2(eventSeed, 2.0))
+            );
 
-            float bandSteps = round(r0 * (JITTER_BAND_COUNT_MAX - JITTER_BAND_COUNT_MIN) / 0.5);
+            float bandSteps = floor((r.x * (JITTER_BAND_COUNT_MAX - JITTER_BAND_COUNT_MIN) / 0.5) + 0.5);
             float bandCount = JITTER_BAND_COUNT_MIN + bandSteps * 0.5;
 
-            float bandSpeed   = lerp(JITTER_BAND_SPEED_MIN,    JITTER_BAND_SPEED_MAX,    r1);
-            float desyncPx    = lerp(JITTER_DESYNC_PIXELS_MIN,  JITTER_DESYNC_PIXELS_MAX,  r2);
-            float smoothness  = lerp(JITTER_SMOOTHNESS_MIN,     JITTER_SMOOTHNESS_MAX,     r3);
+            float bandSpeed   = lerp(JITTER_BAND_SPEED_MIN,    JITTER_BAND_SPEED_MAX,    r.y);
+            float desyncPx    = lerp(JITTER_DESYNC_PIXELS_MIN,  JITTER_DESYNC_PIXELS_MAX,  r.z);
+            
+            float smoothness = 40.0; 
 
             float rawIntensity   = (abs(chaos) - chaosThreshold) / (3.0 - chaosThreshold);
-            float glitchIntensity = pow(saturate(rawIntensity), 1.0 / max(smoothness, 0.01));
+            float glitchIntensity = pow(saturate(rawIntensity), 1.0 / smoothness);
 
             float pixelRow = floor(virtualPos.y);
             float band = sign(sin(
@@ -177,8 +177,7 @@ float4 MainPS(PixelShaderInput input) : COLOR
                 + Time * bandSpeed
             ));
 
-            float shiftPixels = round(band * desyncPx * glitchIntensity);
-            virtualPos.x += shiftPixels;
+            virtualPos.x += floor((band * desyncPx * glitchIntensity) + 0.5);
         }
     }
 
@@ -188,10 +187,8 @@ float4 MainPS(PixelShaderInput input) : COLOR
     float2 snappedUV = snappedScreenPos / ScreenResolution;
 
     // --- 4. SAMPLING & QUANTIZATION ---
-    float3 color;
     float tearNoise = 0.0;
     
-    // Keep the "Tearing" geometry effect for gameplay feedback, but remove color splitting
     if (ImpactGlitchIntensity > 0.0) {
         float highFreq = floor(uv.y * 300.0); 
         float noise = rand(float2(Time * 50.0, highFreq)) - 0.5;
@@ -200,9 +197,7 @@ float4 MainPS(PixelShaderInput input) : COLOR
         }
     }
 
-    // Single sample with Dithering + Tearing Offset
-    // We pass staticVirtualPos to ensure the dither pattern stays locked to the grid
-    color = Tex2DQuantized(s0, snappedUV + float2(tearNoise, 0.0), staticVirtualPos).rgb;
+    float3 color = Tex2DQuantized(s0, snappedUV + float2(tearNoise, 0.0), staticVirtualPos).rgb;
 
     // --- 5. HALATION ---
 #ifdef ENABLE_HALATION
@@ -230,22 +225,16 @@ float4 MainPS(PixelShaderInput input) : COLOR
     color += glow * HALATION_INTENSITY;
 #endif
 
-    // --- LCD VARIANCE (RGB) ---
+    // --- LCD VARIANCE ---
     float2 cellIndex = floor(staticVirtualPos);
+    float baseSeed = rand(cellIndex);
     
-    float3 cellSeed = float3(
-        rand(cellIndex),
-        rand(cellIndex + 17.0),
-        rand(cellIndex + 43.0)
-    );
+    float3 cellSeed = float3(baseSeed, baseSeed + 0.33, baseSeed + 0.66);
 
     float t = Time * LCD_VARIANCE_SPEED;
     float3 phase = cellSeed * 6.283; 
     
-    float3 wave1_lcd = sin(t + phase);
-    float3 wave2_lcd = sin(t * 0.7 + phase * 2.0);
-    
-    float3 smoothNoise = (wave1_lcd + wave2_lcd) * 0.5; 
+    float3 smoothNoise = sin(t + phase); 
     float3 variance = 1.0 + (smoothNoise * LCD_VARIANCE_INTENSITY);
     
     color *= variance;
@@ -256,23 +245,20 @@ float4 MainPS(PixelShaderInput input) : COLOR
     {
         float2 pixelCell = frac(staticVirtualPos);
 
-        float2 edgeMask;
-        edgeMask.x = smoothstep(0.0, LCD_GAP_SIZE + LCD_GAP_SOFTNESS, pixelCell.x) *
-                     smoothstep(1.0, 1.0 - (LCD_GAP_SIZE + LCD_GAP_SOFTNESS), pixelCell.x);
-        edgeMask.y = smoothstep(0.0, LCD_GAP_SIZE + LCD_GAP_SOFTNESS, pixelCell.y) *
-                     smoothstep(1.0, 1.0 - (LCD_GAP_SIZE + LCD_GAP_SOFTNESS), pixelCell.y);
+        float low = LCD_GAP_SIZE + LCD_GAP_SOFTNESS;
+        float high = 1.0 - low;
 
+        float2 edgeMask = smoothstep(0.0, low, pixelCell) * smoothstep(1.0, high, pixelCell);
         float gridMask = edgeMask.x * edgeMask.y;
-        float gridMultiplier = lerp(LCD_GAP_DARKNESS, 1.0, gridMask);
-        color *= gridMultiplier;
+        
+        color *= lerp(LCD_GAP_DARKNESS, 1.0, gridMask);
     }
 #endif
 
     // --- 7. HUM BAR ---
 #ifdef ENABLE_HUM_BAR
     float humWave = sin((uv.y * 2.0) + (Time * HUM_BAR_SPEED));
-    float humFactor = 1.0 - (((humWave + 1.0) / 2.0) * HUM_BAR_OPACITY);
-    color *= humFactor;
+    color *= (1.0 - (((humWave + 1.0) * 0.5) * HUM_BAR_OPACITY));
 #endif
 
     // --- 8. COLOR GRADING ---
@@ -289,10 +275,12 @@ float4 MainPS(PixelShaderInput input) : COLOR
 #ifdef ENABLE_VIGNETTE
     float2 vUV = uv * (1.0 - uv.yx);
     float vig = vUV.x * vUV.y * 15.0;
-    vig = pow(vig, VIGNETTE_ROUNDNESS);
+    
+    // sqrt(sqrt(x)) optimization
+    vig = sqrt(sqrt(vig));
+    
     color *= lerp(1.0, vig, VIGNETTE_INTENSITY);
 #endif
-
 
     // --- 11. GAMMA & FLASH ---
     color = max(color, 0.0);
