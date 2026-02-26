@@ -438,7 +438,7 @@ namespace ProjectVagabond.Scenes
                     _currentMoveStep++;
 
                     // Trigger Haptic on landing
-                    _hapticsManager.TriggerShake(1.5f, 0.1f);
+                    _hapticsManager.TriggerHop(1.5f, 0.1f);
 
                     if (_currentMoveStep >= TOTAL_MOVE_STEPS)
                     {
