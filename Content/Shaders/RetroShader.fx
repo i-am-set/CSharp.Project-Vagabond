@@ -15,8 +15,10 @@ uniform float Gamma;
 uniform float3 FlashColor;
 uniform float FlashIntensity;
 uniform float ImpactGlitchIntensity;
-uniform float Saturation;
-uniform float Vibrance;
+
+// --- Color Grading Uniforms ---
+uniform float Saturation; // 1.0 is neutral
+uniform float Vibrance;   // 0.0 is neutral
 
 // Toggles passed from Core
 uniform float EnableJitter; 
@@ -44,14 +46,13 @@ static const float BLACK_LEVEL = 0.01;
 static const float LCD_GAP_SIZE = 0.04;      
 static const float LCD_GAP_SOFTNESS = 0.2;  
 static const float LCD_GAP_DARKNESS = 0.55;  
-static const float LCD_VARIANCE_INTENSITY = 0.05;
+static const float LCD_VARIANCE_INTENSITY = 0.025;
 static const float LCD_VARIANCE_SPEED = 10;
 
 static const float DITHER_SPREAD = 0.025; 
 
 static const float HALATION_INTENSITY = 0.35;
 static const float HALATION_RADIUS = 7.0;
-// Tuning for Smooth Breathing
 static const float HALATION_BREATH_SPEED = 2.5; 
 static const float HALATION_BREATH_AMOUNT = 1.5; 
 
@@ -67,6 +68,12 @@ static const float JITTER_SMOOTHNESS_MAX     = 60.0;
 static const float HUM_BAR_SPEED = 0.2;
 static const float HUM_BAR_OPACITY = 0.05;
 static const float VIGNETTE_INTENSITY = 1.40;
+
+// --- Color Tuning Defaults ---
+// These are applied ON TOP of the Uniforms.
+// Use these to set a "Base" look if Uniforms are left at default.
+static const float TUNING_SATURATION_BASE = 1.15; 
+static const float TUNING_VIBRANCE_BASE = 0.15;   
 
 // --- Globals ---
 Texture2D SpriteTexture;
@@ -202,51 +209,39 @@ float4 MainPS(PixelShaderInput input) : COLOR
 
     // --- 5. HALATION (FULL COVERAGE + BREATHING) ---
 #ifdef ENABLE_HALATION
-    // Smooth sine wave breathing
     float breath = sin(Time * HALATION_BREATH_SPEED);
-    
-    // Modulate Radius & Intensity
     float currentRadius = HALATION_RADIUS + (breath * HALATION_BREATH_AMOUNT);
     float currentIntensity = HALATION_INTENSITY + (breath * 0.05);
 
     float2 pixelSize = 1.0 / ScreenResolution;
-    
-    // Calculate Axis and Diagonal offsets
     float2 offAxis = pixelSize * currentRadius;
     float2 offDiag = offAxis * 0.707; 
 
     float3 glow = float3(0.0, 0.0, 0.0);
 
-    // 8-Tap Kernel for Full Coverage
-    
-    // Diagonals (X)
     glow += tex2D(s0, snappedUV + float2(offDiag.x, offDiag.y)).rgb;
     glow += tex2D(s0, snappedUV + float2(-offDiag.x, offDiag.y)).rgb;
     glow += tex2D(s0, snappedUV + float2(offDiag.x, -offDiag.y)).rgb;
     glow += tex2D(s0, snappedUV + float2(-offDiag.x, -offDiag.y)).rgb;
 
-    // Axis (+)
     glow += tex2D(s0, snappedUV + float2(offAxis.x, 0.0)).rgb;
     glow += tex2D(s0, snappedUV + float2(-offAxis.x, 0.0)).rgb;
     glow += tex2D(s0, snappedUV + float2(0.0, offAxis.y)).rgb;
     glow += tex2D(s0, snappedUV + float2(0.0, -offAxis.y)).rgb;
 
-    glow *= 0.125; // Average of 8 samples
+    glow *= 0.125; 
     color += glow * currentIntensity;
 #endif
 
-    // --- LCD VARIANCE (OPTIMIZED) ---
+    // --- LCD VARIANCE ---
     float2 cellIndex = floor(staticVirtualPos);
     float baseSeed = rand(cellIndex);
-    
     float3 cellSeed = float3(baseSeed, baseSeed + 0.33, baseSeed + 0.66);
 
     float t = Time * LCD_VARIANCE_SPEED;
     float3 phase = cellSeed * 6.283; 
-    
     float3 smoothNoise = sin(t + phase); 
     float3 variance = 1.0 + (smoothNoise * LCD_VARIANCE_INTENSITY);
-    
     color *= variance;
 
     // --- 6. LCD PIXEL GRID ---
@@ -254,13 +249,10 @@ float4 MainPS(PixelShaderInput input) : COLOR
     if (EnableLcdGrid > 0.5)
     {
         float2 pixelCell = frac(staticVirtualPos);
-
         float low = LCD_GAP_SIZE + LCD_GAP_SOFTNESS;
         float high = 1.0 - low;
-
         float2 edgeMask = smoothstep(0.0, low, pixelCell) * smoothstep(1.0, high, pixelCell);
         float gridMask = edgeMask.x * edgeMask.y;
-        
         color *= lerp(LCD_GAP_DARKNESS, 1.0, gridMask);
     }
 #endif
@@ -271,17 +263,29 @@ float4 MainPS(PixelShaderInput input) : COLOR
     color *= (1.0 - (((humWave + 1.0) * 0.5) * HUM_BAR_OPACITY));
 #endif
 
-    // --- 8. COLOR GRADING ---
+    // --- 8. COLOR GRADING (SATURATION & VIBRANCE) ---
     color = max(color, BLACK_LEVEL); 
 
+    // Calculate Luminance
     float lumaVal = dot(color, float3(0.299, 0.587, 0.114));
-    color = lerp(float3(lumaVal, lumaVal, lumaVal), color, Saturation);
+    float3 lumaVec = float3(lumaVal, lumaVal, lumaVal);
+
+    // Combine Uniforms with Tuning Constants
+    float finalSat = Saturation * TUNING_SATURATION_BASE;
+    float finalVib = Vibrance + TUNING_VIBRANCE_BASE;
+
+    // Apply Saturation
+    color = lerp(lumaVec, color, finalSat);
     
+    // Apply Vibrance (Boosts saturation of less saturated colors)
     float max_c = max(color.r, max(color.g, color.b));
     float min_c = min(color.r, min(color.g, color.b));
-    color = lerp(float3(lumaVal, lumaVal, lumaVal), color, 1.0 + (Vibrance * (1.0 - (max_c - min_c))));
+    float satMask = 1.0 - (max_c - min_c); // 1.0 for gray, 0.0 for pure color
+    
+    // Aggressive Vibrance Curve
+    color = lerp(lumaVec, color, 1.0 + (finalVib * satMask * 2.0));
 
-    // --- 9. VIGNETTE (OPTIMIZED) ---
+    // --- 9. VIGNETTE ---
 #ifdef ENABLE_VIGNETTE
     float2 vUV = uv * (1.0 - uv.yx);
     float vig = vUV.x * vUV.y * 15.0;
@@ -289,7 +293,7 @@ float4 MainPS(PixelShaderInput input) : COLOR
     color *= lerp(1.0, vig, VIGNETTE_INTENSITY);
 #endif
 
-    // --- 11. GAMMA & FLASH ---
+    // --- 10. GAMMA & FLASH ---
     color = max(color, 0.0);
     color = pow(color, 1.0 / Gamma);
     color = lerp(color, FlashColor, FlashIntensity);
