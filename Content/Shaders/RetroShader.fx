@@ -40,8 +40,8 @@ uniform int PaletteCount;
 #define ENABLE_HALATION
 
 // --- Tuning ---
-static const float CURVATURE = 0.25; 
-static const float ZOOM = 1.05;
+static const float CURVATURE = 0.15; 
+static const float ZOOM = 1.03;
 static const float BLACK_LEVEL = 0.01; 
 static const float LCD_GAP_SIZE = 0.04;      
 static const float LCD_GAP_SOFTNESS = 0.2;  
