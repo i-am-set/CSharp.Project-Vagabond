@@ -1,16 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
-using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond.Battle;
-
-using ProjectVagabond.Progression;
-using ProjectVagabond.Scenes;
-using ProjectVagabond.UI;
-using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace ProjectVagabond.Progression
 {
@@ -22,7 +12,6 @@ namespace ProjectVagabond.Progression
         Rest,
         Recruit
     }
-
     public enum BattleDifficulty
     {
         Easy,
@@ -42,6 +31,8 @@ namespace ProjectVagabond.Progression
         public List<int> OutgoingPathIds { get; } = new List<int>();
         public bool IsReachable { get; set; } = false;
         public bool IsCompleted { get; set; } = false;
+        public bool IsAbandoned { get; set; } = false;
+        public float VisualAlpha { get; set; } = 1.0f;
         public float AnimationOffset { get; }
         public Vector2 VisualOffset { get; set; } = Vector2.Zero;
 

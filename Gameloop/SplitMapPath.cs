@@ -1,14 +1,5 @@
 ﻿#nullable enable
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
-using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond.Battle;
-
-using ProjectVagabond.Progression;
-using ProjectVagabond.Scenes;
-using ProjectVagabond.UI;
-using System;
 using System.Collections.Generic;
 
 namespace ProjectVagabond.Progression
@@ -21,9 +12,10 @@ namespace ProjectVagabond.Progression
         public int Id { get; }
         public int FromNodeId { get; }
         public int ToNodeId { get; }
+        public bool IsAbandoned { get; set; } = false;
+        public float VisualAlpha { get; set; } = 1.0f; // Added for smooth fading
         public List<Vector2> RenderPoints { get; set; } = new List<Vector2>();
         public List<Point> PixelPoints { get; set; } = new List<Point>();
-
         private static int _nextId = 0;
 
         public SplitMapPath(int fromNodeId, int toNodeId)
@@ -35,4 +27,3 @@ namespace ProjectVagabond.Progression
         public static void ResetIdCounter() => _nextId = 0;
     }
 }
-#nullable restore

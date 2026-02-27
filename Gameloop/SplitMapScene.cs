@@ -33,7 +33,6 @@ namespace ProjectVagabond.Scenes
         private readonly SpriteManager _spriteManager;
         private readonly Global _global;
         private readonly VoidEdgeEffect _voidEdgeEffect;
-
         private readonly SplitMapHudRenderer _hudRenderer;
 
         private readonly BirdManager _birdManager;
@@ -291,6 +290,23 @@ namespace ProjectVagabond.Scenes
             if (IsInputBlocked) { base.Update(gameTime); return; }
 
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            // --- Smooth Fade for Abandoned Elements ---
+            if (_currentMap != null)
+            {
+                float fadeSpeed = 3f * deltaTime;
+                foreach (var node in _currentMap.Nodes.Values)
+                {
+                    if (node.IsAbandoned)
+                        node.VisualAlpha = MathHelper.Lerp(node.VisualAlpha, 0.5f, fadeSpeed);
+                }
+                foreach (var path in _currentMap.Paths.Values)
+                {
+                    if (path.IsAbandoned)
+                        path.VisualAlpha = MathHelper.Lerp(path.VisualAlpha, 0.5f, fadeSpeed);
+                }
+            }
+
             var currentMouseState = Mouse.GetState();
             var currentKeyboardState = Keyboard.GetState();
             var virtualMousePos = Core.TransformMouse(currentMouseState.Position);
@@ -877,7 +893,7 @@ namespace ProjectVagabond.Scenes
         private void DrawAllPaths(SpriteBatch spriteBatch, Texture2D pixel)
         {
             if (_currentMap == null) return;
-            foreach (var path in _currentMap.Paths.Values) DrawPath(spriteBatch, pixel, path, _global.Palette_DarkShadow, false);
+
             SplitMapPath? highlightedPath = null;
             if (_hoveredNodeId != -1 && _mapState == SplitMapState.Idle)
                 highlightedPath = _currentMap.Paths.Values.FirstOrDefault(p => p.FromNodeId == _playerCurrentNodeId && p.ToNodeId == _hoveredNodeId);
@@ -885,18 +901,30 @@ namespace ProjectVagabond.Scenes
             foreach (var path in _currentMap.Paths.Values)
             {
                 if (path == highlightedPath) continue;
+
+                if (path.IsAbandoned)
+                {
+                    DrawPath(spriteBatch, pixel, path, _global.Palette_DarkShadow, false, path.VisualAlpha);
+                    continue;
+                }
+
                 var fromNode = _currentMap.Nodes[path.FromNodeId];
                 var toNode = _currentMap.Nodes[path.ToNodeId];
                 bool isPathFromCurrentNode = fromNode.Id == _playerCurrentNodeId;
                 bool isPathToReachableNode = toNode.IsReachable;
                 bool isPathTraversed = _traversedPathIds.Contains(path.Id);
                 bool isAnimating = isPathFromCurrentNode && isPathToReachableNode && !_visitedNodeIds.Contains(toNode.Id);
-                if (isPathTraversed || isAnimating) DrawPath(spriteBatch, pixel, path, _global.SplitMapPathColor, isAnimating);
+
+                if (isPathTraversed || isAnimating)
+                    DrawPath(spriteBatch, pixel, path, _global.SplitMapPathColor, isAnimating, path.VisualAlpha);
+                else
+                    DrawPath(spriteBatch, pixel, path, _global.Palette_DarkestPale, false, path.VisualAlpha);
             }
-            if (highlightedPath != null) DrawPath(spriteBatch, pixel, highlightedPath, _global.SplitMapNodeColor, false);
+
+            if (highlightedPath != null) DrawPath(spriteBatch, pixel, highlightedPath, _global.SplitMapNodeColor, false, 1.0f);
         }
 
-        private void DrawPath(SpriteBatch spriteBatch, Texture2D pixel, SplitMapPath path, Color pathColor, bool isAnimating)
+        private void DrawPath(SpriteBatch spriteBatch, Texture2D pixel, SplitMapPath path, Color pathColor, bool isAnimating, float alpha)
         {
             if (_currentMap == null || path.PixelPoints.Count < 2) return;
             var fromNode = _currentMap.Nodes[path.FromNodeId];
@@ -914,6 +942,9 @@ namespace ProjectVagabond.Scenes
             else numPixelsToDraw = path.PixelPoints.Count;
 
             if (numPixelsToDraw <= 0) return;
+
+            Color finalColor = pathColor * alpha;
+
             for (int i = 0; i < numPixelsToDraw; i++)
             {
                 var point = path.PixelPoints[i];
@@ -921,7 +952,7 @@ namespace ProjectVagabond.Scenes
                 float distFrom = Vector2.Distance(pointVec, fromNode.Position);
                 float distTo = Vector2.Distance(pointVec, toNode.Position);
                 if (distFrom <= PATH_EXCLUSION_RADIUS || distTo <= PATH_EXCLUSION_RADIUS) continue;
-                if (i % 4 < 2) spriteBatch.Draw(pixel, pointVec, pathColor);
+                if (i % 4 < 2) spriteBatch.Draw(pixel, pointVec, finalColor);
             }
         }
 
@@ -929,10 +960,16 @@ namespace ProjectVagabond.Scenes
         {
             var (texture, silhouette, sourceRect, origin) = GetNodeDrawData(node, gameTime);
             var bounds = node.GetBounds();
-            var color = _global.SplitMapNodeColor;
 
-            if (node.IsCompleted) color = _global.Palette_DarkShadow;
-            else if (node.NodeType != SplitNodeType.Origin && node.Id != _playerCurrentNodeId && !node.IsReachable) color = _global.Palette_DarkShadow;
+            var color = _global.SplitMapNodeColor;
+            float alpha = node.VisualAlpha;
+
+            if (node.IsAbandoned)
+            {
+                color = _global.Palette_DarkShadow;
+            }
+            else if (node.IsCompleted) color = _global.Palette_DarkShadow;
+            else if (node.NodeType != SplitNodeType.Origin && node.Id != _playerCurrentNodeId && !node.IsReachable) color = _global.Palette_DarkestPale;
 
             bool isSelected = (node.Id == _selectedNodeId);
             bool isHovered = (node.Id == _hoveredNodeId);
@@ -967,7 +1004,9 @@ namespace ProjectVagabond.Scenes
             }
 
             var position = bounds.Center.ToVector2() + node.VisualOffset + shake;
-            Color outlineColor = _global.Palette_Black;
+
+            Color outlineColor = node.IsAbandoned ? _global.Palette_Black * alpha : _global.Palette_Black;
+            Color finalColor = color * alpha;
 
             if (silhouette != null)
             {
@@ -976,7 +1015,7 @@ namespace ProjectVagabond.Scenes
                 spriteBatch.DrawSnapped(silhouette, position + new Vector2(0, -1), sourceRect, outlineColor, rotation, origin, scale, SpriteEffects.None, 0.4f);
                 spriteBatch.DrawSnapped(silhouette, position + new Vector2(0, 1), sourceRect, outlineColor, rotation, origin, scale, SpriteEffects.None, 0.4f);
             }
-            spriteBatch.DrawSnapped(texture, position, sourceRect, color, rotation, origin, scale, SpriteEffects.None, 0.4f);
+            spriteBatch.DrawSnapped(texture, position, sourceRect, finalColor, rotation, origin, scale, SpriteEffects.None, 0.4f);
         }
 
         private (Texture2D texture, Texture2D? silhouette, Rectangle? sourceRect, Vector2 origin) GetNodeDrawData(SplitMapNode node, GameTime gameTime)

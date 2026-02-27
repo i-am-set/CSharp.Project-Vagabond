@@ -1,15 +1,8 @@
 ﻿#nullable enable
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using ProjectVagabond.Battle;
-using ProjectVagabond.Progression;
-using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
 using System.Linq;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace ProjectVagabond.Progression
 {
@@ -24,7 +17,6 @@ namespace ProjectVagabond.Progression
         public int TargetColumnCount { get; }
         public int StartNodeId { get; }
         public float MapWidth { get; }
-
         public SplitMap(List<SplitMapNode> nodes, List<SplitMapPath> paths, RenderTarget2D bakedScenery, int targetColumnCount, int startNodeId, float mapWidth)
         {
             Nodes = nodes.ToDictionary(n => n.Id, n => n);
@@ -41,48 +33,47 @@ namespace ProjectVagabond.Progression
         }
 
         /// <summary>
-        /// Removes all nodes on a given column except for a specified one to keep,
-        /// and cleans up all associated paths.
+        /// Marks all nodes on a given column (except the kept one) and their paths as abandoned.
+        /// Recursively abandons downstream nodes that are no longer accessible.
         /// </summary>
-        /// <param name="columnIndex">The column index to prune.</param>
-        /// <param name="keepNodeId">The ID of the single node to preserve on that column.</param>
         public void PruneColumn(int columnIndex, int keepNodeId)
         {
-            var nodesToRemove = Nodes.Values.Where(n => n.Floor == columnIndex && n.Id != keepNodeId).ToList();
-            if (!nodesToRemove.Any()) return;
+            // 1. Abandon unchosen nodes in the current column
+            var nodesToAbandon = Nodes.Values.Where(n => n.Floor == columnIndex && n.Id != keepNodeId && !n.IsAbandoned).ToList();
+            if (!nodesToAbandon.Any()) return;
 
-            var pathsToRemove = new HashSet<int>();
-
-            // Collect all paths connected to the nodes being removed
-            foreach (var node in nodesToRemove)
+            foreach (var node in nodesToAbandon)
             {
-                foreach (var pathId in node.IncomingPathIds) pathsToRemove.Add(pathId);
-                foreach (var pathId in node.OutgoingPathIds) pathsToRemove.Add(pathId);
-            }
-
-            // Remove references to these paths from their connected nodes and then remove the paths themselves
-            foreach (var pathId in pathsToRemove)
-            {
-                if (Paths.TryGetValue(pathId, out var path))
+                node.IsAbandoned = true;
+                foreach (var pathId in node.OutgoingPathIds)
                 {
-                    if (Nodes.TryGetValue(path.FromNodeId, out var fromNode))
-                    {
-                        fromNode.OutgoingPathIds.Remove(pathId);
-                    }
-                    if (Nodes.TryGetValue(path.ToNodeId, out var toNode))
-                    {
-                        toNode.IncomingPathIds.Remove(pathId);
-                    }
-                    Paths.Remove(pathId);
+                    if (Paths.TryGetValue(pathId, out var path)) path.IsAbandoned = true;
                 }
             }
 
-            // Finally, remove the nodes themselves
-            foreach (var node in nodesToRemove)
+            // 2. Cascade abandonment forward to dead branches
+            bool changed = true;
+            while (changed)
             {
-                Nodes.Remove(node.Id);
+                changed = false;
+                foreach (var node in Nodes.Values.Where(n => n.Floor > columnIndex && !n.IsAbandoned))
+                {
+                    // A node is completely cut off if ALL of its incoming paths are abandoned
+                    bool allIncomingAbandoned = node.IncomingPathIds.Count > 0 &&
+                        node.IncomingPathIds.All(pid => Paths.TryGetValue(pid, out var p) && p.IsAbandoned);
+
+                    if (allIncomingAbandoned)
+                    {
+                        node.IsAbandoned = true;
+                        changed = true; // Trigger another pass to catch nodes that relied on this one
+
+                        foreach (var pathId in node.OutgoingPathIds)
+                        {
+                            if (Paths.TryGetValue(pathId, out var path)) path.IsAbandoned = true;
+                        }
+                    }
+                }
             }
         }
     }
 }
-#nullable restore

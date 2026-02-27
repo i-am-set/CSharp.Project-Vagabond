@@ -15,10 +15,11 @@ namespace ProjectVagabond.Progression
         private static readonly Random _random = new Random();
         private static readonly SeededPerlin _baldSpotNoise;
         private static readonly SeededPerlin _nodeExclusionNoise;
+        private static readonly SeededPerlin _pathWiggleNoise;
         public const int COLUMN_WIDTH = 96;
         public const int HORIZONTAL_PADDING = 64;
-        private const float PATH_SEGMENT_LENGTH = 10f;
-        private const float PATH_MAX_OFFSET = 5f;
+        private const float PATH_SEGMENT_LENGTH = 5f;
+        private const float PATH_MAX_OFFSET = 4f;
         private const float NODE_REPULSION_RADIUS = 30f;
         private const float NODE_REPULSION_STRENGTH = 15f;
 
@@ -38,6 +39,7 @@ namespace ProjectVagabond.Progression
         {
             _baldSpotNoise = new SeededPerlin(_random.Next());
             _nodeExclusionNoise = new SeededPerlin(_random.Next());
+            _pathWiggleNoise = new SeededPerlin(_random.Next());
         }
 
         public static SplitMap? GenerateInitial(SplitData splitData)
@@ -57,14 +59,15 @@ namespace ProjectVagabond.Progression
             var allPaths = new List<SplitMapPath>();
             var nodesByColumn = new Dictionary<int, List<SplitMapNode>>();
 
-            // --- 1. GENERATE NODES (Centered & Tightened) ---
+            // --- 1. GENERATE NODES ---
             for (int col = 0; col < totalColumns; col++)
             {
                 nodesByColumn[col] = new List<SplitMapNode>();
                 int nodeCount = (col == 0 || col == totalColumns - 1) ? 1 : _random.Next(2, 4);
-                float x = HORIZONTAL_PADDING + (col * COLUMN_WIDTH);
 
-                // Calculate starting Y so the group of nodes is perfectly centered vertically
+                // Add +-4 pixel horizontal variance
+                float x = HORIZONTAL_PADDING + (col * COLUMN_WIDTH) + _random.Next(-4, 5);
+
                 float totalHeight = (nodeCount - 1) * NODE_VERTICAL_GAP;
                 float startY = WORLD_Y_CENTER - (totalHeight / 2f);
 
@@ -86,14 +89,8 @@ namespace ProjectVagabond.Progression
                     else
                     {
                         double roll = _random.NextDouble();
-                        if (roll < 0.1)
-                        {
-                            node.NodeType = SplitNodeType.Rest;
-                        }
-                        else if (roll < 0.2)
-                        {
-                            node.NodeType = SplitNodeType.Recruit;
-                        }
+                        if (roll < 0.1) node.NodeType = SplitNodeType.Rest;
+                        else if (roll < 0.2) node.NodeType = SplitNodeType.Recruit;
                         else
                         {
                             node.NodeType = SplitNodeType.Battle;
@@ -110,7 +107,7 @@ namespace ProjectVagabond.Progression
                 }
             }
 
-            // --- 2. GENERATE PATHS (Grid Walk to prevent crossing) ---
+            // --- 2. GENERATE PATHS ---
             for (int col = 0; col < totalColumns - 1; col++)
             {
                 var currentNodes = nodesByColumn[col];
@@ -130,37 +127,14 @@ namespace ProjectVagabond.Progression
                     if (canMoveI && canMoveJ)
                     {
                         int r = _random.Next(3);
+                        if (!hasOutgoingBranch && j == nextNodes.Count - 2) r = 1;
 
-                        // Force an outgoing branch if we haven't yet and this is the last chance to increment J
-                        if (!hasOutgoingBranch && j == nextNodes.Count - 2)
-                        {
-                            r = 1;
-                        }
-
-                        if (r == 0)
-                        {
-                            i++;
-                        }
-                        else if (r == 1)
-                        {
-                            j++;
-                            hasOutgoingBranch = true;
-                        }
-                        else
-                        {
-                            i++;
-                            j++;
-                        }
+                        if (r == 0) i++;
+                        else if (r == 1) { j++; hasOutgoingBranch = true; }
+                        else { i++; j++; }
                     }
-                    else if (canMoveI)
-                    {
-                        i++;
-                    }
-                    else if (canMoveJ)
-                    {
-                        j++;
-                        hasOutgoingBranch = true;
-                    }
+                    else if (canMoveI) i++;
+                    else if (canMoveJ) { j++; hasOutgoingBranch = true; }
 
                     CreatePath(currentNodes[i], nextNodes[j], allPaths, allNodes);
                 }
@@ -179,7 +153,8 @@ namespace ProjectVagabond.Progression
             if (from.OutgoingPathIds.Any(pid => allPaths.Any(p => p.Id == pid && p.ToNodeId == to.Id))) return;
 
             var path = new SplitMapPath(from.Id, to.Id);
-            path.RenderPoints = GenerateWigglyPathPoints(from.Position, to.Position, new List<int> { from.Id, to.Id }, allNodes);
+            // Pass allPaths to allow repulsion from already generated paths
+            path.RenderPoints = GenerateWigglyPathPoints(from.Position, to.Position, new List<int> { from.Id, to.Id }, allNodes, allPaths);
             from.OutgoingPathIds.Add(path.Id);
             to.IncomingPathIds.Add(path.Id);
             allPaths.Add(path);
@@ -206,9 +181,9 @@ namespace ProjectVagabond.Progression
             }
         }
 
-        private static List<Vector2> GenerateWigglyPathPoints(Vector2 start, Vector2 end, List<int> ignoreNodeIds, List<SplitMapNode> allNodes)
+        private static List<Vector2> GenerateWigglyPathPoints(Vector2 start, Vector2 end, List<int> ignoreNodeIds, List<SplitMapNode> allNodes, List<SplitMapPath> existingPaths)
         {
-            var points = new List<Vector2> { start };
+            var points = new List<Vector2> { start }; // Guarantees exact origin
             var mainVector = end - start;
             var totalDistance = mainVector.Length();
 
@@ -222,21 +197,28 @@ namespace ProjectVagabond.Progression
             var perpendicular = new Vector2(-direction.Y, direction.X);
             int numSegments = (int)(totalDistance / PATH_SEGMENT_LENGTH);
 
+            float pathSeed = (float)_random.NextDouble() * 1000f;
+
             for (int i = 1; i < numSegments; i++)
             {
                 float progress = (float)i / numSegments;
                 var pointOnLine = start + direction * progress * totalDistance;
 
-                float randomOffset = ((float)_random.NextDouble() * 2f - 1f) * PATH_MAX_OFFSET;
+                // Smooth wiggle using Perlin noise
+                float noiseVal = _pathWiggleNoise.Noise(progress * 4f, pathSeed);
+                float smoothOffset = noiseVal * PATH_MAX_OFFSET;
+
+                // Taper forces the offset to 0 at the start and end
                 float taper = MathF.Sin(progress * MathF.PI);
 
                 Vector2 totalRepulsion = Vector2.Zero;
+
+                // Node repulsion
                 foreach (var otherNode in allNodes)
                 {
                     if (ignoreNodeIds.Contains(otherNode.Id)) continue;
 
                     float distanceToNode = Vector2.Distance(pointOnLine, otherNode.Position);
-
                     if (distanceToNode < NODE_REPULSION_RADIUS)
                     {
                         Vector2 repulsionVector = pointOnLine - otherNode.Position;
@@ -244,17 +226,35 @@ namespace ProjectVagabond.Progression
                         {
                             repulsionVector.Normalize();
                             float falloff = 1.0f - (distanceToNode / NODE_REPULSION_RADIUS);
-                            float strength = NODE_REPULSION_STRENGTH * Easing.EaseOutQuad(falloff);
-                            totalRepulsion += repulsionVector * strength;
+                            totalRepulsion += repulsionVector * (NODE_REPULSION_STRENGTH * Easing.EaseOutQuad(falloff));
                         }
                     }
                 }
 
-                var finalPoint = pointOnLine + perpendicular * randomOffset * taper + totalRepulsion;
+                // Path repulsion to prevent overlap
+                const float PATH_REPULSION_RADIUS = 12f;
+                const float PATH_REPULSION_STRENGTH = 6f;
+                foreach (var existingPath in existingPaths)
+                {
+                    foreach (var p in existingPath.RenderPoints)
+                    {
+                        float dist = Vector2.Distance(pointOnLine, p);
+                        if (dist < PATH_REPULSION_RADIUS && dist > 0.1f)
+                        {
+                            Vector2 repVec = pointOnLine - p;
+                            repVec.Normalize();
+                            float falloff = 1.0f - (dist / PATH_REPULSION_RADIUS);
+                            totalRepulsion += repVec * (PATH_REPULSION_STRENGTH * falloff);
+                        }
+                    }
+                }
+
+                // Apply taper to repulsion as well so it still connects perfectly
+                var finalPoint = pointOnLine + perpendicular * smoothOffset * taper + totalRepulsion * taper;
                 points.Add(finalPoint);
             }
 
-            points.Add(end);
+            points.Add(end); // Guarantees exact destination
             return points;
         }
 
