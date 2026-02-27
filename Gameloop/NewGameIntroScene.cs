@@ -9,7 +9,6 @@ using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -91,7 +90,7 @@ namespace ProjectVagabond.Scenes
         private IntroState _currentState = IntroState.TypingTitle;
 
         // Layout Constants
-        private const int BASE_CENTER_Y = 56;
+        private const int BASE_CENTER_Y = 50;
 
         public NewGameIntroScene()
         {
@@ -228,7 +227,7 @@ namespace ProjectVagabond.Scenes
             _rightArrow.OnClick += () => CycleCharacter(1);
 
             // --- Select Button ---
-            int contentStartY = centerY + 48;
+            int contentStartY = centerY + 54; 
 
             // Stats Height
             int statsHeight = (int)secondaryFont.LineHeight * 2 + 2; // 2 rows + gap
@@ -570,7 +569,7 @@ namespace ProjectVagabond.Scenes
             // Title
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, staticTransform);
 
-            float titleY = 24f;
+            float titleY = 14f;
 
             if (!string.IsNullOrEmpty(_currentText1))
             {
@@ -696,7 +695,7 @@ namespace ProjectVagabond.Scenes
             if (!BattleDataCache.PartyMembers.TryGetValue(charId, out var data)) return;
 
             int centerX = Global.VIRTUAL_WIDTH / 2;
-            int startY = BASE_CENTER_Y + 32;
+            int startY = BASE_CENTER_Y + 38;
             int currentY = startY;
 
             // --- Stats Block ---
@@ -932,13 +931,13 @@ namespace ProjectVagabond.Scenes
                 {
                     string name = data.Name.ToUpper();
                     Vector2 nameSize = font.MeasureString(name);
-                    Vector2 namePos = new Vector2(centerX - nameSize.X / 2, centerY + 20);
+                    Vector2 namePos = new Vector2(centerX - nameSize.X / 2, centerY + 26);
                     spriteBatch.DrawStringSnapped(font, name, namePos, _global.Palette_LightPale * _uiAlpha);
 
                     // Draw Number
                     string numberText = (spriteIndex + 1).ToString();
                     Vector2 numSize = tertiaryFont.MeasureString(numberText);
-                    Vector2 numPos = new Vector2(centerX - numSize.X / 2, centerY + 14);
+                    Vector2 numPos = new Vector2(centerX - numSize.X / 2, centerY + 20);
                     spriteBatch.DrawStringSnapped(tertiaryFont, numberText, numPos, _global.Palette_LightPale * _uiAlpha);
                 }
             }

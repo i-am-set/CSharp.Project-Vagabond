@@ -44,6 +44,14 @@ namespace ProjectVagabond
         private bool _mouseClickConsumed;
         private bool _ignoreMouseUntilMovement;
 
+        // The specific keys that are allowed to trigger a switch to Keyboard mode
+        private readonly Keys[] _mappedKeys = new Keys[]
+        {
+            Keys.W, Keys.A, Keys.S, Keys.D,
+            Keys.Up, Keys.Down, Keys.Left, Keys.Right,
+            Keys.Space, Keys.Enter, Keys.Escape, Keys.Back
+        };
+
         public void Update()
         {
             _mouseClickConsumed = false;
@@ -88,11 +96,15 @@ namespace ProjectVagabond
             bool isSignificantMovement = mouseDistance > MOUSE_WAKE_THRESHOLD;
             bool isClick = _currentMouseState.LeftButton == ButtonState.Pressed || _currentMouseState.RightButton == ButtonState.Pressed;
 
-            // Check for Keyboard activity
+            // Check for Keyboard activity (ONLY mapped keys)
             bool keyboardActive = false;
-            if (_currentKeyboardState.GetPressedKeyCount() > 0 && _currentKeyboardState != _previousKeyboardState)
+            foreach (var key in _mappedKeys)
             {
-                keyboardActive = true;
+                if (_currentKeyboardState.IsKeyDown(key) && _previousKeyboardState.IsKeyUp(key))
+                {
+                    keyboardActive = true;
+                    break;
+                }
             }
 
             // Check for Gamepad activity

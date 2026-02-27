@@ -51,10 +51,7 @@ namespace ProjectVagabond.Battle.UI
         public static Vector2 GetPlayerSpriteCenter(int slotIndex)
         {
             // Y Alignment:
-            // Previous: ACTION_MENU_Y - 19.
-            // New Request: Move UP by 4 pixels.
-            // New Y: (ACTION_MENU_Y - 19) - 4 = ACTION_MENU_Y - 23.
-            float centerY = ACTION_MENU_Y - 23;
+            float centerY = ACTION_MENU_Y - 26;
 
             if (slotIndex == 0) // Left Slot
             {
