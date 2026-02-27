@@ -1625,7 +1625,7 @@ namespace ProjectVagabond.Battle.UI
                 else if (indicator.Type == DamageIndicatorState.IndicatorType.EXP)
                 {
                     float progress = indicator.Timer / DamageIndicatorState.DURATION;
-                    float yOffset = -Easing.EaseOutQuad(progress) * 10f;
+                    float yOffset = -Easing.EaseOutCubic(progress) * 15f;
                     indicator.Position = indicator.InitialPosition + new Vector2(0, yOffset);
                     indicator.Rotation = 0f;
                 }
