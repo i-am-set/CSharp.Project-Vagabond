@@ -583,7 +583,7 @@ namespace ProjectVagabond.UI
                 float rotation = isBeingDragged ? _currentDragRotation : 0f;
 
                 Matrix localTransform = Matrix.CreateTranslation(new Vector3(-cardCenter, 0)) *
-                                        Matrix.CreateScale(scaleX, 1f, 1f) * // Apply Flip Scale
+                                        Matrix.CreateScale(scaleX, 1f, 1f) *
                                         Matrix.CreateRotationZ(rotation) *
                                         Matrix.CreateTranslation(new Vector3(cardCenter, 0));
 
