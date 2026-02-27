@@ -1476,30 +1476,6 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/MoveAnimationSpriteSheets/sta_stall.png;Sprites/MoveAnimationSpriteSheets/sta_stall
 
-#begin Sprites/Player/cat_portraits_32x32_altsprites.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/Player/cat_portraits_32x32_altsprites.png;Sprites/Player/cat_portraits_32x32_altsprites
-
-#begin Sprites/Player/cat_portraits_32x32_sleepsprites.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/Player/cat_portraits_32x32_sleepsprites.png;Sprites/Player/cat_portraits_32x32_sleepsprites
-
 #begin Sprites/Player/cat_portraits_32x32_spritesheet.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -1511,42 +1487,6 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Sprites/Player/cat_portraits_32x32_spritesheet.png;Sprites/Player/cat_portraits_32x32_spritesheet
-
-#begin Sprites/Player/cat_portraits_32x32.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/Player/cat_portraits_32x32.png;Sprites/Player/cat_portraits_32x32
-
-#begin Sprites/Player/cat_portraits_8x8.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/Player/cat_portraits_8x8.png;Sprites/Player/cat_portraits_8x8
-
-#begin Sprites/Player/cat_portraits.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/Player/cat_portraits.png;Sprites/Player/cat_portraits
 
 #begin Sprites/Player/player_heart_spritesheet.png
 /importer:TextureImporter
