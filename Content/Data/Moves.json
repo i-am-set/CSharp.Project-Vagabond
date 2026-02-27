@@ -16,7 +16,8 @@
     "Tags": [],
     "AnimationId": "phy_impact",
     "IsAnimationCentralized": false,
-    "Cooldown": 0
+    "Cooldown": 0,
+    "IsRare": false
   },
   {
     "MoveID": "1",
@@ -35,7 +36,8 @@
     "Tags": [],
     "AnimationId": "phy_impact",
     "IsAnimationCentralized": false,
-    "Cooldown": 0
+    "Cooldown": 0,
+    "IsRare": false
   },
   {
     "MoveID": "2",
@@ -54,7 +56,8 @@
     "Tags": [],
     "AnimationId": "phy_impact",
     "IsAnimationCentralized": false,
-    "Cooldown": 0
+    "Cooldown": 0,
+    "IsRare": false
   },
   {
     "MoveID": "3",
@@ -73,7 +76,8 @@
     "Tags": [],
     "AnimationId": "phy_bite",
     "IsAnimationCentralized": false,
-    "Cooldown": 0
+    "Cooldown": 0,
+    "IsRare": false
   },
   {
     "MoveID": "4",
@@ -92,7 +96,8 @@
     "Tags": [],
     "AnimationId": "phy_claw",
     "IsAnimationCentralized": false,
-    "Cooldown": 0
+    "Cooldown": 0,
+    "IsRare": false
   },
   {
     "MoveID": "5",
@@ -111,7 +116,8 @@
     "Tags": [ "Priority" ],
     "AnimationId": "phy_small_side_swipe",
     "IsAnimationCentralized": false,
-    "Cooldown": 0
+    "Cooldown": 0,
+    "IsRare": false
   },
   {
     "MoveID": "6",
@@ -130,7 +136,8 @@
     "Tags": [],
     "AnimationId": "sta_stall",
     "IsAnimationCentralized": false,
-    "Cooldown": 0
+    "Cooldown": 0,
+    "IsRare": false
   },
   {
     "MoveID": "7",
@@ -152,7 +159,8 @@
     "Tags": [],
     "AnimationId": "sta_orange_orb",
     "IsAnimationCentralized": false,
-    "Cooldown": 0
+    "Cooldown": 0,
+    "IsRare": false
   },
   {
     "MoveID": "8",
@@ -174,7 +182,8 @@
     "Tags": [ "Defense", "Priority" ],
     "AnimationId": "sta_protect",
     "IsAnimationCentralized": false,
-    "Cooldown": 2
+    "Cooldown": 2,
+    "IsRare": false
   },
   {
     "MoveID": "9",
@@ -196,7 +205,8 @@
     "Tags": [ "Fire", "AoE" ],
     "AnimationId": "mag_flame_ground",
     "IsAnimationCentralized": false,
-    "Cooldown": 2
+    "Cooldown": 2,
+    "IsRare": false
   },
   {
     "MoveID": "10",
@@ -218,7 +228,8 @@
     "Tags": [ "Fire", "Status" ],
     "AnimationId": "mag_fire_ember_cluster",
     "IsAnimationCentralized": false,
-    "Cooldown": 2
+    "Cooldown": 2,
+    "IsRare": false
   },
   {
     "MoveID": "11",
@@ -240,7 +251,8 @@
     "Tags": [ "MultiHit", "Contact" ],
     "AnimationId": "phy_bite",
     "IsAnimationCentralized": false,
-    "Cooldown": 1
+    "Cooldown": 1,
+    "IsRare": false
   },
   {
     "MoveID": "12",
@@ -258,7 +270,8 @@
       "SelfSwitch": ""
     },
     "AnimationId": "sta_orange_orb",
-    "Cooldown": 3
+    "Cooldown": 3,
+    "IsRare": false
   },
   {
     "MoveID": "13",
@@ -275,7 +288,8 @@
       "ModifyStatStage_Str": "Strength,1,100"
     },
     "AnimationId": "sta_orange_orb",
-    "Cooldown": 1
+    "Cooldown": 1,
+    "IsRare": false
   },
   {
     "MoveID": "14",
@@ -294,7 +308,8 @@
     },
     "Tags": [ "Contact", "Recoil" ],
     "AnimationId": "phy_large_impact",
-    "Cooldown": 2
+    "Cooldown": 2,
+    "IsRare": false
   },
   {
     "MoveID": "15",
@@ -312,7 +327,8 @@
     },
     "Tags": [ "Heal" ],
     "AnimationId": "sta_orange_orb",
-    "Cooldown": 3
+    "Cooldown": 3,
+    "IsRare": false
   },
   {
     "MoveID": "16",
@@ -331,7 +347,8 @@
     },
     "Tags": [ "Contact", "Heal" ],
     "AnimationId": "phy_bite",
-    "Cooldown": 2
+    "Cooldown": 2,
+    "IsRare": false
   },
   {
     "MoveID": "17",
@@ -349,7 +366,8 @@
     },
     "Tags": [ "Debuff" ],
     "AnimationId": "sta_orange_orb",
-    "Cooldown": 3
+    "Cooldown": 3,
+    "IsRare": false
   },
   {
     "MoveID": "18",
@@ -371,7 +389,8 @@
     },
     "Tags": [ "Contact", "Recoil" ],
     "AnimationId": "phy_large_impact",
-    "Cooldown": 3
+    "Cooldown": 3,
+    "IsRare": false
   },
   {
     "MoveID": "19",
@@ -392,7 +411,8 @@
     },
     "Tags": [ "Contact", "Priority" ],
     "AnimationId": "phy_small_side_swipe",
-    "Cooldown": 2
+    "Cooldown": 2,
+    "IsRare": false
   },
   {
     "MoveID": "20",
@@ -409,7 +429,8 @@
     "Effects": { "Lifesteal": "75" },
     "Tags": [ "Heal" ],
     "AnimationId": "mag_blue_flame",
-    "Cooldown": 2
+    "Cooldown": 2,
+    "IsRare": false
   },
   {
     "MoveID": "21",
@@ -426,7 +447,8 @@
     "Effects": { "Heal": "25" },
     "Tags": [ "Heal" ],
     "AnimationId": "sta_protect",
-    "Cooldown": 3
+    "Cooldown": 3,
+    "IsRare": false
   },
   {
     "MoveID": "22",
@@ -445,7 +467,8 @@
     "Tags": [ "Contact" ],
     "AnimationId": "phy_impact",
     "IsAnimationCentralized": false,
-    "Cooldown": 1
+    "Cooldown": 1,
+    "IsRare": false
   },
   {
     "MoveID": "23",
@@ -468,7 +491,8 @@
     "Tags": [ "Contact" ],
     "AnimationId": "phy_large_impact",
     "IsAnimationCentralized": false,
-    "Cooldown": 3
+    "Cooldown": 3,
+    "IsRare": false
   },
   {
     "MoveID": "24",
@@ -490,6 +514,7 @@
     "Tags": [ "MultiHit", "Projectile" ],
     "AnimationId": "magic_missile",
     "IsAnimationCentralized": false,
-    "Cooldown": 2
+    "Cooldown": 2,
+    "IsRare": false
   }
 ]

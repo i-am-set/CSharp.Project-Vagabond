@@ -29,5 +29,6 @@ namespace ProjectVagabond.Battle
         public List<IAbility> Abilities { get; set; } = new List<IAbility>();
         public bool AffectsUserHP { get; set; }
         public bool AffectsTargetHP { get; set; }
+        public bool IsRare { get; set; } = false;
     }
 }

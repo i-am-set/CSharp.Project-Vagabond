@@ -37,25 +37,40 @@ namespace ProjectVagabond.Battle
                 Debug.WriteLine($"[PartyMemberFactory] {member.Name} generated with passive: {string.Join(", ", member.IntrinsicAbilities.Keys)}");
             }
 
-            // Assign Basic Move
             if (!string.IsNullOrEmpty(data.BasicMoveId) && BattleDataCache.Moves.ContainsKey(data.BasicMoveId))
             {
                 member.BasicMove = new MoveEntry(data.BasicMoveId, 0);
             }
 
-            // Assign Core Move
-            if (!string.IsNullOrEmpty(data.CoreMoveId) && BattleDataCache.Moves.ContainsKey(data.CoreMoveId))
+            AssignRandomMoveFromPool(data.CoreMovePool, out var coreMove);
+            if (coreMove != null)
             {
-                member.CoreMove = new MoveEntry(data.CoreMoveId, 0);
+                member.CoreMove = coreMove;
             }
 
-            // Assign Alt Move
-            if (!string.IsNullOrEmpty(data.AltMoveId) && BattleDataCache.Moves.ContainsKey(data.AltMoveId))
+            AssignRandomMoveFromPool(data.AltMovePool, out var altMove);
+            if (altMove != null)
             {
-                member.AltMove = new MoveEntry(data.AltMoveId, 0);
+                member.AltMove = altMove;
             }
 
             return member;
+        }
+
+        private static void AssignRandomMoveFromPool(List<MovePoolEntry> pool, out MoveEntry assignedMove)
+        {
+            assignedMove = null;
+            if (pool == null || !pool.Any()) return;
+
+            var validEntries = pool.Where(p => !p.IsFiller &&
+                                               BattleDataCache.Moves.TryGetValue(p.MoveId, out var moveData) &&
+                                               !moveData.IsRare).ToList();
+
+            if (validEntries.Any())
+            {
+                var selected = validEntries[_rng.Next(validEntries.Count)];
+                assignedMove = new MoveEntry(selected.MoveId, 0);
+            }
         }
     }
 }
