@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -877,10 +877,10 @@ namespace ProjectVagabond.Scenes
                         var nodeTextSize = secondaryFont.MeasureString(nodeText);
                         Vector2 nodeScreenPos = hoveredNode.Position + snappedCameraOffset;
                         float textX = nodeScreenPos.X - (nodeTextSize.Width / 2f);
-                        float textY = nodeScreenPos.Y + 6f;
+                        float textY = nodeScreenPos.Y + 8f;
                         var textPosition = new Vector2(textX, textY);
                         _nodeTextWaveTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-                        TextAnimator.DrawTextWithEffect(spriteBatch, secondaryFont, nodeText, textPosition, _global.Palette_DarkSun, TextEffectType.Wave, _nodeTextWaveTimer);
+                        TextAnimator.DrawTextWithEffectSquareOutlined(spriteBatch, secondaryFont, nodeText, textPosition, _global.Palette_DarkSun, _global.Palette_Black, TextEffectType.Wave, _nodeTextWaveTimer);
                     }
                 }
             }
@@ -1073,3 +1073,4 @@ namespace ProjectVagabond.Scenes
         }
     }
 }
+﻿

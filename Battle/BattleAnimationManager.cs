@@ -213,7 +213,7 @@ namespace ProjectVagabond.Battle.UI
 
         public class DamageIndicatorState
         {
-            public enum IndicatorType { Text, Number, HealNumber, EmphasizedNumber, Effectiveness, StatChange, Protected, Failed }
+            public enum IndicatorType { Text, Number, HealNumber, EmphasizedNumber, Effectiveness, StatChange, Protected, Failed, EXP }
             public IndicatorType Type;
             public string CombatantID;
             public string PrimaryText;
@@ -928,6 +928,25 @@ namespace ProjectVagabond.Battle.UI
             });
         }
 
+        public void StartEXPIndicator(string combatantId, int expAmount, Vector2 startPosition)
+        {
+            _pendingTextIndicators.Enqueue(() =>
+            {
+                _activeDamageIndicators.Add(new DamageIndicatorState
+                {
+                    Type = DamageIndicatorState.IndicatorType.EXP,
+                    CombatantID = combatantId,
+                    PrimaryText = $"+{expAmount} EXP",
+                    Position = startPosition,
+                    InitialPosition = startPosition,
+                    PrimaryColor = _global.Palette_Sky,
+                    Timer = 0f,
+                    Rotation = 0f,
+                    RotationVelocity = 0f
+                });
+            });
+        }
+
         public void SkipAllHealthAnimations(IEnumerable<BattleCombatant> combatants)
         {
             foreach (var c in combatants)
@@ -1603,6 +1622,13 @@ namespace ProjectVagabond.Battle.UI
                     float yOffset = Easing.EaseOutQuad(progress) * DamageIndicatorState.RISE_DISTANCE;
                     indicator.Position = indicator.InitialPosition + new Vector2(0, yOffset);
                 }
+                else if (indicator.Type == DamageIndicatorState.IndicatorType.EXP)
+                {
+                    float progress = indicator.Timer / DamageIndicatorState.DURATION;
+                    float yOffset = -Easing.EaseOutQuad(progress) * 10f;
+                    indicator.Position = indicator.InitialPosition + new Vector2(0, yOffset);
+                    indicator.Rotation = 0f;
+                }
                 else
                 {
                     float progress = indicator.Timer / DamageIndicatorState.DURATION;
@@ -1693,6 +1719,7 @@ namespace ProjectVagabond.Battle.UI
             DrawIndicatorsOfType(spriteBatch, font, DamageIndicatorState.IndicatorType.Number);
             DrawIndicatorsOfType(spriteBatch, font, DamageIndicatorState.IndicatorType.HealNumber);
             DrawIndicatorsOfType(spriteBatch, font, DamageIndicatorState.IndicatorType.EmphasizedNumber);
+            DrawIndicatorsOfType(spriteBatch, font, DamageIndicatorState.IndicatorType.EXP);
         }
 
         private void DrawIndicatorsOfType(SpriteBatch spriteBatch, BitmapFont font, DamageIndicatorState.IndicatorType typeToDraw)
@@ -1759,6 +1786,11 @@ namespace ProjectVagabond.Battle.UI
                     const float flashInterval = 0.1f;
                     bool useRed = (int)(indicator.Timer / flashInterval) % 2 == 0;
                     drawColor = useRed ? _global.FailedIndicatorColor : _global.Palette_Rust;
+                }
+                else if (indicator.Type == DamageIndicatorState.IndicatorType.EXP)
+                {
+                    activeFont = ServiceLocator.Get<Core>().TertiaryFont;
+                    drawColor = indicator.PrimaryColor;
                 }
                 else
                 {

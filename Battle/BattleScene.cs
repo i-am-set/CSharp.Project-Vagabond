@@ -796,8 +796,8 @@ namespace ProjectVagabond.Scenes
 
         private void OnEXPGained(EXPGainedEvent e)
         {
-            Vector2 hudPos = _renderer.GetCombatantHudCenterPosition(e.Combatant, _battleManager.AllCombatants);
-            _animationManager.StartDamageIndicator(e.Combatant.CombatantID, $"+{e.Amount} EXP", hudPos + new Vector2(0, -20), _global.Palette_Sea);
+            Vector2 visualPos = _renderer.GetCombatantVisualCenterPosition(e.Combatant, _battleManager.AllCombatants);
+            _animationManager.StartEXPIndicator(e.Combatant.CombatantID, e.Amount, visualPos);
         }
 
         private void TriggerVictoryRestoration()

@@ -19,6 +19,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using static ProjectVagabond.GameEvents;
+using static System.Formats.Asn1.AsnWriter;
 
 namespace ProjectVagabond.Battle
 {
@@ -1155,6 +1156,8 @@ namespace ProjectVagabond.Battle
             var gameState = ServiceLocator.Get<GameState>();
             var dataManager = ServiceLocator.Get<DataManager>();
 
+            int totalExpYield = 0;
+
             foreach (var deadCombatant in deadCombatants)
             {
                 RecordDefeatedName(deadCombatant);
@@ -1169,38 +1172,42 @@ namespace ProjectVagabond.Battle
 
                 if (!deadCombatant.IsPlayerControlled)
                 {
-                    var livingPartyMembers = gameState.PlayerState.Party.Where(p => p.CurrentHP > 0).ToList();
-                    if (livingPartyMembers.Count > 0)
+                    int yield = deadCombatant.EXPYield;
+                    if (yield <= 0)
                     {
-                        int yield = deadCombatant.EXPYield;
-                        if (yield <= 0)
+                        var enemyData = dataManager.GetEnemyData(deadCombatant.ArchetypeId);
+                        if (enemyData != null) yield = enemyData.EXPYield;
+                        if (yield <= 0) yield = 50; // Ultimate fallback
+                    }
+                    totalExpYield += yield;
+                }
+            }
+
+            if (totalExpYield > 0)
+            {
+                var livingPartyMembers = gameState.PlayerState.Party.Where(p => p.CurrentHP > 0).ToList();
+                if (livingPartyMembers.Count > 0)
+                {
+                    int expShare = Math.Max(1, totalExpYield / livingPartyMembers.Count);
+
+                    foreach (var partyMember in livingPartyMembers)
+                    {
+                        partyMember.CurrentEXP += expShare;
+
+                        AppendToLog($"[cBlue]{partyMember.Name} gained {expShare} EXP.[/]");
+
+                        var activeCombatant = _cachedActivePlayers.FirstOrDefault(c => c.Name == partyMember.Name);
+                        if (activeCombatant != null)
                         {
-                            var enemyData = dataManager.GetEnemyData(deadCombatant.ArchetypeId);
-                            if (enemyData != null) yield = enemyData.EXPYield;
-                            if (yield <= 0) yield = 50; // Ultimate fallback
+                            EventBus.Publish(new EXPGainedEvent { Combatant = activeCombatant, Amount = expShare });
                         }
 
-                        int expShare = Math.Max(1, yield / livingPartyMembers.Count);
-
-                        foreach (var partyMember in livingPartyMembers)
+                        while (partyMember.CurrentEXP >= partyMember.MaxEXP)
                         {
-                            partyMember.CurrentEXP += expShare;
-
-                            AppendToLog($"[cBlue]{partyMember.Name} gained {expShare} EXP.[/]");
-
-                            var activeCombatant = _cachedActivePlayers.FirstOrDefault(c => c.Name == partyMember.Name);
-                            if (activeCombatant != null)
-                            {
-                                EventBus.Publish(new EXPGainedEvent { Combatant = activeCombatant, Amount = expShare });
-                            }
-
-                            while (partyMember.CurrentEXP >= partyMember.MaxEXP)
-                            {
-                                partyMember.CurrentEXP -= partyMember.MaxEXP;
-                                partyMember.Level++;
-                                partyMember.MaxEXP = (int)(partyMember.MaxEXP * 1.2f);
-                                PendingLevelUps.Enqueue(partyMember);
-                            }
+                            partyMember.CurrentEXP -= partyMember.MaxEXP;
+                            partyMember.Level++;
+                            partyMember.MaxEXP = (int)(partyMember.MaxEXP * 1.2f);
+                            PendingLevelUps.Enqueue(partyMember);
                         }
                     }
                 }
@@ -1360,3 +1367,4 @@ namespace ProjectVagabond.Battle
         }
     }
 }
+﻿
