@@ -45,7 +45,13 @@ namespace ProjectVagabond.Progression
             foreach (var node in nodesToAbandon)
             {
                 node.IsAbandoned = true;
+
                 foreach (var pathId in node.OutgoingPathIds)
+                {
+                    if (Paths.TryGetValue(pathId, out var path)) path.IsAbandoned = true;
+                }
+
+                foreach (var pathId in node.IncomingPathIds)
                 {
                     if (Paths.TryGetValue(pathId, out var path)) path.IsAbandoned = true;
                 }

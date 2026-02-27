@@ -298,12 +298,12 @@ namespace ProjectVagabond.Scenes
                 foreach (var node in _currentMap.Nodes.Values)
                 {
                     if (node.IsAbandoned)
-                        node.VisualAlpha = MathHelper.Lerp(node.VisualAlpha, 0.5f, fadeSpeed);
+                        node.VisualAlpha = MathHelper.Lerp(node.VisualAlpha, 0.75f, fadeSpeed);
                 }
                 foreach (var path in _currentMap.Paths.Values)
                 {
                     if (path.IsAbandoned)
-                        path.VisualAlpha = MathHelper.Lerp(path.VisualAlpha, 0.5f, fadeSpeed);
+                        path.VisualAlpha = MathHelper.Lerp(path.VisualAlpha, 0.75f, fadeSpeed);
                 }
             }
 
@@ -904,7 +904,9 @@ namespace ProjectVagabond.Scenes
 
                 if (path.IsAbandoned)
                 {
-                    DrawPath(spriteBatch, pixel, path, _global.Palette_DarkShadow, false, path.VisualAlpha);
+                    float fadeT = Math.Clamp((1.0f - path.VisualAlpha) / 0.25f, 0f, 1f);
+                    Color lerpedColor = Color.Lerp(_global.Palette_DarkestPale, _global.Palette_DarkShadow, fadeT);
+                    DrawPath(spriteBatch, pixel, path, lerpedColor, false, path.VisualAlpha);
                     continue;
                 }
 
@@ -966,7 +968,8 @@ namespace ProjectVagabond.Scenes
 
             if (node.IsAbandoned)
             {
-                color = _global.Palette_DarkShadow;
+                float fadeT = Math.Clamp((1.0f - node.VisualAlpha) / 0.25f, 0f, 1f);
+                color = Color.Lerp(_global.Palette_DarkestPale, _global.Palette_DarkShadow, fadeT);
             }
             else if (node.IsCompleted) color = _global.Palette_DarkShadow;
             else if (node.NodeType != SplitNodeType.Origin && node.Id != _playerCurrentNodeId && !node.IsReachable) color = _global.Palette_DarkestPale;
