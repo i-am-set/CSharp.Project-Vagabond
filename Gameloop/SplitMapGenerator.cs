@@ -10,35 +10,28 @@ using System.Linq;
 
 namespace ProjectVagabond.Progression
 {
-    /// <summary>
-    /// A static class responsible for procedurally generating a linear map for a split.
-    /// </summary>
     public static class SplitMapGenerator
     {
         private static readonly Random _random = new Random();
         private static readonly SeededPerlin _baldSpotNoise;
         private static readonly SeededPerlin _nodeExclusionNoise;
 
-        // --- Visual Tuning ---
-        public const int COLUMN_WIDTH = 96; // 6 * GRID_SIZE
-        public const int HORIZONTAL_PADDING = 64; // 4 * GRID_SIZE
-        private const float PATH_SEGMENT_LENGTH = 10f; // Smaller value = more wiggles
-        private const float PATH_MAX_OFFSET = 5f; // Max perpendicular deviation
+        public const int COLUMN_WIDTH = 96;
+        public const int HORIZONTAL_PADDING = 64;
+        private const float PATH_SEGMENT_LENGTH = 10f;
+        private const float PATH_MAX_OFFSET = 5f;
         private const float NODE_REPULSION_RADIUS = 30f;
         private const float NODE_REPULSION_STRENGTH = 15f;
 
-        // --- Tree Generation Tuning ---
-        private const int TREE_DENSITY_STEP = 2; // Check for a tree every pixel for max density.
-        private const float TREE_NOISE_SCALE = 8.0f; // Controls the size of clearings.
-        private const float TREE_PLACEMENT_THRESHOLD = 0.45f; // Noise value must be above this to place a tree.
+        private const int TREE_DENSITY_STEP = 2;
+        private const float TREE_NOISE_SCALE = 8.0f;
+        private const float TREE_PLACEMENT_THRESHOLD = 0.45f;
         private const float TREE_EXCLUSION_RADIUS_NODE = 20f;
         private const float TREE_EXCLUSION_RADIUS_PATH = 8f;
 
-        // --- Bald Spot Generation Tuning ---
         private const float BALD_SPOT_NOISE_SCALE = 0.1f;
         private const float BALD_SPOT_THRESHOLD = 0.65f;
 
-        // --- Node Exclusion Zone Tuning ---
         private const float NODE_EXCLUSION_NOISE_SCALE = 2.5f;
         private const float NODE_EXCLUSION_NOISE_STRENGTH = 0.4f;
 
@@ -55,70 +48,107 @@ namespace ProjectVagabond.Progression
 
             var progressionManager = ServiceLocator.Get<ProgressionManager>();
 
-            // Fixed linear structure: 11 columns (0 to 10)
             const int totalColumns = 11;
             float mapWidth = (10 * COLUMN_WIDTH) + HORIZONTAL_PADDING * 2;
-            float centerY = Global.VIRTUAL_HEIGHT / 2f;
+            float screenHeight = Global.VIRTUAL_HEIGHT;
 
             var allNodes = new List<SplitMapNode>();
             var allPaths = new List<SplitMapPath>();
+            var nodesByColumn = new Dictionary<int, List<SplitMapNode>>();
 
-            // Generate Nodes linearly
             for (int col = 0; col < totalColumns; col++)
             {
+                nodesByColumn[col] = new List<SplitMapNode>();
+                int nodeCount = (col == 0 || col == totalColumns - 1) ? 1 : _random.Next(2, 4);
                 float x = HORIZONTAL_PADDING + (col * COLUMN_WIDTH);
-                var position = new Vector2(x, centerY);
-                var node = new SplitMapNode(col, position);
+                float segmentHeight = screenHeight / (nodeCount + 1);
 
-                // Assign Type and Data
-                if (col == 0)
+                for (int i = 0; i < nodeCount; i++)
                 {
-                    node.NodeType = SplitNodeType.Origin;
-                }
-                else if (col == totalColumns - 1) // Column 10
-                {
-                    node.NodeType = SplitNodeType.MajorBattle;
-                    node.EventData = progressionManager.GetRandomMajorBattle();
-                }
-                else
-                {
-                    node.NodeType = SplitNodeType.Battle;
+                    float y = segmentHeight * (i + 1);
+                    var position = new Vector2(x, y);
+                    var node = new SplitMapNode(col, position);
 
-                    // Difficulty Progression
-                    if (col <= 3) node.Difficulty = BattleDifficulty.Easy;
-                    else if (col <= 6) node.Difficulty = BattleDifficulty.Normal;
-                    else node.Difficulty = BattleDifficulty.Hard;
+                    if (col == 0)
+                    {
+                        node.NodeType = SplitNodeType.Origin;
+                    }
+                    else if (col == totalColumns - 1)
+                    {
+                        node.NodeType = SplitNodeType.MajorBattle;
+                        node.EventData = progressionManager.GetRandomMajorBattle();
+                    }
+                    else
+                    {
+                        double roll = _random.NextDouble();
+                        if (roll < 0.1)
+                        {
+                            node.NodeType = SplitNodeType.Rest;
+                        }
+                        else if (roll < 0.2)
+                        {
+                            node.NodeType = SplitNodeType.Recruit;
+                        }
+                        else
+                        {
+                            node.NodeType = SplitNodeType.Battle;
+                            if (col <= 3) node.Difficulty = BattleDifficulty.Easy;
+                            else if (col <= 6) node.Difficulty = BattleDifficulty.Normal;
+                            else node.Difficulty = BattleDifficulty.Hard;
 
-                    node.EventData = progressionManager.GetRandomBattle(node.Difficulty);
-                }
+                            node.EventData = progressionManager.GetRandomBattle(node.Difficulty);
+                        }
+                    }
 
-                allNodes.Add(node);
-
-                // Create Path from previous node
-                if (col > 0)
-                {
-                    var prevNode = allNodes[col - 1];
-                    var path = new SplitMapPath(prevNode.Id, node.Id);
-
-                    // Generate visual points
-                    // We pass an empty list for ignoreNodeIds because in a linear map we don't need complex exclusion logic,
-                    // but we pass allNodes so the wiggle logic can still respect general repulsion if we ever add nearby props.
-                    path.RenderPoints = GenerateWigglyPathPoints(prevNode.Position, node.Position, new List<int> { prevNode.Id, node.Id }, allNodes);
-
-                    prevNode.OutgoingPathIds.Add(path.Id);
-                    node.IncomingPathIds.Add(path.Id);
-                    allPaths.Add(path);
+                    allNodes.Add(node);
+                    nodesByColumn[col].Add(node);
                 }
             }
 
-            // Final Assembly
-            int startNodeId = allNodes.FirstOrDefault(n => n.Floor == 0)?.Id ?? -1;
-            if (startNodeId == -1) return null;
+            for (int col = 0; col < totalColumns - 1; col++)
+            {
+                var currentNodes = nodesByColumn[col];
+                var nextNodes = nodesByColumn[col + 1];
+
+                foreach (var cNode in currentNodes)
+                {
+                    int connections = _random.Next(1, 3);
+                    connections = Math.Min(connections, nextNodes.Count);
+
+                    var shuffledNext = nextNodes.OrderBy(n => _random.Next()).Take(connections).ToList();
+                    foreach (var nNode in shuffledNext)
+                    {
+                        CreatePath(cNode, nNode, allPaths, allNodes);
+                    }
+                }
+
+                foreach (var nNode in nextNodes)
+                {
+                    if (nNode.IncomingPathIds.Count == 0)
+                    {
+                        var cNode = currentNodes[_random.Next(currentNodes.Count)];
+                        CreatePath(cNode, nNode, allPaths, allNodes);
+                    }
+                }
+            }
+
+            int startNodeId = nodesByColumn[0].First().Id;
 
             GeneratePathRenderPoints(allPaths, allNodes);
             var bakedScenery = BakeTreesToTexture(allNodes, allPaths, mapWidth);
 
             return new SplitMap(allNodes, allPaths, bakedScenery, totalColumns, startNodeId, mapWidth);
+        }
+
+        private static void CreatePath(SplitMapNode from, SplitMapNode to, List<SplitMapPath> allPaths, List<SplitMapNode> allNodes)
+        {
+            if (from.OutgoingPathIds.Any(pid => allPaths.Any(p => p.Id == pid && p.ToNodeId == to.Id))) return;
+
+            var path = new SplitMapPath(from.Id, to.Id);
+            path.RenderPoints = GenerateWigglyPathPoints(from.Position, to.Position, new List<int> { from.Id, to.Id }, allNodes);
+            from.OutgoingPathIds.Add(path.Id);
+            to.IncomingPathIds.Add(path.Id);
+            allPaths.Add(path);
         }
 
         private static void GeneratePathRenderPoints(List<SplitMapPath> paths, List<SplitMapNode> allNodes)
@@ -212,17 +242,16 @@ namespace ProjectVagabond.Progression
 
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
 
-            // Y-sort trees before drawing to the texture
             foreach (var treePos in treePositions.OrderBy(p => p.Y))
             {
-                spriteBatch.DrawSnapped(pixel, treePos + new Vector2(0, -1), global.Palette_DarkShadow); // Top
-                spriteBatch.DrawSnapped(pixel, treePos, global.Palette_Black);      // Middle
-                spriteBatch.DrawSnapped(pixel, treePos + new Vector2(0, 1), global.Palette_Black); // Bottom
+                spriteBatch.DrawSnapped(pixel, treePos + new Vector2(0, -1), global.Palette_DarkShadow);
+                spriteBatch.DrawSnapped(pixel, treePos, global.Palette_Black);
+                spriteBatch.DrawSnapped(pixel, treePos + new Vector2(0, 1), global.Palette_Black);
             }
 
             spriteBatch.End();
 
-            graphicsDevice.SetRenderTarget(null); // Reset to back buffer
+            graphicsDevice.SetRenderTarget(null);
 
             return renderTarget;
         }
@@ -235,7 +264,6 @@ namespace ProjectVagabond.Progression
             int endX = (int)mapWidth + HORIZONTAL_PADDING;
             int endY = Global.VIRTUAL_HEIGHT;
 
-            // Pre-calculate exclusion zones for performance
             var noSpawnZone = new bool[endX, endY];
             float pathRadiusSq = TREE_EXCLUSION_RADIUS_PATH * TREE_EXCLUSION_RADIUS_PATH;
 
@@ -292,7 +320,6 @@ namespace ProjectVagabond.Progression
                 }
             }
 
-            // Generate trees
             for (int y = 0; y < endY; y += TREE_DENSITY_STEP)
             {
                 for (int x = 0; x < endX; x += TREE_DENSITY_STEP)
@@ -302,8 +329,7 @@ namespace ProjectVagabond.Progression
                     float lushnessNoise = noiseManager.GetNoiseValue(NoiseMapType.Lushness, x * TREE_NOISE_SCALE, y * TREE_NOISE_SCALE);
                     if (lushnessNoise > TREE_PLACEMENT_THRESHOLD)
                     {
-                        // Now check the bald spot noise layer
-                        float baldnessNoise = (_baldSpotNoise.Noise(x * BALD_SPOT_NOISE_SCALE, y * BALD_SPOT_NOISE_SCALE) + 1f) * 0.5f; // Normalize to 0-1
+                        float baldnessNoise = (_baldSpotNoise.Noise(x * BALD_SPOT_NOISE_SCALE, y * BALD_SPOT_NOISE_SCALE) + 1f) * 0.5f;
                         if (baldnessNoise <= BALD_SPOT_THRESHOLD)
                         {
                             treePositions.Add(new Vector2(x, y));

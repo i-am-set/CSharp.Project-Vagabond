@@ -22,6 +22,12 @@ using static ProjectVagabond.GameEvents;
 
 namespace ProjectVagabond.Battle
 {
+    public class EXPGainedEvent
+    {
+        public BattleCombatant Combatant { get; set; }
+        public int Amount { get; set; }
+    }
+
     public class BattleManager
     {
         public enum BattlePhase
@@ -32,6 +38,7 @@ namespace ProjectVagabond.Battle
             ActionSelection,
             ActionResolution,
             EndOfRound,
+            WaitingForLevelUp,
             BattleOver,
             ProcessingInteraction,
             WaitingForSwitchCompletion
@@ -564,6 +571,7 @@ namespace ProjectVagabond.Battle
 
             bool isWaitingForInput = _currentPhase == BattlePhase.ProcessingInteraction ||
                                      _currentPhase == BattlePhase.WaitingForSwitchCompletion ||
+                                     _currentPhase == BattlePhase.WaitingForLevelUp ||
                                      _waitingForReinforcementSelection;
 
             if (!CanAdvance && !isWaitingForInput && _currentPhase != BattlePhase.BattleOver)
@@ -599,6 +607,7 @@ namespace ProjectVagabond.Battle
                     }
                     break;
                 case BattlePhase.EndOfRound: HandleEndOfRound(); break;
+                case BattlePhase.WaitingForLevelUp: break;
                 case BattlePhase.ProcessingInteraction: break;
                 case BattlePhase.WaitingForSwitchCompletion: break;
             }
@@ -733,7 +742,12 @@ namespace ProjectVagabond.Battle
 
             if (!_cachedActiveEnemies.Any())
             {
-                if (_enemyParty.All(c => c.IsDefeated)) { _currentPhase = BattlePhase.BattleOver; return; }
+                if (_enemyParty.All(c => c.IsDefeated))
+                {
+                    if (PendingLevelUps.Any()) _currentPhase = BattlePhase.WaitingForLevelUp;
+                    else _currentPhase = BattlePhase.BattleOver;
+                    return;
+                }
                 else
                 {
                     // Skip to EndOfRound to trigger reinforcements if enemies exist but aren't active
@@ -1063,6 +1077,13 @@ namespace ProjectVagabond.Battle
 
                 case EndOfRoundStage.CheckWinLoss:
                     if (CheckWinLoss()) return;
+
+                    if (PendingLevelUps.Any())
+                    {
+                        _currentPhase = BattlePhase.WaitingForLevelUp;
+                        return;
+                    }
+
                     _endOfRoundStage = EndOfRoundStage.ProcessReinforcements;
                     _reinforcementSlotIndex = 0;
                     _reinforcementAnnounced = false;
@@ -1132,6 +1153,7 @@ namespace ProjectVagabond.Battle
                 !c.IsRemovalProcessed).ToList();
 
             var gameState = ServiceLocator.Get<GameState>();
+            var dataManager = ServiceLocator.Get<DataManager>();
 
             foreach (var deadCombatant in deadCombatants)
             {
@@ -1145,15 +1167,33 @@ namespace ProjectVagabond.Battle
 
                 EventBus.Publish(new GameEvents.CombatantDefeated { DefeatedCombatant = deadCombatant });
 
-                if (!deadCombatant.IsPlayerControlled && _cachedActivePlayers.Count > 0)
+                if (!deadCombatant.IsPlayerControlled)
                 {
-                    int expShare = deadCombatant.EXPYield / _cachedActivePlayers.Count;
-                    foreach (var activePlayer in _cachedActivePlayers)
+                    var livingPartyMembers = gameState.PlayerState.Party.Where(p => p.CurrentHP > 0).ToList();
+                    if (livingPartyMembers.Count > 0)
                     {
-                        var partyMember = gameState.PlayerState.Party.FirstOrDefault(p => p.Name == activePlayer.Name);
-                        if (partyMember != null)
+                        int yield = deadCombatant.EXPYield;
+                        if (yield <= 0)
+                        {
+                            var enemyData = dataManager.GetEnemyData(deadCombatant.ArchetypeId);
+                            if (enemyData != null) yield = enemyData.EXPYield;
+                            if (yield <= 0) yield = 50; // Ultimate fallback
+                        }
+
+                        int expShare = Math.Max(1, yield / livingPartyMembers.Count);
+
+                        foreach (var partyMember in livingPartyMembers)
                         {
                             partyMember.CurrentEXP += expShare;
+
+                            AppendToLog($"[cBlue]{partyMember.Name} gained {expShare} EXP.[/]");
+
+                            var activeCombatant = _cachedActivePlayers.FirstOrDefault(c => c.Name == partyMember.Name);
+                            if (activeCombatant != null)
+                            {
+                                EventBus.Publish(new EXPGainedEvent { Combatant = activeCombatant, Amount = expShare });
+                            }
+
                             while (partyMember.CurrentEXP >= partyMember.MaxEXP)
                             {
                                 partyMember.CurrentEXP -= partyMember.MaxEXP;
@@ -1175,8 +1215,35 @@ namespace ProjectVagabond.Battle
         private bool CheckWinLoss()
         {
             if (_playerParty.All(c => c.IsDefeated)) { _currentPhase = BattlePhase.BattleOver; _actionQueue.Clear(); return true; }
-            if (_enemyParty.All(c => c.IsDefeated)) { _currentPhase = BattlePhase.BattleOver; _actionQueue.Clear(); return true; }
+            if (_enemyParty.All(c => c.IsDefeated))
+            {
+                if (PendingLevelUps.Any())
+                {
+                    _currentPhase = BattlePhase.WaitingForLevelUp;
+                }
+                else
+                {
+                    _currentPhase = BattlePhase.BattleOver;
+                }
+                _actionQueue.Clear();
+                return true;
+            }
             return false;
+        }
+
+        public void CompleteLevelUps()
+        {
+            if (_enemyParty.All(c => c.IsDefeated))
+            {
+                _currentPhase = BattlePhase.BattleOver;
+            }
+            else
+            {
+                _currentPhase = BattlePhase.EndOfRound;
+                _endOfRoundStage = EndOfRoundStage.ProcessReinforcements;
+                _reinforcementSlotIndex = 0;
+                _reinforcementAnnounced = false;
+            }
         }
 
         private void HandleReinforcementsLogic()

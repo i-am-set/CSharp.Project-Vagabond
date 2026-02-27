@@ -123,6 +123,8 @@ namespace ProjectVagabond.Scenes
         // Floor Alpha Control
         private float _floorAlpha = 1f;
 
+        private LevelUpDialog _levelUpDialog;
+
         public BattleAnimationManager AnimationManager => _animationManager;
 
         public BattleScene()
@@ -302,6 +304,7 @@ namespace ProjectVagabond.Scenes
             EventBus.Subscribe<GameEvents.GuardBroken>(OnGuardBroken);
             EventBus.Subscribe<GameEvents.RequestImpactSync>(OnRequestImpactSync);
             EventBus.Subscribe<GameEvents.CombatantVisualDeath>(OnCombatantVisualDeath);
+            EventBus.Subscribe<EXPGainedEvent>(OnEXPGained);
 
             _uiManager.OnForcedSwitchSelected += OnForcedSwitchSelected;
             _uiManager.OnFleeRequested += FleeBattle;
@@ -331,6 +334,7 @@ namespace ProjectVagabond.Scenes
             EventBus.Unsubscribe<GameEvents.GuardBroken>(OnGuardBroken);
             EventBus.Unsubscribe<GameEvents.RequestImpactSync>(OnRequestImpactSync);
             EventBus.Unsubscribe<GameEvents.CombatantVisualDeath>(OnCombatantVisualDeath);
+            EventBus.Unsubscribe<EXPGainedEvent>(OnEXPGained);
 
             _uiManager.OnForcedSwitchSelected -= OnForcedSwitchSelected;
             _uiManager.OnFleeRequested -= FleeBattle;
@@ -453,6 +457,40 @@ namespace ProjectVagabond.Scenes
                     _sceneManager.ChangeScene(GameSceneState.GameOver, TransitionType.None, TransitionType.None);
                 }
                 return;
+            }
+
+            if (_battleManager.CurrentPhase == BattleManager.BattlePhase.WaitingForLevelUp)
+            {
+                if (_levelUpDialog == null || !_levelUpDialog.IsActive)
+                {
+                    if (_battleManager.PendingLevelUps.Count > 0)
+                    {
+                        var member = _battleManager.PendingLevelUps.Dequeue();
+                        _levelUpDialog = new LevelUpDialog(this, member, (choice, moveId) =>
+                        {
+                            if (choice == LevelUpDialog.LevelUpChoice.Core) member.CoreMove = new MoveEntry(moveId, 0);
+                            else if (choice == LevelUpDialog.LevelUpChoice.Alt) member.AltMove = new MoveEntry(moveId, 0);
+                            else if (choice == LevelUpDialog.LevelUpChoice.Omni)
+                            {
+                                member.MaxHP += 1;
+                                member.CurrentHP += 1;
+                                member.Strength += 1;
+                                member.Intelligence += 1;
+                                member.Tenacity += 1;
+                                member.Agility += 1;
+                            }
+                        });
+                    }
+                    else
+                    {
+                        _battleManager.CompleteLevelUps();
+                    }
+                }
+
+                if (_levelUpDialog != null && _levelUpDialog.IsActive)
+                {
+                    _levelUpDialog.Update(effectiveGameTime);
+                }
             }
 
             if (_battleManager.CurrentPhase == BattleManager.BattlePhase.BattleStartIntro)
@@ -681,7 +719,7 @@ namespace ProjectVagabond.Scenes
             }
 
             bool stateChanged = _battleManager.CurrentPhase != _lastFramePhase || isUiBusy != _wasUiBusyLastFrame || isAnimBusy != _wasAnimatingLastFrame;
-            if (!stateChanged && !_isBattleOver && !_uiManager.IsWaitingForInput) _watchdogTimer += dt; else _watchdogTimer = 0f;
+            if (!stateChanged && !_isBattleOver && !_uiManager.IsWaitingForInput && _battleManager.CurrentPhase != BattleManager.BattlePhase.WaitingForLevelUp) _watchdogTimer += dt; else _watchdogTimer = 0f;
 
             if (_watchdogTimer > WATCHDOG_TIMEOUT)
             {
@@ -733,6 +771,25 @@ namespace ProjectVagabond.Scenes
             }
 
             base.Update(gameTime);
+        }
+
+        public override void DrawFullscreenUI(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
+        {
+            _uiManager.DrawFullscreenDialogs(spriteBatch, font, gameTime, transform);
+            if (_levelUpDialog != null && _levelUpDialog.IsActive)
+            {
+                _levelUpDialog.DrawOverlay(spriteBatch);
+
+                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
+                _levelUpDialog.DrawContent(spriteBatch, font, gameTime, transform);
+                spriteBatch.End();
+            }
+        }
+
+        private void OnEXPGained(EXPGainedEvent e)
+        {
+            Vector2 hudPos = _renderer.GetCombatantHudCenterPosition(e.Combatant, _battleManager.AllCombatants);
+            _animationManager.StartDamageIndicator(e.Combatant.CombatantID, $"+{e.Amount} EXP", hudPos + new Vector2(0, -20), _global.Palette_Sea);
         }
 
         private void TriggerVictoryRestoration()
@@ -965,11 +1022,6 @@ namespace ProjectVagabond.Scenes
                 var screenBounds = new Rectangle(0, 0, graphicsDevice.Viewport.Width, graphicsDevice.Viewport.Height);
                 spriteBatch.Draw(pixel, screenBounds, Color.Black * alpha);
             }
-        }
-
-        public override void DrawFullscreenUI(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
-        {
-            _uiManager.DrawFullscreenDialogs(spriteBatch, font, gameTime, transform);
         }
 
         public void TriggerFlee()

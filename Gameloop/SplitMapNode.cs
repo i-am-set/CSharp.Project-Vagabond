@@ -18,7 +18,9 @@ namespace ProjectVagabond.Progression
     {
         Origin,
         Battle,
-        MajorBattle
+        MajorBattle,
+        Rest,
+        Recruit
     }
 
     public enum BattleDifficulty
@@ -32,10 +34,10 @@ namespace ProjectVagabond.Progression
     {
         public int Id { get; }
         public int Floor { get; }
-        public Vector2 Position { get; set; } // Changed to get; set; to allow post-generation centering
+        public Vector2 Position { get; set; }
         public SplitNodeType NodeType { get; set; }
         public BattleDifficulty Difficulty { get; set; } = BattleDifficulty.Normal;
-        public object? EventData { get; set; } // List<string> for battles
+        public object? EventData { get; set; }
         public List<int> IncomingPathIds { get; } = new List<int>();
         public List<int> OutgoingPathIds { get; } = new List<int>();
         public bool IsReachable { get; set; } = false;
@@ -52,8 +54,8 @@ namespace ProjectVagabond.Progression
             Id = _nextId++;
             Floor = floor;
             Position = position;
-            NodeType = SplitNodeType.Battle; // Default
-            AnimationOffset = (float)_random.NextDouble() * 2f; // Random offset up to 2 seconds for staggered animations
+            NodeType = SplitNodeType.Battle;
+            AnimationOffset = (float)_random.NextDouble() * 2f;
         }
 
         public Rectangle GetBounds()

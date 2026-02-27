@@ -13,6 +13,7 @@ using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace ProjectVagabond.Scenes
@@ -34,7 +35,6 @@ namespace ProjectVagabond.Scenes
         private readonly VoidEdgeEffect _voidEdgeEffect;
 
         private readonly SplitMapHudRenderer _hudRenderer;
-        private readonly PostBattleMenu _postBattleMenu;
 
         private readonly BirdManager _birdManager;
         private readonly TransitionManager _transitionManager;
@@ -46,12 +46,10 @@ namespace ProjectVagabond.Scenes
         private int _cameraFocusNodeId;
         private readonly PlayerMapIcon _playerIcon;
 
-        // --- MOVEMENT TUNING ---
         private const float CAMERA_LERP_SPEED = 15f;
         private const float POST_EVENT_DELAY = 0.0f;
         private const float PATH_ANIMATION_DURATION = 0.6f;
 
-        // --- AUTO WALK STATE ---
         private bool _isWalking = false;
         private int _currentMoveStep = 0;
         private float _walkStepTimer = 0f;
@@ -71,17 +69,15 @@ namespace ProjectVagabond.Scenes
 
         private const float POP_ROTATION_DEG = 15f;
 
-        // --- NODE ANIMATION TUNING ---
-        private const float NODE_LIFT_DURATION = 0.15f; // Fast pop up
-        private const float PULSE_DURATION = 1.0f; // Settle time
+        private const float NODE_LIFT_DURATION = 0.15f;
+        private const float PULSE_DURATION = 1.0f;
         private const float NODE_LOWERING_DURATION = 0.75f;
-        private const float NODE_LIFT_AMOUNT = 8f; // Higher lift for drama
-        private const float ARRIVAL_SCALE_MAX = 1.5f; // Big pop on arrival
+        private const float NODE_LIFT_AMOUNT = 8f;
+        private const float ARRIVAL_SCALE_MAX = 1.5f;
 
         private Vector2 _cameraOffset;
         private Vector2 _targetCameraOffset;
 
-        // --- Dynamic Viewport State ---
         private float _hudSlideOffset = 0f;
         private const float HUD_SLIDE_DISTANCE = 24f;
         private const float HUD_SLIDE_SPEED = 10f;
@@ -135,10 +131,7 @@ namespace ProjectVagabond.Scenes
         private static readonly RasterizerState _scissorRasterizerState = new RasterizerState { ScissorTestEnable = true };
 
         private Vector2 _nodeArrivalScale = Vector2.One;
-
-        // FIX: Added missing field definition
         private Vector2 _nodeArrivalShake = Vector2.Zero;
-
         private float _nodeArrivalRotation = 0f;
         private int _arrivalRotationDir = 1;
 
@@ -154,13 +147,6 @@ namespace ProjectVagabond.Scenes
             _playerIcon = new PlayerMapIcon();
 
             _hudRenderer = new SplitMapHudRenderer();
-            _postBattleMenu = new PostBattleMenu();
-            _postBattleMenu.OnComplete += () =>
-            {
-                _mapState = SplitMapState.Idle;
-                UpdateReachableNodes();
-                StartPathRevealAnimation();
-            };
 
             _birdManager = new BirdManager();
             _transitionManager = ServiceLocator.Get<TransitionManager>();
@@ -204,7 +190,6 @@ namespace ProjectVagabond.Scenes
             _playerMoveTargetNodeId = -1;
             _playerMovePath = null;
 
-            _postBattleMenu.Hide();
             InitializeSettingsButton();
             _settingsButtonState = SettingsButtonState.AnimatingIn;
             _settingsButtonAnimTimer = 0f;
@@ -310,7 +295,6 @@ namespace ProjectVagabond.Scenes
             var currentKeyboardState = Keyboard.GetState();
             var virtualMousePos = Core.TransformMouse(currentMouseState.Position);
 
-            // --- Dynamic Viewport Logic ---
             float splitLineY = (Global.VIRTUAL_HEIGHT - SplitMapHudRenderer.HUD_HEIGHT) + _hudSlideOffset;
             bool mouseInMap = virtualMousePos.Y < splitLineY;
 
@@ -340,8 +324,6 @@ namespace ProjectVagabond.Scenes
                 _nodeLiftTimer = 0f;
             }
 
-            if (_mapState == SplitMapState.Resting) _postBattleMenu.Update(gameTime, currentMouseState);
-
             if (_settingsButton != null)
             {
                 if (_settingsButtonState == SettingsButtonState.AnimatingIn)
@@ -368,7 +350,6 @@ namespace ProjectVagabond.Scenes
 
             if (KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState)) OpenSettings();
 
-            // Camera Update
             float cameraDamping = 1.0f - MathF.Exp(-CAMERA_LERP_SPEED * deltaTime);
 
             if (_currentMap != null && _currentMap.Nodes.TryGetValue(_cameraFocusNodeId, out var pNode))
@@ -394,14 +375,12 @@ namespace ProjectVagabond.Scenes
                 if (_pathAnimationProgress[pathId] < duration) _pathAnimationProgress[pathId] += deltaTime;
             }
 
-            // Update Click Animation
             if (_clickAnimTimer > 0f)
             {
                 _clickAnimTimer -= deltaTime;
                 if (_clickAnimTimer < 0f) _clickAnimTimer = 0f;
             }
 
-            // --- AUTO WALK LOGIC ---
             if (_isWalking && _playerMovePath != null)
             {
                 _playerIcon.SetIsMoving(true);
@@ -409,22 +388,17 @@ namespace ProjectVagabond.Scenes
 
                 float stepProgress = Math.Clamp(_walkStepTimer / STEP_DURATION, 0f, 1f);
 
-                // Calculate Global Progress for path interpolation
                 float startRatio = (float)_currentMoveStep / TOTAL_MOVE_STEPS;
                 float endRatio = (float)(_currentMoveStep + 1) / TOTAL_MOVE_STEPS;
 
-                // Use EaseOut for "Start fast, end slow" movement within the step
                 float moveT = Easing.EaseOutCubic(stepProgress);
                 float globalT = MathHelper.Lerp(startRatio, endRatio, moveT);
 
                 Vector2 pathPos = GetPointOnPath(globalT);
 
-                // Add Jump Arc (Sine wave)
                 float jumpY = MathF.Sin(stepProgress * MathHelper.Pi) * -JUMP_HEIGHT;
                 _playerIcon.SetPosition(pathPos + new Vector2(0, jumpY));
 
-                // Add Rotation (Waddle)
-                // Alternate direction based on step index (Even = Left, Odd = Right)
                 float rotationDir = (_currentMoveStep % 2 == 0) ? -1f : 1f;
                 float targetRotation = MathHelper.ToRadians(STEP_ROTATION) * rotationDir;
 
@@ -432,16 +406,13 @@ namespace ProjectVagabond.Scenes
 
                 if (_walkStepTimer >= STEP_DURATION)
                 {
-                    // Step Complete (Landing)
                     _walkStepTimer = 0f;
                     _currentMoveStep++;
 
-                    // Trigger Haptic on landing
                     _hapticsManager.TriggerHop(1.5f, 0.1f);
 
                     if (_currentMoveStep >= TOTAL_MOVE_STEPS)
                     {
-                        // Arrival
                         _isWalking = false;
                         _playerIcon.Rotation = 0f;
                         _playerIcon.SetIsMoving(false);
@@ -450,7 +421,6 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            // Only process input if NOT auto-walking
             if (!_isWalking)
             {
                 HandleMapInput(gameTime);
@@ -521,14 +491,11 @@ namespace ProjectVagabond.Scenes
                     {
                         if (_currentMap != null && _currentMap.Nodes[_hoveredNodeId].IsReachable)
                         {
-                            // Visual Click Effect
                             _clickedNodeId = _hoveredNodeId;
                             _clickAnimTimer = CLICK_ANIM_DURATION;
 
-                            // Pick random direction for rotation (+1 or -1)
                             _clickRotationDir = _random.Next(2) == 0 ? 1 : -1;
 
-                            // Logic
                             HandleNodeClick(_hoveredNodeId);
 
                             _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
@@ -545,16 +512,13 @@ namespace ProjectVagabond.Scenes
 
         private void HandleNodeClick(int targetNodeId)
         {
-            // Reset for new movement
             _playerMoveTargetNodeId = targetNodeId;
             _currentMoveStep = 0;
             _walkStepTimer = 0f;
             _isWalking = true;
 
-            // Find path
             _playerMovePath = _currentMap?.Paths.Values.FirstOrDefault(p => p.FromNodeId == _playerCurrentNodeId && p.ToNodeId == targetNodeId);
 
-            // Calculate total length for interpolation
             if (_playerMovePath != null)
             {
                 _playerPathTotalLength = 0f;
@@ -599,7 +563,11 @@ namespace ProjectVagabond.Scenes
             _visitedNodeIds.Add(_playerCurrentNodeId);
             _selectedNodeId = -1;
 
-            // Reset move state
+            if (_currentMap != null)
+            {
+                _currentMap.PruneColumn(_currentMap.Nodes[_playerCurrentNodeId].Floor, _playerCurrentNodeId);
+            }
+
             _playerMovePath = null;
             _playerMoveTargetNodeId = -1;
             _currentMoveStep = 0;
@@ -634,7 +602,6 @@ namespace ProjectVagabond.Scenes
                 float eased = Easing.EaseOutCubic(progress);
                 currentNode.VisualOffset = new Vector2(0, MathHelper.Lerp(0, -NODE_LIFT_AMOUNT, eased));
 
-                // No stretch during lift, we rely on the pulse for impact
                 _nodeArrivalScale = Vector2.One;
                 _nodeArrivalRotation = 0f;
             }
@@ -642,7 +609,6 @@ namespace ProjectVagabond.Scenes
             {
                 _mapState = SplitMapState.PulsingNode;
                 _pulseTimer = 0f;
-                // Pick random direction for arrival rotation
                 _arrivalRotationDir = _random.Next(2) == 0 ? 1 : -1;
             }
         }
@@ -651,17 +617,14 @@ namespace ProjectVagabond.Scenes
         {
             _pulseTimer += deltaTime;
 
-            // "Scale instantly to its max, then ease back down"
-            float progress = Math.Clamp(_pulseTimer / PULSE_DURATION, 0f, 1f); // 0 -> 1
-            float countdown = 1.0f - progress; // 1 -> 0
+            float progress = Math.Clamp(_pulseTimer / PULSE_DURATION, 0f, 1f);
+            float countdown = 1.0f - progress;
 
-            // Squared decay creates a fast dropoff: 1.0 -> 0.25 -> 0.0
             float decayCurve = countdown * countdown;
 
             float scaleBonus = (ARRIVAL_SCALE_MAX - 1.0f) * decayCurve;
             _nodeArrivalScale = new Vector2(1.0f + scaleBonus);
 
-            // Apply rotation decay: Max -> 0
             _nodeArrivalRotation = MathHelper.ToRadians(POP_ROTATION_DEG) * decayCurve * _arrivalRotationDir;
 
             _nodeArrivalShake = Vector2.Zero;
@@ -686,7 +649,6 @@ namespace ProjectVagabond.Scenes
                 float eased = Easing.EaseOutBounce(progress);
                 currentNode.VisualOffset = new Vector2(0, MathHelper.Lerp(-NODE_LIFT_AMOUNT, 0, eased));
 
-                // Slight squash on impact
                 if (progress > 0.8f)
                 {
                     float squashProgress = (progress - 0.8f) / 0.2f;
@@ -695,7 +657,7 @@ namespace ProjectVagabond.Scenes
                 }
                 else _nodeArrivalScale = Vector2.One;
 
-                _nodeArrivalRotation = 0f; // Ensure flat
+                _nodeArrivalRotation = 0f;
             }
 
             if (_nodeLiftTimer >= NODE_LOWERING_DURATION)
@@ -709,17 +671,8 @@ namespace ProjectVagabond.Scenes
                 _nodeArrivalScale = Vector2.One;
                 _nodeArrivalRotation = 0f;
 
-                bool wasBattle = currentNode != null && (currentNode.NodeType == SplitNodeType.Battle || currentNode.NodeType == SplitNodeType.MajorBattle);
-                if (wasBattle)
-                {
-                    _mapState = SplitMapState.Resting;
-                    _postBattleMenu.Show();
-                }
-                else
-                {
-                    _mapState = SplitMapState.PostEventDelay;
-                    _postEventDelayTimer = POST_EVENT_DELAY;
-                }
+                _mapState = SplitMapState.PostEventDelay;
+                _postEventDelayTimer = POST_EVENT_DELAY;
             }
         }
 
@@ -790,6 +743,20 @@ namespace ProjectVagabond.Scenes
                     WasMajorBattle = node.NodeType == SplitNodeType.MajorBattle;
                     InitiateCombat(node.EventData as List<string> ?? new List<string>());
                     break;
+                case SplitNodeType.Rest:
+                    Debug.WriteLine("[SplitMapScene] Player landed on a Rest node.");
+                    node.IsCompleted = true;
+                    UpdateCameraTarget(node.Position, false);
+                    _mapState = SplitMapState.LoweringNode;
+                    _nodeLiftTimer = 0f;
+                    break;
+                case SplitNodeType.Recruit:
+                    Debug.WriteLine("[SplitMapScene] Player landed on a Recruit node.");
+                    node.IsCompleted = true;
+                    UpdateCameraTarget(node.Position, false);
+                    _mapState = SplitMapState.LoweringNode;
+                    _nodeLiftTimer = 0f;
+                    break;
                 default:
                     node.IsCompleted = true;
                     UpdateCameraTarget(node.Position, false);
@@ -803,7 +770,6 @@ namespace ProjectVagabond.Scenes
         {
             if (_currentMap == null) return;
 
-            // Snap camera offset to nearest pixel to prevent subpixel artifacts on pixel art
             var snappedCameraOffset = new Vector2(MathF.Round(_cameraOffset.X), MathF.Round(_cameraOffset.Y));
             var cameraTransform = Matrix.CreateTranslation(snappedCameraOffset.X, snappedCameraOffset.Y, 0);
             var finalTransform = cameraTransform * transform;
@@ -871,7 +837,6 @@ namespace ProjectVagabond.Scenes
             _hudRenderer.Draw(spriteBatch, gameTime, _hudSlideOffset);
 
             _settingsButton?.Draw(spriteBatch, font, gameTime, transform);
-            _postBattleMenu.Draw(spriteBatch, gameTime);
 
             if (_hoveredNodeId != -1 && _mapState == SplitMapState.Idle)
             {
@@ -886,6 +851,8 @@ namespace ProjectVagabond.Scenes
                             _ => "COMBAT",
                         },
                         SplitNodeType.MajorBattle => "MAJOR BATTLE",
+                        SplitNodeType.Rest => "REST",
+                        SplitNodeType.Recruit => "RECRUIT",
                         _ => ""
                     };
 
@@ -981,7 +948,6 @@ namespace ProjectVagabond.Scenes
             Vector2 shake = Vector2.Zero;
             float rotation = 0f;
 
-            // Apply Arrival Animation Transforms
             if (node.Id == _playerCurrentNodeId)
             {
                 scale = _nodeArrivalScale;
@@ -989,18 +955,14 @@ namespace ProjectVagabond.Scenes
                 rotation = _nodeArrivalRotation;
             }
 
-            // Apply Click Animation Transforms (Overrides if active)
             if (node.Id == _clickedNodeId && _clickAnimTimer > 0f)
             {
-                // Quadratic Decay from Max Scale to 1.0
-                float t = _clickAnimTimer / CLICK_ANIM_DURATION; // 1 -> 0
+                float t = _clickAnimTimer / CLICK_ANIM_DURATION;
                 float decay = t * t;
 
-                // Base 1.0 + Extra
                 float scaleBonus = (CLICK_SCALE_MAX - 1.0f) * decay;
                 scale = new Vector2(1.0f + scaleBonus);
 
-                // Quick snap rotation
                 rotation = MathHelper.ToRadians(POP_ROTATION_DEG) * decay * _clickRotationDir;
             }
 
