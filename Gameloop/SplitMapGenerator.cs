@@ -16,7 +16,7 @@ namespace ProjectVagabond.Progression
         private static readonly SeededPerlin _baldSpotNoise;
         private static readonly SeededPerlin _nodeExclusionNoise;
         private static readonly SeededPerlin _pathWiggleNoise;
-        public const int COLUMN_WIDTH = 96;
+        public const int COLUMN_WIDTH = 64;
         public const int HORIZONTAL_PADDING = 64;
         private const float PATH_SEGMENT_LENGTH = 5f;
         private const float PATH_MAX_OFFSET = 4f;
@@ -26,8 +26,8 @@ namespace ProjectVagabond.Progression
         private const int TREE_DENSITY_STEP = 2;
         private const float TREE_NOISE_SCALE = 8.0f;
         private const float TREE_PLACEMENT_THRESHOLD = 0.45f;
-        private const float TREE_EXCLUSION_RADIUS_NODE = 20f;
-        private const float TREE_EXCLUSION_RADIUS_PATH = 8f;
+        private const float TREE_EXCLUSION_RADIUS_NODE = 15f;
+        private const float TREE_EXCLUSION_RADIUS_PATH = 5f;
 
         private const float BALD_SPOT_NOISE_SCALE = 0.1f;
         private const float BALD_SPOT_THRESHOLD = 0.65f;
@@ -153,7 +153,6 @@ namespace ProjectVagabond.Progression
             if (from.OutgoingPathIds.Any(pid => allPaths.Any(p => p.Id == pid && p.ToNodeId == to.Id))) return;
 
             var path = new SplitMapPath(from.Id, to.Id);
-            // Pass allPaths to allow repulsion from already generated paths
             path.RenderPoints = GenerateWigglyPathPoints(from.Position, to.Position, new List<int> { from.Id, to.Id }, allNodes, allPaths);
             from.OutgoingPathIds.Add(path.Id);
             to.IncomingPathIds.Add(path.Id);
@@ -183,7 +182,7 @@ namespace ProjectVagabond.Progression
 
         private static List<Vector2> GenerateWigglyPathPoints(Vector2 start, Vector2 end, List<int> ignoreNodeIds, List<SplitMapNode> allNodes, List<SplitMapPath> existingPaths)
         {
-            var points = new List<Vector2> { start }; // Guarantees exact origin
+            var points = new List<Vector2> { start };
             var mainVector = end - start;
             var totalDistance = mainVector.Length();
 
@@ -204,16 +203,13 @@ namespace ProjectVagabond.Progression
                 float progress = (float)i / numSegments;
                 var pointOnLine = start + direction * progress * totalDistance;
 
-                // Smooth wiggle using Perlin noise
                 float noiseVal = _pathWiggleNoise.Noise(progress * 4f, pathSeed);
                 float smoothOffset = noiseVal * PATH_MAX_OFFSET;
 
-                // Taper forces the offset to 0 at the start and end
                 float taper = MathF.Sin(progress * MathF.PI);
 
                 Vector2 totalRepulsion = Vector2.Zero;
 
-                // Node repulsion
                 foreach (var otherNode in allNodes)
                 {
                     if (ignoreNodeIds.Contains(otherNode.Id)) continue;
@@ -231,7 +227,6 @@ namespace ProjectVagabond.Progression
                     }
                 }
 
-                // Path repulsion to prevent overlap
                 const float PATH_REPULSION_RADIUS = 12f;
                 const float PATH_REPULSION_STRENGTH = 6f;
                 foreach (var existingPath in existingPaths)
@@ -249,12 +244,11 @@ namespace ProjectVagabond.Progression
                     }
                 }
 
-                // Apply taper to repulsion as well so it still connects perfectly
                 var finalPoint = pointOnLine + perpendicular * smoothOffset * taper + totalRepulsion * taper;
                 points.Add(finalPoint);
             }
 
-            points.Add(end); // Guarantees exact destination
+            points.Add(end);
             return points;
         }
 

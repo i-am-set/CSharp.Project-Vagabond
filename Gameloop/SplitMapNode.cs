@@ -37,7 +37,6 @@ namespace ProjectVagabond.Progression
         public Vector2 VisualOffset { get; set; } = Vector2.Zero;
 
         private static int _nextId = 0;
-        private const int NODE_SIZE = 32;
         private static readonly Random _random = new Random();
 
         public SplitMapNode(int floor, Vector2 position)
@@ -51,7 +50,8 @@ namespace ProjectVagabond.Progression
 
         public Rectangle GetBounds()
         {
-            return new Rectangle((int)(Position.X - NODE_SIZE / 2), (int)(Position.Y - NODE_SIZE / 2), NODE_SIZE, NODE_SIZE);
+            // 16x16 hitbox centered on the node
+            return new Rectangle((int)(Position.X - 8), (int)(Position.Y - 8), 16, 16);
         }
 
         public static void ResetIdCounter() => _nextId = 0;

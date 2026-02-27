@@ -291,7 +291,6 @@ namespace ProjectVagabond.Scenes
 
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            // --- Smooth Fade for Abandoned Elements ---
             if (_currentMap != null)
             {
                 float fadeSpeed = 3f * deltaTime;
@@ -878,7 +877,7 @@ namespace ProjectVagabond.Scenes
                         var nodeTextSize = secondaryFont.MeasureString(nodeText);
                         Vector2 nodeScreenPos = hoveredNode.Position + snappedCameraOffset;
                         float textX = nodeScreenPos.X - (nodeTextSize.Width / 2f);
-                        float textY = nodeScreenPos.Y - 16f - nodeTextSize.Height - 4f;
+                        float textY = nodeScreenPos.Y + 6f;
                         var textPosition = new Vector2(textX, textY);
                         _nodeTextWaveTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
                         TextAnimator.DrawTextWithEffect(spriteBatch, secondaryFont, nodeText, textPosition, _global.Palette_DarkSun, TextEffectType.Wave, _nodeTextWaveTimer);
