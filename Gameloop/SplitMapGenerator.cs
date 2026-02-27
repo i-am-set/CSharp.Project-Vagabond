@@ -15,7 +15,6 @@ namespace ProjectVagabond.Progression
         private static readonly Random _random = new Random();
         private static readonly SeededPerlin _baldSpotNoise;
         private static readonly SeededPerlin _nodeExclusionNoise;
-
         public const int COLUMN_WIDTH = 96;
         public const int HORIZONTAL_PADDING = 64;
         private const float PATH_SEGMENT_LENGTH = 10f;
@@ -50,22 +49,28 @@ namespace ProjectVagabond.Progression
 
             const int totalColumns = 11;
             float mapWidth = (10 * COLUMN_WIDTH) + HORIZONTAL_PADDING * 2;
-            float screenHeight = Global.VIRTUAL_HEIGHT;
+
+            const float WORLD_Y_CENTER = 91f;
+            const float NODE_VERTICAL_GAP = 24f;
 
             var allNodes = new List<SplitMapNode>();
             var allPaths = new List<SplitMapPath>();
             var nodesByColumn = new Dictionary<int, List<SplitMapNode>>();
 
+            // --- 1. GENERATE NODES (Centered & Tightened) ---
             for (int col = 0; col < totalColumns; col++)
             {
                 nodesByColumn[col] = new List<SplitMapNode>();
                 int nodeCount = (col == 0 || col == totalColumns - 1) ? 1 : _random.Next(2, 4);
                 float x = HORIZONTAL_PADDING + (col * COLUMN_WIDTH);
-                float segmentHeight = screenHeight / (nodeCount + 1);
+
+                // Calculate starting Y so the group of nodes is perfectly centered vertically
+                float totalHeight = (nodeCount - 1) * NODE_VERTICAL_GAP;
+                float startY = WORLD_Y_CENTER - (totalHeight / 2f);
 
                 for (int i = 0; i < nodeCount; i++)
                 {
-                    float y = segmentHeight * (i + 1);
+                    float y = startY + (i * NODE_VERTICAL_GAP);
                     var position = new Vector2(x, y);
                     var node = new SplitMapNode(col, position);
 
@@ -105,30 +110,59 @@ namespace ProjectVagabond.Progression
                 }
             }
 
+            // --- 2. GENERATE PATHS (Grid Walk to prevent crossing) ---
             for (int col = 0; col < totalColumns - 1; col++)
             {
                 var currentNodes = nodesByColumn[col];
                 var nextNodes = nodesByColumn[col + 1];
 
-                foreach (var cNode in currentNodes)
-                {
-                    int connections = _random.Next(1, 3);
-                    connections = Math.Min(connections, nextNodes.Count);
+                int i = 0;
+                int j = 0;
+                CreatePath(currentNodes[i], nextNodes[j], allPaths, allNodes);
 
-                    var shuffledNext = nextNodes.OrderBy(n => _random.Next()).Take(connections).ToList();
-                    foreach (var nNode in shuffledNext)
-                    {
-                        CreatePath(cNode, nNode, allPaths, allNodes);
-                    }
-                }
+                bool hasOutgoingBranch = false;
 
-                foreach (var nNode in nextNodes)
+                while (i < currentNodes.Count - 1 || j < nextNodes.Count - 1)
                 {
-                    if (nNode.IncomingPathIds.Count == 0)
+                    bool canMoveI = i < currentNodes.Count - 1;
+                    bool canMoveJ = j < nextNodes.Count - 1;
+
+                    if (canMoveI && canMoveJ)
                     {
-                        var cNode = currentNodes[_random.Next(currentNodes.Count)];
-                        CreatePath(cNode, nNode, allPaths, allNodes);
+                        int r = _random.Next(3);
+
+                        // Force an outgoing branch if we haven't yet and this is the last chance to increment J
+                        if (!hasOutgoingBranch && j == nextNodes.Count - 2)
+                        {
+                            r = 1;
+                        }
+
+                        if (r == 0)
+                        {
+                            i++;
+                        }
+                        else if (r == 1)
+                        {
+                            j++;
+                            hasOutgoingBranch = true;
+                        }
+                        else
+                        {
+                            i++;
+                            j++;
+                        }
                     }
+                    else if (canMoveI)
+                    {
+                        i++;
+                    }
+                    else if (canMoveJ)
+                    {
+                        j++;
+                        hasOutgoingBranch = true;
+                    }
+
+                    CreatePath(currentNodes[i], nextNodes[j], allPaths, allNodes);
                 }
             }
 
