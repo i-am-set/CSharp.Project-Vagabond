@@ -559,31 +559,25 @@ namespace ProjectVagabond.UI
             float yOffset = _verticalOffsets[member] + verticalOffset;
             bool isBeingDragged = (_isDragging && _draggedMember == member);
 
-            // --- Flip Animation Math ---
             float flipP = _flipProgress.ContainsKey(member) ? _flipProgress[member] : 0f;
-            // Scale goes 1 -> 0 -> 1. 
-            // 0.0 to 0.5 is Front shrinking. 0.5 to 1.0 is Back expanding.
             float scaleX = Math.Abs(1f - 2f * flipP);
             bool showBack = flipP > 0.5f;
 
-            // --- Flip Hop Effect ---
             float flipHop = MathF.Sin(flipP * MathHelper.Pi) * -5.0f;
             yOffset += flipHop;
 
-            // --- Matrix Transformation ---
-            // We combine Rotation (Drag) and Scale (Flip)
             bool useTransform = isBeingDragged || flipP > 0.01f;
+
+            Vector2 cardCenter = new Vector2(MathF.Round(x + CARD_WIDTH / 2f), MathF.Round(BaseY + 3 + yOffset + (HUD_HEIGHT - 4) / 2f));
 
             if (useTransform)
             {
                 spriteBatch.End();
 
-                Vector2 cardCenter = new Vector2(x + CARD_WIDTH / 2f, BaseY + 3 + yOffset + (HUD_HEIGHT - 4) / 2f);
-
                 float rotation = isBeingDragged ? _currentDragRotation : 0f;
 
                 Matrix localTransform = Matrix.CreateTranslation(new Vector3(-cardCenter, 0)) *
-                                        Matrix.CreateScale(scaleX, 1f, 1f) * // Apply Flip Scale
+                                        Matrix.CreateScale(scaleX, 1f, 1f) *
                                         Matrix.CreateRotationZ(rotation) *
                                         Matrix.CreateTranslation(new Vector3(cardCenter, 0));
 
@@ -592,32 +586,26 @@ namespace ProjectVagabond.UI
                 spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, finalTransform);
             }
 
-            // --- DRAW SLOT TAG (Behind Card) ---
             float tagOffset = _tagOffsets.ContainsKey(member) ? _tagOffsets[member] : TAG_DEFAULT_OFFSET;
             int displayedNumber = _currentTagNumbers.ContainsKey(member) ? _currentTagNumbers[member] : (index + 1);
             DrawSlotTag(spriteBatch, x, yOffset, displayedNumber, tertiaryFont, tagOffset, showBack);
 
-            // Draw Background
-            Vector2 cardPos = new Vector2(x, BaseY + 3 + yOffset);
+            int snappedX = (int)MathF.Round(x);
+            int snappedY = (int)MathF.Round(BaseY + 3 + yOffset);
+            Vector2 cardPos = new Vector2(snappedX, snappedY);
             Vector2 cardSize = new Vector2(CARD_WIDTH, HUD_HEIGHT - 4);
             spriteBatch.DrawSnapped(_pixel, cardPos, null, _global.Palette_Black, 0f, Vector2.Zero, cardSize, SpriteEffects.None, 0f);
 
-            // Border Color
             Color borderColor;
             if (isBeingDragged) borderColor = _global.Palette_Sun;
             else
             {
-                // Use snapped coordinates for hit testing to match visual rendering
-                int snappedX = (int)MathF.Round(x);
-                int snappedY = (int)MathF.Round(BaseY + 3 + yOffset);
                 Rectangle cardRect = new Rectangle(snappedX, snappedY, CARD_WIDTH, HUD_HEIGHT - 4);
-
                 if (cardRect.Contains(mousePos) && !_isDragging) borderColor = _global.Palette_Pale;
                 else borderColor = (index >= 2) ? _global.Palette_DarkestPale : _global.Palette_DarkPale;
             }
             DrawHollowRectSmooth(spriteBatch, cardPos, cardSize, borderColor);
 
-            // --- Draw Content (Front or Back) ---
             if (showBack)
             {
                 DrawCardBack(spriteBatch, member, x, yOffset, defaultFont, secondaryFont, tertiaryFont);
@@ -627,28 +615,17 @@ namespace ProjectVagabond.UI
                 DrawCardContents(spriteBatch, gameTime, member, x, yOffset, index, defaultFont, secondaryFont, tertiaryFont);
             }
 
-            // --- Draw Flip Button ---
-            // Only draw if the card is wide enough to look good AND we are hovering this specific card
             if (scaleX > 0.2f && member == _hoveredMember && !_isDragging)
             {
                 var flipIcon = _spriteManager.CardFlipIcon;
                 if (flipIcon != null)
                 {
-                    // Determine hover state for the button sprite
-                    int snappedX = (int)MathF.Round(x);
-                    int snappedY = (int)MathF.Round(BaseY + 3 + yOffset);
                     Rectangle btnRect = new Rectangle(snappedX + 2, snappedY + 2, FLIP_BUTTON_SIZE, FLIP_BUTTON_SIZE);
                     bool btnHover = btnRect.Contains(mousePos);
-
-                    // Source rect: 0=Idle, 1=Hover. 8x8 sprites.
                     Rectangle src = new Rectangle(btnHover ? 8 : 0, 0, 8, 8);
-
-                    // Use Vector2 for position to ensure it snaps exactly like the card body
                     Vector2 btnPos = new Vector2(snappedX + 2, snappedY + 2);
 
-                    // Draw a small backing to make it easier to see
                     spriteBatch.DrawSnapped(_pixel, btnPos, null, _global.Palette_Black * 0.6f, 0f, Vector2.Zero, new Vector2(8, 8), SpriteEffects.None, 0f);
-
                     spriteBatch.DrawSnapped(flipIcon, btnPos, src, Color.White);
                 }
             }
@@ -831,8 +808,8 @@ namespace ProjectVagabond.UI
 
         private void DrawCardContents(SpriteBatch spriteBatch, GameTime gameTime, PartyMember member, float xPosition, float yOffset, int index, BitmapFont defaultFont, BitmapFont secondaryFont, BitmapFont tertiaryFont)
         {
-            float y = BaseY + 5 + yOffset;
-            float centerX = xPosition + (CARD_WIDTH / 2f);
+            float y = MathF.Round(BaseY + 5 + yOffset);
+            float centerX = MathF.Round(xPosition + (CARD_WIDTH / 2f));
 
             string name = member.Name.ToUpper();
             Color nameColor = _global.Palette_LightPale;
@@ -846,20 +823,21 @@ namespace ProjectVagabond.UI
             float bobSpeed = 3f;
             float wavePhase = index * 1.0f;
             float sineValue = MathF.Sin(time * bobSpeed + wavePhase);
-            float bobOffset = sineValue * 0.5f;
+
+            float bobOffset = MathF.Round(sineValue * 0.5f);
 
             Vector2 origin = new Vector2(16, 16);
 
-            // Draw Body
             PlayerSpriteType bodyType = sineValue < 0 ? PlayerSpriteType.BodyAlt : PlayerSpriteType.BodyNormal;
             var bodySourceRect = _spriteManager.GetPlayerSourceRect(member.PortraitIndex, bodyType);
-            Vector2 bodyPos = new Vector2(MathF.Round(centerX), MathF.Round(y + 16));
+
+            Vector2 bodyPos = new Vector2(centerX, y + 16);
             spriteBatch.DrawSnapped(_spriteManager.PlayerMasterSpriteSheet, bodyPos, bodySourceRect, Color.White, 0f, origin, 1.0f, SpriteEffects.None, 0f);
 
-            // Draw Head
             PlayerSpriteType type = sineValue < 0 ? PlayerSpriteType.Alt : PlayerSpriteType.Normal;
             var sourceRect = _spriteManager.GetPlayerSourceRect(member.PortraitIndex, type);
-            Vector2 pos = new Vector2(MathF.Round(centerX), MathF.Round(y + 16 + bobOffset));
+
+            Vector2 pos = new Vector2(centerX, y + 16 + bobOffset);
             spriteBatch.DrawSnapped(_spriteManager.PlayerMasterSpriteSheet, pos, sourceRect, Color.White, 0f, origin, 1.0f, SpriteEffects.None, 0f);
 
             y += 32 + 4;
@@ -904,8 +882,6 @@ namespace ProjectVagabond.UI
                         if (basePoints > 0)
                         {
                             var srcBase = new Rectangle(0, 0, basePoints * 4, 3);
-
-                            // Color Logic
                             Color pipColor = Color.White;
                             if (basePoints >= 8) pipColor = _global.StatColor_High;
                             else if (basePoints >= 4) pipColor = _global.StatColor_Average;

@@ -32,11 +32,9 @@ namespace ProjectVagabond.UI
             _onRevert = onRevert;
             _countdownTimer = countdownDuration;
 
-            _previousKeyboardState = Keyboard.GetState();
             _previousMouseState = Mouse.GetState();
             _core.IsMouseVisible = true;
 
-            // Layout
             int dialogWidth = 280;
             int dialogHeight = 100;
             _dialogBounds = new Rectangle(
@@ -69,7 +67,7 @@ namespace ProjectVagabond.UI
             if (!IsActive) return;
 
             var currentMouseState = Mouse.GetState();
-            var currentKeyboardState = Keyboard.GetState();
+            var inputManager = ServiceLocator.Get<InputManager>();
 
             _countdownTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
             if (_countdownTimer <= 0)
@@ -82,17 +80,16 @@ namespace ProjectVagabond.UI
             _confirmButton.Update(currentMouseState);
             _revertButton.Update(currentMouseState);
 
-            if (KeyPressed(Keys.Enter, currentKeyboardState, _previousKeyboardState))
+            if (inputManager.Confirm)
             {
                 _confirmButton.TriggerClick();
             }
-            if (KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState))
+            if (inputManager.Back)
             {
                 _revertButton.TriggerClick();
             }
 
             _previousMouseState = currentMouseState;
-            _previousKeyboardState = currentKeyboardState;
         }
 
         public override void DrawContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
@@ -103,12 +100,10 @@ namespace ProjectVagabond.UI
             spriteBatch.DrawSnapped(pixel, _dialogBounds, _global.Palette_DarkShadow);
             DrawRectangleBorder(spriteBatch, pixel, _dialogBounds, 1, _global.Palette_Shadow);
 
-            // Draw Prompt
             Vector2 promptSize = font.MeasureString(_prompt);
             Vector2 promptPosition = new Vector2(_dialogBounds.Center.X - promptSize.X / 2, _dialogBounds.Y + 10);
             spriteBatch.DrawStringSnapped(font, _prompt, promptPosition, _global.Palette_Sun);
 
-            // Draw Countdown Timer
             _stringBuilder.Clear();
             _stringBuilder.Append("Reverting in ").Append((int)Math.Ceiling(_countdownTimer)).Append(" seconds...");
             string timerString = _stringBuilder.ToString();
@@ -116,7 +111,6 @@ namespace ProjectVagabond.UI
             Vector2 timerPosition = new Vector2(_dialogBounds.Center.X - timerSize.X / 2, promptPosition.Y + promptSize.Y + 8);
             spriteBatch.DrawStringSnapped(font, timerString, timerPosition, _global.Palette_DarkSun);
 
-            // Draw Buttons
             _confirmButton.Draw(spriteBatch, font, gameTime, transform);
             _revertButton.Draw(spriteBatch, font, gameTime, transform);
         }

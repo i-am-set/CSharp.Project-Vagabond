@@ -64,7 +64,6 @@ namespace ProjectVagabond.Scenes
         private int _clickedNodeId = -1;
         private float _clickAnimTimer = 0f;
 
-        // FIX: Added missing field definition
         private int _clickRotationDir = 1;
 
         private const float CLICK_ANIM_DURATION = 0.1f;

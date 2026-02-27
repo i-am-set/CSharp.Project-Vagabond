@@ -3,25 +3,14 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
-using ProjectVagabond.Battle.Abilities;
-using ProjectVagabond.Battle.UI;
-using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
-using ProjectVagabond.Transitions;
-using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 
 namespace ProjectVagabond.UI
 {
-    /// <summary>
-    /// A modal dialog that forces the player to select a bench member to switch in.
-    /// Used for moves like "Shadow Step" (Disengage) and forced reinforcements.
-    /// </summary>
     public class CombatSwitchDialog : Dialog
     {
         public event Action<BattleCombatant> OnMemberSelected;
@@ -31,21 +20,14 @@ namespace ProjectVagabond.UI
         private int _selectedIndex = 0;
         private int? _targetSlotIndex = null;
 
-        // Layout Constants
         private const int DIALOG_WIDTH = 180;
         private const int BUTTON_HEIGHT = 15;
         private const int BUTTON_SPACING = 2;
         private const int PADDING = 10;
 
-        /// <summary>
-        /// If true, the player cannot close this dialog without making a selection.
-        /// Used for death replacements.
-        /// </summary>
         public bool IsMandatory { get; set; } = false;
 
-        public CombatSwitchDialog(GameScene scene) : base(scene)
-        {
-        }
+        public CombatSwitchDialog(GameScene scene) : base(scene) { }
 
         public void Show(List<BattleCombatant> allCombatants, int? slotIndex = null)
         {
@@ -57,11 +39,9 @@ namespace ProjectVagabond.UI
 
             InitializeButtons();
 
-            // Reset selection
             _selectedIndex = 0;
             if (_memberButtons.Any())
             {
-                // Snap mouse to first button to ensure immediate usability
                 var firstBtn = _memberButtons[0];
                 Point screenPos = Core.TransformVirtualToScreen(firstBtn.Bounds.Center);
                 Mouse.SetPosition(screenPos.X, screenPos.Y);
@@ -73,7 +53,7 @@ namespace ProjectVagabond.UI
             _memberButtons.Clear();
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
 
-            int totalContentHeight = (_benchMembers.Count * (BUTTON_HEIGHT + BUTTON_SPACING)) + 20; // +20 for title
+            int totalContentHeight = (_benchMembers.Count * (BUTTON_HEIGHT + BUTTON_SPACING)) + 20;
             int dialogHeight = totalContentHeight + (PADDING * 2);
 
             _dialogBounds = new Rectangle(
@@ -83,7 +63,7 @@ namespace ProjectVagabond.UI
                 dialogHeight
             );
 
-            int startY = _dialogBounds.Y + PADDING + 20; // Title offset
+            int startY = _dialogBounds.Y + PADDING + 20;
             int buttonWidth = DIALOG_WIDTH - (PADDING * 2);
             int buttonX = _dialogBounds.X + PADDING;
 
@@ -114,9 +94,8 @@ namespace ProjectVagabond.UI
             if (!IsActive) return;
 
             var currentMouseState = Mouse.GetState();
-            var currentKeyboardState = Keyboard.GetState();
+            var inputManager = ServiceLocator.Get<InputManager>();
 
-            // Update Buttons
             for (int i = 0; i < _memberButtons.Count; i++)
             {
                 _memberButtons[i].Update(currentMouseState);
@@ -126,19 +105,18 @@ namespace ProjectVagabond.UI
                 }
             }
 
-            // Keyboard Navigation
-            if (KeyPressed(Keys.Up, currentKeyboardState, _previousKeyboardState))
+            if (inputManager.NavigateUp)
             {
                 _selectedIndex = (_selectedIndex - 1 + _memberButtons.Count) % _memberButtons.Count;
                 SnapMouseToSelection();
             }
-            else if (KeyPressed(Keys.Down, currentKeyboardState, _previousKeyboardState))
+            else if (inputManager.NavigateDown)
             {
                 _selectedIndex = (_selectedIndex + 1) % _memberButtons.Count;
                 SnapMouseToSelection();
             }
 
-            if (KeyPressed(Keys.Enter, currentKeyboardState, _previousKeyboardState))
+            if (inputManager.Confirm)
             {
                 if (_selectedIndex >= 0 && _selectedIndex < _memberButtons.Count)
                 {
@@ -146,14 +124,12 @@ namespace ProjectVagabond.UI
                 }
             }
 
-            // Only allow closing if NOT mandatory
-            if (!IsMandatory && KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState))
+            if (!IsMandatory && inputManager.Back)
             {
                 Hide();
             }
 
             _previousMouseState = currentMouseState;
-            _previousKeyboardState = currentKeyboardState;
         }
 
         private void SnapMouseToSelection()
@@ -173,11 +149,9 @@ namespace ProjectVagabond.UI
             var pixel = ServiceLocator.Get<Texture2D>();
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
 
-            // Draw Background
             spriteBatch.DrawSnapped(pixel, _dialogBounds, _global.Palette_Black);
             DrawRectangleBorder(spriteBatch, pixel, _dialogBounds, 1, _global.Palette_Sun);
 
-            // Draw Title
             string title = IsMandatory ? "REINFORCEMENT NEEDED" : "CHOOSE REPLACEMENT";
             if (IsMandatory && _targetSlotIndex.HasValue)
             {
@@ -191,7 +165,6 @@ namespace ProjectVagabond.UI
             );
             spriteBatch.DrawStringSnapped(secondaryFont, title, titlePos, _global.Palette_Sky);
 
-            // Draw Buttons
             foreach (var button in _memberButtons)
             {
                 button.Draw(spriteBatch, font, gameTime, transform);

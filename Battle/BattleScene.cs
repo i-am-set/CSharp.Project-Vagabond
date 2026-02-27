@@ -415,31 +415,22 @@ namespace ProjectVagabond.Scenes
 
             var currentKeyboardState = Keyboard.GetState();
             var currentMouseState = Mouse.GetState();
+            var inputManager = ServiceLocator.Get<InputManager>();
 
-            // --- Fast Forward Logic ---
-            // Allow speeding up during non-interactive phases (Action Resolution, End of Round, Intro, Outro)
             bool canSpeedUp = _battleManager.CurrentPhase == BattleManager.BattlePhase.ActionResolution ||
                               _battleManager.CurrentPhase == BattleManager.BattlePhase.EndOfRound ||
                               _battleManager.CurrentPhase == BattleManager.BattlePhase.BattleStartIntro ||
                               _battleManager.CurrentPhase == BattleManager.BattlePhase.BattleOver;
 
-            // Check for hold input (Spacebar or Left Mouse Button)
             bool isSpeedInput = currentKeyboardState.IsKeyDown(Keys.Space) || currentMouseState.LeftButton == ButtonState.Pressed;
-
-            // Apply 3x speed multiplier if conditions met
             float speedMultiplier = (canSpeedUp && isSpeedInput) ? _speed_up_multiplier : 1.0f;
 
             float rawDt = (float)gameTime.ElapsedGameTime.TotalSeconds;
             float dt = rawDt * speedMultiplier;
 
-            // Create effective GameTime for systems that rely on it
             GameTime effectiveGameTime = new GameTime(gameTime.TotalGameTime, TimeSpan.FromSeconds(dt));
-
-            // Calculate time scale based on hitstop active state
-            // Hitstop consumes effective time, so freezes last shorter in real-time if speeding up
             float hitstopScale = _hitstopManager.Update(dt);
 
-            // --- Floor Alpha Logic ---
             if (_battleManager.CurrentPhase == BattleManager.BattlePhase.BattleOver)
             {
                 _floorAlpha = MathHelper.Lerp(_floorAlpha, 0.0f, dt * 8.0f);
@@ -488,8 +479,6 @@ namespace ProjectVagabond.Scenes
 
                 if (isComplete || isTimedOut)
                 {
-                    if (isTimedOut) Debug.WriteLine("[BattleScene] Intro Watchdog Triggered - Forcing Start");
-
                     _battleManager.TriggerBattleStartEvents();
                     _roundAnimState = RoundAnimState.Pop;
                     _roundAnimTimer = 0f;
@@ -579,7 +568,7 @@ namespace ProjectVagabond.Scenes
             _alertManager.Update(effectiveGameTime);
             _tooltipManager.Update(effectiveGameTime);
 
-            if (KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState))
+            if (inputManager.Back)
             {
                 if (_uiManager.UIState == BattleUIState.Targeting)
                 {
@@ -694,18 +683,6 @@ namespace ProjectVagabond.Scenes
 
             if (_watchdogTimer > WATCHDOG_TIMEOUT)
             {
-                string stallReport = $"[BATTLE WATCHDOG] STALL DETECTED (>4s) - RECOVERING\n" +
-                     $"Phase: {_battleManager.CurrentPhase}\n" +
-                     $"UI Busy: {_uiManager.IsBusy}\n" +
-                     $"Anim Busy: {_animationManager.IsBlockingAnimation}\n" +
-                     $"Detailed Anims: {_animationManager.GetDebugStateReport()}\n" +
-                     $"MoveAnim Busy: {_moveAnimationManager.IsAnimating}\n" +
-                     $"Pending Anims: {_pendingAnimations.Count}\n" +
-                     $"Switch State: {_switchSequenceState}\n" +
-                     $"MultiHit Wait: {_isWaitingForMultiHitDelay}";
-
-                Debug.WriteLine(stallReport);
-
                 _battleManager.ForceAdvance();
                 _uiManager.Reset();
                 _animationManager.Reset();
@@ -754,13 +731,6 @@ namespace ProjectVagabond.Scenes
             }
 
             base.Update(gameTime);
-        }
-
-        private void StartPlayerIntro()
-        {
-            var players = _battleManager.AllCombatants.Where(c => c.IsPlayerControlled && c.IsActiveOnField).ToList();
-            foreach (var p in players) _animationManager.StartIntroFadeAnimation(p.CombatantID);
-            _uiSlideTimer = 0f;
         }
 
         private void TriggerVictoryRestoration()

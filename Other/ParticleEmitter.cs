@@ -48,7 +48,6 @@ namespace ProjectVagabond.Particles
                 _durationTimer += deltaTime;
             }
 
-            // CRITICAL FIX: Do not return early if !IsActive. 
             // We must continue updating existing particles so trails fade out naturally.
 
             deltaTime *= Settings.TimeScale;
