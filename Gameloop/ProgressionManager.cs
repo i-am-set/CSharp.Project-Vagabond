@@ -18,6 +18,7 @@ namespace ProjectVagabond.Progression
 
         public SplitData? CurrentSplit { get; private set; }
         public SplitMap? CurrentSplitMap { get; private set; }
+        public int CurrentSplitCap { get; set; } = 5;
 
         private readonly Dictionary<BattleDifficulty, List<List<string>>> _categorizedBattles = new();
 
@@ -64,7 +65,7 @@ namespace ProjectVagabond.Progression
         {
             foreach (var split in _splits.Values)
             {
-                
+
             }
         }
 
@@ -78,13 +79,11 @@ namespace ProjectVagabond.Progression
                 return;
             }
 
-            CurrentSplitMap?.Dispose(); // Dispose the old render target if it exists
+            CurrentSplitMap?.Dispose();
 
             CurrentSplit = _splits.Values.ElementAt(_random.Next(_splits.Count));
             CategorizeBattles(CurrentSplit);
 
-            // Generate the map. The generator is now guaranteed to produce a valid map
-            // without needing retries or safe mode fallbacks.
             CurrentSplitMap = SplitMapGenerator.GenerateInitial(CurrentSplit);
 
             if (CurrentSplitMap != null)
@@ -126,7 +125,6 @@ namespace ProjectVagabond.Progression
                     var enemyData = dataManager.GetEnemyData(archetypeId);
                     if (enemyData != null)
                     {
-                        // Calculate a rough power score based on stats
                         powerScore += enemyData.MinHP + (enemyData.MinStrength + enemyData.MinIntelligence + enemyData.MinTenacity + enemyData.MinAgility) * 10;
                     }
                 }
@@ -145,7 +143,6 @@ namespace ProjectVagabond.Progression
             _categorizedBattles[BattleDifficulty.Normal].AddRange(sortedEncounters.Skip(easyCount).Take(normalCount).Select(e => e.Encounter));
             _categorizedBattles[BattleDifficulty.Hard].AddRange(sortedEncounters.Skip(easyCount + normalCount).Select(e => e.Encounter));
 
-            // Handle cases where a category might be empty due to small numbers (e.g., totalCount < 3)
             if (!_categorizedBattles[BattleDifficulty.Easy].Any() && _categorizedBattles[BattleDifficulty.Normal].Any())
             {
                 _categorizedBattles[BattleDifficulty.Easy].Add(_categorizedBattles[BattleDifficulty.Normal].First());
@@ -172,7 +169,6 @@ namespace ProjectVagabond.Progression
             {
                 return encounterList[_random.Next(encounterList.Count)];
             }
-            // Fallback if a category is empty for some reason
             Debug.WriteLine($"[ProgressionManager] [WARNING] No battles found for difficulty '{difficulty}'. Using first available battle as fallback.");
             return CurrentSplit?.PossibleBattles?.FirstOrDefault();
         }

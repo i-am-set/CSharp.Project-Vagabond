@@ -343,7 +343,7 @@ namespace ProjectVagabond.Scenes
             var playerParty = new List<BattleCombatant>();
 
             var leaderMember = gameState.PlayerState.Leader;
-            if (leaderMember != null)
+            if (leaderMember != null && leaderMember.Level <= _progressionManager.CurrentSplitCap)
             {
                 var leaderCombatant = BattleCombatantFactory.CreatePlayer(leaderMember, "player_leader");
                 leaderCombatant.BattleSlot = 0;
@@ -353,8 +353,10 @@ namespace ProjectVagabond.Scenes
             for (int i = 1; i < gameState.PlayerState.Party.Count; i++)
             {
                 var member = gameState.PlayerState.Party[i];
+                if (member.Level > _progressionManager.CurrentSplitCap) continue;
+
                 var memberCombatant = BattleCombatantFactory.CreatePlayer(member, $"player_ally_{i}");
-                memberCombatant.BattleSlot = i;
+                memberCombatant.BattleSlot = playerParty.Count;
                 playerParty.Add(memberCombatant);
             }
 

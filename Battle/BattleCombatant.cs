@@ -9,8 +9,8 @@ namespace ProjectVagabond.Battle
 {
     public enum Gender
     {
-        Male,
-        Female,
+        Male, // He
+        Female, // She
         Thing, // It
         Neutral // They
     }
@@ -23,6 +23,7 @@ namespace ProjectVagabond.Battle
         public Gender Gender { get; set; } = Gender.Neutral;
         public bool IsProperNoun { get; set; } = false;
 
+        public int EXPYield { get; set; }
         public CombatantStats Stats { get; set; }
 
         public int CurrentGuard { get; set; }

@@ -67,6 +67,8 @@ namespace ProjectVagabond.Battle
         private readonly List<BattleCombatant> _cachedAllActive = new List<BattleCombatant>();
 
         private List<QueuedAction> _actionQueue;
+        public Queue<PartyMember> PendingLevelUps { get; } = new Queue<PartyMember>();
+
         private readonly Dictionary<int, QueuedAction> _pendingPlayerActions = new Dictionary<int, QueuedAction>();
 
         public IReadOnlyList<QueuedAction> ActionQueue => _actionQueue;
@@ -1129,6 +1131,8 @@ namespace ProjectVagabond.Battle
                 (c.IsDefeated || c.Stats.CurrentHP <= 0) &&
                 !c.IsRemovalProcessed).ToList();
 
+            var gameState = ServiceLocator.Get<GameState>();
+
             foreach (var deadCombatant in deadCombatants)
             {
                 RecordDefeatedName(deadCombatant);
@@ -1140,6 +1144,26 @@ namespace ProjectVagabond.Battle
                 _actionQueue.RemoveAll(a => a.Actor == deadCombatant);
 
                 EventBus.Publish(new GameEvents.CombatantDefeated { DefeatedCombatant = deadCombatant });
+
+                if (!deadCombatant.IsPlayerControlled && _cachedActivePlayers.Count > 0)
+                {
+                    int expShare = deadCombatant.EXPYield / _cachedActivePlayers.Count;
+                    foreach (var activePlayer in _cachedActivePlayers)
+                    {
+                        var partyMember = gameState.PlayerState.Party.FirstOrDefault(p => p.Name == activePlayer.Name);
+                        if (partyMember != null)
+                        {
+                            partyMember.CurrentEXP += expShare;
+                            while (partyMember.CurrentEXP >= partyMember.MaxEXP)
+                            {
+                                partyMember.CurrentEXP -= partyMember.MaxEXP;
+                                partyMember.Level++;
+                                partyMember.MaxEXP = (int)(partyMember.MaxEXP * 1.2f);
+                                PendingLevelUps.Enqueue(partyMember);
+                            }
+                        }
+                    }
+                }
             }
 
             if (deadCombatants.Any())

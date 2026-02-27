@@ -10,6 +10,8 @@ namespace ProjectVagabond.Battle
         public Gender Gender { get; set; } = Gender.Thing;
         public bool IsProperNoun { get; set; } = false;
 
+        public int EXPYield { get; set; }
+
         public int MinHP { get; set; }
         public int MaxHP { get; set; }
 

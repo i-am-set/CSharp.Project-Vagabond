@@ -6,6 +6,9 @@ namespace ProjectVagabond
     public class PartyMember
     {
         public string Name { get; set; }
+        public int Level { get; set; } = 1;
+        public int CurrentEXP { get; set; }
+        public int MaxEXP { get; set; } = 100;
         public int MaxHP { get; set; }
         public int CurrentHP { get; set; }
         public int Strength { get; set; }
