@@ -24,6 +24,8 @@ namespace ProjectVagabond
         public MoveEntry? CoreMove { get; set; }
         public MoveEntry? AltMove { get; set; }
 
+        public HashSet<string> KnownMovesHistory { get; set; } = new HashSet<string>();
+
         public List<TemporaryBuff> ActiveBuffs { get; set; } = new List<TemporaryBuff>();
 
         public PartyMember() { }
@@ -36,6 +38,8 @@ namespace ProjectVagabond
             if (this.BasicMove != null) clone.BasicMove = this.BasicMove.Clone();
             if (this.CoreMove != null) clone.CoreMove = this.CoreMove.Clone();
             if (this.AltMove != null) clone.AltMove = this.AltMove.Clone();
+
+            clone.KnownMovesHistory = new HashSet<string>(this.KnownMovesHistory);
 
             clone.ActiveBuffs = new List<TemporaryBuff>();
             foreach (var buff in this.ActiveBuffs)

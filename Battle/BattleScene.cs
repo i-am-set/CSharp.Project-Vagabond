@@ -468,8 +468,16 @@ namespace ProjectVagabond.Scenes
                         var member = _battleManager.PendingLevelUps.Dequeue();
                         _levelUpDialog = new LevelUpDialog(this, member, (choice, moveId) =>
                         {
-                            if (choice == LevelUpDialog.LevelUpChoice.Core) member.CoreMove = new MoveEntry(moveId, 0);
-                            else if (choice == LevelUpDialog.LevelUpChoice.Alt) member.AltMove = new MoveEntry(moveId, 0);
+                            if (choice == LevelUpDialog.LevelUpChoice.Core)
+                            {
+                                member.CoreMove = new MoveEntry(moveId, 0);
+                                member.KnownMovesHistory.Add(moveId);
+                            }
+                            else if (choice == LevelUpDialog.LevelUpChoice.Alt)
+                            {
+                                member.AltMove = new MoveEntry(moveId, 0);
+                                member.KnownMovesHistory.Add(moveId);
+                            }
                             else if (choice == LevelUpDialog.LevelUpChoice.Omni)
                             {
                                 member.MaxHP += 1;

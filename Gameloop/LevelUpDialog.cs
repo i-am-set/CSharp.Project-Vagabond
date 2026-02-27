@@ -37,9 +37,10 @@ namespace ProjectVagabond.UI
 
             if (pmData != null)
             {
-                if (pmData.CoreMovePool != null && pmData.CoreMovePool.Any())
+                var validCoreMoves = pmData.CoreMovePool?.Where(m => IsMoveValid(m.MoveId)).ToList();
+                if (validCoreMoves != null && validCoreMoves.Any())
                 {
-                    var coreEntry = pmData.CoreMovePool[rng.Next(pmData.CoreMovePool.Count)];
+                    var coreEntry = validCoreMoves[rng.Next(validCoreMoves.Count)];
                     if (BattleDataCache.Moves.TryGetValue(coreEntry.MoveId, out var coreMove))
                     {
                         string prefix = coreMove.IsRare ? "[rainbow]RARE[/] " : "";
@@ -53,9 +54,10 @@ namespace ProjectVagabond.UI
                     }
                 }
 
-                if (pmData.AltMovePool != null && pmData.AltMovePool.Any())
+                var validAltMoves = pmData.AltMovePool?.Where(m => IsMoveValid(m.MoveId)).ToList();
+                if (validAltMoves != null && validAltMoves.Any())
                 {
-                    var altEntry = pmData.AltMovePool[rng.Next(pmData.AltMovePool.Count)];
+                    var altEntry = validAltMoves[rng.Next(validAltMoves.Count)];
                     if (BattleDataCache.Moves.TryGetValue(altEntry.MoveId, out var altMove))
                     {
                         string prefix = altMove.IsRare ? "[rainbow]RARE[/] " : "";
@@ -75,6 +77,15 @@ namespace ProjectVagabond.UI
                 OnClick = () => MakeChoice(LevelUpChoice.Omni, null)
             };
             _buttons.Add(omniBtn);
+        }
+
+        private bool IsMoveValid(string moveId)
+        {
+            if (_member.BasicMove != null && _member.BasicMove.MoveID == moveId) return false;
+            if (_member.CoreMove != null && _member.CoreMove.MoveID == moveId) return false;
+            if (_member.AltMove != null && _member.AltMove.MoveID == moveId) return false;
+            if (_member.KnownMovesHistory.Contains(moveId)) return false;
+            return true;
         }
 
         private void MakeChoice(LevelUpChoice choice, string moveId)
