@@ -101,6 +101,8 @@ namespace ProjectVagabond
 
         public const string GAME_VERSION = "0.1.0";
 
+        public float SpeedUpMultiplier { get; set; } = 2.0f;
+
         public float UI_ButtonHoverLift { get; set; } = -1f;
         public float UI_ButtonHoverDuration { get; set; } = 0.0f;
 

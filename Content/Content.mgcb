@@ -1716,6 +1716,18 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/BasicIcons/down_arrow.png;Sprites/UI/BasicIcons/down_arrow
 
+#begin Sprites/UI/BasicIcons/fastforward_icon.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/BasicIcons/fastforward_icon.png;Sprites/UI/BasicIcons/fastforward_icon
+
 #begin Sprites/UI/BasicIcons/rarity_icons_8x8_spritesheet.png
 /importer:TextureImporter
 /processor:TextureProcessor

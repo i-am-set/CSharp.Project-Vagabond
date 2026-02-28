@@ -41,6 +41,9 @@ namespace ProjectVagabond
         public bool Confirm { get; private set; }
         public bool Back { get; private set; }
 
+        // Expose a continuous state for speed-up logic
+        public bool IsSpeedUpHeld { get; private set; }
+
         private bool _mouseClickConsumed;
         private bool _ignoreMouseUntilMovement;
 
@@ -186,6 +189,21 @@ namespace ProjectVagabond
 
             Confirm = IsKeyPressed(Keys.Space) || IsKeyPressed(Keys.Enter) || IsButtonJustPressed(Buttons.A);
             Back = IsKeyPressed(Keys.Escape) || IsButtonJustPressed(Buttons.B);
+
+            // Continuous input check for fast-forwarding/speeding up time
+            IsSpeedUpHeld = _currentKeyboardState.IsKeyDown(Keys.Space) ||
+                            _currentKeyboardState.IsKeyDown(Keys.Enter) ||
+                            _currentMouseState.LeftButton == ButtonState.Pressed ||
+                            _currentGamePadState.IsButtonDown(Buttons.A);
+        }
+
+        /// <summary>
+        /// Calculates a sped-up GameTime if the user is holding the speed-up button and the context allows it.
+        /// </summary>
+        public GameTime GetEffectiveGameTime(GameTime originalTime, bool canSpeedUp)
+        {
+            float multiplier = (canSpeedUp && IsSpeedUpHeld) ? ServiceLocator.Get<Global>().SpeedUpMultiplier : 1.0f;
+            return new GameTime(originalTime.TotalGameTime, TimeSpan.FromSeconds(originalTime.ElapsedGameTime.TotalSeconds * multiplier));
         }
 
         private bool IsKeyPressed(Keys key)

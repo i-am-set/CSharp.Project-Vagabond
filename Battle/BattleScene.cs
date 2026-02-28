@@ -80,8 +80,6 @@ namespace ProjectVagabond.Scenes
         private float _deathFadeTimer = 0f;
         private readonly HashSet<string> _processedDeathAnimations = new HashSet<string>();
 
-        private float _speed_up_multiplier = 2.0f;
-
         private enum SwitchSequenceState { None, AnimatingOut, Swapping, AnimatingIn }
         private SwitchSequenceState _switchSequenceState = SwitchSequenceState.None;
         private float _switchSequenceTimer = 0f;
@@ -419,7 +417,6 @@ namespace ProjectVagabond.Scenes
                 return;
             }
 
-            var currentKeyboardState = Keyboard.GetState();
             var currentMouseState = Mouse.GetState();
             var inputManager = ServiceLocator.Get<InputManager>();
 
@@ -428,13 +425,9 @@ namespace ProjectVagabond.Scenes
                               _battleManager.CurrentPhase == BattleManager.BattlePhase.BattleStartIntro ||
                               _battleManager.CurrentPhase == BattleManager.BattlePhase.BattleOver;
 
-            bool isSpeedInput = currentKeyboardState.IsKeyDown(Keys.Space) || currentMouseState.LeftButton == ButtonState.Pressed;
-            float speedMultiplier = (canSpeedUp && isSpeedInput) ? _speed_up_multiplier : 1.0f;
+            GameTime effectiveGameTime = inputManager.GetEffectiveGameTime(gameTime, canSpeedUp);
+            float dt = (float)effectiveGameTime.ElapsedGameTime.TotalSeconds;
 
-            float rawDt = (float)gameTime.ElapsedGameTime.TotalSeconds;
-            float dt = rawDt * speedMultiplier;
-
-            GameTime effectiveGameTime = new GameTime(gameTime.TotalGameTime, TimeSpan.FromSeconds(dt));
             float hitstopScale = _hitstopManager.Update(dt);
 
             if (_battleManager.CurrentPhase == BattleManager.BattlePhase.BattleOver)
@@ -541,7 +534,7 @@ namespace ProjectVagabond.Scenes
 
                 _animationManager.Update(effectiveGameTime, _battleManager.AllCombatants, hitstopScale);
                 _renderer.Update(effectiveGameTime, _battleManager.AllCombatants, _animationManager, null);
-                _uiManager.Update(effectiveGameTime, currentMouseState, currentKeyboardState, null, _renderer, isInputBlocked: true);
+                _uiManager.Update(effectiveGameTime, currentMouseState, Keyboard.GetState(), null, _renderer, isInputBlocked: true);
                 return;
             }
 
@@ -593,7 +586,7 @@ namespace ProjectVagabond.Scenes
             _animationManager.Update(effectiveGameTime, _battleManager.AllCombatants, hitstopScale);
             _moveAnimationManager.Update(effectiveGameTime);
 
-            bool uiCapturedInput = _uiManager.Update(effectiveGameTime, currentMouseState, currentKeyboardState, _battleManager.CurrentActingCombatant, _renderer);
+            bool uiCapturedInput = _uiManager.Update(effectiveGameTime, currentMouseState, Keyboard.GetState(), _battleManager.CurrentActingCombatant, _renderer);
 
             if (!uiCapturedInput)
             {
@@ -783,14 +776,34 @@ namespace ProjectVagabond.Scenes
 
         public override void DrawFullscreenUI(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
-            _uiManager.DrawFullscreenDialogs(spriteBatch, font, gameTime, transform);
+            bool canSpeedUp = _battleManager != null && (
+                              _battleManager.CurrentPhase == BattleManager.BattlePhase.ActionResolution ||
+                              _battleManager.CurrentPhase == BattleManager.BattlePhase.EndOfRound ||
+                              _battleManager.CurrentPhase == BattleManager.BattlePhase.BattleStartIntro ||
+                              _battleManager.CurrentPhase == BattleManager.BattlePhase.BattleOver);
+
+            GameTime effectiveGameTime = ServiceLocator.Get<InputManager>().GetEffectiveGameTime(gameTime, canSpeedUp);
+
+            _uiManager.DrawFullscreenDialogs(spriteBatch, font, effectiveGameTime, transform);
             if (_levelUpDialog != null && _levelUpDialog.IsActive)
             {
                 _levelUpDialog.DrawOverlay(spriteBatch);
 
                 spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
-                _levelUpDialog.DrawContent(spriteBatch, font, gameTime, transform);
+                _levelUpDialog.DrawContent(spriteBatch, font, effectiveGameTime, transform);
                 spriteBatch.End();
+            }
+
+            if (canSpeedUp && ServiceLocator.Get<InputManager>().IsSpeedUpHeld)
+            {
+                var ffIcon = _spriteManager.FastForwardIcon;
+                if (ffIcon != null)
+                {
+                    spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
+                    float pulse = 0.7f + 0.3f * MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * 15f);
+                    spriteBatch.Draw(ffIcon, new Vector2(8, 8), Color.White * pulse);
+                    spriteBatch.End();
+                }
             }
         }
 
@@ -892,6 +905,14 @@ namespace ProjectVagabond.Scenes
                 return;
             }
 
+            bool canSpeedUp = _battleManager != null && (
+                              _battleManager.CurrentPhase == BattleManager.BattlePhase.ActionResolution ||
+                              _battleManager.CurrentPhase == BattleManager.BattlePhase.EndOfRound ||
+                              _battleManager.CurrentPhase == BattleManager.BattlePhase.BattleStartIntro ||
+                              _battleManager.CurrentPhase == BattleManager.BattlePhase.BattleOver);
+
+            GameTime effectiveGameTime = ServiceLocator.Get<InputManager>().GetEffectiveGameTime(gameTime, canSpeedUp);
+
             var secondaryFont = _core.SecondaryFont;
 
             spriteBatch.End();
@@ -915,7 +936,7 @@ namespace ProjectVagabond.Scenes
                 renderContextActor = null;
             }
 
-            _renderer.Draw(spriteBatch, font, gameTime, _battleManager.AllCombatants, renderContextActor, _uiManager, _inputHandler, _animationManager, _uiManager.SharedPulseTimer, worldTransform, _floorAlpha);
+            _renderer.Draw(spriteBatch, font, effectiveGameTime, _battleManager.AllCombatants, renderContextActor, _uiManager, _inputHandler, _animationManager, _uiManager.SharedPulseTimer, worldTransform, _floorAlpha);
 
             bool isFlashing = _animationManager.GetImpactFlashState() != null;
 
@@ -983,7 +1004,7 @@ namespace ProjectVagabond.Scenes
 
             if (!isFlashing)
             {
-                _uiManager.Draw(spriteBatch, font, gameTime, transform);
+                _uiManager.Draw(spriteBatch, font, effectiveGameTime, transform);
             }
 
             _battleLogManager.Draw(spriteBatch);
@@ -1004,7 +1025,7 @@ namespace ProjectVagabond.Scenes
                     sb.End();
 
                     sb.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, uiMatrix);
-                    _uiManager.Draw(sb, font, gameTime, Matrix.Identity);
+                    _uiManager.Draw(sb, font, effectiveGameTime, Matrix.Identity);
                     sb.End();
                 });
             }
@@ -1250,11 +1271,6 @@ namespace ProjectVagabond.Scenes
             {
                 // Use default timing
                 float delay = e.DefaultTimeToImpact > 0 ? e.DefaultTimeToImpact : 0.25f;
-
-                // We use a pending animation queue or simpler delay mechanism
-                // Since update loop handles pending animations, we can enqueue it with a delay, 
-                // but BattleManager is paused waiting for this trigger.
-                // We must trigger it.
 
                 // For immediate fallback (simplest solution given constraints):
                 executeImpact();

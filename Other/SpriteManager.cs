@@ -67,6 +67,9 @@ namespace ProjectVagabond
         public Texture2D StatModIconsTexture { get; private set; }
         public Texture2D CardFlipIcon { get; private set; }
 
+        // NEW: Fast Forward Icon
+        public Texture2D FastForwardIcon { get; private set; }
+
         public Rectangle[] ActionButtonSourceRects { get; private set; }
         public Rectangle[] ActionIconSourceRects { get; private set; }
         public Dictionary<int, Rectangle> SpellUsesSourceRects { get; private set; } = new Dictionary<int, Rectangle>();
@@ -205,6 +208,9 @@ namespace ProjectVagabond
 
             try { _downArrowSprite = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/down_arrow"); }
             catch { _downArrowSprite = _textureFactory.CreateColoredTexture(9, 9, Color.Red); }
+
+            try { FastForwardIcon = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/fastforward_icon"); }
+            catch { FastForwardIcon = _textureFactory.CreateColoredTexture(32, 32, Color.Yellow); }
 
             try { _circleParticleSprite = _textureFactory.CreateCircleParticleTexture(); }
             catch { _circleParticleSprite = _textureFactory.CreateColoredTexture(4, 4, Color.Red); }
@@ -1105,4 +1111,3 @@ namespace ProjectVagabond
         }
     }
 }
-﻿﻿

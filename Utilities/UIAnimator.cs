@@ -370,7 +370,7 @@ namespace ProjectVagabond.UI
 
         // Halved rotation variance: ~0.125 radians is approx 7 degrees
         public float MaxRotationVariance { get; set; } = 0.125f;
-        public int ParticleCount { get; set; } = 12;
+        public int ParticleCount { get; set; } = 0;
         public float HapticStrength { get; set; } = 0.0f;
         public float FlashMaxAlpha { get; set; } = 0.8f;
         public float PlinkTriggerThreshold { get; set; } = 0.05f;

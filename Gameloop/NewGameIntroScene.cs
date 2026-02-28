@@ -4,13 +4,16 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Particles;
+using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace ProjectVagabond.Scenes
@@ -48,6 +51,10 @@ namespace ProjectVagabond.Scenes
         private PlinkAnimator _plinkStats;
         private PlinkAnimator[] _plinkCarousel = new PlinkAnimator[7];
         private List<PlinkAnimator> _allPlinks = new List<PlinkAnimator>();
+
+        private Queue<Action> _plinkQueue = new Queue<Action>();
+        private float _plinkTimer = 0f;
+        private const float PLINK_STAGGER = 0.05f;
 
         // Idle Animation State
         private float _idleTimer = 0f;
@@ -115,46 +122,54 @@ namespace ProjectVagabond.Scenes
             // --- Setup Randomized Plink Stagger ---
             _isPlinkingIn = true;
             _allPlinks.Clear();
+            _plinkQueue.Clear();
 
-            var randomPlinks = new List<PlinkAnimator>();
-
-            _plinkTitle1 = new PlinkAnimator(); randomPlinks.Add(_plinkTitle1);
-            _plinkTitle2 = new PlinkAnimator(); randomPlinks.Add(_plinkTitle2);
-            _plinkStats = new PlinkAnimator(); randomPlinks.Add(_plinkStats);
+            _plinkTitle1 = new PlinkAnimator(); _allPlinks.Add(_plinkTitle1);
+            _plinkTitle2 = new PlinkAnimator(); _allPlinks.Add(_plinkTitle2);
+            _plinkStats = new PlinkAnimator(); _allPlinks.Add(_plinkStats);
 
             for (int i = 0; i < 7; i++)
             {
                 _plinkCarousel[i] = new PlinkAnimator();
-                randomPlinks.Add(_plinkCarousel[i]);
+                _allPlinks.Add(_plinkCarousel[i]);
             }
 
-            // Shuffle ONLY the titles, stats, and carousel elements
-            var rng = new Random();
-            randomPlinks = randomPlinks.OrderBy(x => rng.Next()).ToList();
+            // Hide them initially by starting with a massive delay so they scale to 0
+            foreach (var p in _allPlinks) p.Start(9999f, 0.25f);
 
-            float delay = 0f;
-            float stagger = 0.05f; // Increased stagger so the sequence is clearly visible
+            _leftArrow.SetHiddenForEntrance();
+            _rightArrow.SetHiddenForEntrance();
+            _selectButton.SetHiddenForEntrance();
 
-            foreach (var p in randomPlinks)
-            {
-                p.Start(delay, 0.25f);
-                delay += stagger;
-            }
-
-            // Explicitly use PlayEntrance for buttons so they properly hide during the delay
-            _leftArrow.PlayEntrance(delay);
-            delay += stagger;
-
-            _rightArrow.PlayEntrance(delay);
-            delay += stagger;
-
-            _selectButton.PlayEntrance(delay);
-
-            // Add everything to _allPlinks so the Update loop knows when the entire sequence is done
-            _allPlinks.AddRange(randomPlinks);
             _allPlinks.Add(_leftArrow.Plink);
             _allPlinks.Add(_rightArrow.Plink);
             _allPlinks.Add(_selectButton.Plink);
+
+            // Queue up the random elements
+            var randomActions = new List<Action>
+            {
+                () => _plinkTitle1.Start(0f, 0.25f),
+                () => _plinkTitle2.Start(0f, 0.25f),
+                () => _plinkStats.Start(0f, 0.25f)
+            };
+
+            for (int i = 0; i < 7; i++)
+            {
+                int index = i;
+                randomActions.Add(() => _plinkCarousel[index].Start(0f, 0.25f));
+            }
+
+            var rng = new Random();
+            randomActions = randomActions.OrderBy(x => rng.Next()).ToList();
+
+            foreach (var a in randomActions) _plinkQueue.Enqueue(a);
+
+            // Queue the buttons explicitly at the end so they ALWAYS pop last
+            _plinkQueue.Enqueue(() => _leftArrow.PlayEntrance(0f));
+            _plinkQueue.Enqueue(() => _rightArrow.PlayEntrance(0f));
+            _plinkQueue.Enqueue(() => _selectButton.PlayEntrance(0f));
+
+            _plinkTimer = 0f;
         }
 
         private void InitializeData()
@@ -386,7 +401,9 @@ namespace ProjectVagabond.Scenes
         public override void Update(GameTime gameTime)
         {
             base.Update(gameTime);
-            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            GameTime effectiveGameTime = _inputManager.GetEffectiveGameTime(gameTime, _isPlinkingIn);
+            float dt = (float)effectiveGameTime.ElapsedGameTime.TotalSeconds;
 
             if (_transitionManager.IsTransitioning) return;
 
@@ -412,40 +429,34 @@ namespace ProjectVagabond.Scenes
 
             if (_isPlinkingIn)
             {
-                bool skipPressed = _inputManager.Confirm || (_inputManager.IsMouseActive && currentMouseState.LeftButton == ButtonState.Pressed);
+                _plinkTimer -= dt;
+                while (_plinkTimer <= 0f && _plinkQueue.Count > 0)
+                {
+                    _plinkQueue.Dequeue().Invoke();
+                    _plinkTimer += PLINK_STAGGER;
+                }
 
-                if (skipPressed)
+                int centerX = Global.VIRTUAL_WIDTH / 2;
+                var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+
+                _plinkTitle1.Update(effectiveGameTime, new Vector2(centerX, 14));
+                _plinkTitle2.Update(effectiveGameTime, new Vector2(centerX, 14 + secondaryFont.LineHeight + 2));
+                _plinkStats.Update(effectiveGameTime, new Vector2(centerX, BASE_CENTER_Y + 70));
+
+                for (int i = 0; i < 7; i++)
+                {
+                    int offset = i - 3;
+                    float visualOffset = offset + _carouselSlideOffset;
+                    float xOffset = MathF.Sin(visualOffset * 0.5f) * 100f;
+                    float xPos = centerX + xOffset;
+                    float curveY = MathF.Pow(Math.Abs(visualOffset), 1.5f) * 2.0f;
+                    float baseYPos = BASE_CENTER_Y - curveY;
+                    _plinkCarousel[i].Update(effectiveGameTime, new Vector2(xPos, baseYPos));
+                }
+
+                if (_plinkQueue.Count == 0 && !_allPlinks.Any(p => p.IsActive))
                 {
                     _isPlinkingIn = false;
-                    // Fast forward all animators to prevent late particles
-                    foreach (var p in _allPlinks) p.Start(0, 0.001f);
-                    if (_inputManager.IsMouseActive) _inputManager.ConsumeMouseClick();
-                }
-                else
-                {
-                    int centerX = Global.VIRTUAL_WIDTH / 2;
-                    var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-
-                    _plinkTitle1.Update(gameTime, new Vector2(centerX, 14));
-                    _plinkTitle2.Update(gameTime, new Vector2(centerX, 14 + secondaryFont.LineHeight + 2));
-                    _plinkStats.Update(gameTime, new Vector2(centerX, BASE_CENTER_Y + 70));
-
-                    for (int i = 0; i < 7; i++)
-                    {
-                        int offset = i - 3;
-                        float visualOffset = offset + _carouselSlideOffset;
-                        float xOffset = MathF.Sin(visualOffset * 0.5f) * 100f;
-                        float xPos = centerX + xOffset;
-                        float curveY = MathF.Pow(Math.Abs(visualOffset), 1.5f) * 2.0f;
-                        float baseYPos = BASE_CENTER_Y - curveY;
-                        _plinkCarousel[i].Update(gameTime, new Vector2(xPos, baseYPos));
-                    }
-
-                    // Buttons update their own plinks during Draw, but we still need to check if they are active
-                    if (!_allPlinks.Any(p => p.IsActive))
-                    {
-                        _isPlinkingIn = false;
-                    }
                 }
             }
             else
@@ -508,6 +519,8 @@ namespace ProjectVagabond.Scenes
 
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
+            GameTime effectiveGameTime = _inputManager.GetEffectiveGameTime(gameTime, _isPlinkingIn);
+
             var core = ServiceLocator.Get<Core>();
             var secondaryFont = core.SecondaryFont;
             var tertiaryFont = core.TertiaryFont;
@@ -583,7 +596,7 @@ namespace ProjectVagabond.Scenes
             }
 
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, Matrix.CreateTranslation(0, leftY, 0) * staticTransform);
-            _leftArrow.Draw(spriteBatch, font, gameTime, Matrix.Identity, false, null, null, leftColor);
+            _leftArrow.Draw(spriteBatch, font, effectiveGameTime, Matrix.Identity, false, null, null, leftColor);
             spriteBatch.End();
 
             // Right Arrow
@@ -602,13 +615,13 @@ namespace ProjectVagabond.Scenes
             }
 
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, Matrix.CreateTranslation(0, rightY, 0) * staticTransform);
-            _rightArrow.Draw(spriteBatch, font, gameTime, Matrix.Identity, false, null, null, rightColor);
+            _rightArrow.Draw(spriteBatch, font, effectiveGameTime, Matrix.Identity, false, null, null, rightColor);
             spriteBatch.End();
 
             // Select Button
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, staticTransform);
             Color selectColor = (_selectButton.IsHovered || _selectButton.IsSelected) ? _global.ButtonHoverColor : _global.GameTextColor;
-            _selectButton.Draw(spriteBatch, font, gameTime, Matrix.Identity, false, null, null, selectColor);
+            _selectButton.Draw(spriteBatch, font, effectiveGameTime, Matrix.Identity, false, null, null, selectColor);
             spriteBatch.End();
 
             // --- Stats and Abilities ---
