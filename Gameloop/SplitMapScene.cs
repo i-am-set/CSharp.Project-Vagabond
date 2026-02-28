@@ -424,8 +424,6 @@ namespace ProjectVagabond.Scenes
                     _walkStepTimer = 0f;
                     _currentMoveStep++;
 
-                    _hapticsManager.TriggerHop(1.5f, 0.1f);
-
                     if (_currentMoveStep >= TOTAL_MOVE_STEPS)
                     {
                         _isWalking = false;

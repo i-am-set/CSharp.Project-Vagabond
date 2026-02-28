@@ -80,6 +80,10 @@ namespace ProjectVagabond.Battle.UI
         private const int TENACITY_ANIM_FRAMES = 13;
         private const int TENACITY_ANIM_WIDTH = 32;
 
+        // --- EXP Animation State ---
+        private readonly Dictionary<string, float> _expAnimTimers = new Dictionary<string, float>();
+        private readonly Dictionary<string, float> _expAnimStartValues = new Dictionary<string, float>();
+
         private float _statTooltipAlpha = 0f;
         private string _statTooltipCombatantID = null;
 
@@ -140,6 +144,8 @@ namespace ProjectVagabond.Battle.UI
             _enemySquashScales.Clear();
             _reticleController.Reset();
             _tenacityAnims.Clear();
+            _expAnimTimers.Clear();
+            _expAnimStartValues.Clear();
         }
 
         public List<TargetInfo> GetCurrentTargets() => _currentTargets;
@@ -232,7 +238,6 @@ namespace ProjectVagabond.Battle.UI
 
         public void Update(GameTime gameTime, IEnumerable<BattleCombatant> combatants, BattleAnimationManager animationManager, BattleCombatant currentActor)
         {
-            // Ensure the animation manager knows how to find combatant positions for projectiles
             if (animationManager.GetCombatantPosition == null)
             {
                 animationManager.GetCombatantPosition = (c) => GetCombatantVisualCenterPosition(c, combatants);
@@ -268,6 +273,7 @@ namespace ProjectVagabond.Battle.UI
             UpdateActiveTurnOffsets(dt, combatants, currentActor);
             UpdateEnemySquash(dt);
             UpdateTenacityAnimations(dt);
+            UpdateEXPAnimations(dt, combatants);
 
             foreach (var controller in _attackAnimControllers.Values) controller.Update(gameTime);
 
@@ -281,22 +287,65 @@ namespace ProjectVagabond.Battle.UI
                     if (battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection && !battleManager.IsActionPending(c.BattleSlot))
                     {
                         float t = (float)gameTime.TotalGameTime.TotalSeconds;
-                        // 1 second cycle. 0.0-0.5 = State A, 0.5-1.0 = State B.
                         float cycle = t % 1.0f;
                         bool stateA = cycle < 0.5f;
 
-                        // Slot 0 (Left): State A = Down (0), State B = Up (-1)
-                        // Slot 1 (Right): State A = Up (-1), State B = Down (0)
-
                         bool isUp;
-                        if (c.BattleSlot == 0) isUp = !stateA; // Up in second half
-                        else isUp = stateA; // Up in first half
+                        if (c.BattleSlot == 0) isUp = !stateA;
+                        else isUp = stateA;
 
                         manualBob = isUp ? -1f : 0f;
                         manualAlt = isUp;
                     }
 
                     sprite.Update(gameTime, currentActor == c, manualBob, manualAlt);
+                }
+            }
+        }
+
+        private void UpdateEXPAnimations(float dt, IEnumerable<BattleCombatant> combatants)
+        {
+            var gameState = ServiceLocator.Get<GameState>();
+            if (gameState.PlayerState == null) return;
+
+            const float EXP_ANIM_DURATION = 2.0f;
+
+            foreach (var c in combatants.Where(c => c.IsPlayerControlled))
+            {
+                var pm = gameState.PlayerState.Party.FirstOrDefault(p => p.Name == c.Name);
+                if (pm != null)
+                {
+                    bool needsLevelUp = c.VisualLevel < pm.Level;
+                    float targetExp = needsLevelUp ? c.VisualMaxEXP : pm.CurrentEXP;
+
+                    if (Math.Abs(c.VisualEXP - targetExp) > 0.1f)
+                    {
+                        if (!_expAnimTimers.ContainsKey(c.CombatantID))
+                        {
+                            _expAnimTimers[c.CombatantID] = 0f;
+                            _expAnimStartValues[c.CombatantID] = c.VisualEXP;
+                        }
+
+                        _expAnimTimers[c.CombatantID] += dt;
+                        float progress = Math.Clamp(_expAnimTimers[c.CombatantID] / EXP_ANIM_DURATION, 0f, 1f);
+
+                        float easedProgress = Easing.EaseOutQuint(progress);
+                        c.VisualEXP = MathHelper.Lerp(_expAnimStartValues[c.CombatantID], targetExp, easedProgress);
+
+                        if (progress >= 1.0f)
+                        {
+                            c.VisualEXP = targetExp;
+                            _expAnimTimers.Remove(c.CombatantID);
+                            _expAnimStartValues.Remove(c.CombatantID);
+
+                            if (needsLevelUp)
+                            {
+                                c.VisualLevel++;
+                                c.VisualEXP = 0f;
+                                c.VisualMaxEXP = (c.VisualLevel == pm.Level) ? pm.MaxEXP : (int)(c.VisualMaxEXP * 1.2f);
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -352,13 +401,11 @@ namespace ProjectVagabond.Battle.UI
                 hoveredGroupColor = color;
             }
 
-            // Draw Floors Explicitly (Decoupled from entity logic)
             DrawEnemyFloors(spriteBatch, globalFloorAlpha, allCombatants);
 
             var flashState = animationManager.GetImpactFlashState();
             if (flashState != null)
             {
-                // Draw entities normally first (under flash)
                 DrawEnemies(spriteBatch, enemies, allCombatants, currentActor, shouldGrayOut, selectableTargets, animationManager, silhouetteColors, transform, gameTime, uiManager, hoveredCombatant, isTargetingMode, hoveredGroupColor, drawShadow: true, drawSprite: false);
                 DrawPlayers(spriteBatch, font, players, currentActor, shouldGrayOut, selectableTargets, animationManager, silhouetteColors, gameTime, uiManager, hoveredCombatant, isTargetingMode, hoveredGroupColor, drawShadow: true, drawSprite: false);
 
@@ -456,28 +503,24 @@ namespace ProjectVagabond.Battle.UI
         private void DrawEnemyFloors(SpriteBatch spriteBatch, float globalFloorAlpha, IEnumerable<BattleCombatant> combatants)
         {
             var battleManager = ServiceLocator.Get<BattleManager>();
-            // Check if we are in the intro phase where floors should sync with combatant fade-in
             bool isIntro = battleManager != null && battleManager.CurrentPhase == BattleManager.BattlePhase.BattleStartIntro;
 
             for (int i = 0; i < 2; i++)
             {
                 var center = BattleLayout.GetEnemySlotCenter(i);
 
-                // Find occupant to determine size and alpha source
                 var occupant = combatants.FirstOrDefault(c => !c.IsPlayerControlled && c.BattleSlot == i);
 
                 float alpha = globalFloorAlpha;
 
                 if (isIntro)
                 {
-                    // During intro, couple floor alpha to the combatant's alpha to match the stagger
                     if (occupant != null)
                     {
                         alpha = occupant.VisualAlpha;
                     }
                     else
                     {
-                        // If no combatant in this slot during intro, floor is invisible
                         alpha = 0f;
                     }
                 }
@@ -1255,15 +1298,12 @@ namespace ProjectVagabond.Battle.UI
 
                         _entityRenderer.DrawEnemy(spriteBatch, enemy, drawPos, offsets, shake, alpha, silhouetteAmt, silhouetteColor, isHighlighted, assignedColor, outlineColor, flashWhite, tint * alpha, scale, transform, lowHealthOverlay);
 
-                        // STUN INDICATOR
                         if (enemy.HasStatusEffect(StatusEffectType.Stun))
                         {
                             var stunTex = _spriteManager.StunnedIconSpriteSheet;
                             var stunRect = _spriteManager.GetStunnedAnimRect(gameTime);
 
-                            // Calculate top of sprite visually
                             float spriteTopY = GetEnemyStaticVisualTop(enemy, center.Y);
-                            // Position icon centered horizontally, and slightly above the sprite top
                             Vector2 stunPos = new Vector2(center.X - (stunRect.Width / 2f), spriteTopY - 12f + bob + spawnY);
 
                             spriteBatch.DrawSnapped(stunTex, stunPos, stunRect, Color.White * alpha, 0f, Vector2.Zero, 1f, SpriteEffects.None, 1.0f);
@@ -1535,14 +1575,11 @@ namespace ProjectVagabond.Battle.UI
 
                     sprite.Draw(spriteBatch, animManager, player, tint, isHighlightedSprite, pulse, isSilhouetted, silhouetteColor, gameTime, assignedColor, outlineColor, scale * chargeScale.X, lowHealthOverlay, rotation);
 
-                    // STUN INDICATOR
                     if (player.ActiveStatusEffects.Any(s => s.EffectType == StatusEffectType.Stun))
                     {
                         var stunTex = _spriteManager.StunnedIconSpriteSheet;
                         var stunRect = _spriteManager.GetStunnedAnimRect(gameTime);
 
-                        // Player sprite is 32x32 centered at spriteCenter
-                        // Top is spriteCenter.Y - 16
                         float spriteTopY = spriteCenter.Y - 16f;
                         Vector2 stunPos = new Vector2(spriteCenter.X - (stunRect.Width / 2f), spriteTopY - 8f + bob + spawnY);
 
@@ -1797,29 +1834,6 @@ namespace ProjectVagabond.Battle.UI
 
             if (minOffset == int.MaxValue) return baseTopY;
             return baseTopY + minOffset;
-        }
-
-        private Vector2 GetCombatantBarPosition(BattleCombatant c)
-        {
-            if (!_combatantVisualCenters.TryGetValue(c.CombatantID, out var center)) return Vector2.Zero;
-
-            float tooltipTopY;
-            if (c.IsPlayerControlled)
-            {
-                tooltipTopY = center.Y - 16;
-            }
-            else
-            {
-                float baseTooltipY = center.Y - 3;
-                float spriteTopY = GetEnemyStaticVisualTop(c, center.Y);
-                tooltipTopY = Math.Min(baseTooltipY, spriteTopY + 2);
-            }
-
-            if (tooltipTopY < 5) tooltipTopY = 5;
-
-            float barY = tooltipTopY - 6;
-
-            return new Vector2(center.X, barY);
         }
     }
 }

@@ -40,6 +40,11 @@ namespace ProjectVagabond.Battle
             combatant.Tags.Add("Type.Player");
             combatant.Tags.Add("Type.Ally");
 
+            // Initialize Visual EXP state
+            combatant.VisualLevel = member.Level;
+            combatant.VisualEXP = member.CurrentEXP;
+            combatant.VisualMaxEXP = member.MaxEXP;
+
             var data = BattleDataCache.PartyMembers.Values.FirstOrDefault(p => p.Name == member.Name);
             if (data != null)
             {
@@ -49,7 +54,6 @@ namespace ProjectVagabond.Battle
                 combatant.Tags.Add($"Gender.{data.Gender}");
                 if (data.IsProperNoun) combatant.Tags.Add("Prop.ProperNoun");
 
-                // Initialize Guard from Data (Default 3)
                 combatant.MaxGuard = data.MaxGuard ?? 3;
             }
             else
@@ -108,13 +112,11 @@ namespace ProjectVagabond.Battle
             combatant.Stats.Tenacity = _random.Next(enemyData.MinTenacity, enemyData.MaxTenacity + 1);
             combatant.Stats.Agility = _random.Next(enemyData.MinAgility, enemyData.MaxAgility + 1);
 
-            // Initialize Guard from Data (Default 3)
             combatant.MaxGuard = enemyData.MaxGuard ?? 3;
             combatant.CurrentGuard = combatant.MaxGuard;
 
             combatant.VisualHP = combatant.Stats.CurrentHP;
 
-            // Assign Basic Move
             if (enemyData.BasicMoves != null && enemyData.BasicMoves.Any())
             {
                 string moveId = enemyData.BasicMoves[_random.Next(enemyData.BasicMoves.Count)];
@@ -123,12 +125,11 @@ namespace ProjectVagabond.Battle
                     combatant.BasicMove = new MoveEntry(moveId, 0);
                 }
             }
-            else if (BattleDataCache.Moves.ContainsKey("6")) // Fallback to stall if no basic move defined
+            else if (BattleDataCache.Moves.ContainsKey("6"))
             {
                 combatant.BasicMove = new MoveEntry("6", 0);
             }
 
-            // Assign Core Move
             if (enemyData.CoreMoves != null && enemyData.CoreMoves.Any())
             {
                 string moveId = enemyData.CoreMoves[_random.Next(enemyData.CoreMoves.Count)];
@@ -138,7 +139,6 @@ namespace ProjectVagabond.Battle
                 }
             }
 
-            // Assign Alt Move
             if (enemyData.AltMoves != null && enemyData.AltMoves.Any())
             {
                 string moveId = enemyData.AltMoves[_random.Next(enemyData.AltMoves.Count)];

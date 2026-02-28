@@ -316,7 +316,7 @@ namespace ProjectVagabond.Transitions
     public class FadeOffTransition : ITransitionEffect
     {
         private float _timer;
-        private const float DURATION = 1.0f;
+        private const float DURATION = 0.5f;
         private bool _isOut;
         public bool IsComplete => _timer >= DURATION;
 

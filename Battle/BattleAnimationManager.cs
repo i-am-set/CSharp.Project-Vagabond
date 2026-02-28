@@ -269,7 +269,6 @@ namespace ProjectVagabond.Battle.UI
         private readonly Queue<Action> _pendingTextIndicators = new Queue<Action>();
         private float _indicatorCooldownTimer = 0f;
 
-
         private readonly Random _random = new Random();
         private readonly Global _global;
 
@@ -302,12 +301,10 @@ namespace ProjectVagabond.Battle.UI
 
         private void OnSpawnProjectile(GameEvents.SpawnProjectile e)
         {
-            // We need the start position. For now, use the actor's visual center.
             Vector2 startPos = Vector2.Zero;
             if (GetCombatantPosition != null)
             {
                 startPos = GetCombatantPosition(e.Actor);
-                // Offset slightly so it doesn't spawn inside the sprite
                 startPos.Y -= 20f;
             }
 
@@ -317,7 +314,6 @@ namespace ProjectVagabond.Battle.UI
 
         private void OnActionExecuted(GameEvents.BattleActionExecuted e)
         {
-            // Target Animations (Hit Flash / Shake)
             if (e.Targets != null)
             {
                 foreach (var target in e.Targets)
@@ -481,14 +477,11 @@ namespace ProjectVagabond.Battle.UI
 
         public void ReleaseAttackCharge(string combatantId, float timeToImpact)
         {
-            // No-op or logic if needed for timer-based resets
-            // Since we use explicit TriggerLunge now, this can be empty or redirect
             TriggerLunge(combatantId);
         }
 
         public void TriggerInstantAttack(string combatantId, bool isPlayer)
         {
-            // Fallback for instant attacks without windup
             StartWindup(combatantId, isPlayer);
             TriggerLunge(combatantId);
         }
@@ -583,8 +576,6 @@ namespace ProjectVagabond.Battle.UI
 
         public void StartDeathAnimation(string combatantId)
         {
-            // Safety: Clear any pending attack charges or hit flashes for this unit
-            // This prevents softlocks if a unit dies mid-attack (e.g. recoil)
             _activeAttackCharges.RemoveAll(a => a.CombatantID == combatantId);
             _activeHitFlashAnimations.RemoveAll(a => a.CombatantID == combatantId);
             _activeSwitchOutAnimations.RemoveAll(a => a.CombatantID == combatantId);
@@ -667,7 +658,6 @@ namespace ProjectVagabond.Battle.UI
 
         public void StartSwitchOutAnimation(string combatantId, bool isEnemy)
         {
-            // Safety: Clear attack charges for switching unit
             _activeAttackCharges.RemoveAll(a => a.CombatantID == combatantId);
 
             _activeSwitchOutAnimations.RemoveAll(a => a.CombatantID == combatantId);
@@ -1007,16 +997,10 @@ namespace ProjectVagabond.Battle.UI
 
         public void Update(GameTime gameTime, IEnumerable<BattleCombatant> combatants, float timeScale = 1.0f)
         {
-            // Calculate Scaled Time (for impact/visuals that should freeze during hitstop)
             double scaledSeconds = gameTime.ElapsedGameTime.TotalSeconds * timeScale;
             var scaledGameTime = new GameTime(gameTime.TotalGameTime, TimeSpan.FromSeconds(scaledSeconds));
-
-            // Calculate Unscaled Time (for structural/flow logic that must NEVER freeze)
-            // We use the original gameTime which represents real wall-clock time delta
             var unscaledGameTime = gameTime;
 
-            // --- Structural / Flow Animations (Real Time) ---
-            // These control the battle flow (blocking animations). If these freeze, the game deadlocks.
             UpdateIndicatorQueue(unscaledGameTime);
             UpdateDeathAnimations(unscaledGameTime, combatants);
             UpdateSpawnAnimations(unscaledGameTime, combatants);
@@ -1027,8 +1011,6 @@ namespace ProjectVagabond.Battle.UI
             UpdateHudEntryAnimations(unscaledGameTime, combatants);
             UpdateAlphaAnimations(unscaledGameTime, combatants);
 
-            // --- Cosmetic / Impact Animations (Scaled Time) ---
-            // These add "juice" and weight. They should freeze during hitstop to sell the impact.
             UpdateHealthAnimations(scaledGameTime, combatants);
             UpdateHitFlashAnimations(scaledGameTime);
             UpdateHealAnimations(scaledGameTime);
@@ -1095,7 +1077,6 @@ namespace ProjectVagabond.Battle.UI
             {
                 var anim = _activeAttackCharges[i];
 
-                // Safety: If combatant is gone or dead, remove animation
                 var combatant = combatants.FirstOrDefault(c => c.CombatantID == anim.CombatantID);
                 if (combatant == null || combatant.IsDefeated || combatant.Stats.CurrentHP <= 0)
                 {
@@ -1107,8 +1088,6 @@ namespace ProjectVagabond.Battle.UI
 
                 if (anim.CurrentPhase == AttackChargeAnimationState.Phase.Windup)
                 {
-                    // Windup: Player moves Down (+Y), Enemy moves Up (-Y)
-                    // Squash Y (1.2, 0.8) for anticipation
                     Vector2 targetOffset = new Vector2(0f, 10f * dir);
                     Vector2 targetScale = new Vector2(1.2f, 0.8f);
 
@@ -1118,35 +1097,29 @@ namespace ProjectVagabond.Battle.UI
                 }
                 else if (anim.CurrentPhase == AttackChargeAnimationState.Phase.Lunge)
                 {
-                    // Lunge: Player moves Up (-Y), Enemy moves Down (+Y)
-                    // Stretch Y (0.8, 1.2) for the strike
                     Vector2 targetOffset = new Vector2(0f, -20f * dir);
                     Vector2 targetScale = new Vector2(0.8f, 1.2f);
 
-                    // Fast movement for the strike
                     float smooth = 1f - MathF.Exp(-25f * dt);
                     anim.Offset = Vector2.Lerp(anim.Offset, targetOffset, smooth);
                     anim.Scale = Vector2.Lerp(anim.Scale, targetScale, smooth);
 
-                    // Transition to Recovery when close to the apex
                     if (Vector2.DistanceSquared(anim.Offset, targetOffset) < 5f)
                     {
                         if (anim.OnApex != null)
                         {
                             anim.OnApex.Invoke();
-                            anim.OnApex = null; // Ensure it only fires once
+                            anim.OnApex = null;
                         }
                         anim.CurrentPhase = AttackChargeAnimationState.Phase.Recovery;
                     }
                 }
-                else // Recovery
+                else
                 {
-                    // Return to Neutral
                     float smooth = 1f - MathF.Exp(-10f * dt);
                     anim.Offset = Vector2.Lerp(anim.Offset, Vector2.Zero, smooth);
                     anim.Scale = Vector2.Lerp(anim.Scale, Vector2.One, smooth);
 
-                    // Remove when close enough to neutral
                     if (anim.Offset.LengthSquared() < 1f && Math.Abs(anim.Scale.X - 1f) < 0.01f)
                     {
                         _activeAttackCharges.RemoveAt(i);
@@ -1223,7 +1196,7 @@ namespace ProjectVagabond.Battle.UI
                             break;
                     }
                 }
-                else // Recovery
+                else
                 {
                     if (anim.CurrentRecoveryPhase == ResourceBarAnimationState.RecoveryPhase.Hang)
                     {
@@ -1247,7 +1220,7 @@ namespace ProjectVagabond.Battle.UI
         private void UpdateHealthAnimations(GameTime gameTime, IEnumerable<BattleCombatant> combatants)
         {
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
-            const float LERP_SPEED = 10f; // Tuned for "responsive but smooth"
+            const float LERP_SPEED = 10f;
 
             foreach (var combatant in combatants)
             {
@@ -1731,7 +1704,6 @@ namespace ProjectVagabond.Battle.UI
             {
                 if (indicator.Type != typeToDraw) continue;
 
-                // Scale Logic: Shrink in the last 25%
                 float progress = indicator.Timer / DamageIndicatorState.DURATION;
                 float scale = 1.0f;
                 float shrinkStart = 0.75f;
@@ -1790,7 +1762,9 @@ namespace ProjectVagabond.Battle.UI
                 else if (indicator.Type == DamageIndicatorState.IndicatorType.EXP)
                 {
                     activeFont = ServiceLocator.Get<Core>().TertiaryFont;
-                    drawColor = indicator.PrimaryColor;
+                    const float flashInterval = 0.1f;
+                    bool useSun = (int)(indicator.Timer / flashInterval) % 2 == 0;
+                    drawColor = useSun ? _global.Palette_Sun : _global.Palette_Sky;
                 }
                 else
                 {
@@ -1822,7 +1796,6 @@ namespace ProjectVagabond.Battle.UI
                     float totalWidth = prefixSize.X + statSize.X + suffixSize.X;
                     Vector2 basePosition = indicator.Position - new Vector2(totalWidth / 2f, statSize.Y);
 
-                    // Origin for rotation
                     Vector2 groupOrigin = new Vector2(totalWidth / 2f, statSize.Y / 2f);
                     Vector2 drawCenter = indicator.Position;
 
@@ -1836,7 +1809,7 @@ namespace ProjectVagabond.Battle.UI
                     currentPos = new Vector2(MathF.Round(currentPos.X), MathF.Round(currentPos.Y));
 
                     spriteBatch.DrawStringOutlinedSnapped(activeFont, prefixText, currentPos, prefixColor, _global.Palette_Black, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
-                    currentPos.X += prefixSize.X * scale; // Approximate spacing
+                    currentPos.X += prefixSize.X * scale;
                     spriteBatch.DrawStringOutlinedSnapped(activeFont, statText, currentPos, statColor, _global.Palette_Black, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
                     currentPos.X += statSize.X * scale;
                     spriteBatch.DrawStringOutlinedSnapped(activeFont, suffixText, currentPos, suffixColor, _global.Palette_Black, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);

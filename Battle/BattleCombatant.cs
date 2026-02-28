@@ -33,6 +33,11 @@ namespace ProjectVagabond.Battle
         public float VisualHP { get; set; }
         public float VisualAlpha { get; set; } = 1.0f;
 
+        // --- VISUAL EXP TRACKING ---
+        public int VisualLevel { get; set; }
+        public float VisualEXP { get; set; }
+        public int VisualMaxEXP { get; set; }
+
         public float HudVisualAlpha { get; set; } = 0f;
 
         public float VisualSilhouetteAmount { get; set; } = 0f;
@@ -167,7 +172,6 @@ namespace ProjectVagabond.Battle
 
         public (bool success, string message) ModifyStatStage(OffensiveStatType stat, int amount)
         {
-            // Allow abilities (like Scrappy) to intercept or modify the change
             var attemptEvent = new StatChangeAttemptEvent(this, stat, amount);
             var context = new BattleContext { Actor = this, Target = this };
             NotifyAbilities(attemptEvent, context);
@@ -181,7 +185,6 @@ namespace ProjectVagabond.Battle
 
             StatStages[stat] = Math.Clamp(currentStage + amount, -2, 2);
 
-            // Fire the UI event (Struct)
             EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = this, Stat = stat, Amount = amount });
 
             string changeText = amount > 0 ? (amount > 1 ? "sharply rose" : "rose") : (amount < -1 ? "harshly fell" : "fell");
