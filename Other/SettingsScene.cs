@@ -2,10 +2,13 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -24,6 +27,7 @@ namespace ProjectVagabond.Scenes
         private List<ISettingControl> _settingControls = new();
         private List<Button> _footerButtons = new();
         private readonly NavigationGroup _navigationGroup;
+        private Dictionary<ISettingControl, PlinkAnimator> _controlPlinks = new();
 
         private string _confirmationMessage = "";
         private float _confirmationTimer = 0f;
@@ -150,6 +154,7 @@ namespace ProjectVagabond.Scenes
             _settingControls.Clear();
             _footerButtons.Clear();
             _navigationGroup.Clear();
+            _controlPlinks.Clear();
 
             // --- 1. Resolution ---
             var resolutions = SettingsManager.GetResolutions();
@@ -253,6 +258,21 @@ namespace ProjectVagabond.Scenes
 
             CalculateButtonLayout();
             applyButton.IsEnabled = IsDirty();
+
+            // Trigger Plink Entrance
+            float delay = 0f;
+            foreach (var ctrl in _settingControls)
+            {
+                var plink = new PlinkAnimator();
+                plink.Start(delay);
+                _controlPlinks[ctrl] = plink;
+                delay += 0.05f;
+            }
+            foreach (var btn in _footerButtons)
+            {
+                btn.PlayEntrance(delay);
+                delay += 0.05f;
+            }
         }
 
         private void CalculateButtonLayout()
@@ -439,7 +459,6 @@ namespace ProjectVagabond.Scenes
             Vector2 virtualMousePos = Core.TransformMouse(currentMouseState.Position);
 
             // --- 1. Update Controls (Position & Bounds) ---
-            // We update ALL controls so their bounds are correct for the navigation group.
             for (int i = 0; i < _settingControls.Count; i++)
             {
                 var item = _settingControls[i];
@@ -447,7 +466,12 @@ namespace ProjectVagabond.Scenes
 
                 Vector2 updatePos = new Vector2(SETTINGS_PANEL_X, itemY);
 
-                if (_currentInputDelay <= 0)
+                if (_controlPlinks.TryGetValue(item, out var plink))
+                {
+                    plink.Update(gameTime, new Vector2(updatePos.X + SETTINGS_PANEL_WIDTH / 2f, updatePos.Y + ITEM_VERTICAL_SPACING / 2f));
+                }
+
+                if (_currentInputDelay <= 0 && (!plink.IsActive || plink.Scale > 0.9f))
                 {
                     item.Update(new Vector2(updatePos.X, updatePos.Y + 2), currentMouseState, _previousMouseState, virtualMousePos, font, font);
                 }
@@ -456,7 +480,6 @@ namespace ProjectVagabond.Scenes
             // --- 2. Update Navigation Group (Selection) ---
             if (_currentInputDelay <= 0)
             {
-                // Create virtual mouse state for correct hit testing against virtual bounds
                 var virtualMousePoint = new Point((int)virtualMousePos.X, (int)virtualMousePos.Y);
                 var virtualMouseState = new MouseState(
                     virtualMousePoint.X,
@@ -469,7 +492,6 @@ namespace ProjectVagabond.Scenes
                     currentMouseState.XButton2
                 );
 
-                // Pass true to deselect if mouse is active but not hovering anything
                 _navigationGroup.Update(_inputManager, virtualMouseState, deselectIfNoHover: true);
 
                 if (_inputManager.CurrentInputDevice != InputDeviceType.Mouse)
@@ -520,30 +542,6 @@ namespace ProjectVagabond.Scenes
             _targetScrollOffset = Math.Clamp(_targetScrollOffset, 0, maxScroll);
         }
 
-        private void EnsureSelectionVisible()
-        {
-            var selection = _navigationGroup.CurrentSelection;
-            if (selection == null || !(selection is ISettingControl)) return;
-
-            int index = _settingControls.IndexOf((ISettingControl)selection);
-            if (index == -1) return;
-
-            float itemTop = index * ITEM_VERTICAL_SPACING;
-            float itemBottom = itemTop + ITEM_VERTICAL_SPACING;
-
-            if (itemTop < _targetScrollOffset)
-            {
-                _targetScrollOffset = itemTop;
-            }
-            else if (itemBottom > _targetScrollOffset + SCROLL_VIEW_HEIGHT)
-            {
-                _targetScrollOffset = itemBottom - SCROLL_VIEW_HEIGHT;
-            }
-
-            float maxScroll = Math.Max(0, (_settingControls.Count * ITEM_VERTICAL_SPACING) - SCROLL_VIEW_HEIGHT);
-            _targetScrollOffset = Math.Clamp(_targetScrollOffset, 0, maxScroll);
-        }
-
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             int screenWidth = Global.VIRTUAL_WIDTH;
@@ -572,7 +570,7 @@ namespace ProjectVagabond.Scenes
             var core = ServiceLocator.Get<Core>();
             Rectangle screenScissor = ScaleRectToScreen(_listViewPort, core.FinalScale, core.FinalRenderRectangle.Location);
 
-            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, new RasterizerState { ScissorTestEnable = true }, null, transform);
+            var originalRasterizerState = new RasterizerState { ScissorTestEnable = true };
             _graphics.GraphicsDevice.ScissorRectangle = screenScissor;
 
             for (int i = 0; i < _settingControls.Count; i++)
@@ -581,6 +579,21 @@ namespace ProjectVagabond.Scenes
                 float itemY = SETTINGS_START_Y + (i * ITEM_VERTICAL_SPACING) - _scrollOffset;
                 Vector2 currentPos = new Vector2(SETTINGS_PANEL_X, itemY);
 
+                var plink = _controlPlinks[item];
+                if (plink.IsActive && plink.Scale < 0.01f) continue;
+
+                Matrix itemTransform = transform;
+                if (plink.IsActive)
+                {
+                    Vector2 center = new Vector2(SETTINGS_PANEL_X + SETTINGS_PANEL_WIDTH / 2f, itemY + ITEM_VERTICAL_SPACING / 2f);
+                    itemTransform = Matrix.CreateTranslation(-center.X, -center.Y, 0) *
+                                    Matrix.CreateScale(plink.Scale) *
+                                    Matrix.CreateRotationZ(plink.Rotation) *
+                                    Matrix.CreateTranslation(center.X, center.Y, 0) * transform;
+                }
+
+                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, originalRasterizerState, null, itemTransform);
+
                 if (item.IsSelected)
                 {
                     var hoverRect = new Rectangle((int)currentPos.X - 5, (int)currentPos.Y, SETTINGS_PANEL_WIDTH + 10, ITEM_VERTICAL_SPACING);
@@ -588,9 +601,14 @@ namespace ProjectVagabond.Scenes
                 }
 
                 item.Draw(spriteBatch, secondaryFont, font, new Vector2(currentPos.X, currentPos.Y + 2), gameTime);
-            }
 
-            spriteBatch.End();
+                if (plink.IsActive && plink.FlashTint.HasValue)
+                {
+                    spriteBatch.Draw(pixel, new Rectangle((int)currentPos.X - 5, (int)currentPos.Y, SETTINGS_PANEL_WIDTH + 10, ITEM_VERTICAL_SPACING), plink.FlashTint.Value);
+                }
+
+                spriteBatch.End();
+            }
 
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
 

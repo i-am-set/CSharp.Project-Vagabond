@@ -21,11 +21,6 @@ namespace ProjectVagabond.UI
         protected readonly Rectangle? _selectedSourceRect;
         private bool _isHeldDown;
 
-        private enum AnimationState { Hidden, Idle, Appearing }
-        private AnimationState _animState = AnimationState.Idle;
-        private float _appearTimer = 0f;
-        private const float APPEAR_DURATION = 0.25f;
-
         private float _shakeTimer = 0f;
         private const float SHAKE_DURATION = 0.3f;
         private const float SHAKE_MAGNITUDE = 4f;
@@ -41,7 +36,11 @@ namespace ProjectVagabond.UI
             _disabledSourceRect = disabledSourceRect;
             _selectedSourceRect = selectedSourceRect;
             DebugColor = debugColor;
-            _animState = startVisible ? AnimationState.Idle : AnimationState.Hidden;
+
+            if (!startVisible)
+            {
+                SetHiddenForEntrance();
+            }
         }
 
         public void SetSprites(Texture2D spriteSheet, Rectangle defaultRect, Rectangle hoverRect)
@@ -53,11 +52,7 @@ namespace ProjectVagabond.UI
 
         public void TriggerAppearAnimation()
         {
-            if (_animState == AnimationState.Hidden)
-            {
-                _animState = AnimationState.Appearing;
-                _appearTimer = 0f;
-            }
+            PlayEntrance(0f);
         }
 
         public new void TriggerShake()
@@ -67,12 +62,12 @@ namespace ProjectVagabond.UI
 
         public void HideForAnimation()
         {
-            _animState = AnimationState.Hidden;
+            SetHiddenForEntrance();
         }
 
         public override void Update(MouseState currentMouseState, Matrix? worldTransform = null)
         {
-            if (_animState != AnimationState.Idle)
+            if (Plink.IsActive && Plink.Scale < 0.9f)
             {
                 IsHovered = false;
                 _isPressed = false;
@@ -99,12 +94,13 @@ namespace ProjectVagabond.UI
 
         public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? horizontalOffset = null, float? verticalOffset = null, Color? tintColorOverride = null)
         {
-            if (_animState == AnimationState.Hidden) return;
-
             bool isActivated = IsEnabled && (IsHovered || IsSelected || forceHover);
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            UpdateFeedbackAnimations(gameTime);
+            var (feedbackShake, flashTint) = UpdateFeedbackAnimations(gameTime);
+            float scale = _currentScale;
+
+            if (scale < 0.01f) return;
 
             float hoverYOffset = 0f;
             if (EnableHoverSway)
@@ -121,34 +117,20 @@ namespace ProjectVagabond.UI
                 _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated, HoverLiftOffset, HoverLiftDuration);
             }
 
-            float shakeOffset = 0f;
+            float shakeOffset = feedbackShake.X;
             if (_shakeTimer > 0)
             {
                 _shakeTimer -= dt;
                 float progress = 1f - (_shakeTimer / SHAKE_DURATION);
                 float magnitude = SHAKE_MAGNITUDE * (1f - Easing.EaseOutQuad(progress));
-                shakeOffset = MathF.Sin(_shakeTimer * SHAKE_FREQUENCY) * magnitude;
+                shakeOffset += MathF.Sin(_shakeTimer * SHAKE_FREQUENCY) * magnitude;
             }
 
             float totalHorizontalOffset = (horizontalOffset ?? 0f) + shakeOffset;
 
-            float scale = 1.0f;
-            if (_animState == AnimationState.Appearing)
-            {
-                _appearTimer += dt;
-                float progress = Math.Clamp(_appearTimer / APPEAR_DURATION, 0f, 1f);
-                scale = Easing.EaseOutCubic(progress);
-                if (progress >= 1.0f)
-                {
-                    _animState = AnimationState.Idle;
-                }
-            }
-
-            if (scale < 0.01f) return;
-
             Vector2 drawPosition = new Vector2(
                 Bounds.Center.X + totalHorizontalOffset,
-                Bounds.Center.Y + (verticalOffset ?? 0f) + hoverYOffset
+                Bounds.Center.Y + (verticalOffset ?? 0f) + hoverYOffset + feedbackShake.Y
             );
 
             Rectangle? sourceRectToDraw = _defaultSourceRect;
@@ -173,6 +155,12 @@ namespace ProjectVagabond.UI
             if (!IsEnabled && !_disabledSourceRect.HasValue)
             {
                 drawColor = _global.ButtonDisableColor;
+            }
+
+            if (flashTint.HasValue)
+            {
+                float flashAmount = flashTint.Value.A / 255f;
+                drawColor = Color.Lerp(drawColor, flashTint.Value, flashAmount);
             }
 
             if (_spriteSheet != null && sourceRectToDraw.HasValue)

@@ -29,39 +29,32 @@ namespace ProjectVagabond.UI
         public float ContentXOffset { get; set; } = 0f;
         public Vector2 IconRenderOffset { get; set; } = Vector2.Zero;
 
-        private enum AnimationState { Hidden, Idle, Appearing }
-        private AnimationState _animState = AnimationState.Idle;
-        private float _appearTimer = 0f;
-        private const float APPEAR_DURATION = 0.25f;
-
         public TextOverImageButton(Rectangle bounds, string text, Texture2D? backgroundTexture, string? function = null, Color? customDefaultTextColor = null, Color? customHoverTextColor = null, Color? customDisabledTextColor = null, bool alignLeft = false, float overflowScrollSpeed = 0, bool enableHoverSway = true, BitmapFont? font = null, Texture2D? iconTexture = null, Rectangle? iconSourceRect = null, bool startVisible = true)
             : base(bounds, text, function, customDefaultTextColor, customHoverTextColor, customDisabledTextColor, alignLeft, overflowScrollSpeed, enableHoverSway, font)
         {
             _backgroundTexture = backgroundTexture;
             IconTexture = iconTexture;
             IconSourceRect = iconSourceRect;
-            _animState = startVisible ? AnimationState.Idle : AnimationState.Hidden;
+
+            if (!startVisible)
+            {
+                SetHiddenForEntrance();
+            }
         }
 
         public void TriggerAppearAnimation()
         {
-            if (_animState == AnimationState.Hidden)
-            {
-                _animState = AnimationState.Appearing;
-                _appearTimer = 0f;
-            }
+            PlayEntrance(0f);
         }
 
         public void HideForAnimation()
         {
-            _animState = AnimationState.Hidden;
+            SetHiddenForEntrance();
         }
 
         public override void ResetAnimationState()
         {
             base.ResetAnimationState();
-            _animState = AnimationState.Idle;
-            _appearTimer = 0f;
         }
 
         public override void Update(MouseState currentMouseState, Matrix? worldTransform = null)
@@ -71,27 +64,15 @@ namespace ProjectVagabond.UI
 
         public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? horizontalOffset = null, float? verticalOffset = null, Color? tintColorOverride = null)
         {
-            if (_animState == AnimationState.Hidden) return;
-
             bool isActivated = IsEnabled && (IsHovered || IsSelected || forceHover);
             BitmapFont font = this.Font ?? defaultFont;
             var pixel = ServiceLocator.Get<Texture2D>();
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            float verticalScale = 1.0f;
-            if (_animState == AnimationState.Appearing)
-            {
-                _appearTimer += deltaTime;
-                float progress = Math.Clamp(_appearTimer / APPEAR_DURATION, 0f, 1f);
-                verticalScale = Easing.EaseOutBack(progress);
-                if (progress >= 1.0f)
-                {
-                    _animState = AnimationState.Idle;
-                }
-            }
-            if (verticalScale < 0.01f) return;
-
             var (shakeOffset, flashTint) = UpdateFeedbackAnimations(gameTime);
+            float verticalScale = _currentScale;
+
+            if (verticalScale < 0.01f) return;
 
             float yOffset = 0f;
             if (EnableHoverSway)
@@ -107,7 +88,7 @@ namespace ProjectVagabond.UI
             float totalY = Bounds.Center.Y + (verticalOffset ?? 0f) + shakeOffset.Y + yOffset;
             Vector2 centerPos = new Vector2(totalX, totalY);
 
-            int width = Bounds.Width;
+            int width = (int)(Bounds.Width * verticalScale);
             int height = (int)(Bounds.Height * verticalScale);
 
             Color backgroundTintColor;
@@ -253,7 +234,7 @@ namespace ProjectVagabond.UI
                     Vector2 iconDrawPos = centerPos + RotateOffset(iconOffset);
                     Vector2 iconOrigin = new Vector2(IconSourceRect!.Value.Width / 2f, IconSourceRect.Value.Height / 2f);
 
-                    spriteBatch.DrawSnapped(IconTexture, iconDrawPos, IconSourceRect.Value, iconColor, _currentHoverRotation, iconOrigin, 1.0f, SpriteEffects.None, 0f);
+                    spriteBatch.DrawSnapped(IconTexture, iconDrawPos, IconSourceRect.Value, iconColor, _currentHoverRotation, iconOrigin, verticalScale, SpriteEffects.None, 0f);
                 }
 
                 Vector2 textDrawPos = centerPos + RotateOffset(textOffset);
@@ -268,12 +249,12 @@ namespace ProjectVagabond.UI
                         if (_waveTimer > duration + 0.1f) _waveTimer = 0f;
                     }
 
-                    TextAnimator.DrawTextWithEffect(spriteBatch, font, Text, textDrawPos - textOrigin, textColor, WaveEffectType, _waveTimer, Vector2.One, null, _currentHoverRotation);
+                    TextAnimator.DrawTextWithEffect(spriteBatch, font, Text, textDrawPos - textOrigin, textColor, WaveEffectType, _waveTimer, new Vector2(verticalScale), null, _currentHoverRotation);
                 }
                 else
                 {
                     _waveTimer = 0f;
-                    spriteBatch.DrawStringSnapped(font, Text, textDrawPos, textColor, _currentHoverRotation, textOrigin, 1.0f, SpriteEffects.None, 0f);
+                    spriteBatch.DrawStringSnapped(font, Text, textDrawPos, textColor, _currentHoverRotation, textOrigin, verticalScale, SpriteEffects.None, 0f);
                 }
 
                 if (!IsEnabled)

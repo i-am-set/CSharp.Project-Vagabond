@@ -15,6 +15,34 @@ namespace ProjectVagabond.Particles
 {
     public static class ParticleEffects
     {
+        public static ParticleEmitterSettings CreateUIPlink()
+        {
+            var settings = ParticleEmitterSettings.CreateDefault();
+            var global = ServiceLocator.Get<Global>();
+            settings.Shape = EmitterShape.Point;
+            settings.EmissionRate = 0;
+            settings.BurstCount = 12;
+            settings.MaxParticles = 12;
+            settings.Duration = 0.5f;
+            settings.VelocityPattern = EmissionPattern.Radial;
+            settings.Lifetime = new FloatRange(0.15f, 0.4f);
+            settings.InitialVelocityX = new FloatRange(100f, 300f);
+            settings.InitialVelocityY = new FloatRange(0f);
+            settings.InitialSize = new FloatRange(1f, 3f);
+            settings.EndSize = new FloatRange(0f);
+            settings.InterpolateSize = true;
+            settings.Gravity = new Vector2(0, 300f);
+            settings.Drag = 3f;
+            settings.StartColor = global.Palette_Sun;
+            settings.EndColor = global.Palette_DarkSun;
+            settings.StartAlpha = 1.0f;
+            settings.EndAlpha = 0.0f;
+            settings.Texture = ServiceLocator.Get<Texture2D>();
+            settings.BlendMode = BlendState.Additive;
+            settings.LayerDepth = 0.99f;
+            return settings;
+        }
+
         /// <summary>
         /// Creates a high-density, multi-colored sparkle volume for Magic Missiles.
         /// </summary>

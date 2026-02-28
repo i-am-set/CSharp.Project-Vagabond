@@ -2,9 +2,13 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ProjectVagabond.UI
 {
@@ -115,10 +119,7 @@ namespace ProjectVagabond.UI
         private const double DEBOUNCE_DURATION = 0.1;
 
         // --- ENTRANCE ANIMATION STATE ---
-        private bool _isEntering = false;
-        private float _entranceTimer = 0f;
-        private float _entranceDelay = 0f;
-        private const float ENTRANCE_DURATION = 0.4f;
+        public PlinkAnimator Plink { get; } = new PlinkAnimator();
 
         public Button(Rectangle bounds, string text, string? function = null, Color? customDefaultTextColor = null, Color? customHoverTextColor = null, Color? customDisabledTextColor = null, bool alignLeft = false, float overflowScrollSpeed = 0.0f, bool enableHoverSway = true, BitmapFont? font = null)
         {
@@ -188,24 +189,20 @@ namespace ProjectVagabond.UI
 
         public void PlayEntrance(float delay)
         {
-            _isEntering = true;
-            _entranceTimer = 0f;
-            _entranceDelay = delay;
+            Plink.Start(delay);
             _currentScale = 0f;
             _targetScale = 1.0f;
         }
 
         public void SetHiddenForEntrance()
         {
-            _isEntering = true;
-            _entranceTimer = 0f;
-            _entranceDelay = 100f;
+            Plink.Start(100f); // Arbitrary long delay to keep it hidden
             _currentScale = 0f;
         }
 
         public virtual void Update(MouseState currentMouseState, Matrix? worldTransform = null)
         {
-            if (_isEntering)
+            if (Plink.IsActive)
             {
                 IsHovered = false;
                 _isPressed = false;
@@ -244,9 +241,6 @@ namespace ProjectVagabond.UI
             bool mouseIsDown = currentMouseState.LeftButton == ButtonState.Pressed;
             bool mouseWasDown = _previousMouseState.LeftButton == ButtonState.Pressed;
 
-            // Sticky Press Logic:
-            // If clicked while hovered, become pressed.
-            // Stay pressed until released, even if mouse leaves.
             if (IsHovered && mouseIsDown && !mouseWasDown)
             {
                 _isPressed = true;
@@ -255,7 +249,6 @@ namespace ProjectVagabond.UI
             if (!mouseIsDown && _isPressed)
             {
                 _isPressed = false;
-                // Only trigger click if released while hovering
                 if (IsHovered)
                 {
                     bool isDebounceClear = (DateTime.Now - _lastClickTime).TotalSeconds > DEBOUNCE_DURATION;
@@ -328,34 +321,18 @@ namespace ProjectVagabond.UI
             _currentHoverRotation = 0f;
             _currentScale = 1.0f;
             _targetScale = 1.0f;
-            _isEntering = false;
         }
 
         protected (Vector2 shakeOffset, Color? flashTint) UpdateFeedbackAnimations(GameTime gameTime)
         {
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            if (_isEntering)
+            if (Plink.IsActive)
             {
-                _entranceTimer += dt;
-
-                if (_entranceTimer < _entranceDelay)
-                {
-                    _currentScale = 0f;
-                }
-                else
-                {
-                    float animTime = _entranceTimer - _entranceDelay;
-                    float progress = Math.Clamp(animTime / ENTRANCE_DURATION, 0f, 1f);
-                    _currentScale = Easing.EaseOutElastic(progress);
-
-                    if (progress >= 1.0f)
-                    {
-                        _isEntering = false;
-                        _currentScale = 1.0f;
-                    }
-                }
-                return (Vector2.Zero, null);
+                Plink.Update(gameTime, Bounds.Center.ToVector2());
+                _currentScale = Plink.Scale;
+                _currentHoverRotation = Plink.Rotation;
+                return (Vector2.Zero, Plink.FlashTint);
             }
 
             Vector2 shakeOffset = Vector2.Zero;
@@ -402,15 +379,23 @@ namespace ProjectVagabond.UI
             else if (_isPressed && _clickedSourceRect.HasValue) sourceRectToDraw = _clickedSourceRect;
             else if (isActivated && _hoverSourceRect.HasValue) sourceRectToDraw = _hoverSourceRect;
 
-            UpdateFeedbackAnimations(gameTime);
+            var (shakeOffset, flashTint) = UpdateFeedbackAnimations(gameTime);
+            if (_currentScale < 0.01f) return;
 
             Vector2 scale = new Vector2(_currentScale);
-            var position = new Vector2(Bounds.Center.X + (horizontalOffset ?? 0f), Bounds.Center.Y + (verticalOffset ?? 0f));
+            var position = new Vector2(Bounds.Center.X + (horizontalOffset ?? 0f) + shakeOffset.X, Bounds.Center.Y + (verticalOffset ?? 0f) + shakeOffset.Y);
+
+            Color finalColor = tintColorOverride ?? Color.White;
+            if (flashTint.HasValue)
+            {
+                float flashAmount = flashTint.Value.A / 255f;
+                finalColor = Color.Lerp(finalColor, flashTint.Value, flashAmount);
+            }
 
             if (_spriteSheet != null && sourceRectToDraw.HasValue)
             {
                 var origin = new Vector2(MathF.Round(sourceRectToDraw.Value.Width / 2f), MathF.Round(sourceRectToDraw.Value.Height / 2f));
-                spriteBatch.DrawSnapped(_spriteSheet, position, sourceRectToDraw, tintColorOverride ?? Color.White, _currentHoverRotation, origin, scale, SpriteEffects.None, 0f);
+                spriteBatch.DrawSnapped(_spriteSheet, position, sourceRectToDraw, finalColor, _currentHoverRotation, origin, scale, SpriteEffects.None, 0f);
             }
             else if (DebugColor.HasValue)
             {
@@ -449,7 +434,14 @@ namespace ProjectVagabond.UI
                 _waveTimer = 0f;
             }
 
-            UpdateFeedbackAnimations(gameTime);
+            var (shakeOffset, flashTint) = UpdateFeedbackAnimations(gameTime);
+            if (_currentScale < 0.01f) return;
+
+            if (flashTint.HasValue)
+            {
+                float flashAmount = flashTint.Value.A / 255f;
+                textColor = Color.Lerp(textColor, flashTint.Value, flashAmount);
+            }
 
             float xHoverOffset = 0f;
             float yHoverOffset = 0f;
@@ -457,7 +449,6 @@ namespace ProjectVagabond.UI
             {
                 if (HoverAnimation == HoverAnimationType.Hop)
                 {
-                    // If pressed, force offset to 0 to show "pushed down" state
                     if (_isPressed)
                     {
                         yHoverOffset = 0f;
@@ -476,8 +467,8 @@ namespace ProjectVagabond.UI
                 }
             }
 
-            float totalXOffset = xHoverOffset + (horizontalOffset ?? 0f);
-            float totalYOffset = yHoverOffset + (verticalOffset ?? 0f);
+            float totalXOffset = xHoverOffset + (horizontalOffset ?? 0f) + shakeOffset.X;
+            float totalYOffset = yHoverOffset + (verticalOffset ?? 0f) + shakeOffset.Y;
 
             Vector2 textSize = font.MeasureString(Text);
             Vector2 textPosition;

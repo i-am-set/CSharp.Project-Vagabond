@@ -32,7 +32,6 @@ namespace ProjectVagabond.Scenes
         private readonly HapticsManager _hapticsManager;
         private readonly InputManager _inputManager;
         private readonly List<Button> _buttons = new();
-        private readonly List<UIAnimator> _buttonAnimators = new();
         private readonly NavigationGroup _navigationGroup;
 
         private float _inputDelay = 0.1f;
@@ -213,26 +212,12 @@ namespace ProjectVagabond.Scenes
             _currentInputDelay = _inputDelay;
             _previousKeyboardState = Keyboard.GetState();
 
-            _buttonAnimators.Clear();
             for (int i = 0; i < _buttons.Count; i++)
             {
                 _buttons[i].ResetAnimationState();
-
                 _buttons[i].WaveEffectType = TextEffectType.SmallWave;
                 _buttons[i].AlwaysAnimateText = false;
-
-                float fadeDuration = 0.6f;
-
-                var animator = new UIAnimator
-                {
-                    EntryStyle = EntryExitStyle.Fade,
-                    ExitStyle = EntryExitStyle.Pop,
-                    DurationIn = fadeDuration,
-                    DurationOut = 0.5f
-                };
-
-                animator.Show(delay: i * BUTTON_STAGGER_DELAY);
-                _buttonAnimators.Add(animator);
+                _buttons[i].PlayEntrance(delay: i * BUTTON_STAGGER_DELAY);
             }
 
             if (_inputManager.CurrentInputDevice != InputDeviceType.Mouse && !firstTimeOpened)
@@ -273,11 +258,6 @@ namespace ProjectVagabond.Scenes
                 return;
             }
 
-            foreach (var animator in _buttonAnimators)
-            {
-                animator.Update(dt);
-            }
-
             // Use effective mouse state to disable hovering when using keyboard
             var currentMouseState = _inputManager.GetEffectiveMouseState();
 
@@ -299,14 +279,7 @@ namespace ProjectVagabond.Scenes
 
             for (int i = 0; i < _buttons.Count; i++)
             {
-                if (_buttonAnimators[i].IsInteractive)
-                {
-                    _buttons[i].Update(currentMouseState);
-                }
-                else
-                {
-                    _buttons[i].IsHovered = false;
-                }
+                _buttons[i].Update(currentMouseState);
             }
 
             if (_currentInputDelay <= 0)
@@ -330,61 +303,28 @@ namespace ProjectVagabond.Scenes
 
             spriteBatch.DrawSnapped(_spriteManager.LogoSprite, new Vector2(screenWidth / 2 - _spriteManager.LogoSprite.Width / 2, 25), Color.White);
 
-            spriteBatch.End();
-
-            for (int i = 0; i < _buttons.Count; i++)
-            {
-                var state = _buttonAnimators[i].GetVisualState();
-                if (!state.IsVisible) continue;
-
-                Vector2 center = _buttons[i].Bounds.Center.ToVector2();
-                Matrix animMatrix = Matrix.CreateTranslation(-center.X, -center.Y, 0) *
-                                    Matrix.CreateRotationZ(state.Rotation) *
-                                    Matrix.CreateScale(state.Scale.X, state.Scale.Y, 1.0f) *
-                                    Matrix.CreateTranslation(center.X, center.Y, 0) *
-                                    Matrix.CreateTranslation(state.Offset.X, state.Offset.Y, 0);
-
-                Matrix finalTransform = animMatrix * transform;
-
-                spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: finalTransform);
-
-                // Pass opacity from animator to button draw
-                Color? tint = null;
-
-                if (state.Opacity < 0.99f)
-                {
-                    Color baseColor = _buttons[i].IsEnabled ? _global.GameTextColor : _global.ButtonDisableColor;
-                    tint = baseColor * state.Opacity;
-                }
-
-                _buttons[i].Draw(spriteBatch, font, gameTime, Matrix.Identity, false, null, null, tint);
-
-                spriteBatch.End();
-            }
-
-            spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
-
             for (int i = 0; i < _buttons.Count; i++)
             {
                 var button = _buttons[i];
+
+                button.Draw(spriteBatch, font, gameTime, transform);
+
                 if (button.IsSelected || button.IsHovered || button.IsPressed)
                 {
-                    var state = _buttonAnimators[i].GetVisualState();
-                    if (state.IsVisible && state.Scale.X >= 0.95f)
-                    {
-                        var bounds = button.Bounds;
-                        var color = button.IsPressed ? _global.Palette_Fruit : _global.ButtonHoverColor;
-                        var fontToUse = button.Font ?? secondaryFont;
+                    if (button.Plink.IsActive && button.Plink.Scale < 0.95f) continue;
 
-                        string leftArrow = ">";
-                        var arrowSize = fontToUse.MeasureString(leftArrow);
+                    var bounds = button.Bounds;
+                    var color = button.IsPressed ? _global.Palette_Fruit : _global.ButtonHoverColor;
+                    var fontToUse = button.Font ?? secondaryFont;
 
-                        float pressOffset = button.IsPressed ? 2f : 0f;
-                        float liftOffset = button.HoverAnimator.CurrentOffset;
-                        var leftPos = new Vector2(bounds.Left - arrowSize.Width - 4 + pressOffset, bounds.Center.Y - arrowSize.Height / 2f + button.TextRenderOffset.Y + liftOffset);
+                    string leftArrow = ">";
+                    var arrowSize = fontToUse.MeasureString(leftArrow);
 
-                        spriteBatch.DrawStringSnapped(fontToUse, leftArrow, leftPos, color);
-                    }
+                    float pressOffset = button.IsPressed ? 2f : 0f;
+                    float liftOffset = button.HoverAnimator.CurrentOffset;
+                    var leftPos = new Vector2(bounds.Left - arrowSize.Width - 4 + pressOffset, bounds.Center.Y - arrowSize.Height / 2f + button.TextRenderOffset.Y + liftOffset);
+
+                    spriteBatch.DrawStringSnapped(fontToUse, leftArrow, leftPos, color);
                 }
             }
 

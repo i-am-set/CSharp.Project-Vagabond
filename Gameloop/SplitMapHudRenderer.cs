@@ -7,6 +7,7 @@ using ProjectVagabond.Battle.Abilities;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -70,6 +71,7 @@ namespace ProjectVagabond.UI
         private readonly Dictionary<PartyMember, float> _verticalOffsets = new Dictionary<PartyMember, float>();
         private readonly Dictionary<PartyMember, float> _tagOffsets = new Dictionary<PartyMember, float>();
         private readonly Dictionary<PartyMember, int> _currentTagNumbers = new Dictionary<PartyMember, int>();
+        private readonly Dictionary<PartyMember, PlinkAnimator> _plinkAnimators = new();
 
         // --- Flip State ---
         // 0.0 = Front, 1.0 = Back
@@ -142,6 +144,14 @@ namespace ProjectVagabond.UI
                 {
                     _flipProgress[member] = target;
                 }
+
+                if (!_plinkAnimators.ContainsKey(member))
+                {
+                    var plink = new PlinkAnimator();
+                    plink.Start(delay: party.IndexOf(member) * 0.1f);
+                    _plinkAnimators[member] = plink;
+                }
+                _plinkAnimators[member].Update(gameTime, new Vector2(_visualPositions.GetValueOrDefault(member, 0) + CARD_WIDTH / 2f, BaseY + HUD_HEIGHT / 2f));
             }
 
             // --- Drag Logic ---
@@ -468,6 +478,7 @@ namespace ProjectVagabond.UI
                 _currentTagNumbers.Remove(key);
                 _flipTargets.Remove(key);
                 _flipProgress.Remove(key);
+                _plinkAnimators.Remove(key);
             }
 
             if (_isDragging)
@@ -555,6 +566,12 @@ namespace ProjectVagabond.UI
             if (!_visualPositions.ContainsKey(member)) return;
             if (!_verticalOffsets.ContainsKey(member)) return;
 
+            var plink = _plinkAnimators.ContainsKey(member) ? _plinkAnimators[member] : null;
+            float plinkScale = plink?.Scale ?? 1f;
+            float plinkRot = plink?.Rotation ?? 0f;
+
+            if (plink != null && plink.IsActive && plinkScale < 0.01f) return;
+
             float x = _visualPositions[member];
             float yOffset = _verticalOffsets[member] + verticalOffset;
             bool isBeingDragged = (_isDragging && _draggedMember == member);
@@ -571,8 +588,8 @@ namespace ProjectVagabond.UI
             yOffset += flipHop;
 
             // --- Matrix Transformation ---
-            // We combine Rotation (Drag) and Scale (Flip)
-            bool useTransform = isBeingDragged || flipP > 0.01f;
+            // We combine Rotation (Drag and Plink) and Scale (Flip and Plink)
+            bool useTransform = isBeingDragged || flipP > 0.01f || (plink != null && plink.IsActive);
 
             Vector2 cardCenter = new Vector2(MathF.Round(x + CARD_WIDTH / 2f), MathF.Round(BaseY + 3 + yOffset + (HUD_HEIGHT - 4) / 2f));
 
@@ -581,9 +598,10 @@ namespace ProjectVagabond.UI
                 spriteBatch.End();
 
                 float rotation = isBeingDragged ? _currentDragRotation : 0f;
+                rotation += plinkRot;
 
                 Matrix localTransform = Matrix.CreateTranslation(new Vector3(-cardCenter, 0)) *
-                                        Matrix.CreateScale(scaleX, 1f, 1f) *
+                                        Matrix.CreateScale(scaleX * plinkScale, 1f * plinkScale, 1f) *
                                         Matrix.CreateRotationZ(rotation) *
                                         Matrix.CreateTranslation(new Vector3(cardCenter, 0));
 
@@ -649,6 +667,11 @@ namespace ProjectVagabond.UI
 
                     spriteBatch.DrawSnapped(flipIcon, btnPos, src, Color.White);
                 }
+            }
+
+            if (plink != null && plink.IsActive && plink.FlashTint.HasValue)
+            {
+                spriteBatch.DrawSnapped(_pixel, cardPos, null, plink.FlashTint.Value, 0f, Vector2.Zero, cardSize, SpriteEffects.None, 0f);
             }
 
             if (useTransform)

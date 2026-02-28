@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
@@ -22,15 +23,13 @@ namespace ProjectVagabond.Scenes
         private readonly SceneManager _sceneManager;
         private readonly TransitionManager _transitionManager;
         private readonly HapticsManager _hapticsManager;
+        private readonly ParticleSystemManager _particleSystemManager;
+
         // Carousel State
         private List<string> _characterIds = new();
         private int _focusedIndex = 0;
         private float _carouselSlideOffset = 0f;
         private const float CAROUSEL_SLIDE_SPEED = 15f;
-
-        // Spacing Tuning
-        private const int SPACING_CENTER = 48;
-        private const int SPACING_OUTER = 32;
 
         // UI Elements
         private Button _leftArrow;
@@ -38,29 +37,21 @@ namespace ProjectVagabond.Scenes
         private Button _selectButton;
         private readonly NavigationGroup _navigationGroup;
 
-        // Intro Text State
+        // Intro Text
         private const string INTRO_LINE_1 = "CHOOSE AN";
         private const string INTRO_LINE_2 = "ADVENTURER";
 
-        private string _currentText1 = "";
-        private string _currentText2 = "";
-
-        private float _textTimer = 0f;
-        private int _textIndex = 0;
-        private const float TYPEWRITER_SPEED = 0.02f;
-        private float _titleWaveTimer = 0f;
-
-        // Animation State Variables
-        private float _centerSpriteAlpha = 0f;
-        private float _surroundAnimTimer = 0f;
-        private float _uiAlpha = 0f;
+        // --- Plink Animation State ---
+        private bool _isPlinkingIn = true;
+        private PlinkAnimator _plinkTitle1 = new PlinkAnimator();
+        private PlinkAnimator _plinkTitle2 = new PlinkAnimator();
+        private PlinkAnimator _plinkStats = new PlinkAnimator();
+        private PlinkAnimator[] _plinkCarousel = new PlinkAnimator[7];
+        private List<PlinkAnimator> _allPlinks = new List<PlinkAnimator>();
 
         // Idle Animation State
         private float _idleTimer = 0f;
-
-        // Select Button Hop State
-        private float _selectButtonHopTimer = 0f;
-        private const float SELECT_HOP_DURATION = 0.0f;
+        private float _titleWaveTimer = 0f;
 
         // Arrow Simulation State
         private float _leftArrowSimTimer = 0f;
@@ -78,17 +69,6 @@ namespace ProjectVagabond.Scenes
         private int _globalMinHP = 0;
         private int _globalMaxHP = 0;
 
-        private enum IntroState
-        {
-            TypingTitle,
-            FadeInCenter,
-            FadeInSurround,
-            FadeInUI,
-            Selection
-        }
-
-        private IntroState _currentState = IntroState.TypingTitle;
-
         // Layout Constants
         private const int BASE_CENTER_Y = 50;
 
@@ -100,6 +80,7 @@ namespace ProjectVagabond.Scenes
             _sceneManager = ServiceLocator.Get<SceneManager>();
             _transitionManager = ServiceLocator.Get<TransitionManager>();
             _hapticsManager = ServiceLocator.Get<HapticsManager>();
+            _particleSystemManager = ServiceLocator.Get<ParticleSystemManager>();
             _navigationGroup = new NavigationGroup(wrapNavigation: true);
         }
 
@@ -120,20 +101,9 @@ namespace ProjectVagabond.Scenes
             InitializeUI();
             UpdateCachedAbilityInfo();
 
-            _currentState = IntroState.TypingTitle;
-            _currentText1 = "";
-            _currentText2 = "";
-            _textIndex = 0;
-            _textTimer = 0f;
-
-            _centerSpriteAlpha = 0f;
-            _surroundAnimTimer = 0f;
-            _uiAlpha = 0f;
-
             _carouselSlideOffset = 0f;
             _titleWaveTimer = 0f;
             _idleTimer = 0f;
-            _selectButtonHopTimer = 0f;
             _leftArrowSimTimer = 0f;
             _rightArrowSimTimer = 0f;
 
@@ -141,6 +111,35 @@ namespace ProjectVagabond.Scenes
             _scrollAccumulator = 0;
 
             _navigationGroup.DeselectAll();
+
+            // --- Setup Randomized Plink Stagger ---
+            _isPlinkingIn = true;
+            _allPlinks.Clear();
+
+            _plinkTitle1 = new PlinkAnimator(); _allPlinks.Add(_plinkTitle1);
+            _plinkTitle2 = new PlinkAnimator(); _allPlinks.Add(_plinkTitle2);
+            _plinkStats = new PlinkAnimator(); _allPlinks.Add(_plinkStats);
+
+            for (int i = 0; i < 7; i++)
+            {
+                _plinkCarousel[i] = new PlinkAnimator();
+                _allPlinks.Add(_plinkCarousel[i]);
+            }
+
+            _allPlinks.Add(_leftArrow.Plink);
+            _allPlinks.Add(_rightArrow.Plink);
+            _allPlinks.Add(_selectButton.Plink);
+
+            // Shuffle the list to randomize the entrance order
+            var rng = new Random();
+            _allPlinks = _allPlinks.OrderBy(x => rng.Next()).ToList();
+
+            float delay = 0f;
+            foreach (var p in _allPlinks)
+            {
+                p.Start(delay, 0.25f);
+                delay += 0.05f; // Fast, snappy stagger
+            }
         }
 
         private void InitializeData()
@@ -227,7 +226,7 @@ namespace ProjectVagabond.Scenes
             _rightArrow.OnClick += () => CycleCharacter(1);
 
             // --- Select Button ---
-            int contentStartY = centerY + 54; 
+            int contentStartY = centerY + 54;
 
             // Stats Height
             int statsHeight = (int)secondaryFont.LineHeight * 2 + 2; // 2 rows + gap
@@ -241,7 +240,6 @@ namespace ProjectVagabond.Scenes
             int abilityNameY = contentStartY + statsHeight + 4 + abilityLabelHeight;
 
             // Select button is 6px below the ability DESCRIPTION area (which is 3 lines tall)
-            // Ability description starts at abilityNameY + abilityNameHeight
             int abilityDescStartY = abilityNameY + abilityNameHeight;
             int selectButtonY = abilityDescStartY + abilityDescHeight + 6;
 
@@ -266,11 +264,11 @@ namespace ProjectVagabond.Scenes
 
         private void CycleCharacter(int direction)
         {
-            if (_currentState != IntroState.Selection) return;
+            if (_isPlinkingIn) return;
 
             _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
 
-            // Trigger visual simulation only if not using mouse (mouse has its own natural interaction)
+            // Trigger visual simulation only if not using mouse
             if (_inputManager.CurrentInputDevice != InputDeviceType.Mouse)
             {
                 if (direction == -1) _leftArrowSimTimer = ARROW_SIM_DURATION;
@@ -283,7 +281,6 @@ namespace ProjectVagabond.Scenes
             if (_focusedIndex >= _characterIds.Count) _focusedIndex = 0;
 
             _carouselSlideOffset = direction;
-            _selectButtonHopTimer = SELECT_HOP_DURATION;
 
             UpdateCachedAbilityInfo();
         }
@@ -296,7 +293,6 @@ namespace ProjectVagabond.Scenes
 
             if (data.PassiveAbilityPool != null && data.PassiveAbilityPool.Any())
             {
-                // Take the first passive from the pool as a preview
                 var passiveDict = data.PassiveAbilityPool.First();
                 if (passiveDict.Count > 0)
                 {
@@ -347,7 +343,7 @@ namespace ProjectVagabond.Scenes
 
         private void ConfirmSelection()
         {
-            if (_currentState != IntroState.Selection) return;
+            if (_isPlinkingIn) return;
             if (_transitionManager.IsTransitioning) return;
             if (_characterIds.Count == 0) return;
 
@@ -358,12 +354,12 @@ namespace ProjectVagabond.Scenes
             var gameState = ServiceLocator.Get<GameState>();
 
             var loadingTasks = new List<LoadingTask>
-        {
-            new GenericTask("Initializing world...", () =>
             {
-                gameState.InitializeWorld(selectedId);
-            })
-        };
+                new GenericTask("Initializing world...", () =>
+                {
+                    gameState.InitializeWorld(selectedId);
+                })
+            };
 
             core.SetGameLoaded(true);
 
@@ -385,12 +381,6 @@ namespace ProjectVagabond.Scenes
             _idleTimer += dt;
             _titleWaveTimer += dt;
 
-            if (_selectButtonHopTimer > 0f)
-            {
-                _selectButtonHopTimer -= dt;
-                if (_selectButtonHopTimer < 0f) _selectButtonHopTimer = 0f;
-            }
-
             if (_leftArrowSimTimer > 0f)
             {
                 _leftArrowSimTimer -= dt;
@@ -403,13 +393,49 @@ namespace ProjectVagabond.Scenes
                 if (_rightArrowSimTimer < 0f) _rightArrowSimTimer = 0f;
             }
 
-            UpdateIntroSequence(dt);
+            var currentMouseState = _inputManager.GetEffectiveMouseState();
 
-            if (_currentState == IntroState.Selection)
+            if (_isPlinkingIn)
             {
-                var currentMouseState = _inputManager.GetEffectiveMouseState();
+                bool skipPressed = _inputManager.Confirm || (_inputManager.IsMouseActive && currentMouseState.LeftButton == ButtonState.Pressed);
 
-                // Scroll Logic
+                if (skipPressed)
+                {
+                    _isPlinkingIn = false;
+                    // Fast forward all animators to prevent late particles
+                    foreach (var p in _allPlinks) p.Start(0, 0.001f);
+                    if (_inputManager.IsMouseActive) _inputManager.ConsumeMouseClick();
+                }
+                else
+                {
+                    int centerX = Global.VIRTUAL_WIDTH / 2;
+                    var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+
+                    _plinkTitle1.Update(gameTime, new Vector2(centerX, 14));
+                    _plinkTitle2.Update(gameTime, new Vector2(centerX, 14 + secondaryFont.LineHeight + 2));
+                    _plinkStats.Update(gameTime, new Vector2(centerX, BASE_CENTER_Y + 70));
+
+                    for (int i = 0; i < 7; i++)
+                    {
+                        int offset = i - 3;
+                        float visualOffset = offset + _carouselSlideOffset;
+                        float xOffset = MathF.Sin(visualOffset * 0.5f) * 100f;
+                        float xPos = centerX + xOffset;
+                        float curveY = MathF.Pow(Math.Abs(visualOffset), 1.5f) * 2.0f;
+                        float baseYPos = BASE_CENTER_Y - curveY;
+                        _plinkCarousel[i].Update(gameTime, new Vector2(xPos, baseYPos));
+                    }
+
+                    // Buttons update their own plinks during Draw, but we still need to check if they are active
+                    if (!_allPlinks.Any(p => p.IsActive))
+                    {
+                        _isPlinkingIn = false;
+                    }
+                }
+            }
+            else
+            {
+                // --- Normal Selection Logic ---
                 int currentScroll = currentMouseState.ScrollWheelValue;
                 int scrollDelta = currentScroll - _lastScrollWheelValue;
                 _lastScrollWheelValue = currentScroll;
@@ -465,92 +491,6 @@ namespace ProjectVagabond.Scenes
             }
         }
 
-        private void UpdateIntroSequence(float dt)
-        {
-            bool skipPressed = _inputManager.Confirm || (_inputManager.IsMouseActive && _inputManager.GetEffectiveMouseState().LeftButton == ButtonState.Pressed);
-
-            if (skipPressed && _currentState != IntroState.Selection && _inputManager.IsMouseActive)
-            {
-                _inputManager.ConsumeMouseClick();
-            }
-
-            switch (_currentState)
-            {
-                case IntroState.TypingTitle:
-                    if (skipPressed)
-                    {
-                        _currentText1 = INTRO_LINE_1;
-                        _currentText2 = INTRO_LINE_2;
-                        _textIndex = INTRO_LINE_1.Length + INTRO_LINE_2.Length;
-                    }
-                    else
-                    {
-                        _textTimer += dt;
-                        if (_textTimer >= TYPEWRITER_SPEED)
-                        {
-                            _textTimer = 0f;
-                            int totalLen = INTRO_LINE_1.Length + INTRO_LINE_2.Length;
-                            if (_textIndex < totalLen)
-                            {
-                                if (_textIndex < INTRO_LINE_1.Length)
-                                {
-                                    _currentText1 += INTRO_LINE_1[_textIndex];
-                                }
-                                else
-                                {
-                                    _currentText2 += INTRO_LINE_2[_textIndex - INTRO_LINE_1.Length];
-                                }
-                                _textIndex++;
-                            }
-                        }
-                    }
-
-                    if (_textIndex >= INTRO_LINE_1.Length + INTRO_LINE_2.Length)
-                    {
-                        _currentState = IntroState.FadeInCenter;
-                    }
-                    break;
-
-                case IntroState.FadeInCenter:
-                    if (skipPressed) _centerSpriteAlpha = 1.0f;
-                    else _centerSpriteAlpha += dt * 2.0f;
-
-                    if (_centerSpriteAlpha >= 1.0f)
-                    {
-                        _centerSpriteAlpha = 1.0f;
-                        _currentState = IntroState.FadeInSurround;
-                    }
-                    break;
-
-                case IntroState.FadeInSurround:
-                    if (skipPressed) _surroundAnimTimer = 10.0f;
-                    else _surroundAnimTimer += dt;
-
-                    if (_surroundAnimTimer >= 1.0f)
-                    {
-                        _currentState = IntroState.FadeInUI;
-                    }
-                    break;
-
-                case IntroState.FadeInUI:
-                    if (skipPressed) _uiAlpha = 1.0f;
-                    else _uiAlpha += dt * 2.0f;
-
-                    if (_uiAlpha >= 1.0f)
-                    {
-                        _uiAlpha = 1.0f;
-                        _currentState = IntroState.Selection;
-                    }
-                    break;
-
-                case IntroState.Selection:
-                    _centerSpriteAlpha = 1.0f;
-                    _uiAlpha = 1.0f;
-                    _surroundAnimTimer = 10.0f;
-                    break;
-            }
-        }
-
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             var core = ServiceLocator.Get<Core>();
@@ -566,28 +506,44 @@ namespace ProjectVagabond.Scenes
             spriteBatch.Draw(_spriteManager.EmptySprite, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), _global.Palette_Off);
             spriteBatch.End();
 
-            // Title
+            // --- Title ---
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, staticTransform);
 
             float titleY = 14f;
 
-            if (!string.IsNullOrEmpty(_currentText1))
+            float t1Scale = _isPlinkingIn ? _plinkTitle1.Scale : 1f;
+            float t1Rot = _isPlinkingIn ? _plinkTitle1.Rotation : 0f;
+            if (t1Scale > 0.01f)
             {
                 Vector2 size1 = secondaryFont.MeasureString(INTRO_LINE_1);
                 var pos1 = new Vector2((Global.VIRTUAL_WIDTH - size1.X) / 2, titleY - 2);
-                TextAnimator.DrawTextWithEffect(spriteBatch, secondaryFont, _currentText1, pos1, _global.Palette_DarkPale, TextEffectType.None, 0f);
+                TextAnimator.DrawTextWithEffect(spriteBatch, secondaryFont, INTRO_LINE_1, pos1, _global.Palette_DarkPale, TextEffectType.None, 0f, new Vector2(t1Scale), null, t1Rot);
+
+                if (_isPlinkingIn && _plinkTitle1.FlashTint.HasValue)
+                {
+                    Rectangle bounds = new Rectangle((int)pos1.X, (int)pos1.Y, (int)size1.X, (int)size1.Y);
+                    spriteBatch.DrawSnapped(_spriteManager.EmptySprite, bounds, _plinkTitle1.FlashTint.Value);
+                }
             }
 
-            if (!string.IsNullOrEmpty(_currentText2))
+            float t2Scale = _isPlinkingIn ? _plinkTitle2.Scale : 1f;
+            float t2Rot = _isPlinkingIn ? _plinkTitle2.Rotation : 0f;
+            if (t2Scale > 0.01f)
             {
                 Vector2 size2 = font.MeasureString(INTRO_LINE_2);
                 var pos2 = new Vector2((Global.VIRTUAL_WIDTH - size2.X) / 2, titleY + secondaryFont.LineHeight + 2);
-                TextAnimator.DrawTextWithEffect(spriteBatch, font, _currentText2, pos2, _global.Palette_White, TextEffectType.RainbowWave, _titleWaveTimer);
+                TextAnimator.DrawTextWithEffect(spriteBatch, font, INTRO_LINE_2, pos2, _global.Palette_White, TextEffectType.RainbowWave, _titleWaveTimer, new Vector2(t2Scale), null, t2Rot);
+
+                if (_isPlinkingIn && _plinkTitle2.FlashTint.HasValue)
+                {
+                    Rectangle bounds = new Rectangle((int)pos2.X, (int)pos2.Y, (int)size2.X, (int)size2.Y);
+                    spriteBatch.DrawSnapped(_spriteManager.EmptySprite, bounds, _plinkTitle2.FlashTint.Value);
+                }
             }
 
             spriteBatch.End();
 
-            // Carousel
+            // --- Carousel ---
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
             if (_characterIds.Count > 0)
             {
@@ -595,86 +551,72 @@ namespace ProjectVagabond.Scenes
             }
             spriteBatch.End();
 
-            // UI Elements
-            if (_uiAlpha > 0f)
+            // --- UI Elements ---
+            // Left Arrow
+            float leftY = 0f;
+            Color leftColor = (_leftArrow.IsHovered || _leftArrow.IsSelected) ? _global.ButtonHoverColor : _global.GameTextColor;
+
+            if (_leftArrowSimTimer > 0f)
             {
-                Color GetTint(Button btn)
+                float progress = 1f - (_leftArrowSimTimer / ARROW_SIM_DURATION);
+                if (progress < 0.5f) { leftY = -1f; leftColor = _global.ButtonHoverColor; }
+                else { leftY = 1f; leftColor = _global.Palette_Fruit; }
+            }
+            else if (_leftArrow.IsHovered && _inputManager.GetEffectiveMouseState().LeftButton == ButtonState.Pressed)
+            {
+                leftY = 1f;
+            }
+
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, Matrix.CreateTranslation(0, leftY, 0) * staticTransform);
+            _leftArrow.Draw(spriteBatch, font, gameTime, Matrix.Identity, false, null, null, leftColor);
+            spriteBatch.End();
+
+            // Right Arrow
+            float rightY = 0f;
+            Color rightColor = (_rightArrow.IsHovered || _rightArrow.IsSelected) ? _global.ButtonHoverColor : _global.GameTextColor;
+
+            if (_rightArrowSimTimer > 0f)
+            {
+                float progress = 1f - (_rightArrowSimTimer / ARROW_SIM_DURATION);
+                if (progress < 0.5f) { rightY = -1f; rightColor = _global.ButtonHoverColor; }
+                else { rightY = 1f; rightColor = _global.Palette_Fruit; }
+            }
+            else if (_rightArrow.IsHovered && _inputManager.GetEffectiveMouseState().LeftButton == ButtonState.Pressed)
+            {
+                rightY = 1f;
+            }
+
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, Matrix.CreateTranslation(0, rightY, 0) * staticTransform);
+            _rightArrow.Draw(spriteBatch, font, gameTime, Matrix.Identity, false, null, null, rightColor);
+            spriteBatch.End();
+
+            // Select Button
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, staticTransform);
+            Color selectColor = (_selectButton.IsHovered || _selectButton.IsSelected) ? _global.ButtonHoverColor : _global.GameTextColor;
+            _selectButton.Draw(spriteBatch, font, gameTime, Matrix.Identity, false, null, null, selectColor);
+            spriteBatch.End();
+
+            // --- Stats and Abilities ---
+            float sScale = _isPlinkingIn ? _plinkStats.Scale : 1f;
+            float sRot = _isPlinkingIn ? _plinkStats.Rotation : 0f;
+
+            if (sScale > 0.01f)
+            {
+                Vector2 statsCenter = new Vector2(Global.VIRTUAL_WIDTH / 2f, BASE_CENTER_Y + 70);
+                Matrix statsMatrix = Matrix.CreateTranslation(-statsCenter.X, -statsCenter.Y, 0) *
+                                     Matrix.CreateScale(sScale) *
+                                     Matrix.CreateRotationZ(sRot) *
+                                     Matrix.CreateTranslation(statsCenter.X, statsCenter.Y, 0);
+
+                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, statsMatrix * staticTransform);
+                DrawStatsAndAbilities(spriteBatch, secondaryFont, tertiaryFont);
+
+                if (_isPlinkingIn && _plinkStats.FlashTint.HasValue)
                 {
-                    Color baseColor = (btn.IsHovered || btn.IsSelected)
-                                      ? _global.ButtonHoverColor
-                                      : _global.GameTextColor;
-                    return baseColor * _uiAlpha;
+                    Rectangle flashRect = new Rectangle((int)statsCenter.X - 70, (int)statsCenter.Y - 30, 140, 60);
+                    spriteBatch.DrawSnapped(_spriteManager.EmptySprite, flashRect, _plinkStats.FlashTint.Value);
                 }
 
-                // --- Left Arrow ---
-                float leftY = 0f;
-                Color leftColor = GetTint(_leftArrow);
-
-                if (_leftArrowSimTimer > 0f)
-                {
-                    // Simulated Click Animation
-                    float progress = 1f - (_leftArrowSimTimer / ARROW_SIM_DURATION);
-                    if (progress < 0.5f)
-                    {
-                        leftY = -1f; // Pop Up
-                        leftColor = _global.ButtonHoverColor * _uiAlpha;
-                    }
-                    else
-                    {
-                        leftY = 1f; // Down
-                        leftColor = _global.Palette_Fruit * _uiAlpha;
-                    }
-                }
-                else if (_leftArrow.IsHovered)
-                {
-                    leftY = -1f;
-                    if (_inputManager.GetEffectiveMouseState().LeftButton == ButtonState.Pressed)
-                        leftY = 1f;
-                }
-
-                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, Matrix.CreateTranslation(0, leftY, 0) * staticTransform);
-                _leftArrow.Draw(spriteBatch, font, gameTime, Matrix.Identity, false, null, null, leftColor);
-                spriteBatch.End();
-
-                // --- Right Arrow ---
-                float rightY = 0f;
-                Color rightColor = GetTint(_rightArrow);
-
-                if (_rightArrowSimTimer > 0f)
-                {
-                    // Simulated Click Animation
-                    float progress = 1f - (_rightArrowSimTimer / ARROW_SIM_DURATION);
-                    if (progress < 0.5f)
-                    {
-                        rightY = -1f; // Pop Up
-                        rightColor = _global.ButtonHoverColor * _uiAlpha;
-                    }
-                    else
-                    {
-                        rightY = 1f; // Down
-                        rightColor = _global.Palette_Fruit * _uiAlpha;
-                    }
-                }
-                else if (_rightArrow.IsHovered)
-                {
-                    rightY = -1f;
-                    if (_inputManager.GetEffectiveMouseState().LeftButton == ButtonState.Pressed)
-                        rightY = 1f;
-                }
-
-                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, Matrix.CreateTranslation(0, rightY, 0) * staticTransform);
-                _rightArrow.Draw(spriteBatch, font, gameTime, Matrix.Identity, false, null, null, rightColor);
-                spriteBatch.End();
-
-                // --- Select Button ---
-                float hopY = (_selectButtonHopTimer > 0f) ? -1f : 0f;
-                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, Matrix.CreateTranslation(0, hopY, 0) * staticTransform);
-                _selectButton.Draw(spriteBatch, font, gameTime, Matrix.Identity, false, null, null, GetTint(_selectButton));
-                spriteBatch.End();
-
-                // --- Stats and Abilities ---
-                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, staticTransform);
-                DrawStatsAndAbilities(spriteBatch, secondaryFont, tertiaryFont, _uiAlpha);
                 spriteBatch.End();
             }
 
@@ -688,7 +630,7 @@ namespace ProjectVagabond.Scenes
             return _global.StatColor_Low;
         }
 
-        private void DrawStatsAndAbilities(SpriteBatch spriteBatch, BitmapFont secondaryFont, BitmapFont tertiaryFont, float alpha)
+        private void DrawStatsAndAbilities(SpriteBatch spriteBatch, BitmapFont secondaryFont, BitmapFont tertiaryFont)
         {
             if (_characterIds.Count == 0) return;
             string charId = _characterIds[_focusedIndex];
@@ -704,21 +646,16 @@ namespace ProjectVagabond.Scenes
 
             int statBlockX = centerX - 30;
 
-            // Calculate alignment reference based on "STR" (standard 3-letter width)
             float standardLabelWidth = secondaryFont.MeasureString("STR").Width;
 
             // 1. HP Row
             string hpLabel = "HP";
             float hpLabelWidth = secondaryFont.MeasureString(hpLabel).Width;
 
-            // Right-align HP label with other labels
             float hpLabelX = statBlockX + (standardLabelWidth - hpLabelWidth);
 
-            spriteBatch.DrawStringSnapped(secondaryFont, hpLabel, new Vector2(hpLabelX, currentY), _global.Palette_DarkestPale * alpha);
+            spriteBatch.DrawStringSnapped(secondaryFont, hpLabel, new Vector2(hpLabelX, currentY), _global.Palette_DarkestPale);
 
-            // Center HP Value in the bar area
-            // Bar area starts at statBlockX + 19 (from original code loop)
-            // Bar width comes from texture
             Texture2D statBg = _spriteManager.InventoryStatBarEmpty;
             float barAreaWidth = (statBg != null) ? statBg.Width : 40f;
             float barStartX = statBlockX + 19;
@@ -727,7 +664,6 @@ namespace ProjectVagabond.Scenes
             string hpValue = data.MaxHP.ToString();
             Vector2 hpValueSize = secondaryFont.MeasureString(hpValue);
 
-            // Calculate normalized HP score (1-10)
             int hpScore = 1;
             if (_globalMaxHP > _globalMinHP)
             {
@@ -735,13 +671,12 @@ namespace ProjectVagabond.Scenes
             }
             else
             {
-                hpScore = 5; // Default if all same
+                hpScore = 5;
             }
             hpScore = Math.Clamp(hpScore, 1, 10);
             Color hpColor = GetStatColor(hpScore);
 
-            // Draw HP Value centered
-            spriteBatch.DrawStringSnapped(secondaryFont, hpValue, new Vector2(barCenterX - hpValueSize.X / 2f, currentY), hpColor * alpha);
+            spriteBatch.DrawStringSnapped(secondaryFont, hpValue, new Vector2(barCenterX - hpValueSize.X / 2f, currentY), hpColor);
 
             currentY += secondaryFont.LineHeight + 1;
 
@@ -750,13 +685,13 @@ namespace ProjectVagabond.Scenes
 
             for (int i = 0; i < labels.Length; i++)
             {
-                spriteBatch.DrawStringSnapped(secondaryFont, labels[i], new Vector2(statBlockX, currentY), _global.Palette_DarkestPale * alpha);
+                spriteBatch.DrawStringSnapped(secondaryFont, labels[i], new Vector2(statBlockX, currentY), _global.Palette_DarkestPale);
 
                 if (statBg != null)
                 {
                     float pipX = statBlockX + 19;
                     float pipY = currentY + MathF.Ceiling((secondaryFont.LineHeight - statBg.Height) / 2f);
-                    spriteBatch.DrawSnapped(statBg, new Vector2(pipX, pipY), Color.White * alpha);
+                    spriteBatch.DrawSnapped(statBg, new Vector2(pipX, pipY), Color.White);
 
                     if (statFull != null)
                     {
@@ -766,32 +701,29 @@ namespace ProjectVagabond.Scenes
                         {
                             var srcBase = new Rectangle(0, 0, basePoints * 4, 3);
                             Color pipColor = GetStatColor(basePoints);
-                            spriteBatch.DrawSnapped(statFull, new Vector2(pipX, pipY), srcBase, pipColor * alpha);
+                            spriteBatch.DrawSnapped(statFull, new Vector2(pipX, pipY), srcBase, pipColor);
                         }
                     }
                 }
                 currentY += secondaryFont.LineHeight + 1;
             }
 
-            currentY += 4; // Gap between Stats and Ability
+            currentY += 4;
 
             // --- Passive Ability Block ---
-            // "ABILITY" Label (Tertiary Font)
             string abilityLabel = "ABILITY";
             Vector2 abilityLabelSize = tertiaryFont.MeasureString(abilityLabel);
-            spriteBatch.DrawStringSnapped(tertiaryFont, abilityLabel, new Vector2(centerX - abilityLabelSize.X / 2f, currentY), _global.Palette_DarkestPale * alpha);
-            currentY += tertiaryFont.LineHeight + 2; // 2px gap
+            spriteBatch.DrawStringSnapped(tertiaryFont, abilityLabel, new Vector2(centerX - abilityLabelSize.X / 2f, currentY), _global.Palette_DarkestPale);
+            currentY += tertiaryFont.LineHeight + 2;
 
             if (_cachedAbilityInfo.HasValue)
             {
                 var (name, desc) = _cachedAbilityInfo.Value;
 
-                // Name (Secondary Font, Centered)
                 Vector2 nameSize = secondaryFont.MeasureString(name);
-                spriteBatch.DrawStringSnapped(secondaryFont, name, new Vector2(centerX - nameSize.X / 2f, currentY), _global.Palette_LightPale * alpha);
+                spriteBatch.DrawStringSnapped(secondaryFont, name, new Vector2(centerX - nameSize.X / 2f, currentY), _global.Palette_LightPale);
                 currentY += secondaryFont.LineHeight + 1;
 
-                // Description (Centered & Wrapped)
                 float descLineHeight = tertiaryFont.LineHeight + 2;
 
                 if (!string.IsNullOrEmpty(desc))
@@ -807,7 +739,7 @@ namespace ProjectVagabond.Scenes
                         if (tertiaryFont.MeasureString(testLine).Width > maxWidth)
                         {
                             Vector2 lineSize = tertiaryFont.MeasureString(line);
-                            spriteBatch.DrawStringSnapped(tertiaryFont, line, new Vector2(centerX - lineSize.X / 2f, localY), _global.Palette_Pale * alpha);
+                            spriteBatch.DrawStringSnapped(tertiaryFont, line, new Vector2(centerX - lineSize.X / 2f, localY), _global.Palette_Pale);
                             localY += descLineHeight;
                             line = word;
                         }
@@ -819,7 +751,7 @@ namespace ProjectVagabond.Scenes
                     if (!string.IsNullOrEmpty(line))
                     {
                         Vector2 lineSize = tertiaryFont.MeasureString(line);
-                        spriteBatch.DrawStringSnapped(tertiaryFont, line, new Vector2(centerX - lineSize.X / 2f, localY), _global.Palette_Pale * alpha);
+                        spriteBatch.DrawStringSnapped(tertiaryFont, line, new Vector2(centerX - lineSize.X / 2f, localY), _global.Palette_Pale);
                     }
                 }
             }
@@ -830,46 +762,35 @@ namespace ProjectVagabond.Scenes
             int centerX = Global.VIRTUAL_WIDTH / 2;
             int centerY = BASE_CENTER_Y;
             var sheet = _spriteManager.PlayerMasterSpriteSheet;
+            var silhouette = _spriteManager.PlayerMasterSpriteSheetSilhouette;
             int count = _characterIds.Count;
 
             int[] drawOrder = { -3, 3, -2, 2, -1, 1, 0 };
 
-            // Tuning for circular curve
-            // 0.5f rads per index * 100f radius gives ~48px gap at center, diminishing outwards
             const float SPREAD_FACTOR = 0.5f;
             const float RADIUS = 100f;
 
             foreach (int offset in drawOrder)
             {
+                int plinkIndex = offset + 3;
+                var plink = _plinkCarousel[plinkIndex];
+
+                float pScale = _isPlinkingIn ? plink.Scale : 1f;
+                float pRot = _isPlinkingIn ? plink.Rotation : 0f;
+
+                if (_isPlinkingIn && pScale < 0.01f) continue;
+
                 int charIndex = (_focusedIndex + offset) % count;
                 if (charIndex < 0) charIndex += count;
 
                 string charId = _characterIds[charIndex];
                 bool isCenter = (offset == 0);
 
-                float baseOpacity = isCenter ? 1.0f : 0.6f;
-                if (Math.Abs(offset) >= 2) baseOpacity = 0.3f;
-
-                float entryAlpha = 0f;
-                if (isCenter)
-                {
-                    entryAlpha = _centerSpriteAlpha;
-                }
-                else
-                {
-                    float staggerDelay = 0.1f;
-                    float fadeDuration = 0.5f;
-                    int distance = Math.Abs(offset);
-                    float progress = (_surroundAnimTimer - ((distance - 1) * staggerDelay)) / fadeDuration;
-                    entryAlpha = Math.Clamp(progress, 0f, 1f);
-                }
-
-                float finalOpacity = baseOpacity * entryAlpha;
-                if (finalOpacity <= 0.01f) continue;
+                float finalOpacity = isCenter ? 1.0f : 0.6f;
+                if (Math.Abs(offset) >= 2) finalOpacity = 0.3f;
 
                 float visualOffset = offset + _carouselSlideOffset;
 
-                // Sinusoidal spacing for circular effect
                 float xOffset = MathF.Sin(visualOffset * SPREAD_FACTOR) * RADIUS;
                 float xPos = centerX + xOffset;
 
@@ -892,53 +813,44 @@ namespace ProjectVagabond.Scenes
                 }
 
                 Vector2 origin = new Vector2(16, 16);
+                Vector2 bodyPosition = new Vector2(MathF.Round(xPos), MathF.Round(baseYPos));
+                Vector2 headPosition = new Vector2(MathF.Round(xPos), MathF.Round(headYPos));
 
-                // Draw Body (if it's a normal sprite, meaning offset < 1)
+                // Draw Body
                 if (Math.Abs(offset) < 1)
                 {
                     PlayerSpriteType bodyType = (spriteType == PlayerSpriteType.Alt) ? PlayerSpriteType.BodyAlt : PlayerSpriteType.BodyNormal;
                     var bodySourceRect = _spriteManager.GetPlayerSourceRect(spriteIndex, bodyType);
-                    Vector2 bodyPosition = new Vector2(MathF.Round(xPos), MathF.Round(baseYPos));
-                    spriteBatch.Draw(
-                        sheet,
-                        bodyPosition,
-                        bodySourceRect,
-                        Color.White * finalOpacity,
-                        0f,
-                        origin,
-                        1.0f,
-                        SpriteEffects.None,
-                        0f
-                    );
+
+                    spriteBatch.Draw(sheet, bodyPosition, bodySourceRect, Color.White * finalOpacity, pRot, origin, pScale, SpriteEffects.None, 0f);
+
+                    if (_isPlinkingIn && plink.FlashTint.HasValue && silhouette != null)
+                    {
+                        spriteBatch.Draw(silhouette, bodyPosition, bodySourceRect, plink.FlashTint.Value, pRot, origin, pScale, SpriteEffects.None, 0f);
+                    }
                 }
 
                 // Draw Head
                 var sourceRect = _spriteManager.GetPlayerSourceRect(spriteIndex, spriteType);
-                Vector2 position = new Vector2(MathF.Round(xPos), MathF.Round(headYPos));
-                spriteBatch.Draw(
-                    sheet,
-                    position,
-                    sourceRect,
-                    Color.White * finalOpacity,
-                    0f,
-                    origin,
-                    1.0f,
-                    SpriteEffects.None,
-                    0f
-                );
+                spriteBatch.Draw(sheet, headPosition, sourceRect, Color.White * finalOpacity, pRot, origin, pScale, SpriteEffects.None, 0f);
 
-                if (isCenter && _uiAlpha > 0f && BattleDataCache.PartyMembers.TryGetValue(charId, out var data))
+                if (_isPlinkingIn && plink.FlashTint.HasValue && silhouette != null)
+                {
+                    spriteBatch.Draw(silhouette, headPosition, sourceRect, plink.FlashTint.Value, pRot, origin, pScale, SpriteEffects.None, 0f);
+                }
+
+                // Draw Text (Only for center, uses the same plink scale)
+                if (isCenter && BattleDataCache.PartyMembers.TryGetValue(charId, out var data))
                 {
                     string name = data.Name.ToUpper();
                     Vector2 nameSize = font.MeasureString(name);
                     Vector2 namePos = new Vector2(centerX - nameSize.X / 2, centerY + 26);
-                    spriteBatch.DrawStringSnapped(font, name, namePos, _global.Palette_LightPale * _uiAlpha);
+                    TextAnimator.DrawTextWithEffect(spriteBatch, font, name, namePos, _global.Palette_LightPale, TextEffectType.None, 0f, new Vector2(pScale), null, pRot);
 
-                    // Draw Number
                     string numberText = (spriteIndex + 1).ToString();
                     Vector2 numSize = tertiaryFont.MeasureString(numberText);
                     Vector2 numPos = new Vector2(centerX - numSize.X / 2, centerY + 20);
-                    spriteBatch.DrawStringSnapped(tertiaryFont, numberText, numPos, _global.Palette_LightPale * _uiAlpha);
+                    TextAnimator.DrawTextWithEffect(spriteBatch, tertiaryFont, numberText, numPos, _global.Palette_LightPale, TextEffectType.None, 0f, new Vector2(pScale), null, pRot);
                 }
             }
         }

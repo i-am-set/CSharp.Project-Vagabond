@@ -1,4 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
+using ProjectVagabond.Particles;
+using ProjectVagabond.Utils;
 using System;
 
 namespace ProjectVagabond.UI
@@ -325,8 +327,6 @@ namespace ProjectVagabond.UI
             }
 
             // 3. Interpolate Current Values towards Targets
-            // For Entry/Exit, we snap directly to the calculated curve value to ensure the animation plays exactly as designed.
-            // For Interaction, we lerp to smooth out state changes (e.g. Hover -> Idle).
             if (_state == AnimationState.AnimatingIn || _state == AnimationState.AnimatingOut || _state == AnimationState.Hidden)
             {
                 _currentScale = targetScale;
@@ -336,9 +336,6 @@ namespace ProjectVagabond.UI
             }
             else
             {
-                // Simple Lerp (dt * speed) behaves differently at different framerates.
-                // At 30 FPS, dt is larger, causing a larger jump (or overshoot if not clamped).
-                // 1 - Exp(-speed * dt) provides a consistent decay rate regardless of FPS.
                 float dampingFactor = 1.0f - MathF.Exp(-InteractionSpeed * deltaTime);
 
                 _currentScale = Vector2.Lerp(_currentScale, targetScale, dampingFactor);
@@ -358,6 +355,108 @@ namespace ProjectVagabond.UI
                 Rotation = _currentRotation,
                 IsVisible = _currentOpacity > 0.01f
             };
+        }
+    }
+
+    /// <summary>
+    /// Provides a juicy, snappy "plink" entrance animation that can be attached to any UI element.
+    /// It handles elastic scaling, a white flash, and particle debris automatically.
+    /// </summary>
+    public class PlinkAnimator
+    {
+        // --- Tunables ---
+        public float MaxScale { get; set; } = 1.3f;
+        public float RestScale { get; set; } = 1.0f;
+
+        // Halved rotation variance: ~0.125 radians is approx 7 degrees
+        public float MaxRotationVariance { get; set; } = 0.125f;
+        public int ParticleCount { get; set; } = 12;
+        public float HapticStrength { get; set; } = 0.0f;
+        public float FlashMaxAlpha { get; set; } = 0.8f;
+        public float PlinkTriggerThreshold { get; set; } = 0.05f;
+
+        // --- State ---
+        public bool IsActive { get; private set; }
+        public float Scale { get; private set; } = 1f;
+        public float Rotation { get; private set; } = 0f;
+        public Color? FlashTint { get; private set; }
+
+        private float _timer;
+        private float _delay;
+        private float _duration;
+        private bool _hasPlinked;
+        private float _startRotation;
+
+        public void Start(float delay = 0f, float duration = 0.2f)
+        {
+            _delay = delay;
+            _duration = duration;
+            _timer = 0f;
+            IsActive = true;
+            _hasPlinked = false;
+            Scale = 0f; // Hidden during delay
+            Rotation = 0f;
+            FlashTint = null;
+
+            // Randomize starting rotation based on tunable variance
+            var rng = new Random();
+            _startRotation = (float)((rng.NextDouble() * 2.0 - 1.0) * MaxRotationVariance);
+        }
+
+        public void Update(GameTime gameTime, Vector2 centerPosition)
+        {
+            if (!IsActive) return;
+
+            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            if (_delay > 0)
+            {
+                _delay -= dt;
+                Scale = 0f; // Keep hidden until delay finishes
+                return;
+            }
+
+            _timer += dt;
+            float progress = Math.Clamp(_timer / _duration, 0f, 1f);
+
+            // Snappy pop: Starts huge, settles elastically to rest scale
+            float ease = Easing.EaseOutBack(progress);
+            Scale = MathHelper.Lerp(MaxScale, RestScale, ease);
+            Rotation = MathHelper.Lerp(_startRotation, 0f, ease);
+
+            if (!_hasPlinked && progress > PlinkTriggerThreshold)
+            {
+                _hasPlinked = true;
+
+                // Spawn debris particles
+                if (ParticleCount > 0)
+                {
+                    var psm = ServiceLocator.Get<ParticleSystemManager>();
+                    var emitter = psm.CreateEmitter(ParticleEffects.CreateUIPlink());
+                    emitter.Position = centerPosition;
+                    emitter.EmitBurst(ParticleCount);
+                }
+
+                // Add a snappy haptic kick
+                if (HapticStrength > 0)
+                {
+                    ServiceLocator.Get<HapticsManager>().TriggerUICompoundShake(HapticStrength);
+                }
+            }
+
+            if (_hasPlinked)
+            {
+                float flashAlpha = 1.0f - progress;
+                FlashTint = ServiceLocator.Get<Global>().Palette_Sun * (flashAlpha * FlashMaxAlpha);
+            }
+
+            if (progress >= 1.0f)
+            {
+                IsActive = false;
+                Scale = RestScale;
+                Rotation = 0f;
+                FlashTint = null;
+            }
         }
     }
 }
