@@ -793,18 +793,6 @@ namespace ProjectVagabond.Scenes
                 _levelUpDialog.DrawContent(spriteBatch, font, effectiveGameTime, transform);
                 spriteBatch.End();
             }
-
-            if (canSpeedUp && ServiceLocator.Get<InputManager>().IsSpeedUpHeld)
-            {
-                var ffIcon = _spriteManager.FastForwardIcon;
-                if (ffIcon != null)
-                {
-                    spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
-                    float pulse = 0.7f + 0.3f * MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * 15f);
-                    spriteBatch.Draw(ffIcon, new Vector2(8, 8), Color.White * pulse);
-                    spriteBatch.End();
-                }
-            }
         }
 
         private void OnEXPGained(EXPGainedEvent e)

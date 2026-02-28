@@ -44,6 +44,9 @@ namespace ProjectVagabond
         // Expose a continuous state for speed-up logic
         public bool IsSpeedUpHeld { get; private set; }
 
+        // True if ANY scene actually applied the speed up this frame
+        public bool IsCurrentlyFastForwarding { get; private set; }
+
         private bool _mouseClickConsumed;
         private bool _ignoreMouseUntilMovement;
 
@@ -58,6 +61,7 @@ namespace ProjectVagabond
         public void Update()
         {
             _mouseClickConsumed = false;
+            IsCurrentlyFastForwarding = false; // Reset every frame
 
             _previousKeyboardState = _currentKeyboardState;
             _currentKeyboardState = Keyboard.GetState();
@@ -202,8 +206,13 @@ namespace ProjectVagabond
         /// </summary>
         public GameTime GetEffectiveGameTime(GameTime originalTime, bool canSpeedUp)
         {
-            float multiplier = (canSpeedUp && IsSpeedUpHeld) ? ServiceLocator.Get<Global>().SpeedUpMultiplier : 1.0f;
-            return new GameTime(originalTime.TotalGameTime, TimeSpan.FromSeconds(originalTime.ElapsedGameTime.TotalSeconds * multiplier));
+            if (canSpeedUp && IsSpeedUpHeld)
+            {
+                IsCurrentlyFastForwarding = true;
+                float multiplier = ServiceLocator.Get<Global>().SpeedUpMultiplier;
+                return new GameTime(originalTime.TotalGameTime, TimeSpan.FromSeconds(originalTime.ElapsedGameTime.TotalSeconds * multiplier));
+            }
+            return originalTime;
         }
 
         private bool IsKeyPressed(Keys key)
