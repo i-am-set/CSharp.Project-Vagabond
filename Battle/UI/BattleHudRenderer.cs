@@ -24,9 +24,9 @@ namespace ProjectVagabond.Battle.UI
         private readonly Texture2D _pixel;
 
         // --- TUNING NUMBERS ---
-        public const int HP_WRAP_THRESHOLD = 55; // Wrap if MaxHP is >= this
-        public const int HP_WRAP_CHUNK = 50;     // Pips per line when wrapped
-        public const int HP_WRAP_GAP = 1;        // Vertical pixels between lines
+        public const int HP_WRAP_THRESHOLD = 100; // Wrap if MaxHP is >= this
+        public const int HP_WRAP_CHUNK = 100;     // Pips per line when wrapped
+        public const int HP_WRAP_GAP = 1;         // Vertical pixels between lines
 
         public BattleHudRenderer()
         {
@@ -266,21 +266,23 @@ namespace ProjectVagabond.Battle.UI
             }
 
             // --- WRAPPING LOGIC (TUNED) ---
-            int pipsPerLine = maxPips;
+            int visualColsPerLine = (maxPips + 1) / 2;
             if (maxPips >= HP_WRAP_THRESHOLD)
             {
-                pipsPerLine = HP_WRAP_CHUNK;
+                visualColsPerLine = HP_WRAP_CHUNK / 2;
             }
 
             // --- DRAW LOOP ---
             for (int i = 0; i < maxPips; i++)
             {
-                // Calculate Row and Column
-                int row = i / pipsPerLine;
-                int col = i % pipsPerLine;
+                // Calculate Row and Column based on visual columns
+                int visualColIndex = i / 2;
+                int row = visualColIndex / visualColsPerLine;
+                int col = visualColIndex % visualColsPerLine;
 
                 // Calculate Y Position (with Gap)
-                float pipY = position.Y + (row * (height + HP_WRAP_GAP));
+                float rowY = position.Y + (row * (height + HP_WRAP_GAP));
+                float pipY = rowY + ((i % 2 == 0) ? 1 : 0);
 
                 // Calculate X Position
                 float pipX;
@@ -315,14 +317,13 @@ namespace ProjectVagabond.Battle.UI
                 }
 
                 // 4. Heal Preview
-                // Draws on top of empty pips (or filled pips if we wanted to show overheal, but usually fills gaps)
                 if (i >= currentPips && projectedHeal.HasValue)
                 {
-                    if (i < healMinEnd) pipColor = _global.Palette_Sea; // Guaranteed heal
-                    else if (i < healMaxEnd) pipColor = _global.Palette_Sky * 0.7f; // Potential max heal (if variable)
+                    if (i < healMinEnd) pipColor = _global.Palette_Sea;
+                    else if (i < healMaxEnd) pipColor = _global.Palette_Sky * 0.7f;
                 }
 
-                spriteBatch.DrawSnapped(_pixel, new Vector2(pipX, pipY), null, pipColor * alpha, 0f, Vector2.Zero, new Vector2(pipWidth, height), SpriteEffects.None, 0f);
+                spriteBatch.DrawSnapped(_pixel, new Vector2(pipX, pipY), null, pipColor * alpha, 0f, Vector2.Zero, new Vector2(1, 1), SpriteEffects.None, 0f);
             }
         }
 
