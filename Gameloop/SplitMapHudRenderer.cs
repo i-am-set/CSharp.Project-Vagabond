@@ -102,10 +102,6 @@ namespace ProjectVagabond.UI
             _tooltipRenderer = new MoveTooltipRenderer();
         }
 
-        /// <summary>
-        /// Forces all cards to flip back to the front side (Target = 0).
-        /// Called when the HUD loses focus.
-        /// </summary>
         public void ResetAllFlips()
         {
             foreach (var member in _flipTargets.Keys.ToList())
@@ -157,7 +153,6 @@ namespace ProjectVagabond.UI
             // --- Drag Logic ---
             if (_isDragging && _draggedMember != null)
             {
-                // Force flip back to front immediately if dragging
                 _flipTargets[_draggedMember] = 0f;
 
                 cursorManager.SetState(CursorState.Dragging);
@@ -256,21 +251,16 @@ namespace ProjectVagabond.UI
                 if (!_visualPositions.ContainsKey(member)) continue;
 
                 float x = _visualPositions[member];
-                // Added +3 to match Draw method offset. This aligns the hitbox with the visual.
                 float y = currentHudY + 3 + (_verticalOffsets.ContainsKey(member) ? _verticalOffsets[member] : 0);
 
-                // Use MathF.Round to match DrawSnapped logic for precise hitboxes
                 int snappedX = (int)MathF.Round(x);
                 int snappedY = (int)MathF.Round(y);
 
                 Rectangle cardRect = new Rectangle(snappedX, snappedY, CARD_WIDTH, HUD_HEIGHT);
-
-                // Flip Button Hitbox (Top-Left) - Snapped relative to card
                 Rectangle flipBtnRect = new Rectangle(snappedX + 2, snappedY + 2, FLIP_BUTTON_SIZE, FLIP_BUTTON_SIZE);
 
                 if (cardRect.Contains(virtualMousePos))
                 {
-                    // --- Right Click Flip (Anywhere on Card) ---
                     if (currentMouseState.RightButton == ButtonState.Pressed && _prevRightButtonState == ButtonState.Released && !_isDragging)
                     {
                         float currentTarget = _flipTargets[member];
@@ -278,28 +268,20 @@ namespace ProjectVagabond.UI
                         ServiceLocator.Get<HapticsManager>().TriggerUICompoundShake(0.3f);
                     }
 
-                    // 1. Check Flip Button First (Priority)
-                    // Only interactable if we are hovering the card (which we are)
                     if (flipBtnRect.Contains(virtualMousePos))
                     {
                         cursorManager.SetState(CursorState.HoverClickable);
-                        _hoveredMember = member; // Keep card hovered so it doesn't drop down
+                        _hoveredMember = member;
 
-                        // Only trigger on FRESH click
                         if (currentMouseState.LeftButton == ButtonState.Pressed && _prevLeftButtonState == ButtonState.Released)
                         {
-                            // Toggle Flip Target
                             float currentTarget = _flipTargets[member];
                             _flipTargets[member] = (currentTarget == 0f) ? 1f : 0f;
-
                             ServiceLocator.Get<HapticsManager>().TriggerUICompoundShake(0.3f);
                         }
-
-                        // CRITICAL: If we are hovering the button, we DO NOT process drag logic for this card.
                         continue;
                     }
 
-                    // 2. Normal Card Hover (Only if NOT hovering button)
                     cursorManager.SetState(CursorState.HoverDraggable);
                     _hoveredMember = member;
 
@@ -309,7 +291,6 @@ namespace ProjectVagabond.UI
                         _draggedMember = member;
                         _topmostMember = member;
 
-                        // Force flip back to front immediately on interaction
                         _flipTargets[member] = 0f;
 
                         _dragStartMouseY = currentMouseState.Y;
@@ -384,7 +365,6 @@ namespace ProjectVagabond.UI
             _lastMousePos = virtualMousePos;
 
         ProcessTweening:
-            // Update Input Latch
             _prevLeftButtonState = currentMouseState.LeftButton;
             _prevRightButtonState = currentMouseState.RightButton;
 
@@ -578,8 +558,6 @@ namespace ProjectVagabond.UI
 
             // --- Flip Animation Math ---
             float flipP = _flipProgress.ContainsKey(member) ? _flipProgress[member] : 0f;
-            // Scale goes 1 -> 0 -> 1. 
-            // 0.0 to 0.5 is Front shrinking. 0.5 to 1.0 is Back expanding.
             float scaleX = Math.Abs(1f - 2f * flipP);
             bool showBack = flipP > 0.5f;
 
@@ -587,8 +565,6 @@ namespace ProjectVagabond.UI
             float flipHop = MathF.Sin(flipP * MathHelper.Pi) * -5.0f;
             yOffset += flipHop;
 
-            // --- Matrix Transformation ---
-            // We combine Rotation (Drag and Plink) and Scale (Flip and Plink)
             bool useTransform = isBeingDragged || flipP > 0.01f || (plink != null && plink.IsActive);
 
             Vector2 cardCenter = new Vector2(MathF.Round(x + CARD_WIDTH / 2f), MathF.Round(BaseY + 3 + yOffset + (HUD_HEIGHT - 4) / 2f));
@@ -627,9 +603,7 @@ namespace ProjectVagabond.UI
             if (isBeingDragged) borderColor = _global.Palette_Sun;
             else
             {
-                // Use snapped coordinates for hit testing to match visual rendering
                 Rectangle cardRect = new Rectangle(snappedX, snappedY, CARD_WIDTH, HUD_HEIGHT - 4);
-
                 if (cardRect.Contains(mousePos) && !_isDragging) borderColor = _global.Palette_Pale;
                 else borderColor = (index >= 2) ? _global.Palette_DarkestPale : _global.Palette_DarkPale;
             }
@@ -646,25 +620,18 @@ namespace ProjectVagabond.UI
             }
 
             // --- Draw Flip Button ---
-            // Only draw if the card is wide enough to look good AND we are hovering this specific card
             if (scaleX > 0.2f && member == _hoveredMember && !_isDragging)
             {
                 var flipIcon = _spriteManager.CardFlipIcon;
                 if (flipIcon != null)
                 {
-                    // Determine hover state for the button sprite
                     Rectangle btnRect = new Rectangle(snappedX + 2, snappedY + 2, FLIP_BUTTON_SIZE, FLIP_BUTTON_SIZE);
                     bool btnHover = btnRect.Contains(mousePos);
 
-                    // Source rect: 0=Idle, 1=Hover. 8x8 sprites.
                     Rectangle src = new Rectangle(btnHover ? 8 : 0, 0, 8, 8);
-
-                    // Use Vector2 for position to ensure it snaps exactly like the card body
                     Vector2 btnPos = new Vector2(snappedX + 2, snappedY + 2);
 
-                    // Draw a small backing to make it easier to see
                     spriteBatch.DrawSnapped(_pixel, btnPos, null, _global.Palette_Black * 0.6f, 0f, Vector2.Zero, new Vector2(8, 8), SpriteEffects.None, 0f);
-
                     spriteBatch.DrawSnapped(flipIcon, btnPos, src, Color.White);
                 }
             }
@@ -683,17 +650,15 @@ namespace ProjectVagabond.UI
 
         private void DrawCardBack(SpriteBatch spriteBatch, PartyMember member, float xPosition, float yOffset, BitmapFont defaultFont, BitmapFont secondaryFont, BitmapFont tertiaryFont)
         {
-            // Use dynamic coordinates to ensure sync with card body
             float y = BaseY + 5 + yOffset;
             float centerX = xPosition + (CARD_WIDTH / 2f);
-            float maxWidth = CARD_WIDTH - 4; // 2px padding on sides
+            float maxWidth = CARD_WIDTH - 4;
 
             // 1. Header: INFO
             string title = "INFO";
             Vector2 titleSize = defaultFont.MeasureString(title);
-            // Snap text position relative to center
             spriteBatch.DrawStringSnapped(defaultFont, title, new Vector2(centerX - MathF.Floor(titleSize.X / 2f), y), _global.Palette_Rust);
-            y += 12; // Spacing
+            y += titleSize.Y + 4;
 
             // 2. Section: ABILITY
             string abilityLabel = "ABILITY";
@@ -701,7 +666,6 @@ namespace ProjectVagabond.UI
             spriteBatch.DrawStringSnapped(tertiaryFont, abilityLabel, new Vector2(centerX - MathF.Floor(abilityLabelSize.X / 2f), y), _global.Palette_DarkPale);
             y += tertiaryFont.LineHeight + 1;
 
-            // Ability Name & Desc
             string abilityName = "NONE";
             string abilityDesc = "";
 
@@ -709,19 +673,15 @@ namespace ProjectVagabond.UI
             {
                 var kvp = member.IntrinsicAbilities.First();
                 string abilityId = kvp.Key;
-
                 var info = GetAbilityInfo(abilityId);
-
                 abilityName = info.Name;
                 abilityDesc = string.IsNullOrEmpty(kvp.Value) ? info.Description : kvp.Value;
             }
 
-            // Draw Name (Secondary, Centered, Highlighted)
             Vector2 nameSize = secondaryFont.MeasureString(abilityName);
             spriteBatch.DrawStringSnapped(secondaryFont, abilityName, new Vector2(centerX - MathF.Floor(nameSize.X / 2f), y), _global.Palette_LightPale);
             y += secondaryFont.LineHeight + 1;
 
-            // Draw Description (Tertiary, Centered, Wrapped)
             if (!string.IsNullOrEmpty(abilityDesc))
             {
                 var words = abilityDesc.Split(' ');
@@ -731,10 +691,9 @@ namespace ProjectVagabond.UI
                     string testLine = string.IsNullOrEmpty(line) ? word : line + " " + word;
                     if (tertiaryFont.MeasureString(testLine).Width > maxWidth)
                     {
-                        // Draw current line
                         Vector2 lineSize = tertiaryFont.MeasureString(line);
                         spriteBatch.DrawStringSnapped(tertiaryFont, line, new Vector2(centerX - MathF.Floor(lineSize.X / 2f), y), _global.Palette_Pale);
-                        y += tertiaryFont.LineHeight + 2; // Line spacing
+                        y += tertiaryFont.LineHeight + 2;
                         line = word;
                     }
                     else
@@ -742,16 +701,15 @@ namespace ProjectVagabond.UI
                         line = testLine;
                     }
                 }
-                // Draw last line
                 if (!string.IsNullOrEmpty(line))
                 {
                     Vector2 lineSize = tertiaryFont.MeasureString(line);
                     spriteBatch.DrawStringSnapped(tertiaryFont, line, new Vector2(centerX - MathF.Floor(lineSize.X / 2f), y), _global.Palette_Pale);
-                    y += tertiaryFont.LineHeight + 2; // Line spacing
+                    y += tertiaryFont.LineHeight + 2;
                 }
             }
 
-            y += 4; // Gap before Status
+            y += 4;
 
             // 3. Section: STATUS
             string statusLabel = "STATUS";
@@ -762,11 +720,32 @@ namespace ProjectVagabond.UI
             string statusText = member.ActiveBuffs.Count > 0 ? $"{member.ActiveBuffs.Count} EFF" : "NORMAL";
             Vector2 statusTextSize = secondaryFont.MeasureString(statusText);
             spriteBatch.DrawStringSnapped(secondaryFont, statusText, new Vector2(centerX - MathF.Floor(statusTextSize.X / 2f), y), _global.Palette_LightPale);
+            y += secondaryFont.LineHeight + 6; // Gap before EXP
+
+            // 4. Section: EXP
+            string expLabel = "EXP";
+            Vector2 expLabelSize = tertiaryFont.MeasureString(expLabel);
+            spriteBatch.DrawStringSnapped(tertiaryFont, expLabel, new Vector2(centerX - MathF.Floor(expLabelSize.X / 2f), y), _global.Palette_DarkPale);
+            y += tertiaryFont.LineHeight + 1;
+
+            string expValue = $"{member.CurrentEXP}/{member.MaxEXP}";
+            Vector2 expValueSize = tertiaryFont.MeasureString(expValue);
+            spriteBatch.DrawStringSnapped(tertiaryFont, expValue, new Vector2(centerX - MathF.Floor(expValueSize.X / 2f), y), _global.Palette_Sea);
+            y += tertiaryFont.LineHeight + 2;
+
+            // EXP Bar (1px tall)
+            int expBarWidth = (int)maxWidth - 12;
+            float expBarX = centerX - MathF.Floor(expBarWidth / 2f);
+            float expPercent = member.MaxEXP > 0 ? Math.Clamp((float)member.CurrentEXP / member.MaxEXP, 0f, 1f) : 0f;
+            int filledExp = (int)(expBarWidth * expPercent);
+
+            spriteBatch.DrawSnapped(_pixel, new Vector2(expBarX, y), null, _global.Palette_DarkestPale, 0f, Vector2.Zero, new Vector2(expBarWidth, 1), SpriteEffects.None, 0f);
+            if (filledExp > 0)
+            {
+                spriteBatch.DrawSnapped(_pixel, new Vector2(expBarX, y), null, _global.Palette_Sky, 0f, Vector2.Zero, new Vector2(filledExp, 1), SpriteEffects.None, 0f);
+            }
         }
 
-        /// <summary>
-        /// Helper to retrieve ability info (Name, Description) from the class definition if missing from instance data.
-        /// </summary>
         private (string Name, string Description) GetAbilityInfo(string abilityId)
         {
             if (_abilityInfoCache.TryGetValue(abilityId, out var cachedInfo))
@@ -774,16 +753,14 @@ namespace ProjectVagabond.UI
                 return cachedInfo;
             }
 
-            string friendlyName = abilityId; // Default to ID if not found
+            string friendlyName = abilityId;
             string description = "";
 
             try
             {
-                // Assume naming convention "AbilityName" + "Ability"
                 var typeName = $"ProjectVagabond.Battle.Abilities.{abilityId}Ability";
                 var type = Type.GetType(typeName);
 
-                // Fallback search in all assemblies if not found directly
                 if (type == null)
                 {
                     foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
@@ -795,8 +772,6 @@ namespace ProjectVagabond.UI
 
                 if (type != null)
                 {
-                    // Attempt to create an instance. Most passive abilities are parameterless.
-                    // If it requires parameters, this might fail, but the try-catch handles it.
                     var instance = Activator.CreateInstance(type) as IAbility;
                     if (instance != null)
                     {
@@ -811,10 +786,8 @@ namespace ProjectVagabond.UI
             }
             catch
             {
-                // Silently fail
             }
 
-            // Cache failure to prevent retry
             var fallback = (friendlyName, description);
             _abilityInfoCache[abilityId] = fallback;
             return fallback;
@@ -826,7 +799,6 @@ namespace ProjectVagabond.UI
             float tagHeight = 10f;
             float visibleHeight = 10f;
 
-            // If flipped, position on the right side
             float tagX = isFlipped ? (x + CARD_WIDTH - 7f - tagWidth) : (x + 7f);
 
             float cardTopY = BaseY + 3 + yOffset;
@@ -852,7 +824,6 @@ namespace ProjectVagabond.UI
 
         private void DrawCardContents(SpriteBatch spriteBatch, GameTime gameTime, PartyMember member, float xPosition, float yOffset, int index, BitmapFont defaultFont, BitmapFont secondaryFont, BitmapFont tertiaryFont)
         {
-            // FIX: Round the base coordinates so all subsequent additions are integers
             float y = MathF.Round(BaseY + 5 + yOffset);
             float centerX = MathF.Round(xPosition + (CARD_WIDTH / 2f));
 
@@ -869,22 +840,17 @@ namespace ProjectVagabond.UI
             float wavePhase = index * 1.0f;
             float sineValue = MathF.Sin(time * bobSpeed + wavePhase);
 
-            // Determine if we are in the "Alt" frame state
             bool isAltFrame = sineValue < 0;
-
-            // Head bobs up 1 pixel (-1 Y) exactly when the Alt frame is active
             float bobOffset = isAltFrame ? -1f : 0f;
 
             Vector2 origin = new Vector2(16, 16);
 
-            // Draw Body (Static Y position)
             PlayerSpriteType bodyType = isAltFrame ? PlayerSpriteType.BodyAlt : PlayerSpriteType.BodyNormal;
             var bodySourceRect = _spriteManager.GetPlayerSourceRect(member.PortraitIndex, bodyType);
 
             Vector2 bodyPos = new Vector2(centerX, y + 16);
             spriteBatch.DrawSnapped(_spriteManager.PlayerMasterSpriteSheet, bodyPos, bodySourceRect, Color.White, 0f, origin, 1.0f, SpriteEffects.None, 0f);
 
-            // Draw Head (Applies bobOffset)
             PlayerSpriteType type = isAltFrame ? PlayerSpriteType.Alt : PlayerSpriteType.Normal;
             var sourceRect = _spriteManager.GetPlayerSourceRect(member.PortraitIndex, type);
 
@@ -897,9 +863,29 @@ namespace ProjectVagabond.UI
             if (hpBg != null)
             {
                 float barX = centerX - MathF.Floor(hpBg.Width / 2f);
-                string hpText = $"{member.CurrentHP}/{member.MaxHP}";
+                float textY = (y - 9) - tertiaryFont.LineHeight + 1;
 
-                spriteBatch.DrawStringSnapped(tertiaryFont, hpText, new Vector2(barX, (y - 9) - tertiaryFont.LineHeight + 1), _global.Palette_DarkPale);
+                // HP Text (Left aligned)
+                string hpText = $"{member.CurrentHP}/{member.MaxHP}";
+                spriteBatch.DrawStringSnapped(tertiaryFont, hpText, new Vector2(barX, textY), _global.Palette_DarkPale);
+
+                // Level Icon + Text (Right aligned)
+                if (_spriteManager.LevelIconSprite != null)
+                {
+                    string lvValue = member.Level.ToString();
+                    float lvValueWidth = tertiaryFont.MeasureString(lvValue).Width;
+                    float iconWidth = _spriteManager.LevelIconSprite.Width;
+                    float gap = 1f;
+                    float totalLvWidth = iconWidth + gap + lvValueWidth;
+
+                    float rightEdge = barX + hpBg.Width;
+                    float lvStartX = rightEdge - totalLvWidth;
+
+                    spriteBatch.DrawSnapped(_spriteManager.LevelIconSprite, new Vector2(lvStartX, textY + 1), _global.Palette_DarkestPale);
+                    spriteBatch.DrawStringSnapped(tertiaryFont, lvValue, new Vector2(lvStartX + iconWidth + gap, textY), _global.Palette_DarkestPale);
+                }
+
+                // Draw HP Bar
                 spriteBatch.DrawSnapped(hpBg, new Vector2(barX, y - 8), Color.White);
 
                 if (_spriteManager.InventoryPlayerHealthBarFull != null)

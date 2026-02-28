@@ -125,15 +125,18 @@ namespace ProjectVagabond.Battle.UI
                 float expBarY = barY + hpBarTotalHeight + 2;
                 float expBarX = nameX;
 
-                // Draw "LV X" text aligned with the name
-                string lvLabel = "LV ";
                 string lvValue = player.VisualLevel.ToString();
 
                 // Offset text Y slightly so it centers visually with the 1px bar
                 float textY = expBarY - 1;
 
-                spriteBatch.DrawStringSnapped(tertiaryFont, lvLabel, new Vector2(expBarX, textY), _global.Palette_DarkestPale * hpAlpha);
-                float lvLabelWidth = tertiaryFont.MeasureString(lvLabel).Width;
+                float lvLabelWidth = 0;
+                if (_spriteManager.LevelIconSprite != null)
+                {
+                    // Draw the 5x3 icon. Offset Y slightly to align with the number text.
+                    spriteBatch.DrawSnapped(_spriteManager.LevelIconSprite, new Vector2(expBarX, textY + 1), _global.Palette_DarkestPale * hpAlpha);
+                    lvLabelWidth = _spriteManager.LevelIconSprite.Width + 1; // 1px gap
+                }
 
                 spriteBatch.DrawStringSnapped(tertiaryFont, lvValue, new Vector2(expBarX + lvLabelWidth, textY), _global.Palette_DarkestPale * hpAlpha);
                 float lvValueWidth = tertiaryFont.MeasureString(lvValue).Width;

@@ -342,6 +342,15 @@ namespace ProjectVagabond.Scenes
         private void SetupBattle()
         {
             var gameState = _gameState;
+
+            // --- Reset Cooldowns for the new battle ---
+            foreach (var member in gameState.PlayerState.Party)
+            {
+                if (member.BasicMove != null) member.BasicMove.TurnsUntilReady = 0;
+                if (member.CoreMove != null) member.CoreMove.TurnsUntilReady = 0;
+                if (member.AltMove != null) member.AltMove.TurnsUntilReady = 0;
+            }
+
             var playerParty = new List<BattleCombatant>();
 
             var leaderMember = gameState.PlayerState.Leader;
@@ -420,10 +429,11 @@ namespace ProjectVagabond.Scenes
             var currentMouseState = Mouse.GetState();
             var inputManager = ServiceLocator.Get<InputManager>();
 
-            bool canSpeedUp = _battleManager.CurrentPhase == BattleManager.BattlePhase.ActionResolution ||
+            bool canSpeedUp = _battleManager != null && (
+                              _battleManager.CurrentPhase == BattleManager.BattlePhase.ActionResolution ||
                               _battleManager.CurrentPhase == BattleManager.BattlePhase.EndOfRound ||
                               _battleManager.CurrentPhase == BattleManager.BattlePhase.BattleStartIntro ||
-                              _battleManager.CurrentPhase == BattleManager.BattlePhase.BattleOver;
+                              _battleManager.CurrentPhase == BattleManager.BattlePhase.BattleOver);
 
             GameTime effectiveGameTime = inputManager.GetEffectiveGameTime(gameTime, canSpeedUp);
             float dt = (float)effectiveGameTime.ElapsedGameTime.TotalSeconds;

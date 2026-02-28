@@ -66,6 +66,7 @@ namespace ProjectVagabond
         public Texture2D TenacityPipTexture { get; private set; }
         public Texture2D StatModIconsTexture { get; private set; }
         public Texture2D CardFlipIcon { get; private set; }
+        public Texture2D LevelIconSprite { get; private set; }
 
         // NEW: Fast Forward Icon
         public Texture2D FastForwardIcon { get; private set; }
@@ -428,6 +429,9 @@ namespace ProjectVagabond
 
             try { CardFlipIcon = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/rotate_icon_8x8_spritesheet"); }
             catch { CardFlipIcon = _textureFactory.CreateColoredTexture(16, 8, Color.Yellow); }
+
+            try { LevelIconSprite = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/level_text_icon"); }
+            catch { LevelIconSprite = _textureFactory.CreateColoredTexture(5, 3, Color.Magenta); }
 
             try { MiniActionButtonSprite = _textureFactory.CreateMiniActionButtonTexture(80); }
             catch { MiniActionButtonSprite = _textureFactory.CreateColoredTexture(80, 6, Color.Magenta); }

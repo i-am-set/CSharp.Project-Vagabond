@@ -54,11 +54,12 @@ namespace ProjectVagabond.Scenes
         private int _currentMoveStep = 0;
         private float _walkStepTimer = 0f;
 
-        private const int TOTAL_MOVE_STEPS = 5;
-        private const float STEP_DURATION = 0.5f;
+        private const int TOTAL_MOVE_STEPS = 8;
+        private const float STEP_DURATION = 0.3f;
         private const float JUMP_HEIGHT = 8f;
-        private const float STEP_ROTATION = 15f;
+        private const float STEP_ROTATION = 20f;
 
+        private float _abandonedFadeAmount = 0.5f;
         private int _clickedNodeId = -1;
         private float _clickAnimTimer = 0f;
 
@@ -290,7 +291,9 @@ namespace ProjectVagabond.Scenes
             if (_inputBlockTimer > 0) _inputBlockTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
             if (IsInputBlocked) { base.Update(gameTime); return; }
 
-            float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            var inputManager = ServiceLocator.Get<InputManager>();
+            GameTime effectiveGameTime = inputManager.GetEffectiveGameTime(gameTime, _isWalking);
+            float deltaTime = (float)effectiveGameTime.ElapsedGameTime.TotalSeconds;
 
             if (_currentMap != null)
             {
@@ -298,12 +301,12 @@ namespace ProjectVagabond.Scenes
                 foreach (var node in _currentMap.Nodes.Values)
                 {
                     if (node.IsAbandoned)
-                        node.VisualAlpha = MathHelper.Lerp(node.VisualAlpha, 0.75f, fadeSpeed);
+                        node.VisualAlpha = MathHelper.Lerp(node.VisualAlpha, _abandonedFadeAmount, fadeSpeed);
                 }
                 foreach (var path in _currentMap.Paths.Values)
                 {
                     if (path.IsAbandoned)
-                        path.VisualAlpha = MathHelper.Lerp(path.VisualAlpha, 0.75f, fadeSpeed);
+                        path.VisualAlpha = MathHelper.Lerp(path.VisualAlpha, _abandonedFadeAmount, fadeSpeed);
                 }
             }
 
@@ -322,10 +325,10 @@ namespace ProjectVagabond.Scenes
             float targetHudOffset = (mouseInMap && !_hudRenderer.IsDragging) ? HUD_SLIDE_DISTANCE : 0f;
             _hudSlideOffset = MathHelper.Lerp(_hudSlideOffset, targetHudOffset, deltaTime * HUD_SLIDE_SPEED);
 
-            _hudRenderer.Update(gameTime, virtualMousePos, _hudSlideOffset);
+            _hudRenderer.Update(effectiveGameTime, virtualMousePos, _hudSlideOffset);
 
-            _voidEdgeEffect.Update(gameTime, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), _cameraOffset);
-            _birdManager.Update(gameTime, _currentMap, _playerIcon.Position, _cameraOffset);
+            _voidEdgeEffect.Update(effectiveGameTime, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), _cameraOffset);
+            _birdManager.Update(effectiveGameTime, _currentMap, _playerIcon.Position, _cameraOffset);
 
             if (_wasModalActiveLastFrame)
             {
@@ -437,7 +440,7 @@ namespace ProjectVagabond.Scenes
 
             if (!_isWalking)
             {
-                HandleMapInput(gameTime);
+                HandleMapInput(effectiveGameTime);
             }
 
             switch (_mapState)
@@ -456,8 +459,8 @@ namespace ProjectVagabond.Scenes
                     break;
             }
 
-            _playerIcon.Update(gameTime);
-            base.Update(gameTime);
+            _playerIcon.Update(effectiveGameTime);
+            base.Update(effectiveGameTime);
         }
 
         private void HandleMapInput(GameTime gameTime)
@@ -471,13 +474,12 @@ namespace ProjectVagabond.Scenes
             var mouseInMapSpace = Vector2.Transform(virtualMousePos, inverseCameraTransform);
 
             int rawHoveredNodeId = -1;
-            bool rawPlayerHovered = false;
 
             if (_currentMap != null && _mapState == SplitMapState.Idle)
             {
                 foreach (var node in _currentMap.Nodes.Values)
                 {
-                    if ((node.IsReachable || node.Id == _playerCurrentNodeId) && node.GetBounds().Contains(mouseInMapSpace))
+                    if (node.IsReachable && node.GetBounds().Contains(mouseInMapSpace))
                     {
                         rawHoveredNodeId = node.Id;
                         break;
@@ -486,7 +488,7 @@ namespace ProjectVagabond.Scenes
             }
 
             bool hoveringButtons = (_settingsButton?.IsHovered ?? false);
-            _hoveredNodeId = rawPlayerHovered ? -1 : rawHoveredNodeId;
+            _hoveredNodeId = rawHoveredNodeId;
             _lastHoveredNodeId = _hoveredNodeId;
 
             if (_hoveredNodeId != -1) cursorManager.SetState(CursorState.HoverClickable);
@@ -902,7 +904,7 @@ namespace ProjectVagabond.Scenes
 
                 if (path.IsAbandoned)
                 {
-                    float fadeT = Math.Clamp((1.0f - path.VisualAlpha) / 0.25f, 0f, 1f);
+                    float fadeT = Math.Clamp((1.0f - path.VisualAlpha) / 0.5f, 0f, 1f);
                     Color lerpedColor = Color.Lerp(_global.Palette_DarkestPale, _global.Palette_DarkShadow, fadeT);
                     DrawPath(spriteBatch, pixel, path, lerpedColor, false, path.VisualAlpha);
                     continue;
@@ -966,10 +968,10 @@ namespace ProjectVagabond.Scenes
 
             if (node.IsAbandoned)
             {
-                float fadeT = Math.Clamp((1.0f - node.VisualAlpha) / 0.25f, 0f, 1f);
+                float fadeT = Math.Clamp((1.0f - node.VisualAlpha) / 0.5f, 0f, 1f);
                 color = Color.Lerp(_global.Palette_DarkestPale, _global.Palette_DarkShadow, fadeT);
             }
-            else if (node.IsCompleted) color = _global.Palette_DarkShadow;
+            else if (node.IsCompleted) color = _global.SplitMapPathColor;
             else if (node.NodeType != SplitNodeType.Origin && node.Id != _playerCurrentNodeId && !node.IsReachable) color = _global.Palette_DarkestPale;
 
             bool isSelected = (node.Id == _selectedNodeId);
@@ -1064,7 +1066,8 @@ namespace ProjectVagabond.Scenes
                     break;
             }
             int frameIndex = 0;
-            if (node.IsReachable || node.NodeType == SplitNodeType.Origin || node.IsCompleted)
+            bool shouldAnimate = node.IsReachable || (node.NodeType == SplitNodeType.Origin && !node.IsCompleted);
+            if (shouldAnimate)
             {
                 float totalTime = (float)gameTime.TotalGameTime.TotalSeconds;
                 frameIndex = (int)((totalTime + node.AnimationOffset) / NODE_FRAME_DURATION) % 2;
@@ -1080,4 +1083,3 @@ namespace ProjectVagabond.Scenes
         }
     }
 }
-﻿
