@@ -43,9 +43,9 @@ namespace ProjectVagabond.Scenes
 
         // --- Plink Animation State ---
         private bool _isPlinkingIn = true;
-        private PlinkAnimator _plinkTitle1 = new PlinkAnimator();
-        private PlinkAnimator _plinkTitle2 = new PlinkAnimator();
-        private PlinkAnimator _plinkStats = new PlinkAnimator();
+        private PlinkAnimator _plinkTitle1;
+        private PlinkAnimator _plinkTitle2;
+        private PlinkAnimator _plinkStats;
         private PlinkAnimator[] _plinkCarousel = new PlinkAnimator[7];
         private List<PlinkAnimator> _allPlinks = new List<PlinkAnimator>();
 
@@ -116,30 +116,45 @@ namespace ProjectVagabond.Scenes
             _isPlinkingIn = true;
             _allPlinks.Clear();
 
-            _plinkTitle1 = new PlinkAnimator(); _allPlinks.Add(_plinkTitle1);
-            _plinkTitle2 = new PlinkAnimator(); _allPlinks.Add(_plinkTitle2);
-            _plinkStats = new PlinkAnimator(); _allPlinks.Add(_plinkStats);
+            var randomPlinks = new List<PlinkAnimator>();
+
+            _plinkTitle1 = new PlinkAnimator(); randomPlinks.Add(_plinkTitle1);
+            _plinkTitle2 = new PlinkAnimator(); randomPlinks.Add(_plinkTitle2);
+            _plinkStats = new PlinkAnimator(); randomPlinks.Add(_plinkStats);
 
             for (int i = 0; i < 7; i++)
             {
                 _plinkCarousel[i] = new PlinkAnimator();
-                _allPlinks.Add(_plinkCarousel[i]);
+                randomPlinks.Add(_plinkCarousel[i]);
             }
 
+            // Shuffle ONLY the titles, stats, and carousel elements
+            var rng = new Random();
+            randomPlinks = randomPlinks.OrderBy(x => rng.Next()).ToList();
+
+            float delay = 0f;
+            float stagger = 0.05f; // Increased stagger so the sequence is clearly visible
+
+            foreach (var p in randomPlinks)
+            {
+                p.Start(delay, 0.25f);
+                delay += stagger;
+            }
+
+            // Explicitly use PlayEntrance for buttons so they properly hide during the delay
+            _leftArrow.PlayEntrance(delay);
+            delay += stagger;
+
+            _rightArrow.PlayEntrance(delay);
+            delay += stagger;
+
+            _selectButton.PlayEntrance(delay);
+
+            // Add everything to _allPlinks so the Update loop knows when the entire sequence is done
+            _allPlinks.AddRange(randomPlinks);
             _allPlinks.Add(_leftArrow.Plink);
             _allPlinks.Add(_rightArrow.Plink);
             _allPlinks.Add(_selectButton.Plink);
-
-            // Shuffle the list to randomize the entrance order
-            var rng = new Random();
-            _allPlinks = _allPlinks.OrderBy(x => rng.Next()).ToList();
-
-            float delay = 0f;
-            foreach (var p in _allPlinks)
-            {
-                p.Start(delay, 0.25f);
-                delay += 0.05f; // Fast, snappy stagger
-            }
         }
 
         private void InitializeData()
