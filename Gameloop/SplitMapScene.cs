@@ -138,6 +138,18 @@ namespace ProjectVagabond.Scenes
 
         private int _selectedNodeId = -1;
 
+        // --- Rest Event State ---
+        private bool _isRestEventActive = false;
+        private bool _isRestEventFadingOut = false;
+        private float _restEventFadeTimer = 0f;
+        private const float REST_EVENT_FADE_DURATION = 0.3f;
+        private float _restHealPercentage = 1.0f; // 1.0 = 100% heal
+
+        private PlinkAnimator _restPromptPlink = new PlinkAnimator();
+        private Button _restYesButton;
+        private Button _restNoButton;
+        private NavigationGroup _restNavGroup = new NavigationGroup(wrapNavigation: true);
+
         public SplitMapScene()
         {
             _progressionManager = ServiceLocator.Get<ProgressionManager>();
@@ -192,6 +204,8 @@ namespace ProjectVagabond.Scenes
             _playerMovePath = null;
 
             InitializeSettingsButton();
+            InitializeRestUI();
+
             _settingsButtonState = SettingsButtonState.AnimatingIn;
             _settingsButtonAnimTimer = 0f;
 
@@ -273,6 +287,33 @@ namespace ProjectVagabond.Scenes
                 OpenSettings();
             };
             _settingsButton.ResetAnimationState();
+        }
+
+        private void InitializeRestUI()
+        {
+            if (_restYesButton == null)
+            {
+                var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+                _restYesButton = new Button(Rectangle.Empty, "YES", font: secondaryFont)
+                {
+                    CustomDefaultTextColor = _global.Palette_Sun,
+                    CustomHoverTextColor = _global.ButtonHoverColor,
+                    HoverAnimation = HoverAnimationType.Hop
+                };
+                _restNoButton = new Button(Rectangle.Empty, "NO", font: secondaryFont)
+                {
+                    CustomDefaultTextColor = _global.Palette_Sun,
+                    CustomHoverTextColor = _global.ButtonHoverColor,
+                    HoverAnimation = HoverAnimationType.Hop
+                };
+
+                _restYesButton.OnClick += () => ResolveRestEvent(true);
+                _restNoButton.OnClick += () => ResolveRestEvent(false);
+
+                _restNavGroup.Add(_restYesButton);
+                _restNavGroup.Add(_restNoButton);
+            }
+            _isRestEventActive = false;
         }
 
         private void UpdateReachableNodes()
@@ -438,29 +479,98 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            if (!_isWalking)
+            if (_mapState == SplitMapState.Resting)
             {
-                HandleMapInput(effectiveGameTime);
+                UpdateRestEvent(deltaTime, currentMouseState, effectiveGameTime);
             }
-
-            switch (_mapState)
+            else
             {
-                case SplitMapState.LiftingNode: UpdateLiftingNode(deltaTime); break;
-                case SplitMapState.PulsingNode: UpdatePulsingNode(deltaTime); break;
-                case SplitMapState.LoweringNode: UpdateLoweringNode(deltaTime); break;
-                case SplitMapState.PostEventDelay:
-                    _postEventDelayTimer -= deltaTime;
-                    if (_postEventDelayTimer <= 0)
-                    {
-                        _mapState = SplitMapState.Idle;
-                        UpdateReachableNodes();
-                        StartPathRevealAnimation();
-                    }
-                    break;
+                if (!_isWalking)
+                {
+                    HandleMapInput(effectiveGameTime);
+                }
+
+                switch (_mapState)
+                {
+                    case SplitMapState.LiftingNode: UpdateLiftingNode(deltaTime); break;
+                    case SplitMapState.PulsingNode: UpdatePulsingNode(deltaTime); break;
+                    case SplitMapState.LoweringNode: UpdateLoweringNode(deltaTime); break;
+                    case SplitMapState.PostEventDelay:
+                        _postEventDelayTimer -= deltaTime;
+                        if (_postEventDelayTimer <= 0)
+                        {
+                            _mapState = SplitMapState.Idle;
+                            UpdateReachableNodes();
+                            StartPathRevealAnimation();
+                        }
+                        break;
+                }
             }
 
             _playerIcon.Update(effectiveGameTime);
             base.Update(effectiveGameTime);
+        }
+
+        private void UpdateRestEvent(float dt, MouseState mouseState, GameTime gameTime)
+        {
+            if (_isRestEventFadingOut)
+            {
+                _restEventFadeTimer -= dt;
+                if (_restEventFadeTimer <= 0)
+                {
+                    _isRestEventActive = false;
+                    var node = _currentMap?.Nodes[_playerCurrentNodeId];
+                    if (node != null)
+                    {
+                        node.IsCompleted = true;
+                        UpdateCameraTarget(node.Position, false);
+                    }
+                    _mapState = SplitMapState.LoweringNode;
+                    _nodeLiftTimer = 0f;
+                }
+                return;
+            }
+
+            _restEventFadeTimer += dt;
+            if (_restEventFadeTimer > REST_EVENT_FADE_DURATION)
+                _restEventFadeTimer = REST_EVENT_FADE_DURATION;
+
+            float mapViewHeight = (Global.VIRTUAL_HEIGHT - SplitMapHudRenderer.HUD_HEIGHT) + _hudSlideOffset;
+            Vector2 promptCenter = new Vector2(Global.VIRTUAL_WIDTH / 2f, mapViewHeight / 2f - 15);
+            _restPromptPlink.Update(gameTime, promptCenter);
+
+            int btnY = (int)(mapViewHeight / 2f + 10);
+            int centerX = Global.VIRTUAL_WIDTH / 2;
+            _restYesButton.Bounds = new Rectangle(centerX - 40, btnY, 30, 15);
+            _restNoButton.Bounds = new Rectangle(centerX + 10, btnY, 30, 15);
+
+            _restYesButton.Update(mouseState);
+            _restNoButton.Update(mouseState);
+
+            var inputManager = ServiceLocator.Get<InputManager>();
+            if (inputManager.CurrentInputDevice == InputDeviceType.Mouse)
+            {
+                _restNavGroup.DeselectAll();
+            }
+            else
+            {
+                _restNavGroup.UpdateInput(inputManager);
+            }
+        }
+
+        private void ResolveRestEvent(bool heal)
+        {
+            _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
+            if (heal && _gameState.PlayerState != null)
+            {
+                foreach (var member in _gameState.PlayerState.Party)
+                {
+                    int healAmount = (int)(member.MaxHP * _restHealPercentage);
+                    member.CurrentHP = Math.Min(member.MaxHP, member.CurrentHP + healAmount);
+                }
+                ServiceLocator.Get<Core>().TriggerFullscreenFlash(_global.Palette_Leaf, 0.2f);
+            }
+            _isRestEventFadingOut = true;
         }
 
         private void HandleMapInput(GameTime gameTime)
@@ -751,20 +861,24 @@ namespace ProjectVagabond.Scenes
         private void TriggerNodeEvent(int nodeId)
         {
             if (_currentMap == null || !_currentMap.Nodes.TryGetValue(nodeId, out var node)) return;
-            _mapState = SplitMapState.EventInProgress;
             switch (node.NodeType)
             {
                 case SplitNodeType.Battle:
                 case SplitNodeType.MajorBattle:
+                    _mapState = SplitMapState.EventInProgress;
                     WasMajorBattle = node.NodeType == SplitNodeType.MajorBattle;
                     InitiateCombat(node.EventData as List<string> ?? new List<string>());
                     break;
                 case SplitNodeType.Rest:
                     Debug.WriteLine("[SplitMapScene] Player landed on a Rest node.");
-                    node.IsCompleted = true;
-                    UpdateCameraTarget(node.Position, false);
-                    _mapState = SplitMapState.LoweringNode;
-                    _nodeLiftTimer = 0f;
+                    _mapState = SplitMapState.Resting;
+                    _isRestEventActive = true;
+                    _isRestEventFadingOut = false;
+                    _restEventFadeTimer = 0f;
+                    _restPromptPlink.Start(REST_EVENT_FADE_DURATION);
+                    _restYesButton.PlayEntrance(REST_EVENT_FADE_DURATION + 0.15f);
+                    _restNoButton.PlayEntrance(REST_EVENT_FADE_DURATION + 0.3f);
+                    _restNavGroup.SelectFirst();
                     break;
                 case SplitNodeType.Recruit:
                     Debug.WriteLine("[SplitMapScene] Player landed on a Recruit node.");
@@ -850,11 +964,46 @@ namespace ProjectVagabond.Scenes
             var mapBounds = new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
             _voidEdgeEffect.Draw(spriteBatch, mapBounds);
 
+            // --- REST EVENT OVERLAY ---
+            if (_isRestEventActive)
+            {
+                float alpha = _restEventFadeTimer / REST_EVENT_FADE_DURATION;
+                alpha = Math.Clamp(alpha, 0f, 1f);
+
+                var maskRect = new Rectangle(0, 0, Global.VIRTUAL_WIDTH, (int)mapViewHeight);
+                spriteBatch.DrawSnapped(pixel, maskRect, _global.Palette_Off * (alpha * 0.95f));
+
+                if (alpha >= 1f || _restPromptPlink.IsActive)
+                {
+                    string prompt = "SHOULD THE PARTY REST?";
+                    var defaultFont = ServiceLocator.Get<Core>().DefaultFont;
+                    var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+
+                    Vector2 promptSize = defaultFont.MeasureString(prompt);
+                    Vector2 promptOrigin = promptSize / 2f;
+                    Vector2 promptPos = new Vector2(Global.VIRTUAL_WIDTH / 2f, mapViewHeight / 2f - 15);
+
+                    float pScale = _restPromptPlink.IsActive ? _restPromptPlink.Scale : 1f;
+                    float pRot = _restPromptPlink.IsActive ? _restPromptPlink.Rotation : 0f;
+
+                    if (pScale > 0.01f && !_isRestEventFadingOut)
+                    {
+                        spriteBatch.DrawStringSnapped(defaultFont, prompt, promptPos, _global.Palette_LightPale, pRot, promptOrigin, pScale, SpriteEffects.None, 0f);
+                    }
+
+                    if (!_isRestEventFadingOut)
+                    {
+                        _restYesButton.Draw(spriteBatch, secondaryFont, gameTime, transform);
+                        _restNoButton.Draw(spriteBatch, secondaryFont, gameTime, transform);
+                    }
+                }
+            }
+
             _hudRenderer.Draw(spriteBatch, gameTime, _hudSlideOffset);
 
             _settingsButton?.Draw(spriteBatch, font, gameTime, transform);
 
-            if (_hoveredNodeId != -1 && _mapState == SplitMapState.Idle)
+            if (_hoveredNodeId != -1 && _mapState == SplitMapState.Idle && !_isRestEventActive)
             {
                 if (_currentMap.Nodes.TryGetValue(_hoveredNodeId, out var hoveredNode) && hoveredNode.IsReachable)
                 {
@@ -895,7 +1044,7 @@ namespace ProjectVagabond.Scenes
             if (_currentMap == null) return;
 
             SplitMapPath? highlightedPath = null;
-            if (_hoveredNodeId != -1 && _mapState == SplitMapState.Idle)
+            if (_hoveredNodeId != -1 && _mapState == SplitMapState.Idle && !_isRestEventActive)
                 highlightedPath = _currentMap.Paths.Values.FirstOrDefault(p => p.FromNodeId == _playerCurrentNodeId && p.ToNodeId == _hoveredNodeId);
 
             foreach (var path in _currentMap.Paths.Values)
@@ -975,7 +1124,7 @@ namespace ProjectVagabond.Scenes
             else if (node.NodeType != SplitNodeType.Origin && node.Id != _playerCurrentNodeId && !node.IsReachable) color = _global.Palette_DarkestPale;
 
             bool isSelected = (node.Id == _selectedNodeId);
-            bool isHovered = (node.Id == _hoveredNodeId);
+            bool isHovered = (node.Id == _hoveredNodeId && !_isRestEventActive);
             bool isAnimatingThisNode = (node.Id == _playerCurrentNodeId) &&
                                        (_mapState == SplitMapState.LiftingNode ||
                                         _mapState == SplitMapState.PulsingNode ||
