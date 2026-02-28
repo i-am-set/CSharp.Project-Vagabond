@@ -557,7 +557,7 @@ namespace ProjectVagabond
                     {
                         _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, baseTransform);
                         float pulse = 0.7f + 0.3f * MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * 15f);
-                        _spriteBatch.Draw(ffIcon, new Vector2(2, 2), Color.White * pulse);
+                        _spriteBatch.Draw(ffIcon, new Vector2(4, 4), Color.White * pulse);
                         _spriteBatch.End();
                     }
                 }
