@@ -29,7 +29,6 @@ namespace ProjectVagabond.Battle
         public int CurrentGuard { get; set; }
         public int MaxGuard { get; set; }
 
-        // VisualHP is distinct from Stats.CurrentHP to allow for smooth animation
         public float VisualHP { get; set; }
         public float VisualAlpha { get; set; } = 1.0f;
 

@@ -155,13 +155,14 @@ namespace ProjectVagabond.Battle.UI
 
             public float ValueBefore;
             public float ValueAfter;
+            public int AnimatedHP;
 
             public float Timer;
 
             public const float PREVIEW_DURATION = 0.6f;
             public const float FLASH_BLACK_DURATION = 0.05f;
             public const float FLASH_WHITE_DURATION = 0.05f;
-            public const float SHRINK_DURATION = 0.25f;
+            public const float SHRINK_DURATION = 0.5f;
         }
 
         public class AbilityIndicatorState
@@ -525,32 +526,56 @@ namespace ProjectVagabond.Battle.UI
 
         public void StartHealthLossAnimation(string combatantId, float hpBefore, float hpAfter)
         {
-            _activeBarAnimations.RemoveAll(a => a.CombatantID == combatantId && a.ResourceType == ResourceBarAnimationState.BarResourceType.HP);
-            _activeBarAnimations.Add(new ResourceBarAnimationState
+            var existing = _activeBarAnimations.FirstOrDefault(a => a.CombatantID == combatantId && a.ResourceType == ResourceBarAnimationState.BarResourceType.HP);
+            if (existing != null)
             {
-                CombatantID = combatantId,
-                ResourceType = ResourceBarAnimationState.BarResourceType.HP,
-                AnimationType = ResourceBarAnimationState.BarAnimationType.Loss,
-                CurrentLossPhase = ResourceBarAnimationState.LossPhase.Preview,
-                ValueBefore = hpBefore,
-                ValueAfter = hpAfter,
-                Timer = 0f
-            });
+                existing.ValueBefore = existing.AnimatedHP;
+                existing.ValueAfter = hpAfter;
+                existing.Timer = 0f;
+                existing.AnimationType = ResourceBarAnimationState.BarAnimationType.Loss;
+                existing.CurrentLossPhase = ResourceBarAnimationState.LossPhase.Preview;
+            }
+            else
+            {
+                _activeBarAnimations.Add(new ResourceBarAnimationState
+                {
+                    CombatantID = combatantId,
+                    ResourceType = ResourceBarAnimationState.BarResourceType.HP,
+                    AnimationType = ResourceBarAnimationState.BarAnimationType.Loss,
+                    CurrentLossPhase = ResourceBarAnimationState.LossPhase.Preview,
+                    ValueBefore = hpBefore,
+                    ValueAfter = hpAfter,
+                    AnimatedHP = (int)hpBefore,
+                    Timer = 0f
+                });
+            }
         }
 
         public void StartHealthRecoveryAnimation(string combatantId, float hpBefore, float hpAfter)
         {
-            _activeBarAnimations.RemoveAll(a => a.CombatantID == combatantId && a.ResourceType == ResourceBarAnimationState.BarResourceType.HP);
-            _activeBarAnimations.Add(new ResourceBarAnimationState
+            var existing = _activeBarAnimations.FirstOrDefault(a => a.CombatantID == combatantId && a.ResourceType == ResourceBarAnimationState.BarResourceType.HP);
+            if (existing != null)
             {
-                CombatantID = combatantId,
-                ResourceType = ResourceBarAnimationState.BarResourceType.HP,
-                AnimationType = ResourceBarAnimationState.BarAnimationType.Recovery,
-                CurrentRecoveryPhase = ResourceBarAnimationState.RecoveryPhase.Hang,
-                ValueBefore = hpBefore,
-                ValueAfter = hpAfter,
-                Timer = 0f
-            });
+                existing.ValueBefore = existing.AnimatedHP;
+                existing.ValueAfter = hpAfter;
+                existing.Timer = 0f;
+                existing.AnimationType = ResourceBarAnimationState.BarAnimationType.Recovery;
+                existing.CurrentRecoveryPhase = ResourceBarAnimationState.RecoveryPhase.Hang;
+            }
+            else
+            {
+                _activeBarAnimations.Add(new ResourceBarAnimationState
+                {
+                    CombatantID = combatantId,
+                    ResourceType = ResourceBarAnimationState.BarResourceType.HP,
+                    AnimationType = ResourceBarAnimationState.BarAnimationType.Recovery,
+                    CurrentRecoveryPhase = ResourceBarAnimationState.RecoveryPhase.Hang,
+                    ValueBefore = hpBefore,
+                    ValueAfter = hpAfter,
+                    AnimatedHP = (int)hpBefore,
+                    Timer = 0f
+                });
+            }
         }
 
         public void StartAlphaAnimation(string combatantId, float alphaBefore, float alphaAfter)
@@ -1191,7 +1216,13 @@ namespace ProjectVagabond.Battle.UI
                         case ResourceBarAnimationState.LossPhase.Shrink:
                             if (anim.Timer >= ResourceBarAnimationState.SHRINK_DURATION)
                             {
+                                anim.AnimatedHP = (int)anim.ValueAfter;
                                 _activeBarAnimations.RemoveAt(i);
+                            }
+                            else
+                            {
+                                float progress = anim.Timer / ResourceBarAnimationState.SHRINK_DURATION;
+                                anim.AnimatedHP = (int)MathHelper.Lerp(anim.ValueBefore, anim.ValueAfter, Easing.EaseOutQuad(progress));
                             }
                             break;
                     }
@@ -1210,7 +1241,13 @@ namespace ProjectVagabond.Battle.UI
                     {
                         if (anim.Timer >= _global.HealOverlayFadeDuration)
                         {
+                            anim.AnimatedHP = (int)anim.ValueAfter;
                             _activeBarAnimations.RemoveAt(i);
+                        }
+                        else
+                        {
+                            float progress = anim.Timer / _global.HealOverlayFadeDuration;
+                            anim.AnimatedHP = (int)MathHelper.Lerp(anim.ValueBefore, anim.ValueAfter, Easing.EaseOutQuad(progress));
                         }
                     }
                 }
@@ -1219,19 +1256,9 @@ namespace ProjectVagabond.Battle.UI
 
         private void UpdateHealthAnimations(GameTime gameTime, IEnumerable<BattleCombatant> combatants)
         {
-            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
-            const float LERP_SPEED = 10f;
-
             foreach (var combatant in combatants)
             {
-                if (Math.Abs(combatant.VisualHP - combatant.Stats.CurrentHP) > 0.01f)
-                {
-                    combatant.VisualHP = MathHelper.Lerp(combatant.VisualHP, combatant.Stats.CurrentHP, 1f - MathF.Exp(-LERP_SPEED * dt));
-                }
-                else
-                {
-                    combatant.VisualHP = combatant.Stats.CurrentHP;
-                }
+                combatant.VisualHP = combatant.Stats.CurrentHP;
             }
         }
 

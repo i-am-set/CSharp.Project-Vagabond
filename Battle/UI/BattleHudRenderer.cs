@@ -24,7 +24,7 @@ namespace ProjectVagabond.Battle.UI
         private readonly Texture2D _pixel;
 
         // --- TUNING NUMBERS ---
-        public const int HP_WRAP_THRESHOLD = 100; // Wrap if MaxHP is >= this
+        public const int HP_WRAP_THRESHOLD = 110; // Wrap if MaxHP is >= this
         public const int HP_WRAP_CHUNK = 100;     // Pips per line when wrapped
         public const int HP_WRAP_GAP = 1;         // Vertical pixels between lines
 
@@ -210,52 +210,6 @@ namespace ProjectVagabond.Battle.UI
                 healMaxEnd = Math.Min(maxPips, currentPips + maxHeal);
             }
 
-            // Animation Calculation
-            int animStart = -1;
-            int animEnd = -1;
-            Color animColor = Color.Transparent;
-
-            if (anim != null)
-            {
-                if (anim.AnimationType == BattleAnimationManager.ResourceBarAnimationState.BarAnimationType.Loss)
-                {
-                    animStart = (int)anim.ValueAfter;
-                    animEnd = (int)anim.ValueBefore;
-
-                    switch (anim.CurrentLossPhase)
-                    {
-                        case BattleAnimationManager.ResourceBarAnimationState.LossPhase.Preview:
-                            animColor = (anim.ResourceType == BattleAnimationManager.ResourceBarAnimationState.BarResourceType.HP) ? _global.Palette_Rust : Color.White;
-                            break;
-                        case BattleAnimationManager.ResourceBarAnimationState.LossPhase.FlashBlack:
-                            animColor = Color.Black;
-                            break;
-                        case BattleAnimationManager.ResourceBarAnimationState.LossPhase.FlashWhite:
-                            animColor = Color.White;
-                            break;
-                        case BattleAnimationManager.ResourceBarAnimationState.LossPhase.Shrink:
-                            float progress = anim.Timer / BattleAnimationManager.ResourceBarAnimationState.SHRINK_DURATION;
-                            Color baseC = (anim.ResourceType == BattleAnimationManager.ResourceBarAnimationState.BarResourceType.HP) ? _global.Palette_Rust : _global.Palette_Sun;
-                            animColor = baseC * (1.0f - progress);
-                            break;
-                    }
-                }
-                else // Recovery
-                {
-                    animStart = (int)anim.ValueBefore;
-                    animEnd = (int)anim.ValueAfter;
-
-                    Color ghostColor = _global.HealOverlayColor;
-                    float overlayAlpha = 1.0f;
-                    if (anim.CurrentRecoveryPhase == BattleAnimationManager.ResourceBarAnimationState.RecoveryPhase.Fade)
-                    {
-                        float progress = anim.Timer / _global.HealOverlayFadeDuration;
-                        overlayAlpha = (1.0f - progress);
-                    }
-                    animColor = ghostColor * overlayAlpha;
-                }
-            }
-
             // Flash Timers
             float flashMinRollAlpha = 0f;
             float flashMaxRollAlpha = 0f;
@@ -304,9 +258,37 @@ namespace ProjectVagabond.Battle.UI
                 if (i < currentPips) pipColor = fgColor;
 
                 // 2. Animation Overlay
-                if (animStart != -1 && i >= animStart && i < animEnd)
+                if (anim != null)
                 {
-                    if (animColor.A > 0) pipColor = animColor;
+                    int valueBefore = (int)anim.ValueBefore;
+
+                    if (anim.AnimationType == BattleAnimationManager.ResourceBarAnimationState.BarAnimationType.Loss)
+                    {
+                        if (anim.CurrentLossPhase == BattleAnimationManager.ResourceBarAnimationState.LossPhase.Shrink)
+                        {
+                            if (i >= currentPips && i < anim.AnimatedHP) pipColor = _global.Palette_Rust;
+                        }
+                        else
+                        {
+                            if (i >= currentPips && i < valueBefore)
+                            {
+                                if (anim.CurrentLossPhase == BattleAnimationManager.ResourceBarAnimationState.LossPhase.Preview) pipColor = _global.Palette_Rust;
+                                else if (anim.CurrentLossPhase == BattleAnimationManager.ResourceBarAnimationState.LossPhase.FlashBlack) pipColor = Color.Black;
+                                else if (anim.CurrentLossPhase == BattleAnimationManager.ResourceBarAnimationState.LossPhase.FlashWhite) pipColor = Color.White;
+                            }
+                        }
+                    }
+                    else // Recovery
+                    {
+                        if (anim.CurrentRecoveryPhase == BattleAnimationManager.ResourceBarAnimationState.RecoveryPhase.Hang)
+                        {
+                            if (i >= valueBefore && i < currentPips) pipColor = _global.Palette_Sun;
+                        }
+                        else if (anim.CurrentRecoveryPhase == BattleAnimationManager.ResourceBarAnimationState.RecoveryPhase.Fade)
+                        {
+                            if (i >= valueBefore && i < anim.AnimatedHP) pipColor = _global.Palette_Sky;
+                        }
+                    }
                 }
 
                 // 3. Damage Preview
