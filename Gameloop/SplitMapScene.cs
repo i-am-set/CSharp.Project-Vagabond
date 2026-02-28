@@ -1,4 +1,5 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using BepuPhysics.Trees;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -1048,6 +1049,14 @@ namespace ProjectVagabond.Scenes
                 case SplitNodeType.MajorBattle:
                     texture = _spriteManager.SplitNodeCombat;
                     silhouette = _spriteManager.SplitNodeCombatSilhouette;
+                    break;
+                case SplitNodeType.Rest:
+                    texture = _spriteManager.SplitNodeRest;
+                    silhouette = _spriteManager.SplitNodeRestSilhouette;
+                    break;
+                case SplitNodeType.Recruit:
+                    texture = _spriteManager.SplitNodeRecruit;
+                    silhouette = _spriteManager.SplitNodeRecruitSilhouette;
                     break;
                 default:
                     texture = _spriteManager.SplitNodeCombat;

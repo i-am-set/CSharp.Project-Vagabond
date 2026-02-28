@@ -71,6 +71,28 @@ namespace ProjectVagabond.Progression
                 float totalHeight = (nodeCount - 1) * NODE_VERTICAL_GAP;
                 float startY = WORLD_Y_CENTER - (totalHeight / 2f);
 
+                // Create a weighted pool for this column to guarantee no duplicates
+                var pool = new List<(SplitNodeType Type, BattleDifficulty Diff, int Weight)>();
+                pool.Add((SplitNodeType.Rest, BattleDifficulty.Normal, 10));
+                pool.Add((SplitNodeType.Recruit, BattleDifficulty.Normal, 10));
+
+                if (col <= 3)
+                {
+                    pool.Add((SplitNodeType.Battle, BattleDifficulty.Easy, 60));
+                    pool.Add((SplitNodeType.Battle, BattleDifficulty.Normal, 20));
+                }
+                else if (col <= 6)
+                {
+                    pool.Add((SplitNodeType.Battle, BattleDifficulty.Easy, 15));
+                    pool.Add((SplitNodeType.Battle, BattleDifficulty.Normal, 50));
+                    pool.Add((SplitNodeType.Battle, BattleDifficulty.Hard, 15));
+                }
+                else
+                {
+                    pool.Add((SplitNodeType.Battle, BattleDifficulty.Normal, 30));
+                    pool.Add((SplitNodeType.Battle, BattleDifficulty.Hard, 50));
+                }
+
                 for (int i = 0; i < nodeCount; i++)
                 {
                     float y = startY + (i * NODE_VERTICAL_GAP);
@@ -88,16 +110,30 @@ namespace ProjectVagabond.Progression
                     }
                     else
                     {
-                        double roll = _random.NextDouble();
-                        if (roll < 0.1) node.NodeType = SplitNodeType.Rest;
-                        else if (roll < 0.2) node.NodeType = SplitNodeType.Recruit;
-                        else
-                        {
-                            node.NodeType = SplitNodeType.Battle;
-                            if (col <= 3) node.Difficulty = BattleDifficulty.Easy;
-                            else if (col <= 6) node.Difficulty = BattleDifficulty.Normal;
-                            else node.Difficulty = BattleDifficulty.Hard;
+                        // Weighted random selection without replacement
+                        int totalWeight = pool.Sum(p => p.Weight);
+                        int roll = _random.Next(totalWeight);
+                        int currentWeight = 0;
+                        int selectedIndex = 0;
 
+                        for (int p = 0; p < pool.Count; p++)
+                        {
+                            currentWeight += pool[p].Weight;
+                            if (roll < currentWeight)
+                            {
+                                selectedIndex = p;
+                                break;
+                            }
+                        }
+
+                        var selected = pool[selectedIndex];
+                        pool.RemoveAt(selectedIndex); // Remove to prevent duplicates in this column
+
+                        node.NodeType = selected.Type;
+                        node.Difficulty = selected.Diff;
+
+                        if (node.NodeType == SplitNodeType.Battle)
+                        {
                             node.EventData = progressionManager.GetRandomBattle(node.Difficulty);
                         }
                     }

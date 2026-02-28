@@ -35,11 +35,9 @@ namespace ProjectVagabond
         public Texture2D ActionIconsSpriteSheet { get; private set; }
         public Texture2D ActionButtonUsesSpriteSheet { get; private set; }
 
-        // Used for Stat Change Arrows (Up/Down) - 9x3
         public Texture2D StatChangeIconsSpriteSheet { get; private set; }
         public Texture2D StatChangeIconsSpriteSheetSilhouette { get; private set; }
 
-        // Used for Permanent Status Effects (Poison, Burn, etc.) - 20x10
         public Texture2D PermanentStatusIconsSpriteSheet { get; private set; }
 
         public Texture2D MiniActionButtonSprite { get; private set; }
@@ -126,6 +124,12 @@ namespace ProjectVagabond
         public Texture2D SplitNodeHardCombatSilhouette { get; private set; }
         public Texture2D MapNodePlayerSprite { get; private set; }
         public Texture2D MapNodePlayerSpriteSilhouette { get; private set; }
+
+        // NEW: Rest and Recruit Nodes
+        public Texture2D SplitNodeRest { get; private set; }
+        public Texture2D SplitNodeRestSilhouette { get; private set; }
+        public Texture2D SplitNodeRecruit { get; private set; }
+        public Texture2D SplitNodeRecruitSilhouette { get; private set; }
 
         public Texture2D SplitMapInventoryButton { get; private set; }
         public Texture2D SplitMapHeaderBorder { get; private set; }
@@ -237,7 +241,6 @@ namespace ProjectVagabond
 
             try
             {
-                // Load the 9x3 arrow sheet for stat changes
                 StatChangeIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/stat_change_icons_spritesheet");
                 StatChangeIconsSpriteSheetSilhouette = CreateSilhouette(StatChangeIconsSpriteSheet);
             }
@@ -247,7 +250,6 @@ namespace ProjectVagabond
                 StatChangeIconsSpriteSheetSilhouette = _textureFactory.CreateColoredTexture(9, 3, Color.White);
             }
 
-            // Load the 20x10 status icon sheet from the new path
             try
             {
                 PermanentStatusIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/status_effect_icon_spritesheet");
@@ -261,8 +263,6 @@ namespace ProjectVagabond
             try { ItemWeaponsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/Items/item_weapons_spritesheet"); }
             catch { ItemWeaponsSpriteSheet = _textureFactory.CreateColoredTexture(128, 256, Color.Magenta); }
 
-
-            // Load Battle Borders
             try { BattleBorderMain = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/battle_border_main"); }
             catch { BattleBorderMain = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
 
@@ -284,7 +284,6 @@ namespace ProjectVagabond
             try { BattleBorderSwitch = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/battle_border_switch"); }
             catch { BattleBorderSwitch = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
 
-            // Load Mouse Prompt Sprites
             try { MousePromptBlank = _core.Content.Load<Texture2D>("Sprites/UI/KeyPrompts/mouse/ui_mouse_blank"); }
             catch { MousePromptBlank = _textureFactory.CreateColoredTexture(5, 7, Color.Magenta); }
             MousePromptBlankSilhouette = CreateSilhouette(MousePromptBlank);
@@ -327,6 +326,15 @@ namespace ProjectVagabond
             try { SplitNodeHardCombat = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_HardCombat"); }
             catch { SplitNodeHardCombat = _textureFactory.CreateColoredTexture(64, 32, Color.DarkRed); }
             SplitNodeHardCombatSilhouette = CreateSilhouette(SplitNodeHardCombat);
+
+            // NEW: Rest and Recruit nodes
+            try { SplitNodeRest = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_Rest"); }
+            catch { SplitNodeRest = _textureFactory.CreateColoredTexture(64, 32, Color.GreenYellow); }
+            SplitNodeRestSilhouette = CreateSilhouette(SplitNodeRest);
+
+            try { SplitNodeRecruit = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_Recuit"); } // Kept exact spelling from prompt
+            catch { SplitNodeRecruit = _textureFactory.CreateColoredTexture(64, 32, Color.CornflowerBlue); }
+            SplitNodeRecruitSilhouette = CreateSilhouette(SplitNodeRecruit);
 
             try { MapNodePlayerSprite = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_Player"); }
             catch { MapNodePlayerSprite = _textureFactory.CreateColoredTexture(64, 32, Color.Cyan); }
@@ -378,7 +386,6 @@ namespace ProjectVagabond
             try { TargetingButtonSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/ui_choose_a_target_button_spritesheet"); }
             catch { TargetingButtonSpriteSheet = _textureFactory.CreateColoredTexture(450, 22, Color.Magenta); }
 
-            // Load Health Bar Sprites
             try { InventoryPlayerHealthBarEmpty = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_player_health_bar_empty"); }
             catch { InventoryPlayerHealthBarEmpty = _textureFactory.CreateColoredTexture(66, 7, Color.DarkGray); }
             try { InventoryPlayerHealthBarDisabled = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_player_health_bar_disabled"); }
@@ -389,27 +396,21 @@ namespace ProjectVagabond
             try { InventoryPlayerHealthBarOverlay = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_player_health_bar_overlay"); }
             catch { InventoryPlayerHealthBarOverlay = _textureFactory.CreateColoredTexture(64, 7, Color.LimeGreen); }
 
-            // Generate Noise Texture
             try { NoiseTexture = _textureFactory.CreateNoiseTexture(256, 256); }
             catch { NoiseTexture = _textureFactory.CreateColoredTexture(256, 256, Color.Gray); }
 
-            // Load Heal Particle Sprite
             try { HealParticleSprite = _core.Content.Load<Texture2D>("Sprites/Particles/heal_plus"); }
             catch { HealParticleSprite = _textureFactory.CreatePlusParticleTexture(); }
 
-            // Load Spell Slot Button Sprite
             try { InventorySpellSlotButtonSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_spell_slot_button"); }
             catch { InventorySpellSlotButtonSpriteSheet = _textureFactory.CreateColoredTexture(192, 8, Color.Magenta); }
 
-            // Load Stunned Animation Sprite Sheet
             try { StunnedIconSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/stunned_16x16_spritesheet"); }
             catch { StunnedIconSpriteSheet = _textureFactory.CreateColoredTexture(48, 16, Color.Magenta); }
 
-            // Load Tenacity Pip Sprite Sheet
             try { TenacityPipTexture = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/tenacity_3x3_icon"); }
             catch { TenacityPipTexture = _textureFactory.CreateColoredTexture(6, 3, Color.Magenta); }
 
-            // Load Tenacity Animation Sprite Sheets
             try { TenacityBreakSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/tenacity_break_32x32_spritesheet"); }
             catch { TenacityBreakSpriteSheet = _textureFactory.CreateColoredTexture(352, 32, Color.Cyan); }
 
@@ -422,15 +423,13 @@ namespace ProjectVagabond
             try { CardFlipIcon = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/rotate_icon_8x8_spritesheet"); }
             catch { CardFlipIcon = _textureFactory.CreateColoredTexture(16, 8, Color.Yellow); }
 
-            // --- Create Mini Action Button Texture ---
-            // Width 80px, Height 6px
             try { MiniActionButtonSprite = _textureFactory.CreateMiniActionButtonTexture(80); }
             catch { MiniActionButtonSprite = _textureFactory.CreateColoredTexture(80, 6, Color.Magenta); }
 
             LoadAndCacheCursorSprite("cursor_default");
             LoadAndCacheCursorSprite("cursor_hover_clickable");
-            LoadAndCacheCursorSprite("cursor_hover_clickable_hint"); // Added new cursor
-            LoadAndCacheCursorSprite("cursor_hover_hint"); // Added new cursor
+            LoadAndCacheCursorSprite("cursor_hover_clickable_hint");
+            LoadAndCacheCursorSprite("cursor_hover_hint");
             LoadAndCacheCursorSprite("cursor_dragging_draggable");
 
             InitializeArrowSourceRects();
@@ -452,11 +451,8 @@ namespace ProjectVagabond
         {
             StatChangeIconSourceRects = new Rectangle[3];
             const int iconSize = 3;
-            // Frame 0: Neutral
             StatChangeIconSourceRects[0] = new Rectangle(0, 0, iconSize, iconSize);
-            // Frame 1: Up
             StatChangeIconSourceRects[1] = new Rectangle(iconSize, 0, iconSize, iconSize);
-            // Frame 2: Down
             StatChangeIconSourceRects[2] = new Rectangle(iconSize * 2, 0, iconSize, iconSize);
         }
 
@@ -464,12 +460,9 @@ namespace ProjectVagabond
         {
             TargetingButtonSourceRects = new Rectangle[3];
             const int frameWidth = 150;
-            const int frameHeight = 13; // Changed from 22 to 13
-            // Frame 0: Idle
+            const int frameHeight = 13;
             TargetingButtonSourceRects[0] = new Rectangle(0, 0, frameWidth, frameHeight);
-            // Frame 1: Hover
             TargetingButtonSourceRects[1] = new Rectangle(frameWidth, 0, frameWidth, frameHeight);
-            // Frame 2: Disabled
             TargetingButtonSourceRects[2] = new Rectangle(frameWidth * 2, 0, frameWidth, frameHeight);
         }
 
@@ -478,19 +471,16 @@ namespace ProjectVagabond
             InventorySpellSlotButtonSourceRects = new Rectangle[3];
             const int frameWidth = 64;
             const int frameHeight = 8;
-            // Frame 0: Empty
             InventorySpellSlotButtonSourceRects[0] = new Rectangle(0, 0, frameWidth, frameHeight);
-            // Frame 1: Filled
             InventorySpellSlotButtonSourceRects[1] = new Rectangle(frameWidth, 0, frameWidth, frameHeight);
-            // Frame 2: Hover
             InventorySpellSlotButtonSourceRects[2] = new Rectangle(frameWidth * 2, 0, frameWidth, frameHeight);
         }
 
         private void InitializeInventoryScrollArrowRects()
         {
             InventoryScrollArrowRects = new Rectangle[2];
-            InventoryScrollArrowRects[0] = new Rectangle(0, 0, 5, 5); // Up
-            InventoryScrollArrowRects[1] = new Rectangle(5, 0, 5, 5); // Down
+            InventoryScrollArrowRects[0] = new Rectangle(0, 0, 5, 5);
+            InventoryScrollArrowRects[1] = new Rectangle(5, 0, 5, 5);
         }
 
         private void InitializeInventoryArrowButtonRects()
@@ -499,12 +489,12 @@ namespace ProjectVagabond
             const int frameHeight = 5;
 
             InventoryLeftArrowButtonSourceRects = new Rectangle[2];
-            InventoryLeftArrowButtonSourceRects[0] = new Rectangle(0, 0, frameWidth, frameHeight); // Idle
-            InventoryLeftArrowButtonSourceRects[1] = new Rectangle(frameWidth, 0, frameWidth, frameHeight); // Hover
+            InventoryLeftArrowButtonSourceRects[0] = new Rectangle(0, 0, frameWidth, frameHeight);
+            InventoryLeftArrowButtonSourceRects[1] = new Rectangle(frameWidth, 0, frameWidth, frameHeight);
 
             InventoryRightArrowButtonSourceRects = new Rectangle[2];
-            InventoryRightArrowButtonSourceRects[0] = new Rectangle(0, 0, frameWidth, frameHeight); // Idle
-            InventoryRightArrowButtonSourceRects[1] = new Rectangle(frameWidth, 0, frameWidth, frameHeight); // Hover
+            InventoryRightArrowButtonSourceRects[0] = new Rectangle(0, 0, frameWidth, frameHeight);
+            InventoryRightArrowButtonSourceRects[1] = new Rectangle(frameWidth, 0, frameWidth, frameHeight);
         }
 
         private void InitializeInventoryHeaderButtonRects()
@@ -512,11 +502,8 @@ namespace ProjectVagabond
             InventoryHeaderButtonSourceRects = new Rectangle[3];
             const int frameWidth = 32;
             const int frameHeight = 32;
-            // Frame 0: Default/Unselected
             InventoryHeaderButtonSourceRects[0] = new Rectangle(0, 0, frameWidth, frameHeight);
-            // Frame 1: Hover
             InventoryHeaderButtonSourceRects[1] = new Rectangle(frameWidth, 0, frameWidth, frameHeight);
-            // Frame 2: Selected
             InventoryHeaderButtonSourceRects[2] = new Rectangle(frameWidth * 2, 0, frameWidth, frameHeight);
         }
 
@@ -525,9 +512,7 @@ namespace ProjectVagabond
             SplitMapInventoryButtonSourceRects = new Rectangle[2];
             const int frameWidth = 16;
             const int frameHeight = 16;
-            // Frame 0: Idle
             SplitMapInventoryButtonSourceRects[0] = new Rectangle(0, 0, frameWidth, frameHeight);
-            // Frame 1: Hover
             SplitMapInventoryButtonSourceRects[1] = new Rectangle(frameWidth, 0, frameWidth, frameHeight);
         }
 
@@ -536,9 +521,7 @@ namespace ProjectVagabond
             SplitMapCloseInventoryButtonSourceRects = new Rectangle[2];
             const int frameWidth = 16;
             const int frameHeight = 16;
-            // Frame 0: Idle
             SplitMapCloseInventoryButtonSourceRects[0] = new Rectangle(0, 0, frameWidth, frameHeight);
-            // Frame 1: Hover
             SplitMapCloseInventoryButtonSourceRects[1] = new Rectangle(frameWidth, 0, frameWidth, frameHeight);
         }
 
@@ -547,9 +530,7 @@ namespace ProjectVagabond
             SplitMapSettingsButtonSourceRects = new Rectangle[2];
             const int frameWidth = 16;
             const int frameHeight = 16;
-            // Frame 0: Idle
             SplitMapSettingsButtonSourceRects[0] = new Rectangle(0, 0, frameWidth, frameHeight);
-            // Frame 1: Hover
             SplitMapSettingsButtonSourceRects[1] = new Rectangle(frameWidth, 0, frameWidth, frameHeight);
         }
 
@@ -558,28 +539,24 @@ namespace ProjectVagabond
             if (ActionButtonUsesSpriteSheet == null) return;
             int spriteWidth = 157;
             int spriteHeight = 17;
-            // Corrected mapping based on user feedback.
-            // Assumes the sprite sheet is ordered: [3 uses], [2 uses], [1 use]
-            SpellUsesSourceRects[3] = new Rectangle(0 * spriteWidth, 0, spriteWidth, spriteHeight); // 3 uses left (leftmost sprite)
-            SpellUsesSourceRects[2] = new Rectangle(1 * spriteWidth, 0, spriteWidth, spriteHeight); // 2 uses left (middle sprite)
-            SpellUsesSourceRects[1] = new Rectangle(2 * spriteWidth, 0, spriteWidth, spriteHeight); // 1 use left (rightmost sprite)
+            SpellUsesSourceRects[3] = new Rectangle(0 * spriteWidth, 0, spriteWidth, spriteHeight);
+            SpellUsesSourceRects[2] = new Rectangle(1 * spriteWidth, 0, spriteWidth, spriteHeight);
+            SpellUsesSourceRects[1] = new Rectangle(2 * spriteWidth, 0, spriteWidth, spriteHeight);
         }
 
         private void InitializeArrowSourceRects()
         {
-            // Indices 0-7 are the directional arrows in a circle starting from West, going clockwise.
-            // Index 8 is the center star.
             var spriteSheetCoords = new Point[9]
             {
-        new Point(0, 1), // 0: W
-        new Point(0, 0), // 1: NW
-        new Point(1, 0), // 2: N (Up)
-        new Point(2, 0), // 3: NE
-        new Point(2, 1), // 4: E (Right)
-        new Point(2, 2), // 5: SE
-        new Point(1, 2), // 6: S (Down)
-        new Point(0, 2), // 7: SW
-        new Point(1, 1)  // 8: Center (Star)
+                new Point(0, 1),
+                new Point(0, 0),
+                new Point(1, 0),
+                new Point(2, 0),
+                new Point(2, 1),
+                new Point(2, 2),
+                new Point(1, 2),
+                new Point(0, 2),
+                new Point(1, 1)
             };
 
             ArrowIconSourceRects = new Rectangle[9];
@@ -599,17 +576,13 @@ namespace ProjectVagabond
 
         private void InitializeActionButtonsSourceRects()
         {
-            // The new sheet is a 2x3 grid (2 columns: Normal, Hover; 3 rows: Act, Item, Run)
-            // Each sprite is 96x43 pixels.
             ActionButtonSourceRects = new Rectangle[6];
             int spriteWidth = 192 / 2;
             int spriteHeight = 129 / 3;
 
-            for (int i = 0; i < 3; i++) // 3 rows for Act, Item, Run
+            for (int i = 0; i < 3; i++)
             {
-                // Normal state (column 0)
                 ActionButtonSourceRects[i * 2] = new Rectangle(0, i * spriteHeight, spriteWidth, spriteHeight);
-                // Hover state (column 1)
                 ActionButtonSourceRects[i * 2 + 1] = new Rectangle(spriteWidth, i * spriteHeight, spriteWidth, spriteHeight);
             }
         }
@@ -636,7 +609,6 @@ namespace ProjectVagabond
             Texture2D sprite = null;
             bool isMajor = false;
 
-            // Try loading major sprite first
             try
             {
                 sprite = _core.Content.Load<Texture2D>($"Sprites/Enemies/Major/{archetypeId.ToLower()}");
@@ -644,7 +616,6 @@ namespace ProjectVagabond
             }
             catch
             {
-                // Major sprite not found, fall back to normal
                 try
                 {
                     sprite = _core.Content.Load<Texture2D>($"Sprites/Enemies/{archetypeId.ToLower()}");
@@ -652,13 +623,11 @@ namespace ProjectVagabond
                 }
                 catch
                 {
-                    // Neither found, cache null
                     _enemySprites[archetypeId] = (null, null, false);
                     return null;
                 }
             }
 
-            // If a sprite was loaded (either major or normal)
             var silhouette = CreateSilhouette(sprite);
             _enemySprites[archetypeId] = (sprite, silhouette, isMajor);
             int partSize = isMajor ? 96 : 64;
@@ -675,7 +644,6 @@ namespace ProjectVagabond
                 return cachedSprite.Silhouette;
             }
 
-            // This will load and cache both original and silhouette
             GetEnemySprite(archetypeId);
 
             if (_enemySprites.TryGetValue(archetypeId, out var newlyCachedSprite))
@@ -689,7 +657,6 @@ namespace ProjectVagabond
         public bool IsMajorEnemySprite(string archetypeId)
         {
             if (string.IsNullOrEmpty(archetypeId)) return false;
-            // Ensure it's loaded if not already
             GetEnemySprite(archetypeId);
             if (_enemySprites.TryGetValue(archetypeId, out var cachedSprite))
             {
@@ -761,7 +728,6 @@ namespace ProjectVagabond
                 return cachedTuple;
             }
 
-            // --- NEW LOGIC: Check for Sprite Sheet Paths ---
             if (imagePath != null)
             {
                 if (imagePath.StartsWith("Sprites/Items/Weapons/"))
@@ -773,7 +739,6 @@ namespace ProjectVagabond
                 }
             }
 
-            // --- FALLBACK: Legacy Individual File Loading ---
             Debug.WriteLine($"[SpriteManager] LoadAndCacheItem called for legacy path: '{imagePath}'");
 
             Texture2D originalTexture;
@@ -792,7 +757,6 @@ namespace ProjectVagabond
             {
                 Debug.WriteLine($"[SpriteManager] [WARNING] FAILED to load: '{imagePath}'. Exception: {ex.Message}");
 
-                // Try fallback
                 if (!string.IsNullOrEmpty(fallbackPath))
                 {
                     try
@@ -849,23 +813,19 @@ namespace ProjectVagabond
             }
 
             const int spriteSize = 16;
-            const int columns = 8; // 128 / 16
+            const int columns = 8;
 
             int col = index % columns;
             int row = index / columns;
 
             var sourceRect = new Rectangle(col * spriteSize, row * spriteSize, spriteSize, spriteSize);
 
-            // Create new texture for the extracted sprite
             var extractedTexture = new Texture2D(_core.GraphicsDevice, spriteSize, spriteSize);
             var data = new Color[spriteSize * spriteSize];
 
-            // Get data from the sheet
-            // We need to get the full sheet data first? No, GetData allows specifying a rectangle.
             sheet.GetData(0, sourceRect, data, 0, data.Length);
             extractedTexture.SetData(data);
 
-            // Create Silhouette
             var silhouetteTexture = CreateSilhouette(extractedTexture);
 
             var tuple = (extractedTexture, silhouetteTexture);
@@ -912,19 +872,15 @@ namespace ProjectVagabond
                 int partStartX = i * partSize;
                 int topY = -1, leftX = -1, rightX = -1, bottomY = -1;
 
-                // Find Top
                 for (int y = 0; y < partSize; y++) { for (int x = 0; x < partSize; x++) { if (pixelData[(y * sprite.Width) + (partStartX + x)].A > 0) { topY = y; goto FoundTopPixel; } } }
             FoundTopPixel: topOffsets[i] = topY != -1 ? topY : int.MaxValue;
 
-                // Find Left
                 for (int x = 0; x < partSize; x++) { for (int y = 0; y < partSize; y++) { if (pixelData[(y * sprite.Width) + (partStartX + x)].A > 0) { leftX = x; goto FoundLeftPixel; } } }
             FoundLeftPixel: leftOffsets[i] = leftX != -1 ? leftX : int.MaxValue;
 
-                // Find Right
                 for (int x = partSize - 1; x >= 0; x--) { for (int y = 0; y < partSize; y++) { if (pixelData[(y * sprite.Width) + (partStartX + x)].A > 0) { rightX = x; goto FoundRightPixel; } } }
             FoundRightPixel: rightOffsets[i] = rightX;
 
-                // Find Bottom
                 for (int y = partSize - 1; y >= 0; y--) { for (int x = 0; x < partSize; x++) { if (pixelData[(y * sprite.Width) + (partStartX + x)].A > 0) { bottomY = y; goto FoundBottomPixel; } } }
             FoundBottomPixel: bottomOffsets[i] = bottomY;
             }
@@ -934,7 +890,6 @@ namespace ProjectVagabond
             _enemySpriteRightPixelOffsets[archetypeId] = rightOffsets;
             _enemySpriteBottomPixelOffsets[archetypeId] = bottomOffsets;
 
-            // ---  Calculate Visual Center Offset (Union) ---
             if (numParts > 0)
             {
                 int globalMinY = int.MaxValue;
@@ -950,7 +905,6 @@ namespace ProjectVagabond
                 {
                     float centerY = (globalMinY + globalMaxY) / 2f;
                     float frameCenterY = partSize / 2f;
-                    // X is 0 (Geometric Center), Y is Visual Center
                     _visualCenterOffsets[archetypeId] = new Vector2(0, centerY - frameCenterY);
                 }
                 else
@@ -971,15 +925,6 @@ namespace ProjectVagabond
 
         public Rectangle GetPermanentStatusIconSourceRect(StatusEffectType type, int frameIndex)
         {
-            // Sheet Layout: 20x10
-            // Row 0 (Y=0): Frame 1
-            // Row 1 (Y=5): Frame 2
-            // Cols (5px wide):
-            // 0: Poison
-            // 1: Burn
-            // 2: Frostbite
-            // 3: Bleeding
-
             int x = 0;
             switch (type)
             {
@@ -1054,7 +999,7 @@ namespace ProjectVagabond
                 PlayerHeartSpriteSheet = _textureFactory.CreateColoredTexture(32, 32, Color.DeepPink);
                 PlayerHeartSpriteSheetSilhouette = _textureFactory.CreateColoredTexture(32, 32, Color.White);
             }
-            // Load Stat Bars
+
             try { InventoryStatBarEmpty = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_stat_bar_empty"); }
             catch { InventoryStatBarEmpty = _textureFactory.CreateColoredTexture(40, 3, Color.DarkGray); }
             try { InventoryStatBarDisabled = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_stat_bar_disabled"); }
@@ -1062,15 +1007,6 @@ namespace ProjectVagabond
             try { InventoryStatBarFull = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_stat_bar_full"); }
             catch { InventoryStatBarFull = _textureFactory.CreateColoredTexture(40, 3, Color.White); }
 
-            // --- STAT CHANGE ARROWS ---
-            // Since the file on disk was repurposed for status icons, we generate the arrows programmatically.
-            // This ensures the 9x3 arrow logic in BattleVfxRenderer still works.
-            // NOTE: This is a fallback because the original file was overwritten.
-            // If you restore the original 9x3 file, you can revert this to load from disk.
-            // But for now, this guarantees no "T" artifacts on arrows.
-            // StatChangeIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/stat_change_icons_spritesheet"); // OLD
-
-            //  Load the 9x3 arrow sheet from disk as requested.
             try
             {
                 StatChangeIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/stat_change_icons_spritesheet");
@@ -1078,7 +1014,6 @@ namespace ProjectVagabond
             }
             catch
             {
-                // Fallback if file missing
                 StatChangeIconsSpriteSheet = _textureFactory.CreateColoredTexture(9, 3, Color.Magenta);
                 StatChangeIconsSpriteSheetSilhouette = _textureFactory.CreateColoredTexture(9, 3, Color.White);
             }
@@ -1090,24 +1025,16 @@ namespace ProjectVagabond
         {
             try
             {
-                // Load the single master sheet
                 PlayerMasterSpriteSheet = _core.Content.Load<Texture2D>("Sprites/Player/cat_portraits_32x32_spritesheet");
                 PlayerMasterSpriteSheetSilhouette = CreateSilhouette(PlayerMasterSpriteSheet);
             }
             catch
             {
-                // Fallback
                 PlayerMasterSpriteSheet = _textureFactory.CreateColoredTexture(32, 32, Color.Magenta);
                 PlayerMasterSpriteSheetSilhouette = _textureFactory.CreateColoredTexture(32, 32, Color.White);
             }
         }
 
-        /// <summary>
-        /// Calculates the source rectangle for a specific player sprite type and member index.
-        /// </summary>
-        /// <param name="memberIndex">The column index (0-based) representing the party member.</param>
-        /// <param name="type">The row type (Normal, Alt, Sleep, etc.).</param>
-        /// <returns>The 32x32 source rectangle.</returns>
         public Rectangle GetPlayerSourceRect(int memberIndex, PlayerSpriteType type)
         {
             if (PlayerMasterSpriteSheet == null) return Rectangle.Empty;
@@ -1116,13 +1043,11 @@ namespace ProjectVagabond
             int row = (int)type;
             int col = memberIndex;
 
-            // Safety check for bounds
             int maxCols = PlayerMasterSpriteSheet.Width / spriteSize;
             int maxRows = PlayerMasterSpriteSheet.Height / spriteSize;
 
             if (col >= maxCols || row >= maxRows)
             {
-                // Return empty or default if out of bounds
                 return new Rectangle(0, 0, spriteSize, spriteSize);
             }
 
@@ -1145,14 +1070,13 @@ namespace ProjectVagabond
         {
             if (texture == null) return Rectangle.Empty;
 
-            // Assume square frames
             int frameSize = texture.Height;
             if (frameSize == 0) return Rectangle.Empty;
 
             int frameCount = texture.Width / frameSize;
             if (frameCount <= 1) return new Rectangle(0, 0, texture.Width, texture.Height);
 
-            const float frameDuration = 0.15f; // Standard animation speed
+            const float frameDuration = 0.15f;
             int frameIndex = (int)(gameTime.TotalGameTime.TotalSeconds / frameDuration) % frameCount;
 
             return new Rectangle(frameIndex * frameSize, 0, frameSize, frameSize);
@@ -1181,3 +1105,4 @@ namespace ProjectVagabond
         }
     }
 }
+﻿﻿
