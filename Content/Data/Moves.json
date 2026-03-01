@@ -815,7 +815,7 @@
       "PyreFire": ""
     },
     "Tags": [ "Fire", "Status" ],
-    "AnimationId": "mag_blue_flame",
+    "AnimationId": "mag_small_flame",
     "IsAnimationCentralized": false,
     "Cooldown": 2,
     "IsRare": false

@@ -18,7 +18,7 @@ namespace ProjectVagabond.UI
 
         // Shared Constants
         public const int WIDTH = 140;
-        public const int HEIGHT = 34;
+        public const int HEIGHT = 42;
 
         public MoveTooltipRenderer()
         {
@@ -131,8 +131,14 @@ namespace ProjectVagabond.UI
             DrawPair("ACC", accTxt);
             DrawPair("USE", useTxt);
 
+            // --- 1.5. Target Type Row (Centered) ---
+            currentY += tertiaryFont.LineHeight + 5;
+            string targetText = GetTargetDisplayName(move.Target);
+            float targetX = boxPos.X + (WIDTH - tertiaryFont.MeasureString(targetText).Width) / 2f;
+            sb.DrawStringSnapped(tertiaryFont, targetText, new Vector2(targetX, currentY), _global.Palette_DarkPale);
+
             // --- 2. Name (Centered) ---
-            currentY += (rowSpacing - 2);
+            currentY += (rowSpacing - 1);
             Vector2 nameSize = secondaryFont.MeasureString(name);
             float centeredNameX = boxPos.X + (WIDTH - nameSize.X) / 2f;
             sb.DrawStringSnapped(secondaryFont, name, new Vector2(centeredNameX, currentY), _global.Palette_Sun);
@@ -266,6 +272,19 @@ namespace ProjectVagabond.UI
                 OffensiveStatType.Tenacity => "TEN",
                 OffensiveStatType.Agility => "AGI",
                 _ => "---"
+            };
+        }
+
+        private string GetTargetDisplayName(TargetType target)
+        {
+            return target switch
+            {
+                TargetType.SingleAll => "SINGLE ALL",
+                TargetType.SingleTeam => "SINGLE TEAM",
+                TargetType.RandomBoth => "RANDOM BOTH",
+                TargetType.RandomEvery => "RANDOM EVERY",
+                TargetType.RandomAll => "RANDOM ALL",
+                _ => target.ToString().ToUpper()
             };
         }
     }

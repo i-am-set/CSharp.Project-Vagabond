@@ -116,6 +116,7 @@ namespace ProjectVagabond.Battle.Abilities
             {
                 var global = ServiceLocator.Get<Global>();
                 dmgEvent.DamageMultiplier *= global.BurnDamageMultiplier;
+                dmgEvent.FinalDamage = (int)(dmgEvent.FinalDamage * global.BurnDamageMultiplier);
             }
         }
     }
@@ -227,6 +228,7 @@ namespace ProjectVagabond.Battle.Abilities
             {
                 var global = ServiceLocator.Get<Global>();
                 dmgEvent.DamageMultiplier *= global.EmpoweredDamageMultiplier;
+                dmgEvent.FinalDamage = (int)(dmgEvent.FinalDamage * global.EmpoweredDamageMultiplier);
             }
         }
     }
@@ -246,6 +248,7 @@ namespace ProjectVagabond.Battle.Abilities
             {
                 dmgEvent.Target.Tags.Add(GameplayTags.States.Protected);
                 dmgEvent.DamageMultiplier = 0f;
+                dmgEvent.FinalDamage = 0;
                 dmgEvent.WasProtected = true;
             }
         }
@@ -272,6 +275,7 @@ namespace ProjectVagabond.Battle.Abilities
                 {
                     dmgEvent.Target.Tags.Add(GameplayTags.States.Protected);
                     dmgEvent.DamageMultiplier = 0f;
+                    dmgEvent.FinalDamage = 0;
                     dmgEvent.WasProtected = true;
                 }
             }

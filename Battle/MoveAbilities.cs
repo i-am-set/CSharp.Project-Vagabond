@@ -24,11 +24,9 @@ namespace ProjectVagabond.Battle.Abilities
 
                 if (burnEffect != null)
                 {
-                    // Consume Burn
                     target.ActiveStatusEffects.Remove(burnEffect);
                     EventBus.Publish(new GameEvents.StatusEffectRemoved { Combatant = target, EffectType = StatusEffectType.Burn });
 
-                    // Drop to exactly 25% HP
                     int targetHp = (int)(target.Stats.MaxHP * 0.25f);
                     if (targetHp < 1) targetHp = 1;
 
@@ -45,7 +43,6 @@ namespace ProjectVagabond.Battle.Abilities
                 }
                 else
                 {
-                    // Inflict Burn
                     bool applied = target.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Burn, -1));
                     if (applied)
                     {
@@ -241,6 +238,7 @@ namespace ProjectVagabond.Battle.Abilities
             if (e is CalculateDamageEvent dmgEvent && dmgEvent.Move.Abilities.Contains(this))
             {
                 dmgEvent.DamageMultiplier *= (1.0f + (_percent / 100f));
+                dmgEvent.FinalDamage = (int)(dmgEvent.FinalDamage * (1.0f + (_percent / 100f)));
             }
         }
     }
@@ -356,6 +354,7 @@ namespace ProjectVagabond.Battle.Abilities
 
                     EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "GUARD BROKEN!" });
                     dmgEvent.DamageMultiplier *= 1.5f;
+                    dmgEvent.FinalDamage = (int)(dmgEvent.FinalDamage * 1.5f);
                 }
             }
         }
@@ -650,6 +649,7 @@ namespace ProjectVagabond.Battle.Abilities
                 if (dmgEvent.Target.HasStatusEffect(_statusType))
                 {
                     dmgEvent.DamageMultiplier *= _multiplier;
+                    dmgEvent.FinalDamage = (int)(dmgEvent.FinalDamage * _multiplier);
                 }
             }
         }

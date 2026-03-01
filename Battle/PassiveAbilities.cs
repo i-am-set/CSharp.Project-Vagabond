@@ -20,6 +20,7 @@ namespace ProjectVagabond.Battle.Abilities
                 if (dmgEvent.Move.MoveType == MoveType.Spell)
                 {
                     dmgEvent.DamageMultiplier *= DAMAGE_MULTIPLIER;
+                    dmgEvent.FinalDamage = (int)(dmgEvent.FinalDamage * DAMAGE_MULTIPLIER);
                     if (!context.IsSimulation)
                     {
                         EventBus.Publish(new GameEvents.AbilityActivated { Combatant = dmgEvent.Actor, Ability = this });
@@ -42,7 +43,6 @@ namespace ProjectVagabond.Battle.Abilities
                 if (prioEvent.Move.ImpactType == ImpactType.Status)
                 {
                     prioEvent.Priority += 1;
-                    // Optional: Visual log or debug print
                 }
             }
         }
@@ -56,7 +56,6 @@ namespace ProjectVagabond.Battle.Abilities
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
-            // 1. Block Stun (Status Effect)
             if (e is StatusAppliedEvent statusEvent && statusEvent.Target == context.Actor)
             {
                 if (statusEvent.StatusEffect.EffectType == StatusEffectType.Stun)
@@ -66,18 +65,15 @@ namespace ProjectVagabond.Battle.Abilities
                 }
             }
 
-            // 2. Block Strength Drops (Stat Change)
             if (e is StatChangeAttemptEvent statEvent && statEvent.Target == context.Actor)
             {
                 if (statEvent.Stat == OffensiveStatType.Strength && statEvent.Amount < 0)
                 {
-                    statEvent.IsHandled = true; // Cancel the change
+                    statEvent.IsHandled = true;
                     EventBus.Publish(new GameEvents.AbilityActivated { Combatant = context.Actor, Ability = this, NarrationText = "Scrappy prevents Strength loss!" });
                 }
             }
 
-            // 3. Block Daze (Tag)
-            // Daze is a tag, usually checked at TurnStart. We remove it immediately if found.
             if (e is TurnStartEvent turnEvent && turnEvent.Actor == context.Actor)
             {
                 if (turnEvent.Actor.Tags.Has(GameplayTags.States.Dazed))
@@ -97,18 +93,15 @@ namespace ProjectVagabond.Battle.Abilities
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
-            // Use ReactionEvent to react AFTER the hit is confirmed
             if (e is ReactionEvent reaction && reaction.Target.Abilities.Contains(this))
             {
                 if (reaction.Result.WasCritical)
                 {
-                    // Calculate distance to Max (+2)
                     int currentStr = reaction.Target.StatStages[OffensiveStatType.Strength];
                     int needed = 2 - currentStr;
 
                     if (needed > 0)
                     {
-                        // Force the change to exactly +2
                         reaction.Target.ModifyStatStage(OffensiveStatType.Strength, needed);
 
                         if (!context.IsSimulation)
@@ -119,7 +112,6 @@ namespace ProjectVagabond.Battle.Abilities
                     }
                     else if (!context.IsSimulation)
                     {
-                        // Optional: Flavor text if already maxed
                         EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{reaction.Target.Name} is already furious!" });
                     }
                 }
@@ -137,7 +129,6 @@ namespace ProjectVagabond.Battle.Abilities
         {
             var bm = ServiceLocator.Get<BattleManager>();
 
-            // 1. Battle Start
             if (e is BattleStartedEvent battleEvent)
             {
                 if (battleEvent.Combatants.Contains(context.Actor))
@@ -145,7 +136,6 @@ namespace ProjectVagabond.Battle.Abilities
                     QueueMajesticEffects(context.Actor, bm);
                 }
             }
-            // 2. Entry (Switch or Reinforcement)
             else if (e is GameEvents.CombatantEnteredEvent entryEvent && entryEvent.Combatant == context.Actor)
             {
                 QueueMajesticEffects(context.Actor, bm);
@@ -156,28 +146,22 @@ namespace ProjectVagabond.Battle.Abilities
         {
             var enemies = bm.AllCombatants
                 .Where(c => c.IsPlayerControlled != user.IsPlayerControlled && c.IsActiveOnField && !c.IsDefeated)
-                .OrderBy(c => c.BattleSlot) // Slot 1 then Slot 2
+                .OrderBy(c => c.BattleSlot)
                 .ToList();
 
             if (enemies.Any())
             {
-                // Initial Notification
                 bm.EnqueueStartupEvent(() =>
                 {
                     EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{user.Name}'s {Name} activates!" });
                     EventBus.Publish(new GameEvents.AbilityActivated { Combatant = user, Ability = this });
                 });
 
-                // Staggered Effect per Enemy
                 foreach (var enemy in enemies)
                 {
                     bm.EnqueueStartupEvent(() =>
                     {
                         var result = enemy.ModifyStatStage(OffensiveStatType.Strength, -1);
-                        // Explicitly trigger particle here to ensure visibility
-                        if (result.success)
-                        {
-                        }
                     });
                 }
             }
@@ -192,12 +176,12 @@ namespace ProjectVagabond.Battle.Abilities
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
-            // 1. Damage Reduction Logic
             if (e is CalculateDamageEvent dmgEvent && dmgEvent.Target.Abilities.Contains(this))
             {
                 if (dmgEvent.Move.MoveType == MoveType.Spell)
                 {
                     dmgEvent.DamageMultiplier *= 0.5f;
+                    dmgEvent.FinalDamage = (int)(dmgEvent.FinalDamage * 0.5f);
                     if (!context.IsSimulation)
                     {
                         EventBus.Publish(new GameEvents.AbilityActivated { Combatant = dmgEvent.Target, Ability = this });
@@ -205,7 +189,6 @@ namespace ProjectVagabond.Battle.Abilities
                 }
             }
 
-            // 2. Spell Refusal Logic
             if (e is ActionDeclaredEvent actionEvent && actionEvent.Actor.Abilities.Contains(this))
             {
                 if (actionEvent.Move.MoveType == MoveType.Spell)
@@ -230,7 +213,6 @@ namespace ProjectVagabond.Battle.Abilities
     {
         public string Name => "9 Lives";
         public string Description => "Survive lethal damage if at full HP.";
-
         public int Priority => -10;
 
         public void OnEvent(GameEvent e, BattleContext context)
@@ -241,7 +223,6 @@ namespace ProjectVagabond.Battle.Abilities
                 {
                     if (dmgEvent.FinalDamage >= dmgEvent.Target.Stats.CurrentHP)
                     {
-                        // Clamp damage to leave 1 HP
                         dmgEvent.FinalDamage = dmgEvent.Target.Stats.CurrentHP - 1;
 
                         if (!context.IsSimulation)
@@ -268,6 +249,7 @@ namespace ProjectVagabond.Battle.Abilities
                 if (dmgEvent.Move.Power > 0 && dmgEvent.Move.Power <= 60)
                 {
                     dmgEvent.DamageMultiplier *= 1.5f;
+                    dmgEvent.FinalDamage = (int)(dmgEvent.FinalDamage * 1.5f);
                     if (!context.IsSimulation)
                     {
                         EventBus.Publish(new GameEvents.AbilityActivated { Combatant = dmgEvent.Actor, Ability = this });
@@ -290,6 +272,7 @@ namespace ProjectVagabond.Battle.Abilities
                 if (dmgEvent.Target.Stats.CurrentHP >= dmgEvent.Target.Stats.MaxHP)
                 {
                     dmgEvent.DamageMultiplier *= 0.5f;
+                    dmgEvent.FinalDamage = (int)(dmgEvent.FinalDamage * 0.5f);
                     if (!context.IsSimulation)
                     {
                         EventBus.Publish(new GameEvents.AbilityActivated { Combatant = dmgEvent.Target, Ability = this });

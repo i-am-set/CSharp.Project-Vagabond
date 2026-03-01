@@ -48,6 +48,14 @@
     "ImpactFrameIndex": 3
   },
   {
+    "Id": "mag_fire_ember_cluster",
+    "TexturePath": "Sprites/MoveAnimationSpriteSheets/mag_fire_ember_cluster",
+    "FrameWidth": 32,
+    "FrameHeight": 32,
+    "FPS": 12.0,
+    "ImpactFrameIndex": 5
+  },
+  {
     "Id": "mag_small_flame",
     "TexturePath": "Sprites/MoveAnimationSpriteSheets/mag_small_flame",
     "FrameWidth": 16,
