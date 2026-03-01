@@ -20,10 +20,6 @@
         "IsFiller": false
       },
       {
-        "MoveId": "27",
-        "IsFiller": false
-      },
-      {
         "MoveId": "28",
         "IsFiller": false
       },
@@ -63,6 +59,10 @@
       },
       {
         "MoveId": "26",
+        "IsFiller": false
+      },
+      {
+        "MoveId": "27",
         "IsFiller": false
       },
       {
