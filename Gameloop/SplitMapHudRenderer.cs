@@ -46,6 +46,10 @@ namespace ProjectVagabond.UI
         private PartyMember? _topmostMember;
         private float _currentCursorLift = 0f;
 
+        // --- Replacement Mode State ---
+        public bool IsReplacementMode { get; set; } = false;
+        public PartyMember? SelectedForReplacement { get; set; } = null;
+
         // Input Latch
         private ButtonState _prevLeftButtonState = ButtonState.Released;
         private ButtonState _prevRightButtonState = ButtonState.Released;
@@ -118,7 +122,7 @@ namespace ProjectVagabond.UI
             var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
             var currentMouseState = Mouse.GetState();
 
-            float currentHudY = BaseY + verticalOffset;
+            float currentHudY = MathF.Round(BaseY + verticalOffset);
             _hoveredMember = null;
 
             // --- 0. Update Flip Animations ---
@@ -151,7 +155,7 @@ namespace ProjectVagabond.UI
             }
 
             // --- Drag Logic ---
-            if (_isDragging && _draggedMember != null)
+            if (_isDragging && _draggedMember != null && !IsReplacementMode)
             {
                 _flipTargets[_draggedMember] = 0f;
 
@@ -268,7 +272,7 @@ namespace ProjectVagabond.UI
                         ServiceLocator.Get<HapticsManager>().TriggerUICompoundShake(0.3f);
                     }
 
-                    if (flipBtnRect.Contains(virtualMousePos))
+                    if (flipBtnRect.Contains(virtualMousePos) && !IsReplacementMode)
                     {
                         cursorManager.SetState(CursorState.HoverClickable);
                         _hoveredMember = member;
@@ -282,37 +286,45 @@ namespace ProjectVagabond.UI
                         continue;
                     }
 
-                    cursorManager.SetState(CursorState.HoverDraggable);
+                    cursorManager.SetState(IsReplacementMode ? CursorState.HoverClickable : CursorState.HoverDraggable);
                     _hoveredMember = member;
 
                     if (currentMouseState.LeftButton == ButtonState.Pressed && _prevLeftButtonState == ButtonState.Released && !_isDragging)
                     {
-                        _isDragging = true;
-                        _draggedMember = member;
-                        _topmostMember = member;
+                        if (IsReplacementMode)
+                        {
+                            SelectedForReplacement = member;
+                            ServiceLocator.Get<HapticsManager>().TriggerUICompoundShake(_global.ButtonHapticStrength);
+                        }
+                        else
+                        {
+                            _isDragging = true;
+                            _draggedMember = member;
+                            _topmostMember = member;
 
-                        _flipTargets[member] = 0f;
+                            _flipTargets[member] = 0f;
 
-                        _dragStartMouseY = currentMouseState.Y;
-                        _lastScreenMouseX = currentMouseState.X;
+                            _dragStartMouseY = currentMouseState.Y;
+                            _lastScreenMouseX = currentMouseState.X;
 
-                        float grabOffset = _visualPositions[member] - virtualMousePos.X;
-                        _virtualPullX = virtualMousePos.X + grabOffset;
+                            float grabOffset = _visualPositions[member] - virtualMousePos.X;
+                            _virtualPullX = virtualMousePos.X + grabOffset;
 
-                        float currentCardX = _visualPositions[member];
-                        float currentCardY = BaseY + 3 + _verticalOffsets[member] + verticalOffset;
-                        Vector2 cardCenter = new Vector2(currentCardX + CARD_WIDTH / 2f, currentCardY + (HUD_HEIGHT - 4) / 2f);
+                            float currentCardX = _visualPositions[member];
+                            float currentCardY = BaseY + 3 + _verticalOffsets[member] + verticalOffset;
+                            Vector2 cardCenter = new Vector2(currentCardX + CARD_WIDTH / 2f, currentCardY + (HUD_HEIGHT - 4) / 2f);
 
-                        _dragGrabOffsetFromCenter = virtualMousePos - cardCenter;
+                            _dragGrabOffsetFromCenter = virtualMousePos - cardCenter;
 
-                        _currentDragRotation = 0f;
-                        _currentDragVelocity = 0f;
+                            _currentDragRotation = 0f;
+                            _currentDragVelocity = 0f;
+                        }
                     }
                 }
             }
 
             // --- Tooltip Logic ---
-            if (verticalOffset <= 1.0f)
+            if (verticalOffset <= 1.0f && !IsReplacementMode)
             {
                 bool found = false;
                 for (int i = _activeHitboxes.Count - 1; i >= 0; i--)
@@ -407,10 +419,17 @@ namespace ProjectVagabond.UI
                 {
                     float currentY = _verticalOffsets[member];
                     float targetY = 0f;
-                    if (i >= 2) targetY = 2f;
 
-                    if (member == _draggedMember) targetY = DRAG_LIFT_OFFSET;
-                    else if (member == _hoveredMember) targetY = HOVER_LIFT_OFFSET;
+                    if (IsReplacementMode)
+                    {
+                        targetY = (member == SelectedForReplacement) ? 0f : 8f;
+                    }
+                    else
+                    {
+                        if (i >= 2) targetY = 2f;
+                        if (member == _draggedMember) targetY = DRAG_LIFT_OFFSET;
+                        else if (member == _hoveredMember) targetY = HOVER_LIFT_OFFSET;
+                    }
 
                     float dampingY = 1.0f - MathF.Exp(-CARD_DROP_SPEED * dt);
                     _verticalOffsets[member] = MathHelper.Lerp(currentY, targetY, dampingY);
@@ -431,7 +450,7 @@ namespace ProjectVagabond.UI
                 float currentTagY = _tagOffsets[member];
                 float targetTagY;
 
-                if (currentNumber != actualNumber)
+                if (currentNumber != actualNumber || IsReplacementMode)
                 {
                     targetTagY = TAG_HIDDEN_OFFSET;
                     if (currentTagY >= TAG_HIDDEN_OFFSET - 0.5f)
@@ -483,7 +502,7 @@ namespace ProjectVagabond.UI
             float ty = core.FinalRenderRectangle.Y;
             Matrix globalTransform = Matrix.CreateScale(scale) * Matrix.CreateTranslation(tx, ty, 0f);
 
-            float currentStartY = BaseY + verticalOffset;
+            float currentStartY = MathF.Round(BaseY + verticalOffset);
             float t = Math.Clamp(verticalOffset / 24f, 0f, 1f);
             Color lineColor = Color.Lerp(_global.Palette_DarkPale, _global.Palette_DarkestPale, t);
 
@@ -529,7 +548,7 @@ namespace ProjectVagabond.UI
                 }
             }
 
-            if (_currentHoveredItem.HasValue && _isTooltipVisible && _currentHoveredItem.Value.Move != null && !_isDragging)
+            if (_currentHoveredItem.HasValue && _isTooltipVisible && _currentHoveredItem.Value.Move != null && !_isDragging && !IsReplacementMode)
             {
                 _tooltipRenderer.DrawFloating(
                     spriteBatch,
@@ -600,13 +619,34 @@ namespace ProjectVagabond.UI
 
             // Border Color
             Color borderColor;
-            if (isBeingDragged) borderColor = _global.Palette_Sun;
+            Rectangle cardRect = new Rectangle(snappedX, snappedY, CARD_WIDTH, HUD_HEIGHT - 4);
+
+            if (IsReplacementMode)
+            {
+                if (member == SelectedForReplacement)
+                {
+                    float flash = (MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * 10f) + 1f) / 2f;
+                    borderColor = Color.Lerp(_global.Palette_DarkRust, _global.Palette_Rust, flash);
+                }
+                else if (cardRect.Contains(mousePos))
+                {
+                    borderColor = _global.Palette_Rust;
+                }
+                else
+                {
+                    borderColor = _global.Palette_DarkShadow;
+                }
+            }
             else
             {
-                Rectangle cardRect = new Rectangle(snappedX, snappedY, CARD_WIDTH, HUD_HEIGHT - 4);
-                if (cardRect.Contains(mousePos) && !_isDragging) borderColor = _global.Palette_Pale;
-                else borderColor = (index >= 2) ? _global.Palette_DarkestPale : _global.Palette_DarkPale;
+                if (isBeingDragged) borderColor = _global.Palette_Sun;
+                else
+                {
+                    if (cardRect.Contains(mousePos) && !_isDragging) borderColor = _global.Palette_Pale;
+                    else borderColor = (index >= 2) ? _global.Palette_DarkestPale : _global.Palette_DarkPale;
+                }
             }
+
             DrawHollowRectSmooth(spriteBatch, cardPos, cardSize, borderColor);
 
             // --- Draw Content (Front or Back) ---
@@ -620,7 +660,7 @@ namespace ProjectVagabond.UI
             }
 
             // --- Draw Flip Button ---
-            if (scaleX > 0.2f && member == _hoveredMember && !_isDragging)
+            if (scaleX > 0.2f && member == _hoveredMember && !_isDragging && !IsReplacementMode)
             {
                 var flipIcon = _spriteManager.CardFlipIcon;
                 if (flipIcon != null)
@@ -963,7 +1003,7 @@ namespace ProjectVagabond.UI
             Rectangle hitRect = new Rectangle((int)cardStartX, (int)y - 2, CARD_WIDTH, lineHeight + 4);
             bool isHovered = !_isDragging && _currentHoveredItem.HasValue && _currentHoveredItem.Value.Bounds == hitRect;
 
-            if (isHovered && isMovePresent && _isTooltipVisible)
+            if (isHovered && isMovePresent && _isTooltipVisible && !IsReplacementMode)
             {
                 Color c = _global.Palette_Sun;
                 DrawHollowRectSmooth(sb, new Vector2(cardStartX, y - 2), new Vector2(CARD_WIDTH, lineHeight + 4), c);

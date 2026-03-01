@@ -159,6 +159,9 @@ namespace ProjectVagabond.Scenes
         private int _selectedRecruitIndex = -1;
         private PlinkAnimator _recruitPromptPlink = new PlinkAnimator();
         private Button _recruitActionButton;
+        private Button _replaceButton;
+        private PlinkAnimator _partyFullPlink = new PlinkAnimator();
+        private bool _wasPartyFullTextVisible = false;
         private NavigationGroup _recruitNavGroup = new NavigationGroup(wrapNavigation: true);
         private Rectangle[] _recruitHitboxes = new Rectangle[2];
 
@@ -223,6 +226,8 @@ namespace ProjectVagabond.Scenes
             _settingsButtonAnimTimer = 0f;
 
             _isRecruitEventActive = false;
+            _hudRenderer.IsReplacementMode = false;
+            _hudRenderer.SelectedForReplacement = null;
 
             if (_progressionManager.CurrentSplitMap == null)
             {
@@ -343,7 +348,7 @@ namespace ProjectVagabond.Scenes
                     HoverAnimation = HoverAnimationType.Hop
                 };
                 _recruitActionButton.OnClick += () => {
-                    if (_selectedRecruitIndex != -1)
+                    if (_selectedRecruitIndex != -1 && _gameState.PlayerState.Party.Count < 4)
                     {
                         ResolveRecruitEvent(_recruitCandidates[_selectedRecruitIndex]);
                     }
@@ -353,6 +358,21 @@ namespace ProjectVagabond.Scenes
                     }
                 };
                 _recruitNavGroup.Add(_recruitActionButton);
+
+                _replaceButton = new Button(Rectangle.Empty, "REPLACE", font: secondaryFont)
+                {
+                    CustomDefaultTextColor = _global.Palette_Sun,
+                    CustomHoverTextColor = _global.ButtonHoverColor,
+                    HoverAnimation = HoverAnimationType.Hop
+                };
+                _replaceButton.OnClick += () => {
+                    if (_selectedRecruitIndex != -1 && _hudRenderer.SelectedForReplacement != null)
+                    {
+                        _gameState.PlayerState.Party.Remove(_hudRenderer.SelectedForReplacement);
+                        ResolveRecruitEvent(_recruitCandidates[_selectedRecruitIndex]);
+                    }
+                };
+                _recruitNavGroup.Add(_replaceButton);
             }
         }
 
@@ -395,7 +415,7 @@ namespace ProjectVagabond.Scenes
             var currentKeyboardState = Keyboard.GetState();
             var virtualMousePos = Core.TransformMouse(currentMouseState.Position);
 
-            float splitLineY = (Global.VIRTUAL_HEIGHT - SplitMapHudRenderer.HUD_HEIGHT) + _hudSlideOffset;
+            float splitLineY = MathF.Round((Global.VIRTUAL_HEIGHT - SplitMapHudRenderer.HUD_HEIGHT) + _hudSlideOffset);
             bool mouseInMap = virtualMousePos.Y < splitLineY;
 
             if (mouseInMap && !_hudRenderer.IsDragging)
@@ -579,7 +599,7 @@ namespace ProjectVagabond.Scenes
             if (_restEventFadeTimer > REST_EVENT_FADE_DURATION)
                 _restEventFadeTimer = REST_EVENT_FADE_DURATION;
 
-            float mapViewHeight = (Global.VIRTUAL_HEIGHT - SplitMapHudRenderer.HUD_HEIGHT) + _hudSlideOffset;
+            float mapViewHeight = MathF.Round((Global.VIRTUAL_HEIGHT - SplitMapHudRenderer.HUD_HEIGHT) + _hudSlideOffset);
             Vector2 promptCenter = new Vector2(Global.VIRTUAL_WIDTH / 2f, mapViewHeight / 2f - 15);
             _restPromptPlink.Update(gameTime, promptCenter);
 
@@ -625,6 +645,7 @@ namespace ProjectVagabond.Scenes
                 if (_recruitEventFadeTimer <= 0)
                 {
                     _isRecruitEventActive = false;
+                    _hudRenderer.IsReplacementMode = false;
                     var node = _currentMap?.Nodes[_playerCurrentNodeId];
                     if (node != null)
                     {
@@ -641,36 +662,34 @@ namespace ProjectVagabond.Scenes
             if (_recruitEventFadeTimer > RECRUIT_EVENT_FADE_DURATION)
                 _recruitEventFadeTimer = RECRUIT_EVENT_FADE_DURATION;
 
-            float mapViewHeight = (Global.VIRTUAL_HEIGHT - SplitMapHudRenderer.HUD_HEIGHT) + _hudSlideOffset;
-            Vector2 promptCenter = new Vector2(Global.VIRTUAL_WIDTH / 2f, mapViewHeight / 2f - 35);
+            float mapViewHeight = MathF.Round((Global.VIRTUAL_HEIGHT - SplitMapHudRenderer.HUD_HEIGHT) + _hudSlideOffset);
+            Vector2 promptCenter = new Vector2(Global.VIRTUAL_WIDTH / 2f, mapViewHeight / 2f - 29);
             _recruitPromptPlink.Update(gameTime, promptCenter);
 
-            int btnY = (int)(mapViewHeight / 2f + 30);
+            int btnY = (int)(mapViewHeight / 2f + 25);
+            int startY = (int)(mapViewHeight / 2f - 2);
             int centerX = Global.VIRTUAL_WIDTH / 2;
-            _recruitActionButton.Bounds = new Rectangle(centerX - 25, btnY, 50, 15);
-            _recruitActionButton.Update(mouseState);
 
             // Hitbox logic
+            var inputManager = ServiceLocator.Get<InputManager>();
             var virtualMousePos = Core.TransformMouse(mouseState.Position);
-            bool clicked = mouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released;
+            bool clicked = inputManager.IsMouseClickAvailable() && mouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released;
 
             for (int i = 0; i < _recruitCandidates.Count; i++)
             {
+                int spacing = 60;
+                int drawX = centerX + (i == 0 ? -spacing / 2 : spacing / 2);
+                _recruitHitboxes[i] = new Rectangle(drawX - 16, startY - 16, 32, 32);
+
                 if (_recruitHitboxes[i].Contains(virtualMousePos))
                 {
                     ServiceLocator.Get<CursorManager>().SetState(CursorState.HoverClickable);
                     if (clicked)
                     {
+                        inputManager.ConsumeMouseClick();
                         _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
 
-                        // Prevent selection if party is full
-                        if (_gameState.PlayerState.Party.Count >= 4)
-                        {
-                            _selectedRecruitIndex = -1;
-                            _recruitActionButton.Text = "SKIP";
-                            // Optional: Could trigger a buzzer or shake here
-                        }
-                        else if (_selectedRecruitIndex == i)
+                        if (_selectedRecruitIndex == i)
                         {
                             _selectedRecruitIndex = -1; // Deselect
                             _recruitActionButton.Text = "SKIP";
@@ -678,13 +697,57 @@ namespace ProjectVagabond.Scenes
                         else
                         {
                             _selectedRecruitIndex = i; // Select
-                            _recruitActionButton.Text = "SELECT";
+                            if (_gameState.PlayerState.Party.Count < 4)
+                            {
+                                _recruitActionButton.Text = "SELECT";
+                            }
                         }
                     }
                 }
             }
 
-            var inputManager = ServiceLocator.Get<InputManager>();
+            bool isPartyFull = _gameState.PlayerState.Party.Count >= 4;
+            bool hasRecruitSelected = _selectedRecruitIndex != -1;
+            bool hasReplaceTarget = _hudRenderer.SelectedForReplacement != null;
+
+            // Manage HUD state
+            _hudRenderer.IsReplacementMode = isPartyFull && hasRecruitSelected;
+            if (!_hudRenderer.IsReplacementMode)
+            {
+                _hudRenderer.SelectedForReplacement = null;
+            }
+
+            // Manage Plinks & Buttons
+            bool shouldShowPartyFull = isPartyFull && hasRecruitSelected && !hasReplaceTarget;
+            if (shouldShowPartyFull && !_wasPartyFullTextVisible)
+            {
+                _partyFullPlink.Start(0f);
+                _wasPartyFullTextVisible = true;
+            }
+            else if (!shouldShowPartyFull)
+            {
+                _wasPartyFullTextVisible = false;
+            }
+
+            if (_partyFullPlink.IsActive)
+            {
+                _partyFullPlink.Update(gameTime, new Vector2(centerX, btnY + 7));
+            }
+
+            if (isPartyFull && hasRecruitSelected)
+            {
+                if (hasReplaceTarget)
+                {
+                    _replaceButton.Bounds = new Rectangle(centerX - 35, btnY, 70, 15);
+                    _replaceButton.Update(mouseState);
+                }
+            }
+            else
+            {
+                _recruitActionButton.Bounds = new Rectangle(centerX - 25, btnY, 50, 15);
+                _recruitActionButton.Update(mouseState);
+            }
+
             if (inputManager.CurrentInputDevice == InputDeviceType.Mouse)
             {
                 _recruitNavGroup.DeselectAll();
@@ -707,6 +770,7 @@ namespace ProjectVagabond.Scenes
                     ServiceLocator.Get<Core>().TriggerFullscreenFlash(_global.Palette_Sky, 0.2f);
                 }
             }
+            _hudRenderer.IsReplacementMode = false;
             _isRecruitEventFadingOut = true;
         }
 
@@ -1024,6 +1088,8 @@ namespace ProjectVagabond.Scenes
                     _isRecruitEventFadingOut = false;
                     _recruitEventFadeTimer = 0f;
                     _selectedRecruitIndex = -1;
+                    _hudRenderer.IsReplacementMode = false;
+                    _hudRenderer.SelectedForReplacement = null;
                     _recruitActionButton.Text = "SKIP";
 
                     var validIds = BattleDataCache.PartyMembers.Keys
@@ -1058,7 +1124,7 @@ namespace ProjectVagabond.Scenes
             var cameraTransform = Matrix.CreateTranslation(snappedCameraOffset.X, snappedCameraOffset.Y, 0);
             var finalTransform = cameraTransform * transform;
 
-            float mapViewHeight = (Global.VIRTUAL_HEIGHT - SplitMapHudRenderer.HUD_HEIGHT) + _hudSlideOffset;
+            float mapViewHeight = MathF.Round((Global.VIRTUAL_HEIGHT - SplitMapHudRenderer.HUD_HEIGHT) + _hudSlideOffset);
 
             var tl = Vector2.Transform(Vector2.Zero, transform);
             var br = Vector2.Transform(new Vector2(Global.VIRTUAL_WIDTH, mapViewHeight), transform);
@@ -1171,7 +1237,7 @@ namespace ProjectVagabond.Scenes
 
                     Vector2 promptSize = defaultFont.MeasureString(prompt);
                     Vector2 promptOrigin = promptSize / 2f;
-                    Vector2 promptPos = new Vector2(Global.VIRTUAL_WIDTH / 2f, mapViewHeight / 2f - 35);
+                    Vector2 promptPos = new Vector2(Global.VIRTUAL_WIDTH / 2f, mapViewHeight / 2f - 29);
 
                     float pScale = _recruitPromptPlink.IsActive ? _recruitPromptPlink.Scale : 1f;
                     float pRot = _recruitPromptPlink.IsActive ? _recruitPromptPlink.Rotation : 0f;
@@ -1184,12 +1250,30 @@ namespace ProjectVagabond.Scenes
                     if (!_isRecruitEventFadingOut)
                     {
                         int centerX = Global.VIRTUAL_WIDTH / 2;
-                        int startY = (int)(mapViewHeight / 2f - 10);
+                        int startY = (int)(mapViewHeight / 2f - 2);
                         int spacing = 60;
 
                         var mousePos = Core.TransformMouse(Mouse.GetState().Position);
                         var silhouette = _spriteManager.PlayerMasterSpriteSheetSilhouette;
                         var sheet = _spriteManager.PlayerMasterSpriteSheet;
+
+                        Action<Texture2D, Vector2, Rectangle, Color, int, bool> drawOutlines = (tex, pos, rect, col, dist, diag) => {
+                            Vector2 origin = new Vector2(16, 16);
+                            if (diag)
+                            {
+                                spriteBatch.DrawSnapped(tex, pos + new Vector2(-dist, -dist), rect, col, 0f, origin, 1.0f, SpriteEffects.None, 0f);
+                                spriteBatch.DrawSnapped(tex, pos + new Vector2(dist, -dist), rect, col, 0f, origin, 1.0f, SpriteEffects.None, 0f);
+                                spriteBatch.DrawSnapped(tex, pos + new Vector2(-dist, dist), rect, col, 0f, origin, 1.0f, SpriteEffects.None, 0f);
+                                spriteBatch.DrawSnapped(tex, pos + new Vector2(dist, dist), rect, col, 0f, origin, 1.0f, SpriteEffects.None, 0f);
+                            }
+                            else
+                            {
+                                spriteBatch.DrawSnapped(tex, pos + new Vector2(-dist, 0), rect, col, 0f, origin, 1.0f, SpriteEffects.None, 0f);
+                                spriteBatch.DrawSnapped(tex, pos + new Vector2(dist, 0), rect, col, 0f, origin, 1.0f, SpriteEffects.None, 0f);
+                                spriteBatch.DrawSnapped(tex, pos + new Vector2(0, -dist), rect, col, 0f, origin, 1.0f, SpriteEffects.None, 0f);
+                                spriteBatch.DrawSnapped(tex, pos + new Vector2(0, dist), rect, col, 0f, origin, 1.0f, SpriteEffects.None, 0f);
+                            }
+                        };
 
                         for (int i = 0; i < _recruitCandidates.Count; i++)
                         {
@@ -1231,18 +1315,15 @@ namespace ProjectVagabond.Scenes
                                 // Draw Outline
                                 if (outlineColor != Color.Transparent && silhouette != null)
                                 {
-                                    // Body Outline
-                                    spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(-1, 0), bodyRect, outlineColor, 0f, origin, 1.0f, SpriteEffects.None, 0f);
-                                    spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(1, 0), bodyRect, outlineColor, 0f, origin, 1.0f, SpriteEffects.None, 0f);
-                                    spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(0, -1), bodyRect, outlineColor, 0f, origin, 1.0f, SpriteEffects.None, 0f);
-                                    spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(0, 1), bodyRect, outlineColor, 0f, origin, 1.0f, SpriteEffects.None, 0f);
+                                    // Outer Color
+                                    drawOutlines(silhouette, drawPos, bodyRect, outlineColor, 2, false);
+                                    drawOutlines(silhouette, drawPos, bodyRect, outlineColor, 1, true);
+                                    drawOutlines(silhouette, drawPos + new Vector2(0, bobOffset), headRect, outlineColor, 2, false);
+                                    drawOutlines(silhouette, drawPos + new Vector2(0, bobOffset), headRect, outlineColor, 1, true);
 
-                                    // Head Outline
-                                    Vector2 headPos = drawPos + new Vector2(0, bobOffset);
-                                    spriteBatch.DrawSnapped(silhouette, headPos + new Vector2(-1, 0), headRect, outlineColor, 0f, origin, 1.0f, SpriteEffects.None, 0f);
-                                    spriteBatch.DrawSnapped(silhouette, headPos + new Vector2(1, 0), headRect, outlineColor, 0f, origin, 1.0f, SpriteEffects.None, 0f);
-                                    spriteBatch.DrawSnapped(silhouette, headPos + new Vector2(0, -1), headRect, outlineColor, 0f, origin, 1.0f, SpriteEffects.None, 0f);
-                                    spriteBatch.DrawSnapped(silhouette, headPos + new Vector2(0, 1), headRect, outlineColor, 0f, origin, 1.0f, SpriteEffects.None, 0f);
+                                    // Inner Off Color
+                                    drawOutlines(silhouette, drawPos, bodyRect, _global.Palette_Off, 1, false);
+                                    drawOutlines(silhouette, drawPos + new Vector2(0, bobOffset), headRect, _global.Palette_Off, 1, false);
                                 }
 
                                 // Draw Body and Head
@@ -1261,10 +1342,9 @@ namespace ProjectVagabond.Scenes
                                 // Draw Outline
                                 if (outlineColor != Color.Transparent && silhouette != null)
                                 {
-                                    spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(-1, 0), headRect, outlineColor, 0f, origin, 1.0f, SpriteEffects.None, 0f);
-                                    spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(1, 0), headRect, outlineColor, 0f, origin, 1.0f, SpriteEffects.None, 0f);
-                                    spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(0, -1), headRect, outlineColor, 0f, origin, 1.0f, SpriteEffects.None, 0f);
-                                    spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(0, 1), headRect, outlineColor, 0f, origin, 1.0f, SpriteEffects.None, 0f);
+                                    drawOutlines(silhouette, drawPos, headRect, outlineColor, 2, false);
+                                    drawOutlines(silhouette, drawPos, headRect, outlineColor, 1, true);
+                                    drawOutlines(silhouette, drawPos, headRect, _global.Palette_Off, 1, false);
                                 }
 
                                 // Draw Sprite
@@ -1272,7 +1352,46 @@ namespace ProjectVagabond.Scenes
                             }
                         }
 
-                        _recruitActionButton.Draw(spriteBatch, secondaryFont, gameTime, transform);
+                        bool isPartyFull = _gameState.PlayerState.Party.Count >= 4;
+                        bool hasRecruitSelected = _selectedRecruitIndex != -1;
+                        bool hasReplaceTarget = _hudRenderer.SelectedForReplacement != null;
+
+                        int btnY = (int)(mapViewHeight / 2f + 25);
+
+                        if (isPartyFull && hasRecruitSelected && !hasReplaceTarget)
+                        {
+                            if (_partyFullPlink.IsActive)
+                            {
+                                float pfScale = _partyFullPlink.Scale;
+                                float pfRot = _partyFullPlink.Rotation;
+                                if (pfScale > 0.01f)
+                                {
+                                    string fullText = "PARTY FULL";
+                                    Vector2 fullSize = secondaryFont.MeasureString(fullText);
+                                    Vector2 fullOrigin = fullSize / 2f;
+                                    Vector2 fullPos = new Vector2(centerX, btnY + 7);
+                                    spriteBatch.DrawStringSnapped(secondaryFont, fullText, fullPos, _global.Palette_Rust, pfRot, fullOrigin, pfScale, SpriteEffects.None, 0f);
+                                }
+                            }
+                            else
+                            {
+                                string fullText = "PARTY FULL";
+                                Vector2 fullSize = secondaryFont.MeasureString(fullText);
+                                Vector2 fullOrigin = fullSize / 2f;
+                                Vector2 fullPos = new Vector2(centerX, btnY + 7);
+                                spriteBatch.DrawStringSnapped(secondaryFont, fullText, fullPos, _global.Palette_Rust, 0f, fullOrigin, 1.0f, SpriteEffects.None, 0f);
+                            }
+                        }
+                        else if (isPartyFull && hasRecruitSelected && hasReplaceTarget)
+                        {
+                            _replaceButton.Bounds = new Rectangle(centerX - 35, btnY, 70, 15);
+                            _replaceButton.Draw(spriteBatch, secondaryFont, gameTime, transform);
+                        }
+                        else
+                        {
+                            _recruitActionButton.Bounds = new Rectangle(centerX - 25, btnY, 50, 15);
+                            _recruitActionButton.Draw(spriteBatch, secondaryFont, gameTime, transform);
+                        }
                     }
                 }
             }
