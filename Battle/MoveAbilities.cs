@@ -578,4 +578,31 @@ namespace ProjectVagabond.Battle.Abilities
             }
         }
     }
+
+    public class BonusDamageVsStatusAbility : IAbility
+    {
+        public string Name => "Bonus Damage Vs Status";
+        public string Description => "Deals extra damage if the target has a specific status.";
+        public int Priority => 0;
+
+        private readonly StatusEffectType _statusType;
+        private readonly float _multiplier;
+
+        public BonusDamageVsStatusAbility(StatusEffectType statusType, float multiplier)
+        {
+            _statusType = statusType;
+            _multiplier = multiplier;
+        }
+
+        public void OnEvent(GameEvent e, BattleContext context)
+        {
+            if (e is CalculateDamageEvent dmgEvent && dmgEvent.Move.Abilities.Contains(this))
+            {
+                if (dmgEvent.Target.HasStatusEffect(_statusType))
+                {
+                    dmgEvent.DamageMultiplier *= _multiplier;
+                }
+            }
+        }
+    }
 }

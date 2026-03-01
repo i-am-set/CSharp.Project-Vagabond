@@ -14,11 +14,55 @@
       {
         "MoveId": "9",
         "IsFiller": false
+      },
+      {
+        "MoveId": "25",
+        "IsFiller": false
+      },
+      {
+        "MoveId": "27",
+        "IsFiller": false
+      },
+      {
+        "MoveId": "28",
+        "IsFiller": false
+      },
+      {
+        "MoveId": "29",
+        "IsFiller": false
+      },
+      {
+        "MoveId": "30",
+        "IsFiller": false
+      },
+      {
+        "MoveId": "31",
+        "IsFiller": false
+      },
+      {
+        "MoveId": "32",
+        "IsFiller": false
+      },
+      {
+        "MoveId": "33",
+        "IsFiller": false
+      },
+      {
+        "MoveId": "35",
+        "IsFiller": false
       }
     ],
     "AltMovePool": [
       {
         "MoveId": "10",
+        "IsFiller": false
+      },
+      {
+        "MoveId": "26",
+        "IsFiller": false
+      },
+      {
+        "MoveId": "34",
         "IsFiller": false
       }
     ],
@@ -67,7 +111,7 @@
     "CoreMovePool": [
       {
         "MoveId": "14",
-"IsFiller": false
+        "IsFiller": false
       }
     ],
     "AltMovePool": [

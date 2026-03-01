@@ -81,6 +81,9 @@ namespace ProjectVagabond.Battle.Abilities
                 case StatusEffectType.Protected:
                     list.Add(new ProtectedLogicAbility(instance));
                     break;
+                case StatusEffectType.WideProtected:
+                    list.Add(new WideProtectedLogicAbility(instance));
+                    break;
                 default:
                     break;
             }

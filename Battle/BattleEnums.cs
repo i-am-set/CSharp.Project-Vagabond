@@ -68,7 +68,8 @@ namespace ProjectVagabond.Battle
         Protected,
         Empowered,
         TargetMe,
-        Provoked
+        Provoked,
+        WideProtected
     }
 
     /// <summary>

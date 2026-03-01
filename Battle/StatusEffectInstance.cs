@@ -95,6 +95,7 @@ namespace ProjectVagabond.Battle
                 StatusEffectType.TargetMe => "Draw Fire",
                 StatusEffectType.Provoked => "Provoked",
                 StatusEffectType.Bleeding => "Bleeding",
+                StatusEffectType.WideProtected => "Wide Guard",
                 _ => EffectType.ToString(),
             };
         }
@@ -144,6 +145,8 @@ namespace ProjectVagabond.Battle
                     return "Can't use status moves";
                 case StatusEffectType.Bleeding:
                     return "Takes 10% Max HP damage at end of turn";
+                case StatusEffectType.WideProtected:
+                    return "Protects from multi-target attacks";
                 default:
                     return "";
             }

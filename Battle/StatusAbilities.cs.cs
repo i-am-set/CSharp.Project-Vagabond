@@ -250,4 +250,31 @@ namespace ProjectVagabond.Battle.Abilities
             }
         }
     }
+
+    public class WideProtectedLogicAbility : IAbility
+    {
+        public string Name => "Wide Protected Logic";
+        public string Description => "Blocks AoE damage.";
+        public int Priority => 0;
+
+        private readonly StatusEffectInstance _status;
+        public WideProtectedLogicAbility(StatusEffectInstance status) { _status = status; }
+
+        public void OnEvent(GameEvent e, BattleContext context)
+        {
+            if (e is CalculateDamageEvent dmgEvent && dmgEvent.Target.ActiveStatusEffects.Contains(_status))
+            {
+                var targetType = dmgEvent.Move.Target;
+                bool isAoE = targetType == TargetType.Both || targetType == TargetType.Every || targetType == TargetType.All || targetType == TargetType.RandomBoth || targetType == TargetType.RandomEvery || targetType == TargetType.RandomAll;
+                bool isEnemyAttack = dmgEvent.Actor.IsPlayerControlled != dmgEvent.Target.IsPlayerControlled;
+
+                if (isAoE && isEnemyAttack)
+                {
+                    dmgEvent.Target.Tags.Add(GameplayTags.States.Protected);
+                    dmgEvent.DamageMultiplier = 0f;
+                    dmgEvent.WasProtected = true;
+                }
+            }
+        }
+    }
 }
