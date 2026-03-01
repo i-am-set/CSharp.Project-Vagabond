@@ -307,29 +307,6 @@ namespace ProjectVagabond.Battle.UI
 
                 spriteBatch.DrawStringSnapped(cdFont, cdText, snappedCdPos, cdColor * effectiveOpacity, 0f, cdOrigin, animScale, SpriteEffects.None, 0f);
             }
-
-            // 7. Draw Disabled Strikethrough (Flat, no rotation)
-            if (!IsEnabled && !isOnCooldown)
-            {
-                // Calculate center
-                Vector2 lineCenterOffset = isStackedLayout ? new Vector2(0, 5) : Vector2.Zero;
-                lineCenterOffset *= animScale;
-
-                Vector2 rawLineCenter = boundsCenter + lineCenterOffset;
-                Vector2 snappedLineCenter = new Vector2(MathF.Round(rawLineCenter.X), MathF.Round(rawLineCenter.Y));
-
-                int halfTextW = (int)((textSize.X / 2f) * animScale) + 2;
-
-                // Draw a simple 1px rectangle
-                Rectangle lineRect = new Rectangle(
-                    (int)(snappedLineCenter.X - halfTextW),
-                    (int)snappedLineCenter.Y,
-                    halfTextW * 2,
-                    1
-                );
-
-                spriteBatch.Draw(ServiceLocator.Get<Texture2D>(), lineRect, _global.ButtonDisableColor * effectiveOpacity);
-            }
         }
 
         private void DrawPixelPerfectBevel(SpriteBatch spriteBatch, Texture2D pixel, Rectangle bounds, Color color)

@@ -161,9 +161,24 @@ namespace ProjectVagabond.Battle
         {
         }
 
+        private void UpdateSeenCombatants()
+        {
+            var activeEnemies = _allCombatants.Where(c => !c.IsPlayerControlled && c.IsActiveOnField && !c.IsDefeated);
+            var activePlayers = _allCombatants.Where(c => c.IsPlayerControlled && c.IsActiveOnField && !c.IsDefeated);
+
+            foreach (var enemy in activeEnemies)
+            {
+                foreach (var player in activePlayers)
+                {
+                    enemy.SeenPlayerCharacterNames.Add(player.Name);
+                }
+            }
+        }
+
         public void TriggerBattleStartEvents()
         {
             _battleContext.ResetMultipliers();
+            UpdateSeenCombatants();
 
             var battleStartEvent = new BattleStartedEvent(_allCombatants);
 
@@ -394,6 +409,8 @@ namespace ProjectVagabond.Battle
                     int slot = _reinforcementSlotIndex % 2;
                     reinforcement.BattleSlot = slot;
                     RefreshCombatantCaches();
+                    UpdateSeenCombatants();
+
                     string key = $"{(isPlayerSlot ? "Player" : "Enemy")}_{slot}";
                     string msg = $"{reinforcement.Name} enters the battle!";
                     if (_lastDefeatedNames.TryGetValue(key, out string deadName)) { msg = $"{reinforcement.Name} takes {deadName}'s place!"; _lastDefeatedNames.Remove(key); }
@@ -432,6 +449,12 @@ namespace ProjectVagabond.Battle
             incomingMember.BattleSlot = oldSlot;
             incomingMember.HasUsedFirstAttack = false;
             RefreshCombatantCaches();
+
+            if (!actor.IsPlayerControlled)
+            {
+                actor.SeenPlayerCharacterNames.Clear();
+            }
+
             foreach (var action in _actionQueue) if (action.Target == actor) action.Target = incomingMember;
 
             var entryEvent = new GameEvents.CombatantEnteredEvent(incomingMember);
@@ -442,6 +465,8 @@ namespace ProjectVagabond.Battle
 
         public void ResumeAfterSwitch(BattleCombatant incomingMember)
         {
+            UpdateSeenCombatants();
+
             // --- SWITCH-IN ATTACK LOGIC ---
             if (incomingMember != null && incomingMember.BasicMove != null && BattleDataCache.Moves.TryGetValue(incomingMember.BasicMove.MoveID, out var basicMove))
             {
@@ -740,6 +765,7 @@ namespace ProjectVagabond.Battle
         private void HandleStartOfRound()
         {
             SanitizeBattlefield();
+            UpdateSeenCombatants();
 
             if (!_cachedActiveEnemies.Any())
             {
@@ -1156,8 +1182,6 @@ namespace ProjectVagabond.Battle
             var gameState = ServiceLocator.Get<GameState>();
             var dataManager = ServiceLocator.Get<DataManager>();
 
-            int totalExpYield = 0;
-
             foreach (var deadCombatant in deadCombatants)
             {
                 RecordDefeatedName(deadCombatant);
@@ -1179,35 +1203,34 @@ namespace ProjectVagabond.Battle
                         if (enemyData != null) yield = enemyData.EXPYield;
                         if (yield <= 0) yield = 50; // Ultimate fallback
                     }
-                    totalExpYield += yield;
-                }
-            }
 
-            if (totalExpYield > 0)
-            {
-                var livingPartyMembers = gameState.PlayerState.Party.Where(p => p.CurrentHP > 0).ToList();
-                if (livingPartyMembers.Count > 0)
-                {
-                    int expShare = Math.Max(1, totalExpYield / livingPartyMembers.Count);
+                    // Distribute this specific enemy's yield
+                    var eligibleNames = deadCombatant.SeenPlayerCharacterNames;
+                    var eligiblePartyMembers = gameState.PlayerState.Party
+                        .Where(p => eligibleNames.Contains(p.Name) && p.CurrentHP > 0)
+                        .ToList();
 
-                    foreach (var partyMember in livingPartyMembers)
+                    if (eligiblePartyMembers.Count > 0)
                     {
-                        partyMember.CurrentEXP += expShare;
-
-                        AppendToLog($"[cBlue]{partyMember.Name} gained {expShare} EXP.[/]");
-
-                        var activeCombatant = _cachedActivePlayers.FirstOrDefault(c => c.Name == partyMember.Name);
-                        if (activeCombatant != null)
+                        int expShare = Math.Max(1, yield / eligiblePartyMembers.Count);
+                        foreach (var partyMember in eligiblePartyMembers)
                         {
-                            EventBus.Publish(new EXPGainedEvent { Combatant = activeCombatant, Amount = expShare });
-                        }
+                            partyMember.CurrentEXP += expShare;
+                            AppendToLog($"[cBlue]{partyMember.Name} gained {expShare} EXP.[/]");
 
-                        while (partyMember.CurrentEXP >= partyMember.MaxEXP)
-                        {
-                            partyMember.CurrentEXP -= partyMember.MaxEXP;
-                            partyMember.Level++;
-                            partyMember.MaxEXP = (int)(partyMember.MaxEXP * 1.2f);
-                            PendingLevelUps.Enqueue(partyMember);
+                            var activeCombatant = _cachedActivePlayers.FirstOrDefault(c => c.Name == partyMember.Name);
+                            if (activeCombatant != null)
+                            {
+                                EventBus.Publish(new EXPGainedEvent { Combatant = activeCombatant, Amount = expShare });
+                            }
+
+                            while (partyMember.CurrentEXP >= partyMember.MaxEXP)
+                            {
+                                partyMember.CurrentEXP -= partyMember.MaxEXP;
+                                partyMember.Level++;
+                                partyMember.MaxEXP = (int)(partyMember.MaxEXP * 1.2f);
+                                PendingLevelUps.Enqueue(partyMember);
+                            }
                         }
                     }
                 }
@@ -1296,6 +1319,7 @@ namespace ProjectVagabond.Battle
                         {
                             reinforcement.BattleSlot = slot;
                             RefreshCombatantCaches();
+                            UpdateSeenCombatants();
 
                             string key = $"Enemy_{slot}";
                             string msg = $"{reinforcement.Name} enters the battle!";
@@ -1367,4 +1391,3 @@ namespace ProjectVagabond.Battle
         }
     }
 }
-﻿

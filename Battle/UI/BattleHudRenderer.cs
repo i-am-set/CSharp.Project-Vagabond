@@ -84,7 +84,6 @@ namespace ProjectVagabond.Battle.UI
         public void DrawPlayerBars(SpriteBatch spriteBatch, BattleCombatant player, float barX, float barY, int barWidth, int barHeight, BattleAnimationManager animationManager, float hpAlpha, GameTime gameTime, BattleUIManager uiManager, bool isActiveActor, bool isRightAligned = false, (int Min, int Max)? projectedDamage = null, (int Min, int Max)? projectedHeal = null)
         {
             var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
-            float nameX = barX; // Keep track of name X for EXP bar alignment
 
             if (hpAlpha > 0.01f)
             {
@@ -93,13 +92,11 @@ namespace ProjectVagabond.Battle.UI
                 if (isRightAligned)
                 {
                     float nameWidth = tertiaryFont.MeasureString(name).Width;
-                    nameX = barX + barWidth - nameWidth;
-                    namePos = new Vector2(nameX, barY - tertiaryFont.LineHeight - 1);
+                    namePos = new Vector2(barX + barWidth - nameWidth, barY - tertiaryFont.LineHeight - 1);
                 }
                 else
                 {
-                    nameX = barX;
-                    namePos = new Vector2(nameX, barY - tertiaryFont.LineHeight - 1);
+                    namePos = new Vector2(barX, barY - tertiaryFont.LineHeight - 1);
                 }
                 spriteBatch.DrawStringSnapped(tertiaryFont, name, namePos, _global.Palette_Sun * hpAlpha);
             }
@@ -116,64 +113,102 @@ namespace ProjectVagabond.Battle.UI
             // --- EXP PROGRESSION BAR ---
             if (hpAlpha > 0.01f)
             {
-                // Calculate exact bottom of the HP bar to position EXP bar 2 pixels below
                 int maxPips = player.Stats.MaxHP;
                 int pipsPerLine = maxPips >= HP_WRAP_THRESHOLD ? HP_WRAP_CHUNK : maxPips;
                 int rows = maxPips > 0 ? ((maxPips - 1) / pipsPerLine) + 1 : 1;
                 float hpBarTotalHeight = rows * barHeight + (rows - 1) * HP_WRAP_GAP;
 
                 float expBarY = barY + hpBarTotalHeight + 2;
-                float expBarX = nameX;
-
-                string lvValue = player.VisualLevel.ToString();
-
-                // Offset text Y slightly so it centers visually with the 1px bar
                 float textY = expBarY - 1;
 
-                float lvLabelWidth = 0;
-                if (_spriteManager.LevelIconSprite != null)
-                {
-                    // Draw the 5x3 icon. Offset Y slightly to align with the number text.
-                    spriteBatch.DrawSnapped(_spriteManager.LevelIconSprite, new Vector2(expBarX, textY + 1), _global.Palette_DarkestPale * hpAlpha);
-                    lvLabelWidth = _spriteManager.LevelIconSprite.Width + 1; // 1px gap
-                }
-
-                spriteBatch.DrawStringSnapped(tertiaryFont, lvValue, new Vector2(expBarX + lvLabelWidth, textY), _global.Palette_DarkestPale * hpAlpha);
+                string lvValue = player.VisualLevel.ToString();
+                float lvLabelWidth = _spriteManager.LevelIconSprite != null ? _spriteManager.LevelIconSprite.Width + 1 : 0;
                 float lvValueWidth = tertiaryFont.MeasureString(lvValue).Width;
 
-                // Position the bar 4 pixels to the right of the text
-                float barStartX = expBarX + lvLabelWidth + lvValueWidth + 2;
                 int totalBarWidth = 60;
+                float totalBlockWidth = lvLabelWidth + lvValueWidth + 2 + totalBarWidth;
 
-                // USE VISUAL STATE INSTEAD OF RAW DATA
+                float iconX, textX, barStartX;
+
+                if (isRightAligned)
+                {
+                    // Right-align the entire block to the right edge of the HP bar
+                    float blockStartX = barX + barWidth - totalBlockWidth;
+
+                    // Order: Bar -> Icon -> Text
+                    barStartX = blockStartX;
+                    iconX = barStartX + totalBarWidth + 2;
+                    textX = iconX + lvLabelWidth;
+                }
+                else
+                {
+                    // Left-align the entire block to the left edge of the HP bar
+                    float blockStartX = barX;
+
+                    // Order: Icon -> Text -> Bar
+                    iconX = blockStartX;
+                    textX = iconX + lvLabelWidth;
+                    barStartX = textX + lvValueWidth + 2;
+                }
+
+                // 1. Draw Level Icon
+                if (_spriteManager.LevelIconSprite != null)
+                {
+                    spriteBatch.DrawSnapped(_spriteManager.LevelIconSprite, new Vector2(iconX, textY + 1), _global.Palette_DarkestPale * hpAlpha);
+                }
+
+                // 2. Draw Level Text
+                spriteBatch.DrawStringSnapped(tertiaryFont, lvValue, new Vector2(textX, textY), _global.Palette_DarkestPale * hpAlpha);
+
+                // 3. Draw EXP Bar
                 float expProgress = player.VisualMaxEXP > 0 ? Math.Clamp(player.VisualEXP / player.VisualMaxEXP, 0f, 1f) : 0f;
                 float pixelProgress = expProgress * totalBarWidth;
                 int filledPixels = (int)pixelProgress;
                 float subProgress = pixelProgress - filledPixels;
 
-                // Draw filled portion
-                if (filledPixels > 0)
-                {
-                    spriteBatch.DrawSnapped(_pixel, new Vector2(barStartX, expBarY), null, _global.Palette_Sun * hpAlpha, 0f, Vector2.Zero, new Vector2(filledPixels, 1), SpriteEffects.None, 0f);
-                }
-
-                // Draw progressing pixel
+                Color pxColor = _global.Palette_Sun;
                 if (filledPixels < totalBarWidth)
                 {
-                    Color pxColor;
                     if (subProgress < 0.25f) pxColor = _global.Palette_Sea;
                     else if (subProgress < 0.50f) pxColor = _global.Palette_Sky;
                     else if (subProgress < 0.75f) pxColor = _global.Palette_Leaf;
-                    else pxColor = _global.Palette_Sun;
-
-                    spriteBatch.DrawSnapped(_pixel, new Vector2(barStartX + filledPixels, expBarY), null, pxColor * hpAlpha, 0f, Vector2.Zero, new Vector2(1, 1), SpriteEffects.None, 0f);
                 }
 
-                // Draw empty portion
-                int emptyPixels = totalBarWidth - filledPixels - 1;
-                if (emptyPixels > 0)
+                int emptyPixels = totalBarWidth - filledPixels - (filledPixels < totalBarWidth ? 1 : 0);
+
+                if (isRightAligned)
                 {
-                    spriteBatch.DrawSnapped(_pixel, new Vector2(barStartX + filledPixels + 1, expBarY), null, _global.Palette_DarkestPale * hpAlpha, 0f, Vector2.Zero, new Vector2(emptyPixels, 1), SpriteEffects.None, 0f);
+                    // Draw Empty (Left side)
+                    if (emptyPixels > 0)
+                        spriteBatch.DrawSnapped(_pixel, new Vector2(barStartX, expBarY), null, _global.Palette_DarkestPale * hpAlpha, 0f, Vector2.Zero, new Vector2(emptyPixels, 1), SpriteEffects.None, 0f);
+
+                    // Draw Progressing Pixel (Middle)
+                    if (filledPixels < totalBarWidth)
+                        spriteBatch.DrawSnapped(_pixel, new Vector2(barStartX + emptyPixels, expBarY), null, pxColor * hpAlpha, 0f, Vector2.Zero, new Vector2(1, 1), SpriteEffects.None, 0f);
+
+                    // Draw Filled (Right side)
+                    if (filledPixels > 0)
+                    {
+                        int filledStartX = (int)(barStartX + emptyPixels + (filledPixels < totalBarWidth ? 1 : 0));
+                        spriteBatch.DrawSnapped(_pixel, new Vector2(filledStartX, expBarY), null, _global.Palette_Sun * hpAlpha, 0f, Vector2.Zero, new Vector2(filledPixels, 1), SpriteEffects.None, 0f);
+                    }
+                }
+                else
+                {
+                    // Draw Filled (Left side)
+                    if (filledPixels > 0)
+                        spriteBatch.DrawSnapped(_pixel, new Vector2(barStartX, expBarY), null, _global.Palette_Sun * hpAlpha, 0f, Vector2.Zero, new Vector2(filledPixels, 1), SpriteEffects.None, 0f);
+
+                    // Draw Progressing Pixel (Middle)
+                    if (filledPixels < totalBarWidth)
+                        spriteBatch.DrawSnapped(_pixel, new Vector2(barStartX + filledPixels, expBarY), null, pxColor * hpAlpha, 0f, Vector2.Zero, new Vector2(1, 1), SpriteEffects.None, 0f);
+
+                    // Draw Empty (Right side)
+                    if (emptyPixels > 0)
+                    {
+                        int emptyStartX = (int)(barStartX + filledPixels + (filledPixels < totalBarWidth ? 1 : 0));
+                        spriteBatch.DrawSnapped(_pixel, new Vector2(emptyStartX, expBarY), null, _global.Palette_DarkestPale * hpAlpha, 0f, Vector2.Zero, new Vector2(emptyPixels, 1), SpriteEffects.None, 0f);
+                    }
                 }
             }
         }

@@ -47,6 +47,8 @@ namespace ProjectVagabond.Battle
 
         public TagContainer Tags { get; private set; } = new TagContainer();
 
+        public HashSet<string> SeenPlayerCharacterNames { get; set; } = new HashSet<string>();
+
         public List<MoveData> AvailableMoves
         {
             get

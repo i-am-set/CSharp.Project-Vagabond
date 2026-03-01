@@ -11,7 +11,7 @@ namespace ProjectVagabond.Battle.UI
 {
     public class BattleAnimationManager
     {
-        private const float INDICATOR_COOLDOWN = 0.1f;
+        private const float INDICATOR_COOLDOWN = 0.15f;
         private const float INDICATOR_MAX_ROTATION_SPEED = 0.25f;
 
         public class AlphaAnimationState { public string CombatantID; public float StartAlpha; public float TargetAlpha; public float Timer; public const float Duration = 0.1f; }
@@ -195,14 +195,16 @@ namespace ProjectVagabond.Battle.UI
             public const float TOTAL_DURATION = EASE_IN_DURATION + FLASH_DURATION + HOLD_DURATION + EASE_OUT_DURATION;
         }
 
-        private struct PendingAbilityIndicator
+        private struct PendingIndicator
         {
             public string CombatantID;
-            public string Text;
-            public Vector2 StartPosition;
+            public Action SpawnAction;
         }
 
-        private readonly Queue<PendingAbilityIndicator> _pendingAbilityQueue = new Queue<PendingAbilityIndicator>();
+        private readonly List<PendingIndicator> _pendingIndicators = new List<PendingIndicator>();
+        private readonly Dictionary<string, float> _indicatorCooldowns = new Dictionary<string, float>();
+
+        private readonly Queue<PendingIndicator> _pendingAbilityQueue = new Queue<PendingIndicator>();
         private float _abilitySpawnTimer = 0f;
 
         private const float ABILITY_SPAWN_INTERVAL = 0.4f;
@@ -266,9 +268,6 @@ namespace ProjectVagabond.Battle.UI
         private readonly List<AbilityIndicatorState> _activeAbilityIndicators = new List<AbilityIndicatorState>();
 
         private readonly List<BattleProjectile> _activeProjectiles = new List<BattleProjectile>();
-
-        private readonly Queue<Action> _pendingTextIndicators = new Queue<Action>();
-        private float _indicatorCooldownTimer = 0f;
 
         private readonly Random _random = new Random();
         private readonly Global _global;
@@ -343,7 +342,8 @@ namespace ProjectVagabond.Battle.UI
             _activeDamageIndicators.Clear();
             _activeAbilityIndicators.Clear();
             _activeBarAnimations.Clear();
-            _pendingTextIndicators.Clear();
+            _pendingIndicators.Clear();
+            _indicatorCooldowns.Clear();
             _activeHitstopVisuals.Clear();
             _activeIntroFadeAnimations.Clear();
             _activeFloorIntroAnimations.Clear();
@@ -351,7 +351,6 @@ namespace ProjectVagabond.Battle.UI
             _activeAttackCharges.Clear();
             _activeHudEntryAnimations.Clear();
             _impactFlashState = null;
-            _indicatorCooldownTimer = 0f;
             _pendingAbilityQueue.Clear();
             _abilitySpawnTimer = 0f;
 
@@ -769,26 +768,32 @@ namespace ProjectVagabond.Battle.UI
                 return;
             }
 
-            var indicator = new AbilityIndicatorState
+            _pendingAbilityQueue.Enqueue(new PendingIndicator
             {
                 CombatantID = combatantId,
-                OriginalText = text,
-                Text = text,
-                Count = 1,
-                Timer = 0f,
-                Phase = AbilityIndicatorState.AnimationPhase.EasingIn,
-                ShakeTimer = AbilityIndicatorState.SHAKE_DURATION,
-                InitialPosition = startPosition,
-                CurrentPosition = startPosition,
-                Velocity = new Vector2(
-                    (float)(_random.NextDouble() * ABILITY_DRIFT_RANGE * 2 - ABILITY_DRIFT_RANGE),
-                    -ABILITY_FLOAT_SPEED_INITIAL
-                ),
-                Rotation = 0f,
-                RotationSpeed = (float)(_random.NextDouble() * ABILITY_ROTATION_SPEED_MAX * 2 - ABILITY_ROTATION_SPEED_MAX)
-            };
-
-            _activeAbilityIndicators.Add(indicator);
+                SpawnAction = () =>
+                {
+                    var indicator = new AbilityIndicatorState
+                    {
+                        CombatantID = combatantId,
+                        OriginalText = text,
+                        Text = text,
+                        Count = 1,
+                        Timer = 0f,
+                        Phase = AbilityIndicatorState.AnimationPhase.EasingIn,
+                        ShakeTimer = AbilityIndicatorState.SHAKE_DURATION,
+                        InitialPosition = startPosition,
+                        CurrentPosition = startPosition,
+                        Velocity = new Vector2(
+                            (float)(_random.NextDouble() * ABILITY_DRIFT_RANGE * 2 - ABILITY_DRIFT_RANGE),
+                            -ABILITY_FLOAT_SPEED_INITIAL
+                        ),
+                        Rotation = 0f,
+                        RotationSpeed = (float)(_random.NextDouble() * ABILITY_ROTATION_SPEED_MAX * 2 - ABILITY_ROTATION_SPEED_MAX)
+                    };
+                    _activeAbilityIndicators.Add(indicator);
+                }
+            });
         }
 
         private float GetRandomIndicatorRotation()
@@ -798,167 +803,212 @@ namespace ProjectVagabond.Battle.UI
 
         public void StartDamageIndicator(string combatantId, string text, Vector2 startPosition, Color color)
         {
-            _pendingTextIndicators.Enqueue(() =>
+            _pendingIndicators.Add(new PendingIndicator
             {
-                _activeDamageIndicators.Add(new DamageIndicatorState
+                CombatantID = combatantId,
+                SpawnAction = () =>
                 {
-                    Type = DamageIndicatorState.IndicatorType.Text,
-                    CombatantID = combatantId,
-                    PrimaryText = text,
-                    Position = startPosition,
-                    InitialPosition = startPosition,
-                    PrimaryColor = color,
-                    Timer = 0f,
-                    Rotation = 0f,
-                    RotationVelocity = GetRandomIndicatorRotation()
-                });
+                    _activeDamageIndicators.Add(new DamageIndicatorState
+                    {
+                        Type = DamageIndicatorState.IndicatorType.Text,
+                        CombatantID = combatantId,
+                        PrimaryText = text,
+                        Position = startPosition,
+                        InitialPosition = startPosition,
+                        PrimaryColor = color,
+                        Timer = 0f,
+                        Rotation = 0f,
+                        RotationVelocity = GetRandomIndicatorRotation()
+                    });
+                }
             });
         }
 
         public void StartProtectedIndicator(string combatantId, Vector2 startPosition)
         {
-            _pendingTextIndicators.Enqueue(() =>
+            _pendingIndicators.Add(new PendingIndicator
             {
-                _activeDamageIndicators.Add(new DamageIndicatorState
+                CombatantID = combatantId,
+                SpawnAction = () =>
                 {
-                    Type = DamageIndicatorState.IndicatorType.Protected,
-                    CombatantID = combatantId,
-                    PrimaryText = "PROTECTED",
-                    Position = startPosition,
-                    InitialPosition = startPosition,
-                    Timer = 0f,
-                    Rotation = 0f,
-                    RotationVelocity = GetRandomIndicatorRotation()
-                });
+                    _activeDamageIndicators.Add(new DamageIndicatorState
+                    {
+                        Type = DamageIndicatorState.IndicatorType.Protected,
+                        CombatantID = combatantId,
+                        PrimaryText = "PROTECTED",
+                        Position = startPosition,
+                        InitialPosition = startPosition,
+                        Timer = 0f,
+                        Rotation = 0f,
+                        RotationVelocity = GetRandomIndicatorRotation()
+                    });
+                }
             });
         }
 
         public void StartFailedIndicator(string combatantId, Vector2 startPosition)
         {
-            _pendingTextIndicators.Enqueue(() =>
+            _pendingIndicators.Add(new PendingIndicator
             {
-                _activeDamageIndicators.Add(new DamageIndicatorState
+                CombatantID = combatantId,
+                SpawnAction = () =>
                 {
-                    Type = DamageIndicatorState.IndicatorType.Failed,
-                    CombatantID = combatantId,
-                    PrimaryText = "FAILED",
-                    Position = startPosition,
-                    InitialPosition = startPosition,
-                    Timer = 0f,
-                    Rotation = 0f,
-                    RotationVelocity = GetRandomIndicatorRotation()
-                });
+                    _activeDamageIndicators.Add(new DamageIndicatorState
+                    {
+                        Type = DamageIndicatorState.IndicatorType.Failed,
+                        CombatantID = combatantId,
+                        PrimaryText = "FAILED",
+                        Position = startPosition,
+                        InitialPosition = startPosition,
+                        Timer = 0f,
+                        Rotation = 0f,
+                        RotationVelocity = GetRandomIndicatorRotation()
+                    });
+                }
             });
         }
 
         public void StartEffectivenessIndicator(string combatantId, string text, Vector2 startPosition)
         {
-            _pendingTextIndicators.Enqueue(() =>
+            _pendingIndicators.Add(new PendingIndicator
             {
-                _activeDamageIndicators.Add(new DamageIndicatorState
+                CombatantID = combatantId,
+                SpawnAction = () =>
                 {
-                    Type = DamageIndicatorState.IndicatorType.Effectiveness,
-                    CombatantID = combatantId,
-                    PrimaryText = text,
-                    Position = startPosition,
-                    InitialPosition = startPosition,
-                    Timer = 0f,
-                    Rotation = 0f,
-                    RotationVelocity = GetRandomIndicatorRotation()
-                });
+                    _activeDamageIndicators.Add(new DamageIndicatorState
+                    {
+                        Type = DamageIndicatorState.IndicatorType.Effectiveness,
+                        CombatantID = combatantId,
+                        PrimaryText = text,
+                        Position = startPosition,
+                        InitialPosition = startPosition,
+                        Timer = 0f,
+                        Rotation = 0f,
+                        RotationVelocity = GetRandomIndicatorRotation()
+                    });
+                }
             });
         }
 
         public void StartDamageNumberIndicator(string combatantId, int damageAmount, Vector2 startPosition, float floorY)
         {
-            _activeDamageIndicators.Add(new DamageIndicatorState
+            _pendingIndicators.Add(new PendingIndicator
             {
-                Type = DamageIndicatorState.IndicatorType.Number,
                 CombatantID = combatantId,
-                PrimaryText = damageAmount.ToString(),
-                Position = startPosition,
-                InitialPosition = startPosition,
-                AbsoluteFloorY = floorY,
-                Velocity = new Vector2((float)(_random.NextDouble() * 60 - 30), -110f),
-                Timer = 0f,
-                Rotation = 0f,
-                RotationVelocity = GetRandomIndicatorRotation()
+                SpawnAction = () =>
+                {
+                    _activeDamageIndicators.Add(new DamageIndicatorState
+                    {
+                        Type = DamageIndicatorState.IndicatorType.Number,
+                        CombatantID = combatantId,
+                        PrimaryText = damageAmount.ToString(),
+                        Position = startPosition,
+                        InitialPosition = startPosition,
+                        AbsoluteFloorY = floorY,
+                        Velocity = new Vector2((float)(_random.NextDouble() * 60 - 30), -110f),
+                        Timer = 0f,
+                        Rotation = 0f,
+                        RotationVelocity = GetRandomIndicatorRotation()
+                    });
+                }
             });
         }
 
         public void StartEmphasizedDamageNumberIndicator(string combatantId, int damageAmount, Vector2 startPosition, float floorY)
         {
-            _activeDamageIndicators.Add(new DamageIndicatorState
+            _pendingIndicators.Add(new PendingIndicator
             {
-                Type = DamageIndicatorState.IndicatorType.EmphasizedNumber,
                 CombatantID = combatantId,
-                PrimaryText = damageAmount.ToString(),
-                Position = startPosition,
-                InitialPosition = startPosition,
-                AbsoluteFloorY = floorY,
-                Velocity = new Vector2((float)(_random.NextDouble() * 80 - 40), -150f),
-                Timer = 0f,
-                Rotation = 0f,
-                RotationVelocity = GetRandomIndicatorRotation()
+                SpawnAction = () =>
+                {
+                    _activeDamageIndicators.Add(new DamageIndicatorState
+                    {
+                        Type = DamageIndicatorState.IndicatorType.EmphasizedNumber,
+                        CombatantID = combatantId,
+                        PrimaryText = damageAmount.ToString(),
+                        Position = startPosition,
+                        InitialPosition = startPosition,
+                        AbsoluteFloorY = floorY,
+                        Velocity = new Vector2((float)(_random.NextDouble() * 80 - 40), -150f),
+                        Timer = 0f,
+                        Rotation = 0f,
+                        RotationVelocity = GetRandomIndicatorRotation()
+                    });
+                }
             });
         }
 
         public void StartHealNumberIndicator(string combatantId, int healAmount, Vector2 startPosition, float floorY)
         {
-            _activeDamageIndicators.Add(new DamageIndicatorState
+            _pendingIndicators.Add(new PendingIndicator
             {
-                Type = DamageIndicatorState.IndicatorType.HealNumber,
                 CombatantID = combatantId,
-                PrimaryText = healAmount.ToString(),
-                Position = startPosition,
-                InitialPosition = startPosition,
-                AbsoluteFloorY = floorY,
-                Velocity = new Vector2((float)(_random.NextDouble() * 60 - 30), -110f),
-                Timer = 0f,
-                Rotation = 0f,
-                RotationVelocity = GetRandomIndicatorRotation()
+                SpawnAction = () =>
+                {
+                    _activeDamageIndicators.Add(new DamageIndicatorState
+                    {
+                        Type = DamageIndicatorState.IndicatorType.HealNumber,
+                        CombatantID = combatantId,
+                        PrimaryText = healAmount.ToString(),
+                        Position = startPosition,
+                        InitialPosition = startPosition,
+                        AbsoluteFloorY = floorY,
+                        Velocity = new Vector2((float)(_random.NextDouble() * 60 - 30), -110f),
+                        Timer = 0f,
+                        Rotation = 0f,
+                        RotationVelocity = GetRandomIndicatorRotation()
+                    });
+                }
             });
         }
 
         public void StartStatStageIndicator(string combatantId, string prefixText, string statText, string suffixText, Color prefixColor, Color statColor, Color suffixColor, Vector2 startPosition)
         {
-            _pendingTextIndicators.Enqueue(() =>
+            _pendingIndicators.Add(new PendingIndicator
             {
-                _activeDamageIndicators.Add(new DamageIndicatorState
+                CombatantID = combatantId,
+                SpawnAction = () =>
                 {
-                    Type = DamageIndicatorState.IndicatorType.StatChange,
-                    CombatantID = combatantId,
-                    PrimaryText = prefixText,
-                    SecondaryText = statText,
-                    TertiaryText = suffixText,
-                    Position = startPosition,
-                    InitialPosition = startPosition,
-                    PrimaryColor = prefixColor,
-                    SecondaryColor = statColor,
-                    TertiaryColor = suffixColor,
-                    Timer = 0f,
-                    Rotation = 0f,
-                    RotationVelocity = GetRandomIndicatorRotation()
-                });
+                    _activeDamageIndicators.Add(new DamageIndicatorState
+                    {
+                        Type = DamageIndicatorState.IndicatorType.StatChange,
+                        CombatantID = combatantId,
+                        PrimaryText = prefixText,
+                        SecondaryText = statText,
+                        TertiaryText = suffixText,
+                        Position = startPosition,
+                        InitialPosition = startPosition,
+                        PrimaryColor = prefixColor,
+                        SecondaryColor = statColor,
+                        TertiaryColor = suffixColor,
+                        Timer = 0f,
+                        Rotation = 0f,
+                        RotationVelocity = GetRandomIndicatorRotation()
+                    });
+                }
             });
         }
 
         public void StartEXPIndicator(string combatantId, int expAmount, Vector2 startPosition)
         {
-            _pendingTextIndicators.Enqueue(() =>
+            _pendingIndicators.Add(new PendingIndicator
             {
-                _activeDamageIndicators.Add(new DamageIndicatorState
+                CombatantID = combatantId,
+                SpawnAction = () =>
                 {
-                    Type = DamageIndicatorState.IndicatorType.EXP,
-                    CombatantID = combatantId,
-                    PrimaryText = $"+{expAmount} EXP",
-                    Position = startPosition,
-                    InitialPosition = startPosition,
-                    PrimaryColor = _global.Palette_Sky,
-                    Timer = 0f,
-                    Rotation = 0f,
-                    RotationVelocity = 0f
-                });
+                    _activeDamageIndicators.Add(new DamageIndicatorState
+                    {
+                        Type = DamageIndicatorState.IndicatorType.EXP,
+                        CombatantID = combatantId,
+                        PrimaryText = $"+{expAmount} EXP",
+                        Position = startPosition,
+                        InitialPosition = startPosition,
+                        PrimaryColor = _global.Palette_Sky,
+                        Timer = 0f,
+                        Rotation = 0f,
+                        RotationVelocity = 0f
+                    });
+                }
             });
         }
 
@@ -1167,16 +1217,27 @@ namespace ProjectVagabond.Battle.UI
 
         private void UpdateIndicatorQueue(GameTime gameTime)
         {
-            if (_indicatorCooldownTimer > 0)
+            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            var keys = _indicatorCooldowns.Keys.ToList();
+            foreach (var key in keys)
             {
-                _indicatorCooldownTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
+                if (_indicatorCooldowns[key] > 0)
+                    _indicatorCooldowns[key] -= dt;
             }
 
-            if (_indicatorCooldownTimer <= 0f && _pendingTextIndicators.Any())
+            for (int i = 0; i < _pendingIndicators.Count; i++)
             {
-                var createAction = _pendingTextIndicators.Dequeue();
-                createAction.Invoke();
-                _indicatorCooldownTimer = INDICATOR_COOLDOWN;
+                var pending = _pendingIndicators[i];
+                float cd = _indicatorCooldowns.GetValueOrDefault(pending.CombatantID, 0f);
+
+                if (cd <= 0f)
+                {
+                    pending.SpawnAction.Invoke();
+                    _indicatorCooldowns[pending.CombatantID] = INDICATOR_COOLDOWN;
+                    _pendingIndicators.RemoveAt(i);
+                    i--; // Adjust index since we removed an item
+                }
             }
         }
 
@@ -1625,7 +1686,7 @@ namespace ProjectVagabond.Battle.UI
                 else if (indicator.Type == DamageIndicatorState.IndicatorType.EXP)
                 {
                     float progress = indicator.Timer / DamageIndicatorState.DURATION;
-                    float yOffset = -Easing.EaseOutCubic(progress) * 15f;
+                    float yOffset = -Easing.EaseOutCubic(progress) * 25f; // Increased from 15f
                     indicator.Position = indicator.InitialPosition + new Vector2(0, yOffset);
                     indicator.Rotation = 0f;
                 }
@@ -1650,25 +1711,7 @@ namespace ProjectVagabond.Battle.UI
             if (_abilitySpawnTimer <= 0 && _pendingAbilityQueue.Count > 0)
             {
                 var pending = _pendingAbilityQueue.Dequeue();
-                var indicator = new AbilityIndicatorState
-                {
-                    CombatantID = pending.CombatantID,
-                    OriginalText = pending.Text,
-                    Text = pending.Text,
-                    Count = 1,
-                    Timer = 0f,
-                    Phase = AbilityIndicatorState.AnimationPhase.EasingIn,
-                    ShakeTimer = AbilityIndicatorState.SHAKE_DURATION,
-                    InitialPosition = pending.StartPosition,
-                    CurrentPosition = pending.StartPosition,
-                    Velocity = new Vector2(
-                        (float)(_random.NextDouble() * ABILITY_DRIFT_RANGE * 2 - ABILITY_DRIFT_RANGE),
-                        -ABILITY_FLOAT_SPEED_INITIAL
-                    ),
-                    Rotation = 0f,
-                    RotationSpeed = (float)(_random.NextDouble() * ABILITY_ROTATION_SPEED_MAX * 2 - ABILITY_ROTATION_SPEED_MAX)
-                };
-                _activeAbilityIndicators.Add(indicator);
+                pending.SpawnAction.Invoke();
                 _abilitySpawnTimer = ABILITY_SPAWN_INTERVAL;
             }
 
