@@ -72,6 +72,30 @@
     "ImpactFrameIndex": 6
   },
   {
+    "Id": "mag_small_fire_tornado",
+    "TexturePath": "Sprites/MoveAnimationSpriteSheets/mag_small_fire_tornado",
+    "FrameWidth": 32,
+    "FrameHeight": 32,
+    "FPS": 12.0,
+    "ImpactFrameIndex": 6
+  },
+  {
+    "Id": "mag_tornado",
+    "TexturePath": "Sprites/MoveAnimationSpriteSheets/mag_tornado",
+    "FrameWidth": 128,
+    "FrameHeight": 128,
+    "FPS": 12.0,
+    "ImpactFrameIndex": 4
+  },
+  {
+    "Id": "mag_fire_tornado",
+    "TexturePath": "Sprites/MoveAnimationSpriteSheets/mag_fire_tornado",
+    "FrameWidth": 128,
+    "FrameHeight": 128,
+    "FPS": 12.0,
+    "ImpactFrameIndex": 4
+  },
+  {
     "Id": "mag_explosion",
     "TexturePath": "Sprites/MoveAnimationSpriteSheets/mag_explosion",
     "FrameWidth": 32,

@@ -559,7 +559,7 @@
       "ApplyStatus": "Burn, 100, 99"
     },
     "Tags": [ "Fire", "Heal", "Status" ],
-    "AnimationId": "sta_orange_orb",
+    "AnimationId": "mag_small_flame",
     "IsAnimationCentralized": false,
     "Cooldown": 2,
     "IsRare": false
@@ -583,7 +583,7 @@
       "ApplySelfStatus": "Stun, 100, 1"
     },
     "Tags": [ "Fire", "AoE" ],
-    "AnimationId": "mag_explosion",
+    "AnimationId": "mag_flame_ground",
     "IsAnimationCentralized": false,
     "Cooldown": 3,
     "IsRare": false
@@ -606,7 +606,7 @@
       "InflictStatusBurn": "10"
     },
     "Tags": [ "Fire", "Projectile" ],
-    "AnimationId": "mag_small_flame",
+    "AnimationId": "mag_explosion",
     "IsAnimationCentralized": false,
     "Cooldown": 0,
     "IsRare": false
@@ -652,7 +652,7 @@
       "InflictStatusBurn": "50"
     },
     "Tags": [ "Fire", "AoE" ],
-    "AnimationId": "mag_small_flame",
+    "AnimationId": "mag_fire_ember_cluster",
     "IsAnimationCentralized": false,
     "Cooldown": 1,
     "IsRare": false
@@ -723,7 +723,7 @@
       "InflictStatusBurn": "10"
     },
     "Tags": [ "Fire", "AoE" ],
-    "AnimationId": "mag_small_tornado",
+    "AnimationId": "mag_small_fire_tornado",
     "IsAnimationCentralized": false,
     "Cooldown": 1,
     "IsRare": false
@@ -746,7 +746,7 @@
       "InflictStatusBurn": "90"
     },
     "Tags": [ "Fire", "Contact" ],
-    "AnimationId": "phy_slash",
+    "AnimationId": "mag_small_flame",
     "IsAnimationCentralized": false,
     "Cooldown": 1,
     "IsRare": false

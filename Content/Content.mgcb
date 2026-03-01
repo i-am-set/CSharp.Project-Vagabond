@@ -804,6 +804,18 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/MoveAnimationSpriteSheets/mag_fire_ember_cluster.png;Sprites/MoveAnimationSpriteSheets/mag_fire_ember_cluster
 
+#begin Sprites/MoveAnimationSpriteSheets/mag_fire_tornado.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/MoveAnimationSpriteSheets/mag_fire_tornado.png;Sprites/MoveAnimationSpriteSheets/mag_fire_tornado
+
 #begin Sprites/MoveAnimationSpriteSheets/mag_flame_ground.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -923,6 +935,18 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Sprites/MoveAnimationSpriteSheets/mag_small_explosion.png;Sprites/MoveAnimationSpriteSheets/mag_small_explosion
+
+#begin Sprites/MoveAnimationSpriteSheets/mag_small_fire_tornado.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/MoveAnimationSpriteSheets/mag_small_fire_tornado.png;Sprites/MoveAnimationSpriteSheets/mag_small_fire_tornado
 
 #begin Sprites/MoveAnimationSpriteSheets/mag_small_flame.png
 /importer:TextureImporter
