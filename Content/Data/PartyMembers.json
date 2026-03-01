@@ -50,6 +50,10 @@
       {
         "MoveId": "35",
         "IsFiller": false
+      },
+      {
+        "MoveId": "45",
+        "IsFiller": false
       }
     ],
     "AltMovePool": [
@@ -63,6 +67,42 @@
       },
       {
         "MoveId": "34",
+        "IsFiller": false
+      },
+      {
+        "MoveId": "36",
+        "IsFiller": false
+      },
+      {
+        "MoveId": "37",
+        "IsFiller": false
+      },
+      {
+        "MoveId": "38",
+        "IsFiller": false
+      },
+      {
+        "MoveId": "39",
+        "IsFiller": false
+      },
+      {
+        "MoveId": "40",
+        "IsFiller": true
+      },
+      {
+        "MoveId": "41",
+        "IsFiller": true
+      },
+      {
+        "MoveId": "42",
+        "IsFiller": false
+      },
+      {
+        "MoveId": "43",
+        "IsFiller": false
+      },
+      {
+        "MoveId": "44",
         "IsFiller": false
       }
     ],

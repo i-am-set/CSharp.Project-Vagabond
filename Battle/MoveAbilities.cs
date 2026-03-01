@@ -7,6 +7,55 @@ using static ProjectVagabond.GameEvents;
 
 namespace ProjectVagabond.Battle.Abilities
 {
+    public class PyreFireAbility : IAbility
+    {
+        public string Name => "Pyre Fire";
+        public string Description => "Consumes Burn to drop HP to 25%, or inflicts Burn.";
+        public int Priority => 0;
+
+        public void OnEvent(GameEvent e, BattleContext context)
+        {
+            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
+            {
+                if (reaction.Result.WasGraze) return;
+
+                var target = reaction.Target;
+                var burnEffect = target.ActiveStatusEffects.FirstOrDefault(eff => eff.EffectType == StatusEffectType.Burn);
+
+                if (burnEffect != null)
+                {
+                    // Consume Burn
+                    target.ActiveStatusEffects.Remove(burnEffect);
+                    EventBus.Publish(new GameEvents.StatusEffectRemoved { Combatant = target, EffectType = StatusEffectType.Burn });
+
+                    // Drop to exactly 25% HP
+                    int targetHp = (int)(target.Stats.MaxHP * 0.25f);
+                    if (targetHp < 1) targetHp = 1;
+
+                    if (target.Stats.CurrentHP > targetHp)
+                    {
+                        int damage = target.Stats.CurrentHP - targetHp;
+                        target.ApplyDamage(damage);
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{target.Name}'s burn was consumed, ravaging their health!" });
+                    }
+                    else
+                    {
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{target.Name}'s burn was consumed!" });
+                    }
+                }
+                else
+                {
+                    // Inflict Burn
+                    bool applied = target.AddStatusEffect(new StatusEffectInstance(StatusEffectType.Burn, -1));
+                    if (applied)
+                    {
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{target.Name} gained [pop][cStatus]Burn[/][/]!" });
+                    }
+                }
+            }
+        }
+    }
+
     public class ApplyStatusAbility : IAbility
     {
         public string Name => "Apply Status";
