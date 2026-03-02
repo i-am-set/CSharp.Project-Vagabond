@@ -303,8 +303,9 @@ namespace ProjectVagabond.Battle
         private static QueuedAction CreateAction(BattleCombatant actor, MoveData move, BattleCombatant target)
         {
             MoveEntry? entry = null;
-            if (actor.CoreMove != null && actor.CoreMove.MoveID == move.MoveID) entry = actor.CoreMove;
-            else if (actor.AltMove != null && actor.AltMove.MoveID == move.MoveID) entry = actor.AltMove;
+            if (actor.Spell1 != null && actor.Spell1.MoveID == move.MoveID) entry = actor.Spell1;
+            else if (actor.Spell2 != null && actor.Spell2.MoveID == move.MoveID) entry = actor.Spell2;
+            else if (actor.Spell3 != null && actor.Spell3.MoveID == move.MoveID) entry = actor.Spell3;
             else if (actor.BasicMove != null && actor.BasicMove.MoveID == move.MoveID) entry = actor.BasicMove;
 
             return new QueuedAction

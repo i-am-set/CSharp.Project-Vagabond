@@ -347,8 +347,9 @@ namespace ProjectVagabond.Scenes
             foreach (var member in gameState.PlayerState.Party)
             {
                 if (member.BasicMove != null) member.BasicMove.TurnsUntilReady = 0;
-                if (member.CoreMove != null) member.CoreMove.TurnsUntilReady = 0;
-                if (member.AltMove != null) member.AltMove.TurnsUntilReady = 0;
+                if (member.Spell1 != null) member.Spell1.TurnsUntilReady = 0;
+                if (member.Spell2 != null) member.Spell2.TurnsUntilReady = 0;
+                if (member.Spell3 != null) member.Spell3.TurnsUntilReady = 0;
             }
 
             var playerParty = new List<BattleCombatant>();
@@ -468,28 +469,22 @@ namespace ProjectVagabond.Scenes
                 {
                     if (_battleManager.PendingLevelUps.Count > 0)
                     {
-                        var member = _battleManager.PendingLevelUps.Dequeue();
-                        _levelUpDialog = new LevelUpDialog(this, member, (choice, moveId) =>
+                        var levelUpData = _battleManager.PendingLevelUps.Dequeue();
+                        _levelUpDialog = new LevelUpDialog(this, levelUpData.Member, levelUpData.NewMoveId, (choice, moveId) =>
                         {
-                            if (choice == LevelUpDialog.LevelUpChoice.Core)
+                            if (choice == LevelUpDialog.LevelUpChoice.Spell1)
                             {
-                                member.CoreMove = new MoveEntry(moveId, 0);
-                                member.KnownMovesHistory.Add(moveId);
+                                levelUpData.Member.Spell1 = new MoveEntry(moveId, 0);
                             }
-                            else if (choice == LevelUpDialog.LevelUpChoice.Alt)
+                            else if (choice == LevelUpDialog.LevelUpChoice.Spell2)
                             {
-                                member.AltMove = new MoveEntry(moveId, 0);
-                                member.KnownMovesHistory.Add(moveId);
+                                levelUpData.Member.Spell2 = new MoveEntry(moveId, 0);
                             }
-                            else if (choice == LevelUpDialog.LevelUpChoice.Omni)
+                            else if (choice == LevelUpDialog.LevelUpChoice.Spell3)
                             {
-                                member.MaxHP += 1;
-                                member.CurrentHP += 1;
-                                member.Strength += 1;
-                                member.Intelligence += 1;
-                                member.Tenacity += 1;
-                                member.Agility += 1;
+                                levelUpData.Member.Spell3 = new MoveEntry(moveId, 0);
                             }
+                            // Skip does nothing
                         });
                     }
                     else

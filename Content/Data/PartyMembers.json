@@ -10,102 +10,10 @@
     "Tenacity": 3,
     "Agility": 4,
     "BasicMoveId": "4",
-    "CoreMovePool": [
-      {
-        "MoveId": "9",
-        "IsFiller": false
-      },
-      {
-        "MoveId": "25",
-        "IsFiller": false
-      },
-      {
-        "MoveId": "28",
-        "IsFiller": false
-      },
-      {
-        "MoveId": "29",
-        "IsFiller": false
-      },
-      {
-        "MoveId": "30",
-        "IsFiller": false
-      },
-      {
-        "MoveId": "31",
-        "IsFiller": false
-      },
-      {
-        "MoveId": "32",
-        "IsFiller": false
-      },
-      {
-        "MoveId": "33",
-        "IsFiller": false
-      },
-      {
-        "MoveId": "45",
-        "IsFiller": false
-      }
-    ],
-    "AltMovePool": [
-      {
-        "MoveId": "10",
-        "IsFiller": false
-      },
-      {
-        "MoveId": "26",
-        "IsFiller": false
-      },
-      {
-        "MoveId": "27",
-        "IsFiller": false
-      },
-      {
-        "MoveId": "34",
-        "IsFiller": false
-      },
-      {
-        "MoveId": "35",
-        "IsFiller": false
-      },
-      {
-        "MoveId": "36",
-        "IsFiller": false
-      },
-      {
-        "MoveId": "37",
-        "IsFiller": false
-      },
-      {
-        "MoveId": "38",
-        "IsFiller": false
-      },
-      {
-        "MoveId": "39",
-        "IsFiller": false
-      },
-      {
-        "MoveId": "40",
-        "IsFiller": true
-      },
-      {
-        "MoveId": "41",
-        "IsFiller": true
-      },
-      {
-        "MoveId": "42",
-        "IsFiller": false
-      },
-      {
-        "MoveId": "43",
-        "IsFiller": false
-      },
-      {
-        "MoveId": "44",
-        "IsFiller": false
-      }
-    ],
+    "StartSpellSlot1MoveId": "28",
+    "StartSpellSlot2MoveId": "9",
+    "StartSpellSlot3MoveId": "",
+    "MovePool": [ "25", "29", "30", "31", "32", "33", "45", "10", "26", "27", "34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44" ],
     "PassiveAbilityPool": [
       { "PMPyromancer": "" }
     ]
@@ -121,18 +29,10 @@
     "Tenacity": 3,
     "Agility": 5,
     "BasicMoveId": "4",
-    "CoreMovePool": [
-      {
-        "MoveId": "24",
-        "IsFiller": false
-      }
-    ],
-    "AltMovePool": [
-      {
-        "MoveId": "13",
-        "IsFiller": false
-      }
-    ],
+    "StartSpellSlot1MoveId": "24",
+    "StartSpellSlot2MoveId": "13",
+    "StartSpellSlot3MoveId": "",
+    "MovePool": [],
     "PassiveAbilityPool": [
       { "PMAnnoying": "" }
     ]
@@ -148,18 +48,10 @@
     "Tenacity": 3,
     "Agility": 5,
     "BasicMoveId": "4",
-    "CoreMovePool": [
-      {
-        "MoveId": "14",
-        "IsFiller": false
-      }
-    ],
-    "AltMovePool": [
-      {
-        "MoveId": "15",
-        "IsFiller": false
-      }
-    ],
+    "StartSpellSlot1MoveId": "14",
+    "StartSpellSlot2MoveId": "15",
+    "StartSpellSlot3MoveId": "",
+    "MovePool": [],
     "PassiveAbilityPool": [
       { "PMScrappy": "" }
     ]
@@ -175,18 +67,10 @@
     "Tenacity": 4,
     "Agility": 7,
     "BasicMoveId": "4",
-    "CoreMovePool": [
-      {
-        "MoveId": "16",
-        "IsFiller": false
-      }
-    ],
-    "AltMovePool": [
-      {
-        "MoveId": "17",
-        "IsFiller": false
-      }
-    ],
+    "StartSpellSlot1MoveId": "16",
+    "StartSpellSlot2MoveId": "17",
+    "StartSpellSlot3MoveId": "",
+    "MovePool": [],
     "PassiveAbilityPool": [
       { "PMShortTemper": "" }
     ]
@@ -202,24 +86,13 @@
     "Tenacity": 8,
     "Agility": 3,
     "BasicMoveId": "4",
-    "CoreMovePool": [
-      {
-        "MoveId": "18",
-        "IsFiller": false
-      }
-    ],
-    "AltMovePool": [
-      {
-        "MoveId": "19",
-        "IsFiller": false
-      }
-    ],
+    "StartSpellSlot1MoveId": "18",
+    "StartSpellSlot2MoveId": "19",
+    "StartSpellSlot3MoveId": "",
+    "MovePool": [],
     "PassiveAbilityPool": [
       { "PMMajestic": "" }
-    ],
-    "StartingRelics": {
-      "20": 1
-    }
+    ]
   },
   {
     "MemberID": "5",
@@ -232,18 +105,10 @@
     "Tenacity": 5,
     "Agility": 5,
     "BasicMoveId": "4",
-    "CoreMovePool": [
-      {
-        "MoveId": "20",
-        "IsFiller": false
-      }
-    ],
-    "AltMovePool": [
-      {
-        "MoveId": "21",
-        "IsFiller": false
-      }
-    ],
+    "StartSpellSlot1MoveId": "20",
+    "StartSpellSlot2MoveId": "21",
+    "StartSpellSlot3MoveId": "",
+    "MovePool": [],
     "PassiveAbilityPool": [
       { "PMSweetpea": "" }
     ]
@@ -259,18 +124,10 @@
     "Tenacity": 3,
     "Agility": 6,
     "BasicMoveId": "4",
-    "CoreMovePool": [
-      {
-        "MoveId": "22",
-        "IsFiller": false
-      }
-    ],
-    "AltMovePool": [
-      {
-        "MoveId": "23",
-        "IsFiller": false
-      }
-    ],
+    "StartSpellSlot1MoveId": "22",
+    "StartSpellSlot2MoveId": "23",
+    "StartSpellSlot3MoveId": "",
+    "MovePool": [],
     "PassiveAbilityPool": [
       { "PMSkeptic": "" }
     ]
@@ -286,18 +143,10 @@
     "Tenacity": 8,
     "Agility": 4,
     "BasicMoveId": "4",
-    "CoreMovePool": [
-      {
-        "MoveId": "11",
-        "IsFiller": false
-      }
-    ],
-    "AltMovePool": [
-      {
-        "MoveId": "15",
-        "IsFiller": false
-      }
-    ],
+    "StartSpellSlot1MoveId": "11",
+    "StartSpellSlot2MoveId": "15",
+    "StartSpellSlot3MoveId": "",
+    "MovePool": [],
     "PassiveAbilityPool": [
       { "PM9Lives": "" }
     ]
@@ -313,18 +162,10 @@
     "Tenacity": 3,
     "Agility": 4,
     "BasicMoveId": "4",
-    "CoreMovePool": [
-      {
-        "MoveId": "20",
-        "IsFiller": false
-      }
-    ],
-    "AltMovePool": [
-      {
-        "MoveId": "19",
-        "IsFiller": false
-      }
-    ],
+    "StartSpellSlot1MoveId": "20",
+    "StartSpellSlot2MoveId": "19",
+    "StartSpellSlot3MoveId": "",
+    "MovePool": [],
     "PassiveAbilityPool": [
       { "PMMinutiae": "" }
     ]
@@ -340,8 +181,10 @@
     "Tenacity": 4,
     "Agility": 5,
     "BasicMoveId": "4",
-    "CoreMovePool": [],
-    "AltMovePool": [],
+    "StartSpellSlot1MoveId": "",
+    "StartSpellSlot2MoveId": "",
+    "StartSpellSlot3MoveId": "",
+    "MovePool": [],
     "PassiveAbilityPool": []
   },
   {
@@ -355,8 +198,10 @@
     "Tenacity": 4,
     "Agility": 3,
     "BasicMoveId": "4",
-    "CoreMovePool": [],
-    "AltMovePool": [],
+    "StartSpellSlot1MoveId": "",
+    "StartSpellSlot2MoveId": "",
+    "StartSpellSlot3MoveId": "",
+    "MovePool": [],
     "PassiveAbilityPool": [
       { "PMGentleSoul": "" }
     ]
@@ -372,8 +217,10 @@
     "Tenacity": 6,
     "Agility": 2,
     "BasicMoveId": "4",
-    "CoreMovePool": [],
-    "AltMovePool": [],
+    "StartSpellSlot1MoveId": "",
+    "StartSpellSlot2MoveId": "",
+    "StartSpellSlot3MoveId": "",
+    "MovePool": [],
     "PassiveAbilityPool": [
       { "PMWellfed": "" }
     ]
@@ -389,8 +236,10 @@
     "Tenacity": 4,
     "Agility": 4,
     "BasicMoveId": "4",
-    "CoreMovePool": [],
-    "AltMovePool": [],
+    "StartSpellSlot1MoveId": "",
+    "StartSpellSlot2MoveId": "",
+    "StartSpellSlot3MoveId": "",
+    "MovePool": [],
     "PassiveAbilityPool": [
       { "PMStubborn": "" }
     ]
@@ -406,8 +255,10 @@
     "Tenacity": 7,
     "Agility": 1,
     "BasicMoveId": "5",
-    "CoreMovePool": [],
-    "AltMovePool": [],
+    "StartSpellSlot1MoveId": "",
+    "StartSpellSlot2MoveId": "",
+    "StartSpellSlot3MoveId": "",
+    "MovePool": [],
     "PassiveAbilityPool": []
   },
   {
@@ -421,8 +272,10 @@
     "Tenacity": 3,
     "Agility": 5,
     "BasicMoveId": "4",
-    "CoreMovePool": [],
-    "AltMovePool": [],
+    "StartSpellSlot1MoveId": "",
+    "StartSpellSlot2MoveId": "",
+    "StartSpellSlot3MoveId": "",
+    "MovePool": [],
     "PassiveAbilityPool": []
   }
 ]

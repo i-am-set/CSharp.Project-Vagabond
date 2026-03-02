@@ -75,7 +75,7 @@ namespace ProjectVagabond.Battle
         private readonly List<BattleCombatant> _cachedAllActive = new List<BattleCombatant>();
 
         private List<QueuedAction> _actionQueue;
-        public Queue<PartyMember> PendingLevelUps { get; } = new Queue<PartyMember>();
+        public Queue<(PartyMember Member, string NewMoveId)> PendingLevelUps { get; } = new Queue<(PartyMember, string)>();
 
         private readonly Dictionary<int, QueuedAction> _pendingPlayerActions = new Dictionary<int, QueuedAction>();
 
@@ -1133,11 +1133,11 @@ namespace ProjectVagabond.Battle
             foreach (var combatant in _cachedAllActive)
             {
                 if (combatant.BasicMove != null && combatant.BasicMove.TurnsUntilReady > 0) combatant.BasicMove.TurnsUntilReady--;
-                if (combatant.CoreMove != null && combatant.CoreMove.TurnsUntilReady > 0) combatant.CoreMove.TurnsUntilReady--;
-                if (combatant.AltMove != null && combatant.AltMove.TurnsUntilReady > 0) combatant.AltMove.TurnsUntilReady--;
+                if (combatant.Spell1 != null && combatant.Spell1.TurnsUntilReady > 0) combatant.Spell1.TurnsUntilReady--;
+                if (combatant.Spell2 != null && combatant.Spell2.TurnsUntilReady > 0) combatant.Spell2.TurnsUntilReady--;
+                if (combatant.Spell3 != null && combatant.Spell3.TurnsUntilReady > 0) combatant.Spell3.TurnsUntilReady--;
 
                 _battleContext.ResetMultipliers();
-                _battleContext.Actor = combatant;
                 _battleContext.Actor = combatant;
                 _battleContext.Target = null;
                 _battleContext.Move = null;
@@ -1201,10 +1201,9 @@ namespace ProjectVagabond.Battle
                     {
                         var enemyData = dataManager.GetEnemyData(deadCombatant.ArchetypeId);
                         if (enemyData != null) yield = enemyData.EXPYield;
-                        if (yield <= 0) yield = 50; // Ultimate fallback
+                        if (yield <= 0) yield = 50;
                     }
 
-                    // Distribute this specific enemy's yield
                     var eligibleNames = deadCombatant.SeenPlayerCharacterNames;
                     var eligiblePartyMembers = gameState.PlayerState.Party
                         .Where(p => eligibleNames.Contains(p.Name) && p.CurrentHP > 0)
@@ -1229,17 +1228,38 @@ namespace ProjectVagabond.Battle
                                 partyMember.CurrentEXP -= partyMember.MaxEXP;
                                 partyMember.Level++;
                                 partyMember.MaxEXP = (int)(partyMember.MaxEXP * 1.2f);
-                                PendingLevelUps.Enqueue(partyMember);
+
+                                // Auto Omni-Stat Boost
+                                partyMember.MaxHP++; partyMember.CurrentHP++;
+                                partyMember.Strength++; partyMember.Intelligence++;
+                                partyMember.Tenacity++; partyMember.Agility++;
+
+                                // Auto Learn Move
+                                if (BattleDataCache.PartyMembers.TryGetValue(partyMember.Name, out var pmData))
+                                {
+                                    var availableMoves = pmData.MovePool.Where(m => !partyMember.KnownMovesHistory.Contains(m)).ToList();
+                                    if (availableMoves.Any())
+                                    {
+                                        string newMove = availableMoves[_random.Next(availableMoves.Count)];
+                                        partyMember.KnownMovesHistory.Add(newMove);
+
+                                        if (partyMember.Spell1 == null) partyMember.Spell1 = new MoveEntry(newMove, 0);
+                                        else if (partyMember.Spell2 == null) partyMember.Spell2 = new MoveEntry(newMove, 0);
+                                        else if (partyMember.Spell3 == null) partyMember.Spell3 = new MoveEntry(newMove, 0);
+                                        else
+                                        {
+                                            // All slots full, queue for replacement UI
+                                            PendingLevelUps.Enqueue((partyMember, newMove));
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
                 }
             }
 
-            if (deadCombatants.Any())
-            {
-                RefreshCombatantCaches();
-            }
+            if (deadCombatants.Any()) RefreshCombatantCaches();
         }
 
         private bool CheckWinLoss()

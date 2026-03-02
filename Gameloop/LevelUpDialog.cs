@@ -7,85 +7,56 @@ using ProjectVagabond.Scenes;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace ProjectVagabond.UI
 {
     public class LevelUpDialog : Dialog
     {
-        public enum LevelUpChoice { Core, Alt, Omni }
+        public enum LevelUpChoice { Spell1, Spell2, Spell3, Skip }
 
         private PartyMember _member;
         private Action<LevelUpChoice, string> _onChoiceMade;
         private List<Button> _buttons = new List<Button>();
         private string _titleText;
+        private string _newMoveId;
 
-        public LevelUpDialog(GameScene scene, PartyMember member, Action<LevelUpChoice, string> onChoiceMade) : base(scene)
+        public LevelUpDialog(GameScene scene, PartyMember member, string newMoveId, Action<LevelUpChoice, string> onChoiceMade) : base(scene)
         {
             _member = member;
+            _newMoveId = newMoveId;
             _onChoiceMade = onChoiceMade;
             IsActive = true;
-            _titleText = $"{member.Name} Leveled Up!";
 
-            var pmData = BattleDataCache.PartyMembers.Values.FirstOrDefault(p => p.Name == member.Name);
-            var rng = new Random();
+            string moveName = BattleDataCache.Moves.TryGetValue(newMoveId, out var m) ? m.MoveName : "Unknown Move";
+            _titleText = $"{member.Name} learned {moveName}!\nChoose a spell to replace:";
 
             int btnWidth = 200;
             int btnHeight = 20;
             int btnX = (Global.VIRTUAL_WIDTH - btnWidth) / 2;
             int startY = Global.VIRTUAL_HEIGHT / 2 - 20;
 
-            if (pmData != null)
+            void AddReplaceButton(string label, MoveEntry currentMove, LevelUpChoice choice)
             {
-                var validCoreMoves = pmData.CoreMovePool?.Where(m => IsMoveValid(m.MoveId)).ToList();
-                if (validCoreMoves != null && validCoreMoves.Any())
+                if (currentMove != null && BattleDataCache.Moves.TryGetValue(currentMove.MoveID, out var data))
                 {
-                    var coreEntry = validCoreMoves[rng.Next(validCoreMoves.Count)];
-                    if (BattleDataCache.Moves.TryGetValue(coreEntry.MoveId, out var coreMove))
+                    var btn = new Button(new Rectangle(btnX, startY, btnWidth, btnHeight), $"Replace {label}: {data.MoveName}")
                     {
-                        string prefix = coreMove.IsRare ? "[rainbow]RARE[/] " : "";
-                        string text = $"Replace Core: {prefix}{coreMove.MoveName}";
-                        var btn = new Button(new Rectangle(btnX, startY, btnWidth, btnHeight), text)
-                        {
-                            OnClick = () => MakeChoice(LevelUpChoice.Core, coreEntry.MoveId)
-                        };
-                        _buttons.Add(btn);
-                        startY += 25;
-                    }
-                }
-
-                var validAltMoves = pmData.AltMovePool?.Where(m => IsMoveValid(m.MoveId)).ToList();
-                if (validAltMoves != null && validAltMoves.Any())
-                {
-                    var altEntry = validAltMoves[rng.Next(validAltMoves.Count)];
-                    if (BattleDataCache.Moves.TryGetValue(altEntry.MoveId, out var altMove))
-                    {
-                        string prefix = altMove.IsRare ? "[rainbow]RARE[/] " : "";
-                        string text = $"Replace Alt: {prefix}{altMove.MoveName}";
-                        var btn = new Button(new Rectangle(btnX, startY, btnWidth, btnHeight), text)
-                        {
-                            OnClick = () => MakeChoice(LevelUpChoice.Alt, altEntry.MoveId)
-                        };
-                        _buttons.Add(btn);
-                        startY += 25;
-                    }
+                        OnClick = () => MakeChoice(choice, _newMoveId)
+                    };
+                    _buttons.Add(btn);
+                    startY += 25;
                 }
             }
 
-            var omniBtn = new Button(new Rectangle(btnX, startY, btnWidth, btnHeight), "Omni-Stat Boost (+1 to all)")
-            {
-                OnClick = () => MakeChoice(LevelUpChoice.Omni, null)
-            };
-            _buttons.Add(omniBtn);
-        }
+            AddReplaceButton("Spell 1", _member.Spell1, LevelUpChoice.Spell1);
+            AddReplaceButton("Spell 2", _member.Spell2, LevelUpChoice.Spell2);
+            AddReplaceButton("Spell 3", _member.Spell3, LevelUpChoice.Spell3);
 
-        private bool IsMoveValid(string moveId)
-        {
-            if (_member.BasicMove != null && _member.BasicMove.MoveID == moveId) return false;
-            if (_member.CoreMove != null && _member.CoreMove.MoveID == moveId) return false;
-            if (_member.AltMove != null && _member.AltMove.MoveID == moveId) return false;
-            if (_member.KnownMovesHistory.Contains(moveId)) return false;
-            return true;
+            var skipBtn = new Button(new Rectangle(btnX, startY, btnWidth, btnHeight), "Skip learning")
+            {
+                OnClick = () => MakeChoice(LevelUpChoice.Skip, null)
+            };
+            _buttons.Add(skipBtn);
         }
 
         private void MakeChoice(LevelUpChoice choice, string moveId)
@@ -104,10 +75,8 @@ namespace ProjectVagabond.UI
         public override void DrawContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             if (!IsActive) return;
-
             Vector2 titleSize = font.MeasureString(_titleText);
-            spriteBatch.DrawStringSnapped(font, _titleText, new Vector2((Global.VIRTUAL_WIDTH - titleSize.X) / 2, Global.VIRTUAL_HEIGHT / 2 - 50), _global.Palette_Sun);
-
+            spriteBatch.DrawStringSnapped(font, _titleText, new Vector2((Global.VIRTUAL_WIDTH - titleSize.X) / 2, Global.VIRTUAL_HEIGHT / 2 - 60), _global.Palette_Sun);
             foreach (var btn in _buttons) btn.Draw(spriteBatch, font, gameTime, transform);
         }
     }

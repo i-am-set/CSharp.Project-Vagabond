@@ -975,8 +975,9 @@ namespace ProjectVagabond.UI
 
             float moveStartX = statBlockStartX - 6;
             DrawMoveName(spriteBatch, member.BasicMove, "bas", moveStartX, centerX, ref y, tertiaryFont, tertiaryFont);
-            DrawMoveName(spriteBatch, member.CoreMove, "cor", moveStartX, centerX, ref y, tertiaryFont, tertiaryFont);
-            DrawMoveName(spriteBatch, member.AltMove, "alt", moveStartX, centerX, ref y, tertiaryFont, tertiaryFont);
+            DrawMoveName(spriteBatch, member.Spell1, "sp1", moveStartX, centerX, ref y, tertiaryFont, tertiaryFont);
+            DrawMoveName(spriteBatch, member.Spell2, "sp2", moveStartX, centerX, ref y, tertiaryFont, tertiaryFont);
+            DrawMoveName(spriteBatch, member.Spell3, "sp3", moveStartX, centerX, ref y, tertiaryFont, tertiaryFont);
         }
 
         private void DrawMoveName(SpriteBatch sb, MoveEntry? move, string label, float x, float centerX, ref float y, BitmapFont labelFont, BitmapFont font)

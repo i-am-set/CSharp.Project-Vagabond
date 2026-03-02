@@ -32,15 +32,15 @@ namespace ProjectVagabond.Battle
                     Agility = gameState.PlayerState.GetEffectiveStat(member, "Agility")
                 },
                 BasicMove = member.BasicMove,
-                CoreMove = member.CoreMove,
-                AltMove = member.AltMove,
+                Spell1 = member.Spell1,
+                Spell2 = member.Spell2,
+                Spell3 = member.Spell3,
                 PortraitIndex = member.PortraitIndex
             };
 
             combatant.Tags.Add("Type.Player");
             combatant.Tags.Add("Type.Ally");
 
-            // Initialize Visual EXP state
             combatant.VisualLevel = member.Level;
             combatant.VisualEXP = member.CurrentEXP;
             combatant.VisualMaxEXP = member.MaxEXP;
@@ -130,22 +130,12 @@ namespace ProjectVagabond.Battle
                 combatant.BasicMove = new MoveEntry("6", 0);
             }
 
-            if (enemyData.CoreMoves != null && enemyData.CoreMoves.Any())
+            if (enemyData.MovePool != null && enemyData.MovePool.Any())
             {
-                string moveId = enemyData.CoreMoves[_random.Next(enemyData.CoreMoves.Count)];
-                if (BattleDataCache.Moves.ContainsKey(moveId))
-                {
-                    combatant.CoreMove = new MoveEntry(moveId, 0);
-                }
-            }
-
-            if (enemyData.AltMoves != null && enemyData.AltMoves.Any())
-            {
-                string moveId = enemyData.AltMoves[_random.Next(enemyData.AltMoves.Count)];
-                if (BattleDataCache.Moves.ContainsKey(moveId))
-                {
-                    combatant.AltMove = new MoveEntry(moveId, 0);
-                }
+                var shuffled = enemyData.MovePool.OrderBy(x => _random.Next()).ToList();
+                if (shuffled.Count > 0 && BattleDataCache.Moves.ContainsKey(shuffled[0])) combatant.Spell1 = new MoveEntry(shuffled[0], 0);
+                if (shuffled.Count > 1 && BattleDataCache.Moves.ContainsKey(shuffled[1])) combatant.Spell2 = new MoveEntry(shuffled[1], 0);
+                if (shuffled.Count > 2 && BattleDataCache.Moves.ContainsKey(shuffled[2])) combatant.Spell3 = new MoveEntry(shuffled[2], 0);
             }
 
             return combatant;

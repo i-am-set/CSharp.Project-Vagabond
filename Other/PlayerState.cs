@@ -21,8 +21,9 @@ namespace ProjectVagabond
 
         public int PortraitIndex { get => Leader?.PortraitIndex ?? 0; set { if (Leader != null) Leader.PortraitIndex = value; } }
 
-        public MoveEntry? CoreMove { get => Leader?.CoreMove; set { if (Leader != null) Leader.CoreMove = value; } }
-        public MoveEntry? AltMove { get => Leader?.AltMove; set { if (Leader != null) Leader.AltMove = value; } }
+        public MoveEntry? Spell1 { get => Leader?.Spell1; set { if (Leader != null) Leader.Spell1 = value; } }
+        public MoveEntry? Spell2 { get => Leader?.Spell2; set { if (Leader != null) Leader.Spell2 = value; } }
+        public MoveEntry? Spell3 { get => Leader?.Spell3; set { if (Leader != null) Leader.Spell3 = value; } }
 
         public PlayerState() { }
 
@@ -63,19 +64,17 @@ namespace ProjectVagabond
             var target = member ?? Leader;
             if (target == null || !BattleDataCache.Moves.TryGetValue(moveId, out var moveData)) return;
 
-            // Simple logic: Fill Attack if empty, then Special if empty.
-            // If both full, replace Special.
-            if (target.CoreMove == null)
+            if (target.Spell1 == null)
             {
-                target.CoreMove = new MoveEntry(moveId, 0);
+                target.Spell1 = new MoveEntry(moveId, 0);
             }
-            else if (target.AltMove == null)
+            else if (target.Spell2 == null)
             {
-                target.AltMove = new MoveEntry(moveId, 0);
+                target.Spell2 = new MoveEntry(moveId, 0);
             }
             else
             {
-                target.AltMove = new MoveEntry(moveId, 0);
+                target.Spell3 = new MoveEntry(moveId, 0);
             }
         }
 
@@ -84,8 +83,9 @@ namespace ProjectVagabond
             var target = member ?? Leader;
             if (target == null) return;
 
-            if (target.CoreMove?.MoveID == moveId) target.CoreMove = null;
-            if (target.AltMove?.MoveID == moveId) target.AltMove = null;
+            if (target.Spell1?.MoveID == moveId) target.Spell1 = null;
+            if (target.Spell2?.MoveID == moveId) target.Spell2 = null;
+            if (target.Spell3?.MoveID == moveId) target.Spell3 = null;
         }
     }
 }

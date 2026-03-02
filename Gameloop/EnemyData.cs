@@ -30,7 +30,6 @@ namespace ProjectVagabond.Battle
         public int? MaxGuard { get; set; }
 
         public List<string> BasicMoves { get; set; } = new List<string>();
-        public List<string> CoreMoves { get; set; } = new List<string>();
-        public List<string> AltMoves { get; set; } = new List<string>();
+        public List<string> MovePool { get; set; } = new List<string>();
     }
 }

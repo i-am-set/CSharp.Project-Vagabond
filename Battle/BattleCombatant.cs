@@ -54,16 +54,18 @@ namespace ProjectVagabond.Battle
             get
             {
                 var moves = new List<MoveData>();
-                if (BasicMove != null && BattleDataCache.Moves.TryGetValue(BasicMove.MoveID, out var str)) moves.Add(str);
-                if (CoreMove != null && BattleDataCache.Moves.TryGetValue(CoreMove.MoveID, out var ctp)) moves.Add(ctp);
-                if (AltMove != null && BattleDataCache.Moves.TryGetValue(AltMove.MoveID, out var spl)) moves.Add(spl);
+                if (BasicMove != null && BattleDataCache.Moves.TryGetValue(BasicMove.MoveID, out var bas)) moves.Add(bas);
+                if (Spell1 != null && BattleDataCache.Moves.TryGetValue(Spell1.MoveID, out var s1)) moves.Add(s1);
+                if (Spell2 != null && BattleDataCache.Moves.TryGetValue(Spell2.MoveID, out var s2)) moves.Add(s2);
+                if (Spell3 != null && BattleDataCache.Moves.TryGetValue(Spell3.MoveID, out var s3)) moves.Add(s3);
                 return moves;
             }
         }
 
         public MoveEntry? BasicMove { get; set; }
-        public MoveEntry? CoreMove { get; set; }
-        public MoveEntry? AltMove { get; set; }
+        public MoveEntry? Spell1 { get; set; }
+        public MoveEntry? Spell2 { get; set; }
+        public MoveEntry? Spell3 { get; set; }
 
         public int PortraitIndex { get; set; } = 0;
         public List<StatusEffectInstance> ActiveStatusEffects { get; set; } = new List<StatusEffectInstance>();

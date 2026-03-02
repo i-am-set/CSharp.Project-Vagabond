@@ -20,9 +20,11 @@ namespace ProjectVagabond.Battle
         public int? MaxGuard { get; set; }
 
         public string BasicMoveId { get; set; }
-        public List<MovePoolEntry> CoreMovePool { get; set; } = new List<MovePoolEntry>();
-        public List<MovePoolEntry> AltMovePool { get; set; } = new List<MovePoolEntry>();
+        public string StartSpellSlot1MoveId { get; set; }
+        public string StartSpellSlot2MoveId { get; set; }
+        public string StartSpellSlot3MoveId { get; set; }
 
+        public List<string> MovePool { get; set; } = new List<string>();
         public List<Dictionary<string, string>> PassiveAbilityPool { get; set; } = new List<Dictionary<string, string>>();
     }
 }

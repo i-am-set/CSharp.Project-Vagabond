@@ -453,8 +453,9 @@ namespace ProjectVagabond
             var leader = ps.Leader;
             if (leader != null)
             {
-                Log($"  Core: {leader.CoreMove?.MoveID ?? "Empty"} (Used: {leader.CoreMove?.TimesUsed ?? 0})");
-                Log($"  Alternative: {leader.AltMove?.MoveID ?? "Empty"} (Used: {leader.AltMove?.TimesUsed ?? 0})");
+                Log($"  Spell 1: {leader.Spell1?.MoveID ?? "Empty"} (Used: {leader.Spell1?.TimesUsed ?? 0})");
+                Log($"  Spell 2: {leader.Spell2?.MoveID ?? "Empty"} (Used: {leader.Spell2?.TimesUsed ?? 0})");
+                Log($"  Spell 3: {leader.Spell3?.MoveID ?? "Empty"} (Used: {leader.Spell3?.TimesUsed ?? 0})");
             }
             else
             {

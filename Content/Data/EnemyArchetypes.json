@@ -15,8 +15,7 @@
     "MinAgility": 1,
     "MaxAgility": 1,
     "BasicMoves": [ "1" ],
-    "CoreMoves": [],
-    "AltMoves": []
+    "MovePool": []
   },
   {
     "Id": "sapling",
@@ -34,8 +33,7 @@
     "MinAgility": 1,
     "MaxAgility": 2,
     "BasicMoves": [ "5" ],
-    "CoreMoves": [],
-    "AltMoves": []
+    "MovePool": []
   },
   {
     "Id": "boar",
@@ -53,8 +51,7 @@
     "MinAgility": 2,
     "MaxAgility": 3,
     "BasicMoves": [ "1" ],
-    "CoreMoves": [],
-    "AltMoves": []
+    "MovePool": []
   },
   {
     "Id": "toad",
@@ -72,8 +69,7 @@
     "MinAgility": 1,
     "MaxAgility": 3,
     "BasicMoves": [ "1" ],
-    "CoreMoves": [],
-    "AltMoves": []
+    "MovePool": []
   },
   {
     "Id": "snake",
@@ -91,8 +87,7 @@
     "MinAgility": 6,
     "MaxAgility": 7,
     "BasicMoves": [ "3" ],
-    "CoreMoves": [],
-    "AltMoves": []
+    "MovePool": []
   },
   {
     "Id": "wolf",
@@ -110,8 +105,7 @@
     "MinAgility": 5,
     "MaxAgility": 6,
     "BasicMoves": [ "3" ],
-    "CoreMoves": [],
-    "AltMoves": []
+    "MovePool": []
   },
   {
     "Id": "spider",
@@ -129,7 +123,6 @@
     "MinAgility": 6,
     "MaxAgility": 7,
     "BasicMoves": [ "3" ],
-    "CoreMoves": [],
-    "AltMoves": []
+    "MovePool": []
   }
 ]

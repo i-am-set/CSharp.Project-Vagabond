@@ -34,7 +34,6 @@ namespace ProjectVagabond.Battle
             {
                 var selectedPassive = data.PassiveAbilityPool[_rng.Next(data.PassiveAbilityPool.Count)];
                 member.IntrinsicAbilities = new Dictionary<string, string>(selectedPassive);
-                Debug.WriteLine($"[PartyMemberFactory] {member.Name} generated with passive: {string.Join(", ", member.IntrinsicAbilities.Keys)}");
             }
 
             if (!string.IsNullOrEmpty(data.BasicMoveId) && BattleDataCache.Moves.ContainsKey(data.BasicMoveId))
@@ -42,35 +41,25 @@ namespace ProjectVagabond.Battle
                 member.BasicMove = new MoveEntry(data.BasicMoveId, 0);
             }
 
-            AssignRandomMoveFromPool(data.CoreMovePool, out var coreMove);
-            if (coreMove != null)
+            if (!string.IsNullOrEmpty(data.StartSpellSlot1MoveId) && BattleDataCache.Moves.ContainsKey(data.StartSpellSlot1MoveId))
             {
-                member.CoreMove = coreMove;
+                member.Spell1 = new MoveEntry(data.StartSpellSlot1MoveId, 0);
+                member.KnownMovesHistory.Add(data.StartSpellSlot1MoveId);
             }
 
-            AssignRandomMoveFromPool(data.AltMovePool, out var altMove);
-            if (altMove != null)
+            if (!string.IsNullOrEmpty(data.StartSpellSlot2MoveId) && BattleDataCache.Moves.ContainsKey(data.StartSpellSlot2MoveId))
             {
-                member.AltMove = altMove;
+                member.Spell2 = new MoveEntry(data.StartSpellSlot2MoveId, 0);
+                member.KnownMovesHistory.Add(data.StartSpellSlot2MoveId);
+            }
+
+            if (!string.IsNullOrEmpty(data.StartSpellSlot3MoveId) && BattleDataCache.Moves.ContainsKey(data.StartSpellSlot3MoveId))
+            {
+                member.Spell3 = new MoveEntry(data.StartSpellSlot3MoveId, 0);
+                member.KnownMovesHistory.Add(data.StartSpellSlot3MoveId);
             }
 
             return member;
-        }
-
-        private static void AssignRandomMoveFromPool(List<MovePoolEntry> pool, out MoveEntry assignedMove)
-        {
-            assignedMove = null;
-            if (pool == null || !pool.Any()) return;
-
-            var validEntries = pool.Where(p => !p.IsFiller &&
-                                               BattleDataCache.Moves.TryGetValue(p.MoveId, out var moveData) &&
-                                               !moveData.IsRare).ToList();
-
-            if (validEntries.Any())
-            {
-                var selected = validEntries[_rng.Next(validEntries.Count)];
-                assignedMove = new MoveEntry(selected.MoveId, 0);
-            }
         }
     }
 }
