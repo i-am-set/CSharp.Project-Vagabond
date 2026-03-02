@@ -474,12 +474,16 @@ namespace ProjectVagabond.UI
             Vector2 textPosition;
 
             if (AlignLeft)
-                textPosition = new Vector2(Bounds.Left + totalXOffset + LEFT_ALIGN_PADDING, Bounds.Center.Y + totalYOffset - (textSize.Y / 2f));
+                textPosition = new Vector2(Bounds.Left + totalXOffset + LEFT_ALIGN_PADDING, Bounds.Center.Y + totalYOffset - MathF.Floor(textSize.Y / 2f));
             else
-                textPosition = new Vector2(Bounds.Center.X + totalXOffset - (textSize.X / 2f), Bounds.Center.Y + totalYOffset - (textSize.Y / 2f));
+                textPosition = new Vector2(Bounds.Center.X + totalXOffset - MathF.Floor(textSize.X / 2f), Bounds.Center.Y + totalYOffset - MathF.Floor(textSize.Y / 2f));
 
             textPosition += TextRenderOffset;
-            Vector2 origin = new Vector2(MathF.Round(textSize.X / 2f), MathF.Round(textSize.Y / 2f));
+
+            // Round the base position to prevent subpixel jitter during movement
+            textPosition = new Vector2(MathF.Round(textPosition.X), MathF.Round(textPosition.Y));
+
+            Vector2 origin = new Vector2(MathF.Floor(textSize.X / 2f), MathF.Floor(textSize.Y / 2f));
             Vector2 drawPos = textPosition + origin;
 
             if (EnableTextWave && (isActivated || AlwaysAnimateText))

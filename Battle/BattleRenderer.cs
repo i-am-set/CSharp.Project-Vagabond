@@ -391,6 +391,13 @@ namespace ProjectVagabond.Battle.UI
             var players = allCombatants.Where(c => c.IsPlayerControlled && c.IsActiveOnField).ToList();
 
             var (selectableTargets, activeTargetType) = ResolveSelectableTargets(allCombatants, currentActor, uiManager);
+            var sortedSelectable = SortTargetsByHierarchy(selectableTargets, currentActor);
+
+            bool isMultiTarget = activeTargetType == TargetType.Every ||
+                                 activeTargetType == TargetType.Both ||
+                                 activeTargetType == TargetType.All ||
+                                 activeTargetType == TargetType.Team;
+
             var silhouetteColors = ResolveSilhouetteColors(allCombatants, currentActor, selectableTargets, activeTargetType, uiManager, hoveredCombatant);
             bool shouldGrayOut = uiManager.UIState == BattleUIState.Targeting || (uiManager.HoveredMove != null && uiManager.HoveredMove.Target != TargetType.None);
 
@@ -406,14 +413,14 @@ namespace ProjectVagabond.Battle.UI
             var flashState = animationManager.GetImpactFlashState();
             if (flashState != null)
             {
-                DrawEnemies(spriteBatch, enemies, allCombatants, currentActor, shouldGrayOut, selectableTargets, animationManager, silhouetteColors, transform, gameTime, uiManager, hoveredCombatant, isTargetingMode, hoveredGroupColor, drawShadow: true, drawSprite: false);
-                DrawPlayers(spriteBatch, font, players, currentActor, shouldGrayOut, selectableTargets, animationManager, silhouetteColors, gameTime, uiManager, hoveredCombatant, isTargetingMode, hoveredGroupColor, drawShadow: true, drawSprite: false);
+                DrawEnemies(spriteBatch, enemies, allCombatants, currentActor, shouldGrayOut, selectableTargets, sortedSelectable, isMultiTarget, animationManager, silhouetteColors, transform, gameTime, uiManager, hoveredCombatant, isTargetingMode, hoveredGroupColor, drawShadow: true, drawSprite: false);
+                DrawPlayers(spriteBatch, font, players, currentActor, shouldGrayOut, selectableTargets, sortedSelectable, isMultiTarget, animationManager, silhouetteColors, gameTime, uiManager, hoveredCombatant, isTargetingMode, hoveredGroupColor, drawShadow: true, drawSprite: false);
 
                 var nonTargetEnemies = enemies.Where(e => !flashState.TargetCombatantIDs.Contains(e.CombatantID)).ToList();
                 var nonTargetPlayers = players.Where(p => !flashState.TargetCombatantIDs.Contains(p.CombatantID)).ToList();
 
-                DrawEnemies(spriteBatch, nonTargetEnemies, allCombatants, currentActor, shouldGrayOut, selectableTargets, animationManager, silhouetteColors, transform, gameTime, uiManager, hoveredCombatant, isTargetingMode, hoveredGroupColor, drawShadow: false, drawSprite: true, includeDying: true);
-                DrawPlayers(spriteBatch, font, nonTargetPlayers, currentActor, shouldGrayOut, selectableTargets, animationManager, silhouetteColors, gameTime, uiManager, hoveredCombatant, isTargetingMode, hoveredGroupColor, drawShadow: false, drawSprite: true);
+                DrawEnemies(spriteBatch, nonTargetEnemies, allCombatants, currentActor, shouldGrayOut, selectableTargets, sortedSelectable, isMultiTarget, animationManager, silhouetteColors, transform, gameTime, uiManager, hoveredCombatant, isTargetingMode, hoveredGroupColor, drawShadow: false, drawSprite: true, includeDying: true);
+                DrawPlayers(spriteBatch, font, nonTargetPlayers, currentActor, shouldGrayOut, selectableTargets, sortedSelectable, isMultiTarget, animationManager, silhouetteColors, gameTime, uiManager, hoveredCombatant, isTargetingMode, hoveredGroupColor, drawShadow: false, drawSprite: true);
 
                 _core.RequestFullscreenOverlay((overlayBatch, uiMatrix) =>
                 {
@@ -431,15 +438,15 @@ namespace ProjectVagabond.Battle.UI
                     var targetPlayers = players.Where(p => flashState.TargetCombatantIDs.Contains(p.CombatantID)).ToList();
 
                     overlayBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
-                    DrawEnemies(overlayBatch, targetEnemies, allCombatants, currentActor, shouldGrayOut, selectableTargets, animationManager, silhouetteColors, transform, gameTime, uiManager, hoveredCombatant, isTargetingMode, hoveredGroupColor, drawShadow: false, drawSprite: true, includeDying: false);
-                    DrawPlayers(overlayBatch, font, targetPlayers, currentActor, shouldGrayOut, selectableTargets, animationManager, silhouetteColors, gameTime, uiManager, hoveredCombatant, isTargetingMode, hoveredGroupColor, drawShadow: false, drawSprite: true);
+                    DrawEnemies(overlayBatch, targetEnemies, allCombatants, currentActor, shouldGrayOut, selectableTargets, sortedSelectable, isMultiTarget, animationManager, silhouetteColors, transform, gameTime, uiManager, hoveredCombatant, isTargetingMode, hoveredGroupColor, drawShadow: false, drawSprite: true, includeDying: false);
+                    DrawPlayers(overlayBatch, font, targetPlayers, currentActor, shouldGrayOut, selectableTargets, sortedSelectable, isMultiTarget, animationManager, silhouetteColors, gameTime, uiManager, hoveredCombatant, isTargetingMode, hoveredGroupColor, drawShadow: false, drawSprite: true);
                     overlayBatch.End();
                 });
             }
             else
             {
-                DrawEnemies(spriteBatch, enemies, allCombatants, currentActor, shouldGrayOut, selectableTargets, animationManager, silhouetteColors, transform, gameTime, uiManager, hoveredCombatant, isTargetingMode, hoveredGroupColor);
-                DrawPlayers(spriteBatch, font, players, currentActor, shouldGrayOut, selectableTargets, animationManager, silhouetteColors, gameTime, uiManager, hoveredCombatant, isTargetingMode, hoveredGroupColor);
+                DrawEnemies(spriteBatch, enemies, allCombatants, currentActor, shouldGrayOut, selectableTargets, sortedSelectable, isMultiTarget, animationManager, silhouetteColors, transform, gameTime, uiManager, hoveredCombatant, isTargetingMode, hoveredGroupColor);
+                DrawPlayers(spriteBatch, font, players, currentActor, shouldGrayOut, selectableTargets, sortedSelectable, isMultiTarget, animationManager, silhouetteColors, gameTime, uiManager, hoveredCombatant, isTargetingMode, hoveredGroupColor);
             }
 
             animationManager.DrawProjectiles(spriteBatch);
@@ -1073,7 +1080,7 @@ namespace ProjectVagabond.Battle.UI
             foreach (var k in keysToRemove) _playerVisualXPositions.Remove(k);
         }
 
-        private void DrawEnemies(SpriteBatch spriteBatch, List<BattleCombatant> activeEnemies, IEnumerable<BattleCombatant> allCombatants, BattleCombatant currentActor, bool shouldGrayOut, HashSet<BattleCombatant> selectable, BattleAnimationManager animManager, Dictionary<string, Color> silhouetteColors, Matrix transform, GameTime gameTime, BattleUIManager uiManager, BattleCombatant hoveredCombatant, bool isTargetingMode, Color? hoveredGroupColor, bool drawShadow = true, bool drawSprite = true, bool includeDying = true)
+        private void DrawEnemies(SpriteBatch spriteBatch, List<BattleCombatant> activeEnemies, IEnumerable<BattleCombatant> allCombatants, BattleCombatant currentActor, bool shouldGrayOut, HashSet<BattleCombatant> selectable, List<BattleCombatant> sortedSelectable, bool isMultiTarget, BattleAnimationManager animManager, Dictionary<string, Color> silhouetteColors, Matrix transform, GameTime gameTime, BattleUIManager uiManager, BattleCombatant hoveredCombatant, bool isTargetingMode, Color? hoveredGroupColor, bool drawShadow = true, bool drawSprite = true, bool includeDying = true)
         {
             var dyingEnemies = allCombatants.Where(c => !c.IsPlayerControlled && animManager.IsDeathAnimating(c.CombatantID)).ToList();
 
@@ -1103,50 +1110,102 @@ namespace ProjectVagabond.Battle.UI
 
                     var center = new Vector2(visualX, BattleLayout.ENEMY_SLOT_Y_OFFSET);
 
-                    Color? assignedColor = silhouetteColors.ContainsKey(enemy.CombatantID) ? silhouetteColors[enemy.CombatantID] : null;
                     bool isSelectable = selectable.Contains(enemy);
+                    Color? assignedColor = silhouetteColors.ContainsKey(enemy.CombatantID) ? silhouetteColors[enemy.CombatantID] : null;
 
                     bool isHovered = (hoveredCombatant == enemy);
                     bool isGroupHovered = assignedColor.HasValue && hoveredGroupColor.HasValue && assignedColor.Value == hoveredGroupColor.Value;
+                    bool isAnyTargetHovered = isTargetingMode && hoveredCombatant != null && selectable.Contains(hoveredCombatant);
 
-                    bool isSilhouetted = shouldGrayOut && !isSelectable;
+                    float cycleAlpha = 1.0f;
+                    bool isSilhouetted = false;
                     Color silhouetteColor = _global.Palette_DarkShadow;
                     Color outlineColor = (enemy == currentActor) ? _global.Palette_Sun : Color.Transparent;
 
-                    if (assignedColor.HasValue)
+                    if (shouldGrayOut)
                     {
                         if (isTargetingMode)
                         {
-                            outlineColor = assignedColor.Value;
-                            if (isGroupHovered)
+                            if (isAnyTargetHovered)
                             {
                                 isSilhouetted = true;
-                                silhouetteColor = assignedColor.Value;
+                                if (isGroupHovered && assignedColor.HasValue)
+                                {
+                                    silhouetteColor = assignedColor.Value;
+                                    outlineColor = assignedColor.Value;
+                                }
+                                else
+                                {
+                                    silhouetteColor = _global.Palette_DarkShadow;
+                                    outlineColor = Color.Transparent;
+                                    assignedColor = null;
+                                }
                             }
                             else
                             {
-                                isSilhouetted = false;
+                                if (isSelectable && assignedColor.HasValue)
+                                {
+                                    isSilhouetted = false;
+                                    outlineColor = assignedColor.Value;
+                                }
+                                else
+                                {
+                                    isSilhouetted = true;
+                                    silhouetteColor = _global.Palette_DarkShadow;
+                                    outlineColor = Color.Transparent;
+                                    assignedColor = null;
+                                }
                             }
                         }
                         else
                         {
-                            isSilhouetted = true;
-                            silhouetteColor = assignedColor.Value;
-                            outlineColor = Color.Transparent;
+                            if (isSelectable)
+                            {
+                                float t = (float)gameTime.TotalGameTime.TotalSeconds;
+                                float cycle = isMultiTarget ? _global.TargetingFlashCycleDurationMulti : _global.TargetingFlashCycleDurationSingle;
+
+                                if (isMultiTarget || sortedSelectable.Count <= 1)
+                                {
+                                    float localT = t % (cycle * 2);
+                                    if (localT < cycle)
+                                    {
+                                        float progress = localT / cycle;
+                                        cycleAlpha = 1.0f - MathF.Sin(progress * MathHelper.Pi);
+                                    }
+                                }
+                                else
+                                {
+                                    int index = sortedSelectable.IndexOf(enemy);
+                                    int activeIndex = (int)(t / cycle) % sortedSelectable.Count;
+                                    if (index == activeIndex)
+                                    {
+                                        float localT = t % cycle;
+                                        float progress = localT / cycle;
+                                        cycleAlpha = 1.0f - MathF.Sin(progress * MathHelper.Pi);
+                                    }
+                                }
+
+                                isSilhouetted = false;
+                                if (assignedColor.HasValue) outlineColor = assignedColor.Value;
+                            }
+                            else
+                            {
+                                isSilhouetted = true;
+                                silhouetteColor = _global.Palette_DarkShadow;
+                                outlineColor = Color.Transparent;
+                                assignedColor = null;
+                            }
                         }
                     }
-                    else if (isSelectable)
+                    else
                     {
-                        outlineColor = _global.Palette_Sun;
+                        if (isHovered)
+                        {
+                            outlineColor = _global.HoveredCombatantOutline;
+                        }
                     }
 
-                    if (isHovered && !shouldGrayOut && !assignedColor.HasValue)
-                    {
-                        isSilhouetted = false;
-                        outlineColor = _global.HoveredCombatantOutline;
-                    }
-
-                    outlineColor = outlineColor * enemy.VisualAlpha;
+                    outlineColor = outlineColor * (enemy.VisualAlpha * cycleAlpha);
 
                     var spawnAnim = animManager.GetSpawnAnimationState(enemy.CombatantID);
                     var switchOut = animManager.GetSwitchOutAnimationState(enemy.CombatantID);
@@ -1158,7 +1217,7 @@ namespace ProjectVagabond.Battle.UI
                     var attackCharge = animManager.GetAttackChargeState(enemy.CombatantID);
 
                     float spawnY = 0f;
-                    float alpha = enemy.VisualAlpha;
+                    float alpha = enemy.VisualAlpha * cycleAlpha;
                     float silhouetteAmt = enemy.VisualSilhouetteAmount;
                     Vector2 slideOffset = Vector2.Zero;
                     Vector2 chargeOffset = Vector2.Zero;
@@ -1272,6 +1331,8 @@ namespace ProjectVagabond.Battle.UI
 
                     drawPos = new Vector2(MathF.Round(drawPos.X), MathF.Round(drawPos.Y));
 
+                    bool skipRender = alpha < 0.01f;
+
                     if (drawSprite)
                     {
                         Vector2[] offsets = _enemySpritePartOffsets.TryGetValue(enemy.CombatantID, out var o) ? o : null;
@@ -1296,17 +1357,20 @@ namespace ProjectVagabond.Battle.UI
                                 lowHealthOverlay = _global.LowHealthFlashColor * flashAlpha;
                         }
 
-                        _entityRenderer.DrawEnemy(spriteBatch, enemy, drawPos, offsets, shake, alpha, silhouetteAmt, silhouetteColor, isHighlighted, assignedColor, outlineColor, flashWhite, tint * alpha, scale, transform, lowHealthOverlay);
-
-                        if (enemy.HasStatusEffect(StatusEffectType.Stun))
+                        if (!skipRender)
                         {
-                            var stunTex = _spriteManager.StunnedIconSpriteSheet;
-                            var stunRect = _spriteManager.GetStunnedAnimRect(gameTime);
+                            _entityRenderer.DrawEnemy(spriteBatch, enemy, drawPos, offsets, shake, alpha, silhouetteAmt, silhouetteColor, isHighlighted, assignedColor, outlineColor, flashWhite, tint * alpha, scale, transform, lowHealthOverlay);
 
-                            float spriteTopY = GetEnemyStaticVisualTop(enemy, center.Y);
-                            Vector2 stunPos = new Vector2(center.X - (stunRect.Width / 2f), spriteTopY - 12f + bob + spawnY);
+                            if (enemy.HasStatusEffect(StatusEffectType.Stun))
+                            {
+                                var stunTex = _spriteManager.StunnedIconSpriteSheet;
+                                var stunRect = _spriteManager.GetStunnedAnimRect(gameTime);
 
-                            spriteBatch.DrawSnapped(stunTex, stunPos, stunRect, Color.White * alpha, 0f, Vector2.Zero, 1f, SpriteEffects.None, 1.0f);
+                                float spriteTopY = GetEnemyStaticVisualTop(enemy, center.Y);
+                                Vector2 stunPos = new Vector2(center.X - (stunRect.Width / 2f), spriteTopY - 12f + bob + spawnY);
+
+                                spriteBatch.DrawSnapped(stunTex, stunPos, stunRect, Color.White * alpha, 0f, Vector2.Zero, 1f, SpriteEffects.None, 1.0f);
+                            }
                         }
 
                         if (!enemy.IsDefeated)
@@ -1418,7 +1482,7 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private void DrawPlayers(SpriteBatch spriteBatch, BitmapFont font, List<BattleCombatant> players, BattleCombatant currentActor, bool shouldGrayOut, HashSet<BattleCombatant> selectable, BattleAnimationManager animManager, Dictionary<string, Color> silhouetteColors, GameTime gameTime, BattleUIManager uiManager, BattleCombatant hoveredCombatant, bool isTargetingMode, Color? hoveredGroupColor, bool drawShadow = true, bool drawSprite = true)
+        private void DrawPlayers(SpriteBatch spriteBatch, BitmapFont font, List<BattleCombatant> players, BattleCombatant currentActor, bool shouldGrayOut, HashSet<BattleCombatant> selectable, List<BattleCombatant> sortedSelectable, bool isMultiTarget, BattleAnimationManager animManager, Dictionary<string, Color> silhouetteColors, GameTime gameTime, BattleUIManager uiManager, BattleCombatant hoveredCombatant, bool isTargetingMode, Color? hoveredGroupColor, bool drawShadow = true, bool drawSprite = true)
         {
             foreach (var player in players)
             {
@@ -1437,50 +1501,100 @@ namespace ProjectVagabond.Battle.UI
 
                 if (player.BattleSlot == 0) PlayerSpritePosition = spriteCenter;
 
-                Color? assignedColor = silhouetteColors.ContainsKey(player.CombatantID) ? silhouetteColors[player.CombatantID] : null;
                 bool isSelectable = selectable.Contains(player);
+                Color? assignedColor = silhouetteColors.ContainsKey(player.CombatantID) ? silhouetteColors[player.CombatantID] : null;
 
                 bool isHovered = (hoveredCombatant == player);
                 bool isGroupHovered = assignedColor.HasValue && hoveredGroupColor.HasValue && assignedColor.Value == hoveredGroupColor.Value;
+                bool isAnyTargetHovered = isTargetingMode && hoveredCombatant != null && selectable.Contains(hoveredCombatant);
 
-                bool isSilhouetted = shouldGrayOut && !isSelectable;
+                float cycleAlpha = 1.0f;
+                bool isSilhouetted = false;
                 Color silhouetteColor = _global.Palette_DarkShadow;
                 Color outlineColor = (player == currentActor) ? _global.Palette_Sun : Color.Transparent;
 
-                if (assignedColor.HasValue)
+                if (shouldGrayOut)
                 {
                     if (isTargetingMode)
                     {
-                        outlineColor = assignedColor.Value;
-                        if (isGroupHovered)
+                        if (isAnyTargetHovered)
                         {
                             isSilhouetted = true;
-                            silhouetteColor = assignedColor.Value;
+                            if (isGroupHovered && assignedColor.HasValue)
+                            {
+                                silhouetteColor = assignedColor.Value;
+                                outlineColor = assignedColor.Value;
+                            }
+                            else
+                            {
+                                silhouetteColor = _global.Palette_DarkShadow;
+                                outlineColor = Color.Transparent;
+                                assignedColor = null;
+                            }
                         }
                         else
                         {
-                            isSilhouetted = false;
+                            if (isSelectable && assignedColor.HasValue)
+                            {
+                                isSilhouetted = false;
+                                outlineColor = assignedColor.Value;
+                            }
+                            else
+                            {
+                                isSilhouetted = true;
+                                silhouetteColor = _global.Palette_DarkShadow;
+                                outlineColor = Color.Transparent;
+                                assignedColor = null;
+                            }
                         }
                     }
                     else
                     {
-                        isSilhouetted = true;
-                        silhouetteColor = assignedColor.Value;
-                        outlineColor = Color.Transparent;
+                        if (isSelectable)
+                        {
+                            float t = (float)gameTime.TotalGameTime.TotalSeconds;
+                            float cycle = isMultiTarget ? _global.TargetingFlashCycleDurationMulti : _global.TargetingFlashCycleDurationSingle;
+
+                            if (isMultiTarget || sortedSelectable.Count <= 1)
+                            {
+                                float localT = t % (cycle * 2);
+                                if (localT < cycle)
+                                {
+                                    float progress = localT / cycle;
+                                    cycleAlpha = 1.0f - MathF.Sin(progress * MathHelper.Pi);
+                                }
+                            }
+                            else
+                            {
+                                int index = sortedSelectable.IndexOf(player);
+                                int activeIndex = (int)(t / cycle) % sortedSelectable.Count;
+                                if (index == activeIndex)
+                                {
+                                    float localT = t % cycle;
+                                    float progress = localT / cycle;
+                                    cycleAlpha = 1.0f - MathF.Sin(progress * MathHelper.Pi);
+                                }
+                            }
+
+                            isSilhouetted = false;
+                            if (assignedColor.HasValue) outlineColor = assignedColor.Value;
+                        }
+                        else
+                        {
+                            isSilhouetted = true;
+                            silhouetteColor = _global.Palette_DarkShadow;
+                            outlineColor = Color.Transparent;
+                            assignedColor = null;
+                        }
                     }
                 }
-                else if (isSelectable)
+                else
                 {
-                    outlineColor = _global.Palette_Sun;
+                    if (isHovered)
+                    {
+                        outlineColor = _global.HoveredCombatantOutline;
+                    }
                 }
-
-                if (isHovered && !shouldGrayOut && !assignedColor.HasValue)
-                {
-                    isSilhouetted = false;
-                    outlineColor = _global.HoveredCombatantOutline;
-                }
-
-                outlineColor = outlineColor * player.VisualAlpha;
 
                 var spawnAnim = animManager.GetSpawnAnimationState(player.CombatantID);
                 var switchOut = animManager.GetSwitchOutAnimationState(player.CombatantID);
@@ -1492,7 +1606,7 @@ namespace ProjectVagabond.Battle.UI
                 var attackCharge = animManager.GetAttackChargeState(player.CombatantID);
 
                 float spawnY = 0f;
-                float alpha = player.VisualAlpha;
+                float alpha = player.VisualAlpha * cycleAlpha;
                 float scale = 1.0f;
                 float rotation = 0f;
                 Vector2 slideOffset = Vector2.Zero;
@@ -1512,7 +1626,7 @@ namespace ProjectVagabond.Battle.UI
                 else if (switchOut != null)
                 {
                     float p = Math.Clamp(switchOut.Timer / BattleAnimationManager.SwitchOutAnimationState.DURATION, 0f, 1f);
-                    spawnY = MathHelper.Lerp(0f, -BattleAnimationManager.SwitchOutAnimationState.SIMPLE_LIFT_HEIGHT, Easing.EaseInCubic(p));
+                    spawnY = MathHelper.Lerp(0f, -BattleAnimationManager.SwitchOutAnimationState.SIMPLE_LIFT_HEIGHT, Easing.EaseOutCubic(p));
                     alpha = 1.0f - Easing.EaseOutCubic(p);
                 }
                 else if (switchIn != null)
@@ -1573,17 +1687,25 @@ namespace ProjectVagabond.Battle.UI
                             lowHealthOverlay = _global.LowHealthFlashColor * flashAlpha;
                     }
 
-                    sprite.Draw(spriteBatch, animManager, player, tint, isHighlightedSprite, pulse, isSilhouetted, silhouetteColor, gameTime, assignedColor, outlineColor, scale * chargeScale.X, lowHealthOverlay, rotation);
+                    bool skipRender = alpha < 0.01f;
 
-                    if (player.ActiveStatusEffects.Any(s => s.EffectType == StatusEffectType.Stun))
+                    if (!skipRender)
                     {
-                        var stunTex = _spriteManager.StunnedIconSpriteSheet;
-                        var stunRect = _spriteManager.GetStunnedAnimRect(gameTime);
+                        Color finalSilhouetteColor = silhouetteColor * alpha;
+                        Color? finalAssignedColor = assignedColor.HasValue ? assignedColor.Value * alpha : null;
 
-                        float spriteTopY = spriteCenter.Y - 16f;
-                        Vector2 stunPos = new Vector2(spriteCenter.X - (stunRect.Width / 2f), spriteTopY - 8f + bob + spawnY);
+                        sprite.Draw(spriteBatch, animManager, player, tint, isHighlightedSprite, pulse, isSilhouetted, finalSilhouetteColor, gameTime, finalAssignedColor, outlineColor, scale * chargeScale.X, lowHealthOverlay, rotation);
 
-                        spriteBatch.DrawSnapped(stunTex, stunPos, stunRect, Color.White * alpha, 0f, Vector2.Zero, 1f, SpriteEffects.None, 1.0f);
+                        if (player.ActiveStatusEffects.Any(s => s.EffectType == StatusEffectType.Stun))
+                        {
+                            var stunTex = _spriteManager.StunnedIconSpriteSheet;
+                            var stunRect = _spriteManager.GetStunnedAnimRect(gameTime);
+
+                            float spriteTopY = spriteCenter.Y - 16f;
+                            Vector2 stunPos = new Vector2(spriteCenter.X - (stunRect.Width / 2f), spriteTopY - 8f + bob + spawnY);
+
+                            spriteBatch.DrawSnapped(stunTex, stunPos, stunRect, Color.White * alpha, 0f, Vector2.Zero, 1f, SpriteEffects.None, 1.0f);
+                        }
                     }
 
                     Rectangle bounds = new Rectangle((int)(spriteCenter.X - 16), (int)(spriteCenter.Y - 16), 32, 32);

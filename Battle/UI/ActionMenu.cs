@@ -244,7 +244,8 @@ namespace ProjectVagabond.Battle.UI
                 int primaryTotalWidth = 133;
                 float panelCenterX = _position.X + (PANEL_WIDTH / 2f);
                 int startX = (int)(panelCenterX - (primaryTotalWidth / 2f));
-                int y = (int)_position.Y + 1;
+
+                int y = (int)_position.Y;
 
                 // Basic
                 if (_buttons.Count > 0) { _buttons[0].Bounds = InflateRect(startX - 1, y - 1, 44, 28); ((MoveButton)_buttons[0]).VisualWidthOverride = 44; ((MoveButton)_buttons[0]).VisualHeightOverride = 28; }
@@ -280,6 +281,15 @@ namespace ProjectVagabond.Battle.UI
                     iconColor = global.Palette_Black;
                     if (moveData.Abilities.OfType<CounterAbility>().Any() && Combatant.HasUsedFirstAttack) forceDisabled = true;
                 }
+                else
+                {
+                    // EMPTY SLOT LOGIC
+                    label = "EMPTY";
+                    font = ServiceLocator.Get<Core>().TertiaryFont;
+                    backgroundColor = global.Palette_Black;
+                    forceDisabled = true;
+                    showCooldown = false;
+                }
 
                 bool isOnCooldown = entry != null && entry.TurnsUntilReady > 0;
 
@@ -291,6 +301,7 @@ namespace ProjectVagabond.Battle.UI
                     Text = label,
                     CustomDefaultTextColor = global.Palette_Black,
                     CustomHoverTextColor = global.Palette_DarkestPale,
+                    CustomDisabledTextColor = moveData == null ? global.Palette_DarkShadow : global.ButtonDisableColor,
                     VisualWidthOverride = width,
                     VisualHeightOverride = height,
                     TextRenderOffset = textOffset,
@@ -398,7 +409,8 @@ namespace ProjectVagabond.Battle.UI
                 if (HoveredMove == null) return;
                 int targetSlot = (SlotIndex == 0) ? 1 : 0;
                 var targetArea = BattleLayout.GetActionMenuArea(targetSlot);
-                Vector2 tooltipPos = new Vector2(targetArea.Center.X - (MoveTooltipRenderer.WIDTH / 2f), targetArea.Center.Y - 23f + offset.Y);
+                // Moved up 5 pixels (was -23f, now -28f)
+                Vector2 tooltipPos = new Vector2(targetArea.Center.X - (MoveTooltipRenderer.WIDTH / 2f), targetArea.Center.Y - 28f + offset.Y);
                 _tooltipRenderer.DrawFixed(spriteBatch, tooltipPos, HoveredMove);
             }
 

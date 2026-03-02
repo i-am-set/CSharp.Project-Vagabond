@@ -156,9 +156,13 @@ namespace ProjectVagabond
 
         public Color LowHealthFlashColor { get; set; } = new Color(181, 65, 49);
         public float LowHealthThreshold { get; set; } = 0.50f;
-        public float LowHealthFlashSpeedMin { get; set; } = 1.5f;
-        public float LowHealthFlashSpeedMax { get; set; } = 4.0f;
+        public float LowHealthFlashSpeedMin { get; set; } = 3.0f;
+        public float LowHealthFlashSpeedMax { get; set; } = 8.0f;
         public float LowHealthFlashPatternLength { get; set; } = 7.0f;
+
+        // Tunable variables for targeting silhouette flash cycles
+        public float TargetingFlashCycleDurationSingle { get; set; } = 0.75f;
+        public float TargetingFlashCycleDurationMulti { get; set; } = 0.5f;
 
         public float SquashRecoverySpeed { get; set; } = 4f;
         public const float ItemHoverScale = 1.2f;
