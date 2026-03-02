@@ -89,9 +89,8 @@ namespace ProjectVagabond.Battle.UI
                 return;
             }
 
-            // Easing: EaseInExpo for "Start slow, accelerate exponentially"
             float t = Math.Clamp(progress, 0f, 1f);
-            float easedT = (t == 0) ? 0 : MathF.Pow(2, 10 * (t - 1));
+            float easedT = Easing.EaseInExpo(t);
 
             Vector2 targetPos = (Target != null) ? getTargetPos(Target) : _startPosition;
 
@@ -218,7 +217,6 @@ namespace ProjectVagabond.Battle.UI
 
             float t = Math.Clamp(progress, 0f, 1f);
 
-            // Linear time for a smooth, predictable parabolic arc rather than the snappy exponential curve
             float smoothT = t;
 
             Vector2 targetPos = (Target != null) ? getTargetPos(Target) : _startPosition;
