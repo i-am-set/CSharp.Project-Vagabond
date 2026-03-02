@@ -961,7 +961,8 @@ namespace ProjectVagabond.Battle
                             Actor = action.Actor,
                             Target = target,
                             OnImpact = () => { EventBus.Publish(new GameEvents.TriggerImpact()); },
-                            Color = _global.Palette_Sky
+                            Color = _global.Palette_Sky,
+                            Move = action.ChosenMove
                         });
                     }
                 }

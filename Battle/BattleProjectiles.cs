@@ -154,4 +154,120 @@ namespace ProjectVagabond.Battle.UI
             }
         }
     }
+
+    public class FireballProjectile : BattleProjectile
+    {
+        private float _timer;
+        private readonly float _duration;
+        private readonly Vector2 _startPosition;
+        private Vector2 _controlPoint;
+        private float _rotation;
+
+        private ParticleEmitter _trailEmitter;
+        private readonly ParticleSystemManager _psm;
+        private readonly Random _rng = new Random();
+
+        private readonly Color[] _fireColors;
+
+        public FireballProjectile(Vector2 startPos, BattleCombatant target, Action onImpact)
+        {
+            Position = startPos;
+            _startPosition = startPos;
+            Target = target;
+            OnImpact = onImpact;
+            _psm = ServiceLocator.Get<ParticleSystemManager>();
+            var global = ServiceLocator.Get<Global>();
+
+            _fireColors = new Color[] { global.Palette_Sun, global.Palette_DarkSun, global.Palette_Fruit, global.Palette_Rust };
+
+            // Slower lob
+            _duration = 0.8f + (float)_rng.NextDouble() * 0.3f;
+
+            // Higher arc
+            float cpX = _rng.Next(-40, 41);
+            float cpY = _rng.Next(-180, -100);
+            _controlPoint = startPos + new Vector2(cpX, cpY);
+
+            var settings = ParticleEffects.CreateFireballBody();
+            _trailEmitter = _psm.CreateEmitter(settings);
+            _trailEmitter.Position = Position;
+        }
+
+        public override void Update(GameTime gameTime, Func<BattleCombatant, Vector2> getTargetPos)
+        {
+            if (!IsActive) return;
+
+            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            _timer += dt;
+
+            if (_trailEmitter != null)
+            {
+                _trailEmitter.Settings.StartColor = _fireColors[_rng.Next(0, _fireColors.Length)];
+            }
+
+            float progress = _timer / _duration;
+
+            if (progress >= 1.0f)
+            {
+                if (Target != null && !Target.IsDefeated) Position = getTargetPos(Target);
+                OnImpact?.Invoke();
+                SpawnImpact();
+                IsActive = false;
+                return;
+            }
+
+            float t = Math.Clamp(progress, 0f, 1f);
+
+            // Linear time for a smooth, predictable parabolic arc rather than the snappy exponential curve
+            float smoothT = t;
+
+            Vector2 targetPos = (Target != null) ? getTargetPos(Target) : _startPosition;
+
+            float u = 1 - smoothT;
+            float tt = smoothT * smoothT;
+            float uu = u * u;
+
+            Vector2 nextPos = (uu * _startPosition) + (2 * u * smoothT * _controlPoint) + (tt * targetPos);
+
+            Vector2 delta = nextPos - Position;
+            if (delta.LengthSquared() > 0.001f) _rotation = MathF.Atan2(delta.Y, delta.X);
+
+            Position = nextPos;
+            if (_trailEmitter != null) _trailEmitter.Position = Position;
+        }
+
+        private void SpawnImpact()
+        {
+            var settings = new ParticleEmitterSettings
+            {
+                Texture = ServiceLocator.Get<SpriteManager>().SoftParticleSprite,
+                StartColor = _fireColors[0],
+                EndColor = _fireColors[3],
+                Lifetime = new FloatRange(0.3f, 0.6f),
+                InitialSize = new FloatRange(15f, 30f),
+                EndSize = new FloatRange(0f),
+                EmissionRate = 0f,
+                BurstCount = 20,
+                VelocityPattern = EmissionPattern.Radial,
+                InitialVelocityX = new FloatRange(100f, 300f),
+                BlendMode = BlendState.Additive
+            };
+            var burst = _psm.CreateEmitter(settings);
+            burst.Position = Position;
+            burst.Settings.Duration = 0.1f;
+            burst.EmitBurst(20);
+        }
+
+        public override void Draw(SpriteBatch spriteBatch) { }
+
+        public override void Destroy()
+        {
+            if (_trailEmitter != null)
+            {
+                _trailEmitter.IsActive = false;
+                _trailEmitter.Settings.Duration = 0.1f;
+                _trailEmitter = null;
+            }
+        }
+    }
 }

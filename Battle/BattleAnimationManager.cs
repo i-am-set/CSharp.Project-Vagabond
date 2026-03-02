@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Particles;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
@@ -308,7 +309,16 @@ namespace ProjectVagabond.Battle.UI
                 startPos.Y -= 20f;
             }
 
-            var projectile = new HomingProjectile(startPos, e.Target, e.OnImpact, e.Color);
+            BattleProjectile projectile;
+            if (e.Move != null && e.Move.Tags.Contains("Fire"))
+            {
+                projectile = new FireballProjectile(startPos, e.Target, e.OnImpact);
+            }
+            else
+            {
+                projectile = new HomingProjectile(startPos, e.Target, e.OnImpact, e.Color);
+            }
+
             SpawnProjectile(projectile);
         }
 

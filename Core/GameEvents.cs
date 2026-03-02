@@ -232,6 +232,7 @@ namespace ProjectVagabond
             public BattleCombatant Target { get; set; }
             public Action OnImpact { get; set; }
             public Color Color { get; set; }
+            public MoveData Move { get; set; }
         }
 
         public class CheckActionPriorityEvent : GameEvent

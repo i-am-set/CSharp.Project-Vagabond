@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
 using MonoGame.Extended.ECS;
 using ProjectVagabond;
+using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
@@ -43,15 +44,11 @@ namespace ProjectVagabond.Particles
             return settings;
         }
 
-        /// <summary>
-        /// Creates a high-density, multi-colored sparkle volume for Magic Missiles.
-        /// </summary>
         public static ParticleEmitterSettings CreateMagicMissileBody()
         {
             var settings = ParticleEmitterSettings.CreateDefault();
             var global = ServiceLocator.Get<Global>();
 
-            // Emitter
             settings.Shape = EmitterShape.Circle;
             settings.EmitFrom = EmissionSource.Volume;
             settings.EmitterSize = new Vector2(3f, 3f);
@@ -60,32 +57,24 @@ namespace ProjectVagabond.Particles
             settings.MaxParticles = 300;
             settings.Duration = float.PositiveInfinity;
 
-            // Particle Physics
             settings.VelocityPattern = EmissionPattern.Radial;
             settings.Lifetime = new FloatRange(0.1f, 0.3f);
 
             settings.InitialVelocityX = new FloatRange(5f, 20f);
             settings.InitialVelocityY = new FloatRange(0f);
 
-            // Hard Edges & Rotation
-            // Using 1x1 pixel texture for hard edges. 
-            // Size 2f-4f = 2-4 screen pixels.
             settings.InitialSize = new FloatRange(2f, 4f);
             settings.EndSize = new FloatRange(0f);
             settings.InterpolateSize = true;
 
-            // Random Rotation & Spin
             settings.InitialRotation = new FloatRange(0, MathHelper.TwoPi);
-            settings.InitialRotationSpeed = new FloatRange(-10f, 10f); // High variance spin
+            settings.InitialRotationSpeed = new FloatRange(-10f, 10f);
 
-            // Color (Overridden per-frame in HomingProjectile)
             settings.StartColor = global.Palette_Sky;
             settings.EndColor = global.Palette_Sea;
             settings.StartAlpha = 1.0f;
             settings.EndAlpha = 0.0f;
 
-            // Rendering
-            // Use the 1x1 pixel for a sharp, hard-edged look
             settings.Texture = ServiceLocator.Get<Texture2D>();
             settings.BlendMode = BlendState.Additive;
             settings.LayerDepth = 0.96f;
@@ -93,33 +82,61 @@ namespace ProjectVagabond.Particles
             return settings;
         }
 
-        /// <summary>
-        /// Creates a burst of bright sparks for combat impacts.
-        /// </summary>
-        /// <param name="intensity">Scalar for the size and violence of the effect (1.0 = Normal, 3.0+ = Heavy).</param>
+        public static ParticleEmitterSettings CreateFireballBody()
+        {
+            var settings = ParticleEmitterSettings.CreateDefault();
+            var global = ServiceLocator.Get<Global>();
+
+            settings.Shape = EmitterShape.Circle;
+            settings.EmitFrom = EmissionSource.Volume;
+            settings.EmitterSize = new Vector2(10f, 10f);
+            settings.EmissionRate = 800f;
+            settings.MaxParticles = 500;
+            settings.Duration = float.PositiveInfinity;
+
+            settings.VelocityPattern = EmissionPattern.Radial;
+            settings.Lifetime = new FloatRange(0.2f, 0.4f);
+            settings.InitialVelocityX = new FloatRange(20f, 60f);
+            settings.InitialVelocityY = new FloatRange(0f);
+
+            settings.InitialSize = new FloatRange(3f, 6f);
+            settings.EndSize = new FloatRange(0f);
+            settings.InterpolateSize = true;
+
+            settings.InitialRotation = new FloatRange(0, MathHelper.TwoPi);
+            settings.InitialRotationSpeed = new FloatRange(-15f, 15f);
+
+            settings.StartColor = global.Palette_Sun;
+            settings.EndColor = global.Palette_Rust;
+            settings.StartAlpha = 1.0f;
+            settings.EndAlpha = 0.0f;
+
+            settings.Texture = ServiceLocator.Get<Texture2D>();
+            settings.BlendMode = BlendState.Additive;
+            settings.LayerDepth = 0.96f;
+
+            return settings;
+        }
+
         public static ParticleEmitterSettings CreateHitSparks(float intensity = 1.0f)
         {
             var settings = ParticleEmitterSettings.CreateDefault();
             var global = ServiceLocator.Get<Global>();
 
-            // Scale particle count and size based on intensity
             int baseCount = 12;
             int scaledCount = (int)(baseCount * intensity);
 
-            // Emitter
             settings.Shape = EmitterShape.Circle;
             settings.EmitFrom = EmissionSource.Volume;
             settings.EmitterSize = new Vector2(10f * intensity, 10f * intensity);
-            settings.EmissionRate = 0; // Burst only
+            settings.EmissionRate = 0;
             settings.BurstCount = scaledCount;
             settings.MaxParticles = scaledCount * 2;
-            settings.Duration = 0.2f + (0.1f * intensity); // Lasts slightly longer on big hits
+            settings.Duration = 0.2f + (0.1f * intensity);
 
-            // Initial Particle
             settings.VelocityPattern = EmissionPattern.Radial;
             settings.Lifetime = new FloatRange(0.15f, 0.3f + (0.1f * intensity));
 
-            // Velocity scales with intensity to make debris fly further
             float speedScale = 1.0f + (intensity * 0.5f);
             settings.InitialVelocityX = new FloatRange(150f * speedScale, 300f * speedScale);
             settings.InitialVelocityY = new FloatRange(0f);
@@ -129,57 +146,44 @@ namespace ProjectVagabond.Particles
             settings.InterpolateSize = true;
             settings.InitialRotation = new FloatRange(0, MathHelper.TwoPi);
 
-            // Over Lifetime
-            settings.Gravity = new Vector2(0, 200f * intensity); // Heavier sparks fall faster
+            settings.Gravity = new Vector2(0, 200f * intensity);
             settings.Drag = 3.0f;
             settings.StartColor = global.Palette_Sun;
             settings.EndColor = global.Palette_DarkSun;
             settings.StartAlpha = 1.0f;
             settings.EndAlpha = 0.0f;
 
-            // Rendering
-            settings.Texture = ServiceLocator.Get<Texture2D>(); // 1x1 pixel
+            settings.Texture = ServiceLocator.Get<Texture2D>();
             settings.BlendMode = BlendState.Additive;
-            settings.LayerDepth = 0.95f; // Very top
+            settings.LayerDepth = 0.95f;
 
             return settings;
         }
 
-        /// <summary>
-        /// Creates an expanding ring shockwave.
-        /// </summary>
         public static ParticleEmitterSettings CreateImpactRing(float intensity = 1.0f)
         {
             var settings = ParticleEmitterSettings.CreateDefault();
             var global = ServiceLocator.Get<Global>();
 
-            // Emitter
             settings.Shape = EmitterShape.Point;
             settings.EmissionRate = 0;
             settings.BurstCount = 1;
             settings.MaxParticles = 1;
             settings.Duration = 0.1f + (0.1f * intensity);
 
-            // Initial Particle
             settings.Lifetime = new FloatRange(0.1f + (0.05f * intensity));
             settings.InitialVelocityX = new FloatRange(0f);
             settings.InitialVelocityY = new FloatRange(0f);
 
-            // The ring texture is 64x64.
-            // Scale 0.1 = 6.4px
-            // Scale 1.5 = 96px
             settings.InitialSize = new FloatRange(0.1f * intensity);
             settings.EndSize = new FloatRange(1.5f * intensity);
             settings.InterpolateSize = true;
 
-            // Over Lifetime
             settings.StartColor = global.Palette_Sun;
             settings.EndColor = global.Palette_Sun;
             settings.StartAlpha = 0.8f;
             settings.EndAlpha = 0.0f;
 
-            // Rendering
-            // Use the new hollow ring texture
             settings.Texture = ServiceLocator.Get<SpriteManager>().RingTextureSprite;
             settings.BlendMode = BlendState.Additive;
             settings.LayerDepth = 0.94f;
@@ -533,42 +537,33 @@ namespace ProjectVagabond.Particles
             return settings;
         }
 
-        /// <summary>
-        /// Creates a burst of rising green sparkles for healing effects.
-        /// </summary>
         public static ParticleEmitterSettings CreateHealBurst()
         {
             var settings = ParticleEmitterSettings.CreateDefault();
             var global = ServiceLocator.Get<Global>();
 
-            // Emitter
             settings.Shape = EmitterShape.Circle;
             settings.EmitFrom = EmissionSource.Volume;
-            settings.EmitterSize = new Vector2(30f, 30f); // Wide and flat
+            settings.EmitterSize = new Vector2(30f, 30f);
             settings.EmissionRate = 25;
-            settings.BurstCount = 1; // Increased count
-            settings.Duration = 0.5f; // Give the emitter plenty of time to exist while particles float
+            settings.BurstCount = 1;
+            settings.Duration = 0.5f;
 
-            // Initial Particle
-            settings.Lifetime = new FloatRange(1.0f, 2.5f); // Live much longer
-            settings.InitialVelocityX = new FloatRange(-5f, 5f); // Reduced spread speed
-            settings.InitialVelocityY = new FloatRange(-20f, -5f); // Very slow rise
+            settings.Lifetime = new FloatRange(1.0f, 2.5f);
+            settings.InitialVelocityX = new FloatRange(-5f, 5f);
+            settings.InitialVelocityY = new FloatRange(-20f, -5f);
 
-            // Scale 1.0 = 3x3 pixels. Scale 2.0 = 6x6 pixels.
             settings.InitialSize = new FloatRange(2f, 2f);
             settings.EndSize = new FloatRange(0f);
             settings.InterpolateSize = true;
 
-            // Over Lifetime
-            settings.Gravity = new Vector2(0, -5f); // Tiny upward drift
-            settings.Drag = 0.3f; // Low drag to let them drift
+            settings.Gravity = new Vector2(0, -5f);
+            settings.Drag = 0.3f;
             settings.StartColor = global.Palette_Leaf;
             settings.EndColor = global.Palette_Sun;
             settings.StartAlpha = 1.0f;
             settings.EndAlpha = 0.0f;
 
-            // Rendering
-            // Use the new 3x3 plus sprite
             settings.Texture = ServiceLocator.Get<SpriteManager>().HealParticleSprite;
             settings.BlendMode = BlendState.Additive;
             settings.LayerDepth = 0.9f;
@@ -576,43 +571,33 @@ namespace ProjectVagabond.Particles
             return settings;
         }
 
-        /// <summary>
-        /// Creates a burst of rising blue sparkles for mana restoration.
-        /// </summary>
         public static ParticleEmitterSettings CreateManaBurst()
         {
             var settings = ParticleEmitterSettings.CreateDefault();
             var global = ServiceLocator.Get<Global>();
 
-            // Emitter
             settings.Shape = EmitterShape.Circle;
             settings.EmitFrom = EmissionSource.Volume;
-            settings.EmitterSize = new Vector2(30f, 30f); // Wide and flat
+            settings.EmitterSize = new Vector2(30f, 30f);
             settings.EmissionRate = 35;
-            settings.BurstCount = 1; // Increased count
-            settings.Duration = 0.25f; // Give the emitter plenty of time to exist while particles float
+            settings.BurstCount = 1;
+            settings.Duration = 0.25f;
 
-            // Initial Particle
-            settings.Lifetime = new FloatRange(0.5f, 1.5f); // Live much longer
-            settings.InitialVelocityX = new FloatRange(-5f, 5f); // Reduced spread speed
-            settings.InitialVelocityY = new FloatRange(-20f, -5f); // Very slow rise
+            settings.Lifetime = new FloatRange(0.5f, 1.5f);
+            settings.InitialVelocityX = new FloatRange(-5f, 5f);
+            settings.InitialVelocityY = new FloatRange(-20f, -5f);
 
-            // Scale 1.0 = 4x4 pixels (Circle). Scale 1.5 = 6x6 pixels.
-            // Adjusted scale slightly down from 2.0 since the circle sprite (4x4) is larger than the cross (3x3).
             settings.InitialSize = new FloatRange(1.0f, 1.0f);
             settings.EndSize = new FloatRange(0f);
             settings.InterpolateSize = true;
 
-            // Over Lifetime
-            settings.Gravity = new Vector2(0, -5f); // Tiny upward drift
-            settings.Drag = 1.5f; // Low drag to let them drift
+            settings.Gravity = new Vector2(0, -5f);
+            settings.Drag = 1.5f;
             settings.StartColor = global.Palette_Sky;
             settings.EndColor = global.Palette_Sea;
             settings.StartAlpha = 1.0f;
             settings.EndAlpha = 0.0f;
 
-            // Rendering
-            // Use the circle sprite instead of the plus sprite
             settings.Texture = ServiceLocator.Get<SpriteManager>().CircleParticleSprite;
             settings.BlendMode = BlendState.Additive;
             settings.LayerDepth = 0.9f;
@@ -620,15 +605,11 @@ namespace ProjectVagabond.Particles
             return settings;
         }
 
-        /// <summary>
-        /// Creates a soft, rising burst of particles for status effect applications.
-        /// </summary>
         public static ParticleEmitterSettings CreateStatusImpact()
         {
             var settings = ParticleEmitterSettings.CreateDefault();
             var global = ServiceLocator.Get<Global>();
 
-            // Emitter
             settings.Shape = EmitterShape.Circle;
             settings.EmitFrom = EmissionSource.Volume;
             settings.EmitterSize = new Vector2(12f, 12f);
@@ -637,29 +618,25 @@ namespace ProjectVagabond.Particles
             settings.MaxParticles = 15;
             settings.Duration = 0.5f;
 
-            // Initial Particle
             settings.Lifetime = new FloatRange(1.5f, 1.8f);
             settings.VelocityPattern = EmissionPattern.Radial;
-            settings.InitialVelocityX = new FloatRange(10f, 30f); // Gentle expansion speed
-            settings.InitialVelocityY = new FloatRange(0f); // Radial uses X as speed
+            settings.InitialVelocityX = new FloatRange(10f, 30f);
+            settings.InitialVelocityY = new FloatRange(0f);
 
             settings.InitialSize = new FloatRange(2f, 4f);
             settings.EndSize = new FloatRange(0f);
             settings.InterpolateSize = true;
 
-            // Over Lifetime
-            settings.Gravity = new Vector2(0, -40f); // Float upwards
+            settings.Gravity = new Vector2(0, -40f);
             settings.Drag = 2.0f;
             settings.StartColor = global.Palette_Pale;
-            settings.EndColor = global.Palette_Sky; // Fade to teal
+            settings.EndColor = global.Palette_Sky;
             settings.StartAlpha = 0.8f;
             settings.EndAlpha = 0.0f;
 
-            // Rendering
-            // Use the 1x1 pixel for a sharp look
             settings.Texture = ServiceLocator.Get<Texture2D>();
             settings.BlendMode = BlendState.Additive;
-            settings.LayerDepth = 0.92f; // Slightly below sparks
+            settings.LayerDepth = 0.92f;
 
             return settings;
         }
@@ -671,31 +648,30 @@ namespace ProjectVagabond.Particles
 
             settings.Shape = EmitterShape.Circle;
             settings.EmitFrom = EmissionSource.Volume;
-            settings.EmitterSize = new Vector2(16f, 16f); // Halo around head
+            settings.EmitterSize = new Vector2(16f, 16f);
             settings.EmissionRate = 0;
             settings.BurstCount = 12;
             settings.MaxParticles = 12;
-            settings.Duration = 1.0f; // Lasts 1 second to match turn skip
+            settings.Duration = 1.0f;
 
             settings.Lifetime = new FloatRange(0.5f, 0.8f);
             settings.VelocityPattern = EmissionPattern.Radial;
-            settings.InitialVelocityX = new FloatRange(20f, 40f); // Spin outward
+            settings.InitialVelocityX = new FloatRange(20f, 40f);
             settings.InitialVelocityY = new FloatRange(0f);
 
             settings.InitialSize = new FloatRange(2f, 4f);
             settings.EndSize = new FloatRange(0f);
             settings.InterpolateSize = true;
 
-            // Spinning motion
             settings.InitialRotation = new FloatRange(0, MathHelper.TwoPi);
             settings.InitialRotationSpeed = new FloatRange(2f, 5f);
 
-            settings.StartColor = global.Palette_Sun; // Yellow/Gold for Dazed
+            settings.StartColor = global.Palette_Sun;
             settings.EndColor = global.Palette_DarkSun;
             settings.StartAlpha = 1.0f;
             settings.EndAlpha = 0.0f;
 
-            settings.Texture = ServiceLocator.Get<SpriteManager>().CircleParticleSprite; // Use circle/star shape
+            settings.Texture = ServiceLocator.Get<SpriteManager>().CircleParticleSprite;
             settings.BlendMode = BlendState.Additive;
             settings.LayerDepth = 0.95f;
 
@@ -709,7 +685,7 @@ namespace ProjectVagabond.Particles
 
             settings.Shape = EmitterShape.Rectangle;
             settings.EmitFrom = EmissionSource.Volume;
-            settings.EmitterSize = new Vector2(24f, 48f); // Tall column
+            settings.EmitterSize = new Vector2(24f, 48f);
             settings.EmissionRate = 0;
             settings.BurstCount = 8;
             settings.MaxParticles = 8;
@@ -717,15 +693,15 @@ namespace ProjectVagabond.Particles
 
             settings.Lifetime = new FloatRange(0.4f, 0.7f);
             settings.InitialVelocityX = new FloatRange(0f);
-            settings.InitialVelocityY = new FloatRange(10f, 30f); // Fall down
+            settings.InitialVelocityY = new FloatRange(10f, 30f);
 
             settings.InitialSize = new FloatRange(2f, 3f);
             settings.EndSize = new FloatRange(0f);
 
-            settings.StartColor = global.Palette_Rust; // Red for debuff
+            settings.StartColor = global.Palette_Rust;
             settings.EndColor = global.Palette_DarkShadow;
 
-            settings.Texture = ServiceLocator.Get<Texture2D>(); // Pixel
+            settings.Texture = ServiceLocator.Get<Texture2D>();
             settings.BlendMode = BlendState.AlphaBlend;
             settings.LayerDepth = 0.9f;
 
