@@ -929,7 +929,7 @@ namespace ProjectVagabond.UI
             else
             {
                 // Overlay Background
-                spriteBatch.DrawSnapped(_pixel, new Vector2(snappedX + 1, snappedY + 1), null, _global.Palette_Black * 0.8f, 0f, Vector2.Zero, new Vector2(CARD_WIDTH - 2, HUD_HEIGHT - 6), SpriteEffects.None, 0f);
+                spriteBatch.DrawSnapped(_pixel, new Vector2(snappedX + 1, snappedY + 1), null, _global.Palette_Black, 0f, Vector2.Zero, new Vector2(CARD_WIDTH - 2, HUD_HEIGHT - 6), SpriteEffects.None, 0f);
 
                 // Overlay Plinks
                 var plinks = _moveButtonPlinks.GetValueOrDefault(member);
@@ -937,9 +937,9 @@ namespace ProjectVagabond.UI
                 {
                     MoveEntry[] entries = { member.BasicMove, member.Spell1, member.Spell2, member.Spell3 };
 
-                    int overlayBtnWidth = CARD_WIDTH - 8;
+                    int overlayBtnWidth = CARD_WIDTH - 6;
                     int overlayBtnHeight = 14;
-                    int overlayBtnX = snappedX + 4;
+                    int overlayBtnX = snappedX + 3;
                     int startOverlayY = snappedY + 6;
                     int spacing = 2;
 
@@ -994,12 +994,54 @@ namespace ProjectVagabond.UI
                         Rectangle drawRect = new Rectangle(btnRect.X, btnRect.Y, btnRect.Width, btnRect.Height);
                         DrawBeveledRect(spriteBatch, drawRect, bgColor);
 
-                        var activeFont = text.Length > 8 ? tertiaryFont : secondaryFont;
-                        Vector2 tSize = activeFont.MeasureString(text);
-                        Vector2 tOrigin = new Vector2(MathF.Floor(tSize.X / 2f), MathF.Floor(tSize.Y / 2f));
-                        Vector2 tPos = new Vector2(cX, cY);
+                        if (moveData != null && _spriteManager.ActionIconsSpriteSheet != null && _spriteManager.ActionIconSourceRects != null)
+                        {
+                            int iconIndex = moveData.ImpactType switch { ImpactType.Physical => 3, ImpactType.Magical => 4, ImpactType.Status => 5, _ => -1 };
+                            if (iconIndex >= 0 && iconIndex < _spriteManager.ActionIconSourceRects.Length)
+                            {
+                                var iconRect = _spriteManager.ActionIconSourceRects[iconIndex];
+                                Vector2 iconOrigin = new Vector2(MathF.Floor(iconRect.Width / 2f), MathF.Floor(iconRect.Height / 2f));
+                                Vector2 iconPos = new Vector2(drawRect.X + 6, cY);
+                                spriteBatch.DrawSnapped(_spriteManager.ActionIconsSpriteSheet, iconPos, iconRect, _global.Palette_Black, 0f, iconOrigin, 1f, SpriteEffects.None, 0f);
+                            }
+                        }
 
-                        spriteBatch.DrawStringSnapped(activeFont, text, tPos, textColor, 0f, tOrigin, 1f, SpriteEffects.None, 0f);
+                        var activeFont = text.Length > 8 ? tertiaryFont : secondaryFont;
+
+                        string line1 = text;
+                        string line2 = null;
+
+                        if (text.Length > 12)
+                        {
+                            int firstSpace = text.IndexOf(' ');
+                            if (firstSpace != -1)
+                            {
+                                line1 = text.Substring(0, firstSpace);
+                                line2 = text.Substring(firstSpace + 1);
+                            }
+                        }
+
+                        if (line2 != null)
+                        {
+                            float lineOffset = MathF.Floor(activeFont.LineHeight / 2f) + 1f;
+
+                            Vector2 tSize1 = activeFont.MeasureString(line1);
+                            Vector2 tOrigin1 = new Vector2(MathF.Floor(tSize1.X / 2f), MathF.Floor(tSize1.Y / 2f));
+                            Vector2 tPos1 = new Vector2(cX, cY - lineOffset);
+                            spriteBatch.DrawStringSnapped(activeFont, line1, tPos1, textColor, 0f, tOrigin1, 1f, SpriteEffects.None, 0f);
+
+                            Vector2 tSize2 = activeFont.MeasureString(line2);
+                            Vector2 tOrigin2 = new Vector2(MathF.Floor(tSize2.X / 2f), MathF.Floor(tSize2.Y / 2f));
+                            Vector2 tPos2 = new Vector2(cX, cY + lineOffset);
+                            spriteBatch.DrawStringSnapped(activeFont, line2, tPos2, textColor, 0f, tOrigin2, 1f, SpriteEffects.None, 0f);
+                        }
+                        else
+                        {
+                            Vector2 tSize = activeFont.MeasureString(text);
+                            Vector2 tOrigin = new Vector2(MathF.Floor(tSize.X / 2f), MathF.Floor(tSize.Y / 2f));
+                            Vector2 tPos = new Vector2(cX, cY);
+                            spriteBatch.DrawStringSnapped(activeFont, text, tPos, textColor, 0f, tOrigin, 1f, SpriteEffects.None, 0f);
+                        }
 
                         if (plinks[j].IsActive && plinks[j].FlashTint.HasValue)
                         {

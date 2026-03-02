@@ -86,7 +86,7 @@ namespace ProjectVagabond.UI
 
             // Layout Tuning
             int rowSpacing = 8;
-            int pairSpacing = 5;
+            int pairSpacing = 4; // Reduced slightly to fit 4 items comfortably
             float labelValueGap = tertiaryFont.MeasureString(" ").Width;
 
             string name = move.MoveName.ToUpper();
@@ -104,6 +104,7 @@ namespace ProjectVagabond.UI
             string powTxt = move.Power > 0 ? move.Power.ToString() : "--";
             string accTxt = move.Accuracy > 0 ? $"{move.Accuracy}%" : "--";
             string useTxt = GetStatShortName(move.OffensiveStat);
+            string cdTxt = move.Cooldown.ToString(); // Added Cooldown
 
             // --- 1. Stats Row (Centered) ---
             float MeasurePair(string label, string val)
@@ -114,7 +115,8 @@ namespace ProjectVagabond.UI
             float w1 = MeasurePair("POW", powTxt);
             float w2 = MeasurePair("ACC", accTxt);
             float w3 = MeasurePair("USE", useTxt);
-            float totalStatsWidth = w1 + pairSpacing + w2 + pairSpacing + w3;
+            float w4 = MeasurePair("CD", cdTxt); // Added Cooldown Width
+            float totalStatsWidth = w1 + pairSpacing + w2 + pairSpacing + w3 + pairSpacing + w4;
 
             float statsCurrentX = boxPos.X + (WIDTH - totalStatsWidth) / 2f;
 
@@ -130,6 +132,7 @@ namespace ProjectVagabond.UI
             DrawPair("POW", powTxt);
             DrawPair("ACC", accTxt);
             DrawPair("USE", useTxt);
+            DrawPair("CD", cdTxt); // Draw Cooldown
 
             // --- 1.5. Target Type Row (Centered) ---
             currentY += tertiaryFont.LineHeight + 5;
