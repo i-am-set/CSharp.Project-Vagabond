@@ -329,7 +329,7 @@ namespace ProjectVagabond.Battle.Abilities
         {
             if (e is ActionDeclaredEvent actionEvent && actionEvent.Actor.ActiveStatusEffects.Contains(_status))
             {
-                if (actionEvent.ActionType == QueuedActionType.Switch) // FIXED: Uses ActionType instead of Type
+                if (actionEvent.ActionType == QueuedActionType.Switch)
                 {
                     actionEvent.IsHandled = true;
                     EventBus.Publish(new GameEvents.ActionFailed
