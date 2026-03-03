@@ -421,7 +421,6 @@ namespace ProjectVagabond.Battle
         {
             if (actor == null || incomingMember == null || actor == incomingMember) return;
 
-            // --- Remove volatile statuses and reset poison ---
             var effectsToRemove = actor.ActiveStatusEffects.Where(eff => !eff.IsPermanent).ToList();
             foreach (var eff in effectsToRemove)
             {
@@ -432,9 +431,8 @@ namespace ProjectVagabond.Battle
             var poisonEffect = actor.ActiveStatusEffects.FirstOrDefault(eff => eff.EffectType == StatusEffectType.Poison);
             if (poisonEffect != null)
             {
-                poisonEffect.PoisonTurnCount = 0; // Reset so it starts at 1 next time
+                poisonEffect.PoisonTurnCount = 0;
             }
-            // -------------------------------------------------
 
             incomingMember.IsDying = false;
             incomingMember.IsRemovalProcessed = false;
@@ -452,12 +450,11 @@ namespace ProjectVagabond.Battle
 
             foreach (var action in _actionQueue) if (action.Target == actor) action.Target = incomingMember;
 
-            actor.HasEnteredCombat = true;
-            if (incomingMember.HasEnteredCombat)
+            incomingMember.SwitchInCount++;
+            if (incomingMember.SwitchInCount > 1)
             {
                 incomingMember.GuardExhaustion++;
             }
-            incomingMember.HasEnteredCombat = true;
             incomingMember.CurrentGuard = incomingMember.MaxGuard;
 
             var entryEvent = new GameEvents.CombatantEnteredEvent(incomingMember);

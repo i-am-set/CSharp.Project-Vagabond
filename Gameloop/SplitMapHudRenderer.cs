@@ -816,6 +816,19 @@ namespace ProjectVagabond.UI
 
             y += nameSize.Y - 4;
 
+            if (_spriteManager.LevelIconSprite != null)
+            {
+                string lvValue = member.Level.ToString();
+                float iconWidth = _spriteManager.LevelIconSprite.Width;
+                float gap = 1f;
+
+                int lvStartX = snappedX + 4;
+                int textY = (int)MathF.Round(y);
+
+                spriteBatch.DrawSnapped(_spriteManager.LevelIconSprite, new Vector2(lvStartX, textY + 1), _global.Palette_DarkestPale);
+                spriteBatch.DrawStringSnapped(tertiaryFont, lvValue, new Vector2(lvStartX + iconWidth + gap, textY), _global.Palette_DarkestPale);
+            }
+
             float time = (float)gameTime.TotalGameTime.TotalSeconds;
             float bobSpeed = 3f;
             float wavePhase = index * 1.0f;
@@ -838,37 +851,23 @@ namespace ProjectVagabond.UI
 
             y += 32 + 4;
 
-            Texture2D hpBg = _spriteManager.InventoryPlayerHealthBarEmpty;
-            if (hpBg != null)
+            if (_spriteManager.HealthHearts3x3SpriteSheet != null)
             {
-                float barX = MathF.Round(centerX - hpBg.Width / 2f);
-                float textY = MathF.Round((y - 9) - tertiaryFont.LineHeight + 1);
+                int maxHearts = (int)Math.Ceiling(member.MaxHP / 2f);
+                int currentHP = member.CurrentHP;
+                int heartWidth = 3;
+                int heartGap = 1;
+                int totalHeartsWidth = maxHearts * heartWidth + Math.Max(0, maxHearts - 1) * heartGap;
 
-                string hpText = $"{member.CurrentHP}/{member.MaxHP}";
-                spriteBatch.DrawStringSnapped(tertiaryFont, hpText, new Vector2(barX, textY), _global.Palette_DarkPale);
+                int startX = (int)MathF.Floor(centerX - totalHeartsWidth / 2f);
+                int heartY = (int)MathF.Round(y - 4);
 
-                if (_spriteManager.LevelIconSprite != null)
+                for (int i = 0; i < maxHearts; i++)
                 {
-                    string lvValue = member.Level.ToString();
-                    float lvValueWidth = tertiaryFont.MeasureString(lvValue).Width;
-                    float iconWidth = _spriteManager.LevelIconSprite.Width;
-                    float gap = 1f;
-                    float totalLvWidth = iconWidth + gap + lvValueWidth;
-                    float rightEdge = barX + hpBg.Width;
-                    float lvStartX = MathF.Round(rightEdge - totalLvWidth);
-
-                    spriteBatch.DrawSnapped(_spriteManager.LevelIconSprite, new Vector2(lvStartX, textY + 1), _global.Palette_DarkestPale);
-                    spriteBatch.DrawStringSnapped(tertiaryFont, lvValue, new Vector2(lvStartX + iconWidth + gap, textY), _global.Palette_DarkestPale);
-                }
-
-                spriteBatch.DrawSnapped(hpBg, new Vector2(barX, MathF.Round(y - 8)), Color.White);
-
-                if (_spriteManager.InventoryPlayerHealthBarFull != null)
-                {
-                    float hpPercent = (float)member.CurrentHP / Math.Max(1, member.MaxHP);
-                    int visibleWidth = (int)(_spriteManager.InventoryPlayerHealthBarFull.Width * hpPercent);
-                    var srcRect = new Rectangle(0, 0, visibleWidth, _spriteManager.InventoryPlayerHealthBarFull.Height);
-                    spriteBatch.DrawSnapped(_spriteManager.InventoryPlayerHealthBarFull, new Vector2(barX + 1, MathF.Round(y - 8)), srcRect, Color.White);
+                    int heartValue = Math.Clamp(currentHP - (i * 2), 0, 2);
+                    int frameIndex = heartValue == 2 ? 0 : (heartValue == 1 ? 1 : 2);
+                    Rectangle srcRect = new Rectangle(frameIndex * 3, 0, 3, 3);
+                    spriteBatch.DrawSnapped(_spriteManager.HealthHearts3x3SpriteSheet, new Vector2(startX + i * (heartWidth + heartGap), heartY), srcRect, Color.White);
                 }
             }
 

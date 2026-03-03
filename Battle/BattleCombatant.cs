@@ -29,7 +29,7 @@ namespace ProjectVagabond.Battle
         public int CurrentGuard { get; set; }
         public int GuardExhaustion { get; set; } = 0;
         public int MaxGuard => Math.Max(0, (Stats.Tenacity / 2) - GuardExhaustion);
-        public bool HasEnteredCombat { get; set; } = false;
+        public int SwitchInCount { get; set; } = 0;
 
         public float VisualHP { get; set; }
         public float VisualAlpha { get; set; } = 1.0f;
