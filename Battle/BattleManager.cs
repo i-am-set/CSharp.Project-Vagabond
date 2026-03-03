@@ -289,7 +289,6 @@ namespace ProjectVagabond.Battle
             _phaseWatchdogTimer = 0f;
 
             var significantTargetIds = new List<string>();
-            var brokenTargets = new List<BattleCombatant>();
 
             for (int i = 0; i < targets.Count; i++)
             {
@@ -305,30 +304,31 @@ namespace ProjectVagabond.Battle
                     continue;
                 }
 
-                target.ApplyDamage(result.DamageAmount);
+                int damageToProcess = result.DamageAmount;
 
-                if (target.Stats.CurrentHP <= 0 && !target.IsDying)
+                if (damageToProcess > 0 && target.CurrentGuard > 0)
                 {
-                    EventBus.Publish(new GameEvents.CombatantVisualDeath { Victim = target });
-                }
+                    int guardDamage = Math.Min(damageToProcess, target.CurrentGuard);
+                    target.CurrentGuard -= guardDamage;
+                    damageToProcess -= guardDamage;
 
-                // --- GUARD BREAK LOGIC ---
-                if (!result.WasGraze && result.DamageAmount > 0 && target.CurrentGuard > 0)
-                {
-                    target.CurrentGuard--;
                     EventBus.Publish(new GameEvents.GuardChanged { Combatant = target, NewValue = target.CurrentGuard });
 
                     if (target.CurrentGuard == 0)
                     {
                         EventBus.Publish(new GameEvents.GuardBroken { Combatant = target });
                         AppendToCurrentLine(" [cStatus]GUARD BROKEN![/]");
-
-                        // Track enemies whose guard was broken for follow-up attacks
-                        if (target.IsPlayerControlled != action.Actor.IsPlayerControlled)
-                        {
-                            brokenTargets.Add(target);
-                        }
                     }
+                }
+
+                if (damageToProcess > 0)
+                {
+                    target.ApplyDamage(damageToProcess);
+                }
+
+                if (target.Stats.CurrentHP <= 0 && !target.IsDying)
+                {
+                    EventBus.Publish(new GameEvents.CombatantVisualDeath { Victim = target });
                 }
 
                 if (result.DamageAmount > 0 && result.DamageAmount >= (target.Stats.MaxHP * 0.50f)) significantTargetIds.Add(target.CombatantID);
@@ -367,27 +367,6 @@ namespace ProjectVagabond.Battle
                         ServiceLocator.Get<HapticsManager>().TriggerImpactTwist(intensity, 0.25f);
                     }
                     break;
-                }
-            }
-
-            // --- GUARD BREAK FOLLOW-UP ATTACKS ---
-            if (brokenTargets.Any() && action.Actor.BasicMove != null && BattleDataCache.Moves.TryGetValue(action.Actor.BasicMove.MoveID, out var basicMove))
-            {
-                // Reverse so they execute in the correct order (first broken = first hit)
-                brokenTargets.Reverse();
-                foreach (var bt in brokenTargets)
-                {
-                    var followUpTarget = (basicMove.Target == TargetType.Single || basicMove.Target == TargetType.SingleAll) ? bt : null;
-                    var followUpAction = new QueuedAction
-                    {
-                        Actor = action.Actor,
-                        ChosenMove = basicMove,
-                        SpellbookEntry = action.Actor.BasicMove,
-                        Target = followUpTarget,
-                        Type = QueuedActionType.Move,
-                        Priority = 999 // High priority to execute immediately next
-                    };
-                    _actionQueue.Insert(0, followUpAction);
                 }
             }
 
@@ -472,6 +451,14 @@ namespace ProjectVagabond.Battle
             }
 
             foreach (var action in _actionQueue) if (action.Target == actor) action.Target = incomingMember;
+
+            actor.HasEnteredCombat = true;
+            if (incomingMember.HasEnteredCombat)
+            {
+                incomingMember.GuardExhaustion++;
+            }
+            incomingMember.HasEnteredCombat = true;
+            incomingMember.CurrentGuard = incomingMember.MaxGuard;
 
             var entryEvent = new GameEvents.CombatantEnteredEvent(incomingMember);
             _battleContext.ResetMultipliers();

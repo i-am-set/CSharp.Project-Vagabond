@@ -1,7 +1,4 @@
-﻿using ProjectVagabond.Battle;
-using ProjectVagabond.Battle.Abilities;
-using ProjectVagabond.Utils;
-using System;
+﻿using System;
 
 namespace ProjectVagabond.Battle.Abilities
 {
@@ -12,7 +9,6 @@ namespace ProjectVagabond.Battle.Abilities
         public int Priority => 0;
         private static readonly Random _random = new Random();
 
-        // Every 3 points of stat advantage = 1 damage (half a heart)
         private const float STAT_DIVISOR = 3.0f;
 
         public void OnEvent(GameEvent e, BattleContext context)
@@ -24,14 +20,12 @@ namespace ProjectVagabond.Battle.Abilities
             else if (e is CalculateDamageEvent dmgEvent)
             {
                 float offense = GetOffensiveStat(dmgEvent.Actor, dmgEvent.Move.OffensiveStat, context);
-                float defense = CalculateDefense(dmgEvent.Target, dmgEvent.Move.ImpactType, context);
 
                 float baseDamage = 0f;
 
                 if (dmgEvent.Move.Power > 0)
                 {
-                    // Additive formula for low-number systems
-                    baseDamage = dmgEvent.Move.Power + (offense / STAT_DIVISOR) - (defense / STAT_DIVISOR);
+                    baseDamage = dmgEvent.Move.Power + (offense / STAT_DIVISOR);
                 }
 
                 float multiplier = dmgEvent.DamageMultiplier;
@@ -47,13 +41,11 @@ namespace ProjectVagabond.Battle.Abilities
 
                 float finalValue = (baseDamage + dmgEvent.FlatBonus) * multiplier;
 
-                // Minimum 1 damage if it's an attack and not blocked
                 if (finalValue < 1f && dmgEvent.Move.Power > 0 && !dmgEvent.WasProtected)
                 {
                     finalValue = 1f;
                 }
 
-                // Probabilistic Rounding
                 int guaranteed = (int)Math.Floor(finalValue);
                 float chance = finalValue - guaranteed;
 
@@ -70,16 +62,6 @@ namespace ProjectVagabond.Battle.Abilities
 
                 if (dmgEvent.FinalDamage < 0) dmgEvent.FinalDamage = 0;
             }
-        }
-
-        private float CalculateDefense(BattleCombatant target, ImpactType impactType, BattleContext context)
-        {
-            float resistanceStat = impactType == ImpactType.Magical
-                ? GetEffectiveStat(target, OffensiveStatType.Intelligence, context)
-                : GetEffectiveStat(target, OffensiveStatType.Strength, context);
-
-            float tenacity = GetEffectiveStat(target, OffensiveStatType.Tenacity, context);
-            return Math.Max(1.0f, tenacity + (resistanceStat * 0.5f));
         }
 
         private float GetOffensiveStat(BattleCombatant attacker, OffensiveStatType type, BattleContext context)

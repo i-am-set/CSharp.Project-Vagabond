@@ -27,8 +27,8 @@ namespace ProjectVagabond.UI
         private int BaseY => Global.VIRTUAL_HEIGHT - HUD_HEIGHT;
 
         // --- Hover State ---
-        private readonly List<(Rectangle Bounds, MoveData? Move, int CardCenterX)> _activeHitboxes = new();
-        private (Rectangle Bounds, MoveData? Move, int CardCenterX)? _currentHoveredItem;
+        private readonly List<(Rectangle Bounds, MoveData? Move, int CardCenterX, PartyMember Member)> _activeHitboxes = new();
+        private (Rectangle Bounds, MoveData? Move, int CardCenterX, PartyMember Member)? _currentHoveredItem;
         private Vector2 _lastMousePos;
         private bool _isTooltipVisible;
         private PartyMember? _hoveredMember;
@@ -542,12 +542,16 @@ namespace ProjectVagabond.UI
 
             if (_currentHoveredItem.HasValue && _isTooltipVisible && _currentHoveredItem.Value.Move != null && !_isDragging && !IsReplacementMode)
             {
+                var member = _currentHoveredItem.Value.Member;
+                var dummyCombatant = BattleCombatantFactory.CreatePlayer(member, member.Name);
+
                 _tooltipRenderer.DrawFloating(
                     spriteBatch,
                     gameTime,
                     _currentHoveredItem.Value.Bounds,
                     _currentHoveredItem.Value.CardCenterX,
-                    _currentHoveredItem.Value.Move
+                    _currentHoveredItem.Value.Move,
+                    dummyCombatant
                 );
             }
         }
@@ -976,7 +980,7 @@ namespace ProjectVagabond.UI
                         if (btnHovered && moveData != null)
                         {
                             bgColor = _global.ButtonHoverColor;
-                            _activeHitboxes.Add((btnRect, moveData, (int)centerX));
+                            _activeHitboxes.Add((btnRect, moveData, (int)centerX, member));
                         }
 
                         int cX = btnRect.Center.X;

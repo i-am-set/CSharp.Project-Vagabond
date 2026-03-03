@@ -27,7 +27,6 @@ namespace ProjectVagabond.Battle
             var attacker = action.Actor;
             var random = Random.Shared;
 
-            // 1. Accuracy Check
             bool isGraze = false;
             if (context.IsSimulation)
             {
@@ -43,15 +42,10 @@ namespace ProjectVagabond.Battle
                 if (random.Next(1, 101) > hitEvt.FinalAccuracy) isGraze = true;
             }
 
-            // 2. Critical Hit Check
             bool isCrit = false;
             if (!isGraze && move.ImpactType != ImpactType.Status && move.Power > 0)
             {
-                if (target.CurrentGuard <= 0)
-                {
-                    isCrit = true;
-                }
-                else if (context.IsSimulation)
+                if (context.IsSimulation)
                 {
                     isCrit = overrideCrit ?? false;
                 }
@@ -63,11 +57,9 @@ namespace ProjectVagabond.Battle
                 }
             }
 
-            // 3. Calculate Damage Event
             var dmgEvt = new CalculateDamageEvent(attacker, target, move, 0f, isCrit, isGraze);
             dmgEvt.DamageMultiplier = multiTargetModifier;
 
-            // Notify in order: Attacker -> Move -> Target
             attacker.NotifyAbilities(dmgEvt, context);
             foreach (var ab in move.Abilities) ab.OnEvent(dmgEvt, context);
             target.NotifyAbilities(dmgEvt, context);

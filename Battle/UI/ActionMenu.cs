@@ -411,7 +411,7 @@ namespace ProjectVagabond.Battle.UI
                 var targetArea = BattleLayout.GetActionMenuArea(targetSlot);
                 // Moved up 5 pixels (was -23f, now -28f)
                 Vector2 tooltipPos = new Vector2(targetArea.Center.X - (MoveTooltipRenderer.WIDTH / 2f), targetArea.Center.Y - 28f + offset.Y);
-                _tooltipRenderer.DrawFixed(spriteBatch, tooltipPos, HoveredMove);
+                _tooltipRenderer.DrawFixed(spriteBatch, tooltipPos, HoveredMove, Combatant);
             }
 
             private void DrawButton(SpriteBatch spriteBatch, Button btn, Texture2D pixel, Global global, float snappedOffsetY, GameTime gameTime, Matrix transform)

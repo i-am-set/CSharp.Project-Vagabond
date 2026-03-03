@@ -318,7 +318,6 @@ namespace ProjectVagabond
             try { SpellbookClosedSprite = _core.Content.Load<Texture2D>("Sprites/SpellBook/spellbook_closed"); }
             catch { SpellbookClosedSprite = _textureFactory.CreateColoredTexture(64, 64, Color.Magenta); }
 
-            // Load Split Map Node Sprites & Generate Silhouettes
             try { SplitNodeStart = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_Start"); }
             catch { SplitNodeStart = _textureFactory.CreateColoredTexture(64, 32, Color.Green); }
             SplitNodeStartSilhouette = CreateSilhouette(SplitNodeStart);
@@ -335,12 +334,11 @@ namespace ProjectVagabond
             catch { SplitNodeHardCombat = _textureFactory.CreateColoredTexture(64, 32, Color.DarkRed); }
             SplitNodeHardCombatSilhouette = CreateSilhouette(SplitNodeHardCombat);
 
-            // NEW: Rest and Recruit nodes
             try { SplitNodeRest = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_Rest"); }
             catch { SplitNodeRest = _textureFactory.CreateColoredTexture(64, 32, Color.GreenYellow); }
             SplitNodeRestSilhouette = CreateSilhouette(SplitNodeRest);
 
-            try { SplitNodeRecruit = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_Recuit"); } // Kept exact spelling from prompt
+            try { SplitNodeRecruit = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_Recuit"); }
             catch { SplitNodeRecruit = _textureFactory.CreateColoredTexture(64, 32, Color.CornflowerBlue); }
             SplitNodeRecruitSilhouette = CreateSilhouette(SplitNodeRecruit);
 
@@ -418,8 +416,8 @@ namespace ProjectVagabond
             try { StunnedIconSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/stunned_16x16_spritesheet"); }
             catch { StunnedIconSpriteSheet = _textureFactory.CreateColoredTexture(48, 16, Color.Magenta); }
 
-            try { TenacityPipTexture = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/tenacity_3x3_icon"); }
-            catch { TenacityPipTexture = _textureFactory.CreateColoredTexture(6, 3, Color.Magenta); }
+            try { TenacityPipTexture = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/tenacity_5x5_icon_spritesheet"); }
+            catch { TenacityPipTexture = _textureFactory.CreateColoredTexture(20, 5, Color.Magenta); }
 
             try { TenacityBreakSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/tenacity_break_32x32_spritesheet"); }
             catch { TenacityBreakSpriteSheet = _textureFactory.CreateColoredTexture(352, 32, Color.Cyan); }

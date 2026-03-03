@@ -30,16 +30,16 @@ namespace ProjectVagabond.UI
         /// <summary>
         /// Draws the tooltip at a specific, fixed position (Used by ActionMenu).
         /// </summary>
-        public void DrawFixed(SpriteBatch sb, Vector2 position, MoveData move)
+        public void DrawFixed(SpriteBatch sb, Vector2 position, MoveData move, BattleCombatant actor)
         {
-            DrawContainerAndContent(sb, position, move);
+            DrawContainerAndContent(sb, position, move, actor);
         }
 
         /// <summary>
         /// Calculates position based on target center, clamps to screen, applies floating animation, 
         /// and draws the tooltip (Used by SplitMapHud).
         /// </summary>
-        public void DrawFloating(SpriteBatch sb, GameTime gameTime, Rectangle targetRect, int cardCenterX, MoveData move)
+        public void DrawFloating(SpriteBatch sb, GameTime gameTime, Rectangle targetRect, int cardCenterX, MoveData move, BattleCombatant actor)
         {
             // 1. Calculate ideal centered X
             float x = cardCenterX - (WIDTH / 2f);
@@ -54,10 +54,10 @@ namespace ProjectVagabond.UI
             // 3. Position above the target rect (Removed floating animation)
             float y = targetRect.Top - HEIGHT - 4;
 
-            DrawContainerAndContent(sb, new Vector2(x, y), move);
+            DrawContainerAndContent(sb, new Vector2(x, y), move, actor);
         }
 
-        private void DrawContainerAndContent(SpriteBatch sb, Vector2 pos, MoveData move)
+        private void DrawContainerAndContent(SpriteBatch sb, Vector2 pos, MoveData move, BattleCombatant actor)
         {
             Vector2 size = new Vector2(WIDTH, HEIGHT);
 
@@ -73,10 +73,10 @@ namespace ProjectVagabond.UI
             DrawBeveledBackground(sb, descPos, descSize, _global.Palette_Black);
 
             // --- Draw Content ---
-            DrawTextContent(sb, pos, move);
+            DrawTextContent(sb, pos, move, actor);
         }
 
-        private void DrawTextContent(SpriteBatch sb, Vector2 boxPos, MoveData move)
+        private void DrawTextContent(SpriteBatch sb, Vector2 boxPos, MoveData move, BattleCombatant actor)
         {
             var secondaryFont = _core.SecondaryFont;
             var tertiaryFont = _core.TertiaryFont;
@@ -101,7 +101,29 @@ namespace ProjectVagabond.UI
                 initialColor = _global.Palette_DarkestPale;
             }
 
-            string powTxt = move.Power > 0 ? move.Power.ToString() : "--";
+            string damTxt = "--";
+            if (move.Power > 0)
+            {
+                int statValue = move.OffensiveStat switch
+                {
+                    OffensiveStatType.Strength => actor.Stats.Strength,
+                    OffensiveStatType.Intelligence => actor.Stats.Intelligence,
+                    OffensiveStatType.Tenacity => actor.Stats.Tenacity,
+                    OffensiveStatType.Agility => actor.Stats.Agility,
+                    _ => actor.Stats.Strength
+                };
+
+                int baseDmg = (int)Math.Floor(move.Power + (statValue / 3.0f));
+                if (statValue % 3 > 0)
+                {
+                    damTxt = $"{baseDmg}-{baseDmg + 1}";
+                }
+                else
+                {
+                    damTxt = $"{baseDmg}";
+                }
+            }
+
             string accTxt = move.Accuracy > 0 ? $"{move.Accuracy}%" : "--";
             string useTxt = GetStatShortName(move.OffensiveStat);
             string cdTxt = move.Cooldown.ToString(); // Added Cooldown
@@ -112,7 +134,7 @@ namespace ProjectVagabond.UI
                 return tertiaryFont.MeasureString(label).Width + labelValueGap + secondaryFont.MeasureString(val).Width;
             }
 
-            float w1 = MeasurePair("POW", powTxt);
+            float w1 = MeasurePair("DAM", damTxt);
             float w2 = MeasurePair("ACC", accTxt);
             float w3 = MeasurePair("USE", useTxt);
             float w4 = MeasurePair("CD", cdTxt); // Added Cooldown Width
@@ -129,7 +151,7 @@ namespace ProjectVagabond.UI
                 statsCurrentX += secondaryFont.MeasureString(val).Width + pairSpacing;
             }
 
-            DrawPair("POW", powTxt);
+            DrawPair("DAM", damTxt);
             DrawPair("ACC", accTxt);
             DrawPair("USE", useTxt);
             DrawPair("CD", cdTxt); // Draw Cooldown

@@ -27,12 +27,13 @@ namespace ProjectVagabond.Battle
         public CombatantStats Stats { get; set; }
 
         public int CurrentGuard { get; set; }
-        public int MaxGuard { get; set; }
+        public int GuardExhaustion { get; set; } = 0;
+        public int MaxGuard => Math.Max(0, (Stats.Tenacity / 2) - GuardExhaustion);
+        public bool HasEnteredCombat { get; set; } = false;
 
         public float VisualHP { get; set; }
         public float VisualAlpha { get; set; } = 1.0f;
 
-        // --- VISUAL EXP TRACKING ---
         public int VisualLevel { get; set; }
         public float VisualEXP { get; set; }
         public int VisualMaxEXP { get; set; }
