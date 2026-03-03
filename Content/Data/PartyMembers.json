@@ -12,7 +12,7 @@
     "BasicMoveId": "4",
     "StartSpellSlot1MoveId": "28",
     "StartSpellSlot2MoveId": "9",
-    "StartSpellSlot3MoveId": "",
+    "StartSpellSlot3MoveId": "29",
     "MovePool": [ "25", "29", "30", "31", "32", "33", "45", "10", "26", "27", "34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44" ],
     "PassiveAbilityPool": [
       { "PMPyromancer": "" }

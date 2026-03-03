@@ -511,8 +511,8 @@
     "Effects": {
       "MultiHit": "3,5"
     },
-    "Tags": [ "MultiHit", "Projectile" ],
-    "AnimationId": "magic_missile",
+    "Tags": [ "MultiHit" ],
+    "AnimationId": "proj_magic_missile",
     "IsAnimationCentralized": false,
     "Cooldown": 2,
     "IsRare": false
@@ -605,8 +605,8 @@
     "Effects": {
       "InflictStatusBurn": "10"
     },
-    "Tags": [ "Fire", "Projectile" ],
-    "AnimationId": "mag_explosion",
+    "Tags": [ "Fire" ],
+    "AnimationId": "proj_fireball",
     "IsAnimationCentralized": false,
     "Cooldown": 1,
     "IsRare": false
@@ -629,7 +629,7 @@
       "InflictStatusBurn": "30"
     },
     "Tags": [ "Fire" ],
-    "AnimationId": "mag_flame_ground",
+    "AnimationId": "proj_flamethrower",
     "IsAnimationCentralized": false,
     "Cooldown": 1,
     "IsRare": false
@@ -999,7 +999,7 @@
     "Effects": {
       "ModifyStatStage": "Intelligence,-2,100,Self"
     },
-    "Tags": [ "Fire", "Projectile" ],
+    "Tags": [ "Fire" ],
     "AnimationId": "mag_explosion",
     "IsAnimationCentralized": false,
     "Cooldown": 2,

@@ -173,7 +173,13 @@ namespace ProjectVagabond.Scenes
             _animationManager.GetCombatantPosition = (c) =>
             {
                 if (_battleManager == null) return Vector2.Zero;
-                return _renderer.GetCombatantVisualCenterPosition(c, _battleManager.AllCombatants);
+                var pos = _renderer.GetCombatantVisualCenterPosition(c, _battleManager.AllCombatants);
+                if (pos == Vector2.Zero)
+                {
+                    pos = c.IsPlayerControlled ? BattleLayout.GetPlayerSpriteCenter(c.BattleSlot) : BattleLayout.GetEnemySlotCenter(c.BattleSlot);
+                    pos.Y += 32f; // Approximate center if visual bounds aren't cached yet
+                }
+                return pos;
             };
 
             _moveAnimationManager.SkipAll();

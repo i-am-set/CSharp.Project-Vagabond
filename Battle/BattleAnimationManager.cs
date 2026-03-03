@@ -284,7 +284,8 @@ namespace ProjectVagabond.Battle.UI
             _activeIntroFadeAnimations.Any() ||
             _activeFloorIntroAnimations.Any() ||
             _activeFloorOutroAnimations.Any(a => a.Timer < FloorOutroAnimationState.DURATION) ||
-            _activeAttackCharges.Any();
+            _activeAttackCharges.Any() ||
+            _activeProjectiles.Any();
 
         public bool IsAnimating => IsBlockingAnimation;
 
@@ -310,13 +311,19 @@ namespace ProjectVagabond.Battle.UI
             }
 
             BattleProjectile projectile;
-            if (e.Move != null && e.Move.Tags.Contains("Fire"))
+            string profile = e.AnimDef?.ParticleProfile?.ToLowerInvariant() ?? "";
+
+            if (profile == "flamethrower")
             {
-                projectile = new FireballProjectile(startPos, e.Target, e.OnImpact);
+                projectile = new FlamethrowerProjectile(startPos, e.Target, e.OnImpact, e.AnimDef);
+            }
+            else if (profile == "fireball")
+            {
+                projectile = new FireballProjectile(startPos, e.Target, e.OnImpact, e.AnimDef);
             }
             else
             {
-                projectile = new HomingProjectile(startPos, e.Target, e.OnImpact, e.Color);
+                projectile = new HomingProjectile(startPos, e.Target, e.OnImpact, e.Color, e.AnimDef);
             }
 
             SpawnProjectile(projectile);

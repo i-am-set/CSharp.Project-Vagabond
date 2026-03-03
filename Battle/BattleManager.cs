@@ -952,7 +952,9 @@ namespace ProjectVagabond.Battle
                 _phaseWatchdogTimer = 0f;
 
                 // --- PROJECTILE LOGIC ---
-                if (action.ChosenMove.Tags.Contains("Projectile"))
+                BattleDataCache.Animations.TryGetValue(action.ChosenMove.AnimationId, out var animDef);
+
+                if (animDef != null && animDef.IsParticle)
                 {
                     foreach (var target in targetsForThisHit)
                     {
@@ -962,13 +964,14 @@ namespace ProjectVagabond.Battle
                             Target = target,
                             OnImpact = () => { EventBus.Publish(new GameEvents.TriggerImpact()); },
                             Color = _global.Palette_Sky,
-                            Move = action.ChosenMove
+                            Move = action.ChosenMove,
+                            AnimDef = animDef
                         });
                     }
                 }
                 else
                 {
-                    // Request Visual Sync (Standard)
+                    // Request Visual Sync (Standard Sprite)
                     EventBus.Publish(new GameEvents.RequestImpactSync
                     {
                         Actor = action.Actor,

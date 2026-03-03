@@ -9,251 +9,120 @@ namespace ProjectVagabond.Battle.UI
     public abstract class BattleProjectile
     {
         public Vector2 Position;
-        public Vector2 Velocity;
         public BattleCombatant Target;
         public Action OnImpact;
         public bool IsActive = true;
 
-        public abstract void Update(GameTime gameTime, Func<BattleCombatant, Vector2> getTargetPos);
+        public float Timer = 0f;
+        public float Duration = 1f;
+        public float ImpactTime = 0.5f;
+        protected bool _hasImpacted = false;
+        protected Vector2 _startPosition;
+
+        public virtual void Update(GameTime gameTime, Func<BattleCombatant, Vector2> getTargetPos)
+        {
+            if (!IsActive) return;
+
+            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            Timer += dt;
+
+            // Trigger impact exactly at ImpactTime
+            if (Timer >= ImpactTime && !_hasImpacted)
+            {
+                OnImpact?.Invoke();
+                _hasImpacted = true;
+                OnHitTarget(getTargetPos);
+            }
+
+            // Deactivate exactly at Duration
+            if (Timer >= Duration)
+            {
+                IsActive = false;
+
+                // Failsafe: If duration was shorter than impact time, force impact now
+                if (!_hasImpacted)
+                {
+                    OnImpact?.Invoke();
+                    _hasImpacted = true;
+                    OnHitTarget(getTargetPos);
+                }
+            }
+        }
+
+        protected virtual void OnHitTarget(Func<BattleCombatant, Vector2> getTargetPos) { }
+
         public abstract void Draw(SpriteBatch spriteBatch);
         public virtual void Destroy() { }
+
+        protected Vector2 GetSafeTargetPos(Func<BattleCombatant, Vector2> getTargetPos)
+        {
+            if (Target == null || Target.IsDefeated) return _startPosition;
+            Vector2 pos = getTargetPos(Target);
+            if (pos == Vector2.Zero) return _startPosition; // Failsafe
+            return pos;
+        }
     }
 
     public class HomingProjectile : BattleProjectile
     {
-        private float _timer;
-        private readonly float _duration;
-        private readonly Vector2 _startPosition;
         private Vector2 _controlPoint;
-        private float _rotation;
-
         private ParticleEmitter _trailEmitter;
-        private readonly ParticleSystemManager _psm;
-        private readonly Random _rng = new Random();
+        private ParticleSystemManager _psm;
+        private Color[] _colors;
+        private Random _rng = new Random();
 
-        // Magic Missile Sparkle Palette
-        private readonly Color[] _sparkleColors;
-
-        public HomingProjectile(Vector2 startPos, BattleCombatant target, Action onImpact, Color color)
+        public HomingProjectile(Vector2 startPos, BattleCombatant target, Action onImpact, Color color, AnimationDefinition animDef)
         {
-            Position = startPos;
             _startPosition = startPos;
+            Position = startPos;
             Target = target;
             OnImpact = onImpact;
+
+            Duration = animDef.TotalDuration > 0 ? animDef.TotalDuration : 0.6f;
+            ImpactTime = animDef.ImpactTime > 0 ? Math.Min(animDef.ImpactTime, Duration) : Duration;
+
             _psm = ServiceLocator.Get<ParticleSystemManager>();
-            var global = ServiceLocator.Get<Global>();
+            var g = ServiceLocator.Get<Global>();
+            _colors = new Color[] { g.Palette_Sea, g.Palette_Sky, g.Palette_Leaf };
 
-            // Cache the palette for efficiency
-            _sparkleColors = new Color[] { global.Palette_Sea, global.Palette_Sky, global.Palette_Leaf };
-
-            // Duration: 0.5s to 0.7s for a snappy, magical feel
-            _duration = 0.5f + (float)_rng.NextDouble() * 0.2f;
-
-            // Control Point: Randomly offset "up and out" to create an arc
-            float cpX = _rng.Next(-80, 81);
-            float cpY = _rng.Next(-120, -60);
-            _controlPoint = startPos + new Vector2(cpX, cpY);
-
-            // Initialize Emitter with the new "Volume" settings
-            var settings = ParticleEffects.CreateMagicMissileBody();
-            _trailEmitter = _psm.CreateEmitter(settings);
+            _controlPoint = startPos + new Vector2(_rng.Next(-80, 81), _rng.Next(-120, -60));
+            _trailEmitter = _psm.CreateEmitter(ParticleEffects.CreateMagicMissileBody());
             _trailEmitter.Position = Position;
         }
 
         public override void Update(GameTime gameTime, Func<BattleCombatant, Vector2> getTargetPos)
         {
-            if (!IsActive) return;
+            base.Update(gameTime, getTargetPos);
 
-            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
-            _timer += dt;
+            if (!IsActive || _hasImpacted) return;
 
-            // --- Sparkle Logic ---
-            // Randomly swap the emitter's start color every frame to create a glittering effect
-            if (_trailEmitter != null)
-            {
-                _trailEmitter.Settings.StartColor = _sparkleColors[_rng.Next(0, _sparkleColors.Length)];
-            }
+            if (_trailEmitter != null) _trailEmitter.Settings.StartColor = _colors[_rng.Next(_colors.Length)];
 
-            float progress = _timer / _duration;
-
-            if (progress >= 1.0f)
-            {
-                if (Target != null && !Target.IsDefeated)
-                {
-                    Position = getTargetPos(Target);
-                }
-
-                OnImpact?.Invoke();
-                SpawnImpact();
-                IsActive = false;
-                return;
-            }
-
-            float t = Math.Clamp(progress, 0f, 1f);
+            float t = Math.Clamp(Timer / ImpactTime, 0f, 1f);
             float easedT = Easing.EaseInExpo(t);
 
-            Vector2 targetPos = (Target != null) ? getTargetPos(Target) : _startPosition;
+            Vector2 targetPos = GetSafeTargetPos(getTargetPos);
 
-            // Quadratic Bezier Calculation
             float u = 1 - easedT;
             float tt = easedT * easedT;
             float uu = u * u;
+            Position = (uu * _startPosition) + (2 * u * easedT * _controlPoint) + (tt * targetPos);
 
-            Vector2 nextPos = (uu * _startPosition) + (2 * u * easedT * _controlPoint) + (tt * targetPos);
-
-            Vector2 delta = nextPos - Position;
-            if (delta.LengthSquared() > 0.001f)
-            {
-                _rotation = MathF.Atan2(delta.Y, delta.X);
-            }
-
-            Position = nextPos;
-
-            if (_trailEmitter != null)
-            {
-                _trailEmitter.Position = Position;
-            }
-        }
-
-        private void SpawnImpact()
-        {
-            var settings = new ParticleEmitterSettings
-            {
-                Texture = ServiceLocator.Get<SpriteManager>().SoftParticleSprite,
-                StartColor = Color.White,
-                EndColor = _sparkleColors[1], // Use Sky for impact fade
-                Lifetime = new FloatRange(0.2f, 0.4f),
-                InitialSize = new FloatRange(10f, 20f),
-                EndSize = new FloatRange(0f),
-                EmissionRate = 0f,
-                BurstCount = 12,
-                VelocityPattern = EmissionPattern.Radial,
-                InitialVelocityX = new FloatRange(150f, 250f),
-                BlendMode = BlendState.Additive
-            };
-            var burst = _psm.CreateEmitter(settings);
-            burst.Position = Position;
-            burst.Settings.Duration = 0.1f;
-            burst.EmitBurst(12);
-        }
-
-        public override void Draw(SpriteBatch spriteBatch)
-        {
-            // Intentionally empty. 
-            // The projectile's visual presence is now entirely defined by the particle volume.
-        }
-
-        public override void Destroy()
-        {
-            if (_trailEmitter != null)
-            {
-                _trailEmitter.IsActive = false;
-                _trailEmitter.Settings.Duration = 0.1f; // Let existing particles fade out naturally
-                _trailEmitter = null;
-            }
-        }
-    }
-
-    public class FireballProjectile : BattleProjectile
-    {
-        private float _timer;
-        private readonly float _duration;
-        private readonly Vector2 _startPosition;
-        private Vector2 _controlPoint;
-        private float _rotation;
-
-        private ParticleEmitter _trailEmitter;
-        private readonly ParticleSystemManager _psm;
-        private readonly Random _rng = new Random();
-
-        private readonly Color[] _fireColors;
-
-        public FireballProjectile(Vector2 startPos, BattleCombatant target, Action onImpact)
-        {
-            Position = startPos;
-            _startPosition = startPos;
-            Target = target;
-            OnImpact = onImpact;
-            _psm = ServiceLocator.Get<ParticleSystemManager>();
-            var global = ServiceLocator.Get<Global>();
-
-            _fireColors = new Color[] { global.Palette_Sun, global.Palette_DarkSun, global.Palette_Fruit, global.Palette_Rust };
-
-            // Slower lob
-            _duration = 0.8f + (float)_rng.NextDouble() * 0.3f;
-
-            // Higher arc
-            float cpX = _rng.Next(-40, 41);
-            float cpY = _rng.Next(-180, -100);
-            _controlPoint = startPos + new Vector2(cpX, cpY);
-
-            var settings = ParticleEffects.CreateFireballBody();
-            _trailEmitter = _psm.CreateEmitter(settings);
-            _trailEmitter.Position = Position;
-        }
-
-        public override void Update(GameTime gameTime, Func<BattleCombatant, Vector2> getTargetPos)
-        {
-            if (!IsActive) return;
-
-            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
-            _timer += dt;
-
-            if (_trailEmitter != null)
-            {
-                _trailEmitter.Settings.StartColor = _fireColors[_rng.Next(0, _fireColors.Length)];
-            }
-
-            float progress = _timer / _duration;
-
-            if (progress >= 1.0f)
-            {
-                if (Target != null && !Target.IsDefeated) Position = getTargetPos(Target);
-                OnImpact?.Invoke();
-                SpawnImpact();
-                IsActive = false;
-                return;
-            }
-
-            float t = Math.Clamp(progress, 0f, 1f);
-
-            float smoothT = t;
-
-            Vector2 targetPos = (Target != null) ? getTargetPos(Target) : _startPosition;
-
-            float u = 1 - smoothT;
-            float tt = smoothT * smoothT;
-            float uu = u * u;
-
-            Vector2 nextPos = (uu * _startPosition) + (2 * u * smoothT * _controlPoint) + (tt * targetPos);
-
-            Vector2 delta = nextPos - Position;
-            if (delta.LengthSquared() > 0.001f) _rotation = MathF.Atan2(delta.Y, delta.X);
-
-            Position = nextPos;
             if (_trailEmitter != null) _trailEmitter.Position = Position;
         }
 
-        private void SpawnImpact()
+        protected override void OnHitTarget(Func<BattleCombatant, Vector2> getTargetPos)
         {
-            var settings = new ParticleEmitterSettings
-            {
-                Texture = ServiceLocator.Get<SpriteManager>().SoftParticleSprite,
-                StartColor = _fireColors[0],
-                EndColor = _fireColors[3],
-                Lifetime = new FloatRange(0.3f, 0.6f),
-                InitialSize = new FloatRange(15f, 30f),
-                EndSize = new FloatRange(0f),
-                EmissionRate = 0f,
-                BurstCount = 20,
-                VelocityPattern = EmissionPattern.Radial,
-                InitialVelocityX = new FloatRange(100f, 300f),
-                BlendMode = BlendState.Additive
-            };
-            var burst = _psm.CreateEmitter(settings);
-            burst.Position = Position;
+            var burst = _psm.CreateEmitter(ParticleEffects.CreateHitSparks(1.0f));
+            burst.Settings.EmissionRate = 0;
             burst.Settings.Duration = 0.1f;
-            burst.EmitBurst(20);
+            burst.Position = Position;
+            burst.EmitBurst(12);
+
+            if (_trailEmitter != null)
+            {
+                _trailEmitter.IsActive = false;
+            }
         }
 
         public override void Draw(SpriteBatch spriteBatch) { }
@@ -265,6 +134,184 @@ namespace ProjectVagabond.Battle.UI
                 _trailEmitter.IsActive = false;
                 _trailEmitter.Settings.Duration = 0.1f;
                 _trailEmitter = null;
+            }
+        }
+    }
+
+    public class FireballProjectile : BattleProjectile
+    {
+        private Vector2 _controlPoint;
+        private ParticleEmitter _trailEmitter;
+        private ParticleSystemManager _psm;
+        private Color[] _colors;
+        private Random _rng = new Random();
+
+        public FireballProjectile(Vector2 startPos, BattleCombatant target, Action onImpact, AnimationDefinition animDef)
+        {
+            _startPosition = startPos;
+            Position = startPos;
+            Target = target;
+            OnImpact = onImpact;
+
+            Duration = animDef.TotalDuration > 0 ? animDef.TotalDuration : 0.9f;
+            ImpactTime = animDef.ImpactTime > 0 ? Math.Min(animDef.ImpactTime, Duration) : Duration;
+
+            _psm = ServiceLocator.Get<ParticleSystemManager>();
+            var g = ServiceLocator.Get<Global>();
+            _colors = new Color[] { g.Palette_Sun, g.Palette_DarkSun, g.Palette_Fruit, g.Palette_Rust };
+
+            _controlPoint = startPos + new Vector2(_rng.Next(-40, 41), _rng.Next(-180, -100));
+            _trailEmitter = _psm.CreateEmitter(ParticleEffects.CreateFireballBody());
+            _trailEmitter.Position = Position;
+        }
+
+        public override void Update(GameTime gameTime, Func<BattleCombatant, Vector2> getTargetPos)
+        {
+            base.Update(gameTime, getTargetPos);
+
+            if (!IsActive || _hasImpacted) return;
+
+            if (_trailEmitter != null) _trailEmitter.Settings.StartColor = _colors[_rng.Next(_colors.Length)];
+
+            float t = Math.Clamp(Timer / ImpactTime, 0f, 1f);
+            float smoothT = t;
+
+            Vector2 targetPos = GetSafeTargetPos(getTargetPos);
+
+            float u = 1 - smoothT;
+            float tt = smoothT * smoothT;
+            float uu = u * u;
+            Position = (uu * _startPosition) + (2 * u * smoothT * _controlPoint) + (tt * targetPos);
+
+            if (_trailEmitter != null) _trailEmitter.Position = Position;
+        }
+
+        protected override void OnHitTarget(Func<BattleCombatant, Vector2> getTargetPos)
+        {
+            var burst = _psm.CreateEmitter(ParticleEffects.CreateHitSparks(2.0f));
+            burst.Settings.EmissionRate = 0;
+            burst.Settings.Duration = 0.1f;
+            burst.Position = Position;
+            burst.EmitBurst(20);
+
+            if (_trailEmitter != null)
+            {
+                _trailEmitter.IsActive = false;
+            }
+        }
+
+        public override void Draw(SpriteBatch spriteBatch) { }
+
+        public override void Destroy()
+        {
+            if (_trailEmitter != null)
+            {
+                _trailEmitter.IsActive = false;
+                _trailEmitter.Settings.Duration = 0.1f;
+                _trailEmitter = null;
+            }
+        }
+    }
+
+    public class FlamethrowerProjectile : BattleProjectile
+    {
+        private ParticleEmitter _beamEmitter;
+        private ParticleSystemManager _psm;
+        private Random _rng = new Random();
+        private Color[] _colors;
+        private float _spawnAccumulator = 0f;
+
+        private float _expansionTime;
+        private float _retractionTime;
+
+        public FlamethrowerProjectile(Vector2 startPos, BattleCombatant target, Action onImpact, AnimationDefinition animDef)
+        {
+            _startPosition = startPos;
+            Position = startPos;
+            Target = target;
+            OnImpact = onImpact;
+
+            Duration = animDef.TotalDuration > 0 ? animDef.TotalDuration : 1.0f;
+            ImpactTime = animDef.ImpactTime > 0 ? Math.Min(animDef.ImpactTime, Duration) : Duration * 0.5f;
+
+            // Apply granular timings
+            _expansionTime = animDef.ExpansionTime > 0 ? animDef.ExpansionTime : 0.2f;
+            _retractionTime = animDef.RetractionTime > 0 ? animDef.RetractionTime : 0.2f;
+
+            _psm = ServiceLocator.Get<ParticleSystemManager>();
+            var g = ServiceLocator.Get<Global>();
+            _colors = new Color[] { g.Palette_Sun, g.Palette_DarkSun, g.Palette_Fruit, g.Palette_Rust };
+
+            _beamEmitter = _psm.CreateEmitter(ParticleEffects.CreateFlamethrowerNode());
+            _beamEmitter.Settings.EmissionRate = 0;
+        }
+
+        public override void Update(GameTime gameTime, Func<BattleCombatant, Vector2> getTargetPos)
+        {
+            base.Update(gameTime, getTargetPos);
+            if (!IsActive) return;
+
+            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            Vector2 targetPos = GetSafeTargetPos(getTargetPos);
+
+            // Head extends quickly based on ExpansionTime
+            float headProgress = Math.Clamp(Timer / _expansionTime, 0f, 1f);
+
+            // Tail retracts at the end of the duration
+            float retractionStart = Math.Max(0, Duration - _retractionTime);
+            float tailProgress = 0f;
+            if (_retractionTime > 0 && Timer > retractionStart)
+            {
+                tailProgress = Math.Clamp((Timer - retractionStart) / _retractionTime, 0f, 1f);
+            }
+
+            Vector2 headPos = Vector2.Lerp(_startPosition, targetPos, headProgress);
+            Vector2 tailPos = Vector2.Lerp(_startPosition, targetPos, tailProgress);
+
+            float segmentLength = Vector2.Distance(tailPos, headPos);
+            float particlesPerPixel = 1.5f;
+
+            _spawnAccumulator += segmentLength * particlesPerPixel * dt * 60f;
+            int toSpawn = (int)_spawnAccumulator;
+            _spawnAccumulator -= toSpawn;
+
+            // Ensure we spawn at least a few particles if the beam is active
+            if (segmentLength > 5f && toSpawn < 2) toSpawn = 2;
+
+            Vector2 dir = Vector2.Normalize(headPos - tailPos);
+            if (dir.LengthSquared() == 0) dir = new Vector2(1, 0);
+            Vector2 perp = new Vector2(-dir.Y, dir.X);
+
+            for (int i = 0; i < toSpawn; i++)
+            {
+                float t = (float)_rng.NextDouble();
+                Vector2 spawnPos = Vector2.Lerp(tailPos, headPos, t);
+                float jitter = (float)(_rng.NextDouble() * 8f - 4f);
+
+                _beamEmitter.Position = spawnPos + (perp * jitter);
+                _beamEmitter.Settings.StartColor = _colors[_rng.Next(_colors.Length)];
+                _beamEmitter.EmitBurst(1);
+            }
+        }
+
+        protected override void OnHitTarget(Func<BattleCombatant, Vector2> getTargetPos)
+        {
+            var burst = _psm.CreateEmitter(ParticleEffects.CreateHitSparks(0.5f));
+            burst.Settings.EmissionRate = 0;
+            burst.Settings.Duration = 0.1f;
+            burst.Position = GetSafeTargetPos(getTargetPos);
+            burst.EmitBurst(5);
+        }
+
+        public override void Draw(SpriteBatch spriteBatch) { }
+
+        public override void Destroy()
+        {
+            if (_beamEmitter != null)
+            {
+                _beamEmitter.IsActive = false;
+                _beamEmitter.Settings.Duration = 0.1f;
+                _beamEmitter = null;
             }
         }
     }

@@ -233,6 +233,7 @@ namespace ProjectVagabond
             public Action OnImpact { get; set; }
             public Color Color { get; set; }
             public MoveData Move { get; set; }
+            public AnimationDefinition AnimDef { get; set; }
         }
 
         public class CheckActionPriorityEvent : GameEvent

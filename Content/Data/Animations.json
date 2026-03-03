@@ -140,7 +140,7 @@
     "TexturePath": "Sprites/MoveAnimationSpriteSheets/sta_stall",
     "FrameWidth": 96,
     "FrameHeight": 96,
-    "FPS": 2,
+    "FPS": 2.0,
     "ImpactFrameIndex": 2
   },
   {
@@ -158,5 +158,28 @@
     "FrameHeight": 16,
     "FPS": 12.0,
     "ImpactFrameIndex": 0
+  },
+  {
+    "Id": "proj_magic_missile",
+    "IsParticle": true,
+    "ParticleProfile": "homing",
+    "TotalDuration": 0.6,
+    "ImpactTime": 0.6
+  },
+  {
+    "Id": "proj_fireball",
+    "IsParticle": true,
+    "ParticleProfile": "fireball",
+    "TotalDuration": 0.9,
+    "ImpactTime": 0.9
+  },
+  {
+    "Id": "proj_flamethrower",
+    "IsParticle": true,
+    "ParticleProfile": "flamethrower",
+    "TotalDuration": 1.7,
+    "ImpactTime": 1.2,
+    "ExpansionTime": 0.2,
+    "RetractionTime": 0.3
   }
 ]

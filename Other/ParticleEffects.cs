@@ -3,7 +3,6 @@ using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
 using MonoGame.Extended.ECS;
 using ProjectVagabond;
-using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
@@ -83,6 +82,42 @@ namespace ProjectVagabond.Particles
         }
 
         public static ParticleEmitterSettings CreateFireballBody()
+        {
+            var settings = ParticleEmitterSettings.CreateDefault();
+            var global = ServiceLocator.Get<Global>();
+
+            settings.Shape = EmitterShape.Circle;
+            settings.EmitFrom = EmissionSource.Volume;
+            settings.EmitterSize = new Vector2(10f, 10f);
+            settings.EmissionRate = 800f;
+            settings.MaxParticles = 500;
+            settings.Duration = float.PositiveInfinity;
+
+            settings.VelocityPattern = EmissionPattern.Radial;
+            settings.Lifetime = new FloatRange(0.2f, 0.4f);
+            settings.InitialVelocityX = new FloatRange(20f, 60f);
+            settings.InitialVelocityY = new FloatRange(0f);
+
+            settings.InitialSize = new FloatRange(3f, 6f);
+            settings.EndSize = new FloatRange(0f);
+            settings.InterpolateSize = true;
+
+            settings.InitialRotation = new FloatRange(0, MathHelper.TwoPi);
+            settings.InitialRotationSpeed = new FloatRange(-15f, 15f);
+
+            settings.StartColor = global.Palette_Sun;
+            settings.EndColor = global.Palette_Rust;
+            settings.StartAlpha = 1.0f;
+            settings.EndAlpha = 0.0f;
+
+            settings.Texture = ServiceLocator.Get<Texture2D>();
+            settings.BlendMode = BlendState.Additive;
+            settings.LayerDepth = 0.96f;
+
+            return settings;
+        }
+
+        public static ParticleEmitterSettings CreateFlamethrowerNode()
         {
             var settings = ParticleEmitterSettings.CreateDefault();
             var global = ServiceLocator.Get<Global>();
