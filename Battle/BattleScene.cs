@@ -1366,6 +1366,17 @@ namespace ProjectVagabond.Scenes
                 _hapticsManager.TriggerZoomPulse(1.15f, 0.5f);
                 _hapticsManager.TriggerShake(1.5f, 0.25f);
             }
+            else if (e.Reason == "trapped")
+            {
+                _renderer.TriggerStatusIconHop(e.Actor.CombatantID, StatusEffectType.Trapped);
+                Vector2 hudPos = _renderer.GetCombatantHudCenterPosition(e.Actor, _battleManager.AllCombatants);
+                _animationManager.StartDamageIndicator(e.Actor.CombatantID, "TRAPPED!", hudPos + new Vector2(0, -15), _global.Palette_Rust);
+            }
+            else if (e.Reason == "bleeding")
+            {
+                Vector2 hudPos = _renderer.GetCombatantHudCenterPosition(e.Actor, _battleManager.AllCombatants);
+                _animationManager.StartDamageIndicator(e.Actor.CombatantID, "FAILED!", hudPos + new Vector2(0, -15), _global.Palette_Rust);
+            }
         }
 
 

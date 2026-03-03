@@ -60,7 +60,7 @@ namespace ProjectVagabond.Battle
         Frostbite,
         Bleeding,
 
-        // Temps
+        // Temps (Volatile)
         Stun,
         Regen,
         Dodging,
@@ -69,7 +69,10 @@ namespace ProjectVagabond.Battle
         Empowered,
         TargetMe,
         Provoked,
-        WideProtected
+        WideProtected,
+        Blind,
+        Vulnerable,
+        Trapped
     }
 
     /// <summary>

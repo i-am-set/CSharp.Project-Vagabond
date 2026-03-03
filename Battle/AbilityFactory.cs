@@ -1,6 +1,14 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Particles;
+using ProjectVagabond.Progression;
+using ProjectVagabond.Transitions;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections;
@@ -9,6 +17,8 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using System.Text;
+using static ProjectVagabond.GameEvents;
 
 namespace ProjectVagabond.Battle.Abilities
 {
@@ -83,6 +93,18 @@ namespace ProjectVagabond.Battle.Abilities
                     break;
                 case StatusEffectType.WideProtected:
                     list.Add(new WideProtectedLogicAbility(instance));
+                    break;
+                case StatusEffectType.Bleeding:
+                    list.Add(new BleedingLogicAbility(instance));
+                    break;
+                case StatusEffectType.Blind:
+                    list.Add(new BlindLogicAbility(instance));
+                    break;
+                case StatusEffectType.Vulnerable:
+                    list.Add(new VulnerableLogicAbility(instance));
+                    break;
+                case StatusEffectType.Trapped:
+                    list.Add(new TrappedLogicAbility(instance));
                     break;
                 default:
                     break;

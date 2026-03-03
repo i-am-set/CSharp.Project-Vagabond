@@ -1,7 +1,24 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Particles;
+using ProjectVagabond.Progression;
+using ProjectVagabond.Transitions;
+using ProjectVagabond.UI;
+using ProjectVagabond.Utils;
+using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
+using System.Linq;
+using System.Reflection;
+using System.Text;
+using static ProjectVagabond.GameEvents;
 
 namespace ProjectVagabond
 {
@@ -93,7 +110,10 @@ namespace ProjectVagabond
                 { StatusEffectType.Empowered, Palette_Fruit },
                 { StatusEffectType.TargetMe, Palette_Rust },
                 { StatusEffectType.Provoked, Palette_Fruit },
-                { StatusEffectType.Bleeding, Palette_Rust }
+                { StatusEffectType.Bleeding, Palette_Rust },
+                { StatusEffectType.Blind, Palette_DarkGray },
+                { StatusEffectType.Vulnerable, Palette_Pink },
+                { StatusEffectType.Trapped, Palette_DarkRust }
             };
         }
 
@@ -134,10 +154,14 @@ namespace ProjectVagabond
         public float HoverHapticStrength { get; set; } = 0.75f;
         public float ButtonHapticStrength { get; set; } = 0.5f;
 
-        public int PoisonBaseDamage { get; set; } = 2;
+        // Mechanics Tuning
+        public float PoisonBasePercent { get; set; } = 0.10f;
+        public float BleedBasePercent { get; set; } = 0.0625f;
         public float RegenPercent { get; set; } = 0.0625f;
         public float DodgingAccuracyMultiplier { get; set; } = 0.5f;
-        public float BurnDamageMultiplier { get; set; } = 2.0f;
+        public float BlindAccuracyMultiplier { get; set; } = 0.5f;
+        public float BurnDamageMultiplier { get; set; } = 1.5f;
+        public float VulnerableDamageMultiplier { get; set; } = 1.5f;
         public float FrostbiteAgilityMultiplier { get; set; } = 0.5f;
         public float EmpoweredDamageMultiplier { get; set; } = 1.5f;
 

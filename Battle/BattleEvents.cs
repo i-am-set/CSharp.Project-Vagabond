@@ -1,5 +1,11 @@
-﻿using System.Collections.Generic;
-using ProjectVagabond.Battle.Abilities;
+﻿using ProjectVagabond.Battle.Abilities;
+using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Utils;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using static ProjectVagabond.GameEvents;
 
 namespace ProjectVagabond.Battle
 {
@@ -31,12 +37,14 @@ namespace ProjectVagabond.Battle
         public BattleCombatant Actor { get; }
         public MoveData Move { get; }
         public BattleCombatant Target { get; }
+        public QueuedActionType ActionType { get; } // Added this property
 
-        public ActionDeclaredEvent(BattleCombatant actor, MoveData move, BattleCombatant target)
+        public ActionDeclaredEvent(BattleCombatant actor, MoveData move, BattleCombatant target, QueuedActionType actionType)
         {
             Actor = actor;
             Move = move;
             Target = target;
+            ActionType = actionType;
         }
     }
 

@@ -686,7 +686,7 @@
     "MoveID": "32",
     "MoveName": "Lava Splash",
     "ActionPhrase": "{IsUserProperNoun}[cSlot]{user}[/] [cSpell]SPLASHES LAVA[/]!",
-    "Description": "Deals [cpositive]3x[/] damage to [cnegative]Burned[/] targets.",
+    "Description": "Deals [cpositive]extra[/] damage to [cnegative]Burned[/] targets.",
     "Flavor": "Coats the enemy in molten rock.",
     "Power": 50,
     "MoveType": "Spell",

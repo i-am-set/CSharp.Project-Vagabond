@@ -8,7 +8,7 @@ namespace ProjectVagabond.Battle.Abilities
     public class PoisonLogicAbility : IAbility
     {
         public string Name => "Poison Logic";
-        public string Description => "Deals damage at end of turn.";
+        public string Description => "Deals damage at end of turn based on turns active.";
         public int Priority => 0;
 
         private readonly StatusEffectInstance _status;
@@ -23,12 +23,12 @@ namespace ProjectVagabond.Battle.Abilities
             if (e is TurnEndEvent turnEnd && turnEnd.Actor.ActiveStatusEffects.Contains(_status))
             {
                 var global = ServiceLocator.Get<Global>();
-                int safeTurnCount = Math.Min(_status.PoisonTurnCount, 30);
-                long rawDamage = (long)global.PoisonBaseDamage * (long)Math.Pow(2, safeTurnCount);
-                int damage = (int)Math.Min(rawDamage, int.MaxValue);
+                _status.PoisonTurnCount++; // Starts at 0, becomes 1 on first turn end.
+
+                int damage = (int)(turnEnd.Actor.Stats.MaxHP * global.PoisonBasePercent * _status.PoisonTurnCount);
+                if (damage < 1) damage = 1;
 
                 turnEnd.Actor.ApplyDamage(damage);
-                _status.PoisonTurnCount++;
 
                 EventBus.Publish(new GameEvents.StatusEffectTriggered
                 {
@@ -37,6 +37,61 @@ namespace ProjectVagabond.Battle.Abilities
                     Damage = damage
                 });
             }
+        }
+    }
+
+    public class BleedingLogicAbility : IAbility
+    {
+        public string Name => "Bleeding Logic";
+        public string Description => "Deals damage at end of turn and when attacking.";
+        public int Priority => 0;
+
+        private readonly StatusEffectInstance _status;
+
+        public BleedingLogicAbility(StatusEffectInstance status)
+        {
+            _status = status;
+        }
+
+        public void OnEvent(GameEvent e, BattleContext context)
+        {
+            if (e is TurnEndEvent turnEnd && turnEnd.Actor.ActiveStatusEffects.Contains(_status))
+            {
+                ApplyBleedDamage(turnEnd.Actor);
+            }
+            else if (e is ActionDeclaredEvent actionDecl && actionDecl.Actor.ActiveStatusEffects.Contains(_status))
+            {
+                if (actionDecl.Move != null && actionDecl.Move.Power > 0) // Damaging move
+                {
+                    ApplyBleedDamage(actionDecl.Actor);
+
+                    if (actionDecl.Actor.Stats.CurrentHP <= 0)
+                    {
+                        actionDecl.IsHandled = true; // Cancel the attack
+                        EventBus.Publish(new GameEvents.ActionFailed { Actor = actionDecl.Actor, Reason = "bleeding", MoveName = actionDecl.Move.MoveName });
+
+                        if (!actionDecl.Actor.IsDying)
+                        {
+                            EventBus.Publish(new GameEvents.CombatantVisualDeath { Victim = actionDecl.Actor });
+                        }
+                    }
+                }
+            }
+        }
+
+        private void ApplyBleedDamage(BattleCombatant combatant)
+        {
+            var global = ServiceLocator.Get<Global>();
+            int damage = (int)(combatant.Stats.MaxHP * global.BleedBasePercent);
+            if (damage < 1) damage = 1;
+
+            combatant.ApplyDamage(damage);
+            EventBus.Publish(new GameEvents.StatusEffectTriggered
+            {
+                Combatant = combatant,
+                EffectType = StatusEffectType.Bleeding,
+                Damage = damage
+            });
         }
     }
 
@@ -134,7 +189,7 @@ namespace ProjectVagabond.Battle.Abilities
         {
             if (e is ActionDeclaredEvent actionEvent && actionEvent.Actor.ActiveStatusEffects.Contains(_status))
             {
-                if (actionEvent.Move.ImpactType == ImpactType.Status)
+                if (actionEvent.Move != null && actionEvent.Move.ImpactType == ImpactType.Status)
                 {
                     e.IsHandled = true;
                     EventBus.Publish(new GameEvents.ActionFailed
@@ -161,7 +216,7 @@ namespace ProjectVagabond.Battle.Abilities
         {
             if (e is ActionDeclaredEvent actionEvent && actionEvent.Actor.ActiveStatusEffects.Contains(_status))
             {
-                if (actionEvent.Move.MoveType == MoveType.Spell)
+                if (actionEvent.Move != null && actionEvent.Move.MoveType == MoveType.Spell)
                 {
                     e.IsHandled = true;
                     EventBus.Publish(new GameEvents.ActionFailed
@@ -209,6 +264,81 @@ namespace ProjectVagabond.Battle.Abilities
             {
                 var global = ServiceLocator.Get<Global>();
                 hitEvent.FinalAccuracy = (int)(hitEvent.FinalAccuracy * global.DodgingAccuracyMultiplier);
+            }
+        }
+    }
+
+    public class BlindLogicAbility : IAbility
+    {
+        public string Name => "Blind Logic";
+        public string Description => "Decreases accuracy.";
+        public int Priority => 0;
+
+        private readonly StatusEffectInstance _status;
+        public BlindLogicAbility(StatusEffectInstance status) { _status = status; }
+
+        public void OnEvent(GameEvent e, BattleContext context)
+        {
+            if (e is CheckHitChanceEvent hitEvent && hitEvent.Actor.ActiveStatusEffects.Contains(_status))
+            {
+                var global = ServiceLocator.Get<Global>();
+                hitEvent.FinalAccuracy = (int)(hitEvent.FinalAccuracy * global.BlindAccuracyMultiplier);
+            }
+        }
+    }
+
+    public class VulnerableLogicAbility : IAbility
+    {
+        public string Name => "Vulnerable Logic";
+        public string Description => "Increases damage taken for one hit, then is consumed.";
+        public int Priority => 0;
+
+        private readonly StatusEffectInstance _status;
+        public VulnerableLogicAbility(StatusEffectInstance status) { _status = status; }
+
+        public void OnEvent(GameEvent e, BattleContext context)
+        {
+            // Only proc on actual hits, not simulations
+            if (!context.IsSimulation && e is CalculateDamageEvent dmgEvent && dmgEvent.Target.ActiveStatusEffects.Contains(_status))
+            {
+                if (dmgEvent.Move.Power > 0) // Ensure it's a damaging move
+                {
+                    var global = ServiceLocator.Get<Global>();
+                    dmgEvent.DamageMultiplier *= global.VulnerableDamageMultiplier;
+                    dmgEvent.FinalDamage = (int)(dmgEvent.FinalDamage * global.VulnerableDamageMultiplier);
+                    dmgEvent.WasVulnerable = true;
+
+                    // Consume the status effect immediately
+                    dmgEvent.Target.ActiveStatusEffects.Remove(_status);
+                    EventBus.Publish(new GameEvents.StatusEffectRemoved { Combatant = dmgEvent.Target, EffectType = StatusEffectType.Vulnerable });
+                }
+            }
+        }
+    }
+
+    public class TrappedLogicAbility : IAbility
+    {
+        public string Name => "Trapped Logic";
+        public string Description => "Prevents switching out.";
+        public int Priority => 10;
+
+        private readonly StatusEffectInstance _status;
+        public TrappedLogicAbility(StatusEffectInstance status) { _status = status; }
+
+        public void OnEvent(GameEvent e, BattleContext context)
+        {
+            if (e is ActionDeclaredEvent actionEvent && actionEvent.Actor.ActiveStatusEffects.Contains(_status))
+            {
+                if (actionEvent.ActionType == QueuedActionType.Switch) // FIXED: Uses ActionType instead of Type
+                {
+                    actionEvent.IsHandled = true;
+                    EventBus.Publish(new GameEvents.ActionFailed
+                    {
+                        Actor = actionEvent.Actor,
+                        Reason = "trapped",
+                        MoveName = "SWITCH"
+                    });
+                }
             }
         }
     }

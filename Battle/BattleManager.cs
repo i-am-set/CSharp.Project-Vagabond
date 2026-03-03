@@ -441,6 +441,22 @@ namespace ProjectVagabond.Battle
         public void PerformLogicalSwitch(BattleCombatant actor, BattleCombatant incomingMember)
         {
             if (actor == null || incomingMember == null || actor == incomingMember) return;
+
+            // --- Remove volatile statuses and reset poison ---
+            var effectsToRemove = actor.ActiveStatusEffects.Where(eff => !eff.IsPermanent).ToList();
+            foreach (var eff in effectsToRemove)
+            {
+                actor.ActiveStatusEffects.Remove(eff);
+                EventBus.Publish(new GameEvents.StatusEffectRemoved { Combatant = actor, EffectType = eff.EffectType });
+            }
+
+            var poisonEffect = actor.ActiveStatusEffects.FirstOrDefault(eff => eff.EffectType == StatusEffectType.Poison);
+            if (poisonEffect != null)
+            {
+                poisonEffect.PoisonTurnCount = 0; // Reset so it starts at 1 next time
+            }
+            // -------------------------------------------------
+
             incomingMember.IsDying = false;
             incomingMember.IsRemovalProcessed = false;
             int oldSlot = actor.BattleSlot;
@@ -713,26 +729,28 @@ namespace ProjectVagabond.Battle
             CurrentActingCombatant = nextAction.Actor;
 
             string moveName = nextAction.ChosenMove?.MoveName ?? "ACTION";
+            if (nextAction.Type == QueuedActionType.Switch) moveName = "SWITCH";
+
             string typeColor = nextAction.ChosenMove?.MoveType == MoveType.Spell ? "[cAlt]" : "[cAction]";
+            if (nextAction.Type == QueuedActionType.Switch) typeColor = "[cSystem]";
+
             AppendToLog($"{nextAction.Actor.Name} USED {typeColor}{moveName}[/].");
 
-            if (_actionToExecute.ChosenMove != null)
+            // ALWAYS fire the ability event, even for switches
+            _battleContext.ResetMultipliers();
+            _battleContext.Actor = _actionToExecute.Actor;
+            _battleContext.Target = _actionToExecute.Target;
+            _battleContext.Move = _actionToExecute.ChosenMove;
+            _battleContext.Action = _actionToExecute;
+
+            var declEvent = new ActionDeclaredEvent(_actionToExecute.Actor, _actionToExecute.ChosenMove, _actionToExecute.Target, _actionToExecute.Type);
+            _actionToExecute.Actor.NotifyAbilities(declEvent, _battleContext);
+
+            if (declEvent.IsHandled)
             {
-                _battleContext.ResetMultipliers();
-                _battleContext.Actor = _actionToExecute.Actor;
-                _battleContext.Target = _actionToExecute.Target;
-                _battleContext.Move = _actionToExecute.ChosenMove;
-                _battleContext.Action = _actionToExecute;
-
-                var declEvent = new ActionDeclaredEvent(_actionToExecute.Actor, _actionToExecute.ChosenMove, _actionToExecute.Target);
-                _actionToExecute.Actor.NotifyAbilities(declEvent, _battleContext);
-
-                if (declEvent.IsHandled)
-                {
-                    _actionToExecute = null;
-                    _turnPacingTimer = ACTION_DELAY;
-                    return;
-                }
+                _actionToExecute = null;
+                _turnPacingTimer = ACTION_DELAY;
+                return;
             }
 
             EventBus.Publish(new GameEvents.ActionDeclared { Actor = _actionToExecute.Actor, Move = _actionToExecute.ChosenMove, Target = _actionToExecute.Target, Type = _actionToExecute.Type });

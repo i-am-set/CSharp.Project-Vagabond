@@ -191,7 +191,7 @@ namespace ProjectVagabond.Battle.Abilities
 
             if (e is ActionDeclaredEvent actionEvent && actionEvent.Actor.Abilities.Contains(this))
             {
-                if (actionEvent.Move.MoveType == MoveType.Spell)
+                if (actionEvent.Move != null && actionEvent.Move.MoveType == MoveType.Spell)
                 {
                     actionEvent.IsHandled = true;
                     if (!context.IsSimulation)

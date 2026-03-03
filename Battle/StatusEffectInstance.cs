@@ -23,7 +23,7 @@ namespace ProjectVagabond.Battle
 
         /// <summary>
         /// Tracks how many turns this specific instance of Poison has been active.
-        /// Used to calculate the doubling damage.
+        /// Used to calculate the scaling damage. Resets when switched out.
         /// </summary>
         public int PoisonTurnCount { get; set; } = 0;
 
@@ -96,6 +96,9 @@ namespace ProjectVagabond.Battle
                 StatusEffectType.Provoked => "Provoked",
                 StatusEffectType.Bleeding => "Bleeding",
                 StatusEffectType.WideProtected => "Wide Guard",
+                StatusEffectType.Blind => "Blind",
+                StatusEffectType.Vulnerable => "Vulnerable",
+                StatusEffectType.Trapped => "Trapped",
                 _ => EffectType.ToString(),
             };
         }
@@ -125,10 +128,9 @@ namespace ProjectVagabond.Battle
                 case StatusEffectType.Burn:
                     return $"{global.BurnDamageMultiplier}x damage received";
                 case StatusEffectType.Poison:
-                    // Calculate next turn damage
-                    int safeTurnCount = Math.Min(PoisonTurnCount, 30);
-                    long dmg = (long)global.PoisonBaseDamage * (long)Math.Pow(2, safeTurnCount);
-                    return $"Does {dmg} damage at end of turn";
+                    int turns = Math.Max(1, PoisonTurnCount);
+                    float dmgPercent = global.PoisonBasePercent * 100 * turns;
+                    return $"Does {dmgPercent}% Max HP damage at end of turn";
                 case StatusEffectType.Regen:
                     return $"Restores {global.RegenPercent * 100}% HP at end of turn";
                 case StatusEffectType.Dodging:
@@ -144,9 +146,15 @@ namespace ProjectVagabond.Battle
                 case StatusEffectType.Provoked:
                     return "Can't use status moves";
                 case StatusEffectType.Bleeding:
-                    return "Takes 10% Max HP damage at end of turn";
+                    return $"Takes {global.BleedBasePercent * 100}% Max HP damage at end of turn and when attacking";
                 case StatusEffectType.WideProtected:
                     return "Protects from multi-target attacks";
+                case StatusEffectType.Blind:
+                    return $"{global.BlindAccuracyMultiplier}x accuracy";
+                case StatusEffectType.Vulnerable:
+                    return $"Takes {global.VulnerableDamageMultiplier}x damage from the next hit";
+                case StatusEffectType.Trapped:
+                    return "Cannot switch out";
                 default:
                     return "";
             }
