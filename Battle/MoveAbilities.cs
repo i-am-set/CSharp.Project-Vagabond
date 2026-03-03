@@ -654,4 +654,66 @@ namespace ProjectVagabond.Battle.Abilities
             }
         }
     }
+
+    public class ChanceToDazeAbility : IAbility
+    {
+        public string Name => "Chance To Daze";
+        public string Description => "Chance to daze the target.";
+        public int Priority => 0;
+
+        private readonly int _chance;
+        public ChanceToDazeAbility(int chance) { _chance = chance; }
+
+        public void OnEvent(GameEvent e, BattleContext context)
+        {
+            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
+            {
+                if (!reaction.Result.WasGraze && Random.Shared.Next(1, 101) <= _chance)
+                {
+                    reaction.Target.Tags.Add(GameplayTags.States.Dazed);
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{reaction.Target.Name} was [shake][cStatus]DAZED[/][/]!" });
+                }
+            }
+        }
+    }
+
+    public class DazeOtherEnemyAbility : IAbility
+    {
+        public string Name => "Daze Other Enemy";
+        public string Description => "Dazes the other enemy present.";
+        public int Priority => 0;
+
+        public void OnEvent(GameEvent e, BattleContext context)
+        {
+            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
+            {
+                if (reaction.Result.WasGraze || context.AllCombatants == null) return;
+
+                var otherEnemy = context.AllCombatants.FirstOrDefault(c =>
+                    c.IsPlayerControlled == reaction.Target.IsPlayerControlled &&
+                    c != reaction.Target &&
+                    c.IsActiveOnField &&
+                    !c.IsDefeated &&
+                    c.Stats.CurrentHP > 0);
+
+                if (otherEnemy != null)
+                {
+                    otherEnemy.Tags.Add(GameplayTags.States.Dazed);
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{otherEnemy.Name} was [shake][cStatus]DAZED[/][/] by the chain!" });
+                }
+            }
+        }
+    }
+
+    public class HighCritAbility : IAbility
+    {
+        public string Name => "High Crit";
+        public string Description => "Increased critical hit chance.";
+        public int Priority => 0;
+
+        public float Chance { get; }
+        public HighCritAbility(float chance) { Chance = chance; }
+
+        public void OnEvent(GameEvent e, BattleContext context) { }
+    }
 }

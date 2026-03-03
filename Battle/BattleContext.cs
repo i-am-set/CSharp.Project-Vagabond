@@ -16,6 +16,7 @@ namespace ProjectVagabond.Battle.Abilities
         public QueuedAction Action { get; set; }
         public bool IsSimulation { get; set; }
         public VarianceMode SimulationVariance { get; set; } = VarianceMode.Random;
+        public IEnumerable<BattleCombatant> AllCombatants { get; set; }
 
         public void ResetMultipliers()
         {

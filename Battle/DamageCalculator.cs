@@ -47,7 +47,6 @@ namespace ProjectVagabond.Battle
             bool isCrit = false;
             if (!isGraze && move.ImpactType != ImpactType.Status && move.Power > 0)
             {
-                // CHANGE: Guaranteed Crit if Guard is broken (<= 0)
                 if (target.CurrentGuard <= 0)
                 {
                     isCrit = true;
@@ -58,7 +57,9 @@ namespace ProjectVagabond.Battle
                 }
                 else
                 {
-                    isCrit = overrideCrit ?? (random.NextDouble() < BattleConstants.CRITICAL_HIT_CHANCE);
+                    var highCrit = move.Abilities.OfType<HighCritAbility>().FirstOrDefault();
+                    float critChance = highCrit != null ? highCrit.Chance / 100f : BattleConstants.CRITICAL_HIT_CHANCE;
+                    isCrit = overrideCrit ?? (random.NextDouble() < critChance);
                 }
             }
 
