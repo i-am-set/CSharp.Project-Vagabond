@@ -157,6 +157,7 @@ namespace ProjectVagabond
         public Texture2D RestBorderMain { get; private set; }
         public Texture2D RestActionIconsSpriteSheet { get; private set; }
         public Texture2D TargetingButtonSpriteSheet { get; private set; }
+        public Texture2D HealthHeartsSpriteSheet { get; private set; }
 
         public Texture2D NoiseTexture { get; private set; }
 
@@ -392,6 +393,8 @@ namespace ProjectVagabond
             catch { RestActionIconsSpriteSheet = _textureFactory.CreateColoredTexture(24, 32, Color.Magenta); }
             try { TargetingButtonSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/ui_choose_a_target_button_spritesheet"); }
             catch { TargetingButtonSpriteSheet = _textureFactory.CreateColoredTexture(450, 22, Color.Magenta); }
+            try { HealthHeartsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/health_5x5_icon_spritesheet"); }
+            catch { HealthHeartsSpriteSheet = _textureFactory.CreateColoredTexture(30, 5, Color.Red); }
 
             try { InventoryPlayerHealthBarEmpty = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_player_health_bar_empty"); }
             catch { InventoryPlayerHealthBarEmpty = _textureFactory.CreateColoredTexture(66, 7, Color.DarkGray); }

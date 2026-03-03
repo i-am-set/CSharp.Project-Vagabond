@@ -8,34 +8,21 @@ namespace ProjectVagabond.Battle.Abilities
     public class PoisonLogicAbility : IAbility
     {
         public string Name => "Poison Logic";
-        public string Description => "Deals damage at end of turn based on turns active.";
+        public string Description => "Deals flat damage at end of turn based on turns active.";
         public int Priority => 0;
 
         private readonly StatusEffectInstance _status;
-
-        public PoisonLogicAbility(StatusEffectInstance status)
-        {
-            _status = status;
-        }
+        public PoisonLogicAbility(StatusEffectInstance status) { _status = status; }
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
             if (e is TurnEndEvent turnEnd && turnEnd.Actor.ActiveStatusEffects.Contains(_status))
             {
-                var global = ServiceLocator.Get<Global>();
-                _status.PoisonTurnCount++; // Starts at 0, becomes 1 on first turn end.
-
-                int damage = (int)(turnEnd.Actor.Stats.MaxHP * global.PoisonBasePercent * _status.PoisonTurnCount);
-                if (damage < 1) damage = 1;
+                _status.PoisonTurnCount++;
+                int damage = _status.PoisonTurnCount; // Scales +1 flat damage per turn
 
                 turnEnd.Actor.ApplyDamage(damage);
-
-                EventBus.Publish(new GameEvents.StatusEffectTriggered
-                {
-                    Combatant = turnEnd.Actor,
-                    EffectType = StatusEffectType.Poison,
-                    Damage = damage
-                });
+                EventBus.Publish(new GameEvents.StatusEffectTriggered { Combatant = turnEnd.Actor, EffectType = StatusEffectType.Poison, Damage = damage });
             }
         }
     }
@@ -43,15 +30,11 @@ namespace ProjectVagabond.Battle.Abilities
     public class BleedingLogicAbility : IAbility
     {
         public string Name => "Bleeding Logic";
-        public string Description => "Deals damage at end of turn and when attacking.";
+        public string Description => "Deals 1 damage at end of turn and when attacking.";
         public int Priority => 0;
 
         private readonly StatusEffectInstance _status;
-
-        public BleedingLogicAbility(StatusEffectInstance status)
-        {
-            _status = status;
-        }
+        public BleedingLogicAbility(StatusEffectInstance status) { _status = status; }
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
@@ -61,19 +44,14 @@ namespace ProjectVagabond.Battle.Abilities
             }
             else if (e is ActionDeclaredEvent actionDecl && actionDecl.Actor.ActiveStatusEffects.Contains(_status))
             {
-                if (actionDecl.Move != null && actionDecl.Move.Power > 0) // Damaging move
+                if (actionDecl.Move != null && actionDecl.Move.Power > 0)
                 {
                     ApplyBleedDamage(actionDecl.Actor);
-
                     if (actionDecl.Actor.Stats.CurrentHP <= 0)
                     {
-                        actionDecl.IsHandled = true; // Cancel the attack
+                        actionDecl.IsHandled = true;
                         EventBus.Publish(new GameEvents.ActionFailed { Actor = actionDecl.Actor, Reason = "bleeding", MoveName = actionDecl.Move.MoveName });
-
-                        if (!actionDecl.Actor.IsDying)
-                        {
-                            EventBus.Publish(new GameEvents.CombatantVisualDeath { Victim = actionDecl.Actor });
-                        }
+                        if (!actionDecl.Actor.IsDying) EventBus.Publish(new GameEvents.CombatantVisualDeath { Victim = actionDecl.Actor });
                     }
                 }
             }
@@ -81,17 +59,9 @@ namespace ProjectVagabond.Battle.Abilities
 
         private void ApplyBleedDamage(BattleCombatant combatant)
         {
-            var global = ServiceLocator.Get<Global>();
-            int damage = (int)(combatant.Stats.MaxHP * global.BleedBasePercent);
-            if (damage < 1) damage = 1;
-
+            int damage = 1; // Flat 1 damage
             combatant.ApplyDamage(damage);
-            EventBus.Publish(new GameEvents.StatusEffectTriggered
-            {
-                Combatant = combatant,
-                EffectType = StatusEffectType.Bleeding,
-                Damage = damage
-            });
+            EventBus.Publish(new GameEvents.StatusEffectTriggered { Combatant = combatant, EffectType = StatusEffectType.Bleeding, Damage = damage });
         }
     }
 
@@ -159,7 +129,7 @@ namespace ProjectVagabond.Battle.Abilities
     public class BurnLogicAbility : IAbility
     {
         public string Name => "Burn Logic";
-        public string Description => "Increases damage taken.";
+        public string Description => "Increases damage taken by 1.";
         public int Priority => 0;
 
         private readonly StatusEffectInstance _status;
@@ -169,9 +139,7 @@ namespace ProjectVagabond.Battle.Abilities
         {
             if (e is CalculateDamageEvent dmgEvent && dmgEvent.Target.ActiveStatusEffects.Contains(_status))
             {
-                var global = ServiceLocator.Get<Global>();
-                dmgEvent.DamageMultiplier *= global.BurnDamageMultiplier;
-                dmgEvent.FinalDamage = (int)(dmgEvent.FinalDamage * global.BurnDamageMultiplier);
+                dmgEvent.FlatBonus += 1f; // Flat +1 damage taken
             }
         }
     }

@@ -18,11 +18,13 @@ namespace ProjectVagabond.Battle
                 Debug.WriteLine($"[PartyMemberFactory] Error: Member ID '{memberId}' not found in cache.");
                 return null;
             }
+
             var member = new PartyMember
             {
                 Name = data.Name,
-                MaxHP = data.MaxHP,
-                CurrentHP = data.MaxHP,
+                // Convert the raw JSON stat (Hearts) into Battle HP (Hearts * 2) immediately
+                MaxHP = data.MaxHP * 2,
+                CurrentHP = data.MaxHP * 2,
                 Strength = data.Strength,
                 Intelligence = data.Intelligence,
                 Tenacity = data.Tenacity,

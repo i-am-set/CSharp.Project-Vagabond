@@ -1992,6 +1992,18 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/BattleUI/battle_enemy_floor.png;Sprites/UI/BattleUI/battle_enemy_floor
 
+#begin Sprites/UI/BattleUI/health_5x5_icon_spritesheet.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/BattleUI/health_5x5_icon_spritesheet.png;Sprites/UI/BattleUI/health_5x5_icon_spritesheet
+
 #begin Sprites/UI/BattleUI/party_member_enemy_floor.png
 /importer:TextureImporter
 /processor:TextureProcessor

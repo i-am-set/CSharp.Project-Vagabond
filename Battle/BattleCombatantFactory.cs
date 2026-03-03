@@ -24,6 +24,7 @@ namespace ProjectVagabond.Battle
                 IsPlayerControlled = true,
                 Stats = new CombatantStats
                 {
+                    // Removed the * 2 here, because PartyMember already holds Battle HP
                     MaxHP = gameState.PlayerState.GetEffectiveStat(member, "MaxHP"),
                     CurrentHP = member.CurrentHP,
                     Strength = gameState.PlayerState.GetEffectiveStat(member, "Strength"),
@@ -105,7 +106,8 @@ namespace ProjectVagabond.Battle
             combatant.Tags.Add($"Gender.{enemyData.Gender}");
             if (enemyData.IsProperNoun) combatant.Tags.Add("Prop.ProperNoun");
 
-            combatant.Stats.MaxHP = _random.Next(enemyData.MinHP, enemyData.MaxHP + 1);
+            // 1 Stat = 2 Battle HP
+            combatant.Stats.MaxHP = _random.Next(enemyData.MinHP, enemyData.MaxHP + 1) * 2;
             combatant.Stats.CurrentHP = combatant.Stats.MaxHP;
             combatant.Stats.Strength = _random.Next(enemyData.MinStrength, enemyData.MaxStrength + 1);
             combatant.Stats.Intelligence = _random.Next(enemyData.MinIntelligence, enemyData.MaxIntelligence + 1);

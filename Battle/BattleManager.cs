@@ -1252,9 +1252,12 @@ namespace ProjectVagabond.Battle
                                 partyMember.MaxEXP = (int)(partyMember.MaxEXP * 1.2f);
 
                                 // Auto Omni-Stat Boost
-                                partyMember.MaxHP++; partyMember.CurrentHP++;
-                                partyMember.Strength++; partyMember.Intelligence++;
-                                partyMember.Tenacity++; partyMember.Agility++;
+                                partyMember.MaxHP += 2;
+                                partyMember.CurrentHP += 2;
+                                partyMember.Strength++;
+                                partyMember.Intelligence++;
+                                partyMember.Tenacity++;
+                                partyMember.Agility++;
 
                                 // Auto Learn Move
                                 if (BattleDataCache.PartyMembers.TryGetValue(partyMember.Name, out var pmData))

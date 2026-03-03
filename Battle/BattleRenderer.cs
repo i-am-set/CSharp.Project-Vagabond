@@ -563,7 +563,8 @@ namespace ProjectVagabond.Battle.UI
             {
                 if (combatant.IsDefeated || combatant.VisualHealthBarAlpha <= 0.01f || !combatant.IsActiveOnField) continue;
 
-                int barWidth = (int)(combatant.Stats.MaxHP * BattleLayout.HEALTH_PIXELS_PER_HP);
+                int maxHearts = (int)Math.Ceiling(combatant.Stats.MaxHP / 2f);
+                int barWidth = maxHearts * 6 - 1; // 5px heart + 1px gap
                 if (barWidth < BattleLayout.MIN_BAR_WIDTH) barWidth = BattleLayout.MIN_BAR_WIDTH;
 
                 float hudAlpha = combatant.HudVisualAlpha;

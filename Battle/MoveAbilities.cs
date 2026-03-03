@@ -205,21 +205,18 @@ namespace ProjectVagabond.Battle.Abilities
     public class RecoilAbility : IAbility
     {
         public string Name => "Recoil";
-        public string Description => "User takes damage after using this move.";
+        public string Description => "User takes flat damage after using this move.";
         public int Priority => 0;
 
-        private readonly float _damagePercent;
-        public RecoilAbility(float damagePercent) { _damagePercent = damagePercent; }
+        private readonly int _amount;
+        public RecoilAbility(int amount) { _amount = amount; }
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
             if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
             {
-                int recoilDamage = (int)(reaction.Actor.Stats.MaxHP * (_damagePercent / 100f));
-                if (recoilDamage < 1) recoilDamage = 1;
-
-                reaction.Actor.ApplyDamage(recoilDamage);
-                EventBus.Publish(new GameEvents.CombatantRecoiled { Actor = reaction.Actor, RecoilDamage = recoilDamage });
+                reaction.Actor.ApplyDamage(_amount);
+                EventBus.Publish(new GameEvents.CombatantRecoiled { Actor = reaction.Actor, RecoilDamage = _amount });
             }
         }
     }
@@ -246,27 +243,20 @@ namespace ProjectVagabond.Battle.Abilities
     public class DamageRecoilAbility : IAbility
     {
         public string Name => "Damage Recoil";
-        public string Description => "User takes recoil damage based on damage dealt.";
+        public string Description => "User takes flat recoil damage based on damage dealt.";
         public int Priority => 0;
 
-        private readonly float _percent;
-        public DamageRecoilAbility(float percent) { _percent = percent; }
+        private readonly int _amount;
+        public DamageRecoilAbility(int amount) { _amount = amount; }
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
             if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
             {
-                int damageDealt = reaction.Result.DamageAmount;
-                float targetMaxHP = Math.Max(1, reaction.Target.Stats.MaxHP);
-                float healthPercentageDealt = damageDealt / targetMaxHP;
-                int recoil = (int)(reaction.Actor.Stats.MaxHP * healthPercentageDealt * (_percent / 100f));
-
-                if (damageDealt > 0 && recoil < 1) recoil = 1;
-
-                if (recoil > 0)
+                if (reaction.Result.DamageAmount > 0)
                 {
-                    reaction.Actor.ApplyDamage(recoil);
-                    EventBus.Publish(new GameEvents.CombatantRecoiled { Actor = reaction.Actor, RecoilDamage = recoil });
+                    reaction.Actor.ApplyDamage(_amount);
+                    EventBus.Publish(new GameEvents.CombatantRecoiled { Actor = reaction.Actor, RecoilDamage = _amount });
                 }
             }
         }
@@ -288,18 +278,17 @@ namespace ProjectVagabond.Battle.Abilities
     public class PercentageDamageAbility : IAbility
     {
         public string Name => "Gravity Crush";
-        public string Description => "Deals fixed percentage of current HP.";
+        public string Description => "Deals fixed flat damage.";
         public int Priority => 0;
 
-        private readonly float _percent;
-        public PercentageDamageAbility(float percent) { _percent = percent; }
+        private readonly int _amount;
+        public PercentageDamageAbility(int amount) { _amount = amount; }
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
             if (e is CalculateDamageEvent dmgEvent && dmgEvent.Move.Abilities.Contains(this))
             {
-                int damage = (int)(dmgEvent.Target.Stats.CurrentHP * (_percent / 100f));
-                dmgEvent.FinalDamage = Math.Max(1, damage);
+                dmgEvent.FinalDamage = _amount;
                 dmgEvent.IsHandled = true;
             }
         }
@@ -308,28 +297,26 @@ namespace ProjectVagabond.Battle.Abilities
     public class LifestealAbility : IAbility
     {
         public string Name => "Lifesteal";
-        public string Description => "Heals user for a percentage of damage dealt.";
+        public string Description => "Heals user for a flat amount on hit.";
         public int Priority => 0;
 
-        private readonly float _percent;
-        public LifestealAbility(float percent) { _percent = percent; }
+        private readonly int _amount;
+        public LifestealAbility(int amount) { _amount = amount; }
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
             if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
             {
-                int damageDealt = reaction.Result.DamageAmount;
-                int healAmount = (int)(damageDealt * (_percent / 100f));
-                if (healAmount > 0)
+                if (reaction.Result.DamageAmount > 0)
                 {
                     int hpBefore = (int)reaction.Actor.VisualHP;
-                    reaction.Actor.ApplyHealing(healAmount);
+                    reaction.Actor.ApplyHealing(_amount);
 
                     EventBus.Publish(new GameEvents.CombatantHealed
                     {
                         Actor = reaction.Actor,
                         Target = reaction.Actor,
-                        HealAmount = healAmount,
+                        HealAmount = _amount,
                         VisualHPBefore = hpBefore
                     });
                 }
@@ -471,27 +458,24 @@ namespace ProjectVagabond.Battle.Abilities
     public class HealAbility : IAbility
     {
         public string Name => "Heal";
-        public string Description => "Restores a percentage of Max HP.";
+        public string Description => "Restores a flat amount of HP.";
         public int Priority => 0;
 
-        private readonly int _percent;
-        public HealAbility(int percent) { _percent = percent; }
+        private readonly int _amount;
+        public HealAbility(int amount) { _amount = amount; }
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
             if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
             {
-                int healAmount = (int)(reaction.Target.Stats.MaxHP * (_percent / 100f));
-                if (healAmount < 1) healAmount = 1;
-
                 int hpBefore = (int)reaction.Target.VisualHP;
-                reaction.Target.ApplyHealing(healAmount);
+                reaction.Target.ApplyHealing(_amount);
 
                 EventBus.Publish(new GameEvents.CombatantHealed
                 {
                     Actor = reaction.Actor,
                     Target = reaction.Target,
-                    HealAmount = healAmount,
+                    HealAmount = _amount,
                     VisualHPBefore = hpBefore
                 });
             }

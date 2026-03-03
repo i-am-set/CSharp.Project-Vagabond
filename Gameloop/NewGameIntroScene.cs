@@ -669,51 +669,21 @@ namespace ProjectVagabond.Scenes
             int currentY = startY;
 
             // --- Stats Block ---
-            string[] labels = { "STR", "INT", "TEN", "AGI" };
-            int[] values = { data.Strength, data.Intelligence, data.Tenacity, data.Agility };
+            string[] labels = { "HP", "STR", "INT", "TEN", "AGI" };
+            int[] values = { data.MaxHP, data.Strength, data.Intelligence, data.Tenacity, data.Agility };
 
             int statBlockX = centerX - 30;
-
             float standardLabelWidth = secondaryFont.MeasureString("STR").Width;
 
-            // 1. HP Row
-            string hpLabel = "HP";
-            float hpLabelWidth = secondaryFont.MeasureString(hpLabel).Width;
-
-            float hpLabelX = statBlockX + (standardLabelWidth - hpLabelWidth);
-
-            spriteBatch.DrawStringSnapped(secondaryFont, hpLabel, new Vector2(hpLabelX, currentY), _global.Palette_DarkestPale);
-
             Texture2D statBg = _spriteManager.InventoryStatBarEmpty;
-            float barAreaWidth = (statBg != null) ? statBg.Width : 40f;
-            float barStartX = statBlockX + 19;
-            float barCenterX = barStartX + (barAreaWidth / 2f);
-
-            string hpValue = data.MaxHP.ToString();
-            Vector2 hpValueSize = secondaryFont.MeasureString(hpValue);
-
-            int hpScore = 1;
-            if (_globalMaxHP > _globalMinHP)
-            {
-                hpScore = 1 + (int)Math.Round((double)(data.MaxHP - _globalMinHP) * 9 / (_globalMaxHP - _globalMinHP));
-            }
-            else
-            {
-                hpScore = 5;
-            }
-            hpScore = Math.Clamp(hpScore, 1, 10);
-            Color hpColor = GetStatColor(hpScore);
-
-            spriteBatch.DrawStringSnapped(secondaryFont, hpValue, new Vector2(barCenterX - hpValueSize.X / 2f, currentY), hpColor);
-
-            currentY += secondaryFont.LineHeight + 1;
-
-            // 2. Stat Rows
             Texture2D statFull = _spriteManager.InventoryStatBarFull;
 
             for (int i = 0; i < labels.Length; i++)
             {
-                spriteBatch.DrawStringSnapped(secondaryFont, labels[i], new Vector2(statBlockX, currentY), _global.Palette_DarkestPale);
+                float labelWidth = secondaryFont.MeasureString(labels[i]).Width;
+                float labelX = statBlockX + (standardLabelWidth - labelWidth);
+
+                spriteBatch.DrawStringSnapped(secondaryFont, labels[i], new Vector2(labelX, currentY), _global.Palette_DarkestPale);
 
                 if (statBg != null)
                 {
