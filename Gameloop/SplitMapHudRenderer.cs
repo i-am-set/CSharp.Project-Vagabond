@@ -73,6 +73,12 @@ namespace ProjectVagabond.UI
         private readonly Dictionary<PartyMember, int> _currentTagNumbers = new Dictionary<PartyMember, int>();
         private readonly Dictionary<PartyMember, PlinkAnimator> _plinkAnimators = new();
 
+        // --- Heart Wave State ---
+        private readonly Random _random = new Random();
+        private readonly Dictionary<PartyMember, float> _heartWaveCooldowns = new();
+        private readonly Dictionary<PartyMember, float> _heartWaveProgresses = new();
+        private readonly Dictionary<PartyMember, bool> _isHeartWaving = new();
+
         // --- Flip & Overlay State ---
         private readonly Dictionary<PartyMember, float> _flipTargets = new Dictionary<PartyMember, float>();
         private readonly Dictionary<PartyMember, float> _flipProgress = new Dictionary<PartyMember, float>();
@@ -149,6 +155,33 @@ namespace ProjectVagabond.UI
                     if (plinks != null)
                     {
                         foreach (var p in plinks) p.Update(gameTime, new Vector2(_visualPositions.GetValueOrDefault(member, 0) + CARD_WIDTH / 2f, BaseY + HUD_HEIGHT / 2f));
+                    }
+                }
+
+                // Heart Wave Logic
+                if (!_heartWaveCooldowns.ContainsKey(member))
+                {
+                    _heartWaveCooldowns[member] = (float)(_random.NextDouble() * 2.0 + 1.0);
+                    _isHeartWaving[member] = false;
+                    _heartWaveProgresses[member] = 0f;
+                }
+
+                if (_isHeartWaving[member])
+                {
+                    _heartWaveProgresses[member] += dt * 1.5f;
+                    if (_heartWaveProgresses[member] >= 1.0f)
+                    {
+                        _isHeartWaving[member] = false;
+                        _heartWaveCooldowns[member] = (float)(_random.NextDouble() * 2.0 + 1.0);
+                    }
+                }
+                else
+                {
+                    _heartWaveCooldowns[member] -= dt;
+                    if (_heartWaveCooldowns[member] <= 0f)
+                    {
+                        _isHeartWaving[member] = true;
+                        _heartWaveProgresses[member] = 0f;
                     }
                 }
             }
@@ -473,6 +506,9 @@ namespace ProjectVagabond.UI
                 _plinkAnimators.Remove(key);
                 _movesViewActive.Remove(key);
                 _moveButtonPlinks.Remove(key);
+                _heartWaveCooldowns.Remove(key);
+                _heartWaveProgresses.Remove(key);
+                _isHeartWaving.Remove(key);
             }
 
             if (_isDragging) cursorManager.Hide();
@@ -823,10 +859,45 @@ namespace ProjectVagabond.UI
                 float gap = 1f;
 
                 int lvStartX = snappedX + 4;
-                int textY = (int)MathF.Round(y);
+                int textY = (int)MathF.Round(y) + 31;
 
                 spriteBatch.DrawSnapped(_spriteManager.LevelIconSprite, new Vector2(lvStartX, textY + 1), _global.Palette_DarkestPale);
                 spriteBatch.DrawStringSnapped(tertiaryFont, lvValue, new Vector2(lvStartX + iconWidth + gap, textY), _global.Palette_DarkestPale);
+            }
+
+            if (_spriteManager.HealthHearts3x3SpriteSheet != null)
+            {
+                int maxHearts = (int)Math.Ceiling(member.MaxHP / 2f);
+                int currentHP = member.CurrentHP;
+                int heartWidth = 3;
+                int heartGap = 1;
+                int totalHeartsWidth = maxHearts * heartWidth + Math.Max(0, maxHearts - 1) * heartGap;
+
+                int startX = (int)MathF.Floor(centerX - totalHeartsWidth / 2f);
+                int baseHeartY = (int)MathF.Round(y + 6);
+
+                bool isWaving = _isHeartWaving.GetValueOrDefault(member);
+                float waveProgress = _heartWaveProgresses.GetValueOrDefault(member);
+
+                for (int i = 0; i < maxHearts; i++)
+                {
+                    int currentHeartY = baseHeartY;
+                    if (isWaving)
+                    {
+                        float waveCenter = waveProgress * (maxHearts + 2) - 1;
+                        float dist = Math.Abs(waveCenter - i);
+                        if (dist < 1.5f)
+                        {
+                            float waveAmt = MathF.Cos((dist / 1.5f) * MathHelper.PiOver2);
+                            currentHeartY += (int)MathF.Round(-1f * waveAmt);
+                        }
+                    }
+
+                    int heartValue = Math.Clamp(currentHP - (i * 2), 0, 2);
+                    int frameIndex = heartValue == 2 ? 0 : (heartValue == 1 ? 1 : 2);
+                    Rectangle srcRect = new Rectangle(frameIndex * 3, 0, 3, 3);
+                    spriteBatch.DrawSnapped(_spriteManager.HealthHearts3x3SpriteSheet, new Vector2(startX + i * (heartWidth + heartGap), currentHeartY), srcRect, Color.White);
+                }
             }
 
             float time = (float)gameTime.TotalGameTime.TotalSeconds;
@@ -841,35 +912,15 @@ namespace ProjectVagabond.UI
 
             PlayerSpriteType bodyType = isAltFrame ? PlayerSpriteType.BodyAlt : PlayerSpriteType.BodyNormal;
             var bodySourceRect = _spriteManager.GetPlayerSourceRect(member.PortraitIndex, bodyType);
-            Vector2 bodyPos = new Vector2(MathF.Round(centerX), MathF.Round(y + 16));
+            Vector2 bodyPos = new Vector2(MathF.Round(centerX), MathF.Round(y + 21));
             spriteBatch.DrawSnapped(_spriteManager.PlayerMasterSpriteSheet, bodyPos, bodySourceRect, Color.White, 0f, origin, 1.0f, SpriteEffects.None, 0f);
 
             PlayerSpriteType type = isAltFrame ? PlayerSpriteType.Alt : PlayerSpriteType.Normal;
             var sourceRect = _spriteManager.GetPlayerSourceRect(member.PortraitIndex, type);
-            Vector2 pos = new Vector2(MathF.Round(centerX), MathF.Round(y + 16 + bobOffset));
+            Vector2 pos = new Vector2(MathF.Round(centerX), MathF.Round(y + 21 + bobOffset));
             spriteBatch.DrawSnapped(_spriteManager.PlayerMasterSpriteSheet, pos, sourceRect, Color.White, 0f, origin, 1.0f, SpriteEffects.None, 0f);
 
             y += 32 + 4;
-
-            if (_spriteManager.HealthHearts3x3SpriteSheet != null)
-            {
-                int maxHearts = (int)Math.Ceiling(member.MaxHP / 2f);
-                int currentHP = member.CurrentHP;
-                int heartWidth = 3;
-                int heartGap = 1;
-                int totalHeartsWidth = maxHearts * heartWidth + Math.Max(0, maxHearts - 1) * heartGap;
-
-                int startX = (int)MathF.Floor(centerX - totalHeartsWidth / 2f);
-                int heartY = (int)MathF.Round(y - 4);
-
-                for (int i = 0; i < maxHearts; i++)
-                {
-                    int heartValue = Math.Clamp(currentHP - (i * 2), 0, 2);
-                    int frameIndex = heartValue == 2 ? 0 : (heartValue == 1 ? 1 : 2);
-                    Rectangle srcRect = new Rectangle(frameIndex * 3, 0, 3, 3);
-                    spriteBatch.DrawSnapped(_spriteManager.HealthHearts3x3SpriteSheet, new Vector2(startX + i * (heartWidth + heartGap), heartY), srcRect, Color.White);
-                }
-            }
 
             string[] labels = { "STR", "INT", "TEN", "AGI" };
             string[] keys = { "Strength", "Intelligence", "Tenacity", "Agility" };
