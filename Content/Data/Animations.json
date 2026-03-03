@@ -177,9 +177,9 @@
     "Id": "proj_flamethrower",
     "IsParticle": true,
     "ParticleProfile": "flamethrower",
-    "TotalDuration": 1.7,
-    "ImpactTime": 1.2,
-    "ExpansionTime": 0.2,
-    "RetractionTime": 0.3
+    "TotalDuration": 0.7,
+    "ImpactTime": 0.5,
+    "ExpansionTime": 0.1,
+    "RetractionTime": 0.1
   }
 ]
