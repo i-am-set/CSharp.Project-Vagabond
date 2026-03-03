@@ -95,6 +95,7 @@ namespace ProjectVagabond.UI
         private const float ENTRY_Y_OFFSET = -16f;
         private const float DRAG_LIFT_OFFSET = -8f;
         private const float HOVER_LIFT_OFFSET = -1f;
+        private const float BACK_ROW_Y_OFFSET = 1f; // Changed from 2f to 1f
         private const float TAG_DEFAULT_OFFSET = 4f;
         private const float TAG_HOVER_OFFSET = 2f;
         private const float TAG_HIDDEN_OFFSET = 12f;
@@ -287,10 +288,10 @@ namespace ProjectVagabond.UI
                 Rectangle cardRect = new Rectangle(snappedX, snappedY, CARD_WIDTH, HUD_HEIGHT);
                 Rectangle flipBtnRect = new Rectangle(snappedX + 2, snappedY + 2, FLIP_BUTTON_SIZE, FLIP_BUTTON_SIZE);
 
-                int btnWidth = 64;
-                int btnHeight = 14;
+                int btnWidth = 42;
+                int btnHeight = 11;
                 int btnX = snappedX + (CARD_WIDTH - btnWidth) / 2;
-                int btnY = snappedY + 76;
+                int btnY = snappedY + 71;
                 Rectangle movesBtnRect = new Rectangle(btnX, btnY, btnWidth, btnHeight);
 
                 bool isMovesMenuOpen = _movesViewActive.GetValueOrDefault(member);
@@ -385,7 +386,7 @@ namespace ProjectVagabond.UI
                 }
             }
 
-            if (verticalOffset <= 1.0f && !IsReplacementMode)
+            if (verticalOffset <= 8.0f && !IsReplacementMode)
             {
                 bool found = false;
                 for (int i = _activeHitboxes.Count - 1; i >= 0; i--)
@@ -465,7 +466,7 @@ namespace ProjectVagabond.UI
                     if (IsReplacementMode) targetY = (member == SelectedForReplacement) ? 0f : 8f;
                     else
                     {
-                        if (i >= 2) targetY = 2f;
+                        if (i >= 2) targetY = BACK_ROW_Y_OFFSET; // Changed from 2f to 1f
                         if (member == _draggedMember) targetY = DRAG_LIFT_OFFSET;
                         else if (member == _hoveredMember) targetY = HOVER_LIFT_OFFSET;
                     }
@@ -531,7 +532,8 @@ namespace ProjectVagabond.UI
             Matrix globalTransform = Matrix.CreateScale(scale) * Matrix.CreateTranslation(tx, ty, 0f);
 
             float currentStartY = MathF.Round(BaseY + verticalOffset);
-            float t = Math.Clamp(verticalOffset / 24f, 0f, 1f);
+
+            float t = Math.Clamp((verticalOffset - 7f) / 17f, 0f, 1f);
             Color lineColor = Color.Lerp(_global.Palette_DarkPale, _global.Palette_DarkestPale, t);
 
             spriteBatch.DrawSnapped(_pixel, new Vector2(0, currentStartY), null, _global.Palette_Black, 0f, Vector2.Zero, new Vector2(Global.VIRTUAL_WIDTH, HUD_HEIGHT), SpriteEffects.None, 0f);
@@ -641,7 +643,8 @@ namespace ProjectVagabond.UI
             int snappedY = (int)MathF.Round(BaseY + 3 + yOffset);
             Vector2 cardPos = new Vector2(snappedX, snappedY);
             Vector2 cardSize = new Vector2(CARD_WIDTH, HUD_HEIGHT - 4);
-            spriteBatch.DrawSnapped(_pixel, cardPos, null, _global.Palette_Black, 0f, Vector2.Zero, cardSize, SpriteEffects.None, 0f);
+
+            DrawBeveledRect(spriteBatch, new Rectangle(snappedX, snappedY, (int)cardSize.X, (int)cardSize.Y), _global.Palette_Black);
 
             Color borderColor;
             Rectangle cardRect = new Rectangle(snappedX, snappedY, CARD_WIDTH, HUD_HEIGHT - 4);
@@ -697,6 +700,29 @@ namespace ProjectVagabond.UI
                 spriteBatch.End();
                 spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, globalTransform);
             }
+        }
+
+        private void DrawHollowRectSmooth(SpriteBatch spriteBatch, Vector2 pos, Vector2 size, Color color)
+        {
+            int x = (int)pos.X;
+            int y = (int)pos.Y;
+            int w = (int)size.X;
+            int h = (int)size.Y;
+
+            // Top edge
+            spriteBatch.DrawSnapped(_pixel, new Rectangle(x + 1, y, w - 2, 1), color);
+            // Bottom edge
+            spriteBatch.DrawSnapped(_pixel, new Rectangle(x + 1, y + h - 1, w - 2, 1), color);
+            // Left edge
+            spriteBatch.DrawSnapped(_pixel, new Rectangle(x, y + 1, 1, h - 2), color);
+            // Right edge
+            spriteBatch.DrawSnapped(_pixel, new Rectangle(x + w - 1, y + 1, 1, h - 2), color);
+
+            // Inner corners
+            spriteBatch.DrawSnapped(_pixel, new Rectangle(x + 1, y + 1, 1, 1), color);
+            spriteBatch.DrawSnapped(_pixel, new Rectangle(x + w - 2, y + 1, 1, 1), color);
+            spriteBatch.DrawSnapped(_pixel, new Rectangle(x + 1, y + h - 2, 1, 1), color);
+            spriteBatch.DrawSnapped(_pixel, new Rectangle(x + w - 2, y + h - 2, 1, 1), color);
         }
 
         private void DrawCardBack(SpriteBatch spriteBatch, PartyMember member, float xPosition, float yOffset, BitmapFont defaultFont, BitmapFont secondaryFont, BitmapFont tertiaryFont)
@@ -828,14 +854,6 @@ namespace ProjectVagabond.UI
             sb.DrawStringSnapped(font, num, new Vector2(textX, textY), displayedNumber == 1 || displayedNumber == 2 ? _global.Palette_LightPale : _global.Palette_DarkPale);
         }
 
-        private void DrawHollowRectSmooth(SpriteBatch spriteBatch, Vector2 pos, Vector2 size, Color color)
-        {
-            spriteBatch.DrawSnapped(_pixel, pos, null, color, 0f, Vector2.Zero, new Vector2(size.X, 1), SpriteEffects.None, 0f);
-            spriteBatch.DrawSnapped(_pixel, new Vector2(pos.X, pos.Y + size.Y - 1), null, color, 0f, Vector2.Zero, new Vector2(size.X, 1), SpriteEffects.None, 0f);
-            spriteBatch.DrawSnapped(_pixel, pos, null, color, 0f, Vector2.Zero, new Vector2(1, size.Y), SpriteEffects.None, 0f);
-            spriteBatch.DrawSnapped(_pixel, new Vector2(pos.X + size.X - 1, pos.Y), null, color, 0f, Vector2.Zero, new Vector2(1, size.Y), SpriteEffects.None, 0f);
-        }
-
         private void DrawCardContents(SpriteBatch spriteBatch, GameTime gameTime, PartyMember member, float xPosition, float yOffset, int index, BitmapFont defaultFont, BitmapFont secondaryFont, BitmapFont tertiaryFont, Vector2 mousePos, Matrix currentTransform)
         {
             int snappedX = (int)MathF.Round(xPosition);
@@ -957,10 +975,10 @@ namespace ProjectVagabond.UI
             }
 
             // MOVES / BACK Button Logic
-            int btnWidth = 64;
-            int btnHeight = 14;
+            int btnWidth = 42;
+            int btnHeight = 11;
             int btnX = snappedX + (CARD_WIDTH - btnWidth) / 2;
-            int btnY = snappedY + 74;
+            int btnY = snappedY + 73;
             Rectangle bottomBtnRect = new Rectangle(btnX, btnY, btnWidth, btnHeight);
 
             bool isMovesMenuOpen = _movesViewActive.GetValueOrDefault(member);
@@ -983,7 +1001,7 @@ namespace ProjectVagabond.UI
             else
             {
                 // Overlay Background
-                spriteBatch.DrawSnapped(_pixel, new Vector2(snappedX + 1, snappedY + 1), null, _global.Palette_Black, 0f, Vector2.Zero, new Vector2(CARD_WIDTH - 2, HUD_HEIGHT - 6), SpriteEffects.None, 0f);
+                DrawBeveledRect(spriteBatch, new Rectangle(snappedX + 1, snappedY + 1, CARD_WIDTH - 2, HUD_HEIGHT - 6), _global.Palette_Black);
 
                 // Overlay Plinks
                 var plinks = _moveButtonPlinks.GetValueOrDefault(member);

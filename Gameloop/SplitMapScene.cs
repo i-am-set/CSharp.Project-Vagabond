@@ -81,6 +81,7 @@ namespace ProjectVagabond.Scenes
 
         private float _hudSlideOffset = 0f;
         private const float HUD_SLIDE_DISTANCE = 24f;
+        private const float HUD_HOVER_OFFSET = 7f; // Added: HUD moves up 7 pixels less
         private const float HUD_SLIDE_SPEED = 10f;
         private const float BASE_CAMERA_Y = -50f;
 
@@ -423,7 +424,8 @@ namespace ProjectVagabond.Scenes
                 _hudRenderer.ResetAllFlips();
             }
 
-            float targetHudOffset = (mouseInMap && !_hudRenderer.IsDragging) ? HUD_SLIDE_DISTANCE : 0f;
+            // Fixed: Use HUD_HOVER_OFFSET so it moves 7 pixels less when hovered
+            float targetHudOffset = (mouseInMap && !_hudRenderer.IsDragging) ? HUD_SLIDE_DISTANCE : HUD_HOVER_OFFSET;
             _hudSlideOffset = MathHelper.Lerp(_hudSlideOffset, targetHudOffset, deltaTime * HUD_SLIDE_SPEED);
 
             _hudRenderer.Update(effectiveGameTime, virtualMousePos, _hudSlideOffset);
