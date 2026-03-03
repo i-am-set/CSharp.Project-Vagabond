@@ -246,6 +246,10 @@ namespace ProjectVagabond.Battle.UI
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
             var battleManager = ServiceLocator.Get<BattleManager>();
 
+            bool isCombatActive = battleManager.CurrentPhase == BattleManager.BattlePhase.ActionResolution ||
+                                  battleManager.CurrentPhase == BattleManager.BattlePhase.ProcessingInteraction ||
+                                  battleManager.CurrentPhase == BattleManager.BattlePhase.WaitingForSwitchCompletion;
+
             foreach (var c in combatants)
             {
                 if (c.HealthBarVisibleTimer > 0) c.HealthBarVisibleTimer = Math.Max(0, c.HealthBarVisibleTimer - dt);
@@ -261,6 +265,35 @@ namespace ProjectVagabond.Battle.UI
                 else
                 {
                     c.LowHealthFlashTimer = 0f;
+                }
+
+                if (!isCombatActive)
+                {
+                    if (c.IsHeartWaving)
+                    {
+                        c.HeartWaveProgress += dt * 1.5f; // Speed of the wave
+                        if (c.HeartWaveProgress >= 1.0f)
+                        {
+                            c.IsHeartWaving = false;
+                            c.HeartWaveCooldown = (float)(_random.NextDouble() * 2.0 + 1.0); // 1 to 3 seconds
+                        }
+                    }
+                    else
+                    {
+                        c.HeartWaveCooldown -= dt;
+                        if (c.HeartWaveCooldown <= 0f)
+                        {
+                            c.IsHeartWaving = true;
+                            c.HeartWaveProgress = 0f;
+                        }
+                    }
+                }
+                else
+                {
+                    // Reset wave during active combat
+                    c.IsHeartWaving = false;
+                    c.HeartWaveProgress = 0f;
+                    if (c.HeartWaveCooldown <= 0f) c.HeartWaveCooldown = (float)(_random.NextDouble() * 2.0 + 1.0);
                 }
             }
 

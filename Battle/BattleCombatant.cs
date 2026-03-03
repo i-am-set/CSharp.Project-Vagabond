@@ -92,6 +92,9 @@ namespace ProjectVagabond.Battle
         public float HealthBarDelayTimer { get; set; } = 0f;
         public float HealthBarDisappearTimer { get; set; } = 0f;
         public float LowHealthFlashTimer { get; set; } = 0f;
+        public float HeartWaveCooldown { get; set; } = 0f;
+        public float HeartWaveProgress { get; set; } = 0f;
+        public bool IsHeartWaving { get; set; } = false;
         public const float BAR_DISAPPEAR_DURATION = 2.0f;
         public const float BAR_DELAY_DURATION = 1.2f;
         public const float BAR_VARIANCE_MAX = 0.5f;

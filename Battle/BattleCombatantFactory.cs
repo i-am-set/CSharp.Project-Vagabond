@@ -76,6 +76,8 @@ namespace ProjectVagabond.Battle
                 combatant.AddStatusEffect(new StatusEffectInstance(buff.EffectType, 99));
             }
 
+            combatant.HeartWaveCooldown = (float)(_random.NextDouble() * 2.0 + 1.0);
+
             return combatant;
         }
 
@@ -139,6 +141,8 @@ namespace ProjectVagabond.Battle
                 if (shuffled.Count > 1 && BattleDataCache.Moves.ContainsKey(shuffled[1])) combatant.Spell2 = new MoveEntry(shuffled[1], 0);
                 if (shuffled.Count > 2 && BattleDataCache.Moves.ContainsKey(shuffled[2])) combatant.Spell3 = new MoveEntry(shuffled[2], 0);
             }
+
+            combatant.HeartWaveCooldown = (float)(_random.NextDouble() * 2.0 + 1.0);
 
             return combatant;
         }

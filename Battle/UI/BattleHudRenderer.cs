@@ -51,7 +51,7 @@ namespace ProjectVagabond.Battle.UI
             float hpPercent = combatant.Stats.MaxHP > 0 ? Math.Clamp(combatant.VisualHP / combatant.Stats.MaxHP, 0f, 1f) : 0f;
             var hpAnim = animationManager.GetResourceBarAnimation(combatant.CombatantID, BattleAnimationManager.ResourceBarAnimationState.BarResourceType.HP);
 
-            DrawHeartBar(spriteBatch, new Vector2(barX, barY), barWidth, hpPercent, hpAlpha, hpAnim, combatant.Stats.MaxHP, isRightAligned);
+            DrawHeartBar(spriteBatch, combatant, new Vector2(barX, barY + 1), barWidth, hpPercent, hpAlpha, hpAnim, combatant.Stats.MaxHP, isRightAligned);
         }
 
         public void DrawPlayerBars(SpriteBatch spriteBatch, BattleCombatant player, float barX, float barY, int barWidth, int barHeight, BattleAnimationManager animationManager, float hpAlpha, GameTime gameTime, BattleUIManager uiManager, bool isActiveActor, bool isRightAligned = false, (int Min, int Max)? projectedDamage = null, (int Min, int Max)? projectedHeal = null)
@@ -74,12 +74,12 @@ namespace ProjectVagabond.Battle.UI
             float hpPercent = player.Stats.MaxHP > 0 ? Math.Clamp(player.VisualHP / player.Stats.MaxHP, 0f, 1f) : 0f;
             var hpAnim = animationManager.GetResourceBarAnimation(player.CombatantID, BattleAnimationManager.ResourceBarAnimationState.BarResourceType.HP);
 
-            DrawHeartBar(spriteBatch, new Vector2(barX, barY), barWidth, hpPercent, hpAlpha, hpAnim, player.Stats.MaxHP, isRightAligned);
+            DrawHeartBar(spriteBatch, player, new Vector2(barX, barY + 1), barWidth, hpPercent, hpAlpha, hpAnim, player.Stats.MaxHP, isRightAligned);
 
             // EXP PROGRESSION BAR
             if (hpAlpha > 0.01f)
             {
-                float expBarY = barY + 6 + 2; // 5px heart + gap + 2
+                float expBarY = barY + 6 + 2 + 1; // 5px heart + gap + 2 + 1px drop
                 float textY = expBarY - 1;
 
                 string lvValue = player.VisualLevel.ToString();
@@ -138,7 +138,7 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private void DrawHeartBar(SpriteBatch spriteBatch, Vector2 position, int width, float fillPercent, float alpha, BattleAnimationManager.ResourceBarAnimationState anim, float maxResource, bool isRightAligned)
+        private void DrawHeartBar(SpriteBatch spriteBatch, BattleCombatant combatant, Vector2 position, int width, float fillPercent, float alpha, BattleAnimationManager.ResourceBarAnimationState anim, float maxResource, bool isRightAligned)
         {
             if (alpha <= 0.01f || _spriteManager.HealthHeartsSpriteSheet == null) return;
 
@@ -149,10 +149,54 @@ namespace ProjectVagabond.Battle.UI
             const int heartGap = 1;
             const int stride = heartWidth + heartGap;
 
+            int maxDamagedIndex = -1;
+            if (anim != null && anim.AnimationType == BattleAnimationManager.ResourceBarAnimationState.BarAnimationType.Loss)
+            {
+                for (int j = 0; j < maxHearts; j++)
+                {
+                    int vBefore = Math.Clamp((int)anim.ValueBefore - (j * 2), 0, 2);
+                    int vAfter = Math.Clamp((int)anim.ValueAfter - (j * 2), 0, 2);
+                    if (vBefore > vAfter) maxDamagedIndex = Math.Max(maxDamagedIndex, j);
+                }
+            }
+
+            SpriteEffects spriteEffect = isRightAligned ? SpriteEffects.FlipHorizontally : SpriteEffects.None;
+
             for (int i = 0; i < maxHearts; i++)
             {
                 float heartX = isRightAligned ? (position.X + width - ((i + 1) * stride) + heartGap) : (position.X + (i * stride));
                 float heartY = position.Y;
+
+                // --- 1. Damage Bounce Stagger ---
+                if (maxDamagedIndex != -1)
+                {
+                    int vBefore = Math.Clamp((int)anim.ValueBefore - (i * 2), 0, 2);
+                    int vAfter = Math.Clamp((int)anim.ValueAfter - (i * 2), 0, 2);
+
+                    if (vBefore > vAfter && anim.CurrentLossPhase == BattleAnimationManager.ResourceBarAnimationState.LossPhase.Preview)
+                    {
+                        float delay = (maxDamagedIndex - i) * 0.06f;
+                        float localTimer = anim.Timer - delay;
+                        float popDuration = 0.25f;
+
+                        if (localTimer > 0 && localTimer < popDuration)
+                        {
+                            float bounce = MathF.Sin((localTimer / popDuration) * MathF.PI) * -3f;
+                            heartY += MathF.Round(bounce);
+                        }
+                    }
+                }
+                // --- 2. Idle Wave ---
+                else if (combatant.IsHeartWaving)
+                {
+                    float waveCenter = combatant.HeartWaveProgress * (maxHearts + 2) - 1;
+                    float dist = Math.Abs(waveCenter - i);
+                    if (dist < 1.5f)
+                    {
+                        float waveAmt = MathF.Cos((dist / 1.5f) * MathHelper.PiOver2);
+                        heartY += MathF.Round(-1f * waveAmt);
+                    }
+                }
 
                 int heartValueBefore = Math.Clamp((anim != null ? (int)anim.ValueBefore : currentHP) - (i * 2), 0, 2);
                 int heartValueAfter = Math.Clamp((anim != null ? (int)anim.ValueAfter : currentHP) - (i * 2), 0, 2);
@@ -162,9 +206,9 @@ namespace ProjectVagabond.Battle.UI
                 if (anim != null && anim.AnimationType == BattleAnimationManager.ResourceBarAnimationState.BarAnimationType.Loss && heartValueBefore > heartValueAfter)
                 {
                     int damage = heartValueBefore - heartValueAfter;
-                    int flashFrame = 3; // Full flash (taking 2 dmg)
-                    if (heartValueBefore == 2 && damage == 1) flashFrame = 4; // Full half flash
-                    else if (heartValueBefore == 1 && damage == 1) flashFrame = 5; // Half half flash
+                    int flashFrame = 3;
+                    if (heartValueBefore == 2 && damage == 1) flashFrame = 4;
+                    else if (heartValueBefore == 1 && damage == 1) flashFrame = 5;
 
                     bool showFlash = (anim.Timer % 0.2f) < 0.1f;
 
@@ -185,7 +229,19 @@ namespace ProjectVagabond.Battle.UI
                 }
 
                 Rectangle sourceRect = new Rectangle(frameIndex * 5, 0, 5, 5);
-                spriteBatch.DrawSnapped(_spriteManager.HealthHeartsSpriteSheet, new Vector2(heartX, heartY), sourceRect, Color.White * alpha);
+
+                // Draw with extended parameters to apply horizontal flip
+                spriteBatch.DrawSnapped(
+                    _spriteManager.HealthHeartsSpriteSheet,
+                    new Vector2(heartX, heartY),
+                    sourceRect,
+                    Color.White * alpha,
+                    0f,
+                    Vector2.Zero,
+                    1f,
+                    spriteEffect,
+                    0f
+                );
             }
         }
 
@@ -216,7 +272,7 @@ namespace ProjectVagabond.Battle.UI
 
             int iconSize = BattleLayout.STATUS_ICON_SIZE;
             int gap = BattleLayout.STATUS_ICON_GAP;
-            float iconY = startY + 6 + 2; // 5px heart + gap + 2
+            float iconY = startY + 6 + 2;
 
             int step = iconSize + gap;
             int frameIndex = (DateTime.Now.Millisecond < 500) ? 0 : 1;
