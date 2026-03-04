@@ -1151,7 +1151,7 @@ namespace ProjectVagabond.Scenes
 
                         ServiceLocator.Get<Core>().TriggerFullscreenGlitch(0.2f);
 
-                        if (target.IsPlayerControlled && isHeavyHit)
+                        if (target.IsPlayerControlled && result.WasCritical)
                         {
                             _core.TriggerFullscreenFlash(Color.White, 0.15f * juiceIntensity);
                             _core.TriggerScreenFlashSequence(_global.Palette_Rust);
@@ -1232,7 +1232,6 @@ namespace ProjectVagabond.Scenes
             Vector2 hudPos = _renderer.GetCombatantHudCenterPosition(e.Combatant, _battleManager.AllCombatants);
             _animationManager.StartDamageIndicator(e.Combatant.CombatantID, "GUARD BROKEN", hudPos + new Vector2(0, -15), _global.TenacityBrokenIndicatorColor);
             _hapticsManager.TriggerShake(5f, 0.2f);
-            _core.TriggerFullscreenFlash(_global.TenacityBrokenIndicatorColor, 0.1f);
 
             _renderer.TriggerTenacityAnimation(e.Combatant.CombatantID, true);
         }
@@ -1306,7 +1305,6 @@ namespace ProjectVagabond.Scenes
             e.Actor.HealthBarVisibleTimer = 6.0f;
             if (e.Actor.IsPlayerControlled)
             {
-                _core.TriggerScreenFlashSequence(_global.Palette_Rust);
                 _hapticsManager.TriggerWobble(intensity: 10.0f, duration: 0.75f, frequency: 120f);
             }
             _animationManager.StartHealthLossAnimation(e.Actor.CombatantID, e.Actor.VisualHP, e.Actor.Stats.CurrentHP);
@@ -1362,7 +1360,6 @@ namespace ProjectVagabond.Scenes
                 _dazedWaitTimer = 1.0f;
 
                 // 5. Screen Pulse
-                _core.TriggerFullscreenFlash(_global.Palette_DarkSun * 0.7f, 0.5f);
                 _hapticsManager.TriggerZoomPulse(1.15f, 0.5f);
                 _hapticsManager.TriggerShake(1.5f, 0.25f);
             }

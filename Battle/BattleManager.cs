@@ -331,7 +331,9 @@ namespace ProjectVagabond.Battle
                     EventBus.Publish(new GameEvents.CombatantVisualDeath { Victim = target });
                 }
 
-                if (result.DamageAmount > 0 && result.DamageAmount >= (target.Stats.MaxHP * 0.50f)) significantTargetIds.Add(target.CombatantID);
+                // ONLY trigger screen flash if it was a critical hit
+                if (result.DamageAmount > 0 && result.WasCritical) significantTargetIds.Add(target.CombatantID);
+
                 if (result.WasCritical) AppendToCurrentLine(" [cCrit]CRITICAL HIT![/]");
                 if (result.WasVulnerable) AppendToCurrentLine(" [cVulnerable]VULNERABLE![/]");
 
