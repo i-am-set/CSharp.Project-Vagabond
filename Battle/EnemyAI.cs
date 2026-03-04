@@ -46,11 +46,11 @@ namespace ProjectVagabond.Battle
 
             if (actor.HasStatusEffect(StatusEffectType.Silence))
             {
-                moves = moves.Where(m => m.MoveType != MoveType.Spell).ToList();
+                moves = moves.Where(m => m.BaseTemplate.MoveType != MoveType.Spell).ToList();
             }
             if (actor.HasStatusEffect(StatusEffectType.Provoked))
             {
-                moves = moves.Where(m => m.ImpactType != ImpactType.Status).ToList();
+                moves = moves.Where(m => m.BaseTemplate.ImpactType != ImpactType.Status).ToList();
             }
 
             if (!moves.Any()) return CreateStallAction(actor);
@@ -61,7 +61,7 @@ namespace ProjectVagabond.Battle
             foreach (var enemy in enemies)
             {
                 int maxDmg = 0;
-                foreach (var move in moves.Where(m => m.Power > 0))
+                foreach (var move in moves.Where(m => m.FinalPower > 0))
                 {
                     var dummyAction = new QueuedAction { Actor = actor, ChosenMove = move, Target = enemy };
 
@@ -80,9 +80,9 @@ namespace ProjectVagabond.Battle
 
             foreach (var move in moves)
             {
-                var validTargets = TargetingHelper.GetValidTargets(actor, move.Target, allCombatants);
+                var validTargets = TargetingHelper.GetValidTargets(actor, move.FinalTargetType, allCombatants);
 
-                if (!IsSpreadMove(move.Target))
+                if (!IsSpreadMove(move.FinalTargetType))
                 {
                     foreach (var target in validTargets)
                     {
@@ -109,7 +109,7 @@ namespace ProjectVagabond.Battle
 
         private static int EvaluateAction(
             BattleCombatant actor,
-            MoveData move,
+            CompiledMove move,
             List<BattleCombatant> targets,
             List<BattleCombatant> enemies,
             List<BattleCombatant> allies,
@@ -117,7 +117,7 @@ namespace ProjectVagabond.Battle
             BattleContext context)
         {
             int totalScore = 0;
-            bool isDamagingMove = move.Power > 0;
+            bool isDamagingMove = move.FinalPower > 0;
             int rngBonus = (_random.NextDouble() < 0.2) ? RNG_BONUS : 0;
 
             foreach (var target in targets)
@@ -152,7 +152,7 @@ namespace ProjectVagabond.Battle
 
                         if (isKill)
                         {
-                            if (isFaster || move.Priority > 0)
+                            if (isFaster || move.FinalPriority > 0)
                                 targetScore = SCORE_FAST_KILL + rngBonus;
                             else
                                 targetScore = SCORE_SLOW_KILL + rngBonus;
@@ -164,11 +164,11 @@ namespace ProjectVagabond.Battle
                     }
                 }
 
-                if (move.Effects.TryGetValue("ModifyStatStage", out var statVal))
+                foreach (var ability in move.FinalAbilities)
                 {
-                    if (EffectParser.TryParseStatStageParams(statVal, out var stat, out int amount, out int chance, out string targetStr))
+                    if (ability is IStatModifyingAbility statMod)
                     {
-                        bool isDebuff = amount < 0;
+                        bool isDebuff = statMod.Amount < 0;
 
                         if (isTargetAlly)
                         {
@@ -179,62 +179,28 @@ namespace ProjectVagabond.Battle
                         {
                             if (isDebuff)
                             {
-                                if (target.StatStages[stat] <= -2) targetScore += PENALTY_REDUNDANT;
+                                if (target.StatStages.GetValueOrDefault(statMod.Stat, 0) <= -2) targetScore += PENALTY_REDUNDANT;
                                 else targetScore += SCORE_DEBUFF_ENEMY;
                             }
                             else targetScore += PENALTY_HARMFUL_TO_ALLY;
                         }
                     }
-                }
-
-                if (move.Effects.TryGetValue("InflictStatChange", out var inflictVal))
-                {
-                    var parts = inflictVal.Split(',');
-                    for (int i = 0; i < parts.Length; i += 2)
+                    else if (ability is IStatusInflictingAbility statusInflict)
                     {
-                        if (i + 1 >= parts.Length) break;
-                        if (int.TryParse(parts[i + 1], out int amount))
+                        EvaluateStatusEffect(statusInflict.EffectType, target, isTargetAlly, isTargetEnemy, ref targetScore);
+                    }
+                    else if (ability is IHealingAbility healer)
+                    {
+                        if (isTargetAlly)
                         {
-                            bool isDebuff = amount < 0;
-                            if (isTargetAlly)
-                            {
-                                if (isDebuff) targetScore += PENALTY_HARMFUL_TO_ALLY;
-                                else targetScore += SCORE_BUFF_ALLY;
-                            }
-                            else if (isTargetEnemy)
-                            {
-                                if (isDebuff) targetScore += SCORE_DEBUFF_ENEMY;
-                                else targetScore += PENALTY_HARMFUL_TO_ALLY;
-                            }
+                            float hpPercent = (float)target.Stats.CurrentHP / target.Stats.MaxHP;
+                            if (hpPercent > 0.85f) targetScore += PENALTY_REDUNDANT;
+                            else if (hpPercent < 0.5f) targetScore += SCORE_HEAL_ALLY;
                         }
-                    }
-                }
-
-                if (move.Effects.TryGetValue("ApplyStatus", out var statusVal))
-                {
-                    if (EffectParser.TryParseStatusEffectParams(statusVal, out var type, out int chance, out int duration))
-                    {
-                        EvaluateStatusEffect(type, target, isTargetAlly, isTargetEnemy, ref targetScore);
-                    }
-                }
-
-                CheckInflictStatusKey(move, "InflictStatusPoison", StatusEffectType.Poison, target, isTargetAlly, isTargetEnemy, ref targetScore);
-                CheckInflictStatusKey(move, "InflictStatusBurn", StatusEffectType.Burn, target, isTargetAlly, isTargetEnemy, ref targetScore);
-                CheckInflictStatusKey(move, "InflictStatusFrostbite", StatusEffectType.Frostbite, target, isTargetAlly, isTargetEnemy, ref targetScore);
-                CheckInflictStatusKey(move, "InflictStatusStun", StatusEffectType.Stun, target, isTargetAlly, isTargetEnemy, ref targetScore);
-                CheckInflictStatusKey(move, "InflictStatusSilence", StatusEffectType.Silence, target, isTargetAlly, isTargetEnemy, ref targetScore);
-
-                if (move.Effects.ContainsKey("Heal"))
-                {
-                    if (isTargetAlly)
-                    {
-                        float hpPercent = (float)target.Stats.CurrentHP / target.Stats.MaxHP;
-                        if (hpPercent > 0.85f) targetScore += PENALTY_REDUNDANT;
-                        else if (hpPercent < 0.5f) targetScore += SCORE_HEAL_ALLY;
-                    }
-                    else if (isTargetEnemy)
-                    {
-                        targetScore += PENALTY_HARMFUL_TO_ALLY;
+                        else if (isTargetEnemy)
+                        {
+                            targetScore += PENALTY_HARMFUL_TO_ALLY;
+                        }
                     }
                 }
 
@@ -243,14 +209,6 @@ namespace ProjectVagabond.Battle
             }
 
             return totalScore;
-        }
-
-        private static void CheckInflictStatusKey(MoveData move, string key, StatusEffectType type, BattleCombatant target, bool isTargetAlly, bool isTargetEnemy, ref int targetScore)
-        {
-            if (move.Effects.ContainsKey(key))
-            {
-                EvaluateStatusEffect(type, target, isTargetAlly, isTargetEnemy, ref targetScore);
-            }
         }
 
         private static void EvaluateStatusEffect(StatusEffectType type, BattleCombatant target, bool isTargetAlly, bool isTargetEnemy, ref int targetScore)
@@ -277,7 +235,7 @@ namespace ProjectVagabond.Battle
             }
         }
 
-        private static int GetMoveSpecificModifier(MoveData move, BattleCombatant actor, BattleCombatant target, List<BattleCombatant> enemies, List<BattleCombatant> allies)
+        private static int GetMoveSpecificModifier(CompiledMove move, BattleCombatant actor, BattleCombatant target, List<BattleCombatant> enemies, List<BattleCombatant> allies)
         {
             int modifier = 0;
 
@@ -300,13 +258,13 @@ namespace ProjectVagabond.Battle
             return type == StatusEffectType.Regen || type == StatusEffectType.Dodging || type == StatusEffectType.Protected || type == StatusEffectType.Empowered;
         }
 
-        private static QueuedAction CreateAction(BattleCombatant actor, MoveData move, BattleCombatant target)
+        private static QueuedAction CreateAction(BattleCombatant actor, CompiledMove move, BattleCombatant target)
         {
             MoveEntry? entry = null;
-            if (actor.Spell1 != null && actor.Spell1.MoveID == move.MoveID) entry = actor.Spell1;
-            else if (actor.Spell2 != null && actor.Spell2.MoveID == move.MoveID) entry = actor.Spell2;
-            else if (actor.Spell3 != null && actor.Spell3.MoveID == move.MoveID) entry = actor.Spell3;
-            else if (actor.BasicMove != null && actor.BasicMove.MoveID == move.MoveID) entry = actor.BasicMove;
+            if (actor.Spell1 != null && actor.Spell1.CompiledMove.BaseTemplate.MoveID == move.BaseTemplate.MoveID) entry = actor.Spell1;
+            else if (actor.Spell2 != null && actor.Spell2.CompiledMove.BaseTemplate.MoveID == move.BaseTemplate.MoveID) entry = actor.Spell2;
+            else if (actor.Spell3 != null && actor.Spell3.CompiledMove.BaseTemplate.MoveID == move.BaseTemplate.MoveID) entry = actor.Spell3;
+            else if (actor.BasicMove != null && actor.BasicMove.CompiledMove.BaseTemplate.MoveID == move.BaseTemplate.MoveID) entry = actor.BasicMove;
 
             return new QueuedAction
             {
@@ -314,7 +272,7 @@ namespace ProjectVagabond.Battle
                 ChosenMove = move,
                 SpellbookEntry = entry,
                 Target = target,
-                Priority = move.Priority,
+                Priority = move.FinalPriority,
                 ActorAgility = actor.GetEffectiveAgility(),
                 Type = QueuedActionType.Move
             };
@@ -322,10 +280,13 @@ namespace ProjectVagabond.Battle
 
         private static QueuedAction CreateStallAction(BattleCombatant actor)
         {
+            var fallbackMove = BattleDataCache.Moves.ContainsKey("6") ? BattleDataCache.Moves["6"] : new MoveData { MoveID = "6", Target = TargetType.Self };
+            var compiledFallback = new CompiledMove(fallbackMove, new List<ModifierToken>());
+
             return new QueuedAction
             {
                 Actor = actor,
-                ChosenMove = BattleDataCache.Moves["6"],
+                ChosenMove = compiledFallback,
                 Target = actor,
                 Priority = 0,
                 ActorAgility = actor.GetEffectiveAgility(),

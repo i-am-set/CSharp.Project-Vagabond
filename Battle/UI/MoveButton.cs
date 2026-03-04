@@ -15,7 +15,7 @@ namespace ProjectVagabond.Battle.UI
 {
     public class MoveButton : Button
     {
-        public MoveData? Move { get; }
+        public CompiledMove? Move { get; }
         public MoveEntry? Entry { get; }
         public BattleCombatant Owner { get; }
 
@@ -52,7 +52,7 @@ namespace ProjectVagabond.Battle.UI
         private const int SCROLL_GAP_SPACES = 3;
         private static readonly RasterizerState _clipRasterizerState = new RasterizerState { ScissorTestEnable = true };
 
-        public MoveButton(BattleCombatant owner, MoveData? move, MoveEntry? entry, BitmapFont font)
+        public MoveButton(BattleCombatant owner, CompiledMove? move, MoveEntry? entry, BitmapFont font)
             : base(Rectangle.Empty, "---", font: font)
         {
             Owner = owner;

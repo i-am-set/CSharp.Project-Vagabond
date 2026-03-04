@@ -37,8 +37,9 @@ namespace ProjectVagabond.UI
 
             void AddReplaceButton(string label, MoveEntry currentMove, LevelUpChoice choice)
             {
-                if (currentMove != null && BattleDataCache.Moves.TryGetValue(currentMove.MoveID, out var data))
+                if (currentMove != null)
                 {
+                    var data = currentMove.CompiledMove.BaseTemplate;
                     var btn = new Button(new Rectangle(btnX, startY, btnWidth, btnHeight), $"Replace {label}: {data.MoveName}")
                     {
                         OnClick = () => MakeChoice(choice, _newMoveId)

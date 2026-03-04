@@ -17,7 +17,7 @@ namespace ProjectVagabond.Battle.Abilities
         {
             if (e is CalculateDamageEvent dmgEvent && dmgEvent.Actor.Abilities.Contains(this))
             {
-                if (dmgEvent.Move.MoveType == MoveType.Spell)
+                if (dmgEvent.Move.BaseTemplate.MoveType == MoveType.Spell)
                 {
                     dmgEvent.DamageMultiplier *= DAMAGE_MULTIPLIER;
                     dmgEvent.FinalDamage = (int)(dmgEvent.FinalDamage * DAMAGE_MULTIPLIER);
@@ -40,7 +40,7 @@ namespace ProjectVagabond.Battle.Abilities
         {
             if (e is CheckActionPriorityEvent prioEvent && prioEvent.Actor.Abilities.Contains(this))
             {
-                if (prioEvent.Move.ImpactType == ImpactType.Status)
+                if (prioEvent.Move.BaseTemplate.ImpactType == ImpactType.Status)
                 {
                     prioEvent.Priority += 1;
                 }
@@ -178,7 +178,7 @@ namespace ProjectVagabond.Battle.Abilities
         {
             if (e is CalculateDamageEvent dmgEvent && dmgEvent.Target.Abilities.Contains(this))
             {
-                if (dmgEvent.Move.MoveType == MoveType.Spell)
+                if (dmgEvent.Move.BaseTemplate.MoveType == MoveType.Spell)
                 {
                     dmgEvent.DamageMultiplier *= 0.5f;
                     dmgEvent.FinalDamage = (int)(dmgEvent.FinalDamage * 0.5f);
@@ -191,7 +191,7 @@ namespace ProjectVagabond.Battle.Abilities
 
             if (e is ActionDeclaredEvent actionEvent && actionEvent.Actor.Abilities.Contains(this))
             {
-                if (actionEvent.Move != null && actionEvent.Move.MoveType == MoveType.Spell)
+                if (actionEvent.Move != null && actionEvent.Move.BaseTemplate.MoveType == MoveType.Spell)
                 {
                     actionEvent.IsHandled = true;
                     if (!context.IsSimulation)
@@ -201,7 +201,7 @@ namespace ProjectVagabond.Battle.Abilities
                         {
                             Actor = actionEvent.Actor,
                             Reason = "skeptic",
-                            MoveName = actionEvent.Move.MoveName
+                            MoveName = actionEvent.Move.BaseTemplate.MoveName
                         });
                     }
                 }
@@ -246,7 +246,7 @@ namespace ProjectVagabond.Battle.Abilities
         {
             if (e is CalculateDamageEvent dmgEvent && dmgEvent.Actor.Abilities.Contains(this))
             {
-                if (dmgEvent.Move.Power > 0 && dmgEvent.Move.Power <= 60)
+                if (dmgEvent.Move.FinalPower > 0 && dmgEvent.Move.FinalPower <= 60)
                 {
                     dmgEvent.DamageMultiplier *= 1.5f;
                     dmgEvent.FinalDamage = (int)(dmgEvent.FinalDamage * 1.5f);
@@ -310,7 +310,7 @@ namespace ProjectVagabond.Battle.Abilities
         {
             if (e is CheckActionPriorityEvent prioEvent && prioEvent.Actor.Abilities.Contains(this))
             {
-                if (prioEvent.Move.Tags.Contains("Heal"))
+                if (prioEvent.Move.BaseTemplate.Tags.Contains("Heal"))
                 {
                     prioEvent.Priority += 2;
                 }

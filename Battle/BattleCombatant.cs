@@ -50,15 +50,15 @@ namespace ProjectVagabond.Battle
 
         public HashSet<string> SeenPlayerCharacterNames { get; set; } = new HashSet<string>();
 
-        public List<MoveData> AvailableMoves
+        public List<CompiledMove> AvailableMoves
         {
             get
             {
-                var moves = new List<MoveData>();
-                if (BasicMove != null && BattleDataCache.Moves.TryGetValue(BasicMove.MoveID, out var bas)) moves.Add(bas);
-                if (Spell1 != null && BattleDataCache.Moves.TryGetValue(Spell1.MoveID, out var s1)) moves.Add(s1);
-                if (Spell2 != null && BattleDataCache.Moves.TryGetValue(Spell2.MoveID, out var s2)) moves.Add(s2);
-                if (Spell3 != null && BattleDataCache.Moves.TryGetValue(Spell3.MoveID, out var s3)) moves.Add(s3);
+                var moves = new List<CompiledMove>();
+                if (BasicMove != null) moves.Add(BasicMove.CompiledMove);
+                if (Spell1 != null) moves.Add(Spell1.CompiledMove);
+                if (Spell2 != null) moves.Add(Spell2.CompiledMove);
+                if (Spell3 != null) moves.Add(Spell3.CompiledMove);
                 return moves;
             }
         }

@@ -432,7 +432,7 @@ namespace ProjectVagabond.Battle.UI
                                  activeTargetType == TargetType.Team;
 
             var silhouetteColors = ResolveSilhouetteColors(allCombatants, currentActor, selectableTargets, activeTargetType, uiManager, hoveredCombatant);
-            bool shouldGrayOut = uiManager.UIState == BattleUIState.Targeting || (uiManager.HoveredMove != null && uiManager.HoveredMove.Target != TargetType.None);
+            bool shouldGrayOut = uiManager.UIState == BattleUIState.Targeting || (uiManager.HoveredMove != null && uiManager.HoveredMove.FinalTargetType != TargetType.None);
 
             bool isTargetingMode = uiManager.UIState == BattleUIState.Targeting;
             Color? hoveredGroupColor = null;
@@ -688,15 +688,15 @@ namespace ProjectVagabond.Battle.UI
 
                 if (showDamage && move != null && actor != null)
                 {
-                    bool isHeal = move.Effects.ContainsKey("Heal");
-                    bool isLifesteal = move.Effects.ContainsKey("Lifesteal");
+                    bool isHeal = move.BaseTemplate.Effects.ContainsKey("Heal");
+                    bool isLifesteal = move.BaseTemplate.Effects.ContainsKey("Lifesteal");
 
                     if (isHeal)
                     {
-                        var validTargets = TargetingHelper.GetValidTargets(actor, move.Target, battleManager.AllCombatants);
+                        var validTargets = TargetingHelper.GetValidTargets(actor, move.FinalTargetType, battleManager.AllCombatants);
                         if (validTargets.Contains(combatant))
                         {
-                            if (float.TryParse(move.Effects["Heal"], out float percent))
+                            if (float.TryParse(move.BaseTemplate.Effects["Heal"], out float percent))
                             {
                                 int amount = (int)(combatant.Stats.MaxHP * (percent / 100f));
                                 projectedHeal = (amount, amount);
@@ -705,7 +705,7 @@ namespace ProjectVagabond.Battle.UI
                     }
                     else if (isLifesteal && combatant == actor)
                     {
-                        if (float.TryParse(move.Effects["Lifesteal"], out float percent))
+                        if (float.TryParse(move.BaseTemplate.Effects["Lifesteal"], out float percent))
                         {
                             var targets = new List<BattleCombatant>();
                             if (uiManager.UIState == BattleUIState.Targeting && hoveredCombatant != null) targets.Add(hoveredCombatant);
@@ -730,12 +730,13 @@ namespace ProjectVagabond.Battle.UI
                         }
                     }
 
-                    if (combatant == actor && (move.Effects.ContainsKey("Recoil") || move.Effects.ContainsKey("DamageRecoil")))
+                    if (combatant == actor && (move.BaseTemplate.Effects.ContainsKey("Recoil") || move.BaseTemplate.Effects.ContainsKey("DamageRecoil")))
                     {
                         float minRecoil = 0;
                         float maxRecoil = 0;
 
-                        if (move.Effects.TryGetValue("DamageRecoil", out string dmgRecoilVal) && float.TryParse(dmgRecoilVal, out float dmgPercent))
+                        float dmgPercent = 0f;
+                        if (move.BaseTemplate.Effects.TryGetValue("DamageRecoil", out string dmgRecoilVal) && float.TryParse(dmgRecoilVal, out dmgPercent))
                         {
                             var targets = new List<BattleCombatant>();
 
@@ -750,7 +751,7 @@ namespace ProjectVagabond.Battle.UI
 
                             if (targets.Any())
                             {
-                                bool isMultiTarget = move.Target == TargetType.All || move.Target == TargetType.Both || move.Target == TargetType.Every || move.Target == TargetType.Team;
+                                bool isMultiTarget = move.FinalTargetType == TargetType.All || move.FinalTargetType == TargetType.Both || move.FinalTargetType == TargetType.Every || move.FinalTargetType == TargetType.Team;
 
                                 if (isMultiTarget)
                                 {
@@ -795,7 +796,8 @@ namespace ProjectVagabond.Battle.UI
                             }
                         }
 
-                        if (move.Effects.TryGetValue("Recoil", out string recoilVal) && float.TryParse(recoilVal, out float hpPercent))
+                        float hpPercent = 0f;
+                        if (move.BaseTemplate.Effects.TryGetValue("Recoil", out string recoilVal) && float.TryParse(recoilVal, out hpPercent))
                         {
                             float amt = actor.Stats.MaxHP * (hpPercent / 100f);
                             minRecoil += amt;
@@ -982,7 +984,7 @@ namespace ProjectVagabond.Battle.UI
             else if (uiManager.HoverHighlightState.CurrentMove != null && uiManager.HoverHighlightState.Targets.Any())
             {
                 foreach (var t in uiManager.HoverHighlightState.Targets) set.Add(t);
-                type = uiManager.HoverHighlightState.CurrentMove.Target;
+                type = uiManager.HoverHighlightState.CurrentMove.FinalTargetType;
             }
 
             return (set, type);
@@ -1790,7 +1792,7 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private void AnalyzeMoveImpact(MoveData move, BattleCombatant actor, BattleCombatant candidate, out bool affectsHP)
+        private void AnalyzeMoveImpact(CompiledMove move, BattleCombatant actor, BattleCombatant candidate, out bool affectsHP)
         {
             affectsHP = false;
 
@@ -1798,19 +1800,19 @@ namespace ProjectVagabond.Battle.UI
 
             bool isActor = actor == candidate;
             var battleManager = ServiceLocator.Get<BattleManager>();
-            var validTargets = TargetingHelper.GetValidTargets(actor, move.Target, battleManager.AllCombatants);
+            var validTargets = TargetingHelper.GetValidTargets(actor, move.FinalTargetType, battleManager.AllCombatants);
             bool isTarget = validTargets.Contains(candidate);
 
             if (isActor)
             {
-                if (move.AffectsUserHP) affectsHP = true;
-                if (move.Effects.ContainsKey("Recoil") || move.Effects.ContainsKey("DamageRecoil")) affectsHP = true;
+                if (move.BaseTemplate.AffectsUserHP) affectsHP = true;
+                if (move.BaseTemplate.Effects.ContainsKey("Recoil") || move.BaseTemplate.Effects.ContainsKey("DamageRecoil")) affectsHP = true;
             }
 
             if (isTarget)
             {
-                if (move.Power > 0 || move.Effects.ContainsKey("Heal")) affectsHP = true;
-                if (move.AffectsTargetHP) affectsHP = true;
+                if (move.FinalPower > 0 || move.BaseTemplate.Effects.ContainsKey("Heal")) affectsHP = true;
+                if (move.BaseTemplate.AffectsTargetHP) affectsHP = true;
             }
         }
 

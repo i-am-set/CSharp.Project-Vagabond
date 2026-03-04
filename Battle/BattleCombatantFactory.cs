@@ -115,22 +115,22 @@ namespace ProjectVagabond.Battle
             if (enemyData.BasicMoves != null && enemyData.BasicMoves.Any())
             {
                 string moveId = enemyData.BasicMoves[_random.Next(enemyData.BasicMoves.Count)];
-                if (BattleDataCache.Moves.ContainsKey(moveId))
+                if (BattleDataCache.Moves.TryGetValue(moveId, out var baseMove))
                 {
-                    combatant.BasicMove = new MoveEntry(moveId, 0);
+                    combatant.BasicMove = new MoveEntry(new CompiledMove(baseMove, new List<ModifierToken>()), 0);
                 }
             }
-            else if (BattleDataCache.Moves.ContainsKey("6"))
+            else if (BattleDataCache.Moves.TryGetValue("6", out var fallbackMove))
             {
-                combatant.BasicMove = new MoveEntry("6", 0);
+                combatant.BasicMove = new MoveEntry(new CompiledMove(fallbackMove, new List<ModifierToken>()), 0);
             }
 
             if (enemyData.MovePool != null && enemyData.MovePool.Any())
             {
                 var shuffled = enemyData.MovePool.OrderBy(x => _random.Next()).ToList();
-                if (shuffled.Count > 0 && BattleDataCache.Moves.ContainsKey(shuffled[0])) combatant.Spell1 = new MoveEntry(shuffled[0], 0);
-                if (shuffled.Count > 1 && BattleDataCache.Moves.ContainsKey(shuffled[1])) combatant.Spell2 = new MoveEntry(shuffled[1], 0);
-                if (shuffled.Count > 2 && BattleDataCache.Moves.ContainsKey(shuffled[2])) combatant.Spell3 = new MoveEntry(shuffled[2], 0);
+                if (shuffled.Count > 0 && BattleDataCache.Moves.TryGetValue(shuffled[0], out var m1)) combatant.Spell1 = new MoveEntry(new CompiledMove(m1, new List<ModifierToken>()), 0);
+                if (shuffled.Count > 1 && BattleDataCache.Moves.TryGetValue(shuffled[1], out var m2)) combatant.Spell2 = new MoveEntry(new CompiledMove(m2, new List<ModifierToken>()), 0);
+                if (shuffled.Count > 2 && BattleDataCache.Moves.TryGetValue(shuffled[2], out var m3)) combatant.Spell3 = new MoveEntry(new CompiledMove(m3, new List<ModifierToken>()), 0);
             }
 
             combatant.HeartWaveCooldown = (float)(_random.NextDouble() * 2.0 + 1.0);

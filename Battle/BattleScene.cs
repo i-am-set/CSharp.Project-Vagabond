@@ -478,17 +478,21 @@ namespace ProjectVagabond.Scenes
                         var levelUpData = _battleManager.PendingLevelUps.Dequeue();
                         _levelUpDialog = new LevelUpDialog(this, levelUpData.Member, levelUpData.NewMoveId, (choice, moveId) =>
                         {
-                            if (choice == LevelUpDialog.LevelUpChoice.Spell1)
+                            if (BattleDataCache.Moves.TryGetValue(moveId, out var baseMove))
                             {
-                                levelUpData.Member.Spell1 = new MoveEntry(moveId, 0);
-                            }
-                            else if (choice == LevelUpDialog.LevelUpChoice.Spell2)
-                            {
-                                levelUpData.Member.Spell2 = new MoveEntry(moveId, 0);
-                            }
-                            else if (choice == LevelUpDialog.LevelUpChoice.Spell3)
-                            {
-                                levelUpData.Member.Spell3 = new MoveEntry(moveId, 0);
+                                var compiled = new CompiledMove(baseMove, new List<ModifierToken>());
+                                if (choice == LevelUpDialog.LevelUpChoice.Spell1)
+                                {
+                                    levelUpData.Member.Spell1 = new MoveEntry(compiled, 0);
+                                }
+                                else if (choice == LevelUpDialog.LevelUpChoice.Spell2)
+                                {
+                                    levelUpData.Member.Spell2 = new MoveEntry(compiled, 0);
+                                }
+                                else if (choice == LevelUpDialog.LevelUpChoice.Spell3)
+                                {
+                                    levelUpData.Member.Spell3 = new MoveEntry(compiled, 0);
+                                }
                             }
                             // Skip does nothing
                         });
@@ -1114,7 +1118,7 @@ namespace ProjectVagabond.Scenes
         private void OnBattleActionExecuted(GameEvents.BattleActionExecuted e)
         {
             _currentActor = e.Actor;
-            bool isMultiHit = e.ChosenMove != null && e.ChosenMove.Effects.ContainsKey("MultiHit");
+            bool isMultiHit = e.ChosenMove != null && e.ChosenMove.BaseTemplate.Effects.ContainsKey("MultiHit");
             if (isMultiHit) _isWaitingForMultiHitDelay = true;
 
             for (int i = 0; i < e.Targets.Count; i++)
@@ -1124,7 +1128,7 @@ namespace ProjectVagabond.Scenes
                 Vector2 targetPos = _renderer.GetCombatantVisualCenterPosition(target, _battleManager.AllCombatants);
                 Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(target, _battleManager.AllCombatants);
 
-                if (e.ChosenMove.ImpactType == ImpactType.Status && !result.WasGraze && !result.WasProtected)
+                if (e.ChosenMove.BaseTemplate.ImpactType == ImpactType.Status && !result.WasGraze && !result.WasProtected)
                 {
                     var statusParticles = _particleSystemManager.CreateEmitter(ParticleEffects.CreateStatusImpact());
                     statusParticles.Position = targetPos;

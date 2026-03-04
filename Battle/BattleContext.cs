@@ -12,7 +12,7 @@ namespace ProjectVagabond.Battle.Abilities
     {
         public BattleCombatant Actor { get; set; }
         public BattleCombatant Target { get; set; }
-        public MoveData Move { get; set; }
+        public CompiledMove Move { get; set; }
         public QueuedAction Action { get; set; }
         public bool IsSimulation { get; set; }
         public VarianceMode SimulationVariance { get; set; } = VarianceMode.Random;

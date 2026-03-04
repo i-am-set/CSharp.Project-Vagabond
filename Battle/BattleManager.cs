@@ -338,7 +338,7 @@ namespace ProjectVagabond.Battle
                 var reactionEvt = new ReactionEvent(action.Actor, target, action, result);
                 action.Actor.NotifyAbilities(reactionEvt, _battleContext);
                 target.NotifyAbilities(reactionEvt, _battleContext);
-                foreach (var ab in action.ChosenMove.Abilities) ab.OnEvent(reactionEvt, _battleContext);
+                foreach (var ab in action.ChosenMove.FinalAbilities) ab.OnEvent(reactionEvt, _battleContext);
             }
 
             EventBus.Publish(new GameEvents.BattleActionExecuted
@@ -468,8 +468,9 @@ namespace ProjectVagabond.Battle
             UpdateSeenCombatants();
 
             // --- SWITCH-IN ATTACK LOGIC ---
-            if (incomingMember != null && incomingMember.BasicMove != null && BattleDataCache.Moves.TryGetValue(incomingMember.BasicMove.MoveID, out var basicMove))
+            if (incomingMember != null && incomingMember.BasicMove != null)
             {
+                var basicMove = incomingMember.BasicMove.CompiledMove;
                 var target = ResolveDefaultTarget(incomingMember, basicMove);
                 var action = new QueuedAction
                 {
@@ -489,12 +490,12 @@ namespace ProjectVagabond.Battle
             CanAdvance = true;
         }
 
-        private BattleCombatant ResolveDefaultTarget(BattleCombatant actor, MoveData move)
+        private BattleCombatant ResolveDefaultTarget(BattleCombatant actor, CompiledMove move)
         {
-            var validTargets = TargetingHelper.GetValidTargets(actor, move.Target, _allCombatants);
+            var validTargets = TargetingHelper.GetValidTargets(actor, move.FinalTargetType, _allCombatants);
             validTargets = validTargets.Where(c => !c.IsDefeated && c.Stats.CurrentHP > 0).ToList();
 
-            if (move.Target == TargetType.Single || move.Target == TargetType.SingleAll || move.Target == TargetType.RandomBoth || move.Target == TargetType.RandomEvery || move.Target == TargetType.RandomAll)
+            if (move.FinalTargetType == TargetType.Single || move.FinalTargetType == TargetType.SingleAll || move.FinalTargetType == TargetType.RandomBoth || move.FinalTargetType == TargetType.RandomEvery || move.FinalTargetType == TargetType.RandomAll)
             {
                 // Prefer enemies for the random target
                 var enemies = validTargets.Where(c => c.IsPlayerControlled != actor.IsPlayerControlled).ToList();
@@ -679,7 +680,7 @@ namespace ProjectVagabond.Battle
 
             if (nextAction.Type == QueuedActionType.Charging)
             {
-                AppendToLog($"{nextAction.Actor.Name} IS CHARGING [cAction]{nextAction.ChosenMove.MoveName}[/].");
+                AppendToLog($"{nextAction.Actor.Name} IS CHARGING [cAction]{nextAction.ChosenMove.BaseTemplate.MoveName}[/].");
                 _turnPacingTimer = ACTION_DELAY * 0.5f; // Faster pacing for charge messages
                 return;
             }
@@ -712,10 +713,10 @@ namespace ProjectVagabond.Battle
             _actionToExecute = nextAction;
             CurrentActingCombatant = nextAction.Actor;
 
-            string moveName = nextAction.ChosenMove?.MoveName ?? "ACTION";
+            string moveName = nextAction.ChosenMove?.BaseTemplate.MoveName ?? "ACTION";
             if (nextAction.Type == QueuedActionType.Switch) moveName = "SWITCH";
 
-            string typeColor = nextAction.ChosenMove?.MoveType == MoveType.Spell ? "[cAlt]" : "[cAction]";
+            string typeColor = nextAction.ChosenMove?.BaseTemplate.MoveType == MoveType.Spell ? "[cAlt]" : "[cAction]";
             if (nextAction.Type == QueuedActionType.Switch) typeColor = "[cSystem]";
 
             AppendToLog($"{nextAction.Actor.Name} USED {typeColor}{moveName}[/].");
@@ -889,11 +890,11 @@ namespace ProjectVagabond.Battle
             if (action.Actor.IsPlayerControlled && action.SpellbookEntry != null)
             {
                 action.SpellbookEntry.TimesUsed++;
-                action.SpellbookEntry.TurnsUntilReady = action.ChosenMove.Cooldown + 1;
+                action.SpellbookEntry.TurnsUntilReady = action.ChosenMove.FinalCooldown + 1;
             }
             action.Actor.PendingDisengage = false;
 
-            var multiHit = action.ChosenMove.Abilities.OfType<MultiHitAbility>().FirstOrDefault();
+            var multiHit = action.ChosenMove.FinalAbilities.OfType<MultiHitAbility>().FirstOrDefault();
             if (multiHit != null) { int hits = _random.Next(multiHit.MinHits, multiHit.MaxHits + 1); _multiHitTotalExecuted = 0; _multiHitRemaining = hits; _multiHitCrits = 0; }
             else { _multiHitTotalExecuted = 0; _multiHitRemaining = 1; _multiHitCrits = 0; }
 
@@ -954,7 +955,7 @@ namespace ProjectVagabond.Battle
                 _phaseWatchdogTimer = 0f;
 
                 // --- PROJECTILE LOGIC ---
-                BattleDataCache.Animations.TryGetValue(action.ChosenMove.AnimationId, out var animDef);
+                BattleDataCache.Animations.TryGetValue(action.ChosenMove.FinalAnimationId, out var animDef);
 
                 if (animDef != null && animDef.IsParticle)
                 {
@@ -1000,7 +1001,7 @@ namespace ProjectVagabond.Battle
             if (_multiHitRemaining > 0)
             {
                 bool shouldContinue = true;
-                var targetType = action.ChosenMove.Target;
+                var targetType = action.ChosenMove.FinalTargetType;
                 bool isRandom = targetType == TargetType.RandomBoth || targetType == TargetType.RandomEvery || targetType == TargetType.RandomAll;
 
                 if (isRandom)
@@ -1038,7 +1039,7 @@ namespace ProjectVagabond.Battle
             var actor = action.Actor;
             if (!actor.HasUsedFirstAttack) actor.HasUsedFirstAttack = true;
 
-            bool isMultiHit = action.ChosenMove.Abilities.OfType<MultiHitAbility>().Any() || action.ChosenMove.Effects.ContainsKey("MultiHit");
+            bool isMultiHit = action.ChosenMove.FinalAbilities.OfType<MultiHitAbility>().Any() || action.ChosenMove.BaseTemplate.Effects.ContainsKey("MultiHit");
 
             if (isMultiHit)
             {
@@ -1052,7 +1053,7 @@ namespace ProjectVagabond.Battle
 
         private List<BattleCombatant> ResolveTargets(QueuedAction action)
         {
-            var targetType = action.ChosenMove?.Target ?? TargetType.None;
+            var targetType = action.ChosenMove?.FinalTargetType ?? TargetType.None;
             var actor = action.Actor;
             var specifiedTarget = action.Target;
             var validCandidates = TargetingHelper.GetValidTargets(actor, targetType, _allCombatants);
@@ -1252,13 +1253,17 @@ namespace ProjectVagabond.Battle
                                         string newMove = availableMoves[_random.Next(availableMoves.Count)];
                                         partyMember.KnownMovesHistory.Add(newMove);
 
-                                        if (partyMember.Spell1 == null) partyMember.Spell1 = new MoveEntry(newMove, 0);
-                                        else if (partyMember.Spell2 == null) partyMember.Spell2 = new MoveEntry(newMove, 0);
-                                        else if (partyMember.Spell3 == null) partyMember.Spell3 = new MoveEntry(newMove, 0);
-                                        else
+                                        if (BattleDataCache.Moves.TryGetValue(newMove, out var baseMoveData))
                                         {
-                                            // All slots full, queue for replacement UI
-                                            PendingLevelUps.Enqueue((partyMember, newMove));
+                                            var compiledMove = new CompiledMove(baseMoveData, new List<ModifierToken>());
+                                            if (partyMember.Spell1 == null) partyMember.Spell1 = new MoveEntry(compiledMove, 0);
+                                            else if (partyMember.Spell2 == null) partyMember.Spell2 = new MoveEntry(compiledMove, 0);
+                                            else if (partyMember.Spell3 == null) partyMember.Spell3 = new MoveEntry(compiledMove, 0);
+                                            else
+                                            {
+                                                // All slots full, queue for replacement UI
+                                                PendingLevelUps.Enqueue((partyMember, newMove));
+                                            }
                                         }
                                     }
                                 }
@@ -1385,12 +1390,12 @@ namespace ProjectVagabond.Battle
             _endOfRoundStage = EndOfRoundStage.PrepareNextRound;
         }
 
-        public (int Min, int Max) GetProjectedDamageRange(BattleCombatant actor, BattleCombatant target, MoveData move)
+        public (int Min, int Max) GetProjectedDamageRange(BattleCombatant actor, BattleCombatant target, CompiledMove move)
         {
-            if (move.Power == 0) return (0, 0);
+            if (move.FinalPower == 0) return (0, 0);
 
             float modifier = 1.0f;
-            bool isMulti = move.Target == TargetType.All || move.Target == TargetType.Both || move.Target == TargetType.Every || move.Target == TargetType.Team;
+            bool isMulti = move.FinalTargetType == TargetType.All || move.FinalTargetType == TargetType.Both || move.FinalTargetType == TargetType.Every || move.FinalTargetType == TargetType.Team;
             if (isMulti) modifier = BattleConstants.MULTI_TARGET_MODIFIER;
 
             var tempContext = new BattleContext

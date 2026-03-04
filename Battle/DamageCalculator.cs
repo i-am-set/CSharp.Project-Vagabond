@@ -22,7 +22,7 @@ namespace ProjectVagabond.Battle
             public bool WasVulnerable;
         }
 
-        public static DamageResult CalculateDamage(QueuedAction action, BattleCombatant target, MoveData move, float multiTargetModifier, bool? overrideCrit, bool isSimulation, BattleContext context)
+        public static DamageResult CalculateDamage(QueuedAction action, BattleCombatant target, CompiledMove move, float multiTargetModifier, bool? overrideCrit, bool isSimulation, BattleContext context)
         {
             var attacker = action.Actor;
             var random = Random.Shared;
@@ -32,18 +32,18 @@ namespace ProjectVagabond.Battle
             {
                 isGraze = false;
             }
-            else if (move.Accuracy != -1)
+            else if (move.FinalAccuracy != -1)
             {
-                var hitEvt = new CheckHitChanceEvent(attacker, target, move, move.Accuracy);
+                var hitEvt = new CheckHitChanceEvent(attacker, target, move, move.FinalAccuracy);
                 attacker.NotifyAbilities(hitEvt, context);
                 target.NotifyAbilities(hitEvt, context);
-                foreach (var ab in move.Abilities) ab.OnEvent(hitEvt, context);
+                foreach (var ab in move.FinalAbilities) ab.OnEvent(hitEvt, context);
 
                 if (random.Next(1, 101) > hitEvt.FinalAccuracy) isGraze = true;
             }
 
             bool isCrit = false;
-            if (!isGraze && move.ImpactType != ImpactType.Status && move.Power > 0)
+            if (!isGraze && move.BaseTemplate.ImpactType != ImpactType.Status && move.FinalPower > 0)
             {
                 if (context.IsSimulation)
                 {
@@ -51,7 +51,7 @@ namespace ProjectVagabond.Battle
                 }
                 else
                 {
-                    var highCrit = move.Abilities.OfType<HighCritAbility>().FirstOrDefault();
+                    var highCrit = move.FinalAbilities.OfType<HighCritAbility>().FirstOrDefault();
                     float critChance = highCrit != null ? highCrit.Chance / 100f : BattleConstants.CRITICAL_HIT_CHANCE;
                     isCrit = overrideCrit ?? (random.NextDouble() < critChance);
                 }
@@ -61,7 +61,7 @@ namespace ProjectVagabond.Battle
             dmgEvt.DamageMultiplier = multiTargetModifier;
 
             attacker.NotifyAbilities(dmgEvt, context);
-            foreach (var ab in move.Abilities) ab.OnEvent(dmgEvt, context);
+            foreach (var ab in move.FinalAbilities) ab.OnEvent(dmgEvt, context);
             target.NotifyAbilities(dmgEvt, context);
 
             return new DamageResult
@@ -74,9 +74,9 @@ namespace ProjectVagabond.Battle
             };
         }
 
-        public static int CalculateBaselineDamage(BattleCombatant attacker, BattleCombatant target, MoveData move)
+        public static int CalculateBaselineDamage(BattleCombatant attacker, BattleCombatant target, CompiledMove move)
         {
-            if (move.Power == 0) return 0;
+            if (move.FinalPower == 0) return 0;
 
             var context = new BattleContext
             {
@@ -89,7 +89,7 @@ namespace ProjectVagabond.Battle
             var dmgEvt = new CalculateDamageEvent(attacker, target, move, 0f, false, false);
 
             attacker.NotifyAbilities(dmgEvt, context);
-            foreach (var ab in move.Abilities) ab.OnEvent(dmgEvt, context);
+            foreach (var ab in move.FinalAbilities) ab.OnEvent(dmgEvt, context);
             target.NotifyAbilities(dmgEvt, context);
 
             return dmgEvt.FinalDamage;

@@ -2,22 +2,38 @@
 
 namespace ProjectVagabond.Battle.Abilities
 {
+    public static class AbilityPriority
+    {
+        public const int BaseOverride = 100;
+        public const int FlatAddition = 50;
+        public const int Multiplier = 10;
+        public const int StatusEffect = 0;
+    }
+
     public interface IAbility
     {
         string Name { get; }
         string Description { get; }
-
-        /// <summary>
-        /// Determines the execution order of abilities. Higher values execute first.
-        /// Defaults to 0.
-        /// </summary>
         int Priority { get; }
-
-        /// <summary>
-        /// Responds to a game event within the context of the current battle.
-        /// </summary>
-        /// <param name="e">The event data.</param>
-        /// <param name="context">The battle context (manager, RNG, combatants).</param>
         void OnEvent(GameEvent e, BattleContext context);
+    }
+
+    public interface IStatusInflictingAbility : IAbility
+    {
+        StatusEffectType EffectType { get; }
+        int Chance { get; }
+        int Duration { get; }
+    }
+
+    public interface IHealingAbility : IAbility
+    {
+        int HealAmount { get; }
+        float HealPercentage { get; }
+    }
+
+    public interface IStatModifyingAbility : IAbility
+    {
+        OffensiveStatType Stat { get; }
+        int Amount { get; }
     }
 }
