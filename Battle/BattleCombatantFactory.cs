@@ -31,8 +31,10 @@ namespace ProjectVagabond.Battle
                     Tenacity = gameState.PlayerState.GetEffectiveStat(member, "Tenacity"),
                     Agility = gameState.PlayerState.GetEffectiveStat(member, "Agility")
                 },
-                StrikeMove = member.StrikeMove,
-                AltMove = member.AltMove,
+                BasicMove = member.BasicMove,
+                Spell1 = member.Spell1,
+                Spell2 = member.Spell2,
+                Spell3 = member.Spell3,
                 PortraitIndex = member.PortraitIndex
             };
 
@@ -115,18 +117,20 @@ namespace ProjectVagabond.Battle
                 string moveId = enemyData.BasicMoves[_random.Next(enemyData.BasicMoves.Count)];
                 if (BattleDataCache.Moves.TryGetValue(moveId, out var baseMove))
                 {
-                    combatant.StrikeMove = new MoveEntry(new CompiledMove(baseMove, new List<ModifierToken>()), 0);
+                    combatant.BasicMove = new MoveEntry(new CompiledMove(baseMove, new List<ModifierToken>()), 0);
                 }
             }
             else if (BattleDataCache.Moves.TryGetValue("6", out var fallbackMove))
             {
-                combatant.StrikeMove = new MoveEntry(new CompiledMove(fallbackMove, new List<ModifierToken>()), 0);
+                combatant.BasicMove = new MoveEntry(new CompiledMove(fallbackMove, new List<ModifierToken>()), 0);
             }
 
             if (enemyData.MovePool != null && enemyData.MovePool.Any())
             {
                 var shuffled = enemyData.MovePool.OrderBy(x => _random.Next()).ToList();
-                if (shuffled.Count > 0 && BattleDataCache.Moves.TryGetValue(shuffled[0], out var m1)) combatant.AltMove = new MoveEntry(new CompiledMove(m1, new List<ModifierToken>()), 0);
+                if (shuffled.Count > 0 && BattleDataCache.Moves.TryGetValue(shuffled[0], out var m1)) combatant.Spell1 = new MoveEntry(new CompiledMove(m1, new List<ModifierToken>()), 0);
+                if (shuffled.Count > 1 && BattleDataCache.Moves.TryGetValue(shuffled[1], out var m2)) combatant.Spell2 = new MoveEntry(new CompiledMove(m2, new List<ModifierToken>()), 0);
+                if (shuffled.Count > 2 && BattleDataCache.Moves.TryGetValue(shuffled[2], out var m3)) combatant.Spell3 = new MoveEntry(new CompiledMove(m3, new List<ModifierToken>()), 0);
             }
 
             combatant.HeartWaveCooldown = (float)(_random.NextDouble() * 2.0 + 1.0);

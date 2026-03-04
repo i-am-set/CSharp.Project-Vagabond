@@ -29,11 +29,11 @@ namespace ProjectVagabond.Battle
         public int Amount { get; set; }
     }
 
-    public class LevelUpDraftData
+    public class LevelUpDraft
     {
         public PartyMember Member { get; set; }
-        public List<ModifierToken> StrikeOptions { get; set; }
-        public List<ModifierToken> AltOptions { get; set; }
+        public List<ModifierToken> Spell1Options { get; set; }
+        public List<ModifierToken> Spell2Options { get; set; }
     }
 
     public class BattleManager
@@ -82,7 +82,7 @@ namespace ProjectVagabond.Battle
         private readonly List<BattleCombatant> _cachedAllActive = new List<BattleCombatant>();
 
         private List<QueuedAction> _actionQueue;
-        public Queue<LevelUpDraftData> PendingLevelUps { get; } = new Queue<LevelUpDraftData>();
+        public Queue<LevelUpDraft> PendingLevelUps { get; } = new Queue<LevelUpDraft>();
 
         private readonly Dictionary<int, QueuedAction> _pendingPlayerActions = new Dictionary<int, QueuedAction>();
 
@@ -1146,8 +1146,10 @@ namespace ProjectVagabond.Battle
         {
             foreach (var combatant in _cachedAllActive)
             {
-                if (combatant.StrikeMove != null && combatant.StrikeMove.TurnsUntilReady > 0) combatant.StrikeMove.TurnsUntilReady--;
-                if (combatant.AltMove != null && combatant.AltMove.TurnsUntilReady > 0) combatant.AltMove.TurnsUntilReady--;
+                if (combatant.BasicMove != null && combatant.BasicMove.TurnsUntilReady > 0) combatant.BasicMove.TurnsUntilReady--;
+                if (combatant.Spell1 != null && combatant.Spell1.TurnsUntilReady > 0) combatant.Spell1.TurnsUntilReady--;
+                if (combatant.Spell2 != null && combatant.Spell2.TurnsUntilReady > 0) combatant.Spell2.TurnsUntilReady--;
+                if (combatant.Spell3 != null && combatant.Spell3.TurnsUntilReady > 0) combatant.Spell3.TurnsUntilReady--;
 
                 _battleContext.ResetMultipliers();
                 _battleContext.Actor = combatant;
@@ -1248,12 +1250,12 @@ namespace ProjectVagabond.Battle
                                 partyMember.Tenacity++;
                                 partyMember.Agility++;
 
-                                var strikeOptions = GetValidTokensForMove(partyMember.StrikeMove?.CompiledMove?.BaseTemplate, 2);
-                                var altOptions = GetValidTokensForMove(partyMember.AltMove?.CompiledMove?.BaseTemplate, 2);
+                                var spell1Options = GetValidTokensForMove(partyMember.Spell1?.CompiledMove?.BaseTemplate, 2);
+                                var spell2Options = GetValidTokensForMove(partyMember.Spell2?.CompiledMove?.BaseTemplate, 2);
 
-                                if (strikeOptions.Any() || altOptions.Any())
+                                if (spell1Options.Any() || spell2Options.Any())
                                 {
-                                    PendingLevelUps.Enqueue(new LevelUpDraftData { Member = partyMember, StrikeOptions = strikeOptions, AltOptions = altOptions });
+                                    PendingLevelUps.Enqueue(new LevelUpDraft { Member = partyMember, Spell1Options = spell1Options, Spell2Options = spell2Options });
                                 }
                             }
                         }

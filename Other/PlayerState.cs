@@ -21,9 +21,9 @@ namespace ProjectVagabond
 
         public int PortraitIndex { get => Leader?.PortraitIndex ?? 0; set { if (Leader != null) Leader.PortraitIndex = value; } }
 
-        // Shifted to strict 2-move system (Strike and Alt)
-        public MoveEntry? StrikeMove { get => Leader?.StrikeMove; set { if (Leader != null) Leader.StrikeMove = value; } }
-        public MoveEntry? AltMove { get => Leader?.AltMove; set { if (Leader != null) Leader.AltMove = value; } }
+        public MoveEntry? Spell1 { get => Leader?.Spell1; set { if (Leader != null) Leader.Spell1 = value; } }
+        public MoveEntry? Spell2 { get => Leader?.Spell2; set { if (Leader != null) Leader.Spell2 = value; } }
+        public MoveEntry? Spell3 { get => Leader?.Spell3; set { if (Leader != null) Leader.Spell3 = value; } }
 
         public PlayerState() { }
 
@@ -66,13 +66,17 @@ namespace ProjectVagabond
 
             var compiledMove = new CompiledMove(moveData, new List<ModifierToken>());
 
-            if (target.StrikeMove == null)
+            if (target.Spell1 == null)
             {
-                target.StrikeMove = new MoveEntry(compiledMove, 0);
+                target.Spell1 = new MoveEntry(compiledMove, 0);
+            }
+            else if (target.Spell2 == null)
+            {
+                target.Spell2 = new MoveEntry(compiledMove, 0);
             }
             else
             {
-                target.AltMove = new MoveEntry(compiledMove, 0);
+                target.Spell3 = new MoveEntry(compiledMove, 0);
             }
         }
 
@@ -81,8 +85,9 @@ namespace ProjectVagabond
             var target = member ?? Leader;
             if (target == null) return;
 
-            if (target.StrikeMove?.CompiledMove.BaseTemplate.MoveID == moveId) target.StrikeMove = null;
-            if (target.AltMove?.CompiledMove.BaseTemplate.MoveID == moveId) target.AltMove = null;
+            if (target.Spell1?.CompiledMove.BaseTemplate.MoveID == moveId) target.Spell1 = null;
+            if (target.Spell2?.CompiledMove.BaseTemplate.MoveID == moveId) target.Spell2 = null;
+            if (target.Spell3?.CompiledMove.BaseTemplate.MoveID == moveId) target.Spell3 = null;
         }
     }
 }

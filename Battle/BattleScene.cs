@@ -352,8 +352,10 @@ namespace ProjectVagabond.Scenes
             // --- Reset Cooldowns for the new battle ---
             foreach (var member in gameState.PlayerState.Party)
             {
-                if (member.StrikeMove != null) member.StrikeMove.TurnsUntilReady = 0;
-                if (member.AltMove != null) member.AltMove.TurnsUntilReady = 0;
+                if (member.BasicMove != null) member.BasicMove.TurnsUntilReady = 0;
+                if (member.Spell1 != null) member.Spell1.TurnsUntilReady = 0;
+                if (member.Spell2 != null) member.Spell2.TurnsUntilReady = 0;
+                if (member.Spell3 != null) member.Spell3.TurnsUntilReady = 0;
             }
 
             var playerParty = new List<BattleCombatant>();
@@ -474,7 +476,7 @@ namespace ProjectVagabond.Scenes
                     if (_battleManager.PendingLevelUps.Count > 0)
                     {
                         var levelUpData = _battleManager.PendingLevelUps.Dequeue();
-                        _levelUpDialog = new LevelUpDialog(this, levelUpData, (moveIndex, chosenToken) =>
+                        _levelUpDialog = new LevelUpDialog(this, levelUpData.Member, levelUpData.Spell1Options, levelUpData.Spell2Options, (spellIndex, chosenToken) =>
                         {
                         });
                     }
